@@ -1,5 +1,4 @@
 <view id="membership-explore-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+160rpx)] pt-4 text-ink">
-  <view id="case-context-host" wx:if="{{isEmbeddedCase}}"><case-context-bar id="case-context-component" /></view>
   <view class="px-1">
     <view class="text-[length:22rpx] font-semibold text-accent">成员社区</view>
     <view class="mt-1 text-[length:39rpx] font-bold">认识有趣的人</view>
@@ -23,5 +22,4 @@
     </view>
   </view>
   <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
-  <view id="case-tab-host" wx:if="{{isEmbeddedCase}}"><case-tab-bar id="case-tab-component" value="pages/explore/index" /></view>
 </view>

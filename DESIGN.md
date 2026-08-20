@@ -51,7 +51,7 @@ Semantic 级（不随品牌乱改）：danger `#B8453E`，success `#2F7758`。
 
 ## 页面安全区
 
-底部主操作保留 `safe-area-inset-bottom`。自定义 TabBar 高度 `84rpx` 并开启底部安全区。
+底部主操作保留 `safe-area-inset-bottom`。自定义 TabBar 内容高度 `96rpx`（对应微信 48px），并开启底部安全区。
 
 ## 导航栏
 
@@ -59,7 +59,7 @@ Semantic 级（不随品牌乱改）：danger `#B8453E`，success `#2F7758`。
 
 ## TabBar
 
-自定义 TDesign TabBar：首页、认识、活动、我的。图标用 `t-icon`，不要栅格图。
+微信自定义 TabBar（`tabBar.custom: true`）：首页、认识、活动、我的。图标在上、文字在下。选中态由页面 `onShow` 同步 `selected` 索引。可见图标用 `t-icon`；`app.json` 的 `iconPath` 只作微信回退资源，不要在自定义组件里用栅格图。不要使用 TDesign `theme="tag"`。
 
 ## 卡片 / 表单 / 按钮 / 列表
 

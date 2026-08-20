@@ -4,7 +4,7 @@
   "coverage": "full",
   "routeCount": 41,
   "notes": [
-    "Canonical runtime route contract for the membership case.",
+    "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
     "config/project.json routes must list the same 41 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
@@ -103,7 +103,7 @@
   "routes": [
     {
       "id": "U01",
-      "name": "案例首页",
+      "name": "首页",
       "path": "pages/index/index",
       "selector": "#membership-case-home",
       "group": "public",

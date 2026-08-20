@@ -19,7 +19,7 @@
 ## 五分钟开始
 
 ```bash
-git clone <this-repo> mip-weapp
+git clone git@github.com:makerjackie/mip-weapp.git
 cd mip-weapp
 pnpm install
 pnpm setup

@@ -5,7 +5,7 @@
   "namespace": "membership",
   "routes": [
     {
-      "name": "案例首页",
+      "name": "首页",
       "pathName": "pages/index/index"
     },
     {

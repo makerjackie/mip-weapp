@@ -33,7 +33,6 @@ Page({
     emptyTitle: '新的活动正在准备',
     emptyDescription: '活动发布后会第一时间出现在这里。',
     message: '',
-    isEmbeddedCase: false,
     searchInput: '',
     activeQuery: '',
   },

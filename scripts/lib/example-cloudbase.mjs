@@ -83,7 +83,7 @@ function findEnvInfo(value) {
 export function bindAndRequireMysqlEnvironment(caseRoot, envId, { development = false, stage } = {}) {
   const status = cloudbaseAuthStatus(workspaceRoot(caseRoot))
   if (status.authStatus !== 'READY') {
-    throw new Error('CloudBase MCP is not READY. Run pnpm cloud:auth once; this script will not start a second authorization flow.')
+    throw new Error('CloudBase MCP is not READY. Set CLOUDBASE_API_KEY in .env.local or run pnpm cloud:auth once; this script will not start a second authorization flow.')
   }
   callCloudbase(caseRoot, 'auth', { action: 'set_env', envId })
   const boundStatus = cloudbaseAuthStatus(workspaceRoot(caseRoot))

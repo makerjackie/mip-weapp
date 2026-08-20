@@ -5,8 +5,8 @@ import path from 'node:path'
 import { assertMembershipApiActivityDomainPackage } from './lib/membership-api-package.mjs'
 import { loadVerifiedMigrations } from './lib/migrations.mjs'
 import {
+  assertOfficialCustomTabBar,
   assertSemanticIconColors,
-  assertTabBarParity,
   assertValidTDesignIconNames,
 } from './lib/ui-contracts.mjs'
 
@@ -54,7 +54,7 @@ const appHome = read('src/pages/index/index.wxml')
 const profileEdit = read('src/packages/member/profile-edit/index.wxml')
 const accessPage = read('src/packages/member/access/index.wxml')
 const customTabBar = read('src/custom-tab-bar/index.wxml')
-const caseTabBar = read('src/components/case-tab-bar/index.wxml')
+const tabConfig = read('src/config/tabs.ts')
 const membershipApi = read('cloudfunctions/membership-api/index.js')
 const membershipAdminApi = read('cloudfunctions/membership-admin-api/index.js')
 const membershipAdminWorkflows = read('cloudfunctions/membership-admin-api/lib/workflows.js')
@@ -111,20 +111,25 @@ assert(membershipModule.includes('peekOverview') && membershipModule.includes('p
 assert(!appHome.includes('open-type="getPhoneNumber"') && !appHome.includes('open-type="chooseAvatar"'), 'Public home must not request identity data on first entry')
 assert(accessPage.includes('open-type="getPhoneNumber"') && profileEdit.includes('open-type="chooseAvatar"') && profileEdit.includes('type="nickname"'), 'Situational native identity flow is incomplete')
 for (const icon of ['home-filled', 'usergroup-filled', 'calendar-event-filled', 'user-filled']) {
-  assert(customTabBar.includes(`'${icon}'`), `Custom TabBar TDesign icon ${icon} is missing`)
+  assert(tabConfig.includes(`'${icon}'`), `Custom TabBar TDesign icon ${icon} is missing`)
 }
-assert(customTabBar.includes('--td-tab-bar-height: 84rpx') && customTabBar.includes('--td-font-body-extraSmall: 20rpx/28rpx'), 'Custom TabBar must preserve the compact TDesign scale')
-assert(!customTabBar.includes('<image') && !customTabBar.includes('assets/tab'), 'Standard TabBar icons must not regress to custom raster assets')
+assertOfficialCustomTabBar(customTabBar, appJson, assert, 'Membership custom TabBar')
+assert(
+  !fs.existsSync(path.join(root, 'src/components/case-tab-bar/index.wxml'))
+  && !fs.existsSync(path.join(root, 'src/components/case-context-bar/index.wxml')),
+  'Showcase gallery chrome must not remain in this product template',
+)
+assert(!allWxml.includes('返回案例馆') && !allWxml.includes('isEmbeddedCase'), 'Embedded gallery hosts must not remain in page templates')
 assert(allWxml.includes('<t-icon'), 'Case UI must use the bundled TDesign icon component for standard interface symbols')
 assert(!allWxml.includes('nav-chevron') && !/>\s*[›‹✓×＋]\s*</.test(allWxml), 'Case UI must not use raw text glyphs as interface icons')
 assertValidTDesignIconNames({
   sources: [allWxml],
+  declaredNames: [...tabConfig.matchAll(/icon(?:Active)?: '([a-z0-9-]+)'/g)].map(match => match[1]),
   repositoryRoot,
   assert,
   label: 'Membership source UI',
 })
 assertSemanticIconColors({ sources: [allWxml], assert, label: 'Membership source UI' })
-assertTabBarParity(customTabBar, caseTabBar, assert, 'Membership primary TabBar')
 assert(!allWxml.includes('<t-loading'), 'Full-page text loading must use stable skeletons instead')
 const paymentIdentity = read('cloudfunctions/membership-cloudpay/lib/identity.js')
 assert(

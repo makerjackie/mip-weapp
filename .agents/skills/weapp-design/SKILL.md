@@ -21,9 +21,10 @@ description: Use for visual, token, TabBar, empty/error/loading, or TDesign work
 ## Steps
 
 1. 品牌入口是 `src/config/brand.ts` 与 `src/app.css` `@theme`。
-2. 会员、活动、订单、支付页沿用现有视觉状态，不要换成案例馆皮肤。
-3. 需要的状态都要能看见：loading、empty、error+retry、未配置、支付关闭。
-4. 不要用假数据把界面填满。
+2. 会员、活动、订单、支付页沿用现有视觉状态，不要改成无关的展示皮肤。
+3. TabBar 必须是微信自定义 TabBar：图标在上文字在下、`96rpx` + 安全区、页面 `onShow` 同步 `selected`。禁止 TDesign `theme="tag"`。
+4. 需要的状态都要能看见：loading、empty、error+retry、未配置、支付关闭。
+5. 不要用假数据把界面填满。
 
 ## Scripts
 
@@ -35,7 +36,7 @@ description: Use for visual, token, TabBar, empty/error/loading, or TDesign work
 
 ## Forbidden
 
-拼接 Tailwind class、`space-y-*`、用栅格图标代替 TDesign、暴露 OpenID。
+拼接 Tailwind class、`space-y-*`、在自定义 TabBar 里用栅格图标、使用 `theme="tag"`、暴露 OpenID。
 
 ## Verify
 

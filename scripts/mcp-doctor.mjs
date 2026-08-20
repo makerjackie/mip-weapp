@@ -70,7 +70,7 @@ check('mcporter installed', exists('node_modules/mcporter/package.json') || exis
 check('weapp-vite installed', exists('node_modules/weapp-vite/package.json'), 'pnpm install')
 
 const requiredEnv = ['MINI_PROGRAM_APP_ID']
-const optionalEnv = ['CLOUDBASE_ENV_ID', 'WECHAT_PAY_MERCHANT_ID']
+const optionalEnv = ['CLOUDBASE_ENV_ID', 'CLOUDBASE_API_KEY', 'WECHAT_PAY_MERCHANT_ID']
 const envExample = fs.readFileSync(path.join(root, '.env.example'), 'utf8')
 for (const key of [...requiredEnv, ...optionalEnv]) {
   check(`.env.example has ${key}`, envExample.includes(`${key}=`), key, key === 'MINI_PROGRAM_APP_ID')

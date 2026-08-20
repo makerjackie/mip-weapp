@@ -21,7 +21,7 @@ description: Use for owner bootstrap, demo seed, CloudBase deploy, MySQL schema,
 
 ## Steps
 
-1. 先 `pnpm cloud:status`。未授权才运行一次 `pnpm cloud:auth`。
+1. 先 `pnpm cloud:status`。优先用 `.env.local` 的 `CLOUDBASE_API_KEY`；没有密钥且未授权时才运行一次 `pnpm cloud:auth`。
 2. 部署必须带 `--confirm-env=`。
 3. seed 只能打到 development/test，且 `is_demo=1`。
 4. owner bootstrap 拒绝 demo 身份，不打印 OpenID。

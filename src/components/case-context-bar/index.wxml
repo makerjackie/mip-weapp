@@ -1,5 +1,0 @@
-<view style="padding-top: {{statusBarHeight}}px;">
-  <view id="case-context-bar" class="mb-2 flex min-h-[68rpx] items-center">
-    <view id="membership-return-gallery" class="flex min-h-[56rpx] items-center gap-1 rounded-full border border-line bg-panel px-3 text-[length:21rpx] font-semibold text-brand shadow-[0_4rpx_14rpx_rgba(29,42,35,0.06)] active:bg-brand-soft" bind:tap="leaveCase"><t-icon name="chevron-left" size="32rpx" color="var(--color-brand)" /><text>返回案例馆</text></view>
-  </view>
-</view>

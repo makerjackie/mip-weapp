@@ -67,6 +67,22 @@ export function assertTabBarParity(leftSource, rightSource, assert, label) {
   )
 }
 
+export function assertOfficialCustomTabBar(source, appJson, assert, label, { compiled = false } = {}) {
+  assert(!source.includes('theme="tag"'), `${label} must not use TDesign theme="tag"`)
+  assert(source.includes('env(safe-area-inset-bottom)') || source.includes('safe-area-inset-bottom'), `${label} must reserve the device safe area`)
+  if (!compiled) {
+    assert(source.includes('h-[96rpx]'), `${label} must use the native 48px / 96rpx content height`)
+  }
+  assert(source.includes('<t-icon'), `${label} visible icons must use TDesign t-icon`)
+  assert(!source.includes('<image') && !source.includes('assets/tab'), `${label} must not render raster tab icons in the custom component`)
+  assert(source.includes('selected'), `${label} must sync the selected index`)
+  const list = appJson?.tabBar?.list || []
+  assert(list.length >= 2 && list.length <= 5, `${label} app.json tabBar.list must have 2-5 items`)
+  for (const item of list) {
+    assert(item.iconPath && item.selectedIconPath, `${label} ${item.pagePath || 'tab'} is missing fallback iconPath`)
+  }
+}
+
 function findIconStyleSheet(repositoryRoot) {
   const candidates = [
     path.join(repositoryRoot, 'node_modules', 'tdesign-miniprogram', 'miniprogram_dist', 'icon', 'icon.wxss'),

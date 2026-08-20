@@ -27,7 +27,6 @@ Page({
     emptyDescription: '填写城市和兴趣后，我们会为你推荐更合适的成员。',
     recommendationSignature: '',
     message: '',
-    isEmbeddedCase: false,
   },
   requestSeq: 0,
 

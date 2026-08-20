@@ -1,14 +1,21 @@
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
+import { applyCloudbaseManagementEnv } from './cloudbase-local-auth.mjs'
 
-export function canonicalCloudbaseMcpConfig(workspaceRoot) {
-  return path.join(workspaceRoot, 'config', 'mcporter.json')
+const CLOUD_BASE_CREDENTIAL_RELATIVE_PATHS = [
+  ['.config', '.cloudbase', 'auth.json'],
+  ['.mcporter', 'credentials.json'],
+]
+
+export function canonicalCloudbaseMcpConfig(projectRoot) {
+  return path.join(projectRoot, 'config', 'mcporter.json')
 }
 
-function mcporterBinary(workspaceRoot) {
-  const binary = path.join(workspaceRoot, 'node_modules', '.bin', process.platform === 'win32' ? 'mcporter.cmd' : 'mcporter')
+function mcporterBinary(projectRoot) {
+  const binary = path.join(projectRoot, 'node_modules', '.bin', process.platform === 'win32' ? 'mcporter.cmd' : 'mcporter')
   if (!fs.existsSync(binary)) {
     throw new Error('Pinned mcporter is missing. Run pnpm install at the project root.')
   }
@@ -23,6 +30,50 @@ function sanitizedDiagnostic(value) {
     .replace(/wx[0-9a-f]{16}/gi, '[redacted-appid]')
     .replace(/\b[a-z][a-z0-9-]{1,31}-[a-z0-9]{16}\b/gi, '[redacted-env]')
     .slice(0, 4000)
+}
+
+export function cloudbaseCredentialPaths(homeDirectory = os.homedir()) {
+  return CLOUD_BASE_CREDENTIAL_RELATIVE_PATHS.map(parts => path.join(homeDirectory, ...parts))
+}
+
+export function hardenCloudbaseCredentialFiles(
+  homeDirectory = os.homedir(),
+  {
+    platform = process.platform,
+    uid = typeof process.getuid === 'function' ? process.getuid() : undefined,
+  } = {},
+) {
+  if (platform === 'win32') {
+    return
+  }
+  for (const credentialPath of cloudbaseCredentialPaths(homeDirectory)) {
+    let stat
+    try {
+      stat = fs.lstatSync(credentialPath)
+    }
+    catch (error) {
+      if (error?.code === 'ENOENT') {
+        continue
+      }
+      throw new Error(`CloudBase credential inspection failed for ${credentialPath}: ${error instanceof Error ? error.message : String(error)}`)
+    }
+    if (!stat.isFile()) {
+      throw new Error(`CloudBase credential path must be a regular file: ${credentialPath}`)
+    }
+    if (uid !== undefined && stat.uid !== uid) {
+      throw new Error(`CloudBase credential file owner does not match the current user: ${credentialPath}`)
+    }
+    try {
+      fs.chmodSync(credentialPath, 0o600)
+    }
+    catch (error) {
+      throw new Error(`CloudBase credential permission update failed for ${credentialPath}: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+}
+
+export function shouldUseSecureDaemonUmask(args, platform = process.platform) {
+  return platform !== 'win32' && args[0] === 'daemon' && ['start', 'restart'].includes(args[1])
 }
 
 export function parseMcpOutput(value) {
@@ -58,17 +109,32 @@ export function parseMcpOutput(value) {
   return result
 }
 
-export function runMcporter(workspaceRoot, args, timeout = 120000) {
-  const config = canonicalCloudbaseMcpConfig(workspaceRoot)
+export function runMcporter(projectRoot, args, timeout = 120000) {
+  applyCloudbaseManagementEnv(projectRoot)
+  const config = canonicalCloudbaseMcpConfig(projectRoot)
   if (!fs.existsSync(config)) {
     throw new Error('Canonical CloudBase MCP config is missing at config/mcporter.json')
   }
-  const result = spawnSync(mcporterBinary(workspaceRoot), ['--config', config, ...args], {
-    cwd: workspaceRoot,
-    encoding: 'utf8',
-    maxBuffer: 20 * 1024 * 1024,
-    timeout,
-  })
+  const childUmaskRequired = shouldUseSecureDaemonUmask(args)
+  let previousUmask
+  let result
+  try {
+    if (childUmaskRequired) {
+      previousUmask = process.umask(0o077)
+    }
+    result = spawnSync(mcporterBinary(projectRoot), ['--config', config, ...args], {
+      cwd: projectRoot,
+      encoding: 'utf8',
+      maxBuffer: 20 * 1024 * 1024,
+      timeout,
+    })
+  }
+  finally {
+    if (previousUmask !== undefined) {
+      process.umask(previousUmask)
+    }
+    hardenCloudbaseCredentialFiles()
+  }
   if (result.error) {
     throw result.error
   }
@@ -78,8 +144,8 @@ export function runMcporter(workspaceRoot, args, timeout = 120000) {
   return result.stdout
 }
 
-export function callCloudbaseMcp(workspaceRoot, tool, args, timeout = 120000) {
-  return parseMcpOutput(runMcporter(workspaceRoot, [
+export function callCloudbaseMcp(projectRoot, tool, args, timeout = 120000) {
+  return parseMcpOutput(runMcporter(projectRoot, [
     'call',
     `cloudbase.${tool}`,
     '--args',
@@ -91,14 +157,14 @@ export function callCloudbaseMcp(workspaceRoot, tool, args, timeout = 120000) {
   ], timeout + 5000))
 }
 
-export function cloudbaseAuthStatus(workspaceRoot) {
-  const value = callCloudbaseMcp(workspaceRoot, 'auth', { action: 'status' }, 30000)
+export function cloudbaseAuthStatus(projectRoot) {
+  const value = callCloudbaseMcp(projectRoot, 'auth', { action: 'status' }, 30000)
   return {
     authStatus: String(value?.auth_status || ''),
     envStatus: String(value?.env_status || ''),
   }
 }
 
-export function restartCloudbaseMcp(workspaceRoot) {
-  runMcporter(workspaceRoot, ['daemon', 'restart'], 30000)
+export function restartCloudbaseMcp(projectRoot) {
+  runMcporter(projectRoot, ['daemon', 'restart'], 30000)
 }

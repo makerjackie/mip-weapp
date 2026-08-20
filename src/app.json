@@ -71,19 +71,27 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "首页"
+        "text": "首页",
+        "iconPath": "assets/tab/home.png",
+        "selectedIconPath": "assets/tab/home-active.png"
       },
       {
         "pagePath": "pages/explore/index",
-        "text": "认识"
+        "text": "认识",
+        "iconPath": "assets/tab/usergroup.png",
+        "selectedIconPath": "assets/tab/usergroup-active.png"
       },
       {
         "pagePath": "pages/events/index",
-        "text": "活动"
+        "text": "活动",
+        "iconPath": "assets/tab/calendar.png",
+        "selectedIconPath": "assets/tab/calendar-active.png"
       },
       {
         "pagePath": "pages/profile/index",
-        "text": "我的"
+        "text": "我的",
+        "iconPath": "assets/tab/user.png",
+        "selectedIconPath": "assets/tab/user-active.png"
       }
     ]
   },

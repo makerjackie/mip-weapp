@@ -7,6 +7,6 @@
 
 `project.config.json` 使用 `touristappid`。填入真实 `MINI_PROGRAM_APP_ID` 后再运行 `pnpm setup:local`。
 
-没有 `CLOUDBASE_ENV_ID` 时可以浏览 UI，首页会提示会员服务尚未配置。
+没有 `CLOUDBASE_ENV_ID` 时可以浏览 UI，首页会提示会员服务尚未配置。CloudBase MCP 推荐在 `.env.local` 写环境级 `CLOUDBASE_API_KEY`，然后 `pnpm cloud:status`。
 
 下一步：[CUSTOMIZATION.md](CUSTOMIZATION.md)、[CLOUDBASE.md](CLOUDBASE.md)、[WECHAT_PAY.md](WECHAT_PAY.md)。

@@ -7,7 +7,7 @@ import { verifyNodeSources } from './lib/node-source-verifier.mjs'
 const root = path.resolve(import.meta.dirname, '..')
 const repositoryRoot = root
 
-// Fail before unit tests if the deployable package still escapes the monorepo.
+// Fail before unit tests if the deployable package still escapes this repository.
 assertMembershipApiActivityDomainPackage({
   caseRoot: root,
   repositoryRoot,

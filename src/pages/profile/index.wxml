@@ -1,5 +1,4 @@
 <view id="membership-profile-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+160rpx)] pt-4 text-ink">
-  <view id="case-context-host" wx:if="{{isEmbeddedCase}}"><case-context-bar id="case-context-component" /></view>
   <view wx:if="{{state === 'loading'}}" class="rounded-[28rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载资料" description="服务暂时没有响应，请稍后重试。" action-text="重新加载" bind:action="loadProfile" /></view>
 
@@ -64,5 +63,4 @@
     <view wx:if="{{adminEnabled}}" class="mt-3 rounded-[24rpx] border border-line bg-panel px-5 py-4" bind:tap="openAdmin"><view class="flex items-center justify-between"><view><view class="text-[length:26rpx] font-bold">手机运营台</view><view class="mt-1 text-[length:21rpx] text-muted">成员、订单与系统运营</view></view><view class="flex items-center gap-1 text-brand">进入 <t-icon name="chevron-right" size="36rpx" color="var(--color-brand)" /></view></view></view>
     <view wx:if="{{message}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
   </block>
-  <view id="case-tab-host" wx:if="{{isEmbeddedCase}}"><case-tab-bar id="case-tab-component" value="pages/profile/index" /></view>
 </view>

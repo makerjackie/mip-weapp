@@ -96,7 +96,6 @@ Page({
     recommendations: [] as HomeMember[],
     announcement: null as AnnouncementSummary | null,
     overviewSignature: '',
-    isEmbeddedCase: false,
     productName: brand.productName,
     tagline: brand.tagline,
     logoPath: brand.logoPath,

@@ -1,5 +1,4 @@
 <view id="membership-events-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+160rpx)] pt-4 text-ink">
-  <view id="case-context-host" wx:if="{{isEmbeddedCase}}"><case-context-bar id="case-context-component" /></view>
   <view class="flex items-end justify-between px-1">
     <view>
       <view class="text-[length:38rpx] font-bold">活动</view>
@@ -45,5 +44,4 @@
     <view wx:for="{{events}}" wx:key="id" class="event-list-item block"><event-card event="{{item}}" compact bind:select="openEvent" /></view>
   </view>
   <view wx:if="{{message && state !== 'error'}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
-  <view id="case-tab-host" wx:if="{{isEmbeddedCase}}"><case-tab-bar id="case-tab-component" value="pages/events/index" /></view>
 </view>

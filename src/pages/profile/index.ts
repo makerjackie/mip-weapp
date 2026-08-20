@@ -39,7 +39,6 @@ Page({
     onboardingComplete: true,
     profileSignature: '',
     unreadNotificationCount: 0,
-    isEmbeddedCase: false,
   },
 
   onShow() {
