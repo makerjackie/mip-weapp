@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "cloudbase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@cloudbase/cloudbase-mcp@2.23.11"
+      ],
+      "description": "Canonical project CloudBase MCP for scripts and agent automation",
+      "lifecycle": "keep-alive"
+    }
+  }
+}

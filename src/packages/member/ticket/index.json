@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "活动凭证",
+  "usingComponents": {
+    "app-empty-state": "/components/empty-state/index",
+    "t-button": "tdesign-miniprogram/button/button"
+  }
+}

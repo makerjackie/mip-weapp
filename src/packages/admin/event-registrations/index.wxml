@@ -1,0 +1,238 @@
+<view id="admin-event-registrations-page" class="min-h-screen bg-canvas px-5 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-6 text-ink">
+  <view class="border-b border-ink pb-5">
+    <view class="text-[length:21rpx] font-semibold tracking-[0.16em] text-coral">现场履约</view>
+    <view class="mt-2 truncate text-[length:40rpx] font-bold">{{title || '报名名单'}}</view>
+    <view wx:if="{{startsText}}" class="mt-2 text-[length:22rpx] text-muted">{{startsText}}</view>
+  </view>
+
+  <view wx:if="{{state === 'loading'}}" class="mt-6 bg-panel px-5 py-8">
+    <t-skeleton row-col="{{[1, 1, 1, 1]}}" theme="paragraph" animation="gradient" loading />
+  </view>
+
+  <view wx:elif="{{state === 'error'}}" class="mt-6">
+    <app-empty-state
+      title="暂时无法加载名单"
+      description="服务暂时没有响应，请稍后重试。"
+      action-text="重新加载"
+      bind:action="loadRoster"
+    />
+  </view>
+
+  <view wx:elif="{{state === 'forbidden'}}" class="mt-6">
+    <app-empty-state
+      title="没有运营权限"
+      description="请使用已授权的运营账号进入，或联系主理人开通权限。"
+      action-text="重新验证"
+      bind:action="loadRoster"
+    />
+  </view>
+
+  <block wx:else>
+    <view class="mt-5 grid grid-cols-4 overflow-hidden rounded-[22rpx] border border-line bg-panel">
+      <view class="border-r border-line px-2 py-3 text-center"><view class="font-mono text-[length:30rpx] font-bold">{{totalCount}}</view><view class="mt-1 text-[length:18rpx] text-muted">全部</view></view>
+      <view class="border-r border-line px-2 py-3 text-center"><view class="font-mono text-[length:30rpx] font-bold">{{pendingReviewCount}}</view><view class="mt-1 text-[length:18rpx] text-muted">待审核</view></view>
+      <view class="border-r border-line px-2 py-3 text-center"><view class="font-mono text-[length:30rpx] font-bold">{{waitlistedCount}}</view><view class="mt-1 text-[length:18rpx] text-muted">候补</view></view>
+      <view class="px-2 py-3 text-center"><view class="font-mono text-[length:30rpx] font-bold">{{attendedCount}}</view><view class="mt-1 text-[length:18rpx] text-muted">已签到</view></view>
+    </view>
+
+    <view class="mt-5">
+      <t-tabs value="{{status}}" bind:change="changeStatus" t-class="bg-transparent">
+        <t-tab-panel label="全部" value="ALL" />
+        <t-tab-panel label="待审核" value="PENDING_REVIEW" />
+        <t-tab-panel label="候补" value="WAITLISTED" />
+        <t-tab-panel label="已报名" value="REGISTERED" />
+        <t-tab-panel label="退款中" value="CANCELLATION_PENDING" />
+        <t-tab-panel label="已签到" value="ATTENDED" />
+        <t-tab-panel label="未通过" value="REJECTED" />
+        <t-tab-panel label="已取消" value="CANCELLED" />
+      </t-tabs>
+    </view>
+
+    <view class="mt-4 flex items-center gap-2 border border-line bg-panel px-3 py-2">
+      <t-icon name="search" size="34rpx" color="var(--color-muted)" />
+      <input
+        class="box-border h-[64rpx] min-w-0 flex-1 max-w-full text-[length:25rpx]"
+        value="{{searchInput}}"
+        bindinput="onSearchInput"
+        bindconfirm="onSearchConfirm"
+        confirm-type="search"
+        maxlength="64"
+        placeholder="昵称 / 城市 / 票码 / 手机号"
+      />
+      <view
+        wx:if="{{searchInput}}"
+        class="px-2 py-2 text-[length:22rpx] text-muted active:opacity-70"
+        bind:tap="clearSearch"
+      >清除</view>
+    </view>
+
+    <view wx:if="{{canCheckIn || canExportRoster}}" class="mt-4 flex flex-col gap-2">
+      <t-button
+        wx:if="{{canCheckIn}}"
+        block
+        theme="primary"
+        loading="{{scanning}}"
+        disabled="{{processingId || undoing || exporting}}"
+        bind:tap="scanCheckIn"
+      >扫码签到</t-button>
+      <t-button
+        wx:if="{{canExportRoster}}"
+        block
+        variant="outline"
+        loading="{{exporting}}"
+        disabled="{{processingId || undoing || scanning}}"
+        bind:tap="exportRoster"
+      >导出名单（含手机号）</t-button>
+    </view>
+
+    <view wx:if="{{items.length === 0}}" class="mt-6">
+      <app-empty-state title="{{emptyTitle}}" description="{{emptyDescription}}" />
+    </view>
+
+    <view wx:else class="mt-5 flex flex-col gap-3">
+      <view wx:for="{{items}}" wx:key="id" class="overflow-hidden rounded-[22rpx] border border-line bg-panel">
+        <view class="flex min-h-[112rpx] items-center gap-3 px-4 py-3" data-registration-id="{{item.id}}" bind:tap="toggleDetails">
+          <image wx:if="{{item.avatarUrl}}" class="h-[72rpx] w-[72rpx] shrink-0 rounded-full bg-brand-soft" src="{{item.avatarUrl}}" mode="aspectFill" />
+          <view wx:else class="flex h-[72rpx] w-[72rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft text-[length:24rpx] font-semibold text-brand">{{item.initial}}</view>
+          <view class="min-w-0 flex-1">
+            <view class="truncate text-[length:26rpx] font-semibold">{{item.nickname}}</view>
+            <view class="mt-1 truncate text-[length:20rpx] text-muted">{{item.city || '城市未填'}} · 报名 {{item.registeredText}}</view>
+            <view wx:if="{{canViewSensitiveRoster && item.phoneNumber}}" class="mt-1 text-[length:20rpx] font-semibold text-ink">联系电话 {{item.phoneNumber}}</view>
+            <view wx:elif="{{item.phoneBound}}" class="mt-1 text-[length:20rpx] text-muted">手机已绑定</view>
+          </view>
+          <view class="flex shrink-0 items-center gap-1"><t-tag variant="light">{{item.statusText}}</t-tag><t-icon name="{{expandedId === item.id ? 'chevron-up' : 'chevron-down'}}" size="30rpx" color="var(--color-muted)" /></view>
+        </view>
+
+        <view wx:if="{{expandedId === item.id}}" class="border-t border-line bg-canvas px-4 py-3">
+          <view class="text-[length:20rpx] text-muted">票码 {{item.ticketCodeMasked || '未分配'}}</view>
+          <view wx:if="{{item.attendedText}}" class="mt-1 text-[length:20rpx] text-muted">签到 {{item.attendedText}}</view>
+          <view wx:if="{{item.reviewReason}}" class="mt-2 text-[length:20rpx] text-muted">审核说明：{{item.reviewReason}}</view>
+          <view wx:if="{{item.answers.length}}" class="mt-3 rounded-[14rpx] bg-panel px-3 py-2">
+            <view wx:for="{{item.answers}}" wx:for-item="answer" wx:key="label" class="py-1 text-[length:20rpx] text-muted"><text class="font-semibold text-ink">{{answer.label}}：</text>{{answer.value}}</view>
+          </view>
+        </view>
+
+        <view wx:if="{{canReviewRegistration && (item.status === 'PENDING_REVIEW' || item.status === 'WAITLISTED')}}" class="grid grid-cols-2 gap-3 border-t border-line px-4 py-3">
+          <t-button
+            block
+            variant="outline"
+            theme="danger"
+            disabled="{{processingId && processingId !== item.id}}"
+            data-registration-id="{{item.id}}"
+            bind:tap="openRejectDialog"
+          >不通过</t-button>
+          <t-button
+            block
+            theme="primary"
+            loading="{{item.actionBusy}}"
+            disabled="{{processingId && processingId !== item.id}}"
+            data-registration-id="{{item.id}}"
+            bind:tap="approveRegistration"
+          >{{item.status === 'WAITLISTED' ? '补位' : '通过'}}</t-button>
+        </view>
+        <view wx:elif="{{canCheckIn && item.status === 'REGISTERED'}}" class="border-t border-line px-4 py-3">
+          <t-button
+            block
+            theme="primary"
+            loading="{{item.actionBusy}}"
+            disabled="{{processingId && processingId !== item.id}}"
+            data-registration-id="{{item.id}}"
+            bind:tap="checkIn"
+          >签到</t-button>
+        </view>
+        <view wx:elif="{{canUndoCheckIn && item.status === 'ATTENDED'}}" class="border-t border-line px-4 py-3">
+          <t-button
+            block
+            variant="outline"
+            theme="danger"
+            loading="{{item.actionBusy}}"
+            disabled="{{processingId && processingId !== item.id}}"
+            data-registration-id="{{item.id}}"
+            bind:tap="openUndoDialog"
+          >撤销签到</t-button>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{nextCursor}}" class="mt-5">
+      <t-button
+        block
+        variant="outline"
+        loading="{{loadingMore}}"
+        disabled="{{processingId || exporting}}"
+        bind:tap="loadMore"
+      >加载更多</t-button>
+    </view>
+
+    <view
+      wx:if="{{message}}"
+      class="mt-5 border-l-[8rpx] border-coral bg-panel px-4 py-4 text-[length:24rpx] text-muted"
+    >{{message}}</view>
+  </block>
+
+  <view
+    wx:if="{{undoDialogVisible}}"
+    class="fixed inset-0 z-50 flex items-end justify-center bg-black/45 px-4 pb-[calc(env(safe-area-inset-bottom)+24rpx)] pt-24"
+    catch:tap="closeUndoDialog"
+  >
+    <view class="w-full max-w-full rounded-[28rpx] bg-panel px-5 py-5" catch:tap="">
+      <view class="text-[length:30rpx] font-bold">撤销签到</view>
+      <view class="mt-2 text-[length:22rpx] text-muted">
+        将「{{undoNickname}}」恢复为已报名。请填写原因，操作会写入审计。
+      </view>
+      <view class="mt-4 text-[length:22rpx] font-semibold text-muted">撤销原因类别（必选）</view>
+      <view class="mt-2 flex flex-wrap gap-2">
+        <block wx:for="{{undoCategories}}" wx:key="value">
+          <view
+            wx:if="{{undoCategory === item.value}}"
+            class="rounded-full border border-forest bg-forest px-3 py-2 text-[length:22rpx] text-white"
+            data-category="{{item.value}}"
+            bind:tap="selectUndoCategory"
+          >{{item.label}}</view>
+          <view
+            wx:else
+            class="rounded-full border border-line px-3 py-2 text-[length:22rpx] text-ink"
+            data-category="{{item.value}}"
+            bind:tap="selectUndoCategory"
+          >{{item.label}}</view>
+        </block>
+      </view>
+      <view class="mt-4 text-[length:22rpx] font-semibold text-muted">补充说明（可选）</view>
+      <textarea
+        class="box-border mt-2 h-[140rpx] w-full max-w-full border border-line p-3 text-[length:25rpx]"
+        value="{{undoReasonText}}"
+        bindinput="updateUndoReasonText"
+        maxlength="120"
+        placeholder="可补充现场说明，不写入敏感信息"
+      />
+      <view class="mt-2 text-[length:20rpx] text-muted">{{undoReasonText.length || 0}}/120</view>
+      <view class="mt-5 grid grid-cols-2 gap-3">
+        <t-button block variant="outline" disabled="{{undoing}}" bind:tap="closeUndoDialog">返回</t-button>
+        <t-button block theme="danger" loading="{{undoing}}" bind:tap="confirmUndo">确认撤销</t-button>
+      </view>
+    </view>
+  </view>
+
+  <view
+    wx:if="{{rejectDialogVisible}}"
+    class="fixed inset-0 z-50 flex items-end justify-center bg-black/45 px-4 pb-[calc(env(safe-area-inset-bottom)+24rpx)] pt-24"
+    catch:tap="closeRejectDialog"
+  >
+    <view class="w-full max-w-full rounded-[28rpx] bg-panel px-5 py-5" catch:tap="">
+      <view class="text-[length:30rpx] font-bold">报名不通过</view>
+      <view class="mt-2 text-[length:22rpx] text-muted">请给 {{reviewNickname}} 一条简短、明确的说明。</view>
+      <textarea
+        class="box-border mt-4 h-[170rpx] w-full max-w-full border border-line p-3 text-[length:25rpx]"
+        value="{{reviewReason}}"
+        bindinput="updateReviewReason"
+        maxlength="300"
+        placeholder="例如：本场活动仅面向指定行业成员"
+      />
+      <view class="mt-2 text-right text-[length:20rpx] text-muted">{{reviewReason.length || 0}}/300</view>
+      <view class="mt-5 grid grid-cols-2 gap-3">
+        <t-button block variant="outline" disabled="{{processingId}}" bind:tap="closeRejectDialog">返回</t-button>
+        <t-button block theme="danger" loading="{{processingId === reviewRegistrationId}}" bind:tap="confirmReject">确认不通过</t-button>
+      </view>
+    </view>
+  </view>
+</view>

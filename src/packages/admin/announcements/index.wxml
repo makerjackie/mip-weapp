@@ -1,0 +1,19 @@
+<view id="admin-announcements-page" class="min-h-screen bg-canvas px-5 pb-[calc(env(safe-area-inset-bottom)+120rpx)] pt-5 text-ink">
+  <view class="flex items-end justify-between border-b border-ink pb-5"><view><view class="text-[length:21rpx] font-semibold tracking-[0.16em] text-brand">内容运营</view><view class="mt-2 text-[length:40rpx] font-bold">社区公告</view></view><t-button size="small" theme="primary" bind:tap="createItem">新建公告</t-button></view>
+  <view class="mt-4"><t-tabs value="{{status}}" theme="line" bind:change="changeStatus"><t-tab-panel value="" label="全部" /><t-tab-panel value="DRAFT" label="草稿" /><t-tab-panel value="PUBLISHED" label="已发布" /><t-tab-panel value="WITHDRAWN" label="已撤回" /></t-tabs></view>
+  <view wx:if="{{state === 'loading'}}" class="mt-5 bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载公告" description="{{message}}" action-text="重新加载" bind:action="loadItems" /></view>
+  <view wx:elif="{{state === 'forbidden'}}" class="mt-5"><app-empty-state title="没有公告管理权限" description="请联系主理人调整权限。" /></view>
+  <view wx:elif="{{!items.length}}" class="mt-5"><app-empty-state title="这里还没有公告" description="新建公告会先保存为草稿。" action-text="新建公告" bind:action="createItem" /></view>
+  <view wx:else class="mt-5 flex flex-col gap-3">
+    <view wx:for="{{items}}" wx:key="id" class="rounded-[22rpx] bg-panel px-4 py-4">
+      <view data-id="{{item.id}}" bind:tap="editItem"><view class="flex items-center gap-2"><view wx:if="{{item.isPinned}}" class="rounded-full bg-accent px-2 py-1 text-[length:17rpx] text-white">置顶</view><view class="min-w-0 flex-1 truncate text-[length:27rpx] font-semibold">{{item.title}}</view><view class="text-[length:19rpx] text-muted">{{item.statusText}}</view></view><view class="mt-2 line-clamp-2 text-[length:22rpx] leading-5 text-muted">{{item.summary}}</view><view class="mt-2 text-[length:18rpx] text-muted">{{item.updatedText}}</view></view>
+      <view class="mt-3 flex gap-2 border-t border-line pt-3">
+        <t-button wx:if="{{item.status !== 'PUBLISHED'}}" size="small" theme="primary" loading="{{processingId === item.id}}" data-index="{{index}}" data-transition="PUBLISH" bind:tap="transition">发布</t-button>
+        <t-button wx:if="{{item.status === 'PUBLISHED'}}" size="small" variant="outline" theme="primary" loading="{{processingId === item.id}}" data-index="{{index}}" data-transition="{{item.isPinned ? 'UNPIN' : 'PIN'}}" bind:tap="transition">{{item.isPinned ? '取消置顶' : '置顶'}}</t-button>
+        <t-button wx:if="{{item.status === 'PUBLISHED'}}" size="small" variant="outline" theme="danger" loading="{{processingId === item.id}}" data-index="{{index}}" data-transition="WITHDRAW" bind:tap="transition">撤回</t-button>
+      </view>
+    </view>
+  </view>
+  <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
+</view>

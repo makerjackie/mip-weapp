@@ -1,0 +1,546 @@
+{
+  "schemaVersion": 1,
+  "case": "mip-weapp",
+  "coverage": "full",
+  "routeCount": 41,
+  "notes": [
+    "Canonical runtime route contract for the membership case.",
+    "Must match src/app.json page inventory exactly.",
+    "config/project.json routes must list the same 41 paths.",
+    "verify-runtime.mjs loads this file; error is never a success state for data routes."
+  ],
+  "deviceRequiredCapabilities": [
+    {
+      "id": "phone-auth",
+      "label": "微信手机号授权",
+      "routes": [
+        "packages/member/access/index",
+        "packages/member/event-detail/index",
+        "pages/membership/index"
+      ],
+      "reason": "open-type=getPhoneNumber only works on a real device"
+    },
+    {
+      "id": "wechat-pay",
+      "label": "微信支付",
+      "routes": [
+        "pages/membership/index",
+        "packages/member/payment-result/index",
+        "packages/member/order-detail/index"
+      ],
+      "reason": "wx.requestPayment and real entitlement require a real device and merchant binding"
+    },
+    {
+      "id": "customer-service",
+      "label": "小程序客服会话",
+      "routes": ["packages/member/help/index"],
+      "reason": "open-type=contact opens WeChat customer service on a real device"
+    },
+    {
+      "id": "subscription-message",
+      "label": "活动订阅消息",
+      "routes": [
+        "packages/member/event-detail/index"
+      ],
+      "reason": "订阅授权必须由用户手势触发，授权结果和微信送达都需要真机验证"
+    },
+    {
+      "id": "share",
+      "label": "分享",
+      "routes": ["packages/member/event-detail/index"],
+      "reason": "Share sheet behavior is device/WeChat-client only when enabled"
+    },
+    {
+      "id": "phone-calendar",
+      "label": "系统日历",
+      "routes": ["packages/member/event-detail/index"],
+      "reason": "wx.addPhoneCalendar requires real-device permission and calendar verification"
+    },
+    {
+      "id": "photo-upload",
+      "label": "活动相册上传",
+      "routes": [
+        "packages/member/event-album/index",
+        "packages/admin/event-album/index"
+      ],
+      "reason": "相册/相机选择、客户端压缩、CloudBase 上传与内容审核需要真机链路"
+    },
+    {
+      "id": "qr-checkin",
+      "label": "二维码签到",
+      "routes": [
+        "packages/member/ticket/index",
+        "packages/admin/event-registrations/index"
+      ],
+      "reason": "动态签到码需要两台真机验证出示、扫码、重复扫码与撤销签到"
+    },
+    {
+      "id": "two-account-follow",
+      "label": "双账号关注关系",
+      "routes": [
+        "packages/member/member-detail/index",
+        "packages/member/connections/index"
+      ],
+      "reason": "关注、取消关注、粉丝列表与互相关注状态需要两个真实微信账号闭环验证"
+    }
+  ],
+  "sensitivePatterns": [
+    "openid",
+    "open_id",
+    "from_openid",
+    "fileid",
+    "file_id",
+    "cloud://",
+    "mysql://",
+    "jdbc:",
+    "secretid",
+    "secretkey",
+    "appsecret",
+    "phone_number",
+    "phonenumber",
+    "ticket_code"
+  ],
+  "routes": [
+    {
+      "id": "U01",
+      "name": "案例首页",
+      "path": "pages/index/index",
+      "selector": "#membership-case-home",
+      "group": "public",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "readyAssertion": "state === 'ready'",
+      "tab": true
+    },
+    {
+      "id": "U02",
+      "name": "成员推荐",
+      "path": "pages/explore/index",
+      "selector": "#membership-explore-page",
+      "group": "public",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "readyAssertion": "state === 'ready'",
+      "tab": true
+    },
+    {
+      "id": "U03",
+      "name": "线下活动",
+      "path": "pages/events/index",
+      "selector": "#membership-events-page",
+      "group": "public",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "readyAssertion": "state === 'ready'",
+      "tab": true
+    },
+    {
+      "id": "U04",
+      "name": "会员支付",
+      "path": "pages/membership/index",
+      "selector": "#membership-checkout-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "readyAssertion": "state === 'ready'",
+      "deviceRequired": ["phone-auth", "wechat-pay"]
+    },
+    {
+      "id": "U05",
+      "name": "个人中心",
+      "path": "pages/profile/index",
+      "selector": "#membership-profile-page",
+      "group": "public",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'",
+      "tab": true
+    },
+    {
+      "id": "U06",
+      "name": "继续使用",
+      "path": "packages/member/access/index",
+      "selector": "#member-access-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'",
+      "deviceRequired": ["phone-auth", "subscription-message"]
+    },
+    {
+      "id": "U07",
+      "name": "编辑公开资料",
+      "path": "packages/member/profile-edit/index",
+      "selector": "#profile-edit-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "U08",
+      "name": "成员资料详情",
+      "path": "packages/member/member-detail/index",
+      "selector": "#member-detail-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["memberId"],
+      "deviceRequired": ["two-account-follow"]
+    },
+    {
+      "id": "U20",
+      "name": "关注与粉丝",
+      "path": "packages/member/connections/index",
+      "selector": "#member-connections-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "readyAssertion": "state === 'ready'",
+      "deviceRequired": ["two-account-follow"]
+    },
+    {
+      "id": "U24",
+      "name": "社区公告",
+      "path": "packages/member/announcements/index",
+      "selector": "#member-announcements-page",
+      "group": "public",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "U25",
+      "name": "公告详情",
+      "path": "packages/member/announcement-detail/index",
+      "selector": "#member-announcement-detail-page",
+      "group": "public",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["announcementId"]
+    },
+    {
+      "id": "U26",
+      "name": "已屏蔽的成员",
+      "path": "packages/member/blocked-members/index",
+      "selector": "#member-blocked-members-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "U09",
+      "name": "活动详情",
+      "path": "packages/member/event-detail/index",
+      "selector": "#event-detail-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["eventId"],
+      "deviceRequired": ["phone-auth"]
+    },
+    {
+      "id": "U21",
+      "name": "活动相册",
+      "path": "packages/member/event-album/index",
+      "selector": "#event-album-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["eventId"],
+      "deviceRequired": ["photo-upload"]
+    },
+    {
+      "id": "U23",
+      "name": "活动参与者",
+      "path": "packages/member/event-participants/index",
+      "selector": "#event-participants-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["eventId"]
+    },
+    {
+      "id": "U10",
+      "name": "确认报名",
+      "path": "packages/member/registration-confirm/index",
+      "selector": "#registration-confirm-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["eventId"]
+    },
+    {
+      "id": "U11",
+      "name": "活动凭证",
+      "path": "packages/member/ticket/index",
+      "selector": "#event-ticket-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["eventId"],
+      "deviceRequired": ["qr-checkin"]
+    },
+    {
+      "id": "U12",
+      "name": "我的订单",
+      "path": "packages/member/orders/index",
+      "selector": "#member-orders-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "U13",
+      "name": "订单详情",
+      "path": "packages/member/order-detail/index",
+      "selector": "#order-detail-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["orderId"],
+      "deviceRequired": ["wechat-pay"]
+    },
+    {
+      "id": "U14",
+      "name": "支付结果",
+      "path": "packages/member/payment-result/index",
+      "selector": "#payment-result-page",
+      "group": "member",
+      "kind": "result",
+      "states": ["checking", "success", "pending", "failed"],
+      "readyAssertion": "result in checking|success|pending|failed",
+      "query": ["orderId"],
+      "deviceRequired": ["wechat-pay"]
+    },
+    {
+      "id": "U15",
+      "name": "我的活动凭证",
+      "path": "packages/member/registrations/index",
+      "selector": "#member-registrations-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "U22",
+      "name": "消息通知",
+      "path": "packages/member/notifications/index",
+      "selector": "#member-notifications-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "U16",
+      "name": "会员权益说明",
+      "path": "packages/member/benefits/index",
+      "selector": "#member-benefits-page",
+      "group": "member",
+      "kind": "static-data",
+      "states": ["ready", "error"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "U17",
+      "name": "隐私与账户",
+      "path": "packages/member/privacy/index",
+      "selector": "#privacy-account-page",
+      "group": "member",
+      "kind": "static",
+      "states": ["ready"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "U18",
+      "name": "帮助与客服",
+      "path": "packages/member/help/index",
+      "selector": "#member-help-page",
+      "group": "member",
+      "kind": "static",
+      "states": ["ready"],
+      "readyAssertion": "state === 'ready'",
+      "deviceRequired": ["customer-service"]
+    },
+    {
+      "id": "U19",
+      "name": "关于同行会",
+      "path": "packages/member/about/index",
+      "selector": "#member-about-page",
+      "group": "member",
+      "kind": "static",
+      "states": ["ready"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A01",
+      "name": "运营工作台",
+      "path": "packages/admin/dashboard/index",
+      "selector": "#admin-dashboard-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A02",
+      "name": "活动管理",
+      "path": "packages/admin/managed-events/index",
+      "selector": "#admin-managed-events-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A03",
+      "name": "单场活动管理",
+      "path": "packages/admin/event-console/index",
+      "selector": "#admin-event-console-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["eventId"]
+    },
+    {
+      "id": "A04",
+      "name": "活动编辑",
+      "path": "packages/admin/events/index",
+      "selector": "#admin-events-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["eventId"]
+    },
+    {
+      "id": "A05",
+      "name": "活动报名名单",
+      "path": "packages/admin/event-registrations/index",
+      "selector": "#admin-event-registrations-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["eventId"],
+      "deviceRequired": ["qr-checkin"]
+    },
+    {
+      "id": "A06",
+      "name": "活动管理员",
+      "path": "packages/admin/event-managers/index",
+      "selector": "#admin-event-managers-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["eventId"]
+    },
+    {
+      "id": "A07",
+      "name": "活动相册审核",
+      "path": "packages/admin/event-album/index",
+      "selector": "#admin-event-album-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["eventId"],
+      "deviceRequired": ["photo-upload"]
+    },
+    {
+      "id": "A08",
+      "name": "成员运营",
+      "path": "packages/admin/profiles/index",
+      "selector": "#admin-profiles-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'"
+    },
+    {
+      "id": "A09",
+      "name": "订单运营",
+      "path": "packages/admin/orders/index",
+      "selector": "#admin-orders-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A12",
+      "name": "统一异常中心",
+      "path": "packages/admin/exceptions/index",
+      "selector": "#admin-exceptions-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A13",
+      "name": "公告管理",
+      "path": "packages/admin/announcements/index",
+      "selector": "#admin-announcements-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A14",
+      "name": "公告编辑",
+      "path": "packages/admin/announcement-editor/index",
+      "selector": "#admin-announcement-editor-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A15",
+      "name": "成员举报",
+      "path": "packages/admin/reports/index",
+      "selector": "#admin-reports-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A10",
+      "name": "运营审计",
+      "path": "packages/admin/audit/index",
+      "selector": "#admin-audit-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A11",
+      "name": "管理员与权限",
+      "path": "packages/admin/roles/index",
+      "selector": "#admin-roles-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'"
+    }
+  ]
+}

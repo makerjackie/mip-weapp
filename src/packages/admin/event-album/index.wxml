@@ -1,0 +1,27 @@
+<view id="admin-event-album-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view class="rounded-[22rpx] bg-panel px-4 py-4">
+    <view class="text-[length:20rpx] font-semibold text-brand">活动相册</view>
+    <view class="mt-1 truncate text-[length:30rpx] font-bold">{{eventTitle || '本场活动'}}</view>
+    <view wx:if="{{startsText}}" class="mt-1 text-[length:20rpx] text-muted">{{startsText}}</view>
+  </view>
+  <view class="mt-4 flex items-center justify-between"><view class="text-[length:25rpx] font-semibold">待审核照片</view><view class="text-[length:20rpx] text-muted">{{items.length}} 张</view></view>
+  <view class="mt-1 text-[length:21rpx] text-muted">审核通过后，照片会进入活动公开相册。</view>
+  <view wx:if="{{state === 'loading'}}" class="mt-5 rounded-[26rpx] bg-panel px-5 py-8"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载照片" description="{{message}}" action-text="重试" bind:action="load" /></view>
+  <view wx:elif="{{state === 'forbidden'}}" class="mt-5"><app-empty-state title="没有相册管理权限" description="请联系活动负责人确认你的协作角色。" /></view>
+  <view wx:elif="{{items.length === 0}}" class="mt-5"><app-empty-state title="没有待审核照片" description="新的活动照片会出现在这里。" /></view>
+  <view wx:else class="mt-5 grid grid-cols-2 gap-3">
+    <view wx:for="{{items}}" wx:key="id" class="overflow-hidden rounded-[24rpx] bg-panel">
+      <image class="h-[250rpx] w-full bg-brand-soft" src="{{item.imageUrl}}" mode="aspectFill" data-url="{{item.imageUrl}}" bind:tap="preview" />
+      <view class="px-3 py-3">
+        <view class="truncate text-[length:22rpx] font-semibold">{{item.nickname}}</view>
+        <view wx:if="{{item.caption}}" class="mt-1 line-clamp-2 text-[length:19rpx] text-muted">{{item.caption}}</view>
+        <view class="mt-3 grid grid-cols-2 gap-2">
+          <t-button size="small" variant="outline" theme="danger" loading="{{processingId === item.id}}" data-photo-id="{{item.id}}" data-decision="reject" bind:tap="review">隐藏</t-button>
+          <t-button size="small" theme="primary" loading="{{processingId === item.id}}" data-photo-id="{{item.id}}" data-decision="approve" bind:tap="review">通过</t-button>
+        </view>
+      </view>
+    </view>
+  </view>
+  <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:22rpx] text-[#9F4727]">{{message}}</view>
+</view>

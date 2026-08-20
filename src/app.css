@@ -1,0 +1,52 @@
+@import 'tailwindcss';
+@source "./**/*.{wxml,js,ts}";
+@source not "../dist/**";
+@source not "../node_modules/**";
+
+@theme {
+  --color-canvas: #f6f4ee;
+  --color-panel: #fffefa;
+  --color-panel-muted: #f0eee7;
+  --color-ink: #1d2a23;
+  --color-muted: #69726b;
+  --color-line: #ddd9cf;
+  --color-brand: #285e46;
+  --color-on-brand: #fff;
+  --color-brand-active: #1e4936;
+  --color-brand-soft: #e2eee7;
+  --color-coral: #e77745;
+  --color-accent: #e77745;
+  --color-gold: #bd8a2f;
+  --color-danger: #b8453e;
+  --color-membership-brand: #285e46;
+  --color-membership-muted: #69726b;
+  --color-membership-panel: #fffefa;
+}
+
+page {
+  min-height: 100%;
+  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  color: #1d2a23;
+  background: #f6f4ee;
+
+  --td-brand-color: #285e46;
+  --td-brand-color-active: #1e4936;
+  --td-brand-color-disabled: #9eb8a8;
+  --td-bg-color-container: #fffefa;
+  --td-button-border-radius: 18rpx;
+  --td-button-large-height: 92rpx;
+  --td-tab-bar-active-color: #285e46;
+  --td-tab-bar-color: #69726b;
+  --td-tab-bar-bg-color: #fffefa;
+  --td-tab-bar-active-bg: #e2eee7;
+  --td-tab-bar-border-color: #ddd9cf;
+}
+
+button::after {
+  border: 0;
+}
+
+textarea,
+input {
+  box-sizing: border-box;
+}

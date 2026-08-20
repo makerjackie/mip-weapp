@@ -1,0 +1,93 @@
+{
+  "$schema": "https://vite.icebreaker.top/app.json",
+  "pages": [
+    "pages/index/index",
+    "pages/explore/index",
+    "pages/membership/index",
+    "pages/events/index",
+    "pages/profile/index"
+  ],
+  "subPackages": [
+    {
+      "root": "packages/member",
+      "pages": [
+        "access/index",
+        "connections/index",
+        "announcements/index",
+        "announcement-detail/index",
+        "blocked-members/index",
+        "member-detail/index",
+        "profile-edit/index",
+        "event-detail/index",
+        "event-participants/index",
+        "event-album/index",
+        "registration-confirm/index",
+        "ticket/index",
+        "orders/index",
+        "order-detail/index",
+        "payment-result/index",
+        "registrations/index",
+        "notifications/index",
+        "benefits/index",
+        "privacy/index",
+        "help/index",
+        "about/index"
+      ]
+    },
+    {
+      "root": "packages/admin",
+      "pages": [
+        "dashboard/index",
+        "managed-events/index",
+        "event-console/index",
+        "profiles/index",
+        "events/index",
+        "event-managers/index",
+        "event-album/index",
+        "event-registrations/index",
+        "orders/index",
+        "exceptions/index",
+        "announcements/index",
+        "announcement-editor/index",
+        "reports/index",
+        "audit/index",
+        "roles/index"
+      ]
+    }
+  ],
+  "window": {
+    "navigationBarTitleText": "同行会",
+    "navigationBarBackgroundColor": "#F6F4EE",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F6F4EE",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#69726B",
+    "selectedColor": "#285E46",
+    "backgroundColor": "#FFFEFA",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/explore/index",
+        "text": "认识"
+      },
+      {
+        "pagePath": "pages/events/index",
+        "text": "活动"
+      },
+      {
+        "pagePath": "pages/profile/index",
+        "text": "我的"
+      }
+    ]
+  },
+  "componentFramework": "glass-easel",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents"
+}

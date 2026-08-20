@@ -1,0 +1,7 @@
+<view class="flex items-center justify-between gap-4">
+  <view class="min-w-0 flex-1">
+    <view wx:if="{{eyebrow}}" class="text-[length:20rpx] font-semibold text-accent">{{eyebrow}}</view>
+    <view class="mt-1 text-[length:32rpx] font-bold text-ink">{{title}}</view>
+  </view>
+  <view wx:if="{{actionText}}" class="shrink-0 rounded-full bg-brand-soft px-4 py-2 text-[length:22rpx] font-semibold text-brand active:opacity-70" bind:tap="handleAction">{{actionText}}</view>
+</view>

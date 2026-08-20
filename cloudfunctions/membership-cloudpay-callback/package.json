@@ -1,0 +1,16 @@
+{
+  "name": "membership-cloudpay-callback",
+  "version": "0.2.0",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": ">=20 <21"
+  },
+  "scripts": {
+    "test": "node --test tests"
+  },
+  "dependencies": {
+    "ws": "^8.18.3",
+    "wx-server-sdk": "4.0.2"
+  }
+}

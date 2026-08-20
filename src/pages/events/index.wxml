@@ -1,0 +1,49 @@
+<view id="membership-events-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+160rpx)] pt-4 text-ink">
+  <view id="case-context-host" wx:if="{{isEmbeddedCase}}"><case-context-bar id="case-context-component" /></view>
+  <view class="flex items-end justify-between px-1">
+    <view>
+      <view class="text-[length:38rpx] font-bold">活动</view>
+      <view class="mt-1 text-[length:22rpx] text-muted">和有趣的人，做有意义的事。</view>
+    </view>
+    <view class="pb-1 text-[length:21rpx] font-semibold text-brand">{{sourceCount ? sourceCount + ' 场可选' : ''}}</view>
+  </view>
+  <view class="mt-4 flex items-center gap-2 rounded-[18rpx] border border-line bg-panel px-4">
+    <t-icon name="search" size="34rpx" color="var(--color-muted)" />
+    <input
+      class="box-border h-[72rpx] min-w-0 flex-1 max-w-full text-[length:24rpx]"
+      value="{{searchInput}}"
+      bindinput="onSearchInput"
+      bindconfirm="onSearchConfirm"
+      confirm-type="search"
+      maxlength="50"
+      placeholder="搜索活动名称或地点"
+    />
+    <view wx:if="{{searchInput}}" class="px-2 py-2 text-[length:21rpx] text-muted active:opacity-70" bind:tap="clearSearch">清除</view>
+  </view>
+  <view id="event-filter-tabs" class="mt-3 border-b border-line">
+    <t-tabs value="{{view}}" theme="line" space-evenly bind:change="changeView">
+      <t-tab-panel value="upcoming" label="发现活动" />
+      <t-tab-panel value="mine" label="我的活动" />
+    </t-tabs>
+  </view>
+  <scroll-view wx:if="{{view === 'upcoming'}}" scroll-x enhanced show-scrollbar="{{false}}" class="mt-3 whitespace-nowrap">
+    <view class="inline-flex gap-2 pr-4">
+      <view wx:if="{{timeFilter === 'all'}}" class="rounded-full bg-brand px-4 py-2 text-[length:21rpx] font-semibold text-white" data-filter="all" bind:tap="changeTimeFilter">全部</view>
+      <view wx:else class="rounded-full bg-panel px-4 py-2 text-[length:21rpx] text-muted" data-filter="all" bind:tap="changeTimeFilter">全部</view>
+      <view wx:if="{{timeFilter === 'next7'}}" class="rounded-full bg-brand px-4 py-2 text-[length:21rpx] font-semibold text-white" data-filter="next7" bind:tap="changeTimeFilter">7 天内</view>
+      <view wx:else class="rounded-full bg-panel px-4 py-2 text-[length:21rpx] text-muted" data-filter="next7" bind:tap="changeTimeFilter">7 天内</view>
+      <view wx:if="{{timeFilter === 'weekend'}}" class="rounded-full bg-brand px-4 py-2 text-[length:21rpx] font-semibold text-white" data-filter="weekend" bind:tap="changeTimeFilter">本周末</view>
+      <view wx:else class="rounded-full bg-panel px-4 py-2 text-[length:21rpx] text-muted" data-filter="weekend" bind:tap="changeTimeFilter">本周末</view>
+      <view wx:if="{{timeFilter === 'month'}}" class="rounded-full bg-brand px-4 py-2 text-[length:21rpx] font-semibold text-white" data-filter="month" bind:tap="changeTimeFilter">本月</view>
+      <view wx:else class="rounded-full bg-panel px-4 py-2 text-[length:21rpx] text-muted" data-filter="month" bind:tap="changeTimeFilter">本月</view>
+    </view>
+  </scroll-view>
+  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[28rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error'}}" class="mt-6"><app-empty-state title="暂时无法加载活动" description="服务暂时没有响应，请稍后重试。" action-text="重新加载" bind:action="loadEvents" /></view>
+  <view wx:elif="{{events.length === 0}}" class="mt-6"><app-empty-state title="{{activeQuery ? '没有找到相关活动' : timeFilter !== 'all' && view === 'upcoming' ? '这个时间段暂无活动' : emptyTitle}}" description="{{activeQuery ? '换个关键词试试，或清除搜索条件。' : timeFilter !== 'all' && view === 'upcoming' ? '试试其他时间，或查看全部活动。' : emptyDescription}}" /></view>
+  <view wx:else id="events-list" class="mt-5 flex flex-col gap-4">
+    <view wx:for="{{events}}" wx:key="id" class="event-list-item block"><event-card event="{{item}}" compact bind:select="openEvent" /></view>
+  </view>
+  <view wx:if="{{message && state !== 'error'}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
+  <view id="case-tab-host" wx:if="{{isEmbeddedCase}}"><case-tab-bar id="case-tab-component" value="pages/events/index" /></view>
+</view>

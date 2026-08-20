@@ -1,0 +1,41 @@
+<view wx:if="{{compact}}" class="flex h-[210rpx] overflow-hidden rounded-[22rpx] border border-line bg-panel active:bg-panel-muted" bind:tap="handleSelect">
+  <image wx:if="{{event.coverUrl}}" class="h-[210rpx] w-[210rpx] shrink-0 bg-brand-soft" mode="aspectFill" src="{{event.coverUrl}}" />
+  <view wx:else class="flex h-[210rpx] w-[210rpx] shrink-0 items-center justify-center bg-brand-soft"><t-icon name="calendar-event" size="54rpx" color="var(--color-brand)" /></view>
+  <view class="flex min-w-0 flex-1 flex-col px-4 py-3">
+    <view class="flex items-center justify-between gap-2">
+      <view class="truncate text-[length:19rpx] font-semibold text-accent">{{event.startsText}}</view>
+      <view wx:if="{{event.statusText}}" class="shrink-0 rounded-full bg-brand-soft px-2 py-1 text-[length:17rpx] font-semibold text-brand">{{event.statusText}}</view>
+    </view>
+    <view class="mt-2 line-clamp-2 text-[length:26rpx] font-bold leading-6">{{event.title}}</view>
+    <view class="mt-2 truncate text-[length:20rpx] text-muted">{{event.location || '地点待定'}}</view>
+    <view class="mt-auto flex items-center justify-between gap-2">
+      <view class="truncate text-[length:19rpx] text-muted">{{event.availabilityText}}</view>
+      <view wx:if="{{event.priceText}}" class="shrink-0 text-[length:19rpx] font-semibold text-brand">{{event.priceText}}</view>
+    </view>
+  </view>
+</view>
+<view wx:else class="overflow-hidden rounded-[28rpx] bg-panel shadow-[0_8rpx_32rpx_rgba(29,42,35,0.06)]">
+  <view class="active:opacity-80" bind:tap="handleSelect">
+    <image wx:if="{{event.coverUrl}}" class="h-[280rpx] w-full bg-brand-soft" mode="aspectFill" src="{{event.coverUrl}}" />
+    <view class="px-4 py-4">
+      <view class="flex items-start justify-between gap-4">
+        <view class="min-w-0 flex-1">
+          <view class="text-[length:21rpx] font-semibold text-accent">{{event.startsText}}</view>
+          <view class="mt-1 line-clamp-2 text-[length:30rpx] font-bold">{{event.title}}</view>
+          <view class="mt-2 text-[length:22rpx] text-muted">{{event.location}} · {{event.availabilityText}}</view>
+        </view>
+        <view wx:if="{{event.priceText}}" class="rounded-full bg-brand-soft px-3 py-2 text-[length:21rpx] font-semibold text-brand">{{event.priceText}}</view>
+      </view>
+    </view>
+  </view>
+  <view wx:if="{{showAction}}" class="px-4 pb-4 active:opacity-70">
+    <t-button
+      block
+      theme="primary"
+      variant="outline"
+      disabled="{{event.action === 'registered' || event.action === 'payment' || event.action === 'full' || event.action === 'closed'}}"
+      loading="{{actionLoading}}"
+      catch:tap="handleAction"
+    >{{event.actionLabel}}</t-button>
+  </view>
+</view>

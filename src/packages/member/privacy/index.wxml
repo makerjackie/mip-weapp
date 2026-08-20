@@ -1,0 +1,13 @@
+<view id="privacy-account-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view class="px-1"><view class="text-[length:22rpx] font-semibold text-accent">你的数据</view><view class="mt-1 text-[length:38rpx] font-bold">隐私与账号</view><view class="mt-2 text-[length:22rpx] text-muted">只收集完成相应服务所必需的信息。</view></view>
+  <view class="mt-5 flex flex-col gap-3">
+    <view class="rounded-[24rpx] bg-panel px-5 py-5"><view class="text-[length:27rpx] font-semibold">微信账号</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">用于识别账号、会员权益和订单，不会作为公开资料展示。</view></view>
+    <view class="rounded-[24rpx] bg-panel px-5 py-5"><view class="text-[length:27rpx] font-semibold">手机号</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">仅在主动授权后用于活动、支付和必要联系，不会展示给其他成员。</view></view>
+    <view class="rounded-[24rpx] bg-panel px-5 py-5"><view class="text-[length:27rpx] font-semibold">支付记录</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">订单和退款记录按法律与财务要求保存，可在订单详情查看状态。</view></view>
+  </view>
+  <view class="mt-5 overflow-hidden rounded-[24rpx] bg-panel">
+    <view class="flex min-h-[96rpx] items-center justify-between px-5 active:bg-panel-muted" bind:tap="openBlockedMembers"><view><view class="text-[length:27rpx] font-semibold">已屏蔽的成员</view><view class="mt-1 text-[length:21rpx] text-muted">查看或恢复你主动屏蔽的成员</view></view><t-icon name="chevron-right" size="38rpx" color="var(--color-muted)" /></view>
+  </view>
+  <view class="mt-7 rounded-[24rpx] border border-danger bg-panel px-5 py-5"><view class="text-[length:28rpx] font-semibold text-danger">注销账号</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">公开资料会匿名化，会员权益和未来报名会终止；依法需保留的交易记录不会删除。</view><view class="mt-5"><t-button block theme="danger" variant="outline" loading="{{deleting}}" bind:tap="deleteAccount">注销当前账号</t-button></view></view>
+  <view wx:if="{{message}}" class="mt-4 rounded-[18rpx] bg-[#F8E8E6] px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
+</view>

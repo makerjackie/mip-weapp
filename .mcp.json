@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "weapp-vite": {
+      "command": "node",
+      "args": [
+        "scripts/mcp/weapp-vite.mjs"
+      ]
+    }
+  }
+}

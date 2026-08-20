@@ -1,0 +1,117 @@
+{
+  "version": 1,
+  "migrations": [
+    {
+      "name": "member_mysql_schema",
+      "version": "20260719010100",
+      "sql": "database/mysql/001_member_schema.sql",
+      "sqlSha256": "095ac3084f0e528c45464c04cbd25789e92d7941630a0cade77ad647133df807",
+      "rollback": "database/mysql/rollback/001_member_schema.sql",
+      "rollbackSha256": "5023a645a1cb93087e665896ff20adb1f75f55411377bca35dac06feaa3e3c47"
+    },
+    {
+      "name": "activity_operations",
+      "version": "20260723220000",
+      "sql": "database/mysql/002_activity_operations.sql",
+      "sqlSha256": "71609949877057f1188cfd71ebd1d156ceec0d9b1afe18a61cec275b5eb69d3e",
+      "rollback": "database/mysql/rollback/002_activity_operations.sql",
+      "rollbackSha256": "1ddf8547f3d01df536428c392cc39f282c6a02c06003cd5c190b7872f9aa55fe"
+    },
+    {
+      "name": "export_integrity",
+      "version": "20260723230000",
+      "sql": "database/mysql/003_export_integrity.sql",
+      "sqlSha256": "9a6e4e1b689daf4afddcd1146c60cfdaf0e16000b516ee5c2c4306461b2c190c",
+      "rollback": "database/mysql/rollback/003_export_integrity.sql",
+      "rollbackSha256": "e3fb2822259b3c73796361fb9d5863e867862bf2bb7e05117e43faf3de59364a"
+    },
+    {
+      "name": "media_cleanup_outbox",
+      "version": "20260724010000",
+      "sql": "database/mysql/004_media_cleanup_outbox.sql",
+      "sqlSha256": "647e66afdcb564e851c10bb13bca245c889861aab103334d7e7e4b34d5223f18",
+      "rollback": "database/mysql/rollback/004_media_cleanup_outbox.sql",
+      "rollbackSha256": "ceea10ea92c89315022c949ba9009119b501fa0ee6967982ba1d6665e6246abe"
+    },
+    {
+      "name": "activity_platform",
+      "version": "20260725010000",
+      "sql": "database/mysql/005_activity_platform.sql",
+      "sqlSha256": "5878a841b097505188955da35ef5cbfbcddb9e3a19f7dbd7c2dc8c9c631c1d58",
+      "rollback": "database/mysql/rollback/005_activity_platform.sql",
+      "rollbackSha256": "732368cd5c6fbc42834091f248c8d0a9ecad215a9d098e652d1ce519a7f82bbd"
+    },
+    {
+      "name": "registration_ticket_backfill",
+      "version": "20260725020000",
+      "sql": "database/mysql/006_registration_ticket_backfill.sql",
+      "sqlSha256": "e66a5b6a10eb5d0d8ef95de0c7fcc4c45db266158aa49192b0260ae656b50d6d",
+      "rollback": "database/mysql/rollback/006_registration_ticket_backfill.sql",
+      "rollbackSha256": "506d7efe0068bb57bdb9333e1287c5e8facfe3ac10a4d355c2718e455092f0a0"
+    },
+    {
+      "name": "event_growth_core",
+      "version": "20260725030000",
+      "sql": "database/mysql/007_event_growth_core.sql",
+      "sqlSha256": "6408ae07ec353f8f6f969873734393b34d5a26295d27e8eedf27ec7a370df8f4",
+      "rollback": "database/mysql/rollback/007_event_growth_core.sql",
+      "rollbackSha256": "b72ca6d015458871951260bdfe4a37176a928dfbb9809cb35eec095036fe2d79"
+    },
+    {
+      "name": "event_role_simplification",
+      "version": "20260725040000",
+      "sql": "database/mysql/008_event_role_simplification.sql",
+      "sqlSha256": "fda6d78f8e5b357f42fdfbd1f194400ab705205e532eba92b6aab3a2482f1cb5",
+      "rollback": "database/mysql/rollback/008_event_role_simplification.sql",
+      "rollbackSha256": "0f83c407f8a193f9bcbb2b4899767faba0a697785939675b993e178b06474907"
+    },
+    {
+      "name": "notifications_and_operations",
+      "version": "20260725050000",
+      "sql": "database/mysql/009_notifications_and_operations.sql",
+      "sqlSha256": "d930c868d49d80c1dd692548aaa2d924fc1dbc659ba2e64682429fa52ab0087c",
+      "rollback": "database/mysql/rollback/009_notifications_and_operations.sql",
+      "rollbackSha256": "54fd33fcc926d426c39dd7d3ff983aabe9c9ab96a5424b1b92913d9e4a504fc1"
+    },
+    {
+      "name": "media_failure_tracking",
+      "version": "20260725060000",
+      "sql": "database/mysql/010_media_failure_tracking.sql",
+      "sqlSha256": "c3ac97d6cafa85066864ae384a4d2ce7a276602de92ae612cac899dae4d05af6",
+      "rollback": "database/mysql/rollback/010_media_failure_tracking.sql",
+      "rollbackSha256": "e1efac33b1b214682f431010d1cf6cb800e592a9bb79cd7c25709c25247022d7"
+    },
+    {
+      "name": "event_participant_visibility",
+      "version": "20260728090000",
+      "sql": "database/mysql/011_event_participant_visibility.sql",
+      "sqlSha256": "4029332ec29811444bf045db29ee7f968a4dd8b982a4e7caaa79370a8c042c16",
+      "rollback": "database/mysql/rollback/011_event_participant_visibility.sql",
+      "rollbackSha256": "97e7a6157dab6a7cb186d3fee02de43721512833b7f31289835b1ec34b5bf2cf"
+    },
+    {
+      "name": "community_foundation",
+      "version": "20260728113000",
+      "sql": "database/mysql/012_community_foundation.sql",
+      "sqlSha256": "4d8c2beba82770c592f5c0dadae81f4ce33a3583be27666edc5c732eb752b779",
+      "rollback": "database/mysql/rollback/012_community_foundation.sql",
+      "rollbackSha256": "adbc14d0455f80a374003c7150cf0ce433f59f8e3b8c50a8c70ea2310d948b8e"
+    },
+    {
+      "name": "event_owner_backfill",
+      "version": "20260728143000",
+      "sql": "database/mysql/013_event_owner_backfill.sql",
+      "sqlSha256": "ad6718473a2befecf288dfd600bfebd4ca459d17bcc20790d049aec5e7d93a0a",
+      "rollback": "database/mysql/rollback/013_event_owner_backfill.sql",
+      "rollbackSha256": "9a78b5e3ccfc37979f22881614abb23e52a559bbb4e84634d31102e1c44b5d75"
+    },
+    {
+      "name": "event_owner_backfill_v2",
+      "version": "20260728144500",
+      "sql": "database/mysql/014_event_owner_backfill_v2.sql",
+      "sqlSha256": "492af29b93bce302c68a5c567129d911d742f1d9c33d35af02a25ba778c684e6",
+      "rollback": "database/mysql/rollback/014_event_owner_backfill_v2.sql",
+      "rollbackSha256": "20c684846aa4f82373a9ec9eb1a9a640649ba8979515d4bbcebd1140de4441c4"
+    }
+  ]
+}

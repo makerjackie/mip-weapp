@@ -1,0 +1,24 @@
+<t-popup visible="{{visible}}" placement="bottom" close-on-overlay-click="{{!loading}}" prevent-scroll-through bind:visible-change="handleVisibleChange">
+  <view id="phone-login-sheet" class="rounded-t-[38rpx] bg-panel px-5 pb-[calc(env(safe-area-inset-bottom)+32rpx)] pt-4 text-ink">
+    <view class="mx-auto h-[8rpx] w-[72rpx] rounded-full bg-line" />
+    <view class="mt-4 flex items-start justify-between gap-4">
+      <view class="min-w-0 flex-1">
+        <view class="text-[length:34rpx] font-bold">{{title}}</view>
+        <view class="mt-2 text-[length:23rpx] text-muted">{{description}}</view>
+      </view>
+      <view class="flex h-[64rpx] w-[64rpx] shrink-0 items-center justify-center rounded-full bg-panel-muted active:opacity-70" bind:tap="close">
+        <t-icon name="close" size="36rpx" color="var(--color-muted)" />
+      </view>
+    </view>
+    <button open-type="getPhoneNumber" disabled="{{loading}}" class="mt-6 flex h-[96rpx] w-full items-center justify-center gap-2 rounded-[18rpx] border-0 bg-brand text-[length:28rpx] font-semibold text-white active:bg-brand-active disabled:opacity-60" bind:getphonenumber="handlePhone">
+      <view class="flex h-[38rpx] w-[38rpx] items-center justify-center rounded-[8rpx] bg-white"><t-icon name="logo-wechat-stroke" size="26rpx" color="var(--color-brand)" /></view>
+      <text>{{loading ? '正在登录…' : '微信手机号快捷登录'}}</text>
+    </button>
+    <view class="mt-4 text-center text-[length:20rpx] text-muted">
+      登录即表示同意
+      <text class="text-brand" bind:tap="openAgreement">《用户协议》</text>
+      与
+      <text class="text-brand" bind:tap="openPrivacy">《隐私政策》</text>
+    </view>
+  </view>
+</t-popup>

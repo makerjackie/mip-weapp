@@ -1,0 +1,11 @@
+{
+  "navigationBarTitleText": "我的关注",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "app-empty-state": "/components/empty-state/index",
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
+    "t-tabs": "tdesign-miniprogram/tabs/tabs",
+    "t-tab-panel": "tdesign-miniprogram/tab-panel/tab-panel"
+  }
+}

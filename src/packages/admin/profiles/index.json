@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "资料审核",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "app-empty-state": "/components/empty-state/index",
+    "t-tab-panel": "tdesign-miniprogram/tab-panel/tab-panel",
+    "t-tabs": "tdesign-miniprogram/tabs/tabs"
+  }
+}

@@ -1,0 +1,31 @@
+<view id="admin-exceptions-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view class="border-y border-ink py-5">
+    <view class="text-[length:21rpx] font-semibold tracking-[0.16em] text-coral">统一异常中心</view>
+    <view class="mt-2 text-[length:40rpx] font-bold">需要人工关注的事项</view>
+    <view class="mt-2 text-[length:22rpx] leading-5 text-muted">只提供可安全执行的重试；退款与图片问题保留人工判断。</view>
+  </view>
+  <view wx:if="{{state === 'loading'}}" class="mt-5 bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载异常" description="请稍后重试。" action-text="重新加载" bind:action="loadExceptions" /></view>
+  <view wx:elif="{{state === 'forbidden'}}" class="mt-5"><app-empty-state title="没有异常处理权限" description="请联系主理人调整运营权限。" /></view>
+  <view wx:elif="{{!items.length}}" class="mt-5"><app-empty-state title="当前没有待处理异常" description="退款、图片、文件清理和消息发送状态正常。" /></view>
+  <view wx:else class="mt-5 flex flex-col gap-3">
+    <view wx:for="{{items}}" wx:key="id" class="rounded-[22rpx] bg-panel px-4 py-4">
+      <view class="flex items-start justify-between gap-3">
+        <view class="min-w-0 flex-1" data-index="{{index}}" bind:tap="openItem">
+          <view class="flex items-center gap-2">
+            <view class="text-[length:26rpx] font-semibold">{{item.title}}</view>
+            <view wx:if="{{item.severity === 'HIGH'}}" class="rounded-full bg-[#FFF0E8] px-2 py-1 text-[length:18rpx] text-[#9F4727]">{{item.severityText}}</view>
+            <view wx:else class="rounded-full bg-brand-soft px-2 py-1 text-[length:18rpx] text-brand">{{item.severityText}}</view>
+          </view>
+          <view class="mt-2 text-[length:22rpx] leading-5 text-muted">{{item.summary}}</view>
+          <view class="mt-2 text-[length:19rpx] text-muted">{{item.updatedText}} · {{item.status}}</view>
+        </view>
+        <t-icon wx:if="{{item.route}}" name="chevron-right" size="34rpx" color="var(--color-muted)" />
+      </view>
+      <view wx:if="{{item.canRetry}}" class="mt-3 border-t border-line pt-3">
+        <t-button size="small" variant="outline" theme="primary" loading="{{retryingId === item.id}}" data-index="{{index}}" bind:tap="retryItem">重新处理</t-button>
+      </view>
+    </view>
+  </view>
+  <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
+</view>

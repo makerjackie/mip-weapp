@@ -1,0 +1,12 @@
+<view id="member-benefits-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view class="rounded-[32rpx] bg-brand px-5 py-6 text-white"><view class="text-[length:21rpx] text-brand-soft">{{membershipActive ? '会员权益使用中' : '同行会会员'}}</view><view class="mt-2 text-[length:39rpx] font-bold">认真认识，真实连接</view><view class="mt-3 text-[length:23rpx] text-brand-soft">{{expiresText ? '有效期至 ' + expiresText : '一次开通，解锁完整社区体验'}}</view></view>
+  <view class="mt-5 flex flex-col gap-3">
+    <view class="flex gap-4 rounded-[24rpx] bg-panel px-4 py-4"><view class="flex h-[68rpx] w-[68rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft"><t-icon name="usergroup-circle" size="38rpx" color="var(--color-brand)" /></view><view><view class="text-[length:27rpx] font-semibold">查看完整成员资料</view><view class="mt-1 text-[length:22rpx] leading-5 text-muted">在公开资料基础上查看更完整的自我介绍与加入时间。</view></view></view>
+    <view class="flex gap-4 rounded-[24rpx] bg-panel px-4 py-4"><view class="flex h-[68rpx] w-[68rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft"><t-icon name="calendar-event" size="38rpx" color="var(--color-brand)" /></view><view><view class="text-[length:27rpx] font-semibold">会员活动与优先报名</view><view class="mt-1 text-[length:22rpx] leading-5 text-muted">会员专属活动免费参加；热门活动可优先获得名额。</view></view></view>
+    <view class="flex gap-4 rounded-[24rpx] bg-panel px-4 py-4"><view class="flex h-[68rpx] w-[68rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft"><t-icon name="certificate" size="38rpx" color="var(--color-brand)" /></view><view><view class="text-[length:27rpx] font-semibold">会员身份凭证</view><view class="mt-1 text-[length:22rpx] leading-5 text-muted">权益与活动凭证均绑定当前微信账号，不可转让。</view></view></view>
+  </view>
+  <view class="mt-5 rounded-[22rpx] bg-panel px-4 py-4 text-[length:21rpx] leading-5 text-muted">会员属于数字服务。支付、退款与权益变化均以订单详情和微信支付结果为准；如遇异常可联系客服处理。</view>
+  <view wx:if="{{message}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
+  <view wx:if="{{!membershipActive}}" class="mt-6"><t-button block size="large" theme="primary" bind:tap="openMembership">查看会员方案</t-button></view>
+  <view class="mt-4"><t-button block variant="outline" theme="primary" bind:tap="backToHome">返回首页</t-button></view>
+</view>

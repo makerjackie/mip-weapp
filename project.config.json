@@ -1,0 +1,33 @@
+{
+  "description": "Membership WeChat Mini Program template",
+  "miniprogramRoot": "dist/",
+  "cloudfunctionRoot": "cloudfunctions/",
+  "compileType": "miniprogram",
+  "setting": {
+    "postcss": false,
+    "minified": false,
+    "enhance": true,
+    "ignoreUploadUnusedFiles": true,
+    "compileHotReLoad": false,
+    "packNpmManually": true,
+    "es6": true,
+    "swc": false,
+    "disableSWC": true,
+    "minifyWXML": true,
+    "minifyWXSS": true,
+    "uploadWithSourceMap": true
+  },
+  "simulatorType": "wechat",
+  "condition": {},
+  "srcMiniprogramRoot": "dist/",
+  "editorSetting": {
+    "tabIndent": "insertSpaces",
+    "tabSize": 2
+  },
+  "libVersion": "3.15.2",
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "appid": "touristappid"
+}

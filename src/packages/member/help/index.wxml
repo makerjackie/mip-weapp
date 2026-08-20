@@ -1,0 +1,12 @@
+<view id="member-help-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view class="rounded-[30rpx] bg-brand px-5 py-6 text-white"><view class="text-[length:38rpx] font-bold">有什么可以帮你？</view><view class="mt-2 text-[length:23rpx] text-brand-soft">先查看常见问题，也可以直接联系小程序客服。</view><button open-type="contact" class="mt-5 w-full rounded-full border-0 bg-white py-3 text-[length:25rpx] font-semibold text-brand">联系在线客服</button></view>
+  <view class="mt-5 overflow-hidden rounded-[26rpx] bg-panel">
+    <t-collapse>
+      <t-collapse-panel header="如何修改头像和公开资料？" value="profile"><view class="px-4 pb-4 text-[length:22rpx] leading-6 text-muted">进入“我的”，点击头像旁的“编辑”，即可更新头像、昵称、城市和个人介绍。</view></t-collapse-panel>
+      <t-collapse-panel header="会员包含哪些权益？" value="benefits"><view class="px-4 pb-4 text-[length:22rpx] leading-6 text-muted">会员可以查看完整成员资料、参加会员活动并获得优先报名机会。具体以会员权益页展示为准。</view></t-collapse-panel>
+      <t-collapse-panel header="如何取消活动报名？" value="event"><view class="px-4 pb-4 text-[length:22rpx] leading-6 text-muted">进入“我的活动”，打开对应凭证，在允许取消的时间内点击“取消报名”。</view></t-collapse-panel>
+      <t-collapse-panel header="如何查看支付或退款进度？" value="refund"><view class="px-4 pb-4 text-[length:22rpx] leading-6 text-muted">进入“我的”里的“订单与售后”，打开对应订单即可查看处理进度；需要人工协助时可在本页联系客服。</view></t-collapse-panel>
+      <t-collapse-panel header="其他成员能看到手机号吗？" value="privacy"><view class="px-4 pb-4 text-[length:22rpx] leading-6 text-muted">不能。手机号仅用于活动、支付与必要的服务联系，不会展示在成员资料中。</view></t-collapse-panel>
+    </t-collapse>
+  </view>
+</view>

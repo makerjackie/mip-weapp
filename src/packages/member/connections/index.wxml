@@ -1,0 +1,43 @@
+<view id="member-connections-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view class="text-[length:36rpx] font-bold">社区关系</view>
+  <view class="mt-1 text-[length:22rpx] text-muted">在活动之外，也能继续认识同行的人。</view>
+
+  <view class="mt-4">
+    <t-tabs value="{{direction}}" bind:change="changeDirection">
+      <t-tab-panel label="我的关注" value="following" />
+      <t-tab-panel label="关注我的" value="followers" />
+    </t-tabs>
+  </view>
+
+  <view wx:if="{{state === 'loading'}}" class="mt-5 rounded-[24rpx] bg-panel px-5 py-7">
+    <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
+  </view>
+  <view wx:elif="{{state === 'error'}}" class="mt-5">
+    <app-empty-state title="暂时无法加载" description="{{message}}" action-text="重试" bind:action="load" />
+  </view>
+  <view wx:elif="{{items.length === 0}}" class="mt-5">
+    <app-empty-state
+      title="{{direction === 'following' ? '还没有关注成员' : '还没有人关注你'}}"
+      description="{{direction === 'following' ? '从成员详情页关注感兴趣的人。' : '完善公开名片，更容易被同行认识。'}}"
+    />
+  </view>
+  <view wx:else class="mt-5 flex flex-col gap-3">
+    <view
+      wx:for="{{items}}"
+      wx:key="id"
+      class="flex items-center gap-3 rounded-[24rpx] bg-panel px-4 py-4 active:opacity-75"
+      data-member-id="{{item.id}}"
+      bind:tap="openMember"
+    >
+      <image wx:if="{{item.avatarUrl}}" class="h-[92rpx] w-[92rpx] rounded-full bg-brand-soft" src="{{item.avatarUrl}}" mode="aspectFill" fade-show="{{false}}" />
+      <view wx:else class="flex h-[92rpx] w-[92rpx] items-center justify-center rounded-full bg-brand text-[length:30rpx] font-bold text-white">{{item.initial}}</view>
+      <view class="min-w-0 flex-1">
+        <view class="truncate text-[length:27rpx] font-semibold">{{item.nickname}}</view>
+        <view class="mt-1 truncate text-[length:21rpx] text-muted">{{item.identityText}}</view>
+        <view wx:if="{{item.headline}}" class="mt-1 line-clamp-1 text-[length:21rpx] text-muted">{{item.headline}}</view>
+      </view>
+      <t-icon name="chevron-right" size="36rpx" color="var(--color-muted)" />
+    </view>
+  </view>
+  <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:22rpx] text-[#9F4727]">{{message}}</view>
+</view>

@@ -1,0 +1,9 @@
+# pnpm 11 settings for this single Mini Program. Do not add a packages list.
+allowBuilds:
+  '@parcel/watcher': true
+  '@swc/core': true
+  core-js-pure: true
+  esbuild: true
+  protobufjs: true
+  sharp: true
+  weapp-tailwindcss: true

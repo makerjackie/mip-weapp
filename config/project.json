@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "slug": "mip-weapp",
+  "name": "同行会",
+  "namespace": "membership",
+  "routes": [
+    {
+      "name": "案例首页",
+      "pathName": "pages/index/index"
+    },
+    {
+      "name": "成员推荐",
+      "pathName": "pages/explore/index"
+    },
+    {
+      "name": "线下活动",
+      "pathName": "pages/events/index"
+    },
+    {
+      "name": "会员支付",
+      "pathName": "pages/membership/index"
+    },
+    {
+      "name": "个人中心",
+      "pathName": "pages/profile/index"
+    },
+    {
+      "name": "继续使用",
+      "pathName": "packages/member/access/index"
+    },
+    {
+      "name": "编辑公开资料",
+      "pathName": "packages/member/profile-edit/index"
+    },
+    {
+      "name": "关注与粉丝",
+      "pathName": "packages/member/connections/index"
+    },
+    {
+      "name": "社区公告",
+      "pathName": "packages/member/announcements/index"
+    },
+    {
+      "name": "公告详情",
+      "pathName": "packages/member/announcement-detail/index"
+    },
+    {
+      "name": "已屏蔽的成员",
+      "pathName": "packages/member/blocked-members/index"
+    },
+    {
+      "name": "成员资料详情",
+      "pathName": "packages/member/member-detail/index"
+    },
+    {
+      "name": "活动详情",
+      "pathName": "packages/member/event-detail/index"
+    },
+    {
+      "name": "活动参与者",
+      "pathName": "packages/member/event-participants/index"
+    },
+    {
+      "name": "活动相册",
+      "pathName": "packages/member/event-album/index"
+    },
+    {
+      "name": "确认报名",
+      "pathName": "packages/member/registration-confirm/index"
+    },
+    {
+      "name": "活动凭证",
+      "pathName": "packages/member/ticket/index"
+    },
+    {
+      "name": "我的订单",
+      "pathName": "packages/member/orders/index"
+    },
+    {
+      "name": "订单详情",
+      "pathName": "packages/member/order-detail/index"
+    },
+    {
+      "name": "支付结果",
+      "pathName": "packages/member/payment-result/index"
+    },
+    {
+      "name": "我的活动凭证",
+      "pathName": "packages/member/registrations/index"
+    },
+    {
+      "name": "消息通知",
+      "pathName": "packages/member/notifications/index"
+    },
+    {
+      "name": "会员权益说明",
+      "pathName": "packages/member/benefits/index"
+    },
+    {
+      "name": "隐私与账户",
+      "pathName": "packages/member/privacy/index"
+    },
+    {
+      "name": "帮助与客服",
+      "pathName": "packages/member/help/index"
+    },
+    {
+      "name": "关于同行会",
+      "pathName": "packages/member/about/index"
+    },
+    {
+      "name": "运营工作台",
+      "pathName": "packages/admin/dashboard/index"
+    },
+    {
+      "name": "活动管理",
+      "pathName": "packages/admin/managed-events/index"
+    },
+    {
+      "name": "单场活动管理",
+      "pathName": "packages/admin/event-console/index"
+    },
+    {
+      "name": "活动编辑",
+      "pathName": "packages/admin/events/index"
+    },
+    {
+      "name": "活动管理员",
+      "pathName": "packages/admin/event-managers/index"
+    },
+    {
+      "name": "活动相册审核",
+      "pathName": "packages/admin/event-album/index"
+    },
+    {
+      "name": "活动报名名单",
+      "pathName": "packages/admin/event-registrations/index"
+    },
+    {
+      "name": "成员运营",
+      "pathName": "packages/admin/profiles/index"
+    },
+    {
+      "name": "订单运营",
+      "pathName": "packages/admin/orders/index"
+    },
+    {
+      "name": "统一异常中心",
+      "pathName": "packages/admin/exceptions/index"
+    },
+    {
+      "name": "公告管理",
+      "pathName": "packages/admin/announcements/index"
+    },
+    {
+      "name": "公告编辑",
+      "pathName": "packages/admin/announcement-editor/index"
+    },
+    {
+      "name": "成员举报",
+      "pathName": "packages/admin/reports/index"
+    },
+    {
+      "name": "运营审计",
+      "pathName": "packages/admin/audit/index"
+    },
+    {
+      "name": "管理员与权限",
+      "pathName": "packages/admin/roles/index"
+    }
+  ]
+}

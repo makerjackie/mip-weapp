@@ -1,0 +1,48 @@
+<view id="profile-edit-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view wx:if="{{state === 'loading'}}" class="rounded-[28rpx] bg-panel px-5 py-8"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载资料" description="服务暂时没有响应，请稍后重试。" action-text="重新加载" bind:action="loadProfile" /></view>
+  <block wx:else>
+    <view class="text-[length:37rpx] font-bold">编辑公开资料</view>
+    <view class="mt-2 text-[length:22rpx] leading-5 text-muted">头像、昵称和介绍会展示给其他成员；手机号不会公开。</view>
+    <view id="profile-edit-form-card" class="mt-5 rounded-[28rpx] bg-panel px-5 py-5">
+      <view class="flex items-center gap-4">
+        <button plain open-type="chooseAvatar" class="m-0 flex h-[128rpx] w-[128rpx] shrink-0 items-center justify-center overflow-hidden rounded-full border-0 bg-brand-soft p-0 leading-[128rpx]" bindchooseavatar="chooseAvatar">
+          <image wx:if="{{draftAvatarUrl}}" class="h-full w-full" mode="aspectFill" src="{{draftAvatarUrl}}" />
+          <text wx:else class="text-[length:34rpx] font-bold text-brand">同</text>
+        </button>
+        <view class="min-w-0 flex-1"><view class="text-[length:27rpx] font-semibold">头像</view><view class="mt-2 text-[length:21rpx] leading-5 text-muted">点击选择微信头像；上传前会自动压缩。</view></view>
+      </view>
+
+      <view class="mt-6 text-[length:22rpx] font-semibold text-muted">昵称</view>
+      <input type="nickname" class="profile-edit-field profile-edit-single-line mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[18rpx] bg-canvas px-4 text-[length:26rpx]" maxlength="20" value="{{draftNickname}}" data-field="draftNickname" bindinput="updateDraft" placeholder="输入昵称" placeholder-style="color: #929A94;" />
+      <view class="mt-5 text-[length:22rpx] font-semibold text-muted">城市</view>
+      <input class="profile-edit-field profile-edit-single-line mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[18rpx] bg-canvas px-4 text-[length:26rpx]" maxlength="30" value="{{draftCity}}" data-field="draftCity" bindinput="updateDraft" placeholder="例如：上海" placeholder-style="color: #929A94;" />
+      <view class="mt-5 text-[length:22rpx] font-semibold text-muted">组织或公司</view>
+      <input class="profile-edit-field profile-edit-single-line mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[18rpx] bg-canvas px-4 text-[length:26rpx]" maxlength="60" value="{{draftOrganization}}" data-field="draftOrganization" bindinput="updateDraft" placeholder="例如：独立设计工作室" placeholder-style="color: #929A94;" />
+      <view class="mt-5 grid grid-cols-2 gap-3">
+        <view>
+          <view class="text-[length:22rpx] font-semibold text-muted">职业</view>
+          <input class="profile-edit-field profile-edit-single-line mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[18rpx] bg-canvas px-4 text-[length:26rpx]" maxlength="60" value="{{draftRoleTitle}}" data-field="draftRoleTitle" bindinput="updateDraft" placeholder="产品经理" placeholder-style="color: #929A94;" />
+        </view>
+        <view>
+          <view class="text-[length:22rpx] font-semibold text-muted">行业</view>
+          <input class="profile-edit-field profile-edit-single-line mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[18rpx] bg-canvas px-4 text-[length:26rpx]" maxlength="60" value="{{draftIndustry}}" data-field="draftIndustry" bindinput="updateDraft" placeholder="互联网" placeholder-style="color: #929A94;" />
+        </view>
+      </view>
+      <view class="mt-5 text-[length:22rpx] font-semibold text-muted">一句话介绍</view>
+      <textarea id="profile-edit-headline" class="profile-edit-field mt-2 block h-[200rpx] w-full max-w-full box-border rounded-[18rpx] bg-canvas px-4 py-4 text-[length:26rpx] leading-6" maxlength="100" auto-height="{{false}}" value="{{draftHeadline}}" data-field="draftHeadline" bindinput="updateDraft" placeholder="你在做什么、想认识谁" placeholder-style="color: #929A94;" />
+      <view class="mt-2 text-right text-[length:20rpx] text-muted">{{headlineCount}} / 100</view>
+      <view class="mt-5 text-[length:22rpx] font-semibold text-muted">个人简介</view>
+      <textarea class="profile-edit-field mt-2 block h-[240rpx] w-full max-w-full box-border rounded-[18rpx] bg-canvas px-4 py-4 text-[length:26rpx] leading-6" maxlength="300" auto-height="{{false}}" value="{{draftBio}}" data-field="draftBio" bindinput="updateDraft" placeholder="介绍你的经历、正在做的事，以及希望认识怎样的朋友" placeholder-style="color: #929A94;" />
+      <view class="mt-2 text-right text-[length:20rpx] text-muted">{{bioCount}} / 300</view>
+      <view class="mt-5 text-[length:22rpx] font-semibold text-muted">兴趣标签</view>
+      <input class="profile-edit-field profile-edit-single-line mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[18rpx] bg-canvas px-4 text-[length:26rpx]" maxlength="80" value="{{draftTags}}" data-field="draftTags" bindinput="updateDraft" placeholder="最多 5 个，用顿号分隔" placeholder-style="color: #929A94;" />
+      <view class="mt-5 text-[length:22rpx] font-semibold text-muted">想交流的话题</view>
+      <input class="profile-edit-field profile-edit-single-line mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[18rpx] bg-canvas px-4 text-[length:26rpx]" maxlength="160" value="{{draftInterests}}" data-field="draftInterests" bindinput="updateDraft" placeholder="最多 8 个，用顿号分隔" placeholder-style="color: #929A94;" />
+      <view class="mt-5 text-[length:22rpx] font-semibold text-muted">可以分享的技能</view>
+      <input class="profile-edit-field profile-edit-single-line mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[18rpx] bg-canvas px-4 text-[length:26rpx]" maxlength="160" value="{{draftSkills}}" data-field="draftSkills" bindinput="updateDraft" placeholder="例如：摄影、设计、运营" placeholder-style="color: #929A94;" />
+    </view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
+    <view class="mt-6"><t-button block size="large" theme="primary" loading="{{saving}}" bind:tap="saveProfile">保存资料</t-button></view>
+  </block>
+</view>

@@ -1,0 +1,12 @@
+{
+  "navigationBarTitleText": "同行会",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "app-section-header": "/components/section-header/index",
+    "app-empty-state": "/components/empty-state/index",
+    "event-card": "/components/event-card/index",
+    "member-card": "/components/member-card/index",
+    "case-context-bar": "/components/case-context-bar/index",
+    "case-tab-bar": "/components/case-tab-bar/index"
+  }
+}

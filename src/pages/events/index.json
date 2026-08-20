@@ -1,0 +1,12 @@
+{
+  "navigationBarTitleText": "线下活动",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "app-empty-state": "/components/empty-state/index",
+    "event-card": "/components/event-card/index",
+    "case-context-bar": "/components/case-context-bar/index",
+    "case-tab-bar": "/components/case-tab-bar/index",
+    "t-tab-panel": "tdesign-miniprogram/tab-panel/tab-panel",
+    "t-tabs": "tdesign-miniprogram/tabs/tabs"
+  }
+}

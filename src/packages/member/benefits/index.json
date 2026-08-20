@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "会员权益",
+  "usingComponents": {
+    "t-button": "tdesign-miniprogram/button/button"
+  }
+}

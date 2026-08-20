@@ -1,0 +1,36 @@
+<view id="admin-event-managers-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view class="rounded-[22rpx] bg-panel px-4 py-4">
+    <view class="text-[length:20rpx] font-semibold text-brand">团队与权限</view>
+    <view class="mt-1 truncate text-[length:30rpx] font-bold">{{eventTitle || '本场活动'}}</view>
+    <view wx:if="{{startsText}}" class="mt-1 text-[length:20rpx] text-muted">{{startsText}}</view>
+  </view>
+  <view class="mt-4 text-[length:21rpx] text-muted">权限只作用于本场活动，按职责选择一个清晰角色即可。</view>
+
+  <view wx:if="{{state === 'loading'}}" class="mt-5 rounded-[26rpx] bg-panel px-5 py-8"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载管理员" description="{{message}}" action-text="重试" bind:action="load" /></view>
+  <view wx:elif="{{state === 'forbidden'}}" class="mt-5"><app-empty-state title="没有团队管理权限" description="请联系活动负责人确认你的协作角色。" /></view>
+  <block wx:else>
+    <view class="mt-5 rounded-[26rpx] bg-panel px-5 py-5">
+      <view class="text-[length:27rpx] font-bold">添加管理员</view>
+      <picker mode="selector" range="{{profileNames}}" value="{{selectedProfileIndex}}" bindchange="chooseProfile">
+        <view class="mt-4 flex h-[82rpx] items-center rounded-[16rpx] bg-canvas px-4 text-[length:23rpx]">{{profileNames[selectedProfileIndex] || '请选择已通过审核的成员'}}</view>
+      </picker>
+      <picker mode="selector" range="{{roleNames}}" value="{{selectedRoleIndex}}" bindchange="chooseRole">
+        <view class="mt-3 flex h-[82rpx] items-center rounded-[16rpx] bg-canvas px-4 text-[length:23rpx]">{{roleNames[selectedRoleIndex]}}</view>
+      </picker>
+      <view class="mt-2 text-[length:20rpx] leading-[1.6] text-muted">{{roleDescription}}</view>
+      <view class="mt-4"><t-button block theme="primary" loading="{{saving}}" bind:tap="assign">添加到本场活动</t-button></view>
+    </view>
+
+    <view wx:if="{{managers.length === 0}}" class="mt-5"><app-empty-state title="还没有活动管理员" description="活动仍可由全局运营人员管理。" /></view>
+    <view wx:else class="mt-5 flex flex-col gap-3">
+      <view wx:for="{{managers}}" wx:key="profileId" class="flex items-center gap-3 rounded-[22rpx] bg-panel px-4 py-4">
+        <image wx:if="{{item.avatarUrl}}" class="h-[82rpx] w-[82rpx] rounded-full bg-brand-soft" src="{{item.avatarUrl}}" mode="aspectFill" />
+        <view wx:else class="flex h-[82rpx] w-[82rpx] items-center justify-center rounded-full bg-brand text-white">{{item.initial}}</view>
+        <view class="min-w-0 flex-1"><view class="truncate text-[length:25rpx] font-semibold">{{item.nickname}}</view><view class="mt-1 text-[length:20rpx] text-muted">{{item.roleText}}</view></view>
+        <view class="text-[length:21rpx] text-danger" data-profile-id="{{item.profileId}}" data-role="{{item.role}}" bind:tap="remove">移除</view>
+      </view>
+    </view>
+  </block>
+  <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:22rpx] text-[#9F4727]">{{message}}</view>
+</view>
