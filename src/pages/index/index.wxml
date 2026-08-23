@@ -1,4 +1,4 @@
-<view id="membership-case-home" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+160rpx)] pt-4 text-ink">
+<view id="membership-case-home" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+240rpx)] pt-4 text-ink">
   <view class="flex items-center justify-between px-1">
     <view class="flex items-center gap-3">
       <image class="h-[58rpx] w-[58rpx] rounded-[14rpx]" mode="aspectFit" fade-show="{{false}}" src="{{logoPath}}" />

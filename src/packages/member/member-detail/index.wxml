@@ -34,4 +34,5 @@
     <view wx:else class="mt-4 rounded-[24rpx] bg-brand-soft px-5 py-5"><view class="text-[length:27rpx] font-semibold text-brand">完整资料已解锁</view><view class="mt-2 text-[length:22rpx] leading-5 text-brand">请尊重彼此边界，在共同活动中自然认识。</view></view>
     <view wx:if="{{message}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
   </block>
+  <app-page-exit />
 </view>

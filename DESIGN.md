@@ -55,11 +55,17 @@ Semantic 级（不随品牌乱改）：danger `#B8453E`，success `#2F7758`。
 
 ## 导航栏
 
-主 Tab 使用原生导航栏标题。二级页使用原生返回，不在页内伪造返回按钮。
+主 Tab 使用原生导航栏标题。禁止 `navigationStyle: custom` 和 `disableSwipeBack`。
+
+Tab 根页用 TabBar 离开，不要放返回按钮。
+
+二级页必须能离开。有页面栈时走原生返回和侧滑；从编译条件、redirect 或 reLaunch 进入时栈深为 1，左上角原生返回会消失，页面必须提供明显的「返回」「完成」或「返回首页」，并回到 Tab 页。不要用 reLaunch 把用户扔到没有退出方式的二级页。
 
 ## TabBar
 
 微信自定义 TabBar（`tabBar.custom: true`）：首页、认识、活动、我的。图标在上、文字在下。选中态由页面 `onShow` 同步 `selected` 索引。可见图标用 `t-icon`；`app.json` 的 `iconPath` 只作微信回退资源，不要在自定义组件里用栅格图。不要使用 TDesign `theme="tag"`。
+
+custom-tab-bar 不是 `page` 的子节点，吃不到 `page {}` 上的 CSS 变量。必须用组件自己的 `index.wxss` 画不透明底色（hex，与 panel token 一致），并在 `.tab-bar` 上定义 `--color-brand` / `--color-muted`。`styleIsolation` 用 `isolated`。按微信文档用底部 `cover-view` 铺不透明底，避免页面内容透出来；可见图标仍用 `t-icon`，不要用栅格图。不要使用 `bg-panel` 当底。
 
 ## 卡片 / 表单 / 按钮 / 列表
 
@@ -116,5 +122,6 @@ Semantic 级（不随品牌乱改）：danger `#B8453E`，success `#2F7758`。
 2. 有 loading/empty/error
 3. 底部安全区
 4. 无内部实现语言
-5. 自定义组件 `styleIsolation: apply-shared`
+5. 页面级自定义组件 `styleIsolation: apply-shared`；`custom-tab-bar` 用 `isolated` + 自有不透明 wxss
 6. 不引用原型图当生产资源
+7. 非 Tab 页保留侧滑返回，并有明显的返回/完成（编译条件入口也要能离开）

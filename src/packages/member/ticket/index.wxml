@@ -37,4 +37,5 @@
     <view wx:if="{{canCancel}}" class="mt-4"><t-button block variant="outline" theme="danger" loading="{{busy}}" bind:tap="cancel">取消报名</t-button></view>
     <view wx:if="{{message}}" class="mt-3 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:22rpx] text-[#9F4727]">{{message}}</view>
   </block>
+  <app-page-exit />
 </view>

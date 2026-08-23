@@ -1,4 +1,4 @@
-<view id="membership-events-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+160rpx)] pt-4 text-ink">
+<view id="membership-events-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+240rpx)] pt-4 text-ink">
   <view class="flex items-end justify-between px-1">
     <view>
       <view class="text-[length:38rpx] font-bold">活动</view>

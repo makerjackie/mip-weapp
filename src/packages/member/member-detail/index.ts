@@ -1,6 +1,6 @@
 import type { MemberDetail, MemberReportCategory } from '../../../modules/membership/types'
 import { membershipModule } from '../../../modules/membership/client'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo, leaveSecondaryPage } from '../../../modules/platform/case-navigation'
 
 Page({
   data: {
@@ -141,7 +141,7 @@ Page({
     try {
       await membershipModule.setMemberBlock(this.data.memberId, true)
       wx.showToast({ title: '已屏蔽', icon: 'success' })
-      setTimeout(() => wx.navigateBack(), 500)
+      setTimeout(leaveSecondaryPage, 500, '/pages/explore/index')
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '屏蔽失败' })

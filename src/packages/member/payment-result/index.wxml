@@ -15,4 +15,5 @@
   </view>
   <view wx:if="{{result === 'success'}}" class="mt-8 flex w-full flex-col gap-3"><t-button block size="large" theme="primary" bind:tap="openMembership">查看会员权益</t-button><t-button block variant="outline" theme="primary" bind:tap="openOrder">查看订单</t-button></view>
   <view wx:else class="mt-10 w-full"><t-button block size="large" theme="primary" bind:tap="openOrder">查看订单详情</t-button></view>
+  <app-page-exit label="完成" tab-url="/pages/profile/index" />
 </view>

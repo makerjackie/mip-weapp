@@ -45,4 +45,5 @@
     <view wx:if="{{message}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
     <view class="mt-6"><t-button block size="large" theme="primary" loading="{{saving}}" bind:tap="saveProfile">保存资料</t-button></view>
   </block>
+  <app-page-exit />
 </view>

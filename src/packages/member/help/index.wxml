@@ -9,4 +9,5 @@
       <t-collapse-panel header="其他成员能看到手机号吗？" value="privacy"><view class="px-4 pb-4 text-[length:22rpx] leading-6 text-muted">不能。手机号仅用于活动、支付与必要的服务联系，不会展示在成员资料中。</view></t-collapse-panel>
     </t-collapse>
   </view>
+  <app-page-exit />
 </view>

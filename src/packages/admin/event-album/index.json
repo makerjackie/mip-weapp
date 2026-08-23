@@ -4,6 +4,7 @@
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",
     "t-button": "tdesign-miniprogram/button/button",
-    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
+    "app-page-exit": "/components/page-exit/index"
   }
 }

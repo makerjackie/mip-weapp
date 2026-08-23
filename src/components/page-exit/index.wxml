@@ -1,0 +1,4 @@
+<view class="mt-6">
+  <t-button wx:if="{{primary}}" block size="large" theme="primary" bind:tap="onExit">{{label}}</t-button>
+  <t-button wx:else block size="large" variant="outline" theme="primary" bind:tap="onExit">{{label}}</t-button>
+</view>

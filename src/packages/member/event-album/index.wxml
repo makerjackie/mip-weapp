@@ -31,4 +31,5 @@
   </view>
   <view wx:if="{{loadingMore}}" class="py-5 text-center text-[length:21rpx] text-muted">加载更多照片…</view>
   <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:22rpx] text-[#9F4727]">{{message}}</view>
+  <app-page-exit />
 </view>

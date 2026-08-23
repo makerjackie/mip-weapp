@@ -10,4 +10,5 @@
   </view>
   <view class="mt-7 rounded-[24rpx] border border-danger bg-panel px-5 py-5"><view class="text-[length:28rpx] font-semibold text-danger">注销账号</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">公开资料会匿名化，会员权益和未来报名会终止；依法需保留的交易记录不会删除。</view><view class="mt-5"><t-button block theme="danger" variant="outline" loading="{{deleting}}" bind:tap="deleteAccount">注销当前账号</t-button></view></view>
   <view wx:if="{{message}}" class="mt-4 rounded-[18rpx] bg-[#F8E8E6] px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
+  <app-page-exit />
 </view>

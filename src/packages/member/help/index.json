@@ -3,6 +3,7 @@
   "usingComponents": {
     "t-button": "tdesign-miniprogram/button/button",
     "t-collapse": "tdesign-miniprogram/collapse/collapse",
-    "t-collapse-panel": "tdesign-miniprogram/collapse-panel/collapse-panel"
+    "t-collapse-panel": "tdesign-miniprogram/collapse-panel/collapse-panel",
+    "app-page-exit": "/components/page-exit/index"
   }
 }

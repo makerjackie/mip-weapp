@@ -1,4 +1,5 @@
 import { adminModule } from '../../../modules/admin/client'
+import { leaveSecondaryPage } from '../../../modules/platform/case-navigation'
 
 Page({
   data: {
@@ -63,7 +64,7 @@ Page({
       })
       this.setData({ announcementId: saved.id, version: saved.version })
       wx.showToast({ title: '草稿已保存', icon: 'success' })
-      setTimeout(() => wx.navigateBack(), 500)
+      setTimeout(leaveSecondaryPage, 500, '/pages/index/index')
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '保存失败' })

@@ -20,4 +20,5 @@
     <view wx:if="{{message}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
     <view class="mt-6 grid grid-cols-2 gap-3"><t-button block variant="outline" theme="primary" bind:tap="openHelp">联系售后</t-button><t-button block theme="primary" bind:tap="openMembership">会员中心</t-button></view>
   </block>
+  <app-page-exit />
 </view>

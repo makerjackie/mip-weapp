@@ -4,4 +4,5 @@
   <view class="mt-2 text-[length:22rpx] text-muted" bind:tap="copyVersion">{{versionText}}</view>
   <view class="mt-8 rounded-[28rpx] bg-panel px-5 py-6 text-left"><view class="text-[length:29rpx] font-semibold">认真认识，真实连接</view><view class="mt-3 text-[length:23rpx] leading-7 text-muted">{{productName}}是一个围绕城市活动和共同兴趣建立连接的会员社区。我们希望每一次认识都有足够的信息、清晰的边界和真实的见面机会。</view></view>
   <view class="mt-5 rounded-[24rpx] bg-brand-soft px-5 py-5 text-left text-[length:22rpx] leading-6 text-brand">小程序提供微信身份、手机号授权、支付、会员权益、活动、订单与售后等完整服务。</view>
+  <app-page-exit />
 </view>

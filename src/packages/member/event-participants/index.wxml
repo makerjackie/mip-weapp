@@ -32,4 +32,5 @@
     <view wx:elif="{{items.length && !nextCursor}}" class="py-5 text-center text-[length:20rpx] text-muted">仅展示主动同意公开资料的成员</view>
     <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
   </block>
+  <app-page-exit />
 </view>

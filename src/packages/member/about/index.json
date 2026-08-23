@@ -1,4 +1,6 @@
 {
   "navigationBarTitleText": "关于同行会",
-  "usingComponents": {}
+  "usingComponents": {
+    "app-page-exit": "/components/page-exit/index"
+  }
 }

@@ -54,6 +54,9 @@ const appHome = read('src/pages/index/index.wxml')
 const profileEdit = read('src/packages/member/profile-edit/index.wxml')
 const accessPage = read('src/packages/member/access/index.wxml')
 const customTabBar = read('src/custom-tab-bar/index.wxml')
+const customTabBarWxss = read('src/custom-tab-bar/index.wxss')
+const customTabBarJson = JSON.parse(read('src/custom-tab-bar/index.json'))
+assert(customTabBarJson.styleIsolation === 'isolated', 'Custom TabBar must isolate styles; it is not a descendant of page')
 const tabConfig = read('src/config/tabs.ts')
 const membershipApi = read('cloudfunctions/membership-api/index.js')
 const membershipAdminApi = read('cloudfunctions/membership-admin-api/index.js')
@@ -113,7 +116,7 @@ assert(accessPage.includes('open-type="getPhoneNumber"') && profileEdit.includes
 for (const icon of ['home-filled', 'usergroup-filled', 'calendar-event-filled', 'user-filled']) {
   assert(tabConfig.includes(`'${icon}'`), `Custom TabBar TDesign icon ${icon} is missing`)
 }
-assertOfficialCustomTabBar(customTabBar, appJson, assert, 'Membership custom TabBar')
+assertOfficialCustomTabBar(customTabBar, appJson, assert, 'Membership custom TabBar', { wxss: customTabBarWxss })
 assert(
   !fs.existsSync(path.join(root, 'src/components/case-tab-bar/index.wxml'))
   && !fs.existsSync(path.join(root, 'src/components/case-context-bar/index.wxml')),
@@ -510,6 +513,48 @@ for (const sourceFile of walk('src').filter(file => file.endsWith('.ts'))) {
   const template = read(templateFile)
   assert(template.includes(`state === 'loading'`) && template.includes(`state === 'error'`), `${templateFile} must render loading and error states`)
 }
+
+const tabPages = new Set((appJson.tabBar?.list || []).map(item => String(item.pagePath)))
+const projectRoutes = fs.existsSync(path.join(root, 'config/project.json'))
+  ? JSON.parse(read('config/project.json')).routes || []
+  : []
+function collectAppPages(config) {
+  const pages = [...(config.pages || [])]
+  for (const subPackage of config.subPackages || []) {
+    for (const page of subPackage.pages || []) {
+      pages.push(`${String(subPackage.root).replace(/\/$/, '')}/${page}`)
+    }
+  }
+  return pages
+}
+function hasExplicitPageExit(wxml) {
+  return wxml.includes('<app-page-exit')
+    || (wxml.includes('bind:tap="backToHome"') && wxml.includes('返回首页'))
+}
+for (const page of collectAppPages(appJson)) {
+  const pageJson = JSON.parse(read(`src/${page}.json`))
+  assert(pageJson.disableSwipeBack !== true, `${page} must keep swipe-back`)
+  assert(pageJson.navigationStyle !== 'custom', `${page} must keep native navigation chrome`)
+  const wxml = read(`src/${page}.wxml`)
+  if (tabPages.has(page)) {
+    assert(!wxml.includes('<app-page-exit'), `Tab root ${page} must not show an in-page exit control`)
+    continue
+  }
+  assert(hasExplicitPageExit(wxml), `Secondary page ${page} must provide an explicit 返回/完成 control`)
+}
+for (const route of projectRoutes) {
+  const page = String(route.pathName || '')
+  if (!page || tabPages.has(page)) {
+    continue
+  }
+  assert(
+    hasExplicitPageExit(read(`src/${page}.wxml`)),
+    `Compile-condition page ${route.name} (${page}) can open as the stack root and must provide 返回/完成`,
+  )
+}
+assert(fs.existsSync(path.join(root, 'src/platform/navigation/leave.ts')), 'Secondary-page leave helper is missing')
+assert(fs.existsSync(path.join(root, 'src/components/page-exit/index.ts')), 'page-exit component is missing')
+
 assert(fs.existsSync(path.join(root, '.mcp.json')), 'Case MCP config is missing')
 assert(!JSON.parse(read('.mcp.json')).mcpServers?.cloudbase, 'Case editor config must not start a second CloudBase MCP')
 assert(fs.existsSync(path.join(root, 'config', 'mcporter.json')), 'CloudBase MCP config is missing')

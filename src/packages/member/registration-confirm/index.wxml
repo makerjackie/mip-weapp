@@ -79,6 +79,8 @@
       </view>
     </view>
     <view wx:if="{{message}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
+    <app-page-exit />
     <view class="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-panel px-4 pb-[calc(env(safe-area-inset-bottom)+20rpx)] pt-3"><t-button block size="large" theme="primary" loading="{{busy}}" bind:tap="confirm">{{editing ? '保存报名资料' : !profileReady ? '绑定手机号并继续' : event.memberFree && !event.membershipActive ? '开通会员后报名' : event.activityType === 'PAID' ? '支付 ' + priceText + ' 并报名' : event.registrationMode === 'APPROVAL' ? '提交报名申请' : event.waitlistEnabled && event.capacity && event.registrationCount >= event.capacity ? '加入候补' : '确认报名'}}</t-button></view>
   </block>
+  <app-page-exit wx:if="{{state !== 'ready'}}" />
 </view>

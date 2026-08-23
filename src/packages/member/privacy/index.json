@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "隐私与账号"
+  "navigationBarTitleText": "隐私与账号",
+  "usingComponents": {
+    "app-page-exit": "/components/page-exit/index"
+  }
 }

@@ -1,6 +1,6 @@
 {
   "component": true,
-  "styleIsolation": "apply-shared",
+  "styleIsolation": "isolated",
   "usingComponents": {
     "t-icon": "tdesign-miniprogram/icon/icon"
   }

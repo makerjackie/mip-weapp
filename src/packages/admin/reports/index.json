@@ -1,4 +1,7 @@
 {
   "navigationBarTitleText": "成员举报",
-  "enablePullDownRefresh": true
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "app-page-exit": "/components/page-exit/index"
+  }
 }

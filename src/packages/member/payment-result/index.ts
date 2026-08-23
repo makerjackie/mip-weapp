@@ -1,6 +1,6 @@
 import type { MembershipOrder } from '../../../modules/membership/types'
 import { membershipModule } from '../../../modules/membership/client'
-import { caseRedirectTo, caseRelaunch } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../modules/platform/case-navigation'
 import { formatLocalDate } from '../../../utils/date'
 
 let pollTimer: ReturnType<typeof setTimeout> | undefined
@@ -60,6 +60,6 @@ Page({
       this.setData({ result: 'pending', message: '正在查询付款结果，请稍候' })
     }
   },
-  openMembership() { caseRelaunch({ url: '/pages/membership/index' }) },
-  openOrder() { caseRedirectTo({ url: `/packages/member/order-detail/index?orderId=${encodeURIComponent(this.data.orderId)}` }) },
+  openMembership() { caseNavigateTo({ url: '/pages/membership/index' }) },
+  openOrder() { caseNavigateTo({ url: `/packages/member/order-detail/index?orderId=${encodeURIComponent(this.data.orderId)}` }) },
 })

@@ -37,6 +37,7 @@ const adminWxml = read('dist/packages/admin/dashboard/index.wxml')
 const privacyWxml = read('dist/packages/member/privacy/index.wxml')
 const ticketJs = read('dist/packages/member/ticket/index.js')
 const tabBarWxml = read('dist/custom-tab-bar/index.wxml')
+const tabBarWxss = read('dist/custom-tab-bar/index.wxss')
 const tabBarJson = JSON.parse(read('dist/custom-tab-bar/index.json'))
 const appJson = JSON.parse(read('dist/app.json'))
 const membershipJson = JSON.parse(read('dist/pages/membership/index.json'))
@@ -56,7 +57,7 @@ const tabConfig = read('src/config/tabs.ts')
 for (const icon of ['home-filled', 'usergroup-filled', 'calendar-event-filled', 'user-filled']) {
   assert(tabConfig.includes(`'${icon}'`), `Built TabBar TDesign icon ${icon} is missing`)
 }
-assertOfficialCustomTabBar(tabBarWxml, appJson, assert, 'Membership built custom TabBar', { compiled: true })
+assertOfficialCustomTabBar(tabBarWxml, appJson, assert, 'Membership built custom TabBar', { compiled: true, wxss: tabBarWxss })
 assert(
   ticketJs.includes('require("../miniprogram_npm/tdesign-miniprogram/common/shared/qrcode/qrcodegen")'),
   'Member-only QR encoder must be emitted inside the member subpackage',
@@ -71,6 +72,6 @@ assertCompiledTDesignRegistrations({
   assert,
   label: 'Membership compiled UI',
 })
-assert(tabBarWxml.includes('safe-area-inset-bottom'), 'Custom TabBar must handle the device safe area')
+assert(tabBarWxss.includes('safe-area-inset-bottom'), 'Custom TabBar must handle the device safe area')
 
 console.log('Membership case build contract passed')

@@ -1,4 +1,4 @@
-<view id="membership-explore-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+160rpx)] pt-4 text-ink">
+<view id="membership-explore-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+240rpx)] pt-4 text-ink">
   <view class="px-1">
     <view class="text-[length:22rpx] font-semibold text-accent">成员社区</view>
     <view class="mt-1 text-[length:39rpx] font-bold">认识有趣的人</view>

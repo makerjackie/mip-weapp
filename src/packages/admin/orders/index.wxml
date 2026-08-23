@@ -27,4 +27,5 @@
   </view>
   <view wx:if="{{message && state === 'ready'}}" class="mt-5 border-l-[8rpx] border-coral bg-panel px-4 py-4 text-[length:24rpx] text-muted">{{message}}</view>
   <view class="mt-5 text-[length:21rpx] leading-5 text-muted">退款状态会自动同步；只有微信回调或负责人确认到账后，订单与会员权益才会更新。</view>
+  <app-page-exit />
 </view>

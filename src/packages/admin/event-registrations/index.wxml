@@ -235,4 +235,5 @@
       </view>
     </view>
   </view>
+  <app-page-exit />
 </view>

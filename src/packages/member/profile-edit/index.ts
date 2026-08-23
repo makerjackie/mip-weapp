@@ -1,4 +1,5 @@
 import { membershipModule } from '../../../modules/membership/client'
+import { leaveSecondaryPage } from '../../../modules/platform/case-navigation'
 import {
   compressImageToBase64,
   IMAGE_UPLOAD_POLICIES,
@@ -128,7 +129,7 @@ Page({
         skills: this.data.draftSkills.split(/[、,，]/).map(item => item.trim()).filter(Boolean),
       })
       wx.showToast({ title: '已保存', icon: 'success' })
-      setTimeout(() => wx.navigateBack(), 500)
+      setTimeout(leaveSecondaryPage, 500, '/pages/profile/index')
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '保存失败，请重试' })

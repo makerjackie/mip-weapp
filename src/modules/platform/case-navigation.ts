@@ -1,5 +1,7 @@
 import { syncCustomTabBar } from '@weapp/platform/tab-bar'
 
+export { canNavigateBack, leaveSecondaryPage } from '../../platform/navigation/leave'
+
 interface TabPageHandle {
   getTabBar?: () => { setData: (data: { value: string, selected: number }) => void } | undefined
 }

@@ -1,5 +1,8 @@
 {
   "navigationBarTitleText": "活动参与者",
   "enablePullDownRefresh": true,
-  "onReachBottomDistance": 120
+  "onReachBottomDistance": 120,
+  "usingComponents": {
+    "app-page-exit": "/components/page-exit/index"
+  }
 }

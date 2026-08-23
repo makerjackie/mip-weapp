@@ -1,5 +1,5 @@
 import { membershipModule } from '../../../modules/membership/client'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo, leaveSecondaryPage } from '../../../modules/platform/case-navigation'
 
 const reasonCopy = {
   event: { title: '登录后继续报名', description: '用于活动联系、订单与售后' },
@@ -77,7 +77,7 @@ Page({
       }
       this.applyProfile(profile)
       wx.showToast({ title: '登录成功', icon: 'success' })
-      setTimeout(() => wx.navigateBack(), 350)
+      setTimeout(leaveSecondaryPage, 350, '/pages/index/index')
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '手机号授权失败' })
@@ -88,7 +88,7 @@ Page({
   },
 
   browseFirst() {
-    wx.navigateBack()
+    leaveSecondaryPage('/pages/index/index')
   },
 
   openAgreement() {

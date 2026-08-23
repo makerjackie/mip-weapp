@@ -67,12 +67,18 @@ export function assertTabBarParity(leftSource, rightSource, assert, label) {
   )
 }
 
-export function assertOfficialCustomTabBar(source, appJson, assert, label, { compiled = false } = {}) {
+export function assertOfficialCustomTabBar(source, appJson, assert, label, { compiled = false, wxss = '' } = {}) {
   assert(!source.includes('theme="tag"'), `${label} must not use TDesign theme="tag"`)
-  assert(source.includes('env(safe-area-inset-bottom)') || source.includes('safe-area-inset-bottom'), `${label} must reserve the device safe area`)
-  if (!compiled) {
-    assert(source.includes('h-[96rpx]'), `${label} must use the native 48px / 96rpx content height`)
-  }
+  const combined = `${source}\n${wxss}`
+  assert(combined.includes('env(safe-area-inset-bottom)') || combined.includes('safe-area-inset-bottom'), `${label} must reserve the device safe area`)
+  assert(
+    /height:\s*96rpx/.test(wxss) || (!compiled && source.includes('h-[96rpx]')),
+    `${label} must use the native 48px / 96rpx content height`,
+  )
+  assert(
+    /background(?:-color)?:\s*#[0-9A-Fa-f]{3,8}/.test(wxss),
+    `${label} must paint an opaque background in its own stylesheet; custom-tab-bar is not a child of page`,
+  )
   assert(source.includes('<t-icon'), `${label} visible icons must use TDesign t-icon`)
   assert(!source.includes('<image') && !source.includes('assets/tab'), `${label} must not render raster tab icons in the custom component`)
   assert(source.includes('selected'), `${label} must sync the selected index`)

@@ -1,12 +1,10 @@
-<view
-  class="fixed inset-x-0 bottom-0 z-[1000] border-t border-line bg-panel"
-  style="padding-bottom: env(safe-area-inset-bottom)"
->
-  <view class="flex h-[96rpx] items-stretch">
+<cover-view class="tab-bar-surface"></cover-view>
+<view class="tab-bar">
+  <view class="tab-bar-row">
     <view
       wx:for="{{tabs}}"
       wx:key="value"
-      class="flex min-h-[88rpx] flex-1 flex-col items-center justify-center"
+      class="tab-bar-item"
       data-tab-bar-item="true"
       data-value="{{item.value}}"
       data-index="{{index}}"
@@ -17,7 +15,7 @@
         size="48rpx"
         color="{{selected === index ? 'var(--color-brand)' : 'var(--color-muted)'}}"
       />
-      <view class="mt-[4rpx] text-[length:20rpx] leading-[28rpx]" style="color: {{selected === index ? 'var(--color-brand)' : 'var(--color-muted)'}}">{{item.label}}</view>
+      <view class="tab-bar-label" style="color: {{selected === index ? 'var(--color-brand)' : 'var(--color-muted)'}}">{{item.label}}</view>
     </view>
   </view>
 </view>

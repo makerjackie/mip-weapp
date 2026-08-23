@@ -9,4 +9,5 @@
     <t-button block theme="primary" loading="{{saving}}" bind:tap="save">保存草稿</t-button>
   </view>
   <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
+  <app-page-exit />
 </view>

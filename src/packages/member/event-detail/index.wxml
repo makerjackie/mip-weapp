@@ -117,6 +117,7 @@
       </view>
       <view wx:if="{{event.canCancel && (event.registrationState === 'PENDING_REVIEW' || event.registrationState === 'WAITLISTED')}}" class="mt-4"><t-button block variant="text" theme="danger" loading="{{busy}}" bind:tap="cancelRegistration">取消报名</t-button></view>
       <view wx:if="{{message}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
+      <app-page-exit />
     </view>
 
     <view class="fixed bottom-0 left-0 right-0 z-50 flex items-center gap-3 border-t border-line bg-panel/95 px-4 pb-[calc(env(safe-area-inset-bottom)+16rpx)] pt-3">
@@ -128,4 +129,5 @@
     </view>
   </block>
   <app-phone-login-sheet visible="{{phoneSheetVisible}}" loading="{{phoneBinding}}" title="登录后继续报名" description="用于活动联系、订单与售后" bind:phone="bindPhone" bind:close="closePhoneSheet" bind:agreement="openAgreement" bind:privacy="openPrivacy" />
+  <app-page-exit wx:if="{{state !== 'ready'}}" />
 </view>

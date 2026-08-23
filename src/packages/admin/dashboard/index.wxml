@@ -63,4 +63,5 @@
   </view>
   <view wx:if="{{state === 'ready'}}" class="mt-5 text-[length:20rpx] leading-5 text-muted">访问趋势、来源、留存与性能请使用微信官方数据工具；这里仅处理会员、活动、订单和售后。</view>
   <view wx:if="{{message && state === 'ready'}}" class="mt-5 border-l-[8rpx] border-coral bg-panel px-4 py-4 text-[length:24rpx] text-muted">{{message}}</view>
+  <app-page-exit />
 </view>

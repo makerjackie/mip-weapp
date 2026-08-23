@@ -14,7 +14,7 @@ export default defineConfig({
       '@weapp/platform/runtime-config': path.join(root, 'src/platform/runtime/config.ts'),
       '@weapp/platform/media-urls': path.join(root, 'src/platform/storage/media-urls.ts'),
       '@weapp/platform/tab-bar': path.join(root, 'src/platform/navigation/tab-bar.ts'),
-      '@weapp/platform/navigation': path.join(root, 'src/platform/navigation/status-bar.ts'),
+      '@weapp/platform/navigation': path.join(root, 'src/platform/navigation/index.ts'),
       '@weapp/platform/cloudbase': path.join(root, 'src/platform/cloudbase/runtime.ts'),
     },
   },

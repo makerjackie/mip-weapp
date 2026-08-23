@@ -1,4 +1,4 @@
-<view id="membership-profile-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+160rpx)] pt-4 text-ink">
+<view id="membership-profile-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+240rpx)] pt-4 text-ink">
   <view wx:if="{{state === 'loading'}}" class="rounded-[28rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载资料" description="服务暂时没有响应，请稍后重试。" action-text="重新加载" bind:action="loadProfile" /></view>
 

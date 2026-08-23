@@ -1,3 +1,6 @@
 {
-  "navigationBarTitleText": "编辑公告"
+  "navigationBarTitleText": "编辑公告",
+  "usingComponents": {
+    "app-page-exit": "/components/page-exit/index"
+  }
 }

@@ -13,4 +13,5 @@
   <view wx:elif="{{items.length === 0}}" class="mt-7 border border-line bg-panel px-5 py-9 text-center"><view class="text-[length:29rpx] font-semibold">还没有操作记录</view></view>
   <view wx:else class="mt-6 border-l border-line pl-4"><view wx:for="{{items}}" wx:key="id" class="relative mb-4 bg-panel px-5 py-4 before:absolute before:-left-[22rpx] before:top-6 before:h-[14rpx] before:w-[14rpx] before:bg-brand"><view class="flex items-center justify-between gap-3"><view class="min-w-0 flex-1 truncate text-[length:24rpx] font-semibold text-brand">{{item.actionText}}</view><view class="shrink-0 text-[length:20rpx] text-muted">{{item.createdText}}</view></view><view class="mt-2 text-[length:23rpx]">{{item.resourceText}}</view><view class="mt-1 text-[length:19rpx] text-muted">操作人：{{item.roleText}}</view></view></view>
   <view wx:if="{{message && state === 'ready'}}" class="mt-5 border-l-[8rpx] border-coral bg-panel px-4 py-4 text-[length:24rpx] text-muted">{{message}}</view>
+  <app-page-exit />
 </view>
