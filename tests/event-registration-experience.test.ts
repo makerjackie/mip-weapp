@@ -35,9 +35,9 @@ describe('event registration experience', () => {
     const home = read('src/pages/index/index.wxml')
     const member = read('src/packages/member/member-detail/index.wxml')
 
-    expect(read('src/config/brand.ts')).toContain('/assets/brand/tongxinghui-logo.webp')
+    expect(read('src/config/brand.ts')).toContain('/assets/brand/mip-logo-yellow.png')
     expect(home).toContain('src="{{logoPath}}"')
-    expect(fs.existsSync(path.join(root, 'src/assets/brand/tongxinghui-logo.webp'))).toBe(true)
+    expect(fs.existsSync(path.join(root, 'src/assets/brand/mip-logo-yellow.png'))).toBe(true)
     expect(home).toContain('nextEvent.coverUrl')
     expect(member).toContain('h-[176rpx] w-[176rpx]')
     expect(member).not.toContain('h-[520rpx]')

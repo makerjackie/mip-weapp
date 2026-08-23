@@ -4,42 +4,47 @@
 @source not "../node_modules/**";
 
 @theme {
-  --color-canvas: #f6f4ee;
-  --color-panel: #fffefa;
-  --color-panel-muted: #f0eee7;
-  --color-ink: #1d2a23;
-  --color-muted: #69726b;
-  --color-line: #ddd9cf;
-  --color-brand: #285e46;
-  --color-on-brand: #fff;
-  --color-brand-active: #1e4936;
-  --color-brand-soft: #e2eee7;
-  --color-coral: #e77745;
-  --color-accent: #e77745;
-  --color-gold: #bd8a2f;
-  --color-danger: #b8453e;
-  --color-membership-brand: #285e46;
-  --color-membership-muted: #69726b;
-  --color-membership-panel: #fffefa;
+  --color-canvas: #040404;
+  --color-panel: #202020;
+  --color-panel-raised: #2a2a2a;
+  --color-panel-muted: #2a2a2a;
+  --color-ink: #fff;
+  --color-muted: #a3a3a3;
+  --color-line: #363636;
+  --color-brand: #fcdf03;
+  --color-on-brand: #040000;
+  --color-brand-active: #e3c900;
+  --color-brand-soft: #3b3505;
+  --color-coral: #fcdf03;
+  --color-accent: #fcdf03;
+  --color-gold: #fcdf03;
+  --color-danger: #e65c5c;
+  --color-success: #43b581;
+  --color-membership-brand: #fcdf03;
+  --color-membership-muted: #a3a3a3;
+  --color-membership-panel: #202020;
 }
 
 page {
   min-height: 100%;
   font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  color: #1d2a23;
-  background: #f6f4ee;
+  color: #fff;
+  background: #040404;
 
-  --td-brand-color: #285e46;
-  --td-brand-color-active: #1e4936;
-  --td-brand-color-disabled: #9eb8a8;
-  --td-bg-color-container: #fffefa;
-  --td-button-border-radius: 18rpx;
+  --td-brand-color: #fcdf03;
+  --td-brand-color-active: #e3c900;
+  --td-brand-color-disabled: #72680f;
+  --td-text-color-primary: #fff;
+  --td-text-color-secondary: #a3a3a3;
+  --td-bg-color-page: #040404;
+  --td-bg-color-container: #202020;
+  --td-button-border-radius: 16rpx;
   --td-button-large-height: 92rpx;
-  --td-tab-bar-active-color: #285e46;
-  --td-tab-bar-color: #69726b;
-  --td-tab-bar-bg-color: #fffefa;
-  --td-tab-bar-active-bg: #e2eee7;
-  --td-tab-bar-border-color: #ddd9cf;
+  --td-tab-bar-active-color: #fcdf03;
+  --td-tab-bar-color: #a3a3a3;
+  --td-tab-bar-bg-color: #202020;
+  --td-tab-bar-active-bg: #202020;
+  --td-tab-bar-border-color: #363636;
 }
 
 button::after {

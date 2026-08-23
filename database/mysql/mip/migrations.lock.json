@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "tablePrefix": "mip_",
+  "trackingTable": "mip_schema_migrations",
+  "migrations": [
+    {
+      "version": "20260824010000",
+      "name": "mip_foundation",
+      "sql": "database/mysql/mip/001_foundation.sql",
+      "sqlSha256": "ceb3e2e18a8b818a02beeab3a6502e17aad69ee80db1d7e2eaef8709dbd78afb",
+      "rollback": "database/mysql/mip/rollback/001_foundation.sql",
+      "rollbackSha256": "1ca5512e0fffd1a2cb543b0b5bd6c4affa5ae4fffba6cf12947bbf7b96c7c9f5",
+      "createsTables": [
+        "mip_users",
+        "mip_user_identities",
+        "mip_media_assets",
+        "mip_city_branches",
+        "mip_branch_memberships",
+        "mip_profiles",
+        "mip_private_profiles",
+        "mip_agreement_acceptances",
+        "mip_tags",
+        "mip_profile_tags",
+        "mip_admin_role_bindings",
+        "mip_app_settings",
+        "mip_idempotency_keys",
+        "mip_outbox_events",
+        "mip_audit_logs"
+      ]
+    }
+  ]
+}

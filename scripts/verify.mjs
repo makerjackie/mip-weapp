@@ -5,6 +5,7 @@ import process from 'node:process'
 const root = process.cwd()
 const steps = [
   ['architecture:check', ['node', 'scripts/architecture-check.mjs']],
+  ['mip:isolation:check', ['node', 'scripts/mip-isolation-check.mjs']],
   ['security:check', ['node', 'scripts/security-check.mjs']],
   ['mcp:doctor', ['node', 'scripts/mcp-doctor.mjs']],
   ['typecheck', ['pnpm', 'typecheck']],

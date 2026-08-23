@@ -23,7 +23,7 @@ CLOUDBASE_API_KEY=你刚创建的密钥
 ```bash
 pnpm cloud:status    # 配好后应变成 READY，不用扫码
 pnpm cloud:auth      # 有 API Key 时只加载密钥，不会再开设备码
-pnpm database:setup -- --confirm-env=<EnvID>
+pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --dry-run
 pnpm cloud:deploy -- --confirm-env=<EnvID>
 ```
 

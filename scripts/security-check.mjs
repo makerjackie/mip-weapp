@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 
@@ -24,18 +25,24 @@ const allowAppIdFiles = new Set([
   'scripts/security-check.mjs',
 ])
 
-function walk(dir) {
-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    if (['node_modules', 'dist', '.git', '.weapp-vite', '.tmp'].includes(entry.name)) {
-      return []
-    }
-    const child = path.join(dir, entry.name)
-    return entry.isDirectory() ? walk(child) : [child]
-  })
+function filesToScan() {
+  const result = spawnSync(
+    'git',
+    ['ls-files', '--cached', '--others', '--exclude-standard', '-z'],
+    { cwd: root, encoding: 'utf8' },
+  )
+  if (result.status !== 0) {
+    throw new Error(`Unable to list repository files: ${result.stderr.trim()}`)
+  }
+  return result.stdout
+    .split('\0')
+    .filter(Boolean)
+    .map(file => path.join(root, file))
+    .filter(file => fs.existsSync(file))
 }
 
 const hits = []
-for (const file of walk(root)) {
+for (const file of filesToScan()) {
   if (!/\.(?:md|json|ts|js|mjs|cjs|env|example|yml|yaml|txt)$/.test(file) && path.basename(file) !== '.env.example') {
     continue
   }

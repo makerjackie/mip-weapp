@@ -1,0 +1,16 @@
+DROP TABLE IF EXISTS mip_audit_logs;
+DROP TABLE IF EXISTS mip_outbox_events;
+DROP TABLE IF EXISTS mip_idempotency_keys;
+DROP TABLE IF EXISTS mip_app_settings;
+DROP TABLE IF EXISTS mip_admin_role_bindings;
+DROP TABLE IF EXISTS mip_profile_tags;
+DROP TABLE IF EXISTS mip_tags;
+DROP TABLE IF EXISTS mip_agreement_acceptances;
+DROP TABLE IF EXISTS mip_private_profiles;
+DROP TABLE IF EXISTS mip_profiles;
+ALTER TABLE mip_users DROP FOREIGN KEY mip_users_primary_branch_fk;
+DROP TABLE IF EXISTS mip_branch_memberships;
+DROP TABLE IF EXISTS mip_city_branches;
+DROP TABLE IF EXISTS mip_media_assets;
+DROP TABLE IF EXISTS mip_user_identities;
+DROP TABLE IF EXISTS mip_users;
