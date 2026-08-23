@@ -537,35 +537,28 @@ for (const functionName of [
   console.log(`[cloud-deploy] verified ${functionName} (MEMBERSHIP_DEPLOYMENT_STAGE=production)`)
 }
 
-const notificationTrigger = {
-  FunctionName: 'membership-notification-worker',
-  TriggerName: 'membership-notification-every-5m',
-  Type: 'timer',
-  TriggerDesc: '0 */5 * * * * *',
-  Namespace: envId,
-  Enable: 'OPEN',
-  CustomArgument: JSON.stringify({ action: 'run' }),
-}
-function isDuplicateTriggerError(error) {
-  return /already|exist|duplicate|ResourceInUse|相同的触发器已经存在|触发器已存在/i
+const notificationTriggerName = 'membership-notification-every-5m'
+function isMissingTriggerError(error) {
+  return /not exist|does not exist|ResourceNotFound|cannot find|不存在|未找到|NoSuch/i
     .test(String(error?.message || error))
 }
+// A 5-minute timer keeps Serverless MySQL awake and burns CCU. Do not reinstall it.
 try {
   callCloudbase(root, 'callCloudApi', {
     service: 'scf',
-    action: 'CreateTrigger',
-    params: notificationTrigger,
+    action: 'DeleteTrigger',
+    params: {
+      FunctionName: 'membership-notification-worker',
+      TriggerName: notificationTriggerName,
+      Type: 'timer',
+      Namespace: envId,
+    },
   })
 }
 catch (error) {
-  if (!isDuplicateTriggerError(error)) {
+  if (!isMissingTriggerError(error)) {
     throw error
   }
-  callCloudbase(root, 'callCloudApi', {
-    service: 'scf',
-    action: 'UpdateTrigger',
-    params: notificationTrigger,
-  })
 }
 const triggerReadback = callCloudbase(root, 'callCloudApi', {
   service: 'scf',
@@ -576,11 +569,10 @@ const triggerReadback = callCloudbase(root, 'callCloudApi', {
   },
 })
 const triggerText = JSON.stringify(triggerReadback)
-if (!triggerText.includes(notificationTrigger.TriggerName)
-  || !triggerText.includes('0 */5 * * * * *')) {
-  throw new Error('notification timer trigger readback failed')
+if (triggerText.includes(notificationTriggerName)) {
+  throw new Error('notification timer trigger must stay removed; it keeps Serverless MySQL awake')
 }
-console.log('[cloud-deploy] notification timer trigger verified (every 5 minutes)')
+console.log('[cloud-deploy] notification timer trigger removed (avoids MySQL CCU)')
 
 for (const protectedFunction of [
   'membership-payment-ledger',

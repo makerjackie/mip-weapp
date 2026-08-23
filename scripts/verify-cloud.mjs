@@ -147,9 +147,8 @@ const notificationTriggers = callCloudbase(root, 'callCloudApi', {
   },
 })
 const triggerText = JSON.stringify(notificationTriggers)
-if (!triggerText.includes('membership-notification-every-5m')
-  || !triggerText.includes('0 */5 * * * * *')) {
-  throw new Error('Notification worker timer trigger is missing or drifted')
+if (triggerText.includes('membership-notification-every-5m')) {
+  throw new Error('Notification worker timer trigger must stay removed; it keeps Serverless MySQL awake')
 }
 
 if (['test', 'live'].includes(paymentMode)) {

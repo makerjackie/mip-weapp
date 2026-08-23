@@ -424,10 +424,10 @@ assert(
   'Notification delivery must use a durable bounded outbox with an in-app fallback',
 )
 assert(
-  cloudDeploy.includes('isDuplicateTriggerError')
-  && cloudDeploy.includes('相同的触发器已经存在')
-  && cloudDeploy.includes('TriggerDesc: \'0 */5 * * * * *\''),
-  'Notification timer deployment must update existing Chinese/English trigger responses with the raw cron contract',
+  cloudDeploy.includes('DeleteTrigger')
+  && cloudDeploy.includes('membership-notification-every-5m')
+  && cloudDeploy.includes('keeps Serverless MySQL awake'),
+  'Notification worker must not install a 5-minute timer; it keeps Serverless MySQL awake',
 )
 assert(
   operationalExceptions.includes('member_refunds')

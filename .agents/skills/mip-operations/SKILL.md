@@ -33,11 +33,11 @@ description: Use for owner bootstrap, demo seed, CloudBase deploy, MySQL schema,
 
 ## Safety
 
-确认目标 EnvID。不要对生产跑 demo seed。
+确认目标 EnvID。不要对生产跑 demo seed。不要给通知 worker 安装 5 分钟定时器：它会阻止 Serverless MySQL 暂停，按 CCU 消耗额度。
 
 ## Forbidden
 
-自动授权、把环境 ID 写入验收产物、跳过确认参数。
+自动授权、把环境 ID 写入验收产物、跳过确认参数、把高频 MySQL 定时触发器部署到共享个人环境。
 
 ## Verify
 

@@ -22,9 +22,9 @@
 | `member_refunds` | UUID；订单与退款单号包含 app scope | 运营退款事务；支付 ledger 更新 |
 | `member_audit_logs` | auto increment bigint；`app_id` 索引 | 业务函数只追加（runtime 无 UPDATE/DELETE） |
 | `member_media_cleanup_outbox` | `(app_id, media_asset_id)` 唯一；status/lease/version | 账号注销后可执行对象清理；DONE 仅在 deleteFile 逐项 status 成功后 |
-| `member_notifications` | UUID；业务来源版本幂等 | 通知 worker 写；当前用户读取/标记已读 |
+| `member_notifications` | UUID；业务来源版本幂等 | 通知 worker 被受控调用时写；当前用户读取/标记已读 |
 | `member_notification_subscriptions` | UUID；按用户、活动和模板索引 | `membership-api` 保存真机订阅结果；worker 成功送达后消耗 |
-| `member_notification_outbox` | UUID；业务来源版本幂等；status/lease/attempts | 定时 worker 领取、发送和收敛 |
+| `member_notification_outbox` | UUID；业务来源版本幂等；status/lease/attempts | 通知 worker 被受控调用时领取、发送和收敛 |
 | `member_operational_failures` | UUID；`app_id + status + category + updated_at` | 上传/安全审核失败时只记录有限错误码，不保存图片或 provider 原文 |
 
 ## 关键约束
@@ -111,6 +111,7 @@
 ## 消息与异常运营（009）
 
 - 站内消息是权威用户回查入口；微信订阅消息只是可选送达通道。
+- 默认部署不安装通知定时器；未另行提供受控调用时，通知 worker 不会生成站内消息、发送订阅消息或处理活动提醒。
 - `member_notifications` 以 `app_id + user_id + kind + source + source_version` 幂等，覆盖报名结果、活动变更、活动提醒、活动取消和退款结果。
 - `member_notification_subscriptions` 保存用户针对当前小程序的真实订阅结果。普通活动模板按一次性授权处理，只有微信发送成功后才写 `consumed_at`。
 - `member_notification_outbox` 使用租约、有限重试和过期时间；没有模板、没有授权或已经过期时收敛为 `IN_APP_ONLY`，不阻断站内消息。

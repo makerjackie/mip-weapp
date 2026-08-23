@@ -27,8 +27,10 @@
 | `member_media_assets` | COS 文件 ID、尺寸和用途 | 只返回已绑定业务素材的 file ID |
 | `member_notifications` | 报名、活动和退款的站内消息 | 当前用户只读自己的消息；按来源版本幂等 |
 | `member_notification_subscriptions` | 用户真实订阅结果和一次性消耗状态 | 当前用户手势后写；不向其他用户或普通运营角色公开 |
-| `member_notification_outbox` | 微信消息发送租约、次数和结果 | 定时 worker 写；仅 owner/manager 的异常中心读取最小状态 |
+| `member_notification_outbox` | 微信消息发送租约、次数和结果 | 通知 worker 被受控调用时写；仅 owner/manager 的异常中心读取最小状态 |
 | `member_operational_failures` | 图片安全审核/上传失败的有限运营事实 | 只存安全错误码和业务资源；不存图片字节、provider 原文或用户身份响应 |
+
+默认部署不安装通知定时器；未另行提供受控调用时，不会生成站内消息、发送订阅消息或处理活动提醒。
 
 ## 活动与报名合同
 
