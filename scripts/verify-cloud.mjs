@@ -10,14 +10,16 @@ import {
   loadCaseEnv,
   sqlLiteral,
 } from './lib/example-cloudbase.mjs'
+import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
 const envId = env.CLOUDBASE_ENV_ID
 const appId = env.MINI_PROGRAM_APP_ID
 const paymentMode = env.MEMBERSHIP_PAYMENT_MODE || 'disabled'
-const paymentFunction = env.MEMBERSHIP_PAY_FUNCTION_NAME || 'membership-cloudpay'
-const paymentCallbackFunction = env.MEMBERSHIP_PAY_CALLBACK_FUNCTION || 'membership-cloudpay-callback'
+const functionNames = resolveMipFunctionNames(env)
+const paymentFunction = functionNames.pay
+const paymentCallbackFunction = functionNames.callback
 const confirmedEnv = process.argv.find(value => value.startsWith('--confirm-env='))?.slice('--confirm-env='.length)
 
 if (!envId || !appId || confirmedEnv !== envId) {
@@ -95,10 +97,10 @@ if (!tableCountRow || Number(tableCountRow.eventsWithoutOwner) !== 0) {
 
 const functions = []
 for (const functionName of [
-  'membership-api',
-  'membership-admin-api',
-  'membership-payment-ledger',
-  'membership-notification-worker',
+  functionNames.api,
+  functionNames.admin,
+  functionNames.ledger,
+  functionNames.notification,
 ]) {
   const health = callCloudbase(root, 'manageFunctions', {
     action: 'invokeFunction',
@@ -116,7 +118,7 @@ for (const functionName of [
     || healthResult?.data?.persistence !== 'cloudbase-mysql') {
     throw new Error(`${functionName} cloud verification failed`)
   }
-  if (!['membership-payment-ledger'].includes(functionName)
+  if (functionName !== functionNames.ledger
     && healthResult?.data?.appAllowlistConfigured !== true) {
     throw new Error(`${functionName} app allowlist verification failed`)
   }
@@ -126,7 +128,7 @@ for (const functionName of [
 const notificationPermissions = callCloudbase(root, 'queryPermissions', {
   action: 'getResourcePermission',
   resourceType: 'function',
-  resourceId: 'membership-notification-worker',
+  resourceId: functionNames.notification,
 })
 let notificationRules
 try {
@@ -135,19 +137,19 @@ try {
 catch {
   notificationRules = null
 }
-if (notificationRules?.['membership-notification-worker']?.invoke !== false) {
+if (notificationRules?.[functionNames.notification]?.invoke !== false) {
   throw new Error('Notification worker client invocation is not disabled')
 }
 const notificationTriggers = callCloudbase(root, 'callCloudApi', {
   service: 'scf',
   action: 'ListTriggers',
   params: {
-    FunctionName: 'membership-notification-worker',
+    FunctionName: functionNames.notification,
     Namespace: envId,
   },
 })
 const triggerText = JSON.stringify(notificationTriggers)
-if (triggerText.includes('membership-notification-every-5m')) {
+if (triggerText.includes('mip-notification-every-5m')) {
   throw new Error('Notification worker timer trigger must stay removed; it keeps Serverless MySQL awake')
 }
 
@@ -181,7 +183,7 @@ if (['test', 'live'].includes(paymentMode)) {
   catch {
     rules = null
   }
-  if (rules?.['membership-payment-ledger']?.invoke !== false || rules?.[paymentCallbackFunction]?.invoke !== false) {
+  if (rules?.[functionNames.ledger]?.invoke !== false || rules?.[paymentCallbackFunction]?.invoke !== false) {
     throw new Error('Payment callback and ledger client invocation rules are not enforced')
   }
 }

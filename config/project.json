@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "slug": "mip-weapp",
   "name": "同行会",
-  "namespace": "membership",
+  "namespace": "mip",
   "routes": [
     {
       "name": "首页",

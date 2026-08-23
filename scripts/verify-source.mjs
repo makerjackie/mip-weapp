@@ -428,7 +428,7 @@ assert(
 )
 assert(
   cloudDeploy.includes('DeleteTrigger')
-  && cloudDeploy.includes('membership-notification-every-5m')
+  && cloudDeploy.includes('mip-notification-every-5m')
   && cloudDeploy.includes('keeps Serverless MySQL awake'),
   'Notification worker must not install a 5-minute timer; it keeps Serverless MySQL awake',
 )

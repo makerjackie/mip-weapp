@@ -59,7 +59,7 @@ pnpm verify
 ## 修改品牌
 
 ```bash
-pnpm project:init --name "新产品名" --namespace membership
+pnpm project:init --name "新产品名" --namespace mip
 ```
 
 颜色、Logo、协议入口集中在 `src/config/brand.ts` 与 `src/app.css`。细节见 [docs/CUSTOMIZATION.md](docs/CUSTOMIZATION.md)。

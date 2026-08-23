@@ -4,12 +4,12 @@
 
 | 表 | 主键/租户键 | 写入方 |
 | --- | --- | --- |
-| `member_profiles` | UUID；`app_id + user_id` 或 demo `external_key` 唯一 | `membership-api` / `membership-admin-api` / dev seed |
-| `member_private_profiles` | `app_id + user_id` | `membership-api` 手机号换取 |
+| `member_profiles` | UUID；`app_id + user_id` 或 demo `external_key` 唯一 | `mip-api` / `mip-admin-api` / dev seed |
+| `member_private_profiles` | `app_id + user_id` | `mip-api` 手机号换取 |
 | `member_media_assets` | UUID；`app_id + asset_key + content_version` 唯一 | 受控上传/seed 工具 |
 | `member_plans` | `app_id + id` | 迁移/运营工具 |
 | `member_entitlements` | UUID；`app_id + user_id` 唯一 | 仅支付 ledger 事务 |
-| `member_events` | UUID；demo 可用 `app_id + external_key` | `membership-admin-api` / dev seed |
+| `member_events` | UUID；demo 可用 `app_id + external_key` | `mip-admin-api` / dev seed |
 | `member_orders` | UUID；幂等键与商户单号均包含 app scope | 下单事务；支付 ledger 更新 |
 | `member_registrations` | UUID；`app_id + event_id + user_id` 唯一 | 报名/取消/签到事务 |
 | `member_event_reservations` | UUID；`app_id + order_id` 唯一 | 独立付费活动预约；支付 ledger 转换为报名 |
@@ -23,7 +23,7 @@
 | `member_audit_logs` | auto increment bigint；`app_id` 索引 | 业务函数只追加（runtime 无 UPDATE/DELETE） |
 | `member_media_cleanup_outbox` | `(app_id, media_asset_id)` 唯一；status/lease/version | 账号注销后可执行对象清理；DONE 仅在 deleteFile 逐项 status 成功后 |
 | `member_notifications` | UUID；业务来源版本幂等 | 通知 worker 被受控调用时写；当前用户读取/标记已读 |
-| `member_notification_subscriptions` | UUID；按用户、活动和模板索引 | `membership-api` 保存真机订阅结果；worker 成功送达后消耗 |
+| `member_notification_subscriptions` | UUID；按用户、活动和模板索引 | `mip-api` 保存真机订阅结果；worker 成功送达后消耗 |
 | `member_notification_outbox` | UUID；业务来源版本幂等；status/lease/attempts | 通知 worker 被受控调用时领取、发送和收敛 |
 | `member_operational_failures` | UUID；`app_id + status + category + updated_at` | 上传/安全审核失败时只记录有限错误码，不保存图片或 provider 原文 |
 
@@ -33,7 +33,7 @@
 - 金额统一整数分，货币当前固定 `CNY`；数组和审计 metadata 使用 MySQL `JSON`。
 - 每个用户查询、公开内容查询、订单、报名、管理员和审计都必须带服务端可信 `app_id`。多租户隔离永不接受客户端 ownership。
 - 方案价格、权益天数、会员资格、名额、支付金额和退款金额在 MySQL 事务中重建，不能信任客户端。
-- 支付/退款回调在 `membership-payment-ledger` 中使用 `SELECT ... FOR UPDATE` 和条件状态更新；只有事务提交成功才向微信返回成功。
+- 支付/退款回调在 `mip-payment-ledger` 中使用 `SELECT ... FOR UPDATE` 和条件状态更新；只有事务提交成功才向微信返回成功。
 - 退款后根据全部仍为 `PAID` 的订单重算权益，因此退款较早订单不会误删后续购买的有效期。
 - demo 内容统一 `is_demo=1`，素材记录 provenance、SHA-256、尺寸和版本；production 禁止 seed。
 - `database/mysql/migrations.lock.json` 固定 migration 和 rollback 的 SHA-256；锁定文件不可原地修改，修复必须追加新迁移。
@@ -142,4 +142,4 @@
 - 图片失败：`app_id + status + category + updated_at + id`
 - 审计流：`app_id + created_at desc`
 
-客户端没有数据库直读写权限。`membership-api`、`membership-admin-api` 和原生 CloudPay 适配器从 `cloud.getWXContext()` 获取身份；支付函数不连接私网数据库，而是用 HMAC 调用 `membership-payment-ledger` 完成事务。
+客户端没有数据库直读写权限。`mip-api`、`mip-admin-api` 和原生 CloudPay 适配器从 `cloud.getWXContext()` 获取身份；支付函数不连接私网数据库，而是用 HMAC 调用 `mip-payment-ledger` 完成事务。

@@ -94,9 +94,9 @@
 - 账号注销在同一事务内写 `member_media_cleanup_outbox` PENDING 行；当前请求可立即尝试 deleteFile，但必须检查每项 status 才收敛 DONE。owner/admin 或签名运维可 `retryMediaCleanup`。
 - 会员退款门控与 `listOrders.canRefund` / `refundBlockReason` 一致：仅当退款会使剩余权益失效，且 ATTENDED 的会员包含活动落在**该订单权益覆盖期**内时阻断；历史任意 ATTENDED 不得永久阻断所有订单。覆盖期优先 `entitlement_start/end`，否则 `paid_at + duration_days`；字段不足时对“唯一剩余会员订单”保守阻断。
 - 所有时间存 UTC，客户端只负责本地化显示。
-- 页面不直连 MySQL；所有普通读写经过 `membership-api`，运营写经过 `membership-admin-api`。
+- 页面不直连 MySQL；所有普通读写经过 `mip-api`，运营写经过 `mip-admin-api`。
 - 下单、报名、取消、注销、支付和退款使用参数化 SQL 与 InnoDB 事务。
-- 支付函数不持有数据库连接串；它通过 HMAC 认证的内部调用访问 `membership-payment-ledger`。
+- 支付函数不持有数据库连接串；它通过 HMAC 认证的内部调用访问 `mip-payment-ledger`。
 - 普通用户端永不获得数据库连接串、HMAC secret、商户密钥、其他报名者手机号原文、完整票码或他人 OpenID/UID；授权运营端只按当前活动名单合同获得联系电话。
 - Runtime MySQL 授权为精确 table→privilege 映射：无 schema ALL、无全局 DELETE；`member_audit_logs` 仅 SELECT+INSERT。
 - 公开 `health` 只读（SELECT 探活 + 空结果集读权限）；深度写探针仅 owner 或签名运维路径。

@@ -1,10 +1,10 @@
 export const defaults = {
-  appNamespace: 'membership',
+  appNamespace: 'mip',
   touristAppId: 'touristappid',
-  membershipFunctionName: 'membership-api',
-  adminFunctionName: 'membership-admin-api',
-  paymentFunctionName: 'membership-cloudpay',
-  paymentCallbackFunctionName: 'membership-cloudpay-callback',
-  ledgerFunctionName: 'membership-payment-ledger',
+  membershipFunctionName: 'mip-api',
+  adminFunctionName: 'mip-admin-api',
+  paymentFunctionName: 'mip-cloudpay',
+  paymentCallbackFunctionName: 'mip-cloudpay-callback',
+  ledgerFunctionName: 'mip-payment-ledger',
   paymentMode: 'disabled',
 } as const

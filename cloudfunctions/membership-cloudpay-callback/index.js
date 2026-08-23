@@ -9,7 +9,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const appId = process.env.MEMBERSHIP_APP_ID || ''
 const callLedger = createLedgerClient({
   cloud,
-  functionName: process.env.MEMBERSHIP_LEDGER_FUNCTION || 'membership-payment-ledger',
+  functionName: process.env.MEMBERSHIP_LEDGER_FUNCTION || 'mip-payment-ledger',
   appId,
   secret: process.env.MEMBERSHIP_LEDGER_SECRET || '',
 })

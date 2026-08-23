@@ -12,6 +12,10 @@ import {
 } from './lib/example-cloudbase.mjs'
 import { assertMembershipApiActivityDomainPackage } from './lib/membership-api-package.mjs'
 import {
+  MIP_FUNCTION_SOURCES,
+  resolveMipFunctionNames,
+} from './lib/mip-function-names.mjs'
+import {
   assertRuntimePrivilegesExact,
   buildRuntimeGrantStatements,
   parseGrantee,
@@ -24,6 +28,8 @@ const repositoryRoot = path.resolve(root, '..', '..')
 const env = loadCaseEnv(root)
 const envId = env.CLOUDBASE_ENV_ID
 const appId = env.MINI_PROGRAM_APP_ID
+const functionNames = resolveMipFunctionNames(env)
+const databaseRuntimeUser = String(env.MEMBERSHIP_DB_RUNTIME_USER || 'mip_runtime').trim()
 let connectionUri = env.MEMBERSHIP_DB_CONNECTION_URI
 const paymentMode = env.MEMBERSHIP_PAYMENT_MODE || 'disabled'
 const subscribeTemplatesJson = String(env.MEMBERSHIP_SUBSCRIBE_TEMPLATES_JSON || '').trim()
@@ -43,6 +49,10 @@ const maintenanceSecret = typeof env.MEMBERSHIP_MAINTENANCE_SECRET === 'string'
   && env.MEMBERSHIP_MAINTENANCE_SECRET.length >= 32
   ? env.MEMBERSHIP_MAINTENANCE_SECRET
   : null
+
+if (!/^mip_[a-z0-9_]{0,23}$/.test(databaseRuntimeUser)) {
+  throw new Error('MEMBERSHIP_DB_RUNTIME_USER must be a dedicated lowercase mip_* MySQL user')
+}
 
 if (!envId || !appId || confirmedEnv !== envId) {
   throw new Error('Deployment requires EnvID/AppID and --confirm-env=<exact CLOUDBASE_ENV_ID>')
@@ -110,7 +120,14 @@ if (!vpcId || !subnetId) {
   throw new Error('MySQL VPC/subnet could not be resolved; configure MEMBERSHIP_DB_VPC_ID and MEMBERSHIP_DB_SUBNET_ID')
 }
 
-const functionRootPath = path.join(root, 'cloudfunctions')
+const sourceFunctionRootPath = path.join(root, 'cloudfunctions')
+const functionRootPath = path.join(root, '.tmp', 'mip-core-function-source')
+const coreFunctionSpecs = [
+  { role: 'api', source: MIP_FUNCTION_SOURCES.api, name: functionNames.api, timeout: 20 },
+  { role: 'admin', source: MIP_FUNCTION_SOURCES.admin, name: functionNames.admin, timeout: 20 },
+  { role: 'ledger', source: MIP_FUNCTION_SOURCES.ledger, name: functionNames.ledger, timeout: 20 },
+  { role: 'notification', source: MIP_FUNCTION_SOURCES.notification, name: functionNames.notification, timeout: 60 },
+]
 const deployed = []
 
 function existingFunctionDetail(functionName) {
@@ -161,7 +178,7 @@ function validConnectionUri(value) {
 }
 
 let credentialSource = 'configured'
-const existingMembershipApi = existingFunctionDetail('membership-api')
+const existingMembershipApi = existingFunctionDetail(functionNames.api)
 if (!validConnectionUri(connectionUri) && existingMembershipApi) {
   const current = existingMembershipApi
   const deployedUri = environmentVariables(current).MEMBERSHIP_DB_CONNECTION_URI
@@ -177,7 +194,7 @@ if (!validConnectionUri(connectionUri)) {
   if (!schema || !/^[\w-]+$/.test(schema) || !address || !/^[a-z0-9.-]+:\d+$/i.test(address)) {
     throw new Error('CloudBase MySQL private endpoint or schema could not be resolved safely')
   }
-  const runtimeUser = 'member_runtime'
+  const runtimeUser = databaseRuntimeUser
   const runtimePassword = randomBytes(32).toString('base64url')
   const account = parseGrantee(runtimeUser, '%')
   // Exact table→privilege map. No schema ALL, no global DELETE, audit append-only.
@@ -208,6 +225,9 @@ const runtimeSchema = decodeURIComponent(parsedConnection.pathname.replace(/^\//
 const runtimeUserName = decodeURIComponent(parsedConnection.username)
 if (!runtimeSchema || !/^[\w-]+$/.test(runtimeSchema) || !runtimeUserName || !/^[\w.-]+$/.test(runtimeUserName)) {
   throw new Error('Runtime MySQL schema/user could not be resolved safely for grants')
+}
+if (runtimeUserName !== databaseRuntimeUser) {
+  throw new Error('MEMBERSHIP_DB_CONNECTION_URI must use the dedicated MEMBERSHIP_DB_RUNTIME_USER account')
 }
 const runtimeAccount = parseGrantee(runtimeUserName, '%')
 const schemaSqlLiteral = runtimeSchema.replaceAll('\'', '\'\'')
@@ -263,7 +283,7 @@ for (const table of runtimeTableNames) {
 console.log('[cloud-deploy] exact minimal runtime grants verified (full map; no schema/global ALL; scoped DELETE only)')
 
 let ledgerSecret = randomBytes(32).toString('hex')
-const existingLedger = existingFunctionDetail('membership-payment-ledger')
+const existingLedger = existingFunctionDetail(functionNames.ledger)
 if (existingLedger) {
   const ledgerDetail = existingLedger
   const deployedSecret = environmentVariables(ledgerDetail).MEMBERSHIP_LEDGER_SECRET
@@ -381,7 +401,7 @@ function extractRemoteOpenApiPermissions(detail) {
  * Documented post-deploy avatar safety probe action name.
  * NOT invoked by this deploy script this round — structure readiness only.
  * Future owner/ops lane may invoke:
- *   manageFunctions invokeFunction membership-api { action: 'probeAvatarSafety' }
+ *   manageFunctions invokeFunction mip-api { action: 'probeAvatarSafety' }
  * to prove imgSecCheck is reachable without uploading a real user avatar.
  */
 function avatarSafetyProbeActionName() {
@@ -392,7 +412,7 @@ void avatarSafetyProbeActionName
 
 // Pre-deploy: local config.json must declare openapi permissions (upload source of truth).
 // Live remote permissions are verified after deploy; local config alone is not live proof.
-const membershipApiConfigPath = path.join(functionRootPath, 'membership-api', 'config.json')
+const membershipApiConfigPath = path.join(sourceFunctionRootPath, MIP_FUNCTION_SOURCES.api, 'config.json')
 const membershipApiConfig = JSON.parse(fs.readFileSync(membershipApiConfigPath, 'utf8'))
 const localOpenapi = membershipApiConfig?.permissions?.openapi || []
 if (!localOpenapi.includes('security.imgSecCheck')
@@ -402,8 +422,8 @@ if (!localOpenapi.includes('security.imgSecCheck')
 }
 console.log('[cloud-deploy] pre-deploy local openapi permissions include image/message safety + phone')
 const notificationWorkerConfigPath = path.join(
-  functionRootPath,
-  'membership-notification-worker',
+  sourceFunctionRootPath,
+  MIP_FUNCTION_SOURCES.notification,
   'config.json',
 )
 const notificationWorkerConfig = JSON.parse(fs.readFileSync(notificationWorkerConfigPath, 'utf8'))
@@ -412,12 +432,17 @@ if (!notificationWorkerConfig?.permissions?.openapi?.includes('subscribeMessage.
 }
 console.log('[cloud-deploy] notification worker declares subscribeMessage.send')
 
-for (const functionName of [
-  'membership-api',
-  'membership-admin-api',
-  'membership-payment-ledger',
-  'membership-notification-worker',
-]) {
+fs.rmSync(functionRootPath, { recursive: true, force: true })
+fs.mkdirSync(functionRootPath, { recursive: true })
+for (const spec of coreFunctionSpecs) {
+  fs.cpSync(path.join(sourceFunctionRootPath, spec.source), path.join(functionRootPath, spec.name), {
+    recursive: true,
+    filter: source => path.basename(source) !== 'node_modules',
+  })
+}
+
+for (const spec of coreFunctionSpecs) {
+  const { name: functionName, role } = spec
   const envVariables = {
     MEMBERSHIP_DB_CONNECTION_URI: connectionUri,
     MEMBERSHIP_DB_POOL_SIZE: '4',
@@ -427,20 +452,20 @@ for (const functionName of [
     // fails closed independently of MEMBERSHIP_PAYMENT_MODE (including disabled).
     MEMBERSHIP_DEPLOYMENT_STAGE: deploymentStage,
     // Production export uses private CloudBase storage + DB tickets; never memory.
-    ...(functionName === 'membership-admin-api'
+    ...(role === 'admin'
       ? { MEMBERSHIP_EXPORT_STORAGE: 'cloudbase' }
       : {}),
-    ...(functionName === 'membership-payment-ledger' ? { MEMBERSHIP_LEDGER_SECRET: ledgerSecret } : {}),
-    ...((functionName === 'membership-api' || functionName === 'membership-notification-worker')
+    ...(role === 'ledger' ? { MEMBERSHIP_LEDGER_SECRET: ledgerSecret } : {}),
+    ...((role === 'api' || role === 'notification')
       ? {
           MEMBERSHIP_SUBSCRIBE_TEMPLATES_JSON: subscribeTemplatesJson,
-          ...(functionName === 'membership-notification-worker'
+          ...(role === 'notification'
             ? { MEMBERSHIP_MINIPROGRAM_STATE: miniprogramState }
             : {}),
         }
       : {}),
     // Optional signed maintenance path for api/admin only; omit when not configured.
-    ...(maintenanceSecret && (functionName === 'membership-api' || functionName === 'membership-admin-api')
+    ...(maintenanceSecret && (role === 'api' || role === 'admin')
       ? { MEMBERSHIP_MAINTENANCE_SECRET: maintenanceSecret }
       : {}),
   }
@@ -454,7 +479,7 @@ for (const functionName of [
       type: 'Event',
       runtime: 'Nodejs20.19',
       handler: 'index.main',
-      timeout: functionName === 'membership-notification-worker' ? 60 : 20,
+      timeout: spec.timeout,
       envVariables,
       vpc: { vpcId, subnetId },
       isWaitInstall: true,
@@ -477,7 +502,7 @@ for (const functionName of [
     throw new Error(`${functionName} MEMBERSHIP_DEPLOYMENT_STAGE readback is not production`)
   }
   // Maintenance secret: presence-only readback; never print the secret value.
-  if (maintenanceSecret && (functionName === 'membership-api' || functionName === 'membership-admin-api')) {
+  if (maintenanceSecret && (role === 'api' || role === 'admin')) {
     const deployedSecret = deployedEnvironment.MEMBERSHIP_MAINTENANCE_SECRET
     const present = typeof deployedSecret === 'string' && deployedSecret.length > 0
     const lengthMatch = present && deployedSecret.length === maintenanceSecret.length
@@ -489,20 +514,20 @@ for (const functionName of [
   const health = callCloudbase(root, 'manageFunctions', {
     action: 'invokeFunction',
     functionName,
-    params: functionName === 'membership-payment-ledger' ? signedLedgerHealth() : { action: 'health' },
+    params: role === 'ledger' ? signedLedgerHealth() : { action: 'health' },
   }, 120000)
   const healthResult = cloudFunctionResult(health)
   if (healthResult?.ok !== true || healthResult?.data?.persistence !== 'cloudbase-mysql') {
     throw new Error(`${functionName} health response did not prove MySQL persistence`)
   }
-  if (functionName === 'membership-api' || functionName === 'membership-admin-api') {
+  if (role === 'api' || role === 'admin') {
     const grants = healthResult?.data?.exportIntegrityGrants
     // Public health is read-only; deep write probes are owner/signed only.
     if (
       grants?.exportTickets !== true
       || grants?.mutationIdempotency !== true
-      || (functionName === 'membership-api' && grants?.notificationInboxRead !== true)
-      || (functionName === 'membership-admin-api' && grants?.operationalExceptionsRead !== true)
+      || (role === 'api' && grants?.notificationInboxRead !== true)
+      || (role === 'admin' && grants?.operationalExceptionsRead !== true)
       || grants?.appScoped !== true
       || grants?.mode !== 'read-only'
     ) {
@@ -510,7 +535,7 @@ for (const functionName of [
     }
   }
   // Post-deploy: remote OpenAPI permissions for membership-api (live readback, not local config).
-  if (functionName === 'membership-api') {
+  if (role === 'api') {
     const remoteOpenapi = extractRemoteOpenApiPermissions(deployedDetail)
     if (remoteOpenapi.status === 'OK'
       && (!remoteOpenapi.openapi.includes('security.imgSecCheck')
@@ -524,7 +549,7 @@ for (const functionName of [
     // live proof or blocking unrelated activity-platform deployments.
     console.log(`[cloud-deploy] membership-api openapiPermissions: ${remoteOpenapi.status}`)
   }
-  if (functionName === 'membership-notification-worker') {
+  if (role === 'notification') {
     const remoteOpenapi = extractRemoteOpenApiPermissions(deployedDetail)
     if (remoteOpenapi.status === 'OK'
       && !remoteOpenapi.openapi.includes('subscribeMessage.send')) {
@@ -537,7 +562,7 @@ for (const functionName of [
   console.log(`[cloud-deploy] verified ${functionName} (MEMBERSHIP_DEPLOYMENT_STAGE=production)`)
 }
 
-const notificationTriggerName = 'membership-notification-every-5m'
+const notificationTriggerName = 'mip-notification-every-5m'
 function isMissingTriggerError(error) {
   return /not exist|does not exist|ResourceNotFound|cannot find|不存在|未找到|NoSuch/i
     .test(String(error?.message || error))
@@ -548,7 +573,7 @@ try {
     service: 'scf',
     action: 'DeleteTrigger',
     params: {
-      FunctionName: 'membership-notification-worker',
+      FunctionName: functionNames.notification,
       TriggerName: notificationTriggerName,
       Type: 'timer',
       Namespace: envId,
@@ -564,7 +589,7 @@ const triggerReadback = callCloudbase(root, 'callCloudApi', {
   service: 'scf',
   action: 'ListTriggers',
   params: {
-    FunctionName: 'membership-notification-worker',
+    FunctionName: functionNames.notification,
     Namespace: envId,
   },
 })
@@ -575,8 +600,8 @@ if (triggerText.includes(notificationTriggerName)) {
 console.log('[cloud-deploy] notification timer trigger removed (avoids MySQL CCU)')
 
 for (const protectedFunction of [
-  'membership-payment-ledger',
-  'membership-notification-worker',
+  functionNames.ledger,
+  functionNames.notification,
 ]) {
   const currentPermissions = callCloudbase(root, 'queryPermissions', {
     action: 'getResourcePermission',

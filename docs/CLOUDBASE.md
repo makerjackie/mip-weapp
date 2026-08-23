@@ -2,8 +2,8 @@
 
 - EnvID 只写 `.env.local` 的 `CLOUDBASE_ENV_ID`。不要把原项目生产环境写进仓库。
 - 小程序端通过 `createCloudbaseRuntime` 初始化；未配置时 mode=`disabled`。
-- 业务函数：`membership-api`、`membership-admin-api`、`membership-cloudpay`、`membership-cloudpay-callback`、`membership-payment-ledger`、`membership-notification-worker`。
-- `membership-notification-worker` 只保留函数，不安装定时触发器。会访问 MySQL 的 SCF timer 会阻止 Serverless MySQL 自动暂停，按 CCU（核·小时）消耗资源点，个人版很快超额。默认部署不会生成站内消息、发送微信订阅消息或处理活动提醒；只有在另行提供受控调用后才会执行这些任务。
+- 部署函数：`mip-api`、`mip-admin-api`、`mip-cloudpay`、`mip-cloudpay-callback`、`mip-payment-ledger`、`mip-notification-worker`。源码目录仍保留 `cloudfunctions/membership-*` 领域命名，部署脚本会映射到独立的 `mip-*` 目标，避免覆盖共享环境里的旧函数。
+- `mip-notification-worker` 只保留函数，不安装定时触发器。会访问 MySQL 的 SCF timer 会阻止 Serverless MySQL 自动暂停，按 CCU（核·小时）消耗资源点，个人版很快超额。默认部署不会生成站内消息、发送微信订阅消息或处理活动提醒；只有在另行提供受控调用后才会执行这些任务。
 - MySQL 连接串只进函数配置。
 
 ## MCP 授权

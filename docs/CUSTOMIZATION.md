@@ -11,7 +11,7 @@
 | 会员方案 | 服务端 `member_plans`，不要写死在客户端 |
 
 ```bash
-pnpm project:init --name "新产品" --namespace membership --dry-run
+pnpm project:init --name "新产品" --namespace mip --dry-run
 pnpm project:init --name "新产品"
 ```
 

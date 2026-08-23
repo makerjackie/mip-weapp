@@ -9,15 +9,20 @@ import {
   cloudFunctionResult,
   loadCaseEnv,
 } from './lib/example-cloudbase.mjs'
+import {
+  MIP_FUNCTION_SOURCES,
+  resolveMipFunctionNames,
+} from './lib/mip-function-names.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
 const envId = env.CLOUDBASE_ENV_ID
 const appId = env.MINI_PROGRAM_APP_ID
 const merchantId = env.WECHAT_PAY_MERCHANT_ID
-const functionName = env.MEMBERSHIP_PAY_FUNCTION_NAME || 'membership-cloudpay'
-const callbackFunction = env.MEMBERSHIP_PAY_CALLBACK_FUNCTION || 'membership-cloudpay-callback'
-const ledgerFunction = env.MEMBERSHIP_LEDGER_FUNCTION_NAME || 'membership-payment-ledger'
+const functionNames = resolveMipFunctionNames(env)
+const functionName = functionNames.pay
+const callbackFunction = functionNames.callback
+const ledgerFunction = functionNames.ledger
 const paymentMode = env.MEMBERSHIP_PAYMENT_MODE
 const confirmedEnv = process.argv.find(value => value.startsWith('--confirm-env='))?.slice('--confirm-env='.length)
 const confirmedFunction = process.argv.find(value => value.startsWith('--confirm-function='))?.slice('--confirm-function='.length)
@@ -65,8 +70,8 @@ const functionRootPath = path.join(root, '.tmp', 'cloudpay-function-source')
 fs.rmSync(functionRootPath, { recursive: true, force: true })
 fs.mkdirSync(functionRootPath, { recursive: true })
 for (const [sourceName, targetName] of [
-  ['membership-cloudpay', functionName],
-  ['membership-cloudpay-callback', callbackFunction],
+  [MIP_FUNCTION_SOURCES.pay, functionName],
+  [MIP_FUNCTION_SOURCES.callback, callbackFunction],
 ]) {
   fs.cpSync(path.join(root, 'cloudfunctions', sourceName), path.join(functionRootPath, targetName), {
     recursive: true,

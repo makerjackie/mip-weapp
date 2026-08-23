@@ -12,7 +12,7 @@ const config = {
   envId: process.env.CLOUDBASE_ENV_ID || '',
   appId: process.env.MEMBERSHIP_APP_ID || '',
   merchantId: process.env.WECHAT_PAY_MERCHANT_ID || '',
-  callbackFunction: process.env.MEMBERSHIP_CALLBACK_FUNCTION || 'membership-cloudpay-callback',
+  callbackFunction: process.env.MEMBERSHIP_CALLBACK_FUNCTION || 'mip-cloudpay-callback',
   paymentMode: process.env.MEMBERSHIP_PAYMENT_MODE || 'disabled',
 }
 const allowedAppIds = new Set(String(process.env.MEMBERSHIP_ALLOWED_APP_IDS || config.appId)
@@ -22,7 +22,7 @@ const allowedAppIds = new Set(String(process.env.MEMBERSHIP_ALLOWED_APP_IDS || c
 
 const callLedger = createLedgerClient({
   cloud,
-  functionName: process.env.MEMBERSHIP_LEDGER_FUNCTION || 'membership-payment-ledger',
+  functionName: process.env.MEMBERSHIP_LEDGER_FUNCTION || 'mip-payment-ledger',
   appId: config.appId,
   secret: process.env.MEMBERSHIP_LEDGER_SECRET || '',
 })
