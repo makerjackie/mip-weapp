@@ -8,20 +8,24 @@
     </view>
   </view>
 
-  <view wx:if="{{heroEvent}}" class="relative mt-2 h-[298rpx] overflow-hidden rounded-[16rpx] bg-panel" data-event-id="{{heroEvent.id}}" bind:tap="openEvent">
-    <image wx:if="{{heroEvent.coverUrl}}" class="h-full w-full" mode="aspectFill" src="{{heroEvent.coverUrl}}" />
-    <view wx:else class="flex h-full w-full items-center justify-center bg-brand-soft"><t-icon name="calendar" size="78rpx" color="var(--color-brand)" /></view>
-    <view class="absolute bottom-0 left-0 right-0 bg-[#080808E6] px-4 py-3">
-      <view class="line-clamp-1 text-[length:28rpx] font-bold">{{heroEvent.title}}</view>
-      <view class="mt-1 text-[length:22rpx] text-muted">{{heroEvent.startsText}} · {{heroEvent.locationText}}</view>
-    </view>
-  </view>
+  <swiper wx:if="{{banners.length}}" class="mt-2 h-[298rpx] overflow-hidden rounded-[16rpx] bg-panel" autoplay="{{banners.length > 1}}" circular="{{banners.length > 1}}" indicator-dots="{{banners.length > 1}}" interval="4500" duration="400">
+    <swiper-item wx:for="{{banners}}" wx:key="id">
+      <view class="h-full w-full" aria-role="button" aria-label="{{item.accessibilityLabel}}" data-banner-id="{{item.id}}" bind:tap="openBanner">
+        <image class="h-full w-full" mode="aspectFill" src="{{item.imagePath}}" />
+      </view>
+    </swiper-item>
+  </swiper>
 
   <view class="mt-4 grid grid-cols-2 border-b border-line">
     <view wx:if="{{view === 'UPCOMING'}}" class="flex min-h-[80rpx] items-center justify-center border-b-[4rpx] border-brand text-[length:27rpx] font-semibold text-brand" data-view="UPCOMING" bind:tap="changeView">活动报名</view>
     <view wx:else class="flex min-h-[80rpx] items-center justify-center border-b-[4rpx] border-transparent text-[length:27rpx] font-semibold text-muted" data-view="UPCOMING" bind:tap="changeView">活动报名</view>
     <view wx:if="{{view === 'PAST'}}" class="flex min-h-[80rpx] items-center justify-center border-b-[4rpx] border-brand text-[length:27rpx] font-semibold text-brand" data-view="PAST" bind:tap="changeView">往期活动</view>
     <view wx:else class="flex min-h-[80rpx] items-center justify-center border-b-[4rpx] border-transparent text-[length:27rpx] font-semibold text-muted" data-view="PAST" bind:tap="changeView">往期活动</view>
+  </view>
+
+  <view wx:if="{{videoChannelConfigured}}" class="mt-3 flex min-h-[88rpx] items-center justify-between rounded-[16rpx] bg-panel px-4" bind:tap="openPastReview">
+    <view><view class="text-[length:25rpx] font-semibold">往期回顾</view><view class="mt-1 text-[length:22rpx] text-muted">在视频号查看活动内容</view></view>
+    <t-icon name="chevron-right" size="32rpx" color="var(--color-brand)" />
   </view>
 
   <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="mt-3 whitespace-nowrap">
@@ -32,8 +36,27 @@
       <view wx:else class="rounded-[16rpx] bg-panel px-4 py-2 text-[length:22rpx] text-muted" data-filter="ENDED" bind:tap="changeDateFilter">已结束</view>
       <view wx:if="{{dateFilter === 'TODAY'}}" class="rounded-[16rpx] bg-brand px-4 py-2 text-[length:22rpx] text-on-brand" data-filter="TODAY" bind:tap="changeDateFilter">今天</view>
       <view wx:else class="rounded-[16rpx] bg-panel px-4 py-2 text-[length:22rpx] text-muted" data-filter="TODAY" bind:tap="changeDateFilter">今天</view>
+      <view wx:if="{{dateFilter === 'CUSTOM'}}" class="flex min-h-[64rpx] items-center rounded-[16rpx] bg-brand px-4 text-[length:22rpx] text-on-brand" bind:tap="showCalendar"><t-icon name="calendar" size="26rpx" color="var(--color-on-brand)" /><text class="ml-1">{{customDateLabel || '自定义日期'}}</text></view>
+      <view wx:else class="flex min-h-[64rpx] items-center rounded-[16rpx] bg-panel px-4 text-[length:22rpx] text-muted" bind:tap="showCalendar"><t-icon name="calendar" size="26rpx" color="var(--color-muted)" /><text class="ml-1">选择日期</text></view>
     </view>
   </scroll-view>
+
+  <view class="mt-3 rounded-[16rpx] bg-panel px-4 py-3">
+    <view class="flex min-h-[48rpx] items-center justify-between">
+      <text class="text-[length:24rpx] font-semibold">日期范围</text>
+      <view wx:if="{{dateFrom || dateTo}}" class="min-h-[64rpx] px-2 py-2 text-[length:22rpx] text-muted" bind:tap="clearDateRange">清除</view>
+    </view>
+    <view class="mt-2 flex gap-2">
+      <view class="box-border flex min-h-[72rpx] min-w-0 flex-1 items-center rounded-[12rpx] bg-panel-raised px-3 text-[length:23rpx]" data-target="FROM" bind:tap="showRangeCalendar">
+        <text class="text-muted">开始日期</text>
+        <text wx:if="{{dateFromLabel}}" class="ml-2 text-ink">{{dateFromLabel}}</text>
+      </view>
+      <view class="box-border flex min-h-[72rpx] min-w-0 flex-1 items-center rounded-[12rpx] bg-panel-raised px-3 text-[length:23rpx]" data-target="TO" bind:tap="showRangeCalendar">
+        <text class="text-muted">结束日期</text>
+        <text wx:if="{{dateToLabel}}" class="ml-2 text-ink">{{dateToLabel}}</text>
+      </view>
+    </view>
+  </view>
 
   <view class="mt-3 flex items-center gap-2 rounded-[16rpx] bg-panel px-4">
     <t-icon name="search" size="32rpx" color="var(--color-muted)" />
@@ -64,11 +87,15 @@
           <view class="flex items-center">
             <image wx:for="{{item.participantPreview}}" wx:key="participantRef" class="-mr-2 h-[48rpx] w-[48rpx] rounded-full border-[3rpx] border-panel bg-brand-soft" mode="aspectFill" src="{{item.avatarUrl}}" />
             <text class="ml-3 text-[length:21rpx] text-muted">{{item.registrationCount}} 人参加</text>
+            <text wx:if="{{item.capacity}}" class="ml-2 text-[length:21rpx] text-muted">限 {{item.capacity}} 人</text>
           </view>
-          <t-icon name="chevron-right" size="30rpx" color="var(--color-brand)" />
+          <button open-type="share" class="m-0 flex min-h-[72rpx] items-center gap-1 border-0 bg-transparent px-3 py-0 text-[length:22rpx] leading-none text-brand after:border-0" data-event-id="{{item.id}}" catch:tap="stopPropagation"><t-icon name="share" size="28rpx" color="var(--color-brand)" /><text>分享</text></button>
         </view>
       </view>
     </view>
+    <view wx:if="{{nextCursor}}" class="flex min-h-[88rpx] items-center justify-center rounded-[16rpx] bg-panel text-[length:24rpx] text-brand" bind:tap="loadMore">{{loadingMore ? '加载中' : '加载更多'}}</view>
+    <view wx:else class="py-2 text-center text-[length:22rpx] text-muted">已显示全部活动</view>
   </view>
   <view wx:if="{{message && state !== 'error'}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
+  <t-calendar visible="{{calendarVisible}}" value="{{calendarValue}}" min-date="{{calendarMinDate}}" max-date="{{calendarMaxDate}}" title="选择活动日期" type="single" switch-mode="year-month" confirm-btn="确定" bind:confirm="confirmCalendar" bind:close="closeCalendar" />
 </view>

@@ -21,9 +21,31 @@ function createNotificationsRepository(database) {
         params,
       ),
       database.one(
-        `SELECT COUNT(*) AS count FROM mip_inbox_messages
-         WHERE app_id = ? AND recipient_user_id = ? AND read_at IS NULL`,
-        [appId, userId],
+        `SELECT (
+           SELECT COUNT(*)
+           FROM mip_inbox_messages
+           WHERE app_id = ? AND recipient_user_id = ? AND read_at IS NULL
+         ) + (
+           SELECT COUNT(*) FROM (
+             SELECT visit.visitor_user_id
+             FROM mip_profile_visits visit
+             INNER JOIN mip_users visitor
+               ON visitor.app_id = visit.app_id
+               AND visitor.id = visit.visitor_user_id
+               AND visitor.status = 'ACTIVE'
+             WHERE visit.app_id = ? AND visit.profile_user_id = ? AND visit.read_at IS NULL
+               AND NOT EXISTS (
+                 SELECT 1 FROM mip_user_blocks block
+                 WHERE block.app_id = visit.app_id AND block.status = 'ACTIVE'
+                   AND (
+                     (block.blocker_user_id = ? AND block.blocked_user_id = visit.visitor_user_id)
+                     OR (block.blocker_user_id = visit.visitor_user_id AND block.blocked_user_id = ?)
+                   )
+               )
+             GROUP BY visit.visitor_user_id
+           ) visitor_unread
+         ) AS count`,
+        [appId, userId, appId, userId, userId, userId],
       ),
     ])
     const page = rows.slice(0, limit)

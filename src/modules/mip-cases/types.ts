@@ -1,7 +1,7 @@
 import type { SuperCaseId } from '../mip'
 import type { AiDraftSourceConfirmation } from '../mip-ai/types'
 
-export type SuperCaseStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED'
+export type SuperCaseStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'ARCHIVED'
 
 export interface SuperCaseSummary {
   id: SuperCaseId
@@ -16,6 +16,7 @@ export interface SuperCaseSummary {
   publishedAt: string
   author: { profileRef: string, nickname: string, avatarUrl?: string, headline?: string }
   mine: boolean
+  version?: number
 }
 
 export interface SuperCaseDetail extends SuperCaseSummary {

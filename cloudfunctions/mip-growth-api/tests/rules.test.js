@@ -40,8 +40,28 @@ test('snapshot derives the active level from server thresholds', () => {
     { id: 'one', level_key: 'one', name: '一级', minimum_experience: 0, benefits_json: '[]', status: 'ACTIVE' },
     { id: 'two', level_key: 'two', name: '二级', minimum_experience: 100, benefits_json: '["活动权益"]', status: 'ACTIVE' },
     { id: 'three', level_key: 'three', name: '三级', minimum_experience: 200, benefits_json: '[]', status: 'ACTIVE' },
-  ])
+  ], [{
+    id: 'rule-one',
+    rule_key: 'event_attended',
+    name: '完成活动签到',
+    metric: 'EXPERIENCE',
+    delta_value: 100,
+    daily_limit_value: 300,
+    source_event_type: 'event.checked_in',
+    status: 'ACTIVE',
+  }])
   assert.equal(result.currentLevel.levelKey, 'two')
+  assert.deepEqual(result.levels.map(level => level.levelKey), ['one', 'two', 'three'])
+  assert.deepEqual(result.earningRules, [{
+    id: 'rule-one',
+    ruleKey: 'event_attended',
+    name: '完成活动签到',
+    metric: 'EXPERIENCE',
+    deltaValue: 100,
+    dailyLimitValue: 300,
+    sourceEventType: 'event.checked_in',
+    status: 'ACTIVE',
+  }])
   assert.equal(result.experienceToNextLevel, 80)
   assert.equal(result.levelProgressPercent, 20)
 })

@@ -4,10 +4,13 @@ import type {
   AdminEventAlbumPhoto,
   AdminEventAlbumPhotoStatus,
   AdminEventCloneResult,
+  AdminEventPolicy,
   AdminEventReminderPublication,
   AdminExportReservation,
   AdminExportStatus,
   AdminExportTicket,
+  AdminRoleCandidate,
+  AdminRoleItem,
   MipAdminGateway,
 } from './types'
 import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
@@ -20,6 +23,7 @@ import {
   parseAdminAnnouncementScopes,
 } from './announcements'
 import { parseOperationalExceptionPage } from './operational-exceptions'
+import { parseAdminOrderPage, parseAdminRosterPage } from './order-roster'
 import { MipAdminError } from './types'
 
 interface Envelope<T> {
@@ -37,7 +41,9 @@ const readActions = new Set([
   'mip.admin.announcements.get',
   'mip.admin.communityReports.list',
   'mip.admin.users.list',
+  'mip.admin.users.get',
   'mip.admin.events.list',
+  'mip.admin.events.policy.get',
   'mip.admin.events.get',
   'mip.admin.events.album.list',
   'mip.admin.events.roster',
@@ -59,9 +65,35 @@ const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}
 const communityReportCategories = new Set(['SPAM', 'HARASSMENT', 'FRAUD', 'INAPPROPRIATE_CONTENT', 'IMPERSONATION', 'OTHER'])
 const communityReportStatuses = new Set(['PENDING', 'REVIEWING', 'RESOLVED', 'DISMISSED'])
 const eventAlbumPhotoStatuses = new Set(['PENDING', 'PUBLISHED', 'REJECTED'])
+const adminRoleKeys = new Set([
+  'PLATFORM_OWNER',
+  'PLATFORM_OPERATIONS',
+  'PLATFORM_FINANCE',
+  'BRANCH_ADMIN',
+  'EVENT_OWNER',
+  'EVENT_MANAGER',
+  'EVENT_STAFF',
+])
+const adminScopeTypes = new Set(['PLATFORM', 'BRANCH', 'EVENT'])
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function parseEventPolicy(value: unknown): AdminEventPolicy {
+  if (!record(value)) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的活动规则')
+  }
+  const cancellationHoursBeforeStart = Number(value.cancellationHoursBeforeStart)
+  const version = Number(value.version)
+  if (!Number.isInteger(cancellationHoursBeforeStart)
+    || cancellationHoursBeforeStart < 0
+    || cancellationHoursBeforeStart > 720
+    || !Number.isInteger(version)
+    || version < 0) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的活动规则')
+  }
+  return { cancellationHoursBeforeStart, version }
 }
 
 function hasOnlyKeys(value: Record<string, unknown>, keys: string[]) {
@@ -187,6 +219,92 @@ function parseBranchPage(value: unknown) {
     items: value.items.map(parseBranch),
     nextCursor: value.nextCursor === undefined ? null : value.nextCursor,
   }
+}
+
+function parseAdminRole(value: unknown): AdminRoleItem {
+  if (!record(value)
+    || typeof value.id !== 'string'
+    || value.id.length < 1
+    || value.id.length > 36
+    || typeof value.userId !== 'string'
+    || value.userId.length < 1
+    || value.userId.length > 36
+    || typeof value.nickname !== 'string'
+    || value.nickname.length < 1
+    || value.nickname.length > 64
+    || !adminScopeTypes.has(String(value.scopeType))
+    || !adminRoleKeys.has(String(value.roleKey))
+    || typeof value.scopeName !== 'string'
+    || value.scopeName.length < 1
+    || value.scopeName.length > 120
+    || !['ACTIVE', 'REVOKED'].includes(String(value.status))
+    || !(value.grantedAt === null || (typeof value.grantedAt === 'string' && Number.isFinite(Date.parse(value.grantedAt))))
+    || !(value.revokedAt === null || (typeof value.revokedAt === 'string' && Number.isFinite(Date.parse(value.revokedAt))))) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的角色信息')
+  }
+  const scopeType = String(value.scopeType)
+  const scopeIdValid = scopeType === 'PLATFORM'
+    ? value.scopeId === null
+    : typeof value.scopeId === 'string' && value.scopeId.length > 0 && value.scopeId.length <= 36
+  const branchIdValid = scopeType === 'PLATFORM'
+    ? value.branchId === null
+    : scopeType === 'BRANCH'
+      ? value.branchId === value.scopeId
+      : value.branchId === null || (typeof value.branchId === 'string' && value.branchId.length > 0 && value.branchId.length <= 36)
+  if (!scopeIdValid || !branchIdValid) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的角色范围')
+  }
+  return {
+    id: value.id as string,
+    userId: value.userId as string,
+    nickname: value.nickname as string,
+    scopeType: value.scopeType as AdminRoleItem['scopeType'],
+    scopeId: value.scopeId as string | null,
+    scopeName: value.scopeName as string,
+    branchId: value.branchId as string | null,
+    roleKey: value.roleKey as AdminRoleItem['roleKey'],
+    status: value.status as AdminRoleItem['status'],
+    grantedAt: value.grantedAt as string | null,
+    revokedAt: value.revokedAt as string | null,
+  }
+}
+
+function parseAdminRolePage(value: unknown) {
+  if (!record(value)
+    || !Array.isArray(value.items)
+    || !(value.nextCursor === undefined || value.nextCursor === null || typeof value.nextCursor === 'string')) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的角色列表')
+  }
+  return {
+    items: value.items.map(parseAdminRole),
+    nextCursor: value.nextCursor === undefined ? null : value.nextCursor,
+  }
+}
+
+function parseAdminRoleCandidate(value: unknown): AdminRoleCandidate {
+  if (!record(value)
+    || typeof value.id !== 'string'
+    || value.id.length < 1
+    || value.id.length > 36
+    || typeof value.nickname !== 'string'
+    || value.nickname.length < 1
+    || value.nickname.length > 64
+    || typeof value.cityName !== 'string'
+    || value.cityName.length > 80) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的角色候选人')
+  }
+  return {
+    id: value.id,
+    nickname: value.nickname,
+    cityName: value.cityName,
+  } as AdminRoleCandidate
+}
+
+function parseAdminRoleCandidatePage(value: unknown) {
+  if (!record(value) || !Array.isArray(value.items)) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的角色候选人列表')
+  }
+  return { items: value.items.map(parseAdminRoleCandidate), nextCursor: null }
 }
 
 function parseCommunityReportProfile(value: unknown) {
@@ -379,6 +497,7 @@ export const cloudbaseMipAdminGateway: MipAdminGateway = {
     await call('mip.admin.communityReports.close', { ...input }),
   ),
   listUsers: input => call('mip.admin.users.list', input || {}),
+  getUser: (userId, includePhone = false) => call('mip.admin.users.get', { userId, includePhone }),
   updateUser: input => call('mip.admin.users.update', input),
   setUserControl: input => call('mip.admin.users.setControl', input),
   createExport: async input => parseExportTicket(await call('mip.admin.exports.create', input)),
@@ -393,7 +512,14 @@ export const cloudbaseMipAdminGateway: MipAdminGateway = {
     return { status: 'CONSUMED' as const, consumedAt: value.consumedAt }
   },
   listEvents: input => call('mip.admin.events.list', input || {}),
-  getEvent: eventId => call('mip.admin.events.get', { eventId }),
+  getEventPolicy: async () => parseEventPolicy(await call('mip.admin.events.policy.get')),
+  saveEventPolicy: async input => parseEventPolicy(await call('mip.admin.events.policy.save', {
+    cancellationHoursBeforeStart: input.cancellationHoursBeforeStart,
+    expectedVersion: input.version,
+  })),
+  getEvent: async eventId => resolveCloudFileUrls(
+    await call('mip.admin.events.get', { eventId }),
+  ),
   listEventAlbumPhotos: async (eventId: string, status: AdminEventAlbumPhotoStatus) => {
     const page = parseEventAlbumPage(await call('mip.admin.events.album.list', { eventId, status }))
     return resolveCloudFileUrls(page)
@@ -408,12 +534,14 @@ export const cloudbaseMipAdminGateway: MipAdminGateway = {
   publishEventReminder: async input => parseEventReminderPublication(
     await call('mip.admin.communications.publishEventReminder', { ...input }),
   ),
-  listRoster: input => call('mip.admin.events.roster', input),
+  listRoster: async input => parseAdminRosterPage(await call('mip.admin.events.roster', { ...input })),
   reviewRegistration: input => call('mip.admin.events.registrations.review', input),
   checkIn: input => call('mip.admin.events.checkIn', input),
   undoCheckIn: input => call('mip.admin.events.undoCheckIn', input),
-  listRoles: () => call('mip.admin.roles.list'),
-  searchRoleCandidates: (eventId, query) => call('mip.admin.roles.candidates', { eventId, query }),
+  listRoles: async () => parseAdminRolePage(await call('mip.admin.roles.list')),
+  searchRoleCandidates: async (eventId, query) => parseAdminRoleCandidatePage(
+    await call('mip.admin.roles.candidates', { eventId, query }),
+  ),
   setRole: input => call('mip.admin.roles.set', input),
   listOpportunities: input => call('mip.admin.opportunities.list', input || {}),
   unpublishOpportunity: input => call('mip.admin.opportunities.unpublish', input),
@@ -424,7 +552,7 @@ export const cloudbaseMipAdminGateway: MipAdminGateway = {
   saveGrowthRule: input => call('mip.admin.growth.saveRule', input),
   listGrowthEntries: input => call('mip.admin.growth.entries', input || {}),
   adjustGrowth: input => call('mip.admin.growth.adjust', input),
-  listOrders: input => call('mip.admin.orders.list', input || {}),
+  listOrders: async input => parseAdminOrderPage(await call('mip.admin.orders.list', { ...(input || {}) })),
   submitRefund: input => call('mip.admin.refunds.submit', input),
   retryRefund: refundId => call('mip.admin.refunds.retry', { refundId }),
   listOperationalExceptions: async input => parseOperationalExceptionPage(

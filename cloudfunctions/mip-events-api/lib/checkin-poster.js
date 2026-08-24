@@ -5,6 +5,18 @@ const { DomainError } = require('../domain/rules')
 
 const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
 const ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const EVENT_CODE_SPECS = Object.freeze({
+  CHECKIN_POSTER: {
+    directory: 'checkin-posters',
+    scenePattern: /^s1\.[A-Za-z0-9_-]{11}\.[A-Za-z0-9_-]{11}$/,
+    forbiddenMessage: '当前账号不能生成签到海报',
+  },
+  EVENT_INVITATION_CODE: {
+    directory: 'event-invitations',
+    scenePattern: /^i1\.[A-Za-z0-9_-]{11}\.[A-Za-z0-9_-]{11}$/,
+    forbiddenMessage: '当前账号不能生成活动分享码',
+  },
+})
 
 function deploymentStage(value) {
   const stage = String(value || '').trim().toLowerCase()
@@ -14,18 +26,40 @@ function deploymentStage(value) {
   return stage
 }
 
-function buildCheckInCodeKey({ appId, eventId, credentialId, env = process.env }) {
+function buildEventCodeKey({ appId, eventId, referenceId, purpose, env = process.env }) {
+  const spec = EVENT_CODE_SPECS[purpose]
   const secret = String(env.MIP_MEDIA_SCOPE_SECRET || '')
   if (typeof appId !== 'string'
     || !appId
+    || !spec
     || !ID_PATTERN.test(eventId)
-    || !ID_PATTERN.test(credentialId)
+    || !ID_PATTERN.test(referenceId)
     || secret.length < 32) {
     throw new Error('CHECKIN_POSTER_CONFIG_REQUIRED')
   }
   const stage = deploymentStage(env.MIP_DEPLOYMENT_STAGE)
   const appScope = createHmac('sha256', secret).update(appId).digest('hex').slice(0, 24)
-  return `mip/${stage}/${appScope}/checkin-posters/${eventId}/${credentialId}.png`
+  return `mip/${stage}/${appScope}/${spec.directory}/${eventId}/${referenceId}.png`
+}
+
+function buildCheckInCodeKey({ appId, eventId, credentialId, env = process.env }) {
+  return buildEventCodeKey({
+    appId,
+    eventId,
+    referenceId: credentialId,
+    purpose: 'CHECKIN_POSTER',
+    env,
+  })
+}
+
+function buildInvitationCodeKey({ appId, eventId, invitationId, env = process.env }) {
+  return buildEventCodeKey({
+    appId,
+    eventId,
+    referenceId: invitationId,
+    purpose: 'EVENT_INVITATION_CODE',
+    env,
+  })
 }
 
 function codeEnvironment(stage) {
@@ -63,25 +97,28 @@ async function deleteUploadedObject(cloud, fileId, objectKey) {
   }
 }
 
-async function createCheckInCodeAsset({
+async function createEventCodeAsset({
   appId,
   eventId,
-  credentialId,
+  referenceId,
   ownerUserId,
   scene,
+  purpose,
   cloud,
   database,
   env = process.env,
   createId = randomUUID,
 }) {
-  if (!/^s1\.[A-Za-z0-9_-]{11}\.[A-Za-z0-9_-]{11}$/.test(scene)
+  const spec = EVENT_CODE_SPECS[purpose]
+  if (!spec
+    || !spec.scenePattern.test(scene)
     || scene.length > 32
     || typeof cloud?.openapi?.wxacode?.getUnlimited !== 'function'
     || typeof cloud?.uploadFile !== 'function') {
     throw new Error('CHECKIN_POSTER_UNAVAILABLE')
   }
   const stage = deploymentStage(env.MIP_DEPLOYMENT_STAGE)
-  const objectKey = buildCheckInCodeKey({ appId, eventId, credentialId, env })
+  const objectKey = buildEventCodeKey({ appId, eventId, referenceId, purpose, env })
   const response = await cloud.openapi.wxacode.getUnlimited({
     scene,
     page: 'packages/member/mip-events/detail/index',
@@ -106,10 +143,11 @@ async function createCheckInCodeAsset({
       `INSERT INTO mip_media_assets (
         id, app_id, owner_user_id, purpose, object_key, cloud_file_id,
         content_sha256, content_type, content_bytes, width_px, height_px, status
-      ) VALUES (?, ?, NULL, 'CHECKIN_POSTER', ?, ?, ?, 'image/png', ?, 430, 430, 'PENDING')`,
+      ) VALUES (?, ?, NULL, ?, ?, ?, ?, 'image/png', ?, 430, 430, 'PENDING')`,
       [
         assetId,
         appId,
+        purpose,
         objectKey,
         codeUrl,
         createHash('sha256').update(content).digest('hex'),
@@ -128,14 +166,14 @@ async function createCheckInCodeAsset({
         [appId, ownerUserId],
       )
       if (!owner || owner.status !== 'ACTIVE') {
-        throw new DomainError('FORBIDDEN', '当前账号不能生成签到海报')
+        throw new DomainError('FORBIDDEN', spec.forbiddenMessage)
       }
       const result = await tx.query(
         `UPDATE mip_media_assets
          SET owner_user_id = ?, status = 'READY'
          WHERE app_id = ? AND id = ? AND owner_user_id IS NULL
-           AND purpose = 'CHECKIN_POSTER' AND status = 'PENDING'`,
-        [ownerUserId, appId, assetId],
+           AND purpose = ? AND status = 'PENDING'`,
+        [ownerUserId, appId, assetId, purpose],
       )
       if (Number(result?.affectedRows) !== 1) {
         throw new Error('CHECKIN_POSTER_UNAVAILABLE')
@@ -189,8 +227,8 @@ async function createCheckInCodeAsset({
       await database.query(
         `UPDATE mip_media_assets SET status = 'DELETED'
          WHERE app_id = ? AND id = ? AND owner_user_id IS NULL
-           AND purpose = 'CHECKIN_POSTER' AND status = 'PENDING'`,
-        [appId, assetId],
+           AND purpose = ? AND status = 'PENDING'`,
+        [appId, assetId, purpose],
       ).catch(() => undefined)
     }
     throw error
@@ -198,11 +236,31 @@ async function createCheckInCodeAsset({
   return { assetId, codeUrl, objectKey }
 }
 
+function createCheckInCodeAsset(input) {
+  return createEventCodeAsset({
+    ...input,
+    referenceId: input.credentialId,
+    purpose: 'CHECKIN_POSTER',
+  })
+}
+
+function createInvitationCodeAsset(input) {
+  return createEventCodeAsset({
+    ...input,
+    referenceId: input.invitationId,
+    purpose: 'EVENT_INVITATION_CODE',
+  })
+}
+
 module.exports = {
   assertUploadedObject,
   buildCheckInCodeKey,
+  buildEventCodeKey,
+  buildInvitationCodeKey,
   codeEnvironment,
   createCheckInCodeAsset,
+  createEventCodeAsset,
+  createInvitationCodeAsset,
   deleteUploadedObject,
   deploymentStage,
 }

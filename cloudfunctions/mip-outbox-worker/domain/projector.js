@@ -80,6 +80,8 @@ async function projectEvent(database, event) {
       return projectReferral(database, event)
     case 'profile.interest_changed':
       return projectInterest(database, event)
+    case 'super_case.published':
+      return projectSuperCasePublished(database, event)
     default:
       return NO_PROJECTION_EVENT_TYPES.has(event.event_type)
         ? projection([], [], 'NO_PROJECTION_REQUIRED')
@@ -99,6 +101,21 @@ async function projectProfileCompleted(database, event) {
   )
   if (!row) return projection([], [], 'FACT_NO_LONGER_CURRENT')
   return projection([], [growth(event, row.user_id)], 'PROJECTED')
+}
+
+async function projectSuperCasePublished(database, event) {
+  assertAggregate(event, 'SUPER_CASE')
+  const row = await database.one(
+    `SELECT c.owner_user_id
+     FROM mip_super_cases c
+     INNER JOIN mip_users u
+       ON u.app_id = c.app_id AND u.id = c.owner_user_id AND u.status = 'ACTIVE'
+     WHERE c.app_id = ? AND c.id = ? AND c.status = 'PUBLISHED'
+       AND c.published_at IS NOT NULL`,
+    [event.app_id, event.aggregate_id],
+  )
+  if (!row) return projection([], [], 'FACT_NO_LONGER_CURRENT')
+  return projection([], [growth(event, row.owner_user_id)], 'PROJECTED')
 }
 
 async function projectMembershipPayment(database, event) {
@@ -227,8 +244,10 @@ function registrationMessage(eventType, status) {
 async function projectCheckIn(database, event) {
   assertAggregate(event, 'EVENT_REGISTRATION')
   const row = await database.one(
-    `SELECT r.user_id, r.event_id, transition.id AS transition_id
+    `SELECT r.user_id, r.event_id, e.title AS event_title,
+            c.checked_in_at, transition.id AS transition_id
      FROM mip_event_registrations r
+     INNER JOIN mip_events e ON e.app_id = r.app_id AND e.id = r.event_id
      INNER JOIN mip_event_checkins c
        ON c.app_id = r.app_id AND c.registration_id = r.id AND c.status = 'ACTIVE'
      INNER JOIN mip_event_checkin_transitions transition
@@ -249,6 +268,7 @@ async function projectCheckIn(database, event) {
       body: '到场状态已记录。',
       targetType: 'EVENT',
       targetId: row.event_id,
+      external: checkInExternal(row.event_title, row.checked_in_at),
     }),
   ], [checkInGrowth(row.transition_id)], 'PROJECTED')
 }
@@ -258,6 +278,7 @@ async function projectCheckInTransition(database, event) {
   const row = await database.one(
     `SELECT transition.id, transition.transition_type, transition.registration_version,
             transition.reversal_of_transition_id, transition.user_id, transition.event_id,
+            transition.occurred_at, event_fact.title AS event_title,
             user.status AS user_status, reversal.id AS reversal_id
      FROM mip_event_checkin_transitions transition
      INNER JOIN mip_event_checkins checkin
@@ -273,6 +294,8 @@ async function projectCheckInTransition(database, event) {
       AND registration.user_id = transition.user_id
      INNER JOIN mip_users user
        ON user.app_id = transition.app_id AND user.id = transition.user_id
+     INNER JOIN mip_events event_fact
+       ON event_fact.app_id = transition.app_id AND event_fact.id = transition.event_id
      LEFT JOIN mip_event_checkin_transitions reversal
        ON reversal.app_id = transition.app_id
       AND reversal.reversal_of_transition_id = transition.id
@@ -298,6 +321,7 @@ async function projectCheckInTransition(database, event) {
       body: '到场状态已记录。',
       targetType: 'EVENT',
       targetId: row.event_id,
+      external: checkInExternal(row.event_title, row.occurred_at),
     }),
   ], growthEvents, 'PROJECTED')
 }
@@ -461,8 +485,10 @@ function atOrAfter(left, right) {
 async function projectHeart(database, event) {
   assertAggregate(event, 'EVENT_HEART')
   const row = await database.one(
-    `SELECT h.target_user_id, h.event_id, h.status, h.version
+    `SELECT h.target_user_id, h.event_id, h.status, h.version,
+            e.title AS event_title
      FROM mip_event_hearts h
+     INNER JOIN mip_events e ON e.app_id = h.app_id AND e.id = h.event_id
      INNER JOIN mip_users u
        ON u.app_id = h.app_id AND u.id = h.target_user_id AND u.status = 'ACTIVE'
      WHERE h.app_id = ? AND h.id = ?`,
@@ -478,6 +504,14 @@ async function projectHeart(database, event) {
       body: '活动中有新的心动选择。',
       targetType: 'EVENT',
       targetId: row.event_id,
+      external: {
+        channel: 'WECHAT_SUBSCRIPTION',
+        templateKey: 'HEART_RECEIVED',
+        fields: {
+          title: boundedText(row.event_title, 100),
+          status: '收到新的心动选择',
+        },
+      },
     }),
   ], [], 'PROJECTED')
 }
@@ -610,27 +644,43 @@ function boundedText(value, limit) {
 async function projectReferral(database, event) {
   assertAggregate(event, 'REFERRAL_INTENT')
   const row = await database.one(
-    `SELECT r.status, r.version, r.opportunity_id, o.owner_user_id
+    `SELECT r.status, r.version, r.opportunity_id, r.actor_user_id, r.target_user_id
      FROM mip_referral_intents r
      INNER JOIN mip_opportunities o
        ON o.app_id = r.app_id AND o.id = r.opportunity_id AND o.status IN ('PUBLISHED', 'ENDED')
-     INNER JOIN mip_users u
-       ON u.app_id = o.app_id AND u.id = o.owner_user_id AND u.status = 'ACTIVE'
-     WHERE r.app_id = ? AND r.id = ?`,
+     INNER JOIN mip_users actor
+       ON actor.app_id = r.app_id AND actor.id = r.actor_user_id AND actor.status = 'ACTIVE'
+     INNER JOIN mip_users target
+       ON target.app_id = r.app_id AND target.id = r.target_user_id AND target.status = 'ACTIVE'
+     WHERE r.app_id = ? AND r.id = ?
+       AND NOT EXISTS (
+         SELECT 1 FROM mip_user_blocks visibility_block
+         WHERE visibility_block.app_id = r.app_id AND visibility_block.status = 'ACTIVE'
+           AND (
+             (visibility_block.blocker_user_id = r.actor_user_id
+               AND visibility_block.blocked_user_id = r.target_user_id)
+             OR
+             (visibility_block.blocker_user_id = r.target_user_id
+               AND visibility_block.blocked_user_id = r.actor_user_id)
+           )
+       )`,
     [event.app_id, event.aggregate_id],
   )
   if (!row || row.status !== 'ACTIVE' || Number(row.version) !== Number(event.source_version)) {
     return projection([], [], 'FACT_NO_LONGER_CURRENT')
   }
+  const growthEvents = Number(row.version) === 1
+    ? [growth(event, row.actor_user_id, 'referral.confirmed')]
+    : []
   return projection([
-    message(event, row.owner_user_id, 'referral', {
+    message(event, row.target_user_id, 'referral', {
       messageType: 'OPPORTUNITY',
-      title: '新的引荐意向',
-      body: '你的机会收到新的引荐意向。',
+      title: '收到机会引荐',
+      body: '有人向你引荐了一个机会。',
       targetType: 'OPPORTUNITY',
       targetId: row.opportunity_id,
     }),
-  ], [], 'PROJECTED')
+  ], growthEvents, 'PROJECTED')
 }
 
 async function projectInterest(database, event) {
@@ -652,6 +702,7 @@ async function projectInterest(database, event) {
     OPPORTUNITY: ['opportunity-interest', '机会收到新的关注', '你的机会收到新的感兴趣标记。'],
     COOPERATION_CARD: ['cooperation-interest', '合作卡收到新的关注', '你的合作卡收到新的感兴趣标记。'],
     SUPER_CASE: ['case-interest', '超级案例收到新的关注', '你的超级案例收到新的感兴趣标记。'],
+    PROFILE: ['profile-interest', '公开档案收到新的关注', '有人对你的公开档案标记感兴趣。'],
   }
   const label = labels[row.source_type]
   const target = row.source_type === 'OPPORTUNITY'
@@ -675,6 +726,9 @@ async function activeInterestSource(database, appId, sourceType, sourceId) {
       WHERE app_id = ? AND id = ? AND status = 'PUBLISHED'`,
     SUPER_CASE: `SELECT id FROM mip_super_cases
       WHERE app_id = ? AND id = ? AND status = 'PUBLISHED'`,
+    PROFILE: `SELECT target.id FROM mip_users target
+      INNER JOIN mip_profiles profile ON profile.app_id = target.app_id AND profile.user_id = target.id
+      WHERE target.app_id = ? AND target.id = ? AND target.status = 'ACTIVE'`,
   }
   return queries[sourceType] ? database.one(queries[sourceType], [appId, sourceId]) : null
 }
@@ -695,10 +749,32 @@ function message(event, recipientUserId, key, details) {
   }
 }
 
-function growth(event, userId) {
+function checkInExternal(title, occurredAt) {
+  return {
+    channel: 'WECHAT_SUBSCRIPTION',
+    templateKey: 'CHECKIN_RESULT',
+    fields: {
+      title: boundedText(title, 100),
+      checkedAt: notificationDateTime(occurredAt),
+      status: '签到成功',
+    },
+  }
+}
+
+function notificationDateTime(value) {
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) throw new Error('OUTBOX_EVENT_INVALID')
+  const local = new Date(date.getTime() + 8 * 60 * 60 * 1000)
+  return [
+    `${local.getUTCFullYear()}-${String(local.getUTCMonth() + 1).padStart(2, '0')}-${String(local.getUTCDate()).padStart(2, '0')}`,
+    `${String(local.getUTCHours()).padStart(2, '0')}:${String(local.getUTCMinutes()).padStart(2, '0')}`,
+  ].join(' ')
+}
+
+function growth(event, userId, sourceEventType = event.event_type) {
   return {
     userId,
-    sourceEventType: event.event_type,
+    sourceEventType,
     sourceEventId: event.id,
   }
 }

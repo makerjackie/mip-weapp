@@ -10,11 +10,14 @@
       data-index="{{index}}"
       bindtap="switchTab"
     >
-      <t-icon
-        name="{{selected === index ? item.iconActive : item.icon}}"
-        size="48rpx"
-        color="{{selected === index ? 'var(--color-brand)' : 'var(--color-muted)'}}"
-      />
+      <view class="tab-bar-icon">
+        <t-icon
+          name="{{selected === index ? item.iconActive : item.icon}}"
+          size="48rpx"
+          color="{{selected === index ? 'var(--color-brand)' : 'var(--color-muted)'}}"
+        />
+        <view wx:if="{{item.value === 'pages/profile/index' && unreadCount > 0}}" class="tab-bar-badge">{{unreadCount > 99 ? '99+' : unreadCount}}</view>
+      </view>
       <view class="tab-bar-label" style="color: {{selected === index ? 'var(--color-brand)' : 'var(--color-muted)'}}">{{item.label}}</view>
     </view>
   </view>

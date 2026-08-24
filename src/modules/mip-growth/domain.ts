@@ -99,6 +99,8 @@ export function buildGrowthSnapshot(
     return {
       account,
       currentLevel,
+      levels: active,
+      earningRules: [],
       levelProgressPercent: 100,
     }
   }
@@ -107,6 +109,8 @@ export function buildGrowthSnapshot(
   return {
     account,
     currentLevel,
+    levels: active,
+    earningRules: [],
     nextLevel,
     experienceToNextLevel: Math.max(0, nextLevel.minimumExperience - account.experienceBalance),
     levelProgressPercent: Math.max(0, Math.min(100, Math.floor(earnedWithinLevel / levelSpan * 100))),

@@ -19,13 +19,16 @@ export type RegistrationStatus
     | 'ATTENDED'
 
 export type EventListView = 'UPCOMING' | 'PAST' | 'MINE'
-export type EventDateFilter = 'RECENT' | 'ENDED' | 'TODAY'
+export type EventDateFilter = 'RECENT' | 'ENDED' | 'TODAY' | 'CUSTOM'
 
 export interface EventFeedQuery {
   view: EventListView
   dateFilter: EventDateFilter
   branchId?: BranchId
   cityName?: string
+  date?: string
+  dateFrom?: string
+  dateTo?: string
   query?: string
   cursor?: string
   limit?: number
@@ -61,6 +64,12 @@ export interface EventOrganizer {
   nickname?: string
   avatarUrl?: string
   headline?: string
+}
+
+export interface EventInvitationAttribution {
+  sourceType: 'PLATFORM' | 'USER'
+  displayName: string
+  avatarUrl?: string
 }
 
 export interface PublicEventParticipantPage {
@@ -105,7 +114,12 @@ export interface EventChangeSummary {
 
 export interface MipEventDetail extends MipEventListItem {
   organizer?: EventOrganizer
+  invitationAttribution?: EventInvitationAttribution
   description: string
+  contentMedia?: Array<{
+    imageUrl: string
+    caption: string
+  }>
   notices?: string
   address?: string
   latitude?: number
@@ -259,6 +273,21 @@ export interface CheckInPosterCredential extends CheckInScene {
   codeUrl: string
 }
 
+export interface InvitationSceneResolution {
+  eventId: EventId
+  invitationToken: string
+  validUntil: string
+}
+
+export interface EventInvitationCode {
+  invitationId: string
+  eventId: EventId
+  scene: string
+  validUntil: string
+  assetId: string
+  codeUrl: string
+}
+
 export interface HeartCandidate {
   participantRef: string
   nickname: string
@@ -273,6 +302,30 @@ export interface HeartState {
   received: HeartCandidate[]
   version: number
   updatedAt?: string
+}
+
+export type HeartHistoryKind = 'SENT' | 'RECEIVED'
+
+export interface HeartHistoryItem {
+  event: {
+    id: EventId
+    title: string
+    startsAt: string
+    endsAt: string
+  }
+  person: {
+    profileRef: string
+    nickname: string
+    avatarUrl?: string
+    headline?: string
+  }
+  updatedAt: string
+}
+
+export interface HeartHistoryPage {
+  kind: HeartHistoryKind
+  items: HeartHistoryItem[]
+  nextCursor?: string
 }
 
 export interface EventFeedbackDraft {
@@ -324,8 +377,11 @@ export interface MipEventsGateway {
   cancelRegistration: (eventId: EventId, expectedVersion?: number) => Promise<RegistrationCancellation>
   checkIn: (scanToken: string, idempotencyKey: string) => Promise<CheckInOutcome>
   resolveCheckInScene: (scene: string) => Promise<CheckInScene>
+  resolveInvitationScene: (scene: string) => Promise<InvitationSceneResolution>
   createCheckInPoster: (eventId: EventId, mode?: CheckInCredentialMode) => Promise<CheckInPosterCredential>
+  createInvitationCode: (eventId: EventId) => Promise<EventInvitationCode>
   listHeartCandidates: (eventId: EventId) => Promise<HeartCandidate[]>
+  listHeartHistory: (kind: HeartHistoryKind, cursor?: string, limit?: number) => Promise<HeartHistoryPage>
   getHeart: (eventId: EventId) => Promise<HeartState>
   setHeart: (eventId: EventId, targetRef: string | null, expectedVersion?: number) => Promise<HeartState>
   getFeedback: (eventId: EventId) => Promise<EventFeedback | null>

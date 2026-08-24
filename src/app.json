@@ -13,6 +13,7 @@
       "pages": [
         "mip-access/index",
         "mip-profile/index",
+        "mip-people/index",
         "mip-public-profile/index",
         "mip-blocked/index",
         "mip-branches/index",
@@ -37,6 +38,7 @@
         "announcements/index",
         "announcement-detail/index",
         "mip-received/index",
+        "mip-hearts/index",
         "mip-ai/index",
         "orders/index",
         "order-detail/index",

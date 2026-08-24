@@ -1,6 +1,10 @@
 import type { AccessReturnContext, AccessSession } from '../../../modules/mip-identity'
 import { accessReturnUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
+import {
+  exitMipMiniProgram,
+  mipGlobalAccessGuard,
+} from '../../../modules/mip-identity/runtime'
 
 const requirementCopy = {
   AUTHENTICATED: {
@@ -32,17 +36,25 @@ Page({
     agreements: [] as AccessSession['snapshot']['agreements'],
     agreementsChecked: false,
     membershipLabel: '嘉宾',
+    globalGate: false,
+    cancelLabel: '取消',
     submitting: false,
     message: '',
   },
 
   onLoad(query: Record<string, string>) {
     const token = String(query.token || '')
-    if (!token || !mipIdentityModule.peekIntent(token)) {
+    const intent = token ? mipIdentityModule.peekIntent(token) : null
+    if (!intent) {
       this.setData({ state: 'expired' })
       return
     }
-    this.setData({ token })
+    const globalGate = intent.action === 'ENTER_APP'
+    this.setData({
+      token,
+      globalGate,
+      cancelLabel: globalGate ? '退出小程序' : '取消',
+    })
   },
 
   onShow() {
@@ -54,7 +66,9 @@ Page({
   async loadAccess() {
     this.setData({ state: 'loading', message: '' })
     try {
-      this.applySession(await mipIdentityModule.loadAccess(this.data.token))
+      const session = await mipIdentityModule.loadAccess(this.data.token)
+      this.applySession(session)
+      await this.continueGlobalAccess(session)
     }
     catch (error) {
       const message = error instanceof Error ? error.message : ''
@@ -80,8 +94,18 @@ Page({
       ready: session.decision.ready,
       agreements: session.snapshot.agreements,
       membershipLabel: session.snapshot.membership.kind === 'PLAYER' ? '玩家' : '嘉宾',
+      globalGate: session.intent.action === 'ENTER_APP',
+      cancelLabel: session.intent.action === 'ENTER_APP' ? '退出小程序' : '取消',
       message: session.decision.block === 'FORBIDDEN' ? '当前没有权限进入该功能。' : '',
     })
+  },
+
+  async continueGlobalAccess(session: AccessSession) {
+    if (session.intent.action !== 'ENTER_APP' || !session.decision.ready) {
+      return
+    }
+    this.setData({ submitting: false })
+    await this.finish()
   },
 
   toggleAgreements(event: WechatMiniprogram.CheckboxGroupChange) {
@@ -99,7 +123,9 @@ Page({
         key: agreement.key,
         version: agreement.version,
       }))
-      this.applySession(await mipIdentityModule.acceptAgreements(this.data.token, { agreements }))
+      const session = await mipIdentityModule.acceptAgreements(this.data.token, { agreements })
+      this.applySession(session)
+      await this.continueGlobalAccess(session)
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '协议确认失败，请重试。' })
@@ -175,20 +201,39 @@ Page({
   cancel() {
     const intent = mipIdentityModule.peekIntent(this.data.token)
     const context = mipIdentityModule.cancel(this.data.token)
+    if (intent?.action === 'ENTER_APP' || this.data.globalGate) {
+      exitMipMiniProgram()
+      return
+    }
     this.navigateToSource(context, intent?.action || '')
+  },
+
+  restartAccess() {
+    if (this.data.token) {
+      mipIdentityModule.cancel(this.data.token)
+    }
+    mipGlobalAccessGuard.enterTarget({ path: 'pages/index/index' })
   },
 
   navigateToSource(context: AccessReturnContext | null, action: string) {
     if (!context || context.navigation === 'navigateBack') {
+      const fallbackUrl = context
+        ? accessReturnUrl(context, action || undefined) || '/pages/index/index'
+        : '/pages/index/index'
       wx.navigateBack({
         delta: 1,
-        fail: () => wx.reLaunch({ url: '/pages/index/index' }),
+        fail: () => wx.reLaunch({ url: fallbackUrl }),
       })
       return
     }
-    const url = accessReturnUrl(context, action) || '/pages/index/index'
+    const resumeAction = action === 'ENTER_APP' ? undefined : action
+    const url = accessReturnUrl(context, resumeAction) || '/pages/index/index'
     if (context.navigation === 'switchTab') {
       wx.switchTab({ url: context.route || '/pages/index/index' })
+      return
+    }
+    if (context.navigation === 'reLaunch') {
+      wx.reLaunch({ url })
       return
     }
     wx.redirectTo({

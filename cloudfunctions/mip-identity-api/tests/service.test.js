@@ -140,6 +140,35 @@ describe('MIP identity service', () => {
 })
 
 describe('MIP profile input', () => {
+  it('accepts up to twelve companies and organizations', () => {
+    const base = {
+      expectedVersion: 0,
+      nickname: '测试用户',
+      identityStatus: '',
+      headline: '',
+      introduction: '',
+      visibility: {},
+      abilityTagIds: [],
+    }
+    const entries = Array.from({ length: 12 }, (_, index) => ({
+      name: `组织 ${index + 1}`,
+      role: '成员',
+    }))
+    assert.equal(normalizeProfileInput({
+      ...base,
+      companies: entries,
+      organizations: entries,
+    }).organizations.length, 12)
+    assert.throws(
+      () => normalizeProfileInput({
+        ...base,
+        companies: [...entries, { name: '第十三项' }],
+        organizations: [],
+      }),
+      /VALIDATION_FAILED/,
+    )
+  })
+
   it('requires branch and user version to be supplied as one optimistic-lock pair', () => {
     const base = {
       expectedVersion: 0,

@@ -4,6 +4,7 @@ import type {
   CheckInCredentialMode,
   EventFeedbackDraft,
   EventFeedQuery,
+  HeartHistoryKind,
   MipEventsGateway,
   PublicEventParticipantQuery,
   RegistrationIntent,
@@ -14,9 +15,31 @@ function requestKey(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
+function normalizeDate(value: string | undefined) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value || '')) {
+    return undefined
+  }
+  const [year, month, day] = value!.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  return date.getUTCFullYear() === year
+    && date.getUTCMonth() === month - 1
+    && date.getUTCDate() === day
+    ? value
+    : undefined
+}
+
 function normalizedQuery(query: EventFeedQuery): EventFeedQuery {
+  const date = normalizeDate(query.date)
+  const dateFrom = normalizeDate(query.dateFrom)
+  const dateTo = normalizeDate(query.dateTo)
+  if (dateFrom && dateTo && dateFrom > dateTo) {
+    throw new Error('开始日期不能晚于结束日期')
+  }
   return {
     ...query,
+    date,
+    dateFrom,
+    dateTo,
     query: query.query?.trim().slice(0, 50) || undefined,
     cityName: query.cityName?.trim().slice(0, 80) || undefined,
     limit: Math.min(30, Math.max(1, query.limit || 20)),
@@ -152,12 +175,31 @@ export function createMipEventsModule(gateway: MipEventsGateway) {
       return gateway.resolveCheckInScene(normalized)
     },
 
+    resolveInvitationScene(scene: string) {
+      const normalized = scene.trim()
+      if (!/^i1\.[\w-]{11}\.[\w-]{11}$/.test(normalized)) {
+        throw new Error('活动邀请无效')
+      }
+      return gateway.resolveInvitationScene(normalized)
+    },
+
     createCheckInPoster(eventId: EventId, mode: CheckInCredentialMode = 'STATIC') {
       return gateway.createCheckInPoster(eventId, mode)
     },
 
+    createInvitationCode(eventId: EventId) {
+      return gateway.createInvitationCode(eventId)
+    },
+
     listHeartCandidates(eventId: EventId) {
       return gateway.listHeartCandidates(eventId)
+    },
+
+    listHeartHistory(kind: HeartHistoryKind, cursor?: string) {
+      if (!['SENT', 'RECEIVED'].includes(kind)) {
+        throw new Error('心动记录类型无效')
+      }
+      return gateway.listHeartHistory(kind, cursor, 20)
     },
 
     getHeart(eventId: EventId) {

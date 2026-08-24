@@ -1,14 +1,38 @@
 import type { BranchId } from '../../../modules/mip'
 import type { AiDraftSourceConfirmation } from '../../../modules/mip-ai'
 import type { ProfileTagOption } from '../../../modules/mip-identity'
+import type { EditableProfileOrganization } from './organization-editor'
 import { aiOrganizations, aiText } from '../../../modules/mip-ai/editor'
 import { loadAiEditorDraft } from '../../../modules/mip-ai/editor-loader'
 import { mipBranchesModule, mipIdentityModule } from '../../../modules/mip-identity/client'
 import { flattenProfileIndustries } from '../../../modules/mip-identity/tag-catalog'
 import { mipMediaModule } from '../../../modules/mip-media/client'
+import {
+  appendEditableOrganization,
+  createEditableOrganizations,
+  MAX_PROFILE_ORGANIZATIONS,
+  moveEditableOrganization,
+  normalizeEditableOrganizations,
+  removeEditableOrganization,
+  updateEditableOrganization,
+  validateEditableOrganizations,
+} from './organization-editor'
 
 interface SelectableTag extends ProfileTagOption {
   selected: boolean
+}
+
+type ExperienceCollection = 'companies' | 'organizations'
+
+let experienceId = 0
+
+function nextExperienceId(kind: ExperienceCollection) {
+  experienceId += 1
+  return `${kind}-${experienceId}`
+}
+
+function experienceCollection(value: unknown): ExperienceCollection | null {
+  return value === 'companies' || value === 'organizations' ? value : null
 }
 
 Page({
@@ -29,10 +53,9 @@ Page({
     identityStatus: '',
     headline: '',
     introduction: '',
-    companyName: '',
-    companyRole: '',
-    organizationName: '',
-    organizationRole: '',
+    companies: [] as EditableProfileOrganization[],
+    organizations: [] as EditableProfileOrganization[],
+    maxOrganizations: MAX_PROFILE_ORGANIZATIONS,
     visibilityNickname: true,
     visibilityAvatar: true,
     visibilityIdentityStatus: true,
@@ -104,10 +127,14 @@ Page({
         identityStatus: aiText(aiFields, 'identityStatus', 32) || snapshot.profile.identityStatus,
         headline: aiText(aiFields, 'headline', 160) || snapshot.profile.headline,
         introduction: aiText(aiFields, 'introduction', 600) || snapshot.profile.introduction,
-        companyName: companies[0]?.name || snapshot.profile.companies[0]?.name || '',
-        companyRole: companies[0]?.role || snapshot.profile.companies[0]?.role || '',
-        organizationName: organizations[0]?.name || snapshot.profile.organizations[0]?.name || '',
-        organizationRole: organizations[0]?.role || snapshot.profile.organizations[0]?.role || '',
+        companies: createEditableOrganizations(
+          companies.length ? companies : snapshot.profile.companies,
+          () => nextExperienceId('companies'),
+        ),
+        organizations: createEditableOrganizations(
+          organizations.length ? organizations : snapshot.profile.organizations,
+          () => nextExperienceId('organizations'),
+        ),
         visibilityNickname: snapshot.profile.visibility.nickname !== false,
         visibilityAvatar: snapshot.profile.visibility.avatar !== false,
         visibilityIdentityStatus: snapshot.profile.visibility.identityStatus !== false,
@@ -143,13 +170,63 @@ Page({
       'identityStatus',
       'headline',
       'introduction',
-      'companyName',
-      'companyRole',
-      'organizationName',
-      'organizationRole',
     ].includes(field)) {
       this.setData({ [field]: event.detail.value })
     }
+  },
+
+  addExperience(event: WechatMiniprogram.TouchEvent) {
+    const kind = experienceCollection(event.currentTarget.dataset.kind)
+    if (!kind) {
+      return
+    }
+    const items = this.data[kind]
+    if (items.length >= MAX_PROFILE_ORGANIZATIONS) {
+      this.setData({ message: `${kind === 'companies' ? '公司' : '组织'}经历最多添加 ${MAX_PROFILE_ORGANIZATIONS} 条。` })
+      return
+    }
+    this.setData({
+      [kind]: appendEditableOrganization(items, nextExperienceId(kind)),
+      message: '',
+    })
+  },
+
+  updateExperience(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const kind = experienceCollection(event.currentTarget.dataset.kind)
+    const field = event.currentTarget.dataset.field
+    const index = Number(event.currentTarget.dataset.index)
+    if (!kind || (field !== 'name' && field !== 'role') || !Number.isInteger(index)) {
+      return
+    }
+    this.setData({
+      [kind]: updateEditableOrganization(this.data[kind], index, field, event.detail.value),
+      message: '',
+    })
+  },
+
+  moveExperience(event: WechatMiniprogram.TouchEvent) {
+    const kind = experienceCollection(event.currentTarget.dataset.kind)
+    const index = Number(event.currentTarget.dataset.index)
+    const direction = Number(event.currentTarget.dataset.direction)
+    if (!kind || !Number.isInteger(index) || (direction !== -1 && direction !== 1)) {
+      return
+    }
+    this.setData({
+      [kind]: moveEditableOrganization(this.data[kind], index, direction),
+      message: '',
+    })
+  },
+
+  removeExperience(event: WechatMiniprogram.TouchEvent) {
+    const kind = experienceCollection(event.currentTarget.dataset.kind)
+    const index = Number(event.currentTarget.dataset.index)
+    if (!kind || !Number.isInteger(index)) {
+      return
+    }
+    this.setData({
+      [kind]: removeEditableOrganization(this.data[kind], index),
+      message: '',
+    })
   },
 
   async chooseAvatar(event: WechatMiniprogram.CustomEvent<{ avatarUrl?: string }>) {
@@ -246,6 +323,12 @@ Page({
       this.setData({ message: '请选择主城市分会。' })
       return
     }
+    const experienceError = validateEditableOrganizations(this.data.companies, '公司')
+      || validateEditableOrganizations(this.data.organizations, '组织')
+    if (experienceError) {
+      this.setData({ message: experienceError })
+      return
+    }
 
     this.setData({ saving: true, message: '' })
     try {
@@ -259,12 +342,8 @@ Page({
         identityStatus: this.data.identityStatus,
         headline: this.data.headline,
         introduction: this.data.introduction,
-        companies: this.data.companyName.trim()
-          ? [{ name: this.data.companyName, role: this.data.companyRole || undefined }]
-          : [],
-        organizations: this.data.organizationName.trim()
-          ? [{ name: this.data.organizationName, role: this.data.organizationRole || undefined }]
-          : [],
+        companies: normalizeEditableOrganizations(this.data.companies),
+        organizations: normalizeEditableOrganizations(this.data.organizations),
         visibility: {
           nickname: this.data.visibilityNickname,
           avatar: this.data.visibilityAvatar,

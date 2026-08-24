@@ -183,9 +183,13 @@ async function revokeAndMinimize(tx, input) {
      INNER JOIN mip_opportunities opportunity
        ON opportunity.app_id = referral.app_id AND opportunity.id = referral.opportunity_id
      WHERE referral.app_id = ? AND referral.status = 'ACTIVE'
-       AND (referral.actor_user_id = ? OR opportunity.owner_user_id = ?)
+       AND (
+         referral.actor_user_id = ?
+         OR referral.target_user_id = ?
+         OR opportunity.owner_user_id = ?
+       )
      FOR UPDATE`,
-    [appId, user.id, user.id],
+    [appId, user.id, user.id, user.id],
   )
   effects.referrals = affected(await tx.query(
     `UPDATE mip_referral_intents referral
@@ -194,8 +198,12 @@ async function revokeAndMinimize(tx, input) {
      SET referral.status = 'CANCELLED', referral.cancelled_at = ?,
        referral.version = referral.version + 1
      WHERE referral.app_id = ? AND referral.status = 'ACTIVE'
-       AND (referral.actor_user_id = ? OR opportunity.owner_user_id = ?)`,
-    [closedAt, appId, user.id, user.id],
+       AND (
+         referral.actor_user_id = ?
+         OR referral.target_user_id = ?
+         OR opportunity.owner_user_id = ?
+       )`,
+    [closedAt, appId, user.id, user.id, user.id],
   ))
   const referralCounts = countBy(activeReferrals, 'opportunity_id')
   for (const [opportunityId, total] of referralCounts) {

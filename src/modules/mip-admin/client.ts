@@ -5,6 +5,8 @@ import type {
   AdminCapabilityGrant,
   AdminCommunityReportStatus,
   AdminEventAlbumPhotoStatus,
+  AdminOrderListInput,
+  AdminRosterListInput,
   MipAdminGateway,
 } from './types'
 import { createQueryCache } from '@weapp/shared/cache'
@@ -46,9 +48,21 @@ export function createMipAdminModule(gateway: MipAdminGateway) {
           () => gateway.listUsers(input),
           { force },
         ),
+    getUser: (userId: string, includePhone = false, force = false) => includePhone
+      ? gateway.getUser(userId, true)
+      : cache.query(
+          `mip-admin:user:${userId}`,
+          () => gateway.getUser(userId, false),
+          { force },
+        ),
     listEvents: (input: Record<string, unknown> = {}, force = false) => cache.query(
       `mip-admin:events:${JSON.stringify(input)}`,
       () => gateway.listEvents(input),
+      { force },
+    ),
+    getEventPolicy: (force = false) => cache.query(
+      'mip-admin:event-policy',
+      gateway.getEventPolicy,
       { force },
     ),
     getEvent: (eventId: string, force = false) => cache.query(
@@ -61,7 +75,7 @@ export function createMipAdminModule(gateway: MipAdminGateway) {
       () => gateway.listEventAlbumPhotos(eventId, status),
       { force },
     ),
-    listRoster: (input: Record<string, unknown>, force = false) => input.includePhone === true
+    listRoster: (input: AdminRosterListInput, force = false) => input.includePhone === true
       ? gateway.listRoster(input)
       : cache.query(
           `mip-admin:roster:${JSON.stringify(input)}`,
@@ -82,7 +96,7 @@ export function createMipAdminModule(gateway: MipAdminGateway) {
       () => gateway.listGrowthEntries(input),
       { force },
     ),
-    listOrders: (input: Record<string, unknown> = {}, force = false) => cache.query(
+    listOrders: (input: AdminOrderListInput = {}, force = false) => cache.query(
       `mip-admin:orders:${JSON.stringify(input)}`,
       () => gateway.listOrders(input),
       { force },

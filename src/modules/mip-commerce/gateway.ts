@@ -1,7 +1,9 @@
 import type {
   CommerceGateway,
   CommerceOrder,
+  MembershipBenefitsSnapshot,
   MembershipInvitation,
+  MembershipInvitationCode,
   MembershipPlan,
   RefundId,
   RefundIntent,
@@ -80,8 +82,20 @@ export function createMipCommerceGateway(
       return commerce<MembershipPlan[]>('listPlans', {}, true)
     },
 
+    getMembershipBenefits() {
+      return commerce<MembershipBenefitsSnapshot>('getMembershipBenefits', {}, true)
+    },
+
     createMembershipInvitation() {
       return commerce<MembershipInvitation>('createMembershipInvitation')
+    },
+
+    createMembershipInvitationCode() {
+      return commerce<MembershipInvitationCode>('createMembershipInvitationCode')
+    },
+
+    resolveMembershipInvitationScene(scene) {
+      return commerce<MembershipInvitation>('resolveMembershipInvitationScene', { scene })
     },
 
     createCheckout(intent) {

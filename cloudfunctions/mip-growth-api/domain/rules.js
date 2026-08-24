@@ -30,7 +30,7 @@ function balanceField(metric) {
   throw new Error('GROWTH_RULE_NOT_AVAILABLE')
 }
 
-function levelSnapshot(account, levels) {
+function levelSnapshot(account, levels, rules = []) {
   const active = levels
     .filter(level => level.status === 'ACTIVE')
     .sort((left, right) => Number(left.minimum_experience) - Number(right.minimum_experience))
@@ -46,6 +46,8 @@ function levelSnapshot(account, levels) {
   const dto = {
     account: accountDto(account),
     currentLevel: levelDto(current),
+    levels: active.map(levelDto),
+    earningRules: rules.map(ruleDto),
     levelProgressPercent: 100,
   }
   if (next) {
@@ -57,6 +59,21 @@ function levelSnapshot(account, levels) {
     )))
   }
   return dto
+}
+
+function ruleDto(row) {
+  return {
+    id: row.id,
+    ruleKey: row.rule_key,
+    name: row.name,
+    metric: row.metric,
+    deltaValue: Number(row.delta_value),
+    dailyLimitValue: row.daily_limit_value === null || row.daily_limit_value === undefined
+      ? undefined
+      : Number(row.daily_limit_value),
+    sourceEventType: row.source_event_type,
+    status: row.status,
+  }
 }
 
 function accountDto(row) {
@@ -91,4 +108,4 @@ function jsonArray(value) {
   }
 }
 
-module.exports = { accountDto, balanceField, levelDto, levelSnapshot, projectAward }
+module.exports = { accountDto, balanceField, levelDto, levelSnapshot, projectAward, ruleDto }

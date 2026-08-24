@@ -4,7 +4,7 @@ import { cooperationAbilityDimensions, cooperationRoles } from '../../../../conf
 import { cooperationModule } from '../../../../modules/mip-cooperation'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
-import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
+import { caseNavigateTo, leaveSecondaryPage } from '../../../../modules/platform/case-navigation'
 
 interface AbilityView { key: string, label: string, score: number }
 interface RoleFieldView { key: string, label: string, value: string }
@@ -204,6 +204,36 @@ Page({
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '合作卡下架失败' })
+    }
+    finally {
+      this.setData({ acting: false })
+    }
+  },
+
+  async deleteCard() {
+    const item = this.data.item
+    if (!item?.mine || this.data.acting) {
+      return
+    }
+    const confirmation = await wx.showModal({
+      title: '删除合作卡',
+      content: '删除后，这张合作卡将不再显示，且无法恢复。',
+      confirmText: '删除',
+      confirmColor: '#B30516',
+    })
+    if (!confirmation.confirm) {
+      return
+    }
+    this.setData({ acting: true, message: '' })
+    try {
+      await cooperationModule.archive(item.id, item.version)
+      wx.showToast({ title: '已删除', icon: 'success' })
+      leaveSecondaryPage('/pages/opportunities/index')
+    }
+    catch (error) {
+      const message = error instanceof Error ? error.message : '合作卡删除失败'
+      await this.load()
+      wx.showToast({ title: message, icon: 'none' })
     }
     finally {
       this.setData({ acting: false })

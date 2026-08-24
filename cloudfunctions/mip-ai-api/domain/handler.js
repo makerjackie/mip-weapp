@@ -43,6 +43,7 @@ function createHandler(options) {
       if (event.action === 'createTextDraft') return success(await options.service.createTextDraft(caller, event))
       if (event.action === 'createVoiceDraft') return success(await options.service.createVoiceDraft(caller, event))
       if (event.action === 'createVoiceDraftUpload') return success(await options.service.createVoiceDraftUpload(caller, event))
+      if (event.action === 'continueDraft') return success(await options.service.continueDraft(caller, event))
       if (event.action === 'updateDraft') return success(await options.service.updateDraft(caller, event))
       if (event.action === 'deleteDraft') return success(await options.service.deleteDraft(caller, event))
       throw new Error('NOT_FOUND')

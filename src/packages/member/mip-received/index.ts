@@ -55,6 +55,24 @@ function dateText(value: string) {
 
 function present(item: ReceivedInteraction, index: number): InteractionView {
   const actorName = item.actor.nickname || 'MIP 用户'
+  if (item.kind === 'VISITOR') {
+    return {
+      viewKey: `visitor-${item.actor.profileRef}-${index}`,
+      kind: item.kind,
+      messageId: item.actor.profileRef,
+      unread: item.unread,
+      actorName,
+      actorInitial: actorName.slice(0, 1),
+      actorAvatarUrl: item.actor.avatarUrl || '',
+      actorHeadline: item.actor.headline || '',
+      statusText: `${item.visitCount} 次访问`,
+      sourceText: '公开档案',
+      detailText: '访问了你的公开档案',
+      note: '',
+      updatedText: dateText(item.lastVisitedAt),
+      navigationUrl: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(item.actor.profileRef)}`,
+    }
+  }
   if (item.kind === 'REFERRAL') {
     return {
       viewKey: item.messageId || `referral-${item.opportunity.id}-${index}`,
@@ -67,7 +85,7 @@ function present(item: ReceivedInteraction, index: number): InteractionView {
       actorHeadline: item.actor.headline || '',
       statusText: item.status === 'ACTIVE' ? '有效' : '已取消',
       sourceText: item.opportunity.title,
-      detailText: '提交了引荐意向',
+      detailText: '向你引荐了这个机会',
       note: item.note || '',
       updatedText: dateText(item.updatedAt),
       navigationUrl: `/packages/member/mip-opportunities/detail/index?id=${encodeURIComponent(item.opportunity.id)}`,
@@ -77,6 +95,7 @@ function present(item: ReceivedInteraction, index: number): InteractionView {
     OPPORTUNITY: '机会',
     COOPERATION_CARD: '合作卡',
     SUPER_CASE: '超级案例',
+    PROFILE: '公开档案',
   } as const
   return {
     viewKey: item.messageId || `interest-${item.actor.profileRef}-${index}`,
@@ -103,6 +122,7 @@ Page({
     items: [] as InteractionView[],
     referralUnreadCount: 0,
     interestUnreadCount: 0,
+    visitorUnreadCount: 0,
     nextCursor: '',
     loadingMore: false,
     openingKey: '',
@@ -114,6 +134,7 @@ Page({
   categoryCache: {
     REFERRAL: createCategoryCache(),
     PROFILE_INTEREST: createCategoryCache(),
+    VISITOR: createCategoryCache(),
   } as Record<ReceivedInteractionCategory, CategoryCache>,
 
   onShow() {
@@ -150,6 +171,7 @@ Page({
       await Promise.all([
         this.loadCategory('REFERRAL', true),
         this.loadCategory('PROFILE_INTEREST', true),
+        this.loadCategory('VISITOR', true),
       ])
     }
     catch {
@@ -168,7 +190,7 @@ Page({
 
   changeCategory(event: WechatMiniprogram.TouchEvent) {
     const category = String(event.currentTarget.dataset.category || '') as ReceivedInteractionCategory
-    if (!['REFERRAL', 'PROFILE_INTEREST'].includes(category) || category === this.data.category) {
+    if (!['REFERRAL', 'PROFILE_INTEREST', 'VISITOR'].includes(category) || category === this.data.category) {
       return
     }
     this.setData({ category, message: '' })
@@ -186,6 +208,7 @@ Page({
       nextCursor: cache.nextCursor,
       referralUnreadCount: this.categoryCache.REFERRAL.unreadCount,
       interestUnreadCount: this.categoryCache.PROFILE_INTEREST.unreadCount,
+      visitorUnreadCount: this.categoryCache.VISITOR.unreadCount,
     })
   },
 
@@ -219,6 +242,7 @@ Page({
         this.setData({
           referralUnreadCount: this.categoryCache.REFERRAL.unreadCount,
           interestUnreadCount: this.categoryCache.PROFILE_INTEREST.unreadCount,
+          visitorUnreadCount: this.categoryCache.VISITOR.unreadCount,
         })
       }
     }
@@ -261,7 +285,12 @@ Page({
     this.setData({ openingKey: viewKey, message: '' })
     if (item.unread && item.messageId) {
       try {
-        await opportunityModule.markReceivedRead(item.messageId)
+        if (this.data.category === 'VISITOR') {
+          await opportunityModule.markReceivedRead(item.messageId, this.data.category)
+        }
+        else {
+          await opportunityModule.markReceivedRead(item.messageId)
+        }
         item.unread = false
         cache.unreadCount = Math.max(0, cache.unreadCount - 1)
         mipMessagingModule.invalidate()

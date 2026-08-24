@@ -10,6 +10,7 @@
       <view class="px-5 py-5">
         <view class="flex items-center justify-between"><view class="rounded-full bg-brand px-3 py-1 text-[length:20rpx] font-semibold text-on-brand">{{item.status === 'PUBLISHED' ? '招募中' : '已完成'}}</view><view class="text-[length:21rpx] text-muted">{{item.city.label || item.branchName || '全国'}}</view></view>
         <view class="mt-4 text-[length:36rpx] font-bold leading-8">{{item.title}}</view>
+        <view wx:if="{{publishedText}}" class="mt-2 text-[length:21rpx] text-muted">发布于 {{publishedText}}</view>
         <view class="mt-4 text-[length:24rpx] leading-7 text-muted">{{item.valueSummary}}</view>
         <view class="mt-4 rounded-[12rpx] bg-brand-soft px-4 py-3 text-[length:23rpx] leading-6"><text class="text-brand">寻找：</text>{{item.targetSummary}}</view>
       </view>
@@ -23,11 +24,49 @@
     <view class="mt-4 flex min-h-[112rpx] items-center rounded-[16rpx] bg-panel px-5 py-4" bind:tap="openAuthor">
       <view class="min-w-0 flex-1"><view class="text-[length:21rpx] text-muted">发布人</view><view class="mt-2 text-[length:27rpx] font-semibold">{{item.author.nickname}}</view><view wx:if="{{item.author.headline}}" class="mt-1 text-[length:22rpx] text-muted">{{item.author.headline}}</view></view><t-icon name="chevron-right" size="30rpx" color="var(--color-brand)" />
     </view>
-    <view wx:if="{{!item.mine && item.status === 'PUBLISHED'}}" class="mt-4 flex gap-3">
-      <t-button class="min-w-0 flex-1" block size="large" theme="primary" loading="{{acting}}" bind:tap="toggleReferral">{{item.referralActive ? '取消引荐意向' : '我想引荐'}}</t-button>
-      <t-button class="min-w-0 flex-1" block size="large" variant="outline" theme="primary" disabled="{{acting}}" bind:tap="toggleInterest">{{item.interestActive ? '取消感兴趣' : '我感兴趣'}}</t-button>
+    <view wx:if="{{item.teamMembers.length}}" class="mt-4 rounded-[16rpx] bg-panel px-5 py-5">
+      <view class="text-[length:28rpx] font-semibold">团队成员</view>
+      <view class="mt-3 flex flex-col gap-2"><view wx:for="{{item.teamMembers}}" wx:key="profileRef" class="flex items-center rounded-[12rpx] bg-panel-raised px-3 py-3" data-profile-ref="{{item.profileRef}}" bind:tap="openTeamMember"><image wx:if="{{item.avatarUrl}}" class="mr-3 h-[72rpx] w-[72rpx] rounded-full" src="{{item.avatarUrl}}" mode="aspectFill" /><view wx:else class="mr-3 flex h-[72rpx] w-[72rpx] items-center justify-center rounded-full bg-brand-soft text-[length:22rpx] text-brand">MIP</view><view class="min-w-0 flex-1"><view class="truncate text-[length:24rpx] font-semibold">{{item.nickname}}</view><view wx:if="{{item.headline}}" class="mt-1 truncate text-[length:20rpx] text-muted">{{item.headline}}</view></view><t-icon name="chevron-right" size="28rpx" color="var(--color-brand)" /></view></view>
+    </view>
+    <view wx:if="{{!item.mine && item.status === 'PUBLISHED'}}" class="mt-4 rounded-[16rpx] bg-panel px-4 py-4">
+      <view wx:if="{{item.referralActive}}" class="mb-4 rounded-[12rpx] bg-panel-raised px-4 py-4">
+        <view class="text-[length:21rpx] text-muted">已引荐给</view>
+        <view wx:if="{{item.referralTarget}}" class="mt-3 flex items-center gap-3" bind:tap="openReferralTarget">
+          <image wx:if="{{item.referralTarget.avatarUrl}}" class="h-[72rpx] w-[72rpx] shrink-0 rounded-full bg-brand-soft" src="{{item.referralTarget.avatarUrl}}" mode="aspectFill" />
+          <view wx:else class="flex h-[72rpx] w-[72rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft text-[length:22rpx] text-brand">MIP</view>
+          <view class="min-w-0 flex-1"><view class="truncate text-[length:25rpx] font-semibold">{{item.referralTarget.nickname}}</view><view wx:if="{{item.referralTarget.headline}}" class="mt-1 truncate text-[length:20rpx] text-muted">{{item.referralTarget.headline}}</view></view><t-icon name="chevron-right" size="28rpx" color="var(--color-muted)" />
+        </view>
+        <view wx:else class="mt-2 text-[length:22rpx] text-muted">当前无法查看被引荐人档案</view>
+      </view>
+      <view class="flex gap-3">
+        <t-button wx:if="{{item.referralActive}}" class="min-w-0 flex-1" block size="large" theme="primary" loading="{{acting}}" bind:tap="changeReferralTarget">更换对象</t-button>
+        <t-button wx:else class="min-w-0 flex-1" block size="large" theme="primary" loading="{{acting}}" bind:tap="toggleReferral">我想引荐</t-button>
+        <t-button wx:if="{{item.referralActive}}" class="min-w-0 flex-1" block size="large" variant="outline" theme="primary" disabled="{{acting}}" bind:tap="cancelReferral">取消引荐</t-button>
+      </view>
+      <view class="mt-3"><t-button block size="large" variant="outline" theme="primary" disabled="{{acting}}" bind:tap="toggleInterest">{{item.interestActive ? '取消感兴趣' : '我感兴趣'}}</t-button></view>
     </view>
     <view wx:if="{{item.canEdit}}" class="mt-4 flex gap-3"><t-button class="min-w-0 flex-1" block size="large" theme="primary" bind:tap="edit">编辑</t-button><t-button wx:if="{{item.status === 'PUBLISHED'}}" class="min-w-0 flex-1" block size="large" variant="outline" theme="primary" bind:tap="end">结束机会</t-button></view>
     <app-page-exit label="返回机会" />
+    <t-popup visible="{{referralPickerVisible}}" placement="bottom" prevent-scroll-through bind:visible-change="handleReferralPickerVisibility">
+      <view class="box-border max-h-[82vh] min-h-[620rpx] rounded-t-[24rpx] bg-panel px-4 pb-[calc(env(safe-area-inset-bottom)+32rpx)] pt-5 text-ink">
+        <view class="flex items-center justify-between gap-3"><view><view class="text-[length:30rpx] font-semibold">选择被引荐人</view><view class="mt-1 text-[length:21rpx] text-muted">玩家和嘉宾均可选择</view></view><view class="min-h-[64rpx] px-3 py-2 text-[length:23rpx] text-muted" bind:tap="closeReferralPicker">取消</view></view>
+        <view class="mt-4 flex gap-2"><input class="box-border h-[76rpx] min-w-0 flex-1 rounded-[12rpx] bg-panel-raised px-3 text-[length:24rpx]" value="{{referralKeyword}}" maxlength="80" placeholder="搜索姓名、公司、行业或城市" bindinput="updateReferralKeyword" confirm-type="search" bindconfirm="searchReferralCandidates" /><t-button theme="primary" loading="{{referralCandidatesLoading}}" bind:tap="searchReferralCandidates">搜索</t-button></view>
+        <view wx:if="{{referralPickerMessage}}" class="mt-3 rounded-[12rpx] border border-danger px-3 py-3 text-[length:21rpx] text-danger">{{referralPickerMessage}}</view>
+        <scroll-view scroll-y class="mt-4 h-[420rpx]" lower-threshold="100" bindscrolltolower="loadMoreReferralCandidates">
+          <view wx:if="{{!referralCandidatesLoading && !referralCandidates.length}}" class="py-12 text-center text-[length:23rpx] text-muted">暂无符合条件的用户</view>
+          <view wx:else class="flex flex-col gap-2">
+            <view wx:for="{{referralCandidates}}" wx:key="profileRef" class="flex min-h-[96rpx] items-center rounded-[12rpx] bg-panel-raised px-3 py-3" data-profile-ref="{{item.profileRef}}" bind:tap="selectReferralTarget">
+              <image wx:if="{{item.avatarUrl}}" class="mr-3 h-[72rpx] w-[72rpx] shrink-0 rounded-full bg-brand-soft" src="{{item.avatarUrl}}" mode="aspectFill" />
+              <view wx:else class="mr-3 flex h-[72rpx] w-[72rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft text-[length:24rpx] font-semibold text-brand">{{item.displayInitial}}</view>
+              <view class="min-w-0 flex-1"><view class="truncate text-[length:24rpx] font-semibold">{{item.displayName}}</view><view class="mt-1 truncate text-[length:20rpx] text-muted">{{item.userKind === 'PLAYER' ? '玩家' : '嘉宾'}}{{item.headline ? ' · ' + item.headline : ''}}</view></view>
+              <view wx:if="{{selectedReferralTarget && selectedReferralTarget.profileRef === item.profileRef}}" class="rounded-full bg-brand px-3 py-1 text-[length:20rpx] text-on-brand">已选择</view><view wx:else class="rounded-full border border-line px-3 py-1 text-[length:20rpx] text-muted">选择</view>
+            </view>
+            <view wx:if="{{referralCandidatesLoading}}" class="py-4 text-center text-[length:21rpx] text-muted">正在加载</view>
+          </view>
+        </scroll-view>
+        <view wx:if="{{selectedReferralTarget}}" class="mt-3 text-[length:22rpx] text-muted">已选择：{{selectedReferralTarget.displayName}}</view>
+        <view class="mt-3"><t-button block size="large" theme="primary" loading="{{acting}}" disabled="{{!selectedReferralTarget}}" bind:tap="confirmReferralTarget">确认引荐</t-button></view>
+      </view>
+    </t-popup>
   </block>
 </view>

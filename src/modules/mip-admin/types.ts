@@ -103,6 +103,43 @@ export interface AdminUser {
   updatedAt: string | null
 }
 
+export interface AdminUserDetail extends AdminUser {
+  companies: Array<{ name: string, role?: string }>
+  organizations: Array<{ name: string, role?: string }>
+  membership: null | {
+    status: string
+    startsAt: string | null
+    endsAt: string | null
+  }
+  growth: {
+    levelName: string
+    experience: number
+    contribution: number
+    coin: number
+  }
+  counts: {
+    registrations: number
+    attended: number
+    orders: number
+    opportunities: number
+    cooperationCards: number
+    superCases: number
+  }
+  tags: Array<{
+    id: string
+    kind: string
+    relation: string
+    label: string
+  }>
+  roles: Array<{
+    roleKey: AdminRoleKey
+    scopeType: AdminScopeType
+    scopeId: string | null
+    grantedAt: string | null
+  }>
+  createdAt: string | null
+}
+
 export interface AdminEvent {
   id: string
   title: string
@@ -132,6 +169,11 @@ export interface AdminEventDetail {
   title: string
   summary: string
   description: string
+  contentMedia?: Array<{
+    assetId: string
+    imageUrl: string
+    caption: string
+  }>
   notices: string
   coverAssetId: string | null
   coverUrl: string
@@ -157,6 +199,11 @@ export interface AdminEventDetail {
   registrationSchema: unknown[]
   status: AdminEvent['status']
   contentSafetyStatus: AdminEvent['contentSafetyStatus']
+  version: number
+}
+
+export interface AdminEventPolicy {
+  cancellationHoursBeforeStart: number
   version: number
 }
 
@@ -295,13 +342,44 @@ export interface AdminRosterItem {
   id: string
   nickname: string
   cityName: string
-  status: string
+  status: AdminRosterStatus
   answers: Record<string, unknown>
+  answerItems: AdminRosterAnswerItem[]
   phoneBound: boolean
   phoneNumber: string | null
+  submittedAt: string
   registeredAt: string | null
   checkedInAt: string | null
   version: number
+}
+
+export type AdminRosterStatus
+  = | 'PENDING_REVIEW'
+    | 'WAITLISTED'
+    | 'PAYMENT_PENDING'
+    | 'REGISTERED'
+    | 'CANCELLATION_PENDING'
+    | 'CANCELLED'
+    | 'REJECTED'
+    | 'ATTENDED'
+
+export interface AdminRosterAnswerItem {
+  key: string
+  label: string
+  value: string
+}
+
+export interface AdminRosterFilters {
+  query?: string
+  status?: AdminRosterStatus | ''
+}
+
+export interface AdminRosterListInput {
+  eventId: string
+  includePhone?: boolean
+  filters?: AdminRosterFilters
+  cursor?: string
+  limit?: number
 }
 
 export interface AdminRoleItem {
@@ -310,6 +388,8 @@ export interface AdminRoleItem {
   nickname: string
   scopeType: AdminScopeType
   scopeId: string | null
+  scopeName: string
+  branchId: string | null
   roleKey: AdminRoleKey
   status: 'ACTIVE' | 'REVOKED'
   grantedAt: string | null
@@ -375,23 +455,62 @@ export interface AdminGrowthEntry {
   createdAt: string | null
 }
 
+export type AdminOrderStatus
+  = | 'CREATED'
+    | 'PAYMENT_CREATED'
+    | 'PAID'
+    | 'FAILED'
+    | 'CLOSED'
+    | 'REFUND_PENDING'
+    | 'PARTIALLY_REFUNDED'
+    | 'REFUNDED'
+
+export type AdminRefundStatus
+  = | 'PENDING'
+    | 'PROVIDER_CREATED'
+    | 'PROCESSING'
+    | 'SUCCEEDED'
+    | 'FAILED'
+    | 'CANCELLED'
+
+export type AdminOrderRefundAction = 'SUBMIT_REFUND' | 'RETRY_REFUND'
+
+export interface AdminOrderFilters {
+  query?: string
+  eventId?: string
+  orderType?: AdminOrder['orderType'] | ''
+  status?: AdminOrderStatus | ''
+  refundStatus?: AdminRefundStatus | 'NONE' | ''
+  createdFrom?: string
+  createdTo?: string
+}
+
+export interface AdminOrderListInput {
+  filters?: AdminOrderFilters
+  cursor?: string
+  limit?: number
+}
+
 export interface AdminOrder {
   id: string
   userId: string
   nickname: string
   orderType: 'MEMBERSHIP' | 'EVENT'
   resourceId: string | null
+  resourceType: 'MEMBERSHIP_PLAN' | 'EVENT'
+  resourceTitle: string
+  resourceBranchName: string
   merchantOrderNoMasked: string
-  merchantOrderNo: string
   providerTransactionIdMasked: string | null
   amountCents: number
   refundedAmountCents: number
   currency: string
-  status: string
-  refundStatus: string | null
+  status: AdminOrderStatus
+  refundStatus: AdminRefundStatus | null
   refundId: string | null
+  availableRefundActions: AdminOrderRefundAction[]
   paidAt: string | null
-  createdAt: string | null
+  createdAt: string
   version: number
 }
 
@@ -473,6 +592,7 @@ export interface MipAdminGateway {
   claimCommunityReport: (input: AdminCommunityReportClaimInput) => Promise<AdminCommunityReport>
   closeCommunityReport: (input: AdminCommunityReportCloseInput) => Promise<AdminCommunityReport>
   listUsers: (input?: Record<string, unknown>) => Promise<AdminPage<AdminUser>>
+  getUser: (userId: string, includePhone?: boolean) => Promise<AdminUserDetail>
   updateUser: (input: Record<string, unknown>) => Promise<{ userId: string, version: number }>
   setUserControl: (input: Record<string, unknown>) => Promise<{ userId: string, controlType: string, active: boolean }>
   createExport: (input: Record<string, unknown>) => Promise<AdminExportTicket>
@@ -481,6 +601,8 @@ export interface MipAdminGateway {
   reserveExport: (ticketId: string, token: string) => Promise<AdminExportReservation>
   completeExport: (ticketId: string, token: string) => Promise<{ status: 'CONSUMED', consumedAt: string }>
   listEvents: (input?: Record<string, unknown>) => Promise<AdminPage<AdminEvent>>
+  getEventPolicy: () => Promise<AdminEventPolicy>
+  saveEventPolicy: (input: AdminEventPolicy) => Promise<AdminEventPolicy>
   getEvent: (eventId: string) => Promise<AdminEventDetail>
   saveEvent: (input: Record<string, unknown>) => Promise<{ id: string, version: number, status: string }>
   cloneEvent: (input: AdminEventCloneInput) => Promise<AdminEventCloneResult>
@@ -488,7 +610,7 @@ export interface MipAdminGateway {
   publishEventReminder: (input: AdminEventReminderInput) => Promise<AdminEventReminderPublication>
   listEventAlbumPhotos: (eventId: string, status: AdminEventAlbumPhotoStatus) => Promise<AdminPage<AdminEventAlbumPhoto>>
   reviewEventAlbumPhoto: (input: AdminEventAlbumReviewInput) => Promise<AdminEventAlbumPhoto>
-  listRoster: (input: Record<string, unknown>) => Promise<AdminPage<AdminRosterItem>>
+  listRoster: (input: AdminRosterListInput) => Promise<AdminPage<AdminRosterItem>>
   reviewRegistration: (input: Record<string, unknown>) => Promise<{ id: string, status: string, version: number }>
   checkIn: (input: Record<string, unknown>) => Promise<{ id: string, status: string, version: number, idempotent: boolean }>
   undoCheckIn: (input: Record<string, unknown>) => Promise<{ id: string, status: 'REGISTERED', version: number }>
@@ -504,7 +626,7 @@ export interface MipAdminGateway {
   saveGrowthRule: (input: Record<string, unknown>) => Promise<{ id: string, version: number }>
   listGrowthEntries: (input?: Record<string, unknown>) => Promise<AdminPage<AdminGrowthEntry>>
   adjustGrowth: (input: Record<string, unknown>) => Promise<Record<string, unknown>>
-  listOrders: (input?: Record<string, unknown>) => Promise<AdminPage<AdminOrder>>
+  listOrders: (input?: AdminOrderListInput) => Promise<AdminPage<AdminOrder>>
   submitRefund: (input: Record<string, unknown>) => Promise<Record<string, unknown>>
   retryRefund: (refundId: string) => Promise<Record<string, unknown>>
   listOperationalExceptions: (input?: AdminOperationalExceptionFilters) => Promise<AdminOperationalExceptionPage>

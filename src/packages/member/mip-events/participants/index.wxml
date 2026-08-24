@@ -15,9 +15,12 @@
 
   <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="mt-3 whitespace-nowrap">
     <view class="inline-flex gap-2 pr-3">
-      <view class="rounded-[16rpx] px-4 py-2 text-[length:22rpx] {{kind === 'ALL' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-kind="ALL" bind:tap="changeKind">全部</view>
-      <view class="rounded-[16rpx] px-4 py-2 text-[length:22rpx] {{kind === 'PLAYER' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-kind="PLAYER" bind:tap="changeKind">玩家</view>
-      <view class="rounded-[16rpx] px-4 py-2 text-[length:22rpx] {{kind === 'GUEST' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-kind="GUEST" bind:tap="changeKind">嘉宾</view>
+      <view wx:if="{{kind === 'ALL'}}" class="rounded-[16rpx] bg-brand px-4 py-2 text-[length:22rpx] text-on-brand" data-kind="ALL" bind:tap="changeKind">全部</view>
+      <view wx:else class="rounded-[16rpx] bg-panel px-4 py-2 text-[length:22rpx] text-muted" data-kind="ALL" bind:tap="changeKind">全部</view>
+      <view wx:if="{{kind === 'PLAYER'}}" class="rounded-[16rpx] bg-brand px-4 py-2 text-[length:22rpx] text-on-brand" data-kind="PLAYER" bind:tap="changeKind">玩家</view>
+      <view wx:else class="rounded-[16rpx] bg-panel px-4 py-2 text-[length:22rpx] text-muted" data-kind="PLAYER" bind:tap="changeKind">玩家</view>
+      <view wx:if="{{kind === 'GUEST'}}" class="rounded-[16rpx] bg-brand px-4 py-2 text-[length:22rpx] text-on-brand" data-kind="GUEST" bind:tap="changeKind">嘉宾</view>
+      <view wx:else class="rounded-[16rpx] bg-panel px-4 py-2 text-[length:22rpx] text-muted" data-kind="GUEST" bind:tap="changeKind">嘉宾</view>
     </view>
   </scroll-view>
 

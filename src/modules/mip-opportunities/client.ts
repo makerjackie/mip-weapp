@@ -7,11 +7,21 @@ import type {
   OpportunityInteractionResult,
   OpportunityMutationResult,
   OpportunityPage,
+  PeopleFilter,
+  PeoplePage,
+  PublicProfileAggregate,
   ReceivedInteractionCategory,
   ReceivedInteractionPage,
 } from './types'
 import { callOpportunityApi } from './transport'
-import { createMutationKey, normalizeOpportunityDraft, normalizeOpportunityFilter } from './validation'
+import {
+  createMutationKey,
+  normalizeOpportunityDraft,
+  normalizeOpportunityFilter,
+  normalizePeopleFilter,
+  parsePeoplePage,
+  parsePublicProfileAggregate,
+} from './validation'
 
 export const opportunityModule = {
   getCatalogs() {
@@ -28,6 +38,29 @@ export const opportunityModule = {
     return callOpportunityApi<OpportunityDetail>('getOpportunity', { id })
   },
 
+  async listPeople(filter: PeopleFilter) {
+    return parsePeoplePage(await callOpportunityApi<PeoplePage>('listPeople', {
+      filter: normalizePeopleFilter(filter),
+    }))
+  },
+
+  async getPublicProfile(profileRef: string) {
+    return parsePublicProfileAggregate(await callOpportunityApi<PublicProfileAggregate>(
+      'getPublicProfileAggregate',
+      { profileRef: profileRef.trim() },
+    ))
+  },
+
+  recordProfileVisit(
+    profileRef: string,
+    visitKey = createMutationKey('profile-visit'),
+  ) {
+    return callOpportunityApi<{ recorded: boolean }>('recordProfileVisit', {
+      profileRef: profileRef.trim(),
+      visitKey,
+    })
+  },
+
   listMine(cursor?: string) {
     return callOpportunityApi<OpportunityPage>('listMine', { cursor, limit: 20 })
   },
@@ -42,10 +75,13 @@ export const opportunityModule = {
 
   markReceivedRead(
     messageId: string,
+    category: ReceivedInteractionCategory = 'REFERRAL',
     idempotencyKey = createMutationKey('received-interaction-read'),
   ) {
     return callOpportunityApi<{ messageId: string, readAt: string }>('markReceivedInteractionRead', {
       messageId,
+      category,
+      ...(category === 'VISITOR' ? { profileRef: messageId } : {}),
       idempotencyKey,
     })
   },
@@ -68,12 +104,14 @@ export const opportunityModule = {
   setReferral(
     id: OpportunityId,
     active: boolean,
+    targetProfileRef = '',
     note = '',
     idempotencyKey = createMutationKey('opportunity-referral'),
   ) {
     return callOpportunityApi<OpportunityInteractionResult>('setReferral', {
       id,
       active,
+      targetProfileRef: targetProfileRef.trim(),
       note: note.trim(),
       idempotencyKey,
     })
@@ -87,6 +125,19 @@ export const opportunityModule = {
     return callOpportunityApi<OpportunityInteractionResult>('setProfileInterest', {
       sourceType: 'OPPORTUNITY',
       sourceId: id,
+      active,
+      idempotencyKey,
+    })
+  },
+
+  setProfileInterest(
+    profileRef: string,
+    active: boolean,
+    idempotencyKey = createMutationKey('profile-interest'),
+  ) {
+    return callOpportunityApi<OpportunityInteractionResult>('setProfileInterest', {
+      sourceType: 'PROFILE',
+      profileRef: profileRef.trim(),
       active,
       idempotencyKey,
     })

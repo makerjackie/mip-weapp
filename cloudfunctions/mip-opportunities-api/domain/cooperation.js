@@ -141,6 +141,7 @@ const cardSelect = `
 
 function summary(row, caller) {
   const profileVisibility = jsonObject(row.visibility_json)
+  const mine = Boolean(caller.userId && caller.userId === row.owner_user_id)
   return {
     id: row.id,
     roleKey: row.role_key,
@@ -159,7 +160,8 @@ function summary(row, caller) {
         ? undefined
         : { id: row.industry_tag_id, key: row.industry_key, label: row.industry_label },
     },
-    mine: Boolean(caller.userId && caller.userId === row.owner_user_id),
+    mine,
+    ...(mine ? { version: Number(row.version) } : {}),
   }
 }
 
@@ -258,7 +260,7 @@ async function listMyCooperationCards(database, caller, input = {}) {
   if (cursor) params.push(cursor.timestamp, cursor.timestamp, cursor.id)
   const rows = await database.query(
     `${cardSelect}
-     WHERE c.app_id = ? AND c.owner_user_id = ? ${cursorSql}
+     WHERE c.app_id = ? AND c.owner_user_id = ? AND c.status <> 'ARCHIVED' ${cursorSql}
      ORDER BY c.updated_at DESC, c.id DESC
      LIMIT ${pageLimit + 1}`,
     params,
@@ -281,6 +283,7 @@ async function getCooperationCard(database, caller, id) {
     [caller.appId, id, ...blockFilter.params],
   )
   if (!row) throw new Error('NOT_FOUND')
+  if (row.status === 'ARCHIVED') throw new Error('NOT_FOUND')
   const mine = Boolean(caller.userId && caller.userId === row.owner_user_id)
   if (row.status !== 'PUBLISHED' && !mine) throw new Error('NOT_FOUND')
   let interestActive = false
@@ -328,13 +331,15 @@ async function saveCooperationCard(database, contentSafety, caller, input) {
       )
       if (!existing) throw new Error('NOT_FOUND')
       if (existing.owner_user_id !== caller.userId) throw new Error('FORBIDDEN')
+      if (existing.status === 'ARCHIVED') throw new Error('FORBIDDEN')
       if (existing.role_key !== draft.roleKey) throw new Error('CONFLICT')
       if (Number(existing.version) !== draft.expectedVersion) throw new Error('CONFLICT')
     }
     else {
       const sameRole = await tx.one(
         `SELECT id FROM mip_cooperation_cards
-         WHERE app_id = ? AND owner_user_id = ? AND role_key = ? FOR UPDATE`,
+         WHERE app_id = ? AND owner_user_id = ? AND role_key = ?
+           AND status <> 'ARCHIVED' FOR UPDATE`,
         [caller.appId, caller.userId, draft.roleKey],
       )
       if (sameRole) throw new Error('COOPERATION_ROLE_EXISTS')
@@ -443,7 +448,53 @@ async function unpublishCooperationCard(database, caller, input = {}) {
   })
 }
 
+async function archiveCooperationCard(database, caller, input = {}) {
+  const id = stringValue(input.id, 36, 'VALIDATION_FAILED')
+  const expectedVersion = Number(input.expectedVersion)
+  if (!uuid(id) || !Number.isInteger(expectedVersion) || expectedVersion < 1) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  return idempotentTransaction(database, {
+    appId: caller.appId,
+    userId: caller.userId,
+    operation: 'cooperation-card.archive',
+    idempotencyKey: input.idempotencyKey,
+    request: { id, expectedVersion },
+  }, async (tx) => {
+    await lockActiveContributor(tx, caller)
+    const existing = await tx.one(
+      `SELECT owner_user_id, status, version
+       FROM mip_cooperation_cards
+       WHERE app_id = ? AND id = ? FOR UPDATE`,
+      [caller.appId, id],
+    )
+    if (!existing) throw new Error('NOT_FOUND')
+    if (existing.owner_user_id !== caller.userId) throw new Error('FORBIDDEN')
+    if (Number(existing.version) !== expectedVersion || existing.status === 'ARCHIVED') {
+      throw new Error('CONFLICT')
+    }
+    const result = await tx.query(
+      `UPDATE mip_cooperation_cards
+       SET status = 'ARCHIVED', archived_at = UTC_TIMESTAMP(3), version = version + 1
+       WHERE app_id = ? AND id = ? AND version = ? AND status <> 'ARCHIVED'`,
+      [caller.appId, id, expectedVersion],
+    )
+    if (result.affectedRows !== 1) throw new Error('CONFLICT')
+    const version = expectedVersion + 1
+    await appendAudit(tx, {
+      appId: caller.appId,
+      actorUserId: caller.userId,
+      action: 'COOPERATION_CARD_ARCHIVED',
+      resourceType: 'COOPERATION_CARD',
+      resourceId: id,
+      metadata: { version },
+    })
+    return { id, status: 'ARCHIVED', version }
+  })
+}
+
 module.exports = {
+  archiveCooperationCard,
   getCooperationCard,
   listCooperationCards,
   listMyCooperationCards,

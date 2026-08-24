@@ -1,11 +1,13 @@
 'use strict'
 
 const { randomUUID } = require('node:crypto')
-const { deriveMembershipCheckout, refundableAmount } = require('./pure')
+const { deriveMembershipCheckout, jsonStringArray, refundableAmount } = require('./pure')
 const {
   createMembershipInvitation: createInvitationToken,
+  createMembershipInvitationScene,
   hashMembershipInvitation,
   readMembershipInvitation,
+  readMembershipInvitationScene,
 } = require('../lib/membership-invitation')
 
 function createCommerceService(options) {
@@ -14,10 +16,15 @@ function createCommerceService(options) {
   const createId = options.createId || randomUUID
   const now = options.now || (() => new Date())
   const invitationSecret = options.invitationSecret
+  const invitationCode = options.createInvitationCode
 
   async function listPlans(caller) {
     const rows = await repository.listPlans(caller.appId, catalogStage)
     return rows.map(planDto)
+  }
+
+  function getMembershipBenefits(caller) {
+    return repository.getMembershipBenefits(caller)
   }
 
   function createCheckout(caller, value) {
@@ -40,6 +47,37 @@ function createCommerceService(options) {
     }
   }
 
+  async function createMembershipInvitationCode(caller) {
+    if (typeof invitationCode !== 'function') throw new Error('MEMBERSHIP_INVITATION_CODE_UNAVAILABLE')
+    const inviterUserId = await repository.resolveMembershipInviter(caller)
+    const expiresAt = new Date(now().getTime() + 30 * 24 * 60 * 60 * 1000)
+    const scene = createMembershipInvitationScene({
+      appId: caller.appId,
+      inviterUserId,
+      expiresAt,
+    }, invitationSecret)
+    const code = await invitationCode({ appId: caller.appId, scene })
+    return { codeUrl: code.codeUrl, expiresAt: expiresAt.toISOString() }
+  }
+
+  async function resolveMembershipInvitationScene(caller, value) {
+    const invitation = readMembershipInvitationScene(
+      optionalText(value?.scene, 32),
+      caller.appId,
+      invitationSecret,
+      now(),
+    )
+    await repository.assertMembershipInviter(caller.appId, invitation.inviterUserId)
+    return {
+      token: createInvitationToken({
+        appId: caller.appId,
+        inviterUserId: invitation.inviterUserId,
+        expiresAt: invitation.expiresAt,
+      }, invitationSecret),
+      expiresAt: invitation.expiresAt,
+    }
+  }
+
   function getOrder(caller, value) {
     return repository.getOrder(caller, uuid(value?.orderId))
   }
@@ -58,7 +96,17 @@ function createCommerceService(options) {
     }, refundableAmount)
   }
 
-  return { createCheckout, createMembershipInvitation, getOrder, listOrders, listPlans, requestRefund }
+  return {
+    createCheckout,
+    createMembershipInvitation,
+    createMembershipInvitationCode,
+    getMembershipBenefits,
+    getOrder,
+    listOrders,
+    listPlans,
+    requestRefund,
+    resolveMembershipInvitationScene,
+  }
 }
 
 function checkoutInput(value) {
@@ -99,7 +147,7 @@ function planDto(row) {
     durationDays: Number(row.duration_days),
     priceCents: Number(row.price_cents),
     currency: row.currency,
-    benefits: jsonArray(row.benefits_json),
+    benefits: jsonStringArray(row.benefits_json),
     status: row.status,
     version: Number(row.version),
   }
@@ -135,19 +183,6 @@ function uuid(value) {
 
 function merchantNumber(prefix, id, maximum) {
   return `${prefix}${String(id).replaceAll('-', '').toUpperCase()}`.slice(0, maximum)
-}
-
-function jsonArray(value) {
-  if (Array.isArray(value)) {
-    return value
-  }
-  try {
-    const parsed = JSON.parse(value || '[]')
-    return Array.isArray(parsed) ? parsed : []
-  }
-  catch {
-    return []
-  }
 }
 
 module.exports = { checkoutInput, createCommerceService, membershipAttribution, planDto, refundInput }

@@ -6,6 +6,7 @@
       </view>
     </picker>
     <view class="flex items-center gap-2">
+      <view class="rounded-full border border-line px-3 py-2 text-[length:22rpx] text-muted active:bg-panel" bind:tap="openPeople">找人才</view>
       <view class="rounded-full border border-line px-3 py-2 text-[length:22rpx] text-muted active:bg-panel" bind:tap="openMine">我的</view>
       <view class="rounded-[12rpx] bg-brand px-4 py-3 text-[length:23rpx] font-semibold text-on-brand active:bg-brand-active" bind:tap="publish">
         {{mode === 'opportunities' ? '发布机会' : '创建合作卡'}}

@@ -87,6 +87,125 @@ describe('admin repository persistence contracts', () => {
     assert.match(eventSql, /SELECT COUNT\(\*\) FROM mip_event_registrations/)
   })
 
+  it('builds a user detail only from app-scoped MIP facts', async () => {
+    const calls = []
+    const repository = createAdminRepository(transactionDatabase({
+      async one(sql, params) {
+        calls.push({ sql, params })
+        if (sql.includes('FROM mip_users u')) {
+          return {
+            id: 'user-a', status: 'ACTIVE', primary_branch_id: 'branch-a', user_version: 2,
+            created_at: new Date('2026-01-01T00:00:00.000Z'), updated_at: new Date('2026-08-24T00:00:00.000Z'),
+            nickname: '用户', headline: '', introduction: '', companies_json: '[]', organizations_json: '[]',
+            visibility_json: '{}', profile_version: 1, phone_verified_at: null, branch_name: '广州分会', city_name: '广州',
+          }
+        }
+        return null
+      },
+      async query(sql, params) {
+        calls.push({ sql, params })
+        return []
+      },
+    }))
+    const detail = await repository.getUserDetail('wx-app', 'user-a')
+    assert.equal(detail.id, 'user-a')
+    assert.equal(detail.kind, 'GUEST')
+    assert.deepEqual(detail.counts, {
+      registrations: 0, attended: 0, orders: 0, opportunities: 0, cooperationCards: 0, superCases: 0,
+    })
+    assert.ok(calls.every(call => call.params[0] === 'wx-app'))
+    assert.doesNotMatch(calls.map(call => call.sql).join('\n'), /\b(?:member|dating|sewing)_\w+/i)
+  })
+
+  it('combines user phone, profile and joining-time filters on server facts', async () => {
+    let captured
+    const repository = createAdminRepository(transactionDatabase({
+      async query(sql, params) {
+        captured = { sql, params }
+        return []
+      },
+    }))
+    await repository.listUsers('wx-app', { platform: true, branchIds: [], eventIds: [] }, {
+      phoneBound: 'BOUND',
+      profileComplete: 'COMPLETE',
+      joinedWithinDays: 30,
+    }, 20)
+    assert.match(captured.sql, /pp\.phone_verified_at IS NOT NULL/)
+    assert.match(captured.sql, /u\.primary_branch_id IS NOT NULL/)
+    assert.match(captured.sql, /DATE_SUB\(UTC_TIMESTAMP\(3\), INTERVAL \? DAY\)/)
+    assert.ok(captured.params.includes(30))
+  })
+
+  it('filters orders by keyword, type, states and time while returning safe business resources', async () => {
+    let captured
+    const repository = createAdminRepository(transactionDatabase({
+      async query(sql, params) {
+        captured = { sql, params }
+        return [{
+          id: 'order-a', user_id: 'user-a', nickname: '用户', order_type: 'EVENT',
+          resource_id: 'event-a', membership_plan_id: null, event_title: '城市交流会',
+          branch_id: 'branch-a', event_branch_name: '广州分会', merchant_order_no: 'MIP-ORDER-0001',
+          provider_transaction_id: 'WX-TRANSACTION-0001', amount_cents: 19900,
+          refunded_amount: 9900, currency: 'CNY', status: 'PARTIALLY_REFUNDED',
+          refund_status: 'SUCCEEDED', refund_id: 'refund-a',
+          paid_at: new Date('2026-08-20T02:00:00.000Z'),
+          created_at: new Date('2026-08-19T02:00:00.000Z'), version: 3,
+        }]
+      },
+    }))
+    const page = await repository.listOrders('wx-app', { platform: true, branchIds: [], eventIds: [] }, {
+      query: '用户', orderType: 'EVENT', status: 'PARTIALLY_REFUNDED', refundStatus: 'SUCCEEDED',
+      createdFrom: '2026-08-01 00:00:00.000', createdTo: '2026-08-24 23:59:59.999',
+    }, 20)
+    assert.match(captured.sql, /LEFT JOIN mip_membership_plans/)
+    assert.match(captured.sql, /LEFT JOIN mip_events/)
+    assert.match(captured.sql, /o\.merchant_order_no LIKE/)
+    assert.match(captured.sql, /ORDER BY rf\.created_at DESC, rf\.id DESC LIMIT 1\) = \?/)
+    assert.match(captured.sql, /o\.created_at >= \?/)
+    assert.match(captured.sql, /o\.created_at <= \?/)
+    assert.ok(captured.params.includes('%用户%'))
+    assert.deepEqual(page.items[0], {
+      id: 'order-a', userId: 'user-a', nickname: '用户', orderType: 'EVENT',
+      resourceId: 'event-a', resourceType: 'EVENT', resourceTitle: '城市交流会',
+      resourceBranchName: '广州分会', merchantOrderNoMasked: 'MIP-…0001',
+      amountCents: 19900, refundedAmountCents: 9900, currency: 'CNY',
+      status: 'PARTIALLY_REFUNDED', refundStatus: 'SUCCEEDED', refundId: 'refund-a',
+      paidAt: '2026-08-20T02:00:00.000Z', createdAt: '2026-08-19T02:00:00.000Z',
+      version: 3, providerTransactionIdMasked: 'WX-T…0001', branchId: 'branch-a',
+    })
+    assert.equal(Object.hasOwn(page.items[0], 'merchantOrderNo'), false)
+  })
+
+  it('maps roster answer labels and pages by non-null submission time', async () => {
+    let captured
+    const repository = createAdminRepository(transactionDatabase({
+      async query(sql, params) {
+        captured = { sql, params }
+        return [{
+          id: 'registration-a', user_id: 'user-a', status: 'PENDING_REVIEW',
+          answers_json: JSON.stringify({ role: '嘉宾', share_contact: false }),
+          registration_schema_json: JSON.stringify([
+            { key: 'role', label: '参与身份', type: 'SELECT' },
+            { key: 'share_contact', label: '同意交换联系方式', type: 'BOOLEAN' },
+          ]),
+          created_at: new Date('2026-08-20T01:00:00.000Z'), registered_at: null,
+          nickname: '用户', city_name: '广州', phone_ciphertext: null,
+          phone_verified_at: null, checked_in_at: null, version: 1,
+        }]
+      },
+    }))
+    const page = await repository.listRoster('wx-app', 'event-a', { query: '', status: '' }, 20)
+    assert.match(captured.sql, /e\.registration_schema_json/)
+    assert.match(captured.sql, /ORDER BY r\.created_at DESC, r\.id DESC LIMIT \?/)
+    assert.equal(captured.params[0], 'wx-app')
+    assert.deepEqual(page.items[0].answerItems, [
+      { key: 'role', label: '参与身份', value: '嘉宾' },
+      { key: 'share_contact', label: '同意交换联系方式', value: '否' },
+    ])
+    assert.equal(page.items[0].submittedAt, '2026-08-20T01:00:00.000Z')
+    assert.equal(page.items[0].registeredAt, null)
+  })
+
   it('makes an active blacklist effective through mip_users and records the audit', async () => {
     const calls = []
     const repository = createAdminRepository(transactionDatabase({
@@ -604,6 +723,58 @@ describe('admin repository persistence contracts', () => {
     assert.equal(calls[0].params.filter(value => value === 'branch-a').length, 2)
     assert.match(calls[1].sql, /a\.scope_type = 'EVENT'[\s\S]*FROM mip_events e/)
     assert.equal(calls[1].params.filter(value => value === 'branch-a').length, 2)
+  })
+
+  it('returns readable role scopes and hides administrative bindings from team-only readers', async () => {
+    let captured
+    const repository = createAdminRepository(transactionDatabase({
+      async query(sql, params) {
+        captured = { sql, params }
+        return [{
+          id: 'binding-a', user_id: 'user-a', nickname: '用户', scope_type: 'EVENT',
+          scope_id: 'event-a', role_key: 'EVENT_MANAGER', status: 'ACTIVE',
+          granted_at: new Date('2026-08-24T01:00:00.000Z'), revoked_at: null,
+          branch_name: null, event_title: '城市交流会', event_branch_id: 'branch-a',
+        }]
+      },
+    }))
+    const items = await repository.listRoles(
+      'wx-app',
+      { platform: true, branchIds: [], eventIds: [] },
+      { includeAdministrativeScopes: false },
+    )
+    assert.match(captured.sql, /r\.scope_type = 'EVENT'/)
+    assert.match(captured.sql, /e\.title AS event_title/)
+    assert.deepEqual(items[0], {
+      id: 'binding-a', userId: 'user-a', nickname: '用户', scopeType: 'EVENT',
+      scopeId: 'event-a', scopeName: '城市交流会', branchId: 'branch-a',
+      roleKey: 'EVENT_MANAGER', status: 'ACTIVE',
+      grantedAt: '2026-08-24T01:00:00.000Z', revokedAt: null,
+    })
+  })
+
+  it('rejects a concurrent duplicate role revocation before writing an audit', async () => {
+    const writes = []
+    const repository = createAdminRepository(transactionDatabase({
+      async one(sql) {
+        if (sql.includes('FROM mip_events')) return { id: 'event-a', branch_id: 'branch-a' }
+        if (sql.includes('FROM mip_users')) return { id: 'user-a', status: 'ACTIVE' }
+        return null
+      },
+      async query(sql, params) {
+        writes.push({ sql, params })
+        if (sql.includes('UPDATE mip_admin_role_bindings')) return { affectedRows: 0 }
+        return { affectedRows: 1 }
+      },
+    }))
+    await assert.rejects(() => repository.setRole({
+      appId: 'wx-app', actorUserId: 'admin-user', userId: 'user-a',
+      roleKey: 'EVENT_STAFF', active: false,
+      scope: { scopeType: 'EVENT', scopeId: 'event-a', branchId: 'branch-a' },
+      authorizedScope: { scopeType: 'EVENT', scopeId: 'event-a', branchId: 'branch-a' },
+      audit: audit({ action: 'admin.roles.revoke', resourceType: 'ADMIN_ROLE_BINDING' }),
+    }), /CONFLICT/)
+    assert.equal(writes.some(call => call.sql.includes('INSERT INTO mip_audit_logs')), false)
   })
 
   it('looks up an export only by exact app, requester, ticket and token hash', async () => {

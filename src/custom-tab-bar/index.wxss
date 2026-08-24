@@ -39,6 +39,30 @@
   min-height: 88rpx;
 }
 
+.tab-bar-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tab-bar-badge {
+  position: absolute;
+  top: -10rpx;
+  left: 34rpx;
+  min-width: 26rpx;
+  height: 26rpx;
+  padding: 0 6rpx;
+  font-size: 17rpx;
+  font-weight: 700;
+  line-height: 26rpx;
+  color: #080808;
+  text-align: center;
+  background: #fcdf03;
+  border: 2rpx solid #202020;
+  border-radius: 999rpx;
+}
+
 .tab-bar-label {
   margin-top: 4rpx;
   font-size: 20rpx;

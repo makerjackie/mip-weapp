@@ -51,6 +51,7 @@ export function createMipAiGateway(functionName = runtimeConfig.cloudbase.aiFunc
     createTextDraft: intent => call('createTextDraft', intent as unknown as Record<string, unknown>),
     createVoiceDraft: intent => call('createVoiceDraft', intent as unknown as Record<string, unknown>),
     createVoiceDraftUpload: intent => call('createVoiceDraftUpload', intent as unknown as Record<string, unknown>),
+    continueDraft: intent => call('continueDraft', intent as unknown as Record<string, unknown>),
     updateDraft: confirmation => call('updateDraft', confirmation as unknown as Record<string, unknown>),
     deleteDraft: (draftId, expectedVersion) => call('deleteDraft', { draftId, expectedVersion }),
   }

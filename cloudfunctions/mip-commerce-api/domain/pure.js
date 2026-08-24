@@ -34,9 +34,28 @@ function deriveMembershipCheckout(plan, catalogStage) {
       priceCents: amountCents,
       currency: 'CNY',
       catalogStage: plan.catalog_stage,
+      benefits: jsonStringArray(plan.benefits_json),
       version: Number(plan.version),
     },
   }
+}
+
+function jsonStringArray(value) {
+  let parsed = value
+  if (!Array.isArray(parsed)) {
+    try {
+      parsed = JSON.parse(value || '[]')
+    }
+    catch {
+      parsed = []
+    }
+  }
+  return Array.isArray(parsed)
+    ? parsed
+        .slice(0, 30)
+        .map(item => typeof item === 'string' ? item.trim() : '')
+        .filter(item => item.length > 0 && item.length <= 160)
+    : []
 }
 
 function assertOrderTransition(from, to) {
@@ -56,4 +75,4 @@ function refundableAmount(order, reservedRefundCents) {
   return amount
 }
 
-module.exports = { assertOrderTransition, deriveMembershipCheckout, refundableAmount }
+module.exports = { assertOrderTransition, deriveMembershipCheckout, jsonStringArray, refundableAmount }

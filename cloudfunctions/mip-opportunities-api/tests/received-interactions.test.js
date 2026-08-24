@@ -74,7 +74,8 @@ describe('received interaction queries', () => {
     assert.equal(serialized.includes('cloud://private-looking-file-id'), false)
 
     const relationQuery = calls.find(call => call.sql.includes('FROM mip_referral_intents r'))
-    assert.match(relationQuery.sql, /o\.owner_user_id = \?/)
+    assert.match(relationQuery.sql, /r\.target_user_id = \?/)
+    assert.match(relationQuery.sql, /o\.status IN \('PUBLISHED', 'ENDED'\)/)
     assert.match(relationQuery.sql, /r\.app_id = \?/)
     assert.match(relationQuery.sql, /FROM mip_user_blocks visibility_block/)
     assert.match(relationQuery.sql, /visibility_block\.app_id = r\.app_id/)
@@ -82,8 +83,8 @@ describe('received interaction queries', () => {
     assert.match(relationQuery.sql, /blocker_user_id = r\.actor_user_id AND visibility_block\.blocked_user_id = \?/)
     assert.match(relationQuery.sql, /ORDER BY r\.updated_at DESC, r\.id DESC/)
     assert.deepEqual(relationQuery.params, [
-      caller.userId,
       caller.appId,
+      caller.userId,
       caller.userId,
       caller.userId,
     ])
@@ -97,7 +98,8 @@ describe('received interaction queries', () => {
       async query(sql, params) {
         if (sql.includes('FROM mip_profile_interests i')) {
           assert.match(sql, /i\.target_user_id = \?/)
-          assert.match(sql, /COALESCE\(opportunity\.id, cooperation\.id, super_case\.id\) IS NOT NULL/)
+          assert.match(sql, /COALESCE\(opportunity\.id, cooperation\.id, super_case\.id, profile_source\.id\) IS NOT NULL/)
+          assert.match(sql, /WHEN 'PROFILE' THEN '公开档案'/)
           assert.match(sql, /visibility_block\.app_id = i\.app_id/)
           assert.match(sql, /blocker_user_id = \? AND visibility_block\.blocked_user_id = i\.actor_user_id/)
           assert.deepEqual(params.slice(0, 4), [caller.appId, caller.userId, caller.userId, caller.userId])
@@ -154,7 +156,7 @@ describe('received interaction read state', () => {
         if (sql.includes('FROM mip_users')) return { id: caller.userId, status: 'ACTIVE' }
         if (sql.includes('FROM mip_inbox_messages m')) {
           assert.match(sql, /m\.recipient_user_id = \?/)
-          assert.match(sql, /o\.owner_user_id = \?/)
+          assert.match(sql, /r\.target_user_id = \?/)
           assert.match(sql, /i\.target_user_id = \?/)
           assert.match(sql, /visibility_block\.app_id = r\.app_id/)
           assert.match(sql, /visibility_block\.app_id = i\.app_id/)

@@ -2,7 +2,7 @@
 
 const { randomUUID } = require('node:crypto')
 const { lockActiveContributor } = require('../lib/auth')
-const { createProfileRef } = require('../lib/profile-ref')
+const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
 const {
   ROLE_KEYS,
   appendAudit,
@@ -72,8 +72,19 @@ function normalizeDraft(value = {}) {
     roleKeys,
     industryTagIds: stringList(value.industryTagIds, 8, 'VALIDATION_FAILED', uuid),
     abilityTagIds: stringList(value.abilityTagIds, 8, 'VALIDATION_FAILED', uuid),
+    teamProfileRefs: profileRefList(value.teamProfileRefs),
     publish: Boolean(value.publish),
   }
+}
+
+function profileRefList(value) {
+  const result = Array.isArray(value)
+    ? [...new Set(value.map(item => String(item).trim()).filter(Boolean))]
+    : []
+  if (result.length > 8 || result.some(item => item.length < 20 || item.length > 200 || !item.startsWith('p1.'))) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  return result
 }
 
 async function getCatalogs(database, caller) {
@@ -132,16 +143,17 @@ async function getCatalogs(database, caller) {
   }
 }
 
-async function relatedData(database, appId, ids) {
-  if (!ids.length) return { roles: new Map(), industry: new Map(), ability: new Map() }
+async function relatedData(database, caller, ids) {
+  if (!ids.length) return { roles: new Map(), industry: new Map(), ability: new Map(), team: new Map() }
   const placeholders = ids.map(() => '?').join(', ')
-  const [roles, tags] = await Promise.all([
+  const blockFilter = mutualBlockFilter(caller.userId, 'u.id', 'u.app_id')
+  const [roles, tags, team] = await Promise.all([
     database.query(
       `SELECT opportunity_id, role_key
        FROM mip_opportunity_roles
        WHERE app_id = ? AND opportunity_id IN (${placeholders})
        ORDER BY role_key`,
-      [appId, ...ids],
+      [caller.appId, ...ids],
     ),
     database.query(
       `SELECT ot.opportunity_id, ot.relation, t.id, t.tag_key, t.label
@@ -149,10 +161,33 @@ async function relatedData(database, appId, ids) {
        INNER JOIN mip_tags t ON t.app_id = ot.app_id AND t.id = ot.tag_id
        WHERE ot.app_id = ? AND ot.opportunity_id IN (${placeholders})
        ORDER BY ot.relation, t.sort_order, t.id`,
-      [appId, ...ids],
+      [caller.appId, ...ids],
+    ),
+    database.query(
+      `SELECT member.opportunity_id, member.user_id,
+              p.nickname, p.headline, p.visibility_json,
+              avatar.cloud_file_id AS avatar_file_id
+       FROM mip_opportunity_team_members member
+       INNER JOIN mip_users u
+         ON u.app_id = member.app_id AND u.id = member.user_id AND u.status = 'ACTIVE'
+       INNER JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
+       LEFT JOIN mip_media_assets avatar
+         ON avatar.app_id = p.app_id AND avatar.id = p.avatar_asset_id AND avatar.status = 'READY'
+       WHERE member.app_id = ? AND member.opportunity_id IN (${placeholders})
+         AND member.status = 'ACTIVE'
+         AND EXISTS (
+           SELECT 1 FROM mip_membership_entitlements entitlement
+           WHERE entitlement.app_id = u.app_id AND entitlement.user_id = u.id
+             AND entitlement.status = 'ACTIVE'
+             AND entitlement.starts_at <= UTC_TIMESTAMP(3)
+             AND entitlement.ends_at > UTC_TIMESTAMP(3)
+         )
+         ${blockFilter.sql ? `AND ${blockFilter.sql}` : ''}
+       ORDER BY member.opportunity_id, member.sort_order, member.id`,
+      [caller.appId, ...ids, ...blockFilter.params],
     ),
   ])
-  const result = { roles: new Map(), industry: new Map(), ability: new Map() }
+  const result = { roles: new Map(), industry: new Map(), ability: new Map(), team: new Map() }
   for (const row of roles) {
     const list = result.roles.get(row.opportunity_id) || []
     list.push(row.role_key)
@@ -163,6 +198,18 @@ async function relatedData(database, appId, ids) {
     const list = target.get(row.opportunity_id) || []
     list.push({ id: row.id, key: row.tag_key, label: row.label })
     target.set(row.opportunity_id, list)
+  }
+  for (const row of team) {
+    const visibility = jsonObject(row.visibility_json)
+    const list = result.team.get(row.opportunity_id) || []
+    list.push({
+      profileRef: createProfileRef({ appId: caller.appId, userId: row.user_id }, caller.profileRefSecret),
+      nickname: visibility.nickname === false ? 'MIP 用户' : (row.nickname || 'MIP 用户'),
+      avatarUrl: visibility.avatar === false ? undefined : (row.avatar_file_id || undefined),
+      headline: visibility.headline === false ? undefined : (row.headline || undefined),
+      userKind: 'PLAYER',
+    })
+    result.team.set(row.opportunity_id, list)
   }
   return result
 }
@@ -181,6 +228,7 @@ function opportunitySummary(row, related, caller) {
     roles: related.roles.get(row.id) || [],
     industryTags: related.industry.get(row.id) || [],
     abilityTags: related.ability.get(row.id) || [],
+    teamMembers: related.team.get(row.id) || [],
     referralCount: Number(row.referral_count || 0),
     status: row.status,
     publishedAt: iso(row.published_at),
@@ -273,7 +321,7 @@ async function listOpportunities(database, caller, rawFilter) {
     params,
   )
   const pageRows = rows.slice(0, filter.limit)
-  const related = await relatedData(database, caller.appId, pageRows.map(row => row.id))
+  const related = await relatedData(database, caller, pageRows.map(row => row.id))
   return {
     items: pageRows.map(row => opportunitySummary(row, related, caller)),
     nextCursor: rows.length > filter.limit && pageRows.length
@@ -299,7 +347,7 @@ async function listMine(database, caller, input = {}) {
     params,
   )
   const pageRows = rows.slice(0, pageLimit)
-  const related = await relatedData(database, caller.appId, pageRows.map(row => row.id))
+  const related = await relatedData(database, caller, pageRows.map(row => row.id))
   return {
     items: pageRows.map(row => opportunitySummary(row, related, caller)),
     nextCursor: rows.length > pageLimit && pageRows.length
@@ -323,15 +371,29 @@ async function getOpportunity(database, caller, id) {
   if (!['PUBLISHED', 'ENDED'].includes(row.status) && !mine) {
     throw new Error('NOT_FOUND')
   }
-  const related = await relatedData(database, caller.appId, [row.id])
+  const related = await relatedData(database, caller, [row.id])
   let referralActive = false
+  let referralTarget
   let interestActive = false
   if (caller.userId) {
+    const targetBlock = mutualBlockFilter(caller.userId, 'target.id', 'target.app_id')
     const [referral, interest] = await Promise.all([
       database.one(
-        `SELECT status FROM mip_referral_intents
-         WHERE app_id = ? AND opportunity_id = ? AND actor_user_id = ?`,
-        [caller.appId, row.id, caller.userId],
+        `SELECT referral.status, target.id AS visible_target_user_id,
+                profile.nickname, profile.headline, profile.visibility_json,
+                avatar.cloud_file_id AS avatar_file_id
+         FROM mip_referral_intents referral
+         LEFT JOIN mip_users target
+           ON target.app_id = referral.app_id AND target.id = referral.target_user_id
+             AND target.status = 'ACTIVE' AND ${targetBlock.sql}
+         LEFT JOIN mip_profiles profile
+           ON profile.app_id = target.app_id AND profile.user_id = target.id
+         LEFT JOIN mip_media_assets avatar
+           ON avatar.app_id = profile.app_id AND avatar.id = profile.avatar_asset_id
+             AND avatar.status = 'READY'
+         WHERE referral.app_id = ? AND referral.opportunity_id = ?
+           AND referral.actor_user_id = ?`,
+        [...targetBlock.params, caller.appId, row.id, caller.userId],
       ),
       database.one(
         `SELECT status FROM mip_profile_interests
@@ -340,6 +402,18 @@ async function getOpportunity(database, caller, id) {
       ),
     ])
     referralActive = referral?.status === 'ACTIVE'
+    if (referralActive && referral.visible_target_user_id) {
+      const visibility = jsonObject(referral.visibility_json)
+      referralTarget = {
+        profileRef: createProfileRef(
+          { appId: caller.appId, userId: referral.visible_target_user_id },
+          caller.profileRefSecret,
+        ),
+        nickname: visibility.nickname === false ? 'MIP 用户' : (referral.nickname || 'MIP 用户'),
+        avatarUrl: visibility.avatar === false ? undefined : (referral.avatar_file_id || undefined),
+        headline: visibility.headline === false ? undefined : (referral.headline || undefined),
+      }
+    }
     interestActive = interest?.status === 'ACTIVE'
   }
   return {
@@ -348,9 +422,28 @@ async function getOpportunity(database, caller, id) {
     coverAssetId: mine ? (row.cover_asset_id || undefined) : undefined,
     version: Number(row.version),
     referralActive,
+    referralTarget,
     interestActive,
     canEdit: mine && !['UNPUBLISHED', 'ARCHIVED'].includes(row.status),
   }
+}
+
+async function resolveReferralTarget(tx, caller, profileRef) {
+  const targetUserId = readProfileRef(profileRef, caller.appId, caller.profileRefSecret)
+  if (targetUserId === caller.userId) throw new Error('CONFLICT')
+  const blockFilter = mutualBlockFilter(caller.userId, 'target.id', 'target.app_id')
+  const target = await tx.one(
+    `SELECT target.id
+     FROM mip_users target
+     INNER JOIN mip_profiles profile
+       ON profile.app_id = target.app_id AND profile.user_id = target.id
+     WHERE target.app_id = ? AND target.id = ? AND target.status = 'ACTIVE'
+       AND ${blockFilter.sql}
+     FOR UPDATE`,
+    [caller.appId, targetUserId, ...blockFilter.params],
+  )
+  if (!target) throw new Error('NOT_FOUND')
+  return target.id
 }
 
 async function assertReferences(tx, caller, draft) {
@@ -377,6 +470,84 @@ async function assertReferences(tx, caller, draft) {
     ...draft.abilityTagIds.map(id => [id, 'ABILITY']),
   ]
   await assertSelectableTags(tx, caller.appId, expectedTags)
+}
+
+async function resolveTeamUserIds(tx, caller, profileRefs) {
+  if (!profileRefs.length) return []
+  let userIds
+  try {
+    userIds = [...new Set(profileRefs.map(profileRef => (
+      readProfileRef(profileRef, caller.appId, caller.profileRefSecret)
+    )))]
+  }
+  catch (error) {
+    if (error?.message === 'IDENTITY_CONFIG_REQUIRED') throw error
+    throw new Error('VALIDATION_FAILED')
+  }
+  if (userIds.includes(caller.userId)) throw new Error('VALIDATION_FAILED')
+  const blockFilter = mutualBlockFilter(caller.userId, 'u.id', 'u.app_id')
+  const rows = await tx.query(
+    `SELECT u.id
+     FROM mip_users u
+     INNER JOIN mip_profiles profile ON profile.app_id = u.app_id AND profile.user_id = u.id
+     WHERE u.app_id = ? AND u.id IN (${userIds.map(() => '?').join(', ')})
+       AND u.status = 'ACTIVE'
+       AND EXISTS (
+         SELECT 1 FROM mip_membership_entitlements entitlement
+         WHERE entitlement.app_id = u.app_id AND entitlement.user_id = u.id
+           AND entitlement.status = 'ACTIVE'
+           AND entitlement.starts_at <= UTC_TIMESTAMP(3)
+           AND entitlement.ends_at > UTC_TIMESTAMP(3)
+       )
+       ${blockFilter.sql ? `AND ${blockFilter.sql}` : ''}
+     FOR UPDATE`,
+    [caller.appId, ...userIds, ...blockFilter.params],
+  )
+  const available = new Set(rows.map(row => row.id))
+  if (available.size !== userIds.length) throw new Error('VALIDATION_FAILED')
+  return userIds.filter(id => available.has(id))
+}
+
+async function syncOpportunityTeam(tx, caller, opportunityId, userIds) {
+  const stored = await tx.query(
+    `SELECT id, user_id, status
+     FROM mip_opportunity_team_members
+     WHERE app_id = ? AND opportunity_id = ?
+     FOR UPDATE`,
+    [caller.appId, opportunityId],
+  )
+  const byUser = new Map(stored.map(row => [row.user_id, row]))
+  const desired = new Set(userIds)
+  for (const row of stored) {
+    if (desired.has(row.user_id)) continue
+    if (row.status === 'ACTIVE') {
+      await tx.query(
+        `UPDATE mip_opportunity_team_members
+         SET status = 'REMOVED', removed_at = UTC_TIMESTAMP(3)
+         WHERE app_id = ? AND id = ?`,
+        [caller.appId, row.id],
+      )
+    }
+  }
+  for (const [sortOrder, userId] of userIds.entries()) {
+    const row = byUser.get(userId)
+    if (row) {
+      await tx.query(
+        `UPDATE mip_opportunity_team_members
+         SET status = 'ACTIVE', sort_order = ?, removed_at = NULL
+         WHERE app_id = ? AND id = ?`,
+        [sortOrder, caller.appId, row.id],
+      )
+    }
+    else {
+      await tx.query(
+        `INSERT INTO mip_opportunity_team_members (
+           id, app_id, opportunity_id, user_id, status, sort_order
+         ) VALUES (?, ?, ?, ?, 'ACTIVE', ?)`,
+        [randomUUID(), caller.appId, opportunityId, userId, sortOrder],
+      )
+    }
+  }
 }
 
 async function assertSelectableTags(adapter, appId, expectedTags) {
@@ -427,6 +598,7 @@ async function saveOpportunity(database, contentSafety, caller, input) {
   }, async (tx) => {
     await lockActiveContributor(tx, caller)
     await assertReferences(tx, caller, draft)
+    const teamUserIds = await resolveTeamUserIds(tx, caller, draft.teamProfileRefs)
     const id = draft.id || randomUUID()
     let existing = null
     if (draft.id) {
@@ -500,6 +672,7 @@ async function saveOpportunity(database, contentSafety, caller, input) {
         )
       }
     }
+    await syncOpportunityTeam(tx, caller, id, teamUserIds)
     const version = existing ? Number(existing.version) + 1 : 1
     await appendAudit(tx, {
       appId: caller.appId,
@@ -509,7 +682,7 @@ async function saveOpportunity(database, contentSafety, caller, input) {
       action: existing ? 'OPPORTUNITY_UPDATED' : 'OPPORTUNITY_CREATED',
       resourceType: 'OPPORTUNITY',
       resourceId: id,
-      metadata: { status, version },
+      metadata: { status, version, teamMemberCount: teamUserIds.length },
     })
     if (published) {
       await appendOutbox(tx, {
@@ -572,12 +745,18 @@ async function setReferral(database, caller, input) {
   if (!uuid(input.id)) throw new Error('NOT_FOUND')
   const active = Boolean(input.active)
   const note = stringValue(input.note, 240, 'VALIDATION_FAILED', false)
+  const targetProfileRef = stringValue(
+    input.targetProfileRef,
+    200,
+    'VALIDATION_FAILED',
+    active,
+  )
   return idempotentTransaction(database, {
     appId: caller.appId,
     userId: caller.userId,
     operation: 'opportunity.referral',
     idempotencyKey: input.idempotencyKey,
-    request: { id: input.id, active, note },
+    request: { id: input.id, active, note, targetProfileRef },
   }, async (tx) => {
     await lockActiveContributor(tx, caller)
     const blockFilter = mutualBlockFilter(caller.userId, 'o.owner_user_id', 'o.app_id')
@@ -589,12 +768,16 @@ async function setReferral(database, caller, input) {
     )
     if (!opportunity || opportunity.status !== 'PUBLISHED') throw new Error('NOT_FOUND')
     if (opportunity.owner_user_id === caller.userId) throw new Error('CONFLICT')
+    const targetUserId = active
+      ? await resolveReferralTarget(tx, caller, targetProfileRef)
+      : null
     const stored = await tx.one(
-      `SELECT id, status, version FROM mip_referral_intents
+      `SELECT id, status, target_user_id, version FROM mip_referral_intents
        WHERE app_id = ? AND opportunity_id = ? AND actor_user_id = ? FOR UPDATE`,
       [caller.appId, input.id, caller.userId],
     )
-    if (stored?.status === (active ? 'ACTIVE' : 'CANCELLED')) {
+    const requestedStatus = active ? 'ACTIVE' : 'CANCELLED'
+    if (stored?.status === requestedStatus && (!active || stored.target_user_id === targetUserId)) {
       return {
         active,
         version: Number(stored.version),
@@ -603,32 +786,47 @@ async function setReferral(database, caller, input) {
     }
     const id = stored?.id || randomUUID()
     const version = stored ? Number(stored.version) + 1 : 1
+    const countDelta = stored
+      ? (stored.status === requestedStatus ? 0 : (active ? 1 : -1))
+      : (active ? 1 : 0)
     if (stored) {
       await tx.query(
         `UPDATE mip_referral_intents
-         SET status = ?, note = ?, version = version + 1,
+         SET status = ?, target_user_id = CASE WHEN ? = 1 THEN ? ELSE target_user_id END,
+             note = ?, version = version + 1,
              activated_at = CASE WHEN ? = 1 THEN UTC_TIMESTAMP(3) ELSE activated_at END,
              cancelled_at = CASE WHEN ? = 1 THEN NULL ELSE UTC_TIMESTAMP(3) END
          WHERE app_id = ? AND id = ?`,
-        [active ? 'ACTIVE' : 'CANCELLED', note || null, active ? 1 : 0, active ? 1 : 0, caller.appId, id],
+        [
+          requestedStatus,
+          active ? 1 : 0,
+          targetUserId,
+          note || null,
+          active ? 1 : 0,
+          active ? 1 : 0,
+          caller.appId,
+          id,
+        ],
       )
     }
     else {
       if (!active) return { active: false, version: 0, referralCount: Number(opportunity.referral_count) }
       await tx.query(
         `INSERT INTO mip_referral_intents (
-           id, app_id, opportunity_id, actor_user_id, status, note
-         ) VALUES (?, ?, ?, ?, 'ACTIVE', ?)`,
-        [id, caller.appId, input.id, caller.userId, note || null],
+           id, app_id, opportunity_id, actor_user_id, target_user_id, status, note
+         ) VALUES (?, ?, ?, ?, ?, 'ACTIVE', ?)`,
+        [id, caller.appId, input.id, caller.userId, targetUserId, note || null],
       )
     }
-    await tx.query(
-      `UPDATE mip_opportunities
-       SET referral_count = GREATEST(0, referral_count + ?)
-       WHERE app_id = ? AND id = ?`,
-      [active ? 1 : -1, caller.appId, input.id],
-    )
-    const referralCount = Math.max(0, Number(opportunity.referral_count) + (active ? 1 : -1))
+    if (countDelta) {
+      await tx.query(
+        `UPDATE mip_opportunities
+         SET referral_count = GREATEST(0, referral_count + ?)
+         WHERE app_id = ? AND id = ?`,
+        [countDelta, caller.appId, input.id],
+      )
+    }
+    const referralCount = Math.max(0, Number(opportunity.referral_count) + countDelta)
     await appendOutbox(tx, {
       appId: caller.appId,
       aggregateType: 'REFERRAL_INTENT',
@@ -637,7 +835,6 @@ async function setReferral(database, caller, input) {
       sourceVersion: version,
       payload: {
         opportunityId: input.id,
-        recipientUserId: active ? opportunity.owner_user_id : null,
         active,
       },
     })
@@ -653,7 +850,24 @@ async function setReferral(database, caller, input) {
   })
 }
 
-async function resolveInterestTarget(tx, caller, sourceType, sourceId) {
+async function resolveInterestTarget(tx, caller, sourceType, sourceId, profileRef) {
+  if (sourceType === 'PROFILE') {
+    const targetUserId = readProfileRef(profileRef, caller.appId, caller.profileRefSecret)
+    const blockFilter = mutualBlockFilter(caller.userId, 'target.id', 'target.app_id')
+    const target = await tx.one(
+      `SELECT target.id AS owner_user_id
+       FROM mip_users target
+       INNER JOIN mip_profiles profile
+         ON profile.app_id = target.app_id AND profile.user_id = target.id
+       WHERE target.app_id = ? AND target.id = ? AND target.status = 'ACTIVE'
+         AND ${blockFilter.sql}
+       FOR UPDATE`,
+      [caller.appId, targetUserId, ...blockFilter.params],
+    )
+    if (!target) throw new Error('NOT_FOUND')
+    if (target.owner_user_id === caller.userId) throw new Error('CONFLICT')
+    return { targetUserId: target.owner_user_id, sourceId: target.owner_user_id }
+  }
   const table = {
     OPPORTUNITY: ['mip_opportunities', ['PUBLISHED', 'ENDED']],
     COOPERATION_CARD: ['mip_cooperation_cards', ['PUBLISHED']],
@@ -670,22 +884,28 @@ async function resolveInterestTarget(tx, caller, sourceType, sourceId) {
   )
   if (!row || !statuses.includes(row.status)) throw new Error('NOT_FOUND')
   if (row.owner_user_id === caller.userId) throw new Error('CONFLICT')
-  return row.owner_user_id
+  return { targetUserId: row.owner_user_id, sourceId }
 }
 
 async function setProfileInterest(database, caller, input) {
   const sourceType = String(input.sourceType || '')
   const sourceId = String(input.sourceId || '')
+  const profileRef = typeof input.profileRef === 'string' ? input.profileRef.trim() : ''
   const active = Boolean(input.active)
+  const request = sourceType === 'PROFILE'
+    ? { sourceType, profileRef, active }
+    : { sourceType, sourceId, active }
   return idempotentTransaction(database, {
     appId: caller.appId,
     userId: caller.userId,
     operation: 'profile.interest',
     idempotencyKey: input.idempotencyKey,
-    request: { sourceType, sourceId, active },
+    request,
   }, async (tx) => {
     await lockActiveContributor(tx, caller)
-    const targetUserId = await resolveInterestTarget(tx, caller, sourceType, sourceId)
+    const resolved = await resolveInterestTarget(tx, caller, sourceType, sourceId, profileRef)
+    const targetUserId = resolved.targetUserId
+    const storedSourceId = resolved.sourceId
     const stored = await tx.one(
       `SELECT id, status, version FROM mip_profile_interests
        WHERE app_id = ? AND actor_user_id = ? AND target_user_id = ? FOR UPDATE`,
@@ -703,7 +923,7 @@ async function setProfileInterest(database, caller, input) {
              activated_at = CASE WHEN ? = 1 THEN UTC_TIMESTAMP(3) ELSE activated_at END,
              cancelled_at = CASE WHEN ? = 1 THEN NULL ELSE UTC_TIMESTAMP(3) END
          WHERE app_id = ? AND id = ?`,
-        [active ? 'ACTIVE' : 'CANCELLED', sourceType, sourceId, active ? 1 : 0, active ? 1 : 0, caller.appId, id],
+        [active ? 'ACTIVE' : 'CANCELLED', sourceType, storedSourceId, active ? 1 : 0, active ? 1 : 0, caller.appId, id],
       )
     }
     else {
@@ -712,7 +932,7 @@ async function setProfileInterest(database, caller, input) {
         `INSERT INTO mip_profile_interests (
            id, app_id, actor_user_id, target_user_id, status, source_type, source_id
          ) VALUES (?, ?, ?, ?, 'ACTIVE', ?, ?)`,
-        [id, caller.appId, caller.userId, targetUserId, sourceType, sourceId],
+        [id, caller.appId, caller.userId, targetUserId, sourceType, storedSourceId],
       )
     }
     await appendOutbox(tx, {
@@ -721,7 +941,7 @@ async function setProfileInterest(database, caller, input) {
       aggregateId: id,
       eventType: 'profile.interest_changed',
       sourceVersion: version,
-      payload: { recipientUserId: active ? targetUserId : null, sourceType, sourceId, active },
+      payload: { recipientUserId: active ? targetUserId : null, sourceType, sourceId: storedSourceId, active },
     })
     await appendAudit(tx, {
       appId: caller.appId,
@@ -729,7 +949,7 @@ async function setProfileInterest(database, caller, input) {
       action: active ? 'PROFILE_INTEREST_ACTIVATED' : 'PROFILE_INTEREST_CANCELLED',
       resourceType: 'PROFILE_INTEREST',
       resourceId: id,
-      metadata: { sourceType, sourceId, version },
+      metadata: { sourceType, sourceId: storedSourceId, version },
     })
     return { active, version }
   })
@@ -745,7 +965,12 @@ module.exports = {
   listOpportunities,
   normalizeDraft,
   normalizeFilter,
+  profileRefList,
+  relatedData,
+  resolveReferralTarget,
+  resolveTeamUserIds,
   saveOpportunity,
   setProfileInterest,
   setReferral,
+  syncOpportunityTeam,
 }

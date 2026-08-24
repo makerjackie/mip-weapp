@@ -34,6 +34,50 @@ function createCommerceRepository(database, options = {}) {
     )
   }
 
+  async function getMembershipBenefits(caller) {
+    const row = await database.one(
+      `SELECT e.id, e.status, e.starts_at, e.ends_at, e.version,
+              e.plan_id, p.name AS plan_name, p.description AS plan_description,
+              p.benefits_json, o.product_snapshot_json,
+              attribution.source_type AS invitation_source_type,
+              inviter_profile.nickname AS inviter_nickname,
+              inviter_profile.visibility_json AS inviter_visibility_json,
+              inviter_avatar.cloud_file_id AS inviter_avatar_file_id,
+              (
+                SELECT MAX(chain.ends_at)
+                FROM mip_membership_entitlements chain
+                WHERE chain.app_id = e.app_id AND chain.user_id = e.user_id
+                  AND chain.status = 'ACTIVE' AND chain.ends_at > UTC_TIMESTAMP(3)
+              ) AS membership_ends_at
+       FROM mip_user_identities i
+       INNER JOIN mip_users u
+         ON u.app_id = i.app_id AND u.id = i.user_id AND u.status = 'ACTIVE'
+       INNER JOIN mip_membership_entitlements e
+         ON e.app_id = u.app_id AND e.user_id = u.id
+        AND e.status = 'ACTIVE'
+        AND e.starts_at <= UTC_TIMESTAMP(3) AND e.ends_at > UTC_TIMESTAMP(3)
+       INNER JOIN mip_membership_plans p
+         ON p.app_id = e.app_id AND p.id = e.plan_id
+       INNER JOIN mip_orders o
+         ON o.app_id = e.app_id AND o.id = e.order_id
+       LEFT JOIN mip_membership_attributions attribution
+         ON attribution.app_id = e.app_id AND attribution.entitlement_id = e.id
+       LEFT JOIN mip_users inviter
+         ON inviter.app_id = attribution.app_id AND inviter.id = attribution.invited_by_user_id
+        AND inviter.status = 'ACTIVE'
+       LEFT JOIN mip_profiles inviter_profile
+         ON inviter_profile.app_id = inviter.app_id AND inviter_profile.user_id = inviter.id
+       LEFT JOIN mip_media_assets inviter_avatar
+         ON inviter_avatar.app_id = inviter_profile.app_id
+        AND inviter_avatar.id = inviter_profile.avatar_asset_id AND inviter_avatar.status = 'READY'
+       WHERE i.app_id = ? AND i.provider = 'WECHAT_MINIPROGRAM' AND i.identity_key = ?
+       ORDER BY e.starts_at DESC, e.id DESC
+       LIMIT 1`,
+      [caller.appId, caller.identityKey],
+    )
+    return membershipBenefitsDto(row)
+  }
+
   async function resolveMembershipInviter(caller) {
     const row = await database.one(
       `SELECT u.id
@@ -52,6 +96,23 @@ function createCommerceRepository(database, options = {}) {
     if (!row) {
       throw new Error('MEMBERSHIP_INVITATION_FORBIDDEN')
     }
+    return row.id
+  }
+
+  async function assertMembershipInviter(appId, userId) {
+    const row = await database.one(
+      `SELECT u.id
+       FROM mip_users u
+       WHERE u.app_id = ? AND u.id = ? AND u.status = 'ACTIVE'
+         AND EXISTS (
+           SELECT 1 FROM mip_membership_entitlements e
+           WHERE e.app_id = u.app_id AND e.user_id = u.id AND e.status = 'ACTIVE'
+             AND e.starts_at <= UTC_TIMESTAMP(3) AND e.ends_at > UTC_TIMESTAMP(3)
+         )
+       LIMIT 1`,
+      [appId, userId],
+    )
+    if (!row) throw new Error('MEMBERSHIP_INVITATION_INVALID')
     return row.id
   }
 
@@ -235,13 +296,75 @@ function createCommerceRepository(database, options = {}) {
   }
 
   return {
+    assertMembershipInviter,
     createCheckout,
+    getMembershipBenefits,
     getOrder,
     listOrders,
     listPlans,
     requestRefund,
     resolveMembershipInviter,
   }
+}
+
+function membershipBenefitsDto(row) {
+  if (!row) {
+    return {
+      kind: 'GUEST',
+      status: 'NONE',
+      benefits: [],
+    }
+  }
+  const snapshot = parseJson(row.product_snapshot_json)
+  const benefits = benefitList(
+    Array.isArray(snapshot.benefits) ? snapshot.benefits : parseJsonArray(row.benefits_json),
+  )
+  return {
+    kind: 'PLAYER',
+    status: row.status,
+    entitlementId: row.id,
+    plan: {
+      id: row.plan_id,
+      name: row.plan_name,
+      description: row.plan_description || undefined,
+    },
+    startsAt: dateValue(row.starts_at),
+    endsAt: dateValue(row.ends_at),
+    membershipEndsAt: dateValue(row.membership_ends_at || row.ends_at),
+    benefits,
+    invitationAttribution: membershipInvitationAttribution(row),
+    version: Number(row.version),
+  }
+}
+
+function membershipInvitationAttribution(row) {
+  if (row.invitation_source_type !== 'USER') {
+    return { sourceType: 'PLATFORM', displayName: 'MIP 平台' }
+  }
+  const visibility = parseJson(row.inviter_visibility_json)
+  return {
+    sourceType: 'USER',
+    displayName: visibility.nickname === false || !row.inviter_nickname
+      ? 'MIP 用户'
+      : row.inviter_nickname,
+    ...(visibility.avatar === false || !row.inviter_avatar_file_id
+      ? {}
+      : { avatarUrl: row.inviter_avatar_file_id }),
+  }
+}
+
+function benefitList(values) {
+  return values.slice(0, 30).flatMap((value, index) => {
+    const label = typeof value === 'string'
+      ? value.trim()
+      : typeof value?.label === 'string'
+        ? value.label.trim()
+        : ''
+    if (!label || label.length > 160) return []
+    const suppliedKey = typeof value?.key === 'string' ? value.key.trim() : ''
+    const key = /^[a-z][a-z0-9_-]{1,63}$/i.test(suppliedKey) ? suppliedKey : `benefit-${index + 1}`
+    return [{ key, label, status: 'ACTIVE' }]
+  })
 }
 
 async function resolveCheckoutAttribution(tx, appId, buyerUserId, attribution) {
@@ -345,9 +468,22 @@ function parseJson(value) {
   }
 }
 
+function parseJsonArray(value) {
+  if (Array.isArray(value)) return value
+  try {
+    const parsed = JSON.parse(value || '[]')
+    return Array.isArray(parsed) ? parsed : []
+  }
+  catch {
+    return []
+  }
+}
+
 module.exports = {
   assertSameAttribution,
+  benefitList,
   createCommerceRepository,
+  membershipBenefitsDto,
   orderDto,
   refundDto,
   resolveCheckoutAttribution,

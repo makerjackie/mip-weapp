@@ -1,7 +1,7 @@
 import type { BranchId, CooperationCardId, CooperationRoleKey } from '../mip'
 import type { AiDraftSourceConfirmation } from '../mip-ai/types'
 
-export type CooperationCardStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED'
+export type CooperationCardStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'ARCHIVED'
 
 export interface CooperationAuthor {
   profileRef: string
@@ -32,6 +32,7 @@ export interface CooperationCardSummary {
   publishedAt: string
   author: CooperationAuthor
   mine: boolean
+  version?: number
 }
 
 export interface CooperationCardDetail extends CooperationCardSummary {

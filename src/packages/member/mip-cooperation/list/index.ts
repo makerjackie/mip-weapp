@@ -40,6 +40,7 @@ Page({
     hasAppliedFilters: false,
     nextCursor: '',
     loadingMore: false,
+    archivingId: '',
     message: '',
   },
   requestSequence: 0,
@@ -296,6 +297,38 @@ Page({
 
   openCases() {
     caseNavigateTo({ url: '/packages/member/mip-cases/list/index' })
+  },
+
+  async deleteCard(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    const item = this.data.items.find(card => card.id === id)
+    const expectedVersion = Number(item?.version)
+    if (!item?.mine || !Number.isInteger(expectedVersion) || this.data.archivingId) {
+      return
+    }
+    const confirmation = await wx.showModal({
+      title: '删除合作卡',
+      content: '删除后，这张合作卡将不再显示，且无法恢复。',
+      confirmText: '删除',
+      confirmColor: '#B30516',
+    })
+    if (!confirmation.confirm) {
+      return
+    }
+    this.setData({ archivingId: id, message: '' })
+    try {
+      await cooperationModule.archive(item.id, expectedVersion)
+      await this.load(true)
+      wx.showToast({ title: '已删除', icon: 'success' })
+    }
+    catch (error) {
+      const message = error instanceof Error ? error.message : '合作卡删除失败'
+      await this.load(true)
+      wx.showToast({ title: message, icon: 'none' })
+    }
+    finally {
+      this.setData({ archivingId: '' })
+    }
   },
 
   open(event: WechatMiniprogram.TouchEvent) {

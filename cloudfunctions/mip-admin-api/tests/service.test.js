@@ -26,13 +26,28 @@ function repository(roleKey = 'PLATFORM_OWNER', scopeType = 'PLATFORM', scopeId 
       id: 'admin-user', status: 'ACTIVE', agreementsAccepted: true,
       phoneBound: true, profileComplete: true,
     }),
-    listRoleBindings: async () => [{ roleKey, scopeType, scopeId }],
+    listRoleBindings: async () => [{
+      roleKey,
+      scopeType,
+      scopeId: scopeType === 'PLATFORM' ? null : scopeId,
+    }],
     listUsers: async () => [{
       id: 'target-user', status: 'ACTIVE', kind: 'PLAYER', nickname: '用户', headline: '',
       introduction: '', primaryBranchId: 'branch-a', branchName: '广州分会', cityName: '广州',
       phoneBound: true, phoneCiphertext: encryptedPhone({ appId: caller.appId, userId: 'target-user' }),
       controls: [], visibility: {}, userVersion: 1, profileVersion: 1, updatedAt: new Date().toISOString(),
     }],
+    getUserDetail: async () => ({
+      id: 'target-user', status: 'ACTIVE', kind: 'PLAYER', nickname: '用户', headline: '产品负责人',
+      introduction: '个人介绍', primaryBranchId: 'branch-a', branchName: '广州分会', cityName: '广州',
+      phoneBound: true, phoneCiphertext: encryptedPhone({ appId: caller.appId, userId: 'target-user' }),
+      controls: [], visibility: {}, userVersion: 1, profileVersion: 1,
+      companies: [{ name: '示例公司', role: '负责人' }], organizations: [],
+      membership: { status: 'ACTIVE', startsAt: '2026-01-01T00:00:00.000Z', endsAt: '2027-01-01T00:00:00.000Z' },
+      growth: { levelName: '一级', experience: 10, contribution: 2, coin: 1 },
+      counts: { registrations: 3, attended: 2, orders: 1, opportunities: 1, cooperationCards: 1, superCases: 1 },
+      tags: [], roles: [], createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-08-24T00:00:00.000Z',
+    }),
     recordAudit: async audit => audits.push(audit),
     getUserScope: async () => ({ scopeType: 'BRANCH', scopeId: 'branch-a' }),
     updateUserFields: async input => input,
@@ -63,6 +78,7 @@ function repository(roleKey = 'PLATFORM_OWNER', scopeType = 'PLATFORM', scopeId 
     setRole: async input => input,
     getOrderScope: async () => ({ scopeType: 'PLATFORM', scopeId: null }),
     getRefundScope: async () => ({ scopeType: 'PLATFORM', scopeId: null, refundStatus: 'PENDING' }),
+    listOrders: async () => [],
     authorizeRefundRetry: async input => {
       audits.push(input.audit)
       return { id: input.refundId, status: 'PENDING' }
@@ -72,6 +88,57 @@ function repository(roleKey = 'PLATFORM_OWNER', scopeType = 'PLATFORM', scopeId 
 }
 
 describe('admin service', () => {
+  it('records a successful admin workspace entry with the effective scope', async () => {
+    const repo = repository('BRANCH_ADMIN', 'BRANCH', 'branch-a')
+    repo.dashboard = async () => ({
+      totalUsers: 1, newUsers7d: 0, activePlayers: 1, totalEvents: 1,
+      publishedEvents: 1, pendingRegistrations: 0, paidOrders: 0,
+      pendingRefunds: 0, totalOpportunities: 0, publishedOpportunities: 0,
+    })
+    const service = createAdminService({ repository: repo, phoneEncryptionKey: secret })
+    const result = await service.getDashboard(caller)
+    assert.equal(result.counts.totalUsers, 1)
+    assert.deepEqual(repo.audits.at(-1), {
+      appId: caller.appId,
+      actorUserId: 'admin-user',
+      scopeType: 'BRANCH',
+      scopeId: 'branch-a',
+      action: 'admin.session.enter',
+      resourceType: 'ADMIN_SESSION',
+      resourceId: null,
+      effectiveRole: 'BRANCH_ADMIN',
+      metadata: {},
+    })
+  })
+
+  it('rejects a role whose key and stored scope type do not match', async () => {
+    const repo = repository('PLATFORM_OWNER', 'BRANCH', 'branch-a')
+    const service = createAdminService({ repository: repo, phoneEncryptionKey: secret })
+    await assert.rejects(() => service.getSession(caller), /当前账号没有运营权限/)
+  })
+
+  it('shows administrative role scopes only to a platform role-change grant', async () => {
+    const operationsRepo = repository('PLATFORM_OPERATIONS')
+    let operationsOptions
+    operationsRepo.listRoles = async (_appId, _visibility, options) => {
+      operationsOptions = options
+      return []
+    }
+    const operations = createAdminService({ repository: operationsRepo, phoneEncryptionKey: secret })
+    await operations.listRoles(caller)
+    assert.deepEqual(operationsOptions, { includeAdministrativeScopes: false })
+
+    const ownerRepo = repository('PLATFORM_OWNER')
+    let ownerOptions
+    ownerRepo.listRoles = async (_appId, _visibility, options) => {
+      ownerOptions = options
+      return []
+    }
+    const owner = createAdminService({ repository: ownerRepo, phoneEncryptionKey: secret })
+    await owner.listRoles(caller)
+    assert.deepEqual(ownerOptions, { includeAdministrativeScopes: true })
+  })
+
   it('never returns ciphertext and audits original phone reads', async () => {
     const repo = repository()
     const service = createAdminService({ repository: repo, phoneEncryptionKey: secret })
@@ -82,6 +149,7 @@ describe('admin service', () => {
     assert.equal(repo.audits[0].action, 'admin.users.phone.view')
     assert.deepEqual(repo.audits[0].metadata, { count: 1, filters: {
       query: '', status: '', kind: '', branchId: '', controlType: '',
+      phoneBound: '', profileComplete: '', joinedWithinDays: 0,
     }, cursor: false })
   })
 
@@ -95,6 +163,18 @@ describe('admin service', () => {
     assert.equal(repo.audits.length, 0)
   })
 
+  it('returns an authorized user detail aggregate without leaking ciphertext', async () => {
+    const repo = repository()
+    const service = createAdminService({ repository: repo, phoneEncryptionKey: secret })
+    const detail = await service.getUser(caller, { userId: 'target-user', includePhone: true })
+    assert.equal(detail.phoneNumber, '+86 13800138000')
+    assert.equal(detail.counts.attended, 2)
+    assert.equal(detail.growth.experience, 10)
+    assert.equal(Object.hasOwn(detail, 'phoneCiphertext'), false)
+    assert.equal(repo.audits.at(-1).resourceType, 'USER')
+    assert.deepEqual(repo.audits.at(-1).metadata, { detail: true })
+  })
+
   it('does not cache or leak roster identity fields and audits original phone reads', async () => {
     const repo = repository()
     repo.listRoster = async () => [{
@@ -104,8 +184,10 @@ describe('admin service', () => {
       cityName: '广州',
       status: 'REGISTERED',
       answers: {},
+      answerItems: [],
       phoneBound: true,
       phoneCiphertext: encryptedPhone({ appId: caller.appId, userId: 'target-user' }),
+      submittedAt: new Date().toISOString(),
       registeredAt: new Date().toISOString(),
       checkedInAt: null,
       version: 1,
@@ -116,6 +198,51 @@ describe('admin service', () => {
     assert.equal(Object.hasOwn(response.items[0], 'userId'), false)
     assert.equal(Object.hasOwn(response.items[0], 'phoneCiphertext'), false)
     assert.equal(repo.audits[0].action, 'admin.events.roster.phone.view')
+  })
+
+  it('normalizes complete order filters and returns only server-authorized refund actions', async () => {
+    const repo = repository('PLATFORM_FINANCE')
+    let captured
+    repo.listOrders = async (...args) => {
+      captured = args
+      return [{
+        id: 'order-a', userId: 'target-user', nickname: '用户', orderType: 'MEMBERSHIP',
+        resourceId: 'plan-a', resourceType: 'MEMBERSHIP_PLAN', resourceTitle: '年度会员',
+        resourceBranchName: '', merchantOrderNoMasked: 'MIP1…0001', providerTransactionIdMasked: null,
+        amountCents: 79900, refundedAmountCents: 0, currency: 'CNY', status: 'PAID',
+        refundStatus: null, refundId: null, paidAt: '2026-08-20T00:00:00.000Z',
+        createdAt: '2026-08-19T00:00:00.000Z', version: 2, branchId: null,
+      }]
+    }
+    const service = createAdminService({ repository: repo, phoneEncryptionKey: secret })
+    const response = await service.listOrders(caller, { filters: {
+      query: ' MIP-0001 ', orderType: 'MEMBERSHIP', status: 'PAID', refundStatus: 'NONE',
+      createdFrom: '2026-08-01T00:00:00.000Z', createdTo: '2026-08-24T23:59:59.999Z',
+    } })
+    assert.deepEqual(captured[2], {
+      query: 'MIP-0001', eventId: '', orderType: 'MEMBERSHIP', status: 'PAID', refundStatus: 'NONE',
+      createdFrom: '2026-08-01 00:00:00.000', createdTo: '2026-08-24 23:59:59.999',
+    })
+    assert.deepEqual(response.items[0].availableRefundActions, ['SUBMIT_REFUND'])
+    assert.equal(Object.hasOwn(response.items[0], 'branchId'), false)
+
+    const operationsRepo = repository('PLATFORM_OPERATIONS')
+    operationsRepo.listOrders = repo.listOrders
+    const operations = createAdminService({ repository: operationsRepo, phoneEncryptionKey: secret })
+    const operationsPage = await operations.listOrders(caller)
+    assert.deepEqual(operationsPage.items[0].availableRefundActions, [])
+  })
+
+  it('rejects invalid order time ranges before reading orders', async () => {
+    const repo = repository('PLATFORM_FINANCE')
+    let reads = 0
+    repo.listOrders = async () => { reads += 1; return [] }
+    const service = createAdminService({ repository: repo, phoneEncryptionKey: secret })
+    await assert.rejects(() => service.listOrders(caller, { filters: {
+      createdFrom: '2026-08-25T00:00:00.000Z',
+      createdTo: '2026-08-24T00:00:00.000Z',
+    } }), error => error?.code === 'VALIDATION_FAILED')
+    assert.equal(reads, 0)
   })
 
   it('does not let operations submit refunds and does not let finance read phones', async () => {
@@ -260,8 +387,8 @@ describe('admin service', () => {
       eventId: 'event-a', expectedVersion: 7, recipientCount: 2, sendWechatReminder: true,
     })
 
-    for (const role of ['PLATFORM_FINANCE', 'EVENT_STAFF']) {
-      const denied = createAdminService({ repository: repository(role, 'EVENT', 'event-a'), phoneEncryptionKey: secret })
+    for (const [role, scopeType] of [['PLATFORM_FINANCE', 'PLATFORM'], ['EVENT_STAFF', 'EVENT']]) {
+      const denied = createAdminService({ repository: repository(role, scopeType, 'event-a'), phoneEncryptionKey: secret })
       await assert.rejects(() => denied.publishEventReminder(caller, {
         eventId: 'event-a', expectedVersion: 7,
         idempotencyKey: 'event-reminder-request-0001', sendWechatReminder: false,

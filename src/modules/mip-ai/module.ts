@@ -1,4 +1,4 @@
-import type { AiDraftConfirmation, AiDraftId, AiTextDraftIntent, AiVoiceDraftIntent, AiVoiceUploadIntent, MipAiGateway } from './types'
+import type { AiDraftConfirmation, AiDraftId, AiDraftRefinementIntent, AiTextDraftIntent, AiVoiceDraftIntent, AiVoiceUploadIntent, MipAiGateway } from './types'
 import { confirmAiDraft } from './domain'
 
 export function createMipAiModule(gateway: MipAiGateway) {
@@ -17,6 +17,15 @@ export function createMipAiModule(gateway: MipAiGateway) {
 
     createVoiceDraft: (intent: AiVoiceDraftIntent) => gateway.createVoiceDraft(intent),
     createVoiceDraftUpload: (intent: AiVoiceUploadIntent) => gateway.createVoiceDraftUpload(intent),
+
+    continueDraft(intent: AiDraftRefinementIntent) {
+      const supplementalText = intent.supplementalText.trim()
+      if (!Number.isInteger(intent.expectedVersion) || intent.expectedVersion < 1
+        || !supplementalText || supplementalText.length > 4000) {
+        throw new Error('请输入 1–4000 个字的补充内容')
+      }
+      return gateway.continueDraft({ ...intent, supplementalText })
+    },
 
     async updateDraft(confirmation: AiDraftConfirmation) {
       const current = await gateway.getDraft(confirmation.draftId)

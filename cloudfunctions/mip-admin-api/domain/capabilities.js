@@ -139,7 +139,26 @@ const roleCapabilities = Object.freeze({
   ],
 })
 
+const roleScopeTypes = Object.freeze({
+  PLATFORM_OWNER: 'PLATFORM',
+  PLATFORM_OPERATIONS: 'PLATFORM',
+  PLATFORM_FINANCE: 'PLATFORM',
+  BRANCH_ADMIN: 'BRANCH',
+  EVENT_OWNER: 'EVENT',
+  EVENT_MANAGER: 'EVENT',
+  EVENT_STAFF: 'EVENT',
+})
+
+function isValidRoleBinding(binding) {
+  const expectedScopeType = roleScopeTypes[binding?.roleKey]
+  if (!expectedScopeType || binding?.scopeType !== expectedScopeType) return false
+  return expectedScopeType === 'PLATFORM'
+    ? binding.scopeId === null || binding.scopeId === undefined
+    : typeof binding.scopeId === 'string' && binding.scopeId.length > 0
+}
+
 function coversScope(binding, requested) {
+  if (!isValidRoleBinding(binding)) return false
   if (binding.scopeType === 'PLATFORM') {
     return true
   }
@@ -164,7 +183,8 @@ function authorize(bindings, capability, requested = { scopeType: 'PLATFORM', sc
 }
 
 function firstGrant(bindings, capability) {
-  const binding = bindings.find(item => roleCapabilities[item.roleKey]?.includes(capability))
+  const binding = bindings.find(item => isValidRoleBinding(item)
+    && roleCapabilities[item.roleKey]?.includes(capability))
   if (!binding) {
     const error = new Error('FORBIDDEN')
     error.code = 'FORBIDDEN'
@@ -177,6 +197,7 @@ function capabilitySnapshot(bindings) {
   const entries = []
   const seen = new Set()
   for (const binding of bindings) {
+    if (!isValidRoleBinding(binding)) continue
     for (const capability of roleCapabilities[binding.roleKey] || []) {
       const key = `${capability}:${binding.scopeType}:${binding.scopeId || ''}`
       if (!seen.has(key)) {
@@ -193,10 +214,11 @@ function capabilitySnapshot(bindings) {
 }
 
 function visibilityFromBindings(bindings) {
+  const validBindings = bindings.filter(isValidRoleBinding)
   return {
-    platform: bindings.some(item => item.scopeType === 'PLATFORM'),
-    branchIds: [...new Set(bindings.filter(item => item.scopeType === 'BRANCH').map(item => item.scopeId))],
-    eventIds: [...new Set(bindings.filter(item => item.scopeType === 'EVENT').map(item => item.scopeId))],
+    platform: validBindings.some(item => item.scopeType === 'PLATFORM'),
+    branchIds: [...new Set(validBindings.filter(item => item.scopeType === 'BRANCH').map(item => item.scopeId))],
+    eventIds: [...new Set(validBindings.filter(item => item.scopeType === 'EVENT').map(item => item.scopeId))],
   }
 }
 
@@ -210,6 +232,7 @@ module.exports = {
   capabilitySnapshot,
   coversScope,
   firstGrant,
+  isValidRoleBinding,
   roleCapabilities,
   visibilityForCapability,
   visibilityFromBindings,

@@ -1,6 +1,11 @@
 <view id="admin-managed-events-page" class="min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
   <view class="flex items-center justify-between"><view><view class="text-[length:40rpx] font-bold">活动管理</view><view class="mt-1 text-[length:24rpx] text-muted">查看和处理全部授权活动</view></view><t-button wx:if="{{canCreate}}" size="small" theme="primary" bind:tap="createEvent">新建活动</t-button></view>
   <view class="mt-5 rounded-[16rpx] bg-panel p-3"><t-input value="{{query}}" placeholder="搜索活动名称" bind:change="updateQuery" bind:enter="search" /><view class="mt-3 flex flex-wrap gap-2"><t-tag variant="outline" data-value="" bind:tap="changeStatus">全部</t-tag><t-tag variant="outline" data-value="PUBLISHED" bind:tap="changeStatus">已发布</t-tag><t-tag variant="outline" data-value="DRAFT" bind:tap="changeStatus">草稿</t-tag><t-tag variant="outline" data-value="UNPUBLISHED" bind:tap="changeStatus">已下架</t-tag></view></view>
+  <view wx:if="{{state === 'ready' && canManagePolicy}}" class="mt-4 rounded-[16rpx] bg-panel px-4 py-4">
+    <view class="text-[length:27rpx] font-semibold">默认取消报名时间</view>
+    <view class="mt-1 text-[length:22rpx] text-muted">活动未单独设置时，参与者可在开始前指定小时数之前取消。0 表示开始前均可取消。</view>
+    <view class="mt-3 flex items-center gap-3"><input class="box-border h-[72rpx] min-w-0 flex-1 rounded-[12rpx] bg-panel-raised px-3 text-[length:24rpx]" type="number" value="{{cancellationHoursBeforeStart}}" maxlength="3" bindinput="updateCancellationHours" /><view class="text-[length:23rpx] text-muted">小时</view><t-button size="small" theme="primary" loading="{{policySaving}}" bind:tap="saveEventPolicy">保存</t-button></view>
+  </view>
   <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载活动" description="{{message}}" action-text="重新加载" bind:action="loadEvents" /></view>
   <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有活动管理权限" description="当前账号不能查看活动管理内容。" /></view>

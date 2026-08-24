@@ -1,6 +1,7 @@
 export const mipMediaPurposes = [
   'AVATAR',
   'EVENT_COVER',
+  'EVENT_CONTENT',
   'EVENT_ALBUM',
   'OPPORTUNITY_COVER',
   'SUPER_CASE_COVER',

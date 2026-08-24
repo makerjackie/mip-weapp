@@ -1,4 +1,4 @@
-import type { GrowthEntry, GrowthSnapshot } from '../../../modules/mip-growth'
+import type { GrowthEntry, GrowthLevel, GrowthRule, GrowthSnapshot } from '../../../modules/mip-growth'
 import { mipGrowthModule } from '../../../modules/mip-growth/client'
 
 const metricLabels = {
@@ -11,6 +11,17 @@ interface GrowthEntryView extends GrowthEntry {
   metricLabel: string
   deltaText: string
   createdText: string
+}
+
+interface GrowthLevelView extends GrowthLevel {
+  thresholdText: string
+  current: boolean
+}
+
+interface GrowthRuleView extends GrowthRule {
+  metricLabel: string
+  deltaText: string
+  dailyLimitText: string
 }
 
 function dateText(value: string) {
@@ -30,10 +41,32 @@ function entryView(entry: GrowthEntry): GrowthEntryView {
   }
 }
 
+function levelView(level: GrowthLevel, currentLevelId: string): GrowthLevelView {
+  return {
+    ...level,
+    thresholdText: level.minimumExperience === 0 ? '基础等级' : `${level.minimumExperience} 经验值`,
+    current: level.id === currentLevelId,
+  }
+}
+
+function ruleView(rule: GrowthRule): GrowthRuleView {
+  const metricLabel = metricLabels[rule.metric]
+  return {
+    ...rule,
+    metricLabel,
+    deltaText: `${rule.deltaValue > 0 ? '+' : ''}${rule.deltaValue} ${metricLabel}`,
+    dailyLimitText: rule.dailyLimitValue === undefined
+      ? '无每日上限'
+      : `每日最多 ${rule.dailyLimitValue} ${metricLabel}`,
+  }
+}
+
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
     snapshot: null as GrowthSnapshot | null,
+    levels: [] as GrowthLevelView[],
+    earningRules: [] as GrowthRuleView[],
     entries: [] as GrowthEntryView[],
     nextCursor: '',
     loadingMore: false,
@@ -43,7 +76,7 @@ Page({
   onLoad() {
     const cached = mipGrowthModule.peekSnapshot()
     if (cached) {
-      this.setData({ state: 'ready', snapshot: cached })
+      this.presentSnapshot(cached)
     }
     void this.loadGrowth()
   },
@@ -65,6 +98,8 @@ Page({
       this.setData({
         state: 'ready',
         snapshot,
+        levels: snapshot.levels.map(level => levelView(level, snapshot.currentLevel.id)),
+        earningRules: snapshot.earningRules.map(ruleView),
         entries: page.items.map(entryView),
         nextCursor: page.nextCursor || '',
         message: '',
@@ -75,6 +110,15 @@ Page({
         ? { message: '成长记录更新失败，已保留上次结果。' }
         : { state: 'error', message: error instanceof Error ? error.message : '成长记录加载失败' })
     }
+  },
+
+  presentSnapshot(snapshot: GrowthSnapshot) {
+    this.setData({
+      state: 'ready',
+      snapshot,
+      levels: snapshot.levels.map(level => levelView(level, snapshot.currentLevel.id)),
+      earningRules: snapshot.earningRules.map(ruleView),
+    })
   },
 
   async loadMore() {

@@ -502,4 +502,8 @@ Page({
   openCases() {
     caseNavigateTo({ url: '/packages/member/mip-cases/list/index' })
   },
+
+  openPeople() {
+    caseNavigateTo({ url: '/packages/member/mip-people/index' })
+  },
 })

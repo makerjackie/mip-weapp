@@ -37,6 +37,7 @@ export interface AiDraftSourceConfirmation {
 export interface AiCapability {
   voiceDrafts: boolean
   textDrafts: boolean
+  refinementDrafts: boolean
   reason?: 'PROVIDER_NOT_CONFIGURED' | 'STORAGE_NOT_CONFIGURED'
 }
 
@@ -61,6 +62,12 @@ export interface AiVoiceUploadIntent {
   contentType: 'audio/mpeg'
 }
 
+export interface AiDraftRefinementIntent {
+  draftId: AiDraftId
+  expectedVersion: number
+  supplementalText: string
+}
+
 export interface MipAiGateway {
   getCapability: () => Promise<AiCapability>
   listDrafts: (cursor?: string, limit?: number) => Promise<AiDraftPage>
@@ -68,6 +75,7 @@ export interface MipAiGateway {
   createTextDraft: (intent: AiTextDraftIntent) => Promise<AiDraft>
   createVoiceDraft: (intent: AiVoiceDraftIntent) => Promise<AiDraft>
   createVoiceDraftUpload: (intent: AiVoiceUploadIntent) => Promise<AiDraft>
+  continueDraft: (intent: AiDraftRefinementIntent) => Promise<AiDraft>
   updateDraft: (confirmation: AiDraftConfirmation) => Promise<AiDraft>
   deleteDraft: (draftId: AiDraftId, expectedVersion: number) => Promise<{ draftId: AiDraftId, status: 'DELETED' }>
 }

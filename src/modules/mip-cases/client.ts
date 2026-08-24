@@ -37,6 +37,17 @@ export const superCaseModule = {
     )
   },
 
+  archive(
+    id: SuperCaseId,
+    expectedVersion: number,
+    idempotencyKey = createMutationKey('case-archive'),
+  ) {
+    return callOpportunityApi<{ id: SuperCaseId, status: 'ARCHIVED', version: number }>(
+      'archiveSuperCase',
+      { id, expectedVersion, idempotencyKey },
+    )
+  },
+
   setOwnerInterest(
     id: SuperCaseId,
     active: boolean,

@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict')
 const test = require('node:test')
 const { unpublishCooperationCard } = require('../domain/cooperation')
-const { unpublishSuperCase } = require('../domain/cases')
+const { saveSuperCase, unpublishSuperCase } = require('../domain/cases')
 
 const appId = 'wx-publication-lifecycle'
 const userId = '10000000-0000-4000-8000-000000000001'
@@ -69,6 +69,44 @@ test('owner can unpublish a super case without deleting its media facts', async 
   assert.equal(fixture.calls.some(call => /DELETE FROM mip_super_case_media/.test(call.sql)), false)
   const audit = fixture.calls.find(call => call.sql.includes('INSERT INTO mip_audit_logs'))
   assert.equal(audit.params[5], 'SUPER_CASE_UNPUBLISHED')
+})
+
+test('the first super-case publication emits one authoritative growth event', async () => {
+  const calls = []
+  const tx = {
+    async one(sql) {
+      calls.push({ sql, params: [] })
+      if (sql.includes('FROM mip_idempotency_keys')) return null
+      if (sql.includes('FROM mip_users')) return { id: userId, status: 'ACTIVE' }
+      throw new Error(`unexpected one: ${sql}`)
+    },
+    async query(sql, params) {
+      calls.push({ sql, params })
+      return { affectedRows: 1 }
+    },
+  }
+  const result = await saveSuperCase({
+    async transaction(work) {
+      return work(tx)
+    },
+  }, { async assertSafe() {} }, { appId, userId }, {
+    idempotencyKey: 'super-case-first-publication',
+    draft: {
+      projectName: '品牌项目',
+      summary: '完成品牌升级',
+      responsibility: '项目统筹',
+      description: '项目按计划完成。',
+      mediaAssetIds: [],
+      publish: true,
+    },
+  })
+
+  assert.equal(result.status, 'PUBLISHED')
+  const outbox = calls.filter(call => call.sql.includes('INSERT INTO mip_outbox_events'))
+  assert.equal(outbox.length, 1)
+  assert.equal(outbox[0].params[2], 'SUPER_CASE')
+  assert.equal(outbox[0].params[4], 'super_case.published')
+  assert.equal(outbox[0].params[5], 1)
 })
 
 test('publication lifecycle rejects stale or non-published mutations', async () => {

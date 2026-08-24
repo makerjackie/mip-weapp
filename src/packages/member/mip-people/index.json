@@ -1,0 +1,15 @@
+{
+  "navigationBarTitleText": "玩家与嘉宾",
+  "navigationBarBackgroundColor": "#080808",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#080808",
+  "enablePullDownRefresh": true,
+  "onReachBottomDistance": 160,
+  "usingComponents": {
+    "app-empty-state": "/components/empty-state/index",
+    "app-page-exit": "/components/page-exit/index",
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
+  }
+}

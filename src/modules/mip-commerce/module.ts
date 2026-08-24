@@ -20,12 +20,24 @@ export function createMipCommerceModule(
       return plans.filter(plan => plan.catalogStage === options.catalogStage && plan.status === 'ACTIVE')
     },
 
+    getMembershipBenefits() {
+      return gateway.getMembershipBenefits()
+    },
+
     listOrders() {
       return gateway.listOrders()
     },
 
     createMembershipInvitation() {
       return gateway.createMembershipInvitation()
+    },
+
+    createMembershipInvitationCode() {
+      return gateway.createMembershipInvitationCode()
+    },
+
+    resolveMembershipInvitationScene(scene: string) {
+      return gateway.resolveMembershipInvitationScene(scene)
     },
 
     async purchase(intent: CheckoutIntent) {

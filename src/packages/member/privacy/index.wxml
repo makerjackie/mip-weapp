@@ -5,7 +5,7 @@
   <app-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载账号状态" description="{{message}}" action-text="重新加载" bind:action="loadAccountState" />
   <view wx:elif="{{state === 'success'}}">
     <app-empty-state title="账号已注销" description="公开资料与可撤销状态已关闭。订单、支付、退款、活动记录和审计记录按规则保留。" />
-    <app-page-exit />
+    <app-page-exit managed bind:exit="leavePage" />
   </view>
   <block wx:else>
     <view class="px-1">
@@ -35,6 +35,6 @@
       </view>
     </view>
     <view class="mt-5 rounded-[24rpx] border border-line bg-panel px-5 py-5"><view class="text-[length:27rpx] font-semibold">其他账号请求</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">数据副本或更正请求可通过小程序客服提交。</view><button open-type="contact" class="mt-5 w-full rounded-full border border-line bg-panel-raised py-3 text-[length:24rpx] text-ink">联系小程序客服</button></view>
-    <app-page-exit />
+    <app-page-exit managed bind:exit="leavePage" />
   </block>
 </view>

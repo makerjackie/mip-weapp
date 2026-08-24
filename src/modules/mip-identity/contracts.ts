@@ -14,6 +14,7 @@ import type {
 } from '../mip-branches/contracts'
 
 export const protectedActionKeys = [
+  'ENTER_APP',
   'REGISTER_EVENT',
   'PURCHASE_MEMBERSHIP',
   'PUBLISH_OPPORTUNITY',
@@ -32,7 +33,7 @@ export type AccessBlockCode
     | 'PROFILE_REQUIRED'
     | 'FORBIDDEN'
 
-export type ReturnNavigation = 'navigateBack' | 'redirectTo' | 'switchTab'
+export type ReturnNavigation = 'navigateBack' | 'redirectTo' | 'reLaunch' | 'switchTab'
 
 export interface AccessReturnContext {
   navigation: ReturnNavigation

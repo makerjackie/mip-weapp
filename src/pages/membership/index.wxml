@@ -27,9 +27,26 @@
   </view>
 
   <view wx:if="{{message && state !== 'error'}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:22rpx] text-ink">{{message}}</view>
+  <view wx:if="{{invitationMessage}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:22rpx] text-ink">{{invitationMessage}}</view>
   <view wx:if="{{state === 'ready' && plans.length}}" class="mt-6"><t-button block size="large" theme="primary" loading="{{paying || accessing}}" disabled="{{!paymentEnabled || !selectedPlanId}}" bind:tap="purchase">{{!paymentEnabled ? '会员支付尚未配置' : isPlayer ? '续费会员' : '微信支付'}}</t-button></view>
   <view class="mt-3 text-center text-[length:21rpx] leading-5 text-muted">支付调起后需等待服务端确认，以订单状态为准。</view>
-  <view wx:if="{{isPlayer}}" class="mt-3"><t-button block variant="outline" theme="default" open-type="share" disabled="{{!invitationReady}}">邀请好友开通会员</t-button></view>
+  <view wx:if="{{isPlayer}}" class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
+    <view class="text-[length:27rpx] font-semibold">会员邀请</view>
+    <view class="mt-1 text-[length:21rpx] text-muted">邀请资格和归因由服务端确认</view>
+    <view wx:if="{{invitationSourceName}}" class="mt-4 flex items-center gap-3 rounded-[12rpx] bg-panel-raised px-3 py-3">
+      <image wx:if="{{invitationSourceAvatar}}" class="h-[56rpx] w-[56rpx] shrink-0 rounded-full" mode="aspectFill" src="{{invitationSourceAvatar}}" />
+      <t-icon wx:else name="user" size="38rpx" color="var(--color-brand)" />
+      <view><view class="text-[length:20rpx] text-muted">当前会员邀请来源</view><view class="mt-1 text-[length:23rpx] font-semibold">{{invitationSourceName}}</view></view>
+    </view>
+    <view class="mt-4 grid grid-cols-2 gap-3">
+      <t-button block variant="outline" theme="default" open-type="share" disabled="{{!invitationReady}}">微信分享</t-button>
+      <t-button block variant="outline" theme="default" disabled="{{!invitationReady}}" bind:tap="copyInvitation">复制邀请文案</t-button>
+      <view class="col-span-2"><t-button block theme="primary" loading="{{posterBusy}}" bind:tap="createInvitationPoster">生成邀请海报</t-button></view>
+    </view>
+    <image wx:if="{{posterPath}}" class="mt-4 h-[560rpx] w-full rounded-[16rpx] bg-panel-raised" mode="aspectFit" src="{{posterPath}}" bind:tap="previewInvitationPoster" />
+    <view wx:if="{{posterPath}}" class="mt-3 grid grid-cols-2 gap-3"><t-button block variant="outline" bind:tap="previewInvitationPoster">预览海报</t-button><t-button block theme="primary" bind:tap="saveInvitationPoster">保存到相册</t-button></view>
+  </view>
   <view class="mt-3"><t-button block variant="text" theme="default" bind:tap="openOrders">查看我的订单</t-button></view>
   <app-page-exit label="返回" />
+  <canvas id="mip-membership-invitation-canvas" type="2d" class="fixed left-[-9999px] top-0 h-[560px] w-[375px]"></canvas>
 </view>

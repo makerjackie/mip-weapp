@@ -1,5 +1,5 @@
 import type { BranchId, CooperationRoleKey, OpportunityId } from '../../../../modules/mip'
-import type { OpportunityCatalog, OpportunityDetail } from '../../../../modules/mip-opportunities'
+import type { OpportunityCatalog, OpportunityDetail, PublicPerson } from '../../../../modules/mip-opportunities'
 import { cooperationRoles } from '../../../../config/mip-catalogs'
 import { mipMediaModule } from '../../../../modules/mip-media/client'
 import { opportunityModule } from '../../../../modules/mip-opportunities'
@@ -8,6 +8,8 @@ import { chooseSingleImage } from '../../../../modules/platform/image-upload'
 interface SelectOption { id: string, label: string, selected: boolean }
 interface IndustryGroupOption { id: string, label: string, options: SelectOption[] }
 interface RoleOption { key: CooperationRoleKey, name: string, selected: boolean }
+interface TeamSelection { profileRef: string, nickname: string, avatarUrl?: string, headline?: string }
+interface TeamCandidate extends PublicPerson { selected: boolean }
 
 Page({
   data: {
@@ -34,6 +36,11 @@ Page({
     roleOptions: cooperationRoles.map(item => ({ key: item.key, name: item.name, selected: false })) as RoleOption[],
     industryGroups: [] as IndustryGroupOption[],
     abilityOptions: [] as SelectOption[],
+    teamMembers: [] as TeamSelection[],
+    teamPickerVisible: false,
+    teamKeyword: '',
+    teamCandidates: [] as TeamCandidate[],
+    teamLoading: false,
   },
 
   onLoad(options: Record<string, string | undefined>) {
@@ -91,6 +98,12 @@ Page({
         options: group.options.map(item => ({ id: item.id, label: item.label, selected: industryIds.has(item.id) })),
       })),
       abilityOptions: catalog.abilityTags.map(item => ({ id: item.id, label: item.label, selected: abilityIds.has(item.id) })),
+      teamMembers: (detail?.teamMembers || []).map(item => ({
+        profileRef: item.profileRef,
+        nickname: item.nickname,
+        ...(item.avatarUrl ? { avatarUrl: item.avatarUrl } : {}),
+        ...(item.headline ? { headline: item.headline } : {}),
+      })),
     })
   },
 
@@ -155,6 +168,88 @@ Page({
     }
   },
 
+  openTeamPicker() {
+    this.setData({ teamPickerVisible: true })
+    void this.searchTeam()
+  },
+
+  closeTeamPicker() {
+    this.setData({ teamPickerVisible: false })
+  },
+
+  handleTeamPickerVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {
+    if (!event.detail.visible) {
+      this.closeTeamPicker()
+    }
+  },
+
+  updateTeamKeyword(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.setData({ teamKeyword: event.detail.value })
+  },
+
+  async searchTeam() {
+    if (this.data.teamLoading) {
+      return
+    }
+    this.setData({ teamLoading: true, message: '' })
+    try {
+      const selected = new Set(this.data.teamMembers.map(item => item.profileRef))
+      const page = await opportunityModule.listPeople({
+        kind: 'PLAYER',
+        keyword: this.data.teamKeyword.trim() || undefined,
+        limit: 20,
+      })
+      this.setData({
+        teamCandidates: page.items
+          .filter(item => !item.isSelf)
+          .map(item => ({ ...item, selected: selected.has(item.profileRef) })),
+      })
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '团队成员加载失败' })
+    }
+    finally {
+      this.setData({ teamLoading: false })
+    }
+  },
+
+  toggleTeamMember(event: WechatMiniprogram.TouchEvent) {
+    const profileRef = String(event.currentTarget.dataset.profileRef || '')
+    const candidate = this.data.teamCandidates.find(item => item.profileRef === profileRef)
+    if (!candidate) {
+      return
+    }
+    const exists = this.data.teamMembers.some(item => item.profileRef === profileRef)
+    if (!exists && this.data.teamMembers.length >= 8) {
+      wx.showToast({ title: '最多选择 8 名成员', icon: 'none' })
+      return
+    }
+    const teamMembers = exists
+      ? this.data.teamMembers.filter(item => item.profileRef !== profileRef)
+      : [...this.data.teamMembers, {
+          profileRef: candidate.profileRef,
+          nickname: candidate.nickname || 'MIP 用户',
+          ...(candidate.avatarUrl ? { avatarUrl: candidate.avatarUrl } : {}),
+          ...(candidate.headline ? { headline: candidate.headline } : {}),
+        }]
+    this.setData({
+      teamMembers,
+      teamCandidates: this.data.teamCandidates.map(item => (
+        item.profileRef === profileRef ? { ...item, selected: !exists } : item
+      )),
+    })
+  },
+
+  removeTeamMember(event: WechatMiniprogram.TouchEvent) {
+    const profileRef = String(event.currentTarget.dataset.profileRef || '')
+    this.setData({
+      teamMembers: this.data.teamMembers.filter(item => item.profileRef !== profileRef),
+      teamCandidates: this.data.teamCandidates.map(item => (
+        item.profileRef === profileRef ? { ...item, selected: false } : item
+      )),
+    })
+  },
+
   async chooseCover() {
     if (this.data.coverUploading || this.data.saving) {
       return
@@ -199,6 +294,7 @@ Page({
           .filter(item => item.selected)
           .map(item => item.id),
         abilityTagIds: this.data.abilityOptions.filter(item => item.selected).map(item => item.id),
+        teamProfileRefs: this.data.teamMembers.map(item => item.profileRef),
         publish,
       })
       this.setData({ id: result.id, version: result.version })

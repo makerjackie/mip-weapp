@@ -8,6 +8,10 @@ MIP AI 草稿服务。服务只生成、保存和更新可过期草稿，不直�
 
 未配置 `MIP_AI_PROVIDER_FUNCTION_NAME` 时，语音和文本整理明确返回不可用，不生成伪造结果。
 
-AI Provider 必须使用 `mip-` 前缀的独立云函数，并校验请求中由 `MIP_AI_HMAC_SECRET` 生成的 HMAC 签名及时间戳；Provider 签名绑定动作、AppID、草稿、用途和输入摘要，维护签名绑定完整未签名 body。
+用户可在 `DRAFT_READY` 状态连续补充信息。每轮先用版本号把草稿短暂转为 `STRUCTURING`，Provider 只返回新的结构化草稿；服务端自行追加用户原文。Provider 失败时恢复上一版可用草稿，版本冲突要求客户端刷新。完成补充仍只是临时草稿，只有个人档案、合作卡或超级案例编辑页在正式保存事务中校验草稿并写入对应资源，同时把草稿标为 `CONFIRMED`。
 
-环境变量：`MIP_ALLOWED_APP_IDS`、`MIP_IDENTITY_PEPPER`、`MIP_AI_PROVIDER_FUNCTION_NAME`、`MIP_AI_HMAC_SECRET`、`MIP_AI_STORAGE_KEY`、`MIP_AI_DRAFT_TTL_HOURS`、`MIP_DEPLOYMENT_STAGE`、`MIP_DB_CONNECTION_URI`。
+Provider 通过 `MIP_AI_PROVIDER_ADAPTER` 选择。当前正式适配器值为 `cloud_function`，空值也按该适配器处理；其他值会明确降级为不可用。测试可注入内存 Provider，但运行时没有 mock 成功路径。Cloud Function Provider 必须使用 `mip-` 前缀的独立函数，并实现 `structureText`、`transcribeAndStructure` 与 `refineDraft` 三个 action。`refineDraft` 接收当前转写、当前结构化草稿和本轮补充，至少返回 `structuredDraft`；其他两个 action 还必须返回 `transcriptText`。所有 action 可返回仅用于摘要留存的 `providerJobKey`。
+
+Provider 必须校验请求中由 `MIP_AI_HMAC_SECRET` 生成的 HMAC 签名及五分钟内时间戳；签名绑定动作、AppID、草稿、用途、处理版本和全部输入的稳定摘要。Provider 原始错误和用户输入不得写入普通业务日志或返回客户端。
+
+环境变量：`MIP_ALLOWED_APP_IDS`、`MIP_IDENTITY_PEPPER`、`MIP_AI_PROVIDER_ADAPTER`、`MIP_AI_PROVIDER_FUNCTION_NAME`、`MIP_AI_HMAC_SECRET`、`MIP_AI_STORAGE_KEY`、`MIP_AI_DRAFT_TTL_HOURS`、`MIP_DEPLOYMENT_STAGE`、`MIP_DB_CONNECTION_URI`。

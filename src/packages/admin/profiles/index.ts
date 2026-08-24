@@ -1,4 +1,4 @@
-import type { AdminUser } from '../../../modules/mip-admin'
+import type { AdminBranch, AdminUser, AdminUserDetail } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { adminLoadFailure } from '../shared/page-state'
@@ -17,16 +17,27 @@ Page({
     kind: '',
     status: '',
     controlType: '',
+    phoneBound: '',
+    profileComplete: '',
+    joinedWithinDays: 0,
+    branchId: '',
+    branchLabel: '全部分会',
+    branches: [] as AdminBranch[],
     includePhone: false,
     canPhone: false,
     canEdit: false,
     canControl: false,
     canExport: false,
+    canFilterBranches: false,
     processingId: '',
     exportPending: false,
     message: '',
     nextCursor: null as string | null,
     loadingMore: false,
+    detailOpen: false,
+    detailState: 'loading' as AdminPageState,
+    detail: null as AdminUserDetail | null,
+    detailMessage: '',
   },
   requestSeq: 0,
   confirmationBusy: false,
@@ -36,6 +47,8 @@ Page({
     mipAdminModule.clearSensitive()
     this.setData({
       includePhone: false,
+      detailOpen: false,
+      detail: null,
       users: this.data.users.map(item => ({ ...item, phoneNumber: null })),
     })
   },
@@ -46,10 +59,12 @@ Page({
   updateQuery(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ query: event.detail.value }) },
   chooseFilter(event: WechatMiniprogram.TouchEvent) {
     const field = String(event.currentTarget.dataset.field || '')
-    if (!['kind', 'status', 'controlType'].includes(field)) {
+    if (!['kind', 'status', 'controlType', 'phoneBound', 'profileComplete', 'joinedWithinDays'].includes(field)) {
       return
     }
-    this.setData({ [field]: String(event.currentTarget.dataset.value || '') })
+    this.setData({ [field]: field === 'joinedWithinDays'
+      ? Number(event.currentTarget.dataset.value || 0)
+      : String(event.currentTarget.dataset.value || '') })
     void this.loadUsers(true)
   },
   search() { void this.loadUsers(true) },
@@ -65,7 +80,16 @@ Page({
         mipAdminModule.getSession(force),
         mipAdminModule.listUsers({
           includePhone: this.data.includePhone,
-          filters: { query: this.data.query.trim(), kind: this.data.kind, status: this.data.status, controlType: this.data.controlType },
+          filters: {
+            query: this.data.query.trim(),
+            kind: this.data.kind,
+            status: this.data.status,
+            controlType: this.data.controlType,
+            phoneBound: this.data.phoneBound,
+            profileComplete: this.data.profileComplete,
+            joinedWithinDays: this.data.joinedWithinDays,
+            branchId: this.data.branchId,
+          },
         }, force),
       ])
       if (seq !== this.requestSeq) {
@@ -83,10 +107,14 @@ Page({
         canEdit: hasCapability(session.capabilities, 'users.fields.edit'),
         canControl: hasCapability(session.capabilities, 'users.access.manage'),
         canExport: hasCapability(session.capabilities, 'exports.create'),
+        canFilterBranches: hasCapability(session.capabilities, 'branches.manage'),
         nextCursor: response.nextCursor || null,
         loadingMore: false,
         message: '',
       })
+      if (hasCapability(session.capabilities, 'branches.manage') && !this.data.branches.length) {
+        void this.loadBranches()
+      }
     }
     catch (error) {
       if (seq !== this.requestSeq) {
@@ -104,7 +132,16 @@ Page({
       const response = await mipAdminModule.listUsers({
         includePhone: this.data.includePhone,
         cursor: this.data.nextCursor,
-        filters: { query: this.data.query.trim(), kind: this.data.kind, status: this.data.status, controlType: this.data.controlType },
+        filters: {
+          query: this.data.query.trim(),
+          kind: this.data.kind,
+          status: this.data.status,
+          controlType: this.data.controlType,
+          phoneBound: this.data.phoneBound,
+          profileComplete: this.data.profileComplete,
+          joinedWithinDays: this.data.joinedWithinDays,
+          branchId: this.data.branchId,
+        },
       })
       const users = response.items.map(item => ({
         ...item,
@@ -121,7 +158,63 @@ Page({
       this.setData({ loadingMore: false })
     }
   },
+  async loadBranches() {
+    try {
+      const response = await mipAdminModule.listBranches()
+      this.setData({ branches: response.items })
+    }
+    catch {
+      this.setData({ message: '分会筛选暂时无法加载。' })
+    }
+  },
+  async chooseBranch() {
+    if (!this.data.canFilterBranches || !this.data.branches.length) {
+      return
+    }
+    try {
+      const choices = ['全部分会', ...this.data.branches.map(branch => `${branch.name} · ${branch.cityName}`)]
+      const result = await wx.showActionSheet({ itemList: choices })
+      const branch = result.tapIndex > 0 ? this.data.branches[result.tapIndex - 1] : null
+      this.setData({ branchId: branch?.id || '', branchLabel: branch?.name || '全部分会' })
+      void this.loadUsers(true)
+    }
+    catch {
+      // Closing the native selector leaves the current filter unchanged.
+    }
+  },
   onReachBottom() { void this.loadMoreUsers() },
+  async openDetail(event: WechatMiniprogram.TouchEvent) {
+    const userId = String(event.currentTarget.dataset.id || '')
+    if (!userId) {
+      return
+    }
+    this.setData({ detailOpen: true, detailState: 'loading', detail: null, detailMessage: '' })
+    try {
+      const detail = await mipAdminModule.getUser(userId, this.data.includePhone, true)
+      if (!this.data.detailOpen) {
+        return
+      }
+      this.setData({ detailState: 'ready', detail })
+    }
+    catch (error) {
+      if (!this.data.detailOpen) {
+        return
+      }
+      this.setData({
+        detailState: 'error',
+        detailMessage: error instanceof Error ? error.message : '用户详情加载失败',
+      })
+    }
+  },
+  closeDetail() {
+    this.setData({ detailOpen: false, detail: null, detailMessage: '' })
+    mipAdminModule.clearSensitive()
+  },
+  handleDetailVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {
+    if (!event.detail.visible) {
+      this.closeDetail()
+    }
+  },
   async showPhones() {
     if (!this.data.canPhone || this.data.processingId || this.data.exportPending || this.confirmationBusy) {
       return
@@ -137,6 +230,9 @@ Page({
       }
       this.setData({ includePhone: true })
       await this.loadUsers(true)
+      if (this.data.detailOpen && this.data.detail?.id) {
+        this.setData({ detail: await mipAdminModule.getUser(this.data.detail.id, true, true) })
+      }
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '手机号加载失败' })
@@ -223,7 +319,16 @@ Page({
       const result = await mipAdminModule.mutate(() => mipAdminModule.exportAndOpen({
         exportType: 'USERS',
         includesPhone: this.data.includePhone,
-        filters: { query: this.data.query, kind: this.data.kind, controlType: this.data.controlType },
+        filters: {
+          query: this.data.query,
+          kind: this.data.kind,
+          status: this.data.status,
+          controlType: this.data.controlType,
+          phoneBound: this.data.phoneBound,
+          profileComplete: this.data.profileComplete,
+          joinedWithinDays: this.data.joinedWithinDays,
+          branchId: this.data.branchId,
+        },
       }))
       wx.showToast({ title: `已导出 ${result.rowCount} 条`, icon: 'success' })
     }

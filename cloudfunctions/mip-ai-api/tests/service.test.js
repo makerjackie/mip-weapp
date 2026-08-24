@@ -36,6 +36,7 @@ test('disables voice drafts when the private audio store is not configured', () 
   assert.deepEqual(service.getCapability(), {
     textDrafts: true,
     voiceDrafts: false,
+    refinementDrafts: false,
     reason: 'STORAGE_NOT_CONFIGURED',
   })
 })
@@ -82,6 +83,28 @@ test('marks the private draft failed when provider processing fails', async () =
     transcriptText: '资料内容',
   }), /AI_PROVIDER_UNAVAILABLE/)
   assert.equal(failed, true)
+})
+
+test('does not disguise a post-provider ownership fence as a provider error', async () => {
+  let failed = false
+  const service = createAiService({
+    repository: {
+      async createTextDraft() { return draft },
+      async completeDraft() { throw new Error('FORBIDDEN') },
+      async failDraft() { failed = true },
+    },
+    provider: {
+      capability: () => ({ textDrafts: true, voiceDrafts: false }),
+      async structureText() {
+        return { transcriptText: '资料内容', structuredDraft: { headline: '产品负责人' } }
+      },
+    },
+  })
+  await assert.rejects(() => service.createTextDraft(caller, {
+    purpose: 'PROFILE',
+    transcriptText: '资料内容',
+  }), /FORBIDDEN/)
+  assert.equal(failed, false)
 })
 
 function voiceUploadEvent() {
@@ -169,4 +192,93 @@ test('marks a failed voice tombstone DELETED only after exact storage deletion s
   })
   await assert.rejects(() => service.createVoiceDraftUpload(caller, voiceUploadEvent()), /FORBIDDEN/)
   assert.equal(marked, true)
+})
+
+test('supports consecutive refinement turns without writing an official resource', async () => {
+  let current = {
+    ...draft,
+    status: 'DRAFT_READY',
+    transcriptText: '第一轮内容',
+    structuredDraft: { headline: '原标题' },
+  }
+  const repository = {
+    async beginDraftRefinement(_appId, _userId, input) {
+      assert.equal(input.expectedVersion, current.version)
+      current = { ...current, status: 'STRUCTURING', version: current.version + 1 }
+      return current
+    },
+    async completeDraft(_appId, _userId, _draftId, expectedVersion, result) {
+      assert.equal(expectedVersion, current.version)
+      current = {
+        ...current,
+        status: 'DRAFT_READY',
+        transcriptText: result.transcriptText,
+        structuredDraft: result.structuredDraft,
+        version: current.version + 1,
+      }
+      return current
+    },
+    async getDraft() { return current },
+    async restoreDraftAfterRefinement() { throw new Error('unexpected restore') },
+  }
+  const turns = []
+  const service = createAiService({
+    repository,
+    provider: {
+      capability: () => ({ textDrafts: true, voiceDrafts: true, refinementDrafts: true }),
+      async refineDraft(input) {
+        turns.push(input)
+        return {
+          structuredDraft: { headline: input.supplementalText },
+          providerJobKey: `job-${turns.length}`,
+        }
+      },
+    },
+  })
+  const second = await service.continueDraft(caller, {
+    draftId: draft.id,
+    expectedVersion: 1,
+    supplementalText: '第二轮内容',
+  })
+  const third = await service.continueDraft(caller, {
+    draftId: draft.id,
+    expectedVersion: second.version,
+    supplementalText: '第三轮内容',
+  })
+  assert.equal(third.version, 5)
+  assert.equal(third.transcriptText, '第一轮内容\n\n第二轮内容\n\n第三轮内容')
+  assert.deepEqual(third.structuredDraft, { headline: '第三轮内容' })
+  assert.deepEqual(turns[1].currentStructuredDraft, { headline: '第二轮内容' })
+  assert.equal(typeof repository.saveProfile, 'undefined')
+})
+
+test('restores the last ready draft when refinement provider processing fails', async () => {
+  let restored
+  let completed = false
+  const service = createAiService({
+    repository: {
+      async beginDraftRefinement() {
+        return {
+          ...draft,
+          status: 'STRUCTURING',
+          version: 2,
+          transcriptText: '原内容',
+          structuredDraft: { headline: '原标题' },
+        }
+      },
+      async restoreDraftAfterRefinement(...args) { restored = args; return true },
+      async completeDraft() { completed = true },
+    },
+    provider: {
+      capability: () => ({ textDrafts: true, voiceDrafts: true, refinementDrafts: true }),
+      async refineDraft() { throw new Error('private provider failure') },
+    },
+  })
+  await assert.rejects(() => service.continueDraft(caller, {
+    draftId: draft.id,
+    expectedVersion: 1,
+    supplementalText: '补充内容',
+  }), /AI_PROVIDER_UNAVAILABLE/)
+  assert.deepEqual(restored, [caller.appId, caller.userId, draft.id, 2])
+  assert.equal(completed, false)
 })

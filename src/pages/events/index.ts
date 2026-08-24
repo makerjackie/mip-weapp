@@ -18,12 +18,39 @@ interface EventCardView extends MipEventListItem {
   locationText: string
 }
 
+interface EventBannerView {
+  id: string
+  imagePath: string
+  accessibilityLabel: string
+  targetType: 'PAGE' | 'ARTICLE'
+  target: string
+}
+
 function formatDateTime(value: string) {
   const date = new Date(value)
   if (!Number.isFinite(date.getTime())) {
     return ''
   }
   return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+function formatCalendarDate(value: number) {
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) {
+    return ''
+  }
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-')
+}
+
+function formatCalendarLabel(value: number) {
+  const date = new Date(value)
+  return Number.isFinite(date.getTime())
+    ? `${date.getMonth() + 1}月${date.getDate()}日`
+    : ''
 }
 
 function accessLabel(event: MipEventListItem) {
@@ -75,11 +102,27 @@ Page({
     view: 'UPCOMING' as EventListView,
     dateFilter: 'RECENT' as EventDateFilter,
     events: [] as EventCardView[],
-    heroEvent: null as EventCardView | null,
+    banners: mipOperationsConfig.eventBanners as readonly EventBannerView[],
+    videoChannelConfigured: Boolean(mipOperationsConfig.videoChannelFinderUserName),
     cities: [] as string[],
     selectedCity: '',
     searchInput: '',
     activeQuery: '',
+    selectedDate: '',
+    selectedDateLabel: '',
+    customDateLabel: '',
+    dateFrom: '',
+    dateFromLabel: '',
+    dateTo: '',
+    dateToLabel: '',
+    calendarVisible: false,
+    calendarTarget: 'SINGLE' as 'SINGLE' | 'FROM' | 'TO',
+    calendarValue: Date.now(),
+    calendarMinDate: new Date(new Date().getFullYear() - 1, 0, 1).getTime(),
+    calendarMaxDate: new Date(new Date().getFullYear() + 2, 11, 31).getTime(),
+    nextCursor: '',
+    loadingMore: false,
+    shareTokens: {} as Record<string, string>,
     message: '',
   },
   requestSeq: 0,
@@ -99,12 +142,16 @@ Page({
     }
   },
 
-  currentQuery(): EventFeedQuery {
+  currentQuery(cursor = ''): EventFeedQuery {
     return {
       view: this.data.view,
       dateFilter: this.data.dateFilter,
       cityName: this.data.selectedCity || undefined,
+      date: this.data.dateFilter === 'CUSTOM' ? this.data.selectedDate : undefined,
+      dateFrom: this.data.dateFrom || undefined,
+      dateTo: this.data.dateTo || undefined,
       query: this.data.activeQuery || undefined,
+      cursor: cursor || undefined,
     }
   },
 
@@ -145,11 +192,18 @@ Page({
     return this.cityInitialization
   },
 
-  async loadEvents(options: { force?: boolean } = {}) {
-    const query = this.currentQuery()
+  async loadEvents(options: { force?: boolean, append?: boolean } = {}) {
+    const cursor = options.append ? this.data.nextCursor : ''
+    if (options.append && (!cursor || this.data.loadingMore)) {
+      return
+    }
+    const query = this.currentQuery(cursor)
     const cached = mipEventsModule.peekEvents(query)
-    if (cached) {
-      this.applyFeed(cached)
+    if (options.append) {
+      this.setData({ loadingMore: true })
+    }
+    else if (cached) {
+      this.applyFeed(cached, false)
     }
     else if (this.data.state !== 'ready') {
       this.setData({ state: 'loading', message: '' })
@@ -161,27 +215,57 @@ Page({
       if (requestSeq !== this.requestSeq) {
         return
       }
-      this.applyFeed(feed)
+      this.applyFeed(feed, options.append === true)
     }
     catch (error) {
       if (requestSeq !== this.requestSeq) {
         return
       }
-      this.setData(cached
+      this.setData(cached && !options.append
         ? { message: '活动更新失败，已保留上次结果。' }
-        : { state: 'error', message: error instanceof Error ? error.message : '活动加载失败' })
+        : options.append
+          ? { loadingMore: false, message: '更多活动加载失败，请稍后重试。' }
+          : { state: 'error', message: error instanceof Error ? error.message : '活动加载失败' })
     }
   },
 
-  applyFeed(feed: Awaited<ReturnType<typeof mipEventsModule.listEvents>>) {
+  applyFeed(feed: Awaited<ReturnType<typeof mipEventsModule.listEvents>>, append = false) {
     const events = feed.items.map(presentEvent)
+    const merged = append
+      ? [...this.data.events, ...events.filter(item => !this.data.events.some(current => current.id === item.id))]
+      : events
     this.setData({
       state: 'ready',
-      events,
-      heroEvent: events[0] || null,
+      events: merged,
       cities: feed.cities || [],
+      nextCursor: feed.nextCursor || '',
+      loadingMore: false,
       message: '',
     })
+    void this.loadShareTokens(events)
+  },
+
+  async loadShareTokens(events: EventCardView[]) {
+    const missing = events.filter(item => !this.data.shareTokens[item.id])
+    if (!missing.length) {
+      return
+    }
+    const entries = await Promise.all(missing.map(async (item) => {
+      try {
+        const invitation = await mipEventsModule.createInvitation(item.id)
+        return [item.id, invitation.token] as const
+      }
+      catch {
+        return [item.id, ''] as const
+      }
+    }))
+    const shareTokens = { ...this.data.shareTokens }
+    for (const [eventId, token] of entries) {
+      if (token) {
+        shareTokens[eventId] = token
+      }
+    }
+    this.setData({ shareTokens })
   },
 
   async onPullDownRefresh() {
@@ -198,7 +282,19 @@ Page({
     if (!['UPCOMING', 'PAST'].includes(view) || view === this.data.view) {
       return
     }
-    this.setData({ view, dateFilter: view === 'PAST' ? 'ENDED' : 'RECENT', message: '' })
+    this.setData({
+      view,
+      dateFilter: view === 'PAST' ? 'ENDED' : 'RECENT',
+      selectedDate: '',
+      selectedDateLabel: '',
+      customDateLabel: '',
+      dateFrom: '',
+      dateFromLabel: '',
+      dateTo: '',
+      dateToLabel: '',
+      nextCursor: '',
+      message: '',
+    })
     void this.loadEvents()
   },
 
@@ -210,6 +306,14 @@ Page({
     this.setData({
       dateFilter,
       view: dateFilter === 'ENDED' ? 'PAST' : 'UPCOMING',
+      selectedDate: '',
+      selectedDateLabel: '',
+      customDateLabel: '',
+      dateFrom: '',
+      dateFromLabel: '',
+      dateTo: '',
+      dateToLabel: '',
+      nextCursor: '',
       message: '',
     })
     void this.loadEvents()
@@ -226,7 +330,7 @@ Page({
       success: ({ tapIndex }) => {
         const selectedCity = tapIndex === 0 ? '' : choices[tapIndex]
         this.cityManuallySelected = true
-        this.setData({ selectedCity })
+        this.setData({ selectedCity, nextCursor: '' })
         void this.loadEvents()
       },
     })
@@ -256,15 +360,163 @@ Page({
   commitSearch() {
     const activeQuery = this.data.searchInput.trim()
     if (activeQuery !== this.data.activeQuery) {
-      this.setData({ activeQuery })
+      this.setData({ activeQuery, nextCursor: '' })
       void this.loadEvents()
     }
   },
+
+  showCalendar() {
+    this.setData({ calendarVisible: true, calendarTarget: 'SINGLE' })
+  },
+
+  showRangeCalendar(event: WechatMiniprogram.TouchEvent) {
+    const target = String(event.currentTarget.dataset.target || '') as 'FROM' | 'TO'
+    if (target !== 'FROM' && target !== 'TO') {
+      return
+    }
+    this.setData({ calendarVisible: true, calendarTarget: target })
+  },
+
+  closeCalendar() {
+    this.setData({ calendarVisible: false })
+  },
+
+  confirmCalendar(event: WechatMiniprogram.CustomEvent<{ value: number | number[] }>) {
+    const value = Array.isArray(event.detail.value) ? event.detail.value[0] : event.detail.value
+    const selectedDate = formatCalendarDate(value)
+    if (!selectedDate) {
+      wx.showToast({ title: '请选择有效日期', icon: 'none' })
+      return
+    }
+    const label = formatCalendarLabel(value)
+    if (this.data.calendarTarget === 'FROM') {
+      if (this.data.dateTo && selectedDate > this.data.dateTo) {
+        wx.showToast({ title: '开始日期不能晚于结束日期', icon: 'none' })
+        return
+      }
+      this.setData({
+        calendarVisible: false,
+        calendarValue: value,
+        dateFrom: selectedDate,
+        dateFromLabel: label,
+        dateFilter: 'CUSTOM',
+        selectedDate: '',
+        selectedDateLabel: '',
+        customDateLabel: this.data.dateToLabel ? `${label} - ${this.data.dateToLabel}` : `${label}起`,
+        view: 'UPCOMING',
+        nextCursor: '',
+        message: '',
+      })
+    }
+    else if (this.data.calendarTarget === 'TO') {
+      if (this.data.dateFrom && selectedDate < this.data.dateFrom) {
+        wx.showToast({ title: '结束日期不能早于开始日期', icon: 'none' })
+        return
+      }
+      this.setData({
+        calendarVisible: false,
+        calendarValue: value,
+        dateTo: selectedDate,
+        dateToLabel: label,
+        dateFilter: 'CUSTOM',
+        selectedDate: '',
+        selectedDateLabel: '',
+        customDateLabel: this.data.dateFromLabel ? `${this.data.dateFromLabel} - ${label}` : `截至${label}`,
+        view: 'UPCOMING',
+        nextCursor: '',
+        message: '',
+      })
+    }
+    else {
+      this.setData({
+        calendarVisible: false,
+        calendarValue: value,
+        selectedDate,
+        selectedDateLabel: label,
+        customDateLabel: label,
+        dateFrom: '',
+        dateFromLabel: '',
+        dateTo: '',
+        dateToLabel: '',
+        dateFilter: 'CUSTOM',
+        view: 'UPCOMING',
+        nextCursor: '',
+        message: '',
+      })
+    }
+    void this.loadEvents()
+  },
+
+  clearDateRange() {
+    if (!this.data.dateFrom && !this.data.dateTo) {
+      return
+    }
+    this.setData({
+      dateFrom: '',
+      dateFromLabel: '',
+      dateTo: '',
+      dateToLabel: '',
+      customDateLabel: this.data.selectedDateLabel,
+      dateFilter: this.data.selectedDate ? 'CUSTOM' : 'RECENT',
+      nextCursor: '',
+      message: '',
+    })
+    void this.loadEvents()
+  },
+
+  openBanner(event: WechatMiniprogram.TouchEvent) {
+    const bannerId = String(event.currentTarget.dataset.bannerId || '')
+    const banner = this.data.banners.find(item => item.id === bannerId)
+    if (!banner) {
+      return
+    }
+    if (banner.targetType === 'ARTICLE') {
+      wx.openOfficialAccountArticle({
+        url: banner.target,
+        fail: () => wx.showToast({ title: '文章暂未配置', icon: 'none' }),
+      })
+      return
+    }
+    if (banner.target && banner.target !== '/pages/events/index') {
+      caseNavigateTo({ url: banner.target })
+    }
+  },
+
+  openPastReview() {
+    const finderUserName = mipOperationsConfig.videoChannelFinderUserName
+    if (!finderUserName) {
+      return
+    }
+    wx.openChannelsUserProfile({
+      finderUserName,
+      fail: () => wx.showToast({ title: '暂时无法打开视频号', icon: 'none' }),
+    })
+  },
+
+  loadMore() {
+    void this.loadEvents({ append: true })
+  },
+
+  stopPropagation() {},
 
   openEvent(event: WechatMiniprogram.TouchEvent) {
     const eventId = String(event.currentTarget.dataset.eventId || '') as EventId
     if (eventId) {
       caseNavigateTo({ url: `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(eventId)}` })
+    }
+  },
+
+  onShareAppMessage(event: WechatMiniprogram.Page.IShareAppMessageOption) {
+    const eventId = String(event.target?.dataset?.eventId || '')
+    const item = this.data.events.find(current => current.id === eventId)
+    const token = eventId ? this.data.shareTokens[eventId] : ''
+    const invitation = token ? `&invitationToken=${encodeURIComponent(token)}` : ''
+    return {
+      title: item?.title || 'MIP 活动',
+      path: eventId
+        ? `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(eventId)}${invitation}`
+        : '/pages/events/index',
+      imageUrl: item?.coverUrl,
     }
   },
 })

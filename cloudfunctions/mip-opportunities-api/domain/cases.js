@@ -6,6 +6,7 @@ const { createProfileRef } = require('../lib/profile-ref')
 const { confirmAiDraft, normalizeAiConfirmation } = require('./ai-confirmation')
 const {
   appendAudit,
+  appendOutbox,
   decodeCursor,
   encodeCursor,
   idempotentTransaction,
@@ -84,6 +85,7 @@ function dateText(value) {
 
 function summary(row, caller) {
   const profileVisibility = jsonObject(row.visibility_json)
+  const mine = Boolean(caller.userId && caller.userId === row.owner_user_id)
   return {
     id: row.id,
     projectName: row.project_name,
@@ -101,7 +103,8 @@ function summary(row, caller) {
       avatarUrl: profileVisibility.avatar === false ? undefined : (row.avatar_file_id || undefined),
       headline: profileVisibility.headline === false ? undefined : (row.headline || undefined),
     },
-    mine: Boolean(caller.userId && caller.userId === row.owner_user_id),
+    mine,
+    ...(mine ? { version: Number(row.version) } : {}),
   }
 }
 
@@ -143,7 +146,7 @@ async function listMySuperCases(database, caller, input = {}) {
   if (cursor) params.push(cursor.timestamp, cursor.timestamp, cursor.id)
   const rows = await database.query(
     `${caseSelect}
-     WHERE c.app_id = ? AND c.owner_user_id = ? ${cursorSql}
+     WHERE c.app_id = ? AND c.owner_user_id = ? AND c.status <> 'ARCHIVED' ${cursorSql}
      ORDER BY c.updated_at DESC, c.id DESC
      LIMIT ${pageLimit + 1}`,
     params,
@@ -166,6 +169,7 @@ async function getSuperCase(database, caller, id) {
     [caller.appId, id, ...blockFilter.params],
   )
   if (!row) throw new Error('NOT_FOUND')
+  if (row.status === 'ARCHIVED') throw new Error('NOT_FOUND')
   const mine = Boolean(caller.userId && caller.userId === row.owner_user_id)
   if (row.status !== 'PUBLISHED' && !mine) throw new Error('NOT_FOUND')
   const media = await database.query(
@@ -256,12 +260,13 @@ async function saveSuperCase(database, contentSafety, caller, input) {
     let existing = null
     if (draft.id) {
       existing = await tx.one(
-        `SELECT owner_user_id, status, version FROM mip_super_cases
+        `SELECT owner_user_id, status, version, published_at FROM mip_super_cases
          WHERE app_id = ? AND id = ? FOR UPDATE`,
         [caller.appId, draft.id],
       )
       if (!existing) throw new Error('NOT_FOUND')
       if (existing.owner_user_id !== caller.userId) throw new Error('FORBIDDEN')
+      if (existing.status === 'ARCHIVED') throw new Error('FORBIDDEN')
       if (Number(existing.version) !== draft.expectedVersion) throw new Error('CONFLICT')
     }
     const status = draft.publish
@@ -274,7 +279,7 @@ async function saveSuperCase(database, contentSafety, caller, input) {
          SET project_name = ?, summary = ?, started_on = ?, ended_on = ?,
              responsibility = ?, city_tag_id = ?, industry_tag_id = ?, case_type = ?,
              description = ?, cover_asset_id = ?, status = ?, content_safety_status = 'APPROVED',
-             published_at = CASE WHEN ? = 1 THEN UTC_TIMESTAMP(3) ELSE published_at END,
+             published_at = CASE WHEN ? = 1 THEN COALESCE(published_at, UTC_TIMESTAMP(3)) ELSE published_at END,
              version = version + 1
          WHERE app_id = ? AND id = ? AND version = ?`,
         [
@@ -314,6 +319,15 @@ async function saveSuperCase(database, contentSafety, caller, input) {
       )
     }
     const version = existing ? Number(existing.version) + 1 : 1
+    if (published && !existing?.published_at) {
+      await appendOutbox(tx, {
+        appId: caller.appId,
+        aggregateType: 'SUPER_CASE',
+        aggregateId: id,
+        eventType: 'super_case.published',
+        sourceVersion: version,
+      })
+    }
     await appendAudit(tx, {
       appId: caller.appId,
       actorUserId: caller.userId,
@@ -385,7 +399,53 @@ async function unpublishSuperCase(database, caller, input = {}) {
   })
 }
 
+async function archiveSuperCase(database, caller, input = {}) {
+  const id = stringValue(input.id, 36, 'VALIDATION_FAILED')
+  const expectedVersion = Number(input.expectedVersion)
+  if (!uuid(id) || !Number.isInteger(expectedVersion) || expectedVersion < 1) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  return idempotentTransaction(database, {
+    appId: caller.appId,
+    userId: caller.userId,
+    operation: 'super-case.archive',
+    idempotencyKey: input.idempotencyKey,
+    request: { id, expectedVersion },
+  }, async (tx) => {
+    await lockActiveContributor(tx, caller)
+    const existing = await tx.one(
+      `SELECT owner_user_id, status, version
+       FROM mip_super_cases
+       WHERE app_id = ? AND id = ? FOR UPDATE`,
+      [caller.appId, id],
+    )
+    if (!existing) throw new Error('NOT_FOUND')
+    if (existing.owner_user_id !== caller.userId) throw new Error('FORBIDDEN')
+    if (Number(existing.version) !== expectedVersion || existing.status === 'ARCHIVED') {
+      throw new Error('CONFLICT')
+    }
+    const result = await tx.query(
+      `UPDATE mip_super_cases
+       SET status = 'ARCHIVED', archived_at = UTC_TIMESTAMP(3), version = version + 1
+       WHERE app_id = ? AND id = ? AND version = ? AND status <> 'ARCHIVED'`,
+      [caller.appId, id, expectedVersion],
+    )
+    if (result.affectedRows !== 1) throw new Error('CONFLICT')
+    const version = expectedVersion + 1
+    await appendAudit(tx, {
+      appId: caller.appId,
+      actorUserId: caller.userId,
+      action: 'SUPER_CASE_ARCHIVED',
+      resourceType: 'SUPER_CASE',
+      resourceId: id,
+      metadata: { version },
+    })
+    return { id, status: 'ARCHIVED', version }
+  })
+}
+
 module.exports = {
+  archiveSuperCase,
   assertReferences,
   getSuperCase,
   listMySuperCases,

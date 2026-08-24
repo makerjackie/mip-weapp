@@ -9,5 +9,5 @@
     <view class="rounded-[20rpx] bg-panel px-4 py-4"><view class="text-[length:27rpx] font-semibold">服务调整</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">协议或服务发生重要变化时，小程序会展示更新版本并在需要时重新取得确认。继续使用前可以查看最新内容。</view></view>
     <view class="rounded-[20rpx] bg-panel px-4 py-4"><view class="text-[length:27rpx] font-semibold">联系与请求</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">服务、订单、数据或账号相关请求可通过小程序客服提交。</view></view>
   </view>
-  <app-page-exit />
+  <app-page-exit managed bind:exit="leavePage" />
 </view>

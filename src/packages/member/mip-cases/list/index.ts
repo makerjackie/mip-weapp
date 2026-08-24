@@ -17,6 +17,7 @@ Page({
     items: [] as SuperCaseSummary[],
     nextCursor: '',
     loadingMore: false,
+    archivingId: '',
     message: '',
   },
 
@@ -65,6 +66,38 @@ Page({
   },
 
   create() { caseNavigateTo({ url: '/packages/member/mip-cases/editor/index' }) },
+
+  async deleteCase(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    const item = this.data.items.find(entry => entry.id === id)
+    const expectedVersion = Number(item?.version)
+    if (!item?.mine || !Number.isInteger(expectedVersion) || this.data.archivingId) {
+      return
+    }
+    const confirmation = await wx.showModal({
+      title: '删除案例',
+      content: '删除后，这个案例将不再显示，且无法恢复。',
+      confirmText: '删除',
+      confirmColor: '#B30516',
+    })
+    if (!confirmation.confirm) {
+      return
+    }
+    this.setData({ archivingId: id, message: '' })
+    try {
+      await superCaseModule.archive(item.id, expectedVersion)
+      await this.load(true)
+      wx.showToast({ title: '已删除', icon: 'success' })
+    }
+    catch (error) {
+      const message = error instanceof Error ? error.message : '案例删除失败'
+      await this.load(true)
+      wx.showToast({ title: message, icon: 'none' })
+    }
+    finally {
+      this.setData({ archivingId: '' })
+    }
+  },
 
   open(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || '')

@@ -18,11 +18,13 @@ describe('mip commerce pure rules', () => {
       duration_days: 365,
       price_cents: 79900,
       currency: 'CNY',
+      benefits_json: '["玩家身份","会员活动权益"]',
       status: 'ACTIVE',
       version: 2,
     }, 'TEST')
     assert.equal(result.amountCents, 79900)
     assert.equal(result.productSnapshot.version, 2)
+    assert.deepEqual(result.productSnapshot.benefits, ['玩家身份', '会员活动权益'])
     assert.throws(() => deriveMembershipCheckout({
       catalog_stage: 'TEST',
       status: 'ACTIVE',

@@ -11,6 +11,43 @@ const input = {
   sourceEventId: '20000000-0000-4000-8000-000000000001',
 }
 
+test('returns the full active level ladder and earning rules from server facts', async () => {
+  const queries = []
+  const database = {
+    async one(sql, params) {
+      queries.push({ sql, params })
+      return {
+        user_id: input.userId,
+        experience_balance: 120,
+        contribution_balance: 8,
+        coin_balance: 2,
+        version: 3,
+      }
+    },
+    async query(sql, params) {
+      queries.push({ sql, params })
+      if (sql.includes('FROM mip_growth_levels')) {
+        return [
+          { id: 'level-1', level_key: 'starter', name: '起步', minimum_experience: 0, benefits_json: '[]', status: 'ACTIVE' },
+          { id: 'level-2', level_key: 'active', name: '活跃', minimum_experience: 100, benefits_json: '["活动权益"]', status: 'ACTIVE' },
+        ]
+      }
+      if (sql.includes('FROM mip_growth_rules')) {
+        return [{
+          id: 'rule-1', rule_key: 'event_attended', name: '完成活动签到', metric: 'EXPERIENCE',
+          delta_value: 100, daily_limit_value: 300, source_event_type: 'event.checked_in', status: 'ACTIVE',
+        }]
+      }
+      return { affectedRows: 1 }
+    },
+  }
+  const result = await createGrowthRepository(database).getSnapshot('wx-app', input.userId)
+  assert.deepEqual(result.levels.map(level => level.levelKey), ['starter', 'active'])
+  assert.equal(result.currentLevel.levelKey, 'active')
+  assert.deepEqual(result.earningRules.map(rule => rule.ruleKey), ['event_attended'])
+  assert.ok(queries.some(item => item.sql.includes("status = 'ACTIVE'") && item.sql.includes('mip_growth_rules')))
+})
+
 test('records a capped award and account update in one transaction', async () => {
   const queries = []
   const tx = {

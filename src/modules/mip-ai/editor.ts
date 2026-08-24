@@ -49,5 +49,5 @@ export function aiOrganizations(fields: Record<string, unknown>, key: string) {
     const name = typeof record.name === 'string' ? record.name.trim().slice(0, 120) : ''
     const role = typeof record.role === 'string' ? record.role.trim().slice(0, 80) : ''
     return name ? [{ name, role }] : []
-  }).slice(0, 10)
+  }).slice(0, 12)
 }

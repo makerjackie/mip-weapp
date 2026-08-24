@@ -4,7 +4,7 @@ const cloud = require('wx-server-sdk')
 const { DomainError } = require('./domain/rules')
 const service = require('./domain/event-service')
 const { resolveMipUser, trustedWechatIdentity } = require('./lib/identity')
-const { createCheckInCodeAsset } = require('./lib/checkin-poster')
+const { createCheckInCodeAsset, createInvitationCodeAsset } = require('./lib/checkin-poster')
 const { mysqlDatabase } = require('./lib/mysql')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
@@ -15,6 +15,7 @@ const publicActions = new Set([
   'mip.events.publicParticipants',
   'mip.events.album.list',
   'mip.events.resolveCheckInScene',
+  'mip.events.resolveInvitationScene',
 ])
 const userActions = new Set([
   'mip.events.mine',
@@ -24,11 +25,13 @@ const userActions = new Set([
   'mip.events.cancelRegistration',
   'mip.events.checkIn',
   'mip.events.heartCandidates',
+  'mip.events.hearts.mine',
   'mip.events.heart',
   'mip.events.setHeart',
   'mip.events.feedback',
   'mip.events.saveFeedback',
   'mip.events.createInvitation',
+  'mip.events.createInvitationCode',
   'mip.events.album.mine',
   'mip.events.album.submit',
   'mip.events.album.withdraw',
@@ -107,6 +110,8 @@ async function dispatch(event) {
       })
     case 'mip.events.resolveCheckInScene':
       return service.resolveCheckInScene(mysqlDatabase(), { ...shared, scene: event.scene })
+    case 'mip.events.resolveInvitationScene':
+      return service.resolveInvitationScene(mysqlDatabase(), { ...shared, scene: event.scene })
     case 'mip.events.mine':
       return service.listMyRegistrations(mysqlDatabase(), { ...shared, cursor: event.cursor })
     case 'mip.events.myRegistration':
@@ -135,6 +140,13 @@ async function dispatch(event) {
       })
     case 'mip.events.heartCandidates':
       return service.listHeartCandidates(mysqlDatabase(), { ...shared, eventId: event.eventId })
+    case 'mip.events.hearts.mine':
+      return service.listHeartHistory(mysqlDatabase(), {
+        ...shared,
+        kind: event.kind,
+        cursor: event.cursor,
+        limit: event.limit,
+      })
     case 'mip.events.heart':
       return service.getHeart(mysqlDatabase(), { ...shared, eventId: event.eventId })
     case 'mip.events.setHeart':
@@ -150,6 +162,28 @@ async function dispatch(event) {
       return service.saveFeedback(mysqlDatabase(), { ...shared, eventId: event.eventId, draft: event.draft })
     case 'mip.events.createInvitation':
       return service.createInvitation(mysqlDatabase(), { ...shared, eventId: event.eventId })
+    case 'mip.events.createInvitationCode': {
+      const invitation = await service.issueInvitationLink(mysqlDatabase(), {
+        ...shared,
+        eventId: event.eventId,
+      })
+      const asset = await createInvitationCodeAsset({
+        appId: current.appId,
+        eventId: invitation.eventId,
+        invitationId: invitation.invitationId,
+        ownerUserId: current.userId,
+        scene: invitation.scene,
+        cloud,
+        database: mysqlDatabase(),
+      })
+      await service.attachInvitationCodeAsset(mysqlDatabase(), {
+        appId: current.appId,
+        invitationId: invitation.invitationId,
+        userId: current.userId,
+        assetId: asset.assetId,
+      })
+      return { ...invitation, ...asset }
+    }
     case 'mip.events.album.mine':
       return service.listMyEventAlbumSubmissions(mysqlDatabase(), {
         ...shared,

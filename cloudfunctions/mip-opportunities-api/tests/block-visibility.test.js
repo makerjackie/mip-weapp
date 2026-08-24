@@ -10,6 +10,7 @@ const {
 } = require('../domain/opportunities')
 const { getCooperationCard, listCooperationCards } = require('../domain/cooperation')
 const { getSuperCase, listSuperCases } = require('../domain/cases')
+const { createProfileRef } = require('../lib/profile-ref')
 
 const appId = 'wx-app'
 const viewerUserId = '10000000-0000-4000-8000-000000000001'
@@ -20,6 +21,10 @@ const caller = {
   grants: [],
   profileRefSecret: 'block-visibility-profile-ref-secret-more-than-32-characters',
 }
+const referralTargetRef = createProfileRef({
+  appId,
+  userId: '30000000-0000-4000-8000-000000000001',
+}, caller.profileRefSecret)
 
 function assertMutualBlock(sql, subjectSql, appSql) {
   assert.match(sql, /FROM mip_user_blocks visibility_block/)
@@ -117,6 +122,7 @@ describe('opportunity interaction visibility', () => {
       const call = await captureRejectedMutation(database => setReferral(database, caller, {
         id: resourceId,
         active,
+        targetProfileRef: active ? referralTargetRef : undefined,
         note: '',
         idempotencyKey: `referral-block-${active}-stable-key`,
       }))

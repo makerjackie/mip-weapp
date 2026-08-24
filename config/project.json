@@ -41,6 +41,10 @@
       "pathName": "packages/member/mip-profile/index"
     },
     {
+      "name": "玩家与嘉宾",
+      "pathName": "packages/member/mip-people/index"
+    },
+    {
       "name": "公开档案",
       "pathName": "packages/member/mip-public-profile/index"
     },
@@ -127,6 +131,10 @@
     {
       "name": "收到的互动",
       "pathName": "packages/member/mip-received/index"
+    },
+    {
+      "name": "心动记录",
+      "pathName": "packages/member/mip-hearts/index"
     },
     {
       "name": "AI 草稿",

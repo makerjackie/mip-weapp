@@ -40,13 +40,21 @@ test('normalizes an inbox message before any external delivery is scheduled', ()
 })
 
 test('maps logical fields through server template configuration', () => {
-  const config = parseTemplateConfig(JSON.stringify({
+  const templates = parseTemplateConfig(JSON.stringify({
     EVENT_REMINDER: {
       templateId: 'template-id',
       fields: { title: 'thing1', startsAt: 'time2', location: 'thing3' },
     },
-  })).EVENT_REMINDER
-  const request = buildWechatRequest(config, {
+    CHECKIN_RESULT: {
+      templateId: 'checkin-template-id',
+      fields: { title: 'thing1', checkedAt: 'time2', status: 'phrase3' },
+    },
+    HEART_RECEIVED: {
+      templateId: 'heart-template-id',
+      fields: { title: 'thing1', status: 'phrase2' },
+    },
+  }))
+  const request = buildWechatRequest(templates.EVENT_REMINDER, {
     payload_json: JSON.stringify({
       fields: { title: '城市活动', startsAt: '2026-08-25 10:00', location: '广州活动中心' },
     }),
@@ -58,13 +66,31 @@ test('maps logical fields through server template configuration', () => {
     thing3: { value: '广州活动中心' },
   })
   assert.equal(request.page.startsWith('packages/'), true)
+
+  const checkInRequest = buildWechatRequest(templates.CHECKIN_RESULT, {
+    payload_json: JSON.stringify({
+      fields: { title: '城市活动', checkedAt: '2026-08-25 10:00', status: '签到成功' },
+    }),
+    target_route: '/packages/member/mip-events/detail/index?eventId=20000000-0000-4000-8000-000000000001',
+  }, 'openid-private')
+  assert.deepEqual(checkInRequest.data, {
+    thing1: { value: '城市活动' },
+    time2: { value: '2026-08-25 10:00' },
+    phrase3: { value: '签到成功' },
+  })
 })
 
-test('rejects template mappings outside the EVENT_REMINDER logical field contract', () => {
+test('rejects template mappings outside the named logical field contracts', () => {
   assert.throws(() => parseTemplateConfig(JSON.stringify({
     EVENT_REMINDER: {
       templateId: 'template-id',
       fields: { title: 'thing1', attackerField: 'thing2' },
+    },
+  })), /NOTIFICATION_TEMPLATE_CONFIG_INVALID/)
+  assert.throws(() => parseTemplateConfig(JSON.stringify({
+    HEART_RECEIVED: {
+      templateId: 'template-id',
+      fields: { checkedAt: 'time1' },
     },
   })), /NOTIFICATION_TEMPLATE_CONFIG_INVALID/)
 })

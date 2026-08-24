@@ -21,6 +21,7 @@ const {
   setReferral,
 } = require('./domain/opportunities')
 const {
+  archiveCooperationCard,
   getCooperationCard,
   listCooperationCards,
   listMyCooperationCards,
@@ -28,6 +29,7 @@ const {
   unpublishCooperationCard,
 } = require('./domain/cooperation')
 const {
+  archiveSuperCase,
   getSuperCase,
   listMySuperCases,
   listSuperCases,
@@ -38,6 +40,11 @@ const {
   listReceivedInteractions,
   markReceivedInteractionRead,
 } = require('./domain/received-interactions')
+const { recordProfileVisit } = require('./domain/profile-visits')
+const {
+  getPublicProfileAggregate,
+  listPeople,
+} = require('./domain/discovery')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
@@ -51,6 +58,8 @@ const publicActions = new Set([
   'getCooperationCard',
   'listSuperCases',
   'getSuperCase',
+  'listPeople',
+  'getPublicProfileAggregate',
 ])
 
 const messages = {
@@ -98,6 +107,9 @@ async function dispatch(database, caller, event) {
     case 'endOpportunity': return endOpportunity(database, caller, event)
     case 'setReferral': return setReferral(database, caller, event)
     case 'setProfileInterest': return setProfileInterest(database, caller, event)
+    case 'listPeople': return listPeople(database, caller, event.filter)
+    case 'getPublicProfileAggregate': return getPublicProfileAggregate(database, caller, event)
+    case 'recordProfileVisit': return recordProfileVisit(database, caller, event)
     case 'listReceivedInteractions': return listReceivedInteractions(database, caller, event)
     case 'markReceivedInteractionRead': return markReceivedInteractionRead(database, caller, event)
     case 'listCooperationCards': return listCooperationCards(database, caller, event.filter)
@@ -105,11 +117,13 @@ async function dispatch(database, caller, event) {
     case 'getCooperationCard': return getCooperationCard(database, caller, event.id)
     case 'saveCooperationCard': return saveCooperationCard(database, contentSafety, caller, event)
     case 'unpublishCooperationCard': return unpublishCooperationCard(database, caller, event)
+    case 'archiveCooperationCard': return archiveCooperationCard(database, caller, event)
     case 'listSuperCases': return listSuperCases(database, caller, event)
     case 'listMySuperCases': return listMySuperCases(database, caller, event)
     case 'getSuperCase': return getSuperCase(database, caller, event.id)
     case 'saveSuperCase': return saveSuperCase(database, contentSafety, caller, event)
     case 'unpublishSuperCase': return unpublishSuperCase(database, caller, event)
+    case 'archiveSuperCase': return archiveSuperCase(database, caller, event)
     default: throw new Error('NOT_FOUND')
   }
 }

@@ -3,7 +3,11 @@
 const { createHash, createHmac, randomUUID } = require('node:crypto')
 const { PURPOSE_POLICIES, decodeAndSanitizeImage, openApiChecker } = require('./image')
 
-const CLEANABLE_PURPOSES = Object.freeze([...Object.keys(PURPOSE_POLICIES), 'CHECKIN_POSTER'])
+const CLEANABLE_PURPOSES = Object.freeze([
+  ...Object.keys(PURPOSE_POLICIES),
+  'CHECKIN_POSTER',
+  'EVENT_INVITATION_CODE',
+])
 
 function deploymentStage(value) {
   const normalized = String(value || '').trim().toLowerCase()
@@ -280,6 +284,11 @@ function createMediaService({ database, cloud, checker, env = process.env, id = 
              WHERE event.app_id = asset.app_id AND event.cover_asset_id = asset.id
            )
            AND NOT EXISTS (
+             SELECT 1 FROM mip_event_content_media content_media
+             WHERE content_media.app_id = asset.app_id AND content_media.media_asset_id = asset.id
+               AND content_media.status = 'ACTIVE'
+           )
+           AND NOT EXISTS (
              SELECT 1 FROM mip_event_album_photos photo
              WHERE photo.app_id = asset.app_id AND photo.media_asset_id = asset.id
                AND photo.status IN ('PENDING', 'PUBLISHED')
@@ -295,6 +304,11 @@ function createMediaService({ database, cloud, checker, env = process.env, id = 
            AND NOT EXISTS (
              SELECT 1 FROM mip_super_case_media media
              WHERE media.app_id = asset.app_id AND media.media_asset_id = asset.id
+           )
+           AND NOT EXISTS (
+             SELECT 1 FROM mip_event_invitation_links invitation
+             WHERE invitation.app_id = asset.app_id AND invitation.code_asset_id = asset.id
+               AND invitation.status = 'ACTIVE' AND invitation.expires_at > UTC_TIMESTAMP(3)
            )
            AND (
              asset.purpose <> 'CHECKIN_POSTER'

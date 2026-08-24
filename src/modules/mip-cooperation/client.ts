@@ -48,6 +48,17 @@ export const cooperationModule = {
     )
   },
 
+  archive(
+    id: CooperationCardId,
+    expectedVersion: number,
+    idempotencyKey = createMutationKey('cooperation-archive'),
+  ) {
+    return callOpportunityApi<{ id: CooperationCardId, status: 'ARCHIVED', version: number }>(
+      'archiveCooperationCard',
+      { id, expectedVersion, idempotencyKey },
+    )
+  },
+
   setOwnerInterest(
     id: CooperationCardId,
     active: boolean,

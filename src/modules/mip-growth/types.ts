@@ -46,6 +46,8 @@ export interface GrowthEntry {
 export interface GrowthSnapshot {
   account: GrowthAccount
   currentLevel: GrowthLevel
+  levels: GrowthLevel[]
+  earningRules: GrowthRule[]
   nextLevel?: GrowthLevel
   experienceToNextLevel?: number
   levelProgressPercent: number

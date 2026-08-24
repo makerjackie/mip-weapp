@@ -1,0 +1,30 @@
+<view id="mip-heart-history-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view class="grid grid-cols-2 border-b border-line text-center text-[length:24rpx]">
+    <view wx:if="{{kind === 'SENT'}}" class="min-h-[84rpx] border-b-[4rpx] border-brand py-4 text-brand" data-kind="SENT" bind:tap="changeKind">我点过的人</view>
+    <view wx:else class="min-h-[84rpx] border-b-[4rpx] border-transparent py-4 text-muted" data-kind="SENT" bind:tap="changeKind">我点过的人</view>
+    <view wx:if="{{kind === 'RECEIVED'}}" class="min-h-[84rpx] border-b-[4rpx] border-brand py-4 text-brand" data-kind="RECEIVED" bind:tap="changeKind">对我心动的人</view>
+    <view wx:else class="min-h-[84rpx] border-b-[4rpx] border-transparent py-4 text-muted" data-kind="RECEIVED" bind:tap="changeKind">对我心动的人</view>
+  </view>
+
+  <view wx:if="{{state === 'loading'}}" class="mt-4 flex flex-col gap-3">
+    <view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+    <view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  </view>
+  <view wx:elif="{{state === 'access'}}"><app-empty-state title="需要完成身份信息" description="完成身份信息后可以查看心动记录。" action-text="继续" bind:action="openAccess" /></view>
+  <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载心动记录" description="请检查网络后重试。" action-text="重新加载" bind:action="retry" /></view>
+  <app-empty-state wx:elif="{{state === 'empty'}}" title="{{kind === 'SENT' ? '暂无我点过的人' : '暂无对我心动的人'}}" description="活动签到后的心动记录会显示在这里。" />
+  <view wx:else class="mt-4 flex flex-col gap-3">
+    <view wx:for="{{items}}" wx:key="viewKey" class="rounded-[16rpx] bg-panel px-4 py-4 active:bg-panel-raised" data-event-id="{{item.event.id}}" bind:tap="openEvent">
+      <view class="flex items-center gap-3" data-profile-ref="{{item.person.profileRef}}" catch:tap="openProfile">
+        <image wx:if="{{item.person.avatarUrl}}" class="h-[76rpx] w-[76rpx] shrink-0 rounded-full bg-brand-soft" mode="aspectFill" src="{{item.person.avatarUrl}}" />
+        <view wx:else class="flex h-[76rpx] w-[76rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft text-[length:26rpx] font-semibold text-brand">{{item.personInitial}}</view>
+        <view class="min-w-0 flex-1"><view class="truncate text-[length:27rpx] font-semibold">{{item.person.nickname}}</view><view wx:if="{{item.person.headline}}" class="mt-1 line-clamp-1 text-[length:21rpx] text-muted">{{item.person.headline}}</view></view>
+        <t-icon name="chevron-right" size="30rpx" color="var(--color-muted)" />
+      </view>
+      <view class="mt-4 border-t border-line pt-3"><view class="line-clamp-1 text-[length:23rpx]">{{item.event.title}}</view><view class="mt-2 flex items-center justify-between gap-3 text-[length:20rpx] text-muted"><text>{{item.eventTimeText}}</text><text>{{item.updatedText}}</text></view></view>
+    </view>
+    <view wx:if="{{nextCursor}}" class="mt-1"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
+  </view>
+  <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
+  <app-page-exit />
+</view>

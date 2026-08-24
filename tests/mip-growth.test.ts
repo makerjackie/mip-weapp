@@ -66,10 +66,26 @@ describe('MIP growth', () => {
   it('projects progress without letting the page derive a different level', () => {
     expect(buildGrowthSnapshot(account, levels)).toMatchObject({
       currentLevel: { levelKey: 'starter' },
+      levels: [
+        { levelKey: 'starter' },
+        { levelKey: 'regular' },
+      ],
+      earningRules: [],
       nextLevel: { levelKey: 'regular' },
       experienceToNextLevel: 10,
       levelProgressPercent: 90,
     })
+  })
+
+  it('renders the complete server-provided level and active reward facts', () => {
+    const page = fs.readFileSync(path.join(process.cwd(), 'src/packages/member/mip-growth/index.wxml'), 'utf8')
+    const controller = fs.readFileSync(path.join(process.cwd(), 'src/packages/member/mip-growth/index.ts'), 'utf8')
+    expect(page).toContain('等级与权益')
+    expect(page).toContain('wx:for="{{levels}}"')
+    expect(page).toContain('成长规则')
+    expect(page).toContain('wx:for="{{earningRules}}"')
+    expect(controller).toContain('snapshot.levels.map')
+    expect(controller).toContain('snapshot.earningRules.map')
   })
 
   it('keeps the admin editor limited to server-approved reward values', () => {

@@ -4,7 +4,7 @@ import { mipCommerceModule } from '../../../../modules/mip-commerce/client'
 import { MipEventsError } from '../../../../modules/mip-events'
 import { mipEventsModule } from '../../../../modules/mip-events/client'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
-import { mipIdentityModule } from '../../../../modules/mip-identity/client'
+import { mipBranchesModule, mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
 
 interface RegistrationFieldView extends RegistrationField {
@@ -12,6 +12,8 @@ interface RegistrationFieldView extends RegistrationField {
   checked: boolean
   selectedIndex: number
   selectedLabel: string
+  currentLength: number
+  error: string
 }
 
 function initialField(field: RegistrationField, answer?: string | boolean): RegistrationFieldView {
@@ -28,6 +30,8 @@ function initialField(field: RegistrationField, answer?: string | boolean): Regi
     checked: field.type === 'BOOLEAN' && answer === true,
     selectedIndex,
     selectedLabel: selectedIndex >= 0 ? field.options?.[selectedIndex] || '请选择' : '请选择',
+    currentLength: value.length,
+    error: '',
   }
 }
 
@@ -44,6 +48,14 @@ function answersFromFields(fields: RegistrationFieldView[]) {
 
 function requestKey(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) {
+    return ''
+  }
+  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
 function isAccessRequired(error: unknown) {
@@ -67,8 +79,13 @@ Page({
     invitationToken: '',
     checkInToken: '',
     canContinueCheckIn: false,
+    profileNickname: '',
+    profilePhoneText: '',
+    profileBranchText: '',
+    cancellationText: '',
   },
   submissionIdempotencyKey: '',
+  pendingAccessResume: false,
 
   onLoad(query: Record<string, string>) {
     this.setData({
@@ -82,7 +99,12 @@ Page({
   onShow() {
     const resume = mipIdentityModule.consumePendingResume()
     if (resume?.action === 'REGISTER_EVENT') {
-      void this.submit()
+      if (this.data.state === 'ready' && this.data.event) {
+        void this.submit()
+      }
+      else {
+        this.pendingAccessResume = true
+      }
     }
   },
 
@@ -124,7 +146,15 @@ Page({
         fields: fieldsFromAnswers(event, editing ? registration?.answers : undefined),
         editing,
         shareProfile: editing ? registration?.shareProfile === true : false,
+        cancellationText: event.cancellationDeadline
+          ? `${formatDateTime(event.cancellationDeadline)} 前可申请取消`
+          : '是否可以取消以活动当前状态为准',
       })
+      if (this.pendingAccessResume) {
+        this.pendingAccessResume = false
+        this.setData({ message: '身份已确认，请核对报名信息后提交。' })
+      }
+      void this.loadProfileSummary()
     }
     catch (error) {
       this.setData({ state: 'error', message: error instanceof Error ? error.message : '活动加载失败' })
@@ -134,7 +164,7 @@ Page({
   onTextInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const index = Number(event.currentTarget.dataset.index)
     const fields = this.data.fields.map((field, fieldIndex) => fieldIndex === index
-      ? { ...field, value: event.detail.value }
+      ? { ...field, value: event.detail.value, currentLength: event.detail.value.length, error: '' }
       : field)
     this.submissionIdempotencyKey = ''
     this.setData({ fields, message: '' })
@@ -149,6 +179,7 @@ Page({
           selectedIndex,
           selectedLabel: field.options?.[selectedIndex] || '请选择',
           value: field.options?.[selectedIndex] || '',
+          error: '',
         }
       : field)
     this.submissionIdempotencyKey = ''
@@ -158,7 +189,7 @@ Page({
   onBooleanChange(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
     const index = Number(event.currentTarget.dataset.index)
     const fields = this.data.fields.map((field, fieldIndex) => fieldIndex === index
-      ? { ...field, checked: event.detail.value }
+      ? { ...field, checked: event.detail.value, error: '' }
       : field)
     this.submissionIdempotencyKey = ''
     this.setData({ fields, message: '' })
@@ -170,14 +201,23 @@ Page({
   },
 
   validate() {
-    const missing = this.data.fields.find((field) => {
-      if (!field.required) {
-        return false
+    let firstInvalidLabel = ''
+    const fields = this.data.fields.map((field) => {
+      const missing = field.required && (field.type === 'BOOLEAN' ? !field.checked : !field.value.trim())
+      const tooLong = Boolean(field.maxLength && field.value.length > field.maxLength)
+      const error = missing
+        ? `${field.label}为必填项`
+        : tooLong
+          ? `${field.label}不能超过 ${field.maxLength} 个字`
+          : ''
+      if (error && !firstInvalidLabel) {
+        firstInvalidLabel = field.label
       }
-      return field.type === 'BOOLEAN' ? !field.checked : !field.value.trim()
+      return { ...field, error }
     })
-    if (missing) {
-      this.setData({ message: `请填写${missing.label}` })
+    this.setData({ fields })
+    if (firstInvalidLabel) {
+      this.setData({ message: `请检查${firstInvalidLabel}` })
       return false
     }
     return true
@@ -226,6 +266,7 @@ Page({
         invitationToken: this.data.invitationToken || undefined,
         idempotencyKey: this.submissionIdempotencyKey,
       })
+      void this.refreshInvitationAttribution()
       this.submissionIdempotencyKey = ''
       if (result.kind === 'PAYMENT_REQUIRED') {
         let resultTitle = '报名订单已创建'
@@ -283,7 +324,11 @@ Page({
         try {
           const session = await mipIdentityModule.beginProtectedAction({
             action: 'REGISTER_EVENT',
-            source: { navigation: 'navigateBack' },
+            source: {
+              navigation: 'navigateBack',
+              route: '/packages/member/mip-events/registration/index',
+              query: { eventId: this.data.eventId },
+            },
           })
           if (session.decision.ready) {
             this.setData({ message: '身份状态已更新，请重新提交。' })
@@ -303,6 +348,51 @@ Page({
     finally {
       this.setData({ busy: false })
     }
+  },
+
+  async loadProfileSummary() {
+    try {
+      const snapshot = mipIdentityModule.peekSnapshot() || await mipIdentityModule.loadSnapshot()
+      let profileBranchText = snapshot.primaryBranchId ? '主分会已设置' : '主分会未设置'
+      if (snapshot.primaryBranchId) {
+        const branchSnapshot = mipBranchesModule.peek()
+          || await mipBranchesModule.load(snapshot.primaryBranchId, snapshot.userVersion)
+        const branch = branchSnapshot.branches.find(item => item.id === snapshot.primaryBranchId)
+        profileBranchText = branch ? `${branch.name} · ${branch.cityName}` : profileBranchText
+      }
+      this.setData({
+        profileNickname: snapshot.profile.nickname || '昵称未设置',
+        profilePhoneText: snapshot.phoneBound ? '手机号已绑定' : '手机号未绑定',
+        profileBranchText,
+      })
+    }
+    catch {
+      this.setData({
+        profileNickname: '资料尚未完成',
+        profilePhoneText: '手机号状态待确认',
+        profileBranchText: '主分会状态待确认',
+      })
+    }
+  },
+
+  async refreshInvitationAttribution() {
+    try {
+      const event = await mipEventsModule.getEvent(this.data.eventId, { force: true })
+      this.setData({ event })
+    }
+    catch {}
+  },
+
+  openProfile() {
+    caseNavigateTo({ url: '/packages/member/mip-profile/index' })
+  },
+
+  openAgreement() {
+    caseNavigateTo({ url: '/packages/member/user-agreement/index' })
+  },
+
+  openPrivacy() {
+    caseNavigateTo({ url: '/packages/member/privacy/index' })
   },
 
   async recoverUpdateConflict(

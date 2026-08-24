@@ -77,6 +77,15 @@ function parseCheckInToken(value) {
   throw new DomainError('VALIDATION_FAILED', '活动码无效')
 }
 
+function parseInvitationScene(value) {
+  const token = typeof value === 'string' ? value.trim() : ''
+  const parsed = /^i1\.([A-Za-z0-9_-]{11})\.([A-Za-z0-9_-]{11})$/.exec(token)
+  if (!parsed) {
+    throw new DomainError('VALIDATION_FAILED', '活动邀请无效')
+  }
+  return { reference: parsed[1], secret: parsed[2], token }
+}
+
 function checkInCredentialQuery(parsed, { lock = false } = {}) {
   return {
     sql: `SELECT * FROM mip_event_checkin_credentials
@@ -101,6 +110,33 @@ function decodeCursor(value) {
   }
   catch {}
   throw new DomainError('VALIDATION_FAILED', '分页参数无效')
+}
+
+const businessDayMilliseconds = 24 * 60 * 60 * 1000
+const chinaOffsetMilliseconds = 8 * 60 * 60 * 1000
+
+function businessDateStart(value, label) {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new DomainError('VALIDATION_FAILED', label)
+  }
+  const [year, month, day] = value.split('-').map(Number)
+  const utcDay = new Date(Date.UTC(year, month - 1, day))
+  if (utcDay.getUTCFullYear() !== year
+    || utcDay.getUTCMonth() !== month - 1
+    || utcDay.getUTCDate() !== day) {
+    throw new DomainError('VALIDATION_FAILED', label)
+  }
+  return new Date(utcDay.getTime() - chinaOffsetMilliseconds)
+}
+
+function currentBusinessDateStart(now) {
+  const local = new Date(now.getTime() + chinaOffsetMilliseconds)
+  const value = [
+    local.getUTCFullYear(),
+    String(local.getUTCMonth() + 1).padStart(2, '0'),
+    String(local.getUTCDate()).padStart(2, '0'),
+  ].join('-')
+  return businessDateStart(value, '当前日期无效')
 }
 
 function encodeAlbumCursor(row) {
@@ -135,6 +171,28 @@ function decodeParticipantCursor(value) {
     const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'))
     if (typeof parsed.registeredAt === 'string'
       && Number.isFinite(Date.parse(parsed.registeredAt))
+      && typeof parsed.id === 'string'
+      && /^[0-9a-f-]{36}$/i.test(parsed.id)) {
+      return parsed
+    }
+  }
+  catch {}
+  throw new DomainError('VALIDATION_FAILED', '分页参数无效')
+}
+
+function encodeHeartCursor(row) {
+  return Buffer.from(JSON.stringify({
+    updatedAt: iso(row.updated_at),
+    id: row.id,
+  })).toString('base64url')
+}
+
+function decodeHeartCursor(value) {
+  if (!value) return null
+  try {
+    const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'))
+    if (typeof parsed.updatedAt === 'string'
+      && Number.isFinite(Date.parse(parsed.updatedAt))
       && typeof parsed.id === 'string'
       && /^[0-9a-f-]{36}$/i.test(parsed.id)) {
       return parsed
@@ -220,6 +278,21 @@ function publicEventRow(row, previews = []) {
     participantPreview: previews,
     registrationStatus: row.registration_status || undefined,
     albumEnabled: Number(row.album_enabled) === 1,
+  }
+}
+
+function publicInvitationAttribution(row) {
+  if (!row.registration_status || !row.invitation_source_type) {
+    return undefined
+  }
+  if (row.invitation_source_type !== 'USER') {
+    return { sourceType: 'PLATFORM', displayName: 'MIP 平台' }
+  }
+  const allowed = publicVisibility(row.inviter_visibility_json)
+  return {
+    sourceType: 'USER',
+    displayName: allowed.nickname && row.inviter_nickname ? row.inviter_nickname : 'MIP 用户',
+    ...(allowed.avatar && row.inviter_avatar_file_id ? { avatarUrl: row.inviter_avatar_file_id } : {}),
   }
 }
 
@@ -484,7 +557,7 @@ async function listEvents(db, {
   tokenSecret,
 }) {
   const view = ['UPCOMING', 'PAST', 'MINE'].includes(query.view) ? query.view : 'UPCOMING'
-  const dateFilter = ['RECENT', 'ENDED', 'TODAY'].includes(query.dateFilter) ? query.dateFilter : 'RECENT'
+  const dateFilter = ['RECENT', 'ENDED', 'TODAY', 'CUSTOM'].includes(query.dateFilter) ? query.dateFilter : 'RECENT'
   if (view === 'MINE' && !userId) {
     throw new DomainError('AUTH_REQUIRED', '请登录后查看我的活动')
   }
@@ -508,9 +581,34 @@ async function listEvents(db, {
     params.push(now)
   }
   if (dateFilter === 'TODAY') {
-    const start = new Date(now)
-    start.setUTCHours(0, 0, 0, 0)
-    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000)
+    const start = currentBusinessDateStart(now)
+    const end = new Date(start.getTime() + businessDayMilliseconds)
+    clauses.push('e.starts_at >= ? AND e.starts_at < ?')
+    params.push(start, end)
+  }
+  const hasDateRange = query.dateFrom !== undefined || query.dateTo !== undefined
+  if (hasDateRange) {
+    const start = query.dateFrom === undefined
+      ? undefined
+      : businessDateStart(query.dateFrom, '开始日期无效')
+    const endStart = query.dateTo === undefined
+      ? undefined
+      : businessDateStart(query.dateTo, '结束日期无效')
+    if (start && endStart && start > endStart) {
+      throw new DomainError('VALIDATION_FAILED', '开始日期不能晚于结束日期')
+    }
+    if (start) {
+      clauses.push('e.starts_at >= ?')
+      params.push(start)
+    }
+    if (endStart) {
+      clauses.push('e.starts_at < ?')
+      params.push(new Date(endStart.getTime() + businessDayMilliseconds))
+    }
+  }
+  else if (dateFilter === 'CUSTOM') {
+    const start = businessDateStart(query.date, '请选择有效日期')
+    const end = new Date(start.getTime() + businessDayMilliseconds)
     clauses.push('e.starts_at >= ? AND e.starts_at < ?')
     params.push(start, end)
   }
@@ -578,12 +676,17 @@ async function getEvent(db, {
   profileRefSecret,
 }) {
   const organizerBlock = mutualBlockFilter(userId, 'e.organizer_user_id', 'e.app_id')
+  const inviterBlock = mutualBlockFilter(userId, 'ia.inviter_user_id', 'ia.app_id')
   const row = await db.one(
     `SELECT e.*, b.name AS branch_name, a.cloud_file_id AS cover_file_id,
        organizer_profile.nickname AS organizer_nickname,
        organizer_profile.headline AS organizer_headline,
        organizer_profile.visibility_json AS organizer_visibility_json,
        organizer_avatar.cloud_file_id AS organizer_avatar_file_id,
+       ia.source_type AS invitation_source_type,
+       inviter_profile.nickname AS inviter_nickname,
+       inviter_profile.visibility_json AS inviter_visibility_json,
+       inviter_avatar.cloud_file_id AS inviter_avatar_file_id,
        r.status AS registration_status,
        CASE WHEN e.status = 'PUBLISHED' AND e.ends_at < ? THEN 'ENDED' ELSE e.status END AS public_status,
        (SELECT COUNT(*) FROM mip_event_registrations rc
@@ -599,10 +702,18 @@ async function getEvent(db, {
        ON organizer_avatar.app_id = organizer_profile.app_id
        AND organizer_avatar.id = organizer_profile.avatar_asset_id AND organizer_avatar.status = 'READY'
      LEFT JOIN mip_event_registrations r ON r.app_id = e.app_id AND r.event_id = e.id AND r.user_id = ?
+     LEFT JOIN mip_event_invitation_attributions ia
+       ON ia.app_id = r.app_id AND ia.registration_id = r.id
+     LEFT JOIN mip_profiles inviter_profile
+       ON inviter_profile.app_id = ia.app_id AND inviter_profile.user_id = ia.inviter_user_id
+       ${inviterBlock.sql ? `AND ${inviterBlock.sql}` : ''}
+     LEFT JOIN mip_media_assets inviter_avatar
+       ON inviter_avatar.app_id = inviter_profile.app_id
+       AND inviter_avatar.id = inviter_profile.avatar_asset_id AND inviter_avatar.status = 'READY'
      WHERE e.app_id = ? AND e.id = ?
        AND (e.status = 'PUBLISHED' OR (e.published_at IS NOT NULL AND e.status IN ('CANCELLED','ENDED')) OR r.id IS NOT NULL)
      LIMIT 1`,
-    [now, ...organizerBlock.params, userId || '', appId, eventId],
+    [now, ...organizerBlock.params, userId || '', ...inviterBlock.params, appId, eventId],
   )
   if (!row) {
     throw new DomainError('NOT_FOUND', '活动不存在或已下架')
@@ -618,7 +729,18 @@ async function getEvent(db, {
      WHERE app_id = ? AND event_id = ? ORDER BY source_version DESC, id DESC LIMIT 20`,
     [appId, eventId],
   )
+  const contentMedia = await db.query(
+    `SELECT asset.cloud_file_id, media.caption
+     FROM mip_event_content_media media
+     INNER JOIN mip_media_assets asset
+       ON asset.app_id = media.app_id AND asset.id = media.media_asset_id
+       AND asset.status = 'READY' AND asset.purpose = 'EVENT_CONTENT'
+     WHERE media.app_id = ? AND media.event_id = ? AND media.status = 'ACTIVE'
+     ORDER BY media.sort_order, media.media_asset_id`,
+    [appId, eventId],
+  )
   const timestamp = now.getTime()
+  const cancellationDeadline = await effectiveCancellationDeadline(db, appId, row)
   const opensAt = row.registration_opens_at ? new Date(row.registration_opens_at).getTime() : Number.NEGATIVE_INFINITY
   const deadline = row.registration_deadline ? new Date(row.registration_deadline).getTime() : new Date(row.starts_at).getTime()
   const activeStatus = activeRegistrationStatuses.has(row.registration_status)
@@ -626,6 +748,10 @@ async function getEvent(db, {
   return {
     ...publicEventRow(row, previews.get(eventId) || []),
     description: row.description,
+    contentMedia: contentMedia.map(item => ({
+      imageUrl: item.cloud_file_id,
+      caption: item.caption || '',
+    })),
     notices: row.notices || undefined,
     address: row.address || undefined,
     latitude: row.latitude === null ? undefined : Number(row.latitude),
@@ -635,7 +761,7 @@ async function getEvent(db, {
     registrationPolicy: row.registration_policy,
     registrationOpensAt: row.registration_opens_at ? iso(row.registration_opens_at) : undefined,
     registrationDeadline: row.registration_deadline ? iso(row.registration_deadline) : undefined,
-    cancellationDeadline: row.cancellation_deadline ? iso(row.cancellation_deadline) : undefined,
+    cancellationDeadline: iso(cancellationDeadline) || undefined,
     priceCents: Number(row.price_cents),
     currency: row.currency,
     formVersion: Number(row.form_version),
@@ -647,12 +773,31 @@ async function getEvent(db, {
     })),
     canRegister: row.status === 'PUBLISHED' && !activeStatus && timestamp >= opensAt && timestamp < deadline,
     canCancel: activeStatus && row.registration_status !== 'ATTENDED'
-      && (!row.cancellation_deadline || timestamp < new Date(row.cancellation_deadline).getTime()),
+      && timestamp < cancellationDeadline.getTime(),
     canCheckIn: ['REGISTERED', 'ATTENDED'].includes(row.registration_status),
     canInteract: row.registration_status === 'ATTENDED',
     albumSubmissionPolicy: row.album_submission_policy,
     organizer: publicOrganizer(row, { appId, profileRefSecret }),
+    invitationAttribution: publicInvitationAttribution(row),
   }
+}
+
+function eventCancellationHours(value) {
+  const policy = parseJson(value, {})
+  const hours = Number(policy.cancellationHoursBeforeStart)
+  return Number.isInteger(hours) && hours >= 0 && hours <= 720 ? hours : 24
+}
+
+async function effectiveCancellationDeadline(adapter, appId, event) {
+  if (event.cancellation_deadline) return new Date(event.cancellation_deadline)
+  const setting = await adapter.one(
+    `SELECT value_json FROM mip_app_settings
+     WHERE app_id = ? AND setting_key = 'EVENT_REGISTRATION_POLICY'`,
+    [appId],
+  )
+  const startsAt = new Date(event.starts_at)
+  if (!Number.isFinite(startsAt.getTime())) throw new DomainError('INVALID_STATE', '活动时间无效')
+  return new Date(startsAt.getTime() - eventCancellationHours(setting?.value_json) * 60 * 60 * 1000)
 }
 
 function publicOrganizer(row, { appId, profileRefSecret }) {
@@ -1615,7 +1760,7 @@ async function cancelRegistration(db, {
   return db.transaction(async (tx) => {
     await requireActiveUserForMutation(tx, appId, userId)
     const event = await tx.one(
-      `SELECT id, access_type, cancellation_deadline FROM mip_events
+      `SELECT id, access_type, starts_at, cancellation_deadline FROM mip_events
        WHERE app_id = ? AND id = ? FOR UPDATE`,
       [appId, eventId],
     )
@@ -1630,11 +1775,12 @@ async function cancelRegistration(db, {
     if (!event || !registration) {
       throw new DomainError('NOT_FOUND', '报名记录不存在')
     }
+    const cancellationDeadline = await effectiveCancellationDeadline(tx, appId, event)
     if (registration.status === 'CANCELLED') {
       return { registrationId: registration.id, status: 'CANCELLED', refundRequired: false, paymentAvailable }
     }
     assertCanCancel(registration.status)
-    if (event.cancellation_deadline && now.getTime() >= new Date(event.cancellation_deadline).getTime()) {
+    if (now.getTime() >= cancellationDeadline.getTime()) {
       throw new DomainError('CONFLICT', '已超过可取消时间')
     }
     if (expectedVersion !== undefined && Number(expectedVersion) !== Number(registration.version)) {
@@ -1860,6 +2006,103 @@ async function resolveCheckInScene(db, { appId, scene, now = new Date() }) {
   }
 }
 
+async function issueInvitationLink(db, { appId, eventId, userId, now = new Date() }) {
+  return db.transaction(async (tx) => {
+    await requireActiveUserForMutation(tx, appId, userId)
+    const event = await tx.one(
+      `SELECT id FROM mip_events WHERE app_id = ? AND id = ? AND status = 'PUBLISHED' FOR UPDATE`,
+      [appId, eventId],
+    )
+    if (!event) {
+      throw new DomainError('NOT_FOUND', '活动不存在或已下架')
+    }
+    const invitationId = randomUUID()
+    const sceneKey = randomBytes(8).toString('base64url')
+    const secret = randomBytes(8).toString('base64url')
+    const validUntil = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
+    await tx.query(
+      `INSERT INTO mip_event_invitation_links (
+        id, app_id, event_id, inviter_user_id, scene_key, token_hash, status, expires_at
+      ) VALUES (?, ?, ?, ?, ?, ?, 'ACTIVE', ?)`,
+      [invitationId, appId, eventId, userId, sceneKey, sha256(secret), validUntil],
+    )
+    await writeAudit(tx, {
+      appId,
+      actorUserId: userId,
+      scopeId: eventId,
+      action: 'EVENT_INVITATION_CODE_CREATED',
+      resourceType: 'EVENT_INVITATION_LINK',
+      resourceId: invitationId,
+      metadata: { validUntil: iso(validUntil) },
+    })
+    return {
+      invitationId,
+      eventId,
+      scene: `i1.${sceneKey}.${secret}`,
+      validUntil: iso(validUntil),
+    }
+  })
+}
+
+async function attachInvitationCodeAsset(db, { appId, invitationId, userId, assetId, now = new Date() }) {
+  return db.transaction(async (tx) => {
+    const invitation = await tx.one(
+      `SELECT id, code_asset_id, status, expires_at FROM mip_event_invitation_links
+       WHERE app_id = ? AND id = ? AND inviter_user_id = ? FOR UPDATE`,
+      [appId, invitationId, userId],
+    )
+    if (!invitation || invitation.status !== 'ACTIVE' || new Date(invitation.expires_at) <= now) {
+      throw new DomainError('CONFLICT', '活动分享码已失效，请重新生成', true)
+    }
+    if (invitation.code_asset_id && invitation.code_asset_id !== assetId) {
+      throw new DomainError('CONFLICT', '活动分享码已更新，请重新生成', true)
+    }
+    if (!invitation.code_asset_id) {
+      const result = await tx.query(
+        `UPDATE mip_event_invitation_links SET code_asset_id = ?
+         WHERE app_id = ? AND id = ? AND inviter_user_id = ? AND code_asset_id IS NULL
+           AND status = 'ACTIVE' AND expires_at > ?`,
+        [assetId, appId, invitationId, userId, now],
+      )
+      if (Number(result?.affectedRows) !== 1) {
+        throw new DomainError('CONFLICT', '活动分享码已变化，请重新生成', true)
+      }
+    }
+    return { invitationId, assetId }
+  })
+}
+
+async function resolveInvitationScene(db, {
+  appId,
+  scene,
+  tokenSecret,
+  now = new Date(),
+}) {
+  const parsed = parseInvitationScene(scene)
+  const invitation = await db.one(
+    `SELECT link.event_id, link.inviter_user_id, link.expires_at
+     FROM mip_event_invitation_links link
+     JOIN mip_events event ON event.app_id = link.app_id AND event.id = link.event_id
+     WHERE link.app_id = ? AND link.scene_key = ? AND link.token_hash = ?
+       AND link.status = 'ACTIVE' AND link.expires_at > ? AND event.status = 'PUBLISHED'`,
+    [appId, parsed.reference, sha256(parsed.secret), now],
+  )
+  if (!invitation) {
+    throw new DomainError('VALIDATION_FAILED', '活动邀请无效或已失效')
+  }
+  const validUntil = iso(invitation.expires_at)
+  return {
+    eventId: invitation.event_id,
+    invitationToken: createSignedToken({
+      type: 'event-invitation',
+      eventId: invitation.event_id,
+      inviterUserId: invitation.inviter_user_id,
+      expiresAt: validUntil,
+    }, tokenSecret),
+    validUntil,
+  }
+}
+
 function heartParticipant(row, { eventId, tokenSecret }) {
   return {
     participantRef: createSignedToken({
@@ -1957,6 +2200,69 @@ async function getHeart(db, { appId, eventId, userId, tokenSecret }) {
     received: received.map(row => heartParticipant(row, { eventId, tokenSecret })),
     version: Number(heart?.version || 0),
     updatedAt: heart?.updated_at ? iso(heart.updated_at) : undefined,
+  }
+}
+
+async function listHeartHistory(db, {
+  appId,
+  userId,
+  kind = 'SENT',
+  cursor,
+  limit = 20,
+  profileRefSecret,
+}) {
+  if (!['SENT', 'RECEIVED'].includes(kind)) {
+    throw new DomainError('VALIDATION_FAILED', '心动记录类型无效')
+  }
+  const pageLimit = limitOf(limit)
+  const decoded = decodeHeartCursor(cursor)
+  const personSql = kind === 'SENT' ? 'h.target_user_id' : 'h.voter_user_id'
+  const ownerSql = kind === 'SENT' ? 'h.voter_user_id' : 'h.target_user_id'
+  const blockFilter = mutualBlockFilter(userId, personSql, 'h.app_id')
+  const cursorClause = decoded
+    ? 'AND (h.updated_at < ? OR (h.updated_at = ? AND h.id < ?))'
+    : ''
+  const params = [appId, userId, ...blockFilter.params]
+  if (decoded) {
+    params.push(decoded.updatedAt, decoded.updatedAt, decoded.id)
+  }
+  params.push(pageLimit + 1)
+  const rows = await db.query(
+    `SELECT h.id, h.updated_at, e.id AS event_id, e.title AS event_title,
+       e.starts_at, e.ends_at, p.user_id AS person_user_id, p.nickname, p.headline,
+       a.cloud_file_id AS avatar_file_id
+     FROM mip_event_hearts h
+     JOIN mip_events e ON e.app_id = h.app_id AND e.id = h.event_id
+     JOIN mip_profiles p ON p.app_id = h.app_id AND p.user_id = ${personSql}
+     LEFT JOIN mip_media_assets a
+       ON a.app_id = p.app_id AND a.id = p.avatar_asset_id AND a.status = 'READY'
+     WHERE h.app_id = ? AND ${ownerSql} = ? AND h.status = 'ACTIVE'
+       AND ${blockFilter.sql} ${cursorClause}
+     ORDER BY h.updated_at DESC, h.id DESC LIMIT ?`,
+    params,
+  )
+  const hasMore = rows.length > pageLimit
+  const pageRows = rows.slice(0, pageLimit)
+  return {
+    kind,
+    items: pageRows.map(row => ({
+      event: {
+        id: row.event_id,
+        title: row.event_title,
+        startsAt: iso(row.starts_at),
+        endsAt: iso(row.ends_at),
+      },
+      person: {
+        profileRef: createProfileRef({ appId, userId: row.person_user_id }, profileRefSecret),
+        nickname: row.nickname || 'MIP 用户',
+        avatarUrl: row.avatar_file_id || undefined,
+        headline: row.headline || undefined,
+      },
+      updatedAt: iso(row.updated_at),
+    })),
+    nextCursor: hasMore && pageRows.length
+      ? encodeHeartCursor(pageRows[pageRows.length - 1])
+      : undefined,
   }
 }
 
@@ -2666,25 +2972,32 @@ async function adminListFeedback(db, { appId, userId, eventId, cursor, limit = 3
 module.exports = {
   adminIssueCheckInCredential,
   adminListFeedback,
+  attachInvitationCodeAsset,
   cancelRegistration,
   canEditRegistration,
   checkIn,
   createInvitation,
   createRegistration,
   getEvent,
+  effectiveCancellationDeadline,
+  eventCancellationHours,
   getFeedback,
   getHeart,
   getMyRegistration,
   listEventAlbum,
   listEvents,
   listHeartCandidates,
+  listHeartHistory,
   listMyEventAlbumSubmissions,
   listMyRegistrations,
   listPublicParticipants,
   parseCheckInToken,
+  parseInvitationScene,
   resolveCheckInScene,
+  resolveInvitationScene,
   saveFeedback,
   setHeart,
+  issueInvitationLink,
   submitEventAlbumPhoto,
   updateRegistration,
   withdrawEventAlbumPhoto,

@@ -9,6 +9,7 @@ export function createMipMessagingModule(
   subscriptionRequester: WechatSubscriptionRequester,
 ) {
   let firstPage: Awaited<ReturnType<MipMessagingGateway['listInbox']>> | undefined
+  let firstPageLoadedAt = 0
 
   return {
     peekInbox() {
@@ -22,8 +23,22 @@ export function createMipMessagingModule(
       const result = await gateway.listInbox(cursor, Math.min(30, Math.max(1, options.limit || 20)))
       if (!cursor) {
         firstPage = result
+        firstPageLoadedAt = Date.now()
       }
       return result
+    },
+
+    peekUnreadCount() {
+      return firstPage?.unreadCount
+    },
+
+    async refreshUnreadCount(options: { force?: boolean, maxAgeMs?: number } = {}) {
+      const maxAgeMs = Math.max(0, options.maxAgeMs ?? 30_000)
+      if (!options.force && firstPage && Date.now() - firstPageLoadedAt < maxAgeMs) {
+        return firstPage.unreadCount
+      }
+      const page = await this.listInbox(undefined, { force: true, limit: 1 })
+      return page.unreadCount
     },
 
     async markRead(messageId: InboxMessageId) {
@@ -49,6 +64,7 @@ export function createMipMessagingModule(
 
     invalidate() {
       firstPage = undefined
+      firstPageLoadedAt = 0
     },
   }
 }

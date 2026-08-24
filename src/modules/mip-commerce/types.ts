@@ -42,6 +42,17 @@ export interface MembershipInvitation {
   expiresAt: string
 }
 
+export interface MembershipInvitationCode {
+  codeUrl: string
+  expiresAt: string
+}
+
+export interface MembershipInvitationAttribution {
+  sourceType: 'PLATFORM' | 'USER'
+  displayName: string
+  avatarUrl?: string
+}
+
 export interface MembershipCheckoutFact {
   orderType: 'MEMBERSHIP'
   planId: MembershipPlanId
@@ -55,6 +66,7 @@ export interface MembershipCheckoutFact {
     priceCents: number
     currency: 'CNY'
     catalogStage: CatalogStage
+    benefits: string[]
     version: number
   }
 }
@@ -86,6 +98,35 @@ export interface MembershipEntitlement {
   version: number
 }
 
+export interface MembershipBenefitItem {
+  key: string
+  label: string
+  status: 'ACTIVE'
+}
+
+export type MembershipBenefitsSnapshot
+  = | {
+    kind: 'GUEST'
+    status: 'NONE'
+    benefits: []
+  }
+  | {
+    kind: 'PLAYER'
+    status: 'ACTIVE'
+    entitlementId: EntitlementId
+    plan: {
+      id: MembershipPlanId
+      name: string
+      description?: string
+    }
+    startsAt: string
+    endsAt: string
+    membershipEndsAt: string
+    benefits: MembershipBenefitItem[]
+    invitationAttribution: MembershipInvitationAttribution
+    version: number
+  }
+
 export interface RefundIntent {
   orderId: OrderId
   idempotencyKey: string
@@ -107,7 +148,10 @@ export interface WechatPaymentParameters {
 
 export interface CommerceGateway {
   listPlans: () => Promise<MembershipPlan[]>
+  getMembershipBenefits: () => Promise<MembershipBenefitsSnapshot>
   createMembershipInvitation: () => Promise<MembershipInvitation>
+  createMembershipInvitationCode: () => Promise<MembershipInvitationCode>
+  resolveMembershipInvitationScene: (scene: string) => Promise<MembershipInvitation>
   createCheckout: (intent: CheckoutIntent) => Promise<CommerceOrder>
   createPayment: (orderId: OrderId) => Promise<WechatPaymentParameters>
   getOrder: (orderId: OrderId) => Promise<CommerceOrder>

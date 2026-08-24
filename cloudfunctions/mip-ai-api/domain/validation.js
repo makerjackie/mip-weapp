@@ -48,6 +48,35 @@ function normalizeVoiceUploadIntent(event) {
   }
 }
 
+function normalizeRefinementIntent(event) {
+  if (!isUuid(event.draftId)
+    || !Number.isInteger(Number(event.expectedVersion))
+    || Number(event.expectedVersion) < 1) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  const supplementalText = typeof event.supplementalText === 'string'
+    ? event.supplementalText.trim()
+    : ''
+  if (!supplementalText || supplementalText.length > 4000) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  return {
+    draftId: event.draftId,
+    expectedVersion: Number(event.expectedVersion),
+    supplementalText,
+  }
+}
+
+function combineDraftTranscript(currentValue, supplementalText) {
+  const current = typeof currentValue === 'string' ? currentValue.trim() : ''
+  const supplemental = typeof supplementalText === 'string' ? supplementalText.trim() : ''
+  const combined = [current, supplemental].filter(Boolean).join('\n\n')
+  if (!combined || combined.length > 20_000) {
+    throw new Error('AI_DRAFT_CONTENT_INVALID')
+  }
+  return combined
+}
+
 function isSupportedValue(value) {
   if (typeof value === 'string') return value.trim().length <= 4000
   if (typeof value === 'number') return Number.isFinite(value)
@@ -65,8 +94,10 @@ function isUuid(value) {
 }
 
 module.exports = {
+  combineDraftTranscript,
   isUuid,
   normalizePurpose,
+  normalizeRefinementIntent,
   normalizeStructuredDraft,
   normalizeTextIntent,
   normalizeVoiceIntent,

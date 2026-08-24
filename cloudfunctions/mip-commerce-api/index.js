@@ -6,6 +6,7 @@ const { configuredAgreements } = require('./domain/full-access')
 const { createCommerceRepository } = require('./domain/repository')
 const { createCommerceService } = require('./domain/service')
 const { resolveTrustedIdentity } = require('./lib/identity')
+const { createMembershipInvitationCode } = require('./lib/membership-invitation-code')
 const { mysqlDatabase } = require('./lib/mysql')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
@@ -24,6 +25,7 @@ const service = createCommerceService({
   repository,
   catalogStage,
   invitationSecret: process.env.MIP_IDENTITY_PEPPER,
+  createInvitationCode: input => createMembershipInvitationCode({ ...input, cloud }),
 })
 
 const handler = createHandler({

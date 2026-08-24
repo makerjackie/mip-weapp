@@ -12,6 +12,7 @@ const JPEG_SOF_MARKERS = new Set([
 const PURPOSE_POLICIES = Object.freeze({
   AVATAR: Object.freeze({ directory: 'avatars', minimumEdge: 64, maximumEdge: 2048, maximumPixels: 4_194_304 }),
   EVENT_COVER: Object.freeze({ directory: 'event-covers', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
+  EVENT_CONTENT: Object.freeze({ directory: 'event-content', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
   EVENT_ALBUM: Object.freeze({ directory: 'event-album', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
   OPPORTUNITY_COVER: Object.freeze({ directory: 'opportunity-covers', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
   SUPER_CASE_COVER: Object.freeze({ directory: 'case-covers', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),

@@ -10,6 +10,27 @@ function idFactory() {
 }
 
 describe('mip commerce service', () => {
+  it('reads the current membership benefit fact without client eligibility input', async () => {
+    let captured
+    const service = createCommerceService({
+      catalogStage: 'TEST',
+      repository: {
+        async getMembershipBenefits(caller) {
+          captured = caller
+          return { kind: 'GUEST', status: 'NONE', benefits: [] }
+        },
+      },
+      createInvitationCode: async ({ scene }) => ({ codeUrl: `cloud://env.test/${scene}.png` }),
+    })
+    const caller = { appId: 'app', identityKey: 'identity' }
+    assert.deepEqual(await service.getMembershipBenefits(caller, { userId: 'client-user' }), {
+      kind: 'GUEST',
+      status: 'NONE',
+      benefits: [],
+    })
+    assert.deepEqual(captured, caller)
+  })
+
   it('passes only plan and idempotency intent to the repository', async () => {
     let captured
     const service = createCommerceService({
@@ -54,6 +75,38 @@ describe('mip commerce service', () => {
     assert.match(result.token, /^m1\./)
     assert.equal(result.token.includes('20000000-0000-4000-8000-000000000001'), false)
     assert.equal(result.expiresAt, '2026-09-23T00:00:00.000Z')
+  })
+
+  it('creates a player-only membership code and resolves its scene only while the inviter is active', async () => {
+    let generatedScene = ''
+    let assertedInviter = ''
+    const repository = {
+      async resolveMembershipInviter() {
+        return '20000000-0000-4000-8000-000000000001'
+      },
+      async assertMembershipInviter(appId, userId) {
+        assert.equal(appId, 'app-1')
+        assertedInviter = userId
+      },
+    }
+    const service = createCommerceService({
+      catalogStage: 'TEST',
+      invitationSecret: 'membership-invitation-secret-with-more-than-32-characters',
+      now: () => new Date('2026-08-24T00:00:00.000Z'),
+      repository,
+      async createInvitationCode({ scene }) {
+        generatedScene = scene
+        return { codeUrl: 'cloud://env.test/membership-code.png' }
+      },
+    })
+    const caller = { appId: 'app-1', identityKey: 'identity' }
+    const code = await service.createMembershipInvitationCode(caller)
+    assert.equal(generatedScene.length, 32)
+    assert.equal(code.codeUrl, 'cloud://env.test/membership-code.png')
+    const resolved = await service.resolveMembershipInvitationScene(caller, { scene: generatedScene })
+    assert.equal(assertedInviter, '20000000-0000-4000-8000-000000000001')
+    assert.match(resolved.token, /^m1\./)
+    assert.equal(resolved.expiresAt, '2026-09-23T00:00:00.000Z')
   })
 
   it('passes no client amount when requesting a refund', async () => {

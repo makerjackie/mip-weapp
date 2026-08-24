@@ -4,7 +4,7 @@ import { mipOperationsConfig } from '../../../../config/mip-operations'
 import { superCaseModule } from '../../../../modules/mip-cases'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
-import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
+import { caseNavigateTo, leaveSecondaryPage } from '../../../../modules/platform/case-navigation'
 
 Page({
   data: {
@@ -140,6 +140,36 @@ Page({
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '案例下架失败' })
+    }
+    finally {
+      this.setData({ acting: false })
+    }
+  },
+
+  async deleteCase() {
+    const item = this.data.item
+    if (!item?.mine || this.data.acting) {
+      return
+    }
+    const confirmation = await wx.showModal({
+      title: '删除案例',
+      content: '删除后，这个案例将不再显示，且无法恢复。',
+      confirmText: '删除',
+      confirmColor: '#B30516',
+    })
+    if (!confirmation.confirm) {
+      return
+    }
+    this.setData({ acting: true, message: '' })
+    try {
+      await superCaseModule.archive(item.id, item.version)
+      wx.showToast({ title: '已删除', icon: 'success' })
+      leaveSecondaryPage('/pages/opportunities/index')
+    }
+    catch (error) {
+      const message = error instanceof Error ? error.message : '案例删除失败'
+      await this.load()
+      wx.showToast({ title: message, icon: 'none' })
     }
     finally {
       this.setData({ acting: false })

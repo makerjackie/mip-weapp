@@ -140,8 +140,10 @@ test('only protected contribution writes require full readiness', () => {
     'setProfileInterest',
     'saveCooperationCard',
     'unpublishCooperationCard',
+    'archiveCooperationCard',
     'saveSuperCase',
     'unpublishSuperCase',
+    'archiveSuperCase',
   ]) {
     assert.equal(requiresFullAccessAction(action), true, action)
   }

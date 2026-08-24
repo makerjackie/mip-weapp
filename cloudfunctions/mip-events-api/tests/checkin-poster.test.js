@@ -4,7 +4,9 @@ const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const {
   buildCheckInCodeKey,
+  buildInvitationCodeKey,
   createCheckInCodeAsset,
+  createInvitationCodeAsset,
 } = require('../lib/checkin-poster')
 
 const env = {
@@ -39,6 +41,45 @@ describe('MIP check-in mini-program code asset', () => {
     const key = buildCheckInCodeKey({ ...input, env })
     assert.match(key, /^mip\/test\/[0-9a-f]{24}\/checkin-posters\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.png$/)
     assert.equal(key.includes(input.appId), false)
+  })
+
+  it('uses a separate invitation object prefix and media purpose', async () => {
+    const invitationId = '50000000-0000-4000-8000-000000000001'
+    const key = buildInvitationCodeKey({
+      appId: input.appId,
+      eventId: input.eventId,
+      invitationId,
+      env,
+    })
+    assert.match(key, /^mip\/test\/[0-9a-f]{24}\/event-invitations\/[0-9a-f-]{36}\/[0-9a-f-]{36}\.png$/)
+    const calls = []
+    const result = await createInvitationCodeAsset({
+      appId: input.appId,
+      eventId: input.eventId,
+      invitationId,
+      ownerUserId: input.ownerUserId,
+      scene: 'i1.abcdefghijk.lmnopqrstuv',
+      env,
+      createId: () => '60000000-0000-4000-8000-000000000001',
+      cloud: posterCloud(),
+      database: {
+        async query(sql, params) {
+          calls.push({ sql, params })
+          return { affectedRows: 1 }
+        },
+        async transaction(work) {
+          return work({
+            async one() { return { id: input.ownerUserId, status: 'ACTIVE' } },
+            async query(sql, params) {
+              calls.push({ sql, params })
+              return { affectedRows: 1 }
+            },
+          })
+        },
+      },
+    })
+    assert.match(result.objectKey, /\/event-invitations\//)
+    assert.ok(calls.some(call => call.params.includes('EVENT_INVITATION_CODE')))
   })
 
   it('generates, uploads, and records a bounded PNG', async () => {

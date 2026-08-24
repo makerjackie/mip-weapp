@@ -2,6 +2,7 @@
 
 const { lockActiveContributor } = require('../lib/auth')
 const { createProfileRef } = require('../lib/profile-ref')
+const { listProfileVisitors, markProfileVisitorRead } = require('./profile-visits')
 const {
   appendAudit,
   decodeCursor,
@@ -13,7 +14,7 @@ const {
   uuid,
 } = require('./common')
 
-const categories = new Set(['REFERRAL', 'PROFILE_INTEREST'])
+const categories = new Set(['REFERRAL', 'PROFILE_INTEREST', 'VISITOR'])
 
 function normalizeListInput(value = {}) {
   const category = String(value.category || '').trim().toUpperCase()
@@ -21,7 +22,7 @@ function normalizeListInput(value = {}) {
   const parsedLimit = Number(value.limit)
   return {
     category,
-    cursor: decodeCursor(value.cursor),
+    cursor: category === 'VISITOR' ? value.cursor : decodeCursor(value.cursor),
     limit: Math.min(30, Math.max(1, Number.isInteger(parsedLimit) ? parsedLimit : 20)),
   }
 }
@@ -75,6 +76,9 @@ function interestDto(row, message, caller) {
 async function listReceivedInteractions(database, caller, rawInput = {}) {
   if (!caller.userId) throw new Error('AUTH_REQUIRED')
   const input = normalizeListInput(rawInput)
+  if (input.category === 'VISITOR') {
+    return { category: input.category, ...(await listProfileVisitors(database, caller, input)) }
+  }
   const rows = input.category === 'REFERRAL'
     ? await listReferrals(database, caller, input)
     : await listInterests(database, caller, input)
@@ -97,7 +101,7 @@ async function listReceivedInteractions(database, caller, rawInput = {}) {
 
 async function listReferrals(database, caller, input) {
   const blockFilter = mutualBlockFilter(caller.userId, 'r.actor_user_id', 'r.app_id')
-  const params = [caller.userId, caller.appId, ...blockFilter.params]
+  const params = [caller.appId, caller.userId, ...blockFilter.params]
   const cursorSql = input.cursor
     ? 'AND (r.updated_at < ? OR (r.updated_at = ? AND r.id < ?))'
     : ''
@@ -111,14 +115,16 @@ async function listReferrals(database, caller, input) {
             avatar.cloud_file_id AS actor_avatar_file_id
      FROM mip_referral_intents r
      INNER JOIN mip_opportunities o
-       ON o.app_id = r.app_id AND o.id = r.opportunity_id AND o.owner_user_id = ?
+       ON o.app_id = r.app_id AND o.id = r.opportunity_id
+         AND o.status IN ('PUBLISHED', 'ENDED')
      INNER JOIN mip_users actor
        ON actor.app_id = r.app_id AND actor.id = r.actor_user_id AND actor.status = 'ACTIVE'
      INNER JOIN mip_profiles p
        ON p.app_id = actor.app_id AND p.user_id = actor.id
      LEFT JOIN mip_media_assets avatar
        ON avatar.app_id = p.app_id AND avatar.id = p.avatar_asset_id AND avatar.status = 'READY'
-     WHERE r.app_id = ? AND ${blockFilter.sql} ${cursorSql}
+     WHERE r.app_id = ? AND r.target_user_id = ?
+       AND ${blockFilter.sql} ${cursorSql}
      ORDER BY r.updated_at DESC, r.id DESC
      LIMIT ${input.limit + 1}`,
     params,
@@ -141,11 +147,13 @@ async function listInterests(database, caller, input) {
               WHEN 'OPPORTUNITY' THEN opportunity.title
               WHEN 'COOPERATION_CARD' THEN cooperation.positioning
               WHEN 'SUPER_CASE' THEN super_case.project_name
+              WHEN 'PROFILE' THEN '公开档案'
             END AS source_label,
             CASE i.source_type
               WHEN 'OPPORTUNITY' THEN opportunity.status
               WHEN 'COOPERATION_CARD' THEN cooperation.status
               WHEN 'SUPER_CASE' THEN super_case.status
+              WHEN 'PROFILE' THEN 'PUBLISHED'
             END AS source_status
      FROM mip_profile_interests i
      INNER JOIN mip_users actor
@@ -163,8 +171,12 @@ async function listInterests(database, caller, input) {
      LEFT JOIN mip_super_cases super_case
        ON i.source_type = 'SUPER_CASE' AND super_case.app_id = i.app_id
          AND super_case.id = i.source_id AND super_case.owner_user_id = i.target_user_id
+     LEFT JOIN mip_users profile_source
+       ON i.source_type = 'PROFILE' AND profile_source.app_id = i.app_id
+         AND profile_source.id = i.source_id AND profile_source.id = i.target_user_id
+         AND profile_source.status = 'ACTIVE'
      WHERE i.app_id = ? AND i.target_user_id = ?
-       AND COALESCE(opportunity.id, cooperation.id, super_case.id) IS NOT NULL
+       AND COALESCE(opportunity.id, cooperation.id, super_case.id, profile_source.id) IS NOT NULL
        AND ${blockFilter.sql}
        ${cursorSql}
      ORDER BY i.updated_at DESC, i.id DESC
@@ -185,7 +197,8 @@ async function loadRelationshipMessages(database, caller, category, relationIds)
     : `m.dedupe_key IN (
         CONCAT('outbox:', e.id, ':opportunity-interest'),
         CONCAT('outbox:', e.id, ':cooperation-interest'),
-        CONCAT('outbox:', e.id, ':case-interest')
+        CONCAT('outbox:', e.id, ':case-interest'),
+        CONCAT('outbox:', e.id, ':profile-interest')
       )`
   const rows = await database.query(
     `SELECT e.aggregate_id AS relation_id, m.id, m.read_at, m.created_at
@@ -213,7 +226,8 @@ async function countRelationshipUnread(database, caller, category) {
     : `m.dedupe_key IN (
         CONCAT('outbox:', e.id, ':opportunity-interest'),
         CONCAT('outbox:', e.id, ':cooperation-interest'),
-        CONCAT('outbox:', e.id, ':case-interest')
+        CONCAT('outbox:', e.id, ':case-interest'),
+        CONCAT('outbox:', e.id, ':profile-interest')
       )`
   const blockFilter = mutualBlockFilter(
     caller.userId,
@@ -223,10 +237,12 @@ async function countRelationshipUnread(database, caller, category) {
   const ownershipSql = referral
     ? `EXISTS (
         SELECT 1 FROM mip_referral_intents r
-        INNER JOIN mip_opportunities o ON o.app_id = r.app_id AND o.id = r.opportunity_id
+        INNER JOIN mip_opportunities o
+          ON o.app_id = r.app_id AND o.id = r.opportunity_id
+            AND o.status IN ('PUBLISHED', 'ENDED')
         INNER JOIN mip_users actor
           ON actor.app_id = r.app_id AND actor.id = r.actor_user_id AND actor.status = 'ACTIVE'
-        WHERE r.app_id = e.app_id AND r.id = e.aggregate_id AND o.owner_user_id = ?
+        WHERE r.app_id = e.app_id AND r.id = e.aggregate_id AND r.target_user_id = ?
           AND ${blockFilter.sql}
       )`
     : `EXISTS (
@@ -253,6 +269,7 @@ async function countRelationshipUnread(database, caller, category) {
               WHERE s.app_id = i.app_id AND s.id = i.source_id
                 AND s.owner_user_id = i.target_user_id
             ))
+            OR (i.source_type = 'PROFILE' AND i.source_id = i.target_user_id)
           )
       )`
   const row = await database.one(
@@ -282,6 +299,9 @@ async function countRelationshipUnread(database, caller, category) {
 
 async function markReceivedInteractionRead(database, caller, input = {}) {
   if (!caller.userId) throw new Error('AUTH_REQUIRED')
+  if (String(input.category || '').trim().toUpperCase() === 'VISITOR') {
+    return markProfileVisitorRead(database, caller, input)
+  }
   const messageId = String(input.messageId || '')
   if (!uuid(messageId)) throw new Error('VALIDATION_FAILED')
   return idempotentTransaction(database, {
@@ -307,15 +327,18 @@ async function markReceivedInteractionRead(database, caller, input = {}) {
            AND m.dedupe_key IN (
              CONCAT('outbox:', e.id, ':opportunity-interest'),
              CONCAT('outbox:', e.id, ':cooperation-interest'),
-             CONCAT('outbox:', e.id, ':case-interest')
+             CONCAT('outbox:', e.id, ':case-interest'),
+             CONCAT('outbox:', e.id, ':profile-interest')
            ))
        )
        WHERE m.app_id = ? AND m.recipient_user_id = ? AND m.id = ?
          AND (
            (e.aggregate_type = 'REFERRAL_INTENT' AND EXISTS (
              SELECT 1 FROM mip_referral_intents r
-             INNER JOIN mip_opportunities o ON o.app_id = r.app_id AND o.id = r.opportunity_id
-             WHERE r.app_id = e.app_id AND r.id = e.aggregate_id AND o.owner_user_id = ?
+             INNER JOIN mip_opportunities o
+               ON o.app_id = r.app_id AND o.id = r.opportunity_id
+                 AND o.status IN ('PUBLISHED', 'ENDED')
+             WHERE r.app_id = e.app_id AND r.id = e.aggregate_id AND r.target_user_id = ?
                AND ${referralBlock.sql}
            ))
            OR

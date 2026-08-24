@@ -346,7 +346,7 @@ function normalizeProfileInput(value) {
 }
 
 function organizations(value) {
-  if (!Array.isArray(value) || value.length > 10) {
+  if (!Array.isArray(value) || value.length > 12) {
     throw new Error('VALIDATION_FAILED')
   }
   return value.map((item) => {

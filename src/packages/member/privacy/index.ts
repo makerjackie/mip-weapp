@@ -4,6 +4,7 @@ import {
   MipIdentityGatewayError,
 } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
+import { mipGlobalAccessGuard } from '../../../modules/mip-identity/runtime'
 import { caseNavigateTo } from '../../../modules/platform/case-navigation'
 
 Page({
@@ -29,6 +30,10 @@ Page({
       this.closureRequest = createAccountClosureRequestTracker()
     }
     return this.closureRequest
+  },
+
+  leavePage() {
+    mipGlobalAccessGuard.leaveDocument()
   },
 
   async loadAccountState() {

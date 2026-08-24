@@ -35,6 +35,18 @@
       <t-input class="box-border max-w-full" value="{{draft.summary}}" maxlength="300" data-field="summary" bind:change="updateField" />
       <view class="mb-2 mt-4 text-[length:23rpx] text-muted">活动介绍</view>
       <t-textarea class="box-border max-w-full" value="{{draft.description}}" maxlength="20000" autosize data-field="description" bind:change="updateField" />
+      <view class="mt-2 text-[length:20rpx] leading-5 text-muted">可使用 # 标题、- 列表和 ![图片说明](https://图片地址) 排版活动介绍。</view>
+      <view class="mb-2 mt-4 text-[length:23rpx] text-muted">活动介绍图片</view>
+      <view wx:for="{{draft.contentMedia}}" wx:key="assetId" class="mb-3 rounded-[12rpx] bg-panel-raised p-3">
+        <image class="h-[260rpx] w-full rounded-[10rpx] bg-canvas" mode="aspectFill" src="{{item.imageUrl}}" data-index="{{index}}" bind:tap="previewContentImage" />
+        <t-input class="box-border mt-2 max-w-full" value="{{item.caption}}" maxlength="120" placeholder="图片说明（选填）" data-index="{{index}}" bind:change="updateContentCaption" />
+        <view class="mt-2 grid grid-cols-3 gap-2">
+          <t-button size="small" variant="outline" disabled="{{index === 0}}" data-index="{{index}}" data-direction="-1" bind:tap="moveContentImage">上移</t-button>
+          <t-button size="small" variant="outline" disabled="{{index === draft.contentMedia.length - 1}}" data-index="{{index}}" data-direction="1" bind:tap="moveContentImage">下移</t-button>
+          <t-button size="small" variant="text" theme="danger" data-index="{{index}}" bind:tap="removeContentImage">移除</t-button>
+        </view>
+      </view>
+      <t-button block variant="outline" loading="{{contentUploading}}" disabled="{{saving || cancelBusy || draft.contentMedia.length >= 12}}" bind:tap="chooseContentImage">上传介绍图片</t-button>
       <view class="mb-2 mt-4 text-[length:23rpx] text-muted">参与须知</view>
       <t-textarea class="box-border max-w-full" value="{{draft.notices}}" maxlength="5000" autosize data-field="notices" bind:change="updateField" />
     </view>

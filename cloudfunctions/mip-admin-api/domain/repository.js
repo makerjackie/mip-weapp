@@ -21,6 +21,31 @@ function json(value, fallback = {}) {
   catch { return fallback }
 }
 
+function displayAnswer(value) {
+  if (typeof value === 'boolean') return value ? '是' : '否'
+  if (typeof value === 'string') return value
+  if (value === null || value === undefined) return ''
+  try { return JSON.stringify(value) }
+  catch { return String(value) }
+}
+
+function registrationAnswerItems(schemaValue, answersValue) {
+  const schema = json(schemaValue, [])
+  const answers = json(answersValue, {})
+  if (!answers || typeof answers !== 'object' || Array.isArray(answers)) return []
+  const labels = new Map(
+    (Array.isArray(schema) ? schema : [])
+      .filter(field => field && typeof field === 'object' && !Array.isArray(field)
+        && typeof field.key === 'string' && typeof field.label === 'string')
+      .map(field => [field.key, field.label]),
+  )
+  return Object.entries(answers).map(([key, value]) => ({
+    key,
+    label: labels.get(key) || key,
+    value: displayAnswer(value),
+  }))
+}
+
 function iso(value) {
   if (!value) return null
   const date = value instanceof Date ? value : new Date(value)
@@ -274,6 +299,47 @@ async function assertEventCover(tx, input, currentCoverId) {
       : [input.appId, coverAssetId, input.actorUserId],
   )
   if (!asset) throw codeError('VALIDATION_FAILED')
+}
+
+async function assertEventContentMedia(tx, input, eventId) {
+  const media = input.draft.contentMedia || []
+  if (!media.length) return
+  const ids = media.map(item => item.assetId)
+  const rows = await tx.query(
+    `SELECT asset.id
+     FROM mip_media_assets asset
+     LEFT JOIN mip_event_content_media current_media
+       ON current_media.app_id = asset.app_id
+       AND current_media.media_asset_id = asset.id
+       AND current_media.event_id = ? AND current_media.status = 'ACTIVE'
+     WHERE asset.app_id = ? AND asset.id IN (${ids.map(() => '?').join(', ')})
+       AND asset.status = 'READY' AND asset.purpose = 'EVENT_CONTENT'
+       AND (asset.owner_user_id = ? OR current_media.event_id IS NOT NULL)
+     FOR UPDATE`,
+    [eventId || '', input.appId, ...ids, input.actorUserId],
+  )
+  if (new Set(rows.map(row => row.id)).size !== ids.length) {
+    throw codeError('VALIDATION_FAILED')
+  }
+}
+
+async function replaceEventContentMedia(tx, input, eventId) {
+  await tx.query(
+    `UPDATE mip_event_content_media
+     SET status = 'REMOVED', version = version + 1
+     WHERE app_id = ? AND event_id = ? AND status = 'ACTIVE'`,
+    [input.appId, eventId],
+  )
+  for (const [sortOrder, media] of (input.draft.contentMedia || []).entries()) {
+    await tx.query(
+      `INSERT INTO mip_event_content_media (
+        app_id, event_id, media_asset_id, sort_order, caption, status
+      ) VALUES (?, ?, ?, ?, ?, 'ACTIVE')
+      ON DUPLICATE KEY UPDATE sort_order = VALUES(sort_order), caption = VALUES(caption),
+        status = 'ACTIVE', version = version + 1`,
+      [input.appId, eventId, media.assetId, sortOrder, media.caption || null],
+    )
+  }
 }
 
 function createAdminRepository(database, options = {}) {
@@ -670,6 +736,22 @@ function createAdminRepository(database, options = {}) {
         WHERE c.app_id = u.app_id AND c.user_id = u.id AND c.control_type = ? AND c.status = 'ACTIVE')`)
       params.push(filters.controlType)
     }
+    if (filters.phoneBound === 'BOUND') {
+      clauses.push('pp.phone_verified_at IS NOT NULL')
+    }
+    if (filters.phoneBound === 'UNBOUND') {
+      clauses.push('pp.phone_verified_at IS NULL')
+    }
+    if (filters.profileComplete === 'COMPLETE') {
+      clauses.push("u.primary_branch_id IS NOT NULL AND p.nickname IS NOT NULL AND TRIM(p.nickname) <> ''")
+    }
+    if (filters.profileComplete === 'INCOMPLETE') {
+      clauses.push("(u.primary_branch_id IS NULL OR p.nickname IS NULL OR TRIM(p.nickname) = '')")
+    }
+    if (filters.joinedWithinDays) {
+      clauses.push('u.created_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ? DAY)')
+      params.push(filters.joinedWithinDays)
+    }
     if (filters.query) {
       clauses.push('(p.nickname LIKE ? ESCAPE \'\\\\\' OR p.headline LIKE ? ESCAPE \'\\\\\' OR b.city_name LIKE ? ESCAPE \'\\\\\')')
       const query = `%${escapeLike(filters.query)}%`
@@ -714,6 +796,127 @@ function createAdminRepository(database, options = {}) {
       updatedAt: iso(row.updated_at),
     }))
     return pageRows(items, pageLimit, row => ({ updatedAt: row.updatedAt, id: row.id }))
+  }
+
+  async function getUserDetail(appId, userId) {
+    const user = await database.one(
+      `SELECT u.id, u.status, u.primary_branch_id, u.version AS user_version,
+        u.created_at, u.updated_at,
+        p.nickname, p.headline, p.introduction, p.companies_json,
+        p.organizations_json, p.visibility_json, p.version AS profile_version,
+        pp.phone_ciphertext, pp.phone_verified_at,
+        b.name AS branch_name, b.city_name,
+        (SELECT GROUP_CONCAT(c.control_type ORDER BY c.control_type SEPARATOR ',')
+          FROM mip_user_access_controls c
+          WHERE c.app_id = u.app_id AND c.user_id = u.id AND c.status = 'ACTIVE') AS controls
+       FROM mip_users u
+       LEFT JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
+       LEFT JOIN mip_private_profiles pp ON pp.app_id = u.app_id AND pp.user_id = u.id
+       LEFT JOIN mip_city_branches b ON b.app_id = u.app_id AND b.id = u.primary_branch_id
+       WHERE u.app_id = ? AND u.id = ?`,
+      [appId, userId],
+    )
+    if (!user) return null
+
+    const [entitlement, growth, counts, tags, roles] = await Promise.all([
+      database.one(
+        `SELECT status, starts_at, ends_at
+         FROM mip_membership_entitlements
+         WHERE app_id = ? AND user_id = ?
+         ORDER BY ends_at DESC, id DESC LIMIT 1`,
+        [appId, userId],
+      ),
+      database.one(
+        `SELECT account.experience_balance, account.contribution_balance,
+                account.coin_balance, level.name AS level_name
+         FROM mip_growth_accounts account
+         LEFT JOIN mip_growth_levels level
+           ON level.app_id = account.app_id AND level.id = account.current_level_id
+         WHERE account.app_id = ? AND account.user_id = ?`,
+        [appId, userId],
+      ),
+      database.one(
+        `SELECT
+          (SELECT COUNT(*) FROM mip_event_registrations r
+            WHERE r.app_id = ? AND r.user_id = ?) AS registration_count,
+          (SELECT COUNT(*) FROM mip_event_registrations r
+            WHERE r.app_id = ? AND r.user_id = ? AND r.status = 'ATTENDED') AS attended_count,
+          (SELECT COUNT(*) FROM mip_orders o
+            WHERE o.app_id = ? AND o.user_id = ?) AS order_count,
+          (SELECT COUNT(*) FROM mip_opportunities o
+            WHERE o.app_id = ? AND o.owner_user_id = ? AND o.status <> 'ARCHIVED') AS opportunity_count,
+          (SELECT COUNT(*) FROM mip_cooperation_cards c
+            WHERE c.app_id = ? AND c.owner_user_id = ?) AS cooperation_card_count,
+          (SELECT COUNT(*) FROM mip_super_cases c
+            WHERE c.app_id = ? AND c.owner_user_id = ?) AS super_case_count`,
+        [appId, userId, appId, userId, appId, userId, appId, userId, appId, userId, appId, userId],
+      ),
+      database.query(
+        `SELECT relation.relation, tag.id, tag.kind, tag.label
+         FROM mip_profile_tags relation
+         INNER JOIN mip_tags tag
+           ON tag.app_id = relation.app_id AND tag.id = relation.tag_id
+         WHERE relation.app_id = ? AND relation.user_id = ? AND tag.enabled = 1
+         ORDER BY relation.relation, tag.sort_order, tag.id`,
+        [appId, userId],
+      ),
+      database.query(
+        `SELECT role_key, scope_type, scope_id, granted_at
+         FROM mip_admin_role_bindings
+         WHERE app_id = ? AND user_id = ? AND status = 'ACTIVE'
+         ORDER BY scope_type, scope_id, role_key`,
+        [appId, userId],
+      ),
+    ])
+
+    const activePlayer = entitlement?.status === 'ACTIVE'
+      && new Date(entitlement.starts_at).getTime() <= Date.now()
+      && new Date(entitlement.ends_at).getTime() > Date.now()
+    return {
+      id: user.id,
+      status: user.status,
+      kind: activePlayer ? 'PLAYER' : 'GUEST',
+      nickname: user.nickname || '未填写昵称',
+      headline: user.headline || '',
+      introduction: user.introduction || '',
+      companies: json(user.companies_json, []),
+      organizations: json(user.organizations_json, []),
+      visibility: json(user.visibility_json, {}),
+      primaryBranchId: user.primary_branch_id || null,
+      branchName: user.branch_name || '',
+      cityName: user.city_name || '',
+      phoneBound: Boolean(user.phone_verified_at),
+      phoneCiphertext: user.phone_ciphertext || null,
+      controls: user.controls ? String(user.controls).split(',') : [],
+      userVersion: Number(user.user_version || 1),
+      profileVersion: Number(user.profile_version || 0),
+      membership: entitlement
+        ? { status: entitlement.status, startsAt: iso(entitlement.starts_at), endsAt: iso(entitlement.ends_at) }
+        : null,
+      growth: {
+        levelName: growth?.level_name || '',
+        experience: Number(growth?.experience_balance || 0),
+        contribution: Number(growth?.contribution_balance || 0),
+        coin: Number(growth?.coin_balance || 0),
+      },
+      counts: {
+        registrations: Number(counts?.registration_count || 0),
+        attended: Number(counts?.attended_count || 0),
+        orders: Number(counts?.order_count || 0),
+        opportunities: Number(counts?.opportunity_count || 0),
+        cooperationCards: Number(counts?.cooperation_card_count || 0),
+        superCases: Number(counts?.super_case_count || 0),
+      },
+      tags: tags.map(tag => ({ id: tag.id, kind: tag.kind, relation: tag.relation, label: tag.label })),
+      roles: roles.map(role => ({
+        roleKey: role.role_key,
+        scopeType: role.scope_type,
+        scopeId: role.scope_id || null,
+        grantedAt: iso(role.granted_at),
+      })),
+      createdAt: iso(user.created_at),
+      updatedAt: iso(user.updated_at),
+    }
   }
 
   async function getUserScope(appId, userId) {
@@ -1247,6 +1450,16 @@ function createAdminRepository(database, options = {}) {
       [appId, eventId],
     )
     if (!row) return null
+    const contentMedia = await database.query(
+      `SELECT media.media_asset_id, media.caption, asset.cloud_file_id
+       FROM mip_event_content_media media
+       INNER JOIN mip_media_assets asset
+         ON asset.app_id = media.app_id AND asset.id = media.media_asset_id
+         AND asset.status = 'READY' AND asset.purpose = 'EVENT_CONTENT'
+       WHERE media.app_id = ? AND media.event_id = ? AND media.status = 'ACTIVE'
+       ORDER BY media.sort_order, media.media_asset_id`,
+      [appId, eventId],
+    )
     return {
       id: row.id,
       scopeType: row.scope_type,
@@ -1254,6 +1467,11 @@ function createAdminRepository(database, options = {}) {
       title: row.title,
       summary: row.summary,
       description: row.description,
+      contentMedia: contentMedia.map(item => ({
+        assetId: item.media_asset_id,
+        imageUrl: item.cloud_file_id,
+        caption: item.caption || '',
+      })),
       notices: row.notices || '',
       coverAssetId: row.cover_asset_id || null,
       coverUrl: row.cover_file_id || '',
@@ -1281,6 +1499,62 @@ function createAdminRepository(database, options = {}) {
       contentSafetyStatus: row.content_safety_status,
       version: Number(row.version),
     }
+  }
+
+  async function getEventPolicy(appId) {
+    const row = await database.one(
+      `SELECT value_json, version FROM mip_app_settings
+       WHERE app_id = ? AND setting_key = 'EVENT_REGISTRATION_POLICY'`,
+      [appId],
+    )
+    const value = json(row?.value_json, {})
+    const cancellationHoursBeforeStart = Number(value.cancellationHoursBeforeStart)
+    return {
+      cancellationHoursBeforeStart: Number.isInteger(cancellationHoursBeforeStart)
+        && cancellationHoursBeforeStart >= 0
+        && cancellationHoursBeforeStart <= 720
+        ? cancellationHoursBeforeStart
+        : 24,
+      version: row ? Number(row.version) : 0,
+    }
+  }
+
+  async function saveEventPolicy(input) {
+    return database.transaction(async (tx) => {
+      await authorizeMutation(tx, input, { scopeType: 'PLATFORM', scopeId: null })
+      const current = await tx.one(
+        `SELECT version FROM mip_app_settings
+         WHERE app_id = ? AND setting_key = 'EVENT_REGISTRATION_POLICY' FOR UPDATE`,
+        [input.appId],
+      )
+      const currentVersion = current ? Number(current.version) : 0
+      if (currentVersion !== input.expectedVersion) throw codeError('CONFLICT')
+      const value = JSON.stringify({
+        cancellationHoursBeforeStart: input.cancellationHoursBeforeStart,
+      })
+      if (current) {
+        const updated = await tx.query(
+          `UPDATE mip_app_settings
+           SET value_json = ?, updated_by_user_id = ?, version = version + 1
+           WHERE app_id = ? AND setting_key = 'EVENT_REGISTRATION_POLICY' AND version = ?`,
+          [value, input.actorUserId, input.appId, input.expectedVersion],
+        )
+        if (Number(updated.affectedRows) !== 1) throw codeError('CONFLICT')
+      }
+      else {
+        await tx.query(
+          `INSERT INTO mip_app_settings (
+             app_id, setting_key, value_json, version, updated_by_user_id
+           ) VALUES (?, 'EVENT_REGISTRATION_POLICY', ?, 1, ?)`,
+          [input.appId, value, input.actorUserId],
+        )
+      }
+      await writeAudit(tx, input.audit)
+      return {
+        cancellationHoursBeforeStart: input.cancellationHoursBeforeStart,
+        version: currentVersion + 1,
+      }
+    })
   }
 
   async function listEventAlbumPhotos(appId, eventId, status, pageLimit) {
@@ -1394,6 +1668,7 @@ function createAdminRepository(database, options = {}) {
         if (Number(current.version) !== input.expectedVersion) throw codeError('CONFLICT')
         if (!['DRAFT', 'UNPUBLISHED'].includes(current.status)) throw codeError('INVALID_STATE')
         await assertEventCover(tx, input, current.cover_asset_id || null)
+        await assertEventContentMedia(tx, input, eventId)
         status = current.status
         nextVersion = Number(current.version) + 1
         const result = await tx.query(
@@ -1427,6 +1702,7 @@ function createAdminRepository(database, options = {}) {
       else {
         assertScope(authorization, draftResourceScope(input.draft))
         await assertEventCover(tx, input, null)
+        await assertEventContentMedia(tx, input, null)
         await tx.query(
           `INSERT INTO mip_events (
             id, app_id, scope_type, branch_id, organizer_user_id, title, summary,
@@ -1451,6 +1727,7 @@ function createAdminRepository(database, options = {}) {
             JSON.stringify(input.draft.registrationSchema || [])],
         )
       }
+      await replaceEventContentMedia(tx, input, eventId)
       await writeEventChange(tx, {
         id: id(),
         appId: input.appId,
@@ -1561,6 +1838,18 @@ function createAdminRepository(database, options = {}) {
           source.longitude ?? null, source.online_url || null, source.capacity,
           Number(source.waitlist_enabled) === 1 ? 1 : 0, Number(source.price_cents || 0),
           source.currency || 'CNY', JSON.stringify(json(source.registration_schema_json, []))],
+      )
+      await tx.query(
+        `INSERT INTO mip_event_content_media (
+          app_id, event_id, media_asset_id, sort_order, caption
+        )
+        SELECT media.app_id, ?, media.media_asset_id, media.sort_order, media.caption
+        FROM mip_event_content_media media
+        INNER JOIN mip_media_assets asset
+          ON asset.app_id = media.app_id AND asset.id = media.media_asset_id
+          AND asset.status = 'READY' AND asset.purpose = 'EVENT_CONTENT'
+        WHERE media.app_id = ? AND media.event_id = ? AND media.status = 'ACTIVE'`,
+        [eventId, input.appId, input.sourceEventId],
       )
       await writeEventChange(tx, {
         id: id(),
@@ -1784,18 +2073,19 @@ function createAdminRepository(database, options = {}) {
       clauses.push('p.nickname LIKE ? ESCAPE \'\\\\\'')
       params.push(`%${escapeLike(filters.query)}%`)
     }
-    const cursorWhere = cursorPredicateFor('r.registered_at', cursor, 'registeredAt', 'r.id')
+    const cursorWhere = cursorPredicateFor('r.created_at', cursor, 'submittedAt', 'r.id')
     const rows = await database.query(
-      `SELECT r.id, r.user_id, r.status, r.answers_json, r.registered_at, r.version,
+      `SELECT r.id, r.user_id, r.status, r.answers_json, r.created_at, r.registered_at, r.version,
         p.nickname, b.city_name, pp.phone_ciphertext, pp.phone_verified_at,
-        c.checked_in_at
+        c.checked_in_at, e.registration_schema_json
        FROM mip_event_registrations r
+       INNER JOIN mip_events e ON e.app_id = r.app_id AND e.id = r.event_id
        LEFT JOIN mip_profiles p ON p.app_id = r.app_id AND p.user_id = r.user_id
        LEFT JOIN mip_users u ON u.app_id = r.app_id AND u.id = r.user_id
        LEFT JOIN mip_city_branches b ON b.app_id = u.app_id AND b.id = u.primary_branch_id
        LEFT JOIN mip_private_profiles pp ON pp.app_id = r.app_id AND pp.user_id = r.user_id
        LEFT JOIN mip_event_checkins c ON c.app_id = r.app_id AND c.registration_id = r.id AND c.status = 'ACTIVE'
-       WHERE ${clauses.join(' AND ')}${cursorWhere.sql} ORDER BY r.registered_at DESC, r.id DESC LIMIT ?`,
+       WHERE ${clauses.join(' AND ')}${cursorWhere.sql} ORDER BY r.created_at DESC, r.id DESC LIMIT ?`,
       [...params, ...cursorWhere.params, pageLimit + 1],
     )
     const items = rows.map(row => ({
@@ -1805,13 +2095,15 @@ function createAdminRepository(database, options = {}) {
       cityName: row.city_name || '',
       status: row.status,
       answers: json(row.answers_json, {}),
+      answerItems: registrationAnswerItems(row.registration_schema_json, row.answers_json),
       phoneBound: Boolean(row.phone_verified_at),
       phoneCiphertext: row.phone_ciphertext || null,
+      submittedAt: iso(row.created_at),
       registeredAt: iso(row.registered_at),
       checkedInAt: iso(row.checked_in_at),
       version: Number(row.version),
     }))
-    return pageRows(items, pageLimit, row => ({ registeredAt: row.registeredAt, id: row.id }))
+    return pageRows(items, pageLimit, row => ({ submittedAt: row.submittedAt, id: row.id }))
   }
 
   async function reviewRegistration(input) {
@@ -2093,7 +2385,7 @@ function createAdminRepository(database, options = {}) {
     })
   }
 
-  async function listRoles(appId, visibility) {
+  async function listRoles(appId, visibility, { includeAdministrativeScopes = false } = {}) {
     const clauses = []
     const params = [appId]
     if (!visibility.platform) {
@@ -2111,13 +2403,19 @@ function createAdminRepository(database, options = {}) {
         params.push(...visibility.eventIds)
       }
     }
-    const where = visibility.platform ? '1 = 1' : clauses.length ? `(${clauses.join(' OR ')})` : '0 = 1'
+    const visibleWhere = visibility.platform ? '1 = 1' : clauses.length ? `(${clauses.join(' OR ')})` : '0 = 1'
+    const scopeWhere = includeAdministrativeScopes ? '1 = 1' : "r.scope_type = 'EVENT'"
     const rows = await database.query(
       `SELECT r.id, r.user_id, r.scope_type, r.scope_id, r.role_key, r.status,
-        r.granted_at, r.revoked_at, p.nickname
+        r.granted_at, r.revoked_at, p.nickname, b.name AS branch_name,
+        e.title AS event_title, e.branch_id AS event_branch_id
        FROM mip_admin_role_bindings r
        LEFT JOIN mip_profiles p ON p.app_id = r.app_id AND p.user_id = r.user_id
-       WHERE r.app_id = ? AND ${where}
+       LEFT JOIN mip_city_branches b ON b.app_id = r.app_id
+         AND r.scope_type = 'BRANCH' AND b.id = r.scope_id
+       LEFT JOIN mip_events e ON e.app_id = r.app_id
+         AND r.scope_type = 'EVENT' AND e.id = r.scope_id
+       WHERE r.app_id = ? AND ${visibleWhere} AND ${scopeWhere}
        ORDER BY r.status, r.granted_at DESC, r.id DESC`,
       params,
     )
@@ -2127,6 +2425,16 @@ function createAdminRepository(database, options = {}) {
       nickname: row.nickname || '未填写昵称',
       scopeType: row.scope_type,
       scopeId: row.scope_type === 'PLATFORM' ? null : row.scope_id,
+      scopeName: row.scope_type === 'PLATFORM'
+        ? '平台'
+        : row.scope_type === 'BRANCH'
+          ? row.branch_name || '城市分会'
+          : row.event_title || '活动',
+      branchId: row.scope_type === 'BRANCH'
+        ? row.scope_id
+        : row.scope_type === 'EVENT'
+          ? row.event_branch_id || null
+          : null,
       roleKey: row.role_key,
       status: row.status,
       grantedAt: iso(row.granted_at),
@@ -2166,11 +2474,12 @@ function createAdminRepository(database, options = {}) {
       }
       else if (input.scope.scopeType === 'BRANCH') {
         const branch = await tx.one(
-          `SELECT id FROM mip_city_branches
+          `SELECT id, status FROM mip_city_branches
            WHERE app_id = ? AND id = ? FOR UPDATE`,
           [input.appId, input.scope.scopeId],
         )
         if (!branch) throw codeError('NOT_FOUND')
+        if (input.active && branch.status !== 'ACTIVE') throw codeError('INVALID_STATE')
         const currentScope = { scopeType: 'BRANCH', scopeId: input.scope.scopeId }
         assertScope(authorization, currentScope)
         assertAuthorizedScope(currentScope, input.authorizedScope)
@@ -2206,12 +2515,13 @@ function createAdminRepository(database, options = {}) {
         )
       }
       else {
-        await tx.query(
+        const revoked = await tx.query(
           `UPDATE mip_admin_role_bindings SET status = 'REVOKED', revoked_at = UTC_TIMESTAMP(3)
            WHERE app_id = ? AND user_id = ? AND scope_type = ? AND scope_id = ?
              AND role_key = ? AND status = 'ACTIVE'`,
           [input.appId, input.userId, input.scope.scopeType, input.scope.scopeId, input.roleKey],
         )
+        if (Number(revoked.affectedRows) !== 1) throw codeError('CONFLICT')
       }
       await writeAudit(tx, input.audit)
       return {
@@ -2548,9 +2858,28 @@ function createAdminRepository(database, options = {}) {
     if (filters.status) { clauses.push('o.status = ?'); params.push(filters.status) }
     if (filters.orderType) { clauses.push('o.order_type = ?'); params.push(filters.orderType) }
     if (filters.eventId) { clauses.push("o.order_type = 'EVENT' AND o.resource_id = ?"); params.push(filters.eventId) }
+    if (filters.refundStatus === 'NONE') {
+      clauses.push('NOT EXISTS (SELECT 1 FROM mip_refunds rf WHERE rf.app_id = o.app_id AND rf.order_id = o.id)')
+    }
+    else if (filters.refundStatus) {
+      clauses.push(`(SELECT rf.status FROM mip_refunds rf
+        WHERE rf.app_id = o.app_id AND rf.order_id = o.id
+        ORDER BY rf.created_at DESC, rf.id DESC LIMIT 1) = ?`)
+      params.push(filters.refundStatus)
+    }
+    if (filters.createdFrom) { clauses.push('o.created_at >= ?'); params.push(filters.createdFrom) }
+    if (filters.createdTo) { clauses.push('o.created_at <= ?'); params.push(filters.createdTo) }
+    if (filters.query) {
+      clauses.push(`(o.id LIKE ? ESCAPE '\\\\' OR o.merchant_order_no LIKE ? ESCAPE '\\\\'
+        OR p.nickname LIKE ? ESCAPE '\\\\' OR mp.name LIKE ? ESCAPE '\\\\'
+        OR e.title LIKE ? ESCAPE '\\\\')`)
+      const query = `%${escapeLike(filters.query)}%`
+      params.push(query, query, query, query, query)
+    }
     const cursorWhere = cursorPredicateFor('o.created_at', cursor, 'createdAt', 'o.id')
     const rows = await database.query(
-      `SELECT o.id, o.user_id, p.nickname, o.order_type, o.resource_id,
+      `SELECT o.id, o.user_id, p.nickname, o.order_type, o.resource_id, o.membership_plan_id,
+        mp.name AS membership_plan_name, e.title AS event_title, e.branch_id, eb.name AS event_branch_name,
         o.merchant_order_no, o.provider_transaction_id, o.amount_cents, o.currency, o.status, o.paid_at,
         o.version, o.created_at,
         COALESCE((SELECT SUM(r.amount_cents) FROM mip_refunds r
@@ -2561,6 +2890,9 @@ function createAdminRepository(database, options = {}) {
           ORDER BY r.created_at DESC, r.id DESC LIMIT 1) AS refund_id
        FROM mip_orders o
        LEFT JOIN mip_profiles p ON p.app_id = o.app_id AND p.user_id = o.user_id
+       LEFT JOIN mip_membership_plans mp ON mp.app_id = o.app_id AND mp.id = o.membership_plan_id
+       LEFT JOIN mip_events e ON e.app_id = o.app_id AND e.id = o.resource_id
+       LEFT JOIN mip_city_branches eb ON eb.app_id = e.app_id AND eb.id = e.branch_id
        WHERE ${clauses.join(' AND ')}${cursorWhere.sql} ORDER BY o.created_at DESC, o.id DESC LIMIT ?`,
       [...params, ...cursorWhere.params, pageLimit + 1],
     )
@@ -2569,7 +2901,12 @@ function createAdminRepository(database, options = {}) {
       userId: row.user_id,
       nickname: row.nickname || '未填写昵称',
       orderType: row.order_type,
-      resourceId: row.resource_id || null,
+      resourceId: row.order_type === 'MEMBERSHIP' ? row.membership_plan_id : row.resource_id,
+      resourceType: row.order_type === 'MEMBERSHIP' ? 'MEMBERSHIP_PLAN' : 'EVENT',
+      resourceTitle: row.order_type === 'MEMBERSHIP'
+        ? row.membership_plan_name || '会员方案'
+        : row.event_title || '活动',
+      resourceBranchName: row.event_branch_name || '',
       merchantOrderNoMasked: maskIdentifier(row.merchant_order_no),
       amountCents: Number(row.amount_cents),
       refundedAmountCents: Number(row.refunded_amount || 0),
@@ -2580,8 +2917,8 @@ function createAdminRepository(database, options = {}) {
       paidAt: iso(row.paid_at),
       createdAt: iso(row.created_at),
       version: Number(row.version),
-      merchantOrderNo: row.merchant_order_no || '',
       providerTransactionIdMasked: row.provider_transaction_id ? maskIdentifier(row.provider_transaction_id) : null,
+      branchId: row.branch_id || null,
     }))
     return pageRows(items, pageLimit, row => ({ createdAt: row.createdAt, id: row.id }))
   }
@@ -2804,11 +3141,13 @@ function createAdminRepository(database, options = {}) {
     dashboard,
     getEventScope,
     getEvent,
+    getEventPolicy,
     getExportTicket,
     getOpportunityScope,
     getOrderScope,
     getRefundScope,
     getUserScope,
+    getUserDetail,
     health,
     listAudit,
     listBranches,
@@ -2834,6 +3173,7 @@ function createAdminRepository(database, options = {}) {
     recordAudit,
     resolveUser,
     saveEvent,
+    saveEventPolicy,
     saveGrowthLevel,
     saveGrowthRule,
     failExportBuild,
@@ -3005,4 +3345,10 @@ function codeError(code) {
   return error
 }
 
-module.exports = { assertEventCover, createAdminRepository, writeAudit }
+module.exports = {
+  assertEventContentMedia,
+  assertEventCover,
+  createAdminRepository,
+  replaceEventContentMedia,
+  writeAudit,
+}

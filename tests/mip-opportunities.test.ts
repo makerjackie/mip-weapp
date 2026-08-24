@@ -14,8 +14,10 @@ describe('MIP opportunity contracts', () => {
       'setProfileInterest',
       'saveCooperationCard',
       'unpublishCooperationCard',
+      'archiveCooperationCard',
       'saveSuperCase',
       'unpublishSuperCase',
+      'archiveSuperCase',
     ]) {
       expect(auth).toContain(`'${action}'`)
     }
@@ -86,5 +88,12 @@ describe('MIP opportunity contracts', () => {
     expect(sql).toContain('UNIQUE KEY mip_profile_interests_pair_uk')
     expect(rollback).toContain('DROP TABLE IF EXISTS mip_opportunities')
     expect(sql).not.toMatch(/\b(member|dating|sewing)_/i)
+  })
+
+  it('shows the opportunity publication time in the detail view', () => {
+    const page = readFileSync(new URL('../src/packages/member/mip-opportunities/detail/index.ts', import.meta.url), 'utf8')
+    const view = readFileSync(new URL('../src/packages/member/mip-opportunities/detail/index.wxml', import.meta.url), 'utf8')
+    expect(page).toContain('formatLocalDateTime(item.publishedAt)')
+    expect(view).toContain('发布于 {{publishedText}}')
   })
 })

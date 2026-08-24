@@ -46,6 +46,7 @@ export function deriveMembershipCheckout(
       priceCents: plan.priceCents,
       currency: plan.currency,
       catalogStage: plan.catalogStage,
+      benefits: [...plan.benefits],
       version: plan.version,
     },
   }

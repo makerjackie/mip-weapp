@@ -22,7 +22,7 @@ describe('MIP received interaction client flow', () => {
     expect(page).toContain('markReceivedRead')
     expect(page).toContain('mipMessagingModule.invalidate()')
     expect(page).not.toContain('wx.cloud')
-    expect(view).toContain('收到的引荐')
+    expect(view).toContain('引荐给我的')
     expect(view).toContain('对我感兴趣')
     expect(view).toContain('state === \'loading\'')
     expect(view).toContain('state === \'empty\'')

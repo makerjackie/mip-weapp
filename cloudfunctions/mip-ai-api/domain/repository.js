@@ -208,25 +208,79 @@ function createAiRepository(database, options = {}) {
     const providerHash = result.providerJobKey
       ? createHash('sha256').update(result.providerJobKey).digest('hex')
       : null
-    const structured = normalizeStructuredDraft(result.purpose, result.structuredDraft)
+    return database.transaction(async (tx) => {
+      await requireActiveUser(tx, appId, userId)
+      const current = await tx.one(
+        `SELECT purpose, status, version, expires_at FROM mip_ai_drafts
+         WHERE app_id = ? AND user_id = ? AND id = ? FOR UPDATE`,
+        [appId, userId, draftId],
+      )
+      if (!current) throw new Error('NOT_FOUND')
+      if (!['TRANSCRIBING', 'STRUCTURING'].includes(current.status)
+        || Number(current.version) !== expectedVersion
+        || new Date(current.expires_at).getTime() <= Date.now()
+        || current.purpose !== result.purpose) {
+        throw new Error('CONFLICT')
+      }
+      const structured = normalizeStructuredDraft(current.purpose, result.structuredDraft)
+      const update = await tx.query(
+        `UPDATE mip_ai_drafts SET
+           transcript_text = ?, structured_draft_json = ?, provider_job_key_hash = ?,
+           status = 'DRAFT_READY', version = version + 1
+         WHERE app_id = ? AND user_id = ? AND id = ? AND version = ?
+           AND status IN ('TRANSCRIBING', 'STRUCTURING') AND expires_at > UTC_TIMESTAMP(3)`,
+        [
+          result.transcriptText,
+          JSON.stringify(structured),
+          providerHash,
+          appId,
+          userId,
+          draftId,
+          expectedVersion,
+        ],
+      )
+      if (Number(update.affectedRows) !== 1) throw new Error('CONFLICT')
+      return readDraft(tx, appId, userId, draftId)
+    })
+  }
+
+  async function beginDraftRefinement(appId, userId, input) {
+    if (!isUuid(input.draftId) || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1) {
+      throw new Error('VALIDATION_FAILED')
+    }
+    return database.transaction(async (tx) => {
+      await requireActiveUser(tx, appId, userId)
+      const current = await tx.one(
+        `SELECT id, user_id, purpose, transcript_text, structured_draft_json,
+                status, expires_at, version, created_at, updated_at
+         FROM mip_ai_drafts
+         WHERE app_id = ? AND user_id = ? AND id = ? FOR UPDATE`,
+        [appId, userId, input.draftId],
+      )
+      if (!current) throw new Error('NOT_FOUND')
+      if (current.status !== 'DRAFT_READY' || new Date(current.expires_at).getTime() <= Date.now()) {
+        throw new Error('AI_DRAFT_NOT_EDITABLE')
+      }
+      if (Number(current.version) !== input.expectedVersion) throw new Error('CONFLICT')
+      const update = await tx.query(
+        `UPDATE mip_ai_drafts SET status = 'STRUCTURING', version = version + 1
+         WHERE app_id = ? AND user_id = ? AND id = ? AND version = ?
+           AND status = 'DRAFT_READY' AND expires_at > UTC_TIMESTAMP(3)`,
+        [appId, userId, input.draftId, input.expectedVersion],
+      )
+      if (Number(update.affectedRows) !== 1) throw new Error('CONFLICT')
+      return draftDto({ ...current, status: 'STRUCTURING', version: input.expectedVersion + 1 })
+    })
+  }
+
+  async function restoreDraftAfterRefinement(appId, userId, draftId, expectedVersion) {
     const update = await database.query(
-      `UPDATE mip_ai_drafts SET
-         transcript_text = ?, structured_draft_json = ?, provider_job_key_hash = ?,
-         status = 'DRAFT_READY', version = version + 1
+      `UPDATE mip_ai_drafts SET status = 'DRAFT_READY', version = version + 1
        WHERE app_id = ? AND user_id = ? AND id = ? AND version = ?
-         AND status IN ('TRANSCRIBING', 'STRUCTURING') AND expires_at > UTC_TIMESTAMP(3)`,
-      [
-        result.transcriptText,
-        JSON.stringify(structured),
-        providerHash,
-        appId,
-        userId,
-        draftId,
-        expectedVersion,
-      ],
+         AND status = 'STRUCTURING' AND expires_at > UTC_TIMESTAMP(3)`,
+      [appId, userId, draftId, expectedVersion],
     )
-    if (Number(update.affectedRows) !== 1) throw new Error('CONFLICT')
-    return getDraft(appId, userId, draftId)
+    return Number(update.affectedRows) === 1
   }
 
   async function failDraft(appId, userId, draftId, expectedVersion) {
@@ -389,6 +443,7 @@ function createAiRepository(database, options = {}) {
   }
 
   return {
+    beginDraftRefinement,
     completeDraft,
     createTextDraft,
     createVoiceDraft,
@@ -405,6 +460,7 @@ function createAiRepository(database, options = {}) {
     markPendingAudioUploadDeleted,
     recoverVoiceDraftFromUpload,
     registerPendingAudioUpload,
+    restoreDraftAfterRefinement,
     updateDraft,
   }
 }

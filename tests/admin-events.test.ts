@@ -50,6 +50,30 @@ describe('MIP admin event contract', () => {
     expect(pageTs).toContain('\'draft.waitlistEnabled\': false')
   })
 
+  it('lets platform event operators configure the default cancellation hours', () => {
+    const source = read('src/packages/admin/managed-events/index.ts')
+    const view = read('src/packages/admin/managed-events/index.wxml')
+    expect(source).toContain('saveEventPolicy')
+    expect(source).toContain('item.capability === \'events.write\' && item.scopeType === \'PLATFORM\'')
+    expect(view).toContain('默认取消报名时间')
+    expect(view).toContain('cancellationHoursBeforeStart')
+  })
+
+  it('supports ordered event description image upload and preview', () => {
+    const source = read('src/packages/admin/events/index.ts')
+    const view = read('src/packages/admin/events/index.wxml')
+    const detail = read('src/packages/member/mip-events/detail/index.wxml')
+    const gateway = read('src/modules/mip-admin/cloudbase-gateway.ts')
+    expect(source).toContain('uploadImageFromPath(\'EVENT_CONTENT\'')
+    expect(source).toContain('moveContentImage')
+    expect(source).toContain('previewContentImage')
+    expect(view).toContain('活动介绍图片')
+    expect(view).toContain('updateContentCaption')
+    expect(view).toContain('removeContentImage')
+    expect(detail).toContain('event.contentMedia')
+    expect(gateway).toMatch(/getEvent: async eventId => resolveCloudFileUrls\([\s\S]*mip\.admin\.events\.get/)
+  })
+
   it('blocks stale saves and requires explicit conflict recovery', () => {
     const pageTs = read('src/packages/admin/events/index.ts')
     const pageWxml = read('src/packages/admin/events/index.wxml')

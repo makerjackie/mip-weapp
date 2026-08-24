@@ -12,8 +12,12 @@ import type {
   EventFeedbackDraft,
   EventFeedQuery,
   EventFeedResult,
+  EventInvitationCode,
   HeartCandidate,
+  HeartHistoryKind,
+  HeartHistoryPage,
   HeartState,
+  InvitationSceneResolution,
   MipEventDetail,
   MipEventsGateway,
   MyEventAlbumSubmissions,
@@ -46,10 +50,12 @@ const readActions = new Set([
   'mip.events.mine',
   'mip.events.myRegistration',
   'mip.events.heartCandidates',
+  'mip.events.hearts.mine',
   'mip.events.heart',
   'mip.events.feedback',
   'mip.events.admin.listFeedback',
   'mip.events.resolveCheckInScene',
+  'mip.events.resolveInvitationScene',
 ])
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -150,12 +156,24 @@ export const cloudbaseMipEventsGateway: MipEventsGateway = {
     return callEvents<CheckInScene>('mip.events.resolveCheckInScene', { scene })
   },
 
+  resolveInvitationScene(scene: string) {
+    return callEvents<InvitationSceneResolution>('mip.events.resolveInvitationScene', { scene })
+  },
+
   createCheckInPoster(eventId: EventId, mode: CheckInCredentialMode = 'STATIC') {
     return callEvents<CheckInPosterCredential>('mip.events.admin.createCheckInPoster', { eventId, mode })
   },
 
+  createInvitationCode(eventId: EventId) {
+    return callEvents<EventInvitationCode>('mip.events.createInvitationCode', { eventId })
+  },
+
   listHeartCandidates(eventId: EventId) {
     return callEvents<HeartCandidate[]>('mip.events.heartCandidates', { eventId })
+  },
+
+  listHeartHistory(kind: HeartHistoryKind, cursor?: string, limit = 20) {
+    return callEvents<HeartHistoryPage>('mip.events.hearts.mine', { kind, cursor, limit })
   },
 
   getHeart(eventId: EventId) {

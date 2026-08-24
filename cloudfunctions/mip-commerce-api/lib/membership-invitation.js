@@ -4,11 +4,14 @@ const {
   createCipheriv,
   createDecipheriv,
   createHash,
+  createHmac,
   randomBytes,
+  timingSafeEqual,
 } = require('node:crypto')
 
 const VERSION = 'm1'
 const USER_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const SCENE_PATTERN = /^[A-Za-z0-9_-]{32}$/
 
 function keyFromSecret(secret) {
   if (typeof secret !== 'string' || secret.length < 32) {
@@ -92,8 +95,66 @@ function hashMembershipInvitation(token) {
   return createHash('sha256').update(token, 'utf8').digest('hex')
 }
 
+function sceneSignature(body, appId, secret) {
+  return createHmac('sha256', keyFromSecret(secret))
+    .update('membership-scene:v1\0')
+    .update(appId)
+    .update('\0')
+    .update(body)
+    .digest('base64url')
+}
+
+function uuidBytes(userId) {
+  return Buffer.from(userId.replaceAll('-', ''), 'hex')
+}
+
+function bytesUuid(value) {
+  const hex = value.toString('hex')
+  return [hex.slice(0, 8), hex.slice(8, 12), hex.slice(12, 16), hex.slice(16, 20), hex.slice(20)].join('-')
+}
+
+function createMembershipInvitationScene({ appId, inviterUserId, expiresAt }, secret) {
+  const expiry = expiresAt instanceof Date ? expiresAt : new Date(expiresAt)
+  const expiryDay = Math.ceil(expiry.getTime() / 86_400_000)
+  if (typeof appId !== 'string' || !appId || !USER_ID_PATTERN.test(inviterUserId)
+    || !Number.isInteger(expiryDay) || expiryDay < 1 || expiryDay > 0xffff) {
+    throw new Error('MEMBERSHIP_INVITATION_INVALID')
+  }
+  const expiryBytes = Buffer.alloc(2)
+  expiryBytes.writeUInt16BE(expiryDay)
+  const body = Buffer.concat([uuidBytes(inviterUserId), expiryBytes]).toString('base64url')
+  return `${body}${sceneSignature(body, appId, secret).slice(0, 8)}`
+}
+
+function readMembershipInvitationScene(scene, appId, secret, now = new Date()) {
+  if (!SCENE_PATTERN.test(String(scene || '')) || typeof appId !== 'string' || !appId
+    || !Number.isFinite(now.getTime())) {
+    throw new Error('MEMBERSHIP_INVITATION_INVALID')
+  }
+  try {
+    const body = scene.slice(0, 24)
+    const suppliedSignature = Buffer.from(scene.slice(24), 'utf8')
+    const expectedSignature = Buffer.from(sceneSignature(body, appId, secret).slice(0, 8), 'utf8')
+    if (!timingSafeEqual(suppliedSignature, expectedSignature)) throw new Error('INVALID_SCENE')
+    const payload = Buffer.from(body, 'base64url')
+    if (payload.length !== 18) throw new Error('INVALID_SCENE')
+    const inviterUserId = bytesUuid(payload.subarray(0, 16))
+    const expiresAt = new Date(payload.readUInt16BE(16) * 86_400_000)
+    if (!USER_ID_PATTERN.test(inviterUserId) || expiresAt.getTime() <= now.getTime()) {
+      throw new Error('INVALID_SCENE')
+    }
+    return { inviterUserId, expiresAt: expiresAt.toISOString() }
+  }
+  catch (error) {
+    if (error?.message === 'IDENTITY_CONFIG_REQUIRED') throw error
+    throw new Error('MEMBERSHIP_INVITATION_INVALID')
+  }
+}
+
 module.exports = {
   createMembershipInvitation,
+  createMembershipInvitationScene,
   hashMembershipInvitation,
   readMembershipInvitation,
+  readMembershipInvitationScene,
 }

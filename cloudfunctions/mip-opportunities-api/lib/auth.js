@@ -14,8 +14,10 @@ const fullAccessActions = new Set([
   'setProfileInterest',
   'saveCooperationCard',
   'unpublishCooperationCard',
+  'archiveCooperationCard',
   'saveSuperCase',
   'unpublishSuperCase',
+  'archiveSuperCase',
 ])
 
 function allowedAppIds() {

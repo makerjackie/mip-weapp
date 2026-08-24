@@ -97,6 +97,7 @@ function createGateway() {
     })),
     checkIn: vi.fn(async () => ({ eventId, registrationId: 'registration-1', status: 'ATTENDED' as const, checkedInAt: '', idempotent: false })),
     resolveCheckInScene: vi.fn(async scene => ({ eventId, scanToken: scene, validFrom: '', validUntil: '' })),
+    resolveInvitationScene: vi.fn(async () => ({ eventId, invitationToken: 'invitation-token', validUntil: '' })),
     createCheckInPoster: vi.fn(async (_eventId, mode = 'STATIC') => ({
       eventId,
       credentialId: 'credential-1',
@@ -107,7 +108,16 @@ function createGateway() {
       assetId: 'asset-1',
       codeUrl: 'https://example.test/code.png',
     })),
+    createInvitationCode: vi.fn(async () => ({
+      invitationId: 'invitation-1',
+      eventId,
+      scene: 'i1.abcdefghijk.lmnopqrstuv',
+      validUntil: '',
+      assetId: 'asset-1',
+      codeUrl: 'https://example.test/invitation.png',
+    })),
     listHeartCandidates: vi.fn(async () => []),
+    listHeartHistory: vi.fn(async kind => ({ kind, items: [] })),
     getHeart: vi.fn(async () => ({ received: [], version: 0 })),
     setHeart: vi.fn(async () => ({ received: [], version: 1 })),
     getFeedback: vi.fn(async () => null),
@@ -126,6 +136,32 @@ describe('MIP events client module', () => {
     await module.listEvents(query)
     await module.listEvents(query, { force: true })
     expect(gateway.listEvents).toHaveBeenCalledTimes(2)
+  })
+
+  it('normalizes a selected calendar date and keeps cursor pagination in the server query', async () => {
+    const gateway = createGateway()
+    const module = createMipEventsModule(gateway)
+    await module.listEvents({
+      view: 'UPCOMING',
+      dateFilter: 'CUSTOM',
+      date: '2026-08-24',
+      cursor: 'cursor-2',
+      limit: 99,
+    })
+    expect(gateway.listEvents).toHaveBeenCalledWith({
+      view: 'UPCOMING',
+      dateFilter: 'CUSTOM',
+      date: '2026-08-24',
+      cursor: 'cursor-2',
+      limit: 30,
+    })
+
+    await module.listEvents({
+      view: 'UPCOMING',
+      dateFilter: 'CUSTOM',
+      date: '24/08/2026',
+    })
+    expect(gateway.listEvents).toHaveBeenLastCalledWith(expect.objectContaining({ date: undefined }))
   })
 
   it('normalizes public participant search and keeps role filtering on the server', async () => {
@@ -243,11 +279,28 @@ describe('MIP events client module', () => {
     expect(() => module.resolveCheckInScene('event-id.secret')).toThrow('活动码无效')
   })
 
+  it('accepts only bounded invitation scenes and creates invitation codes through the server', async () => {
+    const gateway = createGateway()
+    const module = createMipEventsModule(gateway)
+    const scene = 'i1.abcdefghijk.lmnopqrstuv'
+    await expect(module.resolveInvitationScene(scene)).resolves.toMatchObject({ eventId })
+    await expect(module.createInvitationCode(eventId)).resolves.toMatchObject({ scene })
+    expect(() => module.resolveInvitationScene('bad.scene')).toThrow('活动邀请无效')
+  })
+
   it('forwards the selected check-in credential mode to the server gateway', async () => {
     const gateway = createGateway()
     const module = createMipEventsModule(gateway)
     await expect(module.createCheckInPoster(eventId, 'ROTATING')).resolves.toMatchObject({ mode: 'ROTATING' })
     expect(gateway.createCheckInPoster).toHaveBeenCalledWith(eventId, 'ROTATING')
+  })
+
+  it('loads sent and received heart history with server pagination', async () => {
+    const gateway = createGateway()
+    const module = createMipEventsModule(gateway)
+    await expect(module.listHeartHistory('SENT', 'cursor-1')).resolves.toMatchObject({ kind: 'SENT' })
+    expect(gateway.listHeartHistory).toHaveBeenCalledWith('SENT', 'cursor-1', 20)
+    expect(() => module.listHeartHistory('UNKNOWN' as never)).toThrow('心动记录类型无效')
   })
 
   it('submits and withdraws album photos without client-owned review facts', async () => {

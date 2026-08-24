@@ -93,7 +93,14 @@ describe('MIP membership commerce', () => {
   it('fails closed when payment is disabled and reconciles when enabled', async () => {
     const gateway = {
       listPlans: vi.fn(async () => [plan]),
+      getMembershipBenefits: vi.fn(async () => ({
+        kind: 'GUEST' as const,
+        status: 'NONE' as const,
+        benefits: [] as [],
+      })),
       createMembershipInvitation: vi.fn(async () => ({ token: 'm1.opaque', expiresAt: '2026-09-23T00:00:00.000Z' })),
+      createMembershipInvitationCode: vi.fn(async () => ({ codeUrl: 'cloud://env.test/code.png', expiresAt: '2026-09-23T00:00:00.000Z' })),
+      resolveMembershipInvitationScene: vi.fn(async () => ({ token: 'm1.scene', expiresAt: '2026-09-23T00:00:00.000Z' })),
       createCheckout: vi.fn(async () => order('CREATED')),
       createPayment: vi.fn(async () => ({
         timeStamp: '1',
@@ -153,6 +160,9 @@ describe('MIP membership commerce', () => {
       if (action === 'requestRefund') {
         return { ok: true, data: { id: 'refund-1', status: 'PENDING' } }
       }
+      if (action === 'getMembershipBenefits') {
+        return { ok: true, data: { kind: 'GUEST', status: 'NONE', benefits: [] } }
+      }
       if (action === 'submitRefund') {
         return { ok: true, data: { status: 'PROVIDER_CREATED' } }
       }
@@ -163,12 +173,18 @@ describe('MIP membership commerce', () => {
       payment: 'mip-cloudpay',
     })
 
+    await expect(gateway.getMembershipBenefits()).resolves.toEqual({
+      kind: 'GUEST',
+      status: 'NONE',
+      benefits: [],
+    })
     await expect(gateway.reconcileOrder(order('PAID').id)).resolves.toMatchObject({ status: 'PAID' })
     await expect(gateway.requestRefund({
       orderId: order('PAID').id,
       idempotencyKey: 'refund-key',
     })).resolves.toEqual({ refundId: 'refund-1', status: 'PROVIDER_CREATED' })
     expect(invoke.mock.calls.map(call => `${call[0]}:${call[1]}`)).toEqual([
+      'mip-commerce-api:getMembershipBenefits',
       'mip-cloudpay:syncPayment',
       'mip-commerce-api:getOrder',
       'mip-commerce-api:requestRefund',

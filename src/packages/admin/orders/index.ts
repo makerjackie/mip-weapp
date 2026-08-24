@@ -1,17 +1,127 @@
-import type { AdminOrder } from '../../../modules/mip-admin'
+import type {
+  AdminOrder,
+  AdminOrderFilters,
+  AdminOrderStatus,
+  AdminRefundStatus,
+} from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, hasScopedCapability, mipAdminModule } from '../../../modules/mip-admin'
+import { formatLocalDateTime } from '../../../utils/date'
 import { adminLoadFailure } from '../shared/page-state'
 
-type OrderView = AdminOrder & { amountText: string, refundedText: string }
+interface FilterOption<T extends string> {
+  label: string
+  value: T | ''
+}
+
+type OrderView = AdminOrder & {
+  amountText: string
+  refundedText: string
+  createdText: string
+  paidText: string
+  orderTypeText: string
+  statusText: string
+  refundStatusText: string
+  canSubmitRefund: boolean
+  canRetryRefund: boolean
+}
+
+const orderTypeOptions: Array<FilterOption<AdminOrder['orderType']>> = [
+  { label: '全部类型', value: '' },
+  { label: '会员订单', value: 'MEMBERSHIP' },
+  { label: '活动订单', value: 'EVENT' },
+]
+const statusOptions: Array<FilterOption<AdminOrderStatus>> = [
+  { label: '全部订单状态', value: '' },
+  { label: '待支付', value: 'CREATED' },
+  { label: '支付单已创建', value: 'PAYMENT_CREATED' },
+  { label: '已支付', value: 'PAID' },
+  { label: '支付失败', value: 'FAILED' },
+  { label: '已关闭', value: 'CLOSED' },
+  { label: '退款处理中', value: 'REFUND_PENDING' },
+  { label: '部分退款', value: 'PARTIALLY_REFUNDED' },
+  { label: '已退款', value: 'REFUNDED' },
+]
+const refundStatusOptions: Array<FilterOption<AdminRefundStatus | 'NONE'>> = [
+  { label: '全部退款状态', value: '' },
+  { label: '无退款记录', value: 'NONE' },
+  { label: '待提交', value: 'PENDING' },
+  { label: '退款单已创建', value: 'PROVIDER_CREATED' },
+  { label: '退款处理中', value: 'PROCESSING' },
+  { label: '退款成功', value: 'SUCCEEDED' },
+  { label: '退款失败', value: 'FAILED' },
+  { label: '退款已取消', value: 'CANCELLED' },
+]
+const orderTypeLabels = Object.fromEntries(orderTypeOptions.map(item => [item.value, item.label]))
+const statusLabels = Object.fromEntries(statusOptions.map(item => [item.value, item.label]))
+const refundStatusLabels = Object.fromEntries(refundStatusOptions.map(item => [item.value, item.label]))
+
+function dateBoundary(value: string, endOfDay: boolean) {
+  const parts = value.split('-').map(Number)
+  if (parts.length !== 3 || parts.some(part => !Number.isInteger(part))) {
+    return ''
+  }
+  const date = new Date(
+    parts[0],
+    parts[1] - 1,
+    parts[2],
+    endOfDay ? 23 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 999 : 0,
+  )
+  return Number.isFinite(date.getTime()) ? date.toISOString() : ''
+}
+
+function filters(data: {
+  eventId: string
+  query: string
+  orderTypeIndex: number
+  statusIndex: number
+  refundStatusIndex: number
+  createdFromDate: string
+  createdToDate: string
+}): AdminOrderFilters {
+  return {
+    query: data.query.trim(),
+    eventId: data.eventId || undefined,
+    orderType: data.eventId ? 'EVENT' : orderTypeOptions[data.orderTypeIndex]?.value || '',
+    status: statusOptions[data.statusIndex]?.value || '',
+    refundStatus: refundStatusOptions[data.refundStatusIndex]?.value || '',
+    createdFrom: data.createdFromDate ? dateBoundary(data.createdFromDate, false) : '',
+    createdTo: data.createdToDate ? dateBoundary(data.createdToDate, true) : '',
+  }
+}
+
+function orderView(item: AdminOrder): OrderView {
+  return {
+    ...item,
+    amountText: `${item.currency} ${(item.amountCents / 100).toFixed(2)}`,
+    refundedText: `${item.currency} ${(item.refundedAmountCents / 100).toFixed(2)}`,
+    createdText: formatLocalDateTime(item.createdAt),
+    paidText: item.paidAt ? formatLocalDateTime(item.paidAt) : '',
+    orderTypeText: orderTypeLabels[item.orderType] || item.orderType,
+    statusText: statusLabels[item.status] || item.status,
+    refundStatusText: item.refundStatus ? refundStatusLabels[item.refundStatus] || item.refundStatus : '无退款记录',
+    canSubmitRefund: item.availableRefundActions.includes('SUBMIT_REFUND'),
+    canRetryRefund: item.availableRefundActions.includes('RETRY_REFUND'),
+  }
+}
 
 Page({
   data: {
     state: 'loading' as AdminPageState,
     eventId: '',
     orders: [] as OrderView[],
-    status: '',
-    canRefund: false,
+    query: '',
+    orderTypeOptions,
+    orderTypeIndex: 0,
+    statusOptions,
+    statusIndex: 0,
+    refundStatusOptions,
+    refundStatusIndex: 0,
+    createdFromDate: '',
+    createdToDate: '',
     canExport: false,
     processingId: '',
     exportPending: false,
@@ -19,10 +129,38 @@ Page({
     nextCursor: null as string | null,
     loadingMore: false,
   },
+  requestSeq: 0,
   onLoad(query: Record<string, string>) { this.setData({ eventId: query.eventId || '' }) },
   onShow() { void this.loadOrders() },
-  chooseStatus(event: WechatMiniprogram.TouchEvent) {
-    this.setData({ status: String(event.currentTarget.dataset.value || '') })
+  updateQuery(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.setData({ query: event.detail.value })
+  },
+  search() {
+    this.setData({ orders: [], nextCursor: null })
+    void this.loadOrders(true)
+  },
+  changeOrderType(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.setData({ orderTypeIndex: Number(event.detail.value), orders: [], nextCursor: null })
+    void this.loadOrders(true)
+  },
+  changeStatus(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.setData({ statusIndex: Number(event.detail.value), orders: [], nextCursor: null })
+    void this.loadOrders(true)
+  },
+  changeRefundStatus(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.setData({ refundStatusIndex: Number(event.detail.value), orders: [], nextCursor: null })
+    void this.loadOrders(true)
+  },
+  changeCreatedDate(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const field = String(event.currentTarget.dataset.field || '')
+    if (!['createdFromDate', 'createdToDate'].includes(field)) {
+      return
+    }
+    this.setData({ [field]: event.detail.value, orders: [], nextCursor: null })
+    void this.loadOrders(true)
+  },
+  clearCreatedDates() {
+    this.setData({ createdFromDate: '', createdToDate: '', orders: [], nextCursor: null })
     void this.loadOrders(true)
   },
   async loadOrders(force = false) {
@@ -30,25 +168,24 @@ Page({
     if (!hasContent) {
       this.setData({ state: 'loading', message: '' })
     }
+    const seq = this.requestSeq + 1
+    this.requestSeq = seq
     try {
+      const input = { filters: filters(this.data) }
       const [session, response, event] = await Promise.all([
         mipAdminModule.getSession(force),
-        mipAdminModule.listOrders({ filters: { status: this.data.status, eventId: this.data.eventId } }, force),
+        mipAdminModule.listOrders(input, force),
         this.data.eventId ? mipAdminModule.getEvent(this.data.eventId, force) : Promise.resolve(null),
       ])
+      if (seq !== this.requestSeq) {
+        return
+      }
       const eventScope = event
         ? { scopeType: 'EVENT' as const, scopeId: event.id, branchId: event.branchId }
         : null
       this.setData({
         state: 'ready',
-        orders: response.items.map(item => ({
-          ...item,
-          amountText: `${item.currency} ${(item.amountCents / 100).toFixed(2)}`,
-          refundedText: `${item.currency} ${(item.refundedAmountCents / 100).toFixed(2)}`,
-        })),
-        canRefund: eventScope
-          ? hasScopedCapability(session.capabilities, 'refunds.submit', eventScope)
-          : hasCapability(session.capabilities, 'refunds.submit'),
+        orders: response.items.map(orderView),
         canExport: eventScope
           ? hasScopedCapability(session.capabilities, 'exports.create', eventScope)
           : hasCapability(session.capabilities, 'exports.create'),
@@ -58,6 +195,9 @@ Page({
       })
     }
     catch (error) {
+      if (seq !== this.requestSeq) {
+        return
+      }
       this.setData(adminLoadFailure(error, { hasContent, fallbackMessage: '订单列表加载失败' }))
     }
   },
@@ -69,14 +209,12 @@ Page({
     try {
       const response = await mipAdminModule.listOrders({
         cursor: this.data.nextCursor,
-        filters: { status: this.data.status, eventId: this.data.eventId },
+        filters: filters(this.data),
       })
-      const orders = response.items.map(item => ({
-        ...item,
-        amountText: `${item.currency} ${(item.amountCents / 100).toFixed(2)}`,
-        refundedText: `${item.currency} ${(item.refundedAmountCents / 100).toFixed(2)}`,
-      }))
-      this.setData({ orders: this.data.orders.concat(orders), nextCursor: response.nextCursor || null })
+      this.setData({
+        orders: this.data.orders.concat(response.items.map(orderView)),
+        nextCursor: response.nextCursor || null,
+      })
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '更多订单加载失败' })
@@ -88,7 +226,8 @@ Page({
   onReachBottom() { void this.loadMoreOrders() },
   async submitRefund(event: WechatMiniprogram.TouchEvent) {
     const orderId = String(event.currentTarget.dataset.id || '')
-    if (!orderId || !this.data.canRefund || this.data.processingId) {
+    const order = this.data.orders.find(item => item.id === orderId)
+    if (!order?.canSubmitRefund || this.data.processingId) {
       return
     }
     this.setData({ processingId: orderId, message: '' })
@@ -110,10 +249,7 @@ Page({
           : dispatchStatus === 'PENDING_RETRY'
             ? '退款请求已记录'
             : '退款已提交'
-      wx.showToast({
-        title,
-        icon: dispatchStatus === 'FAILED' ? 'none' : 'success',
-      })
+      wx.showToast({ title, icon: dispatchStatus === 'FAILED' ? 'none' : 'success' })
       await this.loadOrders(true)
     }
     catch (error) {
@@ -126,7 +262,8 @@ Page({
   async retryRefund(event: WechatMiniprogram.TouchEvent) {
     const orderId = String(event.currentTarget.dataset.orderId || '')
     const refundId = String(event.currentTarget.dataset.refundId || '')
-    if (!orderId || !refundId || !this.data.canRefund || this.data.processingId) {
+    const order = this.data.orders.find(item => item.id === orderId)
+    if (!refundId || !order?.canRetryRefund || this.data.processingId) {
       return
     }
     this.setData({ processingId: orderId, message: '' })
@@ -162,7 +299,7 @@ Page({
         exportType: this.data.eventId ? 'EVENT_ORDERS' : 'ORDERS',
         eventId: this.data.eventId || undefined,
         includesPhone: false,
-        filters: { status: this.data.status },
+        filters: filters(this.data),
       }))
       wx.showToast({ title: `已导出 ${result.rowCount} 条`, icon: 'success' })
     }

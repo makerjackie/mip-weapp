@@ -10,7 +10,7 @@ function createGrowthRepository(database, options = {}) {
 
   async function getSnapshot(appId, userId) {
     await ensureAccount(database, appId, userId)
-    const [account, levels] = await Promise.all([
+    const [account, levels, rules] = await Promise.all([
       database.one(
         `SELECT user_id, experience_balance, contribution_balance, coin_balance, version
          FROM mip_growth_accounts WHERE app_id = ? AND user_id = ?`,
@@ -23,8 +23,16 @@ function createGrowthRepository(database, options = {}) {
          ORDER BY minimum_experience, id`,
         [appId],
       ),
+      database.query(
+        `SELECT id, rule_key, name, metric, delta_value, daily_limit_value,
+                source_event_type, status
+         FROM mip_growth_rules
+         WHERE app_id = ? AND status = 'ACTIVE'
+         ORDER BY metric, name, id`,
+        [appId],
+      ),
     ])
-    return levelSnapshot(account, levels)
+    return levelSnapshot(account, levels, rules)
   }
 
   async function listEntries(appId, userId, options = {}) {

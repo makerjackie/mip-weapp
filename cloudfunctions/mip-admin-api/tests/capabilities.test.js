@@ -96,4 +96,18 @@ describe('admin capabilities', () => {
       eventIds: [],
     })
   })
+
+  it('fails closed when a role key is stored under an incompatible scope type', () => {
+    const malformedOwner = { roleKey: 'PLATFORM_OWNER', scopeType: 'BRANCH', scopeId: 'branch-a' }
+    const malformedBranchAdmin = { roleKey: 'BRANCH_ADMIN', scopeType: 'PLATFORM', scopeId: null }
+    assert.throws(() => authorize([malformedOwner], CAPABILITIES.ROLES_CHANGE, {
+      scopeType: 'BRANCH', scopeId: 'branch-a',
+    }), /FORBIDDEN/)
+    assert.deepEqual(capabilitySnapshot([malformedOwner, malformedBranchAdmin]), [])
+    assert.deepEqual(visibilityForCapability([malformedOwner], CAPABILITIES.USERS_READ), {
+      platform: false,
+      branchIds: [],
+      eventIds: [],
+    })
+  })
 })

@@ -4,8 +4,10 @@ const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const {
   createMembershipInvitation,
+  createMembershipInvitationScene,
   hashMembershipInvitation,
   readMembershipInvitation,
+  readMembershipInvitationScene,
 } = require('../lib/membership-invitation')
 
 const secret = 'membership-invitation-secret-with-more-than-32-characters'
@@ -38,6 +40,28 @@ describe('membership invitation token', () => {
     )
     assert.throws(
       () => readMembershipInvitation(token, 'app-1', secret, new Date('2026-09-23T00:00:00.000Z')),
+      /MEMBERSHIP_INVITATION_INVALID/,
+    )
+  })
+
+  it('uses a 32-character AppID-bound expiring scene for mini-program codes', () => {
+    const scene = createMembershipInvitationScene({
+      appId: 'app-1',
+      inviterUserId,
+      expiresAt: new Date('2026-09-23T00:00:00.000Z'),
+    }, secret)
+    assert.equal(scene.length, 32)
+    assert.equal(scene.includes(inviterUserId), false)
+    assert.deepEqual(
+      readMembershipInvitationScene(scene, 'app-1', secret, new Date('2026-08-24T00:00:00.000Z')),
+      { inviterUserId, expiresAt: '2026-09-23T00:00:00.000Z' },
+    )
+    assert.throws(
+      () => readMembershipInvitationScene(scene, 'app-2', secret, new Date('2026-08-24T00:00:00.000Z')),
+      /MEMBERSHIP_INVITATION_INVALID/,
+    )
+    assert.throws(
+      () => readMembershipInvitationScene(scene, 'app-1', secret, new Date('2026-09-23T00:00:00.000Z')),
       /MEMBERSHIP_INVITATION_INVALID/,
     )
   })

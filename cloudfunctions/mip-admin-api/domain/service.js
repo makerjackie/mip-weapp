@@ -8,6 +8,7 @@ const {
   authorize,
   capabilitySnapshot,
   firstGrant,
+  isValidRoleBinding,
   visibilityForCapability,
 } = require('./capabilities')
 const {
@@ -36,6 +37,15 @@ const {
 const { decodeCursor } = require('./pagination')
 
 const PLATFORM_SCOPE_ID = '00000000-0000-0000-0000-000000000000'
+const ORDER_STATUSES = [
+  'CREATED', 'PAYMENT_CREATED', 'PAID', 'FAILED', 'CLOSED',
+  'REFUND_PENDING', 'PARTIALLY_REFUNDED', 'REFUNDED',
+]
+const REFUND_STATUSES = ['NONE', 'PENDING', 'PROVIDER_CREATED', 'PROCESSING', 'SUCCEEDED', 'FAILED', 'CANCELLED']
+const ROSTER_STATUSES = [
+  'PENDING_REVIEW', 'WAITLISTED', 'PAYMENT_PENDING', 'REGISTERED',
+  'CANCELLATION_PENDING', 'CANCELLED', 'REJECTED', 'ATTENDED',
+]
 
 function createAdminService({
   repository,
@@ -68,7 +78,8 @@ function createAdminService({
   }
   async function session(caller) {
     const user = assertFullAccessUser(await repository.resolveUser(caller))
-    const bindings = await repository.listRoleBindings(caller.appId, user.id)
+    const bindings = (await repository.listRoleBindings(caller.appId, user.id))
+      .filter(isValidRoleBinding)
     if (!bindings.length) {
       throw new AdminError('FORBIDDEN', '当前账号没有运营权限')
     }
@@ -162,19 +173,27 @@ function createAdminService({
 
   async function getDashboard(caller) {
     const context = await session(caller)
-    firstGrant(context.bindings, CAPABILITIES.DASHBOARD)
+    const grant = firstGrant(context.bindings, CAPABILITIES.DASHBOARD)
+    const counts = await repository.dashboard(context.caller.appId, {
+      users: visibilityForCapability(context.bindings, CAPABILITIES.USERS_READ),
+      events: visibilityForCapability(context.bindings, CAPABILITIES.EVENTS_READ),
+      orders: visibilityForCapability(context.bindings, CAPABILITIES.ORDERS_READ),
+      opportunities: visibilityForCapability(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE),
+    })
+    await repository.recordAudit(audit(context, grant, {
+      scopeType: grant.scopeType,
+      scopeId: grant.scopeId,
+      action: 'admin.session.enter',
+      resourceType: 'ADMIN_SESSION',
+      metadata: {},
+    }))
     return {
       session: {
         enabled: true,
         capabilities: context.capabilities,
         roles: context.bindings,
       },
-      counts: await repository.dashboard(context.caller.appId, {
-        users: visibilityForCapability(context.bindings, CAPABILITIES.USERS_READ),
-        events: visibilityForCapability(context.bindings, CAPABILITIES.EVENTS_READ),
-        orders: visibilityForCapability(context.bindings, CAPABILITIES.ORDERS_READ),
-        opportunities: visibilityForCapability(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE),
-      }),
+      counts,
     }
   }
 
@@ -536,6 +555,33 @@ function createAdminService({
       }))
     }
     return { items: result, nextCursor: page.nextCursor }
+  }
+
+  async function getUser(caller, input = {}) {
+    const context = await session(caller)
+    const userId = requiredId(input.userId, '用户')
+    const { scope } = await userAuthorization(context, userId, CAPABILITIES.USERS_READ)
+    const includePhone = input.includePhone === true
+    const phoneGrant = includePhone
+      ? authorize(context.bindings, CAPABILITIES.USERS_PHONE_READ, scope)
+      : null
+    const item = await repository.getUserDetail(context.caller.appId, userId)
+    if (!item) throw new AdminError('NOT_FOUND', '用户不存在')
+    const rawPhone = includePhone && item.phoneCiphertext
+      ? decryptPhone(item.phoneCiphertext, phoneEncryptionKey, { appId: context.caller.appId, userId })
+      : null
+    const { phoneCiphertext, ...safe } = item
+    if (includePhone) {
+      await repository.recordAudit(audit(context, phoneGrant, {
+        scopeType: scope.scopeType,
+        scopeId: scope.scopeId,
+        action: 'admin.users.phone.view',
+        resourceType: 'USER',
+        resourceId: userId,
+        metadata: { detail: true },
+      }))
+    }
+    return { ...safe, phoneNumber: rawPhone }
   }
 
   async function updateUser(caller, input) {
@@ -909,6 +955,41 @@ function createAdminService({
     return page
   }
 
+  async function getEventPolicy(caller) {
+    const context = await session(caller)
+    firstGrant(context.bindings, CAPABILITIES.EVENTS_WRITE)
+    return repository.getEventPolicy(context.caller.appId)
+  }
+
+  async function saveEventPolicy(caller, input = {}) {
+    const context = await session(caller)
+    const grant = authorize(context.bindings, CAPABILITIES.EVENTS_WRITE, {
+      scopeType: 'PLATFORM',
+      scopeId: null,
+    })
+    const cancellationHoursBeforeStart = Number(input.cancellationHoursBeforeStart)
+    if (!Number.isInteger(cancellationHoursBeforeStart)
+      || cancellationHoursBeforeStart < 0
+      || cancellationHoursBeforeStart > 720) {
+      throw new AdminError('VALIDATION_FAILED', '默认取消时间无效')
+    }
+    const version = nonNegativeVersion(input.expectedVersion)
+    return repository.saveEventPolicy({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      expectedVersion: version,
+      cancellationHoursBeforeStart,
+      authorization: mutationAuthorization(grant, CAPABILITIES.EVENTS_WRITE),
+      audit: audit(context, grant, {
+        scopeType: 'PLATFORM',
+        scopeId: null,
+        action: 'admin.events.policy.update',
+        resourceType: 'APP_SETTING',
+        metadata: { expectedVersion: version, cancellationHoursBeforeStart },
+      }),
+    })
+  }
+
   async function getEvent(caller, input) {
     const context = await session(caller)
     const eventId = requiredId(input.eventId, '活动')
@@ -1152,9 +1233,9 @@ function createAdminService({
     const page = pageResult(await repository.listRoster(
       context.caller.appId,
       eventId,
-      normalizeFilters(input.filters),
+      normalizeRosterFilters(input.filters),
       limit(input.limit),
-      decodeCursor(input.cursor, ['registeredAt', 'id']),
+      decodeCursor(input.cursor, ['submittedAt', 'id']),
     ))
     const safeItems = page.items.map((item) => {
       const rawPhone = includePhone && item.phoneCiphertext
@@ -1261,9 +1342,11 @@ function createAdminService({
   async function listRoles(caller) {
     const context = await session(caller)
     const grant = firstGrant(context.bindings, CAPABILITIES.EVENTS_TEAM)
+    const roleChangeVisibility = visibilityForCapability(context.bindings, CAPABILITIES.ROLES_CHANGE)
     const items = await repository.listRoles(
       context.caller.appId,
       visibilityForCapability(context.bindings, CAPABILITIES.EVENTS_TEAM),
+      { includeAdministrativeScopes: roleChangeVisibility.platform },
     )
     await repository.recordAudit(audit(context, grant, {
       scopeType: grant.scopeType,
@@ -1463,10 +1546,11 @@ function createAdminService({
 
   async function listOrders(caller, input = {}) {
     const context = await session(caller)
+    const filters = normalizeOrderFilters(input.filters)
     let grant
     let scope
-    if (input.filters?.eventId) {
-      const authorization = await eventAuthorization(context, input.filters.eventId, CAPABILITIES.ORDERS_READ)
+    if (filters.eventId) {
+      const authorization = await eventAuthorization(context, filters.eventId, CAPABILITIES.ORDERS_READ)
       grant = authorization.grant
       scope = authorization.scope
     }
@@ -1474,7 +1558,6 @@ function createAdminService({
       grant = firstGrant(context.bindings, CAPABILITIES.ORDERS_READ)
       scope = { scopeType: grant.scopeType, scopeId: grant.scopeId }
     }
-    const filters = normalizeFilters(input.filters)
     const page = pageResult(await repository.listOrders(
       context.caller.appId,
       visibilityForCapability(context.bindings, CAPABILITIES.ORDERS_READ),
@@ -1489,7 +1572,34 @@ function createAdminService({
       resourceType: 'ORDER_LIST',
       metadata: { count: page.items.length, filters },
     }))
-    return page
+    return {
+      ...page,
+      items: page.items.map((item) => {
+        const { branchId, ...safe } = item
+        const orderScope = item.orderType === 'EVENT'
+          ? { scopeType: 'EVENT', scopeId: item.resourceId, branchId: branchId || null }
+          : { scopeType: 'PLATFORM', scopeId: null, branchId: null }
+        let canRefund = false
+        try {
+          authorize(context.bindings, CAPABILITIES.REFUNDS_SUBMIT, orderScope)
+          canRefund = true
+        }
+        catch {}
+        const availableRefundActions = []
+        if (canRefund
+          && ['PAID', 'PARTIALLY_REFUNDED'].includes(item.status)
+          && Number(item.refundedAmountCents) < Number(item.amountCents)) {
+          availableRefundActions.push('SUBMIT_REFUND')
+        }
+        if (canRefund
+          && item.status === 'REFUND_PENDING'
+          && item.refundId
+          && ['PENDING', 'PROVIDER_CREATED', 'PROCESSING'].includes(item.refundStatus)) {
+          availableRefundActions.push('RETRY_REFUND')
+        }
+        return { ...safe, availableRefundActions }
+      }),
+    }
   }
 
   async function submitRefund(caller, input) {
@@ -1614,9 +1724,11 @@ function createAdminService({
     createExport,
     getDashboard,
     getEvent,
+    getEventPolicy,
     getExportStatus,
     health,
     getSession,
+    getUser,
     listAnnouncements,
     listAnnouncementScopes,
     listAudit,
@@ -1641,6 +1753,7 @@ function createAdminService({
     publishEventReminder,
     publishAnnouncement,
     saveEvent,
+    saveEventPolicy,
     saveAnnouncement,
     saveGrowthLevel,
     saveGrowthRule,
@@ -1761,6 +1874,11 @@ function normalizeUserFilters(value) {
     kind: ['PLAYER', 'GUEST'].includes(filters.kind) ? filters.kind : '',
     branchId: filters.branchId ? requiredId(filters.branchId, '城市分会') : '',
     controlType: ['ALLOWLIST', 'BLOCKLIST'].includes(filters.controlType) ? filters.controlType : '',
+    phoneBound: ['BOUND', 'UNBOUND'].includes(filters.phoneBound) ? filters.phoneBound : '',
+    profileComplete: ['COMPLETE', 'INCOMPLETE'].includes(filters.profileComplete) ? filters.profileComplete : '',
+    joinedWithinDays: [7, 30, 90].includes(Number(filters.joinedWithinDays))
+      ? Number(filters.joinedWithinDays)
+      : 0,
   }
 }
 
@@ -1813,6 +1931,53 @@ function normalizeFilters(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? { ...value } : {}
 }
 
+function normalizeRosterFilters(value) {
+  const filters = normalizeFilters(value)
+  return {
+    query: text(filters.query, 80),
+    status: enumFilter(filters.status, ROSTER_STATUSES, '报名状态'),
+  }
+}
+
+function normalizeOrderFilters(value) {
+  const filters = normalizeFilters(value)
+  const createdFrom = dateTimeFilter(filters.createdFrom, '开始时间')
+  const createdTo = dateTimeFilter(filters.createdTo, '结束时间')
+  if (createdFrom && createdTo && createdFrom > createdTo) {
+    throw new AdminError('VALIDATION_FAILED', '订单开始时间不能晚于结束时间')
+  }
+  return {
+    query: text(filters.query, 80),
+    eventId: filters.eventId ? requiredId(filters.eventId, '活动') : '',
+    orderType: enumFilter(filters.orderType, ['MEMBERSHIP', 'EVENT'], '订单类型'),
+    status: enumFilter(filters.status, ORDER_STATUSES, '订单状态'),
+    refundStatus: enumFilter(filters.refundStatus, REFUND_STATUSES, '退款状态'),
+    createdFrom,
+    createdTo,
+  }
+}
+
+function enumFilter(value, allowed, label) {
+  if (value === null || value === undefined || value === '') return ''
+  const normalized = typeof value === 'string' ? value.trim().toUpperCase() : ''
+  if (!allowed.includes(normalized)) {
+    throw new AdminError('VALIDATION_FAILED', `${label}无效`)
+  }
+  return normalized
+}
+
+function dateTimeFilter(value, label) {
+  if (value === null || value === undefined || value === '') return ''
+  if (typeof value !== 'string' || value.length > 40) {
+    throw new AdminError('VALIDATION_FAILED', `${label}无效`)
+  }
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) {
+    throw new AdminError('VALIDATION_FAILED', `${label}无效`)
+  }
+  return date.toISOString().slice(0, 23).replace('T', ' ')
+}
+
 function normalizeExportFilters(exportType, value, scope) {
   const filters = normalizeFilters(value)
   const normalized = {}
@@ -1820,19 +1985,13 @@ function normalizeExportFilters(exportType, value, scope) {
     Object.assign(normalized, normalizeUserFilters(filters))
   }
   else if (exportType === 'EVENT_ROSTER') {
-    normalized.query = text(filters.query, 80)
-    normalized.status = text(filters.status, 24)
-    normalized.eventId = scope.scopeId
+    Object.assign(normalized, normalizeRosterFilters(filters), { eventId: scope.scopeId })
   }
   else if (exportType === 'EVENT_ORDERS') {
-    normalized.status = text(filters.status, 24)
-    normalized.eventId = scope.scopeId
+    Object.assign(normalized, normalizeOrderFilters({ ...filters, eventId: scope.scopeId }))
   }
   else if (exportType === 'ORDERS') {
-    normalized.status = text(filters.status, 24)
-    normalized.orderType = ['MEMBERSHIP', 'EVENT'].includes(filters.orderType)
-      ? filters.orderType
-      : ''
+    Object.assign(normalized, normalizeOrderFilters(filters))
   }
   else if (exportType === 'GROWTH_ENTRIES') {
     normalized.userId = filters.userId ? requiredId(filters.userId, '用户') : ''
@@ -1900,12 +2059,30 @@ function normalizeEventDraft(value) {
   if (coverAssetId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(coverAssetId)) {
     throw new AdminError('VALIDATION_FAILED', '活动封面无效')
   }
+  const contentMedia = Array.isArray(value.contentMedia) ? value.contentMedia : []
+  if (contentMedia.length > 12) {
+    throw new AdminError('VALIDATION_FAILED', '活动介绍图片最多 12 张')
+  }
+  const contentMediaIds = new Set()
+  const normalizedContentMedia = contentMedia.map((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new AdminError('VALIDATION_FAILED', '活动介绍图片无效')
+    }
+    const assetId = text(item.assetId, 36)
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(assetId)
+      || contentMediaIds.has(assetId)) {
+      throw new AdminError('VALIDATION_FAILED', '活动介绍图片无效')
+    }
+    contentMediaIds.add(assetId)
+    return { assetId, caption: text(item.caption, 120) }
+  })
   return {
     scopeType: value.scopeType === 'BRANCH' ? 'BRANCH' : 'PLATFORM',
     branchId: value.scopeType === 'BRANCH' ? requiredId(value.branchId, '城市分会') : null,
     title: text(value.title, 120, { required: true, label: '活动名称' }),
     summary: text(value.summary, 300, { required: true, label: '活动摘要' }),
     description: text(value.description, 20_000, { required: true, label: '活动介绍' }),
+    contentMedia: normalizedContentMedia,
     notices: text(value.notices, 5_000),
     coverAssetId: coverAssetId || null,
     eventTypeKey: stableKey(value.eventTypeKey || 'general', '活动类型', 64),

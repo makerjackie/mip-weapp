@@ -73,3 +73,43 @@ test('anonymous event participant previews keep the existing public range', asyn
 
   assert.equal(previewSql.includes('mip_user_blocks'), false)
 })
+
+test('custom event date is validated and converted from the China business day', async () => {
+  let eventQuery
+  const database = {
+    async query(sql, params) {
+      if (sql.includes('FROM mip_events e')) {
+        eventQuery = { sql, params }
+        return []
+      }
+      if (sql.includes('SELECT DISTINCT city_name')) return []
+      throw new Error(`unexpected query: ${sql}`)
+    },
+  }
+
+  await listEvents(database, {
+    appId: 'wx-app',
+    query: { view: 'UPCOMING', dateFilter: 'CUSTOM', date: '2026-08-24' },
+    now: new Date('2026-08-20T00:00:00.000Z'),
+    tokenSecret: 'event-preview-token-secret',
+  })
+
+  assert.match(eventQuery.sql, /e\.starts_at >= \? AND e\.starts_at < \?/)
+  const dateParams = eventQuery.params.filter(value => value instanceof Date).map(value => value.toISOString())
+  assert.deepEqual(dateParams, [
+    '2026-08-20T00:00:00.000Z',
+    '2026-08-20T00:00:00.000Z',
+    '2026-08-23T16:00:00.000Z',
+    '2026-08-24T16:00:00.000Z',
+  ])
+
+  await assert.rejects(
+    () => listEvents(database, {
+      appId: 'wx-app',
+      query: { view: 'UPCOMING', dateFilter: 'CUSTOM', date: '2026/08/24' },
+      now: new Date('2026-08-20T00:00:00.000Z'),
+      tokenSecret: 'event-preview-token-secret',
+    }),
+    /请选择有效日期/,
+  )
+})

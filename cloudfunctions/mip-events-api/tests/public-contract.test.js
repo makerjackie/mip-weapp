@@ -41,12 +41,13 @@ function eventRow(overrides = {}) {
   }
 }
 
-function eventDatabase(row) {
+function eventDatabase(row, contentMedia = []) {
   return {
     async one() {
       return row
     },
     async query(sql) {
+      if (sql.includes('mip_event_content_media')) return contentMedia
       assert.match(sql, /mip_event_changes/)
       return []
     },
@@ -59,7 +60,11 @@ describe('MIP public event detail', () => {
       ticket_hash: 'secret',
       phone_ciphertext: Buffer.from('secret'),
       answers_json: '{"phone":"secret"}',
-    })), {
+    }), [{
+      media_asset_id: 'must-not-leak',
+      cloud_file_id: 'cloud://event-content/image.png',
+      caption: '现场照片',
+    }]), {
       appId: 'wx-app',
       userId: null,
       eventId: 'event-1',
@@ -78,6 +83,11 @@ describe('MIP public event detail', () => {
     assert.equal('headline' in result.organizer, false)
     assert.match(result.organizer.profileRef, /^p1\./)
     assert.equal(JSON.stringify(result).includes('10000000-0000-4000-8000-000000000001'), false)
+    assert.deepEqual(result.contentMedia, [{
+      imageUrl: 'cloud://event-content/image.png',
+      caption: '现场照片',
+    }])
+    assert.equal(JSON.stringify(result).includes('must-not-leak'), false)
   })
 
   it('returns an HTTPS online link only to a confirmed participant', async () => {
@@ -93,6 +103,46 @@ describe('MIP public event detail', () => {
       assert.equal(result.onlineAccessAvailable, true)
       assert.equal(result.onlineUrl, 'https://private.example.test/meeting')
     }
+  })
+
+  it('shows the locked invitation source without returning inviter identities', async () => {
+    const userSource = await getEvent(eventDatabase(eventRow({
+      registration_status: 'REGISTERED',
+      invitation_source_type: 'USER',
+      inviter_nickname: '邀请人',
+      inviter_visibility_json: '{"nickname":true,"avatar":true}',
+      inviter_avatar_file_id: 'cloud://inviter-avatar',
+      inviter_user_id: '20000000-0000-4000-8000-000000000002',
+    })), {
+      appId: 'wx-app',
+      userId: 'participant-1',
+      eventId: 'event-1',
+      now: new Date('2026-08-24T00:00:00.000Z'),
+      tokenSecret: '',
+      profileRefSecret: 'public-organizer-profile-ref-pepper-more-than-32-characters',
+    })
+    assert.deepEqual(userSource.invitationAttribution, {
+      sourceType: 'USER',
+      displayName: '邀请人',
+      avatarUrl: 'cloud://inviter-avatar',
+    })
+    assert.equal(JSON.stringify(userSource).includes('20000000-0000-4000-8000-000000000002'), false)
+
+    const platformSource = await getEvent(eventDatabase(eventRow({
+      registration_status: 'REGISTERED',
+      invitation_source_type: 'PLATFORM',
+    })), {
+      appId: 'wx-app',
+      userId: 'participant-1',
+      eventId: 'event-1',
+      now: new Date('2026-08-24T00:00:00.000Z'),
+      tokenSecret: '',
+      profileRefSecret: 'public-organizer-profile-ref-pepper-more-than-32-characters',
+    })
+    assert.deepEqual(platformSource.invitationAttribution, {
+      sourceType: 'PLATFORM',
+      displayName: 'MIP 平台',
+    })
   })
 
   it('withholds online links from pending participants and rejects non-HTTPS stored values', async () => {
@@ -135,6 +185,7 @@ describe('MIP public event detail', () => {
         })
       },
       async query(sql) {
+        if (sql.includes('mip_event_content_media')) return []
         assert.match(sql, /mip_event_changes/)
         return []
       },
@@ -155,6 +206,8 @@ describe('MIP public event detail', () => {
     assert.match(calls[0].sql, /visibility_block\.app_id = e\.app_id/)
     assert.match(calls[0].sql, /blocked_user_id = e\.organizer_user_id/)
     assert.deepEqual(calls[0].params.slice(1), [
+      'viewer-user',
+      'viewer-user',
       'viewer-user',
       'viewer-user',
       'viewer-user',

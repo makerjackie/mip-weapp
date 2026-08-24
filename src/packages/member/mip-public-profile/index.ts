@@ -1,5 +1,11 @@
 import type { CommunityReportIntent, ReportCategory } from '../../../modules/mip-community'
-import type { ProfileOrganization, PublicMipProfile } from '../../../modules/mip-identity'
+import type {
+  PublicPerson,
+  PublicProfileCooperationCard,
+  PublicProfileOpportunity,
+  PublicProfileSuperCase,
+} from '../../../modules/mip-opportunities'
+import { cooperationRoles } from '../../../config/mip-catalogs'
 import {
   createCommunityReportIntent,
   mipCommunityModule,
@@ -7,24 +13,29 @@ import {
 } from '../../../modules/mip-community'
 import { mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
+import { opportunityModule } from '../../../modules/mip-opportunities'
+import { createMutationKey } from '../../../modules/mip-opportunities/validation'
 import { caseNavigateTo } from '../../../modules/platform/case-navigation'
 
-type SafetyAction = 'block' | 'report'
+type ProfileAction = 'interest' | 'block' | 'report'
+type AccessActionState = 'loading' | 'ready' | 'access' | 'error'
 
-interface PublicProfileView extends PublicMipProfile {
+interface PublicProfileView extends PublicPerson {
   displayName: string
   kindLabel: string
-  companies: ProfileOrganization[]
-  organizations: ProfileOrganization[]
-  abilities: Array<{ label: string }>
+  companies: NonNullable<PublicPerson['companies']>
+  organizations: NonNullable<PublicPerson['organizations']>
+  abilities: NonNullable<PublicPerson['abilities']>
   branchText: string
 }
 
-function presentProfile(profile: PublicMipProfile): PublicProfileView {
+interface CooperationCardView extends PublicProfileCooperationCard { roleName: string }
+
+function presentProfile(profile: PublicPerson): PublicProfileView {
   return {
     ...profile,
     displayName: profile.nickname || 'MIP 用户',
-    kindLabel: profile.userKind === 'PLAYER' ? '玩家' : profile.userKind === 'GUEST' ? '嘉宾' : '',
+    kindLabel: profile.userKind === 'PLAYER' ? '玩家' : '嘉宾',
     companies: profile.companies || [],
     organizations: profile.organizations || [],
     abilities: profile.abilities || [],
@@ -39,6 +50,12 @@ Page({
     state: 'loading' as 'loading' | 'ready' | 'error' | 'blocked',
     profileRef: '',
     profile: null as PublicProfileView | null,
+    cooperationCards: [] as CooperationCardView[],
+    superCases: [] as PublicProfileSuperCase[],
+    opportunities: [] as PublicProfileOpportunity[],
+    interestActive: false,
+    interestState: 'idle' as 'idle' | 'loading' | 'ready' | 'access' | 'processing' | 'error',
+    interestMessage: '',
     safetyState: 'idle' as 'idle' | 'loading' | 'ready' | 'access' | 'processing' | 'reported' | 'error',
     safetyMessage: '',
     canRetryReport: false,
@@ -46,21 +63,23 @@ Page({
     isSelf: false,
     message: '',
   },
-  pendingSafetyAction: '' as SafetyAction | '',
+  pendingAction: '' as ProfileAction | '',
   reportIntent: null as CommunityReportIntent | null,
+  visitKey: '',
 
   onLoad(query: Record<string, string | undefined>) {
     this.reportIntent = null
+    this.visitKey = createMutationKey('profile-visit')
     this.setData({ profileRef: String(query.profileRef || '') })
     void this.loadProfile()
   },
 
   onShow() {
     const resumed = mipIdentityModule.consumePendingResume()
-    if (resumed?.action === 'INTERACT' && this.pendingSafetyAction) {
-      const action = this.pendingSafetyAction
-      this.pendingSafetyAction = ''
-      void this.runSafetyAction(action)
+    if (resumed?.action === 'INTERACT' && this.pendingAction) {
+      const action = this.pendingAction
+      this.pendingAction = ''
+      void this.runProfileAction(action)
     }
   },
 
@@ -73,13 +92,24 @@ Page({
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const profile = await mipIdentityModule.getPublicProfile(this.data.profileRef)
+      const aggregate = await opportunityModule.getPublicProfile(this.data.profileRef)
       this.setData({
         state: 'ready',
-        profile: presentProfile(profile),
-        isSelf: profile.isSelf,
+        profile: presentProfile(aggregate.profile),
+        cooperationCards: aggregate.cooperationCards.map(card => ({
+          ...card,
+          roleName: cooperationRoles.find(role => role.key === card.roleKey)?.name || card.roleKey,
+        })),
+        superCases: aggregate.superCases,
+        opportunities: aggregate.opportunities,
+        interestActive: aggregate.interestActive,
+        interestState: 'ready',
+        isSelf: aggregate.profile.isSelf,
         message: '',
       })
+      if (!aggregate.profile.isSelf) {
+        void opportunityModule.recordProfileVisit(this.data.profileRef, this.visitKey).catch(() => undefined)
+      }
     }
     catch (error) {
       this.setData({
@@ -89,32 +119,41 @@ Page({
     }
   },
 
-  async ensureSafetyAccess(action: SafetyAction) {
-    this.setData({ safetyState: 'loading', safetyMessage: '' })
+  setActionState(action: ProfileAction, state: AccessActionState, message = '') {
+    if (action === 'interest') {
+      this.setData({ interestState: state, interestMessage: message })
+      return
+    }
+    this.setData({ safetyState: state, safetyMessage: message })
+  },
+
+  async ensureActionAccess(action: ProfileAction) {
+    this.setActionState(action, 'loading')
     try {
       const session = await mipIdentityModule.beginProtectedAction({
         action: 'INTERACT',
         source: { navigation: 'navigateBack' },
       })
       if (!session.decision.ready) {
-        this.pendingSafetyAction = action
-        this.setData({ safetyState: 'access', accessToken: session.token })
+        this.pendingAction = action
+        this.setData({ accessToken: session.token })
+        this.setActionState(action, 'access')
         return false
       }
       const relationship = await mipCommunityModule.relationship(this.data.profileRef)
-      this.setData({
-        safetyState: 'ready',
-        accessToken: '',
-        isSelf: relationship.isSelf,
-      })
+      this.setData({ accessToken: '', isSelf: relationship.isSelf })
+      this.setActionState(action, 'ready')
       return !relationship.isSelf
     }
     catch (error) {
-      this.setData({
-        safetyState: 'error',
-        safetyMessage: error instanceof Error ? error.message : '暂时无法确认操作状态。',
-        canRetryReport: false,
-      })
+      this.setActionState(
+        action,
+        'error',
+        error instanceof Error ? error.message : '暂时无法确认操作状态。',
+      )
+      if (action !== 'interest') {
+        this.setData({ canRetryReport: false })
+      }
       return false
     }
   },
@@ -125,31 +164,53 @@ Page({
     }
   },
 
-  retrySafetyAction() {
-    if (this.pendingSafetyAction) {
-      void this.runSafetyAction(this.pendingSafetyAction)
-    }
+  toggleInterest() {
+    void this.runProfileAction('interest')
   },
 
   blockProfile() {
-    void this.runSafetyAction('block')
+    void this.runProfileAction('block')
   },
 
   reportProfile() {
-    void this.runSafetyAction('report')
+    void this.runProfileAction('report')
   },
 
-  async runSafetyAction(action: SafetyAction) {
-    this.pendingSafetyAction = action
-    if (!await this.ensureSafetyAccess(action)) {
+  async runProfileAction(action: ProfileAction) {
+    this.pendingAction = action
+    if (!await this.ensureActionAccess(action)) {
       return
     }
-    this.pendingSafetyAction = ''
+    this.pendingAction = ''
+    if (action === 'interest') {
+      await this.updateInterest()
+      return
+    }
     if (action === 'block') {
       await this.confirmBlock()
       return
     }
     await this.submitReport()
+  },
+
+  async updateInterest() {
+    const active = !this.data.interestActive
+    this.setData({ interestState: 'processing', interestMessage: '' })
+    try {
+      const result = await opportunityModule.setProfileInterest(this.data.profileRef, active)
+      this.setData({
+        interestActive: result.active,
+        interestState: 'ready',
+        interestMessage: '',
+      })
+      wx.showToast({ title: result.active ? '已标记感兴趣' : '已取消', icon: 'success' })
+    }
+    catch (error) {
+      this.setData({
+        interestState: 'error',
+        interestMessage: error instanceof Error ? error.message : '操作失败，请重试。',
+      })
+    }
   },
 
   async confirmBlock() {
@@ -165,7 +226,14 @@ Page({
     this.setData({ safetyState: 'processing', safetyMessage: '' })
     try {
       await mipCommunityModule.block(this.data.profileRef)
-      this.setData({ state: 'blocked', profile: null, safetyState: 'ready' })
+      this.setData({
+        state: 'blocked',
+        profile: null,
+        cooperationCards: [],
+        superCases: [],
+        opportunities: [],
+        safetyState: 'ready',
+      })
       wx.showToast({ title: '已屏蔽', icon: 'success' })
     }
     catch (error) {
@@ -239,6 +307,27 @@ Page({
   retryReport() {
     if (this.reportIntent) {
       void this.sendReportIntent()
+    }
+  },
+
+  openCooperationCard(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    if (id) {
+      caseNavigateTo({ url: `/packages/member/mip-cooperation/detail/index?id=${encodeURIComponent(id)}` })
+    }
+  },
+
+  openSuperCase(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    if (id) {
+      caseNavigateTo({ url: `/packages/member/mip-cases/detail/index?id=${encodeURIComponent(id)}` })
+    }
+  },
+
+  openOpportunity(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    if (id) {
+      caseNavigateTo({ url: `/packages/member/mip-opportunities/detail/index?id=${encodeURIComponent(id)}` })
     }
   },
 

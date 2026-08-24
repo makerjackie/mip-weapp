@@ -61,7 +61,7 @@ function fakeRepository(options = {}) {
     listRoleBindings: async () => [{
       roleKey: options.roleKey || 'PLATFORM_OWNER',
       scopeType: 'PLATFORM',
-      scopeId: '00000000-0000-0000-0000-000000000000',
+      scopeId: null,
     }],
     async getExportTicket(input) {
       if (input.appId !== state.ticket.appId

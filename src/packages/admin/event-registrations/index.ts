@@ -1,15 +1,44 @@
-import type { AdminRosterItem } from '../../../modules/mip-admin'
+import type { AdminRosterItem, AdminRosterStatus } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
 import { hasScopedCapability, mipAdminModule } from '../../../modules/mip-admin'
+import { formatLocalDateTime } from '../../../utils/date'
 import { adminLoadFailure } from '../shared/page-state'
+
+type RosterView = AdminRosterItem & {
+  statusText: string
+  submittedText: string
+  registeredText: string
+  checkedInText: string
+}
+
+const statusLabels: Record<AdminRosterStatus, string> = {
+  PENDING_REVIEW: '待审核',
+  WAITLISTED: '候补中',
+  PAYMENT_PENDING: '待支付',
+  REGISTERED: '已报名',
+  CANCELLATION_PENDING: '取消处理中',
+  CANCELLED: '已取消',
+  REJECTED: '已拒绝',
+  ATTENDED: '已签到',
+}
+
+function rosterView(item: AdminRosterItem): RosterView {
+  return {
+    ...item,
+    statusText: statusLabels[item.status],
+    submittedText: formatLocalDateTime(item.submittedAt),
+    registeredText: item.registeredAt ? formatLocalDateTime(item.registeredAt) : '',
+    checkedInText: item.checkedInAt ? formatLocalDateTime(item.checkedInAt) : '',
+  }
+}
 
 Page({
   data: {
     state: 'loading' as AdminPageState,
     eventId: '',
-    items: [] as AdminRosterItem[],
+    items: [] as RosterView[],
     query: '',
-    status: '',
+    status: '' as AdminRosterStatus | '',
     includePhone: false,
     canPhone: false,
     canExport: false,
@@ -44,7 +73,8 @@ Page({
   },
   updateQuery(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ query: event.detail.value }) },
   chooseStatus(event: WechatMiniprogram.TouchEvent) {
-    this.setData({ status: String(event.currentTarget.dataset.value || ''), items: [], nextCursor: null })
+    const status = String(event.currentTarget.dataset.value || '') as AdminRosterStatus | ''
+    this.setData({ status, items: [], nextCursor: null })
     void this.loadRoster(true)
   },
   search() { void this.loadRoster(true) },
@@ -71,7 +101,7 @@ Page({
       const scope = { scopeType: 'EVENT' as const, scopeId: this.data.eventId, branchId: eventDetail.branchId }
       this.setData({
         state: 'ready',
-        items: page.items,
+        items: page.items.map(rosterView),
         canPhone: hasScopedCapability(session.capabilities, 'users.phone.read', scope),
         canExport: hasScopedCapability(session.capabilities, 'exports.create', scope),
         canReview: hasScopedCapability(session.capabilities, 'events.registrations.manage', scope),
@@ -101,7 +131,7 @@ Page({
         cursor: this.data.nextCursor,
         filters: { query: this.data.query.trim(), status: this.data.status },
       })
-      this.setData({ items: this.data.items.concat(page.items), nextCursor: page.nextCursor || null })
+      this.setData({ items: this.data.items.concat(page.items.map(rosterView)), nextCursor: page.nextCursor || null })
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '更多参与者加载失败' })

@@ -1,14 +1,81 @@
 <view id="admin-event-registrations-page" class="min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
   <view class="text-[length:40rpx] font-bold">参与者与签到</view>
-  <view class="mt-5 rounded-[16rpx] bg-panel p-3"><t-input value="{{query}}" placeholder="搜索昵称" bind:change="updateQuery" bind:enter="search" /><view class="mt-3 flex flex-wrap gap-2"><t-tag variant="outline" data-value="" bind:tap="chooseStatus">全部</t-tag><t-tag variant="outline" data-value="PENDING_REVIEW" bind:tap="chooseStatus">待审核</t-tag><t-tag variant="outline" data-value="REGISTERED" bind:tap="chooseStatus">已报名</t-tag><t-tag variant="outline" data-value="ATTENDED" bind:tap="chooseStatus">已签到</t-tag><t-tag variant="outline" data-value="CANCELLED" bind:tap="chooseStatus">已取消</t-tag></view><view class="mt-3 flex gap-2"><t-button wx:if="{{canPhone && !includePhone}}" size="small" variant="outline" bind:tap="showPhones">查看联系电话</t-button><t-button wx:if="{{canExport}}" size="small" variant="outline" loading="{{exportPending}}" bind:tap="createExport">创建导出</t-button></view></view>
-  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载名单" description="{{message}}" action-text="重新加载" bind:action="loadRoster" /></view>
-  <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有名单权限" description="当前账号不能查看这场活动的参与者。" /></view>
-  <view wx:elif="{{items.length === 0}}" class="mt-6"><app-empty-state title="暂无参与者" description="符合筛选条件的参与者会显示在这里。" /></view>
+  <view class="mt-5 rounded-[16rpx] bg-panel p-3">
+    <t-input value="{{query}}" placeholder="搜索昵称" bind:change="updateQuery" bind:enter="search" />
+    <view class="mt-3 flex flex-wrap gap-2">
+      <t-tag variant="outline" data-value="" bind:tap="chooseStatus">全部</t-tag>
+      <t-tag variant="outline" data-value="PENDING_REVIEW" bind:tap="chooseStatus">待审核</t-tag>
+      <t-tag variant="outline" data-value="WAITLISTED" bind:tap="chooseStatus">候补中</t-tag>
+      <t-tag variant="outline" data-value="PAYMENT_PENDING" bind:tap="chooseStatus">待支付</t-tag>
+      <t-tag variant="outline" data-value="REGISTERED" bind:tap="chooseStatus">已报名</t-tag>
+      <t-tag variant="outline" data-value="CANCELLATION_PENDING" bind:tap="chooseStatus">取消处理中</t-tag>
+      <t-tag variant="outline" data-value="ATTENDED" bind:tap="chooseStatus">已签到</t-tag>
+      <t-tag variant="outline" data-value="CANCELLED" bind:tap="chooseStatus">已取消</t-tag>
+      <t-tag variant="outline" data-value="REJECTED" bind:tap="chooseStatus">已拒绝</t-tag>
+    </view>
+    <view class="mt-3 flex gap-2">
+      <t-button wx:if="{{canPhone && !includePhone}}" size="small" variant="outline" bind:tap="showPhones">查看联系电话</t-button>
+      <t-button wx:if="{{canExport}}" size="small" variant="outline" loading="{{exportPending}}" bind:tap="createExport">创建导出</t-button>
+    </view>
+  </view>
+
+  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5">
+    <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
+  </view>
+  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6">
+    <app-empty-state title="暂时无法加载名单" description="{{message}}" action-text="重新加载" bind:action="loadRoster" />
+  </view>
+  <view wx:elif="{{state === 'forbidden'}}" class="mt-6">
+    <app-empty-state title="没有名单权限" description="当前账号不能查看这场活动的参与者。" />
+  </view>
+  <view wx:elif="{{items.length === 0}}" class="mt-6">
+    <app-empty-state title="暂无参与者" description="符合筛选条件的参与者会显示在这里。" />
+  </view>
   <view wx:else class="mt-5 flex flex-col gap-3">
-    <view wx:for="{{items}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4"><view class="flex items-start justify-between gap-3"><view><view class="text-[length:28rpx] font-semibold">{{item.nickname}}</view><view class="mt-1 text-[length:22rpx] text-muted">{{item.cityName || '未填写城市'}} · {{item.status}}</view></view><t-tag variant="outline">{{item.checkedInAt ? '已签到' : '未签到'}}</t-tag></view><view wx:if="{{includePhone}}" class="mt-3 text-[length:24rpx]">联系电话：{{item.phoneNumber || '未绑定'}}</view><view wx:elif="{{item.phoneBound}}" class="mt-3 text-[length:22rpx] text-muted">手机已绑定</view><view wx:else class="mt-3 text-[length:22rpx] text-muted">手机未绑定</view><view wx:if="{{canReview && item.status === 'PENDING_REVIEW'}}" class="mt-4 flex gap-2"><view class="min-w-0 flex-1"><t-button block theme="primary" loading="{{processingId === item.id}}" data-id="{{item.id}}" data-version="{{item.version}}" data-decision="APPROVE" bind:tap="reviewRegistration">通过报名</t-button></view><view class="min-w-0 flex-1"><t-button block variant="outline" theme="danger" disabled="{{processingId === item.id}}" data-id="{{item.id}}" data-version="{{item.version}}" data-decision="REJECT" bind:tap="reviewRegistration">拒绝报名</t-button></view></view><view wx:if="{{canCheckIn && item.status === 'REGISTERED'}}" class="mt-4"><t-button block theme="primary" loading="{{processingId === item.id}}" data-id="{{item.id}}" data-version="{{item.version}}" bind:tap="checkIn">确认签到</t-button></view><view wx:if="{{canUndoCheckIn && item.status === 'ATTENDED'}}" class="mt-4"><t-button block variant="outline" theme="danger" loading="{{processingId === item.id}}" data-id="{{item.id}}" data-version="{{item.version}}" bind:tap="undoCheckIn">撤销签到</t-button></view></view>
+    <view wx:for="{{items}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
+      <view class="flex items-start justify-between gap-3">
+        <view>
+          <view class="text-[length:28rpx] font-semibold">{{item.nickname}}</view>
+          <view class="mt-1 text-[length:22rpx] text-muted">{{item.cityName || '未填写城市'}}</view>
+        </view>
+        <t-tag variant="outline">{{item.statusText}}</t-tag>
+      </view>
+      <view wx:if="{{includePhone}}" class="mt-3 text-[length:24rpx]">联系电话：{{item.phoneNumber || '未绑定'}}</view>
+      <view wx:elif="{{item.phoneBound}}" class="mt-3 text-[length:22rpx] text-muted">手机已绑定</view>
+      <view wx:else class="mt-3 text-[length:22rpx] text-muted">手机未绑定</view>
+
+      <view class="mt-3 rounded-[12rpx] bg-panel-raised px-3 py-3">
+        <view class="text-[length:23rpx] font-semibold">报名信息</view>
+        <view wx:if="{{item.answerItems.length === 0}}" class="mt-2 text-[length:22rpx] text-muted">未填写报名信息</view>
+        <view wx:for="{{item.answerItems}}" wx:for-item="answer" wx:key="key" class="mt-2 text-[length:22rpx]">
+          <text class="text-muted">{{answer.label}}：</text>{{answer.value || '未填写'}}
+        </view>
+      </view>
+      <view class="mt-3 border-t border-line pt-3 text-[length:22rpx] text-muted">
+        <view>报名提交：{{item.submittedText}}</view>
+        <view class="mt-1">报名确认：{{item.registeredText || '未确认'}}</view>
+        <view class="mt-1">签到时间：{{item.checkedInText || '未签到'}}</view>
+      </view>
+
+      <view wx:if="{{canReview && item.status === 'PENDING_REVIEW'}}" class="mt-4 flex gap-2">
+        <view class="min-w-0 flex-1">
+          <t-button block theme="primary" loading="{{processingId === item.id}}" data-id="{{item.id}}" data-version="{{item.version}}" data-decision="APPROVE" bind:tap="reviewRegistration">通过报名</t-button>
+        </view>
+        <view class="min-w-0 flex-1">
+          <t-button block variant="outline" theme="danger" disabled="{{processingId === item.id}}" data-id="{{item.id}}" data-version="{{item.version}}" data-decision="REJECT" bind:tap="reviewRegistration">拒绝报名</t-button>
+        </view>
+      </view>
+      <view wx:if="{{canCheckIn && item.status === 'REGISTERED'}}" class="mt-4">
+        <t-button block theme="primary" loading="{{processingId === item.id}}" data-id="{{item.id}}" data-version="{{item.version}}" bind:tap="checkIn">确认签到</t-button>
+      </view>
+      <view wx:if="{{canUndoCheckIn && item.status === 'ATTENDED'}}" class="mt-4">
+        <t-button block variant="outline" theme="danger" loading="{{processingId === item.id}}" data-id="{{item.id}}" data-version="{{item.version}}" bind:tap="undoCheckIn">撤销签到</t-button>
+      </view>
+    </view>
   </view>
   <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
-  <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMoreRoster">加载更多</t-button></view>
+  <view wx:if="{{nextCursor}}" class="mt-4">
+    <t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMoreRoster">加载更多</t-button>
+  </view>
   <app-page-exit />
 </view>

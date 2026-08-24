@@ -3,7 +3,13 @@ import type { AdminPageState } from '../shared/page-state'
 import { hasScopedCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { adminLoadFailure } from '../shared/page-state'
 
-type AdminRoleView = AdminRoleItem & { canManage: boolean }
+const eventRoleLabels: Partial<Record<AdminRoleKey, string>> = {
+  EVENT_OWNER: '活动负责人',
+  EVENT_MANAGER: '活动管理员',
+  EVENT_STAFF: '现场人员',
+}
+
+type AdminRoleView = AdminRoleItem & { canManage: boolean, roleLabel: string, statusLabel: string }
 
 Page({
   data: {
@@ -13,6 +19,7 @@ Page({
     candidates: [] as AdminRoleCandidate[],
     query: '',
     selectedRole: 'EVENT_STAFF' as AdminRoleKey,
+    selectedRoleLabel: '现场人员',
     canChange: false,
     canGrantOwner: false,
     canGrantManager: false,
@@ -56,12 +63,18 @@ Page({
         state: 'ready',
         roles: response.items
           .filter(item => item.scopeType === 'EVENT' && item.scopeId === this.data.eventId)
-          .map(item => ({ ...item, canManage: manageableRoles.has(item.roleKey) })),
+          .map(item => ({
+            ...item,
+            canManage: manageableRoles.has(item.roleKey),
+            roleLabel: eventRoleLabels[item.roleKey] || '活动成员',
+            statusLabel: item.status === 'ACTIVE' ? '生效中' : '已撤销',
+          })),
         canChange,
         canGrantOwner,
         canGrantManager,
         canGrantStaff,
         selectedRole: canGrantOwner ? 'EVENT_OWNER' : canGrantManager ? 'EVENT_MANAGER' : 'EVENT_STAFF',
+        selectedRoleLabel: canGrantOwner ? '活动负责人' : canGrantManager ? '活动管理员' : '现场人员',
         message: '',
       })
     }
@@ -75,7 +88,7 @@ Page({
     if ((role === 'EVENT_OWNER' && this.data.canGrantOwner)
       || (role === 'EVENT_MANAGER' && this.data.canGrantManager)
       || (role === 'EVENT_STAFF' && this.data.canGrantStaff)) {
-      this.setData({ selectedRole: role })
+      this.setData({ selectedRole: role, selectedRoleLabel: eventRoleLabels[role] || '活动成员' })
     }
   },
   async search() {
@@ -125,7 +138,7 @@ Page({
   },
   async revoke(event: WechatMiniprogram.TouchEvent) {
     const userId = String(event.currentTarget.dataset.userId || '')
-    const roleKey = String(event.currentTarget.dataset.role || '')
+    const roleKey = String(event.currentTarget.dataset.role || '') as AdminRoleKey
     if (!userId || !this.data.canChange || this.data.processingId) {
       return
     }

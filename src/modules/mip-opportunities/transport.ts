@@ -13,6 +13,8 @@ const readActions = new Set([
   'getCatalogs',
   'listOpportunities',
   'getOpportunity',
+  'listPeople',
+  'getPublicProfileAggregate',
   'listMine',
   'listReceivedInteractions',
   'listCooperationCards',

@@ -1,4 +1,5 @@
 import type { AiCapability, AiDraft, AiDraftId, AiDraftPurpose, MipVoiceRecorder } from '../../../modules/mip-ai'
+import { cooperationRoles } from '../../../config/mip-catalogs'
 import { createMipVoiceRecorder } from '../../../modules/mip-ai'
 import { mipAiModule } from '../../../modules/mip-ai/client'
 import { caseNavigateTo } from '../../../modules/platform/case-navigation'
@@ -27,6 +28,34 @@ interface DraftView extends AiDraft {
   summary: string
   copyText: string
   canUse: boolean
+  fieldRows: Array<{ key: string, label: string, value: string }>
+}
+
+const fieldLabels: Record<AiDraftPurpose, Record<string, string>> = {
+  PROFILE: {
+    nickname: '昵称',
+    identityStatus: '身份状态',
+    headline: '个人标题',
+    introduction: '个人介绍',
+    companies: '公司经历',
+    organizations: '组织经历',
+  },
+  COOPERATION_CARD: {
+    roleKey: '合作角色',
+    positioning: '定位',
+    targetSummary: '目标',
+    roleFields: '合作信息',
+    abilityScores: '能力评分',
+  },
+  SUPER_CASE: {
+    projectName: '项目名称',
+    summary: '案例摘要',
+    responsibility: '负责内容',
+    description: '案例说明',
+    startedOn: '开始日期',
+    endedOn: '结束日期',
+    caseType: '案例类型',
+  },
 }
 
 function readableValue(value: unknown): string {
@@ -40,14 +69,21 @@ function readableValue(value: unknown): string {
     return value.map(readableValue).join('、')
   }
   if (value && typeof value === 'object') {
-    return Object.entries(value).map(([key, item]) => `${key}：${readableValue(item)}`).join('\n')
+    return Object.values(value).map(readableValue).filter(Boolean).join('；')
   }
   return ''
 }
 
 function draftView(draft: AiDraft): DraftView {
   const fields = Object.entries(draft.structuredDraft || {})
-  const copyText = fields.map(([key, value]) => `${key}：${readableValue(value)}`).join('\n')
+  const fieldRows = fields.map(([key, value]) => ({
+    key,
+    label: fieldLabels[draft.purpose][key] || '补充信息',
+    value: draft.purpose === 'COOPERATION_CARD' && key === 'roleKey' && typeof value === 'string'
+      ? cooperationRoles.find(role => role.key === value)?.name || readableValue(value)
+      : readableValue(value),
+  })).filter(item => item.value)
+  const copyText = fieldRows.map(item => `${item.label}：${item.value}`).join('\n')
   const expiry = new Date(draft.expiresAt)
   return {
     ...draft,
@@ -57,6 +93,7 @@ function draftView(draft: AiDraft): DraftView {
     summary: fields.slice(0, 2).map(([, value]) => readableValue(value)).filter(Boolean).join(' · '),
     copyText,
     canUse: draft.status === 'DRAFT_READY',
+    fieldRows,
   }
 }
 
@@ -81,6 +118,9 @@ Page({
     loadingMore: false,
     generating: false,
     recording: false,
+    refining: false,
+    activeDraft: null as DraftView | null,
+    supplementalText: '',
     message: '',
   },
   voiceRecorder: null as MipVoiceRecorder | null,
@@ -108,6 +148,9 @@ Page({
         state: 'ready',
         capability,
         drafts: page.items.map(draftView),
+        activeDraft: this.data.activeDraft
+          ? page.items.map(draftView).find(item => item.id === this.data.activeDraft?.id && item.canUse) || null
+          : null,
         nextCursor: page.nextCursor || '',
         message: '',
       })
@@ -160,7 +203,8 @@ Page({
     this.setData({ generating: true, message: '' })
     try {
       const draft = await mipAiModule.createTextDraft({ purpose, transcriptText })
-      this.setData({ sourceText: '', drafts: [draftView(draft), ...this.data.drafts] })
+      const view = draftView(draft)
+      this.setData({ sourceText: '', drafts: [view, ...this.data.drafts], activeDraft: view, supplementalText: '' })
       wx.showToast({ title: '草稿已生成', icon: 'success' })
     }
     catch (error) {
@@ -193,7 +237,8 @@ Page({
         audioBase64: voice.audioBase64,
         contentType: voice.contentType,
       })
-      this.setData({ drafts: [draftView(draft), ...this.data.drafts] })
+      const view = draftView(draft)
+      this.setData({ drafts: [view, ...this.data.drafts], activeDraft: view, supplementalText: '' })
       wx.showToast({ title: '语音草稿已生成', icon: 'success' })
     }).catch((error) => {
       this.setData({ recording: false, message: error instanceof Error ? error.message : '录音整理失败' })
@@ -219,6 +264,59 @@ Page({
     wx.setClipboardData({ data: draft.copyText })
   },
 
+  openRefinement(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    const draft = this.data.drafts.find(item => item.id === id)
+    if (!draft?.canUse) {
+      return
+    }
+    this.setData({ activeDraft: draft, supplementalText: '', message: '' })
+  },
+
+  closeRefinement() {
+    if (!this.data.refining) {
+      this.setData({ activeDraft: null, supplementalText: '' })
+    }
+  },
+
+  updateSupplement(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.setData({ supplementalText: event.detail.value, message: '' })
+  },
+
+  async continueDraft() {
+    const draft = this.data.activeDraft
+    const supplementalText = this.data.supplementalText.trim()
+    if (!draft || this.data.refining || !this.data.capability?.refinementDrafts) {
+      return
+    }
+    if (!supplementalText) {
+      this.setData({ message: '请输入补充内容。' })
+      return
+    }
+    this.setData({ refining: true, message: '' })
+    try {
+      const updated = draftView(await mipAiModule.continueDraft({
+        draftId: draft.id,
+        expectedVersion: draft.version,
+        supplementalText,
+      }))
+      this.setData({
+        drafts: this.data.drafts.map(item => item.id === updated.id ? updated : item),
+        activeDraft: updated,
+        supplementalText: '',
+      })
+      wx.showToast({ title: '草稿已更新', icon: 'success' })
+    }
+    catch (error) {
+      const message = error instanceof Error ? error.message : '草稿更新失败'
+      await this.loadDrafts()
+      this.setData({ message })
+    }
+    finally {
+      this.setData({ refining: false })
+    }
+  },
+
   useDraft(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || '')
     const draft = this.data.drafts.find(item => item.id === id)
@@ -240,7 +338,11 @@ Page({
     }
     try {
       await mipAiModule.deleteDraft(id, draft.version)
-      this.setData({ drafts: this.data.drafts.filter(item => item.id !== id) })
+      this.setData({
+        drafts: this.data.drafts.filter(item => item.id !== id),
+        activeDraft: this.data.activeDraft?.id === id ? null : this.data.activeDraft,
+        supplementalText: this.data.activeDraft?.id === id ? '' : this.data.supplementalText,
+      })
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '草稿删除失败' })

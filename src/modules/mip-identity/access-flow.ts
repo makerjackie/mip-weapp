@@ -16,6 +16,7 @@ const fullAccessRequirements: AccessRequirement[] = [
 ]
 
 const defaultRequirements: Record<ProtectedActionIntent['action'], AccessRequirement[]> = {
+  ENTER_APP: ['AUTHENTICATED', 'AGREEMENTS'],
   REGISTER_EVENT: fullAccessRequirements,
   PURCHASE_MEMBERSHIP: fullAccessRequirements,
   PUBLISH_OPPORTUNITY: fullAccessRequirements,
@@ -33,6 +34,9 @@ const blockByRequirement = {
 } as const
 
 export function requirementsFor(intent: ProtectedActionIntent): AccessRequirement[] {
+  if (intent.action === 'ENTER_APP') {
+    return [...defaultRequirements.ENTER_APP]
+  }
   return [...(intent.requirements || defaultRequirements[intent.action])]
 }
 
@@ -69,19 +73,47 @@ export function evaluateAccess(
   return { ready: true }
 }
 
+export function isSensitiveAccessQueryKey(key: string): boolean {
+  const normalized = key.toLowerCase().replace(/[^a-z0-9]/g, '')
+  return normalized === 'key'
+    || normalized.includes('openid')
+    || normalized.includes('unionid')
+    || normalized.includes('phone')
+    || normalized.includes('mobile')
+    || normalized.includes('password')
+    || normalized.includes('passwd')
+    || normalized.includes('secret')
+    || normalized.includes('token')
+    || normalized.includes('credential')
+    || normalized.includes('authorization')
+    || normalized.includes('sessionkey')
+    || normalized.includes('privatekey')
+    || normalized.includes('accesskey')
+    || normalized.includes('apikey')
+    || normalized.includes('merchantkey')
+    || normalized.includes('mchkey')
+    || normalized.includes('encryptionkey')
+}
+
 export function sanitizeReturnContext(source: AccessReturnContext): AccessReturnContext {
-  if (source.navigation === 'navigateBack') {
+  if (source.navigation === 'navigateBack' && !source.route) {
     return { navigation: 'navigateBack' }
   }
 
   const route = String(source.route || '')
-  if (!/^\/[\w/-]+$/.test(route) || route.includes('..') || route.includes('//')) {
+  if (route.length > 200
+    || !/^\/[\w/-]+$/.test(route)
+    || route.includes('..')
+    || route.includes('//')) {
     throw new Error('INVALID_RETURN_ROUTE')
   }
 
   const query: Record<string, string> = {}
   for (const [key, value] of Object.entries(source.query || {})) {
-    if (!/^[a-z]\w{0,39}$/i.test(key)) {
+    if (Object.keys(query).length >= 16) {
+      break
+    }
+    if (!/^[a-z]\w{0,39}$/i.test(key) || isSensitiveAccessQueryKey(key)) {
       continue
     }
     const normalized = String(value)
@@ -93,11 +125,15 @@ export function sanitizeReturnContext(source: AccessReturnContext): AccessReturn
   return { navigation: source.navigation, route, query }
 }
 
-export function accessReturnUrl(context: AccessReturnContext, resumeAction: string): string | null {
+export function accessReturnUrl(context: AccessReturnContext, resumeAction?: string): string | null {
   if (!context.route) {
     return null
   }
-  const suffix = Object.entries({ ...(context.query || {}), mipResume: resumeAction })
+  const query = { ...(context.query || {}) }
+  if (resumeAction) {
+    query.mipResume = resumeAction
+  }
+  const suffix = Object.entries(query)
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
     .join('&')
   return suffix ? `${context.route}?${suffix}` : context.route

@@ -85,7 +85,8 @@ describe('MIP public profiles', () => {
     const participantPage = source('src/packages/member/mip-events/participants/index.ts')
     const profilePage = source('src/packages/member/mip-public-profile/index.ts')
     expect(participantPage).toContain('mipEventsModule.listPublicParticipants')
-    expect(profilePage).toContain('mipIdentityModule.getPublicProfile')
+    expect(profilePage).toContain('opportunityModule.getPublicProfile')
+    expect(profilePage).toContain('opportunityModule.setProfileInterest')
     expect(`${participantPage}\n${profilePage}`).not.toMatch(/membershipModule|wx\.cloud/)
 
     for (const detail of [

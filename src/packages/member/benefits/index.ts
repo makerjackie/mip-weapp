@@ -1,7 +1,9 @@
-import type { MembershipPlan } from '../../../modules/mip-commerce'
+import type {
+  MembershipBenefitItem,
+  MembershipBenefitsSnapshot,
+  MembershipPlan,
+} from '../../../modules/mip-commerce'
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
-import { mipIdentityModule } from '../../../modules/mip-identity/client'
-import { membershipPresentation } from '../../../modules/mip-shell'
 import { caseNavigateTo } from '../../../modules/platform/case-navigation'
 import { formatLocalDate } from '../../../utils/date'
 
@@ -9,10 +11,14 @@ Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
     plans: [] as MembershipPlan[],
-    membershipLabel: '嘉宾',
-    membershipDescription: '当前没有有效会员权益',
+    membershipLabel: '会员状态',
+    membershipDescription: '正在读取会员权益',
     membershipEndsText: '',
+    planEndsText: '',
+    currentPlanName: '',
+    activeBenefits: [] as MembershipBenefitItem[],
     isPlayer: false,
+    membershipKnown: false,
     message: '',
   },
 
@@ -24,28 +30,60 @@ Page({
     if (this.data.state !== 'ready') {
       this.setData({ state: 'loading', message: '' })
     }
-    const identityRequest = mipIdentityModule.loadSnapshot().then((snapshot) => {
-      const membership = membershipPresentation(snapshot.membership.kind, snapshot.membership.entitlement)
+    const [membershipResult, plansResult] = await Promise.allSettled([
+      mipCommerceModule.getMembershipBenefits(),
+      mipCommerceModule.listPlans(),
+    ])
+    if (membershipResult.status === 'fulfilled') {
+      this.presentMembership(membershipResult.value)
+    }
+    else if (!this.data.membershipKnown) {
       this.setData({
-        membershipLabel: membership.label,
-        membershipDescription: membership.description,
-        membershipEndsText: membership.endsAt ? formatLocalDate(membership.endsAt) : '',
-        isPlayer: membership.label === '玩家',
+        membershipLabel: '会员状态暂不可用',
+        membershipDescription: '请稍后重新加载',
       })
-    }).catch(() => {
-      this.setData({ message: '会员状态暂时无法更新。' })
+    }
+    if (plansResult.status === 'fulfilled') {
+      this.setData({ plans: plansResult.value })
+    }
+    if (membershipResult.status === 'rejected' && plansResult.status === 'rejected') {
+      this.setData({ state: 'error', message: '会员权益暂时无法加载。' })
+      return
+    }
+    this.setData({
+      state: 'ready',
+      message: membershipResult.status === 'rejected'
+        ? '会员状态暂时无法更新。'
+        : plansResult.status === 'rejected'
+          ? '会员方案暂时无法更新。'
+          : '',
     })
-    try {
-      const plans = await mipCommerceModule.listPlans()
-      this.setData({ state: 'ready', plans })
-      await identityRequest
+  },
+
+  presentMembership(snapshot: MembershipBenefitsSnapshot) {
+    if (snapshot.kind === 'GUEST') {
+      this.setData({
+        membershipLabel: '嘉宾',
+        membershipDescription: '当前没有有效会员权益',
+        membershipEndsText: '',
+        planEndsText: '',
+        currentPlanName: '',
+        activeBenefits: [],
+        isPlayer: false,
+        membershipKnown: true,
+      })
+      return
     }
-    catch {
-      await identityRequest
-      this.setData(this.data.plans.length
-        ? { message: '权益说明更新失败，已保留上次结果。' }
-        : { state: 'error', message: '会员权益暂时无法加载。' })
-    }
+    this.setData({
+      membershipLabel: '玩家',
+      membershipDescription: snapshot.plan.description || snapshot.plan.name,
+      membershipEndsText: formatLocalDate(snapshot.membershipEndsAt),
+      planEndsText: formatLocalDate(snapshot.endsAt),
+      currentPlanName: snapshot.plan.name,
+      activeBenefits: snapshot.benefits,
+      isPlayer: true,
+      membershipKnown: true,
+    })
   },
 
   openMembership() {

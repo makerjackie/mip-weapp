@@ -74,6 +74,127 @@ describe('AI draft retention', () => {
     assert.equal(inserted, false)
   })
 
+  it('locks the active owner and version before a refinement provider call', async () => {
+    const calls = []
+    const repository = createAiRepository({
+      async transaction(work) {
+        return work({
+          async one(sql, params) {
+            calls.push({ sql, params })
+            if (sql.includes('FROM mip_users')) return { id: USER_ID, status: 'ACTIVE' }
+            return {
+              id: '22222222-2222-4222-8222-222222222222',
+              user_id: USER_ID,
+              purpose: 'PROFILE',
+              transcript_text: '原内容',
+              structured_draft_json: JSON.stringify({ headline: '原标题' }),
+              status: 'DRAFT_READY',
+              expires_at: '2099-01-01T00:00:00.000Z',
+              version: 4,
+            }
+          },
+          async query(sql, params) {
+            calls.push({ sql, params })
+            return { affectedRows: 1 }
+          },
+        })
+      },
+    })
+    const processing = await repository.beginDraftRefinement(APP_ID, USER_ID, {
+      draftId: '22222222-2222-4222-8222-222222222222',
+      expectedVersion: 4,
+    })
+    assert.match(calls[0].sql, /FROM mip_users[\s\S]*FOR UPDATE/)
+    assert.match(calls[1].sql, /FROM mip_ai_drafts[\s\S]*FOR UPDATE/)
+    assert.match(calls[2].sql, /status = 'STRUCTURING', version = version \+ 1/)
+    assert.deepEqual(calls[2].params, [APP_ID, USER_ID, processing.id, 4])
+    assert.equal(processing.status, 'STRUCTURING')
+    assert.equal(processing.version, 5)
+  })
+
+  it('does not complete provider output after account closure wins the user lock', async () => {
+    let updated = false
+    const repository = createAiRepository({
+      async transaction(work) {
+        return work({
+          async one(sql) {
+            if (sql.includes('FROM mip_users')) return { id: USER_ID, status: 'CLOSED' }
+            throw new Error(`unexpected query: ${sql}`)
+          },
+          async query() {
+            updated = true
+            return { affectedRows: 1 }
+          },
+        })
+      },
+    })
+    await assert.rejects(() => repository.completeDraft(
+      APP_ID,
+      USER_ID,
+      '22222222-2222-4222-8222-222222222222',
+      1,
+      {
+        purpose: 'PROFILE',
+        transcriptText: '资料',
+        structuredDraft: { headline: '产品负责人' },
+      },
+    ), /FORBIDDEN/)
+    assert.equal(updated, false)
+  })
+
+  it('completes a structured draft only inside the active-owner transaction', async () => {
+    const calls = []
+    const repository = createAiRepository({
+      async transaction(work) {
+        return work({
+          async one(sql, params) {
+            calls.push({ sql, params })
+            if (sql.includes('FROM mip_users')) return { id: USER_ID, status: 'ACTIVE' }
+            if (sql.includes('SELECT purpose, status')) {
+              return {
+                purpose: 'PROFILE',
+                status: 'STRUCTURING',
+                expires_at: '2099-01-01T00:00:00.000Z',
+                version: 2,
+              }
+            }
+            return {
+              id: '22222222-2222-4222-8222-222222222222',
+              user_id: USER_ID,
+              purpose: 'PROFILE',
+              transcript_text: '资料',
+              structured_draft_json: JSON.stringify({ headline: '产品负责人' }),
+              status: 'DRAFT_READY',
+              expires_at: '2099-01-01T00:00:00.000Z',
+              version: 3,
+            }
+          },
+          async query(sql, params) {
+            calls.push({ sql, params })
+            return { affectedRows: 1 }
+          },
+        })
+      },
+    })
+    const ready = await repository.completeDraft(
+      APP_ID,
+      USER_ID,
+      '22222222-2222-4222-8222-222222222222',
+      2,
+      {
+        purpose: 'PROFILE',
+        transcriptText: '资料',
+        structuredDraft: { headline: '产品负责人', adminRole: 'PLATFORM_OWNER' },
+      },
+    )
+    assert.equal(ready.status, 'DRAFT_READY')
+    assert.deepEqual(ready.structuredDraft, { headline: '产品负责人' })
+    assert.match(calls[0].sql, /FROM mip_users[\s\S]*FOR UPDATE/)
+    assert.match(calls[1].sql, /FROM mip_ai_drafts[\s\S]*FOR UPDATE/)
+    assert.match(calls[2].sql, /status = 'DRAFT_READY'/)
+    assert.equal(calls[2].params[1], JSON.stringify({ headline: '产品负责人' }))
+  })
+
   it('stages uploaded audio as PENDING before the ACTIVE transaction promotes it to READY', async () => {
     const calls = []
     const repository = createAiRepository({

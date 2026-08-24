@@ -6,7 +6,7 @@ const { createAiRepository } = require('./domain/repository')
 const { createAiService } = require('./domain/service')
 const { resolveMipUser, trustedWechatIdentity } = require('./lib/identity')
 const { mysqlDatabase } = require('./lib/mysql')
-const { createCloudAiProvider } = require('./lib/provider')
+const { createAiProviderAdapter } = require('./lib/provider')
 const { createAudioStore } = require('./lib/audio-store')
 const { verifyMaintenanceRequest } = require('./lib/internal-auth')
 
@@ -20,11 +20,12 @@ const service = createAiService({
   repository: createAiRepository(database, {
     draftTtlHours: process.env.MIP_AI_DRAFT_TTL_HOURS || 72,
   }),
-  provider: createCloudAiProvider(
+  provider: createAiProviderAdapter({
     cloud,
-    process.env.MIP_AI_PROVIDER_FUNCTION_NAME,
-    process.env.MIP_AI_HMAC_SECRET,
-  ),
+    adapter: process.env.MIP_AI_PROVIDER_ADAPTER,
+    functionName: process.env.MIP_AI_PROVIDER_FUNCTION_NAME,
+    secret: process.env.MIP_AI_HMAC_SECRET,
+  }),
   audioStore: createAudioStore(cloud, {
     storageKey: process.env.MIP_AI_STORAGE_KEY,
     stage: process.env.MIP_DEPLOYMENT_STAGE,

@@ -3,7 +3,39 @@ import type { AdminPageState } from '../shared/page-state'
 import { mipAdminModule } from '../../../modules/mip-admin'
 import { adminLoadFailure } from '../shared/page-state'
 
-type AuditView = AdminAuditItem & { metadataText: string }
+const roleLabels: Record<string, string> = {
+  PLATFORM_OWNER: '平台超级管理员',
+  PLATFORM_OPERATIONS: '平台运营',
+  PLATFORM_FINANCE: '平台财务',
+  BRANCH_ADMIN: '城市管理员',
+  EVENT_OWNER: '活动负责人',
+  EVENT_MANAGER: '活动管理员',
+  EVENT_STAFF: '现场人员',
+}
+
+const actionLabels: Record<string, string> = {
+  'admin.session.enter': '进入运营管理',
+  'admin.roles.view': '查看角色列表',
+  'admin.roles.grant': '设置角色',
+  'admin.roles.revoke': '撤销角色',
+}
+
+type AuditView = AdminAuditItem & {
+  actionLabel: string
+  roleLabel: string
+  scopeLabel: string
+  metadataText: string
+}
+
+function auditView(item: AdminAuditItem): AuditView {
+  return {
+    ...item,
+    actionLabel: actionLabels[item.action] || item.action,
+    roleLabel: item.effectiveRole ? roleLabels[item.effectiveRole] || item.effectiveRole : '系统',
+    scopeLabel: item.scopeType === 'PLATFORM' ? '平台' : item.scopeType === 'BRANCH' ? '城市分会' : '活动',
+    metadataText: JSON.stringify(item.metadata),
+  }
+}
 
 Page({
   data: {
@@ -30,7 +62,7 @@ Page({
       }, force)
       this.setData({
         state: 'ready',
-        items: response.items.map(item => ({ ...item, metadataText: JSON.stringify(item.metadata) })),
+        items: response.items.map(auditView),
         nextCursor: response.nextCursor || null,
         loadingMore: false,
         message: '',
@@ -51,7 +83,7 @@ Page({
         filters: { action: this.data.action.trim(), resourceType: this.data.resourceType.trim() },
       })
       this.setData({
-        items: this.data.items.concat(response.items.map(item => ({ ...item, metadataText: JSON.stringify(item.metadata) }))),
+        items: this.data.items.concat(response.items.map(auditView)),
         nextCursor: response.nextCursor || null,
       })
     }

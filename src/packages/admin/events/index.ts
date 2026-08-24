@@ -11,6 +11,12 @@ interface DateTimeParts {
   time: string
 }
 
+interface AdminContentMediaDraft {
+  assetId: string
+  imageUrl: string
+  caption: string
+}
+
 function pad(value: number) {
   return String(value).padStart(2, '0')
 }
@@ -40,6 +46,7 @@ function initialDraft() {
     title: '',
     summary: '',
     description: '',
+    contentMedia: [] as AdminContentMediaDraft[],
     notices: '',
     coverAssetId: '',
     eventTypeKey: 'general',
@@ -98,6 +105,7 @@ Page({
     cancelBusy: false,
     coverUrl: '',
     coverUploading: false,
+    contentUploading: false,
     message: '',
   },
   onLoad(query: Record<string, string>) {
@@ -200,6 +208,7 @@ Page({
       title: event.title,
       summary: event.summary,
       description: event.description,
+      contentMedia: (event.contentMedia || []).map(item => ({ ...item })),
       notices: event.notices,
       coverAssetId: event.coverAssetId || '',
       eventTypeKey: event.eventTypeKey,
@@ -271,6 +280,68 @@ Page({
     }
     finally {
       this.setData({ coverUploading: false })
+    }
+  },
+  async chooseContentImage() {
+    if (this.data.contentUploading || this.data.saving || this.data.cancelBusy) {
+      return
+    }
+    if (this.data.draft.contentMedia.length >= 12) {
+      this.setData({ message: '活动介绍图片最多 12 张。' })
+      return
+    }
+    this.setData({ contentUploading: true, message: '' })
+    try {
+      const sourcePath = await chooseSingleImage()
+      const asset = await mipMediaModule.uploadImageFromPath('EVENT_CONTENT', sourcePath)
+      this.setData({
+        'draft.contentMedia': [
+          ...this.data.draft.contentMedia,
+          { assetId: asset.assetId, imageUrl: asset.imageUrl, caption: '' },
+        ],
+      })
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '图片上传失败，请重试。' })
+    }
+    finally {
+      this.setData({ contentUploading: false })
+    }
+  },
+  updateContentCaption(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const index = Number(event.currentTarget.dataset.index)
+    if (Number.isInteger(index) && this.data.draft.contentMedia[index]) {
+      this.setData({ [`draft.contentMedia[${index}].caption`]: event.detail.value })
+    }
+  },
+  moveContentImage(event: WechatMiniprogram.TouchEvent) {
+    const index = Number(event.currentTarget.dataset.index)
+    const direction = Number(event.currentTarget.dataset.direction)
+    const target = index + direction
+    const media = [...this.data.draft.contentMedia]
+    if (!Number.isInteger(index) || ![-1, 1].includes(direction) || !media[index] || !media[target]) {
+      return
+    }
+    const current = media[index]
+    media[index] = media[target]
+    media[target] = current
+    this.setData({ 'draft.contentMedia': media })
+  },
+  removeContentImage(event: WechatMiniprogram.TouchEvent) {
+    const index = Number(event.currentTarget.dataset.index)
+    if (!Number.isInteger(index) || !this.data.draft.contentMedia[index]) {
+      return
+    }
+    this.setData({
+      'draft.contentMedia': this.data.draft.contentMedia.filter((_, itemIndex) => itemIndex !== index),
+    })
+  },
+  previewContentImage(event: WechatMiniprogram.TouchEvent) {
+    const index = Number(event.currentTarget.dataset.index)
+    const urls = this.data.draft.contentMedia.map(item => item.imageUrl).filter(Boolean)
+    const current = this.data.draft.contentMedia[index]?.imageUrl
+    if (current && urls.length) {
+      void wx.previewImage({ current, urls })
     }
   },
   choose(event: WechatMiniprogram.TouchEvent) {
@@ -353,7 +424,7 @@ Page({
     if (this.data.saving) {
       return
     }
-    if (this.data.coverUploading) {
+    if (this.data.coverUploading || this.data.contentUploading) {
       return
     }
     if (this.data.conflict) {

@@ -4,6 +4,7 @@ const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const {
   assertSameAttribution,
+  createCommerceRepository,
   resolveCheckoutAttribution,
 } = require('../domain/repository')
 
@@ -58,5 +59,59 @@ describe('membership checkout attribution', () => {
       sourceTokenHash: 'b'.repeat(64),
     }))
     assert.throws(() => assertSameAttribution(first, { sourceType: 'PLATFORM' }), /IDEMPOTENCY_CONFLICT/)
+  })
+})
+
+describe('membership benefit projection', () => {
+  it('reads the current entitlement and immutable order benefit snapshot for the caller', async () => {
+    const calls = []
+    const repository = createCommerceRepository({
+      async one(sql, params) {
+        calls.push({ sql, params })
+        return {
+          id: '30000000-0000-4000-8000-000000000001',
+          status: 'ACTIVE',
+          starts_at: '2026-08-01T00:00:00.000Z',
+          ends_at: '2026-09-01T00:00:00.000Z',
+          membership_ends_at: '2026-10-01T00:00:00.000Z',
+          version: 2,
+          plan_id: '40000000-0000-4000-8000-000000000001',
+          plan_name: '年度会员',
+          plan_description: '会员说明',
+          benefits_json: '["已修改的权益"]',
+          product_snapshot_json: JSON.stringify({ benefits: ['玩家身份', '会员活动权益'] }),
+          invitation_source_type: 'USER',
+          inviter_nickname: '邀请会员',
+          inviter_visibility_json: JSON.stringify({ nickname: true, avatar: true }),
+          inviter_avatar_file_id: 'cloud://env.test/avatar.png',
+        }
+      },
+    })
+    const result = await repository.getMembershipBenefits({ appId: 'app-1', identityKey: 'identity-1' })
+    assert.equal(result.kind, 'PLAYER')
+    assert.equal(result.status, 'ACTIVE')
+    assert.equal(result.membershipEndsAt, '2026-10-01T00:00:00.000Z')
+    assert.deepEqual(result.benefits, [
+      { key: 'benefit-1', label: '玩家身份', status: 'ACTIVE' },
+      { key: 'benefit-2', label: '会员活动权益', status: 'ACTIVE' },
+    ])
+    assert.deepEqual(result.invitationAttribution, {
+      sourceType: 'USER',
+      displayName: '邀请会员',
+      avatarUrl: 'cloud://env.test/avatar.png',
+    })
+    assert.match(calls[0].sql, /mip_membership_entitlements/)
+    assert.match(calls[0].sql, /mip_orders/)
+    assert.match(calls[0].sql, /mip_membership_attributions/)
+    assert.match(calls[0].sql, /e\.starts_at <= UTC_TIMESTAMP\(3\)/)
+    assert.deepEqual(calls[0].params, ['app-1', 'identity-1'])
+  })
+
+  it('returns a guest fact when no effective entitlement exists', async () => {
+    const repository = createCommerceRepository({ one: async () => null })
+    assert.deepEqual(
+      await repository.getMembershipBenefits({ appId: 'app-1', identityKey: 'identity-1' }),
+      { kind: 'GUEST', status: 'NONE', benefits: [] },
+    )
   })
 })

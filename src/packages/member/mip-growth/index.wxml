@@ -24,6 +24,22 @@
       <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[length:31rpx] font-bold">{{snapshot.account.coinBalance}}</view><view class="mt-1 text-[length:21rpx] text-muted">游戏币</view></view>
     </view>
 
+    <view class="mt-6 text-[length:30rpx] font-bold">等级与权益</view>
+    <view class="mt-3 flex flex-col gap-3">
+      <view wx:for="{{levels}}" wx:key="id" class="rounded-[16rpx] border border-line bg-panel px-4 py-4">
+        <view class="flex items-center justify-between gap-3"><view class="text-[length:26rpx] font-semibold">{{item.name}}</view><view wx:if="{{item.current}}" class="rounded-full bg-brand-soft px-3 py-1 text-[length:20rpx] text-brand">当前等级</view></view>
+        <view class="mt-2 text-[length:20rpx] text-muted">{{item.thresholdText}}</view>
+        <view wx:if="{{item.benefits.length}}" class="mt-3 flex flex-col gap-2"><view wx:for="{{item.benefits}}" wx:for-item="benefit" wx:key="*this" class="text-[length:22rpx] text-muted">{{benefit}}</view></view>
+        <view wx:else class="mt-3 text-[length:21rpx] text-muted">暂未配置等级权益。</view>
+      </view>
+    </view>
+
+    <view class="mt-6 text-[length:30rpx] font-bold">成长规则</view>
+    <view wx:if="{{earningRules.length === 0}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-5 text-[length:22rpx] text-muted">暂无启用的成长规则。</view>
+    <view wx:else class="mt-3 flex flex-col gap-3">
+      <view wx:for="{{earningRules}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4"><view class="flex items-center justify-between gap-3"><view class="min-w-0 flex-1 text-[length:25rpx] font-semibold">{{item.name}}</view><view class="shrink-0 text-[length:24rpx] font-semibold text-brand">{{item.deltaText}}</view></view><view class="mt-2 text-[length:21rpx] text-muted">{{item.dailyLimitText}}</view></view>
+    </view>
+
     <view class="mt-6 text-[length:30rpx] font-bold">成长流水</view>
     <view wx:if="{{entries.length === 0}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-7 text-center text-[length:23rpx] text-muted">暂无成长记录。</view>
     <view wx:else class="mt-3 flex flex-col gap-3">

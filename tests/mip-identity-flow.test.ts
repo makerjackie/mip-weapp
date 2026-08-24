@@ -1,16 +1,21 @@
 import type { BranchId, UserId } from '../src/modules/mip'
 import type {
   IdentityAccessSnapshot,
+  MipIdentityAccessStorage,
   MipIdentityGateway,
   ProfileUpdateInput,
 } from '../src/modules/mip-identity'
+import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import {
   accountClosureConfirmationPhrase,
   createAccountClosureRequestTracker,
+  createMipGlobalAccessGuard,
+  createMipGlobalAccessIntent,
   createMipIdentityGateway,
   createMipIdentityModule,
   evaluateAccess,
+  isMipGlobalAccessExemptRoute,
   mipAccessPageUrl,
 } from '../src/modules/mip-identity'
 
@@ -98,6 +103,24 @@ function gateway(initial = accessSnapshot()) {
   return source
 }
 
+function memoryAccessStorage(initial?: unknown) {
+  let value = initial
+  const clone = <T>(input: T): T => structuredClone(input)
+  const storage = {
+    read: vi.fn(() => value === undefined ? undefined : clone(value)),
+    write: vi.fn((state) => {
+      value = clone(state)
+    }),
+    clear: vi.fn(() => {
+      value = undefined
+    }),
+  } satisfies MipIdentityAccessStorage
+  return {
+    storage,
+    value: () => value === undefined ? undefined : clone(value),
+  }
+}
+
 const protectedIntent = {
   action: 'REGISTER_EVENT' as const,
   source: {
@@ -108,6 +131,28 @@ const protectedIntent = {
 }
 
 describe('MIP resumable identity access', () => {
+  it('requires only authentication and current agreements before public browsing', () => {
+    const intent = createMipGlobalAccessIntent({
+      path: 'packages/member/mip-events/detail/index',
+      query: { id: 'event-1' },
+    })
+    const ready = accessSnapshot({
+      agreements: [],
+      phoneBound: false,
+      profile: { ...accessSnapshot().profile, complete: false },
+    })
+
+    expect(evaluateAccess(ready, intent)).toEqual({ ready: true })
+    expect(evaluateAccess(accessSnapshot(), intent)).toMatchObject({
+      ready: false,
+      block: 'AGREEMENT_REQUIRED',
+    })
+    expect(evaluateAccess(accessSnapshot(), { ...intent, requirements: [] })).toMatchObject({
+      ready: false,
+      block: 'AGREEMENT_REQUIRED',
+    })
+  })
+
   it('checks agreement, phone and profile in order before restoring the source action', async () => {
     const source = gateway()
     const module = createMipIdentityModule(source, { token: () => 'intent-1' })
@@ -241,6 +286,265 @@ describe('MIP resumable identity access', () => {
     await module.beginProtectedAction(protectedIntent)
     now = 1051
     await expect(module.loadAccess('intent-1')).rejects.toThrow('ACCESS_INTENT_EXPIRED')
+  })
+
+  it('restores a minimal versioned intent after cold start and clears it on cancel', () => {
+    const memory = memoryAccessStorage()
+    const first = createMipIdentityModule(gateway(), {
+      now: () => 10_000,
+      token: () => 'cold-intent',
+      storage: memory.storage,
+    })
+    first.prepareProtectedAction({
+      ...protectedIntent,
+      source: {
+        ...protectedIntent.source,
+        query: {
+          id: 'event-1',
+          scene: 'branch-qr',
+          openid: 'must-not-persist',
+          phone: '13800000000',
+          apiKey: 'must-not-persist',
+          accessToken: 'must-not-persist',
+        },
+      },
+    })
+
+    const persisted = memory.value() as {
+      version: number
+      intents: Array<{ intent: typeof protectedIntent }>
+    }
+    expect(persisted.version).toBe(1)
+    expect(persisted.intents[0].intent.source.query).toEqual({
+      id: 'event-1',
+      scene: 'branch-qr',
+    })
+    expect(JSON.stringify(persisted)).not.toContain('must-not-persist')
+    expect(JSON.stringify(persisted)).not.toContain('13800000000')
+
+    const restored = createMipIdentityModule(gateway(), {
+      now: () => 10_001,
+      storage: memory.storage,
+    })
+    expect(restored.peekIntent('cold-intent')).toMatchObject({
+      action: 'REGISTER_EVENT',
+      source: { route: '/packages/member/event-detail/index' },
+    })
+    restored.cancel('cold-intent')
+    expect(memory.value()).toBeUndefined()
+  })
+
+  it('expires persisted intents after 30 minutes', () => {
+    let now = 20_000
+    const memory = memoryAccessStorage()
+    const first = createMipIdentityModule(gateway(), {
+      now: () => now,
+      token: () => 'expiring-intent',
+      storage: memory.storage,
+    })
+    first.prepareProtectedAction(protectedIntent)
+
+    now += 30 * 60 * 1000 + 1
+    const restored = createMipIdentityModule(gateway(), {
+      now: () => now,
+      storage: memory.storage,
+    })
+    expect(restored.peekIntent('expiring-intent')).toBeNull()
+    expect(memory.value()).toBeUndefined()
+  })
+
+  it('restores one pending resume after cold start and clears it after consumption', async () => {
+    const memory = memoryAccessStorage()
+    const ready = accessSnapshot({
+      agreements: [],
+      phoneBound: true,
+      profile: { ...accessSnapshot().profile, complete: true, missingFields: [] },
+    })
+    const first = createMipIdentityModule(gateway(ready), {
+      now: () => 30_000,
+      token: () => 'pending-intent',
+      storage: memory.storage,
+    })
+    const token = first.prepareProtectedAction({
+      ...protectedIntent,
+      source: { navigation: 'navigateBack' },
+    })
+    await first.complete(token)
+
+    const restored = createMipIdentityModule(gateway(ready), {
+      now: () => 30_001,
+      storage: memory.storage,
+    })
+    expect(restored.consumePendingResume()).toEqual({
+      action: 'REGISTER_EVENT',
+      source: { navigation: 'navigateBack' },
+    })
+    expect(memory.value()).toBeUndefined()
+  })
+
+  it('keeps a safe navigate-back fallback route across a cold start', async () => {
+    const memory = memoryAccessStorage()
+    const first = createMipIdentityModule(gateway(), {
+      now: () => 32_000,
+      token: () => 'registration-intent',
+      storage: memory.storage,
+    })
+    first.prepareProtectedAction({
+      action: 'REGISTER_EVENT',
+      source: {
+        navigation: 'navigateBack',
+        route: '/packages/member/mip-events/registration/index',
+        query: {
+          eventId: 'event-1',
+          invitationToken: 'must-not-persist',
+        },
+      },
+    })
+
+    const restored = createMipIdentityModule(gateway(), {
+      now: () => 32_001,
+      storage: memory.storage,
+    })
+    expect(restored.peekIntent('registration-intent')).toMatchObject({
+      source: {
+        navigation: 'navigateBack',
+        route: '/packages/member/mip-events/registration/index',
+        query: { eventId: 'event-1' },
+      },
+    })
+  })
+
+  it('clears a completed direct-return intent without persisting identity facts', async () => {
+    const memory = memoryAccessStorage()
+    const ready = accessSnapshot({ agreements: [] })
+    const module = createMipIdentityModule(gateway(ready), {
+      now: () => 35_000,
+      token: () => 'global-complete',
+      storage: memory.storage,
+    })
+    const token = module.prepareProtectedAction(createMipGlobalAccessIntent({
+      path: 'pages/index/index',
+    }))
+
+    await expect(module.complete(token)).resolves.toMatchObject({
+      navigation: 'reLaunch',
+      route: '/pages/index/index',
+    })
+    expect(memory.value()).toBeUndefined()
+  })
+})
+
+describe('MIP global access guard', () => {
+  it('wires the guard to app lifecycle and removes unguarded exits from exempt pages', () => {
+    const app = readFileSync(new URL('../src/app.ts', import.meta.url), 'utf8')
+    const access = readFileSync(
+      new URL('../src/packages/member/mip-access/index.ts', import.meta.url),
+      'utf8',
+    )
+    const accessTemplate = readFileSync(
+      new URL('../src/packages/member/mip-access/index.wxml', import.meta.url),
+      'utf8',
+    )
+    const agreement = readFileSync(
+      new URL('../src/packages/member/user-agreement/index.ts', import.meta.url),
+      'utf8',
+    )
+    const privacy = readFileSync(
+      new URL('../src/packages/member/privacy/index.ts', import.meta.url),
+      'utf8',
+    )
+
+    expect(app).toContain('onLaunch(options)')
+    expect(app).toContain('onShow(options)')
+    expect(app.match(/mipGlobalAccessGuard\.ensureLaunch\(options\)/g)).toHaveLength(2)
+    expect(access).toContain('context.navigation === \'reLaunch\'')
+    expect(access).toContain('exitMipMiniProgram()')
+    expect(accessTemplate).toContain('<app-page-exit managed')
+    expect(accessTemplate).toContain('bind:exit="cancel"')
+    expect(agreement).toContain('mipGlobalAccessGuard.leaveDocument()')
+    expect(privacy).toContain('mipGlobalAccessGuard.leaveDocument()')
+  })
+
+  it('exempts access-control documents without exempting public pages', () => {
+    expect(isMipGlobalAccessExemptRoute('/packages/member/mip-access/index')).toBe(true)
+    expect(isMipGlobalAccessExemptRoute('packages/member/user-agreement/index')).toBe(true)
+    expect(isMipGlobalAccessExemptRoute('/packages/member/privacy/index')).toBe(true)
+    expect(isMipGlobalAccessExemptRoute('/pages/index/index')).toBe(false)
+  })
+
+  it('does not redirect while an agreement page is active', () => {
+    const module = createMipIdentityModule(gateway())
+    const reLaunch = vi.fn()
+    const navigateBack = vi.fn()
+    const guard = createMipGlobalAccessGuard(module, {
+      currentPage: () => ({ path: 'packages/member/user-agreement/index' }),
+      reLaunch,
+      canNavigateBack: () => true,
+      navigateBack,
+    })
+
+    expect(guard.ensureLaunch({ path: 'pages/index/index' })).toBe('EXEMPT')
+    expect(reLaunch).not.toHaveBeenCalled()
+    expect(guard.leaveDocument()).toBe('BACK')
+    expect(navigateBack).toHaveBeenCalledOnce()
+  })
+
+  it('redirects a deep link to one durable gate intent until a snapshot is ready', async () => {
+    const module = createMipIdentityModule(gateway(accessSnapshot({ agreements: [] })), {
+      now: () => 40_000,
+      token: () => 'global-intent',
+    })
+    const prepare = vi.spyOn(module, 'prepareProtectedAction')
+    const reLaunch = vi.fn()
+    const guard = createMipGlobalAccessGuard(module, {
+      currentPage: () => undefined,
+      reLaunch,
+      canNavigateBack: () => false,
+      navigateBack: vi.fn(),
+    })
+    const launch = {
+      path: 'packages/member/mip-events/detail/index',
+      query: { id: 'event-1', phone: '13800000000' },
+    }
+
+    expect(guard.ensureLaunch(launch)).toBe('BLOCKED')
+    expect(guard.ensureLaunch(launch)).toBe('BLOCKED')
+    expect(prepare).toHaveBeenCalledTimes(1)
+    expect(reLaunch).toHaveBeenLastCalledWith(
+      '/packages/member/mip-access/index?token=global-intent',
+    )
+    expect(module.peekIntent('global-intent')).toMatchObject({
+      action: 'ENTER_APP',
+      source: {
+        navigation: 'reLaunch',
+        route: '/packages/member/mip-events/detail/index',
+        query: { id: 'event-1' },
+      },
+    })
+
+    await module.loadSnapshot()
+    expect(guard.ensureLaunch(launch)).toBe('READY')
+    expect(module.peekIntent('global-intent')).toBeNull()
+  })
+
+  it('returns directly from an exempt document when the cached access snapshot is ready', async () => {
+    const module = createMipIdentityModule(gateway(accessSnapshot({ agreements: [] })))
+    await module.loadSnapshot()
+    const reLaunch = vi.fn()
+    const guard = createMipGlobalAccessGuard(module, {
+      currentPage: () => ({ path: 'packages/member/user-agreement/index' }),
+      reLaunch,
+      canNavigateBack: () => false,
+      navigateBack: vi.fn(),
+    })
+
+    expect(guard.enterTarget({
+      path: 'packages/member/mip-events/detail/index',
+      query: { id: 'event-1' },
+    })).toBe('READY')
+    expect(reLaunch).toHaveBeenCalledWith(
+      '/packages/member/mip-events/detail/index?id=event-1',
+    )
   })
 })
 

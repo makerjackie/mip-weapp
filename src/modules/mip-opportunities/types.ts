@@ -20,6 +20,10 @@ export interface OpportunityAuthor {
   headline?: string
 }
 
+export interface OpportunityTeamMember extends OpportunityAuthor {
+  userKind: 'PLAYER'
+}
+
 export interface OpportunitySummary {
   id: OpportunityId
   title: string
@@ -32,6 +36,7 @@ export interface OpportunitySummary {
   roles: CooperationRoleKey[]
   industryTags: OpportunityTag[]
   abilityTags: OpportunityTag[]
+  teamMembers: OpportunityTeamMember[]
   referralCount: number
   status: OpportunityStatus
   publishedAt: string
@@ -44,6 +49,7 @@ export interface OpportunityDetail extends OpportunitySummary {
   coverAssetId?: string
   version: number
   referralActive: boolean
+  referralTarget?: OpportunityAuthor
   interestActive: boolean
   canEdit: boolean
 }
@@ -73,6 +79,91 @@ export interface OpportunityCatalog {
   abilityTags: OpportunityTag[]
 }
 
+export type PeopleKindFilter = 'ALL' | 'PLAYER' | 'GUEST'
+export type PeopleSearchScope = 'GLOBAL' | 'PLAYER'
+
+export interface PeopleFilter {
+  scope?: PeopleSearchScope
+  kind?: PeopleKindFilter
+  keyword?: string
+  branchId?: BranchId
+  industryTagIds?: string[]
+  abilityTagIds?: string[]
+  cursor?: string
+  limit?: number
+}
+
+export interface PublicProfileOrganization {
+  name: string
+  role?: string
+}
+
+export interface PublicPerson {
+  profileRef: string
+  isSelf: boolean
+  userKind: 'PLAYER' | 'GUEST'
+  joinedAt: string
+  nickname?: string
+  avatarUrl?: string
+  identityStatus?: string
+  headline?: string
+  introduction?: string
+  companies?: PublicProfileOrganization[]
+  organizations?: PublicProfileOrganization[]
+  primaryIndustry?: OpportunityTag
+  abilities?: OpportunityTag[]
+  primaryBranch?: { id: BranchId, name: string, cityName: string }
+}
+
+export interface PeoplePage {
+  items: PublicPerson[]
+  nextCursor?: string
+}
+
+export interface PublicProfileCooperationCard {
+  id: string
+  roleKey: CooperationRoleKey
+  positioning: string
+  targetSummary: string
+  abilityScores: Record<string, number>
+  status: 'PUBLISHED'
+  publishedAt: string
+}
+
+export interface PublicProfileSuperCase {
+  id: string
+  projectName: string
+  summary: string
+  responsibility: string
+  caseType?: string
+  cityLabel?: string
+  industryLabel?: string
+  coverUrl?: string
+  status: 'PUBLISHED'
+  publishedAt: string
+}
+
+export interface PublicProfileOpportunity {
+  id: OpportunityId
+  title: string
+  valueSummary: string
+  targetSummary: string
+  referralCount: number
+  branchName?: string
+  cityLabel?: string
+  coverUrl?: string
+  status: 'PUBLISHED'
+  publishedAt: string
+}
+
+export interface PublicProfileAggregate {
+  profile: PublicPerson
+  cooperationCards: PublicProfileCooperationCard[]
+  superCases: PublicProfileSuperCase[]
+  opportunities: PublicProfileOpportunity[]
+  interestActive: boolean
+}
+
 export interface OpportunityDraft {
   id?: OpportunityId
   expectedVersion?: number
@@ -87,6 +178,7 @@ export interface OpportunityDraft {
   roleKeys: CooperationRoleKey[]
   industryTagIds: string[]
   abilityTagIds: string[]
+  teamProfileRefs?: string[]
   publish: boolean
 }
 
@@ -102,9 +194,9 @@ export interface OpportunityInteractionResult {
   referralCount?: number
 }
 
-export type ReceivedInteractionCategory = 'REFERRAL' | 'PROFILE_INTEREST'
+export type ReceivedInteractionCategory = 'REFERRAL' | 'PROFILE_INTEREST' | 'VISITOR'
 export type ReceivedInteractionStatus = 'ACTIVE' | 'CANCELLED'
-export type ReceivedInterestSourceType = 'OPPORTUNITY' | 'COOPERATION_CARD' | 'SUPER_CASE'
+export type ReceivedInterestSourceType = 'OPPORTUNITY' | 'COOPERATION_CARD' | 'SUPER_CASE' | 'PROFILE'
 
 export interface ReceivedInteractionActor {
   profileRef: string
@@ -140,7 +232,13 @@ export interface ReceivedProfileInterest extends ReceivedInteractionBase {
   }
 }
 
-export type ReceivedInteraction = ReceivedReferral | ReceivedProfileInterest
+export interface ReceivedVisitor extends ReceivedInteractionBase {
+  kind: 'VISITOR'
+  visitCount: number
+  lastVisitedAt: string
+}
+
+export type ReceivedInteraction = ReceivedReferral | ReceivedProfileInterest | ReceivedVisitor
 
 export interface ReceivedInteractionPage {
   category: ReceivedInteractionCategory

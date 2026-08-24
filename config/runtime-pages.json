@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 62,
+  "routeCount": 64,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 62 paths.",
+    "config/project.json routes must list the same 64 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -729,6 +729,17 @@
       "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
+      "id": "M30",
+      "name": "心动记录",
+      "path": "packages/member/mip-hearts/index",
+      "selector": "#mip-heart-history-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "access"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'"
+    },
+    {
       "id": "M21",
       "name": "AI 草稿",
       "path": "packages/member/mip-ai/index",
@@ -740,13 +751,24 @@
       "deviceRequired": ["ai-voice"]
     },
     {
+      "id": "M29",
+      "name": "玩家与嘉宾",
+      "path": "packages/member/mip-people/index",
+      "selector": "#mip-people-discovery-page",
+      "group": "public",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'"
+    },
+    {
       "id": "M22",
       "name": "公开档案",
       "path": "packages/member/mip-public-profile/index",
       "selector": "#mip-public-profile-page",
       "group": "public",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": ["loading", "ready", "error", "blocked"],
       "readyAssertion": "state === 'ready'",
       "query": ["profileRef"]
     },

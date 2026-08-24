@@ -59,12 +59,44 @@
 
     <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
       <view class="text-[length:30rpx] font-semibold">经历</view>
-      <view class="mt-4 text-[length:23rpx] font-semibold text-muted">公司</view>
-      <input class="mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:26rpx]" maxlength="120" value="{{companyName}}" data-field="companyName" bindinput="updateText" placeholder="公司名称" placeholder-style="color:#A3A3A3" />
-      <input class="mt-3 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:26rpx]" maxlength="80" value="{{companyRole}}" data-field="companyRole" bindinput="updateText" placeholder="职位" placeholder-style="color:#A3A3A3" />
-      <view class="mt-5 text-[length:23rpx] font-semibold text-muted">组织</view>
-      <input class="mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:26rpx]" maxlength="120" value="{{organizationName}}" data-field="organizationName" bindinput="updateText" placeholder="组织名称" placeholder-style="color:#A3A3A3" />
-      <input class="mt-3 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:26rpx]" maxlength="80" value="{{organizationRole}}" data-field="organizationRole" bindinput="updateText" placeholder="角色" placeholder-style="color:#A3A3A3" />
+
+      <view class="mt-4 flex items-center justify-between">
+        <view class="text-[length:23rpx] font-semibold text-muted">公司</view>
+        <view class="text-[length:21rpx] text-muted">{{companies.length}}/{{maxOrganizations}}</view>
+      </view>
+      <view wx:if="{{!companies.length}}" class="mt-3 rounded-[14rpx] border border-line px-4 py-4 text-[length:23rpx] text-muted">暂未添加公司经历。</view>
+      <view wx:for="{{companies}}" wx:key="id" class="mt-3 rounded-[14rpx] border border-line bg-panel-raised px-3 py-4">
+        <view class="flex min-h-[64rpx] items-center justify-between gap-2">
+          <view class="text-[length:24rpx] font-semibold">公司 {{index + 1}}</view>
+          <view class="flex shrink-0 items-center gap-1">
+            <button plain class="m-0 flex min-h-[64rpx] min-w-[88rpx] items-center justify-center px-2 text-[length:22rpx] text-muted disabled:opacity-40" disabled="{{index === 0}}" data-kind="companies" data-index="{{index}}" data-direction="-1" bind:tap="moveExperience">上移</button>
+            <button plain class="m-0 flex min-h-[64rpx] min-w-[88rpx] items-center justify-center px-2 text-[length:22rpx] text-muted disabled:opacity-40" disabled="{{index === companies.length - 1}}" data-kind="companies" data-index="{{index}}" data-direction="1" bind:tap="moveExperience">下移</button>
+            <button plain class="m-0 flex min-h-[64rpx] min-w-[88rpx] items-center justify-center px-2 text-[length:22rpx] text-danger" data-kind="companies" data-index="{{index}}" bind:tap="removeExperience">删除</button>
+          </view>
+        </view>
+        <input class="mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-canvas px-4 text-[length:26rpx]" maxlength="120" value="{{item.name}}" data-kind="companies" data-index="{{index}}" data-field="name" bindinput="updateExperience" placeholder="公司名称" placeholder-style="color:#A3A3A3" />
+        <input class="mt-3 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-canvas px-4 text-[length:26rpx]" maxlength="80" value="{{item.role}}" data-kind="companies" data-index="{{index}}" data-field="role" bindinput="updateExperience" placeholder="职位" placeholder-style="color:#A3A3A3" />
+      </view>
+      <button plain class="mt-3 flex min-h-[88rpx] w-full max-w-full box-border items-center justify-center rounded-[14rpx] border border-line text-[length:24rpx] text-ink disabled:opacity-40" disabled="{{companies.length >= maxOrganizations}}" data-kind="companies" bind:tap="addExperience">添加公司经历</button>
+
+      <view class="mt-6 flex items-center justify-between">
+        <view class="text-[length:23rpx] font-semibold text-muted">组织</view>
+        <view class="text-[length:21rpx] text-muted">{{organizations.length}}/{{maxOrganizations}}</view>
+      </view>
+      <view wx:if="{{!organizations.length}}" class="mt-3 rounded-[14rpx] border border-line px-4 py-4 text-[length:23rpx] text-muted">暂未添加组织经历。</view>
+      <view wx:for="{{organizations}}" wx:key="id" class="mt-3 rounded-[14rpx] border border-line bg-panel-raised px-3 py-4">
+        <view class="flex min-h-[64rpx] items-center justify-between gap-2">
+          <view class="text-[length:24rpx] font-semibold">组织 {{index + 1}}</view>
+          <view class="flex shrink-0 items-center gap-1">
+            <button plain class="m-0 flex min-h-[64rpx] min-w-[88rpx] items-center justify-center px-2 text-[length:22rpx] text-muted disabled:opacity-40" disabled="{{index === 0}}" data-kind="organizations" data-index="{{index}}" data-direction="-1" bind:tap="moveExperience">上移</button>
+            <button plain class="m-0 flex min-h-[64rpx] min-w-[88rpx] items-center justify-center px-2 text-[length:22rpx] text-muted disabled:opacity-40" disabled="{{index === organizations.length - 1}}" data-kind="organizations" data-index="{{index}}" data-direction="1" bind:tap="moveExperience">下移</button>
+            <button plain class="m-0 flex min-h-[64rpx] min-w-[88rpx] items-center justify-center px-2 text-[length:22rpx] text-danger" data-kind="organizations" data-index="{{index}}" bind:tap="removeExperience">删除</button>
+          </view>
+        </view>
+        <input class="mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-canvas px-4 text-[length:26rpx]" maxlength="120" value="{{item.name}}" data-kind="organizations" data-index="{{index}}" data-field="name" bindinput="updateExperience" placeholder="组织名称" placeholder-style="color:#A3A3A3" />
+        <input class="mt-3 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-canvas px-4 text-[length:26rpx]" maxlength="80" value="{{item.role}}" data-kind="organizations" data-index="{{index}}" data-field="role" bindinput="updateExperience" placeholder="角色" placeholder-style="color:#A3A3A3" />
+      </view>
+      <button plain class="mt-3 flex min-h-[88rpx] w-full max-w-full box-border items-center justify-center rounded-[14rpx] border border-line text-[length:24rpx] text-ink disabled:opacity-40" disabled="{{organizations.length >= maxOrganizations}}" data-kind="organizations" bind:tap="addExperience">添加组织经历</button>
     </view>
 
     <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">

@@ -32,6 +32,30 @@ describe('outbox event projector', () => {
     assert.deepEqual(calls[0].params, ['wx-app', base.aggregate_id])
   })
 
+  it('projects a currently published super case to its owner growth ledger', async () => {
+    const event = {
+      ...base,
+      aggregate_type: 'SUPER_CASE',
+      aggregate_id: '20000000-0000-4000-8000-000000000008',
+      event_type: 'super_case.published',
+    }
+    const ownerUserId = '30000000-0000-4000-8000-000000000008'
+    const result = await projectEvent({
+      async one(sql, params) {
+        assert.match(sql, /mip_super_cases/)
+        assert.match(sql, /c\.status = 'PUBLISHED'/)
+        assert.deepEqual(params, ['wx-app', event.aggregate_id])
+        return { owner_user_id: ownerUserId }
+      },
+    }, event)
+
+    assert.deepEqual(result.growth, [{
+      userId: ownerUserId,
+      sourceEventType: 'super_case.published',
+      sourceEventId: event.id,
+    }])
+  })
+
   it('rebuilds a referral recipient from relational facts instead of payload identity', async () => {
     const event = {
       ...base,
@@ -49,7 +73,8 @@ describe('outbox event projector', () => {
           status: 'ACTIVE',
           version: 3,
           opportunity_id: '30000000-0000-4000-8000-000000000001',
-          owner_user_id: '40000000-0000-4000-8000-000000000001',
+          actor_user_id: '50000000-0000-4000-8000-000000000001',
+          target_user_id: '40000000-0000-4000-8000-000000000001',
         }
       },
     }
@@ -58,7 +83,43 @@ describe('outbox event projector', () => {
     assert.equal(result.notifications[0].recipientUserId, '40000000-0000-4000-8000-000000000001')
     assert.equal(result.notifications[0].targetId, '30000000-0000-4000-8000-000000000001')
     assert.equal(result.notifications[0].dedupeKey, `outbox:${event.id}:referral`)
+    assert.deepEqual(result.growth, [])
     assert.deepEqual(replay.notifications, result.notifications)
+  })
+
+  it('projects the first active referral fact to the fixed server reward rule idempotently', async () => {
+    const event = {
+      ...base,
+      aggregate_type: 'REFERRAL_INTENT',
+      aggregate_id: '20000000-0000-4000-8000-000000000002',
+      event_type: 'opportunity.referral_changed',
+      source_version: 1,
+      payload_json: { actorUserId: 'attacker-controlled' },
+    }
+    const actorUserId = '50000000-0000-4000-8000-000000000002'
+    const database = {
+      async one(sql, params) {
+        assert.match(sql, /r\.actor_user_id/)
+        assert.match(sql, /actor\.status = 'ACTIVE'/)
+        assert.deepEqual(params, ['wx-app', event.aggregate_id])
+        return {
+          status: 'ACTIVE',
+          version: 1,
+          opportunity_id: '30000000-0000-4000-8000-000000000002',
+          actor_user_id: actorUserId,
+          target_user_id: '40000000-0000-4000-8000-000000000002',
+        }
+      },
+    }
+    const result = await projectEvent(database, event)
+    const replay = await projectEvent(database, event)
+    assert.deepEqual(result.growth, [{
+      userId: actorUserId,
+      sourceEventType: 'referral.confirmed',
+      sourceEventId: event.id,
+    }])
+    assert.deepEqual(replay.growth, result.growth)
+    assert.doesNotMatch(JSON.stringify(result), /attacker-controlled/)
   })
 
   it('drops a stale toggle projection without creating a notification', async () => {
@@ -75,6 +136,33 @@ describe('outbox event projector', () => {
     assert.equal(result.supported, true)
     assert.deepEqual(result.notifications, [])
     assert.equal(result.reason, 'FACT_NO_LONGER_CURRENT')
+  })
+
+  it('projects a current heart fact to inbox and the optional subscription adapter', async () => {
+    const event = {
+      ...base,
+      aggregate_type: 'EVENT_HEART',
+      aggregate_id: '50000000-0000-4000-8000-000000000002',
+      event_type: 'event.heart_changed',
+      source_version: 3,
+    }
+    const result = await projectEvent({
+      one: async () => ({
+        target_user_id: '51000000-0000-4000-8000-000000000001',
+        event_id: '52000000-0000-4000-8000-000000000001',
+        event_title: 'MIP 城市交流活动',
+        status: 'ACTIVE',
+        version: 3,
+      }),
+    }, event)
+    assert.deepEqual(result.notifications[0].external, {
+      channel: 'WECHAT_SUBSCRIPTION',
+      templateKey: 'HEART_RECEIVED',
+      fields: {
+        title: 'MIP 城市交流活动',
+        status: '收到新的心动选择',
+      },
+    })
   })
 
   it('rebuilds a growth notification from the immutable ledger entry without another growth projection', async () => {
@@ -128,6 +216,8 @@ describe('outbox event projector', () => {
           reversal_of_transition_id: null,
           user_id: userId,
           event_id: eventId,
+          event_title: 'MIP 城市交流活动',
+          occurred_at: '2026-08-24T08:30:00.000Z',
           user_status: 'ACTIVE',
           reversal_id: null,
         }
@@ -135,6 +225,15 @@ describe('outbox event projector', () => {
     }, checkedInEvent)
     assert.deepEqual(checkedIn.growth, [{ action: 'applyCheckInTransition', transitionId }])
     assert.equal(checkedIn.notifications[0].recipientUserId, userId)
+    assert.deepEqual(checkedIn.notifications[0].external, {
+      channel: 'WECHAT_SUBSCRIPTION',
+      templateKey: 'CHECKIN_RESULT',
+      fields: {
+        title: 'MIP 城市交流活动',
+        checkedAt: '2026-08-24 16:30',
+        status: '签到成功',
+      },
+    })
     assert.doesNotMatch(JSON.stringify(checkedIn), /attacker-controlled/)
 
     const reversalId = '61000000-0000-4000-8000-000000000002'

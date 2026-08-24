@@ -1,6 +1,12 @@
 'use strict'
 
-const { normalizeTextIntent, normalizeVoiceIntent, normalizeVoiceUploadIntent } = require('./validation')
+const {
+  combineDraftTranscript,
+  normalizeRefinementIntent,
+  normalizeTextIntent,
+  normalizeVoiceIntent,
+  normalizeVoiceUploadIntent,
+} = require('./validation')
 
 function createAiService(options) {
   const repository = options.repository
@@ -47,11 +53,17 @@ function createAiService(options) {
   return {
     getCapability() {
       const capability = provider.capability()
-      if (!capability.voiceDrafts || options.audioStore?.configured) {
-        return capability
+      const normalized = {
+        textDrafts: capability.textDrafts === true,
+        voiceDrafts: capability.voiceDrafts === true,
+        refinementDrafts: capability.refinementDrafts === true,
+        ...(capability.reason ? { reason: capability.reason } : {}),
+      }
+      if (!normalized.voiceDrafts || options.audioStore?.configured) {
+        return normalized
       }
       return {
-        ...capability,
+        ...normalized,
         voiceDrafts: false,
         reason: 'STORAGE_NOT_CONFIGURED',
       }
@@ -89,30 +101,32 @@ function createAiService(options) {
       assertProvider(provider.capability(), 'textDrafts')
       const input = normalizeTextIntent(event)
       const draft = await repository.createTextDraft(caller.appId, caller.userId, input)
+      let result
       try {
-        const result = await provider.structureText({
+        result = await provider.structureText({
           appId: caller.appId,
           draftId: draft.id,
           purpose: input.purpose,
           transcriptText: input.transcriptText,
-        })
-        return repository.completeDraft(caller.appId, caller.userId, draft.id, draft.version, {
-          ...result,
-          purpose: input.purpose,
         })
       }
       catch (error) {
         await repository.failDraft(caller.appId, caller.userId, draft.id, draft.version)
         throw normalizeProviderError(error)
       }
+      return repository.completeDraft(caller.appId, caller.userId, draft.id, draft.version, {
+        ...result,
+        purpose: input.purpose,
+      })
     },
 
     async createVoiceDraft(caller, event) {
       assertProvider(provider.capability(), 'voiceDrafts')
       const input = normalizeVoiceIntent(event)
       const created = await repository.createVoiceDraft(caller.appId, caller.userId, input)
+      let result
       try {
-        const result = await provider.transcribeAndStructure({
+        result = await provider.transcribeAndStructure({
           appId: caller.appId,
           draftId: created.draft.id,
           purpose: input.purpose,
@@ -120,15 +134,15 @@ function createAiService(options) {
           contentType: created.asset.content_type,
           contentBytes: Number(created.asset.content_bytes),
         })
-        return repository.completeDraft(caller.appId, caller.userId, created.draft.id, created.draft.version, {
-          ...result,
-          purpose: input.purpose,
-        })
       }
       catch (error) {
         await repository.failDraft(caller.appId, caller.userId, created.draft.id, created.draft.version)
         throw normalizeProviderError(error)
       }
+      return repository.completeDraft(caller.appId, caller.userId, created.draft.id, created.draft.version, {
+        ...result,
+        purpose: input.purpose,
+      })
     },
 
     async createVoiceDraftUpload(caller, event) {
@@ -198,8 +212,9 @@ function createAiService(options) {
           }
         }
       }
+      let result
       try {
-        const result = await provider.transcribeAndStructure({
+        result = await provider.transcribeAndStructure({
           appId: caller.appId,
           draftId: created.draft.id,
           purpose: input.purpose,
@@ -207,14 +222,72 @@ function createAiService(options) {
           contentType: created.asset.content_type,
           contentBytes: Number(created.asset.content_bytes),
         })
-        return repository.completeDraft(caller.appId, caller.userId, created.draft.id, created.draft.version, {
-          ...result,
-          purpose: input.purpose,
-        })
       }
       catch (error) {
         await repository.failDraft(caller.appId, caller.userId, created.draft.id, created.draft.version)
         throw normalizeProviderError(error)
+      }
+      return repository.completeDraft(caller.appId, caller.userId, created.draft.id, created.draft.version, {
+        ...result,
+        purpose: input.purpose,
+      })
+    },
+
+    async continueDraft(caller, event) {
+      assertProvider(provider.capability(), 'refinementDrafts')
+      const input = normalizeRefinementIntent(event)
+      const processing = await repository.beginDraftRefinement(caller.appId, caller.userId, input)
+      let result
+      try {
+        result = await provider.refineDraft({
+          appId: caller.appId,
+          draftId: processing.id,
+          purpose: processing.purpose,
+          expectedVersion: processing.version,
+          currentTranscript: processing.transcriptText || '',
+          currentStructuredDraft: processing.structuredDraft || {},
+          supplementalText: input.supplementalText,
+        })
+      }
+      catch (error) {
+        await repository.restoreDraftAfterRefinement(
+          caller.appId,
+          caller.userId,
+          processing.id,
+          processing.version,
+        ).catch(() => false)
+        throw normalizeProviderError(error)
+      }
+      const transcriptText = combineDraftTranscript(
+        processing.transcriptText,
+        input.supplementalText,
+      )
+      try {
+        return await repository.completeDraft(
+          caller.appId,
+          caller.userId,
+          processing.id,
+          processing.version,
+          { ...result, transcriptText, purpose: processing.purpose },
+        )
+      }
+      catch (error) {
+        const recovered = await repository.getDraft(
+          caller.appId,
+          caller.userId,
+          processing.id,
+        ).catch(() => null)
+        if (recovered?.status === 'DRAFT_READY'
+          && recovered.version === processing.version + 1) {
+          return recovered
+        }
+        await repository.restoreDraftAfterRefinement(
+          caller.appId,
+          caller.userId,
+          processing.id,
+          processing.version,
+        ).catch(() => false)
+        throw error
       }
     },
 

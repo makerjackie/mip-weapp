@@ -8,6 +8,7 @@ import { cooperationModule } from '../../modules/mip-cooperation'
 import { mipGrowthModule } from '../../modules/mip-growth/client'
 import { mipAccessPageUrl } from '../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
+import { mipMessagingModule } from '../../modules/mip-messaging/client'
 import { opportunityModule } from '../../modules/mip-opportunities'
 import { canManageEvents, hasCapability, membershipPresentation } from '../../modules/mip-shell'
 import { caseNavigateTo, syncCaseNavigation } from '../../modules/platform/case-navigation'
@@ -43,6 +44,7 @@ Page({
     experience: 0,
     contribution: 0,
     coin: 0,
+    unreadCount: 0,
     portfolioTab: 'cooperation' as PortfolioTab,
     cooperationState: 'loading' as SectionState,
     cooperationCards: [] as CooperationCardView[],
@@ -84,12 +86,26 @@ Page({
         this.loadCooperation(),
         this.loadCases(),
         this.loadOpportunities(),
+        this.loadUnreadCount(snapshot),
       ])
     }
     catch {
       this.setData(cached || this.data.state === 'ready'
         ? { message: '资料更新失败，已保留上次结果。' }
         : { state: 'error', message: '资料服务暂时不可用。' })
+    }
+  },
+
+  async loadUnreadCount(snapshot: IdentityAccessSnapshot) {
+    if (!snapshot.authenticated) {
+      this.setData({ unreadCount: 0 })
+      return
+    }
+    try {
+      this.setData({ unreadCount: await mipMessagingModule.refreshUnreadCount() })
+    }
+    catch {
+      this.setData({ unreadCount: mipMessagingModule.peekUnreadCount() || 0 })
     }
   },
 
@@ -263,6 +279,7 @@ Page({
   openOrders() { void this.openProtected('/packages/member/orders/index', 'VIEW_RESTRICTED_PROFILE') },
   openNotifications() { void this.openProtected('/packages/member/mip-notifications/index', 'INTERACT') },
   openReceivedInteractions() { void this.openProtected('/packages/member/mip-received/index', 'INTERACT') },
+  openHeartHistory() { void this.openProtected('/packages/member/mip-hearts/index', 'INTERACT') },
   openGrowth() { void this.openProtected('/packages/member/mip-growth/index', 'VIEW_RESTRICTED_PROFILE') },
   openAiDrafts() { void this.openProtected('/packages/member/mip-ai/index', 'EDIT_PROFILE') },
   openCooperationList() { void this.openProtected('/packages/member/mip-cooperation/list/index?mine=1', 'INTERACT') },

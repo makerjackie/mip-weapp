@@ -1,10 +1,53 @@
 import type { EventId, OrderId } from '../../../../modules/mip'
 import type { RefundId } from '../../../../modules/mip-commerce'
 import type { MipEventDetail } from '../../../../modules/mip-events'
+import { mipOperationsConfig } from '../../../../config/mip-operations'
 import { mipCommerceModule } from '../../../../modules/mip-commerce/client'
-import { safeHttpsEventUrl } from '../../../../modules/mip-events'
+import { eventRichTextNodes, safeHttpsEventUrl } from '../../../../modules/mip-events'
 import { mipEventsModule } from '../../../../modules/mip-events/client'
 import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
+
+const POSTER_WIDTH = 375
+const POSTER_HEIGHT = 560
+
+interface Canvas2dNode {
+  width: number
+  height: number
+  createImage: () => WechatMiniprogram.Image
+  getContext: (type: '2d') => WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext2D
+  requestAnimationFrame?: (callback: () => void) => number
+}
+
+function wrappedLines(context: WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext2D, value: string, maxWidth: number, maxLines: number) {
+  const lines: string[] = []
+  let current = ''
+  for (const character of value) {
+    const candidate = current + character
+    if (current && context.measureText(candidate).width > maxWidth) {
+      lines.push(current)
+      current = character
+      if (lines.length === maxLines - 1) {
+        break
+      }
+    }
+    else {
+      current = candidate
+    }
+  }
+  if (current && lines.length < maxLines) {
+    lines.push(current)
+  }
+  return lines
+}
+
+function loadCanvasImage(canvas: Canvas2dNode, source: string) {
+  return new Promise<WechatMiniprogram.Image>((resolve, reject) => {
+    const image = canvas.createImage()
+    image.onload = () => resolve(image)
+    image.onerror = reject
+    image.src = source
+  })
+}
 
 function formatDateTime(value?: string) {
   if (!value) {
@@ -63,6 +106,7 @@ Page({
     eventId: '' as EventId,
     orderId: '' as OrderId | '',
     event: null as MipEventDetail | null,
+    descriptionNodes: [] as ReturnType<typeof eventRichTextNodes>,
     startsText: '',
     endsText: '',
     accessText: '',
@@ -73,10 +117,14 @@ Page({
     message: '',
     invitationToken: '',
     incomingInvitationToken: '',
+    shareOpen: false,
+    posterBusy: false,
+    posterPath: '',
     checkInToken: '',
     onlineMode: false,
     onlineUrl: '',
     hasCoordinates: false,
+    supportPhone: mipOperationsConfig.supportPhone,
   },
   requestSeq: 0,
   onlineRequested: false,
@@ -85,7 +133,12 @@ Page({
     this.onlineRequested = query.online === '1'
     const scene = String(query.scene || '').trim()
     if (scene) {
-      void this.loadCheckInScene(scene)
+      if (scene.startsWith('i1.')) {
+        void this.loadInvitationScene(scene)
+      }
+      else {
+        void this.loadCheckInScene(scene)
+      }
       return
     }
     const eventId = String(query.eventId || '') as EventId
@@ -110,8 +163,29 @@ Page({
       })
       await this.loadEvent({ force: true })
     }
-    catch (error) {
-      this.setData({ state: 'error', message: error instanceof Error ? error.message : '活动码无效' })
+    catch {
+      this.setData({
+        state: 'error',
+        message: '未识别到有效活动码，请打开微信扫一扫重新扫码。',
+      })
+    }
+  },
+
+  async loadInvitationScene(scene: string) {
+    this.setData({ state: 'loading', message: '' })
+    try {
+      const resolved = await mipEventsModule.resolveInvitationScene(scene)
+      this.setData({
+        eventId: resolved.eventId,
+        incomingInvitationToken: resolved.invitationToken,
+      })
+      await this.loadEvent({ force: true })
+    }
+    catch {
+      this.setData({
+        state: 'error',
+        message: '活动邀请无效或已失效，请通过活动列表重新进入。',
+      })
     }
   },
 
@@ -141,9 +215,11 @@ Page({
   applyEvent(event: MipEventDetail) {
     const action = primaryAction(event, Boolean(this.data.checkInToken))
     const onlineUrl = safeHttpsEventUrl(event.onlineUrl)
+    const normalizedEvent = { ...event, contentMedia: event.contentMedia || [] }
     this.setData({
       state: 'ready',
-      event,
+      event: normalizedEvent,
+      descriptionNodes: eventRichTextNodes(event.description),
       startsText: formatDateTime(event.startsAt),
       endsText: formatDateTime(event.endsAt),
       accessText: accessText(event),
@@ -165,6 +241,139 @@ Page({
     }
     catch {
       this.setData({ invitationToken: '' })
+    }
+  },
+
+  openShare() {
+    this.setData({ shareOpen: true })
+  },
+
+  closeShare() {
+    this.setData({ shareOpen: false })
+  },
+
+  handleShareVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {
+    if (!event.detail.visible) {
+      this.closeShare()
+    }
+  },
+
+  copyShareText() {
+    const event = this.data.event
+    if (!event) {
+      return
+    }
+    const lines = [
+      event.title,
+      this.data.startsText,
+      this.data.locationText,
+      event.summary,
+      '请在微信中打开 MIP 小程序查看活动详情。',
+    ].filter(Boolean)
+    wx.setClipboardData({
+      data: lines.join('\n'),
+      success: () => {
+        this.closeShare()
+        wx.showToast({ title: '活动信息已复制', icon: 'success' })
+      },
+    })
+  },
+
+  async createInvitationPoster() {
+    const event = this.data.event
+    if (!event || this.data.posterBusy) {
+      return
+    }
+    this.setData({ posterBusy: true, message: '' })
+    try {
+      const credential = await mipEventsModule.createInvitationCode(this.data.eventId)
+      const posterPath = await this.drawInvitationPoster(credential.codeUrl)
+      this.setData({ posterPath })
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '邀请海报生成失败' })
+    }
+    finally {
+      this.setData({ posterBusy: false })
+    }
+  },
+
+  async drawInvitationPoster(codeUrl: string) {
+    const event = this.data.event
+    if (!event) {
+      throw new Error('活动信息不可用')
+    }
+    const node = await new Promise<Canvas2dNode>((resolve, reject) => {
+      this.createSelectorQuery()
+        .select('#mip-event-invitation-poster-canvas')
+        .fields({ node: true, size: true })
+        .exec((results) => {
+          const result = results?.[0] as { node?: Canvas2dNode } | undefined
+          if (!result?.node) {
+            reject(new Error('邀请海报画布不可用'))
+            return
+          }
+          resolve(result.node)
+        })
+    })
+    const ratio = wx.getWindowInfo().pixelRatio || 1
+    node.width = POSTER_WIDTH * ratio
+    node.height = POSTER_HEIGHT * ratio
+    const context = node.getContext('2d')
+    context.scale(ratio, ratio)
+    context.fillStyle = '#FFD800'
+    context.fillRect(0, 0, POSTER_WIDTH, POSTER_HEIGHT)
+    context.fillStyle = '#111111'
+    context.font = '700 34px sans-serif'
+    context.fillText('MIP', 28, 52)
+    context.font = '700 22px sans-serif'
+    wrappedLines(context, event.title, POSTER_WIDTH - 56, 2)
+      .forEach((line, index) => context.fillText(line, 28, 94 + index * 30))
+    context.font = '400 14px sans-serif'
+    context.fillText(this.data.startsText, 28, 158)
+    context.fillText(this.data.locationText, 28, 182, POSTER_WIDTH - 56)
+    context.fillStyle = '#FFFFFF'
+    context.fillRect(28, 208, 319, 286)
+    const codeImage = await loadCanvasImage(node, codeUrl)
+    context.drawImage(codeImage, 78, 228, 219, 219)
+    context.fillStyle = '#111111'
+    context.font = '600 15px sans-serif'
+    context.textAlign = 'center'
+    context.fillText('使用微信扫码查看活动详情', POSTER_WIDTH / 2, 474)
+    context.textAlign = 'start'
+    context.font = '400 12px sans-serif'
+    context.fillText('邀请关系将在报名时由服务端确认', 28, 526)
+    if (node.requestAnimationFrame) {
+      await new Promise<void>(resolve => node.requestAnimationFrame?.(resolve))
+    }
+    return new Promise<string>((resolve, reject) => {
+      wx.canvasToTempFilePath({
+        canvas: node,
+        fileType: 'png',
+        destWidth: POSTER_WIDTH * ratio,
+        destHeight: POSTER_HEIGHT * ratio,
+        success: result => resolve(result.tempFilePath),
+        fail: reject,
+      })
+    })
+  },
+
+  previewInvitationPoster() {
+    if (this.data.posterPath) {
+      wx.previewImage({ current: this.data.posterPath, urls: [this.data.posterPath] })
+    }
+  },
+
+  async saveInvitationPoster() {
+    if (!this.data.posterPath || this.data.posterBusy) {
+      return
+    }
+    try {
+      await wx.saveImageToPhotosAlbum({ filePath: this.data.posterPath })
+      wx.showToast({ title: '已保存到相册', icon: 'success' })
+    }
+    catch {
+      this.setData({ message: '保存失败，请检查相册权限后重试。' })
     }
   },
 
@@ -315,6 +524,14 @@ Page({
     }
   },
 
+  callSupport() {
+    if (!this.data.supportPhone) {
+      wx.showToast({ title: '联系电话暂未配置', icon: 'none' })
+      return
+    }
+    wx.makePhoneCall({ phoneNumber: this.data.supportPhone })
+  },
+
   openOrganizer() {
     const profileRef = this.data.event?.organizer?.profileRef
     if (profileRef) {
@@ -381,6 +598,7 @@ Page({
   },
 
   onShareAppMessage() {
+    this.closeShare()
     return {
       title: this.data.event?.title || 'MIP 活动',
       path: `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(this.data.eventId)}${this.data.invitationToken ? `&invitationToken=${encodeURIComponent(this.data.invitationToken)}` : ''}`,

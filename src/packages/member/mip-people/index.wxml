@@ -1,0 +1,55 @@
+<view id="mip-people-discovery-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view class="flex items-center justify-between">
+    <view><view class="text-[length:36rpx] font-bold">玩家与嘉宾</view><view class="mt-1 text-[length:22rpx] text-muted">按加入时间展示公开档案</view></view>
+    <picker mode="selector" range="{{branchOptions}}" range-key="label" value="{{branchIndex}}" bindchange="changeBranch">
+      <view class="flex min-h-[72rpx] max-w-[300rpx] items-center gap-1 rounded-[12rpx] border border-line bg-panel px-3 text-[length:22rpx]"><text class="truncate">{{branchOptions[branchIndex].label}}</text><t-icon name="chevron-down" size="24rpx" color="var(--color-muted)" /></view>
+    </picker>
+  </view>
+
+  <view class="mt-4 flex h-[76rpx] items-center gap-2 rounded-[12rpx] bg-panel px-3">
+    <t-icon name="search" size="30rpx" color="var(--color-muted)" />
+    <input class="min-w-0 flex-1 text-[length:24rpx]" value="{{keywordInput}}" maxlength="80" confirm-type="search" placeholder="搜索姓名、简介、行业、能力或分会" bindinput="onKeywordInput" bindconfirm="submitSearch" />
+    <view wx:if="{{keywordInput}}" class="px-2 py-2 text-[length:21rpx] text-muted" bind:tap="clearSearch">清除</view>
+  </view>
+
+  <view class="mt-3 flex items-center justify-between gap-2">
+    <view class="flex gap-2">
+      <view class="rounded-full px-4 py-2 text-[length:22rpx] {{searchScope === 'GLOBAL' ? 'bg-brand font-semibold text-on-brand' : 'bg-panel text-muted'}}" data-scope="GLOBAL" bind:tap="changeSearchScope">全局</view>
+      <view class="rounded-full px-4 py-2 text-[length:22rpx] {{searchScope === 'PLAYER' ? 'bg-brand font-semibold text-on-brand' : 'bg-panel text-muted'}}" data-scope="PLAYER" bind:tap="changeSearchScope">玩家</view>
+    </view>
+    <view class="flex min-h-[64rpx] items-center gap-1 rounded-[12rpx] border border-line bg-panel px-3 text-[length:22rpx]" bind:tap="toggleFilters"><t-icon name="filter" size="26rpx" color="var(--color-ink)" />筛选</view>
+  </view>
+
+  <view wx:if="{{filterOpen}}" class="mt-3 rounded-[16rpx] border border-line bg-panel px-4 py-4">
+    <view class="flex items-center justify-between"><view class="text-[length:26rpx] font-semibold">人才筛选</view><view class="text-[length:21rpx] text-brand" bind:tap="resetIndustryDraft">重置</view></view>
+    <view class="mt-4 text-[length:23rpx] font-semibold">行业</view>
+    <block wx:for="{{industryGroups}}" wx:for-item="group" wx:key="id">
+      <view class="mt-4 text-[length:21rpx] text-muted">{{group.label}}</view>
+      <view class="mt-2 flex flex-wrap gap-2"><block wx:for="{{group.options}}" wx:for-item="tag" wx:key="id"><view class="rounded-full px-3 py-2 text-[length:21rpx] {{tag.selected ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-id="{{tag.id}}" bind:tap="toggleIndustry">{{tag.label}}</view></block></view>
+    </block>
+    <view wx:if="{{!industryGroups.length}}" class="mt-4 text-[length:22rpx] text-muted">行业筛选项暂时无法加载。</view>
+    <view class="mt-5 text-[length:23rpx] font-semibold">能力</view>
+    <view wx:if="{{abilityOptions.length}}" class="mt-2 flex flex-wrap gap-2"><view wx:for="{{abilityOptions}}" wx:key="id" class="rounded-full px-3 py-2 text-[length:21rpx] {{item.selected ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-id="{{item.id}}" bind:tap="toggleAbility">{{item.label}}</view></view>
+    <view wx:else class="mt-3 text-[length:22rpx] text-muted">能力筛选项暂时无法加载。</view>
+    <view class="mt-5 grid grid-cols-2 gap-3"><t-button block variant="outline" bind:tap="resetIndustryDraft">重置</t-button><t-button block theme="primary" bind:tap="applyIndustryFilters">确认筛选</t-button></view>
+  </view>
+
+  <view wx:if="{{state === 'loading'}}" class="mt-4 flex flex-col gap-3"><view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view><view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
+  <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载人才档案" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
+  <view wx:elif="{{state === 'empty'}}" class="mt-5"><app-empty-state title="没有找到公开档案" description="调整筛选条件后重试。" action-text="清除筛选" bind:action="clearAllFilters" /></view>
+
+  <view wx:if="{{state === 'ready'}}" class="mt-4 flex flex-col gap-3">
+    <view wx:for="{{people}}" wx:key="profileRef" class="rounded-[16rpx] bg-panel px-4 py-4 active:bg-panel-raised" data-profile-ref="{{item.profileRef}}" bind:tap="openProfile">
+      <view class="flex items-center gap-3">
+        <image wx:if="{{item.avatarUrl}}" class="h-[112rpx] w-[112rpx] shrink-0 rounded-full bg-panel-raised" src="{{item.avatarUrl}}" mode="aspectFill" />
+        <view wx:else class="flex h-[112rpx] w-[112rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft"><t-icon name="user" size="48rpx" color="var(--color-brand)" /></view>
+        <view class="min-w-0 flex-1"><view class="flex items-center gap-2"><view class="truncate text-[length:29rpx] font-semibold">{{item.displayName}}</view><text class="shrink-0 rounded-full bg-brand px-2 py-1 text-[length:19rpx] font-semibold text-on-brand">{{item.kindLabel}}</text></view><view wx:if="{{item.identityStatus || item.headline}}" class="mt-2 line-clamp-2 text-[length:22rpx] leading-5 text-muted">{{item.identityStatus || item.headline}}</view><view wx:if="{{item.joinedText}}" class="mt-2 text-[length:20rpx] text-subtle">{{item.joinedText}}</view></view>
+      </view>
+      <view wx:if="{{item.branchText || item.primaryIndustry}}" class="mt-3 flex flex-wrap gap-2"><text wx:if="{{item.branchText}}" class="rounded-full bg-panel-raised px-3 py-1 text-[length:20rpx] text-muted">{{item.branchText}}</text><text wx:if="{{item.primaryIndustry}}" class="rounded-full bg-panel-raised px-3 py-1 text-[length:20rpx] text-muted">{{item.primaryIndustry.label}}</text></view>
+      <view wx:if="{{item.abilities.length}}" class="mt-2 flex flex-wrap gap-2"><text wx:for="{{item.abilities}}" wx:key="id" class="rounded-full border border-line px-3 py-1 text-[length:20rpx] text-muted">{{item.label}}</text></view>
+    </view>
+  </view>
+  <view wx:if="{{loadingMore}}" class="py-5 text-center text-[length:21rpx] text-muted">正在加载</view>
+  <view wx:if="{{message && state === 'ready'}}" class="mt-3 rounded-[12rpx] border border-line bg-panel px-4 py-3 text-[length:22rpx] text-muted">{{message}}</view>
+  <app-page-exit />
+</view>

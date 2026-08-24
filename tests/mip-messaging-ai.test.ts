@@ -1,8 +1,9 @@
 import type { UserId } from '../src/modules/mip'
 import type { AiDraft } from '../src/modules/mip-ai'
-import { describe, expect, it } from 'vitest'
+import type { MipMessagingGateway, WechatSubscriptionRequester } from '../src/modules/mip-messaging'
+import { describe, expect, it, vi } from 'vitest'
 import { assertAiDraftTransition, confirmAiDraft, normalizeStructuredDraft, requireAiEditorDraft, shouldExpireAiDraft } from '../src/modules/mip-ai'
-import { buildInboxTarget, createWechatSubscriptionRequester, decideExternalDelivery, isTrustedInboxRoute, normalizeInboxIntent } from '../src/modules/mip-messaging'
+import { buildInboxTarget, createMipMessagingModule, createWechatSubscriptionRequester, decideExternalDelivery, isTrustedInboxRoute, normalizeInboxIntent } from '../src/modules/mip-messaging'
 
 describe('MIP messaging', () => {
   it('builds routes only from trusted target types', () => {
@@ -54,6 +55,43 @@ describe('MIP messaging', () => {
     }), async () => ({ 'template-id': 'accept' }) as never)
     expect(requester.capability('EVENT_REMINDER').available).toBe(true)
     await expect(requester.request('EVENT_REMINDER')).resolves.toBe('ACCEPTED')
+  })
+
+  it('caches the global unread count briefly and updates it after reading', async () => {
+    const messageId = 'message-1' as never
+    const listInbox = vi.fn(async () => ({
+      items: [{
+        id: messageId,
+        recipientUserId: 'user-1' as UserId,
+        messageType: 'EVENT' as const,
+        title: '活动提醒',
+        body: '活动即将开始。',
+        createdAt: '2026-08-24T00:00:00.000Z',
+      }],
+      unreadCount: 1,
+    }))
+    const gateway: MipMessagingGateway = {
+      listInbox,
+      markRead: async id => ({ messageId: id, readAt: '2026-08-24T01:00:00.000Z' }),
+      recordSubscriptionDecision: async (templateKey, decision) => ({
+        templateKey,
+        decision,
+        grantAvailable: decision === 'ACCEPTED',
+      }),
+    }
+    const requester: WechatSubscriptionRequester = {
+      capability: templateKey => ({ templateKey, available: false }),
+      request: async () => 'REJECTED',
+    }
+    const module = createMipMessagingModule(gateway, requester)
+
+    await expect(module.refreshUnreadCount()).resolves.toBe(1)
+    await expect(module.refreshUnreadCount()).resolves.toBe(1)
+    expect(listInbox).toHaveBeenCalledTimes(1)
+    await module.markRead(messageId)
+    expect(module.peekUnreadCount()).toBe(0)
+    await expect(module.refreshUnreadCount({ force: true })).resolves.toBe(1)
+    expect(listInbox).toHaveBeenCalledTimes(2)
   })
 })
 

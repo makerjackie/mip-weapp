@@ -146,10 +146,11 @@ Page({
     this.setData({ abilities: this.data.abilities.map(item => item.key === key ? { ...item, score: Number(event.detail.value) } : item) })
   },
 
-  saveDraft() { void this.save(false) },
-  publish() { void this.save(true) },
+  saveDraft() { void this.save(false, 'back') },
+  preview() { void this.save(false, 'preview') },
+  publish() { void this.save(true, 'back') },
 
-  async save(publish: boolean) {
+  async save(publish: boolean, destination: 'back' | 'preview') {
     if (this.data.saving) {
       return
     }
@@ -176,7 +177,14 @@ Page({
       })
       this.setData({ id: result.id, version: result.version })
       wx.showToast({ title: result.status === 'PUBLISHED' ? '合作卡已发布' : '草稿已保存', icon: 'success' })
-      setTimeout(() => wx.navigateBack(), 500)
+      if (destination === 'preview') {
+        await wx.navigateTo({
+          url: `/packages/member/mip-cooperation/detail/index?id=${encodeURIComponent(result.id)}`,
+        })
+      }
+      else {
+        setTimeout(() => wx.navigateBack(), 500)
+      }
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '保存失败' })
