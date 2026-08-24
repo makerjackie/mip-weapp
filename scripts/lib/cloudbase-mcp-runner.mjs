@@ -98,6 +98,18 @@ export function parseMcpOutput(value) {
       throw error
     }
   }
+  if (result?.isError === true) {
+    const diagnostic = Array.isArray(result.content)
+      ? result.content.filter(item => item?.type === 'text').map(item => item.text).join('\n')
+      : ''
+    if (/not found|not exist|resourcenotfound|不存在|未找到/i.test(diagnostic)) {
+      throw new Error('MCP tool returned an error response: resource not found.')
+    }
+    if (/accessdenied|forbidden|unauthori[sz]ed|permission|没有权限|无权限|未授权/i.test(diagnostic)) {
+      throw new Error('MCP tool returned an error response: permission denied.')
+    }
+    throw new Error('MCP tool returned an error response.')
+  }
   if (Array.isArray(result?.content) && typeof result.content[0]?.text === 'string') {
     try {
       return JSON.parse(result.content[0].text)

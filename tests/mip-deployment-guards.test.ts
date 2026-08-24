@@ -70,4 +70,16 @@ describe('MIP deployment safety guards', () => {
     expect(skill).toContain('scripts/apply-mip-schema.mjs')
     expect(skill).not.toContain('scripts/apply-mysql-schema.mjs')
   })
+
+  it('converges runtime grants only for the confirmed environment-scoped MIP account', () => {
+    const source = read('scripts/converge-mip-runtime-grants.mjs')
+    expect(source).toContain('--confirm-env=<exact CLOUDBASE_ENV_ID>')
+    expect(source).toContain('--confirm-runtime-user=<exact environment-scoped user>')
+    expect(source).toContain('runtimeUserForEnvironment(envId)')
+    expect(source).toContain('assertRuntimeAccountClaimable')
+    expect(source).toContain('assertRuntimePrivilegesExact')
+    expect(source).toContain('buildRuntimeRevokeStatements')
+    expect(source).toContain('buildRuntimeGrantStatements')
+    expect(source).not.toContain('ALL PRIVILEGES')
+  })
 })

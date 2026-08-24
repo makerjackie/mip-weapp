@@ -5,8 +5,10 @@ import { describe, expect, it } from 'vitest'
 import {
   applyCloudbaseManagementEnv,
   CLOUDBASE_LOCAL_CREDENTIAL_STATES,
+  hasExplicitDeviceAuthApproval,
   inspectLocalCloudbaseCredential,
   loadCloudbaseManagementEnv,
+  requireCloudbaseManagementEnv,
 } from '../scripts/lib/cloudbase-local-auth.mjs'
 
 function writeAuth(home: string, credential: Record<string, unknown>) {
@@ -94,5 +96,31 @@ describe('CloudBase local management env', () => {
     finally {
       fs.rmSync(project, { recursive: true, force: true })
     }
+  })
+
+  it('requires an environment-level API Key and EnvID for normal commands', () => {
+    const project = fs.mkdtempSync(path.join(os.tmpdir(), 'weapp-auth-required-'))
+    try {
+      expect(() => requireCloudbaseManagementEnv(project, {})).toThrow('CLOUDBASE_API_KEY is required')
+      expect(() => requireCloudbaseManagementEnv(project, {
+        CLOUDBASE_API_KEY: 'management-key',
+      } as NodeJS.ProcessEnv)).toThrow('CLOUDBASE_ENV_ID is required')
+      expect(requireCloudbaseManagementEnv(project, {
+        CLOUDBASE_API_KEY: 'management-key',
+        CLOUDBASE_ENV_ID: 'environment-id',
+      } as NodeJS.ProcessEnv)).toMatchObject({
+        hasApiKey: true,
+        hasEnvId: true,
+      })
+    }
+    finally {
+      fs.rmSync(project, { recursive: true, force: true })
+    }
+  })
+
+  it('requires the exact maintainer approval flag for device authorization', () => {
+    expect(hasExplicitDeviceAuthApproval([])).toBe(false)
+    expect(hasExplicitDeviceAuthApproval(['--allow-device-auth', 'extra'])).toBe(false)
+    expect(hasExplicitDeviceAuthApproval(['--allow-device-auth'])).toBe(true)
   })
 })

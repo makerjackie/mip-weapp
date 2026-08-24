@@ -60,6 +60,21 @@ export function loadCloudbaseManagementEnv(projectRoot, env = process.env) {
   }
 }
 
+export function requireCloudbaseManagementEnv(projectRoot, env = process.env) {
+  const loaded = loadCloudbaseManagementEnv(projectRoot, env)
+  if (!loaded.hasApiKey) {
+    throw new Error('CLOUDBASE_API_KEY is required in the project-root .env.local. Create an environment-level API Key; a publish_key is not accepted.')
+  }
+  if (!loaded.hasEnvId) {
+    throw new Error('CLOUDBASE_ENV_ID is required with CLOUDBASE_API_KEY in the project-root .env.local.')
+  }
+  return loaded
+}
+
+export function hasExplicitDeviceAuthApproval(args = []) {
+  return args.length === 1 && args[0] === '--allow-device-auth'
+}
+
 export function applyCloudbaseManagementEnv(projectRoot, env = process.env) {
   const loaded = loadCloudbaseManagementEnv(projectRoot, env)
   if (loaded.authMode === 'local') {
