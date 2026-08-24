@@ -1,6 +1,8 @@
-# 同行会 v0.2 完整页面与状态规格
+# 历史页面与状态规格（同行会 v0.2）
 
-本规格以第二版五屏方案为唯一视觉基调。规划包含 26 个用户端路由和 15 个管理路由；关键用户页面、活动运营和社群安全主流程均进入 ImageGen 视觉细化，其他管理路由遵守基础令牌、原生操作习惯和功能完整性。
+> 本文件保留旧产品的页面交互输入，不是当前 MIP 路由或验收清单。当前范围以 [MIP 功能需求基线](mip/REQUIREMENTS.md)、[MIP 架构](mip/ARCHITECTURE.md)、`src/app.json` 和 `config/runtime-pages.json` 为准。旧路由只有在迁入 MIP 模块并进入当前路由合同时才算实现；不得用名称相同但职责不同的页面代替验收。
+
+本规格以第二版五屏方案为唯一视觉基调。当前运行时契约包含 40 个用户/公开路由和 22 个管理路由；关键用户页面、活动运营和社群安全主流程均进入视觉细化，其他管理路由遵守基础令牌、原生操作习惯和功能完整性。
 
 ## 总体流程
 
@@ -27,7 +29,7 @@
 | U08 | `packages/member/member-detail/index` | 成员公开详情；使用适配微信头像分辨率的紧凑头像与资料层级 | 会员完整详情、非会员摘要+解锁、下线 |
 | U09 | `packages/member/connections/index` | 关注与关注者名单 | 关注、关注者、空态、后台刷新失败 |
 | U10 | `packages/member/event-detail/index` | 活动完整信息 | 短 hero、真实摘要与标签、紧凑时间地点/余位、可点击参与者预览、真实发起人、可展开介绍；覆盖可报名、待审核、候补位次、未通过、地图/线上入口、原生分享/日历、变更记录、截止/满员 |
-| U11 | `packages/member/event-album/index` | 活动相册 | 已发布照片、分页、压缩上传、待审核、删除 |
+| U11 | `packages/member/event-album/index` | 活动相册 | 已发布照片、分页、压缩上传、待审核、拒绝原因、本人版本化撤回 |
 | U12 | `packages/member/registration-confirm/index` | 任务化报名确认、自定义问题与资料修改；不重复详情页内容，新报名公开资料默认开启且可关闭 | 免费、会员包含、独立付费、复用资料、编辑既有回答、字段校验、提交中、失败 |
 | U13 | `packages/member/registrations/index` | 我的活动票列表 | 有凭证、空态、取消/退款中、已取消、已结束 |
 | U14 | `packages/member/ticket/index` | 单张活动凭证与签到二维码 | 有效、已签到、取消/退款中、已取消、已结束 |
@@ -35,11 +37,11 @@
 | U16 | `packages/member/order-detail/index` | 单笔订单详情和售后 | 自动确认、已支付、退款中、已退款、失败 |
 | U17 | `packages/member/payment-result/index` | 支付后自动收敛 | 确认中、成功、失败/异常、超时但继续自动处理 |
 | U18 | `packages/member/benefits/index` | 会员权益说明 | 普通用户 CTA、有效会员权益、明确返回首页 |
-| U19 | `packages/member/privacy/index` | 授权、隐私和注销 | 常规、注销二次确认、注销中 |
+| U19 | `packages/member/privacy/index` | 授权、隐私和注销 | 加载、常规、确认短语、二次确认、注销中、失败恢复、注销成功 |
 | U20 | `packages/member/help/index` | 常见问题与微信客服 | 常规、客服入口不可用提示 |
 | U21 | `packages/member/about/index` | 品牌说明、规则、版本 | 常规 |
 | U22 | `packages/member/notifications/index` | 报名、活动变更、开始提醒、取消与退款的站内消息 | 冷启动骨架、消息列表、空态、后台更新失败 |
-| U23 | `packages/member/event-participants/index` | 本场活动公开参与者 | 全部/发起人/嘉宾/参与者筛选、游标分页、公开资料卡、公开人数不足、后台刷新失败 |
+| U23 | `packages/member/event-participants/index` | 本场活动公开参与者 | 姓名/行业/简介搜索、全部/玩家/嘉宾筛选、游标分页、公开资料卡、公开人数不足、后台刷新失败 |
 | U24 | `packages/member/announcements/index` | 社区公告列表 | 置顶、最新、历史、空态、后台刷新失败 |
 | U25 | `packages/member/announcement-detail/index` | 公告正文与相关行动 | 正常、已撤回/过期、网络错误 |
 | U26 | `packages/member/blocked-members/index` | 已屏蔽成员管理 | 列表、解除确认、空态、后台刷新失败 |
@@ -55,16 +57,23 @@
 | A03 | `packages/admin/event-console/index` | 单场活动管理中枢；集中展示上下文、权限和下游任务入口 |
 | A04 | `packages/admin/events/index` | 独立活动编辑；新增、复制、编辑、发布、结束与取消 |
 | A05 | `packages/admin/event-registrations/index` | 名单、审核/拒绝、候补补位、筛选、导出、签到与撤销 |
+| A19 | `packages/admin/event-feedback/index` | 活动反馈列表、评分筛选、稳定 cursor 分页和权限状态 |
 | A06 | `packages/admin/event-managers/index` | 本场活动的负责人、管理员和现场工作人员 |
-| A07 | `packages/admin/event-album/index` | 本场活动待审核相册 |
+| A07 | `packages/admin/exports/index` | 本场活动参与者与订单的短期导出 |
 | A08 | `packages/admin/profiles/index` | 资料审核 |
 | A09 | `packages/admin/orders/index` | 订单、退款和主动查询 |
 | A10 | `packages/admin/audit/index` | 审计记录 |
 | A11 | `packages/admin/roles/index` | 平台管理员与权限 |
-| A12 | `packages/admin/exceptions/index` | 退款、图片、文件清理和消息投递的统一异常中心 |
-| A13 | `packages/admin/announcements/index` | 公告列表、筛选和进入编辑 |
-| A14 | `packages/admin/announcement-editor/index` | 新建、编辑、发布、置顶和撤回公告 |
-| A15 | `packages/admin/reports/index` | 举报审核、处置和审计 |
+| A12 | `packages/admin/opportunities/index` | 机会筛选、状态查看、受控下架和平台级草稿归档 |
+| A13 | `packages/admin/growth-levels/index` | 成长等级、经验门槛和权益配置 |
+| A14 | `packages/admin/growth-rules/index` | 成长奖励规则和每日上限配置 |
+| A15 | `packages/admin/growth-entries/index` | 成长流水、筛选、导出和受控人工调整 |
+| A16 | `packages/admin/branches/index` | 城市分会目录、编辑、启停和停用阻塞计数 |
+| A17 | `packages/admin/community-reports/index` | 举报领取、审核结论和状态冲突恢复；不自动处置用户账号 |
+| A18 | `packages/admin/event-album/index` | 单场活动相册待审/已发布/已拒绝筛选、原因、版本冲突和审核审计 |
+| A19 | `packages/admin/announcements/index` | 平台和城市分会公告筛选、发布、撤回与置顶 |
+| A20 | `packages/admin/announcement-editor/index` | 公告范围、正文、展示窗口和关联内容编辑 |
+| A21 | `packages/admin/exceptions/index` | 支付、退款、outbox、媒体、通知和 AI 处理异常的只读汇总 |
 
 活动运营的正常导航固定为：
 
@@ -76,6 +85,7 @@
    ├─ 报名与签到
    ├─ 团队与权限
    ├─ 活动相册
+   ├─ 导出与现场资料
    └─ 更多活动操作
       ├─ 复制活动
       ├─ 结束活动
@@ -118,7 +128,7 @@
 1. U10 展示活动，不因缺手机号或会员而报错。
 2. 满足条件时进入 U12，只确认本次活动身份、报名结果说明和自定义问题；时间、地点、封面、完整须知与取消规则留在 U10，已保存资料可明确复用。
 3. 免费/会员包含活动按规则进入已报名、待审核或候补；独立付费活动先创建服务端预约订单，支付事实确认后再授予报名。
-4. 待审核和候补可以修改报名回答或撤回；已报名在截止前可修改回答。候补补位后才签发票码。
+4. 待审核和候补仅在活动仍发布且活动开始前可以修改报名回答；已报名在报名截止前可以修改，未设置报名截止时间时以活动开始时间为准。修改使用当前报名表版本和报名记录版本，冲突后刷新服务端内容并保留仍适用于当前字段的本地填写。候补补位后才签发票码。
 5. 取消在 U14/U13 二次确认；免费活动直接取消并在同一事务补位，付费活动进入退款中，只有退款终态才能成为已取消。
 6. U11 相册按需分页，上传前客户端压缩；服务端校验并按活动规则直接发布或进入审核。
 7. 签到二维码只携带不可猜的凭证引用；服务端基于可信身份、活动权限、状态和乐观锁签到。
@@ -137,7 +147,8 @@
 4. U08 的更多操作中提供举报与屏蔽。举报使用固定类别和可选短说明，重复提交幂等；提交后不承诺处罚结果。
 5. 屏蔽后双方从成员发现、推荐和活动公开参与者中互相隐藏，并删除双方关注关系；报名、订单、签到和管理员名单保持不变。
 6. U26 只列出当前用户主动屏蔽的成员，并允许解除；被屏蔽方不会收到通知，也不能看到屏蔽原因。
-7. A15 只开放给拥有社群安全权限的运营者。忽略、警告、隐藏资料和停用账号均需填写原因、版本校验和审计。
+7. A17 只开放给拥有 `community.reports.manage` capability 的平台运营者。领取、处理和驳回均需填写原因、版本校验和审计；审核结论不自动隐藏资料或停用账号。
+8. A18 只开放给在本场活动范围内拥有 `events.album.manage` capability 的运营者。批准或拒绝必须填写原因并携带当前版本；冲突后重新加载，页面不能直接决定发布状态。
 8. 举报和屏蔽接口不返回手机号、OpenID、内部用户 ID、报名回答或完整票码。
 
 ### 页面返回与加载
@@ -157,4 +168,4 @@
 
 实现前，按根目录流程生成并确认全量 ImageGen 视觉原型：覆盖 U01–U21 中约 20 个最关键页面/状态，按连续用户流程组织，不必为重复 CRUD、普通 Loading 或结构相同的错误状态单独生图。每个页面规格必须能追溯到对应的批准原型；ImageGen 中不合理的导航、微信控件和状态逻辑在本规格中修正。
 
-实现后，运行时验收必须覆盖 `config/runtime-pages.json` 中全部可达页面（当前 26 个用户路由、15 个运营路由），并为关键状态生成截图索引；每张截图注明路由、状态、数据来源和是否需要真实设备。真实小程序截图属于运行证据和视觉对照，不得称为实现前的全量视觉原型，也不能替代第二次用户确认。
+实现后，运行时验收必须覆盖 `config/runtime-pages.json` 中全部可达页面（当前 40 个用户/公开路由、22 个运营路由），并为关键状态生成截图索引；每张截图注明路由、状态、数据来源和是否需要真实设备。真实小程序截图属于运行证据和视觉对照，不得称为实现前的全量视觉原型，也不能替代第二次用户确认。

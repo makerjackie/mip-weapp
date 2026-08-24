@@ -1,4 +1,6 @@
-# 同行会 v0.2 页面与组件映射
+# 历史页面与组件映射（同行会 v0.2）
+
+> 本文件用于追溯旧原型的视觉输入，不是当前 MIP 页面事实。当前页面职责以 [MIP 功能需求基线](mip/REQUIREMENTS.md)、`src/app.json` 和 `config/runtime-pages.json` 为准；旧路由名与当前页面职责不一致时，必须先修正当前路由和验收映射，不能按本表宣告功能完成。
 
 本映射在全量 ImageGen 原型二次确认后冻结。它连接视觉来源、页面规格、共享组件、真实数据和允许的实现修正；页面不得绕过本表逐图猜 CSS。
 
@@ -15,7 +17,7 @@
 | `profile-form` 页面模式 | B3 v2、v0.5 I4–I5 | 初始、编辑、校验、保存中 | 头像、昵称、城市、职业、个人简介和兴趣标签 | 审核与服务端权限 |
 | `member-detail-profile` 页面模式 | B4–B5 v2、v0.7 K4 | 完整、锁定、下线 | 适配微信头像分辨率的圆形头像、身份、标签和关于 | 客户端自行解锁隐私字段；把头像拉伸为整屏 hero |
 | `event-detail` 页面模式 | v0.5 I1–I2（继承 v0.3 E2） | 可报名、需手机号、会员限制、已报名、截止 | 短 hero、摘要标签、紧凑时间地点、参与者预览、真实发起人、可展开介绍与固定 CTA | 报名资格计算、参与者权限或伪造发起人 |
-| `event-participant-list` 页面模式 | v0.5 I3–I4 | 全部、发起人、嘉宾、参与者、分页、空态 | 全宽公开资料卡、角色筛选、头像、职业、组织与简介 | 暴露未授权成员、手机号、报名回答、OpenID 或完整票码 |
+| `event-participant-list` 页面模式 | v0.5 I3–I4 | 全部、玩家、嘉宾、搜索、分页、空态 | 全宽公开资料卡、身份筛选、头像、行业、职业与简介 | 暴露未授权成员、手机号、报名回答、OpenID 或完整票码 |
 | `event-ticket` 页面模式 | C3 | 有效、已取消、已结束 | 凭证视觉、掩码号码、说明、取消入口 | 生成或验证凭证 |
 | `confirm-sheet` | C5 | 取消报名、注销、退款确认 | 危险动作二次确认 | 直接执行服务端 mutation |
 | `order-card` | D4 | 待确认、已支付、退款中、已退款 | 方案、时间、金额和状态 | 客户端推导最终订单状态 |
@@ -66,11 +68,13 @@
 | `packages/admin/event-console/index` | v0.4 G3 | admin event context、event operations hub、settings list | managed event | 只显示当前角色允许的任务入口 |
 | `packages/admin/events/index` | v0.4 G4 | grouped form、sticky actions、confirm sheet | event list/detail、save/status mutations | 只做编辑；取消放在更多操作并保留冲突保护 |
 | `packages/admin/event-registrations/index` | v0.4 H1–H2 | admin event context、roster summary、line tabs、expandable attendee card | roster page | 真实统计；手机号和导出服从活动权限 |
+| `packages/admin/event-feedback/index` | v0.4 H3 | admin event context、评分筛选、反馈分页 | event console | 反馈正文仅反馈查看权限可见；不返回用户标识、手机号或报名回答 |
 | `packages/admin/event-managers/index` | v0.4 H3 | admin event context、role summary、settings rows | event managers、approved profiles | 使用用户可懂角色文案，不展示 RBAC |
-| `packages/admin/event-album/index` | v0.4 H4 | admin event context、two-column media grid、moderation actions | pending event photos | 只呈现当前接口真实支持的待审核状态 |
-| `packages/admin/announcements/index` | v0.6 J5 | line tabs、搜索、announcement card | all announcements | 每卡只有编辑/进入管理入口，不在列表堆发布按钮 |
-| `packages/admin/announcement-editor/index` | v0.6 J5 推导 | grouped form、sticky actions、confirm sheet | announcement detail、save/status mutations | 发布、置顶、撤回执行版本校验和审计 |
-| `packages/admin/reports/index` | v0.6 J6 | report task card、line tabs、处理确认 | report queue | 举报不会自动处罚；运营动作必须填写原因 |
+| `packages/admin/exports/index` | v0.4 H4 | activity-scoped export actions、short-lived result state | export tickets | 只创建参与者和活动订单短期导出，不承载相册审核 |
+| `packages/admin/opportunities/index` | v0.6 J5 | search、status filters、opportunity cards | moderated opportunities | 查看发布状态并按版本下架机会 |
+| `packages/admin/growth-levels/index` | v0.6 J5 | level list、configuration form、related navigation | growth levels | 等级门槛和基础等级约束由服务端事务校验 |
+| `packages/admin/growth-rules/index` | v0.6 J5 推导 | fixed rule list、value configuration form | growth rules | 奖励行为、来源事件和成长类型由服务端固定，运营只能调整数值、每日上限和状态 |
+| `packages/admin/growth-entries/index` | v0.6 J6 | ledger list、user search、adjustment confirmation | growth entries | 人工调整和导出分别服从独立 capability 与审计 |
 
 ## 状态和交互映射
 

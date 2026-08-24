@@ -30,6 +30,8 @@ Figma 决定视觉与交互；服务端资格、金额、权限和状态机以�
 - [ACCEPTANCE.md](ACCEPTANCE.md)：静态、运行时、云端和真机验收矩阵
 - [../../CONTEXT.md](../../CONTEXT.md)：统一业务语言
 
+根目录 `docs/page-specs.md` 与 `docs/component-map.md` 保留同行会时期的交互和视觉输入，仅用于追溯；它们不是当前路由清单。当前页面事实必须同时进入 `src/app.json` 与 `config/runtime-pages.json`，且页面职责与路由名称一致。
+
 ## 更新规则
 
 标签、数值和外部配置允许先使用仓库内默认值。更新时只替换配置或追加迁移，不把飞书表格、Figma 文件或共享数据库变成运行时直接依赖。

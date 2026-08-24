@@ -18,23 +18,23 @@ Figma 已确认四个主 Tab，顺序固定为：
 | 区域 | 页面节点 | 代表 frame | 代码目标 |
 | --- | --- | --- | --- |
 | 我的 | `69:4972` | `1770:38871` 我的 | `src/pages/profile` |
-| 我的活动/订单 | `69:4972` | `1723:16217`、`1723:16988` | `src/packages/member` |
-| 编辑档案 | `69:4972` | `1732:20291` | `src/packages/member/profile-edit` |
-| 合作卡 | `69:4972` | `2004:2227`、`2571:34139` | `src/packages/member/cooperation-card-*` |
-| 超级案例 | `69:4972` | `1987:30162`、`2173:42605` | `src/packages/member/super-case-*` |
-| AI 语音填写 | `69:4972` | `2172:42168` | `src/packages/member/ai-assistant` |
-| 玩家等级 | `69:4972` | `1948:14079` | `src/packages/member/growth` |
+| 我的活动/订单 | `69:4972` | `1723:16217`、`1723:16988` | `src/packages/member/mip-events/mine`、`src/packages/member/orders` |
+| 编辑档案 | `69:4972` | `1732:20291` | `src/packages/member/mip-profile` |
+| 合作卡 | `69:4972` | `2004:2227`、`2571:34139` | `src/packages/member/mip-cooperation` |
+| 超级案例 | `69:4972` | `1987:30162`、`2173:42605` | `src/packages/member/mip-cases` |
+| AI 语音填写 | `69:4972` | `2172:42168` | `src/packages/member/mip-ai` |
+| 玩家等级 | `69:4972` | `1948:14079` | `src/packages/member/mip-growth` |
 | 活动首页 | `69:4975` | `1819:17664` | `src/pages/events` |
-| 活动详情 | `69:4975` | `1861:17860`、`1818:17142` | `src/packages/member/event-detail` |
-| 参与人/互动 | `69:4975` | `1818:17230`、`2168:17419` | `src/packages/member/event-participants` |
-| 活动报名 | `69:4975` | `1821:19274` | `src/packages/member/registration-confirm` |
+| 活动详情 | `69:4975` | `1861:17860`、`1818:17142` | `src/packages/member/mip-events/detail` |
+| 参与人/互动 | `69:4975` | `1818:17230`、`2168:17419` | `src/packages/member/mip-events/participants`、`src/packages/member/mip-events/interaction` |
+| 活动报名 | `69:4975` | `1821:19274` | `src/packages/member/mip-events/registration` |
 | 机会探索 | `69:4976` | `1766:36567` | `src/pages/opportunities` |
-| 发布机会 | `69:4976` | `1766:36864` | `src/packages/member/opportunity-edit` |
-| 机会详情 | `69:4976` | `1768:37414`、`1768:37369` | `src/packages/member/opportunity-detail` |
-| 人才合作 | `69:4976` | `1768:37534`、`2917:4875` | `src/packages/member/talent` |
-| 玩家档案 | `69:4976` | `1769:38198` | `src/packages/member/member-detail` |
-| 超级案例详情 | `69:4976` | `1958:11897`、`2037:12261` | `src/packages/member/super-case-detail` |
-| 行业筛选 | `69:4976` | `2917:4785` | `src/components/tag-selector` |
+| 发布机会 | `69:4976` | `1766:36864` | `src/packages/member/mip-opportunities/editor` |
+| 机会详情 | `69:4976` | `1768:37414`、`1768:37369` | `src/packages/member/mip-opportunities/detail` |
+| 人才合作 | `69:4976` | `1768:37534`、`2917:4875` | `src/packages/member/mip-cooperation/list` |
+| 玩家档案 | `69:4976` | `1769:38198` | `src/packages/member/mip-public-profile` |
+| 超级案例详情 | `69:4976` | `1958:11897`、`2037:12261` | `src/packages/member/mip-cases/detail` |
+| 行业筛选 | `69:4976` | `2917:4785` | `src/config/mip-catalogs.ts` 与机会/档案页面筛选控件 |
 
 ## 画板批注转成的业务合同
 

@@ -31,8 +31,8 @@ _Avoid_: 当前组织、所在公司
 _Avoid_: 套餐、商品
 
 **会员订单（Membership Order）**：
-用户购买会员方案形成的支付事实容器。
-_Avoid_: 交易、账单
+用户购买会员方案或付费活动形成的统一支付事实容器，存储于 `mip_orders`；订单类型区分 `MEMBERSHIP` 和 `EVENT`。
+_Avoid_: 交易、账单、支付记录
 
 **会员权益（Membership Entitlement）**：
 支付 ledger 确认后生效的玩家有效期。页面和支付回调都不能直接把用户变成玩家。

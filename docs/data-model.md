@@ -1,145 +1,86 @@
-# MySQL 8 数据模型
+# MIP MySQL 8 数据模型
 
-会员案例复用现有 CloudBase MySQL 8 环境。v0.2 权威定义在 `database/mysql/` 的版本化迁移中，新代码只使用 `member_*` 表，不读取或写入 v0.1 的 `dating_*` 和旧 `membership_plans`。
+MIP 的运行时数据位于 `database/mysql/mip/`，迁移跟踪表为 `mip_schema_migrations`。所有业务表使用 InnoDB、`utf8mb4`、UTC `DATETIME(3)` 和可信 `app_id`；金额使用 CNY 整数分。历史 `database/mysql/001_member_schema.sql` 至 `014_event_owner_backfill_v2.sql` 不属于 MIP 运行时 schema，默认不应用。
 
-| 表 | 主键/租户键 | 写入方 |
+## 表清单
+
+| 迁移域 | 表 |
+| --- | --- |
+| 基础身份 | `mip_users`, `mip_user_identities`, `mip_media_assets`, `mip_city_branches`, `mip_branch_memberships`, `mip_profiles`, `mip_private_profiles`, `mip_agreement_acceptances`, `mip_tags`, `mip_profile_tags`, `mip_admin_role_bindings`, `mip_app_settings`, `mip_idempotency_keys`, `mip_outbox_events`, `mip_audit_logs` |
+| 活动和交易 | `mip_membership_plans`, `mip_orders`, `mip_events`, `mip_event_changes`, `mip_event_seat_holds`, `mip_event_registrations`, `mip_event_invitation_attributions`, `mip_event_checkin_credentials`, `mip_event_checkins`, `mip_event_checkin_transitions`, `mip_event_hearts`, `mip_event_feedback`, `mip_event_album_photos` |
+| 机会和协作 | `mip_opportunities`, `mip_opportunity_roles`, `mip_opportunity_tags`, `mip_referral_intents`, `mip_profile_interests`, `mip_cooperation_cards`, `mip_super_cases`, `mip_super_case_media` |
+| 社区安全 | `mip_user_blocks`, `mip_reports` |
+| 公告 | `mip_announcements` |
+| 支付和权益 | `mip_payment_attempts`, `mip_refunds`, `mip_membership_entitlements`, `mip_membership_attributions`, `mip_payment_callbacks` |
+| 成长、消息和 AI | `mip_growth_levels`, `mip_growth_rules`, `mip_growth_accounts`, `mip_growth_entries`, `mip_operations_messages`, `mip_inbox_messages`, `mip_notification_grants`, `mip_delivery_tasks`, `mip_ai_drafts` |
+| 管理 | `mip_user_access_controls`, `mip_admin_export_tickets` |
+
+迁移文件和 lock 文件是字段、CHECK、外键、索引、版本与 checksum 的唯一事实；本文只说明跨域关系和运行时约束，不替代 SQL。
+
+## 核心关系
+
+```text
+mip_users
+  ├─ mip_user_identities / mip_profiles / mip_private_profiles
+  ├─ mip_branch_memberships → mip_city_branches
+  ├─ mip_membership_entitlements ← mip_orders ← mip_membership_plans
+  ├─ mip_events → mip_event_registrations → mip_event_checkins → mip_event_checkin_transitions
+  │             └─ mip_event_album_photos → mip_media_assets
+  ├─ mip_opportunities → mip_referral_intents
+  ├─ mip_user_blocks / mip_reports
+  ├─ mip_announcements → mip_city_branches / mip_events / mip_opportunities
+  ├─ mip_growth_accounts → mip_growth_entries
+  └─ mip_operations_messages → mip_inbox_messages → mip_delivery_tasks
+```
+
+所有关系都使用 `(app_id, id)` 或 `(app_id, user_id)` 复合外键/唯一键，避免共享 CloudBase 环境中的跨 AppID 串读。对象资源通过 `mip_media_assets` 关联，`object_key` 必须以 `mip/` 开头；删除媒体前必须先解除业务外键。
+
+## 统一订单模型
+
+`mip_orders` 是会员和活动的唯一交易容器：
+
+| `order_type` | 关系 | 支付后事实 |
 | --- | --- | --- |
-| `member_profiles` | UUID；`app_id + user_id` 或 demo `external_key` 唯一 | `mip-api` / `mip-admin-api` / dev seed |
-| `member_private_profiles` | `app_id + user_id` | `mip-api` 手机号换取 |
-| `member_media_assets` | UUID；`app_id + asset_key + content_version` 唯一 | 受控上传/seed 工具 |
-| `member_plans` | `app_id + id` | 迁移/运营工具 |
-| `member_entitlements` | UUID；`app_id + user_id` 唯一 | 仅支付 ledger 事务 |
-| `member_events` | UUID；demo 可用 `app_id + external_key` | `mip-admin-api` / dev seed |
-| `member_orders` | UUID；幂等键与商户单号均包含 app scope | 下单事务；支付 ledger 更新 |
-| `member_registrations` | UUID；`app_id + event_id + user_id` 唯一 | 报名/取消/签到事务 |
-| `member_event_reservations` | UUID；`app_id + order_id` 唯一 | 独立付费活动预约；支付 ledger 转换为报名 |
-| `member_event_managers` | `app_id + event_id + user_id` | 活动级分角色授权 |
-| `member_event_photos` | UUID；活动/状态/时间复合索引 | 用户上传；活动相册审核 |
-| `member_checkin_credentials` | UUID；`app_id + token_hash` 唯一 | 服务端签发短期二维码签到凭证 |
-| `member_follows` | `app_id + follower_user_id + followee_user_id` | 成员关注关系 |
-| `member_event_changes` | auto increment bigint；`app_id + event_id + created_at` | 活动编辑/发布/取消事务只追加 |
-| `member_admin_roles` | `app_id + user_id` | 一次性 owner bootstrap / 可信运营工具 |
-| `member_refunds` | UUID；订单与退款单号包含 app scope | 运营退款事务；支付 ledger 更新 |
-| `member_audit_logs` | auto increment bigint；`app_id` 索引 | 业务函数只追加（runtime 无 UPDATE/DELETE） |
-| `member_media_cleanup_outbox` | `(app_id, media_asset_id)` 唯一；status/lease/version | 账号注销后可执行对象清理；DONE 仅在 deleteFile 逐项 status 成功后 |
-| `member_notifications` | UUID；业务来源版本幂等 | 通知 worker 被受控调用时写；当前用户读取/标记已读 |
-| `member_notification_subscriptions` | UUID；按用户、活动和模板索引 | `mip-api` 保存真机订阅结果；worker 成功送达后消耗 |
-| `member_notification_outbox` | UUID；业务来源版本幂等；status/lease/attempts | 通知 worker 被受控调用时领取、发送和收敛 |
-| `member_operational_failures` | UUID；`app_id + status + category + updated_at` | 上传/安全审核失败时只记录有限错误码，不保存图片或 provider 原文 |
+| `MEMBERSHIP` | `membership_plan_id` 非空，`resource_id` 为空 | ledger 更新 `PAID`，重建 `mip_membership_entitlements` |
+| `EVENT` | `resource_id` 非空，`membership_plan_id` 为空 | ledger 消耗 `mip_event_seat_holds`，把报名收敛为正式资格 |
 
-## 关键约束
+订单同时保存 `merchant_order_no`、可选 provider transaction ID、幂等键、金额、货币、商品快照、支付状态和版本。状态包括 `CREATED`、`PAYMENT_CREATED`、`PAID`、`FAILED`、`CLOSED`、`REFUND_PENDING`、`PARTIALLY_REFUNDED`、`REFUNDED`。所有写入由 commerce/ledger 事务完成，客户端不能改变金额、状态或权益。
 
-- 表使用 InnoDB、`utf8mb4`、参数化查询和 UTC `DATETIME(3)`。客户端 ISO 时间在服务端解析后按 UTC 存储，页面只做本地化显示。
-- 金额统一整数分，货币当前固定 `CNY`；数组和审计 metadata 使用 MySQL `JSON`。
-- 每个用户查询、公开内容查询、订单、报名、管理员和审计都必须带服务端可信 `app_id`。多租户隔离永不接受客户端 ownership。
-- 方案价格、权益天数、会员资格、名额、支付金额和退款金额在 MySQL 事务中重建，不能信任客户端。
-- 支付/退款回调在 `mip-payment-ledger` 中使用 `SELECT ... FOR UPDATE` 和条件状态更新；只有事务提交成功才向微信返回成功。
-- 退款后根据全部仍为 `PAID` 的订单重算权益，因此退款较早订单不会误删后续购买的有效期。
-- demo 内容统一 `is_demo=1`，素材记录 provenance、SHA-256、尺寸和版本；production 禁止 seed。
-- `database/mysql/migrations.lock.json` 固定 migration 和 rollback 的 SHA-256；锁定文件不可原地修改，修复必须追加新迁移。
+## 身份、分会和管理
 
-## 活动履约字段（002）
+- `mip_users.status` 为 `ACTIVE`、`BLOCKED`、`CLOSED`；`CLOSED` 必须带 `closed_at`。主分会通过 `mip_branch_memberships` 约束归属。注销时 `mip_user_identities.closed_identity_key` 保留不可逆身份墓碑，运行身份摘要不再供其他领域解析。
+- `mip_profiles` 保存公开资料和可见性 JSON；`mip_private_profiles` 仅保存手机号 hash、加密 ciphertext 和验证时间。
+- `mip_admin_role_bindings` 记录平台、分会或活动范围的角色绑定；`mip_user_access_controls` 记录用户级 allow/block 控制。页面只接收 capability，不以菜单显示决定权限。
+- `mip_audit_logs` 是追加事实，runtime 账号只允许 `SELECT`、`INSERT`；导出只通过 `mip_admin_export_tickets` 的短期票据消费。
 
-`001` 已提供 `member_events.registration_deadline`、`address`、`cover_asset_id` 与基础报名表。`002_activity_operations` 只追加履约与取消收敛所需列：
+## 活动和报名
 
-### `member_events`
+`mip_events` 支持 `OFFLINE`、`ONLINE`、`HYBRID`，范围为平台或城市分会；`access_type` 为 `FREE`、`MEMBER_INCLUDED`、`PAID`。付费活动必须 `registration_policy=AUTO`、`waitlist_enabled=0` 且 `price_cents>0`。已发布内容变更追加到 `mip_event_changes`，不覆盖历史事实。
 
-| 列 | 含义 |
-| --- | --- |
-| `venue_name` | 结构化场地名；`location` 保留为兼容展示字段 |
-| `address` | 详细地址（001 已有，002 不重复创建） |
-| `cancellation_policy` | 取消规则文案 |
-| `cancelled_at` / `cancelled_by` / `cancellation_reason` | 主办方取消元数据 |
-| `version` | 运营编辑乐观锁，从 1 递增 |
-| `registration_deadline` / `cover_asset_id` | 001 已有，合同正式启用 |
+`mip_event_registrations.status` 允许：
 
-活动状态机：`DRAFT → PUBLISHED → COMPLETED`；未开始的 `DRAFT/PUBLISHED → CANCELLED`；`CANCELLED` 与 `COMPLETED` 均为终态，不可重开。
+`PENDING_REVIEW`、`WAITLISTED`、`PAYMENT_PENDING`、`REGISTERED`、`CANCELLATION_PENDING`、`CANCELLED`、`REJECTED`、`ATTENDED`。
 
-活动类型由 domain 集中映射，页面不得自行拼布尔值：
+付费活动先创建 `mip_event_seat_holds` 和报名记录；支付回调在 ledger 事务中校验 hold 尚未过期后完成报名。名额、候补、取消、签到和撤销签到使用行锁、版本号和幂等键；活动取消不得抹除已发生的 `ATTENDED`。
 
-| 类型 | 存储语义 |
-| --- | --- |
-| `PUBLIC_FREE` | `price_cents=0` 且 `member_free=0` |
-| `MEMBER_INCLUDED` | `price_cents=0` 且 `member_free=1`（仅会员可报名，费用已包含） |
-| `PAID` | `price_cents>0` 且 `member_free=0` |
+`mip_event_checkin_credentials` 只保存短期 token hash，`mip_event_checkins` 保存当前到场状态，`mip_event_checkin_transitions` 只追加每轮签到和撤销。撤销显式关联原签到 transition，与 outbox 同一事务写入。凭证不包含 OpenID、手机号或可预测票码。
 
-`price_cents>0 && member_free=1` 不受支持，服务端在写库前拒绝。
+`mip_events.album_enabled` 控制相册入口，`album_submission_policy` 为 `AUTO` 或 `REVIEW`。`mip_event_album_photos` 只允许 `PENDING`、`PUBLISHED`、`REJECTED`、`WITHDRAWN`，素材唯一绑定一个照片事实；提交、审核和本人撤回都以 AppID、活动、用户、版本和 `EVENT_ALBUM` 素材状态为边界。拒绝或撤回后照片记录保留，媒体对象可在最短保留期后由受控孤儿清理回收。
 
-### `member_registrations`
+## 机会、成长、消息和 AI
 
-| 列 | 含义 |
-| --- | --- |
-| `ticket_code` | 票码；`app_id + ticket_code` 唯一；对外只展示掩码，不可当身份凭证，日志必须掩码 |
-| `attended_at` / `attended_by` | 签到时间与操作者 |
-| `cancelled_at` / `cancelled_by_type` / `cancellation_reason` | 取消元数据；`cancelled_by_type ∈ MEMBER\|EVENT\|SYSTEM` |
-| `version` | 签到/撤销等 mutation 的乐观锁 |
+- `mip_opportunities`、`mip_cooperation_cards`、`mip_super_cases` 等内容表都带状态、版本和内容安全状态；关系表使用 app-scoped 复合主键。机会草稿通过 `ARCHIVED` 保留归档时间、操作人和原因，不物理删除。
+- `mip_user_blocks` 保存可解除的主动屏蔽关系；公开档案和公共列表按已识别查看者双向过滤 `ACTIVE` 屏蔽。`mip_reports` 保存幂等举报和审核版本，不生成对方通知，也不自动改变用户状态。
+- `mip_announcements` 保存平台或城市分会公告、展示窗口、内容安全结果和可选活动/机会关联；草稿、发布、撤回和置顶都保留版本与审计，不提供物理删除。
+- `mip_growth_levels` 和 `mip_growth_rules` 是配置；`mip_growth_accounts` 是余额快照；`mip_growth_entries` 只追加，每个用户/来源/指标保持幂等。签到撤销的反向流水引用撤销 transition，delta 等于原实际入账值的反数，不依赖后续修改的规则。
+- `mip_inbox_messages` 以收件人和 dedupe key 唯一，是站内消息事实；`mip_notification_grants` 记录用户手势授权，并用任务、随机 token 和租约表达 `RESERVED` 状态；`mip_delivery_tasks` 使用 lease、attempts 和可恢复状态，不由高频 timer 驱动。reservation 使用短事务；实际微信调用和最终状态写入由锁定 `ACTIVE` 用户、任务及授权的专用投递事务串行化，完整边界见 [NOTIFICATIONS.md](NOTIFICATIONS.md)。
+- `mip_operations_messages` 是按收件人展开的不可变运营发布事实，以 `(app_id, publication_id, recipient_user_id)` 去重。范围、创建者、活动目标和可选订阅消息快照都保留在服务端；runtime 账号只允许读取和追加。
+- `mip_ai_drafts` 的状态由 `UPLOADED`、`TRANSCRIBING`、`STRUCTURING`、`DRAFT_READY`、`FAILED`、`CONFIRMED`、`EXPIRED`、`DELETED` 组成。只有 `CONFIRMED` 才能关联正式资源。
 
-报名状态机：`REGISTERED → ATTENDED`、`REGISTERED → CANCELLED`、`ATTENDED → REGISTERED`（仅撤销误签到）。付费取消先进入 `CANCELLATION_PENDING`，只有退款终态才进入 `CANCELLED`；退款提交失败时，活动仍有效则恢复 `REGISTERED`，活动已经取消则保留待退款状态供运营重试。`CANCELLED → REGISTERED` 的重新报名由报名事务控制，不作为自由状态迁移。主办方取消活动只收敛仍为 `REGISTERED` 的报名，**不得抹除历史 `ATTENDED` 事实**。
+## 迁移与权限
 
-## 完整活动平台（005）
+迁移必须追加，不得修改已应用 migration 的 SQL/checksum；完整版本写入 `mip_schema_migrations`，语句级状态写入 `mip_schema_migration_steps`。执行器要求显式 `--confirm-env=<精确 EnvID>` 和 `--confirm-prefix=mip_`，待应用迁移或首次安装 step journal 时必须提供仓库外逻辑备份。任何 `RUNNING` 状态都按不确定 DDL 失败关闭，先恢复或人工核对，不自动重放。部署前后复核 MIP 表清单、runtime table→privilege 映射、函数健康和通知 timer 缺失。
 
-- `member_profiles` 增加组织、职务、行业、兴趣、技能和资料版本，组成可复用成员名片；敏感手机号仍只在私密表。
-- `member_events` 增加活动须知、版本化自定义报名表、相册策略和海报素材引用。
-- `member_registrations` 固化报名时的表单版本与答案快照，后续编辑活动不会改写历史报名事实。
-- 独立付费活动先锁定短期 `member_event_reservations`，支付回调在可信 ledger 中转换为正式报名，避免“已付费但名额被抢”。
-- `008_event_role_simplification.sql` 将活动级角色收敛为活动负责人、活动管理员、现场工作人员三类；全局运营角色仍由 `member_admin_roles` 管理。
-- 相册原图先由客户端按用途自适应压缩，服务端再次完整解码、统一重编码并校验格式、体积、内容安全和归属；CloudBase 基础图片处理只用于头像/封面/相册展示衍生图，是否直接发布仍由活动审核策略决定。
-- 签到二维码不包含 OpenID、手机号或可预测票码，只携带服务端短期凭证；扫码后仍执行活动权限、状态和版本检查。
+runtime 账号只拥有代码实际使用的 `mip_*` 表级权限：无 schema-level `ALL PRIVILEGES`、无全局权限和无业务需要的 `DELETE`。共享环境中的 `member_*`、`dating_*`、`sewing_*` 表保持只读，不纳入 MIP 迁移、seed 或函数连接。
 
-## 历史票码收敛（006）
-
-- 对 002 迁移前已经存在、仍为 `REGISTERED` / `ATTENDED` 且没有 `ticket_code` 的报名记录执行一次性确定性回填。
-- 回填只补充便于人工核对和名单搜索的稳定票码；现场签到仍使用五分钟有效、可消费的动态二维码凭证。
-- 读取报名历史保持零写入，页面刷新不会偷偷修改票码或审计时间。
-
-## 活动增长能力（007）
-
-- `member_events.registration_mode` 为 `AUTO | APPROVAL`；`waitlist_enabled` 控制满员后是否允许候补。
-- `member_events.event_mode` 为 `OFFLINE | ONLINE | HYBRID`；坐标成对保存，线上链接只在服务端授权后返回。
-- `member_registrations.status` 扩展为 `PENDING_REVIEW | WAITLISTED | REGISTERED | CANCELLATION_PENDING | CANCELLED | REJECTED | ATTENDED`。其中只有 `REGISTERED`、`CANCELLATION_PENDING`、`ATTENDED` 占用名额。
-- 审核记录保存审核时间、审核人和拒绝原因；候补记录保存进入队列的时间。补位使用 `waitlisted_at, id` 的稳定顺序并在释放名额的事务内完成。
-- `member_event_changes` 只追加时间、地点、报名规则、内容和状态摘要，为用户详情页提供可追溯变更历史。
-- 付费活动在本阶段固定 `AUTO + waitlist_enabled=0`，避免未付款审核、候补预约和退款之间形成不完整状态机。
-
-## 活动角色收敛（008）
-
-- `EVENT_OWNER`：活动编辑/发布、团队管理、含联系电话的名单与导出、报名审核、签到、相册审核。
-- `EVENT_MANAGER`：活动编辑/发布、含联系电话的名单与导出、报名审核、签到和相册审核；不能授予管理员。
-- `EVENT_STAFF`：含联系电话的在线名单、签到和相册现场协作；不开放活动编辑、名单导出和团队管理。
-- 平台 `owner/manager/reviewer/support` 不与活动角色合并。财务退款、全局审计和跨活动配置继续由平台角色控制。
-
-## 消息与异常运营（009）
-
-- 站内消息是权威用户回查入口；微信订阅消息只是可选送达通道。
-- 默认部署不安装通知定时器；未另行提供受控调用时，通知 worker 不会生成站内消息、发送订阅消息或处理活动提醒。
-- `member_notifications` 以 `app_id + user_id + kind + source + source_version` 幂等，覆盖报名结果、活动变更、活动提醒、活动取消和退款结果。
-- `member_notification_subscriptions` 保存用户针对当前小程序的真实订阅结果。普通活动模板按一次性授权处理，只有微信发送成功后才写 `consumed_at`。
-- `member_notification_outbox` 使用租约、有限重试和过期时间；没有模板、没有授权或已经过期时收敛为 `IN_APP_ONLY`，不阻断站内消息。
-- 手机运营台的统一异常中心聚合退款未收敛、图片处理卡住、孤立文件清理失败和通知发送失败。
-
-## 图片失败追踪（010）
-
-- `member_operational_failures` 只保存租户、当前用户、图片用途、业务资源 ID、有限错误码和处理状态；不保存图片字节、手机号、OpenID 响应或内容安全 provider 原始结果。
-- 头像、活动照片和活动封面在解码、内容安全、上传或回读校验失败时留下可运营记录；图片仍由用户重新选择，后台不提供危险的“自动重试审核”。
-- 云对象已经上传但即时删除未返回逐项成功状态时，使用候选素材 UUID 写入既有 `member_media_cleanup_outbox`，由耐久清理队列收敛，不静默遗留孤立文件。
-
-## 索引
-
-- 成员发现：`app_id + status + updated_at desc`
-- 活动流：`app_id + status + starts_at`
-- 用户订单：`app_id + user_id + created_at desc`
-- 订单运营：`app_id + status + created_at desc`
-- 用户报名：`app_id + user_id + registered_at desc`
-- 活动报名（既有）：`app_id + event_id + status`
-- 活动名单分页（002）：`app_id + event_id + status + registered_at + id`
-- 票码检索（002）：`app_id + ticket_code` 唯一
-- 退款运营：`app_id + status + updated_at desc`
-- 候补补位：`app_id + event_id + status + waitlisted_at + id`
-- 活动变更：`app_id + event_id + created_at desc`
-- 消息收件箱：`app_id + user_id + status + created_at desc + id`
-- 通知授权：`app_id + user_id + event_id + template_key + status + consumed_at`
-- 消息 outbox：`app_id + status + send_at + lease_expires_at + expires_at + id`
-- 图片失败：`app_id + status + category + updated_at + id`
-- 审计流：`app_id + created_at desc`
-
-客户端没有数据库直读写权限。`mip-api`、`mip-admin-api` 和原生 CloudPay 适配器从 `cloud.getWXContext()` 获取身份；支付函数不连接私网数据库，而是用 HMAC 调用 `mip-payment-ledger` 完成事务。
+账号注销的状态撤销、数据最小化、事实保留和不可逆 rollback 约束见 [ACCOUNT_CLOSURE.md](ACCOUNT_CLOSURE.md)。
