@@ -18,6 +18,10 @@ const settingsStorageFileNames = [
   `ls_${settingsStorageHash}.json`,
 ]
 
+export const RUNTIME_SERVICE_PORT_NOT_LISTENING_ERROR
+  = 'WeChat DevTools service port is configured but not listening. '
+    + 'Enable 设置 → 安全设置 → 服务端口 in the currently open DevTools instance.'
+
 function readJson(filePath) {
   if (!fs.existsSync(filePath)) {
     return undefined
@@ -159,10 +163,7 @@ export async function assertRuntimePreflight(root, options = {}) {
   }
   const listeningServicePort = await selectListeningServicePort(configuredPorts)
   if (!listeningServicePort) {
-    throw new Error(
-      'WeChat DevTools service port is configured but not listening. '
-      + 'Enable 设置 → 安全设置 → 服务端口 in the currently open DevTools instance.',
-    )
+    throw new Error(RUNTIME_SERVICE_PORT_NOT_LISTENING_ERROR)
   }
   setRuntimeWechatDevtoolsServicePort(listeningServicePort)
 

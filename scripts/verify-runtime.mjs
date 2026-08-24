@@ -26,6 +26,7 @@ import {
 } from './lib/runtime-observability.mjs'
 import { assertRuntimePreflight } from './lib/runtime-preflight.mjs'
 import { assertReadyAssertion, parseReadyAssertion } from './lib/runtime-ready-assertion.mjs'
+import { prepareRuntimeDevtools } from './lib/runtime-startup.mjs'
 import { comparePngBuffers } from './lib/visual-diff.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
@@ -1051,13 +1052,20 @@ export async function main(runArgs = process.argv.slice(2)) {
   }
 
   try {
-    report.preflight = await assertRuntimePreflight(devtoolsRoot, {
-      sourceRoot: devtoolsRoot === root ? 'src' : 'dist',
-      requirePublicAppId: devtoolsRoot !== root,
-      requiredRoutes: runtimeRoutes,
+    const runtimeStartup = await prepareRuntimeDevtools({
+      preflight: () => assertRuntimePreflight(devtoolsRoot, {
+        sourceRoot: devtoolsRoot === root ? 'src' : 'dist',
+        requirePublicAppId: devtoolsRoot !== root,
+        requiredRoutes: runtimeRoutes,
+      }),
+      warmProject: () => warmWechatDevtoolsProject({ projectPath: devtoolsRoot }),
     })
+    report.preflight = runtimeStartup.preflight
+    if (runtimeStartup.projectPrewarmedBeforePreflight) {
+      report.recoveries.push({ action: 'prewarmed-devtools-project-before-preflight' })
+    }
     const openedAutomatorAvailable = await isLocalPortListening(baseRuntimeOptions.port)
-    if (!openedAutomatorAvailable) {
+    if (!openedAutomatorAvailable && !runtimeStartup.projectPrewarmedBeforePreflight) {
       await warmWechatDevtoolsProject({ projectPath: devtoolsRoot })
       report.recoveries.push({ action: 'prewarmed-devtools-project' })
     }

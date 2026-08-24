@@ -14,6 +14,8 @@ pnpm test:runtime
 
 loading、empty、error、forbidden、conflict、disabled 代表状态除页面数据外，还必须命中合同配置的可见节点和关键文案。通过报告写入 `.tmp/runtime/report.json`；只有 `status=passed`、页面数等于合同路由数且代表状态全部通过，才构成开发者工具运行时证据。`runtime:preflight` 只证明登录、服务端口和路由配置可用。
 
+完整验收时无需先执行 `pnpm dev:open`。当服务端口已配置但当前没有 DevTools 实例监听时，`pnpm test:runtime` 会先通过 CLI 打开隔离的本地 host，再重试预检；服务端口已监听时不额外打开项目。安全设置中的服务端口如果被关闭，仍需先手动开启。
+
 运行时逐页打开和代表状态截图不代替关键业务流程交互、375px 长内容检查或 Figma 对照。未配置云环境或核心云函数不可调用时，数据页应清晰失败，不得连接原生产环境或把占位状态记为通过。未配置支付时不得假装支付成功。
 
 ## 真机能力清单
