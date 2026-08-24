@@ -48,6 +48,9 @@
 | `mip_super_cases` / `mip_super_case_media` | 已确认可公开的案例及素材关系 | `mip-opportunities-api` |
 | `mip_growth_levels` / `mip_growth_rules` | 成长等级和事件规则 | `mip-growth-api` / 管理动作 |
 | `mip_growth_accounts` / `mip_growth_entries` | 余额快照和不可变成长流水 | `mip-growth-api`；流水只追加 |
+| `mip_badges` / `mip_user_badges` | 勋章目录与用户获授/撤销事实 | `mip-admin-api` 受 `badges.manage` capability 约束写入并追加审计 |
+| `mip_user_badge_profiles` / `mip_user_badge_equipment` | 本人勋章收藏版本与最多 3 个佩戴槽位 | `mip-growth-api` 事务校验有效获授事实后写入 |
+| `mip_task_cards` / `mip_task_assignments` / `mip_task_completions` | 任务配置、全员或指定成员派发、模板、截止窗口、每用户单次完成事实、附件引用和奖励快照 | `mip-tasks-api`；派发撤销保留状态和审计，完成事实与经验奖励在同一事务写入 |
 | `mip_operations_messages` | 按收件人展开的不可变运营通知、范围和模板快照 | 受 capability 约束的管理事务只追加 |
 | `mip_inbox_messages` | 用户可回查的站内消息 | `mip-notification-worker` 写入；`mip-notifications-api` 读取和标记已读 |
 | `mip_notification_grants` / `mip_delivery_tasks` | 订阅授权消耗和外部投递任务 | `mip-notifications-api` 记录授权；`mip-notification-worker` 消耗授权并投递 |
@@ -78,6 +81,7 @@
 ## 成长、消息和 AI
 
 - 成长规则、余额和流水由 `mip-growth-api` 计算；`mip_growth_entries` 只追加，客户端不能直接加分。撤销签到时按原 transition 已实际入账的 delta 追加反向流水，不按当前规则重算；精确校正允许经验余额为负数。
+- 勋章目录与获授状态是服务端事实。本人只能在当前 AppID 内有效获授且启用的勋章中选择最多 3 枚佩戴；保存使用档案版本和事务行锁。公开档案只投影仍有效的已佩戴勋章，不返回用户内部标识或未佩戴收藏。
 - `mip-outbox-worker` 只接受内部 HMAC 调用，使用 `FOR UPDATE SKIP LOCKED`、过期租约和指数退避领取事件。接收者和可计成长事实必须回查业务表，不能信任 `payload_json` 中的用户字段；消息 dedupe key 与成长 source event id 均绑定 outbox id。
 - 运营发布先在同一事务按收件人追加 `mip_operations_messages` 与 `operations.notification_published` outbox；投影时重新按 `app_id` 回查有效收件人、正文、活动目标和模板字段。Outbox payload 不承载收件人或文案事实。
 - `mip_inbox_messages` 是定向通知的权威回查入口。小程序只通过 `mip-notifications-api` 读取本人消息、标记已读和记录真实订阅授权选择；`mip-notification-worker` 不开放客户端调用，只通过内部 HMAC 写入消息、保留/消费授权和领取投递任务。同一授权由 reservation 独占；实际微信调用和最终状态写入由锁定 `ACTIVE` 用户、任务、授权及 reservation token 的专用投递事务串行化，调用后失败只由原任务重试。没有模板、授权或外部送达时，不阻断站内消息。完整边界见 [NOTIFICATIONS.md](NOTIFICATIONS.md)。

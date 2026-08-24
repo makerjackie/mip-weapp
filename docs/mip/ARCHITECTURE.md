@@ -1,6 +1,6 @@
 # MIP 架构
 
-MIP 是一个原生微信小程序、13 个核心 CloudBase 函数和三个可选支付函数组成的会员与协作平台。短期复用共享 CloudBase，业务数据、函数名和对象 key 使用 MIP 专属边界；正式 AppID 上线时迁移到空的独立 CloudBase/MySQL 环境。当前 schema 不支持在同一数据库中以相同主键并存两个 AppID 副本。
+MIP 是一个原生微信小程序、16 个核心 CloudBase 函数和三个可选支付函数组成的会员与协作平台。当前工程声明 80 条小程序路由，数据库 lock 固定 29 个追加迁移。短期复用共享 CloudBase，业务数据、函数名和对象 key 使用 MIP 专属边界；正式 AppID 上线时迁移到空的独立 CloudBase/MySQL 环境。当前 schema 不支持在同一数据库中以相同主键并存两个 AppID 副本。
 
 ## 调用方向
 
@@ -12,7 +12,7 @@ MIP 是一个原生微信小程序、13 个核心 CloudBase 函数和三个可�
         → mip_* MySQL / mip/ 对象存储
 ```
 
-页面不得直接初始化 CloudBase、读取 MySQL 或调用 `wx.requestPayment`。客户端只提交业务意图；身份、玩家/嘉宾状态、会员资格、金额、名额、活动资格、成长流水、通知状态和管理权限都由服务端决定。
+页面不得直接初始化 CloudBase、读取 MySQL 或调用 `wx.requestPayment`。客户端只提交业务意图；身份、玩家/嘉宾状态、会员资格、金额、名额、活动资格、成长流水、比赛分数、排行快照、通知状态和管理权限都由服务端决定。
 
 未来独立后台 API 复用同一套服务端 DTO、capability、错误码和审计合同，只新增后台 adapter，不复制业务规则。当前管理端仍在小程序管理分包中。
 
@@ -30,6 +30,9 @@ MIP 是一个原生微信小程序、13 个核心 CloudBase 函数和三个可�
 | `mip-commerce-api` | 会员方案、统一订单、订单查询和退款申请 | 小程序调用 |
 | `mip-admin-api` | 管理分包、分会/活动/相册运营、审计、导出 | capability 保护 |
 | `mip-growth-api` | 等级、规则、余额和不可变成长流水 | 小程序或内部事件 |
+| `mip-game-api` | 团队、赛季、周赛、排行榜快照与队伍大本营 | 玩家读取；管理动作受 `game.manage` capability 保护 |
+| `mip-tasks-api` | 任务、成员派发、模板、完成事实和经验奖励 | 小程序调用；管理动作受 capability 保护 |
+| `mip-banners-api` | Banner 公开读取、版本化编辑、排序、启停与软删除 | 小程序读取；管理动作受 `banners.manage` capability 保护 |
 | `mip-ai-api` | 音频、转写、结构化草稿和用户确认 | 小程序；provider 内部鉴权 |
 | `mip-notifications-api` | 当前用户站内消息、已读状态和订阅授权选择 | 小程序调用 |
 | `mip-payment-ledger` | 支付、退款、权益和订单事务 | 仅内部 HMAC |
@@ -50,7 +53,9 @@ MIP 是一个原生微信小程序、13 个核心 CloudBase 函数和三个可�
 | events | 活动、报名、邀请、签到、心动、反馈、相册照片 | 名额、活动资格、签到和照片发布状态 |
 | opportunities | 机会、引荐、感兴趣、合作卡、超级案例 | 内容审核和关系状态 |
 | community safety | 举报事实、双向可见性屏蔽和个人屏蔽列表 | 客户端目标身份、举报处置和对方通知 |
-| growth | 等级、规则、经验/贡献余额与流水 | 客户端直接加分；游戏币不在本次实现与验收范围 |
+| growth | 等级、规则、经验/贡献余额与流水、勋章目录和佩戴事实 | 客户端直接加分；游戏币不在本次实现与验收范围 |
+| tasks | 全员或指定成员任务、模板、截止窗口、完成事实 | 可见范围、截止资格、单次完成和经验奖励 |
+| game | 赛季、团队成员历史、每周赛况、团队/个人排行快照和队伍大本营 | 客户端不能传分数；只对当前有效会员开放；正式规则与视觉可替换 |
 | messaging | 站内消息、授权和投递任务 | 业务事实最终状态、授权消耗 |
 | ai | 语音、转写、结构化草稿 | 未确认草稿不能写正式资源 |
 | admin | 平台/分会/活动 capability、脱敏、导出、审计 | 页面菜单不是授权依据 |
@@ -84,6 +89,6 @@ MIP 是一个原生微信小程序、13 个核心 CloudBase 函数和三个可�
 
 ## 运行时和迁移边界
 
-`mip-notification-worker`、`mip-outbox-worker` 和 `mip-refund-worker` 不安装高频 timer。Outbox worker 按 AppID 领取事件，回查服务端事实后，以内部 HMAC 和幂等键调用消息与成长服务；退款 worker 只从 ledger 读取金额和商户单号，使用不可变退款单号向 provider 提交或查单。需要处理积压时分别运行 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10` 和 `pnpm refunds:run -- --confirm-env=<EnvID> --confirm-refund=mip-refund-worker --limit=10`。未知事件或重试耗尽会终止并写系统审计。短期共享环境的变更流程是：仓库外逻辑备份 → `mip_` 前缀 dry-run → 迁移 → 函数部署 → 只读健康检查。未来独立环境迁移时，只复制经过校验的 MIP 表、`mip/` 对象和 MIP 配置，重新绑定 AppID，不迁移旧项目资源。
+`mip-notification-worker`、`mip-outbox-worker` 和 `mip-refund-worker` 不安装高频 timer。Outbox worker 按 AppID 领取事件，回查服务端事实后，以内部 HMAC 和幂等键调用消息与成长服务；退款 worker 只从 ledger 读取金额和商户单号，使用不可变退款单号向 provider 提交或查单。需要处理积压时分别运行 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10` 和 `pnpm refunds:run -- --confirm-env=<EnvID> --confirm-refund=mip-refund-worker --limit=10`。未知事件或重试耗尽会终止并写系统审计。短期共享环境的变更流程是：仓库外逻辑备份 → `mip_` 前缀 dry-run → 迁移 → `pnpm database:grants` 收敛运行时表级权限 → 函数部署 → 只读健康检查。未来独立环境迁移时，只复制经过校验的 MIP 表、`mip/` 对象和 MIP 配置，重新绑定 AppID，不迁移旧项目资源。
 
 并行开发前冻结 `UserId`、`BranchId`、`EventId`、`OpportunityId`、`OrderId`、caller context、错误码、分页游标、审计 envelope、状态机和跨域事件名。各域不能自行创建第二套身份、订单或权限模型。

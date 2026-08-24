@@ -10,6 +10,11 @@ pnpm database:setup -- \
   --confirm-prefix=mip_ \
   --backup-manifest=/absolute/path/to/manifest.json
 
+pnpm project:init
+pnpm database:grants -- \
+  --confirm-env=<EnvID> \
+  --confirm-runtime-user=<exact-runtime-user>
+
 pnpm cloud:deploy-payment -- \
   --confirm-env=<EnvID> \
   --confirm-function=mip-cloudpay \
@@ -30,10 +35,15 @@ pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo
 - 退款：服务端角色校验；管理端只提交订单/退款意图，金额和权益由 ledger 决定；到账后由 ledger 重算权益，不能手工改玩家状态
 - 名册导出：含手机号的导出走安全票据，页面只显示掩码票码
 - 公告：使用独立 `announcements.manage` capability；平台运营维护全平台和分会公告，城市管理员只能维护本分会公告
+- 任务：使用独立 `tasks.manage` capability；平台负责人和平台运营配置全员或指定成员任务、截止时间和单个模板，按当前 AppID 成员范围搜索并批量派发或软撤销，发布、下架和软删除任务，并查看或导出完成流水
+- 勋章：使用独立 `badges.manage` capability；维护目录、排序与启停，授予或撤销玩家勋章并保留审计。仍在佩戴的获授事实先取消佩戴，再撤销，不物理删除历史
+- 游戏化：使用独立 `game.manage` capability；平台负责人和平台运营维护赛季、队伍、有效会员成员、每周对阵、服务端结算和排行快照。管理端不输入比赛分数，结算和团队/个人排行只从当前 AppID 的成长流水与账户事实生成
 - 举报：使用固定类别和可选短说明；审核使用独立 `community.reports.manage` capability、版本冲突保护和逐笔原因，无批量封禁
 - owner 引导：使用上方带环境和 owner 确认参数的命令，拒绝 demo 身份；手机号、导出、退款、角色变更和签到覆盖必须使用对应 capability
 
 现场人员只拥有本场活动的只读名册与签到权限，不授予手机号原文、报名审核、导出或消息发布能力。需要联系参与者时由活动负责人或管理员在明确用途下使用独立 `users.phone.read` capability。
+
+游戏化只向当前有效会员开放。赛季结束、周赛结算和排行生成都写入不可变或版本化快照，后续成长值变化不回写历史结果。正式 PK 规则、等级阈值和队伍大本营视觉尚未提供时使用仓库内可替换的中性默认配置；当前不实现游戏币，也不能把默认配置描述为正式赛事规则。
 
 签到确认使用 `events.checkin.manage`；撤销误签到使用更窄的 `events.checkin.undo`，只授予活动负责人、活动管理员、城市管理员和平台运营，不授予现场人员。撤销必须提交 1–120 字原因、当前报名版本并追加审计；签到和撤销均追加 transition/outbox，撤销只冲销本轮签到实际入账的成长值，重试与乱序不重复入账。报名恢复为 `REGISTERED`，不删除到场记录。
 

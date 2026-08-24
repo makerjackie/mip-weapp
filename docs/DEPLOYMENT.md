@@ -2,10 +2,11 @@
 
 ## 当前共享环境进度（2026-08-24）
 
-- 23 个锁定的 `mip_*` 迁移已成功应用，迁移版本、表清单和数据库隔离检查通过；当前数据库步骤不再是部署阻塞。
+- 29 个锁定的 `mip_*` 迁移已成功应用，迁移版本、表清单和数据库隔离检查通过；变更前稳定备份保存在 `~/Backups/mip-weapp/2026-08-24T090959-097Z/`。
+- 环境专属 runtime 账号已收敛为 75 张 MIP 业务表的精确表级权限，二次运行结果为 `already current`；没有 schema/global 权限，也没有改动其他账号。
 - 微信开发者工具已登录并能看到函数列表，但这只证明控制台登录和可见性。
 - 云端已创建空的 `mip-identity-api` 函数壳；它没有完成目标 VPC/子网、运行时环境变量、仓库代码和 MySQL 健康检查，不能算作已部署函数。
-- 当前 `CLOUDBASE_API_KEY` 与 2026-08-24 已恢复的本地 CloudBase 登录都缺少完整的 `scf:CreateFunction`、`scf:UpdateFunctionConfiguration` 以及目标 VPC/子网权限；`managePermissions` 不能修改 CAM。13 个核心函数及正式运行时仍为 `external-wait`。
+- 2026-08-24 数据库收口后再次执行完整部署，请求在首个 `mip-identity-api` 创建前被腾讯云拒绝：当前身份缺少 `scf:CreateFunction`，并且对目标 VPC 与子网没有权限。`managePermissions` 不能修改 CAM；包含 `mip-game-api` 在内的 16 个核心函数及正式运行时仍为 `external-wait`，本次没有产生半部署函数。
 
 继续部署前只需要一次权限调整：主账号在 CAM/CloudBase 控制台补齐目标 SCF、VPC 和 `TCB_QcsRole` 服务授权，或提供限定到当前环境、`mip-*` 函数和目标网络的专用 CAM 部署身份。完整 action 与精确 `TCB_QcsRole` `PassRole` 范围见 [CLOUDBASE.md](CLOUDBASE.md#当前部署阻塞与最小人工动作)。不要提供主账号长期密钥，也不要把真实 AppID、EnvID、VPC、子网、UIN、runtime 用户或 secret 写入文档。
 
@@ -13,14 +14,15 @@
 
 1. 在 `.env.local` 配置 AppID、CloudBase EnvID、允许的 AppID、MIP runtime 配置和明确的 `MIP_DEPLOYMENT_STAGE=development|test|staging|production`。
 2. 首次部署运行 `pnpm secrets:init -- --confirm-env=<EnvID>`，并把 `.env.local` 纳入私密凭证备份。命令先校验已部署函数，不打印密钥，也不会修改云资源。
-3. 对新环境或新增迁移先做仓库外逻辑备份，预览 `mip_` 迁移范围：`pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --dry-run`。当前共享环境的 23 个迁移已经完成，不要把它们描述为待应用。
+3. 对新环境或新增迁移先做仓库外逻辑备份，预览 `mip_` 迁移范围：`pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --dry-run`。当前共享环境的 29 个锁定迁移已经完成，后续只应用新追加的迁移。
 4. 只在预览显示存在新迁移时应用：`pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --backup-manifest=/absolute/path/to/manifest.json`。
-5. 仅在 development/test 环境需要占位目录时执行 `pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo`；生产环境不得运行 demo seed。
-6. 授权完成后，先运行 `pnpm project:init` 收敛环境专属 runtime 账号，再部署并验收 13 个核心 `mip-*` 函数：`pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<.env.local 中的 MIP_DB_RUNTIME_USER>`。该命令会覆盖空的 `mip-identity-api` 函数壳，写入仓库代码、目标 VPC/子网和完整环境变量；不要在控制台手工补配置。部署脚本会校验并注入本地 deployment stage；`MIP_DEPLOYMENT_STAGE=production` 时必须追加 `--confirm-production`。脚本会拒绝归属无法证明或持有跨项目权限的同名账号，显式开放已登录客户端可调用的 API、关闭 ledger 与 worker 的客户端权限，并确认通知与 outbox worker 都没有高频 timer。
-7. 配置支付后，执行 `pnpm cloud:deploy-payment -- --confirm-env=<EnvID> --confirm-function=mip-cloudpay --confirm-callback=mip-cloudpay-callback --confirm-refund=mip-refund-worker` 部署三个支付函数；`MIP_PAYMENT_MODE=live` 时必须追加 `--confirm-live`，测试/生产目录和商户配置必须隔离。
-8. 执行 `pnpm admin:bootstrap -- --confirm-env=<EnvID> --confirm-owner` 配置首个 owner；有多个候选资料时追加 `--user-id=<用户 UUID>`，demo 身份会被拒绝。
-9. 部署后或发现 outbox 积压时，运行 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10` 做一次受控处理；退款停留在活动状态时，运行 `pnpm refunds:run -- --confirm-env=<EnvID> --confirm-refund=mip-refund-worker --limit=10`。两个命令都读取已部署函数配置完成 HMAC 调用，不打印密钥。
-10. 微信后台配置服务器域名、业务域名、用户隐私协议，完成上传与提审。
+5. 运行 `pnpm project:init` 生成环境专属 runtime 用户，再执行 `pnpm database:grants -- --confirm-env=<EnvID> --confirm-runtime-user=<.env.local 中的 MIP_DB_RUNTIME_USER>` 收敛并回读验证精确表级权限。发现 schema/global 权限、缺表授权或账号归属不一致时停止部署。
+6. 仅在 development/test 环境需要占位目录时执行 `pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo`；生产环境不得运行 demo seed。
+7. CAM 授权完成后部署并验收 16 个核心 `mip-*` 函数：`pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<.env.local 中的 MIP_DB_RUNTIME_USER>`。该命令会覆盖空的 `mip-identity-api` 函数壳，写入仓库代码、目标 VPC/子网和完整环境变量；不要在控制台手工补配置。部署脚本会校验并注入本地 deployment stage；`MIP_DEPLOYMENT_STAGE=production` 时必须追加 `--confirm-production`。脚本会拒绝归属无法证明或持有跨项目权限的同名账号，显式开放已登录客户端可调用的 API、关闭 ledger 与 worker 的客户端权限，并确认通知与 outbox worker 都没有高频 timer。
+8. 配置支付后，执行 `pnpm cloud:deploy-payment -- --confirm-env=<EnvID> --confirm-function=mip-cloudpay --confirm-callback=mip-cloudpay-callback --confirm-refund=mip-refund-worker` 部署三个支付函数；`MIP_PAYMENT_MODE=live` 时必须追加 `--confirm-live`，测试/生产目录和商户配置必须隔离。
+9. 执行 `pnpm admin:bootstrap -- --confirm-env=<EnvID> --confirm-owner` 配置首个 owner；有多个候选资料时追加 `--user-id=<用户 UUID>`，demo 身份会被拒绝。
+10. 部署后或发现 outbox 积压时，运行 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10` 做一次受控处理；退款停留在活动状态时，运行 `pnpm refunds:run -- --confirm-env=<EnvID> --confirm-refund=mip-refund-worker --limit=10`。两个命令都读取已部署函数配置完成 HMAC 调用，不打印密钥。
+11. 微信后台配置服务器域名、业务域名、用户隐私协议，完成上传与提审。
 
 核心函数部署后必须单独执行 `pnpm cloud:verify -- --confirm-env=<EnvID>`。空函数壳、控制台可见、单个函数创建成功或 API Key 状态为 `READY` 都不能代替该验收；只有所有核心函数配置回读、MySQL 健康、最小权限调用规则和禁止 timer 检查通过，云端运行时才算完成。
 

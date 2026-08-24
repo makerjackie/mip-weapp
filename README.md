@@ -10,10 +10,11 @@ MIP 的会员与城市分会小程序。根目录是唯一的微信小程序工�
 - 活动列表、报名、邀请、签到、心动与反馈
 - 机会广场、六类合作卡和超级案例
 - 公开档案举报、用户屏蔽与隐私管理
-- 成长记录、站内消息与微信通知适配
+- 成长记录、任务卡、勋章、团队赛季与排行榜
+- 站内消息与微信通知适配
 - AI 文字与语音草稿适配
 - 小程序运营管理分包与可复用服务端 API
-- 13 个核心 `mip-*` CloudBase 函数 + MySQL；支付启用时另有 `mip-cloudpay` / `mip-cloudpay-callback` / `mip-refund-worker`
+- 80 条小程序路由、16 个核心 `mip-*` CloudBase 函数和 29 个锁定的 MySQL 迁移；支付启用时另有 `mip-cloudpay` / `mip-cloudpay-callback` / `mip-refund-worker`
 
 ## 五分钟开始
 
@@ -66,10 +67,11 @@ pnpm project:init --name "新产品名" --namespace mip
 ## 上线
 
 1. 完成仓库外逻辑备份后执行 `pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --backup-manifest=/absolute/path/to/manifest.json`
-2. 在 `.env.local` 明确设置 `MIP_DEPLOYMENT_STAGE=development|test|staging|production`，运行 `pnpm project:init` 生成环境专属 runtime 用户，再执行 `pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<exact-user>`；production 必须追加 `--confirm-production`
-3. 配置支付并执行 `pnpm cloud:deploy-payment -- --confirm-env=<EnvID> --confirm-function=mip-cloudpay --confirm-callback=mip-cloudpay-callback --confirm-refund=mip-refund-worker`；`MIP_PAYMENT_MODE=live` 时追加 `--confirm-live`
-4. 执行 `pnpm admin:bootstrap -- --confirm-env=<EnvID> --confirm-owner` 配置首个 owner
-5. 仅在 development/test 环境需要演示数据时执行 `pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo`
-6. 运营后台：小程序内进入 `packages/admin/dashboard`
+2. 运行 `pnpm project:init` 生成环境专属 runtime 用户，再执行 `pnpm database:grants -- --confirm-env=<EnvID> --confirm-runtime-user=<exact-user>` 收敛精确表级权限
+3. 在 `.env.local` 明确设置 `MIP_DEPLOYMENT_STAGE=development|test|staging|production`，执行 `pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<exact-user>`；production 必须追加 `--confirm-production`
+4. 配置支付并执行 `pnpm cloud:deploy-payment -- --confirm-env=<EnvID> --confirm-function=mip-cloudpay --confirm-callback=mip-cloudpay-callback --confirm-refund=mip-refund-worker`；`MIP_PAYMENT_MODE=live` 时追加 `--confirm-live`
+5. 执行 `pnpm admin:bootstrap -- --confirm-env=<EnvID> --confirm-owner` 配置首个 owner
+6. 仅在 development/test 环境需要演示数据时执行 `pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo`
+7. 运营后台：小程序内进入 `packages/admin/dashboard`
 
 必须真机完成：手机号授权、真实支付、订阅消息、扫码签到。详见 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)。

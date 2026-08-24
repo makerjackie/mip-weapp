@@ -5,11 +5,13 @@
 | 现象或错误 | 排查与处理 |
 | --- | --- |
 | 启动后仍显示 `touristappid` | 在 `.env.local` 配置有效 `MINI_PROGRAM_APP_ID`，运行 `pnpm setup:local`；`project.config.json` 的默认 `touristappid` 是浏览 UI 的安全默认值。 |
-| `CLOUDBASE_API_KEY` 未生效或 MCP 未授权 | 先确认密钥在项目根 `.env.local`，运行 `pnpm cloud:status`；期望状态为 `READY`。没有 API Key 时才运行一次 `pnpm cloud:auth`，不要把 `publish_key` 当管理密钥。 |
+| `CLOUDBASE_API_KEY` 未生效或 MCP 未授权 | 确认环境级 API Key 与 `CLOUDBASE_ENV_ID` 同时写在项目根 `.env.local`，再运行 `pnpm cloud:auth` 或 `pnpm cloud:status`；两者都只验证 API Key，缺 Key 直接失败。不要把 `publish_key` 当管理密钥。维护者只有在 API Key 通道不可用且明确需要救援时，才运行 `pnpm cloud:auth:device -- --allow-device-auth`。 |
 | 部署提示 `MIP deployment requires AppID and --confirm-env=<exact CLOUDBASE_ENV_ID>` | 检查 `MINI_PROGRAM_APP_ID`、`CLOUDBASE_ENV_ID` 和命令行 `--confirm-env` 完全一致；不要猜测或切换目标环境。 |
 | 部署提示缺少 MIP 表 | 先运行 `pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --dry-run`，确认 lock 文件和迁移范围，再按数据库备份流程应用迁移。不要补建 `member_*` 表。 |
-| `Runtime account missing grant` / `schema-level ALL PRIVILEGES` | 运行时账号必须是专用 `mip_*` 用户。重新执行部署前核对 `mip_*` 表逐表权限；移除 schema/global ALL，审计表只保留 `SELECT`、`INSERT`。 |
-| 旧 `membership-*` 函数仍被部署或找不到 `mip-*` | 旧目录只是迁移参考，不再部署。检查 `scripts/lib/mip-function-manifest.mjs` 和部署产物，只允许 13 个核心 `mip-*`；支付另查 `mip-cloudpay`、`mip-cloudpay-callback`、`mip-refund-worker`。 |
+| `Runtime account missing grant` / `schema-level ALL PRIVILEGES` | 运行时账号必须是环境专属 `mip_*` 用户。运行 `pnpm database:grants -- --confirm-env=<EnvID> --confirm-runtime-user=<exact-runtime-user>` 收敛并复核 `mip_*` 表逐表权限；命令会拒绝 schema/global 权限和不精确授权，审计及流水等追加事实不授予无业务需要的更新或删除权限。 |
+| 旧 `membership-*` 函数仍被部署或找不到 `mip-*` | 旧目录只是迁移参考，不再部署。检查 `scripts/lib/mip-function-manifest.mjs` 和部署产物，只允许 16 个核心 `mip-*`，其中游戏化服务为 `mip-game-api`；支付另查 `mip-cloudpay`、`mip-cloudpay-callback`、`mip-refund-worker`。 |
+| 赛季页返回 `MEMBERSHIP_REQUIRED` | 团队 PK、赛季、排行榜和队伍大本营只对当前有效会员开放。检查 ledger 已确认的 `mip_membership_entitlements`，不要用客户端会员标记或支付调起结果绕过。 |
+| 游戏化接口返回 `SCORE_NOT_ACCEPTED` | 客户端请求中包含了 score/points 等分数字段。移除这些字段；周赛结算和排行榜快照只允许 `mip-game-api` 从当前 AppID 的服务端成长流水与账户事实生成。 |
 | 消息页提示无权调用 `mip-notification-worker` | 客户端只能调用 `mip-notifications-api`。检查构建配置中的 `MIP_NOTIFICATIONS_FUNCTION_NAME`，再重新部署并运行云端验收；不要开放 worker 的客户端权限。 |
 | worker 触发 MySQL 资源持续增长 | 检查 CloudBase 定时触发器，删除 `mip-notification-every-5m`、`mip-outbox-every-5m`、`mip-refund-every-5m` 或其他高频 timer。三个 worker 都只保留函数，由受控内部调用触发。 |
 | `mip_outbox_events` 长时间停留在 `PENDING` / `FAILED` | 先检查核心函数健康与 HMAC 配置，再运行 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10`。重试耗尽或未知事件会进入 `CANCELLED`，原因写入 `last_error_code` 和系统审计。 |

@@ -1,6 +1,6 @@
 # Architecture
 
-本仓库是一个原生微信小程序和一组 MIP CloudBase 服务，不是 Monorepo。当前运行时由 13 个核心 `mip-*` 函数组成，支付启用时再部署 `mip-cloudpay`、`mip-cloudpay-callback` 与 `mip-refund-worker`。用户消息 API 与内部投递 worker 使用独立函数和调用权限。完整领域边界见 [mip/ARCHITECTURE.md](mip/ARCHITECTURE.md)，统一业务语言见 [../CONTEXT.md](../CONTEXT.md)。
+本仓库是一个原生微信小程序和一组 MIP CloudBase 服务，不是 Monorepo。当前工程声明 80 条路由，运行时由 16 个核心 `mip-*` 函数组成，支付启用时再部署 `mip-cloudpay`、`mip-cloudpay-callback` 与 `mip-refund-worker`。用户消息 API、任务 API、Banner API、游戏化 API 与内部投递 worker 使用独立函数和调用权限。完整领域边界见 [mip/ARCHITECTURE.md](mip/ARCHITECTURE.md)，统一业务语言见 [../CONTEXT.md](../CONTEXT.md)。
 
 ```text
 页面 (src/pages, src/packages)
@@ -12,7 +12,7 @@
 
 ## 关键边界
 
-- 页面只提交意图，不计算玩家/嘉宾、会员、金额、库存、报名、签到、成长或权限事实。
+- 页面只提交意图，不计算玩家/嘉宾、会员、金额、库存、报名、签到、成长、比赛分数、排行或权限事实。
 - CloudBase 初始化只发生在 `src/modules/platform/cloudbase.ts`。
 - `wx.requestPayment` 只通过支付 adapter 调用，权益由 payment ledger 确认。
 - 小程序管理分包和未来独立后台共用服务端 DTO、capability 和审计合同。
