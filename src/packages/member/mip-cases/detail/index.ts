@@ -11,6 +11,7 @@ Page({
     id: '' as SuperCaseId,
     state: 'loading' as 'loading' | 'ready' | 'error',
     item: null as SuperCaseDetail | null,
+    mediaUrls: [] as string[],
     acting: false,
     message: '',
   },
@@ -39,12 +40,14 @@ Page({
     }
     try {
       const item = await superCaseModule.get(this.data.id)
+      const presented = {
+        ...item,
+        coverUrl: item.coverUrl || mipOperationsConfig.defaultCoverPaths.superCase,
+      }
       this.setData({
         state: 'ready',
-        item: {
-          ...item,
-          coverUrl: item.coverUrl || mipOperationsConfig.defaultCoverPaths.superCase,
-        },
+        item: presented,
+        mediaUrls: presented.media.map(media => media.url).filter(Boolean),
         message: '',
       })
     }
@@ -105,6 +108,14 @@ Page({
     const profileRef = this.data.item?.author.profileRef
     if (profileRef) {
       caseNavigateTo({ url: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(profileRef)}` })
+    }
+  },
+
+  previewImage(event: WechatMiniprogram.TouchEvent) {
+    const current = String(event.currentTarget.dataset.url || '')
+    const urls = this.data.mediaUrls
+    if (current && urls.includes(current)) {
+      wx.previewImage({ current, urls })
     }
   },
 

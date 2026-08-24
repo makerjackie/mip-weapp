@@ -1,5 +1,6 @@
 import type { SuperCaseSummary } from '../../modules/mip-cases'
 import type { CooperationCardSummary } from '../../modules/mip-cooperation'
+import type { BadgeCollectionItem } from '../../modules/mip-growth'
 import type { IdentityAccessSnapshot, ProtectedActionKey } from '../../modules/mip-identity'
 import type { OpportunitySummary } from '../../modules/mip-opportunities'
 import { cooperationRoles } from '../../config/mip-catalogs'
@@ -43,6 +44,8 @@ Page({
     growthNextText: '',
     experience: 0,
     contribution: 0,
+    badgeState: 'loading' as SectionState,
+    equippedBadges: [] as BadgeCollectionItem[],
     unreadCount: 0,
     visitorUnreadCount: 0,
     portfolioTab: 'cooperation' as PortfolioTab,
@@ -83,6 +86,7 @@ Page({
       await Promise.allSettled([
         this.loadBranch(snapshot, options),
         this.loadGrowth(snapshot, options),
+        this.loadBadges(snapshot),
         this.loadCooperation(),
         this.loadCases(),
         this.loadOpportunities(),
@@ -184,6 +188,25 @@ Page({
       experience: snapshot.account.experienceBalance,
       contribution: snapshot.account.contributionBalance,
     })
+  },
+
+  async loadBadges(snapshot: IdentityAccessSnapshot) {
+    if (!snapshot.authenticated) {
+      this.setData({ badgeState: 'ready', equippedBadges: [] })
+      return
+    }
+    try {
+      const collection = await mipGrowthModule.listBadgeCollection()
+      this.setData({
+        badgeState: 'ready',
+        equippedBadges: collection.items
+          .filter(item => item.equippedSlot !== undefined)
+          .sort((left, right) => Number(left.equippedSlot) - Number(right.equippedSlot)),
+      })
+    }
+    catch {
+      this.setData({ badgeState: 'error' })
+    }
   },
 
   async loadCooperation() {
@@ -295,6 +318,8 @@ Page({
   openReceivedInteractions() { void this.openProtected('/packages/member/mip-received/index', 'INTERACT') },
   openHeartHistory() { void this.openProtected('/packages/member/mip-hearts/index', 'INTERACT') },
   openGrowth() { void this.openProtected('/packages/member/mip-growth/index', 'VIEW_RESTRICTED_PROFILE') },
+  openBadges() { void this.openProtected('/packages/member/mip-badges/index', 'VIEW_RESTRICTED_PROFILE') },
+  openGame() { void this.openProtected('/packages/member/mip-game/index', 'VIEW_RESTRICTED_PROFILE') },
   openAiDrafts() { void this.openProtected('/packages/member/mip-ai/index', 'EDIT_PROFILE') },
   openCooperationList() { void this.openProtected('/packages/member/mip-cooperation/list/index?mine=1', 'INTERACT') },
   openCaseList() { void this.openProtected('/packages/member/mip-cases/list/index?mine=1', 'INTERACT') },

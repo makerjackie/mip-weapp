@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 64,
+  "routeCount": 80,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 64 paths.",
+    "config/project.json routes must list the same 80 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -61,6 +61,18 @@
       "label": "活动照片上传",
       "routes": ["packages/member/event-album/index"],
       "reason": "wx.chooseMedia、客户端压缩、图片安全检查和上传结果需要真机验收"
+    },
+    {
+      "id": "task-attachment",
+      "label": "任务附件上传",
+      "routes": ["packages/member/mip-tasks/detail/index"],
+      "reason": "wx.chooseMedia、客户端压缩、图片安全检查和上传结果需要真机验收"
+    },
+    {
+      "id": "task-template",
+      "label": "任务模板上传与保存",
+      "routes": ["packages/admin/tasks/index", "packages/member/mip-tasks/detail/index"],
+      "reason": "wx.chooseMedia、图片内容安全、模板下载和相册保存结果需要真机验收"
     },
     {
       "id": "photo-save",
@@ -163,6 +175,138 @@
         { "path": "capability.voiceDrafts", "equals": false }
       ],
       "visibleAssertion": { "selector": "#mip-ai-page", "text": "AI 整理当前不可用" }
+    }
+  ],
+  "interactionJourneys": [
+    {
+      "id": "opportunity-search-and-filter",
+      "route": "pages/opportunities/index",
+      "nonMutating": true,
+      "steps": [
+        {
+          "id": "enter-keyword",
+          "type": "input",
+          "selector": "#opportunities-search-input",
+          "value": "合作",
+          "dataAssertions": [{ "path": "keywordInput", "equals": "合作" }]
+        },
+        {
+          "id": "open-filter",
+          "type": "tap",
+          "selector": "#opportunities-filter-toggle",
+          "dataAssertions": [{ "path": "filterOpen", "equals": true }],
+          "visibleAssertion": { "text": "筛选条件" }
+        },
+        {
+          "id": "close-filter",
+          "type": "tap",
+          "selector": "#opportunities-filter-toggle",
+          "dataAssertions": [
+            { "path": "filterOpen", "equals": false },
+            { "path": "keywordInput", "equals": "" }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "people-search-and-filter",
+      "route": "packages/member/mip-people/index",
+      "nonMutating": true,
+      "steps": [
+        {
+          "id": "enter-keyword",
+          "type": "input",
+          "selector": "#people-search-input",
+          "value": "设计",
+          "dataAssertions": [{ "path": "keywordInput", "equals": "设计" }]
+        },
+        {
+          "id": "open-filter",
+          "type": "tap",
+          "selector": "#people-filter-toggle",
+          "dataAssertions": [{ "path": "filterOpen", "equals": true }],
+          "visibleAssertion": { "text": "人才筛选" }
+        },
+        {
+          "id": "close-filter",
+          "type": "tap",
+          "selector": "#people-filter-toggle",
+          "dataAssertions": [{ "path": "filterOpen", "equals": false }]
+        }
+      ]
+    },
+    {
+      "id": "profile-content-tabs",
+      "route": "pages/profile/index",
+      "nonMutating": true,
+      "steps": [
+        {
+          "id": "show-cases",
+          "type": "tap",
+          "selector": "#profile-tab-cases",
+          "dataAssertions": [{ "path": "portfolioTab", "equals": "cases" }],
+          "visibleAssertion": { "selector": "#profile-tab-cases", "text": "超级案例" }
+        },
+        {
+          "id": "show-opportunities",
+          "type": "tap",
+          "selector": "#profile-tab-opportunities",
+          "dataAssertions": [{ "path": "portfolioTab", "equals": "opportunities" }],
+          "visibleAssertion": { "selector": "#profile-tab-opportunities", "text": "相关机会" }
+        }
+      ]
+    },
+    {
+      "id": "task-assignment-mode",
+      "route": "packages/admin/tasks/index",
+      "nonMutating": true,
+      "steps": [
+        {
+          "id": "open-task-editor",
+          "type": "tap",
+          "selector": "#admin-task-create",
+          "dataAssertions": [{ "path": "editorOpen", "equals": true }],
+          "visibleAssertion": { "text": "任务范围" }
+        },
+        {
+          "id": "select-assignment-mode",
+          "type": "tap",
+          "selector": "#task-assignment-mode-selected",
+          "dataAssertions": [{ "path": "assignmentMode", "equals": "SELECTED" }],
+          "visibleAssertion": { "selector": "#task-assignment-mode-selected", "text": "指定成员" }
+        }
+      ]
+    },
+    {
+      "id": "badge-award-search-input",
+      "route": "packages/admin/badges/index",
+      "nonMutating": true,
+      "steps": [
+        {
+          "id": "enter-award-keyword",
+          "type": "input",
+          "selector": "#badge-award-query",
+          "value": "活动",
+          "dataAssertions": [{ "path": "awardQuery", "equals": "活动" }]
+        }
+      ]
+    },
+    {
+      "id": "game-ranking-tabs",
+      "route": "packages/member/mip-game/index",
+      "nonMutating": true,
+      "steps": [
+        {
+          "id": "show-individual-season-ranking",
+          "type": "tap",
+          "selector": "#game-ranking-INDIVIDUAL_SEASON",
+          "dataAssertions": [{ "path": "rankingType", "equals": "INDIVIDUAL_SEASON" }],
+          "visibleAssertion": {
+            "selector": "#game-ranking-INDIVIDUAL_SEASON",
+            "text": "个人赛季榜"
+          }
+        }
+      ]
     }
   ],
   "routes": [
@@ -418,6 +562,17 @@
       "query": ["eventId"]
     },
     {
+      "id": "A30",
+      "name": "活动参与者",
+      "path": "packages/admin/event-participants/index",
+      "selector": "#admin-event-participants-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'"
+    },
+    {
       "id": "A18",
       "name": "活动相册审核",
       "path": "packages/admin/event-album/index",
@@ -484,6 +639,27 @@
       "readyAssertion": "state === 'ready'"
     },
     {
+      "id": "A27",
+      "name": "机会编辑",
+      "path": "packages/admin/opportunity-editor/index",
+      "selector": "#admin-opportunity-editor-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A28",
+      "name": "机会详情",
+      "path": "packages/admin/opportunity-detail/index",
+      "selector": "#admin-opportunity-detail-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["id"]
+    },
+    {
       "id": "A13",
       "name": "成长等级",
       "path": "packages/admin/growth-levels/index",
@@ -492,6 +668,17 @@
       "kind": "data",
       "states": ["loading", "ready", "empty", "error", "forbidden"],
       "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A29",
+      "name": "权益管理",
+      "path": "packages/admin/growth-benefits/index",
+      "selector": "#admin-growth-benefits-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
       "id": "A14",
@@ -511,6 +698,82 @@
       "group": "admin",
       "kind": "data",
       "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A32",
+      "name": "勋章管理",
+      "path": "packages/admin/badges/index",
+      "selector": "#admin-badges-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'"
+    },
+    {
+      "id": "A33",
+      "name": "赛季与队伍管理",
+      "path": "packages/admin/game/index",
+      "selector": "#admin-game-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A23",
+      "name": "任务管理",
+      "path": "packages/admin/tasks/index",
+      "selector": "#admin-tasks-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'",
+      "deviceRequired": ["task-template"]
+    },
+    {
+      "id": "A24",
+      "name": "任务完成流水",
+      "path": "packages/admin/task-completions/index",
+      "selector": "#admin-task-completions-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'"
+    },
+    {
+      "id": "A31",
+      "name": "任务派发",
+      "path": "packages/admin/task-assignments/index",
+      "selector": "#admin-task-assignments-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'",
+      "query": ["taskId", "version"]
+    },
+    {
+      "id": "A25",
+      "name": "Banner 管理",
+      "path": "packages/admin/banners/index",
+      "selector": "#admin-banners-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "error", "forbidden", "conflict"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A26",
+      "name": "Banner 编辑",
+      "path": "packages/admin/banner-editor/index",
+      "selector": "#admin-banner-editor-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "error", "forbidden", "conflict"],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -770,6 +1033,62 @@
       "kind": "data",
       "states": ["loading", "ready", "error"],
       "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "M33",
+      "name": "我的勋章",
+      "path": "packages/member/mip-badges/index",
+      "selector": "#mip-badges-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "conflict"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'"
+    },
+    {
+      "id": "M34",
+      "name": "团队 PK",
+      "path": "packages/member/mip-game/index",
+      "selector": "#mip-game-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'"
+    },
+    {
+      "id": "M35",
+      "name": "队伍大本营",
+      "path": "packages/member/mip-game/team/index",
+      "selector": "#mip-game-team-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["teamId"]
+    },
+    {
+      "id": "M31",
+      "name": "任务",
+      "path": "packages/member/mip-tasks/index",
+      "selector": "#mip-tasks-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'"
+    },
+    {
+      "id": "M32",
+      "name": "任务详情",
+      "path": "packages/member/mip-tasks/detail/index",
+      "selector": "#mip-task-detail-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["taskId"],
+      "deviceRequired": ["task-attachment", "task-template"]
     },
     {
       "id": "M20",

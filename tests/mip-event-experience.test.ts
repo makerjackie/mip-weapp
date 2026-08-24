@@ -4,6 +4,8 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   checkInCredentialCountdown,
+  eventInvitationPath,
+  isEventAccessRequirementError,
   resolvePrimaryBranchCity,
   safeHttpsEventUrl,
 } from '../src/modules/mip-events'
@@ -43,6 +45,35 @@ describe('MIP event experience contracts', () => {
     expect(detail).toContain('&online=1')
     expect(view).toContain('进入线上活动')
     expect(view).toContain('<web-view')
+  })
+
+  it('keeps the invitation route actionable and classifies identity requirements', () => {
+    expect(eventInvitationPath('event 1', 'invite/value')).toBe(
+      '/packages/member/mip-events/detail/index?eventId=event%201&invitationToken=invite%2Fvalue',
+    )
+    expect(() => eventInvitationPath(' ')).toThrow('EVENT_ID_REQUIRED')
+    expect(isEventAccessRequirementError({ code: 'PHONE_REQUIRED' })).toBe(true)
+    expect(isEventAccessRequirementError({ code: 'REGISTRATION_REQUIRED' })).toBe(false)
+    expect(isEventAccessRequirementError(null)).toBe(false)
+
+    const detail = source('src/packages/member/mip-events/detail/index.ts')
+    expect(detail).toContain('`小程序路径：${eventInvitationPath(')
+    expect(detail).toContain('requestWechatSubscription(\'CHECKIN_RESULT\')')
+  })
+
+  it('recovers protected check-in gestures and requests the result subscription per use', () => {
+    const checkIn = source('src/packages/member/mip-events/check-in/index.ts')
+    const checkInView = source('src/packages/member/mip-events/check-in/index.wxml')
+    const registration = source('src/packages/member/mip-events/registration/index.ts')
+    expect(checkIn).toContain('isEventAccessRequirementError(error)')
+    expect(checkIn).toContain('action: \'INTERACT\'')
+    expect(checkIn).toContain('scene: this.data.scanToken')
+    expect(checkIn).toContain('consumePendingResume(\'packages/member/mip-events/check-in/index\')')
+    expect(checkIn).toContain('route: \'packages/member/mip-events/check-in/index\'')
+    expect(checkIn).toContain(`scanToken: invalidCredential ? '' : this.data.scanToken`)
+    expect(checkIn).toContain('requestWechatSubscription(\'CHECKIN_RESULT\')')
+    expect(registration).toContain('requestWechatSubscription(\'CHECKIN_RESULT\')')
+    expect(checkInView).toContain('scanToken ? \'确认签到\' : \'扫描活动码\'')
   })
 
   it('formats a five-minute rotating credential countdown and exposes refresh controls', () => {

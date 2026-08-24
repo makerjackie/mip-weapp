@@ -321,6 +321,95 @@
         "mip_profile_visits"
       ],
       "altersTables": []
+    },
+    {
+      "version": "20260824240000",
+      "name": "mip_task_cards",
+      "sql": "database/mysql/mip/024_task_cards.sql",
+      "sqlSha256": "b2fd1c1eb767d533d40d18953f94018e156e9c8406255a193c4106034ecb7ee5",
+      "rollback": "database/mysql/mip/rollback/024_task_cards.sql",
+      "rollbackSha256": "e0a3406b90ad180e605bd08f981914dc77d969a407f06cffd7585e71cbeef8b1",
+      "createsTables": [
+        "mip_task_cards",
+        "mip_task_completions"
+      ],
+      "altersTables": []
+    },
+    {
+      "version": "20260824250000",
+      "name": "mip_banners",
+      "sql": "database/mysql/mip/025_banners.sql",
+      "sqlSha256": "363f24cef7b51e98033f2f4c2c2c5ad575c86e1c58c8d4f769e89ce6dd8ac77b",
+      "rollback": "database/mysql/mip/rollback/025_banners.sql",
+      "rollbackSha256": "dd2f68fd395d66b22f92cc8cf6bfbfb38f6acd34a675658c2236f91ca10ca8dd",
+      "createsTables": [
+        "mip_banners"
+      ],
+      "altersTables": []
+    },
+    {
+      "version": "20260824260000",
+      "name": "admin_prd_extensions",
+      "sql": "database/mysql/mip/026_admin_prd_extensions.sql",
+      "sqlSha256": "a2796384ffdd7eeab7d474640dd0eb2808f8a14c3a6fb66999c644b15884590f",
+      "rollback": "database/mysql/mip/rollback/026_admin_prd_extensions.sql",
+      "rollbackSha256": "64171363087fafe7c50bfd9ecd25469ee7c77b8676428fa54f06cbb966241af1",
+      "createsTables": [
+        "mip_growth_benefits",
+        "mip_growth_level_benefits"
+      ],
+      "altersTables": [
+        "mip_opportunities",
+        "mip_growth_levels",
+        "mip_events",
+        "mip_admin_export_tickets"
+      ]
+    },
+    {
+      "version": "20260824270000",
+      "name": "task_assignments_templates",
+      "sql": "database/mysql/mip/027_task_assignments_templates.sql",
+      "sqlSha256": "1d9dc18136188b815631def82ca52e7b8d65ac08259356527e2e9039917d95b5",
+      "rollback": "database/mysql/mip/rollback/027_task_assignments_templates.sql",
+      "rollbackSha256": "fff60e7e6832f5efdd1da9849a5c46e7e019c3038e32f682c9c6637bb5b4ca3a",
+      "createsTables": [
+        "mip_task_assignments"
+      ],
+      "altersTables": [
+        "mip_task_cards"
+      ]
+    },
+    {
+      "version": "20260824280000",
+      "name": "mip_badge_collection",
+      "sql": "database/mysql/mip/028_badge_collection.sql",
+      "sqlSha256": "c2824cf3a989540e258684ace3d2175fe54f506d233d4b76305a1a5c95b50cdf",
+      "rollback": "database/mysql/mip/rollback/028_badge_collection.sql",
+      "rollbackSha256": "786efe3fdb5257ab5014ca6564534754967c63a24c7adab68b0493a93dfd230f",
+      "createsTables": [
+        "mip_badges",
+        "mip_user_badges",
+        "mip_user_badge_profiles",
+        "mip_user_badge_equipment"
+      ],
+      "altersTables": []
+    },
+    {
+      "version": "20260824290000",
+      "name": "mip_gamification_foundation",
+      "sql": "database/mysql/mip/029_gamification_foundation.sql",
+      "sqlSha256": "cead489255361596a4b61f7d2eff156dc59f18d168e6947e21df27e800963696",
+      "rollback": "database/mysql/mip/rollback/029_gamification_foundation.sql",
+      "rollbackSha256": "bd4aa8ab133e6fe016033f36853399548a2dd1572046d8ca01e1b8ba1e5dd707",
+      "createsTables": [
+        "mip_game_seasons",
+        "mip_game_teams",
+        "mip_game_team_memberships",
+        "mip_game_weekly_matches",
+        "mip_game_ranking_snapshots",
+        "mip_game_ranking_entries"
+      ],
+      "altersTables": []
     }
   ]
 }

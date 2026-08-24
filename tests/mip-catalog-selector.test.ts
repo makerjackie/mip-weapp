@@ -7,6 +7,7 @@ import {
   selectedCatalogIds,
   toggleCatalogSelection,
 } from '../src/components/catalog-selector/model'
+import { groupedCityBranches } from '../src/modules/mip-opportunities/catalog'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -47,6 +48,26 @@ describe('shared catalog selector', () => {
     })
   })
 
+  it('projects popular cities onto the reused branch selector', () => {
+    expect(groupedCityBranches(
+      [
+        { id: 'shenzhen-branch', name: '深圳分会', cityName: '深圳' },
+        { id: 'huizhou-branch', name: '惠州分会', cityName: '惠州' },
+      ],
+      [
+        { label: '深圳', popular: true },
+        { label: '惠州' },
+      ],
+    )).toEqual([{
+      id: 'city-branches',
+      label: '城市分会',
+      options: [
+        { id: 'shenzhen-branch', label: '深圳 · 深圳分会', popular: true },
+        { id: 'huizhou-branch', label: '惠州 · 惠州分会', popular: false },
+      ],
+    }])
+  })
+
   it('reuses the grouped selector for profile, people, and opportunity filters', () => {
     const pages = [
       'src/packages/member/mip-profile',
@@ -58,5 +79,29 @@ describe('shared catalog selector', () => {
         .toBe('/components/catalog-selector/index')
       expect(read(`${page}/index.wxml`)).toContain('<mip-catalog-selector')
     }
+  })
+
+  it('exposes stable runtime selectors for user discovery and profile tabs', () => {
+    const opportunities = read('src/pages/opportunities/index.wxml')
+    const people = read('src/packages/member/mip-people/index.wxml')
+    const profile = read('src/pages/profile/index.wxml')
+    expect(opportunities).toContain('id="opportunities-search-input"')
+    expect(opportunities).toContain('id="opportunities-filter-toggle"')
+    expect(people).toContain('id="people-search-input"')
+    expect(people).toContain('id="people-filter-toggle"')
+    expect(people).not.toContain('text-subtle')
+    for (const id of ['cooperation', 'cases', 'opportunities']) {
+      expect(profile.match(new RegExp(`id="profile-tab-${id}"`, 'g'))).toHaveLength(2)
+    }
+  })
+
+  it('keeps catalog choices readable, stateful, and at least 88rpx high', () => {
+    const view = read('src/components/catalog-selector/index.wxml')
+    expect(view).not.toContain('min-h-[64rpx]')
+    expect(view).toContain('min-h-[88rpx]')
+    expect(view).toContain('aria-checked="true"')
+    expect(view).toContain('aria-checked="false"')
+    expect(view).toContain('aria-pressed="true"')
+    expect(view).toContain('已选')
   })
 })

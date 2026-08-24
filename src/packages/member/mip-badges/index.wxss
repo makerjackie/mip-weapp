@@ -1,0 +1,13 @@
+.badge-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 88rpx;
+  height: 88rpx;
+  background: var(--color-brand-soft);
+  border: 4rpx solid var(--color-brand);
+}
+
+.badge-placeholder--hexagon {
+  clip-path: polygon(25% 7%, 75% 7%, 100% 50%, 75% 93%, 25% 93%, 0 50%);
+}

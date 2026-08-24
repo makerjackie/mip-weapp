@@ -351,7 +351,9 @@ export function createMipIdentityModule(
         persistAccessState()
         return null
       }
-      if (route && pendingResume.source.route && pendingResume.source.route !== route) {
+      if (route
+        && pendingResume.source.route
+        && pendingResume.source.route.replace(/^\//, '') !== route.replace(/^\//, '')) {
         return null
       }
       const result = { action: pendingResume.action, source: pendingResume.source }

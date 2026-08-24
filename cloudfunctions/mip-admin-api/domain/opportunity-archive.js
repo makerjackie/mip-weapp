@@ -12,35 +12,6 @@ const ARCHIVE_BLOCKER_KEYS = Object.freeze([
 
 const ARCHIVE_ROLE_KEYS = new Set(['PLATFORM_OWNER', 'PLATFORM_OPERATIONS'])
 
-const blockerQueries = Object.freeze([
-  Object.freeze({
-    key: 'REFERRAL_INTENTS',
-    sql: `SELECT id FROM mip_referral_intents
-      WHERE app_id = ? AND opportunity_id = ? LIMIT 1 FOR UPDATE`,
-  }),
-  Object.freeze({
-    key: 'PROFILE_INTERESTS',
-    sql: `SELECT id FROM mip_profile_interests
-      WHERE app_id = ? AND source_type = 'OPPORTUNITY' AND source_id = ? LIMIT 1 FOR UPDATE`,
-  }),
-  Object.freeze({
-    key: 'ORDERS',
-    sql: `SELECT id FROM mip_orders
-      WHERE app_id = ? AND resource_id = ? LIMIT 1 FOR UPDATE`,
-  }),
-  Object.freeze({
-    key: 'ANNOUNCEMENTS',
-    sql: `SELECT id FROM mip_announcements
-      WHERE app_id = ? AND target_type = 'OPPORTUNITY' AND target_id = ? LIMIT 1 FOR UPDATE`,
-  }),
-  Object.freeze({
-    key: 'OUTBOX_EVENTS',
-    sql: `SELECT id FROM mip_outbox_events
-      WHERE app_id = ? AND aggregate_type = 'OPPORTUNITY' AND aggregate_id = ?
-      LIMIT 1 FOR UPDATE`,
-  }),
-])
-
 class OpportunityArchiveError extends Error {
   constructor(code, details = null) {
     super(code)
@@ -130,23 +101,11 @@ function createOpportunityArchiveRepository(database, {
       )
       if (!row) throw codeError('NOT_FOUND')
       if (Number(row.version) !== input.expectedVersion) throw codeError('CONFLICT')
-      if (row.status !== 'DRAFT') throw codeError('INVALID_STATE')
+      if (!['DRAFT', 'UNPUBLISHED', 'ENDED'].includes(row.status)) throw codeError('INVALID_STATE')
 
       const lockedScope = scopeFromRow(row)
       assertScope(authorization, lockedScope)
       if (!sameScope(lockedScope, input.authorizedScope)) throw codeError('CONFLICT')
-
-      const blockers = []
-      if (Number(row.referral_count) !== 0) blockers.push('REFERRAL_INTENTS')
-      for (const blocker of blockerQueries) {
-        if (await tx.one(blocker.sql, [input.appId, input.opportunityId])) {
-          blockers.push(blocker.key)
-        }
-      }
-      const uniqueBlockers = [...new Set(blockers)]
-      if (uniqueBlockers.length) {
-        throw codeError('OPPORTUNITY_ARCHIVE_BLOCKED', { blockers: uniqueBlockers })
-      }
 
       const archivedAt = now()
       if (!(archivedAt instanceof Date) || !Number.isFinite(archivedAt.getTime())) {
@@ -156,7 +115,8 @@ function createOpportunityArchiveRepository(database, {
         `UPDATE mip_opportunities
          SET status = 'ARCHIVED', archived_at = ?, archived_by_user_id = ?,
            archive_reason = ?, version = version + 1
-         WHERE app_id = ? AND id = ? AND version = ? AND status = 'DRAFT'`,
+         WHERE app_id = ? AND id = ? AND version = ?
+           AND status IN ('DRAFT', 'UNPUBLISHED', 'ENDED')`,
         [archivedAt, input.actorUserId, input.reason, input.appId,
           input.opportunityId, input.expectedVersion],
       )

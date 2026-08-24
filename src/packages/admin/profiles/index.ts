@@ -1,12 +1,92 @@
-import type { AdminBranch, AdminUser, AdminUserDetail } from '../../../modules/mip-admin'
+import type { AdminBranch, AdminGrowthLevel, AdminUser, AdminUserDetail } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
+import { formatLocalDateTime } from '../../../utils/date'
 import { adminLoadFailure } from '../shared/page-state'
 
 type AdminUserView = AdminUser & {
   controlText: string
   hasAllowlist: boolean
   hasBlocklist: boolean
+  createdText: string
+  statusText: string
+  statusTheme: 'default' | 'success' | 'danger'
+}
+
+type AdminUserDetailView = AdminUserDetail & {
+  statusText: string
+  membershipText: string
+  membershipEndsText: string
+  relatedRecords: AdminUserDetail['relatedRecords'] & {
+    orders: Array<AdminUserDetail['relatedRecords']['orders'][number] & { amountText: string }>
+  }
+}
+
+const userStatusLabels: Record<AdminUser['status'], string> = {
+  ACTIVE: '正常',
+  BLOCKED: '已限制',
+  CLOSED: '已关闭',
+}
+
+const userStatusThemes: Record<AdminUser['status'], AdminUserView['statusTheme']> = {
+  ACTIVE: 'success',
+  BLOCKED: 'danger',
+  CLOSED: 'default',
+}
+
+const membershipStatusLabels: Record<string, string> = {
+  PENDING: '待生效',
+  ACTIVE: '有效',
+  EXPIRED: '已过期',
+  CANCELLED: '已取消',
+  REVOKED: '已撤销',
+}
+
+function userView(item: AdminUser): AdminUserView {
+  return {
+    ...item,
+    controlText: item.controls.join('、'),
+    hasAllowlist: item.controls.includes('ALLOWLIST'),
+    hasBlocklist: item.controls.includes('BLOCKLIST'),
+    createdText: item.createdAt ? formatLocalDateTime(item.createdAt) : '未记录',
+    statusText: userStatusLabels[item.status],
+    statusTheme: userStatusThemes[item.status],
+  }
+}
+
+function userDetailView(detail: AdminUserDetail): AdminUserDetailView {
+  return {
+    ...detail,
+    statusText: userStatusLabels[detail.status],
+    membershipText: detail.membership
+      ? membershipStatusLabels[detail.membership.status] || '状态待确认'
+      : '非会员',
+    membershipEndsText: detail.membership?.endsAt ? formatLocalDateTime(detail.membership.endsAt) : '未设置',
+    relatedRecords: {
+      ...detail.relatedRecords,
+      orders: detail.relatedRecords.orders.map(order => ({
+        ...order,
+        amountText: `${(order.amountCents / 100).toFixed(2)} 元`,
+      })),
+    },
+  }
+}
+
+function dateBoundary(value: string, endOfDay: boolean) {
+  const parts = value.split('-').map(Number)
+  if (parts.length !== 3 || parts.some(part => !Number.isInteger(part))) {
+    return ''
+  }
+  const date = new Date(
+    parts[0],
+    parts[1] - 1,
+    parts[2],
+    endOfDay ? 23 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 999 : 0,
+  )
+  return Number.isFinite(date.getTime()) ? date.toISOString() : ''
 }
 
 Page({
@@ -23,6 +103,13 @@ Page({
     branchId: '',
     branchLabel: '全部分会',
     branches: [] as AdminBranch[],
+    levelId: '',
+    levelLabel: '全部等级',
+    levels: [] as AdminGrowthLevel[],
+    experienceMin: '',
+    experienceMax: '',
+    createdFromDate: '',
+    createdToDate: '',
     includePhone: false,
     canPhone: false,
     canEdit: false,
@@ -36,7 +123,7 @@ Page({
     loadingMore: false,
     detailOpen: false,
     detailState: 'loading' as AdminPageState,
-    detail: null as AdminUserDetail | null,
+    detail: null as AdminUserDetailView | null,
     detailMessage: '',
   },
   requestSeq: 0,
@@ -57,6 +144,24 @@ Page({
     mipAdminModule.clearSensitive()
   },
   updateQuery(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ query: event.detail.value }) },
+  updateRangeFilter(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const field = String(event.currentTarget.dataset.field || '')
+    if (!['experienceMin', 'experienceMax'].includes(field)) {
+      return
+    }
+    this.setData({ [field]: event.detail.value })
+  },
+  changeCreatedDate(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const field = String(event.currentTarget.dataset.field || '')
+    if (!['createdFromDate', 'createdToDate'].includes(field)) {
+      return
+    }
+    this.setData({ [field]: event.detail.value })
+  },
+  clearCreatedDates() {
+    this.setData({ createdFromDate: '', createdToDate: '' })
+    void this.loadUsers(true)
+  },
   chooseFilter(event: WechatMiniprogram.TouchEvent) {
     const field = String(event.currentTarget.dataset.field || '')
     if (!['kind', 'status', 'controlType', 'phoneBound', 'profileComplete', 'joinedWithinDays'].includes(field)) {
@@ -89,6 +194,11 @@ Page({
             profileComplete: this.data.profileComplete,
             joinedWithinDays: this.data.joinedWithinDays,
             branchId: this.data.branchId,
+            levelId: this.data.levelId,
+            experienceMin: this.data.experienceMin,
+            experienceMax: this.data.experienceMax,
+            createdFrom: this.data.createdFromDate ? dateBoundary(this.data.createdFromDate, false) : '',
+            createdTo: this.data.createdToDate ? dateBoundary(this.data.createdToDate, true) : '',
           },
         }, force),
       ])
@@ -97,12 +207,7 @@ Page({
       }
       this.setData({
         state: 'ready',
-        users: response.items.map(item => ({
-          ...item,
-          controlText: item.controls.join('、'),
-          hasAllowlist: item.controls.includes('ALLOWLIST'),
-          hasBlocklist: item.controls.includes('BLOCKLIST'),
-        })),
+        users: response.items.map(userView),
         canPhone: hasCapability(session.capabilities, 'users.phone.read'),
         canEdit: hasCapability(session.capabilities, 'users.fields.edit'),
         canControl: hasCapability(session.capabilities, 'users.access.manage'),
@@ -114,6 +219,9 @@ Page({
       })
       if (hasCapability(session.capabilities, 'branches.manage') && !this.data.branches.length) {
         void this.loadBranches()
+      }
+      if (hasCapability(session.capabilities, 'growth.read') && !this.data.levels.length) {
+        void this.loadGrowthLevels()
       }
     }
     catch (error) {
@@ -141,14 +249,14 @@ Page({
           profileComplete: this.data.profileComplete,
           joinedWithinDays: this.data.joinedWithinDays,
           branchId: this.data.branchId,
+          levelId: this.data.levelId,
+          experienceMin: this.data.experienceMin,
+          experienceMax: this.data.experienceMax,
+          createdFrom: this.data.createdFromDate ? dateBoundary(this.data.createdFromDate, false) : '',
+          createdTo: this.data.createdToDate ? dateBoundary(this.data.createdToDate, true) : '',
         },
       })
-      const users = response.items.map(item => ({
-        ...item,
-        controlText: item.controls.join('、'),
-        hasAllowlist: item.controls.includes('ALLOWLIST'),
-        hasBlocklist: item.controls.includes('BLOCKLIST'),
-      }))
+      const users = response.items.map(userView)
       this.setData({ users: this.data.users.concat(users), nextCursor: response.nextCursor || null })
     }
     catch (error) {
@@ -167,6 +275,15 @@ Page({
       this.setData({ message: '分会筛选暂时无法加载。' })
     }
   },
+  async loadGrowthLevels() {
+    try {
+      const response = await mipAdminModule.listGrowthLevels()
+      this.setData({ levels: response.items })
+    }
+    catch {
+      this.setData({ message: '等级筛选暂时无法加载。' })
+    }
+  },
   async chooseBranch() {
     if (!this.data.canFilterBranches || !this.data.branches.length) {
       return
@@ -176,6 +293,21 @@ Page({
       const result = await wx.showActionSheet({ itemList: choices })
       const branch = result.tapIndex > 0 ? this.data.branches[result.tapIndex - 1] : null
       this.setData({ branchId: branch?.id || '', branchLabel: branch?.name || '全部分会' })
+      void this.loadUsers(true)
+    }
+    catch {
+      // Closing the native selector leaves the current filter unchanged.
+    }
+  },
+  async chooseLevel() {
+    if (!this.data.levels.length) {
+      return
+    }
+    try {
+      const choices = ['全部等级', ...this.data.levels.map(level => `${level.name} · ${level.minimumExperience} 经验`)]
+      const result = await wx.showActionSheet({ itemList: choices })
+      const level = result.tapIndex > 0 ? this.data.levels[result.tapIndex - 1] : null
+      this.setData({ levelId: level?.id || '', levelLabel: level?.name || '全部等级' })
       void this.loadUsers(true)
     }
     catch {
@@ -194,7 +326,7 @@ Page({
       if (!this.data.detailOpen) {
         return
       }
-      this.setData({ detailState: 'ready', detail })
+      this.setData({ detailState: 'ready', detail: userDetailView(detail) })
     }
     catch (error) {
       if (!this.data.detailOpen) {
@@ -210,6 +342,16 @@ Page({
     this.setData({ detailOpen: false, detail: null, detailMessage: '' })
     mipAdminModule.clearSensitive()
   },
+  openRelatedOpportunity(event: WechatMiniprogram.TouchEvent) {
+    void wx.navigateTo({ url: `/packages/admin/opportunity-detail/index?id=${String(event.currentTarget.dataset.id || '')}` })
+  },
+  openRelatedCase(event: WechatMiniprogram.TouchEvent) {
+    void wx.navigateTo({ url: `/packages/member/mip-cases/detail/index?id=${String(event.currentTarget.dataset.id || '')}` })
+  },
+  openRelatedRegistration(event: WechatMiniprogram.TouchEvent) {
+    void wx.navigateTo({ url: `/packages/admin/event-registrations/index?eventId=${String(event.currentTarget.dataset.id || '')}` })
+  },
+  openOrders() { void wx.navigateTo({ url: '/packages/admin/orders/index' }) },
   handleDetailVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {
     if (!event.detail.visible) {
       this.closeDetail()
@@ -231,7 +373,7 @@ Page({
       this.setData({ includePhone: true })
       await this.loadUsers(true)
       if (this.data.detailOpen && this.data.detail?.id) {
-        this.setData({ detail: await mipAdminModule.getUser(this.data.detail.id, true, true) })
+        this.setData({ detail: userDetailView(await mipAdminModule.getUser(this.data.detail.id, true, true)) })
       }
     }
     catch (error) {
@@ -328,6 +470,11 @@ Page({
           profileComplete: this.data.profileComplete,
           joinedWithinDays: this.data.joinedWithinDays,
           branchId: this.data.branchId,
+          levelId: this.data.levelId,
+          experienceMin: this.data.experienceMin,
+          experienceMax: this.data.experienceMax,
+          createdFrom: this.data.createdFromDate ? dateBoundary(this.data.createdFromDate, false) : '',
+          createdTo: this.data.createdToDate ? dateBoundary(this.data.createdToDate, true) : '',
         },
       }))
       wx.showToast({ title: `已导出 ${result.rowCount} 条`, icon: 'success' })

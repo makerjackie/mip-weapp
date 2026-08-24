@@ -35,7 +35,9 @@ function repository(roleKey = 'PLATFORM_OWNER', scopeType = 'PLATFORM', scopeId 
       id: 'target-user', status: 'ACTIVE', kind: 'PLAYER', nickname: '用户', headline: '',
       introduction: '', primaryBranchId: 'branch-a', branchName: '广州分会', cityName: '广州',
       phoneBound: true, phoneCiphertext: encryptedPhone({ appId: caller.appId, userId: 'target-user' }),
-      controls: [], visibility: {}, userVersion: 1, profileVersion: 1, updatedAt: new Date().toISOString(),
+      controls: [], levelId: 'level-a', levelName: '一级', experience: 10,
+      visibility: {}, userVersion: 1, profileVersion: 1,
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
     }],
     getUserDetail: async () => ({
       id: 'target-user', status: 'ACTIVE', kind: 'PLAYER', nickname: '用户', headline: '产品负责人',
@@ -79,6 +81,11 @@ function repository(roleKey = 'PLATFORM_OWNER', scopeType = 'PLATFORM', scopeId 
     getOrderScope: async () => ({ scopeType: 'PLATFORM', scopeId: null }),
     getRefundScope: async () => ({ scopeType: 'PLATFORM', scopeId: null, refundStatus: 'PENDING' }),
     listOrders: async () => [],
+    summarizeOrders: async () => ({
+      currency: 'CNY', orderCount: 0, paidOrderCount: 0,
+      eventGrossAmountCents: 0, membershipGrossAmountCents: 0,
+      grossAmountCents: 0, refundedAmountCents: 0, netAmountCents: 0,
+    }),
     authorizeRefundRetry: async input => {
       audits.push(input.audit)
       return { id: input.refundId, status: 'PENDING' }
@@ -148,8 +155,9 @@ describe('admin service', () => {
     assert.equal(repo.audits.length, 1)
     assert.equal(repo.audits[0].action, 'admin.users.phone.view')
     assert.deepEqual(repo.audits[0].metadata, { count: 1, filters: {
-      query: '', status: '', kind: '', branchId: '', controlType: '',
+      query: '', status: '', kind: '', branchId: '', levelId: '', controlType: '',
       phoneBound: '', profileComplete: '', joinedWithinDays: 0,
+      experienceMin: null, experienceMax: null, createdFrom: '', createdTo: '',
     }, cursor: false })
   })
 
@@ -214,6 +222,11 @@ describe('admin service', () => {
         createdAt: '2026-08-19T00:00:00.000Z', version: 2, branchId: null,
       }]
     }
+    repo.summarizeOrders = async () => ({
+      currency: 'CNY', orderCount: 1, paidOrderCount: 1,
+      eventGrossAmountCents: 0, membershipGrossAmountCents: 79900,
+      grossAmountCents: 79900, refundedAmountCents: 0, netAmountCents: 79900,
+    })
     const service = createAdminService({ repository: repo, phoneEncryptionKey: secret })
     const response = await service.listOrders(caller, { filters: {
       query: ' MIP-0001 ', orderType: 'MEMBERSHIP', status: 'PAID', refundStatus: 'NONE',
@@ -228,6 +241,7 @@ describe('admin service', () => {
 
     const operationsRepo = repository('PLATFORM_OPERATIONS')
     operationsRepo.listOrders = repo.listOrders
+    operationsRepo.summarizeOrders = repo.summarizeOrders
     const operations = createAdminService({ repository: operationsRepo, phoneEncryptionKey: secret })
     const operationsPage = await operations.listOrders(caller)
     assert.deepEqual(operationsPage.items[0].availableRefundActions, [])

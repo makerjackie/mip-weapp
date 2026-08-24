@@ -66,6 +66,33 @@ export const IMAGE_UPLOAD_POLICIES = Object.freeze({
       { width: 1080, quality: 54 },
     ],
   },
+  taskAttachment: {
+    label: '任务附件',
+    maximumBytes: HALF_MEGABYTE,
+    steps: [
+      { width: 1600, quality: 78 },
+      { width: 1280, quality: 66 },
+      { width: 1080, quality: 54 },
+    ],
+  },
+  taskTemplate: {
+    label: '任务模板',
+    maximumBytes: HALF_MEGABYTE,
+    steps: [
+      { width: 1600, quality: 80 },
+      { width: 1280, quality: 68 },
+      { width: 1080, quality: 58 },
+    ],
+  },
+  banner: {
+    label: 'Banner 图片',
+    maximumBytes: HALF_MEGABYTE,
+    steps: [
+      { width: 1600, quality: 80 },
+      { width: 1200, quality: 68 },
+      { width: 960, quality: 58 },
+    ],
+  },
 }) satisfies Record<string, ImageUploadPolicy>
 
 export function estimateBase64Bytes(base64: string) {
@@ -102,15 +129,20 @@ function readBase64(filePath: string) {
   })
 }
 
-export function chooseSingleImage() {
+export function chooseSingleImage(maximumBytes?: number) {
   return new Promise<string>((resolve, reject) => {
     wx.chooseMedia({
       count: 1,
       mediaType: ['image'],
       sourceType: ['album', 'camera'],
-      sizeType: ['compressed'],
+      sizeType: [maximumBytes ? 'original' : 'compressed'],
       success: (result) => {
-        const path = result.tempFiles[0]?.tempFilePath
+        const file = result.tempFiles[0]
+        const path = file?.tempFilePath
+        if (maximumBytes && Number(file?.size || 0) > maximumBytes) {
+          reject(new Error(`图片不能超过 ${Math.floor(maximumBytes / 1024 / 1024)}MB`))
+          return
+        }
         if (path) {
           resolve(path)
           return

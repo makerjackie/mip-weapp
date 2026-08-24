@@ -139,4 +139,8 @@ Page({
       this.setData({ loadingMore: false })
     }
   },
+
+  openTasks() {
+    void wx.navigateTo({ url: '/packages/member/mip-tasks/index' })
+  },
 })

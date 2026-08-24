@@ -5,6 +5,7 @@ const {
   iso,
   jsonObject,
   mutualBlockFilter,
+  ROLE_KEYS,
   stringList,
   stringValue,
   uuid,
@@ -99,10 +100,13 @@ function normalizePeopleFilter(value = {}, caller) {
   if (requestedScope && !PEOPLE_SEARCH_SCOPES.has(requestedScope)) throw new Error('VALIDATION_FAILED')
   const branchId = stringValue(value.branchId, 36, 'VALIDATION_FAILED', false) || null
   if (branchId && !uuid(branchId)) throw new Error('VALIDATION_FAILED')
+  const roleKey = stringValue(value.roleKey, 32, 'VALIDATION_FAILED', false)
+  if (roleKey && !ROLE_KEYS.has(roleKey)) throw new Error('VALIDATION_FAILED')
   return {
     scope: requestedScope || (kind === 'PLAYER' ? 'PLAYER' : 'GLOBAL'),
     keyword: stringValue(value.keyword, 80, 'VALIDATION_FAILED', false),
     branchId,
+    roleKey,
     industryTagIds: stringList(value.industryTagIds, 8, 'VALIDATION_FAILED', uuid),
     abilityTagIds: stringList(value.abilityTagIds, 8, 'VALIDATION_FAILED', uuid),
     cursor: decodePeopleCursor(value.cursor, caller),
@@ -146,7 +150,7 @@ function publicOrganizations(value) {
   }).slice(0, 12)
 }
 
-function publicProfileDto(row, tags, caller, profileRef) {
+function publicProfileDto(row, tags, caller, profileRef, badges = []) {
   const allowed = visibleFields(row.visibility_json)
   const abilities = tags.filter(tag => tag.relation === 'ABILITY')
   return {
@@ -191,6 +195,16 @@ function publicProfileDto(row, tags, caller, profileRef) {
           },
         }
       : {}),
+    badges: badges.map(row => ({
+      id: row.id,
+      key: row.badge_key,
+      name: row.name,
+      description: row.description,
+      iconName: row.icon_name || undefined,
+      imageUrl: row.image_url || undefined,
+      placeholderShape: row.placeholder_shape,
+      equippedSlot: Number(row.slot_no),
+    })),
   }
 }
 
@@ -203,6 +217,32 @@ async function loadProfileTags(database, appId, userIds) {
      WHERE pt.app_id = ? AND pt.user_id IN (${userIds.map(() => '?').join(', ')})
        AND pt.relation IN ('PRIMARY_INDUSTRY', 'ABILITY')
      ORDER BY pt.user_id, pt.relation, t.sort_order, t.id`,
+    [appId, ...userIds],
+  )
+  const byUser = new Map()
+  for (const row of rows) {
+    const current = byUser.get(row.user_id) || []
+    current.push(row)
+    byUser.set(row.user_id, current)
+  }
+  return byUser
+}
+
+async function loadPublicBadges(database, appId, userIds) {
+  if (!userIds.length) return new Map()
+  const rows = await database.query(
+    `SELECT equipment.user_id, equipment.slot_no, badge.id, badge.badge_key,
+            badge.name, badge.description, badge.icon_name, badge.image_url,
+            badge.placeholder_shape
+     FROM mip_user_badge_equipment equipment
+     INNER JOIN mip_user_badges award
+       ON award.app_id = equipment.app_id AND award.user_id = equipment.user_id
+         AND award.badge_id = equipment.badge_id AND award.status = 'ACTIVE'
+     INNER JOIN mip_badges badge
+       ON badge.app_id = equipment.app_id AND badge.id = equipment.badge_id
+         AND badge.status = 'ACTIVE'
+     WHERE equipment.app_id = ? AND equipment.user_id IN (${userIds.map(() => '?').join(', ')})
+     ORDER BY equipment.user_id, equipment.slot_no`,
     [appId, ...userIds],
   )
   const byUser = new Map()
@@ -268,6 +308,16 @@ async function listPeople(database, caller, rawFilter = {}) {
       AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.primaryBranch')), 'true') <> 'false'`)
     params.push(filter.branchId)
   }
+  if (filter.roleKey) {
+    where.push(`EXISTS (
+      SELECT 1 FROM mip_cooperation_cards role_card
+      WHERE role_card.app_id = u.app_id
+        AND role_card.owner_user_id = u.id
+        AND role_card.role_key = ?
+        AND role_card.status = 'PUBLISHED'
+    )`)
+    params.push(filter.roleKey)
+  }
   if (filter.industryTagIds.length) {
     where.push(`COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.industry')), 'true') <> 'false'
       AND EXISTS (
@@ -312,9 +362,19 @@ async function listPeople(database, caller, rawFilter = {}) {
     params,
   )
   const pageRows = rows.slice(0, filter.limit)
-  const tags = await loadProfileTags(database, caller.appId, pageRows.map(row => row.profile_user_id))
+  const userIds = pageRows.map(row => row.profile_user_id)
+  const [tags, badges] = await Promise.all([
+    loadProfileTags(database, caller.appId, userIds),
+    loadPublicBadges(database, caller.appId, userIds),
+  ])
   return {
-    items: pageRows.map(row => publicProfileDto(row, tags.get(row.profile_user_id) || [], caller)),
+    items: pageRows.map(row => publicProfileDto(
+      row,
+      tags.get(row.profile_user_id) || [],
+      caller,
+      undefined,
+      badges.get(row.profile_user_id) || [],
+    )),
     nextCursor: rows.length > filter.limit && pageRows.length
       ? encodePeopleCursor(pageRows.at(-1).joined_at, pageRows.at(-1).profile_user_id, caller)
       : undefined,
@@ -334,8 +394,9 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
   )
   if (!row) throw new Error('NOT_FOUND')
 
-  const [tags, cooperationCards, superCases, opportunities, interest] = await Promise.all([
+  const [tags, badges, cooperationCards, superCases, opportunities, interest] = await Promise.all([
     loadProfileTags(database, caller.appId, [targetUserId]),
+    loadPublicBadges(database, caller.appId, [targetUserId]),
     database.query(
       `SELECT id, role_key, positioning, target_summary, ability_scores_json, published_at
        FROM mip_cooperation_cards
@@ -380,7 +441,13 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
   ])
 
   return {
-    profile: publicProfileDto(row, tags.get(targetUserId) || [], caller, profileRef),
+    profile: publicProfileDto(
+      row,
+      tags.get(targetUserId) || [],
+      caller,
+      profileRef,
+      badges.get(targetUserId) || [],
+    ),
     cooperationCards: cooperationCards.map(item => ({
       id: item.id,
       roleKey: item.role_key,
@@ -423,6 +490,7 @@ module.exports = {
   encodePeopleCursor,
   getPublicProfileAggregate,
   listPeople,
+  loadPublicBadges,
   normalizePeopleFilter,
   publicProfileDto,
 }

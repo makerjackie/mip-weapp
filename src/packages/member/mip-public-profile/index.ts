@@ -26,6 +26,7 @@ interface PublicProfileView extends PublicPerson {
   companies: NonNullable<PublicPerson['companies']>
   organizations: NonNullable<PublicPerson['organizations']>
   abilities: NonNullable<PublicPerson['abilities']>
+  badges: NonNullable<PublicPerson['badges']>
   branchText: string
 }
 
@@ -39,6 +40,7 @@ function presentProfile(profile: PublicPerson): PublicProfileView {
     companies: profile.companies || [],
     organizations: profile.organizations || [],
     abilities: profile.abilities || [],
+    badges: profile.badges || [],
     branchText: profile.primaryBranch
       ? [profile.primaryBranch.cityName, profile.primaryBranch.name].filter(Boolean).join(' · ')
       : '',

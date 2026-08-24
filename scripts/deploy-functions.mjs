@@ -636,6 +636,9 @@ function environmentForRole(role, options) {
       MIP_EXPORT_MAX_BYTES: String(options.exportMaxBytes),
     },
     growth: { MIP_GROWTH_HMAC_SECRET: options.secrets.growthHmac },
+    game: agreementEnvironment,
+    tasks: agreementEnvironment,
+    banners: agreementEnvironment,
     ai: {
       MIP_AI_HMAC_SECRET: options.secrets.aiHmac,
       MIP_AI_STORAGE_KEY: options.secrets.aiStorage,
@@ -670,6 +673,8 @@ function verifyLocalOpenApiDeclarations() {
     media: ['security.imgSecCheck'],
     events: ['security.msgSecCheck', 'wxacode.getUnlimited'],
     opportunities: ['security.msgSecCheck'],
+    tasks: ['security.msgSecCheck'],
+    banners: ['security.msgSecCheck'],
     notification: ['subscribeMessage.send'],
   }
   for (const [role, permissions] of Object.entries(expected)) {

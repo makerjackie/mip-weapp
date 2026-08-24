@@ -22,10 +22,10 @@ export function cloudImageTransformForFileId(fileId: string) {
   if (/\/avatars\//.test(fileId)) {
     return cloudImageTransforms.avatar
   }
-  if (/\/(?:covers|event-covers|opportunity-covers|case-covers)\//.test(fileId)) {
+  if (/\/(?:covers|event-covers|opportunity-covers|case-covers|banners)\//.test(fileId)) {
     return cloudImageTransforms.cover
   }
-  if (/\/(?:event-album|album|case-media)\//.test(fileId)) {
+  if (/\/(?:event-album|album|case-media|task-attachments|task-templates)\//.test(fileId)) {
     return cloudImageTransforms.album
   }
   return ''

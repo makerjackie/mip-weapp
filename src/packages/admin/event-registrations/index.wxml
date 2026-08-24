@@ -2,17 +2,22 @@
   <view class="text-[length:40rpx] font-bold">参与者与签到</view>
   <view class="mt-5 rounded-[16rpx] bg-panel p-3">
     <t-input value="{{query}}" placeholder="搜索昵称" bind:change="updateQuery" bind:enter="search" />
-    <view class="mt-3 flex flex-wrap gap-2">
-      <t-tag variant="outline" data-value="" bind:tap="chooseStatus">全部</t-tag>
-      <t-tag variant="outline" data-value="PENDING_REVIEW" bind:tap="chooseStatus">待审核</t-tag>
-      <t-tag variant="outline" data-value="WAITLISTED" bind:tap="chooseStatus">候补中</t-tag>
-      <t-tag variant="outline" data-value="PAYMENT_PENDING" bind:tap="chooseStatus">待支付</t-tag>
-      <t-tag variant="outline" data-value="REGISTERED" bind:tap="chooseStatus">已报名</t-tag>
-      <t-tag variant="outline" data-value="CANCELLATION_PENDING" bind:tap="chooseStatus">取消处理中</t-tag>
-      <t-tag variant="outline" data-value="ATTENDED" bind:tap="chooseStatus">已签到</t-tag>
-      <t-tag variant="outline" data-value="CANCELLED" bind:tap="chooseStatus">已取消</t-tag>
-      <t-tag variant="outline" data-value="REJECTED" bind:tap="chooseStatus">已拒绝</t-tag>
+    <view class="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label="报名状态">
+      <view class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{status === ''}}"><t-tag variant="outline" theme="{{status === '' ? 'primary' : 'default'}}" data-value="" bind:tap="chooseStatus">全部</t-tag></view>
+      <view class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{status === 'PENDING_REVIEW'}}"><t-tag variant="outline" theme="{{status === 'PENDING_REVIEW' ? 'primary' : 'default'}}" data-value="PENDING_REVIEW" bind:tap="chooseStatus">待审核</t-tag></view>
+      <view class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{status === 'WAITLISTED'}}"><t-tag variant="outline" theme="{{status === 'WAITLISTED' ? 'primary' : 'default'}}" data-value="WAITLISTED" bind:tap="chooseStatus">候补中</t-tag></view>
+      <view class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{status === 'PAYMENT_PENDING'}}"><t-tag variant="outline" theme="{{status === 'PAYMENT_PENDING' ? 'primary' : 'default'}}" data-value="PAYMENT_PENDING" bind:tap="chooseStatus">待支付</t-tag></view>
+      <view class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{status === 'REGISTERED'}}"><t-tag variant="outline" theme="{{status === 'REGISTERED' ? 'primary' : 'default'}}" data-value="REGISTERED" bind:tap="chooseStatus">已报名</t-tag></view>
+      <view class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{status === 'CANCELLATION_PENDING'}}"><t-tag variant="outline" theme="{{status === 'CANCELLATION_PENDING' ? 'primary' : 'default'}}" data-value="CANCELLATION_PENDING" bind:tap="chooseStatus">取消处理中</t-tag></view>
+      <view class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{status === 'ATTENDED'}}"><t-tag variant="outline" theme="{{status === 'ATTENDED' ? 'primary' : 'default'}}" data-value="ATTENDED" bind:tap="chooseStatus">已签到</t-tag></view>
+      <view class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{status === 'CANCELLED'}}"><t-tag variant="outline" theme="{{status === 'CANCELLED' ? 'primary' : 'default'}}" data-value="CANCELLED" bind:tap="chooseStatus">已取消</t-tag></view>
+      <view class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{status === 'REJECTED'}}"><t-tag variant="outline" theme="{{status === 'REJECTED' ? 'primary' : 'default'}}" data-value="REJECTED" bind:tap="chooseStatus">已拒绝</t-tag></view>
     </view>
+    <view class="mt-3 grid grid-cols-2 gap-2">
+      <picker mode="date" value="{{createdFromDate}}" data-field="createdFromDate" bindchange="changeCreatedDate"><view class="flex min-h-[88rpx] flex-col justify-center rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]"><view class="text-muted">报名日期起</view><view class="mt-1">{{createdFromDate || '不限'}}</view></view></picker>
+      <picker mode="date" value="{{createdToDate}}" data-field="createdToDate" bindchange="changeCreatedDate"><view class="flex min-h-[88rpx] flex-col justify-center rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]"><view class="text-muted">报名日期止</view><view class="mt-1">{{createdToDate || '不限'}}</view></view></picker>
+    </view>
+    <view wx:if="{{createdFromDate || createdToDate}}" class="flex min-h-[88rpx] items-center justify-end text-[length:21rpx] text-muted" role="button" bind:tap="clearCreatedDates">清除日期</view>
     <view class="mt-3 flex gap-2">
       <t-button wx:if="{{canPhone && !includePhone}}" size="small" variant="outline" bind:tap="showPhones">查看联系电话</t-button>
       <t-button wx:if="{{canExport}}" size="small" variant="outline" loading="{{exportPending}}" bind:tap="createExport">创建导出</t-button>
@@ -38,7 +43,7 @@
           <view class="text-[length:28rpx] font-semibold">{{item.nickname}}</view>
           <view class="mt-1 text-[length:22rpx] text-muted">{{item.cityName || '未填写城市'}}</view>
         </view>
-        <t-tag variant="outline">{{item.statusText}}</t-tag>
+        <t-tag variant="outline" theme="{{item.statusTheme}}">{{item.statusText}}</t-tag>
       </view>
       <view wx:if="{{includePhone}}" class="mt-3 text-[length:24rpx]">联系电话：{{item.phoneNumber || '未绑定'}}</view>
       <view wx:elif="{{item.phoneBound}}" class="mt-3 text-[length:22rpx] text-muted">手机已绑定</view>

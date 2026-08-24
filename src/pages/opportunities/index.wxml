@@ -1,12 +1,12 @@
 <view id="mip-opportunities-page" class="min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+220rpx)] pt-3 text-ink">
-  <view class="flex items-center justify-between px-1">
-    <view class="flex min-h-[88rpx] items-center gap-1 text-[length:28rpx] font-semibold" bind:tap="toggleFilters"><text>{{cityOptions[cityIndex].label}}</text><t-icon name="chevron-down" size="28rpx" color="var(--color-ink)" /></view>
-    <view class="flex items-center gap-2">
-      <view class="rounded-full border border-line px-3 py-2 text-[length:22rpx] text-muted active:bg-panel" bind:tap="openPeople">找人才</view>
-      <view class="rounded-full border border-line px-3 py-2 text-[length:22rpx] text-muted active:bg-panel" bind:tap="openMine">我的</view>
-      <view class="rounded-[12rpx] bg-brand px-4 py-3 text-[length:23rpx] font-semibold text-on-brand active:bg-brand-active" bind:tap="publish">
-        {{mode === 'opportunities' ? '发布机会' : '创建合作卡'}}
-      </view>
+  <view class="flex flex-col gap-2 px-1">
+    <view class="flex items-center justify-between gap-3">
+      <view class="flex min-h-[88rpx] min-w-0 items-center gap-1 text-[length:28rpx] font-semibold" aria-role="button" aria-expanded="{{filterOpen}}" bind:tap="toggleFilters"><text class="truncate">{{cityOptions[cityIndex].label}}</text><t-icon name="chevron-down" size="28rpx" color="var(--color-ink)" /></view>
+      <view class="flex min-h-[88rpx] shrink-0 items-center rounded-[12rpx] bg-brand px-4 py-3 text-[length:23rpx] font-semibold text-on-brand active:bg-brand-active" aria-role="button" bind:tap="publish">{{mode === 'opportunities' ? '发布机会' : '创建合作卡'}}</view>
+    </view>
+    <view class="grid grid-cols-2 gap-2">
+      <view class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] border border-line px-3 py-2 text-[length:22rpx] text-muted active:bg-panel" aria-role="button" bind:tap="openPeople">找人才</view>
+      <view class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] border border-line px-3 py-2 text-[length:22rpx] text-muted active:bg-panel" aria-role="button" bind:tap="openMine">我的机会</view>
     </view>
   </view>
 
@@ -18,19 +18,19 @@
   </view>
 
   <view class="mt-3 flex items-center gap-2">
-    <view class="flex h-[72rpx] min-w-0 flex-1 items-center gap-2 rounded-[12rpx] bg-panel px-3">
+    <view class="flex min-h-[88rpx] min-w-0 flex-1 items-center gap-2 rounded-[12rpx] bg-panel px-3">
       <t-icon name="search" size="32rpx" color="var(--color-muted)" />
-      <input class="box-border min-w-0 flex-1 max-w-full text-[length:24rpx]" value="{{keywordInput}}" maxlength="80" confirm-type="search" placeholder="{{mode === 'cooperation' ? '搜索合作方向或成员' : '搜索机会、行业或能力'}}" bindinput="onKeywordInput" bindconfirm="onSearchConfirm" />
+      <input id="opportunities-search-input" class="box-border min-w-0 flex-1 max-w-full text-[length:24rpx]" value="{{keywordInput}}" maxlength="80" confirm-type="search" placeholder="{{mode === 'cooperation' ? '搜索合作方向或成员' : '搜索机会、行业或能力'}}" bindinput="onKeywordInput" bindconfirm="onSearchConfirm" />
       <view wx:if="{{keywordInput}}" class="px-2 py-2 text-[length:21rpx] text-muted" bind:tap="clearSearch">清除</view>
     </view>
-    <view class="flex h-[72rpx] w-[72rpx] items-center justify-center rounded-[12rpx] border border-line bg-panel active:bg-panel-raised" bind:tap="toggleFilters">
+    <view id="opportunities-filter-toggle" class="flex h-[88rpx] w-[88rpx] items-center justify-center rounded-[12rpx] border border-line bg-panel active:bg-panel-raised" aria-role="button" aria-expanded="{{filterOpen}}" bind:tap="toggleFilters">
       <t-icon name="filter" size="34rpx" color="var(--color-ink)" />
     </view>
   </view>
 
   <view wx:if="{{mode === 'opportunities'}}" class="mt-3 flex gap-2">
-    <view wx:if="{{status === 'RECRUITING'}}" class="rounded-full bg-brand px-4 py-2 text-[length:22rpx] font-semibold text-on-brand" data-status="RECRUITING" bind:tap="changeStatus">招募中</view><view wx:else class="rounded-full bg-panel px-4 py-2 text-[length:22rpx] text-muted" data-status="RECRUITING" bind:tap="changeStatus">招募中</view>
-    <view wx:if="{{status === 'COMPLETED'}}" class="rounded-full bg-brand px-4 py-2 text-[length:22rpx] font-semibold text-on-brand" data-status="COMPLETED" bind:tap="changeStatus">已完成</view><view wx:else class="rounded-full bg-panel px-4 py-2 text-[length:22rpx] text-muted" data-status="COMPLETED" bind:tap="changeStatus">已完成</view>
+    <view wx:if="{{status === 'RECRUITING'}}" class="flex min-h-[88rpx] items-center rounded-full bg-brand px-4 py-2 text-[length:22rpx] font-semibold text-on-brand" aria-role="radio" aria-checked="true" data-status="RECRUITING" bind:tap="changeStatus">招募中 · 已选</view><view wx:else class="flex min-h-[88rpx] items-center rounded-full bg-panel px-4 py-2 text-[length:22rpx] text-muted" aria-role="radio" aria-checked="false" data-status="RECRUITING" bind:tap="changeStatus">招募中</view>
+    <view wx:if="{{status === 'COMPLETED'}}" class="flex min-h-[88rpx] items-center rounded-full bg-brand px-4 py-2 text-[length:22rpx] font-semibold text-on-brand" aria-role="radio" aria-checked="true" data-status="COMPLETED" bind:tap="changeStatus">已完成 · 已选</view><view wx:else class="flex min-h-[88rpx] items-center rounded-full bg-panel px-4 py-2 text-[length:22rpx] text-muted" aria-role="radio" aria-checked="false" data-status="COMPLETED" bind:tap="changeStatus">已完成</view>
   </view>
 
   <view wx:if="{{filterOpen}}" class="mt-3 rounded-[16rpx] border border-line bg-panel px-4 py-4">

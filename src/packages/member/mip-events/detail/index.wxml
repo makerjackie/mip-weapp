@@ -47,7 +47,7 @@
         <rich-text class="mip-event-rich-content mt-3 text-[length:25rpx] leading-7 text-muted" nodes="{{descriptionNodes}}" />
         <view wx:if="{{event.contentMedia.length}}" class="mt-4 flex flex-col gap-3">
           <view wx:for="{{event.contentMedia}}" wx:key="imageUrl">
-            <image class="w-full rounded-[16rpx] bg-panel" mode="widthFix" src="{{item.imageUrl}}" />
+            <image class="w-full rounded-[16rpx] bg-panel" mode="widthFix" src="{{item.imageUrl}}" data-url="{{item.imageUrl}}" bind:tap="previewContentImage" />
             <view wx:if="{{item.caption}}" class="mt-2 text-center text-[length:21rpx] text-muted">{{item.caption}}</view>
           </view>
         </view>

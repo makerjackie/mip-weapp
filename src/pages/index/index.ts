@@ -1,5 +1,6 @@
 import type { BranchId, EventId, OpportunityId } from '../../modules/mip'
 import type { AnnouncementSummary } from '../../modules/mip-announcements'
+import type { MipBannerTargetType } from '../../modules/mip-banners'
 import type { MipEventListItem } from '../../modules/mip-events'
 import type { IdentityAccessSnapshot } from '../../modules/mip-identity'
 import type { OpportunitySummary } from '../../modules/mip-opportunities'
@@ -7,6 +8,7 @@ import { brand } from '../../config/brand'
 import { cooperationRoles } from '../../config/mip-catalogs'
 import { mipOperationsConfig } from '../../config/mip-operations'
 import { mipAnnouncementsModule } from '../../modules/mip-announcements'
+import { mipBannerModule } from '../../modules/mip-banners'
 import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { opportunityModule } from '../../modules/mip-opportunities'
@@ -59,8 +61,10 @@ Page({
     state: 'loading' as 'loading' | 'ready',
     logoPath: brand.logoPath,
     productName: brand.productName,
-    bannerImagePath: mipOperationsConfig.homeBanner.imagePath,
-    bannerAccessibilityLabel: mipOperationsConfig.homeBanner.accessibilityLabel,
+    bannerImagePath: mipOperationsConfig.homeBanner.imagePath as string,
+    bannerAccessibilityLabel: mipOperationsConfig.homeBanner.accessibilityLabel as string,
+    bannerTargetType: 'MINIPROGRAM_PATH' as MipBannerTargetType,
+    bannerTargetValue: mipOperationsConfig.homeBanner.targetPath as string,
     identityState: 'loading' as 'loading' | 'ready' | 'error',
     membershipLabel: '嘉宾',
     membershipDescription: '当前没有有效会员权益',
@@ -92,6 +96,7 @@ Page({
       this.loadEvents(options),
       this.loadOpportunities(),
       this.loadAnnouncements(),
+      this.loadBanner(options.force === true),
     ])
     this.setData({ state: 'ready' })
   },
@@ -213,6 +218,26 @@ Page({
     }
   },
 
+  async loadBanner(force = false) {
+    try {
+      const [banner] = await mipBannerModule.listActive(force)
+      this.setData(banner
+        ? {
+            bannerImagePath: banner.imageUrl,
+            bannerAccessibilityLabel: banner.accessibilityLabel,
+            bannerTargetType: banner.targetType,
+            bannerTargetValue: banner.targetValue,
+          }
+        : {
+            bannerImagePath: mipOperationsConfig.homeBanner.imagePath,
+            bannerAccessibilityLabel: mipOperationsConfig.homeBanner.accessibilityLabel,
+            bannerTargetType: 'MINIPROGRAM_PATH',
+            bannerTargetValue: mipOperationsConfig.homeBanner.targetPath,
+          })
+    }
+    catch {}
+  },
+
   async onPullDownRefresh() {
     try {
       await this.loadDiscover({ force: true })
@@ -227,7 +252,14 @@ Page({
   },
 
   openBanner() {
-    const targetPath = mipOperationsConfig.homeBanner.targetPath
+    if (this.data.bannerTargetType === 'ARTICLE_URL') {
+      wx.openOfficialAccountArticle({
+        url: this.data.bannerTargetValue,
+        fail: () => wx.showToast({ title: '文章暂未配置', icon: 'none' }),
+      })
+      return
+    }
+    const targetPath = this.data.bannerTargetValue
     if (targetPath.startsWith('/') && !targetPath.startsWith('//') && targetPath.length < 300) {
       caseNavigateTo({ url: targetPath })
     }

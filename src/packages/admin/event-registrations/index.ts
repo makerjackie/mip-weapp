@@ -6,6 +6,7 @@ import { adminLoadFailure } from '../shared/page-state'
 
 type RosterView = AdminRosterItem & {
   statusText: string
+  statusTheme: 'default' | 'primary' | 'success' | 'warning' | 'danger'
   submittedText: string
   registeredText: string
   checkedInText: string
@@ -22,10 +23,53 @@ const statusLabels: Record<AdminRosterStatus, string> = {
   ATTENDED: '已签到',
 }
 
+const statusThemes: Record<AdminRosterStatus, RosterView['statusTheme']> = {
+  PENDING_REVIEW: 'warning',
+  WAITLISTED: 'warning',
+  PAYMENT_PENDING: 'warning',
+  REGISTERED: 'primary',
+  CANCELLATION_PENDING: 'warning',
+  CANCELLED: 'default',
+  REJECTED: 'danger',
+  ATTENDED: 'success',
+}
+
+function dateBoundary(value: string, endOfDay: boolean) {
+  const parts = value.split('-').map(Number)
+  if (parts.length !== 3 || parts.some(part => !Number.isInteger(part))) {
+    return ''
+  }
+  const date = new Date(
+    parts[0],
+    parts[1] - 1,
+    parts[2],
+    endOfDay ? 23 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 59 : 0,
+    endOfDay ? 999 : 0,
+  )
+  return Number.isFinite(date.getTime()) ? date.toISOString() : ''
+}
+
+function rosterFilters(data: {
+  query: string
+  status: AdminRosterStatus | ''
+  createdFromDate: string
+  createdToDate: string
+}) {
+  return {
+    query: data.query.trim(),
+    status: data.status,
+    createdFrom: data.createdFromDate ? dateBoundary(data.createdFromDate, false) : '',
+    createdTo: data.createdToDate ? dateBoundary(data.createdToDate, true) : '',
+  }
+}
+
 function rosterView(item: AdminRosterItem): RosterView {
   return {
     ...item,
     statusText: statusLabels[item.status],
+    statusTheme: statusThemes[item.status],
     submittedText: formatLocalDateTime(item.submittedAt),
     registeredText: item.registeredAt ? formatLocalDateTime(item.registeredAt) : '',
     checkedInText: item.checkedInAt ? formatLocalDateTime(item.checkedInAt) : '',
@@ -39,6 +83,8 @@ Page({
     items: [] as RosterView[],
     query: '',
     status: '' as AdminRosterStatus | '',
+    createdFromDate: '',
+    createdToDate: '',
     includePhone: false,
     canPhone: false,
     canExport: false,
@@ -72,6 +118,18 @@ Page({
     mipAdminModule.clearSensitive()
   },
   updateQuery(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ query: event.detail.value }) },
+  changeCreatedDate(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const field = String(event.currentTarget.dataset.field || '')
+    if (!['createdFromDate', 'createdToDate'].includes(field)) {
+      return
+    }
+    this.setData({ [field]: event.detail.value, items: [], nextCursor: null })
+    void this.loadRoster(true)
+  },
+  clearCreatedDates() {
+    this.setData({ createdFromDate: '', createdToDate: '', items: [], nextCursor: null })
+    void this.loadRoster(true)
+  },
   chooseStatus(event: WechatMiniprogram.TouchEvent) {
     const status = String(event.currentTarget.dataset.value || '') as AdminRosterStatus | ''
     this.setData({ status, items: [], nextCursor: null })
@@ -92,7 +150,7 @@ Page({
         mipAdminModule.listRoster({
           eventId: this.data.eventId,
           includePhone: this.data.includePhone,
-          filters: { query: this.data.query.trim(), status: this.data.status },
+          filters: rosterFilters(this.data),
         }, force),
       ])
       if (seq !== this.requestSeq) {
@@ -129,7 +187,7 @@ Page({
         eventId: this.data.eventId,
         includePhone: this.data.includePhone,
         cursor: this.data.nextCursor,
-        filters: { query: this.data.query.trim(), status: this.data.status },
+        filters: rosterFilters(this.data),
       })
       this.setData({ items: this.data.items.concat(page.items.map(rosterView)), nextCursor: page.nextCursor || null })
     }
@@ -288,7 +346,7 @@ Page({
         exportType: 'EVENT_ROSTER',
         eventId: this.data.eventId,
         includesPhone: this.data.includePhone,
-        filters: { query: this.data.query, status: this.data.status },
+        filters: rosterFilters(this.data),
       }))
       wx.showToast({ title: `已导出 ${result.rowCount} 条`, icon: 'success' })
     }

@@ -49,6 +49,12 @@
     <view wx:if="{{createdFromDate || createdToDate}}" class="mt-2 text-right text-[length:21rpx] text-muted" bind:tap="clearCreatedDates">清除日期</view>
   </view>
 
+  <view wx:if="{{state === 'ready'}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-4">
+    <view class="flex items-center justify-between"><view class="text-[length:27rpx] font-semibold">收费汇总</view><view class="text-[length:21rpx] text-muted">{{summary.orderCount}} 笔订单 · {{summary.paidOrderCount}} 笔已支付</view></view>
+    <view class="mt-3 grid grid-cols-2 gap-2 text-[length:22rpx]"><view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">活动收入</view><view class="mt-1 font-semibold">{{summary.eventGrossText}}</view></view><view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">会员收入</view><view class="mt-1 font-semibold">{{summary.membershipGrossText}}</view></view><view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">收费总额</view><view class="mt-1 font-semibold">{{summary.grossText}}</view></view><view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">退款金额</view><view class="mt-1 font-semibold">{{summary.refundedText}}</view></view></view>
+    <view class="mt-3 flex items-end justify-between border-0 border-t border-solid border-line pt-3"><view class="text-[length:22rpx] text-muted">净收费</view><view class="text-[length:29rpx] font-bold text-brand">{{summary.netText}}</view></view>
+  </view>
+
   <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5">
     <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
@@ -68,13 +74,14 @@
           <view class="text-[length:27rpx] font-semibold">{{item.nickname}}</view>
           <view class="mt-1 text-[length:22rpx] text-muted">{{item.orderTypeText}} · {{item.merchantOrderNoMasked}}</view>
         </view>
-        <t-tag variant="outline">{{item.statusText}}</t-tag>
+        <t-tag variant="outline" theme="{{item.statusTheme}}">{{item.statusText}}</t-tag>
       </view>
       <view class="mt-3 rounded-[12rpx] bg-panel-raised px-3 py-3">
         <view class="text-[length:23rpx] font-semibold">{{item.resourceTitle}}</view>
         <view class="mt-1 text-[length:21rpx] text-muted">{{item.resourceType === 'EVENT' ? '活动' : '会员方案'}}{{item.resourceBranchName ? ' · ' + item.resourceBranchName : ''}}</view>
       </view>
       <view wx:if="{{item.providerTransactionIdMasked}}" class="mt-2 text-[length:22rpx] text-muted">微信支付单号：{{item.providerTransactionIdMasked}}</view>
+      <view wx:if="{{item.entitlementWindowText}}" class="mt-2 rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]">会员权益有效期：{{item.entitlementWindowText}}</view>
       <view class="mt-3 flex items-end justify-between gap-3">
         <view>
           <view class="text-[length:21rpx] text-muted">订单金额</view>

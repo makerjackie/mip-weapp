@@ -219,6 +219,14 @@ Page({
     })
   },
 
+  previewMedia(event: WechatMiniprogram.TouchEvent) {
+    const current = String(event.currentTarget.dataset.url || '')
+    const urls = this.data.mediaAssets.map(item => item.imageUrl).filter(Boolean)
+    if (current && urls.includes(current)) {
+      wx.previewImage({ current, urls })
+    }
+  },
+
   saveDraft() { void this.save(false) },
   publish() { void this.save(true) },
 

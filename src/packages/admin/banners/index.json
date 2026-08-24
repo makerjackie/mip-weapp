@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "Banner 管理",
+  "usingComponents": {
+    "app-empty-state": "/components/empty-state/index",
+    "app-page-exit": "/components/page-exit/index",
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-input": "tdesign-miniprogram/input/input",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
+  }
+}

@@ -125,6 +125,26 @@
       "pathName": "packages/member/mip-growth/index"
     },
     {
+      "name": "我的勋章",
+      "pathName": "packages/member/mip-badges/index"
+    },
+    {
+      "name": "团队 PK",
+      "pathName": "packages/member/mip-game/index"
+    },
+    {
+      "name": "队伍大本营",
+      "pathName": "packages/member/mip-game/team/index"
+    },
+    {
+      "name": "任务",
+      "pathName": "packages/member/mip-tasks/index"
+    },
+    {
+      "name": "任务详情",
+      "pathName": "packages/member/mip-tasks/detail/index"
+    },
+    {
       "name": "消息",
       "pathName": "packages/member/mip-notifications/index"
     },
@@ -221,6 +241,10 @@
       "pathName": "packages/admin/event-registrations/index"
     },
     {
+      "name": "活动参与者",
+      "pathName": "packages/admin/event-participants/index"
+    },
+    {
       "name": "成员运营",
       "pathName": "packages/admin/profiles/index"
     },
@@ -233,8 +257,20 @@
       "pathName": "packages/admin/opportunities/index"
     },
     {
+      "name": "机会编辑",
+      "pathName": "packages/admin/opportunity-editor/index"
+    },
+    {
+      "name": "机会详情",
+      "pathName": "packages/admin/opportunity-detail/index"
+    },
+    {
       "name": "成长等级",
       "pathName": "packages/admin/growth-levels/index"
+    },
+    {
+      "name": "权益管理",
+      "pathName": "packages/admin/growth-benefits/index"
     },
     {
       "name": "奖励规则",
@@ -243,6 +279,34 @@
     {
       "name": "成长流水",
       "pathName": "packages/admin/growth-entries/index"
+    },
+    {
+      "name": "勋章管理",
+      "pathName": "packages/admin/badges/index"
+    },
+    {
+      "name": "赛季与队伍管理",
+      "pathName": "packages/admin/game/index"
+    },
+    {
+      "name": "任务管理",
+      "pathName": "packages/admin/tasks/index"
+    },
+    {
+      "name": "任务派发",
+      "pathName": "packages/admin/task-assignments/index"
+    },
+    {
+      "name": "任务完成流水",
+      "pathName": "packages/admin/task-completions/index"
+    },
+    {
+      "name": "Banner 管理",
+      "pathName": "packages/admin/banners/index"
+    },
+    {
+      "name": "Banner 编辑",
+      "pathName": "packages/admin/banner-editor/index"
     },
     {
       "name": "举报审核",

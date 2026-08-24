@@ -17,6 +17,9 @@ const PURPOSE_POLICIES = Object.freeze({
   OPPORTUNITY_COVER: Object.freeze({ directory: 'opportunity-covers', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
   SUPER_CASE_COVER: Object.freeze({ directory: 'case-covers', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
   SUPER_CASE_MEDIA: Object.freeze({ directory: 'case-media', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
+  TASK_ATTACHMENT: Object.freeze({ directory: 'task-attachments', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
+  TASK_TEMPLATE: Object.freeze({ directory: 'task-templates', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
+  BANNER: Object.freeze({ directory: 'banners', minimumEdge: 64, maximumEdge: 4096, maximumPixels: 12_000_000 }),
 })
 
 const CRC_TABLE = (() => {

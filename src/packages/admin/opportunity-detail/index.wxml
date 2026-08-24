@@ -1,0 +1,14 @@
+<view id="admin-opportunity-detail-page" class="min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+  <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel p-5"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <app-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载机会" description="{{message}}" action-text="重新加载" bind:action="load" />
+  <block wx:else>
+    <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1"><view class="text-[length:40rpx] font-bold">{{item.title}}</view><view class="mt-2 text-[length:23rpx] text-muted">{{item.ownerNickname}} · {{item.cityName || item.branchName || '平台'}}</view></view><t-tag theme="{{item.status === 'PUBLISHED' ? 'success' : item.status === 'UNPUBLISHED' ? 'danger' : 'default'}}" variant="outline">{{item.statusText}}</t-tag></view>
+    <view class="mt-5 rounded-[16rpx] bg-panel p-4"><view class="font-semibold">价值说明</view><view class="mt-2 whitespace-pre-wrap text-muted">{{item.valueSummary}}</view><view class="mt-4 font-semibold">合作目标</view><view class="mt-2 whitespace-pre-wrap text-muted">{{item.targetSummary || '未填写'}}</view><view class="mt-4 font-semibold">详细说明</view><view class="mt-2 whitespace-pre-wrap text-muted">{{item.description || '未填写'}}</view></view>
+    <view class="mt-3 rounded-[16rpx] bg-panel p-4 text-[length:23rpx]"><view>合作角色：{{item.roleText}}</view><view class="mt-2">标签：{{item.tagText}}</view><view class="mt-2">截止时间：{{item.deadlineText}}</view><view class="mt-2">更新时间：{{item.updatedText}}</view></view>
+    <view wx:if="{{item.status !== 'ARCHIVED'}}" class="mt-4 grid grid-cols-2 gap-2"><t-button block variant="outline" bind:tap="edit">编辑</t-button><t-button wx:if="{{item.status === 'DRAFT' || item.status === 'UNPUBLISHED'}}" block theme="primary" loading="{{processing}}" bind:tap="publish">发布</t-button><t-button wx:elif="{{item.status === 'PUBLISHED' || item.status === 'ENDED'}}" block variant="outline" theme="danger" loading="{{processing}}" bind:tap="unpublish">下架</t-button></view>
+    <view wx:if="{{canArchive && item.status !== 'PUBLISHED' && item.status !== 'ARCHIVED'}}" class="mt-3"><t-button block variant="outline" theme="danger" loading="{{processing}}" bind:tap="archive">归档</t-button></view>
+    <view class="mt-6 text-[length:28rpx] font-semibold">操作记录</view><view wx:if="{{history.length}}" class="mt-3 flex flex-col gap-2"><view wx:for="{{history}}" wx:key="id" class="rounded-[12rpx] bg-panel px-4 py-3"><view>{{item.actionText}}</view><view class="mt-1 text-[length:21rpx] text-muted">{{item.actorNickname}} · {{item.createdText || '未记录'}}</view></view></view><app-empty-state wx:else class="mt-3" title="暂无操作记录" description="后续发生的操作会记录在这里。" />
+    <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-danger">{{message}}</view>
+  </block>
+  <app-page-exit />
+</view>

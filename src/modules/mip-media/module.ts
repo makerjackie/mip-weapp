@@ -13,6 +13,9 @@ const policies: Record<MipMediaPurpose, ImageUploadPolicy> = {
   OPPORTUNITY_COVER: IMAGE_UPLOAD_POLICIES.opportunityCover,
   SUPER_CASE_COVER: IMAGE_UPLOAD_POLICIES.superCaseCover,
   SUPER_CASE_MEDIA: IMAGE_UPLOAD_POLICIES.superCaseMedia,
+  TASK_ATTACHMENT: IMAGE_UPLOAD_POLICIES.taskAttachment,
+  TASK_TEMPLATE: IMAGE_UPLOAD_POLICIES.taskTemplate,
+  BANNER: IMAGE_UPLOAD_POLICIES.banner,
 }
 
 export function createMipMediaModule(gateway: MipMediaGateway) {

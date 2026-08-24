@@ -42,6 +42,10 @@ const NO_PROJECTION_EVENT_TYPES = new Set([
   'membership.order_created',
   'membership.refund_requested',
   'opportunity.published',
+  'task.completed',
+  'task.deleted',
+  'task.published',
+  'task.unpublished',
 ])
 
 async function projectEvent(database, event) {

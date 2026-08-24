@@ -61,8 +61,8 @@
     <view class="rounded-[16rpx] bg-panel p-4">
       <view class="mb-3 text-[length:27rpx] font-semibold">活动范围</view>
       <view wx:if="{{canChangeScope}}" class="flex flex-wrap gap-2">
-        <t-tag variant="outline" data-value="PLATFORM" bind:tap="chooseScope">平台活动</t-tag>
-        <t-tag variant="outline" data-value="BRANCH" bind:tap="chooseScope">城市分会活动</t-tag>
+        <view class="flex min-h-[88rpx] items-center" aria-role="radio" aria-checked="{{draft.scopeType === 'PLATFORM'}}" data-value="PLATFORM" bind:tap="chooseScope"><t-tag theme="{{draft.scopeType === 'PLATFORM' ? 'primary' : 'default'}}" variant="outline">平台活动</t-tag></view>
+        <view class="flex min-h-[88rpx] items-center" aria-role="radio" aria-checked="{{draft.scopeType === 'BRANCH'}}" data-value="BRANCH" bind:tap="chooseScope"><t-tag theme="{{draft.scopeType === 'BRANCH' ? 'primary' : 'default'}}" variant="outline">城市分会活动</t-tag></view>
       </view>
       <view wx:else class="text-[length:23rpx] text-muted">当前活动按已授权范围管理。</view>
       <picker wx:if="{{draft.scopeType === 'BRANCH' && branches.length}}" class="mt-3" mode="selector" disabled="{{!canSelectBranch}}" range="{{branches}}" range-key="name" value="{{branchIndex}}" bindchange="changeBranch">
@@ -96,7 +96,7 @@
 
     <view class="rounded-[16rpx] bg-panel p-4">
       <view class="mb-3 text-[length:27rpx] font-semibold">活动形式</view>
-      <view class="flex flex-wrap gap-2"><t-tag variant="outline" data-field="eventMode" data-value="OFFLINE" bind:tap="choose">线下</t-tag><t-tag variant="outline" data-field="eventMode" data-value="ONLINE" bind:tap="choose">线上</t-tag><t-tag variant="outline" data-field="eventMode" data-value="HYBRID" bind:tap="choose">线上与线下</t-tag></view>
+      <view class="flex flex-wrap gap-2"><view class="flex min-h-[88rpx] items-center" aria-role="radio" aria-checked="{{draft.eventMode === 'OFFLINE'}}" data-field="eventMode" data-value="OFFLINE" bind:tap="choose"><t-tag theme="{{draft.eventMode === 'OFFLINE' ? 'primary' : 'default'}}" variant="outline">线下</t-tag></view><view class="flex min-h-[88rpx] items-center" aria-role="radio" aria-checked="{{draft.eventMode === 'ONLINE'}}" data-field="eventMode" data-value="ONLINE" bind:tap="choose"><t-tag theme="{{draft.eventMode === 'ONLINE' ? 'primary' : 'default'}}" variant="outline">线上</t-tag></view><view class="flex min-h-[88rpx] items-center" aria-role="radio" aria-checked="{{draft.eventMode === 'HYBRID'}}" data-field="eventMode" data-value="HYBRID" bind:tap="choose"><t-tag theme="{{draft.eventMode === 'HYBRID' ? 'primary' : 'default'}}" variant="outline">线上与线下</t-tag></view></view>
       <block wx:if="{{draft.eventMode !== 'ONLINE'}}">
         <view class="mb-2 mt-4 text-[length:23rpx] text-muted">场地名称</view><t-input class="box-border max-w-full" value="{{draft.venueName}}" maxlength="200" data-field="venueName" bind:change="updateField" />
         <view class="mb-2 mt-4 text-[length:23rpx] text-muted">详细地址</view><t-input class="box-border max-w-full" value="{{draft.address}}" maxlength="500" data-field="address" bind:change="updateField" />
@@ -111,14 +111,14 @@
     <view class="rounded-[16rpx] bg-panel p-4">
       <view class="mb-3 text-[length:27rpx] font-semibold">报名设置</view>
       <view class="mb-2 text-[length:23rpx] text-muted">参与方式</view>
-      <view class="flex flex-wrap gap-2"><t-tag variant="outline" data-field="accessType" data-value="FREE" bind:tap="choose">免费报名</t-tag><t-tag variant="outline" data-field="accessType" data-value="MEMBER_INCLUDED" bind:tap="choose">玩家权益包含</t-tag><t-tag variant="outline" data-field="accessType" data-value="PAID" bind:tap="choose">付费报名</t-tag></view>
+      <view class="flex flex-wrap gap-2"><view class="flex min-h-[88rpx] items-center" aria-role="radio" aria-checked="{{draft.accessType === 'FREE'}}" data-field="accessType" data-value="FREE" bind:tap="choose"><t-tag theme="{{draft.accessType === 'FREE' ? 'primary' : 'default'}}" variant="outline">免费报名</t-tag></view><view class="flex min-h-[88rpx] items-center" aria-role="radio" aria-checked="{{draft.accessType === 'MEMBER_INCLUDED'}}" data-field="accessType" data-value="MEMBER_INCLUDED" bind:tap="choose"><t-tag theme="{{draft.accessType === 'MEMBER_INCLUDED' ? 'primary' : 'default'}}" variant="outline">玩家权益包含</t-tag></view><view class="flex min-h-[88rpx] items-center" aria-role="radio" aria-checked="{{draft.accessType === 'PAID'}}" data-field="accessType" data-value="PAID" bind:tap="choose"><t-tag theme="{{draft.accessType === 'PAID' ? 'primary' : 'default'}}" variant="outline">付费报名</t-tag></view></view>
       <view wx:if="{{draft.accessType === 'PAID'}}">
         <view class="mb-2 mt-4 text-[length:23rpx] text-muted">报名价格（元）</view><t-input class="box-border max-w-full" type="digit" value="{{draft.priceYuan}}" data-field="priceYuan" bind:change="updateField" />
         <view class="mt-2 text-[length:22rpx] text-muted">付费报名在支付完成后自动确认。</view>
       </view>
       <view wx:else>
         <view class="mb-2 mt-4 text-[length:23rpx] text-muted">确认方式</view>
-        <view class="flex flex-wrap gap-2"><t-tag variant="outline" data-field="registrationPolicy" data-value="AUTO" bind:tap="choose">自动确认</t-tag><t-tag variant="outline" data-field="registrationPolicy" data-value="APPROVAL" bind:tap="choose">人工确认</t-tag></view>
+        <view class="flex flex-wrap gap-2"><view class="flex min-h-[88rpx] items-center" aria-role="radio" aria-checked="{{draft.registrationPolicy === 'AUTO'}}" data-field="registrationPolicy" data-value="AUTO" bind:tap="choose"><t-tag theme="{{draft.registrationPolicy === 'AUTO' ? 'primary' : 'default'}}" variant="outline">自动确认</t-tag></view><view class="flex min-h-[88rpx] items-center" aria-role="radio" aria-checked="{{draft.registrationPolicy === 'APPROVAL'}}" data-field="registrationPolicy" data-value="APPROVAL" bind:tap="choose"><t-tag theme="{{draft.registrationPolicy === 'APPROVAL' ? 'primary' : 'default'}}" variant="outline">人工确认</t-tag></view></view>
       </view>
       <view class="mb-2 mt-4 text-[length:23rpx] text-muted">名额上限</view><t-input class="box-border max-w-full" type="number" value="{{draft.capacity}}" placeholder="不填写表示不限额" data-field="capacity" bind:change="updateField" />
       <view wx:if="{{draft.accessType !== 'PAID'}}" class="mt-3 flex min-h-[72rpx] items-center justify-between"><view class="text-[length:23rpx]">名额满后启用候补</view><t-switch value="{{draft.waitlistEnabled}}" bind:change="toggleWaitlist" /></view>
@@ -129,7 +129,7 @@
       <view class="flex min-h-[72rpx] items-center justify-between"><view class="text-[length:23rpx]">开放活动相册</view><t-switch value="{{draft.albumEnabled}}" bind:change="toggleAlbum" /></view>
       <view wx:if="{{draft.albumEnabled}}">
         <view class="mb-2 mt-4 text-[length:23rpx] text-muted">照片发布方式</view>
-        <view class="flex flex-wrap gap-2"><t-tag theme="{{draft.albumSubmissionPolicy === 'REVIEW' ? 'primary' : 'default'}}" variant="outline" data-field="albumSubmissionPolicy" data-value="REVIEW" bind:tap="choose">审核后发布</t-tag><t-tag theme="{{draft.albumSubmissionPolicy === 'AUTO' ? 'primary' : 'default'}}" variant="outline" data-field="albumSubmissionPolicy" data-value="AUTO" bind:tap="choose">自动发布</t-tag></view>
+        <view class="flex flex-wrap gap-2"><view class="flex min-h-[88rpx] items-center" aria-role="radio" aria-checked="{{draft.albumSubmissionPolicy === 'REVIEW'}}" data-field="albumSubmissionPolicy" data-value="REVIEW" bind:tap="choose"><t-tag theme="{{draft.albumSubmissionPolicy === 'REVIEW' ? 'primary' : 'default'}}" variant="outline">审核后发布</t-tag></view><view class="flex min-h-[88rpx] items-center" aria-role="radio" aria-checked="{{draft.albumSubmissionPolicy === 'AUTO'}}" data-field="albumSubmissionPolicy" data-value="AUTO" bind:tap="choose"><t-tag theme="{{draft.albumSubmissionPolicy === 'AUTO' ? 'primary' : 'default'}}" variant="outline">自动发布</t-tag></view></view>
       </view>
     </view>
 

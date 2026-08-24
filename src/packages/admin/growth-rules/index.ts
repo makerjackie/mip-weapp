@@ -6,6 +6,8 @@ import { adminLoadFailure } from '../shared/page-state'
 interface GrowthRuleView extends AdminGrowthRule {
   metricLabel: string
   statusLabel: string
+  statusTheme: 'default' | 'success' | 'warning'
+  sourceLabel: string
 }
 
 const metricLabels: Record<AdminGrowthRule['metric'], string> = {
@@ -19,11 +21,26 @@ const statusLabels: Record<AdminGrowthRule['status'], string> = {
   INACTIVE: '停用',
 }
 
+const statusThemes: Record<AdminGrowthRule['status'], GrowthRuleView['statusTheme']> = {
+  DRAFT: 'warning',
+  ACTIVE: 'success',
+  INACTIVE: 'default',
+}
+
+const sourceLabels: Record<string, string> = {
+  'identity.profile_completed': '完善资料',
+  'event.checked_in': '完成活动签到',
+  'referral.confirmed': '确认有效引荐',
+  'super_case.published': '发布超级案例',
+}
+
 function toView(rule: AdminGrowthRule): GrowthRuleView {
   return {
     ...rule,
     metricLabel: metricLabels[rule.metric],
     statusLabel: statusLabels[rule.status],
+    statusTheme: statusThemes[rule.status],
+    sourceLabel: sourceLabels[rule.sourceEventType] || '其他业务行为',
   }
 }
 
@@ -40,6 +57,7 @@ Page({
     deltaValue: '',
     dailyLimitValue: '',
     sourceEventType: '',
+    sourceLabel: '',
     status: 'DRAFT',
     saving: false,
     message: '',
@@ -80,7 +98,7 @@ Page({
     if (!rule) {
       return
     }
-    this.setData({ editorId: rule.id, editorVersion: rule.version, ruleKey: rule.ruleKey, name: rule.name, metric: rule.metric, deltaValue: String(rule.deltaValue), dailyLimitValue: rule.dailyLimitValue === null ? '' : String(rule.dailyLimitValue), sourceEventType: rule.sourceEventType, status: rule.status })
+    this.setData({ editorId: rule.id, editorVersion: rule.version, ruleKey: rule.ruleKey, name: rule.name, metric: rule.metric, deltaValue: String(rule.deltaValue), dailyLimitValue: rule.dailyLimitValue === null ? '' : String(rule.dailyLimitValue), sourceEventType: rule.sourceEventType, sourceLabel: rule.sourceLabel, status: rule.status })
   },
   resetEditor() {
     this.setData({
@@ -92,6 +110,7 @@ Page({
       deltaValue: '',
       dailyLimitValue: '',
       sourceEventType: '',
+      sourceLabel: '',
       status: 'DRAFT',
       message: '',
     })

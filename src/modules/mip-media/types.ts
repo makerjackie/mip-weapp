@@ -6,6 +6,9 @@ export const mipMediaPurposes = [
   'OPPORTUNITY_COVER',
   'SUPER_CASE_COVER',
   'SUPER_CASE_MEDIA',
+  'TASK_ATTACHMENT',
+  'TASK_TEMPLATE',
+  'BANNER',
 ] as const
 
 export type MipMediaPurpose = (typeof mipMediaPurposes)[number]

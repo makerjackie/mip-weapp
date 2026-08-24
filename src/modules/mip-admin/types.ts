@@ -44,6 +44,10 @@ export type AdminCapability
     | 'growth.read'
     | 'growth.configure'
     | 'growth.adjust'
+    | 'tasks.manage'
+    | 'banners.manage'
+    | 'badges.manage'
+    | 'game.manage'
     | 'orders.read'
     | 'refunds.submit'
     | 'operations.exceptions.read'
@@ -97,9 +101,13 @@ export interface AdminUser {
   phoneBound: boolean
   phoneNumber: string | null
   controls: Array<'ALLOWLIST' | 'BLOCKLIST'>
+  levelId: string | null
+  levelName: string
+  experience: number
   visibility: Record<string, unknown>
   userVersion: number
   profileVersion: number
+  createdAt: string | null
   updatedAt: string | null
 }
 
@@ -137,6 +145,12 @@ export interface AdminUserDetail extends AdminUser {
     grantedAt: string | null
   }>
   createdAt: string | null
+  relatedRecords: {
+    superCases: Array<{ id: string, title: string, summary: string, status: string, updatedAt: string | null }>
+    opportunities: Array<{ id: string, title: string, status: AdminOpportunity['status'], updatedAt: string | null }>
+    registrations: Array<{ id: string, eventId: string, title: string, status: AdminRosterStatus, createdAt: string | null }>
+    orders: Array<{ id: string, orderType: AdminOrder['orderType'], title: string, status: AdminOrderStatus, amountCents: number, currency: string, merchantOrderNoMasked: string, createdAt: string | null }>
+  }
 }
 
 export interface AdminEvent {
@@ -146,7 +160,7 @@ export interface AdminEvent {
   scopeType: AdminScopeType
   branchId: string | null
   branchName: string
-  status: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'CANCELLED' | 'ENDED'
+  status: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'CANCELLED' | 'ENDED' | 'ARCHIVED'
   contentSafetyStatus: 'PENDING' | 'PASSED' | 'REJECTED' | 'ERROR'
   startsAt: string
   endsAt: string
@@ -352,6 +366,20 @@ export interface AdminRosterItem {
   version: number
 }
 
+export interface AdminRosterAllItem extends AdminRosterItem {
+  eventId: string
+  eventTitle: string
+  branchId: string | null
+  branchName: string
+}
+
+export interface AdminRosterAllListInput {
+  includePhone?: boolean
+  filters?: AdminRosterFilters & { eventId?: string, branchId?: string, createdFrom?: string, createdTo?: string }
+  cursor?: string
+  limit?: number
+}
+
 export type AdminRosterStatus
   = | 'PENDING_REVIEW'
     | 'WAITLISTED'
@@ -408,6 +436,12 @@ export interface AdminOpportunity {
   scopeType: AdminScopeType
   branchId: string | null
   branchName: string
+  cityName: string
+  ownerNickname: string
+  targetSummary: string
+  description: string
+  roleKeys: string[]
+  tags: string[]
   status: 'DRAFT' | 'PUBLISHED' | 'ENDED' | 'UNPUBLISHED' | 'ARCHIVED'
   contentSafetyStatus: 'PENDING' | 'APPROVED' | 'REJECTED' | 'ERROR'
   referralCount: number
@@ -418,6 +452,45 @@ export interface AdminOpportunity {
   archivedAt: string | null
   archiveReason: string
   updatedAt: string | null
+  deadlineAt: string | null
+  ownerUserId: string
+  cityTagId: string | null
+  tagIds: string[]
+}
+
+export interface AdminOpportunityHistoryItem {
+  id: string
+  action: string
+  actorNickname: string
+  metadata: Record<string, unknown>
+  createdAt: string | null
+}
+
+export interface AdminOpportunityDetail extends AdminOpportunity {
+  history: AdminOpportunityHistoryItem[]
+}
+
+export interface AdminOpportunityEditorOptions {
+  owners: Array<{ id: string, nickname: string, branchName: string }>
+  branches: Array<{ id: string, name: string, cityName: string }>
+  cities: Array<{ id: string, label: string }>
+  tags: Array<{ id: string, kind: 'INDUSTRY' | 'ABILITY', label: string }>
+  roles: Array<{ key: string, label: string }>
+}
+
+export interface AdminOrderSummary {
+  currency: 'CNY'
+  orderCount: number
+  paidOrderCount: number
+  eventGrossAmountCents: number
+  membershipGrossAmountCents: number
+  grossAmountCents: number
+  refundedAmountCents: number
+  netAmountCents: number
+}
+
+export interface AdminOrderPage extends AdminPage<AdminOrder> {
+  summary: AdminOrderSummary
 }
 
 export interface AdminGrowthLevel {
@@ -425,7 +498,19 @@ export interface AdminGrowthLevel {
   levelKey: string
   name: string
   minimumExperience: number
-  benefits: unknown[]
+  displayBadge: string
+  sortOrder: number
+  benefits: AdminGrowthBenefit[]
+  legacyBenefits: string[]
+  status: 'DRAFT' | 'ACTIVE' | 'INACTIVE'
+  version: number
+}
+
+export interface AdminGrowthBenefit {
+  id: string
+  name: string
+  description: string
+  sortOrder: number
   status: 'DRAFT' | 'ACTIVE' | 'INACTIVE'
   version: number
 }
@@ -446,12 +531,44 @@ export interface AdminGrowthEntry {
   id: string
   userId: string
   nickname: string
+  sourceEventId: string
   sourceEventType: string
   metric: 'EXPERIENCE' | 'CONTRIBUTION'
   deltaValue: number
+  balanceBefore: number
   balanceAfter: number
   adjustmentReason: string
   createdAt: string | null
+}
+
+export interface AdminBadge {
+  id: string
+  key: string
+  name: string
+  description: string
+  iconName: string
+  imageUrl: string
+  placeholderShape: 'CIRCLE' | 'DIAMOND' | 'HEXAGON'
+  sortOrder: number
+  status: 'DRAFT' | 'ACTIVE' | 'INACTIVE'
+  version: number
+  createdAt: string | null
+  updatedAt: string | null
+}
+
+export interface AdminBadgeAward {
+  id: string
+  userId: string
+  nickname: string
+  badgeId: string
+  badgeName: string
+  status: 'ACTIVE' | 'REVOKED'
+  awardReason: string
+  awardedAt: string | null
+  revokeReason: string
+  revokedAt: string | null
+  equipped: boolean
+  version: number
 }
 
 export type AdminOrderStatus
@@ -511,6 +628,9 @@ export interface AdminOrder {
   paidAt: string | null
   createdAt: string
   version: number
+  entitlementStartsAt?: string | null
+  entitlementEndsAt?: string | null
+  entitlementStatus?: 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'REFUNDED' | null
 }
 
 export interface AdminAuditItem {
@@ -606,10 +726,12 @@ export interface MipAdminGateway {
   saveEvent: (input: Record<string, unknown>) => Promise<{ id: string, version: number, status: string }>
   cloneEvent: (input: AdminEventCloneInput) => Promise<AdminEventCloneResult>
   changeEventStatus: (input: Record<string, unknown>) => Promise<{ id: string, version: number, status: string }>
+  archiveEvent: (input: { eventId: string, expectedVersion: number, reason: string }) => Promise<{ id: string, version: number, status: 'ARCHIVED' }>
   publishEventReminder: (input: AdminEventReminderInput) => Promise<AdminEventReminderPublication>
   listEventAlbumPhotos: (eventId: string, status: AdminEventAlbumPhotoStatus) => Promise<AdminPage<AdminEventAlbumPhoto>>
   reviewEventAlbumPhoto: (input: AdminEventAlbumReviewInput) => Promise<AdminEventAlbumPhoto>
   listRoster: (input: AdminRosterListInput) => Promise<AdminPage<AdminRosterItem>>
+  listRosterAll: (input: AdminRosterAllListInput) => Promise<AdminPage<AdminRosterAllItem>>
   reviewRegistration: (input: Record<string, unknown>) => Promise<{ id: string, status: string, version: number }>
   checkIn: (input: Record<string, unknown>) => Promise<{ id: string, status: string, version: number, idempotent: boolean }>
   undoCheckIn: (input: Record<string, unknown>) => Promise<{ id: string, status: 'REGISTERED', version: number }>
@@ -617,15 +739,26 @@ export interface MipAdminGateway {
   searchRoleCandidates: (eventId: string, query: string) => Promise<AdminPage<AdminRoleCandidate>>
   setRole: (input: Record<string, unknown>) => Promise<Record<string, unknown>>
   listOpportunities: (input?: Record<string, unknown>) => Promise<AdminPage<AdminOpportunity>>
+  getOpportunity: (opportunityId: string) => Promise<AdminOpportunityDetail>
+  getOpportunityEditorOptions: () => Promise<AdminOpportunityEditorOptions>
+  saveOpportunity: (input: Record<string, unknown>) => Promise<{ id: string, status: string, version: number }>
+  publishOpportunity: (input: { opportunityId: string, expectedVersion: number }) => Promise<{ id: string, status: 'PUBLISHED', version: number }>
   unpublishOpportunity: (input: Record<string, unknown>) => Promise<{ id: string, status: string, version: number }>
   archiveOpportunity: (input: Record<string, unknown>) => Promise<{ id: string, status: 'ARCHIVED', version: number, archivedAt: string }>
   listGrowthLevels: () => Promise<AdminPage<AdminGrowthLevel>>
+  listGrowthBenefits: () => Promise<AdminPage<AdminGrowthBenefit>>
+  saveGrowthBenefit: (input: Record<string, unknown>) => Promise<{ id: string, version: number }>
   saveGrowthLevel: (input: Record<string, unknown>) => Promise<{ id: string, version: number }>
   listGrowthRules: () => Promise<AdminPage<AdminGrowthRule>>
   saveGrowthRule: (input: Record<string, unknown>) => Promise<{ id: string, version: number }>
   listGrowthEntries: (input?: Record<string, unknown>) => Promise<AdminPage<AdminGrowthEntry>>
   adjustGrowth: (input: Record<string, unknown>) => Promise<Record<string, unknown>>
-  listOrders: (input?: AdminOrderListInput) => Promise<AdminPage<AdminOrder>>
+  listBadges: () => Promise<AdminPage<AdminBadge>>
+  saveBadge: (input: Record<string, unknown>) => Promise<{ id: string, version: number }>
+  listBadgeAwards: (input?: { query?: string, status?: 'ACTIVE' | 'REVOKED' | '' }) => Promise<AdminPage<AdminBadgeAward>>
+  grantBadge: (input: { userId: string, badgeId: string, reason: string }) => Promise<Record<string, unknown>>
+  revokeBadge: (input: { awardId: string, expectedVersion: number, reason: string }) => Promise<Record<string, unknown>>
+  listOrders: (input?: AdminOrderListInput) => Promise<AdminOrderPage>
   submitRefund: (input: Record<string, unknown>) => Promise<Record<string, unknown>>
   retryRefund: (refundId: string) => Promise<Record<string, unknown>>
   listOperationalExceptions: (input?: AdminOperationalExceptionFilters) => Promise<AdminOperationalExceptionPage>

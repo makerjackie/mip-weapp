@@ -22,6 +22,12 @@ describe('MIP media client boundary', () => {
 
     await module.uploadImageBase64('EVENT_CONTENT', Buffer.alloc(64).toString('base64'))
     expect(uploadImage).toHaveBeenLastCalledWith('EVENT_CONTENT', expect.any(String))
+
+    await module.uploadImageBase64('BANNER', Buffer.alloc(64).toString('base64'))
+    expect(uploadImage).toHaveBeenLastCalledWith('BANNER', expect.any(String))
+
+    await module.uploadImageBase64('TASK_TEMPLATE', Buffer.alloc(64).toString('base64'))
+    expect(uploadImage).toHaveBeenLastCalledWith('TASK_TEMPLATE', expect.any(String))
   })
 
   it('rejects a client payload larger than the server envelope before transport', async () => {

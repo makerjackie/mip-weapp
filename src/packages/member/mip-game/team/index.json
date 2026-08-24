@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "队伍大本营",
+  "backgroundColor": "#040404",
+  "usingComponents": {
+    "app-empty-state": "/components/empty-state/index",
+    "app-page-exit": "/components/page-exit/index",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
+  }
+}

@@ -60,13 +60,33 @@ function roster(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function summary(overrides: Record<string, unknown> = {}) {
+  return {
+    currency: 'CNY',
+    orderCount: 1,
+    paidOrderCount: 1,
+    eventGrossAmountCents: 0,
+    membershipGrossAmountCents: 79900,
+    grossAmountCents: 79900,
+    refundedAmountCents: 0,
+    netAmountCents: 79900,
+    ...overrides,
+  }
+}
+
 describe('H2 admin order and roster response boundary', () => {
   it('accepts complete safe DTOs and rejects raw payment or roster identity fields', () => {
-    expect(parseAdminOrderPage({ items: [order()], nextCursor: null }).items[0].resourceTitle).toBe('年度会员')
+    expect(parseAdminOrderPage({ items: [order()], nextCursor: null, summary: summary() }).items[0].resourceTitle).toBe('年度会员')
     expect(() => parseAdminOrderPage({
       items: [order({ merchantOrderNo: 'MIP-RAW-ORDER' })],
       nextCursor: null,
+      summary: summary(),
     })).toThrow(/无效的订单列表/)
+    expect(() => parseAdminOrderPage({
+      items: [order()],
+      nextCursor: null,
+      summary: summary({ netAmountCents: 1 }),
+    })).toThrow(/无效的财务汇总/)
 
     expect(parseAdminRosterPage({ items: [roster()], nextCursor: null }).items[0].answerItems[0]).toEqual({
       key: 'role',

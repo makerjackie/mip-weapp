@@ -6,7 +6,7 @@
     <view wx:elif="{{state === 'checking'}}" class="mt-5 rounded-[12rpx] bg-panel-raised px-4 py-4"><t-skeleton row-col="{{[1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <view wx:elif="{{state === 'success'}}" class="mt-3 text-[length:24rpx] leading-6 text-success">签到成功</view>
     <view wx:else class="mt-3 text-[length:24rpx] leading-6 text-danger">{{message}}</view>
-    <view wx:if="{{state === 'idle' || state === 'error'}}" class="mt-6"><t-button block size="large" theme="primary" bind:tap="scanCode">扫描活动码</t-button></view>
+    <view wx:if="{{state === 'idle' || state === 'error'}}" class="mt-6"><t-button block size="large" theme="primary" bind:tap="scanCode">{{scanToken ? '确认签到' : '扫描活动码'}}</t-button></view>
     <view wx:if="{{state === 'success'}}" class="mt-6"><t-button block size="large" theme="primary" bind:tap="openInteraction">心动与反馈</t-button></view>
   </view>
   <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-3 text-[length:21rpx] leading-5 text-muted">活动码可能被转发，签到仍会核对报名资格和活动时间。请仅在现场使用。</view>

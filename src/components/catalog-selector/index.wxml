@@ -1,15 +1,15 @@
 <view class="w-full max-w-full box-border">
   <view wx:if="{{title}}" class="text-[length:23rpx] font-semibold">{{title}}</view>
   <view class="mt-2 flex flex-wrap gap-2">
-    <view wx:if="{{normalizedSelectedIds.length === 0}}" class="min-h-[64rpx] rounded-full bg-brand px-4 py-2 text-[length:22rpx] text-on-brand" bind:tap="clear">{{clearLabel}}</view>
-    <view wx:else class="min-h-[64rpx] rounded-full bg-panel-raised px-4 py-2 text-[length:22rpx] text-muted" bind:tap="clear">{{clearLabel}}</view>
+    <view wx:if="{{normalizedSelectedIds.length === 0}}" class="flex min-h-[88rpx] items-center rounded-full bg-brand px-4 py-2 text-[length:22rpx] text-on-brand" aria-role="button" aria-pressed="true" bind:tap="clear"><text>{{clearLabel}}</text><text class="ml-1 text-[length:19rpx]">已选</text></view>
+    <view wx:else class="flex min-h-[88rpx] items-center rounded-full bg-panel-raised px-4 py-2 text-[length:22rpx] text-muted" aria-role="button" aria-pressed="false" bind:tap="clear">{{clearLabel}}</view>
   </view>
   <block wx:if="{{popularOptions.length}}">
     <view class="mt-3 text-[length:21rpx] text-muted">热门</view>
     <view class="mt-2 flex flex-wrap gap-2">
       <block wx:for="{{popularOptions}}" wx:key="id">
-        <view wx:if="{{item.selected}}" class="min-h-[64rpx] rounded-full bg-brand px-4 py-2 text-[length:22rpx] text-on-brand" data-id="{{item.id}}" bind:tap="toggle">{{item.label}}</view>
-        <view wx:else class="min-h-[64rpx] rounded-full bg-panel-raised px-4 py-2 text-[length:22rpx] text-muted" data-id="{{item.id}}" bind:tap="toggle">{{item.label}}</view>
+        <view wx:if="{{item.selected}}" class="flex min-h-[88rpx] items-center rounded-full bg-brand px-4 py-2 text-[length:22rpx] text-on-brand" aria-role="{{multiple ? 'checkbox' : 'radio'}}" aria-checked="true" data-id="{{item.id}}" bind:tap="toggle"><text>{{item.label}}</text><text class="ml-1 text-[length:19rpx]">已选</text></view>
+        <view wx:else class="flex min-h-[88rpx] items-center rounded-full bg-panel-raised px-4 py-2 text-[length:22rpx] text-muted" aria-role="{{multiple ? 'checkbox' : 'radio'}}" aria-checked="false" data-id="{{item.id}}" bind:tap="toggle">{{item.label}}</view>
       </block>
     </view>
   </block>
@@ -17,8 +17,8 @@
     <view class="mt-3 text-[length:21rpx] text-muted">{{group.label}}</view>
     <view class="mt-2 flex flex-wrap gap-2">
       <block wx:for="{{group.options}}" wx:for-item="option" wx:key="id">
-        <view wx:if="{{option.selected}}" class="min-h-[64rpx] rounded-full bg-brand px-4 py-2 text-[length:22rpx] text-on-brand" data-id="{{option.id}}" bind:tap="toggle">{{option.label}}</view>
-        <view wx:else class="min-h-[64rpx] rounded-full bg-panel-raised px-4 py-2 text-[length:22rpx] text-muted" data-id="{{option.id}}" bind:tap="toggle">{{option.label}}</view>
+        <view wx:if="{{option.selected}}" class="flex min-h-[88rpx] items-center rounded-full bg-brand px-4 py-2 text-[length:22rpx] text-on-brand" aria-role="{{multiple ? 'checkbox' : 'radio'}}" aria-checked="true" data-id="{{option.id}}" bind:tap="toggle"><text>{{option.label}}</text><text class="ml-1 text-[length:19rpx]">已选</text></view>
+        <view wx:else class="flex min-h-[88rpx] items-center rounded-full bg-panel-raised px-4 py-2 text-[length:22rpx] text-muted" aria-role="{{multiple ? 'checkbox' : 'radio'}}" aria-checked="false" data-id="{{option.id}}" bind:tap="toggle">{{option.label}}</view>
       </block>
     </view>
   </block>

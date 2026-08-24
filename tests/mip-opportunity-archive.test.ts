@@ -16,7 +16,7 @@ describe('MIP opportunity archive client contract', () => {
     expect(gateway).toContain('call(\'mip.admin.opportunities.archive\', input)')
     expect(page).toContain('hasCapability(session.capabilities, \'opportunities.archive\')')
     expect(page).toContain('expectedVersion: version')
-    expect(template).toContain('item.status === \'DRAFT\' && canArchive')
+    expect(template).toContain('item.status !== \'PUBLISHED\' && item.status !== \'ARCHIVED\' && canArchive')
     expect(template).toContain('data-value="ARCHIVED"')
   })
 

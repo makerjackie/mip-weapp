@@ -6,7 +6,6 @@ const path = require('node:path')
 const { describe, it } = require('node:test')
 const { actions, errorResponse } = require('../domain/handler')
 const {
-  ARCHIVE_BLOCKER_KEYS,
   createOpportunityArchiveRepository: createProductionOpportunityArchiveRepository,
   createOpportunityArchiveService,
   normalizeArchiveRequest,
@@ -89,26 +88,12 @@ describe('opportunity archive repository', () => {
     assert.match(lock.sql, /FROM mip_opportunities[\s\S]*app_id = \? AND id = \? FOR UPDATE/)
     assert.deepEqual(lock.params, [APP_ID, OPPORTUNITY_ID])
 
-    for (const key of ARCHIVE_BLOCKER_KEYS) {
-      const marker = {
-        REFERRAL_INTENTS: 'mip_referral_intents',
-        PROFILE_INTERESTS: 'mip_profile_interests',
-        ORDERS: 'mip_orders',
-        ANNOUNCEMENTS: 'mip_announcements',
-        OUTBOX_EVENTS: 'mip_outbox_events',
-      }[key]
-      const check = calls.find(call => call.kind === 'one' && call.sql.includes(marker))
-      assert.ok(check, `${key} blocker was not checked`)
-      assert.deepEqual(check.params, [APP_ID, OPPORTUNITY_ID])
-      assert.match(check.sql, /FOR UPDATE/)
-    }
-
     const updateIndex = calls.findIndex(call => call.sql.includes('UPDATE mip_opportunities'))
     const auditIndex = calls.findIndex(call => call.sql.includes('INSERT INTO mip_audit_logs'))
     assert.ok(updateIndex > 0 && auditIndex > updateIndex)
     assert.match(calls[updateIndex].sql, /status = 'ARCHIVED'/)
     assert.match(calls[updateIndex].sql, /version = version \+ 1/)
-    assert.match(calls[updateIndex].sql, /status = 'DRAFT'/)
+    assert.match(calls[updateIndex].sql, /status IN \('DRAFT', 'UNPUBLISHED', 'ENDED'\)/)
     assert.deepEqual(calls[updateIndex].params, [
       ARCHIVED_AT,
       ADMIN_ID,
@@ -129,7 +114,7 @@ describe('opportunity archive repository', () => {
     assert.equal(calls.some(call => /\bDELETE\s+FROM\b/i.test(call.sql)), false)
   })
 
-  it('fails closed for every durable business fact without updating or auditing', async () => {
+  it('archives while preserving every durable business fact', async () => {
     const markers = {
       REFERRAL_INTENTS: 'mip_referral_intents',
       PROFILE_INTERESTS: 'mip_profile_interests',
@@ -137,7 +122,7 @@ describe('opportunity archive repository', () => {
       ANNOUNCEMENTS: 'mip_announcements',
       OUTBOX_EVENTS: 'mip_outbox_events',
     }
-    for (const [blocker, marker] of Object.entries(markers)) {
+    for (const marker of Object.values(markers)) {
       const writes = []
       const repository = createOpportunityArchiveRepository(transactionDatabase({
         async one(sql) {
@@ -149,16 +134,13 @@ describe('opportunity archive repository', () => {
           return { affectedRows: 1 }
         },
       }))
-      await assert.rejects(
-        () => repository.archiveOpportunity(archiveInput()),
-        error => error.code === 'OPPORTUNITY_ARCHIVE_BLOCKED'
-          && error.details.blockers.includes(blocker),
-      )
-      assert.equal(writes.length, 0)
+      const result = await repository.archiveOpportunity(archiveInput())
+      assert.equal(result.status, 'ARCHIVED')
+      assert.equal(writes.some(sql => /DELETE\s+FROM/i.test(sql)), false)
     }
   })
 
-  it('treats a non-zero denormalized referral count as a blocker', async () => {
+  it('keeps referral history when the denormalized count is non-zero', async () => {
     const writes = []
     const repository = createOpportunityArchiveRepository(transactionDatabase({
       async one(sql) {
@@ -170,12 +152,9 @@ describe('opportunity archive repository', () => {
         return { affectedRows: 1 }
       },
     }))
-    await assert.rejects(
-      () => repository.archiveOpportunity(archiveInput()),
-      error => error.code === 'OPPORTUNITY_ARCHIVE_BLOCKED'
-        && error.details.blockers.includes('REFERRAL_INTENTS'),
-    )
-    assert.equal(writes.length, 0)
+    const result = await repository.archiveOpportunity(archiveInput())
+    assert.equal(result.status, 'ARCHIVED')
+    assert.equal(writes.some(sql => /DELETE\s+FROM/i.test(sql)), false)
   })
 
   it('rejects stale, non-draft and re-scoped records before mutation', async () => {

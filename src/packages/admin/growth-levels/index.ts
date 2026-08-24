@@ -1,20 +1,36 @@
-import type { AdminGrowthLevel } from '../../../modules/mip-admin'
+import type { AdminGrowthBenefit, AdminGrowthLevel } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { adminLoadFailure } from '../shared/page-state'
 
+type LevelView = AdminGrowthLevel & { statusText: string, statusTheme: string, benefitText: string }
+type BenefitChoice = AdminGrowthBenefit & { selected: boolean }
+const statusLabels = { DRAFT: '草稿', ACTIVE: '启用', INACTIVE: '停用' } as const
+
+function levelView(item: AdminGrowthLevel): LevelView {
+  const benefitNames = item.benefits.map(benefit => benefit.name)
+  return {
+    ...item,
+    statusText: statusLabels[item.status],
+    statusTheme: item.status === 'ACTIVE' ? 'success' : item.status === 'INACTIVE' ? 'danger' : 'default',
+    benefitText: [...benefitNames, ...item.legacyBenefits.filter(name => !benefitNames.includes(name))].join('、') || '未关联权益',
+  }
+}
+
 Page({
   data: {
     state: 'loading' as AdminPageState,
-    levels: [] as AdminGrowthLevel[],
+    levels: [] as LevelView[],
+    benefits: [] as BenefitChoice[],
     canConfigure: false,
     editorId: '',
     editorVersion: 0,
     levelKey: '',
     name: '',
+    displayBadge: '',
     minimumExperience: '',
-    benefits: '',
-    status: 'DRAFT',
+    sortOrder: '',
+    status: 'DRAFT' as AdminGrowthLevel['status'],
     saving: false,
     message: '',
   },
@@ -25,8 +41,18 @@ Page({
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const [session, response] = await Promise.all([mipAdminModule.getSession(force), mipAdminModule.listGrowthLevels(force)])
-      this.setData({ state: 'ready', levels: response.items, canConfigure: hasCapability(session.capabilities, 'growth.configure'), message: '' })
+      const [session, response, benefits] = await Promise.all([
+        mipAdminModule.getSession(force),
+        mipAdminModule.listGrowthLevels(force),
+        mipAdminModule.listGrowthBenefits(force),
+      ])
+      this.setData({
+        state: 'ready',
+        levels: response.items.map(levelView),
+        benefits: benefits.items.map(item => ({ ...item, selected: false })),
+        canConfigure: hasCapability(session.capabilities, 'growth.configure'),
+        message: '',
+      })
     }
     catch (error) {
       this.setData(adminLoadFailure(error, { hasContent, fallbackMessage: '成长等级加载失败' }))
@@ -34,20 +60,48 @@ Page({
   },
   updateField(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const field = String(event.currentTarget.dataset.field || '')
-    if (['levelKey', 'name', 'minimumExperience', 'benefits'].includes(field)) {
+    if (['name', 'displayBadge', 'minimumExperience', 'sortOrder'].includes(field)) {
       this.setData({ [field]: event.detail.value })
     }
   },
-  chooseStatus(event: WechatMiniprogram.TouchEvent) { this.setData({ status: String(event.currentTarget.dataset.value || 'DRAFT') }) },
-  edit(event: WechatMiniprogram.TouchEvent) {
+  chooseStatus(event: WechatMiniprogram.TouchEvent) {
+    this.setData({ status: String(event.currentTarget.dataset.value || 'DRAFT') as AdminGrowthLevel['status'] })
+  },
+  toggleBenefit(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || '')
-    const level = this.data.levels.find(item => item.id === id)
+    this.setData({ benefits: this.data.benefits.map(item => item.id === id ? { ...item, selected: !item.selected } : item) })
+  },
+  edit(event: WechatMiniprogram.TouchEvent) {
+    const level = this.data.levels.find(item => item.id === String(event.currentTarget.dataset.id || ''))
     if (!level) {
       return
     }
-    this.setData({ editorId: level.id, editorVersion: level.version, levelKey: level.levelKey, name: level.name, minimumExperience: String(level.minimumExperience), benefits: level.benefits.join('、'), status: level.status })
+    const selected = new Set(level.benefits.map(item => item.id))
+    this.setData({
+      editorId: level.id,
+      editorVersion: level.version,
+      levelKey: level.levelKey,
+      name: level.name,
+      displayBadge: level.displayBadge,
+      minimumExperience: String(level.minimumExperience),
+      sortOrder: String(level.sortOrder),
+      status: level.status,
+      benefits: this.data.benefits.map(item => ({ ...item, selected: selected.has(item.id) })),
+    })
   },
-  resetEditor() { this.setData({ editorId: '', editorVersion: 0, levelKey: '', name: '', minimumExperience: '', benefits: '', status: 'DRAFT' }) },
+  resetEditor() {
+    this.setData({
+      editorId: '',
+      editorVersion: 0,
+      levelKey: '',
+      name: '',
+      displayBadge: '',
+      minimumExperience: '',
+      sortOrder: '',
+      status: 'DRAFT',
+      benefits: this.data.benefits.map(item => ({ ...item, selected: false })),
+    })
+  },
   async save() {
     if (!this.data.canConfigure || this.data.saving) {
       return
@@ -56,12 +110,14 @@ Page({
     try {
       await mipAdminModule.mutate(() => mipAdminModule.gateway.saveGrowthLevel({
         levelId: this.data.editorId || undefined,
-        expectedVersion: this.data.editorVersion || undefined,
+        expectedVersion: this.data.editorId ? this.data.editorVersion : undefined,
         draft: {
-          levelKey: this.data.levelKey.trim(),
-          name: this.data.name.trim(),
+          levelKey: this.data.levelKey || `level-${Date.now()}`,
+          name: this.data.name,
+          displayBadge: this.data.displayBadge,
           minimumExperience: Number(this.data.minimumExperience),
-          benefits: this.data.benefits.split(/[、,，]/).map(value => value.trim()).filter(Boolean),
+          sortOrder: Number(this.data.sortOrder),
+          benefitIds: this.data.benefits.filter(item => item.selected).map(item => item.id),
           status: this.data.status,
         },
       }))
@@ -69,13 +125,10 @@ Page({
       this.resetEditor()
       await this.loadLevels(true)
     }
-    catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '等级保存失败' })
-    }
-    finally {
-      this.setData({ saving: false })
-    }
+    catch (error) { this.setData({ message: error instanceof Error ? error.message : '等级保存失败' }) }
+    finally { this.setData({ saving: false }) }
   },
+  openBenefits() { void wx.navigateTo({ url: '/packages/admin/growth-benefits/index' }) },
   openRules() { void wx.navigateTo({ url: '/packages/admin/growth-rules/index' }) },
   openEntries() { void wx.navigateTo({ url: '/packages/admin/growth-entries/index' }) },
 })

@@ -47,6 +47,7 @@ describe('MIP people discovery client contract', () => {
       kind: 'PLAYER',
       keyword: '  品牌  ',
       branchId: '20000000-0000-4000-8000-000000000001',
+      roleKey: 'strategist',
       industryTagIds: ['industry-1', 'industry-1'],
       abilityTagIds: ['ability-1', 'ability-1'],
       limit: 100,
@@ -54,6 +55,7 @@ describe('MIP people discovery client contract', () => {
       scope: 'PLAYER',
       keyword: '品牌',
       branchId: '20000000-0000-4000-8000-000000000001',
+      roleKey: 'strategist',
       industryTagIds: ['industry-1'],
       abilityTagIds: ['ability-1'],
       cursor: undefined,
@@ -61,6 +63,7 @@ describe('MIP people discovery client contract', () => {
     })
     expect(normalizePeopleFilter({ scope: 'GLOBAL' })).toMatchObject({
       scope: 'GLOBAL',
+      roleKey: undefined,
       industryTagIds: [],
       abilityTagIds: [],
     })
@@ -138,7 +141,11 @@ describe('MIP people discovery client contract', () => {
     expect(discovery).toContain('opportunityModule.listPeople')
     expect(discovery).toContain('searchScope: \'GLOBAL\'')
     expect(discovery).toContain('abilityTagIds: this.data.selectedAbilityTagIds')
+    expect(discovery).toContain('roleKey: this.data.selectedRoleKey')
     expect(source('src/packages/member/mip-people/index.wxml')).toContain('bind:tap="toggleAbility"')
+    expect(source('src/packages/member/mip-people/index.wxml')).toContain('bind:tap="chooseRole"')
+    expect(source('src/packages/member/mip-people/index.wxml')).toContain('全局搜索')
+    expect(source('src/packages/member/mip-people/index.wxml')).toContain('只搜玩家')
     expect(source('src/packages/member/mip-people/index.wxml')).toContain('data-scope="PLAYER"')
     expect(profile).toContain('opportunityModule.getPublicProfile')
     expect(profile).toContain('opportunityModule.setProfileInterest')

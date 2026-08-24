@@ -36,6 +36,15 @@ Page({
     else if (this.resumeInterest) {
       this.resumeInterest = false
     }
+    if (this.data.state === 'ready') {
+      wx.nextTick(() => this.drawRadar())
+    }
+  },
+
+  onResize() {
+    if (this.data.state === 'ready') {
+      wx.nextTick(() => this.drawRadar())
+    }
   },
 
   async load() {
@@ -100,6 +109,14 @@ Page({
         context.closePath()
         context.stroke()
       }
+      context.strokeStyle = '#4A4A4A'
+      for (let index = 0; index < 6; index += 1) {
+        const current = point(index, 1)
+        context.beginPath()
+        context.moveTo(centerX, centerY)
+        context.lineTo(current.x, current.y)
+        context.stroke()
+      }
       context.beginPath()
       this.data.abilities.forEach((ability, index) => {
         const current = point(index, ability.score / 5)
@@ -114,6 +131,16 @@ Page({
       context.lineWidth = 2
       context.fill()
       context.stroke()
+      context.fillStyle = '#A3A3A3'
+      context.font = '500 11px sans-serif'
+      context.textBaseline = 'middle'
+      this.data.abilities.forEach((ability, index) => {
+        const angle = -Math.PI / 2 + index * Math.PI / 3
+        const label = point(index, 1.18)
+        const horizontal = Math.cos(angle)
+        context.textAlign = horizontal > 0.35 ? 'left' : horizontal < -0.35 ? 'right' : 'center'
+        context.fillText(ability.label, label.x, label.y)
+      })
     })
   },
 

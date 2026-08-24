@@ -88,6 +88,7 @@ export interface PeopleFilter {
   kind?: PeopleKindFilter
   keyword?: string
   branchId?: BranchId
+  roleKey?: CooperationRoleKey
   industryTagIds?: string[]
   abilityTagIds?: string[]
   cursor?: string
@@ -97,6 +98,17 @@ export interface PeopleFilter {
 export interface PublicProfileOrganization {
   name: string
   role?: string
+}
+
+export interface PublicProfileBadge {
+  id: string
+  key: string
+  name: string
+  description: string
+  iconName?: string
+  imageUrl?: string
+  placeholderShape: 'CIRCLE' | 'DIAMOND' | 'HEXAGON'
+  equippedSlot: number
 }
 
 export interface PublicPerson {
@@ -114,6 +126,7 @@ export interface PublicPerson {
   primaryIndustry?: OpportunityTag
   abilities?: OpportunityTag[]
   primaryBranch?: { id: BranchId, name: string, cityName: string }
+  badges?: PublicProfileBadge[]
 }
 
 export interface PeoplePage {

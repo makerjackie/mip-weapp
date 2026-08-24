@@ -34,3 +34,22 @@ test('routes an authenticated check-in transition to the compensation service', 
     data: { ...transition, status: 'APPLIED' },
   })
 })
+
+test('routes badge collection reads and versioned equipment writes for the current user', async () => {
+  const caller = { appId: 'wx-app', userId: '10000000-0000-4000-8000-000000000001' }
+  const handler = createHandler({
+    resolveCaller: async () => caller,
+    service: {
+      listBadgeCollection: async value => ({ userId: value.userId, items: [] }),
+      equipBadges: async (value, event) => ({ userId: value.userId, badgeIds: event.badgeIds }),
+    },
+  })
+  assert.deepEqual(await handler({ action: 'listBadgeCollection' }), {
+    ok: true,
+    data: { userId: caller.userId, items: [] },
+  })
+  assert.deepEqual(await handler({ action: 'equipBadges', badgeIds: ['badge-1'] }), {
+    ok: true,
+    data: { userId: caller.userId, badgeIds: ['badge-1'] },
+  })
+})

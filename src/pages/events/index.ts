@@ -1,4 +1,5 @@
 import type { EventId } from '../../modules/mip'
+import type { MipPublicBanner } from '../../modules/mip-banners'
 import type {
   EventDateFilter,
   EventFeedQuery,
@@ -6,6 +7,7 @@ import type {
   MipEventListItem,
 } from '../../modules/mip-events'
 import { mipOperationsConfig } from '../../config/mip-operations'
+import { mipBannerModule } from '../../modules/mip-banners'
 import { resolvePrimaryBranchCity } from '../../modules/mip-events'
 import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
@@ -18,12 +20,18 @@ interface EventCardView extends MipEventListItem {
   locationText: string
 }
 
-interface EventBannerView {
-  id: string
-  imagePath: string
-  accessibilityLabel: string
-  targetType: 'PAGE' | 'ARTICLE'
-  target: string
+type EventBannerView = MipPublicBanner
+
+function fallbackEventBanners(): EventBannerView[] {
+  return mipOperationsConfig.eventBanners.map((item, index) => ({
+    id: item.id,
+    title: item.accessibilityLabel,
+    accessibilityLabel: item.accessibilityLabel,
+    imageUrl: item.imagePath,
+    targetType: item.targetType === 'ARTICLE' ? 'ARTICLE_URL' : 'MINIPROGRAM_PATH',
+    targetValue: item.target,
+    sortOrder: index * 10,
+  }))
 }
 
 function formatDateTime(value: string) {
@@ -102,7 +110,7 @@ Page({
     view: 'UPCOMING' as EventListView,
     dateFilter: 'RECENT' as EventDateFilter,
     events: [] as EventCardView[],
-    banners: mipOperationsConfig.eventBanners as readonly EventBannerView[],
+    banners: fallbackEventBanners(),
     videoChannelConfigured: Boolean(mipOperationsConfig.videoChannelFinderUserName),
     cities: [] as string[],
     selectedCity: '',
@@ -157,7 +165,22 @@ Page({
 
   async loadPage(options: { force?: boolean } = {}) {
     await this.initializeDefaultCity()
-    await this.loadEvents(options)
+    await Promise.all([
+      this.loadEvents(options),
+      this.loadBanners(options.force === true),
+    ])
+  },
+
+  async loadBanners(force = false) {
+    try {
+      const banners = await mipBannerModule.listActive(force)
+      this.setData({ banners: banners.length ? banners : fallbackEventBanners() })
+    }
+    catch {
+      if (!this.data.banners.length) {
+        this.setData({ banners: fallbackEventBanners() })
+      }
+    }
   },
 
   async initializeDefaultCity() {
@@ -470,15 +493,15 @@ Page({
     if (!banner) {
       return
     }
-    if (banner.targetType === 'ARTICLE') {
+    if (banner.targetType === 'ARTICLE_URL') {
       wx.openOfficialAccountArticle({
-        url: banner.target,
+        url: banner.targetValue,
         fail: () => wx.showToast({ title: '文章暂未配置', icon: 'none' }),
       })
       return
     }
-    if (banner.target && banner.target !== '/pages/events/index') {
-      caseNavigateTo({ url: banner.target })
+    if (banner.targetValue && banner.targetValue !== '/pages/events/index') {
+      caseNavigateTo({ url: banner.targetValue })
     }
   },
 

@@ -144,7 +144,7 @@ describe('assertTablePrivilegePairs', () => {
       assert.doesNotMatch(sql, /\bALL\b/)
       assert.match(sql, /^GRANT /)
       if (/\bDELETE\b/.test(sql)) {
-        assert.match(sql, /mip_profile_tags|mip_opportunity_roles|mip_opportunity_tags|mip_super_case_media/)
+        assert.match(sql, /mip_profile_tags|mip_opportunity_roles|mip_opportunity_tags|mip_growth_level_benefits|mip_user_badge_equipment|mip_super_case_media/)
       }
     }
     assert.ok(statements.some(sql => sql.includes('mip_audit_logs') && sql.includes('SELECT, INSERT')))
@@ -153,6 +153,7 @@ describe('assertTablePrivilegePairs', () => {
     assert.ok(statements.some(sql => sql.includes('mip_profile_tags') && sql.includes('DELETE')))
     assert.ok(statements.some(sql => sql.includes('mip_opportunity_roles') && sql.includes('DELETE')))
     assert.ok(statements.some(sql => sql.includes('mip_opportunity_tags') && sql.includes('DELETE')))
+    assert.ok(statements.some(sql => sql.includes('mip_growth_level_benefits') && sql.includes('DELETE')))
     assert.ok(statements.some(sql => sql.includes('mip_super_case_media') && sql.includes('DELETE')))
     const byTable = Object.fromEntries(statements.map(sql => {
       const match = sql.match(/^GRANT ([A-Z, ]+) ON `member_db`\.`([^`]+)`/)
@@ -167,6 +168,12 @@ describe('assertTablePrivilegePairs', () => {
     assert.deepEqual(byTable.mip_event_content_media, ['SELECT', 'INSERT', 'UPDATE'])
     assert.deepEqual(byTable.mip_event_invitation_links, ['SELECT', 'INSERT', 'UPDATE'])
     assert.deepEqual(byTable.mip_opportunity_team_members, ['SELECT', 'INSERT', 'UPDATE'])
+    assert.deepEqual(byTable.mip_game_seasons, ['SELECT', 'INSERT', 'UPDATE'])
+    assert.deepEqual(byTable.mip_game_teams, ['SELECT', 'INSERT', 'UPDATE'])
+    assert.deepEqual(byTable.mip_game_team_memberships, ['SELECT', 'INSERT', 'UPDATE'])
+    assert.deepEqual(byTable.mip_game_weekly_matches, ['SELECT', 'INSERT', 'UPDATE'])
+    assert.deepEqual(byTable.mip_game_ranking_snapshots, ['SELECT', 'INSERT', 'UPDATE'])
+    assert.deepEqual(byTable.mip_game_ranking_entries, ['SELECT', 'INSERT'])
   })
 
   it('derives a stable environment-unique account and revokes only observed owned-table grants', async () => {

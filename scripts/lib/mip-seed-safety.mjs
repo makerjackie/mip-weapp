@@ -4,6 +4,7 @@ const SEED_TABLES = Object.freeze({
   membershipPlans: 'mip_membership_plans',
   growthLevels: 'mip_growth_levels',
   growthRules: 'mip_growth_rules',
+  badges: 'mip_badges',
 })
 
 export function buildSeedOwnershipQuery(appId, seed) {

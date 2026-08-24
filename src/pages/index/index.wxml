@@ -11,7 +11,7 @@
     </view>
   </view>
 
-  <image wx:if="{{bannerImagePath}}" class="mt-3 h-[260rpx] w-full rounded-[20rpx] bg-panel" mode="aspectFill" src="{{bannerImagePath}}" aria-label="{{bannerAccessibilityLabel}}" bind:tap="openBanner" />
+  <image wx:if="{{bannerImagePath}}" class="mt-3 h-[260rpx] w-full rounded-[20rpx] bg-panel" mode="aspectFill" src="{{bannerImagePath}}" aria-role="button" aria-label="{{bannerAccessibilityLabel}}" bind:tap="openBanner" />
 
   <view class="mt-3 rounded-[20rpx] bg-brand px-5 py-5 text-on-brand" bind:tap="openMembership">
     <view class="flex items-start justify-between gap-4">

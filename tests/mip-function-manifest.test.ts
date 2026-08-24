@@ -5,7 +5,7 @@ import { resolveMipFunctionNames } from '../scripts/lib/mip-function-names.mjs'
 describe('MIP Cloud Function manifest', () => {
   it('deploys only direct mip-* sources into matching mip-* targets', () => {
     const manifest = createMipCoreFunctionManifest(resolveMipFunctionNames())
-    expect(manifest).toHaveLength(13)
+    expect(manifest).toHaveLength(16)
     for (const item of manifest) {
       expect(item.source).toBe(item.name)
       expect(item.name).toMatch(/^mip-/)

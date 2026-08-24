@@ -1,7 +1,22 @@
+import fs from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { normalizeSuperCaseDraft } from '../src/modules/mip-cases/validation'
 
 describe('MIP super case contracts', () => {
+  it('shows complete case media and opens the native image preview', () => {
+    const source = fs.readFileSync(new URL('../src/packages/member/mip-cases/detail/index.ts', import.meta.url), 'utf8')
+    const view = fs.readFileSync(new URL('../src/packages/member/mip-cases/detail/index.wxml', import.meta.url), 'utf8')
+    const editorSource = fs.readFileSync(new URL('../src/packages/member/mip-cases/editor/index.ts', import.meta.url), 'utf8')
+    const editorView = fs.readFileSync(new URL('../src/packages/member/mip-cases/editor/index.wxml', import.meta.url), 'utf8')
+    expect(source).toContain('wx.previewImage({ current, urls })')
+    expect(view).toContain('mode="widthFix"')
+    expect(view).toContain('bind:tap="previewImage"')
+    expect(view).not.toContain('h-[420rpx]')
+    expect(editorSource).toContain('previewMedia')
+    expect(editorSource).toContain('wx.previewImage({ current, urls })')
+    expect(editorView).toContain('bind:tap="previewMedia"')
+  })
+
   it('normalizes optional classification and de-duplicates media assets', () => {
     const normalized = normalizeSuperCaseDraft({
       projectName: '品牌升级项目',

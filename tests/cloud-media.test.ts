@@ -21,6 +21,12 @@ describe('CloudBase media URLs', () => {
       .toContain('thumbnail/1600x')
     expect(cloudImageTransformForFileId('cloud://env/mip/test/scope/event-album/user/a.jpg'))
       .toContain('thumbnail/1600x')
+    expect(cloudImageTransformForFileId('cloud://env/mip/test/scope/banners/user/a.jpg'))
+      .toContain('thumbnail/1200x')
+    expect(cloudImageTransformForFileId('cloud://env/mip/test/scope/task-attachments/user/a.jpg'))
+      .toContain('thumbnail/1600x')
+    expect(cloudImageTransformForFileId('cloud://env/mip/test/scope/task-templates/user/a.jpg'))
+      .toContain('thumbnail/1600x')
     expect(appendCloudImageTransform(
       'https://example.test/file.jpg?sign=1',
       'imageMogr2/thumbnail/1200x',

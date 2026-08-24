@@ -5,6 +5,7 @@ import { MipEventsError } from '../../../../modules/mip-events'
 import { mipEventsModule } from '../../../../modules/mip-events/client'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../../../modules/mip-identity/client'
+import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
 import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
 
 interface RegistrationFieldView extends RegistrationField {
@@ -427,9 +428,12 @@ Page({
     }
   },
 
-  continueCheckIn() {
+  async continueCheckIn() {
     if (!this.data.canContinueCheckIn || !this.data.checkInToken) {
       return
+    }
+    if (mipMessagingModule.subscriptionCapability('CHECKIN_RESULT').available) {
+      await mipMessagingModule.requestWechatSubscription('CHECKIN_RESULT').catch(() => undefined)
     }
     caseNavigateTo({
       url: `/packages/member/mip-events/check-in/index?eventId=${encodeURIComponent(this.data.eventId)}&token=${encodeURIComponent(this.data.checkInToken)}`,

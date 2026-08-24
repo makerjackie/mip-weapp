@@ -47,6 +47,19 @@ interface RuntimePagesContract {
     dataAssertions: Array<{ path: string, equals: unknown }>
     visibleAssertion: { selector: string, text?: string }
   }>
+  interactionJourneys: Array<{
+    id: string
+    route: string
+    nonMutating: boolean
+    steps: Array<{
+      id: string
+      type: 'input' | 'tap'
+      selector: string
+      value?: string
+      dataAssertions: Array<{ path: string, equals: unknown }>
+      visibleAssertion?: { selector?: string, text?: string }
+    }>
+  }>
   routes: RuntimeRoute[]
 }
 
@@ -230,6 +243,24 @@ describe('mip-weapp UI runtime contract', () => {
     expect(verifyRuntime).toContain('visibleAssertion')
   })
 
+  it('executes non-mutating UI interactions through rendered controls', () => {
+    expect(contract.interactionJourneys.length).toBeGreaterThanOrEqual(3)
+    expect(verifyRuntime).toContain('verifyInteractionJourneys')
+    expect(verifyRuntime).toContain('element.input(step.value)')
+    expect(verifyRuntime).toContain('element.tap()')
+    expect(verifyRuntime).toMatch(/interaction-\$\{outputName\(journey\.id\)\}\.png/)
+    const routeByPath = new Map(contract.routes.map(route => [route.path, route]))
+    for (const journey of contract.interactionJourneys) {
+      expect(journey.nonMutating).toBe(true)
+      expect(routeByPath.has(journey.route)).toBe(true)
+      expect(journey.steps.length).toBeGreaterThan(0)
+      for (const step of journey.steps) {
+        expect(step.selector).toMatch(/^#\w[\w-]*$/)
+        expect(step.dataAssertions.length).toBeGreaterThan(0)
+      }
+    }
+  })
+
   it('keeps real-device capabilities explicit and unresolved by DevTools', () => {
     const capabilityIds = contract.deviceRequiredCapabilities.map(item => item.id).sort()
     expect(capabilityIds).toEqual([
@@ -242,6 +273,8 @@ describe('mip-weapp UI runtime contract', () => {
       'qr-checkin',
       'share',
       'subscription-message',
+      'task-attachment',
+      'task-template',
       'wechat-pay',
     ])
     const routeSet = new Set(contractRoutes)
@@ -267,6 +300,10 @@ describe('mip-weapp UI runtime contract', () => {
     ]))
     expect(byId.get('subscription-message')?.routes).toEqual(['packages/member/mip-notifications/index'])
     expect(byId.get('ai-voice')?.routes).toEqual(['packages/member/mip-ai/index'])
+    expect(byId.get('task-template')?.routes).toEqual([
+      'packages/admin/tasks/index',
+      'packages/member/mip-tasks/detail/index',
+    ])
   })
 
   it('uses safe query contracts for event, profile, and order deep links', () => {

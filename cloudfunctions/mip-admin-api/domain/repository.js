@@ -2,6 +2,8 @@
 
 const { createHash, randomBytes, randomUUID } = require('node:crypto')
 const { createAnnouncementRepository } = require('./announcements')
+const { createAdminPrdExtensions } = require('./admin-prd-extensions')
+const { createBadgeAdminRepository } = require('./badges')
 const { createFullAccessPolicy } = require('./full-access')
 const { assertFixedGrowthRuleUpdate } = require('./growth-rule-catalog')
 const { createOpportunityArchiveRepository } = require('./opportunity-archive')
@@ -359,8 +361,15 @@ function createAdminRepository(database, options = {}) {
     lockMutation,
     now,
   })
+  const badgeAdminRepository = createBadgeAdminRepository(database, { createId: id })
   const opportunityArchiveRepository = createOpportunityArchiveRepository(database, {
     assertScope,
+    lockMutation,
+    now,
+  })
+  const adminPrdExtensions = createAdminPrdExtensions(database, {
+    assertMutationScope: assertScope,
+    id,
     lockMutation,
     now,
   })
@@ -721,6 +730,18 @@ function createAdminRepository(database, options = {}) {
       clauses.push('u.primary_branch_id = ?')
       params.push(filters.branchId)
     }
+    if (filters.levelId) {
+      clauses.push('ga.current_level_id = ?')
+      params.push(filters.levelId)
+    }
+    if (filters.experienceMin !== null && filters.experienceMin !== undefined) {
+      clauses.push('COALESCE(ga.experience_balance, 0) >= ?')
+      params.push(filters.experienceMin)
+    }
+    if (filters.experienceMax !== null && filters.experienceMax !== undefined) {
+      clauses.push('COALESCE(ga.experience_balance, 0) <= ?')
+      params.push(filters.experienceMax)
+    }
     if (filters.kind === 'PLAYER') {
       clauses.push(`EXISTS (SELECT 1 FROM mip_membership_entitlements me
         WHERE me.app_id = u.app_id AND me.user_id = u.id AND me.status = 'ACTIVE'
@@ -752,6 +773,8 @@ function createAdminRepository(database, options = {}) {
       clauses.push('u.created_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL ? DAY)')
       params.push(filters.joinedWithinDays)
     }
+    if (filters.createdFrom) { clauses.push('u.created_at >= ?'); params.push(filters.createdFrom) }
+    if (filters.createdTo) { clauses.push('u.created_at <= ?'); params.push(filters.createdTo) }
     if (filters.query) {
       clauses.push('(p.nickname LIKE ? ESCAPE \'\\\\\' OR p.headline LIKE ? ESCAPE \'\\\\\' OR b.city_name LIKE ? ESCAPE \'\\\\\')')
       const query = `%${escapeLike(filters.query)}%`
@@ -762,17 +785,20 @@ function createAdminRepository(database, options = {}) {
       `SELECT u.id, u.status, u.primary_branch_id, u.version AS user_version,
         p.nickname, p.headline, p.introduction, p.visibility_json, p.version AS profile_version,
         pp.phone_ciphertext, pp.phone_verified_at, b.name AS branch_name, b.city_name,
+        ga.current_level_id, ga.experience_balance, gl.name AS level_name,
         EXISTS (SELECT 1 FROM mip_membership_entitlements me
           WHERE me.app_id = u.app_id AND me.user_id = u.id AND me.status = 'ACTIVE'
             AND me.starts_at <= UTC_TIMESTAMP(3) AND me.ends_at > UTC_TIMESTAMP(3)) AS is_player,
         (SELECT GROUP_CONCAT(c.control_type ORDER BY c.control_type SEPARATOR ',')
           FROM mip_user_access_controls c
           WHERE c.app_id = u.app_id AND c.user_id = u.id AND c.status = 'ACTIVE') AS controls,
-        u.updated_at
+        u.created_at, u.updated_at
        FROM mip_users u
        LEFT JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
        LEFT JOIN mip_private_profiles pp ON pp.app_id = u.app_id AND pp.user_id = u.id
        LEFT JOIN mip_city_branches b ON b.app_id = u.app_id AND b.id = u.primary_branch_id
+       LEFT JOIN mip_growth_accounts ga ON ga.app_id = u.app_id AND ga.user_id = u.id
+       LEFT JOIN mip_growth_levels gl ON gl.app_id = ga.app_id AND gl.id = ga.current_level_id
        WHERE ${clauses.join(' AND ')}${cursorWhere.sql}
        ORDER BY u.updated_at DESC, u.id DESC LIMIT ?`,
       [...params, ...cursorWhere.params, pageLimit + 1],
@@ -790,9 +816,13 @@ function createAdminRepository(database, options = {}) {
       phoneBound: Boolean(row.phone_verified_at),
       phoneCiphertext: row.phone_ciphertext || null,
       controls: row.controls ? String(row.controls).split(',') : [],
+      levelId: row.current_level_id || null,
+      levelName: row.level_name || '',
+      experience: Number(row.experience_balance || 0),
       visibility: json(row.visibility_json, {}),
       userVersion: Number(row.user_version || 1),
       profileVersion: Number(row.profile_version || 0),
+      createdAt: iso(row.created_at),
       updatedAt: iso(row.updated_at),
     }))
     return pageRows(items, pageLimit, row => ({ updatedAt: row.updatedAt, id: row.id }))
@@ -1300,6 +1330,14 @@ function createAdminRepository(database, options = {}) {
     if (ticket.exportType === 'EVENT_ROSTER') {
       return (await listRoster(ticket.appId, ticket.scopeId, ticket.filters, maximumRows)).items
     }
+    if (ticket.exportType === 'EVENT_ROSTER_ALL') {
+      return (await adminPrdExtensions.listRosterAll(
+        ticket.appId,
+        visibility,
+        ticket.filters,
+        maximumRows,
+      )).items
+    }
     if (ticket.exportType === 'EVENT_ORDERS' || ticket.exportType === 'ORDERS') {
       return (await listOrders(ticket.appId, visibility, {
         ...ticket.filters,
@@ -1308,6 +1346,14 @@ function createAdminRepository(database, options = {}) {
     }
     if (ticket.exportType === 'GROWTH_ENTRIES') {
       return (await listGrowthEntries(ticket.appId, visibility, ticket.filters, maximumRows)).items
+    }
+    if (ticket.exportType === 'OPPORTUNITIES') {
+      return (await adminPrdExtensions.listOpportunitiesV2(
+        ticket.appId,
+        visibility,
+        ticket.filters,
+        maximumRows,
+      )).items
     }
     throw codeError('EXPORT_TYPE_INVALID')
   }
@@ -2072,6 +2118,8 @@ function createAdminRepository(database, options = {}) {
       clauses.push('p.nickname LIKE ? ESCAPE \'\\\\\'')
       params.push(`%${escapeLike(filters.query)}%`)
     }
+    if (filters.createdFrom) { clauses.push('r.created_at >= ?'); params.push(filters.createdFrom) }
+    if (filters.createdTo) { clauses.push('r.created_at <= ?'); params.push(filters.createdTo) }
     const cursorWhere = cursorPredicateFor('r.created_at', cursor, 'submittedAt', 'r.id')
     const rows = await database.query(
       `SELECT r.id, r.user_id, r.status, r.answers_json, r.created_at, r.registered_at, r.version,
@@ -2546,16 +2594,41 @@ function createAdminRepository(database, options = {}) {
       params.push(filters.status)
     }
     if (filters.query) {
-      clauses.push('o.title LIKE ? ESCAPE \'\\\\\'')
-      params.push(`%${escapeLike(filters.query)}%`)
+      clauses.push(`(o.title LIKE ? ESCAPE '\\\\' OR o.value_summary LIKE ? ESCAPE '\\\\'
+        OR o.target_summary LIKE ? ESCAPE '\\\\' OR o.description LIKE ? ESCAPE '\\\\')`)
+      const query = `%${escapeLike(filters.query)}%`
+      params.push(query, query, query, query)
     }
+    if (filters.ownerQuery) {
+      clauses.push('owner_profile.nickname LIKE ? ESCAPE \'\\\\\'')
+      params.push(`%${escapeLike(filters.ownerQuery)}%`)
+    }
+    if (filters.cityQuery) {
+      clauses.push('(b.city_name LIKE ? ESCAPE \'\\\\\' OR city_tag.label LIKE ? ESCAPE \'\\\\\')')
+      const cityQuery = `%${escapeLike(filters.cityQuery)}%`
+      params.push(cityQuery, cityQuery)
+    }
+    if (filters.updatedFrom) { clauses.push('o.updated_at >= ?'); params.push(filters.updatedFrom) }
+    if (filters.updatedTo) { clauses.push('o.updated_at <= ?'); params.push(filters.updatedTo) }
     const cursorWhere = cursorPredicateFor('o.updated_at', cursor, 'updatedAt', 'o.id')
     const rows = await database.query(
-      `SELECT o.id, o.title, o.value_summary, o.scope_type, o.branch_id, b.name AS branch_name,
+      `SELECT o.id, o.title, o.value_summary, o.target_summary, o.description,
+        o.scope_type, o.branch_id, b.name AS branch_name,
+        COALESCE(b.city_name, city_tag.label, '') AS city_name,
+        owner_profile.nickname AS owner_nickname,
         o.status, o.content_safety_status, o.referral_count, o.version, o.published_at, o.updated_at,
-        o.moderated_at, o.moderation_reason, o.archived_at, o.archive_reason
+        o.moderated_at, o.moderation_reason, o.archived_at, o.archive_reason,
+        (SELECT GROUP_CONCAT(role.role_key ORDER BY role.role_key SEPARATOR ',')
+          FROM mip_opportunity_roles role
+          WHERE role.app_id = o.app_id AND role.opportunity_id = o.id) AS role_keys,
+        (SELECT GROUP_CONCAT(REPLACE(tag.label, ',', '，') ORDER BY relation.relation, tag.sort_order, tag.id SEPARATOR ',')
+          FROM mip_opportunity_tags relation
+          INNER JOIN mip_tags tag ON tag.app_id = relation.app_id AND tag.id = relation.tag_id
+          WHERE relation.app_id = o.app_id AND relation.opportunity_id = o.id) AS tag_labels
        FROM mip_opportunities o
        LEFT JOIN mip_city_branches b ON b.app_id = o.app_id AND b.id = o.branch_id
+       LEFT JOIN mip_tags city_tag ON city_tag.app_id = o.app_id AND city_tag.id = o.city_tag_id
+       LEFT JOIN mip_profiles owner_profile ON owner_profile.app_id = o.app_id AND owner_profile.user_id = o.owner_user_id
        WHERE ${clauses.join(' AND ')}${cursorWhere.sql} ORDER BY o.updated_at DESC, o.id DESC LIMIT ?`,
       [...params, ...cursorWhere.params, pageLimit + 1],
     )
@@ -2566,6 +2639,12 @@ function createAdminRepository(database, options = {}) {
       scopeType: row.scope_type,
       branchId: row.branch_id || null,
       branchName: row.branch_name || '',
+      cityName: row.city_name || '',
+      ownerNickname: row.owner_nickname || '未填写昵称',
+      targetSummary: row.target_summary || '',
+      description: row.description || '',
+      roleKeys: row.role_keys ? String(row.role_keys).split(',') : [],
+      tags: row.tag_labels ? String(row.tag_labels).split(',') : [],
       status: row.status,
       contentSafetyStatus: row.content_safety_status,
       referralCount: Number(row.referral_count || 0),
@@ -2738,9 +2817,12 @@ function createAdminRepository(database, options = {}) {
     const params = [appId, ...users.params]
     if (filters.userId) { clauses.push('ge.user_id = ?'); params.push(filters.userId) }
     if (filters.metric) { clauses.push('ge.metric = ?'); params.push(filters.metric) }
+    if (filters.sourceEventType) { clauses.push('ge.source_event_type = ?'); params.push(filters.sourceEventType) }
+    if (filters.createdFrom) { clauses.push('ge.created_at >= ?'); params.push(filters.createdFrom) }
+    if (filters.createdTo) { clauses.push('ge.created_at <= ?'); params.push(filters.createdTo) }
     const cursorWhere = cursorPredicateFor('ge.created_at', cursor, 'createdAt', 'ge.id')
     const rows = await database.query(
-      `SELECT ge.id, ge.user_id, p.nickname, ge.source_event_type, ge.metric,
+      `SELECT ge.id, ge.user_id, p.nickname, ge.source_event_id, ge.source_event_type, ge.metric,
         ge.delta_value, ge.balance_after, ge.adjustment_reason, ge.created_at
        FROM mip_growth_entries ge
        INNER JOIN mip_users u ON u.app_id = ge.app_id AND u.id = ge.user_id
@@ -2754,9 +2836,11 @@ function createAdminRepository(database, options = {}) {
         id: row.id,
         userId: row.user_id,
         nickname: row.nickname || '未填写昵称',
+        sourceEventId: row.source_event_id,
         sourceEventType: row.source_event_type,
         metric: row.metric,
         deltaValue: Number(row.delta_value),
+        balanceBefore: Number(row.balance_after) - Number(row.delta_value),
         balanceAfter: Number(row.balance_after),
         adjustmentReason: row.adjustment_reason || '',
         createdAt: iso(row.created_at),
@@ -2857,7 +2941,7 @@ function createAdminRepository(database, options = {}) {
     })
   }
 
-  async function listOrders(appId, visibility, filters, pageLimit, cursor = null) {
+  function orderFilterWhere(appId, visibility, filters) {
     const scope = orderVisibilityWhere(visibility)
     const clauses = ['o.app_id = ?', scope.sql]
     const params = [appId, ...scope.params]
@@ -2882,12 +2966,18 @@ function createAdminRepository(database, options = {}) {
       const query = `%${escapeLike(filters.query)}%`
       params.push(query, query, query, query, query)
     }
+    return { clauses, params }
+  }
+
+  async function listOrders(appId, visibility, filters, pageLimit, cursor = null) {
+    const { clauses, params } = orderFilterWhere(appId, visibility, filters)
     const cursorWhere = cursorPredicateFor('o.created_at', cursor, 'createdAt', 'o.id')
     const rows = await database.query(
       `SELECT o.id, o.user_id, p.nickname, o.order_type, o.resource_id, o.membership_plan_id,
         mp.name AS membership_plan_name, e.title AS event_title, e.branch_id, eb.name AS event_branch_name,
         o.merchant_order_no, o.provider_transaction_id, o.amount_cents, o.currency, o.status, o.paid_at,
-        o.version, o.created_at,
+        o.version, o.created_at, entitlement.status AS entitlement_status,
+        entitlement.starts_at AS entitlement_starts_at, entitlement.ends_at AS entitlement_ends_at,
         COALESCE((SELECT SUM(r.amount_cents) FROM mip_refunds r
           WHERE r.app_id = o.app_id AND r.order_id = o.id AND r.status = 'SUCCEEDED'), 0) AS refunded_amount,
         (SELECT r.status FROM mip_refunds r WHERE r.app_id = o.app_id AND r.order_id = o.id
@@ -2899,6 +2989,8 @@ function createAdminRepository(database, options = {}) {
        LEFT JOIN mip_membership_plans mp ON mp.app_id = o.app_id AND mp.id = o.membership_plan_id
        LEFT JOIN mip_events e ON e.app_id = o.app_id AND e.id = o.resource_id
        LEFT JOIN mip_city_branches eb ON eb.app_id = e.app_id AND eb.id = e.branch_id
+       LEFT JOIN mip_membership_entitlements entitlement
+         ON entitlement.app_id = o.app_id AND entitlement.order_id = o.id
        WHERE ${clauses.join(' AND ')}${cursorWhere.sql} ORDER BY o.created_at DESC, o.id DESC LIMIT ?`,
       [...params, ...cursorWhere.params, pageLimit + 1],
     )
@@ -2921,12 +3013,48 @@ function createAdminRepository(database, options = {}) {
       refundStatus: row.refund_status || null,
       refundId: row.refund_id || null,
       paidAt: iso(row.paid_at),
+      ...(row.order_type === 'MEMBERSHIP' ? {
+        entitlementStartsAt: iso(row.entitlement_starts_at),
+        entitlementEndsAt: iso(row.entitlement_ends_at),
+        entitlementStatus: row.entitlement_status || null,
+      } : {}),
       createdAt: iso(row.created_at),
       version: Number(row.version),
       providerTransactionIdMasked: row.provider_transaction_id ? maskIdentifier(row.provider_transaction_id) : null,
       branchId: row.branch_id || null,
     }))
     return pageRows(items, pageLimit, row => ({ createdAt: row.createdAt, id: row.id }))
+  }
+
+  async function summarizeOrders(appId, visibility, filters) {
+    const { clauses, params } = orderFilterWhere(appId, visibility, filters)
+    const row = await database.one(
+      `SELECT COUNT(*) AS order_count,
+        SUM(CASE WHEN o.paid_at IS NOT NULL THEN 1 ELSE 0 END) AS paid_order_count,
+        SUM(CASE WHEN o.paid_at IS NOT NULL AND o.order_type = 'EVENT' THEN o.amount_cents ELSE 0 END) AS event_gross_amount,
+        SUM(CASE WHEN o.paid_at IS NOT NULL AND o.order_type = 'MEMBERSHIP' THEN o.amount_cents ELSE 0 END) AS membership_gross_amount,
+        SUM(CASE WHEN o.paid_at IS NOT NULL THEN o.amount_cents ELSE 0 END) AS gross_amount,
+        SUM(COALESCE((SELECT SUM(r.amount_cents) FROM mip_refunds r
+          WHERE r.app_id = o.app_id AND r.order_id = o.id AND r.status = 'SUCCEEDED'), 0)) AS refunded_amount
+       FROM mip_orders o
+       LEFT JOIN mip_profiles p ON p.app_id = o.app_id AND p.user_id = o.user_id
+       LEFT JOIN mip_membership_plans mp ON mp.app_id = o.app_id AND mp.id = o.membership_plan_id
+       LEFT JOIN mip_events e ON e.app_id = o.app_id AND e.id = o.resource_id
+       WHERE ${clauses.join(' AND ')}`,
+      params,
+    )
+    const grossAmountCents = Number(row?.gross_amount || 0)
+    const refundedAmountCents = Number(row?.refunded_amount || 0)
+    return {
+      currency: 'CNY',
+      orderCount: Number(row?.order_count || 0),
+      paidOrderCount: Number(row?.paid_order_count || 0),
+      eventGrossAmountCents: Number(row?.event_gross_amount || 0),
+      membershipGrossAmountCents: Number(row?.membership_gross_amount || 0),
+      grossAmountCents,
+      refundedAmountCents,
+      netAmountCents: Math.max(0, grossAmountCents - refundedAmountCents),
+    }
   }
 
   function orderVisibilityWhere(visibility) {
@@ -3131,6 +3259,8 @@ function createAdminRepository(database, options = {}) {
 
   return {
     ...announcementRepository,
+    ...adminPrdExtensions,
+    ...badgeAdminRepository,
     ...opportunityArchiveRepository,
     adjustGrowth,
     authorizeRefundRetry,
@@ -3187,6 +3317,7 @@ function createAdminRepository(database, options = {}) {
     setRole,
     setUserControl,
     submitRefund,
+    summarizeOrders,
     unpublishOpportunity,
     undoCheckIn,
     updateBranch,

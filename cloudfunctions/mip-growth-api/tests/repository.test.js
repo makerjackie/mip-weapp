@@ -31,6 +31,12 @@ test('returns the full active level ladder and earning rules from server facts',
           { id: 'level-2', level_key: 'active', name: '活跃', minimum_experience: 100, benefits_json: '["活动权益"]', status: 'ACTIVE' },
         ]
       }
+      if (sql.includes('FROM mip_growth_level_benefits')) {
+        return [
+          { level_id: 'level-2', name: '活动新权益', status: 'ACTIVE' },
+          { level_id: 'level-2', name: '已停用权益', status: 'INACTIVE' },
+        ]
+      }
       if (sql.includes('FROM mip_growth_rules')) {
         return [{
           id: 'rule-1', rule_key: 'event_attended', name: '完成活动签到', metric: 'EXPERIENCE',
@@ -42,11 +48,34 @@ test('returns the full active level ladder and earning rules from server facts',
   }
   const result = await createGrowthRepository(database).getSnapshot('wx-app', input.userId)
   assert.deepEqual(result.levels.map(level => level.levelKey), ['starter', 'active'])
+  assert.deepEqual(result.levels[0].benefits, [])
+  assert.deepEqual(result.levels[1].benefits, ['活动新权益'])
   assert.equal(result.currentLevel.levelKey, 'active')
   assert.deepEqual(result.earningRules.map(rule => rule.ruleKey), ['event_attended'])
   assert.ok(queries.some(item => item.sql.includes("status = 'ACTIVE'")
     && item.sql.includes("metric IN ('EXPERIENCE', 'CONTRIBUTION')")
     && item.sql.includes('mip_growth_rules')))
+})
+
+test('falls back to legacy level benefits only when no benefit relation exists', async () => {
+  const database = {
+    async one() {
+      return { user_id: input.userId, experience_balance: 0, contribution_balance: 0, version: 1 }
+    },
+    async query(sql) {
+      if (sql.includes('FROM mip_growth_levels')) {
+        return [{
+          id: 'level-1', level_key: 'starter', name: '起步', minimum_experience: 0,
+          benefits_json: '["兼容权益"]', status: 'ACTIVE',
+        }]
+      }
+      if (sql.includes('FROM mip_growth_level_benefits')) return []
+      if (sql.includes('FROM mip_growth_rules')) return []
+      return { affectedRows: 1 }
+    },
+  }
+  const result = await createGrowthRepository(database).getSnapshot('wx-app', input.userId)
+  assert.deepEqual(result.currentLevel.benefits, ['兼容权益'])
 })
 
 test('records a capped award and account update in one transaction', async () => {

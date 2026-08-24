@@ -9,7 +9,12 @@ const eventRoleLabels: Partial<Record<AdminRoleKey, string>> = {
   EVENT_STAFF: '现场人员',
 }
 
-type AdminRoleView = AdminRoleItem & { canManage: boolean, roleLabel: string, statusLabel: string }
+type AdminRoleView = AdminRoleItem & {
+  canManage: boolean
+  roleLabel: string
+  statusLabel: string
+  statusTheme: 'default' | 'success'
+}
 
 Page({
   data: {
@@ -68,6 +73,7 @@ Page({
             canManage: manageableRoles.has(item.roleKey),
             roleLabel: eventRoleLabels[item.roleKey] || '活动成员',
             statusLabel: item.status === 'ACTIVE' ? '生效中' : '已撤销',
+            statusTheme: item.status === 'ACTIVE' ? 'success' : 'default',
           })),
         canChange,
         canGrantOwner,

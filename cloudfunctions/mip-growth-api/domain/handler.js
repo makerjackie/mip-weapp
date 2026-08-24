@@ -6,6 +6,7 @@ const messages = {
   FORBIDDEN: '当前没有权限执行此操作',
   GROWTH_LEVEL_BASE_REQUIRED: '成长等级尚未配置',
   GROWTH_RULE_CONFLICT: '成长规则配置冲突',
+  BADGE_EQUIPMENT_INVALID: '最多可以佩戴 3 个已获得且已启用的勋章',
   IDEMPOTENCY_CONFLICT: '业务事件与已有记录不一致',
   IDENTITY_CONFIG_REQUIRED: '身份服务尚未配置',
   INTERNAL_AUTH_NOT_CONFIGURED: '成长写入服务尚未配置',
@@ -35,6 +36,12 @@ function createHandler(options) {
       }
       if (event.action === 'listEntries') {
         return success(await options.service.listEntries(caller, event))
+      }
+      if (event.action === 'listBadgeCollection') {
+        return success(await options.service.listBadgeCollection(caller))
+      }
+      if (event.action === 'equipBadges') {
+        return success(await options.service.equipBadges(caller, event))
       }
       throw new Error('NOT_FOUND')
     }

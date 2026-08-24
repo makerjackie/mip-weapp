@@ -3,8 +3,9 @@ import type { RefundId } from '../../../../modules/mip-commerce'
 import type { MipEventDetail } from '../../../../modules/mip-events'
 import { mipOperationsConfig } from '../../../../config/mip-operations'
 import { mipCommerceModule } from '../../../../modules/mip-commerce/client'
-import { eventRichTextNodes, safeHttpsEventUrl } from '../../../../modules/mip-events'
+import { eventInvitationPath, eventRichTextNodes, safeHttpsEventUrl } from '../../../../modules/mip-events'
 import { mipEventsModule } from '../../../../modules/mip-events/client'
+import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
 import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
 
 const POSTER_WIDTH = 375
@@ -269,6 +270,7 @@ Page({
       this.data.locationText,
       event.summary,
       '请在微信中打开 MIP 小程序查看活动详情。',
+      `小程序路径：${eventInvitationPath(this.data.eventId, this.data.invitationToken)}`,
     ].filter(Boolean)
     wx.setClipboardData({
       data: lines.join('\n'),
@@ -364,6 +366,14 @@ Page({
     }
   },
 
+  previewContentImage(event: WechatMiniprogram.TouchEvent) {
+    const current = String(event.currentTarget.dataset.url || '')
+    const urls = (this.data.event?.contentMedia || []).map(item => item.imageUrl).filter(Boolean)
+    if (current && urls.includes(current)) {
+      wx.previewImage({ current, urls })
+    }
+  },
+
   async saveInvitationPoster() {
     if (!this.data.posterPath || this.data.posterBusy) {
       return
@@ -389,7 +399,7 @@ Page({
       return
     }
     if (this.data.primaryAction === 'checkin') {
-      this.openCheckIn()
+      void this.openCheckIn()
       return
     }
     if (this.data.primaryAction === 'interact') {
@@ -445,7 +455,10 @@ Page({
     }
   },
 
-  openCheckIn() {
+  async openCheckIn() {
+    if (mipMessagingModule.subscriptionCapability('CHECKIN_RESULT').available) {
+      await mipMessagingModule.requestWechatSubscription('CHECKIN_RESULT').catch(() => undefined)
+    }
     const token = this.data.checkInToken
       ? `&token=${encodeURIComponent(this.data.checkInToken)}`
       : ''
@@ -601,7 +614,7 @@ Page({
     this.closeShare()
     return {
       title: this.data.event?.title || 'MIP 活动',
-      path: `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(this.data.eventId)}${this.data.invitationToken ? `&invitationToken=${encodeURIComponent(this.data.invitationToken)}` : ''}`,
+      path: eventInvitationPath(this.data.eventId, this.data.invitationToken),
     }
   },
 })

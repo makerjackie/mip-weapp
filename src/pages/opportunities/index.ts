@@ -11,7 +11,7 @@ import { cooperationRoles } from '../../config/mip-catalogs'
 import { cooperationModule } from '../../modules/mip-cooperation'
 import { mipAccessPageUrl } from '../../modules/mip-identity'
 import { mipIdentityModule } from '../../modules/mip-identity/client'
-import { opportunityModule } from '../../modules/mip-opportunities'
+import { groupedCityBranches, opportunityModule } from '../../modules/mip-opportunities'
 import { caseNavigateTo, syncCaseNavigation } from '../../modules/platform/case-navigation'
 
 type PageMode = 'opportunities' | 'cooperation'
@@ -25,10 +25,7 @@ const nationwideOption: CityOption = { id: '', label: '全国' }
 
 function cityOptionsFor(mode: PageMode, catalog: OpportunityCatalog): CityOption[] {
   return mode === 'cooperation'
-    ? [nationwideOption, ...catalog.branches.map(item => ({
-        id: item.id,
-        label: item.name === item.cityName ? item.cityName : `${item.cityName} · ${item.name}`,
-      }))]
+    ? [nationwideOption, ...groupedCityBranches(catalog.branches, catalog.cityTags)[0].options]
     : [nationwideOption, ...catalog.cityTags.map(item => ({
         id: item.id,
         label: item.label,

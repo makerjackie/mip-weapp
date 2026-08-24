@@ -10,7 +10,7 @@ function createGrowthRepository(database, options = {}) {
 
   async function getSnapshot(appId, userId) {
     await ensureAccount(database, appId, userId)
-    const [account, levels, rules] = await Promise.all([
+    const [account, rawLevels, levelBenefits, rules] = await Promise.all([
       database.one(
         `SELECT user_id, experience_balance, contribution_balance, version
          FROM mip_growth_accounts WHERE app_id = ? AND user_id = ?`,
@@ -24,6 +24,15 @@ function createGrowthRepository(database, options = {}) {
         [appId],
       ),
       database.query(
+        `SELECT relation.level_id, benefit.name, benefit.status
+         FROM mip_growth_level_benefits relation
+         INNER JOIN mip_growth_benefits benefit
+           ON benefit.app_id = relation.app_id AND benefit.id = relation.benefit_id
+         WHERE relation.app_id = ?
+         ORDER BY relation.level_id, relation.sort_order, benefit.sort_order, benefit.id`,
+        [appId],
+      ),
+      database.query(
         `SELECT id, rule_key, name, metric, delta_value, daily_limit_value,
                 source_event_type, status
          FROM mip_growth_rules
@@ -33,6 +42,21 @@ function createGrowthRepository(database, options = {}) {
         [appId],
       ),
     ])
+    const benefitsByLevel = new Map()
+    for (const benefit of levelBenefits) {
+      const group = benefitsByLevel.get(benefit.level_id) || []
+      group.push(benefit)
+      benefitsByLevel.set(benefit.level_id, group)
+    }
+    const levels = rawLevels.map((level) => {
+      const related = benefitsByLevel.get(level.id)
+      return {
+        ...level,
+        benefits_json: related
+          ? JSON.stringify(related.filter(item => item.status === 'ACTIVE').map(item => item.name))
+          : level.benefits_json,
+      }
+    })
     return levelSnapshot(account, levels, rules)
   }
 
@@ -222,7 +246,118 @@ function createGrowthRepository(database, options = {}) {
     })
   }
 
-  return { ...checkInGrowthRepository, getSnapshot, listEntries, recordConfirmedEvent }
+  async function listBadgeCollection(appId, userId) {
+    await database.query(
+      `INSERT INTO mip_user_badge_profiles (app_id, user_id)
+       VALUES (?, ?) ON DUPLICATE KEY UPDATE user_id = VALUES(user_id)`,
+      [appId, userId],
+    )
+    const [profile, rows] = await Promise.all([
+      database.one(
+        `SELECT version FROM mip_user_badge_profiles WHERE app_id = ? AND user_id = ?`,
+        [appId, userId],
+      ),
+      database.query(
+        `SELECT badge.id, badge.badge_key, badge.name, badge.description, badge.icon_name,
+                badge.image_url, badge.placeholder_shape, badge.sort_order, badge.status,
+                award.awarded_at, equipment.slot_no
+         FROM mip_user_badges award
+         INNER JOIN mip_badges badge
+           ON badge.app_id = award.app_id AND badge.id = award.badge_id
+         LEFT JOIN mip_user_badge_equipment equipment
+           ON equipment.app_id = award.app_id AND equipment.user_id = award.user_id
+             AND equipment.badge_id = award.badge_id
+         WHERE award.app_id = ? AND award.user_id = ? AND award.status = 'ACTIVE'
+         ORDER BY equipment.slot_no IS NULL, equipment.slot_no, badge.sort_order, award.awarded_at, badge.id`,
+        [appId, userId],
+      ),
+    ])
+    return badgeCollectionDto(profile, rows)
+  }
+
+  async function equipBadges(appId, userId, input = {}) {
+    const expectedVersion = Number(input.expectedVersion)
+    const badgeIds = Array.isArray(input.badgeIds)
+      ? [...new Set(input.badgeIds.map(value => String(value || '').trim()).filter(Boolean))]
+      : []
+    if (!Number.isInteger(expectedVersion) || expectedVersion < 1
+      || badgeIds.length > 3 || badgeIds.some(value => !isUuid(value))) {
+      throw new Error('BADGE_EQUIPMENT_INVALID')
+    }
+    await database.transaction(async (tx) => {
+      await tx.query(
+        `INSERT INTO mip_user_badge_profiles (app_id, user_id)
+         VALUES (?, ?) ON DUPLICATE KEY UPDATE user_id = VALUES(user_id)`,
+        [appId, userId],
+      )
+      const profile = await tx.one(
+        `SELECT version FROM mip_user_badge_profiles
+         WHERE app_id = ? AND user_id = ? FOR UPDATE`,
+        [appId, userId],
+      )
+      if (Number(profile?.version) !== expectedVersion) throw new Error('CONFLICT')
+      if (badgeIds.length) {
+        const rows = await tx.query(
+          `SELECT award.badge_id
+           FROM mip_user_badges award
+           INNER JOIN mip_badges badge
+             ON badge.app_id = award.app_id AND badge.id = award.badge_id
+           WHERE award.app_id = ? AND award.user_id = ?
+             AND award.badge_id IN (${badgeIds.map(() => '?').join(', ')})
+             AND award.status = 'ACTIVE' AND badge.status = 'ACTIVE'
+           FOR UPDATE`,
+          [appId, userId, ...badgeIds],
+        )
+        if (rows.length !== badgeIds.length) throw new Error('BADGE_EQUIPMENT_INVALID')
+      }
+      await tx.query(
+        'DELETE FROM mip_user_badge_equipment WHERE app_id = ? AND user_id = ?',
+        [appId, userId],
+      )
+      for (const [index, badgeId] of badgeIds.entries()) {
+        await tx.query(
+          `INSERT INTO mip_user_badge_equipment (app_id, user_id, slot_no, badge_id)
+           VALUES (?, ?, ?, ?)`,
+          [appId, userId, index + 1, badgeId],
+        )
+      }
+      const result = await tx.query(
+        `UPDATE mip_user_badge_profiles SET version = version + 1
+         WHERE app_id = ? AND user_id = ? AND version = ?`,
+        [appId, userId, expectedVersion],
+      )
+      if (Number(result.affectedRows) !== 1) throw new Error('CONFLICT')
+    })
+    return listBadgeCollection(appId, userId)
+  }
+
+  return {
+    ...checkInGrowthRepository,
+    equipBadges,
+    getSnapshot,
+    listBadgeCollection,
+    listEntries,
+    recordConfirmedEvent,
+  }
+}
+
+function badgeCollectionDto(profile, rows) {
+  return {
+    version: Number(profile?.version || 1),
+    maximumEquipped: 3,
+    items: rows.map(row => ({
+      id: row.id,
+      key: row.badge_key,
+      name: row.name,
+      description: row.description,
+      iconName: row.icon_name || undefined,
+      imageUrl: row.image_url || undefined,
+      placeholderShape: row.placeholder_shape,
+      status: row.status,
+      equippedSlot: row.slot_no === null || row.slot_no === undefined ? undefined : Number(row.slot_no),
+      awardedAt: iso(row.awarded_at),
+    })),
+  }
 }
 
 async function ensureAccount(database, appId, userId) {
@@ -305,4 +440,11 @@ function parseObject(value) {
   }
 }
 
-module.exports = { createGrowthRepository, decodeCursor, encodeCursor, entryDto, validateConfirmedEvent }
+module.exports = {
+  badgeCollectionDto,
+  createGrowthRepository,
+  decodeCursor,
+  encodeCursor,
+  entryDto,
+  validateConfirmedEvent,
+}

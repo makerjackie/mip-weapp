@@ -1,11 +1,12 @@
 import type { CatalogSelectorGroup } from '../../../components/catalog-selector/model'
-import type { BranchId } from '../../../modules/mip'
+import type { BranchId, CooperationRoleKey } from '../../../modules/mip'
 import type {
   OpportunityCatalog,
   PeopleSearchScope,
   PublicPerson,
 } from '../../../modules/mip-opportunities'
-import { opportunityModule } from '../../../modules/mip-opportunities'
+import { cooperationRoles } from '../../../config/mip-catalogs'
+import { groupedCityBranches, opportunityModule } from '../../../modules/mip-opportunities'
 import { caseNavigateTo } from '../../../modules/platform/case-navigation'
 
 interface PersonView extends PublicPerson {
@@ -14,6 +15,7 @@ interface PersonView extends PublicPerson {
   branchText: string
   joinedText: string
   abilities: NonNullable<PublicPerson['abilities']>
+  badges: NonNullable<PublicPerson['badges']>
 }
 
 interface FilterOption { id: string, label: string }
@@ -39,6 +41,7 @@ function presentPerson(person: PublicPerson): PersonView {
       : '',
     joinedText: dateText(person.joinedAt),
     abilities: person.abilities || [],
+    badges: person.badges || [],
   }
 }
 
@@ -54,6 +57,9 @@ Page({
     draftBranchIds: [] as string[],
     branchIndex: 0,
     selectedBranchId: '' as '' | BranchId,
+    roleOptions: cooperationRoles,
+    draftRoleKey: '' as '' | CooperationRoleKey,
+    selectedRoleKey: '' as '' | CooperationRoleKey,
     draftIndustryTagIds: [] as string[],
     selectedIndustryTagIds: [] as string[],
     industryGroups: [] as CatalogSelectorGroup[],
@@ -96,17 +102,11 @@ Page({
   },
 
   applyCatalog(catalog: OpportunityCatalog) {
-    const branchOptions = [allBranches, ...catalog.branches.map(item => ({
-      id: item.id,
-      label: item.name === item.cityName ? item.cityName : `${item.cityName} · ${item.name}`,
-    }))]
+    const branchGroups = groupedCityBranches(catalog.branches, catalog.cityTags)
+    const branchOptions = [allBranches, ...branchGroups[0].options]
     this.setData({
       branchOptions,
-      branchGroups: [{
-        id: 'city-branches',
-        label: '城市分会',
-        options: branchOptions.slice(1),
-      }],
+      branchGroups,
       branchIndex: Math.max(0, branchOptions.findIndex(item => item.id === this.data.selectedBranchId)),
       industryGroups: catalog.industryGroups.map(group => ({
         id: group.id,
@@ -139,6 +139,7 @@ Page({
         scope: this.data.searchScope,
         keyword: this.data.keyword || undefined,
         branchId: this.data.selectedBranchId || undefined,
+        roleKey: this.data.selectedRoleKey || undefined,
         industryTagIds: this.data.selectedIndustryTagIds,
         abilityTagIds: this.data.selectedAbilityTagIds,
         cursor: reset ? undefined : this.data.nextCursor || undefined,
@@ -202,6 +203,14 @@ Page({
     this.setData({ draftIndustryTagIds: event.detail.selectedIds.slice(0, 8) })
   },
 
+  chooseRole(event: WechatMiniprogram.TouchEvent) {
+    const roleKey = String(event.currentTarget.dataset.key || '') as CooperationRoleKey
+    if (!cooperationRoles.some(role => role.key === roleKey)) {
+      return
+    }
+    this.setData({ draftRoleKey: this.data.draftRoleKey === roleKey ? '' : roleKey })
+  },
+
   toggleAbility(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || '')
     if (!id) {
@@ -222,6 +231,7 @@ Page({
   resetFilterDraft() {
     this.setData({
       draftBranchIds: [],
+      draftRoleKey: '',
       draftIndustryTagIds: [],
       draftAbilityTagIds: [],
       abilityOptions: this.data.abilityOptions.map(item => ({ ...item, selected: false })),
@@ -233,6 +243,7 @@ Page({
     this.setData({
       selectedBranchId,
       branchIndex: Math.max(0, this.data.branchOptions.findIndex(item => item.id === selectedBranchId)),
+      selectedRoleKey: this.data.draftRoleKey,
       selectedIndustryTagIds: [...this.data.draftIndustryTagIds],
       selectedAbilityTagIds: [...this.data.draftAbilityTagIds],
       filterOpen: false,
@@ -247,6 +258,8 @@ Page({
       branchIndex: 0,
       draftBranchIds: [],
       selectedBranchId: '',
+      draftRoleKey: '',
+      selectedRoleKey: '',
       draftIndustryTagIds: [],
       selectedIndustryTagIds: [],
       draftAbilityTagIds: [],

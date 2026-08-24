@@ -14,6 +14,9 @@ declare const __MIP_COMMUNITY_FUNCTION_NAME__: string
 declare const __MIP_COMMERCE_FUNCTION_NAME__: string
 declare const __MIP_ADMIN_FUNCTION_NAME__: string
 declare const __MIP_GROWTH_FUNCTION_NAME__: string
+declare const __MIP_GAME_FUNCTION_NAME__: string
+declare const __MIP_TASKS_FUNCTION_NAME__: string
+declare const __MIP_BANNERS_FUNCTION_NAME__: string
 declare const __MIP_AI_FUNCTION_NAME__: string
 declare const __MIP_NOTIFICATIONS_FUNCTION_NAME__: string
 declare const __MIP_PAY_FUNCTION_NAME__: string

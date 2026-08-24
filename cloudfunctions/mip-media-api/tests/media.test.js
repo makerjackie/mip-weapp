@@ -49,6 +49,32 @@ describe('MIP media image boundary', () => {
     await assert.rejects(() => unavailable.health(), /SERVICE_UNAVAILABLE/)
   })
 
+  it('restricts Banner and task template uploads to current platform owner or operations accounts', async () => {
+    const queries = []
+    const service = createMediaService({
+      database: {
+        async one(sql, params) {
+          queries.push({ sql, params })
+          return null
+        },
+      },
+      cloud: {},
+      env: environment(),
+    })
+    await assert.rejects(() => service.uploadImage(
+      { appId: APP_ID, userId: USER_ID },
+      { purpose: 'BANNER', imageBase64: pngBase64(750, 300) },
+    ), /FORBIDDEN/)
+    assert.equal(queries.length, 1)
+    assert.match(queries[0].sql, /PLATFORM_OWNER.*PLATFORM_OPERATIONS/s)
+    assert.deepEqual(queries[0].params, [APP_ID, USER_ID])
+    await assert.rejects(() => service.uploadImage(
+      { appId: APP_ID, userId: USER_ID },
+      { purpose: 'TASK_TEMPLATE', imageBase64: pngBase64(750, 300) },
+    ), /FORBIDDEN/)
+    assert.equal(queries.length, 2)
+  })
+
   it('rejects malformed and truncated image payloads', () => {
     assert.throws(() => decodeAndSanitizeImage('not-base64', 'AVATAR'), /IMAGE_INVALID/)
     const truncated = Buffer.from(pngBase64(), 'base64').subarray(0, 48).toString('base64')
@@ -381,6 +407,9 @@ describe('MIP media orphan maintenance', () => {
               assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_opportunities/)
               assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_super_cases/)
               assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_super_case_media/)
+              assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_task_completions/)
+              assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_task_cards/)
+              assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_banners/)
               assert.match(sql, /mip_event_checkin_credentials credential/)
               assert.match(sql, /credential\.valid_until > UTC_TIMESTAMP/)
               assert.match(sql, /FOR UPDATE SKIP LOCKED/)

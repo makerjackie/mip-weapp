@@ -1,0 +1,20 @@
+<view id="mip-badges-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-5 text-ink">
+  <view class="text-[length:40rpx] font-bold">我的勋章</view>
+  <view class="mt-2 text-[length:23rpx] text-muted">已获得的勋章会保存在这里，最多佩戴 3 个。</view>
+
+  <view wx:if="{{state === 'loading'}}" class="mt-5 rounded-[16rpx] bg-panel px-5 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'empty'}}" class="mt-5"><app-empty-state title="暂无勋章" description="勋章由运营人员根据实际记录授予。" /></view>
+  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-5"><app-empty-state title="暂时无法处理勋章" description="{{message}}" action-text="重新加载" bind:action="loadBadges" /></view>
+  <view wx:else class="mt-5 flex flex-col gap-3">
+    <view id="badge-option-{{index}}" wx:for="{{items}}" wx:key="id" class="flex min-h-[136rpx] items-center gap-4 rounded-[16rpx] border border-line bg-panel px-4 py-4" style="{{item.selected ? 'border-color: var(--color-brand); background: var(--color-brand-soft);' : ''}}" data-id="{{item.id}}" bind:tap="toggleBadge" aria-role="checkbox" aria-checked="{{item.selected}}">
+      <image wx:if="{{item.imageUrl}}" class="h-[88rpx] w-[88rpx] shrink-0 rounded-full bg-panel-raised" mode="aspectFill" src="{{item.imageUrl}}" />
+      <view wx:elif="{{item.iconName}}" class="flex h-[88rpx] w-[88rpx] shrink-0 items-center justify-center rounded-full bg-brand text-on-brand"><t-icon name="{{item.iconName}}" size="44rpx" color="var(--color-on-brand)" /></view>
+      <view wx:elif="{{item.placeholderShape === 'DIAMOND'}}" class="flex h-[88rpx] w-[88rpx] shrink-0 items-center justify-center"><view class="h-[58rpx] w-[58rpx] rotate-45 rounded-[10rpx] border-[4rpx] border-brand bg-brand-soft" /></view>
+      <view wx:elif="{{item.placeholderShape === 'HEXAGON'}}" class="badge-placeholder badge-placeholder--hexagon shrink-0"><view class="h-[24rpx] w-[24rpx] rounded-full bg-brand" /></view>
+      <view wx:else class="flex h-[88rpx] w-[88rpx] shrink-0 items-center justify-center rounded-full border-[4rpx] border-brand bg-brand-soft"><view class="h-[24rpx] w-[24rpx] rounded-full bg-brand" /></view>
+      <view class="min-w-0 flex-1"><view class="flex items-center gap-2"><view class="truncate text-[length:28rpx] font-semibold">{{item.name}}</view><text wx:if="{{item.slotText}}" class="shrink-0 rounded-full bg-brand px-2 py-1 text-[length:19rpx] text-on-brand">{{item.slotText}}</text></view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">{{item.description || '暂无说明'}}</view><view wx:if="{{item.unavailable}}" class="mt-2 text-[length:20rpx] text-muted">当前已停用，不能新增佩戴</view></view>
+    </view>
+    <view class="mt-2"><t-button block theme="primary" loading="{{saving}}" disabled="{{saving}}" bind:tap="save">保存佩戴状态（{{selectedIds.length}}/3）</t-button></view>
+  </view>
+  <app-page-exit />
+</view>

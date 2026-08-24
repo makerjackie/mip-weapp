@@ -7,7 +7,8 @@
 
   <block wx:else>
     <view class="flex min-h-[88rpx] items-center justify-between"><view class="text-[length:40rpx] font-bold">我的</view><view class="min-h-[64rpx] px-3 py-2 text-[length:22rpx] text-brand" bind:tap="openProfileEdit">编辑档案</view></view>
-    <view class="mt-2 flex items-center gap-4 rounded-[16rpx] bg-panel px-4 py-5">
+    <view class="mt-2 rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="flex items-center gap-4">
       <image wx:if="{{avatarUrl}}" class="h-[116rpx] w-[116rpx] shrink-0 rounded-full bg-brand-soft" mode="aspectFill" fade-show="{{false}}" src="{{avatarUrl}}" />
       <view wx:else class="flex h-[116rpx] w-[116rpx] shrink-0 items-center justify-center rounded-full bg-brand text-[length:38rpx] font-bold text-on-brand">{{nicknameInitial}}</view>
       <view class="min-w-0 flex-1">
@@ -15,6 +16,15 @@
         <view class="mt-2 text-[length:22rpx] text-muted">{{primaryBranchName}}</view>
         <view wx:if="{{headline}}" class="mt-1 line-clamp-2 text-[length:22rpx] text-muted">{{headline}}</view>
         <view wx:elif="{{!profileComplete}}" class="mt-1 text-[length:22rpx] text-muted">档案待完善</view>
+      </view>
+      </view>
+      <view wx:if="{{equippedBadges.length}}" class="mt-4 flex flex-wrap gap-2 border-t border-line pt-4">
+        <view wx:for="{{equippedBadges}}" wx:key="id" class="flex min-h-[64rpx] items-center gap-2 rounded-full bg-panel-raised px-3 py-2">
+          <image wx:if="{{item.imageUrl}}" class="h-[36rpx] w-[36rpx] rounded-full" mode="aspectFill" src="{{item.imageUrl}}" />
+          <t-icon wx:elif="{{item.iconName}}" name="{{item.iconName}}" size="30rpx" color="var(--color-brand)" />
+          <view wx:else class="h-[28rpx] w-[28rpx] rounded-full border-[3rpx] border-brand bg-brand-soft" />
+          <text class="text-[length:20rpx]">{{item.name}}</text>
+        </view>
       </view>
     </view>
 
@@ -46,12 +56,12 @@
 
     <view class="mt-6 text-[length:32rpx] font-bold">我的内容</view>
     <view class="mt-3 grid grid-cols-3 border-b border-line text-center text-[length:23rpx]">
-      <view wx:if="{{portfolioTab === 'cooperation'}}" class="min-h-[76rpx] border-b-[4rpx] border-brand py-3 text-brand" data-tab="cooperation" bind:tap="changePortfolioTab">合作卡</view>
-      <view wx:else class="min-h-[76rpx] border-b-[4rpx] border-transparent py-3 text-muted" data-tab="cooperation" bind:tap="changePortfolioTab">合作卡</view>
-      <view wx:if="{{portfolioTab === 'cases'}}" class="min-h-[76rpx] border-b-[4rpx] border-brand py-3 text-brand" data-tab="cases" bind:tap="changePortfolioTab">超级案例</view>
-      <view wx:else class="min-h-[76rpx] border-b-[4rpx] border-transparent py-3 text-muted" data-tab="cases" bind:tap="changePortfolioTab">超级案例</view>
-      <view wx:if="{{portfolioTab === 'opportunities'}}" class="min-h-[76rpx] border-b-[4rpx] border-brand py-3 text-brand" data-tab="opportunities" bind:tap="changePortfolioTab">相关机会</view>
-      <view wx:else class="min-h-[76rpx] border-b-[4rpx] border-transparent py-3 text-muted" data-tab="opportunities" bind:tap="changePortfolioTab">相关机会</view>
+      <view wx:if="{{portfolioTab === 'cooperation'}}" id="profile-tab-cooperation" class="min-h-[88rpx] border-b-[4rpx] border-brand py-3 text-brand" aria-role="tab" aria-selected="true" data-tab="cooperation" bind:tap="changePortfolioTab">合作卡</view>
+      <view wx:else id="profile-tab-cooperation" class="min-h-[88rpx] border-b-[4rpx] border-transparent py-3 text-muted" aria-role="tab" aria-selected="false" data-tab="cooperation" bind:tap="changePortfolioTab">合作卡</view>
+      <view wx:if="{{portfolioTab === 'cases'}}" id="profile-tab-cases" class="min-h-[88rpx] border-b-[4rpx] border-brand py-3 text-brand" aria-role="tab" aria-selected="true" data-tab="cases" bind:tap="changePortfolioTab">超级案例</view>
+      <view wx:else id="profile-tab-cases" class="min-h-[88rpx] border-b-[4rpx] border-transparent py-3 text-muted" aria-role="tab" aria-selected="false" data-tab="cases" bind:tap="changePortfolioTab">超级案例</view>
+      <view wx:if="{{portfolioTab === 'opportunities'}}" id="profile-tab-opportunities" class="min-h-[88rpx] border-b-[4rpx] border-brand py-3 text-brand" aria-role="tab" aria-selected="true" data-tab="opportunities" bind:tap="changePortfolioTab">相关机会</view>
+      <view wx:else id="profile-tab-opportunities" class="min-h-[88rpx] border-b-[4rpx] border-transparent py-3 text-muted" aria-role="tab" aria-selected="false" data-tab="opportunities" bind:tap="changePortfolioTab">相关机会</view>
     </view>
 
     <block wx:if="{{portfolioTab === 'cooperation'}}">
@@ -76,6 +86,8 @@
     </block>
 
     <view class="mt-6 overflow-hidden rounded-[16rpx] bg-panel">
+      <view class="flex min-h-[96rpx] items-center justify-between border-b border-line px-4" bind:tap="openBadges"><view><view class="text-[length:26rpx] font-semibold">我的勋章</view><view class="mt-1 text-[length:20rpx] text-muted">查看收藏并设置佩戴状态</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
+      <view class="flex min-h-[96rpx] items-center justify-between border-b border-line px-4" bind:tap="openGame"><view><view class="text-[length:26rpx] font-semibold">团队 PK</view><view class="mt-1 text-[length:20rpx] text-muted">查看赛季、队伍和排行榜</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
       <view class="flex min-h-[96rpx] items-center justify-between border-b border-line px-4" bind:tap="openBranches"><view><view class="text-[length:26rpx] font-semibold">主分会</view><view class="mt-1 text-[length:20rpx] text-muted">{{primaryBranchName}}</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
       <view class="flex min-h-[96rpx] items-center justify-between border-b border-line px-4" bind:tap="openReceivedInteractions"><view><view class="flex items-center gap-2"><view class="text-[length:26rpx] font-semibold">收到的互动</view><text wx:if="{{visitorUnreadCount > 0}}" class="min-w-[32rpx] rounded-full bg-brand px-2 text-center text-[length:18rpx] font-semibold leading-[32rpx] text-on-brand">{{visitorUnreadCount > 99 ? '99+' : visitorUnreadCount}}</text></view><view class="mt-1 text-[length:20rpx] text-muted">查看被引荐、感兴趣和访客记录</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
       <view class="flex min-h-[96rpx] items-center justify-between border-b border-line px-4" bind:tap="openHeartHistory"><view><view class="text-[length:26rpx] font-semibold">心动记录</view><view class="mt-1 text-[length:20rpx] text-muted">查看我点过和对我心动的人</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>

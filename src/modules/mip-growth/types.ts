@@ -57,6 +57,25 @@ export interface GrowthEntryPage {
   nextCursor?: string
 }
 
+export interface BadgeCollectionItem {
+  id: string
+  key: string
+  name: string
+  description: string
+  iconName?: string
+  imageUrl?: string
+  placeholderShape: 'CIRCLE' | 'DIAMOND' | 'HEXAGON'
+  status: 'DRAFT' | 'ACTIVE' | 'INACTIVE'
+  equippedSlot?: number
+  awardedAt: string
+}
+
+export interface BadgeCollection {
+  version: number
+  maximumEquipped: 3
+  items: BadgeCollectionItem[]
+}
+
 export interface GrowthEntryIntent {
   userId: UserId
   rule: GrowthRule
@@ -76,6 +95,8 @@ export interface GrowthEntryProjection {
 export interface MipGrowthGateway {
   getSnapshot: () => Promise<GrowthSnapshot>
   listEntries: (cursor?: string, limit?: number) => Promise<GrowthEntryPage>
+  listBadgeCollection: () => Promise<BadgeCollection>
+  equipBadges: (badgeIds: string[], expectedVersion: number) => Promise<BadgeCollection>
 }
 
 export class MipGrowthError extends Error {

@@ -1,12 +1,31 @@
 import type { AdminEvent } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
 import { mipAdminModule } from '../../../modules/mip-admin'
+import { formatLocalDateTime } from '../../../utils/date'
 import { adminLoadFailure } from '../shared/page-state'
+
+type EventView = AdminEvent & { statusText: string, statusTheme: string, startsText: string }
+const statusLabels: Record<AdminEvent['status'], string> = {
+  DRAFT: '草稿',
+  PUBLISHED: '已发布',
+  UNPUBLISHED: '已下架',
+  CANCELLED: '已取消',
+  ENDED: '已结束',
+  ARCHIVED: '已归档',
+}
+function eventView(item: AdminEvent): EventView {
+  return {
+    ...item,
+    statusText: statusLabels[item.status],
+    startsText: formatLocalDateTime(item.startsAt),
+    statusTheme: item.status === 'PUBLISHED' ? 'success' : item.status === 'CANCELLED' ? 'danger' : item.status === 'DRAFT' ? 'default' : 'warning',
+  }
+}
 
 Page({
   data: {
     state: 'loading' as AdminPageState,
-    events: [] as AdminEvent[],
+    events: [] as EventView[],
     query: '',
     status: '',
     canCreate: false,
@@ -17,6 +36,7 @@ Page({
     message: '',
     nextCursor: null as string | null,
     loadingMore: false,
+    processingId: '',
   },
   onShow() { void this.loadEvents() },
   updateQuery(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ query: event.detail.value }) },
@@ -45,7 +65,7 @@ Page({
         item.capability === 'events.write' && item.scopeType === 'PLATFORM')
       this.setData({
         state: 'ready',
-        events: response.items,
+        events: response.items.map(eventView),
         canCreate,
         canManagePolicy,
         cancellationHoursBeforeStart: String(policy.cancellationHoursBeforeStart),
@@ -69,7 +89,7 @@ Page({
         cursor: this.data.nextCursor,
         filters: { query: this.data.query.trim(), status: this.data.status },
       })
-      this.setData({ events: this.data.events.concat(response.items), nextCursor: response.nextCursor || null })
+      this.setData({ events: this.data.events.concat(response.items.map(eventView)), nextCursor: response.nextCursor || null })
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '更多活动加载失败' })
@@ -97,6 +117,30 @@ Page({
     if (this.data.canCreate) {
       void wx.navigateTo({ url: '/packages/admin/events/index' })
     }
+  },
+  openParticipants() {
+    void wx.navigateTo({ url: '/packages/admin/event-participants/index' })
+  },
+  async archiveEvent(event: WechatMiniprogram.TouchEvent) {
+    const eventId = String(event.currentTarget.dataset.id || '')
+    const version = Number(event.currentTarget.dataset.version)
+    if (!eventId || this.data.processingId) {
+      return
+    }
+    const modal = await wx.showModal({ title: '归档活动草稿', editable: true, placeholderText: '填写归档原因' })
+    if (!modal.confirm || !modal.content.trim()) {
+      return
+    }
+    this.setData({ processingId: eventId, message: '' })
+    try {
+      await mipAdminModule.mutate(() => mipAdminModule.gateway.archiveEvent({ eventId, expectedVersion: version, reason: modal.content }))
+      wx.showToast({ title: '活动已归档', icon: 'success' })
+      await this.loadEvents(true)
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '活动归档失败' })
+    }
+    finally { this.setData({ processingId: '' }) }
   },
   updateCancellationHours(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ cancellationHoursBeforeStart: event.detail.value })

@@ -7,6 +7,7 @@ import type {
   PeoplePage,
   PublicPerson,
   PublicProfileAggregate,
+  PublicProfileBadge,
   PublicProfileCooperationCard,
   PublicProfileOpportunity,
   PublicProfileSuperCase,
@@ -95,6 +96,7 @@ export function normalizePeopleFilter(value: PeopleFilter): PeopleFilter {
     scope,
     keyword: text(value.keyword, 80, '关键词', false) || undefined,
     branchId: value.branchId,
+    roleKey: value.roleKey && isCooperationRoleKey(value.roleKey) ? value.roleKey : undefined,
     industryTagIds: uniqueStrings(value.industryTagIds, 8, '行业标签'),
     abilityTagIds: uniqueStrings(value.abilityTagIds, 8, '能力标签'),
     cursor: text(value.cursor, 768, '分页位置', false) || undefined,
@@ -164,6 +166,39 @@ function publicOrganizations(value: unknown) {
   })
 }
 
+function publicBadges(value: unknown): PublicProfileBadge[] {
+  if (value === undefined) {
+    return []
+  }
+  if (!Array.isArray(value) || value.length > 3) {
+    throw new Error('人才服务返回了无效响应')
+  }
+  const slots = new Set<number>()
+  return value.map((item) => {
+    const source = record(item)
+    const equippedSlot = Number(source.equippedSlot)
+    const placeholderShape = String(source.placeholderShape)
+    if (!Number.isInteger(equippedSlot) || equippedSlot < 1 || equippedSlot > 3
+      || slots.has(equippedSlot)
+      || !['CIRCLE', 'DIAMOND', 'HEXAGON'].includes(placeholderShape)) {
+      throw new Error('人才服务返回了无效响应')
+    }
+    slots.add(equippedSlot)
+    const iconName = responseText(source.iconName, 64)
+    const imageUrl = responseText(source.imageUrl, 1024)
+    return {
+      id: responseId(source.id),
+      key: responseText(source.key, 80, true),
+      name: responseText(source.name, 100, true),
+      description: responseText(source.description, 500),
+      ...(iconName ? { iconName } : {}),
+      ...(imageUrl ? { imageUrl } : {}),
+      placeholderShape: placeholderShape as PublicProfileBadge['placeholderShape'],
+      equippedSlot,
+    }
+  }).sort((left, right) => left.equippedSlot - right.equippedSlot)
+}
+
 export function parsePublicPerson(value: unknown): PublicPerson {
   const source = record(value)
   const profileRef = responseText(source.profileRef, 200, true)
@@ -201,6 +236,7 @@ export function parsePublicPerson(value: unknown): PublicPerson {
           },
         }
       : {}),
+    badges: publicBadges(source.badges),
   }
 }
 

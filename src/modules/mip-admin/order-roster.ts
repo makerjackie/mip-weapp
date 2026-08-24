@@ -1,7 +1,9 @@
 import type {
   AdminOrder,
+  AdminOrderPage,
   AdminOrderRefundAction,
   AdminOrderStatus,
+  AdminOrderSummary,
   AdminPage,
   AdminRefundStatus,
   AdminRosterItem,
@@ -86,6 +88,9 @@ function parseRosterItem(value: unknown): AdminRosterItem {
       'registeredAt',
       'checkedInAt',
       'version',
+      'entitlementStartsAt',
+      'entitlementEndsAt',
+      'entitlementStatus',
     ])
     || typeof value.id !== 'string'
     || !uuidPattern.test(value.id)
@@ -103,7 +108,11 @@ function parseRosterItem(value: unknown): AdminRosterItem {
     || !validDate(value.registeredAt, true)
     || !validDate(value.checkedInAt, true)
     || !Number.isInteger(value.version)
-    || Number(value.version) < 1) {
+    || Number(value.version) < 1
+    || !(value.entitlementStartsAt === undefined || validDate(value.entitlementStartsAt, true))
+    || !(value.entitlementEndsAt === undefined || validDate(value.entitlementEndsAt, true))
+    || !(value.entitlementStatus === undefined || value.entitlementStatus === null
+      || ['PENDING', 'ACTIVE', 'EXPIRED', 'REVOKED', 'REFUNDED'].includes(String(value.entitlementStatus)))) {
     throw invalidResponse('参与者名单')
   }
   for (const item of value.answerItems) {
@@ -189,10 +198,55 @@ function parseOrderItem(value: unknown): AdminOrder {
   return value as unknown as AdminOrder
 }
 
+function parseOrderSummary(value: unknown): AdminOrderSummary {
+  if (!record(value)
+    || !hasOnlyKeys(value, [
+      'currency',
+      'orderCount',
+      'paidOrderCount',
+      'eventGrossAmountCents',
+      'membershipGrossAmountCents',
+      'grossAmountCents',
+      'refundedAmountCents',
+      'netAmountCents',
+    ])
+    || value.currency !== 'CNY') {
+    throw invalidResponse('财务汇总')
+  }
+  for (const key of [
+    'orderCount',
+    'paidOrderCount',
+    'eventGrossAmountCents',
+    'membershipGrossAmountCents',
+    'grossAmountCents',
+    'refundedAmountCents',
+    'netAmountCents',
+  ]) {
+    if (!Number.isInteger(value[key]) || Number(value[key]) < 0) {
+      throw invalidResponse('财务汇总')
+    }
+  }
+  if (Number(value.eventGrossAmountCents) + Number(value.membershipGrossAmountCents) !== Number(value.grossAmountCents)
+    || Number(value.grossAmountCents) - Number(value.refundedAmountCents) !== Number(value.netAmountCents)) {
+    throw invalidResponse('财务汇总')
+  }
+  return value as unknown as AdminOrderSummary
+}
+
 export function parseAdminRosterPage(value: unknown): AdminPage<AdminRosterItem> {
   return parsePage(value, '参与者名单', parseRosterItem)
 }
 
-export function parseAdminOrderPage(value: unknown): AdminPage<AdminOrder> {
-  return parsePage(value, '订单列表', parseOrderItem)
+export function parseAdminOrderPage(value: unknown): AdminOrderPage {
+  if (!record(value)
+    || !hasOnlyKeys(value, ['items', 'nextCursor', 'summary'])
+    || !Array.isArray(value.items)
+    || !(value.nextCursor === undefined || value.nextCursor === null || typeof value.nextCursor === 'string')) {
+    throw invalidResponse('订单列表')
+  }
+  return {
+    items: value.items.map(parseOrderItem),
+    nextCursor: value.nextCursor === undefined ? null : value.nextCursor,
+    summary: parseOrderSummary(value.summary),
+  }
 }

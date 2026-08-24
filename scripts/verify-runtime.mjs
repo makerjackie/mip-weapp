@@ -72,6 +72,16 @@ function assertRepresentativeData(data, scenario) {
   }
 }
 
+function assertInteractionData(data, journey, step) {
+  for (const assertion of step.dataAssertions || []) {
+    const value = pathValue(data, assertion.path)
+    assert(
+      Object.is(value, assertion.equals),
+      `Interaction ${journey.id}/${step.id} expected ${assertion.path}=${JSON.stringify(assertion.equals)}, received ${JSON.stringify(value)}`,
+    )
+  }
+}
+
 function acceptedStates(route) {
   if (Array.isArray(route.acceptStates) && route.acceptStates.length > 0) {
     return route.acceptStates
@@ -170,6 +180,36 @@ function validateRuntimeContract(runtimePages) {
       assert(typeof visible.text === 'string' && visible.text.trim(), `Representative ${scenario.id} visible text must be non-empty`)
       const wxml = fs.readFileSync(path.join(root, 'src', `${route.path}.wxml`), 'utf8')
       assert(wxml.includes(visible.text), `Representative ${scenario.id} text is missing from ${route.path}`)
+    }
+  }
+
+  const interactionJourneys = runtimePages.interactionJourneys
+  assert(Array.isArray(interactionJourneys) && interactionJourneys.length >= 3, 'runtime-pages.json must define at least three interactionJourneys')
+  const seenJourneyIds = new Set()
+  for (const journey of interactionJourneys) {
+    assert(journey?.id && !seenJourneyIds.has(journey.id), `Invalid or duplicate interaction journey id: ${journey?.id}`)
+    seenJourneyIds.add(journey.id)
+    const route = runtimePages.routes.find(candidate => candidate.path === journey.route)
+    assert(route, `Interaction ${journey.id} route is missing: ${journey.route}`)
+    assert(journey.nonMutating === true, `Interaction ${journey.id} must explicitly be nonMutating`)
+    assert(Array.isArray(journey.steps) && journey.steps.length > 0, `Interaction ${journey.id} steps[] is required`)
+    for (const step of journey.steps) {
+      assert(step?.id && ['input', 'tap'].includes(step.type), `Interaction ${journey.id} has an invalid step`)
+      assert(typeof step.selector === 'string' && step.selector.startsWith('#'), `Interaction ${journey.id}/${step.id} needs an id selector`)
+      if (step.type === 'input') {
+        assert(typeof step.value === 'string', `Interaction ${journey.id}/${step.id} input value is required`)
+      }
+      assert(Array.isArray(step.dataAssertions) && step.dataAssertions.length > 0, `Interaction ${journey.id}/${step.id} dataAssertions[] is required`)
+      for (const dataAssertion of step.dataAssertions) {
+        assert(/^[a-z]\w*(?:\.[a-z]\w*)*$/i.test(dataAssertion?.path || ''), `Interaction ${journey.id}/${step.id} has an invalid data path`)
+        assert(Object.hasOwn(dataAssertion || {}, 'equals'), `Interaction ${journey.id}/${step.id} data assertion needs equals`)
+      }
+      if (step.visibleAssertion) {
+        assert(
+          typeof step.visibleAssertion.selector === 'string' || typeof step.visibleAssertion.text === 'string',
+          `Interaction ${journey.id}/${step.id} visibleAssertion needs selector or text`,
+        )
+      }
     }
   }
 }
@@ -575,6 +615,65 @@ async function verifyRepresentativeStates(miniProgram, runtimePages, report, sen
   }
 }
 
+async function verifyInteractionJourneys(miniProgram, runtimePages, report, sensitivePatterns) {
+  const routes = new Map(runtimePages.routes.map(route => [route.path, route]))
+  report.interactions = []
+  for (const journey of runtimePages.interactionJourneys) {
+    const route = routes.get(journey.route)
+    const result = { id: journey.id, route: journey.route, status: 'running', steps: [] }
+    report.interactions.push(result)
+    try {
+      const page = await retry(`interaction ${journey.id}`, () => miniProgram.reLaunch(`/${journey.route}`))
+      await retry(
+        `wait interaction ${journey.id}`,
+        () => page.waitForRendered({ selector: route.selector, timeout: 15000 }),
+      )
+      const settled = await waitForPageData(page, route, sensitivePatterns, 12000)
+      assert(settled.status === 'passed', `Interaction ${journey.id} route did not reach an accepted state`)
+
+      for (const step of journey.steps) {
+        const element = await retry(`find interaction ${journey.id}/${step.id}`, () => page.$(step.selector))
+        assert(element, `Interaction ${journey.id}/${step.id} selector was not rendered: ${step.selector}`)
+        if (step.type === 'input') {
+          assert(typeof element.input === 'function', `Interaction ${journey.id}/${step.id} is not an input element`)
+          await retry(`input interaction ${journey.id}/${step.id}`, () => element.input(step.value))
+        }
+        else {
+          await retry(`tap interaction ${journey.id}/${step.id}`, () => element.tap())
+        }
+        await new Promise(resolve => setTimeout(resolve, 180))
+        const data = await retry(`read interaction ${journey.id}/${step.id}`, () => page.data())
+        assertNoSensitivePageData(data, journey.route, sensitivePatterns)
+        assertInteractionData(data, journey, step)
+        if (step.visibleAssertion?.selector) {
+          await retry(
+            `wait interaction ${journey.id}/${step.id} selector`,
+            () => page.waitForRendered({ selector: step.visibleAssertion.selector, timeout: 5000 }),
+          )
+        }
+        if (step.visibleAssertion?.text) {
+          await retry(
+            `wait interaction ${journey.id}/${step.id} text`,
+            () => page.waitForRendered({ text: step.visibleAssertion.text, timeout: 5000 }),
+          )
+        }
+        result.steps.push({ id: step.id, type: step.type, status: 'passed' })
+      }
+      const screenshotPath = path.join(outputDir, `interaction-${outputName(journey.id)}.png`)
+      await captureScreenshot(`interaction-${journey.id}`, miniProgram, screenshotPath)
+      result.sizeBytes = fs.statSync(screenshotPath).size
+      assert(result.sizeBytes >= 8 * 1024, `Interaction ${journey.id} screenshot is suspiciously small`)
+      result.status = 'passed'
+      console.log(`PASS  interaction:${journey.id}  ${journey.route}`)
+    }
+    catch (error) {
+      result.status = 'failed'
+      result.error = sanitizeRuntimeValue(error instanceof Error ? error.message : error)
+      throw error
+    }
+  }
+}
+
 async function verifyContractedPages(miniProgram, runtimePages, report, options) {
   const { sensitivePatterns, updateBaseline } = options
   report.pages = []
@@ -722,6 +821,7 @@ export async function main(runArgs = process.argv.slice(2)) {
     attempts: [],
     recoveries: [],
     representativeStates: [],
+    interactions: [],
     deviceRequired: buildDeviceRequiredReport(runtimePages),
     routeContract: {
       source: 'config/runtime-pages.json',
@@ -765,6 +865,7 @@ export async function main(runArgs = process.argv.slice(2)) {
     await verifyRepresentativeStates(miniProgram, runtimePages, report, sensitivePatterns)
     await verifyContractedPages(miniProgram, runtimePages, report, { sensitivePatterns, updateBaseline })
     await verifyNavigation(miniProgram, runtimePages, report, sensitivePatterns)
+    await verifyInteractionJourneys(miniProgram, runtimePages, report, sensitivePatterns)
 
     const failedPages = report.pages.filter(page => page.status !== 'passed')
     const failedTabs = report.navigation.tabs.filter(tab => tab.status !== 'passed')
@@ -815,6 +916,7 @@ export async function main(runArgs = process.argv.slice(2)) {
         miniProgram = undefined
         report.pages = []
         report.representativeStates = []
+        report.interactions = []
         report.navigation = undefined
         await warmWechatDevtoolsProject({ projectPath: devtoolsRoot, restart: true })
       }
@@ -828,6 +930,11 @@ export async function main(runArgs = process.argv.slice(2)) {
     assert(report.ideCompilerDiagnostics.failures === 0, `WeChat DevTools compiler reported ${report.ideCompilerDiagnostics.failures} build/HMR error(s)`)
     assert(report.pages.length === runtimePages.routeCount, `Runtime verifier covered ${report.pages.length}/${runtimePages.routeCount} routes`)
     assert(report.representativeStates.length === 6, 'Runtime verifier did not cover all representative states')
+    assert(
+      report.interactions.length === runtimePages.interactionJourneys.length
+      && report.interactions.every(journey => journey.status === 'passed'),
+      'Runtime verifier did not complete all interaction journeys',
+    )
 
     if (updateBaseline) {
       for (const route of runtimePages.routes) {

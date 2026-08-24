@@ -10,6 +10,13 @@ function read(relativePath: string) {
 }
 
 describe('MIP cooperation card preview', () => {
+  it('labels every radar axis and redraws after the page size changes', () => {
+    const detail = read('src/packages/member/mip-cooperation/detail/index.ts')
+    expect(detail).toContain('context.fillText(ability.label')
+    expect(detail).toContain('onResize()')
+    expect(detail).toContain(`context.textBaseline = 'middle'`)
+  })
+
   it('saves a draft before opening the owner-visible detail page', () => {
     const source = read('src/packages/member/mip-cooperation/editor/index.ts')
     const view = read('src/packages/member/mip-cooperation/editor/index.wxml')

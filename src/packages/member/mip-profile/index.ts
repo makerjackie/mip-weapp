@@ -11,6 +11,7 @@ import {
   groupProfileIndustries,
 } from '../../../modules/mip-identity/tag-catalog'
 import { mipMediaModule } from '../../../modules/mip-media/client'
+import { groupedCityBranches, opportunityModule } from '../../../modules/mip-opportunities'
 import {
   appendEditableOrganization,
   createEditableOrganizations,
@@ -105,9 +106,10 @@ Page({
           aiMessage = error instanceof Error ? error.message : 'AI 草稿加载失败'
         }
       }
-      const [tags, branches] = await Promise.all([
+      const [tags, branches, opportunityCatalog] = await Promise.all([
         mipIdentityModule.listProfileTags(),
         mipBranchesModule.load(snapshot.primaryBranchId, snapshot.userVersion),
+        opportunityModule.getCatalogs().catch(() => null),
       ])
       const industryOptions = [
         { id: '', label: '未选择' },
@@ -122,9 +124,10 @@ Page({
           popular: option.popular,
         })),
       }))
+      const branchGroups = groupedCityBranches(branches.branches, opportunityCatalog?.cityTags || [])
       const branchOptions = [
         { id: '', label: '未选择' },
-        ...branches.branches.map(branch => ({ id: branch.id, label: `${branch.cityName} · ${branch.name}` })),
+        ...branchGroups[0].options,
       ]
       const primaryIndustryId = snapshot.profile.primaryIndustryTagId || ''
       const primaryBranchId = snapshot.primaryBranchId || ''
@@ -163,7 +166,7 @@ Page({
         visibilityAbilities: snapshot.profile.visibility.abilities !== false,
         visibilityPrimaryBranch: snapshot.profile.visibility.primaryBranch !== false,
         branchOptions,
-        branchGroups: [{ id: 'city-branches', label: '城市分会', options: branchOptions.slice(1) }],
+        branchGroups,
         selectedBranchIds: primaryBranchId ? [primaryBranchId] : [],
         branchIndex: Math.max(0, branchOptions.findIndex(item => item.id === primaryBranchId)),
         industryOptions,

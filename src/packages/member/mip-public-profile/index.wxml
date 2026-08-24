@@ -23,6 +23,14 @@
       </view>
       <view wx:if="{{profile.branchText || profile.primaryIndustry}}" class="mt-5 flex flex-wrap gap-2"><text wx:if="{{profile.branchText}}" class="rounded-full bg-panel-raised px-3 py-1 text-[length:21rpx] text-muted">{{profile.branchText}}</text><text wx:if="{{profile.primaryIndustry}}" class="rounded-full bg-panel-raised px-3 py-1 text-[length:21rpx] text-muted">{{profile.primaryIndustry.label}}</text></view>
       <view wx:if="{{profile.abilities.length}}" class="mt-3 flex flex-wrap gap-2"><text wx:for="{{profile.abilities}}" wx:key="id" class="rounded-full border border-line px-3 py-1 text-[length:21rpx] text-muted">{{item.label}}</text></view>
+      <view wx:if="{{profile.badges.length}}" class="mt-4 flex flex-wrap gap-2 border-t border-line pt-4">
+        <view wx:for="{{profile.badges}}" wx:key="id" class="flex min-h-[64rpx] items-center gap-2 rounded-full bg-panel-raised px-3 py-2">
+          <image wx:if="{{item.imageUrl}}" class="h-[36rpx] w-[36rpx] rounded-full" mode="aspectFill" src="{{item.imageUrl}}" />
+          <t-icon wx:elif="{{item.iconName}}" name="{{item.iconName}}" size="30rpx" color="var(--color-brand)" />
+          <view wx:else class="h-[28rpx] w-[28rpx] rounded-full border-[3rpx] border-brand bg-brand-soft" />
+          <text class="text-[length:20rpx]">{{item.name}}</text>
+        </view>
+      </view>
 
       <view wx:if="{{!isSelf}}" class="mt-5 border-t border-line pt-5">
         <view wx:if="{{interestState === 'access'}}" class="rounded-[12rpx] bg-panel-raised px-4 py-4"><view class="text-[length:23rpx]">需要完成身份信息后继续。</view><view class="mt-3"><t-button block theme="primary" bind:tap="openAccess">继续</t-button></view></view>
@@ -47,13 +55,13 @@
 
     <view class="mt-4 rounded-[16rpx] bg-panel px-5 py-5">
       <view class="flex items-center justify-between"><view class="text-[length:28rpx] font-semibold">超级案例</view><view class="text-[length:21rpx] text-muted">{{superCases.length}} 个</view></view>
-      <view wx:if="{{superCases.length}}" class="mt-3 flex flex-col gap-3"><view wx:for="{{superCases}}" wx:key="id" class="flex overflow-hidden rounded-[12rpx] bg-panel-raised active:bg-canvas" data-id="{{item.id}}" bind:tap="openSuperCase"><image wx:if="{{item.coverUrl}}" class="h-[180rpx] w-[180rpx] shrink-0" src="{{item.coverUrl}}" mode="aspectFill" /><view class="min-w-0 flex-1 px-4 py-4"><view class="line-clamp-1 text-[length:25rpx] font-semibold">{{item.projectName}}</view><view class="mt-2 line-clamp-2 text-[length:22rpx] leading-5 text-muted">{{item.summary}}</view><view wx:if="{{item.cityLabel || item.industryLabel}}" class="mt-2 text-[length:20rpx] text-subtle">{{item.cityLabel}} {{item.industryLabel}}</view></view></view></view>
+      <view wx:if="{{superCases.length}}" class="mt-3 flex flex-col gap-3"><view wx:for="{{superCases}}" wx:key="id" class="flex overflow-hidden rounded-[12rpx] bg-panel-raised active:bg-canvas" data-id="{{item.id}}" bind:tap="openSuperCase"><image wx:if="{{item.coverUrl}}" class="h-[180rpx] w-[180rpx] shrink-0" src="{{item.coverUrl}}" mode="aspectFill" /><view class="min-w-0 flex-1 px-4 py-4"><view class="line-clamp-1 text-[length:25rpx] font-semibold">{{item.projectName}}</view><view class="mt-2 line-clamp-2 text-[length:22rpx] leading-5 text-muted">{{item.summary}}</view><view wx:if="{{item.cityLabel || item.industryLabel}}" class="mt-2 text-[length:20rpx] text-muted">{{item.cityLabel}} {{item.industryLabel}}</view></view></view></view>
       <view wx:else class="mt-3 text-[length:22rpx] text-muted">暂无已发布超级案例。</view>
     </view>
 
     <view class="mt-4 rounded-[16rpx] bg-panel px-5 py-5">
       <view class="flex items-center justify-between"><view class="text-[length:28rpx] font-semibold">招募中的机会</view><view class="text-[length:21rpx] text-muted">{{opportunities.length}} 个</view></view>
-      <view wx:if="{{opportunities.length}}" class="mt-3 flex flex-col gap-3"><view wx:for="{{opportunities}}" wx:key="id" class="rounded-[12rpx] bg-panel-raised px-4 py-4 active:bg-canvas" data-id="{{item.id}}" bind:tap="openOpportunity"><view class="line-clamp-1 text-[length:25rpx] font-semibold">{{item.title}}</view><view class="mt-2 line-clamp-2 text-[length:22rpx] leading-5 text-muted">{{item.valueSummary}}</view><view class="mt-2 flex items-center justify-between gap-3 text-[length:20rpx] text-subtle"><text class="truncate">{{item.cityLabel || item.branchName || '全国'}}</text><text>{{item.referralCount}} 人引荐</text></view></view></view>
+      <view wx:if="{{opportunities.length}}" class="mt-3 flex flex-col gap-3"><view wx:for="{{opportunities}}" wx:key="id" class="rounded-[12rpx] bg-panel-raised px-4 py-4 active:bg-canvas" data-id="{{item.id}}" bind:tap="openOpportunity"><view class="line-clamp-1 text-[length:25rpx] font-semibold">{{item.title}}</view><view class="mt-2 line-clamp-2 text-[length:22rpx] leading-5 text-muted">{{item.valueSummary}}</view><view class="mt-2 flex items-center justify-between gap-3 text-[length:20rpx] text-muted"><text class="truncate">{{item.cityLabel || item.branchName || '全国'}}</text><text>{{item.referralCount}} 人引荐</text></view></view></view>
       <view wx:else class="mt-3 text-[length:22rpx] text-muted">暂无招募中的机会。</view>
     </view>
 

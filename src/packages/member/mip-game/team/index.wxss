@@ -1,0 +1,47 @@
+.headquarters {
+  color: #f8f8f8;
+  background: #202020;
+}
+
+.headquarters-level-2 {
+  background: #34311e;
+}
+
+.headquarters-level-3 {
+  background: #514919;
+}
+
+.headquarters-level-4 {
+  color: #111;
+  background: #fcdf03;
+}
+
+.headquarters-mark {
+  display: flex;
+  gap: 10rpx;
+  align-items: flex-end;
+  height: 72rpx;
+}
+
+.headquarters-mark view {
+  width: 42rpx;
+  border: 2rpx solid currentcolor;
+  border-bottom: 0;
+  opacity: 0.75;
+}
+
+.headquarters-mark view:nth-child(1) {
+  height: 32rpx;
+}
+
+.headquarters-mark view:nth-child(2) {
+  height: 48rpx;
+}
+
+.headquarters-mark view:nth-child(3) {
+  height: 64rpx;
+}
+
+.headquarters-mark view:nth-child(4) {
+  height: 44rpx;
+}

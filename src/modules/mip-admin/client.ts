@@ -6,6 +6,7 @@ import type {
   AdminCommunityReportStatus,
   AdminEventAlbumPhotoStatus,
   AdminOrderListInput,
+  AdminRosterAllListInput,
   AdminRosterListInput,
   MipAdminGateway,
 } from './types'
@@ -82,6 +83,13 @@ export function createMipAdminModule(gateway: MipAdminGateway) {
           () => gateway.listRoster(input),
           { force },
         ),
+    listRosterAll: (input: AdminRosterAllListInput = {}, force = false) => input.includePhone === true
+      ? gateway.listRosterAll(input)
+      : cache.query(
+          `mip-admin:roster-all:${JSON.stringify(input)}`,
+          () => gateway.listRosterAll(input),
+          { force },
+        ),
     listRoles: (force = false) => cache.query('mip-admin:roles', gateway.listRoles, { force }),
     searchRoleCandidates: (eventId: string, query: string) => gateway.searchRoleCandidates(eventId, query),
     listOpportunities: (input: Record<string, unknown> = {}, force = false) => cache.query(
@@ -89,11 +97,28 @@ export function createMipAdminModule(gateway: MipAdminGateway) {
       () => gateway.listOpportunities(input),
       { force },
     ),
+    getOpportunity: (opportunityId: string, force = false) => cache.query(
+      `mip-admin:opportunity:${opportunityId}`,
+      () => gateway.getOpportunity(opportunityId),
+      { force },
+    ),
+    getOpportunityEditorOptions: (force = false) => cache.query(
+      'mip-admin:opportunity-options',
+      gateway.getOpportunityEditorOptions,
+      { force },
+    ),
     listGrowthLevels: (force = false) => cache.query('mip-admin:growth-levels', gateway.listGrowthLevels, { force }),
+    listGrowthBenefits: (force = false) => cache.query('mip-admin:growth-benefits', gateway.listGrowthBenefits, { force }),
     listGrowthRules: (force = false) => cache.query('mip-admin:growth-rules', gateway.listGrowthRules, { force }),
     listGrowthEntries: (input: Record<string, unknown> = {}, force = false) => cache.query(
       `mip-admin:growth-entries:${JSON.stringify(input)}`,
       () => gateway.listGrowthEntries(input),
+      { force },
+    ),
+    listBadges: (force = false) => cache.query('mip-admin:badges', gateway.listBadges, { force }),
+    listBadgeAwards: (input: { query?: string, status?: 'ACTIVE' | 'REVOKED' | '' } = {}, force = false) => cache.query(
+      `mip-admin:badge-awards:${JSON.stringify(input)}`,
+      () => gateway.listBadgeAwards(input),
       { force },
     ),
     listOrders: (input: AdminOrderListInput = {}, force = false) => cache.query(

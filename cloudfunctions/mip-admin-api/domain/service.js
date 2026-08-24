@@ -581,7 +581,10 @@ function createAdminService({
         metadata: { detail: true },
       }))
     }
-    return { ...safe, phoneNumber: rawPhone }
+    const relatedRecords = typeof repository.getUserRelatedRecords === 'function'
+      ? await repository.getUserRelatedRecords(context.caller.appId, userId)
+      : { superCases: [], opportunities: [], registrations: [], orders: [] }
+    return { ...safe, phoneNumber: rawPhone, relatedRecords }
   }
 
   async function updateUser(caller, input) {
@@ -638,7 +641,10 @@ function createAdminService({
 
   async function createExport(caller, input) {
     const context = await session(caller)
-    const exportType = ['USERS', 'EVENT_ROSTER', 'EVENT_ORDERS', 'ORDERS', 'GROWTH_ENTRIES'].includes(input.exportType)
+    const exportType = [
+      'USERS', 'EVENT_ROSTER', 'EVENT_ROSTER_ALL', 'EVENT_ORDERS', 'ORDERS',
+      'GROWTH_ENTRIES', 'OPPORTUNITIES',
+    ].includes(input.exportType)
       ? input.exportType
       : null
     if (!exportType) throw new AdminError('VALIDATION_FAILED', '导出类型无效')
@@ -649,7 +655,7 @@ function createAdminService({
       throw new AdminError('FORBIDDEN', '当前账号不能创建该类导出')
     }
     const includesPhone = input.includesPhone === true
-    if (includesPhone && !['USERS', 'EVENT_ROSTER'].includes(exportType)) {
+    if (includesPhone && !['USERS', 'EVENT_ROSTER', 'EVENT_ROSTER_ALL'].includes(exportType)) {
       throw new AdminError('VALIDATION_FAILED', '该导出不包含手机号')
     }
     const phoneGrant = includesPhone
@@ -940,6 +946,28 @@ function createAdminService({
       return { scopeType: 'BRANCH', scopeId: visibility.branchIds[0] }
     }
     return { scopeType: 'PLATFORM', scopeId: null }
+  }
+
+  async function archiveEvent(caller, input = {}) {
+    const context = await session(caller)
+    const eventId = requiredId(input.eventId, '活动')
+    const { scope, grant } = await eventAuthorization(context, eventId, CAPABILITIES.EVENTS_WRITE)
+    const version = expectedVersion(input.expectedVersion)
+    const reason = text(input.reason, 300, { required: true, label: '归档原因' })
+    return repository.archiveEvent({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      eventId,
+      expectedVersion: version,
+      reason,
+      authorizedScope: scope,
+      authorization: mutationAuthorization(grant, CAPABILITIES.EVENTS_WRITE),
+      audit: audit(context, grant, {
+        scopeType: 'EVENT', scopeId: eventId,
+        action: 'admin.events.archive', resourceType: 'EVENT', resourceId: eventId,
+        metadata: { expectedVersion: version, reasonLength: reason.length },
+      }),
+    })
   }
 
   async function listEvents(caller, input = {}) {
@@ -1260,6 +1288,38 @@ function createAdminService({
     return { items: safeItems, nextCursor: page.nextCursor }
   }
 
+  async function listRosterAll(caller, input = {}) {
+    const context = await session(caller)
+    const grant = firstGrant(context.bindings, CAPABILITIES.EVENTS_ROSTER)
+    const includePhone = input.includePhone === true
+    const scope = { scopeType: grant.scopeType, scopeId: grant.scopeId }
+    const phoneGrant = includePhone
+      ? authorize(context.bindings, CAPABILITIES.USERS_PHONE_READ, scope)
+      : null
+    const page = pageResult(await repository.listRosterAll(
+      context.caller.appId,
+      visibilityForCapability(context.bindings, CAPABILITIES.EVENTS_ROSTER),
+      normalizeRosterAllFilters(input.filters),
+      limit(input.limit),
+      decodeCursor(input.cursor, ['submittedAt', 'id']),
+    ))
+    const items = page.items.map((item) => {
+      const phoneNumber = includePhone && item.phoneCiphertext
+        ? decryptPhone(item.phoneCiphertext, phoneEncryptionKey, { appId: context.caller.appId, userId: item.userId })
+        : null
+      const { phoneCiphertext, ...safe } = item
+      return { ...safe, phoneNumber }
+    })
+    if (includePhone) {
+      await repository.recordAudit(audit(context, phoneGrant, {
+        scopeType: scope.scopeType, scopeId: scope.scopeId,
+        action: 'admin.events.roster.all.phone.view', resourceType: 'EVENT_ROSTER',
+        metadata: { count: items.length },
+      }))
+    }
+    return { items, nextCursor: page.nextCursor }
+  }
+
   async function checkIn(caller, input) {
     const context = await session(caller)
     const eventId = requiredId(input.eventId, '活动')
@@ -1401,14 +1461,98 @@ function createAdminService({
   async function listOpportunities(caller, input = {}) {
     const context = await session(caller)
     firstGrant(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE)
-    const page = pageResult(await repository.listOpportunities(
+    const readOpportunities = repository.listOpportunitiesV2 || repository.listOpportunities
+    const page = pageResult(await readOpportunities(
         context.caller.appId,
         visibilityForCapability(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE),
-        normalizeFilters(input.filters),
+        normalizeOpportunityFilters(input.filters),
         limit(input.limit),
         decodeCursor(input.cursor, ['updatedAt', 'id']),
       ))
     return page
+  }
+
+  async function getOpportunity(caller, input = {}) {
+    const context = await session(caller)
+    const opportunityId = requiredId(input.opportunityId, '机会')
+    const scope = await repository.getOpportunityScope(context.caller.appId, opportunityId)
+    if (!scope) throw new AdminError('NOT_FOUND', '机会不存在')
+    authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, scope)
+    const item = await repository.getOpportunityDetail(context.caller.appId, opportunityId)
+    if (!item) throw new AdminError('NOT_FOUND', '机会不存在')
+    return item
+  }
+
+  async function getOpportunityEditorOptions(caller) {
+    const context = await session(caller)
+    firstGrant(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE)
+    return repository.getOpportunityEditorOptions(context.caller.appId)
+  }
+
+  async function saveOpportunity(caller, input = {}) {
+    const context = await session(caller)
+    const draft = normalizeOpportunityDraft(input.draft)
+    const existingId = input.opportunityId ? requiredId(input.opportunityId, '机会') : null
+    let existingScope = null
+    let grant
+    if (existingId) {
+      existingScope = await repository.getOpportunityScope(context.caller.appId, existingId)
+      if (!existingScope) throw new AdminError('NOT_FOUND', '机会不存在')
+      grant = authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, existingScope)
+    }
+    else {
+      grant = authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, {
+        scopeType: draft.scopeType,
+        scopeId: draft.branchId,
+      })
+    }
+    const checked = await contentSafety({
+      title: draft.title,
+      summary: `${draft.valueSummary}\n${draft.targetSummary}`,
+      description: draft.description,
+    }, caller)
+    const contentSafetyStatus = checked === 'PASSED' || checked === 'APPROVED'
+      ? 'APPROVED'
+      : checked === 'REJECTED' ? 'REJECTED' : 'ERROR'
+    const version = existingId ? expectedVersion(input.expectedVersion) : 0
+    return repository.saveOpportunity({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      opportunityId: existingId,
+      expectedVersion: version,
+      draft,
+      contentSafetyStatus,
+      authorizedScope: existingScope,
+      authorization: mutationAuthorization(grant, CAPABILITIES.OPPORTUNITIES_MODERATE),
+      audit: opportunityId => audit(context, grant, {
+        scopeType: draft.scopeType, scopeId: draft.branchId,
+        action: existingId ? 'admin.opportunities.update' : 'admin.opportunities.create',
+        resourceType: 'OPPORTUNITY', resourceId: opportunityId,
+        metadata: { expectedVersion: version },
+      }),
+    })
+  }
+
+  async function publishOpportunity(caller, input = {}) {
+    const context = await session(caller)
+    const opportunityId = requiredId(input.opportunityId, '机会')
+    const scope = await repository.getOpportunityScope(context.caller.appId, opportunityId)
+    if (!scope) throw new AdminError('NOT_FOUND', '机会不存在')
+    const grant = authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, scope)
+    const version = expectedVersion(input.expectedVersion)
+    return repository.publishOpportunity({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      opportunityId,
+      expectedVersion: version,
+      authorizedScope: scope,
+      authorization: mutationAuthorization(grant, CAPABILITIES.OPPORTUNITIES_MODERATE),
+      audit: audit(context, grant, {
+        scopeType: scope.scopeType, scopeId: scope.scopeId,
+        action: 'admin.opportunities.publish', resourceType: 'OPPORTUNITY', resourceId: opportunityId,
+        metadata: { expectedVersion: version },
+      }),
+    })
   }
 
   async function unpublishOpportunity(caller, input) {
@@ -1454,7 +1598,34 @@ function createAdminService({
   async function listGrowthLevels(caller) {
     const context = await session(caller)
     firstGrant(context.bindings, CAPABILITIES.GROWTH_READ)
-    return { items: await repository.listGrowthLevels(context.caller.appId) }
+    return { items: await repository.listGrowthLevelsV2(context.caller.appId) }
+  }
+
+  async function listGrowthBenefits(caller) {
+    const context = await session(caller)
+    firstGrant(context.bindings, CAPABILITIES.GROWTH_READ)
+    return { items: await repository.listGrowthBenefits(context.caller.appId) }
+  }
+
+  async function saveGrowthBenefit(caller, input = {}) {
+    const context = await session(caller)
+    const grant = authorize(context.bindings, CAPABILITIES.GROWTH_CONFIGURE, { scopeType: 'PLATFORM', scopeId: null })
+    const draft = normalizeGrowthBenefit(input.draft)
+    const benefitId = input.benefitId ? requiredId(input.benefitId, '权益') : null
+    const version = benefitId ? expectedVersion(input.expectedVersion) : 0
+    return repository.saveGrowthBenefit({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      benefitId,
+      expectedVersion: version,
+      draft,
+      authorization: mutationAuthorization(grant, CAPABILITIES.GROWTH_CONFIGURE),
+      audit: resourceId => audit(context, grant, {
+        scopeType: 'PLATFORM', action: benefitId ? 'admin.growth.benefit.update' : 'admin.growth.benefit.create',
+        resourceType: 'GROWTH_BENEFIT', resourceId,
+        metadata: { status: draft.status, sortOrder: draft.sortOrder },
+      }),
+    })
   }
 
   async function saveGrowthLevel(caller, input) {
@@ -1462,7 +1633,7 @@ function createAdminService({
     const grant = authorize(context.bindings, CAPABILITIES.GROWTH_CONFIGURE, { scopeType: 'PLATFORM', scopeId: null })
     const draft = normalizeLevel(input.draft)
     const version = input.levelId ? expectedVersion(input.expectedVersion) : 0
-    return repository.saveGrowthLevel({
+    return repository.saveGrowthLevelV2({
       appId: context.caller.appId,
       actorUserId: context.caller.userId,
       levelId: input.levelId ? requiredId(input.levelId, '等级') : null,
@@ -1510,7 +1681,7 @@ function createAdminService({
     const page = pageResult(await repository.listGrowthEntries(
         context.caller.appId,
         visibilityForCapability(context.bindings, CAPABILITIES.GROWTH_READ),
-        normalizeFilters(input.filters),
+        normalizeGrowthEntryFilters(input.filters),
         limit(input.limit),
         decodeCursor(input.cursor, ['createdAt', 'id']),
       ))
@@ -1544,6 +1715,89 @@ function createAdminService({
     })
   }
 
+  async function listBadges(caller) {
+    const context = await session(caller)
+    authorize(context.bindings, CAPABILITIES.BADGES_MANAGE, { scopeType: 'PLATFORM', scopeId: null })
+    return { items: await repository.listBadges(context.caller.appId) }
+  }
+
+  async function saveBadge(caller, input = {}) {
+    const context = await session(caller)
+    const grant = authorize(context.bindings, CAPABILITIES.BADGES_MANAGE, { scopeType: 'PLATFORM', scopeId: null })
+    const badgeId = input.badgeId ? requiredId(input.badgeId, '勋章') : null
+    const draft = normalizeBadge(input.draft)
+    const version = badgeId ? expectedVersion(input.expectedVersion) : 0
+    return repository.saveBadge({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      badgeId,
+      expectedVersion: version,
+      draft,
+      authorization: mutationAuthorization(grant, CAPABILITIES.BADGES_MANAGE),
+      audit: resourceId => audit(context, grant, {
+        scopeType: 'PLATFORM',
+        action: badgeId ? 'admin.badge.update' : 'admin.badge.create',
+        resourceType: 'BADGE',
+        resourceId,
+        metadata: { status: draft.status, sortOrder: draft.sortOrder },
+      }),
+    })
+  }
+
+  async function listBadgeAwards(caller, input = {}) {
+    const context = await session(caller)
+    authorize(context.bindings, CAPABILITIES.BADGES_MANAGE, { scopeType: 'PLATFORM', scopeId: null })
+    const status = input.status === 'ACTIVE' || input.status === 'REVOKED' ? input.status : ''
+    const query = text(input.query, 100)
+    return { items: await repository.listBadgeAwards(context.caller.appId, { status, query }) }
+  }
+
+  async function grantBadge(caller, input = {}) {
+    const context = await session(caller)
+    const grant = authorize(context.bindings, CAPABILITIES.BADGES_MANAGE, { scopeType: 'PLATFORM', scopeId: null })
+    const userId = requiredId(input.userId, '用户')
+    const badgeId = requiredId(input.badgeId, '勋章')
+    const reason = text(input.reason, 300, { required: true, label: '授予原因' })
+    return repository.grantBadge({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      userId,
+      badgeId,
+      reason,
+      authorization: mutationAuthorization(grant, CAPABILITIES.BADGES_MANAGE),
+      audit: resourceId => audit(context, grant, {
+        scopeType: 'PLATFORM',
+        action: 'admin.badge.grant',
+        resourceType: 'USER_BADGE',
+        resourceId,
+        metadata: { userId, badgeId, reasonLength: reason.length },
+      }),
+    })
+  }
+
+  async function revokeBadge(caller, input = {}) {
+    const context = await session(caller)
+    const grant = authorize(context.bindings, CAPABILITIES.BADGES_MANAGE, { scopeType: 'PLATFORM', scopeId: null })
+    const awardId = requiredId(input.awardId, '获授记录')
+    const version = expectedVersion(input.expectedVersion)
+    const reason = text(input.reason, 300, { required: true, label: '撤销原因' })
+    return repository.revokeBadge({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      awardId,
+      expectedVersion: version,
+      reason,
+      authorization: mutationAuthorization(grant, CAPABILITIES.BADGES_MANAGE),
+      audit: resourceId => audit(context, grant, {
+        scopeType: 'PLATFORM',
+        action: 'admin.badge.revoke',
+        resourceType: 'USER_BADGE',
+        resourceId,
+        metadata: { reasonLength: reason.length, expectedVersion: version },
+      }),
+    })
+  }
+
   async function listOrders(caller, input = {}) {
     const context = await session(caller)
     const filters = normalizeOrderFilters(input.filters)
@@ -1558,13 +1812,18 @@ function createAdminService({
       grant = firstGrant(context.bindings, CAPABILITIES.ORDERS_READ)
       scope = { scopeType: grant.scopeType, scopeId: grant.scopeId }
     }
-    const page = pageResult(await repository.listOrders(
-      context.caller.appId,
-      visibilityForCapability(context.bindings, CAPABILITIES.ORDERS_READ),
-      filters,
-      limit(input.limit),
-      decodeCursor(input.cursor, ['createdAt', 'id']),
-    ))
+    const visibility = visibilityForCapability(context.bindings, CAPABILITIES.ORDERS_READ)
+    const [pageValue, summary] = await Promise.all([
+      repository.listOrders(
+        context.caller.appId,
+        visibility,
+        filters,
+        limit(input.limit),
+        decodeCursor(input.cursor, ['createdAt', 'id']),
+      ),
+      repository.summarizeOrders(context.caller.appId, visibility, filters),
+    ])
+    const page = pageResult(pageValue)
     await repository.recordAudit(audit(context, grant, {
       scopeType: scope.scopeType,
       scopeId: scope.scopeId,
@@ -1574,6 +1833,7 @@ function createAdminService({
     }))
     return {
       ...page,
+      summary,
       items: page.items.map((item) => {
         const { branchId, ...safe } = item
         const orderScope = item.orderType === 'EVENT'
@@ -1712,6 +1972,7 @@ function createAdminService({
   return {
     getAnnouncement,
     adjustGrowth,
+    archiveEvent,
     archiveOpportunity,
     changeBranchStatus,
     changeEventStatus,
@@ -1725,6 +1986,8 @@ function createAdminService({
     getDashboard,
     getEvent,
     getEventPolicy,
+    getOpportunity,
+    getOpportunityEditorOptions,
     getExportStatus,
     health,
     getSession,
@@ -1732,11 +1995,14 @@ function createAdminService({
     listAnnouncements,
     listAnnouncementScopes,
     listAudit,
+    listBadges,
+    listBadgeAwards,
     listBranches,
     listCommunityReports,
     listEventAlbumPhotos,
     listEvents,
     listGrowthEntries,
+    listGrowthBenefits,
     listGrowthLevels,
     listGrowthRules,
     listOpportunities,
@@ -1744,6 +2010,7 @@ function createAdminService({
     listOperationalExceptions,
     listRoles,
     listRoster,
+    listRosterAll,
     reviewRegistration,
     reviewEventAlbumPhoto,
     retryRefund,
@@ -1751,22 +2018,28 @@ function createAdminService({
     reserveExportDownload,
     listUsers,
     publishEventReminder,
+    publishOpportunity,
     publishAnnouncement,
+    grantBadge,
     saveEvent,
     saveEventPolicy,
     saveAnnouncement,
+    saveBadge,
     saveGrowthLevel,
+    saveGrowthBenefit,
     saveGrowthRule,
     searchRoleCandidates,
     setRole,
     setUserControl,
     submitRefund,
+    revokeBadge,
     setAnnouncementPinned,
     withdrawAnnouncement,
     unpublishOpportunity,
     undoCheckIn,
     updateBranch,
     updateUser,
+    saveOpportunity,
   }
 }
 
@@ -1868,18 +2141,42 @@ function exportError(error) {
 
 function normalizeUserFilters(value) {
   const filters = normalizeFilters(value)
+  const createdFrom = dateTimeFilter(filters.createdFrom, '开始时间')
+  const createdTo = dateTimeFilter(filters.createdTo, '结束时间')
+  if (createdFrom && createdTo && createdFrom > createdTo) {
+    throw new AdminError('VALIDATION_FAILED', '注册开始时间不能晚于结束时间')
+  }
+  const experienceMin = nonNegativeIntegerFilter(filters.experienceMin, '最低经验值')
+  const experienceMax = nonNegativeIntegerFilter(filters.experienceMax, '最高经验值')
+  if (experienceMin !== null && experienceMax !== null && experienceMin > experienceMax) {
+    throw new AdminError('VALIDATION_FAILED', '最低经验值不能大于最高经验值')
+  }
   return {
     query: text(filters.query, 80),
     status: ['ACTIVE', 'BLOCKED', 'CLOSED'].includes(filters.status) ? filters.status : '',
     kind: ['PLAYER', 'GUEST'].includes(filters.kind) ? filters.kind : '',
     branchId: filters.branchId ? requiredId(filters.branchId, '城市分会') : '',
+    levelId: filters.levelId ? requiredId(filters.levelId, '成长等级') : '',
     controlType: ['ALLOWLIST', 'BLOCKLIST'].includes(filters.controlType) ? filters.controlType : '',
     phoneBound: ['BOUND', 'UNBOUND'].includes(filters.phoneBound) ? filters.phoneBound : '',
     profileComplete: ['COMPLETE', 'INCOMPLETE'].includes(filters.profileComplete) ? filters.profileComplete : '',
     joinedWithinDays: [7, 30, 90].includes(Number(filters.joinedWithinDays))
       ? Number(filters.joinedWithinDays)
       : 0,
+    experienceMin,
+    experienceMax,
+    createdFrom,
+    createdTo,
   }
+}
+
+function nonNegativeIntegerFilter(value, label) {
+  if (value === null || value === undefined || value === '') return null
+  const number = Number(value)
+  if (!Number.isInteger(number) || number < 0 || number > 1_000_000_000) {
+    throw new AdminError('VALIDATION_FAILED', `${label}无效`)
+  }
+  return number
 }
 
 function normalizeBranchDraft(value, { includeKey = false } = {}) {
@@ -1933,9 +2230,16 @@ function normalizeFilters(value) {
 
 function normalizeRosterFilters(value) {
   const filters = normalizeFilters(value)
+  const createdFrom = dateTimeFilter(filters.createdFrom, '开始时间')
+  const createdTo = dateTimeFilter(filters.createdTo, '结束时间')
+  if (createdFrom && createdTo && createdFrom > createdTo) {
+    throw new AdminError('VALIDATION_FAILED', '报名开始时间不能晚于结束时间')
+  }
   return {
     query: text(filters.query, 80),
     status: enumFilter(filters.status, ROSTER_STATUSES, '报名状态'),
+    createdFrom,
+    createdTo,
   }
 }
 
@@ -1952,6 +2256,99 @@ function normalizeOrderFilters(value) {
     orderType: enumFilter(filters.orderType, ['MEMBERSHIP', 'EVENT'], '订单类型'),
     status: enumFilter(filters.status, ORDER_STATUSES, '订单状态'),
     refundStatus: enumFilter(filters.refundStatus, REFUND_STATUSES, '退款状态'),
+    createdFrom,
+    createdTo,
+  }
+}
+
+function normalizeOpportunityFilters(value) {
+  const filters = normalizeFilters(value)
+  const updatedFrom = dateTimeFilter(filters.updatedFrom, '开始时间')
+  const updatedTo = dateTimeFilter(filters.updatedTo, '结束时间')
+  const deadlineFrom = dateTimeFilter(filters.deadlineFrom, '截止开始时间')
+  const deadlineTo = dateTimeFilter(filters.deadlineTo, '截止结束时间')
+  if (updatedFrom && updatedTo && updatedFrom > updatedTo) {
+    throw new AdminError('VALIDATION_FAILED', '机会开始时间不能晚于结束时间')
+  }
+  if (deadlineFrom && deadlineTo && deadlineFrom > deadlineTo) {
+    throw new AdminError('VALIDATION_FAILED', '机会截止开始时间不能晚于结束时间')
+  }
+  return {
+    query: text(filters.query, 80),
+    ownerQuery: text(filters.ownerQuery, 80),
+    cityQuery: text(filters.cityQuery, 80),
+    status: enumFilter(filters.status, ['DRAFT', 'PUBLISHED', 'ENDED', 'UNPUBLISHED', 'ARCHIVED'], '机会状态'),
+    updatedFrom,
+    updatedTo,
+    deadlineFrom,
+    deadlineTo,
+  }
+}
+
+function normalizeRosterAllFilters(value) {
+  const filters = normalizeRosterFilters(value)
+  const source = normalizeFilters(value)
+  return {
+    ...filters,
+    eventId: source.eventId ? requiredId(source.eventId, '活动') : '',
+    branchId: source.branchId ? requiredId(source.branchId, '城市分会') : '',
+  }
+}
+
+function normalizeOpportunityDraft(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new AdminError('VALIDATION_FAILED', '机会内容无效')
+  }
+  const scopeType = value.scopeType === 'BRANCH' ? 'BRANCH' : 'PLATFORM'
+  const roleKeys = Array.isArray(value.roleKeys) ? [...new Set(value.roleKeys)] : []
+  const allowedRoles = new Set(['connector', 'business_builder', 'capital_operator', 'strategist', 'visual_designer', 'delivery_lead'])
+  if (roleKeys.length > 6 || roleKeys.some(item => !allowedRoles.has(item))) {
+    throw new AdminError('VALIDATION_FAILED', '合作角色无效')
+  }
+  const tagIds = Array.isArray(value.tagIds) ? [...new Set(value.tagIds.map(item => requiredId(item, '标签')))] : []
+  if (tagIds.length > 20) throw new AdminError('VALIDATION_FAILED', '标签数量过多')
+  return {
+    ownerUserId: requiredId(value.ownerUserId, '发布人'),
+    scopeType,
+    branchId: scopeType === 'BRANCH' ? requiredId(value.branchId, '城市分会') : null,
+    title: text(value.title, 120, { required: true, label: '机会标题' }),
+    valueSummary: text(value.valueSummary, 300, { required: true, label: '机会价值' }),
+    targetSummary: text(value.targetSummary, 300),
+    description: text(value.description, 5_000),
+    cityTagId: value.cityTagId ? requiredId(value.cityTagId, '城市') : null,
+    roleKeys,
+    tagIds,
+    deadlineAt: value.deadlineAt ? dateTimeFilter(value.deadlineAt, '截止时间') : null,
+  }
+}
+
+function normalizeGrowthBenefit(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new AdminError('VALIDATION_FAILED', '权益内容无效')
+  }
+  const sortOrder = Number(value.sortOrder)
+  if (!Number.isInteger(sortOrder) || sortOrder < 0 || sortOrder > 1_000_000) {
+    throw new AdminError('VALIDATION_FAILED', '权益排序无效')
+  }
+  return {
+    name: text(value.name, 120, { required: true, label: '权益名称' }),
+    description: text(value.description, 600),
+    sortOrder,
+    status: enumFilter(value.status, ['DRAFT', 'ACTIVE', 'INACTIVE'], '权益状态') || 'DRAFT',
+  }
+}
+
+function normalizeGrowthEntryFilters(value) {
+  const filters = normalizeFilters(value)
+  const createdFrom = dateTimeFilter(filters.createdFrom, '开始时间')
+  const createdTo = dateTimeFilter(filters.createdTo, '结束时间')
+  if (createdFrom && createdTo && createdFrom > createdTo) {
+    throw new AdminError('VALIDATION_FAILED', '成长流水开始时间不能晚于结束时间')
+  }
+  return {
+    userId: filters.userId ? requiredId(filters.userId, '用户') : '',
+    metric: filters.metric ? metric(filters.metric) : '',
+    sourceEventType: filters.sourceEventType ? stableKey(filters.sourceEventType, '来源事件', 80) : '',
     createdFrom,
     createdTo,
   }
@@ -1987,6 +2384,9 @@ function normalizeExportFilters(exportType, value, scope) {
   else if (exportType === 'EVENT_ROSTER') {
     Object.assign(normalized, normalizeRosterFilters(filters), { eventId: scope.scopeId })
   }
+  else if (exportType === 'EVENT_ROSTER_ALL') {
+    Object.assign(normalized, normalizeRosterAllFilters(filters))
+  }
   else if (exportType === 'EVENT_ORDERS') {
     Object.assign(normalized, normalizeOrderFilters({ ...filters, eventId: scope.scopeId }))
   }
@@ -1994,8 +2394,10 @@ function normalizeExportFilters(exportType, value, scope) {
     Object.assign(normalized, normalizeOrderFilters(filters))
   }
   else if (exportType === 'GROWTH_ENTRIES') {
-    normalized.userId = filters.userId ? requiredId(filters.userId, '用户') : ''
-    normalized.metric = filters.metric ? metric(filters.metric) : ''
+    Object.assign(normalized, normalizeGrowthEntryFilters(filters))
+  }
+  else if (exportType === 'OPPORTUNITIES') {
+    Object.assign(normalized, normalizeOpportunityFilters(filters))
   }
   if (scope.scopeType === 'BRANCH') normalized.branchId = scope.scopeId
   return normalized
@@ -2157,12 +2559,48 @@ function normalizeLevel(value) {
   const minimumExperience = Number(value.minimumExperience)
   if (!Number.isInteger(minimumExperience) || minimumExperience < 0) throw new AdminError('VALIDATION_FAILED', '等级门槛无效')
   const status = ['DRAFT', 'ACTIVE', 'INACTIVE'].includes(value.status) ? value.status : 'DRAFT'
+  const sortOrder = Number(value.sortOrder ?? minimumExperience)
+  if (!Number.isInteger(sortOrder) || sortOrder < 0 || sortOrder > 1_000_000) throw new AdminError('VALIDATION_FAILED', '等级排序无效')
+  const benefitIds = Array.isArray(value.benefitIds)
+    ? [...new Set(value.benefitIds.map(item => requiredId(item, '权益')))]
+    : []
+  if (benefitIds.length > 50) throw new AdminError('VALIDATION_FAILED', '权益数量过多')
   return {
     levelKey: stableKey(value.levelKey, '等级', 48),
     name: text(value.name, 80, { required: true, label: '等级名称' }),
     minimumExperience,
-    benefits: Array.isArray(value.benefits) ? value.benefits.slice(0, 20) : [],
+    displayBadge: text(value.displayBadge, 80),
+    sortOrder,
+    benefitIds,
     status,
+  }
+}
+
+function normalizeBadge(value) {
+  if (!value || typeof value !== 'object') throw new AdminError('VALIDATION_FAILED', '勋章内容无效')
+  const imageUrl = text(value.imageUrl, 1024)
+  if (imageUrl && !/^https:\/\//.test(imageUrl)) {
+    throw new AdminError('VALIDATION_FAILED', '勋章图片地址无效')
+  }
+  const iconName = text(value.iconName, 64)
+  if (iconName && !/^[a-z][a-z0-9-]{0,63}$/.test(iconName)) {
+    throw new AdminError('VALIDATION_FAILED', '勋章图标无效')
+  }
+  const sortOrder = Number(value.sortOrder || 0)
+  if (!Number.isInteger(sortOrder) || sortOrder < 0 || sortOrder > 1_000_000) {
+    throw new AdminError('VALIDATION_FAILED', '勋章排序无效')
+  }
+  return {
+    key: stableKey(value.key, '勋章', 80),
+    name: text(value.name, 100, { required: true, label: '勋章名称' }),
+    description: text(value.description, 500),
+    iconName,
+    imageUrl,
+    placeholderShape: ['CIRCLE', 'DIAMOND', 'HEXAGON'].includes(value.placeholderShape)
+      ? value.placeholderShape
+      : 'CIRCLE',
+    sortOrder,
+    status: ['DRAFT', 'ACTIVE', 'INACTIVE'].includes(value.status) ? value.status : 'DRAFT',
   }
 }
 

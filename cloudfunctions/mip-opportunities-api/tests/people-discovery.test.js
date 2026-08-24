@@ -66,6 +66,7 @@ describe('people discovery', () => {
       scope: 'player',
       keyword: '  品牌_10%  ',
       branchId,
+      roleKey: 'strategist',
       industryTagIds: [industryId, industryId],
       abilityTagIds: [abilityId, abilityId],
       limit: 100,
@@ -73,6 +74,7 @@ describe('people discovery', () => {
       scope: 'PLAYER',
       keyword: '品牌_10%',
       branchId,
+      roleKey: 'strategist',
       industryTagIds: [industryId],
       abilityTagIds: [abilityId],
       cursor: null,
@@ -80,6 +82,7 @@ describe('people discovery', () => {
     })
     assert.throws(() => normalizePeopleFilter({ kind: 'OWNER' }, caller), /VALIDATION_FAILED/)
     assert.throws(() => normalizePeopleFilter({ scope: 'GUEST' }, caller), /VALIDATION_FAILED/)
+    assert.throws(() => normalizePeopleFilter({ roleKey: 'owner' }, caller), /VALIDATION_FAILED/)
   })
 
   it('orders by join time, applies visible app-scoped filters, and returns only public fields', async () => {
@@ -122,6 +125,7 @@ describe('people discovery', () => {
             label: '项目管理',
           }]
         }
+        if (sql.includes('FROM mip_user_badge_equipment')) return []
         throw new Error(`unexpected query: ${sql}`)
       },
     }
@@ -129,6 +133,7 @@ describe('people discovery', () => {
       kind: 'PLAYER',
       keyword: '品牌_10%',
       branchId,
+      roleKey: 'strategist',
       industryTagIds: [industryId],
       abilityTagIds: [abilityId],
       limit: 1,
@@ -141,6 +146,9 @@ describe('people discovery', () => {
     assert.match(listCall.sql, /JSON_EXTRACT\(p\.visibility_json, '\$\.primaryBranch'\)/)
     assert.match(listCall.sql, /industry_filter\.tag_id IN \(\?\)/)
     assert.match(listCall.sql, /ability_filter\.tag_id IN \(\?\)/)
+    assert.match(listCall.sql, /FROM mip_cooperation_cards role_card/)
+    assert.match(listCall.sql, /role_card\.role_key = \?/)
+    assert.match(listCall.sql, /role_card\.status = 'PUBLISHED'/)
     assert.match(listCall.sql, /JSON_EXTRACT\(p\.visibility_json, '\$\.abilities'\)/)
     assert.equal(listCall.sql.includes('mip_private_profiles'), false)
     assert.equal(listCall.sql.includes('mip_user_identities'), false)
@@ -178,6 +186,7 @@ describe('people discovery', () => {
           ]
         }
         if (sql.includes('FROM mip_profile_tags pt')) return []
+        if (sql.includes('FROM mip_user_badge_equipment')) return []
         throw new Error(`unexpected query: ${sql}`)
       },
     }
@@ -213,6 +222,19 @@ describe('public profile aggregate', () => {
       async query(sql, params) {
         calls.push({ sql, params })
         if (sql.includes('FROM mip_profile_tags pt')) return []
+        if (sql.includes('FROM mip_user_badge_equipment')) {
+          return [{
+            user_id: targetUserId,
+            slot_no: 1,
+            id: '90000000-0000-4000-8000-000000000001',
+            badge_key: 'event_participant',
+            name: '活动参与',
+            description: '已完成活动参与记录',
+            icon_name: 'calendar-check',
+            image_url: '',
+            placeholder_shape: 'CIRCLE',
+          }]
+        }
         if (sql.includes('FROM mip_cooperation_cards')) {
           return [{
             id: '60000000-0000-4000-8000-000000000001',
@@ -249,6 +271,7 @@ describe('public profile aggregate', () => {
     assert.equal(result.profile.nickname, undefined)
     assert.equal(result.profile.companies, undefined)
     assert.equal(result.profile.userKind, 'PLAYER')
+    assert.deepEqual(result.profile.badges.map(item => item.name), ['活动参与'])
     assert.equal(result.cooperationCards[0].roleKey, 'strategist')
     assert.equal(result.superCases[0].projectName, '品牌升级')
     assert.equal(result.opportunities[0].status, 'PUBLISHED')

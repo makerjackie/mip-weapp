@@ -2,6 +2,7 @@ import type {
   AdminOrder,
   AdminOrderFilters,
   AdminOrderStatus,
+  AdminOrderSummary,
   AdminRefundStatus,
 } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
@@ -24,6 +25,39 @@ type OrderView = AdminOrder & {
   refundStatusText: string
   canSubmitRefund: boolean
   canRetryRefund: boolean
+  entitlementWindowText: string
+  statusTheme: 'default' | 'success' | 'warning' | 'danger'
+}
+
+type SummaryView = AdminOrderSummary & {
+  eventGrossText: string
+  membershipGrossText: string
+  grossText: string
+  refundedText: string
+  netText: string
+}
+
+const emptySummary: AdminOrderSummary = {
+  currency: 'CNY',
+  orderCount: 0,
+  paidOrderCount: 0,
+  eventGrossAmountCents: 0,
+  membershipGrossAmountCents: 0,
+  grossAmountCents: 0,
+  refundedAmountCents: 0,
+  netAmountCents: 0,
+}
+
+function summaryView(summary: AdminOrderSummary): SummaryView {
+  const money = (value: number) => `${summary.currency} ${(value / 100).toFixed(2)}`
+  return {
+    ...summary,
+    eventGrossText: money(summary.eventGrossAmountCents),
+    membershipGrossText: money(summary.membershipGrossAmountCents),
+    grossText: money(summary.grossAmountCents),
+    refundedText: money(summary.refundedAmountCents),
+    netText: money(summary.netAmountCents),
+  }
 }
 
 const orderTypeOptions: Array<FilterOption<AdminOrder['orderType']>> = [
@@ -103,6 +137,12 @@ function orderView(item: AdminOrder): OrderView {
     orderTypeText: orderTypeLabels[item.orderType] || item.orderType,
     statusText: statusLabels[item.status] || item.status,
     refundStatusText: item.refundStatus ? refundStatusLabels[item.refundStatus] || item.refundStatus : '无退款记录',
+    entitlementWindowText: item.orderType === 'MEMBERSHIP' && item.entitlementStartsAt && item.entitlementEndsAt
+      ? `${formatLocalDateTime(item.entitlementStartsAt)} 至 ${formatLocalDateTime(item.entitlementEndsAt)}`
+      : '',
+    statusTheme: ['PAID', 'REFUNDED'].includes(item.status)
+      ? 'success'
+      : ['FAILED', 'CLOSED'].includes(item.status) ? 'danger' : 'warning',
     canSubmitRefund: item.availableRefundActions.includes('SUBMIT_REFUND'),
     canRetryRefund: item.availableRefundActions.includes('RETRY_REFUND'),
   }
@@ -113,6 +153,7 @@ Page({
     state: 'loading' as AdminPageState,
     eventId: '',
     orders: [] as OrderView[],
+    summary: summaryView(emptySummary),
     query: '',
     orderTypeOptions,
     orderTypeIndex: 0,
@@ -186,6 +227,7 @@ Page({
       this.setData({
         state: 'ready',
         orders: response.items.map(orderView),
+        summary: summaryView(response.summary),
         canExport: eventScope
           ? hasScopedCapability(session.capabilities, 'exports.create', eventScope)
           : hasCapability(session.capabilities, 'exports.create'),

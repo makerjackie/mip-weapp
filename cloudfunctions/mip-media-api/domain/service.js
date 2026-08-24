@@ -8,6 +8,7 @@ const CLEANABLE_PURPOSES = Object.freeze([
   'CHECKIN_POSTER',
   'EVENT_INVITATION_CODE',
 ])
+const ADMIN_UPLOAD_PURPOSES = new Set(['BANNER', 'TASK_TEMPLATE'])
 
 function deploymentStage(value) {
   const normalized = String(value || '').trim().toLowerCase()
@@ -112,6 +113,18 @@ function createMediaService({ database, cloud, checker, env = process.env, id = 
   async function uploadImage(caller, value) {
     const purpose = typeof value?.purpose === 'string' ? value.purpose.trim() : ''
     if (!PURPOSE_POLICIES[purpose]) throw new Error('PURPOSE_INVALID')
+    if (ADMIN_UPLOAD_PURPOSES.has(purpose)) {
+      const role = await database.one(
+        `SELECT role_key FROM mip_admin_role_bindings
+         WHERE app_id = ? AND user_id = ? AND scope_type = 'PLATFORM'
+           AND scope_id = '00000000-0000-0000-0000-000000000000'
+           AND status = 'ACTIVE'
+           AND role_key IN ('PLATFORM_OWNER', 'PLATFORM_OPERATIONS')
+         LIMIT 1`,
+        [caller.appId, caller.userId],
+      )
+      if (!role) throw new Error('FORBIDDEN')
+    }
     const image = decodeAndSanitizeImage(value?.imageBase64, purpose)
     const safetyResult = await checkImage(image)
     if (safetyResult === false || safetyResult?.ok === false || safetyResult?.rejected === true) {
@@ -304,6 +317,20 @@ function createMediaService({ database, cloud, checker, env = process.env, id = 
            AND NOT EXISTS (
              SELECT 1 FROM mip_super_case_media media
              WHERE media.app_id = asset.app_id AND media.media_asset_id = asset.id
+           )
+           AND NOT EXISTS (
+             SELECT 1 FROM mip_task_completions completion
+             WHERE completion.app_id = asset.app_id AND completion.attachment_asset_id = asset.id
+           )
+           AND NOT EXISTS (
+             SELECT 1 FROM mip_task_cards task
+             WHERE task.app_id = asset.app_id AND task.template_asset_id = asset.id
+               AND task.status <> 'DELETED'
+           )
+           AND NOT EXISTS (
+             SELECT 1 FROM mip_banners banner
+             WHERE banner.app_id = asset.app_id AND banner.image_asset_id = asset.id
+               AND banner.status <> 'DELETED'
            )
            AND NOT EXISTS (
              SELECT 1 FROM mip_event_invitation_links invitation

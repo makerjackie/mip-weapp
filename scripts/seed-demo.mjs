@@ -43,6 +43,7 @@ assertTablesExist([
   'mip_membership_plans',
   'mip_growth_levels',
   'mip_growth_rules',
+  'mip_badges',
   'mip_app_settings',
 ])
 
@@ -64,6 +65,7 @@ const statements = [
   membershipPlanStatement(seed.membershipPlans),
   growthLevelStatement(seed.growthLevels),
   growthRuleStatement(seed.growthRules),
+  badgeStatement(seed.badges),
   `INSERT INTO mip_app_settings (
      app_id, setting_key, value_json, version, updated_by_user_id
    ) VALUES (
@@ -100,7 +102,10 @@ const verification = callCloudbase(root, 'queryMysqlDatabase', {
         AND level_key IN (${seed.growthLevels.map(item => sqlLiteral(item.key)).join(', ')})) AS levels,
     (SELECT COUNT(*) FROM mip_growth_rules
       WHERE app_id = ${sqlLiteral(appId)}
-        AND rule_key IN (${seed.growthRules.map(item => sqlLiteral(item.key)).join(', ')})) AS rules`,
+        AND rule_key IN (${seed.growthRules.map(item => sqlLiteral(item.key)).join(', ')})) AS rules,
+    (SELECT COUNT(*) FROM mip_badges
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND badge_key IN (${seed.badges.map(item => sqlLiteral(item.key)).join(', ')})) AS badges`,
 })
 const counts = findCountRow(verification)
 const expected = {
@@ -109,6 +114,7 @@ const expected = {
   plans: seed.membershipPlans.length,
   levels: seed.growthLevels.length,
   rules: seed.growthRules.length,
+  badges: seed.badges.length,
 }
 if (!counts || Object.entries(expected).some(([key, value]) => Number(counts[key]) !== value)) {
   throw new Error('MIP demo catalog verification failed')
@@ -123,7 +129,7 @@ fs.writeFileSync(path.join(root, '.tmp', 'seed-demo-result.json'), `${JSON.strin
   recordsVerified: expected,
   seededAt: new Date().toISOString(),
 }, null, 2)}\n`)
-console.log('[mip-seed] placeholder branches, tags, test plan, and growth catalog verified; no environment or AppID was persisted')
+console.log('[mip-seed] placeholder branches, tags, test plan, growth, and badge catalogs verified; no environment or AppID was persisted')
 
 function branchStatement(items) {
   const values = items.map(item => `(
@@ -211,11 +217,28 @@ function growthRuleStatement(items) {
     status = VALUES(status), version = version + 1`
 }
 
+function badgeStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.key)}, ${sqlLiteral(item.name)},
+    ${sqlLiteral(item.description)}, ${sqlLiteral(item.iconName)}, ${sqlLiteral(item.imageUrl)},
+    ${sqlLiteral(item.placeholderShape)}, ${Number(item.sortOrder)}, 'ACTIVE', 1, NULL
+  )`).join(',\n')
+  return `INSERT INTO mip_badges (
+    id, app_id, badge_key, name, description, icon_name, image_url,
+    placeholder_shape, sort_order, status, version, created_by_user_id
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    name = VALUES(name), description = VALUES(description), icon_name = VALUES(icon_name),
+    image_url = VALUES(image_url), placeholder_shape = VALUES(placeholder_shape),
+    sort_order = VALUES(sort_order), status = 'ACTIVE', version = version + 1`
+}
+
 function assertSeed(value) {
   if (!value || value.replaceBeforeProduction !== true || typeof value.version !== 'string') {
     throw new Error('MIP demo seed metadata is invalid')
   }
-  for (const key of ['branches', 'tags', 'membershipPlans', 'growthLevels', 'growthRules']) {
+  for (const key of ['branches', 'tags', 'membershipPlans', 'growthLevels', 'growthRules', 'badges']) {
     if (!Array.isArray(value[key]) || value[key].length === 0) {
       throw new Error(`MIP demo seed ${key} is empty`)
     }

@@ -42,6 +42,6 @@ describe('MIP demo seed ownership safety', () => {
   it('makes every fixed-ID upsert fail when a duplicate belongs to another AppID', () => {
     const source = fs.readFileSync(path.join(root, 'scripts/seed-demo.mjs'), 'utf8')
     expect(source.match(/app_id = IF\(app_id = VALUES\(app_id\), app_id, NULL\)/g))
-      .toHaveLength(5)
+      .toHaveLength(6)
   })
 })

@@ -40,6 +40,12 @@ describe('MIP admin event contract', () => {
     expect(pageWxml).toContain('报名价格（元）')
     expect(pageWxml).toContain('人工确认')
     expect(pageWxml).toContain('名额满后启用候补')
+    for (const field of ['scopeType', 'eventMode', 'accessType', 'registrationPolicy', 'albumSubmissionPolicy']) {
+      expect(pageWxml).toContain(`draft.${field} ===`)
+    }
+    expect(pageWxml.match(/aria-role="radio"/g)?.length).toBe(12)
+    expect(pageWxml.match(/min-h-\[88rpx\]/g)?.length).toBeGreaterThanOrEqual(12)
+    expect(pageWxml.match(/aria-checked=/g)?.length).toBe(12)
     expect(pageWxml).toContain('box-border')
     expect(pageWxml).toContain('max-w-full')
     expect(pageWxml).not.toContain('开始时间（ISO）')
@@ -71,6 +77,8 @@ describe('MIP admin event contract', () => {
     expect(view).toContain('updateContentCaption')
     expect(view).toContain('removeContentImage')
     expect(detail).toContain('event.contentMedia')
+    expect(detail).toContain('bind:tap="previewContentImage"')
+    expect(read('src/packages/member/mip-events/detail/index.ts')).toContain('wx.previewImage({ current, urls })')
     expect(gateway).toMatch(/getEvent: async eventId => resolveCloudFileUrls\([\s\S]*mip\.admin\.events\.get/)
   })
 

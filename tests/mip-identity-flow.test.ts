@@ -244,6 +244,33 @@ describe('MIP resumable identity access', () => {
     expect(module.consumePendingResume()).toBeNull()
   })
 
+  it('normalizes an internal fallback route while matching the page route without a leading slash', async () => {
+    const ready = accessSnapshot({
+      agreements: [],
+      phoneBound: true,
+      profile: { ...accessSnapshot().profile, complete: true, missingFields: [] },
+    })
+    const module = createMipIdentityModule(gateway(ready), { token: () => 'relative-resume' })
+    const token = module.prepareProtectedAction({
+      action: 'INTERACT',
+      source: {
+        navigation: 'navigateBack',
+        route: 'packages/member/mip-events/check-in/index',
+        query: { scene: 's1.abcdefghijk.abcdefghijk' },
+      },
+    })
+    await module.complete(token)
+
+    expect(module.consumePendingResume('packages/member/mip-events/check-in/index')).toEqual({
+      action: 'INTERACT',
+      source: {
+        navigation: 'navigateBack',
+        route: '/packages/member/mip-events/check-in/index',
+        query: { scene: 's1.abcdefghijk.abcdefghijk' },
+      },
+    })
+  })
+
   it('returns an internal access route and keeps no intent when access is already ready', async () => {
     const ready = accessSnapshot({
       phoneBound: true,

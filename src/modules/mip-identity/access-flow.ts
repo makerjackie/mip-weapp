@@ -100,7 +100,8 @@ export function sanitizeReturnContext(source: AccessReturnContext): AccessReturn
     return { navigation: 'navigateBack' }
   }
 
-  const route = String(source.route || '')
+  const rawRoute = String(source.route || '')
+  const route = rawRoute && !rawRoute.startsWith('/') ? `/${rawRoute}` : rawRoute
   if (route.length > 200
     || !/^\/[\w/-]+$/.test(route)
     || route.includes('..')
