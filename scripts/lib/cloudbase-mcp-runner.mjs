@@ -98,6 +98,9 @@ export function parseMcpOutput(value) {
       throw error
     }
   }
+  if (result?.isError === true) {
+    throw new Error('MCP tool returned an error response.')
+  }
   if (Array.isArray(result?.content) && typeof result.content[0]?.text === 'string') {
     try {
       return JSON.parse(result.content[0].text)

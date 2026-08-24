@@ -47,9 +47,12 @@ export function localEnvPath(projectRoot) {
 
 export function loadCloudbaseManagementEnv(projectRoot, env = process.env) {
   const fileEnv = parseDotEnvFile(localEnvPath(projectRoot))
-  const apiKey = firstNonEmpty(env.CLOUDBASE_API_KEY, fileEnv.CLOUDBASE_API_KEY)
+  const authMode = firstNonEmpty(env.CLOUDBASE_AUTH_MODE).toLowerCase()
+  const localOnly = authMode === 'local'
+  const apiKey = localOnly ? '' : firstNonEmpty(env.CLOUDBASE_API_KEY, fileEnv.CLOUDBASE_API_KEY)
   const envId = firstNonEmpty(env.CLOUDBASE_ENV_ID, fileEnv.CLOUDBASE_ENV_ID)
   return {
+    authMode: localOnly ? 'local' : 'management-key',
     hasApiKey: Boolean(apiKey),
     hasEnvId: Boolean(envId),
     apiKey,
@@ -57,8 +60,26 @@ export function loadCloudbaseManagementEnv(projectRoot, env = process.env) {
   }
 }
 
+export function requireCloudbaseManagementEnv(projectRoot, env = process.env) {
+  const loaded = loadCloudbaseManagementEnv(projectRoot, env)
+  if (!loaded.hasApiKey) {
+    throw new Error('CLOUDBASE_API_KEY is required in the project-root .env.local. Create an environment-level API Key; a publish_key is not accepted.')
+  }
+  if (!loaded.hasEnvId) {
+    throw new Error('CLOUDBASE_ENV_ID is required with CLOUDBASE_API_KEY in the project-root .env.local.')
+  }
+  return loaded
+}
+
+export function hasExplicitDeviceAuthApproval(args = []) {
+  return args.length === 1 && args[0] === '--allow-device-auth'
+}
+
 export function applyCloudbaseManagementEnv(projectRoot, env = process.env) {
   const loaded = loadCloudbaseManagementEnv(projectRoot, env)
+  if (loaded.authMode === 'local') {
+    delete env.CLOUDBASE_API_KEY
+  }
   if (loaded.apiKey && !firstNonEmpty(env.CLOUDBASE_API_KEY)) {
     env.CLOUDBASE_API_KEY = loaded.apiKey
   }

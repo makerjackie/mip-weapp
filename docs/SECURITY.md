@@ -5,7 +5,7 @@
 - 客户端不得出现连接串或支付密钥
 - 公开资料接口不得返回手机号、OpenID、完整票码
 - 日志脱敏，见 `src/shared/errors.ts`
-- CloudBase 管理密钥只用环境级 `CLOUDBASE_API_KEY`，放 `.env.local`，不要提交
+- CloudBase 管理命令只接受环境级 `CLOUDBASE_API_KEY`，放 `.env.local`，不要提交；按环境或设备分别创建，设备丢失或成员退出时立即撤销旧 Key
 
 ```bash
 pnpm security:check

@@ -45,7 +45,7 @@
 
 ## 8. CloudBase
 
-唯一通道 `config/mcporter.json`。优先在 `.env.local` 写环境级 `CLOUDBASE_API_KEY`，再 `pnpm cloud:status`；配好后应为 READY，不必扫码。没有密钥时才 `pnpm cloud:auth`。
+唯一通道 `config/mcporter.json`。CloudBase 管理命令必须在 `.env.local` 配置环境级 `CLOUDBASE_API_KEY` 与 `CLOUDBASE_ENV_ID`；`pnpm cloud:status` 和 `pnpm cloud:auth` 都只验证并加载 API Key，不发起设备码。维护者应急设备授权只能显式运行 `pnpm cloud:auth:device -- --allow-device-auth`。
 
 ## 9. 微信支付
 
