@@ -94,4 +94,10 @@ function text(value) {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-module.exports = { buildWechatRequest, normalizePage, parseTemplateConfig, templateFieldContracts }
+module.exports = {
+  buildWechatRequest,
+  normalizePage,
+  parseObject,
+  parseTemplateConfig,
+  templateFieldContracts,
+}

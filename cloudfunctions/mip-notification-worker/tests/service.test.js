@@ -420,3 +420,45 @@ test('retains external delivery only when the corresponding template is configur
   })
   assert.equal(captured.external.templateKey, 'EVENT_REMINDER')
 })
+
+test('delivers a configured service-account task without a recipient grant', async () => {
+  const task = {
+    id: '30000000-0000-4000-8000-000000000003',
+    app_id: appId,
+    leaseKey: '2026-08-24T01:02:00.000Z',
+  }
+  let sent
+  const service = createNotificationService({
+    repository: {
+      async leaseTasks() { return [task] },
+      async reserveTask() {
+        return {
+          taskId: task.id,
+          app_id: appId,
+          channel: 'WECHAT_SERVICE_ACCOUNT',
+          template_key: 'EVENT_NOTICE',
+          payload_json: JSON.stringify({ fields: { title: '活动通知' } }),
+          recipient_user_id: userId,
+          target_route: '/packages/member/mip-events/detail/index?eventId=40000000-0000-4000-8000-000000000001',
+        }
+      },
+      async deliverReservedTask(_reservation, deliver) {
+        await deliver()
+        return { taskId: task.id, status: 'DELIVERED' }
+      },
+      async failReservedTask() { throw new Error('unexpected failure') },
+    },
+    serviceAccountConfig: {
+      endpoint: 'https://notify.example.com/mip',
+      templates: { EVENT_NOTICE: 'provider-event-template' },
+    },
+    senders: {
+      async WECHAT_SERVICE_ACCOUNT(request) { sent = request },
+    },
+  })
+  const result = await service.runDeliveryBatch({ appId })
+  assert.equal(result.delivered, 1)
+  assert.equal(sent.idempotencyKey, task.id)
+  assert.equal(sent.recipientUserId, userId)
+  assert.equal(JSON.stringify(result).includes(userId), false)
+})

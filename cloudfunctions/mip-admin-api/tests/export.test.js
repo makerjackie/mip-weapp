@@ -176,6 +176,37 @@ describe('MIP admin XLSX', () => {
     const shared = unzipEntries(withoutPhone.content).get('xl/sharedStrings.xml').toString('utf8')
     assert.doesNotMatch(shared, /手机号/)
   })
+
+  it('exports resource names and only masked provider transaction ids for order workbooks', () => {
+    for (const exportType of ['EVENT_ORDERS', 'ORDERS']) {
+      const workbook = workbookForExport({
+        appId,
+        exportType,
+        includesPhone: false,
+        phoneEncryptionKey: '',
+        rows: [{
+          id: 'order-a',
+          nickname: '用户',
+          orderType: exportType === 'EVENT_ORDERS' ? 'EVENT' : 'CONTENT',
+          resourceId: 'resource-a',
+          resourceTitle: exportType === 'EVENT_ORDERS' ? '城市交流活动' : '会员内容',
+          merchantOrderNoMasked: 'mip******1234',
+          providerTransactionIdMasked: '420000******5678',
+          providerTransactionId: '420000123456785678',
+          amountCents: 9900,
+          refundedAmountCents: 0,
+          currency: 'CNY',
+          status: 'PAID',
+        }],
+      })
+      const shared = unzipEntries(workbook.content).get('xl/sharedStrings.xml').toString('utf8')
+      assert.match(shared, /活动\/会员\/内容商品名/)
+      assert.match(shared, /微信支付单号（脱敏）/)
+      assert.match(shared, exportType === 'EVENT_ORDERS' ? /城市交流活动/ : /会员内容/)
+      assert.match(shared, /420000\*\*\*\*\*\*5678/)
+      assert.doesNotMatch(shared, /420000123456785678/)
+    }
+  })
 })
 
 describe('MIP export lifecycle', () => {

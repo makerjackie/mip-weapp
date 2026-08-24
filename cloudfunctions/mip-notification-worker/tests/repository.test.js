@@ -564,4 +564,106 @@ describe('notification repository', () => {
     assert.match(writes[0].sql, /status = 'EXPIRED'/)
     assert.match(writes[1].sql, /status = \?/)
   })
+
+  it('delivers a service-account task without reading or consuming a recipient grant', async () => {
+    const lease = new Date('2026-08-24T01:02:00.000Z')
+    const grantReads = []
+    const writes = []
+    const database = {
+      transaction: async (callback, attempts) => callback({
+        async one(sql) {
+          if (sql.includes('mip_notification_grants')) grantReads.push(sql)
+          if (sql.includes('INNER JOIN mip_inbox_messages')) {
+            return {
+              id: 'task-id',
+              app_id: appId,
+              channel: 'WECHAT_SERVICE_ACCOUNT',
+              template_key: 'EVENT_NOTICE',
+              payload_json: JSON.stringify({ fields: { title: '活动通知' } }),
+              attempts: 1,
+              lease_expires_at: lease,
+              recipient_user_id: userId,
+              target_route: '/packages/member/mip-events/detail/index?eventId=event-id',
+            }
+          }
+          if (sql.includes('FROM mip_users')) return { id: userId, status: 'ACTIVE' }
+          return {
+            id: 'task-id', app_id: appId, status: 'PROCESSING', attempts: 1,
+            lease_expires_at: lease,
+          }
+        },
+        async query(sql, params) {
+          writes.push({ sql, params, attempts })
+          return { affectedRows: 1 }
+        },
+      }),
+    }
+    const repository = createNotificationRepository(database)
+    const reservation = await repository.reserveTask({
+      id: 'task-id', app_id: appId, leaseKey: lease.toISOString(),
+    })
+    assert.equal(reservation.channel, 'WECHAT_SERVICE_ACCOUNT')
+    assert.equal(reservation.grant, undefined)
+    let sent = 0
+    const result = await repository.deliverReservedTask(reservation, async () => { sent += 1 })
+    assert.deepEqual(result, { taskId: 'task-id', status: 'DELIVERED' })
+    assert.equal(sent, 1)
+    assert.deepEqual(grantReads, [])
+    assert.match(writes.at(-1).sql, /status = 'DELIVERED'/)
+    assert.equal(writes.at(-1).attempts, 1)
+  })
+
+  it('releases a customer-service window after a completed delivery', async () => {
+    const lease = new Date('2026-08-24T01:02:00.000Z')
+    const writes = []
+    const reservation = {
+      taskId: 'task-id',
+      app_id: appId,
+      channel: 'WECHAT_CUSTOMER_SERVICE',
+      template_key: 'CUSTOMER_SERVICE_TEXT',
+      recipient_user_id: userId,
+      lease_expires_at: lease,
+      leaseKey: lease.toISOString(),
+      reservationToken: 'reservation-id',
+      grant: { id: 'grant-id' },
+    }
+    const database = {
+      transaction: async (callback, attempts) => callback({
+        async one(sql) {
+          if (sql.includes('FROM mip_users')) return { id: userId, status: 'ACTIVE' }
+          if (sql.includes('FROM mip_delivery_tasks')) {
+            return {
+              id: 'task-id', app_id: appId, status: 'PROCESSING', attempts: 1,
+              lease_expires_at: lease,
+            }
+          }
+          return {
+            id: 'grant-id',
+            user_id: userId,
+            channel: 'WECHAT_CUSTOMER_SERVICE',
+            template_key: 'CUSTOMER_SERVICE_TEXT',
+            status: 'RESERVED',
+            expires_at: '2026-08-26T00:00:00.000Z',
+            reservation_task_id: 'task-id',
+            reservation_token: 'reservation-id',
+          }
+        },
+        async query(sql, params) {
+          writes.push({ sql, params, attempts })
+          return { affectedRows: 1 }
+        },
+      }),
+    }
+    const repository = createNotificationRepository(database)
+    const result = await repository.deliverReservedTask(
+      reservation,
+      async () => undefined,
+      { now: new Date('2026-08-24T01:00:00.000Z') },
+    )
+    assert.deepEqual(result, { taskId: 'task-id', status: 'DELIVERED' })
+    assert.match(writes[0].sql, /SET status = 'AVAILABLE'/)
+    assert.doesNotMatch(writes[0].sql, /CONSUMED/)
+    assert.match(writes[1].sql, /SET status = 'DELIVERED'/)
+    assert.equal(writes[1].attempts, 1)
+  })
 })

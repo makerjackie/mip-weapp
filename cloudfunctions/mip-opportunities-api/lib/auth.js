@@ -24,6 +24,10 @@ const fullAccessActions = new Set([
   'deleteOpportunityComment',
   'setOpportunityCommentCall',
   'reportOpportunityComment',
+  'createMatchingRequest',
+  'listMatchingRequests',
+  'listMatchingResults',
+  'saveMatchingFeedback',
 ])
 
 function allowedAppIds() {

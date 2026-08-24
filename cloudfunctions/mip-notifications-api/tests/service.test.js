@@ -61,3 +61,35 @@ test('revokes available grants when the user bans a template', async () => {
   })
   assert.deepEqual(revoked, [appId, userId, 'EVENT_REMINDER'])
 })
+
+test('records a reusable customer-service window from trusted caller context', async () => {
+  let captured
+  const service = createNotificationsService({
+    repository: {
+      async createCustomerServiceGrant(input) { captured = input },
+    },
+    customerServiceEnabled: true,
+    encryptionKey: key,
+    createId: () => grantId,
+    randomBytes: size => Buffer.alloc(size, 8),
+    clock: () => Date.parse('2026-08-24T00:00:00.000Z'),
+  })
+  const result = await service.recordCustomerServiceInteraction({
+    appId,
+    userId,
+    openId: 'openid-private',
+  })
+  assert.deepEqual(result, {
+    channel: 'WECHAT_CUSTOMER_SERVICE',
+    availableUntil: '2026-08-26T00:00:00.000Z',
+  })
+  assert.equal(captured.templateKey, 'CUSTOMER_SERVICE_TEXT')
+  assert.equal(captured.expiresAt.toISOString(), '2026-08-26T00:00:00.000Z')
+  assert.equal(JSON.stringify(result).includes('openid-private'), false)
+  assert.equal(revealRecipient(captured.recipientCiphertext, key, {
+    appId,
+    userId,
+    grantId,
+    templateKey: 'CUSTOMER_SERVICE_TEXT',
+  }), 'openid-private')
+})

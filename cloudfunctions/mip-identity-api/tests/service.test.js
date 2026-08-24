@@ -169,6 +169,32 @@ describe('MIP identity service', () => {
 })
 
 describe('MIP profile input', () => {
+  it('normalizes influence visibility as an explicit public-profile choice', () => {
+    const normalized = normalizeProfileInput({
+      expectedVersion: 0,
+      nickname: '测试用户',
+      identityStatus: '',
+      headline: '',
+      introduction: '',
+      companies: [],
+      organizations: [],
+      visibility: { influence: false },
+      abilityTagIds: [],
+    })
+    assert.equal(normalized.visibility.influence, false)
+    assert.equal(normalizeProfileInput({
+      expectedVersion: 0,
+      nickname: '历史用户',
+      identityStatus: '',
+      headline: '',
+      introduction: '',
+      companies: [],
+      organizations: [],
+      visibility: {},
+      abilityTagIds: [],
+    }).visibility.influence, false)
+  })
+
   it('accepts up to twelve companies and organizations', () => {
     const base = {
       expectedVersion: 0,

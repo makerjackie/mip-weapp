@@ -2,6 +2,7 @@
 
 const { randomUUID } = require('node:crypto')
 const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
+const { createBlindBoxRepository } = require('./blind-box')
 const {
   boundedText,
   expectedVersion,
@@ -20,6 +21,11 @@ const GAME_ADMIN_ROLES = new Set(['PLATFORM_OWNER', 'PLATFORM_OPERATIONS'])
 
 function createGameRepository(database, options = {}) {
   const createId = options.createId || randomUUID
+  const blindBox = createBlindBoxRepository(database, {
+    ...options,
+    createId,
+    assertAdmin: (db, caller, lock) => assertGameAdmin(db, caller, lock),
+  })
 
   async function getAdminSession(caller) {
     return { capability: GAME_CAPABILITY, roleKey: await assertGameAdmin(database, caller) }
@@ -621,6 +627,7 @@ function createGameRepository(database, options = {}) {
   }
 
   return {
+    ...blindBox,
     changeSeasonStatus,
     finalizeWeeklyMatch,
     generateRankingSnapshot,

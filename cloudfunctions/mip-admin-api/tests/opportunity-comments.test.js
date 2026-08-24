@@ -64,7 +64,14 @@ describe('admin opportunity comments', () => {
     const tx = {
       async one(sql) {
         if (sql.includes('FROM mip_opportunity_comments comment')) {
-          return { opportunity_id: opportunityId, branch_id: 'branch-1', status: 'PENDING', version: 2 }
+          return {
+            opportunity_id: opportunityId,
+            author_user_id: '50000000-0000-4000-8000-000000000001',
+            owner_user_id: '60000000-0000-4000-8000-000000000001',
+            branch_id: 'branch-1',
+            status: 'PENDING',
+            version: 2,
+          }
         }
         throw new Error(`unexpected query: ${sql}`)
       },
@@ -91,6 +98,9 @@ describe('admin opportunity comments', () => {
     assert.deepEqual(assertedScopes, [{ scopeType: 'BRANCH', scopeId: 'branch-1' }])
     const update = writes.find(call => call.sql.includes('UPDATE mip_opportunity_comments'))
     assert.deepEqual(update.params.slice(-3), [appId, commentId, 2])
+    const outbox = writes.find(call => call.sql.includes('INSERT INTO mip_outbox_events'))
+    assert.match(outbox.sql, /opportunity\.comment_published/)
+    assert.deepEqual(outbox.params.slice(1), [appId, commentId, 3])
   })
 
   it('refuses to close a report that belongs to another opportunity in the same branch', async () => {

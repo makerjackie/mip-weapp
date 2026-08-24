@@ -88,6 +88,16 @@ async function recordProfileVisit(database, caller, rawInput = {}) {
     request: { profileRef: input.profileRef, visitKey: input.visitKey },
   }, async (tx) => {
     await lockActiveContributor(tx, caller)
+    const visitorProfile = await tx.one(
+      `SELECT profile.user_id
+       FROM mip_users visitor
+       INNER JOIN mip_profiles profile
+         ON profile.app_id = visitor.app_id AND profile.user_id = visitor.id
+       WHERE visitor.app_id = ? AND visitor.id = ? AND visitor.status = 'ACTIVE'
+       LIMIT 1`,
+      [caller.appId, caller.userId],
+    )
+    if (!visitorProfile) return { recorded: false }
     const blockFilter = mutualBlockFilter(caller.userId, 'target.id', 'target.app_id')
     const target = await tx.one(
       `SELECT target.id
@@ -170,14 +180,22 @@ async function listProfileVisitors(database, caller, rawInput = {}) {
        ) unread_groups
        INNER JOIN mip_users visitor
          ON visitor.app_id = ? AND visitor.id = unread_groups.visitor_user_id AND visitor.status = 'ACTIVE'
+       INNER JOIN mip_profiles visitor_profile
+         ON visitor_profile.app_id = visitor.app_id AND visitor_profile.user_id = visitor.id
        WHERE ${blockFilter.sql || '1 = 1'}`,
       [caller.appId, caller.userId, caller.appId, ...blockFilter.params],
     ),
     database.one(
       `SELECT COUNT(*) AS count
-       FROM mip_profile_visits
-       WHERE app_id = ? AND profile_user_id = ?`,
-      [caller.appId, caller.userId],
+       FROM mip_profile_visits visit
+       INNER JOIN mip_users visitor
+         ON visitor.app_id = visit.app_id AND visitor.id = visit.visitor_user_id
+          AND visitor.status = 'ACTIVE'
+       INNER JOIN mip_profiles visitor_profile
+         ON visitor_profile.app_id = visitor.app_id AND visitor_profile.user_id = visitor.id
+       WHERE visit.app_id = ? AND visit.profile_user_id = ?
+         AND ${blockFilter.sql || '1 = 1'}`,
+      [caller.appId, caller.userId, ...blockFilter.params],
     ),
   ])
   return {
@@ -209,6 +227,8 @@ async function markProfileVisitorRead(database, caller, rawInput = {}) {
        FROM mip_profile_visits v
        INNER JOIN mip_users visitor
          ON visitor.app_id = v.app_id AND visitor.id = v.visitor_user_id AND visitor.status = 'ACTIVE'
+       INNER JOIN mip_profiles visitor_profile
+         ON visitor_profile.app_id = visitor.app_id AND visitor_profile.user_id = visitor.id
        WHERE v.app_id = ? AND v.profile_user_id = ? AND v.visitor_user_id = ?
          AND ${blockFilter.sql || '1 = 1'}`,
       [caller.appId, caller.userId, visitorUserId, ...blockFilter.params],

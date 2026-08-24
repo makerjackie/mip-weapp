@@ -106,6 +106,71 @@ describe('refund provider worker', () => {
     assert.equal(apply.input.merchantOrderNo, 'MIP123')
   })
 
+  it('moves provider CHANGE to manual review without releasing or resubmitting it', async () => {
+    const ledgerCalls = []
+    let submitted = false
+    const service = createRefundDispatchService({
+      config: config(),
+      nonce: () => 'nonce',
+      async callLedger(action, requestedAppId, input) {
+        ledgerCalls.push({ action, appId: requestedAppId, input })
+        if (action === 'getRefundRequestForProvider') {
+          return refund({ status: 'PROCESSING', providerRefundId: 'provider-refund' })
+        }
+        return { status: 'PROCESSING', manualReview: true }
+      },
+      cloudPay: {
+        async refund() {
+          submitted = true
+          throw new Error('MUST_NOT_SUBMIT')
+        },
+        async queryRefund() {
+          return {
+            returnCode: 'SUCCESS',
+            resultCode: 'SUCCESS',
+            outRefundNoList: ['MIPR123'],
+            refundStatusList: ['CHANGE'],
+            refundIdList: ['provider-refund'],
+            refundFeeList: [19900],
+          }
+        },
+      },
+    })
+    const result = await service.dispatchRefund(appId, { refundId })
+    assert.deepEqual(result, { status: 'MANUAL_REVIEW', operation: 'RECONCILED' })
+    assert.equal(submitted, false)
+    assert.deepEqual(ledgerCalls.at(-1), {
+      action: 'markRefundManualReview',
+      appId,
+      input: { refundId, merchantRefundNo: 'MIPR123', reasonCode: 'CHANGE' },
+    })
+  })
+
+  it('queries but never resubmits an existing manual-review refund', async () => {
+    let submitted = false
+    const service = createRefundDispatchService({
+      config: config(),
+      nonce: () => 'nonce',
+      async callLedger(action) {
+        if (action === 'getRefundRequestForProvider') {
+          return refund({ status: 'PROCESSING', manualReview: true })
+        }
+        throw new Error('UNEXPECTED_LEDGER_MUTATION')
+      },
+      cloudPay: {
+        async refund() {
+          submitted = true
+        },
+        async queryRefund() {
+          return { returnCode: 'SUCCESS', resultCode: 'SUCCESS' }
+        },
+      },
+    })
+    const result = await service.dispatchRefund(appId, { refundId })
+    assert.deepEqual(result, { status: 'MANUAL_REVIEW', operation: 'PENDING' })
+    assert.equal(submitted, false)
+  })
+
   it('recovers durable active refunds in a bounded batch and continues after one failure', async () => {
     const errors = []
     const ids = [

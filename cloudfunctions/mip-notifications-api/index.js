@@ -18,6 +18,7 @@ const service = createNotificationsService({
   repository: createNotificationsRepository(database),
   encryptionKey: process.env.MIP_NOTIFICATION_ENCRYPTION_KEY,
   templates: parseTemplateConfig(process.env.MIP_SUBSCRIBE_TEMPLATES_JSON || ''),
+  customerServiceEnabled: process.env.MIP_CUSTOMER_SERVICE_ENABLED === 'true',
 })
 
 exports.main = createHandler({

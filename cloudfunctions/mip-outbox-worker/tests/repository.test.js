@@ -59,6 +59,24 @@ describe('outbox repository', () => {
     assert.equal(retryDelayMs(5), 4_000)
   })
 
+  it('enqueues continuation events with a deterministic idempotent key', async () => {
+    const calls = []
+    const database = {
+      async query(sql, params) {
+        calls.push({ sql, params })
+        return { affectedRows: 1 }
+      },
+    }
+    const repository = createOutboxRepository(database)
+    const payload = { knowledgeRecipientCursor: '20000000-0000-4000-8000-000000000500' }
+    const first = await repository.enqueueContinuation(event, payload)
+    const replay = await repository.enqueueContinuation(event, payload)
+    assert.equal(first.eventId, replay.eventId)
+    assert.match(first.eventId, /^[0-9a-f-]{36}$/)
+    assert.match(calls[0].sql, /ON DUPLICATE KEY UPDATE/)
+    assert.equal(calls[0].params[6], JSON.stringify(payload))
+  })
+
   it('moves the final failed attempt to CANCELLED and appends a system audit', async () => {
     const calls = []
     const tx = {

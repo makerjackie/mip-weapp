@@ -83,6 +83,11 @@ describe('outbox event projector', () => {
     assert.equal(result.notifications[0].recipientUserId, '40000000-0000-4000-8000-000000000001')
     assert.equal(result.notifications[0].targetId, '30000000-0000-4000-8000-000000000001')
     assert.equal(result.notifications[0].dedupeKey, `outbox:${event.id}:referral`)
+    assert.deepEqual(result.notifications[0].external, {
+      channel: 'WECHAT_CUSTOMER_SERVICE',
+      templateKey: 'CUSTOMER_SERVICE_TEXT',
+      fields: { content: '你收到了一条机会引荐，请在小程序内查看。' },
+    })
     assert.deepEqual(result.growth, [])
     assert.deepEqual(replay.notifications, result.notifications)
   })
@@ -433,7 +438,14 @@ describe('outbox event projector', () => {
     assert.doesNotMatch(JSON.stringify(result), /伪造|13800000000|openid-private/)
     assert.equal(result.notifications[0].targetType, 'EVENT')
     assert.equal(result.notifications[0].targetId, event.aggregate_id)
-    assert.equal('external' in result.notifications[0], false)
+    assert.deepEqual(result.notifications[0].external, {
+      channel: 'WECHAT_SERVICE_ACCOUNT',
+      templateKey: 'EVENT_NOTICE',
+      fields: {
+        title: '活动信息已更新',
+        body: '活动“可信活动”的信息已更新，请查看最新时间、地点和参与说明。',
+      },
+    })
     assert.deepEqual(replay.notifications, result.notifications)
   })
 

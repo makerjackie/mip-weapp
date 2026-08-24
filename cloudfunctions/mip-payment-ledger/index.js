@@ -35,6 +35,7 @@ const handlers = {
   listPendingRefunds: (db, event, appId) => ledger.listPendingRefunds(db, { ...event, appId }),
   markRefundCreated: (db, event, appId) => ledger.markRefundCreated(db, { ...event, appId }),
   markRefundFailed: (db, event, appId) => ledger.markRefundFailed(db, { ...event, appId }),
+  markRefundManualReview: (db, event, appId) => ledger.markRefundManualReview(db, { ...event, appId }),
   applyRefundCallback: (db, event, appId) => ledger.applyRefundCallback(db, { ...event, appId }),
 }
 

@@ -7,9 +7,11 @@ const {
   TASKS_CAPABILITY,
   adminCompletionDto,
   assignmentMemberDto,
+  assertTaskLevelEligible,
   assertTaskTemplate,
   assertTasksAdmin,
   createTaskRepository,
+  replaceTaskLevelRules,
   userTaskDto,
 } = require('../domain/repository')
 const { createTaskService } = require('../domain/service')
@@ -38,7 +40,21 @@ test('task input only accepts bounded server-owned reward configuration', () => 
     assignmentMode: 'ALL',
     endsAt: null,
     templateAssetId: null,
+    eligibleLevelIds: undefined,
   })
+  const levelId = '77777777-7777-4777-8777-777777777777'
+  assert.deepEqual(normalizeTask({
+    name: '等级任务',
+    content: '仅部分等级可完成。',
+    rewardExperience: 1,
+    eligibleLevelIds: [levelId, levelId],
+  }).eligibleLevelIds, [levelId])
+  assert.deepEqual(normalizeTask({
+    name: '解除等级限制', content: '适用于全部等级。', rewardExperience: 1, eligibleLevelIds: [],
+  }).eligibleLevelIds, [])
+  assert.throws(() => normalizeTask({
+    name: '任务', content: '内容', rewardExperience: 1, eligibleLevelIds: null,
+  }), /VALIDATION_FAILED/)
   assert.throws(() => normalizeTask({ name: '任务', content: '内容', rewardExperience: -1 }), /VALIDATION_FAILED/)
   assert.throws(() => normalizeCompletionFilters({ resultStatus: 'UNKNOWN' }), /VALIDATION_FAILED/)
 })
@@ -320,6 +336,183 @@ test('selected tasks require an active app-scoped assignment', async () => {
   await repository.listTasks({ appId, userId }, {})
   assert.match(listSql, /assignment\.user_id = \? AND assignment\.status = 'ACTIVE'/)
   assert.match(listSql, /task\.assignment_mode = 'ALL'/)
+  assert.match(listSql, /mip_task_level_rules/)
+  assert.match(listSql, /mip_growth_accounts/)
+  assert.match(listSql, /current_level\.minimum_experience DESC/)
+})
+
+test('completion rechecks the server growth account and rejects a client-bypassed level', async () => {
+  const eligibleLevelId = '77777777-7777-4777-8777-777777777777'
+  const currentLevelId = '88888888-8888-4888-8888-888888888888'
+  const reads = []
+  const adapter = {
+    async one(sql) {
+      reads.push(sql)
+      if (sql.includes('FROM mip_growth_accounts')) return { experience_balance: 80, version: 2 }
+      if (sql.includes('ORDER BY level_id LIMIT 1')) return { level_id: eligibleLevelId }
+      if (sql.includes('FROM mip_growth_levels')) return { id: currentLevelId }
+      if (sql.includes('AND level_id = ?')) return null
+      return null
+    },
+  }
+  await assert.rejects(
+    assertTaskLevelEligible(adapter, appId, userId, taskId, { currentLevelId: eligibleLevelId }),
+    /TASK_LEVEL_NOT_ELIGIBLE/,
+  )
+  assert.equal(reads.some(sql => sql.includes('experience_balance')), true)
+})
+
+test('an unrestricted task accepts the server account without creating a rule fact', async () => {
+  const adapter = {
+    async one(sql) {
+      if (sql.includes('FROM mip_growth_accounts')) return { experience_balance: 20, version: 3 }
+      if (sql.includes('FROM mip_task_level_rules')) return null
+      return null
+    },
+  }
+  const account = await assertTaskLevelEligible(adapter, appId, userId, taskId)
+  assert.equal(account.experience_balance, 20)
+  assert.equal(account.persisted, true)
+})
+
+test('admin level rules are an exact active-level set and retain prior ids for audit', async () => {
+  const oldLevelId = '77777777-7777-4777-8777-777777777777'
+  const nextLevelId = '88888888-8888-4888-8888-888888888888'
+  const writes = []
+  const adapter = {
+    async query(sql, params) {
+      if (sql.includes('SELECT level_id FROM mip_task_level_rules')) return [{ level_id: oldLevelId }]
+      if (sql.includes('SELECT id FROM mip_growth_levels')) return [{ id: nextLevelId }]
+      writes.push({ sql, params })
+      return { affectedRows: 1 }
+    },
+  }
+  const prior = await replaceTaskLevelRules(
+    adapter,
+    { appId, userId },
+    taskId,
+    [nextLevelId],
+  )
+  assert.deepEqual(prior, [oldLevelId])
+  assert.match(writes[0].sql, /DELETE FROM mip_task_level_rules/)
+  assert.deepEqual(writes[1].params, [appId, taskId, nextLevelId, userId])
+})
+
+test('task save validates active levels and audits the exact eligibility change', async () => {
+  const levelId = '88888888-8888-4888-8888-888888888888'
+  const auditWrites = []
+  const tx = {
+    async one(sql) {
+      if (sql.includes('FROM mip_users')) return { status: 'ACTIVE' }
+      if (sql.includes('FROM mip_admin_role_bindings')) return { role_key: 'PLATFORM_OWNER' }
+      if (sql.includes('FROM mip_task_cards task')) {
+        return {
+          id: taskId,
+          name: '等级任务',
+          content: '仅部分等级可完成。',
+          reward_experience: 10,
+          attachment_required: 0,
+          assignment_mode: 'ALL',
+          status: 'DRAFT',
+          version: 1,
+        }
+      }
+      return null
+    },
+    async query(sql, params) {
+      if (sql.includes('SELECT level_id FROM mip_task_level_rules')) return []
+      if (sql.includes('SELECT id FROM mip_growth_levels')) return [{ id: levelId }]
+      if (sql.includes('SELECT rule.task_id')) {
+        return [{
+          task_id: taskId,
+          id: levelId,
+          level_key: 'LEVEL_1',
+          name: '等级 1',
+          minimum_experience: 0,
+          status: 'ACTIVE',
+        }]
+      }
+      if (sql.includes('INSERT INTO mip_audit_logs')) auditWrites.push(params)
+      return { affectedRows: 1 }
+    },
+  }
+  const repository = createTaskRepository(
+    { transaction: work => work(tx) },
+    { createId: () => taskId },
+  )
+  const saved = await repository.saveTask({ appId, userId }, {
+    task: {
+      name: '等级任务',
+      content: '仅部分等级可完成。',
+      rewardExperience: 10,
+      eligibleLevelIds: [levelId],
+    },
+  })
+  assert.deepEqual(saved.eligibleLevels.map(level => level.id), [levelId])
+  assert.deepEqual(JSON.parse(auditWrites[0][5]), {
+    status: 'DRAFT',
+    previousEligibleLevelIds: [],
+    eligibleLevelIds: [levelId],
+  })
+})
+
+test('task update preserves level rules when eligibleLevelIds is omitted and only clears on an explicit empty list', async () => {
+  const levelId = '88888888-8888-4888-8888-888888888888'
+  const writes = []
+  const auditWrites = []
+  const tx = {
+    async one(sql) {
+      if (sql.includes('FROM mip_users')) return { status: 'ACTIVE' }
+      if (sql.includes('FROM mip_admin_role_bindings')) return { role_key: 'PLATFORM_OWNER' }
+      if (sql.includes('FROM mip_task_cards\n')) return { status: 'DRAFT', version: 1 }
+      if (sql.includes('FROM mip_task_cards task')) {
+        return {
+          id: taskId,
+          name: '等级任务',
+          content: '更新后的说明。',
+          reward_experience: 10,
+          attachment_required: 0,
+          assignment_mode: 'ALL',
+          status: 'DRAFT',
+          version: 2,
+        }
+      }
+      return null
+    },
+    async query(sql, params) {
+      writes.push({ sql, params })
+      if (sql.includes('SELECT level_id FROM mip_task_level_rules')) return [{ level_id: levelId }]
+      if (sql.includes('SELECT rule.task_id')) {
+        return [{
+          task_id: taskId,
+          id: levelId,
+          level_key: 'LEVEL_1',
+          name: '等级 1',
+          minimum_experience: 0,
+          status: 'ACTIVE',
+        }]
+      }
+      if (sql.includes('INSERT INTO mip_audit_logs')) auditWrites.push(params)
+      return { affectedRows: 1 }
+    },
+  }
+  const repository = createTaskRepository({ transaction: work => work(tx) })
+  const saved = await repository.saveTask({ appId, userId }, {
+    taskId,
+    expectedVersion: 1,
+    task: {
+      name: '等级任务',
+      content: '更新后的说明。',
+      rewardExperience: 10,
+    },
+  })
+  assert.deepEqual(saved.eligibleLevels.map(level => level.id), [levelId])
+  assert.equal(writes.some(call => call.sql.includes('DELETE FROM mip_task_level_rules')), false)
+  assert.deepEqual(JSON.parse(auditWrites[0][5]), {
+    status: 'DRAFT',
+    previousEligibleLevelIds: [levelId],
+    eligibleLevelIds: [levelId],
+  })
 })
 
 test('assignment member references are opaque and bound to the trusted AppID', () => {

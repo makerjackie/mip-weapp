@@ -3,6 +3,7 @@
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const {
+  assertCanCancel,
   assertCheckInAllowed,
   decideRegistration,
   grantsCapability,
@@ -48,6 +49,12 @@ describe('MIP event registration rules', () => {
       error => error.code === 'CONFLICT',
     )
   })
+
+  it('does not restart a cancellation that is already pending', () => {
+    assert.doesNotThrow(() => assertCanCancel('REGISTERED'))
+    assert.throws(() => assertCanCancel('CANCELLATION_PENDING'), error => error.code === 'CONFLICT')
+    assert.throws(() => assertCanCancel('ATTENDED'), error => error.code === 'CONFLICT')
+  })
 })
 
 describe('MIP event check-in and feedback rules', () => {
@@ -68,7 +75,13 @@ describe('MIP event check-in and feedback rules', () => {
       registration: { event_id: 'event-1', status: 'PAYMENT_PENDING' },
       credential: { event_id: 'event-1', status: 'ACTIVE', valid_from: now, valid_until: now },
       now,
-    }), error => error.code === 'FORBIDDEN')
+    }), error => error.code === 'REGISTRATION_PENDING')
+    assert.throws(() => assertCheckInAllowed({
+      event: { id: 'event-1' },
+      registration: null,
+      credential: { event_id: 'event-1', status: 'ACTIVE', valid_from: now, valid_until: now },
+      now,
+    }), error => error.code === 'REGISTRATION_REQUIRED')
   })
 
   it('normalizes feedback without exposing it through public rules', () => {

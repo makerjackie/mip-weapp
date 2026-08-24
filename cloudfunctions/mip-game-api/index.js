@@ -17,7 +17,7 @@ const allowedAppIds = new Set(
 )
 const database = mysqlDatabase()
 const service = createGameService(createGameRepository(database))
-const outboxMutationActions = new Set(['admin.finalizeWeeklyMatch'])
+const outboxMutationActions = new Set(['admin.finalizeWeeklyMatch', 'drawBlindBox'])
 const outboxWakeup = createOutboxWakeup({
   cloud,
   functionName: process.env.MIP_OUTBOX_FUNCTION_NAME,

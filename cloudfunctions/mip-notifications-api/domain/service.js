@@ -4,9 +4,13 @@ const { randomUUID } = require('node:crypto')
 const { protectRecipient } = require('../lib/recipient-protection')
 const { normalizeSubscriptionDecision } = require('./validation')
 
+const CUSTOMER_SERVICE_TEMPLATE_KEY = 'CUSTOMER_SERVICE_TEXT'
+const CUSTOMER_SERVICE_WINDOW_MS = 48 * 60 * 60 * 1000
+
 function createNotificationsService(options) {
   const repository = options.repository
   const createId = options.createId || randomUUID
+  const clock = options.clock || Date.now
 
   return {
     listInbox(caller, event) {
@@ -49,7 +53,40 @@ function createNotificationsService(options) {
         ...protectedRecipient,
       })
     },
+
+    async recordCustomerServiceInteraction(caller) {
+      if (options.customerServiceEnabled !== true) throw new Error('CHANNEL_UNAVAILABLE')
+      const id = createId()
+      const expiresAt = new Date(Number(clock()) + CUSTOMER_SERVICE_WINDOW_MS)
+      const protectedRecipient = protectRecipient(
+        caller.openId,
+        options.encryptionKey,
+        {
+          appId: caller.appId,
+          userId: caller.userId,
+          grantId: id,
+          templateKey: CUSTOMER_SERVICE_TEMPLATE_KEY,
+        },
+        options.randomBytes,
+      )
+      await repository.createCustomerServiceGrant({
+        id,
+        appId: caller.appId,
+        userId: caller.userId,
+        templateKey: CUSTOMER_SERVICE_TEMPLATE_KEY,
+        expiresAt,
+        ...protectedRecipient,
+      })
+      return {
+        channel: 'WECHAT_CUSTOMER_SERVICE',
+        availableUntil: expiresAt.toISOString(),
+      }
+    },
   }
 }
 
-module.exports = { createNotificationsService }
+module.exports = {
+  CUSTOMER_SERVICE_TEMPLATE_KEY,
+  CUSTOMER_SERVICE_WINDOW_MS,
+  createNotificationsService,
+}

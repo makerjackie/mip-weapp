@@ -17,6 +17,7 @@ function createCommerceService(options) {
   const now = options.now || (() => new Date())
   const invitationSecret = options.invitationSecret
   const invitationCode = options.createInvitationCode
+  const paymentMode = options.paymentMode || 'disabled'
 
   async function listPlans(caller) {
     const rows = await repository.listPlans(caller.appId, catalogStage)
@@ -36,6 +37,20 @@ function createCommerceService(options) {
       outboxId: createId(),
       createdAt: now().toISOString(),
     }, deriveMembershipCheckout)
+  }
+
+  function createKnowledgeCheckout(caller, value) {
+    if (paymentMode === 'disabled') throw new Error('PAYMENT_UNAVAILABLE')
+    return repository.createKnowledgeCheckout(caller, {
+      contentId: uuid(value?.contentId),
+      idempotencyKey: boundedText(value?.idempotencyKey, 1, 128),
+      catalogStage,
+    }, {
+      orderId: createId(),
+      merchantOrderNo: merchantNumber('MIPK', createId(), 32),
+      outboxId: createId(),
+      createdAt: now().toISOString(),
+    })
   }
 
   async function createMembershipInvitation(caller) {
@@ -98,6 +113,7 @@ function createCommerceService(options) {
 
   return {
     createCheckout,
+    createKnowledgeCheckout,
     createMembershipInvitation,
     createMembershipInvitationCode,
     getMembershipBenefits,

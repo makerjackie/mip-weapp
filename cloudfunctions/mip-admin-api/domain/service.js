@@ -74,6 +74,7 @@ function createAdminService({
   exportMaxBytes = 8 * 1024 * 1024,
   exportIssuanceTimeoutMs = 15_000,
   profileRefSecret = '',
+  recalculateMatching = async () => { throw new AdminError('MATCHING_DISPATCH_CONFIG_REQUIRED', '机会撮合重算服务尚未配置') },
 }) {
   function pageResult(value) {
     if (Array.isArray(value)) return { items: value, nextCursor: null }
@@ -1912,6 +1913,96 @@ function createAdminService({
     }).archiveOpportunity(context, input)
   }
 
+  async function getMatchingAdminState(caller, input = {}) {
+    const context = await session(caller)
+    const branchId = input.branchId ? requiredId(input.branchId, '城市分会') : null
+    if (branchId) {
+      authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, {
+        scopeType: 'BRANCH',
+        scopeId: branchId,
+      })
+    }
+    else {
+      authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, {
+        scopeType: 'PLATFORM',
+        scopeId: null,
+      })
+    }
+    return repository.getMatchingAdminState(
+      context.caller.appId,
+      visibilityForCapability(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE),
+      { branchId },
+    )
+  }
+
+  async function saveMatchingSettings(caller, input = {}) {
+    const context = await session(caller)
+    const branchId = input.branchId ? requiredId(input.branchId, '城市分会') : null
+    const scope = branchId
+      ? { scopeType: 'BRANCH', scopeId: branchId }
+      : { scopeType: 'PLATFORM', scopeId: null }
+    const grant = authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, scope)
+    const settings = normalizeMatchingSettings(input.settings)
+    const version = nonNegativeVersion(input.expectedVersion)
+    return repository.saveMatchingSettings({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      scope,
+      expectedVersion: version,
+      settings,
+      authorization: mutationAuthorization(grant, CAPABILITIES.OPPORTUNITIES_MODERATE),
+      audit: nextVersion => audit(context, grant, {
+        scopeType: scope.scopeType,
+        scopeId: scope.scopeId,
+        action: 'admin.matching.settings.update',
+        resourceType: 'MATCHING_SETTINGS',
+        resourceId: scope.scopeId,
+        metadata: { expectedVersion: version, nextVersion, ...settings },
+      }),
+    })
+  }
+
+  async function recalculateOpportunityMatching(caller, input = {}) {
+    const context = await session(caller)
+    const opportunityId = requiredId(input.opportunityId, '机会')
+    const target = await repository.getMatchingRecalculationTarget(context.caller.appId, opportunityId)
+    if (!target) throw new AdminError('NOT_FOUND', '机会不存在')
+    const scope = target.branch_id
+      ? { scopeType: 'BRANCH', scopeId: target.branch_id }
+      : { scopeType: 'PLATFORM', scopeId: null }
+    const grant = authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, scope)
+    if (target.status !== 'PUBLISHED') throw new AdminError('INVALID_STATE', '只有已发布机会可以重算撮合结果')
+    const idempotencyKey = text(input.idempotencyKey, 128, {
+      required: true,
+      label: '幂等标识',
+    })
+    if (idempotencyKey.length < 12) throw new AdminError('VALIDATION_FAILED', '幂等标识无效')
+    try {
+      const authorizedTarget = await repository.authorizeMatchingRecalculation({
+        appId: context.caller.appId,
+        actorUserId: context.caller.userId,
+        opportunityId,
+        expectedVersion: Number(target.version),
+        authorization: mutationAuthorization(grant, CAPABILITIES.OPPORTUNITIES_MODERATE),
+      })
+      return await recalculateMatching({
+        appId: context.caller.appId,
+        actorUserId: context.caller.userId,
+        requesterUserId: authorizedTarget.owner_user_id,
+        opportunityId,
+        sourceVersion: Number(authorizedTarget.version),
+        idempotencyKey,
+      })
+    }
+    catch (error) {
+      const code = String(error?.message || '')
+      if (['MATCHING_DISPATCH_CONFIG_REQUIRED', 'MATCHING_DISPATCH_UNAVAILABLE'].includes(code)) {
+        throw new AdminError(code, '机会撮合重算服务暂时不可用')
+      }
+      throw new AdminError('MATCHING_DISPATCH_UNAVAILABLE', '机会撮合重算服务暂时不可用')
+    }
+  }
+
   async function opportunityCommentAuthorization(context, opportunityId) {
     const scope = await repository.getOpportunityScope(context.caller.appId, opportunityId)
     if (!scope) throw new AdminError('NOT_FOUND', '机会不存在')
@@ -2282,7 +2373,7 @@ function createAdminService({
       ...page,
       summary,
       items: page.items.map((item) => {
-        const { branchId, ...safe } = item
+        const { branchId, contentRefundEligible, ...safe } = item
         const orderScope = item.orderType === 'EVENT'
           ? { scopeType: 'EVENT', scopeId: item.resourceId, branchId: branchId || null }
           : { scopeType: 'PLATFORM', scopeId: null, branchId: null }
@@ -2295,6 +2386,7 @@ function createAdminService({
         const availableRefundActions = []
         if (canRefund
           && ['PAID', 'PARTIALLY_REFUNDED'].includes(item.status)
+          && (item.orderType !== 'CONTENT' || contentRefundEligible)
           && Number(item.refundedAmountCents) < Number(item.amountCents)) {
           availableRefundActions.push('SUBMIT_REFUND')
         }
@@ -2435,6 +2527,7 @@ function createAdminService({
     getEvent,
     getEventPolicy,
     getOpportunity,
+    getMatchingAdminState,
     getOpportunityCommentAdminState,
     getOpportunityEditorOptions,
     getMessageCampaign,
@@ -2473,6 +2566,7 @@ function createAdminService({
     publishEventReminder,
     publishMessageCampaign,
     publishOpportunity,
+    recalculateOpportunityMatching,
     moderateOpportunityComment,
     publishAnnouncement,
     grantBadge,
@@ -2502,6 +2596,7 @@ function createAdminService({
     updateUser,
     saveOpportunity,
     saveOpportunityCommentSettings,
+    saveMatchingSettings,
   }
 }
 
@@ -2517,6 +2612,27 @@ function normalizeIdempotencyKey(value) {
   const key = stableKey(value, '请求', 128)
   if (key.length < 12) throw new AdminError('VALIDATION_FAILED', '请求标识无效')
   return key
+}
+
+function normalizeMatchingSettings(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new AdminError('VALIDATION_FAILED', '撮合设置无效')
+  }
+  const talentMinScore = Number(value.talentMinScore)
+  const projectMinScore = Number(value.projectMinScore)
+  const maximumCandidates = Number(value.maximumCandidates)
+  if (!Number.isInteger(talentMinScore) || talentMinScore < 0 || talentMinScore > 100
+    || !Number.isInteger(projectMinScore) || projectMinScore < 0 || projectMinScore > 100
+    || !Number.isInteger(maximumCandidates) || maximumCandidates < 10 || maximumCandidates > 500
+    || typeof value.externalProviderEnabled !== 'boolean') {
+    throw new AdminError('VALIDATION_FAILED', '撮合设置无效')
+  }
+  return {
+    talentMinScore,
+    projectMinScore,
+    maximumCandidates,
+    externalProviderEnabled: value.externalProviderEnabled,
+  }
 }
 
 function exportStatus(ticket) {
@@ -2715,7 +2831,7 @@ function normalizeOrderFilters(value) {
   return {
     query: text(filters.query, 80),
     eventId: filters.eventId ? requiredId(filters.eventId, '活动') : '',
-    orderType: enumFilter(filters.orderType, ['MEMBERSHIP', 'EVENT'], '订单类型'),
+    orderType: enumFilter(filters.orderType, ['MEMBERSHIP', 'EVENT', 'CONTENT'], '订单类型'),
     status: enumFilter(filters.status, ORDER_STATUSES, '订单状态'),
     refundStatus: enumFilter(filters.refundStatus, REFUND_STATUSES, '退款状态'),
     createdFrom,

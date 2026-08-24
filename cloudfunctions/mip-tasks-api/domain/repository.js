@@ -31,7 +31,7 @@ function createTaskRepository(database, options = {}) {
   async function listTasks(caller, event = {}) {
     const limit = pageLimit(event.limit)
     const cursor = decodeCursor(event.cursor)
-    const params = [caller.userId, caller.appId, caller.userId]
+    const params = [caller.userId, caller.appId, caller.userId, caller.userId]
     let cursorSql = ''
     if (cursor) {
       cursorSql = 'AND (task.published_at < ? OR (task.published_at = ? AND task.id < ?))'
@@ -50,7 +50,8 @@ function createTaskRepository(database, options = {}) {
            SELECT 1 FROM mip_task_assignments assignment
            WHERE assignment.app_id = task.app_id AND assignment.task_id = task.id
              AND assignment.user_id = ? AND assignment.status = 'ACTIVE'
-         )) ${cursorSql}
+         ))
+         AND ${taskLevelEligibilitySql()} ${cursorSql}
        ORDER BY task.published_at DESC, task.id DESC LIMIT ?`,
       params,
     )
@@ -81,8 +82,9 @@ function createTaskRepository(database, options = {}) {
            SELECT 1 FROM mip_task_assignments assignment
            WHERE assignment.app_id = task.app_id AND assignment.task_id = task.id
              AND assignment.user_id = ? AND assignment.status = 'ACTIVE'
-         ))`,
-      [caller.userId, caller.appId, taskId, caller.userId],
+         ))
+         AND ${taskLevelEligibilitySql()}`,
+      [caller.userId, caller.appId, taskId, caller.userId, caller.userId],
     )
     if (!row) throw new Error('NOT_FOUND')
     return userTaskDto(row, true)
@@ -116,6 +118,12 @@ function createTaskRepository(database, options = {}) {
         )
         if (!assignment || assignment.status !== 'ACTIVE') throw new Error('FORBIDDEN')
       }
+      const growthAccount = await assertTaskLevelEligible(
+        tx,
+        caller.appId,
+        caller.userId,
+        taskId,
+      )
       if (Boolean(task.attachment_required) && !attachmentAssetId) throw new Error('ATTACHMENT_REQUIRED')
       let attachment = null
       if (attachmentAssetId) {
@@ -145,17 +153,20 @@ function createTaskRepository(database, options = {}) {
       let growthEntryId = null
       let balanceAfter = null
       if (rewardExperience > 0) {
-        await tx.query(
-          `INSERT INTO mip_growth_accounts (app_id, user_id)
-           VALUES (?, ?) ON DUPLICATE KEY UPDATE user_id = VALUES(user_id)`,
-          [caller.appId, caller.userId],
-        )
-        const account = await tx.one(
-          `SELECT experience_balance, version FROM mip_growth_accounts
-           WHERE app_id = ? AND user_id = ? FOR UPDATE`,
-          [caller.appId, caller.userId],
-        )
-        balanceAfter = Number(account.experience_balance) + rewardExperience
+        let rewardAccount = growthAccount
+        if (!growthAccount.persisted) {
+          await tx.query(
+            `INSERT INTO mip_growth_accounts (app_id, user_id)
+             VALUES (?, ?) ON DUPLICATE KEY UPDATE user_id = VALUES(user_id)`,
+            [caller.appId, caller.userId],
+          )
+          rewardAccount = await tx.one(
+            `SELECT experience_balance, version FROM mip_growth_accounts
+             WHERE app_id = ? AND user_id = ? FOR UPDATE`,
+            [caller.appId, caller.userId],
+          )
+        }
+        balanceAfter = Number(rewardAccount.experience_balance) + rewardExperience
         await tx.query(
           `UPDATE mip_growth_accounts SET experience_balance = ?, version = version + 1
            WHERE app_id = ? AND user_id = ?`,
@@ -174,7 +185,7 @@ function createTaskRepository(database, options = {}) {
              id, app_id, aggregate_type, aggregate_id, event_type,
              source_version, payload_json, status
            ) VALUES (?, ?, 'GROWTH_ENTRY', ?, 'growth.changed', ?, JSON_OBJECT(), 'PENDING')`,
-          [createId(), caller.appId, growthEntryId, Number(account.version) + 1],
+          [createId(), caller.appId, growthEntryId, Number(rewardAccount.version) + 1],
         )
       }
       await tx.query(
@@ -244,8 +255,9 @@ function createTaskRepository(database, options = {}) {
       params,
     )
     const page = rows.slice(0, limit)
+    const levelsByTask = await listTaskEligibleLevels(database, caller.appId, page.map(row => row.id))
     return {
-      items: page.map(row => adminTaskDto(row)),
+      items: page.map(row => adminTaskDto(row, false, levelsByTask.get(row.id) || [])),
       nextCursor: rows.length > limit ? encodeCursor(page.at(-1)) : undefined,
     }
   }
@@ -272,7 +284,20 @@ function createTaskRepository(database, options = {}) {
       [caller.appId, taskId],
     )
     if (!row || row.status === 'DELETED') throw new Error('NOT_FOUND')
-    return adminTaskDto(row, true)
+    const levelsByTask = await listTaskEligibleLevels(database, caller.appId, [taskId])
+    return adminTaskDto(row, true, levelsByTask.get(taskId) || [])
+  }
+
+  async function listEligibleLevels(caller) {
+    await assertTasksAdmin(database, caller)
+    const rows = await database.query(
+      `SELECT id, level_key, name, minimum_experience, status
+       FROM mip_growth_levels
+       WHERE app_id = ? AND status = 'ACTIVE'
+       ORDER BY minimum_experience, id`,
+      [caller.appId],
+    )
+    return rows.map(taskEligibleLevelDto)
   }
 
   async function saveTask(caller, value) {
@@ -282,6 +307,8 @@ function createTaskRepository(database, options = {}) {
     return database.transaction(async (tx) => {
       const roleKey = await assertTasksAdmin(tx, caller, true)
       if (draft.templateAssetId) await assertTaskTemplate(tx, caller, draft.templateAssetId)
+      let auditAction = 'task.created'
+      let status = 'DRAFT'
       if (!value.taskId) {
         await tx.query(
           `INSERT INTO mip_task_cards (
@@ -292,7 +319,6 @@ function createTaskRepository(database, options = {}) {
             draft.attachmentRequired ? 1 : 0, draft.assignmentMode, draft.endsAt,
             draft.templateAssetId, caller.userId],
         )
-        await writeAudit(tx, caller, roleKey, 'task.created', taskId, { status: 'DRAFT' })
       }
       else {
         const current = await tx.one(
@@ -302,6 +328,8 @@ function createTaskRepository(database, options = {}) {
         )
         if (!current || current.status === 'DELETED') throw new Error('NOT_FOUND')
         if (Number(current.version) !== version) throw new Error('CONFLICT')
+        auditAction = 'task.updated'
+        status = current.status
         const result = await tx.query(
           `UPDATE mip_task_cards SET name = ?, content = ?, reward_experience = ?,
              attachment_required = ?, assignment_mode = ?, ends_at = ?, template_asset_id = ?,
@@ -311,8 +339,27 @@ function createTaskRepository(database, options = {}) {
             draft.assignmentMode, draft.endsAt, draft.templateAssetId, caller.appId, taskId, version],
         )
         if (Number(result.affectedRows) !== 1) throw new Error('CONFLICT')
-        await writeAudit(tx, caller, roleKey, 'task.updated', taskId, { status: current.status })
       }
+      let previousEligibleLevelIds
+      let eligibleLevelIds
+      if (value.taskId && draft.eligibleLevelIds === undefined) {
+        previousEligibleLevelIds = await listTaskLevelRuleIds(tx, caller.appId, taskId)
+        eligibleLevelIds = previousEligibleLevelIds
+      }
+      else {
+        eligibleLevelIds = draft.eligibleLevelIds || []
+        previousEligibleLevelIds = await replaceTaskLevelRules(
+          tx,
+          caller,
+          taskId,
+          eligibleLevelIds,
+        )
+      }
+      await writeAudit(tx, caller, roleKey, auditAction, taskId, {
+        status,
+        previousEligibleLevelIds,
+        eligibleLevelIds,
+      })
       const row = await tx.one(
         `SELECT task.*,
                 (SELECT COUNT(*) FROM mip_task_completions completion
@@ -324,7 +371,8 @@ function createTaskRepository(database, options = {}) {
          FROM mip_task_cards task WHERE task.app_id = ? AND task.id = ?`,
         [caller.appId, taskId],
       )
-      return adminTaskDto(row)
+      const levelsByTask = await listTaskEligibleLevels(tx, caller.appId, [taskId])
+      return adminTaskDto(row, false, levelsByTask.get(taskId) || [])
     })
   }
 
@@ -379,7 +427,8 @@ function createTaskRepository(database, options = {}) {
          FROM mip_task_cards task WHERE task.app_id = ? AND task.id = ?`,
         [caller.appId, taskId],
       )
-      return adminTaskDto(row)
+      const levelsByTask = await listTaskEligibleLevels(tx, caller.appId, [taskId])
+      return adminTaskDto(row, false, levelsByTask.get(taskId) || [])
     })
   }
 
@@ -537,6 +586,7 @@ function createTaskRepository(database, options = {}) {
     getCompletion,
     getTask,
     listAdminTasks,
+    listEligibleLevels,
     listAssignableMembers,
     listCompletions,
     listTasks,
@@ -544,6 +594,124 @@ function createTaskRepository(database, options = {}) {
     assignMembers: (caller, value) => changeAssignments(caller, value, 'ACTIVE'),
     revokeMembers: (caller, value) => changeAssignments(caller, value, 'REVOKED'),
     transitionTask,
+  }
+}
+
+function taskLevelEligibilitySql() {
+  return `(NOT EXISTS (
+    SELECT 1 FROM mip_task_level_rules unrestricted_rule
+    WHERE unrestricted_rule.app_id = task.app_id AND unrestricted_rule.task_id = task.id
+  ) OR EXISTS (
+    SELECT 1 FROM mip_task_level_rules eligible_rule
+    WHERE eligible_rule.app_id = task.app_id AND eligible_rule.task_id = task.id
+      AND eligible_rule.level_id = (
+        SELECT current_level.id
+        FROM mip_growth_levels current_level
+        WHERE current_level.app_id = task.app_id AND current_level.status = 'ACTIVE'
+          AND current_level.minimum_experience <= COALESCE((
+            SELECT account.experience_balance FROM mip_growth_accounts account
+            WHERE account.app_id = task.app_id AND account.user_id = ?
+          ), 0)
+        ORDER BY current_level.minimum_experience DESC, current_level.id
+        LIMIT 1
+      )
+  ))`
+}
+
+async function assertTaskLevelEligible(adapter, appId, userId, taskId) {
+  const storedAccount = await adapter.one(
+    `SELECT experience_balance, version FROM mip_growth_accounts
+     WHERE app_id = ? AND user_id = ? FOR UPDATE`,
+    [appId, userId],
+  )
+  const account = storedAccount
+    ? { ...storedAccount, persisted: true }
+    : { experience_balance: 0, version: 0, persisted: false }
+  const restricted = await adapter.one(
+    `SELECT level_id FROM mip_task_level_rules
+     WHERE app_id = ? AND task_id = ? ORDER BY level_id LIMIT 1 FOR UPDATE`,
+    [appId, taskId],
+  )
+  if (!restricted) return account
+  const currentLevel = await adapter.one(
+    `SELECT id FROM mip_growth_levels
+     WHERE app_id = ? AND status = 'ACTIVE' AND minimum_experience <= ?
+     ORDER BY minimum_experience DESC, id LIMIT 1 FOR UPDATE`,
+    [appId, Number(account.experience_balance)],
+  )
+  if (!currentLevel) throw new Error('TASK_LEVEL_NOT_ELIGIBLE')
+  const eligible = await adapter.one(
+    `SELECT level_id FROM mip_task_level_rules
+     WHERE app_id = ? AND task_id = ? AND level_id = ? FOR UPDATE`,
+    [appId, taskId, currentLevel.id],
+  )
+  if (!eligible) throw new Error('TASK_LEVEL_NOT_ELIGIBLE')
+  return account
+}
+
+async function replaceTaskLevelRules(adapter, caller, taskId, eligibleLevelIds) {
+  const previousEligibleLevelIds = await listTaskLevelRuleIds(adapter, caller.appId, taskId)
+  if (eligibleLevelIds.length) {
+    const placeholders = eligibleLevelIds.map(() => '?').join(', ')
+    const levels = await adapter.query(
+      `SELECT id FROM mip_growth_levels
+       WHERE app_id = ? AND status = 'ACTIVE' AND id IN (${placeholders})
+       ORDER BY id FOR UPDATE`,
+      [caller.appId, ...eligibleLevelIds],
+    )
+    if (levels.length !== eligibleLevelIds.length) throw new Error('ELIGIBLE_LEVEL_NOT_FOUND')
+  }
+  await adapter.query(
+    `DELETE FROM mip_task_level_rules WHERE app_id = ? AND task_id = ?`,
+    [caller.appId, taskId],
+  )
+  for (const levelId of eligibleLevelIds) {
+    await adapter.query(
+      `INSERT INTO mip_task_level_rules (
+         app_id, task_id, level_id, created_by_user_id
+       ) VALUES (?, ?, ?, ?)`,
+      [caller.appId, taskId, levelId, caller.userId],
+    )
+  }
+  return previousEligibleLevelIds
+}
+
+async function listTaskLevelRuleIds(adapter, appId, taskId) {
+  const rows = await adapter.query(
+    `SELECT level_id FROM mip_task_level_rules
+     WHERE app_id = ? AND task_id = ? ORDER BY level_id FOR UPDATE`,
+    [appId, taskId],
+  )
+  return rows.map(row => row.level_id)
+}
+
+async function listTaskEligibleLevels(adapter, appId, taskIds) {
+  const result = new Map(taskIds.map(taskId => [taskId, []]))
+  if (!taskIds.length) return result
+  const placeholders = taskIds.map(() => '?').join(', ')
+  const rows = await adapter.query(
+    `SELECT rule.task_id, level.id, level.level_key, level.name,
+            level.minimum_experience, level.status
+     FROM mip_task_level_rules rule
+     INNER JOIN mip_growth_levels level
+       ON level.app_id = rule.app_id AND level.id = rule.level_id
+     WHERE rule.app_id = ? AND rule.task_id IN (${placeholders})
+     ORDER BY rule.task_id, level.minimum_experience, level.id`,
+    [appId, ...taskIds],
+  )
+  for (const row of rows) {
+    result.get(row.task_id)?.push(taskEligibleLevelDto(row))
+  }
+  return result
+}
+
+function taskEligibleLevelDto(row) {
+  return {
+    id: row.id,
+    levelKey: row.level_key,
+    name: row.name,
+    minimumExperience: Number(row.minimum_experience),
+    status: row.status,
   }
 }
 
@@ -695,7 +863,7 @@ function userTaskDto(row, includeTemplateUrl = false) {
   }
 }
 
-function adminTaskDto(row, includeTemplateUrl = false) {
+function adminTaskDto(row, includeTemplateUrl = false, eligibleLevels = []) {
   return {
     id: row.id,
     name: row.name,
@@ -704,6 +872,7 @@ function adminTaskDto(row, includeTemplateUrl = false) {
     attachmentRequired: Boolean(row.attachment_required),
     assignmentMode: row.assignment_mode || 'ALL',
     assignmentCount: Number(row.assignment_count || 0),
+    eligibleLevels,
     endsAt: iso(row.ends_at),
     template: row.template_asset_id ? {
       assetId: row.template_asset_id,
@@ -775,7 +944,11 @@ module.exports = {
   adminTaskDto,
   assignmentMemberDto,
   assertTaskTemplate,
+  assertTaskLevelEligible,
   assertTasksAdmin,
   createTaskRepository,
+  replaceTaskLevelRules,
+  taskEligibleLevelDto,
+  taskLevelEligibilitySql,
   userTaskDto,
 }

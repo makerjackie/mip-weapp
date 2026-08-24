@@ -110,4 +110,69 @@ describe('mip CloudPay adapter', () => {
     assert.equal(providerCalls[0].totalFee, 79900)
     assert.equal(providerCalls[0].refundFee, 19900)
   })
+
+  it('marks provider CHANGE for manual review and does not mark it failed', async () => {
+    const calls = []
+    const service = createPaymentService({
+      config: config(),
+      nonce: () => 'nonce',
+      async callLedger(action, input) {
+        calls.push({ action, input })
+        if (action === 'getRefundRequest') {
+          return {
+            id: refundId,
+            merchantOrderNo: 'MIP123',
+            merchantRefundNo: 'MIPR123',
+            amountCents: 19900,
+            totalCents: 79900,
+            currency: 'CNY',
+            status: 'PROCESSING',
+          }
+        }
+        return { status: 'PROCESSING', manualReview: true }
+      },
+      cloudPay: {
+        async queryRefund() {
+          return {
+            returnCode: 'SUCCESS',
+            resultCode: 'SUCCESS',
+            outRefundNoList: ['MIPR123'],
+            refundStatusList: ['CHANGE'],
+            refundIdList: ['provider-refund'],
+            refundFeeList: [19900],
+          }
+        },
+      },
+    })
+    const result = await service.syncRefund(caller, { refundId })
+    assert.deepEqual(result, { status: 'REFUND_MANUAL_REVIEW' })
+    assert.equal(calls.some(call => call.action === 'markRefundFailed'), false)
+    assert.deepEqual(calls.at(-1), {
+      action: 'markRefundManualReview',
+      input: { refundId, merchantRefundNo: 'MIPR123', reasonCode: 'CHANGE' },
+    })
+  })
+
+  it('does not submit a refund that is already in manual review', async () => {
+    let providerCalled = false
+    const service = createPaymentService({
+      config: config(),
+      nonce: () => 'nonce',
+      async callLedger() {
+        return {
+          id: refundId,
+          merchantOrderNo: 'MIP123',
+          merchantRefundNo: 'MIPR123',
+          amountCents: 19900,
+          totalCents: 79900,
+          currency: 'CNY',
+          status: 'PROCESSING',
+          manualReview: true,
+        }
+      },
+      cloudPay: { refund: async () => { providerCalled = true } },
+    })
+    await assert.rejects(() => service.submitRefund(caller, { refundId }), /REFUND_MANUAL_REVIEW/)
+    assert.equal(providerCalled, false)
+  })
 })

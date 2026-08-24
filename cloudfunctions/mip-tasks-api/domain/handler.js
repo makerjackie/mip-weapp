@@ -7,6 +7,7 @@ const actions = Object.freeze({
   'admin.getSession': (service, caller) => service.getAdminSession(caller),
   'admin.getTask': (service, caller, event) => service.getAdminTask(caller, event),
   'admin.listTasks': (service, caller, event) => service.listAdminTasks(caller, event),
+  'admin.listEligibleLevels': (service, caller) => service.listEligibleLevels(caller),
   'admin.listAssignableMembers': (service, caller, event) => service.listAssignableMembers(caller, event),
   'admin.assignMembers': (service, caller, event) => service.assignMembers(caller, event),
   'admin.revokeMembers': (service, caller, event) => service.revokeMembers(caller, event),
@@ -28,6 +29,7 @@ const messages = Object.freeze({
   CONFLICT: '任务状态已变化，请刷新后重试',
   CONTENT_REJECTED: '内容未通过安全检查，请修改后重试',
   EXPORT_TOO_LARGE: '符合条件的流水过多，请缩小筛选范围',
+  ELIGIBLE_LEVEL_NOT_FOUND: '部分成长等级当前不可用，请刷新后重试',
   FORBIDDEN: '当前没有权限执行此操作',
   IDENTITY_CONFIG_REQUIRED: '身份服务尚未配置',
   INVALID_STATE: '当前任务状态不支持此操作',
@@ -36,6 +38,7 @@ const messages = Object.freeze({
   PHONE_REQUIRED: '请先绑定手机号',
   PROFILE_REQUIRED: '请先完善个人资料',
   TASK_ENDED: '任务已截止',
+  TASK_LEVEL_NOT_ELIGIBLE: '当前等级不能完成此任务',
   TEMPLATE_INVALID: '任务模板状态无效，请重新上传',
   VALIDATION_FAILED: '提交内容格式不正确，请检查后重试',
 })

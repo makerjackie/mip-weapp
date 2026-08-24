@@ -66,6 +66,9 @@ const actions = Object.freeze({
   'mip.admin.opportunities.end': (service, caller, event) => service.endOpportunity(caller, event),
   'mip.admin.opportunities.unpublish': (service, caller, event) => service.unpublishOpportunity(caller, event),
   'mip.admin.opportunities.archive': (service, caller, event) => service.archiveOpportunity(caller, event),
+  'mip.admin.matching.get': (service, caller, event) => service.getMatchingAdminState(caller, event),
+  'mip.admin.matching.settings.save': (service, caller, event) => service.saveMatchingSettings(caller, event),
+  'mip.admin.matching.recalculate': (service, caller, event) => service.recalculateOpportunityMatching(caller, event),
   'mip.admin.opportunityComments.get': (service, caller, event) => service.getOpportunityCommentAdminState(caller, event),
   'mip.admin.opportunityComments.settings.save': (service, caller, event) => service.saveOpportunityCommentSettings(caller, event),
   'mip.admin.opportunityComments.moderate': (service, caller, event) => service.moderateOpportunityComment(caller, event),
@@ -84,11 +87,26 @@ const actions = Object.freeze({
   'mip.admin.badges.grant': (service, caller, event) => service.grantBadge(caller, event),
   'mip.admin.badges.revoke': (service, caller, event) => service.revokeBadge(caller, event),
   'mip.admin.orders.list': (service, caller, event) => service.listOrders(caller, event),
+  'mip.admin.knowledge.list': (service, caller, event) => knowledgeAction(service, caller, event, 'listKnowledgeAdmin'),
+  'mip.admin.knowledge.get': (service, caller, event) => knowledgeAction(service, caller, event, 'getKnowledgeAdminContent'),
+  'mip.admin.knowledge.sources.save': (service, caller, event) => knowledgeAction(service, caller, event, 'saveKnowledgeSource'),
+  'mip.admin.knowledge.categories.save': (service, caller, event) => knowledgeAction(service, caller, event, 'saveKnowledgeCategory'),
+  'mip.admin.knowledge.contents.save': (service, caller, event) => knowledgeAction(service, caller, event, 'saveKnowledgeContent'),
+  'mip.admin.knowledge.contents.review': (service, caller, event) => knowledgeAction(service, caller, event, 'reviewKnowledgeContent'),
+  'mip.admin.knowledge.products.save': (service, caller, event) => knowledgeAction(service, caller, event, 'saveKnowledgeProduct'),
+  'mip.admin.knowledge.comments.moderate': (service, caller, event) => knowledgeAction(service, caller, event, 'moderateKnowledgeComment'),
+  'mip.admin.knowledge.reports.close': (service, caller, event) => knowledgeAction(service, caller, event, 'closeKnowledgeCommentReport'),
+  'mip.admin.knowledge.ingestion.run': (service, caller, event) => knowledgeAction(service, caller, event, 'runKnowledgeIngestion'),
   'mip.admin.refunds.submit': (service, caller, event) => service.submitRefund(caller, event),
   'mip.admin.refunds.retry': (service, caller, event) => service.retryRefund(caller, event),
   'mip.admin.exceptions.list': (service, caller, event) => service.listOperationalExceptions(caller, event),
   'mip.admin.audit.list': (service, caller, event) => service.listAudit(caller, event),
 })
+
+async function knowledgeAction(service, caller, event, method) {
+  await service.getSession(caller)
+  return service[method](caller, event)
+}
 
 function createHandler({ service, getContext, resolveCaller }) {
   return async function handler(event = {}) {
@@ -118,7 +136,10 @@ function errorResponse(error) {
     VALIDATION_FAILED: '提交内容无效',
     CONFLICT: '记录状态已变化，请刷新后重试',
     INVALID_STATE: '当前状态不支持此操作',
+    MATCHING_DISPATCH_CONFIG_REQUIRED: '机会撮合重算服务尚未配置',
+    MATCHING_DISPATCH_UNAVAILABLE: '机会撮合重算服务暂时不可用',
     CONTENT_SAFETY_REQUIRED: '内容安全检查未通过，暂不能发布',
+    CONTENT_REFUND_NOT_AVAILABLE: '内容已访问或已超过可退款时间',
     INSUFFICIENT_BALANCE: '调整后余额不能小于零',
     PHONE_ENCRYPTION_NOT_CONFIGURED: '手机号服务尚未配置',
     PHONE_CIPHERTEXT_INVALID: '手机号数据无法读取',
@@ -159,6 +180,8 @@ function errorResponse(error) {
     BADGE_IN_USE: '勋章仍在佩戴中，请用户先取消佩戴',
     BADGE_EQUIPPED: '勋章仍在佩戴中，暂时不能撤销',
     BADGE_KEY_CONFLICT: '勋章标识已存在',
+    KNOWLEDGE_SOURCE_FETCH_UNAVAILABLE: '当前信息源不能自动抓取，请检查配置',
+    KNOWLEDGE_SOURCE_RESPONSE_INVALID: '信息源返回了无效内容',
   }
   if (known[code] || error instanceof AdminError) {
     const responseError = {

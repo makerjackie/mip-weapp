@@ -398,6 +398,7 @@ function visibility(value) {
     industry: input.industry !== false,
     abilities: input.abilities !== false,
     primaryBranch: input.primaryBranch !== false,
+    influence: input.influence === true,
   }
 }
 

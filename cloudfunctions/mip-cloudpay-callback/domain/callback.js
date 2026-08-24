@@ -85,17 +85,11 @@ function parseAttach(value) {
 }
 
 function paymentSucceeded(resource) {
-  const returnCode = pick(resource, 'returnCode', 'return_code')
-  const resultCode = pick(resource, 'resultCode', 'result_code')
-  const tradeState = pick(resource, 'tradeState', 'trade_state')
-  return tradeState === 'SUCCESS' || (returnCode === 'SUCCESS' && resultCode === 'SUCCESS')
+  return pick(resource, 'tradeState', 'trade_state') === 'SUCCESS'
 }
 
 function refundSucceeded(resource) {
-  const returnCode = pick(resource, 'returnCode', 'return_code')
-  const resultCode = pick(resource, 'resultCode', 'result_code')
-  const refundStatus = pick(resource, 'refundStatus', 'refund_status')
-  return refundStatus === 'SUCCESS' || (returnCode === 'SUCCESS' && resultCode === 'SUCCESS')
+  return pick(resource, 'refundStatus', 'refund_status') === 'SUCCESS'
 }
 
 function validUuid(value) {

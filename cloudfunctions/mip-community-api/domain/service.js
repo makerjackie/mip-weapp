@@ -1,6 +1,7 @@
 'use strict'
 
 const { randomUUID } = require('node:crypto')
+const { createKnowledgeService } = require('./knowledge')
 
 const REPORT_CATEGORIES = new Set([
   'SPAM',
@@ -25,6 +26,13 @@ function createCommunityService(database, options) {
   const readProfileRef = options.readProfileRef
   const createProfileRef = options.createProfileRef
   const profileRefSecret = options.profileRefSecret
+  const knowledge = createKnowledgeService(database, {
+    assertSafe: options.assertKnowledgeSafe,
+    catalogStage: options.catalogStage,
+    createProfileRef,
+    id: options.id,
+    profileRefSecret,
+  })
 
   function targetUserId(profileRef, appId) {
     const normalized = typeof profileRef === 'string' ? profileRef.trim() : ''
@@ -230,6 +238,7 @@ function createCommunityService(database, options) {
   }
 
   return {
+    ...knowledge,
     blockProfile: (caller, input) => setBlock(caller, input, true),
     getAnnouncement,
     getRelationship,

@@ -188,6 +188,7 @@ module.exports = {
   iso,
   jsonObject,
   mutualBlockFilter,
+  normalizeIdempotencyKey,
   stringList,
   stringValue,
   uuid,

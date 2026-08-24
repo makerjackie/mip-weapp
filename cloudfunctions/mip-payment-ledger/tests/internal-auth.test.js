@@ -73,4 +73,22 @@ describe('mip payment ledger internal authentication', () => {
       now: () => now,
     }), 'app-1')
   })
+
+  it('signs the provider CHANGE manual-review transition', () => {
+    const event = {
+      action: 'markRefundManualReview',
+      appId: 'app-1',
+      signedAt: now,
+      nonce: 'nonce-1',
+      refundId: 'refund-1',
+      merchantRefundNo: 'MIPR1',
+      reasonCode: 'CHANGE',
+    }
+    event.signature = sign(event)
+    assert.equal(assertInternalRequest(event, {
+      allowedAppIds: new Set(['app-1']),
+      secrets: [secret],
+      now: () => now,
+    }), 'app-1')
+  })
 })

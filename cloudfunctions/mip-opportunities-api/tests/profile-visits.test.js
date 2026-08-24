@@ -25,6 +25,9 @@ describe('profile visits', () => {
       async one(sql) {
         if (sql.includes('FROM mip_idempotency_keys')) return idempotency
         if (sql.includes('FROM mip_users') && sql.includes('FOR UPDATE')) return { id: visitorId, status: 'ACTIVE' }
+        if (sql.includes('FROM mip_users visitor') && sql.includes('INNER JOIN mip_profiles profile')) {
+          return { user_id: visitorId }
+        }
         if (sql.includes('FROM mip_users target')) return { id: ownerId }
         throw new Error(`unexpected one: ${sql}`)
       },
@@ -49,6 +52,41 @@ describe('profile visits', () => {
     assert.deepEqual(result, { recorded: true })
     assert.match(writes.find(call => call.sql.includes('INSERT INTO mip_profile_visits')).sql, /ON DUPLICATE KEY UPDATE/)
     assert.equal(JSON.stringify(result).includes(ownerId), false)
+  })
+
+  it('does not record visits from active users without a displayable profile', async () => {
+    let idempotency
+    const writes = []
+    const tx = {
+      async one(sql) {
+        if (sql.includes('FROM mip_idempotency_keys')) return idempotency
+        if (sql.includes('FROM mip_users') && sql.includes('FOR UPDATE')) {
+          return { id: visitorId, status: 'ACTIVE' }
+        }
+        if (sql.includes('FROM mip_users visitor') && sql.includes('INNER JOIN mip_profiles profile')) {
+          return null
+        }
+        throw new Error(`unexpected one: ${sql}`)
+      },
+      async query(sql, params) {
+        writes.push({ sql, params })
+        if (sql.includes('INSERT INTO mip_idempotency_keys')) {
+          idempotency = { request_hash: params[5], status: 'RUNNING' }
+        }
+        if (sql.includes('UPDATE mip_idempotency_keys')) idempotency.status = 'COMPLETED'
+        return { affectedRows: 1 }
+      },
+    }
+    const result = await recordProfileVisit({ transaction: work => work(tx) }, {
+      appId,
+      userId: visitorId,
+      profileRefSecret: pepper,
+    }, {
+      profileRef: createProfileRef({ appId, userId: ownerId }, pepper),
+      visitKey: 'visit-key-no-profile',
+    })
+    assert.deepEqual(result, { recorded: false })
+    assert.equal(writes.some(call => call.sql.includes('INSERT INTO mip_profile_visits')), false)
   })
 
   it('groups visits by visitor, filters inactive visitors and returns opaque profile refs', async () => {
@@ -87,9 +125,12 @@ describe('profile visits', () => {
     assert.equal(calls.length, 1)
     assert.deepEqual(oneCalls[0].params, [appId, ownerId, appId, ownerId, ownerId])
     assert.match(oneCalls[0].sql, /unread_groups/)
-    assert.deepEqual(oneCalls[1].params, [appId, ownerId])
+    assert.match(oneCalls[0].sql, /INNER JOIN mip_profiles visitor_profile/)
+    assert.deepEqual(oneCalls[1].params, [appId, ownerId, ownerId, ownerId])
     assert.match(oneCalls[1].sql, /FROM mip_profile_visits/)
-    assert.doesNotMatch(oneCalls[1].sql, /mip_users/)
+    assert.match(oneCalls[1].sql, /visitor\.status = 'ACTIVE'/)
+    assert.match(oneCalls[1].sql, /INNER JOIN mip_profiles visitor_profile/)
+    assert.match(oneCalls[1].sql, /FROM mip_user_blocks visibility_block/)
 
     const cursor = encodeVisitorCursor('2026-08-24T03:00:00.000Z', visitorId, owner)
     await listProfileVisitors(database, owner, { cursor, limit: 20 })
@@ -104,7 +145,7 @@ describe('profile visits', () => {
       visitorId,
     ])
     assert.deepEqual(oneCalls[2].params, [appId, ownerId, appId, ownerId, ownerId])
-    assert.deepEqual(oneCalls[3].params, [appId, ownerId])
+    assert.deepEqual(oneCalls[3].params, [appId, ownerId, ownerId, ownerId])
   })
 
   it('round-trips a visitor cursor without placing a raw id in the cursor', () => {
@@ -117,10 +158,14 @@ describe('profile visits', () => {
     let idempotency
     let updated = 0
     const tx = {
+      lastReadSql: '',
       async one(sql) {
         if (sql.includes('FROM mip_idempotency_keys')) return idempotency
         if (sql.includes('FROM mip_users') && sql.includes('FOR UPDATE')) return { id: ownerId, status: 'ACTIVE' }
-        if (sql.includes('MAX(v.visited_at)')) return { last_visited_at: '2026-08-24T03:00:00.000Z' }
+        if (sql.includes('MAX(v.visited_at)')) {
+          this.lastReadSql = sql
+          return { last_visited_at: '2026-08-24T03:00:00.000Z' }
+        }
         if (sql.includes('MAX(read_at)')) return { read_at: '2026-08-24T04:00:00.000Z' }
         throw new Error(`unexpected one: ${sql}`)
       },
@@ -137,5 +182,6 @@ describe('profile visits', () => {
     })
     assert.equal(result.profileRef, visitorRef)
     assert.equal(updated, 1)
+    assert.match(tx.lastReadSql || '', /INNER JOIN mip_profiles visitor_profile/)
   })
 })

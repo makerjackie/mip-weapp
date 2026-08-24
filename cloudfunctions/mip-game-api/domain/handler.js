@@ -3,6 +3,11 @@
 const { assertNoClientScore } = require('./validation')
 
 const actions = Object.freeze({
+  listBlindBoxes: (service, caller) => service.listBlindBoxes(caller),
+  getBlindBox: (service, caller, event) => service.getBlindBox(caller, event),
+  drawBlindBox: (service, caller, event) => service.drawBlindBox(caller, event),
+  getBlindBoxInventory: (service, caller, event) => service.getBlindBoxInventory(caller, event),
+  listBlindBoxCoinEntries: (service, caller, event) => service.listBlindBoxCoinEntries(caller, event),
   getOverview: (service, caller, event) => service.getOverview(caller, event),
   getRules: (service, caller, event) => service.getRules(caller, event),
   getTeam: (service, caller, event) => service.getTeam(caller, event),
@@ -21,15 +26,27 @@ const actions = Object.freeze({
   'admin.saveWeeklyMatch': (service, caller, event) => service.saveWeeklyMatch(caller, event),
   'admin.finalizeWeeklyMatch': (service, caller, event) => service.finalizeWeeklyMatch(caller, event),
   'admin.generateRankingSnapshot': (service, caller, event) => service.generateRankingSnapshot(caller, event),
+  'admin.listBlindBoxCatalogs': (service, caller) => service.adminListBlindBoxCatalogs(caller),
+  'admin.saveBlindBoxCatalog': (service, caller, event) => service.adminSaveBlindBoxCatalog(caller, event),
+  'admin.changeBlindBoxCatalogStatus': (service, caller, event) => service.adminChangeBlindBoxCatalogStatus(caller, event),
+  'admin.listBlindBoxCards': (service, caller, event) => service.adminListBlindBoxCards(caller, event),
+  'admin.saveBlindBoxCard': (service, caller, event) => service.adminSaveBlindBoxCard(caller, event),
+  'admin.changeBlindBoxCardStatus': (service, caller, event) => service.adminChangeBlindBoxCardStatus(caller, event),
 })
 
 const messages = Object.freeze({
   AUTH_REQUIRED: '登录后可继续操作',
   AGREEMENT_REQUIRED: '请先确认服务协议和隐私协议',
+  BLIND_BOX_DAILY_LIMIT_REACHED: '今日抽取次数已达到上限',
+  BLIND_BOX_PITY_STOCK_UNAVAILABLE: '当前库存不能满足保底规则',
+  BLIND_BOX_STOCK_CONFLICT: '库存数量低于已抽取数量，请刷新后重试',
+  BLIND_BOX_STOCK_UNAVAILABLE: '当前没有可抽取的卡牌',
   CONFLICT: '数据已变化，请刷新后重试',
   FORBIDDEN: '当前没有权限执行此操作',
   IDENTITY_CONFIG_REQUIRED: '身份服务尚未配置',
+  IDEMPOTENCY_CONFLICT: '该请求标识已用于其他盲盒',
   INVALID_STATE: '当前状态不支持此操作',
+  INSUFFICIENT_GAME_COIN_BALANCE: '游戏币余额不足',
   MEMBER_NOT_FOUND: '部分成员当前不可用，请刷新后重试',
   MEMBERSHIP_REQUIRED: '当前功能仅对有效会员开放',
   NOT_FOUND: '相关记录不存在',

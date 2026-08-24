@@ -1,5 +1,7 @@
 'use strict'
 
+const { randomUUID } = require('node:crypto')
+
 function createOpportunityCommentAdminRepository(database, options = {}) {
   const lockMutation = options.lockMutationAuthorization
   const assertScope = options.assertMutationScope
@@ -122,7 +124,8 @@ function createOpportunityCommentAdminRepository(database, options = {}) {
     return database.transaction(async (tx) => {
       const authorization = await lockMutation(tx, input)
       const comment = await tx.one(
-        `SELECT comment.opportunity_id, comment.status, comment.version, opportunity.branch_id
+        `SELECT comment.opportunity_id, comment.author_user_id, comment.status, comment.version,
+                opportunity.branch_id, opportunity.owner_user_id
          FROM mip_opportunity_comments comment
          INNER JOIN mip_opportunities opportunity
            ON opportunity.app_id = comment.app_id AND opportunity.id = comment.opportunity_id
@@ -150,6 +153,16 @@ function createOpportunityCommentAdminRepository(database, options = {}) {
       )
       if (Number(result.affectedRows) !== 1) throw codeError('CONFLICT')
       await writeAudit(tx, input.audit(comment.opportunity_id, status))
+      if (status === 'PUBLISHED' && comment.author_user_id !== comment.owner_user_id) {
+        await tx.query(
+          `INSERT INTO mip_outbox_events (
+           id, app_id, aggregate_type, aggregate_id, event_type,
+             source_version, payload_json
+           ) VALUES (?, ?, 'OPPORTUNITY_COMMENT', ?,
+             'opportunity.comment_published', ?, JSON_OBJECT())`,
+          [randomUUID(), input.appId, input.commentId, input.expectedVersion + 1],
+        )
+      }
       return { id: input.commentId, status, version: input.expectedVersion + 1 }
     })
   }

@@ -24,6 +24,9 @@ function normalizeTask(value) {
   }
   const assignmentMode = boundedText(value.assignmentMode || 'ALL', 16).toUpperCase()
   if (!['ALL', 'SELECTED'].includes(assignmentMode)) throw new Error('VALIDATION_FAILED')
+  const eligibleLevelIds = Object.prototype.hasOwnProperty.call(value, 'eligibleLevelIds')
+    ? normalizeEligibleLevelIds(value.eligibleLevelIds)
+    : undefined
   return {
     name,
     content,
@@ -32,7 +35,13 @@ function normalizeTask(value) {
     assignmentMode,
     endsAt: optionalDate(value.endsAt),
     templateAssetId: value.templateAssetId ? requiredId(value.templateAssetId) : null,
+    eligibleLevelIds,
   }
+}
+
+function normalizeEligibleLevelIds(value) {
+  if (!Array.isArray(value) || value.length > 50) throw new Error('VALIDATION_FAILED')
+  return [...new Set(value.map(requiredId))]
 }
 
 function normalizeAssignmentInput(value = {}) {
@@ -115,6 +124,7 @@ module.exports = {
   encodeCursor,
   expectedVersion,
   normalizeCompletionFilters,
+  normalizeEligibleLevelIds,
   normalizeAssignmentInput,
   normalizeMemberFilters,
   normalizeTask,

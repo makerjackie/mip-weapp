@@ -63,7 +63,8 @@ const definitions = Object.freeze({
 function orderColumns() {
   return [
     ['id', '订单编号'], ['nickname', '用户昵称'], ['orderType', '订单类型'], ['resourceId', '业务编号'],
-    ['merchantOrderNoMasked', '商户订单号'], ['amountCents', '金额（分）'], ['refundedAmountCents', '已退款金额（分）'],
+    ['resourceTitle', '活动/会员/内容商品名'], ['merchantOrderNoMasked', '商户订单号'],
+    ['providerTransactionIdMasked', '微信支付单号（脱敏）'], ['amountCents', '金额（分）'], ['refundedAmountCents', '已退款金额（分）'],
     ['currency', '币种'], ['status', '订单状态'], ['refundStatus', '退款状态'], ['paidAt', '支付时间'], ['createdAt', '创建时间'],
     ['entitlementStartsAt', '会员权益开始时间'], ['entitlementEndsAt', '会员权益结束时间'],
   ]

@@ -101,6 +101,34 @@ function createNotificationsRepository(database) {
     })
   }
 
+  async function createCustomerServiceGrant(input) {
+    return database.transaction(async (tx) => {
+      await lockActiveUser(tx, input.appId, input.userId)
+      await tx.query(
+        `UPDATE mip_notification_grants
+         SET status = 'REVOKED'
+         WHERE app_id = ? AND user_id = ? AND channel = 'WECHAT_CUSTOMER_SERVICE'
+           AND template_key = ? AND status = 'AVAILABLE'`,
+        [input.appId, input.userId, input.templateKey],
+      )
+      await tx.query(
+        `INSERT INTO mip_notification_grants (
+           id, app_id, user_id, channel, template_key, status,
+           recipient_hash, recipient_ciphertext, granted_at, expires_at
+         ) VALUES (?, ?, ?, 'WECHAT_CUSTOMER_SERVICE', ?, 'AVAILABLE', ?, ?, UTC_TIMESTAMP(3), ?)`,
+        [
+          input.id,
+          input.appId,
+          input.userId,
+          input.templateKey,
+          input.recipientHash,
+          input.recipientCiphertext,
+          input.expiresAt,
+        ],
+      )
+    })
+  }
+
   async function revokeGrants(appId, userId, templateKey) {
     return database.transaction(async (tx) => {
       await lockActiveUser(tx, appId, userId)
@@ -114,7 +142,7 @@ function createNotificationsRepository(database) {
     })
   }
 
-  return { createGrant, listInbox, markRead, revokeGrants }
+  return { createCustomerServiceGrant, createGrant, listInbox, markRead, revokeGrants }
 }
 
 async function lockActiveUser(adapter, appId, userId) {

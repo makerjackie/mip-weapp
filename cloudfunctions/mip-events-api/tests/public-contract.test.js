@@ -105,6 +105,36 @@ describe('MIP public event detail', () => {
     }
   })
 
+  it('projects a server-authorized refund retry without exposing manual-review refunds', async () => {
+    const base = {
+      registration_status: 'CANCELLATION_PENDING',
+      order_status: 'REFUND_PENDING',
+      refund_status: 'PROCESSING',
+    }
+    const retryable = await getEvent(eventDatabase(eventRow(base)), {
+      appId: 'wx-app',
+      userId: 'participant-1',
+      eventId: 'event-1',
+      now: new Date('2026-08-24T00:00:00.000Z'),
+      tokenSecret: '',
+      profileRefSecret: 'public-organizer-profile-ref-pepper-more-than-32-characters',
+    })
+    assert.equal(retryable.canRetryRefund, true)
+
+    const manual = await getEvent(eventDatabase(eventRow({
+      ...base,
+      refund_last_error_code: 'MANUAL_REVIEW_CHANGE',
+    })), {
+      appId: 'wx-app',
+      userId: 'participant-1',
+      eventId: 'event-1',
+      now: new Date('2026-08-24T00:00:00.000Z'),
+      tokenSecret: '',
+      profileRefSecret: 'public-organizer-profile-ref-pepper-more-than-32-characters',
+    })
+    assert.equal(manual.canRetryRefund, false)
+  })
+
   it('shows the locked invitation source without returning inviter identities', async () => {
     const userSource = await getEvent(eventDatabase(eventRow({
       registration_status: 'REGISTERED',

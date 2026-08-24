@@ -11,6 +11,7 @@ const {
   uuid,
 } = require('./common')
 const { assertSelectableTags } = require('./opportunities')
+const { loadProfileInfluenceSummary } = require('./profile-influence')
 
 const PEOPLE_KINDS = new Set(['ALL', 'PLAYER', 'GUEST'])
 const PEOPLE_SEARCH_SCOPES = new Set(['GLOBAL', 'PLAYER'])
@@ -127,6 +128,7 @@ function visibleFields(value) {
     industry: source.industry !== false,
     abilities: source.abilities !== false,
     primaryBranch: source.primaryBranch !== false,
+    influence: source.influence === true,
   }
 }
 
@@ -394,7 +396,8 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
   )
   if (!row) throw new Error('NOT_FOUND')
 
-  const [tags, badges, cooperationCards, superCases, opportunities, interest] = await Promise.all([
+  const profileVisibility = visibleFields(row.visibility_json)
+  const [tags, badges, cooperationCards, superCases, opportunities, interest, influence] = await Promise.all([
     loadProfileTags(database, caller.appId, [targetUserId]),
     loadPublicBadges(database, caller.appId, [targetUserId]),
     database.query(
@@ -438,6 +441,9 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
           [caller.appId, caller.userId, targetUserId],
         )
       : Promise.resolve(null),
+    profileVisibility.influence
+      ? loadProfileInfluenceSummary(database, { appId: caller.appId, profileUserId: targetUserId })
+      : Promise.resolve(undefined),
   ])
 
   return {
@@ -482,6 +488,7 @@ async function getPublicProfileAggregate(database, caller, input = {}) {
       publishedAt: iso(item.published_at),
     })),
     interestActive: interest?.status === 'ACTIVE',
+    ...(influence ? { influence } : {}),
   }
 }
 

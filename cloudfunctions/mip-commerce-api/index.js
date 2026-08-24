@@ -19,7 +19,7 @@ const allowedAppIds = new Set(
     .filter(Boolean),
 )
 const catalogStage = process.env.MIP_CATALOG_STAGE === 'LIVE' ? 'LIVE' : 'TEST'
-const outboxMutationActions = new Set(['createCheckout', 'requestRefund'])
+const outboxMutationActions = new Set(['createCheckout', 'createKnowledgeCheckout', 'requestRefund'])
 const outboxWakeup = createOutboxWakeup({
   cloud,
   functionName: process.env.MIP_OUTBOX_FUNCTION_NAME,
@@ -34,6 +34,7 @@ const service = createCommerceService({
   repository,
   catalogStage,
   invitationSecret: process.env.MIP_IDENTITY_PEPPER,
+  paymentMode: process.env.MIP_PAYMENT_MODE || 'disabled',
   createInvitationCode: input => createMembershipInvitationCode({ ...input, cloud }),
 })
 

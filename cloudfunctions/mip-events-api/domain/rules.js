@@ -19,6 +19,12 @@ const activeRegistrationStatuses = new Set([
 ])
 
 const capacityStatuses = new Set(['REGISTERED', 'CANCELLATION_PENDING', 'ATTENDED'])
+const cancellableRegistrationStatuses = new Set([
+  'PENDING_REVIEW',
+  'WAITLISTED',
+  'PAYMENT_PENDING',
+  'REGISTERED',
+])
 
 function asDate(value, code = 'DATA_INTEGRITY') {
   const date = value instanceof Date ? value : new Date(value)
@@ -66,13 +72,19 @@ function decideRegistration({ event, userKind, capacityCount, activeHoldCount, n
 }
 
 function assertCanCancel(status) {
-  if (!activeRegistrationStatuses.has(status) || status === 'ATTENDED') {
+  if (!cancellableRegistrationStatuses.has(status)) {
     throw new DomainError('CONFLICT', '当前报名状态不能取消')
   }
 }
 
 function assertCheckInAllowed({ event, registration, credential, now = new Date() }) {
-  if (!registration || !['REGISTERED', 'ATTENDED'].includes(registration.status)) {
+  if (!registration || ['CANCELLED', 'REJECTED'].includes(registration.status)) {
+    throw new DomainError('REGISTRATION_REQUIRED', '请先完成活动报名')
+  }
+  if (registration.status === 'PAYMENT_PENDING') {
+    throw new DomainError('REGISTRATION_PENDING', '报名支付尚未确认')
+  }
+  if (!['REGISTERED', 'ATTENDED'].includes(registration.status)) {
     throw new DomainError('FORBIDDEN', '当前没有可签到的报名资格')
   }
   if (!credential || credential.status !== 'ACTIVE') {
@@ -155,6 +167,7 @@ function grantsCapability(bindings, capability, event) {
 module.exports = {
   DomainError,
   activeRegistrationStatuses,
+  cancellableRegistrationStatuses,
   assertCanCancel,
   assertCheckInAllowed,
   capacityStatuses,

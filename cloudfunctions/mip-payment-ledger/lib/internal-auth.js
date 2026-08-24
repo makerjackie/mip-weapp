@@ -21,6 +21,9 @@ const signedFieldsByAction = Object.freeze({
   markRefundFailed: [
     'action', 'appId', 'signedAt', 'nonce', 'refundId', 'merchantRefundNo', 'reasonCode',
   ],
+  markRefundManualReview: [
+    'action', 'appId', 'signedAt', 'nonce', 'refundId', 'merchantRefundNo', 'reasonCode',
+  ],
   applyRefundCallback: [
     'action', 'appId', 'signedAt', 'nonce', 'refundId', 'merchantOrderNo',
     'merchantRefundNo', 'providerRefundId', 'amountCents',

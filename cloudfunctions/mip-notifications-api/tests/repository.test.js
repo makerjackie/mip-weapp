@@ -70,6 +70,15 @@ test('rejects notification writes for closed callers before changing user data',
       recipientHash: 'hash',
       recipientCiphertext: Buffer.from('ciphertext'),
     }),
+    repository => repository.createCustomerServiceGrant({
+      id: '30000000-0000-4000-8000-000000000002',
+      appId,
+      userId,
+      templateKey: 'CUSTOMER_SERVICE_TEXT',
+      recipientHash: 'hash',
+      recipientCiphertext: Buffer.from('ciphertext'),
+      expiresAt: new Date('2026-08-26T00:00:00.000Z'),
+    }),
     repository => repository.revokeGrants(appId, userId, 'EVENT_REMINDER'),
   ]
   for (const operation of operations) {

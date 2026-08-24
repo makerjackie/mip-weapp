@@ -4,6 +4,11 @@ const { lockActiveContributor } = require('../lib/auth')
 const { createProfileRef } = require('../lib/profile-ref')
 const { listProfileVisitors, markProfileVisitorRead } = require('./profile-visits')
 const {
+  listActiveInfluenceInterests,
+  listInfluenceGuests,
+  listInfluenceInteractions,
+} = require('./profile-influence')
+const {
   appendAudit,
   decodeCursor,
   encodeCursor,
@@ -14,7 +19,15 @@ const {
   uuid,
 } = require('./common')
 
-const categories = new Set(['REFERRAL', 'PROFILE_INTEREST', 'OUTBOUND_INTEREST', 'VISITOR'])
+const categories = new Set([
+  'REFERRAL',
+  'PROFILE_INTEREST',
+  'OUTBOUND_INTEREST',
+  'VISITOR',
+  'GUEST',
+  'INTERACTION',
+  'ACTIVE_INTEREST',
+])
 
 function normalizeListInput(value = {}) {
   const category = String(value.category || '').trim().toUpperCase()
@@ -22,7 +35,7 @@ function normalizeListInput(value = {}) {
   const parsedLimit = Number(value.limit)
   return {
     category,
-    cursor: category === 'VISITOR' ? value.cursor : decodeCursor(value.cursor),
+    cursor: ['VISITOR', 'GUEST'].includes(category) ? value.cursor : decodeCursor(value.cursor),
     limit: Math.min(30, Math.max(1, Number.isInteger(parsedLimit) ? parsedLimit : 20)),
   }
 }
@@ -106,6 +119,15 @@ async function listReceivedInteractions(database, caller, rawInput = {}) {
   const input = normalizeListInput(rawInput)
   if (input.category === 'VISITOR') {
     return { category: input.category, ...(await listProfileVisitors(database, caller, input)) }
+  }
+  if (input.category === 'GUEST') {
+    return listInfluenceGuests(database, caller, input)
+  }
+  if (input.category === 'INTERACTION') {
+    return listInfluenceInteractions(database, caller, input)
+  }
+  if (input.category === 'ACTIVE_INTEREST') {
+    return listActiveInfluenceInterests(database, caller, input)
   }
   if (input.category === 'OUTBOUND_INTEREST') {
     const rows = await listOutboundInterests(database, caller, input)

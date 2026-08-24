@@ -27,7 +27,7 @@ function normalizeMessage(input) {
   }
   const target = buildTarget(input.targetType, input.targetId)
   const external = normalizeExternal(input.external)
-  if (external && !target) {
+  if (external && !target && external.channel !== 'WECHAT_CUSTOMER_SERVICE') {
     throw new Error('VALIDATION_FAILED')
   }
   return {
@@ -44,7 +44,11 @@ function normalizeMessage(input) {
 function normalizeExternal(value) {
   if (value === undefined || value === null) return null
   if (!value || typeof value !== 'object' || Array.isArray(value)
-    || value.channel !== 'WECHAT_SUBSCRIPTION'
+    || ![
+      'WECHAT_SUBSCRIPTION',
+      'WECHAT_CUSTOMER_SERVICE',
+      'WECHAT_SERVICE_ACCOUNT',
+    ].includes(value.channel)
     || !/^[A-Z][A-Z0-9_]{2,79}$/.test(text(value.templateKey))) {
     throw new Error('VALIDATION_FAILED')
   }
@@ -55,11 +59,19 @@ function normalizeExternal(value) {
   }
   const normalizedFields = Object.fromEntries(Object.entries(fields).map(([key, item]) => {
     const fieldValue = text(item)
-    if (!/^[a-z][a-zA-Z0-9_]{0,39}$/.test(key) || !fieldValue || fieldValue.length > 100) {
+    const limit = value.channel === 'WECHAT_CUSTOMER_SERVICE' && key === 'content' ? 600 : 100
+    if (!/^[a-z][a-zA-Z0-9_]{0,39}$/.test(key) || !fieldValue || fieldValue.length > limit) {
       throw new Error('VALIDATION_FAILED')
     }
     return [key, fieldValue]
   }))
+  if (value.channel === 'WECHAT_CUSTOMER_SERVICE'
+    && (text(value.templateKey) !== 'CUSTOMER_SERVICE_TEXT'
+      || Object.keys(normalizedFields).length !== 1
+      || !normalizedFields.content
+      || normalizedFields.content.length > 600)) {
+    throw new Error('VALIDATION_FAILED')
+  }
   return {
     channel: value.channel,
     templateKey: text(value.templateKey),

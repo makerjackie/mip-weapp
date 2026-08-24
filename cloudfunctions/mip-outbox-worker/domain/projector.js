@@ -1,6 +1,7 @@
 'use strict'
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const KNOWLEDGE_RECIPIENT_PAGE_SIZE = 50
 
 const SUBSTANTIVE_EVENT_FIELDS = new Set([
   'accessType',
@@ -41,6 +42,8 @@ const NO_PROJECTION_EVENT_TYPES = new Set([
   'identity.user_registered',
   'membership.order_created',
   'membership.refund_requested',
+  'knowledge.order_created',
+  'knowledge.refund_requested',
   'opportunity.published',
   'task.completed',
   'task.deleted',
@@ -57,6 +60,14 @@ async function projectEvent(database, event) {
       return projectMembershipPayment(database, event)
     case 'membership.refund_confirmed':
       return projectMembershipRefund(database, event)
+    case 'knowledge.payment_confirmed':
+      return projectKnowledgePayment(database, event)
+    case 'knowledge.refund_confirmed':
+      return projectKnowledgeRefund(database, event)
+    case 'knowledge.comment_published':
+      return projectKnowledgeComment(database, event)
+    case 'knowledge.content_published':
+      return projectKnowledgePublication(database, event)
     case 'event.registration_submitted':
     case 'event.registration_confirmed':
     case 'event.registration_waitlisted':
@@ -89,11 +100,222 @@ async function projectEvent(database, event) {
       return projectInterest(database, event)
     case 'super_case.published':
       return projectSuperCasePublished(database, event)
+    case 'matching.recommendation_ready':
+      return projectMatchingRecommendation(database, event)
+    case 'opportunity.comment_published':
+      return projectOpportunityComment(database, event)
     default:
       return NO_PROJECTION_EVENT_TYPES.has(event.event_type)
         ? projection([], [], 'NO_PROJECTION_REQUIRED')
         : { supported: false, notifications: [], growth: [], reason: 'EVENT_TYPE_UNSUPPORTED' }
   }
+}
+
+async function projectKnowledgePayment(database, event) {
+  assertAggregate(event, 'ORDER')
+  const row = await database.one(
+    `SELECT order_row.id AS order_id, order_row.user_id, content.id AS content_id
+     FROM mip_orders order_row
+     INNER JOIN mip_knowledge_contents content
+       ON content.app_id = order_row.app_id AND content.id = order_row.resource_id
+     INNER JOIN mip_knowledge_entitlements entitlement
+       ON entitlement.app_id = order_row.app_id AND entitlement.order_id = order_row.id
+        AND entitlement.status = 'ACTIVE'
+     INNER JOIN mip_users user
+       ON user.app_id = order_row.app_id AND user.id = order_row.user_id AND user.status = 'ACTIVE'
+     WHERE order_row.app_id = ? AND order_row.id = ? AND order_row.order_type = 'CONTENT'
+       AND order_row.status = 'PAID'`,
+    [event.app_id, event.aggregate_id],
+  )
+  if (!row) return projection([], [], 'FACT_NO_LONGER_CURRENT')
+  return projection([
+    message(event, row.user_id, 'content-payment-confirmed', {
+      messageType: 'MEMBERSHIP',
+      title: '内容支付已确认',
+      body: '内容访问权益已生效。',
+      targetType: 'KNOWLEDGE',
+      targetId: row.content_id,
+    }),
+  ], [], 'PROJECTED')
+}
+
+async function projectKnowledgeRefund(database, event) {
+  assertAggregate(event, 'REFUND')
+  const row = await database.one(
+    `SELECT refund.id AS refund_id, order_row.id AS order_id,
+            order_row.user_id, order_row.resource_id AS content_id
+     FROM mip_refunds refund
+     INNER JOIN mip_orders order_row
+       ON order_row.app_id = refund.app_id AND order_row.id = refund.order_id
+        AND order_row.order_type = 'CONTENT'
+     INNER JOIN mip_users user
+       ON user.app_id = order_row.app_id AND user.id = order_row.user_id AND user.status = 'ACTIVE'
+     WHERE refund.app_id = ? AND refund.id = ? AND refund.status = 'SUCCEEDED'`,
+    [event.app_id, event.aggregate_id],
+  )
+  if (!row) return projection([], [], 'FACT_NO_LONGER_CURRENT')
+  return projection([
+    message(event, row.user_id, 'content-refund-confirmed', {
+      messageType: 'MEMBERSHIP',
+      title: '内容退款已完成',
+      body: '退款结果和内容访问权益已更新。',
+      targetType: 'KNOWLEDGE',
+      targetId: row.content_id,
+    }),
+  ], [], 'PROJECTED')
+}
+
+async function projectKnowledgeComment(database, event) {
+  assertAggregate(event, 'KNOWLEDGE_COMMENT')
+  const row = await database.one(
+    `SELECT comment.author_user_id, content.created_by_user_id, content.id AS content_id
+     FROM mip_content_comments comment
+     INNER JOIN mip_knowledge_contents content
+       ON content.app_id = comment.app_id AND content.id = comment.target_id
+        AND comment.target_type = 'KNOWLEDGE' AND content.status = 'PUBLISHED'
+     INNER JOIN mip_users recipient
+       ON recipient.app_id = content.app_id AND recipient.id = content.created_by_user_id
+        AND recipient.status = 'ACTIVE'
+     LEFT JOIN mip_user_notification_preferences preference
+       ON preference.app_id = recipient.app_id AND preference.user_id = recipient.id
+     WHERE comment.app_id = ? AND comment.id = ? AND comment.status = 'PUBLISHED'
+       AND content.created_by_user_id <> comment.author_user_id
+       AND COALESCE(preference.comment_notifications_enabled, 1) = 1
+       AND NOT EXISTS (
+         SELECT 1 FROM mip_user_blocks block
+         WHERE block.app_id = comment.app_id AND block.status = 'ACTIVE'
+           AND ((block.blocker_user_id = comment.author_user_id
+             AND block.blocked_user_id = content.created_by_user_id)
+             OR (block.blocker_user_id = content.created_by_user_id
+             AND block.blocked_user_id = comment.author_user_id))
+       )`,
+    [event.app_id, event.aggregate_id],
+  )
+  if (!row) return projection([], [], 'FACT_NO_LONGER_CURRENT')
+  return projection([
+    message(event, row.created_by_user_id, 'knowledge-comment-published', {
+      messageType: 'OPERATIONS',
+      title: '内容收到新评论',
+      body: '你发布的内容收到一条新评论。',
+      targetType: 'KNOWLEDGE',
+      targetId: row.content_id,
+    }),
+  ], [], 'PROJECTED')
+}
+
+async function projectKnowledgePublication(database, event) {
+  assertAggregate(event, 'KNOWLEDGE_CONTENT')
+  const content = await database.one(
+    `SELECT id, title, content_type, version FROM mip_knowledge_contents
+     WHERE app_id = ? AND id = ? AND status = 'PUBLISHED' AND version = ?`,
+    [event.app_id, event.aggregate_id, event.source_version],
+  )
+  if (!content || content.content_type !== 'HOT_NEWS') {
+    return projection([], [], 'FACT_NO_LONGER_CURRENT')
+  }
+  const cursor = knowledgeRecipientCursor(event)
+  const recipients = await database.query(
+    `SELECT user.id AS user_id
+     FROM mip_users user
+     INNER JOIN mip_user_notification_preferences preference
+       ON preference.app_id = user.app_id AND preference.user_id = user.id
+        AND preference.hotspot_notifications_enabled = 1
+     WHERE user.app_id = ? AND user.status = 'ACTIVE' AND user.id > ?
+     ORDER BY user.id LIMIT ${KNOWLEDGE_RECIPIENT_PAGE_SIZE + 1}`,
+    [event.app_id, cursor],
+  )
+  const page = recipients.slice(0, KNOWLEDGE_RECIPIENT_PAGE_SIZE)
+  const continuation = recipients.length > page.length
+    ? { knowledgeRecipientCursor: page.at(-1).user_id }
+    : null
+  return projection(page.map(row => message(event, row.user_id, `hotspot:${row.user_id}`, {
+    messageType: 'OPERATIONS',
+    title: '热点内容已更新',
+    body: boundedText(content.title, 100),
+    targetType: 'KNOWLEDGE',
+    targetId: content.id,
+  })), [], page.length ? 'PROJECTED' : 'NO_EFFECTIVE_RECIPIENTS', continuation)
+}
+
+async function projectMatchingRecommendation(database, event) {
+  assertAggregate(event, 'MATCHING_REQUEST')
+  const row = await database.one(
+    `SELECT request.requester_user_id, request.result_count,
+            source.title AS source_title
+     FROM mip_matching_requests request
+     INNER JOIN mip_opportunities source
+       ON source.app_id = request.app_id AND source.id = request.source_opportunity_id
+         AND source.status = 'PUBLISHED' AND source.version = request.source_version
+     INNER JOIN mip_users recipient
+       ON recipient.app_id = request.app_id AND recipient.id = request.requester_user_id
+         AND recipient.status = 'ACTIVE'
+     LEFT JOIN mip_user_notification_preferences preference
+       ON preference.app_id = request.app_id AND preference.user_id = request.requester_user_id
+     WHERE request.app_id = ? AND request.id = ? AND request.status = 'COMPLETED'
+       AND request.result_version = ? AND request.result_count > 0
+       AND COALESCE(preference.opportunity_matching_notifications_enabled, 1) = 1`,
+    [event.app_id, event.aggregate_id, event.source_version],
+  )
+  if (!row) return projection([], [], 'FACT_NO_LONGER_CURRENT')
+  return projection([
+    message(event, row.requester_user_id, 'matching-ready', {
+      messageType: 'OPPORTUNITY',
+      title: '机会撮合结果已生成',
+      body: `“${boundedText(row.source_title, 40)}”已有 ${Number(row.result_count)} 条推荐。`,
+      targetType: 'MATCHING',
+      targetId: event.aggregate_id,
+      external: {
+        channel: 'WECHAT_CUSTOMER_SERVICE',
+        templateKey: 'CUSTOMER_SERVICE_TEXT',
+        fields: { content: '机会撮合结果已生成，请在小程序内查看。' },
+      },
+    }),
+  ], [], 'PROJECTED')
+}
+
+async function projectOpportunityComment(database, event) {
+  assertAggregate(event, 'OPPORTUNITY_COMMENT')
+  const row = await database.one(
+    `SELECT comment.author_user_id, opportunity.owner_user_id, opportunity.id AS opportunity_id
+     FROM mip_opportunity_comments comment
+     INNER JOIN mip_opportunities opportunity
+       ON opportunity.app_id = comment.app_id AND opportunity.id = comment.opportunity_id
+         AND opportunity.status IN ('PUBLISHED', 'ENDED')
+     INNER JOIN mip_users owner
+       ON owner.app_id = opportunity.app_id AND owner.id = opportunity.owner_user_id
+         AND owner.status = 'ACTIVE'
+     LEFT JOIN mip_user_notification_preferences preference
+       ON preference.app_id = owner.app_id AND preference.user_id = owner.id
+     WHERE comment.app_id = ? AND comment.id = ? AND comment.status = 'PUBLISHED'
+       AND comment.author_user_id <> opportunity.owner_user_id
+       AND COALESCE(preference.comment_notifications_enabled, 1) = 1
+       AND NOT EXISTS (
+         SELECT 1 FROM mip_user_blocks block
+         WHERE block.app_id = comment.app_id AND block.status = 'ACTIVE'
+           AND (
+             (block.blocker_user_id = comment.author_user_id
+               AND block.blocked_user_id = opportunity.owner_user_id)
+             OR (block.blocker_user_id = opportunity.owner_user_id
+               AND block.blocked_user_id = comment.author_user_id)
+           )
+       )`,
+    [event.app_id, event.aggregate_id],
+  )
+  if (!row) return projection([], [], 'FACT_NO_LONGER_CURRENT')
+  return projection([
+    message(event, row.owner_user_id, 'comment-published', {
+      messageType: 'OPPORTUNITY',
+      title: '机会收到新评论',
+      body: '你发布的机会收到一条新评论。',
+      targetType: 'OPPORTUNITY',
+      targetId: row.opportunity_id,
+      external: {
+        channel: 'WECHAT_CUSTOMER_SERVICE',
+        templateKey: 'CUSTOMER_SERVICE_TEXT',
+        fields: { content: '你发布的机会收到新评论，请在小程序内查看。' },
+      },
+    }),
+  ], [], 'PROJECTED')
 }
 
 async function projectProfileCompleted(database, event) {
@@ -374,6 +596,11 @@ async function projectEventNotice(database, event) {
       body: details.body,
       targetType: 'EVENT',
       targetId: fact.event_id,
+      external: {
+        channel: 'WECHAT_SERVICE_ACCOUNT',
+        templateKey: 'EVENT_NOTICE',
+        fields: { title: details.title, body: details.body },
+      },
     })
   }), [], 'PROJECTED')
 }
@@ -755,6 +982,11 @@ async function projectReferral(database, event) {
       body: '有人向你引荐了一个机会。',
       targetType: 'OPPORTUNITY',
       targetId: row.opportunity_id,
+      external: {
+        channel: 'WECHAT_CUSTOMER_SERVICE',
+        templateKey: 'CUSTOMER_SERVICE_TEXT',
+        fields: { content: '你收到了一条机会引荐，请在小程序内查看。' },
+      },
     }),
   ], growthEvents, 'PROJECTED')
 }
@@ -790,6 +1022,11 @@ async function projectInterest(database, event) {
       title: label[1],
       body: label[2],
       ...target,
+      external: {
+        channel: 'WECHAT_CUSTOMER_SERVICE',
+        templateKey: 'CUSTOMER_SERVICE_TEXT',
+        fields: { content: `${label[1]}，请在小程序内查看。` },
+      },
     }),
   ], [], 'PROJECTED')
 }
@@ -809,8 +1046,19 @@ async function activeInterestSource(database, appId, sourceType, sourceId) {
   return queries[sourceType] ? database.one(queries[sourceType], [appId, sourceId]) : null
 }
 
-function projection(notifications, growthEvents, reason) {
-  return { supported: true, notifications, growth: growthEvents, reason }
+function projection(notifications, growthEvents, reason, continuation = null) {
+  return { supported: true, notifications, growth: growthEvents, reason, continuation }
+}
+
+function knowledgeRecipientCursor(event) {
+  let payload = event?.payload_json
+  if (typeof payload === 'string') {
+    try { payload = JSON.parse(payload) }
+    catch { throw new Error('OUTBOX_EVENT_INVALID') }
+  }
+  const cursor = payload?.knowledgeRecipientCursor || ''
+  if (cursor && !UUID_PATTERN.test(cursor)) throw new Error('OUTBOX_EVENT_INVALID')
+  return cursor
 }
 
 function message(event, recipientUserId, key, details) {

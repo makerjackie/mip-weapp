@@ -8,6 +8,8 @@ const {
   getPayableOrder,
   getRefundRequestForProvider,
   listPendingRefunds,
+  markRefundFailed,
+  markRefundManualReview,
   rebuildMembershipEntitlements,
   membershipAttribution,
 } = require('../domain/ledger')
@@ -94,7 +96,59 @@ describe('mip payment ledger', () => {
     }, { appId: 'app-1', limit: 2 })
     assert.deepEqual(result, { refundIds: ['refund-a', 'refund-b'] })
     assert.match(calls[0].sql, /'PENDING', 'PROVIDER_CREATED', 'PROCESSING'/)
+    assert.match(calls[0].sql, /MANUAL_REVIEW_CHANGE/)
     assert.deepEqual(calls[0].params, ['app-1', 2])
+  })
+
+  it('keeps provider CHANGE reserved as a non-retriable manual review fact', async () => {
+    const calls = []
+    const refund = {
+      id: '20000000-0000-4000-8000-000000000001',
+      merchant_refund_no: 'MIPR123',
+      status: 'PROVIDER_CREATED',
+      version: 3,
+    }
+    const db = {
+      transaction: work => work({
+        async one(sql, params) {
+          calls.push({ sql, params })
+          return refund
+        },
+        async query(sql, params) {
+          calls.push({ sql, params })
+          return { affectedRows: 1 }
+        },
+      }),
+    }
+    const result = await markRefundManualReview(db, {
+      appId: 'app-1',
+      refundId: refund.id,
+      merchantRefundNo: refund.merchant_refund_no,
+      reasonCode: 'CHANGE',
+    })
+    assert.deepEqual(result, { status: 'PROCESSING', manualReview: true, idempotent: false })
+    assert.ok(calls.some(call => String(call.sql).includes("SET status = 'PROCESSING', last_error_code = ?")
+      && call.params[0] === 'MANUAL_REVIEW_CHANGE'))
+    assert.equal(calls.some(call => String(call.sql).includes('UPDATE mip_orders')), false)
+    await assert.rejects(() => markRefundManualReview(db, {
+      appId: 'app-1',
+      refundId: refund.id,
+      merchantRefundNo: refund.merchant_refund_no,
+      reasonCode: 'REFUNDCLOSE',
+    }), /REFUND_MANUAL_REVIEW_REASON_INVALID/)
+  })
+
+  it('allows only authoritative REFUNDCLOSE to release a refund reservation', async () => {
+    let called = false
+    await assert.rejects(() => markRefundFailed({
+      transaction: async () => { called = true },
+    }, {
+      appId: 'app-1',
+      refundId: '20000000-0000-4000-8000-000000000001',
+      merchantRefundNo: 'MIPR123',
+      reasonCode: 'CHANGE',
+    }), /REFUND_FAILURE_REASON_INVALID/)
+    assert.equal(called, false)
   })
 
   it('persists PAID before entitlement and outbox facts in one transaction', async () => {

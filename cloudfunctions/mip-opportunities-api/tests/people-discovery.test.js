@@ -213,9 +213,13 @@ describe('public profile aggregate', () => {
         calls.push({ sql, params })
         if (sql.includes('FROM mip_users u')) {
           return profileRow({
-            visibility_json: JSON.stringify({ nickname: false, companies: false }),
+            visibility_json: JSON.stringify({ nickname: false, companies: false, influence: true }),
           })
         }
+        if (sql.includes('mip_event_invitation_attributions')) return { count: 2 }
+        if (sql.includes('mip_event_hearts')) return { count: 3 }
+        if (sql.includes('SELECT COUNT(*) AS count') && sql.includes('mip_profile_interests')) return { count: 4 }
+        if (sql.includes('mip_profile_visits')) return { count: 5 }
         if (sql.includes('FROM mip_profile_interests')) return { status: 'ACTIVE' }
         throw new Error(`unexpected one: ${sql}`)
       },
@@ -276,6 +280,12 @@ describe('public profile aggregate', () => {
     assert.equal(result.superCases[0].projectName, '品牌升级')
     assert.equal(result.opportunities[0].status, 'PUBLISHED')
     assert.equal(result.interestActive, true)
+    assert.deepEqual(result.influence, {
+      guestCount: 2,
+      interactionCount: 3,
+      interestCount: 4,
+      visitorCount: 5,
+    })
     const profileQuery = calls.find(call => call.sql.includes('FROM mip_users u'))
     assert.match(profileQuery.sql, /FROM mip_user_blocks visibility_block/)
     assert.deepEqual(profileQuery.params, [appId, targetUserId, viewerUserId, viewerUserId])
@@ -292,6 +302,50 @@ describe('public profile aggregate', () => {
       () => getPublicProfileAggregate({ one: async () => null }, caller, { profileRef }),
       /NOT_FOUND/,
     )
+  })
+
+  it('omits influence counts when profile visibility disables them', async () => {
+    const profileRef = createProfileRef({ appId, userId: targetUserId }, pepper)
+    const database = {
+      async one(sql) {
+        if (sql.includes('FROM mip_users u')) {
+          return profileRow({ visibility_json: JSON.stringify({ influence: false }) })
+        }
+        if (sql.includes('FROM mip_profile_interests')) return null
+        throw new Error(`unexpected one: ${sql}`)
+      },
+      async query(sql) {
+        if (sql.includes('FROM mip_profile_tags pt')) return []
+        if (sql.includes('FROM mip_user_badge_equipment')) return []
+        if (sql.includes('FROM mip_cooperation_cards')) return []
+        if (sql.includes('FROM mip_super_cases c')) return []
+        if (sql.includes('FROM mip_opportunities o')) return []
+        throw new Error(`unexpected query: ${sql}`)
+      },
+    }
+    const result = await getPublicProfileAggregate(database, caller, { profileRef })
+    assert.equal(result.influence, undefined)
+  })
+
+  it('keeps historical profiles private when influence visibility is missing', async () => {
+    const profileRef = createProfileRef({ appId, userId: targetUserId }, pepper)
+    const database = {
+      async one(sql) {
+        if (sql.includes('FROM mip_users u')) return profileRow({ visibility_json: '{}' })
+        if (sql.includes('FROM mip_profile_interests')) return null
+        throw new Error(`unexpected one: ${sql}`)
+      },
+      async query(sql) {
+        if (sql.includes('FROM mip_profile_tags pt')) return []
+        if (sql.includes('FROM mip_user_badge_equipment')) return []
+        if (sql.includes('FROM mip_cooperation_cards')) return []
+        if (sql.includes('FROM mip_super_cases c')) return []
+        if (sql.includes('FROM mip_opportunities o')) return []
+        throw new Error(`unexpected query: ${sql}`)
+      },
+    }
+    const result = await getPublicProfileAggregate(database, caller, { profileRef })
+    assert.equal(result.influence, undefined)
   })
 })
 

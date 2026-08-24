@@ -144,7 +144,7 @@ describe('assertTablePrivilegePairs', () => {
       assert.doesNotMatch(sql, /\bALL\b/)
       assert.match(sql, /^GRANT /)
       if (/\bDELETE\b/.test(sql)) {
-        assert.match(sql, /mip_profile_tags|mip_opportunity_roles|mip_opportunity_tags|mip_growth_level_benefits|mip_user_badge_equipment|mip_super_case_media/)
+        assert.match(sql, /mip_profile_tags|mip_opportunity_roles|mip_opportunity_tags|mip_growth_level_benefits|mip_user_badge_equipment|mip_super_case_media|mip_task_level_rules/)
       }
     }
     assert.ok(statements.some(sql => sql.includes('mip_audit_logs') && sql.includes('SELECT, INSERT')))
@@ -152,6 +152,7 @@ describe('assertTablePrivilegePairs', () => {
     assert.ok(statements.some(sql => sql.includes('mip_event_seat_holds')))
     assert.ok(statements.some(sql => sql.includes('mip_profile_tags') && sql.includes('DELETE')))
     assert.ok(statements.some(sql => sql.includes('mip_opportunity_roles') && sql.includes('DELETE')))
+    assert.ok(statements.some(sql => sql.includes('mip_task_level_rules') && sql.includes('DELETE')))
     assert.ok(statements.some(sql => sql.includes('mip_opportunity_tags') && sql.includes('DELETE')))
     assert.ok(statements.some(sql => sql.includes('mip_growth_level_benefits') && sql.includes('DELETE')))
     assert.ok(statements.some(sql => sql.includes('mip_super_case_media') && sql.includes('DELETE')))

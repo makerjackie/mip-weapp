@@ -24,7 +24,7 @@ function createOutboxService(options) {
       for (let batch = 0; batch < maxBatches && Number(clock()) < deadline; batch += 1) {
         const result = await runSingleBatch(input.appId, limit)
         batches.push(result)
-        const projectedGrowth = result.results.some(item => Number(item.growthEvents || 0) > 0)
+        const projectedFollowUp = result.results.some(item => Number(item.growthEvents || 0) > 0 || item.continuation)
         const retryAt = earliestRetryAt(result.results)
         if (retryAt && input.drain === true && batch + 1 < maxBatches) {
           const delay = Math.max(0, retryAt - Number(clock()))
@@ -32,7 +32,7 @@ function createOutboxService(options) {
           await wait(delay)
           continue
         }
-        if (result.leased < limit && !projectedGrowth) {
+        if (result.leased < limit && !projectedFollowUp) {
           break
         }
       }
@@ -66,11 +66,12 @@ function createOutboxService(options) {
       if (!projected.supported) {
         return repository.ignoreEvent(event)
       }
-      for (const notification of projected.notifications) {
-        await clients.publishMessage(event.app_id, notification)
-      }
+      await publishNotifications(event.app_id, projected.notifications)
       for (const growth of projected.growth) {
         await clients.recordConfirmedEvent(event.app_id, growth)
+      }
+      if (projected.continuation) {
+        await repository.enqueueContinuation(event, projected.continuation)
       }
       if (projected.notifications.some(notification => notification.external)) {
         const delivery = await clients.runNotificationBatch(event.app_id, 20)
@@ -81,6 +82,7 @@ function createOutboxService(options) {
         ...completed,
         notifications: projected.notifications.length,
         growthEvents: projected.growth.length,
+        continuation: Boolean(projected.continuation),
         projection: projected.reason,
       }
     }
@@ -101,6 +103,14 @@ function createOutboxService(options) {
         }
         throw leaseError
       }
+    }
+  }
+
+  async function publishNotifications(appId, notifications) {
+    const concurrency = 5
+    for (let index = 0; index < notifications.length; index += concurrency) {
+      await Promise.all(notifications.slice(index, index + concurrency)
+        .map(notification => clients.publishMessage(appId, notification)))
     }
   }
 }

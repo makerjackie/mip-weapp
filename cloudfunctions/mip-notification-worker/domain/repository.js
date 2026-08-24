@@ -136,6 +136,10 @@ function createNotificationRepository(database, options = {}) {
       )
       assertTaskLease(current, task)
 
+      if (current.channel === 'WECHAT_SERVICE_ACCOUNT') {
+        return reservationDto(current, null, null)
+      }
+
       let grant = await tx.one(
         `SELECT id, recipient_hash, recipient_ciphertext
          FROM mip_notification_grants
@@ -202,33 +206,45 @@ function createNotificationRepository(database, options = {}) {
         [reservation.app_id, reservation.taskId],
       )
       assertReservationTask(current, reservation)
-      const grant = await tx.one(
-        `SELECT id, user_id, channel, template_key, status,
-                reservation_task_id, reservation_token
-         FROM mip_notification_grants
-         WHERE app_id = ? AND id = ? FOR UPDATE`,
-        [reservation.app_id, reservation.grant.id],
-      )
-      assertGrantReservation(grant, reservation)
-      assertGrantScope(grant, reservation)
+      const grant = reservation.grant
+        ? await tx.one(
+            `SELECT id, user_id, channel, template_key, status, expires_at,
+                    reservation_task_id, reservation_token
+             FROM mip_notification_grants
+             WHERE app_id = ? AND id = ? FOR UPDATE`,
+            [reservation.app_id, reservation.grant.id],
+          )
+        : null
+      if (reservation.grant) {
+        assertGrantReservation(grant, reservation)
+        assertGrantScope(grant, reservation)
+      }
       if (!recipient || recipient.status !== 'ACTIVE') {
-        const grantUpdate = await tx.query(
-          `UPDATE mip_notification_grants
-           SET status = 'EXPIRED', reservation_task_id = NULL, reservation_token = NULL,
-               reservation_expires_at = NULL
-           WHERE app_id = ? AND id = ? AND status = 'RESERVED'
-             AND reservation_task_id = ? AND reservation_token = ?`,
-          [
-            reservation.app_id,
-            reservation.grant.id,
-            reservation.taskId,
-            reservation.reservationToken,
-          ],
-        )
+        const grantUpdate = reservation.grant
+          ? await expireReservationGrant(tx, reservation)
+          : null
         const taskUpdate = await tx.query(
           `UPDATE mip_delivery_tasks
            SET status = 'CANCELLED', lease_expires_at = NULL,
                last_error_code = 'DELIVERY_RECIPIENT_INACTIVE'
+           WHERE app_id = ? AND id = ? AND status = 'PROCESSING' AND lease_expires_at = ?`,
+          [reservation.app_id, reservation.taskId, reservation.lease_expires_at],
+        )
+        if (grantUpdate) assertAffected(grantUpdate, 'DELIVERY_RESERVATION_LOST')
+        assertAffected(taskUpdate, 'DELIVERY_LEASE_LOST')
+        return {
+          taskId: reservation.taskId,
+          status: 'CANCELLED',
+          errorCode: 'DELIVERY_RECIPIENT_INACTIVE',
+        }
+      }
+
+      if (grant && grant.expires_at && new Date(grant.expires_at).getTime() <= now.getTime()) {
+        const grantUpdate = await expireReservationGrant(tx, reservation)
+        const taskUpdate = await tx.query(
+          `UPDATE mip_delivery_tasks
+           SET status = 'CANCELLED', lease_expires_at = NULL,
+               last_error_code = 'DELIVERY_WINDOW_EXPIRED'
            WHERE app_id = ? AND id = ? AND status = 'PROCESSING' AND lease_expires_at = ?`,
           [reservation.app_id, reservation.taskId, reservation.lease_expires_at],
         )
@@ -237,7 +253,7 @@ function createNotificationRepository(database, options = {}) {
         return {
           taskId: reservation.taskId,
           status: 'CANCELLED',
-          errorCode: 'DELIVERY_RECIPIENT_INACTIVE',
+          errorCode: 'DELIVERY_WINDOW_EXPIRED',
         }
       }
 
@@ -253,27 +269,16 @@ function createNotificationRepository(database, options = {}) {
         return settleAttemptedFailure(tx, current, reservation, deliveryError, now)
       }
 
-      const grantUpdate = await tx.query(
-        `UPDATE mip_notification_grants
-         SET status = 'CONSUMED', consumed_at = UTC_TIMESTAMP(3),
-             reservation_task_id = NULL, reservation_token = NULL,
-             reservation_expires_at = NULL
-         WHERE app_id = ? AND id = ? AND status = 'RESERVED'
-           AND reservation_task_id = ? AND reservation_token = ?`,
-        [
-          reservation.app_id,
-          reservation.grant.id,
-          reservation.taskId,
-          reservation.reservationToken,
-        ],
-      )
+      const grantUpdate = reservation.grant
+        ? await completeReservationGrant(tx, reservation)
+        : null
       const taskUpdate = await tx.query(
         `UPDATE mip_delivery_tasks
          SET status = 'DELIVERED', delivered_at = UTC_TIMESTAMP(3), lease_expires_at = NULL
          WHERE app_id = ? AND id = ? AND status = 'PROCESSING' AND lease_expires_at = ?`,
         [reservation.app_id, reservation.taskId, reservation.lease_expires_at],
       )
-      assertAffected(grantUpdate, 'DELIVERY_RESERVATION_LOST')
+      if (grantUpdate) assertAffected(grantUpdate, 'DELIVERY_RESERVATION_LOST')
       assertAffected(taskUpdate, 'DELIVERY_LEASE_LOST')
       return { taskId: reservation.taskId, status: 'DELIVERED' }
     }, 1)
@@ -291,17 +296,20 @@ function createNotificationRepository(database, options = {}) {
         [reservation.app_id, reservation.taskId],
       )
       assertReservationTask(current, reservation)
-      const grant = await tx.one(
-        `SELECT id, status, reservation_task_id, reservation_token
-         FROM mip_notification_grants
-         WHERE app_id = ? AND id = ? FOR UPDATE`,
-        [reservation.app_id, reservation.grant.id],
-      )
-      assertGrantReservation(grant, reservation)
+      const grant = reservation.grant
+        ? await tx.one(
+            `SELECT id, status, reservation_task_id, reservation_token
+             FROM mip_notification_grants
+             WHERE app_id = ? AND id = ? FOR UPDATE`,
+            [reservation.app_id, reservation.grant.id],
+          )
+        : null
+      if (reservation.grant) assertGrantReservation(grant, reservation)
 
       const terminal = Number(current.attempts) >= MAX_ATTEMPTS
-      if (!externalAttempted || terminal) {
-        const nextGrantStatus = externalAttempted ? 'EXPIRED' : 'AVAILABLE'
+      if (reservation.grant && (!externalAttempted || terminal)) {
+        const nextGrantStatus = externalAttempted
+          && reservation.channel !== 'WECHAT_CUSTOMER_SERVICE' ? 'EXPIRED' : 'AVAILABLE'
         const grantUpdate = await tx.query(
           `UPDATE mip_notification_grants
            SET status = ?, reservation_task_id = NULL, reservation_token = NULL,
@@ -387,12 +395,14 @@ function reservationDto(task, grant, reservationToken) {
     leaseKey: iso(task.lease_expires_at),
     recipient_user_id: task.recipient_user_id,
     target_route: task.target_route,
-    reservationToken,
-    grant: {
-      id: grant.id,
-      recipient_hash: grant.recipient_hash,
-      recipient_ciphertext: grant.recipient_ciphertext,
-    },
+    ...(reservationToken ? { reservationToken } : {}),
+    ...(grant ? {
+      grant: {
+        id: grant.id,
+        recipient_hash: grant.recipient_hash,
+        recipient_ciphertext: grant.recipient_ciphertext,
+      },
+    } : {}),
   }
 }
 
@@ -425,20 +435,10 @@ function assertGrantScope(grant, reservation) {
 
 async function settleAttemptedFailure(tx, current, reservation, errorCode, now) {
   const terminal = Number(current.attempts) >= MAX_ATTEMPTS
-  if (terminal) {
-    const grantUpdate = await tx.query(
-      `UPDATE mip_notification_grants
-       SET status = 'EXPIRED', reservation_task_id = NULL, reservation_token = NULL,
-           reservation_expires_at = NULL
-       WHERE app_id = ? AND id = ? AND status = 'RESERVED'
-         AND reservation_task_id = ? AND reservation_token = ?`,
-      [
-        reservation.app_id,
-        reservation.grant.id,
-        reservation.taskId,
-        reservation.reservationToken,
-      ],
-    )
+  if (reservation.grant && (terminal || reservation.channel === 'WECHAT_CUSTOMER_SERVICE')) {
+    const grantUpdate = reservation.channel === 'WECHAT_CUSTOMER_SERVICE'
+      ? await releaseReservationGrant(tx, reservation)
+      : await expireReservationGrant(tx, reservation)
     assertAffected(grantUpdate, 'DELIVERY_RESERVATION_LOST')
   }
   const availableAt = new Date(now.getTime() + retryDelayMs(Number(current.attempts)))
@@ -451,6 +451,58 @@ async function settleAttemptedFailure(tx, current, reservation, errorCode, now) 
   )
   assertAffected(taskUpdate, 'DELIVERY_LEASE_LOST')
   return failureResult(reservation.taskId, status, errorCode, availableAt)
+}
+
+function completeReservationGrant(tx, reservation) {
+  if (reservation.channel === 'WECHAT_CUSTOMER_SERVICE') {
+    return releaseReservationGrant(tx, reservation)
+  }
+  return tx.query(
+    `UPDATE mip_notification_grants
+     SET status = 'CONSUMED', consumed_at = UTC_TIMESTAMP(3),
+         reservation_task_id = NULL, reservation_token = NULL,
+         reservation_expires_at = NULL
+     WHERE app_id = ? AND id = ? AND status = 'RESERVED'
+       AND reservation_task_id = ? AND reservation_token = ?`,
+    [
+      reservation.app_id,
+      reservation.grant.id,
+      reservation.taskId,
+      reservation.reservationToken,
+    ],
+  )
+}
+
+function expireReservationGrant(tx, reservation) {
+  return tx.query(
+    `UPDATE mip_notification_grants
+     SET status = 'EXPIRED', reservation_task_id = NULL, reservation_token = NULL,
+         reservation_expires_at = NULL
+     WHERE app_id = ? AND id = ? AND status = 'RESERVED'
+       AND reservation_task_id = ? AND reservation_token = ?`,
+    [
+      reservation.app_id,
+      reservation.grant.id,
+      reservation.taskId,
+      reservation.reservationToken,
+    ],
+  )
+}
+
+function releaseReservationGrant(tx, reservation) {
+  return tx.query(
+    `UPDATE mip_notification_grants
+     SET status = 'AVAILABLE', reservation_task_id = NULL, reservation_token = NULL,
+         reservation_expires_at = NULL
+     WHERE app_id = ? AND id = ? AND status = 'RESERVED'
+       AND reservation_task_id = ? AND reservation_token = ?`,
+    [
+      reservation.app_id,
+      reservation.grant.id,
+      reservation.taskId,
+      reservation.reservationToken,
+    ],
+  )
 }
 
 function failureResult(taskId, status, errorCode, availableAt) {

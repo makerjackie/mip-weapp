@@ -27,6 +27,7 @@ function createRefundDispatchService(options) {
   }
 
   async function submitProviderRefund(appId, refund) {
+    if (refund.manualReview) throw new Error('REFUND_MANUAL_REVIEW')
     const result = await options.cloudPay.refund({
       envId: config.envId,
       functionName: config.callbackFunction,
@@ -56,7 +57,9 @@ function createRefundDispatchService(options) {
     })
     if (!successful(result)) throw new Error('REFUND_QUERY_UNAVAILABLE')
     const record = refundRecord(result, refund.merchantRefundNo)
-    if (!record) return { status: refund.status, operation: 'PENDING' }
+    if (!record) {
+      return { status: refund.manualReview ? 'MANUAL_REVIEW' : refund.status, operation: 'PENDING' }
+    }
     if (record.status === 'SUCCESS') {
       if (!record.providerRefundId || !Number.isInteger(record.amountCents) || record.amountCents < 1) {
         throw new Error('REFUND_QUERY_MISMATCH')
@@ -70,15 +73,23 @@ function createRefundDispatchService(options) {
       })
       return { status: 'SUCCEEDED', operation: 'RECONCILED' }
     }
-    if (['REFUNDCLOSE', 'CHANGE'].includes(record.status)) {
+    if (record.status === 'CHANGE') {
+      await options.callLedger('markRefundManualReview', appId, {
+        refundId: refund.id,
+        merchantRefundNo: refund.merchantRefundNo,
+        reasonCode: 'CHANGE',
+      })
+      return { status: 'MANUAL_REVIEW', operation: 'RECONCILED' }
+    }
+    if (record.status === 'REFUNDCLOSE') {
       await options.callLedger('markRefundFailed', appId, {
         refundId: refund.id,
         merchantRefundNo: refund.merchantRefundNo,
-        reasonCode: record.status,
+        reasonCode: 'REFUNDCLOSE',
       })
       return { status: 'FAILED', operation: 'RECONCILED' }
     }
-    return { status: refund.status, operation: 'PENDING' }
+    return { status: refund.manualReview ? 'MANUAL_REVIEW' : refund.status, operation: 'PENDING' }
   }
 
   async function runBatch(appId, value = {}) {

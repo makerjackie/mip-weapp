@@ -8,6 +8,7 @@ function createTaskService(repository, contentSafety) {
     getAdminSession: caller => repository.getAdminSession(caller),
     getAdminTask: (caller, event) => repository.getAdminTask(caller, event),
     listAdminTasks: (caller, event) => repository.listAdminTasks(caller, event),
+    listEligibleLevels: caller => repository.listEligibleLevels(caller),
     listAssignableMembers: (caller, event) => repository.listAssignableMembers(caller, event),
     assignMembers: (caller, event) => repository.assignMembers(caller, event),
     revokeMembers: (caller, event) => repository.revokeMembers(caller, event),

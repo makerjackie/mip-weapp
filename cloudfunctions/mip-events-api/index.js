@@ -3,7 +3,7 @@
 const cloud = require('wx-server-sdk')
 const { DomainError } = require('./domain/rules')
 const service = require('./domain/event-service')
-const { resolveMipUser, trustedWechatIdentity } = require('./lib/identity')
+const { identityKey, resolveMipUser, trustedWechatIdentity } = require('./lib/identity')
 const { createCheckInCodeAsset, createInvitationCodeAsset } = require('./lib/checkin-poster')
 const { mysqlDatabase } = require('./lib/mysql')
 const { createOutboxWakeup, trustedContextAppId } = require('./lib/outbox-wakeup')
@@ -87,10 +87,14 @@ function paymentAvailable() {
   return process.env.MIP_PAYMENT_MODE === 'test' || process.env.MIP_PAYMENT_MODE === 'live'
 }
 
-async function caller(event, { requireUser }) {
-  const identity = trustedWechatIdentity(cloud.getWXContext(), { requireUser })
+async function caller(event, { requireUser, requireCaller }) {
+  const identity = trustedWechatIdentity(cloud.getWXContext(), { requireUser: requireUser || requireCaller })
   const user = await resolveMipUser(mysqlDatabase(), identity, { required: requireUser })
-  return { appId: identity.appId, userId: user?.id || null }
+  return {
+    appId: identity.appId,
+    userId: user?.id || null,
+    callerKey: requireCaller ? identityKey(identity.appId, identity.openId) : null,
+  }
 }
 
 async function dispatch(event) {
@@ -102,10 +106,14 @@ async function dispatch(event) {
   if (!publicActions.has(action) && !userActions.has(action) && !adminActions.has(action)) {
     throw new DomainError('NOT_FOUND', '活动操作不存在')
   }
-  const current = await caller(event, { requireUser: !publicActions.has(action) })
+  const current = await caller(event, {
+    requireUser: !publicActions.has(action),
+    requireCaller: ['mip.events.resolveCheckInScene', 'mip.events.checkIn'].includes(action),
+  })
   const shared = {
     appId: current.appId,
     userId: current.userId,
+    callerKey: current.callerKey,
     tokenSecret: interactionTokenSecret(),
     profileRefSecret: process.env.MIP_IDENTITY_PEPPER,
   }
@@ -132,7 +140,11 @@ async function dispatch(event) {
     case 'mip.events.resolveInvitationScene':
       return service.resolveInvitationScene(mysqlDatabase(), { ...shared, scene: event.scene })
     case 'mip.events.mine':
-      return service.listMyRegistrations(mysqlDatabase(), { ...shared, cursor: event.cursor })
+      return service.listMyRegistrations(mysqlDatabase(), {
+        ...shared,
+        cursor: event.cursor,
+        category: event.category,
+      })
     case 'mip.events.myRegistration':
       return service.getMyRegistration(mysqlDatabase(), { ...shared, eventId: event.eventId })
     case 'mip.events.register':
@@ -153,6 +165,7 @@ async function dispatch(event) {
     case 'mip.events.checkIn':
       return service.checkIn(mysqlDatabase(), {
         ...shared,
+        resumeToken: event.resumeToken,
         scanToken: event.scanToken,
         idempotencyKey: event.idempotencyKey,
         expectedVersion: event.expectedVersion,

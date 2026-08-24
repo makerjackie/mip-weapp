@@ -1,11 +1,12 @@
 'use strict'
 
-const { createHash, randomBytes, randomUUID } = require('node:crypto')
+const { createHash, createHmac, randomBytes, randomUUID } = require('node:crypto')
 const {
   DomainError,
   activeRegistrationStatuses,
   assertCanCancel,
   assertCheckInAllowed,
+  cancellableRegistrationStatuses,
   capacityStatuses,
   decideRegistration,
   grantsCapability,
@@ -91,6 +92,112 @@ function checkInCredentialQuery(parsed, { lock = false } = {}) {
     sql: `SELECT * FROM mip_event_checkin_credentials
       WHERE app_id = ? AND ${parsed.kind === 'SHORT' ? 'scan_key' : 'id'} = ? AND token_hash = ?${lock ? ' FOR UPDATE' : ''}`,
     params: [parsed.reference, sha256(parsed.secret)],
+  }
+}
+
+const checkInResumeTtlMs = 30 * 60 * 1000
+
+function checkInResumeRef(kind, reference, { lock = false } = {}) {
+  const short = kind === 'SHORT' && /^[A-Za-z0-9_-]{11}$/.test(reference)
+  const legacy = kind === 'LEGACY'
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(reference)
+  if (!short && !legacy) {
+    throw new DomainError('VALIDATION_FAILED', '签到恢复凭证无效')
+  }
+  return {
+    sql: `SELECT * FROM mip_event_checkin_credentials
+      WHERE app_id = ? AND ${short ? 'scan_key' : 'id'} = ?${lock ? ' FOR UPDATE' : ''}`,
+    params: [reference],
+  }
+}
+
+function checkInResumeSubject(appId, callerKey, tokenSecret) {
+  if (!callerKey) {
+    throw new DomainError('AUTH_REQUIRED', '请登录后继续')
+  }
+  if (!tokenSecret) {
+    throw new DomainError('SERVICE_UNAVAILABLE', '签到恢复服务暂时不可用', true)
+  }
+  return createHmac('sha256', tokenSecret)
+    .update(`event-checkin-resume\0${appId}\0${callerKey}`)
+    .digest('base64url')
+}
+
+function checkInResumeUserRef(appId, userId, tokenSecret) {
+  return userId
+    ? createHmac('sha256', tokenSecret)
+        .update(`event-checkin-user\0${appId}\0${userId}`)
+        .digest('base64url')
+    : undefined
+}
+
+function createCheckInResumeToken({
+  appId,
+  callerKey,
+  credential,
+  parsedToken,
+  tokenSecret,
+  userId,
+  now,
+}) {
+  const credentialExpiry = new Date(credential.valid_until).getTime()
+  const expiresAt = new Date(Math.min(credentialExpiry, now.getTime() + checkInResumeTtlMs))
+  if (!Number.isFinite(credentialExpiry) || expiresAt.getTime() <= now.getTime()) {
+    throw new DomainError('VALIDATION_FAILED', '活动码无效或已失效')
+  }
+  return {
+    token: createSignedToken({
+      type: 'event-checkin-resume',
+      appId,
+      eventId: credential.event_id,
+      credentialKind: parsedToken.kind,
+      credentialRef: parsedToken.reference,
+      subjectRef: checkInResumeSubject(appId, callerKey, tokenSecret),
+      userRef: checkInResumeUserRef(appId, userId, tokenSecret),
+      nonce: randomBytes(16).toString('base64url'),
+      issuedAt: iso(now),
+      expiresAt: iso(expiresAt),
+    }, tokenSecret),
+    expiresAt,
+  }
+}
+
+function parsePresentedCheckInToken(value, {
+  appId,
+  callerKey,
+  tokenSecret,
+  userId,
+  now,
+}) {
+  const token = typeof value === 'string' ? value.trim() : ''
+  if (token.startsWith('s1.') || /^[0-9a-f-]{36}\./i.test(token)) {
+    const parsed = parseCheckInToken(token)
+    return { kind: 'SCAN', credentialKind: parsed.kind, credentialRef: parsed.reference, parsed }
+  }
+  const payload = readSignedToken(token, tokenSecret, 'event-checkin-resume', now)
+  const issuedAt = Date.parse(String(payload.issuedAt || ''))
+  const expiresAt = Date.parse(String(payload.expiresAt || ''))
+  const subjectRef = checkInResumeSubject(appId, callerKey, tokenSecret)
+  const expectedUserRef = checkInResumeUserRef(appId, userId, tokenSecret)
+  if (payload.appId !== appId
+    || payload.subjectRef !== subjectRef
+    || (payload.userRef && payload.userRef !== expectedUserRef)
+    || typeof payload.eventId !== 'string'
+    || payload.eventId.length > 64
+    || typeof payload.nonce !== 'string'
+    || !/^[A-Za-z0-9_-]{22}$/.test(payload.nonce)
+    || !Number.isFinite(issuedAt)
+    || !Number.isFinite(expiresAt)
+    || issuedAt > now.getTime()
+    || expiresAt - issuedAt > checkInResumeTtlMs) {
+    throw new DomainError('VALIDATION_FAILED', '签到恢复凭证无效')
+  }
+  checkInResumeRef(payload.credentialKind, payload.credentialRef)
+  return {
+    kind: 'RESUME',
+    credentialKind: payload.credentialKind,
+    credentialRef: payload.credentialRef,
+    eventId: payload.eventId,
   }
 }
 
@@ -482,17 +589,42 @@ async function createEventRefund(tx, {
   registrationId,
   requestedByUserId,
   reason,
+  now = new Date(),
 }) {
   const idempotencyKey = `event-refund:${registrationId}`
-  const existing = await tx.one(
-    `SELECT id FROM mip_refunds
+  const original = await tx.one(
+    `SELECT * FROM mip_refunds
      WHERE app_id = ? AND order_id = ? AND idempotency_key = ? FOR UPDATE`,
     [appId, order.id, idempotencyKey],
   )
-  if (existing) {
-    return existing.id
+  const latest = await tx.one(
+    `SELECT * FROM mip_refunds
+     WHERE app_id = ? AND order_id = ?
+     ORDER BY created_at DESC, id DESC LIMIT 1 FOR UPDATE`,
+    [appId, order.id],
+  )
+  if (latest && ['PENDING', 'PROVIDER_CREATED', 'PROCESSING'].includes(latest.status)) {
+    return { id: latest.id, status: latest.status, idempotent: true }
+  }
+  const totals = await tx.one(
+    `SELECT COALESCE(SUM(amount_cents), 0) AS reserved_cents
+     FROM mip_refunds
+     WHERE app_id = ? AND order_id = ?
+       AND status IN ('PENDING', 'PROVIDER_CREATED', 'PROCESSING', 'SUCCEEDED')`,
+    [appId, order.id],
+  )
+  const amountCents = Number(order.amount_cents) - Number(totals?.reserved_cents || 0)
+  if (!Number.isSafeInteger(amountCents) || amountCents <= 0) {
+    throw new DomainError('CONFLICT', '订单当前没有可退金额')
+  }
+  const previous = latest || original
+  if (previous && previous.status !== 'FAILED' && previous.status !== 'SUCCEEDED') {
+      throw new DomainError('CONFLICT', '退款状态需要人工核对')
   }
   const refundId = randomUUID()
+  const nextIdempotencyKey = previous
+    ? `event-refund-retry:${registrationId}:${previous.id}`
+    : idempotencyKey
   await tx.query(
     `INSERT INTO mip_refunds (
       id, app_id, order_id, requested_by_user_id, merchant_refund_no,
@@ -503,13 +635,13 @@ async function createEventRefund(tx, {
       appId,
       order.id,
       requestedByUserId,
-      merchantRefundNumber(new Date()),
-      idempotencyKey,
-      order.amount_cents,
+      merchantRefundNumber(now),
+      nextIdempotencyKey,
+      amountCents,
       reason,
     ],
   )
-  return refundId
+  return { id: refundId, status: 'PENDING', idempotent: false }
 }
 
 async function loadParticipantPreviews(db, {
@@ -688,6 +820,9 @@ async function getEvent(db, {
        inviter_profile.visibility_json AS inviter_visibility_json,
        inviter_avatar.cloud_file_id AS inviter_avatar_file_id,
        r.status AS registration_status,
+       registration_order.status AS order_status,
+       latest_refund.status AS refund_status,
+       latest_refund.last_error_code AS refund_last_error_code,
        CASE WHEN e.status = 'PUBLISHED' AND e.ends_at < ? THEN 'ENDED' ELSE e.status END AS public_status,
        (SELECT COUNT(*) FROM mip_event_registrations rc
         WHERE rc.app_id = e.app_id AND rc.event_id = e.id
@@ -702,6 +837,17 @@ async function getEvent(db, {
        ON organizer_avatar.app_id = organizer_profile.app_id
        AND organizer_avatar.id = organizer_profile.avatar_asset_id AND organizer_avatar.status = 'READY'
      LEFT JOIN mip_event_registrations r ON r.app_id = e.app_id AND r.event_id = e.id AND r.user_id = ?
+     LEFT JOIN mip_orders registration_order
+       ON registration_order.app_id = r.app_id AND registration_order.id = r.order_id
+     LEFT JOIN mip_refunds latest_refund
+       ON latest_refund.app_id = registration_order.app_id
+       AND latest_refund.order_id = registration_order.id
+       AND latest_refund.id = (
+         SELECT refund_row.id FROM mip_refunds refund_row
+         WHERE refund_row.app_id = registration_order.app_id
+           AND refund_row.order_id = registration_order.id
+         ORDER BY refund_row.created_at DESC, refund_row.id DESC LIMIT 1
+       )
      LEFT JOIN mip_event_invitation_attributions ia
        ON ia.app_id = r.app_id AND ia.registration_id = r.id
      LEFT JOIN mip_profiles inviter_profile
@@ -772,8 +918,9 @@ async function getEvent(db, {
       createdAt: iso(change.created_at),
     })),
     canRegister: row.status === 'PUBLISHED' && !activeStatus && timestamp >= opensAt && timestamp < deadline,
-    canCancel: activeStatus && row.registration_status !== 'ATTENDED'
+    canCancel: cancellableRegistrationStatuses.has(row.registration_status)
       && timestamp < cancellationDeadline.getTime(),
+    canRetryRefund: canRetryRegistrationRefund(row),
     canCheckIn: ['REGISTERED', 'ATTENDED'].includes(row.registration_status),
     canInteract: row.registration_status === 'ATTENDED',
     albumSubmissionPolicy: row.album_submission_policy,
@@ -1558,8 +1705,13 @@ async function createRegistration(db, {
             eventId,
             title: event.title,
             startsAt: iso(event.starts_at),
+            endsAt: iso(event.ends_at),
+            cityName: event.city_name || undefined,
+            venueName: event.venue_name || undefined,
+            address: event.address || undefined,
             priceCents: Number(event.price_cents),
             currency: event.currency,
+            priceItems: [{ label: '活动报名', amountCents: Number(event.price_cents) }],
             eventVersion: Number(event.version),
           }),
         ],
@@ -1672,10 +1824,29 @@ async function createRegistration(db, {
   })
 }
 
-async function listMyRegistrations(db, { appId, userId, cursor, limit = 20, now = new Date(), tokenSecret }) {
+async function listMyRegistrations(db, {
+  appId,
+  userId,
+  cursor,
+  category,
+  limit = 20,
+  now = new Date(),
+  tokenSecret,
+}) {
+  if (category !== undefined && !['UPCOMING', 'ATTENDED'].includes(category)) {
+    throw new DomainError('VALIDATION_FAILED', '活动分类无效')
+  }
   const pageLimit = limitOf(limit)
   const decoded = decodeCursor(cursor)
   const params = [now, userId, appId, userId]
+  const categoryClause = category === 'UPCOMING'
+    ? "AND r.status IN ('PENDING_REVIEW','WAITLISTED','PAYMENT_PENDING','REGISTERED','CANCELLATION_PENDING') AND e.ends_at > ?"
+    : category === 'ATTENDED'
+      ? "AND r.status = 'ATTENDED'"
+      : ''
+  if (category === 'UPCOMING') {
+    params.push(now)
+  }
   let cursorClause = ''
   if (decoded) {
     cursorClause = 'AND (e.starts_at < ? OR (e.starts_at = ? AND e.id < ?))'
@@ -1685,7 +1856,10 @@ async function listMyRegistrations(db, { appId, userId, cursor, limit = 20, now 
   const rows = await db.query(
     `SELECT e.*, b.name AS branch_name, a.cloud_file_id AS cover_file_id,
        r.id AS registration_id, r.status AS registration_status, r.order_id,
-       r.updated_at AS registration_updated_at, c.checked_in_at,
+       r.version AS registration_version, r.updated_at AS registration_updated_at, c.checked_in_at,
+       registration_order.status AS order_status,
+       latest_refund.status AS refund_status,
+       latest_refund.last_error_code AS refund_last_error_code,
        CASE WHEN e.status = 'PUBLISHED' AND e.ends_at < ? THEN 'ENDED' ELSE e.status END AS public_status,
        (SELECT COUNT(*) FROM mip_event_registrations rc
         WHERE rc.app_id = e.app_id AND rc.event_id = e.id
@@ -1695,30 +1869,90 @@ async function listMyRegistrations(db, { appId, userId, cursor, limit = 20, now 
      LEFT JOIN mip_city_branches b ON b.app_id = e.app_id AND b.id = e.branch_id
      LEFT JOIN mip_media_assets a ON a.app_id = e.app_id AND a.id = e.cover_asset_id AND a.status = 'READY'
      LEFT JOIN mip_event_checkins c ON c.app_id = r.app_id AND c.registration_id = r.id AND c.status = 'ACTIVE'
-     WHERE r.user_id = ? AND r.app_id = ? AND r.user_id = ? ${cursorClause}
+     LEFT JOIN mip_orders registration_order
+       ON registration_order.app_id = r.app_id AND registration_order.id = r.order_id
+     LEFT JOIN mip_refunds latest_refund
+       ON latest_refund.app_id = registration_order.app_id
+       AND latest_refund.order_id = registration_order.id
+       AND latest_refund.id = (
+         SELECT refund_row.id FROM mip_refunds refund_row
+         WHERE refund_row.app_id = registration_order.app_id
+           AND refund_row.order_id = registration_order.id
+         ORDER BY refund_row.created_at DESC, refund_row.id DESC LIMIT 1
+       )
+     WHERE r.user_id = ? AND r.app_id = ? AND r.user_id = ? ${categoryClause} ${cursorClause}
      ORDER BY e.starts_at DESC, e.id DESC LIMIT ?`,
     params,
   )
   const hasMore = rows.length > pageLimit
   const pageRows = rows.slice(0, pageLimit)
-  const previews = await loadParticipantPreviews(db, {
-    appId,
-    eventIds: pageRows.map(row => row.id),
-    tokenSecret,
-    viewerUserId: userId,
-  })
+  const [previews, counts, policy] = await Promise.all([
+    loadParticipantPreviews(db, {
+      appId,
+      eventIds: pageRows.map(row => row.id),
+      tokenSecret,
+      viewerUserId: userId,
+    }),
+    db.one(
+      `SELECT
+         SUM(CASE WHEN registration.status IN ('PENDING_REVIEW','WAITLISTED','PAYMENT_PENDING','REGISTERED','CANCELLATION_PENDING')
+           AND event_row.ends_at > ? THEN 1 ELSE 0 END) AS upcoming_count,
+         SUM(CASE WHEN registration.status = 'ATTENDED' THEN 1 ELSE 0 END) AS attended_count
+       FROM mip_event_registrations registration
+       JOIN mip_events event_row
+         ON event_row.app_id = registration.app_id AND event_row.id = registration.event_id
+       WHERE registration.app_id = ? AND registration.user_id = ?`,
+      [now, appId, userId],
+    ),
+    db.one(
+      `SELECT value_json FROM mip_app_settings
+       WHERE app_id = ? AND setting_key = 'EVENT_REGISTRATION_POLICY'`,
+      [appId],
+    ),
+  ])
+  const fallbackCancellationHours = eventCancellationHours(policy?.value_json)
   return {
     items: pageRows.map(row => ({
       registrationId: row.registration_id,
+      version: Number(row.registration_version),
       event: publicEventRow(row, previews.get(row.id) || []),
       status: row.registration_status,
       orderId: row.order_id || undefined,
       checkedInAt: row.checked_in_at ? iso(row.checked_in_at) : undefined,
+      venueAddress: row.address || undefined,
       updatedAt: iso(row.registration_updated_at),
       canEdit: canEditRegistration(row, row.registration_status, now),
+      canCancel: canCancelRegistration(row, row.registration_status, now, fallbackCancellationHours),
+      canRetryRefund: canRetryRegistrationRefund(row),
     })),
+    counts: {
+      upcoming: Number(counts?.upcoming_count || 0),
+      attended: Number(counts?.attended_count || 0),
+    },
     nextCursor: hasMore ? encodeCursor(pageRows[pageRows.length - 1]) : undefined,
   }
+}
+
+function canRetryRegistrationRefund(row) {
+  return row.registration_status === 'CANCELLATION_PENDING'
+    && row.order_status === 'REFUND_PENDING'
+    && ['PENDING', 'PROVIDER_CREATED', 'PROCESSING'].includes(row.refund_status)
+    && row.refund_last_error_code !== 'MANUAL_REVIEW_CHANGE'
+}
+
+function canCancelRegistration(event, registrationStatus, now = new Date(), fallbackHours = 24) {
+  if (!cancellableRegistrationStatuses.has(registrationStatus)) {
+    return false
+  }
+  const timestamp = now instanceof Date ? now.getTime() : new Date(now).getTime()
+  const startsAt = new Date(event.starts_at).getTime()
+  const explicitDeadline = event.cancellation_deadline
+    ? new Date(event.cancellation_deadline).getTime()
+    : Number.NaN
+  const deadline = Number.isFinite(explicitDeadline)
+    ? explicitDeadline
+    : startsAt - fallbackHours * 60 * 60 * 1000
+  return Number.isFinite(timestamp) && Number.isFinite(deadline) && timestamp < deadline
 }
 
 async function promoteWaitlist(tx, { appId, eventId, now }) {
@@ -1765,7 +1999,8 @@ async function cancelRegistration(db, {
       [appId, eventId],
     )
     const registration = await tx.one(
-      `SELECT r.*, o.status AS order_status, o.amount_cents, h.id AS seat_hold_id
+      `SELECT r.*, o.status AS order_status, o.amount_cents, o.version AS order_version,
+         h.id AS seat_hold_id, h.status AS seat_hold_status
        FROM mip_event_registrations r
        LEFT JOIN mip_orders o ON o.app_id = r.app_id AND o.id = r.order_id AND o.order_type = 'EVENT'
        LEFT JOIN mip_event_seat_holds h ON h.app_id = o.app_id AND h.order_id = o.id
@@ -1775,10 +2010,49 @@ async function cancelRegistration(db, {
     if (!event || !registration) {
       throw new DomainError('NOT_FOUND', '报名记录不存在')
     }
-    const cancellationDeadline = await effectiveCancellationDeadline(tx, appId, event)
+    const activeCheckin = await tx.one(
+      `SELECT id, version FROM mip_event_checkins
+       WHERE app_id = ? AND registration_id = ? AND status = 'ACTIVE' FOR UPDATE`,
+      [appId, registration.id],
+    )
     if (registration.status === 'CANCELLED') {
       return { registrationId: registration.id, status: 'CANCELLED', refundRequired: false, paymentAvailable }
     }
+    if (registration.status === 'CANCELLATION_PENDING') {
+      if (!registration.order_id
+        || !['PAID', 'PARTIALLY_REFUNDED', 'REFUND_PENDING'].includes(registration.order_status)
+        || activeCheckin) {
+        throw new DomainError('CONFLICT', '退款关联状态需要人工核对')
+      }
+      if (registration.order_status !== 'REFUND_PENDING') {
+        const orderUpdated = await tx.query(
+          `UPDATE mip_orders SET status = 'REFUND_PENDING', version = version + 1
+           WHERE app_id = ? AND id = ? AND version = ?
+             AND status IN ('PAID', 'PARTIALLY_REFUNDED')`,
+          [appId, registration.order_id, registration.order_version],
+        )
+        if (Number(orderUpdated?.affectedRows) !== 1) {
+          throw new DomainError('CONFLICT', '订单退款状态已变化，请刷新后重试', true)
+        }
+      }
+      const refund = await createEventRefund(tx, {
+        appId,
+        order: { id: registration.order_id, amount_cents: registration.amount_cents },
+        registrationId: registration.id,
+        requestedByUserId: userId,
+        reason: '用户取消活动报名',
+        now,
+      })
+      return {
+        registrationId: registration.id,
+        status: 'CANCELLATION_PENDING',
+        refundRequired: true,
+        refundId: refund.id,
+        refundStatus: refund.status,
+        paymentAvailable,
+      }
+    }
+    const cancellationDeadline = await effectiveCancellationDeadline(tx, appId, event)
     assertCanCancel(registration.status)
     if (now.getTime() >= cancellationDeadline.getTime()) {
       throw new DomainError('CONFLICT', '已超过可取消时间')
@@ -1786,55 +2060,84 @@ async function cancelRegistration(db, {
     if (expectedVersion !== undefined && Number(expectedVersion) !== Number(registration.version)) {
       throw new DomainError('CONFLICT', '报名状态已变化，请刷新后重试', true)
     }
+    if (activeCheckin) {
+      throw new DomainError('CONFLICT', '签到记录仍有效，不能取消报名')
+    }
     const releasedCapacity = capacityStatuses.has(registration.status)
-    const paidOrder = registration.order_id && registration.order_status === 'PAID'
-    const nextStatus = paidOrder ? 'CANCELLATION_PENDING' : 'CANCELLED'
+    const refundRequired = Boolean(registration.order_id
+      && ['PAID', 'PARTIALLY_REFUNDED', 'REFUND_PENDING'].includes(registration.order_status))
+    if (registration.order_id
+      && !refundRequired
+      && !['CREATED', 'PAYMENT_CREATED'].includes(registration.order_status)) {
+      throw new DomainError('CONFLICT', '活动订单状态需要人工核对')
+    }
+    const nextStatus = refundRequired ? 'CANCELLATION_PENDING' : 'CANCELLED'
     const nextVersion = Number(registration.version) + 1
-    await tx.query(
+    const registrationUpdated = await tx.query(
       `UPDATE mip_event_registrations SET status = ?, cancelled_at = ?,
        cancelled_by_type = 'USER', cancellation_reason = NULL, version = version + 1
-       WHERE app_id = ? AND id = ? AND version = ?`,
-      [nextStatus, now, appId, registration.id, registration.version],
+       WHERE app_id = ? AND id = ? AND version = ? AND status = ?`,
+      [nextStatus, now, appId, registration.id, registration.version, registration.status],
     )
+    if (Number(registrationUpdated?.affectedRows) !== 1) {
+      throw new DomainError('CONFLICT', '报名状态已变化，请刷新后重试', true)
+    }
     let refundId
+    let refundStatus
     if (registration.order_id) {
-      if (paidOrder) {
-        await tx.query(
+      if (refundRequired) {
+        if (registration.order_status !== 'REFUND_PENDING') {
+          const orderUpdated = await tx.query(
           `UPDATE mip_orders SET status = 'REFUND_PENDING', version = version + 1
-           WHERE app_id = ? AND id = ? AND status = 'PAID'`,
-          [appId, registration.order_id],
-        )
-        refundId = await createEventRefund(tx, {
+           WHERE app_id = ? AND id = ? AND version = ?
+             AND status IN ('PAID', 'PARTIALLY_REFUNDED')`,
+          [appId, registration.order_id, registration.order_version],
+          )
+          if (Number(orderUpdated?.affectedRows) !== 1) {
+            throw new DomainError('CONFLICT', '订单退款状态已变化，请刷新后重试', true)
+          }
+        }
+        const refund = await createEventRefund(tx, {
           appId,
           order: { id: registration.order_id, amount_cents: registration.amount_cents },
           registrationId: registration.id,
           requestedByUserId: userId,
           reason: '用户取消活动报名',
+          now,
         })
+        refundId = refund.id
+        refundStatus = refund.status
       }
       else {
-        await tx.query(
+        const orderUpdated = await tx.query(
           `UPDATE mip_orders SET status = 'CLOSED', closed_at = ?, version = version + 1
-           WHERE app_id = ? AND id = ? AND status IN ('CREATED','PAYMENT_CREATED')`,
-          [now, appId, registration.order_id],
+           WHERE app_id = ? AND id = ? AND version = ?
+             AND status IN ('CREATED','PAYMENT_CREATED')`,
+          [now, appId, registration.order_id, registration.order_version],
         )
-        if (registration.seat_hold_id) {
-          await tx.query(
+        if (Number(orderUpdated?.affectedRows) !== 1) {
+          throw new DomainError('CONFLICT', '活动订单状态已变化，请刷新后重试', true)
+        }
+        if (registration.seat_hold_id && registration.seat_hold_status === 'ACTIVE') {
+          const holdUpdated = await tx.query(
             `UPDATE mip_event_seat_holds SET status = 'CANCELLED', cancelled_at = ?
              WHERE app_id = ? AND id = ? AND status = 'ACTIVE'`,
             [now, appId, registration.seat_hold_id],
           )
+          if (Number(holdUpdated?.affectedRows) !== 1) {
+            throw new DomainError('CONFLICT', '活动名额状态已变化，请刷新后重试', true)
+          }
         }
       }
     }
-    if (releasedCapacity && !paidOrder && event.access_type !== 'PAID') {
+    if (releasedCapacity && !refundRequired && event.access_type !== 'PAID') {
       await promoteWaitlist(tx, { appId, eventId, now })
     }
     await writeAudit(tx, {
       appId,
       actorUserId: userId,
       scopeId: eventId,
-      action: paidOrder ? 'EVENT_REGISTRATION_REFUND_REQUESTED' : 'EVENT_REGISTRATION_CANCELLED',
+      action: refundRequired ? 'EVENT_REGISTRATION_REFUND_REQUESTED' : 'EVENT_REGISTRATION_CANCELLED',
       resourceType: 'EVENT_REGISTRATION',
       resourceId: registration.id,
       metadata: { from: registration.status, to: nextStatus },
@@ -1843,22 +2146,39 @@ async function cancelRegistration(db, {
       appId,
       aggregateType: 'EVENT_REGISTRATION',
       aggregateId: registration.id,
-      eventType: paidOrder ? 'event.registration_refund_requested' : 'event.registration_cancelled',
+      eventType: refundRequired ? 'event.registration_refund_requested' : 'event.registration_cancelled',
       sourceVersion: nextVersion,
       payload: { eventId, userId, status: nextStatus, orderId: registration.order_id || undefined },
     })
     return {
       registrationId: registration.id,
       status: nextStatus,
-      refundRequired: paidOrder,
+      refundRequired,
       refundId,
+      refundStatus,
       paymentAvailable,
     }
   })
 }
 
-async function checkIn(db, { appId, userId, scanToken, idempotencyKey, expectedVersion, now = new Date() }) {
-  const parsedToken = parseCheckInToken(scanToken)
+async function checkIn(db, {
+  appId,
+  userId,
+  callerKey,
+  resumeToken,
+  scanToken,
+  tokenSecret,
+  idempotencyKey,
+  expectedVersion,
+  now = new Date(),
+}) {
+  const presented = parsePresentedCheckInToken(resumeToken || scanToken, {
+    appId,
+    callerKey,
+    tokenSecret,
+    userId,
+    now,
+  })
   return db.transaction(async (tx) => {
     await requireActiveUserForMutation(tx, appId, userId)
     const claim = await idempotencyReplay(tx, {
@@ -1866,15 +2186,20 @@ async function checkIn(db, { appId, userId, scanToken, idempotencyKey, expectedV
       userId,
       operation: 'event.checkin',
       key: idempotencyKey,
-      request: { credentialRef: parsedToken.reference },
+      request: { credentialKind: presented.credentialKind, credentialRef: presented.credentialRef },
     })
     if (claim.replay) {
       return claim.replay
     }
-    const lookup = checkInCredentialQuery(parsedToken, { lock: true })
+    const lookup = presented.kind === 'SCAN'
+      ? checkInCredentialQuery(presented.parsed, { lock: true })
+      : checkInResumeRef(presented.credentialKind, presented.credentialRef, { lock: true })
     const credential = await tx.one(lookup.sql, [appId, ...lookup.params])
     if (!credential) {
       throw new DomainError('VALIDATION_FAILED', '活动码无效')
+    }
+    if (presented.eventId && credential.event_id !== presented.eventId) {
+      throw new DomainError('VALIDATION_FAILED', '签到恢复凭证与活动不一致')
     }
     const event = await tx.one(
       `SELECT id FROM mip_events WHERE app_id = ? AND id = ? FOR UPDATE`,
@@ -1981,7 +2306,14 @@ async function checkIn(db, { appId, userId, scanToken, idempotencyKey, expectedV
   })
 }
 
-async function resolveCheckInScene(db, { appId, scene, now = new Date() }) {
+async function resolveCheckInScene(db, {
+  appId,
+  userId,
+  callerKey,
+  scene,
+  tokenSecret,
+  now = new Date(),
+}) {
   const parsedToken = parseCheckInToken(scene)
   const lookup = checkInCredentialQuery(parsedToken)
   const credential = await db.one(
@@ -1998,11 +2330,20 @@ async function resolveCheckInScene(db, { appId, scene, now = new Date() }) {
   if (!event) {
     throw new DomainError('NOT_FOUND', '活动不存在或已下架')
   }
+  const resume = createCheckInResumeToken({
+    appId,
+    callerKey,
+    credential,
+    parsedToken,
+    tokenSecret,
+    userId,
+    now,
+  })
   return {
     eventId: event.id,
-    scanToken: parsedToken.token,
+    resumeToken: resume.token,
     validFrom: iso(credential.valid_from),
-    validUntil: iso(credential.valid_until),
+    validUntil: iso(resume.expiresAt),
   }
 }
 
@@ -2978,6 +3319,8 @@ module.exports = {
   adminListFeedback,
   attachInvitationCodeAsset,
   cancelRegistration,
+  canCancelRegistration,
+  canRetryRegistrationRefund,
   canEditRegistration,
   checkIn,
   createInvitation,

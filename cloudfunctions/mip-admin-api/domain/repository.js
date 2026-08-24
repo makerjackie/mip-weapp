@@ -7,6 +7,7 @@ const { createBadgeAdminRepository } = require('./badges')
 const { createFullAccessPolicy } = require('./full-access')
 const { assertFixedGrowthRuleUpdate } = require('./growth-rule-catalog')
 const { createMessageCampaignRepository } = require('./message-campaigns')
+const { createMatchingAdminRepository } = require('./matching-admin')
 const { createOpportunityArchiveRepository } = require('./opportunity-archive')
 const { createOpportunityCommentAdminRepository } = require('./opportunity-comments')
 const { createRoleCapabilityPolicyRepository } = require('./role-capability-policies')
@@ -372,6 +373,10 @@ function createAdminRepository(database, options = {}) {
     now,
   })
   const opportunityCommentAdminRepository = createOpportunityCommentAdminRepository(database, {
+    assertMutationScope: assertScope,
+    lockMutationAuthorization: lockMutation,
+  })
+  const matchingAdminRepository = createMatchingAdminRepository(database, {
     assertMutationScope: assertScope,
     lockMutationAuthorization: lockMutation,
   })
@@ -2082,14 +2087,19 @@ function createAdminRepository(database, options = {}) {
   async function cancelEventRegistrations(tx, input, cancelledAt) {
     const registrations = await tx.query(
       `SELECT r.id, r.user_id, r.status, r.version, r.order_id,
-        o.status AS order_status, o.amount_cents,
+        o.status AS order_status, o.amount_cents, o.version AS order_version,
         COALESCE((SELECT SUM(ref.amount_cents) FROM mip_refunds ref
           WHERE ref.app_id = o.app_id AND ref.order_id = o.id
             AND ref.status IN ('PENDING', 'PROVIDER_CREATED', 'PROCESSING', 'SUCCEEDED')), 0) AS reserved_refund_cents,
-        h.id AS seat_hold_id
+        h.id AS seat_hold_id, h.status AS seat_hold_status,
+        active_checkin.id AS active_checkin_id
        FROM mip_event_registrations r
        LEFT JOIN mip_orders o ON o.app_id = r.app_id AND o.id = r.order_id AND o.order_type = 'EVENT'
        LEFT JOIN mip_event_seat_holds h ON h.app_id = o.app_id AND h.order_id = o.id
+       LEFT JOIN mip_event_checkins active_checkin
+         ON active_checkin.app_id = r.app_id AND active_checkin.event_id = r.event_id
+        AND active_checkin.registration_id = r.id AND active_checkin.user_id = r.user_id
+        AND active_checkin.status = 'ACTIVE'
        WHERE r.app_id = ? AND r.event_id = ?
          AND r.status IN ('PENDING_REVIEW', 'WAITLISTED', 'PAYMENT_PENDING', 'REGISTERED', 'CANCELLATION_PENDING')
        FOR UPDATE`,
@@ -2097,6 +2107,7 @@ function createAdminRepository(database, options = {}) {
     )
     const refundIds = []
     for (const registration of registrations) {
+      if (registration.active_checkin_id) throw codeError('INVALID_STATE')
       const remainingRefund = Math.max(
         0,
         Number(registration.amount_cents || 0) - Number(registration.reserved_refund_cents || 0),
@@ -2105,13 +2116,14 @@ function createAdminRepository(database, options = {}) {
         && remainingRefund > 0
       const refundPending = shouldCreateRefund || registration.order_status === 'REFUND_PENDING'
       const registrationStatus = refundPending ? 'CANCELLATION_PENDING' : 'CANCELLED'
-      await tx.query(
+      const registrationUpdated = await tx.query(
         `UPDATE mip_event_registrations SET status = ?, cancelled_at = ?,
           cancelled_by_type = 'EVENT', cancellation_reason = ?, version = version + 1
-         WHERE app_id = ? AND id = ? AND version = ?`,
+         WHERE app_id = ? AND id = ? AND version = ? AND status = ?`,
         [registrationStatus, cancelledAt, input.reason, input.appId,
-          registration.id, registration.version],
+          registration.id, registration.version, registration.status],
       )
+      if (Number(registrationUpdated.affectedRows) !== 1) throw codeError('CONFLICT')
       let refundId = null
       if (shouldCreateRefund) {
         refundId = id()
@@ -2125,11 +2137,13 @@ function createAdminRepository(database, options = {}) {
             merchantRefundNumber(refundId), `event-cancel:${input.eventId}:${registration.id}`,
             remainingRefund, input.reason],
         )
-        await tx.query(
+        const orderUpdated = await tx.query(
           `UPDATE mip_orders SET status = 'REFUND_PENDING', version = version + 1
-           WHERE app_id = ? AND id = ? AND status IN ('PAID', 'PARTIALLY_REFUNDED')`,
-          [input.appId, registration.order_id],
+           WHERE app_id = ? AND id = ? AND version = ?
+             AND status IN ('PAID', 'PARTIALLY_REFUNDED')`,
+          [input.appId, registration.order_id, registration.order_version],
         )
+        if (Number(orderUpdated.affectedRows) !== 1) throw codeError('CONFLICT')
         await writeAudit(tx, {
           ...input.audit,
           action: 'admin.refunds.submit',
@@ -2144,18 +2158,21 @@ function createAdminRepository(database, options = {}) {
         })
       }
       else if (registration.order_id && ['CREATED', 'PAYMENT_CREATED'].includes(registration.order_status)) {
-        await tx.query(
+        const orderUpdated = await tx.query(
           `UPDATE mip_orders SET status = 'CLOSED', closed_at = ?, version = version + 1
-           WHERE app_id = ? AND id = ? AND status IN ('CREATED', 'PAYMENT_CREATED')`,
-          [cancelledAt, input.appId, registration.order_id],
+           WHERE app_id = ? AND id = ? AND version = ?
+             AND status IN ('CREATED', 'PAYMENT_CREATED')`,
+          [cancelledAt, input.appId, registration.order_id, registration.order_version],
         )
+        if (Number(orderUpdated.affectedRows) !== 1) throw codeError('CONFLICT')
       }
-      if (registration.seat_hold_id && !refundPending) {
-        await tx.query(
+      if (registration.seat_hold_id && registration.seat_hold_status === 'ACTIVE' && !refundPending) {
+        const holdUpdated = await tx.query(
           `UPDATE mip_event_seat_holds SET status = 'CANCELLED', cancelled_at = ?
            WHERE app_id = ? AND id = ? AND status = 'ACTIVE'`,
           [cancelledAt, input.appId, registration.seat_hold_id],
         )
+        if (Number(holdUpdated.affectedRows) !== 1) throw codeError('CONFLICT')
       }
       await writeOutbox(tx, {
         id: id(),
@@ -3036,9 +3053,9 @@ function createAdminRepository(database, options = {}) {
     if (filters.query) {
       clauses.push(`(o.id LIKE ? ESCAPE '\\\\' OR o.merchant_order_no LIKE ? ESCAPE '\\\\'
         OR p.nickname LIKE ? ESCAPE '\\\\' OR mp.name LIKE ? ESCAPE '\\\\'
-        OR e.title LIKE ? ESCAPE '\\\\')`)
+        OR e.title LIKE ? ESCAPE '\\\\' OR knowledge.title LIKE ? ESCAPE '\\\\')`)
       const query = `%${escapeLike(filters.query)}%`
-      params.push(query, query, query, query, query)
+      params.push(query, query, query, query, query, query)
     }
     return { clauses, params }
   }
@@ -3049,9 +3066,11 @@ function createAdminRepository(database, options = {}) {
     const rows = await database.query(
       `SELECT o.id, o.user_id, p.nickname, o.order_type, o.resource_id, o.membership_plan_id,
         mp.name AS membership_plan_name, e.title AS event_title, e.branch_id, eb.name AS event_branch_name,
+        knowledge.title AS knowledge_title,
         o.merchant_order_no, o.provider_transaction_id, o.amount_cents, o.currency, o.status, o.paid_at,
-        o.version, o.created_at, entitlement.status AS entitlement_status,
+        o.product_snapshot_json, o.version, o.created_at, entitlement.status AS entitlement_status,
         entitlement.starts_at AS entitlement_starts_at, entitlement.ends_at AS entitlement_ends_at,
+        knowledge_entitlement.first_accessed_at AS knowledge_first_accessed_at,
         COALESCE((SELECT SUM(r.amount_cents) FROM mip_refunds r
           WHERE r.app_id = o.app_id AND r.order_id = o.id AND r.status = 'SUCCEEDED'), 0) AS refunded_amount,
         (SELECT r.status FROM mip_refunds r WHERE r.app_id = o.app_id AND r.order_id = o.id
@@ -3062,9 +3081,13 @@ function createAdminRepository(database, options = {}) {
        LEFT JOIN mip_profiles p ON p.app_id = o.app_id AND p.user_id = o.user_id
        LEFT JOIN mip_membership_plans mp ON mp.app_id = o.app_id AND mp.id = o.membership_plan_id
        LEFT JOIN mip_events e ON e.app_id = o.app_id AND e.id = o.resource_id
+       LEFT JOIN mip_knowledge_contents knowledge
+         ON knowledge.app_id = o.app_id AND knowledge.id = o.resource_id AND o.order_type = 'CONTENT'
        LEFT JOIN mip_city_branches eb ON eb.app_id = e.app_id AND eb.id = e.branch_id
        LEFT JOIN mip_membership_entitlements entitlement
          ON entitlement.app_id = o.app_id AND entitlement.order_id = o.id
+       LEFT JOIN mip_knowledge_entitlements knowledge_entitlement
+         ON knowledge_entitlement.app_id = o.app_id AND knowledge_entitlement.order_id = o.id
        WHERE ${clauses.join(' AND ')}${cursorWhere.sql} ORDER BY o.created_at DESC, o.id DESC LIMIT ?`,
       [...params, ...cursorWhere.params, pageLimit + 1],
     )
@@ -3074,10 +3097,12 @@ function createAdminRepository(database, options = {}) {
       nickname: row.nickname || '未填写昵称',
       orderType: row.order_type,
       resourceId: row.order_type === 'MEMBERSHIP' ? row.membership_plan_id : row.resource_id,
-      resourceType: row.order_type === 'MEMBERSHIP' ? 'MEMBERSHIP_PLAN' : 'EVENT',
+      resourceType: row.order_type === 'MEMBERSHIP'
+        ? 'MEMBERSHIP_PLAN'
+        : row.order_type === 'CONTENT' ? 'KNOWLEDGE_CONTENT' : 'EVENT',
       resourceTitle: row.order_type === 'MEMBERSHIP'
         ? row.membership_plan_name || '会员方案'
-        : row.event_title || '活动',
+        : row.order_type === 'CONTENT' ? row.knowledge_title || '单内容解锁' : row.event_title || '活动',
       resourceBranchName: row.event_branch_name || '',
       merchantOrderNoMasked: maskIdentifier(row.merchant_order_no),
       amountCents: Number(row.amount_cents),
@@ -3096,6 +3121,7 @@ function createAdminRepository(database, options = {}) {
       version: Number(row.version),
       providerTransactionIdMasked: row.provider_transaction_id ? maskIdentifier(row.provider_transaction_id) : null,
       branchId: row.branch_id || null,
+      ...(row.order_type === 'CONTENT' ? { contentRefundEligible: contentRefundEligible(row) } : {}),
     }))
     return pageRows(items, pageLimit, row => ({ createdAt: row.createdAt, id: row.id }))
   }
@@ -3161,32 +3187,126 @@ function createAdminRepository(database, options = {}) {
   async function submitRefund(input) {
     return database.transaction(async (tx) => {
       const authorization = await lockMutation(tx, input)
+      const orderReference = await tx.one(
+        `SELECT order_type, resource_id FROM mip_orders
+         WHERE app_id = ? AND id = ?`,
+        [input.appId, input.orderId],
+      )
+      if (!orderReference) throw codeError('NOT_FOUND')
+      let event = null
+      if (orderReference.order_type === 'EVENT') {
+        event = await tx.one(
+          `SELECT id, branch_id FROM mip_events
+           WHERE app_id = ? AND id = ? FOR UPDATE`,
+          [input.appId, orderReference.resource_id],
+        )
+        if (!event) throw codeError('NOT_FOUND')
+      }
       const order = await tx.one(
-        `SELECT id, user_id, order_type, resource_id, amount_cents, status, version FROM mip_orders
+        `SELECT id, user_id, order_type, resource_id, amount_cents, status, version,
+                paid_at, product_snapshot_json
+         FROM mip_orders
          WHERE app_id = ? AND id = ? FOR UPDATE`,
         [input.appId, input.orderId],
       )
       if (!order) throw codeError('NOT_FOUND')
+      if (order.order_type !== orderReference.order_type
+        || order.resource_id !== orderReference.resource_id) throw codeError('CONFLICT')
       let currentScope = { scopeType: 'PLATFORM', scopeId: null, branchId: null }
+      let eventRegistration = null
+      let activeEventCheckin = null
       if (order.order_type === 'EVENT') {
-        const event = await tx.one(
-          `SELECT id, branch_id FROM mip_events
-           WHERE app_id = ? AND id = ? FOR UPDATE`,
-          [input.appId, order.resource_id],
-        )
-        if (!event) throw codeError('NOT_FOUND')
         currentScope = eventScopeFromRow(event, order.resource_id)
+        eventRegistration = await tx.one(
+          `SELECT id, user_id, status, version FROM mip_event_registrations
+           WHERE app_id = ? AND event_id = ? AND order_id = ? AND user_id = ? FOR UPDATE`,
+          [input.appId, order.resource_id, order.id, order.user_id],
+        )
+        if (!eventRegistration) throw codeError('INVALID_STATE')
+        activeEventCheckin = await tx.one(
+          `SELECT id, version FROM mip_event_checkins
+           WHERE app_id = ? AND event_id = ? AND registration_id = ? AND status = 'ACTIVE' FOR UPDATE`,
+          [input.appId, order.resource_id, eventRegistration.id],
+        )
+        if (activeEventCheckin) throw codeError('INVALID_STATE')
       }
       assertScope(authorization, currentScope)
       if (input.authorizedScope && !sameScope(currentScope, input.authorizedScope)) {
         throw codeError('CONFLICT')
       }
       const existing = await tx.one(
-        `SELECT id, amount_cents, status FROM mip_refunds
+        `SELECT id, amount_cents, status, version FROM mip_refunds
          WHERE app_id = ? AND order_id = ? AND idempotency_key = ? FOR UPDATE`,
         [input.appId, input.orderId, input.idempotencyKey],
       )
       if (existing) {
+        if (order.order_type === 'EVENT') {
+          if (existing.status === 'FAILED') {
+            if (eventRegistration.status !== 'CANCELLATION_PENDING'
+              || !['PAID', 'PARTIALLY_REFUNDED'].includes(order.status)) {
+              throw codeError('INVALID_STATE')
+            }
+            const latest = await tx.one(
+              `SELECT id, amount_cents, status FROM mip_refunds
+               WHERE app_id = ? AND order_id = ?
+               ORDER BY created_at DESC, id DESC LIMIT 1 FOR UPDATE`,
+              [input.appId, input.orderId],
+            )
+            if (latest && ['PENDING', 'PROVIDER_CREATED', 'PROCESSING'].includes(latest.status)) {
+              return {
+                id: latest.id,
+                orderId: input.orderId,
+                amountCents: Number(latest.amount_cents),
+                status: latest.status,
+                idempotent: true,
+              }
+            }
+            const totals = await tx.one(
+              `SELECT COALESCE(SUM(amount_cents), 0) AS refunded FROM mip_refunds
+               WHERE app_id = ? AND order_id = ?
+                 AND status IN ('PENDING', 'PROVIDER_CREATED', 'PROCESSING', 'SUCCEEDED')`,
+              [input.appId, input.orderId],
+            )
+            const amount = Number(order.amount_cents) - Number(totals?.refunded || 0)
+            if (amount <= 0) throw codeError('INVALID_STATE')
+            const refundId = id()
+            const merchantRefundNo = `MIPR${Date.now()}${bytes(5).toString('hex').toUpperCase()}`.slice(0, 64)
+            await tx.query(
+              `INSERT INTO mip_refunds (
+                id, app_id, order_id, requested_by_user_id, merchant_refund_no,
+                idempotency_key, amount_cents, reason, status
+              ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')`,
+              [refundId, input.appId, input.orderId, input.actorUserId, merchantRefundNo,
+                `admin-refund-retry:${latest?.id || existing.id}`, amount, input.reason],
+            )
+            const orderUpdated = await tx.query(
+              `UPDATE mip_orders SET status = 'REFUND_PENDING', version = version + 1
+               WHERE app_id = ? AND id = ? AND version = ?
+                 AND status IN ('PAID', 'PARTIALLY_REFUNDED')`,
+              [input.appId, order.id, order.version],
+            )
+            if (Number(orderUpdated.affectedRows) !== 1) throw codeError('CONFLICT')
+            await writeAudit(tx, input.audit(refundId, amount))
+            await writeOutbox(tx, {
+              id: id(),
+              appId: input.appId,
+              aggregateType: 'REFUND',
+              aggregateId: refundId,
+              eventType: 'admin.refund_requested',
+              sourceVersion: 1,
+              payload: { refundId, orderId: input.orderId, requestedByUserId: input.actorUserId, retried: true },
+            })
+            return {
+              id: refundId,
+              orderId: input.orderId,
+              amountCents: amount,
+              status: 'PENDING',
+              idempotent: false,
+            }
+          }
+          const expectedRegistrationStatus = existing.status === 'SUCCEEDED' ? 'CANCELLED' : 'CANCELLATION_PENDING'
+          if (eventRegistration.status !== expectedRegistrationStatus) throw codeError('INVALID_STATE')
+        }
         return {
           id: existing.id,
           orderId: input.orderId,
@@ -3196,6 +3316,23 @@ function createAdminRepository(database, options = {}) {
         }
       }
       if (!['PAID', 'PARTIALLY_REFUNDED'].includes(order.status)) throw codeError('INVALID_STATE')
+      if (order.order_type === 'EVENT'
+        && !['REGISTERED', 'CANCELLATION_PENDING'].includes(eventRegistration.status)) {
+        throw codeError('INVALID_STATE')
+      }
+      if (order.order_type === 'CONTENT') {
+        const entitlement = await tx.one(
+          `SELECT first_accessed_at FROM mip_knowledge_entitlements
+           WHERE app_id = ? AND order_id = ? AND status = 'ACTIVE' FOR UPDATE`,
+          [input.appId, order.id],
+        )
+        if (!contentRefundEligible({
+          ...order,
+          knowledge_first_accessed_at: entitlement?.first_accessed_at,
+        })) {
+          throw codeError('CONTENT_REFUND_NOT_AVAILABLE')
+        }
+      }
       const totals = await tx.one(
         `SELECT COALESCE(SUM(amount_cents), 0) AS refunded FROM mip_refunds
          WHERE app_id = ? AND order_id = ? AND status IN ('PENDING', 'PROVIDER_CREATED', 'PROCESSING', 'SUCCEEDED')`,
@@ -3226,6 +3363,32 @@ function createAdminRepository(database, options = {}) {
         [input.appId, input.orderId, order.version],
       )
       if (Number(updated.affectedRows) !== 1) throw codeError('CONFLICT')
+      if (order.order_type === 'EVENT' && eventRegistration.status === 'REGISTERED') {
+        const registrationUpdated = await tx.query(
+          `UPDATE mip_event_registrations SET
+             status = 'CANCELLATION_PENDING', cancelled_at = ?, cancelled_by_type = 'ADMIN',
+             cancellation_reason = ?, version = version + 1
+           WHERE app_id = ? AND id = ? AND version = ? AND status = 'REGISTERED'`,
+          [now(), input.reason, input.appId, eventRegistration.id, eventRegistration.version],
+        )
+        if (Number(registrationUpdated.affectedRows) !== 1) throw codeError('CONFLICT')
+        await writeOutbox(tx, {
+          id: id(),
+          appId: input.appId,
+          aggregateType: 'EVENT_REGISTRATION',
+          aggregateId: eventRegistration.id,
+          eventType: 'event.registration_refund_requested',
+          sourceVersion: Number(eventRegistration.version) + 1,
+          payload: {
+            eventId: order.resource_id,
+            orderId: order.id,
+            refundId,
+            userId: eventRegistration.user_id,
+            status: 'CANCELLATION_PENDING',
+            requestedByAdmin: true,
+          },
+        })
+      }
       await writeAudit(tx, input.audit(refundId, amount))
       await writeOutbox(tx, {
         id: id(),
@@ -3338,6 +3501,7 @@ function createAdminRepository(database, options = {}) {
     ...messageCampaignRepository,
     ...opportunityArchiveRepository,
     ...opportunityCommentAdminRepository,
+    ...matchingAdminRepository,
     ...roleCapabilityPolicyRepository,
     adjustGrowth,
     authorizeRefundRetry,
@@ -3474,6 +3638,20 @@ function exportVisibility(ticket) {
 function maskIdentifier(value) {
   const text = String(value || '')
   return text.length <= 8 ? text : `${text.slice(0, 4)}…${text.slice(-4)}`
+}
+
+function contentRefundEligible(row) {
+  if (row.order_type !== 'CONTENT') return true
+  const snapshot = json(row.product_snapshot_json, {})
+  const windowHours = Number(snapshot.refundWindowHours)
+  const paidAt = new Date(row.paid_at)
+  return snapshot.refundPolicy === 'BEFORE_ACCESS'
+    && !row.knowledge_first_accessed_at
+    && Number.isInteger(windowHours)
+    && windowHours >= 0
+    && windowHours <= 720
+    && Number.isFinite(paidAt.getTime())
+    && paidAt.getTime() + windowHours * 3_600_000 > Date.now()
 }
 
 function merchantRefundNumber(refundId) {

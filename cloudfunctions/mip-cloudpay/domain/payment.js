@@ -114,6 +114,9 @@ function createPaymentService(options) {
       identityKey: caller.identityKey,
     })
     assertRefund(refund)
+    if (refund.manualReview) {
+      throw new Error('REFUND_MANUAL_REVIEW')
+    }
     const result = await options.cloudPay.refund({
       envId: config.envId,
       functionName: config.callbackFunction,
@@ -155,7 +158,7 @@ function createPaymentService(options) {
     }
     const record = refundRecord(result, refund.merchantRefundNo)
     if (!record) {
-      return { status: 'PROVIDER_CREATED' }
+      return { status: refund.manualReview ? 'REFUND_MANUAL_REVIEW' : 'PROVIDER_CREATED' }
     }
     if (record.status === 'SUCCESS') {
       await options.callLedger('applyRefundCallback', {
@@ -166,15 +169,23 @@ function createPaymentService(options) {
       })
       return { status: 'REFUNDED' }
     }
-    if (['REFUNDCLOSE', 'CHANGE'].includes(record.status)) {
+    if (record.status === 'CHANGE') {
+      await options.callLedger('markRefundManualReview', {
+        refundId,
+        merchantRefundNo: refund.merchantRefundNo,
+        reasonCode: 'CHANGE',
+      })
+      return { status: 'REFUND_MANUAL_REVIEW' }
+    }
+    if (record.status === 'REFUNDCLOSE') {
       await options.callLedger('markRefundFailed', {
         refundId,
         merchantRefundNo: refund.merchantRefundNo,
-        reasonCode: record.status,
+        reasonCode: 'REFUNDCLOSE',
       })
       return { status: 'REFUND_FAILED' }
     }
-    return { status: 'PROVIDER_CREATED' }
+    return { status: refund.manualReview ? 'REFUND_MANUAL_REVIEW' : 'PROVIDER_CREATED' }
   }
 
   return { configReady, createPayment, submitRefund, syncPayment, syncRefund }

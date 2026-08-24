@@ -475,6 +475,74 @@
         "mip_opportunity_comment_reports"
       ],
       "altersTables": []
+    },
+    {
+      "version": "20260824350000",
+      "name": "mip_blind_box",
+      "sql": "database/mysql/mip/035_mip_blind_box.sql",
+      "sqlSha256": "98daf37c772fd4f6040ed016da0cc72ecbe81359cfa41c2ba726d72aff694ddc",
+      "rollback": "database/mysql/mip/rollback/035_mip_blind_box.sql",
+      "rollbackSha256": "30cca27bc9a0609812490bcf944a36457c30bfad9217d4b727333c0083802d31",
+      "createsTables": [
+        "mip_blind_box_catalogs",
+        "mip_blind_box_cards",
+        "mip_blind_box_user_states",
+        "mip_blind_box_draws",
+        "mip_blind_box_inventory"
+      ],
+      "altersTables": []
+    },
+    {
+      "version": "20260824360000",
+      "name": "mip_knowledge_content",
+      "sql": "database/mysql/mip/036_mip_knowledge_content.sql",
+      "sqlSha256": "ceb8c2923add8e588773e452e964a760fb44382a58cf0b7dac9b22f2379d39dc",
+      "rollback": "database/mysql/mip/rollback/036_mip_knowledge_content.sql",
+      "rollbackSha256": "72b9562a0f394c9be449e4bd9074c0df0a33d67b9c950a6987fbdedb9d0cb729",
+      "createsTables": [
+        "mip_knowledge_sources",
+        "mip_knowledge_categories",
+        "mip_knowledge_contents",
+        "mip_knowledge_products",
+        "mip_knowledge_entitlements",
+        "mip_content_comment_settings",
+        "mip_content_comments",
+        "mip_content_comment_reports",
+        "mip_knowledge_ingestion_runs",
+        "mip_knowledge_ingestion_items"
+      ],
+      "altersTables": [
+        "mip_orders"
+      ]
+    },
+    {
+      "version": "20260824370000",
+      "name": "mip_ai_matching_preferences",
+      "sql": "database/mysql/mip/037_mip_ai_matching_preferences.sql",
+      "sqlSha256": "849a6a80bca76c65c1cf7a2c204c0352440554ae33cf87a615badee280ea7f35",
+      "rollback": "database/mysql/mip/rollback/037_mip_ai_matching_preferences.sql",
+      "rollbackSha256": "88a65c3fde804e619dac2771728c011c7819b1c3f046d68bfb75accb077d3d77",
+      "createsTables": [
+        "mip_user_notification_preferences",
+        "mip_user_opportunity_preferences",
+        "mip_matching_settings",
+        "mip_matching_requests",
+        "mip_matching_results",
+        "mip_matching_feedback"
+      ],
+      "altersTables": []
+    },
+    {
+      "version": "20260824380000",
+      "name": "mip_task_level_rules",
+      "sql": "database/mysql/mip/038_task_level_rules.sql",
+      "sqlSha256": "1a713f989d9f157236dc0de530cd25a236719fce8ddefe94cf7206af5c24f74a",
+      "rollback": "database/mysql/mip/rollback/038_task_level_rules.sql",
+      "rollbackSha256": "7a3f4f56813196e45f6d66c535103e2a7ed567b35531076035fcdf1bdab8bd94",
+      "createsTables": [
+        "mip_task_level_rules"
+      ],
+      "altersTables": []
     }
   ]
 }

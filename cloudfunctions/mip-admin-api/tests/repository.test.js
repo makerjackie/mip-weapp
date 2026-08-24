@@ -416,6 +416,77 @@ describe('admin repository persistence contracts', () => {
     assert.ok(calls.some(call => call.sql.includes("UPDATE mip_orders SET status = 'REFUND_PENDING'")))
   })
 
+  it('locks and moves an event registration to cancellation pending before a forced refund can dispatch', async () => {
+    const calls = []
+    let nextId = 0
+    const repository = createAdminRepository(transactionDatabase({
+      async one(sql) {
+        if (sql.includes('FROM mip_orders')) {
+          return {
+            id: 'order-a', user_id: 'buyer-a', order_type: 'EVENT', resource_id: 'event-a',
+            amount_cents: 12000, status: 'PAID', version: 4, product_snapshot_json: '{}',
+          }
+        }
+        if (sql.includes('FROM mip_events')) return { id: 'event-a', branch_id: 'branch-a' }
+        if (sql.includes('FROM mip_event_registrations')) {
+          return { id: 'registration-a', user_id: 'buyer-a', status: 'REGISTERED', version: 2 }
+        }
+        if (sql.includes('FROM mip_event_checkins')) return null
+        if (sql.includes('FROM mip_refunds') && sql.includes('idempotency_key')) return null
+        if (sql.includes('COALESCE(SUM(amount_cents)')) return { refunded: 0 }
+        return null
+      },
+      async query(sql, params) {
+        calls.push({ sql, params })
+        return { affectedRows: 1 }
+      },
+    }), {
+      id: () => `00000000-0000-4000-8000-${String(++nextId).padStart(12, '0')}`,
+      now: () => new Date('2026-08-25T00:00:00.000Z'),
+    })
+    const result = await repository.submitRefund({
+      appId: 'wx-app', actorUserId: 'admin-user', orderId: 'order-a',
+      reason: '运营强制退款', idempotencyKey: 'admin-event-refund',
+      authorizedScope: { scopeType: 'EVENT', scopeId: 'event-a', branchId: 'branch-a' },
+      audit: (refundId, amountCents) => audit({
+        action: 'admin.refunds.submit', resourceType: 'REFUND', resourceId: refundId,
+        metadata: { amountCents },
+      }),
+    })
+    assert.equal(result.amountCents, 12000)
+    assert.ok(calls.some(call => call.sql.includes("status = 'CANCELLATION_PENDING'")
+      && call.sql.includes("status = 'REGISTERED'")))
+    assert.ok(calls.some(call => call.params?.includes('event.registration_refund_requested')))
+  })
+
+  it('fails a forced event refund closed while an active check-in exists', async () => {
+    const writes = []
+    const repository = createAdminRepository(transactionDatabase({
+      async one(sql) {
+        if (sql.includes('FROM mip_orders')) {
+          return {
+            id: 'order-a', user_id: 'buyer-a', order_type: 'EVENT', resource_id: 'event-a',
+            amount_cents: 12000, status: 'PAID', version: 4, product_snapshot_json: '{}',
+          }
+        }
+        if (sql.includes('FROM mip_events')) return { id: 'event-a', branch_id: 'branch-a' }
+        if (sql.includes('FROM mip_event_registrations')) {
+          return { id: 'registration-a', user_id: 'buyer-a', status: 'ATTENDED', version: 3 }
+        }
+        if (sql.includes('FROM mip_event_checkins')) return { id: 'checkin-a', version: 1 }
+        return null
+      },
+      async query(sql) { writes.push(sql); return { affectedRows: 1 } },
+    }))
+    await assert.rejects(repository.submitRefund({
+      appId: 'wx-app', actorUserId: 'admin-user', orderId: 'order-a',
+      reason: '运营强制退款', idempotencyKey: 'admin-event-refund',
+      authorizedScope: { scopeType: 'EVENT', scopeId: 'event-a', branchId: 'branch-a' },
+      audit: () => audit(),
+    }), /INVALID_STATE/)
+    assert.equal(writes.length, 0)
+  })
+
   it('approves a reviewed registration only after locked capacity and hold checks', async () => {
     const calls = []
     const repository = createAdminRepository(transactionDatabase({

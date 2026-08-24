@@ -1,5 +1,7 @@
 'use strict'
 
+const { createHash } = require('node:crypto')
+
 function createOutboxRepository(database, options = {}) {
   const leaseMilliseconds = options.leaseMilliseconds || 2 * 60 * 1000
   const maxAttempts = options.maxAttempts || 5
@@ -9,7 +11,7 @@ function createOutboxRepository(database, options = {}) {
     const batchSize = Math.min(10, Math.max(1, Number(input.limit) || 5))
     return database.transaction(async (tx) => {
       const exhausted = await tx.query(
-        `SELECT id, app_id, aggregate_type, aggregate_id, event_type, source_version,
+        `SELECT id, app_id, aggregate_type, aggregate_id, event_type, source_version, payload_json,
                 status, attempts, available_at, lease_expires_at
          FROM mip_outbox_events
          WHERE app_id = ? AND attempts >= ?
@@ -54,7 +56,7 @@ function createOutboxRepository(database, options = {}) {
         [leaseExpiresAt, appId, ...ids],
       )
       const events = await tx.query(
-        `SELECT id, app_id, aggregate_type, aggregate_id, event_type, source_version,
+        `SELECT id, app_id, aggregate_type, aggregate_id, event_type, source_version, payload_json,
                 status, attempts, available_at, lease_expires_at
          FROM mip_outbox_events
          WHERE app_id = ? AND id IN (${placeholders})
@@ -81,6 +83,19 @@ function createOutboxRepository(database, options = {}) {
     )
     assertLease(result)
     return { eventId: event.id, status: 'DELIVERED' }
+  }
+
+  async function enqueueContinuation(event, payload) {
+    const id = continuationId(event.id, payload)
+    await database.query(
+      `INSERT INTO mip_outbox_events (
+        id, app_id, aggregate_type, aggregate_id, event_type, source_version, payload_json
+      ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE id = VALUES(id)`,
+      [id, event.app_id, event.aggregate_type, event.aggregate_id,
+        event.event_type, event.source_version, JSON.stringify(payload)],
+    )
+    return { eventId: id }
   }
 
   async function retryEvent(event, errorCode, now = new Date()) {
@@ -132,10 +147,22 @@ function createOutboxRepository(database, options = {}) {
   return {
     completeEvent,
     deadEvent,
+    enqueueContinuation,
     ignoreEvent,
     leaseBatch,
     retryEvent,
   }
+}
+
+function continuationId(parentId, payload) {
+  const hex = createHash('sha256')
+    .update(`${parentId}\0${JSON.stringify(payload)}`)
+    .digest('hex')
+    .slice(0, 32)
+    .split('')
+  hex[12] = '5'
+  hex[16] = ['8', '9', 'a', 'b'][Number.parseInt(hex[16], 16) % 4]
+  return `${hex.slice(0, 8).join('')}-${hex.slice(8, 12).join('')}-${hex.slice(12, 16).join('')}-${hex.slice(16, 20).join('')}-${hex.slice(20).join('')}`
 }
 
 async function writeAudit(tx, event, action, reason) {
@@ -185,6 +212,7 @@ function iso(value) {
 }
 
 module.exports = {
+  continuationId,
   createOutboxRepository,
   retryDelayMs,
   safeErrorCode,

@@ -2,6 +2,7 @@
 
 const messages = {
   AUTH_REQUIRED: '登录后可查看消息',
+  CHANNEL_UNAVAILABLE: '当前通知渠道尚未配置',
   FORBIDDEN: '当前没有权限执行此操作',
   IDENTITY_CONFIG_REQUIRED: '身份服务尚未配置',
   NOT_FOUND: '消息不存在',
@@ -10,7 +11,12 @@ const messages = {
   VALIDATION_FAILED: '提交内容格式不正确',
 }
 
-const userActions = new Set(['listInbox', 'markRead', 'recordSubscriptionDecision'])
+const userActions = new Set([
+  'listInbox',
+  'markRead',
+  'recordCustomerServiceInteraction',
+  'recordSubscriptionDecision',
+])
 
 function createHandler(options) {
   return async function main(event = {}) {
@@ -30,6 +36,9 @@ function createHandler(options) {
       }
       if (event.action === 'markRead') {
         return success(await options.service.markRead(caller, event))
+      }
+      if (event.action === 'recordCustomerServiceInteraction') {
+        return success(await options.service.recordCustomerServiceInteraction(caller))
       }
       return success(await options.service.recordSubscriptionDecision(caller, event))
     }

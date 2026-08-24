@@ -40,6 +40,32 @@ test('does not expose worker actions to client callers', async () => {
   assert.equal(resolved, false)
 })
 
+test('records a customer-service window only through the trusted caller action', async () => {
+  let caller
+  const handler = createHandler({
+    async resolveCaller() {
+      return { appId: 'wx-app', userId: 'user-id', openId: 'open-id' }
+    },
+    service: {
+      async recordCustomerServiceInteraction(value) {
+        caller = value
+        return {
+          channel: 'WECHAT_CUSTOMER_SERVICE',
+          availableUntil: '2026-08-26T00:00:00.000Z',
+        }
+      },
+    },
+  })
+  assert.deepEqual(await handler({ action: 'recordCustomerServiceInteraction' }), {
+    ok: true,
+    data: {
+      channel: 'WECHAT_CUSTOMER_SERVICE',
+      availableUntil: '2026-08-26T00:00:00.000Z',
+    },
+  })
+  assert.equal(caller.openId, 'open-id')
+})
+
 test('health checks persistence without exposing configuration', async () => {
   const handler = createHandler({
     async health() {

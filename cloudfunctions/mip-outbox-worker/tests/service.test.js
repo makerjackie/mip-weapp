@@ -43,6 +43,62 @@ describe('outbox service', () => {
     assert.equal(result.delivered, 1)
   })
 
+  it('enqueues a cursor continuation before completing a recipient page', async () => {
+    const order = []
+    const continuation = { knowledgeRecipientCursor: '20000000-0000-4000-8000-000000000500' }
+    const service = createOutboxService({
+      repository: {
+        leaseBatch: async () => ({ events: [event], reaped: [] }),
+        enqueueContinuation: async (_event, value) => order.push(`continue:${value.knowledgeRecipientCursor}`),
+        completeEvent: async () => {
+          order.push('complete')
+          return { eventId: event.id, status: 'DELIVERED' }
+        },
+      },
+      projectEvent: async () => ({
+        supported: true, notifications: [], growth: [], reason: 'PROJECTED', continuation,
+      }),
+      clients: {},
+    })
+    const result = await service.runBatch({ appId: 'wx-app', limit: 1 })
+    assert.deepEqual(order, [`continue:${continuation.knowledgeRecipientCursor}`, 'complete'])
+    assert.equal(result.results[0].continuation, true)
+  })
+
+  it('keeps a bounded drain active until the queued cursor continuation is processed', async () => {
+    const queue = [event]
+    const completed = []
+    const repository = {
+      async leaseBatch() {
+        const next = queue.shift()
+        return { events: next ? [next] : [], reaped: [] }
+      },
+      async enqueueContinuation(parent, payload) {
+        queue.push({ ...parent, id: '90000000-0000-4000-8000-000000000002', payload_json: JSON.stringify(payload) })
+      },
+      async completeEvent(value) {
+        completed.push(value.id)
+        return { eventId: value.id, status: 'DELIVERED' }
+      },
+    }
+    const service = createOutboxService({
+      repository,
+      projectEvent: async value => ({
+        supported: true,
+        notifications: [],
+        growth: [],
+        reason: 'PROJECTED',
+        continuation: value.payload_json
+          ? null
+          : { knowledgeRecipientCursor: '20000000-0000-4000-8000-000000000050' },
+      }),
+      clients: {},
+    })
+    const result = await service.runBatch({ appId: 'wx-app', limit: 5, drain: true, maxBatches: 5 })
+    assert.deepEqual(completed, [event.id, '90000000-0000-4000-8000-000000000002'])
+    assert.equal(result.delivered, 2)
+  })
+
   it('retries a transient target failure and never marks the event delivered', async () => {
     let completed = false
     const service = createOutboxService({

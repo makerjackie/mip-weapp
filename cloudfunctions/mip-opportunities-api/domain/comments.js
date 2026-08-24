@@ -6,6 +6,7 @@ const { lockActiveContributor } = require('../lib/auth')
 const {
   decodeCursor,
   encodeCursor,
+  appendOutbox,
   idempotentTransaction,
   iso,
   jsonObject,
@@ -248,6 +249,16 @@ async function saveOpportunityComment(database, contentSafety, caller, input = {
       [id, caller.appId, input.opportunityId, caller.userId, draft.type, draft.body,
         draft.rating, Number(facts.caller_is_participant) ? 1 : 0, status, status],
     )
+    if (published && facts.owner_user_id !== caller.userId) {
+      await appendOutbox(tx, {
+        appId: caller.appId,
+        aggregateType: 'OPPORTUNITY_COMMENT',
+        aggregateId: id,
+        eventType: 'opportunity.comment_published',
+        sourceVersion: 1,
+        payload: {},
+      })
+    }
     return { id, status, version: 1, participant: Boolean(facts.caller_is_participant) }
   })
 }

@@ -2,6 +2,10 @@
 
 const { timingSafeEqual } = require('node:crypto')
 const { hashRecipient, revealRecipient } = require('../lib/recipient-protection')
+const {
+  buildCustomerServiceRequest,
+  buildServiceAccountRequest,
+} = require('../lib/channel-adapters')
 const { buildWechatRequest } = require('../lib/templates')
 const { normalizeMessage } = require('./validation')
 
@@ -13,7 +17,7 @@ function createNotificationService(options) {
   return {
     publishMessage(input) {
       const message = normalizeMessage(input.message)
-      if (message.external && !options.templates?.[message.external.templateKey]) {
+      if (message.external && !isChannelConfigured(message.external, options)) {
         message.external = null
       }
       return repository.publishMessage(input.appId, message)
@@ -87,9 +91,10 @@ function createNotificationService(options) {
       }
 
       try {
+        const sender = resolveSender(reservation.channel, options)
         results.push(await repository.deliverReservedTask(
           reservation,
-          () => options.sender(request),
+          () => sender(request),
           { now: currentTime },
         ))
       }
@@ -131,9 +136,13 @@ function normalizeMaxBatches(value) {
 }
 
 function buildDeliveryRequest(delivery, options) {
-  if (delivery.channel !== 'WECHAT_SUBSCRIPTION') {
+  if (delivery.channel === 'WECHAT_SERVICE_ACCOUNT') {
+    return buildServiceAccountRequest(options.serviceAccountConfig, delivery)
+  }
+  if (!['WECHAT_SUBSCRIPTION', 'WECHAT_CUSTOMER_SERVICE'].includes(delivery.channel)) {
     throw new Error('CHANNEL_UNSUPPORTED')
   }
+  if (!delivery.grant) throw new Error('GRANT_UNAVAILABLE')
   const recipient = revealRecipient(
     delivery.grant.recipient_ciphertext,
     options.encryptionKey,
@@ -148,12 +157,32 @@ function buildDeliveryRequest(delivery, options) {
     delivery.grant.recipient_hash,
     hashRecipient(recipient, options.encryptionKey, delivery.app_id),
   )
-  return buildWechatRequest(
-    options.templates[delivery.template_key],
-    delivery,
-    recipient,
-    { miniprogramState: options.miniprogramState },
-  )
+  if (delivery.channel === 'WECHAT_CUSTOMER_SERVICE') {
+    return buildCustomerServiceRequest(delivery, recipient)
+  }
+  return buildWechatRequest(options.templates[delivery.template_key], delivery, recipient, {
+    miniprogramState: options.miniprogramState,
+  })
+}
+
+function isChannelConfigured(external, options) {
+  if (external.channel === 'WECHAT_SUBSCRIPTION') {
+    return Boolean(options.templates?.[external.templateKey])
+  }
+  if (external.channel === 'WECHAT_CUSTOMER_SERVICE') {
+    return options.customerServiceEnabled === true
+  }
+  if (external.channel === 'WECHAT_SERVICE_ACCOUNT') {
+    return Boolean(options.serviceAccountConfig?.templates?.[external.templateKey])
+  }
+  return false
+}
+
+function resolveSender(channel, options) {
+  const sender = options.senders?.[channel]
+    || (channel === 'WECHAT_SUBSCRIPTION' ? options.sender : null)
+  if (typeof sender !== 'function') throw new Error('CHANNEL_UNAVAILABLE')
+  return sender
 }
 
 async function settleFailure(work, taskId) {
@@ -194,4 +223,6 @@ module.exports = {
   earliestRetryAt,
   normalizeLimit,
   normalizeMaxBatches,
+  isChannelConfigured,
+  resolveSender,
 }

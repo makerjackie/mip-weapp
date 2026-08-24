@@ -39,6 +39,11 @@ test('projects direct public-profile interest from current relational facts', as
   assert.equal(result.notifications[0].recipientUserId, targetUserId)
   assert.equal(result.notifications[0].title, '公开档案收到新的关注')
   assert.equal(result.notifications[0].dedupeKey, `outbox:${event.id}:profile-interest`)
+  assert.deepEqual(result.notifications[0].external, {
+    channel: 'WECHAT_CUSTOMER_SERVICE',
+    templateKey: 'CUSTOMER_SERVICE_TEXT',
+    fields: { content: '公开档案收到新的关注，请在小程序内查看。' },
+  })
   assert.equal(JSON.stringify(result).includes('attacker-controlled'), false)
   assert.deepEqual(calls[1].params, [event.app_id, targetUserId])
 })
