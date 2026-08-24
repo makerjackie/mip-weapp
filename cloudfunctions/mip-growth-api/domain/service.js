@@ -8,6 +8,7 @@ function createGrowthService(repository) {
     equipBadges: (caller, event) => repository.equipBadges(caller.appId, caller.userId, event),
     applyCheckInTransition: input => repository.applyCheckInTransition(input),
     recordConfirmedEvent: input => repository.recordConfirmedEvent(input),
+    recordGameCoinEvent: input => repository.recordGameCoinEvent(input),
   }
 }
 

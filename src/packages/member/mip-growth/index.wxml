@@ -18,9 +18,10 @@
       </view>
     </view>
 
-    <view class="mt-4 grid grid-cols-2 gap-3">
+    <view class="mt-4 grid grid-cols-3 gap-3">
       <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[length:31rpx] font-bold">{{snapshot.account.experienceBalance}}</view><view class="mt-1 text-[length:21rpx] text-muted">经验值</view></view>
       <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[length:31rpx] font-bold">{{snapshot.account.contributionBalance}}</view><view class="mt-1 text-[length:21rpx] text-muted">贡献值</view></view>
+      <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[length:31rpx] font-bold">{{snapshot.account.coinBalance}}</view><view class="mt-1 text-[length:21rpx] text-muted">游戏币</view></view>
     </view>
     <view class="mt-4 flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" bind:tap="openTasks"><view class="flex-1"><view class="text-[length:27rpx] font-semibold">任务</view><view class="mt-1 text-[length:22rpx] text-muted">查看任务和完成状态</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
 

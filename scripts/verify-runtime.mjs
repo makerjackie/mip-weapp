@@ -35,9 +35,8 @@ const reportPath = path.join(outputDir, 'report.json')
 const consolePath = path.join(outputDir, 'console.json')
 const warningAllowlistPath = path.join(root, 'config', 'runtime-warning-allowlist.json')
 const runtimePagesPath = path.join(root, 'config', 'runtime-pages.json')
-const safePlaceholderUuid = '00000000-0000-4000-8000-000000000000'
 const sessionId = 'mip-weapp-runtime'
-const failedStates = new Set(['error', 'forbidden', 'conflict', 'expired', 'disabled'])
+const failedStates = new Set(['error', 'forbidden', 'conflict', 'expired', 'disabled', 'failed'])
 const pendingStates = new Set(['loading'])
 const rawPhoneLikePattern = /(?:^|\D)1[3-9]\d{9}(?:\D|$)/
 const devToolsCompilerPatterns = [
@@ -60,6 +59,44 @@ function selectorId(selector) {
 
 function pathValue(value, keyPath) {
   return keyPath.split('.').reduce((current, key) => current?.[key], value)
+}
+
+function pendingStatesFor(route) {
+  return new Set([...pendingStates, ...(route.pendingStates || [])])
+}
+
+export function resolveQueryFixtureValues(route, data) {
+  const fixture = route.queryFixture
+  const candidateValue = pathValue(data, fixture.dataPath)
+  const candidates = Array.isArray(candidateValue)
+    ? candidateValue
+    : candidateValue && typeof candidateValue === 'object'
+      ? [candidateValue]
+      : []
+  const candidate = candidates.find(item => Object.entries(fixture.where || {}).every(
+    ([keyPath, expected]) => Object.is(pathValue(item, keyPath), expected),
+  ))
+  if (!candidate) {
+    return {
+      status: 'external-wait',
+      reason: `${route.path} requires a real fixture at ${fixture.sourceRoute}:${fixture.dataPath}`,
+    }
+  }
+  const values = Object.fromEntries(Object.entries(fixture.values).map(([key, keyPath]) => [
+    key,
+    pathValue(candidate, keyPath),
+  ]))
+  const missing = (route.query || []).filter((key) => {
+    const value = values[key]
+    return value === undefined || value === null || String(value).trim() === ''
+  })
+  if (missing.length) {
+    return {
+      status: 'external-wait',
+      reason: `${route.path} fixture is missing ${missing.join(', ')}`,
+    }
+  }
+  return { status: 'resolved', values }
 }
 
 function assertRepresentativeData(data, scenario) {
@@ -87,7 +124,8 @@ function acceptedStates(route) {
     return route.acceptStates
   }
   if (route.kind === 'result') {
-    return (route.states || []).filter(state => !failedStates.has(state) && !pendingStates.has(state))
+    const pending = pendingStatesFor(route)
+    return (route.states || []).filter(state => !failedStates.has(state) && !pending.has(state))
   }
   return ['ready']
 }
@@ -107,6 +145,7 @@ function validateRuntimeContract(runtimePages) {
   const seenIds = new Set()
   const declaredStates = new Set()
   let hasDisabledControl = false
+  const routesByPath = new Map(runtimePages.routes.map(route => [route.path, route]))
   for (const route of runtimePages.routes) {
     assert(route?.id && route.path && route.selector, `Incomplete runtime route: ${JSON.stringify(route)}`)
     assert(!seenPaths.has(route.path), `Duplicate runtime route: ${route.path}`)
@@ -131,13 +170,53 @@ function validateRuntimeContract(runtimePages) {
       }
     }
     const accepted = acceptedStates(route)
+    const pending = pendingStatesFor(route)
     assert(accepted.length > 0, `${route.path} does not declare an accepted runtime state`)
     assert(
-      accepted.every(state => !failedStates.has(state) && !pendingStates.has(state)),
+      accepted.every(state => !failedStates.has(state) && !pending.has(state)),
       `${route.path} accepts a failure or pending state as runtime success`,
     )
     for (const key of route.query || []) {
       assert(/^[a-z][a-z0-9]*$/i.test(key), `${route.path} has an unsafe query key`)
+    }
+    if ((route.query || []).length) {
+      const fixture = route.queryFixture
+      assert(fixture && typeof fixture === 'object', `${route.path} queryFixture is required`)
+      const sourceRoute = routesByPath.get(fixture.sourceRoute)
+      assert(sourceRoute, `${route.path} queryFixture source route is missing: ${fixture.sourceRoute}`)
+      assert(!(sourceRoute.query || []).length, `${route.path} queryFixture source cannot require its own query`)
+      assert(/^[a-z]\w*(?:\.[a-z]\w*)*$/i.test(fixture.dataPath || ''), `${route.path} queryFixture dataPath is invalid`)
+      assert(fixture.values && typeof fixture.values === 'object', `${route.path} queryFixture values are required`)
+      assert(
+        JSON.stringify(Object.keys(fixture.values).sort()) === JSON.stringify([...route.query].sort()),
+        `${route.path} queryFixture values must match query keys`,
+      )
+      for (const keyPath of Object.values(fixture.values)) {
+        assert(/^[a-z]\w*(?:\.[a-z]\w*)*$/i.test(keyPath || ''), `${route.path} queryFixture value path is invalid`)
+      }
+      for (const keyPath of Object.keys(fixture.where || {})) {
+        assert(/^[a-z]\w*(?:\.[a-z]\w*)*$/i.test(keyPath), `${route.path} queryFixture where path is invalid`)
+      }
+    }
+  }
+
+  const capabilities = runtimePages.deviceRequiredCapabilities || []
+  const capabilityIds = new Set()
+  for (const capability of capabilities) {
+    assert(capability?.id && !capabilityIds.has(capability.id), `Invalid or duplicate device capability: ${capability?.id}`)
+    capabilityIds.add(capability.id)
+    assert(Array.isArray(capability.routes) && capability.routes.length > 0, `${capability.id} must declare routes[]`)
+    for (const routePath of capability.routes) {
+      const route = routesByPath.get(routePath)
+      assert(route, `${capability.id} references an inactive route: ${routePath}`)
+      assert((route.deviceRequired || []).includes(capability.id), `${routePath} is missing deviceRequired ${capability.id}`)
+    }
+  }
+  for (const route of runtimePages.routes) {
+    for (const capabilityId of route.deviceRequired || []) {
+      const capability = capabilities.find(item => item.id === capabilityId)
+      assert(capability, `${route.path} references an unknown device capability: ${capabilityId}`)
+      assert(capability.routes.includes(route.path), `${capabilityId} is missing route ${route.path}`)
     }
   }
 
@@ -214,9 +293,13 @@ function validateRuntimeContract(runtimePages) {
   }
 }
 
-function queryForRoute(route) {
+export function queryForRoute(route, values = {}) {
   return (route.query || [])
-    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(safePlaceholderUuid)}`)
+    .map((key) => {
+      const value = values[key]
+      assert(value !== undefined && value !== null && String(value).trim(), `${route.path} query value is missing: ${key}`)
+      return `${encodeURIComponent(key)}=${encodeURIComponent(String(value))}`
+    })
     .join('&')
 }
 
@@ -294,6 +377,7 @@ function assertNoSensitivePageData(data, route, sensitivePatterns) {
 export function evaluateRouteState(route, data) {
   const state = data?.state ?? data?.result
   const accepted = acceptedStates(route)
+  const pending = pendingStatesFor(route)
   if (accepted.includes(state)) {
     try {
       assertReadyAssertion(data, route.readyAssertion, route.path)
@@ -314,7 +398,7 @@ export function evaluateRouteState(route, data) {
       error: `${route.path} settled on ${state}; error/forbidden/conflict/expired/disabled cannot count as runtime success`,
     }
   }
-  if (state && !pendingStates.has(state)) {
+  if (state && !pending.has(state)) {
     return {
       status: 'failed',
       state,
@@ -674,17 +758,67 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
   }
 }
 
+async function resolveRouteQuery(miniProgram, runtimePages, route, sensitivePatterns, fixtureCache) {
+  if (!(route.query || []).length) {
+    return { status: 'resolved', query: '', queryMode: 'none' }
+  }
+  const fixture = route.queryFixture
+  let sourceData = fixtureCache.get(fixture.sourceRoute)
+  if (!sourceData) {
+    const sourceRoute = runtimePages.routes.find(candidate => candidate.path === fixture.sourceRoute)
+    const sourcePage = await retry(
+      `query fixture ${route.path}`,
+      () => miniProgram.reLaunch(`/${sourceRoute.path}`),
+    )
+    await retry(
+      `wait query fixture ${sourceRoute.path}`,
+      () => sourcePage.waitForRendered({ selector: sourceRoute.selector, timeout: 15000 }),
+    )
+    const settled = await waitForPageData(sourcePage, sourceRoute, sensitivePatterns, 12000)
+    if (settled.status !== 'passed') {
+      return {
+        status: 'external-wait',
+        queryMode: 'runtime-fixture',
+        reason: `${route.path} fixture source ${sourceRoute.path} did not reach an accepted state`,
+      }
+    }
+    sourceData = settled.data
+    fixtureCache.set(fixture.sourceRoute, sourceData)
+  }
+  const resolved = resolveQueryFixtureValues(route, sourceData)
+  return resolved.status === 'resolved'
+    ? { ...resolved, query: queryForRoute(route, resolved.values), queryMode: 'runtime-fixture' }
+    : { ...resolved, queryMode: 'runtime-fixture' }
+}
+
 async function verifyContractedPages(miniProgram, runtimePages, report, options) {
-  const { sensitivePatterns, updateBaseline } = options
+  const { fixtureCache, sensitivePatterns, updateBaseline } = options
   report.pages = []
   for (const route of runtimePages.routes) {
     const name = outputName(route.path)
     const baseline = path.join(baselineDir, `${name}.png`)
     const current = path.join(outputDir, `${name}.png`)
     const diff = path.join(outputDir, `${name}.diff.png`)
-    const query = queryForRoute(route)
-    const launchRoute = `/${route.path}${query ? `?${query}` : ''}`
     try {
+      const queryResolution = await resolveRouteQuery(
+        miniProgram,
+        runtimePages,
+        route,
+        sensitivePatterns,
+        fixtureCache,
+      )
+      if (queryResolution.status === 'external-wait') {
+        report.pages.push({
+          route: route.path,
+          selector: route.selector,
+          queryMode: queryResolution.queryMode,
+          status: 'external-wait',
+          error: sanitizeRuntimeValue(queryResolution.reason),
+        })
+        console.log(`WAIT  ${route.path}  ${queryResolution.reason}`)
+        continue
+      }
+      const launchRoute = `/${route.path}${queryResolution.query ? `?${queryResolution.query}` : ''}`
       const page = await retry(`reLaunch ${route.path}`, () => miniProgram.reLaunch(launchRoute))
       await retry(`wait ${route.selector}`, () => page.waitForRendered({ selector: route.selector, timeout: 15000 }))
       assert(String(page.path || '').replace(/^\//, '') === route.path, `Unexpected runtime route: ${page.path}`)
@@ -702,7 +836,7 @@ async function verifyContractedPages(miniProgram, runtimePages, report, options)
       const result = {
         route: route.path,
         selector: route.selector,
-        queryMode: query ? 'safe-placeholder-uuid' : 'none',
+        queryMode: queryResolution.queryMode,
         status,
         sizeBytes,
         mode: updateBaseline ? 'baseline-candidate' : fs.existsSync(baseline) ? 'compare' : 'capture',
@@ -715,6 +849,9 @@ async function verifyContractedPages(miniProgram, runtimePages, report, options)
         Object.assign(result, compare(baseline, current, diff))
       }
       report.pages.push(result)
+      if (status === 'passed') {
+        fixtureCache.set(route.path, screenshotData)
+      }
       console.log(`${status === 'passed' ? 'PASS' : 'FAIL'}  ${route.path}  ${Math.round(sizeBytes / 1024)} KB`)
     }
     catch (error) {
@@ -724,7 +861,7 @@ async function verifyContractedPages(miniProgram, runtimePages, report, options)
       report.pages.push({
         route: route.path,
         selector: route.selector,
-        queryMode: query ? 'safe-placeholder-uuid' : 'none',
+        queryMode: (route.query || []).length ? 'runtime-fixture' : 'none',
         status: 'failed',
         error: sanitizeRuntimeValue(error instanceof Error ? error.message : error),
       })
@@ -733,7 +870,7 @@ async function verifyContractedPages(miniProgram, runtimePages, report, options)
   }
 }
 
-async function verifyNavigation(miniProgram, runtimePages, report, sensitivePatterns) {
+async function verifyNavigation(miniProgram, runtimePages, report, sensitivePatterns, fixtureCache) {
   const tabs = runtimePages.routes.filter(route => route.tab)
   report.navigation = { tabs: [], back: null, deepLink: null }
   for (const route of tabs) {
@@ -759,16 +896,45 @@ async function verifyNavigation(miniProgram, runtimePages, report, sensitivePatt
     to: String(returned.path || ''),
   }
 
-  const deepRoute = runtimePages.routes.find(route => route.group === 'public' && (route.query || []).length > 0)
-    || runtimePages.routes.find(route => (route.query || []).length > 0)
-  assert(deepRoute, 'Runtime contract has no query deep-link route')
-  const deepQuery = queryForRoute(deepRoute)
-  const deepPage = await retry('open safe deep link', () => miniProgram.reLaunch(`/${deepRoute.path}?${deepQuery}`))
+  const queryRoutes = runtimePages.routes.filter(route => (route.query || []).length > 0)
+  const orderedDeepRoutes = [
+    ...queryRoutes.filter(route => route.group === 'public'),
+    ...queryRoutes.filter(route => route.group !== 'public'),
+  ]
+  assert(orderedDeepRoutes.length, 'Runtime contract has no query deep-link route')
+  let deepRoute
+  let deepResolution
+  const waitReasons = []
+  for (const candidate of orderedDeepRoutes) {
+    const resolution = await resolveRouteQuery(
+      miniProgram,
+      runtimePages,
+      candidate,
+      sensitivePatterns,
+      fixtureCache,
+    )
+    if (resolution.status === 'resolved') {
+      deepRoute = candidate
+      deepResolution = resolution
+      break
+    }
+    waitReasons.push(resolution.reason)
+  }
+  if (!deepRoute || !deepResolution) {
+    report.navigation.deepLink = {
+      status: 'external-wait',
+      queryMode: 'runtime-fixture',
+      rootReached: false,
+      error: sanitizeRuntimeValue(waitReasons.join('; ')),
+    }
+    return
+  }
+  const deepPage = await retry('open fixture deep link', () => miniProgram.reLaunch(`/${deepRoute.path}?${deepResolution.query}`))
   await retry('wait safe deep link root', () => deepPage.waitForRendered({ selector: deepRoute.selector, timeout: 15000 }))
   const deepResult = await waitForPageData(deepPage, deepRoute, sensitivePatterns, 12000)
   report.navigation.deepLink = {
     route: deepRoute.path,
-    queryMode: 'safe-placeholder-uuid',
+    queryMode: deepResolution.queryMode,
     rootReached: true,
     status: deepResult.status,
     state: deepResult.state,
@@ -846,6 +1012,7 @@ export async function main(runArgs = process.argv.slice(2)) {
   const devToolsLogSnapshot = snapshotDevToolsLogs()
 
   async function runRuntimeAttempt(preferOpenedSession) {
+    const fixtureCache = new Map()
     if (await clearStaleAutomatorPortLease(baseRuntimeOptions.port)) {
       report.recoveries.push({ action: 'cleared-stale-port-lease', port: baseRuntimeOptions.port })
     }
@@ -863,15 +1030,20 @@ export async function main(runArgs = process.argv.slice(2)) {
     miniProgram.on('exception', payload => diagnostics.captureException(payload))
 
     await verifyRepresentativeStates(miniProgram, runtimePages, report, sensitivePatterns)
-    await verifyContractedPages(miniProgram, runtimePages, report, { sensitivePatterns, updateBaseline })
-    await verifyNavigation(miniProgram, runtimePages, report, sensitivePatterns)
+    await verifyContractedPages(miniProgram, runtimePages, report, {
+      fixtureCache,
+      sensitivePatterns,
+      updateBaseline,
+    })
+    await verifyNavigation(miniProgram, runtimePages, report, sensitivePatterns, fixtureCache)
     await verifyInteractionJourneys(miniProgram, runtimePages, report, sensitivePatterns)
 
     const failedPages = report.pages.filter(page => page.status !== 'passed')
+    const externalWaitPages = failedPages.filter(page => page.status === 'external-wait')
     const failedTabs = report.navigation.tabs.filter(tab => tab.status !== 'passed')
     assert(
       failedPages.length === 0,
-      `${failedPages.length} contracted page(s) did not reach an accepted state; service errors are not runtime success`,
+      `${failedPages.length} contracted page(s) did not reach an accepted state (${externalWaitPages.length} external-wait); missing fixture facts and service errors are not runtime success`,
     )
     assert(failedTabs.length === 0, `${failedTabs.length} primary tab(s) did not reach an accepted state`)
     assert(report.navigation.back?.status === 'passed', 'Secondary-page return path failed')

@@ -1,8 +1,11 @@
 import type {
   AdminBranch,
+  AdminCapability,
+  AdminCapabilityGrant,
   AdminEvent,
   AdminRoleBinding,
   AdminRoleCandidate,
+  AdminRoleCapabilityPolicy,
   AdminRoleItem,
   AdminRoleKey,
 } from '../../../modules/mip-admin'
@@ -10,6 +13,8 @@ import type { AdminPageState } from '../shared/page-state'
 import {
   canDelegateAdminRole,
   hasCapability,
+  hasScopedCapability,
+  MipAdminError,
   mipAdminModule,
   scopeTypeForAdminRole,
 } from '../../../modules/mip-admin'
@@ -35,6 +40,54 @@ const roleOrder: AdminRoleKey[] = [
   'PLATFORM_OWNER',
 ]
 
+type ConfigurableRoleKey = Exclude<AdminRoleKey, 'PLATFORM_OWNER'>
+
+const policyRoleOrder: ConfigurableRoleKey[] = [
+  'PLATFORM_OPERATIONS',
+  'PLATFORM_FINANCE',
+  'BRANCH_ADMIN',
+  'EVENT_OWNER',
+  'EVENT_MANAGER',
+  'EVENT_STAFF',
+]
+
+const capabilityLabels: Record<AdminCapability, string> = {
+  'admin.dashboard': '进入运营工作台',
+  'branches.manage': '城市分会管理',
+  'users.read': '用户资料查看',
+  'users.phone.read': '用户手机号查看',
+  'users.fields.edit': '用户资料编辑',
+  'users.access.manage': '用户访问控制',
+  'exports.create': '数据导出',
+  'events.read': '活动查看',
+  'events.write': '活动编辑',
+  'events.roster.read': '活动名单查看',
+  'events.registrations.manage': '活动报名审核',
+  'events.checkin.manage': '活动签到',
+  'events.checkin.undo': '撤销签到',
+  'events.team.manage': '活动团队查看',
+  'events.album.manage': '活动相册审核',
+  'events.feedback.read': '活动反馈查看',
+  'announcements.manage': '公告管理',
+  'messages.manage': '消息管理',
+  'communications.publish': '活动提醒发布',
+  'community.reports.manage': '举报审核',
+  'opportunities.moderate': '机会管理',
+  'opportunities.archive': '机会归档',
+  'growth.read': '成长数据查看',
+  'growth.configure': '成长规则配置',
+  'growth.adjust': '成长值调整',
+  'tasks.manage': '任务管理',
+  'banners.manage': 'Banner 管理',
+  'badges.manage': '勋章管理',
+  'game.manage': '赛季与队伍管理',
+  'orders.read': '订单查看',
+  'refunds.submit': '退款提交',
+  'operations.exceptions.read': '异常中心查看',
+  'roles.change': '角色设置',
+  'audit.read': '审计记录查看',
+}
+
 interface Scope {
   scopeType: 'PLATFORM' | 'BRANCH' | 'EVENT'
   scopeId: string | null
@@ -48,6 +101,11 @@ type RoleView = AdminRoleItem & {
   scopeLabel: string
   statusLabel: string
   canManage: boolean
+}
+interface PolicyCapabilityView {
+  key: AdminCapability
+  label: string
+  enabled: boolean
 }
 
 function scopeTypeForRole(roleKey: AdminRoleKey): Scope['scopeType'] {
@@ -90,13 +148,27 @@ Page({
     canGrantEventOwner: false,
     canGrantEventManager: false,
     canGrantEventStaff: false,
+    canConfigurePolicies: false,
+    policyLoading: false,
+    policySaving: false,
+    policyMessage: '',
+    policyRoles: [] as Array<{ key: ConfigurableRoleKey, label: string }>,
+    selectedPolicyRole: 'PLATFORM_OPERATIONS' as ConfigurableRoleKey,
+    selectedPolicyRoleLabel: roleLabels.PLATFORM_OPERATIONS,
+    policyCapabilities: [] as PolicyCapabilityView[],
+    policyVersion: 0,
+    policyIsCustom: false,
+    policySourceLabel: '默认模板',
     processingId: '',
     message: '',
   },
   actorRoles: [] as AdminRoleBinding[],
+  actorCapabilities: [] as AdminCapabilityGrant[],
   branchCatalog: [] as BranchOption[],
   eventCatalog: [] as EventOption[],
   availableRoleKeys: [] as AdminRoleKey[],
+  policyCatalog: [] as AdminRoleCapabilityPolicy[],
+  pendingPolicyCapabilities: new Set<AdminCapability>(),
 
   onShow() { void this.loadRoles() },
 
@@ -114,19 +186,24 @@ Page({
     return items.map(item => ({ id: item.id, title: item.title, branchId: item.branchId }))
   },
 
+  canGrantRole(roleKey: AdminRoleKey, scope: Scope) {
+    return hasScopedCapability(this.actorCapabilities, 'roles.change', scope)
+      && canDelegateAdminRole(this.actorRoles, roleKey, scope)
+  },
+
   roleCanBeGranted(roleKey: AdminRoleKey) {
     const scopeType = scopeTypeForRole(roleKey)
     if (scopeType === 'PLATFORM') {
-      return canDelegateAdminRole(this.actorRoles, roleKey, { scopeType, scopeId: null, branchId: null })
+      return this.canGrantRole(roleKey, { scopeType, scopeId: null, branchId: null })
     }
     if (scopeType === 'BRANCH') {
-      return this.branchCatalog.some(item => canDelegateAdminRole(this.actorRoles, roleKey, {
+      return this.branchCatalog.some(item => this.canGrantRole(roleKey, {
         scopeType,
         scopeId: item.id,
         branchId: item.id,
       }))
     }
-    return this.eventCatalog.some(item => canDelegateAdminRole(this.actorRoles, roleKey, {
+    return this.eventCatalog.some(item => this.canGrantRole(roleKey, {
       scopeType,
       scopeId: item.id,
       branchId: item.branchId,
@@ -136,14 +213,14 @@ Page({
   applyRoleSelection(roleKey: AdminRoleKey) {
     const scopeType = scopeTypeForRole(roleKey)
     const branches = scopeType === 'BRANCH'
-      ? this.branchCatalog.filter(item => canDelegateAdminRole(this.actorRoles, roleKey, {
+      ? this.branchCatalog.filter(item => this.canGrantRole(roleKey, {
           scopeType,
           scopeId: item.id,
           branchId: item.id,
         }))
       : []
     const events = scopeType === 'EVENT'
-      ? this.eventCatalog.filter(item => canDelegateAdminRole(this.actorRoles, roleKey, {
+      ? this.eventCatalog.filter(item => this.canGrantRole(roleKey, {
           scopeType,
           scopeId: item.id,
           branchId: item.branchId,
@@ -170,6 +247,27 @@ Page({
     })
   },
 
+  applyPolicySelection(roleKey: ConfigurableRoleKey) {
+    const policy = this.policyCatalog.find(item => item.roleKey === roleKey)
+    if (!policy) {
+      return
+    }
+    this.pendingPolicyCapabilities = new Set(policy.capabilities)
+    this.setData({
+      selectedPolicyRole: roleKey,
+      selectedPolicyRoleLabel: roleLabels[roleKey],
+      policyCapabilities: policy.allowedCapabilities.map(capability => ({
+        key: capability,
+        label: capabilityLabels[capability],
+        enabled: this.pendingPolicyCapabilities.has(capability),
+      })),
+      policyVersion: policy.version,
+      policyIsCustom: policy.source === 'CUSTOM',
+      policySourceLabel: policy.source === 'DEFAULT' ? '默认模板' : '已配置',
+      policyMessage: '',
+    })
+  },
+
   async loadRoles(force = false) {
     const hasContent = this.data.roles.length > 0
     if (!hasContent) {
@@ -177,18 +275,25 @@ Page({
     }
     try {
       const session = await mipAdminModule.getSession(force)
-      const [response, events, branchResponse] = await Promise.all([
+      const canConfigurePolicies = session.roles.some(role => role.roleKey === 'PLATFORM_OWNER'
+        && role.scopeType === 'PLATFORM')
+      const [response, events, branchResponse, policyResponse] = await Promise.all([
         mipAdminModule.listRoles(force),
         this.loadEventCatalog(force),
         hasCapability(session.capabilities, 'branches.manage')
           ? mipAdminModule.listBranches(force)
           : Promise.resolve({ items: [] as AdminBranch[], nextCursor: null }),
+        canConfigurePolicies
+          ? mipAdminModule.listRoleCapabilityPolicies(force)
+          : Promise.resolve({ items: [] as AdminRoleCapabilityPolicy[], nextCursor: null }),
       ])
       this.actorRoles = session.roles
+      this.actorCapabilities = session.capabilities
       this.branchCatalog = branchResponse.items
         .filter(item => item.status === 'ACTIVE')
         .map(item => ({ id: item.id, name: item.name }))
       this.eventCatalog = events
+      this.policyCatalog = policyResponse.items
       this.availableRoleKeys = roleOrder.filter(roleKey => this.roleCanBeGranted(roleKey))
       const available = new Set(this.availableRoleKeys)
       const selectedRole = available.has(this.data.selectedRole)
@@ -201,7 +306,7 @@ Page({
           roleLabel: roleLabels[item.roleKey],
           scopeLabel: item.scopeName,
           statusLabel: item.status === 'ACTIVE' ? '生效中' : '已撤销',
-          canManage: item.status === 'ACTIVE' && canDelegateAdminRole(this.actorRoles, item.roleKey, {
+          canManage: item.status === 'ACTIVE' && this.canGrantRole(item.roleKey, {
             scopeType: item.scopeType,
             scopeId: item.scopeId,
             branchId: item.branchId,
@@ -215,9 +320,22 @@ Page({
         canGrantEventOwner: available.has('EVENT_OWNER'),
         canGrantEventManager: available.has('EVENT_MANAGER'),
         canGrantEventStaff: available.has('EVENT_STAFF'),
+        canConfigurePolicies,
+        policyRoles: canConfigurePolicies
+          ? policyRoleOrder.map(key => ({ key, label: roleLabels[key] }))
+          : [],
+        policyLoading: false,
         message: '',
       })
       this.applyRoleSelection(selectedRole)
+      if (canConfigurePolicies) {
+        const selectedPolicyRole = this.policyCatalog.some(item => item.roleKey === this.data.selectedPolicyRole)
+          ? this.data.selectedPolicyRole
+          : this.policyCatalog[0]?.roleKey
+        if (selectedPolicyRole) {
+          this.applyPolicySelection(selectedPolicyRole)
+        }
+      }
     }
     catch (error) {
       this.setData(adminLoadFailure(error, { hasContent, fallbackMessage: '角色列表加载失败' }))
@@ -232,6 +350,102 @@ Page({
     const roleKey = String(event.currentTarget.dataset.role || '') as AdminRoleKey
     if (this.availableRoleKeys.includes(roleKey)) {
       this.applyRoleSelection(roleKey)
+    }
+  },
+
+  choosePolicyRole(event: WechatMiniprogram.TouchEvent) {
+    const roleKey = String(event.currentTarget.dataset.role || '') as ConfigurableRoleKey
+    if (policyRoleOrder.includes(roleKey)) {
+      this.applyPolicySelection(roleKey)
+    }
+  },
+
+  togglePolicyCapability(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.policySaving) {
+      return
+    }
+    const capability = String(event.currentTarget.dataset.capability || '') as AdminCapability
+    const policy = this.policyCatalog.find(item => item.roleKey === this.data.selectedPolicyRole)
+    if (!policy?.allowedCapabilities.includes(capability)) {
+      return
+    }
+    if (this.pendingPolicyCapabilities.has(capability)) {
+      this.pendingPolicyCapabilities.delete(capability)
+    }
+    else {
+      this.pendingPolicyCapabilities.add(capability)
+    }
+    this.setData({
+      policyCapabilities: policy.allowedCapabilities.map(item => ({
+        key: item,
+        label: capabilityLabels[item],
+        enabled: this.pendingPolicyCapabilities.has(item),
+      })),
+      policyMessage: '',
+    })
+  },
+
+  async resetPolicyCapabilities() {
+    const policy = this.policyCatalog.find(item => item.roleKey === this.data.selectedPolicyRole)
+    if (!policy || policy.source !== 'CUSTOM' || !this.data.canConfigurePolicies || this.data.policySaving) {
+      return
+    }
+    this.setData({ policySaving: true, policyMessage: '' })
+    try {
+      const modal = await wx.showModal({
+        title: '恢复默认权限',
+        content: `确认将${roleLabels[policy.roleKey]}恢复为默认权限。`,
+      })
+      if (!modal.confirm) {
+        return
+      }
+      await mipAdminModule.mutate(() => mipAdminModule.gateway.resetRoleCapabilityPolicy({
+        roleKey: policy.roleKey,
+        expectedVersion: policy.version,
+      }))
+      wx.showToast({ title: '已恢复默认权限', icon: 'success' })
+      await this.loadRoles(true)
+    }
+    catch (error) {
+      if (error instanceof MipAdminError && error.code === 'CONFLICT') {
+        await this.loadRoles(true)
+        this.setData({ policyMessage: '权限配置已更新，请确认最新内容后重试。' })
+      }
+      else {
+        this.setData({ policyMessage: error instanceof Error ? error.message : '恢复默认权限失败' })
+      }
+    }
+    finally {
+      this.setData({ policySaving: false })
+    }
+  },
+
+  async savePolicy() {
+    const policy = this.policyCatalog.find(item => item.roleKey === this.data.selectedPolicyRole)
+    if (!policy || !this.data.canConfigurePolicies || this.data.policySaving) {
+      return
+    }
+    this.setData({ policySaving: true, policyMessage: '' })
+    try {
+      await mipAdminModule.mutate(() => mipAdminModule.gateway.updateRoleCapabilityPolicy({
+        roleKey: policy.roleKey,
+        capabilities: policy.allowedCapabilities.filter(item => this.pendingPolicyCapabilities.has(item)),
+        expectedVersion: policy.version,
+      }))
+      wx.showToast({ title: '权限已保存', icon: 'success' })
+      await this.loadRoles(true)
+    }
+    catch (error) {
+      if (error instanceof MipAdminError && error.code === 'CONFLICT') {
+        await this.loadRoles(true)
+        this.setData({ policyMessage: '权限配置已更新，请确认最新内容后重试。' })
+      }
+      else {
+        this.setData({ policyMessage: error instanceof Error ? error.message : '权限保存失败' })
+      }
+    }
+    finally {
+      this.setData({ policySaving: false })
     }
   },
 
@@ -292,7 +506,7 @@ Page({
       return
     }
     const scope = scopeForRole(this.data.selectedRole, this.data.scopeId, this.eventCatalog)
-    if (!canDelegateAdminRole(this.actorRoles, this.data.selectedRole, scope)) {
+    if (!this.canGrantRole(this.data.selectedRole, scope)) {
       this.setData({ message: '当前账号不能设置该范围的角色。' })
       return
     }

@@ -1,5 +1,6 @@
 import type {
   AdminBranch,
+  AdminCapability,
   AdminCommunityReport,
   AdminEventAlbumPhoto,
   AdminEventAlbumPhotoStatus,
@@ -10,6 +11,7 @@ import type {
   AdminExportStatus,
   AdminExportTicket,
   AdminRoleCandidate,
+  AdminRoleCapabilityPolicy,
   AdminRoleItem,
   MipAdminGateway,
 } from './types'
@@ -22,7 +24,18 @@ import {
   parseAdminAnnouncementPage,
   parseAdminAnnouncementScopes,
 } from './announcements'
+import {
+  parseMessageCampaign,
+  parseMessageCampaignPage,
+  parseMessageCampaignPublication,
+  parseMessageCampaignScopes,
+  parseMessageRecipientPage,
+} from './message-campaigns'
 import { parseOperationalExceptionPage } from './operational-exceptions'
+import {
+  parseOpportunityCommentSettings,
+  parseOpportunityCommentState,
+} from './opportunity-comments'
 import { parseAdminOrderPage, parseAdminRosterPage } from './order-roster'
 import { MipAdminError } from './types'
 
@@ -39,6 +52,10 @@ const readActions = new Set([
   'mip.admin.announcements.scopes',
   'mip.admin.announcements.list',
   'mip.admin.announcements.get',
+  'mip.admin.messageCampaigns.scopes',
+  'mip.admin.messageCampaigns.list',
+  'mip.admin.messageCampaigns.get',
+  'mip.admin.messageCampaigns.recipients',
   'mip.admin.communityReports.list',
   'mip.admin.users.list',
   'mip.admin.users.get',
@@ -50,9 +67,11 @@ const readActions = new Set([
   'mip.admin.events.rosterAll',
   'mip.admin.roles.list',
   'mip.admin.roles.candidates',
+  'mip.admin.rolePolicies.list',
   'mip.admin.opportunities.list',
   'mip.admin.opportunities.get',
   'mip.admin.opportunities.options',
+  'mip.admin.opportunityComments.get',
   'mip.admin.growth.levels',
   'mip.admin.growth.benefits',
   'mip.admin.growth.rules',
@@ -81,6 +100,42 @@ const adminRoleKeys = new Set([
   'EVENT_STAFF',
 ])
 const adminScopeTypes = new Set(['PLATFORM', 'BRANCH', 'EVENT'])
+const adminCapabilities = new Set<AdminCapability>([
+  'admin.dashboard',
+  'branches.manage',
+  'users.read',
+  'users.phone.read',
+  'users.fields.edit',
+  'users.access.manage',
+  'exports.create',
+  'events.read',
+  'events.write',
+  'events.roster.read',
+  'events.registrations.manage',
+  'events.checkin.manage',
+  'events.checkin.undo',
+  'events.team.manage',
+  'events.album.manage',
+  'events.feedback.read',
+  'announcements.manage',
+  'messages.manage',
+  'communications.publish',
+  'community.reports.manage',
+  'opportunities.moderate',
+  'opportunities.archive',
+  'growth.read',
+  'growth.configure',
+  'growth.adjust',
+  'tasks.manage',
+  'banners.manage',
+  'badges.manage',
+  'game.manage',
+  'orders.read',
+  'refunds.submit',
+  'operations.exceptions.read',
+  'roles.change',
+  'audit.read',
+])
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -313,6 +368,39 @@ function parseAdminRoleCandidatePage(value: unknown) {
   return { items: value.items.map(parseAdminRoleCandidate), nextCursor: null }
 }
 
+function parseAdminRoleCapabilityPolicy(value: unknown): AdminRoleCapabilityPolicy {
+  if (!record(value)) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的权限模板')
+  }
+  const allowedCapabilities = value.allowedCapabilities
+  const capabilities = value.capabilities
+  if (value.roleKey === 'PLATFORM_OWNER'
+    || !adminRoleKeys.has(String(value.roleKey))
+    || !adminScopeTypes.has(String(value.scopeType))
+    || !Array.isArray(allowedCapabilities)
+    || !Array.isArray(capabilities)
+    || allowedCapabilities.some(item => !adminCapabilities.has(item as AdminCapability))
+    || capabilities.some(item => !adminCapabilities.has(item as AdminCapability))
+    || new Set(allowedCapabilities).size !== allowedCapabilities.length
+    || new Set(capabilities).size !== capabilities.length
+    || capabilities.some(item => !allowedCapabilities.includes(item))
+    || !Number.isInteger(value.version)
+    || Number(value.version) < 0
+    || !['DEFAULT', 'CUSTOM'].includes(String(value.source))
+    || !(value.updatedAt === null
+      || (typeof value.updatedAt === 'string' && Number.isFinite(Date.parse(value.updatedAt))))) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的权限模板')
+  }
+  return value as unknown as AdminRoleCapabilityPolicy
+}
+
+function parseAdminRoleCapabilityPolicyPage(value: unknown) {
+  if (!record(value) || !Array.isArray(value.items)) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的权限模板列表')
+  }
+  return { items: value.items.map(parseAdminRoleCapabilityPolicy), nextCursor: null }
+}
+
 function parseCommunityReportProfile(value: unknown) {
   if (!record(value)
     || !hasOnlyKeys(value, ['nickname', 'headline', 'cityName'])
@@ -493,6 +581,30 @@ export const cloudbaseMipAdminGateway: MipAdminGateway = {
   setAnnouncementPinned: async (announcementId, pinned, expectedVersion) => parseAdminAnnouncementDetail(
     await call('mip.admin.announcements.pin', { announcementId, pinned, expectedVersion }),
   ),
+  getMessageCampaignScopes: async () => parseMessageCampaignScopes(
+    await call('mip.admin.messageCampaigns.scopes'),
+  ),
+  listMessageCampaigns: async input => parseMessageCampaignPage(
+    await call('mip.admin.messageCampaigns.list', { ...(input || {}) }),
+  ),
+  getMessageCampaign: async campaignId => parseMessageCampaign(
+    await call('mip.admin.messageCampaigns.get', { campaignId }),
+  ),
+  searchMessageRecipients: async input => parseMessageRecipientPage(
+    await call('mip.admin.messageCampaigns.recipients', { ...(input || {}) }),
+  ),
+  saveMessageCampaign: async input => parseMessageCampaign(
+    await call('mip.admin.messageCampaigns.save', { ...input }),
+  ),
+  snapshotMessageCampaign: async (campaignId, expectedVersion) => parseMessageCampaign(
+    await call('mip.admin.messageCampaigns.snapshot', { campaignId, expectedVersion }),
+  ),
+  publishMessageCampaign: async (campaignId, expectedVersion, idempotencyKey) => parseMessageCampaignPublication(
+    await call('mip.admin.messageCampaigns.publish', { campaignId, expectedVersion, idempotencyKey }),
+  ),
+  withdrawMessageCampaign: async (campaignId, expectedVersion, reason) => parseMessageCampaign(
+    await call('mip.admin.messageCampaigns.withdraw', { campaignId, expectedVersion, reason }),
+  ),
   listCommunityReports: async status => parseCommunityReportPage(
     await call('mip.admin.communityReports.list', { status }),
   ),
@@ -551,13 +663,33 @@ export const cloudbaseMipAdminGateway: MipAdminGateway = {
     await call('mip.admin.roles.candidates', { eventId, query }),
   ),
   setRole: input => call('mip.admin.roles.set', input),
+  listRoleCapabilityPolicies: async () => parseAdminRoleCapabilityPolicyPage(
+    await call('mip.admin.rolePolicies.list'),
+  ),
+  updateRoleCapabilityPolicy: async input => parseAdminRoleCapabilityPolicy(
+    await call('mip.admin.rolePolicies.update', { ...input }),
+  ),
+  resetRoleCapabilityPolicy: async input => parseAdminRoleCapabilityPolicy(
+    await call('mip.admin.rolePolicies.update', { ...input, reset: true }),
+  ),
   listOpportunities: input => call('mip.admin.opportunities.list', input || {}),
-  getOpportunity: opportunityId => call('mip.admin.opportunities.get', { opportunityId }),
+  getOpportunity: async opportunityId => resolveCloudFileUrls(
+    await call('mip.admin.opportunities.get', { opportunityId }),
+  ),
   getOpportunityEditorOptions: () => call('mip.admin.opportunities.options'),
   saveOpportunity: input => call('mip.admin.opportunities.save', input),
   publishOpportunity: input => call('mip.admin.opportunities.publish', input),
+  endOpportunity: input => call('mip.admin.opportunities.end', input),
   unpublishOpportunity: input => call('mip.admin.opportunities.unpublish', input),
   archiveOpportunity: input => call('mip.admin.opportunities.archive', input),
+  getOpportunityCommentAdminState: async opportunityId => parseOpportunityCommentState(
+    await call('mip.admin.opportunityComments.get', { opportunityId }),
+  ),
+  saveOpportunityCommentSettings: async input => parseOpportunityCommentSettings(
+    await call('mip.admin.opportunityComments.settings.save', { ...input }),
+  ),
+  moderateOpportunityComment: input => call('mip.admin.opportunityComments.moderate', { ...input }),
+  closeOpportunityCommentReport: input => call('mip.admin.opportunityComments.reports.close', { ...input }),
   listGrowthLevels: () => call('mip.admin.growth.levels'),
   listGrowthBenefits: () => call('mip.admin.growth.benefits'),
   saveGrowthBenefit: input => call('mip.admin.growth.saveBenefit', input),

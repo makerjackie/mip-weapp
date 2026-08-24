@@ -29,13 +29,25 @@ test('server rule refuses to create a negative balance', () => {
   }, 0), /GROWTH_BALANCE_INVALID/)
 })
 
-test('server rejects the retired game coin metric and strips its legacy database balance', () => {
-  assert.throws(() => projectAward({ coin_balance: 3 }, {
+test('server projects game coin awards and protects the balance', () => {
+  assert.deepEqual(projectAward({ coin_balance: 3 }, {
     metric: 'COIN',
     delta_value: 1,
     daily_limit_value: null,
     status: 'ACTIVE',
-  }, 0), /GROWTH_RULE_NOT_AVAILABLE/)
+  }, 0), {
+    field: 'coin_balance',
+    requested: 1,
+    applied: 1,
+    balanceAfter: 4,
+    capped: false,
+  })
+  assert.throws(() => projectAward({ coin_balance: 3 }, {
+    metric: 'COIN',
+    delta_value: -4,
+    daily_limit_value: null,
+    status: 'ACTIVE',
+  }, 0), /GROWTH_BALANCE_INVALID/)
   assert.deepEqual(accountDto({
     user_id: 'user-id',
     experience_balance: 1,
@@ -46,6 +58,7 @@ test('server rejects the retired game coin metric and strips its legacy database
     userId: 'user-id',
     experienceBalance: 1,
     contributionBalance: 2,
+    coinBalance: 3,
     version: 4,
   })
 })
@@ -55,6 +68,7 @@ test('snapshot derives the active level from server thresholds', () => {
     user_id: 'user-id',
     experience_balance: 120,
     contribution_balance: 8,
+    coin_balance: 5,
     version: 3,
   }, [
     { id: 'one', level_key: 'one', name: '一级', minimum_experience: 0, benefits_json: '[]', status: 'ACTIVE' },

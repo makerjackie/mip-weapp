@@ -167,7 +167,7 @@ function deadResult(event) {
 }
 
 function retryDelayMs(attempts) {
-  return Math.min(6 * 60 * 60 * 1000, Math.max(60 * 1000, 2 ** Math.max(0, attempts - 1) * 60 * 1000))
+  return Math.min(4_000, Math.max(250, 2 ** Math.max(0, attempts - 1) * 250))
 }
 
 function safeErrorCode(value) {

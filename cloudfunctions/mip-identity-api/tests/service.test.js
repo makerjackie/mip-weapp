@@ -63,6 +63,19 @@ function repository(overrides = {}) {
 }
 
 describe('MIP identity service', () => {
+  it('returns an opaque self profile reference for card sharing', async () => {
+    const service = createIdentityService({
+      repository: repository(),
+      profileRefWriter(input) {
+        assert.deepEqual(input, { appId: caller.appId, userId: facts().user.id })
+        return 'p1.self-profile-reference'
+      },
+    })
+
+    const snapshot = await service.getAccessSnapshot(caller)
+    assert.equal(snapshot.profileRef, 'p1.self-profile-reference')
+  })
+
   it('projects PLAYER only from an active server entitlement window', async () => {
     const service = createIdentityService({
       repository: repository(),
@@ -136,6 +149,22 @@ describe('MIP identity service', () => {
       roles: ['BRANCH_ADMIN'],
       capabilities: ['admin:enter', 'branch:manage_members', 'branch:operate'],
     }])
+  })
+
+  it('removes projected admin entry grants when the effective policy removes them', async () => {
+    const restrictedFacts = facts({
+      roles: [{
+        scope_type: 'BRANCH',
+        scope_id: '20000000-0000-4000-8000-000000000001',
+        role_key: 'BRANCH_ADMIN',
+        policy_capabilities_json: JSON.stringify(['users.read']),
+      }],
+    })
+    const service = createIdentityService({
+      repository: repository({ loadFacts: async () => restrictedFacts }),
+    })
+    const snapshot = await service.getAccessSnapshot(caller)
+    assert.deepEqual(snapshot.grants[0].capabilities, ['branch:manage_members'])
   })
 })
 

@@ -18,6 +18,12 @@ const fullAccessActions = new Set([
   'saveSuperCase',
   'unpublishSuperCase',
   'archiveSuperCase',
+  'getOpportunityCommentSettings',
+  'listOpportunityComments',
+  'saveOpportunityComment',
+  'deleteOpportunityComment',
+  'setOpportunityCommentCall',
+  'reportOpportunityComment',
 ])
 
 function allowedAppIds() {

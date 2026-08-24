@@ -180,9 +180,12 @@ function createIdentityRepository(database, options = {}) {
         [appId, userId],
       ),
       database.query(
-        `SELECT scope_type, scope_id, role_key
-         FROM mip_admin_role_bindings
-         WHERE app_id = ? AND user_id = ? AND status = 'ACTIVE'`,
+        `SELECT binding.scope_type, binding.scope_id, binding.role_key,
+          CASE WHEN policy.policy_mode = 'CUSTOM' THEN policy.capabilities_json ELSE NULL END AS policy_capabilities_json
+         FROM mip_admin_role_bindings binding
+         LEFT JOIN mip_role_capability_policies policy
+           ON policy.app_id = binding.app_id AND policy.role_key = binding.role_key
+         WHERE binding.app_id = ? AND binding.user_id = ? AND binding.status = 'ACTIVE'`,
         [appId, userId],
       ),
     ])

@@ -14,7 +14,7 @@ const {
   uuid,
 } = require('./common')
 
-const categories = new Set(['REFERRAL', 'PROFILE_INTEREST', 'VISITOR'])
+const categories = new Set(['REFERRAL', 'PROFILE_INTEREST', 'OUTBOUND_INTEREST', 'VISITOR'])
 
 function normalizeListInput(value = {}) {
   const category = String(value.category || '').trim().toUpperCase()
@@ -37,6 +37,19 @@ function publicActor(row, caller) {
     nickname: allowed.nickname === false ? 'MIP 用户' : (row.actor_nickname || 'MIP 用户'),
     avatarUrl: allowed.avatar === false ? undefined : (row.actor_avatar_file_id || undefined),
     headline: allowed.headline === false ? undefined : (row.actor_headline || undefined),
+  }
+}
+
+function publicInterestTarget(row, caller) {
+  const allowed = jsonObject(row.target_visibility_json)
+  return {
+    profileRef: createProfileRef(
+      { appId: caller.appId, userId: row.target_user_id },
+      caller.profileRefSecret,
+    ),
+    nickname: allowed.nickname === false ? 'MIP 用户' : (row.target_nickname || 'MIP 用户'),
+    avatarUrl: allowed.avatar === false ? undefined : (row.target_avatar_file_id || undefined),
+    headline: allowed.headline === false ? undefined : (row.target_headline || undefined),
   }
 }
 
@@ -73,11 +86,38 @@ function interestDto(row, message, caller) {
   }
 }
 
+function outboundInterestDto(row, caller) {
+  return {
+    kind: 'OUTBOUND_INTEREST',
+    status: row.status,
+    target: publicInterestTarget(row, caller),
+    source: {
+      type: row.source_type,
+      label: row.source_label,
+      status: row.source_status,
+    },
+    unread: false,
+    updatedAt: iso(row.updated_at),
+  }
+}
+
 async function listReceivedInteractions(database, caller, rawInput = {}) {
   if (!caller.userId) throw new Error('AUTH_REQUIRED')
   const input = normalizeListInput(rawInput)
   if (input.category === 'VISITOR') {
     return { category: input.category, ...(await listProfileVisitors(database, caller, input)) }
+  }
+  if (input.category === 'OUTBOUND_INTEREST') {
+    const rows = await listOutboundInterests(database, caller, input)
+    const pageRows = rows.slice(0, input.limit)
+    return {
+      category: input.category,
+      items: pageRows.map(row => outboundInterestDto(row, caller)),
+      unreadCount: 0,
+      nextCursor: rows.length > input.limit && pageRows.length
+        ? encodeCursor(pageRows.at(-1).updated_at, pageRows.at(-1).relation_id)
+        : undefined,
+    }
   }
   const rows = input.category === 'REFERRAL'
     ? await listReferrals(database, caller, input)
@@ -176,6 +216,65 @@ async function listInterests(database, caller, input) {
          AND profile_source.id = i.source_id AND profile_source.id = i.target_user_id
          AND profile_source.status = 'ACTIVE'
      WHERE i.app_id = ? AND i.target_user_id = ?
+       AND COALESCE(opportunity.id, cooperation.id, super_case.id, profile_source.id) IS NOT NULL
+       AND ${blockFilter.sql}
+       ${cursorSql}
+     ORDER BY i.updated_at DESC, i.id DESC
+     LIMIT ${input.limit + 1}`,
+    params,
+  )
+}
+
+async function listOutboundInterests(database, caller, input) {
+  const blockFilter = mutualBlockFilter(caller.userId, 'target.id', 'target.app_id')
+  const params = [caller.appId, caller.userId, ...blockFilter.params]
+  const cursorSql = input.cursor
+    ? 'AND (i.updated_at < ? OR (i.updated_at = ? AND i.id < ?))'
+    : ''
+  if (input.cursor) params.push(input.cursor.timestamp, input.cursor.timestamp, input.cursor.id)
+  return database.query(
+    `SELECT i.id AS relation_id, i.status, i.source_type, i.updated_at,
+            target.id AS target_user_id, target_profile.nickname AS target_nickname,
+            target_profile.headline AS target_headline,
+            target_profile.visibility_json AS target_visibility_json,
+            target_avatar.cloud_file_id AS target_avatar_file_id,
+            CASE i.source_type
+              WHEN 'OPPORTUNITY' THEN opportunity.title
+              WHEN 'COOPERATION_CARD' THEN cooperation.positioning
+              WHEN 'SUPER_CASE' THEN super_case.project_name
+              WHEN 'PROFILE' THEN '公开档案'
+            END AS source_label,
+            CASE i.source_type
+              WHEN 'OPPORTUNITY' THEN opportunity.status
+              WHEN 'COOPERATION_CARD' THEN cooperation.status
+              WHEN 'SUPER_CASE' THEN super_case.status
+              WHEN 'PROFILE' THEN 'PUBLISHED'
+            END AS source_status
+     FROM mip_profile_interests i
+     INNER JOIN mip_users target
+       ON target.app_id = i.app_id AND target.id = i.target_user_id AND target.status = 'ACTIVE'
+     INNER JOIN mip_profiles target_profile
+       ON target_profile.app_id = target.app_id AND target_profile.user_id = target.id
+     LEFT JOIN mip_media_assets target_avatar
+       ON target_avatar.app_id = target_profile.app_id
+         AND target_avatar.id = target_profile.avatar_asset_id AND target_avatar.status = 'READY'
+     LEFT JOIN mip_opportunities opportunity
+       ON i.source_type = 'OPPORTUNITY' AND opportunity.app_id = i.app_id
+         AND opportunity.id = i.source_id AND opportunity.owner_user_id = target.id
+         AND opportunity.status IN ('PUBLISHED', 'ENDED')
+     LEFT JOIN mip_cooperation_cards cooperation
+       ON i.source_type = 'COOPERATION_CARD' AND cooperation.app_id = i.app_id
+         AND cooperation.id = i.source_id AND cooperation.owner_user_id = target.id
+         AND cooperation.status = 'PUBLISHED'
+     LEFT JOIN mip_super_cases super_case
+       ON i.source_type = 'SUPER_CASE' AND super_case.app_id = i.app_id
+         AND super_case.id = i.source_id AND super_case.owner_user_id = target.id
+         AND super_case.status = 'PUBLISHED'
+     LEFT JOIN mip_users profile_source
+       ON i.source_type = 'PROFILE' AND profile_source.app_id = i.app_id
+         AND profile_source.id = i.source_id AND profile_source.id = target.id
+         AND profile_source.status = 'ACTIVE'
+     WHERE i.app_id = ? AND i.actor_user_id = ? AND i.status = 'ACTIVE'
        AND COALESCE(opportunity.id, cooperation.id, super_case.id, profile_source.id) IS NOT NULL
        AND ${blockFilter.sql}
        ${cursorSql}
@@ -392,10 +491,13 @@ async function markReceivedInteractionRead(database, caller, input = {}) {
 module.exports = {
   countRelationshipUnread,
   interestDto,
+  listOutboundInterests,
   listReceivedInteractions,
   loadRelationshipMessages,
   markReceivedInteractionRead,
   normalizeListInput,
+  outboundInterestDto,
   publicActor,
+  publicInterestTarget,
   referralDto,
 }

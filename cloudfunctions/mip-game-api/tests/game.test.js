@@ -5,10 +5,20 @@ const fs = require('node:fs')
 const path = require('node:path')
 const test = require('node:test')
 const { createHandler } = require('../domain/handler')
-const { createGameRepository, headquartersLevel, rankingPeriod } = require('../domain/repository')
+const { createGameRepository, headquartersLevel, individualRankingRows, rankingPeriod } = require('../domain/repository')
 const { assertNoClientScore, normalizeMatch, normalizeSeason } = require('../domain/validation')
 
 const seasonId = '10000000-0000-4000-8000-000000000001'
+
+test('game management respects a configured platform operations policy', async () => {
+  const repository = createGameRepository({
+    async one(sql) {
+      assert.match(sql, /LEFT JOIN mip_role_capability_policies/)
+      return { role_key: 'PLATFORM_OPERATIONS', policy_capabilities_json: '[]' }
+    },
+  })
+  await assert.rejects(() => repository.getAdminSession({ appId: 'app', userId: 'user' }), /FORBIDDEN/)
+})
 
 test('uses replaceable neutral rules without any coin metric', () => {
   const season = normalizeSeason({
@@ -139,11 +149,59 @@ test('normalizes an unordered seven-day matchup pair and rejects non-week period
   }), /VALIDATION_FAILED/)
 })
 
+test('rejects membership changes after the season is closed before writing', async () => {
+  const writes = []
+  let oneCall = 0
+  const database = {
+    async transaction(work) { return work(this) },
+    async one() {
+      oneCall += 1
+      if (oneCall === 1) return { role_key: 'PLATFORM_OWNER' }
+      return { version: 3, season_status: 'CLOSED' }
+    },
+    async query(sql) { writes.push(sql); return [] },
+  }
+  const repository = createGameRepository(database)
+  await assert.rejects(
+    repository.replaceTeamMembers(
+      { appId: 'app', userId: 'user', profileRefSecret: 'secret' },
+      {
+        seasonId,
+        teamId: '20000000-0000-4000-8000-000000000001',
+        expectedVersion: 3,
+        members: [],
+      },
+    ),
+    /INVALID_STATE/,
+  )
+  assert.deepEqual(writes, [])
+})
+
+test('builds all-time ranking from time-bounded growth and entitlement facts', async () => {
+  let captured = null
+  const period = {
+    start: '1970-01-01 00:00:00.000',
+    end: '2027-01-01 00:00:00.000',
+  }
+  await individualRankingRows({
+    async query(sql, params) { captured = { sql, params }; return [] },
+  }, 'app', { id: seasonId }, period, 'INDIVIDUAL_ALL_TIME')
+  assert.match(captured.sql, /mip_growth_entries entry/)
+  assert.match(captured.sql, /entry\.created_at >= \? AND entry\.created_at <= \?/)
+  assert.match(captured.sql, /entitlement\.status IN \('ACTIVE', 'EXPIRED'\)/)
+  assert.match(captured.sql, /entitlement\.revoked_at > LEAST\(\?, UTC_TIMESTAMP\(3\)\)/)
+  assert.match(captured.sql, /entitlement\.starts_at <= LEAST\(\?, UTC_TIMESTAMP\(3\)\)/)
+  assert.match(captured.sql, /entitlement\.ends_at > LEAST\(\?, UTC_TIMESTAMP\(3\)\)/)
+  assert.doesNotMatch(captured.sql, /mip_growth_accounts/)
+  assert.deepEqual(captured.params, [period.start, period.end, 'app', period.end, period.end, period.end])
+})
+
 test('keeps score generation app-scoped on growth facts', () => {
   const source = fs.readFileSync(path.join(__dirname, '../domain/repository.js'), 'utf8')
   assert.match(source, /entry\.metric = 'EXPERIENCE'/)
   assert.match(source, /member\.app_id = \?/)
-  assert.match(source, /account\.experience_balance/)
+  assert.match(source, /entry\.created_at >= \? AND entry\.created_at <= \?/)
+  assert.match(source, /entitlement\.starts_at <= LEAST\(\?, UTC_TIMESTAMP\(3\)\)/)
   assert.match(source, /status = 'ARCHIVED'/)
   assert.doesNotMatch(source, /coin_balance|metric = 'COIN'/)
   assert.doesNotMatch(source, /event\.(?:score|points)/)

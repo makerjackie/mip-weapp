@@ -2,9 +2,9 @@
 
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
-const { createInternalClients } = require('../lib/internal-clients')
 const { verifyInternalEvent: verifyGrowth } = require('../../mip-growth-api/lib/internal-auth')
 const { verifyInternalEvent: verifyNotification } = require('../../mip-notification-worker/lib/internal-auth')
+const { createInternalClients } = require('../lib/internal-clients')
 
 const notificationSecret = 'notification-secret-with-at-least-thirty-two-bytes'
 const growthSecret = 'growth-secret-with-at-least-thirty-two-bytes'
@@ -34,6 +34,7 @@ describe('outbox internal clients', () => {
       dedupeKey: 'outbox:one',
     }
     await clients.publishMessage('wx-app', message)
+    await clients.runNotificationBatch('wx-app', 20)
     await clients.recordConfirmedEvent('wx-app', {
       userId: message.recipientUserId,
       sourceEventType: 'event.checked_in',
@@ -46,8 +47,12 @@ describe('outbox internal clients', () => {
       allowedAppIds: new Set(['wx-app']),
       now,
     }).message, message)
-    assert.equal(calls[1].name, 'mip-growth-api')
-    assert.equal(verifyGrowth(calls[1].data, {
+    assert.equal(calls[1].name, 'mip-notification-worker')
+    assert.equal(calls[1].data.action, 'runDeliveryBatch')
+    assert.equal(calls[1].data.drain, true)
+    assert.equal(calls[1].data.maxBatches, 5)
+    assert.equal(calls[2].name, 'mip-growth-api')
+    assert.equal(verifyGrowth(calls[2].data, {
       secret: growthSecret,
       allowedAppIds: new Set(['wx-app']),
       now,
@@ -69,7 +74,12 @@ describe('outbox internal clients', () => {
     const calls = []
     const now = 1_780_000_000_000
     const clients = createInternalClients({
-      cloud: { callFunction: async (input) => { calls.push(input); return { result: { ok: true, data: {} } } } },
+      cloud: {
+        async callFunction(input) {
+          calls.push(input)
+          return { result: { ok: true, data: {} } }
+        },
+      },
       notificationFunctionName: 'mip-notification-worker',
       notificationSecret,
       growthFunctionName: 'mip-growth-api',
@@ -88,5 +98,32 @@ describe('outbox internal clients', () => {
       now,
     }), { appId: 'wx-app', transitionId })
     assert.equal('userId' in calls[0].data, false)
+  })
+
+  it('signs the fixed game coin action without forwarding an amount', async () => {
+    const calls = []
+    const now = 1_780_000_000_000
+    const clients = createInternalClients({
+      cloud: { async callFunction(input) { calls.push(input); return { result: { ok: true, data: {} } } } },
+      notificationFunctionName: 'mip-notification-worker',
+      notificationSecret,
+      growthFunctionName: 'mip-growth-api',
+      growthSecret,
+      now: () => now,
+    })
+    await clients.recordConfirmedEvent('wx-app', {
+      action: 'grantGameCoins',
+      userId: '10000000-0000-4000-8000-000000000001',
+      sourceEventType: 'game.match_won',
+      sourceEventId: '90000000-0000-4000-8000-000000000003',
+      amount: 999999,
+    })
+    const verified = verifyGrowth(calls[0].data, {
+      secret: growthSecret,
+      allowedAppIds: new Set(['wx-app']),
+      now,
+    })
+    assert.equal(verified.action, 'grantGameCoins')
+    assert.equal('amount' in calls[0].data, false)
   })
 })

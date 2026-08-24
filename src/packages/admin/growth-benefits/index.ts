@@ -1,5 +1,7 @@
 import type { AdminGrowthBenefit } from '../../../modules/mip-admin'
+import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
+import { adminLoadFailure } from '../shared/page-state'
 
 type BenefitView = AdminGrowthBenefit & { statusText: string, statusTheme: string }
 const labels = { DRAFT: '草稿', ACTIVE: '启用', INACTIVE: '停用' } as const
@@ -9,7 +11,7 @@ function view(item: AdminGrowthBenefit): BenefitView {
 
 Page({
   data: {
-    state: 'loading',
+    state: 'loading' as AdminPageState,
     items: [] as BenefitView[],
     canConfigure: false,
     editorId: '',
@@ -28,7 +30,10 @@ Page({
       this.setData({ state: 'ready', items: page.items.map(view), canConfigure: hasCapability(session.capabilities, 'growth.configure'), message: '' })
     }
     catch (error) {
-      this.setData({ state: 'error', message: error instanceof Error ? error.message : '权益加载失败' })
+      this.setData(adminLoadFailure(error, {
+        hasContent: this.data.items.length > 0,
+        fallbackMessage: '权益加载失败',
+      }))
     }
   },
   updateField(event: WechatMiniprogram.CustomEvent<{ value: string }>) {

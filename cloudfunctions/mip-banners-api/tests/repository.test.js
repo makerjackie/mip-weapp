@@ -71,6 +71,16 @@ test('public list is active, ordered and fail-closed for invalid historical targ
   assert.match(queries[0].sql, /ORDER BY banner\.sort_order, banner\.id/)
 })
 
+test('configured policy can remove Banner management from platform operations', async () => {
+  const repository = createBannerRepository({
+    async one(sql) {
+      assert.match(sql, /LEFT JOIN mip_role_capability_policies/)
+      return { role_key: 'PLATFORM_OPERATIONS', policy_capabilities_json: '[]' }
+    },
+  })
+  await assert.rejects(() => repository.getAdminSession(caller), /FORBIDDEN/)
+})
+
 test('creates an inactive Banner with owned media and a business audit', async () => {
   const writes = []
   let created = false

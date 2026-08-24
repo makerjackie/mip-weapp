@@ -46,6 +46,38 @@
       <view class="mt-3"><t-button block size="large" variant="outline" theme="primary" disabled="{{acting}}" bind:tap="toggleInterest">{{item.interestActive ? '取消感兴趣' : '我感兴趣'}}</t-button></view>
     </view>
     <view wx:if="{{item.canEdit}}" class="mt-4 flex gap-3"><t-button class="min-w-0 flex-1" block size="large" theme="primary" bind:tap="edit">编辑</t-button><t-button wx:if="{{item.status === 'PUBLISHED'}}" class="min-w-0 flex-1" block size="large" variant="outline" theme="primary" bind:tap="end">结束机会</t-button></view>
+    <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="flex items-center justify-between gap-3">
+        <view><view class="text-[length:28rpx] font-semibold">评论与评价</view><view class="mt-1 text-[length:21rpx] text-muted">参与人标识由机会团队记录确认</view></view>
+        <t-button wx:if="{{commentSettings && (commentSettings.commentsEnabled || (commentSettings.reviewsEnabled && commentSettings.opportunityStatus === 'ENDED'))}}" size="small" theme="primary" bind:tap="startComment">发布</t-button>
+      </view>
+      <view wx:if="{{commentsState === 'loading'}}" class="mt-4"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+      <view wx:elif="{{commentsState === 'error'}}" class="mt-4 rounded-[12rpx] bg-panel-raised px-4 py-4">
+        <view class="text-[length:22rpx] text-muted">{{commentsMessage}}</view>
+        <view class="mt-3"><t-button size="small" variant="outline" theme="primary" bind:tap="startComment">完成身份信息后查看</t-button></view>
+      </view>
+      <view wx:elif="{{!comments.length}}" class="mt-4 text-[length:23rpx] text-muted">暂无评论</view>
+      <view wx:else class="mt-4 flex flex-col gap-3">
+        <view wx:for="{{comments}}" wx:key="id" class="rounded-[12rpx] bg-panel-raised px-4 py-4">
+          <view class="flex items-center gap-3" data-id="{{item.id}}" bind:tap="openCommentAuthor">
+            <image wx:if="{{item.author.avatarUrl}}" class="h-[64rpx] w-[64rpx] shrink-0 rounded-full" src="{{item.author.avatarUrl}}" mode="aspectFill" />
+            <view wx:else class="flex h-[64rpx] w-[64rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft text-[length:22rpx] text-brand">{{item.authorInitial}}</view>
+            <view class="min-w-0 flex-1"><view class="flex items-center gap-2"><text class="truncate text-[length:24rpx] font-semibold">{{item.author.nickname}}</text><text wx:if="{{item.author.participant}}" class="rounded-full bg-brand-soft px-2 py-1 text-[length:18rpx] text-brand">参与人</text><text wx:if="{{item.status === 'PENDING'}}" class="rounded-full border border-line px-2 py-1 text-[length:18rpx] text-muted">审核中</text></view><view class="mt-1 text-[length:19rpx] text-muted">{{item.createdText}}{{item.editedAt ? ' · 已编辑' : ''}}</view></view>
+          </view>
+          <view wx:if="{{item.type === 'REVIEW'}}" class="mt-3 text-[length:21rpx] text-brand">项目评价 · {{item.rating}} / 5</view>
+          <view class="mt-3 whitespace-pre-wrap text-[length:24rpx] leading-7">{{item.body}}</view>
+          <view class="mt-3 flex items-center gap-4 text-[length:21rpx] text-muted">
+            <view wx:if="{{commentSettings.callsEnabled && commentSettings.canCall && !item.mine && item.status === 'PUBLISHED'}}" data-id="{{item.id}}" bind:tap="toggleCommentCall" class="min-h-[64rpx] py-2 {{item.callActive ? 'text-brand' : ''}}">打 call {{item.callCount}}</view>
+            <view wx:else>打 call {{item.callCount}}</view>
+            <view wx:if="{{item.canEdit}}" data-id="{{item.id}}" bind:tap="editComment" class="min-h-[64rpx] py-2">编辑</view>
+            <view wx:if="{{item.canDelete}}" data-id="{{item.id}}" bind:tap="deleteComment" class="min-h-[64rpx] py-2 text-danger">删除</view>
+            <view wx:if="{{!item.mine && item.status === 'PUBLISHED'}}" data-id="{{item.id}}" bind:tap="reportComment" class="min-h-[64rpx] py-2">举报</view>
+          </view>
+        </view>
+        <t-button wx:if="{{commentsCursor}}" block variant="outline" theme="primary" loading="{{commentsLoadingMore}}" bind:tap="loadMoreComments">加载更多</t-button>
+      </view>
+      <view wx:if="{{commentsMessage && commentsState === 'ready'}}" class="mt-3 text-[length:21rpx] text-danger">{{commentsMessage}}</view>
+    </view>
     <app-page-exit label="返回机会" />
     <t-popup visible="{{referralPickerVisible}}" placement="bottom" prevent-scroll-through bind:visible-change="handleReferralPickerVisibility">
       <view class="box-border max-h-[82vh] min-h-[620rpx] rounded-t-[24rpx] bg-panel px-4 pb-[calc(env(safe-area-inset-bottom)+32rpx)] pt-5 text-ink">
@@ -66,6 +98,19 @@
         </scroll-view>
         <view wx:if="{{selectedReferralTarget}}" class="mt-3 text-[length:22rpx] text-muted">已选择：{{selectedReferralTarget.displayName}}</view>
         <view class="mt-3"><t-button block size="large" theme="primary" loading="{{acting}}" disabled="{{!selectedReferralTarget}}" bind:tap="confirmReferralTarget">确认引荐</t-button></view>
+      </view>
+    </t-popup>
+    <t-popup visible="{{composerVisible}}" placement="bottom" prevent-scroll-through bind:visible-change="handleComposerVisibility">
+      <view class="box-border rounded-t-[24rpx] bg-panel px-4 pb-[calc(env(safe-area-inset-bottom)+32rpx)] pt-5 text-ink">
+        <view class="flex items-center justify-between"><view class="text-[length:30rpx] font-semibold">{{editingComment ? '编辑内容' : '发布内容'}}</view><view class="min-h-[64rpx] px-3 py-2 text-[length:23rpx] text-muted" bind:tap="closeCommentComposer">取消</view></view>
+        <view wx:if="{{!editingComment}}" class="mt-4 flex gap-2">
+          <view wx:if="{{commentSettings.commentsEnabled}}" class="min-h-[72rpx] flex-1 rounded-[12rpx] px-3 py-3 text-center text-[length:23rpx] {{commentType === 'COMMENT' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-type="COMMENT" bind:tap="chooseCommentType">评论</view>
+          <view wx:if="{{commentSettings.reviewsEnabled && commentSettings.opportunityStatus === 'ENDED'}}" class="min-h-[72rpx] flex-1 rounded-[12rpx] px-3 py-3 text-center text-[length:23rpx] {{commentType === 'REVIEW' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-type="REVIEW" bind:tap="chooseCommentType">项目评价</view>
+        </view>
+        <view wx:if="{{commentType === 'REVIEW'}}" class="mt-4"><view class="text-[length:22rpx] text-muted">评分</view><view class="mt-2 flex gap-2"><view wx:for="{{[1,2,3,4,5]}}" wx:key="*this" class="flex h-[64rpx] w-[64rpx] items-center justify-center rounded-[12rpx] text-[length:23rpx] {{commentRating === item ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-rating="{{item}}" bind:tap="chooseCommentRating">{{item}}</view></view></view>
+        <textarea class="mt-4 box-border h-[240rpx] w-full rounded-[12rpx] bg-panel-raised px-4 py-4 text-[length:24rpx]" value="{{commentBody}}" maxlength="800" placeholder="请输入内容" bindinput="updateCommentBody" />
+        <view class="mt-2 text-right text-[length:20rpx] text-muted">{{commentBody.length}} / 800</view>
+        <view class="mt-4"><t-button block size="large" theme="primary" loading="{{commentActingId}}" disabled="{{!commentBody}}" bind:tap="submitComment">提交</t-button></view>
       </view>
     </t-popup>
   </block>

@@ -1,6 +1,6 @@
 # Architecture
 
-本仓库是一个原生微信小程序和一组 MIP CloudBase 服务，不是 Monorepo。当前工程声明 80 条路由，运行时由 16 个核心 `mip-*` 函数组成，支付启用时再部署 `mip-cloudpay`、`mip-cloudpay-callback` 与 `mip-refund-worker`。用户消息 API、任务 API、Banner API、游戏化 API 与内部投递 worker 使用独立函数和调用权限。完整领域边界见 [mip/ARCHITECTURE.md](mip/ARCHITECTURE.md)，统一业务语言见 [../CONTEXT.md](../CONTEXT.md)。
+本仓库是一个原生微信小程序和一组 MIP CloudBase 服务，不是 Monorepo。当前工程声明 83 条路由，运行时由 16 个核心 `mip-*` 函数组成，支付启用时再部署 `mip-cloudpay`、`mip-cloudpay-callback` 与 `mip-refund-worker`。用户消息 API、任务 API、Banner API、游戏化 API 与内部投递 worker 使用独立函数和调用权限。完整领域边界见 [mip/ARCHITECTURE.md](mip/ARCHITECTURE.md)，统一业务语言见 [../CONTEXT.md](../CONTEXT.md)。
 
 ```text
 页面 (src/pages, src/packages)

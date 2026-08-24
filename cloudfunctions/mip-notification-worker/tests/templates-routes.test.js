@@ -18,6 +18,10 @@ test('builds only trusted in-app target routes', () => {
     `/packages/member/mip-public-profile/index?profileRef=${profileRef}`,
   )
   assert.throws(() => buildTarget('PROFILE', '10000000-0000-4000-8000-000000000001'), /INBOX_TARGET_INVALID/)
+  assert.equal(
+    buildTarget('GAME', '10000000-0000-4000-8000-000000000002').route,
+    '/packages/member/mip-game/index',
+  )
 })
 
 test('normalizes an inbox message before any external delivery is scheduled', () => {
@@ -37,6 +41,26 @@ test('normalizes an inbox message before any external delivery is scheduled', ()
   })
   assert.equal(message.title, '活动提醒')
   assert.equal(message.target.route, '/packages/member/mip-events/detail/index?eventId=20000000-0000-4000-8000-000000000001')
+})
+
+test('accepts game and level-up messages only with trusted local targets', () => {
+  const game = normalizeMessage({
+    recipientUserId: '10000000-0000-4000-8000-000000000001',
+    messageType: 'GAME',
+    title: '游戏币已更新',
+    body: '本次获得 10 游戏币。',
+    targetType: 'GAME',
+    targetId: '20000000-0000-4000-8000-000000000001',
+    dedupeKey: 'game:coin:one',
+  })
+  assert.equal(game.target.route, '/packages/member/mip-game/index')
+  assert.equal(normalizeMessage({
+    ...game,
+    targetType: 'GROWTH',
+    targetId: '20000000-0000-4000-8000-000000000002',
+    messageType: 'GROWTH_LEVEL_UP',
+    dedupeKey: 'growth:level:one',
+  }).messageType, 'GROWTH_LEVEL_UP')
 })
 
 test('maps logical fields through server template configuration', () => {

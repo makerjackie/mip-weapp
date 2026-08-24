@@ -2,17 +2,19 @@
 
 const { createHash, randomUUID } = require('node:crypto')
 const { createCheckInGrowthRepository } = require('./checkin-compensation')
+const { createGameCoinRepository } = require('./game-coins')
 const { levelSnapshot, projectAward } = require('./rules')
 
 function createGrowthRepository(database, options = {}) {
   const createId = options.createId || randomUUID
   const checkInGrowthRepository = createCheckInGrowthRepository(database, { createId })
+  const gameCoinRepository = createGameCoinRepository(database, { createId })
 
   async function getSnapshot(appId, userId) {
     await ensureAccount(database, appId, userId)
     const [account, rawLevels, levelBenefits, rules] = await Promise.all([
       database.one(
-        `SELECT user_id, experience_balance, contribution_balance, version
+        `SELECT user_id, experience_balance, contribution_balance, coin_balance, version
          FROM mip_growth_accounts WHERE app_id = ? AND user_id = ?`,
         [appId, userId],
       ),
@@ -37,7 +39,7 @@ function createGrowthRepository(database, options = {}) {
                 source_event_type, status
          FROM mip_growth_rules
          WHERE app_id = ? AND status = 'ACTIVE'
-           AND metric IN ('EXPERIENCE', 'CONTRIBUTION')
+           AND metric IN ('EXPERIENCE', 'CONTRIBUTION', 'COIN')
          ORDER BY metric, name, id`,
         [appId],
       ),
@@ -76,7 +78,7 @@ function createGrowthRepository(database, options = {}) {
        FROM mip_growth_entries e
        LEFT JOIN mip_growth_rules r ON r.app_id = e.app_id AND r.id = e.rule_id
        WHERE e.app_id = ? AND e.user_id = ?
-         AND e.metric IN ('EXPERIENCE', 'CONTRIBUTION') ${cursorSql}
+         AND e.metric IN ('EXPERIENCE', 'CONTRIBUTION', 'COIN') ${cursorSql}
        ORDER BY e.created_at DESC, e.id DESC
        LIMIT ?`,
       params,
@@ -133,7 +135,7 @@ function createGrowthRepository(database, options = {}) {
         [input.appId, input.userId],
       )
       const account = await tx.one(
-        `SELECT user_id, experience_balance, contribution_balance, version
+        `SELECT user_id, experience_balance, contribution_balance, coin_balance, version
          FROM mip_growth_accounts WHERE app_id = ? AND user_id = ? FOR UPDATE`,
         [input.appId, input.userId],
       )
@@ -142,7 +144,7 @@ function createGrowthRepository(database, options = {}) {
                 source_event_type, status
          FROM mip_growth_rules
          WHERE app_id = ? AND source_event_type = ? AND status = 'ACTIVE'
-           AND metric IN ('EXPERIENCE', 'CONTRIBUTION')
+           AND metric IN ('EXPERIENCE', 'CONTRIBUTION', 'COIN')
          ORDER BY id FOR UPDATE`,
         [input.appId, input.sourceEventType],
       )
@@ -333,6 +335,7 @@ function createGrowthRepository(database, options = {}) {
 
   return {
     ...checkInGrowthRepository,
+    ...gameCoinRepository,
     equipBadges,
     getSnapshot,
     listBadgeCollection,
@@ -369,7 +372,7 @@ async function ensureAccount(database, appId, userId) {
 }
 
 function entryDto(row) {
-  if (row.metric !== 'EXPERIENCE' && row.metric !== 'CONTRIBUTION') {
+  if (!['EXPERIENCE', 'CONTRIBUTION', 'COIN'].includes(row.metric)) {
     throw new Error('GROWTH_RULE_NOT_AVAILABLE')
   }
   return {
@@ -388,7 +391,7 @@ function sanitizeRecordResponse(value) {
   return {
     ...value,
     awards: Array.isArray(value.awards)
-      ? value.awards.filter(award => award?.metric === 'EXPERIENCE' || award?.metric === 'CONTRIBUTION')
+      ? value.awards.filter(award => ['EXPERIENCE', 'CONTRIBUTION', 'COIN'].includes(award?.metric))
       : [],
   }
 }

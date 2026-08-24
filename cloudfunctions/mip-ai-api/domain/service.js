@@ -2,6 +2,7 @@
 
 const {
   combineDraftTranscript,
+  normalizeDigitalAvatarIntent,
   normalizeRefinementIntent,
   normalizeTextIntent,
   normalizeVoiceIntent,
@@ -53,20 +54,28 @@ function createAiService(options) {
   return {
     getCapability() {
       const capability = provider.capability()
-      const normalized = {
+      let normalized = {
         textDrafts: capability.textDrafts === true,
         voiceDrafts: capability.voiceDrafts === true,
         refinementDrafts: capability.refinementDrafts === true,
+        digitalAvatars: capability.digitalAvatars === true,
         ...(capability.reason ? { reason: capability.reason } : {}),
       }
-      if (!normalized.voiceDrafts || options.audioStore?.configured) {
-        return normalized
+      if (normalized.voiceDrafts && !options.audioStore?.configured) {
+        normalized = {
+          ...normalized,
+          voiceDrafts: false,
+          reason: 'STORAGE_NOT_CONFIGURED',
+        }
       }
-      return {
-        ...normalized,
-        voiceDrafts: false,
-        reason: 'STORAGE_NOT_CONFIGURED',
+      if (normalized.digitalAvatars && !options.avatarStore?.configured) {
+        normalized = {
+          ...normalized,
+          digitalAvatars: false,
+          reason: 'STORAGE_NOT_CONFIGURED',
+        }
       }
+      return normalized
     },
 
     async cleanupExpiredAudioForApp(appId, event = {}) {
@@ -95,6 +104,117 @@ function createAiService(options) {
     async getDraft(caller, event) {
       await cleanupExpiredAudio(caller)
       return repository.getDraft(caller.appId, caller.userId, event.draftId)
+    },
+
+    async listDigitalAvatars(caller, event) {
+      await repository.expireAvatarGenerations(caller.appId, caller.userId)
+      return repository.listAvatarGenerations(caller.appId, caller.userId, event)
+    },
+
+    async generateDigitalAvatar(caller, event) {
+      assertProvider(provider.capability(), 'digitalAvatars')
+      if (!options.avatarStore?.configured) throw new Error('DIGITAL_AVATAR_STORAGE_UNAVAILABLE')
+      const input = normalizeDigitalAvatarIntent(event)
+      const created = await repository.createAvatarGeneration(caller.appId, caller.userId, input)
+      if (created.replayed) {
+        if (created.generation.status === 'READY') return created.generation
+        if (created.generation.status === 'FAILED') {
+          throw new Error(created.generation.failureCode || 'DIGITAL_AVATAR_GENERATION_FAILED')
+        }
+        throw new Error('DIGITAL_AVATAR_GENERATION_IN_PROGRESS')
+      }
+      const expectedVersion = created.generation.version
+      let providerResult
+      try {
+        providerResult = await provider.generateDigitalAvatar({
+          appId: caller.appId,
+          generationId: created.generation.id,
+          styleKey: input.styleKey,
+          sourceImageFileId: created.source.cloudFileId,
+          sourceContentSha256: created.source.contentSha256,
+          sourceContentType: created.source.contentType,
+          sourceContentBytes: created.source.contentBytes,
+          sourceWidth: created.source.width,
+          sourceHeight: created.source.height,
+        })
+      }
+      catch (error) {
+        const normalized = normalizeAvatarProviderError(error)
+        await repository.failAvatarGeneration(
+          caller.appId,
+          caller.userId,
+          created.generation.id,
+          expectedVersion,
+          normalized.message,
+        ).catch(() => false)
+        throw normalized
+      }
+
+      let output
+      try {
+        output = await options.avatarStore.store({
+          appId: caller.appId,
+          userId: caller.userId,
+          imageBase64: providerResult.imageBase64,
+          contentType: providerResult.contentType,
+        })
+      }
+      catch (error) {
+        const normalized = normalizeAvatarOutputError(error)
+        await repository.failAvatarGeneration(
+          caller.appId,
+          caller.userId,
+          created.generation.id,
+          expectedVersion,
+          normalized.message,
+        ).catch(() => false)
+        throw normalized
+      }
+
+      try {
+        await repository.registerPendingAvatarOutput(caller.appId, output)
+        return await repository.completeAvatarGeneration(
+          caller.appId,
+          caller.userId,
+          created.generation.id,
+          expectedVersion,
+          output,
+          providerResult.providerJobKey,
+        )
+      }
+      catch (error) {
+        let outcome = { state: 'UNKNOWN' }
+        try {
+          outcome = await repository.recoverAvatarGenerationOutput(
+            caller.appId,
+            caller.userId,
+            created.generation.id,
+            output.assetId,
+          )
+        }
+        catch {}
+        if (outcome.state === 'COMMITTED') return outcome.generation
+        if (outcome.state === 'MISSING' || outcome.state === 'PENDING') {
+          const removed = await options.avatarStore.remove({
+            appId: caller.appId,
+            userId: caller.userId,
+            objectKey: output.objectKey,
+            fileId: output.cloudFileId,
+          }).catch(() => false)
+          if (removed && outcome.state === 'PENDING') {
+            await repository.markPendingAvatarOutputDeleted(caller.appId, output.assetId)
+              .catch(() => false)
+          }
+        }
+        await repository.failAvatarGeneration(
+          caller.appId,
+          caller.userId,
+          created.generation.id,
+          expectedVersion,
+          errorCode(error, 'DIGITAL_AVATAR_GENERATION_FAILED'),
+        ).catch(() => false)
+        throw error
+      }
     },
 
     async createTextDraft(caller, event) {
@@ -316,4 +436,34 @@ function normalizeProviderError(error) {
   return new Error('AI_PROVIDER_UNAVAILABLE')
 }
 
-module.exports = { createAiService, normalizeProviderError }
+function normalizeAvatarProviderError(error) {
+  const code = errorCode(error, '')
+  if (code === 'DIGITAL_AVATAR_PROVIDER_RESPONSE_INVALID') return new Error(code)
+  return new Error('DIGITAL_AVATAR_PROVIDER_UNAVAILABLE')
+}
+
+function normalizeAvatarOutputError(error) {
+  const code = errorCode(error, '')
+  const allowed = new Set([
+    'DIGITAL_AVATAR_CONTENT_REJECTED',
+    'DIGITAL_AVATAR_IMAGE_DIMENSIONS_INVALID',
+    'DIGITAL_AVATAR_IMAGE_INVALID',
+    'DIGITAL_AVATAR_IMAGE_TOO_LARGE',
+    'DIGITAL_AVATAR_SAFETY_UNAVAILABLE',
+    'DIGITAL_AVATAR_STORAGE_UNAVAILABLE',
+    'DIGITAL_AVATAR_UPLOAD_FAILED',
+  ])
+  return new Error(allowed.has(code) ? code : 'DIGITAL_AVATAR_UPLOAD_FAILED')
+}
+
+function errorCode(error, fallback) {
+  const code = error instanceof Error ? error.message : ''
+  return /^[A-Z][A-Z0-9_]{2,63}$/.test(code) ? code : fallback
+}
+
+module.exports = {
+  createAiService,
+  normalizeAvatarOutputError,
+  normalizeAvatarProviderError,
+  normalizeProviderError,
+}

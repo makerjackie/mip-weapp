@@ -29,6 +29,31 @@ describe('MIP durable outbox contract', () => {
     expect(JSON.parse(read('package.json')).scripts['outbox:run']).toBe('node scripts/run-outbox.mjs')
   })
 
+  it('injects the same outbox wakeup target and secret into all mutation producers', () => {
+    const deployment = read('scripts/deploy-functions.mjs')
+    for (const role of ['identity', 'events', 'opportunities', 'commerce', 'admin', 'game', 'tasks', 'ledger']) {
+      expect(deployment).toContain(`'${role}'`)
+    }
+    expect(deployment).toContain('MIP_OUTBOX_FUNCTION_NAME: options.functionNames.outbox')
+    expect(deployment).toContain('MIP_OUTBOX_HMAC_SECRET: options.secrets.outboxHmac')
+    expect(deployment).toContain('return { ...shared, ...outboxWakeEnvironment, ...extra[role] }')
+    const admin = read('cloudfunctions/mip-admin-api/index.js')
+    expect(admin).toContain('\'mip.admin.messageCampaigns.publish\'')
+    expect(admin).toContain('sourceFunctionName: \'mip-admin-api\'')
+  })
+
+  it('uses event-driven bounded draining and triggers external delivery without a timer', () => {
+    const wakeup = read('cloudfunctions/mip-admin-api/lib/outbox-wakeup.js')
+    const service = read('cloudfunctions/mip-outbox-worker/domain/service.js')
+    const clients = read('cloudfunctions/mip-outbox-worker/lib/internal-clients.js')
+
+    expect(wakeup).toContain('drain: true')
+    expect(wakeup).toContain('maxBatches: 100')
+    expect(service).toContain('normalizeMaxBatches')
+    expect(service).toContain('clients.runNotificationBatch')
+    expect(clients).toContain('action: \'runDeliveryBatch\'')
+  })
+
   it('activates only growth rules backed by current confirmed outbox events', () => {
     const seed = JSON.parse(read('database/mysql/mip/seed.demo.json'))
     const byType = new Map(seed.growthRules.map((item: { sourceEventType: string }) => [item.sourceEventType, item]))

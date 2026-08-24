@@ -42,12 +42,14 @@
 | `mip_event_album_photos` | 活动照片的提交者、素材引用、审核/撤回状态和版本 | events 提交/撤回；受 capability 约束的 admin 审核 |
 | `mip_opportunities` / `mip_opportunity_roles` / `mip_opportunity_tags` | 机会、角色和标签关系；草稿只能由平台级 capability 软归档 | `mip-opportunities-api` / `mip-admin-api` |
 | `mip_referral_intents` / `mip_profile_interests` | 发起人、被引荐人、机会之间的引荐关系和用户感兴趣关系 | `mip-opportunities-api` |
+| `mip_opportunity_comment_settings` / `mip_opportunity_comments` | 机会评论开关、审核方式、评论和项目评价事实 | 用户写入由 `mip-opportunities-api`；配置与审核由 `mip-admin-api` |
+| `mip_opportunity_comment_calls` / `mip_opportunity_comment_reports` | 用户对评论的幂等打 call 关系和独立举报审核事实 | 用户写入由 `mip-opportunities-api`；举报处理由 `mip-admin-api` |
 | `mip_user_blocks` / `mip_reports` | 主动屏蔽关系、幂等举报和审核状态 | `mip-community-api`；审核由受 capability 约束的管理事务处理 |
 | `mip_announcements` | 平台/分会公告、展示窗口、内容安全和关联内容 | `mip-admin-api` 写入；`mip-community-api` 只读公开内容 |
 | `mip_cooperation_cards` | 六种合作角色的结构化合作卡 | `mip-opportunities-api` |
 | `mip_super_cases` / `mip_super_case_media` | 已确认可公开的案例及素材关系 | `mip-opportunities-api` |
 | `mip_growth_levels` / `mip_growth_rules` | 成长等级和事件规则 | `mip-growth-api` / 管理动作 |
-| `mip_growth_accounts` / `mip_growth_entries` | 余额快照和不可变成长流水 | `mip-growth-api`；流水只追加 |
+| `mip_growth_accounts` / `mip_growth_entries` | 经验、贡献和游戏币余额快照及不可变成长流水 | `mip-growth-api`；流水只追加，游戏币消费后余额不得为负 |
 | `mip_badges` / `mip_user_badges` | 勋章目录与用户获授/撤销事实 | `mip-admin-api` 受 `badges.manage` capability 约束写入并追加审计 |
 | `mip_user_badge_profiles` / `mip_user_badge_equipment` | 本人勋章收藏版本与最多 3 个佩戴槽位 | `mip-growth-api` 事务校验有效获授事实后写入 |
 | `mip_task_cards` / `mip_task_assignments` / `mip_task_completions` | 任务配置、全员或指定成员派发、模板、截止窗口、每用户单次完成事实、附件引用和奖励快照 | `mip-tasks-api`；派发撤销保留状态和审计，完成事实与经验奖励在同一事务写入 |
@@ -81,8 +83,10 @@
 ## 成长、消息和 AI
 
 - 成长规则、余额和流水由 `mip-growth-api` 计算；`mip_growth_entries` 只追加，客户端不能直接加分。撤销签到时按原 transition 已实际入账的 delta 追加反向流水，不按当前规则重算；精确校正允许经验余额为负数。
+- 游戏币发放与消费只接受服务端固定事件或具有 `growth.adjust` capability 且覆盖用户范围的管理动作。内部接口只接收事件引用，发放/消费数值由服务端规则决定；事务锁定账户并拒绝负余额，重试返回同一流水。
 - 勋章目录与获授状态是服务端事实。本人只能在当前 AppID 内有效获授且启用的勋章中选择最多 3 枚佩戴；保存使用档案版本和事务行锁。公开档案只投影仍有效的已佩戴勋章，不返回用户内部标识或未佩戴收藏。
 - `mip-outbox-worker` 只接受内部 HMAC 调用，使用 `FOR UPDATE SKIP LOCKED`、过期租约和指数退避领取事件。接收者和可计成长事实必须回查业务表，不能信任 `payload_json` 中的用户字段；消息 dedupe key 与成长 source event id 均绑定 outbox id。
+- 周赛结算在游戏事实事务中追加 `game.match.finalized`；outbox 按结算周期末的队伍成员事实产生固定游戏币事件，再由游戏币流水产生 `GAME` 站内消息。经验值只有跨越当前启用等级门槛时才产生 `GROWTH_LEVEL_UP` 弹窗类型。
 - 运营发布先在同一事务按收件人追加 `mip_operations_messages` 与 `operations.notification_published` outbox；投影时重新按 `app_id` 回查有效收件人、正文、活动目标和模板字段。Outbox payload 不承载收件人或文案事实。
 - `mip_inbox_messages` 是定向通知的权威回查入口。小程序只通过 `mip-notifications-api` 读取本人消息、标记已读和记录真实订阅授权选择；`mip-notification-worker` 不开放客户端调用，只通过内部 HMAC 写入消息、保留/消费授权和领取投递任务。同一授权由 reservation 独占；实际微信调用和最终状态写入由锁定 `ACTIVE` 用户、任务、授权及 reservation token 的专用投递事务串行化，调用后失败只由原任务重试。没有模板、授权或外部送达时，不阻断站内消息。完整边界见 [NOTIFICATIONS.md](NOTIFICATIONS.md)。
 - `mip_ai_drafts` 在用户明确确认前只能是临时草稿；转写 provider 通过内部鉴权调用，不直接写正式档案、合作卡或超级案例。
@@ -91,6 +95,7 @@
 
 - 普通 DTO 永不返回数据库连接串、内部 HMAC、商户密钥、他人 OpenID、完整票据或 provider 原始错误。
 - 引荐的 `actor_user_id` 和 `target_user_id` 只用于服务端关系事实。选择目标、引荐列表和详情均使用 AppID 绑定的 opaque `profileRef`，普通 DTO 不返回内部用户 ID。
+- 机会评论作者和评论举报人仅以 AppID 绑定的 opaque `profileRef` 返回。参与人标识由机会发布人或团队历史关系生成；打 call 总数由关系事实的状态迁移维护，不接受客户端计数。
 - 社区安全客户端只提交 AppID 绑定的 `profileRef`；不接收或返回目标用户 ID、OpenID。任一方向存在 `ACTIVE` 屏蔽时，已识别用户不能读取对方公开档案或在受支持的公共列表中看到对方；举报不通知目标，也不自动处罚。
 - 账号注销以确认短语、`mip_users.version` 和幂等请求为边界；未结支付/退款/活动退款会阻塞。成功后关闭账号、撤销活动外公开/互动状态并最小化直接资料，但保留订单、支付、退款、权益、活动、成长流水与审计事实。完整表清单见 [ACCOUNT_CLOSURE.md](ACCOUNT_CLOSURE.md)。
 - 页面、组件和业务模块不直连 MySQL/CloudBase 数据库；通过 `src/modules/mip-*` 和 platform adapter 调用函数。

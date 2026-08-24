@@ -41,6 +41,14 @@
       "pathName": "packages/member/mip-profile/index"
     },
     {
+      "name": "我的名片",
+      "pathName": "packages/member/mip-card/index"
+    },
+    {
+      "name": "数字分身",
+      "pathName": "packages/member/mip-avatar/index"
+    },
+    {
       "name": "玩家与嘉宾",
       "pathName": "packages/member/mip-people/index"
     },
@@ -203,6 +211,10 @@
     {
       "name": "公告编辑",
       "pathName": "packages/admin/announcement-editor/index"
+    },
+    {
+      "name": "消息管理",
+      "pathName": "packages/admin/message-campaigns/index"
     },
     {
       "name": "城市分会",

@@ -11,7 +11,10 @@ function balanceFor(account: GrowthAccount, metric: GrowthMetric) {
   if (metric === 'EXPERIENCE') {
     return account.experienceBalance
   }
-  return account.contributionBalance
+  if (metric === 'CONTRIBUTION') {
+    return account.contributionBalance
+  }
+  return account.coinBalance
 }
 
 export function validateGrowthLevels(levels: readonly GrowthLevel[]) {
@@ -75,8 +78,11 @@ export function applyGrowthProjection(
   if (projection.metric === 'EXPERIENCE') {
     next.experienceBalance = projection.balanceAfter
   }
-  else {
+  else if (projection.metric === 'CONTRIBUTION') {
     next.contributionBalance = projection.balanceAfter
+  }
+  else {
+    next.coinBalance = projection.balanceAfter
   }
   return next
 }

@@ -442,8 +442,241 @@ function createAiRepository(database, options = {}) {
     return Number(result.affectedRows) === 1
   }
 
+  async function createAvatarGeneration(appId, userId, input) {
+    const generationId = createId()
+    return database.transaction(async (tx) => {
+      await requireActiveUser(tx, appId, userId)
+      const existing = await tx.one(
+        `SELECT id, source_avatar_asset_id, style_key, status
+         FROM mip_digital_avatar_generations
+         WHERE app_id = ? AND user_id = ? AND request_id = ? FOR UPDATE`,
+        [appId, userId, input.requestId],
+      )
+      if (existing) {
+        if (existing.source_avatar_asset_id !== input.sourceAvatarAssetId
+          || existing.style_key !== input.styleKey) {
+          throw new Error('IDEMPOTENCY_CONFLICT')
+        }
+        return {
+          generation: await readAvatarGeneration(tx, appId, userId, existing.id),
+          source: null,
+          replayed: true,
+        }
+      }
+      const source = await tx.one(
+        `SELECT asset.id, asset.cloud_file_id, asset.content_sha256, asset.content_type,
+                asset.content_bytes, asset.width_px, asset.height_px
+         FROM mip_profiles profile
+         INNER JOIN mip_media_assets asset
+           ON asset.app_id = profile.app_id AND asset.id = profile.avatar_asset_id
+         WHERE profile.app_id = ? AND profile.user_id = ?
+           AND profile.avatar_asset_id = ?
+           AND asset.owner_user_id = ?
+           AND asset.purpose = 'AVATAR'
+           AND asset.status = 'READY'
+           AND asset.content_type IN ('image/png', 'image/jpeg')
+         FOR UPDATE`,
+        [appId, userId, input.sourceAvatarAssetId, userId],
+      )
+      if (!source
+        || !String(source.cloud_file_id || '').startsWith('cloud://')
+        || !/^[0-9a-f]{64}$/i.test(String(source.content_sha256 || ''))
+        || Number(source.content_bytes) < 1
+        || !Number.isInteger(Number(source.width_px))
+        || !Number.isInteger(Number(source.height_px))) {
+        throw new Error('DIGITAL_AVATAR_SOURCE_NOT_AVAILABLE')
+      }
+      await tx.query(
+        `INSERT INTO mip_digital_avatar_generations (
+           id, app_id, user_id, request_id, source_avatar_asset_id, style_key, status
+         ) VALUES (?, ?, ?, ?, ?, ?, 'PROCESSING')`,
+        [generationId, appId, userId, input.requestId, input.sourceAvatarAssetId, input.styleKey],
+      )
+      return {
+        generation: await readAvatarGeneration(tx, appId, userId, generationId),
+        source: {
+          cloudFileId: source.cloud_file_id,
+          contentSha256: String(source.content_sha256).toLowerCase(),
+          contentType: source.content_type,
+          contentBytes: Number(source.content_bytes),
+          width: Number(source.width_px),
+          height: Number(source.height_px),
+        },
+        replayed: false,
+      }
+    })
+  }
+
+  async function listAvatarGenerations(appId, userId, options = {}) {
+    const requestedLimit = Number(options.limit ?? 12)
+    if (!Number.isInteger(requestedLimit) || requestedLimit < 1 || requestedLimit > 20) {
+      throw new Error('VALIDATION_FAILED')
+    }
+    const limit = requestedLimit
+    const rows = await database.query(
+      `SELECT generation.id, generation.source_avatar_asset_id,
+              generation.style_key, generation.status, generation.output_asset_id,
+              generation.failure_code, generation.version, generation.created_at,
+              generation.updated_at, output.cloud_file_id AS output_file_id
+       FROM mip_digital_avatar_generations generation
+       LEFT JOIN mip_media_assets output
+         ON output.app_id = generation.app_id AND output.id = generation.output_asset_id
+           AND output.owner_user_id = generation.user_id
+           AND output.purpose = 'DIGITAL_AVATAR' AND output.status = 'READY'
+       WHERE generation.app_id = ? AND generation.user_id = ?
+       ORDER BY generation.created_at DESC, generation.id DESC LIMIT ?`,
+      [appId, userId, limit],
+    )
+    return { items: rows.map(avatarGenerationDto) }
+  }
+
+  async function getAvatarGeneration(appId, userId, generationId) {
+    if (!isUuid(generationId)) throw new Error('VALIDATION_FAILED')
+    return readAvatarGeneration(database, appId, userId, generationId)
+  }
+
+  async function recoverAvatarGenerationOutput(appId, userId, generationId, assetId) {
+    const row = await database.one(
+      `SELECT asset.owner_user_id, asset.status AS asset_status,
+              generation.status AS generation_status, generation.output_asset_id
+       FROM mip_media_assets asset
+       LEFT JOIN mip_digital_avatar_generations generation
+         ON generation.app_id = asset.app_id AND generation.id = ? AND generation.user_id = ?
+       WHERE asset.app_id = ? AND asset.id = ? AND asset.purpose = 'DIGITAL_AVATAR'`,
+      [generationId, userId, appId, assetId],
+    )
+    if (!row) return { state: 'MISSING' }
+    if (row.generation_status === 'READY'
+      && row.output_asset_id === assetId
+      && row.asset_status === 'READY'
+      && row.owner_user_id === userId) {
+      return {
+        state: 'COMMITTED',
+        generation: await readAvatarGeneration(database, appId, userId, generationId),
+      }
+    }
+    if (row.asset_status === 'PENDING' && row.owner_user_id == null) return { state: 'PENDING' }
+    return { state: 'KEEP' }
+  }
+
+  async function readAvatarGeneration(store, appId, userId, generationId) {
+    const row = await store.one(
+      `SELECT generation.id, generation.source_avatar_asset_id,
+              generation.style_key, generation.status, generation.output_asset_id,
+              generation.failure_code, generation.version, generation.created_at,
+              generation.updated_at, output.cloud_file_id AS output_file_id
+       FROM mip_digital_avatar_generations generation
+       LEFT JOIN mip_media_assets output
+         ON output.app_id = generation.app_id AND output.id = generation.output_asset_id
+           AND output.owner_user_id = generation.user_id
+           AND output.purpose = 'DIGITAL_AVATAR' AND output.status = 'READY'
+       WHERE generation.app_id = ? AND generation.user_id = ? AND generation.id = ?`,
+      [appId, userId, generationId],
+    )
+    if (!row) throw new Error('NOT_FOUND')
+    return avatarGenerationDto(row)
+  }
+
+  async function completeAvatarGeneration(appId, userId, generationId, expectedVersion, asset, providerJobKey) {
+    if (!isUuid(generationId)
+      || !Number.isInteger(expectedVersion) || expectedVersion < 1
+      || !isUuid(asset?.assetId)
+      || typeof providerJobKey !== 'string' || !providerJobKey) {
+      throw new Error('VALIDATION_FAILED')
+    }
+    const providerHash = createHash('sha256').update(providerJobKey).digest('hex')
+    return database.transaction(async (tx) => {
+      await requireActiveUser(tx, appId, userId)
+      const current = await tx.one(
+        `SELECT status, version FROM mip_digital_avatar_generations
+         WHERE app_id = ? AND user_id = ? AND id = ? FOR UPDATE`,
+        [appId, userId, generationId],
+      )
+      if (!current) throw new Error('NOT_FOUND')
+      if (current.status !== 'PROCESSING' || Number(current.version) !== expectedVersion) {
+        throw new Error('CONFLICT')
+      }
+      const activated = await tx.query(
+        `UPDATE mip_media_assets
+         SET owner_user_id = ?, status = 'READY'
+         WHERE app_id = ? AND id = ? AND owner_user_id IS NULL
+           AND purpose = 'DIGITAL_AVATAR' AND status = 'PENDING'`,
+        [userId, appId, asset.assetId],
+      )
+      if (Number(activated?.affectedRows) !== 1) throw new Error('DIGITAL_AVATAR_UPLOAD_FAILED')
+      const updated = await tx.query(
+        `UPDATE mip_digital_avatar_generations
+         SET status = 'READY', output_asset_id = ?, provider_job_key_hash = ?,
+             failure_code = NULL, version = version + 1
+         WHERE app_id = ? AND user_id = ? AND id = ?
+           AND status = 'PROCESSING' AND version = ?`,
+        [asset.assetId, providerHash, appId, userId, generationId, expectedVersion],
+      )
+      if (Number(updated?.affectedRows) !== 1) throw new Error('CONFLICT')
+      return readAvatarGeneration(tx, appId, userId, generationId)
+    })
+  }
+
+  async function registerPendingAvatarOutput(appId, asset) {
+    const inserted = await database.query(
+      `INSERT INTO mip_media_assets (
+         id, app_id, owner_user_id, purpose, object_key, cloud_file_id,
+         content_sha256, content_type, content_bytes, width_px, height_px, status
+       ) VALUES (?, ?, NULL, 'DIGITAL_AVATAR', ?, ?, ?, ?, ?, ?, ?, 'PENDING')`,
+      [
+        asset.assetId,
+        appId,
+        asset.objectKey,
+        asset.cloudFileId,
+        asset.contentSha256,
+        asset.contentType,
+        asset.contentBytes,
+        asset.width,
+        asset.height,
+      ],
+    )
+    if (Number(inserted?.affectedRows) !== 1) throw new Error('DIGITAL_AVATAR_UPLOAD_FAILED')
+  }
+
+  async function markPendingAvatarOutputDeleted(appId, assetId) {
+    const result = await database.query(
+      `UPDATE mip_media_assets SET status = 'DELETED'
+       WHERE app_id = ? AND id = ? AND owner_user_id IS NULL
+         AND purpose = 'DIGITAL_AVATAR' AND status = 'PENDING'`,
+      [appId, assetId],
+    )
+    return Number(result?.affectedRows) === 1
+  }
+
+  async function failAvatarGeneration(appId, userId, generationId, expectedVersion, failureCode) {
+    const safeCode = typeof failureCode === 'string' && /^[A-Z][A-Z0-9_]{2,63}$/.test(failureCode)
+      ? failureCode
+      : 'DIGITAL_AVATAR_GENERATION_FAILED'
+    const result = await database.query(
+      `UPDATE mip_digital_avatar_generations
+       SET status = 'FAILED', failure_code = ?, version = version + 1
+       WHERE app_id = ? AND user_id = ? AND id = ?
+         AND status = 'PROCESSING' AND version = ?`,
+      [safeCode, appId, userId, generationId, expectedVersion],
+    )
+    return Number(result?.affectedRows) === 1
+  }
+
+  async function expireAvatarGenerations(appId, userId) {
+    await database.query(
+      `UPDATE mip_digital_avatar_generations
+       SET status = 'FAILED', failure_code = 'DIGITAL_AVATAR_GENERATION_INTERRUPTED',
+           version = version + 1
+       WHERE app_id = ? AND user_id = ? AND status = 'PROCESSING'
+         AND updated_at < DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 15 MINUTE)`,
+      [appId, userId],
+    )
+  }
+
   return {
+    completeAvatarGeneration,
     beginDraftRefinement,
+    createAvatarGeneration,
     completeDraft,
     createTextDraft,
     createVoiceDraft,
@@ -451,14 +684,21 @@ function createAiRepository(database, options = {}) {
     deleteDraft,
     expireDrafts,
     expireDraftsForApp,
+    expireAvatarGenerations,
+    failAvatarGeneration,
     failDraft,
     getDraft,
+    getAvatarGeneration,
     leaseAppAudioCleanup,
     listDrafts,
+    listAvatarGenerations,
     leaseAudioCleanup,
     markAudioDeleted,
+    markPendingAvatarOutputDeleted,
     markPendingAudioUploadDeleted,
+    recoverAvatarGenerationOutput,
     recoverVoiceDraftFromUpload,
+    registerPendingAvatarOutput,
     registerPendingAudioUpload,
     restoreDraftAfterRefinement,
     updateDraft,
@@ -504,6 +744,27 @@ function draftDto(row) {
   }
 }
 
+function avatarGenerationDto(row) {
+  const status = String(row.status || '')
+  const outputUrl = status === 'READY' && typeof row.output_file_id === 'string'
+    && row.output_file_id.startsWith('cloud://')
+    ? row.output_file_id
+    : undefined
+  if (status === 'READY' && !outputUrl) throw new Error('DIGITAL_AVATAR_RESULT_INVALID')
+  return {
+    id: row.id,
+    sourceAvatarAssetId: row.source_avatar_asset_id,
+    styleKey: row.style_key,
+    status,
+    ...(row.output_asset_id ? { outputAssetId: row.output_asset_id } : {}),
+    ...(outputUrl ? { outputUrl } : {}),
+    ...(row.failure_code ? { failureCode: row.failure_code } : {}),
+    version: Number(row.version),
+    createdAt: iso(row.created_at),
+    updatedAt: iso(row.updated_at),
+  }
+}
+
 function parseObject(value) {
   if (value && typeof value === 'object' && !Array.isArray(value)) return value
   try {
@@ -538,6 +799,7 @@ function decodeCursor(value) {
 }
 
 module.exports = {
+  avatarGenerationDto,
   createAiRepository,
   cleanupLimit,
   decodeCursor,

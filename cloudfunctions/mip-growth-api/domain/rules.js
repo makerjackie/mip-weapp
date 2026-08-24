@@ -26,6 +26,7 @@ function projectAward(account, rule, awardedToday) {
 function balanceField(metric) {
   if (metric === 'EXPERIENCE') return 'experience_balance'
   if (metric === 'CONTRIBUTION') return 'contribution_balance'
+  if (metric === 'COIN') return 'coin_balance'
   throw new Error('GROWTH_RULE_NOT_AVAILABLE')
 }
 
@@ -81,12 +82,13 @@ function accountDto(row) {
     userId: row.user_id,
     experienceBalance: Number(row.experience_balance),
     contributionBalance: Number(row.contribution_balance),
+    coinBalance: Number(row.coin_balance || 0),
     version: Number(row.version),
   }
 }
 
 function supportedMetric(metric) {
-  return metric === 'EXPERIENCE' || metric === 'CONTRIBUTION'
+  return metric === 'EXPERIENCE' || metric === 'CONTRIBUTION' || metric === 'COIN'
 }
 
 function levelDto(row) {

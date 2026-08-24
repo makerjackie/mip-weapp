@@ -64,3 +64,22 @@ test('authenticates a check-in transition without accepting a caller-supplied us
     allowedAppIds: new Set(['wx-app']),
   }), /FORBIDDEN/)
 })
+
+test('authenticates a fixed game coin grant without accepting an amount', () => {
+  const event = signed({
+    action: 'grantGameCoins',
+    sourceEventType: 'game.match_won',
+    amount: 999999,
+  })
+  assert.deepEqual(verifyInternalEvent(event, {
+    secret,
+    now,
+    allowedAppIds: new Set(['wx-app']),
+  }), {
+    action: 'grantGameCoins',
+    appId: 'wx-app',
+    userId: event.userId,
+    sourceEventType: 'game.match_won',
+    sourceEventId: event.sourceEventId,
+  })
+})

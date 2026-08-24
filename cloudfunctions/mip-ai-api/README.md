@@ -8,10 +8,12 @@ MIP AI 草稿服务。服务只生成、保存和更新可过期草稿，不直�
 
 未配置 `MIP_AI_PROVIDER_FUNCTION_NAME` 时，语音和文本整理明确返回不可用，不生成伪造结果。
 
+数字分身使用独立的 `MIP_AI_AVATAR_PROVIDER_FUNCTION_NAME`。未配置时只关闭数字分身能力，不影响已有文本和语音草稿。生成前服务端锁定当前用户，确认素材是本人档案当前绑定的 `READY` `AVATAR`；Provider 只能返回 `imageBase64`、`contentType` 和 `providerJobKey`，不能用 URL 或素材 ID直接声明结果。返回图片会在 AI API 内完整解码、重新编码、执行微信图片内容安全检查并写入 `mip/.../digital-avatars/`，然后在同一数据库事务中把 ownerless `PENDING` 素材与生成记录推进到 `READY`。客户端只读取生成记录，不决定生成状态或输出素材。
+
 用户可在 `DRAFT_READY` 状态连续补充信息。每轮先用版本号把草稿短暂转为 `STRUCTURING`，Provider 只返回新的结构化草稿；服务端自行追加用户原文。Provider 失败时恢复上一版可用草稿，版本冲突要求客户端刷新。完成补充仍只是临时草稿，只有个人档案、合作卡或超级案例编辑页在正式保存事务中校验草稿并写入对应资源，同时把草稿标为 `CONFIRMED`。
 
-Provider 通过 `MIP_AI_PROVIDER_ADAPTER` 选择。当前正式适配器值为 `cloud_function`，空值也按该适配器处理；其他值会明确降级为不可用。测试可注入内存 Provider，但运行时没有 mock 成功路径。Cloud Function Provider 必须使用 `mip-` 前缀的独立函数，并实现 `structureText`、`transcribeAndStructure` 与 `refineDraft` 三个 action。`refineDraft` 接收当前转写、当前结构化草稿和本轮补充，至少返回 `structuredDraft`；其他两个 action 还必须返回 `transcriptText`。所有 action 可返回仅用于摘要留存的 `providerJobKey`。
+Provider 通过 `MIP_AI_PROVIDER_ADAPTER` 选择。当前正式适配器值为 `cloud_function`，空值也按该适配器处理；其他值会明确降级为不可用。测试可注入内存 Provider，但运行时没有 mock 成功路径。草稿 Cloud Function Provider 必须使用 `mip-` 前缀的独立函数，并实现 `structureText`、`transcribeAndStructure` 与 `refineDraft` 三个 action。`refineDraft` 接收当前转写、当前结构化草稿和本轮补充，至少返回 `structuredDraft`；其他两个 action 还必须返回 `transcriptText`。数字分身 Provider 同样使用 `mip-` 前缀函数并实现 `generateDigitalAvatar`；请求绑定源文件摘要、尺寸和稳定风格 key，响应严格返回 `imageBase64`、`contentType` 和 `providerJobKey`。所有 job key 只做 SHA-256 摘要留存。
 
 Provider 必须校验请求中由 `MIP_AI_HMAC_SECRET` 生成的 HMAC 签名及五分钟内时间戳；签名绑定动作、AppID、草稿、用途、处理版本和全部输入的稳定摘要。Provider 原始错误和用户输入不得写入普通业务日志或返回客户端。
 
-环境变量：`MIP_ALLOWED_APP_IDS`、`MIP_IDENTITY_PEPPER`、`MIP_AI_PROVIDER_ADAPTER`、`MIP_AI_PROVIDER_FUNCTION_NAME`、`MIP_AI_HMAC_SECRET`、`MIP_AI_STORAGE_KEY`、`MIP_AI_DRAFT_TTL_HOURS`、`MIP_DEPLOYMENT_STAGE`、`MIP_DB_CONNECTION_URI`。
+环境变量：`MIP_ALLOWED_APP_IDS`、`MIP_IDENTITY_PEPPER`、`MIP_AI_PROVIDER_ADAPTER`、`MIP_AI_PROVIDER_FUNCTION_NAME`、`MIP_AI_AVATAR_PROVIDER_FUNCTION_NAME`、`MIP_AI_HMAC_SECRET`、`MIP_AI_STORAGE_KEY`、`MIP_AI_DRAFT_TTL_HOURS`、`MIP_DEPLOYMENT_STAGE`、`MIP_DB_CONNECTION_URI`。

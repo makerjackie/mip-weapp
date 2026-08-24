@@ -1,4 +1,5 @@
 export * from './domain'
 export * from './module'
+export * from './popup'
 export * from './types'
 export * from './wechat-subscription'

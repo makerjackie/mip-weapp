@@ -6,8 +6,6 @@ import { classifyPaymentResult, formatCny, planTitle, presentOrderStatus } from 
 import { caseNavigateTo } from '../../../modules/platform/case-navigation'
 import { formatLocalDate } from '../../../utils/date'
 
-let pollTimer: ReturnType<typeof setTimeout> | undefined
-
 Page({
   data: {
     result: 'checking' as 'checking' | 'success' | 'pending' | 'failed' | 'refund',
@@ -23,13 +21,14 @@ Page({
     statusText: '',
     membershipEndsText: '',
   },
+  pollTimer: undefined as ReturnType<typeof setTimeout> | undefined,
 
   onLoad(query: Record<string, string>) {
     this.setData({ orderId: String(query.orderId || '') as OrderId })
   },
 
   onShow() {
-    if (!pollTimer && this.data.result !== 'success') {
+    if (!this.pollTimer && this.data.result !== 'success') {
       void this.check()
     }
   },
@@ -38,10 +37,10 @@ Page({
   onUnload() { this.stopPolling() },
 
   stopPolling() {
-    if (pollTimer) {
-      clearTimeout(pollTimer)
+    if (this.pollTimer) {
+      clearTimeout(this.pollTimer)
     }
-    pollTimer = undefined
+    this.pollTimer = undefined
   },
 
   async check() {
@@ -145,8 +144,8 @@ Page({
   },
 
   schedulePoll() {
-    pollTimer = setTimeout(() => {
-      pollTimer = undefined
+    this.pollTimer = setTimeout(() => {
+      this.pollTimer = undefined
       void this.check()
     }, 1500)
   },

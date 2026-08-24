@@ -81,6 +81,10 @@ function snapshot(value: unknown): IdentityAccessSnapshot {
     || !['PLAYER', 'GUEST'].includes(String(value.membership.kind))) {
     throw new MipIdentityGatewayError('INVALID_RESPONSE', '身份服务返回了无效访问状态')
   }
+  if (value.profileRef !== undefined
+    && (typeof value.profileRef !== 'string' || !/^p1\.[\w-]{16}\.[\w-]{48}\.[\w-]{22}$/.test(value.profileRef))) {
+    throw new MipIdentityGatewayError('INVALID_RESPONSE', '身份服务返回了无效公开档案引用')
+  }
   return { ...value, profile: profile(value.profile) } as unknown as IdentityAccessSnapshot
 }
 

@@ -54,7 +54,8 @@ function dateText(value: string) {
 }
 
 function present(item: ReceivedInteraction, index: number): InteractionView {
-  const actorName = item.actor.nickname || 'MIP 用户'
+  const subject = item.kind === 'OUTBOUND_INTEREST' ? item.target : item.actor
+  const actorName = subject.nickname || 'MIP 用户'
   if (item.kind === 'VISITOR') {
     return {
       viewKey: `visitor-${item.actor.profileRef}-${index}`,
@@ -97,6 +98,24 @@ function present(item: ReceivedInteraction, index: number): InteractionView {
     SUPER_CASE: '超级案例',
     PROFILE: '公开档案',
   } as const
+  if (item.kind === 'OUTBOUND_INTEREST') {
+    return {
+      viewKey: `outbound-interest-${item.target.profileRef}-${index}`,
+      kind: item.kind,
+      messageId: '',
+      unread: false,
+      actorName,
+      actorInitial: actorName.slice(0, 1),
+      actorAvatarUrl: item.target.avatarUrl || '',
+      actorHeadline: item.target.headline || '',
+      statusText: '感兴趣',
+      sourceText: item.source.label,
+      detailText: `你对该用户的${sourceNames[item.source.type]}标记了感兴趣`,
+      note: '',
+      updatedText: dateText(item.updatedAt),
+      navigationUrl: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(item.target.profileRef)}`,
+    }
+  }
   return {
     viewKey: item.messageId || `interest-${item.actor.profileRef}-${index}`,
     kind: item.kind,
@@ -123,6 +142,8 @@ Page({
     referralUnreadCount: 0,
     interestUnreadCount: 0,
     visitorUnreadCount: 0,
+    totalViewCount: null as number | null,
+    totalViewState: 'loading' as 'loading' | 'ready' | 'error',
     nextCursor: '',
     loadingMore: false,
     openingKey: '',
@@ -134,6 +155,7 @@ Page({
   categoryCache: {
     REFERRAL: createCategoryCache(),
     PROFILE_INTEREST: createCategoryCache(),
+    OUTBOUND_INTEREST: createCategoryCache(),
     VISITOR: createCategoryCache(),
   } as Record<ReceivedInteractionCategory, CategoryCache>,
 
@@ -171,6 +193,7 @@ Page({
       await Promise.all([
         this.loadCategory('REFERRAL', true),
         this.loadCategory('PROFILE_INTEREST', true),
+        this.loadCategory('OUTBOUND_INTEREST', true),
         this.loadCategory('VISITOR', true),
       ])
     }
@@ -190,7 +213,7 @@ Page({
 
   changeCategory(event: WechatMiniprogram.TouchEvent) {
     const category = String(event.currentTarget.dataset.category || '') as ReceivedInteractionCategory
-    if (!['REFERRAL', 'PROFILE_INTEREST', 'VISITOR'].includes(category) || category === this.data.category) {
+    if (!['REFERRAL', 'PROFILE_INTEREST', 'OUTBOUND_INTEREST', 'VISITOR'].includes(category) || category === this.data.category) {
       return
     }
     this.setData({ category, message: '' })
@@ -235,6 +258,12 @@ Page({
       cache.nextCursor = page.nextCursor || ''
       cache.unreadCount = page.unreadCount
       cache.state = cache.items.length ? 'ready' : 'empty'
+      if (category === 'VISITOR') {
+        this.setData({
+          totalViewCount: page.totalViewCount || 0,
+          totalViewState: 'ready',
+        })
+      }
       if (category === this.data.category) {
         this.applyCategory(category)
       }
@@ -248,6 +277,9 @@ Page({
     }
     catch (error) {
       cache.state = cache.items.length ? 'ready' : 'error'
+      if (category === 'VISITOR' && this.data.totalViewCount === null) {
+        this.setData({ totalViewState: 'error' })
+      }
       if (category === this.data.category) {
         this.applyCategory(category)
         this.setData({

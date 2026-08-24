@@ -53,10 +53,10 @@ describe('outbox repository', () => {
     })
     const result = await repository.retryEvent({ ...event, attempts: 2 }, 'INTERNAL_FUNCTION_FAILED', now)
     assert.equal(result.status, 'RETRY')
-    assert.equal(result.nextAttemptAt, '2026-08-24T10:02:00.000Z')
+    assert.equal(result.nextAttemptAt, '2026-08-24T10:00:00.500Z')
     assert.match(update.sql, /status = 'FAILED'/)
     assert.equal(update.params.at(-1), lease)
-    assert.equal(retryDelayMs(5), 16 * 60 * 1000)
+    assert.equal(retryDelayMs(5), 4_000)
   })
 
   it('moves the final failed attempt to CANCELLED and appends a system audit', async () => {

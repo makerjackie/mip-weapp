@@ -129,10 +129,12 @@ Page({
   },
   requestSeq: 0,
   onlineRequested: false,
+  entryScene: '',
 
   onLoad(query: Record<string, string>) {
     this.onlineRequested = query.online === '1'
     const scene = String(query.scene || '').trim()
+    this.entryScene = scene
     if (scene) {
       if (scene.startsWith('i1.')) {
         void this.loadInvitationScene(scene)
@@ -188,6 +190,19 @@ Page({
         message: '活动邀请无效或已失效，请通过活动列表重新进入。',
       })
     }
+  },
+
+  retryLoad() {
+    if (this.entryScene) {
+      if (this.entryScene.startsWith('i1.')) {
+        void this.loadInvitationScene(this.entryScene)
+      }
+      else {
+        void this.loadCheckInScene(this.entryScene)
+      }
+      return
+    }
+    void this.loadEvent({ force: true })
   },
 
   async loadEvent(options: { force?: boolean } = {}) {

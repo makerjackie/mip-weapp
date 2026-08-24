@@ -6,6 +6,8 @@ const messages = {
   FORBIDDEN: '当前没有权限执行此操作',
   GROWTH_LEVEL_BASE_REQUIRED: '成长等级尚未配置',
   GROWTH_RULE_CONFLICT: '成长规则配置冲突',
+  GAME_COIN_RULE_NOT_AVAILABLE: '当前游戏币规则不可用',
+  INSUFFICIENT_GAME_COIN_BALANCE: '游戏币余额不足',
   BADGE_EQUIPMENT_INVALID: '最多可以佩戴 3 个已获得且已启用的勋章',
   IDEMPOTENCY_CONFLICT: '业务事件与已有记录不一致',
   IDENTITY_CONFIG_REQUIRED: '身份服务尚未配置',
@@ -29,6 +31,9 @@ function createHandler(options) {
       }
       if (event.action === 'recordConfirmedEvent') {
         return success(await options.service.recordConfirmedEvent(options.verifyInternal(event)))
+      }
+      if (event.action === 'grantGameCoins' || event.action === 'spendGameCoins') {
+        return success(await options.service.recordGameCoinEvent(options.verifyInternal(event)))
       }
       const caller = await options.resolveCaller()
       if (event.action === 'getSnapshot') {

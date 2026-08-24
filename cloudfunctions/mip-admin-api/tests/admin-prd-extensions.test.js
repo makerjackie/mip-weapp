@@ -35,6 +35,7 @@ describe('admin PRD extension persistence', () => {
           id: 'opportunity-a', owner_user_id: 'owner-a', owner_nickname: '发布人', title: '合作机会',
           value_summary: '价值', target_summary: '目标', description: '详情', scope_type: 'PLATFORM',
           city_tag_id: 'city-a', city_name: '广州', role_keys: 'connector', tag_ids: 'tag-a', tag_labels: '品牌',
+          cover_asset_id: 'cover-a', cover_file_id: 'cloud://mip/cover-a.jpg',
           status: 'DRAFT', content_safety_status: 'APPROVED', referral_count: 0, deadline_at: new Date('2026-09-01T00:00:00Z'),
           version: 2, updated_at: new Date('2026-08-24T00:00:00Z'),
         }
@@ -42,16 +43,38 @@ describe('admin PRD extension persistence', () => {
       async query(sql, params) {
         calls.push({ sql, params })
         if (sql.includes('FROM mip_audit_logs')) return [{ id: 1, action: 'admin.opportunities.create', actor_nickname: '运营', metadata_json: '{}', created_at: new Date('2026-08-24T00:00:00Z') }]
+        if (sql.includes('FROM mip_opportunity_team_members')) return [{ user_id: 'member-a', nickname: '玩家甲', branch_name: '广州分会' }]
         return []
       },
     }))
     const item = await repository.getOpportunityDetail('wx-app', 'opportunity-a')
     assert.equal(item.deadlineAt, '2026-09-01T00:00:00.000Z')
     assert.equal(item.ownerUserId, 'owner-a')
+    assert.equal(item.coverAssetId, 'cover-a')
+    assert.equal(item.coverUrl, 'cloud://mip/cover-a.jpg')
     assert.deepEqual(item.tagIds, ['tag-a'])
+    assert.deepEqual(item.teamMembers, [{ userId: 'member-a', nickname: '玩家甲', branchName: '广州分会' }])
     assert.equal(item.history[0].actorNickname, '运营')
     const history = calls.find(call => call.sql.includes('FROM mip_audit_logs'))
     assert.deepEqual(history.params, ['wx-app', 'opportunity-a'])
+  })
+
+  it('ends a published opportunity with scope, version, and audit checks in one transaction', async () => {
+    const writes = []
+    const repository = extensions(database({
+      async one() { return { id: 'opportunity-a', branch_id: null, status: 'PUBLISHED', version: 4 } },
+      async query(sql, params) {
+        writes.push({ sql, params })
+        return { affectedRows: 1 }
+      },
+    }))
+    const result = await repository.endOpportunity({
+      appId: 'wx-app', actorUserId: 'admin-user', opportunityId: 'opportunity-a', expectedVersion: 4,
+      authorizedScope: { scopeType: 'PLATFORM', scopeId: null }, authorization: {}, audit: audit('opportunity-a'),
+    })
+    assert.deepEqual(result, { id: 'opportunity-a', status: 'ENDED', version: 5 })
+    assert.ok(writes.some(call => /SET status = 'ENDED', ended_at = UTC_TIMESTAMP\(3\)/.test(call.sql)))
+    assert.ok(writes.some(call => /INSERT INTO mip_audit_logs/.test(call.sql)))
   })
 
   it('creates an opportunity and its selected role and tag inside one audited transaction', async () => {

@@ -6,8 +6,9 @@ const { createIdentityRepository } = require('./domain/repository')
 const { createIdentityService } = require('./domain/service')
 const { resolveTrustedIdentity } = require('./lib/identity')
 const { mysqlDatabase } = require('./lib/mysql')
+const { createOutboxWakeup, trustedContextAppId } = require('./lib/outbox-wakeup')
 const { protectPhone } = require('./lib/private-data')
-const { readProfileRef } = require('./lib/profile-ref')
+const { createProfileRef, readProfileRef } = require('./lib/profile-ref')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
@@ -17,6 +18,20 @@ const allowedAppIds = new Set(
     .map(value => value.trim())
     .filter(Boolean),
 )
+const outboxMutationActions = new Set([
+  'acceptAgreements',
+  'bindWechatPhone',
+  'closeAccount',
+  'setPrimaryBranch',
+  'updateProfile',
+])
+const outboxWakeup = createOutboxWakeup({
+  cloud,
+  functionName: process.env.MIP_OUTBOX_FUNCTION_NAME,
+  secret: process.env.MIP_OUTBOX_HMAC_SECRET,
+  sourceFunctionName: 'mip-identity-api',
+  logger: console,
+})
 
 function configuredAgreements() {
   const source = String(process.env.MIP_AGREEMENTS_JSON || '').trim()
@@ -66,6 +81,9 @@ const service = createIdentityService({
   profileRefReader(profileRef, appId) {
     return readProfileRef(profileRef, appId, process.env.MIP_IDENTITY_PEPPER)
   },
+  profileRefWriter(input) {
+    return createProfileRef(input, process.env.MIP_IDENTITY_PEPPER)
+  },
 })
 
 const handler = createHandler({
@@ -83,9 +101,18 @@ exports.main = async (event = {}) => {
     await mysqlDatabase().one('SELECT 1 AS ok')
     return { ok: true, data: { service: 'mip-identity-api', persistence: 'cloudbase-mysql' } }
   }
-  return handler(event)
+  const result = await handler(event)
+  if (result?.ok === true) {
+    await outboxWakeup.afterSuccessfulMutation({
+      appId: trustedContextAppId(cloud.getWXContext(), allowedAppIds),
+      action: String(event.action || ''),
+      mutationActions: outboxMutationActions,
+    })
+  }
+  return result
 }
 exports._test = {
   configuredAgreements,
+  outboxMutationActions,
   resolveTrustedIdentity,
 }

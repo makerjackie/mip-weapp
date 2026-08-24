@@ -12,6 +12,8 @@ export type InboxMessageType
     | 'OPPORTUNITY'
     | 'PROFILE_INTEREST'
     | 'GROWTH'
+    | 'GROWTH_LEVEL_UP'
+    | 'GAME'
     | 'OPERATIONS'
 
 export interface InboxMessage {

@@ -208,7 +208,49 @@ export interface OpportunityInteractionResult {
   referralCount?: number
 }
 
-export type ReceivedInteractionCategory = 'REFERRAL' | 'PROFILE_INTEREST' | 'VISITOR'
+export type OpportunityCommentType = 'COMMENT' | 'REVIEW'
+export type OpportunityCommentStatus = 'PENDING' | 'PUBLISHED'
+
+export interface OpportunityCommentSettings {
+  commentsEnabled: boolean
+  reviewsEnabled: boolean
+  callsEnabled: boolean
+  moderationMode: 'AUTO' | 'REVIEW'
+  canCall: boolean
+  opportunityStatus: OpportunityStatus
+}
+
+export interface OpportunityComment {
+  id: string
+  type: OpportunityCommentType
+  body: string
+  rating?: number
+  author: OpportunityAuthor & { participant: boolean }
+  status: OpportunityCommentStatus
+  callCount: number
+  callActive: boolean
+  mine: boolean
+  canEdit: boolean
+  canDelete: boolean
+  version: number
+  createdAt: string
+  editedAt?: string
+}
+
+export interface OpportunityCommentPage {
+  settings: OpportunityCommentSettings
+  items: OpportunityComment[]
+  nextCursor?: string
+}
+
+export interface OpportunityCommentMutationResult {
+  id: string
+  status: OpportunityCommentStatus | 'DELETED'
+  version: number
+  participant?: boolean
+}
+
+export type ReceivedInteractionCategory = 'REFERRAL' | 'PROFILE_INTEREST' | 'OUTBOUND_INTEREST' | 'VISITOR'
 export type ReceivedInteractionStatus = 'ACTIVE' | 'CANCELLED'
 export type ReceivedInterestSourceType = 'OPPORTUNITY' | 'COOPERATION_CARD' | 'SUPER_CASE' | 'PROFILE'
 
@@ -246,17 +288,31 @@ export interface ReceivedProfileInterest extends ReceivedInteractionBase {
   }
 }
 
+export interface OutboundProfileInterest {
+  kind: 'OUTBOUND_INTEREST'
+  status: ReceivedInteractionStatus
+  target: ReceivedInteractionActor
+  source: {
+    type: ReceivedInterestSourceType
+    label: string
+    status: OpportunityStatus
+  }
+  unread: false
+  updatedAt: string
+}
+
 export interface ReceivedVisitor extends ReceivedInteractionBase {
   kind: 'VISITOR'
   visitCount: number
   lastVisitedAt: string
 }
 
-export type ReceivedInteraction = ReceivedReferral | ReceivedProfileInterest | ReceivedVisitor
+export type ReceivedInteraction = ReceivedReferral | ReceivedProfileInterest | OutboundProfileInterest | ReceivedVisitor
 
 export interface ReceivedInteractionPage {
   category: ReceivedInteractionCategory
   items: ReceivedInteraction[]
   unreadCount: number
+  totalViewCount?: number
   nextCursor?: string
 }

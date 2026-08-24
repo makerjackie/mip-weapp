@@ -13,6 +13,8 @@
       "pages": [
         "mip-access/index",
         "mip-profile/index",
+        "mip-card/index",
+        "mip-avatar/index",
         "mip-people/index",
         "mip-public-profile/index",
         "mip-blocked/index",
@@ -61,6 +63,7 @@
         "dashboard/index",
         "announcements/index",
         "announcement-editor/index",
+        "message-campaigns/index",
         "branches/index",
         "managed-events/index",
         "event-console/index",

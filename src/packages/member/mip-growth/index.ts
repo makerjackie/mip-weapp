@@ -4,6 +4,7 @@ import { mipGrowthModule } from '../../../modules/mip-growth/client'
 const metricLabels = {
   EXPERIENCE: '经验值',
   CONTRIBUTION: '贡献值',
+  COIN: '游戏币',
 } as const
 
 interface GrowthEntryView extends GrowthEntry {

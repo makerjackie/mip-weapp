@@ -8,7 +8,7 @@ MIP 的运行时数据位于 `database/mysql/mip/`，迁移跟踪表为 `mip_sch
 | --- | --- |
 | 基础身份 | `mip_users`, `mip_user_identities`, `mip_media_assets`, `mip_city_branches`, `mip_branch_memberships`, `mip_profiles`, `mip_private_profiles`, `mip_agreement_acceptances`, `mip_tags`, `mip_profile_tags`, `mip_admin_role_bindings`, `mip_app_settings`, `mip_idempotency_keys`, `mip_outbox_events`, `mip_audit_logs` |
 | 活动和交易 | `mip_membership_plans`, `mip_orders`, `mip_events`, `mip_event_changes`, `mip_event_seat_holds`, `mip_event_registrations`, `mip_event_invitation_attributions`, `mip_event_checkin_credentials`, `mip_event_checkins`, `mip_event_checkin_transitions`, `mip_event_hearts`, `mip_event_feedback`, `mip_event_album_photos` |
-| 机会和协作 | `mip_opportunities`, `mip_opportunity_roles`, `mip_opportunity_tags`, `mip_referral_intents`, `mip_profile_interests`, `mip_cooperation_cards`, `mip_super_cases`, `mip_super_case_media` |
+| 机会和协作 | `mip_opportunities`, `mip_opportunity_roles`, `mip_opportunity_tags`, `mip_referral_intents`, `mip_profile_interests`, `mip_cooperation_cards`, `mip_super_cases`, `mip_super_case_media`, `mip_opportunity_comment_settings`, `mip_opportunity_comments`, `mip_opportunity_comment_calls`, `mip_opportunity_comment_reports` |
 | 社区安全 | `mip_user_blocks`, `mip_reports` |
 | 公告 | `mip_announcements` |
 | 支付和权益 | `mip_payment_attempts`, `mip_refunds`, `mip_membership_entitlements`, `mip_membership_attributions`, `mip_payment_callbacks` |
@@ -70,6 +70,7 @@ mip_users
 ## 机会、成长、消息和 AI
 
 - `mip_opportunities`、`mip_cooperation_cards`、`mip_super_cases` 等内容表都带状态、版本和内容安全状态；关系表使用 app-scoped 复合主键。机会草稿通过 `ARCHIVED` 保留归档时间、操作人和原因，不物理删除。
+- 机会评论支持普通评论和结束后的项目评价。参与人标识由发布人或团队关系推导；编辑限时、删除、隐藏和举报均保留状态与版本，打 call 使用独立关系表和服务端计数。
 - `mip_user_blocks` 保存可解除的主动屏蔽关系；公开档案和公共列表按已识别查看者双向过滤 `ACTIVE` 屏蔽。`mip_reports` 保存幂等举报和审核版本，不生成对方通知，也不自动改变用户状态。
 - `mip_announcements` 保存平台或城市分会公告、展示窗口、内容安全结果和可选活动/机会关联；草稿、发布、撤回和置顶都保留版本与审计，不提供物理删除。
 - `mip_growth_levels` 和 `mip_growth_rules` 是配置；`mip_growth_accounts` 是余额快照；`mip_growth_entries` 只追加，每个用户/来源/指标保持幂等。签到撤销的反向流水引用撤销 transition，delta 等于原实际入账值的反数，不依赖后续修改的规则。

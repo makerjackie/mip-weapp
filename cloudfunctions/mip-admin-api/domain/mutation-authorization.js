@@ -1,6 +1,6 @@
 'use strict'
 
-const { coversScope, roleCapabilities } = require('./capabilities')
+const { capabilitiesForBinding, coversScope } = require('./capabilities')
 
 const PLATFORM_SCOPE_ID = '00000000-0000-0000-0000-000000000000'
 
@@ -34,10 +34,13 @@ async function lockMutationAuthorization(tx, input) {
     : grant.scopeId
   if (!storedScopeId) throw codeError('FORBIDDEN')
   const binding = await tx.one(
-    `SELECT scope_type, scope_id, role_key, status
-     FROM mip_admin_role_bindings
-     WHERE app_id = ? AND user_id = ? AND scope_type = ? AND scope_id = ?
-       AND role_key = ? FOR UPDATE`,
+    `SELECT r.scope_type, r.scope_id, r.role_key, r.status,
+      CASE WHEN p.policy_mode = 'CUSTOM' THEN p.capabilities_json ELSE NULL END AS policy_capabilities_json
+     FROM mip_admin_role_bindings r
+     LEFT JOIN mip_role_capability_policies p
+       ON p.app_id = r.app_id AND p.role_key = r.role_key
+     WHERE r.app_id = ? AND r.user_id = ? AND r.scope_type = ? AND r.scope_id = ?
+       AND r.role_key = ? FOR UPDATE`,
     [input.appId, input.actorUserId, grant.scopeType, storedScopeId, grant.roleKey],
   )
   if (!binding || binding.status !== 'ACTIVE') throw codeError('FORBIDDEN')
@@ -46,14 +49,20 @@ async function lockMutationAuthorization(tx, input) {
     scopeType: binding.scope_type,
     scopeId: binding.scope_type === 'PLATFORM' ? null : binding.scope_id,
     roleKey: binding.role_key,
+    capabilities: capabilitiesForBinding({
+      roleKey: binding.role_key,
+      policyCapabilities: Object.hasOwn(binding, 'policy_capabilities_json')
+        ? binding.policy_capabilities_json
+        : null,
+    }),
   }
-  if (!roleCapabilities[effectiveGrant.roleKey]?.includes(capability)) throw codeError('FORBIDDEN')
+  if (!effectiveGrant.capabilities.includes(capability)) throw codeError('FORBIDDEN')
   return { capability, effectiveGrant }
 }
 
 function assertMutationScope(authorization, requestedScope) {
   if (!authorization?.effectiveGrant
-    || !roleCapabilities[authorization.effectiveGrant.roleKey]?.includes(authorization.capability)
+    || !capabilitiesForBinding(authorization.effectiveGrant).includes(authorization.capability)
     || !coversScope(authorization.effectiveGrant, normalizeRequestedScope(requestedScope))) {
     throw codeError('FORBIDDEN')
   }

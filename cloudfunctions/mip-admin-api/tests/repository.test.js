@@ -87,6 +87,26 @@ describe('admin repository persistence contracts', () => {
     assert.match(eventSql, /SELECT COUNT\(\*\) FROM mip_event_registrations/)
   })
 
+  it('derives dashboard rates from active-player interactions and published opportunity teams', async () => {
+    const sqlCalls = []
+    const responses = [
+      { total_users: 12, new_users_7d: 1, active_players: 10, interacting_players_30d: 4 },
+      {},
+      { paid_orders: 0, pending_refunds: 0 },
+      { total_opportunities: 8, published_opportunities: 2, published_lifecycle_opportunities: 5, converted_opportunities: 2 },
+    ]
+    const repository = createAdminRepository(transactionDatabase({
+      async one(sql) { sqlCalls.push(sql); return responses.shift() || {} },
+    }))
+    const counts = await repository.dashboard('wx-app', { platform: true, branchIds: [], eventIds: [] })
+    assert.equal(counts.playerInteractionRate30d, 40)
+    assert.equal(counts.opportunityConversionRate, 40)
+    assert.match(sqlCalls[0], /mip_profile_visits/)
+    assert.match(sqlCalls[0], /INTERVAL 30 DAY/)
+    assert.match(sqlCalls[3], /mip_opportunity_team_members/)
+    assert.match(sqlCalls[3], /o\.published_at IS NOT NULL/)
+  })
+
   it('builds a user detail only from app-scoped MIP facts', async () => {
     const calls = []
     const repository = createAdminRepository(transactionDatabase({
@@ -121,10 +141,9 @@ describe('admin repository persistence contracts', () => {
     assert.deepEqual(detail.counts, {
       registrations: 0, attended: 0, orders: 0, opportunities: 0, cooperationCards: 0, superCases: 0,
     })
-    assert.deepEqual(detail.growth, { levelName: '一级', experience: 10, contribution: 2 })
-    assert.equal('coin' in detail.growth, false)
+    assert.deepEqual(detail.growth, { levelName: '一级', experience: 10, contribution: 2, coin: 99 })
     const growthSql = calls.find(call => call.sql.includes('FROM mip_growth_accounts'))?.sql || ''
-    assert.doesNotMatch(growthSql, /coin_balance/)
+    assert.match(growthSql, /coin_balance/)
     assert.ok(calls.every(call => call.params[0] === 'wx-app'))
     assert.doesNotMatch(calls.map(call => call.sql).join('\n'), /\b(?:member|dating|sewing)_\w+/i)
   })

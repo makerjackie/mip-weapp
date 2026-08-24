@@ -53,6 +53,15 @@ function verifyInternalEvent(event, options = {}) {
       sourceEventId: text(event.sourceEventId),
     }
   }
+  if (action === 'grantGameCoins' || action === 'spendGameCoins') {
+    return {
+      action,
+      appId: text(event.appId),
+      userId: text(event.userId),
+      sourceEventType: text(event.sourceEventType),
+      sourceEventId: text(event.sourceEventId),
+    }
+  }
   throw new Error('FORBIDDEN')
 }
 

@@ -1,4 +1,5 @@
 import type { AdminAnnouncementFilters } from './announcements'
+import type { AdminMessageCampaignStatus } from './message-campaigns'
 import type { AdminOperationalExceptionFilters } from './operational-exceptions'
 import type {
   AdminCapability,
@@ -36,6 +37,27 @@ export function createMipAdminModule(gateway: MipAdminGateway) {
       `mip-admin:announcement:${announcementId}`,
       () => gateway.getAnnouncement(announcementId),
       { force },
+    ),
+    getMessageCampaignScopes: (force = false) => cache.query(
+      'mip-admin:message-campaign-scopes',
+      gateway.getMessageCampaignScopes,
+      { force },
+    ),
+    listMessageCampaigns: (
+      input: { status?: AdminMessageCampaignStatus | '', query?: string } = {},
+      force = false,
+    ) => cache.query(
+      `mip-admin:message-campaigns:${JSON.stringify(input)}`,
+      () => gateway.listMessageCampaigns(input),
+      { force },
+    ),
+    getMessageCampaign: (campaignId: string, force = false) => cache.query(
+      `mip-admin:message-campaign:${campaignId}`,
+      () => gateway.getMessageCampaign(campaignId),
+      { force },
+    ),
+    searchMessageRecipients: (input: { branchId?: string | null, query?: string } = {}) => (
+      gateway.searchMessageRecipients(input)
     ),
     listCommunityReports: (status: AdminCommunityReportStatus, force = false) => cache.query(
       `mip-admin:community-reports:${status}`,
@@ -91,6 +113,11 @@ export function createMipAdminModule(gateway: MipAdminGateway) {
           { force },
         ),
     listRoles: (force = false) => cache.query('mip-admin:roles', gateway.listRoles, { force }),
+    listRoleCapabilityPolicies: (force = false) => cache.query(
+      'mip-admin:role-capability-policies',
+      gateway.listRoleCapabilityPolicies,
+      { force },
+    ),
     searchRoleCandidates: (eventId: string, query: string) => gateway.searchRoleCandidates(eventId, query),
     listOpportunities: (input: Record<string, unknown> = {}, force = false) => cache.query(
       `mip-admin:opportunities:${JSON.stringify(input)}`,
@@ -100,6 +127,11 @@ export function createMipAdminModule(gateway: MipAdminGateway) {
     getOpportunity: (opportunityId: string, force = false) => cache.query(
       `mip-admin:opportunity:${opportunityId}`,
       () => gateway.getOpportunity(opportunityId),
+      { force },
+    ),
+    getOpportunityCommentAdminState: (opportunityId: string, force = false) => cache.query(
+      `mip-admin:opportunity-comments:${opportunityId}`,
+      () => gateway.getOpportunityCommentAdminState(opportunityId),
       { force },
     ),
     getOpportunityEditorOptions: (force = false) => cache.query(

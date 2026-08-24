@@ -10,7 +10,9 @@
     "test": "node --test tests/*.test.js"
   },
   "dependencies": {
+    "jpeg-js": "^0.4.4",
     "mysql2": "^3.14.4",
+    "pngjs": "7.0.0",
     "wx-server-sdk": "^4.0.2"
   }
 }

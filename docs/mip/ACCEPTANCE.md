@@ -38,6 +38,11 @@
 | H4 成长等级、规则、流水与调整 | `tests/mip-growth.test.ts`、`cloudfunctions/mip-admin-api/tests/growth-rule-catalog.test.js` | `implemented-local`；正式数值为 `external-wait` |
 | H5 NPC 任务派发、模板与截止 | `database/mysql/mip/027_task_assignments_templates.sql`、`cloudfunctions/mip-tasks-api/tests/task-contract.test.js`、`tests/mip-tasks.test.ts` | 源码链路和迁移已完成；云函数部署和真机模板上传/保存为 `external-wait` |
 | 勋章收藏、佩戴与运营管理 | `database/mysql/mip/028_badge_collection.sql`、`cloudfunctions/mip-growth-api/tests/badges.test.js`、`cloudfunctions/mip-admin-api/tests/badges.test.js`、`tests/mip-badges.test.ts` | 本人收藏、最多 3 枚佩戴、公开档案投影、运营目录/授予和迁移已完成；正式图片为 `external-wait`。Figma 精确资产因工具配额/导出限制未取得，当前为可替换中性占位 |
+| 数字分身与我的名片 | `database/mysql/mip/030_digital_avatar_generations.sql`、`cloudfunctions/mip-ai-api/tests/avatar-store.test.js`、`tests/mip-digital-avatar.test.ts`、`tests/mip-member-card.test.ts` | 生成任务、服务端资产归属、原图/数字分身切换和名片接线已完成；真实生成 provider、Figma 对照和真机相册为 `external-wait` |
+| 运营消息活动 | `database/mysql/mip/031_message_campaigns.sql`、`cloudfunctions/mip-admin-api/tests/message-campaigns.test.js`、`tests/mip-message-campaigns.test.ts` | 平台/分会范围、收件人快照、幂等发布、撤回和审计已完成；外部微信投递为 `external-wait` |
+| 游戏币、等级与弹窗消息 | `database/mysql/mip/032_game_coin_safety.sql`、`cloudfunctions/mip-growth-api/tests/game-coins.test.js`、`tests/mip-popup-messages.test.ts`、`tests/mip-outbox.test.ts` | 权威余额、追加流水、防负、周赛固定奖励、真实跨级识别、站内消息和弹窗去重已完成；微信模板和云端运行时为 `external-wait` |
+| Owner 可配置角色权限 | `database/mysql/mip/033_configurable_rbac.sql`、`cloudfunctions/mip-admin-api/tests/role-capability-policies.test.js`、`tests/mip-configurable-rbac.test.ts` | 六类非 Owner 角色的白名单策略、版本冲突、恢复默认、安全上限、事务内二次授权和审计已完成；Owner 权限固定 |
+| 机会评论、评价与打 call | `database/mysql/mip/034_opportunity_comments.sql`、`cloudfunctions/mip-opportunities-api/tests/comments.test.js`、`tests/mip-opportunity-comments.test.ts` | 用户评论/评价、参与人标识、编辑/软删除、打 call、举报、双向屏蔽及运营配置/审核已完成 |
 | 固定 PRD #60–#68 团队 PK、赛季、排行与队伍大本营 | `database/mysql/mip/029_gamification_foundation.sql`、`cloudfunctions/mip-game-api/tests/game.test.js`、`tests/mip-game.test.ts`、`src/packages/member/mip-game/`、`src/packages/admin/game/` | 有效会员门禁、服务端计分、周赛历史、四类排行快照、城市筛选、中性大本营状态和迁移已完成；函数部署、正式规则与视觉为 `external-wait` |
 
 ## 静态门禁
@@ -50,11 +55,11 @@
 - 部署清单只有 `mip-*`，存储路径只有 `mip/`。
 - 金额、会员、报名、签到、成长和权限判断均有服务端测试。
 
-以下事项即使本地测试通过，仍保留 `external-wait`：正式 AppID、CloudBase 核心函数部署与运行时健康、支付商户和回调、正式协议正文、正式标签/城市和 AME 配置、通知模板、AI provider、活动介绍图片与任务模板的真机选择/上传/内容安全/临时 URL/相册保存、Figma 勋章精确资产、正式游戏化规则与队伍大本营视觉、手机号、扫码签到、地图/日历和真实支付。当前 29 个数据库迁移已经成功应用，runtime 账号已收敛为 75 张 MIP 业务表的精确表级权限。
+以下事项即使本地测试通过，仍保留 `external-wait`：正式 AppID、CloudBase 核心函数部署与运行时健康、支付商户和回调、正式协议正文、正式标签/城市和 AME 配置、通知模板、AI provider、活动介绍图片与任务模板的真机选择/上传/内容安全/临时 URL/相册保存、Figma 勋章精确资产、正式游戏化规则与队伍大本营视觉、手机号、扫码签到、地图/日历和真实支付。当前 34 个数据库迁移已经成功应用，runtime 账号已收敛为 83 张 MIP 业务表的精确表级权限。
 
 ## 微信开发者工具
 
-2026-08-24 已重新运行 `pnpm runtime:preflight`：开发者工具已登录，真实私有 AppID、服务端口、80 条应用路由和 80 条条件路由全部一致。随后 `pnpm test:runtime` 在首个代表页面等待 `App.callFunction` 时超时，报告保留为 `failed`，页面与代表状态均不得记为已验收。该结果与当前核心函数创建被 CAM 拒绝的事实一致。
+2026-08-24 已重新运行 `pnpm runtime:preflight`：开发者工具已登录，真实私有 AppID、服务端口、83 条应用路由和 83 条条件路由全部一致。随后 `pnpm test:runtime` 在首个代表页面等待 `App.callFunction` 时超时，报告保留为 `failed`，页面与代表状态均不得记为已验收。该结果与当前核心函数创建被 CAM 拒绝的事实一致。
 
 - `pnpm runtime:preflight`
 - `pnpm test:runtime`
@@ -83,8 +88,8 @@
 
 | 验收项 | 当前证据 | 状态 |
 | --- | --- | --- |
-| 29 个锁定的 `mip_*` 迁移 | 全部迁移已成功应用，版本、对象清单、隔离和幂等复跑已核对；变更前稳定备份保存在仓库外 | 云端已验证 |
-| runtime 表级授权 | 75 张 MIP 业务表的精确表→权限映射已收敛，二次运行返回 `already current` | 云端已验证；没有 schema/global 或非 MIP 表权限 |
+| 34 个锁定的 `mip_*` 迁移 | 全部迁移已成功应用，版本、对象清单、隔离和幂等复跑已核对；变更前稳定备份保存在仓库外 | 云端已验证 |
+| runtime 表级授权 | 83 张 MIP 业务表的精确表→权限映射已收敛，二次运行返回 `already current` | 云端已验证；没有 schema/global 或非 MIP 表权限 |
 | 数据库隔离 | 迁移后检查通过，只写入 `mip_*` 与 `mip_schema_migrations` | 云端已验证 |
 | 开发者工具登录 | 已登录并可看到云函数列表 | 只证明可见性 |
 | `mip-identity-api` | 已创建空函数壳 | `external-wait`；VPC、子网、环境变量、仓库代码和 MySQL 健康未完成 |
@@ -100,7 +105,7 @@
 4. 查询现有表行数和结构摘要，变更后复核非 `mip_*` 对象未变化；
 5. 只部署 `mip-*` 函数，不安装高频通知定时器。
 
-当前数据库证据已经包含 29 个迁移版本、MIP 对象清单和 `pnpm database:grants` 的精确授权回读。剩余云端证据必须包含：16 个核心函数清单、每个函数的 VPC/环境变量配置回读、专用 runtime MySQL 账号只读健康检查、客户端调用规则、高频 timer 缺失检查和一组 `is_demo=1` 端到端夹具。不得在共享旧表中造演示数据。空函数壳、开发者工具可见或 API Key 为 `READY` 均不能替代这些证据。
+当前数据库证据已经包含 34 个迁移版本、MIP 对象清单和 `pnpm database:grants` 的精确授权回读。剩余云端证据必须包含：16 个核心函数清单、每个函数的 VPC/环境变量配置回读、专用 runtime MySQL 账号只读健康检查、客户端调用规则、高频 timer 缺失检查和一组 `is_demo=1` 端到端夹具。不得在共享旧表中造演示数据。空函数壳、开发者工具可见或 API Key 为 `READY` 均不能替代这些证据。
 
 ## 真机或生产环境
 

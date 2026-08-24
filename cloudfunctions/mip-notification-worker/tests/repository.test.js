@@ -226,29 +226,49 @@ describe('notification repository', () => {
   it('does not invoke the sender after account closure has committed', async () => {
     let senderCalls = 0
     let reads = 0
+    const writes = []
     const database = {
       async transaction(callback, attempts) {
         assert.equal(attempts, 1)
         return callback({
           async one(sql) {
             reads += 1
-            assert.match(sql, /FROM mip_users[\s\S]*FOR UPDATE/)
-            return { id: userId, status: 'CLOSED' }
+            if (sql.includes('FROM mip_users')) return { id: userId, status: 'CLOSED' }
+            if (sql.includes('FROM mip_delivery_tasks')) {
+              return {
+                id: 'task-id', app_id: appId, status: 'PROCESSING', attempts: 1,
+                lease_expires_at: new Date('2026-08-24T01:02:00.000Z'),
+              }
+            }
+            return {
+              id: 'grant-id', user_id: userId, channel: 'WECHAT_SUBSCRIPTION',
+              template_key: 'EVENT_REMINDER', status: 'RESERVED',
+              reservation_task_id: 'task-id', reservation_token: 'reservation-id',
+            }
           },
-          async query() { throw new Error('unexpected write') },
+          async query(sql) {
+            writes.push(sql)
+            return { affectedRows: 1 }
+          },
         })
       },
     }
     const repository = createNotificationRepository(database)
     const result = await repository.deliverReservedTask({
-      taskId: 'task-id', app_id: appId, recipient_user_id: userId, grant: { id: 'grant-id' },
+      taskId: 'task-id', app_id: appId, channel: 'WECHAT_SUBSCRIPTION',
+      template_key: 'EVENT_REMINDER', recipient_user_id: userId,
+      leaseKey: '2026-08-24T01:02:00.000Z',
+      lease_expires_at: new Date('2026-08-24T01:02:00.000Z'),
+      reservationToken: 'reservation-id', grant: { id: 'grant-id' },
     }, async () => { senderCalls += 1 })
     assert.deepEqual(result, {
       taskId: 'task-id',
       status: 'CANCELLED',
       errorCode: 'DELIVERY_RECIPIENT_INACTIVE',
     })
-    assert.equal(reads, 1)
+    assert.equal(reads, 3)
+    assert.match(writes[0], /status = 'EXPIRED'/)
+    assert.match(writes[1], /status = 'CANCELLED'/)
     assert.equal(senderCalls, 0)
   })
 
@@ -380,9 +400,11 @@ describe('notification repository', () => {
     }, { now: new Date('2026-08-24T01:00:00.000Z') })
     assert.deepEqual(result, {
       taskId: 'task-id', status: 'FAILED', errorCode: 'WECHAT_DELIVERY_FAILED',
+      retryAt: '2026-08-24T01:00:01.000Z',
     })
     assert.equal(writes.length, 1)
-    assert.match(writes[0].sql, /SET status = 'FAILED'/)
+    assert.match(writes[0].sql, /SET status = \?/)
+    assert.equal(writes[0].params[0], 'FAILED')
     assert.equal(writes[0].params.at(-1), lease)
   })
 
@@ -486,7 +508,7 @@ describe('notification repository', () => {
       taskId: 'task-id', app_id: appId, leaseKey: lease.toISOString(), lease_expires_at: lease,
       reservationToken: 'reservation-id', grant: { id: 'grant-id' },
     }, 'WECHAT_DELIVERY_FAILED', { externalAttempted: true, now: new Date('2026-08-24T01:00:00.000Z') })
-    assert.equal(result.status, 'FAILED')
+    assert.equal(result.status, 'CANCELLED')
     assert.equal(writes[0].params[0], 'EXPIRED')
     assert.match(writes[1].sql, /UPDATE mip_delivery_tasks/)
   })
@@ -513,7 +535,7 @@ describe('notification repository', () => {
     assert.deepEqual(await repository.leaseTasks(appId, 10, now), [])
     assert.match(writes[0].sql, /status = 'EXPIRED'/)
     assert.doesNotMatch(writes[0].sql, /status = 'AVAILABLE'/)
-    assert.match(writes[1].sql, /status = 'FAILED'/)
+    assert.match(writes[1].sql, /status = 'CANCELLED'/)
     assert.match(writes[1].sql, /DELIVERY_OUTCOME_UNKNOWN/)
   })
 
@@ -538,7 +560,7 @@ describe('notification repository', () => {
     const result = await repository.failLeasedTask({
       id: 'task-id', app_id: appId, leaseKey: lease.toISOString(),
     }, 'DELIVERY_RESERVATION_LOST', new Date('2026-08-24T01:00:00.000Z'))
-    assert.equal(result.status, 'FAILED')
+    assert.equal(result.status, 'CANCELLED')
     assert.match(writes[0].sql, /status = 'EXPIRED'/)
     assert.match(writes[1].sql, /status = \?/)
   })

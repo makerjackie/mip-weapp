@@ -406,10 +406,15 @@ function createGameRepository(database, options = {}) {
     return database.transaction(async (tx) => {
       const roleKey = await assertGameAdmin(tx, caller, true)
       const team = await tx.one(
-        `SELECT version FROM mip_game_teams WHERE app_id = ? AND season_id = ? AND id = ? FOR UPDATE`,
+        `SELECT team.version, season.status AS season_status
+         FROM mip_game_teams team
+         INNER JOIN mip_game_seasons season
+           ON season.app_id = team.app_id AND season.id = team.season_id
+         WHERE team.app_id = ? AND team.season_id = ? AND team.id = ? FOR UPDATE`,
         [caller.appId, seasonId, teamId],
       )
       if (!team) throw new Error('NOT_FOUND')
+      if (team.season_status === 'CLOSED') throw new Error('INVALID_STATE')
       if (Number(team.version) !== version) throw new Error('CONFLICT')
       for (const member of memberIds) {
         const user = await tx.one(
@@ -554,6 +559,13 @@ function createGameRepository(database, options = {}) {
       )
       if (Number(result.affectedRows) !== 1) throw new Error('CONFLICT')
       await writeAudit(tx, caller, roleKey, 'game.match.finalized', 'GAME_MATCH', matchId)
+      await tx.query(
+        `INSERT INTO mip_outbox_events (
+           id, app_id, aggregate_type, aggregate_id, event_type,
+           source_version, payload_json, status
+         ) VALUES (?, ?, 'GAME_MATCH', ?, 'game.match.finalized', ?, JSON_OBJECT(), 'PENDING')`,
+        [createId(), caller.appId, matchId, version + 1],
+      )
       return matchDto(await matchRow(tx, caller.appId, matchId))
     })
   }
@@ -632,14 +644,36 @@ function createGameRepository(database, options = {}) {
 
 async function assertGameAdmin(database, caller, lock = false) {
   const row = await database.one(
-    `SELECT role_key FROM mip_admin_role_bindings
-     WHERE app_id = ? AND user_id = ? AND scope_type = 'PLATFORM' AND scope_id = ?
-       AND status = 'ACTIVE' AND role_key IN ('PLATFORM_OWNER', 'PLATFORM_OPERATIONS')
-     ORDER BY role_key ${lock ? 'FOR UPDATE' : ''}`,
+    `SELECT binding.role_key,
+      CASE WHEN policy.policy_mode = 'CUSTOM' THEN policy.capabilities_json ELSE NULL END AS policy_capabilities_json
+     FROM mip_admin_role_bindings binding
+     LEFT JOIN mip_role_capability_policies policy
+       ON policy.app_id = binding.app_id AND policy.role_key = binding.role_key
+     WHERE binding.app_id = ? AND binding.user_id = ? AND binding.scope_type = 'PLATFORM'
+       AND binding.scope_id = ? AND binding.status = 'ACTIVE'
+       AND binding.role_key IN ('PLATFORM_OWNER', 'PLATFORM_OPERATIONS')
+     ORDER BY (binding.role_key = 'PLATFORM_OWNER') DESC, binding.role_key ${lock ? 'FOR UPDATE' : ''}`,
     [caller.appId, caller.userId, PLATFORM_SCOPE_ID],
   )
-  if (!row || !GAME_ADMIN_ROLES.has(row.role_key)) throw new Error('FORBIDDEN')
+  if (!row || !GAME_ADMIN_ROLES.has(row.role_key)
+    || !configuredCapabilityAllows(row, GAME_CAPABILITY)) throw new Error('FORBIDDEN')
   return row.role_key
+}
+
+function configuredCapabilityAllows(row, capability) {
+  if (row.role_key === 'PLATFORM_OWNER') return true
+  const value = row.policy_capabilities_json
+  if (value === null || value === undefined) return true
+  try {
+    const capabilities = typeof value === 'string' ? JSON.parse(value) : value
+    return Array.isArray(capabilities)
+      && new Set(capabilities).size === capabilities.length
+      && capabilities.every(item => typeof item === 'string')
+      && capabilities.includes(capability)
+  }
+  catch {
+    return false
+  }
 }
 
 async function teamExperience(database, appId, seasonId, teamId, startsAt, endsAt) {
@@ -681,19 +715,27 @@ async function individualRankingRows(database, appId, season, period, type) {
     return database.query(
       `SELECT user.id AS user_id, user.primary_branch_id AS branch_id,
               COALESCE(profile.nickname, '未设置昵称') AS display_name,
-              COALESCE(account.experience_balance, 0) AS score
+              COALESCE(SUM(entry.delta_value), 0) AS score
        FROM mip_users user
        LEFT JOIN mip_profiles profile ON profile.app_id = user.app_id AND profile.user_id = user.id
-       LEFT JOIN mip_growth_accounts account ON account.app_id = user.app_id AND account.user_id = user.id
+       LEFT JOIN mip_growth_entries entry
+         ON entry.app_id = user.app_id AND entry.user_id = user.id AND entry.metric = 'EXPERIENCE'
+        AND entry.created_at >= ? AND entry.created_at <= ?
        WHERE user.app_id = ? AND user.status = 'ACTIVE'
          AND EXISTS (
            SELECT 1 FROM mip_membership_entitlements entitlement
            WHERE entitlement.app_id = user.app_id AND entitlement.user_id = user.id
-             AND entitlement.status = 'ACTIVE' AND entitlement.starts_at <= UTC_TIMESTAMP(3)
-             AND entitlement.ends_at > UTC_TIMESTAMP(3)
+             AND (
+               entitlement.status IN ('ACTIVE', 'EXPIRED')
+               OR (entitlement.status IN ('REVOKED', 'REFUNDED')
+                 AND entitlement.revoked_at > LEAST(?, UTC_TIMESTAMP(3)))
+             )
+             AND entitlement.starts_at <= LEAST(?, UTC_TIMESTAMP(3))
+             AND entitlement.ends_at > LEAST(?, UTC_TIMESTAMP(3))
          )
+       GROUP BY user.id, user.primary_branch_id, profile.nickname
        ORDER BY score DESC, display_name, user.id`,
-      [appId],
+      [period.start, period.end, appId, period.end, period.end, period.end],
     )
   }
   return database.query(
@@ -709,12 +751,17 @@ async function individualRankingRows(database, appId, season, period, type) {
        AND EXISTS (
          SELECT 1 FROM mip_membership_entitlements entitlement
          WHERE entitlement.app_id = user.app_id AND entitlement.user_id = user.id
-           AND entitlement.status = 'ACTIVE' AND entitlement.starts_at <= UTC_TIMESTAMP(3)
-           AND entitlement.ends_at > UTC_TIMESTAMP(3)
+           AND (
+             entitlement.status IN ('ACTIVE', 'EXPIRED')
+             OR (entitlement.status IN ('REVOKED', 'REFUNDED')
+               AND entitlement.revoked_at > LEAST(?, UTC_TIMESTAMP(3)))
+           )
+           AND entitlement.starts_at <= LEAST(?, UTC_TIMESTAMP(3))
+           AND entitlement.ends_at > LEAST(?, UTC_TIMESTAMP(3))
        )
      GROUP BY user.id, user.primary_branch_id, profile.nickname
      ORDER BY score DESC, display_name, user.id`,
-    [period.start, period.end, appId],
+    [period.start, period.end, appId, period.end, period.end, period.end],
   )
 }
 
@@ -873,6 +920,7 @@ module.exports = {
   GAME_CAPABILITY,
   createGameRepository,
   headquartersLevel,
+  individualRankingRows,
   rankingPeriod,
   teamExperience,
 }

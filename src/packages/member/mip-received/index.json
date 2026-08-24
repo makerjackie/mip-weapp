@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "收到的互动",
+  "navigationBarTitleText": "影响力数据",
   "backgroundColor": "#040404",
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",

@@ -1,5 +1,7 @@
 import type { AdminOpportunityDetail, AdminOpportunityEditorOptions } from '../../../modules/mip-admin'
+import type { AdminPageState } from '../shared/page-state'
 import { mipAdminModule } from '../../../modules/mip-admin'
+import { adminLoadFailure } from '../shared/page-state'
 
 interface Choice { id: string, label: string, selected?: boolean }
 
@@ -9,7 +11,7 @@ function deadlineIso(value: string) {
 
 Page({
   data: {
-    state: 'loading',
+    state: 'loading' as AdminPageState,
     opportunityId: '',
     version: 0,
     options: null as AdminOpportunityEditorOptions | null,
@@ -59,7 +61,7 @@ Page({
       })
     }
     catch (error) {
-      this.setData({ state: 'error', message: error instanceof Error ? error.message : '机会加载失败' })
+      this.setData(adminLoadFailure(error, { hasContent: false, fallbackMessage: '机会加载失败' }))
     }
   },
   updateField(event: WechatMiniprogram.CustomEvent<{ value: string }>) {

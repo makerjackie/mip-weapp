@@ -8,6 +8,7 @@ const { resolveMipUser, trustedWechatIdentity } = require('./lib/identity')
 const { mysqlDatabase } = require('./lib/mysql')
 const { createAiProviderAdapter } = require('./lib/provider')
 const { createAudioStore } = require('./lib/audio-store')
+const { createAvatarStore } = require('./lib/avatar-store')
 const { verifyMaintenanceRequest } = require('./lib/internal-auth')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
@@ -24,9 +25,14 @@ const service = createAiService({
     cloud,
     adapter: process.env.MIP_AI_PROVIDER_ADAPTER,
     functionName: process.env.MIP_AI_PROVIDER_FUNCTION_NAME,
+    avatarFunctionName: process.env.MIP_AI_AVATAR_PROVIDER_FUNCTION_NAME,
     secret: process.env.MIP_AI_HMAC_SECRET,
   }),
   audioStore: createAudioStore(cloud, {
+    storageKey: process.env.MIP_AI_STORAGE_KEY,
+    stage: process.env.MIP_DEPLOYMENT_STAGE,
+  }),
+  avatarStore: createAvatarStore(cloud, {
     storageKey: process.env.MIP_AI_STORAGE_KEY,
     stage: process.env.MIP_DEPLOYMENT_STAGE,
   }),

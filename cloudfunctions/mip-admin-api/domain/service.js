@@ -9,13 +9,22 @@ const {
   capabilitySnapshot,
   firstGrant,
   isValidRoleBinding,
+  roleCapabilities,
   visibilityForCapability,
 } = require('./capabilities')
+const { configurableRoleKeys } = require('./role-capability-policies')
 const {
   normalizeAnnouncementDraft,
   normalizeAnnouncementFilters,
   normalizeAnnouncementReason,
 } = require('./announcement-validation')
+const {
+  normalizeMessageCampaignDraft,
+  normalizeMessageCampaignFilters,
+  normalizePublishKey,
+  normalizeRecipientSearch,
+} = require('./message-campaign-validation')
+const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
 const { decryptPhone } = require('../lib/phone')
 const { exportFileName, workbookForExport } = require('./export-workbook')
 const { createOpportunityArchiveService } = require('./opportunity-archive')
@@ -64,6 +73,7 @@ function createAdminService({
   exportMaxRows = 5_000,
   exportMaxBytes = 8 * 1024 * 1024,
   exportIssuanceTimeoutMs = 15_000,
+  profileRefSecret = '',
 }) {
   function pageResult(value) {
     if (Array.isArray(value)) return { items: value, nextCursor: null }
@@ -88,6 +98,22 @@ function createAdminService({
       bindings,
       capabilities: capabilitySnapshot(bindings),
     }
+  }
+
+  function publicBindings(bindings) {
+    return bindings.map(binding => ({
+      roleKey: binding.roleKey,
+      scopeType: binding.scopeType,
+      scopeId: binding.scopeId,
+    }))
+  }
+
+  function requirePlatformOwner(context) {
+    const grant = context.bindings.find(binding => binding.roleKey === 'PLATFORM_OWNER'
+      && binding.scopeType === 'PLATFORM'
+      && (binding.scopeId === null || binding.scopeId === undefined))
+    if (!grant) throw new AdminError('FORBIDDEN', '当前账号没有权限配置权限')
+    return grant
   }
 
   function audit(context, grant, input) {
@@ -167,7 +193,7 @@ function createAdminService({
     return {
       enabled: true,
       capabilities: context.capabilities,
-      roles: context.bindings,
+      roles: publicBindings(context.bindings),
     }
   }
 
@@ -191,7 +217,7 @@ function createAdminService({
       session: {
         enabled: true,
         capabilities: context.capabilities,
-        roles: context.bindings,
+        roles: publicBindings(context.bindings),
       },
       counts,
     }
@@ -443,6 +469,201 @@ function createAdminService({
         metadata,
       }),
     })
+  }
+
+  async function messageCampaignAuthorization(context, campaignId) {
+    const scope = await repository.getCampaignScope(
+      context.caller.appId,
+      requiredId(campaignId, '消息活动'),
+    )
+    if (!scope) throw new AdminError('NOT_FOUND', '消息活动不存在')
+    return {
+      scope,
+      grant: authorize(context.bindings, CAPABILITIES.MESSAGES_MANAGE, scope),
+    }
+  }
+
+  function publicCampaign(item, appId) {
+    const {
+      audienceUserIds = [],
+      publishIdempotencyKey: _publishIdempotencyKey,
+      publishRequestHash: _publishRequestHash,
+      ...safe
+    } = item
+    return {
+      ...safe,
+      recipientRefs: audienceUserIds.map(userId => createProfileRef({ appId, userId }, profileRefSecret)),
+    }
+  }
+
+  async function listMessageCampaignScopes(caller) {
+    const context = await session(caller)
+    firstGrant(context.bindings, CAPABILITIES.MESSAGES_MANAGE)
+    return repository.listScopes(
+      context.caller.appId,
+      visibilityForCapability(context.bindings, CAPABILITIES.MESSAGES_MANAGE),
+    )
+  }
+
+  async function listMessageCampaigns(caller, input = {}) {
+    const context = await session(caller)
+    firstGrant(context.bindings, CAPABILITIES.MESSAGES_MANAGE)
+    const filters = normalizeMessageCampaignFilters(input)
+    const items = await repository.listCampaigns(
+      context.caller.appId,
+      visibilityForCapability(context.bindings, CAPABILITIES.MESSAGES_MANAGE),
+      filters,
+      limit(input.limit, 50),
+    )
+    return { items: items.map(item => publicCampaign(item, context.caller.appId)), nextCursor: null }
+  }
+
+  async function getMessageCampaign(caller, input = {}) {
+    const context = await session(caller)
+    const campaignId = requiredId(input.campaignId, '消息活动')
+    await messageCampaignAuthorization(context, campaignId)
+    const item = await repository.getCampaign(context.caller.appId, campaignId)
+    if (!item) throw new AdminError('NOT_FOUND', '消息活动不存在')
+    return publicCampaign(item, context.caller.appId)
+  }
+
+  async function searchMessageRecipients(caller, input = {}) {
+    const context = await session(caller)
+    const request = normalizeRecipientSearch(input)
+    const scope = request.branchId
+      ? { scopeType: 'BRANCH', scopeId: request.branchId }
+      : { scopeType: 'PLATFORM', scopeId: null }
+    authorize(context.bindings, CAPABILITIES.MESSAGES_MANAGE, scope)
+    const rows = await repository.searchRecipients(
+      context.caller.appId,
+      scope,
+      request.query,
+      limit(input.limit, 50),
+    )
+    return {
+      items: rows.map(row => ({
+        profileRef: createProfileRef({ appId: context.caller.appId, userId: row.id }, profileRefSecret),
+        nickname: row.nickname,
+        headline: row.headline,
+        branchName: row.branch_name || '',
+      })),
+      nextCursor: null,
+    }
+  }
+
+  async function saveMessageCampaign(caller, input = {}) {
+    const context = await session(caller)
+    const normalized = normalizeMessageCampaignDraft(input)
+    const requestedScope = {
+      scopeType: normalized.scopeType,
+      scopeId: normalized.scopeType === 'BRANCH' ? normalized.branchId : null,
+    }
+    const campaignId = input.campaignId ? requiredId(input.campaignId, '消息活动') : null
+    const existingAuthorization = campaignId
+      ? await messageCampaignAuthorization(context, campaignId)
+      : null
+    const grant = authorize(context.bindings, CAPABILITIES.MESSAGES_MANAGE, requestedScope)
+    const audienceUserIds = normalized.recipientRefs.map((profileRef) => {
+      try {
+        return readProfileRef(profileRef, context.caller.appId, profileRefSecret)
+      }
+      catch (error) {
+        if (error?.message === 'IDENTITY_CONFIG_REQUIRED') throw error
+        throw new AdminError('MESSAGE_RECIPIENT_INVALID', '收件人信息已失效')
+      }
+    })
+    const draft = { ...normalized, audienceUserIds }
+    delete draft.recipientRefs
+    const contentSafetyStatus = await contentSafety(draft, caller)
+    const item = await repository.saveCampaign({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      campaignId,
+      expectedVersion: campaignId ? expectedVersion(input.expectedVersion) : null,
+      draft,
+      contentSafetyStatus,
+      authorization: mutationAuthorization(grant, CAPABILITIES.MESSAGES_MANAGE),
+      authorizedExistingScope: existingAuthorization?.scope || null,
+      audit: (resourceId, action, metadata) => audit(context, grant, {
+        scopeType: requestedScope.scopeType,
+        scopeId: requestedScope.scopeId,
+        action,
+        resourceType: 'MESSAGE_CAMPAIGN',
+        resourceId,
+        metadata,
+      }),
+    })
+    return publicCampaign(item, context.caller.appId)
+  }
+
+  async function snapshotMessageCampaign(caller, input = {}) {
+    const context = await session(caller)
+    const campaignId = requiredId(input.campaignId, '消息活动')
+    const { scope, grant } = await messageCampaignAuthorization(context, campaignId)
+    const item = await repository.snapshotCampaign({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      campaignId,
+      expectedVersion: expectedVersion(input.expectedVersion),
+      authorization: mutationAuthorization(grant, CAPABILITIES.MESSAGES_MANAGE),
+      authorizedScope: scope,
+      audit: (resourceId, action, metadata) => audit(context, grant, {
+        scopeType: scope.scopeType,
+        scopeId: scope.scopeId,
+        action,
+        resourceType: 'MESSAGE_CAMPAIGN',
+        resourceId,
+        metadata,
+      }),
+    })
+    return publicCampaign(item, context.caller.appId)
+  }
+
+  async function publishMessageCampaign(caller, input = {}) {
+    const context = await session(caller)
+    const campaignId = requiredId(input.campaignId, '消息活动')
+    const { scope, grant } = await messageCampaignAuthorization(context, campaignId)
+    return repository.publishCampaign({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      campaignId,
+      expectedVersion: expectedVersion(input.expectedVersion),
+      idempotencyKey: normalizePublishKey(input.idempotencyKey),
+      authorization: mutationAuthorization(grant, CAPABILITIES.MESSAGES_MANAGE),
+      authorizedScope: scope,
+      audit: (resourceId, action, metadata) => audit(context, grant, {
+        scopeType: scope.scopeType,
+        scopeId: scope.scopeId,
+        action,
+        resourceType: 'MESSAGE_CAMPAIGN',
+        resourceId,
+        metadata,
+      }),
+    })
+  }
+
+  async function withdrawMessageCampaign(caller, input = {}) {
+    const context = await session(caller)
+    const campaignId = requiredId(input.campaignId, '消息活动')
+    const { scope, grant } = await messageCampaignAuthorization(context, campaignId)
+    const item = await repository.withdrawCampaign({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      campaignId,
+      expectedVersion: expectedVersion(input.expectedVersion),
+      reason: text(input.reason, 300, { required: true, label: '撤销原因' }),
+      authorization: mutationAuthorization(grant, CAPABILITIES.MESSAGES_MANAGE),
+      authorizedScope: scope,
+      audit: (resourceId, action, metadata) => audit(context, grant, {
+        scopeType: scope.scopeType,
+        scopeId: scope.scopeId,
+        action,
+        resourceType: 'MESSAGE_CAMPAIGN',
+        resourceId,
+        metadata,
+      }),
+    })
+    return publicCampaign(item, context.caller.appId)
   }
 
   async function publishAnnouncement(caller, input = {}) {
@@ -1401,11 +1622,11 @@ function createAdminService({
 
   async function listRoles(caller) {
     const context = await session(caller)
-    const grant = firstGrant(context.bindings, CAPABILITIES.EVENTS_TEAM)
+    const grant = firstGrant(context.bindings, CAPABILITIES.ROLES_CHANGE)
     const roleChangeVisibility = visibilityForCapability(context.bindings, CAPABILITIES.ROLES_CHANGE)
     const items = await repository.listRoles(
       context.caller.appId,
-      visibilityForCapability(context.bindings, CAPABILITIES.EVENTS_TEAM),
+      roleChangeVisibility,
       { includeAdministrativeScopes: roleChangeVisibility.platform },
     )
     await repository.recordAudit(audit(context, grant, {
@@ -1420,7 +1641,7 @@ function createAdminService({
 
   async function searchRoleCandidates(caller, input) {
     const context = await session(caller)
-    await eventAuthorization(context, input.eventId, CAPABILITIES.EVENTS_TEAM)
+    await eventAuthorization(context, input.eventId, CAPABILITIES.ROLES_CHANGE)
     const query = text(input.query, 80, { required: true, label: '搜索内容' })
     return { items: await repository.searchRoleCandidates(context.caller.appId, query, limit(input.limit, 20)) }
   }
@@ -1435,6 +1656,9 @@ function createAdminService({
     assertRoleDelegation(grant.roleKey, roleKey)
     const userId = requiredId(input.userId, '用户')
     if (typeof input.active !== 'boolean') throw new AdminError('VALIDATION_FAILED', '角色状态无效')
+    if (!input.active && roleKey === 'PLATFORM_OWNER' && userId === context.caller.userId) {
+      throw new AdminError('INVALID_STATE', '平台超级管理员不能撤销自己的角色')
+    }
     return repository.setRole({
       appId: context.caller.appId,
       actorUserId: context.caller.userId,
@@ -1456,6 +1680,77 @@ function createAdminService({
         metadata: { roleKey, active: input.active },
       }),
     })
+  }
+
+  async function listRoleCapabilityPolicies(caller) {
+    const context = await session(caller)
+    const grant = requirePlatformOwner(context)
+    const stored = new Map(
+      (await repository.listRoleCapabilityPolicies(context.caller.appId))
+        .map(policy => [policy.roleKey, policy]),
+    )
+    const items = configurableRoleKeys.map((roleKey) => {
+      const policy = stored.get(roleKey)
+      return roleCapabilityPolicyView(
+        roleKey,
+        policy,
+        policy?.mode === 'CUSTOM' ? 'CUSTOM' : 'DEFAULT',
+      )
+    })
+    await repository.recordAudit(audit(context, grant, {
+      scopeType: 'PLATFORM',
+      scopeId: null,
+      action: 'admin.role_capability_policies.view',
+      resourceType: 'ROLE_CAPABILITY_POLICY_LIST',
+      metadata: { count: items.length },
+    }))
+    return { items }
+  }
+
+  async function updateRoleCapabilityPolicy(caller, input = {}) {
+    const context = await session(caller)
+    const grant = requirePlatformOwner(context)
+    const roleKey = normalizeConfigurableRole(input.roleKey)
+    const policyVersion = Number(input.expectedVersion)
+    if (!Number.isInteger(policyVersion) || policyVersion < 0) {
+      throw new AdminError('VALIDATION_FAILED', '权限版本无效')
+    }
+    if (input.reset !== undefined && input.reset !== true) {
+      throw new AdminError('VALIDATION_FAILED', '恢复默认设置无效')
+    }
+    const resetting = input.reset === true
+    const capabilities = resetting ? null : normalizeRoleCapabilities(roleKey, input.capabilities)
+    const mutationInput = {
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      roleKey,
+      expectedVersion: policyVersion,
+      now: now(),
+      authorization: mutationAuthorization(grant, CAPABILITIES.ROLES_CHANGE),
+      audit: audit(context, grant, {
+        scopeType: 'PLATFORM',
+        scopeId: null,
+        action: resetting
+          ? 'admin.role_capability_policies.reset'
+          : 'admin.role_capability_policies.update',
+        resourceType: 'ROLE_CAPABILITY_POLICY',
+        resourceId: roleKey,
+        metadata: {
+          roleKey,
+          expectedVersion: policyVersion,
+          ...(capabilities ? { capabilities } : {}),
+        },
+      }),
+    }
+    if (resetting) {
+      const policy = await repository.resetRoleCapabilityPolicy(mutationInput)
+      return roleCapabilityPolicyView(roleKey, policy, 'DEFAULT')
+    }
+    const policy = await repository.updateRoleCapabilityPolicy({
+      ...mutationInput,
+      capabilities,
+    })
+    return roleCapabilityPolicyView(roleKey, policy, 'CUSTOM')
   }
 
   async function listOpportunities(caller, input = {}) {
@@ -1555,6 +1850,28 @@ function createAdminService({
     })
   }
 
+  async function endOpportunity(caller, input = {}) {
+    const context = await session(caller)
+    const opportunityId = requiredId(input.opportunityId, '机会')
+    const scope = await repository.getOpportunityScope(context.caller.appId, opportunityId)
+    if (!scope) throw new AdminError('NOT_FOUND', '机会不存在')
+    const grant = authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, scope)
+    const version = expectedVersion(input.expectedVersion)
+    return repository.endOpportunity({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      opportunityId,
+      expectedVersion: version,
+      authorizedScope: scope,
+      authorization: mutationAuthorization(grant, CAPABILITIES.OPPORTUNITIES_MODERATE),
+      audit: audit(context, grant, {
+        scopeType: scope.scopeType, scopeId: scope.scopeId,
+        action: 'admin.opportunities.end', resourceType: 'OPPORTUNITY', resourceId: opportunityId,
+        metadata: { expectedVersion: version },
+      }),
+    })
+  }
+
   async function unpublishOpportunity(caller, input) {
     const context = await session(caller)
     const opportunityId = requiredId(input.opportunityId, '机会')
@@ -1593,6 +1910,136 @@ function createAdminService({
         { scopeType: 'PLATFORM', scopeId: null },
       ),
     }).archiveOpportunity(context, input)
+  }
+
+  async function opportunityCommentAuthorization(context, opportunityId) {
+    const scope = await repository.getOpportunityScope(context.caller.appId, opportunityId)
+    if (!scope) throw new AdminError('NOT_FOUND', '机会不存在')
+    return { scope, grant: authorize(context.bindings, CAPABILITIES.MESSAGES_MANAGE, scope) }
+  }
+
+  async function getOpportunityCommentAdminState(caller, input = {}) {
+    const context = await session(caller)
+    const opportunityId = requiredId(input.opportunityId, '机会')
+    await opportunityCommentAuthorization(context, opportunityId)
+    const state = await repository.getOpportunityCommentAdminState(context.caller.appId, opportunityId)
+    return {
+      settings: state.settings,
+      comments: state.comments.map(({ authorUserId, ...comment }) => ({
+        ...comment,
+        authorProfileRef: createProfileRef(
+          { appId: context.caller.appId, userId: authorUserId },
+          profileRefSecret,
+        ),
+      })),
+      reports: state.reports.map(({ reporterUserId, ...report }) => ({
+        ...report,
+        reporterProfileRef: createProfileRef(
+          { appId: context.caller.appId, userId: reporterUserId },
+          profileRefSecret,
+        ),
+      })),
+    }
+  }
+
+  async function saveOpportunityCommentSettings(caller, input = {}) {
+    const context = await session(caller)
+    const opportunityId = requiredId(input.opportunityId, '机会')
+    const { scope, grant } = await opportunityCommentAuthorization(context, opportunityId)
+    if (!input.settings || typeof input.settings !== 'object'
+      || typeof input.settings.commentsEnabled !== 'boolean'
+      || typeof input.settings.reviewsEnabled !== 'boolean'
+      || typeof input.settings.callsEnabled !== 'boolean'
+      || !['AUTO', 'REVIEW'].includes(input.settings.moderationMode)) {
+      throw new AdminError('VALIDATION_FAILED', '评论设置无效')
+    }
+    const version = nonNegativeVersion(input.expectedVersion)
+    return repository.saveOpportunityCommentSettings({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      opportunityId,
+      expectedVersion: version,
+      settings: {
+        commentsEnabled: input.settings.commentsEnabled,
+        reviewsEnabled: input.settings.reviewsEnabled,
+        callsEnabled: input.settings.callsEnabled,
+        moderationMode: input.settings.moderationMode,
+      },
+      authorization: mutationAuthorization(grant, CAPABILITIES.MESSAGES_MANAGE),
+      audit: nextVersion => audit(context, grant, {
+        scopeType: scope.scopeType,
+        scopeId: scope.scopeId,
+        action: 'admin.opportunity_comments.settings.update',
+        resourceType: 'OPPORTUNITY_COMMENT_SETTINGS',
+        resourceId: opportunityId,
+        metadata: { expectedVersion: version, nextVersion },
+      }),
+    })
+  }
+
+  async function moderateOpportunityComment(caller, input = {}) {
+    const context = await session(caller)
+    const opportunityId = requiredId(input.opportunityId, '机会')
+    const { scope, grant } = await opportunityCommentAuthorization(context, opportunityId)
+    const commentId = requiredId(input.commentId, '评论')
+    const action = ['PUBLISH', 'HIDE'].includes(input.action) ? input.action : null
+    if (!action) throw new AdminError('VALIDATION_FAILED', '审核操作无效')
+    const reason = text(input.reason, 300, { required: true, label: '审核原因' })
+    const version = expectedVersion(input.expectedVersion)
+    return repository.moderateOpportunityComment({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      commentId,
+      expectedVersion: version,
+      action,
+      reason,
+      authorization: mutationAuthorization(grant, CAPABILITIES.MESSAGES_MANAGE),
+      audit: (resourceOpportunityId, status) => {
+        if (resourceOpportunityId !== opportunityId) throw new AdminError('CONFLICT', '评论所属机会已变化')
+        return audit(context, grant, {
+          scopeType: scope.scopeType,
+          scopeId: scope.scopeId,
+          action: action === 'PUBLISH'
+            ? 'admin.opportunity_comments.publish'
+            : 'admin.opportunity_comments.hide',
+          resourceType: 'OPPORTUNITY_COMMENT',
+          resourceId: commentId,
+          metadata: { opportunityId, status, expectedVersion: version, reasonLength: reason.length },
+        })
+      },
+    })
+  }
+
+  async function closeOpportunityCommentReport(caller, input = {}) {
+    const context = await session(caller)
+    const opportunityId = requiredId(input.opportunityId, '机会')
+    const { scope, grant } = await opportunityCommentAuthorization(context, opportunityId)
+    const reportId = requiredId(input.reportId, '举报')
+    const decision = ['RESOLVED', 'DISMISSED'].includes(input.decision) ? input.decision : null
+    if (!decision) throw new AdminError('VALIDATION_FAILED', '举报处理结果无效')
+    const reason = text(input.reason, 300, { required: true, label: '处理原因' })
+    const version = expectedVersion(input.expectedVersion)
+    return repository.closeOpportunityCommentReport({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      opportunityId,
+      reportId,
+      expectedVersion: version,
+      decision,
+      reason,
+      authorization: mutationAuthorization(grant, CAPABILITIES.MESSAGES_MANAGE),
+      audit: (resourceOpportunityId, commentId, status) => {
+        if (resourceOpportunityId !== opportunityId) throw new AdminError('CONFLICT', '举报所属机会已变化')
+        return audit(context, grant, {
+          scopeType: scope.scopeType,
+          scopeId: scope.scopeId,
+          action: 'admin.opportunity_comment_reports.close',
+          resourceType: 'OPPORTUNITY_COMMENT_REPORT',
+          resourceId: reportId,
+          metadata: { opportunityId, commentId, status, expectedVersion: version, reasonLength: reason.length },
+        })
+      },
+    })
   }
 
   async function listGrowthLevels(caller) {
@@ -1974,6 +2421,7 @@ function createAdminService({
     adjustGrowth,
     archiveEvent,
     archiveOpportunity,
+    closeOpportunityCommentReport,
     changeBranchStatus,
     changeEventStatus,
     checkIn,
@@ -1987,7 +2435,10 @@ function createAdminService({
     getEvent,
     getEventPolicy,
     getOpportunity,
+    getOpportunityCommentAdminState,
     getOpportunityEditorOptions,
+    getMessageCampaign,
+    endOpportunity,
     getExportStatus,
     health,
     getSession,
@@ -2008,6 +2459,8 @@ function createAdminService({
     listOpportunities,
     listOrders,
     listOperationalExceptions,
+    listMessageCampaignScopes,
+    listMessageCampaigns,
     listRoles,
     listRoster,
     listRosterAll,
@@ -2018,28 +2471,37 @@ function createAdminService({
     reserveExportDownload,
     listUsers,
     publishEventReminder,
+    publishMessageCampaign,
     publishOpportunity,
+    moderateOpportunityComment,
     publishAnnouncement,
     grantBadge,
     saveEvent,
     saveEventPolicy,
     saveAnnouncement,
+    saveMessageCampaign,
     saveBadge,
     saveGrowthLevel,
     saveGrowthBenefit,
     saveGrowthRule,
     searchRoleCandidates,
     setRole,
+    listRoleCapabilityPolicies,
+    updateRoleCapabilityPolicy,
     setUserControl,
     submitRefund,
     revokeBadge,
     setAnnouncementPinned,
+    searchMessageRecipients,
+    snapshotMessageCampaign,
     withdrawAnnouncement,
+    withdrawMessageCampaign,
     unpublishOpportunity,
     undoCheckIn,
     updateBranch,
     updateUser,
     saveOpportunity,
+    saveOpportunityCommentSettings,
   }
 }
 
@@ -2535,6 +2997,42 @@ function normalizeRole(value) {
   const roles = ['PLATFORM_OWNER', 'PLATFORM_OPERATIONS', 'PLATFORM_FINANCE', 'BRANCH_ADMIN', 'EVENT_OWNER', 'EVENT_MANAGER', 'EVENT_STAFF']
   if (!roles.includes(value)) throw new AdminError('VALIDATION_FAILED', '角色无效')
   return value
+}
+
+function normalizeConfigurableRole(value) {
+  if (!configurableRoleKeys.includes(value)) {
+    throw new AdminError('VALIDATION_FAILED', '权限模板角色无效')
+  }
+  return value
+}
+
+function normalizeRoleCapabilities(roleKey, value) {
+  if (!Array.isArray(value)) {
+    throw new AdminError('VALIDATION_FAILED', '权限列表无效')
+  }
+  const safeMaximum = roleCapabilities[roleKey] || []
+  const requested = new Set(value)
+  if (requested.size !== value.length
+    || value.some(item => typeof item !== 'string' || !safeMaximum.includes(item))) {
+    throw new AdminError('VALIDATION_FAILED', '权限列表包含当前角色不可授予的能力')
+  }
+  return safeMaximum.filter(capability => requested.has(capability))
+}
+
+function roleCapabilityPolicyView(roleKey, policy, source) {
+  return {
+    roleKey,
+    scopeType: roleKey.startsWith('PLATFORM_')
+      ? 'PLATFORM'
+      : roleKey === 'BRANCH_ADMIN' ? 'BRANCH' : 'EVENT',
+    allowedCapabilities: roleCapabilities[roleKey],
+    capabilities: source === 'DEFAULT'
+      ? roleCapabilities[roleKey]
+      : policy?.capabilities || [],
+    version: Number(policy?.version || 0),
+    source,
+    updatedAt: policy?.updatedAt || null,
+  }
 }
 
 function assertRoleDelegation(actorRole, targetRole) {

@@ -2,7 +2,9 @@
 
 本矩阵是完整实现的逐项验收入口。状态只使用：`implemented-local` 表示当前代码、迁移和聚焦测试形成了本地证据；`partial-local` 表示仍缺行为、字段、状态或入口；`external-wait` 表示源码链路存在，但能力本身仍依赖已部署 CloudBase、真机或正式配置；`unimplemented` 表示当前没有可触发实现。`implemented-local` 不代表真机或生产验收通过。
 
-当前工程声明 80 条小程序路由、16 个核心 `mip-*` 云函数和 29 个锁定迁移。共享云环境已经应用全部 29 个迁移并收敛 75 张 MIP 业务表的精确 runtime 权限；完整函数部署仍为 `external-wait`。
+固定 PRD 的 1–81 项逐行状态见 [PRD_81_MATRIX.md](PRD_81_MATRIX.md)。本文件继续按业务闭环和 Figma 代表 frame 汇总，二者必须同时满足才能进入最终验收。
+
+当前工程声明 83 条小程序路由、16 个核心 `mip-*` 云函数和 34 个锁定迁移。共享云环境已经应用全部 34 个迁移并收敛 83 张 MIP 业务表的精确 runtime 权限；完整函数部署仍为 `external-wait`。
 
 ## 来源
 
@@ -15,7 +17,7 @@
 | 飞书 AME | Wiki/Base `Hn5cwvTRYiHZATkr4m8cGIu4n5R`，table `tblXOCZImEJuDz6L`，view `vewJLhYC6O` | `external-wait` |
 | Figma | file `qqkbdlh4c4Swubum8S3F2f`，代表 frame 见 [FIGMA_MAP.md](FIGMA_MAP.md) | `partial-local` |
 
-飞书只采纳可读取且明确的条目；未取证内容不得补造。Figma 已通过浏览器逐 frame 核对原始画布，但 MCP Starter 配额受限，不记为 design context 成功证据；勋章精确资产受工具配额/导出限制未能取得可核验切图，当前只使用可替换的中性占位。
+飞书只采纳可读取且明确的条目；未取证内容不得补造。Figma 节点映射来自固定 PRD 和画板链接，但 MCP Starter 配额受限，尚未取得可复核的完整 design context、切图或同尺寸 frame 截图；当前只使用可替换的中性资产，并把精确视觉验收保留为 `external-wait`。
 
 ## GitHub PRD A–D
 
@@ -61,7 +63,8 @@
 | E5 | 我想引荐及通知 | implemented-local | 可见玩家/嘉宾目标、替换、取消、单关系、未读站内信已覆盖；微信补充通知为 `external-wait` |
 | E6 | 我感兴趣及通知 | implemented-local | 每人对另一用户一条有效关系，可取消重加；微信补充通知为 `external-wait` |
 | E7 | 机会参与者档案 | implemented-local | 发布人和团队成员进入公开聚合档案，服务端重查可见性和屏蔽关系 |
-| E8 | 合作卡浏览 | implemented-local | 合作卡列表、角色/行业/城市筛选、详情和人才档案入口已覆盖 |
+| E8 | 机会评论、项目评价与打 call | implemented-local | 身份/协议门禁、内容安全、参与人标识、分页、编辑/软删除、屏蔽、举报、幂等计数和后台范围审核已覆盖 |
+| E9 | 合作卡浏览 | implemented-local | 合作卡列表、角色/行业/城市筛选、详情和人才档案入口已覆盖 |
 | F1 | 我的全部活动 | implemented-local | 当前报名、历史活动、票码、取消状态和分页已覆盖 |
 | F2 | 合作卡 CRUD + AI | external-wait | CRUD、软归档、预览前自动保存、多轮 AI 草稿与确认已本地实现；真实 AI 录音 provider 待配置和真机验收 |
 | F3 | 超级案例 CRUD + AI | external-wait | CRUD、素材、软归档、多轮 AI 草稿、确认和首次发布成长事件已本地实现；真实 AI 录音 provider 待配置和真机验收 |
@@ -72,12 +75,12 @@
 | H1 | 用户组合筛选、详情、名单、导出 | implemented-local | 组合筛选、用户聚合详情、超级案例/机会/报名/订单明细与跳转、脱敏/授权原文和受控导出已覆盖；CloudBase 导出运行时待验收 |
 | H2 | 活动 CRUD、参与人、订单、导出 | external-wait | 活动状态、无业务事实草稿归档、报名审核、单场及跨活动参与者筛选/分页/导出、订单组合筛选、会员权益有效期、退款动作和相册已本地实现；正式支付退款和云端导出待验收 |
 | H3 | 多范围角色、敏感权限、登录审计 | implemented-local | 平台/分会/活动七类角色、窄化委派、独立敏感 capability 和管理端进入审计已覆盖 |
-| H4 | 等级、权益、规则、流水、调整 | implemented-local | 等级显式顺序/展示标识、独立权益实体与等级关联、旧 `benefits_json` 兼容读取、固定规则、流水、受控人工调整和业务 producer 已覆盖；正式数值待配置 |
+| H4 | 等级、权益、规则、流水、调整 | implemented-local | 等级显式顺序/展示标识、独立权益实体与等级关联、经验/贡献/游戏币权威余额与流水、固定规则、受控人工调整和业务 producer 已覆盖；正式数值待配置 |
 | H5 | NPC 任务配置、指定成员派发、模板与截止 | external-wait | 全员/指定成员、成员搜索、批量派发与软撤销、模板上传下载、截止状态、幂等完成、经验奖励和迁移已完成；云函数部署及真机媒体保存待验收 |
-| 固定 PRD #60/#61 | 团队 PK 每周赛况、历史与规则 | external-wait | 有效会员门禁、每周对阵、服务端成长流水结算、历史快照、用户可见规则和 `029` 迁移已完成；草稿赛季快照仅管理端可见，`mip-game-api` 部署及正式 PK 规则待验收 |
+| 固定 PRD #60/#61 | 团队 PK 每周赛况、历史与规则 | external-wait | 有效会员门禁、每周对阵、服务端成长流水结算、胜方成员固定游戏币奖励、历史快照、用户可见规则和迁移已完成；草稿赛季快照仅管理端可见，`mip-game-api` 部署及正式 PK 规则待验收 |
 | 固定 PRD #62/#63 | 队伍大本营与成员 | external-wait | 赛季队伍、成员历史、城市分会、经验值和四档中性大本营状态已本地实现；正式阈值、视觉和云端运行时待配置/验收 |
 | 固定 PRD #64/#65 | 个人赛季排位与规则 | external-wait | 个人赛季快照、等级投影和规则展示已本地实现；客户端分数被拒绝，正式赛季规则和云端运行时待验收 |
-| 固定 PRD #66–#68 | 团队半年/年度榜、个人累计榜与城市筛选 | external-wait | 团队榜按 6/12 个月独立周期生成，个人榜按赛季/累计事实生成，四类服务端快照、城市分会筛选和 `029` 迁移已完成；不含游戏币，`mip-game-api` 部署待验收 |
+| 固定 PRD #66–#68 | 团队半年/年度榜、个人累计榜与城市筛选 | external-wait | 团队榜按 6/12 个月独立周期生成，个人榜按赛季/累计经验事实生成，四类服务端快照、城市分会筛选和 `029` 迁移已完成；游戏币作为独立钱包不参与排名，`mip-game-api` 部署待验收 |
 | N1 | 会员期邀请归因固定 | implemented-local | 微信分享、复制邀请文案/路径、签名 scene 小程序码海报和权益期锁定邀请来源已覆盖；正式 AppID 的 wxacode 权限、扫码和相册为 `external-wait` |
 | N2 | 嘉宾按活动邀请归因 | implemented-local | 活动邀请 scene 锁定到报名事实并在详情展示公开邀请来源 |
 | N3 | 自然流显示 MIP 平台及默认头像 | implemented-local | 自然流 DTO 显示“MIP 平台”，头像缺失时使用平台默认呈现 |

@@ -9,6 +9,10 @@ const CLEANABLE_PURPOSES = Object.freeze([
   'EVENT_INVITATION_CODE',
 ])
 const ADMIN_UPLOAD_PURPOSES = new Set(['BANNER', 'TASK_TEMPLATE'])
+const ADMIN_UPLOAD_CAPABILITIES = Object.freeze({
+  BANNER: 'banners.manage',
+  TASK_TEMPLATE: 'tasks.manage',
+})
 
 function deploymentStage(value) {
   const normalized = String(value || '').trim().toLowerCase()
@@ -115,15 +119,21 @@ function createMediaService({ database, cloud, checker, env = process.env, id = 
     if (!PURPOSE_POLICIES[purpose]) throw new Error('PURPOSE_INVALID')
     if (ADMIN_UPLOAD_PURPOSES.has(purpose)) {
       const role = await database.one(
-        `SELECT role_key FROM mip_admin_role_bindings
-         WHERE app_id = ? AND user_id = ? AND scope_type = 'PLATFORM'
-           AND scope_id = '00000000-0000-0000-0000-000000000000'
-           AND status = 'ACTIVE'
-           AND role_key IN ('PLATFORM_OWNER', 'PLATFORM_OPERATIONS')
-         LIMIT 1`,
+        `SELECT binding.role_key,
+          CASE WHEN policy.policy_mode = 'CUSTOM' THEN policy.capabilities_json ELSE NULL END AS policy_capabilities_json
+         FROM mip_admin_role_bindings binding
+         LEFT JOIN mip_role_capability_policies policy
+           ON policy.app_id = binding.app_id AND policy.role_key = binding.role_key
+         WHERE binding.app_id = ? AND binding.user_id = ? AND binding.scope_type = 'PLATFORM'
+           AND binding.scope_id = '00000000-0000-0000-0000-000000000000'
+           AND binding.status = 'ACTIVE'
+           AND binding.role_key IN ('PLATFORM_OWNER', 'PLATFORM_OPERATIONS')
+         ORDER BY (binding.role_key = 'PLATFORM_OWNER') DESC, binding.role_key LIMIT 1`,
         [caller.appId, caller.userId],
       )
-      if (!role) throw new Error('FORBIDDEN')
+      if (!role || !configuredCapabilityAllows(role, ADMIN_UPLOAD_CAPABILITIES[purpose])) {
+        throw new Error('FORBIDDEN')
+      }
     }
     const image = decodeAndSanitizeImage(value?.imageBase64, purpose)
     const safetyResult = await checkImage(image)
@@ -393,6 +403,22 @@ function createMediaService({ database, cloud, checker, env = process.env, id = 
   }
 
   return { cleanupOrphans, health, uploadImage }
+}
+
+function configuredCapabilityAllows(row, capability) {
+  if (row.role_key === 'PLATFORM_OWNER') return true
+  const value = row.policy_capabilities_json
+  if (value === null || value === undefined) return true
+  try {
+    const capabilities = typeof value === 'string' ? JSON.parse(value) : value
+    return Array.isArray(capabilities)
+      && new Set(capabilities).size === capabilities.length
+      && capabilities.every(item => typeof item === 'string')
+      && capabilities.includes(capability)
+  }
+  catch {
+    return false
+  }
 }
 
 module.exports = {

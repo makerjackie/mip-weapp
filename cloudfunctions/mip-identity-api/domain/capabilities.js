@@ -22,6 +22,38 @@ const capabilitiesByRole = {
   EVENT_STAFF: ['admin:enter', 'event:check_in'],
 }
 
+const policyRequirementByCapability = Object.freeze({
+  'admin:enter': 'admin.dashboard',
+  'platform:operate': 'admin.dashboard',
+  'branch:manage': 'branches.manage',
+  'profile:manage': 'users.fields.edit',
+  'profile:read_phone': 'users.phone.read',
+  'admin:roles': 'roles.change',
+  'finance:manage': 'orders.read',
+  'branch:operate': 'admin.dashboard',
+  'branch:manage_members': 'users.read',
+  'event:manage': 'events.write',
+  'event:check_in': 'events.checkin.manage',
+})
+
+function configuredCapabilityAllows(row, capability) {
+  if (row.role_key === 'PLATFORM_OWNER') return true
+  const value = row.policy_capabilities_json
+  if (value === null || value === undefined) return true
+  try {
+    const capabilities = typeof value === 'string' ? JSON.parse(value) : value
+    const required = policyRequirementByCapability[capability]
+    return typeof required === 'string'
+      && Array.isArray(capabilities)
+      && new Set(capabilities).size === capabilities.length
+      && capabilities.every(item => typeof item === 'string')
+      && capabilities.includes(required)
+  }
+  catch {
+    return false
+  }
+}
+
 function projectGrants(rows) {
   const groups = new Map()
   for (const row of rows || []) {
@@ -36,7 +68,7 @@ function projectGrants(rows) {
       group.roles.push(row.role_key)
     }
     for (const capability of capabilitiesByRole[row.role_key] || []) {
-      group.capabilities.add(capability)
+      if (configuredCapabilityAllows(row, capability)) group.capabilities.add(capability)
     }
     groups.set(key, group)
   }

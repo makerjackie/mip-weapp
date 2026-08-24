@@ -111,11 +111,37 @@ const roleCapabilities = Object.freeze({
   EVENT_STAFF: ['events.checkin'],
 })
 
+const policyCapabilityByEventCapability = Object.freeze({
+  'events.manage': 'events.write',
+  'events.checkin': 'events.checkin.manage',
+  'events.feedback.read': 'events.feedback.read',
+  'events.audit.read': 'audit.read',
+})
+
+function configuredCapabilityAllows(binding, capability) {
+  if (binding.role_key === 'PLATFORM_OWNER') return true
+  const value = binding.policy_capabilities_json
+  if (value === null || value === undefined) return true
+  try {
+    const capabilities = typeof value === 'string' ? JSON.parse(value) : value
+    const policyCapability = policyCapabilityByEventCapability[capability]
+    return typeof policyCapability === 'string'
+      && Array.isArray(capabilities)
+      && new Set(capabilities).size === capabilities.length
+      && capabilities.every(item => typeof item === 'string')
+      && capabilities.includes(policyCapability)
+  }
+  catch {
+    return false
+  }
+}
+
 function grantsCapability(bindings, capability, event) {
   return bindings.some((binding) => {
     if (!roleCapabilities[binding.role_key]?.includes(capability)) {
       return false
     }
+    if (!configuredCapabilityAllows(binding, capability)) return false
     if (binding.scope_type === 'PLATFORM') {
       return true
     }

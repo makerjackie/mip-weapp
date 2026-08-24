@@ -1,5 +1,35 @@
-import type { AiDraftConfirmation, AiDraftId, AiDraftRefinementIntent, AiTextDraftIntent, AiVoiceDraftIntent, AiVoiceUploadIntent, MipAiGateway } from './types'
+import type {
+  AiDraftConfirmation,
+  AiDraftId,
+  AiDraftRefinementIntent,
+  AiTextDraftIntent,
+  AiVoiceDraftIntent,
+  AiVoiceUploadIntent,
+  DigitalAvatarGenerationIntent,
+  MipAiGateway,
+} from './types'
 import { confirmAiDraft } from './domain'
+
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const digitalAvatarStyleKeys = new Set(['PROFESSIONAL', 'ILLUSTRATED', 'MONOCHROME'])
+
+function downloadImage(url: string) {
+  return new Promise<string>((resolve, reject) => {
+    wx.downloadFile({
+      url,
+      success: result => result.statusCode >= 200 && result.statusCode < 300 && result.tempFilePath
+        ? resolve(result.tempFilePath)
+        : reject(new Error('数字分身下载失败')),
+      fail: reject,
+    })
+  })
+}
+
+function saveImage(filePath: string) {
+  return new Promise<void>((resolve, reject) => {
+    wx.saveImageToPhotosAlbum({ filePath, success: () => resolve(), fail: reject })
+  })
+}
 
 export function createMipAiModule(gateway: MipAiGateway) {
   return {
@@ -37,6 +67,25 @@ export function createMipAiModule(gateway: MipAiGateway) {
     },
 
     deleteDraft: (draftId: AiDraftId, expectedVersion: number) => gateway.deleteDraft(draftId, expectedVersion),
+
+    listDigitalAvatars: (limit = 12) => gateway.listDigitalAvatars(Math.min(20, Math.max(1, limit))),
+
+    generateDigitalAvatar(intent: DigitalAvatarGenerationIntent) {
+      if (!uuidPattern.test(intent.sourceAvatarAssetId)
+        || !digitalAvatarStyleKeys.has(intent.styleKey)
+        || !/^[\w.:-]{8,128}$/.test(intent.requestId)) {
+        throw new Error('数字分身生成参数无效')
+      }
+      return gateway.generateDigitalAvatar(intent)
+    },
+
+    async saveDigitalAvatar(outputUrl: string) {
+      if (!outputUrl || /^cloud:\/\//.test(outputUrl) || /^http:\/\//.test(outputUrl)) {
+        throw new Error('数字分身文件不可用')
+      }
+      const filePath = /^https:\/\//.test(outputUrl) ? await downloadImage(outputUrl) : outputUrl
+      await saveImage(filePath)
+    },
   }
 }
 

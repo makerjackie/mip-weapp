@@ -6,7 +6,10 @@ const { createAdminPrdExtensions } = require('./admin-prd-extensions')
 const { createBadgeAdminRepository } = require('./badges')
 const { createFullAccessPolicy } = require('./full-access')
 const { assertFixedGrowthRuleUpdate } = require('./growth-rule-catalog')
+const { createMessageCampaignRepository } = require('./message-campaigns')
 const { createOpportunityArchiveRepository } = require('./opportunity-archive')
+const { createOpportunityCommentAdminRepository } = require('./opportunity-comments')
+const { createRoleCapabilityPolicyRepository } = require('./role-capability-policies')
 const { listOperationalExceptions: readOperationalExceptions } = require('./operational-exceptions')
 const { createOperationsPublisher } = require('./operations-publication')
 const { cursorPredicateFor, pageRows } = require('./pagination')
@@ -15,6 +18,7 @@ const {
   assertMutationScope,
   lockMutationAuthorization,
 } = require('./mutation-authorization')
+const { capabilitiesForBinding } = require('./capabilities')
 
 function json(value, fallback = {}) {
   if (value === null || value === undefined) return fallback
@@ -367,6 +371,14 @@ function createAdminRepository(database, options = {}) {
     lockMutation,
     now,
   })
+  const opportunityCommentAdminRepository = createOpportunityCommentAdminRepository(database, {
+    assertMutationScope: assertScope,
+    lockMutationAuthorization: lockMutation,
+  })
+  const roleCapabilityPolicyRepository = createRoleCapabilityPolicyRepository(database, {
+    id,
+    lockMutation,
+  })
   const adminPrdExtensions = createAdminPrdExtensions(database, {
     assertMutationScope: assertScope,
     id,
@@ -379,6 +391,13 @@ function createAdminRepository(database, options = {}) {
     lockMutationAuthorization: lockMutation,
     maximumRecipients: options.maximumEventReminderRecipients,
     writeAudit,
+  })
+  const messageCampaignRepository = createMessageCampaignRepository(database, {
+    assertMutationScope: assertScope,
+    createId: id,
+    lockMutationAuthorization: lockMutation,
+    maximumRecipients: options.maximumMessageCampaignRecipients,
+    now,
   })
 
   async function health() {
@@ -401,16 +420,25 @@ function createAdminRepository(database, options = {}) {
 
   async function listRoleBindings(appId, userId) {
     const rows = await database.query(
-      `SELECT scope_type, scope_id, role_key
-       FROM mip_admin_role_bindings
-       WHERE app_id = ? AND user_id = ? AND status = 'ACTIVE'
-       ORDER BY scope_type, scope_id, role_key`,
+      `SELECT r.scope_type, r.scope_id, r.role_key,
+        CASE WHEN p.policy_mode = 'CUSTOM' THEN p.capabilities_json ELSE NULL END AS policy_capabilities_json
+       FROM mip_admin_role_bindings r
+       LEFT JOIN mip_role_capability_policies p
+         ON p.app_id = r.app_id AND p.role_key = r.role_key
+       WHERE r.app_id = ? AND r.user_id = ? AND r.status = 'ACTIVE'
+       ORDER BY r.scope_type, r.scope_id, r.role_key`,
       [appId, userId],
     )
     return rows.map(row => ({
       scopeType: row.scope_type,
       scopeId: row.scope_type === 'PLATFORM' ? null : row.scope_id,
       roleKey: row.role_key,
+      capabilities: capabilitiesForBinding({
+        roleKey: row.role_key,
+        policyCapabilities: Object.hasOwn(row, 'policy_capabilities_json')
+          ? row.policy_capabilities_json
+          : null,
+      }),
     }))
   }
 
@@ -451,7 +479,30 @@ function createAdminRepository(database, options = {}) {
             SELECT 1 FROM mip_membership_entitlements me
             WHERE me.app_id = u.app_id AND me.user_id = u.id AND me.status = 'ACTIVE'
               AND me.starts_at <= UTC_TIMESTAMP(3) AND me.ends_at > UTC_TIMESTAMP(3)
-          ) THEN 1 ELSE 0 END) AS active_players
+          ) THEN 1 ELSE 0 END) AS active_players,
+          SUM(CASE WHEN EXISTS (
+            SELECT 1 FROM mip_membership_entitlements me
+            WHERE me.app_id = u.app_id AND me.user_id = u.id AND me.status = 'ACTIVE'
+              AND me.starts_at <= UTC_TIMESTAMP(3) AND me.ends_at > UTC_TIMESTAMP(3)
+          ) AND (
+            EXISTS (
+              SELECT 1 FROM mip_profile_visits visit
+              WHERE visit.app_id = u.app_id AND visit.visitor_user_id = u.id
+                AND visit.visited_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 30 DAY)
+            ) OR EXISTS (
+              SELECT 1 FROM mip_profile_interests interest
+              WHERE interest.app_id = u.app_id AND interest.actor_user_id = u.id
+                AND interest.updated_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 30 DAY)
+            ) OR EXISTS (
+              SELECT 1 FROM mip_referral_intents referral
+              WHERE referral.app_id = u.app_id AND referral.actor_user_id = u.id
+                AND referral.updated_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 30 DAY)
+            ) OR EXISTS (
+              SELECT 1 FROM mip_event_hearts heart
+              WHERE heart.app_id = u.app_id AND heart.voter_user_id = u.id
+                AND heart.updated_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 30 DAY)
+            )
+          ) THEN 1 ELSE 0 END) AS interacting_players_30d
          FROM mip_users u WHERE u.app_id = ? AND ${users.sql}`,
         [appId, ...users.params],
       ),
@@ -469,7 +520,13 @@ function createAdminRepository(database, options = {}) {
       listOrderSummary(appId, orders),
       database.one(
         `SELECT COUNT(*) AS total_opportunities,
-          SUM(CASE WHEN o.status = 'PUBLISHED' THEN 1 ELSE 0 END) AS published_opportunities
+          SUM(CASE WHEN o.status = 'PUBLISHED' THEN 1 ELSE 0 END) AS published_opportunities,
+          SUM(CASE WHEN o.published_at IS NOT NULL THEN 1 ELSE 0 END) AS published_lifecycle_opportunities,
+          SUM(CASE WHEN o.published_at IS NOT NULL AND EXISTS (
+            SELECT 1 FROM mip_opportunity_team_members member
+            WHERE member.app_id = o.app_id AND member.opportunity_id = o.id
+              AND member.status = 'ACTIVE'
+          ) THEN 1 ELSE 0 END) AS converted_opportunities
          FROM mip_opportunities o
          WHERE o.app_id = ? ${opportunities.platform
           ? ''
@@ -479,10 +536,16 @@ function createAdminRepository(database, options = {}) {
         [appId, ...(opportunities.platform ? [] : opportunities.branchIds)],
       ),
     ])
+    const activePlayers = Number(userCounts?.active_players || 0)
+    const interactingPlayers30d = Number(userCounts?.interacting_players_30d || 0)
+    const publishedLifecycleOpportunities = Number(opportunityCounts?.published_lifecycle_opportunities || 0)
+    const convertedOpportunities = Number(opportunityCounts?.converted_opportunities || 0)
     return {
       totalUsers: Number(userCounts?.total_users || 0),
       newUsers7d: Number(userCounts?.new_users_7d || 0),
-      activePlayers: Number(userCounts?.active_players || 0),
+      activePlayers,
+      interactingPlayers30d,
+      playerInteractionRate30d: activePlayers ? Math.round(interactingPlayers30d * 1000 / activePlayers) / 10 : 0,
       totalEvents: Number(eventCounts?.total_events || 0),
       publishedEvents: Number(eventCounts?.published_events || 0),
       pendingRegistrations: Number(eventCounts?.pending_registrations || 0),
@@ -490,6 +553,11 @@ function createAdminRepository(database, options = {}) {
       pendingRefunds: Number(orderCounts.pendingRefunds || 0),
       totalOpportunities: Number(opportunityCounts?.total_opportunities || 0),
       publishedOpportunities: Number(opportunityCounts?.published_opportunities || 0),
+      publishedLifecycleOpportunities,
+      convertedOpportunities,
+      opportunityConversionRate: publishedLifecycleOpportunities
+        ? Math.round(convertedOpportunities * 1000 / publishedLifecycleOpportunities) / 10
+        : 0,
     }
   }
 
@@ -857,7 +925,7 @@ function createAdminRepository(database, options = {}) {
         [appId, userId],
       ),
       database.one(
-        `SELECT account.experience_balance, account.contribution_balance,
+        `SELECT account.experience_balance, account.contribution_balance, account.coin_balance,
                 level.name AS level_name
          FROM mip_growth_accounts account
          LEFT JOIN mip_growth_levels level
@@ -927,6 +995,7 @@ function createAdminRepository(database, options = {}) {
         levelName: growth?.level_name || '',
         experience: Number(growth?.experience_balance || 0),
         contribution: Number(growth?.contribution_balance || 0),
+        coin: Number(growth?.coin_balance || 0),
       },
       counts: {
         registrations: Number(counts?.registration_count || 0),
@@ -2543,6 +2612,7 @@ function createAdminRepository(database, options = {}) {
       if (!target) throw codeError('NOT_FOUND')
       if (input.active && target.status !== 'ACTIVE') throw codeError('INVALID_STATE')
       if (!input.active && input.roleKey === 'PLATFORM_OWNER') {
+        if (input.userId === input.actorUserId) throw codeError('INVALID_STATE')
         const owners = await tx.query(
           `SELECT id FROM mip_admin_role_bindings
            WHERE app_id = ? AND scope_type = 'PLATFORM' AND role_key = 'PLATFORM_OWNER'
@@ -2813,7 +2883,7 @@ function createAdminRepository(database, options = {}) {
 
   async function listGrowthEntries(appId, visibility, filters, pageLimit, cursor = null) {
     const users = visibleBranchesWhere(visibility, 'u')
-    const clauses = ["ge.app_id = ?", "ge.metric IN ('EXPERIENCE', 'CONTRIBUTION')", users.sql]
+    const clauses = ["ge.app_id = ?", "ge.metric IN ('EXPERIENCE', 'CONTRIBUTION', 'COIN')", users.sql]
     const params = [appId, ...users.params]
     if (filters.userId) { clauses.push('ge.user_id = ?'); params.push(filters.userId) }
     if (filters.metric) { clauses.push('ge.metric = ?'); params.push(filters.metric) }
@@ -2831,7 +2901,7 @@ function createAdminRepository(database, options = {}) {
       [...params, ...cursorWhere.params, pageLimit + 1],
     )
     const items = rows
-      .filter(row => row.metric === 'EXPERIENCE' || row.metric === 'CONTRIBUTION')
+      .filter(row => ['EXPERIENCE', 'CONTRIBUTION', 'COIN'].includes(row.metric))
       .map(row => ({
         id: row.id,
         userId: row.user_id,
@@ -2886,11 +2956,15 @@ function createAdminRepository(database, options = {}) {
         [input.appId, input.userId],
       )
       const account = await tx.one(
-        `SELECT experience_balance, contribution_balance, version
+        `SELECT experience_balance, contribution_balance, coin_balance, version
          FROM mip_growth_accounts WHERE app_id = ? AND user_id = ? FOR UPDATE`,
         [input.appId, input.userId],
       )
-      const column = { EXPERIENCE: 'experience_balance', CONTRIBUTION: 'contribution_balance' }[input.metric]
+      const column = {
+        EXPERIENCE: 'experience_balance',
+        CONTRIBUTION: 'contribution_balance',
+        COIN: 'coin_balance',
+      }[input.metric]
       if (!column) throw codeError('VALIDATION_FAILED')
       const current = Number(account[column])
       const next = current + input.deltaValue
@@ -3261,7 +3335,10 @@ function createAdminRepository(database, options = {}) {
     ...announcementRepository,
     ...adminPrdExtensions,
     ...badgeAdminRepository,
+    ...messageCampaignRepository,
     ...opportunityArchiveRepository,
+    ...opportunityCommentAdminRepository,
+    ...roleCapabilityPolicyRepository,
     adjustGrowth,
     authorizeRefundRetry,
     changeBranchStatus,

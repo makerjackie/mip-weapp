@@ -20,6 +20,7 @@ function gateway(continueDraft: MipAiGateway['continueDraft']): MipAiGateway {
       textDrafts: true,
       voiceDrafts: true,
       refinementDrafts: true,
+      digitalAvatars: false,
     }),
     listDrafts: async () => ({ items: [draft] }),
     getDraft: async () => draft,
@@ -29,6 +30,8 @@ function gateway(continueDraft: MipAiGateway['continueDraft']): MipAiGateway {
     continueDraft,
     updateDraft: async () => draft,
     deleteDraft: async draftId => ({ draftId, status: 'DELETED' }),
+    listDigitalAvatars: async () => ({ items: [] }),
+    generateDigitalAvatar: async () => { throw new Error('数字分身未配置') },
   }
 }
 

@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 80,
+  "routeCount": 83,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 80 paths.",
+    "config/project.json routes must list the same 83 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -16,6 +16,7 @@
       "routes": [
         "packages/member/mip-access/index",
         "packages/member/mip-events/registration/index",
+        "packages/member/mip-profile/index",
         "pages/membership/index"
       ],
       "reason": "open-type=getPhoneNumber only works on a real device"
@@ -35,7 +36,10 @@
     {
       "id": "customer-service",
       "label": "小程序客服会话",
-      "routes": ["packages/member/help/index"],
+      "routes": [
+        "packages/member/help/index",
+        "packages/member/privacy/index"
+      ],
       "reason": "open-type=contact opens WeChat customer service on a real device"
     },
     {
@@ -47,8 +51,46 @@
     {
       "id": "share",
       "label": "分享",
-      "routes": ["packages/member/mip-events/detail/index"],
+      "routes": [
+        "pages/events/index",
+        "pages/membership/index",
+        "packages/member/mip-card/index",
+        "packages/member/mip-events/detail/index",
+        "packages/member/mip-events/participants/index",
+        "packages/member/mip-opportunities/detail/index",
+        "packages/member/mip-cases/detail/index"
+      ],
       "reason": "Share sheet behavior is device/WeChat-client only when enabled"
+    },
+    {
+      "id": "phone-call",
+      "label": "拨打电话",
+      "routes": [
+        "packages/member/help/index",
+        "packages/member/mip-events/detail/index"
+      ],
+      "reason": "wx.makePhoneCall 需要在微信真机中验收拨号授权与失败提示"
+    },
+    {
+      "id": "video-channel",
+      "label": "视频号主页",
+      "routes": [
+        "pages/events/index",
+        "packages/member/help/index"
+      ],
+      "reason": "wx.openChannelsUserProfile 依赖已绑定的视频号和微信真机环境"
+    },
+    {
+      "id": "profile-avatar",
+      "label": "头像选择与上传",
+      "routes": ["packages/member/mip-profile/index"],
+      "reason": "open-type=chooseAvatar、图片安全检查和上传结果需要真机验收"
+    },
+    {
+      "id": "online-event-webview",
+      "label": "线上活动网页",
+      "routes": ["packages/member/mip-events/detail/index"],
+      "reason": "web-view 业务域名、跳转和加载失败需要在正式 AppID 的微信真机中验收"
     },
     {
       "id": "calendar-location",
@@ -76,8 +118,14 @@
     },
     {
       "id": "photo-save",
-      "label": "签到海报保存",
-      "routes": ["packages/admin/event-console/index"],
+      "label": "图片保存到相册",
+      "routes": [
+        "pages/membership/index",
+        "packages/admin/event-console/index",
+        "packages/member/mip-avatar/index",
+        "packages/member/mip-card/index",
+        "packages/member/mip-events/detail/index"
+      ],
       "reason": "wx.saveImageToPhotosAlbum 的相册权限和保存结果需要真机验证"
     },
     {
@@ -341,7 +389,12 @@
       "kind": "data",
       "states": ["loading", "ready", "error"],
       "readyAssertion": "state === 'ready'",
-      "query": ["announcementId"]
+      "query": ["announcementId"],
+      "queryFixture": {
+        "sourceRoute": "packages/member/announcements/index",
+        "dataPath": "items",
+        "values": { "announcementId": "id" }
+      }
     },
     {
       "id": "U03",
@@ -352,7 +405,8 @@
       "kind": "data",
       "states": ["loading", "ready", "empty", "error"],
       "readyAssertion": "state === 'ready'",
-      "tab": true
+      "tab": true,
+      "deviceRequired": ["share", "video-channel"]
     },
     {
       "id": "U04",
@@ -363,7 +417,7 @@
       "kind": "data",
       "states": ["loading", "ready", "empty", "error"],
       "readyAssertion": "state === 'ready'",
-      "deviceRequired": ["phone-auth", "wechat-pay"]
+      "deviceRequired": ["phone-auth", "photo-save", "share", "wechat-pay"]
     },
     {
       "id": "U05",
@@ -396,6 +450,11 @@
       "states": ["loading", "ready", "error"],
       "readyAssertion": "state === 'ready'",
       "query": ["orderId"],
+      "queryFixture": {
+        "sourceRoute": "packages/member/orders/index",
+        "dataPath": "orders",
+        "values": { "orderId": "id" }
+      },
       "deviceRequired": ["wechat-pay"]
     },
     {
@@ -405,9 +464,16 @@
       "selector": "#payment-result-page",
       "group": "member",
       "kind": "result",
-      "states": ["checking", "success", "pending", "failed"],
-      "readyAssertion": "result in checking|success|pending|failed",
+      "states": ["checking", "success", "pending", "failed", "refund"],
+      "acceptStates": ["success", "pending", "refund"],
+      "pendingStates": ["checking"],
+      "readyAssertion": "result in success|pending|refund",
       "query": ["orderId"],
+      "queryFixture": {
+        "sourceRoute": "packages/member/orders/index",
+        "dataPath": "orders",
+        "values": { "orderId": "id" }
+      },
       "deviceRequired": ["wechat-pay"]
     },
     {
@@ -429,7 +495,8 @@
       "kind": "data",
       "states": ["loading", "ready", "processing", "success", "blocked", "conflict", "error"],
       "acceptStates": ["ready", "success", "blocked"],
-      "readyAssertion": "state === 'ready' || state === 'success' || state === 'blocked'"
+      "readyAssertion": "state === 'ready' || state === 'success' || state === 'blocked'",
+      "deviceRequired": ["customer-service"]
     },
     {
       "id": "U27",
@@ -450,7 +517,7 @@
       "kind": "static",
       "states": ["ready"],
       "readyAssertion": "state === 'ready'",
-      "deviceRequired": ["customer-service"]
+      "deviceRequired": ["customer-service", "phone-call", "video-channel"]
     },
     {
       "id": "U19",
@@ -503,7 +570,23 @@
       "kind": "data",
       "states": ["loading", "ready", "error", "forbidden", "conflict"],
       "readyAssertion": "state === 'ready'",
-      "query": ["announcementId"]
+      "query": ["announcementId"],
+      "queryFixture": {
+        "sourceRoute": "packages/admin/announcements/index",
+        "dataPath": "items",
+        "values": { "announcementId": "id" }
+      }
+    },
+    {
+      "id": "A34",
+      "name": "消息管理",
+      "path": "packages/admin/message-campaigns/index",
+      "selector": "#admin-message-campaigns-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
       "id": "A02",
@@ -525,6 +608,11 @@
       "states": ["loading", "ready", "error", "forbidden"],
       "readyAssertion": "state === 'ready'",
       "query": ["eventId"],
+      "queryFixture": {
+        "sourceRoute": "packages/admin/managed-events/index",
+        "dataPath": "events",
+        "values": { "eventId": "id" }
+      },
       "deviceRequired": ["photo-save"]
     },
     {
@@ -536,7 +624,12 @@
       "kind": "data",
       "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
       "readyAssertion": "state === 'ready'",
-      "query": ["eventId"]
+      "query": ["eventId"],
+      "queryFixture": {
+        "sourceRoute": "packages/admin/managed-events/index",
+        "dataPath": "events",
+        "values": { "eventId": "id" }
+      }
     },
     {
       "id": "A05",
@@ -548,6 +641,11 @@
       "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
       "readyAssertion": "state === 'ready'",
       "query": ["eventId"],
+      "queryFixture": {
+        "sourceRoute": "packages/admin/managed-events/index",
+        "dataPath": "events",
+        "values": { "eventId": "id" }
+      },
       "deviceRequired": ["qr-checkin"]
     },
     {
@@ -559,7 +657,12 @@
       "kind": "data",
       "states": ["loading", "ready", "empty", "error", "forbidden"],
       "readyAssertion": "state === 'ready'",
-      "query": ["eventId"]
+      "query": ["eventId"],
+      "queryFixture": {
+        "sourceRoute": "packages/admin/managed-events/index",
+        "dataPath": "events",
+        "values": { "eventId": "id" }
+      }
     },
     {
       "id": "A30",
@@ -582,7 +685,12 @@
       "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
       "acceptStates": ["ready", "empty"],
       "readyAssertion": "state === 'ready' || state === 'empty'",
-      "query": ["eventId"]
+      "query": ["eventId"],
+      "queryFixture": {
+        "sourceRoute": "packages/admin/managed-events/index",
+        "dataPath": "events",
+        "values": { "eventId": "id" }
+      }
     },
     {
       "id": "A22",
@@ -594,7 +702,12 @@
       "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
       "acceptStates": ["ready", "empty"],
       "readyAssertion": "state === 'ready' || state === 'empty'",
-      "query": ["eventId"]
+      "query": ["eventId"],
+      "queryFixture": {
+        "sourceRoute": "packages/admin/managed-events/index",
+        "dataPath": "events",
+        "values": { "eventId": "id" }
+      }
     },
     {
       "id": "A07",
@@ -605,7 +718,12 @@
       "kind": "data",
       "states": ["loading", "ready", "error", "forbidden"],
       "readyAssertion": "state === 'ready'",
-      "query": ["eventId"]
+      "query": ["eventId"],
+      "queryFixture": {
+        "sourceRoute": "packages/admin/managed-events/index",
+        "dataPath": "events",
+        "values": { "eventId": "id" }
+      }
     },
     {
       "id": "A08",
@@ -657,7 +775,12 @@
       "kind": "data",
       "states": ["loading", "ready", "error", "forbidden"],
       "readyAssertion": "state === 'ready'",
-      "query": ["id"]
+      "query": ["id"],
+      "queryFixture": {
+        "sourceRoute": "packages/admin/opportunities/index",
+        "dataPath": "opportunities",
+        "values": { "id": "id" }
+      }
     },
     {
       "id": "A13",
@@ -754,7 +877,13 @@
       "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
       "acceptStates": ["ready", "empty"],
       "readyAssertion": "state === 'ready' || state === 'empty'",
-      "query": ["taskId", "version"]
+      "query": ["taskId", "version"],
+      "queryFixture": {
+        "sourceRoute": "packages/admin/tasks/index",
+        "dataPath": "tasks",
+        "where": { "assignmentMode": "SELECTED" },
+        "values": { "taskId": "id", "version": "version" }
+      }
     },
     {
       "id": "A25",
@@ -848,7 +977,8 @@
       "group": "member",
       "kind": "data",
       "states": ["loading", "ready", "error"],
-      "readyAssertion": "state === 'ready'"
+      "readyAssertion": "state === 'ready'",
+      "deviceRequired": ["phone-auth", "profile-avatar"]
     },
     {
       "id": "M04",
@@ -859,7 +989,7 @@
       "kind": "data",
       "states": ["loading", "ready", "empty", "error"],
       "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready'"
+      "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
       "id": "M05",
@@ -871,7 +1001,12 @@
       "states": ["loading", "ready", "error"],
       "readyAssertion": "state === 'ready'",
       "query": ["eventId"],
-      "deviceRequired": ["calendar-location"]
+      "queryFixture": {
+        "sourceRoute": "pages/events/index",
+        "dataPath": "events",
+        "values": { "eventId": "id" }
+      },
+      "deviceRequired": ["calendar-location", "online-event-webview", "phone-call", "photo-save", "share", "wechat-pay"]
     },
     {
       "id": "M26",
@@ -884,6 +1019,12 @@
       "acceptStates": ["ready", "empty"],
       "readyAssertion": "state === 'ready' || state === 'empty'",
       "query": ["eventId"],
+      "queryFixture": {
+        "sourceRoute": "pages/events/index",
+        "dataPath": "events",
+        "where": { "albumEnabled": true },
+        "values": { "eventId": "id" }
+      },
       "deviceRequired": ["event-album-photo"]
     },
     {
@@ -893,9 +1034,14 @@
       "selector": "#mip-event-registration-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "submitted", "error"],
+      "states": ["loading", "ready", "blocked", "submitted", "error"],
       "readyAssertion": "state === 'ready'",
       "query": ["eventId"],
+      "queryFixture": {
+        "sourceRoute": "pages/events/index",
+        "dataPath": "events",
+        "values": { "eventId": "id" }
+      },
       "deviceRequired": ["phone-auth", "wechat-pay"]
     },
     {
@@ -929,7 +1075,13 @@
       "kind": "data",
       "states": ["loading", "ready", "error"],
       "readyAssertion": "state === 'ready'",
-      "query": ["eventId"]
+      "query": ["eventId"],
+      "queryFixture": {
+        "sourceRoute": "packages/member/mip-events/mine/index",
+        "dataPath": "registrations",
+        "where": { "status": "ATTENDED" },
+        "values": { "eventId": "event.id" }
+      }
     },
     {
       "id": "M10",
@@ -940,7 +1092,13 @@
       "kind": "data",
       "states": ["loading", "ready", "error"],
       "readyAssertion": "state === 'ready'",
-      "query": ["id"]
+      "query": ["id"],
+      "queryFixture": {
+        "sourceRoute": "pages/opportunities/index",
+        "dataPath": "opportunities",
+        "values": { "id": "id" }
+      },
+      "deviceRequired": ["share"]
     },
     {
       "id": "M11",
@@ -981,7 +1139,12 @@
       "kind": "data",
       "states": ["loading", "ready", "error"],
       "readyAssertion": "state === 'ready'",
-      "query": ["id"]
+      "query": ["id"],
+      "queryFixture": {
+        "sourceRoute": "packages/member/mip-cooperation/list/index",
+        "dataPath": "items",
+        "values": { "id": "id" }
+      }
     },
     {
       "id": "M15",
@@ -1012,7 +1175,13 @@
       "kind": "data",
       "states": ["loading", "ready", "error"],
       "readyAssertion": "state === 'ready'",
-      "query": ["id"]
+      "query": ["id"],
+      "queryFixture": {
+        "sourceRoute": "packages/member/mip-cases/list/index",
+        "dataPath": "items",
+        "values": { "id": "id" }
+      },
+      "deviceRequired": ["share"]
     },
     {
       "id": "M18",
@@ -1046,6 +1215,30 @@
       "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
+      "id": "M36",
+      "name": "我的名片",
+      "path": "packages/member/mip-card/index",
+      "selector": "#mip-member-card-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'",
+      "deviceRequired": ["photo-save", "share"]
+    },
+    {
+      "id": "M37",
+      "name": "数字分身",
+      "path": "packages/member/mip-avatar/index",
+      "selector": "#mip-avatar-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "unconfigured", "error"],
+      "acceptStates": ["ready"],
+      "pendingStates": ["unconfigured"],
+      "readyAssertion": "state === 'ready'",
+      "deviceRequired": ["photo-save"]
+    },
+    {
       "id": "M34",
       "name": "团队 PK",
       "path": "packages/member/mip-game/index",
@@ -1065,7 +1258,12 @@
       "kind": "data",
       "states": ["loading", "ready", "error"],
       "readyAssertion": "state === 'ready'",
-      "query": ["teamId"]
+      "query": ["teamId"],
+      "queryFixture": {
+        "sourceRoute": "packages/member/mip-game/index",
+        "dataPath": "overview.team",
+        "values": { "teamId": "id" }
+      }
     },
     {
       "id": "M31",
@@ -1088,6 +1286,11 @@
       "states": ["loading", "ready", "error"],
       "readyAssertion": "state === 'ready'",
       "query": ["taskId"],
+      "queryFixture": {
+        "sourceRoute": "packages/member/mip-tasks/index",
+        "dataPath": "tasks",
+        "values": { "taskId": "id" }
+      },
       "deviceRequired": ["task-attachment", "task-template"]
     },
     {
@@ -1154,7 +1357,12 @@
       "kind": "data",
       "states": ["loading", "ready", "error", "blocked"],
       "readyAssertion": "state === 'ready'",
-      "query": ["profileRef"]
+      "query": ["profileRef"],
+      "queryFixture": {
+        "sourceRoute": "packages/member/mip-people/index",
+        "dataPath": "people",
+        "values": { "profileRef": "profileRef" }
+      }
     },
     {
       "id": "M25",
@@ -1176,7 +1384,13 @@
       "kind": "data",
       "states": ["loading", "ready", "error"],
       "readyAssertion": "state === 'ready'",
-      "query": ["eventId"]
+      "query": ["eventId"],
+      "queryFixture": {
+        "sourceRoute": "pages/events/index",
+        "dataPath": "events",
+        "values": { "eventId": "id" }
+      },
+      "deviceRequired": ["share"]
     }
   ]
 }

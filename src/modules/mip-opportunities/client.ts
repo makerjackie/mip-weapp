@@ -1,6 +1,9 @@
 import type { OpportunityId } from '../mip'
 import type {
   OpportunityCatalog,
+  OpportunityCommentMutationResult,
+  OpportunityCommentPage,
+  OpportunityCommentType,
   OpportunityDetail,
   OpportunityDraft,
   OpportunityFilter,
@@ -139,6 +142,65 @@ export const opportunityModule = {
       sourceType: 'PROFILE',
       profileRef: profileRef.trim(),
       active,
+      idempotencyKey,
+    })
+  },
+
+  listComments(opportunityId: OpportunityId, cursor?: string) {
+    return callOpportunityApi<OpportunityCommentPage>('listOpportunityComments', {
+      opportunityId,
+      cursor,
+      limit: 20,
+    })
+  },
+
+  saveComment(input: {
+    opportunityId: OpportunityId
+    commentId?: string
+    expectedVersion?: number
+    type: OpportunityCommentType
+    body: string
+    rating?: number
+  }, idempotencyKey = createMutationKey('opportunity-comment-save')) {
+    return callOpportunityApi<OpportunityCommentMutationResult>('saveOpportunityComment', {
+      ...input,
+      body: input.body.trim(),
+      idempotencyKey,
+    })
+  },
+
+  deleteComment(
+    commentId: string,
+    expectedVersion: number,
+    idempotencyKey = createMutationKey('opportunity-comment-delete'),
+  ) {
+    return callOpportunityApi<OpportunityCommentMutationResult>('deleteOpportunityComment', {
+      commentId,
+      expectedVersion,
+      idempotencyKey,
+    })
+  },
+
+  setCommentCall(
+    commentId: string,
+    active: boolean,
+    idempotencyKey = createMutationKey('opportunity-comment-call'),
+  ) {
+    return callOpportunityApi<{ id: string, active: boolean, callCount: number }>(
+      'setOpportunityCommentCall',
+      { commentId, active, idempotencyKey },
+    )
+  },
+
+  reportComment(input: {
+    commentId: string
+    category: 'SPAM' | 'HARASSMENT' | 'FRAUD' | 'INAPPROPRIATE_CONTENT' | 'IMPERSONATION' | 'OTHER'
+    description?: string
+    requestId: string
+  }, idempotencyKey = createMutationKey('opportunity-comment-report')) {
+    return callOpportunityApi<{ reportId: string, status: 'PENDING' }>('reportOpportunityComment', {
+      ...input,
+      description: input.description?.trim() || '',
       idempotencyKey,
     })
   },

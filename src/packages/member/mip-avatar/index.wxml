@@ -1,0 +1,72 @@
+<view id="mip-avatar-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view wx:if="{{state === 'loading'}}" class="flex flex-col gap-4">
+    <view class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+    <view class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  </view>
+  <view wx:elif="{{state === 'error'}}">
+    <app-empty-state title="暂时无法加载数字分身" description="{{message || '请检查网络后重试。'}}" action-text="重新加载" bind:action="loadPage" />
+    <app-page-exit />
+  </view>
+  <view wx:elif="{{state === 'unconfigured'}}">
+    <app-empty-state title="数字分身暂未开放" description="当前无法生成数字分身。" />
+    <app-page-exit />
+  </view>
+  <block wx:else>
+    <view class="rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="text-[length:32rpx] font-bold">数字分身</view>
+      <view class="mt-2 text-[length:23rpx] leading-6 text-muted">使用当前个人头像生成新的头像图片。</view>
+      <view class="mt-5 flex items-center gap-4 rounded-[14rpx] bg-panel-raised px-4 py-4">
+        <image wx:if="{{avatarUrl}}" class="h-[112rpx] w-[112rpx] shrink-0 rounded-full bg-canvas" mode="aspectFill" src="{{avatarUrl}}" />
+        <view wx:else class="flex h-[112rpx] w-[112rpx] shrink-0 items-center justify-center rounded-full bg-canvas text-[length:22rpx] text-muted">未设置</view>
+        <view class="min-w-0 flex-1">
+          <view class="text-[length:25rpx] font-semibold">当前头像</view>
+          <view class="mt-1 text-[length:22rpx] leading-5 text-muted">{{avatarAssetId ? '选择风格后自动生成。' : '请先在个人资料中设置头像。'}}</view>
+        </view>
+      </view>
+
+      <view class="mt-5 text-[length:24rpx] font-semibold">选择风格</view>
+      <view class="mt-3 flex flex-col gap-3">
+        <block wx:for="{{styles}}" wx:key="key">
+          <view wx:if="{{selectedStyleKey === item.key}}" class="flex min-h-[88rpx] items-center rounded-[14rpx] border border-brand bg-brand-soft px-4 py-3" data-style-key="{{item.key}}" bind:tap="selectStyle">
+            <view class="min-w-0 flex-1">
+              <view class="text-[length:25rpx] font-semibold">{{item.label}}</view>
+              <view class="mt-1 text-[length:21rpx] text-muted">{{item.description}}</view>
+            </view>
+            <t-icon name="check-circle-filled" size="32rpx" color="var(--color-brand)" />
+          </view>
+          <view wx:else class="flex min-h-[88rpx] items-center rounded-[14rpx] border border-line bg-panel-raised px-4 py-3" data-style-key="{{item.key}}" bind:tap="selectStyle">
+            <view class="min-w-0 flex-1">
+              <view class="text-[length:25rpx] font-semibold">{{item.label}}</view>
+              <view class="mt-1 text-[length:21rpx] text-muted">{{item.description}}</view>
+            </view>
+          </view>
+        </block>
+      </view>
+      <view class="mt-5"><t-button block size="large" theme="primary" disabled="{{!avatarAssetId}}" loading="{{generating}}" bind:tap="generate">重新生成当前风格</t-button></view>
+    </view>
+
+    <view wx:if="{{current}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="flex items-center justify-between gap-3"><view class="text-[length:28rpx] font-bold">生成结果</view><view class="text-[length:21rpx] text-muted">{{current.styleLabel}}</view></view>
+      <image class="mt-4 block aspect-square w-full rounded-[16rpx] bg-panel-raised" mode="aspectFill" src="{{current.outputUrl}}" bind:tap="preview" />
+      <view class="mt-4 grid grid-cols-2 gap-3">
+        <t-button block size="large" variant="outline" bind:tap="preview">预览</t-button>
+        <t-button block size="large" theme="primary" loading="{{saving}}" bind:tap="save">保存图片</t-button>
+      </view>
+    </view>
+
+    <view class="mt-6 text-[length:30rpx] font-bold">生成记录</view>
+    <view wx:if="{{generations.length === 0}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-8 text-center text-[length:23rpx] text-muted">暂无生成记录。</view>
+    <view wx:else class="mt-3 grid grid-cols-2 gap-3">
+      <view wx:for="{{generations}}" wx:key="id" class="overflow-hidden rounded-[16rpx] bg-panel" data-id="{{item.id}}" bind:tap="selectGeneration">
+        <image wx:if="{{item.canPreview}}" class="block aspect-square w-full bg-panel-raised" mode="aspectFill" src="{{item.outputUrl}}" />
+        <view wx:else class="flex aspect-square w-full items-center justify-center bg-panel-raised px-3 text-center text-[length:22rpx] text-muted">{{item.statusLabel}}</view>
+        <view class="px-3 py-3">
+          <view class="truncate text-[length:23rpx] font-semibold">{{item.styleLabel}}</view>
+          <view class="mt-1 text-[length:20rpx] text-muted">{{item.createdText}}</view>
+        </view>
+      </view>
+    </view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
+    <app-page-exit />
+  </block>
+</view>

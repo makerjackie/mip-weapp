@@ -73,11 +73,12 @@ describe('profile visits', () => {
       },
       async one(sql, params) {
         oneCalls.push({ sql, params })
-        return { count: 1 }
+        return { count: sql.includes('unread_groups') ? 1 : 7 }
       },
     }
     const result = await listProfileVisitors(database, owner, { limit: 20 })
     assert.equal(result.unreadCount, 1)
+    assert.equal(result.totalViewCount, 7)
     assert.equal(result.items[0].visitCount, 3)
     assert.equal(result.items[0].nickname, '访客甲')
     assert.match(result.items[0].profileRef, /^p1\./)
@@ -85,6 +86,10 @@ describe('profile visits', () => {
     assert.deepEqual(calls[0].params, [appId, ownerId, appId, ownerId, ownerId])
     assert.equal(calls.length, 1)
     assert.deepEqual(oneCalls[0].params, [appId, ownerId, appId, ownerId, ownerId])
+    assert.match(oneCalls[0].sql, /unread_groups/)
+    assert.deepEqual(oneCalls[1].params, [appId, ownerId])
+    assert.match(oneCalls[1].sql, /FROM mip_profile_visits/)
+    assert.doesNotMatch(oneCalls[1].sql, /mip_users/)
 
     const cursor = encodeVisitorCursor('2026-08-24T03:00:00.000Z', visitorId, owner)
     await listProfileVisitors(database, owner, { cursor, limit: 20 })
@@ -98,7 +103,8 @@ describe('profile visits', () => {
       '2026-08-24T03:00:00.000Z',
       visitorId,
     ])
-    assert.deepEqual(oneCalls[1].params, [appId, ownerId, appId, ownerId, ownerId])
+    assert.deepEqual(oneCalls[2].params, [appId, ownerId, appId, ownerId, ownerId])
+    assert.deepEqual(oneCalls[3].params, [appId, ownerId])
   })
 
   it('round-trips a visitor cursor without placing a raw id in the cursor', () => {

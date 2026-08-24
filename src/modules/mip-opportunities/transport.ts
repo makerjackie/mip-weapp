@@ -17,6 +17,8 @@ const readActions = new Set([
   'getPublicProfileAggregate',
   'listMine',
   'listReceivedInteractions',
+  'getOpportunityCommentSettings',
+  'listOpportunityComments',
   'listCooperationCards',
   'getCooperationCard',
   'listMyCooperationCards',

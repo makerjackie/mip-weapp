@@ -20,6 +20,7 @@ test('returns the full active level ladder and earning rules from server facts',
         user_id: input.userId,
         experience_balance: 120,
         contribution_balance: 8,
+        coin_balance: 6,
         version: 3,
       }
     },
@@ -53,14 +54,14 @@ test('returns the full active level ladder and earning rules from server facts',
   assert.equal(result.currentLevel.levelKey, 'active')
   assert.deepEqual(result.earningRules.map(rule => rule.ruleKey), ['event_attended'])
   assert.ok(queries.some(item => item.sql.includes("status = 'ACTIVE'")
-    && item.sql.includes("metric IN ('EXPERIENCE', 'CONTRIBUTION')")
+    && item.sql.includes("metric IN ('EXPERIENCE', 'CONTRIBUTION', 'COIN')")
     && item.sql.includes('mip_growth_rules')))
 })
 
 test('falls back to legacy level benefits only when no benefit relation exists', async () => {
   const database = {
     async one() {
-      return { user_id: input.userId, experience_balance: 0, contribution_balance: 0, version: 1 }
+      return { user_id: input.userId, experience_balance: 0, contribution_balance: 0, coin_balance: 0, version: 1 }
     },
     async query(sql) {
       if (sql.includes('FROM mip_growth_levels')) {
@@ -85,7 +86,7 @@ test('records a capped award and account update in one transaction', async () =>
       if (sql.includes('mip_idempotency_keys')) return null
       if (sql.includes('FROM mip_users')) return { id: input.userId, status: 'ACTIVE' }
       if (sql.includes('FROM mip_growth_accounts')) {
-        return { user_id: input.userId, experience_balance: 90, contribution_balance: 0, version: 1 }
+        return { user_id: input.userId, experience_balance: 90, contribution_balance: 0, coin_balance: 0, version: 1 }
       }
       if (sql.includes('FROM mip_growth_entries') && sql.includes('source_event_id')) return null
       if (sql.includes('COALESCE(SUM')) return { total: 25 }
@@ -158,7 +159,10 @@ test('returns a completed idempotent response without writing another entry', as
   const result = await createGrowthRepository(database).recordConfirmedEvent(input)
   assert.deepEqual(result, {
     sourceEventId: input.sourceEventId,
-    awards: [{ metric: 'EXPERIENCE', appliedDelta: 5 }],
+    awards: [
+      { metric: 'EXPERIENCE', appliedDelta: 5 },
+      { metric: 'COIN', appliedDelta: 1 },
+    ],
   })
   assert.equal(queryCount, 0)
 })

@@ -124,6 +124,7 @@ export interface MembershipAccessProjection {
 export interface IdentityAccessSnapshot {
   authenticated: boolean
   userId?: UserId
+  profileRef?: string
   userVersion: number
   userStatus?: 'ACTIVE' | 'BLOCKED' | 'CLOSED'
   phoneBound: boolean

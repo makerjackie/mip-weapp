@@ -2,8 +2,8 @@
 
 ## 当前共享环境进度（2026-08-24）
 
-- 29 个锁定的 `mip_*` 迁移已成功应用，迁移版本、表清单和数据库隔离检查通过；变更前稳定备份保存在 `~/Backups/mip-weapp/2026-08-24T090959-097Z/`。
-- 环境专属 runtime 账号已收敛为 75 张 MIP 业务表的精确表级权限，二次运行结果为 `already current`；没有 schema/global 权限，也没有改动其他账号。
+- 34 个锁定的 `mip_*` 迁移已成功应用，迁移版本、表清单和数据库隔离检查通过；变更前稳定备份保存在 `~/Backups/mip-weapp/2026-08-24T112700-446Z/`。
+- 环境专属 runtime 账号已收敛为 83 张 MIP 业务表的精确表级权限，二次运行结果为 `already current`；没有 schema/global 权限，也没有改动其他账号。
 - 微信开发者工具已登录并能看到函数列表，但这只证明控制台登录和可见性。
 - 云端已创建空的 `mip-identity-api` 函数壳；它没有完成目标 VPC/子网、运行时环境变量、仓库代码和 MySQL 健康检查，不能算作已部署函数。
 - 2026-08-24 数据库收口后再次执行完整部署，请求在首个 `mip-identity-api` 创建前被腾讯云拒绝：当前身份缺少 `scf:CreateFunction`，并且对目标 VPC 与子网没有权限。`managePermissions` 不能修改 CAM；包含 `mip-game-api` 在内的 16 个核心函数及正式运行时仍为 `external-wait`，本次没有产生半部署函数。
@@ -14,7 +14,7 @@
 
 1. 在 `.env.local` 配置 AppID、CloudBase EnvID、允许的 AppID、MIP runtime 配置和明确的 `MIP_DEPLOYMENT_STAGE=development|test|staging|production`。
 2. 首次部署运行 `pnpm secrets:init -- --confirm-env=<EnvID>`，并把 `.env.local` 纳入私密凭证备份。命令先校验已部署函数，不打印密钥，也不会修改云资源。
-3. 对新环境或新增迁移先做仓库外逻辑备份，预览 `mip_` 迁移范围：`pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --dry-run`。当前共享环境的 29 个锁定迁移已经完成，后续只应用新追加的迁移。
+3. 对新环境或新增迁移先做仓库外逻辑备份，预览 `mip_` 迁移范围：`pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --dry-run`。当前共享环境的 34 个锁定迁移已经完成，后续只应用新追加的迁移。
 4. 只在预览显示存在新迁移时应用：`pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --backup-manifest=/absolute/path/to/manifest.json`。
 5. 运行 `pnpm project:init` 生成环境专属 runtime 用户，再执行 `pnpm database:grants -- --confirm-env=<EnvID> --confirm-runtime-user=<.env.local 中的 MIP_DB_RUNTIME_USER>` 收敛并回读验证精确表级权限。发现 schema/global 权限、缺表授权或账号归属不一致时停止部署。
 6. 仅在 development/test 环境需要占位目录时执行 `pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo`；生产环境不得运行 demo seed。

@@ -70,9 +70,12 @@ test('delivers with one grant and returns only a sanitized task result', async (
   assert.equal(sent.touser, 'openid-private')
   assert.deepEqual(steps, ['lease', 'reserve', 'delivery-fence', 'send', 'finalize'])
   assert.deepEqual(result, {
+    batches: 1,
     leased: 1,
     delivered: 1,
     failed: 0,
+    pending: 0,
+    terminal: 0,
     results: [{ taskId: task.id, status: 'DELIVERED' }],
   })
   assert.equal(JSON.stringify(result).includes('openid-private'), false)
@@ -172,6 +175,68 @@ test('settles an external sender failure through the delivery fence', async () =
   assert.equal(failureCode, 'WECHAT_DELIVERY_FAILED')
   assert.equal(result.failed, 1)
   assert.equal(JSON.stringify(result).includes('openid-private'), false)
+})
+
+test('drains a short retry to delivery in the same bounded invocation', async () => {
+  const context = { appId, userId, grantId, templateKey: 'EVENT_REMINDER' }
+  const protectedValue = protectRecipient('openid-private', key, context, size => Buffer.alloc(size, 9))
+  const task = {
+    id: '30000000-0000-4000-8000-000000000009',
+    app_id: appId,
+    leaseKey: '2026-08-24T01:02:00.000Z',
+  }
+  let currentTime = new Date('2026-08-24T01:00:00.000Z').getTime()
+  let attempts = 0
+  const waits = []
+  const service = createNotificationService({
+    repository: {
+      async leaseTasks() { return [task] },
+      async reserveTask() {
+        return {
+          taskId: task.id,
+          app_id: appId,
+          channel: 'WECHAT_SUBSCRIPTION',
+          template_key: 'EVENT_REMINDER',
+          payload_json: JSON.stringify({ fields: { title: '活动提醒' } }),
+          recipient_user_id: userId,
+          target_route: '/packages/member/mip-events/detail/index?eventId=40000000-0000-4000-8000-000000000001',
+          grant: {
+            id: grantId,
+            recipient_hash: protectedValue.recipientHash,
+            recipient_ciphertext: protectedValue.recipientCiphertext,
+          },
+        }
+      },
+      async deliverReservedTask() {
+        attempts += 1
+        return attempts === 1
+          ? {
+              taskId: task.id,
+              status: 'FAILED',
+              errorCode: 'WECHAT_DELIVERY_FAILED',
+              retryAt: new Date(currentTime + 500).toISOString(),
+            }
+          : { taskId: task.id, status: 'DELIVERED' }
+      },
+    },
+    encryptionKey: key,
+    templates: {
+      EVENT_REMINDER: { templateId: 'template-id', fields: { title: 'thing1' } },
+    },
+    clock: () => currentTime,
+    async wait(delay) {
+      waits.push(delay)
+      currentTime += delay
+    },
+    async sender() {},
+  })
+
+  const result = await service.runDeliveryBatch({ appId, drain: true, limit: 2, maxBatches: 5 })
+  assert.equal(attempts, 2)
+  assert.deepEqual(waits, [500])
+  assert.equal(result.delivered, 1)
+  assert.equal(result.pending, 0)
+  assert.equal(result.terminal, 0)
 })
 
 test('holds the active-user transaction across sender invocation and final state writes', async () => {

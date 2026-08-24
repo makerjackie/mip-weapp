@@ -3,7 +3,11 @@ import {
   assertReadyAssertion,
   parseReadyAssertion,
 } from '../scripts/lib/runtime-ready-assertion.mjs'
-import { evaluateRouteState } from '../scripts/verify-runtime.mjs'
+import {
+  evaluateRouteState,
+  queryForRoute,
+  resolveQueryFixtureValues,
+} from '../scripts/verify-runtime.mjs'
 
 describe('runtime ready assertions', () => {
   it('executes equality and OR assertions against page data', () => {
@@ -50,5 +54,41 @@ describe('runtime ready assertions', () => {
       status: 'failed',
       state: 'ready',
     })
+  })
+
+  it('keeps checking pending and rejects failed payment results', () => {
+    const route = {
+      path: 'packages/member/payment-result/index',
+      kind: 'result',
+      states: ['checking', 'success', 'pending', 'failed', 'refund'],
+      acceptStates: ['success', 'pending', 'refund'],
+      pendingStates: ['checking'],
+      readyAssertion: 'result in success|pending|refund',
+    }
+    expect(evaluateRouteState(route, { result: 'checking' })).toMatchObject({ status: 'pending' })
+    expect(evaluateRouteState(route, { result: 'failed' })).toMatchObject({ status: 'failed' })
+    expect(evaluateRouteState(route, { result: 'refund' })).toMatchObject({ status: 'passed' })
+  })
+
+  it('resolves query values from route-specific page data without placeholders', () => {
+    const route = {
+      path: 'packages/member/mip-public-profile/index',
+      query: ['profileRef'],
+      queryFixture: {
+        sourceRoute: 'packages/member/mip-people/index',
+        dataPath: 'people',
+        values: { profileRef: 'profileRef' },
+      },
+    }
+    const resolved = resolveQueryFixtureValues(route, {
+      people: [{ profileRef: 'p1.real.iv.tag' }],
+    })
+    expect(resolved).toEqual({
+      status: 'resolved',
+      values: { profileRef: 'p1.real.iv.tag' },
+    })
+    expect(queryForRoute(route, resolved.status === 'resolved' ? resolved.values : {}))
+      .toBe('profileRef=p1.real.iv.tag')
+    expect(resolveQueryFixtureValues(route, { people: [] })).toMatchObject({ status: 'external-wait' })
   })
 })

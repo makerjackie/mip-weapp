@@ -2,7 +2,16 @@
 
 const { buildTarget } = require('./routes')
 
-const messageTypes = new Set(['MEMBERSHIP', 'EVENT', 'OPPORTUNITY', 'PROFILE_INTEREST', 'GROWTH', 'OPERATIONS'])
+const messageTypes = new Set([
+  'MEMBERSHIP',
+  'EVENT',
+  'OPPORTUNITY',
+  'PROFILE_INTEREST',
+  'GROWTH',
+  'GROWTH_LEVEL_UP',
+  'GAME',
+  'OPERATIONS',
+])
 
 function normalizeMessage(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input) || !isUuid(input.recipientUserId)) {

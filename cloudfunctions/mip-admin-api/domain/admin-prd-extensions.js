@@ -84,7 +84,7 @@ async function writeAudit(tx, audit) {
   )
 }
 
-function opportunityDto(row, { history = [] } = {}) {
+function opportunityDto(row, { history = [], teamMembers = [] } = {}) {
   return {
     id: String(row.id),
     ownerUserId: row.owner_user_id || '',
@@ -93,6 +93,8 @@ function opportunityDto(row, { history = [] } = {}) {
     valueSummary: row.value_summary,
     targetSummary: row.target_summary || '',
     description: row.description || '',
+    coverAssetId: row.cover_asset_id || null,
+    coverUrl: row.cover_file_id || '',
     scopeType: row.scope_type,
     branchId: row.branch_id || null,
     branchName: row.branch_name || '',
@@ -107,23 +109,26 @@ function opportunityDto(row, { history = [] } = {}) {
     deadlineAt: iso(row.deadline_at),
     version: Number(row.version),
     publishedAt: iso(row.published_at),
+    endedAt: iso(row.ended_at),
     moderatedAt: iso(row.moderated_at),
     moderationReason: row.moderation_reason || '',
     archivedAt: iso(row.archived_at),
     archiveReason: row.archive_reason || '',
     updatedAt: iso(row.updated_at),
     history,
+    teamMembers,
   }
 }
 
 function opportunitySelect(where, suffix = '') {
   return `SELECT o.id, o.owner_user_id, o.title, o.value_summary, o.target_summary, o.description,
-      o.scope_type, o.branch_id, o.city_tag_id, b.name AS branch_name,
+      o.scope_type, o.branch_id, o.city_tag_id, o.cover_asset_id, b.name AS branch_name,
       COALESCE(b.city_name, city_tag.label, '') AS city_name,
       owner_profile.nickname AS owner_nickname,
       o.status, o.content_safety_status, o.referral_count, o.deadline_at, o.version,
-      o.published_at, o.updated_at, o.moderated_at, o.moderation_reason,
+      o.published_at, o.ended_at, o.updated_at, o.moderated_at, o.moderation_reason,
       o.archived_at, o.archive_reason,
+      cover.cloud_file_id AS cover_file_id,
       (SELECT GROUP_CONCAT(role.role_key ORDER BY role.role_key SEPARATOR ',')
        FROM mip_opportunity_roles role
        WHERE role.app_id = o.app_id AND role.opportunity_id = o.id) AS role_keys,
@@ -139,6 +144,8 @@ function opportunitySelect(where, suffix = '') {
     LEFT JOIN mip_city_branches b ON b.app_id = o.app_id AND b.id = o.branch_id
     LEFT JOIN mip_tags city_tag ON city_tag.app_id = o.app_id AND city_tag.id = o.city_tag_id
     LEFT JOIN mip_profiles owner_profile ON owner_profile.app_id = o.app_id AND owner_profile.user_id = o.owner_user_id
+    LEFT JOIN mip_media_assets cover
+      ON cover.app_id = o.app_id AND cover.id = o.cover_asset_id AND cover.status = 'READY'
     WHERE ${where} ${suffix}`
 }
 
@@ -181,14 +188,29 @@ function createAdminPrdExtensions(database, options = {}) {
   async function getOpportunityDetail(appId, opportunityId) {
     const row = await database.one(opportunitySelect('o.app_id = ? AND o.id = ?'), [appId, opportunityId])
     if (!row) return null
-    const auditRows = await database.query(
-      `SELECT a.id, a.action, a.metadata_json, a.created_at, p.nickname AS actor_nickname
-       FROM mip_audit_logs a
-       LEFT JOIN mip_profiles p ON p.app_id = a.app_id AND p.user_id = a.actor_user_id
-       WHERE a.app_id = ? AND a.resource_type = 'OPPORTUNITY' AND a.resource_id = ?
-       ORDER BY a.created_at DESC, a.id DESC LIMIT 100`,
-      [appId, opportunityId],
-    )
+    const [auditRows, teamRows] = await Promise.all([
+      database.query(
+        `SELECT a.id, a.action, a.metadata_json, a.created_at, p.nickname AS actor_nickname
+         FROM mip_audit_logs a
+         LEFT JOIN mip_profiles p ON p.app_id = a.app_id AND p.user_id = a.actor_user_id
+         WHERE a.app_id = ? AND a.resource_type = 'OPPORTUNITY' AND a.resource_id = ?
+         ORDER BY a.created_at DESC, a.id DESC LIMIT 100`,
+        [appId, opportunityId],
+      ),
+      database.query(
+        `SELECT member.user_id, profile.nickname, branch.name AS branch_name
+         FROM mip_opportunity_team_members member
+         INNER JOIN mip_users user
+           ON user.app_id = member.app_id AND user.id = member.user_id AND user.status = 'ACTIVE'
+         LEFT JOIN mip_profiles profile
+           ON profile.app_id = user.app_id AND profile.user_id = user.id
+         LEFT JOIN mip_city_branches branch
+           ON branch.app_id = user.app_id AND branch.id = user.primary_branch_id
+         WHERE member.app_id = ? AND member.opportunity_id = ? AND member.status = 'ACTIVE'
+         ORDER BY member.sort_order, member.id`,
+        [appId, opportunityId],
+      ),
+    ])
     return opportunityDto(row, {
       history: auditRows.map(item => ({
         id: String(item.id),
@@ -196,6 +218,11 @@ function createAdminPrdExtensions(database, options = {}) {
         actorNickname: item.actor_nickname || '系统',
         metadata: json(item.metadata_json, {}),
         createdAt: iso(item.created_at),
+      })),
+      teamMembers: teamRows.map(item => ({
+        userId: item.user_id,
+        nickname: item.nickname || '未填写昵称',
+        branchName: item.branch_name || '',
       })),
     })
   }
@@ -356,6 +383,33 @@ function createAdminPrdExtensions(database, options = {}) {
       if (Number(result.affectedRows) !== 1) throw codeError('CONFLICT')
       await writeAudit(tx, input.audit)
       return { id: input.opportunityId, status: 'PUBLISHED', version: input.expectedVersion + 1 }
+    })
+  }
+
+  async function endOpportunity(input) {
+    return database.transaction(async (tx) => {
+      const authorization = await lockMutation(tx, input)
+      const current = await tx.one(
+        `SELECT id, branch_id, status, version
+         FROM mip_opportunities WHERE app_id = ? AND id = ? FOR UPDATE`,
+        [input.appId, input.opportunityId],
+      )
+      if (!current) throw codeError('NOT_FOUND')
+      const scope = ownedScope(current)
+      assertScope(authorization, scope)
+      if (!sameScope(scope, input.authorizedScope)) throw codeError('CONFLICT')
+      if (Number(current.version) !== input.expectedVersion) throw codeError('CONFLICT')
+      if (current.status !== 'PUBLISHED') throw codeError('INVALID_STATE')
+      const result = await tx.query(
+        `UPDATE mip_opportunities SET status = 'ENDED', ended_at = UTC_TIMESTAMP(3),
+          moderated_at = UTC_TIMESTAMP(3), moderated_by_user_id = ?,
+          moderation_reason = NULL, version = version + 1
+         WHERE app_id = ? AND id = ? AND version = ? AND status = 'PUBLISHED'`,
+        [input.actorUserId, input.appId, input.opportunityId, input.expectedVersion],
+      )
+      if (Number(result.affectedRows) !== 1) throw codeError('CONFLICT')
+      await writeAudit(tx, input.audit)
+      return { id: input.opportunityId, status: 'ENDED', version: input.expectedVersion + 1 }
     })
   }
 
@@ -676,6 +730,7 @@ function createAdminPrdExtensions(database, options = {}) {
 
   return {
     archiveEvent,
+    endOpportunity,
     getOpportunityDetail,
     getOpportunityEditorOptions,
     getUserRelatedRecords,

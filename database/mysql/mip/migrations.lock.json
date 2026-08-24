@@ -410,6 +410,71 @@
         "mip_game_ranking_entries"
       ],
       "altersTables": []
+    },
+    {
+      "version": "20260824300000",
+      "name": "mip_digital_avatar_generations",
+      "sql": "database/mysql/mip/030_digital_avatar_generations.sql",
+      "sqlSha256": "a01de808aec4624366e045a8985b96590f9fd599d75fa4fd4a269ea631ca46b9",
+      "rollback": "database/mysql/mip/rollback/030_digital_avatar_generations.sql",
+      "rollbackSha256": "8d3fa7f41e2b523104524a912139fa14919db334c1e5f9694ae475b67673ab6b",
+      "createsTables": [
+        "mip_digital_avatar_generations"
+      ],
+      "altersTables": []
+    },
+    {
+      "version": "20260824310000",
+      "name": "mip_message_campaigns",
+      "sql": "database/mysql/mip/031_message_campaigns.sql",
+      "sqlSha256": "ac9776bb452887260baaa52ed304b171273d9986ee7e970cabe55480bd7dd8cc",
+      "rollback": "database/mysql/mip/rollback/031_message_campaigns.sql",
+      "rollbackSha256": "827e84d2bed10e0c466da37cc163341567b1f5fce9d0b294bfebf7e38b3982fd",
+      "createsTables": [
+        "mip_message_campaigns",
+        "mip_message_campaign_recipients"
+      ],
+      "altersTables": []
+    },
+    {
+      "version": "20260824320000",
+      "name": "mip_game_coin_safety",
+      "sql": "database/mysql/mip/032_game_coin_safety.sql",
+      "sqlSha256": "f98f404eb0f7cf3d190e19032fc9f45a523e2203395bdc67f528a8b1e0df4e32",
+      "rollback": "database/mysql/mip/rollback/032_game_coin_safety.sql",
+      "rollbackSha256": "37f61c95fd720a75e96409576f45b31fc76eabb84105dbc794793b7fbe4b0a51",
+      "createsTables": [],
+      "altersTables": [
+        "mip_growth_accounts",
+        "mip_growth_entries"
+      ]
+    },
+    {
+      "version": "20260824330000",
+      "name": "mip_configurable_rbac",
+      "sql": "database/mysql/mip/033_configurable_rbac.sql",
+      "sqlSha256": "b19b46ab6a9bc64fd7d57721684c62531da975ea1a503ee896baa9329e08e5b8",
+      "rollback": "database/mysql/mip/rollback/033_configurable_rbac.sql",
+      "rollbackSha256": "5ba55b34a2fb6d0d61b9d0139a6e8d671280c3005c6ccfff5866c650b22817d8",
+      "createsTables": [
+        "mip_role_capability_policies"
+      ],
+      "altersTables": []
+    },
+    {
+      "version": "20260824340000",
+      "name": "mip_opportunity_comments",
+      "sql": "database/mysql/mip/034_opportunity_comments.sql",
+      "sqlSha256": "c772842386f9ebdf43f7f5c24c5022a1e35c67923798215a74b092bc4d8b691c",
+      "rollback": "database/mysql/mip/rollback/034_opportunity_comments.sql",
+      "rollbackSha256": "c10f60695288c1f52e1475a70b96d8ab993aeb5932d45b5c938f4fe5bf1e8c06",
+      "createsTables": [
+        "mip_opportunity_comment_settings",
+        "mip_opportunity_comments",
+        "mip_opportunity_comment_calls",
+        "mip_opportunity_comment_reports"
+      ],
+      "altersTables": []
     }
   ]
 }

@@ -26,6 +26,7 @@ function createIdentityService(options) {
   const phoneResolver = options.phoneResolver
   const protectPhone = options.protectPhone
   const profileRefReader = options.profileRefReader
+  const profileRefWriter = options.profileRefWriter
   const entitlementReader = options.entitlementReader || {
     load: (appId, userId) => repository.loadEntitlement(appId, userId),
   }
@@ -34,7 +35,10 @@ function createIdentityService(options) {
     const user = await repository.ensureUser(caller)
     const facts = await repository.loadFacts(caller.appId, user.id)
     const membership = await membershipProjection(entitlementReader, caller.appId, user.id)
-    return snapshotDto(facts, agreements, membership)
+    const profileRef = typeof profileRefWriter === 'function'
+      ? profileRefWriter({ appId: caller.appId, userId: user.id })
+      : undefined
+    return snapshotDto(facts, agreements, membership, profileRef)
   }
 
   async function acceptAgreements(caller, value) {
@@ -183,13 +187,14 @@ function assertActiveUser(user) {
   }
 }
 
-function snapshotDto(facts, agreements, membership) {
+function snapshotDto(facts, agreements, membership, profileRef) {
   const accepted = new Set((facts.acceptances || []).map(
     item => `${item.agreement_key}:${item.agreement_version}`,
   ))
   return {
     authenticated: true,
     userId: facts.user.id,
+    ...(profileRef ? { profileRef } : {}),
     userVersion: Number(facts.user.version),
     userStatus: facts.user.status,
     phoneBound: Boolean(facts.privateProfile?.phone_verified_at),

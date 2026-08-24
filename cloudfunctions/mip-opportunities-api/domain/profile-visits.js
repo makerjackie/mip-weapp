@@ -159,22 +159,31 @@ async function listProfileVisitors(database, caller, rawInput = {}) {
     [caller.appId, caller.userId, caller.appId, ...blockFilter.params, ...params.slice(2 + blockFilter.params.length)],
   )
   const page = rows.slice(0, limit)
-  const unread = await database.one(
-    `SELECT COUNT(*) AS count
-     FROM (
-       SELECT visitor_user_id
+  const [unread, total] = await Promise.all([
+    database.one(
+      `SELECT COUNT(*) AS count
+       FROM (
+         SELECT visitor_user_id
+         FROM mip_profile_visits
+         WHERE app_id = ? AND profile_user_id = ? AND read_at IS NULL
+         GROUP BY visitor_user_id
+       ) unread_groups
+       INNER JOIN mip_users visitor
+         ON visitor.app_id = ? AND visitor.id = unread_groups.visitor_user_id AND visitor.status = 'ACTIVE'
+       WHERE ${blockFilter.sql || '1 = 1'}`,
+      [caller.appId, caller.userId, caller.appId, ...blockFilter.params],
+    ),
+    database.one(
+      `SELECT COUNT(*) AS count
        FROM mip_profile_visits
-       WHERE app_id = ? AND profile_user_id = ? AND read_at IS NULL
-       GROUP BY visitor_user_id
-     ) unread_groups
-     INNER JOIN mip_users visitor
-       ON visitor.app_id = ? AND visitor.id = unread_groups.visitor_user_id AND visitor.status = 'ACTIVE'
-     WHERE ${blockFilter.sql || '1 = 1'}`,
-    [caller.appId, caller.userId, caller.appId, ...blockFilter.params],
-  )
+       WHERE app_id = ? AND profile_user_id = ?`,
+      [caller.appId, caller.userId],
+    ),
+  ])
   return {
     items: page.map(row => visitorDto({ ...row, visitor_user_id: row.visitor_id }, caller)),
     unreadCount: Number(unread?.count || 0),
+    totalViewCount: Number(total?.count || 0),
     nextCursor: rows.length > limit && page.length
       ? encodeVisitorCursor(page.at(-1).last_visited_at, page.at(-1).visitor_id, caller)
       : undefined,

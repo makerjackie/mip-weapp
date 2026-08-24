@@ -61,6 +61,16 @@ function entryView(item: AdminGrowthEntry): GrowthEntryView {
   }
 }
 
+function metricLabel(value: AdminGrowthEntry['metric']) {
+  if (value === 'EXPERIENCE') {
+    return '经验值'
+  }
+  if (value === 'CONTRIBUTION') {
+    return '贡献值'
+  }
+  return '游戏币'
+}
+
 Page({
   data: {
     state: 'loading' as AdminPageState,
@@ -184,7 +194,10 @@ Page({
         reason: this.data.reason,
         idempotencyKey: `admin-growth-${this.data.selectedUserId}-${Date.now()}`,
       }))
-      wx.showToast({ title: '成长值已调整', icon: 'success' })
+      wx.showToast({
+        title: `${metricLabel(this.data.metric as AdminGrowthEntry['metric'])}已调整`,
+        icon: 'success',
+      })
       this.setData({ deltaValue: '', reason: '' })
       await this.loadEntries(true)
     }

@@ -272,15 +272,36 @@ async function assertBannersAdmin(adapter, caller, lock = false) {
     if (!user || user.status !== 'ACTIVE') throw new Error('FORBIDDEN')
   }
   const row = await adapter.one(
-    `SELECT role_key FROM mip_admin_role_bindings
-     WHERE app_id = ? AND user_id = ? AND scope_type = 'PLATFORM'
-       AND scope_id = ? AND status = 'ACTIVE'
-       AND role_key IN ('PLATFORM_OWNER', 'PLATFORM_OPERATIONS')
-     ORDER BY role_key ${lock ? 'FOR UPDATE' : ''}`,
+    `SELECT binding.role_key,
+      CASE WHEN policy.policy_mode = 'CUSTOM' THEN policy.capabilities_json ELSE NULL END AS policy_capabilities_json
+     FROM mip_admin_role_bindings binding
+     LEFT JOIN mip_role_capability_policies policy
+       ON policy.app_id = binding.app_id AND policy.role_key = binding.role_key
+     WHERE binding.app_id = ? AND binding.user_id = ? AND binding.scope_type = 'PLATFORM'
+       AND binding.scope_id = ? AND binding.status = 'ACTIVE'
+       AND binding.role_key IN ('PLATFORM_OWNER', 'PLATFORM_OPERATIONS')
+     ORDER BY (binding.role_key = 'PLATFORM_OWNER') DESC, binding.role_key ${lock ? 'FOR UPDATE' : ''}`,
     [caller.appId, caller.userId, PLATFORM_SCOPE_ID],
   )
-  if (!row || !BANNER_ADMIN_ROLES.has(row.role_key)) throw new Error('FORBIDDEN')
+  if (!row || !BANNER_ADMIN_ROLES.has(row.role_key)
+    || !configuredCapabilityAllows(row, BANNERS_CAPABILITY)) throw new Error('FORBIDDEN')
   return row.role_key
+}
+
+function configuredCapabilityAllows(row, capability) {
+  if (row.role_key === 'PLATFORM_OWNER') return true
+  const value = row.policy_capabilities_json
+  if (value === null || value === undefined) return true
+  try {
+    const capabilities = typeof value === 'string' ? JSON.parse(value) : value
+    return Array.isArray(capabilities)
+      && new Set(capabilities).size === capabilities.length
+      && capabilities.every(item => typeof item === 'string')
+      && capabilities.includes(capability)
+  }
+  catch {
+    return false
+  }
 }
 
 async function getMedia(adapter, appId, assetId, lock = false) {

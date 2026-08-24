@@ -7,6 +7,8 @@ const emptyCounts: AdminDashboard['counts'] = {
   totalUsers: 0,
   newUsers7d: 0,
   activePlayers: 0,
+  interactingPlayers30d: 0,
+  playerInteractionRate30d: 0,
   totalEvents: 0,
   publishedEvents: 0,
   pendingRegistrations: 0,
@@ -14,6 +16,9 @@ const emptyCounts: AdminDashboard['counts'] = {
   pendingRefunds: 0,
   totalOpportunities: 0,
   publishedOpportunities: 0,
+  publishedLifecycleOpportunities: 0,
+  convertedOpportunities: 0,
+  opportunityConversionRate: 0,
 }
 
 Page({
@@ -24,6 +29,7 @@ Page({
     canBranches: false,
     canCommunityReports: false,
     canAnnouncements: false,
+    canMessages: false,
     canEvents: false,
     canOrders: false,
     canOpportunities: false,
@@ -57,6 +63,7 @@ Page({
         canBranches: hasCapability(grants, 'branches.manage'),
         canCommunityReports: hasCapability(grants, 'community.reports.manage'),
         canAnnouncements: hasCapability(grants, 'announcements.manage'),
+        canMessages: hasCapability(grants, 'messages.manage'),
         canEvents: hasCapability(grants, 'events.read'),
         canOrders: hasCapability(grants, 'orders.read'),
         canOpportunities: hasCapability(grants, 'opportunities.moderate'),
@@ -66,7 +73,7 @@ Page({
         canBadges: hasCapability(grants, 'badges.manage'),
         canGame: hasCapability(grants, 'game.manage'),
         canExceptions: hasCapability(grants, 'operations.exceptions.read'),
-        canRoles: hasCapability(grants, 'events.team.manage'),
+        canRoles: hasCapability(grants, 'roles.change'),
         canAudit: hasCapability(grants, 'audit.read'),
         message: '',
       })

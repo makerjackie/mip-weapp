@@ -1,10 +1,10 @@
 # Figma 页面映射
 
-设计文件：[MIP](https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972)。当前记录来自原始画布的浏览器逐 frame 核对；MCP Starter 配额受限，不把 DOM 浏览或 design context 调用描述为成功证据。只看页面级 metadata 不足以还原视觉。
+设计文件：[MIP](https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972)。节点映射来自固定 PRD、画板链接和已能观察到的页面层级；当前 MCP Starter 调用额度不足，尚未取得可复核的完整 design context、切图或同尺寸 frame 截图。因此本文件只固定页面映射和已明确的业务批注，不把链接可打开或浏览器观察描述为视觉验收证据。
 
 ## 主导航
 
-Figma 已确认四个主 Tab，顺序固定为：
+固定设计输入采用四个主 Tab，顺序为：
 
 1. 发现
 2. 活动

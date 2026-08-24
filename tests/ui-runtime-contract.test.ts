@@ -23,8 +23,15 @@ interface RuntimeRoute {
   kind: string
   states: string[]
   acceptStates?: string[]
+  pendingStates?: string[]
   readyAssertion?: string
   query?: string[]
+  queryFixture?: {
+    sourceRoute: string
+    dataPath: string
+    where?: Record<string, unknown>
+    values: Record<string, string>
+  }
   deviceRequired?: string[]
   tab?: boolean
 }
@@ -151,7 +158,7 @@ describe('mip-weapp UI runtime contract', () => {
   })
 
   it('declares settled states without accepting failures as success', () => {
-    const rejectedStates = ['loading', 'error', 'forbidden', 'conflict', 'expired', 'disabled']
+    const rejectedStates = ['loading', 'error', 'forbidden', 'conflict', 'expired', 'disabled', 'failed']
     for (const route of contract.routes) {
       expect(() => parseReadyAssertion(route.readyAssertion, route.path)).not.toThrow()
       if (route.kind === 'result') {
@@ -195,13 +202,16 @@ describe('mip-weapp UI runtime contract', () => {
     }
   })
 
-  it('drives runtime verification from the route contract and safe query placeholders', () => {
+  it('drives runtime verification from route-specific real-data query fixtures', () => {
     expect(verifyRuntime).toContain('config/runtime-pages.json')
     expect(verifyRuntime).toContain('runtimePages.routes')
     expect(verifyRuntime).toContain('runtimePages.routeCount')
     expect(verifyRuntime).toContain('queryForRoute')
-    expect(verifyRuntime).toContain('safePlaceholderUuid')
-    expect(verifyRuntime).toContain('safe-placeholder-uuid')
+    expect(verifyRuntime).toContain('resolveRouteQuery')
+    expect(verifyRuntime).toContain('resolveQueryFixtureValues')
+    expect(verifyRuntime).toContain('status: \'external-wait\'')
+    expect(verifyRuntime).not.toContain('safePlaceholderUuid')
+    expect(verifyRuntime).not.toContain('safe-placeholder-uuid')
     expect(verifyRuntime).toContain('assertNoSensitivePageData')
     expect(verifyRuntime).toContain('evaluateRouteState')
     expect(verifyRuntime).toContain('assertReadyAssertion')
@@ -268,20 +278,33 @@ describe('mip-weapp UI runtime contract', () => {
       'calendar-location',
       'customer-service',
       'event-album-photo',
+      'online-event-webview',
       'phone-auth',
+      'phone-call',
       'photo-save',
+      'profile-avatar',
       'qr-checkin',
       'share',
       'subscription-message',
       'task-attachment',
       'task-template',
+      'video-channel',
       'wechat-pay',
     ])
     const routeSet = new Set(contractRoutes)
+    const routeByPath = new Map(contract.routes.map(route => [route.path, route]))
     for (const capability of contract.deviceRequiredCapabilities) {
       expect(capability.reason).toBeTruthy()
       for (const route of capability.routes) {
         expect(routeSet.has(route), `${capability.id} references inactive route ${route}`).toBe(true)
+        expect(routeByPath.get(route)?.deviceRequired, `${route} does not map ${capability.id} back to its route`).toContain(capability.id)
+      }
+    }
+    for (const route of contract.routes) {
+      for (const capabilityId of route.deviceRequired ?? []) {
+        const capability = contract.deviceRequiredCapabilities.find(item => item.id === capabilityId)
+        expect(capability, `${route.path} references unknown capability ${capabilityId}`).toBeTruthy()
+        expect(capability!.routes).toContain(route.path)
       }
     }
     expect(verifyRuntime).toContain('DEVICE_REQUIRED_NOT_VERIFIED')
@@ -293,7 +316,11 @@ describe('mip-weapp UI runtime contract', () => {
     const byId = new Map(contract.deviceRequiredCapabilities.map(item => [item.id, item]))
     expect(byId.get('calendar-location')?.routes).toEqual(['packages/member/mip-events/detail/index'])
     expect(byId.get('event-album-photo')?.routes).toEqual(['packages/member/event-album/index'])
-    expect(byId.get('photo-save')?.routes).toEqual(['packages/admin/event-console/index'])
+    expect(byId.get('photo-save')?.routes).toEqual(expect.arrayContaining([
+      'pages/membership/index',
+      'packages/admin/event-console/index',
+      'packages/member/mip-events/detail/index',
+    ]))
     expect(byId.get('qr-checkin')?.routes).toEqual(expect.arrayContaining([
       'packages/member/mip-events/check-in/index',
       'packages/admin/event-registrations/index',
@@ -316,6 +343,20 @@ describe('mip-weapp UI runtime contract', () => {
     expect(byPath.get('packages/member/mip-events/participants/index')?.query).toEqual(['eventId'])
     expect(byPath.get('packages/member/mip-public-profile/index')?.query).toEqual(['profileRef'])
     expect(byPath.get('packages/member/order-detail/index')?.query).toEqual(['orderId'])
+    for (const route of contract.routes.filter(item => item.query?.length)) {
+      expect(route.queryFixture, `${route.path} needs a real-data fixture`).toBeTruthy()
+      expect(Object.keys(route.queryFixture!.values).sort()).toEqual([...route.query!].sort())
+      expect(byPath.has(route.queryFixture!.sourceRoute)).toBe(true)
+      expect(byPath.get(route.queryFixture!.sourceRoute)?.query ?? []).toEqual([])
+    }
+  })
+
+  it('keeps payment checking pending and accepts only server-settled outcomes', () => {
+    const paymentResult = contract.routes.find(route => route.id === 'U14')
+    expect(paymentResult?.states).toEqual(expect.arrayContaining(['checking', 'success', 'pending', 'failed', 'refund']))
+    expect(paymentResult?.pendingStates).toEqual(['checking'])
+    expect(paymentResult?.acceptStates).toEqual(['success', 'pending', 'refund'])
+    expect(paymentResult?.readyAssertion).toBe('result in success|pending|refund')
   })
 
   it('uses one event-management entry and a consistent eventId query', () => {

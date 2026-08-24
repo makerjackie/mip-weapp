@@ -6,8 +6,8 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 
 | 范围 | 当前事实 | 结论 |
 | --- | --- | --- |
-| 数据库 | 29 个锁定的 `mip_*` 迁移已在当前共享数据库成功应用，变更前稳定备份保存在本地仓库外目录 | 云端已验证；后续新增迁移仍需遵守备份合同 |
-| runtime 数据库权限 | 环境专属账号已收敛为 75 张 MIP 业务表的精确表级权限，幂等复跑为 `already current` | 云端已验证；没有 schema/global 权限或跨项目表权限 |
+| 数据库 | 34 个锁定的 `mip_*` 迁移已在当前共享数据库成功应用，变更前稳定备份保存在本地仓库外目录 | 云端已验证；后续新增迁移仍需遵守备份合同 |
+| runtime 数据库权限 | 环境专属账号已收敛为 83 张 MIP 业务表的精确表级权限，幂等复跑为 `already current` | 云端已验证；没有 schema/global 权限或跨项目表权限 |
 | 数据隔离 | 迁移后隔离检查通过，MIP 变更只落在 `mip_*` 对象和 `mip_schema_migrations` | 云端已验证；没有把旧项目表当作 MIP 事实 |
 | 开发者工具 | 已登录当前项目并能看到云函数列表 | 只证明控制台可见性，不证明函数配置或健康 |
 | 核心函数 | 云端已存在一个空的 `mip-identity-api` 函数壳 | `external-wait`；尚未写入目标 VPC、子网、运行时环境变量和仓库代码，MySQL 健康检查未通过 |
@@ -60,7 +60,7 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 
 ## 受控 worker
 
-`mip-notification-worker`、`mip-outbox-worker` 和 `mip-refund-worker` 只保留函数，不安装高频定时触发器。`mip-notifications-api` 显式允许已登录小程序调用，三个 worker 与 payment ledger 显式禁止客户端调用；部署和云端验收会收敛并复核这些函数级权限。任何访问 MySQL 的 5 分钟级 timer 都会阻止 Serverless MySQL 自动暂停并产生持续 CCU 消耗。业务事实与 outbox 在同一事务提交；通知授权先由 reservation 短事务独占，实际微信调用和最终状态写入再由锁定 `ACTIVE` 用户的专用投递事务串行化，避免账号注销提交后继续发信。微信接收与 MySQL 提交仍是 at-least-once 外部边界，详见 [NOTIFICATIONS.md](NOTIFICATIONS.md)。退款 worker 从 ledger 回查权威退款事实并使用不可变商户退款单号保证重试安全。积压由运营命令显式恢复：
+`mip-notification-worker`、`mip-outbox-worker` 和 `mip-refund-worker` 只保留函数，不安装高频定时触发器。`mip-notifications-api` 显式允许已登录小程序调用，三个 worker 与 payment ledger 显式禁止客户端调用；部署和云端验收会收敛并复核这些函数级权限。任何访问 MySQL 的 5 分钟级 timer 都会阻止 Serverless MySQL 自动暂停并产生持续 CCU 消耗。业务事实与 outbox 在同一事务提交；身份、活动、机会、交易、任务、管理 API 以及 payment ledger 在成功提交且对应 action 可能写入 outbox 后，以可信 AppID 和内部 HMAC 唤醒有数量与 45 秒时限的批量排空。每批最多并行处理 10 条，单次最多 100 批；存在微信订阅任务时，在 outbox 事实完成前同步触发通知 worker，失败会保留可重试事实。Payment ledger 只使用其已通过内部 HMAC 校验的 AppID；缺少 `MIP_OUTBOX_HMAC_SECRET` 时安全跳过，调用失败只记录不含密钥的结构化错误，不回滚已提交业务。成长 API 的内部投影 action 不反向唤醒 outbox，避免 worker 递归。通知授权先由 reservation 短事务独占，实际微信调用和最终状态写入再由锁定 `ACTIVE` 用户的专用投递事务串行化，避免账号注销提交后继续发信。微信接收与 MySQL 提交仍是 at-least-once 外部边界，详见 [NOTIFICATIONS.md](NOTIFICATIONS.md)。极端积压仍可由运营命令显式恢复：
 
 ```bash
 pnpm outbox:run -- --confirm-env=<EnvID> --limit=10

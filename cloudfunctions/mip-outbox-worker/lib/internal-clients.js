@@ -23,6 +23,21 @@ function createInternalClients(options) {
       return invoke(options.cloud, options.notificationFunctionName, { ...event, signature })
     },
 
+    async runNotificationBatch(appId, limit = 20) {
+      assertFunctionName(options.notificationFunctionName)
+      assertSecret(options.notificationSecret, 'NOTIFICATION_CLIENT_CONFIG_REQUIRED')
+      const event = {
+        action: 'runDeliveryBatch',
+        appId,
+        limit: Math.min(20, Math.max(1, Number(limit) || 20)),
+        drain: true,
+        maxBatches: 5,
+        timestamp: Number(now()),
+      }
+      const signature = signNotificationEvent(event, options.notificationSecret)
+      return invoke(options.cloud, options.notificationFunctionName, { ...event, signature })
+    },
+
     async recordConfirmedEvent(appId, growth) {
       assertFunctionName(options.growthFunctionName)
       assertSecret(options.growthSecret, 'GROWTH_CLIENT_CONFIG_REQUIRED')
@@ -34,7 +49,9 @@ function createInternalClients(options) {
             timestamp: Number(now()),
           }
         : {
-            action: 'recordConfirmedEvent',
+            action: growth.action === 'grantGameCoins' || growth.action === 'spendGameCoins'
+              ? growth.action
+              : 'recordConfirmedEvent',
             appId,
             userId: growth.userId,
             sourceEventType: growth.sourceEventType,
@@ -90,7 +107,9 @@ function assertFunctionName(value) {
 }
 
 function assertSecret(value, code) {
-  if (typeof value !== 'string' || value.length < 32) throw new Error(code)
+  if (typeof value !== 'string' || value.length < 32) {
+    throw new Error(code)
+  }
 }
 
 function text(value) {

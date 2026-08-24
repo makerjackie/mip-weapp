@@ -175,20 +175,51 @@ describe('outbox event projector', () => {
     }
     const result = await projectEvent({
       async one(sql, params) {
-        assert.match(sql, /mip_growth_entries/)
-        assert.deepEqual(params, ['wx-app', event.aggregate_id])
-        return {
-          id: event.aggregate_id,
-          user_id: '70000000-0000-4000-8000-000000000001',
-          metric: 'EXPERIENCE',
-          delta_value: 10,
-          balance_after: 90,
+        if (sql.includes('mip_growth_entries')) {
+          assert.deepEqual(params, ['wx-app', event.aggregate_id])
+          return {
+            id: event.aggregate_id,
+            user_id: '70000000-0000-4000-8000-000000000001',
+            metric: 'EXPERIENCE',
+            delta_value: 10,
+            balance_after: 90,
+          }
         }
+        assert.match(sql, /mip_growth_levels/)
+        assert.deepEqual(params, ['wx-app', 80, 90])
+        return null
       },
     }, event)
     assert.equal(result.notifications[0].messageType, 'GROWTH')
     assert.equal(result.notifications[0].body, '本次增加 10，当前余额 90。')
     assert.deepEqual(result.growth, [])
+  })
+
+  it('creates the upgrade popup category only when an experience entry crosses a level', async () => {
+    const event = {
+      ...base,
+      aggregate_type: 'GROWTH_ENTRY',
+      aggregate_id: '60000000-0000-4000-8000-000000000009',
+      event_type: 'growth.changed',
+      source_version: 5,
+    }
+    const result = await projectEvent({
+      async one(sql) {
+        if (sql.includes('mip_growth_entries')) {
+          return {
+            id: event.aggregate_id,
+            user_id: '70000000-0000-4000-8000-000000000009',
+            metric: 'EXPERIENCE',
+            delta_value: 20,
+            balance_after: 105,
+          }
+        }
+        return { name: '二级', minimum_experience: 100 }
+      },
+    }, event)
+    assert.equal(result.notifications[0].messageType, 'GROWTH_LEVEL_UP')
+    assert.equal(result.notifications[0].title, '等级已提升')
+    assert.match(result.notifications[0].body, /二级/)
   })
 
   it('projects check-in and revocation from immutable transition relations only', async () => {
@@ -563,7 +594,7 @@ describe('outbox event projector', () => {
     assert.deepEqual(result.growth, [])
   })
 
-  it('does not project a historical game coin entry', async () => {
+  it('projects a game coin entry as a trusted GAME message', async () => {
     const event = {
       ...base,
       aggregate_type: 'GROWTH_ENTRY',
@@ -572,7 +603,7 @@ describe('outbox event projector', () => {
     }
     const result = await projectEvent({
       async one(sql) {
-        assert.match(sql, /metric IN \('EXPERIENCE', 'CONTRIBUTION'\)/)
+        assert.match(sql, /metric IN \('EXPERIENCE', 'CONTRIBUTION', 'COIN'\)/)
         return {
           id: event.aggregate_id,
           user_id: '70000000-0000-4000-8000-000000000003',
@@ -582,8 +613,62 @@ describe('outbox event projector', () => {
         }
       },
     }, event)
+    assert.equal(result.notifications[0].messageType, 'GAME')
+    assert.equal(result.notifications[0].title, '游戏币已更新')
+    assert.equal(result.notifications[0].targetType, 'GAME')
+    assert.equal(result.notifications[0].body, '本次获得 5 游戏币，当前余额 25。')
+  })
+
+  it('projects one fixed game coin grant per winner present at the finalized week end', async () => {
+    const event = {
+      ...base,
+      aggregate_type: 'GAME_MATCH',
+      aggregate_id: '60000000-0000-4000-8000-000000000010',
+      event_type: 'game.match.finalized',
+      source_version: 2,
+    }
+    const result = await projectEvent({
+      async one(sql, params) {
+        assert.match(sql, /mip_game_weekly_matches/)
+        assert.deepEqual(params, ['wx-app', event.aggregate_id])
+        return {
+          id: event.aggregate_id,
+          team_a_id: '61000000-0000-4000-8000-000000000001',
+          team_b_id: '61000000-0000-4000-8000-000000000002',
+          team_a_score: 50,
+          team_b_score: 40,
+          week_start: '2026-08-17',
+          week_end: '2026-08-23',
+          status: 'FINALIZED',
+          version: 2,
+        }
+      },
+      async query(sql, params) {
+        assert.match(sql, /mip_game_team_memberships/)
+        assert.match(sql, /member\.joined_at <=/)
+        assert.match(sql, /member\.left_at IS NULL/)
+        assert.deepEqual(params, ['wx-app', '61000000-0000-4000-8000-000000000001', '2026-08-23', '2026-08-23'])
+        return [
+          { user_id: '62000000-0000-4000-8000-000000000001' },
+          { user_id: '62000000-0000-4000-8000-000000000002' },
+        ]
+      },
+    }, event)
+    assert.deepEqual(result.growth, [
+      {
+        action: 'grantGameCoins',
+        userId: '62000000-0000-4000-8000-000000000001',
+        sourceEventType: 'game.match_won',
+        sourceEventId: event.aggregate_id,
+      },
+      {
+        action: 'grantGameCoins',
+        userId: '62000000-0000-4000-8000-000000000002',
+        sourceEventType: 'game.match_won',
+        sourceEventId: event.aggregate_id,
+      },
+    ])
     assert.deepEqual(result.notifications, [])
-    assert.equal(result.reason, 'FACT_OUT_OF_SCOPE')
   })
 
   it('projects an operations notification only from the app-scoped recipient fact', async () => {

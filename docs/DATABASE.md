@@ -1,6 +1,6 @@
 # Database
 
-MIP 权威结构在 `database/mysql/mip/` 和该目录的 `migrations.lock.json`。当前 lock 固定 29 个追加迁移；新表前缀固定为 `mip_*`，完整迁移记录写入 `mip_schema_migrations`，每条语句的执行状态写入 `mip_schema_migration_steps`，引擎使用 InnoDB。`mip_orders` 统一承载会员和付费活动订单。当前共享数据库已经应用全部 29 个锁定迁移，并通过迁移版本、对象隔离与幂等复跑检查；变更前稳定备份保存在 `~/Backups/mip-weapp/2026-08-24T090959-097Z/`。
+MIP 权威结构在 `database/mysql/mip/` 和该目录的 `migrations.lock.json`。当前 lock 固定 34 个追加迁移；新表前缀固定为 `mip_*`，完整迁移记录写入 `mip_schema_migrations`，每条语句的执行状态写入 `mip_schema_migration_steps`，引擎使用 InnoDB。`mip_orders` 统一承载会员和付费活动订单。当前共享数据库已经应用全部 34 个锁定迁移，并通过迁移版本、对象隔离与幂等复跑检查；变更前稳定备份保存在 `~/Backups/mip-weapp/2026-08-24T112700-446Z/`。
 
 活动相册由 `012_event_album.sql` 追加 `mip_event_album_photos` 与活动相册配置；照片只做状态迁移和版本更新，不执行物理业务删除。`015_checkin_growth_compensation.sql` 追加签到 transition，并将经验余额改为可表达精确冲销的有符号值。`016_notification_delivery_reservations.sql` 为订阅授权追加任务级 reservation，使微信调用可以移出数据库事务且不被其他任务并发复用。`021_referral_targets.sql` 将历史引荐安全回填给对应机会发布人，再把被引荐人收敛为非空外键；发起人和机会的原唯一约束保持不变。后续迁移继续按 lock 中的版本和 checksum 顺序应用。
 
@@ -15,6 +15,8 @@ MIP 权威结构在 `database/mysql/mip/` 和该目录的 `migrations.lock.json`
 `028_badge_collection.sql` 追加勋章目录、用户获授事实、勋章收藏版本和最多 3 个佩戴槽位。获授撤销只改状态并追加管理审计；仍在佩戴的获授记录不能撤销，客户端保存佩戴状态必须通过服务端版本和有效获授校验。
 
 `029_gamification_foundation.sql` 追加赛季、团队、团队成员历史、每周赛况、排行榜快照和排行条目。每周结算与团队/个人排行只从当前 AppID 的服务端成长事实生成，客户端不能提交分数；历史赛况与排行以快照保留，不随后续经验变化重算。
+
+`032_game_coin_safety.sql` 为已有游戏币账户追加非负约束和查询索引，并约束游戏币流水的 `balance_after` 不得为负。游戏币继续使用 `mip_growth_accounts.coin_balance` 与 append-only `mip_growth_entries`，不建立客户端钱包事实或第二套余额。
 
 根目录下 `database/mysql/001_member_schema.sql` 至 `014_event_owner_backfill_v2.sql` 是历史会员模板迁移，仅供迁移参考。默认命令不会应用、修复或回滚这些 `member_*` 对象；历史 `scripts/apply-mysql-schema.mjs` 默认禁用，只能在同时确认 legacy member schema 与隔离测试数据库的非 MIP 流程中运行，不属于任何 MIP 操作命令。活跃 MIP 合同见 [data-model.md](data-model.md)、[data-contract.md](data-contract.md)、[mip/ARCHITECTURE.md](mip/ARCHITECTURE.md) 和 `database/mysql/mip/`。
 

@@ -6,6 +6,7 @@ const routes = {
   ORDER: id => `/packages/member/order-detail/index?orderId=${encodeURIComponent(id)}`,
   PROFILE: profileRef => `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(profileRef)}`,
   GROWTH: () => '/packages/member/mip-growth/index',
+  GAME: () => '/packages/member/mip-game/index',
 }
 
 function buildTarget(type, id) {

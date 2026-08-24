@@ -139,6 +139,61 @@ describe('received interaction queries', () => {
     assert.equal(JSON.stringify(result).includes(actorId), false)
   })
 
+  it('lists only active outbound interests with visible targets and public sources', async () => {
+    const targetUserId = '60000000-0000-4000-8000-000000000001'
+    const calls = []
+    const database = {
+      async query(sql, params) {
+        calls.push({ sql, params })
+        return [{
+          relation_id: relationId,
+          status: 'ACTIVE',
+          source_type: 'PROFILE',
+          source_label: '公开档案',
+          source_status: 'PUBLISHED',
+          updated_at: '2026-08-24T02:30:00.000Z',
+          target_user_id: targetUserId,
+          target_nickname: '不应展示的昵称',
+          target_headline: '公开标题',
+          target_visibility_json: JSON.stringify({ nickname: false }),
+          target_avatar_file_id: 'cloud://target-avatar',
+        }]
+      },
+    }
+    const result = await listReceivedInteractions(database, caller, {
+      category: 'OUTBOUND_INTEREST',
+      limit: 20,
+    })
+
+    assert.equal(result.category, 'OUTBOUND_INTEREST')
+    assert.equal(result.unreadCount, 0)
+    assert.equal(result.items[0].kind, 'OUTBOUND_INTEREST')
+    assert.equal(result.items[0].target.nickname, 'MIP 用户')
+    assert.equal(result.items[0].target.headline, '公开标题')
+    assert.match(result.items[0].target.profileRef, /^p1\./)
+    assert.deepEqual(result.items[0].source, {
+      type: 'PROFILE',
+      label: '公开档案',
+      status: 'PUBLISHED',
+    })
+    assert.equal(JSON.stringify(result).includes(targetUserId), false)
+
+    const relationQuery = calls[0]
+    assert.match(relationQuery.sql, /i\.actor_user_id = \? AND i\.status = 'ACTIVE'/)
+    assert.match(relationQuery.sql, /target\.status = 'ACTIVE'/)
+    assert.match(relationQuery.sql, /opportunity\.status IN \('PUBLISHED', 'ENDED'\)/)
+    assert.match(relationQuery.sql, /cooperation\.status = 'PUBLISHED'/)
+    assert.match(relationQuery.sql, /super_case\.status = 'PUBLISHED'/)
+    assert.match(relationQuery.sql, /visibility_block\.app_id = target\.app_id/)
+    assert.match(relationQuery.sql, /visibility_block\.blocked_user_id = target\.id/)
+    assert.deepEqual(relationQuery.params, [
+      caller.appId,
+      caller.userId,
+      caller.userId,
+      caller.userId,
+    ])
+  })
+
   it('rejects unknown categories before querying', () => {
     assert.throws(() => normalizeListInput({ category: 'FOLLOWER' }), /VALIDATION_FAILED/)
   })

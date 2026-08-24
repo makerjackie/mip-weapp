@@ -208,6 +208,10 @@ const aiProviderFunction = String(env.MIP_AI_PROVIDER_FUNCTION_NAME || '').trim(
 if (aiProviderFunction && !/^[a-z][a-z0-9-]{0,59}$/.test(aiProviderFunction)) {
   throw new Error('MIP_AI_PROVIDER_FUNCTION_NAME is invalid')
 }
+const aiAvatarProviderFunction = String(env.MIP_AI_AVATAR_PROVIDER_FUNCTION_NAME || '').trim()
+if (aiAvatarProviderFunction && !/^[a-z][a-z0-9-]{0,59}$/.test(aiAvatarProviderFunction)) {
+  throw new Error('MIP_AI_AVATAR_PROVIDER_FUNCTION_NAME is invalid')
+}
 const aiDraftTtlHours = Number(env.MIP_AI_DRAFT_TTL_HOURS || 72)
 if (!Number.isInteger(aiDraftTtlHours) || aiDraftTtlHours < 1 || aiDraftTtlHours > 168) {
   throw new Error('MIP_AI_DRAFT_TTL_HOURS must be an integer from 1 to 168')
@@ -226,6 +230,7 @@ try {
   for (const spec of manifest) {
     const envVariables = environmentForRole(spec.role, {
       agreementsJson,
+      aiAvatarProviderFunction,
       aiDraftTtlHours,
       aiProviderFunction,
       allowedAppIds,
@@ -603,6 +608,21 @@ function environmentForRole(role, options) {
   const agreementEnvironment = options.agreementsJson
     ? { MIP_AGREEMENTS_JSON: options.agreementsJson }
     : {}
+  const outboxWakeEnvironment = [
+    'identity',
+    'events',
+    'opportunities',
+    'commerce',
+    'admin',
+    'game',
+    'tasks',
+    'ledger',
+  ].includes(role)
+    ? {
+        MIP_OUTBOX_FUNCTION_NAME: options.functionNames.outbox,
+        MIP_OUTBOX_HMAC_SECRET: options.secrets.outboxHmac,
+      }
+    : {}
   const extra = {
     identity: {
       MIP_PHONE_ENCRYPTION_KEY: options.secrets.phoneEncryption,
@@ -644,6 +664,9 @@ function environmentForRole(role, options) {
       MIP_AI_STORAGE_KEY: options.secrets.aiStorage,
       MIP_AI_DRAFT_TTL_HOURS: String(options.aiDraftTtlHours),
       ...(options.aiProviderFunction ? { MIP_AI_PROVIDER_FUNCTION_NAME: options.aiProviderFunction } : {}),
+      ...(options.aiAvatarProviderFunction
+        ? { MIP_AI_AVATAR_PROVIDER_FUNCTION_NAME: options.aiAvatarProviderFunction }
+        : {}),
     },
     notifications: {
       MIP_NOTIFICATION_ENCRYPTION_KEY: options.secrets.notificationEncryption,
@@ -664,7 +687,7 @@ function environmentForRole(role, options) {
       MIP_GROWTH_HMAC_SECRET: options.secrets.growthHmac,
     },
   }
-  return { ...shared, ...extra[role] }
+  return { ...shared, ...outboxWakeEnvironment, ...extra[role] }
 }
 
 function verifyLocalOpenApiDeclarations() {
@@ -675,6 +698,7 @@ function verifyLocalOpenApiDeclarations() {
     opportunities: ['security.msgSecCheck'],
     tasks: ['security.msgSecCheck'],
     banners: ['security.msgSecCheck'],
+    ai: ['security.imgSecCheck'],
     notification: ['subscribeMessage.send'],
   }
   for (const [role, permissions] of Object.entries(expected)) {

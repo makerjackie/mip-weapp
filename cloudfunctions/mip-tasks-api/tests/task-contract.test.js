@@ -113,6 +113,16 @@ test('task management requires a current platform owner or operations binding', 
   )
 })
 
+test('task management respects a configured platform operations policy', async () => {
+  const repository = createTaskRepository({
+    async one(sql) {
+      assert.match(sql, /LEFT JOIN mip_role_capability_policies/)
+      return { role_key: 'PLATFORM_OPERATIONS', policy_capabilities_json: '[]' }
+    },
+  })
+  await assert.rejects(() => repository.getAdminSession({ appId, userId }), /FORBIDDEN/)
+})
+
 test('task management hides soft-deleted records unless explicitly filtered', async () => {
   let listSql = ''
   const repository = createTaskRepository({

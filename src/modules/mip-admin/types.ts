@@ -5,9 +5,21 @@ import type {
   AdminAnnouncementScope,
 } from './announcements'
 import type {
+  AdminMessageCampaign,
+  AdminMessageCampaignDraft,
+  AdminMessageCampaignPublication,
+  AdminMessageCampaignScope,
+  AdminMessageCampaignStatus,
+  AdminMessageRecipientCandidate,
+} from './message-campaigns'
+import type {
   AdminOperationalExceptionFilters,
   AdminOperationalExceptionPage,
 } from './operational-exceptions'
+import type {
+  AdminOpportunityCommentSettings,
+  AdminOpportunityCommentState,
+} from './opportunity-comments'
 
 export type AdminScopeType = 'PLATFORM' | 'BRANCH' | 'EVENT'
 export type AdminRoleKey
@@ -36,6 +48,7 @@ export type AdminCapability
     | 'events.album.manage'
     | 'events.feedback.read'
     | 'announcements.manage'
+    | 'messages.manage'
     | 'communications.publish'
     | 'branches.manage'
     | 'community.reports.manage'
@@ -78,6 +91,8 @@ export interface AdminDashboard {
     totalUsers: number
     newUsers7d: number
     activePlayers: number
+    interactingPlayers30d: number
+    playerInteractionRate30d: number
     totalEvents: number
     publishedEvents: number
     pendingRegistrations: number
@@ -85,6 +100,9 @@ export interface AdminDashboard {
     pendingRefunds: number
     totalOpportunities: number
     publishedOpportunities: number
+    publishedLifecycleOpportunities: number
+    convertedOpportunities: number
+    opportunityConversionRate: number
   }
 }
 
@@ -123,6 +141,7 @@ export interface AdminUserDetail extends AdminUser {
     levelName: string
     experience: number
     contribution: number
+    coin: number
   }
   counts: {
     registrations: number
@@ -429,6 +448,16 @@ export interface AdminRoleCandidate {
   cityName: string
 }
 
+export interface AdminRoleCapabilityPolicy {
+  roleKey: Exclude<AdminRoleKey, 'PLATFORM_OWNER'>
+  scopeType: AdminScopeType
+  allowedCapabilities: AdminCapability[]
+  capabilities: AdminCapability[]
+  version: number
+  source: 'DEFAULT' | 'CUSTOM'
+  updatedAt: string | null
+}
+
 export interface AdminOpportunity {
   id: string
   title: string
@@ -440,6 +469,8 @@ export interface AdminOpportunity {
   ownerNickname: string
   targetSummary: string
   description: string
+  coverAssetId: string | null
+  coverUrl: string
   roleKeys: string[]
   tags: string[]
   status: 'DRAFT' | 'PUBLISHED' | 'ENDED' | 'UNPUBLISHED' | 'ARCHIVED'
@@ -447,6 +478,7 @@ export interface AdminOpportunity {
   referralCount: number
   version: number
   publishedAt: string | null
+  endedAt: string | null
   moderatedAt: string | null
   moderationReason: string
   archivedAt: string | null
@@ -456,6 +488,12 @@ export interface AdminOpportunity {
   ownerUserId: string
   cityTagId: string | null
   tagIds: string[]
+}
+
+export interface AdminOpportunityTeamMember {
+  userId: string
+  nickname: string
+  branchName: string
 }
 
 export interface AdminOpportunityHistoryItem {
@@ -468,6 +506,7 @@ export interface AdminOpportunityHistoryItem {
 
 export interface AdminOpportunityDetail extends AdminOpportunity {
   history: AdminOpportunityHistoryItem[]
+  teamMembers: AdminOpportunityTeamMember[]
 }
 
 export interface AdminOpportunityEditorOptions {
@@ -533,7 +572,7 @@ export interface AdminGrowthEntry {
   nickname: string
   sourceEventId: string
   sourceEventType: string
-  metric: 'EXPERIENCE' | 'CONTRIBUTION'
+  metric: 'EXPERIENCE' | 'CONTRIBUTION' | 'COIN'
   deltaValue: number
   balanceBefore: number
   balanceAfter: number
@@ -707,6 +746,14 @@ export interface MipAdminGateway {
   publishAnnouncement: (announcementId: string, expectedVersion: number) => Promise<AdminAnnouncement>
   withdrawAnnouncement: (announcementId: string, expectedVersion: number, reason: string) => Promise<AdminAnnouncement>
   setAnnouncementPinned: (announcementId: string, pinned: boolean, expectedVersion: number) => Promise<AdminAnnouncement>
+  getMessageCampaignScopes: () => Promise<AdminMessageCampaignScope>
+  listMessageCampaigns: (input?: { status?: AdminMessageCampaignStatus | '', query?: string }) => Promise<AdminPage<AdminMessageCampaign>>
+  getMessageCampaign: (campaignId: string) => Promise<AdminMessageCampaign>
+  searchMessageRecipients: (input?: { branchId?: string | null, query?: string }) => Promise<AdminPage<AdminMessageRecipientCandidate>>
+  saveMessageCampaign: (input: AdminMessageCampaignDraft) => Promise<AdminMessageCampaign>
+  snapshotMessageCampaign: (campaignId: string, expectedVersion: number) => Promise<AdminMessageCampaign>
+  publishMessageCampaign: (campaignId: string, expectedVersion: number, idempotencyKey: string) => Promise<AdminMessageCampaignPublication>
+  withdrawMessageCampaign: (campaignId: string, expectedVersion: number, reason: string) => Promise<AdminMessageCampaign>
   listCommunityReports: (status: AdminCommunityReportStatus) => Promise<AdminPage<AdminCommunityReport>>
   claimCommunityReport: (input: AdminCommunityReportClaimInput) => Promise<AdminCommunityReport>
   closeCommunityReport: (input: AdminCommunityReportCloseInput) => Promise<AdminCommunityReport>
@@ -738,13 +785,44 @@ export interface MipAdminGateway {
   listRoles: () => Promise<AdminPage<AdminRoleItem>>
   searchRoleCandidates: (eventId: string, query: string) => Promise<AdminPage<AdminRoleCandidate>>
   setRole: (input: Record<string, unknown>) => Promise<Record<string, unknown>>
+  listRoleCapabilityPolicies: () => Promise<AdminPage<AdminRoleCapabilityPolicy>>
+  updateRoleCapabilityPolicy: (input: {
+    roleKey: AdminRoleCapabilityPolicy['roleKey']
+    capabilities: AdminCapability[]
+    expectedVersion: number
+  }) => Promise<AdminRoleCapabilityPolicy>
+  resetRoleCapabilityPolicy: (input: {
+    roleKey: AdminRoleCapabilityPolicy['roleKey']
+    expectedVersion: number
+  }) => Promise<AdminRoleCapabilityPolicy>
   listOpportunities: (input?: Record<string, unknown>) => Promise<AdminPage<AdminOpportunity>>
   getOpportunity: (opportunityId: string) => Promise<AdminOpportunityDetail>
   getOpportunityEditorOptions: () => Promise<AdminOpportunityEditorOptions>
   saveOpportunity: (input: Record<string, unknown>) => Promise<{ id: string, status: string, version: number }>
   publishOpportunity: (input: { opportunityId: string, expectedVersion: number }) => Promise<{ id: string, status: 'PUBLISHED', version: number }>
+  endOpportunity: (input: { opportunityId: string, expectedVersion: number }) => Promise<{ id: string, status: 'ENDED', version: number }>
   unpublishOpportunity: (input: Record<string, unknown>) => Promise<{ id: string, status: string, version: number }>
   archiveOpportunity: (input: Record<string, unknown>) => Promise<{ id: string, status: 'ARCHIVED', version: number, archivedAt: string }>
+  getOpportunityCommentAdminState: (opportunityId: string) => Promise<AdminOpportunityCommentState>
+  saveOpportunityCommentSettings: (input: {
+    opportunityId: string
+    expectedVersion: number
+    settings: Omit<AdminOpportunityCommentSettings, 'version'>
+  }) => Promise<AdminOpportunityCommentSettings>
+  moderateOpportunityComment: (input: {
+    opportunityId: string
+    commentId: string
+    expectedVersion: number
+    action: 'PUBLISH' | 'HIDE'
+    reason: string
+  }) => Promise<{ id: string, status: 'PUBLISHED' | 'HIDDEN', version: number }>
+  closeOpportunityCommentReport: (input: {
+    opportunityId: string
+    reportId: string
+    expectedVersion: number
+    decision: 'RESOLVED' | 'DISMISSED'
+    reason: string
+  }) => Promise<{ id: string, status: 'RESOLVED' | 'DISMISSED', version: number }>
   listGrowthLevels: () => Promise<AdminPage<AdminGrowthLevel>>
   listGrowthBenefits: () => Promise<AdminPage<AdminGrowthBenefit>>
   saveGrowthBenefit: (input: Record<string, unknown>) => Promise<{ id: string, version: number }>

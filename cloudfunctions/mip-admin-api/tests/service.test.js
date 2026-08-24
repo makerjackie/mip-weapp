@@ -95,6 +95,48 @@ function repository(roleKey = 'PLATFORM_OWNER', scopeType = 'PLATFORM', scopeId 
 }
 
 describe('admin service', () => {
+  it('authorizes opportunity ending with the server-owned scope and expected version', async () => {
+    const repo = repository()
+    let captured
+    repo.getOpportunityScope = async () => ({ scopeType: 'PLATFORM', scopeId: null, status: 'PUBLISHED', version: 4 })
+    repo.endOpportunity = async (input) => {
+      captured = input
+      return { id: input.opportunityId, status: 'ENDED', version: input.expectedVersion + 1 }
+    }
+    const service = createAdminService({ repository: repo, phoneEncryptionKey: secret })
+    const result = await service.endOpportunity(caller, { opportunityId: 'opportunity-a', expectedVersion: 4 })
+    assert.deepEqual(result, { id: 'opportunity-a', status: 'ENDED', version: 5 })
+    assert.equal(captured.authorization.capability, 'opportunities.moderate')
+    assert.deepEqual(captured.authorizedScope, { scopeType: 'PLATFORM', scopeId: null, status: 'PUBLISHED', version: 4 })
+    assert.equal(captured.audit.action, 'admin.opportunities.end')
+    assert.deepEqual(captured.audit.metadata, { expectedVersion: 4 })
+  })
+
+  it('binds report closure and its audit to the requested opportunity', async () => {
+    const repo = repository()
+    let captured
+    repo.getOpportunityScope = async () => ({ scopeType: 'PLATFORM', scopeId: null })
+    repo.closeOpportunityCommentReport = async (input) => {
+      captured = input
+      return { id: input.reportId, status: input.decision, version: input.expectedVersion + 1 }
+    }
+    const service = createAdminService({ repository: repo, phoneEncryptionKey: secret })
+    const result = await service.closeOpportunityCommentReport(caller, {
+      opportunityId: 'opportunity-a',
+      reportId: 'report-a',
+      expectedVersion: 1,
+      decision: 'RESOLVED',
+      reason: '确认违规',
+    })
+    assert.deepEqual(result, { id: 'report-a', status: 'RESOLVED', version: 2 })
+    assert.equal(captured.opportunityId, 'opportunity-a')
+    assert.throws(
+      () => captured.audit('opportunity-b', 'comment-a', 'RESOLVED'),
+      /举报所属机会已变化/,
+    )
+    assert.equal(captured.audit('opportunity-a', 'comment-a', 'RESOLVED').metadata.opportunityId, 'opportunity-a')
+  })
+
   it('records a successful admin workspace entry with the effective scope', async () => {
     const repo = repository('BRANCH_ADMIN', 'BRANCH', 'branch-a')
     repo.dashboard = async () => ({
@@ -124,16 +166,10 @@ describe('admin service', () => {
     await assert.rejects(() => service.getSession(caller), /当前账号没有运营权限/)
   })
 
-  it('shows administrative role scopes only to a platform role-change grant', async () => {
+  it('uses roles.change for role management and shows administrative scopes only at platform scope', async () => {
     const operationsRepo = repository('PLATFORM_OPERATIONS')
-    let operationsOptions
-    operationsRepo.listRoles = async (_appId, _visibility, options) => {
-      operationsOptions = options
-      return []
-    }
     const operations = createAdminService({ repository: operationsRepo, phoneEncryptionKey: secret })
-    await operations.listRoles(caller)
-    assert.deepEqual(operationsOptions, { includeAdministrativeScopes: false })
+    await assert.rejects(() => operations.listRoles(caller), error => error?.code === 'FORBIDDEN')
 
     const ownerRepo = repository('PLATFORM_OWNER')
     let ownerOptions

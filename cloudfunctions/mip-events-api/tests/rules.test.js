@@ -89,4 +89,21 @@ describe('MIP event admin scope', () => {
     assert.equal(grantsCapability(grants, 'events.checkin', event()), true)
     assert.equal(grantsCapability(grants, 'events.feedback.read', event()), false)
   })
+
+  it('applies a configured role policy without widening the role default', () => {
+    const operations = [{
+      scope_type: 'PLATFORM',
+      scope_id: '00000000-0000-0000-0000-000000000000',
+      role_key: 'PLATFORM_OPERATIONS',
+      policy_capabilities_json: JSON.stringify(['admin.dashboard']),
+    }]
+    assert.equal(grantsCapability(operations, 'events.manage', event()), false)
+    const staff = [{
+      scope_type: 'EVENT',
+      scope_id: 'event-1',
+      role_key: 'EVENT_STAFF',
+      policy_capabilities_json: JSON.stringify(['events.write']),
+    }]
+    assert.equal(grantsCapability(staff, 'events.manage', event()), false)
+  })
 })

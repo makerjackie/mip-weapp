@@ -18,6 +18,7 @@ const CAPABILITIES = Object.freeze({
   EVENTS_ALBUM_MANAGE: 'events.album.manage',
   EVENTS_FEEDBACK_READ: 'events.feedback.read',
   ANNOUNCEMENTS_MANAGE: 'announcements.manage',
+  MESSAGES_MANAGE: 'messages.manage',
   COMMUNICATIONS_PUBLISH: 'communications.publish',
   COMMUNITY_REPORTS_MANAGE: 'community.reports.manage',
   OPPORTUNITIES_MODERATE: 'opportunities.moderate',
@@ -57,6 +58,7 @@ const roleCapabilities = Object.freeze({
     CAPABILITIES.EVENTS_ALBUM_MANAGE,
     CAPABILITIES.EVENTS_FEEDBACK_READ,
     CAPABILITIES.ANNOUNCEMENTS_MANAGE,
+    CAPABILITIES.MESSAGES_MANAGE,
     CAPABILITIES.COMMUNICATIONS_PUBLISH,
     CAPABILITIES.COMMUNITY_REPORTS_MANAGE,
     CAPABILITIES.OPPORTUNITIES_MODERATE,
@@ -96,6 +98,7 @@ const roleCapabilities = Object.freeze({
     CAPABILITIES.EVENTS_ALBUM_MANAGE,
     CAPABILITIES.EVENTS_FEEDBACK_READ,
     CAPABILITIES.ANNOUNCEMENTS_MANAGE,
+    CAPABILITIES.MESSAGES_MANAGE,
     CAPABILITIES.COMMUNICATIONS_PUBLISH,
     CAPABILITIES.ROLES_CHANGE,
     CAPABILITIES.OPPORTUNITIES_MODERATE,
@@ -157,6 +160,29 @@ const roleScopeTypes = Object.freeze({
   EVENT_STAFF: 'EVENT',
 })
 
+function capabilitiesForBinding(binding) {
+  const safeDefault = roleCapabilities[binding?.roleKey]
+  if (!safeDefault) return []
+  if (binding.roleKey === 'PLATFORM_OWNER') return safeDefault
+
+  const hasEffectiveCapabilities = Object.hasOwn(binding, 'capabilities')
+  const raw = hasEffectiveCapabilities ? binding.capabilities : binding.policyCapabilities
+  if (raw === null || raw === undefined) return safeDefault
+
+  let parsed = raw
+  if (typeof raw === 'string') {
+    try { parsed = JSON.parse(raw) }
+    catch { return [] }
+  }
+  if (!Array.isArray(parsed)) return []
+  const unique = new Set(parsed)
+  if (unique.size !== parsed.length
+    || parsed.some(item => typeof item !== 'string' || !safeDefault.includes(item))) {
+    return []
+  }
+  return parsed
+}
+
 function isValidRoleBinding(binding) {
   const expectedScopeType = roleScopeTypes[binding?.roleKey]
   if (!expectedScopeType || binding?.scopeType !== expectedScopeType) return false
@@ -180,7 +206,7 @@ function coversScope(binding, requested) {
 }
 
 function authorize(bindings, capability, requested = { scopeType: 'PLATFORM', scopeId: null }) {
-  const binding = bindings.find(item => roleCapabilities[item.roleKey]?.includes(capability)
+  const binding = bindings.find(item => capabilitiesForBinding(item).includes(capability)
     && coversScope(item, requested))
   if (!binding) {
     const error = new Error('FORBIDDEN')
@@ -192,7 +218,7 @@ function authorize(bindings, capability, requested = { scopeType: 'PLATFORM', sc
 
 function firstGrant(bindings, capability) {
   const binding = bindings.find(item => isValidRoleBinding(item)
-    && roleCapabilities[item.roleKey]?.includes(capability))
+    && capabilitiesForBinding(item).includes(capability))
   if (!binding) {
     const error = new Error('FORBIDDEN')
     error.code = 'FORBIDDEN'
@@ -206,7 +232,7 @@ function capabilitySnapshot(bindings) {
   const seen = new Set()
   for (const binding of bindings) {
     if (!isValidRoleBinding(binding)) continue
-    for (const capability of roleCapabilities[binding.roleKey] || []) {
+    for (const capability of capabilitiesForBinding(binding)) {
       const key = `${capability}:${binding.scopeType}:${binding.scopeId || ''}`
       if (!seen.has(key)) {
         seen.add(key)
@@ -231,12 +257,13 @@ function visibilityFromBindings(bindings) {
 }
 
 function visibilityForCapability(bindings, capability) {
-  return visibilityFromBindings(bindings.filter(item => roleCapabilities[item.roleKey]?.includes(capability)))
+  return visibilityFromBindings(bindings.filter(item => capabilitiesForBinding(item).includes(capability)))
 }
 
 module.exports = {
   CAPABILITIES,
   authorize,
+  capabilitiesForBinding,
   capabilitySnapshot,
   coversScope,
   firstGrant,

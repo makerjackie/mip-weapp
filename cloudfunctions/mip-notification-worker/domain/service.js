@@ -7,6 +7,8 @@ const { normalizeMessage } = require('./validation')
 
 function createNotificationService(options) {
   const repository = options.repository
+  const clock = options.clock || Date.now
+  const wait = options.wait || (delay => new Promise(resolve => setTimeout(resolve, delay)))
 
   return {
     publishMessage(input) {
@@ -18,57 +20,114 @@ function createNotificationService(options) {
     },
 
     async runDeliveryBatch(input) {
-      const tasks = await repository.leaseTasks(input.appId, input.limit)
-      const results = []
-      for (const task of tasks) {
-        let reservation
-        try {
-          reservation = await repository.reserveTask(task)
-        }
-        catch (error) {
-          results.push(await settleFailure(
-            () => repository.failLeasedTask(task, safeDeliveryError(error)),
-            task.id,
-          ))
+      const limit = normalizeLimit(input.limit)
+      const maxBatches = input.drain === true ? normalizeMaxBatches(input.maxBatches) : 1
+      const deadline = Number(clock()) + 30_000
+      const batches = []
+      const latestResults = new Map()
+      for (let batch = 0; batch < maxBatches && Number(clock()) < deadline; batch += 1) {
+        const result = await runSingleBatch(input.appId, limit)
+        batches.push(result)
+        for (const item of result.results) latestResults.set(item.taskId, item)
+        const retryAt = earliestRetryAt(result.results)
+        if (retryAt && input.drain === true && batch + 1 < maxBatches) {
+          const delay = Math.max(0, retryAt - Number(clock()))
+          if (Number(clock()) + delay >= deadline) break
+          await wait(delay)
           continue
         }
-
-        let request
-        try {
-          request = buildDeliveryRequest(reservation, options)
-        }
-        catch (error) {
-          results.push(await settleFailure(
-            () => repository.failReservedTask(reservation, safeDeliveryError(error), {
-              externalAttempted: false,
-            }),
-            task.id,
-          ))
-          continue
-        }
-
-        try {
-          results.push(await repository.deliverReservedTask(
-            reservation,
-            () => options.sender(request),
-          ))
-        }
-        catch {
-          results.push({
-            taskId: task.id,
-            status: 'LEASE_LOST',
-            errorCode: 'DELIVERY_OUTCOME_UNKNOWN',
-          })
-        }
+        if (result.leased < limit) break
       }
+      const results = batches.flatMap(batch => batch.results)
+      const latest = [...latestResults.values()]
+      const pending = latest.filter(item => item.status === 'FAILED').length
+      const terminal = latest.filter(item => ['CANCELLED', 'LEASE_LOST'].includes(item.status)).length
       return {
-        leased: tasks.length,
-        delivered: results.filter(item => item.status === 'DELIVERED').length,
-        failed: results.filter(item => item.status !== 'DELIVERED').length,
+        batches: batches.length,
+        leased: batches.reduce((total, batch) => total + batch.leased, 0),
+        delivered: latest.filter(item => item.status === 'DELIVERED').length,
+        failed: pending,
+        pending,
+        terminal,
         results,
       }
     },
   }
+
+  async function runSingleBatch(appId, limit) {
+    const currentTime = new Date(Number(clock()))
+    const tasks = await repository.leaseTasks(appId, limit, currentTime)
+    const results = []
+    for (const task of tasks) {
+      let reservation
+      try {
+        reservation = await repository.reserveTask(task)
+      }
+      catch (error) {
+        results.push(await settleFailure(
+          () => repository.failLeasedTask(task, safeDeliveryError(error), currentTime),
+          task.id,
+        ))
+        continue
+      }
+
+      let request
+      try {
+        request = buildDeliveryRequest(reservation, options)
+      }
+      catch (error) {
+        results.push(await settleFailure(
+          () => repository.failReservedTask(reservation, safeDeliveryError(error), {
+            externalAttempted: false,
+            now: currentTime,
+          }),
+          task.id,
+        ))
+        continue
+      }
+
+      try {
+        results.push(await repository.deliverReservedTask(
+          reservation,
+          () => options.sender(request),
+          { now: currentTime },
+        ))
+      }
+      catch {
+        results.push({
+          taskId: task.id,
+          status: 'LEASE_LOST',
+          errorCode: 'DELIVERY_OUTCOME_UNKNOWN',
+        })
+      }
+    }
+    return {
+      leased: tasks.length,
+      results,
+    }
+  }
+}
+
+function earliestRetryAt(results) {
+  const times = results
+    .filter(item => item.status === 'FAILED')
+    .map(item => new Date(item.retryAt).getTime())
+    .filter(Number.isFinite)
+  return times.length ? Math.min(...times) : 0
+}
+
+function normalizeLimit(value) {
+  const limit = value === undefined ? 10 : Number(value)
+  if (!Number.isInteger(limit) || limit < 1 || limit > 20) throw new Error('VALIDATION_FAILED')
+  return limit
+}
+
+function normalizeMaxBatches(value) {
+  const maxBatches = value === undefined ? 5 : Number(value)
+  if (!Number.isInteger(maxBatches) || maxBatches < 1 || maxBatches > 5) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  return maxBatches
 }
 
 function buildDeliveryRequest(delivery, options) {
@@ -132,4 +191,7 @@ module.exports = {
   createNotificationService,
   safeDeliveryError,
   settleFailure,
+  earliestRetryAt,
+  normalizeLimit,
+  normalizeMaxBatches,
 }

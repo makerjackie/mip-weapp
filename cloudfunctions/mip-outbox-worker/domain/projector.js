@@ -75,7 +75,10 @@ async function projectEvent(database, event) {
     case 'event.updated':
       return projectEventNotice(database, event)
     case 'growth.changed':
+    case 'game.coin_changed':
       return projectGrowthChanged(database, event)
+    case 'game.match.finalized':
+      return projectGameMatchFinalized(database, event)
     case 'operations.notification_published':
       return projectOperationsNotification(database, event)
     case 'event.heart_changed':
@@ -528,16 +531,17 @@ async function projectGrowthChanged(database, event) {
      INNER JOIN mip_users user
        ON user.app_id = entry.app_id AND user.id = entry.user_id AND user.status = 'ACTIVE'
      WHERE entry.app_id = ? AND entry.id = ?
-       AND entry.metric IN ('EXPERIENCE', 'CONTRIBUTION')`,
+       AND entry.metric IN ('EXPERIENCE', 'CONTRIBUTION', 'COIN')`,
     [event.app_id, event.aggregate_id],
   )
   if (!row) return projection([], [], 'FACT_NO_LONGER_CURRENT')
-  if (row.metric !== 'EXPERIENCE' && row.metric !== 'CONTRIBUTION') {
+  if (!['EXPERIENCE', 'CONTRIBUTION', 'COIN'].includes(row.metric)) {
     return projection([], [], 'FACT_OUT_OF_SCOPE')
   }
   const labels = {
     EXPERIENCE: '经验值',
     CONTRIBUTION: '贡献值',
+    COIN: '游戏币',
   }
   const label = labels[row.metric]
   const delta = Number(row.delta_value)
@@ -545,15 +549,80 @@ async function projectGrowthChanged(database, event) {
   if (!label || !Number.isFinite(delta) || !Number.isFinite(balance)) {
     throw new Error('OUTBOX_EVENT_INVALID')
   }
+  if (row.metric === 'COIN') {
+    return projection([
+      message(event, row.user_id, 'game-coin-changed', {
+        messageType: 'GAME',
+        title: '游戏币已更新',
+        body: `本次${delta >= 0 ? '获得' : '使用'} ${Math.abs(delta)} 游戏币，当前余额 ${balance}。`,
+        targetType: 'GAME',
+        targetId: row.id,
+      }),
+    ], [], 'PROJECTED')
+  }
+
+  const upgradedLevel = row.metric === 'EXPERIENCE' && delta > 0
+    ? await database.one(
+        `SELECT name, minimum_experience
+         FROM mip_growth_levels
+         WHERE app_id = ? AND status = 'ACTIVE'
+           AND minimum_experience > ? AND minimum_experience <= ?
+         ORDER BY minimum_experience DESC, id DESC LIMIT 1`,
+        [event.app_id, balance - delta, balance],
+      )
+    : null
   return projection([
-    message(event, row.user_id, 'growth-changed', {
-      messageType: 'GROWTH',
-      title: `${label}已更新`,
-      body: `本次${delta >= 0 ? '增加' : '减少'} ${Math.abs(delta)}，当前余额 ${balance}。`,
+    message(event, row.user_id, upgradedLevel ? 'growth-level-up' : 'growth-changed', {
+      messageType: upgradedLevel ? 'GROWTH_LEVEL_UP' : 'GROWTH',
+      title: upgradedLevel ? '等级已提升' : `${label}已更新`,
+      body: upgradedLevel
+        ? `当前等级为${boundedText(upgradedLevel.name, 80)}，经验值余额 ${balance}。`
+        : `本次${delta >= 0 ? '增加' : '减少'} ${Math.abs(delta)}，当前余额 ${balance}。`,
       targetType: 'GROWTH',
       targetId: row.id,
     }),
   ], [], 'PROJECTED')
+}
+
+async function projectGameMatchFinalized(database, event) {
+  assertAggregate(event, 'GAME_MATCH')
+  const match = await database.one(
+    `SELECT id, team_a_id, team_b_id, team_a_score, team_b_score,
+            week_start, week_end, status, version
+     FROM mip_game_weekly_matches
+     WHERE app_id = ? AND id = ?`,
+    [event.app_id, event.aggregate_id],
+  )
+  if (!match || match.status !== 'FINALIZED' || Number(match.version) !== Number(event.source_version)) {
+    return projection([], [], 'FACT_NO_LONGER_CURRENT')
+  }
+  const teamAScore = Number(match.team_a_score)
+  const teamBScore = Number(match.team_b_score)
+  if (!Number.isSafeInteger(teamAScore) || !Number.isSafeInteger(teamBScore)) {
+    throw new Error('OUTBOX_EVENT_INVALID')
+  }
+  if (teamAScore === teamBScore) return projection([], [], 'NO_WINNER')
+  const winningTeamId = teamAScore > teamBScore ? match.team_a_id : match.team_b_id
+  const members = await database.query(
+    `SELECT member.user_id
+     FROM mip_game_team_memberships member
+     INNER JOIN mip_users user
+       ON user.app_id = member.app_id AND user.id = member.user_id AND user.status = 'ACTIVE'
+     WHERE member.app_id = ? AND member.team_id = ?
+       AND member.joined_at <= CONCAT(?, ' 23:59:59.999')
+       AND (member.left_at IS NULL OR member.left_at > CONCAT(?, ' 23:59:59.999'))
+     ORDER BY member.user_id`,
+    [event.app_id, winningTeamId, dateOnly(match.week_end), dateOnly(match.week_end)],
+  )
+  if (members.some(member => !UUID_PATTERN.test(String(member.user_id || '')))) {
+    throw new Error('OUTBOX_EVENT_INVALID')
+  }
+  return projection([], members.map(member => ({
+    action: 'grantGameCoins',
+    userId: member.user_id,
+    sourceEventType: 'game.match_won',
+    sourceEventId: match.id,
+  })), members.length ? 'PROJECTED' : 'NO_RECIPIENTS')
 }
 
 async function projectOperationsNotification(database, event) {
@@ -776,6 +845,12 @@ function notificationDateTime(value) {
     `${local.getUTCFullYear()}-${String(local.getUTCMonth() + 1).padStart(2, '0')}-${String(local.getUTCDate()).padStart(2, '0')}`,
     `${String(local.getUTCHours()).padStart(2, '0')}:${String(local.getUTCMinutes()).padStart(2, '0')}`,
   ].join(' ')
+}
+
+function dateOnly(value) {
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) throw new Error('OUTBOX_EVENT_INVALID')
+  return date.toISOString().slice(0, 10)
 }
 
 function growth(event, userId, sourceEventType = event.event_type) {

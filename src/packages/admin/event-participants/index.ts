@@ -1,6 +1,8 @@
 import type { AdminRosterAllItem, AdminRosterStatus } from '../../../modules/mip-admin'
+import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { formatLocalDateTime } from '../../../utils/date'
+import { adminLoadFailure } from '../shared/page-state'
 
 type ItemView = AdminRosterAllItem & { statusText: string, statusTheme: string, submittedText: string, phoneText: string }
 const statuses: Array<{ value: AdminRosterStatus | '', label: string }> = [
@@ -36,7 +38,7 @@ function boundary(value: string, end: boolean) {
 
 Page({
   data: {
-    state: 'loading',
+    state: 'loading' as AdminPageState,
     items: [] as ItemView[],
     events: [] as Array<{ id: string, title: string }>,
     branches: [] as Array<{ id: string, name: string }>,
@@ -92,7 +94,10 @@ Page({
       })
     }
     catch (error) {
-      this.setData({ state: 'error', message: error instanceof Error ? error.message : '参与者加载失败' })
+      this.setData(adminLoadFailure(error, {
+        hasContent: this.data.items.length > 0,
+        fallbackMessage: '参与者加载失败',
+      }))
     }
   },
   updateQuery(event: WechatMiniprogram.CustomEvent<{ value: string }>) {

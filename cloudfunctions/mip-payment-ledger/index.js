@@ -1,8 +1,12 @@
 'use strict'
 
+const cloud = require('wx-server-sdk')
 const ledger = require('./domain/ledger')
 const { assertInternalRequest } = require('./lib/internal-auth')
 const { mysqlDatabase } = require('./lib/mysql')
+const { createOutboxWakeup } = require('./lib/outbox-wakeup')
+
+cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const allowedAppIds = new Set(
   String(process.env.MIP_ALLOWED_APP_IDS || '')
@@ -14,6 +18,14 @@ const authOptions = {
   allowedAppIds,
   secrets: [process.env.MIP_LEDGER_SECRET, process.env.MIP_LEDGER_PREVIOUS_SECRET],
 }
+const outboxMutationActions = new Set(['applyPaymentCallback', 'applyRefundCallback'])
+const outboxWakeup = createOutboxWakeup({
+  cloud,
+  functionName: process.env.MIP_OUTBOX_FUNCTION_NAME,
+  secret: process.env.MIP_OUTBOX_HMAC_SECRET,
+  sourceFunctionName: 'mip-payment-ledger',
+  logger: console,
+})
 const handlers = {
   getPayableOrder: (db, event, appId) => ledger.getPayableOrder(db, { ...event, appId }),
   markPaymentCreated: (db, event, appId) => ledger.markPaymentCreated(db, { ...event, appId }),
@@ -37,7 +49,13 @@ exports.main = async (event = {}) => {
     if (!handler) {
       throw new Error('UNSUPPORTED_ACTION')
     }
-    return { ok: true, data: await handler(mysqlDatabase(), event, appId) }
+    const data = await handler(mysqlDatabase(), event, appId)
+    await outboxWakeup.afterSuccessfulMutation({
+      appId,
+      action: String(event.action || ''),
+      mutationActions: outboxMutationActions,
+    })
+    return { ok: true, data }
   }
   catch (error) {
     const code = error instanceof Error && /^[A-Z][A-Z0-9_:]+$/.test(error.message)
@@ -48,4 +66,4 @@ exports.main = async (event = {}) => {
   }
 }
 
-exports._test = { assertInternalRequest }
+exports._test = { assertInternalRequest, outboxMutationActions }

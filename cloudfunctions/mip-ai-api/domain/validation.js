@@ -6,6 +6,8 @@ const purposeFields = {
   SUPER_CASE: new Set(['projectName', 'summary', 'responsibility', 'description', 'startedOn', 'endedOn', 'caseType']),
 }
 
+const digitalAvatarStyleKeys = new Set(['PROFESSIONAL', 'ILLUSTRATED', 'MONOCHROME'])
+
 function normalizePurpose(value) {
   const purpose = typeof value === 'string' ? value.trim().toUpperCase() : ''
   if (!purposeFields[purpose]) throw new Error('VALIDATION_FAILED')
@@ -67,6 +69,19 @@ function normalizeRefinementIntent(event) {
   }
 }
 
+function normalizeDigitalAvatarIntent(event) {
+  const sourceAvatarAssetId = typeof event.sourceAvatarAssetId === 'string'
+    ? event.sourceAvatarAssetId.trim()
+    : ''
+  const styleKey = typeof event.styleKey === 'string' ? event.styleKey.trim().toUpperCase() : ''
+  const requestId = typeof event.requestId === 'string' ? event.requestId.trim() : ''
+  if (!isUuid(sourceAvatarAssetId) || !digitalAvatarStyleKeys.has(styleKey)
+    || !/^[\w.:-]{8,128}$/.test(requestId)) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  return { sourceAvatarAssetId, styleKey, requestId }
+}
+
 function combineDraftTranscript(currentValue, supplementalText) {
   const current = typeof currentValue === 'string' ? currentValue.trim() : ''
   const supplemental = typeof supplementalText === 'string' ? supplementalText.trim() : ''
@@ -96,6 +111,7 @@ function isUuid(value) {
 module.exports = {
   combineDraftTranscript,
   isUuid,
+  normalizeDigitalAvatarIntent,
   normalizePurpose,
   normalizeRefinementIntent,
   normalizeStructuredDraft,

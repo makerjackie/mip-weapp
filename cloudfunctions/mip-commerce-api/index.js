@@ -8,6 +8,7 @@ const { createCommerceService } = require('./domain/service')
 const { resolveTrustedIdentity } = require('./lib/identity')
 const { createMembershipInvitationCode } = require('./lib/membership-invitation-code')
 const { mysqlDatabase } = require('./lib/mysql')
+const { createOutboxWakeup, trustedContextAppId } = require('./lib/outbox-wakeup')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
@@ -18,6 +19,14 @@ const allowedAppIds = new Set(
     .filter(Boolean),
 )
 const catalogStage = process.env.MIP_CATALOG_STAGE === 'LIVE' ? 'LIVE' : 'TEST'
+const outboxMutationActions = new Set(['createCheckout', 'requestRefund'])
+const outboxWakeup = createOutboxWakeup({
+  cloud,
+  functionName: process.env.MIP_OUTBOX_FUNCTION_NAME,
+  secret: process.env.MIP_OUTBOX_HMAC_SECRET,
+  sourceFunctionName: 'mip-commerce-api',
+  logger: console,
+})
 const repository = createCommerceRepository(mysqlDatabase(), {
   agreements: configuredAgreements(),
 })
@@ -42,7 +51,15 @@ exports.main = async (event = {}) => {
     await mysqlDatabase().one('SELECT 1 AS ok')
     return { ok: true, data: { service: 'mip-commerce-api', persistence: 'cloudbase-mysql' } }
   }
-  return handler(event)
+  const result = await handler(event)
+  if (result?.ok === true) {
+    await outboxWakeup.afterSuccessfulMutation({
+      appId: trustedContextAppId(cloud.getWXContext(), allowedAppIds),
+      action: String(event.action || ''),
+      mutationActions: outboxMutationActions,
+    })
+  }
+  return result
 }
 
-exports._test = { catalogStage, configuredAgreements, resolveTrustedIdentity }
+exports._test = { catalogStage, configuredAgreements, outboxMutationActions, resolveTrustedIdentity }

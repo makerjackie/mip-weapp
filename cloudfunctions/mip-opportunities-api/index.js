@@ -9,6 +9,7 @@ const {
   trustedWechatIdentity,
 } = require('./lib/auth')
 const { mysqlDatabase } = require('./lib/mysql')
+const { createOutboxWakeup } = require('./lib/outbox-wakeup')
 const { createContentSafety } = require('./domain/content-safety')
 const {
   endOpportunity,
@@ -42,6 +43,14 @@ const {
 } = require('./domain/received-interactions')
 const { recordProfileVisit } = require('./domain/profile-visits')
 const {
+  deleteOpportunityComment,
+  getOpportunityCommentSettings,
+  listOpportunityComments,
+  reportOpportunityComment,
+  saveOpportunityComment,
+  setOpportunityCommentCall,
+} = require('./domain/comments')
+const {
   getPublicProfileAggregate,
   listPeople,
 } = require('./domain/discovery')
@@ -49,6 +58,22 @@ const {
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
 const contentSafety = createContentSafety(cloud)
+const outboxMutationActions = new Set([
+  'saveOpportunity',
+  'setReferral',
+  'setProfileInterest',
+  'saveSuperCase',
+  'saveOpportunityComment',
+  'deleteOpportunityComment',
+  'setOpportunityCommentCall',
+])
+const outboxWakeup = createOutboxWakeup({
+  cloud,
+  functionName: process.env.MIP_OUTBOX_FUNCTION_NAME,
+  secret: process.env.MIP_OUTBOX_HMAC_SECRET,
+  sourceFunctionName: 'mip-opportunities-api',
+  logger: console,
+})
 
 const publicActions = new Set([
   'getCatalogs',
@@ -69,12 +94,19 @@ const messages = {
   AI_DRAFT_NOT_FOUND: 'AI 草稿不存在或已过期',
   AUTH_REQUIRED: '登录后可继续操作',
   CONTENT_REJECTED: '内容未通过安全检查，请修改后重试',
+  CALLS_DISABLED: '当前机会已关闭打 call',
+  CALL_PARTICIPANT_REQUIRED: '只有当前机会参与人可以打 call',
+  COMMENTS_DISABLED: '当前机会已关闭评论',
+  COMMENT_EDIT_WINDOW_CLOSED: '评论已超过可编辑时间',
   CONFLICT: '内容状态已经变化，请刷新后重试',
   COOPERATION_ROLE_EXISTS: '这个合作角色已经有一张合作卡',
   FORBIDDEN: '当前没有权限执行此操作',
   NOT_FOUND: '内容不存在或已经下架',
   PHONE_REQUIRED: '请先绑定手机号',
   PROFILE_REQUIRED: '请先完善个人资料',
+  REVIEWS_DISABLED: '当前机会暂不接受项目评价',
+  SELF_CALL_FORBIDDEN: '不能给自己的内容打 call',
+  SELF_REPORT_FORBIDDEN: '不能举报自己的内容',
   SERVICE_UNAVAILABLE: '机会服务暂时不可用',
   VALIDATION_FAILED: '提交内容格式不正确，请检查后重试',
 }
@@ -112,6 +144,12 @@ async function dispatch(database, caller, event) {
     case 'recordProfileVisit': return recordProfileVisit(database, caller, event)
     case 'listReceivedInteractions': return listReceivedInteractions(database, caller, event)
     case 'markReceivedInteractionRead': return markReceivedInteractionRead(database, caller, event)
+    case 'getOpportunityCommentSettings': return getOpportunityCommentSettings(database, caller, event)
+    case 'listOpportunityComments': return listOpportunityComments(database, caller, event)
+    case 'saveOpportunityComment': return saveOpportunityComment(database, contentSafety, caller, event)
+    case 'deleteOpportunityComment': return deleteOpportunityComment(database, caller, event)
+    case 'setOpportunityCommentCall': return setOpportunityCommentCall(database, caller, event)
+    case 'reportOpportunityComment': return reportOpportunityComment(database, caller, event)
     case 'listCooperationCards': return listCooperationCards(database, caller, event.filter)
     case 'listMyCooperationCards': return listMyCooperationCards(database, caller, event)
     case 'getCooperationCard': return getCooperationCard(database, caller, event.id)
@@ -142,11 +180,17 @@ exports.main = async (event = {}) => {
     if (requiresFullAccessAction(action)) {
       await assertFullAccessReady(database, caller, configuredAgreementRequirements())
     }
-    return success(await dispatch(database, caller, { ...event, action }))
+    const data = await dispatch(database, caller, { ...event, action })
+    await outboxWakeup.afterSuccessfulMutation({
+      appId: caller.appId,
+      action,
+      mutationActions: outboxMutationActions,
+    })
+    return success(data)
   }
   catch (error) {
     return failure(error)
   }
 }
 
-exports._test = { dispatch, failure, success }
+exports._test = { dispatch, failure, outboxMutationActions, success }

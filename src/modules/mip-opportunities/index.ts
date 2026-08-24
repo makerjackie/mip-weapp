@@ -1,4 +1,5 @@
 export * from './catalog'
 export * from './client'
+export * from './comment-intent'
 export * from './types'
 export * from './validation'

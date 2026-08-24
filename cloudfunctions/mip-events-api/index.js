@@ -6,8 +6,27 @@ const service = require('./domain/event-service')
 const { resolveMipUser, trustedWechatIdentity } = require('./lib/identity')
 const { createCheckInCodeAsset, createInvitationCodeAsset } = require('./lib/checkin-poster')
 const { mysqlDatabase } = require('./lib/mysql')
+const { createOutboxWakeup, trustedContextAppId } = require('./lib/outbox-wakeup')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
+
+const allowedAppIds = new Set(
+  String(process.env.MIP_ALLOWED_APP_IDS || '').split(',').map(value => value.trim()).filter(Boolean),
+)
+const outboxMutationActions = new Set([
+  'mip.events.register',
+  'mip.events.cancelRegistration',
+  'mip.events.checkIn',
+  'mip.events.setHeart',
+  'mip.events.saveFeedback',
+])
+const outboxWakeup = createOutboxWakeup({
+  cloud,
+  functionName: process.env.MIP_OUTBOX_FUNCTION_NAME,
+  secret: process.env.MIP_OUTBOX_HMAC_SECRET,
+  sourceFunctionName: 'mip-events-api',
+  logger: console,
+})
 
 const publicActions = new Set([
   'mip.events.list',
@@ -236,11 +255,17 @@ async function dispatch(event) {
 
 exports.main = async (event = {}) => {
   try {
-    return response(await dispatch(event))
+    const data = await dispatch(event)
+    await outboxWakeup.afterSuccessfulMutation({
+      appId: trustedContextAppId(cloud.getWXContext(), allowedAppIds),
+      action: String(event.action || ''),
+      mutationActions: outboxMutationActions,
+    })
+    return response(data)
   }
   catch (error) {
     return errorResponse(error)
   }
 }
 
-exports._test = { dispatch }
+exports._test = { dispatch, outboxMutationActions }

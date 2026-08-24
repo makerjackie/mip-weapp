@@ -1,13 +1,38 @@
 import type { OpportunityId } from '../../../../modules/mip'
-import type { OpportunityDetail, PublicPerson } from '../../../../modules/mip-opportunities'
+import type {
+  OpportunityComment,
+  OpportunityCommentReportIntent,
+  OpportunityCommentSettings,
+  OpportunityCommentSubmissionIntent,
+  OpportunityCommentType,
+  OpportunityDetail,
+  PublicPerson,
+} from '../../../../modules/mip-opportunities'
 import { cooperationRoles } from '../../../../config/mip-catalogs'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
-import { opportunityModule } from '../../../../modules/mip-opportunities'
+import {
+  opportunityModule,
+  retainOpportunityCommentReportIntent,
+  retainOpportunityCommentSubmissionIntent,
+} from '../../../../modules/mip-opportunities'
 import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
 import { formatLocalDateTime } from '../../../../utils/date'
 
-type Interaction = 'referral' | 'referral-cancel' | 'interest'
+type Interaction = 'referral' | 'referral-cancel' | 'interest' | 'comment'
+
+interface PresentedComment extends OpportunityComment {
+  createdText: string
+  authorInitial: string
+}
+
+function presentComment(item: OpportunityComment): PresentedComment {
+  return {
+    ...item,
+    createdText: formatLocalDateTime(item.createdAt),
+    authorInitial: item.author.nickname.slice(0, 1) || 'M',
+  }
+}
 
 interface ReferralCandidate extends PublicPerson {
   displayName: string
@@ -35,10 +60,26 @@ Page({
     referralCandidatesCursor: '',
     referralPickerMessage: '',
     selectedReferralTarget: null as ReferralCandidate | null,
+    commentsState: 'loading' as 'loading' | 'ready' | 'error',
+    comments: [] as PresentedComment[],
+    commentsCursor: '',
+    commentsLoadingMore: false,
+    commentsMessage: '',
+    commentSettings: null as OpportunityCommentSettings | null,
+    composerVisible: false,
+    commentType: 'COMMENT' as OpportunityCommentType,
+    commentBody: '',
+    commentRating: 5,
+    editingComment: null as PresentedComment | null,
+    commentActingId: '',
   },
   resumeInteraction: '' as '' | Interaction,
+  commentSubmissionIntent: null as OpportunityCommentSubmissionIntent | null,
+  commentReportIntent: null as OpportunityCommentReportIntent | null,
 
   onLoad(options: Record<string, string | undefined>) {
+    this.commentSubmissionIntent = null
+    this.commentReportIntent = null
     const id = String(options.id || '') as OpportunityId
     this.setData({ id })
     void this.load()
@@ -73,6 +114,7 @@ Page({
         roleNames: item.roles.map(key => cooperationRoles.find(role => role.key === key)?.name || key),
         message: '',
       })
+      void this.loadComments(true)
     }
     catch (error) {
       this.setData({
@@ -138,6 +180,10 @@ Page({
         this.openReferralPicker()
         return
       }
+      if (interaction === 'comment') {
+        await this.openCommentComposer()
+        return
+      }
       if (interaction === 'referral-cancel') {
         const result = await opportunityModule.setReferral(item.id, false)
         this.setData({
@@ -159,6 +205,267 @@ Page({
     finally {
       this.setData({ acting: false })
     }
+  },
+
+  async loadComments(reset = false) {
+    if (this.data.commentsLoadingMore || (!reset && !this.data.commentsCursor)) {
+      return
+    }
+    this.setData({
+      ...(reset ? { commentsState: 'loading', comments: [], commentsCursor: '' } : { commentsLoadingMore: true }),
+      commentsMessage: '',
+    })
+    try {
+      const page = await opportunityModule.listComments(
+        this.data.id,
+        reset ? undefined : this.data.commentsCursor,
+      )
+      this.setData({
+        commentsState: 'ready',
+        commentSettings: page.settings,
+        comments: [...(reset ? [] : this.data.comments), ...page.items.map(presentComment)],
+        commentsCursor: page.nextCursor || '',
+      })
+    }
+    catch (error) {
+      this.setData({
+        commentsState: 'error',
+        commentsMessage: error instanceof Error ? error.message : '评论加载失败',
+      })
+    }
+    finally {
+      this.setData({ commentsLoadingMore: false })
+    }
+  },
+
+  startComment() {
+    void this.authorizeInteraction('comment')
+  },
+
+  async openCommentComposer() {
+    if (!this.data.commentSettings) {
+      await this.loadComments(true)
+    }
+    const settings = this.data.commentSettings
+    if (!settings) {
+      return
+    }
+    const type = settings.commentsEnabled
+      ? 'COMMENT'
+      : settings.reviewsEnabled && settings.opportunityStatus === 'ENDED' ? 'REVIEW' : null
+    if (!type) {
+      wx.showToast({ title: '当前机会未开放评论', icon: 'none' })
+      return
+    }
+    this.setData({
+      composerVisible: true,
+      editingComment: null,
+      commentType: type,
+      commentBody: '',
+      commentRating: 5,
+      commentsMessage: '',
+    })
+  },
+
+  editComment(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    const item = this.data.comments.find(comment => comment.id === id)
+    if (!item?.canEdit) {
+      return
+    }
+    this.setData({
+      composerVisible: true,
+      editingComment: item,
+      commentType: item.type,
+      commentBody: item.body,
+      commentRating: item.rating || 5,
+      commentsMessage: '',
+    })
+  },
+
+  closeCommentComposer() {
+    if (!this.data.commentActingId) {
+      this.setData({ composerVisible: false })
+    }
+  },
+
+  handleComposerVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {
+    if (!event.detail.visible) {
+      this.closeCommentComposer()
+    }
+  },
+
+  chooseCommentType(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.editingComment) {
+      return
+    }
+    const type = String(event.currentTarget.dataset.type || '') as OpportunityCommentType
+    const settings = this.data.commentSettings
+    if (type === 'COMMENT' && settings?.commentsEnabled && type !== this.data.commentType) {
+      this.commentSubmissionIntent = null
+      this.setData({ commentType: type })
+    }
+    if (type === 'REVIEW' && settings?.reviewsEnabled
+      && settings.opportunityStatus === 'ENDED' && type !== this.data.commentType) {
+      this.commentSubmissionIntent = null
+      this.setData({ commentType: type })
+    }
+  },
+
+  updateCommentBody(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    if (event.detail.value !== this.data.commentBody) {
+      this.commentSubmissionIntent = null
+    }
+    this.setData({ commentBody: event.detail.value })
+  },
+
+  chooseCommentRating(event: WechatMiniprogram.TouchEvent) {
+    const rating = Number(event.currentTarget.dataset.rating)
+    if (Number.isInteger(rating) && rating >= 1 && rating <= 5 && rating !== this.data.commentRating) {
+      this.commentSubmissionIntent = null
+      this.setData({ commentRating: rating })
+    }
+  },
+
+  async submitComment() {
+    const body = this.data.commentBody.trim()
+    if (!body || this.data.commentActingId) {
+      return
+    }
+    const editing = this.data.editingComment
+    const input = {
+      opportunityId: this.data.id,
+      ...(editing ? { commentId: editing.id, expectedVersion: editing.version } : {}),
+      type: this.data.commentType,
+      body,
+      ...(this.data.commentType === 'REVIEW' ? { rating: this.data.commentRating } : {}),
+    }
+    const intent = retainOpportunityCommentSubmissionIntent(this.commentSubmissionIntent, input)
+    this.commentSubmissionIntent = intent
+    this.setData({ commentActingId: editing?.id || 'new', commentsMessage: '' })
+    try {
+      await opportunityModule.saveComment(input, intent.idempotencyKey)
+      this.commentSubmissionIntent = null
+      this.setData({ composerVisible: false, editingComment: null, commentBody: '' })
+      await this.loadComments(true)
+      wx.showToast({ title: this.data.commentSettings?.moderationMode === 'REVIEW' && !editing ? '已提交审核' : '已发布', icon: 'none' })
+    }
+    catch (error) {
+      this.setData({ commentsMessage: error instanceof Error ? error.message : '提交失败' })
+    }
+    finally {
+      this.setData({ commentActingId: '' })
+    }
+  },
+
+  deleteComment(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    const item = this.data.comments.find(comment => comment.id === id)
+    if (!item?.canDelete || this.data.commentActingId) {
+      return
+    }
+    wx.showModal({
+      title: '删除评论',
+      content: '删除后评论将不再展示。',
+      confirmText: '删除',
+      success: (result) => {
+        if (result.confirm) {
+          void this.confirmDeleteComment(item)
+        }
+      },
+    })
+  },
+
+  async confirmDeleteComment(item: PresentedComment) {
+    this.setData({ commentActingId: item.id })
+    try {
+      await opportunityModule.deleteComment(item.id, item.version)
+      this.setData({ comments: this.data.comments.filter(comment => comment.id !== item.id) })
+      wx.showToast({ title: '已删除', icon: 'none' })
+    }
+    catch (error) {
+      wx.showToast({ title: error instanceof Error ? error.message : '删除失败', icon: 'none' })
+    }
+    finally {
+      this.setData({ commentActingId: '' })
+    }
+  },
+
+  async toggleCommentCall(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    const item = this.data.comments.find(comment => comment.id === id)
+    if (!item || item.mine || this.data.commentActingId) {
+      return
+    }
+    this.setData({ commentActingId: id })
+    try {
+      const result = await opportunityModule.setCommentCall(id, !item.callActive)
+      this.setData({
+        comments: this.data.comments.map(comment => comment.id === id
+          ? { ...comment, callActive: result.active, callCount: result.callCount }
+          : comment),
+      })
+    }
+    catch (error) {
+      wx.showToast({ title: error instanceof Error ? error.message : '操作失败', icon: 'none' })
+    }
+    finally {
+      this.setData({ commentActingId: '' })
+    }
+  },
+
+  reportComment(event: WechatMiniprogram.TouchEvent) {
+    const commentId = String(event.currentTarget.dataset.id || '')
+    const item = this.data.comments.find(comment => comment.id === commentId)
+    if (!item || item.mine) {
+      return
+    }
+    const labels = ['垃圾信息', '骚扰行为', '欺诈风险', '不当内容', '冒充他人', '其他问题']
+    const categories = ['SPAM', 'HARASSMENT', 'FRAUD', 'INAPPROPRIATE_CONTENT', 'IMPERSONATION', 'OTHER'] as const
+    wx.showActionSheet({
+      itemList: labels,
+      success: (result) => {
+        const category = categories[result.tapIndex]
+        if (category) {
+          void this.submitCommentReport(commentId, category)
+        }
+      },
+    })
+  },
+
+  async submitCommentReport(commentId: string, category: 'SPAM' | 'HARASSMENT' | 'FRAUD' | 'INAPPROPRIATE_CONTENT' | 'IMPERSONATION' | 'OTHER') {
+    if (this.data.commentActingId) {
+      return
+    }
+    this.setData({ commentActingId: commentId })
+    const intent = retainOpportunityCommentReportIntent(this.commentReportIntent, { commentId, category })
+    this.commentReportIntent = intent
+    try {
+      await opportunityModule.reportComment(
+        { commentId, category, requestId: intent.requestId },
+        intent.idempotencyKey,
+      )
+      this.commentReportIntent = null
+      wx.showToast({ title: '已提交举报', icon: 'none' })
+    }
+    catch (error) {
+      wx.showToast({ title: error instanceof Error ? error.message : '举报失败', icon: 'none' })
+    }
+    finally {
+      this.setData({ commentActingId: '' })
+    }
+  },
+
+  openCommentAuthor(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    const profileRef = this.data.comments.find(comment => comment.id === id)?.author.profileRef
+    if (profileRef) {
+      caseNavigateTo({ url: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(profileRef)}` })
+    }
+  },
+
+  loadMoreComments() {
+    void this.loadComments(false)
   },
 
   openReferralPicker() {

@@ -2,7 +2,7 @@
   <web-view wx:if="{{onlineMode}}" src="{{onlineUrl}}" binderror="handleOnlineError" />
   <block wx:else>
     <view wx:if="{{state === 'loading'}}" class="mx-3 mt-4 rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-    <view wx:elif="{{state === 'error'}}" class="mx-3 mt-4"><app-empty-state title="无法打开活动" description="{{message || '请检查网络后重试。'}}" action-text="重新加载" bind:action="loadEvent" /></view>
+    <view wx:elif="{{state === 'error'}}" class="mx-3 mt-4"><app-empty-state title="无法打开活动" description="{{message || '请检查网络后重试。'}}" action-text="重新加载" bind:action="retryLoad" /></view>
     <block wx:else>
     <image wx:if="{{event.coverUrl}}" class="h-[360rpx] w-full bg-panel" mode="aspectFill" src="{{event.coverUrl}}" />
     <view wx:else class="flex h-[300rpx] w-full items-center justify-center bg-brand-soft"><t-icon name="calendar" size="80rpx" color="var(--color-brand)" /></view>

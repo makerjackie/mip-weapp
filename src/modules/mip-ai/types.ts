@@ -38,7 +38,41 @@ export interface AiCapability {
   voiceDrafts: boolean
   textDrafts: boolean
   refinementDrafts: boolean
+  digitalAvatars: boolean
   reason?: 'PROVIDER_NOT_CONFIGURED' | 'STORAGE_NOT_CONFIGURED'
+}
+
+export const digitalAvatarStyles = [
+  { key: 'PROFESSIONAL', label: '职业形象', description: '适合个人资料和合作名片' },
+  { key: 'ILLUSTRATED', label: '插画形象', description: '保留人物特征的插画风格' },
+  { key: 'MONOCHROME', label: '黑白形象', description: '黑白、高对比度的人像风格' },
+] as const
+
+export type DigitalAvatarStyleKey = (typeof digitalAvatarStyles)[number]['key']
+export type DigitalAvatarGenerationId = Brand<string, 'DigitalAvatarGenerationId'>
+export type DigitalAvatarGenerationStatus = 'PROCESSING' | 'READY' | 'FAILED'
+
+export interface DigitalAvatarGeneration {
+  id: DigitalAvatarGenerationId
+  sourceAvatarAssetId: string
+  styleKey: DigitalAvatarStyleKey
+  status: DigitalAvatarGenerationStatus
+  outputAssetId?: string
+  outputUrl?: string
+  failureCode?: string
+  version: number
+  createdAt: string
+  updatedAt: string
+}
+
+export interface DigitalAvatarGenerationIntent {
+  sourceAvatarAssetId: string
+  styleKey: DigitalAvatarStyleKey
+  requestId: string
+}
+
+export interface DigitalAvatarGenerationPage {
+  items: DigitalAvatarGeneration[]
 }
 
 export interface AiDraftPage {
@@ -78,6 +112,8 @@ export interface MipAiGateway {
   continueDraft: (intent: AiDraftRefinementIntent) => Promise<AiDraft>
   updateDraft: (confirmation: AiDraftConfirmation) => Promise<AiDraft>
   deleteDraft: (draftId: AiDraftId, expectedVersion: number) => Promise<{ draftId: AiDraftId, status: 'DELETED' }>
+  listDigitalAvatars: (limit?: number) => Promise<DigitalAvatarGenerationPage>
+  generateDigitalAvatar: (intent: DigitalAvatarGenerationIntent) => Promise<DigitalAvatarGeneration>
 }
 
 export class MipAiError extends Error {

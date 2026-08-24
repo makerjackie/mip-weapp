@@ -40,6 +40,29 @@
     <view class="mt-4"><t-button block theme="primary" disabled="{{!selectedUserId || (selectedScopeType !== 'PLATFORM' && !scopeId)}}" loading="{{processingId === selectedUserId}}" bind:tap="grant">确认设置</t-button></view>
   </view>
 
+  <view wx:if="{{canConfigurePolicies}}" class="mt-5 rounded-[16rpx] bg-panel p-4">
+    <view class="text-[length:27rpx] font-semibold">权限模板</view>
+    <view class="mt-2 text-[length:22rpx] text-muted">平台超级管理员权限固定。其他角色只能在各自可授予范围内调整。</view>
+    <view class="mt-3 flex flex-wrap gap-2">
+      <t-tag wx:for="{{policyRoles}}" wx:key="key" theme="{{selectedPolicyRole === item.key ? 'primary' : 'default'}}" variant="outline" data-role="{{item.key}}" bind:tap="choosePolicyRole">{{item.label}}</t-tag>
+    </view>
+    <view class="mt-3 flex items-center justify-between text-[length:22rpx] text-muted">
+      <text>{{selectedPolicyRoleLabel}}</text>
+      <text>{{policySourceLabel}}</text>
+    </view>
+    <view class="mt-3 flex flex-col gap-2">
+      <view wx:for="{{policyCapabilities}}" wx:key="key" class="flex min-h-[88rpx] items-center justify-between rounded-[12rpx] bg-panel-raised px-3" data-capability="{{item.key}}" bind:tap="togglePolicyCapability">
+        <view class="min-w-0 flex-1 pr-3 text-[length:24rpx]">{{item.label}}</view>
+        <t-tag theme="{{item.enabled ? 'primary' : 'default'}}" variant="outline">{{item.enabled ? '已启用' : '未启用'}}</t-tag>
+      </view>
+    </view>
+    <view class="mt-4 grid grid-cols-2 gap-3">
+      <t-button block variant="outline" disabled="{{policySaving || !policyIsCustom}}" bind:tap="resetPolicyCapabilities">恢复默认</t-button>
+      <t-button block theme="primary" loading="{{policySaving}}" bind:tap="savePolicy">保存权限</t-button>
+    </view>
+    <view wx:if="{{policyMessage}}" class="mt-3 text-[length:22rpx] text-danger">{{policyMessage}}</view>
+  </view>
+
   <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载角色" description="{{message}}" action-text="重新加载" bind:action="loadRoles" /></view>
   <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有角色查看权限" description="当前账号不能查看角色设置。" /></view>

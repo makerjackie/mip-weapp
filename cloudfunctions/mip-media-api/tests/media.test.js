@@ -75,6 +75,23 @@ describe('MIP media image boundary', () => {
     assert.equal(queries.length, 2)
   })
 
+  it('rejects an admin upload when the effective role policy removes its capability', async () => {
+    const service = createMediaService({
+      database: {
+        async one(sql) {
+          assert.match(sql, /LEFT JOIN mip_role_capability_policies/)
+          return { role_key: 'PLATFORM_OPERATIONS', policy_capabilities_json: '[]' }
+        },
+      },
+      cloud: {},
+      env: environment(),
+    })
+    await assert.rejects(() => service.uploadImage(
+      { appId: APP_ID, userId: USER_ID },
+      { purpose: 'BANNER', imageBase64: pngBase64(750, 300) },
+    ), /FORBIDDEN/)
+  })
+
   it('rejects malformed and truncated image payloads', () => {
     assert.throws(() => decodeAndSanitizeImage('not-base64', 'AVATAR'), /IMAGE_INVALID/)
     const truncated = Buffer.from(pngBase64(), 'base64').subarray(0, 48).toString('base64')

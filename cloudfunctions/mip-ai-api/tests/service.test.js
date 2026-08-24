@@ -37,8 +37,146 @@ test('disables voice drafts when the private audio store is not configured', () 
     textDrafts: true,
     voiceDrafts: false,
     refinementDrafts: false,
+    digitalAvatars: false,
     reason: 'STORAGE_NOT_CONFIGURED',
   })
+})
+
+test('validates the current owned profile avatar before provider generation and persists the output fact', async () => {
+  const calls = []
+  const generation = {
+    id: '40000000-0000-4000-8000-000000000001',
+    version: 1,
+    status: 'PROCESSING',
+  }
+  const output = {
+    assetId: '50000000-0000-4000-8000-000000000001',
+    objectKey: 'mip/development/app/digital-avatars/user/output.png',
+    cloudFileId: 'cloud://env/mip/development/app/digital-avatars/user/output.png',
+    contentSha256: 'b'.repeat(64),
+    contentType: 'image/png',
+    contentBytes: 1024,
+    width: 512,
+    height: 512,
+  }
+  const repository = {
+    async createAvatarGeneration(_appId, _userId, input) {
+      calls.push(['source', input])
+      return {
+        generation,
+        source: {
+          cloudFileId: 'cloud://env/mip/development/app/avatars/user/source.png',
+          contentSha256: 'a'.repeat(64),
+          contentType: 'image/png',
+          contentBytes: 2048,
+          width: 512,
+          height: 512,
+        },
+      }
+    },
+    async registerPendingAvatarOutput(_appId, asset) { calls.push(['pending', asset.assetId]) },
+    async completeAvatarGeneration(_appId, _userId, generationId, version, asset, jobKey) {
+      calls.push(['complete', generationId, version, asset.assetId, jobKey])
+      return { ...generation, status: 'READY', version: 2, outputAssetId: asset.assetId }
+    },
+    async recoverAvatarGenerationOutput() { throw new Error('unexpected recovery') },
+    async failAvatarGeneration() { throw new Error('unexpected failure') },
+  }
+  const service = createAiService({
+    repository,
+    provider: {
+      capability: () => ({ digitalAvatars: true }),
+      async generateDigitalAvatar(input) {
+        calls.push(['provider', input.styleKey, input.sourceContentSha256])
+        return {
+          contentType: 'image/png',
+          imageBase64: Buffer.alloc(32).toString('base64'),
+          providerJobKey: 'private-avatar-job',
+        }
+      },
+    },
+    avatarStore: {
+      configured: true,
+      async store(input) {
+        calls.push(['store', input.contentType])
+        return output
+      },
+    },
+  })
+  const result = await service.generateDigitalAvatar(caller, {
+    sourceAvatarAssetId: '30000000-0000-4000-8000-000000000001',
+    styleKey: 'professional',
+    requestId: 'digital-avatar:test-success',
+  })
+  assert.equal(result.status, 'READY')
+  assert.deepEqual(calls.map(item => item[0]), ['source', 'provider', 'store', 'pending', 'complete'])
+  assert.equal(calls[1][1], 'PROFESSIONAL')
+})
+
+test('records a failed generation without accepting a provider URL as output', async () => {
+  let failedCode = ''
+  const service = createAiService({
+    repository: {
+      async createAvatarGeneration() {
+        return {
+          generation: { id: '40000000-0000-4000-8000-000000000001', version: 1 },
+          source: {
+            cloudFileId: 'cloud://env/source.png',
+            contentSha256: 'a'.repeat(64),
+            contentType: 'image/png',
+            contentBytes: 2048,
+            width: 512,
+            height: 512,
+          },
+        }
+      },
+      async failAvatarGeneration(_appId, _userId, _generationId, _version, code) {
+        failedCode = code
+        return true
+      },
+    },
+    provider: {
+      capability: () => ({ digitalAvatars: true }),
+      async generateDigitalAvatar() { throw new Error('private provider response') },
+    },
+    avatarStore: { configured: true },
+  })
+  await assert.rejects(() => service.generateDigitalAvatar(caller, {
+    sourceAvatarAssetId: '30000000-0000-4000-8000-000000000001',
+    styleKey: 'MONOCHROME',
+    requestId: 'digital-avatar:test-failure',
+  }), /DIGITAL_AVATAR_PROVIDER_UNAVAILABLE/)
+  assert.equal(failedCode, 'DIGITAL_AVATAR_PROVIDER_UNAVAILABLE')
+})
+
+test('replays a completed digital avatar request without calling the provider again', async () => {
+  let providerCalls = 0
+  const ready = {
+    id: '40000000-0000-4000-8000-000000000001',
+    version: 2,
+    status: 'READY',
+    outputAssetId: '50000000-0000-4000-8000-000000000001',
+  }
+  const service = createAiService({
+    repository: {
+      async createAvatarGeneration() {
+        return { generation: ready, source: null, replayed: true }
+      },
+    },
+    provider: {
+      capability: () => ({ digitalAvatars: true }),
+      async generateDigitalAvatar() { providerCalls += 1 },
+    },
+    avatarStore: { configured: true },
+  })
+
+  const result = await service.generateDigitalAvatar(caller, {
+    sourceAvatarAssetId: '30000000-0000-4000-8000-000000000001',
+    styleKey: 'PROFESSIONAL',
+    requestId: 'digital-avatar:replay-ready',
+  })
+  assert.equal(result, ready)
+  assert.equal(providerCalls, 0)
 })
 
 test('stores provider output as a draft instead of an official profile', async () => {

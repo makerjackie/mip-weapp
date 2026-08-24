@@ -29,6 +29,7 @@ function presentReferral(item: ReceivedReferral, index: number): ReferralView {
 
 Page({
   data: {
+    state: 'loading' as SectionState,
     tab: 'PUBLISHED' as OpportunityTab,
     publishedState: 'loading' as SectionState,
     publishedItems: [] as OpportunitySummary[],
@@ -52,7 +53,11 @@ Page({
   changeTab(event: WechatMiniprogram.TouchEvent) {
     const tab = String(event.currentTarget.dataset.tab || '') as OpportunityTab
     if (['PUBLISHED', 'REFERRED'].includes(tab)) {
-      this.setData({ tab, message: '' })
+      this.setData({
+        tab,
+        state: tab === 'PUBLISHED' ? this.data.publishedState : this.data.referredState,
+        message: '',
+      })
     }
   },
 
@@ -61,7 +66,12 @@ Page({
       return
     }
     this.setData(reset
-      ? { publishedState: 'loading', publishedNextCursor: '', message: '' }
+      ? {
+          publishedState: 'loading',
+          publishedNextCursor: '',
+          message: '',
+          ...(this.data.tab === 'PUBLISHED' ? { state: 'loading' as SectionState } : {}),
+        }
       : { loadingMore: true, message: '' })
     try {
       const page = await opportunityModule.listMine(
@@ -69,6 +79,7 @@ Page({
       )
       this.setData({
         publishedState: 'ready',
+        ...(this.data.tab === 'PUBLISHED' ? { state: 'ready' as SectionState } : {}),
         publishedItems: reset ? page.items : [...this.data.publishedItems, ...page.items],
         publishedNextCursor: page.nextCursor || '',
       })
@@ -76,6 +87,9 @@ Page({
     catch (error) {
       this.setData({
         publishedState: this.data.publishedItems.length ? 'ready' : 'error',
+        ...(this.data.tab === 'PUBLISHED'
+          ? { state: this.data.publishedItems.length ? 'ready' as SectionState : 'error' as SectionState }
+          : {}),
         message: error instanceof Error ? error.message : '已发布机会加载失败',
       })
     }
@@ -89,7 +103,12 @@ Page({
       return
     }
     this.setData(reset
-      ? { referredState: 'loading', referredNextCursor: '', message: '' }
+      ? {
+          referredState: 'loading',
+          referredNextCursor: '',
+          message: '',
+          ...(this.data.tab === 'REFERRED' ? { state: 'loading' as SectionState } : {}),
+        }
       : { loadingMore: true, message: '' })
     try {
       const page = await opportunityModule.listReceived(
@@ -100,6 +119,7 @@ Page({
       const offset = reset ? 0 : this.data.referredItems.length
       this.setData({
         referredState: 'ready',
+        ...(this.data.tab === 'REFERRED' ? { state: 'ready' as SectionState } : {}),
         referredItems: reset
           ? referrals.map(presentReferral)
           : [...this.data.referredItems, ...referrals.map((item, index) => presentReferral(item, offset + index))],
@@ -110,6 +130,9 @@ Page({
     catch (error) {
       this.setData({
         referredState: this.data.referredItems.length ? 'ready' : 'error',
+        ...(this.data.tab === 'REFERRED'
+          ? { state: this.data.referredItems.length ? 'ready' as SectionState : 'error' as SectionState }
+          : {}),
         message: error instanceof Error ? error.message : '被引荐机会加载失败',
       })
     }

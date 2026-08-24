@@ -18,6 +18,7 @@ const account: GrowthAccount = {
   userId: 'user-1' as UserId,
   experienceBalance: 90,
   contributionBalance: 10,
+  coinBalance: 3,
   version: 2,
 }
 
@@ -85,8 +86,8 @@ describe('MIP growth', () => {
     expect(page).toContain('wx:for="{{earningRules}}"')
     expect(controller).toContain('snapshot.levels.map')
     expect(controller).toContain('snapshot.earningRules.map')
-    expect(page).not.toContain('游戏币')
-    expect(controller).not.toContain('coinBalance')
+    expect(page).toContain('游戏币')
+    expect(page).toContain('snapshot.account.coinBalance')
   })
 
   it('keeps the admin editor limited to server-approved reward values', () => {
@@ -98,5 +99,7 @@ describe('MIP growth', () => {
     expect(page).not.toContain('data-field="sourceEventType"')
     expect(controller).toContain('!this.data.editorId')
     expect(page).not.toContain('COIN')
+    expect(fs.readFileSync(path.join(process.cwd(), 'src/packages/admin/growth-entries/index.wxml'), 'utf8'))
+      .toContain('data-value="COIN"')
   })
 })

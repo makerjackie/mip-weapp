@@ -48,6 +48,7 @@ Page({
     equippedBadges: [] as BadgeCollectionItem[],
     unreadCount: 0,
     visitorUnreadCount: 0,
+    profileViewCount: null as number | null,
     portfolioTab: 'cooperation' as PortfolioTab,
     cooperationState: 'loading' as SectionState,
     cooperationCards: [] as CooperationCardView[],
@@ -91,7 +92,7 @@ Page({
         this.loadCases(),
         this.loadOpportunities(),
         this.loadUnreadCount(snapshot),
-        this.loadVisitorUnreadCount(snapshot),
+        this.loadInfluenceSummary(snapshot),
       ])
     }
     catch {
@@ -114,17 +115,20 @@ Page({
     }
   },
 
-  async loadVisitorUnreadCount(snapshot: IdentityAccessSnapshot) {
+  async loadInfluenceSummary(snapshot: IdentityAccessSnapshot) {
     if (!snapshot.authenticated) {
-      this.setData({ visitorUnreadCount: 0 })
+      this.setData({ visitorUnreadCount: 0, profileViewCount: 0 })
       return
     }
     try {
       const page = await opportunityModule.listReceived('VISITOR')
-      this.setData({ visitorUnreadCount: page.unreadCount })
+      this.setData({
+        visitorUnreadCount: page.unreadCount,
+        profileViewCount: page.totalViewCount ?? 0,
+      })
     }
     catch {
-      this.setData({ visitorUnreadCount: 0 })
+      this.setData({ visitorUnreadCount: 0, profileViewCount: null })
     }
   },
 
@@ -311,6 +315,8 @@ Page({
 
   openMembership() { caseNavigateTo({ url: '/pages/membership/index' }) },
   openProfileEdit() { void this.openProtected('/packages/member/mip-profile/index', 'EDIT_PROFILE') },
+  openMemberCard() { void this.openProtected('/packages/member/mip-card/index', 'VIEW_RESTRICTED_PROFILE') },
+  openDigitalAvatar() { void this.openProtected('/packages/member/mip-avatar/index', 'EDIT_PROFILE') },
   openBranches() { caseNavigateTo({ url: '/packages/member/mip-branches/index' }) },
   openRegistrations() { void this.openProtected('/packages/member/mip-events/mine/index', 'INTERACT') },
   openOrders() { void this.openProtected('/packages/member/orders/index', 'VIEW_RESTRICTED_PROFILE') },
