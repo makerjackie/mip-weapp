@@ -73,6 +73,10 @@ describe('MIP messaging', () => {
     const gateway: MipMessagingGateway = {
       listInbox,
       markRead: async id => ({ messageId: id, readAt: '2026-08-24T01:00:00.000Z' }),
+      recordCustomerServiceInteraction: async () => ({
+        channel: 'WECHAT_CUSTOMER_SERVICE',
+        availableUntil: '2026-08-26T00:00:00.000Z',
+      }),
       recordSubscriptionDecision: async (templateKey, decision) => ({
         templateKey,
         decision,

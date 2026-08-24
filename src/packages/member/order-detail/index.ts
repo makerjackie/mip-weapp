@@ -1,10 +1,12 @@
-import type { OrderId } from '../../../modules/mip'
+import type { EventId, OrderId } from '../../../modules/mip'
 import type { CommerceOrder, MembershipPlan } from '../../../modules/mip-commerce'
 import { runtimeConfig } from '../../../config/runtime'
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
+import { mipCheckInResumeStore, mipEventsModule } from '../../../modules/mip-events/client'
 import { mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
-import { createIntentKey, formatCny, planTitle, presentOrderStatus } from '../../../modules/mip-shell'
+import { mipMessagingModule } from '../../../modules/mip-messaging/client'
+import { createIntentKey, formatCny, planTitle, presentOrderServiceStatus, presentOrderStatus } from '../../../modules/mip-shell'
 import { caseNavigateTo, caseRedirectTo } from '../../../modules/platform/case-navigation'
 import { formatLocalDateTime } from '../../../utils/date'
 
@@ -13,16 +15,24 @@ function statusDescription(order: CommerceOrder) {
     case 'CREATED': return '订单已创建，尚未确认支付。'
     case 'PAYMENT_CREATED': return '已调起支付，正在等待服务端确认。'
     case 'PAID': return order.orderType === 'EVENT'
-      ? '服务端已确认支付，活动报名已生效。'
-      : '服务端已确认支付，会员权益已生效。'
+      ? '服务端已确认支付，活动报名资格以活动服务当前状态为准。'
+      : order.orderType === 'CONTENT'
+        ? '服务端已确认支付，内容访问权益已生效。'
+        : '服务端已确认支付，会员权益已生效。'
     case 'FAILED': return '这笔订单未完成支付。'
     case 'CLOSED': return '这笔订单已关闭。'
     case 'REFUND_PENDING': return '退款意图已提交，处理结果以服务端状态为准。'
     case 'PARTIALLY_REFUNDED': return '这笔订单已完成部分退款。'
     case 'REFUNDED': return order.orderType === 'EVENT'
       ? '退款已完成，活动报名状态已按服务端事实更新。'
-      : '退款已完成，会员权益已按服务端事实更新。'
+      : order.orderType === 'CONTENT'
+        ? '退款已完成，内容访问权益已按服务端事实更新。'
+        : '退款已完成，会员权益已按服务端事实更新。'
   }
+}
+
+function uniqueText(values: Array<string | undefined>) {
+  return [...new Set(values.map(value => value?.trim()).filter(Boolean))].join(' · ')
 }
 
 Page({
@@ -31,10 +41,18 @@ Page({
     orderId: '' as OrderId | '',
     order: null as CommerceOrder | null,
     isEventOrder: false,
+    isContentOrder: false,
     eventId: '',
+    contentId: '',
+    eventCoverUrl: '',
+    eventStartsText: '',
+    eventEndsText: '',
+    eventLocationText: '',
+    priceItems: [] as Array<{ label: string, amountText: string }>,
     title: '订单',
     productDescription: '',
     statusText: '',
+    serviceStatusText: '',
     statusDescription: '',
     amountText: '',
     refundedAmountText: '',
@@ -47,6 +65,8 @@ Page({
     refundable: false,
     paymentEnabled: runtimeConfig.paymentMode !== 'disabled',
     paymentUnavailableText: '会员支付尚未配置',
+    checkInResumeState: 'none' as 'none' | 'checking' | 'ready' | 'pending',
+    checkInResumeMessage: '',
     paying: false,
     submittingRefund: false,
     message: '',
@@ -64,7 +84,7 @@ Page({
 
   onShow() {
     const resume = mipIdentityModule.consumePendingResume('packages/member/order-detail/index')
-    if (resume && ['PURCHASE_MEMBERSHIP', 'REGISTER_EVENT'].includes(resume.action) && this.resumePayment) {
+    if (resume && ['PURCHASE_MEMBERSHIP', 'REGISTER_EVENT', 'INTERACT'].includes(resume.action) && this.resumePayment) {
       this.resumePayment = false
       void this.performPayment()
       return
@@ -124,15 +144,28 @@ Page({
 
   applyOrder(order: CommerceOrder, plans: readonly MembershipPlan[]) {
     const status = presentOrderStatus(order.status)
+    const orderServiceStatus = order.serviceStatus || 'UNAVAILABLE'
+    const serviceStatus = presentOrderServiceStatus(orderServiceStatus)
     const plan = plans.find(item => String(item.id) === String(order.membershipPlanId))
     this.setData({
       state: 'ready',
       order,
       isEventOrder: order.orderType === 'EVENT',
+      isContentOrder: order.orderType === 'CONTENT',
       eventId: order.orderType === 'EVENT' ? order.resourceId || '' : '',
+      contentId: order.orderType === 'CONTENT' ? order.resourceId || '' : '',
+      eventCoverUrl: order.event?.coverUrl || '',
+      eventStartsText: order.event?.startsAt ? formatLocalDateTime(order.event.startsAt) : '',
+      eventEndsText: order.event?.endsAt ? formatLocalDateTime(order.event.endsAt) : '',
+      eventLocationText: uniqueText([order.event?.cityName, order.event?.venueName, order.event?.address]),
+      priceItems: (order.priceItems || []).map(item => ({
+        label: item.label,
+        amountText: formatCny(item.amountCents),
+      })),
       title: planTitle(order, plans),
       productDescription: plan?.description || '',
       statusText: status.label,
+      serviceStatusText: orderServiceStatus === 'UNAVAILABLE' ? '' : serviceStatus.label,
       statusDescription: statusDescription(order),
       amountText: formatCny(order.amountCents),
       refundedAmountText: order.refundedAmountCents > 0 ? formatCny(order.refundedAmountCents) : '',
@@ -142,9 +175,71 @@ Page({
       statusSuccess: status.tone === 'success',
       statusDanger: status.tone === 'danger',
       paymentPending: status.paymentPending,
-      refundable: status.refundable,
-      paymentUnavailableText: order.orderType === 'EVENT' ? '活动支付尚未配置' : '会员支付尚未配置',
+      refundable: status.refundable && order.orderType !== 'EVENT',
+      paymentUnavailableText: order.orderType === 'EVENT'
+        ? '活动支付尚未配置'
+        : order.orderType === 'CONTENT' ? '内容支付尚未配置' : '会员支付尚未配置',
+      checkInResumeState: 'none',
+      checkInResumeMessage: '',
       message: '',
+    })
+    if (order.orderType === 'EVENT' && order.status === 'PAID') {
+      void this.refreshCheckInResume(order)
+    }
+  },
+
+  async refreshCheckInResume(order: CommerceOrder) {
+    const eventId = order?.orderType === 'EVENT' ? order.resourceId || '' : ''
+    if (!eventId || !mipCheckInResumeStore.peek(eventId)) {
+      this.setData({ checkInResumeState: 'none', checkInResumeMessage: '' })
+      return
+    }
+    this.setData({
+      checkInResumeState: 'checking',
+      checkInResumeMessage: '正在核对活动报名资格。',
+    })
+    try {
+      const registration = await mipEventsModule.getMyRegistration(eventId as EventId)
+      if (this.data.order?.id !== order.id) {
+        return
+      }
+      const ready = registration !== null && ['REGISTERED', 'ATTENDED'].includes(registration.status)
+      this.setData({
+        checkInResumeState: ready ? 'ready' : 'pending',
+        checkInResumeMessage: ready
+          ? '报名资格已生效，可以继续签到。'
+          : '支付已确认，报名资格仍在同步。资格生效前不能签到。',
+      })
+    }
+    catch {
+      if (this.data.order?.id === order.id) {
+        this.setData({
+          checkInResumeState: 'pending',
+          checkInResumeMessage: '报名资格暂时无法核对，请稍后重试。',
+        })
+      }
+    }
+  },
+
+  retryEventRegistration() {
+    if (this.data.order) {
+      void this.refreshCheckInResume(this.data.order)
+    }
+  },
+
+  async continueCheckIn() {
+    if (this.data.checkInResumeState !== 'ready' || !this.data.eventId || !mipCheckInResumeStore.peek(this.data.eventId)) {
+      this.setData({
+        checkInResumeState: 'pending',
+        checkInResumeMessage: '签到意图已失效，请返回现场重新扫描活动码。',
+      })
+      return
+    }
+    if (mipMessagingModule.subscriptionCapability('CHECKIN_RESULT').available) {
+      await mipMessagingModule.requestWechatSubscription('CHECKIN_RESULT').catch(() => undefined)
+    }
+    caseNavigateTo({
+      url: `/packages/member/mip-events/check-in/index?eventId=${encodeURIComponent(this.data.eventId)}&resumeCheckIn=1`,
     })
   },
 
@@ -160,7 +255,9 @@ Page({
     this.resumePayment = true
     try {
       const session = await mipIdentityModule.beginProtectedAction({
-        action: order.orderType === 'EVENT' ? 'REGISTER_EVENT' : 'PURCHASE_MEMBERSHIP',
+        action: order.orderType === 'EVENT'
+          ? 'REGISTER_EVENT'
+          : order.orderType === 'CONTENT' ? 'INTERACT' : 'PURCHASE_MEMBERSHIP',
         source: { navigation: 'navigateBack' },
       })
       if (!session.decision.ready) {
@@ -276,5 +373,10 @@ Page({
     })
   },
   openMyEvents() { caseNavigateTo({ url: '/packages/member/mip-events/mine/index' }) },
+  openContent() {
+    if (this.data.contentId) {
+      caseNavigateTo({ url: `/packages/member/mip-knowledge/detail/index?contentId=${encodeURIComponent(this.data.contentId)}` })
+    }
+  },
   openHelp() { caseNavigateTo({ url: '/packages/member/help/index' }) },
 })

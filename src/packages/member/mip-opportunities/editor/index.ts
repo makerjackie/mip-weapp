@@ -1,8 +1,10 @@
 import type { BranchId, CooperationRoleKey, OpportunityId } from '../../../../modules/mip'
 import type { OpportunityCatalog, OpportunityDetail, PublicPerson } from '../../../../modules/mip-opportunities'
+import type { OpportunityTextDraft } from '../../../../modules/mip-opportunities/text-parser'
 import { cooperationRoles } from '../../../../config/mip-catalogs'
 import { mipMediaModule } from '../../../../modules/mip-media/client'
 import { opportunityModule } from '../../../../modules/mip-opportunities'
+import { parseOpportunityText } from '../../../../modules/mip-opportunities/text-parser'
 import { chooseSingleImage } from '../../../../modules/platform/image-upload'
 
 interface SelectOption { id: string, label: string, selected: boolean }
@@ -10,6 +12,35 @@ interface IndustryGroupOption { id: string, label: string, options: SelectOption
 interface RoleOption { key: CooperationRoleKey, name: string, selected: boolean }
 interface TeamSelection { profileRef: string, nickname: string, avatarUrl?: string, headline?: string }
 interface TeamCandidate extends PublicPerson { selected: boolean }
+interface CityOption { id: string, label: string }
+interface PastePreviewRow { key: string, label: string, value: string }
+
+const cityPriority = ['深圳', '北京', '上海', '成都', '广州', '中国香港', '中国澳门', '海外']
+
+function cityGridOptions(options: CityOption[], selectedId = '') {
+  const order = new Map(cityPriority.map((label, index) => [label, index]))
+  const sorted = options.filter(option => option.id).sort((left, right) => {
+    const leftOrder = order.get(left.label) ?? cityPriority.length
+    const rightOrder = order.get(right.label) ?? cityPriority.length
+    return leftOrder - rightOrder
+  })
+  const visible = sorted.slice(0, 8)
+  const selected = sorted.find(option => option.id === selectedId)
+  if (selected && !visible.some(option => option.id === selected.id)) {
+    visible[visible.length - 1] = selected
+  }
+  return visible
+}
+
+function pastePreviewRows(draft: OpportunityTextDraft): PastePreviewRow[] {
+  return [
+    { key: 'title', label: '项目名称', value: draft.title || '' },
+    { key: 'valueSummary', label: '价值金额', value: draft.valueSummary || '' },
+    { key: 'cityTagId', label: '主营城市', value: draft.cityLabel || '' },
+    { key: 'targetSummary', label: '寻找合作方', value: draft.targetSummary || '' },
+    { key: 'description', label: '展开讲讲', value: draft.description || '' },
+  ].filter(item => item.value)
+}
 
 Page({
   data: {
@@ -33,6 +64,10 @@ Page({
     catalog: { branches: [], cityTags: [], industryGroups: [], industryTags: [], abilityTags: [] } as OpportunityCatalog,
     branchOptions: [{ id: '', name: 'MIP 平台', cityName: '全国' }],
     cityOptions: [{ id: '', label: '全国' }],
+    cityGridOptions: [] as CityOption[],
+    pastePreviewVisible: false,
+    pasteDraft: {} as OpportunityTextDraft,
+    pastePreview: [] as PastePreviewRow[],
     roleOptions: cooperationRoles.map(item => ({ key: item.key, name: item.name, selected: false })) as RoleOption[],
     industryGroups: [] as IndustryGroupOption[],
     abilityOptions: [] as SelectOption[],
@@ -79,6 +114,7 @@ Page({
       catalog,
       branchOptions,
       cityOptions,
+      cityGridOptions: cityGridOptions(cityOptions, detail?.city?.id || ''),
       branchIndex,
       cityIndex,
       title: detail?.title || '',
@@ -142,6 +178,66 @@ Page({
     if (city) {
       this.setData({ cityIndex, cityTagId: city.id })
     }
+  },
+
+  chooseCity(event: WechatMiniprogram.TouchEvent) {
+    const cityTagId = String(event.currentTarget.dataset.id || '')
+    const cityIndex = this.data.cityOptions.findIndex(item => item.id === cityTagId)
+    if (cityIndex < 0) {
+      return
+    }
+    this.setData({ cityIndex, cityTagId })
+  },
+
+  async pasteAndRecognize() {
+    try {
+      const clipboard = await wx.getClipboardData()
+      const source = typeof clipboard.data === 'string' ? clipboard.data.trim() : ''
+      if (!source) {
+        wx.showToast({ title: '剪贴板中没有文字', icon: 'none' })
+        return
+      }
+      const parsed = parseOpportunityText(source, this.data.cityOptions)
+      if (!parsed.recognizedFields.length) {
+        this.setData({ message: '未识别到可填写的机会信息，请按字段名称分行粘贴。' })
+        return
+      }
+      this.setData({
+        pasteDraft: parsed.draft,
+        pastePreview: pastePreviewRows(parsed.draft),
+        pastePreviewVisible: true,
+        message: '',
+      })
+    }
+    catch {
+      this.setData({ message: '暂时无法读取剪贴板，请手动填写。' })
+    }
+  },
+
+  closePastePreview() {
+    this.setData({ pastePreviewVisible: false })
+  },
+
+  handlePastePreviewVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {
+    if (!event.detail.visible) {
+      this.closePastePreview()
+    }
+  },
+
+  confirmPasteDraft() {
+    const draft = this.data.pasteDraft
+    const cityIndex = draft.cityTagId
+      ? this.data.cityOptions.findIndex(item => item.id === draft.cityTagId)
+      : -1
+    this.setData({
+      ...(draft.title ? { title: draft.title } : {}),
+      ...(draft.valueSummary ? { valueSummary: draft.valueSummary } : {}),
+      ...(draft.targetSummary ? { targetSummary: draft.targetSummary } : {}),
+      ...(draft.description ? { description: draft.description } : {}),
+      ...(cityIndex >= 0 ? { cityTagId: draft.cityTagId, cityIndex } : {}),
+      pastePreviewVisible: false,
+    })
+    wx.showToast({ title: '已填入，请确认内容', icon: 'none' })
   },
 
   toggleRole(event: WechatMiniprogram.TouchEvent) {

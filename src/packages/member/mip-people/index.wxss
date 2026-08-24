@@ -1,0 +1,6 @@
+.people-filter-chip-hit {
+  display: flex;
+  align-items: center;
+  min-height: 88rpx;
+  margin: -16rpx 0;
+}

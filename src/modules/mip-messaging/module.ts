@@ -62,6 +62,10 @@ export function createMipMessagingModule(
       return gateway.recordSubscriptionDecision(templateKey, decision)
     },
 
+    recordCustomerServiceInteraction() {
+      return gateway.recordCustomerServiceInteraction()
+    },
+
     invalidate() {
       firstPage = undefined
       firstPageLoadedAt = 0

@@ -171,4 +171,26 @@ describe('MIP migrations', () => {
       expect(sql).not.toMatch(/\b(?:member|dating|sewing)_/i)
     }
   })
+
+  it('locks task eligibility to an exact app-scoped growth-level relation', () => {
+    const migration = fs.readFileSync(
+      path.join(root, 'database/mysql/mip/038_task_level_rules.sql'),
+      'utf8',
+    )
+    const rollback = fs.readFileSync(
+      path.join(root, 'database/mysql/mip/rollback/038_task_level_rules.sql'),
+      'utf8',
+    )
+    const lock = loadMipMigrationLock(root)
+    const entry = lock.migrations.find(item => item.name === 'mip_task_level_rules')
+
+    expect(entry?.createsTables).toEqual(['mip_task_level_rules'])
+    expect(migration).toContain('PRIMARY KEY (app_id, task_id, level_id)')
+    expect(migration).toContain('REFERENCES mip_task_cards (app_id, id) ON DELETE RESTRICT')
+    expect(migration).toContain('REFERENCES mip_growth_levels (app_id, id) ON DELETE RESTRICT')
+    expect(migration).not.toMatch(/\bDELETE\s+FROM\b/i)
+    expect(rollback).toContain('mip_task_level_rules_rollback_guard')
+    expect(rollback.indexOf('SELECT 1 FROM mip_task_level_rules LIMIT 1'))
+      .toBeLessThan(rollback.indexOf('DROP TABLE IF EXISTS mip_task_level_rules;'))
+  })
 })

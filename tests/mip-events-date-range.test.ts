@@ -48,7 +48,7 @@ describe('MIP event date range client contract', () => {
     const view = readFileSync(new URL('../src/pages/events/index.wxml', import.meta.url), 'utf8')
     expect(page).toContain('customDateLabel: this.data.dateToLabel')
     expect(page).toContain('customDateLabel: this.data.dateFromLabel')
-    expect(view).toContain('{{customDateLabel || \'自定义日期\'}}')
+    expect(view).toContain('customDateLabel || \'自定义日期\'')
   })
 
   it('passes valid inclusive endpoints and keeps single-day date compatibility', async () => {

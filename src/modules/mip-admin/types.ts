@@ -61,6 +61,7 @@ export type AdminCapability
     | 'banners.manage'
     | 'badges.manage'
     | 'game.manage'
+    | 'knowledge.manage'
     | 'orders.read'
     | 'refunds.submit'
     | 'operations.exceptions.read'
@@ -104,6 +105,36 @@ export interface AdminDashboard {
     convertedOpportunities: number
     opportunityConversionRate: number
   }
+}
+
+export interface AdminMatchingSettings {
+  scopeKey: string
+  scopeType: 'PLATFORM' | 'BRANCH'
+  scopeId?: string
+  talentMinScore: number
+  projectMinScore: number
+  maximumCandidates: number
+  externalProviderEnabled: boolean
+  version: number
+  updatedAt?: string | null
+}
+
+export interface AdminMatchingRequest {
+  id: string
+  sourceOpportunity: { id: string, title: string }
+  requestedByType: 'USER' | 'ADMIN'
+  provider: 'LOCAL' | 'EXTERNAL'
+  fallbackReason?: string
+  settingsVersion: number
+  sourceVersion: number
+  resultVersion: number
+  resultCount: number
+  createdAt: string | null
+}
+
+export interface AdminMatchingState {
+  settings: AdminMatchingSettings
+  requests: AdminMatchingRequest[]
 }
 
 export interface AdminUser {
@@ -650,9 +681,9 @@ export interface AdminOrder {
   id: string
   userId: string
   nickname: string
-  orderType: 'MEMBERSHIP' | 'EVENT'
+  orderType: 'MEMBERSHIP' | 'EVENT' | 'CONTENT'
   resourceId: string | null
-  resourceType: 'MEMBERSHIP_PLAN' | 'EVENT'
+  resourceType: 'MEMBERSHIP_PLAN' | 'EVENT' | 'KNOWLEDGE_CONTENT'
   resourceTitle: string
   resourceBranchName: string
   merchantOrderNoMasked: string
@@ -803,6 +834,16 @@ export interface MipAdminGateway {
   endOpportunity: (input: { opportunityId: string, expectedVersion: number }) => Promise<{ id: string, status: 'ENDED', version: number }>
   unpublishOpportunity: (input: Record<string, unknown>) => Promise<{ id: string, status: string, version: number }>
   archiveOpportunity: (input: Record<string, unknown>) => Promise<{ id: string, status: 'ARCHIVED', version: number, archivedAt: string }>
+  getMatchingAdminState: (branchId?: string) => Promise<AdminMatchingState>
+  saveMatchingSettings: (input: {
+    branchId?: string
+    expectedVersion: number
+    settings: Omit<AdminMatchingSettings, 'scopeKey' | 'scopeType' | 'scopeId' | 'version' | 'updatedAt'>
+  }) => Promise<AdminMatchingSettings>
+  recalculateOpportunityMatching: (input: {
+    opportunityId: string
+    idempotencyKey: string
+  }) => Promise<{ id: string, resultCount: number }>
   getOpportunityCommentAdminState: (opportunityId: string) => Promise<AdminOpportunityCommentState>
   saveOpportunityCommentSettings: (input: {
     opportunityId: string

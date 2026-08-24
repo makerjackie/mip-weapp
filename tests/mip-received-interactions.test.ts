@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { parseProfileInfluence } from '../src/modules/mip-opportunities/validation'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -18,10 +19,8 @@ describe('MIP received interaction client flow', () => {
     const profile = read('src/pages/profile/index.wxml')
 
     expect(page).toContain('action: \'INTERACT\'')
-    expect(page).toContain('loadCategory(\'REFERRAL\', true)')
-    expect(page).toContain('loadCategory(\'PROFILE_INTEREST\', true)')
-    expect(page).toContain('loadCategory(\'OUTBOUND_INTEREST\', true)')
-    expect(page).toContain('loadCategory(\'VISITOR\', true)')
+    expect(page).toContain('[\'REFERRAL\', \'PROFILE_INTEREST\', \'OUTBOUND_INTEREST\', \'VISITOR\']')
+    expect(page).toContain('[\'GUEST\', \'INTERACTION\', \'ACTIVE_INTEREST\', \'VISITOR\']')
     expect(page).toContain('opportunityModule.listReceived(')
     expect(page).toContain('markReceivedRead')
     expect(page).toContain('mipMessagingModule.invalidate()')
@@ -39,6 +38,70 @@ describe('MIP received interaction client flow', () => {
     expect(profile).toContain('bind:tap=\"openReceivedInteractions\"')
     expect(profile).toContain('visitorUnreadCount > 0')
     expect(profilePage).toContain('opportunityModule.listReceived(\'VISITOR\')')
+    expect(profilePage).toContain('Promise.allSettled([')
+    expect(profilePage).toContain('summaryResult.status === \'fulfilled\'')
+    expect(profilePage).toContain('visitorResult.status === \'fulfilled\'')
+    for (const field of ['guestCount', 'interactionCount', 'interestCount', 'visitorCount']) {
+      expect(profilePage).toContain(`${field}: null`)
+      expect(profilePage).not.toContain(`${field}: 0`)
+    }
+  })
+
+  it('binds the four influence figures to server facts and their real lists', () => {
+    const profilePage = read('src/pages/profile/index.ts')
+    const profileView = read('src/pages/profile/index.wxml')
+    const publicPage = read('src/packages/member/mip-public-profile/index.ts')
+    const publicView = read('src/packages/member/mip-public-profile/index.wxml')
+    const profileEditor = read('src/packages/member/mip-profile/index.wxml')
+    const server = read('cloudfunctions/mip-opportunities-api/domain/profile-influence.js')
+
+    expect(profilePage).toContain('opportunityModule.getProfileInfluence()')
+    expect(profilePage).toContain('?scope=influence&category=')
+    expect(publicPage).toContain('?scope=influence&category=')
+    for (const label of ['嘉宾', '互动', '感兴趣', '访客']) {
+      expect(profileView).toContain(label)
+      expect(publicView).toContain(label)
+    }
+    expect(publicView).toContain('influence ? influence.guestCount : \'—\'')
+    expect(profileEditor).toContain('visibilityInfluence')
+    expect(server).toContain('FROM mip_event_invitation_attributions')
+    expect(server).toContain('FROM mip_event_hearts')
+    expect(server).toContain('FROM mip_profile_interests')
+    expect(server).toContain('FROM mip_profile_visits')
+    expect(server).toContain('guest.status = \'ACTIVE\'')
+    expect(server).toContain('registration.share_profile = 1')
+  })
+
+  it('rejects invented or malformed influence figures at the client boundary', () => {
+    expect(parseProfileInfluence({
+      guestCount: 1,
+      interactionCount: 2,
+      interestCount: 3,
+      visitorCount: 4,
+    })).toEqual({
+      guestCount: 1,
+      interactionCount: 2,
+      interestCount: 3,
+      visitorCount: 4,
+    })
+    expect(() => parseProfileInfluence({
+      guestCount: -1,
+      interactionCount: 2,
+      interestCount: 3,
+      visitorCount: 4,
+    })).toThrow('人才服务返回了无效响应')
+    expect(() => parseProfileInfluence({
+      guestCount: 1,
+      interactionCount: 2.5,
+      interestCount: 3,
+      visitorCount: 4,
+    })).toThrow('人才服务返回了无效响应')
+    expect(() => parseProfileInfluence({
+      guestCount: null,
+      interactionCount: 2,
+      interestCount: 3,
+      visitorCount: 4,
+    })).toThrow('人才服务返回了无效响应')
   })
 
   it('declares the page in every active route contract', () => {

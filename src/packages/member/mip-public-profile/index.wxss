@@ -1,0 +1,4 @@
+.public-profile-tab-hit {
+  min-height: 88rpx;
+  margin: -4rpx 0;
+}

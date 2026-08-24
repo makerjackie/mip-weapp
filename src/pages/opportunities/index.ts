@@ -533,6 +533,10 @@ Page({
     void this.openProtected(url, 'INTERACT')
   },
 
+  openMatching() {
+    void this.openProtected('/packages/member/mip-opportunity-matching/index', 'INTERACT')
+  },
+
   openCases() {
     caseNavigateTo({ url: '/packages/member/mip-cases/list/index' })
   },

@@ -11,14 +11,16 @@
     <view class="flex min-h-[92rpx] items-center justify-between gap-4 border-b border-line px-4"><text class="text-muted">金额</text><text class="font-semibold">{{amountText}}</text></view>
     <view class="flex min-h-[92rpx] items-center justify-between gap-4 px-4"><text class="text-muted">服务端状态</text><text class="text-right text-brand">{{statusText}}</text></view>
   </view>
-  <view wx:if="{{!isEventOrder && membershipEndsText}}" class="mt-4 rounded-[16rpx] border border-line bg-panel px-4 py-4 text-[length:23rpx]">会员有效期至 {{membershipEndsText}}</view>
+  <view wx:if="{{!isEventOrder && !isContentOrder && membershipEndsText}}" class="mt-4 rounded-[16rpx] border border-line bg-panel px-4 py-4 text-[length:23rpx]">会员有效期至 {{membershipEndsText}}</view>
 
   <view class="mt-8 flex flex-col gap-3">
     <t-button wx:if="{{result === 'pending'}}" block size="large" theme="primary" bind:tap="retry">重新查询</t-button>
+    <t-button wx:if="{{canContinueCheckIn}}" block size="large" theme="primary" bind:tap="continueCheckIn">继续签到</t-button>
     <t-button wx:if="{{order}}" block size="large" theme="primary" bind:tap="openOrder">查看订单详情</t-button>
     <t-button wx:if="{{isEventOrder && eventId}}" block variant="outline" theme="default" bind:tap="openEvent">返回活动</t-button>
     <t-button wx:if="{{isEventOrder}}" block variant="outline" theme="default" bind:tap="openMyEvents">查看我的活动</t-button>
-    <t-button wx:if="{{!isEventOrder && result === 'success'}}" block variant="outline" theme="default" bind:tap="openMembership">查看会员权益</t-button>
+    <t-button wx:if="{{isContentOrder && contentId}}" block variant="outline" theme="default" bind:tap="openContent">返回内容</t-button>
+    <t-button wx:if="{{!isEventOrder && !isContentOrder && result === 'success'}}" block variant="outline" theme="default" bind:tap="openMembership">查看会员权益</t-button>
   </view>
   <app-page-exit label="完成" tab-url="/pages/profile/index" />
 </view>

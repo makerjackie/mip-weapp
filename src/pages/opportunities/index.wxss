@@ -1,0 +1,15 @@
+.opportunities-safe-area {
+  height: env(safe-area-inset-top);
+}
+
+.opportunities-tab-hit {
+  min-height: 88rpx;
+  margin: -4rpx 0;
+}
+
+.opportunities-chip-hit {
+  display: flex;
+  align-items: center;
+  min-height: 88rpx;
+  margin: -16rpx 0;
+}

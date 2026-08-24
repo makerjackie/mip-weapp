@@ -321,6 +321,25 @@ function profileOpportunity(value: unknown): PublicProfileOpportunity {
   }
 }
 
+export function parseProfileInfluence(value: unknown) {
+  const source = record(value)
+  const counts = [
+    source.guestCount,
+    source.interactionCount,
+    source.interestCount,
+    source.visitorCount,
+  ]
+  if (counts.some(count => typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0)) {
+    throw new Error('人才服务返回了无效响应')
+  }
+  return {
+    guestCount: source.guestCount as number,
+    interactionCount: source.interactionCount as number,
+    interestCount: source.interestCount as number,
+    visitorCount: source.visitorCount as number,
+  }
+}
+
 export function parsePublicProfileAggregate(value: unknown): PublicProfileAggregate {
   const source = record(value)
   if (!Array.isArray(source.cooperationCards)
@@ -338,6 +357,7 @@ export function parsePublicProfileAggregate(value: unknown): PublicProfileAggreg
     superCases: source.superCases.map(superCase),
     opportunities: source.opportunities.map(profileOpportunity),
     interestActive: source.interestActive,
+    ...(source.influence === undefined ? {} : { influence: parseProfileInfluence(source.influence) }),
   }
 }
 

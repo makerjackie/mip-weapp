@@ -14,12 +14,14 @@ interface PersonView extends PublicPerson {
   kindLabel: string
   branchText: string
   joinedText: string
+  abilityText: string
   abilities: NonNullable<PublicPerson['abilities']>
   badges: NonNullable<PublicPerson['badges']>
 }
 
 interface FilterOption { id: string, label: string }
 interface TagOption extends FilterOption { selected: boolean }
+interface CatalogGroupView { id: string, label: string, options: TagOption[] }
 
 const allBranches: FilterOption = { id: '', label: '全部城市与分会' }
 
@@ -40,9 +42,22 @@ function presentPerson(person: PublicPerson): PersonView {
       ? [person.primaryBranch.cityName, person.primaryBranch.name].filter(Boolean).join(' · ')
       : '',
     joinedText: dateText(person.joinedAt),
+    abilityText: (person.abilities || [])[0]?.label || dateText(person.joinedAt),
     abilities: person.abilities || [],
     badges: person.badges || [],
   }
+}
+
+function catalogGroupViews(groups: CatalogSelectorGroup[], selectedIds: string[]): CatalogGroupView[] {
+  return groups.map(group => ({
+    id: group.id,
+    label: group.label,
+    options: group.options.map(item => ({
+      id: item.id,
+      label: item.label,
+      selected: selectedIds.includes(item.id),
+    })),
+  }))
 }
 
 Page({
@@ -63,6 +78,7 @@ Page({
     draftIndustryTagIds: [] as string[],
     selectedIndustryTagIds: [] as string[],
     industryGroups: [] as CatalogSelectorGroup[],
+    industryViewGroups: [] as CatalogGroupView[],
     draftAbilityTagIds: [] as string[],
     selectedAbilityTagIds: [] as string[],
     abilityOptions: [] as TagOption[],
@@ -104,19 +120,21 @@ Page({
   applyCatalog(catalog: OpportunityCatalog) {
     const branchGroups = groupedCityBranches(catalog.branches, catalog.cityTags)
     const branchOptions = [allBranches, ...branchGroups[0].options]
+    const industryGroups = catalog.industryGroups.map(group => ({
+      id: group.id,
+      label: group.label,
+      options: group.options.map(item => ({
+        id: item.id,
+        label: item.label,
+        popular: item.popular,
+      })),
+    }))
     this.setData({
       branchOptions,
       branchGroups,
       branchIndex: Math.max(0, branchOptions.findIndex(item => item.id === this.data.selectedBranchId)),
-      industryGroups: catalog.industryGroups.map(group => ({
-        id: group.id,
-        label: group.label,
-        options: group.options.map(item => ({
-          id: item.id,
-          label: item.label,
-          popular: item.popular,
-        })),
-      })),
+      industryGroups,
+      industryViewGroups: catalogGroupViews(industryGroups, this.data.draftIndustryTagIds),
       abilityOptions: catalog.abilityTags.map(item => ({
         id: item.id,
         label: item.label,
@@ -200,7 +218,30 @@ Page({
   },
 
   changeIndustry(event: WechatMiniprogram.CustomEvent<{ selectedIds: string[] }>) {
-    this.setData({ draftIndustryTagIds: event.detail.selectedIds.slice(0, 8) })
+    const draftIndustryTagIds = event.detail.selectedIds.slice(0, 8)
+    this.setData({
+      draftIndustryTagIds,
+      industryViewGroups: catalogGroupViews(this.data.industryGroups, draftIndustryTagIds),
+    })
+  },
+
+  toggleIndustry(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    if (!this.data.industryGroups.some(group => group.options.some(item => item.id === id))) {
+      return
+    }
+    const selected = this.data.draftIndustryTagIds.includes(id)
+    if (!selected && this.data.draftIndustryTagIds.length >= 8) {
+      wx.showToast({ title: '最多选择 8 个行业标签', icon: 'none' })
+      return
+    }
+    const draftIndustryTagIds = selected
+      ? this.data.draftIndustryTagIds.filter(item => item !== id)
+      : [...this.data.draftIndustryTagIds, id]
+    this.setData({
+      draftIndustryTagIds,
+      industryViewGroups: catalogGroupViews(this.data.industryGroups, draftIndustryTagIds),
+    })
   },
 
   chooseRole(event: WechatMiniprogram.TouchEvent) {
@@ -235,6 +276,7 @@ Page({
       draftIndustryTagIds: [],
       draftAbilityTagIds: [],
       abilityOptions: this.data.abilityOptions.map(item => ({ ...item, selected: false })),
+      industryViewGroups: catalogGroupViews(this.data.industryGroups, []),
     })
   },
 
@@ -266,6 +308,7 @@ Page({
       selectedAbilityTagIds: [],
       filterOpen: false,
       abilityOptions: this.data.abilityOptions.map(item => ({ ...item, selected: false })),
+      industryViewGroups: catalogGroupViews(this.data.industryGroups, []),
     }, () => void this.loadPeople(true))
   },
 

@@ -62,6 +62,8 @@ interface RuntimePagesContract {
       id: string
       type: 'input' | 'tap'
       selector: string
+      handler: string
+      handlerDataset?: Record<string, string>
       value?: string
       dataAssertions: Array<{ path: string, equals: unknown }>
       visibleAssertion?: { selector?: string, text?: string }
@@ -251,6 +253,10 @@ describe('mip-weapp UI runtime contract', () => {
     }
     expect(verifyRuntime).toContain('assertRepresentativeVisible')
     expect(verifyRuntime).toContain('visibleAssertion')
+    expect(verifyRuntime).toContain('waitForRepresentativeLifecycle(page)')
+    expect(verifyRuntime).toContain('visibleAssertionMode === \'source-data-screenshot\'')
+    expect(verifyRuntime).toContain('visibleAssertionMode = \'natural-source-data-screenshot\'')
+    expect(verifyRuntime).toContain('injectedDiffRatio >= 0.001')
   })
 
   it('executes non-mutating UI interactions through rendered controls', () => {
@@ -258,6 +264,12 @@ describe('mip-weapp UI runtime contract', () => {
     expect(verifyRuntime).toContain('verifyInteractionJourneys')
     expect(verifyRuntime).toContain('element.input(step.value)')
     expect(verifyRuntime).toContain('element.tap()')
+    expect(verifyRuntime).toContain('interactionDataMatches(data, step)')
+    expect(verifyRuntime).toContain('waitForInteractionData(page, step)')
+    expect(verifyRuntime).toContain('invokeInteractionHandler(page, step)')
+    expect(verifyRuntime).toContain('assertInteractionVisible(page, step)')
+    expect(verifyRuntime).toContain('visibleDiffRatio >= 0.001')
+    expect(verifyRuntime).toMatch(/const element = await page\.\$\(step\.selector\)/)
     expect(verifyRuntime).toMatch(/interaction-\$\{outputName\(journey\.id\)\}\.png/)
     const routeByPath = new Map(contract.routes.map(route => [route.path, route]))
     for (const journey of contract.interactionJourneys) {
@@ -266,6 +278,7 @@ describe('mip-weapp UI runtime contract', () => {
       expect(journey.steps.length).toBeGreaterThan(0)
       for (const step of journey.steps) {
         expect(step.selector).toMatch(/^#\w[\w-]*$/)
+        expect(step.handler).toMatch(/^[a-z]\w*$/i)
         expect(step.dataAssertions.length).toBeGreaterThan(0)
       }
     }
@@ -278,6 +291,7 @@ describe('mip-weapp UI runtime contract', () => {
       'calendar-location',
       'customer-service',
       'event-album-photo',
+      'knowledge-webview',
       'online-event-webview',
       'phone-auth',
       'phone-call',
@@ -327,6 +341,9 @@ describe('mip-weapp UI runtime contract', () => {
     ]))
     expect(byId.get('subscription-message')?.routes).toEqual(['packages/member/mip-notifications/index'])
     expect(byId.get('ai-voice')?.routes).toEqual(['packages/member/mip-ai/index'])
+    expect(byId.get('share')?.routes).toContain('packages/member/mip-growth/index')
+    expect(contract.routes.find(route => route.path === 'packages/member/mip-growth/index')?.deviceRequired)
+      .toContain('share')
     expect(byId.get('task-template')?.routes).toEqual([
       'packages/admin/tasks/index',
       'packages/member/mip-tasks/detail/index',
@@ -343,6 +360,8 @@ describe('mip-weapp UI runtime contract', () => {
     expect(byPath.get('packages/member/mip-events/participants/index')?.query).toEqual(['eventId'])
     expect(byPath.get('packages/member/mip-public-profile/index')?.query).toEqual(['profileRef'])
     expect(byPath.get('packages/member/order-detail/index')?.query).toEqual(['orderId'])
+    expect(byPath.get('packages/member/mip-knowledge/detail/index')?.query).toEqual(['contentId'])
+    expect(byPath.get('packages/member/mip-knowledge/web/index')?.query).toEqual(['contentId'])
     for (const route of contract.routes.filter(item => item.query?.length)) {
       expect(route.queryFixture, `${route.path} needs a real-data fixture`).toBeTruthy()
       expect(Object.keys(route.queryFixture!.values).sort()).toEqual([...route.query!].sort())
@@ -424,7 +443,10 @@ describe('mip-weapp UI runtime contract', () => {
     expect(gatewaySource).toContain(`'mip.events.checkIn'`)
     expect(functionSource).toContain(`case 'mip.events.checkIn'`)
     expect(serviceSource).toContain('mip_event_checkin_credentials')
-    expect(serviceSource).toContain('checkInCredentialQuery(parsedToken, { lock: true })')
+    expect(serviceSource).toContain(`presented.kind === 'SCAN'`)
+    expect(serviceSource).toContain('checkInCredentialQuery(presented.parsed, { lock: true })')
+    expect(serviceSource).toContain('checkInResumeRef(presented.credentialKind, presented.credentialRef, { lock: true })')
+    expect(serviceSource).toContain('credential.event_id !== presented.eventId')
     expect(serviceSource).toContain(`parsed.kind === 'SHORT' ? 'scan_key' : 'id'`)
     expect(serviceSource).toContain('sha256(parsed.secret)')
     expect(serviceSource).toContain('assertCheckInAllowed')

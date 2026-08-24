@@ -3,7 +3,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
+  _checkInResumeTest,
   checkInCredentialCountdown,
+  createCheckInResumeStore,
   eventInvitationPath,
   isEventAccessRequirementError,
   resolvePrimaryBranchCity,
@@ -67,13 +69,128 @@ describe('MIP event experience contracts', () => {
     const registration = source('src/packages/member/mip-events/registration/index.ts')
     expect(checkIn).toContain('isEventAccessRequirementError(error)')
     expect(checkIn).toContain('action: \'INTERACT\'')
-    expect(checkIn).toContain('scene: this.data.scanToken')
+    expect(checkIn).toContain('mipCheckInResumeStore.save(this.resolvedScene)')
+    expect(checkIn).toContain('resumeCheckIn: \'1\'')
+    expect(checkIn).not.toMatch(/query:\s*\{[^}]*scene:/)
+    expect(checkIn).not.toMatch(/check-in\/index\?[^`]*token=/)
     expect(checkIn).toContain('consumePendingResume(\'packages/member/mip-events/check-in/index\')')
     expect(checkIn).toContain('route: \'packages/member/mip-events/check-in/index\'')
-    expect(checkIn).toContain(`scanToken: invalidCredential ? '' : this.data.scanToken`)
+    expect(checkIn).toContain('mipEventsModule.resolveCheckInScene(this.scanToken)')
+    expect(checkIn).toContain('error.code === \'REGISTRATION_REQUIRED\'')
+    expect(checkIn).toContain('error.code === \'REGISTRATION_PENDING\'')
     expect(checkIn).toContain('requestWechatSubscription(\'CHECKIN_RESULT\')')
     expect(registration).toContain('requestWechatSubscription(\'CHECKIN_RESULT\')')
-    expect(checkInView).toContain('scanToken ? \'确认签到\' : \'扫描活动码\'')
+    expect(checkInView).toContain('前往报名')
+    expect(checkInView).toContain('重新核对报名')
+    expect(checkInView).toContain('hasScanToken ? \'确认签到\' : \'扫描活动码\'')
+  })
+
+  it('keeps a server-resolved check-in intent only within both local and scene expiry', () => {
+    const values = new Map<string, unknown>()
+    let cleared = false
+    let scheduled: (() => void) | undefined
+    let now = Date.parse('2026-08-25T04:00:00.000Z')
+    const resumeToken = `${'a'.repeat(24)}.${'b'.repeat(43)}`
+    const store = createCheckInResumeStore({
+      read: key => values.get(key),
+      write: (key, value) => { values.set(key, value) },
+      clear: (key) => {
+        values.delete(key)
+        if (key === _checkInResumeTest.STORAGE_KEY) {
+          cleared = true
+        }
+      },
+    }, () => now, {
+      set: (callback) => {
+        scheduled = callback
+        return callback
+      },
+      clear: () => { scheduled = undefined },
+    })
+    const saved = store.save({
+      eventId: 'event-a' as never,
+      resumeToken,
+      validFrom: '2026-08-25T03:00:00.000Z',
+      validUntil: '2026-08-25T06:00:00.000Z',
+    })
+
+    expect(saved?.expiresAt).toBe(now + 30 * 60 * 1000)
+    expect(store.peek('event-a')?.resumeToken).toBe(resumeToken)
+    expect(store.peek('event-b')).toBeNull()
+    expect(cleared).toBe(false)
+    const stored = values.get(_checkInResumeTest.STORAGE_KEY)
+    expect(stored).toEqual(expect.objectContaining({ eventId: 'event-a', resumeToken }))
+    expect(stored).not.toHaveProperty('scanToken')
+    expect(JSON.stringify(stored)).not.toContain('s1.')
+
+    now = Date.parse('2026-08-25T04:31:00.000Z')
+    scheduled?.()
+    expect(values.get(_checkInResumeTest.STORAGE_KEY)).toBeUndefined()
+    expect(cleared).toBe(true)
+
+    const sceneBound = store.save({
+      eventId: 'event-a' as never,
+      resumeToken,
+      validFrom: '2026-08-25T04:00:00.000Z',
+      validUntil: '2026-08-25T04:35:00.000Z',
+    })
+    expect(sceneBound?.expiresAt).toBe(Date.parse('2026-08-25T04:35:00.000Z'))
+  })
+
+  it('prunes only the legacy raw-scene key on first read and repeated foreground pruning', () => {
+    const now = Date.parse('2026-08-25T04:00:00.000Z')
+    const resumeToken = `${'a'.repeat(24)}.${'b'.repeat(43)}`
+    const validIntent = {
+      eventId: 'event-a',
+      resumeToken,
+      validUntil: '2026-08-25T04:30:00.000Z',
+      expiresAt: Date.parse('2026-08-25T04:30:00.000Z'),
+    }
+    const createStorage = (entries: Array<[string, unknown]>) => {
+      const values = new Map(entries)
+      const cleared: string[] = []
+      return {
+        values,
+        cleared,
+        adapter: {
+          read: (key: string) => values.get(key),
+          write: (key: string, value: typeof validIntent) => { values.set(key, value) },
+          clear: (key: string) => {
+            cleared.push(key)
+            values.delete(key)
+          },
+        },
+      }
+    }
+
+    const legacyOnly = createStorage([[
+      _checkInResumeTest.LEGACY_STORAGE_KEY,
+      { eventId: 'event-a', scanToken: 's1.abcdefghijk.abcdefghijk' },
+    ]])
+    createCheckInResumeStore(legacyOnly.adapter, () => now).prune()
+    expect(legacyOnly.values.has(_checkInResumeTest.LEGACY_STORAGE_KEY)).toBe(false)
+
+    const mixed = createStorage([
+      [_checkInResumeTest.LEGACY_STORAGE_KEY, { scanToken: 's1.abcdefghijk.abcdefghijk' }],
+      [_checkInResumeTest.STORAGE_KEY, validIntent],
+    ])
+    const store = createCheckInResumeStore(mixed.adapter, () => now)
+    expect(store.peek('event-a')).toEqual(validIntent)
+    store.prune()
+    store.prune()
+    expect(mixed.values.get(_checkInResumeTest.STORAGE_KEY)).toEqual(validIntent)
+    expect(mixed.values.has(_checkInResumeTest.LEGACY_STORAGE_KEY)).toBe(false)
+    expect(mixed.cleared.filter(key => key === _checkInResumeTest.LEGACY_STORAGE_KEY)).toHaveLength(1)
+    expect(mixed.cleared).not.toContain(_checkInResumeTest.STORAGE_KEY)
+  })
+
+  it('rehydrates only the matching event intent from event detail entry and foreground hooks', () => {
+    const detail = source('src/packages/member/mip-events/detail/index.ts')
+    expect(detail).toContain('mipCheckInResumeStore.peek(String(eventId))')
+    expect(detail).toContain('onShow()')
+    expect(detail).toContain('this.refreshCheckInIntent()')
+    expect(detail).toContain('mipCheckInResumeStore.peek(eventId)')
+    expect(detail).toContain('[\'ATTENDED\', \'CANCELLATION_PENDING\', \'CANCELLED\', \'REJECTED\']')
   })
 
   it('formats a five-minute rotating credential countdown and exposes refresh controls', () => {

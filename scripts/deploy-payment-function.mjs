@@ -5,6 +5,12 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 import {
+  assertFunctionSecurityRulesConverged,
+  assertNoTimerTriggers,
+  parseFunctionSecurityRules,
+  updateMipFunctionInvocationRule,
+} from './lib/cloud-function-safety.mjs'
+import {
   bindAndRequireMysqlEnvironment,
   callCloudbase,
   cloudFunctionResult,
@@ -106,6 +112,16 @@ const paymentFunctions = [
   { source: MIP_FUNCTION_SOURCES.pay, target: paymentFunction, timeout: 30, environment: commonEnvironment },
 ]
 
+for (const spec of paymentFunctions) {
+  if (!existingFunctionDetail(spec.target)) {
+    continue
+  }
+  if (spec.target === refundFunction) {
+    removeOwnedLegacyTimer(refundFunction, 'mip-refund-every-5m')
+  }
+  assertNoFunctionTimers(spec.target)
+}
+
 const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mip-payment-functions-'))
 const deployed = []
 try {
@@ -150,7 +166,10 @@ finally {
   fs.rmSync(stagingRoot, { recursive: true, force: true })
 }
 
-removeForbiddenTimer(refundFunction, 'mip-refund-every-5m')
+removeOwnedLegacyTimer(refundFunction, 'mip-refund-every-5m')
+for (const spec of paymentFunctions) {
+  assertNoFunctionTimers(spec.target)
+}
 enableAuthenticatedClientInvocation(paymentFunction)
 disableClientInvocation(callbackFunction)
 disableClientInvocation(refundFunction)
@@ -166,6 +185,7 @@ fs.writeFileSync(path.join(root, '.tmp', 'deploy-payment-result.json'), `${JSON.
   paymentClientInvocationEnabled: true,
   callbackClientInvocationDisabled: true,
   refundClientInvocationDisabled: true,
+  functionTimersVerifiedAbsent: true,
   refundTimerVerifiedAbsent: true,
   ledgerClientInvocationDisabled: true,
   deployedAt: new Date().toISOString(),
@@ -269,7 +289,7 @@ function assertHealthy(functionName) {
   }
 }
 
-function removeForbiddenTimer(functionName, triggerName) {
+function removeOwnedLegacyTimer(functionName, triggerName) {
   try {
     callCloudbase(root, 'callCloudApi', {
       service: 'scf',
@@ -287,14 +307,15 @@ function removeForbiddenTimer(functionName, triggerName) {
       throw error
     }
   }
+}
+
+function assertNoFunctionTimers(functionName) {
   const readback = callCloudbase(root, 'callCloudApi', {
     service: 'scf',
     action: 'ListTriggers',
-    params: { FunctionName: functionName, Namespace: envId },
+    params: { FunctionName: functionName, Namespace: envId, Limit: 100, Offset: 0 },
   })
-  if (JSON.stringify(readback).includes(triggerName)) {
-    throw new Error(`${triggerName} must stay absent because it keeps Serverless MySQL awake`)
-  }
+  assertNoTimerTriggers(functionName, readback)
 }
 
 function disableClientInvocation(functionName) {
@@ -312,34 +333,27 @@ function setClientInvocationRule(functionName, invoke) {
     resourceId: functionName,
   })
   const text = current?.data?.permissions?.[0]?.SecurityRule
-  let rules
-  try {
-    rules = JSON.parse(text)
-  }
-  catch {
-    rules = { '*': { invoke: 'auth.loginType != \'ANONYMOUS\' && auth != null' } }
-  }
-  rules[functionName] = { invoke }
+  const rules = parseFunctionSecurityRules(text)
+  const updatedRules = updateMipFunctionInvocationRule(rules, functionName, invoke)
   callCloudbase(root, 'managePermissions', {
     action: 'updateResourcePermission',
     resourceType: 'function',
     resourceId: functionName,
     permission: 'CUSTOM',
-    securityRule: JSON.stringify(rules),
+    securityRule: JSON.stringify(updatedRules),
   })
   const readback = callCloudbase(root, 'queryPermissions', {
     action: 'getResourcePermission',
     resourceType: 'function',
     resourceId: functionName,
   })
-  let verified
-  try {
-    verified = JSON.parse(readback?.data?.permissions?.[0]?.SecurityRule)
-  }
-  catch {
-    verified = null
-  }
-  if (verified?.[functionName]?.invoke !== invoke) {
-    throw new Error(`${functionName} client invocation rule did not converge`)
-  }
+  const verified = parseFunctionSecurityRules(
+    readback?.data?.permissions?.[0]?.SecurityRule,
+  )
+  assertFunctionSecurityRulesConverged({
+    before: rules,
+    after: verified,
+    functionName,
+    invoke,
+  })
 }

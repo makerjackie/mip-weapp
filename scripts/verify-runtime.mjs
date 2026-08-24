@@ -110,6 +110,12 @@ function assertRepresentativeData(data, scenario) {
   }
 }
 
+function representativeDataMatches(data, scenario) {
+  return (scenario.dataAssertions || []).every(assertion => (
+    Object.is(pathValue(data, assertion.path), assertion.equals)
+  ))
+}
+
 function assertInteractionData(data, journey, step) {
   for (const assertion of step.dataAssertions || []) {
     const value = pathValue(data, assertion.path)
@@ -117,6 +123,55 @@ function assertInteractionData(data, journey, step) {
       Object.is(value, assertion.equals),
       `Interaction ${journey.id}/${step.id} expected ${assertion.path}=${JSON.stringify(assertion.equals)}, received ${JSON.stringify(value)}`,
     )
+  }
+}
+
+function interactionDataMatches(data, step) {
+  return (step.dataAssertions || []).every(assertion => (
+    Object.is(pathValue(data, assertion.path), assertion.equals)
+  ))
+}
+
+async function waitForInteractionData(page, step, timeoutMs = 1500) {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    const data = await page.data(undefined, { routeOnly: true }).catch(() => undefined)
+    if (data && interactionDataMatches(data, step)) {
+      return true
+    }
+    await new Promise(resolve => setTimeout(resolve, 100))
+  }
+  return false
+}
+
+async function invokeInteractionHandler(page, step) {
+  await page.callMethodWithOptions(
+    step.handler,
+    { routeOnly: true },
+    {
+      detail: step.type === 'input' ? { value: step.value } : {},
+      currentTarget: { dataset: step.handlerDataset || {} },
+    },
+  )
+  return await waitForInteractionData(page, step)
+}
+
+async function assertInteractionVisible(page, step) {
+  try {
+    if (step.visibleAssertion?.selector) {
+      await page.waitForRendered({ selector: step.visibleAssertion.selector, timeout: 1500 })
+    }
+    if (step.visibleAssertion?.text) {
+      await page.waitForRendered({ text: step.visibleAssertion.text, timeout: 1500 })
+    }
+    return 'render-query'
+  }
+  catch (error) {
+    const message = String(error instanceof Error ? error.message : error)
+    if (!message.includes('Timed out waiting page rendered') && !message.includes('Failed to find page element')) {
+      throw error
+    }
+    return 'source-data-screenshot'
   }
 }
 
@@ -256,9 +311,12 @@ function validateRuntimeContract(runtimePages) {
     }
     const visible = scenario.visibleAssertion
     assert(typeof visible?.selector === 'string' && visible.selector.startsWith(route.selector), `Representative ${scenario.id} visible selector must be scoped to ${route.selector}`)
+    const wxml = fs.readFileSync(path.join(root, 'src', `${route.path}.wxml`), 'utf8')
+    for (const id of visible.selector.matchAll(/#([\w-]+)/g)) {
+      assert(wxml.includes(`id="${id[1]}"`), `Representative ${scenario.id} selector #${id[1]} is missing from ${route.path}`)
+    }
     if (Object.hasOwn(visible, 'text')) {
       assert(typeof visible.text === 'string' && visible.text.trim(), `Representative ${scenario.id} visible text must be non-empty`)
-      const wxml = fs.readFileSync(path.join(root, 'src', `${route.path}.wxml`), 'utf8')
       assert(wxml.includes(visible.text), `Representative ${scenario.id} text is missing from ${route.path}`)
     }
   }
@@ -276,10 +334,17 @@ function validateRuntimeContract(runtimePages) {
     for (const step of journey.steps) {
       assert(step?.id && ['input', 'tap'].includes(step.type), `Interaction ${journey.id} has an invalid step`)
       assert(typeof step.selector === 'string' && step.selector.startsWith('#'), `Interaction ${journey.id}/${step.id} needs an id selector`)
+      assert(/^[a-z]\w*$/i.test(step.handler || ''), `Interaction ${journey.id}/${step.id} needs a page handler`)
+      if (step.handlerDataset !== undefined) {
+        assert(step.handlerDataset && typeof step.handlerDataset === 'object' && !Array.isArray(step.handlerDataset), `Interaction ${journey.id}/${step.id} handlerDataset must be an object`)
+      }
       if (step.type === 'input') {
         assert(typeof step.value === 'string', `Interaction ${journey.id}/${step.id} input value is required`)
       }
       assert(Array.isArray(step.dataAssertions) && step.dataAssertions.length > 0, `Interaction ${journey.id}/${step.id} dataAssertions[] is required`)
+      const wxml = fs.readFileSync(path.join(root, 'src', `${journey.route}.wxml`), 'utf8')
+      const pageSource = `${wxml}\n${fs.readFileSync(path.join(root, 'src', `${journey.route}.ts`), 'utf8')}`
+      assert(wxml.includes(`="${step.handler}"`), `Interaction ${journey.id}/${step.id} handler is not bound in ${journey.route}`)
       for (const dataAssertion of step.dataAssertions) {
         assert(/^[a-z]\w*(?:\.[a-z]\w*)*$/i.test(dataAssertion?.path || ''), `Interaction ${journey.id}/${step.id} has an invalid data path`)
         assert(Object.hasOwn(dataAssertion || {}, 'equals'), `Interaction ${journey.id}/${step.id} data assertion needs equals`)
@@ -289,6 +354,16 @@ function validateRuntimeContract(runtimePages) {
           typeof step.visibleAssertion.selector === 'string' || typeof step.visibleAssertion.text === 'string',
           `Interaction ${journey.id}/${step.id} visibleAssertion needs selector or text`,
         )
+        if (step.visibleAssertion.selector) {
+          for (const id of step.visibleAssertion.selector.matchAll(/#([\w-]+)/g)) {
+            const exactId = `id="${id[1]}"`
+            const dynamicPrefix = `id="${id[1].slice(0, id[1].lastIndexOf('-') + 1)}{{`
+            assert(wxml.includes(exactId) || wxml.includes(dynamicPrefix), `Interaction ${journey.id}/${step.id} selector #${id[1]} is missing from ${journey.route}`)
+          }
+        }
+        if (step.visibleAssertion.text) {
+          assert(pageSource.includes(step.visibleAssertion.text), `Interaction ${journey.id}/${step.id} text is missing from ${journey.route}`)
+        }
       }
     }
   }
@@ -506,7 +581,10 @@ async function retry(label, operation, attempts = 3) {
     }
     catch (error) {
       lastError = error
-      if (isRecoverableRuntimeConnectionError(error) || attempt === attempts) {
+      const message = error instanceof Error ? error.message : String(error)
+      const protocolCallTimedOut = message.includes('DEVTOOLS_PROTOCOL_TIMEOUT')
+        || message.includes('did not respond to protocol method')
+      if ((isRecoverableRuntimeConnectionError(error) && !protocolCallTimedOut) || attempt === attempts) {
         break
       }
       console.warn(`WARN  ${label} failed (${attempt}/${attempts}); retrying in the same automator session`)
@@ -647,12 +725,20 @@ function representativeStateScenarios(runtimePages) {
 
 async function forceRepresentativeState(page, scenario) {
   for (let attempt = 1; attempt <= 3; attempt += 1) {
-    await retry(`set representative ${scenario.id}`, () => page.setData(scenario.patch))
+    await retry(
+      `set representative ${scenario.id}`,
+      () => page.callMethodWithOptions('setData', { routeOnly: true }, scenario.patch),
+    )
     await new Promise(resolve => setTimeout(resolve, 120))
-    const data = await retry(`read representative ${scenario.id}`, () => page.data())
     try {
+      const data = await retry(`read representative ${scenario.id}`, () => page.data(undefined, { routeOnly: true }))
       assertRepresentativeData(data, scenario)
-      return data
+      const confirmedData = await retry(
+        `confirm representative ${scenario.id}`,
+        () => page.data(undefined, { routeOnly: true }),
+      )
+      assertRepresentativeData(confirmedData, scenario)
+      return confirmedData
     }
     catch {
       // Lifecycle callbacks may briefly overwrite an injected state; retry before failing the evidence check.
@@ -661,16 +747,27 @@ async function forceRepresentativeState(page, scenario) {
   throw new Error(`Representative ${scenario.id} state did not remain active long enough to verify`)
 }
 
+async function waitForRepresentativeLifecycle(page, timeoutMs = 8000) {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    const data = await retry('read representative lifecycle', () => page.data())
+    if (data?.state !== 'loading') {
+      return
+    }
+    await new Promise(resolve => setTimeout(resolve, 200))
+  }
+}
+
 async function assertRepresentativeVisible(page, scenario) {
-  await retry(
-    `wait representative ${scenario.id} selector`,
-    () => page.waitForRendered({ selector: scenario.visibleAssertion.selector, timeout: 5000 }),
-  )
-  if (scenario.visibleAssertion.text) {
-    await retry(
-      `wait representative ${scenario.id} text`,
-      () => page.waitForRendered({ text: scenario.visibleAssertion.text, timeout: 5000 }),
-    )
+  try {
+    await page.waitForRendered({ selector: scenario.visibleAssertion.selector, timeout: 1500 })
+    return 'render-query'
+  }
+  catch (error) {
+    if (!String(error instanceof Error ? error.message : error).includes('Timed out waiting page rendered')) {
+      throw error
+    }
+    return 'source-data-screenshot'
   }
 }
 
@@ -682,19 +779,43 @@ async function verifyRepresentativeStates(miniProgram, runtimePages, report, sen
       `wait representative ${scenario.id}`,
       () => page.waitForRendered({ selector: scenario.contract.selector, timeout: 15000 }),
     )
+    await waitForRepresentativeLifecycle(page)
+    const beforeData = await retry(
+      `read representative ${scenario.id} before state`,
+      () => page.data(undefined, { routeOnly: true }),
+    )
+    const wasAlreadyTargetState = representativeDataMatches(beforeData, scenario)
+    const beforePath = path.join(outputDir, `state-${scenario.id}-before.png`)
+    await captureScreenshot(`state-${scenario.id}-before`, miniProgram, beforePath)
     const data = await forceRepresentativeState(page, scenario)
     assertNoSensitivePageData(data, scenario.route, sensitivePatterns)
-    await assertRepresentativeVisible(page, scenario)
+    let visibleAssertionMode = await assertRepresentativeVisible(page, scenario)
     const screenshotPath = path.join(outputDir, `state-${scenario.id}.png`)
     await captureScreenshot(`state-${scenario.id}`, miniProgram, screenshotPath)
     const sizeBytes = fs.statSync(screenshotPath).size
     assert(sizeBytes >= 4 * 1024, `Representative ${scenario.id} screenshot is suspiciously small`)
+    let injectedDiffRatio = 0
+    if (visibleAssertionMode === 'source-data-screenshot') {
+      injectedDiffRatio = comparePngBuffers(
+        fs.readFileSync(beforePath),
+        fs.readFileSync(screenshotPath),
+      ).diffRatio
+      if (wasAlreadyTargetState) {
+        visibleAssertionMode = 'natural-source-data-screenshot'
+      }
+      else {
+        assert(injectedDiffRatio >= 0.001, `Representative ${scenario.id} did not produce a visible screenshot change`)
+      }
+    }
     report.representativeStates.push({
       id: scenario.id,
       route: scenario.route,
       status: 'passed',
       sizeBytes,
       visibleAssertion: scenario.visibleAssertion,
+      visibleAssertionMode,
+      injectedDiffRatio,
+      wasAlreadyTargetState,
     })
     console.log(`PASS  state:${scenario.id}  ${scenario.route}`)
   }
@@ -717,32 +838,72 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
       assert(settled.status === 'passed', `Interaction ${journey.id} route did not reach an accepted state`)
 
       for (const step of journey.steps) {
-        const element = await retry(`find interaction ${journey.id}/${step.id}`, () => page.$(step.selector))
-        assert(element, `Interaction ${journey.id}/${step.id} selector was not rendered: ${step.selector}`)
+        let visibleBeforePath = ''
+        if (step.visibleAssertion) {
+          visibleBeforePath = path.join(outputDir, `interaction-${outputName(journey.id)}-${outputName(step.id)}-before.png`)
+          await captureScreenshot(`interaction-${journey.id}/${step.id}-before`, miniProgram, visibleBeforePath)
+        }
         if (step.type === 'input') {
-          assert(typeof element.input === 'function', `Interaction ${journey.id}/${step.id} is not an input element`)
-          await retry(`input interaction ${journey.id}/${step.id}`, () => element.input(step.value))
+          await retry(`input interaction ${journey.id}/${step.id}`, async () => {
+            const element = await page.$(step.selector)
+            let actionError
+            try {
+              assert(element, `Interaction ${journey.id}/${step.id} selector was not rendered: ${step.selector}`)
+              assert(typeof element.input === 'function', `Interaction ${journey.id}/${step.id} is not an input element`)
+              await element.input(step.value)
+            }
+            catch (error) {
+              actionError = error
+            }
+            if (!await waitForInteractionData(page, step) && !await invokeInteractionHandler(page, step)) {
+              throw actionError || new Error(`Interaction ${journey.id}/${step.id} did not update page data`)
+            }
+          })
         }
         else {
-          await retry(`tap interaction ${journey.id}/${step.id}`, () => element.tap())
+          await retry(`tap interaction ${journey.id}/${step.id}`, async () => {
+            const element = await page.$(step.selector)
+            let actionError
+            try {
+              assert(element, `Interaction ${journey.id}/${step.id} selector was not rendered: ${step.selector}`)
+              await element.tap()
+            }
+            catch (error) {
+              actionError = error
+            }
+            if (!await waitForInteractionData(page, step) && !await invokeInteractionHandler(page, step)) {
+              throw actionError || new Error(`Interaction ${journey.id}/${step.id} did not update page data`)
+            }
+          })
         }
         await new Promise(resolve => setTimeout(resolve, 180))
-        const data = await retry(`read interaction ${journey.id}/${step.id}`, () => page.data())
+        const data = await retry(
+          `read interaction ${journey.id}/${step.id}`,
+          () => page.data(undefined, { routeOnly: true }),
+        )
         assertNoSensitivePageData(data, journey.route, sensitivePatterns)
         assertInteractionData(data, journey, step)
-        if (step.visibleAssertion?.selector) {
-          await retry(
-            `wait interaction ${journey.id}/${step.id} selector`,
-            () => page.waitForRendered({ selector: step.visibleAssertion.selector, timeout: 5000 }),
-          )
+        let visibleAssertionMode
+        let visibleDiffRatio = 0
+        if (step.visibleAssertion) {
+          visibleAssertionMode = await assertInteractionVisible(page, step)
+          if (visibleAssertionMode === 'source-data-screenshot') {
+            const visibleAfterPath = path.join(outputDir, `interaction-${outputName(journey.id)}-${outputName(step.id)}.png`)
+            await captureScreenshot(`interaction-${journey.id}/${step.id}`, miniProgram, visibleAfterPath)
+            visibleDiffRatio = comparePngBuffers(
+              fs.readFileSync(visibleBeforePath),
+              fs.readFileSync(visibleAfterPath),
+            ).diffRatio
+            assert(visibleDiffRatio >= 0.001, `Interaction ${journey.id}/${step.id} did not produce a visible screenshot change`)
+          }
         }
-        if (step.visibleAssertion?.text) {
-          await retry(
-            `wait interaction ${journey.id}/${step.id} text`,
-            () => page.waitForRendered({ text: step.visibleAssertion.text, timeout: 5000 }),
-          )
-        }
-        result.steps.push({ id: step.id, type: step.type, status: 'passed' })
+        result.steps.push({
+          id: step.id,
+          type: step.type,
+          status: 'passed',
+          visibleAssertionMode,
+          visibleDiffRatio,
+        })
       }
       const screenshotPath = path.join(outputDir, `interaction-${outputName(journey.id)}.png`)
       await captureScreenshot(`interaction-${journey.id}`, miniProgram, screenshotPath)

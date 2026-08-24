@@ -1,5 +1,11 @@
 import type { OpportunityId } from '../mip'
 import type {
+  MatchingCandidateType,
+  MatchingFeedbackType,
+  MatchingPreferences,
+  MatchingRequestPage,
+  MatchingRequestSummary,
+  MatchingResultPage,
   OpportunityCatalog,
   OpportunityCommentMutationResult,
   OpportunityCommentPage,
@@ -12,6 +18,7 @@ import type {
   OpportunityPage,
   PeopleFilter,
   PeoplePage,
+  ProfileInfluenceSummary,
   PublicProfileAggregate,
   ReceivedInteractionCategory,
   ReceivedInteractionPage,
@@ -23,6 +30,7 @@ import {
   normalizeOpportunityFilter,
   normalizePeopleFilter,
   parsePeoplePage,
+  parseProfileInfluence,
   parsePublicProfileAggregate,
 } from './validation'
 
@@ -52,6 +60,10 @@ export const opportunityModule = {
       'getPublicProfileAggregate',
       { profileRef: profileRef.trim() },
     ))
+  },
+
+  async getProfileInfluence() {
+    return parseProfileInfluence(await callOpportunityApi<ProfileInfluenceSummary>('getProfileInfluence'))
   },
 
   recordProfileVisit(
@@ -203,5 +215,66 @@ export const opportunityModule = {
       description: input.description?.trim() || '',
       idempotencyKey,
     })
+  },
+
+  getMatchingPreferences() {
+    return callOpportunityApi<MatchingPreferences>('getMatchingPreferences')
+  },
+
+  saveMatchingPreferences(
+    preferences: {
+      commentsEnabled: boolean
+      opportunityMatchingNotificationsEnabled: boolean
+      hotspotsEnabled: boolean
+      matchingEnabled: boolean
+      talentRecommendationsEnabled: boolean
+      projectRecommendationsEnabled: boolean
+      discoverableForMatching: boolean
+      matchingScope: 'PLATFORM' | 'PRIMARY_BRANCH'
+      notificationVersion: number
+      opportunityVersion: number
+    },
+    idempotencyKey = createMutationKey('matching-preferences-save'),
+  ) {
+    return callOpportunityApi<MatchingPreferences>('saveMatchingPreferences', {
+      preferences,
+      idempotencyKey,
+    })
+  },
+
+  createMatchingRequest(
+    opportunityId: OpportunityId,
+    idempotencyKey = createMutationKey('matching-request-create'),
+  ) {
+    return callOpportunityApi<MatchingRequestSummary>('createMatchingRequest', {
+      opportunityId,
+      idempotencyKey,
+    })
+  },
+
+  listMatchingRequests(cursor?: string) {
+    return callOpportunityApi<MatchingRequestPage>('listMatchingRequests', { cursor, limit: 20 })
+  },
+
+  listMatchingResults(requestId: string, type: 'ALL' | MatchingCandidateType = 'ALL', cursor?: string) {
+    return callOpportunityApi<MatchingResultPage>('listMatchingResults', {
+      requestId,
+      type,
+      cursor,
+      limit: 20,
+    })
+  },
+
+  saveMatchingFeedback(input: {
+    requestId: string
+    candidateType: MatchingCandidateType
+    candidateRef: string
+    feedbackType: MatchingFeedbackType
+    reason?: string
+  }, idempotencyKey = createMutationKey('matching-feedback-save')) {
+    return callOpportunityApi<{ id: string, feedbackType: MatchingFeedbackType, reason?: string }>(
+      'saveMatchingFeedback',
+      { ...input, reason: input.reason?.trim() || '', idempotencyKey },
+    )
   },
 }

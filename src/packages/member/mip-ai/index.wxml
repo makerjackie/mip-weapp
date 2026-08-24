@@ -2,20 +2,24 @@
   <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载 AI 草稿" description="请检查网络后重试。" action-text="重新加载" bind:action="loadDrafts" /><app-page-exit /></view>
   <block wx:else>
-    <view class="rounded-[16rpx] bg-panel px-4 py-5">
-      <view class="text-[length:30rpx] font-bold">新建草稿</view>
+    <view class="flex min-h-[460rpx] flex-col items-center justify-center rounded-[20rpx] bg-panel px-5 text-center">
+      <view class="text-[length:22rpx] text-muted">语音整理</view>
+      <view class="mt-5 text-[length:72rpx] font-bold tracking-[8rpx] text-brand">{{recordingElapsedText}}</view>
+      <view class="mt-7 text-[length:22rpx] text-muted">{{recording ? '正在录音，再次点击结束' : generating ? '正在整理语音草稿' : '点击开始录音'}}</view>
+      <button wx:if="{{recording}}" plain class="mt-5 flex h-[120rpx] w-[120rpx] items-center justify-center rounded-full border-0 bg-brand p-0" bind:tap="stopRecording"><t-icon name="stop-circle" size="50rpx" color="var(--color-on-brand)" /></button>
+      <button wx:else plain class="mt-5 flex h-[120rpx] w-[120rpx] items-center justify-center rounded-full border-0 bg-brand p-0 disabled:opacity-40" disabled="{{!capability.voiceDrafts || generating}}" bind:tap="startRecording"><t-icon name="microphone" size="50rpx" color="var(--color-on-brand)" /></button>
+      <view wx:if="{{!capability.voiceDrafts}}" class="mt-3 text-[length:21rpx] text-muted">语音整理当前不可用</view>
+    </view>
+    <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="text-[length:30rpx] font-bold">文字整理</view>
       <view class="mt-2 text-[length:22rpx] leading-5 text-muted">AI 只整理草稿。正式内容会在对应编辑页确认保存后更新。</view>
       <view class="mt-4 text-[length:23rpx] font-semibold text-muted">内容类型</view>
       <picker range="{{purposeOptions}}" range-key="label" value="{{purposeIndex}}" bindchange="changePurpose">
         <view class="mt-2 flex h-[88rpx] items-center justify-between rounded-[14rpx] bg-panel-raised px-4 text-[length:25rpx]"><text>{{purposeOptions[purposeIndex].label}}</text><t-icon name="chevron-down" size="30rpx" color="var(--color-muted)" /></view>
       </picker>
       <textarea class="mt-3 block h-[240rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 py-3 text-[length:24rpx] leading-6" value="{{sourceText}}" maxlength="8000" bindinput="updateSource" placeholder="输入需要整理的内容" placeholder-style="color:#A3A3A3" />
-      <view class="mt-4 grid grid-cols-2 gap-3">
-        <t-button block size="large" theme="primary" disabled="{{!capability.textDrafts || recording}}" loading="{{generating && !recording}}" bind:tap="generateFromText">整理文字</t-button>
-        <t-button wx:if="{{!recording}}" block size="large" variant="outline" disabled="{{!capability.voiceDrafts || generating}}" bind:tap="startRecording">{{capability.voiceDrafts ? '开始录音' : '语音不可用'}}</t-button>
-        <t-button wx:else block size="large" theme="danger" bind:tap="stopRecording">结束录音</t-button>
-      </view>
-      <view wx:if="{{!capability.textDrafts && !capability.voiceDrafts}}" class="mt-3 text-[length:21rpx] text-muted">AI 整理当前不可用。</view>
+      <view class="mt-4"><t-button block size="large" theme="primary" disabled="{{!capability.textDrafts || recording}}" loading="{{generating && !recording}}" bind:tap="generateFromText">整理文字</t-button></view>
+      <view id="mip-ai-disabled-state" wx:if="{{!capability.textDrafts && !capability.voiceDrafts}}" class="mt-3 text-[length:21rpx] text-muted">AI 整理当前不可用。</view>
     </view>
 
     <view wx:if="{{activeDraft}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-5">

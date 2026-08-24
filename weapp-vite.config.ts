@@ -77,6 +77,7 @@ export default defineConfig({
     __MIP_PAYMENT_MODE__: JSON.stringify(env.MIP_PAYMENT_MODE || 'disabled'),
     __MIP_CATALOG_STAGE__: JSON.stringify(env.MIP_CATALOG_STAGE || 'TEST'),
     __MIP_SUBSCRIBE_TEMPLATES_JSON__: JSON.stringify(env.MIP_SUBSCRIBE_TEMPLATES_JSON || ''),
+    __MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS__: JSON.stringify(env.MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS || ''),
   },
   weapp: {
     srcRoot: 'src',

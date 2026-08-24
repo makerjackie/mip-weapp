@@ -1,5 +1,8 @@
 {
   "navigationBarTitleText": "公开档案",
+  "navigationBarBackgroundColor": "#202020",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#080808",
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",
     "app-page-exit": "/components/page-exit/index",

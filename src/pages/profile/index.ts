@@ -9,7 +9,6 @@ import { cooperationModule } from '../../modules/mip-cooperation'
 import { mipGrowthModule } from '../../modules/mip-growth/client'
 import { mipAccessPageUrl } from '../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
-import { mipMessagingModule } from '../../modules/mip-messaging/client'
 import { opportunityModule } from '../../modules/mip-opportunities'
 import { canManageEvents, hasCapability, membershipPresentation } from '../../modules/mip-shell'
 import { caseNavigateTo, syncCaseNavigation } from '../../modules/platform/case-navigation'
@@ -30,8 +29,10 @@ Page({
     nicknameInitial: '微',
     avatarUrl: '',
     headline: '',
+    identityStatus: '',
     profileComplete: false,
     primaryBranchName: '未选择主分会',
+    primaryIndustryName: '',
     membershipLabel: '嘉宾',
     membershipDescription: '当前没有有效会员权益',
     membershipEndsText: '',
@@ -46,9 +47,12 @@ Page({
     contribution: 0,
     badgeState: 'loading' as SectionState,
     equippedBadges: [] as BadgeCollectionItem[],
-    unreadCount: 0,
+    primaryBadge: null as BadgeCollectionItem | null,
+    guestCount: null as number | null,
+    interactionCount: null as number | null,
+    interestCount: null as number | null,
     visitorUnreadCount: 0,
-    profileViewCount: null as number | null,
+    visitorCount: null as number | null,
     portfolioTab: 'cooperation' as PortfolioTab,
     cooperationState: 'loading' as SectionState,
     cooperationCards: [] as CooperationCardView[],
@@ -86,12 +90,12 @@ Page({
       this.applyIdentity(snapshot)
       await Promise.allSettled([
         this.loadBranch(snapshot, options),
+        this.loadIndustry(snapshot),
         this.loadGrowth(snapshot, options),
         this.loadBadges(snapshot),
         this.loadCooperation(),
         this.loadCases(),
         this.loadOpportunities(),
-        this.loadUnreadCount(snapshot),
         this.loadInfluenceSummary(snapshot),
       ])
     }
@@ -102,33 +106,36 @@ Page({
     }
   },
 
-  async loadUnreadCount(snapshot: IdentityAccessSnapshot) {
-    if (!snapshot.authenticated) {
-      this.setData({ unreadCount: 0 })
-      return
-    }
-    try {
-      this.setData({ unreadCount: await mipMessagingModule.refreshUnreadCount() })
-    }
-    catch {
-      this.setData({ unreadCount: mipMessagingModule.peekUnreadCount() || 0 })
-    }
-  },
-
   async loadInfluenceSummary(snapshot: IdentityAccessSnapshot) {
     if (!snapshot.authenticated) {
-      this.setData({ visitorUnreadCount: 0, profileViewCount: 0 })
+      this.setData({
+        guestCount: null,
+        interactionCount: null,
+        interestCount: null,
+        visitorCount: null,
+        visitorUnreadCount: 0,
+      })
       return
     }
-    try {
-      const page = await opportunityModule.listReceived('VISITOR')
-      this.setData({
-        visitorUnreadCount: page.unreadCount,
-        profileViewCount: page.totalViewCount ?? 0,
+    const [summaryResult, visitorResult] = await Promise.allSettled([
+      opportunityModule.getProfileInfluence(),
+      opportunityModule.listReceived('VISITOR'),
+    ])
+    const updates: Record<string, unknown> = {}
+    if (summaryResult.status === 'fulfilled') {
+      const summary = summaryResult.value
+      Object.assign(updates, {
+        guestCount: summary.guestCount,
+        interactionCount: summary.interactionCount,
+        interestCount: summary.interestCount,
+        visitorCount: summary.visitorCount,
       })
     }
-    catch {
-      this.setData({ visitorUnreadCount: 0, profileViewCount: null })
+    if (visitorResult.status === 'fulfilled') {
+      updates.visitorUnreadCount = visitorResult.value.unreadCount
+    }
+    if (Object.keys(updates).length) {
+      this.setData(updates)
     }
   },
 
@@ -141,6 +148,7 @@ Page({
       nicknameInitial: (snapshot.profile.nickname || '微信用户').slice(0, 1),
       avatarUrl: snapshot.profile.avatarUrl || '',
       headline: snapshot.profile.headline,
+      identityStatus: snapshot.profile.identityStatus,
       profileComplete: snapshot.profile.complete,
       membershipLabel: membership.label,
       membershipDescription: membership.description,
@@ -160,6 +168,21 @@ Page({
       : await mipBranchesModule.load(snapshot.primaryBranchId, snapshot.userVersion)
     const branch = branchSnapshot.branches.find(item => item.id === snapshot.primaryBranchId)
     this.setData({ primaryBranchName: branch?.name || '未选择主分会' })
+  },
+
+  async loadIndustry(snapshot: IdentityAccessSnapshot) {
+    if (!snapshot.profile.primaryIndustryTagId) {
+      this.setData({ primaryIndustryName: '' })
+      return
+    }
+    try {
+      const tags = await mipIdentityModule.listProfileTags()
+      const industry = tags.find(item => item.id === snapshot.profile.primaryIndustryTagId)
+      this.setData({ primaryIndustryName: industry?.label || '' })
+    }
+    catch {
+      this.setData({ primaryIndustryName: '' })
+    }
   },
 
   async loadGrowth(snapshot: IdentityAccessSnapshot, options: { force?: boolean }) {
@@ -196,16 +219,18 @@ Page({
 
   async loadBadges(snapshot: IdentityAccessSnapshot) {
     if (!snapshot.authenticated) {
-      this.setData({ badgeState: 'ready', equippedBadges: [] })
+      this.setData({ badgeState: 'ready', equippedBadges: [], primaryBadge: null })
       return
     }
     try {
       const collection = await mipGrowthModule.listBadgeCollection()
+      const equippedBadges = collection.items
+        .filter(item => item.equippedSlot !== undefined)
+        .sort((left, right) => Number(left.equippedSlot) - Number(right.equippedSlot))
       this.setData({
         badgeState: 'ready',
-        equippedBadges: collection.items
-          .filter(item => item.equippedSlot !== undefined)
-          .sort((left, right) => Number(left.equippedSlot) - Number(right.equippedSlot)),
+        equippedBadges,
+        primaryBadge: equippedBadges[0] || null,
       })
     }
     catch {
@@ -321,16 +346,35 @@ Page({
   openRegistrations() { void this.openProtected('/packages/member/mip-events/mine/index', 'INTERACT') },
   openOrders() { void this.openProtected('/packages/member/orders/index', 'VIEW_RESTRICTED_PROFILE') },
   openNotifications() { void this.openProtected('/packages/member/mip-notifications/index', 'INTERACT') },
-  openReceivedInteractions() { void this.openProtected('/packages/member/mip-received/index', 'INTERACT') },
+  openInfluenceList(event: WechatMiniprogram.TouchEvent) {
+    const category = String(event.currentTarget.dataset.category || '')
+    if (!['GUEST', 'INTERACTION', 'ACTIVE_INTEREST'].includes(category)) {
+      return
+    }
+    void this.openProtected(
+      `/packages/member/mip-received/index?scope=influence&category=${category}`,
+      'INTERACT',
+    )
+  },
+  openReceivedInteractions() {
+    void this.openProtected(
+      '/packages/member/mip-received/index?scope=influence&category=VISITOR',
+      'INTERACT',
+    )
+  },
   openHeartHistory() { void this.openProtected('/packages/member/mip-hearts/index', 'INTERACT') },
   openGrowth() { void this.openProtected('/packages/member/mip-growth/index', 'VIEW_RESTRICTED_PROFILE') },
   openBadges() { void this.openProtected('/packages/member/mip-badges/index', 'VIEW_RESTRICTED_PROFILE') },
+  openTasks() { void this.openProtected('/packages/member/mip-tasks/index', 'VIEW_RESTRICTED_PROFILE') },
   openGame() { void this.openProtected('/packages/member/mip-game/index', 'VIEW_RESTRICTED_PROFILE') },
   openAiDrafts() { void this.openProtected('/packages/member/mip-ai/index', 'EDIT_PROFILE') },
+  openMatching() { void this.openProtected('/packages/member/mip-opportunity-matching/index', 'INTERACT') },
+  openOpportunitySettings() { void this.openProtected('/packages/member/mip-opportunity-settings/index', 'INTERACT') },
   openCooperationList() { void this.openProtected('/packages/member/mip-cooperation/list/index?mine=1', 'INTERACT') },
   openCaseList() { void this.openProtected('/packages/member/mip-cases/list/index?mine=1', 'INTERACT') },
   openOpportunityList() { void this.openProtected('/packages/member/mip-opportunities/mine/index', 'INTERACT') },
   openBenefits() { caseNavigateTo({ url: '/packages/member/benefits/index' }) },
+  openSettings() { caseNavigateTo({ url: '/packages/member/privacy/index' }) },
   openPrivacy() { caseNavigateTo({ url: '/packages/member/privacy/index' }) },
   openHelp() { caseNavigateTo({ url: '/packages/member/help/index' }) },
   openAbout() { caseNavigateTo({ url: '/packages/member/about/index' }) },

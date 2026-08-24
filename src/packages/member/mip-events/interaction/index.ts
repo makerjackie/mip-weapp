@@ -2,14 +2,30 @@ import type { EventId } from '../../../../modules/mip'
 import type { EventFeedback, HeartCandidate, HeartState } from '../../../../modules/mip-events'
 import { mipEventsModule } from '../../../../modules/mip-events/client'
 
+type InteractionView = 'SENT' | 'RECEIVED' | 'FEEDBACK'
+
+function filteredCandidates(items: HeartCandidate[], keyword: string) {
+  const normalized = keyword.trim().toLocaleLowerCase()
+  if (!normalized) {
+    return items
+  }
+  return items.filter(item => [item.nickname, item.headline]
+    .filter(Boolean)
+    .some(value => String(value).toLocaleLowerCase().includes(normalized)))
+}
+
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
     eventId: '' as EventId,
     candidates: [] as HeartCandidate[],
+    visibleCandidates: [] as HeartCandidate[],
     heart: null as HeartState | null,
     received: [] as HeartCandidate[],
+    visibleReceived: [] as HeartCandidate[],
     feedback: null as EventFeedback | null,
+    activeView: 'SENT' as InteractionView,
+    searchInput: '',
     ratingOptions: ['1 分', '2 分', '3 分', '4 分', '5 分'],
     rating: 5,
     body: '',
@@ -19,7 +35,10 @@ Page({
   },
 
   onLoad(query: Record<string, string>) {
-    this.setData({ eventId: String(query.eventId || '') as EventId })
+    const activeView = ['SENT', 'RECEIVED', 'FEEDBACK'].includes(query.viewMode)
+      ? query.viewMode as InteractionView
+      : 'SENT'
+    this.setData({ eventId: String(query.eventId || '') as EventId, activeView })
     void this.loadInteraction()
   },
 
@@ -34,8 +53,10 @@ Page({
       this.setData({
         state: 'ready',
         candidates,
+        visibleCandidates: filteredCandidates(candidates, this.data.searchInput),
         heart,
         received: heart.received,
+        visibleReceived: filteredCandidates(heart.received, this.data.searchInput),
         feedback,
         rating: feedback?.rating || 5,
         body: feedback?.body || '',
@@ -59,13 +80,16 @@ Page({
         targetRef === currentTarget ? null : targetRef,
         this.data.heart?.version,
       )
+      const candidates = this.data.candidates.map(candidate => ({
+        ...candidate,
+        selected: candidate.participantRef === heart.targetRef,
+      }))
       this.setData({
         heart,
         received: heart.received,
-        candidates: this.data.candidates.map(candidate => ({
-          ...candidate,
-          selected: candidate.participantRef === heart.targetRef,
-        })),
+        visibleReceived: filteredCandidates(heart.received, this.data.searchInput),
+        candidates,
+        visibleCandidates: filteredCandidates(candidates, this.data.searchInput),
       })
       wx.showToast({ title: heart.targetRef ? '已保存' : '已取消', icon: 'success' })
     }
@@ -75,6 +99,31 @@ Page({
     finally {
       this.setData({ savingHeart: false })
     }
+  },
+
+  changeView(event: WechatMiniprogram.TouchEvent) {
+    const activeView = String(event.currentTarget.dataset.view || '') as InteractionView
+    if (!['SENT', 'RECEIVED', 'FEEDBACK'].includes(activeView)) {
+      return
+    }
+    this.setData({ activeView, message: '' })
+  },
+
+  onSearchInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const searchInput = String(event.detail.value || '').slice(0, 80)
+    this.setData({
+      searchInput,
+      visibleCandidates: filteredCandidates(this.data.candidates, searchInput),
+      visibleReceived: filteredCandidates(this.data.received, searchInput),
+    })
+  },
+
+  clearSearch() {
+    this.setData({
+      searchInput: '',
+      visibleCandidates: this.data.candidates,
+      visibleReceived: this.data.received,
+    })
   },
 
   onRatingChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {

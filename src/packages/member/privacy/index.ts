@@ -5,6 +5,7 @@ import {
 } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { mipGlobalAccessGuard } from '../../../modules/mip-identity/runtime'
+import { mipMessagingModule } from '../../../modules/mip-messaging/client'
 import { caseNavigateTo } from '../../../modules/platform/case-navigation'
 
 Page({
@@ -69,6 +70,10 @@ Page({
 
   openBlockedProfiles() {
     caseNavigateTo({ url: '/packages/member/mip-blocked/index' })
+  },
+
+  recordCustomerServiceInteraction() {
+    void mipMessagingModule.recordCustomerServiceInteraction().catch(() => undefined)
   },
 
   startAccountClosure() {

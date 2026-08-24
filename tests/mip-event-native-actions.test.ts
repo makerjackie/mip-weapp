@@ -16,7 +16,7 @@ describe('MIP event native actions', () => {
     expect(service).toContain('longitude: row.longitude === null ? undefined : Number(row.longitude)')
     expect(page).toContain('wx.openLocation')
     expect(page).toContain('wx.setClipboardData')
-    expect(view).toContain('hasCoordinates ? \'打开地图\' : \'复制地址\'')
+    expect(view).toContain('hasCoordinates ? \'地图\' : \'复制\'')
   })
 
   it('adds the server-provided activity time to the system calendar', () => {

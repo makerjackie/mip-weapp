@@ -1,5 +1,6 @@
 {
-  "navigationBarTitleText": "参与人",
+  "navigationBarTitleText": "活动参与人",
+  "enableShareAppMessage": true,
   "enablePullDownRefresh": true,
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",

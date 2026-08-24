@@ -269,6 +269,14 @@ Page({
     caseNavigateTo({ url: '/packages/member/mip-branches/index' })
   },
 
+  openBlindBoxes() {
+    caseNavigateTo({ url: '/packages/member/mip-blind-box/index' })
+  },
+
+  openKnowledge() {
+    caseNavigateTo({ url: '/packages/member/mip-knowledge/index' })
+  },
+
   openEvents() {
     caseSwitchPrimary('/pages/events/index')
   },

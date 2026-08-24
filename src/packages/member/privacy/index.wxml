@@ -34,7 +34,7 @@
         </view>
       </view>
     </view>
-    <view class="mt-5 rounded-[24rpx] border border-line bg-panel px-5 py-5"><view class="text-[length:27rpx] font-semibold">其他账号请求</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">数据副本或更正请求可通过小程序客服提交。</view><button open-type="contact" class="mt-5 w-full rounded-full border border-line bg-panel-raised py-3 text-[length:24rpx] text-ink">联系小程序客服</button></view>
+    <view class="mt-5 rounded-[24rpx] border border-line bg-panel px-5 py-5"><view class="text-[length:27rpx] font-semibold">其他账号请求</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">数据副本或更正请求可通过小程序客服提交。</view><button open-type="contact" bind:contact="recordCustomerServiceInteraction" class="mt-5 w-full rounded-full border border-line bg-panel-raised py-3 text-[length:24rpx] text-ink">联系小程序客服</button></view>
     <app-page-exit managed bind:exit="leavePage" />
   </block>
 </view>

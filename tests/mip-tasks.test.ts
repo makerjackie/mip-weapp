@@ -87,10 +87,40 @@ describe('MIP tasks client contract', () => {
     expect(JSON.stringify(calls)).not.toContain('userId')
   })
 
+  it('sends the exact eligible growth-level set through the admin contract', async () => {
+    const calls: Array<{ action: string, data?: Record<string, unknown> }> = []
+    const levelId = '70000000-0000-4000-8000-000000000001'
+    const gateway = createMipTasksGateway({
+      async invoke(action, data) {
+        calls.push({ action, data })
+        if (action === 'admin.listEligibleLevels') {
+          return { ok: true, data: [{ id: levelId, levelKey: 'level-1', name: '等级 1', minimumExperience: 0, status: 'ACTIVE' }] }
+        }
+        return { ok: true, data: { id: task.id } }
+      },
+    })
+    await gateway.listEligibleLevels()
+    await gateway.saveTask({
+      task: {
+        name: task.name,
+        content: task.content,
+        rewardExperience: task.rewardExperience,
+        attachmentRequired: false,
+        assignmentMode: 'ALL',
+        eligibleLevelIds: [levelId],
+      },
+    })
+    expect(calls[0]).toEqual({ action: 'admin.listEligibleLevels', data: {} })
+    expect(calls[1]?.data).toEqual(expect.objectContaining({
+      task: expect.objectContaining({ eligibleLevelIds: [levelId] }),
+    }))
+  })
+
   it('retries only reads and the server-idempotent completion action', () => {
     expect(isRetryableTaskAction('listTasks')).toBe(true)
     expect(isRetryableTaskAction('completeTask')).toBe(true)
     expect(isRetryableTaskAction('admin.getTask')).toBe(true)
+    expect(isRetryableTaskAction('admin.listEligibleLevels')).toBe(true)
     expect(isRetryableTaskAction('admin.listAssignableMembers')).toBe(true)
     expect(isRetryableTaskAction('admin.exportCompletions')).toBe(true)
     expect(isRetryableTaskAction('admin.saveTask')).toBe(false)
@@ -121,6 +151,8 @@ describe('MIP tasks client contract', () => {
     expect(admin).toContain('新增任务')
     expect(admin).toContain('需要上传附件')
     expect(admin).toContain('指定成员')
+    expect(admin).toContain('适用成长等级')
+    expect(admin).toContain('不选择时，全部成长等级均可完成')
     expect(admin).toContain('上传模板')
     expect(completions).toContain('导出')
     expect(completions).toContain('任务内容快照')

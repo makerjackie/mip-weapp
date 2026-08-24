@@ -81,6 +81,7 @@ const capabilityLabels: Record<AdminCapability, string> = {
   'banners.manage': 'Banner 管理',
   'badges.manage': '勋章管理',
   'game.manage': '赛季与队伍管理',
+  'knowledge.manage': '知识内容管理',
   'orders.read': '订单查看',
   'refunds.submit': '退款提交',
   'operations.exceptions.read': '异常中心查看',

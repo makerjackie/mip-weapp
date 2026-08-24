@@ -64,6 +64,7 @@ const orderTypeOptions: Array<FilterOption<AdminOrder['orderType']>> = [
   { label: '全部类型', value: '' },
   { label: '会员订单', value: 'MEMBERSHIP' },
   { label: '活动订单', value: 'EVENT' },
+  { label: '内容订单', value: 'CONTENT' },
 ]
 const statusOptions: Array<FilterOption<AdminOrderStatus>> = [
   { label: '全部订单状态', value: '' },

@@ -2,9 +2,16 @@
 
 import { randomBytes } from 'node:crypto'
 import fs from 'node:fs'
+import { isIP } from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
+import {
+  assertFunctionSecurityRulesConverged,
+  assertNoTimerTriggers,
+  parseFunctionSecurityRules,
+  updateMipFunctionInvocationRule,
+} from './lib/cloud-function-safety.mjs'
 import {
   bindAndRequireMysqlEnvironment,
   callCloudbase,
@@ -37,6 +44,9 @@ const replaceLegacyRuntime = process.argv.includes('--replace-legacy-runtime')
 const deploymentStage = resolveMipDeploymentStage(env.MIP_DEPLOYMENT_STAGE, process.argv.slice(2))
 const paymentMode = String(env.MIP_PAYMENT_MODE || 'disabled').trim().toLowerCase()
 const catalogStage = String(env.MIP_CATALOG_STAGE || 'TEST').trim().toUpperCase()
+const knowledgeTestPriceCents = Number(env.MIP_KNOWLEDGE_TEST_PRICE_CENTS || 990)
+const knowledgeSourceAllowedHosts = exactHostnameList(env.MIP_KNOWLEDGE_SOURCE_ALLOWED_HOSTS)
+const knowledgeWebviewAllowedHosts = exactHostnameList(env.MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS)
 const unionIdRebindEnabled = String(env.MIP_UNION_ID_REBIND_ENABLED || 'false').trim().toLowerCase() === 'true'
 const exportMaxRows = Number(env.MIP_EXPORT_MAX_ROWS || 5_000)
 const exportMaxBytes = Number(env.MIP_EXPORT_MAX_BYTES || 8 * 1024 * 1024)
@@ -46,6 +56,11 @@ const allowedAppIds = String(env.MIP_ALLOWED_APP_IDS || appId)
   .split(',')
   .map(value => value.trim())
   .filter(Boolean)
+const legacyTimerNames = Object.freeze({
+  notification: 'mip-notification-every-5m',
+  outbox: 'mip-outbox-every-5m',
+  refund: 'mip-refund-every-5m',
+})
 
 if (!envId || confirmedEnv !== envId || !appId) {
   throw new Error('MIP deployment requires AppID and --confirm-env=<exact CLOUDBASE_ENV_ID>')
@@ -58,6 +73,14 @@ if (!['disabled', 'test', 'live'].includes(paymentMode)) {
 }
 if (!['TEST', 'LIVE'].includes(catalogStage)) {
   throw new Error('MIP_CATALOG_STAGE must be TEST or LIVE')
+}
+if (!Number.isInteger(knowledgeTestPriceCents)
+  || knowledgeTestPriceCents < 1
+  || knowledgeTestPriceCents > 10_000_000) {
+  throw new Error('MIP_KNOWLEDGE_TEST_PRICE_CENTS must be an integer from 1 to 10000000')
+}
+if (!knowledgeSourceAllowedHosts.length || !knowledgeWebviewAllowedHosts.length) {
+  throw new Error('Knowledge source and web-view exact hostname allowlists are required')
 }
 if ((paymentMode === 'live' || catalogStage === 'LIVE') && !process.argv.includes('--confirm-live')) {
   throw new Error('Live payment or catalog deployment requires --confirm-live')
@@ -93,6 +116,30 @@ for (const spec of manifest) {
 verifyLocalOpenApiDeclarations()
 const target = bindAndRequireMysqlEnvironment(root, envId)
 const existingDetails = new Map(manifest.map(spec => [spec.role, existingFunctionDetail(spec.name)]))
+for (const spec of manifest) {
+  if (!existingDetails.get(spec.role)) {
+    continue
+  }
+  if (legacyTimerNames[spec.role]) {
+    removeOwnedLegacyTimer(spec.name, legacyTimerNames[spec.role])
+  }
+  assertNoFunctionTimers(spec.name)
+}
+const disabledPaymentFunctionsProtected = []
+if (paymentMode === 'disabled') {
+  for (const role of ['pay', 'callback', 'refund']) {
+    const functionName = functionNames[role]
+    if (!existingFunctionDetail(functionName)) {
+      continue
+    }
+    disableClientInvocation(functionName)
+    if (legacyTimerNames[role]) {
+      removeOwnedLegacyTimer(functionName, legacyTimerNames[role])
+    }
+    assertNoFunctionTimers(functionName)
+    disabledPaymentFunctionsProtected.push(functionName)
+  }
+}
 
 const requiredTables = Object.keys(RUNTIME_TABLE_PRIVILEGES)
 assertRequiredTablesExist(requiredTables)
@@ -203,9 +250,33 @@ const secrets = Object.freeze({
   notificationEncryption: stableSecretValues.MIP_NOTIFICATION_ENCRYPTION_KEY,
   aiHmac: stableSecretValues.MIP_AI_HMAC_SECRET,
   aiStorage: stableSecretValues.MIP_AI_STORAGE_KEY,
+  matchingInternalHmac: stableSecretValues.MIP_MATCHING_INTERNAL_HMAC_SECRET,
+  matchingReference: stableSecretValues.MIP_MATCHING_REFERENCE_SECRET,
 })
 
 const subscribeTemplatesJson = normalizedJsonObject(env.MIP_SUBSCRIBE_TEMPLATES_JSON, 'MIP_SUBSCRIBE_TEMPLATES_JSON')
+const customerServiceSetting = String(
+  env.MIP_CUSTOMER_SERVICE_ENABLED
+  || configuredOrExistingValue('MIP_CUSTOMER_SERVICE_ENABLED', existingDetails)
+  || 'false',
+).trim().toLowerCase()
+if (!['true', 'false'].includes(customerServiceSetting)) {
+  throw new Error('MIP_CUSTOMER_SERVICE_ENABLED must be true or false')
+}
+const customerServiceEnabled = customerServiceSetting === 'true'
+const serviceAccountAdapterJson = normalizedServiceAccountConfig(
+  configuredOrExistingValue('MIP_SERVICE_ACCOUNT_ADAPTER_JSON', existingDetails),
+)
+const serviceAccountAdapterSecret = configuredOrExistingValue(
+  'MIP_SERVICE_ACCOUNT_ADAPTER_SECRET',
+  existingDetails,
+)
+if (Boolean(serviceAccountAdapterJson) !== Boolean(serviceAccountAdapterSecret)) {
+  throw new Error('Service-account adapter configuration and secret must be configured together')
+}
+if (serviceAccountAdapterSecret && serviceAccountAdapterSecret.length < 32) {
+  throw new Error('MIP_SERVICE_ACCOUNT_ADAPTER_SECRET must contain at least 32 characters')
+}
 const agreementsJson = normalizedOptionalJsonArray(env.MIP_AGREEMENTS_JSON, 'MIP_AGREEMENTS_JSON')
 const miniprogramState = ['formal', 'trial', 'developer'].includes(env.MIP_MINIPROGRAM_STATE)
   ? env.MIP_MINIPROGRAM_STATE
@@ -221,6 +292,16 @@ if (aiAvatarProviderFunction && !/^[a-z][a-z0-9-]{0,59}$/.test(aiAvatarProviderF
 const aiDraftTtlHours = Number(env.MIP_AI_DRAFT_TTL_HOURS || 72)
 if (!Number.isInteger(aiDraftTtlHours) || aiDraftTtlHours < 1 || aiDraftTtlHours > 168) {
   throw new Error('MIP_AI_DRAFT_TTL_HOURS must be an integer from 1 to 168')
+}
+const matchingProviderFunction = String(env.MIP_MATCHING_PROVIDER_FUNCTION_NAME || '').trim()
+if (matchingProviderFunction && !/^[a-z][a-z0-9-]{0,59}$/.test(matchingProviderFunction)) {
+  throw new Error('MIP_MATCHING_PROVIDER_FUNCTION_NAME is invalid')
+}
+const matchingProviderTimeoutMs = Number(env.MIP_MATCHING_PROVIDER_TIMEOUT_MS || 3000)
+if (!Number.isInteger(matchingProviderTimeoutMs)
+  || matchingProviderTimeoutMs < 500
+  || matchingProviderTimeoutMs > 10_000) {
+  throw new Error('MIP_MATCHING_PROVIDER_TIMEOUT_MS must be an integer from 500 to 10000')
 }
 
 const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mip-core-functions-'))
@@ -242,38 +323,60 @@ try {
       allowedAppIds,
       catalogStage,
       connectionUri,
+      customerServiceEnabled,
       deploymentStage,
       exportMaxBytes,
       exportMaxRows,
       functionNames,
+      knowledgeTestPriceCents,
+      knowledgeSourceAllowedHosts,
+      knowledgeWebviewAllowedHosts,
       miniprogramState,
+      matchingProviderFunction,
+      matchingProviderTimeoutMs,
       paymentMode,
       secrets,
+      serviceAccountAdapterJson,
+      serviceAccountAdapterSecret,
       subscribeTemplatesJson,
       unionIdRebindEnabled,
     })
     await ensureCompatibleRuntime(spec.name)
-    const creation = callCloudbase(root, 'manageFunctions', {
-      action: 'createFunction',
-      functionRootPath: stagingRoot,
-      force: true,
-      func: {
-        name: spec.name,
-        type: 'Event',
-        runtime: 'Nodejs20.19',
-        handler: 'index.main',
-        timeout: spec.timeout,
-        envVariables,
-        vpc: { vpcId, subnetId },
-        isWaitInstall: true,
-      },
-    }, 300000)
-    const creationSummary = managementResponseSummary(creation)
-    console.log(`[mip-cloud-deploy] create response ${spec.name}: ${creationSummary}`)
-    if (creation?.success === false) {
-      throw new Error(`${spec.name} create request was rejected: ${creationSummary}`)
+    const expectedConfiguration = {
+      envVariables,
+      handler: 'index.main',
+      runtime: 'Nodejs20.19',
+      subnetId,
+      timeout: spec.timeout,
+      vpcId,
     }
-    await waitForFunctionActive(spec.name)
+    const currentDetail = existingFunctionDetail(spec.name)
+    if (functionConfigurationMatches(currentDetail, expectedConfiguration)) {
+      console.log(`[mip-cloud-deploy] configuration already current ${spec.name}`)
+    }
+    else {
+      const creation = callCloudbase(root, 'manageFunctions', {
+        action: 'createFunction',
+        functionRootPath: stagingRoot,
+        force: true,
+        func: {
+          name: spec.name,
+          type: 'Event',
+          runtime: expectedConfiguration.runtime,
+          handler: expectedConfiguration.handler,
+          timeout: expectedConfiguration.timeout,
+          envVariables,
+          vpc: { vpcId, subnetId },
+          isWaitInstall: true,
+        },
+      }, 300000)
+      const creationSummary = managementResponseSummary(creation)
+      console.log(`[mip-cloud-deploy] create response ${spec.name}: ${creationSummary}`)
+      if (creation?.success === false) {
+        throw new Error(`${spec.name} create request was rejected: ${creationSummary}`)
+      }
+      await waitForFunctionActive(spec.name)
+    }
     callCloudbase(root, 'manageFunctions', {
       action: 'updateFunctionCode',
       functionName: spec.name,
@@ -281,7 +384,7 @@ try {
       force: true,
     }, 300000)
     const detail = await waitForFunctionActive(spec.name)
-    assertEnvironmentReadback(spec.name, envVariables, detail)
+    assertFunctionConfigurationReadback(spec.name, expectedConfiguration, detail)
     assertHealthy(spec.name)
     deployed.push(spec.name)
     console.log(`[mip-cloud-deploy] verified ${spec.name}`)
@@ -291,9 +394,11 @@ finally {
   fs.rmSync(stagingRoot, { recursive: true, force: true })
 }
 
-removeForbiddenTimer(functionNames.notification, 'mip-notification-every-5m')
-removeForbiddenTimer(functionNames.outbox, 'mip-outbox-every-5m')
 for (const spec of manifest) {
+  if (legacyTimerNames[spec.role]) {
+    removeOwnedLegacyTimer(spec.name, legacyTimerNames[spec.role])
+  }
+  assertNoFunctionTimers(spec.name)
   if (spec.clientInvokable) {
     enableAuthenticatedClientInvocation(spec.name)
   }
@@ -301,7 +406,6 @@ for (const spec of manifest) {
     disableClientInvocation(spec.name)
   }
 }
-
 const artifact = {
   environmentVerified: true,
   directMipSourcesOnly: true,
@@ -312,6 +416,8 @@ const artifact = {
   deploymentStage,
   deployed,
   protectedFunctions: manifest.filter(item => !item.clientInvokable).map(item => item.name),
+  disabledPaymentFunctionsProtected,
+  functionTimersVerifiedAbsent: true,
   workerTimersVerifiedAbsent: true,
   deployedAt: new Date().toISOString(),
 }
@@ -603,6 +709,41 @@ function normalizedOptionalJsonArray(value, key) {
   return JSON.stringify(parsed)
 }
 
+function normalizedServiceAccountConfig(value) {
+  if (!String(value || '').trim()) {
+    return undefined
+  }
+  const parsed = JSON.parse(value)
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error('MIP_SERVICE_ACCOUNT_ADAPTER_JSON must be a JSON object')
+  }
+  let endpoint
+  try {
+    endpoint = new URL(String(parsed.endpoint || '').trim())
+  }
+  catch {
+    throw new Error('MIP_SERVICE_ACCOUNT_ADAPTER_JSON endpoint is invalid')
+  }
+  if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password || endpoint.hash) {
+    throw new Error('MIP_SERVICE_ACCOUNT_ADAPTER_JSON endpoint must use HTTPS')
+  }
+  if (!parsed.templates || typeof parsed.templates !== 'object' || Array.isArray(parsed.templates)
+    || Object.keys(parsed.templates).length < 1 || Object.keys(parsed.templates).length > 10) {
+    throw new Error('MIP_SERVICE_ACCOUNT_ADAPTER_JSON templates are invalid')
+  }
+  return JSON.stringify(parsed)
+}
+
+function exactHostnameList(value) {
+  const hosts = String(value || '').split(',').map(item => item.trim().toLowerCase()).filter(Boolean)
+  if (hosts.some(host => host.includes('*') || host.includes('/') || host.includes(':')
+    || isIP(host)
+    || !/^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(host))) {
+    throw new Error('Knowledge hostname allowlists accept exact DNS hostnames only')
+  }
+  return [...new Set(hosts)]
+}
+
 function environmentForRole(role, options) {
   const shared = {
     MIP_DB_CONNECTION_URI: options.connectionUri,
@@ -645,8 +786,16 @@ function environmentForRole(role, options) {
       MIP_MEDIA_SCOPE_SECRET: options.secrets.mediaScope,
       MIP_PAYMENT_MODE: options.paymentMode,
     },
-    opportunities: agreementEnvironment,
-    community: {},
+    opportunities: {
+      ...agreementEnvironment,
+      MIP_MATCHING_INTERNAL_HMAC_SECRET: options.secrets.matchingInternalHmac,
+      MIP_MATCHING_REFERENCE_SECRET: options.secrets.matchingReference,
+      ...(options.matchingProviderFunction
+        ? { MIP_MATCHING_PROVIDER_FUNCTION_NAME: options.matchingProviderFunction }
+        : {}),
+      MIP_MATCHING_PROVIDER_TIMEOUT_MS: String(options.matchingProviderTimeoutMs),
+    },
+    community: { MIP_CATALOG_STAGE: options.catalogStage },
     commerce: {
       ...agreementEnvironment,
       MIP_CATALOG_STAGE: options.catalogStage,
@@ -660,6 +809,12 @@ function environmentForRole(role, options) {
       MIP_REFUND_WORKER_HMAC_SECRET: options.secrets.refundWorkerHmac,
       MIP_EXPORT_MAX_ROWS: String(options.exportMaxRows),
       MIP_EXPORT_MAX_BYTES: String(options.exportMaxBytes),
+      MIP_MATCHING_INTERNAL_HMAC_SECRET: options.secrets.matchingInternalHmac,
+      MIP_OPPORTUNITIES_FUNCTION_NAME: options.functionNames.opportunities,
+      MIP_CATALOG_STAGE: options.catalogStage,
+      MIP_KNOWLEDGE_TEST_PRICE_CENTS: String(options.knowledgeTestPriceCents),
+      MIP_KNOWLEDGE_SOURCE_ALLOWED_HOSTS: options.knowledgeSourceAllowedHosts.join(','),
+      MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS: options.knowledgeWebviewAllowedHosts.join(','),
     },
     growth: { MIP_GROWTH_HMAC_SECRET: options.secrets.growthHmac },
     game: agreementEnvironment,
@@ -677,13 +832,21 @@ function environmentForRole(role, options) {
     notifications: {
       MIP_NOTIFICATION_ENCRYPTION_KEY: options.secrets.notificationEncryption,
       MIP_SUBSCRIBE_TEMPLATES_JSON: options.subscribeTemplatesJson,
+      MIP_CUSTOMER_SERVICE_ENABLED: String(options.customerServiceEnabled),
     },
     ledger: { MIP_LEDGER_SECRET: options.secrets.ledger },
     notification: {
       MIP_NOTIFICATION_HMAC_SECRET: options.secrets.notificationHmac,
       MIP_NOTIFICATION_ENCRYPTION_KEY: options.secrets.notificationEncryption,
       MIP_SUBSCRIBE_TEMPLATES_JSON: options.subscribeTemplatesJson,
+      MIP_CUSTOMER_SERVICE_ENABLED: String(options.customerServiceEnabled),
       MIP_MINIPROGRAM_STATE: options.miniprogramState,
+      ...(options.serviceAccountAdapterJson
+        ? {
+            MIP_SERVICE_ACCOUNT_ADAPTER_JSON: options.serviceAccountAdapterJson,
+            MIP_SERVICE_ACCOUNT_ADAPTER_SECRET: options.serviceAccountAdapterSecret,
+          }
+        : {}),
     },
     outbox: {
       MIP_OUTBOX_HMAC_SECRET: options.secrets.outboxHmac,
@@ -705,7 +868,7 @@ function verifyLocalOpenApiDeclarations() {
     tasks: ['security.msgSecCheck'],
     banners: ['security.msgSecCheck'],
     ai: ['security.imgSecCheck'],
-    notification: ['subscribeMessage.send'],
+    notification: ['customerServiceMessage.send', 'subscribeMessage.send'],
   }
   for (const [role, permissions] of Object.entries(expected)) {
     const configPath = path.join(sourceRoot, manifest.find(item => item.role === role).source, 'config.json')
@@ -765,6 +928,29 @@ function assertEnvironmentReadback(functionName, expected, detail) {
   }
 }
 
+function functionConfigurationMatches(detail, expected) {
+  const value = functionDetail(detail)
+  if (!value) {
+    return false
+  }
+  const actualEnvironment = environmentVariables(detail)
+  const expectedEnvironmentEntries = Object.entries(expected.envVariables).sort(([a], [b]) => a.localeCompare(b))
+  const actualEnvironmentEntries = Object.entries(actualEnvironment).sort(([a], [b]) => a.localeCompare(b))
+  return value.Runtime === expected.runtime
+    && value.Handler === expected.handler
+    && Number(value.Timeout) === Number(expected.timeout)
+    && value.VpcConfig?.VpcId === expected.vpcId
+    && value.VpcConfig?.SubnetId === expected.subnetId
+    && JSON.stringify(actualEnvironmentEntries) === JSON.stringify(expectedEnvironmentEntries)
+}
+
+function assertFunctionConfigurationReadback(functionName, expected, detail) {
+  assertEnvironmentReadback(functionName, expected.envVariables, detail)
+  if (!functionConfigurationMatches(detail, expected)) {
+    throw new Error(`${functionName} configuration readback did not match runtime, handler, timeout, VPC, or exact environment`)
+  }
+}
+
 function assertHealthy(functionName) {
   const response = callCloudbase(root, 'manageFunctions', {
     action: 'invokeFunction',
@@ -777,7 +963,7 @@ function assertHealthy(functionName) {
   }
 }
 
-function removeForbiddenTimer(functionName, triggerName) {
+function removeOwnedLegacyTimer(functionName, triggerName) {
   try {
     callCloudbase(root, 'callCloudApi', {
       service: 'scf',
@@ -795,14 +981,15 @@ function removeForbiddenTimer(functionName, triggerName) {
       throw error
     }
   }
+}
+
+function assertNoFunctionTimers(functionName) {
   const readback = callCloudbase(root, 'callCloudApi', {
     service: 'scf',
     action: 'ListTriggers',
-    params: { FunctionName: functionName, Namespace: envId },
+    params: { FunctionName: functionName, Namespace: envId, Limit: 100, Offset: 0 },
   })
-  if (JSON.stringify(readback).includes(triggerName)) {
-    throw new Error(`${triggerName} must stay absent because it keeps Serverless MySQL awake`)
-  }
+  assertNoTimerTriggers(functionName, readback)
 }
 
 function disableClientInvocation(functionName) {
@@ -820,34 +1007,27 @@ function setClientInvocationRule(functionName, invoke) {
     resourceId: functionName,
   })
   const text = current?.data?.permissions?.[0]?.SecurityRule
-  let rules
-  try {
-    rules = JSON.parse(text)
-  }
-  catch {
-    rules = { '*': { invoke: 'auth.loginType != \'ANONYMOUS\' && auth != null' } }
-  }
-  rules[functionName] = { invoke }
+  const rules = parseFunctionSecurityRules(text)
+  const updatedRules = updateMipFunctionInvocationRule(rules, functionName, invoke)
   callCloudbase(root, 'managePermissions', {
     action: 'updateResourcePermission',
     resourceType: 'function',
     resourceId: functionName,
     permission: 'CUSTOM',
-    securityRule: JSON.stringify(rules),
+    securityRule: JSON.stringify(updatedRules),
   })
   const readback = callCloudbase(root, 'queryPermissions', {
     action: 'getResourcePermission',
     resourceType: 'function',
     resourceId: functionName,
   })
-  let verified
-  try {
-    verified = JSON.parse(readback?.data?.permissions?.[0]?.SecurityRule)
-  }
-  catch {
-    verified = null
-  }
-  if (verified?.[functionName]?.invoke !== invoke) {
-    throw new Error(`${functionName} client invocation rule did not converge`)
-  }
+  const verified = parseFunctionSecurityRules(
+    readback?.data?.permissions?.[0]?.SecurityRule,
+  )
+  assertFunctionSecurityRulesConverged({
+    before: rules,
+    after: verified,
+    functionName,
+    invoke,
+  })
 }

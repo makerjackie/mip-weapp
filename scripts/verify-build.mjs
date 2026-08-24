@@ -80,7 +80,10 @@ assert(
 assert(
   eventService.includes('mip_event_checkin_credentials')
   && eventService.includes('token_hash = ?')
-  && eventService.includes('checkInCredentialQuery(parsedToken, { lock: true })')
+  && eventService.includes(`presented.kind === 'SCAN'`)
+  && eventService.includes('checkInCredentialQuery(presented.parsed, { lock: true })')
+  && eventService.includes('checkInResumeRef(presented.credentialKind, presented.credentialRef, { lock: true })')
+  && eventService.includes('credential.event_id !== presented.eventId')
   && eventService.includes('sha256(secret)')
   && eventService.includes('assertCheckInAllowed')
   && eventService.includes(`SET status = 'ATTENDED', version = version + 1`),

@@ -134,6 +134,11 @@ export function createMipAdminModule(gateway: MipAdminGateway) {
       () => gateway.getOpportunityCommentAdminState(opportunityId),
       { force },
     ),
+    getMatchingAdminState: (branchId?: string, force = false) => cache.query(
+      `mip-admin:matching:${branchId || 'PLATFORM'}`,
+      () => gateway.getMatchingAdminState(branchId),
+      { force },
+    ),
     getOpportunityEditorOptions: (force = false) => cache.query(
       'mip-admin:opportunity-options',
       gateway.getOpportunityEditorOptions,

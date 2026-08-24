@@ -3,6 +3,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
+import { assertNoTimerTriggers } from './lib/cloud-function-safety.mjs'
 import {
   bindAndRequireMysqlEnvironment,
   callCloudbase,
@@ -67,6 +68,7 @@ for (const spec of coreManifest) {
     throw new Error(`${spec.name} does not include the configured AppID in MIP_ALLOWED_APP_IDS`)
   }
   assertMysqlHealth(spec.name)
+  assertNoFunctionTimers(spec.name)
   coreDetails.set(spec.role, detail)
   verifiedFunctions.push(spec.name)
 }
@@ -75,6 +77,7 @@ assertRuntimeAccount(coreDetails.get('identity'))
 assertOutboxEnvironment(coreDetails.get('outbox'))
 assertNotificationEnvironment(coreDetails.get('notifications'), coreDetails.get('notification'))
 assertRefundDispatchEnvironment(coreDetails.get('admin'))
+assertKnowledgeEnvironment(coreDetails.get('admin'))
 for (const spec of coreManifest) {
   if (spec.clientInvokable) {
     assertClientInvocationEnabled(spec.name)
@@ -83,9 +86,7 @@ for (const spec of coreManifest) {
     assertClientInvocationDisabled(spec.name)
   }
 }
-assertTimerAbsent(functionNames.notification, 'mip-notification-every-5m')
-assertTimerAbsent(functionNames.outbox, 'mip-outbox-every-5m')
-
+const disabledPaymentFunctionsProtected = []
 if (paymentMode === 'test' || paymentMode === 'live') {
   for (const functionName of [functionNames.pay, functionNames.callback, functionNames.refund]) {
     const detail = existingFunctionDetail(functionName)
@@ -98,6 +99,7 @@ if (paymentMode === 'test' || paymentMode === 'live') {
       throw new Error(`${functionName} payment environment does not match the verified MIP deployment`)
     }
     assertPaymentHealth(functionName)
+    assertNoFunctionTimers(functionName)
     verifiedFunctions.push(functionName)
   }
   assertRefundWorkerEnvironment(
@@ -108,8 +110,18 @@ if (paymentMode === 'test' || paymentMode === 'live') {
   assertClientInvocationDisabled(functionNames.callback)
   assertClientInvocationDisabled(functionNames.refund)
   assertClientInvocationDisabled(functionNames.ledger)
-  assertTimerAbsent(functionNames.refund, 'mip-refund-every-5m')
   protectedFunctions.push(functionNames.callback, functionNames.refund)
+}
+else {
+  for (const functionName of [functionNames.pay, functionNames.callback, functionNames.refund]) {
+    if (!existingFunctionDetail(functionName)) {
+      continue
+    }
+    assertClientInvocationDisabled(functionName)
+    assertNoFunctionTimers(functionName)
+    disabledPaymentFunctionsProtected.push(functionName)
+    protectedFunctions.push(functionName)
+  }
 }
 
 fs.mkdirSync(path.join(root, '.tmp'), { recursive: true })
@@ -122,6 +134,8 @@ fs.writeFileSync(path.join(root, '.tmp', 'verify-cloud-result.json'), `${JSON.st
   tablesVerified: requiredTables.length,
   runtimeAccountLeastPrivilege: true,
   protectedFunctionsVerified: protectedFunctions,
+  disabledPaymentFunctionsProtected,
+  functionTimersVerifiedAbsent: true,
   workerTimersVerifiedAbsent: true,
   verifiedAt: new Date().toISOString(),
 }, null, 2)}\n`)
@@ -280,15 +294,36 @@ function assertRefundDispatchEnvironment(detail) {
   }
 }
 
+function assertKnowledgeEnvironment(detail) {
+  const variables = environmentVariables(detail)
+  for (const key of ['MIP_KNOWLEDGE_SOURCE_ALLOWED_HOSTS', 'MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS']) {
+    const expected = normalizedHostnames(env[key])
+    const actual = normalizedHostnames(variables[key])
+    if (!expected.length || expected.join(',') !== actual.join(',')) {
+      throw new Error(`mip-admin-api ${key} does not match the deployment contract`)
+    }
+  }
+}
+
+function normalizedHostnames(value) {
+  return [...new Set(String(value || '').split(',').map(item => item.trim().toLowerCase()).filter(Boolean))].sort()
+}
+
 function assertNotificationEnvironment(apiDetail, workerDetail) {
   const api = environmentVariables(apiDetail)
   const worker = environmentVariables(workerDetail)
+  const serviceAccountConfigured = Boolean(worker.MIP_SERVICE_ACCOUNT_ADAPTER_JSON)
   if (String(api.MIP_IDENTITY_PEPPER || '').length < 32
     || String(api.MIP_NOTIFICATION_ENCRYPTION_KEY || '').length < 32
     || api.MIP_NOTIFICATION_HMAC_SECRET
+    || api.MIP_SERVICE_ACCOUNT_ADAPTER_SECRET
     || String(worker.MIP_NOTIFICATION_HMAC_SECRET || '').length < 32
     || String(worker.MIP_NOTIFICATION_ENCRYPTION_KEY || '').length < 32
-    || worker.MIP_IDENTITY_PEPPER) {
+    || worker.MIP_IDENTITY_PEPPER
+    || api.MIP_CUSTOMER_SERVICE_ENABLED !== worker.MIP_CUSTOMER_SERVICE_ENABLED
+    || (serviceAccountConfigured
+      ? String(worker.MIP_SERVICE_ACCOUNT_ADAPTER_SECRET || '').length < 32
+      : Boolean(worker.MIP_SERVICE_ACCOUNT_ADAPTER_SECRET))) {
     throw new Error('Notification API and worker environment boundaries are incomplete')
   }
 }
@@ -332,15 +367,13 @@ function clientInvocationRule(functionName) {
   return rules?.[functionName]?.invoke
 }
 
-function assertTimerAbsent(functionName, triggerName) {
+function assertNoFunctionTimers(functionName) {
   const response = callCloudbase(root, 'callCloudApi', {
     service: 'scf',
     action: 'ListTriggers',
-    params: { FunctionName: functionName, Namespace: envId },
+    params: { FunctionName: functionName, Namespace: envId, Limit: 100, Offset: 0 },
   })
-  if (JSON.stringify(response).includes(triggerName)) {
-    throw new Error(`${triggerName} must stay absent because it keeps Serverless MySQL awake`)
-  }
+  assertNoTimerTriggers(functionName, response)
 }
 
 function collectFieldValues(value, names, output = []) {

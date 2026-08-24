@@ -15,6 +15,7 @@ const readActions = new Set([
   'getOpportunity',
   'listPeople',
   'getPublicProfileAggregate',
+  'getProfileInfluence',
   'listMine',
   'listReceivedInteractions',
   'getOpportunityCommentSettings',
@@ -25,6 +26,9 @@ const readActions = new Set([
   'listSuperCases',
   'getSuperCase',
   'listMySuperCases',
+  'getMatchingPreferences',
+  'listMatchingRequests',
+  'listMatchingResults',
 ])
 
 function unwrap<T>(value: unknown): T {

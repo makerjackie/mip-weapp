@@ -15,6 +15,10 @@ function catalogStage(value: string): CatalogStage {
   return value === 'LIVE' ? 'LIVE' : 'TEST'
 }
 
+function hostnameList(value: string) {
+  return value.split(',').map(item => item.trim().toLowerCase()).filter(Boolean)
+}
+
 const baseConfig = createRuntimeConfig({
   appName: __APP_NAME__ || brand.productName,
   appNamespace: __APP_NAMESPACE__ || defaults.appNamespace,
@@ -57,6 +61,7 @@ export const runtimeConfig = {
   paymentMode: resolvedPaymentMode,
   catalogStage: catalogStage(__MIP_CATALOG_STAGE__ || defaults.catalogStage),
   subscribeTemplatesJson: __MIP_SUBSCRIBE_TEMPLATES_JSON__,
+  knowledgeWebviewAllowedHosts: hostnameList(__MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS__),
   unconfigured: {
     cloudbase: baseConfig.cloudbase.mode === 'disabled',
     payment: resolvedPaymentMode === 'disabled',

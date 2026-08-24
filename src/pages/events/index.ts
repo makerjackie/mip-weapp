@@ -123,6 +123,7 @@ Page({
     dateFromLabel: '',
     dateTo: '',
     dateToLabel: '',
+    rangePanelVisible: false,
     calendarVisible: false,
     calendarTarget: 'SINGLE' as 'SINGLE' | 'FROM' | 'TO',
     calendarValue: Date.now(),
@@ -398,6 +399,10 @@ Page({
       return
     }
     this.setData({ calendarVisible: true, calendarTarget: target })
+  },
+
+  toggleRangePanel() {
+    this.setData({ rangePanelVisible: !this.data.rangePanelVisible })
   },
 
   closeCalendar() {

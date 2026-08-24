@@ -16,7 +16,7 @@
   </view>
 
   <view wx:else class="mt-5 flex flex-col gap-4">
-    <view wx:if="{{conflict && !cancelConflict}}" class="rounded-[16rpx] border border-solid border-brand bg-brand-soft p-4">
+    <view id="admin-events-conflict-state" wx:if="{{conflict && !cancelConflict}}" class="rounded-[16rpx] border border-solid border-brand bg-brand-soft p-4">
       <view class="text-[length:26rpx] font-semibold">活动信息已更新</view>
       <view class="mt-2 text-[length:23rpx] text-muted">{{message}}</view>
       <view class="mt-4"><t-button block variant="outline" bind:tap="refreshAfterConflict">载入最新版本</t-button></view>

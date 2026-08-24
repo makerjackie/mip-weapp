@@ -158,6 +158,13 @@ Page({
     }
   },
 
+  openInteraction(event: WechatMiniprogram.TouchEvent) {
+    const viewMode = String(event.currentTarget.dataset.viewMode || 'SENT')
+    caseNavigateTo({
+      url: `/packages/member/mip-events/interaction/index?eventId=${encodeURIComponent(this.data.eventId)}&viewMode=${encodeURIComponent(viewMode)}`,
+    })
+  },
+
   onShareAppMessage() {
     return {
       title: '活动参与人',

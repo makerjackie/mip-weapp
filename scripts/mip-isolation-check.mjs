@@ -3,10 +3,30 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { loadMipMigrationLock, MIP_TABLE_PREFIX } from './lib/mip-migrations.mjs'
+import { findUnsafeMipSqlRelations } from './lib/mip-sql-isolation.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const packageJson = JSON.parse(read('package.json'))
 const lock = loadMipMigrationLock(root)
+const dynamicRelationAllowlist = Object.freeze({
+  'scripts/apply-mip-schema.mjs': {
+    MIP_MIGRATION_TRACKING_TABLE: ['mip_schema_migrations'],
+    MIP_MIGRATION_STEP_TABLE: ['mip_schema_migration_steps'],
+  },
+  'cloudfunctions/mip-opportunities-api/domain/opportunities.js': {
+    tableName: ['mip_opportunities', 'mip_cooperation_cards', 'mip_super_cases'],
+  },
+  'cloudfunctions/mip-admin-api/domain/knowledge.js': {
+    table: [
+      'mip_knowledge_sources',
+      'mip_knowledge_categories',
+      'mip_knowledge_contents',
+      'mip_knowledge_products',
+      'mip_content_comments',
+      'mip_content_comment_reports',
+    ],
+  },
+})
 
 assert(
   packageJson.scripts['database:setup'] === 'node scripts/apply-mip-schema.mjs',
@@ -18,6 +38,17 @@ assert(fs.existsSync(path.join(root, 'src/assets/brand/mip-logo-yellow.png')), '
 
 for (const table of lock.requiredTables) {
   assert(table.startsWith(MIP_TABLE_PREFIX), `MIP migration lock contains unsafe table: ${table}`)
+}
+const lockedTables = new Set(lock.requiredTables)
+for (const [file, variables] of Object.entries(dynamicRelationAllowlist)) {
+  for (const [variable, tables] of Object.entries(variables)) {
+    for (const table of tables) {
+      assert(
+        lockedTables.has(table),
+        `Dynamic SQL allowlist is outside the migration lock: ${file} (${variable} -> ${table})`,
+      )
+    }
+  }
 }
 
 const activePaths = [
@@ -41,6 +72,16 @@ for (const relativePath of activePaths) {
     const source = read(file)
     const table = findLegacyTableReference(source)
     assert(!table, `Active MIP code references a shared legacy table: ${file} (${table})`)
+    if (!file.includes(`${path.sep}tests${path.sep}`)) {
+      const unsafeRelations = findUnsafeMipSqlRelations(source, {
+        allowedDynamicRelations: dynamicRelationAllowlist[file],
+        sqlDocument: file.endsWith('.sql'),
+      })
+      assert(
+        unsafeRelations.length === 0,
+        `Active MIP code references an unowned SQL relation: ${file} (${unsafeRelations[0]?.relation || 'unknown'})`,
+      )
+    }
   }
 }
 

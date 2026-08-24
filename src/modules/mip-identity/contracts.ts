@@ -72,6 +72,7 @@ export interface ProfileVisibility {
   industry?: boolean
   abilities?: boolean
   primaryBranch?: boolean
+  influence?: boolean
 }
 
 export interface PublicProfileTag {

@@ -72,6 +72,66 @@ export interface OpportunityPage {
   nextCursor?: string
 }
 
+export type MatchingCandidateType = 'TALENT' | 'PROJECT'
+export type MatchingFeedbackType = 'HELPFUL' | 'NOT_RELEVANT' | 'CONTACTED' | 'DISMISSED'
+
+export interface MatchingPreferences {
+  notifications: {
+    commentsEnabled: boolean
+    opportunityMatchingEnabled: boolean
+    hotspotsEnabled: boolean
+    version: number
+  }
+  opportunities: {
+    matchingEnabled: boolean
+    talentRecommendationsEnabled: boolean
+    projectRecommendationsEnabled: boolean
+    discoverableForMatching: boolean
+    matchingScope: 'PLATFORM' | 'PRIMARY_BRANCH'
+    version: number
+  }
+}
+
+export interface MatchingRequestSummary {
+  id: string
+  sourceOpportunity: { id: OpportunityId, title: string }
+  provider: 'LOCAL' | 'EXTERNAL'
+  fallbackReason?: string
+  sourceVersion: number
+  resultVersion: number
+  resultCount: number
+  createdAt: string
+}
+
+export interface MatchingExplanation {
+  key: 'ROLE' | 'INDUSTRY' | 'ABILITY' | 'BRANCH' | 'CITY'
+  label: string
+  weight: number
+}
+
+export interface MatchingResult {
+  type: MatchingCandidateType
+  candidateRef: string
+  rank: number
+  score: number
+  explanation: MatchingExplanation[]
+  talent?: { profileRef: string, nickname: string, avatarUrl?: string, headline?: string }
+  project?: { id: OpportunityId, title: string, valueSummary: string, targetSummary: string }
+  feedback?: { type: MatchingFeedbackType, reason?: string }
+}
+
+export interface MatchingRequestPage {
+  items: MatchingRequestSummary[]
+  nextCursor?: string
+}
+
+export interface MatchingResultPage {
+  requestId: string
+  resultVersion: number
+  items: MatchingResult[]
+  nextCursor?: string
+}
+
 export interface OpportunityCatalog {
   branches: Array<{ id: BranchId, name: string, cityName: string }>
   cityTags: OpportunityTag[]
@@ -129,6 +189,13 @@ export interface PublicPerson {
   badges?: PublicProfileBadge[]
 }
 
+export interface ProfileInfluenceSummary {
+  guestCount: number
+  interactionCount: number
+  interestCount: number
+  visitorCount: number
+}
+
 export interface PeoplePage {
   items: PublicPerson[]
   nextCursor?: string
@@ -176,6 +243,7 @@ export interface PublicProfileAggregate {
   superCases: PublicProfileSuperCase[]
   opportunities: PublicProfileOpportunity[]
   interestActive: boolean
+  influence?: ProfileInfluenceSummary
 }
 
 export interface OpportunityDraft {
@@ -250,7 +318,14 @@ export interface OpportunityCommentMutationResult {
   participant?: boolean
 }
 
-export type ReceivedInteractionCategory = 'REFERRAL' | 'PROFILE_INTEREST' | 'OUTBOUND_INTEREST' | 'VISITOR'
+export type ReceivedInteractionCategory
+  = | 'REFERRAL'
+    | 'PROFILE_INTEREST'
+    | 'OUTBOUND_INTEREST'
+    | 'VISITOR'
+    | 'GUEST'
+    | 'INTERACTION'
+    | 'ACTIVE_INTEREST'
 export type ReceivedInteractionStatus = 'ACTIVE' | 'CANCELLED'
 export type ReceivedInterestSourceType = 'OPPORTUNITY' | 'COOPERATION_CARD' | 'SUPER_CASE' | 'PROFILE'
 
@@ -259,6 +334,7 @@ export interface ReceivedInteractionActor {
   nickname: string
   avatarUrl?: string
   headline?: string
+  userKind?: 'PLAYER' | 'GUEST'
 }
 
 interface ReceivedInteractionBase {
@@ -307,7 +383,30 @@ export interface ReceivedVisitor extends ReceivedInteractionBase {
   lastVisitedAt: string
 }
 
-export type ReceivedInteraction = ReceivedReferral | ReceivedProfileInterest | OutboundProfileInterest | ReceivedVisitor
+export interface ReceivedGuest extends ReceivedInteractionBase {
+  kind: 'GUEST'
+  invitationCount: number
+  event: { id: string, title: string }
+}
+
+export interface ReceivedInfluenceInteraction extends ReceivedInteractionBase {
+  kind: 'INTERACTION'
+  event: { id: string, title: string }
+}
+
+export interface ReceivedActiveInterest extends ReceivedInteractionBase {
+  kind: 'ACTIVE_INTEREST'
+  source: { type: ReceivedInterestSourceType, label: string }
+}
+
+export type ReceivedInteraction
+  = | ReceivedReferral
+    | ReceivedProfileInterest
+    | OutboundProfileInterest
+    | ReceivedVisitor
+    | ReceivedGuest
+    | ReceivedInfluenceInteraction
+    | ReceivedActiveInterest
 
 export interface ReceivedInteractionPage {
   category: ReceivedInteractionCategory

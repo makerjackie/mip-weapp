@@ -23,7 +23,9 @@ describe('MIP durable outbox contract', () => {
   it('keeps the worker controlled and provides an explicit recovery command', () => {
     const deployment = read('scripts/deploy-functions.mjs')
     const recovery = read('scripts/run-outbox.mjs')
-    expect(deployment).toContain('removeForbiddenTimer(functionNames.outbox, \'mip-outbox-every-5m\')')
+    expect(deployment).toContain('outbox: \'mip-outbox-every-5m\'')
+    expect(deployment).toContain('removeOwnedLegacyTimer(spec.name, legacyTimerNames[spec.role])')
+    expect(deployment).toContain('assertNoFunctionTimers(spec.name)')
     expect(recovery).toContain('action: \'runBatch\'')
     expect(recovery).toContain('MIP_OUTBOX_HMAC_SECRET')
     expect(JSON.parse(read('package.json')).scripts['outbox:run']).toBe('node scripts/run-outbox.mjs')

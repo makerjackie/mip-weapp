@@ -20,6 +20,7 @@ export type RegistrationStatus
 
 export type EventListView = 'UPCOMING' | 'PAST' | 'MINE'
 export type EventDateFilter = 'RECENT' | 'ENDED' | 'TODAY' | 'CUSTOM'
+export type MyRegistrationCategory = 'UPCOMING' | 'ATTENDED'
 
 export interface EventFeedQuery {
   view: EventListView
@@ -137,6 +138,7 @@ export interface MipEventDetail extends MipEventListItem {
   changes: EventChangeSummary[]
   canRegister: boolean
   canCancel: boolean
+  canRetryRefund: boolean
   canCheckIn: boolean
   canInteract: boolean
   albumSubmissionPolicy: EventAlbumSubmissionPolicy
@@ -234,13 +236,26 @@ export type RegistrationOutcome
 
 export interface RegistrationSummary {
   registrationId: string
+  version: number
   event: MipEventListItem
   status: RegistrationStatus
   orderId?: OrderId
   waitlistPosition?: number
   checkedInAt?: string
+  venueAddress?: string
   updatedAt: string
   canEdit: boolean
+  canCancel: boolean
+  canRetryRefund: boolean
+}
+
+export interface MyRegistrationPage {
+  items: RegistrationSummary[]
+  counts?: {
+    upcoming: number
+    attended: number
+  }
+  nextCursor?: string
 }
 
 export interface RegistrationCancellation {
@@ -248,6 +263,8 @@ export interface RegistrationCancellation {
   status: 'CANCELLED' | 'CANCELLATION_PENDING'
   refundRequired: boolean
   refundId?: string
+  refundStatus?: 'PENDING' | 'PROVIDER_CREATED' | 'PROCESSING'
+  refundSubmission?: 'SUBMITTED' | 'PENDING_RETRY'
   paymentAvailable: boolean
 }
 
@@ -261,14 +278,18 @@ export interface CheckInOutcome {
 
 export interface CheckInScene {
   eventId: EventId
-  scanToken: string
+  resumeToken: string
   validFrom: string
   validUntil: string
 }
 
-export interface CheckInPosterCredential extends CheckInScene {
+export interface CheckInPosterCredential {
   credentialId: string
+  eventId: EventId
   mode: CheckInCredentialMode
+  scanToken: string
+  validFrom: string
+  validUntil: string
   assetId: string
   codeUrl: string
 }
@@ -370,12 +391,12 @@ export interface MipEventsGateway {
   listMyEventAlbumSubmissions: (eventId: EventId) => Promise<MyEventAlbumSubmissions>
   submitEventAlbumPhoto: (eventId: EventId, mediaAssetId: string, caption: string) => Promise<EventAlbumSubmission>
   withdrawEventAlbumPhoto: (photoId: string, expectedVersion: number) => Promise<{ id: string, status: 'WITHDRAWN', version: number }>
-  listMyRegistrations: (cursor?: string) => Promise<{ items: RegistrationSummary[], nextCursor?: string }>
+  listMyRegistrations: (cursor?: string, category?: MyRegistrationCategory) => Promise<MyRegistrationPage>
   getMyRegistration: (eventId: EventId) => Promise<MyEventRegistration | null>
   register: (input: RegistrationIntent) => Promise<RegistrationOutcome>
   updateRegistration: (input: RegistrationUpdateIntent) => Promise<MyEventRegistration>
   cancelRegistration: (eventId: EventId, expectedVersion?: number) => Promise<RegistrationCancellation>
-  checkIn: (scanToken: string, idempotencyKey: string) => Promise<CheckInOutcome>
+  checkIn: (resumeToken: string, idempotencyKey: string) => Promise<CheckInOutcome>
   resolveCheckInScene: (scene: string) => Promise<CheckInScene>
   resolveInvitationScene: (scene: string) => Promise<InvitationSceneResolution>
   createCheckInPoster: (eventId: EventId, mode?: CheckInCredentialMode) => Promise<CheckInPosterCredential>

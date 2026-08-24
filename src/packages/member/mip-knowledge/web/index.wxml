@@ -1,0 +1,1 @@
+<view id="mip-knowledge-web-page" class="min-h-screen bg-canvas text-ink"><web-view wx:if="{{state === 'ready'}}" src="{{url}}" /><view wx:else class="px-4 pt-6"><app-empty-state title="无法打开内容" description="链接无效或当前业务域名尚未配置。" /></view><app-page-exit /></view>

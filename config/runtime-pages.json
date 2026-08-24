@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 83,
+  "routeCount": 95,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 83 paths.",
+    "config/project.json routes must list the same 95 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -29,7 +29,8 @@
         "packages/member/mip-events/registration/index",
         "packages/member/mip-events/detail/index",
         "packages/member/payment-result/index",
-        "packages/member/order-detail/index"
+        "packages/member/order-detail/index",
+        "packages/member/mip-knowledge/detail/index"
       ],
       "reason": "wx.requestPayment and real entitlement require a real device and merchant binding"
     },
@@ -58,7 +59,8 @@
         "packages/member/mip-events/detail/index",
         "packages/member/mip-events/participants/index",
         "packages/member/mip-opportunities/detail/index",
-        "packages/member/mip-cases/detail/index"
+        "packages/member/mip-cases/detail/index",
+        "packages/member/mip-growth/index"
       ],
       "reason": "Share sheet behavior is device/WeChat-client only when enabled"
     },
@@ -76,9 +78,16 @@
       "label": "视频号主页",
       "routes": [
         "pages/events/index",
-        "packages/member/help/index"
+        "packages/member/help/index",
+        "packages/member/mip-knowledge/detail/index"
       ],
       "reason": "wx.openChannelsUserProfile 依赖已绑定的视频号和微信真机环境"
+    },
+    {
+      "id": "knowledge-webview",
+      "label": "知识内容网页",
+      "routes": ["packages/member/mip-knowledge/web/index"],
+      "reason": "web-view 业务域名、跳转和加载失败需要在正式 AppID 的微信真机中验收"
     },
     {
       "id": "profile-avatar",
@@ -166,7 +175,7 @@
       "route": "pages/membership/index",
       "patch": { "state": "loading" },
       "dataAssertions": [{ "path": "state", "equals": "loading" }],
-      "visibleAssertion": { "selector": "#mip-membership-page t-skeleton" }
+      "visibleAssertion": { "selector": "#mip-membership-page #mip-membership-loading-state" }
     },
     {
       "id": "empty",
@@ -176,21 +185,21 @@
         { "path": "state", "equals": "empty" },
         { "path": "branches.length", "equals": 0 }
       ],
-      "visibleAssertion": { "selector": "#mip-branches-page", "text": "暂无城市分会" }
+      "visibleAssertion": { "selector": "#mip-branches-page #mip-branches-empty-state" }
     },
     {
       "id": "error",
       "route": "pages/membership/index",
       "patch": { "state": "error", "message": "暂时无法加载" },
       "dataAssertions": [{ "path": "state", "equals": "error" }],
-      "visibleAssertion": { "selector": "#mip-membership-page", "text": "会员方案暂时无法加载" }
+      "visibleAssertion": { "selector": "#mip-membership-page #mip-membership-error-state" }
     },
     {
       "id": "forbidden",
       "route": "packages/admin/dashboard/index",
       "patch": { "state": "forbidden", "message": "" },
       "dataAssertions": [{ "path": "state", "equals": "forbidden" }],
-      "visibleAssertion": { "selector": "#admin-dashboard-page", "text": "没有运营权限" }
+      "visibleAssertion": { "selector": "#admin-dashboard-page #admin-dashboard-forbidden-state" }
     },
     {
       "id": "conflict",
@@ -205,7 +214,7 @@
         { "path": "state", "equals": "ready" },
         { "path": "conflict", "equals": true }
       ],
-      "visibleAssertion": { "selector": "#admin-events-page", "text": "活动信息已更新" }
+      "visibleAssertion": { "selector": "#admin-events-page #admin-events-conflict-state" }
     },
     {
       "id": "disabled",
@@ -222,7 +231,7 @@
         { "path": "capability.textDrafts", "equals": false },
         { "path": "capability.voiceDrafts", "equals": false }
       ],
-      "visibleAssertion": { "selector": "#mip-ai-page", "text": "AI 整理当前不可用" }
+      "visibleAssertion": { "selector": "#mip-ai-page #mip-ai-disabled-state" }
     }
   ],
   "interactionJourneys": [
@@ -232,23 +241,26 @@
       "nonMutating": true,
       "steps": [
         {
-          "id": "enter-keyword",
-          "type": "input",
-          "selector": "#opportunities-search-input",
-          "value": "合作",
-          "dataAssertions": [{ "path": "keywordInput", "equals": "合作" }]
-        },
-        {
           "id": "open-filter",
           "type": "tap",
           "selector": "#opportunities-filter-toggle",
+          "handler": "toggleFilters",
           "dataAssertions": [{ "path": "filterOpen", "equals": true }],
           "visibleAssertion": { "text": "筛选条件" }
+        },
+        {
+          "id": "enter-keyword",
+          "type": "input",
+          "selector": "#opportunities-search-input",
+          "handler": "onKeywordInput",
+          "value": "合作",
+          "dataAssertions": [{ "path": "keywordInput", "equals": "合作" }]
         },
         {
           "id": "close-filter",
           "type": "tap",
           "selector": "#opportunities-filter-toggle",
+          "handler": "toggleFilters",
           "dataAssertions": [
             { "path": "filterOpen", "equals": false },
             { "path": "keywordInput", "equals": "" }
@@ -265,6 +277,7 @@
           "id": "enter-keyword",
           "type": "input",
           "selector": "#people-search-input",
+          "handler": "onKeywordInput",
           "value": "设计",
           "dataAssertions": [{ "path": "keywordInput", "equals": "设计" }]
         },
@@ -272,6 +285,7 @@
           "id": "open-filter",
           "type": "tap",
           "selector": "#people-filter-toggle",
+          "handler": "toggleFilters",
           "dataAssertions": [{ "path": "filterOpen", "equals": true }],
           "visibleAssertion": { "text": "人才筛选" }
         },
@@ -279,6 +293,7 @@
           "id": "close-filter",
           "type": "tap",
           "selector": "#people-filter-toggle",
+          "handler": "toggleFilters",
           "dataAssertions": [{ "path": "filterOpen", "equals": false }]
         }
       ]
@@ -292,6 +307,8 @@
           "id": "show-cases",
           "type": "tap",
           "selector": "#profile-tab-cases",
+          "handler": "changePortfolioTab",
+          "handlerDataset": { "tab": "cases" },
           "dataAssertions": [{ "path": "portfolioTab", "equals": "cases" }],
           "visibleAssertion": { "selector": "#profile-tab-cases", "text": "超级案例" }
         },
@@ -299,6 +316,8 @@
           "id": "show-opportunities",
           "type": "tap",
           "selector": "#profile-tab-opportunities",
+          "handler": "changePortfolioTab",
+          "handlerDataset": { "tab": "opportunities" },
           "dataAssertions": [{ "path": "portfolioTab", "equals": "opportunities" }],
           "visibleAssertion": { "selector": "#profile-tab-opportunities", "text": "相关机会" }
         }
@@ -313,6 +332,7 @@
           "id": "open-task-editor",
           "type": "tap",
           "selector": "#admin-task-create",
+          "handler": "openCreate",
           "dataAssertions": [{ "path": "editorOpen", "equals": true }],
           "visibleAssertion": { "text": "任务范围" }
         },
@@ -320,6 +340,8 @@
           "id": "select-assignment-mode",
           "type": "tap",
           "selector": "#task-assignment-mode-selected",
+          "handler": "chooseAssignmentMode",
+          "handlerDataset": { "mode": "SELECTED" },
           "dataAssertions": [{ "path": "assignmentMode", "equals": "SELECTED" }],
           "visibleAssertion": { "selector": "#task-assignment-mode-selected", "text": "指定成员" }
         }
@@ -334,6 +356,8 @@
           "id": "enter-award-keyword",
           "type": "input",
           "selector": "#badge-award-query",
+          "handler": "updateField",
+          "handlerDataset": { "field": "awardQuery" },
           "value": "活动",
           "dataAssertions": [{ "path": "awardQuery", "equals": "活动" }]
         }
@@ -348,6 +372,8 @@
           "id": "show-individual-season-ranking",
           "type": "tap",
           "selector": "#game-ranking-INDIVIDUAL_SEASON",
+          "handler": "changeRanking",
+          "handlerDataset": { "type": "INDIVIDUAL_SEASON" },
           "dataAssertions": [{ "path": "rankingType", "equals": "INDIVIDUAL_SEASON" }],
           "visibleAssertion": {
             "selector": "#game-ranking-INDIVIDUAL_SEASON",
@@ -757,6 +783,16 @@
       "readyAssertion": "state === 'ready'"
     },
     {
+      "id": "A36",
+      "name": "机会撮合设置",
+      "path": "packages/admin/opportunity-matching/index",
+      "selector": "#admin-opportunity-matching-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
       "id": "A27",
       "name": "机会编辑",
       "path": "packages/admin/opportunity-editor/index",
@@ -843,6 +879,17 @@
       "kind": "data",
       "states": ["loading", "ready", "error", "forbidden"],
       "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A35",
+      "name": "盲盒管理",
+      "path": "packages/admin/blind-box/index",
+      "selector": "#admin-blind-box-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
       "id": "A23",
@@ -1121,6 +1168,26 @@
       "readyAssertion": "state === 'ready'"
     },
     {
+      "id": "M42",
+      "name": "机会撮合",
+      "path": "packages/member/mip-opportunity-matching/index",
+      "selector": "#mip-opportunity-matching-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "M43",
+      "name": "消息与机会权限",
+      "path": "packages/member/mip-opportunity-settings/index",
+      "selector": "#mip-opportunity-settings-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
       "id": "M13",
       "name": "合作卡",
       "path": "packages/member/mip-cooperation/list/index",
@@ -1201,7 +1268,8 @@
       "group": "member",
       "kind": "data",
       "states": ["loading", "ready", "error"],
-      "readyAssertion": "state === 'ready'"
+      "readyAssertion": "state === 'ready'",
+      "deviceRequired": ["share"]
     },
     {
       "id": "M33",
@@ -1264,6 +1332,55 @@
         "dataPath": "overview.team",
         "values": { "teamId": "id" }
       }
+    },
+    {
+      "id": "M38",
+      "name": "笨笨盲盒",
+      "path": "packages/member/mip-blind-box/index",
+      "selector": "#mip-blind-box-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'"
+    },
+    {
+      "id": "M39",
+      "name": "盲盒详情",
+      "path": "packages/member/mip-blind-box/detail/index",
+      "selector": "#mip-blind-box-detail-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["catalogId"],
+      "queryFixture": {
+        "sourceRoute": "packages/member/mip-blind-box/index",
+        "dataPath": "items",
+        "values": { "catalogId": "id" }
+      }
+    },
+    {
+      "id": "M40",
+      "name": "卡牌背包",
+      "path": "packages/member/mip-blind-box/backpack/index",
+      "selector": "#mip-blind-box-backpack-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'"
+    },
+    {
+      "id": "M41",
+      "name": "游戏币流水",
+      "path": "packages/member/mip-blind-box/coin-entries/index",
+      "selector": "#mip-blind-box-coin-entries-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
       "id": "M31",
@@ -1391,6 +1508,61 @@
         "values": { "eventId": "id" }
       },
       "deviceRequired": ["share"]
+    },
+    {
+      "id": "M44",
+      "name": "知识内容",
+      "path": "packages/member/mip-knowledge/index",
+      "selector": "#mip-knowledge-page",
+      "group": "public",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'"
+    },
+    {
+      "id": "M45",
+      "name": "知识内容详情",
+      "path": "packages/member/mip-knowledge/detail/index",
+      "selector": "#mip-knowledge-detail-page",
+      "group": "public",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["contentId"],
+      "queryFixture": {
+        "sourceRoute": "packages/member/mip-knowledge/index",
+        "dataPath": "items",
+        "values": { "contentId": "id" }
+      },
+      "deviceRequired": ["wechat-pay", "video-channel"]
+    },
+    {
+      "id": "M46",
+      "name": "知识内容网页",
+      "path": "packages/member/mip-knowledge/web/index",
+      "selector": "#mip-knowledge-web-page",
+      "group": "public",
+      "kind": "static-data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["contentId"],
+      "queryFixture": {
+        "sourceRoute": "packages/member/mip-knowledge/index",
+        "dataPath": "items",
+        "values": { "contentId": "id" }
+      },
+      "deviceRequired": ["knowledge-webview"]
+    },
+    {
+      "id": "A37",
+      "name": "知识内容管理",
+      "path": "packages/admin/knowledge/index",
+      "selector": "#admin-knowledge-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "error", "forbidden", "conflict"],
+      "readyAssertion": "state === 'ready'"
     }
   ]
 }

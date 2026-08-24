@@ -1,29 +1,40 @@
-import type { CommerceOrder, MembershipPlan } from '../../../modules/mip-commerce'
+import type { CommerceOrder, MembershipPlan, OrderServiceStatus } from '../../../modules/mip-commerce'
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
-import { formatCny, planTitle, presentOrderStatus } from '../../../modules/mip-shell'
+import { formatCny, planTitle, presentOrderServiceStatus, presentOrderStatus } from '../../../modules/mip-shell'
 import { caseNavigateTo } from '../../../modules/platform/case-navigation'
 import { formatLocalDateTime } from '../../../utils/date'
 
-type OrderFilter = 'all' | 'pending' | 'paid' | 'refund'
+type OrderFilter = 'all' | Exclude<OrderServiceStatus, 'UNAVAILABLE'>
 
 interface DisplayOrder extends CommerceOrder {
   title: string
   statusText: string
   amountText: string
   createdText: string
+  eventStartsText: string
+  eventLocationText: string
   statusBrand: boolean
   statusSuccess: boolean
   statusDanger: boolean
 }
 
 function presentOrder(order: CommerceOrder, plans: readonly MembershipPlan[]): DisplayOrder {
-  const status = presentOrderStatus(order.status)
+  const paymentStatus = presentOrderStatus(order.status)
+  const orderServiceStatus = order.serviceStatus || 'UNAVAILABLE'
+  const serviceStatus = presentOrderServiceStatus(orderServiceStatus)
+  const status = orderServiceStatus === 'UNAVAILABLE' ? paymentStatus : serviceStatus
   return {
     ...order,
     title: planTitle(order, plans),
     statusText: status.label,
     amountText: formatCny(order.amountCents),
     createdText: order.createdAt ? formatLocalDateTime(order.createdAt) : '',
+    eventStartsText: order.event?.startsAt ? formatLocalDateTime(order.event.startsAt) : '',
+    eventLocationText: [...new Set([
+      order.event?.cityName?.trim(),
+      order.event?.venueName?.trim(),
+      order.event?.address?.trim(),
+    ].filter(Boolean))].join(' · '),
     statusBrand: status.tone === 'brand',
     statusSuccess: status.tone === 'success',
     statusDanger: status.tone === 'danger',
@@ -31,16 +42,7 @@ function presentOrder(order: CommerceOrder, plans: readonly MembershipPlan[]): D
 }
 
 function filterOrders(orders: DisplayOrder[], filter: OrderFilter) {
-  if (filter === 'pending') {
-    return orders.filter(order => presentOrderStatus(order.status).paymentPending)
-  }
-  if (filter === 'paid') {
-    return orders.filter(order => order.status === 'PAID')
-  }
-  if (filter === 'refund') {
-    return orders.filter(order => ['REFUND_PENDING', 'PARTIALLY_REFUNDED', 'REFUNDED'].includes(order.status))
-  }
-  return orders
+  return filter === 'all' ? orders : orders.filter(order => order.serviceStatus === filter)
 }
 
 Page({
@@ -100,7 +102,7 @@ Page({
 
   changeFilter(event: WechatMiniprogram.TouchEvent) {
     const filter = String(event.currentTarget.dataset.filter || '') as OrderFilter
-    if (!['all', 'pending', 'paid', 'refund'].includes(filter)) {
+    if (!['all', 'PENDING_USE', 'COMPLETED', 'REFUNDED'].includes(filter)) {
       return
     }
     this.setData({ filter, orders: filterOrders(this.data.allOrders, filter) })

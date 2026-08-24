@@ -162,10 +162,10 @@ function parseOrderItem(value: unknown): AdminOrder {
     || typeof value.nickname !== 'string'
     || value.nickname.length < 1
     || value.nickname.length > 64
-    || !['MEMBERSHIP', 'EVENT'].includes(String(value.orderType))
+    || !['MEMBERSHIP', 'EVENT', 'CONTENT'].includes(String(value.orderType))
     || !(value.resourceId === null
       || (typeof value.resourceId === 'string' && uuidPattern.test(value.resourceId)))
-    || !['MEMBERSHIP_PLAN', 'EVENT'].includes(String(value.resourceType))
+    || !['MEMBERSHIP_PLAN', 'EVENT', 'KNOWLEDGE_CONTENT'].includes(String(value.resourceType))
     || typeof value.resourceTitle !== 'string'
     || value.resourceTitle.length < 1
     || value.resourceTitle.length > 120

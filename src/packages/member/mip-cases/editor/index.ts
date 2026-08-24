@@ -7,6 +7,7 @@ import { loadAiEditorDraft } from '../../../../modules/mip-ai/editor-loader'
 import { superCaseModule } from '../../../../modules/mip-cases'
 import { mipMediaModule } from '../../../../modules/mip-media/client'
 import { opportunityModule } from '../../../../modules/mip-opportunities'
+import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
 import { chooseMultipleImages, chooseSingleImage } from '../../../../modules/platform/image-upload'
 
 interface CaseMediaDraft { assetId: string, imageUrl: string }
@@ -55,6 +56,10 @@ Page({
       aiDraftId: String(options.aiDraftId || ''),
     })
     void this.initialize()
+  },
+
+  openAiAssistant() {
+    caseNavigateTo({ url: '/packages/member/mip-ai/index' })
   },
 
   async initialize() {

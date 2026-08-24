@@ -56,6 +56,62 @@ function dateText(value: string) {
 function present(item: ReceivedInteraction, index: number): InteractionView {
   const subject = item.kind === 'OUTBOUND_INTEREST' ? item.target : item.actor
   const actorName = subject.nickname || 'MIP 用户'
+  if (item.kind === 'GUEST') {
+    return {
+      viewKey: `guest-${item.actor.profileRef}-${index}`,
+      kind: item.kind,
+      messageId: '',
+      unread: false,
+      actorName,
+      actorInitial: actorName.slice(0, 1),
+      actorAvatarUrl: item.actor.avatarUrl || '',
+      actorHeadline: item.actor.headline || '',
+      statusText: '嘉宾',
+      sourceText: item.event.title,
+      detailText: item.invitationCount > 1
+        ? `通过你的邀请参加过 ${item.invitationCount} 场活动`
+        : '通过你的邀请参加活动',
+      note: '',
+      updatedText: dateText(item.updatedAt),
+      navigationUrl: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(item.actor.profileRef)}`,
+    }
+  }
+  if (item.kind === 'INTERACTION') {
+    return {
+      viewKey: `interaction-${item.actor.profileRef}-${item.event.id}-${index}`,
+      kind: item.kind,
+      messageId: '',
+      unread: false,
+      actorName,
+      actorInitial: actorName.slice(0, 1),
+      actorAvatarUrl: item.actor.avatarUrl || '',
+      actorHeadline: item.actor.headline || '',
+      statusText: item.actor.userKind === 'PLAYER' ? '玩家' : '嘉宾',
+      sourceText: item.event.title,
+      detailText: '在活动中向你发送了心动',
+      note: '',
+      updatedText: dateText(item.updatedAt),
+      navigationUrl: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(item.actor.profileRef)}`,
+    }
+  }
+  if (item.kind === 'ACTIVE_INTEREST') {
+    return {
+      viewKey: `active-interest-${item.actor.profileRef}-${index}`,
+      kind: item.kind,
+      messageId: '',
+      unread: false,
+      actorName,
+      actorInitial: actorName.slice(0, 1),
+      actorAvatarUrl: item.actor.avatarUrl || '',
+      actorHeadline: item.actor.headline || '',
+      statusText: item.actor.userKind === 'PLAYER' ? '玩家' : '嘉宾',
+      sourceText: item.source.label,
+      detailText: '当前对你标记了感兴趣',
+      note: '',
+      updatedText: dateText(item.updatedAt),
+      navigationUrl: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(item.actor.profileRef)}`,
+    }
+  }
   if (item.kind === 'VISITOR') {
     return {
       viewKey: `visitor-${item.actor.profileRef}-${index}`,
@@ -66,9 +122,9 @@ function present(item: ReceivedInteraction, index: number): InteractionView {
       actorInitial: actorName.slice(0, 1),
       actorAvatarUrl: item.actor.avatarUrl || '',
       actorHeadline: item.actor.headline || '',
-      statusText: `${item.visitCount} 次访问`,
+      statusText: item.actor.userKind === 'PLAYER' ? '玩家' : '嘉宾',
       sourceText: '公开档案',
-      detailText: '访问了你的公开档案',
+      detailText: `访问了你的公开档案 ${item.visitCount} 次`,
       note: '',
       updatedText: dateText(item.lastVisitedAt),
       navigationUrl: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(item.actor.profileRef)}`,
@@ -137,6 +193,7 @@ function present(item: ReceivedInteraction, index: number): InteractionView {
 Page({
   data: {
     state: 'loading' as PageState,
+    influenceMode: false,
     category: 'REFERRAL' as ReceivedInteractionCategory,
     items: [] as InteractionView[],
     referralUnreadCount: 0,
@@ -157,7 +214,22 @@ Page({
     PROFILE_INTEREST: createCategoryCache(),
     OUTBOUND_INTEREST: createCategoryCache(),
     VISITOR: createCategoryCache(),
+    GUEST: createCategoryCache(),
+    INTERACTION: createCategoryCache(),
+    ACTIVE_INTEREST: createCategoryCache(),
   } as Record<ReceivedInteractionCategory, CategoryCache>,
+
+  onLoad(query: Record<string, string | undefined>) {
+    const influenceMode = query.scope === 'influence'
+    const requested = String(query.category || '').toUpperCase() as ReceivedInteractionCategory
+    const allowed = influenceMode
+      ? ['GUEST', 'INTERACTION', 'ACTIVE_INTEREST', 'VISITOR']
+      : ['REFERRAL', 'PROFILE_INTEREST', 'OUTBOUND_INTEREST', 'VISITOR']
+    this.setData({
+      influenceMode,
+      category: allowed.includes(requested) ? requested : (influenceMode ? 'GUEST' : 'REFERRAL'),
+    })
+  },
 
   onShow() {
     const resumed = mipIdentityModule.consumePendingResume()
@@ -190,12 +262,10 @@ Page({
       }
       this.accessReady = true
       this.setData({ accessToken: '', message: '' })
-      await Promise.all([
-        this.loadCategory('REFERRAL', true),
-        this.loadCategory('PROFILE_INTEREST', true),
-        this.loadCategory('OUTBOUND_INTEREST', true),
-        this.loadCategory('VISITOR', true),
-      ])
+      const categories = this.data.influenceMode
+        ? ['GUEST', 'INTERACTION', 'ACTIVE_INTEREST', 'VISITOR'] as const
+        : ['REFERRAL', 'PROFILE_INTEREST', 'OUTBOUND_INTEREST', 'VISITOR'] as const
+      await Promise.all(categories.map(category => this.loadCategory(category, true)))
     }
     catch {
       this.setData({ state: 'error', message: '身份状态暂时无法确认。' })
@@ -213,7 +283,10 @@ Page({
 
   changeCategory(event: WechatMiniprogram.TouchEvent) {
     const category = String(event.currentTarget.dataset.category || '') as ReceivedInteractionCategory
-    if (!['REFERRAL', 'PROFILE_INTEREST', 'OUTBOUND_INTEREST', 'VISITOR'].includes(category) || category === this.data.category) {
+    const allowed = this.data.influenceMode
+      ? ['GUEST', 'INTERACTION', 'ACTIVE_INTEREST', 'VISITOR']
+      : ['REFERRAL', 'PROFILE_INTEREST', 'OUTBOUND_INTEREST', 'VISITOR']
+    if (!allowed.includes(category) || category === this.data.category) {
       return
     }
     this.setData({ category, message: '' })

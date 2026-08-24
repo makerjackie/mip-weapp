@@ -1,22 +1,24 @@
-<view id="mip-opportunity-detail-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="mip-opportunity-detail-page" class="min-h-screen bg-[#080808] px-3 pb-[calc(env(safe-area-inset-bottom)+176rpx)] pt-3 text-ink">
   <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法查看机会" description="{{message}}" action-text="重新加载" bind:action="load" /><app-page-exit /></view>
   <block wx:elif="{{item}}">
-    <view class="overflow-hidden rounded-[16rpx] bg-panel">
-      <view class="flex h-[300rpx] items-center justify-center bg-panel-raised">
-        <image wx:if="{{item.coverUrl}}" class="h-full w-full" src="{{item.coverUrl}}" mode="aspectFill" />
+    <view class="flex h-[352rpx] overflow-hidden rounded-[16rpx] bg-panel p-2">
+      <view class="flex h-[320rpx] w-[240rpx] shrink-0 items-center justify-center overflow-hidden rounded-[8rpx] bg-panel-raised">
+        <image wx:if="{{item.coverUrl}}" class="h-[320rpx] w-[240rpx]" src="{{item.coverUrl}}" mode="aspectFill" />
         <t-icon wx:else name="undertake-delivery" size="92rpx" color="var(--color-brand)" />
       </view>
-      <view class="px-5 py-5">
-        <view class="flex items-center justify-between"><view class="rounded-full bg-brand px-3 py-1 text-[length:20rpx] font-semibold text-on-brand">{{item.status === 'PUBLISHED' ? '招募中' : '已完成'}}</view><view class="text-[length:21rpx] text-muted">{{item.city.label || item.branchName || '全国'}}</view></view>
-        <view class="mt-4 text-[length:36rpx] font-bold leading-8">{{item.title}}</view>
-        <view wx:if="{{publishedText}}" class="mt-2 text-[length:21rpx] text-muted">发布于 {{publishedText}}</view>
-        <view class="mt-4 text-[length:24rpx] leading-7 text-muted">{{item.valueSummary}}</view>
-        <view class="mt-4 rounded-[12rpx] bg-brand-soft px-4 py-3 text-[length:23rpx] leading-6"><text class="text-brand">寻找：</text>{{item.targetSummary}}</view>
+      <view class="flex min-w-0 flex-1 flex-col py-1 pl-2">
+        <view class="truncate text-[length:32rpx] font-medium leading-[44rpx]">{{item.title}}</view>
+        <view class="mt-2 flex flex-col gap-[12rpx]">
+          <view class="flex min-w-0 items-center gap-1 text-[length:24rpx] leading-[34rpx]"><image class="h-[32rpx] w-[32rpx] shrink-0" src="/assets/figma/opportunities/money-cny-circle.svg" mode="aspectFit" /><text class="truncate">价值：{{item.valueSummary}}</text></view>
+          <view class="flex min-w-0 items-center gap-1 text-[length:24rpx] leading-[34rpx]"><image class="h-[32rpx] w-[32rpx] shrink-0" src="/assets/figma/opportunities/location.svg" mode="aspectFit" /><text class="truncate">地区：{{item.city.label || item.branchName || '全国'}}</text></view>
+          <view class="flex min-w-0 items-center gap-1 text-[length:24rpx] leading-[34rpx]"><image class="h-[32rpx] w-[32rpx] shrink-0" src="/assets/figma/opportunities/service-target.svg" mode="aspectFit" /><text class="truncate">寻找：{{item.targetSummary}}</text></view>
+        </view>
+        <view wx:if="{{publishedText}}" class="mt-auto truncate text-right text-[length:20rpx] text-muted">发布于 {{publishedText}}</view>
       </view>
     </view>
-    <view class="mt-4 rounded-[16rpx] bg-panel px-5 py-5">
-      <view class="text-[length:28rpx] font-semibold">机会说明</view>
+    <view class="mt-3 rounded-[16rpx] bg-panel px-3 py-3">
+      <view class="flex items-center gap-1 text-[length:32rpx] font-medium"><image class="h-[32rpx] w-[32rpx] shrink-0" src="/assets/figma/opportunities/project-introduction.svg" mode="aspectFit" /><text>项目介绍</text></view>
       <view class="mt-3 whitespace-pre-wrap text-[length:24rpx] leading-7 text-muted">{{item.description}}</view>
       <view wx:if="{{roleNames.length}}" class="mt-4 flex flex-wrap gap-2"><view wx:for="{{roleNames}}" wx:key="*this" class="rounded-full border border-line px-3 py-1 text-[length:20rpx] text-muted">{{item}}</view></view>
       <view wx:if="{{item.industryTags.length || item.abilityTags.length}}" class="mt-3 flex flex-wrap gap-2"><view wx:for="{{item.industryTags}}" wx:key="id" class="rounded-full bg-panel-raised px-3 py-1 text-[length:20rpx] text-muted">{{item.label}}</view><view wx:for="{{item.abilityTags}}" wx:key="id" class="rounded-full bg-panel-raised px-3 py-1 text-[length:20rpx] text-muted">{{item.label}}</view></view>
@@ -45,7 +47,6 @@
       </view>
       <view class="mt-3"><t-button block size="large" variant="outline" theme="primary" disabled="{{acting}}" bind:tap="toggleInterest">{{item.interestActive ? '取消感兴趣' : '我感兴趣'}}</t-button></view>
     </view>
-    <view wx:if="{{item.canEdit}}" class="mt-4 flex gap-3"><t-button class="min-w-0 flex-1" block size="large" theme="primary" bind:tap="edit">编辑</t-button><t-button wx:if="{{item.status === 'PUBLISHED'}}" class="min-w-0 flex-1" block size="large" variant="outline" theme="primary" bind:tap="end">结束机会</t-button></view>
     <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
       <view class="flex items-center justify-between gap-3">
         <view><view class="text-[length:28rpx] font-semibold">评论与评价</view><view class="mt-1 text-[length:21rpx] text-muted">参与人标识由机会团队记录确认</view></view>
@@ -77,6 +78,16 @@
         <t-button wx:if="{{commentsCursor}}" block variant="outline" theme="primary" loading="{{commentsLoadingMore}}" bind:tap="loadMoreComments">加载更多</t-button>
       </view>
       <view wx:if="{{commentsMessage && commentsState === 'ready'}}" class="mt-3 text-[length:21rpx] text-danger">{{commentsMessage}}</view>
+    </view>
+    <view wx:if="{{item.canEdit}}" class="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full border border-[#5c5320] bg-[rgba(255,221,2,0.1)] p-2">
+      <view class="flex h-[80rpx] w-[176rpx] shrink-0 items-center justify-center gap-2 rounded-full border border-[#080808] bg-panel text-[length:32rpx] font-medium text-brand active:bg-panel-raised" aria-role="button" bind:tap="edit"><image class="h-[40rpx] w-[40rpx]" src="/assets/figma/opportunities/edit-draft.svg" mode="aspectFit" /><text>编辑</text></view>
+      <view wx:if="{{item.status === 'PUBLISHED'}}" class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full border border-[#080808] bg-brand px-4 text-center text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" bind:tap="end">已完成招募，结束机会</view>
+      <view wx:else class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-panel-raised px-4 text-center text-[length:28rpx] text-muted">机会已结束</view>
+    </view>
+    <view wx:elif="{{!item.mine && item.status === 'PUBLISHED'}}" class="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full border border-[#5c5320] bg-[rgba(255,221,2,0.1)] p-2">
+      <view class="flex h-[80rpx] min-w-[176rpx] shrink-0 items-center justify-center rounded-full bg-panel px-3 text-[length:26rpx] font-medium text-brand">+{{item.referralCount}}引荐</view>
+      <view wx:if="{{item.referralActive}}" class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" aria-disabled="{{acting}}" bind:tap="changeReferralTarget">更换引荐人</view>
+      <view wx:else class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" aria-disabled="{{acting}}" bind:tap="toggleReferral">我想引荐</view>
     </view>
     <app-page-exit label="返回机会" />
     <t-popup visible="{{referralPickerVisible}}" placement="bottom" prevent-scroll-through bind:visible-change="handleReferralPickerVisibility">

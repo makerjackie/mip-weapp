@@ -105,6 +105,14 @@
       "pathName": "packages/member/mip-opportunities/mine/index"
     },
     {
+      "name": "机会撮合",
+      "pathName": "packages/member/mip-opportunity-matching/index"
+    },
+    {
+      "name": "消息与机会权限",
+      "pathName": "packages/member/mip-opportunity-settings/index"
+    },
+    {
       "name": "合作卡",
       "pathName": "packages/member/mip-cooperation/list/index"
     },
@@ -143,6 +151,22 @@
     {
       "name": "队伍大本营",
       "pathName": "packages/member/mip-game/team/index"
+    },
+    {
+      "name": "笨笨盲盒",
+      "pathName": "packages/member/mip-blind-box/index"
+    },
+    {
+      "name": "盲盒详情",
+      "pathName": "packages/member/mip-blind-box/detail/index"
+    },
+    {
+      "name": "卡牌背包",
+      "pathName": "packages/member/mip-blind-box/backpack/index"
+    },
+    {
+      "name": "游戏币流水",
+      "pathName": "packages/member/mip-blind-box/coin-entries/index"
     },
     {
       "name": "任务",
@@ -269,6 +293,10 @@
       "pathName": "packages/admin/opportunities/index"
     },
     {
+      "name": "机会撮合设置",
+      "pathName": "packages/admin/opportunity-matching/index"
+    },
+    {
       "name": "机会编辑",
       "pathName": "packages/admin/opportunity-editor/index"
     },
@@ -299,6 +327,10 @@
     {
       "name": "赛季与队伍管理",
       "pathName": "packages/admin/game/index"
+    },
+    {
+      "name": "盲盒管理",
+      "pathName": "packages/admin/blind-box/index"
     },
     {
       "name": "任务管理",
@@ -335,6 +367,22 @@
     {
       "name": "管理员与权限",
       "pathName": "packages/admin/roles/index"
+    },
+    {
+      "name": "知识内容",
+      "pathName": "packages/member/mip-knowledge/index"
+    },
+    {
+      "name": "知识内容详情",
+      "pathName": "packages/member/mip-knowledge/detail/index"
+    },
+    {
+      "name": "知识内容网页",
+      "pathName": "packages/member/mip-knowledge/web/index"
+    },
+    {
+      "name": "知识内容管理",
+      "pathName": "packages/admin/knowledge/index"
     }
   ]
 }

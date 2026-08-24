@@ -4,7 +4,24 @@
   <view wx:if="{{state === 'loading'}}" class="mt-5 rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载案例" description="{{message}}" action-text="重新加载" bind:action="load" /></view>
   <view wx:elif="{{!items.length}}" class="mt-5"><app-empty-state title="暂时没有案例" description="{{mine ? '已保存的草稿和已发布案例会显示在这里。' : '已发布的案例会显示在这里。'}}" action-text="{{mine ? '发布案例' : ''}}" bind:action="create" /></view>
-  <view wx:else class="mt-5 flex flex-col gap-3"><view wx:for="{{items}}" wx:key="id" class="overflow-hidden rounded-[16rpx] bg-panel active:bg-panel-raised" data-id="{{item.id}}" bind:tap="open"><view class="flex h-[260rpx] items-center justify-center bg-panel-raised"><image wx:if="{{item.coverUrl}}" class="h-full w-full" src="{{item.coverUrl}}" mode="aspectFill" /><t-icon wx:else name="image" size="72rpx" color="var(--color-brand)" /></view><view class="px-4 py-4"><view class="flex items-center justify-between"><view class="min-w-0 flex-1 truncate text-[length:28rpx] font-semibold">{{item.projectName}}</view><view class="ml-2 text-[length:20rpx] text-muted">{{item.cityLabel || '全国'}}</view></view><view class="mt-2 line-clamp-2 text-[length:23rpx] leading-6 text-muted">{{item.summary}}</view><view class="mt-3 flex items-center justify-between text-[length:20rpx] text-muted"><text>{{item.author.nickname}}</text><text>{{mine ? item.status : (item.industryLabel || item.caseType || '')}}</text></view><view wx:if="{{mine}}" class="mt-3 flex min-h-[56rpx] items-center justify-end border-t border-line pt-2"><view class="px-3 py-2 text-[length:21rpx] text-danger" data-id="{{item.id}}" catch:tap="deleteCase">{{archivingId === item.id ? '正在删除' : '删除'}}</view></view></view></view></view>
+  <view wx:else class="mt-5 flex flex-col gap-4">
+    <view wx:for="{{items}}" wx:key="id" class="overflow-hidden rounded-[18rpx] bg-panel active:opacity-90" data-id="{{item.id}}" bind:tap="open">
+      <view class="relative flex h-[300rpx] items-center justify-center overflow-hidden bg-brand">
+        <image wx:if="{{item.coverUrl}}" class="h-full w-full" src="{{item.coverUrl}}" mode="aspectFill" />
+        <image wx:else class="h-[96rpx] w-[240rpx]" src="/assets/brand/mip-logo-black.png" mode="aspectFit" />
+        <view class="absolute bottom-0 left-0 right-0 bg-black/55 px-4 py-3 text-white">
+          <view class="truncate text-[length:30rpx] font-bold">{{item.projectName}}</view>
+          <view class="mt-1 line-clamp-2 text-[length:21rpx] leading-5 opacity-80">{{item.summary}}</view>
+        </view>
+      </view>
+      <view class="px-4 py-3">
+        <view class="flex min-h-[64rpx] items-center gap-3 border-b border-line"><view class="w-[128rpx] shrink-0 text-[length:20rpx] text-muted">项目成员</view><view class="min-w-0 flex-1 truncate text-[length:23rpx]">{{item.author.nickname}}</view></view>
+        <view class="flex min-h-[64rpx] items-center gap-3 border-b border-line"><view class="w-[128rpx] shrink-0 text-[length:20rpx] text-muted">项目城市</view><view class="min-w-0 flex-1 truncate text-[length:23rpx]">{{item.cityLabel || '未填写'}}</view></view>
+        <view class="flex min-h-[64rpx] items-center gap-3"><view class="w-[128rpx] shrink-0 text-[length:20rpx] text-muted">案例类型</view><view class="min-w-0 flex-1 truncate text-[length:23rpx]">{{item.industryLabel || item.caseType || '未填写'}}</view></view>
+        <view wx:if="{{mine}}" class="flex min-h-[72rpx] items-center justify-between border-t border-line"><view class="text-[length:20rpx] text-muted">{{item.status}}</view><view class="flex min-h-[64rpx] items-center px-3 text-[length:21rpx] text-danger" data-id="{{item.id}}" catch:tap="deleteCase">{{archivingId === item.id ? '正在删除' : '删除'}}</view></view>
+      </view>
+    </view>
+  </view>
   <view wx:if="{{loadingMore}}" class="py-5 text-center text-[length:21rpx] text-muted">正在加载</view>
   <app-page-exit label="返回合作卡" />
 </view>

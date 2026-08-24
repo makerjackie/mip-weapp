@@ -1,10 +1,8 @@
 import type { EventId, OrderId } from '../../../../modules/mip'
-import type { RefundId } from '../../../../modules/mip-commerce'
 import type { MipEventDetail } from '../../../../modules/mip-events'
 import { mipOperationsConfig } from '../../../../config/mip-operations'
-import { mipCommerceModule } from '../../../../modules/mip-commerce/client'
 import { eventInvitationPath, eventRichTextNodes, safeHttpsEventUrl } from '../../../../modules/mip-events'
-import { mipEventsModule } from '../../../../modules/mip-events/client'
+import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
 import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
 
@@ -121,11 +119,12 @@ Page({
     shareOpen: false,
     posterBusy: false,
     posterPath: '',
-    checkInToken: '',
+    hasCheckInIntent: false,
     onlineMode: false,
     onlineUrl: '',
     hasCoordinates: false,
     supportPhone: mipOperationsConfig.supportPhone,
+    contentSection: 'INTRO' as 'INTRO' | 'ORGANIZER' | 'NOTICE',
   },
   requestSeq: 0,
   onlineRequested: false,
@@ -145,9 +144,11 @@ Page({
       return
     }
     const eventId = String(query.eventId || '') as EventId
+    const hasCheckInIntent = Boolean(mipCheckInResumeStore.peek(String(eventId)))
     this.setData({
       eventId,
       incomingInvitationToken: query.invitationToken ? decodeURIComponent(query.invitationToken) : '',
+      hasCheckInIntent,
     })
     const cached = mipEventsModule.peekEvent(eventId)
     if (cached) {
@@ -156,13 +157,22 @@ Page({
     void this.loadEvent()
   },
 
+  onShow() {
+    this.refreshCheckInIntent()
+    if (this.data.state === 'ready' && this.data.eventId) {
+      void this.loadEvent({ force: true })
+    }
+  },
+
   async loadCheckInScene(scene: string) {
     this.setData({ state: 'loading', message: '' })
     try {
       const resolved = await mipEventsModule.resolveCheckInScene(scene)
+      const intent = mipCheckInResumeStore.save(resolved)
+      this.entryScene = ''
       this.setData({
         eventId: resolved.eventId,
-        checkInToken: resolved.scanToken,
+        hasCheckInIntent: Boolean(intent),
       })
       await this.loadEvent({ force: true })
     }
@@ -229,9 +239,23 @@ Page({
   },
 
   applyEvent(event: MipEventDetail) {
-    const action = primaryAction(event, Boolean(this.data.checkInToken))
+    const closedRegistration = ['ATTENDED', 'CANCELLATION_PENDING', 'CANCELLED', 'REJECTED']
+      .includes(event.registrationStatus || '')
+    const shouldClearCheckInIntent = event.status === 'CANCELLED' || closedRegistration
+    if (shouldClearCheckInIntent) {
+      mipCheckInResumeStore.clear(String(event.id))
+    }
+    const hasCheckInIntent = shouldClearCheckInIntent
+      ? false
+      : Boolean(mipCheckInResumeStore.peek(String(event.id)))
+    const action = primaryAction(event, hasCheckInIntent)
     const onlineUrl = safeHttpsEventUrl(event.onlineUrl)
-    const normalizedEvent = { ...event, contentMedia: event.contentMedia || [] }
+    const normalizedEvent = {
+      ...event,
+      contentMedia: event.contentMedia || [],
+      participantPreview: event.participantPreview || [],
+      changes: event.changes || [],
+    }
     this.setData({
       state: 'ready',
       event: normalizedEvent,
@@ -246,7 +270,23 @@ Page({
       onlineMode: this.onlineRequested && Boolean(onlineUrl),
       onlineUrl,
       hasCoordinates: Number.isFinite(event.latitude) && Number.isFinite(event.longitude),
+      hasCheckInIntent,
       message: this.onlineRequested && !onlineUrl ? '当前暂不能进入线上活动。' : '',
+    })
+  },
+
+  refreshCheckInIntent() {
+    const eventId = String(this.data.eventId || '')
+    if (!eventId) {
+      return
+    }
+    const hasCheckInIntent = Boolean(mipCheckInResumeStore.peek(eventId))
+    const action = this.data.event
+      ? primaryAction(this.data.event, hasCheckInIntent)
+      : null
+    this.setData({
+      hasCheckInIntent,
+      ...(action ? { primaryAction: action.key, primaryLabel: action.label } : {}),
     })
   },
 
@@ -266,6 +306,14 @@ Page({
 
   closeShare() {
     this.setData({ shareOpen: false })
+  },
+
+  selectContentSection(event: WechatMiniprogram.TouchEvent) {
+    const section = String(event.currentTarget.dataset.section || '')
+    if (!['INTRO', 'ORGANIZER', 'NOTICE'].includes(section)) {
+      return
+    }
+    this.setData({ contentSection: section as 'INTRO' | 'ORGANIZER' | 'NOTICE' })
   },
 
   handleShareVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {
@@ -407,8 +455,8 @@ Page({
       const invitation = this.data.incomingInvitationToken
         ? `&invitationToken=${encodeURIComponent(this.data.incomingInvitationToken)}`
         : ''
-      const checkIn = this.data.checkInToken
-        ? `&checkInToken=${encodeURIComponent(this.data.checkInToken)}`
+      const checkIn = this.data.hasCheckInIntent
+        ? '&resumeCheckIn=1'
         : ''
       caseNavigateTo({ url: `/packages/member/mip-events/registration/index?eventId=${encodeURIComponent(this.data.eventId)}${invitation}${checkIn}` })
       return
@@ -474,14 +522,25 @@ Page({
     if (mipMessagingModule.subscriptionCapability('CHECKIN_RESULT').available) {
       await mipMessagingModule.requestWechatSubscription('CHECKIN_RESULT').catch(() => undefined)
     }
-    const token = this.data.checkInToken
-      ? `&token=${encodeURIComponent(this.data.checkInToken)}`
-      : ''
-    caseNavigateTo({ url: `/packages/member/mip-events/check-in/index?eventId=${encodeURIComponent(this.data.eventId)}${token}` })
+    if (!mipCheckInResumeStore.peek(String(this.data.eventId))) {
+      this.setData({
+        hasCheckInIntent: false,
+        message: '签到意图已失效，请重新扫描现场活动码。',
+      })
+      return
+    }
+    caseNavigateTo({ url: `/packages/member/mip-events/check-in/index?eventId=${encodeURIComponent(this.data.eventId)}&resumeCheckIn=1` })
   },
 
   openParticipants() {
     caseNavigateTo({ url: `/packages/member/mip-events/participants/index?eventId=${encodeURIComponent(this.data.eventId)}` })
+  },
+
+  openInteraction() {
+    if (!this.data.event?.canInteract) {
+      return
+    }
+    caseNavigateTo({ url: `/packages/member/mip-events/interaction/index?eventId=${encodeURIComponent(this.data.eventId)}` })
   },
 
   openAlbum() {
@@ -586,35 +645,32 @@ Page({
   },
 
   async cancelRegistration() {
-    if (!this.data.event?.canCancel || this.data.busy) {
+    const currentEvent = this.data.event
+    const retryRefund = currentEvent?.canRetryRefund === true
+    if ((!currentEvent?.canCancel && !retryRefund) || this.data.busy) {
       return
     }
     this.setData({ busy: true, message: '' })
     try {
       const modal = await wx.showModal({
-        title: '取消报名',
-        content: this.data.event.accessType === 'PAID' ? '取消后将进入退款流程。' : '确认取消本次报名？',
-        confirmText: '确认取消',
+        title: retryRefund ? '继续处理退款' : '取消报名',
+        content: retryRefund
+          ? '将继续查询或提交现有退款，不会重复创建退款。'
+          : currentEvent.accessType === 'PAID' ? '取消后将进入退款流程。' : '确认取消本次报名？',
+        confirmText: retryRefund ? '继续处理' : '确认取消',
       })
       if (!modal.confirm) {
         return
       }
       const result = await mipEventsModule.cancelRegistration(this.data.eventId)
-      if (result.refundRequired && result.refundId && result.paymentAvailable) {
-        try {
-          await mipCommerceModule.submitRefund(result.refundId as RefundId)
-          wx.showToast({ title: '退款已提交', icon: 'success' })
-        }
-        catch {
-          wx.showToast({ title: '退款申请已创建', icon: 'none' })
-        }
-      }
-      else {
-        wx.showToast({
-          title: result.refundRequired ? '退款申请已创建' : '报名已取消',
-          icon: result.refundRequired ? 'none' : 'success',
-        })
-      }
+      mipCheckInResumeStore.clear(String(this.data.eventId))
+      this.setData({ hasCheckInIntent: false })
+      wx.showToast({
+        title: result.refundSubmission === 'SUBMITTED'
+          ? '退款已提交'
+          : result.refundRequired ? '退款申请已创建' : '报名已取消',
+        icon: result.refundSubmission === 'SUBMITTED' || !result.refundRequired ? 'success' : 'none',
+      })
       await this.loadEvent({ force: true })
     }
     catch (error) {

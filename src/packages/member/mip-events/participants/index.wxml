@@ -1,32 +1,26 @@
-<view id="mip-event-participants-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
-  <view class="flex min-h-[88rpx] items-center justify-between">
-    <view>
-      <view class="text-[length:36rpx] font-bold">参与人</view>
-      <view class="mt-1 text-[length:21rpx] text-muted">仅显示本人同意公开的资料。</view>
-    </view>
-    <button open-type="share" class="m-0 flex min-h-[88rpx] items-center gap-1 rounded-[16rpx] border-0 bg-panel px-3 text-[length:22rpx] leading-[88rpx] text-brand"><t-icon name="share" size="28rpx" color="var(--color-brand)" /><text>分享</text></button>
-  </view>
-
-  <view class="mt-3 flex items-center gap-2 rounded-[16rpx] bg-panel px-4">
-    <t-icon name="search" size="30rpx" color="var(--color-muted)" />
-    <input class="box-border h-[88rpx] min-w-0 flex-1 max-w-full text-[length:24rpx]" value="{{searchInput}}" maxlength="80" confirm-type="search" placeholder="搜索姓名、行业或简介" bindinput="onSearchInput" bindconfirm="onSearchConfirm" />
-    <view wx:if="{{searchInput}}" class="px-2 py-2 text-[length:21rpx] text-muted" bind:tap="clearSearch">清除</view>
+<view id="mip-event-participants-page" class="min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-3 text-ink">
+  <view class="flex items-center gap-2 rounded-[16rpx] bg-panel px-3">
+    <t-icon name="search" size="36rpx" color="var(--color-muted)" />
+    <input class="box-border h-[88rpx] min-w-0 flex-1 max-w-full text-[length:26rpx]" value="{{searchInput}}" maxlength="80" confirm-type="search" placeholder="搜索姓名、行业或简介" bindinput="onSearchInput" bindconfirm="onSearchConfirm" />
+    <view wx:if="{{searchInput}}" class="flex min-h-[88rpx] items-center px-2 text-[length:22rpx] text-muted" bind:tap="clearSearch">清除</view>
   </view>
 
   <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="mt-3 whitespace-nowrap">
     <view class="inline-flex gap-2 pr-3">
-      <view wx:if="{{kind === 'ALL'}}" class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-brand px-4 py-2 text-[length:22rpx] text-on-brand" aria-role="radio" aria-checked="true" data-kind="ALL" bind:tap="changeKind">全部 · 已选</view>
-      <view wx:else class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-panel px-4 py-2 text-[length:22rpx] text-muted" aria-role="radio" aria-checked="false" data-kind="ALL" bind:tap="changeKind">全部</view>
-      <view wx:if="{{kind === 'PLAYER'}}" class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-brand px-4 py-2 text-[length:22rpx] text-on-brand" aria-role="radio" aria-checked="true" data-kind="PLAYER" bind:tap="changeKind">玩家 · 已选</view>
-      <view wx:else class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-panel px-4 py-2 text-[length:22rpx] text-muted" aria-role="radio" aria-checked="false" data-kind="PLAYER" bind:tap="changeKind">玩家</view>
-      <view wx:if="{{kind === 'GUEST'}}" class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-brand px-4 py-2 text-[length:22rpx] text-on-brand" aria-role="radio" aria-checked="true" data-kind="GUEST" bind:tap="changeKind">嘉宾 · 已选</view>
-      <view wx:else class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-panel px-4 py-2 text-[length:22rpx] text-muted" aria-role="radio" aria-checked="false" data-kind="GUEST" bind:tap="changeKind">嘉宾</view>
+      <view wx:if="{{kind === 'ALL'}}" class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-brand px-3 text-[length:26rpx] font-medium text-on-brand" aria-role="radio" aria-checked="true" data-kind="ALL" bind:tap="changeKind">全部 · 已选</view>
+      <view wx:else class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:26rpx] text-muted" aria-role="radio" aria-checked="false" data-kind="ALL" bind:tap="changeKind">全部</view>
+      <view wx:if="{{kind === 'GUEST'}}" class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-brand px-3 text-[length:26rpx] font-medium text-on-brand" aria-role="radio" aria-checked="true" data-kind="GUEST" bind:tap="changeKind">嘉宾 · 已选</view>
+      <view wx:else class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:26rpx] text-muted" aria-role="radio" aria-checked="false" data-kind="GUEST" bind:tap="changeKind">嘉宾</view>
+      <view wx:if="{{kind === 'PLAYER'}}" class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-brand px-3 text-[length:26rpx] font-medium text-on-brand" aria-role="radio" aria-checked="true" data-kind="PLAYER" bind:tap="changeKind">玩家 · 已选</view>
+      <view wx:else class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:26rpx] text-muted" aria-role="radio" aria-checked="false" data-kind="PLAYER" bind:tap="changeKind">玩家</view>
+      <view class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:26rpx] text-muted" data-view-mode="SENT" bind:tap="openInteraction">我的心动</view>
+      <view class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:26rpx] text-muted" data-view-mode="RECEIVED" bind:tap="openInteraction">对我心动</view>
     </view>
   </scroll-view>
 
-  <view wx:if="{{state === 'loading'}}" class="flex flex-col gap-3">
-    <view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-    <view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:if="{{state === 'loading'}}" class="mt-3 grid grid-cols-2 gap-3">
+    <view class="min-h-[330rpx] rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+    <view class="min-h-[330rpx] rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   </view>
   <view wx:elif="{{state === 'error'}}">
     <app-empty-state title="暂时无法加载参与人" description="{{message}}" action-text="重新加载" bind:action="loadParticipants" />
@@ -34,16 +28,15 @@
   </view>
   <block wx:else>
     <app-empty-state wx:if="{{items.length === 0}}" title="暂无公开参与人" description="符合当前条件的公开资料会显示在这里。" />
-    <view wx:else class="mt-4 flex flex-col gap-3">
-      <view wx:for="{{items}}" wx:key="profileRef" class="flex min-h-[120rpx] items-center gap-3 rounded-[16rpx] bg-panel px-4 py-3" data-profile-ref="{{item.profileRef}}" bind:tap="openProfile">
-        <image wx:if="{{item.avatarUrl}}" class="h-[88rpx] w-[88rpx] shrink-0 rounded-full bg-panel-raised" mode="aspectFill" src="{{item.avatarUrl}}" />
-        <view wx:else class="flex h-[88rpx] w-[88rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft"><t-icon name="user" size="38rpx" color="var(--color-brand)" /></view>
-        <view class="min-w-0 flex-1">
-          <view class="flex items-center gap-2"><text class="truncate text-[length:26rpx] font-semibold">{{item.displayName}}</text><text wx:if="{{item.kindLabel}}" class="rounded-full bg-brand-soft px-2 py-1 text-[length:19rpx] text-brand">{{item.kindLabel}}</text></view>
-          <view wx:if="{{item.metaText}}" class="mt-1 line-clamp-1 text-[length:21rpx] text-muted">{{item.metaText}}</view>
-          <view wx:if="{{item.introductionText}}" class="mt-1 line-clamp-2 text-[length:20rpx] leading-5 text-muted">{{item.introductionText}}</view>
-        </view>
-        <t-icon name="chevron-right" size="30rpx" color="var(--color-brand)" />
+    <view wx:else class="mt-3 grid grid-cols-2 gap-3">
+      <view wx:for="{{items}}" wx:key="profileRef" class="relative box-border min-h-[374rpx] rounded-[16rpx] bg-panel px-3 pb-3 pt-4 text-center" data-profile-ref="{{item.profileRef}}" bind:tap="openProfile">
+        <text wx:if="{{item.kindLabel}}" class="absolute left-2 top-2 rounded-[8rpx] border border-line bg-panel-raised px-1.5 py-0.5 text-[length:20rpx] font-semibold text-brand">{{item.kindLabel}}</text>
+        <t-icon class="absolute right-2 top-2" name="chevron-right" size="28rpx" color="var(--color-muted)" />
+        <image wx:if="{{item.avatarUrl}}" class="mx-auto h-[112rpx] w-[112rpx] rounded-full bg-panel-raised" mode="aspectFill" src="{{item.avatarUrl}}" />
+        <view wx:else class="mx-auto flex h-[112rpx] w-[112rpx] items-center justify-center rounded-full bg-brand-soft"><t-icon name="user-avatar" size="52rpx" color="var(--color-brand)" /></view>
+        <view class="mt-3 line-clamp-1 text-[length:30rpx] font-semibold">{{item.displayName}}</view>
+        <view wx:if="{{item.metaText}}" class="mt-2 line-clamp-2 text-left text-[length:21rpx] leading-5 text-ink">{{item.metaText}}</view>
+        <view wx:if="{{item.introductionText}}" class="mt-2 line-clamp-2 text-left text-[length:21rpx] leading-5 text-muted">{{item.introductionText}}</view>
       </view>
     </view>
     <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" theme="primary" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>

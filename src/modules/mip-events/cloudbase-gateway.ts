@@ -22,11 +22,12 @@ import type {
   MipEventsGateway,
   MyEventAlbumSubmissions,
   MyEventRegistration,
+  MyRegistrationCategory,
+  MyRegistrationPage,
   PublicEventParticipantPage,
   RegistrationCancellation,
   RegistrationIntent,
   RegistrationOutcome,
-  RegistrationSummary,
   RegistrationUpdateIntent,
 } from './types'
 import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
@@ -128,8 +129,8 @@ export const cloudbaseMipEventsGateway: MipEventsGateway = {
     )
   },
 
-  listMyRegistrations(cursor?: string) {
-    return callEvents<{ items: RegistrationSummary[], nextCursor?: string }>('mip.events.mine', { cursor })
+  listMyRegistrations(cursor?: string, category?: MyRegistrationCategory) {
+    return callEvents<MyRegistrationPage>('mip.events.mine', { cursor, category })
   },
 
   getMyRegistration(eventId: EventId) {
@@ -148,8 +149,8 @@ export const cloudbaseMipEventsGateway: MipEventsGateway = {
     return callEvents<RegistrationCancellation>('mip.events.cancelRegistration', { eventId, expectedVersion })
   },
 
-  checkIn(scanToken: string, idempotencyKey: string) {
-    return callEvents<CheckInOutcome>('mip.events.checkIn', { scanToken, idempotencyKey })
+  checkIn(resumeToken: string, idempotencyKey: string) {
+    return callEvents<CheckInOutcome>('mip.events.checkIn', { resumeToken, idempotencyKey })
   },
 
   resolveCheckInScene(scene: string) {

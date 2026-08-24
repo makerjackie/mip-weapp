@@ -1,4 +1,4 @@
-import type { AdminTaskCard, TaskAssignmentMode, TaskCardStatus } from '../../../modules/mip-tasks'
+import type { AdminTaskCard, TaskAssignmentMode, TaskCardStatus, TaskEligibleLevel } from '../../../modules/mip-tasks'
 import { mipMediaModule } from '../../../modules/mip-media/client'
 import { mipTasksModule } from '../../../modules/mip-tasks'
 import { chooseSingleImage } from '../../../modules/platform/image-upload'
@@ -9,6 +9,12 @@ interface TaskView extends AdminTaskCard {
   assignmentText: string
   deadlineText: string
   templateText: string
+  eligibleLevelText: string
+}
+
+interface TaskEligibleLevelView extends TaskEligibleLevel {
+  thresholdText: string
+  selected: boolean
 }
 
 const statusLabels: Record<TaskCardStatus, string> = {
@@ -46,6 +52,17 @@ function taskView(task: AdminTaskCard): TaskView {
     assignmentText: task.assignmentMode === 'SELECTED' ? `指定成员 ${task.assignmentCount} 人` : '全部成员',
     deadlineText: task.endsAt ? `截止 ${new Date(task.endsAt).toLocaleString('zh-CN', { hour12: false })}` : '不限截止时间',
     templateText: task.template ? '已配置模板' : '无模板',
+    eligibleLevelText: task.eligibleLevels.length
+      ? `等级：${task.eligibleLevels.map(level => level.name).join('、')}`
+      : '全部等级',
+  }
+}
+
+function eligibleLevelView(level: TaskEligibleLevel, selectedIds: string[]): TaskEligibleLevelView {
+  return {
+    ...level,
+    thresholdText: `${level.minimumExperience} 经验值`,
+    selected: selectedIds.includes(level.id),
   }
 }
 
@@ -65,6 +82,10 @@ Page({
     rewardExperience: '0',
     attachmentRequired: false,
     assignmentMode: 'ALL' as TaskAssignmentMode,
+    eligibleLevelOptions: [] as TaskEligibleLevelView[],
+    eligibleLevelIds: [] as string[],
+    eligibleLevelsState: 'loading' as 'loading' | 'ready' | 'error',
+    eligibleLevelsMessage: '',
     endsDate: '',
     endsTime: '23:59',
     templateAssetId: '',
@@ -74,7 +95,34 @@ Page({
     message: '',
   },
 
-  onShow() { void this.loadTasks() },
+  onShow() {
+    void this.loadEligibleLevels()
+    void this.loadTasks()
+  },
+
+  async loadEligibleLevels() {
+    this.setData({ eligibleLevelsState: 'loading', eligibleLevelsMessage: '' })
+    try {
+      const levels = await mipTasksModule.gateway.listEligibleLevels()
+      const activeLevelIds = new Set(levels.map(level => level.id))
+      const unavailableLevels = this.data.eligibleLevelOptions.filter(level => (
+        level.selected && level.status !== 'ACTIVE' && !activeLevelIds.has(level.id)
+      ))
+      this.setData({
+        eligibleLevelOptions: [
+          ...levels.map(level => eligibleLevelView(level, this.data.eligibleLevelIds)),
+          ...unavailableLevels,
+        ],
+        eligibleLevelsState: 'ready',
+      })
+    }
+    catch (error) {
+      this.setData({
+        eligibleLevelsState: 'error',
+        eligibleLevelsMessage: error instanceof Error ? error.message : '成长等级加载失败',
+      })
+    }
+  },
 
   async onPullDownRefresh() {
     try {
@@ -151,6 +199,8 @@ Page({
       rewardExperience: '0',
       attachmentRequired: false,
       assignmentMode: 'ALL',
+      eligibleLevelIds: [],
+      eligibleLevelOptions: this.data.eligibleLevelOptions.map(level => ({ ...level, selected: false })),
       endsDate: '',
       endsTime: '23:59',
       templateAssetId: '',
@@ -168,6 +218,10 @@ Page({
     try {
       const detail = await mipTasksModule.gateway.getAdminTask(task.id)
       const endsAt = detail.endsAt ? new Date(detail.endsAt) : null
+      const catalogIds = new Set(this.data.eligibleLevelOptions.map(level => level.id))
+      const unavailableLevels = detail.eligibleLevels
+        .filter(level => !catalogIds.has(level.id))
+        .map(level => eligibleLevelView(level, detail.eligibleLevels.map(item => item.id)))
       this.setData({
         editorOpen: true,
         editingId: detail.id,
@@ -177,6 +231,14 @@ Page({
         rewardExperience: String(detail.rewardExperience),
         attachmentRequired: detail.attachmentRequired,
         assignmentMode: detail.assignmentMode,
+        eligibleLevelIds: detail.eligibleLevels.map(level => level.id),
+        eligibleLevelOptions: [
+          ...this.data.eligibleLevelOptions.map(level => ({
+            ...level,
+            selected: detail.eligibleLevels.some(selected => selected.id === level.id),
+          })),
+          ...unavailableLevels,
+        ],
         endsDate: endsAt ? localDate(endsAt) : '',
         endsTime: endsAt ? localTime(endsAt) : '23:59',
         templateAssetId: detail.template?.assetId || '',
@@ -200,6 +262,22 @@ Page({
     if (mode === 'ALL' || mode === 'SELECTED') {
       this.setData({ assignmentMode: mode })
     }
+  },
+  toggleEligibleLevel(event: WechatMiniprogram.TouchEvent) {
+    const levelId = String(event.currentTarget.dataset.levelId || '')
+    if (!this.data.eligibleLevelOptions.some(level => level.id === levelId)) {
+      return
+    }
+    const eligibleLevelIds = this.data.eligibleLevelIds.includes(levelId)
+      ? this.data.eligibleLevelIds.filter(id => id !== levelId)
+      : [...this.data.eligibleLevelIds, levelId]
+    this.setData({
+      eligibleLevelIds,
+      eligibleLevelOptions: this.data.eligibleLevelOptions.map(level => ({
+        ...level,
+        selected: eligibleLevelIds.includes(level.id),
+      })),
+    })
   },
   updateEndsDate(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ endsDate: event.detail.value }) },
   updateEndsTime(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ endsTime: event.detail.value }) },
@@ -227,6 +305,10 @@ Page({
       return
     }
     const rewardExperience = Number(this.data.rewardExperience)
+    if (this.data.eligibleLevelsState !== 'ready') {
+      this.setData({ message: '成长等级尚未加载，暂时不能保存任务' })
+      return
+    }
     if (!this.data.name.trim() || !this.data.content.trim()
       || !Number.isInteger(rewardExperience) || rewardExperience < 0) {
       this.setData({ message: '请完整填写任务名称、内容和奖励经验值' })
@@ -243,6 +325,7 @@ Page({
           rewardExperience,
           attachmentRequired: this.data.attachmentRequired,
           assignmentMode: this.data.assignmentMode,
+          eligibleLevelIds: this.data.eligibleLevelIds,
           endsAt: this.data.endsDate ? deadlineIso(this.data.endsDate, this.data.endsTime) : undefined,
           templateAssetId: this.data.templateAssetId || undefined,
         },

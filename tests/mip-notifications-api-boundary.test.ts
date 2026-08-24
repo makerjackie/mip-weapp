@@ -37,7 +37,8 @@ describe('MIP notification function boundary', () => {
   it('keeps user and worker actions out of each other function', () => {
     const apiHandler = read('cloudfunctions/mip-notifications-api/domain/handler.js')
     const workerHandler = read('cloudfunctions/mip-notification-worker/domain/handler.js')
-    expect(apiHandler).toContain('new Set([\'listInbox\', \'markRead\', \'recordSubscriptionDecision\'])')
+    expect(apiHandler).toContain('\'recordCustomerServiceInteraction\'')
+    expect(apiHandler).toContain('\'recordSubscriptionDecision\'')
     expect(apiHandler).not.toContain('verifyInternal')
     expect(workerHandler).toContain('[\'publishMessage\', \'runDeliveryBatch\']')
     expect(workerHandler).toContain('options.verifyInternal(event)')
@@ -81,7 +82,7 @@ describe('MIP notification function boundary', () => {
     const taskLock = repository.indexOf('FROM mip_delivery_tasks', userLock)
     const grantLock = repository.indexOf('FROM mip_notification_grants', taskLock)
     const sender = repository.indexOf('await deliver()', grantLock)
-    const finalWrite = repository.indexOf('SET status = \'CONSUMED\'', sender)
+    const finalWrite = repository.indexOf('const grantUpdate = reservation.grant', sender)
     const noRetry = repository.indexOf('}, 1)', finalWrite)
     expect(fenceStart).toBeGreaterThan(-1)
     expect(userLock).toBeGreaterThan(fenceStart)

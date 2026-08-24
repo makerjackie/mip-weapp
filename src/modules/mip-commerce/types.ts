@@ -6,7 +6,7 @@ export type RefundId = Brand<string, 'RefundId'>
 
 export type CatalogStage = 'TEST' | 'LIVE'
 export type MembershipPlanStatus = 'DRAFT' | 'ACTIVE' | 'INACTIVE'
-export type OrderType = 'MEMBERSHIP' | 'EVENT'
+export type OrderType = 'MEMBERSHIP' | 'EVENT' | 'CONTENT'
 export type OrderStatus
   = | 'CREATED'
     | 'PAYMENT_CREATED'
@@ -16,6 +16,7 @@ export type OrderStatus
     | 'REFUND_PENDING'
     | 'PARTIALLY_REFUNDED'
     | 'REFUNDED'
+export type OrderServiceStatus = 'PENDING_USE' | 'COMPLETED' | 'REFUNDED' | 'UNAVAILABLE'
 
 export interface MembershipPlan {
   id: MembershipPlanId
@@ -81,7 +82,21 @@ export interface CommerceOrder {
   refundedAmountCents: number
   currency: 'CNY'
   status: OrderStatus
+  serviceStatus: OrderServiceStatus
   paidAt?: string
+  event?: {
+    title: string
+    coverUrl?: string
+    startsAt?: string
+    endsAt?: string
+    cityName?: string
+    venueName?: string
+    address?: string
+  }
+  priceItems?: Array<{
+    label: string
+    amountCents: number
+  }>
   version: number
   createdAt?: string
   updatedAt?: string

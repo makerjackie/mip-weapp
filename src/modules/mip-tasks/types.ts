@@ -48,6 +48,7 @@ export interface AdminTaskCard {
   attachmentRequired: boolean
   assignmentMode: TaskAssignmentMode
   assignmentCount: number
+  eligibleLevels: TaskEligibleLevel[]
   endsAt: string
   template?: TaskTemplateMedia
   status: TaskCardStatus
@@ -87,6 +88,15 @@ export interface AdminTaskDraft {
   assignmentMode: TaskAssignmentMode
   endsAt?: string
   templateAssetId?: string
+  eligibleLevelIds?: string[]
+}
+
+export interface TaskEligibleLevel {
+  id: string
+  levelKey: string
+  name: string
+  minimumExperience: number
+  status: 'DRAFT' | 'ACTIVE' | 'INACTIVE'
 }
 
 export interface AssignableTaskMember {
@@ -135,6 +145,7 @@ export interface MipTasksGateway {
   getAdminSession: () => Promise<TaskAdminSession>
   getAdminTask: (taskId: string) => Promise<AdminTaskCard>
   listAdminTasks: (filters?: AdminTaskFilters, cursor?: string, limit?: number) => Promise<TaskPage<AdminTaskCard>>
+  listEligibleLevels: () => Promise<TaskEligibleLevel[]>
   saveTask: (input: { taskId?: string, expectedVersion?: number, task: AdminTaskDraft }) => Promise<AdminTaskCard>
   publishTask: (taskId: string, expectedVersion: number) => Promise<AdminTaskCard>
   unpublishTask: (taskId: string, expectedVersion: number) => Promise<AdminTaskCard>

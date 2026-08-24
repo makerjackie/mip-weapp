@@ -96,7 +96,12 @@ function createGateway() {
       paymentAvailable: false,
     })),
     checkIn: vi.fn(async () => ({ eventId, registrationId: 'registration-1', status: 'ATTENDED' as const, checkedInAt: '', idempotent: false })),
-    resolveCheckInScene: vi.fn(async scene => ({ eventId, scanToken: scene, validFrom: '', validUntil: '' })),
+    resolveCheckInScene: vi.fn(async () => ({
+      eventId,
+      resumeToken: `${'a'.repeat(24)}.${'b'.repeat(43)}`,
+      validFrom: '2026-08-25T03:00:00.000Z',
+      validUntil: '2026-08-25T03:30:00.000Z',
+    })),
     resolveInvitationScene: vi.fn(async () => ({ eventId, invitationToken: 'invitation-token', validUntil: '' })),
     createCheckInPoster: vi.fn(async (_eventId, mode = 'STATIC') => ({
       eventId,
@@ -223,6 +228,45 @@ describe('MIP events client module', () => {
     expect(gateway.register.mock.calls[0][0]).not.toHaveProperty('amountCents')
   })
 
+  it('submits a durable event-cancellation refund from the shared events module', async () => {
+    const gateway = createGateway()
+    gateway.cancelRegistration.mockResolvedValue({
+      registrationId: 'registration-1',
+      status: 'CANCELLATION_PENDING',
+      refundRequired: true,
+      refundId: 'refund-1',
+      refundStatus: 'PENDING',
+      paymentAvailable: true,
+    })
+    const submitRefund = vi.fn(async () => ({ status: 'PROVIDER_CREATED' }))
+    const module = createMipEventsModule(gateway, { submitRefund })
+    await expect(module.cancelRegistration(eventId, 3)).resolves.toMatchObject({
+      status: 'CANCELLATION_PENDING',
+      refundSubmission: 'SUBMITTED',
+    })
+    expect(submitRefund).toHaveBeenCalledWith('refund-1')
+  })
+
+  it('keeps a failed provider submission as a retryable server refund instead of failing cancellation', async () => {
+    const gateway = createGateway()
+    gateway.cancelRegistration.mockResolvedValue({
+      registrationId: 'registration-1',
+      status: 'CANCELLATION_PENDING',
+      refundRequired: true,
+      refundId: 'refund-1',
+      refundStatus: 'PENDING',
+      paymentAvailable: true,
+    })
+    const module = createMipEventsModule(gateway, {
+      submitRefund: vi.fn(async () => { throw new Error('provider unavailable') }),
+    })
+    await expect(module.cancelRegistration(eventId)).resolves.toMatchObject({
+      status: 'CANCELLATION_PENDING',
+      refundId: 'refund-1',
+      refundSubmission: 'PENDING_RETRY',
+    })
+  })
+
   it('reads and updates the current registration with an idempotency key and expected version', async () => {
     const gateway = createGateway()
     gateway.getMyRegistration.mockResolvedValue({
@@ -275,7 +319,7 @@ describe('MIP events client module', () => {
     const gateway = createGateway()
     const module = createMipEventsModule(gateway)
     const scene = 's1.abcdefghijk.lmnopqrstuv'
-    await expect(module.resolveCheckInScene(scene)).resolves.toMatchObject({ eventId, scanToken: scene })
+    await expect(module.resolveCheckInScene(scene)).resolves.toMatchObject({ eventId, resumeToken: expect.any(String) })
     expect(() => module.resolveCheckInScene('event-id.secret')).toThrow('活动码无效')
   })
 

@@ -71,6 +71,7 @@ Page({
     visibilityIndustry: true,
     visibilityAbilities: true,
     visibilityPrimaryBranch: true,
+    visibilityInfluence: true,
     branchOptions: [] as Array<{ id: string, label: string }>,
     branchGroups: [] as CatalogSelectorGroup[],
     selectedBranchIds: [] as string[],
@@ -165,6 +166,7 @@ Page({
         visibilityIndustry: snapshot.profile.visibility.industry !== false,
         visibilityAbilities: snapshot.profile.visibility.abilities !== false,
         visibilityPrimaryBranch: snapshot.profile.visibility.primaryBranch !== false,
+        visibilityInfluence: snapshot.profile.visibility.influence !== false,
         branchOptions,
         branchGroups,
         selectedBranchIds: primaryBranchId ? [primaryBranchId] : [],
@@ -311,6 +313,7 @@ Page({
       'visibilityIndustry',
       'visibilityAbilities',
       'visibilityPrimaryBranch',
+      'visibilityInfluence',
     ].includes(field)) {
       this.setData({ [field]: Boolean(event.detail.value) })
     }
@@ -389,6 +392,7 @@ Page({
           industry: this.data.visibilityIndustry,
           abilities: this.data.visibilityAbilities,
           primaryBranch: this.data.visibilityPrimaryBranch,
+          influence: this.data.visibilityInfluence,
         },
         primaryIndustryTagId: selectedIndustry?.id || undefined,
         abilityTagIds: this.data.abilityOptions.filter(tag => tag.selected).map(tag => tag.id),

@@ -64,6 +64,11 @@ export interface SubscriptionGrantResult {
   grantAvailable: boolean
 }
 
+export interface CustomerServiceWindowResult {
+  channel: 'WECHAT_CUSTOMER_SERVICE'
+  availableUntil: string
+}
+
 export interface ExternalDeliveryDecision {
   channel: NotificationChannel
   deliver: boolean
@@ -77,6 +82,7 @@ export interface MipMessagingGateway {
     templateKey: string,
     decision: SubscriptionDecision,
   ) => Promise<SubscriptionGrantResult>
+  recordCustomerServiceInteraction: () => Promise<CustomerServiceWindowResult>
 }
 
 export interface WechatSubscriptionRequester {

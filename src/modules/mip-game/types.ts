@@ -1,6 +1,119 @@
 export type GameSeasonStatus = 'DRAFT' | 'ACTIVE' | 'CLOSED'
 export type GamePeriodKind = 'HALF_YEAR' | 'YEAR' | 'CUSTOM'
 export type GameRankingType = 'TEAM_HALF_YEAR' | 'TEAM_YEAR' | 'INDIVIDUAL_SEASON' | 'INDIVIDUAL_ALL_TIME'
+export type BlindBoxRarity = 'COMMON' | 'RARE' | 'EPIC' | 'LEGENDARY'
+export type BlindBoxPublishStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED'
+
+export interface BlindBoxCatalogSummary {
+  id: string
+  catalogKey: string
+  name: string
+  summary: string
+  drawCostCoin: number
+  dailyDrawLimit: number
+  pityThreshold: number
+  pityMinRarity: BlindBoxRarity
+  status: 'PUBLISHED'
+  version: number
+  cardCount: number
+  stockRemaining: number
+}
+
+export interface BlindBoxCardPublic {
+  id: string
+  name: string
+  summary: string
+  rarity: BlindBoxRarity
+  status: BlindBoxPublishStatus
+  stockRemaining: number
+}
+
+export interface BlindBoxRarityRule {
+  rarity: BlindBoxRarity
+  label: string
+  weight: number
+  probabilityBasisPoints: number
+  availableCardCount: number
+}
+
+export interface BlindBoxDetail extends BlindBoxCatalogSummary {
+  rulesText: string
+  redemptionRulesText: string
+  rarities: BlindBoxRarityRule[]
+  cards: BlindBoxCardPublic[]
+}
+
+export interface BlindBoxDrawResult {
+  drawId: string
+  catalogId: string
+  card: Pick<BlindBoxCardPublic, 'id' | 'name' | 'summary' | 'rarity'>
+  costCoin: number
+  balanceAfter: number
+  inventoryQuantity: number
+  pityBefore: number
+  pityAfter: number
+  pityTriggered: boolean
+  drawnAt: string
+  idempotent: boolean
+}
+
+export interface BlindBoxInventoryItem {
+  cardId: string
+  catalogId: string
+  catalogName: string
+  name: string
+  summary: string
+  rarity: BlindBoxRarity
+  status: BlindBoxPublishStatus
+  quantity: number
+  firstAcquiredAt: string
+  lastAcquiredAt: string
+}
+
+export interface BlindBoxCoinEntry {
+  id: string
+  deltaValue: number
+  balanceAfter: number
+  reason: string
+  createdAt: string
+}
+
+export interface BlindBoxCatalogDraft {
+  catalogKey: string
+  name: string
+  summary: string
+  rulesText: string
+  redemptionRulesText: string
+  drawCostCoin: number
+  dailyDrawLimit: number
+  pityThreshold: number
+  pityMinRarity: BlindBoxRarity
+}
+
+export interface BlindBoxCatalogAdmin extends Omit<BlindBoxCatalogSummary, 'status'> {
+  status: BlindBoxPublishStatus
+  rulesText: string
+  redemptionRulesText: string
+  stockTotal: number
+}
+
+export interface BlindBoxCardDraft {
+  catalogId: string
+  cardKey: string
+  name: string
+  summary: string
+  rarity: BlindBoxRarity
+  weight: number
+  stockTotal: number
+  displayOrder: number
+}
+
+export interface BlindBoxCardAdmin extends BlindBoxCardDraft {
+  id: string
+  stockRemaining: number
+  status: BlindBoxPublishStatus
+  version: number
+}
 
 export interface HeadquartersThreshold {
   level: number
@@ -135,6 +248,11 @@ export interface AssignableGameMember {
 export interface GameAdminSession { capability: 'game.manage', roleKey: 'PLATFORM_OWNER' | 'PLATFORM_OPERATIONS' }
 
 export interface MipGameGateway {
+  listBlindBoxes: () => Promise<{ coinBalance: number, items: BlindBoxCatalogSummary[] }>
+  getBlindBox: (catalogId: string) => Promise<BlindBoxDetail>
+  drawBlindBox: (catalogId: string, requestId: string) => Promise<BlindBoxDrawResult>
+  getBlindBoxInventory: (catalogId?: string) => Promise<{ items: BlindBoxInventoryItem[] }>
+  listBlindBoxCoinEntries: (limit?: number) => Promise<{ coinBalance: number, items: BlindBoxCoinEntry[] }>
   getOverview: (seasonId?: string) => Promise<GameOverview>
   getRules: (seasonId?: string) => Promise<{ seasonId: string, seasonName: string, rulesText: string, rules: GameRules }>
   getTeam: (teamId: string) => Promise<GameTeamDetail>
@@ -153,6 +271,12 @@ export interface MipGameGateway {
   saveWeeklyMatch: (match: { seasonId: string, weekStart: string, weekEnd: string, teamAId: string, teamBId: string }) => Promise<GameMatch>
   finalizeWeeklyMatch: (matchId: string, expectedVersion: number) => Promise<GameMatch>
   generateRankingSnapshot: (seasonId: string, rankingType: GameRankingType) => Promise<{ snapshotId: string, rankingType: GameRankingType, entryCount: number, generatedAt: string }>
+  adminListBlindBoxCatalogs: () => Promise<{ items: BlindBoxCatalogAdmin[] }>
+  adminSaveBlindBoxCatalog: (input: { catalogId?: string, expectedVersion?: number, catalog: BlindBoxCatalogDraft }) => Promise<BlindBoxCatalogAdmin>
+  adminChangeBlindBoxCatalogStatus: (catalogId: string, expectedVersion: number, status: 'PUBLISHED' | 'UNPUBLISHED') => Promise<{ catalogId: string, status: 'PUBLISHED' | 'UNPUBLISHED', version: number }>
+  adminListBlindBoxCards: (catalogId: string) => Promise<{ items: BlindBoxCardAdmin[] }>
+  adminSaveBlindBoxCard: (input: { cardId?: string, expectedVersion?: number, card: BlindBoxCardDraft }) => Promise<BlindBoxCardAdmin>
+  adminChangeBlindBoxCardStatus: (cardId: string, expectedVersion: number, status: 'PUBLISHED' | 'UNPUBLISHED') => Promise<{ cardId: string, status: 'PUBLISHED' | 'UNPUBLISHED', version: number }>
 }
 
 export class MipGameError extends Error {

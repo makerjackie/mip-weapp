@@ -2,7 +2,7 @@ import type { EventId, OrderId } from '../../../../modules/mip'
 import type { MipEventDetail, MyEventRegistration, RegistrationField } from '../../../../modules/mip-events'
 import { mipCommerceModule } from '../../../../modules/mip-commerce/client'
 import { MipEventsError } from '../../../../modules/mip-events'
-import { mipEventsModule } from '../../../../modules/mip-events/client'
+import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
@@ -59,6 +59,22 @@ function formatDateTime(value: string) {
   return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
+function registrationAccessText(event: MipEventDetail) {
+  if (event.accessType === 'MEMBER_INCLUDED') {
+    return '仅玩家'
+  }
+  if (event.accessType === 'PAID') {
+    return '付费活动'
+  }
+  return '免费活动'
+}
+
+function registrationPriceText(event: MipEventDetail) {
+  return event.accessType === 'PAID'
+    ? `¥${(event.priceCents / 100).toFixed(2)}`
+    : '免费'
+}
+
 function isAccessRequired(error: unknown) {
   return error instanceof MipEventsError && error.code === 'AUTH_REQUIRED'
 }
@@ -78,21 +94,26 @@ Page({
     orderId: '' as OrderId | '',
     message: '',
     invitationToken: '',
-    checkInToken: '',
+    resumeCheckIn: false,
     canContinueCheckIn: false,
+    checkingRegistration: false,
     profileNickname: '',
     profilePhoneText: '',
     profileBranchText: '',
     cancellationText: '',
+    accessText: '',
+    priceText: '',
   },
   submissionIdempotencyKey: '',
   pendingAccessResume: false,
 
   onLoad(query: Record<string, string>) {
+    const eventId = String(query.eventId || '') as EventId
+    const resumeCheckIn = query.resumeCheckIn === '1' && Boolean(mipCheckInResumeStore.peek(String(eventId)))
     this.setData({
-      eventId: String(query.eventId || '') as EventId,
+      eventId,
       invitationToken: query.invitationToken ? decodeURIComponent(query.invitationToken) : '',
-      checkInToken: query.checkInToken ? decodeURIComponent(query.checkInToken) : '',
+      resumeCheckIn,
     })
     void this.loadEvent()
   },
@@ -139,7 +160,7 @@ Page({
         return
       }
       this.submissionIdempotencyKey = ''
-      wx.setNavigationBarTitle({ title: editing ? '修改报名' : '确认报名' })
+      wx.setNavigationBarTitle({ title: editing ? '修改报名' : '活动报名' })
       this.setData({
         state: 'ready',
         event,
@@ -150,6 +171,8 @@ Page({
         cancellationText: event.cancellationDeadline
           ? `${formatDateTime(event.cancellationDeadline)} 前可申请取消`
           : '是否可以取消以活动当前状态为准',
+        accessText: registrationAccessText(event),
+        priceText: registrationPriceText(event),
       })
       if (this.pendingAccessResume) {
         this.pendingAccessResume = false
@@ -255,7 +278,7 @@ Page({
           registration: updated,
           resultTitle: '报名已修改',
           resultDescription: '报名信息已保存。',
-          canContinueCheckIn: updated.status === 'REGISTERED' && Boolean(this.data.checkInToken),
+          canContinueCheckIn: updated.status === 'REGISTERED' && this.data.resumeCheckIn,
         })
         return
       }
@@ -279,9 +302,12 @@ Page({
           try {
             const payment = await mipCommerceModule.payOrder(result.orderId)
             if (payment.kind === 'CONFIRMED') {
-              resultTitle = '报名成功'
-              resultDescription = '支付已确认，报名资格已生效。'
-              canContinueCheckIn = Boolean(this.data.checkInToken)
+              const registrationReady = await this.registrationReadyForCheckIn()
+              resultTitle = registrationReady ? '报名成功' : '支付已确认'
+              resultDescription = registrationReady
+                ? '支付已确认，报名资格已生效。'
+                : '支付已确认，报名资格仍在同步，请稍后重新核对。'
+              canContinueCheckIn = registrationReady && this.data.resumeCheckIn
             }
             else if (payment.kind === 'CANCELLED') {
               resultDescription = '支付已取消，可在订单中继续支付。'
@@ -313,7 +339,7 @@ Page({
           resultTitle: presentation.title,
           resultDescription: presentation.description,
           orderId: '',
-          canContinueCheckIn: result.kind === 'REGISTERED' && Boolean(this.data.checkInToken),
+          canContinueCheckIn: result.kind === 'REGISTERED' && this.data.resumeCheckIn,
         })
       }
     }
@@ -328,7 +354,10 @@ Page({
             source: {
               navigation: 'navigateBack',
               route: '/packages/member/mip-events/registration/index',
-              query: { eventId: this.data.eventId },
+              query: {
+                eventId: this.data.eventId,
+                ...(this.data.resumeCheckIn ? { resumeCheckIn: '1' } : {}),
+              },
             },
           })
           if (session.decision.ready) {
@@ -428,15 +457,45 @@ Page({
     }
   },
 
+  async registrationReadyForCheckIn() {
+    try {
+      const registration = await mipEventsModule.getMyRegistration(this.data.eventId)
+      return registration !== null && ['REGISTERED', 'ATTENDED'].includes(registration.status)
+    }
+    catch {
+      return false
+    }
+  },
+
+  async retryRegistration() {
+    if (this.data.checkingRegistration) {
+      return
+    }
+    this.setData({ checkingRegistration: true })
+    const registrationReady = await this.registrationReadyForCheckIn()
+    this.setData({
+      checkingRegistration: false,
+      canContinueCheckIn: registrationReady && this.data.resumeCheckIn,
+      resultTitle: registrationReady ? '报名成功' : this.data.resultTitle,
+      resultDescription: registrationReady
+        ? '报名资格已生效，可以继续签到。'
+        : '报名资格尚未生效，请稍后重试或查看订单详情。',
+    })
+  },
+
   async continueCheckIn() {
-    if (!this.data.canContinueCheckIn || !this.data.checkInToken) {
+    if (!this.data.canContinueCheckIn || !mipCheckInResumeStore.peek(String(this.data.eventId))) {
+      this.setData({
+        canContinueCheckIn: false,
+        resultDescription: '签到意图已失效，请返回现场重新扫描活动码。',
+      })
       return
     }
     if (mipMessagingModule.subscriptionCapability('CHECKIN_RESULT').available) {
       await mipMessagingModule.requestWechatSubscription('CHECKIN_RESULT').catch(() => undefined)
     }
     caseNavigateTo({
-      url: `/packages/member/mip-events/check-in/index?eventId=${encodeURIComponent(this.data.eventId)}&token=${encodeURIComponent(this.data.checkInToken)}`,
+      url: `/packages/member/mip-events/check-in/index?eventId=${encodeURIComponent(this.data.eventId)}&resumeCheckIn=1`,
     })
   },
 

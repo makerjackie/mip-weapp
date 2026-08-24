@@ -39,6 +39,26 @@
     </view>
   </view>
 
+  <view class="mt-4 rounded-[16rpx] border border-line bg-panel px-4 py-4 active:bg-panel-raised" bind:tap="openBlindBoxes">
+    <view class="flex items-center justify-between gap-3">
+      <view class="min-w-0 flex-1">
+        <view class="text-[length:27rpx] font-semibold">笨笨盲盒</view>
+        <view class="mt-1 text-[length:22rpx] text-muted">使用游戏币抽取卡牌并查看背包</view>
+      </view>
+      <t-icon name="chevron-right" size="34rpx" color="var(--color-brand)" />
+    </view>
+  </view>
+
+  <view class="mt-4 rounded-[16rpx] border border-line bg-panel px-4 py-4 active:bg-panel-raised" bind:tap="openKnowledge">
+    <view class="flex items-center justify-between gap-3">
+      <view class="min-w-0 flex-1">
+        <view class="text-[length:27rpx] font-semibold">知识内容</view>
+        <view class="mt-1 text-[length:22rpx] text-muted">热点、行业内容、视频和专家分享</view>
+      </view>
+      <t-icon name="chevron-right" size="34rpx" color="var(--color-brand)" />
+    </view>
+  </view>
+
   <view wx:if="{{hasAnnouncements}}" class="mt-7">
     <view class="flex min-h-[64rpx] items-center justify-between">
       <view class="text-[length:32rpx] font-bold">社区公告</view>

@@ -1,5 +1,6 @@
 import type { CommunityReportIntent, ReportCategory } from '../../../modules/mip-community'
 import type {
+  ProfileInfluenceSummary,
   PublicPerson,
   PublicProfileCooperationCard,
   PublicProfileOpportunity,
@@ -19,6 +20,7 @@ import { caseNavigateTo } from '../../../modules/platform/case-navigation'
 
 type ProfileAction = 'interest' | 'block' | 'report'
 type AccessActionState = 'loading' | 'ready' | 'access' | 'error'
+type ProfileSection = 'cooperation' | 'cases' | 'opportunities'
 
 interface PublicProfileView extends PublicPerson {
   displayName: string
@@ -31,6 +33,14 @@ interface PublicProfileView extends PublicPerson {
 }
 
 interface CooperationCardView extends PublicProfileCooperationCard { roleName: string }
+interface SuperCaseView extends PublicProfileSuperCase { publishedText: string }
+
+function monthText(value: string) {
+  const date = new Date(value)
+  return Number.isFinite(date.getTime())
+    ? `${date.getFullYear()}年 ${date.getMonth() + 1}月`
+    : ''
+}
 
 function presentProfile(profile: PublicPerson): PublicProfileView {
   return {
@@ -53,8 +63,9 @@ Page({
     profileRef: '',
     profile: null as PublicProfileView | null,
     cooperationCards: [] as CooperationCardView[],
-    superCases: [] as PublicProfileSuperCase[],
+    superCases: [] as SuperCaseView[],
     opportunities: [] as PublicProfileOpportunity[],
+    influence: null as ProfileInfluenceSummary | null,
     interestActive: false,
     interestState: 'idle' as 'idle' | 'loading' | 'ready' | 'access' | 'processing' | 'error',
     interestMessage: '',
@@ -63,6 +74,7 @@ Page({
     canRetryReport: false,
     accessToken: '',
     isSelf: false,
+    activeSection: 'cooperation' as ProfileSection,
     message: '',
   },
   pendingAction: '' as ProfileAction | '',
@@ -102,13 +114,18 @@ Page({
           ...card,
           roleName: cooperationRoles.find(role => role.key === card.roleKey)?.name || card.roleKey,
         })),
-        superCases: aggregate.superCases,
+        superCases: aggregate.superCases.map(item => ({
+          ...item,
+          publishedText: monthText(item.publishedAt),
+        })),
         opportunities: aggregate.opportunities,
+        influence: aggregate.influence || null,
         interestActive: aggregate.interestActive,
         interestState: 'ready',
         isSelf: aggregate.profile.isSelf,
         message: '',
       })
+      wx.setNavigationBarTitle({ title: `${aggregate.profile.userKind === 'PLAYER' ? '玩家' : '嘉宾'}档案` })
       if (!aggregate.profile.isSelf) {
         void opportunityModule.recordProfileVisit(this.data.profileRef, this.visitKey).catch(() => undefined)
       }
@@ -119,6 +136,19 @@ Page({
         message: error instanceof Error ? error.message : '公开档案加载失败。',
       })
     }
+  },
+
+  openOwnInfluence(event: WechatMiniprogram.TouchEvent) {
+    if (!this.data.isSelf) {
+      return
+    }
+    const category = String(event.currentTarget.dataset.category || '')
+    if (!['GUEST', 'INTERACTION', 'ACTIVE_INTEREST', 'VISITOR'].includes(category)) {
+      return
+    }
+    caseNavigateTo({
+      url: `/packages/member/mip-received/index?scope=influence&category=${category}`,
+    })
   },
 
   setActionState(action: ProfileAction, state: AccessActionState, message = '') {
@@ -166,7 +196,19 @@ Page({
     }
   },
 
+  changeSection(event: WechatMiniprogram.TouchEvent) {
+    const activeSection = String(event.currentTarget.dataset.section || '') as ProfileSection
+    if (!['cooperation', 'cases', 'opportunities'].includes(activeSection)
+      || activeSection === this.data.activeSection) {
+      return
+    }
+    this.setData({ activeSection })
+  },
+
   toggleInterest() {
+    if (['loading', 'processing'].includes(this.data.interestState)) {
+      return
+    }
     void this.runProfileAction('interest')
   },
 

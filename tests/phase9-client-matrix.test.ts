@@ -240,7 +240,7 @@ describe('phase9 page double-click / stale / error recovery behavior', () => {
     const adminEvents = read('src/packages/admin/events/index.ts')
     const roster = read('src/packages/admin/event-registrations/index.ts')
 
-    expect(detail).toMatch(/if \(!this\.data\.event\?\.canCancel \|\| this\.data\.busy\)/)
+    expect(detail).toMatch(/if \(\(!currentEvent\?\.canCancel && !retryRefund\) \|\| this\.data\.busy\)/)
     expect(detail).toMatch(/busy: true[\s\S]*?showModal[\s\S]*?finally[\s\S]*?busy: false/)
     expect(registration).toMatch(/if \(!event \|\| this\.data\.busy \|\| !this\.validate\(\)\)/)
     expect(registration).toMatch(/busy: true[\s\S]*?mipEventsModule\.register[\s\S]*?finally[\s\S]*?busy: false/)

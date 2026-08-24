@@ -40,6 +40,7 @@ function order(status: CommerceOrder['status']): CommerceOrder {
     refundedAmountCents: 0,
     currency: 'CNY',
     status,
+    serviceStatus: ['PARTIALLY_REFUNDED', 'REFUNDED'].includes(status) ? 'REFUNDED' : 'UNAVAILABLE',
     version: 1,
   }
 }

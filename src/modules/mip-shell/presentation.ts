@@ -1,5 +1,5 @@
 import type { CallerCapabilities, EntitlementProjection, UserKind } from '../mip'
-import type { CommerceOrder, MembershipPlan, OrderStatus } from '../mip-commerce'
+import type { CommerceOrder, MembershipPlan, OrderServiceStatus, OrderStatus } from '../mip-commerce'
 
 export type OrderTone = 'neutral' | 'brand' | 'success' | 'danger'
 
@@ -9,6 +9,11 @@ export interface OrderStatusPresentation {
   paymentPending: boolean
   refundable: boolean
   terminal: boolean
+}
+
+export interface OrderServiceStatusPresentation {
+  label: string
+  tone: OrderTone
 }
 
 const orderStatusPresentation: Record<OrderStatus, OrderStatusPresentation> = {
@@ -70,8 +75,19 @@ const orderStatusPresentation: Record<OrderStatus, OrderStatusPresentation> = {
   },
 }
 
+const orderServiceStatusPresentation: Record<OrderServiceStatus, OrderServiceStatusPresentation> = {
+  PENDING_USE: { label: '待使用', tone: 'brand' },
+  COMPLETED: { label: '已完成', tone: 'success' },
+  REFUNDED: { label: '已退款', tone: 'neutral' },
+  UNAVAILABLE: { label: '', tone: 'neutral' },
+}
+
 export function presentOrderStatus(status: OrderStatus): OrderStatusPresentation {
   return orderStatusPresentation[status]
+}
+
+export function presentOrderServiceStatus(status: OrderServiceStatus): OrderServiceStatusPresentation {
+  return orderServiceStatusPresentation[status]
 }
 
 export function classifyPaymentResult(order: CommerceOrder): 'pending' | 'success' | 'failed' {
@@ -93,7 +109,10 @@ export function formatCny(amountCents: number) {
 
 export function planTitle(order: CommerceOrder, plans: readonly MembershipPlan[]) {
   if (order.orderType === 'EVENT') {
-    return '活动订单'
+    return order.event?.title || '活动订单'
+  }
+  if (order.orderType === 'CONTENT') {
+    return '单内容解锁订单'
   }
   return plans.find(plan => String(plan.id) === String(order.membershipPlanId))?.name || '会员订单'
 }

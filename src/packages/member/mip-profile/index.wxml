@@ -4,12 +4,30 @@
   </view>
   <app-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载资料" description="身份服务暂时没有响应。" action-text="重新加载" bind:action="loadProfile" />
   <block wx:else>
-    <view class="text-[length:38rpx] font-bold">个人档案</view>
-    <view class="mt-2 text-[length:23rpx] leading-6 text-muted">昵称和主城市分会为必填项，其他信息可稍后补充。</view>
+    <view class="overflow-hidden rounded-[20rpx] bg-brand text-on-brand">
+      <view class="flex min-h-[300rpx] items-center gap-4 px-5 py-6">
+        <view class="flex h-[132rpx] w-[132rpx] shrink-0 items-center justify-center overflow-hidden rounded-full bg-black/10">
+          <image wx:if="{{avatarUrl}}" class="h-full w-full" mode="aspectFill" src="{{avatarUrl}}" />
+          <t-icon wx:else name="user-avatar" size="58rpx" color="var(--color-on-brand)" />
+        </view>
+        <view class="min-w-0 flex-1">
+          <view class="truncate text-[length:38rpx] font-bold">{{nickname || '未填写昵称'}}</view>
+          <view wx:if="{{identityStatus}}" class="mt-2 truncate text-[length:23rpx]">{{identityStatus}}</view>
+          <view wx:if="{{headline}}" class="mt-3 line-clamp-2 text-[length:22rpx] leading-6 opacity-75">{{headline}}</view>
+          <view class="mt-4 flex flex-wrap gap-2 text-[length:20rpx]">
+            <view wx:if="{{branchOptions[branchIndex].id}}" class="rounded-full bg-black/10 px-3 py-1">{{branchOptions[branchIndex].label}}</view>
+            <view wx:if="{{industryOptions[industryIndex].id}}" class="rounded-full bg-black/10 px-3 py-1">{{industryOptions[industryIndex].label}}</view>
+          </view>
+        </view>
+      </view>
+      <view class="border-t border-black/10 px-5 py-3 text-[length:20rpx] opacity-70">名片内容随下方资料实时更新</view>
+    </view>
+    <view class="mt-4 text-[length:23rpx] leading-6 text-muted">昵称和主城市分会为必填项，其他信息可稍后补充。</view>
     <view wx:if="{{aiDraftLoaded}}" class="mt-4 rounded-[14rpx] bg-brand-soft px-4 py-3 text-[length:23rpx] text-brand">已载入 AI 草稿，可继续修改后保存。</view>
 
     <view class="mt-5 rounded-[16rpx] bg-panel px-4 py-5">
-      <view class="text-[length:23rpx] font-semibold text-muted">头像</view>
+      <view class="text-[length:30rpx] font-semibold">个人信息</view>
+      <view class="mt-4 text-[length:23rpx] font-semibold text-muted">头像</view>
       <view class="mt-3 flex items-center gap-4">
         <button plain open-type="chooseAvatar" class="m-0 flex h-[128rpx] w-[128rpx] shrink-0 items-center justify-center overflow-hidden rounded-full border-0 bg-panel-raised p-0 leading-[128rpx]" disabled="{{avatarUploading || saving}}" bindchooseavatar="chooseAvatar">
           <image wx:if="{{avatarUrl}}" class="h-full w-full" mode="aspectFill" src="{{avatarUrl}}" />
@@ -46,7 +64,7 @@
     </view>
 
     <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
-      <view class="text-[length:30rpx] font-semibold">经历</view>
+      <view class="text-[length:30rpx] font-semibold">组织信息</view>
 
       <view class="mt-4 flex items-center justify-between">
         <view class="text-[length:23rpx] font-semibold text-muted">公司</view>
@@ -88,7 +106,7 @@
     </view>
 
     <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
-      <view class="text-[length:30rpx] font-semibold">手机号</view>
+      <view class="text-[length:30rpx] font-semibold">联系方式</view>
       <view class="mt-2 text-[length:22rpx] leading-6 text-muted">{{phoneBound ? '已绑定，可重新授权本人微信手机号。' : '用于活动联系、订单与售后，不会公开展示。'}}</view>
       <button open-type="getPhoneNumber" disabled="{{phoneBinding || saving}}" class="mt-4 flex h-[84rpx] w-full max-w-full box-border items-center justify-center rounded-[14rpx] border border-line bg-panel-raised text-[length:25rpx] font-semibold text-ink disabled:opacity-60" bind:getphonenumber="bindPhone">
         {{phoneBinding ? '正在更新' : phoneBound ? '更换绑定手机号' : '绑定微信手机号'}}
@@ -107,10 +125,11 @@
       <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">能力</text><switch checked="{{visibilityAbilities}}" color="#FCDF03" data-field="visibilityAbilities" bindchange="updateVisibility" /></view>
       <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">公司经历</text><switch checked="{{visibilityCompanies}}" color="#FCDF03" data-field="visibilityCompanies" bindchange="updateVisibility" /></view>
       <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">组织经历</text><switch checked="{{visibilityOrganizations}}" color="#FCDF03" data-field="visibilityOrganizations" bindchange="updateVisibility" /></view>
+      <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">影响力数据</text><switch checked="{{visibilityInfluence}}" color="#FCDF03" data-field="visibilityInfluence" bindchange="updateVisibility" /></view>
     </view>
 
     <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:23rpx] leading-6">{{message}}</view>
-    <view class="mt-6"><t-button block size="large" theme="primary" loading="{{saving}}" disabled="{{avatarUploading}}" bind:tap="saveProfile">保存资料</t-button></view>
+    <view class="mt-6 rounded-[24rpx] border border-line bg-panel p-2"><t-button block size="large" theme="primary" loading="{{saving}}" disabled="{{avatarUploading}}" bind:tap="saveProfile">保存名片</t-button></view>
   </block>
   <app-page-exit />
 </view>

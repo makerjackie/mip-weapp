@@ -1,10 +1,14 @@
 import { mipOperationsConfig } from '../../../config/mip-operations'
+import { mipMessagingModule } from '../../../modules/mip-messaging/client'
 
 Page({
   data: {
     state: 'ready' as const,
     hasSupportPhone: Boolean(mipOperationsConfig.supportPhone),
     hasVideoChannel: Boolean(mipOperationsConfig.videoChannelFinderUserName),
+  },
+  recordCustomerServiceInteraction() {
+    void mipMessagingModule.recordCustomerServiceInteraction().catch(() => undefined)
   },
   callSupport() {
     if (mipOperationsConfig.supportPhone) {

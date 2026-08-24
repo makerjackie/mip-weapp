@@ -7,7 +7,20 @@ import { createMipGameGateway } from './gateway'
 import { MipGameError } from './types'
 
 export const MIP_GAME_FUNCTION_NAME = runtimeConfig.cloudbase.gameFunctionName
-const readActions = new Set(['getOverview', 'getRules', 'getTeam', 'listHistory', 'listRankings', 'admin.listRankings'])
+const readActions = new Set([
+  'getOverview',
+  'getRules',
+  'getTeam',
+  'listHistory',
+  'listRankings',
+  'listBlindBoxes',
+  'getBlindBox',
+  'getBlindBoxInventory',
+  'listBlindBoxCoinEntries',
+  'admin.listRankings',
+  'admin.listBlindBoxCatalogs',
+  'admin.listBlindBoxCards',
+])
 
 export function createMipGameCloudbaseTransport(functionName = MIP_GAME_FUNCTION_NAME): MipGameTransport {
   return {

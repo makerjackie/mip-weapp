@@ -1,5 +1,5 @@
 import type { CallerCapabilities, OrderId, UserId } from '../src/modules/mip'
-import type { CommerceOrder, OrderStatus } from '../src/modules/mip-commerce'
+import type { CommerceOrder, OrderServiceStatus, OrderStatus } from '../src/modules/mip-commerce'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import {
@@ -9,10 +9,11 @@ import {
   formatCny,
   hasCapability,
   membershipPresentation,
+  presentOrderServiceStatus,
   presentOrderStatus,
 } from '../src/modules/mip-shell'
 
-function order(status: OrderStatus): CommerceOrder {
+function order(status: OrderStatus, serviceStatus: OrderServiceStatus = 'UNAVAILABLE'): CommerceOrder {
   return {
     id: '00000000-0000-4000-8000-000000000001' as OrderId,
     userId: '00000000-0000-4000-8000-000000000002' as UserId,
@@ -21,6 +22,7 @@ function order(status: OrderStatus): CommerceOrder {
     refundedAmountCents: 0,
     currency: 'CNY',
     status,
+    serviceStatus,
     version: 1,
   }
 }
@@ -38,6 +40,13 @@ describe('MIP shell presentation', () => {
     expect(presentOrderStatus('PARTIALLY_REFUNDED').refundable).toBe(true)
     expect(presentOrderStatus('REFUND_PENDING').refundable).toBe(false)
     expect(presentOrderStatus('REFUNDED').refundable).toBe(false)
+  })
+
+  it('presents service lifecycle separately from payment state', () => {
+    expect(presentOrderServiceStatus('PENDING_USE')).toMatchObject({ label: '待使用', tone: 'brand' })
+    expect(presentOrderServiceStatus('COMPLETED')).toMatchObject({ label: '已完成', tone: 'success' })
+    expect(presentOrderServiceStatus('REFUNDED')).toMatchObject({ label: '已退款', tone: 'neutral' })
+    expect(presentOrderServiceStatus('UNAVAILABLE').label).toBe('')
   })
 
   it('projects player only from an active entitlement fact', () => {

@@ -1,5 +1,14 @@
 import type {
   AssignableGameMember,
+  BlindBoxCardAdmin,
+  BlindBoxCardDraft,
+  BlindBoxCatalogAdmin,
+  BlindBoxCatalogDraft,
+  BlindBoxCatalogSummary,
+  BlindBoxCoinEntry,
+  BlindBoxDetail,
+  BlindBoxDrawResult,
+  BlindBoxInventoryItem,
   GameAdminSession,
   GameMatch,
   GameMemberAssignment,
@@ -46,6 +55,11 @@ export function createMipGameGateway(transport: MipGameTransport): MipGameGatewa
     return unwrap<T>(await transport.invoke(action, data))
   }
   return {
+    listBlindBoxes: () => call<{ coinBalance: number, items: BlindBoxCatalogSummary[] }>('listBlindBoxes'),
+    getBlindBox: catalogId => call<BlindBoxDetail>('getBlindBox', { catalogId }),
+    drawBlindBox: (catalogId, requestId) => call<BlindBoxDrawResult>('drawBlindBox', { catalogId, requestId }),
+    getBlindBoxInventory: catalogId => call<{ items: BlindBoxInventoryItem[] }>('getBlindBoxInventory', { catalogId }),
+    listBlindBoxCoinEntries: limit => call<{ coinBalance: number, items: BlindBoxCoinEntry[] }>('listBlindBoxCoinEntries', { limit }),
     getOverview: seasonId => call<GameOverview>('getOverview', { seasonId }),
     getRules: seasonId => call<{ seasonId: string, seasonName: string, rulesText: string, rules: GameRules }>('getRules', { seasonId }),
     getTeam: teamId => call<GameTeamDetail>('getTeam', { teamId }),
@@ -64,5 +78,11 @@ export function createMipGameGateway(transport: MipGameTransport): MipGameGatewa
     saveWeeklyMatch: match => call<GameMatch>('admin.saveWeeklyMatch', { match }),
     finalizeWeeklyMatch: (matchId, expectedVersion) => call<GameMatch>('admin.finalizeWeeklyMatch', { matchId, expectedVersion }),
     generateRankingSnapshot: (seasonId: string, rankingType: GameRankingType) => call('admin.generateRankingSnapshot', { seasonId, rankingType }),
+    adminListBlindBoxCatalogs: () => call<{ items: BlindBoxCatalogAdmin[] }>('admin.listBlindBoxCatalogs'),
+    adminSaveBlindBoxCatalog: (input: { catalogId?: string, expectedVersion?: number, catalog: BlindBoxCatalogDraft }) => call<BlindBoxCatalogAdmin>('admin.saveBlindBoxCatalog', input),
+    adminChangeBlindBoxCatalogStatus: (catalogId, expectedVersion, status) => call('admin.changeBlindBoxCatalogStatus', { catalogId, expectedVersion, status }),
+    adminListBlindBoxCards: catalogId => call<{ items: BlindBoxCardAdmin[] }>('admin.listBlindBoxCards', { catalogId }),
+    adminSaveBlindBoxCard: (input: { cardId?: string, expectedVersion?: number, card: BlindBoxCardDraft }) => call<BlindBoxCardAdmin>('admin.saveBlindBoxCard', input),
+    adminChangeBlindBoxCardStatus: (cardId, expectedVersion, status) => call('admin.changeBlindBoxCardStatus', { cardId, expectedVersion, status }),
   }
 }

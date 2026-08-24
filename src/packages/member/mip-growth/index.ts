@@ -1,5 +1,7 @@
 import type { GrowthEntry, GrowthLevel, GrowthRule, GrowthSnapshot } from '../../../modules/mip-growth'
+import { mipCommerceModule } from '../../../modules/mip-commerce/client'
 import { mipGrowthModule } from '../../../modules/mip-growth/client'
+import { caseNavigateTo } from '../../../modules/platform/case-navigation'
 
 const metricLabels = {
   EXPERIENCE: '经验值',
@@ -65,13 +67,18 @@ Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
     snapshot: null as GrowthSnapshot | null,
+    currentLevelNumber: 1,
     levels: [] as GrowthLevelView[],
     earningRules: [] as GrowthRuleView[],
     entries: [] as GrowthEntryView[],
     nextCursor: '',
     loadingMore: false,
+    isPlayer: false,
+    invitationReady: false,
+    invitationMessage: '',
     message: '',
   },
+  shareInvitationToken: '',
 
   onLoad() {
     const cached = mipGrowthModule.peekSnapshot()
@@ -79,6 +86,29 @@ Page({
       this.presentSnapshot(cached)
     }
     void this.loadGrowth()
+  },
+
+  onShow() {
+    void this.loadMembershipActions()
+  },
+
+  async loadMembershipActions() {
+    try {
+      const membership = await mipCommerceModule.getMembershipBenefits()
+      if (membership.kind !== 'PLAYER') {
+        this.shareInvitationToken = ''
+        this.setData({ isPlayer: false, invitationReady: false, invitationMessage: '' })
+        return
+      }
+      this.setData({ isPlayer: true, invitationReady: false, invitationMessage: '' })
+      const invitation = await mipCommerceModule.createMembershipInvitation()
+      this.shareInvitationToken = invitation.token
+      this.setData({ invitationReady: true })
+    }
+    catch {
+      this.shareInvitationToken = ''
+      this.setData({ invitationReady: false, invitationMessage: '会员操作暂时不可用，请稍后重试。' })
+    }
   },
 
   async onPullDownRefresh() {
@@ -98,6 +128,7 @@ Page({
       this.setData({
         state: 'ready',
         snapshot,
+        currentLevelNumber: Math.max(1, snapshot.levels.findIndex(level => level.id === snapshot.currentLevel.id) + 1),
         levels: snapshot.levels.map(level => levelView(level, snapshot.currentLevel.id)),
         earningRules: snapshot.earningRules.map(ruleView),
         entries: page.items.map(entryView),
@@ -116,6 +147,7 @@ Page({
     this.setData({
       state: 'ready',
       snapshot,
+      currentLevelNumber: Math.max(1, snapshot.levels.findIndex(level => level.id === snapshot.currentLevel.id) + 1),
       levels: snapshot.levels.map(level => levelView(level, snapshot.currentLevel.id)),
       earningRules: snapshot.earningRules.map(ruleView),
     })
@@ -143,5 +175,23 @@ Page({
 
   openTasks() {
     void wx.navigateTo({ url: '/packages/member/mip-tasks/index' })
+  },
+
+  openBenefits() {
+    void wx.navigateTo({ url: '/packages/member/benefits/index' })
+  },
+
+  renewMembership() {
+    caseNavigateTo({ url: '/pages/membership/index?source=growth-renew' })
+  },
+
+  onShareAppMessage() {
+    const invitation = this.shareInvitationToken
+      ? `&invitationToken=${encodeURIComponent(this.shareInvitationToken)}`
+      : ''
+    return {
+      title: 'MIP 会员方案',
+      path: `/pages/membership/index?source=growth-share${invitation}`,
+    }
   },
 })

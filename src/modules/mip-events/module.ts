@@ -46,7 +46,10 @@ function normalizedQuery(query: EventFeedQuery): EventFeedQuery {
   }
 }
 
-export function createMipEventsModule(gateway: MipEventsGateway) {
+export function createMipEventsModule(
+  gateway: MipEventsGateway,
+  options: { submitRefund?: (refundId: string) => Promise<unknown> } = {},
+) {
   const eventCache = new Map<string, Awaited<ReturnType<MipEventsGateway['getEvent']>>>()
   const feedCache = new Map<string, Awaited<ReturnType<MipEventsGateway['listEvents']>>>()
 
@@ -128,8 +131,8 @@ export function createMipEventsModule(gateway: MipEventsGateway) {
       return gateway.withdrawEventAlbumPhoto(photoId, expectedVersion)
     },
 
-    listMyRegistrations(cursor?: string) {
-      return gateway.listMyRegistrations(cursor)
+    listMyRegistrations(cursor?: string, category?: import('./types').MyRegistrationCategory) {
+      return gateway.listMyRegistrations(cursor, category)
     },
 
     getMyRegistration(eventId: EventId) {
@@ -160,11 +163,27 @@ export function createMipEventsModule(gateway: MipEventsGateway) {
       const outcome = await gateway.cancelRegistration(eventId, expectedVersion)
       feedCache.clear()
       eventCache.delete(String(eventId))
-      return outcome
+      if (!outcome.refundRequired || !outcome.refundId || !outcome.paymentAvailable) {
+        return outcome
+      }
+      try {
+        await options.submitRefund?.(outcome.refundId)
+        return {
+          ...outcome,
+          refundSubmission: options.submitRefund ? 'SUBMITTED' as const : 'PENDING_RETRY' as const,
+        }
+      }
+      catch {
+        return { ...outcome, refundSubmission: 'PENDING_RETRY' as const }
+      }
     },
 
-    checkIn(scanToken: string) {
-      return gateway.checkIn(scanToken.trim(), requestKey('event-checkin'))
+    checkIn(resumeToken: string) {
+      const normalized = resumeToken.trim()
+      if (!/^[\w-]{20,2048}\.[\w-]{43}$/.test(normalized)) {
+        throw new Error('签到恢复凭证无效')
+      }
+      return gateway.checkIn(normalized, requestKey('event-checkin'))
     },
 
     resolveCheckInScene(scene: string) {

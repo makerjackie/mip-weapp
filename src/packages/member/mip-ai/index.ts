@@ -106,6 +106,13 @@ function editorRoute(draft: DraftView) {
   return `${routes[draft.purpose]}?aiDraftId=${encodeURIComponent(draft.id)}`
 }
 
+function recordingDurationText(elapsedSeconds: number) {
+  const hours = Math.floor(elapsedSeconds / 3600)
+  const minutes = Math.floor((elapsedSeconds % 3600) / 60)
+  const seconds = elapsedSeconds % 60
+  return [hours, minutes, seconds].map(value => String(value).padStart(2, '0')).join(':')
+}
+
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
@@ -118,20 +125,31 @@ Page({
     loadingMore: false,
     generating: false,
     recording: false,
+    recordingElapsedText: '00:00:00',
     refining: false,
     activeDraft: null as DraftView | null,
     supplementalText: '',
     message: '',
   },
   voiceRecorder: null as MipVoiceRecorder | null,
+  recordingStartedAt: 0,
+  recordingTimer: null as ReturnType<typeof setInterval> | null,
 
   onLoad() {
     void this.loadDrafts()
   },
 
   onUnload() {
+    this.clearRecordingTimer()
     if (this.data.recording) {
       this.voiceRecorder?.stop()
+    }
+  },
+
+  clearRecordingTimer() {
+    if (this.recordingTimer) {
+      clearInterval(this.recordingTimer)
+      this.recordingTimer = null
     }
   },
 
@@ -225,9 +243,16 @@ Page({
     }
     const recorder = createMipVoiceRecorder()
     this.voiceRecorder = recorder
-    this.setData({ recording: true, message: '' })
+    this.recordingStartedAt = Date.now()
+    this.clearRecordingTimer()
+    this.setData({ recording: true, recordingElapsedText: '00:00:00', message: '' })
+    this.recordingTimer = setInterval(() => {
+      const elapsedSeconds = Math.max(0, Math.floor((Date.now() - this.recordingStartedAt) / 1000))
+      this.setData({ recordingElapsedText: recordingDurationText(elapsedSeconds) })
+    }, 1000)
     recorder.start()
     void recorder.result.then(async (voice) => {
+      this.clearRecordingTimer()
       this.setData({ recording: false, generating: true })
       if (voice.durationMs < 1000) {
         throw new Error('录音时间太短，请重新录制')
@@ -241,8 +266,10 @@ Page({
       this.setData({ drafts: [view, ...this.data.drafts], activeDraft: view, supplementalText: '' })
       wx.showToast({ title: '语音草稿已生成', icon: 'success' })
     }).catch((error) => {
+      this.clearRecordingTimer()
       this.setData({ recording: false, message: error instanceof Error ? error.message : '录音整理失败' })
     }).finally(() => {
+      this.clearRecordingTimer()
       this.voiceRecorder = null
       this.setData({ generating: false })
     })

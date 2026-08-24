@@ -1,7 +1,9 @@
 import type { OrderId } from '../../../modules/mip'
 import type { CommerceOrder, MembershipPlan } from '../../../modules/mip-commerce'
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
+import { mipCheckInResumeStore, mipEventsModule } from '../../../modules/mip-events/client'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
+import { mipMessagingModule } from '../../../modules/mip-messaging/client'
 import { classifyPaymentResult, formatCny, planTitle, presentOrderStatus } from '../../../modules/mip-shell'
 import { caseNavigateTo } from '../../../modules/platform/case-navigation'
 import { formatLocalDate } from '../../../utils/date'
@@ -12,7 +14,9 @@ Page({
     orderId: '' as OrderId | '',
     order: null as CommerceOrder | null,
     isEventOrder: false,
+    isContentOrder: false,
     eventId: '',
+    contentId: '',
     attempts: 0,
     title: '正在确认支付',
     description: '支付调起完成不代表订单已支付，请等待服务端确认。',
@@ -20,6 +24,7 @@ Page({
     planName: '',
     statusText: '',
     membershipEndsText: '',
+    canContinueCheckIn: false,
   },
   pollTimer: undefined as ReturnType<typeof setTimeout> | undefined,
 
@@ -61,7 +66,7 @@ Page({
       if (presentOrderStatus(order.status).paymentPending) {
         order = await mipCommerceModule.reconcile(order.id)
       }
-      this.applyOrder(order, plans)
+      await this.applyOrder(order, plans)
     }
     catch (error) {
       const attempts = this.data.attempts + 1
@@ -82,28 +87,59 @@ Page({
     }
   },
 
-  applyOrder(order: CommerceOrder, plans: readonly MembershipPlan[]) {
+  async applyOrder(order: CommerceOrder, plans: readonly MembershipPlan[]) {
     const classification = classifyPaymentResult(order)
     const isEventOrder = order.orderType === 'EVENT'
+    const isContentOrder = order.orderType === 'CONTENT'
     const base = {
       order,
       isEventOrder,
+      isContentOrder,
       eventId: isEventOrder ? order.resourceId || '' : '',
+      contentId: isContentOrder ? order.resourceId || '' : '',
       amountText: formatCny(order.amountCents),
       planName: planTitle(order, plans),
       statusText: presentOrderStatus(order.status).label,
-      membershipEndsText: isEventOrder ? '' : this.data.membershipEndsText,
+      membershipEndsText: isEventOrder || isContentOrder ? '' : this.data.membershipEndsText,
+      canContinueCheckIn: false,
     }
     if (classification === 'success') {
+      if (isEventOrder) {
+        const registrationReady = await this.eventRegistrationReady(order.resourceId || '')
+        if (!registrationReady) {
+          const attempts = this.data.attempts + 1
+          this.setData({
+            ...base,
+            result: attempts >= 6 ? 'pending' : 'checking',
+            attempts,
+            title: '支付已确认',
+            description: attempts >= 6
+              ? '报名资格仍在同步，请重新查询。资格生效前不能签到。'
+              : '正在等待活动报名资格生效，资格生效前不能签到。',
+          })
+          if (attempts < 6) {
+            this.schedulePoll()
+          }
+          return
+        }
+        this.setData({
+          ...base,
+          result: 'success',
+          title: '报名成功',
+          description: '支付已确认，活动报名资格已生效。',
+          canContinueCheckIn: Boolean(order.resourceId && mipCheckInResumeStore.peek(order.resourceId)),
+        })
+        return
+      }
       this.setData({
         ...base,
         result: 'success',
         title: '支付已确认',
-        description: isEventOrder
-          ? '服务端已确认订单为已支付，活动报名已生效。'
+        description: isContentOrder
+          ? '服务端已确认订单为已支付，内容访问权益已生效。'
           : '服务端已确认订单为已支付，会员权益已生效。',
       })
-      if (!isEventOrder) {
+      if (!isEventOrder && !isContentOrder) {
         void this.loadMembershipEnd()
       }
       return
@@ -117,7 +153,9 @@ Page({
         title: attempts >= 6 ? '支付结果仍在确认' : '正在确认支付',
         description: isEventOrder
           ? '订单尚未达到已支付状态，活动报名尚未生效。'
-          : '订单尚未达到已支付状态，会员权益暂未生效。',
+          : isContentOrder
+            ? '订单尚未达到已支付状态，内容访问权益暂未生效。'
+            : '订单尚未达到已支付状态，会员权益暂未生效。',
       })
       if (attempts < 6) {
         this.schedulePoll()
@@ -139,8 +177,23 @@ Page({
       title: presentOrderStatus(order.status).label,
       description: isEventOrder
         ? '这笔订单未达到已支付状态，活动报名未生效。'
-        : '这笔订单未达到已支付状态，会员权益未生效。',
+        : isContentOrder
+          ? '这笔订单未达到已支付状态，内容访问权益未生效。'
+          : '这笔订单未达到已支付状态，会员权益未生效。',
     })
+  },
+
+  async eventRegistrationReady(eventId: string) {
+    if (!eventId) {
+      return false
+    }
+    try {
+      const registration = await mipEventsModule.getMyRegistration(eventId as import('../../../modules/mip').EventId)
+      return registration !== null && ['REGISTERED', 'ATTENDED'].includes(registration.status)
+    }
+    catch {
+      return false
+    }
   },
 
   schedulePoll() {
@@ -177,5 +230,25 @@ Page({
     })
   },
   openMyEvents() { caseNavigateTo({ url: '/packages/member/mip-events/mine/index' }) },
+  async continueCheckIn() {
+    if (!this.data.eventId || !mipCheckInResumeStore.peek(this.data.eventId)) {
+      this.setData({
+        canContinueCheckIn: false,
+        description: '签到意图已失效，请返回现场重新扫描活动码。',
+      })
+      return
+    }
+    if (mipMessagingModule.subscriptionCapability('CHECKIN_RESULT').available) {
+      await mipMessagingModule.requestWechatSubscription('CHECKIN_RESULT').catch(() => undefined)
+    }
+    caseNavigateTo({
+      url: `/packages/member/mip-events/check-in/index?eventId=${encodeURIComponent(this.data.eventId)}&resumeCheckIn=1`,
+    })
+  },
+  openContent() {
+    if (this.data.contentId) {
+      caseNavigateTo({ url: `/packages/member/mip-knowledge/detail/index?contentId=${encodeURIComponent(this.data.contentId)}` })
+    }
+  },
   openOrder() { caseNavigateTo({ url: `/packages/member/order-detail/index?orderId=${encodeURIComponent(this.data.orderId)}` }) },
 })

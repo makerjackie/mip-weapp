@@ -7,8 +7,8 @@
 
   <view class="mt-4 flex min-h-[96rpx] items-center justify-between rounded-[16rpx] bg-panel px-4" bind:tap="openBenefits"><view><view class="text-[length:26rpx] font-semibold">权益说明</view><view class="mt-1 text-[length:20rpx] text-muted">查看方案权益和使用说明</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-brand)" /></view>
 
-  <view wx:if="{{state === 'loading'}}" class="mt-5 flex flex-col gap-3"><view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view><view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
-  <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="会员方案暂时无法加载" description="请稍后重试。" action-text="重新加载" bind:action="loadPlans" /></view>
+  <view id="mip-membership-loading-state" wx:if="{{state === 'loading'}}" class="mt-5 flex flex-col gap-3"><view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view><view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
+  <view id="mip-membership-error-state" wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="会员方案暂时无法加载" description="请稍后重试。" action-text="重新加载" bind:action="loadPlans" /></view>
   <view wx:elif="{{plans.length === 0}}" class="mt-5"><app-empty-state title="暂无可用会员方案" description="方案启用后会显示在这里。" /></view>
   <view wx:else class="mt-5 flex flex-col gap-3">
     <block wx:for="{{plans}}" wx:key="id">

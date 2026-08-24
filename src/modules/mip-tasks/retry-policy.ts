@@ -5,6 +5,7 @@ const retryableTaskActions = new Set([
   'admin.getSession',
   'admin.getTask',
   'admin.listTasks',
+  'admin.listEligibleLevels',
   'admin.listAssignableMembers',
   'admin.listCompletions',
   'admin.getCompletion',

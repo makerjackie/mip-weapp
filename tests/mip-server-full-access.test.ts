@@ -29,8 +29,8 @@ describe('server full access contract', () => {
   it('deploys one optional current-agreement configuration to every full-access service', () => {
     const source = read('scripts/deploy-functions.mjs')
     expect(source).toContain('const agreementEnvironment = options.agreementsJson')
-    expect(source).toContain('opportunities: agreementEnvironment')
-    expect(source.match(/\.\.\.agreementEnvironment/g)).toHaveLength(3)
+    expect(source).toMatch(/opportunities:\s*\{\s*\.\.\.agreementEnvironment/)
+    expect(source.match(/\.\.\.agreementEnvironment/g)).toHaveLength(4)
     expect(source).toContain('if (parsed.length === 0)')
   })
 

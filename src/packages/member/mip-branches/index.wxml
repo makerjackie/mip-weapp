@@ -2,7 +2,9 @@
   <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-8">
     <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
-  <app-empty-state wx:elif="{{state === 'empty'}}" title="暂无城市分会" description="城市分会配置后会显示在这里。" />
+  <view id="mip-branches-empty-state" wx:elif="{{state === 'empty'}}">
+    <app-empty-state title="暂无城市分会" description="城市分会配置后会显示在这里。" />
+  </view>
   <app-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载" description="城市分会服务暂时没有响应。" action-text="重新加载" bind:action="loadBranches" />
   <block wx:else>
     <view class="text-[length:38rpx] font-bold">城市分会</view>
