@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
   "routeCount": 64,
@@ -99,6 +99,71 @@
     "phone_number",
     "phonenumber",
     "ticket_code"
+  ],
+  "representativeStates": [
+    {
+      "id": "loading",
+      "route": "pages/membership/index",
+      "patch": { "state": "loading" },
+      "dataAssertions": [{ "path": "state", "equals": "loading" }],
+      "visibleAssertion": { "selector": "#mip-membership-page t-skeleton" }
+    },
+    {
+      "id": "empty",
+      "route": "packages/member/mip-branches/index",
+      "patch": { "state": "empty", "branches": [] },
+      "dataAssertions": [
+        { "path": "state", "equals": "empty" },
+        { "path": "branches.length", "equals": 0 }
+      ],
+      "visibleAssertion": { "selector": "#mip-branches-page", "text": "暂无城市分会" }
+    },
+    {
+      "id": "error",
+      "route": "pages/membership/index",
+      "patch": { "state": "error", "message": "暂时无法加载" },
+      "dataAssertions": [{ "path": "state", "equals": "error" }],
+      "visibleAssertion": { "selector": "#mip-membership-page", "text": "会员方案暂时无法加载" }
+    },
+    {
+      "id": "forbidden",
+      "route": "packages/admin/dashboard/index",
+      "patch": { "state": "forbidden", "message": "" },
+      "dataAssertions": [{ "path": "state", "equals": "forbidden" }],
+      "visibleAssertion": { "selector": "#admin-dashboard-page", "text": "没有运营权限" }
+    },
+    {
+      "id": "conflict",
+      "route": "packages/admin/events/index",
+      "patch": {
+        "state": "ready",
+        "conflict": true,
+        "cancelConflict": false,
+        "message": "活动信息已更新"
+      },
+      "dataAssertions": [
+        { "path": "state", "equals": "ready" },
+        { "path": "conflict", "equals": true }
+      ],
+      "visibleAssertion": { "selector": "#admin-events-page", "text": "活动信息已更新" }
+    },
+    {
+      "id": "disabled",
+      "route": "packages/member/mip-ai/index",
+      "patch": {
+        "state": "ready",
+        "capability": { "textDrafts": false, "voiceDrafts": false },
+        "drafts": [],
+        "recording": false,
+        "generating": false
+      },
+      "dataAssertions": [
+        { "path": "state", "equals": "ready" },
+        { "path": "capability.textDrafts", "equals": false },
+        { "path": "capability.voiceDrafts", "equals": false }
+      ],
+      "visibleAssertion": { "selector": "#mip-ai-page", "text": "AI 整理当前不可用" }
+    }
   ],
   "routes": [
     {

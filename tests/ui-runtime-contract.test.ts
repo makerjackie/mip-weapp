@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { parseReadyAssertion } from '../scripts/lib/runtime-ready-assertion.mjs'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -39,6 +40,13 @@ interface RuntimePagesContract {
     reason: string
   }>
   sensitivePatterns: string[]
+  representativeStates: Array<{
+    id: string
+    route: string
+    patch: Record<string, unknown>
+    dataAssertions: Array<{ path: string, equals: unknown }>
+    visibleAssertion: { selector: string, text?: string }
+  }>
   routes: RuntimeRoute[]
 }
 
@@ -84,7 +92,7 @@ describe('mip-weapp UI runtime contract', () => {
   const contractRoutes = contract.routes.map(route => route.path)
 
   it('declares the complete active MIP route inventory without a stale fixed count', () => {
-    expect(contract.schemaVersion).toBe(1)
+    expect(contract.schemaVersion).toBe(2)
     expect(contract.case).toBe('mip-weapp')
     expect(contract.routeCount).toBe(contract.routes.length)
     expect(contract.routeCount).toBe(appRoutes.length)
@@ -132,6 +140,7 @@ describe('mip-weapp UI runtime contract', () => {
   it('declares settled states without accepting failures as success', () => {
     const rejectedStates = ['loading', 'error', 'forbidden', 'conflict', 'expired', 'disabled']
     for (const route of contract.routes) {
+      expect(() => parseReadyAssertion(route.readyAssertion, route.path)).not.toThrow()
       if (route.kind === 'result') {
         const accepted = route.acceptStates ?? route.states.filter(state => !rejectedStates.includes(state))
         expect(accepted.length, `${route.path} has no result state`).toBeGreaterThan(0)
@@ -182,6 +191,7 @@ describe('mip-weapp UI runtime contract', () => {
     expect(verifyRuntime).toContain('safe-placeholder-uuid')
     expect(verifyRuntime).toContain('assertNoSensitivePageData')
     expect(verifyRuntime).toContain('evaluateRouteState')
+    expect(verifyRuntime).toContain('assertReadyAssertion')
     expect(verifyRuntime).not.toContain('pageCaseDetails')
     expect(verifyRuntime).not.toMatch(/routeCount\s*===\s*\d+/)
   })
@@ -198,9 +208,26 @@ describe('mip-weapp UI runtime contract', () => {
     expect(verifyRuntime).toContain('navigateBack')
     expect(verifyRuntime).toContain('deepLink')
     expect(verifyRuntime).toContain('verifyRepresentativeStates')
-    for (const state of ['loading', 'empty', 'error', 'forbidden', 'conflict', 'disabled']) {
-      expect(verifyRuntime).toContain(`id: '${state}'`)
+    expect(contract.representativeStates.map(state => state.id).sort()).toEqual([
+      'conflict',
+      'disabled',
+      'empty',
+      'error',
+      'forbidden',
+      'loading',
+    ])
+    const routeByPath = new Map(contract.routes.map(route => [route.path, route]))
+    for (const state of contract.representativeStates) {
+      const route = routeByPath.get(state.route)
+      expect(route, `${state.id} references an inactive route`).toBeTruthy()
+      expect(state.dataAssertions.length).toBeGreaterThan(0)
+      expect(state.visibleAssertion.selector.startsWith(route!.selector)).toBe(true)
+      if (state.visibleAssertion.text) {
+        expect(read(`src/${state.route}.wxml`)).toContain(state.visibleAssertion.text)
+      }
     }
+    expect(verifyRuntime).toContain('assertRepresentativeVisible')
+    expect(verifyRuntime).toContain('visibleAssertion')
   })
 
   it('keeps real-device capabilities explicit and unresolved by DevTools', () => {

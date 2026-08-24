@@ -25,6 +25,7 @@ import {
   sanitizeRuntimeValue,
 } from './lib/runtime-observability.mjs'
 import { assertRuntimePreflight } from './lib/runtime-preflight.mjs'
+import { assertReadyAssertion, parseReadyAssertion } from './lib/runtime-ready-assertion.mjs'
 import { comparePngBuffers } from './lib/visual-diff.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
@@ -57,6 +58,20 @@ function selectorId(selector) {
   return selector.slice(1)
 }
 
+function pathValue(value, keyPath) {
+  return keyPath.split('.').reduce((current, key) => current?.[key], value)
+}
+
+function assertRepresentativeData(data, scenario) {
+  for (const assertion of scenario.dataAssertions) {
+    const value = pathValue(data, assertion.path)
+    assert(
+      Object.is(value, assertion.equals),
+      `Representative ${scenario.id} expected ${assertion.path}=${JSON.stringify(assertion.equals)}, received ${JSON.stringify(value)}`,
+    )
+  }
+}
+
 function acceptedStates(route) {
   if (Array.isArray(route.acceptStates) && route.acceptStates.length > 0) {
     return route.acceptStates
@@ -68,7 +83,7 @@ function acceptedStates(route) {
 }
 
 function validateRuntimeContract(runtimePages) {
-  assert(runtimePages?.schemaVersion === 1, 'runtime-pages.json schemaVersion must be 1')
+  assert(runtimePages?.schemaVersion === 2, 'runtime-pages.json schemaVersion must be 2')
   assert(runtimePages.case === 'mip-weapp', 'runtime-pages.json must describe mip-weapp')
   assert(Array.isArray(runtimePages.routes), 'runtime-pages.json routes[] is required')
   assert(
@@ -88,6 +103,7 @@ function validateRuntimeContract(runtimePages) {
     assert(!seenIds.has(route.id), `Duplicate runtime route id: ${route.id}`)
     seenPaths.add(route.path)
     seenIds.add(route.id)
+    parseReadyAssertion(route.readyAssertion, route.path)
     const id = selectorId(route.selector)
     const wxmlPath = path.join(root, 'src', `${route.path}.wxml`)
     assert(fs.existsSync(wxmlPath), `Runtime route is missing WXML: ${route.path}`)
@@ -131,6 +147,31 @@ function validateRuntimeContract(runtimePages) {
     assert(declaredStates.has(state), `Runtime contract has no representative ${state} state`)
   }
   assert(hasDisabledControl, 'Runtime routes do not expose a representative disabled control')
+
+  const representativeStates = runtimePages.representativeStates
+  assert(Array.isArray(representativeStates), 'runtime-pages.json representativeStates[] is required')
+  assert(
+    JSON.stringify(representativeStates.map(scenario => scenario.id).sort())
+    === JSON.stringify(['conflict', 'disabled', 'empty', 'error', 'forbidden', 'loading']),
+    'Runtime contract must define loading, empty, error, forbidden, conflict, and disabled evidence',
+  )
+  for (const scenario of representativeStates) {
+    const route = runtimePages.routes.find(candidate => candidate.path === scenario.route)
+    assert(route, `Representative ${scenario.id} route is missing: ${scenario.route}`)
+    assert(scenario.patch && typeof scenario.patch === 'object' && !Array.isArray(scenario.patch), `Representative ${scenario.id} patch is required`)
+    assert(Array.isArray(scenario.dataAssertions) && scenario.dataAssertions.length > 0, `Representative ${scenario.id} dataAssertions[] is required`)
+    for (const dataAssertion of scenario.dataAssertions) {
+      assert(/^[a-z]\w*(?:\.[a-z]\w*)*$/i.test(dataAssertion?.path || ''), `Representative ${scenario.id} has an invalid data path`)
+      assert(Object.hasOwn(dataAssertion || {}, 'equals'), `Representative ${scenario.id} data assertion needs equals`)
+    }
+    const visible = scenario.visibleAssertion
+    assert(typeof visible?.selector === 'string' && visible.selector.startsWith(route.selector), `Representative ${scenario.id} visible selector must be scoped to ${route.selector}`)
+    if (Object.hasOwn(visible, 'text')) {
+      assert(typeof visible.text === 'string' && visible.text.trim(), `Representative ${scenario.id} visible text must be non-empty`)
+      const wxml = fs.readFileSync(path.join(root, 'src', `${route.path}.wxml`), 'utf8')
+      assert(wxml.includes(visible.text), `Representative ${scenario.id} text is missing from ${route.path}`)
+    }
+  }
 }
 
 function queryForRoute(route) {
@@ -210,11 +251,21 @@ function assertNoSensitivePageData(data, route, sensitivePatterns) {
   )
 }
 
-function evaluateRouteState(route, data) {
+export function evaluateRouteState(route, data) {
   const state = data?.state ?? data?.result
   const accepted = acceptedStates(route)
   if (accepted.includes(state)) {
-    return { status: 'passed', state }
+    try {
+      assertReadyAssertion(data, route.readyAssertion, route.path)
+      return { status: 'passed', state }
+    }
+    catch (error) {
+      return {
+        status: 'failed',
+        state,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
   }
   if (failedStates.has(state)) {
     return {
@@ -461,57 +512,12 @@ function writeArtifacts(report, diagnostics) {
 
 function representativeStateScenarios(runtimePages) {
   const routes = new Map(runtimePages.routes.map(route => [route.path, route]))
-  const definitions = [
-    {
-      id: 'loading',
-      route: 'pages/membership/index',
-      patch: { state: 'loading' },
-      verify: data => data.state === 'loading',
-    },
-    {
-      id: 'empty',
-      route: 'packages/member/mip-branches/index',
-      patch: { state: 'empty', branches: [] },
-      verify: data => data.state === 'empty' && Array.isArray(data.branches) && data.branches.length === 0,
-    },
-    {
-      id: 'error',
-      route: 'pages/membership/index',
-      patch: { state: 'error', message: '暂时无法加载' },
-      verify: data => data.state === 'error',
-    },
-    {
-      id: 'forbidden',
-      route: 'packages/admin/dashboard/index',
-      patch: { state: 'forbidden', message: '' },
-      verify: data => data.state === 'forbidden',
-    },
-    {
-      id: 'conflict',
-      route: 'packages/admin/events/index',
-      patch: { state: 'ready', conflict: true, cancelConflict: false, message: '活动信息已更新' },
-      verify: data => data.state === 'ready' && data.conflict === true,
-    },
-    {
-      id: 'disabled',
-      route: 'packages/member/mip-ai/index',
-      patch: {
-        state: 'ready',
-        capability: { textDrafts: false, voiceDrafts: false },
-        drafts: [],
-        recording: false,
-        generating: false,
-      },
-      verify: data => data.state === 'ready'
-        && data.capability?.textDrafts === false
-        && data.capability?.voiceDrafts === false,
-    },
-  ]
-  for (const scenario of definitions) {
+  const scenarios = runtimePages.representativeStates.map(scenario => ({ ...scenario }))
+  for (const scenario of scenarios) {
     assert(routes.has(scenario.route), `Representative ${scenario.id} route is missing: ${scenario.route}`)
     scenario.contract = routes.get(scenario.route)
   }
-  return definitions
+  return scenarios
 }
 
 async function forceRepresentativeState(page, scenario) {
@@ -519,11 +525,28 @@ async function forceRepresentativeState(page, scenario) {
     await retry(`set representative ${scenario.id}`, () => page.setData(scenario.patch))
     await new Promise(resolve => setTimeout(resolve, 120))
     const data = await retry(`read representative ${scenario.id}`, () => page.data())
-    if (scenario.verify(data)) {
+    try {
+      assertRepresentativeData(data, scenario)
       return data
+    }
+    catch {
+      // Lifecycle callbacks may briefly overwrite an injected state; retry before failing the evidence check.
     }
   }
   throw new Error(`Representative ${scenario.id} state did not remain active long enough to verify`)
+}
+
+async function assertRepresentativeVisible(page, scenario) {
+  await retry(
+    `wait representative ${scenario.id} selector`,
+    () => page.waitForRendered({ selector: scenario.visibleAssertion.selector, timeout: 5000 }),
+  )
+  if (scenario.visibleAssertion.text) {
+    await retry(
+      `wait representative ${scenario.id} text`,
+      () => page.waitForRendered({ text: scenario.visibleAssertion.text, timeout: 5000 }),
+    )
+  }
 }
 
 async function verifyRepresentativeStates(miniProgram, runtimePages, report, sensitivePatterns) {
@@ -536,11 +559,18 @@ async function verifyRepresentativeStates(miniProgram, runtimePages, report, sen
     )
     const data = await forceRepresentativeState(page, scenario)
     assertNoSensitivePageData(data, scenario.route, sensitivePatterns)
+    await assertRepresentativeVisible(page, scenario)
     const screenshotPath = path.join(outputDir, `state-${scenario.id}.png`)
     await captureScreenshot(`state-${scenario.id}`, miniProgram, screenshotPath)
     const sizeBytes = fs.statSync(screenshotPath).size
     assert(sizeBytes >= 4 * 1024, `Representative ${scenario.id} screenshot is suspiciously small`)
-    report.representativeStates.push({ id: scenario.id, route: scenario.route, status: 'passed', sizeBytes })
+    report.representativeStates.push({
+      id: scenario.id,
+      route: scenario.route,
+      status: 'passed',
+      sizeBytes,
+      visibleAssertion: scenario.visibleAssertion,
+    })
     console.log(`PASS  state:${scenario.id}  ${scenario.route}`)
   }
 }
