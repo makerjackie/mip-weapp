@@ -41,7 +41,7 @@
 | `mip_event_hearts` / `mip_event_feedback` | 已签到用户的心动选择和活动反馈 | events 事务 |
 | `mip_event_album_photos` | 活动照片的提交者、素材引用、审核/撤回状态和版本 | events 提交/撤回；受 capability 约束的 admin 审核 |
 | `mip_opportunities` / `mip_opportunity_roles` / `mip_opportunity_tags` | 机会、角色和标签关系；草稿只能由平台级 capability 软归档 | `mip-opportunities-api` / `mip-admin-api` |
-| `mip_referral_intents` / `mip_profile_interests` | 引荐意向和用户感兴趣关系 | `mip-opportunities-api` |
+| `mip_referral_intents` / `mip_profile_interests` | 发起人、被引荐人、机会之间的引荐关系和用户感兴趣关系 | `mip-opportunities-api` |
 | `mip_user_blocks` / `mip_reports` | 主动屏蔽关系、幂等举报和审核状态 | `mip-community-api`；审核由受 capability 约束的管理事务处理 |
 | `mip_announcements` | 平台/分会公告、展示窗口、内容安全和关联内容 | `mip-admin-api` 写入；`mip-community-api` 只读公开内容 |
 | `mip_cooperation_cards` | 六种合作角色的结构化合作卡 | `mip-opportunities-api` |
@@ -86,6 +86,7 @@
 ## 隐私、缓存和内部权限
 
 - 普通 DTO 永不返回数据库连接串、内部 HMAC、商户密钥、他人 OpenID、完整票据或 provider 原始错误。
+- 引荐的 `actor_user_id` 和 `target_user_id` 只用于服务端关系事实。选择目标、引荐列表和详情均使用 AppID 绑定的 opaque `profileRef`，普通 DTO 不返回内部用户 ID。
 - 社区安全客户端只提交 AppID 绑定的 `profileRef`；不接收或返回目标用户 ID、OpenID。任一方向存在 `ACTIVE` 屏蔽时，已识别用户不能读取对方公开档案或在受支持的公共列表中看到对方；举报不通知目标，也不自动处罚。
 - 账号注销以确认短语、`mip_users.version` 和幂等请求为边界；未结支付/退款/活动退款会阻塞。成功后关闭账号、撤销活动外公开/互动状态并最小化直接资料，但保留订单、支付、退款、权益、活动、成长流水与审计事实。完整表清单见 [ACCOUNT_CLOSURE.md](ACCOUNT_CLOSURE.md)。
 - 页面、组件和业务模块不直连 MySQL/CloudBase 数据库；通过 `src/modules/mip-*` 和 platform adapter 调用函数。

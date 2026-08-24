@@ -66,7 +66,7 @@ pnpm project:init --name "新产品名" --namespace mip
 ## 上线
 
 1. 完成仓库外逻辑备份后执行 `pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --backup-manifest=/absolute/path/to/manifest.json`
-2. 运行 `pnpm project:init` 生成环境专属 runtime 用户，从本地 `.env.local` 读取其精确值，再执行 `pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<exact-user>`
+2. 在 `.env.local` 明确设置 `MIP_DEPLOYMENT_STAGE=development|test|staging|production`，运行 `pnpm project:init` 生成环境专属 runtime 用户，再执行 `pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<exact-user>`；production 必须追加 `--confirm-production`
 3. 配置支付并执行 `pnpm cloud:deploy-payment -- --confirm-env=<EnvID> --confirm-function=mip-cloudpay --confirm-callback=mip-cloudpay-callback --confirm-refund=mip-refund-worker`；`MIP_PAYMENT_MODE=live` 时追加 `--confirm-live`
 4. 执行 `pnpm admin:bootstrap -- --confirm-env=<EnvID> --confirm-owner` 配置首个 owner
 5. 仅在 development/test 环境需要演示数据时执行 `pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo`

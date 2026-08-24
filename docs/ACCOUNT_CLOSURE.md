@@ -24,7 +24,7 @@
 | `mip_branch_memberships` | 当前有效归属改为 `INACTIVE` |
 | `mip_admin_role_bindings` | 所有有效角色改为 `REVOKED` |
 | `mip_opportunities` / `mip_cooperation_cards` / `mip_super_cases` | 当前已发布内容改为 `UNPUBLISHED`；草稿和历史版本保留但不公开 |
-| `mip_referral_intents` / `mip_profile_interests` | 用户发起或指向用户/其机会的有效互动改为 `CANCELLED`；同步收敛机会的引荐计数 |
+| `mip_referral_intents` / `mip_profile_interests` | 用户发起、被引荐或指向用户/其机会的有效互动改为 `CANCELLED`；同步收敛机会的引荐计数 |
 | `mip_user_blocks` | 用户主动发起的有效屏蔽改为 `INACTIVE`；他人主动屏蔽该用户的事实保留 |
 | `mip_notification_grants` / `mip_delivery_tasks` | 将 `AVAILABLE` / `RESERVED` 授权改为 `REVOKED`，清空 reservation 与收件凭据并取消未完成外部投递 |
 | `mip_admin_export_tickets` | 未消费导出票据改为 `REVOKED` |

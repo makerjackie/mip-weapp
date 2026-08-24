@@ -2,6 +2,18 @@
 
 MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存储和运行时账号上建立独立边界。真实 AppID、EnvID、MySQL URI、商户凭证和内部密钥只放本机 `.env.local` 或 Cloud Function 环境变量，不进入仓库。
 
+## 当前云端事实（2026-08-24）
+
+| 范围 | 当前事实 | 结论 |
+| --- | --- | --- |
+| 数据库 | `database/mysql/mip/migrations.lock.json` 锁定的 23 个 `mip_*` 迁移已在当前共享数据库成功应用 | 云端已验证；迁移版本和对象清单已核对 |
+| 数据隔离 | 迁移后隔离检查通过，MIP 变更只落在 `mip_*` 对象和 `mip_schema_migrations` | 云端已验证；没有把旧项目表当作 MIP 事实 |
+| 开发者工具 | 已登录当前项目并能看到云函数列表 | 只证明控制台可见性，不证明函数配置或健康 |
+| 核心函数 | 云端已存在一个空的 `mip-identity-api` 函数壳 | `external-wait`；尚未写入目标 VPC、子网、运行时环境变量和仓库代码，MySQL 健康检查未通过 |
+| 完整核心套件 | 13 个核心函数的完整部署与验收未完成 | `external-wait` |
+
+当前 `CLOUDBASE_API_KEY` 可以完成环境和 MySQL 操作，但没有 `scf:CreateFunction`、`scf:UpdateFunctionConfiguration` 以及目标 VPC/子网相关权限。`managePermissions` 只能读写 CloudBase 资源安全规则，不能给当前身份追加 CAM 策略或代替主账号执行 `cam:PassRole`，因此不能用它修复这个阻塞。
+
 ## 部署清单
 
 普通业务部署固定为 13 个核心函数：
@@ -54,7 +66,7 @@ AI 语音 TTL 不使用定时触发器。无人访问的过期或终态草稿通
 
 ## 环境与授权
 
-EnvID 只写项目根目录 `.env.local` 的 `CLOUDBASE_ENV_ID`。CloudBase MCP 统一从 `config/mcporter.json` 启动，优先使用环境级 `CLOUDBASE_API_KEY`，不要使用前端 `publish_key`。
+EnvID 只写项目根目录 `.env.local` 的 `CLOUDBASE_ENV_ID`。同一文件必须明确配置 `MIP_DEPLOYMENT_STAGE=development|test|staging|production`；核心函数部署会把该值注入存储和签到环境，不能自行改写。production 部署必须额外传入 `--confirm-production`。CloudBase MCP 统一从 `config/mcporter.json` 启动，优先使用环境级 `CLOUDBASE_API_KEY`，不要使用前端 `publish_key`。
 
 ```bash
 pnpm cloud:status
@@ -64,7 +76,45 @@ pnpm project:init
 pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<.env.local 中的 MIP_DB_RUNTIME_USER>
 ```
 
-有 API Key 时 `pnpm cloud:status` 应为 `READY`，不需要扫码；没有 API Key 时才运行一次 `pnpm cloud:auth`。部署必须同时明确 `--confirm-env=<精确 EnvID>` 和环境专属 runtime 账号，不会自动授权、切换环境或处理其他项目的数据库账号。
+有 API Key 时 `pnpm cloud:status` 应为 `READY`；`READY` 只表示凭证和环境绑定可用，不表示该身份拥有 SCF、VPC 或 `PassRole` 权限。没有 API Key 时才运行一次 `pnpm cloud:auth`。部署必须同时明确 `--confirm-env=<精确 EnvID>` 和环境专属 runtime 账号；当 `MIP_DEPLOYMENT_STAGE=production` 时命令还必须追加 `--confirm-production`。脚本不会自动授权、切换环境或处理其他项目的数据库账号。
+
+## 当前部署阻塞与最小人工动作
+
+选择以下任一方式即可继续，不需要改代码或重建数据库：
+
+1. 推荐：由腾讯云主账号在 CloudBase 控制台完成扫码登录/服务授权，确认 `TCB_QcsRole` 已存在且允许 CloudBase/SCF 使用目标 VPC 和子网；然后重新运行部署脚本。
+2. 自动化：提供一个只用于当前环境和 `mip-*` 函数的专用 CAM 部署身份。不要提供主账号长期密钥，也不要授予 `cam:*`、`scf:*` 或 `vpc:*` 的无限范围策略。
+
+专用 CAM 身份必须包含部署脚本实际使用的完整 action 集：
+
+| 服务 | 必需 actions | 用途 |
+| --- | --- | --- |
+| SCF | `scf:GetFunction`、`scf:CreateFunction`、`scf:UpdateFunctionCode`、`scf:UpdateFunctionConfiguration`、`scf:InvokeFunction`、`scf:ListTriggers`、`scf:DeleteTrigger` | 创建/更新代码和配置、读取回写、健康检查、确认禁用高频 timer |
+| CloudBase | `tcb:DescribeEnvs`、`tcb:DescribeResourcePermission`、`tcb:ModifyResourcePermission` | 绑定目标环境并收敛、回读函数的客户端调用规则 |
+| VPC | `vpc:DescribeVpcs`、`vpc:DescribeSubnets` | 读取并校验函数要绑定的目标 VPC 和子网 |
+| CAM | `cam:GetRole`、`cam:ListAttachedRolePolicies`、`cam:PassRole` | 读取角色及其关联策略，并把 CloudBase 服务角色精确传递给 SCF |
+
+只有显式使用 `--replace-legacy-runtime` 重建不兼容的现有 `mip-*` 函数时，才额外需要 `scf:DeleteFunction`；正常部署不需要。当前部署身份还要保留已经验证可用的目标环境查询和 MySQL 查询/执行能力，不能为了部署函数撤销数据库迁移与运行时账号收敛所需权限。
+
+`cam:PassRole` 必须只指向 CloudBase 服务角色，不能写成 `*`：
+
+```json
+{
+  "effect": "allow",
+  "action": ["cam:PassRole"],
+  "resource": ["qcs::cam::uin/${OwnerUin}:roleName/TCB_QcsRole"]
+}
+```
+
+`${OwnerUin}` 由主账号在 CAM 控制台填入；仓库和沟通记录不得保存真实 UIN。SCF actions 只授权当前地域、当前 CloudBase namespace 下的 `mip-*` 函数；VPC actions 按 CAM 对对应 action 支持的最小资源范围授权，不授予 `vpc:*`。授权完成后，从脚本重新覆盖空函数壳并验收，不在控制台手工补环境变量：
+
+```bash
+pnpm cloud:status
+pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<exact-runtime-user>
+pnpm cloud:verify -- --confirm-env=<EnvID>
+```
+
+只有 `cloud:deploy` 完成全部函数的代码、VPC、环境变量、调用规则和 timer 收敛，且 `cloud:verify` 证明每个核心函数为 Active、Nodejs20.19、使用专用 runtime MySQL 账号并通过健康检查后，才能把正式运行时从 `external-wait` 改为已验收。
 
 ## 未来迁移
 
