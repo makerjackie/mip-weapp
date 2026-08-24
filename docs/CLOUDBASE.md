@@ -10,9 +10,9 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 | 数据隔离 | 迁移后隔离检查通过，MIP 变更只落在 `mip_*` 对象和 `mip_schema_migrations` | 云端已验证；没有把旧项目表当作 MIP 事实 |
 | 开发者工具 | 已登录当前项目并能看到云函数列表 | 只证明控制台可见性，不证明函数配置或健康 |
 | 核心函数 | 云端已存在一个空的 `mip-identity-api` 函数壳 | `external-wait`；尚未写入目标 VPC、子网、运行时环境变量和仓库代码，MySQL 健康检查未通过 |
-| 完整核心套件 | 13 个核心函数的完整部署与验收未完成 | `external-wait` |
+| 完整核心套件 | 13 个核心函数的完整部署与验收未完成；2026-08-24 本地登录恢复后重试仍被 CAM 拒绝 | `external-wait` |
 
-当前 `CLOUDBASE_API_KEY` 可以完成环境和 MySQL 操作，但没有 `scf:CreateFunction`、`scf:UpdateFunctionConfiguration` 以及目标 VPC/子网相关权限。`managePermissions` 只能读写 CloudBase 资源安全规则，不能给当前身份追加 CAM 策略或代替主账号执行 `cam:PassRole`，因此不能用它修复这个阻塞。
+当前 `CLOUDBASE_API_KEY` 可以完成环境和 MySQL 操作；已恢复的本地 CloudBase 登录也能绑定环境，但两种部署身份都没有完整的 `scf:CreateFunction`、`scf:UpdateFunctionConfiguration` 以及目标 VPC/子网相关权限。`managePermissions` 只能读写 CloudBase 资源安全规则，不能给当前身份追加 CAM 策略或代替主账号执行 `cam:PassRole`，因此不能用它修复这个阻塞。
 
 ## 部署清单
 
@@ -82,7 +82,7 @@ pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<.env.local �
 
 选择以下任一方式即可继续，不需要改代码或重建数据库：
 
-1. 推荐：由腾讯云主账号在 CloudBase 控制台完成扫码登录/服务授权，确认 `TCB_QcsRole` 已存在且允许 CloudBase/SCF 使用目标 VPC 和子网；然后重新运行部署脚本。
+1. 推荐：由腾讯云主账号在 CAM/CloudBase 控制台完成服务授权，确认 `TCB_QcsRole` 已存在且允许 CloudBase/SCF 使用目标 VPC 和子网；本地登录已经恢复，不需要重复扫码。
 2. 自动化：提供一个只用于当前环境和 `mip-*` 函数的专用 CAM 部署身份。不要提供主账号长期密钥，也不要授予 `cam:*`、`scf:*` 或 `vpc:*` 的无限范围策略。
 
 专用 CAM 身份必须包含部署脚本实际使用的完整 action 集：

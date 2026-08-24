@@ -5,9 +5,9 @@
 - 23 个锁定的 `mip_*` 迁移已成功应用，迁移版本、表清单和数据库隔离检查通过；当前数据库步骤不再是部署阻塞。
 - 微信开发者工具已登录并能看到函数列表，但这只证明控制台登录和可见性。
 - 云端已创建空的 `mip-identity-api` 函数壳；它没有完成目标 VPC/子网、运行时环境变量、仓库代码和 MySQL 健康检查，不能算作已部署函数。
-- 当前 `CLOUDBASE_API_KEY` 缺少 `scf:CreateFunction`、`scf:UpdateFunctionConfiguration` 以及目标 VPC/子网权限；`managePermissions` 不能修改 CAM。13 个核心函数及正式运行时仍为 `external-wait`。
+- 当前 `CLOUDBASE_API_KEY` 与 2026-08-24 已恢复的本地 CloudBase 登录都缺少完整的 `scf:CreateFunction`、`scf:UpdateFunctionConfiguration` 以及目标 VPC/子网权限；`managePermissions` 不能修改 CAM。13 个核心函数及正式运行时仍为 `external-wait`。
 
-继续部署前只需要一次人工授权：主账号在 CloudBase 控制台扫码完成服务授权，或提供限定到当前环境、`mip-*` 函数和目标网络的专用 CAM 部署身份。完整 action 与精确 `TCB_QcsRole` `PassRole` 范围见 [CLOUDBASE.md](CLOUDBASE.md#当前部署阻塞与最小人工动作)。不要提供主账号长期密钥，也不要把真实 AppID、EnvID、VPC、子网、UIN、runtime 用户或 secret 写入文档。
+继续部署前只需要一次权限调整：主账号在 CAM/CloudBase 控制台补齐目标 SCF、VPC 和 `TCB_QcsRole` 服务授权，或提供限定到当前环境、`mip-*` 函数和目标网络的专用 CAM 部署身份。完整 action 与精确 `TCB_QcsRole` `PassRole` 范围见 [CLOUDBASE.md](CLOUDBASE.md#当前部署阻塞与最小人工动作)。不要提供主账号长期密钥，也不要把真实 AppID、EnvID、VPC、子网、UIN、runtime 用户或 secret 写入文档。
 
 从临时 AppID 切换到正式 MIP AppID 时，先准备空的新 CloudBase/MySQL 环境，再执行 [AppID 身份迁移](IDENTITY_MIGRATION.md) 中的备份、应用范围复制和身份衔接流程。当前 schema 不支持在同一个数据库中保留旧 AppID 数据并复制同主键的新 AppID 副本。正常开发与部署保持 `MIP_UNION_ID_REBIND_ENABLED=false`。
 
