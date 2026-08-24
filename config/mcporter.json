@@ -4,7 +4,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "@cloudbase/cloudbase-mcp@2.23.11"
+        "@cloudbase/cloudbase-mcp@2.32.0"
       ],
       "description": "Canonical project CloudBase MCP for scripts and agent automation",
       "lifecycle": "keep-alive"

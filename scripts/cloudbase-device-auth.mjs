@@ -4,7 +4,9 @@ import path from 'node:path'
 import process from 'node:process'
 
 const args = process.argv.slice(2)
-if (args.length !== 1 || args[0] !== '--allow-device-auth') {
+const approved = (args.length === 1 && args[0] === '--allow-device-auth')
+  || (args.length === 2 && args[0] === '--' && args[1] === '--allow-device-auth')
+if (!approved) {
   console.error('[cloudbase-mcp] Device authorization is maintainer-only. Re-run with exactly --allow-device-auth to continue.')
   process.exit(1)
 }

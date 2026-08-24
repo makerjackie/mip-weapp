@@ -45,7 +45,11 @@
 
 ## 8. CloudBase
 
-唯一通道 `config/mcporter.json`。CloudBase 管理命令必须在 `.env.local` 配置环境级 `CLOUDBASE_API_KEY` 与 `CLOUDBASE_ENV_ID`；`pnpm cloud:status` 和 `pnpm cloud:auth` 都只验证并加载 API Key，不发起设备码。维护者应急设备授权只能显式运行 `pnpm cloud:auth:device -- --allow-device-auth`。
+唯一通道 `config/mcporter.json`。默认使用 `.env.local` 中的环境级 `CLOUDBASE_API_KEY` 与 `CLOUDBASE_ENV_ID`；`pnpm cloud:status` 和 `pnpm cloud:auth` 只验证并加载 API Key，不发起设备码。
+
+API Key 是日常通道，Device Flow 是部署高权限通道。只有创建、更新云函数等 SCF 控制面操作被 API Key 拒绝时，维护者才显式运行 `pnpm cloud:auth:device -- --allow-device-auth`，并以 `CLOUDBASE_AUTH_MODE=local` 执行该次部署。Device Flow 登录保存在本机并支持刷新，通常不需要每次部署重新授权；凭证过期、被撤销、主动退出、清理本机凭证或更换电脑/系统用户时才重新授权。
+
+其他人使用本仓库时必须配置自己的 CloudBase 环境 ID 和 API Key；需要部署云函数时使用其有权访问目标环境的腾讯云账号完成 Device Flow。不得复制、提交或共享维护者的 API Key、Device Flow 登录文件或本机凭证。
 
 不要给会访问 MySQL 的云函数挂高频定时触发器（例如每 5 分钟）。Serverless MySQL 大约空闲 10–30 分钟才会暂停；定时任务会一直把实例唤醒，按 CCU（核·小时）消耗资源点，个人版额度很快会被打满。通知 worker 只保留函数，默认不安装定时器。
 

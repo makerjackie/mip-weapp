@@ -72,7 +72,8 @@ export function requireCloudbaseManagementEnv(projectRoot, env = process.env) {
 }
 
 export function hasExplicitDeviceAuthApproval(args = []) {
-  return args.length === 1 && args[0] === '--allow-device-auth'
+  return (args.length === 1 && args[0] === '--allow-device-auth')
+    || (args.length === 2 && args[0] === '--' && args[1] === '--allow-device-auth')
 }
 
 export function applyCloudbaseManagementEnv(projectRoot, env = process.env) {

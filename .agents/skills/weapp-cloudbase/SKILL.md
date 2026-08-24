@@ -22,14 +22,14 @@ description: Use for CloudBase env, membership cloud functions, MySQL, or MCP au
 ## Steps
 
 1. 没有 EnvID 时保持 disabled，UI 显示会员服务尚未配置。
-2. 管理授权必须使用环境级 `CLOUDBASE_API_KEY`（不要用前端 publish_key），与 `CLOUDBASE_ENV_ID` 一起写进项目根目录 `.env.local`。
+2. 环境和 MySQL 管理默认使用环境级 `CLOUDBASE_API_KEY`（不要用前端 publish_key），与 `CLOUDBASE_ENV_ID` 一起写进项目根目录 `.env.local`。原始 SCF 管控面被其临时 STS 拒绝时，经维护者明确授权改用 Device Flow。
 3. 先 `pnpm cloud:status`。`pnpm cloud:status` 与 `pnpm cloud:auth` 都只验证并加载 API Key；缺 Key 直接失败，不发起设备码。
-4. 部署使用本仓库脚本，不要手拼 MCP；`MIP_DEPLOYMENT_STAGE` 必须是 development/test/staging/production，production 还需 `--confirm-production`。
+4. 部署使用本仓库脚本，不要手拼 MCP；Device Flow 部署必须显式设置 `CLOUDBASE_AUTH_MODE=local`。`MIP_DEPLOYMENT_STAGE` 必须是 development/test/staging/production，production 还需 `--confirm-production`。
 5. 业务数据走 MySQL，不要回退 `cloud.database()`。
 
 ## Scripts
 
-`pnpm cloud:status` · `pnpm cloud:deploy` · `pnpm verify:server`。维护者应急时才显式运行 `pnpm cloud:auth:device -- --allow-device-auth`。
+`pnpm cloud:status` · `pnpm cloud:deploy` · `pnpm verify:server`。维护者经明确授权才显式运行 `pnpm cloud:auth:device -- --allow-device-auth`。
 
 ## Safety
 
@@ -47,7 +47,7 @@ description: Use for CloudBase env, membership cloud functions, MySQL, or MCP au
 
 ## Done
 
-缺 Key 或 EnvID 时失败可见；配置有效 API Key 后 MCP 为 READY；有环境时函数可部署。
+缺 Key 或 EnvID 时失败可见；配置有效 API Key 后 MCP 为 READY；SCF 管控面需要 Device Flow 时必须显式选择；有环境时函数可部署。
 
 ## Docs
 

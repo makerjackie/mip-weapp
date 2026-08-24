@@ -97,8 +97,14 @@ const existingDetails = new Map(manifest.map(spec => [spec.role, existingFunctio
 const requiredTables = Object.keys(RUNTIME_TABLE_PRIVILEGES)
 assertRequiredTablesExist(requiredTables)
 
-const vpcId = String(env.MIP_DB_VPC_ID || findString(target.mysql, ['vpcid', 'vpc_id']) || '').trim()
-const subnetId = String(env.MIP_DB_SUBNET_ID || findString(target.mysql, ['subnetid', 'subnet_id']) || '').trim()
+let vpcId = String(env.MIP_DB_VPC_ID || findString(target.mysql, ['vpcid', 'vpc_id']) || '').trim()
+let subnetId = String(env.MIP_DB_SUBNET_ID || findString(target.mysql, ['subnetid', 'subnet_id']) || '').trim()
+if (!vpcId || !subnetId) {
+  // Current MCP lifecycle responses omit network metadata; request the explicit TCP payload only when deployment needs it.
+  const connectionInfo = callCloudbase(root, 'queryMysqlDatabase', { action: 'getConnectionInfo' })
+  vpcId ||= String(findString(connectionInfo, ['vpcid', 'vpc_id']) || '').trim()
+  subnetId ||= String(findString(connectionInfo, ['subnetid', 'subnet_id']) || '').trim()
+}
 if (!vpcId || !subnetId) {
   throw new Error('CloudBase MySQL VPC/subnet is unavailable; configure MIP_DB_VPC_ID and MIP_DB_SUBNET_ID')
 }

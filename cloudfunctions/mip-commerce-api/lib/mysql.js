@@ -12,6 +12,11 @@ function createMysqlDatabase(options = {}) {
     return rows
   }
 
+  async function one(sql, params = []) {
+    const rows = await query(sql, params)
+    return Array.isArray(rows) ? rows[0] || null : null
+  }
+
   async function transaction(work, attempts = 3) {
     let lastError
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -47,7 +52,7 @@ function createMysqlDatabase(options = {}) {
     throw lastError
   }
 
-  return { query, transaction }
+  return { one, query, transaction }
 }
 
 function connectionOptions(options) {

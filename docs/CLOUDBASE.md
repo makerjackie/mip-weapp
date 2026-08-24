@@ -9,11 +9,11 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 | 数据库 | 34 个锁定的 `mip_*` 迁移已在当前共享数据库成功应用，变更前稳定备份保存在本地仓库外目录 | 云端已验证；后续新增迁移仍需遵守备份合同 |
 | runtime 数据库权限 | 环境专属账号已收敛为 83 张 MIP 业务表的精确表级权限，幂等复跑为 `already current` | 云端已验证；没有 schema/global 权限或跨项目表权限 |
 | 数据隔离 | 迁移后隔离检查通过，MIP 变更只落在 `mip_*` 对象和 `mip_schema_migrations` | 云端已验证；没有把旧项目表当作 MIP 事实 |
-| 开发者工具 | 已登录当前项目并能看到云函数列表 | 只证明控制台可见性，不证明函数配置或健康 |
-| 核心函数 | 云端已存在一个空的 `mip-identity-api` 函数壳 | `external-wait`；尚未写入目标 VPC、子网、运行时环境变量和仓库代码，MySQL 健康检查未通过 |
-| 完整核心套件 | 16 个核心函数的完整部署与验收未完成；2026-08-24 数据库收口后重试在首个函数创建前被拒绝，缺少 `scf:CreateFunction` 与目标 VPC/子网权限 | `external-wait`；本次没有产生半部署函数 |
+| 管理授权 | 环境 API Key 可完成环境和 MySQL 操作；主账号 Device Flow 可完成 SCF 管控面部署 | 两种凭证边界已分别验证；MCP `2.32.0` 的设备登录解决了环境 API Key 临时 STS 被拒绝的问题 |
+| 核心函数 | 16 个核心 `mip-*` 函数均已写入仓库代码、Nodejs20.19、目标 VPC/子网和运行时环境变量 | 云端已验证；全部函数为 Active/Available，并通过真实 MySQL 健康检查 |
+| 调用边界与 worker | 客户端 API 已开放给已登录用户；payment ledger、notification worker 与 outbox worker 保持受保护 | 云端已验证；禁止的 5 分钟 timer 不存在 |
 
-当前 `CLOUDBASE_API_KEY` 可以完成环境和 MySQL 操作；已恢复的本地 CloudBase 登录也能绑定环境，但部署身份没有 `scf:CreateFunction` 和目标 VPC/子网权限，后续更新还需要 `scf:UpdateFunctionConfiguration`。`managePermissions` 只能读写 CloudBase 资源安全规则，不能给当前身份追加 CAM 策略或代替主账号执行 `cam:PassRole`，因此不能用它修复这个阻塞。
+2026-08-24 的首次 API Key 部署在原始 SCF `CreateFunction` 被拒绝；升级 MCP 并使用资源主账号 Device Flow 后，同一请求成功创建函数，未再出现 SCF、VPC、子网或 `TCB_QcsRole` 错误。当前证据说明被拒绝的是 API Key 换出的临时 STS 调用者，不是函数运行角色。`managePermissions` 仍只负责 CloudBase 资源安全规则，不能修改 CAM 或 STS policy。
 
 ## 部署清单
 
@@ -71,7 +71,7 @@ AI 语音 TTL 不使用定时触发器。无人访问的过期或终态草稿通
 
 ## 环境与授权
 
-EnvID 只写项目根目录 `.env.local` 的 `CLOUDBASE_ENV_ID`。同一文件必须配置环境级 `CLOUDBASE_API_KEY`，并明确配置 `MIP_DEPLOYMENT_STAGE=development|test|staging|production`；核心函数部署会把 stage 注入存储和签到环境，不能自行改写。production 部署必须额外传入 `--confirm-production`。CloudBase MCP 统一从 `config/mcporter.json` 启动，不接受前端 `publish_key` 或已有设备登录作为正常管理凭证。
+EnvID 只写项目根目录 `.env.local` 的 `CLOUDBASE_ENV_ID`。同一文件必须配置环境级 `CLOUDBASE_API_KEY`，并明确配置 `MIP_DEPLOYMENT_STAGE=development|test|staging|production`；核心函数部署会把 stage 注入存储和签到环境，不能自行改写。production 部署必须额外传入 `--confirm-production`。CloudBase MCP 统一从 `config/mcporter.json` 启动，不接受前端 `publish_key`。
 
 ```bash
 pnpm cloud:status
@@ -82,54 +82,28 @@ pnpm database:grants -- --confirm-env=<EnvID> --confirm-runtime-user=<exact-runt
 pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<.env.local 中的 MIP_DB_RUNTIME_USER>
 ```
 
-`pnpm cloud:status` 与 `pnpm cloud:auth` 都会显式执行 API Key 登录并验证目标 EnvID，成功后应为 `READY`；缺 Key 或 EnvID 时直接失败。`READY` 只表示凭证和环境绑定可用，不表示该身份拥有 SCF、VPC 或 `PassRole` 权限。部署必须同时明确 `--confirm-env=<精确 EnvID>` 和环境专属 runtime 账号；当 `MIP_DEPLOYMENT_STAGE=production` 时命令还必须追加 `--confirm-production`。脚本不会自动设备授权、切换环境或处理其他项目的数据库账号。
+`pnpm cloud:status` 与 `pnpm cloud:auth` 都会显式执行 API Key 登录并验证目标 EnvID，成功后应为 `READY`；缺 Key 或 EnvID 时直接失败。`READY` 只表示凭证和环境绑定可用，不证明原始 SCF 管控面 action 可用。部署必须同时明确 `--confirm-env=<精确 EnvID>` 和环境专属 runtime 账号；当 `MIP_DEPLOYMENT_STAGE=production` 时命令还必须追加 `--confirm-production`。脚本不会自动设备授权、切换环境或处理其他项目的数据库账号。
 
-设备码不属于正常使用流程。只有维护者确认 API Key 通道不可用且需要临时救援时，才允许显式运行：
+设备码不由正常命令自动触发。只有维护者获得明确授权，或 API Key 的临时 STS 无法执行所需管控面 action 时，才允许显式运行：
 
 ```bash
 pnpm cloud:auth:device -- --allow-device-auth
 ```
 
-该命令不会被部署、诊断或初始化脚本调用；恢复后仍应创建或更换环境级 API Key。
+该命令不会被部署、诊断或初始化脚本调用。授权完成后，使用 `CLOUDBASE_AUTH_MODE=local` 明确选择本地 Device Flow 凭证；环境 API Key 仍保留给状态、环境和 MySQL 等已验证操作。
 
-## 当前部署阻塞与最小人工动作
+## 已验证的管控面部署路径
 
-选择以下任一方式即可继续，不需要改代码或重建数据库：
-
-1. 推荐：由腾讯云主账号在 CAM/CloudBase 控制台完成服务授权，确认 `TCB_QcsRole` 已存在且允许 CloudBase/SCF 使用目标 VPC 和子网；随后继续使用环境级 API Key，不依赖重复设备登录。
-2. 自动化：提供一个只用于当前环境和 `mip-*` 函数的专用 CAM 部署身份。不要提供主账号长期密钥，也不要授予 `cam:*`、`scf:*` 或 `vpc:*` 的无限范围策略。
-
-专用 CAM 身份必须包含部署脚本实际使用的完整 action 集：
-
-| 服务 | 必需 actions | 用途 |
-| --- | --- | --- |
-| SCF | `scf:GetFunction`、`scf:CreateFunction`、`scf:UpdateFunctionCode`、`scf:UpdateFunctionConfiguration`、`scf:InvokeFunction`、`scf:ListTriggers`、`scf:DeleteTrigger` | 创建/更新代码和配置、读取回写、健康检查、确认禁用高频 timer |
-| CloudBase | `tcb:DescribeEnvs`、`tcb:DescribeResourcePermission`、`tcb:ModifyResourcePermission` | 绑定目标环境并收敛、回读函数的客户端调用规则 |
-| VPC | `vpc:DescribeVpcs`、`vpc:DescribeSubnets` | 读取并校验函数要绑定的目标 VPC 和子网 |
-| CAM | `cam:GetRole`、`cam:ListAttachedRolePolicies`、`cam:PassRole` | 读取角色及其关联策略，并把 CloudBase 服务角色精确传递给 SCF |
-
-只有显式使用 `--replace-legacy-runtime` 重建不兼容的现有 `mip-*` 函数时，才额外需要 `scf:DeleteFunction`；正常部署不需要。当前部署身份还要保留已经验证可用的目标环境查询和 MySQL 查询/执行能力，不能为了部署函数撤销数据库迁移与运行时账号收敛所需权限。
-
-`cam:PassRole` 必须只指向 CloudBase 服务角色，不能写成 `*`：
-
-```json
-{
-  "effect": "allow",
-  "action": ["cam:PassRole"],
-  "resource": ["qcs::cam::uin/${OwnerUin}:roleName/TCB_QcsRole"]
-}
-```
-
-`${OwnerUin}` 由主账号在 CAM 控制台填入；仓库和沟通记录不得保存真实 UIN。SCF actions 只授权当前地域、当前 CloudBase namespace 下的 `mip-*` 函数；VPC actions 按 CAM 对对应 action 支持的最小资源范围授权，不授予 `vpc:*`。授权完成后，从脚本重新覆盖空函数壳并验收，不在控制台手工补环境变量：
+当前共享环境的核心函数使用资源主账号 Device Flow 完成部署。不要给 `TCB_QcsRole` 添加 `scf:CreateFunction`，也不要在没有原始 VPC 错误时预授 `vpc:*`。需要重新部署时，从脚本覆盖代码、配置与权限，不在控制台手工补环境变量：
 
 ```bash
-pnpm cloud:status
+pnpm cloud:auth:device -- --allow-device-auth
 pnpm database:grants -- --confirm-env=<EnvID> --confirm-runtime-user=<exact-runtime-user>
-pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<exact-runtime-user>
-pnpm cloud:verify -- --confirm-env=<EnvID>
+CLOUDBASE_AUTH_MODE=local pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<exact-runtime-user>
+CLOUDBASE_AUTH_MODE=local pnpm cloud:verify -- --confirm-env=<EnvID>
 ```
 
-只有 `cloud:deploy` 完成全部函数的代码、VPC、环境变量、调用规则和 timer 收敛，且 `cloud:verify` 证明每个核心函数为 Active、Nodejs20.19、使用专用 runtime MySQL 账号并通过健康检查后，才能把正式运行时从 `external-wait` 改为已验收。
+MCP `2.32.0` 的 `getInstanceInfo` 不再返回 VPC/子网；部署脚本只在缺少显式网络配置时调用 `getConnectionInfo`，只提取实际 MySQL 网络元数据，不打印或持久化其余连接载荷。`cloud:deploy` 和独立 `cloud:verify` 均已在当前环境通过。
 
 ## 未来迁移
 

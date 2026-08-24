@@ -122,5 +122,7 @@ describe('CloudBase local management env', () => {
     expect(hasExplicitDeviceAuthApproval([])).toBe(false)
     expect(hasExplicitDeviceAuthApproval(['--allow-device-auth', 'extra'])).toBe(false)
     expect(hasExplicitDeviceAuthApproval(['--allow-device-auth'])).toBe(true)
+    expect(hasExplicitDeviceAuthApproval(['--', '--allow-device-auth'])).toBe(true)
+    expect(hasExplicitDeviceAuthApproval(['--', '--allow-device-auth', 'extra'])).toBe(false)
   })
 })

@@ -6,6 +6,8 @@
 | --- | --- |
 | 启动后仍显示 `touristappid` | 在 `.env.local` 配置有效 `MINI_PROGRAM_APP_ID`，运行 `pnpm setup:local`；`project.config.json` 的默认 `touristappid` 是浏览 UI 的安全默认值。 |
 | `CLOUDBASE_API_KEY` 未生效或 MCP 未授权 | 确认环境级 API Key 与 `CLOUDBASE_ENV_ID` 同时写在项目根 `.env.local`，再运行 `pnpm cloud:auth` 或 `pnpm cloud:status`；两者都只验证 API Key，缺 Key 直接失败。不要把 `publish_key` 当管理密钥。维护者只有在 API Key 通道不可用且明确需要救援时，才运行 `pnpm cloud:auth:device -- --allow-device-auth`。 |
+| `you are not authorized to perform operation (scf:CreateFunction)` | MCP 已连通，但当前临时 STS 没有原始 SCF 管控面权限。不要给 `TCB_QcsRole` 添加 `scf:CreateFunction`，也不要先推断 VPC 权限；升级到仓库固定的 MCP 版本，经明确授权运行 `pnpm cloud:auth:device -- --allow-device-auth`，再用 `CLOUDBASE_AUTH_MODE=local` 执行部署和验收。若资源主账号仍被拒绝，保留 RequestId 提交 CloudBase 工单。 |
+| 部署提示 `CloudBase MySQL VPC/subnet is unavailable` | 当前 MCP 的 `getInstanceInfo` 只返回生命周期字段。部署脚本会在缺少显式网络配置时调用 `getConnectionInfo` 并只提取真实 `VpcId`/`SubnetId`；不要猜测网络 ID，也不要把完整连接载荷打印或写入仓库。 |
 | 部署提示 `MIP deployment requires AppID and --confirm-env=<exact CLOUDBASE_ENV_ID>` | 检查 `MINI_PROGRAM_APP_ID`、`CLOUDBASE_ENV_ID` 和命令行 `--confirm-env` 完全一致；不要猜测或切换目标环境。 |
 | 部署提示缺少 MIP 表 | 先运行 `pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --dry-run`，确认 lock 文件和迁移范围，再按数据库备份流程应用迁移。不要补建 `member_*` 表。 |
 | `Runtime account missing grant` / `schema-level ALL PRIVILEGES` | 运行时账号必须是环境专属 `mip_*` 用户。运行 `pnpm database:grants -- --confirm-env=<EnvID> --confirm-runtime-user=<exact-runtime-user>` 收敛并复核 `mip_*` 表逐表权限；命令会拒绝 schema/global 权限和不精确授权，审计及流水等追加事实不授予无业务需要的更新或删除权限。 |

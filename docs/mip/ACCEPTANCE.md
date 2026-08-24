@@ -4,7 +4,7 @@
 
 ## 当前本地证据
 
-以下是当前工作区已有的聚焦证据，未包含微信开发者工具、CloudBase 部署、正式配置或真机结论：
+以下表格只列当前工作区的聚焦本地证据；微信开发者工具、共享 CloudBase、正式配置和真机结论在后续章节单独记录：
 
 | 能力 | 本地证据 | 本地结论 |
 | --- | --- | --- |
@@ -19,7 +19,7 @@
 | N4 行业/城市共用选择器 | `src/components/catalog-selector/`、`tests/mip-catalog-selector.test.ts`、档案/人才/机会三个调用页 | `implemented-local`；正式标签为 `external-wait` |
 | E3 机会详情发布时间与团队呈现 | `src/packages/member/mip-opportunities/detail/index.ts`、`src/packages/member/mip-opportunities/detail/index.wxml` | `implemented-local` |
 | E4 机会团队成员 | `cloudfunctions/mip-opportunities-api/tests/opportunity-team.test.js`、`tests/mip-opportunities.test.ts` | `implemented-local` |
-| E5 指定被引荐人 | `cloudfunctions/mip-opportunities-api/tests/referral-targets.test.js`、`tests/mip-related-opportunities.test.ts` | `implemented-local`，部署与真机为 `external-wait` |
+| E5 指定被引荐人 | `cloudfunctions/mip-opportunities-api/tests/referral-targets.test.js`、`tests/mip-related-opportunities.test.ts` | `implemented-local`；微信补充通知为 `external-wait` |
 | F4 我发布 / 引荐给我 | `tests/mip-related-opportunities.test.ts`、`cloudfunctions/mip-opportunities-api/domain/received-interactions.js` | `implemented-local`，云端运行时为 `external-wait` |
 | 合作卡预览前自动保存 | `tests/mip-cooperation-preview.test.ts`、`src/packages/member/mip-cooperation/editor/index.ts` | `implemented-local` |
 | 合作卡/超级案例软归档与多轮 AI | `tests/mip-content-archive.test.ts`、`tests/mip-ai-multiturn.test.ts` | CRUD 和草稿链路为 `implemented-local`；真实 AI provider 为 `external-wait` |
@@ -28,7 +28,7 @@
 | 平台默认取消规则 | `cloudfunctions/mip-events-api/tests/cancellation-policy.test.js`、`cloudfunctions/mip-admin-api/tests/event-policy.test.js` | `implemented-local`，正式配置为 `external-wait` |
 | 活动介绍媒体上传、排序、预览 | `tests/admin-events.test.ts`、`cloudfunctions/mip-admin-api/tests/event-content-media.test.js`、`tests/mip-event-rich-content.test.ts` | `implemented-local`，真机媒体链路为 `external-wait` |
 | 手机号更换 | `cloudfunctions/mip-identity-api/domain/handler.js`、`cloudfunctions/mip-identity-api/tests/service.test.js` | 本地已覆盖微信验证和重复绑定拒绝；真机为 `external-wait` |
-| 机会兴趣/引荐唯一关系 | `tests/mip-related-opportunities.test.ts`、`cloudfunctions/mip-opportunities-api/tests/block-visibility.test.js` | `implemented-local`，云端部署和运行时为 `external-wait` |
+| 机会兴趣/引荐唯一关系 | `tests/mip-related-opportunities.test.ts`、`cloudfunctions/mip-opportunities-api/tests/block-visibility.test.js` | `implemented-local`；端到端运行时和微信补充通知为 `external-wait` |
 | N1 会员期邀请归因与载体 | `tests/mip-membership-invitation-ui.test.ts`、`cloudfunctions/mip-commerce-api/tests/membership-invitation-code.test.js`、`cloudfunctions/mip-commerce-api/tests/repository.test.js` | `implemented-local`；正式 wxacode、扫码和相册为 `external-wait` |
 | 谁看过我 | `database/mysql/mip/023_profile_visits.sql`、`cloudfunctions/mip-opportunities-api/tests/profile-visits.test.js`、`src/packages/member/mip-received/index.ts`、`tests/mip-received-interactions.test.ts` | 访客列表及“我的”未读入口为 `implemented-local`；云端运行时为 `external-wait` |
 | 管理端 `cloud://` 图片解析 | `tests/cloud-media.test.ts`、`src/modules/mip-admin/cloudbase-gateway.ts` | `implemented-local`；真实临时 URL 和下载失败恢复为 `external-wait` |
@@ -36,14 +36,14 @@
 | H2 订单与参与名单 | `tests/admin-orders-roster-h2.test.ts`、`tests/admin-roster.test.ts` | `implemented-local`；正式支付退款为 `external-wait` |
 | H3 多范围角色和管理登录审计 | `tests/admin-rbac-scope-h3.test.ts`、`cloudfunctions/mip-admin-api/tests/capabilities.test.js` | `implemented-local` |
 | H4 成长等级、规则、流水与调整 | `tests/mip-growth.test.ts`、`cloudfunctions/mip-admin-api/tests/growth-rule-catalog.test.js` | `implemented-local`；正式数值为 `external-wait` |
-| H5 NPC 任务派发、模板与截止 | `database/mysql/mip/027_task_assignments_templates.sql`、`cloudfunctions/mip-tasks-api/tests/task-contract.test.js`、`tests/mip-tasks.test.ts` | 源码链路和迁移已完成；云函数部署和真机模板上传/保存为 `external-wait` |
+| H5 NPC 任务派发、模板与截止 | `database/mysql/mip/027_task_assignments_templates.sql`、`cloudfunctions/mip-tasks-api/tests/task-contract.test.js`、`tests/mip-tasks.test.ts` | 源码链路和迁移已完成；真机模板上传/保存为 `external-wait` |
 | 勋章收藏、佩戴与运营管理 | `database/mysql/mip/028_badge_collection.sql`、`cloudfunctions/mip-growth-api/tests/badges.test.js`、`cloudfunctions/mip-admin-api/tests/badges.test.js`、`tests/mip-badges.test.ts` | 本人收藏、最多 3 枚佩戴、公开档案投影、运营目录/授予和迁移已完成；正式图片为 `external-wait`。Figma 精确资产因工具配额/导出限制未取得，当前为可替换中性占位 |
 | 数字分身与我的名片 | `database/mysql/mip/030_digital_avatar_generations.sql`、`cloudfunctions/mip-ai-api/tests/avatar-store.test.js`、`tests/mip-digital-avatar.test.ts`、`tests/mip-member-card.test.ts` | 生成任务、服务端资产归属、原图/数字分身切换和名片接线已完成；真实生成 provider、Figma 对照和真机相册为 `external-wait` |
 | 运营消息活动 | `database/mysql/mip/031_message_campaigns.sql`、`cloudfunctions/mip-admin-api/tests/message-campaigns.test.js`、`tests/mip-message-campaigns.test.ts` | 平台/分会范围、收件人快照、幂等发布、撤回和审计已完成；外部微信投递为 `external-wait` |
 | 游戏币、等级与弹窗消息 | `database/mysql/mip/032_game_coin_safety.sql`、`cloudfunctions/mip-growth-api/tests/game-coins.test.js`、`tests/mip-popup-messages.test.ts`、`tests/mip-outbox.test.ts` | 权威余额、追加流水、防负、周赛固定奖励、真实跨级识别、站内消息和弹窗去重已完成；微信模板和云端运行时为 `external-wait` |
 | Owner 可配置角色权限 | `database/mysql/mip/033_configurable_rbac.sql`、`cloudfunctions/mip-admin-api/tests/role-capability-policies.test.js`、`tests/mip-configurable-rbac.test.ts` | 六类非 Owner 角色的白名单策略、版本冲突、恢复默认、安全上限、事务内二次授权和审计已完成；Owner 权限固定 |
 | 机会评论、评价与打 call | `database/mysql/mip/034_opportunity_comments.sql`、`cloudfunctions/mip-opportunities-api/tests/comments.test.js`、`tests/mip-opportunity-comments.test.ts` | 用户评论/评价、参与人标识、编辑/软删除、打 call、举报、双向屏蔽及运营配置/审核已完成 |
-| 固定 PRD #60–#68 团队 PK、赛季、排行与队伍大本营 | `database/mysql/mip/029_gamification_foundation.sql`、`cloudfunctions/mip-game-api/tests/game.test.js`、`tests/mip-game.test.ts`、`src/packages/member/mip-game/`、`src/packages/admin/game/` | 有效会员门禁、服务端计分、周赛历史、四类排行快照、城市筛选、中性大本营状态和迁移已完成；函数部署、正式规则与视觉为 `external-wait` |
+| 固定 PRD #60–#68 团队 PK、赛季、排行与队伍大本营 | `database/mysql/mip/029_gamification_foundation.sql`、`cloudfunctions/mip-game-api/tests/game.test.js`、`tests/mip-game.test.ts`、`src/packages/member/mip-game/`、`src/packages/admin/game/` | 有效会员门禁、服务端计分、周赛历史、四类排行快照、城市筛选、中性大本营状态和迁移已完成；正式规则、数据与视觉为 `external-wait` |
 
 ## 静态门禁
 
@@ -55,11 +55,11 @@
 - 部署清单只有 `mip-*`，存储路径只有 `mip/`。
 - 金额、会员、报名、签到、成长和权限判断均有服务端测试。
 
-以下事项即使本地测试通过，仍保留 `external-wait`：正式 AppID、CloudBase 核心函数部署与运行时健康、支付商户和回调、正式协议正文、正式标签/城市和 AME 配置、通知模板、AI provider、活动介绍图片与任务模板的真机选择/上传/内容安全/临时 URL/相册保存、Figma 勋章精确资产、正式游戏化规则与队伍大本营视觉、手机号、扫码签到、地图/日历和真实支付。当前 34 个数据库迁移已经成功应用，runtime 账号已收敛为 83 张 MIP 业务表的精确表级权限。
+以下事项即使本地测试通过，仍保留 `external-wait`：正式 AppID、支付商户和回调、正式协议正文、正式标签/城市和 AME 配置、通知模板、AI provider、活动介绍图片与任务模板的真机选择/上传/内容安全/临时 URL/相册保存、Figma 勋章精确资产、正式游戏化规则与队伍大本营视觉、手机号、扫码签到、地图/日历和真实支付。当前 34 个数据库迁移、83 张 MIP 业务表的精确 runtime 权限以及 16 个核心函数的部署、健康和保护规则已经在共享 CloudBase 验证。
 
 ## 微信开发者工具
 
-2026-08-24 已重新运行 `pnpm runtime:preflight`：开发者工具已登录，真实私有 AppID、服务端口、83 条应用路由和 83 条条件路由全部一致。随后 `pnpm test:runtime` 在首个代表页面等待 `App.callFunction` 时超时，报告保留为 `failed`，页面与代表状态均不得记为已验收。该结果与当前核心函数创建被 CAM 拒绝的事实一致。
+2026-08-24 已重新运行 `pnpm runtime:preflight`：开发者工具已登录，真实私有 AppID、服务端口、83 条应用路由和 83 条条件路由全部一致。此前 `pnpm test:runtime` 在首个代表页面等待 `App.callFunction` 时超时；该报告早于本次完整函数部署，保留为历史 `failed`，不能替代部署后的页面复验，页面与代表状态仍不得记为已验收。
 
 - `pnpm runtime:preflight`
 - `pnpm test:runtime`
@@ -92,10 +92,10 @@
 | runtime 表级授权 | 83 张 MIP 业务表的精确表→权限映射已收敛，二次运行返回 `already current` | 云端已验证；没有 schema/global 或非 MIP 表权限 |
 | 数据库隔离 | 迁移后检查通过，只写入 `mip_*` 与 `mip_schema_migrations` | 云端已验证 |
 | 开发者工具登录 | 已登录并可看到云函数列表 | 只证明可见性 |
-| `mip-identity-api` | 已创建空函数壳 | `external-wait`；VPC、子网、环境变量、仓库代码和 MySQL 健康未完成 |
-| 16 个核心函数 | 2026-08-24 数据库收口后再次部署，在首个函数创建前被 CAM 拒绝 `scf:CreateFunction`，目标 VPC/子网也无访问权；新增清单包含 `mip-game-api`，本次没有产生半部署函数 | `external-wait` |
+| `mip-identity-api` | 当前仓库代码、VPC/子网和环境变量已部署，MySQL 健康检查通过 | 云端已验证 |
+| 16 个核心函数 | 2026-08-24 使用资源所有者 Device Flow 完成 16/16 部署；函数清单、环境配置、健康检查、保护调用规则及高频 timer 缺失检查通过 | 云端已验证 |
 
-`managePermissions` 只能修改 CloudBase 函数的客户端安全规则，不能修改 CAM 或补 `cam:PassRole`。本地登录已经恢复，重复扫码不会补足权限；下一步需要当前腾讯云账号完成目标 SCF/VPC 与 `TCB_QcsRole` 授权，或提供符合 [CloudBase 最小权限清单](../CLOUDBASE.md#当前部署阻塞与最小人工动作) 的专用 CAM 部署身份。
+项目 API Key 继续用于常规 CloudBase MCP、环境和 MySQL 管理；涉及 SCF 控制面的部署显式切换到资源所有者 Device Flow。此次没有修改 `TCB_QcsRole` 或给它追加 `scf:CreateFunction`，也没有观察到独立的 VPC/子网权限错误。认证边界和复现方式见 [CloudBase MCP 鉴权研究](../research/cloudbase-mcp-auth.md)。
 
 新环境或后续新增迁移首次写入前必须：
 
@@ -105,7 +105,7 @@
 4. 查询现有表行数和结构摘要，变更后复核非 `mip_*` 对象未变化；
 5. 只部署 `mip-*` 函数，不安装高频通知定时器。
 
-当前数据库证据已经包含 34 个迁移版本、MIP 对象清单和 `pnpm database:grants` 的精确授权回读。剩余云端证据必须包含：16 个核心函数清单、每个函数的 VPC/环境变量配置回读、专用 runtime MySQL 账号只读健康检查、客户端调用规则、高频 timer 缺失检查和一组 `is_demo=1` 端到端夹具。不得在共享旧表中造演示数据。空函数壳、开发者工具可见或 API Key 为 `READY` 均不能替代这些证据。
+当前云端证据已经包含 34 个迁移版本、MIP 对象清单、`pnpm database:grants` 的精确授权回读、16 个核心函数清单、VPC/环境配置、专用 runtime MySQL 账号健康检查、客户端调用规则和高频 timer 缺失检查。剩余产品级云端证据是一组 `is_demo=1` 端到端夹具及部署后的开发者工具页面复验；不得在共享旧表中造演示数据。API Key 为 `READY` 或开发者工具可见均不能替代这些证据。
 
 ## 真机或生产环境
 
