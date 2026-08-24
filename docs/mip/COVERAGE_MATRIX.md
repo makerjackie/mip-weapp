@@ -6,10 +6,10 @@
 
 | 来源 | 固定证据 | 状态 |
 | --- | --- | --- |
-| GitHub 固定 PRD | `docs/PRD-v1.1.0.md`，commit `a38bc48e4d85ceabf9adb1013fbd5e0842a8c4eb` | `implemented-local` |
-| GitHub 用户流程 PRD | 同一 commit 的 `docs/PRDs/里程碑1-MIP_v1.1.0_待评审需求_用户流程梳理.md` | `implemented-local` |
-| GitHub 需求澄清 | 同一 commit 的 `docs/PRDs/会议纪要_20260822_需求澄清.md` | `implemented-local` |
-| 后台 PRD | 同一 commit 的 `docs/MIP后台PRD_V0.1_含表格.md` | `implemented-local` |
+| GitHub 固定 PRD | [sources/github/PRD-v1.1.0.md](sources/github/PRD-v1.1.0.md)，外部 commit `a38bc48e4d85ceabf9adb1013fbd5e0842a8c4eb` | `implemented-local` |
+| GitHub 用户流程 PRD | [sources/github/里程碑1-MIP_v1.1.0_待评审需求_用户流程梳理.md](sources/github/里程碑1-MIP_v1.1.0_待评审需求_用户流程梳理.md) | `implemented-local` |
+| GitHub 需求澄清 | [sources/github/会议纪要_20260822_需求澄清.md](sources/github/会议纪要_20260822_需求澄清.md) | `implemented-local` |
+| 后台 PRD | [sources/github/MIP后台PRD_V0.1_含表格.md](sources/github/MIP后台PRD_V0.1_含表格.md) | `implemented-local` |
 | 飞书 AME | Wiki/Base `Hn5cwvTRYiHZATkr4m8cGIu4n5R`，table `tblXOCZImEJuDz6L`，view `vewJLhYC6O` | `external-wait` |
 | Figma | file `qqkbdlh4c4Swubum8S3F2f`，代表 frame 见 [FIGMA_MAP.md](FIGMA_MAP.md) | `partial-local` |
 

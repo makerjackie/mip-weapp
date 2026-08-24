@@ -1,0 +1,111 @@
+﻿功能,功能点,描述,涉及端,优先级,需求状态,备注,父记录,设计文档,原型文档,功能模块
+用户注册与登陆,微信一键登陆,登录获取用户手机号、微信头像和昵称,小程序,P0,待评审,登录态缓存1个月,,,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,其他
+活动主页,轮播Banner位,支持跳转链接,小程序,P1,待评审,跳转地址: https://mp.weixin.qq.com/s/DeJ38RyOILq5hPAz5jrVUQ,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+活动主页,往期回顾,跳转到MIP小程序的视频号,小程序,P1,待评审,小程序接入视频号方法: https://developers.weixin.qq.com/miniprogram/dev/platform-capabilities/business-capabilities/ministore/minishopopencomponent2/scene/shipinhao.html,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+活动主页,筛选条件,活动状态区分(近期活动/已结束),小程序,P0,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+活动主页,搜索,支持根据标题模糊搜索活动,小程序,P1,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+活动主页,活动列表,活动卡片: 展示封面、活动基础信息,小程序,P0,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+活动详情页,基础信息,活动信息、活动介绍、主办方、报名须知等,小程序,P0,待评审,@Ame 提供主办方介绍、报名须知,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+活动详情页,详细信息,"活动介绍、主办方、报名须知, 支持创建活动时编辑上传图文介绍",小程序,P0,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+活动详情页,联系方式,写固定电话号码: 13798316515,小程序,P1,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+活动详情页,分享活动,支持分享链接、小程序、二维码、文案,小程序,P0,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+活动详情页,活动报名,登录判断、新用户登陆后填完个人信息返回活动详情页,小程序,P0,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+活动详情页,活动签到码,"生成活动后提供一个可下载的二维码, 让参与者扫码签到",小程序,P0,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+活动详情页,活动反馈,已经签到的玩家可以填写活动反馈（仅本场活动）,小程序,P1,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+活动详情页,参与人列表,展示已报名的嘉宾与玩家、支持搜索、支持分享名单,小程序,P0,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+活动详情页,心动列表,给出心动和被点心动的人展示列表,小程序,P1,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+活动详情页,活动支付,付费活动需要唤起微信支付流程,小程序,P2,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+活动,活动签到,"扫描活动二维码签到成功, 未报名的情况下先报名",小程序,P0,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+我的,基础信息,头像、姓名、等级、一句话介绍、行业身份、职业身份、MIP城市归属、勋章,小程序,P0,未开始,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,我的
+我的,我的名片,基础信息、名片样式、分享与保存,小程序,P1,未开始,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,我的
+我的,我的活动,参加过的活动列表,小程序,P0,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,我的
+我的档案,合作卡,6款合作卡的增删改查、AI助手（AI录音填充内容）,小程序,P1,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,我的
+用户帐号,帐号设置,更换绑定的手机号、退出登录,小程序,P1,未开始,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,我的
+我的,会员系统,会员经验值登记规则、归属分会、支付会费、经验值获取记录,小程序,P0,未开始,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,我的
+,玩家任务,不同等级可做的任务规则,小程序,P0,未开始,,我的,,,我的
+我的档案,影响力数据,嘉宾列表、互动列表、感兴趣列表、主页浏览量,小程序,P0,未开始,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,我的
+申请成为玩家,报名流程,申请协议、基础信息填写,小程序,P0,未开始,@Ame 提供玩家申请协议,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,我的
+NPC任务,我的任务,,小程序,P0,未开始,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,我的
+NPC任务,派发任务,展示成员列表、可搜索、点击确认后派发,小程序,P0,未开始,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,我的
+我的,勋章收藏,展示身份勋章、最多佩戴3个,小程序,P0,未开始,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,我的
+我的,玩家VIP页,展示不同等级的权益、任务、邀请加入、立即续费,小程序,P0,未开始,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,我的
+消息,Push消息,获得经验值、游戏币、支持跳转指定页面,小程序,P2,待评审,微信订阅消息模板,,,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpVCtypBE1HsXxjR,消息
+消息,微信推送消息,活动通知/机会通知,小程序,P2,待评审,微信订阅消息模板,,,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpVCtypBE1HsXxjR,消息
+消息,弹窗消息,等级提升、系统消息、游戏相关,小程序,P2,未开始,微信订阅消息模板,,,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpVCtypBE1HsXxjR,消息
+机会广场,机会列表,展示机会相关信息（招募中/已完成）,小程序,P0,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4976&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WiAgC4TSNVB,机会
+机会广场,机会详情,展示机会详情、发布时机、状态等,小程序,P0,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4976&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WiAgC4TSNVB,机会
+牛人合作,合作卡列表,展示玩家的合作卡,小程序,P1,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4976&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WiAgC4TSNVB,机会
+首页仪表盘,,玩家互动率、机会转化率等关键数据指标,后台,P2,未开始,,,,,
+用户管理,,用户配置与管理系统,后台,P0,待评审,,,,,
+活动管理,,活动配置与管理系统,后台,P0,待评审,,,,,
+机会管理,,机会查看、状态、修改,后台,P0,未开始,,,,,
+任务管理,,任务配置、规则、权益,后台,P0,未开始,,,,,
+后台消息,,消息配置与管理系统,后台,P1,未开始,,,,,
+服务器管理,,MIP不同分会的配置与管理,后台,P0,未开始,,,,,
+角色管理,,超级管理员、服务器管理员、管理团队等角色,后台,P0,待评审,,,,,
+后台账号管理,,增删改查四个权限、配置不同角色有不同权限,后台,P0,待评审,,,,,
+牛人合作,筛选与搜索,根据6大角色筛选、支持同时搜索嘉宾、玩家的信息,小程序,P1,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4976&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WiAgC4TSNVB,机会
+PK打榜,团队PK,展示每周赛况,小程序,P0,未开始,@Ame 需求待补充,,这个模块没做UI，需要AI输出，甲方会提供示意图,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WTqYPgMP9Hd,发现
+PK打榜,团队PK,展示过去团队PK记录、规则详情,小程序,P1,未开始,@Ame 需提供团队pk规则（用户视角）,,这个模块没做UI，需要AI输出，甲方会提供示意图,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WTqYPgMP9Hd,发现
+PK打榜,赛季排位,个人排位赛、按赛季解锁登记，经验值PK,小程序,P0,未开始,@Ame 需求待补充,,这个模块没做UI，需要AI输出，甲方会提供示意图,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WTqYPgMP9Hd,发现
+PK打榜,赛季排位,规则说明,小程序,P1,未开始,@Ame 需提供规则说明（用户视角）,,这个模块没做UI，需要AI输出，甲方会提供示意图,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WTqYPgMP9Hd,发现
+排行榜,团战榜,半年榜单、年度总榜单,小程序,P0,未开始,,,这个模块没做UI，需要AI输出，甲方会提供示意图,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WTqYPgMP9Hd,发现
+排行榜,个人等级排名,玩家累计经验值总排名,小程序,P0,未开始,,,这个模块没做UI，需要AI输出，甲方会提供示意图,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WTqYPgMP9Hd,发现
+笨笨盲盒,盲盒游戏界面,游戏动画,小程序,P3,未开始,,,,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WTqYPgMP9Hd,发现
+笨笨盲盒,游戏币,游戏币发放、展示余额、流水、核销,小程序,P3,未开始,,,,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WTqYPgMP9Hd,发现
+笨笨盲盒,背包,陈列所有游戏卡牌,小程序,P3,未开始,,,,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WTqYPgMP9Hd,发现
+笨笨盲盒,盲盒详情,展示游戏规则、兑换规则、稀有度等信息,小程序,P3,未开始,@Ame 提供盲盒游戏规则,,,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WTqYPgMP9Hd,发现
+笨笨盲盒,抽取盲盒,展示特效动画,小程序,P3,未开始,,,,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WTqYPgMP9Hd,发现
+,切换手机号登陆,切换手机号登陆,小程序,P1,待评审,,用户注册与登陆,,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,其他
+,筛选条件,城市、日历筛选,小程序,P1,待评审,,活动主页,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+,,卡片上的分享按钮,小程序,P1,待评审,,活动主页,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+,,支付判断，付费活动需要唤起微信支付流程,小程序,P1,待评审,,活动详情页,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+,,可以给参与人点心动，每场1票,小程序,P0,待评审,,活动详情页,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+,地点指引,点击icon跳转到指定链接,小程序,P1,待评审,@Ame 提供链接,活动详情页,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+,协议签署*2,登陆前必须签署MIP用户服务协议MIP隐私保护协议,小程序,P0,待评审,,用户注册与登陆,,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,其他
+,,"需要根据邀请链接识别邀请人, 该用户（非玩家）报名后展示邀请人是谁",小程序,P0,待评审,,活动详情页,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+,,查看参与人———跳转到玩家/嘉宾档案,小程序,P0,待评审,,活动详情页,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+,超级案例,超级案例的增删改茶、AI助手（AI录音填充内容）,小程序,P1,待评审,,我的档案,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,我的
+,,点击数据打开对应的列表页、 打开对应的玩家档案,小程序,P0,未开始,,我的档案,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,我的
+,,红点消息提醒的交互,小程序,P0,未开始,,我的档案,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,我的
+,相关机会,已发布机会、引荐的机会 ,小程序,P0,待评审,,我的档案,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,我的
+,队伍大本营,展示阵营等级、可查看阵营成员,小程序,P0,未开始,,PK打榜,这个模块没做UI，需要AI输出，甲方会提供示意图,,发现
+排行榜,筛选,支持按MIP城市分部筛选数据,小程序,P1,未开始,,,这个模块没做UI，需要AI输出，甲方会提供示意图,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WTqYPgMP9Hd,发现
+,,玩家的邀请人展示玩家报名入会的时候填写的人是谁,小程序,P0,待评审,,活动详情页,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+订单,订单状态,全部、待使用、已完成、已退款,小程序,P0,未开始,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WlENWicZhLk,我的
+,,扫码唤起小程序活动详情页->登录判断->签到成功,小程序,P0,待评审,,活动详情页,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+,,二维码识别失败提示打开微信扫码,小程序,P0,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4975&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV2FGK4nPnZLcm,活动
+,大本营效果图,不同等级的大本营展示不同风格的效果图,小程序,P0,未开始,,,,,发现
+,发布机会,标签、关键信息、状态、组队玩家等信息,小程序,P0,待评审,,机会广场,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4976&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WiAgC4TSNVB,机会
+,筛选,根据6大角色筛选、根据行业筛选,小程序,P0,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4976&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WiAgC4TSNVB,机会
+,我想引荐,点击发送微信消息通知,小程序,P0,待评审,,机会广场,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4976&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WiAgC4TSNVB,机会
+,玩家/嘉宾档案,档案详情,小程序,P0,待评审,,牛人合作,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4976&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WiAgC4TSNVB,机会
+,我感兴趣,点击发送微信消息通知,小程序,P0,待评审,,,https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4976&t=NXGNRsb1cM3xndeR-1,https://modao.cc/proto/jL42OUCqt55gkdS11aAOP/sharing?view_mode=read_only&screen=rbpV28WiAgC4TSNVB,机会
+,取消报名,活动开始前X小时可取消活动（可配置）,小程序,P0,待评审,,我的,,,我的
+,MIP会费,详情与支付流程,小程序,P0,未开始,,,,,我的
+,订单详情,展示关键信息,小程序,P0,未开始,,订单,,,我的
+,退款,已取消的活动可退款,小程序,P0,未开始,,订单,,,我的
+,任务列表,待完成（操作完成/未完成）、已结束列表,小程序,P0,未开始,,NPC任务,,,我的
+,任务详情,详情、下载模板、上传附件,小程序,P0,未开始,,,,,我的
+,任务卡,后台配置,小程序,P0,未开始,,NPC任务,,,我的
+,任务完成奖励,后台配置：经验值等,小程序,P0,未开始,,,,,我的
+,数字人,可选择一个名片样式，自动把头像生成数字人形象,小程序,P2,未开始,,我的,,,我的
+AI机会撮合,AI机会撮合,根据发布内容匹配人才和项目,小程序,P3,未开始,,,,,机会
+热点Agent,,每天自动更新热点新闻,小程序,P3,未开始,,,,,知识付费
+战队管理,,团队配置与管理系统,后台,P1,未开始,,,,,
+,配置信息源,可配置信息渠道,小程序,P3,未开始,,热点Agent,,,知识付费
+,行业分类,可配置行业类目,小程序,P3,未开始,,,,,知识付费
+玩家攻略知识库,MIP玩家攻略,图文、网页、视频,小程序,P3,未开始,,,,,知识付费
+5&8分钟视频号,视频号列表,跳转到MIP私密视频号,小程序,P3,未开始,,,,,知识付费
+行业专家分享,行业分类,可配置内容分类,小程序,P3,未开始,,,,,知识付费
+付费解锁,非会员付费引导,付费解锁权益,小程序,,未开始,,,,,知识付费
+评论管理,,评论配置与管理系统,后台,P3,未开始,,,,,
+知识库管理,,知识库配置与管理系统,后台,P3,未开始,,,,,
+消息,微信推送消息,评论通知、机会撮合推荐、热点通知,小程序,P3,未开始,,,,,消息
+我的,权限管理,消息通知权限、机会相关权限,小程序,P3,未开始,,,,,我的
+机会评论区,项目评价,项目参与人打call,小程序,P3,未开始,,,,,机会
+等级管理,,配置系统有多少等级,后台,P0,待评审,,,,,
+经验值管理,,配置每个等级之间距离多少个经验值,后台,P0,待评审,,,,,
+贡献值管理,,配置每个等级奖励多少个经验值,后台,P0,待评审,,,,,
+,,,,,未开始,,,,,
+订单管理,,活动订单、玩家年费、支付流水,后台,P0,未开始,,,,,

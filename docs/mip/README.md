@@ -10,8 +10,8 @@
 | [GitHub 需求澄清纪要](https://github.com/douglas-ou/mip-minip-dev/blob/a38bc48e4d85ceabf9adb1013fbd5e0842a8c4eb/docs/PRDs/%E4%BC%9A%E8%AE%AE%E7%BA%AA%E8%A6%81_20260822_%E9%9C%80%E6%B1%82%E6%BE%84%E6%B8%85.md) | 邀请、签到、合作卡和后台补充规则 | commit `a38bc48e4d85ceabf9adb1013fbd5e0842a8c4eb` |
 | [Figma MIP](https://www.figma.com/design/qqkbdlh4c4Swubum8S3F2f/MIP?node-id=69-4972) | 视觉、布局、交互状态和画板批注 | 页面 `69:4972`、`69:4975`、`69:4976` |
 | [AME 飞书维护页](https://mcnb87a9myxx.feishu.cn/wiki/Hn5cwvTRYiHZATkr4m8cGIu4n5R?table=tblXOCZImEJuDz6L&view=vewJLhYC6O) | 后续标签、字段和需求状态更新 | 仅采纳可读取且明确的条目；原表未能在本环境取证的内容为 `external-wait`，不直接作为运行时依赖 |
-| [GitHub 固定 PRD](https://github.com/douglas-ou/mip-minip-dev/blob/a38bc48e4d85ceabf9adb1013fbd5e0842a8c4eb/docs/PRD-v1.1.0.md) | v1.1.0 总范围和后台排除项 | commit `a38bc48e4d85ceabf9adb1013fbd5e0842a8c4eb`；本地未复制 `docs/PRD-v1.1.0.md` |
-| GitHub CSV 需求清单 | 发现待评审条目和外部来源线索 | 仅作范围索引；缺少规则/UI 的行不能单独形成实现或验收依据 |
+| [GitHub 固定 PRD](sources/github/PRD-v1.1.0.md) | v1.1.0 总范围和后台排除项 | 固定到外部 commit `a38bc48e4d85ceabf9adb1013fbd5e0842a8c4eb`，可离线复核 |
+| [GitHub CSV 需求清单](sources/github/README.md) | 发现待评审条目和外部来源线索 | 已固定三份原始清单；缺少规则/UI 的行不能单独形成实现或验收依据 |
 | [后台 PRD V0.1](https://github.com/douglas-ou/mip-minip-dev/blob/a38bc48e4d85ceabf9adb1013fbd5e0842a8c4eb/docs/MIP%E5%90%8E%E5%8F%B0PRD_V0.1_%E5%90%AB%E8%A1%A8%E6%A0%BC.md) | 后台报价范围及明确排除项 | 明确排除游戏币、勋章、PK、赛季、排行榜、NPC、订阅消息等后台能力 |
 
 ## 决策优先级
@@ -35,6 +35,7 @@ Figma 决定视觉与交互；服务端资格、金额、权限和状态机以�
 ## 本地文档
 
 - [REQUIREMENTS.md](REQUIREMENTS.md)：完整能力范围与已定规则
+- [sources/README.md](sources/README.md)：GitHub、Figma 和飞书来源清单及固定证据
 - [COVERAGE_MATRIX.md](COVERAGE_MATRIX.md)：逐需求、逐 frame 的实现与验收状态
 - [FIGMA_MAP.md](FIGMA_MAP.md)：设计节点到页面/模块的映射
 - [ARCHITECTURE.md](ARCHITECTURE.md)：模块、服务端和共享 CloudBase 边界
