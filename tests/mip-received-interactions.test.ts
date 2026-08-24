@@ -10,24 +10,29 @@ function read(relativePath: string) {
 }
 
 describe('MIP received interaction client flow', () => {
-  it('keeps one reachable member page with two factual categories and identity access', () => {
+  it('keeps one reachable member page with three factual categories and identity access', () => {
     const page = read('src/packages/member/mip-received/index.ts')
     const view = read('src/packages/member/mip-received/index.wxml')
+    const profilePage = read('src/pages/profile/index.ts')
     const profile = read('src/pages/profile/index.wxml')
 
     expect(page).toContain('action: \'INTERACT\'')
     expect(page).toContain('loadCategory(\'REFERRAL\', true)')
     expect(page).toContain('loadCategory(\'PROFILE_INTEREST\', true)')
+    expect(page).toContain('loadCategory(\'VISITOR\', true)')
     expect(page).toContain('opportunityModule.listReceived(')
     expect(page).toContain('markReceivedRead')
     expect(page).toContain('mipMessagingModule.invalidate()')
     expect(page).not.toContain('wx.cloud')
     expect(view).toContain('引荐给我的')
     expect(view).toContain('对我感兴趣')
+    expect(view).toContain('访客')
     expect(view).toContain('state === \'loading\'')
     expect(view).toContain('state === \'empty\'')
     expect(view).toContain('state === \'error\'')
-    expect(profile).toContain('bind:tap="openReceivedInteractions"')
+    expect(profile).toContain('bind:tap=\"openReceivedInteractions\"')
+    expect(profile).toContain('visitorUnreadCount > 0')
+    expect(profilePage).toContain('opportunityModule.listReceived(\'VISITOR\')')
   })
 
   it('declares the page in every active route contract', () => {

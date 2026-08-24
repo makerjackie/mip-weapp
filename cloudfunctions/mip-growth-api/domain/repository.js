@@ -12,7 +12,7 @@ function createGrowthRepository(database, options = {}) {
     await ensureAccount(database, appId, userId)
     const [account, levels, rules] = await Promise.all([
       database.one(
-        `SELECT user_id, experience_balance, contribution_balance, coin_balance, version
+        `SELECT user_id, experience_balance, contribution_balance, version
          FROM mip_growth_accounts WHERE app_id = ? AND user_id = ?`,
         [appId, userId],
       ),
@@ -28,6 +28,7 @@ function createGrowthRepository(database, options = {}) {
                 source_event_type, status
          FROM mip_growth_rules
          WHERE app_id = ? AND status = 'ACTIVE'
+           AND metric IN ('EXPERIENCE', 'CONTRIBUTION')
          ORDER BY metric, name, id`,
         [appId],
       ),
@@ -50,7 +51,8 @@ function createGrowthRepository(database, options = {}) {
               e.created_at, r.rule_key, r.name AS rule_name
        FROM mip_growth_entries e
        LEFT JOIN mip_growth_rules r ON r.app_id = e.app_id AND r.id = e.rule_id
-       WHERE e.app_id = ? AND e.user_id = ? ${cursorSql}
+       WHERE e.app_id = ? AND e.user_id = ?
+         AND e.metric IN ('EXPERIENCE', 'CONTRIBUTION') ${cursorSql}
        ORDER BY e.created_at DESC, e.id DESC
        LIMIT ?`,
       params,
@@ -81,7 +83,7 @@ function createGrowthRepository(database, options = {}) {
           throw new Error('IDEMPOTENCY_CONFLICT')
         }
         if (prior.status === 'COMPLETED') {
-          return parseObject(prior.response_json)
+          return sanitizeRecordResponse(parseObject(prior.response_json))
         }
         throw new Error('CONFLICT')
       }
@@ -107,7 +109,7 @@ function createGrowthRepository(database, options = {}) {
         [input.appId, input.userId],
       )
       const account = await tx.one(
-        `SELECT user_id, experience_balance, contribution_balance, coin_balance, version
+        `SELECT user_id, experience_balance, contribution_balance, version
          FROM mip_growth_accounts WHERE app_id = ? AND user_id = ? FOR UPDATE`,
         [input.appId, input.userId],
       )
@@ -116,6 +118,7 @@ function createGrowthRepository(database, options = {}) {
                 source_event_type, status
          FROM mip_growth_rules
          WHERE app_id = ? AND source_event_type = ? AND status = 'ACTIVE'
+           AND metric IN ('EXPERIENCE', 'CONTRIBUTION')
          ORDER BY id FOR UPDATE`,
         [input.appId, input.sourceEventType],
       )
@@ -231,6 +234,9 @@ async function ensureAccount(database, appId, userId) {
 }
 
 function entryDto(row) {
+  if (row.metric !== 'EXPERIENCE' && row.metric !== 'CONTRIBUTION') {
+    throw new Error('GROWTH_RULE_NOT_AVAILABLE')
+  }
   return {
     id: row.id,
     ruleKey: row.rule_key || undefined,
@@ -240,6 +246,15 @@ function entryDto(row) {
     deltaValue: Number(row.delta_value),
     balanceAfter: Number(row.balance_after),
     createdAt: iso(row.created_at),
+  }
+}
+
+function sanitizeRecordResponse(value) {
+  return {
+    ...value,
+    awards: Array.isArray(value.awards)
+      ? value.awards.filter(award => award?.metric === 'EXPERIENCE' || award?.metric === 'CONTRIBUTION')
+      : [],
   }
 }
 

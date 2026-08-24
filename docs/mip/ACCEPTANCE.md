@@ -16,6 +16,7 @@
 | D5–D7 心动历史与反馈 | `cloudfunctions/mip-events-api/tests/heart-history.test.js`、`src/packages/member/mip-hearts/index.ts`、`tests/mip-event-feedback-admin.test.ts` | `implemented-local` |
 | D8 通知 | `tests/mip-messaging-ai.test.ts`、`cloudfunctions/mip-notification-worker/tests/templates-routes.test.js` | 站内 outbox 为 `implemented-local`；正式模板与微信投递为 `external-wait` |
 | E2 全局/玩家范围、角色/行业/能力筛选 | `tests/mip-people.test.ts`、`cloudfunctions/mip-opportunities-api/tests/people-discovery.test.js`、机会页模块测试 | `implemented-local` |
+| N4 行业/城市共用选择器 | `src/components/catalog-selector/`、`tests/mip-catalog-selector.test.ts`、档案/人才/机会三个调用页 | `implemented-local`；正式标签为 `external-wait` |
 | E3 机会详情发布时间与团队呈现 | `src/packages/member/mip-opportunities/detail/index.ts`、`src/packages/member/mip-opportunities/detail/index.wxml` | `implemented-local` |
 | E4 机会团队成员 | `cloudfunctions/mip-opportunities-api/tests/opportunity-team.test.js`、`tests/mip-opportunities.test.ts` | `implemented-local` |
 | E5 指定被引荐人 | `cloudfunctions/mip-opportunities-api/tests/referral-targets.test.js`、`tests/mip-related-opportunities.test.ts` | `implemented-local`，部署与真机为 `external-wait` |
@@ -29,7 +30,7 @@
 | 手机号更换 | `cloudfunctions/mip-identity-api/domain/handler.js`、`cloudfunctions/mip-identity-api/tests/service.test.js` | 本地已覆盖微信验证和重复绑定拒绝；真机为 `external-wait` |
 | 机会兴趣/引荐唯一关系 | `tests/mip-related-opportunities.test.ts`、`cloudfunctions/mip-opportunities-api/tests/block-visibility.test.js` | `implemented-local`，云端部署和运行时为 `external-wait` |
 | N1 会员期邀请归因与载体 | `tests/mip-membership-invitation-ui.test.ts`、`cloudfunctions/mip-commerce-api/tests/membership-invitation-code.test.js`、`cloudfunctions/mip-commerce-api/tests/repository.test.js` | `implemented-local`；正式 wxacode、扫码和相册为 `external-wait` |
-| 谁看过我 | `database/mysql/mip/023_profile_visits.sql`、`cloudfunctions/mip-opportunities-api/tests/profile-visits.test.js`、`src/packages/member/mip-received/index.ts` | `implemented-local`；云端运行时为 `external-wait` |
+| 谁看过我 | `database/mysql/mip/023_profile_visits.sql`、`cloudfunctions/mip-opportunities-api/tests/profile-visits.test.js`、`src/packages/member/mip-received/index.ts`、`tests/mip-received-interactions.test.ts` | 访客列表及“我的”未读入口为 `implemented-local`；云端运行时为 `external-wait` |
 | 管理端 `cloud://` 图片解析 | `tests/cloud-media.test.ts`、`src/modules/mip-admin/cloudbase-gateway.ts` | `implemented-local`；真实临时 URL 和下载失败恢复为 `external-wait` |
 | H1 用户详情与导出 | `cloudfunctions/mip-admin-api/tests/service.test.js`、`cloudfunctions/mip-admin-api/tests/export.test.js` | `implemented-local`；CloudBase 私有文件运行时为 `external-wait` |
 | H2 订单与参与名单 | `tests/admin-orders-roster-h2.test.ts`、`tests/admin-roster.test.ts` | `implemented-local`；正式支付退款为 `external-wait` |
@@ -49,6 +50,8 @@
 以下事项即使本地测试通过，仍保留 `external-wait`：正式 AppID、CloudBase 核心函数部署与运行时健康、支付商户和回调、正式协议正文、正式标签/城市和 AME 配置、通知模板、AI provider、活动介绍图片的真机选择/上传/内容安全/临时 URL、手机号、扫码签到、地图/日历和真实支付。当前 23 个数据库迁移已经成功应用，不再列为 `external-wait`。
 
 ## 微信开发者工具
+
+2026-08-24 最新证据：`pnpm runtime:preflight` 通过，登录、真实本地 AppID、服务端口和 64 条路由合同均就绪；增强后的 `pnpm test:runtime` 在首个代表页面等待 `App.callFunction` 时超时，报告保留为 `failed`，页面与代表状态均不得记为已验收。该结果与当前核心函数未部署事实一致。
 
 - `pnpm runtime:preflight`
 - `pnpm test:runtime`
@@ -77,9 +80,9 @@
 | 数据库隔离 | 迁移后检查通过，只写入 `mip_*` 与 `mip_schema_migrations` | 云端已验证 |
 | 开发者工具登录 | 已登录并可看到云函数列表 | 只证明可见性 |
 | `mip-identity-api` | 已创建空函数壳 | `external-wait`；VPC、子网、环境变量、仓库代码和 MySQL 健康未完成 |
-| 13 个核心函数 | 当前 API Key 缺少 SCF 创建/更新配置和目标 VPC/子网权限 | `external-wait` |
+| 13 个核心函数 | 管理 API Key 与 2026-08-24 恢复的本地 CloudBase 登录均被 CAM 拒绝 `scf:CreateFunction`，目标 VPC/子网也无访问权 | `external-wait` |
 
-`managePermissions` 只能修改 CloudBase 函数的客户端安全规则，不能修改 CAM 或补 `cam:PassRole`。下一步由主账号扫码完成 CloudBase 服务授权，或提供符合 [CloudBase 最小权限清单](../CLOUDBASE.md#当前部署阻塞与最小人工动作) 的专用 CAM 部署身份。
+`managePermissions` 只能修改 CloudBase 函数的客户端安全规则，不能修改 CAM 或补 `cam:PassRole`。本地登录已经恢复，重复扫码不会补足权限；下一步需要当前腾讯云账号完成目标 SCF/VPC 与 `TCB_QcsRole` 授权，或提供符合 [CloudBase 最小权限清单](../CLOUDBASE.md#当前部署阻塞与最小人工动作) 的专用 CAM 部署身份。
 
 新环境或后续新增迁移首次写入前必须：
 

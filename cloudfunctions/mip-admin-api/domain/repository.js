@@ -828,7 +828,7 @@ function createAdminRepository(database, options = {}) {
       ),
       database.one(
         `SELECT account.experience_balance, account.contribution_balance,
-                account.coin_balance, level.name AS level_name
+                level.name AS level_name
          FROM mip_growth_accounts account
          LEFT JOIN mip_growth_levels level
            ON level.app_id = account.app_id AND level.id = account.current_level_id
@@ -897,7 +897,6 @@ function createAdminRepository(database, options = {}) {
         levelName: growth?.level_name || '',
         experience: Number(growth?.experience_balance || 0),
         contribution: Number(growth?.contribution_balance || 0),
-        coin: Number(growth?.coin_balance || 0),
       },
       counts: {
         registrations: Number(counts?.registration_count || 0),
@@ -2680,20 +2679,23 @@ function createAdminRepository(database, options = {}) {
     const rows = await database.query(
       `SELECT id, rule_key, name, metric, delta_value, daily_limit_value,
         source_event_type, status, version FROM mip_growth_rules
-       WHERE app_id = ? ORDER BY status, name, id`,
+       WHERE app_id = ? AND metric IN ('EXPERIENCE', 'CONTRIBUTION')
+       ORDER BY status, name, id`,
       [appId],
     )
-    return rows.map(row => ({
-      id: row.id,
-      ruleKey: row.rule_key,
-      name: row.name,
-      metric: row.metric,
-      deltaValue: Number(row.delta_value),
-      dailyLimitValue: row.daily_limit_value === null ? null : Number(row.daily_limit_value),
-      sourceEventType: row.source_event_type,
-      status: row.status,
-      version: Number(row.version),
-    }))
+    return rows
+      .filter(row => row.metric === 'EXPERIENCE' || row.metric === 'CONTRIBUTION')
+      .map(row => ({
+        id: row.id,
+        ruleKey: row.rule_key,
+        name: row.name,
+        metric: row.metric,
+        deltaValue: Number(row.delta_value),
+        dailyLimitValue: row.daily_limit_value === null ? null : Number(row.daily_limit_value),
+        sourceEventType: row.source_event_type,
+        status: row.status,
+        version: Number(row.version),
+      }))
   }
 
   async function saveGrowthRule(input) {
@@ -2703,7 +2705,8 @@ function createAdminRepository(database, options = {}) {
       const ruleId = input.ruleId
       const rows = await tx.query(
         `SELECT id, rule_key, name, metric, source_event_type, status, version FROM mip_growth_rules
-         WHERE app_id = ? ORDER BY source_event_type, metric, id FOR UPDATE`,
+         WHERE app_id = ? AND metric IN ('EXPERIENCE', 'CONTRIBUTION')
+         ORDER BY source_event_type, metric, id FOR UPDATE`,
         [input.appId],
       )
       const current = rows.find(row => row.id === ruleId)
@@ -2731,7 +2734,7 @@ function createAdminRepository(database, options = {}) {
 
   async function listGrowthEntries(appId, visibility, filters, pageLimit, cursor = null) {
     const users = visibleBranchesWhere(visibility, 'u')
-    const clauses = ['ge.app_id = ?', users.sql]
+    const clauses = ["ge.app_id = ?", "ge.metric IN ('EXPERIENCE', 'CONTRIBUTION')", users.sql]
     const params = [appId, ...users.params]
     if (filters.userId) { clauses.push('ge.user_id = ?'); params.push(filters.userId) }
     if (filters.metric) { clauses.push('ge.metric = ?'); params.push(filters.metric) }
@@ -2745,17 +2748,19 @@ function createAdminRepository(database, options = {}) {
        WHERE ${clauses.join(' AND ')}${cursorWhere.sql} ORDER BY ge.created_at DESC, ge.id DESC LIMIT ?`,
       [...params, ...cursorWhere.params, pageLimit + 1],
     )
-    const items = rows.map(row => ({
-      id: row.id,
-      userId: row.user_id,
-      nickname: row.nickname || '未填写昵称',
-      sourceEventType: row.source_event_type,
-      metric: row.metric,
-      deltaValue: Number(row.delta_value),
-      balanceAfter: Number(row.balance_after),
-      adjustmentReason: row.adjustment_reason || '',
-      createdAt: iso(row.created_at),
-    }))
+    const items = rows
+      .filter(row => row.metric === 'EXPERIENCE' || row.metric === 'CONTRIBUTION')
+      .map(row => ({
+        id: row.id,
+        userId: row.user_id,
+        nickname: row.nickname || '未填写昵称',
+        sourceEventType: row.source_event_type,
+        metric: row.metric,
+        deltaValue: Number(row.delta_value),
+        balanceAfter: Number(row.balance_after),
+        adjustmentReason: row.adjustment_reason || '',
+        createdAt: iso(row.created_at),
+      }))
     return pageRows(items, pageLimit, row => ({ createdAt: row.createdAt, id: row.id }))
   }
 
@@ -2797,11 +2802,12 @@ function createAdminRepository(database, options = {}) {
         [input.appId, input.userId],
       )
       const account = await tx.one(
-        `SELECT experience_balance, contribution_balance, coin_balance, version
+        `SELECT experience_balance, contribution_balance, version
          FROM mip_growth_accounts WHERE app_id = ? AND user_id = ? FOR UPDATE`,
         [input.appId, input.userId],
       )
-      const column = { EXPERIENCE: 'experience_balance', CONTRIBUTION: 'contribution_balance', COIN: 'coin_balance' }[input.metric]
+      const column = { EXPERIENCE: 'experience_balance', CONTRIBUTION: 'contribution_balance' }[input.metric]
+      if (!column) throw codeError('VALIDATION_FAILED')
       const current = Number(account[column])
       const next = current + input.deltaValue
       if (next < 0) throw codeError('INSUFFICIENT_BALANCE')

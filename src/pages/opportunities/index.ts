@@ -1,3 +1,4 @@
+import type { CatalogSelectorGroup } from '../../components/catalog-selector/model'
 import type { BranchId, CooperationRoleKey, OpportunityId } from '../../modules/mip'
 import type { CooperationCardSummary } from '../../modules/mip-cooperation'
 import type { ProtectedActionKey } from '../../modules/mip-identity'
@@ -15,9 +16,9 @@ import { caseNavigateTo, syncCaseNavigation } from '../../modules/platform/case-
 
 type PageMode = 'opportunities' | 'cooperation'
 interface CooperationCardView extends CooperationCardSummary { roleName: string }
-interface TagView { id: string, label: string, selected: boolean }
+interface TagView { id: string, label: string, selected: boolean, popular?: boolean }
 interface IndustryGroupView { id: string, label: string, options: TagView[] }
-interface CityOption { id: string, label: string }
+interface CityOption { id: string, label: string, popular?: boolean }
 
 const allRoleOptions = [{ key: '', name: '全部角色' }, ...cooperationRoles]
 const nationwideOption: CityOption = { id: '', label: '全国' }
@@ -28,7 +29,19 @@ function cityOptionsFor(mode: PageMode, catalog: OpportunityCatalog): CityOption
         id: item.id,
         label: item.name === item.cityName ? item.cityName : `${item.cityName} · ${item.name}`,
       }))]
-    : [nationwideOption, ...catalog.cityTags.map(item => ({ id: item.id, label: item.label }))]
+    : [nationwideOption, ...catalog.cityTags.map(item => ({
+        id: item.id,
+        label: item.label,
+        popular: item.popular,
+      }))]
+}
+
+function cityGroupsFor(mode: PageMode, cityOptions: CityOption[]): CatalogSelectorGroup[] {
+  return [{
+    id: mode === 'cooperation' ? 'city-branches' : 'cities',
+    label: mode === 'cooperation' ? '城市分会' : '城市',
+    options: cityOptions.slice(1),
+  }]
 }
 
 Page({
@@ -41,6 +54,8 @@ Page({
     filterOpen: false,
     catalog: { branches: [], cityTags: [], industryGroups: [], industryTags: [], abilityTags: [] } as OpportunityCatalog,
     cityOptions: [nationwideOption] as CityOption[],
+    cityGroups: [] as CatalogSelectorGroup[],
+    citySelectionIds: [] as string[],
     cityIndex: 0,
     draftOpportunityCityTagId: '',
     draftCooperationBranchId: '' as '' | BranchId,
@@ -91,6 +106,8 @@ Page({
       this.setData({
         catalog,
         cityOptions,
+        cityGroups: cityGroupsFor(this.data.mode, cityOptions),
+        citySelectionIds: draftCityId ? [draftCityId] : [],
         cityIndex: Math.max(0, cityOptions.findIndex(item => item.id === draftCityId)),
         industryGroups: catalog.industryGroups.map(group => ({
           id: group.id,
@@ -99,6 +116,7 @@ Page({
             id: item.id,
             label: item.label,
             selected: this.data.draftIndustryTagIds.includes(item.id),
+            popular: item.popular,
           })),
         })),
         abilityOptions: catalog.abilityTags.map(item => ({
@@ -223,6 +241,8 @@ Page({
     this.setData({
       mode,
       cityOptions,
+      cityGroups: cityGroupsFor(mode, cityOptions),
+      citySelectionIds: cityId ? [cityId] : [],
       cityIndex: Math.max(0, cityOptions.findIndex(item => item.id === cityId)),
       keywordInput: this.data.keyword,
       draftOpportunityCityTagId: this.data.selectedCityTagId,
@@ -277,6 +297,7 @@ Page({
       draftIndustryTagIds: [...this.data.selectedIndustryTagIds],
       draftAbilityTagIds: [...this.data.selectedAbilityTagIds],
       cityIndex: Math.max(0, this.data.cityOptions.findIndex(item => item.id === cityId)),
+      citySelectionIds: cityId ? [cityId] : [],
       industryGroups: this.data.industryGroups.map(group => ({
         ...group,
         options: group.options.map(item => ({
@@ -292,15 +313,40 @@ Page({
     })
   },
 
-  changeCity(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    const cityIndex = Number(event.detail.value)
+  changeCity(event: WechatMiniprogram.CustomEvent<{ selectedIds: string[] }>) {
+    const cityId = event.detail.selectedIds[0] || ''
+    const cityIndex = Math.max(0, this.data.cityOptions.findIndex(item => item.id === cityId))
     const option = this.data.cityOptions[cityIndex]
     if (!option) {
       return
     }
     this.setData(this.data.mode === 'cooperation'
-      ? { cityIndex, draftCooperationBranchId: option.id as '' | BranchId, filterOpen: true }
-      : { cityIndex, draftOpportunityCityTagId: option.id, filterOpen: true })
+      ? {
+          cityIndex,
+          citySelectionIds: cityId ? [cityId] : [],
+          draftCooperationBranchId: option.id as '' | BranchId,
+          filterOpen: true,
+        }
+      : {
+          cityIndex,
+          citySelectionIds: cityId ? [cityId] : [],
+          draftOpportunityCityTagId: option.id,
+          filterOpen: true,
+        })
+  },
+
+  changeIndustry(event: WechatMiniprogram.CustomEvent<{ selectedIds: string[] }>) {
+    const draftIndustryTagIds = event.detail.selectedIds.slice(0, 8)
+    this.setData({
+      draftIndustryTagIds,
+      industryGroups: this.data.industryGroups.map(group => ({
+        ...group,
+        options: group.options.map(item => ({
+          ...item,
+          selected: draftIndustryTagIds.includes(item.id),
+        })),
+      })),
+    })
   },
 
   toggleFilters() {
@@ -320,6 +366,7 @@ Page({
       draftIndustryTagIds: [...this.data.selectedIndustryTagIds],
       draftAbilityTagIds: [...this.data.selectedAbilityTagIds],
       cityIndex: Math.max(0, this.data.cityOptions.findIndex(item => item.id === cityId)),
+      citySelectionIds: cityId ? [cityId] : [],
       industryGroups: this.data.industryGroups.map(group => ({
         ...group,
         options: group.options.map(item => ({
@@ -345,30 +392,16 @@ Page({
   toggleTag(event: WechatMiniprogram.TouchEvent) {
     const type = String(event.currentTarget.dataset.type || '')
     const id = String(event.currentTarget.dataset.id || '')
-    if (!id || !['industry', 'ability'].includes(type)) {
+    if (!id || type !== 'ability') {
       return
     }
-    if (type === 'industry') {
-      const next = this.data.draftIndustryTagIds.includes(id)
-        ? this.data.draftIndustryTagIds.filter(item => item !== id)
-        : [...this.data.draftIndustryTagIds, id]
-      this.setData({
-        draftIndustryTagIds: next,
-        industryGroups: this.data.industryGroups.map(group => ({
-          ...group,
-          options: group.options.map(item => item.id === id ? { ...item, selected: !item.selected } : item),
-        })),
-      })
-    }
-    else {
-      const next = this.data.draftAbilityTagIds.includes(id)
-        ? this.data.draftAbilityTagIds.filter(item => item !== id)
-        : [...this.data.draftAbilityTagIds, id]
-      this.setData({
-        draftAbilityTagIds: next,
-        abilityOptions: this.data.abilityOptions.map(item => item.id === id ? { ...item, selected: !item.selected } : item),
-      })
-    }
+    const next = this.data.draftAbilityTagIds.includes(id)
+      ? this.data.draftAbilityTagIds.filter(item => item !== id)
+      : [...this.data.draftAbilityTagIds, id]
+    this.setData({
+      draftAbilityTagIds: next,
+      abilityOptions: this.data.abilityOptions.map(item => item.id === id ? { ...item, selected: !item.selected } : item),
+    })
   },
 
   resetFilters() {
@@ -377,6 +410,8 @@ Page({
       keywordInput: '',
       cityIndex: 0,
       cityOptions,
+      cityGroups: cityGroupsFor(this.data.mode, cityOptions),
+      citySelectionIds: [],
       draftOpportunityCityTagId: '',
       draftCooperationBranchId: '',
       draftRoleKey: '',
@@ -426,7 +461,9 @@ Page({
       keywordInput: '',
       keyword: '',
       cityOptions,
+      cityGroups: cityGroupsFor(this.data.mode, cityOptions),
       cityIndex: 0,
+      citySelectionIds: [],
       draftOpportunityCityTagId: '',
       draftCooperationBranchId: '',
       selectedCityTagId: '',

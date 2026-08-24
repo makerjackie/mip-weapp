@@ -233,6 +233,7 @@ describe('MIP profile input', () => {
               tag_key: 'internet_ai',
               label: '互联网与人工智能',
               selectable: 0,
+              popular: 0,
             },
             {
               id: '21000000-0000-4000-8000-000000000001',
@@ -241,6 +242,7 @@ describe('MIP profile input', () => {
               tag_key: 'internet',
               label: '互联网',
               selectable: 1,
+              popular: 1,
             },
           ]
         },
@@ -255,6 +257,7 @@ describe('MIP profile input', () => {
         key: 'internet_ai',
         label: '互联网与人工智能',
         selectable: false,
+        popular: false,
       },
       {
         id: '21000000-0000-4000-8000-000000000001',
@@ -263,6 +266,7 @@ describe('MIP profile input', () => {
         key: 'internet',
         label: '互联网',
         selectable: true,
+        popular: true,
       },
     ])
   })

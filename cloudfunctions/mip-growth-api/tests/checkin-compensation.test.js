@@ -47,7 +47,6 @@ function fixture() {
     user_id: userId,
     experience_balance: 0,
     contribution_balance: 0,
-    coin_balance: 0,
     version: 1,
   }
   const rule = {

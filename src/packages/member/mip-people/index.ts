@@ -1,3 +1,4 @@
+import type { CatalogSelectorGroup } from '../../../components/catalog-selector/model'
 import type { BranchId } from '../../../modules/mip'
 import type {
   OpportunityCatalog,
@@ -17,7 +18,6 @@ interface PersonView extends PublicPerson {
 
 interface FilterOption { id: string, label: string }
 interface TagOption extends FilterOption { selected: boolean }
-interface IndustryGroupView extends FilterOption { options: TagOption[] }
 
 const allBranches: FilterOption = { id: '', label: '全部城市与分会' }
 
@@ -50,11 +50,13 @@ Page({
     keyword: '',
     filterOpen: false,
     branchOptions: [allBranches] as FilterOption[],
+    branchGroups: [] as CatalogSelectorGroup[],
+    draftBranchIds: [] as string[],
     branchIndex: 0,
     selectedBranchId: '' as '' | BranchId,
     draftIndustryTagIds: [] as string[],
     selectedIndustryTagIds: [] as string[],
-    industryGroups: [] as IndustryGroupView[],
+    industryGroups: [] as CatalogSelectorGroup[],
     draftAbilityTagIds: [] as string[],
     selectedAbilityTagIds: [] as string[],
     abilityOptions: [] as TagOption[],
@@ -100,6 +102,11 @@ Page({
     }))]
     this.setData({
       branchOptions,
+      branchGroups: [{
+        id: 'city-branches',
+        label: '城市分会',
+        options: branchOptions.slice(1),
+      }],
       branchIndex: Math.max(0, branchOptions.findIndex(item => item.id === this.data.selectedBranchId)),
       industryGroups: catalog.industryGroups.map(group => ({
         id: group.id,
@@ -107,7 +114,7 @@ Page({
         options: group.options.map(item => ({
           id: item.id,
           label: item.label,
-          selected: this.data.draftIndustryTagIds.includes(item.id),
+          popular: item.popular,
         })),
       })),
       abilityOptions: catalog.abilityTags.map(item => ({
@@ -183,34 +190,16 @@ Page({
     this.setData({ keywordInput: '', keyword: '' }, () => void this.loadPeople(true))
   },
 
-  changeBranch(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    const branchIndex = Number(event.detail.value)
-    const selected = this.data.branchOptions[branchIndex] || allBranches
-    this.setData({
-      branchIndex,
-      selectedBranchId: selected.id as '' | BranchId,
-    }, () => void this.loadPeople(true))
+  changeBranch(event: WechatMiniprogram.CustomEvent<{ selectedIds: string[] }>) {
+    this.setData({ draftBranchIds: event.detail.selectedIds.slice(0, 1) })
   },
 
   toggleFilters() {
     this.setData({ filterOpen: !this.data.filterOpen })
   },
 
-  toggleIndustry(event: WechatMiniprogram.TouchEvent) {
-    const id = String(event.currentTarget.dataset.id || '')
-    if (!id) {
-      return
-    }
-    const draftIndustryTagIds = this.data.draftIndustryTagIds.includes(id)
-      ? this.data.draftIndustryTagIds.filter(item => item !== id)
-      : [...this.data.draftIndustryTagIds, id].slice(0, 8)
-    this.setData({
-      draftIndustryTagIds,
-      industryGroups: this.data.industryGroups.map(group => ({
-        ...group,
-        options: group.options.map(item => ({ ...item, selected: draftIndustryTagIds.includes(item.id) })),
-      })),
-    })
+  changeIndustry(event: WechatMiniprogram.CustomEvent<{ selectedIds: string[] }>) {
+    this.setData({ draftIndustryTagIds: event.detail.selectedIds.slice(0, 8) })
   },
 
   toggleAbility(event: WechatMiniprogram.TouchEvent) {
@@ -230,20 +219,20 @@ Page({
     })
   },
 
-  resetIndustryDraft() {
+  resetFilterDraft() {
     this.setData({
+      draftBranchIds: [],
       draftIndustryTagIds: [],
       draftAbilityTagIds: [],
-      industryGroups: this.data.industryGroups.map(group => ({
-        ...group,
-        options: group.options.map(item => ({ ...item, selected: false })),
-      })),
       abilityOptions: this.data.abilityOptions.map(item => ({ ...item, selected: false })),
     })
   },
 
-  applyIndustryFilters() {
+  applyFilters() {
+    const selectedBranchId = (this.data.draftBranchIds[0] || '') as '' | BranchId
     this.setData({
+      selectedBranchId,
+      branchIndex: Math.max(0, this.data.branchOptions.findIndex(item => item.id === selectedBranchId)),
       selectedIndustryTagIds: [...this.data.draftIndustryTagIds],
       selectedAbilityTagIds: [...this.data.draftAbilityTagIds],
       filterOpen: false,
@@ -256,16 +245,13 @@ Page({
       keywordInput: '',
       keyword: '',
       branchIndex: 0,
+      draftBranchIds: [],
       selectedBranchId: '',
       draftIndustryTagIds: [],
       selectedIndustryTagIds: [],
       draftAbilityTagIds: [],
       selectedAbilityTagIds: [],
       filterOpen: false,
-      industryGroups: this.data.industryGroups.map(group => ({
-        ...group,
-        options: group.options.map(item => ({ ...item, selected: false })),
-      })),
       abilityOptions: this.data.abilityOptions.map(item => ({ ...item, selected: false })),
     }, () => void this.loadPeople(true))
   },

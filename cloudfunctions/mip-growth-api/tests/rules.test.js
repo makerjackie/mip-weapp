@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict')
 const test = require('node:test')
-const { levelSnapshot, projectAward } = require('../domain/rules')
+const { accountDto, levelSnapshot, projectAward } = require('../domain/rules')
 
 test('server rule caps a positive award at the daily limit', () => {
   const projection = projectAward({ experience_balance: 90 }, {
@@ -21,12 +21,33 @@ test('server rule caps a positive award at the daily limit', () => {
 })
 
 test('server rule refuses to create a negative balance', () => {
-  assert.throws(() => projectAward({ coin_balance: 3 }, {
-    metric: 'COIN',
+  assert.throws(() => projectAward({ contribution_balance: 3 }, {
+    metric: 'CONTRIBUTION',
     delta_value: -4,
     daily_limit_value: null,
     status: 'ACTIVE',
   }, 0), /GROWTH_BALANCE_INVALID/)
+})
+
+test('server rejects the retired game coin metric and strips its legacy database balance', () => {
+  assert.throws(() => projectAward({ coin_balance: 3 }, {
+    metric: 'COIN',
+    delta_value: 1,
+    daily_limit_value: null,
+    status: 'ACTIVE',
+  }, 0), /GROWTH_RULE_NOT_AVAILABLE/)
+  assert.deepEqual(accountDto({
+    user_id: 'user-id',
+    experience_balance: 1,
+    contribution_balance: 2,
+    coin_balance: 3,
+    version: 4,
+  }), {
+    userId: 'user-id',
+    experienceBalance: 1,
+    contributionBalance: 2,
+    version: 4,
+  })
 })
 
 test('snapshot derives the active level from server thresholds', () => {
@@ -34,7 +55,6 @@ test('snapshot derives the active level from server thresholds', () => {
     user_id: 'user-id',
     experience_balance: 120,
     contribution_balance: 8,
-    coin_balance: 2,
     version: 3,
   }, [
     { id: 'one', level_key: 'one', name: '一级', minimum_experience: 0, benefits_json: '[]', status: 'ACTIVE' },

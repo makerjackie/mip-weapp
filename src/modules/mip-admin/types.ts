@@ -115,7 +115,6 @@ export interface AdminUserDetail extends AdminUser {
     levelName: string
     experience: number
     contribution: number
-    coin: number
   }
   counts: {
     registrations: number
@@ -435,7 +434,7 @@ export interface AdminGrowthRule {
   id: string
   ruleKey: string
   name: string
-  metric: 'EXPERIENCE' | 'CONTRIBUTION' | 'COIN'
+  metric: 'EXPERIENCE' | 'CONTRIBUTION'
   deltaValue: number
   dailyLimitValue: number | null
   sourceEventType: string
@@ -448,7 +447,7 @@ export interface AdminGrowthEntry {
   userId: string
   nickname: string
   sourceEventType: string
-  metric: 'EXPERIENCE' | 'CONTRIBUTION' | 'COIN'
+  metric: 'EXPERIENCE' | 'CONTRIBUTION'
   deltaValue: number
   balanceAfter: number
   adjustmentReason: string

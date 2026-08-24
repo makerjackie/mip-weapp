@@ -523,14 +523,17 @@ async function projectGrowthChanged(database, event) {
      FROM mip_growth_entries entry
      INNER JOIN mip_users user
        ON user.app_id = entry.app_id AND user.id = entry.user_id AND user.status = 'ACTIVE'
-     WHERE entry.app_id = ? AND entry.id = ?`,
+     WHERE entry.app_id = ? AND entry.id = ?
+       AND entry.metric IN ('EXPERIENCE', 'CONTRIBUTION')`,
     [event.app_id, event.aggregate_id],
   )
   if (!row) return projection([], [], 'FACT_NO_LONGER_CURRENT')
+  if (row.metric !== 'EXPERIENCE' && row.metric !== 'CONTRIBUTION') {
+    return projection([], [], 'FACT_OUT_OF_SCOPE')
+  }
   const labels = {
     EXPERIENCE: '经验值',
     CONTRIBUTION: '贡献值',
-    COIN: '游戏币',
   }
   const label = labels[row.metric]
   const delta = Number(row.delta_value)

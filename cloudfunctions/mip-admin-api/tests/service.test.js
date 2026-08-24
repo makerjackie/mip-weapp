@@ -44,7 +44,7 @@ function repository(roleKey = 'PLATFORM_OWNER', scopeType = 'PLATFORM', scopeId 
       controls: [], visibility: {}, userVersion: 1, profileVersion: 1,
       companies: [{ name: '示例公司', role: '负责人' }], organizations: [],
       membership: { status: 'ACTIVE', startsAt: '2026-01-01T00:00:00.000Z', endsAt: '2027-01-01T00:00:00.000Z' },
-      growth: { levelName: '一级', experience: 10, contribution: 2, coin: 1 },
+      growth: { levelName: '一级', experience: 10, contribution: 2 },
       counts: { registrations: 3, attended: 2, orders: 1, opportunities: 1, cooperationCards: 1, superCases: 1 },
       tags: [], roles: [], createdAt: '2026-01-01T00:00:00.000Z', updatedAt: '2026-08-24T00:00:00.000Z',
     }),

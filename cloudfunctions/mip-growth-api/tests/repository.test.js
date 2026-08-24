@@ -20,7 +20,6 @@ test('returns the full active level ladder and earning rules from server facts',
         user_id: input.userId,
         experience_balance: 120,
         contribution_balance: 8,
-        coin_balance: 2,
         version: 3,
       }
     },
@@ -45,7 +44,9 @@ test('returns the full active level ladder and earning rules from server facts',
   assert.deepEqual(result.levels.map(level => level.levelKey), ['starter', 'active'])
   assert.equal(result.currentLevel.levelKey, 'active')
   assert.deepEqual(result.earningRules.map(rule => rule.ruleKey), ['event_attended'])
-  assert.ok(queries.some(item => item.sql.includes("status = 'ACTIVE'") && item.sql.includes('mip_growth_rules')))
+  assert.ok(queries.some(item => item.sql.includes("status = 'ACTIVE'")
+    && item.sql.includes("metric IN ('EXPERIENCE', 'CONTRIBUTION')")
+    && item.sql.includes('mip_growth_rules')))
 })
 
 test('records a capped award and account update in one transaction', async () => {
@@ -55,7 +56,7 @@ test('records a capped award and account update in one transaction', async () =>
       if (sql.includes('mip_idempotency_keys')) return null
       if (sql.includes('FROM mip_users')) return { id: input.userId, status: 'ACTIVE' }
       if (sql.includes('FROM mip_growth_accounts')) {
-        return { user_id: input.userId, experience_balance: 90, contribution_balance: 0, coin_balance: 0, version: 1 }
+        return { user_id: input.userId, experience_balance: 90, contribution_balance: 0, version: 1 }
       }
       if (sql.includes('FROM mip_growth_entries') && sql.includes('source_event_id')) return null
       if (sql.includes('COALESCE(SUM')) return { total: 25 }
@@ -98,7 +99,13 @@ test('records a capped award and account update in one transaction', async () =>
 
 test('returns a completed idempotent response without writing another entry', async () => {
   let queryCount = 0
-  const response = { sourceEventId: input.sourceEventId, awards: [{ appliedDelta: 5 }] }
+  const response = {
+    sourceEventId: input.sourceEventId,
+    awards: [
+      { metric: 'EXPERIENCE', appliedDelta: 5 },
+      { metric: 'COIN', appliedDelta: 1 },
+    ],
+  }
   const database = {
     transaction: async work => work({
       async one(sql) {
@@ -120,6 +127,9 @@ test('returns a completed idempotent response without writing another entry', as
     }),
   }
   const result = await createGrowthRepository(database).recordConfirmedEvent(input)
-  assert.deepEqual(result, response)
+  assert.deepEqual(result, {
+    sourceEventId: input.sourceEventId,
+    awards: [{ metric: 'EXPERIENCE', appliedDelta: 5 }],
+  })
   assert.equal(queryCount, 0)
 })

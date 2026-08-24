@@ -431,7 +431,7 @@ function createIdentityRepository(database, options = {}) {
 
   async function listProfileTags(appId) {
     return database.query(
-      `SELECT t.id, t.kind, t.parent_id, t.tag_key, t.label, t.selectable
+      `SELECT t.id, t.kind, t.parent_id, t.tag_key, t.label, t.selectable, t.popular
        FROM mip_tags t
        LEFT JOIN mip_tags parent
          ON parent.app_id = t.app_id AND parent.id = t.parent_id

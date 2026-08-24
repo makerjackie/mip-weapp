@@ -563,6 +563,29 @@ describe('outbox event projector', () => {
     assert.deepEqual(result.growth, [])
   })
 
+  it('does not project a historical game coin entry', async () => {
+    const event = {
+      ...base,
+      aggregate_type: 'GROWTH_ENTRY',
+      aggregate_id: '60000000-0000-4000-8000-000000000003',
+      event_type: 'growth.changed',
+    }
+    const result = await projectEvent({
+      async one(sql) {
+        assert.match(sql, /metric IN \('EXPERIENCE', 'CONTRIBUTION'\)/)
+        return {
+          id: event.aggregate_id,
+          user_id: '70000000-0000-4000-8000-000000000003',
+          metric: 'COIN',
+          delta_value: 5,
+          balance_after: 25,
+        }
+      },
+    }, event)
+    assert.deepEqual(result.notifications, [])
+    assert.equal(result.reason, 'FACT_OUT_OF_SCOPE')
+  })
+
   it('projects an operations notification only from the app-scoped recipient fact', async () => {
     const event = {
       ...base,

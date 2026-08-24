@@ -97,7 +97,7 @@ async function getCatalogs(database, caller) {
       [caller.appId],
     ),
     database.query(
-      `SELECT t.id, t.kind, t.parent_id, t.tag_key, t.label, t.selectable
+      `SELECT t.id, t.kind, t.parent_id, t.tag_key, t.label, t.selectable, t.popular
        FROM mip_tags t
        LEFT JOIN mip_tags parent
          ON parent.app_id = t.app_id AND parent.id = t.parent_id
@@ -125,7 +125,12 @@ async function getCatalogs(database, caller) {
       [caller.appId],
     ),
   ])
-  const tag = row => ({ id: row.id, key: row.tag_key, label: row.label })
+  const tag = row => ({
+    id: row.id,
+    key: row.tag_key,
+    label: row.label,
+    popular: Boolean(row.popular),
+  })
   const industryParents = tags.filter(row => row.kind === 'INDUSTRY' && !row.parent_id)
   const industryChildren = tags.filter(row => row.kind === 'INDUSTRY' && row.parent_id)
   const industryGroups = industryParents.map(parent => ({

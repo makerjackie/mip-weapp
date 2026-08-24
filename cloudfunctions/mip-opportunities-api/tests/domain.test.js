@@ -71,6 +71,7 @@ test('opportunity catalog exposes non-selectable industry parents only as groups
             tag_key: 'internet_ai',
             label: '互联网与人工智能',
             selectable: 0,
+            popular: 0,
           },
           {
             id: '21000000-0000-4000-8000-000000000001',
@@ -79,6 +80,7 @@ test('opportunity catalog exposes non-selectable industry parents only as groups
             tag_key: 'internet',
             label: '互联网',
             selectable: 1,
+            popular: 1,
           },
           {
             id: '20000000-0000-4000-8000-000000000001',
@@ -87,6 +89,7 @@ test('opportunity catalog exposes non-selectable industry parents only as groups
             tag_key: 'shenzhen',
             label: '深圳',
             selectable: 1,
+            popular: 1,
           },
         ]
       }
@@ -99,10 +102,12 @@ test('opportunity catalog exposes non-selectable industry parents only as groups
     id: '21900000-0000-4000-8000-000000000001',
     key: 'internet_ai',
     label: '互联网与人工智能',
+    popular: false,
     options: [{
       id: '21000000-0000-4000-8000-000000000001',
       key: 'internet',
       label: '互联网',
+      popular: true,
     }],
   }])
   assert.deepEqual(catalog.industryTags, catalog.industryGroups[0].options)

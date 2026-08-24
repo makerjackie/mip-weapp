@@ -90,6 +90,7 @@ async function awardCheckIn(tx, recorded, account, createId) {
             source_event_type, status
      FROM mip_growth_rules
      WHERE app_id = ? AND source_event_type = 'event.checked_in' AND status = 'ACTIVE'
+       AND metric IN ('EXPERIENCE', 'CONTRIBUTION')
      ORDER BY id FOR UPDATE`,
     [recorded.app_id],
   )
@@ -175,6 +176,7 @@ async function reverseCheckIn(tx, recorded, reversal, account, createId) {
      FROM mip_growth_entries
      WHERE app_id = ? AND user_id = ? AND source_event_type = 'event.checked_in'
        AND source_event_id = ?
+       AND metric IN ('EXPERIENCE', 'CONTRIBUTION')
      ORDER BY id FOR UPDATE`,
     [recorded.app_id, recorded.user_id, recorded.id],
   )
@@ -237,7 +239,7 @@ async function lockAccount(tx, appId, userId) {
     [appId, userId],
   )
   const account = await tx.one(
-    `SELECT user_id, experience_balance, contribution_balance, coin_balance, version
+    `SELECT user_id, experience_balance, contribution_balance, version
      FROM mip_growth_accounts WHERE app_id = ? AND user_id = ? FOR UPDATE`,
     [appId, userId],
   )

@@ -195,6 +195,7 @@ export interface ProfileTagOption {
   key: string
   label: string
   selectable: boolean
+  popular?: boolean
 }
 
 export interface MipIdentityGateway {

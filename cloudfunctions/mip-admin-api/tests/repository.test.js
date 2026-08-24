@@ -100,6 +100,14 @@ describe('admin repository persistence contracts', () => {
             visibility_json: '{}', profile_version: 1, phone_verified_at: null, branch_name: '广州分会', city_name: '广州',
           }
         }
+        if (sql.includes('FROM mip_growth_accounts')) {
+          return {
+            experience_balance: 10,
+            contribution_balance: 2,
+            coin_balance: 99,
+            level_name: '一级',
+          }
+        }
         return null
       },
       async query(sql, params) {
@@ -113,6 +121,10 @@ describe('admin repository persistence contracts', () => {
     assert.deepEqual(detail.counts, {
       registrations: 0, attended: 0, orders: 0, opportunities: 0, cooperationCards: 0, superCases: 0,
     })
+    assert.deepEqual(detail.growth, { levelName: '一级', experience: 10, contribution: 2 })
+    assert.equal('coin' in detail.growth, false)
+    const growthSql = calls.find(call => call.sql.includes('FROM mip_growth_accounts'))?.sql || ''
+    assert.doesNotMatch(growthSql, /coin_balance/)
     assert.ok(calls.every(call => call.params[0] === 'wx-app'))
     assert.doesNotMatch(calls.map(call => call.sql).join('\n'), /\b(?:member|dating|sewing)_\w+/i)
   })
@@ -518,7 +530,7 @@ describe('admin repository persistence contracts', () => {
         }
         if (sql.includes('FROM mip_growth_entries')) return null
         if (sql.includes('FROM mip_growth_accounts')) {
-          return { experience_balance: 10, contribution_balance: 0, coin_balance: 0, version: 1 }
+          return { experience_balance: 10, contribution_balance: 0, version: 1 }
         }
         return null
       },

@@ -7,6 +7,7 @@ export interface OpportunityTag {
   id: string
   key: string
   label: string
+  popular?: boolean
 }
 
 export interface OpportunityTagGroup extends OpportunityTag {

@@ -8,6 +8,7 @@ export interface ProfileIndustryOption {
   groupKey: string
   groupLabel: string
   displayLabel: string
+  popular: boolean
 }
 
 export interface ProfileIndustryGroup {
@@ -35,6 +36,7 @@ export function groupProfileIndustries(tags: ProfileTagOption[]): ProfileIndustr
           groupKey: group.key,
           groupLabel: group.label,
           displayLabel: `${group.label} · ${tag.label}`,
+          popular: Boolean(tag.popular),
         })),
     }))
     .filter(group => group.options.length)

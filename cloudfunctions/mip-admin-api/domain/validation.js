@@ -50,7 +50,7 @@ function limit(value, maximum = 50) {
 }
 
 function metric(value) {
-  if (!['EXPERIENCE', 'CONTRIBUTION', 'COIN'].includes(value)) {
+  if (!['EXPERIENCE', 'CONTRIBUTION'].includes(value)) {
     throw new AdminError('VALIDATION_FAILED', '成长类型无效')
   }
   return value

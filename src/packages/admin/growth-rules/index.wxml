@@ -5,7 +5,7 @@
   <view wx:if="{{canConfigure && editorId}}" class="mt-5 rounded-[16rpx] bg-panel p-4">
     <view class="text-[length:27rpx] font-semibold">编辑规则</view>
     <view class="mt-3 text-[length:25rpx] font-semibold">{{name}}</view>
-    <view class="mt-1 text-[length:22rpx] text-muted">{{sourceEventType}} · {{metric === 'EXPERIENCE' ? '经验值' : metric === 'CONTRIBUTION' ? '贡献值' : '游戏币'}}</view>
+    <view class="mt-1 text-[length:22rpx] text-muted">{{sourceEventType}} · {{metric === 'EXPERIENCE' ? '经验值' : '贡献值'}}</view>
     <view class="mt-3"><t-input type="number" value="{{deltaValue}}" placeholder="单次奖励数值" data-field="deltaValue" bind:change="updateField" /></view>
     <view class="mt-2"><t-input type="number" value="{{dailyLimitValue}}" placeholder="每日上限，可不填" data-field="dailyLimitValue" bind:change="updateField" /></view>
     <view class="mt-3 flex gap-2"><t-tag variant="outline" data-field="status" data-value="DRAFT" bind:tap="choose">草稿</t-tag><t-tag variant="outline" data-field="status" data-value="ACTIVE" bind:tap="choose">启用</t-tag><t-tag variant="outline" data-field="status" data-value="INACTIVE" bind:tap="choose">停用</t-tag></view>

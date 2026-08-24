@@ -26,7 +26,6 @@ function projectAward(account, rule, awardedToday) {
 function balanceField(metric) {
   if (metric === 'EXPERIENCE') return 'experience_balance'
   if (metric === 'CONTRIBUTION') return 'contribution_balance'
-  if (metric === 'COIN') return 'coin_balance'
   throw new Error('GROWTH_RULE_NOT_AVAILABLE')
 }
 
@@ -47,7 +46,7 @@ function levelSnapshot(account, levels, rules = []) {
     account: accountDto(account),
     currentLevel: levelDto(current),
     levels: active.map(levelDto),
-    earningRules: rules.map(ruleDto),
+    earningRules: rules.filter(rule => supportedMetric(rule.metric)).map(ruleDto),
     levelProgressPercent: 100,
   }
   if (next) {
@@ -62,6 +61,7 @@ function levelSnapshot(account, levels, rules = []) {
 }
 
 function ruleDto(row) {
+  if (!supportedMetric(row.metric)) throw new Error('GROWTH_RULE_NOT_AVAILABLE')
   return {
     id: row.id,
     ruleKey: row.rule_key,
@@ -81,9 +81,12 @@ function accountDto(row) {
     userId: row.user_id,
     experienceBalance: Number(row.experience_balance),
     contributionBalance: Number(row.contribution_balance),
-    coinBalance: Number(row.coin_balance),
     version: Number(row.version),
   }
+}
+
+function supportedMetric(metric) {
+  return metric === 'EXPERIENCE' || metric === 'CONTRIBUTION'
 }
 
 function levelDto(row) {
@@ -108,4 +111,4 @@ function jsonArray(value) {
   }
 }
 
-module.exports = { accountDto, balanceField, levelDto, levelSnapshot, projectAward, ruleDto }
+module.exports = { accountDto, balanceField, levelDto, levelSnapshot, projectAward, ruleDto, supportedMetric }

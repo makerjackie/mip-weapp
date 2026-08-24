@@ -1,10 +1,6 @@
 <view id="mip-opportunities-page" class="min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+220rpx)] pt-3 text-ink">
   <view class="flex items-center justify-between px-1">
-    <picker mode="selector" range="{{cityOptions}}" range-key="label" value="{{cityIndex}}" bindchange="changeCity">
-      <view class="flex min-h-[88rpx] items-center gap-1 text-[length:28rpx] font-semibold">
-        <text>{{cityOptions[cityIndex].label}}</text><t-icon name="chevron-down" size="28rpx" color="var(--color-ink)" />
-      </view>
-    </picker>
+    <view class="flex min-h-[88rpx] items-center gap-1 text-[length:28rpx] font-semibold" bind:tap="toggleFilters"><text>{{cityOptions[cityIndex].label}}</text><t-icon name="chevron-down" size="28rpx" color="var(--color-ink)" /></view>
     <view class="flex items-center gap-2">
       <view class="rounded-full border border-line px-3 py-2 text-[length:22rpx] text-muted active:bg-panel" bind:tap="openPeople">找人才</view>
       <view class="rounded-full border border-line px-3 py-2 text-[length:22rpx] text-muted active:bg-panel" bind:tap="openMine">我的</view>
@@ -39,17 +35,12 @@
 
   <view wx:if="{{filterOpen}}" class="mt-3 rounded-[16rpx] border border-line bg-panel px-4 py-4">
     <view class="flex items-center justify-between"><view class="text-[length:25rpx] font-semibold">筛选条件</view><view class="text-[length:21rpx] text-brand" bind:tap="resetFilters">重置</view></view>
+    <view class="mt-4"><mip-catalog-selector title="城市" groups="{{cityGroups}}" selected-ids="{{citySelectionIds}}" multiple="{{false}}" clear-label="全国" bind:change="changeCity" /></view>
     <view class="mt-4 text-[length:25rpx] font-semibold">合作角色</view>
     <view class="mt-3 flex flex-wrap gap-2">
       <block wx:for="{{roleOptions}}" wx:key="key"><view wx:if="{{draftRoleKey === item.key}}" class="rounded-full bg-brand px-3 py-2 text-[length:21rpx] text-on-brand" data-key="{{item.key}}" bind:tap="chooseRole">{{item.name}}</view><view wx:else class="rounded-full bg-panel-raised px-3 py-2 text-[length:21rpx] text-muted" data-key="{{item.key}}" bind:tap="chooseRole">{{item.name}}</view></block>
     </view>
-    <view wx:if="{{industryGroups.length}}" class="mt-4 text-[length:25rpx] font-semibold">行业</view>
-    <block wx:for="{{industryGroups}}" wx:for-item="group" wx:key="id">
-      <view class="mt-3 text-[length:21rpx] text-muted">{{group.label}}</view>
-      <view class="mt-2 flex flex-wrap gap-2">
-        <block wx:for="{{group.options}}" wx:for-item="tag" wx:key="id"><view wx:if="{{tag.selected}}" class="rounded-full bg-brand px-3 py-2 text-[length:21rpx] text-on-brand" data-type="industry" data-id="{{tag.id}}" bind:tap="toggleTag">{{tag.label}}</view><view wx:else class="rounded-full bg-panel-raised px-3 py-2 text-[length:21rpx] text-muted" data-type="industry" data-id="{{tag.id}}" bind:tap="toggleTag">{{tag.label}}</view></block>
-      </view>
-    </block>
+    <view wx:if="{{industryGroups.length}}" class="mt-4"><mip-catalog-selector title="行业" groups="{{industryGroups}}" selected-ids="{{draftIndustryTagIds}}" multiple="{{true}}" max-selections="{{8}}" clear-label="不限" bind:change="changeIndustry" /></view>
     <block wx:if="{{mode === 'opportunities'}}">
       <view wx:if="{{abilityOptions.length}}" class="mt-4 text-[length:25rpx] font-semibold">能力</view>
       <view class="mt-2 flex flex-wrap gap-2">

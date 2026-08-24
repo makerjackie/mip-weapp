@@ -1,3 +1,4 @@
+import type { CatalogSelectorGroup } from '../../../components/catalog-selector/model'
 import type { BranchId } from '../../../modules/mip'
 import type { AiDraftSourceConfirmation } from '../../../modules/mip-ai'
 import type { ProfileTagOption } from '../../../modules/mip-identity'
@@ -5,7 +6,10 @@ import type { EditableProfileOrganization } from './organization-editor'
 import { aiOrganizations, aiText } from '../../../modules/mip-ai/editor'
 import { loadAiEditorDraft } from '../../../modules/mip-ai/editor-loader'
 import { mipBranchesModule, mipIdentityModule } from '../../../modules/mip-identity/client'
-import { flattenProfileIndustries } from '../../../modules/mip-identity/tag-catalog'
+import {
+  flattenProfileIndustries,
+  groupProfileIndustries,
+} from '../../../modules/mip-identity/tag-catalog'
 import { mipMediaModule } from '../../../modules/mip-media/client'
 import {
   appendEditableOrganization,
@@ -67,8 +71,12 @@ Page({
     visibilityAbilities: true,
     visibilityPrimaryBranch: true,
     branchOptions: [] as Array<{ id: string, label: string }>,
+    branchGroups: [] as CatalogSelectorGroup[],
+    selectedBranchIds: [] as string[],
     branchIndex: 0,
     industryOptions: [] as Array<{ id: string, label: string }>,
+    industryGroups: [] as CatalogSelectorGroup[],
+    selectedIndustryIds: [] as string[],
     industryIndex: 0,
     abilityOptions: [] as SelectableTag[],
     saving: false,
@@ -105,6 +113,15 @@ Page({
         { id: '', label: '未选择' },
         ...flattenProfileIndustries(tags).map(tag => ({ id: tag.id, label: tag.displayLabel })),
       ]
+      const industryGroups = groupProfileIndustries(tags).map(group => ({
+        id: group.id,
+        label: group.label,
+        options: group.options.map(option => ({
+          id: option.id,
+          label: option.label,
+          popular: option.popular,
+        })),
+      }))
       const branchOptions = [
         { id: '', label: '未选择' },
         ...branches.branches.map(branch => ({ id: branch.id, label: `${branch.cityName} · ${branch.name}` })),
@@ -146,8 +163,12 @@ Page({
         visibilityAbilities: snapshot.profile.visibility.abilities !== false,
         visibilityPrimaryBranch: snapshot.profile.visibility.primaryBranch !== false,
         branchOptions,
+        branchGroups: [{ id: 'city-branches', label: '城市分会', options: branchOptions.slice(1) }],
+        selectedBranchIds: primaryBranchId ? [primaryBranchId] : [],
         branchIndex: Math.max(0, branchOptions.findIndex(item => item.id === primaryBranchId)),
         industryOptions,
+        industryGroups,
+        selectedIndustryIds: primaryIndustryId ? [primaryIndustryId] : [],
         industryIndex: Math.max(0, industryOptions.findIndex(item => item.id === primaryIndustryId)),
         abilityOptions: tags
           .filter(tag => tag.kind === 'ABILITY' && tag.selectable)
@@ -247,12 +268,22 @@ Page({
     }
   },
 
-  changeBranch(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    this.setData({ branchIndex: Number(event.detail.value) })
+  changeBranch(event: WechatMiniprogram.CustomEvent<{ selectedIds: string[] }>) {
+    const selectedBranchIds = event.detail.selectedIds.slice(0, 1)
+    const branchId = selectedBranchIds[0] || ''
+    this.setData({
+      selectedBranchIds,
+      branchIndex: Math.max(0, this.data.branchOptions.findIndex(item => item.id === branchId)),
+    })
   },
 
-  changeIndustry(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    this.setData({ industryIndex: Number(event.detail.value) })
+  changeIndustry(event: WechatMiniprogram.CustomEvent<{ selectedIds: string[] }>) {
+    const selectedIndustryIds = event.detail.selectedIds.slice(0, 1)
+    const industryId = selectedIndustryIds[0] || ''
+    this.setData({
+      selectedIndustryIds,
+      industryIndex: Math.max(0, this.data.industryOptions.findIndex(item => item.id === industryId)),
+    })
   },
 
   toggleAbility(event: WechatMiniprogram.TouchEvent) {

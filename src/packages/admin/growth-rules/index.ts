@@ -11,7 +11,6 @@ interface GrowthRuleView extends AdminGrowthRule {
 const metricLabels: Record<AdminGrowthRule['metric'], string> = {
   EXPERIENCE: '经验值',
   CONTRIBUTION: '贡献值',
-  COIN: '游戏币',
 }
 
 const statusLabels: Record<AdminGrowthRule['status'], string> = {

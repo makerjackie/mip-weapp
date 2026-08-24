@@ -115,6 +115,7 @@ function createIdentityService(options) {
       key: row.tag_key,
       label: row.label,
       selectable: Boolean(row.selectable),
+      popular: Boolean(row.popular),
     }))
   }
 

@@ -2,7 +2,7 @@ import type { Brand, UserId } from '../mip'
 
 export type GrowthLevelId = Brand<string, 'GrowthLevelId'>
 export type GrowthRuleId = Brand<string, 'GrowthRuleId'>
-export type GrowthMetric = 'EXPERIENCE' | 'CONTRIBUTION' | 'COIN'
+export type GrowthMetric = 'EXPERIENCE' | 'CONTRIBUTION'
 
 export interface GrowthLevel {
   id: GrowthLevelId
@@ -28,7 +28,6 @@ export interface GrowthAccount {
   userId: UserId
   experienceBalance: number
   contributionBalance: number
-  coinBalance: number
   version: number
 }
 

@@ -43,8 +43,8 @@ Page({
     growthNextText: '',
     experience: 0,
     contribution: 0,
-    coin: 0,
     unreadCount: 0,
+    visitorUnreadCount: 0,
     portfolioTab: 'cooperation' as PortfolioTab,
     cooperationState: 'loading' as SectionState,
     cooperationCards: [] as CooperationCardView[],
@@ -87,6 +87,7 @@ Page({
         this.loadCases(),
         this.loadOpportunities(),
         this.loadUnreadCount(snapshot),
+        this.loadVisitorUnreadCount(snapshot),
       ])
     }
     catch {
@@ -106,6 +107,20 @@ Page({
     }
     catch {
       this.setData({ unreadCount: mipMessagingModule.peekUnreadCount() || 0 })
+    }
+  },
+
+  async loadVisitorUnreadCount(snapshot: IdentityAccessSnapshot) {
+    if (!snapshot.authenticated) {
+      this.setData({ visitorUnreadCount: 0 })
+      return
+    }
+    try {
+      const page = await opportunityModule.listReceived('VISITOR')
+      this.setData({ visitorUnreadCount: page.unreadCount })
+    }
+    catch {
+      this.setData({ visitorUnreadCount: 0 })
     }
   },
 
@@ -168,7 +183,6 @@ Page({
         : '已达当前最高等级',
       experience: snapshot.account.experienceBalance,
       contribution: snapshot.account.contributionBalance,
-      coin: snapshot.account.coinBalance,
     })
   },
 
