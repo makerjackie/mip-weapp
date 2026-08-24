@@ -26,10 +26,14 @@
 | `mip_outbox_events` | 业务事实产生的内部事件 | 产生事实的同一事务；`mip-outbox-worker` 受控领取 |
 | `mip_audit_logs` | 管理、支付和覆盖操作的追加审计 | 只允许 `SELECT`、`INSERT` |
 | `mip_membership_plans` | TEST/LIVE 方案目录、价格、时长和权益快照 | `mip-commerce-api` / 管理动作 |
-| `mip_orders` | 统一会员/付费活动订单、金额、商户单号和状态 | commerce 创建；ledger 更新 |
+| `mip_orders` | 统一会员/付费活动/单内容订单、金额、商品快照、商户单号和状态 | commerce 创建；ledger 更新 |
 | `mip_payment_attempts` | CloudPay 参数生成和支付尝试 | payment adapter / ledger |
 | `mip_refunds` | 退款请求、退款单号、金额和状态 | commerce/admin/ledger 创建；ledger 更新；refund worker 只经 ledger 提交 provider |
 | `mip_membership_entitlements` | 支付确认后的会员有效期和状态 | 仅 ledger 事务 |
+| `mip_knowledge_sources` / `mip_knowledge_categories` / `mip_knowledge_contents` | 信息源、行业分类、内容交付和发布审核事实 | community 读取；admin 受 capability 管理 |
+| `mip_knowledge_products` / `mip_knowledge_entitlements` | 单内容 TEST/LIVE 商品和支付确认后的阅读权益 | admin 管商品；ledger 发放或撤销权益 |
+| `mip_content_comment_settings` / `mip_content_comments` / `mip_content_comment_reports` | 跨内容目标的评论开关、评论、举报与审核事实 | community 与 admin 受身份、屏蔽、内容安全和 capability 约束 |
+| `mip_knowledge_ingestion_runs` / `mip_knowledge_ingestion_items` | 显式采集运行、去重和来源审计 | admin 手动触发；不安装 timer |
 | `mip_membership_attributions` | 会员期内固定的邀请归属 | ledger/会员事务 |
 | `mip_payment_callbacks` | 已验签回调的幂等记录和处理状态 | callback/ledger |
 | `mip_events` / `mip_event_changes` | 平台或分会活动及追加变更历史 | events/admin 事务 |
@@ -44,15 +48,21 @@
 | `mip_referral_intents` / `mip_profile_interests` | 发起人、被引荐人、机会之间的引荐关系和用户感兴趣关系 | `mip-opportunities-api` |
 | `mip_opportunity_comment_settings` / `mip_opportunity_comments` | 机会评论开关、审核方式、评论和项目评价事实 | 用户写入由 `mip-opportunities-api`；配置与审核由 `mip-admin-api` |
 | `mip_opportunity_comment_calls` / `mip_opportunity_comment_reports` | 用户对评论的幂等打 call 关系和独立举报审核事实 | 用户写入由 `mip-opportunities-api`；举报处理由 `mip-admin-api` |
+| `mip_user_notification_preferences` / `mip_user_opportunity_preferences` | 评论、撮合、热点通知和撮合/推荐/被发现/范围偏好 | 用户本人通过 `mip-opportunities-api` 按版本和幂等键更新 |
+| `mip_matching_settings` | 平台或城市分会的两类最低分、最大候选数和外部 provider 开关 | `mip-admin-api` 受机会审核 capability、范围授权和版本约束更新 |
+| `mip_matching_requests` / `mip_matching_results` / `mip_matching_feedback` | 来源/设置/结果版本、候选分数与解释、用户反馈 | `mip-opportunities-api` 只追加；后台重算使用内部 HMAC |
 | `mip_user_blocks` / `mip_reports` | 主动屏蔽关系、幂等举报和审核状态 | `mip-community-api`；审核由受 capability 约束的管理事务处理 |
 | `mip_announcements` | 平台/分会公告、展示窗口、内容安全和关联内容 | `mip-admin-api` 写入；`mip-community-api` 只读公开内容 |
 | `mip_cooperation_cards` | 六种合作角色的结构化合作卡 | `mip-opportunities-api` |
 | `mip_super_cases` / `mip_super_case_media` | 已确认可公开的案例及素材关系 | `mip-opportunities-api` |
 | `mip_growth_levels` / `mip_growth_rules` | 成长等级和事件规则 | `mip-growth-api` / 管理动作 |
 | `mip_growth_accounts` / `mip_growth_entries` | 经验、贡献和游戏币余额快照及不可变成长流水 | `mip-growth-api`；流水只追加，游戏币消费后余额不得为负 |
+| `mip_blind_box_catalogs` / `mip_blind_box_cards` | 可发布盲盒目录、规则、概率权重和可核销库存 | `mip-game-api` 受 `game.manage` capability 约束配置，用户端只读已发布事实 |
+| `mip_blind_box_user_states` / `mip_blind_box_draws` / `mip_blind_box_inventory` | 用户抽取计数/保底、不可变抽取记录和卡牌背包 | `mip-game-api` 在锁定账户与库存的同一事务中扣减游戏币、追加流水、核销库存并授予卡牌 |
 | `mip_badges` / `mip_user_badges` | 勋章目录与用户获授/撤销事实 | `mip-admin-api` 受 `badges.manage` capability 约束写入并追加审计 |
 | `mip_user_badge_profiles` / `mip_user_badge_equipment` | 本人勋章收藏版本与最多 3 个佩戴槽位 | `mip-growth-api` 事务校验有效获授事实后写入 |
 | `mip_task_cards` / `mip_task_assignments` / `mip_task_completions` | 任务配置、全员或指定成员派发、模板、截止窗口、每用户单次完成事实、附件引用和奖励快照 | `mip-tasks-api`；派发撤销保留状态和审计，完成事实与经验奖励在同一事务写入 |
+| `mip_task_level_rules` | 任务与成长等级的精确允许集合；没有关联记录表示全部等级 | `mip-tasks-api` 管理事务精确替换；用户列表与完成动作按服务端当前经验对应的启用等级重新校验 |
 | `mip_operations_messages` | 按收件人展开的不可变运营通知、范围和模板快照 | 受 capability 约束的管理事务只追加 |
 | `mip_inbox_messages` | 用户可回查的站内消息 | `mip-notification-worker` 写入；`mip-notifications-api` 读取和标记已读 |
 | `mip_notification_grants` / `mip_delivery_tasks` | 订阅授权消耗和外部投递任务 | `mip-notifications-api` 记录授权；`mip-notification-worker` 消耗授权并投递 |
@@ -63,12 +73,22 @@
 
 ## 统一订单与支付
 
-`mip_orders` 只允许两种 `order_type`：
+`mip_orders` 只允许三种 `order_type`：
 
 - `MEMBERSHIP`：必须有 `membership_plan_id`，不能有 `resource_id`；支付完成后重建会员权益。
 - `EVENT`：必须有活动 `resource_id`，不能有 `membership_plan_id`；付费报名先占用 `mip_event_seat_holds`，支付回调在同一事务中确认报名。
+- `CONTENT`：必须有知识内容 `resource_id`，不能有 `membership_plan_id`；支付回调按订单内不可变商品快照发放单内容权益。
 
-金额为 CNY 整数分，价格、货币、方案阶段、名额、商户单号和权益天数全部由服务端重建。订单状态、支付尝试、回调、退款和权益更新使用参数化 SQL、InnoDB 行锁、条件更新和幂等键。`wx.requestPayment` 成功不是 `PAID`，只有 ledger 确认的 `mip_orders.status=PAID` 才能发放权益或完成付费活动报名。
+金额为 CNY 整数分，价格、货币、目录阶段、方案阶段、名额、商户单号和权益天数全部由服务端重建。订单状态、支付尝试、回调、退款和权益更新使用参数化 SQL、InnoDB 行锁、条件更新和幂等键。`wx.requestPayment` 成功不是 `PAID`，只有 ledger 确认的 `mip_orders.status=PAID` 才能发放会员/单内容权益或完成付费活动报名。单内容退款资格必须读取订单商品快照，并在首次访问受保护正文后拒绝 `BEFORE_ACCESS` 退款。
+
+订单 DTO 额外返回服务端权威 `serviceStatus`，与支付 `status` 分离：
+
+- `REFUNDED`：订单已部分退款或全部退款，或关联会员/内容权益已标记退款。`REFUND_PENDING` 仍是处理中，只出现在“全部”，不进入“已退款”。
+- `PENDING_USE`：已支付活动存在同 AppID、同订单的 `REGISTERED` 报名，且活动处于已发布、未结束状态；或续费会员权益已发放但生效时间尚未到达；或已发放、在有效期内且未首次访问的单内容权益。
+- `COMPLETED`：已支付活动的有效报名已核销，或同 AppID、同订单的 `REGISTERED` 报名对应活动已结束；会员权益已生效完成交付、到期或撤销；单内容权益已访问、到期或撤销。
+- `UNAVAILABLE`：待支付、支付失败、关闭、退款处理中，或已支付但缺少应有服务事实的订单。已支付活动如果报名缺失、待审、待取消、已取消或已拒绝，也必须 fail-closed 为该状态。这些订单保留在“全部”，不进入其他三类。
+
+列表和详情在同一条 SQL 中以 `app_id + order_id` 联接报名及权益，并使用数据库当前时间投影，避免跨 AppID 读取和多次查询的竞态窗口。
 
 ## 活动与公开数据
 
@@ -84,17 +104,20 @@
 
 - 成长规则、余额和流水由 `mip-growth-api` 计算；`mip_growth_entries` 只追加，客户端不能直接加分。撤销签到时按原 transition 已实际入账的 delta 追加反向流水，不按当前规则重算；精确校正允许经验余额为负数。
 - 游戏币发放与消费只接受服务端固定事件或具有 `growth.adjust` capability 且覆盖用户范围的管理动作。内部接口只接收事件引用，发放/消费数值由服务端规则决定；事务锁定账户并拒绝负余额，重试返回同一流水。
+- 盲盒抽取只接收目录和请求 ID；目录价格、每日上限、概率权重、保底阈值、稀有度和库存均从同 AppID 的已发布服务端事实读取。客户端按本人和目录持久化未决请求，只在成功或服务端明确未提交时清除。事务重新锁定有效会员权益，并在抽取记录中固化目录版本、保底规则、随机落点、卡牌展示字段、余额和获得后数量；请求 ID 重放必须属于同一目录并从该不可变快照返回，不重复扣币或减库存。游戏币变化写入全部 COIN 流水并产生 `game.coin_changed` outbox。
 - 勋章目录与获授状态是服务端事实。本人只能在当前 AppID 内有效获授且启用的勋章中选择最多 3 枚佩戴；保存使用档案版本和事务行锁。公开档案只投影仍有效的已佩戴勋章，不返回用户内部标识或未佩戴收藏。
 - `mip-outbox-worker` 只接受内部 HMAC 调用，使用 `FOR UPDATE SKIP LOCKED`、过期租约和指数退避领取事件。接收者和可计成长事实必须回查业务表，不能信任 `payload_json` 中的用户字段；消息 dedupe key 与成长 source event id 均绑定 outbox id。
 - 周赛结算在游戏事实事务中追加 `game.match.finalized`；outbox 按结算周期末的队伍成员事实产生固定游戏币事件，再由游戏币流水产生 `GAME` 站内消息。经验值只有跨越当前启用等级门槛时才产生 `GROWTH_LEVEL_UP` 弹窗类型。
 - 运营发布先在同一事务按收件人追加 `mip_operations_messages` 与 `operations.notification_published` outbox；投影时重新按 `app_id` 回查有效收件人、正文、活动目标和模板字段。Outbox payload 不承载收件人或文案事实。
 - `mip_inbox_messages` 是定向通知的权威回查入口。小程序只通过 `mip-notifications-api` 读取本人消息、标记已读和记录真实订阅授权选择；`mip-notification-worker` 不开放客户端调用，只通过内部 HMAC 写入消息、保留/消费授权和领取投递任务。同一授权由 reservation 独占；实际微信调用和最终状态写入由锁定 `ACTIVE` 用户、任务、授权及 reservation token 的专用投递事务串行化，调用后失败只由原任务重试。没有模板、授权或外部送达时，不阻断站内消息。完整边界见 [NOTIFICATIONS.md](NOTIFICATIONS.md)。
+- 机会撮合默认使用确定性本地 provider，并保存来源机会、阈值和结果版本。客户端和外部 provider 只接收请求范围内的签名候选引用；provider 的其余输入仅含候选类型、本地分数和匿名信号键/权重，不含人才用户 ID、分会/城市/标签内部主键。非法响应、超时或异常降级到本地结果。候选生成和结果读取均按 AppID 回查有效用户、公开字段、分会范围、机会状态、用户可发现偏好和双向屏蔽，最终写入再次锁定偏好与阈值版本。
 - `mip_ai_drafts` 在用户明确确认前只能是临时草稿；转写 provider 通过内部鉴权调用，不直接写正式档案、合作卡或超级案例。
 
 ## 隐私、缓存和内部权限
 
 - 普通 DTO 永不返回数据库连接串、内部 HMAC、商户密钥、他人 OpenID、完整票据或 provider 原始错误。
 - 引荐的 `actor_user_id` 和 `target_user_id` 只用于服务端关系事实。选择目标、引荐列表和详情均使用 AppID 绑定的 opaque `profileRef`，普通 DTO 不返回内部用户 ID。
+- 档案影响力只聚合当前可证明的邀请嘉宾、活动心动、档案兴趣和访客事实。本人可读取对应身份列表；他人公开档案只在 `visibility.influence` 允许时返回聚合数，且不返回列表身份。四项精确定义见 [PROFILE_INFLUENCE.md](PROFILE_INFLUENCE.md)。
 - 机会评论作者和评论举报人仅以 AppID 绑定的 opaque `profileRef` 返回。参与人标识由机会发布人或团队历史关系生成；打 call 总数由关系事实的状态迁移维护，不接受客户端计数。
 - 社区安全客户端只提交 AppID 绑定的 `profileRef`；不接收或返回目标用户 ID、OpenID。任一方向存在 `ACTIVE` 屏蔽时，已识别用户不能读取对方公开档案或在受支持的公共列表中看到对方；举报不通知目标，也不自动处罚。
 - 账号注销以确认短语、`mip_users.version` 和幂等请求为边界；未结支付/退款/活动退款会阻塞。成功后关闭账号、撤销活动外公开/互动状态并最小化直接资料，但保留订单、支付、退款、权益、活动、成长流水与审计事实。完整表清单见 [ACCOUNT_CLOSURE.md](ACCOUNT_CLOSURE.md)。

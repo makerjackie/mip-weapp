@@ -131,12 +131,12 @@ Device Flow 只是换取当前登录腾讯云身份的临时凭证，不会为�
 ## 7. 仍然不确定的事项
 
 - 腾讯云没有公开 `/capi/credential` 为环境 API Key 签发的完整 STS policy，无法仅靠公开文档列出它应包含的全部 SCF/VPC/CAM action。
-- 本次没有重新调用 `CreateFunction`，因此没有新的 RequestId，也没有验证最新 MCP 是否仍复现。
-- 当前没有独立 VPC/子网拒绝的原始错误；VPC 权限缺失仍是未证实推断。
+- 2026-08-25 使用当前本机 Device Flow 身份重发完整函数配置时，SCF 明确拒绝目标 VPC/子网权限；请求在第一个 MIP 函数停止，没有继续更新其他函数配置。
+- 部署脚本随后改为先严格比较运行时、handler、超时、VPC 和完整环境变量。配置完全一致时只更新代码；配置漂移仍请求 `UpdateFunctionConfiguration` 并要求相应 SCF/VPC 权限，不能靠省略校验绕过。
 - 官方 GitHub 曾记录过相同 `scf:CreateFunction` 未授权错误，维护者当时针对 CodeBuddy 集成建议重新配置集成；该记录证明这类错误可能来自集成凭证，不足以证明当前问题的根因。
   来源：[CloudBase MCP issue #136](https://github.com/TencentCloudBase/CloudBase-AI-Toolkit/issues/136)
 
-## 8. 当前环境实际验证结果
+## 8. 2026-08-24 初次环境验证结果
 
 2026-08-24 已完成以下实测：
 
@@ -144,6 +144,13 @@ Device Flow 只是换取当前登录腾讯云身份的临时凭证，不会为�
 2. 环境 API Key 仍可查询目标环境和 MySQL，但原始 SCF `CreateFunction` 拒绝不应归因于 `TCB_QcsRole`。
 3. 经维护者明确授权，资源主账号 Device Flow 返回 `auth=READY`、`env=READY`；同一 `manageFunctions/createFunction` 随后成功。
 4. MCP `2.32.0` 的 `getInstanceInfo` 只返回生命周期字段；显式 `getConnectionInfo` 返回实际 MySQL `VpcId`/`SubnetId`。部署脚本只在缺少网络元数据时读取该载荷并提取两个字段，不输出其余内容。
-5. 16 个核心 `mip-*` 函数全部创建、配置并通过真实 MySQL 健康检查；独立 `cloud:verify` 又验证了 schema、83 张表的精确 runtime 权限、函数状态、客户端调用边界和禁止高频 timer。
+5. 16 个核心 `mip-*` 函数全部创建、配置并通过真实 MySQL 健康检查；独立 `cloud:verify` 又验证了当时 schema、83 张表的精确 runtime 权限、函数状态、客户端调用边界和禁止高频 timer。
 
 因此，当前环境的最小正确处理已经被实测确认：不修改 `TCB_QcsRole`，不预授 VPC 全权限；升级 MCP，并在获得明确授权后用资源主账号 Device Flow 执行 SCF 管控面部署。
+
+## 9. 2026-08-25 当前基线
+
+1. 38 个锁定迁移已全部应用，105 张 `mip_*` runtime 表权限已精确收敛，幂等复跑返回 `already current`。
+2. 部署前严格回读证明 16 个核心函数的运行时、handler、超时、VPC 和完整环境变量均与本地合同一致，因此只执行代码更新，没有修改 VPC 配置。
+3. 最终工作区代码已完成 16/16 部署；每个函数重新达到 Active/Available 并通过真实 MySQL 健康检查。
+4. 独立 `cloud:verify` 再次验证 schema、105 张表权限、函数配置与健康、客户端调用边界、受保护函数和禁止高频 timer。

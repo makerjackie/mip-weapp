@@ -14,7 +14,7 @@ MIP 的会员与城市分会小程序。根目录是唯一的微信小程序工�
 - 站内消息与微信通知适配
 - AI 文字与语音草稿适配
 - 小程序运营管理分包与可复用服务端 API
-- 83 条小程序路由、16 个核心 `mip-*` CloudBase 函数和 34 个锁定的 MySQL 迁移；支付启用时另有 `mip-cloudpay` / `mip-cloudpay-callback` / `mip-refund-worker`
+- 95 条小程序路由、16 个核心 `mip-*` CloudBase 函数和 38 个锁定的 MySQL 迁移；支付启用时另有 `mip-cloudpay` / `mip-cloudpay-callback` / `mip-refund-worker`
 
 ## 五分钟开始
 

@@ -36,16 +36,21 @@
 | H2 订单与参与名单 | `tests/admin-orders-roster-h2.test.ts`、`tests/admin-roster.test.ts` | `implemented-local`；正式支付退款为 `external-wait` |
 | H3 多范围角色和管理登录审计 | `tests/admin-rbac-scope-h3.test.ts`、`cloudfunctions/mip-admin-api/tests/capabilities.test.js` | `implemented-local` |
 | H4 成长等级、规则、流水与调整 | `tests/mip-growth.test.ts`、`cloudfunctions/mip-admin-api/tests/growth-rule-catalog.test.js` | `implemented-local`；正式数值为 `external-wait` |
-| H5 NPC 任务派发、模板与截止 | `database/mysql/mip/027_task_assignments_templates.sql`、`cloudfunctions/mip-tasks-api/tests/task-contract.test.js`、`tests/mip-tasks.test.ts` | 源码链路和迁移已完成；真机模板上传/保存为 `external-wait` |
-| 勋章收藏、佩戴与运营管理 | `database/mysql/mip/028_badge_collection.sql`、`cloudfunctions/mip-growth-api/tests/badges.test.js`、`cloudfunctions/mip-admin-api/tests/badges.test.js`、`tests/mip-badges.test.ts` | 本人收藏、最多 3 枚佩戴、公开档案投影、运营目录/授予和迁移已完成；正式图片为 `external-wait`。Figma 精确资产因工具配额/导出限制未取得，当前为可替换中性占位 |
+| H5 NPC 任务派发、等级、模板与截止 | `database/mysql/mip/027_task_assignments_templates.sql`、`database/mysql/mip/038_task_level_rules.sql`、`cloudfunctions/mip-tasks-api/tests/task-contract.test.js`、`tests/mip-tasks.test.ts` | 指定成员与成长等级双重资格、服务端当前经验重验、版本保护和审计已完成；真机模板上传/保存为 `external-wait` |
+| 固定 PRD #55 玩家 VIP 页 | `src/packages/member/mip-growth/index.ts`、`tests/mip-growth-vip.test.ts`、`tests/mip-membership-invitation-ui.test.ts`、`config/runtime-pages.json` | 成长页邀请复用服务端会员 token，续费进入统一会员方案，分享已纳入真机契约；真实分享与支付为 `external-wait` |
+| 固定 PRD #56 订单使用状态 | `cloudfunctions/mip-commerce-api/tests/repository.test.js`、`tests/mip-order-service-status.test.ts`、`src/packages/member/orders/index.ts` | 活动、会员和内容订单由服务端投影 `serviceStatus`，客户端只按权威值显示和筛选；正式支付/退款与真机状态为 `external-wait` |
+| 勋章收藏、佩戴与运营管理 | `database/mysql/mip/028_badge_collection.sql`、`cloudfunctions/mip-growth-api/tests/badges.test.js`、`cloudfunctions/mip-admin-api/tests/badges.test.js`、`tests/mip-badges.test.ts` | 本人收藏、最多 3 枚佩戴、公开档案投影、运营目录/授予和迁移已完成；Figma 已可读取且代表入口资产已下载，正式勋章目录图片仍为可替换配置并保留 `external-wait` |
 | 数字分身与我的名片 | `database/mysql/mip/030_digital_avatar_generations.sql`、`cloudfunctions/mip-ai-api/tests/avatar-store.test.js`、`tests/mip-digital-avatar.test.ts`、`tests/mip-member-card.test.ts` | 生成任务、服务端资产归属、原图/数字分身切换和名片接线已完成；真实生成 provider、Figma 对照和真机相册为 `external-wait` |
 | 运营消息活动 | `database/mysql/mip/031_message_campaigns.sql`、`cloudfunctions/mip-admin-api/tests/message-campaigns.test.js`、`tests/mip-message-campaigns.test.ts` | 平台/分会范围、收件人快照、幂等发布、撤回和审计已完成；外部微信投递为 `external-wait` |
 | 游戏币、等级与弹窗消息 | `database/mysql/mip/032_game_coin_safety.sql`、`cloudfunctions/mip-growth-api/tests/game-coins.test.js`、`tests/mip-popup-messages.test.ts`、`tests/mip-outbox.test.ts` | 权威余额、追加流水、防负、周赛固定奖励、真实跨级识别、站内消息和弹窗去重已完成；微信模板和云端运行时为 `external-wait` |
 | Owner 可配置角色权限 | `database/mysql/mip/033_configurable_rbac.sql`、`cloudfunctions/mip-admin-api/tests/role-capability-policies.test.js`、`tests/mip-configurable-rbac.test.ts` | 六类非 Owner 角色的白名单策略、版本冲突、恢复默认、安全上限、事务内二次授权和审计已完成；Owner 权限固定 |
 | 机会评论、评价与打 call | `database/mysql/mip/034_opportunity_comments.sql`、`cloudfunctions/mip-opportunities-api/tests/comments.test.js`、`tests/mip-opportunity-comments.test.ts` | 用户评论/评价、参与人标识、编辑/软删除、打 call、举报、双向屏蔽及运营配置/审核已完成 |
+| 热点、知识内容、评论与单内容付费 | `database/mysql/mip/036_mip_knowledge_content.sql`、`cloudfunctions/mip-community-api/tests/knowledge.test.js`、`cloudfunctions/mip-commerce-api/tests/knowledge-content.test.js`、`cloudfunctions/mip-payment-ledger/tests/knowledge-content.test.js`、`cloudfunctions/mip-admin-api/tests/knowledge.test.js`、`tests/mip-knowledge.test.ts` | 内容目录、搜索筛选、受保护详情、显式采集、审核、评论、CONTENT 订单、权益和退款边界为 `implemented-local`；正式源/内容/价格、业务域名、视频号和真实支付为 `external-wait` |
 | 固定 PRD #60–#68 团队 PK、赛季、排行与队伍大本营 | `database/mysql/mip/029_gamification_foundation.sql`、`cloudfunctions/mip-game-api/tests/game.test.js`、`tests/mip-game.test.ts`、`src/packages/member/mip-game/`、`src/packages/admin/game/` | 有效会员门禁、服务端计分、周赛历史、四类排行快照、城市筛选、中性大本营状态和迁移已完成；正式规则、数据与视觉为 `external-wait` |
 
 ## 静态门禁
+
+2026-08-25 最终本地门禁通过：客户端 97 个测试文件、454 项测试；服务端 144 个测试文件、825 项测试；源码合同为 115 个页面视图、16 个核心函数、38 个锁定迁移，构建、包体、文档链接和 `git diff --check` 均通过。
 
 - `pnpm verify`
 - `git diff --check`
@@ -55,11 +60,13 @@
 - 部署清单只有 `mip-*`，存储路径只有 `mip/`。
 - 金额、会员、报名、签到、成长和权限判断均有服务端测试。
 
-以下事项即使本地测试通过，仍保留 `external-wait`：正式 AppID、支付商户和回调、正式协议正文、正式标签/城市和 AME 配置、通知模板、AI provider、活动介绍图片与任务模板的真机选择/上传/内容安全/临时 URL/相册保存、Figma 勋章精确资产、正式游戏化规则与队伍大本营视觉、手机号、扫码签到、地图/日历和真实支付。当前 34 个数据库迁移、83 张 MIP 业务表的精确 runtime 权限以及 16 个核心函数的部署、健康和保护规则已经在共享 CloudBase 验证。
+以下事项即使本地测试通过，仍保留 `external-wait`：正式 AppID、支付商户和回调、正式协议正文、正式标签/城市和 AME 配置、通知模板、AI provider、活动介绍图片与任务模板的真机选择/上传/内容安全/临时 URL/相册保存、正式勋章目录图片、正式游戏化规则与队伍大本营视觉、手机号、扫码签到、地图/日历和真实支付。当前 38 个数据库迁移、105 张 MIP 业务表的精确 runtime 权限以及最终工作区代码对应的 16 个核心函数部署、健康和保护规则已经在共享 CloudBase 验证。
 
 ## 微信开发者工具
 
-2026-08-24 已重新运行 `pnpm runtime:preflight`：开发者工具已登录，真实私有 AppID、服务端口、83 条应用路由和 83 条条件路由全部一致。此前 `pnpm test:runtime` 在首个代表页面等待 `App.callFunction` 时超时；该报告早于本次完整函数部署，保留为历史 `failed`，不能替代部署后的页面复验，页面与代表状态仍不得记为已验收。
+2026-08-25 已重新运行 `pnpm runtime:preflight`：开发者工具已登录，真实 AppID 只保存在私有配置，服务端口已开启，95 条应用路由和 95 条条件路由全部一致。随后严格运行时检查遍历了 95/95 路由；30 条达到合同通过态，27 条因缺少真实活动、订单、内容等详情夹具记为 `external-wait`，38 条因当前微信身份未接受协议、未完成 MIP 档案、不是玩家或没有管理员权限等真实状态记为 `failed`。六类代表状态和机会筛选、人才筛选、我的内容切换三个非写入交互旅程通过；管理端任务交互在进入页的身份门禁处停止。报告仍为 `status=failed`，不能声明全路由运行时通过。
+
+当前身份尚无可安全对应的完整 `mip_profiles` 记录，Owner 初始化脚本已按设计拒绝猜测其他档案。下一轮运行时复验需要由使用者本人接受协议，并在真机完成手机号和档案；之后使用该精确身份执行 Owner 初始化，再准备活动、订单、机会、知识内容等测试夹具。开发用目录和成长默认值已通过 `pnpm seed:demo` 写入 MIP 表，不包含正式内容，也没有修改非 MIP 表。
 
 - `pnpm runtime:preflight`
 - `pnpm test:runtime`
@@ -76,11 +83,13 @@
 - 合作卡点击“预览”先保存当前字段；保存失败时停留编辑页并保留输入。
 - 机会详情展示发布时间、团队成员和默认封面；进入公开档案只使用 opaque profile reference。
 - 进入他人公开档案只记录一次页面访问意图；访客列表按最新访问排序并显示累计次数、未读和本人读取状态。
+- 我的档案四项影响力必须分别来自服务端嘉宾、活动心动、当前兴趣和去重访客事实；点击进入对应列表。公开档案关闭“影响力数据”后不得返回或展示聚合值，也不能从他人档案进入身份列表。
 - 管理端列表中的 `cloud://` 图片先解析为临时可显示 URL，解析失败时保留页面错误恢复，不把文件 ID 当作图片地址展示。
-- 指定成员任务只能从当前 AppID 有效成员中搜索和批量派发；撤销不删除历史，截止后显示“已截止”且不能完成，模板上传和保存需真机验收。
+- 指定成员任务只能从当前 AppID 有效成员中搜索和批量派发；成长等级限制为空时全部等级可完成，非空时列表、详情和完成提交均按服务端当前经验重新判级；撤销不删除历史，截止后显示“已截止”且不能完成，模板上传和保存需真机验收。
 - 我的勋章只展示本人有效获授记录，最多可保存 3 枚佩戴；公开档案只显示佩戴中且目录仍启用的勋章。运营端停用仍被佩戴的勋章或撤销仍在佩戴的获授记录时显示明确规则。
 - 团队 PK、赛季、排行榜和队伍大本营只向当前有效会员开放；客户端携带 score/points 时请求被拒绝，管理端结算和排行只读取服务端成长事实。
 - 每周赛况、历史规则、团队半年/年度独立周期榜、个人赛季/累计榜、城市筛选、当前成员和历史成员均可触达；草稿赛季快照只允许管理端预览。中性大本营状态在正式阈值与视觉替换后重新做同尺寸运行验收。
+- 知识内容覆盖行业分类、内容类型/访问类型筛选、搜索、加载更多、免费/会员/单内容付费详情、评论关闭/待审/删除/举报、业务域名网页和私密视频号。管理端覆盖来源、分类、内容、商品、发布审核、评论/举报和显式采集；采集失败须保留可审计运行且不得自动发布。
 
 ## 共享 CloudBase
 
@@ -88,12 +97,12 @@
 
 | 验收项 | 当前证据 | 状态 |
 | --- | --- | --- |
-| 34 个锁定的 `mip_*` 迁移 | 全部迁移已成功应用，版本、对象清单、隔离和幂等复跑已核对；变更前稳定备份保存在仓库外 | 云端已验证 |
-| runtime 表级授权 | 83 张 MIP 业务表的精确表→权限映射已收敛，二次运行返回 `already current` | 云端已验证；没有 schema/global 或非 MIP 表权限 |
+| 38 个锁定的 `mip_*` 迁移 | 全部迁移已成功应用，版本、对象清单、隔离和幂等复跑已核对；变更前稳定备份保存在仓库外，本轮未重复创建备份 | 云端已验证 |
+| runtime 表级授权 | 105 张 MIP 业务表的精确表→权限映射已收敛，二次运行返回 `already current` | 云端已验证；没有 schema/global 或非 MIP 表权限 |
 | 数据库隔离 | 迁移后检查通过，只写入 `mip_*` 与 `mip_schema_migrations` | 云端已验证 |
 | 开发者工具登录 | 已登录并可看到云函数列表 | 只证明可见性 |
-| `mip-identity-api` | 当前仓库代码、VPC/子网和环境变量已部署，MySQL 健康检查通过 | 云端已验证 |
-| 16 个核心函数 | 2026-08-24 使用资源所有者 Device Flow 完成 16/16 部署；函数清单、环境配置、健康检查、保护调用规则及高频 timer 缺失检查通过 | 云端已验证 |
+| `mip-identity-api` | 最终工作区代码、VPC/子网和环境变量已部署，MySQL 健康检查通过 | 云端已验证 |
+| 16 个核心函数 | 2026-08-25 完成 16/16 最终代码部署；函数清单、环境配置、健康检查、保护调用规则及高频 timer 缺失检查通过；修复知识分类在 `ONLY_FULL_GROUP_BY` 下的查询后再次完成全量部署和独立复核 | 云端已验证 |
 
 项目 API Key 继续用于常规 CloudBase MCP、环境和 MySQL 管理；涉及 SCF 控制面的部署显式切换到资源所有者 Device Flow。此次没有修改 `TCB_QcsRole` 或给它追加 `scf:CreateFunction`，也没有观察到独立的 VPC/子网权限错误。认证边界和复现方式见 [CloudBase MCP 鉴权研究](../research/cloudbase-mcp-auth.md)。
 
@@ -105,7 +114,7 @@
 4. 查询现有表行数和结构摘要，变更后复核非 `mip_*` 对象未变化；
 5. 只部署 `mip-*` 函数，不安装高频通知定时器。
 
-当前云端证据已经包含 34 个迁移版本、MIP 对象清单、`pnpm database:grants` 的精确授权回读、16 个核心函数清单、VPC/环境配置、专用 runtime MySQL 账号健康检查、客户端调用规则和高频 timer 缺失检查。剩余产品级云端证据是一组 `is_demo=1` 端到端夹具及部署后的开发者工具页面复验；不得在共享旧表中造演示数据。API Key 为 `READY` 或开发者工具可见均不能替代这些证据。
+当前云端证据已经包含 38 个迁移版本、105 张表的精确授权回读、MIP 对象清单、16 个最终代码核心函数清单、VPC/环境配置、专用 runtime MySQL 账号健康检查、客户端调用规则和高频 timer 缺失检查。开发者工具已形成 95 路由全遍历和部分真实运行证据，但全通过仍等待当前身份完成协议/档案/权限、真实详情夹具、真机能力和正式外部配置；不得在共享旧表中造演示数据。API Key 为 `READY` 或开发者工具可见均不能替代这些证据。
 
 ## 真机或生产环境
 
@@ -120,6 +129,8 @@
 | 相册/封面 | 真机选择、上传、内容安全、临时 URL 和失败清理 |
 | 日历与地图 | 真机加入系统日历、拒绝授权、打开地图和无坐标时复制地址 |
 | AI 语音 | 真机录音权限、上传、转写、草稿确认和音频清理 |
+| 知识外部交付 | 真机私密视频号跳转、业务域名 `web-view`、无效参数和返回路径 |
+| 单内容付费 | 正式商户下单、回调、查单、首次访问、退款拒绝和全额退款后权益撤销 |
 
 ## 需求追踪
 
@@ -131,6 +142,7 @@
 - 心动与反馈；
 - 机会、引荐和感兴趣；
 - 合作卡、超级案例和 AI 草稿；
+- 热点、知识内容、显式采集、评论和单内容付费；
 - 成长体系、任务卡与勋章；
 - 团队 PK、赛季、排行榜与队伍大本营；
 - 站内消息和微信 adapter；
