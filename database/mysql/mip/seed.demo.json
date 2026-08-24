@@ -1,0 +1,111 @@
+{
+  "version": "2026-08-24-demo.2",
+  "replaceBeforeProduction": true,
+  "branches": [
+    {
+      "id": "10000000-0000-4000-8000-000000000001",
+      "key": "shenzhen",
+      "name": "深圳分会",
+      "cityName": "深圳",
+      "summary": "MIP 深圳城市分会测试数据"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000002",
+      "key": "guangzhou",
+      "name": "广州分会",
+      "cityName": "广州",
+      "summary": "MIP 广州城市分会测试数据"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000003",
+      "key": "shanghai",
+      "name": "上海分会",
+      "cityName": "上海",
+      "summary": "MIP 上海城市分会测试数据"
+    },
+    {
+      "id": "10000000-0000-4000-8000-000000000004",
+      "key": "beijing",
+      "name": "北京分会",
+      "cityName": "北京",
+      "summary": "MIP 北京城市分会测试数据"
+    }
+  ],
+  "tags": [
+    { "id": "20000000-0000-4000-8000-000000000001", "kind": "CITY", "key": "shenzhen", "label": "深圳", "selectable": true, "popular": true, "sortOrder": 10 },
+    { "id": "20000000-0000-4000-8000-000000000002", "kind": "CITY", "key": "guangzhou", "label": "广州", "selectable": true, "popular": true, "sortOrder": 20 },
+    { "id": "20000000-0000-4000-8000-000000000003", "kind": "CITY", "key": "shanghai", "label": "上海", "selectable": true, "popular": true, "sortOrder": 30 },
+    { "id": "20000000-0000-4000-8000-000000000004", "kind": "CITY", "key": "beijing", "label": "北京", "selectable": true, "popular": true, "sortOrder": 40 },
+    { "id": "20000000-0000-4000-8000-000000000005", "kind": "CITY", "key": "hangzhou", "label": "杭州", "selectable": true, "popular": true, "sortOrder": 50 },
+    { "id": "20000000-0000-4000-8000-000000000006", "kind": "CITY", "key": "chengdu", "label": "成都", "selectable": true, "popular": true, "sortOrder": 60 },
+    { "id": "20000000-0000-4000-8000-000000000007", "kind": "CITY", "key": "foshan", "label": "佛山", "selectable": true, "popular": false, "sortOrder": 70 },
+    { "id": "20000000-0000-4000-8000-000000000008", "kind": "CITY", "key": "dongguan", "label": "东莞", "selectable": true, "popular": false, "sortOrder": 80 },
+    { "id": "20000000-0000-4000-8000-000000000009", "kind": "CITY", "key": "zhuhai", "label": "珠海", "selectable": true, "popular": false, "sortOrder": 90 },
+
+    { "id": "21900000-0000-4000-8000-000000000001", "kind": "INDUSTRY", "key": "internet_ai", "label": "互联网与人工智能", "selectable": false, "popular": false, "sortOrder": 10 },
+    { "id": "21900000-0000-4000-8000-000000000002", "kind": "INDUSTRY", "key": "creative_design", "label": "创意与设计", "selectable": false, "popular": false, "sortOrder": 20 },
+    { "id": "21900000-0000-4000-8000-000000000003", "kind": "INDUSTRY", "key": "business_services", "label": "商业与专业服务", "selectable": false, "popular": false, "sortOrder": 30 },
+    { "id": "21900000-0000-4000-8000-000000000004", "kind": "INDUSTRY", "key": "finance_investment", "label": "金融与投资", "selectable": false, "popular": false, "sortOrder": 40 },
+    { "id": "21900000-0000-4000-8000-000000000005", "kind": "INDUSTRY", "key": "consumer_services", "label": "消费与生活服务", "selectable": false, "popular": false, "sortOrder": 50 },
+
+    { "id": "21000000-0000-4000-8000-000000000001", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000001", "key": "internet", "label": "互联网", "selectable": true, "popular": true, "sortOrder": 10 },
+    { "id": "21000000-0000-4000-8000-000000000002", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000001", "key": "artificial_intelligence", "label": "人工智能", "selectable": true, "popular": true, "sortOrder": 20 },
+    { "id": "21000000-0000-4000-8000-000000000010", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000001", "key": "software", "label": "计算机软件", "selectable": true, "popular": false, "sortOrder": 30 },
+    { "id": "21000000-0000-4000-8000-000000000003", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000001", "key": "enterprise_services", "label": "企业服务", "selectable": true, "popular": false, "sortOrder": 40 },
+    { "id": "21000000-0000-4000-8000-000000000011", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000001", "key": "ecommerce", "label": "电子商务", "selectable": true, "popular": false, "sortOrder": 50 },
+    { "id": "21000000-0000-4000-8000-000000000012", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000001", "key": "cloud_computing", "label": "云计算", "selectable": true, "popular": false, "sortOrder": 60 },
+    { "id": "21000000-0000-4000-8000-000000000013", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000001", "key": "data_services", "label": "大数据", "selectable": true, "popular": false, "sortOrder": 70 },
+
+    { "id": "21000000-0000-4000-8000-000000000004", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000002", "key": "advertising_marketing", "label": "广告营销", "selectable": true, "popular": true, "sortOrder": 10 },
+    { "id": "21000000-0000-4000-8000-000000000005", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000002", "key": "visual_design", "label": "视觉设计", "selectable": true, "popular": true, "sortOrder": 20 },
+    { "id": "21000000-0000-4000-8000-000000000014", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000002", "key": "culture_creative", "label": "文化创意", "selectable": true, "popular": false, "sortOrder": 30 },
+    { "id": "21000000-0000-4000-8000-000000000015", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000002", "key": "media_content", "label": "媒体与内容", "selectable": true, "popular": false, "sortOrder": 40 },
+    { "id": "21000000-0000-4000-8000-000000000016", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000002", "key": "brand_consulting", "label": "品牌咨询", "selectable": true, "popular": false, "sortOrder": 50 },
+
+    { "id": "21000000-0000-4000-8000-000000000006", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000003", "key": "business_consulting", "label": "商业咨询", "selectable": true, "popular": true, "sortOrder": 10 },
+    { "id": "21000000-0000-4000-8000-000000000017", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000003", "key": "human_resources", "label": "人力资源", "selectable": true, "popular": false, "sortOrder": 20 },
+    { "id": "21000000-0000-4000-8000-000000000018", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000003", "key": "legal_services", "label": "法律服务", "selectable": true, "popular": false, "sortOrder": 30 },
+    { "id": "21000000-0000-4000-8000-000000000007", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000003", "key": "education_training", "label": "教育培训", "selectable": true, "popular": false, "sortOrder": 40 },
+    { "id": "21000000-0000-4000-8000-000000000019", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000003", "key": "real_estate", "label": "房地产", "selectable": true, "popular": false, "sortOrder": 50 },
+
+    { "id": "21000000-0000-4000-8000-000000000008", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000004", "key": "investment", "label": "投资", "selectable": true, "popular": true, "sortOrder": 10 },
+    { "id": "21000000-0000-4000-8000-000000000020", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000004", "key": "financial_services", "label": "金融服务", "selectable": true, "popular": true, "sortOrder": 20 },
+    { "id": "21000000-0000-4000-8000-000000000021", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000004", "key": "accounting_tax", "label": "财税服务", "selectable": true, "popular": false, "sortOrder": 30 },
+    { "id": "21000000-0000-4000-8000-000000000022", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000004", "key": "insurance", "label": "保险", "selectable": true, "popular": false, "sortOrder": 40 },
+
+    { "id": "21000000-0000-4000-8000-000000000009", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000005", "key": "retail", "label": "零售", "selectable": true, "popular": false, "sortOrder": 10 },
+    { "id": "21000000-0000-4000-8000-000000000023", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000005", "key": "food_beverage", "label": "餐饮", "selectable": true, "popular": false, "sortOrder": 20 },
+    { "id": "21000000-0000-4000-8000-000000000024", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000005", "key": "healthcare", "label": "医疗健康", "selectable": true, "popular": true, "sortOrder": 30 },
+    { "id": "21000000-0000-4000-8000-000000000025", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000005", "key": "sports_wellness", "label": "运动健康", "selectable": true, "popular": false, "sortOrder": 40 },
+    { "id": "21000000-0000-4000-8000-000000000026", "kind": "INDUSTRY", "parentId": "21900000-0000-4000-8000-000000000005", "key": "travel_hospitality", "label": "文旅与酒店", "selectable": true, "popular": false, "sortOrder": 50 },
+
+    { "id": "22000000-0000-4000-8000-000000000001", "kind": "ABILITY", "key": "business_development", "label": "业务拓展", "selectable": true, "popular": true, "sortOrder": 10 },
+    { "id": "22000000-0000-4000-8000-000000000002", "kind": "ABILITY", "key": "resource_integration", "label": "资源整合", "selectable": true, "popular": true, "sortOrder": 20 },
+    { "id": "22000000-0000-4000-8000-000000000003", "kind": "ABILITY", "key": "capital_operation", "label": "资本运作", "selectable": true, "popular": false, "sortOrder": 30 },
+    { "id": "22000000-0000-4000-8000-000000000004", "kind": "ABILITY", "key": "strategy_planning", "label": "策划能力", "selectable": true, "popular": true, "sortOrder": 40 },
+    { "id": "22000000-0000-4000-8000-000000000005", "kind": "ABILITY", "key": "visual_design", "label": "视觉能力", "selectable": true, "popular": true, "sortOrder": 50 },
+    { "id": "22000000-0000-4000-8000-000000000006", "kind": "ABILITY", "key": "delivery_management", "label": "交付管理", "selectable": true, "popular": true, "sortOrder": 60 }
+  ],
+  "membershipPlans": [
+    {
+      "id": "30000000-0000-4000-8000-000000000001",
+      "key": "annual_test",
+      "name": "年度会员（测试）",
+      "description": "用于开发和联调的测试会员方案",
+      "durationDays": 365,
+      "priceCents": 19900,
+      "benefits": ["玩家身份", "会员活动权益", "会员资料展示"]
+    }
+  ],
+  "growthLevels": [
+    { "id": "40000000-0000-4000-8000-000000000001", "key": "starter", "name": "起步", "minimumExperience": 0, "benefits": [] },
+    { "id": "40000000-0000-4000-8000-000000000002", "key": "active", "name": "活跃", "minimumExperience": 500, "benefits": [] },
+    { "id": "40000000-0000-4000-8000-000000000003", "key": "contributor", "name": "贡献者", "minimumExperience": 1500, "benefits": [] }
+  ],
+  "growthRules": [
+    { "id": "41000000-0000-4000-8000-000000000001", "key": "profile_completed", "name": "完善资料", "metric": "EXPERIENCE", "deltaValue": 50, "dailyLimitValue": null, "sourceEventType": "identity.profile_completed", "status": "ACTIVE" },
+    { "id": "41000000-0000-4000-8000-000000000002", "key": "event_attended", "name": "完成活动签到", "metric": "EXPERIENCE", "deltaValue": 100, "dailyLimitValue": 300, "sourceEventType": "event.checked_in", "status": "ACTIVE" },
+    { "id": "41000000-0000-4000-8000-000000000003", "key": "referral_confirmed", "name": "确认有效引荐", "metric": "CONTRIBUTION", "deltaValue": 20, "dailyLimitValue": 100, "sourceEventType": "referral.confirmed", "status": "DRAFT" },
+    { "id": "41000000-0000-4000-8000-000000000004", "key": "case_published", "name": "发布超级案例", "metric": "EXPERIENCE", "deltaValue": 80, "dailyLimitValue": 160, "sourceEventType": "super_case.published", "status": "DRAFT" }
+  ]
+}

@@ -1,29 +1,26 @@
 #!/usr/bin/env node
 
+import fs from 'node:fs'
 import path from 'node:path'
-import { assertMembershipApiActivityDomainPackage } from './lib/membership-api-package.mjs'
+import { MIP_FUNCTION_SOURCES } from './lib/mip-function-names.mjs'
 import { verifyNodeSources } from './lib/node-source-verifier.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
-const repositoryRoot = root
-
-// Fail before unit tests if the deployable package still escapes this repository.
-assertMembershipApiActivityDomainPackage({
-  caseRoot: root,
-  repositoryRoot,
-})
+const sourceRoots = [...new Set(Object.values(MIP_FUNCTION_SOURCES))]
+  .map(source => path.join('cloudfunctions', source))
+for (const relativePath of sourceRoots) {
+  if (!fs.existsSync(path.join(root, relativePath))) {
+    throw new Error(`Missing direct MIP Cloud Function source: ${relativePath}`)
+  }
+}
+const testRoots = sourceRoots
+  .map(relativePath => path.join(relativePath, 'tests'))
+  .filter(relativePath => fs.existsSync(path.join(root, relativePath)))
 
 const result = verifyNodeSources({
   cwd: root,
-  sourceRoots: ['cloudfunctions'],
-  testRoots: [
-    'cloudfunctions/membership-api/tests',
-    'cloudfunctions/membership-admin-api/tests',
-    'cloudfunctions/membership-payment-ledger/tests',
-    'cloudfunctions/membership-cloudpay/tests',
-    'cloudfunctions/membership-cloudpay-callback/tests',
-    'cloudfunctions/membership-notification-worker/tests',
-  ],
+  sourceRoots,
+  testRoots,
 })
 
-console.log(`Membership server contract passed (${result.sourceCount} owned sources, ${result.testCount} tests)`)
+console.log(`MIP server contract passed (${result.sourceCount} owned sources, ${result.testCount} tests)`)

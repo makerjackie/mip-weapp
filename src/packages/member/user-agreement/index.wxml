@@ -1,0 +1,13 @@
+<view id="mip-user-agreement-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view class="text-[length:38rpx] font-bold">用户协议</view>
+  <view class="mt-2 text-[length:21rpx] text-muted">生效日期：{{effectiveDate}}</view>
+  <view class="mt-5 flex flex-col gap-3">
+    <view class="rounded-[20rpx] bg-panel px-4 py-4"><view class="text-[length:27rpx] font-semibold">服务范围</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">MIP 提供会员、城市分会、活动、机会、合作档案、订单和消息等功能。具体服务以小程序当前可用功能为准。</view></view>
+    <view class="rounded-[20rpx] bg-panel px-4 py-4"><view class="text-[length:27rpx] font-semibold">账号与资料</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">用户应通过本人微信账号使用服务，并确保主动提交的资料真实、合法。手机号、头像和昵称仅在用户授权或提交后处理。</view></view>
+    <view class="rounded-[20rpx] bg-panel px-4 py-4"><view class="text-[length:27rpx] font-semibold">内容与互动</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">发布的活动、机会、合作卡、案例和反馈不得侵犯他人权益或违反适用规则。平台可以对违规内容采取下架、限制功能或保留审计记录等措施。</view></view>
+    <view class="rounded-[20rpx] bg-panel px-4 py-4"><view class="text-[length:27rpx] font-semibold">订单与权益</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">订单金额、支付状态、退款状态和会员权益以服务端记录为准。活动取消和退款按下单时展示的规则及实际处理结果执行。</view></view>
+    <view class="rounded-[20rpx] bg-panel px-4 py-4"><view class="text-[length:27rpx] font-semibold">服务调整</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">协议或服务发生重要变化时，小程序会展示更新版本并在需要时重新取得确认。继续使用前可以查看最新内容。</view></view>
+    <view class="rounded-[20rpx] bg-panel px-4 py-4"><view class="text-[length:27rpx] font-semibold">联系与请求</view><view class="mt-2 text-[length:22rpx] leading-6 text-muted">服务、订单、数据或账号相关请求可通过小程序客服提交。</view></view>
+  </view>
+  <app-page-exit />
+</view>

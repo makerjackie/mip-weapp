@@ -1,147 +1,84 @@
-import type { AdminManagedEvent } from '../../../modules/admin/types'
+import type { AdminEvent } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
-import { adminModule } from '../../../modules/admin/client'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
-import { formatLocalDateTime } from '../../../utils/date'
+import { mipAdminModule } from '../../../modules/mip-admin'
 import { adminLoadFailure } from '../shared/page-state'
-
-const roleLabels: Record<AdminManagedEvent['managerRole'], string> = {
-  GLOBAL: '全局运营',
-  EVENT_OWNER: '活动负责人',
-  EVENT_MANAGER: '活动管理员',
-  EVENT_STAFF: '现场工作人员',
-}
-
-const statusLabels: Record<AdminManagedEvent['status'], string> = {
-  DRAFT: '草稿',
-  PUBLISHED: '报名中',
-  CANCELLED: '已取消',
-  COMPLETED: '已结束',
-}
-
-interface DisplayManagedEvent extends AdminManagedEvent {
-  startsText: string
-  roleText: string
-  statusText: string
-}
-
-type ManagedEventStatus = 'ALL' | AdminManagedEvent['status']
-
-function displayEvents(items: AdminManagedEvent[]): DisplayManagedEvent[] {
-  return items.map(item => ({
-    ...item,
-    startsText: formatLocalDateTime(item.startsAt),
-    roleText: roleLabels[item.managerRole],
-    statusText: statusLabels[item.status],
-  }))
-}
-
-function filterEvents(
-  items: DisplayManagedEvent[],
-  status: ManagedEventStatus,
-  query: string,
-) {
-  const normalizedQuery = query.trim().toLocaleLowerCase()
-  return items.filter((item) => {
-    const matchesStatus = status === 'ALL' || item.status === status
-    const matchesQuery = !normalizedQuery
-      || item.title.toLocaleLowerCase().includes(normalizedQuery)
-      || item.location.toLocaleLowerCase().includes(normalizedQuery)
-    return matchesStatus && matchesQuery
-  })
-}
 
 Page({
   data: {
     state: 'loading' as AdminPageState,
-    allItems: [] as DisplayManagedEvent[],
-    items: [] as DisplayManagedEvent[],
-    globalAdmin: false,
-    status: 'ALL' as ManagedEventStatus,
+    events: [] as AdminEvent[],
     query: '',
+    status: '',
+    canCreate: false,
     message: '',
+    nextCursor: null as string | null,
+    loadingMore: false,
   },
-
-  onShow() {
-    void this.load()
+  onShow() { void this.loadEvents() },
+  updateQuery(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ query: event.detail.value }) },
+  changeStatus(event: WechatMiniprogram.TouchEvent) {
+    const status = String(event.currentTarget.dataset.value || '')
+    this.setData({ status })
+    void this.loadEvents(true)
   },
-
-  async load(force = false) {
-    const cached = adminModule.peekManagedEvents()
-    if (cached) {
-      const allItems = displayEvents(cached)
-      this.setData({
-        state: 'ready',
-        allItems,
-        items: filterEvents(allItems, this.data.status, this.data.query),
-        globalAdmin: cached.some(item => item.managerRole === 'GLOBAL'),
-        message: '',
-      })
-    }
-    else if (this.data.state !== 'ready') {
+  search() { void this.loadEvents(true) },
+  async loadEvents(force = false) {
+    const hasContent = this.data.events.length > 0
+    if (!hasContent) {
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const items = await adminModule.listManagedEvents({ force })
-      const allItems = displayEvents(items)
-      this.setData({
-        state: 'ready',
-        allItems,
-        items: filterEvents(allItems, this.data.status, this.data.query),
-        globalAdmin: items.some(item => item.managerRole === 'GLOBAL'),
-        message: '',
-      })
+      const [session, response] = await Promise.all([
+        mipAdminModule.getSession(force),
+        mipAdminModule.listEvents({
+          filters: { query: this.data.query.trim(), status: this.data.status },
+        }, force),
+      ])
+      const canCreate = session.capabilities.some(item =>
+        item.capability === 'events.write' && (item.scopeType === 'PLATFORM' || item.scopeType === 'BRANCH'))
+      this.setData({ state: 'ready', events: response.items, canCreate, nextCursor: response.nextCursor || null, loadingMore: false, message: '' })
     }
     catch (error) {
-      this.setData(adminLoadFailure(error, {
-        hasContent: Boolean(cached) || this.data.state === 'ready',
-        fallbackMessage: '活动管理列表加载失败',
-      }))
+      this.setData(adminLoadFailure(error, { hasContent, fallbackMessage: '活动列表加载失败' }))
     }
   },
-
+  async loadMoreEvents() {
+    if (!this.data.nextCursor || this.data.loadingMore || this.data.state !== 'ready') {
+      return
+    }
+    this.setData({ loadingMore: true, message: '' })
+    try {
+      const response = await mipAdminModule.listEvents({
+        cursor: this.data.nextCursor,
+        filters: { query: this.data.query.trim(), status: this.data.status },
+      })
+      this.setData({ events: this.data.events.concat(response.items), nextCursor: response.nextCursor || null })
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '更多活动加载失败' })
+    }
+    finally {
+      this.setData({ loadingMore: false })
+    }
+  },
+  onReachBottom() { void this.loadMoreEvents() },
   async onPullDownRefresh() {
     try {
-      await this.load(true)
+      await this.loadEvents(true)
     }
     finally {
       wx.stopPullDownRefresh()
     }
   },
-
-  changeStatus(event: WechatMiniprogram.CustomEvent<{ value: ManagedEventStatus }>) {
-    const status = event.detail.value
-    this.setData({
-      status,
-      items: filterEvents(this.data.allItems, status, this.data.query),
-    })
-  },
-
-  updateQuery(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    const query = event.detail.value
-    this.setData({
-      query,
-      items: filterEvents(this.data.allItems, this.data.status, query),
-    })
-  },
-
-  clearQuery() {
-    this.setData({
-      query: '',
-      items: filterEvents(this.data.allItems, this.data.status, ''),
-    })
-  },
-
-  openEvent(event: WechatMiniprogram.BaseEvent) {
-    const eventId = String(event.currentTarget.dataset.eventId || '')
-    if (eventId) {
-      caseNavigateTo({ url: `/packages/admin/event-console/index?eventId=${encodeURIComponent(eventId)}` })
+  openEvent(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    if (id) {
+      void wx.navigateTo({ url: `/packages/admin/event-console/index?eventId=${encodeURIComponent(id)}` })
     }
   },
-
   createEvent() {
-    if (this.data.globalAdmin) {
-      caseNavigateTo({ url: '/packages/admin/events/index?mode=create' })
+    if (this.data.canCreate) {
+      void wx.navigateTo({ url: '/packages/admin/events/index' })
     }
   },
 })

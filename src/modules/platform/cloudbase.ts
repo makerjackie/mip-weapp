@@ -15,12 +15,12 @@ const cloudbaseRuntime = createCloudbaseRuntime({
     mode: runtimeConfig.cloudbase.mode,
     envId: runtimeConfig.cloudbase.envId,
     resourceAppId: runtimeConfig.cloudbase.resourceAppId,
-    functionName: runtimeConfig.cloudbase.membershipFunctionName,
+    functionName: runtimeConfig.cloudbase.identityFunctionName,
   },
 }, {
-  disabledMessage: '会员服务暂未开放',
-  initializingMessage: '正在连接会员服务',
-  unavailableMessage: '会员服务暂时不可用',
+  disabledMessage: '服务暂未开放',
+  initializingMessage: '正在连接服务',
+  unavailableMessage: '服务暂时不可用',
 })
 
 export function initializeCloudbase() {

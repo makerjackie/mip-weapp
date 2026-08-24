@@ -1,87 +1,99 @@
-import type { OperationalException } from '../../../modules/admin/types'
-import { adminModule } from '../../../modules/admin/client'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
-import { formatLocalMonthDayTime } from '../../../utils/date'
-import { adminLoadFailure } from '../shared/page-state'
+import type {
+  AdminOperationalException,
+  AdminOperationalExceptionStatus,
+  AdminOperationalExceptionType,
+} from '../../../modules/mip-admin/operational-exceptions'
+import type { AdminPageState } from '../shared/page-state'
+import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
+import { formatLocalDateTime } from '../../../utils/date'
+import { adminLoadFailure, isAdminForbiddenError } from '../shared/page-state'
 
-interface ExceptionView extends OperationalException {
-  updatedText: string
-  severityText: string
+type ExceptionPageState = AdminPageState | 'empty'
+
+interface FilterOption<T extends string> {
+  value: T | ''
+  label: string
 }
 
-const severityLabels = {
-  LOW: '提醒',
-  MEDIUM: '需处理',
-  HIGH: '优先处理',
+interface ExceptionView extends AdminOperationalException {
+  sourceText: string
+  statusText: string
+  occurredText: string
+}
+
+const sourceLabels: Record<AdminOperationalExceptionType, string> = {
+  OUTBOX: '业务事件',
+  REFUND: '退款',
+  PAYMENT: '支付',
+  MEDIA: '图片',
+  DELIVERY: '通知',
+  AI: 'AI 草稿',
+}
+
+const statusLabels: Record<AdminOperationalExceptionStatus, string> = {
+  FAILED: '失败',
+  STALLED: '处理超时',
+  REJECTED: '未通过',
+  EXPIRED: '已过期',
+  CLEANUP_PENDING: '待清理',
+}
+
+const sourceStatuses: Record<AdminOperationalExceptionType, AdminOperationalExceptionStatus[]> = {
+  OUTBOX: ['FAILED', 'STALLED'],
+  REFUND: ['FAILED', 'STALLED'],
+  PAYMENT: ['FAILED', 'STALLED'],
+  MEDIA: ['REJECTED', 'STALLED'],
+  DELIVERY: ['FAILED', 'STALLED'],
+  AI: ['FAILED', 'EXPIRED', 'CLEANUP_PENDING'],
+}
+
+function typeOptions(types: AdminOperationalExceptionType[]): Array<FilterOption<AdminOperationalExceptionType>> {
+  return [
+    { value: '', label: '全部类型' },
+    ...types.map(value => ({ value, label: sourceLabels[value] })),
+  ]
+}
+
+function statusOptions(
+  types: AdminOperationalExceptionType[],
+  selectedType: AdminOperationalExceptionType | '',
+): Array<FilterOption<AdminOperationalExceptionStatus>> {
+  const selectedTypes = selectedType ? [selectedType] : types
+  const available = new Set(selectedTypes.flatMap(type => sourceStatuses[type]))
+  return [
+    { value: '', label: '全部状态' },
+    ...Object.entries(statusLabels)
+      .filter(([value]) => available.has(value as AdminOperationalExceptionStatus))
+      .map(([value, label]) => ({
+        value: value as AdminOperationalExceptionStatus,
+        label,
+      })),
+  ]
+}
+
+function exceptionView(item: AdminOperationalException): ExceptionView {
+  return {
+    ...item,
+    sourceText: sourceLabels[item.source],
+    statusText: statusLabels[item.status],
+    occurredText: formatLocalDateTime(item.occurredAt),
+  }
 }
 
 Page({
   data: {
-    state: 'loading' as 'loading' | 'ready' | 'error' | 'forbidden',
+    state: 'loading' as ExceptionPageState,
     items: [] as ExceptionView[],
-    retryingId: '',
+    type: '' as AdminOperationalExceptionType | '',
+    status: '' as AdminOperationalExceptionStatus | '',
+    availableTypes: [] as AdminOperationalExceptionType[],
+    typeOptions: typeOptions([]),
+    statusOptions: statusOptions([], ''),
     message: '',
   },
 
-  onLoad() {
+  onShow() {
     void this.loadExceptions()
-  },
-
-  async loadExceptions(force = false) {
-    const cached = adminModule.peekOperationalExceptions()
-    if (cached) {
-      this.applyItems(cached)
-    }
-    else if (this.data.state !== 'ready') {
-      this.setData({ state: 'loading', message: '' })
-    }
-    try {
-      this.applyItems(await adminModule.listOperationalExceptions({ force }))
-    }
-    catch (error) {
-      this.setData(adminLoadFailure(error, {
-        hasContent: Boolean(cached) || this.data.state === 'ready',
-        fallbackMessage: '异常列表加载失败',
-      }))
-    }
-  },
-
-  applyItems(items: OperationalException[]) {
-    this.setData({
-      state: 'ready',
-      items: items.map(item => ({
-        ...item,
-        updatedText: formatLocalMonthDayTime(item.updatedAt),
-        severityText: severityLabels[item.severity],
-      })),
-      message: '',
-    })
-  },
-
-  openItem(event: WechatMiniprogram.BaseEvent) {
-    const item = this.data.items[Number(event.currentTarget.dataset.index)]
-    if (item?.route) {
-      caseNavigateTo({ url: item.route })
-    }
-  },
-
-  async retryItem(event: WechatMiniprogram.BaseEvent) {
-    const item = this.data.items[Number(event.currentTarget.dataset.index)]
-    if (!item?.canRetry || this.data.retryingId) {
-      return
-    }
-    this.setData({ retryingId: item.id, message: '' })
-    try {
-      await adminModule.retryOperationalException(item)
-      wx.showToast({ title: '已重新加入处理队列', icon: 'success' })
-      await this.loadExceptions(true)
-    }
-    catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '重新处理失败' })
-    }
-    finally {
-      this.setData({ retryingId: '' })
-    }
   },
 
   async onPullDownRefresh() {
@@ -91,5 +103,78 @@ Page({
     finally {
       wx.stopPullDownRefresh()
     }
+  },
+
+  retryLoad() {
+    void this.loadExceptions(true)
+  },
+
+  async loadExceptions(force = false) {
+    const hasContent = this.data.items.length > 0
+    if (!hasContent) {
+      this.setData({ state: 'loading', message: '' })
+    }
+    try {
+      const session = await mipAdminModule.getSession(force)
+      if (!hasCapability(session.capabilities, 'operations.exceptions.read')) {
+        this.setData({ state: 'forbidden', items: [], message: '' })
+        return
+      }
+      const response = await mipAdminModule.listOperationalExceptions({
+        type: this.data.type,
+        status: this.data.status,
+        limit: 50,
+      }, force)
+      this.setData({
+        state: response.items.length ? 'ready' : 'empty',
+        items: response.items.map(exceptionView),
+        availableTypes: response.availableTypes,
+        typeOptions: typeOptions(response.availableTypes),
+        statusOptions: statusOptions(response.availableTypes, this.data.type),
+        message: '',
+      })
+    }
+    catch (error) {
+      if (isAdminForbiddenError(error)) {
+        this.setData({ state: 'forbidden', items: [], message: '' })
+        return
+      }
+      this.setData(adminLoadFailure(error, { hasContent, fallbackMessage: '异常列表加载失败' }))
+    }
+  },
+
+  chooseType(event: WechatMiniprogram.TouchEvent) {
+    const value = String(event.currentTarget.dataset.value || '') as AdminOperationalExceptionType | ''
+    if (value === this.data.type || !this.data.typeOptions.some(item => item.value === value)) {
+      return
+    }
+    const nextStatusOptions = statusOptions(this.data.availableTypes, value)
+    const status = nextStatusOptions.some(item => item.value === this.data.status) ? this.data.status : ''
+    this.setData({
+      type: value,
+      status,
+      statusOptions: nextStatusOptions,
+      items: [],
+      state: 'loading',
+      message: '',
+    })
+    void this.loadExceptions(true)
+  },
+
+  chooseStatus(event: WechatMiniprogram.TouchEvent) {
+    const value = String(event.currentTarget.dataset.value || '') as AdminOperationalExceptionStatus | ''
+    if (value === this.data.status || !this.data.statusOptions.some(item => item.value === value)) {
+      return
+    }
+    this.setData({ status: value, items: [], state: 'loading', message: '' })
+    void this.loadExceptions(true)
+  },
+
+  openTarget(event: WechatMiniprogram.TouchEvent) {
+    const item = this.data.items.find(candidate => candidate.id === String(event.currentTarget.dataset.id || ''))
+    if (!item?.target?.route.startsWith('/packages/admin/')) {
+      return
+    }
+    void wx.navigateTo({ url: item.target.route })
   },
 })

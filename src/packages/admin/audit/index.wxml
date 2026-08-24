@@ -1,17 +1,11 @@
 <view id="admin-audit-page" class="min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
-  <view class="border-b border-ink pb-5"><view class="text-[length:21rpx] font-semibold tracking-[0.16em] text-muted">安全记录</view><view class="mt-2 text-[length:44rpx] font-bold">操作历史</view></view>
-  <view wx:if="{{state === 'loading'}}" class="mt-7 bg-panel px-5 py-8"><t-skeleton row-col="{{[1, 1, 1, 1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}" class="mt-7"><app-empty-state title="暂时无法加载记录" description="服务暂时没有响应，请稍后重试。" action-text="重新加载" bind:action="loadAudit" /></view>
-  <view wx:elif="{{state === 'forbidden'}}" class="mt-7">
-    <app-empty-state
-      title="没有运营权限"
-      description="请使用已授权的运营账号进入，或联系主理人开通权限。"
-      action-text="重新验证"
-      bind:action="loadAudit"
-    />
-  </view>
-  <view wx:elif="{{items.length === 0}}" class="mt-7 border border-line bg-panel px-5 py-9 text-center"><view class="text-[length:29rpx] font-semibold">还没有操作记录</view></view>
-  <view wx:else class="mt-6 border-l border-line pl-4"><view wx:for="{{items}}" wx:key="id" class="relative mb-4 bg-panel px-5 py-4 before:absolute before:-left-[22rpx] before:top-6 before:h-[14rpx] before:w-[14rpx] before:bg-brand"><view class="flex items-center justify-between gap-3"><view class="min-w-0 flex-1 truncate text-[length:24rpx] font-semibold text-brand">{{item.actionText}}</view><view class="shrink-0 text-[length:20rpx] text-muted">{{item.createdText}}</view></view><view class="mt-2 text-[length:23rpx]">{{item.resourceText}}</view><view class="mt-1 text-[length:19rpx] text-muted">操作人：{{item.roleText}}</view></view></view>
-  <view wx:if="{{message && state === 'ready'}}" class="mt-5 border-l-[8rpx] border-coral bg-panel px-4 py-4 text-[length:24rpx] text-muted">{{message}}</view>
+  <view class="text-[length:40rpx] font-bold">审计记录</view><view class="mt-2 text-[length:23rpx] text-muted">敏感读取和管理变更只追加记录</view>
+  <view class="mt-5 rounded-[16rpx] bg-panel p-3"><t-input value="{{action}}" placeholder="操作名称" bind:change="updateAction" /><view class="mt-2"><t-input value="{{resourceType}}" placeholder="资源类型" bind:change="updateResource" bind:enter="search" /></view><view class="mt-3"><t-button block variant="outline" bind:tap="search">筛选</t-button></view></view>
+  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载审计记录" description="{{message}}" action-text="重新加载" bind:action="loadAudit" /></view>
+  <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有审计权限" description="当前账号不能查看审计记录。" /></view>
+  <view wx:elif="{{items.length === 0}}" class="mt-6"><app-empty-state title="暂无审计记录" description="符合筛选条件的记录会显示在这里。" /></view>
+  <view wx:else class="mt-5 flex flex-col gap-3"><view wx:for="{{items}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4"><view class="flex items-start justify-between gap-3"><view class="text-[length:26rpx] font-semibold">{{item.action}}</view><view class="text-[length:21rpx] text-muted">{{item.createdAt}}</view></view><view class="mt-2 text-[length:22rpx] text-muted">{{item.actorNickname}} · {{item.effectiveRole || 'SYSTEM'}}</view><view class="mt-1 text-[length:22rpx] text-muted">{{item.resourceType}} · {{item.scopeType}}</view><view class="mt-3 break-all rounded-[10rpx] bg-panel-raised px-3 py-2 text-[length:20rpx] text-muted">{{item.metadataText}}</view></view></view>
+  <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMoreAudit">加载更多</t-button></view>
   <app-page-exit />
 </view>

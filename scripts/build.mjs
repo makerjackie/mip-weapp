@@ -86,7 +86,6 @@ if (!fs.existsSync(stagedNpm) && fs.existsSync(currentNpm)) {
   fs.cpSync(currentNpm, stagedNpm, { recursive: true })
 }
 fs.mkdirSync(outputDir, { recursive: true })
-fs.copyFileSync(path.join(stagingDir, 'app.json'), path.join(outputDir, 'app.json'))
-await new Promise(resolve => setTimeout(resolve, 750))
 synchronizeDirectory(stagingDir, outputDir)
+fs.copyFileSync(path.join(stagingDir, 'app.json'), path.join(outputDir, 'app.json'))
 fs.rmSync(stagingDir, { force: true, recursive: true })

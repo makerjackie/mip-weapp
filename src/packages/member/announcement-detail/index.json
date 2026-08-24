@@ -1,6 +1,9 @@
 {
   "navigationBarTitleText": "公告详情",
   "usingComponents": {
-    "app-page-exit": "/components/page-exit/index"
+    "app-empty-state": "/components/empty-state/index",
+    "app-page-exit": "/components/page-exit/index",
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
   }
 }

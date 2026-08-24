@@ -1,7 +1,7 @@
 .tab-bar-surface,
 .tab-bar {
-  --color-brand: #285e46;
-  --color-muted: #69726b;
+  --color-brand: #fcdf03;
+  --color-muted: #b3b3b3;
 
   position: fixed;
   right: 0;
@@ -10,8 +10,8 @@
   box-sizing: border-box;
   width: 100%;
   padding-bottom: env(safe-area-inset-bottom);
-  background-color: #fffefa;
-  border-top: 1rpx solid #cfcabf;
+  background-color: #202020;
+  border-top: 1rpx solid #363636;
 }
 
 .tab-bar-surface {

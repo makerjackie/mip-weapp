@@ -2,6 +2,9 @@
   "navigationBarTitleText": "社区公告",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "app-page-exit": "/components/page-exit/index"
+    "app-empty-state": "/components/empty-state/index",
+    "app-page-exit": "/components/page-exit/index",
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
   }
 }

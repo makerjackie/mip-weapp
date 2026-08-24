@@ -10,61 +10,81 @@ function read(relativePath: string) {
 }
 
 describe('phase9 final gap contracts', () => {
-  it('idempotent REGISTERED/ATTENDED path never backfills ticket_code', () => {
-    const workflows = read('cloudfunctions/membership-api/lib/workflows.js')
-    const adapter = read('cloudfunctions/membership-api/lib/activity-domain-adapter.js')
-    const tests = read('cloudfunctions/membership-api/tests/workflows.test.js')
-
-    // Replayable statuses stay in the adapter matrix; REPLAY path is zero-write.
-    expect(adapter).toMatch(/REGISTERED:[\s\S]*replayable:\s*true/)
-    expect(adapter).toMatch(/ATTENDED:[\s\S]*replayable:\s*true/)
-    expect(workflows).toMatch(/enrollment\.kind === 'REPLAY'/)
-    expect(workflows).toMatch(/Zero-write fact read/)
-    expect(workflows).toMatch(/ticketCode: enrollment\.fact\.ticket_code \|\| ''/)
-    // ensureTicketCode must not be called on the REPLAY branch.
-    const replayBranch = workflows.slice(
-      workflows.indexOf('enrollment.kind === \'REPLAY\''),
-      workflows.indexOf('// ACCEPT path'),
+  it('replays MIP registrations without mutating ticket or order facts', () => {
+    const service = read('cloudfunctions/mip-events-api/domain/event-service.js')
+    const registrationFlow = service.slice(
+      service.indexOf('async function createRegistration'),
+      service.indexOf('async function listMyRegistrations'),
     )
-    expect(replayBranch).not.toContain('ensureTicketCode')
-    expect(replayBranch).not.toMatch(/UPDATE\s+member_registrations/)
-    expect(tests).toContain('returns empty ticket without UPDATE when historical REGISTERED ticket_code is empty')
-    expect(tests).toContain('returns empty ticket without UPDATE when historical ATTENDED ticket_code is blank')
+    const replayBranch = registrationFlow.slice(
+      registrationFlow.indexOf('if (claim.replay)'),
+      registrationFlow.indexOf('const event = await tx.one'),
+    )
+    const existingBranch = registrationFlow.slice(
+      registrationFlow.indexOf('if (existing && activeRegistrationStatuses.has(existing.status))'),
+      registrationFlow.indexOf('await requireParticipationAccess'),
+    )
+
+    expect(registrationFlow).toContain('operation: \'event.register\'')
+    expect(replayBranch).toContain('return claim.replay')
+    expect(replayBranch).not.toMatch(/(?:INSERT|UPDATE|DELETE)\s+/)
+    expect(existingBranch).toContain('registrationOutcome(existing, { paymentAvailable })')
+    expect(existingBranch).toContain('completeIdempotency')
+    expect(existingBranch).not.toContain('ticketHash')
+    expect(registrationFlow).not.toContain('member_registrations')
+    expect(registrationFlow).not.toContain('ticket_code')
   })
 
-  it('membership-api vendors activity-domain pure.cjs for CloudBase upload', () => {
-    const adapter = read('cloudfunctions/membership-api/lib/activity-domain-adapter.js')
-    const vendorPath = path.join(root, 'cloudfunctions/membership-api/lib/vendor/activity-domain/pure.cjs')
-    const sourcePath = path.join(root, 'src/shared/activity-domain/pure.cjs')
-    const packageHelper = read('scripts/lib/membership-api-package.mjs')
+  it('verifies and deploys only direct MIP Cloud Function sources', () => {
+    const functionNames = read('scripts/lib/mip-function-names.mjs')
+    const manifest = read('scripts/lib/mip-function-manifest.mjs')
     const verifySource = read('scripts/verify-source.mjs')
     const verifyServer = read('scripts/verify-server.mjs')
     const deploy = read('scripts/deploy-functions.mjs')
 
-    expect(fs.existsSync(vendorPath)).toBe(true)
-    expect(fs.readFileSync(vendorPath).equals(fs.readFileSync(sourcePath))).toBe(true)
-    const requireCalls = adapter.match(/require\(([^)]+)\)/g) || []
-    expect(requireCalls.some(call => call.includes('./vendor/activity-domain/pure.cjs'))).toBe(true)
-    for (const call of requireCalls) {
-      expect(call).not.toContain('packages/weapp-core')
-      expect(call).not.toContain('path.join')
-      expect(call).not.toContain('../../../../../')
+    const directSources = [
+      'mip-identity-api',
+      'mip-media-api',
+      'mip-events-api',
+      'mip-opportunities-api',
+      'mip-community-api',
+      'mip-commerce-api',
+      'mip-admin-api',
+      'mip-growth-api',
+      'mip-ai-api',
+      'mip-notifications-api',
+      'mip-payment-ledger',
+      'mip-notification-worker',
+      'mip-outbox-worker',
+      'mip-cloudpay',
+      'mip-cloudpay-callback',
+      'mip-refund-worker',
+    ]
+    for (const source of directSources) {
+      expect(functionNames).toContain(`'${source}'`)
+      expect(fs.existsSync(path.join(root, 'cloudfunctions', source, 'index.js'))).toBe(true)
     }
-    expect(packageHelper).toContain('assertMembershipApiActivityDomainPackage')
-    expect(packageHelper).toContain('membership-api-isolated-load-ok')
-    expect(verifySource).toContain('assertMembershipApiActivityDomainPackage')
-    expect(verifyServer).toContain('assertMembershipApiActivityDomainPackage')
-    expect(deploy).toContain('assertMembershipApiActivityDomainPackage')
+    expect(manifest).toContain('MIP_FUNCTION_SOURCES')
+    expect(deploy).toContain('createMipCoreFunctionManifest')
+    expect(deploy).toMatch(/admin:\s*\{[\s\S]*?MIP_PHONE_ENCRYPTION_KEY: options\.secrets\.phoneEncryption/)
+    expect(verifySource).toContain('createMipCoreFunctionManifest')
+    expect(verifyServer).toContain('MIP_FUNCTION_SOURCES')
+    expect(verifyServer).toContain('sourceRoots')
+    expect(`${verifySource}\n${verifyServer}\n${deploy}`).not.toContain('assertMembershipApiActivityDomainPackage')
   })
 
-  it('PUBLISHED edit validates persisted starts_at before payload publishability', () => {
-    const workflows = read('cloudfunctions/membership-admin-api/lib/workflows.js')
-    const domainTests = read('cloudfunctions/membership-admin-api/tests/domain.test.js')
-
-    expect(workflows).toMatch(
-      /existing\.status === 'PUBLISHED'[\s\S]*?existing\.starts_at[\s\S]*?EVENT_ALREADY_STARTED[\s\S]*?assertEventPublishable/,
+  it('publishes only from the locked persisted event status and starts_at', () => {
+    const repository = read('cloudfunctions/mip-admin-api/domain/repository.js')
+    const statusFlow = repository.slice(
+      repository.indexOf('async function changeEventStatus'),
+      repository.indexOf('async function cancelEventRegistrations'),
     )
-    expect(domainTests).toContain('rejects editing a PUBLISHED event whose persisted starts_at is already past')
+
+    expect(statusFlow).toMatch(/SELECT id, branch_id, status, content_safety_status, starts_at, version[\s\S]*FOR UPDATE/)
+    expect(statusFlow).toContain('input.status === \'PUBLISHED\' && event.content_safety_status !== \'PASSED\'')
+    expect(statusFlow).toContain('input.status === \'PUBLISHED\' && new Date(event.starts_at) <= changedAt')
+    expect(statusFlow.indexOf('new Date(event.starts_at)')).toBeLessThan(statusFlow.indexOf('UPDATE mip_events SET status'))
+    expect(statusFlow).not.toContain('input.startsAt')
   })
 
   it('cancel version conflict locks submit and requires explicit refresh + reopen', () => {
@@ -74,57 +94,67 @@ describe('phase9 final gap contracts', () => {
     expect(pageTs).toContain('cancelConflict: true')
     expect(pageTs).toContain('refreshAfterCancelConflict')
     expect(pageTs).not.toMatch(/cancelEventVersion:\s*latest\.version/)
-    expect(pageTs).toMatch(/EVENT_VERSION_CONFLICT[\s\S]*?cancelDialogVisible: false[\s\S]*?cancelConflict: true/)
+    expect(pageTs).toMatch(/isAdminVersionConflict\(error\)[\s\S]*?cancelDialogVisible: false[\s\S]*?cancelConflict: true/)
+    expect(pageTs).toMatch(/cancelBusy: true[\s\S]*?showModal/)
     expect(pageWxml).toContain('refreshAfterCancelConflict')
     expect(pageWxml).toContain('cancelDialogVisible && !cancelConflict')
   })
 
-  it('default roster DTO exposes phoneBound only, never phoneMasked', () => {
-    const types = read('src/modules/admin/types.ts')
-    const dto = read('src/modules/admin/event-dto.ts')
-    const workflows = read('cloudfunctions/membership-admin-api/lib/workflows.js')
+  it('default MIP roster exposes only phoneBound until an audited phone request', () => {
+    const types = read('src/modules/mip-admin/types.ts')
+    const service = read('cloudfunctions/mip-admin-api/domain/service.js')
+    const repository = read('cloudfunctions/mip-admin-api/domain/repository.js')
     const wxml = read('src/packages/admin/event-registrations/index.wxml')
+    const rosterType = types.slice(
+      types.indexOf('export interface AdminRosterItem'),
+      types.indexOf('export interface AdminRoleItem'),
+    )
+    const rosterService = service.slice(
+      service.indexOf('async function listRoster'),
+      service.indexOf('async function checkIn'),
+    )
 
-    expect(types).toContain('phoneBound: boolean')
-    expect(types).not.toContain('phoneMasked')
-    expect(dto).toContain('phoneBound: requireBoolean(value.phoneBound, \'phoneBound\')')
-    expect(dto).not.toContain('phoneMasked')
-    expect(workflows).toContain('phoneBound: Boolean(row.phone_number)')
-    expect(workflows).not.toMatch(/phoneMasked:\s*maskPhone/)
+    expect(rosterType).toContain('phoneBound: boolean')
+    expect(rosterType).toContain('phoneNumber: string | null')
+    expect(rosterType).not.toContain('phoneMasked')
+    expect(repository).toContain('phoneBound: Boolean(row.phone_verified_at)')
+    expect(rosterService).toContain('input.includePhone === true')
+    expect(rosterService).toContain('CAPABILITIES.USERS_PHONE_READ')
+    expect(rosterService).toContain('admin.events.roster.phone.view')
+    expect(rosterService).toContain('const { phoneCiphertext, userId, ...safe } = item')
+    expect(rosterService).not.toContain('phoneMasked')
     expect(wxml).toContain('手机已绑定')
+    expect(wxml).toContain('wx:if="{{includePhone}}"')
     expect(wxml).not.toContain('phoneMasked')
   })
 
-  it('roster sort prefers effective status and binds cursor signature to filter+sort', () => {
-    const roster = read('cloudfunctions/membership-admin-api/domain/roster.js')
-    const workflows = read('cloudfunctions/membership-admin-api/lib/workflows.js')
+  it('keeps roster reads app/event scoped with deterministic ordering', () => {
+    const repository = read('cloudfunctions/mip-admin-api/domain/repository.js')
+    const roster = repository.slice(
+      repository.indexOf('async function listRoster'),
+      repository.indexOf('async function checkIn'),
+    )
 
-    expect(roster).toContain('statusRank,registeredAtDesc,idDesc')
-    expect(roster).toContain('PENDING_REVIEW: 0')
-    expect(roster).toContain('WAITLISTED: 1')
-    expect(roster).toContain('REGISTERED: 2')
-    expect(roster).toContain('CANCELLATION_PENDING: 3')
-    expect(roster).toContain('ATTENDED: 4')
-    expect(roster).toContain('REJECTED: 5')
-    expect(roster).toContain('CANCELLED: 6')
-    expect(workflows).toContain('ROSTER_ORDER_SQL')
-    expect(workflows).toMatch(/CASE r\.status[\s\S]*REGISTERED[\s\S]*CANCELLATION_PENDING[\s\S]*ATTENDED[\s\S]*CANCELLED/)
+    expect(roster).toContain('const clauses = [\'r.app_id = ?\', \'r.event_id = ?\']')
+    expect(roster).toContain('clauses.push(\'r.status = ?\')')
+    expect(roster).toContain('clauses.push(\'p.nickname LIKE ? ESCAPE')
+    expect(roster).toContain('ORDER BY r.registered_at DESC, r.id DESC LIMIT ?')
+    expect(roster).not.toMatch(/ORDER BY\s+\$\{/)
   })
 
-  it('real pages set confirm latch before showModal and release loadMore loading when superseded', () => {
+  it('real pages latch confirmations and drop superseded roster responses', () => {
     const events = read('src/packages/admin/events/index.ts')
     const roster = read('src/packages/admin/event-registrations/index.ts')
     const ticket = read('src/packages/member/ticket/index.ts')
     const profiles = read('src/packages/admin/profiles/index.ts')
     const orders = read('src/packages/admin/orders/index.ts')
 
-    for (const source of [events, ticket, profiles, orders]) {
-      // processingId/busy latch appears before showModal in each confirm path.
-      expect(source).toMatch(/setData\(\{ (?:processingId|busy):[\s\S]{0,80}showModal/)
-    }
+    expect(events).toMatch(/cancelBusy: true[\s\S]*?showModal/)
+    expect(ticket).toMatch(/busy: true[\s\S]*?showModal/)
+    expect(profiles).toMatch(/processingId: userId[\s\S]*?showModal/)
+    expect(orders).toMatch(/processingId: orderId[\s\S]*?showModal/)
     expect(roster).toMatch(/this\.confirmationBusy = true[\s\S]*?showModal/)
-    expect(roster).toContain('loadingMoreSeq')
-    expect(roster).toMatch(/this\.loadMoreSeq \+= 1[\s\S]*?loadingMore: false/)
-    expect(roster).toMatch(/if \(this\.loadingMoreSeq === seq\)/)
+    expect(roster).toContain('requestSeq: 0')
+    expect(roster).toMatch(/if \(seq !== this\.requestSeq\)/)
   })
 })

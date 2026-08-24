@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "关于同行会",
+  "navigationBarTitleText": "关于 MIP",
   "usingComponents": {
     "app-page-exit": "/components/page-exit/index"
   }

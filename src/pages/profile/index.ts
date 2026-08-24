@@ -1,107 +1,222 @@
-import type { QueryOptions } from '@weapp/shared/cache'
-import { adminModule } from '../../modules/admin/client'
-import { membershipModule } from '../../modules/membership/client'
+import type { SuperCaseSummary } from '../../modules/mip-cases'
+import type { CooperationCardSummary } from '../../modules/mip-cooperation'
+import type { IdentityAccessSnapshot, ProtectedActionKey } from '../../modules/mip-identity'
+import type { OpportunitySummary } from '../../modules/mip-opportunities'
+import { cooperationRoles } from '../../config/mip-catalogs'
+import { superCaseModule } from '../../modules/mip-cases'
+import { cooperationModule } from '../../modules/mip-cooperation'
+import { mipGrowthModule } from '../../modules/mip-growth/client'
+import { mipAccessPageUrl } from '../../modules/mip-identity'
+import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
+import { opportunityModule } from '../../modules/mip-opportunities'
+import { canManageEvents, hasCapability, membershipPresentation } from '../../modules/mip-shell'
 import { caseNavigateTo, syncCaseNavigation } from '../../modules/platform/case-navigation'
 import { formatLocalDate } from '../../utils/date'
 
-const roleLabels: Record<string, string> = {
-  owner: '主理人',
-  manager: '管理员',
-  reviewer: '审核员',
-  support: '客服',
-}
+type PortfolioTab = 'cooperation' | 'cases' | 'opportunities'
+type SectionState = 'loading' | 'ready' | 'error'
 
-function profileSignature(overview: Awaited<ReturnType<typeof membershipModule.load>>) {
-  return JSON.stringify({
-    profile: overview.profile,
-    membership: overview.membership,
-    unreadNotificationCount: overview.unreadNotificationCount,
-  })
+interface CooperationCardView extends CooperationCardSummary {
+  roleName: string
 }
 
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
+    authenticated: false,
     nickname: '微信用户',
     nicknameInitial: '微',
     avatarUrl: '',
-    city: '',
     headline: '',
-    phoneBound: false,
-    completion: 0,
-    membershipLabel: '普通用户',
-    expiresText: '',
-    savingProfile: false,
+    profileComplete: false,
+    primaryBranchName: '未选择主分会',
+    membershipLabel: '嘉宾',
+    membershipDescription: '当前没有有效会员权益',
+    membershipEndsText: '',
+    isPlayer: false,
+    adminVisible: false,
+    eventManagementVisible: false,
+    growthState: 'loading' as 'hidden' | SectionState,
+    levelName: '',
+    growthProgress: 0,
+    growthNextText: '',
+    experience: 0,
+    contribution: 0,
+    coin: 0,
+    portfolioTab: 'cooperation' as PortfolioTab,
+    cooperationState: 'loading' as SectionState,
+    cooperationCards: [] as CooperationCardView[],
+    caseState: 'loading' as SectionState,
+    cases: [] as SuperCaseSummary[],
+    opportunityState: 'loading' as SectionState,
+    opportunities: [] as OpportunitySummary[],
     message: '',
-    adminEnabled: false,
-    eventManagerEnabled: false,
-    adminRole: '',
-    onboardingComplete: true,
-    profileSignature: '',
-    unreadNotificationCount: 0,
   },
+  resumeDestination: '',
 
   onShow() {
     syncCaseNavigation(this, 'pages/profile/index')
+    const resume = mipIdentityModule.consumePendingResume('pages/profile/index')
+    if (resume && this.resumeDestination) {
+      const destination = this.resumeDestination
+      this.resumeDestination = ''
+      caseNavigateTo({ url: destination })
+      return
+    }
+    this.resumeDestination = ''
     void this.loadProfile()
   },
 
-  async loadProfile(options: QueryOptions = {}) {
-    const cached = membershipModule.peekOverview()
+  async loadProfile(options: { force?: boolean } = {}) {
+    const cached = mipIdentityModule.peekSnapshot()
     if (cached) {
-      this.applyOverview(cached)
+      this.applyIdentity(cached)
     }
     else if (this.data.state !== 'ready') {
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const overview = await membershipModule.load(options)
-      this.applyOverview(overview)
-      try {
-        const session = await adminModule.getSession(options)
-        this.setData({
-          adminEnabled: session.enabled,
-          eventManagerEnabled: session.eventManagerEnabled,
-          adminRole: roleLabels[session.role || ''] || '',
-        })
-      }
-      catch {
-        this.setData({ adminEnabled: false, eventManagerEnabled: false, adminRole: '' })
-      }
+      const snapshot = await mipIdentityModule.loadSnapshot()
+      this.applyIdentity(snapshot)
+      await Promise.allSettled([
+        this.loadBranch(snapshot, options),
+        this.loadGrowth(snapshot, options),
+        this.loadCooperation(),
+        this.loadCases(),
+        this.loadOpportunities(),
+      ])
     }
-    catch (error) {
+    catch {
       this.setData(cached || this.data.state === 'ready'
         ? { message: '资料更新失败，已保留上次结果。' }
-        : { state: 'error', message: error instanceof Error ? error.message : '个人信息加载失败' })
+        : { state: 'error', message: '资料服务暂时不可用。' })
     }
   },
 
-  applyOverview(overview: Awaited<ReturnType<typeof membershipModule.load>>) {
-    const signature = profileSignature(overview)
-    if (this.data.state === 'ready' && this.data.profileSignature === signature) {
-      if (this.data.message) {
-        this.setData({ message: '' })
-      }
-      return
-    }
-    const expiresAt = overview.membership.expiresAt
-    const expired = Boolean(expiresAt && new Date(expiresAt).getTime() <= Date.now())
+  applyIdentity(snapshot: IdentityAccessSnapshot) {
+    const membership = membershipPresentation(snapshot.membership.kind, snapshot.membership.entitlement)
     this.setData({
       state: 'ready',
-      nickname: overview.profile.nickname || '微信用户',
-      nicknameInitial: (overview.profile.nickname || '微信用户').slice(0, 1),
-      avatarUrl: overview.profile.avatarUrl,
-      city: overview.profile.city,
-      headline: overview.profile.headline,
-      phoneBound: overview.profile.phoneBound,
-      completion: overview.profile.completion,
-      onboardingComplete: overview.profile.onboardingComplete,
-      membershipLabel: overview.membership.active ? '有效会员' : (expired ? '会员已到期' : '普通用户'),
-      expiresText: overview.membership.active && expiresAt ? formatLocalDate(expiresAt) : '',
+      authenticated: snapshot.authenticated,
+      nickname: snapshot.profile.nickname || '微信用户',
+      nicknameInitial: (snapshot.profile.nickname || '微信用户').slice(0, 1),
+      avatarUrl: snapshot.profile.avatarUrl || '',
+      headline: snapshot.profile.headline,
+      profileComplete: snapshot.profile.complete,
+      membershipLabel: membership.label,
+      membershipDescription: membership.description,
+      membershipEndsText: membership.endsAt ? formatLocalDate(membership.endsAt) : '',
+      isPlayer: membership.label === '玩家',
+      adminVisible: hasCapability(snapshot.grants, 'admin:enter'),
+      eventManagementVisible: canManageEvents(snapshot.grants),
+      growthState: membership.label === '玩家' ? this.data.growthState : 'hidden',
       message: '',
-      profileSignature: signature,
-      unreadNotificationCount: overview.unreadNotificationCount,
     })
+  },
+
+  async loadBranch(snapshot: IdentityAccessSnapshot, options: { force?: boolean }) {
+    const cached = mipBranchesModule.peek()
+    const branchSnapshot = cached && !options.force
+      ? cached
+      : await mipBranchesModule.load(snapshot.primaryBranchId, snapshot.userVersion)
+    const branch = branchSnapshot.branches.find(item => item.id === snapshot.primaryBranchId)
+    this.setData({ primaryBranchName: branch?.name || '未选择主分会' })
+  },
+
+  async loadGrowth(snapshot: IdentityAccessSnapshot, options: { force?: boolean }) {
+    if (snapshot.membership.kind !== 'PLAYER') {
+      this.setData({ growthState: 'hidden' })
+      return
+    }
+    const cached = mipGrowthModule.peekSnapshot()
+    if (cached) {
+      this.applyGrowth(cached)
+    }
+    try {
+      this.applyGrowth(await mipGrowthModule.getSnapshot(options))
+    }
+    catch {
+      if (!cached) {
+        this.setData({ growthState: 'error' })
+      }
+    }
+  },
+
+  applyGrowth(snapshot: Awaited<ReturnType<typeof mipGrowthModule.getSnapshot>>) {
+    this.setData({
+      growthState: 'ready',
+      levelName: snapshot.currentLevel.name,
+      growthProgress: snapshot.levelProgressPercent,
+      growthNextText: snapshot.nextLevel
+        ? `距 ${snapshot.nextLevel.name} 还需 ${snapshot.experienceToNextLevel || 0} 经验值`
+        : '已达当前最高等级',
+      experience: snapshot.account.experienceBalance,
+      contribution: snapshot.account.contributionBalance,
+      coin: snapshot.account.coinBalance,
+    })
+  },
+
+  async loadCooperation() {
+    if (!this.data.authenticated) {
+      this.setData({ cooperationState: 'ready', cooperationCards: [] })
+      return
+    }
+    try {
+      const page = await cooperationModule.listMine()
+      this.setData({
+        cooperationState: 'ready',
+        cooperationCards: page.items.slice(0, 3).map(item => ({
+          ...item,
+          roleName: cooperationRoles.find(role => role.key === item.roleKey)?.name || item.roleKey,
+        })),
+      })
+    }
+    catch {
+      if (!this.data.cooperationCards.length) {
+        this.setData({ cooperationState: 'error' })
+      }
+      else {
+        this.setData({ message: '合作卡更新失败，已保留上次结果。' })
+      }
+    }
+  },
+
+  async loadCases() {
+    if (!this.data.authenticated) {
+      this.setData({ caseState: 'ready', cases: [] })
+      return
+    }
+    try {
+      const page = await superCaseModule.listMine()
+      this.setData({ caseState: 'ready', cases: page.items.slice(0, 3) })
+    }
+    catch {
+      if (!this.data.cases.length) {
+        this.setData({ caseState: 'error' })
+      }
+      else {
+        this.setData({ message: '超级案例更新失败，已保留上次结果。' })
+      }
+    }
+  },
+
+  async loadOpportunities() {
+    if (!this.data.authenticated) {
+      this.setData({ opportunityState: 'ready', opportunities: [] })
+      return
+    }
+    try {
+      const page = await opportunityModule.listMine()
+      this.setData({ opportunityState: 'ready', opportunities: page.items.slice(0, 3) })
+    }
+    catch {
+      if (!this.data.opportunities.length) {
+        this.setData({ opportunityState: 'error' })
+      }
+      else {
+        this.setData({ message: '机会更新失败，已保留上次结果。' })
+      }
+    }
   },
 
   async onPullDownRefresh() {
@@ -113,61 +228,81 @@ Page({
     }
   },
 
-  openMembership() {
-    caseNavigateTo({ url: '/pages/membership/index' })
-  },
-
-  openProfileEdit() {
-    caseNavigateTo({ url: '/packages/member/profile-edit/index' })
-  },
-
-  openAccess() {
-    caseNavigateTo({ url: '/packages/member/profile-edit/index' })
-  },
-
-  openOrders() {
-    caseNavigateTo({ url: '/packages/member/orders/index' })
-  },
-
-  openConnections() {
-    caseNavigateTo({ url: '/packages/member/connections/index' })
-  },
-
-  openNotifications() {
-    caseNavigateTo({ url: '/packages/member/notifications/index' })
-  },
-
-  openRegistrations() {
-    caseNavigateTo({ url: '/packages/member/registrations/index' })
-  },
-
-  openPrivacy() {
-    caseNavigateTo({ url: '/packages/member/privacy/index' })
-  },
-
-  openBenefits() {
-    caseNavigateTo({ url: '/packages/member/benefits/index' })
-  },
-
-  openHelp() {
-    caseNavigateTo({ url: '/packages/member/help/index' })
-  },
-
-  openAbout() {
-    caseNavigateTo({ url: '/packages/member/about/index' })
-  },
-
-  openAdmin() {
-    if (!this.data.adminEnabled) {
-      return
+  changePortfolioTab(event: WechatMiniprogram.TouchEvent) {
+    const tab = String(event.currentTarget.dataset.tab || '') as PortfolioTab
+    if (['cooperation', 'cases', 'opportunities'].includes(tab)) {
+      this.setData({ portfolioTab: tab })
     }
-    caseNavigateTo({ url: '/packages/admin/dashboard/index' })
+  },
+
+  async openProtected(destination: string, action: ProtectedActionKey, requiredCapability?: string) {
+    this.resumeDestination = destination
+    try {
+      const session = await mipIdentityModule.beginProtectedAction({
+        action,
+        requiredCapability,
+        source: { navigation: 'navigateBack' },
+      })
+      if (session.decision.ready) {
+        this.resumeDestination = ''
+        caseNavigateTo({ url: destination })
+        return
+      }
+      caseNavigateTo({ url: mipAccessPageUrl(session.token) })
+    }
+    catch {
+      this.resumeDestination = ''
+      this.setData({ message: '身份状态暂时无法确认，请稍后重试。' })
+    }
+  },
+
+  openMembership() { caseNavigateTo({ url: '/pages/membership/index' }) },
+  openProfileEdit() { void this.openProtected('/packages/member/mip-profile/index', 'EDIT_PROFILE') },
+  openBranches() { caseNavigateTo({ url: '/packages/member/mip-branches/index' }) },
+  openRegistrations() { void this.openProtected('/packages/member/mip-events/mine/index', 'INTERACT') },
+  openOrders() { void this.openProtected('/packages/member/orders/index', 'VIEW_RESTRICTED_PROFILE') },
+  openNotifications() { void this.openProtected('/packages/member/mip-notifications/index', 'INTERACT') },
+  openReceivedInteractions() { void this.openProtected('/packages/member/mip-received/index', 'INTERACT') },
+  openGrowth() { void this.openProtected('/packages/member/mip-growth/index', 'VIEW_RESTRICTED_PROFILE') },
+  openAiDrafts() { void this.openProtected('/packages/member/mip-ai/index', 'EDIT_PROFILE') },
+  openCooperationList() { void this.openProtected('/packages/member/mip-cooperation/list/index?mine=1', 'INTERACT') },
+  openCaseList() { void this.openProtected('/packages/member/mip-cases/list/index?mine=1', 'INTERACT') },
+  openOpportunityList() { void this.openProtected('/packages/member/mip-opportunities/mine/index', 'INTERACT') },
+  openBenefits() { caseNavigateTo({ url: '/packages/member/benefits/index' }) },
+  openPrivacy() { caseNavigateTo({ url: '/packages/member/privacy/index' }) },
+  openHelp() { caseNavigateTo({ url: '/packages/member/help/index' }) },
+  openAbout() { caseNavigateTo({ url: '/packages/member/about/index' }) },
+
+  openCooperation(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    if (id) {
+      caseNavigateTo({ url: `/packages/member/mip-cooperation/detail/index?id=${encodeURIComponent(id)}` })
+    }
+  },
+
+  openCase(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    if (id) {
+      caseNavigateTo({ url: `/packages/member/mip-cases/detail/index?id=${encodeURIComponent(id)}` })
+    }
+  },
+
+  openOpportunity(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    if (id) {
+      caseNavigateTo({ url: `/packages/member/mip-opportunities/detail/index?id=${encodeURIComponent(id)}` })
+    }
   },
 
   openManagedEvents() {
-    if (!this.data.adminEnabled && !this.data.eventManagerEnabled) {
-      return
+    if (this.data.eventManagementVisible) {
+      void this.openProtected('/packages/admin/managed-events/index', 'ENTER_ADMIN', 'admin:enter')
     }
-    caseNavigateTo({ url: '/packages/admin/managed-events/index' })
+  },
+
+  openAdmin() {
+    if (this.data.adminVisible) {
+      void this.openProtected('/packages/admin/dashboard/index', 'ENTER_ADMIN', 'admin:enter')
+    }
   },
 })

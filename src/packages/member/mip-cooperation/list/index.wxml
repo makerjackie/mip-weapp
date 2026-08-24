@@ -1,0 +1,99 @@
+<view id="mip-cooperation-list-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view class="flex items-center justify-between gap-3">
+    <view class="min-w-0 flex-1">
+      <view class="text-[length:36rpx] font-bold">{{mine ? '我的合作卡' : '人才合作'}}</view>
+      <view class="mt-1 text-[length:22rpx] text-muted">{{mine ? '管理已创建的合作卡。' : '查看已发布的合作卡。'}}</view>
+    </view>
+    <view class="shrink-0 rounded-[12rpx] bg-brand px-4 py-3 text-[length:22rpx] font-semibold text-on-brand active:bg-brand-active" bind:tap="create">创建合作卡</view>
+  </view>
+
+  <block wx:if="{{!mine}}">
+    <view class="mt-4 flex items-center gap-2">
+      <view class="flex h-[72rpx] min-w-0 flex-1 items-center gap-2 rounded-[12rpx] bg-panel px-3">
+        <t-icon name="search" size="32rpx" color="var(--color-muted)" />
+        <input class="box-border min-w-0 flex-1 max-w-full text-[length:24rpx]" value="{{keywordInput}}" maxlength="80" confirm-type="search" placeholder="搜索合作方向或成员" bindinput="onKeywordInput" bindconfirm="onSearchConfirm" />
+        <view wx:if="{{keywordInput}}" class="px-2 py-2 text-[length:21rpx] text-muted" bind:tap="clearKeywordDraft">清除</view>
+      </view>
+      <view class="flex h-[72rpx] w-[72rpx] shrink-0 items-center justify-center rounded-[12rpx] border border-line bg-panel active:bg-panel-raised" bind:tap="toggleFilters">
+        <t-icon name="filter" size="34rpx" color="var(--color-ink)" />
+      </view>
+    </view>
+
+    <view wx:if="{{filterOpen}}" class="mt-3 rounded-[16rpx] border border-line bg-panel px-4 py-4">
+      <view class="flex items-center justify-between">
+        <view class="text-[length:26rpx] font-semibold">筛选条件</view>
+        <view class="min-h-[56rpx] px-2 py-2 text-[length:21rpx] text-brand" bind:tap="resetFilterDraft">重置</view>
+      </view>
+
+      <view class="mt-3 text-[length:24rpx] font-semibold">城市</view>
+      <picker mode="selector" range="{{branchOptions}}" range-key="label" value="{{branchIndex}}" bindchange="changeBranch">
+        <view class="mt-2 flex min-h-[80rpx] items-center justify-between rounded-[12rpx] bg-panel-raised px-3 text-[length:23rpx]">
+          <text>{{branchOptions[branchIndex].label}}</text>
+          <t-icon name="chevron-down" size="28rpx" color="var(--color-muted)" />
+        </view>
+      </picker>
+
+      <view class="mt-4 text-[length:24rpx] font-semibold">合作角色</view>
+      <view class="mt-2 flex flex-wrap gap-2">
+        <block wx:for="{{roleOptions}}" wx:key="key">
+          <view wx:if="{{draftRoleKey === item.key}}" class="min-h-[64rpx] rounded-full bg-brand px-3 py-2 text-[length:21rpx] text-on-brand" data-key="{{item.key}}" bind:tap="chooseRole">{{item.name}}</view>
+          <view wx:else class="min-h-[64rpx] rounded-full bg-panel-raised px-3 py-2 text-[length:21rpx] text-muted" data-key="{{item.key}}" bind:tap="chooseRole">{{item.name}}</view>
+        </block>
+      </view>
+
+      <view wx:if="{{industryGroups.length}}" class="mt-4 text-[length:24rpx] font-semibold">行业</view>
+      <block wx:for="{{industryGroups}}" wx:for-item="group" wx:key="id">
+        <view class="mt-3 text-[length:21rpx] text-muted">{{group.label}}</view>
+        <view class="mt-2 flex flex-wrap gap-2">
+          <block wx:for="{{group.options}}" wx:for-item="tag" wx:key="id">
+            <view wx:if="{{tag.selected}}" class="min-h-[64rpx] rounded-full bg-brand px-3 py-2 text-[length:21rpx] text-on-brand" data-id="{{tag.id}}" bind:tap="toggleIndustry">{{tag.label}}</view>
+            <view wx:else class="min-h-[64rpx] rounded-full bg-panel-raised px-3 py-2 text-[length:21rpx] text-muted" data-id="{{tag.id}}" bind:tap="toggleIndustry">{{tag.label}}</view>
+          </block>
+        </view>
+      </block>
+      <view wx:if="{{filterMessage}}" class="mt-3 text-[length:21rpx] text-muted">{{filterMessage}}</view>
+      <view class="mt-5 flex gap-2">
+        <t-button class="min-w-0 flex-1" block variant="outline" bind:tap="resetFilterDraft">重置</t-button>
+        <t-button class="min-w-0 flex-1" block theme="primary" bind:tap="applyFilters">确认筛选</t-button>
+      </view>
+    </view>
+
+    <view class="mt-3 flex min-h-[72rpx] items-center justify-between rounded-[12rpx] border border-line px-3 text-[length:22rpx]">
+      <view class="text-muted">按城市、角色和行业查看合作卡</view>
+      <view class="px-2 py-2 text-brand" bind:tap="openCases">超级案例</view>
+    </view>
+  </block>
+
+  <view wx:if="{{state === 'loading'}}" class="mt-5 flex flex-col gap-3">
+    <view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+    <view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  </view>
+  <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载合作卡" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
+  <view wx:elif="{{!items.length}}" class="mt-5">
+    <app-empty-state wx:if="{{mine}}" title="暂时没有合作卡" description="创建后的草稿和已发布合作卡会显示在这里。" action-text="创建合作卡" bind:action="create" />
+    <app-empty-state wx:else title="没有找到合作卡" description="{{hasAppliedFilters ? '调整筛选条件后重试。' : '已发布的合作卡会显示在这里。'}}" action-text="{{hasAppliedFilters ? '清除筛选' : ''}}" bind:action="clearAppliedFilters" />
+  </view>
+
+  <view wx:else class="mt-5 flex flex-col gap-3">
+    <view wx:for="{{items}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4 active:bg-panel-raised" data-id="{{item.id}}" bind:tap="open">
+      <view class="flex items-center justify-between gap-3">
+        <view class="rounded-full bg-brand px-3 py-1 text-[length:20rpx] font-semibold text-on-brand">{{item.roleName}}</view>
+        <view wx:if="{{!mine}}" class="truncate text-[length:20rpx] text-muted">{{item.author.cityName || '城市未公开'}}</view>
+        <view wx:else class="text-[length:20rpx] text-muted">{{item.status}}</view>
+      </view>
+      <view class="mt-3 flex items-center gap-3">
+        <image wx:if="{{item.author.avatarUrl}}" class="h-[72rpx] w-[72rpx] shrink-0 rounded-full bg-panel-raised" src="{{item.author.avatarUrl}}" mode="aspectFill" />
+        <view wx:else class="flex h-[72rpx] w-[72rpx] shrink-0 items-center justify-center rounded-full bg-panel-raised"><t-icon name="user-avatar" size="36rpx" color="var(--color-muted)" /></view>
+        <view class="min-w-0 flex-1">
+          <view class="truncate text-[length:28rpx] font-semibold">{{item.author.nickname}}</view>
+          <view wx:if="{{item.author.headline || item.author.primaryIndustry}}" class="mt-1 truncate text-[length:21rpx] text-muted">{{item.author.headline || item.author.primaryIndustry.label}}</view>
+        </view>
+      </view>
+      <view class="mt-3 line-clamp-2 text-[length:23rpx] leading-6 text-muted">{{item.positioning}}</view>
+      <view class="mt-3 border-t border-line pt-3 text-[length:22rpx]"><text class="text-muted">合作目标：</text>{{item.targetSummary}}</view>
+    </view>
+  </view>
+  <view wx:if="{{loadingMore}}" class="py-5 text-center text-[length:21rpx] text-muted">正在加载</view>
+  <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[12rpx] border border-line bg-panel px-4 py-3 text-[length:22rpx] text-muted">{{message}}</view>
+  <app-page-exit label="返回机会" />
+</view>

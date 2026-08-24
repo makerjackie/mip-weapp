@@ -1,6 +1,11 @@
 {
-  "navigationBarTitleText": "编辑公告",
+  "navigationBarTitleText": "公告编辑",
   "usingComponents": {
-    "app-page-exit": "/components/page-exit/index"
+    "app-empty-state": "/components/empty-state/index",
+    "app-page-exit": "/components/page-exit/index",
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-input": "tdesign-miniprogram/input/input",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
+    "t-switch": "tdesign-miniprogram/switch/switch"
   }
 }

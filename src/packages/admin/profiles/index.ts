@@ -1,146 +1,238 @@
-import type { AdminListSnapshot, AdminListState } from '@weapp/shared/admin-list'
-import type { AdminProfileItem } from '../../../modules/admin/types'
-import { createAdminListController } from '@weapp/shared/admin-list'
-import { adminModule } from '../../../modules/admin/client'
+import type { AdminUser } from '../../../modules/mip-admin'
+import type { AdminPageState } from '../shared/page-state'
+import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { adminLoadFailure } from '../shared/page-state'
 
-type ProfileView = 'PENDING' | 'APPROVED' | 'SUSPENDED' | 'REJECTED'
-
-const emptyCopy: Record<ProfileView, { title: string, description: string }> = {
-  PENDING: { title: '所有资料都处理完了', description: '新提交的资料会出现在这里。' },
-  APPROVED: { title: '还没有公开成员', description: '审核通过的成员会出现在这里。' },
-  SUSPENDED: { title: '没有暂停展示的成员', description: '需要暂时隐藏的资料会集中在这里。' },
-  REJECTED: { title: '还没有驳回记录', description: '用户重新提交后会回到待审核。' },
-}
-
-const profileList = createAdminListController<AdminProfileItem, ProfileView, string>({
-  getId: profile => profile.id,
-  getQueryKey: view => view,
-  async loadPage({ query, force }) {
-    const items = await adminModule.listProfiles(query, { force })
-    return { items, nextCursor: null, totalCount: items.length }
-  },
-  mapError(error, context) {
-    const failure = adminLoadFailure(error, {
-      hasContent: context.hasContent,
-      fallbackMessage: '资料队列加载失败',
-    })
-    return {
-      message: failure.message,
-      state: failure.state === 'forbidden' ? 'forbidden' : 'error',
-    }
-  },
-})
-
-function listData(snapshot: AdminListSnapshot<AdminProfileItem, string>) {
-  return {
-    state: snapshot.state,
-    profiles: snapshot.items,
-    message: snapshot.message,
-  }
+type AdminUserView = AdminUser & {
+  controlText: string
+  hasAllowlist: boolean
+  hasBlocklist: boolean
 }
 
 Page({
   data: {
-    state: 'loading' as AdminListState,
-    view: 'PENDING' as ProfileView,
-    profiles: [] as AdminProfileItem[],
+    state: 'loading' as AdminPageState,
+    users: [] as AdminUserView[],
+    query: '',
+    kind: '',
+    status: '',
+    controlType: '',
+    includePhone: false,
+    canPhone: false,
+    canEdit: false,
+    canControl: false,
+    canExport: false,
     processingId: '',
-    emptyTitle: emptyCopy.PENDING.title,
-    emptyDescription: emptyCopy.PENDING.description,
+    exportPending: false,
     message: '',
+    nextCursor: null as string | null,
+    loadingMore: false,
   },
-
-  onShow() {
-    void this.loadProfiles()
-  },
-
-  changeView(event: WechatMiniprogram.CustomEvent<{ value: ProfileView }>) {
-    const view = event.detail.value
+  requestSeq: 0,
+  confirmationBusy: false,
+  onShow() { void this.loadUsers() },
+  onHide() {
+    this.requestSeq += 1
+    mipAdminModule.clearSensitive()
     this.setData({
-      view,
-      emptyTitle: emptyCopy[view].title,
-      emptyDescription: emptyCopy[view].description,
+      includePhone: false,
+      users: this.data.users.map(item => ({ ...item, phoneNumber: null })),
     })
-    void this.loadProfiles()
   },
-
-  async loadProfiles(force = false) {
-    this.setData(listData(await profileList.refresh(this.data.view, { force })))
+  onUnload() {
+    this.requestSeq += 1
+    mipAdminModule.clearSensitive()
   },
-
-  async onPullDownRefresh() {
+  updateQuery(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ query: event.detail.value }) },
+  chooseFilter(event: WechatMiniprogram.TouchEvent) {
+    const field = String(event.currentTarget.dataset.field || '')
+    if (!['kind', 'status', 'controlType'].includes(field)) {
+      return
+    }
+    this.setData({ [field]: String(event.currentTarget.dataset.value || '') })
+    void this.loadUsers(true)
+  },
+  search() { void this.loadUsers(true) },
+  async loadUsers(force = false) {
+    const hasContent = this.data.users.length > 0
+    if (!hasContent) {
+      this.setData({ state: 'loading', message: '' })
+    }
+    const seq = this.requestSeq + 1
+    this.requestSeq = seq
     try {
-      await this.loadProfiles(true)
+      const [session, response] = await Promise.all([
+        mipAdminModule.getSession(force),
+        mipAdminModule.listUsers({
+          includePhone: this.data.includePhone,
+          filters: { query: this.data.query.trim(), kind: this.data.kind, status: this.data.status, controlType: this.data.controlType },
+        }, force),
+      ])
+      if (seq !== this.requestSeq) {
+        return
+      }
+      this.setData({
+        state: 'ready',
+        users: response.items.map(item => ({
+          ...item,
+          controlText: item.controls.join('、'),
+          hasAllowlist: item.controls.includes('ALLOWLIST'),
+          hasBlocklist: item.controls.includes('BLOCKLIST'),
+        })),
+        canPhone: hasCapability(session.capabilities, 'users.phone.read'),
+        canEdit: hasCapability(session.capabilities, 'users.fields.edit'),
+        canControl: hasCapability(session.capabilities, 'users.access.manage'),
+        canExport: hasCapability(session.capabilities, 'exports.create'),
+        nextCursor: response.nextCursor || null,
+        loadingMore: false,
+        message: '',
+      })
+    }
+    catch (error) {
+      if (seq !== this.requestSeq) {
+        return
+      }
+      this.setData(adminLoadFailure(error, { hasContent, fallbackMessage: '用户列表加载失败' }))
+    }
+  },
+  async loadMoreUsers() {
+    if (!this.data.nextCursor || this.data.loadingMore || this.data.state !== 'ready') {
+      return
+    }
+    this.setData({ loadingMore: true, message: '' })
+    try {
+      const response = await mipAdminModule.listUsers({
+        includePhone: this.data.includePhone,
+        cursor: this.data.nextCursor,
+        filters: { query: this.data.query.trim(), kind: this.data.kind, status: this.data.status, controlType: this.data.controlType },
+      })
+      const users = response.items.map(item => ({
+        ...item,
+        controlText: item.controls.join('、'),
+        hasAllowlist: item.controls.includes('ALLOWLIST'),
+        hasBlocklist: item.controls.includes('BLOCKLIST'),
+      }))
+      this.setData({ users: this.data.users.concat(users), nextCursor: response.nextCursor || null })
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '更多用户加载失败' })
     }
     finally {
-      wx.stopPullDownRefresh()
+      this.setData({ loadingMore: false })
     }
   },
-
-  async review(event: WechatMiniprogram.TouchEvent) {
-    const profileId = String(event.currentTarget.dataset.profileId || '')
-    const decision = String(event.currentTarget.dataset.decision || '') as 'approve' | 'reject'
-    if (!profileId || !['approve', 'reject'].includes(decision)) {
+  onReachBottom() { void this.loadMoreUsers() },
+  async showPhones() {
+    if (!this.data.canPhone || this.data.processingId || this.data.exportPending || this.confirmationBusy) {
       return
     }
-    if (this.data.processingId) {
-      return
-    }
-    // Confirm latch before showModal so stacked taps cannot open parallel dialogs.
-    this.setData({ processingId: profileId, message: '' })
+    this.confirmationBusy = true
     try {
       const modal = await wx.showModal({
-        title: decision === 'approve' ? '通过资料' : '驳回资料',
-        content: decision === 'approve' ? '通过后资料会进入成员推荐。' : '驳回后资料不会公开，用户可修改后再次提交。',
-        confirmColor: decision === 'approve' ? '#235B43' : '#B8453E',
+        title: '查看手机号原文',
+        content: '手机号仅用于已授权的会员服务和运营联系。',
       })
       if (!modal.confirm) {
         return
       }
-      await adminModule.reviewProfile(profileId, decision)
-      wx.showToast({ title: decision === 'approve' ? '已通过' : '已驳回', icon: 'success' })
-      await this.loadProfiles()
+      this.setData({ includePhone: true })
+      await this.loadUsers(true)
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '审核失败' })
+      this.setData({ message: error instanceof Error ? error.message : '手机号加载失败' })
+    }
+    finally {
+      this.confirmationBusy = false
+    }
+  },
+  async editField(event: WechatMiniprogram.TouchEvent) {
+    const userId = String(event.currentTarget.dataset.id || '')
+    const version = Number(event.currentTarget.dataset.version)
+    const field = String(event.currentTarget.dataset.field || '')
+    const fieldLabels: Record<string, string> = {
+      nickname: '昵称',
+      headline: '资料标题',
+      introduction: '个人介绍',
+    }
+    if (!userId || !fieldLabels[field] || !this.data.canEdit || this.data.processingId) {
+      return
+    }
+    this.setData({ processingId: userId, message: '' })
+    try {
+      const modal = await wx.showModal({
+        title: `编辑${fieldLabels[field]}`,
+        editable: true,
+        placeholderText: `输入${fieldLabels[field]}`,
+      })
+      if (!modal.confirm) {
+        return
+      }
+      await mipAdminModule.mutate(() => mipAdminModule.gateway.updateUser({
+        userId,
+        expectedVersion: version,
+        fields: { [field]: modal.content },
+      }))
+      wx.showToast({ title: '资料已更新', icon: 'success' })
+      await this.loadUsers(true)
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '资料更新失败' })
     }
     finally {
       this.setData({ processingId: '' })
     }
   },
-
-  async setVisibility(event: WechatMiniprogram.TouchEvent) {
-    const profileId = String(event.currentTarget.dataset.profileId || '')
-    const status = String(event.currentTarget.dataset.status || '') as 'APPROVED' | 'SUSPENDED'
-    if (!profileId || !['APPROVED', 'SUSPENDED'].includes(status)) {
+  async setControl(event: WechatMiniprogram.TouchEvent) {
+    const userId = String(event.currentTarget.dataset.id || '')
+    const controlType = String(event.currentTarget.dataset.type || '')
+    const active = event.currentTarget.dataset.active === true || event.currentTarget.dataset.active === 'true'
+    if (!userId || !this.data.canControl || this.data.processingId) {
       return
     }
-    if (this.data.processingId) {
+    this.setData({ processingId: userId, message: '' })
+    try {
+      const modal = await wx.showModal({ title: active ? '设置名单' : '撤销名单', editable: true, placeholderText: '填写操作原因' })
+      if (!modal.confirm || !modal.content.trim()) {
+        return
+      }
+      await mipAdminModule.mutate(() => mipAdminModule.gateway.setUserControl({ userId, controlType, active, reason: modal.content }))
+      wx.showToast({ title: '名单状态已更新', icon: 'success' })
+      await this.loadUsers(true)
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '名单状态更新失败' })
+    }
+    finally {
+      this.setData({ processingId: '' })
+    }
+  },
+  async createExport() {
+    if (!this.data.canExport || this.data.exportPending || this.data.processingId || this.confirmationBusy) {
       return
     }
-    const restoring = status === 'APPROVED'
-    // Confirm latch before showModal so stacked taps cannot open parallel dialogs.
-    this.setData({ processingId: profileId, message: '' })
+    this.confirmationBusy = true
+    this.setData({ exportPending: true, message: '' })
     try {
       const modal = await wx.showModal({
-        title: restoring ? '恢复公开' : '暂停展示',
-        content: restoring ? '恢复后该成员会重新进入公开推荐。' : '暂停后资料立即从成员推荐中隐藏，后续可以恢复。',
-        confirmText: restoring ? '恢复' : '暂停',
-        confirmColor: restoring ? '#235B43' : '#B8453E',
+        title: '创建用户导出',
+        content: '导出文件仅用于已授权的运营工作，有效期较短。',
       })
       if (!modal.confirm) {
         return
       }
-      await adminModule.setProfileStatus(profileId, status)
-      wx.showToast({ title: restoring ? '已恢复' : '已暂停', icon: 'success' })
-      await this.loadProfiles()
+      const result = await mipAdminModule.mutate(() => mipAdminModule.exportAndOpen({
+        exportType: 'USERS',
+        includesPhone: this.data.includePhone,
+        filters: { query: this.data.query, kind: this.data.kind, controlType: this.data.controlType },
+      }))
+      wx.showToast({ title: `已导出 ${result.rowCount} 条`, icon: 'success' })
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '状态更新失败' })
+      this.setData({ message: error instanceof Error ? error.message : '导出任务创建失败' })
     }
     finally {
-      this.setData({ processingId: '' })
+      this.confirmationBusy = false
+      this.setData({ exportPending: false })
     }
   },
 })

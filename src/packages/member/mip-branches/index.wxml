@@ -1,0 +1,23 @@
+<view id="mip-branches-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-8">
+    <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
+  </view>
+  <app-empty-state wx:elif="{{state === 'empty'}}" title="暂无城市分会" description="城市分会配置后会显示在这里。" />
+  <app-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载" description="城市分会服务暂时没有响应。" action-text="重新加载" bind:action="loadBranches" />
+  <block wx:else>
+    <view class="text-[length:38rpx] font-bold">城市分会</view>
+    <view class="mt-2 text-[length:23rpx] leading-6 text-muted">每位用户只有一个主分会，可以浏览和参加其他城市的活动。</view>
+    <view class="mt-5 flex flex-col gap-3">
+      <view wx:for="{{branches}}" wx:key="id" class="flex min-h-[132rpx] items-center justify-between rounded-[16rpx] border border-line bg-panel px-4 py-4">
+        <view class="min-w-0 flex-1">
+          <view class="text-[length:28rpx] font-semibold">{{item.name}}</view>
+          <view class="mt-1 text-[length:22rpx] text-muted">{{item.cityName}}</view>
+        </view>
+        <view wx:if="{{item.selected}}" class="rounded-full bg-brand px-3 py-2 text-[length:21rpx] font-semibold text-on-brand">主分会</view>
+        <t-button wx:else size="small" variant="outline" theme="primary" loading="{{selectingId === item.id}}" data-id="{{item.id}}" bind:tap="selectBranch">设为主分会</t-button>
+      </view>
+    </view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:23rpx]">{{message}}</view>
+  </block>
+  <app-page-exit />
+</view>

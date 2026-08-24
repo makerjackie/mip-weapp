@@ -1,0 +1,130 @@
+import type { AdminAnnouncementFilters } from './announcements'
+import type { AdminOperationalExceptionFilters } from './operational-exceptions'
+import type {
+  AdminCapability,
+  AdminCapabilityGrant,
+  AdminCommunityReportStatus,
+  AdminEventAlbumPhotoStatus,
+  MipAdminGateway,
+} from './types'
+import { createQueryCache } from '@weapp/shared/cache'
+import { createAndOpenExport } from './export-download'
+
+export function createMipAdminModule(gateway: MipAdminGateway) {
+  const cache = createQueryCache(15_000)
+  const refresh = () => {
+    cache.invalidate('mip-admin')
+  }
+  return {
+    getSession: (force = false) => cache.query('mip-admin:session', gateway.getSession, { force }),
+    getDashboard: (force = false) => cache.query('mip-admin:dashboard', gateway.getDashboard, { force }),
+    listBranches: (force = false) => cache.query('mip-admin:branches', gateway.listBranches, { force }),
+    getAnnouncementScopes: (force = false) => cache.query(
+      'mip-admin:announcement-scopes',
+      gateway.getAnnouncementScopes,
+      { force },
+    ),
+    listAnnouncements: (input: AdminAnnouncementFilters = {}, force = false) => cache.query(
+      `mip-admin:announcements:${JSON.stringify(input)}`,
+      () => gateway.listAnnouncements(input),
+      { force },
+    ),
+    getAnnouncement: (announcementId: string, force = false) => cache.query(
+      `mip-admin:announcement:${announcementId}`,
+      () => gateway.getAnnouncement(announcementId),
+      { force },
+    ),
+    listCommunityReports: (status: AdminCommunityReportStatus, force = false) => cache.query(
+      `mip-admin:community-reports:${status}`,
+      () => gateway.listCommunityReports(status),
+      { force },
+    ),
+    listUsers: (input: Record<string, unknown> = {}, force = false) => input.includePhone === true
+      ? gateway.listUsers(input)
+      : cache.query(
+          `mip-admin:users:${JSON.stringify(input)}`,
+          () => gateway.listUsers(input),
+          { force },
+        ),
+    listEvents: (input: Record<string, unknown> = {}, force = false) => cache.query(
+      `mip-admin:events:${JSON.stringify(input)}`,
+      () => gateway.listEvents(input),
+      { force },
+    ),
+    getEvent: (eventId: string, force = false) => cache.query(
+      `mip-admin:event:${eventId}`,
+      () => gateway.getEvent(eventId),
+      { force },
+    ),
+    listEventAlbumPhotos: (eventId: string, status: AdminEventAlbumPhotoStatus, force = false) => cache.query(
+      `mip-admin:event-album:${eventId}:${status}`,
+      () => gateway.listEventAlbumPhotos(eventId, status),
+      { force },
+    ),
+    listRoster: (input: Record<string, unknown>, force = false) => input.includePhone === true
+      ? gateway.listRoster(input)
+      : cache.query(
+          `mip-admin:roster:${JSON.stringify(input)}`,
+          () => gateway.listRoster(input),
+          { force },
+        ),
+    listRoles: (force = false) => cache.query('mip-admin:roles', gateway.listRoles, { force }),
+    searchRoleCandidates: (eventId: string, query: string) => gateway.searchRoleCandidates(eventId, query),
+    listOpportunities: (input: Record<string, unknown> = {}, force = false) => cache.query(
+      `mip-admin:opportunities:${JSON.stringify(input)}`,
+      () => gateway.listOpportunities(input),
+      { force },
+    ),
+    listGrowthLevels: (force = false) => cache.query('mip-admin:growth-levels', gateway.listGrowthLevels, { force }),
+    listGrowthRules: (force = false) => cache.query('mip-admin:growth-rules', gateway.listGrowthRules, { force }),
+    listGrowthEntries: (input: Record<string, unknown> = {}, force = false) => cache.query(
+      `mip-admin:growth-entries:${JSON.stringify(input)}`,
+      () => gateway.listGrowthEntries(input),
+      { force },
+    ),
+    listOrders: (input: Record<string, unknown> = {}, force = false) => cache.query(
+      `mip-admin:orders:${JSON.stringify(input)}`,
+      () => gateway.listOrders(input),
+      { force },
+    ),
+    listOperationalExceptions: (input: AdminOperationalExceptionFilters = {}, force = false) => cache.query(
+      `mip-admin:exceptions:${JSON.stringify(input)}`,
+      () => gateway.listOperationalExceptions(input),
+      { force },
+    ),
+    listAudit: (input: Record<string, unknown> = {}, force = false) => cache.query(
+      `mip-admin:audit:${JSON.stringify(input)}`,
+      () => gateway.listAudit(input),
+      { force },
+    ),
+    async mutate<T>(work: () => Promise<T>) {
+      const result = await work()
+      refresh()
+      return result
+    },
+    exportAndOpen(input: Record<string, unknown>, onProgress?: (progress: 'creating' | 'preparing' | 'downloading' | 'opening') => void) {
+      return createAndOpenExport(gateway, input, { onProgress })
+    },
+    clearSensitive() {
+      cache.invalidate('mip-admin:users')
+      cache.invalidate('mip-admin:roster')
+    },
+    gateway,
+  }
+}
+
+export function hasCapability(grants: AdminCapabilityGrant[], capability: AdminCapability) {
+  return grants.some(item => item.capability === capability)
+}
+
+export function hasScopedCapability(
+  grants: AdminCapabilityGrant[],
+  capability: AdminCapability,
+  scope: { scopeType: 'PLATFORM' | 'BRANCH' | 'EVENT', scopeId: string | null, branchId?: string | null },
+) {
+  return grants.some(item => item.capability === capability && (
+    item.scopeType === 'PLATFORM'
+    || (item.scopeType === scope.scopeType && item.scopeId === scope.scopeId)
+    || (item.scopeType === 'BRANCH' && scope.scopeType === 'EVENT' && item.scopeId === scope.branchId)
+  ))
+}

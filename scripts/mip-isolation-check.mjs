@@ -21,23 +21,35 @@ for (const table of lock.requiredTables) {
 }
 
 const activePaths = [
-  'src/modules/mip',
+  ...listMipModuleDirectories(),
   'src/config/mip-catalogs.ts',
   'database/mysql/mip',
   'scripts/apply-mip-schema.mjs',
+  'scripts/bootstrap-owner.mjs',
+  'scripts/deploy-functions.mjs',
+  'scripts/deploy-payment-function.mjs',
   'scripts/lib/mip-migrations.mjs',
+  'scripts/seed-demo.mjs',
+  'scripts/verify-cloud.mjs',
   ...listMipCloudFunctionDirectories(),
 ]
-const forbiddenTables = /\b(?:member|dating|sewing)_\w+\b/i
 for (const relativePath of activePaths) {
   for (const file of walk(relativePath)) {
     if (!/\.(?:js|mjs|ts|sql|json)$/.test(file)) {
       continue
     }
     const source = read(file)
-    const match = source.match(forbiddenTables)
-    assert(!match, `Active MIP code references a shared legacy table: ${file} (${match?.[0]})`)
+    const table = findLegacyTableReference(source)
+    assert(!table, `Active MIP code references a shared legacy table: ${file} (${table})`)
   }
+}
+
+const clientBuild = read('weapp-vite.config.ts')
+assert(!/env\.MEMBERSHIP_[A-Z0-9_]+/.test(clientBuild), 'MIP client build must not fall back to legacy MEMBERSHIP_* configuration')
+
+function findLegacyTableReference(source) {
+  const sqlTableReference = /\b(?:CREATE\s+TABLE(?:\s+IF\s+NOT\s+EXISTS)?|ALTER\s+TABLE|DROP\s+TABLE(?:\s+IF\s+EXISTS)?|REFERENCES|INSERT\s+INTO|UPDATE|JOIN|FROM|DELETE\s+FROM)\s+`?((?:member|dating|sewing)_\w+)`?/i
+  return sqlTableReference.exec(source)?.[1]
 }
 
 console.log('MIP isolation check passed')
@@ -69,6 +81,16 @@ function listMipCloudFunctionDirectories() {
   return fs.readdirSync(cloudRoot, { withFileTypes: true })
     .filter(entry => entry.isDirectory() && entry.name.startsWith('mip-'))
     .map(entry => path.join('cloudfunctions', entry.name))
+}
+
+function listMipModuleDirectories() {
+  const moduleRoot = path.join(root, 'src', 'modules')
+  if (!fs.existsSync(moduleRoot)) {
+    return []
+  }
+  return fs.readdirSync(moduleRoot, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && (entry.name === 'mip' || entry.name.startsWith('mip-')))
+    .map(entry => path.join('src', 'modules', entry.name))
 }
 
 function assert(condition, message) {

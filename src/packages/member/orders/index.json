@@ -3,8 +3,7 @@
   "enablePullDownRefresh": true,
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",
-    "t-tab-panel": "tdesign-miniprogram/tab-panel/tab-panel",
-    "t-tabs": "tdesign-miniprogram/tabs/tabs",
-    "app-page-exit": "/components/page-exit/index"
+    "app-page-exit": "/components/page-exit/index",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
   }
 }

@@ -7,7 +7,7 @@ node_modules
 dist
 dist-web
 dist-plugin
-exports/
+/exports/
 output/
 
 # weapp-vite
@@ -47,3 +47,4 @@ coverage
 tmp/
 .screenshots/
 .grok/
+.codex/

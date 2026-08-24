@@ -1,0 +1,68 @@
+<view id="mip-public-profile-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-8">
+    <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
+  </view>
+  <view wx:elif="{{state === 'blocked'}}">
+    <app-empty-state title="已屏蔽该用户" description="可以在屏蔽列表中解除屏蔽。" action-text="查看屏蔽列表" bind:action="openBlockedList" />
+    <app-page-exit />
+  </view>
+  <view wx:elif="{{state === 'error'}}">
+    <app-empty-state title="暂时无法查看档案" description="{{message}}" action-text="重新加载" bind:action="loadProfile" />
+    <app-page-exit />
+  </view>
+  <block wx:elif="{{profile}}">
+    <view class="rounded-[16rpx] bg-panel px-5 py-6">
+      <view class="flex items-center gap-4">
+        <image wx:if="{{profile.avatarUrl}}" class="h-[144rpx] w-[144rpx] shrink-0 rounded-full bg-panel-raised" mode="aspectFill" src="{{profile.avatarUrl}}" />
+        <view wx:else class="flex h-[144rpx] w-[144rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft"><t-icon name="user" size="62rpx" color="var(--color-brand)" /></view>
+        <view class="min-w-0 flex-1">
+          <view class="flex flex-wrap items-center gap-2">
+            <view class="text-[length:34rpx] font-bold">{{profile.displayName}}</view>
+            <text wx:if="{{profile.kindLabel}}" class="rounded-full bg-brand px-2 py-1 text-[length:20rpx] font-semibold text-on-brand">{{profile.kindLabel}}</text>
+          </view>
+          <view wx:if="{{profile.identityStatus}}" class="mt-2 text-[length:23rpx] text-muted">{{profile.identityStatus}}</view>
+          <view wx:if="{{profile.headline}}" class="mt-2 text-[length:24rpx] leading-6">{{profile.headline}}</view>
+        </view>
+      </view>
+      <view wx:if="{{profile.branchText || profile.primaryIndustry}}" class="mt-5 flex flex-wrap gap-2">
+        <text wx:if="{{profile.branchText}}" class="rounded-full bg-panel-raised px-3 py-1 text-[length:21rpx] text-muted">{{profile.branchText}}</text>
+        <text wx:if="{{profile.primaryIndustry}}" class="rounded-full bg-panel-raised px-3 py-1 text-[length:21rpx] text-muted">{{profile.primaryIndustry.label}}</text>
+      </view>
+      <view wx:if="{{profile.abilities.length}}" class="mt-3 flex flex-wrap gap-2">
+        <text wx:for="{{profile.abilities}}" wx:key="label" class="rounded-full border border-line px-3 py-1 text-[length:21rpx] text-muted">{{item.label}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{profile.introduction}}" class="mt-4 rounded-[16rpx] bg-panel px-5 py-5">
+      <view class="text-[length:28rpx] font-semibold">个人简介</view>
+      <view class="mt-3 whitespace-pre-wrap text-[length:24rpx] leading-7 text-muted">{{profile.introduction}}</view>
+    </view>
+
+    <view wx:if="{{profile.companies.length || profile.organizations.length}}" class="mt-4 rounded-[16rpx] bg-panel px-5 py-5">
+      <view class="text-[length:28rpx] font-semibold">经历</view>
+      <view wx:if="{{profile.companies.length}}" class="mt-3 flex flex-col gap-3">
+        <view wx:for="{{profile.companies}}" wx:key="name" class="rounded-[12rpx] bg-panel-raised px-4 py-3"><view class="text-[length:24rpx]">{{item.name}}</view><view wx:if="{{item.role}}" class="mt-1 text-[length:21rpx] text-muted">{{item.role}}</view></view>
+      </view>
+      <view wx:if="{{profile.organizations.length}}" class="mt-3 flex flex-col gap-3">
+        <view wx:for="{{profile.organizations}}" wx:key="name" class="rounded-[12rpx] bg-panel-raised px-4 py-3"><view class="text-[length:24rpx]">{{item.name}}</view><view wx:if="{{item.role}}" class="mt-1 text-[length:21rpx] text-muted">{{item.role}}</view></view>
+      </view>
+    </view>
+
+    <view wx:if="{{!isSelf}}" class="mt-4 rounded-[16rpx] border border-line bg-panel px-5 py-5">
+      <view class="text-[length:28rpx] font-semibold">社区安全</view>
+      <view class="mt-2 text-[length:22rpx] leading-6 text-muted">举报只提交给运营人员处理，屏蔽不会通知对方。</view>
+      <view wx:if="{{safetyState === 'access'}}" class="mt-4 rounded-[12rpx] bg-panel-raised px-4 py-4">
+        <view class="text-[length:23rpx]">需要完成身份信息后继续。</view>
+        <view class="mt-3"><t-button block theme="primary" bind:tap="openAccess">继续</t-button></view>
+      </view>
+      <view wx:else class="mt-4 grid grid-cols-2 gap-3">
+        <t-button block variant="outline" disabled="{{safetyState === 'loading' || safetyState === 'processing'}}" bind:tap="reportProfile">举报</t-button>
+        <t-button block variant="outline" theme="danger" loading="{{safetyState === 'processing'}}" disabled="{{safetyState === 'loading'}}" bind:tap="blockProfile">屏蔽</t-button>
+      </view>
+      <view wx:if="{{safetyMessage && safetyState === 'error'}}" class="mt-3 text-[length:22rpx] text-danger">{{safetyMessage}}</view>
+      <view wx:elif="{{safetyMessage}}" class="mt-3 text-[length:22rpx] text-muted">{{safetyMessage}}</view>
+      <view wx:if="{{canRetryReport}}" class="mt-3"><t-button block variant="outline" bind:tap="retryReport">重新提交举报</t-button></view>
+    </view>
+    <app-page-exit />
+  </block>
+</view>

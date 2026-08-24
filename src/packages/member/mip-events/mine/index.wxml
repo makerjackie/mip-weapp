@@ -1,0 +1,25 @@
+<view id="mip-events-mine-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+40rpx)] pt-4 text-ink">
+  <view class="text-[length:34rpx] font-bold">我的活动</view>
+  <view wx:if="{{state === 'loading'}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载活动" description="请稍后重试。" action-text="重新加载" bind:action="loadRegistrations" /></view>
+  <view wx:elif="{{registrations.length === 0}}" class="mt-5"><app-empty-state title="暂无报名记录" description="报名后的活动会显示在这里。" /></view>
+  <view wx:else class="mt-5 flex flex-col gap-3">
+    <view wx:for="{{registrations}}" wx:key="registrationId" class="overflow-hidden rounded-[16rpx] bg-panel" data-event-id="{{item.event.id}}" data-status="{{item.status}}" bind:tap="openRegistration">
+      <view class="flex gap-3 p-3">
+        <image wx:if="{{item.event.coverUrl}}" class="h-[150rpx] w-[180rpx] shrink-0 rounded-[12rpx] bg-brand-soft" mode="aspectFill" src="{{item.event.coverUrl}}" />
+        <view wx:else class="flex h-[150rpx] w-[180rpx] shrink-0 items-center justify-center rounded-[12rpx] bg-brand-soft"><t-icon name="calendar" size="48rpx" color="var(--color-brand)" /></view>
+        <view class="min-w-0 flex-1"><view class="line-clamp-2 text-[length:26rpx] font-bold">{{item.event.title}}</view><view class="mt-2 text-[length:21rpx] text-muted">{{item.startsText}}</view><view class="mt-3 inline-flex rounded-[12rpx] bg-brand-soft px-2 py-1 text-[length:21rpx] text-brand">{{item.statusText}}</view></view>
+      </view>
+      <view wx:if="{{item.status === 'PAYMENT_PENDING'}}" class="border-t border-line px-3 py-2 text-[length:21rpx] text-muted">支付确认前不会生成报名资格。</view>
+      <view wx:if="{{item.orderId || item.canEdit}}" class="border-t border-line px-3 py-3">
+        <view class="flex gap-3">
+          <t-button wx:if="{{item.orderId}}" class="min-w-0 flex-1" block variant="outline" data-order-id="{{item.orderId}}" catch:tap="openOrder">查看订单详情</t-button>
+          <t-button wx:if="{{item.canEdit}}" class="min-w-0 flex-1" block variant="outline" data-event-id="{{item.event.id}}" catch:tap="editRegistration">修改报名</t-button>
+        </view>
+      </view>
+    </view>
+    <view wx:if="{{nextCursor}}" class="py-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
+  </view>
+  <view wx:if="{{message && state !== 'error'}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
+  <app-page-exit />
+</view>

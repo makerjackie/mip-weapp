@@ -1,33 +1,52 @@
-import type { EventAlbumPhoto } from '../../../modules/membership/types'
-import { membershipModule } from '../../../modules/membership/client'
-import {
-  chooseSingleImage,
-  compressImageToBase64,
-  IMAGE_UPLOAD_POLICIES,
-} from '../../../modules/platform/image-upload'
+import type { EventId } from '../../../modules/mip'
+import type { EventAlbumPhoto } from '../../../modules/mip-events'
+import { MipEventsError } from '../../../modules/mip-events'
+import { mipEventsModule } from '../../../modules/mip-events/client'
+import { mipMediaModule } from '../../../modules/mip-media/client'
+import { chooseSingleImage } from '../../../modules/platform/image-upload'
+
+type AlbumState = 'loading' | 'ready' | 'empty' | 'disabled' | 'error'
+
+function isCancelled(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || '')
+  return /cancel/i.test(message)
+}
+
+function mergeItems(published: EventAlbumPhoto[], mine: EventAlbumPhoto[]) {
+  const byId = new Map(published.map(item => [item.id, item]))
+  for (const item of mine) {
+    byId.set(item.id, { ...byId.get(item.id), ...item, mine: true })
+  }
+  return [...byId.values()].sort((left, right) =>
+    Date.parse(right.createdAt) - Date.parse(left.createdAt) || right.id.localeCompare(left.id))
+}
 
 async function askCaption() {
   const result = await wx.showModal({
-    title: '添加照片说明',
+    title: '照片说明',
     content: '',
     editable: true,
-    placeholderText: '可选：记录这一刻',
-    confirmText: '继续上传',
+    placeholderText: '选填，最多 300 个字',
+    confirmText: '提交',
   })
   if (!result.confirm) {
     return null
   }
-  return String(result.content || '').trim().slice(0, 120)
+  return String(result.content || '').trim().slice(0, 300)
 }
 
 Page({
   data: {
-    state: 'loading' as 'loading' | 'ready' | 'error',
+    state: 'loading' as AlbumState,
     eventId: '',
     items: [] as EventAlbumPhoto[],
-    cursor: null as string | null,
+    publicItems: [] as EventAlbumPhoto[],
+    myItems: [] as EventAlbumPhoto[],
+    cursor: undefined as string | undefined,
+    canSubmit: false,
     loadingMore: false,
     uploading: false,
+    withdrawingId: '',
     message: '',
   },
 
@@ -51,29 +70,58 @@ Page({
     }
   },
 
-  async load(reset: boolean) {
-    if (reset && this.data.state !== 'ready') {
+  async load(reset = true) {
+    if (!this.data.eventId) {
+      this.setData({ state: 'error', message: '活动标识无效。' })
+      return
+    }
+    if (reset) {
       this.setData({ state: 'loading', message: '' })
     }
-    if (!reset) {
-      this.setData({ loadingMore: true })
+    else {
+      this.setData({ loadingMore: true, message: '' })
     }
     try {
-      const page = await membershipModule.listEventAlbum(
-        this.data.eventId,
-        reset ? undefined : this.data.cursor || undefined,
+      const publicPage = await mipEventsModule.listEventAlbum(
+        this.data.eventId as EventId,
+        reset ? undefined : this.data.cursor,
       )
+      const publicItems = reset
+        ? publicPage.items
+        : [...this.data.publicItems, ...publicPage.items]
+      let myItems = this.data.myItems
+      let canSubmit = this.data.canSubmit
+      let privateMessage = ''
+      if (reset) {
+        try {
+          const mine = await mipEventsModule.listMyEventAlbumSubmissions(this.data.eventId as EventId)
+          myItems = mine.items
+          canSubmit = mine.canSubmit
+        }
+        catch (error) {
+          privateMessage = error instanceof MipEventsError && error.code === 'AUTH_REQUIRED'
+            ? ''
+            : (error instanceof Error ? error.message : '个人提交状态加载失败。')
+          myItems = []
+          canSubmit = false
+        }
+      }
+      const items = mergeItems(publicItems, myItems)
       this.setData({
-        state: 'ready',
-        items: reset ? page.items : [...this.data.items, ...page.items],
-        cursor: page.nextCursor,
-        message: '',
+        state: !publicPage.albumEnabled ? 'disabled' : (items.length ? 'ready' : 'empty'),
+        publicItems,
+        myItems,
+        items,
+        cursor: publicPage.nextCursor,
+        canSubmit: publicPage.albumEnabled && canSubmit,
+        message: privateMessage,
       })
     }
     catch (error) {
+      const message = error instanceof Error ? error.message : '相册加载失败。'
       this.setData(this.data.items.length
-        ? { message: error instanceof Error ? error.message : '相册加载失败' }
-        : { state: 'error', message: error instanceof Error ? error.message : '相册加载失败' })
+        ? { state: 'ready', message }
+        : { state: 'error', message })
     }
     finally {
       this.setData({ loadingMore: false })
@@ -81,26 +129,32 @@ Page({
   },
 
   async upload() {
-    if (this.data.uploading) {
+    if (!this.data.canSubmit || this.data.uploading) {
       return
     }
     this.setData({ uploading: true, message: '' })
     try {
-      const selected = await chooseSingleImage()
+      const sourcePath = await chooseSingleImage()
       const caption = await askCaption()
       if (caption === null) {
         return
       }
-      const base64 = await compressImageToBase64(selected, IMAGE_UPLOAD_POLICIES.eventAlbum)
-      const result = await membershipModule.uploadEventPhoto(this.data.eventId, base64, caption)
-      wx.showToast({
-        title: result.status === 'PUBLISHED' ? '已发布' : '已提交审核',
+      const asset = await mipMediaModule.uploadImageFromPath('EVENT_ALBUM', sourcePath)
+      const result = await mipEventsModule.submitEventAlbumPhoto(
+        this.data.eventId as EventId,
+        asset.assetId,
+        caption,
+      )
+      await wx.showToast({
+        title: result.status === 'PUBLISHED' ? '照片已发布' : '照片已提交',
         icon: 'success',
       })
       await this.load(true)
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '照片上传失败' })
+      if (!isCancelled(error)) {
+        this.setData({ message: error instanceof Error ? error.message : '照片提交失败。' })
+      }
     }
     finally {
       this.setData({ uploading: false })
@@ -111,27 +165,36 @@ Page({
     const current = String(event.currentTarget.dataset.url || '')
     const urls = this.data.items.map(item => item.imageUrl).filter(Boolean)
     if (current && urls.length) {
-      wx.previewImage({ current, urls })
+      void wx.previewImage({ current, urls }).catch(() => null)
     }
   },
 
-  async remove(event: WechatMiniprogram.BaseEvent) {
+  async withdraw(event: WechatMiniprogram.BaseEvent) {
     const photoId = String(event.currentTarget.dataset.photoId || '')
-    const result = await wx.showModal({
-      title: '删除照片',
-      content: '删除后无法恢复，确认继续吗？',
-      confirmText: '删除',
-      confirmColor: '#B84A43',
-    })
-    if (!result.confirm) {
+    const version = Number(event.currentTarget.dataset.version)
+    if (!photoId || this.data.withdrawingId) {
       return
     }
+    const confirmation = await wx.showModal({
+      title: '撤回照片',
+      content: '撤回后照片不再显示，确认继续吗？',
+      confirmText: '撤回',
+      confirmColor: '#B84A43',
+    }).catch(() => null)
+    if (!confirmation?.confirm) {
+      return
+    }
+    this.setData({ withdrawingId: photoId, message: '' })
     try {
-      await membershipModule.deleteEventPhoto(photoId)
-      this.setData({ items: this.data.items.filter(item => item.id !== photoId) })
+      await mipEventsModule.withdrawEventAlbumPhoto(photoId, version)
+      await this.load(true)
+      await wx.showToast({ title: '照片已撤回', icon: 'success' })
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '删除失败' })
+      this.setData({ message: error instanceof Error ? error.message : '照片撤回失败。' })
+    }
+    finally {
+      this.setData({ withdrawingId: '' })
     }
   },
 })

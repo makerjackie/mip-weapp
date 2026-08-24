@@ -1,0 +1,203 @@
+import type { EventId } from '../mip'
+import type {
+  AdminEventFeedbackQuery,
+  CheckInCredentialMode,
+  EventFeedbackDraft,
+  EventFeedQuery,
+  MipEventsGateway,
+  PublicEventParticipantQuery,
+  RegistrationIntent,
+  RegistrationUpdateIntent,
+} from './types'
+
+function requestKey(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function normalizedQuery(query: EventFeedQuery): EventFeedQuery {
+  return {
+    ...query,
+    query: query.query?.trim().slice(0, 50) || undefined,
+    cityName: query.cityName?.trim().slice(0, 80) || undefined,
+    limit: Math.min(30, Math.max(1, query.limit || 20)),
+  }
+}
+
+export function createMipEventsModule(gateway: MipEventsGateway) {
+  const eventCache = new Map<string, Awaited<ReturnType<MipEventsGateway['getEvent']>>>()
+  const feedCache = new Map<string, Awaited<ReturnType<MipEventsGateway['listEvents']>>>()
+
+  function feedKey(query: EventFeedQuery) {
+    return JSON.stringify(normalizedQuery(query))
+  }
+
+  return {
+    peekEvents(query: EventFeedQuery) {
+      return feedCache.get(feedKey(query))
+    },
+
+    async listEvents(query: EventFeedQuery, options: { force?: boolean } = {}) {
+      const normalized = normalizedQuery(query)
+      const key = feedKey(normalized)
+      if (!options.force && feedCache.has(key)) {
+        return feedCache.get(key)!
+      }
+      const result = await gateway.listEvents(normalized)
+      feedCache.set(key, result)
+      return result
+    },
+
+    peekEvent(eventId: EventId) {
+      return eventCache.get(String(eventId))
+    },
+
+    async getEvent(eventId: EventId, options: { force?: boolean } = {}) {
+      const key = String(eventId)
+      if (options.force) {
+        eventCache.delete(key)
+      }
+      const result = await gateway.getEvent(eventId)
+      eventCache.set(key, {
+        ...result,
+        onlineAccessAvailable: false,
+        onlineUrl: undefined,
+      })
+      return result
+    },
+
+    listPublicParticipants(eventId: EventId, query: PublicEventParticipantQuery = {}) {
+      const keyword = query.keyword?.trim().slice(0, 80) || undefined
+      if (query.userKind && !['PLAYER', 'GUEST'].includes(query.userKind)) {
+        throw new Error('参与人筛选参数无效')
+      }
+      return gateway.listPublicParticipants(eventId, {
+        keyword,
+        userKind: query.userKind,
+        cursor: query.cursor,
+        limit: Math.min(30, Math.max(1, query.limit || 24)),
+      })
+    },
+
+    listEventAlbum(eventId: EventId, cursor?: string) {
+      return gateway.listEventAlbum(eventId, cursor, 20)
+    },
+
+    listMyEventAlbumSubmissions(eventId: EventId) {
+      return gateway.listMyEventAlbumSubmissions(eventId)
+    },
+
+    submitEventAlbumPhoto(eventId: EventId, mediaAssetId: string, caption = '') {
+      const normalizedCaption = caption.trim()
+      if (!/^[0-9a-f-]{36}$/i.test(mediaAssetId)) {
+        throw new Error('照片素材无效')
+      }
+      if (normalizedCaption.length > 300) {
+        throw new Error('照片说明不能超过 300 个字')
+      }
+      return gateway.submitEventAlbumPhoto(eventId, mediaAssetId, normalizedCaption)
+    },
+
+    withdrawEventAlbumPhoto(photoId: string, expectedVersion: number) {
+      if (!/^[0-9a-f-]{36}$/i.test(photoId)
+        || !Number.isInteger(expectedVersion) || expectedVersion < 1) {
+        throw new Error('照片状态无效')
+      }
+      return gateway.withdrawEventAlbumPhoto(photoId, expectedVersion)
+    },
+
+    listMyRegistrations(cursor?: string) {
+      return gateway.listMyRegistrations(cursor)
+    },
+
+    getMyRegistration(eventId: EventId) {
+      return gateway.getMyRegistration(eventId)
+    },
+
+    async register(input: RegistrationIntent) {
+      const outcome = await gateway.register({
+        ...input,
+        idempotencyKey: input.idempotencyKey || requestKey('event-registration'),
+      })
+      feedCache.clear()
+      eventCache.delete(String(input.eventId))
+      return outcome
+    },
+
+    async updateRegistration(input: RegistrationUpdateIntent) {
+      const outcome = await gateway.updateRegistration({
+        ...input,
+        idempotencyKey: input.idempotencyKey || requestKey('event-registration-update'),
+      })
+      feedCache.clear()
+      eventCache.delete(String(input.eventId))
+      return outcome
+    },
+
+    async cancelRegistration(eventId: EventId, expectedVersion?: number) {
+      const outcome = await gateway.cancelRegistration(eventId, expectedVersion)
+      feedCache.clear()
+      eventCache.delete(String(eventId))
+      return outcome
+    },
+
+    checkIn(scanToken: string) {
+      return gateway.checkIn(scanToken.trim(), requestKey('event-checkin'))
+    },
+
+    resolveCheckInScene(scene: string) {
+      const normalized = scene.trim()
+      if (!/^s1\.[\w-]{11}\.[\w-]{11}$/.test(normalized)) {
+        throw new Error('活动码无效')
+      }
+      return gateway.resolveCheckInScene(normalized)
+    },
+
+    createCheckInPoster(eventId: EventId, mode: CheckInCredentialMode = 'STATIC') {
+      return gateway.createCheckInPoster(eventId, mode)
+    },
+
+    listHeartCandidates(eventId: EventId) {
+      return gateway.listHeartCandidates(eventId)
+    },
+
+    getHeart(eventId: EventId) {
+      return gateway.getHeart(eventId)
+    },
+
+    setHeart(eventId: EventId, targetRef: string | null, expectedVersion?: number) {
+      return gateway.setHeart(eventId, targetRef, expectedVersion)
+    },
+
+    getFeedback(eventId: EventId) {
+      return gateway.getFeedback(eventId)
+    },
+
+    async saveFeedback(eventId: EventId, draft: EventFeedbackDraft) {
+      const body = draft.body.trim()
+      if (!body || body.length > 2000) {
+        throw new Error('反馈内容需为 1–2000 个字')
+      }
+      if (draft.rating !== undefined && (!Number.isInteger(draft.rating) || draft.rating < 1 || draft.rating > 5)) {
+        throw new Error('请选择 1–5 分')
+      }
+      return gateway.saveFeedback(eventId, { ...draft, body })
+    },
+
+    listAdminFeedback(eventId: EventId, query: AdminEventFeedbackQuery = {}) {
+      if (query.rating !== undefined && ![1, 2, 3, 4, 5].includes(query.rating)) {
+        throw new Error('评分筛选参数无效')
+      }
+      return gateway.listAdminFeedback(eventId, {
+        rating: query.rating,
+        cursor: query.cursor,
+        limit: Math.min(30, Math.max(1, query.limit || 20)),
+      })
+    },
+
+    createInvitation(eventId: EventId) {
+      return gateway.createInvitation(eventId)
+    },
+  }
+}
+
+export type MipEventsModule = ReturnType<typeof createMipEventsModule>

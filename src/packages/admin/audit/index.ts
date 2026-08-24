@@ -1,72 +1,68 @@
-import type { AuditItem } from '../../../modules/admin/types'
+import type { AdminAuditItem } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
-import { adminModule } from '../../../modules/admin/client'
-import { formatLocalDateTime } from '../../../utils/date'
+import { mipAdminModule } from '../../../modules/mip-admin'
 import { adminLoadFailure } from '../shared/page-state'
 
-const actionLabels: Record<string, string> = {
-  PROFILE_APPROVED: '通过成员资料',
-  PROFILE_REJECTED: '驳回成员资料',
-  PROFILE_SUSPENDED: '暂停展示成员',
-  EVENT_CREATED: '创建活动草稿',
-  EVENT_UPDATED: '更新活动',
-  EVENT_PUBLISHED: '发布活动',
-  EVENT_CANCELLED: '取消活动',
-  REFUND_REQUESTED: '发起退款',
-  ACCOUNT_DELETED: '注销账号',
-}
-const resourceLabels: Record<string, string> = {
-  profile: '成员资料',
-  event: '活动',
-  order: '订单',
-}
-const roleLabels: Record<string, string> = {
-  owner: '主理人',
-  manager: '管理员',
-  reviewer: '审核员',
-  support: '客服',
-  member: '成员',
-}
-
-interface DisplayAudit extends AuditItem { createdText: string, actionText: string, resourceText: string, roleText: string }
-
-function displayAudit(items: AuditItem[]) {
-  return items.map(item => ({
-    ...item,
-    createdText: formatLocalDateTime(item.createdAt),
-    actionText: actionLabels[item.action] || '运营操作',
-    resourceText: resourceLabels[item.resourceType] || '记录',
-    roleText: roleLabels[item.actorRole] || '运营人员',
-  }))
-}
+type AuditView = AdminAuditItem & { metadataText: string }
 
 Page({
-  data: { state: 'loading' as AdminPageState, items: [] as DisplayAudit[], message: '' },
-  onShow() {
-    void this.loadAudit()
+  data: {
+    state: 'loading' as AdminPageState,
+    items: [] as AuditView[],
+    action: '',
+    resourceType: '',
+    message: '',
+    nextCursor: null as string | null,
+    loadingMore: false,
   },
+  onShow() { void this.loadAudit() },
+  updateAction(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ action: event.detail.value }) },
+  updateResource(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ resourceType: event.detail.value }) },
+  search() { void this.loadAudit(true) },
   async loadAudit(force = false) {
-    const cached = adminModule.peekAudit()
-    if (cached) {
-      this.setData({ state: 'ready', items: displayAudit(cached), message: '' })
-    }
-    else if (this.data.state !== 'ready') {
+    const hasContent = this.data.items.length > 0
+    if (!hasContent) {
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const items = await adminModule.listAudit({ force })
+      const response = await mipAdminModule.listAudit({
+        filters: { action: this.data.action.trim(), resourceType: this.data.resourceType.trim() },
+      }, force)
       this.setData({
         state: 'ready',
-        items: displayAudit(items),
+        items: response.items.map(item => ({ ...item, metadataText: JSON.stringify(item.metadata) })),
+        nextCursor: response.nextCursor || null,
+        loadingMore: false,
+        message: '',
       })
     }
     catch (error) {
-      this.setData(adminLoadFailure(error, {
-        hasContent: Boolean(cached) || this.data.state === 'ready',
-        fallbackMessage: '审计日志加载失败',
-      }))
+      this.setData(adminLoadFailure(error, { hasContent, fallbackMessage: '审计记录加载失败' }))
     }
   },
+  async loadMoreAudit() {
+    if (!this.data.nextCursor || this.data.loadingMore || this.data.state !== 'ready') {
+      return
+    }
+    this.setData({ loadingMore: true, message: '' })
+    try {
+      const response = await mipAdminModule.listAudit({
+        cursor: this.data.nextCursor,
+        filters: { action: this.data.action.trim(), resourceType: this.data.resourceType.trim() },
+      })
+      this.setData({
+        items: this.data.items.concat(response.items.map(item => ({ ...item, metadataText: JSON.stringify(item.metadata) }))),
+        nextCursor: response.nextCursor || null,
+      })
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '更多审计记录加载失败' })
+    }
+    finally {
+      this.setData({ loadingMore: false })
+    }
+  },
+  onReachBottom() { void this.loadMoreAudit() },
   async onPullDownRefresh() {
     try {
       await this.loadAudit(true)

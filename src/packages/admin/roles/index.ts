@@ -1,119 +1,205 @@
-import type { AdminProfileItem, AdminRoleItem } from '../../../modules/admin/types'
+import type { AdminRoleItem, AdminRoleKey, AdminUser } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
-import { adminModule } from '../../../modules/admin/client'
+import { mipAdminModule } from '../../../modules/mip-admin'
+import { mipBranchesModule } from '../../../modules/mip-identity/client'
 import { adminLoadFailure } from '../shared/page-state'
 
-const roleValues = ['manager', 'reviewer', 'support'] as const
-const roleLabels = ['管理员', '审核员', '客服']
-const roleCopy: Record<string, string> = {
-  owner: '全部权限',
-  manager: '活动、成员、订单、退款与审计',
-  reviewer: '成员资料与报名审核',
-  support: '订单与售后退款',
+const roleLabels: Record<AdminRoleKey, string> = {
+  PLATFORM_OWNER: '平台超级管理员',
+  PLATFORM_OPERATIONS: '平台运营',
+  PLATFORM_FINANCE: '平台财务',
+  BRANCH_ADMIN: '城市管理员',
+  EVENT_OWNER: '活动负责人',
+  EVENT_MANAGER: '活动管理员',
+  EVENT_STAFF: '现场人员',
 }
 
-function displayRoles(items: AdminRoleItem[]) {
-  return items.map(item => ({
-    ...item,
-    roleText: item.role === 'owner' ? '主理人' : roleLabels[roleValues.indexOf(item.role as typeof roleValues[number])] || '管理员',
-    permissionText: roleCopy[item.role] || '',
-    active: item.status === 'ACTIVE',
-    canEdit: item.role !== 'owner' && Boolean(item.profileId),
-  }))
-}
+type RoleView = AdminRoleItem & { roleLabel: string, scopeLabel: string }
 
 Page({
   data: {
     state: 'loading' as AdminPageState,
-    roles: [] as ReturnType<typeof displayRoles>,
-    profiles: [] as AdminProfileItem[],
-    profileLabels: [] as string[],
-    roleLabels,
-    selectedProfileIndex: 0,
-    selectedRoleIndex: 0,
-    busyId: '',
+    roles: [] as RoleView[],
+    candidates: [] as AdminUser[],
+    query: '',
+    selectedUserId: '',
+    selectedUserName: '',
+    selectedRole: 'PLATFORM_OPERATIONS' as AdminRoleKey,
+    selectedRoleLabel: roleLabels.PLATFORM_OPERATIONS,
+    selectedRoleIsScoped: false,
+    scopeId: '',
+    branches: [] as Array<{ id: string, name: string }>,
+    branchIndex: -1,
+    events: [] as Array<{ id: string, title: string }>,
+    eventIndex: -1,
+    canPlatformChange: false,
+    processing: false,
     message: '',
   },
-  onShow() { void this.load() },
-  async onPullDownRefresh() {
-    try {
-      await this.load(true)
-    }
-    finally {
-      wx.stopPullDownRefresh()
-    }
-  },
-  async load(force = false) {
-    const cached = adminModule.peekAdminRoles()
-    if (cached) {
-      this.setData({ state: 'ready', roles: displayRoles(cached) })
+  onShow() { void this.loadRoles() },
+  async loadRoles(force = false) {
+    const hasContent = this.data.roles.length > 0
+    if (!hasContent) {
+      this.setData({ state: 'loading', message: '' })
     }
     try {
-      const [roles, profiles] = await Promise.all([
-        adminModule.listAdminRoles({ force }),
-        adminModule.listProfiles('APPROVED', { force }),
+      const [session, response, branchSnapshot, eventsResponse] = await Promise.all([
+        mipAdminModule.getSession(force),
+        mipAdminModule.listRoles(force),
+        mipBranchesModule.load(),
+        mipAdminModule.listEvents({ limit: 50 }, force),
       ])
-      const assigned = new Set(roles.map(item => item.profileId).filter(Boolean))
-      const candidates = profiles.filter(item => !assigned.has(item.id))
+      const branches = branchSnapshot.branches
+        .filter(item => item.status === 'ACTIVE')
+        .map(item => ({ id: String(item.id), name: item.name }))
+      const events = eventsResponse.items.map(item => ({ id: item.id, title: item.title }))
+      const branchNames = new Map(branches.map(item => [item.id, item.name]))
+      const eventNames = new Map(events.map(item => [item.id, item.title]))
       this.setData({
         state: 'ready',
-        roles: displayRoles(roles),
-        profiles: candidates,
-        profileLabels: candidates.map(item => `${item.nickname}${item.city ? ` · ${item.city}` : ''}`),
-        selectedProfileIndex: 0,
+        roles: response.items.map(item => ({
+          ...item,
+          roleLabel: roleLabels[item.roleKey],
+          scopeLabel: item.scopeType === 'PLATFORM'
+            ? '平台'
+            : item.scopeType === 'BRANCH'
+              ? branchNames.get(item.scopeId || '') || '城市分会'
+              : eventNames.get(item.scopeId || '') || '活动',
+        })),
+        branches,
+        events,
+        branchIndex: branches.findIndex(item => item.id === this.data.scopeId),
+        eventIndex: events.findIndex(item => item.id === this.data.scopeId),
+        canPlatformChange: session.capabilities.some(item => item.capability === 'roles.change' && item.scopeType === 'PLATFORM'),
         message: '',
       })
     }
     catch (error) {
-      this.setData(adminLoadFailure(error, {
-        hasContent: Boolean(cached),
-        fallbackMessage: '管理员列表加载失败',
+      this.setData(adminLoadFailure(error, { hasContent, fallbackMessage: '角色列表加载失败' }))
+    }
+  },
+  updateQuery(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ query: event.detail.value }) },
+  chooseRole(event: WechatMiniprogram.TouchEvent) {
+    const role = String(event.currentTarget.dataset.role || '') as AdminRoleKey
+    if (!roleLabels[role]) {
+      return
+    }
+    const selectedRoleIsScoped = role === 'BRANCH_ADMIN' || role.startsWith('EVENT_')
+    const branchIndex = role === 'BRANCH_ADMIN' && this.data.branches.length ? 0 : -1
+    const eventIndex = role.startsWith('EVENT_') && this.data.events.length ? 0 : -1
+    const scopeId = branchIndex >= 0
+      ? this.data.branches[branchIndex].id
+      : eventIndex >= 0
+        ? this.data.events[eventIndex].id
+        : ''
+    this.setData({
+      selectedRole: role,
+      selectedRoleLabel: roleLabels[role],
+      selectedRoleIsScoped,
+      scopeId,
+      branchIndex,
+      eventIndex,
+    })
+  },
+  changeBranch(event: WechatMiniprogram.CustomEvent<{ value: string | number }>) {
+    const branchIndex = Number(event.detail.value)
+    const branch = this.data.branches[branchIndex]
+    if (branch) {
+      this.setData({ branchIndex, scopeId: branch.id })
+    }
+  },
+  changeEvent(event: WechatMiniprogram.CustomEvent<{ value: string | number }>) {
+    const eventIndex = Number(event.detail.value)
+    const selected = this.data.events[eventIndex]
+    if (selected) {
+      this.setData({ eventIndex, scopeId: selected.id })
+    }
+  },
+  async searchUsers() {
+    const query = this.data.query.trim()
+    if (!query) {
+      this.setData({ candidates: [] })
+      return
+    }
+    try {
+      const response = await mipAdminModule.listUsers({ includePhone: false, filters: { query } }, true)
+      this.setData({ candidates: response.items, message: '' })
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '用户搜索失败' })
+    }
+  },
+  chooseUser(event: WechatMiniprogram.TouchEvent) {
+    this.setData({
+      selectedUserId: String(event.currentTarget.dataset.id || ''),
+      selectedUserName: String(event.currentTarget.dataset.name || ''),
+      candidates: [],
+    })
+  },
+  async grant() {
+    if (!this.data.canPlatformChange || !this.data.selectedUserId || this.data.processing) {
+      return
+    }
+    if (this.data.selectedRoleIsScoped && !this.data.scopeId.trim()) {
+      this.setData({ message: '请填写分会或活动标识' })
+      return
+    }
+    this.setData({ processing: true, message: '' })
+    try {
+      const modal = await wx.showModal({
+        title: '设置角色',
+        content: `确认将 ${this.data.selectedUserName} 设置为${this.data.selectedRoleLabel}。`,
+      })
+      if (!modal.confirm) {
+        return
+      }
+      await mipAdminModule.mutate(() => mipAdminModule.gateway.setRole({
+        userId: this.data.selectedUserId,
+        roleKey: this.data.selectedRole,
+        scopeId: this.data.scopeId.trim() || undefined,
+        active: true,
       }))
-    }
-  },
-  chooseProfile(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    this.setData({ selectedProfileIndex: Number(event.detail.value) || 0 })
-  },
-  chooseRole(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    this.setData({ selectedRoleIndex: Number(event.detail.value) || 0 })
-  },
-  async addRole() {
-    const profile = this.data.profiles[this.data.selectedProfileIndex]
-    const role = roleValues[this.data.selectedRoleIndex]
-    if (!profile || !role || this.data.busyId) {
-      return
-    }
-    this.setData({ busyId: profile.id, message: '' })
-    try {
-      await adminModule.setAdminRole(profile.id, role, true)
-      wx.showToast({ title: '管理员已添加', icon: 'success' })
-      await this.load(true)
+      wx.showToast({ title: '角色已设置', icon: 'success' })
+      this.setData({ selectedUserId: '', selectedUserName: '', scopeId: '' })
+      await this.loadRoles(true)
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '添加失败' })
+      this.setData({ message: error instanceof Error ? error.message : '角色设置失败' })
     }
     finally {
-      this.setData({ busyId: '' })
+      this.setData({ processing: false })
     }
   },
-  async toggleRole(event: WechatMiniprogram.BaseEvent) {
-    const profileId = String(event.currentTarget.dataset.profileId || '')
-    const role = String(event.currentTarget.dataset.role || '') as typeof roleValues[number]
-    const active = event.currentTarget.dataset.active === true || event.currentTarget.dataset.active === 'true'
-    if (!profileId || !roleValues.includes(role) || this.data.busyId) {
+  async revoke(event: WechatMiniprogram.TouchEvent) {
+    const userId = String(event.currentTarget.dataset.userId || '')
+    const roleKey = String(event.currentTarget.dataset.role || '') as AdminRoleKey
+    const scopeId = String(event.currentTarget.dataset.scopeId || '')
+    if (!this.data.canPlatformChange || !userId || !roleLabels[roleKey] || this.data.processing) {
       return
     }
-    this.setData({ busyId: profileId, message: '' })
+    this.setData({ processing: true, message: '' })
     try {
-      await adminModule.setAdminRole(profileId, role, !active)
-      wx.showToast({ title: active ? '权限已暂停' : '权限已恢复', icon: 'success' })
-      await this.load(true)
+      const modal = await wx.showModal({
+        title: '撤销角色',
+        content: `撤销后该账号立即失去${roleLabels[roleKey]}权限。`,
+      })
+      if (!modal.confirm) {
+        return
+      }
+      await mipAdminModule.mutate(() => mipAdminModule.gateway.setRole({
+        userId,
+        roleKey,
+        scopeId: scopeId || undefined,
+        active: false,
+      }))
+      wx.showToast({ title: '角色已撤销', icon: 'success' })
+      await this.loadRoles(true)
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '更新失败' })
+      this.setData({ message: error instanceof Error ? error.message : '角色撤销失败' })
     }
     finally {
-      this.setData({ busyId: '' })
+      this.setData({ processing: false })
     }
   },
 })

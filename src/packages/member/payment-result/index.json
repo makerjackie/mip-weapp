@@ -1,8 +1,8 @@
 {
   "navigationBarTitleText": "支付结果",
-  "navigationStyle": "default",
   "usingComponents": {
+    "app-page-exit": "/components/page-exit/index",
     "t-button": "tdesign-miniprogram/button/button",
-    "app-page-exit": "/components/page-exit/index"
+    "t-icon": "tdesign-miniprogram/icon/icon"
   }
 }

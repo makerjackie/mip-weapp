@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "slug": "mip-weapp",
-  "name": "同行会",
+  "name": "MIP",
   "namespace": "mip",
   "routes": [
     {
@@ -9,8 +9,12 @@
       "pathName": "pages/index/index"
     },
     {
-      "name": "成员推荐",
-      "pathName": "pages/explore/index"
+      "name": "公告",
+      "pathName": "packages/member/announcements/index"
+    },
+    {
+      "name": "公告详情",
+      "pathName": "packages/member/announcement-detail/index"
     },
     {
       "name": "线下活动",
@@ -25,52 +29,108 @@
       "pathName": "pages/profile/index"
     },
     {
-      "name": "继续使用",
-      "pathName": "packages/member/access/index"
+      "name": "机会广场",
+      "pathName": "pages/opportunities/index"
     },
     {
-      "name": "编辑公开资料",
-      "pathName": "packages/member/profile-edit/index"
+      "name": "使用准备",
+      "pathName": "packages/member/mip-access/index"
     },
     {
-      "name": "关注与粉丝",
-      "pathName": "packages/member/connections/index"
+      "name": "玩家档案",
+      "pathName": "packages/member/mip-profile/index"
     },
     {
-      "name": "社区公告",
-      "pathName": "packages/member/announcements/index"
+      "name": "公开档案",
+      "pathName": "packages/member/mip-public-profile/index"
     },
     {
-      "name": "公告详情",
-      "pathName": "packages/member/announcement-detail/index"
+      "name": "屏蔽列表",
+      "pathName": "packages/member/mip-blocked/index"
     },
     {
-      "name": "已屏蔽的成员",
-      "pathName": "packages/member/blocked-members/index"
-    },
-    {
-      "name": "成员资料详情",
-      "pathName": "packages/member/member-detail/index"
+      "name": "城市分会",
+      "pathName": "packages/member/mip-branches/index"
     },
     {
       "name": "活动详情",
-      "pathName": "packages/member/event-detail/index"
-    },
-    {
-      "name": "活动参与者",
-      "pathName": "packages/member/event-participants/index"
+      "pathName": "packages/member/mip-events/detail/index"
     },
     {
       "name": "活动相册",
       "pathName": "packages/member/event-album/index"
     },
     {
-      "name": "确认报名",
-      "pathName": "packages/member/registration-confirm/index"
+      "name": "活动参与人",
+      "pathName": "packages/member/mip-events/participants/index"
     },
     {
-      "name": "活动凭证",
-      "pathName": "packages/member/ticket/index"
+      "name": "活动报名",
+      "pathName": "packages/member/mip-events/registration/index"
+    },
+    {
+      "name": "我的活动",
+      "pathName": "packages/member/mip-events/mine/index"
+    },
+    {
+      "name": "活动签到",
+      "pathName": "packages/member/mip-events/check-in/index"
+    },
+    {
+      "name": "活动互动",
+      "pathName": "packages/member/mip-events/interaction/index"
+    },
+    {
+      "name": "机会详情",
+      "pathName": "packages/member/mip-opportunities/detail/index"
+    },
+    {
+      "name": "编辑机会",
+      "pathName": "packages/member/mip-opportunities/editor/index"
+    },
+    {
+      "name": "我的机会",
+      "pathName": "packages/member/mip-opportunities/mine/index"
+    },
+    {
+      "name": "合作卡",
+      "pathName": "packages/member/mip-cooperation/list/index"
+    },
+    {
+      "name": "合作卡详情",
+      "pathName": "packages/member/mip-cooperation/detail/index"
+    },
+    {
+      "name": "编辑合作卡",
+      "pathName": "packages/member/mip-cooperation/editor/index"
+    },
+    {
+      "name": "超级案例",
+      "pathName": "packages/member/mip-cases/list/index"
+    },
+    {
+      "name": "超级案例详情",
+      "pathName": "packages/member/mip-cases/detail/index"
+    },
+    {
+      "name": "编辑超级案例",
+      "pathName": "packages/member/mip-cases/editor/index"
+    },
+    {
+      "name": "成长记录",
+      "pathName": "packages/member/mip-growth/index"
+    },
+    {
+      "name": "消息",
+      "pathName": "packages/member/mip-notifications/index"
+    },
+    {
+      "name": "收到的互动",
+      "pathName": "packages/member/mip-received/index"
+    },
+    {
+      "name": "AI 草稿",
+      "pathName": "packages/member/mip-ai/index"
     },
     {
       "name": "我的订单",
@@ -85,14 +145,6 @@
       "pathName": "packages/member/payment-result/index"
     },
     {
-      "name": "我的活动凭证",
-      "pathName": "packages/member/registrations/index"
-    },
-    {
-      "name": "消息通知",
-      "pathName": "packages/member/notifications/index"
-    },
-    {
       "name": "会员权益说明",
       "pathName": "packages/member/benefits/index"
     },
@@ -101,16 +153,32 @@
       "pathName": "packages/member/privacy/index"
     },
     {
+      "name": "用户协议",
+      "pathName": "packages/member/user-agreement/index"
+    },
+    {
       "name": "帮助与客服",
       "pathName": "packages/member/help/index"
     },
     {
-      "name": "关于同行会",
+      "name": "关于 MIP",
       "pathName": "packages/member/about/index"
     },
     {
       "name": "运营工作台",
       "pathName": "packages/admin/dashboard/index"
+    },
+    {
+      "name": "公告管理",
+      "pathName": "packages/admin/announcements/index"
+    },
+    {
+      "name": "公告编辑",
+      "pathName": "packages/admin/announcement-editor/index"
+    },
+    {
+      "name": "城市分会",
+      "pathName": "packages/admin/branches/index"
     },
     {
       "name": "活动管理",
@@ -133,6 +201,14 @@
       "pathName": "packages/admin/event-album/index"
     },
     {
+      "name": "活动反馈",
+      "pathName": "packages/admin/event-feedback/index"
+    },
+    {
+      "name": "导出与现场资料",
+      "pathName": "packages/admin/exports/index"
+    },
+    {
       "name": "活动报名名单",
       "pathName": "packages/admin/event-registrations/index"
     },
@@ -145,20 +221,28 @@
       "pathName": "packages/admin/orders/index"
     },
     {
-      "name": "统一异常中心",
+      "name": "机会管理",
+      "pathName": "packages/admin/opportunities/index"
+    },
+    {
+      "name": "成长等级",
+      "pathName": "packages/admin/growth-levels/index"
+    },
+    {
+      "name": "奖励规则",
+      "pathName": "packages/admin/growth-rules/index"
+    },
+    {
+      "name": "成长流水",
+      "pathName": "packages/admin/growth-entries/index"
+    },
+    {
+      "name": "举报审核",
+      "pathName": "packages/admin/community-reports/index"
+    },
+    {
+      "name": "异常中心",
       "pathName": "packages/admin/exceptions/index"
-    },
-    {
-      "name": "公告管理",
-      "pathName": "packages/admin/announcements/index"
-    },
-    {
-      "name": "公告编辑",
-      "pathName": "packages/admin/announcement-editor/index"
-    },
-    {
-      "name": "成员举报",
-      "pathName": "packages/admin/reports/index"
     },
     {
       "name": "运营审计",

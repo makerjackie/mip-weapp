@@ -1,0 +1,40 @@
+<view id="mip-case-editor-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法编辑案例" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit /></view>
+  <block wx:else>
+    <view class="text-[length:36rpx] font-bold">{{id ? '编辑案例' : '发布案例'}}</view>
+    <view wx:if="{{aiDraftLoaded}}" class="mt-4 rounded-[14rpx] bg-brand-soft px-4 py-3 text-[length:23rpx] text-brand">已载入 AI 草稿，可继续修改后保存。</view>
+    <view class="mt-5 flex flex-col gap-4 rounded-[16rpx] bg-panel px-4 py-5">
+      <view><view class="mb-2 text-[length:23rpx] text-muted">项目名称</view><input class="box-border h-[80rpx] w-full max-w-full rounded-[12rpx] bg-panel-raised px-3 text-[length:25rpx]" value="{{projectName}}" maxlength="120" placeholder="填写项目名称" data-field="projectName" bindinput="updateText" /></view>
+      <view><view class="mb-2 text-[length:23rpx] text-muted">一句话说明</view><textarea class="box-border min-h-[140rpx] w-full max-w-full rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:25rpx]" value="{{summary}}" maxlength="240" placeholder="概括项目和结果" data-field="summary" bindinput="updateText" /></view>
+      <view><view class="mb-2 text-[length:23rpx] text-muted">职责</view><textarea class="box-border min-h-[160rpx] w-full max-w-full rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:25rpx]" value="{{responsibility}}" maxlength="500" placeholder="说明你负责的工作" data-field="responsibility" bindinput="updateText" /></view>
+      <view><view class="mb-2 text-[length:23rpx] text-muted">详细说明</view><textarea class="box-border min-h-[280rpx] w-full max-w-full rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:25rpx]" value="{{description}}" maxlength="8000" placeholder="说明背景、过程和结果" data-field="description" bindinput="updateText" /></view>
+    </view>
+    <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="text-[length:26rpx] font-semibold">时间和分类</view><view class="mt-3 grid grid-cols-2 gap-2"><picker mode="date" value="{{startedOn}}" bindchange="changeStart"><view class="rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]">开始：{{startedOn || '未填写'}}</view></picker><picker mode="date" value="{{endedOn}}" bindchange="changeEnd"><view class="rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]">结束：{{endedOn || '未填写'}}</view></picker></view><view class="mt-2 text-right text-[length:21rpx] text-muted" bind:tap="clearDates">清除日期</view>
+      <picker mode="selector" range="{{cityOptions}}" range-key="label" value="{{cityIndex}}" bindchange="changeCity"><view class="mt-3 flex h-[80rpx] items-center justify-between rounded-[12rpx] bg-panel-raised px-3 text-[length:24rpx]"><text>主营城市：{{cityOptions[cityIndex].label}}</text><t-icon name="chevron-right" size="30rpx" color="var(--color-muted)" /></view></picker>
+      <picker mode="selector" range="{{industryOptions}}" range-key="label" value="{{industryIndex}}" bindchange="changeIndustry"><view class="mt-3 flex h-[80rpx] items-center justify-between rounded-[12rpx] bg-panel-raised px-3 text-[length:24rpx]"><text>行业：{{industryOptions[industryIndex].label}}</text><t-icon name="chevron-right" size="30rpx" color="var(--color-muted)" /></view></picker>
+      <view class="mt-3"><view class="mb-2 text-[length:23rpx] text-muted">案例类型</view><input class="box-border h-[80rpx] w-full max-w-full rounded-[12rpx] bg-panel-raised px-3 text-[length:25rpx]" value="{{caseType}}" maxlength="80" placeholder="例如品牌升级、产品策划" data-field="caseType" bindinput="updateText" /></view>
+    </view>
+    <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="text-[length:26rpx] font-semibold">案例封面</view>
+      <image wx:if="{{coverUrl}}" class="mt-3 h-[320rpx] w-full rounded-[12rpx] bg-panel-raised" mode="aspectFill" src="{{coverUrl}}" />
+      <view wx:else class="mt-3 flex h-[240rpx] items-center justify-center rounded-[12rpx] bg-panel-raised text-[length:23rpx] text-muted">暂未上传封面</view>
+      <view class="mt-3"><t-button block variant="outline" loading="{{coverUploading}}" disabled="{{saving || mediaUploading}}" bind:tap="chooseCover">{{coverUrl ? '更换封面' : '上传封面'}}</t-button></view>
+    </view>
+    <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="flex items-center justify-between"><view class="text-[length:26rpx] font-semibold">展示素材</view><view class="text-[length:22rpx] text-muted">{{mediaAssets.length}} / 12</view></view>
+      <view wx:if="{{mediaAssets.length}}" class="mt-3 grid grid-cols-3 gap-2">
+        <view wx:for="{{mediaAssets}}" wx:key="assetId" class="relative overflow-hidden rounded-[10rpx] bg-panel-raised">
+          <image class="h-[180rpx] w-full" mode="aspectFill" src="{{item.imageUrl}}" />
+          <view class="flex min-h-[64rpx] items-center justify-center text-[length:21rpx] text-muted" data-asset-id="{{item.assetId}}" bind:tap="removeMedia">移除</view>
+        </view>
+      </view>
+      <view wx:else class="mt-3 rounded-[12rpx] bg-panel-raised px-4 py-6 text-center text-[length:23rpx] text-muted">暂未上传展示素材</view>
+      <view class="mt-3"><t-button block variant="outline" loading="{{mediaUploading}}" disabled="{{saving || coverUploading || mediaAssets.length >= 12}}" bind:tap="addMedia">添加展示素材</t-button></view>
+    </view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] border border-danger px-4 py-3 text-[length:22rpx] text-danger">{{message}}</view>
+    <view class="mt-5 flex gap-3"><t-button class="min-w-0 flex-1" block size="large" variant="outline" theme="primary" disabled="{{saving || coverUploading || mediaUploading}}" bind:tap="saveDraft">保存草稿</t-button><t-button class="min-w-0 flex-1" block size="large" theme="primary" loading="{{saving}}" disabled="{{coverUploading || mediaUploading}}" bind:tap="publish">发布</t-button></view>
+    <app-page-exit label="取消" />
+  </block>
+</view>

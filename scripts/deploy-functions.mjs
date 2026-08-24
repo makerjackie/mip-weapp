@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
-import { createHmac, randomBytes } from 'node:crypto'
+import { randomBytes } from 'node:crypto'
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 import {
@@ -10,103 +11,298 @@ import {
   cloudFunctionResult,
   loadCaseEnv,
 } from './lib/example-cloudbase.mjs'
-import { assertMembershipApiActivityDomainPackage } from './lib/membership-api-package.mjs'
+import { createMipCoreFunctionManifest } from './lib/mip-function-manifest.mjs'
+import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
+import { resolveMipStableSecrets } from './lib/mip-local-secrets.mjs'
 import {
-  MIP_FUNCTION_SOURCES,
-  resolveMipFunctionNames,
-} from './lib/mip-function-names.mjs'
-import {
+  assertRuntimeAccountClaimable,
   assertRuntimePrivilegesExact,
   buildRuntimeGrantStatements,
+  buildRuntimeRevokeStatements,
   parseGrantee,
   parsePrivilegeRows,
   RUNTIME_TABLE_PRIVILEGES,
+  runtimeUserForEnvironment,
 } from './lib/mysql-privilege-assert.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
-const repositoryRoot = path.resolve(root, '..', '..')
 const env = loadCaseEnv(root)
-const envId = env.CLOUDBASE_ENV_ID
-const appId = env.MINI_PROGRAM_APP_ID
+const envId = String(env.CLOUDBASE_ENV_ID || '').trim()
+const appId = String(env.MINI_PROGRAM_APP_ID || '').trim()
 const functionNames = resolveMipFunctionNames(env)
-const databaseRuntimeUser = String(env.MEMBERSHIP_DB_RUNTIME_USER || 'mip_runtime').trim()
-let connectionUri = env.MEMBERSHIP_DB_CONNECTION_URI
-const paymentMode = env.MEMBERSHIP_PAYMENT_MODE || 'disabled'
-const subscribeTemplatesJson = String(env.MEMBERSHIP_SUBSCRIBE_TEMPLATES_JSON || '').trim()
-const miniprogramState = ['formal', 'trial', 'developer'].includes(env.MEMBERSHIP_MINIPROGRAM_STATE)
-  ? env.MEMBERSHIP_MINIPROGRAM_STATE
-  : 'trial'
-// Content safety must not depend on payment mode; every deployed function is production stage.
-const deploymentStage = 'production'
-const allowedAppIds = String(env.MEMBERSHIP_ALLOWED_APP_IDS || appId || '')
+const manifest = createMipCoreFunctionManifest(functionNames)
+const confirmedEnv = argumentValue('--confirm-env=')
+const replaceLegacyRuntime = process.argv.includes('--replace-legacy-runtime')
+const paymentMode = String(env.MIP_PAYMENT_MODE || 'disabled').trim().toLowerCase()
+const catalogStage = String(env.MIP_CATALOG_STAGE || 'TEST').trim().toUpperCase()
+const unionIdRebindEnabled = String(env.MIP_UNION_ID_REBIND_ENABLED || 'false').trim().toLowerCase() === 'true'
+const exportMaxRows = Number(env.MIP_EXPORT_MAX_ROWS || 5_000)
+const exportMaxBytes = Number(env.MIP_EXPORT_MAX_BYTES || 8 * 1024 * 1024)
+const databaseRuntimeUser = String(env.MIP_DB_RUNTIME_USER || runtimeUserForEnvironment(envId)).trim()
+const confirmedRuntimeUser = argumentValue('--confirm-runtime-user=')
+const allowedAppIds = String(env.MIP_ALLOWED_APP_IDS || appId)
   .split(',')
   .map(value => value.trim())
   .filter(Boolean)
-const confirmedEnv = process.argv.find(value => value.startsWith('--confirm-env='))?.slice('--confirm-env='.length)
-const replaceLegacyRuntime = process.argv.includes('--replace-legacy-runtime')
-// Optional signed maintenance path; never print the secret value.
-const maintenanceSecret = typeof env.MEMBERSHIP_MAINTENANCE_SECRET === 'string'
-  && env.MEMBERSHIP_MAINTENANCE_SECRET.length >= 32
-  ? env.MEMBERSHIP_MAINTENANCE_SECRET
-  : null
 
-if (!/^mip_[a-z0-9_]{0,23}$/.test(databaseRuntimeUser)) {
-  throw new Error('MEMBERSHIP_DB_RUNTIME_USER must be a dedicated lowercase mip_* MySQL user')
-}
-
-if (!envId || !appId || confirmedEnv !== envId) {
-  throw new Error('Deployment requires EnvID/AppID and --confirm-env=<exact CLOUDBASE_ENV_ID>')
+if (!envId || confirmedEnv !== envId || !appId) {
+  throw new Error('MIP deployment requires AppID and --confirm-env=<exact CLOUDBASE_ENV_ID>')
 }
 if (!allowedAppIds.includes(appId) || allowedAppIds.some(value => !/^wx[0-9a-f]{16}$/i.test(value))) {
-  throw new Error('MEMBERSHIP_ALLOWED_APP_IDS must contain only valid AppIDs and include MINI_PROGRAM_APP_ID')
+  throw new Error('MIP_ALLOWED_APP_IDS must contain valid AppIDs and include MINI_PROGRAM_APP_ID')
 }
 if (!['disabled', 'test', 'live'].includes(paymentMode)) {
-  throw new Error('MEMBERSHIP_PAYMENT_MODE must be disabled, test, or live')
+  throw new Error('MIP_PAYMENT_MODE must be disabled, test, or live')
 }
-if (subscribeTemplatesJson) {
-  const configured = JSON.parse(subscribeTemplatesJson)
-  if (!configured || typeof configured !== 'object' || Array.isArray(configured)) {
-    throw new Error('MEMBERSHIP_SUBSCRIBE_TEMPLATES_JSON must be a JSON object')
-  }
-  if (Object.keys(configured).length > 5) {
-    throw new Error('WeChat allows at most five template IDs in one subscription request')
-  }
+if (!['TEST', 'LIVE'].includes(catalogStage)) {
+  throw new Error('MIP_CATALOG_STAGE must be TEST or LIVE')
 }
-if (paymentMode === 'live' && !process.argv.includes('--confirm-live')) {
-  throw new Error('Live deployment requires --confirm-live')
+if ((paymentMode === 'live' || catalogStage === 'LIVE') && !process.argv.includes('--confirm-live')) {
+  throw new Error('Live payment or catalog deployment requires --confirm-live')
 }
-const target = bindAndRequireMysqlEnvironment(root, envId)
+if (catalogStage === 'LIVE' && paymentMode !== 'live') {
+  throw new Error('LIVE catalog requires MIP_PAYMENT_MODE=live')
+}
+if (databaseRuntimeUser !== runtimeUserForEnvironment(envId)
+  || confirmedRuntimeUser !== databaseRuntimeUser) {
+  throw new Error('MIP deployment requires the environment-scoped runtime user and --confirm-runtime-user=<exact user>')
+}
+if (unionIdRebindEnabled && String(env.MIP_UNION_IDENTITY_PEPPER || '').length < 32) {
+  throw new Error('MIP_UNION_ID_REBIND_ENABLED requires the migration source MIP_UNION_IDENTITY_PEPPER')
+}
+if (!Number.isInteger(exportMaxRows) || exportMaxRows < 100 || exportMaxRows > 20_000) {
+  throw new Error('MIP_EXPORT_MAX_ROWS must be an integer from 100 to 20000')
+}
+if (!Number.isInteger(exportMaxBytes) || exportMaxBytes < 1_048_576 || exportMaxBytes > 10_485_760) {
+  throw new Error('MIP_EXPORT_MAX_BYTES must be an integer from 1048576 to 10485760')
+}
 
-// Prove membership-api is self-contained before any CloudBase upload.
-// CloudBase uploads only the function directory; keep activity-domain vendored inside membership-api.
-assertMembershipApiActivityDomainPackage({
-  caseRoot: root,
-  repositoryRoot,
+const sourceRoot = path.join(root, 'cloudfunctions')
+for (const spec of manifest) {
+  const source = path.join(sourceRoot, spec.source)
+  if (!fs.existsSync(path.join(source, 'index.js')) || !fs.existsSync(path.join(source, 'package.json'))) {
+    throw new Error(`Direct MIP Cloud Function source is incomplete: ${spec.source}`)
+  }
+  if (!spec.source.startsWith('mip-') || !spec.name.startsWith('mip-')) {
+    throw new Error('Only direct mip-* sources and targets may be deployed')
+  }
+}
+
+verifyLocalOpenApiDeclarations()
+const target = bindAndRequireMysqlEnvironment(root, envId)
+const existingDetails = new Map(manifest.map(spec => [spec.role, existingFunctionDetail(spec.name)]))
+
+const requiredTables = Object.keys(RUNTIME_TABLE_PRIVILEGES)
+assertRequiredTablesExist(requiredTables)
+
+const vpcId = String(env.MIP_DB_VPC_ID || findString(target.mysql, ['vpcid', 'vpc_id']) || '').trim()
+const subnetId = String(env.MIP_DB_SUBNET_ID || findString(target.mysql, ['subnetid', 'subnet_id']) || '').trim()
+if (!vpcId || !subnetId) {
+  throw new Error('CloudBase MySQL VPC/subnet is unavailable; configure MIP_DB_VPC_ID and MIP_DB_SUBNET_ID')
+}
+
+let connectionUri = configuredOrExistingValue('MIP_DB_CONNECTION_URI', existingDetails)
+let credentialSource = connectionUri ? (env.MIP_DB_CONNECTION_URI ? 'configured' : 'existing-mip-function') : ''
+if (connectionUri && !validMysqlUri(connectionUri)) {
+  throw new Error('MIP_DB_CONNECTION_URI is not a complete MySQL URI')
+}
+
+const targetSchema = String(findString(target.mysql, ['schema', 'database', 'dbname']) || '').trim()
+if (!/^[\w-]+$/.test(targetSchema)) {
+  throw new Error('CloudBase MySQL schema could not be resolved safely')
+}
+const configuredSchema = connectionUri
+  ? decodeURIComponent(new URL(connectionUri).pathname.replace(/^\//, ''))
+  : targetSchema
+if (configuredSchema !== targetSchema) {
+  throw new Error('MIP runtime connection must use the confirmed CloudBase MySQL schema')
+}
+const runtimeAccount = parseGrantee(databaseRuntimeUser, '%')
+const accountSnapshot = loadRuntimeAccountSnapshot(runtimeAccount)
+const accountClaim = assertRuntimeAccountClaimable({
+  ...accountSnapshot,
+  schema: configuredSchema,
+  grantee: runtimeAccount,
+  allowExisting: Boolean(connectionUri),
 })
 
-function runMysqlStatements(statements) {
-  for (const sql of statements) {
-    const response = callCloudbase(root, 'manageMysqlDatabase', {
-      action: 'runStatement',
-      sql,
+if (!connectionUri) {
+  const address = String(findString(target.mysql, ['privatenetaddress', 'private_net_address']) || '').trim()
+  if (!/^[a-z0-9.-]+:\d+$/i.test(address)) {
+    throw new Error('CloudBase MySQL private endpoint could not be resolved safely')
+  }
+  const password = randomBytes(32).toString('base64url')
+  runMysqlStatements([
+    `CREATE USER ${runtimeAccount} IDENTIFIED BY '${password}'`,
+  ])
+  connectionUri = `mysql://${encodeURIComponent(databaseRuntimeUser)}:${encodeURIComponent(password)}@${address}/${encodeURIComponent(targetSchema)}`
+  credentialSource = 'provisioned-least-privilege'
+}
+
+const parsedConnection = new URL(connectionUri)
+const runtimeSchema = decodeURIComponent(parsedConnection.pathname.replace(/^\//, ''))
+const runtimeUserName = decodeURIComponent(parsedConnection.username)
+if (parsedConnection.protocol !== 'mysql:'
+  || !parsedConnection.hostname
+  || !parsedConnection.password
+  || !/^[\w-]+$/.test(runtimeSchema)
+  || !/^[\w.-]+$/.test(runtimeUserName)) {
+  throw new Error('MIP runtime MySQL connection is incomplete')
+}
+if (runtimeUserName !== databaseRuntimeUser) {
+  throw new Error('MIP_DB_CONNECTION_URI must use the dedicated MIP_DB_RUNTIME_USER account')
+}
+
+runMysqlStatements([
+  ...buildRuntimeRevokeStatements(runtimeSchema, runtimeAccount, accountClaim.tableRows),
+  ...buildRuntimeGrantStatements(runtimeSchema, runtimeAccount),
+])
+assertExactRuntimePrivileges(runtimeSchema, runtimeAccount)
+console.log('[mip-cloud-deploy] exact mip_* runtime grants verified')
+
+const stableSecretValues = resolveMipStableSecrets({
+  localEnv: env,
+  deployedEnvironments: [...existingDetails.values()].filter(Boolean).map(environmentVariables),
+  generate: () => randomBytes(48).toString('base64url'),
+}).values
+const secrets = Object.freeze({
+  identityPepper: stableSecretValues.MIP_IDENTITY_PEPPER,
+  unionIdentityPepper: stableSecretValues.MIP_UNION_IDENTITY_PEPPER,
+  mediaScope: stableSecretValues.MIP_MEDIA_SCOPE_SECRET,
+  mediaMaintenanceHmac: stableSecretValues.MIP_MEDIA_MAINTENANCE_HMAC_SECRET,
+  phoneEncryption: stableSecretValues.MIP_PHONE_ENCRYPTION_KEY,
+  eventToken: stableSecretValues.MIP_EVENT_TOKEN_SECRET,
+  ledger: stableSecretValues.MIP_LEDGER_SECRET,
+  growthHmac: stableSecretValues.MIP_GROWTH_HMAC_SECRET,
+  notificationHmac: stableSecretValues.MIP_NOTIFICATION_HMAC_SECRET,
+  outboxHmac: stableSecretValues.MIP_OUTBOX_HMAC_SECRET,
+  refundWorkerHmac: stableSecretValues.MIP_REFUND_WORKER_HMAC_SECRET,
+  notificationEncryption: stableSecretValues.MIP_NOTIFICATION_ENCRYPTION_KEY,
+  aiHmac: stableSecretValues.MIP_AI_HMAC_SECRET,
+  aiStorage: stableSecretValues.MIP_AI_STORAGE_KEY,
+})
+
+const subscribeTemplatesJson = normalizedJsonObject(env.MIP_SUBSCRIBE_TEMPLATES_JSON, 'MIP_SUBSCRIBE_TEMPLATES_JSON')
+const agreementsJson = normalizedOptionalJsonArray(env.MIP_AGREEMENTS_JSON, 'MIP_AGREEMENTS_JSON')
+const miniprogramState = ['formal', 'trial', 'developer'].includes(env.MIP_MINIPROGRAM_STATE)
+  ? env.MIP_MINIPROGRAM_STATE
+  : 'trial'
+const aiProviderFunction = String(env.MIP_AI_PROVIDER_FUNCTION_NAME || '').trim()
+if (aiProviderFunction && !/^[a-z][a-z0-9-]{0,59}$/.test(aiProviderFunction)) {
+  throw new Error('MIP_AI_PROVIDER_FUNCTION_NAME is invalid')
+}
+const aiDraftTtlHours = Number(env.MIP_AI_DRAFT_TTL_HOURS || 72)
+if (!Number.isInteger(aiDraftTtlHours) || aiDraftTtlHours < 1 || aiDraftTtlHours > 168) {
+  throw new Error('MIP_AI_DRAFT_TTL_HOURS must be an integer from 1 to 168')
+}
+
+const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mip-core-functions-'))
+const deployed = []
+try {
+  for (const spec of manifest) {
+    fs.cpSync(path.join(sourceRoot, spec.source), path.join(stagingRoot, spec.name), {
+      recursive: true,
+      filter: source => path.basename(source) !== 'node_modules',
+    })
+  }
+
+  for (const spec of manifest) {
+    const envVariables = environmentForRole(spec.role, {
+      agreementsJson,
+      aiDraftTtlHours,
+      aiProviderFunction,
+      allowedAppIds,
+      catalogStage,
+      connectionUri,
+      exportMaxBytes,
+      exportMaxRows,
+      functionNames,
+      miniprogramState,
+      paymentMode,
+      secrets,
+      subscribeTemplatesJson,
+      unionIdRebindEnabled,
+    })
+    await ensureCompatibleRuntime(spec.name)
+    callCloudbase(root, 'manageFunctions', {
+      action: 'createFunction',
+      functionRootPath: stagingRoot,
+      force: true,
+      func: {
+        name: spec.name,
+        type: 'Event',
+        runtime: 'Nodejs20.19',
+        handler: 'index.main',
+        timeout: spec.timeout,
+        envVariables,
+        vpc: { vpcId, subnetId },
+        isWaitInstall: true,
+      },
     }, 300000)
-    if (response?.success === false) {
-      throw new Error('CloudBase MySQL statement failed during runtime-account convergence')
-    }
+    await waitForFunctionActive(spec.name)
+    callCloudbase(root, 'manageFunctions', {
+      action: 'updateFunctionCode',
+      functionName: spec.name,
+      functionRootPath: stagingRoot,
+      force: true,
+    }, 300000)
+    const detail = await waitForFunctionActive(spec.name)
+    assertEnvironmentReadback(spec.name, envVariables, detail)
+    assertHealthy(spec.name)
+    deployed.push(spec.name)
+    console.log(`[mip-cloud-deploy] verified ${spec.name}`)
+  }
+}
+finally {
+  fs.rmSync(stagingRoot, { recursive: true, force: true })
+}
+
+removeForbiddenTimer(functionNames.notification, 'mip-notification-every-5m')
+removeForbiddenTimer(functionNames.outbox, 'mip-outbox-every-5m')
+for (const spec of manifest) {
+  if (spec.clientInvokable) {
+    enableAuthenticatedClientInvocation(spec.name)
+  }
+  else {
+    disableClientInvocation(spec.name)
   }
 }
 
-function findValue(value, names) {
+const artifact = {
+  environmentVerified: true,
+  directMipSourcesOnly: true,
+  persistence: 'cloudbase-mysql',
+  credentialSource,
+  paymentMode,
+  catalogStage,
+  deployed,
+  protectedFunctions: manifest.filter(item => !item.clientInvokable).map(item => item.name),
+  workerTimersVerifiedAbsent: true,
+  deployedAt: new Date().toISOString(),
+}
+fs.mkdirSync(path.join(root, '.tmp'), { recursive: true })
+fs.writeFileSync(
+  path.join(root, '.tmp', 'deploy-functions-result.json'),
+  `${JSON.stringify(artifact, null, 2)}\n`,
+)
+console.log('[mip-cloud-deploy] deployment verified; no AppID, environment ID, database URI, or secret was persisted')
+
+function argumentValue(prefix) {
+  return process.argv.find(value => value.startsWith(prefix))?.slice(prefix.length)
+}
+
+function findString(value, names) {
   if (!value || typeof value !== 'object') {
     return null
   }
-  for (const [name, child] of Object.entries(value)) {
-    if (names.has(name.toLowerCase()) && typeof child === 'string' && child.trim()) {
+  const expected = new Set(names.map(name => name.toLowerCase()))
+  for (const [key, child] of Object.entries(value)) {
+    if (expected.has(key.toLowerCase()) && typeof child === 'string' && child.trim()) {
       return child.trim()
     }
   }
   for (const child of Object.values(value)) {
-    const found = findValue(child, names)
+    const found = findString(child, names)
     if (found) {
       return found
     }
@@ -114,51 +310,129 @@ function findValue(value, names) {
   return null
 }
 
-const vpcId = env.MEMBERSHIP_DB_VPC_ID || findValue(target.mysql, new Set(['vpcid', 'vpc_id']))
-const subnetId = env.MEMBERSHIP_DB_SUBNET_ID || findValue(target.mysql, new Set(['subnetid', 'subnet_id']))
-if (!vpcId || !subnetId) {
-  throw new Error('MySQL VPC/subnet could not be resolved; configure MEMBERSHIP_DB_VPC_ID and MEMBERSHIP_DB_SUBNET_ID')
+function collectFieldValues(value, names, output = []) {
+  if (!value || typeof value !== 'object') {
+    return output
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectFieldValues(item, names, output)
+    }
+    return output
+  }
+  const expected = new Set(names.map(name => name.toLowerCase()))
+  for (const [key, child] of Object.entries(value)) {
+    if (expected.has(key.toLowerCase()) && typeof child === 'string') {
+      output.push(child)
+    }
+    else if (child && typeof child === 'object') {
+      collectFieldValues(child, names, output)
+    }
+  }
+  return output
 }
 
-const sourceFunctionRootPath = path.join(root, 'cloudfunctions')
-const functionRootPath = path.join(root, '.tmp', 'mip-core-function-source')
-const coreFunctionSpecs = [
-  { role: 'api', source: MIP_FUNCTION_SOURCES.api, name: functionNames.api, timeout: 20 },
-  { role: 'admin', source: MIP_FUNCTION_SOURCES.admin, name: functionNames.admin, timeout: 20 },
-  { role: 'ledger', source: MIP_FUNCTION_SOURCES.ledger, name: functionNames.ledger, timeout: 20 },
-  { role: 'notification', source: MIP_FUNCTION_SOURCES.notification, name: functionNames.notification, timeout: 60 },
-]
-const deployed = []
+function runMysqlStatements(statements) {
+  for (const sql of statements) {
+    const result = callCloudbase(root, 'manageMysqlDatabase', {
+      action: 'runStatement',
+      sql,
+    }, 300000)
+    if (result?.success === false) {
+      throw new Error('CloudBase MySQL statement failed while converging the MIP runtime account')
+    }
+  }
+}
+
+function assertRequiredTablesExist(tableNames) {
+  const quoted = tableNames.map(name => `'${name.replaceAll('\'', '\'\'')}'`).join(', ')
+  const result = callCloudbase(root, 'queryMysqlDatabase', {
+    action: 'runQuery',
+    sql: `SELECT table_name AS tableName FROM information_schema.tables
+      WHERE table_schema = DATABASE() AND table_name IN (${quoted})`,
+  })
+  const found = new Set(collectFieldValues(result, ['tableName', 'table_name']))
+  const missing = tableNames.filter(name => !found.has(name))
+  if (missing.length) {
+    throw new Error(`Apply the append-only MIP migrations before deploy; missing table ${missing[0]}`)
+  }
+}
+
+function loadRuntimeAccountSnapshot(account) {
+  const grantee = account.replaceAll('\'', '\'\'')
+  const tableRows = parsePrivilegeRows(callCloudbase(root, 'queryMysqlDatabase', {
+    action: 'runQuery',
+    sql: `SELECT table_schema AS tableSchema, table_name AS tableName,
+      privilege_type AS privilegeType, grantee
+      FROM information_schema.table_privileges
+      WHERE grantee = '${grantee}'`,
+  }))
+  const schemaRows = parsePrivilegeRows(callCloudbase(root, 'queryMysqlDatabase', {
+    action: 'runQuery',
+    sql: `SELECT table_schema AS tableSchema, privilege_type AS privilegeType, grantee
+      FROM information_schema.schema_privileges
+      WHERE grantee = '${grantee}'`,
+  }))
+  const userRows = parsePrivilegeRows(callCloudbase(root, 'queryMysqlDatabase', {
+    action: 'runQuery',
+    sql: `SELECT privilege_type AS privilegeType, grantee
+      FROM information_schema.user_privileges
+      WHERE grantee = '${grantee}'`,
+  }))
+  return { tableRows, schemaRows, userRows }
+}
+
+function assertExactRuntimePrivileges(schema, account) {
+  const schemaLiteral = schema.replaceAll('\'', '\'\'')
+  const granteeLiteral = account.replaceAll('\'', '\'\'')
+  const tableProbe = callCloudbase(root, 'queryMysqlDatabase', {
+    action: 'runQuery',
+    sql: `SELECT table_name AS tableName, privilege_type AS privilegeType, grantee
+      FROM information_schema.table_privileges
+      WHERE table_schema = '${schemaLiteral}' AND grantee = '${granteeLiteral}'`,
+  })
+  const schemaProbe = callCloudbase(root, 'queryMysqlDatabase', {
+    action: 'runQuery',
+    sql: `SELECT table_schema AS tableSchema, privilege_type AS privilegeType, grantee
+      FROM information_schema.schema_privileges
+      WHERE table_schema = '${schemaLiteral}' AND grantee = '${granteeLiteral}'`,
+  })
+  const userProbe = callCloudbase(root, 'queryMysqlDatabase', {
+    action: 'runQuery',
+    sql: `SELECT privilege_type AS privilegeType, grantee
+      FROM information_schema.user_privileges WHERE grantee = '${granteeLiteral}'`,
+  })
+  assertRuntimePrivilegesExact({
+    tableRows: parsePrivilegeRows(tableProbe),
+    schemaRows: parsePrivilegeRows(schemaProbe),
+    userRows: parsePrivilegeRows(userProbe),
+    requiredMap: RUNTIME_TABLE_PRIVILEGES,
+    grantee: account,
+  })
+}
 
 function existingFunctionDetail(functionName) {
   try {
-    // queryFunctions/getFunctionDetail includes CodeInfo and is truncated by
-    // the MCP transport once a deployed package grows beyond 64 KiB. The SCF
-    // management API supports ShowCode=FALSE and returns the same runtime,
-    // environment and VPC facts without transporting source code or secrets
-    // through logs.
     return callCloudbase(root, 'callCloudApi', {
       service: 'scf',
       action: 'GetFunction',
-      params: {
-        FunctionName: functionName,
-        Namespace: envId,
-        ShowCode: 'FALSE',
-      },
+      params: { FunctionName: functionName, Namespace: envId, ShowCode: 'FALSE' },
     })
   }
   catch (error) {
-    const message = String(error?.message || error)
-    if (/not found|not exist|resourcenotfound|function.*不存在|未找到指定.*function|请创建后再试/i.test(message)) {
+    if (/not found|not exist|resourcenotfound|不存在|未找到/i.test(String(error?.message || error))) {
       return null
     }
     throw error
   }
 }
 
+function functionDetail(value) {
+  return value?.data?.functionDetail || value?.Response || value?.data || value
+}
+
 function environmentVariables(detail) {
-  const entries = detail?.data?.functionDetail?.Environment?.Variables
-    || detail?.Environment?.Variables
+  const entries = functionDetail(detail)?.Environment?.Variables
   if (!Array.isArray(entries)) {
     return {}
   }
@@ -167,128 +441,147 @@ function environmentVariables(detail) {
     .map(item => [item.Key, item.Value]))
 }
 
-function validConnectionUri(value) {
+function configuredOrExistingValue(key, details) {
+  const configured = typeof env[key] === 'string' ? env[key].trim() : ''
+  if (configured) {
+    return configured
+  }
+  const values = new Set([...details.values()]
+    .filter(Boolean)
+    .map(detail => environmentVariables(detail)[key])
+    .filter(value => typeof value === 'string' && value.trim()))
+  if (values.size > 1) {
+    throw new Error(`Existing MIP functions disagree on ${key}; configure it explicitly before deployment`)
+  }
+  return [...values][0] || ''
+}
+
+function validMysqlUri(value) {
   try {
     const parsed = new URL(value)
-    return parsed.protocol === 'mysql:' && Boolean(parsed.hostname && parsed.username && parsed.password && parsed.pathname !== '/')
+    return parsed.protocol === 'mysql:'
+      && Boolean(parsed.hostname && parsed.username && parsed.password && parsed.pathname !== '/')
   }
   catch {
     return false
   }
 }
 
-let credentialSource = 'configured'
-const existingMembershipApi = existingFunctionDetail(functionNames.api)
-if (!validConnectionUri(connectionUri) && existingMembershipApi) {
-  const current = existingMembershipApi
-  const deployedUri = environmentVariables(current).MEMBERSHIP_DB_CONNECTION_URI
-  if (validConnectionUri(deployedUri)) {
-    connectionUri = deployedUri
-    credentialSource = 'existing-function'
+function normalizedJsonObject(value, key) {
+  if (!String(value || '').trim()) {
+    return '{}'
   }
-}
-
-if (!validConnectionUri(connectionUri)) {
-  const schema = findValue(target.mysql, new Set(['schema']))
-  const address = findValue(target.mysql, new Set(['privatenetaddress', 'private_net_address']))
-  if (!schema || !/^[\w-]+$/.test(schema) || !address || !/^[a-z0-9.-]+:\d+$/i.test(address)) {
-    throw new Error('CloudBase MySQL private endpoint or schema could not be resolved safely')
+  const parsed = JSON.parse(value)
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new Error(`${key} must be a JSON object`)
   }
-  const runtimeUser = databaseRuntimeUser
-  const runtimePassword = randomBytes(32).toString('base64url')
-  const account = parseGrantee(runtimeUser, '%')
-  // Exact table→privilege map. No schema ALL, no global DELETE, audit append-only.
-  // DCL is intentionally executed one statement at a time. CloudBase schema
-  // initialization can truncate long DCL arrays without surfacing a top-level
-  // error, which previously left the runtime account only partially granted.
-  runMysqlStatements([
-    `CREATE USER IF NOT EXISTS ${account} IDENTIFIED BY '${runtimePassword}'`,
-    `ALTER USER ${account} IDENTIFIED BY '${runtimePassword}'`,
-    `REVOKE ALL PRIVILEGES, GRANT OPTION FROM ${account}`,
-    ...buildRuntimeGrantStatements(schema, account),
-  ])
-  connectionUri = `mysql://${encodeURIComponent(runtimeUser)}:${encodeURIComponent(runtimePassword)}@${address}/${encodeURIComponent(schema)}`
-  credentialSource = 'provisioned-least-privilege'
-}
-
-const parsedConnection = new URL(connectionUri)
-if (parsedConnection.protocol !== 'mysql:' || !parsedConnection.hostname || !parsedConnection.username || !parsedConnection.password) {
-  throw new Error('A complete MySQL runtime connection could not be established')
-}
-
-/**
- * Runtime grants must be exact table→privilege pairs for the full RUNTIME_TABLE_PRIVILEGES map.
- * Reused accounts REVOKE ALL first so stale DELETE/ALL/extra grants cannot accumulate.
- * Probes use exact GRANTEE equality (never LIKE). Never print identity or connection strings.
- */
-const runtimeSchema = decodeURIComponent(parsedConnection.pathname.replace(/^\//, ''))
-const runtimeUserName = decodeURIComponent(parsedConnection.username)
-if (!runtimeSchema || !/^[\w-]+$/.test(runtimeSchema) || !runtimeUserName || !/^[\w.-]+$/.test(runtimeUserName)) {
-  throw new Error('Runtime MySQL schema/user could not be resolved safely for grants')
-}
-if (runtimeUserName !== databaseRuntimeUser) {
-  throw new Error('MEMBERSHIP_DB_CONNECTION_URI must use the dedicated MEMBERSHIP_DB_RUNTIME_USER account')
-}
-const runtimeAccount = parseGrantee(runtimeUserName, '%')
-const schemaSqlLiteral = runtimeSchema.replaceAll('\'', '\'\'')
-// MySQL stores GRANTEE as 'user'@'host'; equality probe must quote that literal exactly.
-const granteeSqlLiteral = runtimeAccount.replaceAll('\'', '\'\'')
-// Converge reused (and freshly provisioned) accounts to exact least privilege.
-runMysqlStatements([
-  `REVOKE ALL PRIVILEGES, GRANT OPTION FROM ${runtimeAccount}`,
-  ...buildRuntimeGrantStatements(runtimeSchema, runtimeAccount),
-])
-// Read-back table + schema + global privileges with exact grantee equality.
-const tablePrivilegeProbe = callCloudbase(root, 'queryMysqlDatabase', {
-  action: 'runQuery',
-  sql: `SELECT table_name AS tableName, privilege_type AS privilegeType, grantee AS grantee
-    FROM information_schema.table_privileges
-    WHERE table_schema = '${schemaSqlLiteral}'
-      AND grantee = '${granteeSqlLiteral}'`,
-})
-const schemaPrivilegeProbe = callCloudbase(root, 'queryMysqlDatabase', {
-  action: 'runQuery',
-  sql: `SELECT table_schema AS tableSchema, privilege_type AS privilegeType, grantee AS grantee
-    FROM information_schema.schema_privileges
-    WHERE table_schema = '${schemaSqlLiteral}'
-      AND grantee = '${granteeSqlLiteral}'`,
-})
-const userPrivilegeProbe = callCloudbase(root, 'queryMysqlDatabase', {
-  action: 'runQuery',
-  sql: `SELECT privilege_type AS privilegeType, grantee AS grantee
-    FROM information_schema.user_privileges
-    WHERE grantee = '${granteeSqlLiteral}'`,
-})
-assertRuntimePrivilegesExact({
-  tableRows: parsePrivilegeRows(tablePrivilegeProbe),
-  schemaRows: parsePrivilegeRows(schemaPrivilegeProbe),
-  userRows: parsePrivilegeRows(userPrivilegeProbe),
-  requiredMap: RUNTIME_TABLE_PRIVILEGES,
-  grantee: runtimeAccount,
-})
-// Confirm required runtime tables exist (schema apply must precede deploy).
-const runtimeTableNames = Object.keys(RUNTIME_TABLE_PRIVILEGES)
-const runtimeTables = callCloudbase(root, 'queryMysqlDatabase', {
-  action: 'runQuery',
-  sql: `SELECT table_name AS tableName FROM information_schema.tables
-    WHERE table_schema = DATABASE()
-      AND table_name IN (${runtimeTableNames.map(name => `'${name.replaceAll('\'', '\'\'')}'`).join(', ')})`,
-})
-const runtimeTablesText = JSON.stringify(runtimeTables)
-for (const table of runtimeTableNames) {
-  if (!runtimeTablesText.includes(table)) {
-    throw new Error(`Required table missing before deploy: ${table}`)
+  if (Object.keys(parsed).length > 5) {
+    throw new Error(`${key} may contain at most five subscription templates`)
   }
+  return JSON.stringify(parsed)
 }
-console.log('[cloud-deploy] exact minimal runtime grants verified (full map; no schema/global ALL; scoped DELETE only)')
 
-let ledgerSecret = randomBytes(32).toString('hex')
-const existingLedger = existingFunctionDetail(functionNames.ledger)
-if (existingLedger) {
-  const ledgerDetail = existingLedger
-  const deployedSecret = environmentVariables(ledgerDetail).MEMBERSHIP_LEDGER_SECRET
-  if (/^[0-9a-f]{64}$/i.test(deployedSecret || '')) {
-    ledgerSecret = deployedSecret
+function normalizedOptionalJsonArray(value, key) {
+  if (!String(value || '').trim()) {
+    return undefined
+  }
+  const parsed = JSON.parse(value)
+  if (!Array.isArray(parsed)) {
+    throw new TypeError(`${key} must be a JSON array`)
+  }
+  if (parsed.length === 0) {
+    return undefined
+  }
+  return JSON.stringify(parsed)
+}
+
+function environmentForRole(role, options) {
+  const shared = {
+    MIP_DB_CONNECTION_URI: options.connectionUri,
+    MIP_DB_POOL_SIZE: '4',
+    MIP_ALLOWED_APP_IDS: options.allowedAppIds.join(','),
+    ...(role === 'notification' ? {} : { MIP_IDENTITY_PEPPER: options.secrets.identityPepper }),
+    MIP_DEPLOYMENT_STAGE: 'production',
+  }
+  const agreementEnvironment = options.agreementsJson
+    ? { MIP_AGREEMENTS_JSON: options.agreementsJson }
+    : {}
+  const extra = {
+    identity: {
+      MIP_PHONE_ENCRYPTION_KEY: options.secrets.phoneEncryption,
+      ...agreementEnvironment,
+      MIP_UNION_IDENTITY_PEPPER: options.secrets.unionIdentityPepper,
+      MIP_UNION_ID_REBIND_ENABLED: options.unionIdRebindEnabled ? 'true' : 'false',
+    },
+    media: {
+      MIP_MEDIA_SCOPE_SECRET: options.secrets.mediaScope,
+      MIP_MEDIA_MAINTENANCE_HMAC_SECRET: options.secrets.mediaMaintenanceHmac,
+    },
+    events: {
+      MIP_EVENT_TOKEN_SECRET: options.secrets.eventToken,
+      MIP_MEDIA_SCOPE_SECRET: options.secrets.mediaScope,
+      MIP_PAYMENT_MODE: options.paymentMode,
+    },
+    opportunities: agreementEnvironment,
+    community: {},
+    commerce: {
+      ...agreementEnvironment,
+      MIP_CATALOG_STAGE: options.catalogStage,
+      MIP_PAYMENT_MODE: options.paymentMode,
+    },
+    admin: {
+      ...agreementEnvironment,
+      MIP_PHONE_ENCRYPTION_KEY: options.secrets.phoneEncryption,
+      MIP_REFUND_FUNCTION_NAME: options.functionNames.refund,
+      MIP_REFUND_WORKER_HMAC_SECRET: options.secrets.refundWorkerHmac,
+      MIP_EXPORT_MAX_ROWS: String(options.exportMaxRows),
+      MIP_EXPORT_MAX_BYTES: String(options.exportMaxBytes),
+    },
+    growth: { MIP_GROWTH_HMAC_SECRET: options.secrets.growthHmac },
+    ai: {
+      MIP_AI_HMAC_SECRET: options.secrets.aiHmac,
+      MIP_AI_STORAGE_KEY: options.secrets.aiStorage,
+      MIP_AI_DRAFT_TTL_HOURS: String(options.aiDraftTtlHours),
+      ...(options.aiProviderFunction ? { MIP_AI_PROVIDER_FUNCTION_NAME: options.aiProviderFunction } : {}),
+    },
+    notifications: {
+      MIP_NOTIFICATION_ENCRYPTION_KEY: options.secrets.notificationEncryption,
+      MIP_SUBSCRIBE_TEMPLATES_JSON: options.subscribeTemplatesJson,
+    },
+    ledger: { MIP_LEDGER_SECRET: options.secrets.ledger },
+    notification: {
+      MIP_NOTIFICATION_HMAC_SECRET: options.secrets.notificationHmac,
+      MIP_NOTIFICATION_ENCRYPTION_KEY: options.secrets.notificationEncryption,
+      MIP_SUBSCRIBE_TEMPLATES_JSON: options.subscribeTemplatesJson,
+      MIP_MINIPROGRAM_STATE: options.miniprogramState,
+    },
+    outbox: {
+      MIP_OUTBOX_HMAC_SECRET: options.secrets.outboxHmac,
+      MIP_NOTIFICATION_FUNCTION_NAME: options.functionNames.notification,
+      MIP_NOTIFICATION_HMAC_SECRET: options.secrets.notificationHmac,
+      MIP_GROWTH_FUNCTION_NAME: options.functionNames.growth,
+      MIP_GROWTH_HMAC_SECRET: options.secrets.growthHmac,
+    },
+  }
+  return { ...shared, ...extra[role] }
+}
+
+function verifyLocalOpenApiDeclarations() {
+  const expected = {
+    identity: ['phonenumber.getPhoneNumber'],
+    media: ['security.imgSecCheck'],
+    events: ['security.msgSecCheck', 'wxacode.getUnlimited'],
+    opportunities: ['security.msgSecCheck'],
+    notification: ['subscribeMessage.send'],
+  }
+  for (const [role, permissions] of Object.entries(expected)) {
+    const configPath = path.join(sourceRoot, manifest.find(item => item.role === role).source, 'config.json')
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
+    for (const permission of permissions) {
+      if (!config?.permissions?.openapi?.includes(permission)) {
+        throw new Error(`${role} config.json is missing ${permission}`)
+      }
+    }
   }
 }
 
@@ -297,8 +590,8 @@ const delay = milliseconds => new Promise(resolve => setTimeout(resolve, millise
 async function waitForFunctionActive(functionName) {
   for (let attempt = 0; attempt < 30; attempt += 1) {
     const detail = existingFunctionDetail(functionName)
-    const config = detail?.data?.functionDetail || detail
-    if (config?.Status === 'Active' && config?.AvailableStatus === 'Available') {
+    const value = functionDetail(detail)
+    if (value?.Status === 'Active' && value?.AvailableStatus === 'Available') {
       return detail
     }
     await delay(1000)
@@ -306,16 +599,13 @@ async function waitForFunctionActive(functionName) {
   throw new Error(`${functionName} did not become active after deployment`)
 }
 
-async function replaceIncompatibleRuntime(functionName) {
+async function ensureCompatibleRuntime(functionName) {
   const detail = existingFunctionDetail(functionName)
-  if (!detail) {
-    return
-  }
-  if ((detail?.data?.functionDetail || detail)?.Runtime === 'Nodejs20.19') {
+  if (!detail || functionDetail(detail)?.Runtime === 'Nodejs20.19') {
     return
   }
   if (!replaceLegacyRuntime) {
-    throw new Error(`${functionName} uses a legacy runtime; rerun with --replace-legacy-runtime to recreate it as Nodejs20.19`)
+    throw new Error(`${functionName} uses an incompatible runtime; pass --replace-legacy-runtime to recreate only this mip-* function`)
   }
   callCloudbase(root, 'manageFunctions', {
     action: 'deleteFunction',
@@ -328,339 +618,101 @@ async function replaceIncompatibleRuntime(functionName) {
     }
     await delay(1000)
   }
-  throw new Error(`${functionName} legacy runtime was not removed before recreation`)
+  throw new Error(`${functionName} was not removed before runtime recreation`)
 }
 
-function canonical(value) {
-  if (Array.isArray(value)) {
-    return `[${value.map(canonical).join(',')}]`
-  }
-  if (value && typeof value === 'object') {
-    return `{${Object.keys(value).sort().map(key => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`
-  }
-  return JSON.stringify(value)
-}
-
-function signedLedgerHealth() {
-  const payload = {
-    action: 'health',
-    appId,
-    signedAt: Date.now(),
-    nonce: randomBytes(12).toString('hex'),
-  }
-  return {
-    ...payload,
-    signature: createHmac('sha256', ledgerSecret).update(canonical(payload)).digest('hex'),
-  }
-}
-
-/**
- * Attempt to extract live OpenAPI permissions from getFunctionDetail (or similar).
- * Local config.json is NOT live proof — missing remote fields are UNKNOWN and fail the gate.
- * @param {object} detail Remote function detail payload
- * @returns {{ status: 'OK'|'UNKNOWN'|'FAILED', openapi: string[]|null }} Live openapi status and list
- */
-function extractRemoteOpenApiPermissions(detail) {
-  if (!detail || typeof detail !== 'object') {
-    return { status: 'FAILED', openapi: null }
-  }
-  const functionDetail = detail?.data?.functionDetail || detail?.functionDetail || detail?.data || detail
-  const candidates = [
-    functionDetail?.Permissions?.Openapi,
-    functionDetail?.Permissions?.OpenAPI,
-    functionDetail?.Permissions?.openapi,
-    functionDetail?.permissions?.openapi,
-    functionDetail?.Openapi,
-    functionDetail?.OpenAPI,
-    functionDetail?.openapi,
-    functionDetail?.Config?.permissions?.openapi,
-    functionDetail?.FunctionConfig?.permissions?.openapi,
-    functionDetail?.InstallDependency?.permissions?.openapi,
-  ]
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate) && candidate.every(item => typeof item === 'string')) {
-      return { status: 'OK', openapi: candidate }
-    }
-    if (typeof candidate === 'string' && candidate.trim()) {
-      try {
-        const parsed = JSON.parse(candidate)
-        if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string')) {
-          return { status: 'OK', openapi: parsed }
-        }
-      }
-      catch {
-        // continue scanning other candidate fields
-      }
+function assertEnvironmentReadback(functionName, expected, detail) {
+  const actual = environmentVariables(detail)
+  for (const [key, value] of Object.entries(expected)) {
+    if (actual[key] !== value) {
+      throw new Error(`${functionName} environment readback failed for ${key}`)
     }
   }
-  // Platform did not surface openapi permissions in the detail response.
-  return { status: 'UNKNOWN', openapi: null }
 }
 
-/**
- * Documented post-deploy avatar safety probe action name.
- * NOT invoked by this deploy script this round — structure readiness only.
- * Future owner/ops lane may invoke:
- *   manageFunctions invokeFunction mip-api { action: 'probeAvatarSafety' }
- * to prove imgSecCheck is reachable without uploading a real user avatar.
- */
-function avatarSafetyProbeActionName() {
-  return 'probeAvatarSafety'
-}
-// Keep the probe name exported for operators; do not invoke real imgSecCheck here.
-void avatarSafetyProbeActionName
-
-// Pre-deploy: local config.json must declare openapi permissions (upload source of truth).
-// Live remote permissions are verified after deploy; local config alone is not live proof.
-const membershipApiConfigPath = path.join(sourceFunctionRootPath, MIP_FUNCTION_SOURCES.api, 'config.json')
-const membershipApiConfig = JSON.parse(fs.readFileSync(membershipApiConfigPath, 'utf8'))
-const localOpenapi = membershipApiConfig?.permissions?.openapi || []
-if (!localOpenapi.includes('security.imgSecCheck')
-  || !localOpenapi.includes('security.msgSecCheck')
-  || !localOpenapi.includes('phonenumber.getPhoneNumber')) {
-  throw new Error('membership-api config.json openapi permissions missing image/message safety or phone')
-}
-console.log('[cloud-deploy] pre-deploy local openapi permissions include image/message safety + phone')
-const notificationWorkerConfigPath = path.join(
-  sourceFunctionRootPath,
-  MIP_FUNCTION_SOURCES.notification,
-  'config.json',
-)
-const notificationWorkerConfig = JSON.parse(fs.readFileSync(notificationWorkerConfigPath, 'utf8'))
-if (!notificationWorkerConfig?.permissions?.openapi?.includes('subscribeMessage.send')) {
-  throw new Error('membership-notification-worker config.json missing subscribeMessage.send')
-}
-console.log('[cloud-deploy] notification worker declares subscribeMessage.send')
-
-fs.rmSync(functionRootPath, { recursive: true, force: true })
-fs.mkdirSync(functionRootPath, { recursive: true })
-for (const spec of coreFunctionSpecs) {
-  fs.cpSync(path.join(sourceFunctionRootPath, spec.source), path.join(functionRootPath, spec.name), {
-    recursive: true,
-    filter: source => path.basename(source) !== 'node_modules',
-  })
-}
-
-for (const spec of coreFunctionSpecs) {
-  const { name: functionName, role } = spec
-  const envVariables = {
-    MEMBERSHIP_DB_CONNECTION_URI: connectionUri,
-    MEMBERSHIP_DB_POOL_SIZE: '4',
-    MEMBERSHIP_PAYMENT_MODE: paymentMode,
-    MEMBERSHIP_ALLOWED_APP_IDS: allowedAppIds.join(','),
-    // Force production stage on every deployed function so avatar content safety
-    // fails closed independently of MEMBERSHIP_PAYMENT_MODE (including disabled).
-    MEMBERSHIP_DEPLOYMENT_STAGE: deploymentStage,
-    // Production export uses private CloudBase storage + DB tickets; never memory.
-    ...(role === 'admin'
-      ? { MEMBERSHIP_EXPORT_STORAGE: 'cloudbase' }
-      : {}),
-    ...(role === 'ledger' ? { MEMBERSHIP_LEDGER_SECRET: ledgerSecret } : {}),
-    ...((role === 'api' || role === 'notification')
-      ? {
-          MEMBERSHIP_SUBSCRIBE_TEMPLATES_JSON: subscribeTemplatesJson,
-          ...(role === 'notification'
-            ? { MEMBERSHIP_MINIPROGRAM_STATE: miniprogramState }
-            : {}),
-        }
-      : {}),
-    // Optional signed maintenance path for api/admin only; omit when not configured.
-    ...(maintenanceSecret && (role === 'api' || role === 'admin')
-      ? { MEMBERSHIP_MAINTENANCE_SECRET: maintenanceSecret }
-      : {}),
-  }
-  await replaceIncompatibleRuntime(functionName)
-  callCloudbase(root, 'manageFunctions', {
-    action: 'createFunction',
-    functionRootPath,
-    force: true,
-    func: {
-      name: functionName,
-      type: 'Event',
-      runtime: 'Nodejs20.19',
-      handler: 'index.main',
-      timeout: spec.timeout,
-      envVariables,
-      vpc: { vpcId, subnetId },
-      isWaitInstall: true,
-    },
-  }, 300000)
-  await waitForFunctionActive(functionName)
-  callCloudbase(root, 'manageFunctions', {
-    action: 'updateFunctionCode',
-    functionName,
-    functionRootPath,
-    force: true,
-  }, 300000)
-  const deployedDetail = await waitForFunctionActive(functionName)
-  const deployedEnvironment = environmentVariables(deployedDetail)
-  if (Object.entries(envVariables).some(([key, value]) => deployedEnvironment[key] !== value)) {
-    throw new Error(`${functionName} environment variables were not applied exactly`)
-  }
-  // Explicit production-stage readback (content safety must not depend on payment mode).
-  if (deployedEnvironment.MEMBERSHIP_DEPLOYMENT_STAGE !== 'production') {
-    throw new Error(`${functionName} MEMBERSHIP_DEPLOYMENT_STAGE readback is not production`)
-  }
-  // Maintenance secret: presence-only readback; never print the secret value.
-  if (maintenanceSecret && (role === 'api' || role === 'admin')) {
-    const deployedSecret = deployedEnvironment.MEMBERSHIP_MAINTENANCE_SECRET
-    const present = typeof deployedSecret === 'string' && deployedSecret.length > 0
-    const lengthMatch = present && deployedSecret.length === maintenanceSecret.length
-    if (!present || !lengthMatch) {
-      throw new Error(`${functionName} MEMBERSHIP_MAINTENANCE_SECRET presence readback failed (present=${present}, lengthMatch=${lengthMatch})`)
-    }
-    console.log(`[cloud-deploy] ${functionName} MEMBERSHIP_MAINTENANCE_SECRET present=true lengthMatch=true`)
-  }
-  const health = callCloudbase(root, 'manageFunctions', {
+function assertHealthy(functionName) {
+  const response = callCloudbase(root, 'manageFunctions', {
     action: 'invokeFunction',
     functionName,
-    params: role === 'ledger' ? signedLedgerHealth() : { action: 'health' },
+    params: { action: 'health' },
   }, 120000)
-  const healthResult = cloudFunctionResult(health)
-  if (healthResult?.ok !== true || healthResult?.data?.persistence !== 'cloudbase-mysql') {
-    throw new Error(`${functionName} health response did not prove MySQL persistence`)
+  const result = cloudFunctionResult(response)
+  if (result?.ok !== true || result?.data?.persistence !== 'cloudbase-mysql') {
+    throw new Error(`${functionName} health check did not prove CloudBase MySQL persistence`)
   }
-  if (role === 'api' || role === 'admin') {
-    const grants = healthResult?.data?.exportIntegrityGrants
-    // Public health is read-only; deep write probes are owner/signed only.
-    if (
-      grants?.exportTickets !== true
-      || grants?.mutationIdempotency !== true
-      || (role === 'api' && grants?.notificationInboxRead !== true)
-      || (role === 'admin' && grants?.operationalExceptionsRead !== true)
-      || grants?.appScoped !== true
-      || grants?.mode !== 'read-only'
-    ) {
-      throw new Error(`${functionName} health did not prove read-only export integrity grants`)
-    }
-  }
-  // Post-deploy: remote OpenAPI permissions for membership-api (live readback, not local config).
-  if (role === 'api') {
-    const remoteOpenapi = extractRemoteOpenApiPermissions(deployedDetail)
-    if (remoteOpenapi.status === 'OK'
-      && (!remoteOpenapi.openapi.includes('security.imgSecCheck')
-        || !remoteOpenapi.openapi.includes('security.msgSecCheck')
-        || !remoteOpenapi.openapi.includes('phonenumber.getPhoneNumber'))) {
-      console.error('[cloud-deploy] membership-api openapiPermissions: FAILED')
-      throw new Error('membership-api remote OpenAPI permissions missing image/message safety or phone')
-    }
-    // SCF GetFunction(ShowCode=FALSE) does not expose CloudBase OpenAPI
-    // permissions. Keep this as UNKNOWN rather than treating local config as
-    // live proof or blocking unrelated activity-platform deployments.
-    console.log(`[cloud-deploy] membership-api openapiPermissions: ${remoteOpenapi.status}`)
-  }
-  if (role === 'notification') {
-    const remoteOpenapi = extractRemoteOpenApiPermissions(deployedDetail)
-    if (remoteOpenapi.status === 'OK'
-      && !remoteOpenapi.openapi.includes('subscribeMessage.send')) {
-      console.error('[cloud-deploy] membership-notification-worker openapiPermissions: FAILED')
-      throw new Error('membership-notification-worker remote OpenAPI permissions missing subscribeMessage.send')
-    }
-    console.log(`[cloud-deploy] membership-notification-worker openapiPermissions: ${remoteOpenapi.status}`)
-  }
-  deployed.push(functionName)
-  console.log(`[cloud-deploy] verified ${functionName} (MEMBERSHIP_DEPLOYMENT_STAGE=production)`)
 }
 
-const notificationTriggerName = 'mip-notification-every-5m'
-function isMissingTriggerError(error) {
-  return /not exist|does not exist|ResourceNotFound|cannot find|不存在|未找到|NoSuch/i
-    .test(String(error?.message || error))
-}
-// A 5-minute timer keeps Serverless MySQL awake and burns CCU. Do not reinstall it.
-try {
-  callCloudbase(root, 'callCloudApi', {
+function removeForbiddenTimer(functionName, triggerName) {
+  try {
+    callCloudbase(root, 'callCloudApi', {
+      service: 'scf',
+      action: 'DeleteTrigger',
+      params: {
+        FunctionName: functionName,
+        TriggerName: triggerName,
+        Type: 'timer',
+        Namespace: envId,
+      },
+    })
+  }
+  catch (error) {
+    if (!/not exist|resourcenotfound|不存在|未找到/i.test(String(error?.message || error))) {
+      throw error
+    }
+  }
+  const readback = callCloudbase(root, 'callCloudApi', {
     service: 'scf',
-    action: 'DeleteTrigger',
-    params: {
-      FunctionName: functionNames.notification,
-      TriggerName: notificationTriggerName,
-      Type: 'timer',
-      Namespace: envId,
-    },
+    action: 'ListTriggers',
+    params: { FunctionName: functionName, Namespace: envId },
   })
-}
-catch (error) {
-  if (!isMissingTriggerError(error)) {
-    throw error
+  if (JSON.stringify(readback).includes(triggerName)) {
+    throw new Error(`${triggerName} must stay absent because it keeps Serverless MySQL awake`)
   }
 }
-const triggerReadback = callCloudbase(root, 'callCloudApi', {
-  service: 'scf',
-  action: 'ListTriggers',
-  params: {
-    FunctionName: functionNames.notification,
-    Namespace: envId,
-  },
-})
-const triggerText = JSON.stringify(triggerReadback)
-if (triggerText.includes(notificationTriggerName)) {
-  throw new Error('notification timer trigger must stay removed; it keeps Serverless MySQL awake')
-}
-console.log('[cloud-deploy] notification timer trigger removed (avoids MySQL CCU)')
 
-for (const protectedFunction of [
-  functionNames.ledger,
-  functionNames.notification,
-]) {
-  const currentPermissions = callCloudbase(root, 'queryPermissions', {
+function disableClientInvocation(functionName) {
+  setClientInvocationRule(functionName, false)
+}
+
+function enableAuthenticatedClientInvocation(functionName) {
+  setClientInvocationRule(functionName, 'auth.loginType != \'ANONYMOUS\' && auth != null')
+}
+
+function setClientInvocationRule(functionName, invoke) {
+  const current = callCloudbase(root, 'queryPermissions', {
     action: 'getResourcePermission',
     resourceType: 'function',
-    resourceId: protectedFunction,
+    resourceId: functionName,
   })
-  const currentRuleText = currentPermissions?.data?.permissions?.[0]?.SecurityRule
-  let functionRules
+  const text = current?.data?.permissions?.[0]?.SecurityRule
+  let rules
   try {
-    functionRules = JSON.parse(currentRuleText)
+    rules = JSON.parse(text)
   }
   catch {
-    functionRules = { '*': { invoke: 'auth.loginType != \'ANONYMOUS\' && auth != null' } }
+    rules = { '*': { invoke: 'auth.loginType != \'ANONYMOUS\' && auth != null' } }
   }
-  if (!functionRules['*']?.invoke && functionRules['*']?.invoke !== false) {
-    functionRules['*'] = { invoke: 'auth.loginType != \'ANONYMOUS\' && auth != null' }
-  }
-  functionRules[protectedFunction] = { invoke: false }
+  rules[functionName] = { invoke }
   callCloudbase(root, 'managePermissions', {
     action: 'updateResourcePermission',
     resourceType: 'function',
-    resourceId: protectedFunction,
+    resourceId: functionName,
     permission: 'CUSTOM',
-    securityRule: JSON.stringify(functionRules),
+    securityRule: JSON.stringify(rules),
   })
-  const verifiedPermissions = callCloudbase(root, 'queryPermissions', {
+  const readback = callCloudbase(root, 'queryPermissions', {
     action: 'getResourcePermission',
     resourceType: 'function',
-    resourceId: protectedFunction,
+    resourceId: functionName,
   })
-  const verifiedRuleText = verifiedPermissions?.data?.permissions?.[0]?.SecurityRule
-  let verifiedRules
+  let verified
   try {
-    verifiedRules = JSON.parse(verifiedRuleText)
+    verified = JSON.parse(readback?.data?.permissions?.[0]?.SecurityRule)
   }
   catch {
-    verifiedRules = null
+    verified = null
   }
-  if (verifiedRules?.[protectedFunction]?.invoke !== false) {
-    throw new Error(`${protectedFunction} client invocation was not disabled`)
+  if (verified?.[functionName]?.invoke !== invoke) {
+    throw new Error(`${functionName} client invocation rule did not converge`)
   }
 }
-
-const artifact = {
-  environmentVerified: true,
-  paymentMode,
-  deploymentStage,
-  maintenanceSecretConfigured: Boolean(maintenanceSecret),
-  persistence: 'cloudbase-mysql',
-  credentialSource,
-  deployed,
-  vpcAttached: true,
-  ledgerSecretPreserved: true,
-  notificationTemplatesConfigured: Boolean(subscribeTemplatesJson),
-  notificationTimerVerified: true,
-  // Avatar safety probe action is structured but not invoked this deploy.
-  avatarSafetyProbeAction: avatarSafetyProbeActionName(),
-  deployedAt: new Date().toISOString(),
-}
-fs.mkdirSync(path.join(root, '.tmp'), { recursive: true })
-fs.writeFileSync(path.join(root, '.tmp', 'deploy-functions-result.json'), `${JSON.stringify(artifact, null, 2)}\n`)
-console.log('[cloud-deploy] deployment verified; database and ledger secrets were not written or printed')

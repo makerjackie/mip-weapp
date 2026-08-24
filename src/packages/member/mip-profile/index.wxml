@@ -1,0 +1,96 @@
+<view id="mip-profile-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-8">
+    <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
+  </view>
+  <app-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载资料" description="身份服务暂时没有响应。" action-text="重新加载" bind:action="loadProfile" />
+  <block wx:else>
+    <view class="text-[length:38rpx] font-bold">个人档案</view>
+    <view class="mt-2 text-[length:23rpx] leading-6 text-muted">昵称和主城市分会为必填项，其他信息可稍后补充。</view>
+    <view wx:if="{{aiDraftLoaded}}" class="mt-4 rounded-[14rpx] bg-brand-soft px-4 py-3 text-[length:23rpx] text-brand">已载入 AI 草稿，可继续修改后保存。</view>
+
+    <view class="mt-5 rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="text-[length:23rpx] font-semibold text-muted">头像</view>
+      <view class="mt-3 flex items-center gap-4">
+        <button plain open-type="chooseAvatar" class="m-0 flex h-[128rpx] w-[128rpx] shrink-0 items-center justify-center overflow-hidden rounded-full border-0 bg-panel-raised p-0 leading-[128rpx]" disabled="{{avatarUploading || saving}}" bindchooseavatar="chooseAvatar">
+          <image wx:if="{{avatarUrl}}" class="h-full w-full" mode="aspectFill" src="{{avatarUrl}}" />
+          <t-icon wx:else name="user-avatar" size="56rpx" color="var(--color-muted)" />
+        </button>
+        <view class="min-w-0 flex-1 text-[length:23rpx] leading-6 text-muted">{{avatarUploading ? '头像上传中' : '点击头像选择图片'}}</view>
+      </view>
+
+      <view class="mt-5 text-[length:23rpx] font-semibold text-muted">昵称</view>
+      <input class="mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:26rpx]" type="nickname" maxlength="64" value="{{nickname}}" data-field="nickname" bindinput="updateText" placeholder="输入昵称" placeholder-style="color:#A3A3A3" />
+
+      <view class="mt-5 text-[length:23rpx] font-semibold text-muted">主城市分会</view>
+      <picker mode="selector" range="{{branchOptions}}" range-key="label" value="{{branchIndex}}" bindchange="changeBranch">
+        <view class="mt-2 flex h-[88rpx] items-center justify-between rounded-[14rpx] bg-panel-raised px-4 text-[length:26rpx]">
+          <text>{{branchOptions[branchIndex].label}}</text>
+          <t-icon name="chevron-down" size="32rpx" color="var(--color-muted)" />
+        </view>
+      </picker>
+      <view class="mt-2 text-[length:21rpx] leading-5 text-muted">主分会用于默认展示和归属，不限制参加其他城市活动。</view>
+
+      <view class="mt-5 text-[length:23rpx] font-semibold text-muted">身份状态</view>
+      <input class="mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:26rpx]" maxlength="32" value="{{identityStatus}}" data-field="identityStatus" bindinput="updateText" placeholder="例如：创业者" placeholder-style="color:#A3A3A3" />
+
+      <view class="mt-5 text-[length:23rpx] font-semibold text-muted">主行业</view>
+      <picker mode="selector" range="{{industryOptions}}" range-key="label" value="{{industryIndex}}" bindchange="changeIndustry">
+        <view class="mt-2 flex h-[88rpx] items-center justify-between rounded-[14rpx] bg-panel-raised px-4 text-[length:26rpx]">
+          <text>{{industryOptions[industryIndex].label}}</text>
+          <t-icon name="chevron-down" size="32rpx" color="var(--color-muted)" />
+        </view>
+      </picker>
+      <view class="mt-2 text-[length:21rpx] leading-5 text-muted">一级行业用于分组，主行业从二级行业中选择。</view>
+
+      <view wx:if="{{abilityOptions.length}}" class="mt-5 text-[length:23rpx] font-semibold text-muted">能力</view>
+      <view wx:if="{{abilityOptions.length}}" class="mt-3 flex flex-wrap gap-2">
+        <block wx:for="{{abilityOptions}}" wx:key="id">
+          <view wx:if="{{item.selected}}" data-id="{{item.id}}" class="min-h-[64rpx] rounded-full border border-brand bg-brand-soft px-4 py-2 text-[length:23rpx] text-brand" bind:tap="toggleAbility">{{item.label}}</view>
+          <view wx:else data-id="{{item.id}}" class="min-h-[64rpx] rounded-full border border-line px-4 py-2 text-[length:23rpx] text-muted" bind:tap="toggleAbility">{{item.label}}</view>
+        </block>
+      </view>
+
+      <view class="mt-5 text-[length:23rpx] font-semibold text-muted">一句话介绍</view>
+      <input class="mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:26rpx]" maxlength="160" value="{{headline}}" data-field="headline" bindinput="updateText" placeholder="说明你目前在做的事" placeholder-style="color:#A3A3A3" />
+
+      <view class="mt-5 text-[length:23rpx] font-semibold text-muted">个人简介</view>
+      <textarea class="mt-2 block h-[220rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 py-3 text-[length:26rpx] leading-6" maxlength="600" value="{{introduction}}" data-field="introduction" bindinput="updateText" placeholder="介绍经历、能力和合作方向" placeholder-style="color:#A3A3A3" />
+    </view>
+
+    <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="text-[length:30rpx] font-semibold">经历</view>
+      <view class="mt-4 text-[length:23rpx] font-semibold text-muted">公司</view>
+      <input class="mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:26rpx]" maxlength="120" value="{{companyName}}" data-field="companyName" bindinput="updateText" placeholder="公司名称" placeholder-style="color:#A3A3A3" />
+      <input class="mt-3 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:26rpx]" maxlength="80" value="{{companyRole}}" data-field="companyRole" bindinput="updateText" placeholder="职位" placeholder-style="color:#A3A3A3" />
+      <view class="mt-5 text-[length:23rpx] font-semibold text-muted">组织</view>
+      <input class="mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:26rpx]" maxlength="120" value="{{organizationName}}" data-field="organizationName" bindinput="updateText" placeholder="组织名称" placeholder-style="color:#A3A3A3" />
+      <input class="mt-3 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:26rpx]" maxlength="80" value="{{organizationRole}}" data-field="organizationRole" bindinput="updateText" placeholder="角色" placeholder-style="color:#A3A3A3" />
+    </view>
+
+    <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="text-[length:30rpx] font-semibold">手机号</view>
+      <view class="mt-2 text-[length:22rpx] leading-6 text-muted">{{phoneBound ? '已绑定，可重新授权本人微信手机号。' : '用于活动联系、订单与售后，不会公开展示。'}}</view>
+      <button open-type="getPhoneNumber" disabled="{{phoneBinding || saving}}" class="mt-4 flex h-[84rpx] w-full max-w-full box-border items-center justify-center rounded-[14rpx] border border-line bg-panel-raised text-[length:25rpx] font-semibold text-ink disabled:opacity-60" bind:getphonenumber="bindPhone">
+        {{phoneBinding ? '正在更新' : phoneBound ? '更换绑定手机号' : '绑定微信手机号'}}
+      </button>
+    </view>
+
+    <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-4">
+      <view class="text-[length:30rpx] font-semibold">公开范围</view>
+      <view class="mt-3 flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">昵称</text><switch checked="{{visibilityNickname}}" color="#FCDF03" data-field="visibilityNickname" bindchange="updateVisibility" /></view>
+      <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">头像</text><switch checked="{{visibilityAvatar}}" color="#FCDF03" data-field="visibilityAvatar" bindchange="updateVisibility" /></view>
+      <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">身份状态</text><switch checked="{{visibilityIdentityStatus}}" color="#FCDF03" data-field="visibilityIdentityStatus" bindchange="updateVisibility" /></view>
+      <view class="mt-3 flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">一句话介绍</text><switch checked="{{visibilityHeadline}}" color="#FCDF03" data-field="visibilityHeadline" bindchange="updateVisibility" /></view>
+      <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">个人简介</text><switch checked="{{visibilityIntroduction}}" color="#FCDF03" data-field="visibilityIntroduction" bindchange="updateVisibility" /></view>
+      <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">主城市分会</text><switch checked="{{visibilityPrimaryBranch}}" color="#FCDF03" data-field="visibilityPrimaryBranch" bindchange="updateVisibility" /></view>
+      <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">主行业</text><switch checked="{{visibilityIndustry}}" color="#FCDF03" data-field="visibilityIndustry" bindchange="updateVisibility" /></view>
+      <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">能力</text><switch checked="{{visibilityAbilities}}" color="#FCDF03" data-field="visibilityAbilities" bindchange="updateVisibility" /></view>
+      <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">公司经历</text><switch checked="{{visibilityCompanies}}" color="#FCDF03" data-field="visibilityCompanies" bindchange="updateVisibility" /></view>
+      <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">组织经历</text><switch checked="{{visibilityOrganizations}}" color="#FCDF03" data-field="visibilityOrganizations" bindchange="updateVisibility" /></view>
+    </view>
+
+    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:23rpx] leading-6">{{message}}</view>
+    <view class="mt-6"><t-button block size="large" theme="primary" loading="{{saving}}" disabled="{{avatarUploading}}" bind:tap="saveProfile">保存资料</t-button></view>
+  </block>
+  <app-page-exit />
+</view>

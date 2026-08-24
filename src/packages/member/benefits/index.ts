@@ -1,12 +1,18 @@
-import { membershipModule } from '../../../modules/membership/client'
-import { caseNavigateTo, caseSwitchPrimary } from '../../../modules/platform/case-navigation'
+import type { MembershipPlan } from '../../../modules/mip-commerce'
+import { mipCommerceModule } from '../../../modules/mip-commerce/client'
+import { mipIdentityModule } from '../../../modules/mip-identity/client'
+import { membershipPresentation } from '../../../modules/mip-shell'
+import { caseNavigateTo } from '../../../modules/platform/case-navigation'
 import { formatLocalDate } from '../../../utils/date'
 
 Page({
   data: {
-    state: 'ready' as 'ready' | 'error',
-    membershipActive: false,
-    expiresText: '',
+    state: 'loading' as 'loading' | 'ready' | 'error',
+    plans: [] as MembershipPlan[],
+    membershipLabel: '嘉宾',
+    membershipDescription: '当前没有有效会员权益',
+    membershipEndsText: '',
+    isPlayer: false,
     message: '',
   },
 
@@ -15,31 +21,34 @@ Page({
   },
 
   async load() {
-    try {
-      const overview = await membershipModule.load()
-      this.setData({
-        state: 'ready',
-        membershipActive: overview.membership.active,
-        expiresText: overview.membership.expiresAt ? formatLocalDate(overview.membership.expiresAt) : '',
-        message: '',
-      })
+    if (this.data.state !== 'ready') {
+      this.setData({ state: 'loading', message: '' })
     }
-    catch (error) {
-      // Static benefit copy remains useful offline; only surface a soft message.
+    const identityRequest = mipIdentityModule.loadSnapshot().then((snapshot) => {
+      const membership = membershipPresentation(snapshot.membership.kind, snapshot.membership.entitlement)
       this.setData({
-        state: 'ready',
-        message: this.data.membershipActive || this.data.expiresText
-          ? '会员状态更新失败，已保留上次结果。'
-          : (error instanceof Error ? error.message : ''),
+        membershipLabel: membership.label,
+        membershipDescription: membership.description,
+        membershipEndsText: membership.endsAt ? formatLocalDate(membership.endsAt) : '',
+        isPlayer: membership.label === '玩家',
       })
+    }).catch(() => {
+      this.setData({ message: '会员状态暂时无法更新。' })
+    })
+    try {
+      const plans = await mipCommerceModule.listPlans()
+      this.setData({ state: 'ready', plans })
+      await identityRequest
+    }
+    catch {
+      await identityRequest
+      this.setData(this.data.plans.length
+        ? { message: '权益说明更新失败，已保留上次结果。' }
+        : { state: 'error', message: '会员权益暂时无法加载。' })
     }
   },
 
   openMembership() {
     caseNavigateTo({ url: '/pages/membership/index' })
-  },
-
-  backToHome() {
-    caseSwitchPrimary('/pages/index/index')
   },
 })

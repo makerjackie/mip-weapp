@@ -1,49 +1,93 @@
-<view id="membership-case-home" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+240rpx)] pt-4 text-ink">
-  <view class="flex items-center justify-between px-1">
+<view id="mip-home-page" class="min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+220rpx)] pt-4 text-ink">
+  <view class="flex min-h-[88rpx] items-center justify-between">
     <view class="flex items-center gap-3">
       <image class="h-[58rpx] w-[58rpx] rounded-[14rpx]" mode="aspectFit" fade-show="{{false}}" src="{{logoPath}}" />
-      <view><view class="text-[length:36rpx] font-bold">{{productName}}</view><view class="mt-1 text-[length:18rpx] tracking-[0.12em] text-muted">{{tagline}}</view></view>
+      <view class="text-[length:40rpx] font-bold">{{productName}}</view>
     </view>
-    <image wx:if="{{avatarUrl}}" class="h-[70rpx] w-[70rpx] rounded-full bg-brand-soft" mode="aspectFill" fade-show="{{false}}" src="{{avatarUrl}}" bind:tap="openProfile" />
-    <view wx:else class="flex h-[70rpx] w-[70rpx] items-center justify-center rounded-full bg-brand text-[length:26rpx] font-bold text-white" bind:tap="openProfile">{{nicknameInitial}}</view>
+    <view class="flex min-h-[72rpx] items-center gap-1 px-2 text-[length:23rpx]" bind:tap="openBranches">
+      <t-icon name="location" size="30rpx" color="var(--color-brand)" />
+      <text>{{primaryBranchName}}</text>
+      <t-icon name="chevron-right" size="28rpx" color="var(--color-muted)" />
+    </view>
   </view>
 
-  <view wx:if="{{serviceUnconfigured}}" class="mt-4 rounded-[20rpx] border border-line bg-panel px-4 py-3 text-[length:22rpx] text-muted">会员服务尚未配置。当前可以浏览界面，真实登录、支付和云数据不可用。</view>
-  <view wx:if="{{state === 'loading'}}" class="mt-5 rounded-[28rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法连接" description="服务暂时没有响应，请稍后重试。" action-text="重新加载" bind:action="loadOverview" /></view>
-  <block wx:else>
-    <view wx:if="{{announcement}}" class="mt-5 flex items-center gap-3 rounded-[22rpx] border border-line bg-panel px-4 py-3 active:bg-panel-muted" data-id="{{announcement.id}}" bind:tap="openAnnouncement">
-      <view class="flex h-[48rpx] w-[48rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft"><t-icon name="notification" size="28rpx" color="var(--color-brand)" /></view>
-      <view class="min-w-0 flex-1"><view class="flex items-center gap-2"><view wx:if="{{announcement.isPinned}}" class="rounded-full bg-accent px-2 py-1 text-[length:17rpx] font-semibold text-white">置顶</view><view class="truncate text-[length:23rpx] font-bold">{{announcement.title}}</view></view><view class="mt-1 truncate text-[length:19rpx] text-muted">{{announcement.summary}}</view></view>
-      <t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" />
-    </view>
+  <image wx:if="{{bannerImagePath}}" class="mt-3 h-[260rpx] w-full rounded-[20rpx] bg-panel" mode="aspectFill" src="{{bannerImagePath}}" aria-label="{{bannerAccessibilityLabel}}" bind:tap="openBanner" />
 
-    <view wx:if="{{nextEvent}}" class="mt-5" bind:tap="openFeaturedEvent" data-id="{{nextEvent.id}}">
-      <view class="mb-3 flex items-center justify-between px-1"><view class="text-[length:29rpx] font-bold">本周同行计划</view><view class="flex items-center gap-1 text-[length:20rpx] font-semibold text-brand">查看详情 <t-icon name="chevron-right" size="32rpx" color="var(--color-brand)" /></view></view>
-      <view class="overflow-hidden rounded-[28rpx] bg-panel">
-        <image wx:if="{{nextEvent.coverUrl}}" class="h-[310rpx] w-full bg-brand-soft" mode="aspectFill" fade-show="{{false}}" src="{{nextEvent.coverUrl}}" />
-        <view wx:else class="flex h-[310rpx] w-full items-center justify-center bg-brand-soft"><image class="h-[112rpx] w-[112rpx] opacity-60" mode="aspectFit" src="{{logoPath}}" /></view>
-        <view class="bg-brand px-5 py-4 text-white">
-          <view class="flex items-start justify-between gap-4"><view class="min-w-0 flex-1"><view class="text-[length:20rpx] font-semibold text-brand-soft">{{nextEvent.startsText}}</view><view class="mt-1 line-clamp-2 text-[length:29rpx] font-bold">{{nextEvent.title}}</view><view class="mt-2 flex items-center gap-1 truncate text-[length:21rpx] text-brand-soft"><t-icon name="location" size="28rpx" color="var(--color-brand-soft)" />{{nextEvent.location}}</view></view><view class="shrink-0 rounded-full bg-white px-3 py-2 text-[length:20rpx] font-bold text-brand">{{nextEvent.availabilityText}}</view></view>
+  <view class="mt-3 rounded-[20rpx] bg-brand px-5 py-5 text-on-brand" bind:tap="openMembership">
+    <view class="flex items-start justify-between gap-4">
+      <view class="min-w-0 flex-1">
+        <view class="text-[length:22rpx] font-semibold">{{identityState === 'error' ? '会员状态暂不可用' : membershipLabel}}</view>
+        <view class="mt-2 text-[length:34rpx] font-bold">{{identityState === 'error' ? '查看会员服务' : membershipDescription}}</view>
+        <view wx:if="{{membershipEndsText}}" class="mt-2 text-[length:21rpx] opacity-70">有效期至 {{membershipEndsText}}</view>
+      </view>
+      <view class="flex min-h-[64rpx] shrink-0 items-center gap-1 rounded-full bg-canvas px-3 text-[length:21rpx] font-semibold text-brand">
+        查看<t-icon name="chevron-right" size="28rpx" color="var(--color-brand)" />
+      </view>
+    </view>
+  </view>
+
+  <view class="mt-4 rounded-[16rpx] border border-line bg-panel px-4 py-4" bind:tap="openBranches">
+    <view class="flex items-center justify-between gap-3">
+      <view class="min-w-0 flex-1">
+        <view class="text-[length:27rpx] font-semibold">城市分会</view>
+        <view wx:if="{{branchState === 'loading'}}" class="mt-2 h-[28rpx] w-[240rpx] animate-pulse rounded bg-panel-raised" />
+        <view wx:elif="{{branchState === 'error'}}" class="mt-1 text-[length:22rpx] text-muted">城市分会暂不可用</view>
+        <view wx:elif="{{branchNames.length}}" class="mt-1 truncate text-[length:22rpx] text-muted">{{branchNamesText}}</view>
+        <view wx:else class="mt-1 text-[length:22rpx] text-muted">暂无可用分会</view>
+      </view>
+      <t-icon name="chevron-right" size="34rpx" color="var(--color-brand)" />
+    </view>
+  </view>
+
+  <view wx:if="{{hasAnnouncements}}" class="mt-7">
+    <view class="flex min-h-[64rpx] items-center justify-between">
+      <view class="text-[length:32rpx] font-bold">社区公告</view>
+      <view class="flex items-center gap-1 text-[length:22rpx] text-brand" bind:tap="openAnnouncements">全部公告<t-icon name="chevron-right" size="28rpx" color="var(--color-brand)" /></view>
+    </view>
+    <view wx:if="{{announcement}}" class="mt-3 rounded-[16rpx] border border-brand bg-panel px-4 py-4 active:bg-panel-raised" bind:tap="openAnnouncement">
+      <view class="flex items-center gap-2"><text class="rounded-full bg-brand-soft px-3 py-1 text-[length:20rpx] text-brand">置顶</text><text wx:if="{{announcement.branchName}}" class="text-[length:20rpx] text-muted">{{announcement.branchName}}</text></view>
+      <view class="mt-2 line-clamp-2 text-[length:28rpx] font-bold">{{announcement.title}}</view>
+      <view class="mt-2 line-clamp-2 text-[length:22rpx] leading-5 text-muted">{{announcement.summary}}</view>
+    </view>
+  </view>
+
+  <view class="mt-7">
+    <view class="flex min-h-[64rpx] items-center justify-between">
+      <view class="text-[length:32rpx] font-bold">近期活动</view>
+      <view class="flex items-center gap-1 text-[length:22rpx] text-brand" bind:tap="openEvents">全部活动<t-icon name="chevron-right" size="28rpx" color="var(--color-brand)" /></view>
+    </view>
+    <view wx:if="{{eventState === 'loading'}}" class="mt-3 flex flex-col gap-3">
+      <view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+      <view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+    </view>
+    <view wx:elif="{{eventState === 'error'}}" class="mt-3"><app-empty-state title="活动暂时无法加载" description="其他内容仍可继续浏览。" action-text="重新加载" bind:action="loadEvents" /></view>
+    <view wx:elif="{{events.length === 0}}" class="mt-3"><app-empty-state title="暂无近期活动" description="新活动发布后会显示在这里。" /></view>
+    <view wx:else class="mt-3 flex flex-col gap-3">
+      <view wx:for="{{events}}" wx:key="id" class="overflow-hidden rounded-[16rpx] bg-panel active:bg-panel-raised" data-id="{{item.id}}" bind:tap="openEvent">
+        <image wx:if="{{item.coverUrl}}" class="h-[260rpx] w-full" mode="aspectFill" src="{{item.coverUrl}}" />
+        <view class="px-4 py-4">
+          <view class="flex items-center justify-between gap-3"><text class="rounded-full bg-brand-soft px-3 py-1 text-[length:20rpx] text-brand">{{item.accessLabel}}</text><text class="text-[length:21rpx] text-muted">{{item.registrationCount}} 人参加</text></view>
+          <view class="mt-2 line-clamp-2 text-[length:29rpx] font-bold">{{item.title}}</view>
+          <view class="mt-2 text-[length:22rpx] text-muted">{{item.startsText}} · {{item.locationText}}</view>
         </view>
       </view>
     </view>
+  </view>
 
-    <view class="mt-4 rounded-[28rpx] bg-brand px-5 py-5 text-white" bind:tap="openMembership">
-      <view class="flex items-center justify-between gap-4"><view><view class="text-[length:21rpx] text-brand-soft">{{membershipLabel}}</view><view class="mt-2 text-[length:32rpx] font-bold">{{membershipAction}}</view><view class="mt-1 text-[length:20rpx] text-brand-soft">{{expiresText}}</view></view><view class="flex items-center gap-1 rounded-full bg-white py-2 pl-4 pr-2 text-[length:21rpx] font-semibold text-brand">查看权益 <t-icon name="chevron-right" size="32rpx" color="var(--color-brand)" /></view></view>
+  <view class="mt-7">
+    <view class="flex min-h-[64rpx] items-center justify-between">
+      <view class="text-[length:32rpx] font-bold">合作机会</view>
+      <view class="flex items-center gap-1 text-[length:22rpx] text-brand" bind:tap="openOpportunities">全部机会<t-icon name="chevron-right" size="28rpx" color="var(--color-brand)" /></view>
     </view>
-
-    <view wx:if="{{message}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
-
-    <view class="mt-7"><app-section-header title="热门活动" action-text="更多活动" bind:action="openEvents" />
-      <view wx:if="{{events.length}}" class="mt-3 flex flex-col gap-3"><view wx:for="{{events}}" wx:key="id" class="block"><event-card event="{{item}}" compact bind:select="openEvent" /></view></view>
-      <view wx:else class="mt-3"><app-empty-state title="活动正在准备" description="有新活动时会在这里出现。" /></view>
+    <view wx:if="{{opportunityState === 'loading'}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+    <view wx:elif="{{opportunityState === 'error'}}" class="mt-3"><app-empty-state title="机会暂时无法加载" description="其他内容仍可继续浏览。" action-text="重新加载" bind:action="loadOpportunities" /></view>
+    <view wx:elif="{{opportunities.length === 0}}" class="mt-3"><app-empty-state title="暂无合作机会" description="已发布的招募信息会显示在这里。" /></view>
+    <view wx:else class="mt-3 flex flex-col gap-3">
+      <view wx:for="{{opportunities}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4 active:bg-panel-raised" data-id="{{item.id}}" bind:tap="openOpportunity">
+        <view class="flex items-start justify-between gap-3"><view class="line-clamp-2 min-w-0 flex-1 text-[length:28rpx] font-bold">{{item.title}}</view><text class="shrink-0 rounded-full bg-brand-soft px-3 py-1 text-[length:20rpx] text-brand">招募中</text></view>
+        <view class="mt-2 line-clamp-2 text-[length:22rpx] leading-5 text-muted">{{item.valueSummary}}</view>
+        <view class="mt-3 flex items-center justify-between text-[length:21rpx] text-muted"><text>{{item.metaText}}</text><text>{{item.referralCount}} 人引荐</text></view>
+      </view>
     </view>
-
-    <view class="mt-7"><app-section-header title="新加入的成员" action-text="更多成员" bind:action="openExplore" />
-      <view wx:if="{{recommendations.length}}" class="mt-3 flex gap-4 overflow-x-auto pb-2"><view wx:for="{{recommendations}}" wx:key="id" class="w-[128rpx] shrink-0 text-center" data-id="{{item.id}}" bind:tap="openMemberAvatar"><image wx:if="{{item.avatarUrl}}" class="mx-auto h-[104rpx] w-[104rpx] rounded-full bg-brand-soft" mode="aspectFill" fade-show="{{false}}" src="{{item.avatarUrl}}" /><view wx:else class="mx-auto flex h-[104rpx] w-[104rpx] items-center justify-center rounded-full bg-brand-soft text-[length:30rpx] font-bold text-brand">{{item.initial}}</view><view class="mt-2 truncate text-[length:21rpx] font-semibold">{{item.nickname}}</view><view class="mt-1 truncate text-[length:18rpx] text-muted">{{item.city}}</view></view></view>
-      <view wx:else class="mt-3"><app-empty-state title="新成员正在加入" description="稍后回来看看吧。" /></view>
-    </view>
-    <view wx:if="{{announcement}}" class="mt-7 text-center text-[length:21rpx] font-semibold text-brand" bind:tap="openAnnouncements">查看全部社区公告</view>
-  </block>
+  </view>
 </view>

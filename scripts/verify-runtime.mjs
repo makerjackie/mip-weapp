@@ -6,6 +6,7 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
+import { pathToFileURL } from 'node:url'
 import {
   acquireSharedMiniProgram,
   closeSharedMiniProgram,
@@ -27,28 +28,23 @@ import { assertRuntimePreflight } from './lib/runtime-preflight.mjs'
 import { comparePngBuffers } from './lib/visual-diff.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
-const devtoolsRoot = process.env.MINIPROGRAM_DEVTOOLS_PROJECT_ROOT
-  ? path.resolve(process.env.MINIPROGRAM_DEVTOOLS_PROJECT_ROOT)
-  : root
 const outputDir = path.join(root, '.tmp', 'runtime')
 const baselineDir = path.join(root, '.screenshots', 'baseline')
 const reportPath = path.join(outputDir, 'report.json')
 const consolePath = path.join(outputDir, 'console.json')
 const warningAllowlistPath = path.join(root, 'config', 'runtime-warning-allowlist.json')
 const runtimePagesPath = path.join(root, 'config', 'runtime-pages.json')
+const safePlaceholderUuid = '00000000-0000-4000-8000-000000000000'
+const sessionId = 'mip-weapp-runtime'
+const failedStates = new Set(['error', 'forbidden', 'conflict', 'expired', 'disabled'])
+const pendingStates = new Set(['loading'])
+const rawPhoneLikePattern = /(?:^|\D)1[3-9]\d{9}(?:\D|$)/
 const devToolsCompilerPatterns = [
   { name: 'missing-app-json', pattern: /app\.json doesn't exist/i },
   { name: 'missing-compiled-file', pattern: /summer-compiler miss .*dist/i },
   { name: 'update-app-code-error', pattern: /updateAppCode .*Error/i },
   { name: 'hot-reload-error', pattern: /hotreload error/i },
 ]
-const args = process.argv.slice(2)
-const skipBuild = args.includes('--skip-build')
-const updateBaseline = args.includes('--update-baseline')
-const requireBaseline = args.includes('--require-baseline')
-const sessionId = '01mvp-membership-runtime'
-const fallbackUuid = '00000000-0000-4000-8000-000000000000'
-installMiniprogramAutomatorCompatibility()
 
 function assert(condition, message) {
   if (!condition) {
@@ -56,339 +52,96 @@ function assert(condition, message) {
   }
 }
 
-const runtimePages = JSON.parse(fs.readFileSync(runtimePagesPath, 'utf8'))
-const sensitivePatterns = Array.isArray(runtimePages.sensitivePatterns) ? runtimePages.sensitivePatterns : []
-const deviceRequiredCapabilities = Array.isArray(runtimePages.deviceRequiredCapabilities)
-  ? runtimePages.deviceRequiredCapabilities
-  : []
-const rawPhoneLikePattern = /(?:^|\D)1[3-9]\d{9}(?:\D|$)/
-
-/** Route-specific data/layout checks keyed by path; merged with runtime-pages.json. */
-const pageCaseDetails = {
-  'pages/index/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Home did not load real data')
-      assert(typeof data.profileCompletion === 'number', 'Home profile completion is missing')
-      assert(typeof data.overviewSignature === 'string' && data.overviewSignature, 'Home presentation signature is missing')
-      assertResolvedMediaUrls(data)
-      assertLocalMediaUrl(data.avatarUrl, 'Home avatar')
-      data.recommendations.forEach((item, index) => assertLocalMediaUrl(item.avatarUrl, `Home recommendation ${index + 1}`))
-    },
-  },
-  'pages/explore/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Explore did not load real data')
-      assert(['recommended', 'same-city', 'new'].includes(data.filter), 'Explore filter state is invalid')
-      assertResolvedMediaUrls(data.recommendations)
-      data.recommendations.forEach((item, index) => assertLocalMediaUrl(item.avatarUrl, `Explore recommendation ${index + 1}`))
-    },
-    assertLayout: assertMemberDiscoveryLayout,
-  },
-  'pages/events/index': {
-    visualSettleMs: 6000,
-    assertData(data) {
-      assert(data.state === 'ready', 'Events did not load real data')
-      assert(['upcoming', 'mine'].includes(data.view), 'Event view state is invalid')
-      assert(typeof data.eventSignature === 'string' && data.eventSignature, 'Event presentation signature is missing')
-      assertResolvedMediaUrls(data.events)
-      data.events.forEach((item, index) => assertLocalMediaUrl(item.coverUrl, `Event cover ${index + 1}`))
-    },
-    assertLayout: assertEventListLayout,
-  },
-  'pages/membership/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Membership checkout did not load real data')
-      assert(typeof data.paymentEnabled === 'boolean', 'Payment capability state is missing')
-    },
-  },
-  'pages/profile/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Profile did not load real data')
-      assert(typeof data.adminEnabled === 'boolean', 'Admin capability state is missing')
-      assert(typeof data.profileSignature === 'string' && data.profileSignature, 'Profile presentation signature is missing')
-      assertResolvedMediaUrls(data.avatarUrl)
-      assertLocalMediaUrl(data.avatarUrl, 'Profile avatar')
-    },
-    assertLayout: assertProfileServiceActionsLayout,
-  },
-  'packages/member/access/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Access page did not load real data')
-      assert(typeof data.complete === 'boolean', 'Access completion state is missing')
-    },
-    assertLayout: assertAccessLayout,
-  },
-  'packages/member/profile-edit/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Profile edit did not load real data')
-      assert(data.saving === false, 'Profile edit started in a saving state')
-      assert(typeof data.draftNickname === 'string', 'Profile draft is missing')
-    },
-    assertLayout: assertProfileEditLayout,
-  },
-  'packages/member/member-detail/index': {
-    query(context) {
-      return `memberId=${encodeURIComponent(context.memberId || fallbackUuid)}`
-    },
-    assertData(data) {
-      assert(data.state === 'ready', 'Member detail did not load real data')
-    },
-  },
-  'packages/member/connections/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Member connections did not load real data')
-      assert(['following', 'followers'].includes(data.direction), 'Member connection direction is invalid')
-    },
-  },
-  'packages/member/announcements/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Community announcements did not load real data')
-      assert(Array.isArray(data.items), 'Community announcement list is missing')
-    },
-  },
-  'packages/member/announcement-detail/index': {
-    query(context) {
-      return `announcementId=${encodeURIComponent(context.announcementId || fallbackUuid)}`
-    },
-    assertData(data) {
-      assert(data.state === 'ready', 'Community announcement detail did not load real data')
-      assert(typeof data.item?.body === 'string', 'Community announcement body is missing')
-    },
-  },
-  'packages/member/blocked-members/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Blocked member list did not load real data')
-      assert(Array.isArray(data.items), 'Blocked member list is missing')
-      assert(data.processingId === '', 'Blocked member list started in a mutation state')
-    },
-  },
-  'packages/member/event-detail/index': {
-    query(context) {
-      return `eventId=${encodeURIComponent(context.eventId || fallbackUuid)}`
-    },
-    assertData(data) {
-      assert(data.state === 'ready', 'Event detail did not load real data')
-    },
-  },
-  'packages/member/event-participants/index': {
-    query(context) {
-      return `eventId=${encodeURIComponent(context.eventId || fallbackUuid)}`
-    },
-    assertData(data) {
-      assert(data.state === 'ready', 'Event participants did not load real data')
-      assert(Array.isArray(data.items), 'Event participant list is missing')
-      assert(
-        Number(data.visibleParticipantCount || 0) >= data.items.length,
-        'Visible participant count is smaller than the rendered list',
-      )
-    },
-  },
-  'packages/member/event-album/index': {
-    query(context) {
-      return `eventId=${encodeURIComponent(context.eventId || fallbackUuid)}`
-    },
-    assertData(data) {
-      assert(data.state === 'ready', 'Event album did not load real data')
-    },
-  },
-  'packages/member/registration-confirm/index': {
-    query(context) {
-      return `eventId=${encodeURIComponent(context.eventId || fallbackUuid)}`
-    },
-    assertData(data) {
-      assert(data.state === 'ready', 'Registration confirmation did not load real data')
-    },
-  },
-  'packages/member/ticket/index': {
-    visualSettleMs: 1800,
-    query(context) {
-      return `eventId=${encodeURIComponent(context.registrationEventId || context.eventId || fallbackUuid)}`
-    },
-    assertData(data) {
-      assert(data.state === 'ready', 'Event ticket did not load real data')
-      if (data.registration?.registrationState === 'REGISTERED') {
-        assert(
-          typeof data.passValue === 'string' && data.passValue.startsWith('mbr-checkin:v1:'),
-          'Registered event ticket did not issue a dynamic check-in credential',
-        )
-        assert(typeof data.passExpiresText === 'string' && data.passExpiresText, 'Check-in credential expiry copy is missing')
-        assert(data.passRendered === true, 'Registered event ticket did not render its QR matrix')
-      }
-    },
-  },
-  'packages/member/orders/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Member orders did not load real data')
-    },
-    assertLayout: page => assertQuietFilterTabs(page, '#order-filter-tabs'),
-  },
-  'packages/member/order-detail/index': {
-    query(context) {
-      return `orderId=${encodeURIComponent(context.orderId || fallbackUuid)}`
-    },
-    assertData(data) {
-      assert(data.state === 'ready', 'Order detail did not load real data')
-    },
-  },
-  'packages/member/payment-result/index': {
-    query(context) {
-      return `orderId=${encodeURIComponent(context.orderId || fallbackUuid)}`
-    },
-    assertData(data) {
-      assert(['checking', 'success', 'pending', 'failed'].includes(data.result), 'Payment result state is invalid')
-    },
-  },
-  'packages/member/registrations/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Member registrations did not load real data')
-    },
-  },
-  'packages/member/notifications/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Member notifications did not load real data')
-      assert(Array.isArray(data.items), 'Member notification list is missing')
-    },
-  },
-  'packages/member/benefits/index': {
-    assertData(data) {
-      assert(typeof data.membershipActive === 'boolean', 'Membership benefit state is missing')
-    },
-  },
-  'packages/member/privacy/index': {
-    assertData(data) {
-      assert(data.deleting === false, 'Privacy page started in a destructive state')
-    },
-  },
-  'packages/member/help/index': {
-    assertData(data) {
-      assert(data && typeof data === 'object', 'Help page data is missing')
-    },
-  },
-  'packages/member/about/index': {
-    assertData(data) {
-      assert(data && typeof data === 'object', 'About page data is missing')
-    },
-  },
-  'packages/admin/dashboard/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Admin dashboard did not load real data')
-    },
-  },
-  'packages/admin/managed-events/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Managed events did not load real data')
-    },
-  },
-  'packages/admin/event-console/index': {
-    query(context) {
-      return `eventId=${encodeURIComponent(context.eventId || fallbackUuid)}`
-    },
-    assertData(data) {
-      assert(data.state === 'ready', 'Event operations console did not load real data')
-      assert(data.item && data.item.id, 'Event operations console is missing its event context')
-    },
-  },
-  'packages/admin/events/index': {
-    query(context) {
-      return `eventId=${encodeURIComponent(context.eventId || fallbackUuid)}`
-    },
-    assertData(data) {
-      assert(data.state === 'ready', 'Admin events did not load real data')
-      assert(data.saving === false, 'Admin events started in a saving state')
-    },
-  },
-  'packages/admin/event-registrations/index': {
-    query(context) {
-      return `eventId=${encodeURIComponent(context.eventId || fallbackUuid)}`
-    },
-    assertData(data) {
-      assert(data.state === 'ready', 'Admin event registrations did not load real data')
-      assert(data.state !== 'error' && data.state !== 'forbidden', 'Admin event registrations cannot treat error/forbidden as success')
-    },
-  },
-  'packages/admin/event-managers/index': {
-    query(context) {
-      return `eventId=${encodeURIComponent(context.eventId || fallbackUuid)}`
-    },
-    assertData(data) {
-      assert(data.state === 'ready', 'Event managers did not load real data')
-      assert(data.saving === false, 'Event managers started in a saving state')
-    },
-  },
-  'packages/admin/event-album/index': {
-    query(context) {
-      return `eventId=${encodeURIComponent(context.eventId || fallbackUuid)}`
-    },
-    assertData(data) {
-      assert(data.state === 'ready', 'Admin event album did not load real data')
-    },
-  },
-  'packages/admin/profiles/index': {
-    assertData(data) {
-      assert(
-        data.state === 'ready' || data.state === 'empty',
-        'Admin profiles did not load real data',
-      )
-      assert(Array.isArray(data.profiles), 'Admin profile list is missing')
-    },
-  },
-  'packages/admin/orders/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Admin orders did not load real data')
-    },
-  },
-  'packages/admin/exceptions/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Operational exception center did not load real data')
-      assert(Array.isArray(data.items), 'Operational exception list is missing')
-      assert(data.retryingId === '', 'Operational exception center started in a mutation state')
-    },
-  },
-  'packages/admin/announcements/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Admin announcements did not load real data')
-      assert(Array.isArray(data.items), 'Admin announcement list is missing')
-      assert(data.processingId === '', 'Admin announcements started in a mutation state')
-    },
-  },
-  'packages/admin/announcement-editor/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Admin announcement editor did not become ready')
-      assert(data.saving === false, 'Admin announcement editor started in a saving state')
-    },
-  },
-  'packages/admin/reports/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Member report queue did not load real data')
-      assert(Array.isArray(data.items), 'Member report queue is missing')
-      assert(data.processingId === '', 'Member report queue started in a mutation state')
-    },
-  },
-  'packages/admin/audit/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Admin audit did not load real data')
-    },
-  },
-  'packages/admin/roles/index': {
-    assertData(data) {
-      assert(data.state === 'ready', 'Admin roles did not load real data')
-      assert(Array.isArray(data.roles), 'Admin roles list is missing')
-      assert(Array.isArray(data.profiles), 'Admin role candidates are missing')
-      assert(data.busyId === '', 'Admin roles started in a mutation state')
-    },
-  },
+function selectorId(selector) {
+  assert(/^#[a-z][\w-]*$/i.test(selector || ''), `Invalid runtime root selector: ${selector}`)
+  return selector.slice(1)
 }
 
-function matchesSensitivePattern(text) {
-  const lower = String(text).toLowerCase()
-  const matched = []
-  for (const pattern of sensitivePatterns) {
-    const needle = String(pattern).toLowerCase()
-    if (needle && lower.includes(needle)) {
-      matched.push(String(pattern))
+function acceptedStates(route) {
+  if (Array.isArray(route.acceptStates) && route.acceptStates.length > 0) {
+    return route.acceptStates
+  }
+  if (route.kind === 'result') {
+    return (route.states || []).filter(state => !failedStates.has(state) && !pendingStates.has(state))
+  }
+  return ['ready']
+}
+
+function validateRuntimeContract(runtimePages) {
+  assert(runtimePages?.schemaVersion === 1, 'runtime-pages.json schemaVersion must be 1')
+  assert(runtimePages.case === 'mip-weapp', 'runtime-pages.json must describe mip-weapp')
+  assert(Array.isArray(runtimePages.routes), 'runtime-pages.json routes[] is required')
+  assert(
+    Number.isInteger(runtimePages.routeCount)
+    && runtimePages.routeCount > 0
+    && runtimePages.routes.length === runtimePages.routeCount,
+    `runtime-pages.json routeCount=${runtimePages.routeCount} does not match routes length=${runtimePages.routes.length}`,
+  )
+
+  const seenPaths = new Set()
+  const seenIds = new Set()
+  const declaredStates = new Set()
+  let hasDisabledControl = false
+  for (const route of runtimePages.routes) {
+    assert(route?.id && route.path && route.selector, `Incomplete runtime route: ${JSON.stringify(route)}`)
+    assert(!seenPaths.has(route.path), `Duplicate runtime route: ${route.path}`)
+    assert(!seenIds.has(route.id), `Duplicate runtime route id: ${route.id}`)
+    seenPaths.add(route.path)
+    seenIds.add(route.id)
+    const id = selectorId(route.selector)
+    const wxmlPath = path.join(root, 'src', `${route.path}.wxml`)
+    assert(fs.existsSync(wxmlPath), `Runtime route is missing WXML: ${route.path}`)
+    const wxml = fs.readFileSync(wxmlPath, 'utf8')
+    assert(wxml.includes(`id="${id}"`), `${route.path} does not expose ${route.selector}`)
+    hasDisabledControl ||= /\bdisabled="\{\{/.test(wxml)
+
+    const states = Array.isArray(route.states) ? route.states : []
+    states.forEach(state => declaredStates.add(state))
+    if (route.kind === 'data' || route.kind === 'static-data') {
+      assert(states.includes('ready'), `${route.path} must declare ready`)
+      assert(states.includes('error'), `${route.path} must declare error`)
+      if (route.kind === 'data') {
+        assert(states.includes('loading'), `${route.path} must declare loading`)
+      }
+    }
+    const accepted = acceptedStates(route)
+    assert(accepted.length > 0, `${route.path} does not declare an accepted runtime state`)
+    assert(
+      accepted.every(state => !failedStates.has(state) && !pendingStates.has(state)),
+      `${route.path} accepts a failure or pending state as runtime success`,
+    )
+    for (const key of route.query || []) {
+      assert(/^[a-z][a-z0-9]*$/i.test(key), `${route.path} has an unsafe query key`)
     }
   }
-  return matched
+
+  const tabRoutes = runtimePages.routes.filter(route => route.tab)
+  assert(tabRoutes.length === 4, `Runtime contract must declare four primary tabs, got ${tabRoutes.length}`)
+  assert(
+    JSON.stringify(tabRoutes.map(route => route.path).sort())
+    === JSON.stringify([
+      'pages/events/index',
+      'pages/index/index',
+      'pages/opportunities/index',
+      'pages/profile/index',
+    ].sort()),
+    'Runtime contract primary tabs do not match MIP navigation',
+  )
+  for (const state of ['loading', 'empty', 'error', 'forbidden', 'conflict']) {
+    assert(declaredStates.has(state), `Runtime contract has no representative ${state} state`)
+  }
+  assert(hasDisabledControl, 'Runtime routes do not expose a representative disabled control')
+}
+
+function queryForRoute(route) {
+  return (route.query || [])
+    .map(key => `${encodeURIComponent(key)}=${encodeURIComponent(safePlaceholderUuid)}`)
+    .join('&')
+}
+
+function matchesSensitivePattern(text, sensitivePatterns) {
+  const lower = String(text).toLowerCase()
+  return sensitivePatterns.filter(pattern => lower.includes(String(pattern).toLowerCase()))
 }
 
 function normalizeIdentifier(text) {
@@ -399,11 +152,8 @@ function normalizeIdentifier(text) {
     .toLowerCase()
 }
 
-function matchesSensitiveKey(key) {
+function matchesSensitiveKey(key, sensitivePatterns) {
   const normalizedKey = normalizeIdentifier(key)
-  // Masked presentation fields are the permitted consumer-facing projection.
-  // Their values are still recursively scanned below for configured secrets
-  // and raw phone-number shapes.
   if (normalizedKey.endsWith('_masked')) {
     return []
   }
@@ -419,11 +169,11 @@ function matchesSensitiveKey(key) {
   })
 }
 
-function assertNoSensitivePageData(data, route = '<unknown>') {
+function assertNoSensitivePageData(data, route, sensitivePatterns) {
   const hits = []
   const walk = (value, keyPath) => {
     if (typeof value === 'string') {
-      for (const pattern of matchesSensitivePattern(value)) {
+      for (const pattern of matchesSensitivePattern(value, sensitivePatterns)) {
         hits.push({ path: keyPath || '(root)', pattern })
       }
       if (rawPhoneLikePattern.test(value)) {
@@ -438,7 +188,7 @@ function assertNoSensitivePageData(data, route = '<unknown>') {
     if (value && typeof value === 'object') {
       for (const [key, entry] of Object.entries(value)) {
         const nextPath = keyPath ? `${keyPath}.${key}` : key
-        for (const pattern of matchesSensitiveKey(key)) {
+        for (const pattern of matchesSensitiveKey(key, sensitivePatterns)) {
           hits.push({ path: nextPath, pattern: `key:${pattern}` })
         }
         walk(entry, nextPath)
@@ -446,12 +196,13 @@ function assertNoSensitivePageData(data, route = '<unknown>') {
     }
   }
   walk(data, '')
+
   const unauthorizedHits = hits.filter((hit) => {
-    const isAuthorizedRosterPhone = route === 'packages/admin/event-registrations/index'
+    const authorizedRosterPhone = route === 'packages/admin/event-registrations/index'
       && data?.canViewSensitiveRoster === true
       && /^items\[\d+\]\.phoneNumber$/.test(hit.path)
       && ['key:phonenumber', 'key:phone_number', 'raw-phone-like'].includes(hit.pattern)
-    return !isAuthorizedRosterPhone
+    return !authorizedRosterPhone
   })
   assert(
     unauthorizedHits.length === 0,
@@ -459,78 +210,51 @@ function assertNoSensitivePageData(data, route = '<unknown>') {
   )
 }
 
-function enforceRouteReadyContract(routeConfig, data) {
-  if (routeConfig.kind === 'result') {
-    assert(
-      ['checking', 'success', 'pending', 'failed'].includes(data.result),
-      `${routeConfig.path} payment/result state is invalid (error is not success)`,
-    )
-    return
+function evaluateRouteState(route, data) {
+  const state = data?.state ?? data?.result
+  const accepted = acceptedStates(route)
+  if (accepted.includes(state)) {
+    return { status: 'passed', state }
   }
-  if (routeConfig.kind === 'data') {
-    const acceptedStates = Array.isArray(routeConfig.acceptStates)
-      ? routeConfig.acceptStates
-      : ['ready']
-    assert(
-      acceptedStates.length > 0
-      && acceptedStates.every(state => !['loading', 'error', 'forbidden'].includes(state)),
-      `${routeConfig.path} contract contains a state that cannot count as runtime success`,
-    )
-    assert(
-      acceptedStates.includes(data.state),
-      `${routeConfig.path} did not reach ${acceptedStates.join(' or ')}; error/forbidden/loading are not runtime success states`,
-    )
-  }
-  if (typeof data.state === 'string') {
-    assert(
-      data.state !== 'error',
-      `${routeConfig.path} settled on error, which cannot count as runtime success`,
-    )
-  }
-}
-
-function wrapAssertData(routeConfig, detailAssertData) {
-  return (data) => {
-    assertNoSensitivePageData(data, routeConfig.path)
-    if (typeof detailAssertData === 'function') {
-      detailAssertData(data)
-    }
-    enforceRouteReadyContract(routeConfig, data)
-  }
-}
-
-function buildPageCases() {
-  assert(Array.isArray(runtimePages.routes), 'runtime-pages.json routes[] is required')
-  assert(
-    runtimePages.routeCount === 41 && runtimePages.routes.length === 41,
-    `runtime-pages.json must declare exactly 41 routes, got routeCount=${runtimePages.routeCount} length=${runtimePages.routes.length}`,
-  )
-  const seen = new Set()
-  const cases = runtimePages.routes.map((routeConfig) => {
-    assert(routeConfig?.path && routeConfig?.selector, `runtime-pages route is incomplete: ${JSON.stringify(routeConfig)}`)
-    assert(!seen.has(routeConfig.path), `duplicate runtime route: ${routeConfig.path}`)
-    seen.add(routeConfig.path)
-    const detail = pageCaseDetails[routeConfig.path]
-    assert(detail, `Missing page case detail for contracted route ${routeConfig.path}`)
+  if (failedStates.has(state)) {
     return {
-      route: routeConfig.path,
-      selector: routeConfig.selector,
-      kind: routeConfig.kind,
-      contract: routeConfig,
-      visualSettleMs: detail.visualSettleMs,
-      query: detail.query,
-      assertLayout: detail.assertLayout,
-      assertData: wrapAssertData(routeConfig, detail.assertData),
+      status: 'failed',
+      state,
+      error: `${route.path} settled on ${state}; error/forbidden/conflict/expired/disabled cannot count as runtime success`,
     }
-  })
-  for (const pathName of Object.keys(pageCaseDetails)) {
-    assert(seen.has(pathName), `pageCaseDetails has uncontracted route ${pathName}`)
   }
-  return cases
+  if (state && !pendingStates.has(state)) {
+    return {
+      status: 'failed',
+      state,
+      error: `${route.path} settled on unaccepted state ${state}; expected ${accepted.join(' or ')}`,
+    }
+  }
+  return { status: 'pending', state }
 }
 
-function buildDeviceRequiredReport() {
-  return deviceRequiredCapabilities.map(capability => ({
+async function waitForPageData(page, route, sensitivePatterns, timeoutMs = 20000) {
+  const deadline = Date.now() + timeoutMs
+  let lastData
+  while (Date.now() < deadline) {
+    lastData = await retry(`read data ${route.path}`, () => page.data())
+    assertNoSensitivePageData(lastData, route.path, sensitivePatterns)
+    const evaluation = evaluateRouteState(route, lastData)
+    if (evaluation.status !== 'pending') {
+      return { ...evaluation, data: lastData }
+    }
+    await new Promise(resolve => setTimeout(resolve, 500))
+  }
+  return {
+    status: 'failed',
+    state: lastData?.state ?? lastData?.result,
+    data: lastData,
+    error: `${route.path} did not settle before timeout`,
+  }
+}
+
+function buildDeviceRequiredReport(runtimePages) {
+  return (runtimePages.deviceRequiredCapabilities || []).map(capability => ({
     id: capability.id,
     label: capability.label,
     routes: capability.routes || [],
@@ -539,144 +263,49 @@ function buildDeviceRequiredReport() {
   }))
 }
 
-const pageCases = buildPageCases()
-const runtimeRoutes = pageCases.map(item => item.route)
-
-function pageCaseByRoute(route) {
-  const found = pageCases.find(item => item.route === route)
-  assert(found, `Missing page case for ${route}`)
-  return found
+function publicPageState(data) {
+  const result = {}
+  for (const key of [
+    'state',
+    'result',
+    'mode',
+    'view',
+    'paymentEnabled',
+    'isPlayer',
+    'authenticated',
+    'saving',
+    'deleting',
+    'recording',
+    'generating',
+    'conflict',
+  ]) {
+    if (['string', 'boolean', 'number'].includes(typeof data?.[key])) {
+      result[key] = data[key]
+    }
+  }
+  for (const key of [
+    'events',
+    'opportunities',
+    'cooperationCards',
+    'plans',
+    'profiles',
+    'orders',
+    'items',
+    'drafts',
+    'branches',
+  ]) {
+    if (Array.isArray(data?.[key])) {
+      result[`${key}Count`] = data[key].length
+    }
+  }
+  if (typeof data?.message === 'string' && data.message) {
+    result.message = sanitizeRuntimeValue(data.message)
+  }
+  return result
 }
 
-function assertResolvedMediaUrls(value) {
-  if (typeof value === 'string') {
-    assert(!value.startsWith('cloud://'), 'CloudBase file ID reached a native image instead of a temporary HTTPS URL')
-    return
-  }
-  if (Array.isArray(value)) {
-    value.forEach(assertResolvedMediaUrls)
-    return
-  }
-  if (value && typeof value === 'object') {
-    Object.values(value).forEach(assertResolvedMediaUrls)
-  }
-}
-
-function assertLocalMediaUrl(value, label) {
-  if (!value) {
-    return
-  }
-  assert(
-    value.startsWith('wxfile://') || value.startsWith('http://tmp/'),
-    `${label} stayed remote instead of using the process-local media cache`,
-  )
-}
-
-function rounded(value) {
-  return Math.round(Number(value) * 10) / 10
-}
-
-async function assertProfileEditLayout(page) {
-  const [card] = await page.renderedNodes('#profile-edit-form-card')
-  const fields = await page.renderedNodes('.profile-edit-field')
-  const [headline] = await page.renderedNodes('#profile-edit-headline')
-  const singleLineFields = await page.renderedNodes('.profile-edit-single-line')
-  assert(card && headline && fields.length === 10, 'Profile editor geometry nodes are incomplete')
-  assert(singleLineFields.length === 8, 'Profile editor single-line fields are incomplete')
-  for (const [index, field] of fields.entries()) {
-    assert(field.left >= card.left + 12, `Profile field ${index + 1} escaped the left card padding`)
-    assert(field.right <= card.right - 12, `Profile field ${index + 1} escaped the right card padding`)
-    assert(field.width <= card.width - 24, `Profile field ${index + 1} is wider than its card content area`)
-  }
-  assert(headline.height >= 90 && headline.height <= 120, `Profile headline height is unreasonable: ${headline.height}`)
-  for (const [index, field] of singleLineFields.entries()) {
-    assert(field.height >= 42 && field.height <= 50, `Profile single-line field ${index + 1} height is unreasonable: ${field.height}`)
-  }
-  return {
-    cardWidth: rounded(card.width),
-    fieldCount: fields.length,
-    minimumRightInset: rounded(Math.min(...fields.map(field => card.right - field.right))),
-    headlineHeight: rounded(headline.height),
-    singleLineHeights: singleLineFields.map(field => rounded(field.height)),
-  }
-}
-
-async function assertMemberDiscoveryLayout(page) {
-  const filterTabs = await assertQuietFilterTabs(page, '#explore-filter-tabs')
-  const items = await page.renderedNodes('.member-discovery-item')
-  assert(items.length >= 2, 'Member discovery verification needs at least two real profiles')
-  const gaps = items.slice(1).map((item, index) => item.top - items[index].bottom)
-  for (const [index, item] of items.entries()) {
-    assert(item.width >= 340, `Member discovery item ${index + 1} is too narrow for profile metadata: ${item.width}px`)
-  }
-  for (const [index, gap] of gaps.entries()) {
-    assert(gap >= 10, `Member discovery items ${index + 1}/${index + 2} are visually stuck together: ${gap}px`)
-  }
-  return {
-    itemCount: items.length,
-    minimumWidth: rounded(Math.min(...items.map(item => item.width))),
-    minimumGap: rounded(Math.min(...gaps)),
-    filterTabs,
-  }
-}
-
-async function assertQuietFilterTabs(page, selector) {
-  const [tabs] = await page.renderedNodes(selector)
-  assert(tabs, `Filter tabs are missing: ${selector}`)
-  assert(tabs.width >= 340, `Filter tabs are too narrow: ${tabs.width}px`)
-  assert(tabs.height >= 42 && tabs.height <= 58, `Filter tabs height is visually excessive: ${tabs.height}px`)
-  return { width: rounded(tabs.width), height: rounded(tabs.height) }
-}
-
-async function assertProfileServiceActionsLayout(page) {
-  const [panel] = await page.renderedNodes('#profile-service-actions')
-  const actions = await page.renderedNodes('.profile-service-action')
-  const icons = await page.renderedNodes('.profile-service-icon')
-  assert(panel && actions.length === 3 && icons.length === 3, 'Profile service actions are incomplete')
-  for (const [index, action] of actions.entries()) {
-    assert(action.width >= 340, `Profile service action ${index + 1} is too narrow: ${action.width}px`)
-    assert(action.height >= 54 && action.height <= 64, `Profile service action ${index + 1} height is unreasonable: ${action.height}px`)
-    assert(icons[index].width >= 34 && icons[index].width <= 40, `Profile service icon ${index + 1} width is unreasonable: ${icons[index].width}px`)
-    assert(Math.abs((icons[index].top + icons[index].height / 2) - (action.top + action.height / 2)) <= 2, `Profile service icon ${index + 1} is not vertically centered`)
-  }
-  return {
-    actionHeights: actions.map(action => rounded(action.height)),
-    iconWidths: icons.map(icon => rounded(icon.width)),
-  }
-}
-
-async function assertAccessLayout(page) {
-  const [action] = await page.renderedNodes('#access-primary-action')
-  assert(action, 'Access page primary action is missing')
-  assert(action.height >= 40 && action.height <= 52, `Access primary action height is unreasonable: ${action.height}px`)
-  assert(action.width >= 150 && action.width <= 360, `Access primary action width is unreasonable: ${action.width}px`)
-  return {
-    actionWidth: rounded(action.width),
-    actionHeight: rounded(action.height),
-  }
-}
-
-async function assertEventListLayout(page) {
-  const filterTabs = await assertQuietFilterTabs(page, '#event-filter-tabs')
-  const cards = await page.renderedNodes('.event-list-item')
-  assert(cards.length >= 2, 'Event geometry verification needs at least two real event cards')
-  const gaps = cards.slice(1).map((card, index) => card.top - cards[index].bottom)
-  for (const [index, gap] of gaps.entries()) {
-    assert(gap >= 12, `Event cards ${index + 1}/${index + 2} are visually stuck together: ${gap}px`)
-  }
-  for (const [index, card] of cards.entries()) {
-    assert(card.height >= 104 && card.height <= 116, `Event card ${index + 1} height is unreasonable: ${card.height}px`)
-  }
-  return {
-    cardCount: cards.length,
-    cardHeights: cards.map(card => rounded(card.height)),
-    minimumGap: rounded(Math.min(...gaps)),
-    filterTabs,
-  }
-}
-
-function isScreenshotCaptureError(error) {
-  return error instanceof Error && error.message.includes('fail to capture screenshot')
+function outputName(value) {
+  return value.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')
 }
 
 function run(command, commandArgs) {
@@ -691,10 +320,6 @@ function run(command, commandArgs) {
   if (result.status !== 0) {
     throw new Error(`Command failed: ${command} ${commandArgs.join(' ')}`)
   }
-}
-
-function outputName(page) {
-  return page.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '')
 }
 
 async function retry(label, operation, attempts = 3) {
@@ -733,6 +358,10 @@ async function withProtocolTimeout(label, operation, timeoutMs) {
   }
 }
 
+function isScreenshotCaptureError(error) {
+  return error instanceof Error && error.message.includes('fail to capture screenshot')
+}
+
 async function captureScreenshot(label, miniProgram, screenshotPath, attempts = 3) {
   let lastError
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -751,56 +380,11 @@ async function captureScreenshot(label, miniProgram, screenshotPath, attempts = 
   throw lastError
 }
 
-async function waitForPageData(page, item, timeoutMs = 20000) {
-  const deadline = Date.now() + timeoutMs
-  let lastData
-  let lastError
-  while (Date.now() < deadline) {
-    lastData = await retry(`read data ${item.route}`, () => page.data())
-    try {
-      item.assertData(lastData)
-      return lastData
-    }
-    catch (error) {
-      lastError = error
-      await new Promise(resolve => setTimeout(resolve, 500))
-    }
-  }
-  const state = sanitizeRuntimeValue(lastData)
-  throw new Error(`${lastError instanceof Error ? lastError.message : 'Page did not settle'}; last page data: ${state}`)
-}
-
 function compare(baselinePath, currentPath, diffPath) {
   const result = comparePngBuffers(fs.readFileSync(baselinePath), fs.readFileSync(currentPath))
   fs.writeFileSync(diffPath, result.diffBuffer)
   assert(result.diffRatio <= 0.001, `Visual regression exceeded 0.1%: ${(result.diffRatio * 100).toFixed(3)}%`)
   return result
-}
-
-function publicPageState(data) {
-  const result = {}
-  for (const key of ['state', 'result', 'filter', 'view', 'paymentEnabled', 'membershipActive', 'complete', 'saving', 'deleting', 'adminEnabled']) {
-    if (['string', 'boolean', 'number'].includes(typeof data[key])) {
-      result[key] = data[key]
-    }
-  }
-  for (const key of ['events', 'recommendations', 'plans', 'profiles', 'orders', 'items']) {
-    if (Array.isArray(data[key])) {
-      result[`${key}Count`] = data[key].length
-    }
-  }
-  if (typeof data.message === 'string' && data.message) {
-    result.message = sanitizeRuntimeValue(data.message)
-  }
-  return result
-}
-
-function writeArtifacts(report, diagnostics) {
-  fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`)
-  fs.writeFileSync(consolePath, `${JSON.stringify({
-    summary: diagnostics.summary(),
-    entries: diagnostics.entries(),
-  }, null, 2)}\n`)
 }
 
 function listDevToolsLogFiles() {
@@ -867,325 +451,391 @@ function inspectDevToolsCompilerLogs(snapshot) {
   }
 }
 
-fs.mkdirSync(outputDir, { recursive: true })
-fs.mkdirSync(baselineDir, { recursive: true })
-for (const entry of fs.readdirSync(outputDir, { withFileTypes: true })) {
-  if (entry.isFile()) {
-    fs.rmSync(path.join(outputDir, entry.name))
+function writeArtifacts(report, diagnostics) {
+  fs.writeFileSync(reportPath, `${JSON.stringify(report, null, 2)}\n`)
+  fs.writeFileSync(consolePath, `${JSON.stringify({
+    summary: diagnostics.summary(),
+    entries: diagnostics.entries(),
+  }, null, 2)}\n`)
+}
+
+function representativeStateScenarios(runtimePages) {
+  const routes = new Map(runtimePages.routes.map(route => [route.path, route]))
+  const definitions = [
+    {
+      id: 'loading',
+      route: 'pages/membership/index',
+      patch: { state: 'loading' },
+      verify: data => data.state === 'loading',
+    },
+    {
+      id: 'empty',
+      route: 'packages/member/mip-branches/index',
+      patch: { state: 'empty', branches: [] },
+      verify: data => data.state === 'empty' && Array.isArray(data.branches) && data.branches.length === 0,
+    },
+    {
+      id: 'error',
+      route: 'pages/membership/index',
+      patch: { state: 'error', message: '暂时无法加载' },
+      verify: data => data.state === 'error',
+    },
+    {
+      id: 'forbidden',
+      route: 'packages/admin/dashboard/index',
+      patch: { state: 'forbidden', message: '' },
+      verify: data => data.state === 'forbidden',
+    },
+    {
+      id: 'conflict',
+      route: 'packages/admin/events/index',
+      patch: { state: 'ready', conflict: true, cancelConflict: false, message: '活动信息已更新' },
+      verify: data => data.state === 'ready' && data.conflict === true,
+    },
+    {
+      id: 'disabled',
+      route: 'packages/member/mip-ai/index',
+      patch: {
+        state: 'ready',
+        capability: { textDrafts: false, voiceDrafts: false },
+        drafts: [],
+        recording: false,
+        generating: false,
+      },
+      verify: data => data.state === 'ready'
+        && data.capability?.textDrafts === false
+        && data.capability?.voiceDrafts === false,
+    },
+  ]
+  for (const scenario of definitions) {
+    assert(routes.has(scenario.route), `Representative ${scenario.id} route is missing: ${scenario.route}`)
+    scenario.contract = routes.get(scenario.route)
+  }
+  return definitions
+}
+
+async function forceRepresentativeState(page, scenario) {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    await retry(`set representative ${scenario.id}`, () => page.setData(scenario.patch))
+    await new Promise(resolve => setTimeout(resolve, 120))
+    const data = await retry(`read representative ${scenario.id}`, () => page.data())
+    if (scenario.verify(data)) {
+      return data
+    }
+  }
+  throw new Error(`Representative ${scenario.id} state did not remain active long enough to verify`)
+}
+
+async function verifyRepresentativeStates(miniProgram, runtimePages, report, sensitivePatterns) {
+  report.representativeStates = []
+  for (const scenario of representativeStateScenarios(runtimePages)) {
+    const page = await retry(`representative ${scenario.id}`, () => miniProgram.reLaunch(`/${scenario.route}`))
+    await retry(
+      `wait representative ${scenario.id}`,
+      () => page.waitForRendered({ selector: scenario.contract.selector, timeout: 15000 }),
+    )
+    const data = await forceRepresentativeState(page, scenario)
+    assertNoSensitivePageData(data, scenario.route, sensitivePatterns)
+    const screenshotPath = path.join(outputDir, `state-${scenario.id}.png`)
+    await captureScreenshot(`state-${scenario.id}`, miniProgram, screenshotPath)
+    const sizeBytes = fs.statSync(screenshotPath).size
+    assert(sizeBytes >= 4 * 1024, `Representative ${scenario.id} screenshot is suspiciously small`)
+    report.representativeStates.push({ id: scenario.id, route: scenario.route, status: 'passed', sizeBytes })
+    console.log(`PASS  state:${scenario.id}  ${scenario.route}`)
   }
 }
-if (requireBaseline && !updateBaseline) {
-  for (const item of pageCases) {
-    assert(fs.existsSync(path.join(baselineDir, `${outputName(item.route)}.png`)), `Missing baseline for ${item.route}`)
-  }
-}
-// The wrapper has just synchronized the compiled DevTools host. Let the IDE
-// file watcher finish that setup before establishing the diagnostic baseline;
-// post-baseline compiler errors and every final route still fail the suite.
-await new Promise(resolve => setTimeout(resolve, 1500))
-const devToolsLogSnapshot = snapshotDevToolsLogs()
-if (!skipBuild) {
-  run('pnpm', ['build'])
-}
 
-const report = {
-  status: 'running',
-  updateBaseline,
-  pages: [],
-  attempts: [],
-  recoveries: [],
-  deviceRequired: buildDeviceRequiredReport(),
-  routeContract: {
-    source: 'config/runtime-pages.json',
-    routeCount: pageCases.length,
-    routes: runtimeRoutes,
-  },
-}
-const baseRuntimeOptions = {
-  port: resolveProjectAutomatorPort(devtoolsRoot),
-  projectPath: devtoolsRoot,
-  preserveProjectRoot: true,
-  sessionId,
-  sharedSession: true,
-  timeout: 60000,
-  trustProject: true,
-}
-const warningAllowlist = readRuntimeWarningAllowlist(warningAllowlistPath)
-const diagnostics = createRuntimeDiagnostics({ allowlist: warningAllowlist })
-let miniProgram
-const runtimeContext = {
-  memberId: '',
-  eventId: '',
-  registrationEventId: '',
-  orderId: '',
-  announcementId: '',
-}
-
-async function runRuntimeAttempt(preferOpenedSession) {
-  if (await clearStaleAutomatorPortLease(baseRuntimeOptions.port)) {
-    report.recoveries.push({
-      action: 'cleared-stale-port-lease',
-      port: baseRuntimeOptions.port,
-    })
-  }
-  miniProgram = await withProtocolTimeout(
-    'shared automator acquisition',
-    () => acquireSharedMiniProgram({
-      ...baseRuntimeOptions,
-      preferOpenedSession,
-      sharedSession: preferOpenedSession,
-      openedOnly: preferOpenedSession,
-    }),
-    baseRuntimeOptions.timeout * 2 + 15000,
-  )
-  // weapp-vite already forwards runtime diagnostics. App.enableLog depends on
-  // App.callFunction and can stall DevTools 2.01.2510290 after reconnecting to
-  // an existing automator endpoint, so this suite uses passive listeners.
-  const consoleCapture = 'passive'
-
-  miniProgram.on('console', payload => diagnostics.captureConsole(payload))
-  miniProgram.on('exception', payload => diagnostics.captureException(payload))
-
-  for (const item of pageCases.slice(report.pages.length)) {
-    const name = outputName(item.route)
+async function verifyContractedPages(miniProgram, runtimePages, report, options) {
+  const { sensitivePatterns, updateBaseline } = options
+  report.pages = []
+  for (const route of runtimePages.routes) {
+    const name = outputName(route.path)
     const baseline = path.join(baselineDir, `${name}.png`)
     const current = path.join(outputDir, `${name}.png`)
     const diff = path.join(outputDir, `${name}.diff.png`)
-    const query = typeof item.query === 'function' ? item.query(runtimeContext) : ''
-    const launchRoute = `/${item.route}${query ? `?${query}` : ''}`
-    const page = await retry(`reLaunch ${item.route}`, () => miniProgram.reLaunch(launchRoute))
-    await retry(`wait ${item.selector}`, () => page.waitForRendered({ selector: item.selector, timeout: 15000 }))
-    assert(String(page.path || '').replace(/^\//, '') === item.route, `Unexpected runtime route: ${page.path}`)
-    const settledData = await waitForPageData(page, item)
-    runtimeContext.memberId ||= settledData.recommendations?.[0]?.id || settledData.member?.id || ''
-    runtimeContext.eventId ||= settledData.nextEvent?.id || settledData.events?.[0]?.id || settledData.event?.id || ''
-    runtimeContext.registrationEventId ||= settledData.items?.[0]?.eventId || settledData.registration?.eventId || ''
-    runtimeContext.announcementId ||= settledData.announcement?.id || settledData.items?.[0]?.id || settledData.item?.id || ''
-    runtimeContext.orderId ||= settledData.orders?.[0]?.id || settledData.order?.id || ''
-    await new Promise(resolve => setTimeout(resolve, item.visualSettleMs ?? 1200))
-    const screenshotData = await retry(`confirm data ${item.route}`, () => page.data())
-    item.assertData(screenshotData)
-    const layout = typeof item.assertLayout === 'function' ? await retry(`verify layout ${item.route}`, () => item.assertLayout(page)) : undefined
-    await captureScreenshot(item.route, miniProgram, current)
-    const size = fs.statSync(current).size
-    assert(size >= 12 * 1024, `Screenshot is suspiciously small: ${item.route}`)
-    const result = {
-      route: item.route,
-      sizeBytes: size,
-      mode: updateBaseline ? 'baseline-candidate' : fs.existsSync(baseline) ? 'compare' : 'capture',
-      publicState: publicPageState(screenshotData || settledData),
-    }
-    if (layout) {
-      result.layout = layout
-    }
-    if (!updateBaseline && fs.existsSync(baseline)) {
-      Object.assign(result, compare(baseline, current, diff))
-    }
-    report.pages.push(result)
-    console.log(`PASS  ${item.route}  ${Math.round(size / 1024)} KB`)
-  }
-
-  assert(runtimeContext.eventId, 'Phone login sheet verification requires a real event')
-  const eventDetailCase = pageCaseByRoute('packages/member/event-detail/index')
-  const phoneSheetPage = await retry('phone login sheet page', () => miniProgram.reLaunch(
-    `/packages/member/event-detail/index?eventId=${encodeURIComponent(runtimeContext.eventId)}`,
-  ))
-  await retry('phone login sheet page ready', () => phoneSheetPage.waitForRendered({ selector: eventDetailCase.selector, timeout: 15000 }))
-  const phoneSheetData = await waitForPageData(phoneSheetPage, eventDetailCase)
-  assert(phoneSheetData.state === 'ready', 'Phone login sheet background page is not ready')
-  await retry('open phone login sheet', () => phoneSheetPage.setData({ phoneSheetVisible: true }))
-  const visiblePhoneSheetData = await retry('read phone login sheet state', () => phoneSheetPage.data())
-  assert(visiblePhoneSheetData.phoneSheetVisible === true, 'Phone login sheet did not enter the visible state')
-  // Page selectors do not pierce the custom-component boundary in every
-  // DevTools version, so state + screenshot is the stable interaction proof.
-  await new Promise(resolve => setTimeout(resolve, 700))
-  const phoneSheetPath = path.join(outputDir, 'interaction-phone-login-sheet.png')
-  await captureScreenshot('phone-login-sheet', miniProgram, phoneSheetPath)
-  const phoneSheetSize = fs.statSync(phoneSheetPath).size
-  assert(phoneSheetSize >= 12 * 1024, 'Phone login sheet screenshot is suspiciously small')
-  report.interactionStates = [{
-    name: 'phone-login-sheet',
-    route: 'packages/member/event-detail/index',
-    sizeBytes: phoneSheetSize,
-  }]
-  console.log(`PASS  phone-login-sheet interaction  ${Math.round(phoneSheetSize / 1024)} KB`)
-
-  const homeCase = pageCaseByRoute('pages/index/index')
-  const exploreCase = pageCaseByRoute('pages/explore/index')
-  const eventsCase = pageCaseByRoute('pages/events/index')
-  const membershipCase = pageCaseByRoute('pages/membership/index')
-  const profileCase = pageCaseByRoute('pages/profile/index')
-  const home = await retry('continuity home', () => miniProgram.reLaunch('/pages/index/index'))
-  await retry('continuity wait home', () => home.waitForRendered({ selector: homeCase.selector, timeout: 15000 }))
-  const initialHome = await waitForPageData(home, homeCase)
-  assert(initialHome.state === 'ready', 'Navigation continuity requires a ready home page')
-
-  const explore = await retry('continuity switch to explore', () => miniProgram.switchTab('/pages/explore/index'))
-  await retry('continuity wait explore', () => explore.waitForRendered({ selector: exploreCase.selector, timeout: 15000 }))
-  const settledExplore = await waitForPageData(explore, exploreCase)
-  assert(settledExplore.state === 'ready', 'Tab switch did not settle the explore page')
-
-  const returnedHome = await retry('continuity switch to home', () => miniProgram.switchTab('/pages/index/index'))
-  const immediateTabState = await retry('continuity read home after tab switch', () => returnedHome.data())
-  assert(immediateTabState.state === 'ready', 'Returning by TabBar reset the home page to loading')
-
-  const returnedExplore = await retry('continuity switch back to explore', () => miniProgram.switchTab('/pages/explore/index'))
-  const immediateExploreState = await retry('continuity read explore after tab switch', () => returnedExplore.data())
-  assert(immediateExploreState.state === 'ready', 'Returning to explore reset the member feed to loading')
-  assert(immediateExploreState.recommendationSignature === settledExplore.recommendationSignature, 'Returning to explore replaced the unchanged member feed')
-  await new Promise(resolve => setTimeout(resolve, 700))
-  const settledReturnedExplore = await retry('continuity confirm explore after refresh window', () => returnedExplore.data())
-  assert(settledReturnedExplore.recommendationSignature === settledExplore.recommendationSignature, 'Explore member feed changed during a cache-fresh tab return')
-
-  const events = await retry('continuity switch to events', () => miniProgram.switchTab('/pages/events/index'))
-  await retry('continuity wait events', () => events.waitForRendered({ selector: eventsCase.selector, timeout: 15000 }))
-  const settledEvents = await waitForPageData(events, eventsCase)
-  const eventsHome = await retry('continuity leave events', () => miniProgram.switchTab('/pages/index/index'))
-  assert((await retry('continuity read home after events', () => eventsHome.data())).state === 'ready', 'Leaving events reset the home page')
-  const returnedEvents = await retry('continuity return to events', () => miniProgram.switchTab('/pages/events/index'))
-  const immediateEventsState = await retry('continuity read events after tab switch', () => returnedEvents.data())
-  assert(immediateEventsState.state === 'ready', 'Returning to events reset the page to loading')
-  assert(immediateEventsState.eventSignature === settledEvents.eventSignature, 'Returning to events replaced unchanged event cards')
-
-  const cachedHome = await retry('continuity return home before detail', () => miniProgram.switchTab('/pages/index/index'))
-  const editor = await retry('continuity open profile editor', () => miniProgram.navigateTo('/packages/member/profile-edit/index'))
-  await retry('continuity wait editor', () => editor.waitForRendered({ selector: '#profile-edit-page', timeout: 15000 }))
-  const backHome = await retry('continuity navigate back', () => miniProgram.navigateBack())
-  const immediateBackState = await retry('continuity read home after back', () => backHome.data())
-  assert(immediateBackState.state === 'ready', 'Returning from a detail page reset the home page to loading')
-
-  await retry('continuity confirm cached home', () => cachedHome.data())
-  const profile = await retry('benefits switch to profile', () => miniProgram.switchTab('/pages/profile/index'))
-  await retry('benefits wait profile', () => profile.waitForRendered({ selector: profileCase.selector, timeout: 15000 }))
-  await waitForPageData(profile, profileCase)
-  const benefits = await retry('benefits navigate from profile', () => miniProgram.navigateTo('/packages/member/benefits/index'))
-  await retry('benefits wait page', () => benefits.waitForRendered({ selector: '#member-benefits-page', timeout: 15000 }))
-  const benefitsData = await retry('benefits read state', () => benefits.data())
-  assert(typeof benefitsData.membershipActive === 'boolean', 'Benefits page did not load membership state')
-  await new Promise(resolve => setTimeout(resolve, 500))
-  const benefitsNavigationPath = path.join(outputDir, 'interaction-benefits-navigation.png')
-  await captureScreenshot('benefits-navigation', miniProgram, benefitsNavigationPath)
-  const benefitsNavigationSize = fs.statSync(benefitsNavigationPath).size
-  assert(benefitsNavigationSize >= 12 * 1024, 'Benefits navigation screenshot is suspiciously small')
-  report.interactionStates.push({
-    name: 'benefits-navigation',
-    route: 'packages/member/benefits/index',
-    sizeBytes: benefitsNavigationSize,
-  })
-  await retry('benefits return-home action', () => benefits.callMethod('backToHome'))
-  const benefitsHome = await retry('benefits read returned home', () => miniProgram.currentPage())
-  const returnedHomeData = await retry('benefits read returned home data', () => benefitsHome.data())
-  assert(benefitsHome.path === 'pages/index/index' && returnedHomeData.state === 'ready', 'Benefits page did not return to the ready home page')
-  const membership = await retry('membership open from home', () => miniProgram.navigateTo('/pages/membership/index'))
-  await retry('membership wait page', () => membership.waitForRendered({ selector: '#membership-checkout-page', timeout: 15000 }))
-  await waitForPageData(membership, membershipCase)
-  await retry('membership return-home action', () => membership.callMethod('backToHome'))
-  const membershipHome = await retry('membership read returned home', () => miniProgram.currentPage())
-  const membershipHomeData = await retry('membership read returned home data', () => membershipHome.data())
-  assert(membershipHome.path === 'pages/index/index' && membershipHomeData.state === 'ready', 'Post-payment membership page did not return to the ready home page')
-  report.navigationContinuity = {
-    tabReturnState: immediateTabState.state,
-    exploreReturnState: immediateExploreState.state,
-    detailReturnState: immediateBackState.state,
-    benefitsBackRoute: benefitsHome.path,
-    membershipBackRoute: membershipHome.path,
-    fullPageLoadingOnReturn: false,
-    memberFeedReplacedOnReturn: false,
-    eventCardsReplacedOnReturn: false,
-  }
-  console.log('PASS  navigation continuity  cache-first TabBar, stable member feed, and post-payment home navigation')
-
-  return { consoleCapture }
-}
-
-try {
-  report.preflight = await assertRuntimePreflight(devtoolsRoot, {
-    sourceRoot: devtoolsRoot === root ? 'src' : 'dist',
-    requirePublicAppId: devtoolsRoot !== root,
-    requiredRoutes: runtimeRoutes,
-  })
-  const openedAutomatorAvailable = await isLocalPortListening(baseRuntimeOptions.port)
-  if (!openedAutomatorAvailable) {
-    await warmWechatDevtoolsProject({
-      projectPath: devtoolsRoot,
-    })
-    report.recoveries.push({ action: 'prewarmed-devtools-project' })
-  }
-  for (let attempt = 1; attempt <= 2; attempt += 1) {
-    const preferOpenedSession = attempt === 1 && openedAutomatorAvailable
+    const query = queryForRoute(route)
+    const launchRoute = `/${route.path}${query ? `?${query}` : ''}`
     try {
-      const result = await runRuntimeAttempt(preferOpenedSession)
-      report.consoleCapture = result.consoleCapture
-      report.attempts.push({ attempt, preferOpenedSession, status: 'passed' })
-      break
+      const page = await retry(`reLaunch ${route.path}`, () => miniProgram.reLaunch(launchRoute))
+      await retry(`wait ${route.selector}`, () => page.waitForRendered({ selector: route.selector, timeout: 15000 }))
+      assert(String(page.path || '').replace(/^\//, '') === route.path, `Unexpected runtime route: ${page.path}`)
+      const settled = await waitForPageData(page, route, sensitivePatterns)
+      await new Promise(resolve => setTimeout(resolve, 600))
+      const screenshotData = await retry(`confirm data ${route.path}`, () => page.data())
+      assertNoSensitivePageData(screenshotData, route.path, sensitivePatterns)
+      const confirmed = evaluateRouteState(route, screenshotData)
+      const status = settled.status === 'passed' && confirmed.status === 'passed' ? 'passed' : 'failed'
+      const error = settled.error || confirmed.error
+
+      await captureScreenshot(route.path, miniProgram, current)
+      const sizeBytes = fs.statSync(current).size
+      assert(sizeBytes >= 8 * 1024, `Screenshot is suspiciously small: ${route.path}`)
+      const result = {
+        route: route.path,
+        selector: route.selector,
+        queryMode: query ? 'safe-placeholder-uuid' : 'none',
+        status,
+        sizeBytes,
+        mode: updateBaseline ? 'baseline-candidate' : fs.existsSync(baseline) ? 'compare' : 'capture',
+        publicState: publicPageState(screenshotData || settled.data),
+      }
+      if (error) {
+        result.error = sanitizeRuntimeValue(error)
+      }
+      if (status === 'passed' && !updateBaseline && fs.existsSync(baseline)) {
+        Object.assign(result, compare(baseline, current, diff))
+      }
+      report.pages.push(result)
+      console.log(`${status === 'passed' ? 'PASS' : 'FAIL'}  ${route.path}  ${Math.round(sizeBytes / 1024)} KB`)
     }
     catch (error) {
-      report.attempts.push({
-        attempt,
-        preferOpenedSession,
+      if (isRecoverableRuntimeConnectionError(error) || isScreenshotCaptureError(error)) {
+        throw error
+      }
+      report.pages.push({
+        route: route.path,
+        selector: route.selector,
+        queryMode: query ? 'safe-placeholder-uuid' : 'none',
         status: 'failed',
         error: sanitizeRuntimeValue(error instanceof Error ? error.message : error),
       })
-      if (attempt !== 1 || (!isRecoverableRuntimeConnectionError(error) && !isScreenshotCaptureError(error))) {
-        throw error
-      }
-      report.recoveries.push({
-        attempt,
-        action: 'reconnect-target-project',
-        reason: isScreenshotCaptureError(error) ? 'screenshot-capture-failed' : 'connection-failed',
-      })
-      await closeSharedMiniProgram(devtoolsRoot, sessionId).catch(() => undefined)
-      miniProgram = undefined
-      await warmWechatDevtoolsProject({
-        projectPath: devtoolsRoot,
-        restart: true,
-      })
+      console.log(`FAIL  ${route.path}`)
     }
+  }
+}
+
+async function verifyNavigation(miniProgram, runtimePages, report, sensitivePatterns) {
+  const tabs = runtimePages.routes.filter(route => route.tab)
+  report.navigation = { tabs: [], back: null, deepLink: null }
+  for (const route of tabs) {
+    const page = await retry(`switch tab ${route.path}`, () => miniProgram.switchTab(`/${route.path}`))
+    await retry(`wait tab ${route.path}`, () => page.waitForRendered({ selector: route.selector, timeout: 15000 }))
+    assert(String(page.path || '').replace(/^\//, '') === route.path, `Tab opened unexpected route: ${page.path}`)
+    const settled = await waitForPageData(page, route, sensitivePatterns, 12000)
+    report.navigation.tabs.push({ route: route.path, status: settled.status, state: settled.state })
   }
 
-  await new Promise(resolve => setTimeout(resolve, 300))
-  report.diagnostics = diagnostics.summary()
-  report.ideCompilerDiagnostics = inspectDevToolsCompilerLogs(devToolsLogSnapshot)
-  const failures = diagnostics.failures()
-  assert(failures.length === 0, `Runtime diagnostics reported ${failures.length} error(s) or unknown warning(s)`)
-  assert(report.ideCompilerDiagnostics.failures === 0, `WeChat DevTools compiler reported ${report.ideCompilerDiagnostics.failures} build/HMR error(s)`)
-  assert(report.pages.length === pageCases.length, 'Runtime verifier did not complete every page case')
-  assert(
-    report.pages.length === runtimePages.routeCount,
-    `Runtime verifier must cover all ${runtimePages.routeCount} contracted routes, got ${report.pages.length}`,
-  )
-  assert(
-    report.pages.some(page => page.route === 'packages/admin/event-registrations/index'),
-    'Runtime verifier must cover packages/admin/event-registrations/index',
-  )
-  if (updateBaseline) {
-    for (const item of pageCases) {
-      fs.copyFileSync(
-        path.join(outputDir, `${outputName(item.route)}.png`),
-        path.join(baselineDir, `${outputName(item.route)}.png`),
-      )
+  const homeRoute = runtimePages.routes.find(route => route.path === 'pages/index/index')
+  const returnRoute = runtimePages.routes.find(route => route.path === 'packages/member/help/index')
+  assert(homeRoute && returnRoute, 'Runtime navigation contract is missing home/help')
+  const home = await retry('return flow home', () => miniProgram.reLaunch('/pages/index/index'))
+  await retry('wait return flow home', () => home.waitForRendered({ selector: homeRoute.selector, timeout: 15000 }))
+  const secondary = await retry('open secondary page', () => miniProgram.navigateTo('/packages/member/help/index'))
+  await retry('wait secondary page', () => secondary.waitForRendered({ selector: returnRoute.selector, timeout: 15000 }))
+  const returned = await retry('navigate back', () => miniProgram.navigateBack())
+  await retry('wait returned home', () => returned.waitForRendered({ selector: homeRoute.selector, timeout: 15000 }))
+  report.navigation.back = {
+    status: returned.path === 'pages/index/index' ? 'passed' : 'failed',
+    from: returnRoute.path,
+    to: String(returned.path || ''),
+  }
+
+  const deepRoute = runtimePages.routes.find(route => route.group === 'public' && (route.query || []).length > 0)
+    || runtimePages.routes.find(route => (route.query || []).length > 0)
+  assert(deepRoute, 'Runtime contract has no query deep-link route')
+  const deepQuery = queryForRoute(deepRoute)
+  const deepPage = await retry('open safe deep link', () => miniProgram.reLaunch(`/${deepRoute.path}?${deepQuery}`))
+  await retry('wait safe deep link root', () => deepPage.waitForRendered({ selector: deepRoute.selector, timeout: 15000 }))
+  const deepResult = await waitForPageData(deepPage, deepRoute, sensitivePatterns, 12000)
+  report.navigation.deepLink = {
+    route: deepRoute.path,
+    queryMode: 'safe-placeholder-uuid',
+    rootReached: true,
+    status: deepResult.status,
+    state: deepResult.state,
+    error: deepResult.error ? sanitizeRuntimeValue(deepResult.error) : undefined,
+  }
+}
+
+function resetRuntimeArtifacts() {
+  fs.mkdirSync(outputDir, { recursive: true })
+  fs.mkdirSync(baselineDir, { recursive: true })
+  for (const entry of fs.readdirSync(outputDir, { withFileTypes: true })) {
+    if (entry.isFile()) {
+      fs.rmSync(path.join(outputDir, entry.name))
     }
   }
-  // Simulator never proves phone/pay/share/customer-service; keep them explicit.
-  report.deviceRequired = buildDeviceRequiredReport()
-  report.status = 'passed'
 }
-catch (error) {
-  report.status = 'failed'
-  report.diagnostics = diagnostics.summary()
-  report.ideCompilerDiagnostics ??= inspectDevToolsCompilerLogs(devToolsLogSnapshot)
-  report.deviceRequired = buildDeviceRequiredReport()
-  report.error = sanitizeRuntimeValue(error instanceof Error ? error.message : error)
-  throw error
+
+export async function main(runArgs = process.argv.slice(2)) {
+  const runtimePages = JSON.parse(fs.readFileSync(runtimePagesPath, 'utf8'))
+  validateRuntimeContract(runtimePages)
+  if (runArgs.includes('--map-only') || runArgs.includes('--offline-only') || runArgs.includes('--contract-only')) {
+    console.log(`MIP runtime contract passed (${runtimePages.routeCount} routes)`)
+    return { status: 'contract-passed', routeCount: runtimePages.routeCount }
+  }
+
+  installMiniprogramAutomatorCompatibility()
+  const skipBuild = runArgs.includes('--skip-build')
+  const updateBaseline = runArgs.includes('--update-baseline')
+  const requireBaseline = runArgs.includes('--require-baseline')
+  const devtoolsRoot = process.env.MINIPROGRAM_DEVTOOLS_PROJECT_ROOT
+    ? path.resolve(process.env.MINIPROGRAM_DEVTOOLS_PROJECT_ROOT)
+    : root
+  const sensitivePatterns = Array.isArray(runtimePages.sensitivePatterns) ? runtimePages.sensitivePatterns : []
+  const runtimeRoutes = runtimePages.routes.map(route => route.path)
+
+  resetRuntimeArtifacts()
+  if (requireBaseline && !updateBaseline) {
+    for (const route of runtimePages.routes) {
+      assert(fs.existsSync(path.join(baselineDir, `${outputName(route.path)}.png`)), `Missing baseline for ${route.path}`)
+    }
+  }
+  if (!skipBuild) {
+    run('pnpm', ['build'])
+  }
+
+  const report = {
+    status: 'running',
+    updateBaseline,
+    pages: [],
+    attempts: [],
+    recoveries: [],
+    representativeStates: [],
+    deviceRequired: buildDeviceRequiredReport(runtimePages),
+    routeContract: {
+      source: 'config/runtime-pages.json',
+      routeCount: runtimePages.routeCount,
+      routes: runtimeRoutes,
+    },
+  }
+  const baseRuntimeOptions = {
+    port: resolveProjectAutomatorPort(devtoolsRoot),
+    projectPath: devtoolsRoot,
+    preserveProjectRoot: true,
+    sessionId,
+    sharedSession: true,
+    timeout: 60000,
+    trustProject: true,
+  }
+  const warningAllowlist = readRuntimeWarningAllowlist(warningAllowlistPath)
+  const diagnostics = createRuntimeDiagnostics({ allowlist: warningAllowlist })
+  let miniProgram
+
+  await new Promise(resolve => setTimeout(resolve, 1500))
+  const devToolsLogSnapshot = snapshotDevToolsLogs()
+
+  async function runRuntimeAttempt(preferOpenedSession) {
+    if (await clearStaleAutomatorPortLease(baseRuntimeOptions.port)) {
+      report.recoveries.push({ action: 'cleared-stale-port-lease', port: baseRuntimeOptions.port })
+    }
+    miniProgram = await withProtocolTimeout(
+      'shared automator acquisition',
+      () => acquireSharedMiniProgram({
+        ...baseRuntimeOptions,
+        preferOpenedSession,
+        sharedSession: preferOpenedSession,
+        openedOnly: preferOpenedSession,
+      }),
+      baseRuntimeOptions.timeout * 2 + 15000,
+    )
+    miniProgram.on('console', payload => diagnostics.captureConsole(payload))
+    miniProgram.on('exception', payload => diagnostics.captureException(payload))
+
+    await verifyRepresentativeStates(miniProgram, runtimePages, report, sensitivePatterns)
+    await verifyContractedPages(miniProgram, runtimePages, report, { sensitivePatterns, updateBaseline })
+    await verifyNavigation(miniProgram, runtimePages, report, sensitivePatterns)
+
+    const failedPages = report.pages.filter(page => page.status !== 'passed')
+    const failedTabs = report.navigation.tabs.filter(tab => tab.status !== 'passed')
+    assert(
+      failedPages.length === 0,
+      `${failedPages.length} contracted page(s) did not reach an accepted state; service errors are not runtime success`,
+    )
+    assert(failedTabs.length === 0, `${failedTabs.length} primary tab(s) did not reach an accepted state`)
+    assert(report.navigation.back?.status === 'passed', 'Secondary-page return path failed')
+    assert(report.navigation.deepLink?.status === 'passed', 'Safe deep link reached an error instead of an accepted state')
+  }
+
+  try {
+    report.preflight = await assertRuntimePreflight(devtoolsRoot, {
+      sourceRoot: devtoolsRoot === root ? 'src' : 'dist',
+      requirePublicAppId: devtoolsRoot !== root,
+      requiredRoutes: runtimeRoutes,
+    })
+    const openedAutomatorAvailable = await isLocalPortListening(baseRuntimeOptions.port)
+    if (!openedAutomatorAvailable) {
+      await warmWechatDevtoolsProject({ projectPath: devtoolsRoot })
+      report.recoveries.push({ action: 'prewarmed-devtools-project' })
+    }
+
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      const preferOpenedSession = attempt === 1 && openedAutomatorAvailable
+      try {
+        await runRuntimeAttempt(preferOpenedSession)
+        report.attempts.push({ attempt, preferOpenedSession, status: 'passed' })
+        break
+      }
+      catch (error) {
+        report.attempts.push({
+          attempt,
+          preferOpenedSession,
+          status: 'failed',
+          error: sanitizeRuntimeValue(error instanceof Error ? error.message : error),
+        })
+        if (attempt !== 1 || (!isRecoverableRuntimeConnectionError(error) && !isScreenshotCaptureError(error))) {
+          throw error
+        }
+        report.recoveries.push({
+          attempt,
+          action: 'reconnect-target-project',
+          reason: isScreenshotCaptureError(error) ? 'screenshot-capture-failed' : 'connection-failed',
+        })
+        await closeSharedMiniProgram(devtoolsRoot, sessionId).catch(() => undefined)
+        miniProgram = undefined
+        report.pages = []
+        report.representativeStates = []
+        report.navigation = undefined
+        await warmWechatDevtoolsProject({ projectPath: devtoolsRoot, restart: true })
+      }
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 300))
+    report.diagnostics = diagnostics.summary()
+    report.ideCompilerDiagnostics = inspectDevToolsCompilerLogs(devToolsLogSnapshot)
+    const diagnosticFailures = diagnostics.failures()
+    assert(diagnosticFailures.length === 0, `Runtime diagnostics reported ${diagnosticFailures.length} error(s) or unknown warning(s)`)
+    assert(report.ideCompilerDiagnostics.failures === 0, `WeChat DevTools compiler reported ${report.ideCompilerDiagnostics.failures} build/HMR error(s)`)
+    assert(report.pages.length === runtimePages.routeCount, `Runtime verifier covered ${report.pages.length}/${runtimePages.routeCount} routes`)
+    assert(report.representativeStates.length === 6, 'Runtime verifier did not cover all representative states')
+
+    if (updateBaseline) {
+      for (const route of runtimePages.routes) {
+        fs.copyFileSync(
+          path.join(outputDir, `${outputName(route.path)}.png`),
+          path.join(baselineDir, `${outputName(route.path)}.png`),
+        )
+      }
+    }
+    report.deviceRequired = buildDeviceRequiredReport(runtimePages)
+    report.status = 'passed'
+  }
+  catch (error) {
+    report.status = 'failed'
+    report.diagnostics = diagnostics.summary()
+    report.ideCompilerDiagnostics ??= inspectDevToolsCompilerLogs(devToolsLogSnapshot)
+    report.deviceRequired = buildDeviceRequiredReport(runtimePages)
+    report.error = sanitizeRuntimeValue(error instanceof Error ? error.message : error)
+    throw error
+  }
+  finally {
+    const cleanupStatus = await Promise.race([
+      miniProgram
+        ? closeSharedMiniProgram(devtoolsRoot, sessionId).then(() => 'closed').catch(() => 'failed')
+        : Promise.resolve('not-opened'),
+      new Promise(resolve => setTimeout(resolve, 5000, 'timed-out')),
+    ])
+    report.cleanup = { status: cleanupStatus }
+    report.deviceRequired ??= buildDeviceRequiredReport(runtimePages)
+    writeArtifacts(report, diagnostics)
+  }
+  return report
 }
-finally {
-  const cleanupStatus = await Promise.race([
-    closeSharedMiniProgram(devtoolsRoot, sessionId).then(() => 'closed'),
-    new Promise(resolve => setTimeout(resolve, 5000, 'timed-out')),
-  ])
-  report.cleanup = { status: cleanupStatus }
-  report.deviceRequired ??= buildDeviceRequiredReport()
-  writeArtifacts(report, diagnostics)
-  const exitCode = report.status === 'passed' ? 0 : 1
-  setTimeout(process.exit, 250, exitCode)
+
+const directEntry = process.argv[1] ? pathToFileURL(path.resolve(process.argv[1])).href : ''
+if (import.meta.url === directEntry) {
+  main().catch((error) => {
+    console.error(sanitizeRuntimeValue(error instanceof Error ? error.message : error))
+    process.exitCode = 1
+  })
 }

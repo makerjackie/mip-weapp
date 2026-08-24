@@ -1,0 +1,11 @@
+{
+  "navigationBarTitleText": "超级案例",
+  "navigationBarBackgroundColor": "#040404",
+  "navigationBarTextStyle": "white",
+  "usingComponents": {
+    "app-empty-state": "/components/empty-state/index",
+    "app-page-exit": "/components/page-exit/index",
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
+  }
+}

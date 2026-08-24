@@ -1,36 +1,11 @@
-<view id="admin-roles-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+40rpx)] pt-4 text-ink">
-  <view wx:if="{{state === 'loading'}}" class="rounded-[26rpx] bg-panel px-5 py-8"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'forbidden'}}"><app-empty-state title="仅主理人可管理权限" description="全局管理员权限会影响所有活动、成员与订单。" /></view>
-  <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载管理员" description="{{message}}" action-text="重新加载" bind:action="load" /></view>
-  <block wx:else>
-    <view class="rounded-[28rpx] bg-brand px-5 py-5 text-white">
-      <view class="text-[length:32rpx] font-bold">团队权限</view>
-      <view class="mt-2 text-[length:21rpx] leading-5 text-brand-soft">全局权限与单场活动管理员分开管理；最小授权，随时可暂停。</view>
-    </view>
-
-    <view wx:if="{{profiles.length}}" class="mt-4 rounded-[26rpx] bg-panel px-5 py-5">
-      <view class="text-[length:26rpx] font-bold">添加管理员</view>
-      <picker class="mt-4" mode="selector" range="{{profileLabels}}" value="{{selectedProfileIndex}}" bindchange="chooseProfile">
-        <view class="flex h-[82rpx] items-center justify-between rounded-[18rpx] bg-canvas px-4 text-[length:23rpx]"><text>{{profileLabels[selectedProfileIndex] || '选择已认证成员'}}</text><t-icon name="chevron-down" size="32rpx" color="var(--color-muted)" /></view>
-      </picker>
-      <picker class="mt-3" mode="selector" range="{{roleLabels}}" value="{{selectedRoleIndex}}" bindchange="chooseRole">
-        <view class="flex h-[82rpx] items-center justify-between rounded-[18rpx] bg-canvas px-4 text-[length:23rpx]"><text>{{roleLabels[selectedRoleIndex]}}</text><t-icon name="chevron-down" size="32rpx" color="var(--color-muted)" /></view>
-      </picker>
-      <view class="mt-4"><t-button block theme="primary" loading="{{busyId}}" bind:tap="addRole">添加到运营团队</t-button></view>
-    </view>
-
-    <view class="mt-4 overflow-hidden rounded-[26rpx] bg-panel">
-      <view class="border-b border-line px-5 py-4 text-[length:26rpx] font-bold">当前管理员</view>
-      <view wx:for="{{roles}}" wx:key="profileId" class="border-b border-line px-5 py-4 last:border-b-0">
-        <view class="flex items-start justify-between gap-3">
-          <view class="min-w-0 flex-1"><view class="text-[length:25rpx] font-semibold">{{item.nickname}}</view><view class="mt-1 text-[length:20rpx] text-muted">{{item.roleText}} · {{item.permissionText}}</view></view>
-          <view wx:if="{{item.active}}" class="rounded-full bg-brand-soft px-3 py-1 text-[length:19rpx] text-brand">使用中</view>
-          <view wx:else class="rounded-full bg-panel-muted px-3 py-1 text-[length:19rpx] text-muted">已暂停</view>
-        </view>
-        <view wx:if="{{item.canEdit}}" class="mt-3 text-right"><t-button size="small" variant="outline" theme="{{item.active ? 'danger' : 'primary'}}" loading="{{busyId === item.profileId}}" data-profile-id="{{item.profileId}}" data-role="{{item.role}}" data-active="{{item.active}}" bind:tap="toggleRole">{{item.active ? '暂停权限' : '恢复权限'}}</t-button></view>
-      </view>
-    </view>
-    <view wx:if="{{message}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:22rpx] text-[#9F4727]">{{message}}</view>
-  </block>
+<view id="admin-roles-page" class="min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+  <view class="text-[length:40rpx] font-bold">角色与权限</view><view class="mt-2 text-[length:23rpx] text-muted">平台、城市分会和活动角色按范围生效</view>
+  <view wx:if="{{canPlatformChange}}" class="mt-5 rounded-[16rpx] bg-panel p-4"><view class="text-[length:27rpx] font-semibold">设置角色</view><view class="mt-3"><t-input value="{{query}}" placeholder="搜索用户昵称" bind:change="updateQuery" bind:enter="searchUsers" /></view><view wx:if="{{candidates.length}}" class="mt-2 flex flex-col gap-2"><view wx:for="{{candidates}}" wx:key="id" class="rounded-[10rpx] bg-panel-raised px-3 py-3" data-id="{{item.id}}" data-name="{{item.nickname}}" bind:tap="chooseUser">{{item.nickname}} · {{item.branchName || '未设置分会'}}</view></view><view wx:if="{{selectedUserName}}" class="mt-3 text-[length:23rpx] text-brand">已选择：{{selectedUserName}}</view><view class="mt-3 flex flex-wrap gap-2"><t-tag variant="outline" data-role="PLATFORM_OPERATIONS" bind:tap="chooseRole">平台运营</t-tag><t-tag variant="outline" data-role="PLATFORM_FINANCE" bind:tap="chooseRole">平台财务</t-tag><t-tag variant="outline" data-role="BRANCH_ADMIN" bind:tap="chooseRole">城市管理员</t-tag><t-tag variant="outline" data-role="EVENT_MANAGER" bind:tap="chooseRole">活动管理员</t-tag><t-tag variant="outline" data-role="EVENT_STAFF" bind:tap="chooseRole">现场人员</t-tag></view><view class="mt-2 text-[length:22rpx] text-muted">将设置为：{{selectedRoleLabel}}</view><picker wx:if="{{selectedRole === 'BRANCH_ADMIN' && branches.length}}" class="mt-3" mode="selector" range="{{branches}}" range-key="name" value="{{branchIndex}}" bindchange="changeBranch"><view class="box-border flex min-h-[80rpx] max-w-full items-center justify-between rounded-[12rpx] bg-panel-raised px-3 text-[length:23rpx]"><text>{{branchIndex >= 0 ? branches[branchIndex].name : '选择城市分会'}}</text><text class="text-muted">选择</text></view></picker><picker wx:if="{{selectedRoleIsScoped && selectedRole !== 'BRANCH_ADMIN' && events.length}}" class="mt-3" mode="selector" range="{{events}}" range-key="title" value="{{eventIndex}}" bindchange="changeEvent"><view class="box-border flex min-h-[80rpx] max-w-full items-center justify-between rounded-[12rpx] bg-panel-raised px-3 text-[length:23rpx]"><text>{{eventIndex >= 0 ? events[eventIndex].title : '选择活动'}}</text><text class="text-muted">选择</text></view></picker><view wx:if="{{selectedRoleIsScoped && !scopeId}}" class="mt-3 text-[length:22rpx] text-danger">当前没有可选范围。</view><view class="mt-4"><t-button block theme="primary" loading="{{processing}}" bind:tap="grant">确认设置</t-button></view></view>
+  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载角色" description="{{message}}" action-text="重新加载" bind:action="loadRoles" /></view>
+  <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有角色查看权限" description="当前账号不能查看角色设置。" /></view>
+  <view wx:elif="{{roles.length === 0}}" class="mt-6"><app-empty-state title="暂无角色记录" description="角色设置后会显示在这里。" /></view>
+  <view wx:else class="mt-5 flex flex-col gap-3"><view wx:for="{{roles}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4"><view class="flex items-start justify-between gap-3"><view><view class="text-[length:27rpx] font-semibold">{{item.nickname}}</view><view class="mt-1 text-[length:22rpx] text-muted">{{item.roleLabel}} · {{item.scopeLabel}}</view></view><t-tag variant="outline">{{item.status}}</t-tag></view><view wx:if="{{canPlatformChange && item.status === 'ACTIVE'}}" class="mt-4"><t-button block size="small" variant="outline" theme="danger" loading="{{processing}}" data-user-id="{{item.userId}}" data-role="{{item.roleKey}}" data-scope-id="{{item.scopeId}}" bind:tap="revoke">撤销角色</t-button></view></view></view>
+  <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
   <app-page-exit />
 </view>

@@ -1,10 +1,11 @@
 {
-  "navigationBarTitleText": "活动管理员",
-  "enablePullDownRefresh": true,
+  "navigationBarTitleText": "活动团队",
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",
+    "app-page-exit": "/components/page-exit/index",
     "t-button": "tdesign-miniprogram/button/button",
+    "t-input": "tdesign-miniprogram/input/input",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
-    "app-page-exit": "/components/page-exit/index"
+    "t-tag": "tdesign-miniprogram/tag/tag"
   }
 }

@@ -1,11 +1,10 @@
 {
-  "navigationBarTitleText": "手机运营台",
+  "navigationBarTitleText": "运营工作台",
   "enablePullDownRefresh": true,
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",
-    "t-button": "tdesign-miniprogram/button/button",
+    "app-page-exit": "/components/page-exit/index",
     "t-icon": "tdesign-miniprogram/icon/icon",
-    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
-    "app-page-exit": "/components/page-exit/index"
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
   }
 }

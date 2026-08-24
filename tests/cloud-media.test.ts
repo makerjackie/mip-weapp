@@ -19,6 +19,8 @@ describe('CloudBase media URLs', () => {
       .toContain('thumbnail/1200x')
     expect(cloudImageTransformForFileId('cloud://env/member-assets/app/events/id/album/a.jpg'))
       .toContain('thumbnail/1600x')
+    expect(cloudImageTransformForFileId('cloud://env/mip/test/scope/event-album/user/a.jpg'))
+      .toContain('thumbnail/1600x')
     expect(appendCloudImageTransform(
       'https://example.test/file.jpg?sign=1',
       'imageMogr2/thumbnail/1200x',

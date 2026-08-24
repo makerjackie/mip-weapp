@@ -9,10 +9,13 @@ function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'))
 }
 
-function synchronizeDirectory(source, destination) {
+function synchronizeDirectory(source, destination, { publishManifestLast = false } = {}) {
   fs.mkdirSync(destination, { recursive: true })
   const sourceEntries = new Set(fs.readdirSync(source))
   for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
+    if (publishManifestLast && entry.name === 'app.json') {
+      continue
+    }
     const sourcePath = path.join(source, entry.name)
     const destinationPath = path.join(destination, entry.name)
     if (entry.isDirectory()) {
@@ -29,6 +32,9 @@ function synchronizeDirectory(source, destination) {
         recursive: entry.isDirectory(),
       })
     }
+  }
+  if (publishManifestLast) {
+    fs.copyFileSync(path.join(source, 'app.json'), path.join(destination, 'app.json'))
   }
 }
 
@@ -54,7 +60,7 @@ export function resolveLocalDevtoolsHostRoot(
     .slice(0, 16)
   return path.join(
     temporaryRoot,
-    '01mvp-weapp-devtools',
+    'mip-weapp-devtools',
     `${path.basename(resolvedSourceRoot)}-${identity}`,
   )
 }
@@ -111,7 +117,7 @@ export function syncLocalDevtoolsHost({
     path.join(hostRoot, 'project.private.config.json'),
     `${JSON.stringify(privateConfig, null, 2)}\n`,
   )
-  synchronizeDirectory(sourceDist, hostDist)
+  synchronizeDirectory(sourceDist, hostDist, { publishManifestLast: true })
 
   return {
     hostRoot,

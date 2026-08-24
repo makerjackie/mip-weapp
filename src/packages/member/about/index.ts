@@ -5,7 +5,6 @@ Page({
   data: {
     state: 'ready' as const,
     productName: brand.productName,
-    tagline: brand.tagline,
     markText: brand.markText,
     versionText: `${brand.productName} v${runtimeConfig.appVersion}`,
   },

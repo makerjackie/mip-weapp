@@ -2,6 +2,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
+import { runtimeUserForEnvironment } from './lib/mysql-privilege-assert.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const args = new Map()
@@ -96,10 +97,13 @@ const nextEnv = {
 }
 if (appid) {
   nextEnv.MINI_PROGRAM_APP_ID = appid
-  nextEnv.MEMBERSHIP_ALLOWED_APP_IDS = appid
+  nextEnv.MIP_ALLOWED_APP_IDS = appid
 }
 if (envId) {
   nextEnv.CLOUDBASE_ENV_ID = envId
+}
+if (nextEnv.CLOUDBASE_ENV_ID) {
+  nextEnv.MIP_DB_RUNTIME_USER = runtimeUserForEnvironment(nextEnv.CLOUDBASE_ENV_ID)
 }
 if (!dryRun) {
   fs.writeFileSync(envPath, serializeEnv(nextEnv, envTemplate))

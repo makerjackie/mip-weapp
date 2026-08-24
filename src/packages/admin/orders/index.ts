@@ -1,143 +1,176 @@
-import type { AdminOrderItem } from '../../../modules/admin/types'
+import type { AdminOrder } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
-import { createLabelPresenter, formatMinorUnits, formatRecordCode } from '@weapp/shared/presenter'
-import { adminModule } from '../../../modules/admin/client'
-import { formatLocalDateTime } from '../../../utils/date'
+import { hasCapability, hasScopedCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { adminLoadFailure } from '../shared/page-state'
 
-const statusLabels: Record<string, string> = {
-  PENDING: '待支付',
-  PAYMENT_CREATED: '支付结果确认中',
-  PAID: '已支付',
-  CLOSED: '已关闭',
-  REFUND_PENDING: '退款处理中',
-  REFUNDED: '已退款',
-  REFUND_FAILED: '退款失败',
-  FAILED: '支付失败',
-}
-const statusText = createLabelPresenter(statusLabels)
-
-interface DisplayOrder extends AdminOrderItem {
-  amountText: string
-  createdText: string
-  orderText: string
-  statusText: string
-  refundActionText: string
-}
-
-function displayOrders(orders: AdminOrderItem[]) {
-  return orders.map(item => ({
-    ...item,
-    orderText: formatRecordCode(item.id, { prefix: '订单' }),
-    statusText: statusText(item.status),
-    amountText: formatMinorUnits(item.amountCents),
-    createdText: formatLocalDateTime(item.createdAt),
-    refundActionText: item.status === 'REFUND_FAILED' ? '重新提交退款' : '发起全额退款',
-  }))
-}
+type OrderView = AdminOrder & { amountText: string, refundedText: string }
 
 Page({
-  data: { state: 'loading' as AdminPageState, orders: [] as DisplayOrder[], processingId: '', message: '' },
+  data: {
+    state: 'loading' as AdminPageState,
+    eventId: '',
+    orders: [] as OrderView[],
+    status: '',
+    canRefund: false,
+    canExport: false,
+    processingId: '',
+    exportPending: false,
+    message: '',
+    nextCursor: null as string | null,
+    loadingMore: false,
+  },
+  onLoad(query: Record<string, string>) { this.setData({ eventId: query.eventId || '' }) },
   onShow() { void this.loadOrders() },
+  chooseStatus(event: WechatMiniprogram.TouchEvent) {
+    this.setData({ status: String(event.currentTarget.dataset.value || '') })
+    void this.loadOrders(true)
+  },
   async loadOrders(force = false) {
-    const cached = adminModule.peekOrders()
-    if (cached) {
-      this.setData({ state: 'ready', orders: displayOrders(cached), message: '' })
-    }
-    else if (this.data.state !== 'ready') {
+    const hasContent = this.data.orders.length > 0
+    if (!hasContent) {
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const orders = await adminModule.listOrders({ force })
+      const [session, response, event] = await Promise.all([
+        mipAdminModule.getSession(force),
+        mipAdminModule.listOrders({ filters: { status: this.data.status, eventId: this.data.eventId } }, force),
+        this.data.eventId ? mipAdminModule.getEvent(this.data.eventId, force) : Promise.resolve(null),
+      ])
+      const eventScope = event
+        ? { scopeType: 'EVENT' as const, scopeId: event.id, branchId: event.branchId }
+        : null
       this.setData({
         state: 'ready',
-        orders: displayOrders(orders),
+        orders: response.items.map(item => ({
+          ...item,
+          amountText: `${item.currency} ${(item.amountCents / 100).toFixed(2)}`,
+          refundedText: `${item.currency} ${(item.refundedAmountCents / 100).toFixed(2)}`,
+        })),
+        canRefund: eventScope
+          ? hasScopedCapability(session.capabilities, 'refunds.submit', eventScope)
+          : hasCapability(session.capabilities, 'refunds.submit'),
+        canExport: eventScope
+          ? hasScopedCapability(session.capabilities, 'exports.create', eventScope)
+          : hasCapability(session.capabilities, 'exports.create'),
+        nextCursor: response.nextCursor || null,
+        loadingMore: false,
+        message: '',
       })
     }
     catch (error) {
-      this.setData(adminLoadFailure(error, {
-        hasContent: Boolean(cached) || this.data.state === 'ready',
-        fallbackMessage: '订单列表加载失败',
-      }))
+      this.setData(adminLoadFailure(error, { hasContent, fallbackMessage: '订单列表加载失败' }))
     }
   },
-  async onPullDownRefresh() {
+  async loadMoreOrders() {
+    if (!this.data.nextCursor || this.data.loadingMore || this.data.state !== 'ready') {
+      return
+    }
+    this.setData({ loadingMore: true, message: '' })
     try {
-      await this.loadOrders(true)
+      const response = await mipAdminModule.listOrders({
+        cursor: this.data.nextCursor,
+        filters: { status: this.data.status, eventId: this.data.eventId },
+      })
+      const orders = response.items.map(item => ({
+        ...item,
+        amountText: `${item.currency} ${(item.amountCents / 100).toFixed(2)}`,
+        refundedText: `${item.currency} ${(item.refundedAmountCents / 100).toFixed(2)}`,
+      }))
+      this.setData({ orders: this.data.orders.concat(orders), nextCursor: response.nextCursor || null })
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '更多订单加载失败' })
     }
     finally {
-      wx.stopPullDownRefresh()
+      this.setData({ loadingMore: false })
     }
   },
-  async refund(event: WechatMiniprogram.TouchEvent) {
-    const orderId = String(event.currentTarget.dataset.orderId || '')
-    if (!orderId) {
+  onReachBottom() { void this.loadMoreOrders() },
+  async submitRefund(event: WechatMiniprogram.TouchEvent) {
+    const orderId = String(event.currentTarget.dataset.id || '')
+    if (!orderId || !this.data.canRefund || this.data.processingId) {
       return
     }
-    if (this.data.processingId) {
-      return
-    }
-    // Confirm latch before showModal so stacked taps cannot open parallel dialogs.
     this.setData({ processingId: orderId, message: '' })
     try {
-      const modal = await wx.showModal({
-        title: '全额退款',
-        content: '退款成功后，本订单对应的权益或活动名额会同步更新。确认继续？',
-        confirmText: '提交退款',
-        confirmColor: '#B8453E',
-      })
-      if (!modal.confirm) {
+      const modal = await wx.showModal({ title: '提交退款', editable: true, placeholderText: '填写退款原因' })
+      if (!modal.confirm || !modal.content.trim()) {
         return
       }
-      await adminModule.refundOrder(orderId, '运营者确认全额退款')
-      await this.loadOrders(true)
-      const refreshed = this.data.orders.find(item => item.id === orderId)
-      const completed = refreshed?.status === 'REFUNDED'
-      this.setData({
-        message: completed
-          ? '退款已完成，会员权益已同步更新。'
-          : '退款已提交微信支付，处理完成后会自动更新状态。',
+      const result = await mipAdminModule.mutate(() => mipAdminModule.gateway.submitRefund({
+        orderId,
+        reason: modal.content,
+        idempotencyKey: `admin-refund-${orderId}-${Date.now()}`,
+      }))
+      const dispatchStatus = (result.providerDispatch as { status?: string } | undefined)?.status
+      const title = dispatchStatus === 'SUCCEEDED'
+        ? '退款已完成'
+        : dispatchStatus === 'FAILED'
+          ? '退款处理失败'
+          : dispatchStatus === 'PENDING_RETRY'
+            ? '退款请求已记录'
+            : '退款已提交'
+      wx.showToast({
+        title,
+        icon: dispatchStatus === 'FAILED' ? 'none' : 'success',
       })
-      wx.showToast({ title: completed ? '退款已完成' : '退款已提交', icon: 'success' })
+      await this.loadOrders(true)
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '退款提交失败' })
+      this.setData({ message: error instanceof Error ? error.message : '退款请求提交失败' })
     }
     finally {
       this.setData({ processingId: '' })
     }
   },
-  async confirmRefund(event: WechatMiniprogram.TouchEvent) {
+  async retryRefund(event: WechatMiniprogram.TouchEvent) {
     const orderId = String(event.currentTarget.dataset.orderId || '')
     const refundId = String(event.currentTarget.dataset.refundId || '')
-    if (!orderId || !refundId) {
+    if (!orderId || !refundId || !this.data.canRefund || this.data.processingId) {
       return
     }
-    if (this.data.processingId) {
-      return
-    }
-    // Confirm latch before showModal so stacked taps cannot open parallel dialogs.
     this.setData({ processingId: orderId, message: '' })
     try {
-      const modal = await wx.showModal({
-        title: '确认退款已到账',
-        content: '仅在微信支付账单或商户平台已显示退款成功时操作。确认后订单会标记为已退款，并重新计算会员权益。',
-        confirmText: '确认到账',
-        confirmColor: '#9A6B2F',
+      const result = await mipAdminModule.mutate(() => mipAdminModule.gateway.retryRefund(refundId))
+      const status = (result.providerDispatch as { status?: string } | undefined)?.status
+      wx.showToast({
+        title: status === 'SUCCEEDED'
+          ? '退款已完成'
+          : status === 'FAILED'
+            ? '退款处理失败'
+            : status === 'PENDING_RETRY'
+              ? '退款仍待处理'
+              : '退款处理已更新',
+        icon: 'none',
       })
-      if (!modal.confirm) {
-        return
-      }
-      await adminModule.confirmRefund(refundId)
       await this.loadOrders(true)
-      this.setData({ message: '退款已确认到账，订单与会员权益已同步更新。' })
-      wx.showToast({ title: '已更新为退款完成', icon: 'success' })
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '退款到账确认失败' })
+      this.setData({ message: error instanceof Error ? error.message : '退款重试失败' })
     }
     finally {
       this.setData({ processingId: '' })
+    }
+  },
+  async createExport() {
+    if (!this.data.canExport || this.data.exportPending || this.data.processingId) {
+      return
+    }
+    this.setData({ exportPending: true, message: '' })
+    try {
+      const result = await mipAdminModule.mutate(() => mipAdminModule.exportAndOpen({
+        exportType: this.data.eventId ? 'EVENT_ORDERS' : 'ORDERS',
+        eventId: this.data.eventId || undefined,
+        includesPhone: false,
+        filters: { status: this.data.status },
+      }))
+      wx.showToast({ title: `已导出 ${result.rowCount} 条`, icon: 'success' })
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '导出任务创建失败' })
+    }
+    finally {
+      this.setData({ exportPending: false })
     }
   },
 })

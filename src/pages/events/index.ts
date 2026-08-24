@@ -1,138 +1,235 @@
-import type { QueryOptions } from '@weapp/shared/cache'
+import type { EventId } from '../../modules/mip'
 import type {
-  EventTimeFilter,
-  PresentedEvent,
-} from '../../modules/membership/event-feed'
-import type { EventFeed, EventFeedView } from '../../modules/membership/types'
-import { membershipModule } from '../../modules/membership/client'
-import { presentEventFeed } from '../../modules/membership/event-feed'
+  EventDateFilter,
+  EventFeedQuery,
+  EventListView,
+  MipEventListItem,
+} from '../../modules/mip-events'
+import { mipOperationsConfig } from '../../config/mip-operations'
+import { resolvePrimaryBranchCity } from '../../modules/mip-events'
+import { mipEventsModule } from '../../modules/mip-events/client'
+import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { caseNavigateTo, syncCaseNavigation } from '../../modules/platform/case-navigation'
 
-function eventSignature(view: EventFeedView, filter: EventTimeFilter, events: PresentedEvent[]) {
-  return `${view}:${filter}:${events.map(event => [
-    event.id,
-    event.coverUrl,
-    event.title,
-    event.startsText,
-    event.availabilityText,
-    event.action,
-    event.actionLabel,
-    event.priceText,
-  ].join('|')).join('::')}`
+interface EventCardView extends MipEventListItem {
+  startsText: string
+  accessLabel: string
+  statusLabel: string
+  locationText: string
+}
+
+function formatDateTime(value: string) {
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) {
+    return ''
+  }
+  return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+function accessLabel(event: MipEventListItem) {
+  if (event.accessType === 'MEMBER_INCLUDED') {
+    return '仅玩家'
+  }
+  if (event.accessType === 'PAID') {
+    return '付费活动'
+  }
+  return '免费活动'
+}
+
+function statusLabel(event: MipEventListItem) {
+  if (event.registrationStatus === 'ATTENDED') {
+    return '已签到'
+  }
+  if (event.registrationStatus === 'REGISTERED') {
+    return '已报名'
+  }
+  if (event.registrationStatus === 'WAITLISTED') {
+    return '候补中'
+  }
+  if (event.registrationStatus === 'PENDING_REVIEW') {
+    return '待审核'
+  }
+  if (event.status === 'CANCELLED') {
+    return '已取消'
+  }
+  if (event.status === 'ENDED') {
+    return '已结束'
+  }
+  return ''
+}
+
+function presentEvent(event: MipEventListItem): EventCardView {
+  return {
+    ...event,
+    coverUrl: event.coverUrl || mipOperationsConfig.defaultCoverPaths.event,
+    startsText: formatDateTime(event.startsAt),
+    accessLabel: accessLabel(event),
+    statusLabel: statusLabel(event),
+    locationText: [event.cityName, event.venueName].filter(Boolean).join(' · ') || '地点待公布',
+  }
 }
 
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
-    view: 'upcoming' as EventFeedView,
-    timeFilter: 'all' as EventTimeFilter,
-    events: [] as PresentedEvent[],
-    sourceCount: 0,
-    eventSignature: '',
-    registeringEventId: '',
-    emptyTitle: '新的活动正在准备',
-    emptyDescription: '活动发布后会第一时间出现在这里。',
-    message: '',
+    view: 'UPCOMING' as EventListView,
+    dateFilter: 'RECENT' as EventDateFilter,
+    events: [] as EventCardView[],
+    heroEvent: null as EventCardView | null,
+    cities: [] as string[],
+    selectedCity: '',
     searchInput: '',
     activeQuery: '',
+    message: '',
   },
   requestSeq: 0,
   searchTimer: 0 as number | ReturnType<typeof setTimeout>,
-  currentFeed: null as EventFeed | null,
+  citySelectionInitialized: false,
+  cityManuallySelected: false,
+  cityInitialization: null as Promise<void> | null,
 
   onShow() {
     syncCaseNavigation(this, 'pages/events/index')
-    void this.loadEvents()
+    void this.loadPage()
   },
 
   onUnload() {
     if (this.searchTimer) {
       clearTimeout(this.searchTimer)
-      this.searchTimer = 0
     }
   },
 
-  async loadEvents(options: QueryOptions = {}) {
-    const view = this.data.view
-    const query = this.data.activeQuery
-    const cached = membershipModule.peekEvents(view, query)
+  currentQuery(): EventFeedQuery {
+    return {
+      view: this.data.view,
+      dateFilter: this.data.dateFilter,
+      cityName: this.data.selectedCity || undefined,
+      query: this.data.activeQuery || undefined,
+    }
+  },
+
+  async loadPage(options: { force?: boolean } = {}) {
+    await this.initializeDefaultCity()
+    await this.loadEvents(options)
+  },
+
+  async initializeDefaultCity() {
+    if (this.citySelectionInitialized || this.cityManuallySelected) {
+      return
+    }
+    if (this.cityInitialization) {
+      return this.cityInitialization
+    }
+    this.cityInitialization = (async () => {
+      try {
+        const snapshot = mipIdentityModule.peekSnapshot() || await mipIdentityModule.loadSnapshot()
+        if (!snapshot.primaryBranchId) {
+          return
+        }
+        const cachedBranches = mipBranchesModule.peek()
+        const branchSnapshot = cachedBranches || await mipBranchesModule.load(
+          snapshot.primaryBranchId,
+          snapshot.userVersion,
+        )
+        const selectedCity = resolvePrimaryBranchCity(snapshot.primaryBranchId, branchSnapshot.branches)
+        if (selectedCity && !this.cityManuallySelected) {
+          this.setData({ selectedCity })
+        }
+      }
+      catch {}
+      finally {
+        this.citySelectionInitialized = true
+        this.cityInitialization = null
+      }
+    })()
+    return this.cityInitialization
+  },
+
+  async loadEvents(options: { force?: boolean } = {}) {
+    const query = this.currentQuery()
+    const cached = mipEventsModule.peekEvents(query)
     if (cached) {
-      this.applyEvents(cached)
+      this.applyFeed(cached)
     }
     else if (this.data.state !== 'ready') {
       this.setData({ state: 'loading', message: '' })
     }
-    const seq = this.requestSeq + 1
-    this.requestSeq = seq
+    const requestSeq = this.requestSeq + 1
+    this.requestSeq = requestSeq
     try {
-      const feed = await membershipModule.listEvents(view, query, options)
-      if (seq !== this.requestSeq || this.data.view !== view || this.data.activeQuery !== query) {
+      const feed = await mipEventsModule.listEvents(query, options)
+      if (requestSeq !== this.requestSeq) {
         return
       }
-      this.applyEvents(feed)
+      this.applyFeed(feed)
     }
     catch (error) {
-      if (seq !== this.requestSeq || this.data.view !== view || this.data.activeQuery !== query) {
+      if (requestSeq !== this.requestSeq) {
         return
       }
-      this.setData(cached || this.data.state === 'ready'
+      this.setData(cached
         ? { message: '活动更新失败，已保留上次结果。' }
         : { state: 'error', message: error instanceof Error ? error.message : '活动加载失败' })
     }
   },
 
-  applyEvents(feed: Awaited<ReturnType<typeof membershipModule.listEvents>>) {
-    this.currentFeed = feed
-    const events = presentEventFeed(feed.events, {
-      membershipActive: feed.membershipActive,
-      phoneBound: feed.phoneBound,
-      timeFilter: this.data.timeFilter,
-    })
-    const signature = eventSignature(this.data.view, this.data.timeFilter, events)
-    if (this.data.state === 'ready' && this.data.eventSignature === signature) {
-      if (this.data.message) {
-        this.setData({ message: '' })
-      }
-      return
-    }
+  applyFeed(feed: Awaited<ReturnType<typeof mipEventsModule.listEvents>>) {
+    const events = feed.items.map(presentEvent)
     this.setData({
       state: 'ready',
-      message: '',
-      eventSignature: signature,
       events,
-      sourceCount: feed.events.length,
+      heroEvent: events[0] || null,
+      cities: feed.cities || [],
+      message: '',
     })
   },
 
   async onPullDownRefresh() {
     try {
-      await this.loadEvents({ force: true })
+      await this.loadPage({ force: true })
     }
     finally {
       wx.stopPullDownRefresh()
     }
   },
 
-  changeView(event: WechatMiniprogram.CustomEvent<{ value: EventFeedView }>) {
-    const view = event.detail.value
+  changeView(event: WechatMiniprogram.TouchEvent) {
+    const view = String(event.currentTarget.dataset.view || '') as EventListView
+    if (!['UPCOMING', 'PAST'].includes(view) || view === this.data.view) {
+      return
+    }
+    this.setData({ view, dateFilter: view === 'PAST' ? 'ENDED' : 'RECENT', message: '' })
+    void this.loadEvents()
+  },
+
+  changeDateFilter(event: WechatMiniprogram.TouchEvent) {
+    const dateFilter = String(event.currentTarget.dataset.filter || '') as EventDateFilter
+    if (!['RECENT', 'ENDED', 'TODAY'].includes(dateFilter) || dateFilter === this.data.dateFilter) {
+      return
+    }
     this.setData({
-      view,
-      emptyTitle: view === 'mine' ? '还没有报名活动' : '新的活动正在准备',
-      emptyDescription: view === 'mine' ? '报名成功的活动会集中出现在这里。' : '活动发布后会第一时间出现在这里。',
+      dateFilter,
+      view: dateFilter === 'ENDED' ? 'PAST' : 'UPCOMING',
+      message: '',
     })
     void this.loadEvents()
   },
 
-  changeTimeFilter(event: WechatMiniprogram.TouchEvent) {
-    const filter = String(event.currentTarget.dataset.filter || '')
-    if (!['all', 'next7', 'weekend', 'month'].includes(filter)
-      || filter === this.data.timeFilter) {
+  selectCity() {
+    const choices = ['全部城市', ...this.data.cities]
+    if (choices.length === 1) {
+      wx.showToast({ title: '暂无可选城市', icon: 'none' })
       return
     }
-    this.setData({ timeFilter: filter as EventTimeFilter, message: '' })
-    if (this.currentFeed) {
-      this.applyEvents(this.currentFeed)
-    }
+    wx.showActionSheet({
+      itemList: choices,
+      success: ({ tapIndex }) => {
+        const selectedCity = tapIndex === 0 ? '' : choices[tapIndex]
+        this.cityManuallySelected = true
+        this.setData({ selectedCity })
+        void this.loadEvents()
+      },
+    })
   },
 
   onSearchInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
@@ -140,9 +237,7 @@ Page({
     if (this.searchTimer) {
       clearTimeout(this.searchTimer)
     }
-    this.searchTimer = setTimeout(() => {
-      this.commitSearch()
-    }, 300)
+    this.searchTimer = setTimeout(() => this.commitSearch(), 300)
   },
 
   onSearchConfirm() {
@@ -154,52 +249,22 @@ Page({
   },
 
   clearSearch() {
-    if (this.searchTimer) {
-      clearTimeout(this.searchTimer)
-      this.searchTimer = 0
-    }
     this.setData({ searchInput: '', activeQuery: '' })
     void this.loadEvents()
   },
 
   commitSearch() {
     const activeQuery = this.data.searchInput.trim()
-    if (activeQuery === this.data.activeQuery) {
-      return
+    if (activeQuery !== this.data.activeQuery) {
+      this.setData({ activeQuery })
+      void this.loadEvents()
     }
-    this.setData({ activeQuery, message: '' })
-    void this.loadEvents()
   },
 
-  async handleEventAction(event: WechatMiniprogram.CustomEvent<{ id: string, action: string }>) {
-    const { action, id: eventId } = event.detail
-    if (!eventId || ['full', 'closed'].includes(action)) {
-      return
+  openEvent(event: WechatMiniprogram.TouchEvent) {
+    const eventId = String(event.currentTarget.dataset.eventId || '') as EventId
+    if (eventId) {
+      caseNavigateTo({ url: `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(eventId)}` })
     }
-    if (action === 'registered') {
-      caseNavigateTo({ url: `/packages/member/ticket/index?eventId=${encodeURIComponent(eventId)}` })
-      return
-    }
-    if (action === 'pending' || action === 'waitlisted') {
-      caseNavigateTo({ url: `/packages/member/event-detail/index?eventId=${encodeURIComponent(eventId)}` })
-      return
-    }
-    if (action === 'phone') {
-      caseNavigateTo({ url: `/packages/member/access/index?reason=event&eventId=${encodeURIComponent(eventId)}` })
-      return
-    }
-    if (action === 'membership') {
-      caseNavigateTo({ url: '/pages/membership/index' })
-      return
-    }
-    caseNavigateTo({ url: `/packages/member/registration-confirm/index?eventId=${encodeURIComponent(eventId)}` })
-  },
-
-  openEvent(event: WechatMiniprogram.CustomEvent<{ id: string }>) {
-    const eventId = event.detail.id
-    if (!eventId) {
-      return
-    }
-    caseNavigateTo({ url: `/packages/member/event-detail/index?eventId=${encodeURIComponent(eventId)}` })
   },
 })

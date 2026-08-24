@@ -4,25 +4,35 @@ import { resolveMipFunctionNames } from '../scripts/lib/mip-function-names.mjs'
 describe('MIP Cloud Function names', () => {
   it('uses an isolated mip-* suite by default', () => {
     expect(resolveMipFunctionNames()).toEqual({
-      api: 'mip-api',
+      identity: 'mip-identity-api',
+      media: 'mip-media-api',
+      events: 'mip-events-api',
+      opportunities: 'mip-opportunities-api',
+      community: 'mip-community-api',
+      commerce: 'mip-commerce-api',
       admin: 'mip-admin-api',
+      growth: 'mip-growth-api',
+      ai: 'mip-ai-api',
+      notifications: 'mip-notifications-api',
       ledger: 'mip-payment-ledger',
       notification: 'mip-notification-worker',
+      outbox: 'mip-outbox-worker',
       pay: 'mip-cloudpay',
       callback: 'mip-cloudpay-callback',
+      refund: 'mip-refund-worker',
     })
   })
 
   it('rejects a legacy shared function target', () => {
     expect(() => resolveMipFunctionNames({
-      MEMBERSHIP_FUNCTION_NAME: 'membership-api',
+      MIP_IDENTITY_FUNCTION_NAME: 'membership-api',
     })).toThrow('mip-*')
   })
 
   it('rejects duplicate deployment targets', () => {
     expect(() => resolveMipFunctionNames({
-      MEMBERSHIP_FUNCTION_NAME: 'mip-shared',
-      MEMBERSHIP_ADMIN_FUNCTION_NAME: 'mip-shared',
+      MIP_IDENTITY_FUNCTION_NAME: 'mip-shared',
+      MIP_ADMIN_FUNCTION_NAME: 'mip-shared',
     })).toThrow('unique')
   })
 })

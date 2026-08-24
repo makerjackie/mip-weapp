@@ -1,98 +1,214 @@
-import type { AdminEventPhoto } from '../../../modules/admin/types'
-import type { AdminPageState } from '../shared/page-state'
-import { adminModule } from '../../../modules/admin/client'
-import { formatLocalDateTime } from '../../../utils/date'
-import { adminLoadFailure } from '../shared/page-state'
+import type {
+  AdminEventAlbumPhoto,
+  AdminEventAlbumPhotoStatus,
+} from '../../../modules/mip-admin'
+import { hasScopedCapability, MipAdminError, mipAdminModule } from '../../../modules/mip-admin'
+import { isAdminForbiddenError, isAdminVersionConflict } from '../shared/page-state'
+
+type AlbumAdminState = 'loading' | 'ready' | 'empty' | 'error' | 'forbidden' | 'conflict'
+type ReviewDecision = 'APPROVE' | 'REJECT'
+type PhotoView = AdminEventAlbumPhoto & { createdText: string, reviewedText: string }
+
+const statusOptions: Array<{ value: AdminEventAlbumPhotoStatus, label: string }> = [
+  { value: 'PENDING', label: '待审核' },
+  { value: 'PUBLISHED', label: '已发布' },
+  { value: 'REJECTED', label: '已拒绝' },
+]
+
+function localDateTime(value: string | null) {
+  if (!value) {
+    return ''
+  }
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) {
+    return ''
+  }
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+}
+
+function photoView(photo: AdminEventAlbumPhoto): PhotoView {
+  return {
+    ...photo,
+    createdText: localDateTime(photo.createdAt),
+    reviewedText: localDateTime(photo.reviewedAt),
+  }
+}
 
 Page({
   data: {
-    state: 'loading' as AdminPageState,
+    state: 'loading' as AlbumAdminState,
     eventId: '',
     eventTitle: '',
-    startsText: '',
-    items: [] as AdminEventPhoto[],
-    processingId: '',
+    status: 'PENDING' as AdminEventAlbumPhotoStatus,
+    statusOptions,
+    photos: [] as PhotoView[],
+    canManage: false,
+    actionPhotoId: '',
+    actionVersion: 0,
+    decision: '' as ReviewDecision | '',
+    reason: '',
+    processing: false,
     message: '',
   },
 
   onLoad(query: Record<string, string>) {
-    this.setData({
-      eventId: query.eventId || '',
-      eventTitle: query.title ? decodeURIComponent(query.title) : '',
-      startsText: query.startsAt ? formatLocalDateTime(decodeURIComponent(query.startsAt)) : '',
-    })
-    void this.load(true)
+    this.setData({ eventId: query.eventId || '' })
+  },
+
+  onShow() {
+    void this.loadPhotos()
   },
 
   async onPullDownRefresh() {
     try {
-      await this.load(true)
+      await this.loadPhotos(true)
     }
     finally {
       wx.stopPullDownRefresh()
     }
   },
 
-  async load(force = false) {
-    if (this.data.state !== 'ready') {
+  retryLoad() {
+    void this.loadPhotos(true)
+  },
+
+  async loadPhotos(force = false) {
+    if (!this.data.eventId) {
+      this.setData({ state: 'error', message: '活动标识无效。' })
+      return
+    }
+    if (!this.data.photos.length) {
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const [items, managedEvents] = await Promise.all([
-        adminModule.listPendingEventPhotos(this.data.eventId, { force }),
-        adminModule.listManagedEvents({ force }),
+      const [event, session] = await Promise.all([
+        mipAdminModule.getEvent(this.data.eventId, force),
+        mipAdminModule.getSession(force),
       ])
-      const currentEvent = managedEvents.find(item => item.id === this.data.eventId)
+      const canManage = hasScopedCapability(session.capabilities, 'events.album.manage', {
+        scopeType: 'EVENT',
+        scopeId: event.id,
+        branchId: event.branchId,
+      })
+      if (!canManage) {
+        this.setData({ state: 'forbidden', canManage: false, photos: [], message: '' })
+        return
+      }
+      const page = await mipAdminModule.listEventAlbumPhotos(this.data.eventId, this.data.status, force)
+      const photos = page.items.map(photoView)
       this.setData({
-        state: 'ready',
-        eventTitle: currentEvent?.title || this.data.eventTitle,
-        startsText: currentEvent?.startsAt
-          ? formatLocalDateTime(currentEvent.startsAt)
-          : this.data.startsText,
-        items,
+        state: photos.length ? 'ready' : 'empty',
+        eventTitle: event.title,
+        canManage: true,
+        photos,
         message: '',
       })
     }
     catch (error) {
-      this.setData(adminLoadFailure(error, {
-        hasContent: this.data.items.length > 0,
-        fallbackMessage: '照片加载失败',
+      if (isAdminForbiddenError(error)) {
+        this.setData({ state: 'forbidden', canManage: false, photos: [], message: '' })
+        return
+      }
+      this.setData({
+        state: this.data.photos.length ? 'ready' : 'error',
+        message: error instanceof Error ? error.message : '相册照片加载失败。',
+      })
+    }
+  },
+
+  chooseStatus(event: WechatMiniprogram.TouchEvent) {
+    const status = String(event.currentTarget.dataset.status || '') as AdminEventAlbumPhotoStatus
+    if (!statusOptions.some(item => item.value === status)
+      || status === this.data.status || this.data.processing) {
+      return
+    }
+    this.cancelReview()
+    this.setData({ status, photos: [], state: 'loading', message: '' })
+    void this.loadPhotos(true)
+  },
+
+  beginReview(event: WechatMiniprogram.TouchEvent) {
+    const photoId = String(event.currentTarget.dataset.id || '')
+    const decision = String(event.currentTarget.dataset.decision || '') as ReviewDecision
+    const photo = this.data.photos.find(item => item.id === photoId)
+    if (!photo || photo.status !== 'PENDING'
+      || !['APPROVE', 'REJECT'].includes(decision) || this.data.processing) {
+      return
+    }
+    this.setData({
+      actionPhotoId: photo.id,
+      actionVersion: photo.version,
+      decision,
+      reason: '',
+      message: '',
+    })
+  },
+
+  updateReason(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.setData({ reason: event.detail.value })
+  },
+
+  cancelReview() {
+    this.setData({ actionPhotoId: '', actionVersion: 0, decision: '', reason: '' })
+  },
+
+  async confirmReview() {
+    const reason = this.data.reason.trim()
+    const decision = this.data.decision
+    if (!this.data.canManage || !this.data.actionPhotoId || !decision || this.data.processing) {
+      return
+    }
+    if (!reason || reason.length > 300) {
+      this.setData({ message: '请填写不超过 300 字的审核原因。' })
+      return
+    }
+    const approving = decision === 'APPROVE'
+    const confirmation = await wx.showModal({
+      title: approving ? '批准照片' : '拒绝照片',
+      content: approving ? '批准后照片将在活动相册公开显示。' : '拒绝后照片仅提交者可查看审核结果。',
+      confirmText: approving ? '确认批准' : '确认拒绝',
+    }).catch(() => null)
+    if (!confirmation?.confirm) {
+      return
+    }
+    this.setData({ processing: true, message: '' })
+    try {
+      await mipAdminModule.mutate(() => mipAdminModule.gateway.reviewEventAlbumPhoto({
+        eventId: this.data.eventId,
+        photoId: this.data.actionPhotoId,
+        decision,
+        reason,
+        expectedVersion: this.data.actionVersion,
       }))
+      void wx.showToast({ title: approving ? '照片已发布' : '照片已拒绝', icon: 'success' })
+        .catch(() => null)
+      this.cancelReview()
+      await this.loadPhotos(true)
+    }
+    catch (error) {
+      if (isAdminForbiddenError(error)) {
+        this.cancelReview()
+        this.setData({ state: 'forbidden', canManage: false, photos: [], message: '' })
+      }
+      else if (isAdminVersionConflict(error)
+        || (error instanceof MipAdminError && error.code === 'INVALID_STATE')) {
+        this.cancelReview()
+        this.setData({ state: 'conflict', photos: [], message: '照片状态已变化，请重新加载后再操作。' })
+      }
+      else {
+        this.setData({ message: error instanceof Error ? error.message : '照片审核失败。' })
+      }
+    }
+    finally {
+      this.setData({ processing: false })
     }
   },
 
   preview(event: WechatMiniprogram.BaseEvent) {
     const current = String(event.currentTarget.dataset.url || '')
-    const urls = this.data.items.map(item => item.imageUrl)
-    if (current) {
-      wx.previewImage({ current, urls })
-    }
-  },
-
-  async review(event: WechatMiniprogram.BaseEvent) {
-    const photoId = String(event.currentTarget.dataset.photoId || '')
-    const decision = String(event.currentTarget.dataset.decision || '') as 'approve' | 'reject'
-    const item = this.data.items.find(photo => photo.id === photoId)
-    if (!item || !['approve', 'reject'].includes(decision) || this.data.processingId) {
-      return
-    }
-    this.setData({ processingId: photoId, message: '' })
-    try {
-      await adminModule.reviewEventPhoto(
-        this.data.eventId,
-        photoId,
-        decision,
-        item.version,
-        decision === 'reject' ? '不适合公开展示' : '',
-      )
-      this.setData({ items: this.data.items.filter(photo => photo.id !== photoId) })
-      wx.showToast({ title: decision === 'approve' ? '已发布' : '已拒绝', icon: 'success' })
-    }
-    catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '审核失败' })
-    }
-    finally {
-      this.setData({ processingId: '' })
+    const urls = this.data.photos.map(item => item.imageUrl).filter(Boolean)
+    if (current && urls.length) {
+      void wx.previewImage({ current, urls }).catch(() => null)
     }
   },
 })

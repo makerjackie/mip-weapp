@@ -1,67 +1,28 @@
 <view id="admin-dashboard-page" class="min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
-  <view class="border-y border-ink py-5">
-    <view class="text-[length:21rpx] font-semibold tracking-[0.16em] text-coral">运营工作台 · {{role}}</view>
-    <view class="mt-2 text-[length:44rpx] font-bold">今天要处理什么</view>
-    <view class="mt-2 text-[length:23rpx] text-muted">从待办进入，关键操作会保留记录。</view>
-  </view>
-  <view wx:if="{{state === 'loading'}}" class="mt-7 bg-panel px-5 py-8"><t-skeleton row-col="{{[1, 1, 1, 1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}" class="mt-7"><app-empty-state title="无法进入运营台" description="请确认运营权限或网络后重试。" action-text="重新验证" bind:action="loadDashboard" /></view>
-  <view wx:elif="{{state === 'forbidden'}}" class="mt-7">
-    <app-empty-state
-      title="没有运营权限"
-      description="请使用已授权的运营账号进入，或联系主理人开通权限。"
-      action-text="重新验证"
-      bind:action="loadDashboard"
-    />
-  </view>
-  <view wx:else class="mt-7">
-    <view class="text-[length:25rpx] font-bold">今天要处理</view>
-    <view class="mt-3 overflow-hidden rounded-[24rpx] bg-panel">
-      <view wx:if="{{canProfiles}}" class="flex min-h-[100rpx] items-center gap-3 border-b border-line px-4 active:bg-panel-muted" bind:tap="openProfiles">
-        <view class="flex h-[58rpx] w-[58rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft"><t-icon name="user-checked" size="32rpx" color="var(--color-brand)" /></view>
-        <view class="min-w-0 flex-1"><view class="text-[length:25rpx] font-semibold">待审核资料</view><view class="mt-1 text-[length:20rpx] text-muted">确认成员公开资料是否合适</view></view>
-        <view class="min-w-[44rpx] rounded-full bg-accent px-2 py-1 text-center text-[length:19rpx] font-bold text-white">{{counts.pendingProfiles}}</view>
-        <t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" />
-      </view>
-      <view wx:if="{{canOrders}}" class="flex min-h-[100rpx] items-center gap-3 border-b border-line px-4 active:bg-panel-muted" bind:tap="openOrders">
-        <view class="flex h-[58rpx] w-[58rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft"><t-icon name="money" size="32rpx" color="var(--color-brand)" /></view>
-        <view class="min-w-0 flex-1"><view class="text-[length:25rpx] font-semibold">退款处理中</view><view class="mt-1 text-[length:20rpx] text-muted">核对支付、退款与权益状态</view></view>
-        <view class="min-w-[44rpx] rounded-full bg-accent px-2 py-1 text-center text-[length:19rpx] font-bold text-white">{{counts.pendingRefunds}}</view>
-        <t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" />
-      </view>
-      <view wx:if="{{canReports}}" class="flex min-h-[100rpx] items-center gap-3 border-b border-line px-4 active:bg-panel-muted" bind:tap="openReports">
-        <view class="flex h-[58rpx] w-[58rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft"><t-icon name="flag" size="32rpx" color="var(--color-brand)" /></view>
-        <view class="min-w-0 flex-1"><view class="text-[length:25rpx] font-semibold">成员举报</view><view class="mt-1 text-[length:20rpx] text-muted">核实社区成员提交的问题</view></view>
-        <view class="min-w-[44rpx] rounded-full bg-accent px-2 py-1 text-center text-[length:19rpx] font-bold text-white">{{counts.pendingReports}}</view>
-        <t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" />
-      </view>
-      <view wx:if="{{canOperations}}" class="flex min-h-[100rpx] items-center gap-3 px-4 active:bg-panel-muted" bind:tap="openOperations">
-        <view class="flex h-[58rpx] w-[58rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft"><t-icon name="error-circle" size="32rpx" color="var(--color-brand)" /></view>
-        <view class="min-w-0 flex-1"><view class="text-[length:25rpx] font-semibold">待处理异常</view><view class="mt-1 text-[length:20rpx] text-muted">图片、清理和消息发送</view></view>
-        <view class="min-w-[44rpx] rounded-full bg-accent px-2 py-1 text-center text-[length:19rpx] font-bold text-white">{{counts.operationalExceptions}}</view>
-        <t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" />
-      </view>
+  <view class="border-b border-line pb-5"><view class="text-[length:22rpx] font-semibold text-brand">MIP 管理</view><view class="mt-2 text-[length:40rpx] font-bold">运营工作台</view><view class="mt-2 text-[length:24rpx] text-muted">按当前账号权限显示可处理任务</view></view>
+  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel px-5 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载工作台" description="{{message}}" action-text="重新加载" bind:action="loadDashboard" /></view>
+  <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有运营权限" description="当前账号未获得管理权限。" action-text="重新验证" bind:action="loadDashboard" /></view>
+  <view wx:else>
+    <view class="mt-6 grid grid-cols-2 gap-3">
+      <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:36rpx] font-bold">{{counts.activePlayers}}</view><view class="mt-1 text-[length:22rpx] text-muted">有效玩家</view></view>
+      <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:36rpx] font-bold">{{counts.pendingRegistrations}}</view><view class="mt-1 text-[length:22rpx] text-muted">待处理报名</view></view>
+      <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:36rpx] font-bold">{{counts.pendingRefunds}}</view><view class="mt-1 text-[length:22rpx] text-muted">退款处理中</view></view>
+      <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:36rpx] font-bold">{{counts.publishedOpportunities}}</view><view class="mt-1 text-[length:22rpx] text-muted">公开机会</view></view>
     </view>
-
-    <view wx:if="{{canEvents}}" class="mt-4">
-      <t-button block theme="primary" bind:tap="openEvents">管理全部活动</t-button>
-    </view>
-
-    <view class="mt-6 text-[length:25rpx] font-bold">业务概览</view>
-    <view class="mt-3 grid grid-cols-2 overflow-hidden rounded-[24rpx] border border-line bg-panel">
-      <view class="border-b border-r border-line px-4 py-4"><view class="font-mono text-[length:34rpx] font-bold">{{counts.publishedEvents}}</view><view class="mt-1 text-[length:20rpx] text-muted">已发布活动</view></view>
-      <view class="border-b border-line px-4 py-4"><view class="font-mono text-[length:34rpx] font-bold">{{counts.upcomingRegistrations}}</view><view class="mt-1 text-[length:20rpx] text-muted">待参加人次</view></view>
-      <view class="border-r border-line px-4 py-4"><view class="font-mono text-[length:34rpx] font-bold">{{counts.activeMembers}}</view><view class="mt-1 text-[length:20rpx] text-muted">有效会员</view></view>
-      <view class="px-4 py-4"><view class="font-mono text-[length:34rpx] font-bold">+{{counts.newUsers7d}}</view><view class="mt-1 text-[length:20rpx] text-muted">近 7 日新增</view></view>
-    </view>
-
-    <view class="mt-6 overflow-hidden rounded-[24rpx] bg-panel">
-      <view wx:if="{{canAnnouncements}}" class="flex min-h-[96rpx] items-center justify-between border-b border-line px-4 active:bg-panel-muted" bind:tap="openAnnouncements"><view><view class="text-[length:25rpx] font-semibold">社区公告</view><view class="mt-1 text-[length:20rpx] text-muted">发布、置顶与撤回公告 · 当前 {{counts.publishedAnnouncements}} 条</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canRoles}}" class="flex min-h-[96rpx] items-center justify-between border-b border-line px-4 active:bg-panel-muted" bind:tap="openRoles"><view><view class="text-[length:25rpx] font-semibold">管理员与权限</view><view class="mt-1 text-[length:20rpx] text-muted">添加管理员并按职责分配权限</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canAudit}}" class="flex min-h-[96rpx] items-center justify-between px-4 active:bg-panel-muted" bind:tap="openAudit"><view><view class="text-[length:25rpx] font-semibold">操作记录</view><view class="mt-1 text-[length:20rpx] text-muted">查看资料、活动和退款处理历史</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
+    <view class="mt-6 flex flex-col gap-3">
+      <view wx:if="{{canBranches}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/branches/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">城市分会</view><view class="mt-1 text-[length:22rpx] text-muted">新增、编辑和启停城市分会</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+      <view wx:if="{{canCommunityReports}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/community-reports/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">举报审核</view><view class="mt-1 text-[length:22rpx] text-muted">领取举报并记录审核结果</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+      <view wx:if="{{canAnnouncements}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/announcements/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">公告管理</view><view class="mt-1 text-[length:22rpx] text-muted">维护平台和城市分会公告</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+      <view wx:if="{{canUsers}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/profiles/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">用户管理</view><view class="mt-1 text-[length:22rpx] text-muted">筛选、资料、名单与导出</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+      <view wx:if="{{canEvents}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/managed-events/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">活动管理</view><view class="mt-1 text-[length:22rpx] text-muted">活动、参与者、签到和团队</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+      <view wx:if="{{canOrders}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/orders/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">订单与退款</view><view class="mt-1 text-[length:22rpx] text-muted">查看订单并提交退款请求</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+      <view wx:if="{{canOpportunities}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/opportunities/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">机会管理</view><view class="mt-1 text-[length:22rpx] text-muted">查看状态、下架和审计</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+      <view wx:if="{{canGrowth}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/growth-levels/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">成长管理</view><view class="mt-1 text-[length:22rpx] text-muted">等级、规则、流水和人工调整</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+      <view wx:if="{{canExceptions}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/exceptions/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">异常中心</view><view class="mt-1 text-[length:22rpx] text-muted">查看支付、通知和后台任务异常</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+      <view wx:if="{{canRoles}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/roles/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">角色与权限</view><view class="mt-1 text-[length:22rpx] text-muted">平台、分会和活动角色</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+      <view wx:if="{{canAudit}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/audit/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">审计记录</view><view class="mt-1 text-[length:22rpx] text-muted">查看敏感读取与管理变更</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
     </view>
   </view>
-  <view wx:if="{{state === 'ready'}}" class="mt-5 text-[length:20rpx] leading-5 text-muted">访问趋势、来源、留存与性能请使用微信官方数据工具；这里仅处理会员、活动、订单和售后。</view>
-  <view wx:if="{{message && state === 'ready'}}" class="mt-5 border-l-[8rpx] border-coral bg-panel px-4 py-4 text-[length:24rpx] text-muted">{{message}}</view>
   <app-page-exit />
 </view>

@@ -39,6 +39,33 @@ export const IMAGE_UPLOAD_POLICIES = Object.freeze({
       { width: 1080, quality: 54 },
     ],
   },
+  opportunityCover: {
+    label: '机会封面',
+    maximumBytes: HALF_MEGABYTE,
+    steps: [
+      { width: 1440, quality: 80 },
+      { width: 1200, quality: 68 },
+      { width: 1080, quality: 58 },
+    ],
+  },
+  superCaseCover: {
+    label: '案例封面',
+    maximumBytes: HALF_MEGABYTE,
+    steps: [
+      { width: 1440, quality: 80 },
+      { width: 1200, quality: 68 },
+      { width: 1080, quality: 58 },
+    ],
+  },
+  superCaseMedia: {
+    label: '案例素材',
+    maximumBytes: HALF_MEGABYTE,
+    steps: [
+      { width: 1600, quality: 78 },
+      { width: 1280, quality: 66 },
+      { width: 1080, quality: 54 },
+    ],
+  },
 }) satisfies Record<string, ImageUploadPolicy>
 
 export function estimateBase64Bytes(base64: string) {
@@ -86,6 +113,26 @@ export function chooseSingleImage() {
         const path = result.tempFiles[0]?.tempFilePath
         if (path) {
           resolve(path)
+          return
+        }
+        reject(new Error('没有选择图片'))
+      },
+      fail: reject,
+    })
+  })
+}
+
+export function chooseMultipleImages(count: number) {
+  return new Promise<string[]>((resolve, reject) => {
+    wx.chooseMedia({
+      count: Math.max(1, Math.min(9, Math.floor(count))),
+      mediaType: ['image'],
+      sourceType: ['album', 'camera'],
+      sizeType: ['compressed'],
+      success: (result) => {
+        const paths = result.tempFiles.map(item => item.tempFilePath).filter(Boolean)
+        if (paths.length) {
+          resolve(paths)
           return
         }
         reject(new Error('没有选择图片'))

@@ -1,10 +1,9 @@
 {
-  "navigationBarTitleText": "同行会",
+  "navigationBarTitleText": "MIP",
   "enablePullDownRefresh": true,
   "usingComponents": {
-    "app-section-header": "/components/section-header/index",
     "app-empty-state": "/components/empty-state/index",
-    "event-card": "/components/event-card/index",
-    "member-card": "/components/member-card/index"
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
   }
 }

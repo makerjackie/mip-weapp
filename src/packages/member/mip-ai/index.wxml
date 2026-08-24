@@ -1,0 +1,36 @@
+<view id="mip-ai-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载 AI 草稿" description="请检查网络后重试。" action-text="重新加载" bind:action="loadDrafts" /><app-page-exit /></view>
+  <block wx:else>
+    <view class="rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="text-[length:30rpx] font-bold">新建草稿</view>
+      <view class="mt-2 text-[length:22rpx] leading-5 text-muted">AI 只整理草稿。请核对内容，并在对应页面明确保存。</view>
+      <view class="mt-4 text-[length:23rpx] font-semibold text-muted">内容类型</view>
+      <picker range="{{purposeOptions}}" range-key="label" value="{{purposeIndex}}" bindchange="changePurpose">
+        <view class="mt-2 flex h-[88rpx] items-center justify-between rounded-[14rpx] bg-panel-raised px-4 text-[length:25rpx]"><text>{{purposeOptions[purposeIndex].label}}</text><t-icon name="chevron-down" size="30rpx" color="var(--color-muted)" /></view>
+      </picker>
+      <textarea class="mt-3 block h-[240rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 py-3 text-[length:24rpx] leading-6" value="{{sourceText}}" maxlength="8000" bindinput="updateSource" placeholder="输入需要整理的内容" placeholder-style="color:#A3A3A3" />
+      <view class="mt-4 grid grid-cols-2 gap-3">
+        <t-button block size="large" theme="primary" disabled="{{!capability.textDrafts || recording}}" loading="{{generating && !recording}}" bind:tap="generateFromText">整理文字</t-button>
+        <t-button wx:if="{{!recording}}" block size="large" variant="outline" disabled="{{!capability.voiceDrafts || generating}}" bind:tap="startRecording">{{capability.voiceDrafts ? '开始录音' : '语音不可用'}}</t-button>
+        <t-button wx:else block size="large" theme="danger" bind:tap="stopRecording">结束录音</t-button>
+      </view>
+      <view wx:if="{{!capability.textDrafts && !capability.voiceDrafts}}" class="mt-3 text-[length:21rpx] text-muted">AI 整理当前不可用。</view>
+    </view>
+
+    <view class="mt-6 text-[length:30rpx] font-bold">我的草稿</view>
+    <view wx:if="{{drafts.length === 0}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-8 text-center text-[length:23rpx] text-muted">暂无草稿。</view>
+    <view wx:else class="mt-3 flex flex-col gap-3">
+      <view wx:for="{{drafts}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
+        <view class="flex items-start justify-between gap-3"><view class="text-[length:26rpx] font-semibold">{{item.purposeLabel}}</view><view class="rounded-full bg-brand-soft px-3 py-1 text-[length:20rpx] text-brand">{{item.statusLabel}}</view></view>
+        <view wx:if="{{item.summary}}" class="mt-3 text-[length:23rpx] leading-6 text-muted">{{item.summary}}</view>
+        <view class="mt-3 text-[length:20rpx] text-muted">{{item.expiresText}}</view>
+        <view wx:if="{{item.canUse}}" class="mt-4 grid grid-cols-2 gap-3"><t-button block size="small" variant="outline" data-id="{{item.id}}" bind:tap="copyDraft">复制草稿</t-button><t-button block size="small" theme="primary" data-id="{{item.id}}" bind:tap="useDraft">继续填写</t-button></view>
+        <view class="mt-3 text-right"><text class="inline-block min-h-[64rpx] px-2 py-2 text-[length:21rpx] text-muted" data-id="{{item.id}}" bind:tap="deleteDraft">删除草稿</text></view>
+      </view>
+    </view>
+    <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
+    <app-page-exit />
+  </block>
+</view>

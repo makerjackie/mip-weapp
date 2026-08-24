@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "活动签到",
+  "usingComponents": {
+    "app-page-exit": "/components/page-exit/index",
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
+  }
+}

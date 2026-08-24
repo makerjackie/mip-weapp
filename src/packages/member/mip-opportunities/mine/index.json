@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "我的机会",
+  "navigationBarBackgroundColor": "#040404",
+  "navigationBarTextStyle": "white",
+  "usingComponents": {
+    "app-empty-state": "/components/empty-state/index",
+    "app-page-exit": "/components/page-exit/index",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
+  }
+}

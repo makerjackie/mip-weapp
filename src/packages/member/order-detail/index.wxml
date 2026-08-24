@@ -1,24 +1,29 @@
-<view id="order-detail-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
-  <view wx:if="{{state === 'loading'}}" class="rounded-[28rpx] bg-panel px-5 py-8"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载订单" description="服务暂时没有响应，请稍后重试。" action-text="重新加载" bind:action="load" /></view>
+<view id="order-detail-page" class="min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view wx:if="{{state === 'loading'}}" class="flex flex-col gap-3"><view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view><view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
+  <view wx:elif="{{state === 'error'}}"><app-empty-state title="订单暂时无法加载" description="{{message}}" action-text="重新加载" bind:action="load" /></view>
   <block wx:else>
-    <view class="rounded-[30rpx] bg-brand px-5 py-6 text-white"><view class="text-[length:21rpx] text-brand-soft">订单状态</view><view class="mt-2 text-[length:38rpx] font-bold">{{statusText}}</view><view class="mt-5 text-[length:21rpx] text-brand-soft">{{order.planName}}</view><view class="mt-1 text-[length:42rpx] font-bold">{{amountText}}</view></view>
-    <view class="mt-5 overflow-hidden rounded-[26rpx] bg-panel">
-      <view class="flex justify-between gap-4 border-b border-line px-5 py-4"><view class="text-muted">商品</view><view class="text-right font-semibold">{{order.description || order.planName}}</view></view>
-      <view class="flex justify-between gap-4 border-b border-line px-5 py-4"><view class="text-muted">下单时间</view><view class="text-right">{{createdText}}</view></view>
-      <view wx:if="{{order.durationDays}}" class="flex justify-between gap-4 border-b border-line px-5 py-4"><view class="text-muted">会员时长</view><view class="text-right">{{order.durationDays}} 天</view></view>
-      <view wx:if="{{entitlementText}}" class="flex justify-between gap-4 px-5 py-4"><view class="text-muted">{{entitlementLabel}}</view><view class="text-right">{{entitlementText}}</view></view>
+    <view class="rounded-[20rpx] bg-panel px-5 py-5">
+      <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1"><view class="text-[length:22rpx] text-muted">订单状态</view><view class="mt-2 text-[length:38rpx] font-bold">{{statusText}}</view></view><text wx:if="{{statusSuccess}}" class="rounded-full bg-panel-raised px-3 py-1 text-[length:20rpx] text-success">已确认</text><text wx:elif="{{statusDanger}}" class="rounded-full bg-panel-raised px-3 py-1 text-[length:20rpx] text-danger">未完成</text><text wx:elif="{{statusBrand}}" class="rounded-full bg-brand-soft px-3 py-1 text-[length:20rpx] text-brand">处理中</text></view>
+      <view class="mt-3 text-[length:22rpx] leading-5 text-muted">{{statusDescription}}</view>
+      <view class="mt-5 text-[length:22rpx] text-muted">{{title}}</view><view class="mt-1 text-[length:42rpx] font-bold text-brand">{{amountText}}</view>
     </view>
-    <view class="mt-4 rounded-[26rpx] bg-panel px-5 py-5">
-      <view class="text-[length:28rpx] font-bold">订单进度</view>
-      <view class="mt-5 flex gap-3"><t-icon class="mt-1 shrink-0" name="check-circle-filled" size="28rpx" color="var(--color-brand)" /><view><view class="text-[length:25rpx] font-semibold">订单已提交</view><view class="mt-1 text-[length:21rpx] text-muted">{{createdText}}</view></view></view>
-      <view wx:if="{{paidText}}" class="mt-5 flex gap-3"><t-icon class="mt-1 shrink-0" name="check-circle-filled" size="28rpx" color="var(--color-brand)" /><view><view class="text-[length:25rpx] font-semibold">支付成功</view><view class="mt-1 text-[length:21rpx] text-muted">{{paidText}}</view></view></view>
-      <view wx:if="{{entitlementText && !refundCompleted}}" class="mt-5 flex gap-3"><t-icon class="mt-1 shrink-0" name="check-circle-filled" size="28rpx" color="var(--color-brand)" /><view><view class="text-[length:25rpx] font-semibold">会员权益已开通</view><view class="mt-1 text-[length:21rpx] text-muted">有效期 {{entitlementText}}</view></view></view>
-      <view wx:if="{{refundVisible}}" class="mt-5 flex gap-3"><t-icon wx:if="{{refundCompleted}}" class="mt-1 shrink-0" name="check-circle-filled" size="28rpx" color="var(--color-brand)" /><t-icon wx:else class="mt-1 shrink-0" name="pending" size="28rpx" color="var(--color-gold)" /><view><view class="text-[length:25rpx] font-semibold">{{refundTitle}}</view><view class="mt-1 text-[length:21rpx] leading-5 text-muted">{{refundDescription}}</view></view></view>
+
+    <view class="mt-4 overflow-hidden rounded-[16rpx] bg-panel">
+      <view class="flex min-h-[92rpx] items-center justify-between gap-4 border-b border-line px-4"><text class="text-muted">订单类型</text><text class="text-right">{{order.orderType === 'EVENT' ? '活动订单' : '会员订单'}}</text></view>
+      <view wx:if="{{productDescription}}" class="flex min-h-[92rpx] items-center justify-between gap-4 border-b border-line px-4"><text class="shrink-0 text-muted">方案说明</text><text class="text-right">{{productDescription}}</text></view>
+      <view wx:if="{{createdText}}" class="flex min-h-[92rpx] items-center justify-between gap-4 border-b border-line px-4"><text class="text-muted">下单时间</text><text class="text-right">{{createdText}}</text></view>
+      <view wx:if="{{paidText}}" class="flex min-h-[92rpx] items-center justify-between gap-4 border-b border-line px-4"><text class="text-muted">支付时间</text><text class="text-right">{{paidText}}</text></view>
+      <view wx:if="{{refundedAmountText}}" class="flex min-h-[92rpx] items-center justify-between gap-4 px-4"><text class="text-muted">退款金额</text><text class="text-right">{{refundedAmountText}}</text></view>
     </view>
-    <view class="mt-4 rounded-[22rpx] bg-panel px-4 py-4 text-[length:22rpx] leading-5 text-muted">{{refundVisible ? refundDescription : '会员权益属于虚拟服务。如需申请退款或处理异常订单，请联系人工客服；进度会自动同步到本页。'}}</view>
-    <view wx:if="{{message}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
-    <view class="mt-6 grid grid-cols-2 gap-3"><t-button block variant="outline" theme="primary" bind:tap="openHelp">联系售后</t-button><t-button block theme="primary" bind:tap="openMembership">会员中心</t-button></view>
+
+    <view class="mt-4 rounded-[16rpx] border border-line bg-panel px-4 py-4 text-[length:22rpx] leading-5 text-muted">退款金额、可退资格和订单关联状态均由服务端核对。提交成功只表示已受理，完成状态以本页更新结果为准。</view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:22rpx]">{{message}}</view>
+    <view class="mt-6 flex flex-col gap-3">
+      <t-button wx:if="{{paymentPending}}" block size="large" theme="primary" loading="{{paying}}" disabled="{{!paymentEnabled}}" bind:tap="requestPayment">{{paymentEnabled ? '继续支付' : paymentUnavailableText}}</t-button>
+      <t-button wx:if="{{refundable}}" block size="large" variant="outline" theme="danger" loading="{{submittingRefund}}" disabled="{{!paymentEnabled}}" bind:tap="requestRefund">{{paymentEnabled ? '申请退款' : '退款服务尚未配置'}}</t-button>
+      <view wx:if="{{isEventOrder}}" class="flex gap-3"><t-button class="min-w-0 flex-1" block variant="outline" theme="default" bind:tap="openMyEvents">我的活动</t-button><t-button wx:if="{{eventId}}" class="min-w-0 flex-1" block theme="primary" bind:tap="openEvent">返回活动</t-button></view>
+      <view wx:else class="grid grid-cols-2 gap-3"><t-button block variant="outline" theme="default" bind:tap="openHelp">帮助与客服</t-button><t-button block theme="primary" bind:tap="openMembership">会员方案</t-button></view>
+    </view>
   </block>
-  <app-page-exit />
+  <app-page-exit label="返回" />
 </view>

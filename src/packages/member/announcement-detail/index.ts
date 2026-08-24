@@ -1,5 +1,6 @@
-import type { AnnouncementDetail } from '../../../modules/membership/types'
-import { membershipModule } from '../../../modules/membership/client'
+import type { AnnouncementDetail } from '../../../modules/mip-announcements'
+import { mipAnnouncementsModule } from '../../../modules/mip-announcements'
+import { caseNavigateTo } from '../../../modules/platform/case-navigation'
 import { formatLocalMonthDayTime } from '../../../utils/date'
 
 Page({
@@ -13,7 +14,7 @@ Page({
 
   onLoad(query: Record<string, string>) {
     const announcementId = query.announcementId || ''
-    const cached = membershipModule.peekAnnouncement(announcementId)
+    const cached = mipAnnouncementsModule.peek(announcementId)
     this.setData({ announcementId })
     if (cached) {
       this.applyItem(cached)
@@ -26,7 +27,7 @@ Page({
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      this.applyItem(await membershipModule.getAnnouncement(this.data.announcementId, { force }))
+      this.applyItem(await mipAnnouncementsModule.get(this.data.announcementId, force))
     }
     catch (error) {
       this.setData(this.data.item
@@ -42,5 +43,18 @@ Page({
       publishedText: item.publishedAt ? formatLocalMonthDayTime(item.publishedAt) : '',
       message: '',
     })
+  },
+
+  openTarget() {
+    const item = this.data.item
+    if (!item?.targetId) {
+      return
+    }
+    if (item.targetType === 'EVENT') {
+      caseNavigateTo({ url: `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(item.targetId)}` })
+    }
+    else if (item.targetType === 'OPPORTUNITY') {
+      caseNavigateTo({ url: `/packages/member/mip-opportunities/detail/index?id=${encodeURIComponent(item.targetId)}` })
+    }
   },
 })

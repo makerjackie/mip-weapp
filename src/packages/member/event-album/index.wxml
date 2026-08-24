@@ -1,35 +1,40 @@
 <view id="event-album-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+56rpx)] pt-4 text-ink">
-  <view class="flex items-center justify-between">
+  <view class="flex items-center justify-between gap-3">
     <view>
       <view class="text-[length:36rpx] font-bold">活动相册</view>
-      <view class="mt-1 text-[length:21rpx] text-muted">分享活动现场与共同回忆</view>
+      <view class="mt-1 text-[length:21rpx] text-muted">仅显示已发布照片，参与者可以提交照片。</view>
     </view>
-    <t-button size="small" theme="primary" loading="{{uploading}}" bind:tap="upload">
-      <t-icon name="add" size="28rpx" color="var(--color-on-brand)" /> 上传照片
-    </t-button>
+    <t-button wx:if="{{canSubmit}}" size="small" theme="primary" loading="{{uploading}}" bind:tap="upload">上传照片</t-button>
   </view>
 
   <view wx:if="{{state === 'loading'}}" class="mt-5 rounded-[28rpx] bg-panel px-5 py-8">
     <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
   <view wx:elif="{{state === 'error'}}" class="mt-5">
-    <app-empty-state title="暂时无法打开相册" description="{{message}}" action-text="重新加载" bind:action="load" />
+    <app-empty-state title="相册加载失败" description="{{message}}" action-text="重新加载" bind:action="load" />
   </view>
-  <view wx:elif="{{items.length === 0}}" class="mt-5">
-    <app-empty-state title="还没有照片" description="成为第一个分享活动照片的人。" action-text="上传照片" bind:action="upload" />
+  <view wx:elif="{{state === 'disabled'}}" class="mt-5">
+    <app-empty-state title="相册未开放" description="当前活动未开放相册。" />
+  </view>
+  <view wx:elif="{{state === 'empty'}}" class="mt-5">
+    <app-empty-state title="暂无照片" description="{{canSubmit ? '可以提交活动照片。' : '已发布照片会显示在这里。'}}" action-text="{{canSubmit ? '上传照片' : ''}}" bind:action="upload" />
   </view>
   <view wx:else class="mt-5 grid grid-cols-2 gap-3">
     <view wx:for="{{items}}" wx:key="id" class="overflow-hidden rounded-[22rpx] bg-panel">
-      <image class="h-[300rpx] w-full bg-brand-soft" mode="aspectFill" src="{{item.imageUrl}}" data-url="{{item.imageUrl}}" bind:tap="preview" />
+      <image wx:if="{{item.imageUrl}}" class="h-[300rpx] w-full bg-panel-raised" mode="aspectFill" src="{{item.imageUrl}}" data-url="{{item.imageUrl}}" bind:tap="preview" />
+      <view wx:else class="flex h-[300rpx] items-center justify-center bg-panel-raised px-3 text-center text-[length:22rpx] text-muted">照片文件已清理</view>
       <view class="px-3 py-3">
-        <view class="truncate text-[length:22rpx] font-semibold">{{item.nickname}}</view>
+        <view wx:if="{{item.nickname}}" class="truncate text-[length:22rpx] font-semibold">{{item.nickname}}</view>
         <view wx:if="{{item.caption}}" class="mt-1 line-clamp-2 text-[length:20rpx] leading-5 text-muted">{{item.caption}}</view>
-        <view wx:if="{{item.status === 'PENDING_REVIEW'}}" class="mt-1 text-[length:19rpx] text-coral">审核中，仅自己可见</view>
-        <view wx:if="{{item.mine}}" class="mt-2 text-[length:20rpx] text-danger" data-photo-id="{{item.id}}" bind:tap="remove">删除</view>
+        <view wx:if="{{item.status === 'PENDING'}}" class="mt-2 text-[length:20rpx] text-coral">待审核，仅自己可见</view>
+        <view wx:if="{{item.status === 'REJECTED'}}" class="mt-2 text-[length:20rpx] text-danger">未通过审核{{item.moderationReason ? '：' + item.moderationReason : ''}}</view>
+        <view wx:if="{{item.mine}}" class="mt-3">
+          <t-button size="small" variant="text" theme="danger" loading="{{withdrawingId === item.id}}" data-photo-id="{{item.id}}" data-version="{{item.version}}" bind:tap="withdraw">撤回照片</t-button>
+        </view>
       </view>
     </view>
   </view>
-  <view wx:if="{{loadingMore}}" class="py-5 text-center text-[length:21rpx] text-muted">加载更多照片…</view>
-  <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:22rpx] text-[#9F4727]">{{message}}</view>
+  <view wx:if="{{loadingMore}}" class="py-5 text-center text-[length:21rpx] text-muted">正在加载</view>
+  <view wx:if="{{message && state !== 'error'}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:22rpx] text-[#9F4727]">{{message}}</view>
   <app-page-exit />
 </view>

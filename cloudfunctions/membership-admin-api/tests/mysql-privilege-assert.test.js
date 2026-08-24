@@ -29,6 +29,8 @@ describe('assertTablePrivilegePairs', () => {
     assert.match(deploySource, /function runMysqlStatements\(statements\)/)
     assert.match(deploySource, /action:\s*'runStatement'/)
     assert.doesNotMatch(deploySource, /action:\s*'initializeSchema'/)
+    assert.doesNotMatch(deploySource, /ALTER USER/)
+    assert.doesNotMatch(deploySource, /REVOKE ALL PRIVILEGES, GRANT OPTION FROM/)
   })
 
   it('passes when every exact table×privilege pair is present', async () => {
@@ -119,6 +121,21 @@ describe('assertTablePrivilegePairs', () => {
     )
   })
 
+  it('forbids every privilege on an unmapped shared table when rejectExtra is set', async () => {
+    const { assertTablePrivilegePairs } = await import(helperUrl)
+    const map = {
+      mip_users: ['SELECT'],
+    }
+    const rows = [
+      { tableName: 'mip_users', privilegeType: 'SELECT' },
+      { tableName: 'member_profiles', privilegeType: 'SELECT' },
+    ]
+    assert.throws(
+      () => assertTablePrivilegePairs(rows, map, undefined, { rejectExtra: true }),
+      /forbidden SELECT on unmapped table member_profiles/,
+    )
+  })
+
   it('buildRuntimeGrantStatements emits DELETE only for scoped relationship/lease tables', async () => {
     const { buildRuntimeGrantStatements } = await import(helperUrl)
     const statements = buildRuntimeGrantStatements('member_db', '`member_runtime`@\'%\'')
@@ -127,16 +144,69 @@ describe('assertTablePrivilegePairs', () => {
       assert.doesNotMatch(sql, /\bALL\b/)
       assert.match(sql, /^GRANT /)
       if (/\bDELETE\b/.test(sql)) {
-        assert.match(sql, /member_follows|member_checkin_credentials|member_notifications|member_notification_subscriptions|member_notification_outbox|member_operational_failures|member_blocks/)
+        assert.match(sql, /mip_profile_tags|mip_opportunity_roles|mip_opportunity_tags|mip_super_case_media/)
       }
     }
-    assert.ok(statements.some(sql => sql.includes('member_audit_logs') && sql.includes('SELECT, INSERT')))
-    assert.ok(statements.some(sql => sql.includes('member_media_cleanup_outbox')))
-    assert.ok(statements.some(sql => sql.includes('member_event_reservations')))
-    assert.ok(statements.some(sql => sql.includes('member_follows') && sql.includes('DELETE')))
-    assert.ok(statements.some(sql => sql.includes('member_checkin_credentials') && sql.includes('DELETE')))
-    assert.ok(statements.some(sql => sql.includes('member_notifications') && sql.includes('DELETE')))
-    assert.ok(statements.some(sql => sql.includes('member_blocks') && sql.includes('DELETE')))
+    assert.ok(statements.some(sql => sql.includes('mip_audit_logs') && sql.includes('SELECT, INSERT')))
+    assert.ok(statements.some(sql => sql.includes('mip_outbox_events')))
+    assert.ok(statements.some(sql => sql.includes('mip_event_seat_holds')))
+    assert.ok(statements.some(sql => sql.includes('mip_profile_tags') && sql.includes('DELETE')))
+    assert.ok(statements.some(sql => sql.includes('mip_opportunity_roles') && sql.includes('DELETE')))
+    assert.ok(statements.some(sql => sql.includes('mip_opportunity_tags') && sql.includes('DELETE')))
+    assert.ok(statements.some(sql => sql.includes('mip_super_case_media') && sql.includes('DELETE')))
+    const byTable = Object.fromEntries(statements.map(sql => {
+      const match = sql.match(/^GRANT ([A-Z, ]+) ON `member_db`\.`([^`]+)`/)
+      return match ? [match[2], match[1].split(', ')] : []
+    }).filter(entry => entry.length))
+    assert.deepEqual(byTable.mip_agreement_acceptances, ['SELECT', 'INSERT'])
+    assert.deepEqual(byTable.mip_membership_attributions, ['SELECT', 'INSERT'])
+    assert.deepEqual(byTable.mip_tags, ['SELECT'])
+    assert.deepEqual(byTable.mip_membership_plans, ['SELECT'])
+    assert.deepEqual(byTable.mip_event_checkin_transitions, ['SELECT', 'INSERT'])
+    assert.equal('mip_app_settings' in byTable, false)
+  })
+
+  it('derives a stable environment-unique account and revokes only observed owned-table grants', async () => {
+    const {
+      buildRuntimeRevokeStatements,
+      parseGrantee,
+      runtimeUserForEnvironment,
+    } = await import(helperUrl)
+    const first = runtimeUserForEnvironment('environment-one')
+    const second = runtimeUserForEnvironment('environment-two')
+    assert.match(first, /^mip_[0-9a-f]{12}$/)
+    assert.notEqual(first, second)
+    assert.equal(runtimeUserForEnvironment('environment-one'), first)
+    const account = parseGrantee(first, '%')
+    const statements = buildRuntimeRevokeStatements('mip_schema', account, [
+      { tableSchema: 'mip_schema', tableName: 'mip_users', privilegeType: 'UPDATE' },
+      { tableSchema: 'mip_schema', tableName: 'mip_users', privilegeType: 'SELECT' },
+      { tableSchema: 'other_schema', tableName: 'mip_users', privilegeType: 'SELECT' },
+    ])
+    assert.deepEqual(statements, [
+      `REVOKE SELECT, UPDATE ON \`mip_schema\`.\`mip_users\` FROM ${account}`,
+    ])
+  })
+
+  it('refuses existing or cross-schema runtime account ownership that cannot be proved', async () => {
+    const { assertRuntimeAccountClaimable, parseGrantee } = await import(helperUrl)
+    const grantee = parseGrantee('mip_deadbeef0000', '%')
+    const usage = [{ tableName: null, privilegeType: 'USAGE', grantee }]
+    assert.throws(() => assertRuntimeAccountClaimable({
+      userRows: usage, schema: 'mip_schema', grantee, allowExisting: false,
+    }), /already exists/)
+    assert.throws(() => assertRuntimeAccountClaimable({
+      tableRows: [{
+        tableSchema: 'other_schema', tableName: 'mip_users', privilegeType: 'SELECT', grantee,
+      }],
+      userRows: usage,
+      schema: 'mip_schema',
+      grantee,
+      allowExisting: true,
+    }), /outside the owned MIP table set/)
+    assert.throws(() => assertRuntimeAccountClaimable({
+      schema: 'mip_schema', grantee, allowExisting: true,
+    }), /could not be verified/)
   })
 
   it('parsePrivilegeRows walks nested MCP envelopes and captures grantee/level', async () => {

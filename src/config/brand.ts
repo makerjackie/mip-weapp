@@ -7,7 +7,7 @@ export const brand = {
   supportChannel: '小程序客服',
   contactHint: '请通过小程序客服联系运营团队',
   privacyPolicyPath: '/packages/member/privacy/index',
-  userAgreementPath: '/packages/member/about/index',
+  userAgreementPath: '/packages/member/user-agreement/index',
   colors: {
     canvas: '#040404',
     panel: '#202020',

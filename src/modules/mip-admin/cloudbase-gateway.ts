@@ -1,0 +1,434 @@
+import type {
+  AdminBranch,
+  AdminCommunityReport,
+  AdminEventAlbumPhoto,
+  AdminEventAlbumPhotoStatus,
+  AdminEventCloneResult,
+  AdminEventReminderPublication,
+  AdminExportReservation,
+  AdminExportStatus,
+  AdminExportTicket,
+  MipAdminGateway,
+} from './types'
+import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
+import { runtimeConfig } from '../../config/runtime'
+import { resolveCloudFileUrls } from '../platform/cloud-media'
+import { requireCloudClient } from '../platform/cloudbase'
+import {
+  parseAdminAnnouncementDetail,
+  parseAdminAnnouncementPage,
+  parseAdminAnnouncementScopes,
+} from './announcements'
+import { parseOperationalExceptionPage } from './operational-exceptions'
+import { MipAdminError } from './types'
+
+interface Envelope<T> {
+  ok: boolean
+  data?: T
+  error?: { code?: string, message?: string, retryable?: boolean, details?: unknown }
+}
+
+const readActions = new Set([
+  'mip.admin.session',
+  'mip.admin.dashboard',
+  'mip.admin.branches.list',
+  'mip.admin.announcements.scopes',
+  'mip.admin.announcements.list',
+  'mip.admin.announcements.get',
+  'mip.admin.communityReports.list',
+  'mip.admin.users.list',
+  'mip.admin.events.list',
+  'mip.admin.events.get',
+  'mip.admin.events.album.list',
+  'mip.admin.events.roster',
+  'mip.admin.roles.list',
+  'mip.admin.roles.candidates',
+  'mip.admin.opportunities.list',
+  'mip.admin.growth.levels',
+  'mip.admin.growth.rules',
+  'mip.admin.growth.entries',
+  'mip.admin.orders.list',
+  'mip.admin.exceptions.list',
+  'mip.admin.audit.list',
+  'mip.admin.exports.status',
+])
+
+const exportStatuses = new Set(['PENDING', 'READY', 'RESERVED', 'CONSUMED', 'EXPIRED', 'REVOKED', 'FAILED'])
+const xlsxType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+const communityReportCategories = new Set(['SPAM', 'HARASSMENT', 'FRAUD', 'INAPPROPRIATE_CONTENT', 'IMPERSONATION', 'OTHER'])
+const communityReportStatuses = new Set(['PENDING', 'REVIEWING', 'RESOLVED', 'DISMISSED'])
+const eventAlbumPhotoStatuses = new Set(['PENDING', 'PUBLISHED', 'REJECTED'])
+
+function record(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function hasOnlyKeys(value: Record<string, unknown>, keys: string[]) {
+  const allowed = new Set(keys)
+  return Object.keys(value).every(key => allowed.has(key))
+}
+
+function parseExportTicket(value: unknown): AdminExportTicket {
+  if (!record(value)
+    || typeof value.ticketId !== 'string'
+    || !/^[\w-]{1,36}$/.test(value.ticketId)
+    || typeof value.token !== 'string'
+    || !/^[\w-]{32,96}$/.test(value.token)
+    || value.status !== 'PENDING'
+    || typeof value.expiresAt !== 'string'
+    || !Number.isFinite(Date.parse(value.expiresAt))) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的导出票据')
+  }
+  return value as unknown as AdminExportTicket
+}
+
+function parseExportStatus(value: unknown): AdminExportStatus {
+  if (!record(value)
+    || !exportStatuses.has(String(value.status))
+    || !(value.rowCount === null || (Number.isInteger(value.rowCount) && Number(value.rowCount) >= 0))
+    || typeof value.expiresAt !== 'string'
+    || !Number.isFinite(Date.parse(value.expiresAt))
+    || typeof value.fileName !== 'string'
+    || !/^mip-[a-z-]+-[0-9TZ]+\.xlsx$/.test(value.fileName)
+    || !(value.failureCode === null || typeof value.failureCode === 'string')) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的导出状态')
+  }
+  return value as unknown as AdminExportStatus
+}
+
+function parseExportReservation(value: unknown): AdminExportReservation {
+  if (!record(value)
+    || value.status !== 'RESERVED'
+    || typeof value.tempUrl !== 'string'
+    || !/^https:\/\//.test(value.tempUrl)
+    || typeof value.fileName !== 'string'
+    || !/^mip-[a-z-]+-[0-9TZ]+\.xlsx$/.test(value.fileName)
+    || value.contentType !== xlsxType
+    || !Number.isInteger(value.contentBytes)
+    || Number(value.contentBytes) <= 0
+    || Number(value.contentBytes) > 10_485_760
+    || typeof value.contentSha256 !== 'string'
+    || !/^[a-f0-9]{64}$/.test(value.contentSha256)
+    || typeof value.reservationExpiresAt !== 'string'
+    || !Number.isFinite(Date.parse(value.reservationExpiresAt))
+    || Object.hasOwn(value, 'objectKey')
+    || Object.hasOwn(value, 'fileId')) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的导出下载信息')
+  }
+  return value as unknown as AdminExportReservation
+}
+
+function parseEventReminderPublication(value: unknown): AdminEventReminderPublication {
+  if (!record(value)
+    || typeof value.publicationId !== 'string'
+    || !uuidPattern.test(value.publicationId)
+    || !Number.isInteger(value.recipientCount)
+    || Number(value.recipientCount) < 0
+    || Number(value.recipientCount) > 500
+    || typeof value.sendWechatReminder !== 'boolean'
+    || !['BEST_EFFORT', 'NOT_REQUESTED'].includes(String(value.wechatDelivery))
+    || typeof value.idempotent !== 'boolean') {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的活动提醒结果')
+  }
+  return value as unknown as AdminEventReminderPublication
+}
+
+function parseEventClone(value: unknown): AdminEventCloneResult {
+  if (!record(value)
+    || typeof value.id !== 'string'
+    || !uuidPattern.test(value.id)
+    || value.status !== 'DRAFT'
+    || value.version !== 1
+    || typeof value.startsAt !== 'string'
+    || !Number.isFinite(Date.parse(value.startsAt))
+    || typeof value.idempotent !== 'boolean') {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的活动复制结果')
+  }
+  return value as unknown as AdminEventCloneResult
+}
+
+function parseBranch(value: unknown): AdminBranch {
+  if (!record(value)
+    || typeof value.id !== 'string'
+    || !uuidPattern.test(value.id)
+    || typeof value.branchKey !== 'string'
+    || !/^[a-z0-9][a-z0-9-]{0,63}$/.test(value.branchKey)
+    || typeof value.name !== 'string'
+    || value.name.length < 1
+    || value.name.length > 80
+    || typeof value.cityName !== 'string'
+    || value.cityName.length < 1
+    || value.cityName.length > 80
+    || typeof value.summary !== 'string'
+    || value.summary.length > 500
+    || !['ACTIVE', 'INACTIVE'].includes(String(value.status))
+    || !Number.isInteger(value.version)
+    || Number(value.version) < 1
+    || !record(value.blockers)) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的分会信息')
+  }
+  for (const key of ['activeMemberships', 'activeBranchAdmins', 'publishedEvents', 'publishedOpportunities']) {
+    const count = value.blockers[key]
+    if (!Number.isInteger(count) || Number(count) < 0) {
+      throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的分会信息')
+    }
+  }
+  return value as unknown as AdminBranch
+}
+
+function parseBranchPage(value: unknown) {
+  if (!record(value)
+    || !Array.isArray(value.items)
+    || !(value.nextCursor === undefined || value.nextCursor === null || typeof value.nextCursor === 'string')) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的分会列表')
+  }
+  return {
+    items: value.items.map(parseBranch),
+    nextCursor: value.nextCursor === undefined ? null : value.nextCursor,
+  }
+}
+
+function parseCommunityReportProfile(value: unknown) {
+  if (!record(value)
+    || !hasOnlyKeys(value, ['nickname', 'headline', 'cityName'])
+    || typeof value.nickname !== 'string'
+    || value.nickname.length < 1
+    || value.nickname.length > 64
+    || typeof value.headline !== 'string'
+    || value.headline.length > 160
+    || typeof value.cityName !== 'string'
+    || value.cityName.length > 80) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的举报资料摘要')
+  }
+  return value as unknown as AdminCommunityReport['reporter']
+}
+
+function parseCommunityReport(value: unknown): AdminCommunityReport {
+  if (!record(value)
+    || !hasOnlyKeys(value, [
+      'reportId',
+      'category',
+      'description',
+      'status',
+      'version',
+      'reporter',
+      'target',
+      'resolutionReason',
+      'createdAt',
+      'updatedAt',
+      'reviewedAt',
+    ])
+    || typeof value.reportId !== 'string'
+    || !uuidPattern.test(value.reportId)
+    || !communityReportCategories.has(String(value.category))
+    || typeof value.description !== 'string'
+    || value.description.length > 300
+    || !communityReportStatuses.has(String(value.status))
+    || !Number.isInteger(value.version)
+    || Number(value.version) < 1
+    || typeof value.resolutionReason !== 'string'
+    || value.resolutionReason.length > 300
+    || typeof value.createdAt !== 'string'
+    || !Number.isFinite(Date.parse(value.createdAt))
+    || typeof value.updatedAt !== 'string'
+    || !Number.isFinite(Date.parse(value.updatedAt))
+    || !(value.reviewedAt === null || (typeof value.reviewedAt === 'string' && Number.isFinite(Date.parse(value.reviewedAt))))) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的举报记录')
+  }
+  return {
+    ...(value as unknown as Omit<AdminCommunityReport, 'reporter' | 'target'>),
+    reporter: parseCommunityReportProfile(value.reporter),
+    target: parseCommunityReportProfile(value.target),
+  }
+}
+
+function parseCommunityReportPage(value: unknown) {
+  if (!record(value)
+    || !hasOnlyKeys(value, ['items', 'nextCursor'])
+    || !Array.isArray(value.items)
+    || !(value.nextCursor === null || typeof value.nextCursor === 'string')) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的举报列表')
+  }
+  return {
+    items: value.items.map(parseCommunityReport),
+    nextCursor: value.nextCursor,
+  }
+}
+
+function parseEventAlbumPhoto(value: unknown): AdminEventAlbumPhoto {
+  if (!record(value)
+    || !hasOnlyKeys(value, [
+      'id',
+      'caption',
+      'imageUrl',
+      'nickname',
+      'avatarUrl',
+      'status',
+      'moderationReason',
+      'version',
+      'createdAt',
+      'reviewedAt',
+      'publishedAt',
+    ])
+    || typeof value.id !== 'string'
+    || !uuidPattern.test(value.id)
+    || typeof value.caption !== 'string'
+    || value.caption.length > 300
+    || typeof value.imageUrl !== 'string'
+    || typeof value.nickname !== 'string'
+    || value.nickname.length < 1
+    || value.nickname.length > 64
+    || typeof value.avatarUrl !== 'string'
+    || !eventAlbumPhotoStatuses.has(String(value.status))
+    || typeof value.moderationReason !== 'string'
+    || value.moderationReason.length > 300
+    || !Number.isInteger(value.version)
+    || Number(value.version) < 1
+    || typeof value.createdAt !== 'string'
+    || !Number.isFinite(Date.parse(value.createdAt))
+    || !(value.reviewedAt === null
+      || (typeof value.reviewedAt === 'string' && Number.isFinite(Date.parse(value.reviewedAt))))
+    || !(value.publishedAt === null
+      || (typeof value.publishedAt === 'string' && Number.isFinite(Date.parse(value.publishedAt))))) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的相册照片')
+  }
+  return value as unknown as AdminEventAlbumPhoto
+}
+
+function parseEventAlbumPage(value: unknown) {
+  if (!record(value)
+    || !hasOnlyKeys(value, ['items', 'nextCursor'])
+    || !Array.isArray(value.items)
+    || !(value.nextCursor === null || typeof value.nextCursor === 'string')) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的相册列表')
+  }
+  return { items: value.items.map(parseEventAlbumPhoto), nextCursor: value.nextCursor }
+}
+
+function unwrap<T>(value: unknown): T {
+  if (!value || typeof value !== 'object' || typeof (value as Envelope<T>).ok !== 'boolean') {
+    throw new MipAdminError('SERVICE_UNAVAILABLE', '运营服务返回了无效响应', true)
+  }
+  const envelope = value as Envelope<T>
+  if (!envelope.ok) {
+    throw new MipAdminError(
+      envelope.error?.code || 'SERVICE_UNAVAILABLE',
+      envelope.error?.message || '运营服务请求失败',
+      envelope.error?.retryable === true,
+      record(envelope.error?.details) ? envelope.error.details : null,
+    )
+  }
+  return envelope.data as T
+}
+
+async function call<T>(action: string, data: Record<string, unknown> = {}) {
+  try {
+    const response = await retryTransport(async () => {
+      const cloud = await requireCloudClient()
+      return cloud.callFunction({
+        name: runtimeConfig.cloudbase.adminFunctionName,
+        data: { action, ...data },
+      })
+    }, readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 })
+    return unwrap<T>(response.result)
+  }
+  catch (error) {
+    if (error instanceof MipAdminError) {
+      throw error
+    }
+    throw new MipAdminError('SERVICE_UNAVAILABLE', '运营服务暂时不可用，请稍后重试', true)
+  }
+}
+
+export const cloudbaseMipAdminGateway: MipAdminGateway = {
+  getSession: () => call('mip.admin.session'),
+  getDashboard: () => call('mip.admin.dashboard'),
+  listBranches: async () => parseBranchPage(await call('mip.admin.branches.list')),
+  createBranch: async input => parseBranch(await call('mip.admin.branches.create', { ...input })),
+  updateBranch: async input => parseBranch(await call('mip.admin.branches.update', { ...input })),
+  changeBranchStatus: async input => parseBranch(await call('mip.admin.branches.changeStatus', { ...input })),
+  getAnnouncementScopes: async () => parseAdminAnnouncementScopes(
+    await call('mip.admin.announcements.scopes'),
+  ),
+  listAnnouncements: async input => parseAdminAnnouncementPage(
+    await call('mip.admin.announcements.list', { ...(input || {}) }),
+  ),
+  getAnnouncement: async announcementId => parseAdminAnnouncementDetail(
+    await call('mip.admin.announcements.get', { announcementId }),
+  ),
+  saveAnnouncement: async input => parseAdminAnnouncementDetail(
+    await call('mip.admin.announcements.save', { ...input }),
+  ),
+  publishAnnouncement: async (announcementId, expectedVersion) => parseAdminAnnouncementDetail(
+    await call('mip.admin.announcements.publish', { announcementId, expectedVersion }),
+  ),
+  withdrawAnnouncement: async (announcementId, expectedVersion, reason) => parseAdminAnnouncementDetail(
+    await call('mip.admin.announcements.withdraw', { announcementId, expectedVersion, reason }),
+  ),
+  setAnnouncementPinned: async (announcementId, pinned, expectedVersion) => parseAdminAnnouncementDetail(
+    await call('mip.admin.announcements.pin', { announcementId, pinned, expectedVersion }),
+  ),
+  listCommunityReports: async status => parseCommunityReportPage(
+    await call('mip.admin.communityReports.list', { status }),
+  ),
+  claimCommunityReport: async input => parseCommunityReport(
+    await call('mip.admin.communityReports.claim', { ...input }),
+  ),
+  closeCommunityReport: async input => parseCommunityReport(
+    await call('mip.admin.communityReports.close', { ...input }),
+  ),
+  listUsers: input => call('mip.admin.users.list', input || {}),
+  updateUser: input => call('mip.admin.users.update', input),
+  setUserControl: input => call('mip.admin.users.setControl', input),
+  createExport: async input => parseExportTicket(await call('mip.admin.exports.create', input)),
+  prepareExport: async (ticketId, token) => parseExportStatus(await call('mip.admin.exports.prepare', { ticketId, token })),
+  getExportStatus: async (ticketId, token) => parseExportStatus(await call('mip.admin.exports.status', { ticketId, token })),
+  reserveExport: async (ticketId, token) => parseExportReservation(await call('mip.admin.exports.reserve', { ticketId, token })),
+  completeExport: async (ticketId, token) => {
+    const value = await call<Record<string, unknown>>('mip.admin.exports.complete', { ticketId, token })
+    if (!record(value) || value.status !== 'CONSUMED' || typeof value.consumedAt !== 'string') {
+      throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的导出消费状态')
+    }
+    return { status: 'CONSUMED' as const, consumedAt: value.consumedAt }
+  },
+  listEvents: input => call('mip.admin.events.list', input || {}),
+  getEvent: eventId => call('mip.admin.events.get', { eventId }),
+  listEventAlbumPhotos: async (eventId: string, status: AdminEventAlbumPhotoStatus) => {
+    const page = parseEventAlbumPage(await call('mip.admin.events.album.list', { eventId, status }))
+    return resolveCloudFileUrls(page)
+  },
+  reviewEventAlbumPhoto: async (input) => {
+    const photo = parseEventAlbumPhoto(await call('mip.admin.events.album.review', { ...input }))
+    return resolveCloudFileUrls(photo)
+  },
+  saveEvent: input => call('mip.admin.events.save', input),
+  cloneEvent: async input => parseEventClone(await call('mip.admin.events.clone', { ...input })),
+  changeEventStatus: input => call('mip.admin.events.changeStatus', input),
+  publishEventReminder: async input => parseEventReminderPublication(
+    await call('mip.admin.communications.publishEventReminder', { ...input }),
+  ),
+  listRoster: input => call('mip.admin.events.roster', input),
+  reviewRegistration: input => call('mip.admin.events.registrations.review', input),
+  checkIn: input => call('mip.admin.events.checkIn', input),
+  undoCheckIn: input => call('mip.admin.events.undoCheckIn', input),
+  listRoles: () => call('mip.admin.roles.list'),
+  searchRoleCandidates: (eventId, query) => call('mip.admin.roles.candidates', { eventId, query }),
+  setRole: input => call('mip.admin.roles.set', input),
+  listOpportunities: input => call('mip.admin.opportunities.list', input || {}),
+  unpublishOpportunity: input => call('mip.admin.opportunities.unpublish', input),
+  archiveOpportunity: input => call('mip.admin.opportunities.archive', input),
+  listGrowthLevels: () => call('mip.admin.growth.levels'),
+  saveGrowthLevel: input => call('mip.admin.growth.saveLevel', input),
+  listGrowthRules: () => call('mip.admin.growth.rules'),
+  saveGrowthRule: input => call('mip.admin.growth.saveRule', input),
+  listGrowthEntries: input => call('mip.admin.growth.entries', input || {}),
+  adjustGrowth: input => call('mip.admin.growth.adjust', input),
+  listOrders: input => call('mip.admin.orders.list', input || {}),
+  submitRefund: input => call('mip.admin.refunds.submit', input),
+  retryRefund: refundId => call('mip.admin.refunds.retry', { refundId }),
+  listOperationalExceptions: async input => parseOperationalExceptionPage(
+    await call('mip.admin.exceptions.list', { ...(input || {}) }),
+  ),
+  listAudit: input => call('mip.admin.audit.list', input || {}),
+}

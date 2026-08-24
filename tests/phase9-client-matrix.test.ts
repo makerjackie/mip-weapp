@@ -1,18 +1,10 @@
+import type { MipCommerceError } from '../src/modules/mip-commerce/gateway'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
 import { describe, expect, it, vi } from 'vitest'
-import {
-  AdminDtoError,
-  parseAdminAttendanceResult,
-  parseAdminEventCancelResult,
-  parseAdminEventItem,
-  parseAdminEventList,
-  parseAdminEventSaveResult,
-  parseAdminRosterExportResult,
-  parseAdminRosterPage,
-} from '../src/modules/admin/event-dto'
+import { createMipCommerceGateway } from '../src/modules/mip-commerce/gateway'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -21,64 +13,53 @@ function read(relativePath: string) {
 }
 
 function extractRetryableActions(source: string): string[] {
-  const match = source.match(/const retryableReadActions = new Set\(\[([\s\S]*?)\]\)/)
+  const match = source.match(/const (?:retryableReadActions|readActions) = new Set\(\[([\s\S]*?)\]\)/)
   if (!match) {
     return []
   }
-  return [...match[1].matchAll(/'([a-z]+)'/gi)].map(item => item[1])
-}
-
-function extractHandlerKeys(source: string): string[] {
-  // actions: { name: handler, ... } or handlers map in cloud function index
-  const block = source.match(/const actions = \{([\s\S]*?)\n\}/)
-    || source.match(/const handlers = \{([\s\S]*?)\n\}/)
-  if (!block) {
-    return []
-  }
-  return [...block[1].matchAll(/^\s*([a-z]+)\s*:/gim)].map(item => item[1])
+  return [...match[1].matchAll(/'([^']+)'/g)].map(item => item[1])
 }
 
 describe('phase9 gateway retry policy (read-only)', () => {
-  it('admin and membership gateways retry only declared read actions', () => {
-    const adminGateway = read('src/modules/admin/cloudbase-gateway.ts')
-    const memberGateway = read('src/modules/membership/cloudbase-gateway.ts')
+  it('MIP admin and event gateways retry only declared read actions', () => {
+    const adminGateway = read('src/modules/mip-admin/cloudbase-gateway.ts')
+    const eventGateway = read('src/modules/mip-events/cloudbase-gateway.ts')
 
     const adminReads = extractRetryableActions(adminGateway)
-    const memberReads = extractRetryableActions(memberGateway)
+    const eventReads = extractRetryableActions(eventGateway)
 
     expect(adminReads.length).toBeGreaterThan(0)
-    expect(memberReads.length).toBeGreaterThan(0)
+    expect(eventReads.length).toBeGreaterThan(0)
 
     const adminMutations = [
-      'saveEvent',
-      'setEventStatus',
-      'cancelEvent',
-      'checkInRegistration',
-      'undoCheckIn',
-      'createRosterExport',
-      'downloadRosterExport',
-      'createRefund',
-      'reviewProfile',
+      'mip.admin.users.update',
+      'mip.admin.users.setControl',
+      'mip.admin.events.save',
+      'mip.admin.events.changeStatus',
+      'mip.admin.events.checkIn',
+      'mip.admin.exports.create',
+      'mip.admin.refunds.submit',
     ]
-    const memberMutations = [
-      'createCheckout',
-      'createPayment',
-      'registerEvent',
-      'cancelRegistration',
-      'updateProfile',
-      'bindPhone',
+    const eventMutations = [
+      'mip.events.register',
+      'mip.events.updateRegistration',
+      'mip.events.cancelRegistration',
+      'mip.events.checkIn',
+      'mip.events.setHeart',
+      'mip.events.saveFeedback',
+      'mip.events.createInvitation',
     ]
 
     for (const action of adminMutations) {
       expect(adminReads).not.toContain(action)
     }
-    for (const action of memberMutations) {
-      expect(memberReads).not.toContain(action)
+    for (const action of eventMutations) {
+      expect(eventReads).not.toContain(action)
     }
+    expect(eventReads).toContain('mip.events.myRegistration')
 
-    // Structural: mutation calls must pass attempts: 1, not COLD_START_READ_RETRY blindly.
-    expect(adminGateway).toContain('retryableReadActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 }')
-    expect(memberGateway).toContain('retryableReadActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 }')
+    expect(adminGateway).toContain('readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 }')
+    expect(eventGateway).toContain('readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 }')
     expect(COLD_START_READ_RETRY.attempts).toBeGreaterThan(1)
   })
 
@@ -97,60 +78,32 @@ describe('phase9 gateway retry policy (read-only)', () => {
   })
 })
 
-describe('phase9 malformed DTO rejection', () => {
-  it('rejects ok:true envelopes with missing/illegal business fields', () => {
-    expect(() => parseAdminEventList(null)).toThrow(AdminDtoError)
-    expect(() => parseAdminEventList({ items: [] })).toThrow(AdminDtoError)
-    expect(() => parseAdminEventSaveResult({ id: 'not-uuid', version: 1 })).toThrow(AdminDtoError)
-    expect(() => parseAdminEventCancelResult({
-      id: '11111111-1111-4111-8111-111111111111',
-      status: 'CANCELLED',
-      version: 1,
-      cancelledAt: null,
-      cancellationReason: 'x',
-      // missing affectedCount
-    })).toThrow(AdminDtoError)
-    expect(() => parseAdminAttendanceResult({
-      id: '22222222-2222-4222-8222-222222222222',
-      eventId: '11111111-1111-4111-8111-111111111111',
-      status: 'PAID',
-      version: 1,
-      attendedAt: null,
-    })).toThrow(AdminDtoError)
-    expect(() => parseAdminRosterPage({
-      event: { id: 'x' },
-      items: [],
-      nextCursor: null,
-    })).toThrow(AdminDtoError)
-    expect(() => parseAdminRosterExportResult({
-      downloadToken: 'short',
-      fileName: 'a.csv',
-      rowCount: 1,
-      expiresAt: '2026-01-01T00:00:00.000Z',
-      contentType: 'text/csv',
-      objectKey: 'secret',
-    })).toThrow(AdminDtoError)
-    expect(() => parseAdminEventItem({
-      id: '11111111-1111-4111-8111-111111111111',
-      title: 'x',
-      description: '',
-      startsAt: '2027-01-01T00:00:00.000Z',
-      endsAt: '2027-01-01T02:00:00.000Z',
-      registrationDeadline: null,
-      venueName: '',
-      address: '',
-      location: '',
-      capacity: 10,
-      cancellationPolicy: '',
-      coverAssetId: null,
-      version: 1,
-      memberFree: true,
-      priceCents: 100,
-      activityType: 'PUBLIC_FREE',
-      status: 'DRAFT',
-      cancelledAt: null,
-      cancellationReason: null,
-    })).toThrow(/EVENT_DATA_INTEGRITY|非法|不一致/)
+describe('phase9 malformed MIP commerce response rejection', () => {
+  it('rejects malformed envelopes and payment parameters', async () => {
+    const malformedEnvelope = createMipCommerceGateway({
+      invoke: vi.fn(async () => null),
+    }, { commerce: 'mip-commerce-api', payment: 'mip-cloudpay' })
+    await expect(malformedEnvelope.listPlans()).rejects.toMatchObject({
+      code: 'INVALID_RESPONSE',
+    } satisfies Partial<MipCommerceError>)
+
+    const businessError = createMipCommerceGateway({
+      invoke: vi.fn(async () => ({
+        ok: false,
+        error: { code: 'CONFLICT', message: '订单状态已变化', retryable: true },
+      })),
+    }, { commerce: 'mip-commerce-api', payment: 'mip-cloudpay' })
+    await expect(businessError.listOrders()).rejects.toMatchObject({
+      code: 'CONFLICT',
+      retryable: true,
+    } satisfies Partial<MipCommerceError>)
+
+    const malformedPayment = createMipCommerceGateway({
+      invoke: vi.fn(async () => ({ ok: true, data: { payment: { timeStamp: '1' } } })),
+    }, { commerce: 'mip-commerce-api', payment: 'mip-cloudpay' })
+    await expect(malformedPayment.createPayment('order-1' as never)).rejects.toMatchObject({
+      code: 'INVALID_PAYMENT_RESPONSE',
+    } satisfies Partial<MipCommerceError>)
   })
 })
 
@@ -281,59 +234,59 @@ describe('phase9 page double-click / stale / error recovery behavior', () => {
   })
 
   it('event detail and registration confirm gate double submit via busy flag', () => {
-    const detail = read('src/packages/member/event-detail/index.ts')
-    const confirm = read('src/packages/member/registration-confirm/index.ts')
+    const detail = read('src/packages/member/mip-events/detail/index.ts')
+    const registration = read('src/packages/member/mip-events/registration/index.ts')
     const ticket = read('src/packages/member/ticket/index.ts')
     const adminEvents = read('src/packages/admin/events/index.ts')
     const roster = read('src/packages/admin/event-registrations/index.ts')
 
-    // Behavioral gates present in source (not mere token presence of "busy").
-    expect(detail).toMatch(/if \(this\.data\.busy \|\| \[/)
-    expect(confirm).toMatch(/if \(!this\.data\.event \|\| this\.data\.busy\)/)
+    expect(detail).toMatch(/if \(!this\.data\.event\?\.canCancel \|\| this\.data\.busy\)/)
+    expect(detail).toMatch(/busy: true[\s\S]*?showModal[\s\S]*?finally[\s\S]*?busy: false/)
+    expect(registration).toMatch(/if \(!event \|\| this\.data\.busy \|\| !this\.validate\(\)\)/)
+    expect(registration).toMatch(/busy: true[\s\S]*?mipEventsModule\.register[\s\S]*?finally[\s\S]*?busy: false/)
     expect(ticket).toMatch(/if \(!this\.data\.canCancel \|\| this\.data\.busy\)/)
-    // Confirm latch must be set before showModal and released in finally.
     expect(ticket).toMatch(/this\.setData\(\{ busy: true[\s\S]*?showModal/)
     expect(adminEvents).toMatch(/if \(this\.data\.saving\)/)
     expect(adminEvents).toMatch(/if \(this\.data\.conflict\)/)
     expect(adminEvents).toMatch(/cancelConflict/)
-    expect(adminEvents).toMatch(/this\.setData\(\{ processingId: eventId[\s\S]*?showModal/)
-    expect(roster).toMatch(/if \(this\.data\.processingId \|\| this\.data\.undoing \|\| this\.data\.exporting \|\| this\.confirmationBusy\)/)
+    expect(adminEvents).toMatch(/cancelBusy: true[\s\S]*?showModal/)
+    expect(roster).toMatch(/this\.data\.processingId \|\| this\.data\.exportPending \|\| this\.confirmationBusy/)
     expect(roster).toMatch(/confirmationBusy/)
     expect(roster).toMatch(/this\.confirmationBusy = true[\s\S]*?showModal/)
     expect(roster).toMatch(/seq !== this\.requestSeq/)
-    expect(roster).toMatch(/loadMoreSeq/)
-    expect(roster).toMatch(/loadingMoreSeq/)
   })
 })
 
 describe('phase9 paid event server-authoritative contract', () => {
-  it('supports PAID through reservation, callback grant, and client payment without client amount', () => {
-    const adminWorkflows = read('cloudfunctions/membership-admin-api/lib/workflows.js')
-    const adminEventsWxml = read('src/packages/admin/events/index.wxml')
-    const memberWorkflows = read('cloudfunctions/membership-api/lib/workflows.js')
-    const memberApi = read('cloudfunctions/membership-api/index.js')
-    const membershipModule = read('src/modules/membership/module.ts')
+  it('uses mip_orders from reservation through callback confirmation without client amount', () => {
+    const eventService = read('cloudfunctions/mip-events-api/domain/event-service.js')
+    const eventApi = read('cloudfunctions/mip-events-api/index.js')
+    const ledger = read('cloudfunctions/mip-payment-ledger/domain/ledger.js')
+    const registration = read('src/packages/member/mip-events/registration/index.ts')
+    const commerceModule = read('src/modules/mip-commerce/module.ts')
 
-    expect(adminWorkflows).not.toContain('EVENT_PAYMENT_NOT_READY')
-    expect(adminWorkflows).toContain('normalized.activityType')
-    expect(memberWorkflows).toContain('createEventReservationOrder')
-    expect(memberWorkflows).toContain('member_event_reservations')
-    expect(memberWorkflows).toMatch(/EVENT_PAYMENT_REQUIRED/)
-    expect(memberApi).toContain('kind: \'PAYMENT_REQUIRED\'')
-    expect(adminEventsWxml).toContain('独立付费')
-    expect(membershipModule).toContain('gateway.createPayment(result.orderId)')
-    expect(membershipModule).not.toMatch(/registerEvent\([^)]*amountCents/)
+    const registrationFlow = eventService.slice(
+      eventService.indexOf('async function createRegistration'),
+      eventService.indexOf('async function listMyRegistrations'),
+    )
+    expect(registrationFlow).toContain('INSERT INTO mip_orders')
+    expect(registrationFlow).toContain('VALUES (?, ?, ?, \'EVENT\'')
+    expect(registrationFlow).toContain('INSERT INTO mip_event_seat_holds')
+    expect(eventService).toContain('kind: \'PAYMENT_REQUIRED\'')
+    expect(registrationFlow).not.toContain('mip_event_orders')
+    expect(eventApi).toContain('case \'mip.events.register\'')
 
-    const adminApi = read('cloudfunctions/membership-admin-api/index.js')
-    const keys = extractHandlerKeys(adminApi)
-    expect(keys).toEqual(expect.arrayContaining([
-      'listEventRegistrations',
-      'checkInRegistration',
-      'undoCheckIn',
-      'createRosterExport',
-      'cancelEvent',
-    ]))
-    expect(keys).not.toContain('createEventOrder')
-    expect(keys).not.toContain('grantPaidRegistration')
+    expect(ledger).toContain('order.order_type === \'EVENT\'')
+    expect(ledger).toContain('mip_event_seat_holds SET status = \'CONSUMED\'')
+    expect(ledger).toContain('mip_event_registrations\n     SET status = \'REGISTERED\'')
+    expect(ledger).toContain('SET status = \'REFUND_PENDING\'')
+    expect(ledger).not.toContain('mip_event_orders')
+
+    expect(registration).toContain('mipCommerceModule.payOrder(result.orderId)')
+    expect(registration).toContain('payment.kind === \'CONFIRMED\'')
+    expect(registration).not.toMatch(/(?:amountCents|priceCents|currency)\s*:/)
+    expect(commerceModule).toContain('gateway.createPayment(order.id)')
+    expect(commerceModule).toContain('gateway.reconcileOrder(order.id)')
+    expect(commerceModule).toMatch(/catch \{[\s\S]*?interpretClientPayment\(requestResult, order\)/)
   })
 })

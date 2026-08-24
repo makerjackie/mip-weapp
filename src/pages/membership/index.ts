@@ -1,8 +1,10 @@
-import type { QueryOptions } from '@weapp/shared/cache'
-import type { MembershipPlan } from '../../modules/membership/types'
+import type { MembershipPlan, MembershipPlanId } from '../../modules/mip-commerce'
 import { runtimeConfig } from '../../config/runtime'
-import { membershipModule } from '../../modules/membership/client'
-import { caseNavigateTo, caseRedirectTo, caseSwitchPrimary } from '../../modules/platform/case-navigation'
+import { mipCommerceModule } from '../../modules/mip-commerce/client'
+import { mipAccessPageUrl } from '../../modules/mip-identity'
+import { mipIdentityModule } from '../../modules/mip-identity/client'
+import { createIntentKey, formatCny, membershipPresentation } from '../../modules/mip-shell'
+import { caseNavigateTo, caseRedirectTo } from '../../modules/platform/case-navigation'
 import { formatLocalDate } from '../../utils/date'
 
 interface DisplayPlan extends MembershipPlan {
@@ -10,29 +12,23 @@ interface DisplayPlan extends MembershipPlan {
   durationText: string
 }
 
-function displayPlan(plan: MembershipPlan): DisplayPlan {
+function presentPlan(plan: MembershipPlan): DisplayPlan {
   return {
     ...plan,
-    priceText: `¥${(plan.priceCents / 100).toFixed(2)}`,
-    durationText: plan.testOnly ? `${plan.durationDays} 天体验权益` : `${plan.durationDays} 天会员`,
+    priceText: formatCny(plan.priceCents),
+    durationText: `${plan.durationDays} 天`,
   }
 }
 
-function planData(overview: Awaited<ReturnType<typeof membershipModule.load>>) {
-  const plans = overview.plans.map(displayPlan)
-  return {
-    state: 'ready' as const,
-    plans,
-    phoneBound: overview.profile.phoneBound,
-    profileReady: overview.profile.phoneBound,
-    membershipActive: overview.membership.active,
-    expiresAt: overview.membership.expiresAt,
-    expiresText: overview.membership.expiresAt ? formatLocalDate(overview.membership.expiresAt) : '',
-    nickname: overview.profile.nickname || '微信用户',
-    nicknameInitial: (overview.profile.nickname || '微信用户').slice(0, 1),
-    avatarUrl: overview.profile.avatarUrl,
-    selectedPlanId: plans[0]?.id || '',
-    message: plans.length ? '' : '会员方案即将开放',
+function decodeQueryValue(value: string | undefined) {
+  if (typeof value !== 'string' || !value || value.length > 768) {
+    return ''
+  }
+  try {
+    return decodeURIComponent(value).slice(0, 512)
+  }
+  catch {
+    return ''
   }
 }
 
@@ -40,68 +36,106 @@ Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
     plans: [] as DisplayPlan[],
-    selectedPlanId: '',
-    paying: false,
+    selectedPlanId: '' as MembershipPlanId | '',
+    selectedBenefits: [] as string[],
+    identityState: 'loading' as 'loading' | 'ready' | 'error',
+    membershipLabel: '嘉宾',
+    membershipDescription: '当前没有有效会员权益',
+    membershipEndsText: '',
+    isPlayer: false,
     paymentEnabled: runtimeConfig.paymentMode !== 'disabled',
-    phoneBound: false,
-    profileReady: false,
-    membershipActive: false,
-    expiresAt: null as string | null,
-    expiresText: '',
-    nickname: '微信用户',
-    nicknameInitial: '微',
-    avatarUrl: '',
-    phoneSheetVisible: false,
-    phoneBinding: false,
+    paying: false,
+    accessing: false,
+    invitationReady: false,
     message: '',
   },
+  incomingInvitationToken: '',
+  shareInvitationToken: '',
+  resumePlanId: '' as MembershipPlanId | '',
+  checkoutKey: '',
+  checkoutPlanId: '' as MembershipPlanId | '',
 
-  onLoad() {
+  onLoad(query: Record<string, string | undefined>) {
+    this.incomingInvitationToken = decodeQueryValue(query.invitationToken)
     void this.loadPlans()
   },
 
   onShow() {
-    if (this.data.paying) {
+    const resume = mipIdentityModule.consumePendingResume('pages/membership/index')
+    if (resume?.action === 'PURCHASE_MEMBERSHIP' && this.resumePlanId) {
+      const planId = this.resumePlanId
+      this.resumePlanId = ''
+      void this.performPurchase(planId)
       return
     }
-    void this.reconcilePayment()
+    this.resumePlanId = ''
+    void this.loadIdentity()
   },
 
-  async reconcilePayment() {
+  async loadPlans() {
+    if (this.data.state !== 'ready') {
+      this.setData({ state: 'loading' })
+    }
     try {
-      const order = await membershipModule.reconcilePendingPayments()
-      if (order?.status === 'PAID') {
-        this.setData({ message: '会员权益已生效。' })
-        await this.loadPlans({ force: true })
+      const plans = (await mipCommerceModule.listPlans()).map(presentPlan)
+      const selectedPlanId = plans.some(plan => plan.id === this.data.selectedPlanId)
+        ? this.data.selectedPlanId
+        : plans[0]?.id || ''
+      const selected = plans.find(plan => plan.id === selectedPlanId)
+      this.setData({
+        state: 'ready',
+        plans,
+        selectedPlanId,
+        selectedBenefits: selected?.benefits || [],
+        message: plans.length ? '' : '当前没有可用会员方案。',
+      })
+    }
+    catch {
+      this.setData(this.data.plans.length
+        ? { message: '会员方案更新失败，已保留上次结果。' }
+        : { state: 'error', message: '会员方案暂时无法加载。' })
+    }
+  },
+
+  async loadIdentity() {
+    try {
+      const snapshot = await mipIdentityModule.loadSnapshot()
+      const membership = membershipPresentation(snapshot.membership.kind, snapshot.membership.entitlement)
+      this.setData({
+        identityState: 'ready',
+        membershipLabel: membership.label,
+        membershipDescription: membership.description,
+        membershipEndsText: membership.endsAt ? formatLocalDate(membership.endsAt) : '',
+        isPlayer: membership.label === '玩家',
+      })
+      if (membership.label === '玩家') {
+        void this.prepareInvitation()
+      }
+      else {
+        this.shareInvitationToken = ''
+        this.setData({ invitationReady: false })
       }
     }
     catch {
-      // Keep the current content visible; the next page focus or pull-down refresh retries automatically.
+      this.setData({ identityState: 'error' })
     }
   },
 
-  async loadPlans(options: QueryOptions = {}) {
-    const cached = membershipModule.peekOverview()
-    if (cached) {
-      this.setData(planData(cached))
-    }
-    else if (this.data.state !== 'ready') {
-      this.setData({ state: 'loading', message: '' })
-    }
+  async prepareInvitation() {
     try {
-      const overview = await membershipModule.load(options)
-      this.setData(planData(overview))
+      const invitation = await mipCommerceModule.createMembershipInvitation()
+      this.shareInvitationToken = invitation.token
+      this.setData({ invitationReady: true })
     }
-    catch (error) {
-      this.setData(cached || this.data.state === 'ready'
-        ? { message: '方案更新失败，已保留上次结果。' }
-        : { state: 'error', message: error instanceof Error ? error.message : '方案加载失败' })
+    catch {
+      this.shareInvitationToken = ''
+      this.setData({ invitationReady: false })
     }
   },
 
   async onPullDownRefresh() {
     try {
-      await this.loadPlans({ force: true })
+      await Promise.allSettled([this.loadPlans(), this.loadIdentity()])
     }
     finally {
       wx.stopPullDownRefresh()
@@ -109,90 +143,94 @@ Page({
   },
 
   selectPlan(event: WechatMiniprogram.TouchEvent) {
-    this.setData({ selectedPlanId: String(event.currentTarget.dataset.planId || '') })
+    const selectedPlanId = String(event.currentTarget.dataset.planId || '') as MembershipPlanId
+    const selected = this.data.plans.find(plan => plan.id === selectedPlanId)
+    if (!selected) {
+      return
+    }
+    this.checkoutKey = ''
+    this.checkoutPlanId = ''
+    this.setData({ selectedPlanId, selectedBenefits: selected.benefits, message: '' })
   },
 
   async purchase() {
-    if (!this.data.selectedPlanId || this.data.paying) {
+    const planId = this.data.selectedPlanId
+    if (!planId || this.data.paying || this.data.accessing) {
       return
     }
-    if (!this.data.profileReady) {
-      this.setData({ phoneSheetVisible: true, message: '' })
+    if (!this.data.paymentEnabled) {
+      this.setData({ message: '会员支付尚未配置。' })
       return
+    }
+    this.resumePlanId = planId
+    this.setData({ accessing: true, message: '' })
+    try {
+      const session = await mipIdentityModule.beginProtectedAction({
+        action: 'PURCHASE_MEMBERSHIP',
+        source: { navigation: 'navigateBack' },
+      })
+      if (!session.decision.ready) {
+        caseNavigateTo({ url: mipAccessPageUrl(session.token) })
+        return
+      }
+      this.resumePlanId = ''
+      await this.performPurchase(planId)
+    }
+    catch {
+      this.resumePlanId = ''
+      this.setData({ message: '身份状态暂时无法确认，请稍后重试。' })
+    }
+    finally {
+      this.setData({ accessing: false })
+    }
+  },
+
+  async performPurchase(planId: MembershipPlanId) {
+    if (this.data.paying) {
+      return
+    }
+    if (this.checkoutPlanId !== planId || !this.checkoutKey) {
+      this.checkoutPlanId = planId
+      this.checkoutKey = createIntentKey('membership-checkout')
     }
     this.setData({ paying: true, message: '' })
     try {
-      const outcome = await membershipModule.purchase(this.data.selectedPlanId)
-      if (outcome.status === 'cancelled') {
-        this.setData({ message: '你已取消支付，订单未生效。' })
+      const outcome = await mipCommerceModule.purchase({
+        planId,
+        idempotencyKey: this.checkoutKey,
+        invitationToken: this.incomingInvitationToken || undefined,
+      })
+      if (outcome.kind === 'CANCELLED') {
+        this.setData({ message: '支付已取消，会员权益未发生变化。' })
         return
       }
-      caseRedirectTo({ url: `/packages/member/payment-result/index?orderId=${encodeURIComponent(outcome.order.id)}` })
+      caseRedirectTo({
+        url: `/packages/member/payment-result/index?orderId=${encodeURIComponent(outcome.order.id)}`,
+      })
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '支付失败，请稍后重试' })
+      const code = error instanceof Error ? error.message : ''
+      this.setData({
+        message: code === 'PAYMENT_UNAVAILABLE'
+          ? '会员支付尚未配置。'
+          : '暂时无法发起支付，请稍后重试。',
+      })
     }
     finally {
       this.setData({ paying: false })
     }
   },
 
-  openOrders() {
-    caseNavigateTo({ url: '/packages/member/orders/index' })
-  },
+  openOrders() { caseNavigateTo({ url: '/packages/member/orders/index' }) },
+  openBenefits() { caseNavigateTo({ url: '/packages/member/benefits/index' }) },
 
-  openBenefits() {
-    caseNavigateTo({ url: '/packages/member/benefits/index' })
-  },
-
-  backToHome() {
-    caseSwitchPrimary('/pages/index/index')
-  },
-
-  closePhoneSheet() {
-    if (!this.data.phoneBinding) {
-      this.setData({ phoneSheetVisible: false })
+  onShareAppMessage() {
+    const invitation = this.shareInvitationToken
+      ? `&invitationToken=${encodeURIComponent(this.shareInvitationToken)}`
+      : ''
+    return {
+      title: 'MIP 会员方案',
+      path: `/pages/membership/index?source=member-share${invitation}`,
     }
-  },
-
-  async bindPhone(event: WechatMiniprogram.CustomEvent<{ code?: string, errMsg?: string }>) {
-    if (this.data.phoneBinding || this.data.paying) {
-      return
-    }
-    const code = event.detail.code
-    if (!code) {
-      const errMsg = event.detail.errMsg || ''
-      this.setData({
-        phoneSheetVisible: false,
-        message: errMsg.includes('deny') || errMsg.includes('cancel')
-          ? '已取消登录，你仍可继续查看会员方案。'
-          : '手机号授权需在微信真机完成，模拟器无法代替。',
-      })
-      return
-    }
-    this.setData({ phoneBinding: true, message: '' })
-    try {
-      const profile = await membershipModule.bindPhone(code)
-      if (!profile.phoneBound) {
-        this.setData({ message: '手机号尚未绑定成功，请重试。' })
-        return
-      }
-      this.setData({ phoneBound: true, profileReady: true, phoneSheetVisible: false })
-      await this.purchase()
-    }
-    catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '手机号登录失败，请重试' })
-    }
-    finally {
-      this.setData({ phoneBinding: false })
-    }
-  },
-
-  openAgreement() {
-    caseNavigateTo({ url: '/packages/member/about/index' })
-  },
-
-  openPrivacy() {
-    caseNavigateTo({ url: '/packages/member/privacy/index' })
   },
 })

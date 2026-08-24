@@ -1,46 +1,12 @@
 <view id="admin-profiles-page" class="min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
-  <view class="border-b border-ink pb-5"><view class="text-[length:21rpx] font-semibold tracking-[0.16em] text-brand">成员管理</view><view class="mt-2 text-[length:44rpx] font-bold">资料审核与展示</view></view>
-  <view class="mt-5 border-b border-line">
-    <t-tabs value="{{view}}" theme="line" space-evenly bind:change="changeView">
-      <t-tab-panel value="PENDING" label="待审核" />
-      <t-tab-panel value="APPROVED" label="已公开" />
-      <t-tab-panel value="SUSPENDED" label="已暂停" />
-      <t-tab-panel value="REJECTED" label="已驳回" />
-    </t-tabs>
-  </view>
-  <view wx:if="{{state === 'loading'}}" class="mt-7 bg-panel px-5 py-8"><t-skeleton row-col="{{[1, 1, 1, 1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}" class="mt-7"><app-empty-state title="暂时无法加载资料" description="服务暂时没有响应，请稍后重试。" action-text="重新加载" bind:action="loadProfiles" /></view>
-  <view wx:elif="{{state === 'forbidden'}}" class="mt-7">
-    <app-empty-state
-      title="没有运营权限"
-      description="请使用已授权的运营账号进入，或联系主理人开通权限。"
-      action-text="重新验证"
-      bind:action="loadProfiles"
-    />
-  </view>
-  <view wx:elif="{{profiles.length === 0}}" class="mt-7"><app-empty-state title="{{emptyTitle}}" description="{{emptyDescription}}" /></view>
-  <view wx:else class="mt-6 flex flex-col gap-4">
-    <view wx:for="{{profiles}}" wx:key="id" class="border-l-[10rpx] border-brand bg-panel px-5 py-5">
-      <view class="flex items-start gap-4">
-        <image
-          wx:if="{{item.avatarUrl}}"
-          class="h-[96rpx] w-[96rpx] shrink-0 rounded-full bg-line object-cover"
-          src="{{item.avatarUrl}}"
-          mode="aspectFill"
-          lazy-load="{{false}}"
-        />
-        <view wx:else class="flex h-[96rpx] w-[96rpx] shrink-0 items-center justify-center rounded-full bg-line text-[length:22rpx] text-muted">无头像</view>
-        <view class="min-w-0 flex-1">
-          <view class="truncate text-[length:31rpx] font-bold">{{item.nickname}}{{item.city ? ' · ' + item.city : ''}}</view>
-          <view class="mt-3 line-clamp-3 text-[length:24rpx] leading-6">{{item.headline || '未填写介绍'}}</view>
-        </view>
-      </view>
-      <view class="mt-3 flex flex-wrap gap-2"><t-tag wx:for="{{item.tags}}" wx:for-item="tag" wx:key="*this" variant="outline">{{tag}}</t-tag></view>
-      <view wx:if="{{view === 'PENDING'}}" class="mt-5 grid grid-cols-2 gap-3"><t-button block variant="outline" theme="danger" loading="{{processingId === item.id}}" data-profile-id="{{item.id}}" data-decision="reject" bind:tap="review">驳回</t-button><t-button block theme="primary" loading="{{processingId === item.id}}" data-profile-id="{{item.id}}" data-decision="approve" bind:tap="review">通过</t-button></view>
-      <view wx:elif="{{view === 'APPROVED'}}" class="mt-5"><t-button block variant="outline" theme="danger" loading="{{processingId === item.id}}" data-profile-id="{{item.id}}" data-status="SUSPENDED" bind:tap="setVisibility">暂停展示</t-button></view>
-      <view wx:elif="{{view === 'SUSPENDED'}}" class="mt-5"><t-button block theme="primary" loading="{{processingId === item.id}}" data-profile-id="{{item.id}}" data-status="APPROVED" bind:tap="setVisibility">恢复公开</t-button></view>
-    </view>
-  </view>
-  <view wx:if="{{message && state === 'ready'}}" class="mt-5 border-l-[8rpx] border-danger bg-panel px-4 py-4 text-[length:24rpx] text-muted">{{message}}</view>
+  <view class="text-[length:40rpx] font-bold">用户管理</view><view class="mt-2 text-[length:23rpx] text-muted">组合筛选、脱敏资料、名单和授权字段编辑</view>
+  <view class="mt-5 rounded-[16rpx] bg-panel p-3"><t-input value="{{query}}" placeholder="搜索昵称、资料或城市" bind:change="updateQuery" bind:enter="search" /><view class="mt-3 flex flex-wrap gap-2"><t-tag variant="outline" data-field="kind" data-value="" bind:tap="chooseFilter">全部身份</t-tag><t-tag variant="outline" data-field="kind" data-value="PLAYER" bind:tap="chooseFilter">玩家</t-tag><t-tag variant="outline" data-field="kind" data-value="GUEST" bind:tap="chooseFilter">嘉宾</t-tag><t-tag variant="outline" data-field="status" data-value="" bind:tap="chooseFilter">全部状态</t-tag><t-tag variant="outline" data-field="status" data-value="ACTIVE" bind:tap="chooseFilter">正常</t-tag><t-tag variant="outline" data-field="status" data-value="BLOCKED" bind:tap="chooseFilter">已限制</t-tag><t-tag variant="outline" data-field="controlType" data-value="BLOCKLIST" bind:tap="chooseFilter">黑名单</t-tag><t-tag variant="outline" data-field="controlType" data-value="ALLOWLIST" bind:tap="chooseFilter">白名单</t-tag></view><view class="mt-3 flex gap-2"><t-button wx:if="{{canPhone && !includePhone}}" size="small" variant="outline" bind:tap="showPhones">查看手机号原文</t-button><t-button wx:if="{{canExport}}" size="small" variant="outline" loading="{{exportPending}}" bind:tap="createExport">创建导出</t-button></view></view>
+  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载用户" description="{{message}}" action-text="重新加载" bind:action="loadUsers" /></view>
+  <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有用户管理权限" description="当前账号不能查看用户管理内容。" /></view>
+  <view wx:elif="{{users.length === 0}}" class="mt-6"><app-empty-state title="没有符合条件的用户" description="调整筛选条件后重新查询。" /></view>
+  <view wx:else class="mt-5 flex flex-col gap-3"><view wx:for="{{users}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4"><view class="flex items-start justify-between gap-3"><view><view class="text-[length:28rpx] font-semibold">{{item.nickname}}</view><view class="mt-1 text-[length:22rpx] text-muted">{{item.kind === 'PLAYER' ? '玩家' : '嘉宾'}} · {{item.branchName || '未设置分会'}}</view></view><t-tag variant="outline">{{item.status}}</t-tag></view><view class="mt-3 text-[length:23rpx]">{{item.headline || '未填写资料标题'}}</view><view wx:if="{{item.introduction}}" class="mt-2 text-[length:22rpx] text-muted">{{item.introduction}}</view><view wx:if="{{includePhone}}" class="mt-2 text-[length:22rpx] text-muted">手机号：{{item.phoneNumber || '未绑定'}}</view><view wx:elif="{{item.phoneBound}}" class="mt-2 text-[length:22rpx] text-muted">手机已绑定</view><view wx:else class="mt-2 text-[length:22rpx] text-muted">手机未绑定</view><view wx:if="{{item.controlText}}" class="mt-2 text-[length:22rpx] text-danger">{{item.controlText}}</view><view wx:if="{{canEdit}}" class="mt-4 flex flex-wrap gap-2"><t-button size="small" variant="outline" loading="{{processingId === item.id}}" data-id="{{item.id}}" data-version="{{item.profileVersion}}" data-field="nickname" bind:tap="editField">编辑昵称</t-button><t-button size="small" variant="outline" loading="{{processingId === item.id}}" data-id="{{item.id}}" data-version="{{item.profileVersion}}" data-field="headline" bind:tap="editField">编辑标题</t-button><t-button size="small" variant="outline" loading="{{processingId === item.id}}" data-id="{{item.id}}" data-version="{{item.profileVersion}}" data-field="introduction" bind:tap="editField">编辑介绍</t-button></view><view wx:if="{{canControl}}" class="mt-3 flex flex-wrap gap-2"><t-button wx:if="{{!item.hasBlocklist}}" size="small" variant="outline" theme="danger" data-id="{{item.id}}" data-type="BLOCKLIST" data-active="true" bind:tap="setControl">加入黑名单</t-button><t-button wx:if="{{item.hasBlocklist}}" size="small" variant="outline" data-id="{{item.id}}" data-type="BLOCKLIST" data-active="false" bind:tap="setControl">撤销黑名单</t-button><t-button wx:if="{{!item.hasAllowlist}}" size="small" variant="outline" data-id="{{item.id}}" data-type="ALLOWLIST" data-active="true" bind:tap="setControl">加入白名单</t-button><t-button wx:if="{{item.hasAllowlist}}" size="small" variant="outline" data-id="{{item.id}}" data-type="ALLOWLIST" data-active="false" bind:tap="setControl">撤销白名单</t-button></view></view></view>
+  <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
+  <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMoreUsers">加载更多</t-button></view>
   <app-page-exit />
 </view>

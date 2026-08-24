@@ -1,19 +1,24 @@
-<view id="payment-result-page" class="flex min-h-screen flex-col items-center bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-[150rpx] text-center text-ink">
-  <view wx:if="{{result === 'checking'}}" class="flex h-[128rpx] w-[128rpx] animate-pulse items-center justify-center rounded-full bg-brand-soft"><t-icon name="loading" size="58rpx" color="var(--color-brand)" /></view>
-  <view wx:elif="{{result === 'success'}}" class="flex h-[128rpx] w-[128rpx] items-center justify-center rounded-full bg-brand-soft"><t-icon name="check" size="64rpx" color="var(--color-brand)" /></view>
-  <view wx:elif="{{result === 'pending'}}" class="flex h-[128rpx] w-[128rpx] items-center justify-center rounded-full bg-[#FFF0E8]"><t-icon name="pending" size="58rpx" color="var(--color-accent)" /></view>
-  <view wx:else class="flex h-[128rpx] w-[128rpx] items-center justify-center rounded-full bg-[#F8E8E6]"><t-icon name="close" size="64rpx" color="var(--color-danger)" /></view>
-  <view class="mt-6 text-[length:38rpx] font-bold">{{message}}</view>
-  <view wx:if="{{result === 'checking'}}" class="mt-3 text-[length:23rpx] text-muted">通常几秒内完成，无需离开页面操作</view>
-  <view wx:elif="{{result === 'success'}}" class="mt-3 text-[length:23rpx] text-muted">现在可以查看完整成员资料并参加会员活动</view>
-  <view wx:elif="{{result === 'pending'}}" class="mt-3 text-[length:23rpx] leading-5 text-muted">你可以继续使用小程序；确认完成后，订单与会员权益会自动更新。</view>
-  <view wx:else class="mt-3 text-[length:23rpx] text-muted">未扣款可重新下单；如已扣款请联系小程序客服。</view>
-  <view wx:if="{{order}}" class="mt-8 w-full overflow-hidden rounded-[26rpx] bg-panel text-left">
-    <view class="flex justify-between gap-4 border-b border-line px-5 py-4"><view class="text-muted">实付金额</view><view class="font-semibold text-accent">{{amountText}}</view></view>
-    <view class="flex justify-between gap-4 border-b border-line px-5 py-4"><view class="text-muted">会员方案</view><view class="text-right font-semibold">{{planName}}</view></view>
-    <view wx:if="{{entitlementText}}" class="flex justify-between gap-4 px-5 py-4"><view class="text-muted">有效期</view><view class="text-right">{{entitlementText}}</view></view>
+<view id="payment-result-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-[96rpx] text-center text-ink">
+  <view wx:if="{{result === 'checking'}}" class="mx-auto flex h-[120rpx] w-[120rpx] items-center justify-center rounded-full bg-brand-soft"><t-icon name="pending" size="58rpx" color="var(--color-brand)" /></view>
+  <view wx:elif="{{result === 'success'}}" class="mx-auto flex h-[120rpx] w-[120rpx] items-center justify-center rounded-full bg-brand-soft"><t-icon name="check" size="60rpx" color="var(--color-brand)" /></view>
+  <view wx:elif="{{result === 'failed'}}" class="mx-auto flex h-[120rpx] w-[120rpx] items-center justify-center rounded-full bg-panel-raised"><t-icon name="close" size="60rpx" color="var(--color-danger)" /></view>
+  <view wx:else class="mx-auto flex h-[120rpx] w-[120rpx] items-center justify-center rounded-full bg-panel-raised"><t-icon name="pending" size="58rpx" color="var(--color-brand)" /></view>
+  <view class="mt-6 text-[length:38rpx] font-bold">{{title}}</view>
+  <view class="mx-auto mt-3 max-w-[620rpx] text-[length:23rpx] leading-6 text-muted">{{description}}</view>
+
+  <view wx:if="{{order}}" class="mt-8 overflow-hidden rounded-[16rpx] bg-panel text-left">
+    <view class="flex min-h-[92rpx] items-center justify-between gap-4 border-b border-line px-4"><text class="text-muted">订单</text><text class="text-right font-semibold">{{planName}}</text></view>
+    <view class="flex min-h-[92rpx] items-center justify-between gap-4 border-b border-line px-4"><text class="text-muted">金额</text><text class="font-semibold">{{amountText}}</text></view>
+    <view class="flex min-h-[92rpx] items-center justify-between gap-4 px-4"><text class="text-muted">服务端状态</text><text class="text-right text-brand">{{statusText}}</text></view>
   </view>
-  <view wx:if="{{result === 'success'}}" class="mt-8 flex w-full flex-col gap-3"><t-button block size="large" theme="primary" bind:tap="openMembership">查看会员权益</t-button><t-button block variant="outline" theme="primary" bind:tap="openOrder">查看订单</t-button></view>
-  <view wx:else class="mt-10 w-full"><t-button block size="large" theme="primary" bind:tap="openOrder">查看订单详情</t-button></view>
+  <view wx:if="{{!isEventOrder && membershipEndsText}}" class="mt-4 rounded-[16rpx] border border-line bg-panel px-4 py-4 text-[length:23rpx]">会员有效期至 {{membershipEndsText}}</view>
+
+  <view class="mt-8 flex flex-col gap-3">
+    <t-button wx:if="{{result === 'pending'}}" block size="large" theme="primary" bind:tap="retry">重新查询</t-button>
+    <t-button wx:if="{{order}}" block size="large" theme="primary" bind:tap="openOrder">查看订单详情</t-button>
+    <t-button wx:if="{{isEventOrder && eventId}}" block variant="outline" theme="default" bind:tap="openEvent">返回活动</t-button>
+    <t-button wx:if="{{isEventOrder}}" block variant="outline" theme="default" bind:tap="openMyEvents">查看我的活动</t-button>
+    <t-button wx:if="{{!isEventOrder && result === 'success'}}" block variant="outline" theme="default" bind:tap="openMembership">查看会员权益</t-button>
+  </view>
   <app-page-exit label="完成" tab-url="/pages/profile/index" />
 </view>

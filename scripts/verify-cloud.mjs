@@ -10,171 +10,317 @@ import {
   loadCaseEnv,
   sqlLiteral,
 } from './lib/example-cloudbase.mjs'
+import { createMipCoreFunctionManifest } from './lib/mip-function-manifest.mjs'
 import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
+import {
+  assertRuntimeAccountClaimable,
+  assertRuntimePrivilegesExact,
+  parseGrantee,
+  parsePrivilegeRows,
+  RUNTIME_TABLE_PRIVILEGES,
+  runtimeUserForEnvironment,
+} from './lib/mysql-privilege-assert.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
-const envId = env.CLOUDBASE_ENV_ID
-const appId = env.MINI_PROGRAM_APP_ID
-const paymentMode = env.MEMBERSHIP_PAYMENT_MODE || 'disabled'
+const envId = String(env.CLOUDBASE_ENV_ID || '').trim()
+const appId = String(env.MINI_PROGRAM_APP_ID || '').trim()
+const paymentMode = String(env.MIP_PAYMENT_MODE || 'disabled').trim().toLowerCase()
 const functionNames = resolveMipFunctionNames(env)
-const paymentFunction = functionNames.pay
-const paymentCallbackFunction = functionNames.callback
+const coreManifest = createMipCoreFunctionManifest(functionNames)
 const confirmedEnv = process.argv.find(value => value.startsWith('--confirm-env='))?.slice('--confirm-env='.length)
 
-if (!envId || !appId || confirmedEnv !== envId) {
-  throw new Error('Cloud verification requires configured EnvID/AppID and --confirm-env=<exact EnvID>')
+if (!envId || confirmedEnv !== envId || !/^wx[0-9a-f]{16}$/i.test(appId)) {
+  throw new Error('MIP cloud verification requires configured EnvID/AppID and --confirm-env=<exact EnvID>')
 }
+if (!['disabled', 'test', 'live'].includes(paymentMode)) {
+  throw new Error('MIP_PAYMENT_MODE must be disabled, test, or live')
+}
+
 bindAndRequireMysqlEnvironment(root, envId)
 
-// Keep each response below the MCP 64 KiB transport ceiling. The CloudBase
-// payload includes both normalized rows and a raw copy, so a single large
-// listFunctions response can otherwise be truncated and become invalid JSON.
-const functionInventory = []
-for (let offset = 0; offset < 100; offset += 4) {
-  const page = callCloudbase(root, 'queryFunctions', {
-    action: 'listFunctions',
-    limit: 4,
-    offset,
-  })
-  functionInventory.push(page)
-  const text = JSON.stringify(page)
-  const totalMatch = text.match(/"totalCount"\s*:\s*(\d+)/i)
-  if (totalMatch && offset + 4 >= Number(totalMatch[1])) {
-    break
-  }
-}
-
-function hasActiveFunction(value, functionName) {
-  if (!value || typeof value !== 'object') {
-    return false
-  }
-  if (!Array.isArray(value)) {
-    const name = value.FunctionName || value.functionName || value.Name || value.name
-    const status = value.Status || value.status
-    if (name === functionName && status === 'Active') {
-      return true
-    }
-  }
-  return Object.values(value).some(child => hasActiveFunction(child, functionName))
-}
-
-const tableCounts = callCloudbase(root, 'queryMysqlDatabase', {
+const requiredTables = Object.keys(RUNTIME_TABLE_PRIVILEGES)
+const tableNamesSql = requiredTables.map(sqlLiteral).join(', ')
+const tableInventory = callCloudbase(root, 'queryMysqlDatabase', {
   action: 'runQuery',
-  sql: `select
-    (select count(*) from member_plans where app_id = ${sqlLiteral(appId)}) as plans,
-    (select count(*) from member_profiles where app_id = ${sqlLiteral(appId)}) as profiles,
-    (select count(*) from member_events where app_id = ${sqlLiteral(appId)}) as events,
-    (select count(*) from member_event_managers where app_id = ${sqlLiteral(appId)}) as eventManagers,
-    (select count(*) from member_follows where app_id = ${sqlLiteral(appId)}) as follows,
-    (select count(*) from member_event_photos where app_id = ${sqlLiteral(appId)}) as eventPhotos,
-    (select count(*)
-       from member_events event
-       where event.app_id = ${sqlLiteral(appId)}
-         and exists (
-           select 1 from member_audit_logs creator
-           where creator.app_id = event.app_id
-             and creator.resource_type = 'event'
-             and creator.resource_id = event.id
-             and creator.action in ('EVENT_CREATED', 'EVENT_DUPLICATED')
-         )
-         and not exists (
-           select 1 from member_event_managers owner
-           where owner.app_id = event.app_id
-             and owner.event_id = event.id
-             and owner.role = 'EVENT_OWNER'
-             and owner.status = 'ACTIVE'
-         )
-    ) as eventsWithoutOwner,
-    (select count(*) from member_notifications where app_id = ${sqlLiteral(appId)}) as notifications,
-    (select count(*) from member_notification_outbox where app_id = ${sqlLiteral(appId)}) as notificationOutbox,
-    (select count(*) from member_operational_failures where app_id = ${sqlLiteral(appId)}) as operationalFailures`,
+  sql: `SELECT table_name AS tableName FROM information_schema.tables
+    WHERE table_schema = DATABASE() AND table_name IN (${tableNamesSql})`,
 })
-const tableCountRow = tableCounts?.data?.rows?.[0]
-if (!tableCountRow || Number(tableCountRow.eventsWithoutOwner) !== 0) {
-  throw new Error('Cloud verification found created or duplicated events without an active owner')
+const foundTables = new Set(collectFieldValues(tableInventory, ['tableName', 'table_name']))
+const missingTables = requiredTables.filter(table => !foundTables.has(table))
+if (missingTables.length) {
+  throw new Error(`MIP schema verification failed; missing table ${missingTables[0]}`)
 }
 
-const functions = []
-for (const functionName of [
-  functionNames.api,
-  functionNames.admin,
-  functionNames.ledger,
-  functionNames.notification,
-]) {
-  const health = callCloudbase(root, 'manageFunctions', {
+const coreDetails = new Map()
+const verifiedFunctions = []
+const protectedFunctions = coreManifest.filter(item => !item.clientInvokable).map(item => item.name)
+for (const spec of coreManifest) {
+  const detail = existingFunctionDetail(spec.name)
+  assertActiveFunction(spec.name, detail)
+  const variables = environmentVariables(detail)
+  const allowedAppIds = String(variables.MIP_ALLOWED_APP_IDS || '')
+    .split(',')
+    .map(value => value.trim())
+    .filter(Boolean)
+  if (!allowedAppIds.includes(appId)) {
+    throw new Error(`${spec.name} does not include the configured AppID in MIP_ALLOWED_APP_IDS`)
+  }
+  assertMysqlHealth(spec.name)
+  coreDetails.set(spec.role, detail)
+  verifiedFunctions.push(spec.name)
+}
+
+assertRuntimeAccount(coreDetails.get('identity'))
+assertOutboxEnvironment(coreDetails.get('outbox'))
+assertNotificationEnvironment(coreDetails.get('notifications'), coreDetails.get('notification'))
+assertRefundDispatchEnvironment(coreDetails.get('admin'))
+for (const spec of coreManifest) {
+  if (spec.clientInvokable) {
+    assertClientInvocationEnabled(spec.name)
+  }
+  else {
+    assertClientInvocationDisabled(spec.name)
+  }
+}
+assertTimerAbsent(functionNames.notification, 'mip-notification-every-5m')
+assertTimerAbsent(functionNames.outbox, 'mip-outbox-every-5m')
+
+if (paymentMode === 'test' || paymentMode === 'live') {
+  for (const functionName of [functionNames.pay, functionNames.callback, functionNames.refund]) {
+    const detail = existingFunctionDetail(functionName)
+    assertActiveFunction(functionName, detail)
+    const variables = environmentVariables(detail)
+    if (variables.MIP_APP_ID !== appId
+      || variables.MIP_PAYMENT_MODE !== paymentMode
+      || variables.MIP_LEDGER_FUNCTION !== functionNames.ledger
+      || variables.MIP_PAYMENT_CALLBACK_FUNCTION !== functionNames.callback) {
+      throw new Error(`${functionName} payment environment does not match the verified MIP deployment`)
+    }
+    assertPaymentHealth(functionName)
+    verifiedFunctions.push(functionName)
+  }
+  assertRefundWorkerEnvironment(
+    existingFunctionDetail(functionNames.refund),
+    coreDetails.get('admin'),
+  )
+  assertClientInvocationEnabled(functionNames.pay)
+  assertClientInvocationDisabled(functionNames.callback)
+  assertClientInvocationDisabled(functionNames.refund)
+  assertClientInvocationDisabled(functionNames.ledger)
+  assertTimerAbsent(functionNames.refund, 'mip-refund-every-5m')
+  protectedFunctions.push(functionNames.callback, functionNames.refund)
+}
+
+fs.mkdirSync(path.join(root, '.tmp'), { recursive: true })
+fs.writeFileSync(path.join(root, '.tmp', 'verify-cloud-result.json'), `${JSON.stringify({
+  environmentVerified: true,
+  directMipFunctionsOnly: true,
+  persistence: 'cloudbase-mysql',
+  paymentMode,
+  functionsVerified: verifiedFunctions,
+  tablesVerified: requiredTables.length,
+  runtimeAccountLeastPrivilege: true,
+  protectedFunctionsVerified: protectedFunctions,
+  workerTimersVerifiedAbsent: true,
+  verifiedAt: new Date().toISOString(),
+}, null, 2)}\n`)
+console.log('[mip-cloud-verify] schema, least-privilege grants, functions, health, and protected invocation rules verified')
+
+function functionDetail(value) {
+  return value?.data?.functionDetail || value?.Response || value?.data || value
+}
+
+function environmentVariables(detail) {
+  const entries = functionDetail(detail)?.Environment?.Variables
+  if (!Array.isArray(entries)) {
+    return {}
+  }
+  return Object.fromEntries(entries
+    .filter(item => typeof item?.Key === 'string' && typeof item?.Value === 'string')
+    .map(item => [item.Key, item.Value]))
+}
+
+function existingFunctionDetail(functionName) {
+  try {
+    return callCloudbase(root, 'callCloudApi', {
+      service: 'scf',
+      action: 'GetFunction',
+      params: { FunctionName: functionName, Namespace: envId, ShowCode: 'FALSE' },
+    })
+  }
+  catch (error) {
+    if (/not found|not exist|resourcenotfound|不存在|未找到/i.test(String(error?.message || error))) {
+      return null
+    }
+    throw error
+  }
+}
+
+function assertActiveFunction(functionName, detail) {
+  const value = functionDetail(detail)
+  if (!value
+    || value.Status !== 'Active'
+    || value.AvailableStatus !== 'Available'
+    || value.Runtime !== 'Nodejs20.19') {
+    throw new Error(`${functionName} is not an active Nodejs20.19 function`)
+  }
+}
+
+function invokeHealth(functionName) {
+  const response = callCloudbase(root, 'manageFunctions', {
     action: 'invokeFunction',
     functionName,
     params: { action: 'health' },
+  }, 120000)
+  const invocation = response?.data?.invokeResult || response?.data?.raw
+  if (typeof invocation?.RequestId !== 'string'
+    || !invocation.RequestId
+    || typeof invocation?.Log !== 'string') {
+    throw new Error(`${functionName} did not return Cloud Function invocation evidence`)
+  }
+  return cloudFunctionResult(response)
+}
+
+function assertMysqlHealth(functionName) {
+  const result = invokeHealth(functionName)
+  if (result?.ok !== true || result?.data?.persistence !== 'cloudbase-mysql') {
+    throw new Error(`${functionName} health check did not prove CloudBase MySQL persistence`)
+  }
+}
+
+function assertPaymentHealth(functionName) {
+  const result = invokeHealth(functionName)
+  const healthy = functionName === functionNames.pay || functionName === functionNames.refund
+    ? result?.ok === true
+    && result?.data?.configReady === true
+    && result?.data?.paymentMode === paymentMode
+    && result?.data?.provider === 'cloudbase-native-cloudpay'
+    : result?.errcode === 0 && result?.provider === 'cloudbase-native-cloudpay'
+  if (!healthy) {
+    throw new Error(`${functionName} payment health contract failed`)
+  }
+}
+
+function assertRuntimeAccount(referenceDetail) {
+  const variables = environmentVariables(referenceDetail)
+  const connectionUri = String(variables.MIP_DB_CONNECTION_URI || '').trim()
+  let parsed
+  try {
+    parsed = new URL(connectionUri)
+  }
+  catch {
+    throw new Error('Deployed MIP functions do not contain a valid runtime MySQL connection')
+  }
+  const user = decodeURIComponent(parsed.username)
+  const schema = decodeURIComponent(parsed.pathname.replace(/^\//, ''))
+  const expectedUser = String(env.MIP_DB_RUNTIME_USER || runtimeUserForEnvironment(envId)).trim()
+  if (parsed.protocol !== 'mysql:'
+    || !parsed.hostname
+    || !parsed.password
+    || user !== expectedUser
+    || !/^[\w-]+$/.test(schema)) {
+    throw new Error('Deployed MIP functions do not use the dedicated runtime MySQL account')
+  }
+  const grantee = parseGrantee(user, '%')
+  const tableProbe = callCloudbase(root, 'queryMysqlDatabase', {
+    action: 'runQuery',
+    sql: `SELECT table_schema AS tableSchema, table_name AS tableName,
+      privilege_type AS privilegeType, grantee
+      FROM information_schema.table_privileges
+      WHERE grantee = ${sqlLiteral(grantee)}`,
   })
-  const healthResult = cloudFunctionResult(health)
-  const invocation = health?.data?.invokeResult || health?.data?.raw
-  const hasInvocationEvidence = typeof invocation?.RequestId === 'string'
-    && invocation.RequestId.length > 0
-    && typeof invocation?.Log === 'string'
-  if (!hasInvocationEvidence
-    || !hasActiveFunction(functionInventory, functionName)
-    || healthResult?.ok !== true
-    || healthResult?.data?.persistence !== 'cloudbase-mysql') {
-    throw new Error(`${functionName} cloud verification failed`)
-  }
-  if (functionName !== functionNames.ledger
-    && healthResult?.data?.appAllowlistConfigured !== true) {
-    throw new Error(`${functionName} app allowlist verification failed`)
-  }
-  functions.push(functionName)
+  const schemaProbe = callCloudbase(root, 'queryMysqlDatabase', {
+    action: 'runQuery',
+    sql: `SELECT table_schema AS tableSchema, privilege_type AS privilegeType, grantee
+      FROM information_schema.schema_privileges
+      WHERE grantee = ${sqlLiteral(grantee)}`,
+  })
+  const userProbe = callCloudbase(root, 'queryMysqlDatabase', {
+    action: 'runQuery',
+    sql: `SELECT privilege_type AS privilegeType, grantee
+      FROM information_schema.user_privileges WHERE grantee = ${sqlLiteral(grantee)}`,
+  })
+  const tableRows = parsePrivilegeRows(tableProbe)
+  const schemaRows = parsePrivilegeRows(schemaProbe)
+  const userRows = parsePrivilegeRows(userProbe)
+  assertRuntimeAccountClaimable({
+    tableRows,
+    schemaRows,
+    userRows,
+    schema,
+    grantee,
+    allowExisting: true,
+  })
+  assertRuntimePrivilegesExact({
+    tableRows,
+    schemaRows,
+    userRows,
+    requiredMap: RUNTIME_TABLE_PRIVILEGES,
+    grantee,
+  })
 }
 
-const notificationPermissions = callCloudbase(root, 'queryPermissions', {
-  action: 'getResourcePermission',
-  resourceType: 'function',
-  resourceId: functionNames.notification,
-})
-let notificationRules
-try {
-  notificationRules = JSON.parse(notificationPermissions?.data?.permissions?.[0]?.SecurityRule)
-}
-catch {
-  notificationRules = null
-}
-if (notificationRules?.[functionNames.notification]?.invoke !== false) {
-  throw new Error('Notification worker client invocation is not disabled')
-}
-const notificationTriggers = callCloudbase(root, 'callCloudApi', {
-  service: 'scf',
-  action: 'ListTriggers',
-  params: {
-    FunctionName: functionNames.notification,
-    Namespace: envId,
-  },
-})
-const triggerText = JSON.stringify(notificationTriggers)
-if (triggerText.includes('mip-notification-every-5m')) {
-  throw new Error('Notification worker timer trigger must stay removed; it keeps Serverless MySQL awake')
+function assertOutboxEnvironment(detail) {
+  const variables = environmentVariables(detail)
+  if (variables.MIP_NOTIFICATION_FUNCTION_NAME !== functionNames.notification
+    || variables.MIP_GROWTH_FUNCTION_NAME !== functionNames.growth
+    || String(variables.MIP_OUTBOX_HMAC_SECRET || '').length < 32
+    || String(variables.MIP_NOTIFICATION_HMAC_SECRET || '').length < 32
+    || String(variables.MIP_GROWTH_HMAC_SECRET || '').length < 32) {
+    throw new Error('Outbox worker internal function links or HMAC configuration are incomplete')
+  }
 }
 
-if (['test', 'live'].includes(paymentMode)) {
-  for (const functionName of [paymentFunction, paymentCallbackFunction]) {
-    const health = callCloudbase(root, 'manageFunctions', {
-      action: 'invokeFunction',
-      functionName,
-      params: { action: 'health' },
-    })
-    const healthResult = cloudFunctionResult(health)
-    const healthy = functionName === paymentFunction
-      ? healthResult?.ok === true
-      && healthResult?.data?.configReady === true
-      && healthResult?.data?.paymentMode === paymentMode
-      : healthResult?.errcode === 0 && healthResult?.provider === 'cloudbase-native-cloudpay'
-    if (!hasActiveFunction(functionInventory, functionName) || !healthy) {
-      throw new Error(`${functionName} cloud verification failed`)
-    }
-    functions.push(functionName)
+function assertRefundDispatchEnvironment(detail) {
+  const variables = environmentVariables(detail)
+  if (variables.MIP_REFUND_FUNCTION_NAME !== functionNames.refund
+    || String(variables.MIP_REFUND_WORKER_HMAC_SECRET || '').length < 32) {
+    throw new Error('Admin refund worker link or HMAC configuration is incomplete')
   }
+}
+
+function assertNotificationEnvironment(apiDetail, workerDetail) {
+  const api = environmentVariables(apiDetail)
+  const worker = environmentVariables(workerDetail)
+  if (String(api.MIP_IDENTITY_PEPPER || '').length < 32
+    || String(api.MIP_NOTIFICATION_ENCRYPTION_KEY || '').length < 32
+    || api.MIP_NOTIFICATION_HMAC_SECRET
+    || String(worker.MIP_NOTIFICATION_HMAC_SECRET || '').length < 32
+    || String(worker.MIP_NOTIFICATION_ENCRYPTION_KEY || '').length < 32
+    || worker.MIP_IDENTITY_PEPPER) {
+    throw new Error('Notification API and worker environment boundaries are incomplete')
+  }
+}
+
+function assertRefundWorkerEnvironment(refundDetail, adminDetail) {
+  const refund = environmentVariables(refundDetail)
+  const admin = environmentVariables(adminDetail)
+  if (String(refund.MIP_REFUND_WORKER_HMAC_SECRET || '').length < 32
+    || refund.MIP_REFUND_WORKER_HMAC_SECRET !== admin.MIP_REFUND_WORKER_HMAC_SECRET) {
+    throw new Error('Refund worker HMAC does not match the admin dispatcher')
+  }
+}
+
+function assertClientInvocationDisabled(functionName) {
+  const rule = clientInvocationRule(functionName)
+  if (rule !== false) {
+    throw new Error(`${functionName} client invocation is not disabled`)
+  }
+}
+
+function assertClientInvocationEnabled(functionName) {
+  const rule = clientInvocationRule(functionName)
+  if (rule !== 'auth.loginType != \'ANONYMOUS\' && auth != null') {
+    throw new Error(`${functionName} authenticated client invocation is not enabled`)
+  }
+}
+
+function clientInvocationRule(functionName) {
   const permissions = callCloudbase(root, 'queryPermissions', {
     action: 'getResourcePermission',
     resourceType: 'function',
-    resourceId: paymentCallbackFunction,
+    resourceId: functionName,
   })
   let rules
   try {
@@ -183,18 +329,38 @@ if (['test', 'live'].includes(paymentMode)) {
   catch {
     rules = null
   }
-  if (rules?.[functionNames.ledger]?.invoke !== false || rules?.[paymentCallbackFunction]?.invoke !== false) {
-    throw new Error('Payment callback and ledger client invocation rules are not enforced')
+  return rules?.[functionName]?.invoke
+}
+
+function assertTimerAbsent(functionName, triggerName) {
+  const response = callCloudbase(root, 'callCloudApi', {
+    service: 'scf',
+    action: 'ListTriggers',
+    params: { FunctionName: functionName, Namespace: envId },
+  })
+  if (JSON.stringify(response).includes(triggerName)) {
+    throw new Error(`${triggerName} must stay absent because it keeps Serverless MySQL awake`)
   }
 }
 
-fs.mkdirSync(path.join(root, '.tmp'), { recursive: true })
-fs.writeFileSync(path.join(root, '.tmp', 'verify-cloud-result.json'), `${JSON.stringify({
-  environmentVerified: true,
-  persistence: 'cloudbase-mysql',
-  paymentMode,
-  functions,
-  tableCounts,
-  verifiedAt: new Date().toISOString(),
-}, null, 2)}\n`)
-console.log('[cloud-verify] MySQL schema, functions, health responses, and invocation evidence verified')
+function collectFieldValues(value, names, output = []) {
+  if (!value || typeof value !== 'object') {
+    return output
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      collectFieldValues(item, names, output)
+    }
+    return output
+  }
+  const expected = new Set(names.map(name => name.toLowerCase()))
+  for (const [key, child] of Object.entries(value)) {
+    if (expected.has(key.toLowerCase()) && typeof child === 'string') {
+      output.push(child)
+    }
+    else if (child && typeof child === 'object') {
+      collectFieldValues(child, names, output)
+    }
+  }
+  return output
+}

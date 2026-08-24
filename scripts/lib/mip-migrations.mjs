@@ -4,6 +4,7 @@ import path from 'node:path'
 
 export const MIP_TABLE_PREFIX = 'mip_'
 export const MIP_MIGRATION_TRACKING_TABLE = 'mip_schema_migrations'
+export const MIP_MIGRATION_STEP_TABLE = 'mip_schema_migration_steps'
 
 function sha256File(filePath) {
   return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex')
@@ -92,6 +93,8 @@ function tableReferences(statement) {
     /^INSERT\s+INTO\s+`?(\w+)`?/gi,
     /^UPDATE\s+`?(\w+)`?/gi,
     /^DELETE\s+FROM\s+`?(\w+)`?/gi,
+    /\bFROM\s+`?(\w+)`?/gi,
+    /\bJOIN\s+`?(\w+)`?/gi,
     /\bREFERENCES\s+`?(\w+)`?/gi,
     /\bDROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?`?(\w+)`?/gi,
     /\bCREATE\s+(?:UNIQUE\s+)?INDEX\s+`?\w+`?\s+ON\s+`?(\w+)`?/gi,
@@ -115,8 +118,14 @@ export function assertMipMigrationSql(sql, options = {}) {
     if (/\b(?:CREATE|DROP)\s+DATABASE\b/i.test(statement)) {
       throw new Error('MIP migrations cannot create or drop databases')
     }
+    if (!rollback && /\bDELETE\s+FROM\b/i.test(statement)) {
+      throw new Error('Forward MIP migrations cannot delete rows')
+    }
     if (!rollback && /\b(?:DROP\s+TABLE|TRUNCATE\s+TABLE|RENAME\s+TABLE)\b/i.test(statement)) {
       throw new Error('Forward MIP migrations cannot drop, truncate, or rename tables')
+    }
+    if (!rollback && /\bALTER\s+TABLE\b[\s\S]+\bDROP\s+COLUMN\b/i.test(statement)) {
+      throw new Error('Forward MIP migrations cannot drop columns')
     }
     const references = tableReferences(statement)
     if (references.length === 0) {
@@ -147,7 +156,7 @@ export function loadMipMigrationLock(repoRoot) {
 
   const seenVersions = new Set()
   const seenNames = new Set()
-  const seenTables = new Set([MIP_MIGRATION_TRACKING_TABLE])
+  const seenTables = new Set([MIP_MIGRATION_TRACKING_TABLE, MIP_MIGRATION_STEP_TABLE])
   const migrations = lock.migrations.map((migration) => {
     if (
       !/^[a-z][a-z0-9_]*$/.test(migration.name)
@@ -160,14 +169,23 @@ export function loadMipMigrationLock(repoRoot) {
     seenNames.add(migration.name)
     seenVersions.add(migration.version)
 
-    if (!Array.isArray(migration.createsTables) || migration.createsTables.length === 0) {
-      throw new Error(`MIP migration must declare created tables: ${migration.name}`)
+    const createsTables = migration.createsTables
+    const altersTables = migration.altersTables || []
+    if (!Array.isArray(createsTables)
+      || !Array.isArray(altersTables)
+      || createsTables.length + altersTables.length === 0) {
+      throw new Error(`MIP migration must declare created or altered tables: ${migration.name}`)
     }
-    for (const table of migration.createsTables) {
+    for (const table of createsTables) {
       if (!/^mip_[a-z0-9_]+$/.test(table) || seenTables.has(table)) {
         throw new Error(`MIP migration table is invalid or duplicated: ${table}`)
       }
       seenTables.add(table)
+    }
+    for (const table of altersTables) {
+      if (!/^mip_[a-z0-9_]+$/.test(table) || !seenTables.has(table)) {
+        throw new Error(`MIP altered table is invalid or not yet declared: ${table}`)
+      }
     }
 
     const files = [
@@ -186,6 +204,7 @@ export function loadMipMigrationLock(repoRoot) {
 
     return {
       ...migration,
+      altersTables,
       sqlPath: path.resolve(repoRoot, migration.sql),
       rollbackPath: path.resolve(repoRoot, migration.rollback),
     }

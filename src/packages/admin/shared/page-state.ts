@@ -1,9 +1,15 @@
-import { AdminGatewayError } from '../../../modules/admin/cloudbase-gateway'
+import { MipAdminError } from '../../../modules/mip-admin'
 
-export type AdminPageState = 'loading' | 'ready' | 'error' | 'forbidden'
+export type AdminPageState = 'loading' | 'ready' | 'error' | 'forbidden' | 'conflict'
+
+const VERSION_CONFLICT_CODES = new Set(['CONFLICT', 'EVENT_VERSION_CONFLICT', 'BRANCH_VERSION_CONFLICT'])
 
 export function isAdminForbiddenError(error: unknown): boolean {
-  return error instanceof AdminGatewayError && error.code === 'FORBIDDEN'
+  return error instanceof MipAdminError && error.code === 'FORBIDDEN'
+}
+
+export function isAdminVersionConflict(error: unknown): boolean {
+  return error instanceof MipAdminError && VERSION_CONFLICT_CODES.has(error.code)
 }
 
 /**
@@ -27,13 +33,14 @@ export function adminLoadFailure(
       message: '当前账号没有运营权限',
     }
   }
+  if (isAdminVersionConflict(error)) {
+    return {
+      state: 'conflict',
+      message: '记录状态已变化，请刷新后重试',
+    }
+  }
   return {
     state: 'error',
     message: error instanceof Error ? error.message : options.fallbackMessage,
   }
-}
-
-export function isAdminVersionConflict(error: unknown): boolean {
-  return error instanceof AdminGatewayError
-    && (error.code === 'EVENT_VERSION_CONFLICT' || error.code === 'REGISTRATION_VERSION_CONFLICT')
 }

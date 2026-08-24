@@ -1,5 +1,5 @@
 <view id="member-announcements-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
-  <view class="px-1"><view class="text-[length:22rpx] font-semibold text-accent">社区动态</view><view class="mt-1 text-[length:38rpx] font-bold">社区公告</view><view class="mt-2 text-[length:22rpx] text-muted">活动调整与重要安排会在这里发布。</view></view>
+  <view class="px-1"><view class="text-[length:22rpx] font-semibold text-accent">MIP</view><view class="mt-1 text-[length:38rpx] font-bold">社区公告</view><view class="mt-2 text-[length:22rpx] text-muted">活动调整与重要安排会在这里发布。</view></view>
   <view wx:if="{{state === 'loading'}}" class="mt-5 rounded-[24rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载公告" description="{{message}}" action-text="重新加载" bind:action="loadAnnouncements" /></view>
   <view wx:elif="{{!items.length}}" class="mt-5"><app-empty-state title="暂时没有公告" description="有新安排时会在这里发布。" /></view>
@@ -10,6 +10,7 @@
       <view wx:if="{{item.publishedText}}" class="mt-3 text-[length:19rpx] text-muted">{{item.publishedText}}</view>
     </view>
   </view>
+  <view wx:if="{{loadingMore}}" class="mt-4 text-center text-[length:22rpx] text-muted">正在加载</view>
   <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
   <app-page-exit />
 </view>

@@ -1,0 +1,11 @@
+DROP TABLE IF EXISTS mip_event_feedback;
+DROP TABLE IF EXISTS mip_event_hearts;
+DROP TABLE IF EXISTS mip_event_checkins;
+DROP TABLE IF EXISTS mip_event_checkin_credentials;
+DROP TABLE IF EXISTS mip_event_invitation_attributions;
+DROP TABLE IF EXISTS mip_event_registrations;
+DROP TABLE IF EXISTS mip_event_seat_holds;
+DROP TABLE IF EXISTS mip_event_changes;
+DROP TABLE IF EXISTS mip_events;
+DROP TABLE IF EXISTS mip_orders;
+DROP TABLE IF EXISTS mip_membership_plans;

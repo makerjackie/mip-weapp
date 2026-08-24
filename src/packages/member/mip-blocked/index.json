@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "屏蔽列表",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "app-empty-state": "/components/empty-state/index",
+    "app-page-exit": "/components/page-exit/index",
+    "t-button": "tdesign-miniprogram/button/button",
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
+  }
+}

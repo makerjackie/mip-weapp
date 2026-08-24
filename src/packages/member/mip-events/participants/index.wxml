@@ -1,0 +1,50 @@
+<view id="mip-event-participants-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view class="flex min-h-[72rpx] items-center justify-between">
+    <view>
+      <view class="text-[length:36rpx] font-bold">参与人</view>
+      <view class="mt-1 text-[length:21rpx] text-muted">仅显示本人同意公开的资料。</view>
+    </view>
+    <button open-type="share" class="m-0 flex min-h-[64rpx] items-center gap-1 rounded-[16rpx] border-0 bg-panel px-3 text-[length:21rpx] leading-[64rpx] text-brand"><t-icon name="share" size="28rpx" color="var(--color-brand)" /><text>分享</text></button>
+  </view>
+
+  <view class="mt-3 flex items-center gap-2 rounded-[16rpx] bg-panel px-4">
+    <t-icon name="search" size="30rpx" color="var(--color-muted)" />
+    <input class="box-border h-[76rpx] min-w-0 flex-1 max-w-full text-[length:23rpx]" value="{{searchInput}}" maxlength="80" confirm-type="search" placeholder="搜索姓名、行业或简介" bindinput="onSearchInput" bindconfirm="onSearchConfirm" />
+    <view wx:if="{{searchInput}}" class="px-2 py-2 text-[length:21rpx] text-muted" bind:tap="clearSearch">清除</view>
+  </view>
+
+  <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="mt-3 whitespace-nowrap">
+    <view class="inline-flex gap-2 pr-3">
+      <view class="rounded-[16rpx] px-4 py-2 text-[length:22rpx] {{kind === 'ALL' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-kind="ALL" bind:tap="changeKind">全部</view>
+      <view class="rounded-[16rpx] px-4 py-2 text-[length:22rpx] {{kind === 'PLAYER' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-kind="PLAYER" bind:tap="changeKind">玩家</view>
+      <view class="rounded-[16rpx] px-4 py-2 text-[length:22rpx] {{kind === 'GUEST' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-kind="GUEST" bind:tap="changeKind">嘉宾</view>
+    </view>
+  </scroll-view>
+
+  <view wx:if="{{state === 'loading'}}" class="flex flex-col gap-3">
+    <view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+    <view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  </view>
+  <view wx:elif="{{state === 'error'}}">
+    <app-empty-state title="暂时无法加载参与人" description="{{message}}" action-text="重新加载" bind:action="loadParticipants" />
+    <app-page-exit />
+  </view>
+  <block wx:else>
+    <app-empty-state wx:if="{{items.length === 0}}" title="暂无公开参与人" description="符合当前条件的公开资料会显示在这里。" />
+    <view wx:else class="mt-4 flex flex-col gap-3">
+      <view wx:for="{{items}}" wx:key="profileRef" class="flex min-h-[120rpx] items-center gap-3 rounded-[16rpx] bg-panel px-4 py-3" data-profile-ref="{{item.profileRef}}" bind:tap="openProfile">
+        <image wx:if="{{item.avatarUrl}}" class="h-[88rpx] w-[88rpx] shrink-0 rounded-full bg-panel-raised" mode="aspectFill" src="{{item.avatarUrl}}" />
+        <view wx:else class="flex h-[88rpx] w-[88rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft"><t-icon name="user" size="38rpx" color="var(--color-brand)" /></view>
+        <view class="min-w-0 flex-1">
+          <view class="flex items-center gap-2"><text class="truncate text-[length:26rpx] font-semibold">{{item.displayName}}</text><text wx:if="{{item.kindLabel}}" class="rounded-full bg-brand-soft px-2 py-1 text-[length:19rpx] text-brand">{{item.kindLabel}}</text></view>
+          <view wx:if="{{item.metaText}}" class="mt-1 line-clamp-1 text-[length:21rpx] text-muted">{{item.metaText}}</view>
+          <view wx:if="{{item.introductionText}}" class="mt-1 line-clamp-2 text-[length:20rpx] leading-5 text-muted">{{item.introductionText}}</view>
+        </view>
+        <t-icon name="chevron-right" size="30rpx" color="var(--color-brand)" />
+      </view>
+    </view>
+    <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" theme="primary" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
+    <app-page-exit />
+  </block>
+</view>

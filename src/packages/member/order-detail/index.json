@@ -2,7 +2,8 @@
   "navigationBarTitleText": "订单详情",
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",
+    "app-page-exit": "/components/page-exit/index",
     "t-button": "tdesign-miniprogram/button/button",
-    "app-page-exit": "/components/page-exit/index"
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
   }
 }

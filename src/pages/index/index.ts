@@ -1,152 +1,221 @@
-import type { QueryOptions } from '@weapp/shared/cache'
-import type {
-  AnnouncementSummary,
-  EventSummary,
-  MembershipOverview,
-  RecommendationSummary,
-} from '../../modules/membership/types'
-import { prepareApp } from '../../bootstrap'
+import type { BranchId, EventId, OpportunityId } from '../../modules/mip'
+import type { AnnouncementSummary } from '../../modules/mip-announcements'
+import type { MipEventListItem } from '../../modules/mip-events'
+import type { IdentityAccessSnapshot } from '../../modules/mip-identity'
+import type { OpportunitySummary } from '../../modules/mip-opportunities'
 import { brand } from '../../config/brand'
-import { runtimeConfig } from '../../config/runtime'
-import { membershipModule } from '../../modules/membership/client'
+import { cooperationRoles } from '../../config/mip-catalogs'
+import { mipOperationsConfig } from '../../config/mip-operations'
+import { mipAnnouncementsModule } from '../../modules/mip-announcements'
+import { mipEventsModule } from '../../modules/mip-events/client'
+import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
+import { opportunityModule } from '../../modules/mip-opportunities'
+import { membershipPresentation } from '../../modules/mip-shell'
 import { caseNavigateTo, caseSwitchPrimary, syncCaseNavigation } from '../../modules/platform/case-navigation'
-import { formatLocalDate, formatLocalMonthDayTime } from '../../utils/date'
+import { formatLocalMonthDayTime } from '../../utils/date'
 
-prepareApp()
-
-interface HomeEvent extends EventSummary {
-  availabilityText: string
+interface DiscoverEvent extends MipEventListItem {
   startsText: string
+  locationText: string
+  accessLabel: string
 }
 
-interface HomeMember extends RecommendationSummary {
-  initial: string
+interface DiscoverOpportunity extends OpportunitySummary {
+  roleText: string
+  locationText: string
+  metaText: string
 }
 
-function membershipCopy(overview: MembershipOverview) {
-  const expiresAt = overview.membership.expiresAt
-  const expired = Boolean(expiresAt && new Date(expiresAt).getTime() <= Date.now())
-  if (overview.membership.active) {
-    return {
-      label: `${brand.productName}会员`,
-      action: '查看会员凭证',
-      description: expiresAt ? `有效期至 ${formatLocalDate(expiresAt)}` : '会员权益使用中',
-    }
-  }
-  if (expired) {
-    return {
-      label: '会员已到期',
-      action: '重新开通会员',
-      description: '续费后恢复完整成员资料与会员活动',
-    }
-  }
-  return {
-    label: `欢迎加入${brand.productName}`,
-    action: '了解会员权益',
-    description: '加入后解锁完整成员资料与会员活动',
-  }
-}
-
-function homeEvent(event: EventSummary): HomeEvent {
-  const remaining = event.capacity === null ? null : Math.max(0, event.capacity - event.registrationCount)
+function presentEvent(event: MipEventListItem): DiscoverEvent {
+  const accessLabel = event.accessType === 'MEMBER_INCLUDED'
+    ? '玩家活动'
+    : event.accessType === 'PAID' ? '付费活动' : '免费活动'
   return {
     ...event,
-    availabilityText: event.registered ? '已报名' : remaining === null ? '开放报名' : `剩余 ${remaining} 位`,
+    coverUrl: event.coverUrl || mipOperationsConfig.defaultCoverPaths.event,
     startsText: formatLocalMonthDayTime(event.startsAt),
+    locationText: [event.cityName, event.venueName].filter(Boolean).join(' · ') || '地点待公布',
+    accessLabel,
   }
 }
 
-function overviewData(overview: MembershipOverview) {
-  const nextEvent = overview.events.find(event => event.registered) || overview.events[0]
-  const membership = membershipCopy(overview)
+function presentOpportunity(item: OpportunitySummary): DiscoverOpportunity {
+  const roleText = item.roles
+    .map(key => cooperationRoles.find(role => role.key === key)?.name || '')
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(' · ')
+  const locationText = item.city?.label || item.branchName || '全国'
   return {
-    state: 'ready' as const,
-    membershipLabel: membership.label,
-    membershipAction: membership.action,
-    expiresText: membership.description,
-    profileCompletion: overview.profile.completion,
-    nicknameInitial: (overview.profile.nickname || '同').slice(0, 1),
-    avatarUrl: overview.profile.avatarUrl,
-    nextEvent: nextEvent ? homeEvent(nextEvent) : null,
-    events: overview.events.slice(0, 2).map(homeEvent),
-    recommendations: overview.recommendations.slice(0, 4).map(item => ({
-      ...item,
-      initial: item.nickname.slice(0, 1) || '友',
-    })),
-    announcement: overview.announcements[0] || null,
+    ...item,
+    roleText,
+    locationText,
+    metaText: [locationText, roleText].filter(Boolean).join(' · '),
   }
-}
-
-function overviewSignature(overview: MembershipOverview) {
-  return JSON.stringify(overviewData(overview))
 }
 
 Page({
   data: {
-    state: 'loading' as 'loading' | 'ready' | 'error',
-    membershipLabel: '',
-    membershipAction: '查看会员权益',
-    expiresText: '',
-    profileCompletion: 0,
-    nicknameInitial: '同',
-    avatarUrl: '',
-    message: '',
-    nextEvent: null as HomeEvent | null,
-    events: [] as HomeEvent[],
-    recommendations: [] as HomeMember[],
-    announcement: null as AnnouncementSummary | null,
-    overviewSignature: '',
-    productName: brand.productName,
-    tagline: brand.tagline,
+    state: 'loading' as 'loading' | 'ready',
     logoPath: brand.logoPath,
-    serviceUnconfigured: runtimeConfig.unconfigured.cloudbase,
+    productName: brand.productName,
+    bannerImagePath: mipOperationsConfig.homeBanner.imagePath,
+    bannerAccessibilityLabel: mipOperationsConfig.homeBanner.accessibilityLabel,
+    identityState: 'loading' as 'loading' | 'ready' | 'error',
+    membershipLabel: '嘉宾',
+    membershipDescription: '当前没有有效会员权益',
+    membershipEndsText: '',
+    primaryBranchId: '' as BranchId | '',
+    primaryBranchName: '全部城市',
+    branchState: 'loading' as 'loading' | 'ready' | 'error',
+    branchNames: [] as string[],
+    branchNamesText: '',
+    eventState: 'loading' as 'loading' | 'ready' | 'error',
+    events: [] as DiscoverEvent[],
+    opportunityState: 'loading' as 'loading' | 'ready' | 'error',
+    opportunities: [] as DiscoverOpportunity[],
+    announcement: null as AnnouncementSummary | null,
+    hasAnnouncements: false,
   },
-
   onShow() {
     syncCaseNavigation(this, 'pages/index/index')
-    void this.loadOverview()
+    void this.loadDiscover()
   },
 
-  async loadOverview(options: QueryOptions = {}) {
-    const cached = membershipModule.peekOverview()
-    if (cached) {
-      this.applyOverview(cached)
+  async loadDiscover(options: { force?: boolean } = {}) {
+    if (this.data.state !== 'ready') {
+      this.applyCachedContent()
     }
-    else if (this.data.state !== 'ready') {
-      this.setData({ state: 'loading', message: '' })
+    await Promise.allSettled([
+      this.loadIdentity(),
+      this.loadBranches(options),
+      this.loadEvents(options),
+      this.loadOpportunities(),
+      this.loadAnnouncements(),
+    ])
+    this.setData({ state: 'ready' })
+  },
+
+  applyCachedContent() {
+    const identity = mipIdentityModule.peekSnapshot()
+    if (identity) {
+      this.applyIdentity(identity)
     }
+    const branches = mipBranchesModule.peek()
+    if (branches) {
+      this.applyBranches(branches.branches)
+    }
+    const query = { view: 'UPCOMING' as const, dateFilter: 'RECENT' as const, limit: 3 }
+    const events = mipEventsModule.peekEvents(query)
+    if (events) {
+      this.setData({ eventState: 'ready', events: events.items.slice(0, 3).map(presentEvent) })
+    }
+  },
+
+  async loadIdentity() {
     try {
-      const overview = await membershipModule.load(options)
-      this.applyOverview(overview)
+      this.applyIdentity(await mipIdentityModule.loadSnapshot())
     }
-    catch (error) {
-      if (cached || this.data.state === 'ready') {
-        this.setData({ message: '内容更新失败，已保留上次结果。' })
-      }
-      else {
-        this.setData({ state: 'error', message: error instanceof Error ? error.message : '首页加载失败' })
+    catch {
+      if (this.data.identityState !== 'ready') {
+        this.setData({ identityState: 'error' })
       }
     }
   },
 
-  applyOverview(overview: MembershipOverview) {
-    const signature = overviewSignature(overview)
-    if (this.data.state === 'ready' && this.data.overviewSignature === signature) {
-      if (this.data.message) {
-        this.setData({ message: '' })
-      }
+  applyIdentity(snapshot: IdentityAccessSnapshot) {
+    const membership = membershipPresentation(snapshot.membership.kind, snapshot.membership.entitlement)
+    const primaryBranchId = snapshot.primaryBranchId || ''
+    const previousBranchId = this.data.primaryBranchId
+    const branch = mipBranchesModule.peek()?.branches.find(item => item.id === primaryBranchId)
+    this.setData({
+      identityState: 'ready',
+      membershipLabel: membership.label,
+      membershipDescription: membership.description,
+      membershipEndsText: membership.endsAt ? membership.endsAt.slice(0, 10) : '',
+      primaryBranchId,
+      primaryBranchName: branch?.name || this.data.primaryBranchName,
+    })
+    if (primaryBranchId !== previousBranchId) {
+      void this.loadAnnouncements(primaryBranchId)
+    }
+  },
+
+  async loadAnnouncements(branchId?: BranchId | '') {
+    const selectedBranchId = branchId ?? this.data.primaryBranchId
+    try {
+      const page = await mipAnnouncementsModule.list({ branchId: selectedBranchId || undefined, limit: 5 })
+      this.setData({
+        hasAnnouncements: page.items.length > 0,
+        announcement: page.items.find(item => item.isPinned) || null,
+      })
+    }
+    catch {}
+  },
+
+  async loadBranches(options: { force?: boolean }) {
+    const cached = mipBranchesModule.peek()
+    if (cached && !options.force) {
+      this.applyBranches(cached.branches)
       return
     }
+    try {
+      const result = await mipBranchesModule.load()
+      this.applyBranches(result.branches)
+    }
+    catch {
+      if (this.data.branchState !== 'ready') {
+        this.setData({ branchState: 'error' })
+      }
+    }
+  },
+
+  applyBranches(branches: Awaited<ReturnType<typeof mipBranchesModule.load>>['branches']) {
+    const active = branches.filter(branch => branch.status === 'ACTIVE')
+    const primary = active.find(branch => branch.id === this.data.primaryBranchId)
     this.setData({
-      ...overviewData(overview),
-      message: '',
-      overviewSignature: signature,
+      branchState: 'ready',
+      branchNames: active.slice(0, 3).map(branch => branch.name),
+      branchNamesText: active.slice(0, 3).map(branch => branch.name).join(' · '),
+      primaryBranchName: primary?.name || (this.data.primaryBranchId ? '主分会' : '全部城市'),
     })
+  },
+
+  async loadEvents(options: { force?: boolean }) {
+    const query = { view: 'UPCOMING' as const, dateFilter: 'RECENT' as const, limit: 3 }
+    const cached = mipEventsModule.peekEvents(query)
+    if (cached) {
+      this.setData({ eventState: 'ready', events: cached.items.slice(0, 3).map(presentEvent) })
+    }
+    try {
+      const feed = await mipEventsModule.listEvents(query, options)
+      this.setData({ eventState: 'ready', events: feed.items.slice(0, 3).map(presentEvent) })
+    }
+    catch {
+      if (!cached) {
+        this.setData({ eventState: 'error' })
+      }
+    }
+  },
+
+  async loadOpportunities() {
+    try {
+      const result = await opportunityModule.list({ status: 'RECRUITING', limit: 3 })
+      this.setData({
+        opportunityState: 'ready',
+        opportunities: result.items.slice(0, 3).map(presentOpportunity),
+      })
+    }
+    catch {
+      if (!this.data.opportunities.length) {
+        this.setData({ opportunityState: 'error' })
+      }
+    }
   },
 
   async onPullDownRefresh() {
     try {
-      await this.loadOverview({ force: true })
+      await this.loadDiscover({ force: true })
     }
     finally {
       wx.stopPullDownRefresh()
@@ -157,57 +226,50 @@ Page({
     caseNavigateTo({ url: '/pages/membership/index' })
   },
 
-  openAnnouncements() {
-    caseNavigateTo({ url: '/packages/member/announcements/index' })
-  },
-
-  openAnnouncement(event: WechatMiniprogram.TouchEvent) {
-    const announcementId = String(event.currentTarget.dataset.id || '')
-    if (announcementId) {
-      caseNavigateTo({
-        url: `/packages/member/announcement-detail/index?announcementId=${encodeURIComponent(announcementId)}`,
-      })
+  openBanner() {
+    const targetPath = mipOperationsConfig.homeBanner.targetPath
+    if (targetPath.startsWith('/') && !targetPath.startsWith('//') && targetPath.length < 300) {
+      caseNavigateTo({ url: targetPath })
     }
   },
 
-  openExplore() {
-    caseSwitchPrimary('/pages/explore/index')
+  openBranches() {
+    caseNavigateTo({ url: '/packages/member/mip-branches/index' })
   },
 
   openEvents() {
     caseSwitchPrimary('/pages/events/index')
   },
 
-  openProfile() {
-    caseSwitchPrimary('/pages/profile/index')
+  openOpportunities() {
+    caseSwitchPrimary('/pages/opportunities/index')
   },
 
-  openMember(event: WechatMiniprogram.CustomEvent<{ id: string }>) {
-    const memberId = event.detail.id
-    if (!memberId) {
-      return
-    }
-    caseNavigateTo({ url: `/packages/member/member-detail/index?memberId=${encodeURIComponent(memberId)}` })
-  },
-
-  openMemberAvatar(event: WechatMiniprogram.TouchEvent) {
-    const memberId = String(event.currentTarget.dataset.id || '')
-    if (memberId) {
-      caseNavigateTo({ url: `/packages/member/member-detail/index?memberId=${encodeURIComponent(memberId)}` })
-    }
-  },
-
-  openEvent(event: WechatMiniprogram.CustomEvent<{ id: string }>) {
-    const eventId = event.detail.id
+  openEvent(event: WechatMiniprogram.TouchEvent) {
+    const eventId = String(event.currentTarget.dataset.id || '') as EventId
     if (eventId) {
-      caseNavigateTo({ url: `/packages/member/event-detail/index?eventId=${encodeURIComponent(eventId)}` })
+      caseNavigateTo({ url: `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(eventId)}` })
     }
   },
 
-  openFeaturedEvent(event: WechatMiniprogram.TouchEvent) {
-    const eventId = String(event.currentTarget.dataset.id || '')
-    if (eventId) {
-      caseNavigateTo({ url: `/packages/member/event-detail/index?eventId=${encodeURIComponent(eventId)}` })
+  openOpportunity(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '') as OpportunityId
+    if (id) {
+      caseNavigateTo({ url: `/packages/member/mip-opportunities/detail/index?id=${encodeURIComponent(id)}` })
+    }
+  },
+
+  openAnnouncements() {
+    const query = this.data.primaryBranchId
+      ? `?branchId=${encodeURIComponent(this.data.primaryBranchId)}`
+      : ''
+    caseNavigateTo({ url: `/packages/member/announcements/index${query}` })
+  },
+
+  openAnnouncement() {
+    const id = this.data.announcement?.id
+    if (id) {
+      caseNavigateTo({ url: `/packages/member/announcement-detail/index?announcementId=${encodeURIComponent(id)}` })
     }
   },
 })

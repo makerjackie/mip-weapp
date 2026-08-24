@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+
 /**
  * Exact table×privilege pairing for deploy-time grant readback.
  * Rejects loose JSON includes() false positives across tables.
@@ -5,61 +7,121 @@
  * Global ALL / fuzzy grantee LIKE matches are NEVER accepted.
  */
 
-/**
- * Minimal runtime grants shared by membership-api / membership-admin-api /
- * membership-payment-ledger (one runtime account, documented union).
- *
- * Rules:
- * - DELETE is granted only to scoped, non-ledger relationship/credential/
- *   notification tables whose account-deletion workflows really remove rows.
- * - member_audit_logs is append-only: SELECT + INSERT only.
- * - member_plans is catalog-read for runtime; seed/admin DDL uses management account.
- * - member_admin_roles is role lookup only at runtime (bootstrap uses management account).
- */
 export const RUNTIME_TABLE_PRIVILEGES = Object.freeze({
-  member_media_assets: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
-  member_profiles: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
-  member_private_profiles: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
-  member_plans: Object.freeze(['SELECT']),
-  member_orders: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
-  member_entitlements: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
-  member_events: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
-  member_event_changes: Object.freeze(['SELECT', 'INSERT']),
-  member_registrations: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
-  member_admin_roles: Object.freeze(['SELECT']),
-  member_refunds: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
-  member_audit_logs: Object.freeze(['SELECT', 'INSERT']),
-  member_export_tickets: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
-  member_mutation_idempotency: Object.freeze(['SELECT', 'INSERT']),
-  member_media_cleanup_outbox: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
-  member_follows: Object.freeze(['SELECT', 'INSERT', 'DELETE']),
-  member_event_managers: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
-  member_event_reservations: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
-  member_event_photos: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
-  member_checkin_credentials: Object.freeze(['SELECT', 'INSERT', 'UPDATE', 'DELETE']),
-  member_notifications: Object.freeze(['SELECT', 'INSERT', 'UPDATE', 'DELETE']),
-  member_notification_subscriptions: Object.freeze(['SELECT', 'INSERT', 'UPDATE', 'DELETE']),
-  member_notification_outbox: Object.freeze(['SELECT', 'INSERT', 'UPDATE', 'DELETE']),
-  member_operational_failures: Object.freeze(['SELECT', 'INSERT', 'UPDATE', 'DELETE']),
-  member_announcements: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
-  member_blocks: Object.freeze(['SELECT', 'INSERT', 'DELETE']),
-  member_reports: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_users: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_user_identities: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_media_assets: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_city_branches: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_branch_memberships: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_profiles: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_private_profiles: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_agreement_acceptances: Object.freeze(['SELECT', 'INSERT']),
+  mip_tags: Object.freeze(['SELECT']),
+  mip_profile_tags: Object.freeze(['SELECT', 'INSERT', 'DELETE']),
+  mip_admin_role_bindings: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_idempotency_keys: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_outbox_events: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_audit_logs: Object.freeze(['SELECT', 'INSERT']),
+  mip_events: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_event_changes: Object.freeze(['SELECT', 'INSERT']),
+  mip_event_seat_holds: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_event_registrations: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_event_invitation_attributions: Object.freeze(['SELECT', 'INSERT']),
+  mip_event_checkin_credentials: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_event_checkins: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_event_checkin_transitions: Object.freeze(['SELECT', 'INSERT']),
+  mip_event_hearts: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_event_feedback: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_event_album_photos: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_opportunities: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_opportunity_roles: Object.freeze(['SELECT', 'INSERT', 'DELETE']),
+  mip_opportunity_tags: Object.freeze(['SELECT', 'INSERT', 'DELETE']),
+  mip_referral_intents: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_profile_interests: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_user_blocks: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_reports: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_cooperation_cards: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_super_cases: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_super_case_media: Object.freeze(['SELECT', 'INSERT', 'DELETE']),
+  mip_membership_plans: Object.freeze(['SELECT']),
+  mip_orders: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_payment_attempts: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_refunds: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_membership_entitlements: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_membership_attributions: Object.freeze(['SELECT', 'INSERT']),
+  mip_payment_callbacks: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_growth_levels: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_growth_rules: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_growth_accounts: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_growth_entries: Object.freeze(['SELECT', 'INSERT']),
+  mip_inbox_messages: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_notification_grants: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_delivery_tasks: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_operations_messages: Object.freeze(['SELECT', 'INSERT']),
+  mip_announcements: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_ai_drafts: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_user_access_controls: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_admin_export_tickets: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
 })
 
 const RUNTIME_DELETE_TABLES = new Set([
-  'member_follows',
-  'member_checkin_credentials',
-  'member_notifications',
-  'member_notification_subscriptions',
-  'member_notification_outbox',
-  'member_operational_failures',
-  'member_blocks',
+  'mip_profile_tags',
+  'mip_opportunity_roles',
+  'mip_opportunity_tags',
+  'mip_super_case_media',
 ])
 
 /** @deprecated use RUNTIME_TABLE_PRIVILEGES; kept for call sites that still pass flat lists */
 const DEFAULT_PRIVILEGES = ['SELECT', 'INSERT', 'UPDATE']
 
-const HARMLESS_PRIVILEGES = new Set(['USAGE', 'GRANT OPTION'])
+const HARMLESS_PRIVILEGES = new Set(['USAGE'])
+
+export function runtimeUserForEnvironment(envId) {
+  const normalized = String(envId || '').trim()
+  if (!/^[\w-]{3,128}$/.test(normalized)) {
+    throw new Error('Invalid environment for runtime MySQL user')
+  }
+  const fingerprint = createHash('sha256').update(normalized).digest('hex').slice(0, 12)
+  return `mip_${fingerprint}`
+}
+
+export function assertRuntimeAccountClaimable({
+  tableRows = [],
+  schemaRows = [],
+  userRows = [],
+  schema,
+  grantee,
+  allowExisting,
+}) {
+  const ownedTables = new Set(Object.keys(RUNTIME_TABLE_PRIVILEGES))
+  const exactTableRows = filterRowsByExactGrantee(tableRows, grantee)
+  const exactSchemaRows = filterRowsByExactGrantee(schemaRows, grantee)
+  const exactUserRows = filterRowsByExactGrantee(userRows, grantee)
+  const exists = [...exactTableRows, ...exactSchemaRows, ...exactUserRows].length > 0
+  if (exists && !allowExisting) {
+    throw new Error('Runtime MySQL account already exists without MIP function ownership evidence')
+  }
+  if (!exists && allowExisting) {
+    throw new Error('Runtime MySQL account ownership could not be verified')
+  }
+  const globalPrivilege = exactUserRows.find(
+    row => !HARMLESS_PRIVILEGES.has(String(row.privilegeType || '').toUpperCase()),
+  )
+  if (globalPrivilege) {
+    throw new Error(`Runtime MySQL account has forbidden global privilege ${globalPrivilege.privilegeType}`)
+  }
+  const schemaPrivilege = exactSchemaRows.find(
+    row => !HARMLESS_PRIVILEGES.has(String(row.privilegeType || '').toUpperCase()),
+  )
+  if (schemaPrivilege) {
+    throw new Error(`Runtime MySQL account has schema-level privilege on ${schemaPrivilege.tableSchema || 'unknown schema'}`)
+  }
+  const external = exactTableRows.find(row => row.tableSchema !== schema || !ownedTables.has(row.tableName))
+  if (external) {
+    throw new Error(`Runtime MySQL account has a grant outside the owned MIP table set: ${external.tableSchema || 'unknown'}.${external.tableName || 'unknown'}`)
+  }
+  return { exists, tableRows: exactTableRows }
+}
 
 /**
  * Build the exact MySQL grantee form stored in information_schema: `'user'@'host'`.
@@ -249,6 +311,18 @@ export function assertTablePrivilegePairs(
   }
 
   const tableRows = list.filter(row => row && row.tableName)
+  if (rejectExtra) {
+    const allowedTables = new Set(Object.keys(requiredMap).map(table => table.toLowerCase()))
+    const unexpected = tableRows.find(
+      row => !allowedTables.has(String(row.tableName).toLowerCase())
+        && !HARMLESS_PRIVILEGES.has(String(row.privilegeType || '').toUpperCase()),
+    )
+    if (unexpected) {
+      throw new Error(
+        `Runtime account has forbidden ${unexpected.privilegeType} on unmapped table ${unexpected.tableName}`,
+      )
+    }
+  }
   const missing = []
   let checked = 0
 
@@ -350,7 +424,7 @@ export function assertRuntimePrivilegesExact({
 
 /**
  * Expand RUNTIME_TABLE_PRIVILEGES into GRANT statements for a schema/account.
- * Never emits DELETE or schema ALL.
+ * Emits DELETE only for the explicit replaceable-relation allowlist and never emits schema ALL.
  */
 export function buildRuntimeGrantStatements(schema, account) {
   if (!schema || !/^[\w-]+$/.test(schema)) {
@@ -369,6 +443,32 @@ export function buildRuntimeGrantStatements(schema, account) {
     )
   }
   return statements
+}
+
+export function buildRuntimeRevokeStatements(schema, account, rows) {
+  if (!schema || !/^[\w-]+$/.test(schema)) {
+    throw new Error('Invalid schema for runtime revokes')
+  }
+  if (!account || !/^[`'@\w.%-]+$/.test(account)) {
+    throw new Error('Invalid account for runtime revokes')
+  }
+  const byTable = new Map()
+  for (const row of rows || []) {
+    const table = String(row?.tableName || '')
+    const privilege = String(row?.privilegeType || '').toUpperCase()
+    if (!Object.hasOwn(RUNTIME_TABLE_PRIVILEGES, table)
+      || row?.tableSchema !== schema
+      || !/^[A-Z ]+$/.test(privilege)
+      || privilege === 'USAGE') {
+      continue
+    }
+    const privileges = byTable.get(table) || new Set()
+    privileges.add(privilege)
+    byTable.set(table, privileges)
+  }
+  return [...byTable.entries()].map(([table, privileges]) => (
+    `REVOKE ${[...privileges].sort().join(', ')} ON \`${schema}\`.\`${table}\` FROM ${account}`
+  ))
 }
 
 export { DEFAULT_PRIVILEGES }

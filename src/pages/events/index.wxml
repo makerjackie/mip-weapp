@@ -1,47 +1,74 @@
-<view id="membership-events-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+240rpx)] pt-4 text-ink">
-  <view class="flex items-end justify-between px-1">
-    <view>
-      <view class="text-[length:38rpx] font-bold">活动</view>
-      <view class="mt-1 text-[length:22rpx] text-muted">和有趣的人，做有意义的事。</view>
+<view id="mip-events-page" class="min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+220rpx)] pt-4 text-ink">
+  <view class="flex min-h-[88rpx] items-center justify-between">
+    <view class="text-[length:40rpx] font-bold">活动</view>
+    <view class="flex min-h-[72rpx] items-center gap-1 px-2 text-[length:24rpx]" bind:tap="selectCity">
+      <t-icon name="location" size="30rpx" color="var(--color-brand)" />
+      <text>{{selectedCity || '全部城市'}}</text>
+      <t-icon name="chevron-down" size="28rpx" color="var(--color-muted)" />
     </view>
-    <view class="pb-1 text-[length:21rpx] font-semibold text-brand">{{sourceCount ? sourceCount + ' 场可选' : ''}}</view>
   </view>
-  <view class="mt-4 flex items-center gap-2 rounded-[18rpx] border border-line bg-panel px-4">
-    <t-icon name="search" size="34rpx" color="var(--color-muted)" />
-    <input
-      class="box-border h-[72rpx] min-w-0 flex-1 max-w-full text-[length:24rpx]"
-      value="{{searchInput}}"
-      bindinput="onSearchInput"
-      bindconfirm="onSearchConfirm"
-      confirm-type="search"
-      maxlength="50"
-      placeholder="搜索活动名称或地点"
-    />
-    <view wx:if="{{searchInput}}" class="px-2 py-2 text-[length:21rpx] text-muted active:opacity-70" bind:tap="clearSearch">清除</view>
+
+  <view wx:if="{{heroEvent}}" class="relative mt-2 h-[298rpx] overflow-hidden rounded-[16rpx] bg-panel" data-event-id="{{heroEvent.id}}" bind:tap="openEvent">
+    <image wx:if="{{heroEvent.coverUrl}}" class="h-full w-full" mode="aspectFill" src="{{heroEvent.coverUrl}}" />
+    <view wx:else class="flex h-full w-full items-center justify-center bg-brand-soft"><t-icon name="calendar" size="78rpx" color="var(--color-brand)" /></view>
+    <view class="absolute bottom-0 left-0 right-0 bg-[#080808E6] px-4 py-3">
+      <view class="line-clamp-1 text-[length:28rpx] font-bold">{{heroEvent.title}}</view>
+      <view class="mt-1 text-[length:22rpx] text-muted">{{heroEvent.startsText}} · {{heroEvent.locationText}}</view>
+    </view>
   </view>
-  <view id="event-filter-tabs" class="mt-3 border-b border-line">
-    <t-tabs value="{{view}}" theme="line" space-evenly bind:change="changeView">
-      <t-tab-panel value="upcoming" label="发现活动" />
-      <t-tab-panel value="mine" label="我的活动" />
-    </t-tabs>
+
+  <view class="mt-4 grid grid-cols-2 border-b border-line">
+    <view wx:if="{{view === 'UPCOMING'}}" class="flex min-h-[80rpx] items-center justify-center border-b-[4rpx] border-brand text-[length:27rpx] font-semibold text-brand" data-view="UPCOMING" bind:tap="changeView">活动报名</view>
+    <view wx:else class="flex min-h-[80rpx] items-center justify-center border-b-[4rpx] border-transparent text-[length:27rpx] font-semibold text-muted" data-view="UPCOMING" bind:tap="changeView">活动报名</view>
+    <view wx:if="{{view === 'PAST'}}" class="flex min-h-[80rpx] items-center justify-center border-b-[4rpx] border-brand text-[length:27rpx] font-semibold text-brand" data-view="PAST" bind:tap="changeView">往期活动</view>
+    <view wx:else class="flex min-h-[80rpx] items-center justify-center border-b-[4rpx] border-transparent text-[length:27rpx] font-semibold text-muted" data-view="PAST" bind:tap="changeView">往期活动</view>
   </view>
-  <scroll-view wx:if="{{view === 'upcoming'}}" scroll-x enhanced show-scrollbar="{{false}}" class="mt-3 whitespace-nowrap">
-    <view class="inline-flex gap-2 pr-4">
-      <view wx:if="{{timeFilter === 'all'}}" class="rounded-full bg-brand px-4 py-2 text-[length:21rpx] font-semibold text-white" data-filter="all" bind:tap="changeTimeFilter">全部</view>
-      <view wx:else class="rounded-full bg-panel px-4 py-2 text-[length:21rpx] text-muted" data-filter="all" bind:tap="changeTimeFilter">全部</view>
-      <view wx:if="{{timeFilter === 'next7'}}" class="rounded-full bg-brand px-4 py-2 text-[length:21rpx] font-semibold text-white" data-filter="next7" bind:tap="changeTimeFilter">7 天内</view>
-      <view wx:else class="rounded-full bg-panel px-4 py-2 text-[length:21rpx] text-muted" data-filter="next7" bind:tap="changeTimeFilter">7 天内</view>
-      <view wx:if="{{timeFilter === 'weekend'}}" class="rounded-full bg-brand px-4 py-2 text-[length:21rpx] font-semibold text-white" data-filter="weekend" bind:tap="changeTimeFilter">本周末</view>
-      <view wx:else class="rounded-full bg-panel px-4 py-2 text-[length:21rpx] text-muted" data-filter="weekend" bind:tap="changeTimeFilter">本周末</view>
-      <view wx:if="{{timeFilter === 'month'}}" class="rounded-full bg-brand px-4 py-2 text-[length:21rpx] font-semibold text-white" data-filter="month" bind:tap="changeTimeFilter">本月</view>
-      <view wx:else class="rounded-full bg-panel px-4 py-2 text-[length:21rpx] text-muted" data-filter="month" bind:tap="changeTimeFilter">本月</view>
+
+  <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="mt-3 whitespace-nowrap">
+    <view class="inline-flex gap-2 pr-3">
+      <view wx:if="{{dateFilter === 'RECENT'}}" class="rounded-[16rpx] bg-brand px-4 py-2 text-[length:22rpx] text-on-brand" data-filter="RECENT" bind:tap="changeDateFilter">近期活动</view>
+      <view wx:else class="rounded-[16rpx] bg-panel px-4 py-2 text-[length:22rpx] text-muted" data-filter="RECENT" bind:tap="changeDateFilter">近期活动</view>
+      <view wx:if="{{dateFilter === 'ENDED'}}" class="rounded-[16rpx] bg-brand px-4 py-2 text-[length:22rpx] text-on-brand" data-filter="ENDED" bind:tap="changeDateFilter">已结束</view>
+      <view wx:else class="rounded-[16rpx] bg-panel px-4 py-2 text-[length:22rpx] text-muted" data-filter="ENDED" bind:tap="changeDateFilter">已结束</view>
+      <view wx:if="{{dateFilter === 'TODAY'}}" class="rounded-[16rpx] bg-brand px-4 py-2 text-[length:22rpx] text-on-brand" data-filter="TODAY" bind:tap="changeDateFilter">今天</view>
+      <view wx:else class="rounded-[16rpx] bg-panel px-4 py-2 text-[length:22rpx] text-muted" data-filter="TODAY" bind:tap="changeDateFilter">今天</view>
     </view>
   </scroll-view>
-  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[28rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}" class="mt-6"><app-empty-state title="暂时无法加载活动" description="服务暂时没有响应，请稍后重试。" action-text="重新加载" bind:action="loadEvents" /></view>
-  <view wx:elif="{{events.length === 0}}" class="mt-6"><app-empty-state title="{{activeQuery ? '没有找到相关活动' : timeFilter !== 'all' && view === 'upcoming' ? '这个时间段暂无活动' : emptyTitle}}" description="{{activeQuery ? '换个关键词试试，或清除搜索条件。' : timeFilter !== 'all' && view === 'upcoming' ? '试试其他时间，或查看全部活动。' : emptyDescription}}" /></view>
-  <view wx:else id="events-list" class="mt-5 flex flex-col gap-4">
-    <view wx:for="{{events}}" wx:key="id" class="event-list-item block"><event-card event="{{item}}" compact bind:select="openEvent" /></view>
+
+  <view class="mt-3 flex items-center gap-2 rounded-[16rpx] bg-panel px-4">
+    <t-icon name="search" size="32rpx" color="var(--color-muted)" />
+    <input class="box-border h-[76rpx] min-w-0 flex-1 max-w-full text-[length:24rpx]" value="{{searchInput}}" bindinput="onSearchInput" bindconfirm="onSearchConfirm" confirm-type="search" maxlength="50" placeholder="搜索活动名称" />
+    <view wx:if="{{searchInput}}" class="px-2 py-2 text-[length:22rpx] text-muted" bind:tap="clearSearch">清除</view>
   </view>
-  <view wx:if="{{message && state !== 'error'}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
+
+  <view wx:if="{{state === 'loading'}}" class="mt-4 flex flex-col gap-3">
+    <view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+    <view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  </view>
+  <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载活动" description="请稍后重试。" action-text="重新加载" bind:action="loadEvents" /></view>
+  <view wx:elif="{{events.length === 0}}" class="mt-5"><app-empty-state title="暂无活动" description="符合当前条件的活动会显示在这里。" /></view>
+  <view wx:else id="events-list" class="mt-4 flex flex-col gap-4">
+    <view wx:for="{{events}}" wx:key="id" class="event-list-item overflow-hidden rounded-[16rpx] bg-panel" data-event-id="{{item.id}}" bind:tap="openEvent">
+      <image wx:if="{{item.coverUrl}}" class="h-[300rpx] w-full" mode="aspectFill" src="{{item.coverUrl}}" />
+      <view wx:else class="flex h-[300rpx] w-full items-center justify-center bg-brand-soft"><t-icon name="calendar" size="70rpx" color="var(--color-brand)" /></view>
+      <view class="px-4 py-3">
+        <view class="flex flex-wrap gap-2">
+          <text class="rounded-[12rpx] bg-brand px-2 py-1 text-[length:20rpx] font-semibold text-on-brand">{{item.accessLabel}}</text>
+          <text class="rounded-[12rpx] bg-panel-raised px-2 py-1 text-[length:20rpx] text-muted">{{item.eventTypeLabel}}</text>
+          <text wx:if="{{item.statusLabel}}" class="rounded-[12rpx] bg-brand-soft px-2 py-1 text-[length:20rpx] text-brand">{{item.statusLabel}}</text>
+        </view>
+        <view class="mt-2 line-clamp-2 text-[length:29rpx] font-bold leading-[1.35]">{{item.title}}</view>
+        <view class="mt-2 flex items-center gap-2 text-[length:22rpx] text-muted"><t-icon name="time" size="27rpx" color="var(--color-muted)" /><text>{{item.startsText}}</text></view>
+        <view class="mt-1 flex items-center gap-2 text-[length:22rpx] text-muted"><t-icon name="location" size="27rpx" color="var(--color-muted)" /><text class="line-clamp-1">{{item.locationText}}</text></view>
+        <view class="mt-3 flex items-center justify-between border-t border-line pt-3">
+          <view class="flex items-center">
+            <image wx:for="{{item.participantPreview}}" wx:key="participantRef" class="-mr-2 h-[48rpx] w-[48rpx] rounded-full border-[3rpx] border-panel bg-brand-soft" mode="aspectFill" src="{{item.avatarUrl}}" />
+            <text class="ml-3 text-[length:21rpx] text-muted">{{item.registrationCount}} 人参加</text>
+          </view>
+          <t-icon name="chevron-right" size="30rpx" color="var(--color-brand)" />
+        </view>
+      </view>
+    </view>
+  </view>
+  <view wx:if="{{message && state !== 'error'}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
 </view>

@@ -1,0 +1,34 @@
+<view id="mip-blocked-profiles-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view wx:if="{{state === 'loading'}}" class="flex flex-col gap-3">
+    <view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+    <view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  </view>
+  <view wx:elif="{{state === 'access'}}">
+    <app-empty-state title="需要完成身份信息" description="完成身份信息后可以管理屏蔽列表。" action-text="继续" bind:action="openAccess" />
+    <app-page-exit />
+  </view>
+  <view wx:elif="{{state === 'error'}}">
+    <app-empty-state title="暂时无法加载屏蔽列表" description="{{message}}" action-text="重新加载" bind:action="retry" />
+    <app-page-exit />
+  </view>
+  <block wx:else>
+    <view class="text-[length:36rpx] font-bold">屏蔽列表</view>
+    <view class="mt-2 text-[length:22rpx] leading-6 text-muted">屏蔽不会通知对方，也不影响已经产生的订单和活动报名。</view>
+    <app-empty-state wx:if="{{state === 'empty'}}" title="暂无屏蔽用户" description="你主动屏蔽的用户会显示在这里。" />
+    <view wx:else class="mt-5 flex flex-col gap-3">
+      <view wx:for="{{items}}" wx:key="profileRef" class="flex min-h-[120rpx] items-center gap-3 rounded-[16rpx] bg-panel px-4 py-3">
+        <image wx:if="{{item.avatarUrl}}" class="h-[80rpx] w-[80rpx] shrink-0 rounded-full bg-panel-raised" src="{{item.avatarUrl}}" mode="aspectFill" />
+        <view wx:else class="flex h-[80rpx] w-[80rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft text-[length:26rpx] font-semibold text-brand">{{item.initial}}</view>
+        <view class="min-w-0 flex-1">
+          <view class="truncate text-[length:26rpx] font-semibold">{{item.nickname}}</view>
+          <view class="mt-1 truncate text-[length:21rpx] text-muted">{{item.headline || item.cityName || '公开档案'}}</view>
+          <view wx:if="{{item.blockedText}}" class="mt-1 text-[length:19rpx] text-muted">{{item.blockedText}}</view>
+        </view>
+        <t-button size="small" variant="outline" loading="{{processingRef === item.profileRef}}" disabled="{{!!processingRef && processingRef !== item.profileRef}}" data-profile-ref="{{item.profileRef}}" bind:tap="unblock">解除</t-button>
+      </view>
+    </view>
+    <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
+    <app-page-exit />
+  </block>
+</view>

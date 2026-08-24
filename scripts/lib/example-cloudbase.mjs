@@ -33,7 +33,7 @@ function workspaceRoot(caseRoot) {
 function sanitizedDiagnostic(value) {
   let result = String(value || '')
     .replace(/("(?:api[_-]?key|secret|token|password|private[_-]?key)"\s*:\s*")[^"]+("?)/gi, '$1[redacted]$2')
-    .replace(/("(?:MEMBERSHIP|SEWING)_(?:DB_CONNECTION_URI|(?:PREVIOUS_)?LEDGER_SECRET)"\s*:\s*")[^"]+("?)/gi, '$1[redacted]$2')
+    .replace(/("(?:MIP|MEMBERSHIP|SEWING)_\w*(?:SECRET|PEPPER|ENCRYPTION_KEY|DB_CONNECTION_URI)"\s*:\s*")[^"]+("?)/gi, '$1[redacted]$2')
     .replace(/mysql:\/\/[^\s"']+/gi, 'mysql://[redacted]')
     .replace(/(IDENTIFIED\s+BY\s+')[^']+(')/gi, '$1[redacted]$2')
     .replace(/(Bearer\s+)[\w.~-]+/gi, '$1[redacted]')

@@ -1,479 +1,135 @@
 <view id="admin-events-page" class="min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
-  <view class="border-b border-ink pb-5">
-    <view class="text-[length:21rpx] font-semibold tracking-[0.16em] text-coral">活动信息</view>
-    <view class="mt-2 text-[length:40rpx] font-bold">{{editingId ? '编辑活动' : '新建活动'}}</view>
-    <view class="mt-2 text-[length:22rpx] text-muted">按分组补齐信息，保存后返回单场活动管理。</view>
-  </view>
+  <view class="text-[length:40rpx] font-bold">{{eventId ? '编辑活动' : '新建活动'}}</view>
+  <view class="mt-2 text-[length:23rpx] text-muted">活动保存后进入内容检查，通过后可以发布。</view>
 
-  <view wx:if="{{state === 'loading'}}" class="mt-6 bg-panel px-5 py-8">
-    <t-skeleton row-col="{{[1, 1, 1, 1]}}" theme="paragraph" animation="gradient" loading />
+  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5">
+    <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
-
-  <view wx:elif="{{state === 'error'}}" class="mt-6">
-    <app-empty-state
-      title="暂时无法加载活动"
-      description="服务暂时没有响应，请稍后重试。"
-      action-text="重新加载"
-      bind:action="loadEvents"
-    />
-  </view>
-
   <view wx:elif="{{state === 'forbidden'}}" class="mt-6">
-    <app-empty-state
-      title="没有运营权限"
-      description="请使用已授权的运营账号进入，或联系主理人开通权限。"
-      action-text="重新验证"
-      bind:action="loadEvents"
-    />
+    <app-empty-state title="没有活动编辑权限" description="{{message || '当前账号不能编辑活动。'}}" />
+  </view>
+  <view wx:elif="{{state === 'error' && eventId}}" class="mt-6">
+    <app-empty-state title="活动信息加载失败" description="{{message}}" action-text="重新加载" bind:action="loadEvent" />
+  </view>
+  <view wx:elif="{{state === 'error'}}" class="mt-6">
+    <app-empty-state title="活动配置加载失败" description="{{message}}" action-text="重新加载" bind:action="loadAccessAndBranches" />
   </view>
 
-  <block wx:else>
-    <view wx:if="{{!editorVisible}}" class="mt-6 flex items-center justify-between rounded-[24rpx] bg-panel px-5 py-4">
-      <view>
-        <view class="text-[length:27rpx] font-semibold">共 {{events.length}} 个活动</view>
-        <view class="mt-1 text-[length:20rpx] text-muted">可编辑、复制、发布与管理报名</view>
-      </view>
-      <t-button wx:if="{{canCreate}}" theme="primary" size="small" bind:tap="startCreate">新建活动</t-button>
+  <view wx:else class="mt-5 flex flex-col gap-4">
+    <view wx:if="{{conflict && !cancelConflict}}" class="rounded-[16rpx] border border-solid border-brand bg-brand-soft p-4">
+      <view class="text-[length:26rpx] font-semibold">活动信息已更新</view>
+      <view class="mt-2 text-[length:23rpx] text-muted">{{message}}</view>
+      <view class="mt-4"><t-button block variant="outline" bind:tap="refreshAfterConflict">载入最新版本</t-button></view>
+    </view>
+    <view wx:if="{{cancelConflict}}" class="rounded-[16rpx] border border-solid border-brand bg-brand-soft p-4">
+      <view class="text-[length:26rpx] font-semibold">取消操作需要重新确认</view>
+      <view class="mt-2 text-[length:23rpx] text-muted">{{message}}</view>
+      <view class="mt-4"><t-button block variant="outline" bind:tap="refreshAfterCancelConflict">载入最新版本</t-button></view>
     </view>
 
-    <view wx:if="{{editorVisible}}" class="mt-6 border border-line bg-panel px-5 py-5">
-      <view class="flex items-start justify-between gap-3">
-        <view>
-          <view class="text-[length:29rpx] font-semibold">{{editingId ? '编辑活动' : '新建活动'}}</view>
-          <view class="mt-1 text-[length:21rpx] text-muted">
-            {{editingId ? '保存后已发布活动会立即更新。版本用于防止并发覆盖。' : '先保存草稿，检查无误后发布。'}}
-          </view>
+    <view class="rounded-[16rpx] bg-panel p-4">
+      <view class="mb-3 text-[length:27rpx] font-semibold">基本信息</view>
+      <view class="mb-2 text-[length:23rpx] text-muted">活动名称</view>
+      <t-input class="box-border max-w-full" value="{{draft.title}}" maxlength="120" data-field="title" bind:change="updateField" />
+      <view class="mb-2 mt-4 text-[length:23rpx] text-muted">活动摘要</view>
+      <t-input class="box-border max-w-full" value="{{draft.summary}}" maxlength="300" data-field="summary" bind:change="updateField" />
+      <view class="mb-2 mt-4 text-[length:23rpx] text-muted">活动介绍</view>
+      <t-textarea class="box-border max-w-full" value="{{draft.description}}" maxlength="20000" autosize data-field="description" bind:change="updateField" />
+      <view class="mb-2 mt-4 text-[length:23rpx] text-muted">参与须知</view>
+      <t-textarea class="box-border max-w-full" value="{{draft.notices}}" maxlength="5000" autosize data-field="notices" bind:change="updateField" />
+    </view>
+
+    <view class="rounded-[16rpx] bg-panel p-4">
+      <view class="mb-3 text-[length:27rpx] font-semibold">活动封面</view>
+      <image wx:if="{{coverUrl}}" class="h-[320rpx] w-full rounded-[12rpx] bg-panel-raised" mode="aspectFill" src="{{coverUrl}}" />
+      <view wx:else class="flex h-[240rpx] items-center justify-center rounded-[12rpx] bg-panel-raised text-[length:23rpx] text-muted">暂未上传封面</view>
+      <view class="mt-3"><t-button block variant="outline" loading="{{coverUploading}}" disabled="{{saving || cancelBusy}}" bind:tap="chooseCover">{{coverUrl ? '更换封面' : '上传封面'}}</t-button></view>
+    </view>
+
+    <view class="rounded-[16rpx] bg-panel p-4">
+      <view class="mb-3 text-[length:27rpx] font-semibold">活动范围</view>
+      <view wx:if="{{canChangeScope}}" class="flex flex-wrap gap-2">
+        <t-tag variant="outline" data-value="PLATFORM" bind:tap="chooseScope">平台活动</t-tag>
+        <t-tag variant="outline" data-value="BRANCH" bind:tap="chooseScope">城市分会活动</t-tag>
+      </view>
+      <view wx:else class="text-[length:23rpx] text-muted">当前活动按已授权范围管理。</view>
+      <picker wx:if="{{draft.scopeType === 'BRANCH' && branches.length}}" class="mt-3" mode="selector" disabled="{{!canSelectBranch}}" range="{{branches}}" range-key="name" value="{{branchIndex}}" bindchange="changeBranch">
+        <view class="box-border flex min-h-[80rpx] max-w-full items-center justify-between rounded-[12rpx] bg-panel-raised px-3 text-[length:24rpx]">
+          <text>{{branchIndex >= 0 ? branches[branchIndex].name : '选择城市分会'}}</text>
+          <text class="text-muted">选择</text>
         </view>
-        <view
-          wx:if="{{editingId}}"
-          class="px-2 py-2 text-[length:22rpx] text-muted active:opacity-70"
-          bind:tap="cancelEdit"
-        >返回</view>
-      </view>
+      </picker>
+      <view wx:elif="{{draft.scopeType === 'BRANCH'}}" class="mt-3 text-[length:23rpx] text-danger">当前没有可管理的城市分会。</view>
+    </view>
 
-      <view class="mt-5 text-[length:22rpx] font-semibold text-muted">活动类型</view>
-      <view class="mt-3 grid grid-cols-3 gap-2">
-        <view
-          wx:if="{{activityType === 'PUBLIC_FREE'}}"
-          class="border border-brand bg-brand-soft px-2 py-3 text-center text-[length:22rpx] text-brand"
-          data-type="PUBLIC_FREE"
-          bind:tap="chooseActivityType"
-        >公开免费</view>
-        <view
-          wx:else
-          class="border border-line px-2 py-3 text-center text-[length:22rpx] text-ink"
-          data-type="PUBLIC_FREE"
-          bind:tap="chooseActivityType"
-        >公开免费</view>
-        <view
-          wx:if="{{activityType === 'MEMBER_INCLUDED'}}"
-          class="border border-brand bg-brand-soft px-2 py-3 text-center text-[length:22rpx] text-brand"
-          data-type="MEMBER_INCLUDED"
-          bind:tap="chooseActivityType"
-        >会员包含</view>
-        <view
-          wx:else
-          class="border border-line px-2 py-3 text-center text-[length:22rpx] text-ink"
-          data-type="MEMBER_INCLUDED"
-          bind:tap="chooseActivityType"
-        >会员包含</view>
-        <view
-          wx:if="{{activityType === 'PAID'}}"
-          class="border border-brand bg-brand-soft px-2 py-3 text-center text-[length:22rpx] text-brand"
-          data-type="PAID"
-          bind:tap="chooseActivityType"
-        >独立付费</view>
-        <view
-          wx:else
-          class="border border-line px-2 py-3 text-center text-[length:22rpx] text-ink"
-          data-type="PAID"
-          bind:tap="chooseActivityType"
-        >独立付费</view>
+    <view class="rounded-[16rpx] bg-panel p-4">
+      <view class="mb-3 text-[length:27rpx] font-semibold">活动时间</view>
+      <view class="grid grid-cols-2 gap-3">
+        <picker mode="date" value="{{startsDate}}" bindchange="changeDateTimePart" data-field="startsDate"><view class="box-border min-h-[80rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:23rpx]"><view class="text-muted">开始日期</view><view class="mt-1">{{startsDate}}</view></view></picker>
+        <picker mode="time" value="{{startsTime}}" bindchange="changeDateTimePart" data-field="startsTime"><view class="box-border min-h-[80rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:23rpx]"><view class="text-muted">开始时间</view><view class="mt-1">{{startsTime}}</view></view></picker>
+        <picker mode="date" value="{{endsDate}}" bindchange="changeDateTimePart" data-field="endsDate"><view class="box-border min-h-[80rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:23rpx]"><view class="text-muted">结束日期</view><view class="mt-1">{{endsDate}}</view></view></picker>
+        <picker mode="time" value="{{endsTime}}" bindchange="changeDateTimePart" data-field="endsTime"><view class="box-border min-h-[80rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:23rpx]"><view class="text-muted">结束时间</view><view class="mt-1">{{endsTime}}</view></view></picker>
       </view>
+      <view class="mt-4 flex min-h-[72rpx] items-center justify-between"><view class="text-[length:23rpx]">设置报名截止时间</view><t-switch value="{{registrationDeadlineEnabled}}" data-field="registrationDeadlineEnabled" bind:change="toggleDeadline" /></view>
+      <view wx:if="{{registrationDeadlineEnabled}}" class="grid grid-cols-2 gap-3">
+        <picker mode="date" value="{{registrationDeadlineDate}}" bindchange="changeDateTimePart" data-field="registrationDeadlineDate"><view class="box-border min-h-[72rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]">{{registrationDeadlineDate}}</view></picker>
+        <picker mode="time" value="{{registrationDeadlineTime}}" bindchange="changeDateTimePart" data-field="registrationDeadlineTime"><view class="box-border min-h-[72rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]">{{registrationDeadlineTime}}</view></picker>
+      </view>
+      <view class="mt-3 flex min-h-[72rpx] items-center justify-between"><view class="text-[length:23rpx]">设置取消报名截止时间</view><t-switch value="{{cancellationDeadlineEnabled}}" data-field="cancellationDeadlineEnabled" bind:change="toggleDeadline" /></view>
+      <view wx:if="{{cancellationDeadlineEnabled}}" class="grid grid-cols-2 gap-3">
+        <picker mode="date" value="{{cancellationDeadlineDate}}" bindchange="changeDateTimePart" data-field="cancellationDeadlineDate"><view class="box-border min-h-[72rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]">{{cancellationDeadlineDate}}</view></picker>
+        <picker mode="time" value="{{cancellationDeadlineTime}}" bindchange="changeDateTimePart" data-field="cancellationDeadlineTime"><view class="box-border min-h-[72rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]">{{cancellationDeadlineTime}}</view></picker>
+      </view>
+    </view>
 
-      <view wx:if="{{activityType === 'PAID'}}">
-        <view class="mt-5 text-[length:22rpx] font-semibold text-muted">报名价格（元）</view>
-        <input
-          class="box-border mt-2 h-[80rpx] w-full max-w-full border-b border-line py-3 text-[length:26rpx]"
-          value="{{priceYuan}}"
-          data-field="priceYuan"
-          bindinput="updateDraft"
-          type="digit"
-          placeholder="例如：0.10"
-        />
-        <view class="mt-2 text-[length:20rpx] text-muted">金额由服务端活动配置决定，用户端不可修改。</view>
-      </view>
-
-      <view class="mt-5 text-[length:22rpx] font-semibold text-muted">报名方式</view>
-      <view class="mt-3 grid grid-cols-2 gap-2">
-        <view wx:if="{{registrationMode === 'AUTO'}}" class="border border-brand bg-brand-soft px-3 py-3 text-center text-[length:22rpx] text-brand" data-mode="AUTO" bind:tap="chooseRegistrationMode">直接报名</view>
-        <view wx:else class="border border-line px-3 py-3 text-center text-[length:22rpx] text-ink" data-mode="AUTO" bind:tap="chooseRegistrationMode">直接报名</view>
-        <view wx:if="{{registrationMode === 'APPROVAL'}}" class="border border-brand bg-brand-soft px-3 py-3 text-center text-[length:22rpx] text-brand" data-mode="APPROVAL" bind:tap="chooseRegistrationMode">审核后通过</view>
-        <view wx:elif="{{activityType === 'PAID'}}" class="border border-line px-3 py-3 text-center text-[length:22rpx] text-ink opacity-40" data-mode="APPROVAL" bind:tap="chooseRegistrationMode">审核后通过</view>
-        <view wx:else class="border border-line px-3 py-3 text-center text-[length:22rpx] text-ink" data-mode="APPROVAL" bind:tap="chooseRegistrationMode">审核后通过</view>
-      </view>
-      <view wx:if="{{activityType === 'PAID'}}" class="mt-2 text-[length:20rpx] text-muted">付费活动支付成功后直接占用名额。</view>
-      <view wx:else class="mt-4 flex items-center justify-between rounded-[18rpx] bg-canvas px-4 py-3">
-        <view>
-          <view class="text-[length:23rpx] font-semibold">满员后开放候补</view>
-          <view class="mt-1 text-[length:20rpx] text-muted">有人取消后按顺序自动补位</view>
-        </view>
-        <switch checked="{{waitlistEnabled}}" color="#285E46" bindchange="toggleWaitlist" />
-      </view>
-
-      <view class="mt-5 text-[length:22rpx] font-semibold text-muted">标题</view>
-      <input
-        class="box-border mt-2 h-[80rpx] w-full max-w-full border-b border-line py-3 text-[length:26rpx]"
-        value="{{title}}"
-        data-field="title"
-        bindinput="updateDraft"
-        maxlength="50"
-        placeholder="活动标题"
-      />
-
-      <view class="mt-5 text-[length:22rpx] font-semibold text-muted">活动封面</view>
-      <view class="mt-3 overflow-hidden rounded-[22rpx] border border-line bg-canvas active:bg-panel-muted" bind:tap="chooseCover">
-        <image wx:if="{{coverPreviewUrl}}" class="h-[300rpx] w-full" src="{{coverPreviewUrl}}" mode="aspectFill" fade-show="{{false}}" />
-        <view wx:else class="flex h-[220rpx] flex-col items-center justify-center">
-          <view class="flex h-[70rpx] w-[70rpx] items-center justify-center rounded-full bg-brand-soft"><t-icon name="image-add" size="38rpx" color="var(--color-brand)" /></view>
-          <view class="mt-3 text-[length:24rpx] font-semibold text-brand">选择活动封面</view>
-          <view class="mt-1 text-[length:20rpx] text-muted">建议使用 3:2 横版海报，上传前自动压缩</view>
-        </view>
-        <view wx:if="{{coverPreviewUrl}}" class="flex items-center justify-between px-4 py-3 text-[length:21rpx]"><text class="text-muted">活动封面</text><text class="font-semibold text-brand">{{uploadingCover ? '上传中…' : '点击更换'}}</text></view>
-      </view>
-
-      <view class="mt-5 text-[length:22rpx] font-semibold text-muted">开始时间</view>
-      <view class="mt-2 grid grid-cols-2 gap-3">
-        <picker mode="date" value="{{eventDate}}" data-field="eventDate" bindchange="chooseDate">
-          <view class="box-border h-[80rpx] border-b border-line py-3 text-[length:25rpx]">{{eventDate}}</view>
-        </picker>
-        <picker mode="time" value="{{eventTime}}" data-field="eventTime" bindchange="chooseTime">
-          <view class="box-border h-[80rpx] border-b border-line py-3 text-[length:25rpx]">{{eventTime}}</view>
-        </picker>
-      </view>
-
-      <view class="mt-5 text-[length:22rpx] font-semibold text-muted">结束时间</view>
-      <view class="mt-2 grid grid-cols-2 gap-3">
-        <picker mode="date" value="{{endDate}}" data-field="endDate" bindchange="chooseDate">
-          <view class="box-border h-[80rpx] border-b border-line py-3 text-[length:25rpx]">{{endDate}}</view>
-        </picker>
-        <picker mode="time" value="{{endTime}}" data-field="endTime" bindchange="chooseTime">
-          <view class="box-border h-[80rpx] border-b border-line py-3 text-[length:25rpx]">{{endTime}}</view>
-        </picker>
-      </view>
-
-      <view class="mt-5 flex items-center justify-between">
-        <view class="text-[length:22rpx] font-semibold text-muted">报名截止</view>
-        <view class="px-2 py-1 text-[length:22rpx] text-brand active:opacity-70" bind:tap="toggleDeadline">
-          {{hasDeadline ? '已设置 · 点击关闭' : '未设置 · 点击开启'}}
-        </view>
-      </view>
-      <view wx:if="{{hasDeadline}}" class="mt-2 grid grid-cols-2 gap-3">
-        <picker mode="date" value="{{deadlineDate}}" data-field="deadlineDate" bindchange="chooseDate">
-          <view class="box-border h-[80rpx] border-b border-line py-3 text-[length:25rpx]">{{deadlineDate}}</view>
-        </picker>
-        <picker mode="time" value="{{deadlineTime}}" data-field="deadlineTime" bindchange="chooseTime">
-          <view class="box-border h-[80rpx] border-b border-line py-3 text-[length:25rpx]">{{deadlineTime}}</view>
-        </picker>
-      </view>
-
-      <view class="mt-5 text-[length:22rpx] font-semibold text-muted">活动形式</view>
-      <view class="mt-3 grid grid-cols-3 gap-2">
-        <view wx:if="{{eventMode === 'OFFLINE'}}" class="border border-brand bg-brand-soft px-2 py-3 text-center text-[length:22rpx] text-brand" data-mode="OFFLINE" bind:tap="chooseEventMode">线下</view>
-        <view wx:else class="border border-line px-2 py-3 text-center text-[length:22rpx] text-ink" data-mode="OFFLINE" bind:tap="chooseEventMode">线下</view>
-        <view wx:if="{{eventMode === 'ONLINE'}}" class="border border-brand bg-brand-soft px-2 py-3 text-center text-[length:22rpx] text-brand" data-mode="ONLINE" bind:tap="chooseEventMode">线上</view>
-        <view wx:else class="border border-line px-2 py-3 text-center text-[length:22rpx] text-ink" data-mode="ONLINE" bind:tap="chooseEventMode">线上</view>
-        <view wx:if="{{eventMode === 'HYBRID'}}" class="border border-brand bg-brand-soft px-2 py-3 text-center text-[length:22rpx] text-brand" data-mode="HYBRID" bind:tap="chooseEventMode">线上＋线下</view>
-        <view wx:else class="border border-line px-2 py-3 text-center text-[length:22rpx] text-ink" data-mode="HYBRID" bind:tap="chooseEventMode">线上＋线下</view>
-      </view>
-
-      <block wx:if="{{eventMode !== 'ONLINE'}}">
-        <view class="mt-5 flex items-center justify-between">
-          <view class="text-[length:22rpx] font-semibold text-muted">活动地点</view>
-          <view class="px-2 py-2 text-[length:22rpx] text-brand active:opacity-70" bind:tap="chooseLocation">地图选点</view>
-        </view>
-        <input
-          class="box-border mt-2 h-[80rpx] w-full max-w-full border-b border-line py-3 text-[length:26rpx]"
-          value="{{venueName}}"
-          data-field="venueName"
-          bindinput="updateDraft"
-          maxlength="120"
-          placeholder="场地名称"
-        />
-        <input
-          class="box-border mt-2 h-[80rpx] w-full max-w-full border-b border-line py-3 text-[length:26rpx]"
-          value="{{address}}"
-          data-field="address"
-          bindinput="updateDraft"
-          maxlength="300"
-          placeholder="详细地址"
-        />
-        <view wx:if="{{latitude !== null && longitude !== null}}" class="mt-2 text-[length:20rpx] text-muted">已保存地图坐标</view>
+    <view class="rounded-[16rpx] bg-panel p-4">
+      <view class="mb-3 text-[length:27rpx] font-semibold">活动形式</view>
+      <view class="flex flex-wrap gap-2"><t-tag variant="outline" data-field="eventMode" data-value="OFFLINE" bind:tap="choose">线下</t-tag><t-tag variant="outline" data-field="eventMode" data-value="ONLINE" bind:tap="choose">线上</t-tag><t-tag variant="outline" data-field="eventMode" data-value="HYBRID" bind:tap="choose">线上与线下</t-tag></view>
+      <block wx:if="{{draft.eventMode !== 'ONLINE'}}">
+        <view class="mb-2 mt-4 text-[length:23rpx] text-muted">场地名称</view><t-input class="box-border max-w-full" value="{{draft.venueName}}" maxlength="200" data-field="venueName" bind:change="updateField" />
+        <view class="mb-2 mt-4 text-[length:23rpx] text-muted">详细地址</view><t-input class="box-border max-w-full" value="{{draft.address}}" maxlength="500" data-field="address" bind:change="updateField" />
+        <view class="mt-3"><t-button block variant="outline" disabled="{{saving || cancelBusy}}" bind:tap="chooseVenue">从地图选择地点</t-button></view>
+        <view class="mb-2 mt-4 text-[length:23rpx] text-muted">城市</view><t-input class="box-border max-w-full" value="{{draft.cityName}}" maxlength="100" data-field="cityName" bind:change="updateField" />
       </block>
-
-      <block wx:if="{{eventMode !== 'OFFLINE'}}">
-        <view class="mt-5 text-[length:22rpx] font-semibold text-muted">线上会议链接</view>
-        <input
-          class="box-border mt-2 h-[80rpx] w-full max-w-full border-b border-line py-3 text-[length:26rpx]"
-          value="{{onlineUrl}}"
-          data-field="onlineUrl"
-          bindinput="updateDraft"
-          maxlength="500"
-          placeholder="https://..."
-        />
-        <view class="mt-2 text-[length:20rpx] text-muted">仅向已报名成员和活动管理员展示。</view>
+      <block wx:if="{{draft.eventMode !== 'OFFLINE'}}">
+        <view class="mb-2 mt-4 text-[length:23rpx] text-muted">线上活动地址</view><t-input class="box-border max-w-full" value="{{draft.onlineUrl}}" maxlength="1000" placeholder="https://" data-field="onlineUrl" bind:change="updateField" />
       </block>
+    </view>
 
-      <view class="mt-5 text-[length:22rpx] font-semibold text-muted">人数上限</view>
-      <input
-        class="box-border mt-2 h-[80rpx] w-full max-w-full border-b border-line py-3 text-[length:26rpx]"
-        value="{{capacity}}"
-        data-field="capacity"
-        bindinput="updateDraft"
-        type="number"
-        placeholder="1-10000"
-      />
-
-      <view class="mt-5 text-[length:22rpx] font-semibold text-muted">取消规则</view>
-      <textarea
-        class="box-border mt-2 h-[140rpx] w-full max-w-full border border-line p-3 text-[length:25rpx]"
-        value="{{cancellationPolicy}}"
-        data-field="cancellationPolicy"
-        bindinput="updateDraft"
-        maxlength="1000"
-        placeholder="例如：开始前 24 小时可取消"
-      />
-
-      <view class="mt-5 text-[length:22rpx] font-semibold text-muted">活动须知</view>
-      <textarea
-        class="box-border mt-2 h-[180rpx] w-full max-w-full border border-line p-3 text-[length:25rpx]"
-        value="{{notices}}"
-        data-field="notices"
-        bindinput="updateDraft"
-        maxlength="3000"
-        placeholder="交通、携带物品、着装、安全与现场规则"
-      />
-
-      <view class="mt-5 text-[length:22rpx] font-semibold text-muted">活动说明</view>
-      <textarea
-        class="box-border mt-2 h-[200rpx] w-full max-w-full border border-line p-3 text-[length:25rpx]"
-        value="{{description}}"
-        data-field="description"
-        bindinput="updateDraft"
-        maxlength="2000"
-        placeholder="活动内容、议程与注意事项"
-      />
-
-      <view class="mt-6 border-t border-line pt-5">
-        <view class="flex items-center justify-between">
-          <view>
-            <view class="text-[length:25rpx] font-semibold">自定义报名问题</view>
-            <view class="mt-1 text-[length:20rpx] text-muted">最多 12 项，答案会按报名时版本保存</view>
-          </view>
-          <t-button size="small" variant="outline" bind:tap="addQuestion">添加问题</t-button>
-        </view>
-        <view class="mt-3 flex flex-wrap gap-2">
-          <view class="rounded-full border border-line px-3 py-2 text-[length:20rpx]" data-preset="nickname" bind:tap="addPresetQuestion">姓名</view>
-          <view class="rounded-full border border-line px-3 py-2 text-[length:20rpx]" data-preset="phone" bind:tap="addPresetQuestion">手机号</view>
-          <view class="rounded-full border border-line px-3 py-2 text-[length:20rpx]" data-preset="city" bind:tap="addPresetQuestion">城市</view>
-          <view class="rounded-full border border-line px-3 py-2 text-[length:20rpx]" data-preset="organization" bind:tap="addPresetQuestion">机构</view>
-          <view class="rounded-full border border-line px-3 py-2 text-[length:20rpx]" data-preset="roleTitle" bind:tap="addPresetQuestion">职位</view>
-        </view>
-        <view wx:for="{{questions}}" wx:key="id" class="mt-4 rounded-[20rpx] border border-line bg-canvas px-4 py-4">
-          <view class="flex items-center justify-between">
-            <view class="text-[length:22rpx] font-semibold">问题 {{index + 1}}</view>
-            <view class="flex items-center gap-3">
-              <view class="rounded-full bg-panel px-2 py-1" data-index="{{index}}" data-direction="-1" bind:tap="moveQuestion"><t-icon name="arrow-up" size="28rpx" color="var(--color-muted)" /></view>
-              <view class="rounded-full bg-panel px-2 py-1" data-index="{{index}}" data-direction="1" bind:tap="moveQuestion"><t-icon name="arrow-down" size="28rpx" color="var(--color-muted)" /></view>
-              <view class="text-[length:20rpx] text-danger" data-index="{{index}}" bind:tap="removeQuestion">删除</view>
-            </view>
-          </view>
-          <input
-            class="mt-3 box-border h-[76rpx] w-full max-w-full border-b border-line text-[length:24rpx]"
-            value="{{item.label}}"
-            data-index="{{index}}"
-            data-field="label"
-            bindinput="updateQuestion"
-            maxlength="80"
-            placeholder="问题标题"
-          />
-          <picker
-            mode="selector"
-            range="{{questionTypeLabels}}"
-            value="{{item.type === 'SHORT_TEXT' ? 0 : item.type === 'LONG_TEXT' ? 1 : item.type === 'NUMBER' ? 2 : item.type === 'PHONE' ? 3 : item.type === 'ID_CARD' ? 4 : item.type === 'SINGLE_CHOICE' ? 5 : item.type === 'MULTI_CHOICE' ? 6 : 7}}"
-            data-index="{{index}}"
-            bindchange="chooseQuestionType"
-          >
-            <view class="mt-3 flex h-[72rpx] items-center justify-between border-b border-line text-[length:23rpx]">
-              <text>类型：{{item.type === 'SHORT_TEXT' ? '简短文本' : item.type === 'LONG_TEXT' ? '长文本' : item.type === 'NUMBER' ? '数字' : item.type === 'PHONE' ? '手机号' : item.type === 'ID_CARD' ? '身份证号' : item.type === 'SINGLE_CHOICE' ? '单选' : item.type === 'MULTI_CHOICE' ? '多选' : '确认项'}}</text>
-              <t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" />
-            </view>
-          </picker>
-          <picker
-            mode="selector"
-            range="{{profileFieldLabels}}"
-            value="{{item.profileFieldIndex}}"
-            data-index="{{index}}"
-            bindchange="chooseQuestionProfileField"
-          >
-            <view class="mt-3 flex h-[72rpx] items-center justify-between border-b border-line text-[length:23rpx]">
-              <text>复用名片：{{profileFieldLabels[item.profileFieldIndex]}}</text>
-              <t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" />
-            </view>
-          </picker>
-          <input
-            wx:if="{{item.type === 'SINGLE_CHOICE' || item.type === 'MULTI_CHOICE'}}"
-            class="mt-3 box-border h-[76rpx] w-full max-w-full border-b border-line text-[length:23rpx]"
-            value="{{item.optionsText}}"
-            data-index="{{index}}"
-            data-field="options"
-            bindinput="updateQuestion"
-            maxlength="240"
-            placeholder="选项，用顿号分隔"
-          />
-          <view class="mt-3 flex items-center justify-between">
-            <text class="text-[length:22rpx] text-muted">必填</text>
-            <switch checked="{{item.required}}" data-index="{{index}}" color="#285E46" bindchange="toggleQuestionRequired" />
-          </view>
-        </view>
+    <view class="rounded-[16rpx] bg-panel p-4">
+      <view class="mb-3 text-[length:27rpx] font-semibold">报名设置</view>
+      <view class="mb-2 text-[length:23rpx] text-muted">参与方式</view>
+      <view class="flex flex-wrap gap-2"><t-tag variant="outline" data-field="accessType" data-value="FREE" bind:tap="choose">免费报名</t-tag><t-tag variant="outline" data-field="accessType" data-value="MEMBER_INCLUDED" bind:tap="choose">玩家权益包含</t-tag><t-tag variant="outline" data-field="accessType" data-value="PAID" bind:tap="choose">付费报名</t-tag></view>
+      <view wx:if="{{draft.accessType === 'PAID'}}">
+        <view class="mb-2 mt-4 text-[length:23rpx] text-muted">报名价格（元）</view><t-input class="box-border max-w-full" type="digit" value="{{draft.priceYuan}}" data-field="priceYuan" bind:change="updateField" />
+        <view class="mt-2 text-[length:22rpx] text-muted">付费报名在支付完成后自动确认。</view>
       </view>
-
-      <view class="mt-6 border-t border-line pt-5">
-        <view class="flex items-center justify-between">
-          <view><view class="text-[length:24rpx] font-semibold">开放活动相册</view><view class="mt-1 text-[length:20rpx] text-muted">已报名成员可上传压缩后的照片</view></view>
-          <switch checked="{{albumEnabled}}" color="#285E46" bindchange="toggleAlbum" />
-        </view>
-        <view wx:if="{{albumEnabled}}" class="mt-4 flex items-center justify-between">
-          <view><view class="text-[length:24rpx] font-semibold">照片发布前审核</view><view class="mt-1 text-[length:20rpx] text-muted">推荐开启，避免不合适内容直接公开</view></view>
-          <switch checked="{{albumRequiresReview}}" color="#285E46" bindchange="toggleAlbumReview" />
-        </view>
+      <view wx:else>
+        <view class="mb-2 mt-4 text-[length:23rpx] text-muted">确认方式</view>
+        <view class="flex flex-wrap gap-2"><t-tag variant="outline" data-field="registrationPolicy" data-value="AUTO" bind:tap="choose">自动确认</t-tag><t-tag variant="outline" data-field="registrationPolicy" data-value="APPROVAL" bind:tap="choose">人工确认</t-tag></view>
       </view>
+      <view class="mb-2 mt-4 text-[length:23rpx] text-muted">名额上限</view><t-input class="box-border max-w-full" type="number" value="{{draft.capacity}}" placeholder="不填写表示不限额" data-field="capacity" bind:change="updateField" />
+      <view wx:if="{{draft.accessType !== 'PAID'}}" class="mt-3 flex min-h-[72rpx] items-center justify-between"><view class="text-[length:23rpx]">名额满后启用候补</view><t-switch value="{{draft.waitlistEnabled}}" bind:change="toggleWaitlist" /></view>
+    </view>
 
-      <view wx:if="{{editingId}}" class="mt-3 text-[length:20rpx] text-muted">当前编辑版本：{{version}}</view>
-
-      <view class="mt-6 active:opacity-70">
-        <t-button block theme="primary" loading="{{saving}}" bind:tap="saveDraft">
-          {{editingId ? '保存修改' : '保存草稿'}}
-        </t-button>
-      </view>
-
-      <view wx:if="{{editingId}}" id="admin-event-more-actions" class="mt-7 border-t border-line pt-5">
-        <view class="text-[length:25rpx] font-semibold">更多活动操作</view>
-        <view class="mt-1 text-[length:20rpx] text-muted">这些操作会影响活动状态，请确认后执行。</view>
-        <view class="mt-3 overflow-hidden rounded-[20rpx] border border-line">
-          <view wx:if="{{editingStatus === 'DRAFT'}}" class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4 active:bg-brand-soft" data-event-id="{{editingId}}" data-status="PUBLISHED" bind:tap="setStatus"><view><view class="text-[length:24rpx] font-semibold">发布活动</view><view class="mt-1 text-[length:19rpx] text-muted">发布前请先保存本页修改</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-brand)" /></view>
-          <view wx:if="{{editingCanDuplicate}}" class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4 active:bg-panel-muted" data-event-id="{{editingId}}" bind:tap="duplicateEvent"><view><view class="text-[length:24rpx] font-semibold">复制为新活动</view><view class="mt-1 text-[length:19rpx] text-muted">报名和相册数据不会复制</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-          <view wx:if="{{editingStatus === 'PUBLISHED' && editingCanComplete}}" class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4 active:bg-panel-muted" data-event-id="{{editingId}}" data-status="COMPLETED" bind:tap="setStatus"><view><view class="text-[length:24rpx] font-semibold">结束活动</view><view class="mt-1 text-[length:19rpx] text-muted">停止报名并保留签到与相册</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-          <view wx:if="{{editingStatus === 'DRAFT' || editingStatus === 'PUBLISHED'}}" class="flex min-h-[92rpx] items-center justify-between px-4 active:bg-panel-muted" data-event-id="{{editingId}}" bind:tap="openCancelDialog"><view><view class="text-[length:24rpx] font-semibold text-danger">取消活动</view><view class="mt-1 text-[length:19rpx] text-muted">需要填写原因并处理相关报名</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-danger)" /></view>
-        </view>
-      </view>
-
-      <view wx:if="{{conflict}}" class="mt-4 border-l-[8rpx] border-danger bg-canvas px-4 py-4">
-        <view class="text-[length:24rpx] text-ink">版本冲突：你的输入已保留，不会被清空。</view>
-        <view class="mt-3 active:opacity-70">
-          <t-button block theme="primary" size="small" bind:tap="refreshAfterConflict">刷新并载入最新版本</t-button>
-        </view>
+    <view class="rounded-[16rpx] bg-panel p-4">
+      <view class="mb-3 text-[length:27rpx] font-semibold">活动相册</view>
+      <view class="flex min-h-[72rpx] items-center justify-between"><view class="text-[length:23rpx]">开放活动相册</view><t-switch value="{{draft.albumEnabled}}" bind:change="toggleAlbum" /></view>
+      <view wx:if="{{draft.albumEnabled}}">
+        <view class="mb-2 mt-4 text-[length:23rpx] text-muted">照片发布方式</view>
+        <view class="flex flex-wrap gap-2"><t-tag theme="{{draft.albumSubmissionPolicy === 'REVIEW' ? 'primary' : 'default'}}" variant="outline" data-field="albumSubmissionPolicy" data-value="REVIEW" bind:tap="choose">审核后发布</t-tag><t-tag theme="{{draft.albumSubmissionPolicy === 'AUTO' ? 'primary' : 'default'}}" variant="outline" data-field="albumSubmissionPolicy" data-value="AUTO" bind:tap="choose">自动发布</t-tag></view>
       </view>
     </view>
 
-    <view wx:if="{{!editorVisible && events.length === 0}}" class="mt-6">
-      <app-empty-state
-        title="还没有活动"
-        description="{{canCreate ? '创建第一场活动，保存为草稿后再发布。' : '暂时没有分配给你的可编辑活动。'}}"
-        action-text="{{canCreate ? '新建活动' : ''}}"
-        bind:action="startCreate"
-      />
+    <t-button block theme="primary" loading="{{saving}}" disabled="{{coverUploading || conflict || eventStatus === 'CANCELLED' || eventStatus === 'ENDED'}}" bind:tap="save">保存活动</t-button>
+    <t-button wx:if="{{eventId && eventStatus !== 'CANCELLED' && eventStatus !== 'ENDED'}}" block variant="outline" theme="danger" disabled="{{saving || cancelBusy || conflict}}" bind:tap="openCancelDialog">取消活动</t-button>
+    <view wx:if="{{cancelDialogVisible && !cancelConflict}}" class="rounded-[16rpx] bg-panel p-4">
+      <view class="text-[length:27rpx] font-semibold">取消活动</view>
+      <view class="mb-2 mt-4 text-[length:23rpx] text-muted">取消原因（必填）</view>
+      <t-textarea class="box-border max-w-full" value="{{cancelReason}}" maxlength="300" autosize placeholder="填写取消原因" bind:change="updateCancelReason" />
+      <view class="mt-4 grid grid-cols-2 gap-3"><t-button block variant="outline" disabled="{{cancelBusy}}" bind:tap="closeCancelDialog">暂不取消</t-button><t-button block theme="danger" loading="{{cancelBusy}}" bind:tap="confirmCancelEvent">确认取消</t-button></view>
     </view>
-
-    <view wx:elif="{{!editorVisible}}" class="mt-6 flex flex-col gap-4">
-      <view
-        wx:for="{{events}}"
-        wx:key="id"
-        class="border-l-[10rpx] border-coral bg-panel px-5 py-5"
-      >
-        <view class="flex items-start justify-between gap-3">
-          <view class="min-w-0 flex-1">
-            <view class="truncate text-[length:29rpx] font-bold">{{item.title}}</view>
-            <view class="mt-2 text-[length:22rpx] text-muted">{{item.startsText}}{{item.endsText ? ' - ' + item.endsText : ''}}</view>
-            <view class="mt-1 text-[length:22rpx] text-muted">{{item.placeText}}</view>
-            <view class="mt-1 text-[length:20rpx] text-muted">截止 {{item.deadlineText}} · 名额 {{item.capacity || '不限'}} · v{{item.version || 1}}</view>
-          </view>
-          <view class="flex flex-col items-end gap-2">
-            <t-tag variant="light">{{item.statusText}}</t-tag>
-            <t-tag variant="outline">{{item.activityTypeText}}</t-tag>
-          </view>
-        </view>
-
-        <view wx:if="{{item.status === 'DRAFT'}}" class="mt-5 grid grid-cols-3 overflow-hidden rounded-[18rpx] border border-line bg-canvas">
-          <view class="flex min-h-[94rpx] flex-col items-center justify-center gap-1 border-r border-line active:bg-brand-soft" data-event-id="{{item.id}}" bind:tap="editEvent"><t-icon name="edit-1" size="34rpx" color="var(--color-brand)" /><text class="text-[length:20rpx]">编辑</text></view>
-          <view wx:if="{{item.canDuplicate}}" class="flex min-h-[94rpx] flex-col items-center justify-center gap-1 border-r border-line active:bg-brand-soft" data-event-id="{{item.id}}" bind:tap="duplicateEvent"><t-icon name="file-copy" size="34rpx" color="var(--color-brand)" /><text class="text-[length:20rpx]">复制</text></view>
-          <view class="flex min-h-[94rpx] flex-col items-center justify-center gap-1 active:bg-brand-soft" data-event-id="{{item.id}}" data-status="PUBLISHED" bind:tap="setStatus"><t-icon name="send" size="34rpx" color="var(--color-brand)" /><text class="text-[length:20rpx] font-semibold text-brand">发布</text></view>
-        </view>
-
-        <view wx:elif="{{item.status === 'PUBLISHED'}}" class="mt-5 grid grid-cols-3 overflow-hidden rounded-[18rpx] border border-line bg-canvas">
-          <view class="flex min-h-[94rpx] flex-col items-center justify-center gap-1 border-b border-r border-line active:bg-brand-soft" data-event-id="{{item.id}}" bind:tap="editEvent"><t-icon name="edit-1" size="34rpx" color="var(--color-brand)" /><text class="text-[length:20rpx]">编辑</text></view>
-          <view class="flex min-h-[94rpx] flex-col items-center justify-center gap-1 border-b border-r border-line active:bg-brand-soft" data-event-id="{{item.id}}" bind:tap="openRoster"><t-icon name="usergroup" size="34rpx" color="var(--color-brand)" /><text class="text-[length:20rpx]">报名名单</text></view>
-          <view wx:if="{{item.canDuplicate}}" class="flex min-h-[94rpx] flex-col items-center justify-center gap-1 border-b border-line active:bg-brand-soft" data-event-id="{{item.id}}" bind:tap="duplicateEvent"><t-icon name="file-copy" size="34rpx" color="var(--color-brand)" /><text class="text-[length:20rpx]">复制</text></view>
-          <view wx:if="{{item.canManageTeam}}" class="flex min-h-[94rpx] flex-col items-center justify-center gap-1 border-r border-line active:bg-brand-soft" data-event-id="{{item.id}}" bind:tap="openManagers"><t-icon name="user-setting" size="34rpx" color="var(--color-brand)" /><text class="text-[length:20rpx]">管理员</text></view>
-          <view class="flex min-h-[94rpx] flex-col items-center justify-center gap-1 border-r border-line active:bg-brand-soft" data-event-id="{{item.id}}" bind:tap="openAlbumReview"><t-icon name="image" size="34rpx" color="var(--color-brand)" /><text class="text-[length:20rpx]">相册审核</text></view>
-          <view class="flex min-h-[94rpx] flex-col items-center justify-center gap-1 active:bg-panel-muted" data-event-id="{{item.id}}" bind:tap="openCancelDialog"><t-icon name="close-circle" size="34rpx" color="var(--color-danger)" /><text class="text-[length:20rpx] text-danger">取消</text></view>
-        </view>
-
-        <view wx:if="{{item.status === 'PUBLISHED' && item.canComplete}}" class="mt-3 rounded-[16rpx] border border-line px-4 py-3 text-center text-[length:21rpx] font-semibold text-brand active:bg-brand-soft" data-event-id="{{item.id}}" data-status="COMPLETED" bind:tap="setStatus">标记活动已结束</view>
-
-        <view wx:if="{{item.status === 'COMPLETED' || item.status === 'CANCELLED'}}" class="mt-5 grid grid-cols-2 overflow-hidden rounded-[18rpx] border border-line bg-canvas">
-          <view class="flex min-h-[94rpx] flex-col items-center justify-center gap-1 border-r border-line active:bg-brand-soft" data-event-id="{{item.id}}" bind:tap="openRoster"><t-icon name="usergroup" size="34rpx" color="var(--color-brand)" /><text class="text-[length:20rpx]">查看名单</text></view>
-          <view wx:if="{{item.canDuplicate}}" class="flex min-h-[94rpx] flex-col items-center justify-center gap-1 active:bg-brand-soft" data-event-id="{{item.id}}" bind:tap="duplicateEvent"><t-icon name="file-copy" size="34rpx" color="var(--color-brand)" /><text class="text-[length:20rpx]">复制活动</text></view>
-        </view>
-        <view wx:if="{{item.status === 'CANCELLED' && item.cancellationReason}}" class="mt-4 text-[length:21rpx] text-muted">
-          取消原因：{{item.cancellationReason}}
-        </view>
-      </view>
-    </view>
-
-    <view
-      wx:if="{{message && !conflict && !cancelConflict}}"
-      class="mt-5 border-l-[8rpx] border-coral bg-panel px-4 py-4 text-[length:24rpx] text-muted"
-    >{{message}}</view>
-
-    <view wx:if="{{cancelConflict}}" class="mt-5 border-l-[8rpx] border-danger bg-canvas px-4 py-4">
-      <view class="text-[length:24rpx] text-ink">取消确认已失效：活动版本已变化，不能沿用旧原因直接提交。</view>
-      <view class="mt-3 active:opacity-70">
-        <t-button block theme="primary" size="small" bind:tap="refreshAfterCancelConflict">刷新列表后重新取消</t-button>
-      </view>
-    </view>
-  </block>
-
-  <view
-    wx:if="{{cancelDialogVisible && !cancelConflict}}"
-    class="fixed inset-0 z-50 flex items-end justify-center bg-black/45 px-4 pb-[calc(env(safe-area-inset-bottom)+24rpx)] pt-24"
-    catch:tap="closeCancelDialog"
-  >
-    <view class="w-full max-w-full rounded-[28rpx] bg-panel px-5 py-5" catch:tap="">
-      <view class="text-[length:30rpx] font-bold">取消活动</view>
-      <view class="mt-2 text-[length:22rpx] text-muted">
-        「{{cancelEventTitle}}」取消后不可重新发布，仍为 REGISTERED 的报名会同步收敛。已签到记录会保留。
-      </view>
-      <view class="mt-4 text-[length:22rpx] font-semibold text-muted">取消原因（必填）</view>
-      <textarea
-        class="box-border mt-2 h-[180rpx] w-full max-w-full border border-line p-3 text-[length:25rpx]"
-        value="{{cancelReason}}"
-        bindinput="updateCancelReason"
-        maxlength="500"
-        placeholder="请说明取消原因，将同步展示给已报名用户"
-      />
-      <view class="mt-2 text-[length:20rpx] text-muted">版本 v{{cancelEventVersion}} · {{cancelReason.length || 0}}/500</view>
-      <view class="mt-5 grid grid-cols-2 gap-3">
-        <t-button block variant="outline" disabled="{{cancelling}}" bind:tap="closeCancelDialog">返回</t-button>
-        <t-button
-          block
-          theme="danger"
-          loading="{{cancelling}}"
-          disabled="{{cancelling || cancelConflict}}"
-          bind:tap="confirmCancelEvent"
-        >确认取消</t-button>
-      </view>
-    </view>
+    <view wx:if="{{message}}" class="rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
   </view>
   <app-page-exit />
 </view>

@@ -1,32 +1,39 @@
-<view id="admin-exceptions-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
-  <view class="border-y border-ink py-5">
-    <view class="text-[length:21rpx] font-semibold tracking-[0.16em] text-coral">统一异常中心</view>
-    <view class="mt-2 text-[length:40rpx] font-bold">需要人工关注的事项</view>
-    <view class="mt-2 text-[length:22rpx] leading-5 text-muted">只提供可安全执行的重试；退款与图片问题保留人工判断。</view>
+<view id="admin-exceptions-page" class="min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+  <view class="text-[length:40rpx] font-bold">异常中心</view>
+  <view class="mt-2 text-[length:23rpx] text-muted">查看支付、通知和后台任务的异常状态</view>
+
+  <view wx:if="{{state !== 'forbidden'}}" class="mt-5 flex flex-col gap-3">
+    <view class="flex flex-wrap gap-2">
+      <t-tag wx:for="{{typeOptions}}" wx:key="value" theme="{{item.value === type ? 'primary' : 'default'}}" variant="outline" data-value="{{item.value}}" bind:tap="chooseType">{{item.label}}</t-tag>
+    </view>
+    <view class="flex flex-wrap gap-2">
+      <t-tag wx:for="{{statusOptions}}" wx:key="value" theme="{{item.value === status ? 'primary' : 'default'}}" variant="outline" data-value="{{item.value}}" bind:tap="chooseStatus">{{item.label}}</t-tag>
+    </view>
   </view>
-  <view wx:if="{{state === 'loading'}}" class="mt-5 bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载异常" description="请稍后重试。" action-text="重新加载" bind:action="loadExceptions" /></view>
-  <view wx:elif="{{state === 'forbidden'}}" class="mt-5"><app-empty-state title="没有异常处理权限" description="请联系主理人调整运营权限。" /></view>
-  <view wx:elif="{{!items.length}}" class="mt-5"><app-empty-state title="当前没有待处理异常" description="退款、图片、文件清理和消息发送状态正常。" /></view>
+
+  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载异常" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
+  <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有查看权限" description="当前账号不能查看异常中心。" /></view>
+  <view wx:elif="{{state === 'empty'}}" class="mt-6"><app-empty-state title="暂无异常" description="当前筛选条件下没有异常记录。" /></view>
   <view wx:else class="mt-5 flex flex-col gap-3">
-    <view wx:for="{{items}}" wx:key="id" class="rounded-[22rpx] bg-panel px-4 py-4">
+    <view wx:for="{{items}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
       <view class="flex items-start justify-between gap-3">
-        <view class="min-w-0 flex-1" data-index="{{index}}" bind:tap="openItem">
-          <view class="flex items-center gap-2">
-            <view class="text-[length:26rpx] font-semibold">{{item.title}}</view>
-            <view wx:if="{{item.severity === 'HIGH'}}" class="rounded-full bg-[#FFF0E8] px-2 py-1 text-[length:18rpx] text-[#9F4727]">{{item.severityText}}</view>
-            <view wx:else class="rounded-full bg-brand-soft px-2 py-1 text-[length:18rpx] text-brand">{{item.severityText}}</view>
-          </view>
-          <view class="mt-2 text-[length:22rpx] leading-5 text-muted">{{item.summary}}</view>
-          <view class="mt-2 text-[length:19rpx] text-muted">{{item.updatedText}} · {{item.status}}</view>
+        <view class="min-w-0 flex-1">
+          <view class="text-[length:27rpx] font-semibold">{{item.title}}</view>
+          <view class="mt-2 text-[length:23rpx] leading-[1.7] text-muted">{{item.summary}}</view>
         </view>
-        <t-icon wx:if="{{item.route}}" name="chevron-right" size="34rpx" color="var(--color-muted)" />
+        <t-tag variant="outline" theme="{{item.status === 'FAILED' || item.status === 'REJECTED' ? 'danger' : 'warning'}}">{{item.statusText}}</t-tag>
       </view>
-      <view wx:if="{{item.canRetry}}" class="mt-3 border-t border-line pt-3">
-        <t-button size="small" variant="outline" theme="primary" loading="{{retryingId === item.id}}" data-index="{{index}}" bind:tap="retryItem">重新处理</t-button>
+      <view class="mt-3 text-[length:21rpx] text-muted">{{item.sourceText}} · {{item.occurredText}}</view>
+      <view wx:if="{{item.reasonCode === 'DELIVERY_OUTCOME_UNKNOWN'}}" class="mt-2 text-[length:22rpx] text-muted">投递结果未知，暂不提供重试操作。</view>
+      <view wx:if="{{item.target}}" class="mt-4 flex min-h-[72rpx] items-center border-t border-line pt-3" data-id="{{item.id}}" bind:tap="openTarget">
+        <view class="flex-1 text-[length:23rpx] font-semibold text-brand">查看相关业务</view>
+        <t-icon name="chevron-right" size="30rpx" color="var(--color-brand)" />
       </view>
     </view>
   </view>
-  <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
+
+  <view wx:if="{{message && (state === 'ready' || state === 'empty')}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
+  <view wx:if="{{state === 'ready' || state === 'empty'}}" class="mt-5 text-[length:22rpx] leading-[1.7] text-muted">异常中心仅展示状态，不会修改业务记录。</view>
   <app-page-exit />
 </view>

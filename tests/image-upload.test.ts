@@ -18,5 +18,7 @@ describe('image upload policy', () => {
       expect(policy.steps.every(step => step.width <= 2048)).toBe(true)
       expect(policy.steps.every(step => step.quality >= 40 && step.quality <= 85)).toBe(true)
     }
+    expect(IMAGE_UPLOAD_POLICIES.eventAlbum.label).toBe('活动照片')
+    expect(IMAGE_UPLOAD_POLICIES.eventAlbum.steps[0].width).toBe(1600)
   })
 })

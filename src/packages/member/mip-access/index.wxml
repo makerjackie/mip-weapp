@@ -1,0 +1,46 @@
+<view id="mip-access-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-5 text-ink">
+  <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-8">
+    <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
+  </view>
+  <app-empty-state wx:elif="{{state === 'expired'}}" title="访问请求已失效" description="请返回上一页后重新操作。" action-text="返回" bind:action="cancel" />
+  <app-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载" description="身份服务暂时没有响应。" action-text="重新加载" bind:action="loadAccess" />
+  <block wx:else>
+    <view class="mt-[80rpx] text-[length:38rpx] font-bold">{{title}}</view>
+    <view class="mt-3 text-[length:24rpx] leading-6 text-muted">{{description}}</view>
+    <view class="mt-5 inline-flex rounded-full bg-brand-soft px-3 py-2 text-[length:22rpx] text-brand">当前身份：{{membershipLabel}}</view>
+
+    <view wx:if="{{nextRequirement === 'AGREEMENTS'}}" class="mt-6 rounded-[16rpx] bg-panel px-4 py-5">
+      <view wx:for="{{agreements}}" wx:key="key" class="flex min-h-[88rpx] items-center justify-between border-b border-line last:border-b-0" data-path="{{item.documentPath}}" bind:tap="openAgreement">
+        <text class="text-[length:26rpx]">{{item.label}}</text>
+        <t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" />
+      </view>
+      <checkbox-group class="mt-4" bindchange="toggleAgreements">
+        <label class="flex items-start gap-3 text-[length:23rpx] leading-6 text-muted">
+          <checkbox value="accepted" color="#FCDF03" />
+          <text>我已阅读并同意以上协议</text>
+        </label>
+      </checkbox-group>
+      <view class="mt-5"><t-button block size="large" theme="primary" loading="{{submitting}}" bind:tap="acceptAgreements">确认并继续</t-button></view>
+    </view>
+
+    <button wx:elif="{{nextRequirement === 'PHONE'}}" open-type="getPhoneNumber" disabled="{{submitting}}" class="mt-7 flex h-[92rpx] w-full max-w-full box-border items-center justify-center rounded-[16rpx] border-0 bg-brand text-[length:28rpx] font-semibold text-on-brand disabled:opacity-60" bind:getphonenumber="bindPhone">
+      {{submitting ? '正在绑定' : '绑定微信手机号'}}
+    </button>
+
+    <view wx:elif="{{nextRequirement === 'PROFILE'}}" class="mt-7">
+      <t-button block size="large" theme="primary" bind:tap="openProfile">完善资料</t-button>
+    </view>
+
+    <view wx:elif="{{nextRequirement === 'AUTHENTICATED'}}" class="mt-7">
+      <t-button block size="large" theme="primary" bind:tap="loadAccess">重新获取身份</t-button>
+    </view>
+
+    <view wx:elif="{{ready}}" class="mt-7">
+      <t-button block size="large" theme="primary" loading="{{submitting}}" bind:tap="finish">返回继续</t-button>
+    </view>
+
+    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:23rpx] leading-6 text-ink">{{message}}</view>
+    <view class="mt-4"><t-button block variant="text" theme="default" bind:tap="cancel">取消</t-button></view>
+  </block>
+  <app-page-exit label="返回" />
+</view>

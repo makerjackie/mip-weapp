@@ -1,21 +1,21 @@
 export const tabBarItems = [
   {
     value: 'pages/index/index',
-    label: '首页',
-    icon: 'home',
-    iconActive: 'home-filled',
-  },
-  {
-    value: 'pages/explore/index',
-    label: '认识',
-    icon: 'usergroup',
-    iconActive: 'usergroup-filled',
+    label: '发现',
+    icon: 'compass',
+    iconActive: 'compass-filled',
   },
   {
     value: 'pages/events/index',
     label: '活动',
     icon: 'calendar-event',
     iconActive: 'calendar-event-filled',
+  },
+  {
+    value: 'pages/opportunities/index',
+    label: '机会',
+    icon: 'work',
+    iconActive: 'work-filled',
   },
   {
     value: 'pages/profile/index',
