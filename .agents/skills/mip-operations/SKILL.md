@@ -11,7 +11,7 @@ description: Use for owner bootstrap, demo seed, CloudBase deploy, MySQL schema,
 
 ## Scope
 
-`scripts/deploy-functions.mjs`、`scripts/apply-mysql-schema.mjs`、`scripts/seed-demo.mjs`、`scripts/bootstrap-owner.mjs`、`src/packages/admin`、`docs/OPERATIONS.md`。
+`scripts/deploy-functions.mjs`、`scripts/apply-mip-schema.mjs`、`scripts/seed-demo.mjs`、`scripts/bootstrap-owner.mjs`、`src/packages/admin`、`docs/OPERATIONS.md`。
 
 ## Read first
 
@@ -22,7 +22,7 @@ description: Use for owner bootstrap, demo seed, CloudBase deploy, MySQL schema,
 ## Steps
 
 1. 先 `pnpm cloud:status`。优先用 `.env.local` 的 `CLOUDBASE_API_KEY`；没有密钥且未授权时才运行一次 `pnpm cloud:auth`。
-2. 部署必须带 `--confirm-env=`。
+2. 部署必须带 `--confirm-env=`，并从 `.env.local` 读取 `MIP_DEPLOYMENT_STAGE`；production 还必须带 `--confirm-production`。
 3. seed 只能打到 development/test，且 `is_demo=1`。
 4. owner bootstrap 拒绝 demo 身份，不打印 OpenID。
 5. 运营端变更走 admin API 与 RBAC，不要给客户端加管理 action。
@@ -33,7 +33,7 @@ description: Use for owner bootstrap, demo seed, CloudBase deploy, MySQL schema,
 
 ## Safety
 
-确认目标 EnvID。不要对生产跑 demo seed。不要给通知 worker 安装 5 分钟定时器：它会阻止 Serverless MySQL 暂停，按 CCU 消耗额度。
+确认目标 EnvID 和 deployment stage。历史 legacy member schema 不属于 MIP 操作路径。不要对生产跑 demo seed。不要给通知 worker 安装 5 分钟定时器：它会阻止 Serverless MySQL 暂停，按 CCU 消耗额度。
 
 ## Forbidden
 

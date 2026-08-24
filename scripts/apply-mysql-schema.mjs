@@ -32,9 +32,11 @@ import {
   EXPORT_INTEGRITY_UNIQUE_KEYS,
   EXPORT_INTEGRITY_VERSION,
 } from './lib/export-integrity-schema.mjs'
+import { assertLegacyMemberSchemaInvocation } from './lib/legacy-member-schema-guard.mjs'
 import { loadVerifiedMigrations } from './lib/migrations.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
+assertLegacyMemberSchemaInvocation(process.argv.slice(2))
 const env = loadCaseEnv(root)
 const envId = env.CLOUDBASE_ENV_ID
 const confirmedEnv = process.argv.find(value => value.startsWith('--confirm-env='))?.slice('--confirm-env='.length)

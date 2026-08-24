@@ -159,11 +159,14 @@ describe('assertTablePrivilegePairs', () => {
       return match ? [match[2], match[1].split(', ')] : []
     }).filter(entry => entry.length))
     assert.deepEqual(byTable.mip_agreement_acceptances, ['SELECT', 'INSERT'])
-    assert.deepEqual(byTable.mip_membership_attributions, ['SELECT', 'INSERT'])
+    assert.deepEqual(byTable.mip_membership_attributions, ['INSERT'])
     assert.deepEqual(byTable.mip_tags, ['SELECT'])
     assert.deepEqual(byTable.mip_membership_plans, ['SELECT'])
     assert.deepEqual(byTable.mip_event_checkin_transitions, ['SELECT', 'INSERT'])
-    assert.equal('mip_app_settings' in byTable, false)
+    assert.deepEqual(byTable.mip_app_settings, ['SELECT', 'INSERT', 'UPDATE'])
+    assert.deepEqual(byTable.mip_event_content_media, ['SELECT', 'INSERT', 'UPDATE'])
+    assert.deepEqual(byTable.mip_event_invitation_links, ['SELECT', 'INSERT', 'UPDATE'])
+    assert.deepEqual(byTable.mip_opportunity_team_members, ['SELECT', 'INSERT', 'UPDATE'])
   })
 
   it('derives a stable environment-unique account and revokes only observed owned-table grants', async () => {

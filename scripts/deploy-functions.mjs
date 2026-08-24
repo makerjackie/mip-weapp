@@ -11,6 +11,7 @@ import {
   cloudFunctionResult,
   loadCaseEnv,
 } from './lib/example-cloudbase.mjs'
+import { resolveMipDeploymentStage } from './lib/mip-deployment-stage.mjs'
 import { createMipCoreFunctionManifest } from './lib/mip-function-manifest.mjs'
 import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
 import { resolveMipStableSecrets } from './lib/mip-local-secrets.mjs'
@@ -33,6 +34,7 @@ const functionNames = resolveMipFunctionNames(env)
 const manifest = createMipCoreFunctionManifest(functionNames)
 const confirmedEnv = argumentValue('--confirm-env=')
 const replaceLegacyRuntime = process.argv.includes('--replace-legacy-runtime')
+const deploymentStage = resolveMipDeploymentStage(env.MIP_DEPLOYMENT_STAGE, process.argv.slice(2))
 const paymentMode = String(env.MIP_PAYMENT_MODE || 'disabled').trim().toLowerCase()
 const catalogStage = String(env.MIP_CATALOG_STAGE || 'TEST').trim().toUpperCase()
 const unionIdRebindEnabled = String(env.MIP_UNION_ID_REBIND_ENABLED || 'false').trim().toLowerCase() === 'true'
@@ -136,6 +138,7 @@ if (!connectionUri) {
     `CREATE USER ${runtimeAccount} IDENTIFIED BY '${password}'`,
   ])
   connectionUri = `mysql://${encodeURIComponent(databaseRuntimeUser)}:${encodeURIComponent(password)}@${address}/${encodeURIComponent(targetSchema)}`
+  persistLocalRuntimeConnection(connectionUri)
   credentialSource = 'provisioned-least-privilege'
 }
 
@@ -153,12 +156,26 @@ if (runtimeUserName !== databaseRuntimeUser) {
   throw new Error('MIP_DB_CONNECTION_URI must use the dedicated MIP_DB_RUNTIME_USER account')
 }
 
-runMysqlStatements([
-  ...buildRuntimeRevokeStatements(runtimeSchema, runtimeAccount, accountClaim.tableRows),
-  ...buildRuntimeGrantStatements(runtimeSchema, runtimeAccount),
-])
-assertExactRuntimePrivileges(runtimeSchema, runtimeAccount)
-console.log('[mip-cloud-deploy] exact mip_* runtime grants verified')
+let existingRuntimeGrantsExact = false
+if (accountClaim.exists) {
+  try {
+    assertRuntimePrivilegesExact({
+      ...accountSnapshot,
+      requiredMap: RUNTIME_TABLE_PRIVILEGES,
+      grantee: runtimeAccount,
+    })
+    existingRuntimeGrantsExact = true
+  }
+  catch {}
+}
+if (!existingRuntimeGrantsExact) {
+  runMysqlStatements([
+    ...buildRuntimeRevokeStatements(runtimeSchema, runtimeAccount, accountClaim.tableRows),
+    ...buildRuntimeGrantStatements(runtimeSchema, runtimeAccount),
+  ])
+  assertExactRuntimePrivileges(runtimeSchema, runtimeAccount)
+}
+console.log(`[mip-cloud-deploy] exact mip_* runtime grants verified (${existingRuntimeGrantsExact ? 'reused' : 'converged'})`)
 
 const stableSecretValues = resolveMipStableSecrets({
   localEnv: env,
@@ -214,6 +231,7 @@ try {
       allowedAppIds,
       catalogStage,
       connectionUri,
+      deploymentStage,
       exportMaxBytes,
       exportMaxRows,
       functionNames,
@@ -224,7 +242,7 @@ try {
       unionIdRebindEnabled,
     })
     await ensureCompatibleRuntime(spec.name)
-    callCloudbase(root, 'manageFunctions', {
+    const creation = callCloudbase(root, 'manageFunctions', {
       action: 'createFunction',
       functionRootPath: stagingRoot,
       force: true,
@@ -239,6 +257,11 @@ try {
         isWaitInstall: true,
       },
     }, 300000)
+    const creationSummary = managementResponseSummary(creation)
+    console.log(`[mip-cloud-deploy] create response ${spec.name}: ${creationSummary}`)
+    if (creation?.success === false) {
+      throw new Error(`${spec.name} create request was rejected: ${creationSummary}`)
+    }
     await waitForFunctionActive(spec.name)
     callCloudbase(root, 'manageFunctions', {
       action: 'updateFunctionCode',
@@ -275,6 +298,7 @@ const artifact = {
   credentialSource,
   paymentMode,
   catalogStage,
+  deploymentStage,
   deployed,
   protectedFunctions: manifest.filter(item => !item.clientInvokable).map(item => item.name),
   workerTimersVerifiedAbsent: true,
@@ -341,6 +365,79 @@ function runMysqlStatements(statements) {
     if (result?.success === false) {
       throw new Error('CloudBase MySQL statement failed while converging the MIP runtime account')
     }
+  }
+}
+
+function persistLocalRuntimeConnection(value) {
+  if (!validMysqlUri(value) || /[\r\n]/.test(value)) {
+    throw new Error('Generated MIP runtime connection is invalid')
+  }
+  const envPath = path.join(root, '.env.local')
+  if (!fs.existsSync(envPath)) {
+    throw new Error('.env.local is required before provisioning the MIP runtime account')
+  }
+  const current = fs.readFileSync(envPath, 'utf8')
+  const line = `MIP_DB_CONNECTION_URI=${value}`
+  const next = /^MIP_DB_CONNECTION_URI=.*$/m.test(current)
+    ? current.replace(/^MIP_DB_CONNECTION_URI=.*$/m, line)
+    : `${current.replace(/\n?$/, '\n')}${line}\n`
+  const temporaryPath = `${envPath}.mip-runtime-${process.pid}`
+  fs.writeFileSync(temporaryPath, next, { mode: 0o600 })
+  fs.renameSync(temporaryPath, envPath)
+  fs.chmodSync(envPath, 0o600)
+}
+
+function managementResponseSummary(value) {
+  const summary = {
+    topLevelKeys: value && typeof value === 'object' ? Object.keys(value).sort() : [],
+    success: typeof value?.success === 'boolean' ? value.success : undefined,
+    isError: value?.isError === true,
+    dataKeys: value?.data && typeof value.data === 'object' ? Object.keys(value.data).sort() : [],
+    structuredKeys: value?.structuredContent && typeof value.structuredContent === 'object'
+      ? Object.keys(value.structuredContent).sort()
+      : [],
+    message: sanitizedManagementMessage(value?.message),
+    signals: [],
+  }
+  const messages = []
+  collectDiagnosticStrings(value, messages)
+  const signalPatterns = [
+    'success',
+    'created',
+    'exists',
+    'quota',
+    'limit',
+    'runtime',
+    'vpc',
+    'failed',
+    'error',
+    'invalid',
+  ]
+  summary.signals = signalPatterns.filter(signal => messages.some(message => message.includes(signal)))
+  return JSON.stringify(summary)
+}
+
+function sanitizedManagementMessage(value) {
+  let result = String(value || '').slice(0, 1000)
+  result = result.replace(/mysql:\/\/[^\s"']+/gi, 'mysql://[redacted]')
+  result = result.replace(/wx[0-9a-f]{16}/gi, '[redacted-appid]')
+  for (const sensitive of [envId, appId, vpcId, subnetId, databaseRuntimeUser].filter(Boolean)) {
+    result = result.replaceAll(sensitive, '[redacted-id]')
+  }
+  return result
+}
+
+function collectDiagnosticStrings(value, output) {
+  if (typeof value === 'string') {
+    output.push(value.toLowerCase())
+    return
+  }
+  if (Array.isArray(value)) {
+    value.forEach(item => collectDiagnosticStrings(item, output))
+    return
+  }
+  if (value && typeof value === 'object') {
+    Object.values(value).forEach(item => collectDiagnosticStrings(item, output))
   }
 }
 
@@ -501,7 +598,7 @@ function environmentForRole(role, options) {
     MIP_DB_POOL_SIZE: '4',
     MIP_ALLOWED_APP_IDS: options.allowedAppIds.join(','),
     ...(role === 'notification' ? {} : { MIP_IDENTITY_PEPPER: options.secrets.identityPepper }),
-    MIP_DEPLOYMENT_STAGE: 'production',
+    MIP_DEPLOYMENT_STAGE: options.deploymentStage,
   }
   const agreementEnvironment = options.agreementsJson
     ? { MIP_AGREEMENTS_JSON: options.agreementsJson }
@@ -527,6 +624,7 @@ function environmentForRole(role, options) {
     commerce: {
       ...agreementEnvironment,
       MIP_CATALOG_STAGE: options.catalogStage,
+      MIP_MEDIA_SCOPE_SECRET: options.secrets.mediaScope,
       MIP_PAYMENT_MODE: options.paymentMode,
     },
     admin: {
@@ -585,7 +683,9 @@ function verifyLocalOpenApiDeclarations() {
   }
 }
 
-const delay = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds))
+function delay(milliseconds) {
+  return new Promise(resolve => setTimeout(resolve, milliseconds))
+}
 
 async function waitForFunctionActive(functionName) {
   for (let attempt = 0; attempt < 30; attempt += 1) {

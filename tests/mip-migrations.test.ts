@@ -75,6 +75,27 @@ describe('MIP migrations', () => {
     }
   })
 
+  it('locks event content media columns to the append-only runtime contract', () => {
+    const migration = fs.readFileSync(
+      path.join(root, 'database/mysql/mip/022_event_content_media.sql'),
+      'utf8',
+    )
+    const rollback = fs.readFileSync(
+      path.join(root, 'database/mysql/mip/rollback/022_event_content_media.sql'),
+      'utf8',
+    )
+    const lock = loadMipMigrationLock(root)
+    const entry = lock.migrations.find(item => item.name === 'mip_event_content_media')
+
+    expect(entry?.createsTables).toEqual(['mip_event_content_media'])
+    expect(migration).toContain('status VARCHAR(16)')
+    expect(migration).toContain('version BIGINT UNSIGNED')
+    expect(migration).toContain('mip_event_content_media_status_ck')
+    expect(migration).toContain('mip_event_content_media_version_ck')
+    expect(migration).not.toMatch(/\bDELETE\s+FROM\b/i)
+    expect(rollback.trim()).toBe('DROP TABLE IF EXISTS mip_event_content_media;')
+  })
+
   it('fails closed on unknown or incomplete durable step journals', () => {
     const source = fs.readFileSync(path.join(root, 'scripts/apply-mip-schema.mjs'), 'utf8')
     expect(source).toContain('unknownStepVersions')

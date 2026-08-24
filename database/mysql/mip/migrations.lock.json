@@ -235,6 +235,92 @@
       "altersTables": [
         "mip_notification_grants"
       ]
+    },
+    {
+      "version": "20260824170000",
+      "name": "mip_profile_interest_source",
+      "sql": "database/mysql/mip/017_profile_interest_source.sql",
+      "sqlSha256": "632d756c80ae059c82fa6b5492e9589aec8f0c61b74ffd8f662e0396dfd5454a",
+      "rollback": "database/mysql/mip/rollback/017_profile_interest_source.sql",
+      "rollbackSha256": "6cf9690299c897deced402641ca85ee5e1ef937988defab88a68241a261e321d",
+      "createsTables": [],
+      "altersTables": [
+        "mip_profile_interests",
+        "mip_users"
+      ]
+    },
+    {
+      "version": "20260824180000",
+      "name": "mip_content_archives",
+      "sql": "database/mysql/mip/018_content_archives.sql",
+      "sqlSha256": "fcfa9ac4c43f9ea5334982dbbd570e5c16bdd87d298f354ca2255aa9449a7127",
+      "rollback": "database/mysql/mip/rollback/018_content_archives.sql",
+      "rollbackSha256": "e17246e8bfe25a077839a0c5b7bac3375115e98a7c5a2a5dd973ecb90994cc70",
+      "createsTables": [],
+      "altersTables": [
+        "mip_cooperation_cards",
+        "mip_super_cases"
+      ]
+    },
+    {
+      "version": "20260824190000",
+      "name": "mip_event_invitation_links",
+      "sql": "database/mysql/mip/019_event_invitation_links.sql",
+      "sqlSha256": "2204c90db595d37af452a196516567c0cd83f2ad2c1c73bb124aa4136391c49e",
+      "rollback": "database/mysql/mip/rollback/019_event_invitation_links.sql",
+      "rollbackSha256": "058a639a0059d6604c18ca2a1a3f8e459371394e751250aede76efad0006bdb1",
+      "createsTables": [
+        "mip_event_invitation_links"
+      ],
+      "altersTables": []
+    },
+    {
+      "version": "20260824200000",
+      "name": "mip_opportunity_team_members",
+      "sql": "database/mysql/mip/020_opportunity_team_members.sql",
+      "sqlSha256": "5a7cb1d2aad8624226e358819d0d50e32ed0535b4dd2e8fd84f3b14c9f176e14",
+      "rollback": "database/mysql/mip/rollback/020_opportunity_team_members.sql",
+      "rollbackSha256": "a8ad2ebbb5952cdeec453313af8f1eea4d777dea2bea4cd2e1b0473982378828",
+      "createsTables": [
+        "mip_opportunity_team_members"
+      ],
+      "altersTables": []
+    },
+    {
+      "version": "20260824210000",
+      "name": "mip_referral_targets",
+      "sql": "database/mysql/mip/021_referral_targets.sql",
+      "sqlSha256": "0403c99c6f748da6f16f253c3ac460553a238c5bd3d5b5691d25c99f761290e9",
+      "rollback": "database/mysql/mip/rollback/021_referral_targets.sql",
+      "rollbackSha256": "c2dc11706e52d8ec936ee662b871bb0b119f6a8524ac9a3492d0091d15ae119e",
+      "createsTables": [],
+      "altersTables": [
+        "mip_referral_intents"
+      ]
+    },
+    {
+      "version": "20260824220000",
+      "name": "mip_event_content_media",
+      "sql": "database/mysql/mip/022_event_content_media.sql",
+      "sqlSha256": "50994ff40a78a814b7b5efc48b83435f4922512e2e407f327302022504df9d76",
+      "rollback": "database/mysql/mip/rollback/022_event_content_media.sql",
+      "rollbackSha256": "bf309dfca7cd3e5604126e9825919a9f3ffcea2986102eb10a0d40533f70b90d",
+      "createsTables": [
+        "mip_event_content_media"
+      ],
+      "altersTables": []
+    },
+    {
+      "version": "20260824230000",
+      "name": "mip_profile_visits",
+      "sql": "database/mysql/mip/023_profile_visits.sql",
+      "sqlSha256": "7901bef086f362210950018cf471d2383a91bf56dc2ca398aad2058012fa3107",
+      "rollback": "database/mysql/mip/rollback/023_profile_visits.sql",
+      "rollbackSha256": "cd9a4501f3cdf8f78ce2d3e85caad0c38c415a5bd13e08e06eef2f79553543b9",
+      "createsTables": [
+        "mip_profile_visits"
+      ],
+      "altersTables": []
     }
   ]
 }

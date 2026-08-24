@@ -65,6 +65,17 @@ describe('CloudBase local management env', () => {
         CLOUDBASE_ENV_ID: 'from-process-env',
       } as NodeJS.ProcessEnv)
       expect(fromProcess.apiKey).toBe('from-process')
+      const localOnly = loadCloudbaseManagementEnv(project, {
+        CLOUDBASE_AUTH_MODE: 'local',
+        CLOUDBASE_API_KEY: 'must-not-be-used',
+      } as NodeJS.ProcessEnv)
+      expect(localOnly).toMatchObject({ authMode: 'local', hasApiKey: false, apiKey: '' })
+      const localTarget = {
+        CLOUDBASE_AUTH_MODE: 'local',
+        CLOUDBASE_API_KEY: 'must-be-removed',
+      } as NodeJS.ProcessEnv
+      applyCloudbaseManagementEnv(project, localTarget)
+      expect(localTarget.CLOUDBASE_API_KEY).toBeUndefined()
       const target = {} as NodeJS.ProcessEnv
       applyCloudbaseManagementEnv(project, target)
       expect(target.CLOUDBASE_API_KEY).toBe('from-file')

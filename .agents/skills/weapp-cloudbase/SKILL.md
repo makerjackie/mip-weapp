@@ -24,7 +24,7 @@ description: Use for CloudBase env, membership cloud functions, MySQL, or MCP au
 1. 没有 EnvID 时保持 disabled，UI 显示会员服务尚未配置。
 2. 管理授权优先用环境级 `CLOUDBASE_API_KEY`（不要用前端 publish_key）。写进项目根目录 `.env.local`。
 3. 先 `pnpm cloud:status`。配好密钥后应为 READY，不必扫码。`pnpm cloud:auth` 有密钥时只加载密钥，不会开设备码。
-4. 部署使用本仓库脚本，不要手拼 MCP。
+4. 部署使用本仓库脚本，不要手拼 MCP；`MIP_DEPLOYMENT_STAGE` 必须是 development/test/staging/production，production 还需 `--confirm-production`。
 5. 业务数据走 MySQL，不要回退 `cloud.database()`。
 
 ## Scripts

@@ -254,7 +254,6 @@ const migrations = loadMipMigrationLock(root)
 const nonRuntimeTables = new Set([
   MIP_MIGRATION_TRACKING_TABLE,
   MIP_MIGRATION_STEP_TABLE,
-  'mip_app_settings',
 ])
 const lockedRuntimeTables = migrations.requiredTables.filter(table => !nonRuntimeTables.has(table)).sort()
 const grantedRuntimeTables = Object.keys(RUNTIME_TABLE_PRIVILEGES).sort()
@@ -270,6 +269,8 @@ const refundRecovery = read('scripts/run-refunds.mjs')
 const cloudVerify = read('scripts/verify-cloud.mjs')
 const demoSeed = read('scripts/seed-demo.mjs')
 const ownerBootstrap = read('scripts/bootstrap-owner.mjs')
+const legacySchemaApply = read('scripts/apply-mysql-schema.mjs')
+const legacySchemaGuard = read('scripts/lib/legacy-member-schema-guard.mjs')
 for (const [label, source] of [
   ['core deploy', cloudDeploy],
   ['payment deploy', paymentDeploy],
@@ -290,6 +291,13 @@ assert(cloudDeploy.includes('createMipCoreFunctionManifest')
   && cloudDeploy.includes('mip-notification-every-5m')
   && cloudDeploy.includes('mip-outbox-every-5m')
   && cloudDeploy.includes('--replace-legacy-runtime'), 'Core deploy must enforce direct sources, least privilege, and worker timer removal')
+assert(cloudDeploy.includes('resolveMipDeploymentStage(env.MIP_DEPLOYMENT_STAGE')
+  && cloudDeploy.includes('MIP_DEPLOYMENT_STAGE: options.deploymentStage')
+  && !cloudDeploy.includes('MIP_DEPLOYMENT_STAGE: \'production\''), 'Core deploy must inject a validated local deployment stage')
+assert(legacySchemaApply.indexOf('assertLegacyMemberSchemaInvocation(process.argv.slice(2))')
+  < legacySchemaApply.indexOf('const env = loadCaseEnv(root)')
+  && legacySchemaGuard.includes('--confirm-legacy-member-schema')
+  && legacySchemaGuard.includes('--confirm-test-database'), 'Legacy member schema apply must fail before environment or CloudBase access without both test-only confirmations')
 assert(paymentDeploy.includes('--confirm-function=')
   && paymentDeploy.includes('--confirm-callback=')
   && paymentDeploy.includes('--confirm-refund=')
