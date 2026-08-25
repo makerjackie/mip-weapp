@@ -1,4 +1,3 @@
-import type { ExportProgress } from './export-download'
 import type { PendingAdminExportStore } from './pending-export'
 import type {
   AdminCapability,
@@ -8,11 +7,7 @@ import type {
 import { createQueryCache } from '@weapp/shared/cache'
 import { createMipCommunityAdmin } from './community-admin'
 import { createMipEventsAdmin } from './events-admin'
-import {
-  createAndOpenExport,
-  getPendingAdminExportStatus,
-  resumeAndOpenPendingAdminExport,
-} from './export-download'
+import { createMipExportsAdmin } from './exports-admin'
 import { createMipGovernanceAdmin } from './governance-admin'
 import { createMipGrowthAdmin } from './growth-admin'
 import { createMipMessagingAdmin } from './messaging-admin'
@@ -31,6 +26,7 @@ export function createMipAdminModule(
   const community = createMipCommunityAdmin(gateway, cache)
   const growth = createMipGrowthAdmin(gateway, cache)
   const events = createMipEventsAdmin(gateway, cache)
+  const exports = createMipExportsAdmin(gateway, cache, options.pendingExportStore)
   const governance = createMipGovernanceAdmin(gateway, cache)
   const messaging = createMipMessagingAdmin(gateway, cache)
   const opportunities = createMipOpportunityAdmin(gateway, cache)
@@ -86,27 +82,11 @@ export function createMipAdminModule(
       refresh()
       return result
     },
-    exportAndOpen(input: Record<string, unknown>, onProgress?: (progress: ExportProgress) => void) {
-      return createAndOpenExport(gateway, input, {
-        onProgress,
-        pendingStore: options.pendingExportStore,
-      })
-    },
-    getPendingExportStatus(onProgress?: (progress: ExportProgress) => void) {
-      return getPendingAdminExportStatus(gateway, {
-        onProgress,
-        pendingStore: options.pendingExportStore,
-      })
-    },
-    resumePendingExport(onProgress?: (progress: ExportProgress) => void) {
-      return resumeAndOpenPendingAdminExport(gateway, {
-        onProgress,
-        pendingStore: options.pendingExportStore,
-      })
-    },
-    clearPendingExport(ticketId?: string) {
-      options.pendingExportStore?.clear(ticketId)
-    },
+    exportAndOpen: exports.createAndOpen,
+    getPendingExportStatus: exports.getPendingStatus,
+    resumePendingExport: exports.resumeAndOpen,
+    clearPendingExport: exports.clearPending,
+    exports,
     clearSensitive() {
       cache.invalidate('mip-admin:users')
       cache.invalidate('mip-admin:roster')

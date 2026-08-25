@@ -26,8 +26,8 @@ Page({
   async loadCapabilities(force = false) {
     try {
       const [session, event] = await Promise.all([
-        mipAdminModule.getSession(force),
-        mipAdminModule.getEvent(this.data.eventId, force),
+        mipAdminModule.governance.getSession(force),
+        mipAdminModule.events.get(this.data.eventId, force),
       ])
       const scope = { scopeType: 'EVENT' as const, scopeId: this.data.eventId, branchId: event.branchId }
       const canExport = hasScopedCapability(session.capabilities, 'exports.create', scope)
@@ -52,7 +52,7 @@ Page({
     }
     this.setData(pendingExportProgressPresentation('checking'))
     try {
-      const pending = await mipAdminModule.getPendingExportStatus()
+      const pending = await mipAdminModule.exports.getPendingStatus()
       this.setData(pendingExportStatusPresentation(pending))
     }
     catch (error) {
@@ -69,9 +69,9 @@ Page({
       ...pendingExportProgressPresentation('checking'),
     })
     try {
-      const result = await mipAdminModule.mutate(() => mipAdminModule.resumePendingExport((progress) => {
+      const result = await mipAdminModule.exports.resumeAndOpen((progress) => {
         this.setData(pendingExportProgressPresentation(progress))
-      }))
+      })
       if (!result) {
         this.setData(emptyPendingExportPresentation)
         return
@@ -103,7 +103,7 @@ Page({
     if (!result.confirm) {
       return
     }
-    mipAdminModule.clearPendingExport()
+    mipAdminModule.exports.clearPending()
     this.setData(emptyPendingExportPresentation)
   },
   async createExport(event: WechatMiniprogram.TouchEvent) {
@@ -115,12 +115,12 @@ Page({
     this.setData({ processing: exportType, message: '' })
     let failed = false
     try {
-      const result = await mipAdminModule.mutate(() => mipAdminModule.exportAndOpen({
+      const result = await mipAdminModule.exports.createAndOpen({
         exportType,
         eventId: this.data.eventId,
         includesPhone,
         filters: {},
-      }))
+      })
       this.setData({ lastTicketId: result.ticketId, expiresAt: `${result.rowCount} 条记录` })
       wx.showToast({ title: '导出文件已打开', icon: 'success' })
     }
