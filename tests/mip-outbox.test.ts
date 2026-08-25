@@ -40,7 +40,9 @@ describe('MIP durable outbox contract', () => {
     expect(deployment).toContain('MIP_OUTBOX_HMAC_SECRET: options.secrets.outboxHmac')
     expect(deployment).toContain('return { ...shared, ...outboxWakeEnvironment, ...extra[role] }')
     const admin = read('cloudfunctions/mip-admin-api/index.js')
-    expect(admin).toContain('\'mip.admin.messageCampaigns.publish\'')
+    const messagingOperations = read('cloudfunctions/mip-admin-api/domain/operations/messaging.js')
+    expect(messagingOperations).toMatch(/mip\.admin\.messageCampaigns\.publish[^\n]+wakesOutbox: true/)
+    expect(admin).toContain('outboxMutationActions.has(routeAction)')
     expect(admin).toContain('sourceFunctionName: \'mip-admin-api\'')
   })
 

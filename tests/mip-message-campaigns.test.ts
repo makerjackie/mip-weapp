@@ -53,11 +53,11 @@ describe('MIP message campaign admin contract', () => {
   })
 
   it('keeps message management separate from announcements and exposes complete page states', () => {
-    const handler = readFileSync('cloudfunctions/mip-admin-api/domain/handler.js', 'utf8')
+    const operations = readFileSync('cloudfunctions/mip-admin-api/domain/operations/messaging.js', 'utf8')
     const gateway = readFileSync('src/modules/mip-admin/cloudbase-gateway.ts', 'utf8')
     const types = readFileSync('src/modules/mip-admin/types.ts', 'utf8')
     const page = readFileSync('src/packages/admin/message-campaigns/index.wxml', 'utf8')
-    expect(handler).toContain('mip.admin.messageCampaigns.publish')
+    expect(operations).toContain('mip.admin.messageCampaigns.publish')
     expect(types).toContain('messages.manage')
     expect(gateway).toContain('mip.admin.messageCampaigns.snapshot')
     expect(page).toContain('消息管理')

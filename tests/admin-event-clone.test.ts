@@ -5,18 +5,25 @@ import { describe, expect, it } from 'vitest'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const read = (relativePath: string) => fs.readFileSync(path.join(root, relativePath), 'utf8')
+function readOptional(relativePath: string) {
+  const absolutePath = path.join(root, relativePath)
+  return fs.existsSync(absolutePath) ? fs.readFileSync(absolutePath, 'utf8') : ''
+}
 
 describe('admin event clone contract', () => {
   it('uses a scoped, versioned and idempotent server operation', () => {
-    const handler = read('cloudfunctions/mip-admin-api/domain/handler.js')
-    const service = read('cloudfunctions/mip-admin-api/domain/service.js')
+    const operations = read('cloudfunctions/mip-admin-api/domain/operations/events.js')
+    const eventDomain = [
+      read('cloudfunctions/mip-admin-api/domain/service.js'),
+      readOptional('cloudfunctions/mip-admin-api/domain/events.js'),
+    ].join('\n')
     const repository = read('cloudfunctions/mip-admin-api/domain/repository.js')
     const gateway = read('src/modules/mip-admin/cloudbase-gateway.ts')
 
-    expect(handler).toContain('\'mip.admin.events.clone\'')
-    expect(service).toContain('eventAuthorization(context, sourceEventId, CAPABILITIES.EVENTS_WRITE)')
-    expect(service).toContain('expectedVersion(input.expectedVersion)')
-    expect(service).toContain('normalizeIdempotencyKey(input.idempotencyKey)')
+    expect(operations).toContain('\'mip.admin.events.clone\'')
+    expect(eventDomain).toContain('eventAuthorization(context, sourceEventId, CAPABILITIES.EVENTS_WRITE)')
+    expect(eventDomain).toContain('expectedVersion(input.expectedVersion)')
+    expect(eventDomain).toContain('normalizeIdempotencyKey(input.idempotencyKey)')
     expect(gateway).toContain('call(\'mip.admin.events.clone\'')
     expect(repository).toContain('const operation = \'admin.events.clone\'')
     expect(repository).toContain('status: \'DRAFT\'')

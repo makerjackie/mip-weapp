@@ -64,10 +64,10 @@ describe('server full access contract', () => {
   })
 
   it('checks admin identity completion before role bindings', () => {
-    const source = read('cloudfunctions/mip-admin-api/domain/service.js')
+    const source = read('cloudfunctions/mip-admin-api/domain/access.js')
     const session = source.slice(
       source.indexOf('async function session'),
-      source.indexOf('function audit'),
+      source.indexOf('function publicBindings'),
     )
     expect(session.indexOf('assertFullAccessUser')).toBeGreaterThan(0)
     expect(session.indexOf('assertFullAccessUser')).toBeLessThan(

@@ -20,14 +20,15 @@ describe('phase9 final gap contracts', () => {
       registrationFlow.indexOf('if (claim.replay)'),
       registrationFlow.indexOf('const event = await tx.one'),
     )
-    const existingBranch = registrationFlow.slice(
-      registrationFlow.indexOf('if (existing && activeRegistrationStatuses.has(existing.status))'),
-      registrationFlow.indexOf('await participationAccessPolicy.requireAccess'),
-    )
+    const existingIndex = registrationFlow.indexOf('if (existing && activeRegistrationStatuses.has(existing.status))')
+    const accessIndex = registrationFlow.indexOf('await requireCurrentParticipationAccess')
+    const existingBranch = registrationFlow.slice(existingIndex, accessIndex)
 
     expect(registrationFlow).toContain('operation: \'event.register\'')
     expect(replayBranch).toContain('return claim.replay')
     expect(replayBranch).not.toMatch(/(?:INSERT|UPDATE|DELETE)\s+/)
+    expect(existingIndex).toBeGreaterThan(0)
+    expect(accessIndex).toBeGreaterThan(existingIndex)
     expect(existingBranch).toContain('registrationOutcome(existing, { paymentAvailable })')
     expect(existingBranch).toContain('completeIdempotency')
     expect(existingBranch).not.toContain('ticketHash')
