@@ -5,7 +5,7 @@
   <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel px-5 py-6"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法编辑公告" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
   <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有公告管理权限" description="当前账号不能维护公告。" /></view>
-  <view wx:else class="mt-5 flex flex-col gap-4">
+  <view wx:else class="mip-admin-section-grid mt-5 flex flex-col gap-4">
     <view wx:if="{{announcementId}}" class="rounded-[16rpx] bg-panel px-4 py-4"><view class="flex items-center justify-between"><text class="text-[length:24rpx]">公告状态</text><text class="text-[length:23rpx] text-muted">{{status === 'DRAFT' ? '草稿' : status === 'PUBLISHED' ? '已发布' : '已撤回'}}</text></view><view class="mt-3 flex items-center justify-between"><text class="text-[length:24rpx]">内容检查</text><text class="text-[length:23rpx] text-muted">{{safetyText}}</text></view><view wx:if="{{!editable}}" class="mt-3 text-[length:22rpx] text-muted">已发布公告需要先撤回再编辑。</view></view>
 
     <view class="rounded-[16rpx] bg-panel px-4 py-4">
@@ -16,7 +16,7 @@
 
     <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:24rpx] font-semibold">标题</view><view class="mt-3"><t-input value="{{draft.title}}" maxlength="100" placeholder="填写公告标题" disabled="{{!editable}}" data-field="title" bind:change="updateField" /></view></view>
     <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:24rpx] font-semibold">摘要</view><textarea class="mt-3 box-border h-[160rpx] w-full rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:24rpx]" value="{{draft.summary}}" maxlength="240" placeholder="填写列表摘要" disabled="{{!editable}}" data-field="summary" bind:input="updateField" /></view>
-    <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:24rpx] font-semibold">正文</view><textarea class="mt-3 box-border h-[440rpx] w-full rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:24rpx] leading-[1.7]" value="{{draft.body}}" maxlength="5000" placeholder="填写公告正文" disabled="{{!editable}}" data-field="body" bind:input="updateField" /></view>
+    <view class="mip-admin-span-wide rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:24rpx] font-semibold">正文</view><textarea class="mt-3 box-border h-[440rpx] w-full rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:24rpx] leading-[1.7]" value="{{draft.body}}" maxlength="5000" placeholder="填写公告正文" disabled="{{!editable}}" data-field="body" bind:input="updateField" /></view>
 
     <view class="rounded-[16rpx] bg-panel px-4 py-4">
       <view class="text-[length:26rpx] font-semibold">关联内容</view>
@@ -31,7 +31,7 @@
       <view wx:if="{{visibleUntilEnabled}}" class="mt-3 grid grid-cols-2 gap-2"><picker mode="date" value="{{visibleUntilDate}}" disabled="{{!editable}}" data-field="visibleUntilDate" bindchange="changeDateTimePart"><view class="rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:23rpx]"><view class="text-muted">结束日期</view><view class="mt-1">{{visibleUntilDate}}</view></view></picker><picker mode="time" value="{{visibleUntilTime}}" disabled="{{!editable}}" data-field="visibleUntilTime" bindchange="changeDateTimePart"><view class="rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:23rpx]"><view class="text-muted">结束时间</view><view class="mt-1">{{visibleUntilTime}}</view></view></picker></view>
     </view>
 
-    <t-button wx:if="{{editable}}" block theme="primary" loading="{{saving}}" bind:tap="save">保存草稿</t-button>
+    <view wx:if="{{editable}}" class="mip-admin-span-wide"><t-button block theme="primary" loading="{{saving}}" bind:tap="save">保存草稿</t-button></view>
   </view>
   <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
   <app-page-exit />

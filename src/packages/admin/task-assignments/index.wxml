@@ -1,16 +1,16 @@
 <view id="admin-task-assignments-page" class="mip-admin-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view class="text-[length:38rpx] font-bold">任务派发</view>
   <view class="mt-2 text-[length:23rpx] text-muted">{{taskName || '指定成员任务'}}</view>
-  <view class="mt-5 rounded-[16rpx] bg-panel px-4 py-4">
-    <input id="task-assignment-search" class="h-[80rpx] rounded-[12rpx] bg-panel-raised px-3 text-[length:25rpx] text-ink" value="{{query}}" placeholder="搜索昵称或分会" placeholder-class="text-muted" bindinput="updateQuery" confirm-type="search" bindconfirm="searchMembers" />
-    <view class="mt-3 flex items-center justify-between gap-3"><t-button size="small" variant="outline" bind:tap="searchMembers">搜索</t-button><t-button id="task-assignment-selection-toggle" size="small" variant="text" bind:tap="toggleSelectedOnly">{{selectedOnly ? '显示全部' : '仅看已选'}}</t-button></view>
+  <view class="mip-admin-filter-grid mt-5 grid gap-3 rounded-[16rpx] bg-panel px-4 py-4">
+    <view class="mip-admin-filter-wide"><input id="task-assignment-search" class="h-[80rpx] w-full rounded-[12rpx] bg-panel-raised px-3 text-[length:25rpx] text-ink" value="{{query}}" placeholder="搜索昵称或分会" placeholder-class="text-muted" bindinput="updateQuery" confirm-type="search" bindconfirm="searchMembers" /></view>
+    <view class="mip-admin-filter-wide flex items-center justify-between gap-3"><t-button size="small" variant="outline" bind:tap="searchMembers">搜索</t-button><t-button id="task-assignment-selection-toggle" size="small" variant="text" bind:tap="toggleSelectedOnly">{{selectedOnly ? '显示全部' : '仅看已选'}}</t-button></view>
   </view>
   <view wx:if="{{selectedRefs.length}}" class="mt-4 rounded-[16rpx] border border-brand bg-panel px-4 py-4"><view class="text-[length:24rpx]">已选择 {{selectedRefs.length}} 人</view><view class="mt-3 flex flex-wrap gap-2"><t-button size="small" theme="primary" loading="{{processing}}" data-action="assign" bind:tap="changeAssignments">批量派发</t-button><t-button size="small" variant="outline" loading="{{processing}}" data-action="revoke" bind:tap="changeAssignments">批量撤销</t-button><t-button size="small" variant="text" bind:tap="clearSelection">取消选择</t-button></view></view>
   <view wx:if="{{state === 'loading'}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-5"><app-empty-state title="暂时无法加载成员" description="{{message}}" action-text="重新加载" bind:action="loadPage" /></view>
   <view wx:elif="{{state === 'forbidden'}}" class="mt-5"><app-empty-state title="没有任务派发权限" description="当前账号不能派发任务。" /></view>
   <view wx:elif="{{state === 'empty'}}" class="mt-5"><app-empty-state title="暂无成员" description="当前筛选条件下没有可派发成员。" /></view>
-  <view wx:else class="mt-5 flex flex-col gap-3">
+  <view wx:else class="mip-admin-card-list mt-5 flex flex-col gap-3">
     <block wx:for="{{members}}" wx:key="memberRef"><view wx:if="{{!selectedOnly || item.selected}}" class="flex min-h-[104rpx] items-center gap-3 rounded-[16rpx] border px-4 py-3" style="{{item.cardStyle}}" data-ref="{{item.memberRef}}" bind:tap="toggleMember"><view class="min-w-0 flex-1"><view class="truncate text-[length:27rpx] font-semibold">{{item.nickname}}</view><view class="mt-1 text-[length:22rpx] text-muted">{{item.branchName}} · {{item.statusText}}</view></view><t-icon name="{{item.selected ? 'check-circle-filled' : 'circle'}}" size="34rpx" color="{{item.selected ? 'var(--color-brand)' : 'var(--color-muted)'}}" /></view></block>
   </view>
   <view wx:if="{{nextCursor && !selectedOnly}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>

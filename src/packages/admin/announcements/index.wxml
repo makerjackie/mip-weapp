@@ -16,7 +16,7 @@
   <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载公告" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
   <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有公告管理权限" description="当前账号不能维护公告。" /></view>
   <view wx:elif="{{state === 'empty'}}" class="mt-6"><app-empty-state title="暂无公告" description="新公告会先保存为草稿。" action-text="新建公告" bind:action="createItem" /></view>
-  <view wx:else class="mt-5 flex flex-col gap-3">
+  <view wx:else class="mip-admin-card-list mt-5 flex flex-col gap-3">
     <view wx:for="{{items}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
       <view data-id="{{item.id}}" bind:tap="editItem">
         <view class="flex items-start gap-2"><view class="min-w-0 flex-1 text-[length:28rpx] font-semibold">{{item.title}}</view><t-tag size="small" variant="outline">{{item.statusText}}</t-tag></view>

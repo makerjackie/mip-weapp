@@ -14,7 +14,7 @@
     <view wx:if="{{editorKind}}" class="mt-4 rounded-[16rpx] border border-brand bg-panel px-4 py-4">
       <view class="flex items-center justify-between"><view class="text-[length:28rpx] font-semibold">{{editorId ? '编辑' : '新增'}}{{editorKind === 'SOURCE' ? '信息源' : editorKind === 'CATEGORY' ? '分类' : '内容'}}</view><view class="min-h-[64rpx] px-2 py-2 text-[length:22rpx] text-muted" bind:tap="closeEditor">关闭</view></view>
 
-      <view wx:if="{{editorKind === 'SOURCE'}}" class="mt-3 flex flex-col gap-2">
+      <view wx:if="{{editorKind === 'SOURCE'}}" class="mip-admin-section-grid mt-3 flex flex-col gap-2">
         <t-input value="{{editorKey}}" label="信息源标识" placeholder="稳定英文标识" data-field="editorKey" bind:change="updateField" />
         <t-input value="{{editorName}}" label="名称" data-field="editorName" bind:change="updateField" />
         <picker class="box-border min-h-[88rpx] rounded-[12rpx] bg-panel-raised px-3 py-3" range="{{sourceTypeOptions}}" range-key="label" value="{{sourceTypeIndex}}" bindchange="chooseSourceType"><view class="text-[length:22rpx] text-muted">来源类型</view><view class="mt-1 text-[length:25rpx]">{{sourceTypeOptions[sourceTypeIndex].label}}</view></picker>
@@ -22,28 +22,28 @@
         <view class="flex items-center justify-between rounded-[12rpx] bg-panel-raised px-3 py-3"><text class="text-[length:24rpx]">启用信息源</text><t-switch value="{{editorStatus === 'ACTIVE'}}" bind:change="toggleEditorActive" /></view>
       </view>
 
-      <view wx:elif="{{editorKind === 'CATEGORY'}}" class="mt-3 flex flex-col gap-2">
+      <view wx:elif="{{editorKind === 'CATEGORY'}}" class="mip-admin-section-grid mt-3 flex flex-col gap-2">
         <t-input value="{{editorKey}}" label="分类标识" placeholder="稳定英文标识" data-field="editorKey" bind:change="updateField" />
         <t-input value="{{editorName}}" label="分类名称" data-field="editorName" bind:change="updateField" />
-        <t-textarea value="{{editorSummary}}" label="分类说明" maxlength="300" data-field="editorSummary" bind:change="updateField" />
+        <view class="mip-admin-span-wide"><t-textarea value="{{editorSummary}}" label="分类说明" maxlength="300" data-field="editorSummary" bind:change="updateField" /></view>
         <t-input value="{{editorSortOrder}}" type="number" label="显示顺序" data-field="editorSortOrder" bind:change="updateField" />
         <view class="flex items-center justify-between rounded-[12rpx] bg-panel-raised px-3 py-3"><text class="text-[length:24rpx]">启用分类</text><t-switch value="{{editorStatus === 'ACTIVE'}}" bind:change="toggleEditorActive" /></view>
       </view>
 
-      <view wx:else class="mt-3 flex flex-col gap-2">
+      <view wx:else class="mip-admin-section-grid mt-3 flex flex-col gap-2">
         <picker class="box-border min-h-[88rpx] rounded-[12rpx] bg-panel-raised px-3 py-3" range="{{categories}}" range-key="name" value="{{editorCategoryIndex}}" bindchange="chooseEditorCategory"><view class="text-[length:22rpx] text-muted">内容分类</view><view class="mt-1 text-[length:25rpx]">{{categories[editorCategoryIndex].name || '请先新增分类'}}</view></picker>
         <picker class="box-border min-h-[88rpx] rounded-[12rpx] bg-panel-raised px-3 py-3" range="{{sourcePickerOptions}}" range-key="name" value="{{editorSourceIndex}}" bindchange="chooseEditorSource"><view class="text-[length:22rpx] text-muted">信息源</view><view class="mt-1 text-[length:25rpx]">{{sourcePickerOptions[editorSourceIndex].name}}</view></picker>
         <picker class="box-border min-h-[88rpx] rounded-[12rpx] bg-panel-raised px-3 py-3" range="{{contentTypeOptions}}" range-key="label" value="{{contentTypeIndex}}" bindchange="chooseContentType"><view class="text-[length:22rpx] text-muted">内容类型</view><view class="mt-1 text-[length:25rpx]">{{contentTypeOptions[contentTypeIndex].label}}</view></picker>
         <picker class="box-border min-h-[88rpx] rounded-[12rpx] bg-panel-raised px-3 py-3" range="{{accessTypeOptions}}" range-key="label" value="{{accessTypeIndex}}" bindchange="chooseAccessType"><view class="text-[length:22rpx] text-muted">访问方式</view><view class="mt-1 text-[length:25rpx]">{{accessTypeOptions[accessTypeIndex].label}}</view></picker>
-        <t-input value="{{editorTitle}}" label="标题" data-field="editorTitle" bind:change="updateField" />
-        <t-textarea value="{{editorSummary}}" label="摘要" maxlength="500" data-field="editorSummary" bind:change="updateField" />
-        <t-textarea wx:if="{{contentTypeIndex === 0 || contentTypeIndex === 1 || contentTypeIndex === 5}}" value="{{editorBody}}" label="正文" maxlength="100000" data-field="editorBody" bind:change="updateField" />
-        <t-input wx:if="{{contentTypeIndex === 2 || contentTypeIndex === 3}}" value="{{editorExternalUrl}}" label="HTTPS 内容地址" placeholder="https://" data-field="editorExternalUrl" bind:change="updateField" />
+        <view class="mip-admin-span-wide"><t-input value="{{editorTitle}}" label="标题" data-field="editorTitle" bind:change="updateField" /></view>
+        <view class="mip-admin-span-wide"><t-textarea value="{{editorSummary}}" label="摘要" maxlength="500" data-field="editorSummary" bind:change="updateField" /></view>
+        <view wx:if="{{contentTypeIndex === 0 || contentTypeIndex === 1 || contentTypeIndex === 5}}" class="mip-admin-span-wide"><t-textarea value="{{editorBody}}" label="正文" maxlength="100000" data-field="editorBody" bind:change="updateField" /></view>
+        <view wx:if="{{contentTypeIndex === 2 || contentTypeIndex === 3}}" class="mip-admin-span-wide"><t-input value="{{editorExternalUrl}}" label="HTTPS 内容地址" placeholder="https://" data-field="editorExternalUrl" bind:change="updateField" /></view>
         <block wx:if="{{contentTypeIndex === 4}}"><t-input value="{{editorFinderUserName}}" label="视频号原始 ID" data-field="editorFinderUserName" bind:change="updateField" /><t-input value="{{editorFeedId}}" label="视频 feedId" data-field="editorFeedId" bind:change="updateField" /></block>
         <t-input value="{{editorAuthorName}}" label="作者或专家" placeholder="选填" data-field="editorAuthorName" bind:change="updateField" />
         <view class="flex items-center justify-between rounded-[12rpx] bg-panel-raised px-3 py-3"><text class="text-[length:24rpx]">开启评论</text><t-switch value="{{editorCommentsEnabled}}" bind:change="toggleComments" /></view>
         <view class="flex items-center justify-between rounded-[12rpx] bg-panel-raised px-3 py-3"><text class="text-[length:24rpx]">评论先审核后发布</text><t-switch value="{{editorReviewMode}}" bind:change="toggleReviewMode" /></view>
-        <view wx:if="{{accessTypeIndex === 2}}" class="mt-2 rounded-[12rpx] border border-line px-3 py-3">
+        <view wx:if="{{accessTypeIndex === 2}}" class="mip-admin-span-wide mt-2 rounded-[12rpx] border border-line px-3 py-3">
           <view class="text-[length:24rpx] font-semibold">单内容付费目录</view>
           <view class="mt-2 flex flex-col gap-2"><t-input value="{{editorPriceYuan}}" type="digit" label="价格（元）" placeholder="留空使用测试默认价" data-field="editorPriceYuan" bind:change="updateField" /><t-input value="{{editorUnlockDays}}" type="number" label="有效天数" placeholder="留空为永久" data-field="editorUnlockDays" bind:change="updateField" /><t-input value="{{editorRefundWindowHours}}" type="number" label="未访问退款时限（小时）" data-field="editorRefundWindowHours" bind:change="updateField" /></view>
           <view class="mt-2 flex items-center justify-between"><text class="text-[length:23rpx]">目录启用</text><t-switch value="{{editorProductActive}}" bind:change="toggleProductActive" /></view>
@@ -56,7 +56,7 @@
     <view wx:if="{{section === 'RUNS' && categories.length}}" class="mt-4 rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:24rpx] font-semibold">热点归档分类</view><picker class="mt-3 rounded-[12rpx] bg-panel-raised px-3 py-3" range="{{categories}}" range-key="name" value="{{ingestionCategoryIndex}}" bindchange="chooseIngestionCategory"><view class="text-[length:24rpx]">{{categories[ingestionCategoryIndex].name}}</view></picker><view class="mt-2 text-[length:21rpx] text-muted">抓取仅由运营人员手动触发，内容进入待审核状态。</view></view>
 
     <view wx:if="{{!items.length && !editorKind}}" class="mt-5"><app-empty-state title="暂无记录" description="当前栏目没有可显示的记录。" /></view>
-    <view wx:else class="mt-4 flex flex-col gap-3">
+    <view wx:else class="mip-admin-card-list mt-4 flex flex-col gap-3">
       <view wx:for="{{items}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
         <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1"><view class="text-[length:27rpx] font-semibold">{{item.title || item.name || item.contentTitle || item.sourceName || '处理记录'}}</view><view wx:if="{{section === 'COMMENTS'}}" class="mt-2 whitespace-pre-wrap text-[length:24rpx]">{{item.body}}</view><view wx:if="{{section === 'REPORTS' && item.description}}" class="mt-2 text-[length:23rpx]">{{item.description}}</view><view class="mt-2 text-[length:21rpx] text-muted">{{item.detailLabel}}</view></view><t-tag variant="outline">{{item.statusLabel}}</t-tag></view>
         <view wx:if="{{item.summary && section === 'CONTENTS'}}" class="mt-2 line-clamp-2 text-[length:22rpx] text-muted">{{item.summary}}</view>
@@ -76,7 +76,7 @@
       </view>
     </view>
 
-    <view wx:if="{{section === 'RUNS' && sources.length}}" class="mt-5"><view class="mb-3 text-[length:27rpx] font-semibold">手动抓取</view><view class="flex flex-col gap-3"><view wx:for="{{sources}}" wx:key="id" class="flex items-center justify-between gap-3 rounded-[16rpx] bg-panel px-4 py-4"><view><view class="text-[length:25rpx] font-semibold">{{item.name}}</view><view class="mt-1 text-[length:21rpx] text-muted">{{item.sourceType}}</view></view><t-button size="small" theme="primary" disabled="{{item.sourceType === 'MANUAL' || item.status !== 'ACTIVE' || processing}}" data-id="{{item.id}}" bind:tap="runIngestion">抓取</t-button></view></view></view>
+    <view wx:if="{{section === 'RUNS' && sources.length}}" class="mt-5"><view class="mb-3 text-[length:27rpx] font-semibold">手动抓取</view><view class="mip-admin-card-list flex flex-col gap-3"><view wx:for="{{sources}}" wx:key="id" class="flex items-center justify-between gap-3 rounded-[16rpx] bg-panel px-4 py-4"><view><view class="text-[length:25rpx] font-semibold">{{item.name}}</view><view class="mt-1 text-[length:21rpx] text-muted">{{item.sourceType}}</view></view><t-button size="small" theme="primary" disabled="{{item.sourceType === 'MANUAL' || item.status !== 'ACTIVE' || processing}}" data-id="{{item.id}}" bind:tap="runIngestion">抓取</t-button></view></view></view>
     <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:22rpx] text-danger">{{message}}</view>
   </block>
   <app-page-exit />
