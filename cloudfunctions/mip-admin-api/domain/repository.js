@@ -3121,6 +3121,7 @@ function createAdminRepository(database, options = {}) {
       version: Number(row.version),
       providerTransactionIdMasked: row.provider_transaction_id ? maskIdentifier(row.provider_transaction_id) : null,
       branchId: row.branch_id || null,
+      demoOrder: json(row.product_snapshot_json, {}).demo === true,
       ...(row.order_type === 'CONTENT' ? { contentRefundEligible: contentRefundEligible(row) } : {}),
     }))
     return pageRows(items, pageLimit, row => ({ createdAt: row.createdAt, id: row.id }))
@@ -3210,6 +3211,7 @@ function createAdminRepository(database, options = {}) {
         [input.appId, input.orderId],
       )
       if (!order) throw codeError('NOT_FOUND')
+      if (json(order.product_snapshot_json, {}).demo === true) throw codeError('DEMO_ORDER')
       if (order.order_type !== orderReference.order_type
         || order.resource_id !== orderReference.resource_id) throw codeError('CONFLICT')
       let currentScope = { scopeType: 'PLATFORM', scopeId: null, branchId: null }

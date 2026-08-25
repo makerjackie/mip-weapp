@@ -202,7 +202,7 @@ describe('admin repository persistence contracts', () => {
       amountCents: 19900, refundedAmountCents: 9900, currency: 'CNY',
       status: 'PARTIALLY_REFUNDED', refundStatus: 'SUCCEEDED', refundId: 'refund-a',
       paidAt: '2026-08-20T02:00:00.000Z', createdAt: '2026-08-19T02:00:00.000Z',
-      version: 3, providerTransactionIdMasked: 'WX-T…0001', branchId: 'branch-a',
+      version: 3, providerTransactionIdMasked: 'WX-T…0001', branchId: 'branch-a', demoOrder: false,
     })
     assert.equal(Object.hasOwn(page.items[0], 'merchantOrderNo'), false)
   })
@@ -457,6 +457,30 @@ describe('admin repository persistence contracts', () => {
     assert.ok(calls.some(call => call.sql.includes("status = 'CANCELLATION_PENDING'")
       && call.sql.includes("status = 'REGISTERED'")))
     assert.ok(calls.some(call => call.params?.includes('event.registration_refund_requested')))
+  })
+
+  it('rejects demo membership refunds before writing financial facts', async () => {
+    const writes = []
+    const repository = createAdminRepository(transactionDatabase({
+      async one(sql) {
+        if (sql.includes('FROM mip_orders')) {
+          return {
+            id: 'order-demo', user_id: 'demo-user', order_type: 'MEMBERSHIP', resource_id: null,
+            amount_cents: 19900, status: 'PAID', version: 1,
+            product_snapshot_json: JSON.stringify({ demo: true }),
+          }
+        }
+        return null
+      },
+      async query(sql) { writes.push(sql); return { affectedRows: 1 } },
+    }))
+    await assert.rejects(repository.submitRefund({
+      appId: 'wx-app', actorUserId: 'admin-user', orderId: 'order-demo',
+      reason: '测试退款', idempotencyKey: 'demo-refund-request',
+      authorizedScope: { scopeType: 'PLATFORM', scopeId: null, branchId: null },
+      audit: () => audit(),
+    }), /DEMO_ORDER/)
+    assert.equal(writes.length, 0)
   })
 
   it('fails a forced event refund closed while an active check-in exists', async () => {

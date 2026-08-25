@@ -2373,7 +2373,7 @@ function createAdminService({
       ...page,
       summary,
       items: page.items.map((item) => {
-        const { branchId, contentRefundEligible, ...safe } = item
+        const { branchId, contentRefundEligible, demoOrder, ...safe } = item
         const orderScope = item.orderType === 'EVENT'
           ? { scopeType: 'EVENT', scopeId: item.resourceId, branchId: branchId || null }
           : { scopeType: 'PLATFORM', scopeId: null, branchId: null }
@@ -2385,6 +2385,7 @@ function createAdminService({
         catch {}
         const availableRefundActions = []
         if (canRefund
+          && !demoOrder
           && ['PAID', 'PARTIALLY_REFUNDED'].includes(item.status)
           && (item.orderType !== 'CONTENT' || contentRefundEligible)
           && Number(item.refundedAmountCents) < Number(item.amountCents)) {
