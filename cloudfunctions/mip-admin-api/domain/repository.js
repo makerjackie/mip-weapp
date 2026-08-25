@@ -4,6 +4,7 @@ const { createHash, randomBytes, randomUUID } = require('node:crypto')
 const { createAnnouncementRepository } = require('./announcements')
 const { createAdminPrdExtensions } = require('./admin-prd-extensions')
 const { createBadgeAdminRepository } = require('./badges')
+const { createEventInsightsRepository } = require('./event-insights')
 const { createFullAccessPolicy } = require('./full-access')
 const { assertFixedGrowthRuleUpdate } = require('./growth-rule-catalog')
 const { createMessageCampaignRepository } = require('./message-campaigns')
@@ -368,6 +369,7 @@ function createAdminRepository(database, options = {}) {
     now,
   })
   const badgeAdminRepository = createBadgeAdminRepository(database, { createId: id })
+  const eventInsightsRepository = createEventInsightsRepository(database)
   const opportunityArchiveRepository = createOpportunityArchiveRepository(database, {
     assertScope,
     lockMutation,
@@ -1523,7 +1525,8 @@ function createAdminRepository(database, options = {}) {
         e.status, e.content_safety_status, e.starts_at, e.ends_at, e.city_name,
         e.access_type, e.registration_policy, e.album_enabled, e.album_submission_policy,
         e.capacity, e.version,
-        COUNT(r.id) AS registration_count,
+        SUM(CASE WHEN r.status IN ('REGISTERED', 'CANCELLATION_PENDING', 'ATTENDED')
+          THEN 1 ELSE 0 END) AS registration_count,
         SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) AS attended_count
        FROM mip_events e
        LEFT JOIN mip_city_branches b ON b.app_id = e.app_id AND b.id = e.branch_id
@@ -3508,6 +3511,7 @@ function createAdminRepository(database, options = {}) {
     ...announcementRepository,
     ...adminPrdExtensions,
     ...badgeAdminRepository,
+    ...eventInsightsRepository,
     ...messageCampaignRepository,
     ...messageTemplateRepository,
     ...opportunityArchiveRepository,

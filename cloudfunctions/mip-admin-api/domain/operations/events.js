@@ -6,6 +6,7 @@ module.exports = defineManifest('EVENTS', [
   serviceOperation('mip.admin.events.list', 'QUERY', 'listEvents'),
   serviceOperation('mip.admin.events.policy.get', 'QUERY', 'getEventPolicy'),
   serviceOperation('mip.admin.events.get', 'QUERY', 'getEvent'),
+  serviceOperation('mip.admin.events.insights.get', 'QUERY', 'getEventInsights'),
   serviceOperation('mip.admin.events.album.list', 'QUERY', 'listEventAlbumPhotos'),
   serviceOperation('mip.admin.events.roster', 'QUERY', 'listRoster'),
   serviceOperation('mip.admin.events.rosterAll', 'QUERY', 'listRosterAll'),

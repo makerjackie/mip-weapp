@@ -1,5 +1,5 @@
 import type { EventId } from '../../../modules/mip'
-import type { AdminEventDetail } from '../../../modules/mip-admin'
+import type { AdminEventDetail, AdminEventInsights } from '../../../modules/mip-admin'
 import type { CheckInCredentialMode } from '../../../modules/mip-events'
 import type { AdminPageState } from '../shared/page-state'
 import { hasScopedCapability, MipAdminError, mipAdminModule } from '../../../modules/mip-admin'
@@ -65,11 +65,39 @@ function cloneRequestKey(eventId: string) {
   return `event-clone:${eventId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`
 }
 
+function percentageText(value: number | null) {
+  if (value === null) {
+    return '—'
+  }
+  return `${(value / 100).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1')}%`
+}
+
+function ratingText(value: number | null) {
+  if (value === null) {
+    return '—'
+  }
+  return value.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1')
+}
+
+function moneyText(value: number) {
+  return `¥${(value / 100).toFixed(2)}`
+}
+
 Page({
   data: {
     state: 'loading' as AdminPageState,
     eventId: '',
     event: null as AdminEventDetail | null,
+    insightsState: 'loading' as AdminPageState,
+    insights: null as AdminEventInsights | null,
+    insightsCalculatedText: '',
+    checkInRateText: '—',
+    feedbackRateText: '—',
+    averageRatingText: '—',
+    grossAmountText: '—',
+    refundedAmountText: '—',
+    netAmountText: '—',
+    insightsMessage: '',
     canEdit: false,
     canClone: false,
     canRoster: false,
@@ -107,6 +135,7 @@ Page({
     }
     if (this.data.eventId) {
       void this.loadEvent()
+      void this.loadInsights(true)
     }
   },
   onHide() {
@@ -148,6 +177,40 @@ Page({
     catch (error) {
       this.setData(adminLoadFailure(error, { hasContent, fallbackMessage: '活动信息加载失败' }))
     }
+  },
+
+  async loadInsights(force = true) {
+    const hasContent = Boolean(this.data.insights)
+    if (!hasContent) {
+      this.setData({ insightsState: 'loading', insightsMessage: '' })
+    }
+    try {
+      const insights = await mipAdminModule.events.getInsights(this.data.eventId, force)
+      const feedback = insights.feedback.access === 'GRANTED' ? insights.feedback : null
+      const financials = insights.financials.access === 'GRANTED' ? insights.financials : null
+      this.setData({
+        insightsState: 'ready',
+        insights,
+        insightsCalculatedText: localDateTime(insights.calculatedAt),
+        checkInRateText: percentageText(insights.participation.checkInRateBasisPoints),
+        feedbackRateText: percentageText(feedback?.submissionRateBasisPoints ?? null),
+        averageRatingText: ratingText(feedback?.averageRating ?? null),
+        grossAmountText: financials ? moneyText(financials.grossAmountCents) : '—',
+        refundedAmountText: financials ? moneyText(financials.refundedAmountCents) : '—',
+        netAmountText: financials ? moneyText(financials.netAmountCents) : '—',
+        insightsMessage: '',
+      })
+    }
+    catch (error) {
+      this.setData({
+        insightsState: 'error',
+        insightsMessage: error instanceof Error ? error.message : '活动数据加载失败',
+      })
+    }
+  },
+
+  retryInsights() {
+    void this.loadInsights(true)
   },
 
   clearPosterCountdown() {
@@ -467,7 +530,10 @@ Page({
         expectedVersion: this.data.event?.version,
       })
       wx.showToast({ title: '状态已更新', icon: 'success' })
-      await this.loadEvent(true)
+      await Promise.all([
+        this.loadEvent(true),
+        this.loadInsights(true),
+      ])
     }
     catch (error) {
       const failure = adminLoadFailure(error, { hasContent: true, fallbackMessage: '状态更新失败' })
@@ -503,7 +569,10 @@ Page({
         expectedVersion: this.data.event?.version,
       })
       wx.showToast({ title: '活动已取消', icon: 'success' })
-      await this.loadEvent(true)
+      await Promise.all([
+        this.loadEvent(true),
+        this.loadInsights(true),
+      ])
     }
     catch (error) {
       const failure = adminLoadFailure(error, { hasContent: true, fallbackMessage: '活动取消失败' })

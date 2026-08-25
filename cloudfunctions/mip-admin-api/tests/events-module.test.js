@@ -109,6 +109,7 @@ describe('admin events deep module', () => {
       'checkIn',
       'cloneEvent',
       'getEvent',
+      'getEventInsights',
       'getEventPolicy',
       'listEventAlbumPhotos',
       'listEvents',

@@ -16,6 +16,10 @@ export interface MipEventsAdmin {
     eventId: Parameters<MipAdminGateway['getEvent']>[0],
     force?: boolean,
   ) => ReturnType<MipAdminGateway['getEvent']>
+  getInsights: (
+    eventId: Parameters<MipAdminGateway['getEventInsights']>[0],
+    force?: boolean,
+  ) => ReturnType<MipAdminGateway['getEventInsights']>
   getPolicy: (force?: boolean) => ReturnType<MipAdminGateway['getEventPolicy']>
   listRoster: (
     input: AdminRosterListInput,
@@ -45,6 +49,7 @@ export interface MipEventsAdmin {
 const cacheKeys = {
   lists: 'mip-admin:events',
   detail: 'mip-admin:event',
+  insights: 'mip-admin:event-insights',
   policy: 'mip-admin:event-policy',
   roster: 'mip-admin:roster',
   rosterAll: 'mip-admin:roster-all',
@@ -64,6 +69,7 @@ export function createMipEventsAdmin(
     cache.invalidate(cacheKeys.lists)
     if (eventId) {
       cache.invalidate(`${cacheKeys.detail}:${eventId}`)
+      cache.invalidate(`${cacheKeys.insights}:${eventId}`)
     }
   }
   const invalidateRoster = (eventId: string) => {
@@ -94,6 +100,11 @@ export function createMipEventsAdmin(
     get: (eventId, force = false) => cache.query(
       `${cacheKeys.detail}:${eventId}`,
       () => gateway.getEvent(eventId),
+      { force },
+    ),
+    getInsights: (eventId, force = false) => cache.query(
+      `${cacheKeys.insights}:${eventId}`,
+      () => gateway.getEventInsights(eventId),
       { force },
     ),
     getPolicy: (force = false) => cache.query(cacheKeys.policy, gateway.getEventPolicy, { force }),

@@ -112,6 +112,16 @@ function createAdminEvents({
     return event
   }
 
+  async function getEventInsights(caller, input = {}) {
+    const context = await access.session(caller)
+    const eventId = requiredId(input.eventId, '活动')
+    return repository.getEventInsights({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      eventId,
+    })
+  }
+
   async function listEventAlbumPhotos(caller, input = {}) {
     const context = await access.session(caller)
     const eventId = requiredId(input.eventId, '活动')
@@ -504,6 +514,7 @@ function createAdminEvents({
     checkIn,
     cloneEvent,
     getEvent,
+    getEventInsights,
     getEventPolicy,
     listEventAlbumPhotos,
     listEvents,

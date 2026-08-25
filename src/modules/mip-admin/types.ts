@@ -275,6 +275,55 @@ export interface AdminEventPolicy {
   version: number
 }
 
+export interface AdminEventInsights {
+  eventId: string
+  calculatedAt: string
+  participation: {
+    effectiveRegistrationCount: number
+    checkedInCount: number
+    checkInRateBasisPoints: number | null
+    pendingReviewCount: number
+    waitlistedCount: number
+  }
+  invitations: {
+    attributedRegistrationCount: number
+    distinctInviterCount: number
+  }
+  composition: {
+    playerCount: number
+    guestCount: number
+  }
+  hearts: {
+    voterCount: number
+    activeVoteCount: number
+    mutualMatchCount: number
+  }
+  feedback: {
+    access: 'RESTRICTED'
+  } | {
+    access: 'GRANTED'
+    submissionCount: number
+    eligibleCheckInCount: number
+    submissionRateBasisPoints: number | null
+    ratedCount: number
+    averageRating: number | null
+  }
+  financials: {
+    access: 'RESTRICTED'
+  } | {
+    access: 'GRANTED'
+    currency: 'CNY'
+    paidOrderCount: number
+    grossAmountCents: number
+    refundedAmountCents: number
+    netAmountCents: number
+  }
+  traffic: {
+    views: { availability: 'NOT_TRACKED', count: null }
+    shares: { availability: 'NOT_TRACKED', count: null }
+  }
+}
+
 export interface AdminEventReminderInput {
   eventId: string
   expectedVersion: number
@@ -811,6 +860,7 @@ export interface MipAdminGateway {
   getEventPolicy: () => Promise<AdminEventPolicy>
   saveEventPolicy: (input: AdminEventPolicy) => Promise<AdminEventPolicy>
   getEvent: (eventId: string) => Promise<AdminEventDetail>
+  getEventInsights: (eventId: string) => Promise<AdminEventInsights>
   saveEvent: (input: Record<string, unknown>) => Promise<{ id: string, version: number, status: string }>
   cloneEvent: (input: AdminEventCloneInput) => Promise<AdminEventCloneResult>
   changeEventStatus: (input: Record<string, unknown>) => Promise<{ id: string, version: number, status: string }>

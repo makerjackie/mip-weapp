@@ -42,6 +42,7 @@ const expectedOperations = Object.freeze({
   'mip.admin.events.list': ['EVENTS', 'QUERY', 'listEvents'],
   'mip.admin.events.policy.get': ['EVENTS', 'QUERY', 'getEventPolicy'],
   'mip.admin.events.get': ['EVENTS', 'QUERY', 'getEvent'],
+  'mip.admin.events.insights.get': ['EVENTS', 'QUERY', 'getEventInsights'],
   'mip.admin.events.album.list': ['EVENTS', 'QUERY', 'listEventAlbumPhotos'],
   'mip.admin.events.roster': ['EVENTS', 'QUERY', 'listRoster'],
   'mip.admin.events.rosterAll': ['EVENTS', 'QUERY', 'listRosterAll'],
@@ -173,12 +174,12 @@ function manifest(owner, operations) {
 }
 
 describe('admin operation catalog', () => {
-  it('freezes the exact 102 business actions, owners, and kinds while keeping health separate', () => {
+  it('freezes the exact 103 business actions, owners, and kinds while keeping health separate', () => {
     const handlerActions = Object.keys(actions).filter(action => action !== 'health')
     const expectedActions = Object.keys(expectedOperations)
 
-    assert.equal(expectedActions.length, 102)
-    assert.equal(operationCatalog.length, 102)
+    assert.equal(expectedActions.length, 103)
+    assert.equal(operationCatalog.length, 103)
     assert.deepEqual(sorted(handlerActions), sorted(expectedActions))
     assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(expectedActions))
     assert.equal(operationByAction.health, undefined)

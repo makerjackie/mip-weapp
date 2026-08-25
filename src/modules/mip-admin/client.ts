@@ -51,6 +51,7 @@ export function createMipAdminModule(
     listEvents: events.list,
     getEventPolicy: events.getPolicy,
     getEvent: events.get,
+    getEventInsights: events.getInsights,
     listEventAlbumPhotos: events.listAlbumPhotos,
     listRoster: events.listRoster,
     listRosterAll: events.listRosterAll,

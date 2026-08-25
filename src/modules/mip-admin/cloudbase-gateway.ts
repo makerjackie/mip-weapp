@@ -23,6 +23,7 @@ import {
   parseAdminAnnouncementScopes,
 } from './announcements'
 import { cloudbaseAdminTransport } from './cloudbase-transport'
+import { parseAdminEventInsights } from './event-insights'
 import {
   parseMessageCampaign,
   parseMessageCampaignPage,
@@ -582,6 +583,15 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
     getEvent: async eventId => resolveCloudFileUrls(
       await call('mip.admin.events.get', { eventId }),
     ),
+    getEventInsights: async (eventId) => {
+      const insights = parseAdminEventInsights(
+        await call('mip.admin.events.insights.get', { eventId }),
+      )
+      if (insights.eventId !== eventId) {
+        throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的活动数据洞察')
+      }
+      return insights
+    },
     listEventAlbumPhotos: async (eventId: string, status: AdminEventAlbumPhotoStatus) => {
       const page = parseEventAlbumPage(await call('mip.admin.events.album.list', { eventId, status }))
       return resolveCloudFileUrls(page)
