@@ -185,7 +185,7 @@ function databaseHarness(overrides = {}) {
       if (sql.includes('AS expiring_players')) {
         return state.expiring
       }
-      if (sql.includes('WITH membership_purchases')) {
+      if (sql.includes('WITH mip_membership_purchases')) {
         return state.membershipComparison
       }
       if (sql.includes('AS registration_open_events')) {
@@ -221,7 +221,7 @@ function databaseHarness(overrides = {}) {
       if (sql.includes('FROM mip_admin_role_bindings binding')) {
         return state.bindings
       }
-      if (sql.includes('WITH membership_purchases')) {
+      if (sql.includes('WITH mip_membership_purchases')) {
         return state.membershipSeries
       }
       if (sql.includes('AS scheduled_event_count')) {
@@ -381,7 +381,7 @@ describe('dashboard overview repository', () => {
     assert.match(peopleSql, /heart\.updated_at >= \? AND heart\.updated_at < \?/)
 
     const comparisonPurchaseCall = harness.calls.find(call => call.type === 'one'
-      && call.sql?.includes('WITH membership_purchases'))
+      && call.sql?.includes('WITH mip_membership_purchases'))
     assert.deepEqual(comparisonPurchaseCall.params.slice(-2), [
       overviewInput().period.comparisonStartAt,
       overviewInput().period.comparisonEndAt,
@@ -431,7 +431,7 @@ describe('dashboard overview repository', () => {
     assert.equal(result.tasks.availability, 'NOT_APPLICABLE')
     assertPlaceholderCounts(harness)
     const sql = harness.calls.map(call => call.sql || '').join('\n')
-    assert.doesNotMatch(sql, /WITH membership_purchases/)
+    assert.doesNotMatch(sql, /WITH mip_membership_purchases/)
     assert.doesNotMatch(sql, /membership\.payment_confirmed/)
     assert.match(sql, /event\.branch_id IN \(\?\)/)
   })

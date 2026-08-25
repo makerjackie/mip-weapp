@@ -487,7 +487,7 @@ async function readMembershipPurchases(tx, input, scopeType, orderVisibility) {
   }
   const bucket = bucketExpression('purchase.paid_at', input.period.granularity)
   const rows = await tx.query(
-    `WITH membership_purchases AS (
+    `WITH mip_membership_purchases AS (
        SELECT order_fact.id, order_fact.user_id, order_fact.amount_cents,
          order_fact.currency, order_fact.paid_at,
          ROW_NUMBER() OVER (
@@ -509,7 +509,7 @@ async function readMembershipPurchases(tx, input, scopeType, orderVisibility) {
        COALESCE(SUM(purchase.amount_cents), 0) AS eligible_paid_amount_cents,
        MIN(purchase.currency) AS minimum_currency,
        MAX(purchase.currency) AS maximum_currency
-     FROM membership_purchases purchase
+     FROM mip_membership_purchases purchase
      WHERE purchase.paid_at >= ? AND purchase.paid_at < ?
      GROUP BY bucket_start_date
      ORDER BY bucket_start_date`,
@@ -541,7 +541,7 @@ async function readMembershipPurchases(tx, input, scopeType, orderVisibility) {
 
 async function membershipPurchaseComparison(tx, input) {
   const row = await tx.one(
-    `WITH membership_purchases AS (
+    `WITH mip_membership_purchases AS (
        SELECT order_fact.id, order_fact.user_id, order_fact.amount_cents,
          order_fact.currency, order_fact.paid_at,
          ROW_NUMBER() OVER (
@@ -566,7 +566,7 @@ async function membershipPurchaseComparison(tx, input) {
        COALESCE(SUM(amount_cents), 0) AS eligible_paid_amount_cents,
        MIN(currency) AS minimum_currency,
        MAX(currency) AS maximum_currency
-     FROM membership_purchases
+     FROM mip_membership_purchases
      WHERE paid_at >= ? AND paid_at < ?`,
     [input.appId, input.period.comparisonStartAt, input.period.comparisonEndAt],
   )
