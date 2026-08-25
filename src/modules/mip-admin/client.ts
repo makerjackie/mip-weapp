@@ -6,7 +6,6 @@ import type {
   AdminCapabilityGrant,
   AdminCommunityReportStatus,
   AdminEventAlbumPhotoStatus,
-  AdminOrderListInput,
   AdminRosterAllListInput,
   AdminRosterListInput,
   MipAdminGateway,
@@ -20,6 +19,7 @@ import {
 import { createMipGrowthAdmin } from './growth-admin'
 import { createMipMessagingAdmin } from './messaging-admin'
 import { createMipOpportunityAdmin } from './opportunity-admin'
+import { createMipOrdersAdmin } from './orders-admin'
 
 export function createMipAdminModule(
   gateway: MipAdminGateway,
@@ -32,6 +32,7 @@ export function createMipAdminModule(
   const growth = createMipGrowthAdmin(gateway, cache)
   const messaging = createMipMessagingAdmin(gateway, cache)
   const opportunities = createMipOpportunityAdmin(gateway, cache)
+  const orders = createMipOrdersAdmin(gateway, cache)
   return {
     getSession: (force = false) => cache.query('mip-admin:session', gateway.getSession, { force }),
     getDashboard: (force = false) => cache.query('mip-admin:dashboard', gateway.getDashboard, { force }),
@@ -117,11 +118,8 @@ export function createMipAdminModule(
     listBadges: growth.listBadges,
     listBadgeAwards: growth.listBadgeAwards,
     growth,
-    listOrders: (input: AdminOrderListInput = {}, force = false) => cache.query(
-      `mip-admin:orders:${JSON.stringify(input)}`,
-      () => gateway.listOrders(input),
-      { force },
-    ),
+    listOrders: orders.list,
+    orders,
     listOperationalExceptions: (input: AdminOperationalExceptionFilters = {}, force = false) => cache.query(
       `mip-admin:exceptions:${JSON.stringify(input)}`,
       () => gateway.listOperationalExceptions(input),

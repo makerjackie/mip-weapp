@@ -216,7 +216,7 @@ Page({
       const input = { filters: filters(this.data) }
       const [session, response, event] = await Promise.all([
         mipAdminModule.getSession(force),
-        mipAdminModule.listOrders(input, force),
+        mipAdminModule.orders.list(input, force),
         this.data.eventId ? mipAdminModule.getEvent(this.data.eventId, force) : Promise.resolve(null),
       ])
       if (seq !== this.requestSeq) {
@@ -250,7 +250,7 @@ Page({
     }
     this.setData({ loadingMore: true, message: '' })
     try {
-      const response = await mipAdminModule.listOrders({
+      const response = await mipAdminModule.orders.list({
         cursor: this.data.nextCursor,
         filters: filters(this.data),
       })
@@ -279,11 +279,11 @@ Page({
       if (!modal.confirm || !modal.content.trim()) {
         return
       }
-      const result = await mipAdminModule.mutate(() => mipAdminModule.gateway.submitRefund({
+      const result = await mipAdminModule.orders.submitRefund({
         orderId,
         reason: modal.content,
         idempotencyKey: `admin-refund-${orderId}-${Date.now()}`,
-      }))
+      })
       const dispatchStatus = (result.providerDispatch as { status?: string } | undefined)?.status
       const title = dispatchStatus === 'SUCCEEDED'
         ? '退款已完成'
@@ -311,7 +311,7 @@ Page({
     }
     this.setData({ processingId: orderId, message: '' })
     try {
-      const result = await mipAdminModule.mutate(() => mipAdminModule.gateway.retryRefund(refundId))
+      const result = await mipAdminModule.orders.retryRefund(refundId)
       const status = (result.providerDispatch as { status?: string } | undefined)?.status
       wx.showToast({
         title: status === 'SUCCEEDED'
@@ -338,12 +338,12 @@ Page({
     }
     this.setData({ exportPending: true, message: '' })
     try {
-      const result = await mipAdminModule.mutate(() => mipAdminModule.exportAndOpen({
+      const result = await mipAdminModule.exportAndOpen({
         exportType: this.data.eventId ? 'EVENT_ORDERS' : 'ORDERS',
         eventId: this.data.eventId || undefined,
         includesPhone: false,
         filters: filters(this.data),
-      }))
+      })
       wx.showToast({ title: `已导出 ${result.rowCount} 条`, icon: 'success' })
     }
     catch (error) {

@@ -66,7 +66,7 @@ describe('MIP event cancellation convergence contract', () => {
     expect(events).toContain('dispatchCancellationRefunds(context.caller.appId, refundIds)')
     expect(service).toContain('dispatchCancellationRefunds: dispatchRefundBatchSafely')
     expect(gateway).toContain('call(\'mip.admin.refunds.retry\', { refundId })')
-    expect(pageTs).toContain('gateway.retryRefund(refundId)')
+    expect(pageTs).toContain('orders.retryRefund(refundId)')
     expect(pageTs).toContain('\'退款处理失败\'')
     expect(pageWxml).toContain('item.status === \'REFUND_PENDING\'')
     expect(pageWxml).toContain('item.refundStatus === \'PROVIDER_CREATED\'')
