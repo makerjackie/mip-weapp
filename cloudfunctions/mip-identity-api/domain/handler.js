@@ -59,13 +59,16 @@ function isRecord(value) {
 }
 
 function withoutCloudbaseMetadata(event) {
-  if (!Object.hasOwn(event, 'userInfo')) {
-    return event
+  const request = { ...event }
+  for (const key of ['userInfo', 'tcbContext']) {
+    if (!Object.hasOwn(request, key)) {
+      continue
+    }
+    if (!isRecord(request[key])) {
+      throw new Error('VALIDATION_FAILED')
+    }
+    delete request[key]
   }
-  if (!isRecord(event.userInfo)) {
-    throw new Error('VALIDATION_FAILED')
-  }
-  const { userInfo: _userInfo, ...request } = event
   return request
 }
 

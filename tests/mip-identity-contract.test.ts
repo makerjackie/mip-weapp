@@ -172,7 +172,8 @@ describe('MIP identity v1 client contract', () => {
       invoke: request => handler({
         ...request,
         // Mini Program CloudBase injects this transport metadata beside `data`.
-        userInfo: { openId: 'transport-only-open-id' },
+        tcbContext: {},
+        userInfo: { appId: 'transport-only-app-id', openId: 'transport-only-open-id' },
       }),
     })
 
@@ -190,7 +191,8 @@ describe('MIP identity v1 client contract', () => {
     const response = await handler({
       action: 'acceptAgreements',
       input: { agreements: currentAgreementPairs() },
-      userInfo: { openId: 'transport-only-open-id' },
+      tcbContext: {},
+      userInfo: { appId: 'transport-only-app-id', openId: 'transport-only-open-id' },
     })
 
     expect(response).toMatchObject({ ok: true })

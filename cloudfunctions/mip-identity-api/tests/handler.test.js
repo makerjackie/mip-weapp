@@ -96,7 +96,8 @@ describe('MIP identity handler', () => {
     assert.deepEqual(normalizeRequest({
       action: 'setPrimaryBranch',
       input: { branchId: 'branch-1', expectedVersion: 2 },
-      userInfo: { openId: 'transport-only-open-id' },
+      tcbContext: {},
+      userInfo: { appId: 'transport-only-app-id', openId: 'transport-only-open-id' },
     }), {
       action: 'setPrimaryBranch',
       input: { branchId: 'branch-1', expectedVersion: 2 },
@@ -170,6 +171,15 @@ describe('MIP identity handler', () => {
         action: 'acceptAgreements',
         input: { agreements: [] },
         userInfo: 'forged-open-id',
+      }),
+      /VALIDATION_FAILED/,
+    )
+    assert.throws(
+      () => normalizeRequest({
+        contractVersion: 1,
+        action: 'acceptAgreements',
+        input: { agreements: [] },
+        tcbContext: 'forged-context',
       }),
       /VALIDATION_FAILED/,
     )
