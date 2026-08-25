@@ -3,11 +3,11 @@
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",
     "app-page-exit": "/components/page-exit/index",
+    "mip-admin-responsive-panel": "/packages/admin/components/responsive-panel/index",
     "mip-admin-workspace-nav": "/packages/admin/components/workspace-nav/index",
     "t-button": "tdesign-miniprogram/button/button",
     "t-input": "tdesign-miniprogram/input/input",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
-    "t-tag": "tdesign-miniprogram/tag/tag",
-    "t-popup": "tdesign-miniprogram/popup/popup"
+    "t-tag": "tdesign-miniprogram/tag/tag"
   }
 }
