@@ -1874,6 +1874,7 @@ function createAdminRepository(database, options = {}) {
   async function cloneEvent(input) {
     return database.transaction(async (tx) => {
       const authorization = await lockMutation(tx, input)
+      if (authorization.effectiveGrant.scopeType === 'EVENT') throw codeError('FORBIDDEN')
       const source = await tx.one(
         `SELECT e.id, e.scope_type, e.branch_id, e.title, e.summary, e.description, e.notices,
           e.cover_asset_id, cover.status AS cover_status, e.event_type_key, e.event_mode,
@@ -1895,10 +1896,6 @@ function createAdminRepository(database, options = {}) {
       const currentScope = eventScopeFromRow(source, input.sourceEventId)
       assertScope(authorization, currentScope)
       assertAuthorizedScope(currentScope, input.authorizedScope)
-      if (Number(source.version) !== input.expectedVersion) throw codeError('CONFLICT')
-      if (source.scope_type === 'BRANCH' && source.branch_status !== 'ACTIVE') {
-        throw codeError('INVALID_STATE')
-      }
 
       const operation = 'admin.events.clone'
       const requestHash = createHash('sha256')
@@ -1931,6 +1928,11 @@ function createAdminRepository(database, options = {}) {
           throw codeError('CONFLICT')
         }
         return { ...replay, idempotent: true }
+      }
+
+      if (Number(source.version) !== input.expectedVersion) throw codeError('CONFLICT')
+      if (source.scope_type === 'BRANCH' && source.branch_status !== 'ACTIVE') {
+        throw codeError('INVALID_STATE')
       }
 
       const dates = shiftedCloneDates(source, now())

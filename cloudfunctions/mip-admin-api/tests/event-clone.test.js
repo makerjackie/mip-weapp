@@ -1,6 +1,7 @@
 'use strict'
 
 const assert = require('node:assert/strict')
+const { createHash } = require('node:crypto')
 const { describe, it } = require('node:test')
 const { createAdminRepository: createProductionAdminRepository } = require('../domain/repository')
 const { withTestAuthorization } = require('./test-authorization')
@@ -110,7 +111,7 @@ describe('admin event clone persistence', () => {
     assert.doesNotMatch(source, /INSERT INTO mip_event_(?:album|photos)/)
   })
 
-  it('replays a completed clone request without creating a second event', async () => {
+  it('replays a completed clone request after the source version changes', async () => {
     const stored = {
       id: 'new-event', status: 'DRAFT', version: 1,
       startsAt: '2026-09-05T06:00:00.000Z', idempotent: false,
@@ -127,7 +128,7 @@ describe('admin event clone persistence', () => {
     const one = async (sql) => {
       if (sql.includes('FROM mip_events e')) {
         queriedSource = true
-        return sourceEvent()
+        return { ...sourceEvent(), version: 5 }
       }
       if (sql.includes('FROM mip_idempotency_keys')) {
         return {
@@ -148,5 +149,140 @@ describe('admin event clone persistence', () => {
 
     assert.deepEqual(result, { ...stored, idempotent: true })
     assert.equal(queriedSource, true)
+  })
+
+  it('rejects a reused clone key with a different request hash before stale-version handling', async () => {
+    let eventInsertAttempted = false
+    const query = async (sql) => {
+      if (sql.includes('INSERT INTO mip_idempotency_keys')) {
+        const error = new Error('duplicate')
+        error.code = 'ER_DUP_ENTRY'
+        throw error
+      }
+      if (sql.includes('INSERT INTO mip_events')) eventInsertAttempted = true
+      throw new Error(`unexpected query: ${sql}`)
+    }
+    const one = async (sql) => {
+      if (sql.includes('FROM mip_events e')) return { ...sourceEvent(), version: 5 }
+      if (sql.includes('FROM mip_idempotency_keys')) {
+        return {
+          request_hash: createHash('sha256').update(['another-event', '4'].join('\0')).digest('hex'),
+          status: 'COMPLETED',
+          response_json: JSON.stringify({
+            id: 'another-copy', status: 'DRAFT', version: 1,
+            startsAt: '2026-09-05T06:00:00.000Z', idempotent: false,
+          }),
+        }
+      }
+      return null
+    }
+    const repository = createAdminRepository({
+      one,
+      query,
+      transaction: work => work({ one, query }),
+    })
+
+    await assert.rejects(() => repository.cloneEvent(input()), error => error?.code === 'CONFLICT')
+    assert.equal(eventInsertAttempted, false)
+  })
+
+  it('rejects a fresh clone request when the source version is stale', async () => {
+    let idempotencyReserved = false
+    let eventInsertAttempted = false
+    const query = async (sql) => {
+      if (sql.includes('INSERT INTO mip_idempotency_keys')) {
+        idempotencyReserved = true
+        return { affectedRows: 1 }
+      }
+      if (sql.includes('INSERT INTO mip_events')) eventInsertAttempted = true
+      throw new Error(`unexpected query: ${sql}`)
+    }
+    const one = async (sql) => {
+      if (sql.includes('FROM mip_events e')) return { ...sourceEvent(), version: 5 }
+      return null
+    }
+    const repository = createAdminRepository({
+      one,
+      query,
+      transaction: work => work({ one, query }),
+    })
+
+    await assert.rejects(() => repository.cloneEvent({
+      ...input(),
+      idempotencyKey: 'clone-request-0002',
+    }), error => error?.code === 'CONFLICT')
+    assert.equal(idempotencyReserved, true)
+    assert.equal(eventInsertAttempted, false)
+  })
+
+  it('rechecks the current role before reading a completed clone result', async () => {
+    let idempotencyRead = false
+    const one = async (sql) => {
+      if (sql.includes('FROM mip_users')) return { id: 'admin-user', status: 'ACTIVE' }
+      if (sql.includes('FROM mip_admin_role_bindings')) {
+        return {
+          scope_type: 'BRANCH', scope_id: 'branch-a', role_key: 'BRANCH_ADMIN', status: 'REVOKED',
+        }
+      }
+      if (sql.includes('FROM mip_idempotency_keys')) idempotencyRead = true
+      throw new Error(`unexpected read: ${sql}`)
+    }
+    const query = async (sql) => {
+      throw new Error(`unexpected write: ${sql}`)
+    }
+    const repository = createProductionAdminRepository({
+      one,
+      query,
+      transaction: work => work({ one, query }),
+    })
+
+    await assert.rejects(() => repository.cloneEvent({
+      ...input(),
+      authorization: {
+        capability: 'events.write',
+        effectiveGrant: { roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', scopeId: 'branch-a' },
+      },
+      authorizedScope: {
+        scopeType: 'EVENT', scopeId: 'event-source', branchId: 'branch-a',
+      },
+    }), error => error?.code === 'FORBIDDEN')
+    assert.equal(idempotencyRead, false)
+  })
+
+  it('rejects an event-scoped grant before reading the source or idempotency result', async () => {
+    let sourceRead = false
+    let idempotencyRead = false
+    const one = async (sql) => {
+      if (sql.includes('FROM mip_users')) return { id: 'admin-user', status: 'ACTIVE' }
+      if (sql.includes('FROM mip_admin_role_bindings')) {
+        return {
+          scope_type: 'EVENT', scope_id: 'event-source', role_key: 'EVENT_OWNER', status: 'ACTIVE',
+        }
+      }
+      if (sql.includes('FROM mip_events e')) sourceRead = true
+      if (sql.includes('FROM mip_idempotency_keys')) idempotencyRead = true
+      throw new Error(`unexpected read: ${sql}`)
+    }
+    const query = async (sql) => {
+      throw new Error(`unexpected write: ${sql}`)
+    }
+    const repository = createProductionAdminRepository({
+      one,
+      query,
+      transaction: work => work({ one, query }),
+    })
+
+    await assert.rejects(() => repository.cloneEvent({
+      ...input(),
+      authorization: {
+        capability: 'events.write',
+        effectiveGrant: { roleKey: 'EVENT_OWNER', scopeType: 'EVENT', scopeId: 'event-source' },
+      },
+      authorizedScope: {
+        scopeType: 'EVENT', scopeId: 'event-source', branchId: 'branch-a',
+      },
+    }), error => error?.code === 'FORBIDDEN')
+    assert.equal(sourceRead, false)
+    assert.equal(idempotencyRead, false)
   })
 })

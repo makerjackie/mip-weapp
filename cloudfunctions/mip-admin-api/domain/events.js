@@ -219,12 +219,24 @@ function createAdminEvents({
   async function cloneEvent(caller, input) {
     const context = await access.session(caller)
     const sourceEventId = requiredId(input.sourceEventId, '活动')
-    const { scope, grant } = await access.eventAuthorization(context, sourceEventId, CAPABILITIES.EVENTS_WRITE)
+    const authorization = await access.eventAuthorization(context, sourceEventId, CAPABILITIES.EVENTS_WRITE)
+    const { scope } = authorization
+    let { grant } = authorization
+    if (grant.scopeType === 'EVENT') {
+      const creationScope = scope.eventScopeType === 'BRANCH'
+        ? { scopeType: 'BRANCH', scopeId: scope.branchId }
+        : { scopeType: 'PLATFORM', scopeId: null }
+      try {
+        grant = authorize(context.bindings, CAPABILITIES.EVENTS_WRITE, creationScope)
+      }
+      catch {
+        throw new AdminError('FORBIDDEN', '当前账号没有创建活动权限')
+      }
+    }
     const version = expectedVersion(input.expectedVersion)
     const idempotencyKey = normalizeIdempotencyKey(input.idempotencyKey)
     const source = await repository.getEvent(context.caller.appId, sourceEventId)
     if (!source) throw new AdminError('NOT_FOUND', '活动不存在')
-    if (source.version !== version) throw new AdminError('CONFLICT', '活动信息已更新，请刷新后重试')
     const title = cloneEventTitle(source.title)
     const checkedContentSafetyStatus = await contentSafety({
       title,

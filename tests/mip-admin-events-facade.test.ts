@@ -472,6 +472,7 @@ describe('MIP admin events facade', () => {
 
   it.each([
     ['saveEvent', new MipAdminError('CONFLICT', '活动已被其他管理员更新')],
+    ['cloneEvent', new MipAdminError('SERVICE_UNAVAILABLE', '活动复制状态未确认', true)],
     ['reviewEventAlbumPhoto', new MipAdminError('FORBIDDEN', '当前账号不能审核相册')],
   ] as const)('keeps cached reads and the original %s failure', async (name, failure) => {
     const { module, spies } = createHarness()
@@ -480,8 +481,11 @@ describe('MIP admin events facade', () => {
 
     const work = name === 'saveEvent'
       ? module.events.save(saveInput)
-      : module.events.reviewAlbumPhoto(albumInput)
+      : name === 'cloneEvent'
+        ? module.events.clone(cloneInput)
+        : module.events.reviewAlbumPhoto(albumInput)
     await expect(work).rejects.toBe(failure)
+    expect(spies[name]).toHaveBeenCalledTimes(1)
     await warmQueries(module)
 
     for (const query of querySpies) {

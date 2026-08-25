@@ -35,6 +35,7 @@ describe('phase9 gateway retry policy (read-only)', () => {
       'mip.admin.users.update',
       'mip.admin.users.setControl',
       'mip.admin.events.save',
+      'mip.admin.events.clone',
       'mip.admin.events.changeStatus',
       'mip.admin.events.checkIn',
       'mip.admin.exports.create',

@@ -200,8 +200,18 @@ describe('admin events deep module', () => {
 
   it('clones the server-read definition with a stable idempotency key and preserves conflicts', async () => {
     const cloned = []
+    let sourceVersion = 3
     const repo = repository({
+      async getEvent(_appId, eventId) {
+        return {
+          id: eventId, title: '城市交流会', summary: '摘要', description: '介绍',
+          notices: '须知', version: sourceVersion,
+        }
+      },
       async cloneEvent(input) {
+        if (input.expectedVersion !== 3) {
+          throw new AdminError('CONFLICT', '活动信息已更新，请刷新后重试')
+        }
         cloned.push(input)
         return {
           id: 'event-copy', status: 'DRAFT', version: 1,
@@ -225,6 +235,7 @@ describe('admin events deep module', () => {
     }
 
     assert.equal((await service.cloneEvent(caller, input)).idempotent, false)
+    sourceVersion = 4
     assert.equal((await service.cloneEvent(caller, input)).idempotent, true)
     assert.equal(cloned[0].idempotencyKey, 'clone-request-0001')
     assert.equal(cloned[1].idempotencyKey, 'clone-request-0001')
@@ -240,9 +251,25 @@ describe('admin events deep module', () => {
     }), error => error?.code === 'CONFLICT')
     assert.equal(cloned.length, 2)
 
+    repo.roleBindings = [
+      { roleKey: 'EVENT_OWNER', scopeType: 'EVENT', scopeId: EVENT_ID },
+      { roleKey: 'PLATFORM_OPERATIONS', scopeType: 'PLATFORM', scopeId: null },
+    ]
+    assert.equal((await service.cloneEvent(caller, input)).idempotent, true)
+    assert.equal(cloned.at(-1).authorization.effectiveGrant.scopeType, 'PLATFORM')
+
+    repo.roleBindings = [{ roleKey: 'EVENT_OWNER', scopeType: 'EVENT', scopeId: EVENT_ID }]
+    await assert.rejects(() => service.cloneEvent(caller, input), error => error?.code === 'FORBIDDEN')
+    assert.equal(cloned.length, 3)
+
+    repo.roleBindings = [{ roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', scopeId: 'branch-b' }]
+    await assert.rejects(() => service.cloneEvent(caller, input), error => error?.code === 'FORBIDDEN')
+    assert.equal(cloned.length, 3)
+
+    repo.roleBindings = [{ roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', scopeId: BRANCH_ID }]
     repo.getEvent = async () => null
     await assert.rejects(() => service.cloneEvent(caller, input), error => error?.code === 'NOT_FOUND')
-    assert.equal(cloned.length, 2)
+    assert.equal(cloned.length, 3)
   })
 
   it('dispatches cancellation refunds only after the repository transaction has returned', async () => {

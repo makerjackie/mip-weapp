@@ -2,10 +2,10 @@ import type { EventId } from '../../../modules/mip'
 import type { AdminEventDetail } from '../../../modules/mip-admin'
 import type { CheckInCredentialMode } from '../../../modules/mip-events'
 import type { AdminPageState } from '../shared/page-state'
-import { hasScopedCapability, mipAdminModule } from '../../../modules/mip-admin'
+import { hasScopedCapability, MipAdminError, mipAdminModule } from '../../../modules/mip-admin'
 import { checkInCredentialCountdown } from '../../../modules/mip-events'
 import { mipEventsModule } from '../../../modules/mip-events/client'
-import { adminLoadFailure } from '../shared/page-state'
+import { adminLoadFailure, isAdminVersionConflict } from '../shared/page-state'
 
 const POSTER_WIDTH = 375
 const POSTER_HEIGHT = 560
@@ -71,6 +71,7 @@ Page({
     eventId: '',
     event: null as AdminEventDetail | null,
     canEdit: false,
+    canClone: false,
     canRoster: false,
     canTeam: false,
     canAlbum: false,
@@ -97,6 +98,7 @@ Page({
     posterExpired: false,
     message: '',
   },
+  cloneConfirmationBusy: false,
   posterCountdownTimer: 0 as number | ReturnType<typeof setInterval>,
   onLoad(query: Record<string, string>) { this.setData({ eventId: query.eventId || '' }) },
   onShow() {
@@ -128,6 +130,10 @@ Page({
         state: 'ready',
         event,
         canEdit: hasScopedCapability(session.capabilities, 'events.write', scope),
+        canClone: session.capabilities.some(item => item.capability === 'events.write' && (
+          item.scopeType === 'PLATFORM'
+          || (item.scopeType === 'BRANCH' && item.scopeId === event.branchId)
+        )),
         canRoster: hasScopedCapability(session.capabilities, 'events.roster.read', scope),
         canTeam: hasScopedCapability(session.capabilities, 'events.team.manage', scope),
         canAlbum: hasScopedCapability(session.capabilities, 'events.album.manage', scope),
@@ -364,45 +370,80 @@ Page({
   },
   async cloneEvent() {
     const event = this.data.event
-    if (!event || !this.data.canEdit || this.data.cloneBusy || this.data.processing) {
+    if (!event || !this.data.canClone || this.data.cloneBusy || this.data.processing
+      || this.cloneConfirmationBusy) {
       return
     }
     const retrying = Boolean(this.data.cloneRequestKey)
-      && this.data.cloneRequestVersion === event.version
-    if (!retrying) {
-      const modal = await wx.showModal({
-        title: '复制活动',
-        content: '将复制活动内容和配置，并自动顺延时间。报名、订单、签到、相册和消息不会复制。',
-        confirmText: '复制',
-      }).catch(() => null)
-      if (!modal?.confirm) {
-        return
-      }
-    }
-    const idempotencyKey = retrying
-      ? this.data.cloneRequestKey
-      : cloneRequestKey(event.id)
-    this.setData({
-      cloneBusy: true,
-      cloneRequestKey: idempotencyKey,
-      cloneRequestVersion: event.version,
-      message: '',
-    })
+    this.cloneConfirmationBusy = true
+    this.setData({ cloneBusy: true, message: '' })
     try {
+      if (!retrying) {
+        const modal = await wx.showModal({
+          title: '复制活动',
+          content: '将复制活动内容和配置，并自动顺延时间。报名、订单、签到、相册和消息不会复制。',
+          confirmText: '复制',
+        }).catch(() => null)
+        if (!modal?.confirm) {
+          return
+        }
+      }
+      const idempotencyKey = retrying
+        ? this.data.cloneRequestKey
+        : cloneRequestKey(event.id)
+      const expectedVersion = retrying
+        ? this.data.cloneRequestVersion
+        : event.version
+      if (!retrying) {
+        this.setData({
+          cloneRequestKey: idempotencyKey,
+          cloneRequestVersion: expectedVersion,
+        })
+      }
       const result = await mipAdminModule.events.clone({
         sourceEventId: event.id,
-        expectedVersion: event.version,
+        expectedVersion,
         idempotencyKey,
       })
       this.setData({ cloneRequestKey: '', cloneRequestVersion: 0 })
-      wx.showToast({ title: '草稿已创建', icon: 'success' })
-      await wx.navigateTo({ url: `/packages/admin/events/index?eventId=${encodeURIComponent(result.id)}` })
+      await wx.showModal({
+        title: '草稿已创建',
+        content: '活动时间已自动顺延，请复核活动标题和时间。',
+        showCancel: false,
+        confirmText: '继续编辑',
+      }).catch(() => null)
+      try {
+        await wx.navigateTo({ url: `/packages/admin/events/index?eventId=${encodeURIComponent(result.id)}` })
+      }
+      catch {
+        this.setData({ message: '草稿已创建。请返回活动管理列表打开，并复核标题和时间。' })
+      }
     }
     catch (error) {
-      const failure = adminLoadFailure(error, { hasContent: true, fallbackMessage: '活动复制失败' })
-      this.setData({ message: failure.message, state: failure.state || 'ready' })
+      if (isAdminVersionConflict(error)) {
+        this.setData({
+          cloneRequestKey: '',
+          cloneRequestVersion: 0,
+          message: '活动信息已更新，请重新加载后再复制。',
+        })
+      }
+      else if (error instanceof MipAdminError && !error.retryable) {
+        this.setData({
+          cloneRequestKey: '',
+          cloneRequestVersion: 0,
+          message: error.message || '活动复制失败',
+        })
+      }
+      else {
+        this.setData({
+          message: error instanceof Error
+            ? `${error.message}。再次点击复制可安全重试。`
+            : '活动复制状态未确认，再次点击复制可安全重试。',
+        })
+      }
     }
     finally {
+      this.cloneConfirmationBusy = false
       this.setData({ cloneBusy: false })
     }
   },
