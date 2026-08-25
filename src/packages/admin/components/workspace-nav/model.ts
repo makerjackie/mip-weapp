@@ -204,6 +204,7 @@ const activeItemByRoute: Readonly<Record<string, string>> = {
   'packages/admin/event-managers/index': 'managed-events',
   'packages/admin/event-album/index': 'managed-events',
   'packages/admin/event-feedback/index': 'managed-events',
+  'packages/admin/event-comments/index': 'managed-events',
   'packages/admin/event-registrations/index': 'managed-events',
   'packages/admin/exports/index': 'managed-events',
   'packages/admin/event-participants/index': 'event-participants',

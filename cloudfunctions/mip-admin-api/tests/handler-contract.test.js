@@ -209,7 +209,7 @@ describe('admin handler and isolation contract', () => {
     assert.equal(issues, 0)
   })
 
-  it('keeps all 105 business actions compatible with the handler configuration', async () => {
+  it('keeps all 110 business actions compatible with the handler configuration', async () => {
     const caller = { appId: 'wx', identityKey: 'key' }
     const calls = []
     const service = new Proxy({}, {
@@ -230,7 +230,7 @@ describe('admin handler and isolation contract', () => {
     })
     const businessActions = Object.keys(actions).filter(action => action !== 'health')
 
-    assert.equal(businessActions.length, 105)
+    assert.equal(businessActions.length, 110)
     for (const action of businessActions) {
       const before = calls.length
       const response = await handler({ contractVersion: 1, action, input: { marker: action } })
@@ -367,6 +367,7 @@ describe('admin handler and isolation contract', () => {
     const root = path.resolve(__dirname, '..')
     const repositoryFiles = [
       path.join(root, 'domain/repository.js'),
+      path.join(root, 'domain/event-comment-governance.js'),
       path.join(root, 'domain/repositories/access.js'),
       path.join(root, 'domain/repositories/users.js'),
     ]

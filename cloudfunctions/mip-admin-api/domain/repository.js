@@ -4,6 +4,7 @@ const { createHash, randomBytes, randomUUID } = require('node:crypto')
 const { createAnnouncementRepository } = require('./announcements')
 const { createAdminPrdExtensions } = require('./admin-prd-extensions')
 const { createBadgeAdminRepository } = require('./badges')
+const { createEventCommentAdminRepository } = require('./event-comment-governance')
 const { createEventInsightsRepository } = require('./event-insights')
 const { createFullAccessPolicy } = require('./full-access')
 const { assertFixedGrowthRuleUpdate } = require('./growth-rule-catalog')
@@ -349,6 +350,10 @@ function createAdminRepository(database, options = {}) {
     now,
   })
   const badgeAdminRepository = createBadgeAdminRepository(database, { createId: id })
+  const eventCommentAdminRepository = createEventCommentAdminRepository(database, {
+    assertMutationScope: assertScope,
+    lockMutationAuthorization: lockMutation,
+  })
   const eventInsightsRepository = createEventInsightsRepository(database)
   const opportunityArchiveRepository = createOpportunityArchiveRepository(database, {
     assertScope,
@@ -2817,6 +2822,7 @@ function createAdminRepository(database, options = {}) {
     ...announcementRepository,
     ...adminPrdExtensions,
     ...badgeAdminRepository,
+    ...eventCommentAdminRepository,
     ...eventInsightsRepository,
     ...messageCampaignRepository,
     ...messageTemplateRepository,

@@ -104,6 +104,7 @@ Page({
     canTeam: false,
     canAlbum: false,
     canFeedback: false,
+    canComments: false,
     canOrders: false,
     canExport: false,
     canCheckIn: false,
@@ -167,6 +168,7 @@ Page({
         canTeam: hasScopedCapability(session.capabilities, 'events.team.manage', scope),
         canAlbum: hasScopedCapability(session.capabilities, 'events.album.manage', scope),
         canFeedback: hasScopedCapability(session.capabilities, 'events.feedback.read', scope),
+        canComments: hasScopedCapability(session.capabilities, 'events.comments.manage', scope),
         canOrders: hasScopedCapability(session.capabilities, 'orders.read', scope),
         canExport: hasScopedCapability(session.capabilities, 'exports.create', scope),
         canCheckIn: hasScopedCapability(session.capabilities, 'events.checkin.manage', scope),
@@ -426,7 +428,7 @@ Page({
   },
   openPage(event: WechatMiniprogram.TouchEvent) {
     const page = String(event.currentTarget.dataset.page || '')
-    const allowed = new Set(['events', 'event-registrations', 'event-managers', 'event-album', 'event-feedback', 'exports', 'orders'])
+    const allowed = new Set(['events', 'event-registrations', 'event-managers', 'event-album', 'event-feedback', 'event-comments', 'exports', 'orders'])
     if (allowed.has(page)) {
       void wx.navigateTo({ url: `/packages/admin/${page}/index?eventId=${encodeURIComponent(this.data.eventId)}` })
     }

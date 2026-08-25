@@ -5,6 +5,12 @@ import type {
   AdminAnnouncementScope,
 } from './announcements'
 import type {
+  AdminEventCommentMutationResult,
+  AdminEventCommentReportMutationResult,
+  AdminEventCommentSettings,
+  AdminEventCommentState,
+} from './event-comments'
+import type {
   AdminMessageCampaign,
   AdminMessageCampaignCancelScheduleInput,
   AdminMessageCampaignDraft,
@@ -54,6 +60,7 @@ export type AdminCapability
     | 'events.team.manage'
     | 'events.album.manage'
     | 'events.feedback.read'
+    | 'events.comments.manage'
     | 'announcements.manage'
     | 'messages.manage'
     | 'communications.publish'
@@ -872,6 +879,31 @@ export interface MipAdminGateway {
   publishEventReminder: (input: AdminEventReminderInput) => Promise<AdminEventReminderPublication>
   listEventAlbumPhotos: (eventId: string, status: AdminEventAlbumPhotoStatus) => Promise<AdminPage<AdminEventAlbumPhoto>>
   reviewEventAlbumPhoto: (input: AdminEventAlbumReviewInput) => Promise<AdminEventAlbumPhoto>
+  getEventCommentAdminState: (eventId: string) => Promise<AdminEventCommentState>
+  saveEventCommentSettings: (input: {
+    eventId: string
+    expectedVersion: number
+    settings: Omit<AdminEventCommentSettings, 'version'>
+  }) => Promise<AdminEventCommentSettings>
+  moderateEventComment: (input: {
+    eventId: string
+    commentId: string
+    expectedVersion: number
+    action: 'PUBLISH' | 'HIDE'
+    reason: string
+  }) => Promise<AdminEventCommentMutationResult>
+  claimEventCommentReport: (input: {
+    eventId: string
+    reportId: string
+    expectedVersion: number
+  }) => Promise<AdminEventCommentReportMutationResult>
+  closeEventCommentReport: (input: {
+    eventId: string
+    reportId: string
+    expectedVersion: number
+    decision: 'RESOLVED' | 'DISMISSED'
+    reason: string
+  }) => Promise<AdminEventCommentReportMutationResult>
   listRoster: (input: AdminRosterListInput) => Promise<AdminPage<AdminRosterItem>>
   listRosterAll: (input: AdminRosterAllListInput) => Promise<AdminPage<AdminRosterAllItem>>
   reviewRegistration: (input: Record<string, unknown>) => Promise<{ id: string, status: string, version: number }>

@@ -23,6 +23,13 @@ import {
   parseAdminAnnouncementScopes,
 } from './announcements'
 import { cloudbaseAdminTransport } from './cloudbase-transport'
+import {
+  parseEventCommentMutationResult,
+  parseEventCommentReportClaimResult,
+  parseEventCommentReportCloseResult,
+  parseEventCommentSettings,
+  parseEventCommentState,
+} from './event-comments'
 import { parseAdminEventInsights } from './event-insights'
 import {
   parseMessageCampaign,
@@ -77,6 +84,7 @@ const adminCapabilities = new Set<AdminCapability>([
   'events.team.manage',
   'events.album.manage',
   'events.feedback.read',
+  'events.comments.manage',
   'announcements.manage',
   'messages.manage',
   'communications.publish',
@@ -100,6 +108,10 @@ const adminCapabilities = new Set<AdminCapability>([
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function invalidEventCommentResponse(): never {
+  throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的活动评论数据')
 }
 
 function parseEventPolicy(value: unknown): AdminEventPolicy {
@@ -605,6 +617,56 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
     reviewEventAlbumPhoto: async (input) => {
       const photo = parseEventAlbumPhoto(await call('mip.admin.events.album.review', { ...input }))
       return resolveCloudFileUrls(photo)
+    },
+    getEventCommentAdminState: async (eventId) => {
+      const state = parseEventCommentState(
+        await call('mip.admin.events.comments.get', { eventId }),
+      )
+      if (state.event.id !== eventId) {
+        invalidEventCommentResponse()
+      }
+      return state
+    },
+    saveEventCommentSettings: async (input) => {
+      const settings = parseEventCommentSettings(
+        await call('mip.admin.events.comments.settings.save', { ...input }),
+      )
+      if (settings.version !== input.expectedVersion + 1
+        || settings.commentsEnabled !== input.settings.commentsEnabled
+        || settings.moderationMode !== input.settings.moderationMode) {
+        invalidEventCommentResponse()
+      }
+      return settings
+    },
+    moderateEventComment: async (input) => {
+      const result = parseEventCommentMutationResult(
+        await call('mip.admin.events.comments.moderate', { ...input }),
+      )
+      const expectedStatus = input.action === 'PUBLISH' ? 'PUBLISHED' : 'HIDDEN'
+      if (result.id !== input.commentId || result.status !== expectedStatus
+        || result.version !== input.expectedVersion + 1) {
+        invalidEventCommentResponse()
+      }
+      return result
+    },
+    claimEventCommentReport: async (input) => {
+      const result = parseEventCommentReportClaimResult(
+        await call('mip.admin.events.comments.reports.claim', { ...input }),
+      )
+      if (result.id !== input.reportId || result.version !== input.expectedVersion + 1) {
+        invalidEventCommentResponse()
+      }
+      return result
+    },
+    closeEventCommentReport: async (input) => {
+      const result = parseEventCommentReportCloseResult(
+        await call('mip.admin.events.comments.reports.close', { ...input }),
+      )
+      if (result.id !== input.reportId || result.status !== input.decision
+        || result.version !== input.expectedVersion + 1) {
+        invalidEventCommentResponse()
+      }
+      return result
     },
     saveEvent: input => call('mip.admin.events.save', input),
     cloneEvent: async input => parseEventClone(await call('mip.admin.events.clone', { ...input })),

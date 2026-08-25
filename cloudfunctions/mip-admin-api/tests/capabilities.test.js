@@ -27,6 +27,12 @@ describe('admin capabilities', () => {
     assert.equal(roleCapabilities.EVENT_STAFF.includes(CAPABILITIES.EVENTS_REGISTRATIONS_MANAGE), false)
     assert.equal(roleCapabilities.EVENT_STAFF.includes(CAPABILITIES.EVENTS_CHECKIN_UNDO), false)
     assert.equal(roleCapabilities.EVENT_STAFF.includes(CAPABILITIES.EVENTS_FEEDBACK_READ), false)
+    assert.equal(roleCapabilities.EVENT_OWNER.includes(CAPABILITIES.EVENTS_COMMENTS_MANAGE), true)
+    assert.equal(roleCapabilities.EVENT_MANAGER.includes(CAPABILITIES.EVENTS_COMMENTS_MANAGE), true)
+    assert.equal(roleCapabilities.EVENT_STAFF.includes(CAPABILITIES.EVENTS_COMMENTS_MANAGE), false)
+    assert.equal(roleCapabilities.PLATFORM_OPERATIONS.includes(CAPABILITIES.EVENTS_COMMENTS_MANAGE), true)
+    assert.equal(roleCapabilities.BRANCH_ADMIN.includes(CAPABILITIES.EVENTS_COMMENTS_MANAGE), true)
+    assert.equal(roleCapabilities.PLATFORM_FINANCE.includes(CAPABILITIES.EVENTS_COMMENTS_MANAGE), false)
     for (const role of ['PLATFORM_OWNER', 'PLATFORM_OPERATIONS', 'BRANCH_ADMIN', 'EVENT_OWNER', 'EVENT_MANAGER']) {
       assert.equal(roleCapabilities[role].includes(CAPABILITIES.EVENTS_CHECKIN_UNDO), true)
     }

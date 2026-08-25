@@ -7,6 +7,7 @@ const {
 } = require('./capabilities')
 const { createAdminAccess } = require('./access')
 const { createAdminCommunityGovernance } = require('./community-governance')
+const { createAdminEventComments } = require('./event-comments')
 const { createAdminEvents } = require('./events')
 const { createAdminExports } = require('./exports')
 const { createAdminGovernance, PLATFORM_SCOPE_ID } = require('./governance')
@@ -85,6 +86,13 @@ function createAdminService({
     phoneEncryptionKey,
     repository,
   })
+  const {
+    claimEventCommentReport,
+    closeEventCommentReport,
+    getEventCommentAdminState,
+    moderateEventComment,
+    saveEventCommentSettings,
+  } = createAdminEventComments({ access, repository })
   const {
     listOrders,
     normalizeExportFilters: normalizeOrderFilters,
@@ -274,14 +282,17 @@ function createAdminService({
     changeBranchStatus,
     changeEventStatus,
     checkIn,
+    claimEventCommentReport,
     claimCommunityReport,
     cloneEvent,
     closeCommunityReport,
+    closeEventCommentReport,
     completeExportDownload,
     createBranch,
     createExport,
     getDashboard,
     getEvent,
+    getEventCommentAdminState,
     getEventInsights,
     getEventPolicy,
     getOpportunity,
@@ -328,9 +339,11 @@ function createAdminService({
     publishOpportunity,
     recalculateOpportunityMatching,
     moderateOpportunityComment,
+    moderateEventComment,
     publishAnnouncement,
     grantBadge,
     saveEvent,
+    saveEventCommentSettings,
     saveEventPolicy,
     saveAnnouncement,
     saveMessageCampaign,

@@ -273,6 +273,10 @@
       "pathName": "packages/admin/event-feedback/index"
     },
     {
+      "name": "活动评论",
+      "pathName": "packages/admin/event-comments/index"
+    },
+    {
       "name": "导出与现场资料",
       "pathName": "packages/admin/exports/index"
     },

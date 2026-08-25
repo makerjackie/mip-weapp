@@ -34,6 +34,10 @@ export interface MipEventsAdmin {
     status: Parameters<MipAdminGateway['listEventAlbumPhotos']>[1],
     force?: boolean,
   ) => ReturnType<MipAdminGateway['listEventAlbumPhotos']>
+  getCommentState: (
+    eventId: Parameters<MipAdminGateway['getEventCommentAdminState']>[0],
+    force?: boolean,
+  ) => ReturnType<MipAdminGateway['getEventCommentAdminState']>
   save: MipAdminGateway['saveEvent']
   changeStatus: MipAdminGateway['changeEventStatus']
   archive: MipAdminGateway['archiveEvent']
@@ -44,6 +48,10 @@ export interface MipEventsAdmin {
   checkIn: MipAdminGateway['checkIn']
   undoCheckIn: MipAdminGateway['undoCheckIn']
   reviewAlbumPhoto: MipAdminGateway['reviewEventAlbumPhoto']
+  saveCommentSettings: MipAdminGateway['saveEventCommentSettings']
+  moderateComment: MipAdminGateway['moderateEventComment']
+  claimCommentReport: MipAdminGateway['claimEventCommentReport']
+  closeCommentReport: MipAdminGateway['closeEventCommentReport']
 }
 
 const cacheKeys = {
@@ -54,6 +62,7 @@ const cacheKeys = {
   roster: 'mip-admin:roster',
   rosterAll: 'mip-admin:roster-all',
   album: 'mip-admin:event-album',
+  comments: 'mip-admin:event-comments',
   orders: 'mip-admin:orders',
 } as const
 
@@ -127,6 +136,11 @@ export function createMipEventsAdmin(
       () => gateway.listEventAlbumPhotos(eventId, status),
       { force },
     ),
+    getCommentState: (eventId, force = false) => cache.query(
+      `${cacheKeys.comments}:${eventId}`,
+      () => gateway.getEventCommentAdminState(eventId),
+      { force },
+    ),
     save: input => mutate(
       () => gateway.saveEvent(input),
       () => {
@@ -176,6 +190,22 @@ export function createMipEventsAdmin(
     reviewAlbumPhoto: input => mutate(
       () => gateway.reviewEventAlbumPhoto(input),
       () => cache.invalidate(`${cacheKeys.album}:${input.eventId}`),
+    ),
+    saveCommentSettings: input => mutate(
+      () => gateway.saveEventCommentSettings(input),
+      () => cache.invalidate(`${cacheKeys.comments}:${input.eventId}`),
+    ),
+    moderateComment: input => mutate(
+      () => gateway.moderateEventComment(input),
+      () => cache.invalidate(`${cacheKeys.comments}:${input.eventId}`),
+    ),
+    claimCommentReport: input => mutate(
+      () => gateway.claimEventCommentReport(input),
+      () => cache.invalidate(`${cacheKeys.comments}:${input.eventId}`),
+    ),
+    closeCommentReport: input => mutate(
+      () => gateway.closeEventCommentReport(input),
+      () => cache.invalidate(`${cacheKeys.comments}:${input.eventId}`),
     ),
   }
 }

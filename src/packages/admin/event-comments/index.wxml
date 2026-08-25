@@ -1,0 +1,58 @@
+<view id="admin-event-comments-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+  <mip-admin-workspace-nav />
+  <view class="text-[length:40rpx] font-bold">活动评论</view>
+  <view class="mt-2 text-[length:23rpx] text-muted">配置评论规则并处理评论和举报</view>
+
+  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载活动评论" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
+  <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有评论管理权限" description="当前账号不能管理这场活动的评论。" /></view>
+  <block wx:else>
+    <view class="mt-5 rounded-[16rpx] bg-panel px-4 py-4">
+      <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1 text-[length:30rpx] font-semibold">{{event.title}}</view><t-tag variant="outline">{{event.statusText}}</t-tag></view>
+      <view class="mt-2 text-[length:21rpx] text-muted">活动版本 {{event.version}}</view>
+    </view>
+
+    <view class="mt-5 rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="text-[length:28rpx] font-semibold">评论设置</view>
+      <view class="mip-admin-section-grid mt-4 grid gap-4">
+        <view class="flex items-center justify-between gap-4"><view class="min-w-0 flex-1"><view>开放评论</view><view class="mt-1 text-[length:21rpx] text-muted">关闭后用户不能新增或编辑活动评论</view></view><switch checked="{{settings.commentsEnabled}}" color="#FCDF03" disabled="{{processing}}" bindchange="updateCommentsEnabled" /></view>
+        <view class="flex items-center justify-between gap-4"><view class="min-w-0 flex-1"><view>发布前审核</view><view class="mt-1 text-[length:21rpx] text-muted">开启后，新评论先进入待审核状态</view></view><switch checked="{{settings.moderationMode === 'REVIEW'}}" color="#FCDF03" disabled="{{processing}}" bindchange="updateModerationMode" /></view>
+        <view class="mip-admin-span-wide"><t-button block theme="primary" loading="{{processing}}" disabled="{{processing}}" bind:tap="saveSettings">保存评论设置</t-button></view>
+      </view>
+    </view>
+
+    <view class="mt-6">
+      <view class="flex items-center justify-between"><view class="text-[length:28rpx] font-semibold">评论审核</view><view class="text-[length:21rpx] text-muted">{{comments.length}} 条</view></view>
+      <view wx:if="{{comments.length}}" class="mip-admin-card-list mt-3 flex flex-col gap-3">
+        <view wx:for="{{comments}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
+          <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1 truncate font-semibold">{{item.authorNickname}}</view><t-tag theme="{{item.status === 'PUBLISHED' ? 'success' : item.status === 'HIDDEN' ? 'danger' : 'default'}}" variant="outline">{{item.statusText}}</t-tag></view>
+          <view class="mt-1 text-[length:20rpx] text-muted">{{item.createdText}}</view>
+          <view class="mt-3 whitespace-pre-wrap text-[length:24rpx] leading-[1.7]">{{item.body}}</view>
+          <view class="mt-4 grid grid-cols-2 gap-2">
+            <t-button wx:if="{{item.status === 'PENDING' || item.status === 'HIDDEN'}}" block size="small" theme="primary" loading="{{processing}}" disabled="{{processing}}" data-id="{{item.id}}" data-action="PUBLISH" bind:tap="moderateComment">发布</t-button>
+            <t-button wx:if="{{item.status === 'PENDING' || item.status === 'PUBLISHED'}}" block size="small" variant="outline" theme="danger" loading="{{processing}}" disabled="{{processing}}" data-id="{{item.id}}" data-action="HIDE" bind:tap="moderateComment">隐藏</t-button>
+          </view>
+        </view>
+      </view>
+      <app-empty-state wx:else class="mt-3" title="暂无评论" description="用户提交的活动评论会显示在这里。" />
+    </view>
+
+    <view class="mt-6">
+      <view class="flex items-center justify-between"><view class="text-[length:28rpx] font-semibold">评论举报</view><view class="text-[length:21rpx] text-muted">{{reports.length}} 条</view></view>
+      <view wx:if="{{reports.length}}" class="mip-admin-card-list mt-3 flex flex-col gap-3">
+        <view wx:for="{{reports}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
+          <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1"><view class="font-semibold">{{item.categoryText}}</view><view class="mt-1 text-[length:20rpx] text-muted">{{item.reporterNickname}} · {{item.createdText}}</view></view><t-tag variant="outline">{{item.statusText}}</t-tag></view>
+          <view class="mt-3 rounded-[12rpx] bg-panel-raised px-3 py-3"><view class="text-[length:20rpx] text-muted">被举报评论 · {{item.commentAuthorNickname}}</view><view class="mt-2 whitespace-pre-wrap text-[length:23rpx] leading-[1.7]">{{item.commentBody}}</view></view>
+          <view wx:if="{{item.description}}" class="mt-3 whitespace-pre-wrap text-[length:23rpx] leading-[1.7]">{{item.description}}</view>
+          <view wx:if="{{item.status === 'REVIEWING' && item.reviewedText}}" class="mt-2 text-[length:20rpx] text-muted">领取于 {{item.reviewedText}}</view>
+          <view wx:if="{{item.status === 'PENDING'}}" class="mt-4"><t-button block size="small" theme="primary" loading="{{processing}}" disabled="{{processing}}" data-id="{{item.id}}" bind:tap="claimReport">领取审核</t-button></view>
+          <view wx:elif="{{item.claimedByMe}}" class="mt-4 grid grid-cols-2 gap-2"><t-button block size="small" variant="outline" loading="{{processing}}" disabled="{{processing}}" data-id="{{item.id}}" data-decision="DISMISSED" bind:tap="closeReport">驳回</t-button><t-button block size="small" theme="primary" loading="{{processing}}" disabled="{{processing}}" data-id="{{item.id}}" data-decision="RESOLVED" bind:tap="closeReport">确认违规</t-button></view>
+          <view wx:else class="mt-4 rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx] text-muted">由其他运营成员处理中</view>
+        </view>
+      </view>
+      <app-empty-state wx:else class="mt-3" title="暂无待处理举报" description="用户提交的活动评论举报会显示在这里。" />
+    </view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
+  </block>
+  <app-page-exit />
+</view>

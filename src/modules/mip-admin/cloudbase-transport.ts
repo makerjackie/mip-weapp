@@ -33,6 +33,7 @@ export const readActions = new Set([
   'mip.admin.events.get',
   'mip.admin.events.insights.get',
   'mip.admin.events.album.list',
+  'mip.admin.events.comments.get',
   'mip.admin.events.roster',
   'mip.admin.events.rosterAll',
   'mip.admin.roles.list',

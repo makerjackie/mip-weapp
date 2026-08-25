@@ -82,6 +82,7 @@
         "event-managers/index",
         "event-album/index",
         "event-feedback/index",
+        "event-comments/index",
         "exports/index",
         "event-registrations/index",
         "event-participants/index",

@@ -44,6 +44,7 @@ const expectedOperations = Object.freeze({
   'mip.admin.events.get': ['EVENTS', 'QUERY', 'getEvent'],
   'mip.admin.events.insights.get': ['EVENTS', 'QUERY', 'getEventInsights'],
   'mip.admin.events.album.list': ['EVENTS', 'QUERY', 'listEventAlbumPhotos'],
+  'mip.admin.events.comments.get': ['EVENTS', 'QUERY', 'getEventCommentAdminState'],
   'mip.admin.events.roster': ['EVENTS', 'QUERY', 'listRoster'],
   'mip.admin.events.rosterAll': ['EVENTS', 'QUERY', 'listRosterAll'],
   'mip.admin.events.policy.save': ['EVENTS', 'MUTATION', 'saveEventPolicy'],
@@ -52,6 +53,10 @@ const expectedOperations = Object.freeze({
   'mip.admin.events.changeStatus': ['EVENTS', 'MUTATION', 'changeEventStatus'],
   'mip.admin.events.archive': ['EVENTS', 'MUTATION', 'archiveEvent'],
   'mip.admin.events.album.review': ['EVENTS', 'MUTATION', 'reviewEventAlbumPhoto'],
+  'mip.admin.events.comments.settings.save': ['EVENTS', 'MUTATION', 'saveEventCommentSettings'],
+  'mip.admin.events.comments.moderate': ['EVENTS', 'MUTATION', 'moderateEventComment'],
+  'mip.admin.events.comments.reports.claim': ['EVENTS', 'MUTATION', 'claimEventCommentReport'],
+  'mip.admin.events.comments.reports.close': ['EVENTS', 'MUTATION', 'closeEventCommentReport'],
   'mip.admin.communications.publishEventReminder': ['EVENTS', 'MUTATION', 'publishEventReminder'],
   'mip.admin.events.registrations.review': ['EVENTS', 'MUTATION', 'reviewRegistration'],
   'mip.admin.events.checkIn': ['EVENTS', 'MUTATION', 'checkIn'],
@@ -176,12 +181,12 @@ function manifest(owner, operations) {
 }
 
 describe('admin operation catalog', () => {
-  it('freezes the exact 105 business actions, owners, and kinds while keeping health separate', () => {
+  it('freezes the exact 110 business actions, owners, and kinds while keeping health separate', () => {
     const handlerActions = Object.keys(actions).filter(action => action !== 'health')
     const expectedActions = Object.keys(expectedOperations)
 
-    assert.equal(expectedActions.length, 105)
-    assert.equal(operationCatalog.length, 105)
+    assert.equal(expectedActions.length, 110)
+    assert.equal(operationCatalog.length, 110)
     assert.deepEqual(sorted(handlerActions), sorted(expectedActions))
     assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(expectedActions))
     assert.equal(operationByAction.health, undefined)
