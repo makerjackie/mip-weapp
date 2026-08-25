@@ -259,10 +259,12 @@ describe('mip-weapp UI runtime contract', () => {
     expect(verifyRuntime).toContain('injectedDiffRatio >= 0.001')
   })
 
-  it('uses runtime status-bar geometry for the custom opportunities header', () => {
-    expect(read('src/pages/opportunities/index.ts')).toContain('getCustomNavigationStatusBarHeight')
-    expect(read('src/pages/opportunities/index.wxml')).toContain('height: {{statusBarHeight}}px')
-    expect(read('src/pages/opportunities/index.wxss')).not.toContain('height: env(safe-area-inset-top)')
+  it('uses the native navigation safe area for opportunities', () => {
+    const opportunitiesConfig = readJson<{ navigationStyle?: string }>('src/pages/opportunities/index.json')
+
+    expect(opportunitiesConfig.navigationStyle).toBeUndefined()
+    expect(read('src/pages/opportunities/index.ts')).not.toContain('getCustomNavigationStatusBarHeight')
+    expect(read('src/pages/opportunities/index.wxml')).not.toContain('statusBarHeight')
   })
 
   it('executes non-mutating UI interactions through rendered controls', () => {
