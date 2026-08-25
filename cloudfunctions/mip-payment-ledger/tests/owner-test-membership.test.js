@@ -151,8 +151,7 @@ describe('Owner TEST membership ledger operations', () => {
             amount_cents: plan.price_cents,
             status: 'PAID',
             version: 2,
-            catalog_stage: 'TEST',
-            plan_key: plan.plan_key,
+            snapshot_catalog_stage: 'TEST',
           }]
         }
         writes += 1
@@ -223,7 +222,7 @@ describe('Owner TEST membership ledger operations', () => {
     let writes = 0
     for (const conflict of [
       { membership_plan_id: '20000000-0000-4000-8000-000000000002' },
-      { catalog_stage: 'LIVE' },
+      { snapshot_catalog_stage: 'LIVE' },
     ]) {
       const tx = {
         async one(sql) {
@@ -239,8 +238,7 @@ describe('Owner TEST membership ledger operations', () => {
               amount_cents: plan.price_cents,
               status: 'PAID',
               version: 2,
-              catalog_stage: 'TEST',
-              plan_key: plan.plan_key,
+              snapshot_catalog_stage: 'TEST',
               ...conflict,
             }]
           }
@@ -264,8 +262,7 @@ describe('Owner TEST membership ledger operations', () => {
       amount_cents: plan.price_cents,
       status: 'PAID',
       version: 2,
-      catalog_stage: 'TEST',
-      plan_key: plan.plan_key,
+      snapshot_catalog_stage: 'TEST',
     }
     const ids = idFactory([
       '40000000-0000-4000-8000-000000000001',

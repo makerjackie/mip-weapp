@@ -235,7 +235,7 @@ async function ownerTestMembershipContext(tx, input, options = {}) {
             currency, benefits_json, status, version
      FROM mip_membership_plans
      WHERE app_id = ? AND catalog_stage = 'TEST' AND plan_key = ?
-     LIMIT 1 FOR UPDATE`,
+     LIMIT 1`,
     [input.appId, input.planKey],
   )
   if (!plan || (options.requireActivePlan && plan.status !== 'ACTIVE')) {
@@ -256,10 +256,10 @@ async function ownerTestMembershipContext(tx, input, options = {}) {
 async function activeOwnerTestMembershipOrders(tx, appId, userId) {
   return tx.query(
     `SELECT order_row.id, order_row.membership_plan_id, order_row.amount_cents,
-            order_row.status, order_row.version, plan.catalog_stage, plan.plan_key
+            order_row.status, order_row.version,
+            JSON_UNQUOTE(JSON_EXTRACT(order_row.product_snapshot_json, '$.catalogStage'))
+              AS snapshot_catalog_stage
      FROM mip_orders order_row
-     INNER JOIN mip_membership_plans plan
-       ON plan.app_id = order_row.app_id AND plan.id = order_row.membership_plan_id
      INNER JOIN mip_membership_entitlements entitlement
        ON entitlement.app_id = order_row.app_id AND entitlement.order_id = order_row.id
         AND entitlement.user_id = order_row.user_id
@@ -276,9 +276,9 @@ async function activeOwnerTestMembershipOrders(tx, appId, userId) {
 function assertManagedTestMembershipOrder(order, plan) {
   if (!order
     || order.status !== 'PAID'
-    || order.catalog_stage !== 'TEST'
+    || order.snapshot_catalog_stage !== 'TEST'
     || order.membership_plan_id !== plan.id
-    || order.plan_key !== plan.plan_key) {
+    || plan.catalog_stage !== 'TEST') {
     throw new Error('TEST_MEMBERSHIP_STATE_CONFLICT')
   }
 }
