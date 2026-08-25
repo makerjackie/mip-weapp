@@ -1,13 +1,17 @@
-import type { MipBannerDraft, MipBannerStatus } from './types'
+import type {
+  MipBannerAction,
+  MipBannerActionInputMap,
+  MipBannerGateway,
+  MipBannerRequest,
+} from './types'
 import {
   parseAdminBanner,
   parseAdminBannerPage,
   parseBannerAdminSession,
   parseBannerDeletion,
-  parseBannerUploadedImage,
   parsePublicBannerList,
 } from './contracts'
-import { MipBannerError } from './types'
+import { MIP_BANNER_CONTRACT_VERSION, MipBannerError } from './types'
 
 interface Envelope {
   ok: boolean
@@ -16,12 +20,19 @@ interface Envelope {
 }
 
 export interface MipBannerTransport {
-  invoke: (functionName: string, action: string, data?: Record<string, unknown>) => Promise<unknown>
+  invoke: (request: MipBannerRequest) => Promise<unknown>
 }
 
-export function createMipBannerGateway(transport: MipBannerTransport) {
-  async function invoke(functionName: string, action: string, data: Record<string, unknown> = {}) {
-    const result = await transport.invoke(functionName, action, data) as Envelope
+export function createMipBannerGateway(transport: MipBannerTransport): MipBannerGateway {
+  async function invoke<A extends MipBannerAction>(
+    action: A,
+    input: MipBannerActionInputMap[A],
+  ) {
+    const result = await transport.invoke({
+      contractVersion: MIP_BANNER_CONTRACT_VERSION,
+      action,
+      input,
+    }) as Envelope
     if (!result || typeof result.ok !== 'boolean') {
       throw new MipBannerError('SERVICE_UNAVAILABLE', 'Banner 服务返回了无效响应', true)
     }
@@ -37,44 +48,38 @@ export function createMipBannerGateway(transport: MipBannerTransport) {
 
   return {
     async listActive() {
-      return parsePublicBannerList(await invoke('mip-banners-api', 'mip.banners.listActive'))
+      return parsePublicBannerList(await invoke('mip.banners.listActive', {}))
     },
     async getAdminSession() {
-      return parseBannerAdminSession(await invoke('mip-banners-api', 'mip.banners.admin.session'))
+      return parseBannerAdminSession(await invoke('mip.banners.admin.session', {}))
     },
-    async listAdmin(filters: { status?: MipBannerStatus | '', query?: string } = {}) {
-      return parseAdminBannerPage(await invoke('mip-banners-api', 'mip.banners.admin.list', { filters }))
+    async listAdmin(filters = {}) {
+      return parseAdminBannerPage(await invoke('mip.banners.admin.list', { filters }))
     },
     async getAdmin(bannerId: string) {
-      return parseAdminBanner(await invoke('mip-banners-api', 'mip.banners.admin.get', { bannerId }))
+      return parseAdminBanner(await invoke('mip.banners.admin.get', { bannerId }))
     },
-    async saveAdmin(input: { bannerId?: string, expectedVersion?: number, banner: MipBannerDraft }) {
-      return parseAdminBanner(await invoke('mip-banners-api', 'mip.banners.admin.save', input))
+    async saveAdmin(input) {
+      return parseAdminBanner(await invoke('mip.banners.admin.save', input))
     },
-    async changeStatus(bannerId: string, expectedVersion: number, status: Exclude<MipBannerStatus, 'DELETED'>) {
-      return parseAdminBanner(await invoke('mip-banners-api', 'mip.banners.admin.changeStatus', {
+    async changeStatus(bannerId, expectedVersion, status) {
+      return parseAdminBanner(await invoke('mip.banners.admin.changeStatus', {
         bannerId,
         expectedVersion,
         status,
       }))
     },
     async move(bannerId: string, expectedVersion: number, direction: 'UP' | 'DOWN') {
-      return parseAdminBannerPage(await invoke('mip-banners-api', 'mip.banners.admin.move', {
+      return parseAdminBannerPage(await invoke('mip.banners.admin.move', {
         bannerId,
         expectedVersion,
         direction,
       }))
     },
     async remove(bannerId: string, expectedVersion: number) {
-      return parseBannerDeletion(await invoke('mip-banners-api', 'mip.banners.admin.delete', {
+      return parseBannerDeletion(await invoke('mip.banners.admin.delete', {
         bannerId,
         expectedVersion,
-      }))
-    },
-    async uploadBannerImage(imageBase64: string) {
-      return parseBannerUploadedImage(await invoke('mip-media-api', 'uploadImage', {
-        purpose: 'BANNER',
-        imageBase64,
       }))
     },
   }

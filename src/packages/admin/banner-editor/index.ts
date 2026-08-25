@@ -36,7 +36,7 @@ Page({
 
   onLoad(query: Record<string, string>) {
     this.setData({ bannerId: query.bannerId || '' })
-    void this.load()
+    void this.load(true)
   },
 
   retryLoad() {
@@ -47,8 +47,8 @@ Page({
     this.setData({ state: 'loading', message: '' })
     try {
       const [, banner] = await Promise.all([
-        mipBannerModule.getAdminSession(force),
-        this.data.bannerId ? mipBannerModule.getAdmin(this.data.bannerId, force) : Promise.resolve(null),
+        mipBannerModule.query.getAdminSession(force),
+        this.data.bannerId ? mipBannerModule.query.getAdmin(this.data.bannerId, force) : Promise.resolve(null),
       ])
       if (!banner) {
         this.setData({ state: 'ready', draft: initialDraft(), message: '' })
@@ -134,18 +134,21 @@ Page({
     }
     this.setData({ saving: true, message: '' })
     try {
-      await mipBannerModule.mutate(() => mipBannerModule.gateway.saveAdmin({
+      await mipBannerModule.mutation.saveAdmin({
         ...(this.data.bannerId
           ? { bannerId: this.data.bannerId, expectedVersion: this.data.version }
           : {}),
         banner: this.data.draft,
-      }))
+      })
       wx.showToast({ title: 'Banner 已保存', icon: 'success' })
       setTimeout(leaveSecondaryPage, 500, '/packages/admin/banners/index')
     }
     catch (error) {
       if (error instanceof MipBannerError && error.code === 'CONFLICT') {
         this.setData({ state: 'conflict', message: error.message })
+      }
+      else if (error instanceof MipBannerError && error.code === 'FORBIDDEN') {
+        this.setData({ state: 'forbidden', message: error.message })
       }
       else {
         this.setData({ message: error instanceof Error ? error.message : 'Banner 保存失败' })

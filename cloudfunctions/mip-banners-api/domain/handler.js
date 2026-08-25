@@ -31,11 +31,41 @@ const messages = Object.freeze({
   VALIDATION_FAILED: 'Banner 内容格式不正确',
 })
 
+const CONTRACT_VERSION = 1
+
+function isRecord(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function businessInput(value) {
+  const {
+    action: _action,
+    contractVersion: _contractVersion,
+    input: _input,
+    ...input
+  } = value
+  return input
+}
+
+function normalizeRequest(event) {
+  if (!isRecord(event)) throw new Error('VALIDATION_FAILED')
+  const action = typeof event.action === 'string' ? event.action : ''
+  if (event.contractVersion === undefined) {
+    return { action, input: businessInput(event), legacy: true }
+  }
+  if (event.contractVersion !== CONTRACT_VERSION
+    || !isRecord(event.input)
+    || Object.keys(event).some(key => !['contractVersion', 'action', 'input'].includes(key))) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  return { action, input: businessInput(event.input), legacy: false }
+}
+
 function createHandler(options) {
   return async function handler(event = {}) {
     try {
-      if (event.action === 'health') return success(await options.health())
-      const action = typeof event.action === 'string' ? event.action : ''
+      const { action, input } = normalizeRequest(event)
+      if (action === 'health') return success(await options.health())
       const publicDispatch = publicActions[action]
       if (publicDispatch) {
         return success(await publicDispatch(options.service, options.resolveAppId()))
@@ -44,7 +74,7 @@ function createHandler(options) {
       if (!adminDispatch) throw new Error('NOT_FOUND')
       const caller = await options.resolveCaller()
       await options.assertAdminReady(caller)
-      return success(await adminDispatch(options.service, caller, event))
+      return success(await adminDispatch(options.service, caller, input))
     }
     catch (error) {
       return failure(error)
@@ -69,4 +99,12 @@ function failure(error) {
   }
 }
 
-module.exports = { adminActions, createHandler, failure, publicActions, success }
+module.exports = {
+  CONTRACT_VERSION,
+  adminActions,
+  createHandler,
+  failure,
+  normalizeRequest,
+  publicActions,
+  success,
+}

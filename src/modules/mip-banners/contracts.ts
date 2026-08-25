@@ -1,6 +1,7 @@
 import type {
   MipAdminBanner,
   MipBannerAdminPage,
+  MipBannerAdminSession,
   MipBannerStatus,
   MipBannerTargetType,
   MipBannerUploadedImage,
@@ -118,14 +119,17 @@ export function parseAdminBannerPage(value: unknown): MipBannerAdminPage {
   return { items: value.items.map(parseAdminBanner), truncated: value.truncated }
 }
 
-export function parseBannerAdminSession(value: unknown) {
+export function parseBannerAdminSession(value: unknown): MipBannerAdminSession {
   if (!record(value)
     || !hasOnlyKeys(value, ['capability', 'roleKey'])
     || value.capability !== 'banners.manage'
     || !['PLATFORM_OWNER', 'PLATFORM_OPERATIONS'].includes(String(value.roleKey))) {
     return invalid('管理权限')
   }
-  return { capability: 'banners.manage' as const, roleKey: String(value.roleKey) }
+  return {
+    capability: 'banners.manage',
+    roleKey: value.roleKey as MipBannerAdminSession['roleKey'],
+  }
 }
 
 export function parseBannerDeletion(value: unknown) {

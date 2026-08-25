@@ -8,6 +8,10 @@ type BannerView = MipAdminBanner & {
   targetLabel: string
   dimensionsLabel: string
 }
+type BannerMutationIntent
+  = | { type: 'CHANGE_STATUS', status: 'ACTIVE' | 'INACTIVE' }
+    | { type: 'MOVE', direction: 'UP' | 'DOWN' }
+    | { type: 'REMOVE' }
 
 const statusLabels: Record<MipBannerStatus, string> = {
   ACTIVE: '已启用',
@@ -48,8 +52,8 @@ Page({
     message: '',
   },
 
-  onLoad() {
-    void this.load()
+  onShow() {
+    void this.load(true)
   },
 
   retryLoad() {
@@ -62,7 +66,7 @@ Page({
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const page = await mipBannerModule.listAdmin({
+      const page = await mipBannerModule.query.listAdmin({
         status: this.data.statusFilter,
         query: this.data.query.trim(),
       }, force)
@@ -74,13 +78,17 @@ Page({
       })
     }
     catch (error) {
+      const forbidden = error instanceof MipBannerError && error.code === 'FORBIDDEN'
+      if (forbidden) {
+        this.setData({ state: 'forbidden', items: [], message: error.message })
+        return
+      }
       if (hasContent) {
         this.setData({ message: 'Banner 列表刷新失败，已保留上次结果。' })
         return
       }
-      const forbidden = error instanceof MipBannerError && error.code === 'FORBIDDEN'
       this.setData({
-        state: forbidden ? 'forbidden' : 'error',
+        state: 'error',
         message: error instanceof Error ? error.message : 'Banner 列表加载失败',
       })
     }
@@ -118,11 +126,10 @@ Page({
     const bannerId = String(event.currentTarget.dataset.bannerId || '')
     const item = this.data.items.find(banner => banner.id === bannerId)
     if (item && item.status !== 'DELETED') {
-      void this.runMutation(item, () => mipBannerModule.gateway.changeStatus(
-        item.id,
-        item.version,
-        item.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
-      ))
+      void this.runMutation(item, {
+        type: 'CHANGE_STATUS',
+        status: item.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE',
+      })
     }
   },
 
@@ -131,7 +138,7 @@ Page({
     const direction = String(event.currentTarget.dataset.direction || '')
     const item = this.data.items.find(banner => banner.id === bannerId)
     if (item && (direction === 'UP' || direction === 'DOWN')) {
-      void this.runMutation(item, () => mipBannerModule.gateway.move(item.id, item.version, direction))
+      void this.runMutation(item, { type: 'MOVE', direction })
     }
   },
 
@@ -141,23 +148,33 @@ Page({
     if (!item || item.status === 'DELETED' || !await confirm('删除后不会在公开页面展示，历史审计记录会保留。')) {
       return
     }
-    await this.runMutation(item, () => mipBannerModule.gateway.remove(item.id, item.version))
+    await this.runMutation(item, { type: 'REMOVE' })
   },
 
-  async runMutation(item: BannerView, work: () => Promise<unknown>) {
+  async runMutation(item: BannerView, intent: BannerMutationIntent) {
     if (this.data.mutatingId) {
       return
     }
     this.setData({ mutatingId: item.id, message: '' })
     try {
-      await mipBannerModule.mutate(work)
-      await this.load(true)
+      if (intent.type === 'CHANGE_STATUS') {
+        await mipBannerModule.mutation.changeStatus(item.id, item.version, intent.status)
+      }
+      if (intent.type === 'MOVE') {
+        await mipBannerModule.mutation.move(item.id, item.version, intent.direction)
+      }
+      if (intent.type === 'REMOVE') {
+        await mipBannerModule.mutation.remove(item.id, item.version)
+      }
+      await this.load()
       wx.showToast({ title: '操作成功', icon: 'success' })
     }
     catch (error) {
       if (error instanceof MipBannerError && error.code === 'CONFLICT') {
         this.setData({ state: 'conflict', message: error.message })
-        await this.load(true)
+      }
+      else if (error instanceof MipBannerError && error.code === 'FORBIDDEN') {
+        this.setData({ state: 'forbidden', message: error.message })
       }
       else {
         this.setData({ message: error instanceof Error ? error.message : 'Banner 操作失败' })
