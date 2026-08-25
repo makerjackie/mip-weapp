@@ -18,8 +18,8 @@ function between(source: string, start: string, end: string): string {
 
 describe('MIP admin export account-closure fence', () => {
   it('keeps storage validation and URL issuance inside the repository transaction callback', () => {
-    const service = between(
-      read('cloudfunctions/mip-admin-api/domain/service.js'),
+    const exportsModule = between(
+      read('cloudfunctions/mip-admin-api/domain/exports.js'),
       'async function reserveExportDownload',
       'async function completeExportDownload',
     )
@@ -29,10 +29,10 @@ describe('MIP admin export account-closure fence', () => {
       'async function consumeExportDownload',
     )
 
-    expect(service).toContain('repository.issueExportDownload')
-    expect(service).toContain('exportStorage.read')
-    expect(service).toContain('exportStorage.temporaryUrl')
-    expect(service).not.toContain('claimExportDownload')
+    expect(exportsModule).toContain('repository.issueExportDownload')
+    expect(exportsModule).toContain('exportStorage.read')
+    expect(exportsModule).toContain('exportStorage.temporaryUrl')
+    expect(exportsModule).not.toContain('claimExportDownload')
     expect(repository.indexOf('authorizedExportTicket(tx, input)')).toBeLessThan(
       repository.indexOf('await issue(ticket)'),
     )
