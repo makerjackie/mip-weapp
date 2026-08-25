@@ -102,6 +102,7 @@ test('set heart rechecks a signed target inside the transaction', async () => {
       userId: 'user-self',
       targetRef,
       tokenSecret,
+      participationAccessPolicy: { requireAccess: async () => ({}) },
       now,
     }),
     /参与人不存在或当前不可见/,

@@ -1,8 +1,15 @@
 import type { EventId } from '../../../../modules/mip'
 import type { EventFeedback, HeartCandidate, HeartState } from '../../../../modules/mip-events'
+import { isEventAccessRequirementError, MipEventsError } from '../../../../modules/mip-events'
 import { mipEventsModule } from '../../../../modules/mip-events/client'
+import { mipAccessPageUrl } from '../../../../modules/mip-identity'
+import { mipIdentityModule } from '../../../../modules/mip-identity/client'
+import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
 
 type InteractionView = 'SENT' | 'RECEIVED' | 'FEEDBACK'
+type PendingInteractionAction
+  = | { kind: 'HEART', targetRef: string }
+    | { kind: 'FEEDBACK' }
 
 function filteredCandidates(items: HeartCandidate[], keyword: string) {
   const normalized = keyword.trim().toLocaleLowerCase()
@@ -33,6 +40,9 @@ Page({
     savingFeedback: false,
     message: '',
   },
+  pendingInteractionAction: null as PendingInteractionAction | null,
+  pendingAccessResume: false,
+  accessRetryAttempted: false,
 
   onLoad(query: Record<string, string>) {
     const activeView = ['SENT', 'RECEIVED', 'FEEDBACK'].includes(query.viewMode)
@@ -40,6 +50,31 @@ Page({
       : 'SENT'
     this.setData({ eventId: String(query.eventId || '') as EventId, activeView })
     void this.loadInteraction()
+  },
+
+  onShow() {
+    const resume = mipIdentityModule.consumePendingResume('packages/member/mip-events/interaction/index')
+    if (resume?.action !== 'INTERACT') {
+      return
+    }
+    const pending = this.pendingInteractionAction
+    this.pendingInteractionAction = null
+    if (!pending) {
+      if (this.data.state === 'ready') {
+        this.setData({ message: '身份已确认，请继续刚才的操作。' })
+      }
+      else {
+        this.pendingAccessResume = true
+      }
+      return
+    }
+    this.accessRetryAttempted = true
+    if (pending.kind === 'HEART') {
+      void this.saveHeartTarget(pending.targetRef)
+    }
+    else {
+      void this.submitFeedback()
+    }
   },
 
   async loadInteraction() {
@@ -60,18 +95,28 @@ Page({
         feedback,
         rating: feedback?.rating || 5,
         body: feedback?.body || '',
+        message: this.pendingAccessResume ? '身份已确认，请继续刚才的操作。' : '',
       })
+      this.pendingAccessResume = false
     }
     catch (error) {
       this.setData({ state: 'error', message: error instanceof Error ? error.message : '互动内容加载失败' })
     }
   },
 
-  async chooseHeart(event: WechatMiniprogram.TouchEvent) {
+  chooseHeart(event: WechatMiniprogram.TouchEvent) {
+    const targetRef = String(event.currentTarget.dataset.targetRef || '')
+    if (!targetRef) {
+      return
+    }
+    this.accessRetryAttempted = false
+    void this.saveHeartTarget(targetRef)
+  },
+
+  async saveHeartTarget(targetRef: string) {
     if (this.data.savingHeart) {
       return
     }
-    const targetRef = String(event.currentTarget.dataset.targetRef || '')
     const currentTarget = this.data.heart?.targetRef || ''
     this.setData({ savingHeart: true, message: '' })
     try {
@@ -94,7 +139,16 @@ Page({
       wx.showToast({ title: heart.targetRef ? '已保存' : '已取消', icon: 'success' })
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '心动状态保存失败' })
+      if (isEventAccessRequirementError(error)) {
+        this.setData({ savingHeart: false })
+        await this.recoverInteractionAccess({ kind: 'HEART', targetRef })
+      }
+      else if (error instanceof MipEventsError && error.code === 'CONFLICT') {
+        await this.recoverHeartConflict()
+      }
+      else {
+        this.setData({ message: error instanceof Error ? error.message : '心动状态保存失败' })
+      }
     }
     finally {
       this.setData({ savingHeart: false })
@@ -134,7 +188,12 @@ Page({
     this.setData({ body: event.detail.value, message: '' })
   },
 
-  async saveFeedback() {
+  saveFeedback() {
+    this.accessRetryAttempted = false
+    void this.submitFeedback()
+  },
+
+  async submitFeedback() {
     if (this.data.savingFeedback) {
       return
     }
@@ -149,10 +208,94 @@ Page({
       wx.showToast({ title: '反馈已保存', icon: 'success' })
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '反馈保存失败' })
+      if (isEventAccessRequirementError(error)) {
+        this.setData({ savingFeedback: false })
+        await this.recoverInteractionAccess({ kind: 'FEEDBACK' })
+      }
+      else if (error instanceof MipEventsError && error.code === 'CONFLICT') {
+        await this.recoverFeedbackConflict()
+      }
+      else {
+        this.setData({ message: error instanceof Error ? error.message : '反馈保存失败' })
+      }
     }
     finally {
       this.setData({ savingFeedback: false })
+    }
+  },
+
+  async recoverInteractionAccess(pending: PendingInteractionAction) {
+    if (this.accessRetryAttempted) {
+      this.setData({ message: '身份状态仍未满足互动条件，请稍后重试。' })
+      return
+    }
+    this.pendingInteractionAction = pending
+    try {
+      const session = await mipIdentityModule.beginProtectedAction({
+        action: 'INTERACT',
+        source: {
+          navigation: 'navigateBack',
+          route: '/packages/member/mip-events/interaction/index',
+          query: {
+            eventId: this.data.eventId,
+            viewMode: pending.kind === 'FEEDBACK' ? 'FEEDBACK' : this.data.activeView,
+            resumeInteraction: '1',
+          },
+        },
+      })
+      if (!session.decision.ready) {
+        caseNavigateTo({ url: mipAccessPageUrl(session.token) })
+        return
+      }
+      this.pendingInteractionAction = null
+      this.accessRetryAttempted = true
+      if (pending.kind === 'HEART') {
+        await this.saveHeartTarget(pending.targetRef)
+      }
+      else {
+        await this.submitFeedback()
+      }
+    }
+    catch {
+      this.pendingInteractionAction = null
+      this.setData({ message: '身份状态暂时无法确认，请稍后重试。' })
+    }
+  },
+
+  async recoverHeartConflict() {
+    try {
+      const [candidates, heart] = await Promise.all([
+        mipEventsModule.listHeartCandidates(this.data.eventId),
+        mipEventsModule.getHeart(this.data.eventId),
+      ])
+      const current = candidates.map(candidate => ({
+        ...candidate,
+        selected: candidate.participantRef === heart.targetRef,
+      }))
+      this.setData({
+        heart,
+        candidates: current,
+        visibleCandidates: filteredCandidates(current, this.data.searchInput),
+        received: heart.received,
+        visibleReceived: filteredCandidates(heart.received, this.data.searchInput),
+        message: '心动状态已更新，请重新选择。',
+      })
+    }
+    catch {
+      this.setData({ message: '心动状态已变化，最新状态加载失败，请稍后重试。' })
+    }
+  },
+
+  async recoverFeedbackConflict() {
+    try {
+      const feedback = await mipEventsModule.getFeedback(this.data.eventId)
+      this.setData({
+        feedback,
+        message: '反馈已在其他位置更新，当前填写内容已保留，请确认后重新保存。',
+      })
+    }
+    catch {
+      this.setData({ message: '反馈已变化，最新版本加载失败，请稍后重试。' })
     }
   },
 })

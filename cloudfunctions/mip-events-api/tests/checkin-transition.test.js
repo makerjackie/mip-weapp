@@ -44,6 +44,7 @@ it('writes the user scan transition and outbox atomically with the same immutabl
     scanToken: 's1.abcdefghijk.lmnopqrstuv',
     idempotencyKey: 'scan-transition-test',
     expectedVersion: 2,
+    participationAccessPolicy: { requireAccess: async () => ({}) },
     now,
   })
   assert.equal(result.status, 'ATTENDED')

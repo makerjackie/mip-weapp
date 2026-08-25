@@ -2,7 +2,12 @@
 
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
-const { createRegistration } = require('../domain/event-service')
+const {
+  checkIn,
+  createRegistration,
+  saveFeedback,
+  setHeart,
+} = require('../domain/event-service')
 const {
   configuredAgreements,
   createParticipationAccessPolicy,
@@ -238,5 +243,130 @@ describe('new event registration access ordering', () => {
     assert.ok(accessCheck > registrationRead)
     assert.equal(fixture.calls.some(call => call.sql.includes('mip_event_seat_holds SET')), false)
     assert.equal(fixture.calls.some(call => call.sql.includes('INSERT INTO mip_event_registrations')), false)
+  })
+
+})
+
+describe('current participation access for event actions', () => {
+  it('replays a completed check-in before reloading current participation access', async () => {
+    const replay = {
+      eventId,
+      registrationId: '40000000-0000-4000-8000-000000000001',
+      status: 'ATTENDED',
+      checkedInAt: now.toISOString(),
+      idempotent: false,
+    }
+    let requestHash = ''
+    const tx = {
+      async one(sql) {
+        if (sql.includes('FROM mip_users')) return { id: userId, status: 'ACTIVE' }
+        if (sql.includes('FROM mip_idempotency_keys')) {
+          return {
+            request_hash: requestHash,
+            status: 'COMPLETED',
+            response_json: JSON.stringify(replay),
+          }
+        }
+        throw new Error(`unexpected read: ${sql}`)
+      },
+      async query(sql, params) {
+        if (sql.includes('INSERT INTO mip_idempotency_keys')) {
+          requestHash = params[5]
+          const duplicate = new Error('duplicate')
+          duplicate.errno = 1062
+          throw duplicate
+        }
+        throw new Error(`unexpected write: ${sql}`)
+      },
+    }
+    let accessLoads = 0
+    const result = await checkIn({ transaction: work => work(tx) }, {
+      appId,
+      userId,
+      scanToken: 's1.abcdefghijk.lmnopqrstuv',
+      idempotencyKey: 'check-in-replay',
+      participationAccessPolicy: {
+        async requireAccess() {
+          accessLoads += 1
+          throw new Error('must not load access for a completed replay')
+        },
+      },
+      now,
+    })
+
+    assert.deepEqual(result, replay)
+    assert.equal(accessLoads, 0)
+  })
+
+  it('rechecks uncached access inside check-in, heart and feedback transactions', async () => {
+    const accessFailure = new DomainError('AGREEMENT_REQUIRED', '请先确认协议')
+    const cases = [
+      {
+        name: 'check-in',
+        invoke: database => checkIn(database, {
+          appId,
+          userId,
+          scanToken: 's1.abcdefghijk.lmnopqrstuv',
+          idempotencyKey: 'check-in-access-fence',
+          participationAccessPolicy: accessPolicy,
+          now,
+        }),
+      },
+      {
+        name: 'heart',
+        invoke: database => setHeart(database, {
+          appId,
+          userId,
+          eventId,
+          targetRef: null,
+          participationAccessPolicy: accessPolicy,
+          now,
+        }),
+      },
+      {
+        name: 'feedback',
+        invoke: database => saveFeedback(database, {
+          appId,
+          userId,
+          eventId,
+          draft: { rating: 5, body: '活动反馈' },
+          participationAccessPolicy: accessPolicy,
+          now,
+        }),
+      },
+    ]
+    let calls
+    let accessPolicy
+    for (const entry of cases) {
+      calls = []
+      accessPolicy = {
+        async requireAccess(queryable, policyAppId, policyUserId) {
+          calls.push({ kind: 'policy', queryable, policyAppId, policyUserId })
+          throw accessFailure
+        },
+      }
+      const tx = {
+        async one(sql) {
+          calls.push({ kind: 'one', sql })
+          if (sql.includes('FROM mip_users')) return { id: userId, status: 'ACTIVE' }
+          throw new Error(`unexpected ${entry.name} read: ${sql}`)
+        },
+        async query(sql) {
+          calls.push({ kind: 'query', sql })
+          if (sql.includes('INSERT INTO mip_idempotency_keys')) return { affectedRows: 1 }
+          throw new Error(`unexpected ${entry.name} write: ${sql}`)
+        },
+      }
+      await assert.rejects(
+        () => entry.invoke({ transaction: work => work(tx) }),
+        error => error === accessFailure,
+      )
+      const policyCall = calls.find(call => call.kind === 'policy')
+      assert.ok(policyCall, `${entry.name} must load participation access`)
+      assert.equal(policyCall.queryable, tx)
+      assert.equal(policyCall.policyAppId, appId)
+      assert.equal(policyCall.policyUserId, userId)
+      assert.equal(calls.some(call => /mip_event_(?:registrations|hearts|feedback)/.test(call.sql || '')), false)
+    }
   })
 })

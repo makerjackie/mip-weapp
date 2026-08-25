@@ -172,6 +172,7 @@ async function dispatch(event) {
         scanToken: event.scanToken,
         idempotencyKey: event.idempotencyKey,
         expectedVersion: event.expectedVersion,
+        participationAccessPolicy,
       })
     case 'mip.events.heartCandidates':
       return service.listHeartCandidates(mysqlDatabase(), { ...shared, eventId: event.eventId })
@@ -190,11 +191,17 @@ async function dispatch(event) {
         eventId: event.eventId,
         targetRef: event.targetRef || null,
         expectedVersion: event.expectedVersion,
+        participationAccessPolicy,
       })
     case 'mip.events.feedback':
       return service.getFeedback(mysqlDatabase(), { ...shared, eventId: event.eventId })
     case 'mip.events.saveFeedback':
-      return service.saveFeedback(mysqlDatabase(), { ...shared, eventId: event.eventId, draft: event.draft })
+      return service.saveFeedback(mysqlDatabase(), {
+        ...shared,
+        eventId: event.eventId,
+        draft: event.draft,
+        participationAccessPolicy,
+      })
     case 'mip.events.createInvitation':
       return service.createInvitation(mysqlDatabase(), { ...shared, eventId: event.eventId })
     case 'mip.events.createInvitationCode': {

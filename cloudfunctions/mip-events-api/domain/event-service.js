@@ -426,6 +426,13 @@ async function requireActiveUserForMutation(tx, appId, userId) {
   return user
 }
 
+async function requireCurrentParticipationAccess(policy, queryable, appId, userId) {
+  if (!policy || typeof policy.requireAccess !== 'function') {
+    throw new DomainError('SERVICE_UNAVAILABLE', '活动参与服务暂时不可用', true)
+  }
+  return policy.requireAccess(queryable, appId, userId)
+}
+
 async function idempotencyReplay(tx, { appId, userId, operation, key, request }) {
   if (typeof key !== 'string' || !key.trim() || key.length > 128) {
     throw new DomainError('VALIDATION_FAILED', '请求标识无效')
@@ -1620,10 +1627,7 @@ async function createRegistration(db, {
       await completeIdempotency(tx, claim, { appId, userId, operation: 'event.register', response: outcome })
       return outcome
     }
-    if (!participationAccessPolicy || typeof participationAccessPolicy.requireAccess !== 'function') {
-      throw new DomainError('SERVICE_UNAVAILABLE', '活动报名服务暂时不可用', true)
-    }
-    await participationAccessPolicy.requireAccess(tx, appId, userId)
+    await requireCurrentParticipationAccess(participationAccessPolicy, tx, appId, userId)
     if (!event || Number(event.form_version) !== formVersion) {
       throw new DomainError(event ? 'CONFLICT' : 'NOT_FOUND', event ? '报名表已更新，请刷新后重试' : '活动不存在')
     }
@@ -2144,6 +2148,7 @@ async function checkIn(db, {
   tokenSecret,
   idempotencyKey,
   expectedVersion,
+  participationAccessPolicy,
   now = new Date(),
 }) {
   const presented = parsePresentedCheckInToken(resumeToken || scanToken, {
@@ -2165,6 +2170,7 @@ async function checkIn(db, {
     if (claim.replay) {
       return claim.replay
     }
+    await requireCurrentParticipationAccess(participationAccessPolicy, tx, appId, userId)
     const lookup = presented.kind === 'SCAN'
       ? checkInCredentialQuery(presented.parsed, { lock: true })
       : checkInResumeRef(presented.credentialKind, presented.credentialRef, { lock: true })
@@ -2581,9 +2587,19 @@ async function listHeartHistory(db, {
   }
 }
 
-async function setHeart(db, { appId, eventId, userId, targetRef, expectedVersion, tokenSecret, now = new Date() }) {
+async function setHeart(db, {
+  appId,
+  eventId,
+  userId,
+  targetRef,
+  expectedVersion,
+  tokenSecret,
+  participationAccessPolicy,
+  now = new Date(),
+}) {
   return db.transaction(async (tx) => {
     await requireActiveUserForMutation(tx, appId, userId)
+    await requireCurrentParticipationAccess(participationAccessPolicy, tx, appId, userId)
     await requireAttendedRegistration(tx, { appId, eventId, userId, lock: true })
     let target = null
     if (targetRef) {
@@ -2673,10 +2689,18 @@ async function getFeedback(db, { appId, eventId, userId }) {
     : null
 }
 
-async function saveFeedback(db, { appId, eventId, userId, draft, now = new Date() }) {
+async function saveFeedback(db, {
+  appId,
+  eventId,
+  userId,
+  draft,
+  participationAccessPolicy,
+  now = new Date(),
+}) {
   const normalized = validateFeedback(draft || {})
   return db.transaction(async (tx) => {
     await requireActiveUserForMutation(tx, appId, userId)
+    await requireCurrentParticipationAccess(participationAccessPolicy, tx, appId, userId)
     await requireAttendedRegistration(tx, { appId, eventId, userId, lock: true })
     const existing = await tx.one(
       `SELECT id, version, submitted_at FROM mip_event_feedback

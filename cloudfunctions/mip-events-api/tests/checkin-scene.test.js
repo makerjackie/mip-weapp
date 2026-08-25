@@ -233,6 +233,7 @@ describe('MIP check-in scene', () => {
         resumeToken: issued.resumeToken,
         tokenSecret: TOKEN_SECRET,
         idempotencyKey: 'cross-event-resume',
+        participationAccessPolicy: { requireAccess: async () => ({}) },
         now: new Date('2026-08-24T03:01:00.000Z'),
       }),
       error => error.code === 'VALIDATION_FAILED' && /活动不一致/.test(error.message),
