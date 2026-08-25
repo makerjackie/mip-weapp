@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
@@ -10,7 +11,11 @@ import {
   sqlJson,
   sqlLiteral,
 } from './lib/example-cloudbase.mjs'
-import { buildSeedOwnershipQuery, seedOwnershipConflictCount } from './lib/mip-seed-safety.mjs'
+import {
+  buildSeedCollisionQuery,
+  buildSeedOwnershipQuery,
+  seedOwnershipConflictCount,
+} from './lib/mip-seed-safety.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
@@ -34,7 +39,9 @@ if (String(env.MIP_PAYMENT_MODE || 'disabled').trim().toLowerCase() === 'live') 
 }
 
 const seedPath = path.join(root, 'database', 'mysql', 'mip', 'seed.demo.json')
-const seed = JSON.parse(fs.readFileSync(seedPath, 'utf8'))
+const seedSource = fs.readFileSync(seedPath, 'utf8')
+const seed = JSON.parse(seedSource)
+const seedSha256 = createHash('sha256').update(seedSource).digest('hex')
 assertSeed(seed)
 bindAndRequireMysqlEnvironment(root, envId, { development: true, stage })
 assertTablesExist([
@@ -44,6 +51,20 @@ assertTablesExist([
   'mip_growth_levels',
   'mip_growth_rules',
   'mip_badges',
+  'mip_users',
+  'mip_branch_memberships',
+  'mip_profiles',
+  'mip_profile_tags',
+  'mip_growth_accounts',
+  'mip_orders',
+  'mip_membership_entitlements',
+  'mip_events',
+  'mip_event_registrations',
+  'mip_opportunities',
+  'mip_opportunity_roles',
+  'mip_opportunity_tags',
+  'mip_cooperation_cards',
+  'mip_super_cases',
   'mip_app_settings',
 ])
 
@@ -58,14 +79,45 @@ if (ownershipConflicts === null) {
 if (ownershipConflicts > 0) {
   throw new Error('MIP demo seed IDs already belong to another AppID; no seed writes were attempted')
 }
+const collisionProbe = callCloudbase(root, 'queryMysqlDatabase', {
+  action: 'runQuery',
+  sql: buildSeedCollisionQuery(appId, seed),
+})
+const sameAppCollisions = seedOwnershipConflictCount(collisionProbe)
+if (sameAppCollisions === null) {
+  throw new Error('MIP demo seed same-AppID collision preflight could not be verified')
+}
+if (sameAppCollisions > 0) {
+  throw new Error('MIP demo seed conflicts with records outside the demo manifest; no seed writes were attempted')
+}
 
 const statements = [
+  demoManifestStatement(seed, 'PENDING'),
   branchStatement(seed.branches),
   ...tagStatements(seed.tags),
   membershipPlanStatement(seed.membershipPlans),
   growthLevelStatement(seed.growthLevels),
   growthRuleStatement(seed.growthRules),
   badgeStatement(seed.badges),
+  userStatement(seed.users),
+  branchMembershipResetStatement(seed.users),
+  branchMembershipStatement(seed.users),
+  userPrimaryBranchStatement(seed.users),
+  profileStatement(seed.users),
+  profileTagResetStatement(seed.users),
+  profileTagStatement(seed.users),
+  growthAccountStatement(seed.users),
+  membershipOrderStatement(seed.membershipOrders, seed.membershipPlans),
+  entitlementStatement(seed.entitlements, seed.membershipPlans),
+  eventStatement(seed.events),
+  eventRegistrationStatement(seed.eventRegistrations),
+  opportunityStatement(seed.opportunities),
+  opportunityRoleResetStatement(seed.opportunities),
+  opportunityRoleStatement(seed.opportunities),
+  opportunityTagResetStatement(seed.opportunities),
+  opportunityTagStatement(seed.opportunities, seed.tags),
+  cooperationCardStatement(seed.cooperationCards),
+  superCaseStatement(seed.superCases),
   `INSERT INTO mip_app_settings (
      app_id, setting_key, value_json, version, updated_by_user_id
    ) VALUES (
@@ -73,15 +125,21 @@ const statements = [
      ${sqlJson({ version: seed.version, replaceBeforeProduction: true })}, 1, NULL
    ) ON DUPLICATE KEY UPDATE
      value_json = VALUES(value_json), version = version + 1, updated_by_user_id = NULL`,
+  demoManifestStatement(seed, 'READY'),
 ]
 
-for (const sql of statements) {
-  const result = callCloudbase(root, 'manageMysqlDatabase', {
-    action: 'runStatement',
-    sql,
-  }, 300000)
-  if (result?.success === false) {
-    throw new Error('MIP demo catalog seed did not converge')
+for (const [index, sql] of statements.entries()) {
+  try {
+    const result = callCloudbase(root, 'manageMysqlDatabase', {
+      action: 'runStatement',
+      sql,
+    }, 300000)
+    if (result?.success === false) {
+      throw new Error('management API reported failure')
+    }
+  }
+  catch (error) {
+    throw new Error(`MIP demo seed step ${index + 1}/${statements.length} did not converge: ${error instanceof Error ? error.message : String(error)}`)
   }
 }
 
@@ -105,9 +163,32 @@ const verification = callCloudbase(root, 'queryMysqlDatabase', {
         AND rule_key IN (${seed.growthRules.map(item => sqlLiteral(item.key)).join(', ')})) AS rules,
     (SELECT COUNT(*) FROM mip_badges
       WHERE app_id = ${sqlLiteral(appId)}
-        AND badge_key IN (${seed.badges.map(item => sqlLiteral(item.key)).join(', ')})) AS badges`,
+        AND badge_key IN (${seed.badges.map(item => sqlLiteral(item.key)).join(', ')})) AS badges,
+    (SELECT COUNT(*) FROM mip_users
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.users.map(item => sqlLiteral(item.id)).join(', ')})) AS users,
+    (SELECT COUNT(*) FROM mip_orders
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.membershipOrders.map(item => sqlLiteral(item.id)).join(', ')})) AS membershipOrders,
+    (SELECT COUNT(*) FROM mip_membership_entitlements
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.entitlements.map(item => sqlLiteral(item.id)).join(', ')})) AS entitlements,
+    (SELECT COUNT(*) FROM mip_events
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.events.map(item => sqlLiteral(item.id)).join(', ')})) AS events,
+    (SELECT COUNT(*) FROM mip_event_registrations
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.eventRegistrations.map(item => sqlLiteral(item.id)).join(', ')})) AS eventRegistrations,
+    (SELECT COUNT(*) FROM mip_opportunities
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.opportunities.map(item => sqlLiteral(item.id)).join(', ')})) AS opportunities,
+    (SELECT COUNT(*) FROM mip_cooperation_cards
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.cooperationCards.map(item => sqlLiteral(item.id)).join(', ')})) AS cooperationCards,
+    (SELECT COUNT(*) FROM mip_super_cases
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.superCases.map(item => sqlLiteral(item.id)).join(', ')})) AS superCases`,
 })
-const counts = findCountRow(verification)
 const expected = {
   branches: seed.branches.length,
   tags: seed.tags.length,
@@ -115,7 +196,16 @@ const expected = {
   levels: seed.growthLevels.length,
   rules: seed.growthRules.length,
   badges: seed.badges.length,
+  users: seed.users.length,
+  membershipOrders: seed.membershipOrders.length,
+  entitlements: seed.entitlements.length,
+  events: seed.events.length,
+  eventRegistrations: seed.eventRegistrations.length,
+  opportunities: seed.opportunities.length,
+  cooperationCards: seed.cooperationCards.length,
+  superCases: seed.superCases.length,
 }
+const counts = findCountRow(verification, Object.keys(expected))
 if (!counts || Object.entries(expected).some(([key, value]) => Number(counts[key]) !== value)) {
   throw new Error('MIP demo catalog verification failed')
 }
@@ -129,7 +219,7 @@ fs.writeFileSync(path.join(root, '.tmp', 'seed-demo-result.json'), `${JSON.strin
   recordsVerified: expected,
   seededAt: new Date().toISOString(),
 }, null, 2)}\n`)
-console.log('[mip-seed] placeholder branches, tags, test plan, growth, and badge catalogs verified; no environment or AppID was persisted')
+console.log('[mip-seed] placeholder catalogs and fixed-ID demo fixtures verified; no environment or AppID was persisted')
 
 function branchStatement(items) {
   const values = items.map(item => `(
@@ -142,6 +232,7 @@ function branchStatement(items) {
   ) VALUES ${values}
   ON DUPLICATE KEY UPDATE
     app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
     name = VALUES(name), city_name = VALUES(city_name), summary = VALUES(summary),
     status = 'ACTIVE', version = version + 1`
 }
@@ -163,6 +254,7 @@ function tagStatement(items) {
   ) VALUES ${values}
   ON DUPLICATE KEY UPDATE
     app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
     parent_id = VALUES(parent_id), label = VALUES(label), selectable = VALUES(selectable),
     popular = VALUES(popular), enabled = 1,
     sort_order = VALUES(sort_order)`
@@ -180,7 +272,8 @@ function membershipPlanStatement(items) {
   ) VALUES ${values}
   ON DUPLICATE KEY UPDATE
     app_id = IF(app_id = VALUES(app_id), app_id, NULL),
-    name = VALUES(name), description = VALUES(description),
+    id = IF(id = VALUES(id), id, NULL),
+    plan_key = VALUES(plan_key), name = VALUES(name), description = VALUES(description),
     duration_days = VALUES(duration_days), price_cents = VALUES(price_cents),
     benefits_json = VALUES(benefits_json), status = 'ACTIVE', version = version + 1`
 }
@@ -188,14 +281,18 @@ function membershipPlanStatement(items) {
 function growthLevelStatement(items) {
   const values = items.map(item => `(
     ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.key)}, ${sqlLiteral(item.name)},
-    ${Number(item.minimumExperience)}, ${sqlJson(item.benefits)}, 'ACTIVE', 1
+    ${sqlLiteral(item.displayBadge)}, ${Number(item.minimumExperience)}, ${Number(item.sortOrder)},
+    ${sqlJson(item.benefits)}, 'ACTIVE', 1
   )`).join(',\n')
   return `INSERT INTO mip_growth_levels (
-    id, app_id, level_key, name, minimum_experience, benefits_json, status, version
+    id, app_id, level_key, name, display_badge, minimum_experience, sort_order,
+    benefits_json, status, version
   ) VALUES ${values}
   ON DUPLICATE KEY UPDATE
     app_id = IF(app_id = VALUES(app_id), app_id, NULL),
-    name = VALUES(name), minimum_experience = VALUES(minimum_experience),
+    id = IF(id = VALUES(id), id, NULL),
+    level_key = VALUES(level_key), name = VALUES(name), display_badge = VALUES(display_badge),
+    minimum_experience = VALUES(minimum_experience), sort_order = VALUES(sort_order),
     benefits_json = VALUES(benefits_json), status = 'ACTIVE', version = version + 1`
 }
 
@@ -212,6 +309,7 @@ function growthRuleStatement(items) {
   ) VALUES ${values}
   ON DUPLICATE KEY UPDATE
     app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
     name = VALUES(name), metric = VALUES(metric), delta_value = VALUES(delta_value),
     daily_limit_value = VALUES(daily_limit_value), source_event_type = VALUES(source_event_type),
     status = VALUES(status), version = version + 1`
@@ -229,16 +327,450 @@ function badgeStatement(items) {
   ) VALUES ${values}
   ON DUPLICATE KEY UPDATE
     app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
     name = VALUES(name), description = VALUES(description), icon_name = VALUES(icon_name),
     image_url = VALUES(image_url), placeholder_shape = VALUES(placeholder_shape),
     sort_order = VALUES(sort_order), status = 'ACTIVE', version = version + 1`
+}
+
+function userStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, 'ACTIVE', NULL, NULL, 1
+  )`).join(',\n')
+  return `INSERT INTO mip_users (
+    id, app_id, status, closed_at, primary_branch_id, version
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    status = 'ACTIVE', closed_at = NULL, primary_branch_id = NULL, version = version + 1`
+}
+
+function branchMembershipResetStatement(items) {
+  return `DELETE FROM mip_branch_memberships
+    WHERE app_id = ${sqlLiteral(appId)}
+      AND user_id IN (${items.map(item => sqlLiteral(item.id)).join(', ')})`
+}
+
+function branchMembershipStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.branchId)}, ${sqlLiteral(item.id)},
+    'ACTIVE', '2026-08-25 00:00:00.000', NULL
+  )`).join(',\n')
+  return `INSERT INTO mip_branch_memberships (
+    app_id, branch_id, user_id, status, joined_at, ended_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    status = 'ACTIVE', joined_at = VALUES(joined_at), ended_at = NULL`
+}
+
+function userPrimaryBranchStatement(items) {
+  const cases = items
+    .map(item => `WHEN ${sqlLiteral(item.id)} THEN ${sqlLiteral(item.branchId)}`)
+    .join('\n      ')
+  return `UPDATE mip_users
+    SET primary_branch_id = CASE id
+      ${cases}
+      ELSE primary_branch_id
+    END
+    WHERE app_id = ${sqlLiteral(appId)}
+      AND id IN (${items.map(item => sqlLiteral(item.id)).join(', ')})`
+}
+
+function profileStatement(items) {
+  const visibility = {
+    nickname: true,
+    avatar: true,
+    identityStatus: true,
+    headline: true,
+    introduction: true,
+    companies: true,
+    organizations: true,
+    primaryBranch: true,
+    industry: true,
+    abilities: true,
+    influence: true,
+  }
+  const values = items.map(item => `(
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.id)}, ${sqlLiteral(item.nickname)}, NULL,
+    ${sqlLiteral(item.identityStatus)}, ${sqlLiteral(item.headline)}, ${sqlLiteral(item.introduction)},
+    ${sqlJson(item.companies)}, ${sqlJson(item.organizations)}, ${sqlJson(visibility)}, 1
+  )`).join(',\n')
+  return `INSERT INTO mip_profiles (
+    app_id, user_id, nickname, avatar_asset_id, identity_status, headline, introduction,
+    companies_json, organizations_json, visibility_json, version
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    nickname = VALUES(nickname), avatar_asset_id = NULL,
+    identity_status = VALUES(identity_status), headline = VALUES(headline),
+    introduction = VALUES(introduction), companies_json = VALUES(companies_json),
+    organizations_json = VALUES(organizations_json), visibility_json = VALUES(visibility_json),
+    version = version + 1`
+}
+
+function profileTagStatement(items) {
+  const relations = items.flatMap(item => [
+    { userId: item.id, tagId: item.industryTagId, relation: 'PRIMARY_INDUSTRY' },
+    ...item.abilityTagIds.map(tagId => ({ userId: item.id, tagId, relation: 'ABILITY' })),
+  ])
+  const values = relations.map(item => `(
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.userId)}, ${sqlLiteral(item.tagId)}, ${sqlLiteral(item.relation)}
+  )`).join(',\n')
+  return `INSERT INTO mip_profile_tags (
+    app_id, user_id, tag_id, relation
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE tag_id = VALUES(tag_id)`
+}
+
+function profileTagResetStatement(items) {
+  return `DELETE FROM mip_profile_tags
+    WHERE app_id = ${sqlLiteral(appId)}
+      AND user_id IN (${items.map(item => sqlLiteral(item.id)).join(', ')})`
+}
+
+function growthAccountStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.id)}, ${Number(item.experienceBalance)},
+    ${Number(item.contributionBalance)}, 0, 1
+  )`).join(',\n')
+  return `INSERT INTO mip_growth_accounts (
+    app_id, user_id, experience_balance, contribution_balance, coin_balance, version
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    experience_balance = VALUES(experience_balance),
+    contribution_balance = VALUES(contribution_balance),
+    coin_balance = VALUES(coin_balance), version = version + 1`
+}
+
+function membershipOrderStatement(items, plans) {
+  const planById = new Map(plans.map(item => [item.id, item]))
+  const values = items.map((item, index) => {
+    const plan = planById.get(item.planId)
+    const snapshot = {
+      planKey: plan.key,
+      name: plan.name,
+      durationDays: plan.durationDays,
+      priceCents: plan.priceCents,
+      currency: 'CNY',
+      catalogStage: 'TEST',
+      benefits: plan.benefits,
+      seedVersion: seed.version,
+      demo: true,
+    }
+    return `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.userId)},
+    'MEMBERSHIP', NULL, ${sqlLiteral(item.planId)}, ${sqlLiteral(`MIP-DEMO-MEMBER-${index + 1}`)},
+    NULL, ${sqlLiteral(item.key)}, ${Number(plan.priceCents)}, 'CNY', 'PAID',
+    ${sqlJson(snapshot)}, '2026-08-25 12:00:00.000', NULL, 1
+  )`
+  }).join(',\n')
+  return `INSERT INTO mip_orders (
+    id, app_id, user_id, order_type, resource_id, membership_plan_id,
+    merchant_order_no, provider_transaction_id, idempotency_key, amount_cents,
+    currency, status, product_snapshot_json, paid_at, closed_at, version
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    user_id = VALUES(user_id), order_type = 'MEMBERSHIP', resource_id = NULL,
+    membership_plan_id = VALUES(membership_plan_id), merchant_order_no = VALUES(merchant_order_no),
+    provider_transaction_id = NULL, idempotency_key = VALUES(idempotency_key),
+    amount_cents = VALUES(amount_cents), currency = 'CNY', status = 'PAID',
+    product_snapshot_json = VALUES(product_snapshot_json), paid_at = VALUES(paid_at),
+    closed_at = NULL, version = version + 1`
+}
+
+function entitlementStatement(items, plans) {
+  const planIds = new Set(plans.map(item => item.id))
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.userId)},
+    ${sqlLiteral(item.orderId)}, ${sqlLiteral(planIds.has(item.planId) ? item.planId : null)}, 'ACTIVE',
+    '2026-08-25 12:00:00.000', '2031-08-24 12:00:00.000', NULL, NULL, 1
+  )`).join(',\n')
+  return `INSERT INTO mip_membership_entitlements (
+    id, app_id, user_id, order_id, plan_id, status, starts_at, ends_at,
+    revoked_at, revocation_reason, version
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    user_id = VALUES(user_id), order_id = VALUES(order_id), plan_id = VALUES(plan_id),
+    status = 'ACTIVE', starts_at = VALUES(starts_at), ends_at = VALUES(ends_at),
+    revoked_at = NULL, revocation_reason = NULL, version = version + 1`
+}
+
+function eventStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, 'BRANCH', ${sqlLiteral(item.branchId)},
+    ${sqlLiteral(item.organizerUserId)}, ${sqlLiteral(item.title)}, ${sqlLiteral(item.summary)},
+    ${sqlLiteral(item.description)}, ${sqlLiteral(item.notices)}, NULL,
+    ${sqlLiteral(item.eventTypeKey)}, ${sqlLiteral(item.eventMode)}, ${sqlLiteral(item.accessType)},
+    'AUTO', 'PUBLISHED', 'PASSED', ${sqlLiteral(item.startsAt)}, ${sqlLiteral(item.endsAt)},
+    ${sqlLiteral(item.registrationOpensAt)}, ${sqlLiteral(item.registrationDeadline)},
+    ${sqlLiteral(item.cancellationDeadline)}, ${sqlLiteral(item.venueName)}, ${sqlLiteral(item.address)},
+    ${sqlLiteral(item.cityName)}, NULL, NULL, NULL, ${Number(item.capacity)}, 0, 0, 'CNY',
+    ${sqlJson([])}, 1, 1, '2026-08-25 12:00:00.000', NULL, NULL, NULL
+  )`).join(',\n')
+  return `INSERT INTO mip_events (
+    id, app_id, scope_type, branch_id, organizer_user_id, title, summary, description,
+    notices, cover_asset_id, event_type_key, event_mode, access_type, registration_policy,
+    status, content_safety_status, starts_at, ends_at, registration_opens_at,
+    registration_deadline, cancellation_deadline, venue_name, address, city_name,
+    latitude, longitude, online_url, capacity, waitlist_enabled, price_cents, currency,
+    registration_schema_json, form_version, version, published_at, unpublished_at,
+    cancelled_at, ended_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    scope_type = 'BRANCH', branch_id = VALUES(branch_id), organizer_user_id = VALUES(organizer_user_id),
+    title = VALUES(title), summary = VALUES(summary), description = VALUES(description),
+    notices = VALUES(notices), cover_asset_id = NULL, event_type_key = VALUES(event_type_key),
+    event_mode = VALUES(event_mode), access_type = VALUES(access_type), registration_policy = 'AUTO',
+    status = 'PUBLISHED', content_safety_status = 'PASSED', starts_at = VALUES(starts_at),
+    ends_at = VALUES(ends_at), registration_opens_at = VALUES(registration_opens_at),
+    registration_deadline = VALUES(registration_deadline),
+    cancellation_deadline = VALUES(cancellation_deadline), venue_name = VALUES(venue_name),
+    address = VALUES(address), city_name = VALUES(city_name), latitude = NULL, longitude = NULL,
+    online_url = NULL, capacity = VALUES(capacity), waitlist_enabled = 0, price_cents = 0,
+    currency = 'CNY', registration_schema_json = VALUES(registration_schema_json),
+    form_version = 1, version = version + 1, published_at = VALUES(published_at),
+    unpublished_at = NULL, cancelled_at = NULL, ended_at = NULL,
+    archived_at = NULL, archived_by_user_id = NULL, archive_reason = NULL`
+}
+
+function eventRegistrationStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.eventId)},
+    ${sqlLiteral(item.userId)}, NULL, 'REGISTERED', ${sqlJson({})}, 1, 1, NULL,
+    NULL, '2026-08-25 13:00:00.000', NULL, NULL, NULL, 1
+  )`).join(',\n')
+  return `INSERT INTO mip_event_registrations (
+    id, app_id, event_id, user_id, order_id, status, answers_json, form_version,
+    share_profile, ticket_hash, waitlisted_at, registered_at, cancelled_at,
+    cancellation_reason, cancelled_by_type, version
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    event_id = VALUES(event_id), user_id = VALUES(user_id), order_id = NULL,
+    status = 'REGISTERED', answers_json = VALUES(answers_json), form_version = 1,
+    share_profile = 1, ticket_hash = NULL, waitlisted_at = NULL,
+    registered_at = VALUES(registered_at), cancelled_at = NULL,
+    cancellation_reason = NULL, cancelled_by_type = NULL, version = version + 1`
+}
+
+function opportunityStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.ownerUserId)},
+    'BRANCH', ${sqlLiteral(item.branchId)}, ${sqlLiteral(item.title)},
+    ${sqlLiteral(item.valueSummary)}, ${sqlLiteral(item.targetSummary)}, ${sqlLiteral(item.description)},
+    ${sqlLiteral(item.cityTagId)}, NULL, 'PUBLISHED', 'APPROVED', 0, 1,
+    '2026-08-25 12:00:00.000', NULL, NULL, NULL, NULL, '2030-12-31 23:59:59.000',
+    NULL, NULL, NULL
+  )`).join(',\n')
+  return `INSERT INTO mip_opportunities (
+    id, app_id, owner_user_id, scope_type, branch_id, title, value_summary,
+    target_summary, description, city_tag_id, cover_asset_id, status,
+    content_safety_status, referral_count, version, published_at, ended_at,
+    moderated_at, moderated_by_user_id, moderation_reason, deadline_at,
+    archived_at, archived_by_user_id, archive_reason
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    owner_user_id = VALUES(owner_user_id), scope_type = 'BRANCH', branch_id = VALUES(branch_id),
+    title = VALUES(title), value_summary = VALUES(value_summary), target_summary = VALUES(target_summary),
+    description = VALUES(description), city_tag_id = VALUES(city_tag_id), cover_asset_id = NULL,
+    status = 'PUBLISHED', content_safety_status = 'APPROVED', referral_count = 0,
+    version = version + 1, published_at = VALUES(published_at), ended_at = NULL,
+    moderated_at = NULL, moderated_by_user_id = NULL, moderation_reason = NULL,
+    deadline_at = VALUES(deadline_at), archived_at = NULL, archived_by_user_id = NULL,
+    archive_reason = NULL`
+}
+
+function opportunityRoleStatement(items) {
+  const values = items.flatMap(item => item.roleKeys.map(roleKey => `(
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.id)}, ${sqlLiteral(roleKey)}
+  )`)).join(',\n')
+  return `INSERT INTO mip_opportunity_roles (
+    app_id, opportunity_id, role_key
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE role_key = VALUES(role_key)`
+}
+
+function opportunityRoleResetStatement(items) {
+  return `DELETE FROM mip_opportunity_roles
+    WHERE app_id = ${sqlLiteral(appId)}
+      AND opportunity_id IN (${items.map(item => sqlLiteral(item.id)).join(', ')})`
+}
+
+function opportunityTagStatement(items, tags) {
+  const kindById = new Map(tags.map(item => [item.id, item.kind]))
+  const values = items.flatMap(item => item.tagIds.map(tagId => `(
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.id)}, ${sqlLiteral(tagId)},
+    ${sqlLiteral(kindById.get(tagId) === 'ABILITY' ? 'ABILITY' : 'INDUSTRY')}
+  )`)).join(',\n')
+  return `INSERT INTO mip_opportunity_tags (
+    app_id, opportunity_id, tag_id, relation
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE tag_id = VALUES(tag_id)`
+}
+
+function opportunityTagResetStatement(items) {
+  return `DELETE FROM mip_opportunity_tags
+    WHERE app_id = ${sqlLiteral(appId)}
+      AND opportunity_id IN (${items.map(item => sqlLiteral(item.id)).join(', ')})`
+}
+
+function cooperationCardStatement(items) {
+  const scores = {
+    connector: [5, 5, 2, 3, 2, 3],
+    business_builder: [4, 4, 3, 5, 2, 4],
+    capital_operator: [3, 5, 5, 4, 1, 3],
+    strategist: [3, 3, 2, 5, 4, 4],
+    visual_designer: [2, 2, 1, 4, 5, 4],
+    delivery_lead: [3, 4, 2, 4, 3, 5],
+  }
+  const dimensions = [
+    'business_development',
+    'resource_integration',
+    'capital_operation',
+    'strategy_planning',
+    'visual_design',
+    'delivery_management',
+  ]
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.ownerUserId)},
+    ${sqlLiteral(item.roleKey)}, ${sqlLiteral(item.positioning)}, ${sqlLiteral(item.targetSummary)},
+    ${sqlJson(item.roleFields)},
+    ${sqlJson(Object.fromEntries(dimensions.map((key, index) => [key, scores[item.roleKey][index]])))},
+    'PUBLISHED', 'APPROVED', 1, '2026-08-25 12:00:00.000', NULL
+  )`).join(',\n')
+  return `INSERT INTO mip_cooperation_cards (
+    id, app_id, owner_user_id, role_key, positioning, target_summary,
+    role_fields_json, ability_scores_json, status, content_safety_status,
+    version, published_at, archived_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    owner_user_id = VALUES(owner_user_id), role_key = VALUES(role_key),
+    positioning = VALUES(positioning), target_summary = VALUES(target_summary),
+    role_fields_json = VALUES(role_fields_json), ability_scores_json = VALUES(ability_scores_json),
+    status = 'PUBLISHED', content_safety_status = 'APPROVED', version = version + 1,
+    published_at = VALUES(published_at), archived_at = NULL`
+}
+
+function superCaseStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.ownerUserId)},
+    ${sqlLiteral(item.projectName)}, ${sqlLiteral(item.summary)}, ${sqlLiteral(item.startedOn)},
+    ${sqlLiteral(item.endedOn)}, ${sqlLiteral(item.responsibility)}, ${sqlLiteral(item.cityTagId)},
+    ${sqlLiteral(item.industryTagId)}, ${sqlLiteral(item.caseType)}, ${sqlLiteral(item.description)},
+    NULL, 'PUBLISHED', 'APPROVED', 1, '2026-08-25 12:00:00.000', NULL
+  )`).join(',\n')
+  return `INSERT INTO mip_super_cases (
+    id, app_id, owner_user_id, project_name, summary, started_on, ended_on,
+    responsibility, city_tag_id, industry_tag_id, case_type, description,
+    cover_asset_id, status, content_safety_status, version, published_at, archived_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    owner_user_id = VALUES(owner_user_id), project_name = VALUES(project_name),
+    summary = VALUES(summary), started_on = VALUES(started_on), ended_on = VALUES(ended_on),
+    responsibility = VALUES(responsibility), city_tag_id = VALUES(city_tag_id),
+    industry_tag_id = VALUES(industry_tag_id), case_type = VALUES(case_type),
+    description = VALUES(description), cover_asset_id = NULL, status = 'PUBLISHED',
+    content_safety_status = 'APPROVED', version = version + 1,
+    published_at = VALUES(published_at), archived_at = NULL`
+}
+
+function demoManifestStatement(value, state) {
+  const manifest = buildDemoManifest(value, state)
+  const versionedKey = `demo_seed_manifest:${value.version}`
+  return `INSERT INTO mip_app_settings (
+    app_id, setting_key, value_json, version, updated_by_user_id
+  ) VALUES
+    (${sqlLiteral(appId)}, 'demo_seed_manifest', ${sqlJson(manifest)}, 1, NULL),
+    (${sqlLiteral(appId)}, ${sqlLiteral(versionedKey)}, ${sqlJson(manifest)}, 1, NULL)
+  ON DUPLICATE KEY UPDATE
+    value_json = VALUES(value_json), version = version + 1, updated_by_user_id = NULL`
+}
+
+function buildDemoManifest(value, state) {
+  const tagKindById = new Map(value.tags.map(item => [item.id, item.kind]))
+  return {
+    is_demo: 1,
+    version: value.version,
+    seedSha256,
+    state,
+    replaceBeforeProduction: true,
+    recordIds: Object.fromEntries(Object.entries(value)
+      .filter(([, items]) => Array.isArray(items))
+      .map(([key, items]) => [key, items.map(item => item.id)])),
+    dependentRows: {
+      branchMembershipUserIds: value.users.map(item => item.id),
+      profileUserIds: value.users.map(item => item.id),
+      opportunityIds: value.opportunities.map(item => item.id),
+    },
+    recordsByTable: {
+      mip_city_branches: value.branches.map(item => ({ id: item.id })),
+      mip_tags: value.tags.map(item => ({ id: item.id })),
+      mip_membership_plans: value.membershipPlans.map(item => ({ id: item.id })),
+      mip_growth_levels: value.growthLevels.map(item => ({ id: item.id })),
+      mip_growth_rules: value.growthRules.map(item => ({ id: item.id })),
+      mip_badges: value.badges.map(item => ({ id: item.id })),
+      mip_users: value.users.map(item => ({ id: item.id })),
+      mip_branch_memberships: value.users.map(item => ({ branchId: item.branchId, userId: item.id })),
+      mip_profiles: value.users.map(item => ({ userId: item.id })),
+      mip_profile_tags: value.users.flatMap(item => [
+        { userId: item.id, tagId: item.industryTagId, relation: 'PRIMARY_INDUSTRY' },
+        ...item.abilityTagIds.map(tagId => ({ userId: item.id, tagId, relation: 'ABILITY' })),
+      ]),
+      mip_growth_accounts: value.users.map(item => ({ userId: item.id })),
+      mip_orders: value.membershipOrders.map(item => ({ id: item.id })),
+      mip_membership_entitlements: value.entitlements.map(item => ({ id: item.id })),
+      mip_events: value.events.map(item => ({ id: item.id })),
+      mip_event_registrations: value.eventRegistrations.map(item => ({ id: item.id })),
+      mip_opportunities: value.opportunities.map(item => ({ id: item.id })),
+      mip_opportunity_roles: value.opportunities.flatMap(item => item.roleKeys
+        .map(roleKey => ({ opportunityId: item.id, roleKey }))),
+      mip_opportunity_tags: value.opportunities.flatMap(item => item.tagIds.map(tagId => ({
+        opportunityId: item.id,
+        tagId,
+        relation: tagKindById.get(tagId) === 'ABILITY' ? 'ABILITY' : 'INDUSTRY',
+      }))),
+      mip_cooperation_cards: value.cooperationCards.map(item => ({ id: item.id })),
+      mip_super_cases: value.superCases.map(item => ({ id: item.id })),
+      mip_app_settings: [{ settingKey: 'placeholder_catalog' }],
+    },
+  }
 }
 
 function assertSeed(value) {
   if (!value || value.replaceBeforeProduction !== true || typeof value.version !== 'string') {
     throw new Error('MIP demo seed metadata is invalid')
   }
-  for (const key of ['branches', 'tags', 'membershipPlans', 'growthLevels', 'growthRules', 'badges']) {
+  const groups = [
+    'branches',
+    'tags',
+    'membershipPlans',
+    'growthLevels',
+    'growthRules',
+    'badges',
+    'users',
+    'membershipOrders',
+    'entitlements',
+    'events',
+    'eventRegistrations',
+    'opportunities',
+    'cooperationCards',
+    'superCases',
+  ]
+  const allIds = new Set()
+  for (const key of groups) {
     if (!Array.isArray(value[key]) || value[key].length === 0) {
       throw new Error(`MIP demo seed ${key} is empty`)
     }
@@ -247,12 +779,97 @@ function assertSeed(value) {
         || !/^[a-z][a-z0-9_]{1,79}$/.test(item.key)) {
         throw new Error(`MIP demo seed contains an invalid ${key} identity`)
       }
+      if (allIds.has(item.id)) {
+        throw new Error('MIP demo seed contains duplicate fixed IDs')
+      }
+      allIds.add(item.id)
     }
   }
   if (value.growthRules.some(item => !['ACTIVE', 'DRAFT'].includes(item.status))) {
     throw new Error('Demo growth rule status must be ACTIVE or DRAFT')
   }
   assertTagCatalog(value.tags)
+  assertDemoRelations(value)
+}
+
+function assertDemoRelations(value) {
+  const branchIds = new Set(value.branches.map(item => item.id))
+  const tagById = new Map(value.tags.map(item => [item.id, item]))
+  const userIds = new Set(value.users.map(item => item.id))
+  const planById = new Map(value.membershipPlans.map(item => [item.id, item]))
+  const orderById = new Map(value.membershipOrders.map(item => [item.id, item]))
+  const eventIds = new Set(value.events.map(item => item.id))
+  const roleKeys = new Set([
+    'connector',
+    'business_builder',
+    'capital_operator',
+    'strategist',
+    'visual_designer',
+    'delivery_lead',
+  ])
+  for (const user of value.users) {
+    if (!branchIds.has(user.branchId)
+      || tagById.get(user.industryTagId)?.kind !== 'INDUSTRY'
+      || !Array.isArray(user.abilityTagIds)
+      || user.abilityTagIds.some(tagId => tagById.get(tagId)?.kind !== 'ABILITY')
+      || !Number.isInteger(user.experienceBalance)
+      || !Number.isInteger(user.contributionBalance)
+      || user.experienceBalance !== 0
+      || user.contributionBalance !== 0) {
+      throw new Error('Demo user references are invalid')
+    }
+  }
+  for (const order of value.membershipOrders) {
+    if (!userIds.has(order.userId) || !planById.has(order.planId)) {
+      throw new Error('Demo membership order user is invalid')
+    }
+  }
+  for (const entitlement of value.entitlements) {
+    if (!userIds.has(entitlement.userId)
+      || orderById.get(entitlement.orderId)?.userId !== entitlement.userId
+      || orderById.get(entitlement.orderId)?.planId !== entitlement.planId
+      || !planById.has(entitlement.planId)) {
+      throw new Error('Demo membership entitlement references are invalid')
+    }
+  }
+  if (value.membershipOrders.length !== value.entitlements.length) {
+    throw new Error('Demo players require one order and one entitlement each')
+  }
+  for (const event of value.events) {
+    if (!branchIds.has(event.branchId)
+      || !userIds.has(event.organizerUserId)
+      || !String(event.startsAt).startsWith('2030-')
+      || !String(event.endsAt).startsWith('2030-')
+      || event.endsAt <= event.startsAt) {
+      throw new Error('Demo events must be valid 2030 fixtures')
+    }
+  }
+  for (const registration of value.eventRegistrations) {
+    if (!eventIds.has(registration.eventId) || !userIds.has(registration.userId)) {
+      throw new Error('Demo event registration references are invalid')
+    }
+  }
+  for (const opportunity of value.opportunities) {
+    if (!userIds.has(opportunity.ownerUserId)
+      || !branchIds.has(opportunity.branchId)
+      || tagById.get(opportunity.cityTagId)?.kind !== 'CITY'
+      || opportunity.roleKeys.some(roleKey => !roleKeys.has(roleKey))
+      || opportunity.tagIds.some(tagId => !['INDUSTRY', 'ABILITY'].includes(tagById.get(tagId)?.kind))) {
+      throw new Error('Demo opportunity references are invalid')
+    }
+  }
+  if (value.cooperationCards.length !== roleKeys.size
+    || new Set(value.cooperationCards.map(item => item.roleKey)).size !== roleKeys.size
+    || value.cooperationCards.some(item => !userIds.has(item.ownerUserId) || !roleKeys.has(item.roleKey))) {
+    throw new Error('Demo cooperation cards must cover the six roles')
+  }
+  for (const item of value.superCases) {
+    if (!userIds.has(item.ownerUserId)
+      || tagById.get(item.cityTagId)?.kind !== 'CITY'
+      || tagById.get(item.industryTagId)?.kind !== 'INDUSTRY') {
+      throw new Error('Demo case references are invalid')
+    }
+  }
 }
 
 function assertTagCatalog(tags) {
@@ -326,16 +943,16 @@ function collectFieldValues(value, names, output = []) {
   return output
 }
 
-function findCountRow(value) {
+function findCountRow(value, keys) {
   if (!value || typeof value !== 'object') {
     return null
   }
   if (!Array.isArray(value)
-    && ['branches', 'tags', 'plans', 'levels', 'rules'].every(key => key in value)) {
+    && keys.every(key => key in value)) {
     return value
   }
   for (const child of Object.values(value)) {
-    const found = findCountRow(child)
+    const found = findCountRow(child, keys)
     if (found) {
       return found
     }

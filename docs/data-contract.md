@@ -124,7 +124,7 @@
 - 页面、组件和业务模块不直连 MySQL/CloudBase 数据库；通过 `src/modules/mip-*` 和 platform adapter 调用函数。
 - 临时文件 URL 只存在于进程内缓存，不写回数据库；缓存不能授予资格、权益或 RBAC。
 - runtime MySQL 账号按 EnvID 指纹使用环境专属名称，并使用精确 `mip_*` table→privilege 映射：无 schema/global 权限，不接管已有同名账号，不撤销其他 schema 权限；审计和流水等追加事实不提供 UPDATE/DELETE。
-- 演示种子只允许 development/test，所有演示数据必须 `is_demo=1`；生产不得运行 seed。
+- 演示种子只允许 development/test；所有演示实体使用固定 ID，并登记在当前及版本化 `demo_seed_manifest`，清单必须标记 `is_demo=1` 并记录各表完整主键；生产不得运行 seed。
 
 ## 迁移和部署
 

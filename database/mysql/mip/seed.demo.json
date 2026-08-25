@@ -1,5 +1,5 @@
 {
-  "version": "2026-08-24-demo.3",
+  "version": "2026-08-25-demo.5",
   "replaceBeforeProduction": true,
   "branches": [
     {
@@ -89,18 +89,18 @@
   "membershipPlans": [
     {
       "id": "30000000-0000-4000-8000-000000000001",
-      "key": "annual_test",
-      "name": "年度会员（测试）",
-      "description": "用于开发和联调的测试会员方案",
-      "durationDays": 365,
+      "key": "five_year_test",
+      "name": "五年会员（测试）",
+      "description": "用于 2030 年活动和长期联调的测试会员方案",
+      "durationDays": 1825,
       "priceCents": 19900,
       "benefits": ["玩家身份", "会员活动权益", "会员资料展示"]
     }
   ],
   "growthLevels": [
-    { "id": "40000000-0000-4000-8000-000000000001", "key": "starter", "name": "起步", "minimumExperience": 0, "benefits": [] },
-    { "id": "40000000-0000-4000-8000-000000000002", "key": "active", "name": "活跃", "minimumExperience": 500, "benefits": [] },
-    { "id": "40000000-0000-4000-8000-000000000003", "key": "contributor", "name": "贡献者", "minimumExperience": 1500, "benefits": [] }
+    { "id": "40000000-0000-4000-8000-000000000001", "key": "starter", "name": "起步", "displayBadge": "L1", "sortOrder": 10, "minimumExperience": 0, "benefits": [] },
+    { "id": "40000000-0000-4000-8000-000000000002", "key": "active", "name": "活跃", "displayBadge": "L2", "sortOrder": 20, "minimumExperience": 500, "benefits": [] },
+    { "id": "40000000-0000-4000-8000-000000000003", "key": "contributor", "name": "贡献者", "displayBadge": "L3", "sortOrder": 30, "minimumExperience": 1500, "benefits": [] }
   ],
   "badges": [
     { "id": "42000000-0000-4000-8000-000000000001", "key": "profile_complete", "name": "资料完善", "description": "已完成基础资料", "iconName": "user-check", "imageUrl": "", "placeholderShape": "CIRCLE", "sortOrder": 10 },
@@ -112,5 +112,214 @@
     { "id": "41000000-0000-4000-8000-000000000002", "key": "event_attended", "name": "完成活动签到", "metric": "EXPERIENCE", "deltaValue": 100, "dailyLimitValue": 300, "sourceEventType": "event.checked_in", "status": "ACTIVE" },
     { "id": "41000000-0000-4000-8000-000000000003", "key": "referral_confirmed", "name": "确认有效引荐", "metric": "CONTRIBUTION", "deltaValue": 20, "dailyLimitValue": 100, "sourceEventType": "referral.confirmed", "status": "DRAFT" },
     { "id": "41000000-0000-4000-8000-000000000004", "key": "case_published", "name": "发布超级案例", "metric": "EXPERIENCE", "deltaValue": 80, "dailyLimitValue": 160, "sourceEventType": "super_case.published", "status": "DRAFT" }
+  ],
+  "users": [
+    {
+      "id": "50000000-0000-4000-8000-000000000001",
+      "key": "demo_lin_xia",
+      "nickname": "林夏（演示）",
+      "identityStatus": "Founder",
+      "headline": "企业服务渠道合作",
+      "introduction": "用于 MIP 开发联调的虚构玩家资料。",
+      "branchId": "10000000-0000-4000-8000-000000000001",
+      "industryTagId": "21000000-0000-4000-8000-000000000001",
+      "abilityTagIds": ["22000000-0000-4000-8000-000000000001", "22000000-0000-4000-8000-000000000002"],
+      "companies": [{ "name": "新桥咨询", "role": "合伙人" }],
+      "organizations": [{ "name": "MIP 深圳分会", "role": "成员" }],
+      "experienceBalance": 0,
+      "contributionBalance": 0
+    },
+    {
+      "id": "50000000-0000-4000-8000-000000000002",
+      "key": "demo_zhou_heng",
+      "nickname": "周衡（演示）",
+      "identityStatus": "Operator",
+      "headline": "商业模式与增长设计",
+      "introduction": "用于 MIP 开发联调的虚构玩家资料。",
+      "branchId": "10000000-0000-4000-8000-000000000002",
+      "industryTagId": "21000000-0000-4000-8000-000000000006",
+      "abilityTagIds": ["22000000-0000-4000-8000-000000000004", "22000000-0000-4000-8000-000000000006"],
+      "companies": [{ "name": "衡远商业", "role": "负责人" }],
+      "organizations": [{ "name": "MIP 广州分会", "role": "成员" }],
+      "experienceBalance": 0,
+      "contributionBalance": 0
+    },
+    {
+      "id": "50000000-0000-4000-8000-000000000003",
+      "key": "demo_chen_yuan",
+      "nickname": "陈远（演示）",
+      "identityStatus": "Investor",
+      "headline": "消费与科技项目投资",
+      "introduction": "用于 MIP 开发联调的虚构玩家资料。",
+      "branchId": "10000000-0000-4000-8000-000000000003",
+      "industryTagId": "21000000-0000-4000-8000-000000000008",
+      "abilityTagIds": ["22000000-0000-4000-8000-000000000003", "22000000-0000-4000-8000-000000000002"],
+      "companies": [{ "name": "远见资本", "role": "投资经理" }],
+      "organizations": [{ "name": "MIP 上海分会", "role": "成员" }],
+      "experienceBalance": 0,
+      "contributionBalance": 0
+    },
+    {
+      "id": "50000000-0000-4000-8000-000000000004",
+      "key": "demo_tang_qiao",
+      "nickname": "唐乔（演示）",
+      "identityStatus": "Product Planner",
+      "headline": "产品与品牌项目策划",
+      "introduction": "用于 MIP 开发联调的虚构嘉宾资料。",
+      "branchId": "10000000-0000-4000-8000-000000000004",
+      "industryTagId": "21000000-0000-4000-8000-000000000004",
+      "abilityTagIds": ["22000000-0000-4000-8000-000000000004"],
+      "companies": [{ "name": "乔木策划", "role": "产品策划" }],
+      "organizations": [{ "name": "MIP 北京分会", "role": "嘉宾" }],
+      "experienceBalance": 0,
+      "contributionBalance": 0
+    },
+    {
+      "id": "50000000-0000-4000-8000-000000000005",
+      "key": "demo_su_he",
+      "nickname": "苏禾（演示）",
+      "identityStatus": "Designer",
+      "headline": "品牌视觉与包装设计",
+      "introduction": "用于 MIP 开发联调的虚构嘉宾资料。",
+      "branchId": "10000000-0000-4000-8000-000000000001",
+      "industryTagId": "21000000-0000-4000-8000-000000000005",
+      "abilityTagIds": ["22000000-0000-4000-8000-000000000005"],
+      "companies": [{ "name": "禾木视觉", "role": "设计总监" }],
+      "organizations": [{ "name": "MIP 深圳分会", "role": "嘉宾" }],
+      "experienceBalance": 0,
+      "contributionBalance": 0
+    },
+    {
+      "id": "50000000-0000-4000-8000-000000000006",
+      "key": "demo_gu_ning",
+      "nickname": "顾宁（演示）",
+      "identityStatus": "Project Manager",
+      "headline": "复杂项目交付与团队协同",
+      "introduction": "用于 MIP 开发联调的虚构嘉宾资料。",
+      "branchId": "10000000-0000-4000-8000-000000000002",
+      "industryTagId": "21000000-0000-4000-8000-000000000003",
+      "abilityTagIds": ["22000000-0000-4000-8000-000000000006", "22000000-0000-4000-8000-000000000002"],
+      "companies": [{ "name": "稳达项目管理", "role": "交付负责人" }],
+      "organizations": [{ "name": "MIP 广州分会", "role": "嘉宾" }],
+      "experienceBalance": 0,
+      "contributionBalance": 0
+    }
+  ],
+  "membershipOrders": [
+    { "id": "51000000-0000-4000-8000-000000000001", "key": "demo_player_order_1", "userId": "50000000-0000-4000-8000-000000000001", "planId": "30000000-0000-4000-8000-000000000001" },
+    { "id": "51000000-0000-4000-8000-000000000002", "key": "demo_player_order_2", "userId": "50000000-0000-4000-8000-000000000002", "planId": "30000000-0000-4000-8000-000000000001" },
+    { "id": "51000000-0000-4000-8000-000000000003", "key": "demo_player_order_3", "userId": "50000000-0000-4000-8000-000000000003", "planId": "30000000-0000-4000-8000-000000000001" }
+  ],
+  "entitlements": [
+    { "id": "52000000-0000-4000-8000-000000000001", "key": "demo_player_entitlement_1", "userId": "50000000-0000-4000-8000-000000000001", "orderId": "51000000-0000-4000-8000-000000000001", "planId": "30000000-0000-4000-8000-000000000001" },
+    { "id": "52000000-0000-4000-8000-000000000002", "key": "demo_player_entitlement_2", "userId": "50000000-0000-4000-8000-000000000002", "orderId": "51000000-0000-4000-8000-000000000002", "planId": "30000000-0000-4000-8000-000000000001" },
+    { "id": "52000000-0000-4000-8000-000000000003", "key": "demo_player_entitlement_3", "userId": "50000000-0000-4000-8000-000000000003", "orderId": "51000000-0000-4000-8000-000000000003", "planId": "30000000-0000-4000-8000-000000000001" }
+  ],
+  "events": [
+    {
+      "id": "60000000-0000-4000-8000-000000000001",
+      "key": "demo_event_2030_shenzhen",
+      "branchId": "10000000-0000-4000-8000-000000000001",
+      "organizerUserId": "50000000-0000-4000-8000-000000000001",
+      "title": "MIP 2030 城市协作交流会",
+      "summary": "用于长期联调的免费线下活动。",
+      "description": "围绕城市资源、合作需求和项目进展进行交流。本活动为虚构演示数据。",
+      "notices": "请按报名信息参加，现场流程以测试说明为准。",
+      "eventTypeKey": "community",
+      "eventMode": "OFFLINE",
+      "accessType": "FREE",
+      "startsAt": "2030-10-19 10:00:00.000",
+      "endsAt": "2030-10-19 17:00:00.000",
+      "registrationOpensAt": "2026-08-25 00:00:00.000",
+      "registrationDeadline": "2030-10-18 18:00:00.000",
+      "cancellationDeadline": "2030-10-18 18:00:00.000",
+      "venueName": "MIP 深圳分会活动空间",
+      "address": "深圳市南山区演示地址 1 号",
+      "cityName": "深圳",
+      "capacity": 120
+    },
+    {
+      "id": "60000000-0000-4000-8000-000000000002",
+      "key": "demo_event_2030_shanghai",
+      "branchId": "10000000-0000-4000-8000-000000000003",
+      "organizerUserId": "50000000-0000-4000-8000-000000000003",
+      "title": "MIP 2030 项目共创工作坊",
+      "summary": "用于验证玩家活动和参与者流程的长期演示活动。",
+      "description": "参与者围绕真实业务问题形成合作方案。本活动为虚构演示数据。",
+      "notices": "仅用于开发测试，不代表正式活动安排。",
+      "eventTypeKey": "workshop",
+      "eventMode": "OFFLINE",
+      "accessType": "MEMBER_INCLUDED",
+      "startsAt": "2030-11-16 09:30:00.000",
+      "endsAt": "2030-11-16 18:00:00.000",
+      "registrationOpensAt": "2026-08-25 00:00:00.000",
+      "registrationDeadline": "2030-11-15 18:00:00.000",
+      "cancellationDeadline": "2030-11-15 18:00:00.000",
+      "venueName": "MIP 上海分会活动空间",
+      "address": "上海市浦东新区演示地址 2 号",
+      "cityName": "上海",
+      "capacity": 60
+    }
+  ],
+  "eventRegistrations": [
+    { "id": "61000000-0000-4000-8000-000000000001", "key": "demo_registration_1", "eventId": "60000000-0000-4000-8000-000000000001", "userId": "50000000-0000-4000-8000-000000000001" },
+    { "id": "61000000-0000-4000-8000-000000000002", "key": "demo_registration_2", "eventId": "60000000-0000-4000-8000-000000000001", "userId": "50000000-0000-4000-8000-000000000002" },
+    { "id": "61000000-0000-4000-8000-000000000003", "key": "demo_registration_3", "eventId": "60000000-0000-4000-8000-000000000001", "userId": "50000000-0000-4000-8000-000000000004" },
+    { "id": "61000000-0000-4000-8000-000000000004", "key": "demo_registration_4", "eventId": "60000000-0000-4000-8000-000000000002", "userId": "50000000-0000-4000-8000-000000000001" },
+    { "id": "61000000-0000-4000-8000-000000000005", "key": "demo_registration_5", "eventId": "60000000-0000-4000-8000-000000000002", "userId": "50000000-0000-4000-8000-000000000003" }
+  ],
+  "opportunities": [
+    {
+      "id": "62000000-0000-4000-8000-000000000001",
+      "key": "demo_opportunity_channels",
+      "ownerUserId": "50000000-0000-4000-8000-000000000001",
+      "branchId": "10000000-0000-4000-8000-000000000001",
+      "title": "寻找企业服务渠道合作伙伴",
+      "valueSummary": "共同拓展华南企业客户",
+      "targetSummary": "熟悉企业服务渠道和客户引荐的合作伙伴",
+      "description": "希望共同验证渠道合作和客户转介流程。本机会为虚构演示数据。",
+      "cityTagId": "20000000-0000-4000-8000-000000000001",
+      "roleKeys": ["connector", "business_builder"],
+      "tagIds": ["21000000-0000-4000-8000-000000000003", "22000000-0000-4000-8000-000000000001"]
+    },
+    {
+      "id": "62000000-0000-4000-8000-000000000002",
+      "key": "demo_opportunity_visual",
+      "ownerUserId": "50000000-0000-4000-8000-000000000005",
+      "branchId": "10000000-0000-4000-8000-000000000001",
+      "title": "联合打造城市品牌视觉系统",
+      "valueSummary": "形成可复用的城市活动视觉规范",
+      "targetSummary": "品牌策划、视觉设计和内容团队",
+      "description": "需要共同完成策略、视觉和落地模板。本机会为虚构演示数据。",
+      "cityTagId": "20000000-0000-4000-8000-000000000001",
+      "roleKeys": ["strategist", "visual_designer", "delivery_lead"],
+      "tagIds": ["21000000-0000-4000-8000-000000000005", "22000000-0000-4000-8000-000000000005"]
+    },
+    {
+      "id": "62000000-0000-4000-8000-000000000003",
+      "key": "demo_opportunity_investment",
+      "ownerUserId": "50000000-0000-4000-8000-000000000003",
+      "branchId": "10000000-0000-4000-8000-000000000003",
+      "title": "寻找消费品牌项目投资合作",
+      "valueSummary": "共同筛选和验证早期消费项目",
+      "targetSummary": "具备项目来源、财务测算或品牌运营经验的伙伴",
+      "description": "关注可验证收入和明确增长路径的项目。本机会为虚构演示数据。",
+      "cityTagId": "20000000-0000-4000-8000-000000000003",
+      "roleKeys": ["capital_operator", "business_builder"],
+      "tagIds": ["21000000-0000-4000-8000-000000000008", "22000000-0000-4000-8000-000000000003"]
+    }
+  ],
+  "cooperationCards": [
+    { "id": "63000000-0000-4000-8000-000000000001", "key": "demo_card_connector", "ownerUserId": "50000000-0000-4000-8000-000000000001", "roleKey": "connector", "positioning": "连接企业服务客户与交付团队", "targetSummary": "完成 12 次有效引荐", "roleFields": { "circles": ["企业服务", "创业团队"], "resources": "华南企业客户与服务商资源", "target": "完成 12 次有效引荐" } },
+    { "id": "63000000-0000-4000-8000-000000000002", "key": "demo_card_business_builder", "ownerUserId": "50000000-0000-4000-8000-000000000002", "roleKey": "business_builder", "positioning": "设计可验证的商业模式和增长方案", "targetSummary": "协助 6 个项目完成模式验证", "roleFields": { "industries": ["商业咨询", "消费品牌"], "business_models": "订阅服务、渠道合作和项目制服务", "target": "协助 6 个项目完成模式验证" } },
+    { "id": "63000000-0000-4000-8000-000000000003", "key": "demo_card_capital_operator", "ownerUserId": "50000000-0000-4000-8000-000000000003", "roleKey": "capital_operator", "positioning": "为早期项目匹配资金和财务方案", "targetSummary": "完成 3 个项目的投资评估", "roleFields": { "investment_fields": ["消费", "企业服务"], "capital_range": "100 万至 500 万元", "target": "完成 3 个项目的投资评估" } },
+    { "id": "63000000-0000-4000-8000-000000000004", "key": "demo_card_strategist", "ownerUserId": "50000000-0000-4000-8000-000000000004", "roleKey": "strategist", "positioning": "为产品和品牌项目确定方向并推动落地", "targetSummary": "完成 8 个产品策划方案", "roleFields": { "planning_types": ["产品策划", "品牌策划"], "methods": "用户研究、业务拆解和快速验证", "target": "完成 8 个产品策划方案" } },
+    { "id": "63000000-0000-4000-8000-000000000005", "key": "demo_card_visual_designer", "ownerUserId": "50000000-0000-4000-8000-000000000005", "roleKey": "visual_designer", "positioning": "建立清晰一致的品牌视觉表达", "targetSummary": "服务 10 个品牌项目", "roleFields": { "visual_types": ["品牌视觉", "包装设计"], "portfolio_summary": "品牌识别、活动视觉和包装系统", "target": "服务 10 个品牌项目" } },
+    { "id": "63000000-0000-4000-8000-000000000006", "key": "demo_card_delivery_lead", "ownerUserId": "50000000-0000-4000-8000-000000000006", "roleKey": "delivery_lead", "positioning": "统筹团队按计划完成复杂项目", "targetSummary": "完成 6 个跨团队项目", "roleFields": { "project_types": ["数字化项目", "品牌项目"], "delivery_experience": "10 至 30 人跨职能团队交付", "target": "完成 6 个跨团队项目" } }
+  ],
+  "superCases": [
+    { "id": "64000000-0000-4000-8000-000000000001", "key": "demo_case_channels", "ownerUserId": "50000000-0000-4000-8000-000000000001", "projectName": "区域渠道协作网络搭建", "summary": "建立服务商与企业客户之间的协作机制", "startedOn": "2025-03-01", "endedOn": "2026-02-28", "responsibility": "渠道设计、合作伙伴引入和项目协调", "cityTagId": "20000000-0000-4000-8000-000000000001", "industryTagId": "21000000-0000-4000-8000-000000000003", "caseType": "渠道合作", "description": "完成合作标准、线索流转和交付复盘流程。本案例为虚构演示数据。" },
+    { "id": "64000000-0000-4000-8000-000000000002", "key": "demo_case_growth", "ownerUserId": "50000000-0000-4000-8000-000000000002", "projectName": "消费品牌增长方案", "summary": "通过产品组合和渠道测试验证增长路径", "startedOn": "2025-06-01", "endedOn": "2026-05-31", "responsibility": "商业模式设计、财务测算和增长实验", "cityTagId": "20000000-0000-4000-8000-000000000002", "industryTagId": "21000000-0000-4000-8000-000000000006", "caseType": "商业增长", "description": "完成阶段目标、收入模型和渠道实验设计。本案例为虚构演示数据。" },
+    { "id": "64000000-0000-4000-8000-000000000003", "key": "demo_case_visual", "ownerUserId": "50000000-0000-4000-8000-000000000005", "projectName": "城市活动视觉识别系统", "summary": "建立适用于多场活动的统一视觉规范", "startedOn": "2025-09-01", "endedOn": "2026-04-30", "responsibility": "视觉策略、设计系统和交付模板", "cityTagId": "20000000-0000-4000-8000-000000000001", "industryTagId": "21000000-0000-4000-8000-000000000005", "caseType": "品牌视觉", "description": "完成主视觉、物料模板和使用规范。本案例为虚构演示数据。" }
   ]
 }

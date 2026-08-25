@@ -13,6 +13,10 @@ import {
 
 const PLATFORM_SCOPE_ID = '00000000-0000-0000-0000-000000000000'
 const root = path.resolve(import.meta.dirname, '..')
+const demoSeed = JSON.parse(fs.readFileSync(path.join(root, 'database', 'mysql', 'mip', 'seed.demo.json'), 'utf8'))
+const demoUserIds = new Set((Array.isArray(demoSeed?.users) ? demoSeed.users : [])
+  .map(item => String(item?.id || ''))
+  .filter(isUuid))
 const env = loadCaseEnv(root)
 const envId = String(env.CLOUDBASE_ENV_ID || '').trim()
 const appId = String(env.MINI_PROGRAM_APP_ID || '').trim()
@@ -28,6 +32,9 @@ if (!/^wx[0-9a-f]{16}$/i.test(appId)) {
 if (userId && !isUuid(userId)) {
   throw new Error('Invalid --user-id UUID')
 }
+if (userId && demoUserIds.has(userId)) {
+  throw new Error('Demo seed users cannot become platform owners')
+}
 const allowedAppIds = String(env.MIP_ALLOWED_APP_IDS || appId)
   .split(',')
   .map(value => value.trim())
@@ -38,12 +45,28 @@ if (!allowedAppIds.includes(appId)) {
 
 bindAndRequireMysqlEnvironment(root, envId)
 const filter = userId ? `AND u.id = ${sqlLiteral(userId)}` : ''
+const localDemoFilter = demoUserIds.size
+  ? `AND u.id NOT IN (${[...demoUserIds].map(sqlLiteral).join(', ')})`
+  : ''
 const candidates = callCloudbase(root, 'queryMysqlDatabase', {
   action: 'runQuery',
   sql: `SELECT u.id, p.nickname
     FROM mip_users u
     INNER JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
-    WHERE u.app_id = ${sqlLiteral(appId)} AND u.status = 'ACTIVE' ${filter}
+    WHERE u.app_id = ${sqlLiteral(appId)} AND u.status = 'ACTIVE'
+      ${filter}
+      ${localDemoFilter}
+      AND NOT EXISTS (
+        SELECT 1
+        FROM mip_app_settings demo_manifest
+        WHERE demo_manifest.app_id = u.app_id
+          AND demo_manifest.setting_key LIKE 'demo_seed_manifest%'
+          AND JSON_UNQUOTE(JSON_EXTRACT(demo_manifest.value_json, '$.is_demo')) = '1'
+          AND JSON_SEARCH(
+            JSON_EXTRACT(demo_manifest.value_json, '$.recordIds.users'),
+            'one', u.id
+          ) IS NOT NULL
+      )
     ORDER BY p.updated_at DESC, u.id
     LIMIT 2`,
   limit: 2,

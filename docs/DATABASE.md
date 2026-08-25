@@ -61,4 +61,4 @@ pnpm database:grants -- \
 
 该命令只接受 `.env.local` 中与当前 EnvID 派生结果一致的 runtime 用户，拒绝 schema/global 权限，并按当前 MIP 表清单回读验证授权。共享数据库的其他 schema、旧项目表和其他账号不在其授权范围内。
 
-生产禁止 seed。演示数据 `is_demo=1`。MIP 函数部署前必须由 `pnpm database:grants` 验证环境专属 runtime 账号的精确表级权限，不允许 schema-level ALL 或全局权限。
+生产禁止 seed。演示实体使用仓库固定 ID，并统一登记在 `mip_app_settings.demo_seed_manifest` 及版本化清单；清单必须包含 `is_demo=1`、seed 版本、SHA-256、`PENDING | READY` 状态和各表完整主键，正式上线前按清单替换或清理。MIP 函数部署前必须由 `pnpm database:grants` 验证环境专属 runtime 账号的精确表级权限，不允许 schema-level ALL 或全局权限。
