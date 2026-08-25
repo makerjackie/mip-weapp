@@ -525,7 +525,7 @@ function createBlindBoxRepository(database, options = {}) {
 async function findDraw(database, appId, userId, requestId) {
   return database.one(
     `SELECT * FROM mip_blind_box_draws
-     WHERE app_id = ? AND user_id = ? AND request_id = ? FOR UPDATE`,
+     WHERE app_id = ? AND user_id = ? AND request_id = ?`,
     [appId, userId, requestId],
   )
 }

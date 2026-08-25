@@ -89,6 +89,29 @@ function repository(tx, options = {}) {
 }
 
 describe('admin message templates', () => {
+  it('locks only the template alias when a transaction-local read requests a lock', async () => {
+    const calls = []
+    const tx = {
+      async one(sql, params) {
+        calls.push({ sql, params })
+        return row()
+      },
+      async query() { return [] },
+    }
+    const { repo } = repository(tx)
+
+    await repo.getTemplate(appId, templateId, tx)
+    await repo.getTemplate(appId, templateId, tx, true)
+
+    assert.doesNotMatch(calls[0].sql, /FOR UPDATE/)
+    assert.match(calls[1].sql, /FROM mip_message_templates template/)
+    assert.match(calls[1].sql, /FOR UPDATE OF template$/)
+    assert.deepEqual(calls.map(call => call.params), [
+      [appId, templateId],
+      [appId, templateId],
+    ])
+  })
+
   it('returns only the current immutable revision and never exposes internal user ids', () => {
     const item = templateDto(row())
     assert.deepEqual(Object.keys(item).sort(), [

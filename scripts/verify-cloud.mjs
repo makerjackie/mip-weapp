@@ -22,6 +22,7 @@ import {
   RUNTIME_TABLE_PRIVILEGES,
   runtimeUserForEnvironment,
 } from './lib/mysql-privilege-assert.mjs'
+import { assertSupportedMySqlVersion } from './lib/mysql-version.mjs'
 
 const require = createRequire(import.meta.url)
 const { signInternalEvent: signOutboxInternalEvent } = require('../cloudfunctions/mip-outbox-worker/lib/internal-auth')
@@ -49,6 +50,7 @@ if (!['TEST', 'LIVE'].includes(catalogStage)
 }
 
 bindAndRequireMysqlEnvironment(root, envId)
+const mysqlVersion = assertMysqlVersion()
 
 const requiredTables = Object.keys(RUNTIME_TABLE_PRIVILEGES)
 const tableNamesSql = requiredTables.map(sqlLiteral).join(', ')
@@ -145,6 +147,8 @@ fs.writeFileSync(path.join(root, '.tmp', 'verify-cloud-result.json'), `${JSON.st
   environmentVerified: true,
   directMipFunctionsOnly: true,
   persistence: 'cloudbase-mysql',
+  mysqlVersion: mysqlVersion.raw,
+  mysqlVersionGate: '8.0.22+',
   paymentMode,
   functionsVerified: verifiedFunctions,
   tablesVerified: requiredTables.length,
@@ -157,6 +161,18 @@ fs.writeFileSync(path.join(root, '.tmp', 'verify-cloud-result.json'), `${JSON.st
   verifiedAt: new Date().toISOString(),
 }, null, 2)}\n`)
 console.log('[mip-cloud-verify] schema, least-privilege grants, functions, health, and protected invocation rules verified')
+
+function assertMysqlVersion() {
+  const response = callCloudbase(root, 'queryMysqlDatabase', {
+    action: 'runQuery',
+    sql: 'SELECT VERSION() AS serverVersion',
+  })
+  const versions = collectFieldValues(response, ['serverVersion', 'server_version'])
+  if (versions.length !== 1) {
+    throw new Error('CloudBase MySQL version probe did not return exactly one server version')
+  }
+  return assertSupportedMySqlVersion(versions[0])
+}
 
 function functionDetail(value) {
   return value?.data?.functionDetail || value?.Response || value?.data || value

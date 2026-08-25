@@ -81,6 +81,29 @@ function authorization() {
 }
 
 describe('admin message campaigns', () => {
+  it('locks only the campaign alias when a transaction-local read requests a lock', async () => {
+    const calls = []
+    const tx = {
+      async one(sql, params) {
+        calls.push({ sql, params })
+        return row()
+      },
+      async query() { return [] },
+    }
+    const campaignRepository = repository(tx)
+
+    await campaignRepository.getCampaign(appId, campaignId, tx)
+    await campaignRepository.getCampaign(appId, campaignId, tx, true)
+
+    assert.doesNotMatch(calls[0].sql, /FOR UPDATE/)
+    assert.match(calls[1].sql, /FROM mip_message_campaigns campaign/)
+    assert.match(calls[1].sql, /FOR UPDATE OF campaign$/)
+    assert.deepEqual(calls.map(call => call.params), [
+      [appId, campaignId],
+      [appId, campaignId],
+    ])
+  })
+
   it('uses a distinct capability for platform and branch operators only', () => {
     assert.equal(roleCapabilities.PLATFORM_OPERATIONS.includes(CAPABILITIES.MESSAGES_MANAGE), true)
     assert.equal(roleCapabilities.BRANCH_ADMIN.includes(CAPABILITIES.MESSAGES_MANAGE), true)
@@ -235,6 +258,8 @@ describe('admin message campaigns', () => {
     const messages = calls.find(call => call.sql.includes('INSERT INTO mip_operations_messages'))
     assert.equal(messages.params.includes(recipientId), true)
     assert.equal(messages.params.includes('活动安排已更新'), true)
+    const recipientRead = calls.find(call => call.sql.includes('FROM mip_message_campaign_recipients'))
+    assert.doesNotMatch(recipientRead.sql, /FOR UPDATE/)
     const outbox = calls.find(call => call.sql.includes('INSERT INTO mip_outbox_events'))
     assert.match(outbox.sql, /operations\.notification_published/)
     assert.match(outbox.sql, /JSON_OBJECT\(\)/)

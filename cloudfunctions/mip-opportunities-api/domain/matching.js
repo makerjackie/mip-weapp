@@ -185,7 +185,7 @@ async function createMatchingRequest(database, provider, caller, input = {}, opt
     await lockActiveUser(tx, caller.appId, requesterUserId)
     const stored = await tx.one(
       `SELECT id, request_hash FROM mip_matching_requests
-       WHERE app_id = ? AND requested_by_user_id = ? AND idempotency_key = ? FOR UPDATE`,
+       WHERE app_id = ? AND requested_by_user_id = ? AND idempotency_key = ?`,
       [caller.appId, caller.userId, idempotencyKey],
     )
     if (stored) {
@@ -464,7 +464,7 @@ async function saveMatchingFeedback(database, caller, input = {}) {
     await lockActiveUser(tx, caller.appId, caller.userId)
     const request = await tx.one(
       `SELECT requester_user_id, result_version FROM mip_matching_requests
-       WHERE app_id = ? AND id = ? AND status = 'COMPLETED' FOR UPDATE`,
+       WHERE app_id = ? AND id = ? AND status = 'COMPLETED'`,
       [caller.appId, input.requestId],
     )
     if (!request || request.requester_user_id !== caller.userId) { throw new Error('NOT_FOUND') }
@@ -491,7 +491,7 @@ async function saveMatchingFeedback(database, caller, input = {}) {
     })
     const stored = await tx.one(
       `SELECT id, request_hash, feedback_type, reason FROM mip_matching_feedback
-       WHERE app_id = ? AND actor_user_id = ? AND idempotency_key = ? FOR UPDATE`,
+       WHERE app_id = ? AND actor_user_id = ? AND idempotency_key = ?`,
       [caller.appId, caller.userId, idempotencyKey],
     )
     if (stored) {
@@ -555,17 +555,16 @@ async function loadSource(database, appId, requesterUserId, opportunityId, enfor
 }
 
 async function loadOpportunityPreferences(database, appId, userId, lock = false) {
-  const lockClause = lock ? ' FOR UPDATE' : ''
   const [opportunity, notification] = await Promise.all([
     database.one(
       `SELECT matching_enabled, talent_recommendations_enabled,
               project_recommendations_enabled, matching_scope, version
-       FROM mip_user_opportunity_preferences WHERE app_id = ? AND user_id = ?${lockClause}`,
+       FROM mip_user_opportunity_preferences WHERE app_id = ? AND user_id = ?${lock ? ' FOR UPDATE' : ''}`,
       [appId, userId],
     ),
     database.one(
       `SELECT opportunity_matching_notifications_enabled, version
-       FROM mip_user_notification_preferences WHERE app_id = ? AND user_id = ?${lockClause}`,
+       FROM mip_user_notification_preferences WHERE app_id = ? AND user_id = ?${lock ? ' FOR UPDATE' : ''}`,
       [appId, userId],
     ),
   ])

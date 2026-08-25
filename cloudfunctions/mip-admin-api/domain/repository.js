@@ -2332,7 +2332,7 @@ function createAdminRepository(database, options = {}) {
       const existing = await tx.one(
         `SELECT id, delta_value, balance_after FROM mip_growth_entries
          WHERE app_id = ? AND user_id = ? AND source_event_type = 'ADMIN_ADJUSTMENT'
-           AND source_event_id = ? AND metric = ? FOR UPDATE`,
+           AND source_event_id = ? AND metric = ?`,
         [input.appId, input.userId, sourceEventId, input.metric],
       )
       if (existing) {

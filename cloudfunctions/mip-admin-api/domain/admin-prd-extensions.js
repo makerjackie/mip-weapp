@@ -313,7 +313,7 @@ function createAdminPrdExtensions(database, options = {}) {
       }
       if (input.draft.cityTagId) {
         const city = await tx.one(
-          `SELECT id FROM mip_tags WHERE app_id = ? AND id = ? AND kind = 'CITY' AND enabled = 1 FOR UPDATE`,
+          `SELECT id FROM mip_tags WHERE app_id = ? AND id = ? AND kind = 'CITY' AND enabled = 1 FOR SHARE`,
           [input.appId, input.draft.cityTagId],
         )
         if (!city) throw codeError('VALIDATION_FAILED')
@@ -322,7 +322,7 @@ function createAdminPrdExtensions(database, options = {}) {
       if (input.draft.tagIds.length) {
         selectedTags = await tx.query(
           `SELECT id, kind FROM mip_tags WHERE app_id = ? AND id IN (${placeholders(input.draft.tagIds)})
-             AND kind IN ('INDUSTRY', 'ABILITY') AND enabled = 1 AND selectable = 1 FOR UPDATE`,
+             AND kind IN ('INDUSTRY', 'ABILITY') AND enabled = 1 AND selectable = 1 FOR SHARE`,
           [input.appId, ...input.draft.tagIds],
         )
         if (new Set(selectedTags.map(row => row.id)).size !== input.draft.tagIds.length) throw codeError('VALIDATION_FAILED')

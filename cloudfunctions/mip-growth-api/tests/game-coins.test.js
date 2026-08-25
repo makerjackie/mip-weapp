@@ -47,10 +47,12 @@ test('grants a fixed server amount and appends a GAME notification outbox fact',
 })
 
 test('returns the immutable ledger result on retry', async () => {
+  const reads = []
   let writes = 0
   const repository = createGameCoinRepository({
     transaction: work => work({
       async one(sql) {
+        reads.push(sql)
         if (sql.includes('FROM mip_users')) return { id: base.userId, status: 'ACTIVE' }
         return {
           id: '30000000-0000-4000-8000-000000000001',
@@ -64,6 +66,9 @@ test('returns the immutable ledger result on retry', async () => {
   })
   assert.equal((await repository.recordGameCoinEvent(base)).idempotent, true)
   assert.equal(writes, 0)
+  assert.match(reads[0], /FROM mip_users[\s\S]+FOR UPDATE/)
+  assert.match(reads[1], /FROM mip_growth_entries/)
+  assert.doesNotMatch(reads[1], /FOR UPDATE/)
 })
 
 test('rejects a spend that would create a negative balance', async () => {

@@ -368,12 +368,31 @@ function createMessageDeliveryReviewRepository(database, options = {}) {
 }
 
 async function listCandidates(database, input) {
-  const selections = []
-  const params = []
-  if (!input.sourceType || input.sourceType === 'CAMPAIGN_DISPATCH') {
-    if (input.workflowStatus !== 'RESOLVED') {
-      selections.push(
-        `SELECT 'CAMPAIGN_DISPATCH' AS source_type, dispatch.id AS source_id,
+  const campaignEnabled = !input.sourceType || input.sourceType === 'CAMPAIGN_DISPATCH'
+  const deliveryEnabled = !input.sourceType || input.sourceType === 'DELIVERY_TASK'
+  const incidentEnabled = input.workflowStatus !== 'RESOLVED'
+  const params = [
+    input.appId,
+    input.now,
+    campaignEnabled && incidentEnabled ? 1 : 0,
+    input.appId,
+    campaignEnabled ? 1 : 0,
+    input.workflowStatus,
+    input.appId,
+    input.now,
+    deliveryEnabled && incidentEnabled ? 1 : 0,
+    input.appId,
+    deliveryEnabled ? 1 : 0,
+    input.workflowStatus,
+  ]
+  const cursorSql = input.cursor
+    ? 'WHERE (occurred_at < ? OR (occurred_at = ? AND incident_id < ?))'
+    : ''
+  if (input.cursor) params.push(input.cursor.occurredAt, input.cursor.occurredAt, input.cursor.id)
+  return database.query(
+    `SELECT source_type, source_id, occurred_at, incident_id
+     FROM (
+       SELECT 'CAMPAIGN_DISPATCH' AS source_type, dispatch.id AS source_id,
         dispatch.updated_at AS occurred_at,
         CONCAT('CAMPAIGN_DISPATCH:', dispatch.id) AS incident_id
        FROM mip_message_campaign_dispatches dispatch
@@ -410,25 +429,23 @@ async function listCandidates(database, input) {
                AND changed_message.publication_id = dispatch.campaign_id
                AND changed_outbox.created_at > review.updated_at
            )
-         )`,
-      )
-      params.push(input.appId, input.now)
-    }
-    selections.push(
-      `SELECT review.source_type, review.source_id, dispatch.updated_at AS occurred_at,
+         )
+         AND ? = 1
+       UNION
+       SELECT review.source_type, review.source_id, dispatch.updated_at AS occurred_at,
         CONCAT(review.source_type, ':', review.source_id) AS incident_id
        FROM mip_message_delivery_reviews review
        INNER JOIN mip_message_campaign_dispatches dispatch
          ON dispatch.app_id = review.app_id AND dispatch.id = review.source_id
        WHERE review.app_id = ? AND review.source_type = 'CAMPAIGN_DISPATCH'
-         ${reviewWorkflowCandidateFilter(input.workflowStatus)}`,
-    )
-    params.push(input.appId)
-  }
-  if (!input.sourceType || input.sourceType === 'DELIVERY_TASK') {
-    if (input.workflowStatus !== 'RESOLVED') {
-      selections.push(
-        `SELECT 'DELIVERY_TASK' AS source_type, task.id AS source_id,
+         AND ? = 1
+         AND CASE ?
+           WHEN 'RESOLVED' THEN review.workflow_status = 'RESOLVED'
+           WHEN 'ALL' THEN 1
+           ELSE review.workflow_status <> 'RESOLVED'
+         END
+       UNION
+       SELECT 'DELIVERY_TASK' AS source_type, task.id AS source_id,
         task.outcome_updated_at AS occurred_at,
         CONCAT('DELIVERY_TASK:', task.id) AS incident_id
        FROM mip_delivery_tasks task
@@ -446,38 +463,26 @@ async function listCandidates(database, input) {
          AND (
            review.id IS NULL OR review.workflow_status <> 'RESOLVED'
            OR task.outcome_updated_at > review.updated_at
-         )`,
-      )
-      params.push(input.appId, input.now)
-    }
-    selections.push(
-      `SELECT review.source_type, review.source_id, task.outcome_updated_at AS occurred_at,
+         )
+         AND ? = 1
+       UNION
+       SELECT review.source_type, review.source_id, task.outcome_updated_at AS occurred_at,
         CONCAT(review.source_type, ':', review.source_id) AS incident_id
        FROM mip_message_delivery_reviews review
        INNER JOIN mip_delivery_tasks task
          ON task.app_id = review.app_id AND task.id = review.source_id
        WHERE review.app_id = ? AND review.source_type = 'DELIVERY_TASK'
-         ${reviewWorkflowCandidateFilter(input.workflowStatus)}`,
-    )
-    params.push(input.appId)
-  }
-  const cursorSql = input.cursor
-    ? 'WHERE (occurred_at < ? OR (occurred_at = ? AND incident_id < ?))'
-    : ''
-  if (input.cursor) params.push(input.cursor.occurredAt, input.cursor.occurredAt, input.cursor.id)
-  return database.query(
-    `SELECT source_type, source_id, occurred_at, incident_id
-     FROM (${selections.join(' UNION ')}) incident
+         AND ? = 1
+         AND CASE ?
+           WHEN 'RESOLVED' THEN review.workflow_status = 'RESOLVED'
+           WHEN 'ALL' THEN 1
+           ELSE review.workflow_status <> 'RESOLVED'
+         END
+     ) incident
      ${cursorSql}
      ORDER BY occurred_at DESC, incident_id DESC LIMIT ?`,
     [...params, input.scanLimit],
   )
-}
-
-function reviewWorkflowCandidateFilter(workflowStatus) {
-  if (workflowStatus === 'RESOLVED') return "AND review.workflow_status = 'RESOLVED'"
-  if (workflowStatus === 'ALL') return ''
-  return "AND review.workflow_status <> 'RESOLVED'"
 }
 
 async function hydrateCandidates(database, appId, candidateRows) {

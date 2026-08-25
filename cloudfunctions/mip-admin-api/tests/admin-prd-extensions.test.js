@@ -122,11 +122,20 @@ describe('admin PRD extension persistence', () => {
   })
 
   it('creates an opportunity and its selected role and tag inside one audited transaction', async () => {
+    const reads = []
     const writes = []
     const repository = extensions(database({
-      async one(sql) { return sql.includes('FROM mip_users') ? { id: 'owner-a' } : null },
+      async one(sql) {
+        reads.push(sql)
+        if (sql.includes('FROM mip_users')) return { id: 'owner-a' }
+        if (sql.includes("kind = 'CITY'")) return { id: 'city-a' }
+        return null
+      },
       async query(sql, params) {
-        if (sql.includes('SELECT id, kind FROM mip_tags')) return [{ id: 'tag-a', kind: 'INDUSTRY' }]
+        if (sql.includes('SELECT id, kind FROM mip_tags')) {
+          reads.push(sql)
+          return [{ id: 'tag-a', kind: 'INDUSTRY' }]
+        }
         writes.push({ sql, params })
         return { affectedRows: 1 }
       },
@@ -136,7 +145,7 @@ describe('admin PRD extension persistence', () => {
       authorizedScope: null, authorization: {}, contentSafetyStatus: 'APPROVED',
       draft: {
         ownerUserId: 'owner-a', scopeType: 'PLATFORM', branchId: null, title: '机会', valueSummary: '价值',
-        targetSummary: '', description: '', cityTagId: null, deadlineAt: null,
+        targetSummary: '', description: '', cityTagId: 'city-a', deadlineAt: null,
         roleKeys: ['connector'], tagIds: ['tag-a'],
       },
       audit,
@@ -146,6 +155,10 @@ describe('admin PRD extension persistence', () => {
     assert.ok(writes.some(call => /INSERT INTO mip_opportunity_roles/.test(call.sql)))
     assert.ok(writes.some(call => /INSERT INTO mip_opportunity_tags/.test(call.sql)))
     assert.ok(writes.some(call => /INSERT INTO mip_audit_logs/.test(call.sql)))
+    const tagReads = reads.filter(sql => sql.includes('FROM mip_tags'))
+    assert.equal(tagReads.length, 2)
+    assert.equal(tagReads.every(sql => sql.includes('FOR SHARE')), true)
+    assert.equal(tagReads.some(sql => sql.includes('FOR UPDATE')), false)
   })
 
   it('rejects a branch opportunity owner from another primary branch before writing', async () => {

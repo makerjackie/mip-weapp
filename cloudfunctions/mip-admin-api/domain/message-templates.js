@@ -33,9 +33,24 @@ function createMessageTemplateRepository(database, options = {}) {
   }
 
   async function getTemplate(appId, templateId, adapter = database, lock = false) {
+    const sql = lock
+      ? `SELECT template.id, template.scope_type, template.branch_id,
+       branch.name AS branch_name, template.status, template.current_revision_number,
+       revision.name, revision.title, revision.body, revision.content_safety_status,
+       revision.created_at AS revision_created_at,
+       template.version, template.created_at, template.updated_at
+       FROM mip_message_templates template
+       INNER JOIN mip_message_template_revisions revision
+         ON revision.app_id = template.app_id
+        AND revision.template_id = template.id
+        AND revision.revision_number = template.current_revision_number
+       LEFT JOIN mip_city_branches branch
+         ON branch.app_id = template.app_id AND branch.id = template.branch_id
+       WHERE template.app_id = ? AND template.id = ? FOR UPDATE OF template`
+      : `${templateSelect()}
+       WHERE template.app_id = ? AND template.id = ?`
     const row = await adapter.one(
-      `${templateSelect()}
-       WHERE template.app_id = ? AND template.id = ?${lock ? ' FOR UPDATE' : ''}`,
+      sql,
       [appId, templateId],
     )
     return row ? templateDto(row) : null

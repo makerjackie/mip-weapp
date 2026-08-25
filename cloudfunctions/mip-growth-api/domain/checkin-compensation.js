@@ -11,7 +11,28 @@ function createCheckInGrowthRepository(database, options = {}) {
 
   async function applyCheckInTransition(input) {
     validateInput(input)
+    const hintedRequested = await database.one(
+      `SELECT id, transition_type, reversal_of_transition_id
+       FROM mip_event_checkin_transitions
+       WHERE app_id = ? AND id = ?`,
+      [input.appId, input.transitionId],
+    )
+    if (!hintedRequested) throw new Error('VALIDATION_FAILED')
+    const hintedRecordedId = hintedRequested.transition_type === 'REVOKED'
+      ? hintedRequested.reversal_of_transition_id
+      : hintedRequested.id
+    const hintedRecorded = await database.one(
+      `SELECT transition.id, transition.app_id, transition.checkin_id,
+              transition.registration_id, transition.event_id, transition.user_id,
+              transition.checkin_version, transition.registration_version
+       FROM mip_event_checkin_transitions transition
+       WHERE transition.app_id = ? AND transition.id = ?
+         AND transition.transition_type = 'CHECKED_IN'`,
+      [input.appId, hintedRecordedId],
+    )
+    if (!hintedRecorded) throw new Error('VALIDATION_FAILED')
     return database.transaction(async (tx) => {
+      const account = await lockAccount(tx, input.appId, hintedRecorded.user_id)
       const requested = await tx.one(
         `SELECT id, transition_type, reversal_of_transition_id
          FROM mip_event_checkin_transitions
@@ -22,17 +43,19 @@ function createCheckInGrowthRepository(database, options = {}) {
       const recordedId = requested.transition_type === 'REVOKED'
         ? requested.reversal_of_transition_id
         : requested.id
+      if (recordedId !== hintedRecordedId) throw new Error('VALIDATION_FAILED')
       const recorded = await tx.one(
         `SELECT transition.id, transition.app_id, transition.checkin_id,
                 transition.registration_id, transition.event_id, transition.user_id,
                 transition.checkin_version, transition.registration_version
          FROM mip_event_checkin_transitions transition
          WHERE transition.app_id = ? AND transition.id = ?
-           AND transition.transition_type = 'CHECKED_IN'
-         FOR UPDATE`,
+           AND transition.transition_type = 'CHECKED_IN'`,
         [input.appId, recordedId],
       )
-      if (!recorded) throw new Error('VALIDATION_FAILED')
+      if (!recorded || recorded.user_id !== hintedRecorded.user_id) {
+        throw new Error('VALIDATION_FAILED')
+      }
       const relation = await tx.one(
         `SELECT checkin.id
          FROM mip_event_checkins checkin
@@ -57,8 +80,7 @@ function createCheckInGrowthRepository(database, options = {}) {
                 actor_user_id
          FROM mip_event_checkin_transitions
          WHERE app_id = ? AND reversal_of_transition_id = ?
-           AND transition_type = 'REVOKED'
-         FOR UPDATE`,
+           AND transition_type = 'REVOKED'`,
         [input.appId, recorded.id],
       )
       if (reversal && !sameCycle(recorded, reversal)) throw new Error('VALIDATION_FAILED')
@@ -67,7 +89,6 @@ function createCheckInGrowthRepository(database, options = {}) {
         if (reversal) {
           return { transitionId: requested.id, status: 'REVERSED_BEFORE_PROJECTION', awards: [] }
         }
-        const account = await lockAccount(tx, recorded.app_id, recorded.user_id)
         return awardCheckIn(tx, recorded, account, createId)
       }
       if (requested.transition_type !== 'REVOKED'
@@ -76,7 +97,6 @@ function createCheckInGrowthRepository(database, options = {}) {
         || reversal.reversal_of_transition_id !== recorded.id) {
         throw new Error('VALIDATION_FAILED')
       }
-      const account = await lockAccount(tx, recorded.app_id, recorded.user_id)
       return reverseCheckIn(tx, recorded, reversal, account, createId)
     })
   }
@@ -103,8 +123,7 @@ async function awardCheckIn(tx, recorded, account, createId) {
       `SELECT id, metric, delta_value, balance_after, created_at
        FROM mip_growth_entries
        WHERE app_id = ? AND user_id = ? AND source_event_type = 'event.checked_in'
-         AND source_event_id = ? AND metric = ?
-       FOR UPDATE`,
+         AND source_event_id = ? AND metric = ?`,
       [recorded.app_id, recorded.user_id, recorded.id, rule.metric],
     )
     if (existing) {
@@ -177,7 +196,7 @@ async function reverseCheckIn(tx, recorded, reversal, account, createId) {
      WHERE app_id = ? AND user_id = ? AND source_event_type = 'event.checked_in'
        AND source_event_id = ?
        AND metric IN ('EXPERIENCE', 'CONTRIBUTION')
-     ORDER BY id FOR UPDATE`,
+     ORDER BY id`,
     [recorded.app_id, recorded.user_id, recorded.id],
   )
   const awards = []
@@ -186,8 +205,7 @@ async function reverseCheckIn(tx, recorded, reversal, account, createId) {
       `SELECT id, metric, delta_value, balance_after, created_at
        FROM mip_growth_entries
        WHERE app_id = ? AND user_id = ? AND source_event_type = 'event.checkin_revoked'
-         AND source_event_id = ? AND metric = ?
-       FOR UPDATE`,
+         AND source_event_id = ? AND metric = ?`,
       [recorded.app_id, recorded.user_id, reversal.id, original.metric],
     )
     if (existing) {

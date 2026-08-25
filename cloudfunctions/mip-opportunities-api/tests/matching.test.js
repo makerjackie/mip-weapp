@@ -311,8 +311,10 @@ describe('opportunity matching', () => {
       feedbackType: 'HELPFUL',
       reason: '推荐相关',
     })).digest('hex')
+    const reads = []
     const tx = {
       async one(sql) {
+        reads.push(sql)
         if (sql.includes('FROM mip_users')) { return { id: USER_ID, status: 'ACTIVE' } }
         if (sql.includes('FROM mip_matching_requests')) {
           return { requester_user_id: USER_ID, result_version: 2 }
@@ -347,6 +349,13 @@ describe('opportunity matching', () => {
       idempotencyKey: 'matching-feedback-replay-001',
     })
     assert.equal(replay.feedbackType, 'HELPFUL')
+    const userRead = reads.findIndex(sql => sql.includes('FROM mip_users'))
+    const requestRead = reads.findIndex(sql => sql.includes('FROM mip_matching_requests'))
+    const feedbackRead = reads.findIndex(sql => sql.includes('FROM mip_matching_feedback'))
+    assert.ok(userRead >= 0 && userRead < requestRead && requestRead < feedbackRead)
+    assert.match(reads[userRead], /FOR UPDATE/)
+    assert.doesNotMatch(reads[requestRead], /FOR UPDATE/)
+    assert.doesNotMatch(reads[feedbackRead], /FOR UPDATE/)
 
     await assert.rejects(() => saveMatchingFeedback(database, caller, {
       requestId: REQUEST_ID,
@@ -356,6 +365,86 @@ describe('opportunity matching', () => {
       reason: '推荐相关',
       idempotencyKey: 'matching-feedback-replay-001',
     }), /CONFLICT/)
+  })
+
+  it('replays a matching request found after locking the requester without appending facts', async () => {
+    const requestHash = createHash('sha256').update(JSON.stringify({
+      sourceId: OPPORTUNITY_ID,
+      requestedByType: 'USER',
+      requesterUserId: USER_ID,
+    })).digest('hex')
+    const transactionReads = []
+    let transactionWrites = 0
+    const tx = {
+      async one(sql) {
+        transactionReads.push(sql)
+        if (sql.includes('FROM mip_users')) return { id: USER_ID, status: 'ACTIVE' }
+        if (sql.includes('SELECT id, request_hash FROM mip_matching_requests')) {
+          return { id: REQUEST_ID, request_hash: requestHash }
+        }
+        if (sql.includes('FROM mip_matching_requests request')) {
+          return {
+            id: REQUEST_ID,
+            source_opportunity_id: OPPORTUNITY_ID,
+            source_title: '社区项目合作',
+            provider_key: 'LOCAL',
+            source_version: 2,
+            result_version: 1,
+            result_count: 0,
+            created_at: '2026-08-25T01:00:00.000Z',
+          }
+        }
+        throw new Error(`unexpected transaction query: ${sql}`)
+      },
+      async query(sql) {
+        transactionWrites += 1
+        throw new Error(`unexpected transaction write: ${sql}`)
+      },
+    }
+    const database = {
+      async one(sql) {
+        if (sql.includes('JSON_ARRAYAGG')) {
+          return {
+            id: OPPORTUNITY_ID,
+            owner_user_id: USER_ID,
+            branch_id: null,
+            city_tag_id: null,
+            title: '社区项目合作',
+            version: 2,
+            primary_branch_id: null,
+            role_keys: '[]',
+          }
+        }
+        if (sql.includes('SELECT id, request_hash FROM mip_matching_requests')) return null
+        if (sql.includes('mip_user_opportunity_preferences')) return null
+        if (sql.includes('mip_user_notification_preferences')) return null
+        throw new Error(`unexpected query: ${sql}`)
+      },
+      async query(sql) {
+        if (sql.includes('mip_opportunity_tags')) return []
+        if (sql.includes('FROM mip_matching_settings')) return []
+        if (sql.includes('FROM mip_users candidate')) return []
+        if (sql.includes('FROM mip_opportunities project')) return []
+        throw new Error(`unexpected query: ${sql}`)
+      },
+      transaction: work => work(tx),
+    }
+
+    const result = await createMatchingRequest(database, { configured: false }, {
+      appId: APP_ID,
+      userId: USER_ID,
+      matchingReferenceSecret: REFERENCE_SECRET,
+    }, {
+      opportunityId: OPPORTUNITY_ID,
+      idempotencyKey: 'matching-transaction-replay-001',
+    })
+
+    assert.equal(result.id, REQUEST_ID)
+    assert.equal(result.resultCount, 0)
+    assert.equal(transactionWrites, 0)
+    assert.match(transactionReads[0], /FROM mip_users[\s\S]+FOR UPDATE/)
+    assert.match(transactionReads[1], /SELECT id, request_hash FROM mip_matching_requests/)
+    assert.doesNotMatch(transactionReads[1], /FOR UPDATE/)
   })
 
   it('locks and rechecks matching preference and setting versions before result writes', async () => {

@@ -72,9 +72,69 @@ function createMessageCampaignRepository(database, options = {}) {
   }
 
   async function getCampaign(appId, campaignId, adapter = database, lock = false) {
+    const sql = lock
+      ? `SELECT campaign.id, campaign.scope_type, campaign.branch_id,
+       branch.name AS branch_name, campaign.audience_type,
+       campaign.audience_user_ids_json, campaign.name, campaign.title, campaign.body,
+       campaign.status, campaign.content_safety_status, campaign.recipient_count,
+       (SELECT COUNT(*) FROM mip_operations_messages submitted
+         WHERE submitted.app_id = campaign.app_id AND submitted.publication_id = campaign.id
+       ) AS submitted_count,
+       (SELECT COUNT(*) FROM mip_operations_messages ready_message
+         INNER JOIN mip_outbox_events ready_outbox
+           ON ready_outbox.app_id = ready_message.app_id
+          AND ready_outbox.aggregate_type = 'OPERATIONS_MESSAGE'
+          AND ready_outbox.aggregate_id = ready_message.id
+          AND ready_outbox.event_type = 'operations.notification_published'
+         INNER JOIN mip_inbox_messages ready_inbox
+           ON ready_inbox.app_id = ready_message.app_id
+          AND ready_inbox.recipient_user_id = ready_message.recipient_user_id
+          AND ready_inbox.dedupe_key = CONCAT('outbox:', ready_outbox.id, ':operations')
+         WHERE ready_message.app_id = campaign.app_id AND ready_message.publication_id = campaign.id
+       ) AS inbox_ready_count,
+       (SELECT COUNT(*) FROM mip_operations_messages failed_message
+         INNER JOIN mip_outbox_events failed_outbox
+           ON failed_outbox.app_id = failed_message.app_id
+          AND failed_outbox.aggregate_type = 'OPERATIONS_MESSAGE'
+          AND failed_outbox.aggregate_id = failed_message.id
+          AND failed_outbox.event_type = 'operations.notification_published'
+          AND failed_outbox.status IN ('FAILED', 'CANCELLED')
+         WHERE failed_message.app_id = campaign.app_id AND failed_message.publication_id = campaign.id
+       ) AS failed_count,
+       ${campaignOutboxCount("= 'PENDING'")} AS outbox_pending_count,
+       ${campaignOutboxCount("= 'PROCESSING'")} AS outbox_processing_count,
+       ${campaignOutboxCount("= 'FAILED'")} AS outbox_retrying_count,
+       ${campaignOutboxCount("= 'DELIVERED'")} AS outbox_delivered_count,
+       ${campaignOutboxCount("= 'CANCELLED'")} AS outbox_terminal_count,
+       ${campaignExternalTaskCount("= 'PENDING'")} AS external_task_pending_count,
+       ${campaignExternalTaskCount("= 'PROCESSING'")} AS external_task_processing_count,
+       ${campaignExternalTaskCount("= 'FAILED'")} AS external_task_retrying_count,
+       ${campaignExternalTaskCount("= 'DELIVERED'")} AS external_task_delivered_count,
+       ${campaignExternalTaskCount("= 'CANCELLED'")} AS external_task_terminal_count,
+       campaign.snapshot_at, campaign.published_at, campaign.withdrawn_at,
+       campaign.withdrawal_reason, campaign.publish_idempotency_key, campaign.publish_request_hash,
+       campaign.active_dispatch_id,
+       active_dispatch.status AS active_dispatch_status,
+       active_dispatch.scheduled_for AS active_dispatch_scheduled_for,
+       active_dispatch.attempts AS active_dispatch_attempts,
+       active_dispatch.last_outcome AS active_dispatch_last_outcome,
+       active_dispatch.retry_disposition AS active_dispatch_retry_disposition,
+       active_dispatch.last_error_code AS active_dispatch_last_error_code,
+       active_dispatch.version AS active_dispatch_version,
+       active_dispatch.updated_at AS active_dispatch_updated_at,
+       campaign.version, campaign.updated_at
+       FROM mip_message_campaigns campaign
+       LEFT JOIN mip_city_branches branch
+         ON branch.app_id = campaign.app_id AND branch.id = campaign.branch_id
+       LEFT JOIN mip_message_campaign_dispatches active_dispatch
+         ON active_dispatch.app_id = campaign.app_id
+        AND active_dispatch.campaign_id = campaign.id
+        AND active_dispatch.id = campaign.active_dispatch_id
+       WHERE campaign.app_id = ? AND campaign.id = ? FOR UPDATE OF campaign`
+      : `${campaignSelect(true)}
+       WHERE campaign.app_id = ? AND campaign.id = ?`
     const row = await adapter.one(
-      `${campaignSelect(true)}
-       WHERE campaign.app_id = ? AND campaign.id = ?${lock ? ' FOR UPDATE' : ''}`,
+      sql,
       [appId, campaignId],
     )
     return row ? campaignDto(row) : null
@@ -771,7 +831,7 @@ async function materializeCampaignPublication(tx, input) {
     `SELECT recipient_user_id
      FROM mip_message_campaign_recipients
      WHERE app_id = ? AND campaign_id = ?
-     ORDER BY recipient_user_id FOR UPDATE`,
+     ORDER BY recipient_user_id`,
     [input.appId, input.campaignId],
   )
   if (recipients.length !== input.campaign.recipientCount || !recipients.length) {

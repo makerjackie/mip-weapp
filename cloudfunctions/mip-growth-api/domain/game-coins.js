@@ -35,8 +35,7 @@ function createGameCoinRepository(database, options = {}) {
         `SELECT id, delta_value, balance_after, created_at
          FROM mip_growth_entries
          WHERE app_id = ? AND user_id = ? AND source_event_type = ?
-           AND source_event_id = ? AND metric = 'COIN'
-         FOR UPDATE`,
+           AND source_event_id = ? AND metric = 'COIN'`,
         [input.appId, input.userId, input.sourceEventType, input.sourceEventId],
       )
       if (existing) {

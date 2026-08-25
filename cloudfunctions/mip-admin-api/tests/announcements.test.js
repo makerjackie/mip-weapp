@@ -72,6 +72,28 @@ function audit(resourceId, action, metadata) {
 }
 
 describe('MIP announcement repository', () => {
+  it('locks only the announcement alias when a transaction-local read requests a lock', async () => {
+    const calls = []
+    const adapter = {
+      async one(sql, params) {
+        calls.push({ sql, params })
+        return row()
+      },
+    }
+    const repository = createAnnouncementRepository(adapter)
+
+    await repository.getAnnouncement(appId, announcementId, adapter)
+    await repository.getAnnouncement(appId, announcementId, adapter, true)
+
+    assert.doesNotMatch(calls[0].sql, /FOR UPDATE/)
+    assert.match(calls[1].sql, /FROM mip_announcements announcement/)
+    assert.match(calls[1].sql, /FOR UPDATE OF announcement$/)
+    assert.deepEqual(calls.map(call => call.params), [
+      [appId, announcementId],
+      [appId, announcementId],
+    ])
+  })
+
   it('lists only announcement scopes covered by the caller visibility', async () => {
     const calls = []
     const repository = createAnnouncementRepository({

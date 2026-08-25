@@ -205,28 +205,27 @@ function createAdminAccessRepository(database, options) {
   }
 
   async function countBranchBlockers(connection, appId, branchId, lockRows = false) {
-    const lock = lockRows ? ' FOR UPDATE' : ''
     const memberships = await connection.one(
       `SELECT COUNT(*) AS total FROM mip_branch_memberships
-       WHERE app_id = ? AND branch_id = ? AND status = 'ACTIVE'${lock}`,
+       WHERE app_id = ? AND branch_id = ? AND status = 'ACTIVE'${lockRows ? ' FOR UPDATE' : ''}`,
       [appId, branchId],
     )
     const administrators = await connection.one(
       `SELECT COUNT(*) AS total FROM mip_admin_role_bindings
        WHERE app_id = ? AND scope_type = 'BRANCH' AND scope_id = ?
-         AND role_key = 'BRANCH_ADMIN' AND status = 'ACTIVE'${lock}`,
+         AND role_key = 'BRANCH_ADMIN' AND status = 'ACTIVE'${lockRows ? ' FOR UPDATE' : ''}`,
       [appId, branchId],
     )
     const events = await connection.one(
       `SELECT COUNT(*) AS total FROM mip_events
        WHERE app_id = ? AND scope_type = 'BRANCH' AND branch_id = ?
-         AND status = 'PUBLISHED'${lock}`,
+         AND status = 'PUBLISHED'${lockRows ? ' FOR UPDATE' : ''}`,
       [appId, branchId],
     )
     const opportunities = await connection.one(
       `SELECT COUNT(*) AS total FROM mip_opportunities
        WHERE app_id = ? AND scope_type = 'BRANCH' AND branch_id = ?
-         AND status = 'PUBLISHED'${lock}`,
+         AND status = 'PUBLISHED'${lockRows ? ' FOR UPDATE' : ''}`,
       [appId, branchId],
     )
     return {

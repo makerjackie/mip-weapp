@@ -1,6 +1,7 @@
 'use strict'
 
 const assert = require('node:assert/strict')
+const { readFileSync } = require('node:fs')
 const { describe, it } = require('node:test')
 const { CAPABILITIES } = require('../domain/capabilities')
 const {
@@ -14,6 +15,7 @@ const {
   deliverySource,
   deliveryEvidenceRevision: reviewEvidenceRevision,
   effectiveWorkflow,
+  LIST_SCAN_BATCH_SIZE,
   matchesWorkflowFilter,
   reviewDto,
 } = require('../domain/message-delivery-reviews')
@@ -93,6 +95,74 @@ describe('message delivery review contract', () => {
       error => error.code === 'FORBIDDEN',
     )
     assert.equal(CAPABILITIES.MESSAGES_DELIVERY_REVIEW, 'messages.delivery.review')
+  })
+
+  it('uses four fixed candidate branches with bound source, workflow, and cursor controls', async () => {
+    const repositorySource = readFileSync(require.resolve('../domain/message-delivery-reviews'), 'utf8')
+    assert.doesNotMatch(repositorySource, /\$\{selections\.join\(/)
+
+    for (const [sourceType, workflowStatus, controls, cursor = null] of [
+      [null, 'ACTIVE', [1, 1, 1, 1]],
+      [null, 'RESOLVED', [0, 1, 0, 1]],
+      [null, 'ALL', [1, 1, 1, 1]],
+      ['CAMPAIGN_DISPATCH', 'ACTIVE', [1, 1, 0, 0]],
+      ['CAMPAIGN_DISPATCH', 'RESOLVED', [0, 1, 0, 0]],
+      ['CAMPAIGN_DISPATCH', 'ALL', [1, 1, 0, 0]],
+      ['DELIVERY_TASK', 'ACTIVE', [0, 0, 1, 1]],
+      ['DELIVERY_TASK', 'RESOLVED', [0, 0, 0, 1], {
+        occurredAt: CURRENT_TIME,
+        id: `DELIVERY_TASK:${idFor(1)}`,
+      }],
+      ['DELIVERY_TASK', 'ALL', [0, 0, 1, 1]],
+    ]) {
+      let candidateCall
+      const repository = createMessageDeliveryReviewRepository({
+        async query(sql, params) {
+          candidateCall = { sql, params }
+          return []
+        },
+      }, {
+        lockMutationAuthorization() {},
+        assertMutationScope() {},
+        now: () => CURRENT_TIME,
+      })
+
+      await repository.listMessageDeliveryReviews({
+        appId: APP_ID,
+        actorUserId: ACTOR_ID,
+        sourceType,
+        workflowStatus,
+        cursor,
+        limit: 20,
+        now: CURRENT_TIME,
+      })
+
+      assert.equal(candidateCall.sql.match(/\bUNION\b/g).length, 3)
+      assert.match(candidateCall.sql, /SELECT 'CAMPAIGN_DISPATCH' AS source_type/)
+      assert.match(candidateCall.sql, /SELECT review\.source_type, review\.source_id, dispatch\.updated_at/)
+      assert.match(candidateCall.sql, /SELECT 'DELIVERY_TASK' AS source_type/)
+      assert.match(candidateCall.sql, /SELECT review\.source_type, review\.source_id, task\.outcome_updated_at/)
+      assert.deepEqual([0, 3, 6, 9].map(index => candidateCall.params[index]), Array(4).fill(APP_ID))
+      assert.deepEqual([candidateCall.params[1], candidateCall.params[7]], [CURRENT_TIME, CURRENT_TIME])
+      assert.deepEqual([2, 4, 8, 10].map(index => candidateCall.params[index]), controls)
+      assert.deepEqual([candidateCall.params[5], candidateCall.params[11]], [
+        workflowStatus,
+        workflowStatus,
+      ])
+      if (cursor) {
+        assert.match(candidateCall.sql, /WHERE \(occurred_at < \? OR \(occurred_at = \? AND incident_id < \?\)\)/)
+        assert.deepEqual(candidateCall.params.slice(-4), [
+          cursor.occurredAt,
+          cursor.occurredAt,
+          cursor.id,
+          LIST_SCAN_BATCH_SIZE,
+        ])
+      }
+      else {
+        assert.doesNotMatch(candidateCall.sql, /WHERE \(occurred_at < \?/)
+        assert.equal(candidateCall.params.at(-1), LIST_SCAN_BATCH_SIZE)
+      }
+    }
   })
 
   it('uses bulk evidence reads, excludes unchanged resolved history, and reopens changed evidence', async () => {

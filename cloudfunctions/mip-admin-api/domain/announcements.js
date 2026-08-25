@@ -63,9 +63,22 @@ function createAnnouncementRepository(database, options = {}) {
   }
 
   async function getAnnouncement(appId, announcementId, adapter = database, lock = false) {
+    const sql = lock
+      ? `SELECT announcement.id, announcement.scope_type, announcement.branch_id,
+       branch.name AS branch_name, announcement.title, announcement.summary,
+       announcement.body, announcement.target_type, announcement.target_id,
+       announcement.status, announcement.content_safety_status, announcement.is_pinned,
+       announcement.visible_from, announcement.visible_until,
+       announcement.published_at, announcement.withdrawn_at,
+       announcement.version, announcement.updated_at
+       FROM mip_announcements announcement
+       LEFT JOIN mip_city_branches branch
+         ON branch.app_id = announcement.app_id AND branch.id = announcement.branch_id
+       WHERE announcement.app_id = ? AND announcement.id = ? FOR UPDATE OF announcement`
+      : `${announcementSelect(true)}
+       WHERE announcement.app_id = ? AND announcement.id = ?`
     const row = await adapter.one(
-      `${announcementSelect(true)}
-       WHERE announcement.app_id = ? AND announcement.id = ?${lock ? ' FOR UPDATE' : ''}`,
+      sql,
       [appId, announcementId],
     )
     return row ? announcementDto(row) : null

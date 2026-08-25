@@ -637,8 +637,10 @@ describe('admin repository persistence contracts', () => {
 
   it('derives a fixed-width growth source id and makes retries idempotent', async () => {
     const calls = []
+    const reads = []
     const repository = createAdminRepository(transactionDatabase({
       async one(sql) {
+        reads.push(sql)
         if (sql.includes('FROM mip_users')) {
           return { id: 'user-a', status: 'ACTIVE', primary_branch_id: null }
         }
@@ -672,6 +674,50 @@ describe('admin repository persistence contracts', () => {
     assert.deepEqual(JSON.parse(outbox.params[6]), {
       userId: 'user-a', metric: 'EXPERIENCE', deltaValue: 5,
     })
+    const userRead = reads.findIndex(sql => sql.includes('FROM mip_users'))
+    const entryRead = reads.findIndex(sql => sql.includes('FROM mip_growth_entries'))
+    assert.ok(userRead >= 0 && userRead < entryRead)
+    assert.match(reads[userRead], /FOR UPDATE/)
+    assert.doesNotMatch(reads[entryRead], /FOR UPDATE/)
+  })
+
+  it('replays an immutable admin growth entry after locking the target user', async () => {
+    const reads = []
+    let writes = 0
+    const repository = createAdminRepository(transactionDatabase({
+      async one(sql) {
+        reads.push(sql)
+        if (sql.includes('FROM mip_users')) {
+          return { id: 'user-a', status: 'ACTIVE', primary_branch_id: null }
+        }
+        if (sql.includes('FROM mip_growth_entries')) {
+          return { id: 'entry-a', delta_value: 5, balance_after: 15 }
+        }
+        throw new Error(`unexpected read: ${sql}`)
+      },
+      async query() {
+        writes += 1
+        return { affectedRows: 1 }
+      },
+    }))
+
+    const result = await repository.adjustGrowth({
+      appId: 'wx-app',
+      actorUserId: 'admin-user',
+      userId: 'user-a',
+      metric: 'EXPERIENCE',
+      deltaValue: 5,
+      reason: '补录活动贡献',
+      idempotencyKey: 'admin-growth-user-a-1724450000000',
+      authorizedScope: { scopeType: 'PLATFORM', scopeId: null },
+      audit: () => audit({ resourceType: 'GROWTH_ENTRY', resourceId: 'entry-a' }),
+    })
+
+    assert.equal(result.idempotent, true)
+    assert.equal(writes, 0)
+    assert.match(reads[0], /FROM mip_users[\s\S]+FOR UPDATE/)
+    assert.match(reads[1], /FROM mip_growth_entries/)
+    assert.doesNotMatch(reads[1], /FOR UPDATE/)
   })
 
   it('does not deactivate or move the only active base growth level', async () => {

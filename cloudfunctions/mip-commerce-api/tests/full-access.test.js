@@ -159,6 +159,76 @@ describe('commerce full access', () => {
     assert.equal(writes.length, 0)
   })
 
+  it('holds a shared lock on the membership plan after locking checkout ownership', async () => {
+    const reads = []
+    const writes = []
+    const repository = createCommerceRepository({
+      async transaction(work) {
+        return work({
+          async one(sql) {
+            reads.push(sql)
+            if (sql.includes('FROM mip_user_identities')) return { user_id: userId }
+            if (sql.includes('FROM mip_orders')) return null
+            if (sql.includes('FROM mip_membership_plans')) {
+              return {
+                id: '30000000-0000-4000-8000-000000000001',
+                name: '年度会员',
+                description: '会员说明',
+                benefits_json: '[]',
+                price_cents: 79900,
+                currency: 'CNY',
+                status: 'ACTIVE',
+                catalog_stage: 'TEST',
+              }
+            }
+            throw new Error(`unexpected read: ${sql}`)
+          },
+          async query(sql) {
+            writes.push(sql)
+            return { affectedRows: 1 }
+          },
+        })
+      },
+    }, {
+      fullAccessPolicy: {
+        async loadByUserId() {
+          return {
+            id: userId,
+            status: 'ACTIVE',
+            agreementsAccepted: true,
+            phoneBound: true,
+            profileComplete: true,
+          }
+        },
+      },
+    })
+
+    const result = await repository.createCheckout(caller, {
+      planId: '30000000-0000-4000-8000-000000000001',
+      idempotencyKey: 'checkout-new-request',
+      attribution: { sourceType: 'PLATFORM' },
+      catalogStage: 'TEST',
+    }, {
+      orderId: '20000000-0000-4000-8000-000000000002',
+      merchantOrderNo: 'MIP-ORDER-2',
+      outboxId: '50000000-0000-4000-8000-000000000002',
+      createdAt: '2026-08-24T00:00:00.000Z',
+    }, plan => ({
+      amountCents: plan.price_cents,
+      currency: plan.currency,
+      productSnapshot: { attribution: { sourceType: 'PLATFORM' } },
+    }))
+
+    assert.equal(result.status, 'CREATED')
+    const orderRead = reads.find(sql => sql.includes('FROM mip_orders'))
+    const planRead = reads.find(sql => sql.includes('FROM mip_membership_plans'))
+    assert.match(orderRead, /FOR UPDATE/)
+    assert.match(planRead, /FOR SHARE/)
+    assert.doesNotMatch(planRead, /FOR UPDATE/)
+    assert.equal(writes.filter(sql => sql.includes('INSERT INTO mip_orders')).length, 1)
+    assert.equal(writes.filter(sql => sql.includes('INSERT INTO mip_outbox_events')).length, 1)
+  })
+
   it('keeps agreement parsing aligned with the identity function contract', () => {
     assert.deepEqual(configuredAgreements().map(({ key, version }) => ({ key, version })), [
       { key: 'SERVICE_AGREEMENT', version: 'draft-2026-08-24' },

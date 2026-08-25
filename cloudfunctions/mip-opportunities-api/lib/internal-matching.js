@@ -39,9 +39,8 @@ async function authorizeInternalMatching(database, request, source, options = {}
     || (source.status && source.status !== 'PUBLISHED')) {
     throw new Error('CONFLICT')
   }
-  const lockClause = options.lock ? ' FOR UPDATE' : ''
   const actor = await database.one(
-    `SELECT id, status FROM mip_users WHERE app_id = ? AND id = ?${lockClause}`,
+    `SELECT id, status FROM mip_users WHERE app_id = ? AND id = ?${options.lock ? ' FOR UPDATE' : ''}`,
     [request.appId, request.actorUserId],
   )
   if (!actor || actor.status !== 'ACTIVE') { throw new Error('AUTH_REQUIRED') }
@@ -52,7 +51,7 @@ async function authorizeInternalMatching(database, request, source, options = {}
      LEFT JOIN mip_role_capability_policies policy
        ON policy.app_id = binding.app_id AND policy.role_key = binding.role_key
      WHERE binding.app_id = ? AND binding.user_id = ? AND binding.status = 'ACTIVE'
-     ORDER BY binding.scope_type, binding.scope_id, binding.role_key${lockClause}`,
+     ORDER BY binding.scope_type, binding.scope_id, binding.role_key${options.lock ? ' FOR UPDATE' : ''}`,
     [request.appId, request.actorUserId],
   )
   if (!bindings.some(binding => bindingAllowsMatching(binding, source.branch_id || null))) {

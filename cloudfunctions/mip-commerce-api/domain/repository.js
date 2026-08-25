@@ -188,7 +188,7 @@ function createCommerceRepository(database, options = {}) {
       const plan = await tx.one(
         `SELECT * FROM mip_membership_plans
          WHERE app_id = ? AND id = ?
-         LIMIT 1 FOR UPDATE`,
+         LIMIT 1 FOR SHARE`,
         [caller.appId, input.planId],
       )
       const checkout = deriveCheckout(plan, input.catalogStage)

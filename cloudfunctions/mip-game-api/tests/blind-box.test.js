@@ -96,11 +96,13 @@ describe('blind box draw transaction', () => {
   })
 
   it('replays the immutable draw result without charging or decrementing stock twice', async () => {
+    const reads = []
     let writes = 0
     const database = {
       async transaction(work) {
         return work({
           async one(sql) {
+            reads.push(sql)
             if (sql.includes('FROM mip_users')) return { id: userId, status: 'ACTIVE' }
             if (sql.includes('FROM mip_membership_entitlements')) return { id: 'entitlement' }
             return {
@@ -130,6 +132,11 @@ describe('blind box draw transaction', () => {
     assert.equal(result.card.name, '稀有卡牌')
     assert.equal(result.inventoryQuantity, 2)
     assert.equal(writes, 0)
+    const userRead = reads.findIndex(sql => sql.includes('FROM mip_users'))
+    const drawRead = reads.findIndex(sql => sql.includes('FROM mip_blind_box_draws'))
+    assert.ok(userRead >= 0 && userRead < drawRead)
+    assert.match(reads[userRead], /FOR UPDATE/)
+    assert.doesNotMatch(reads[drawRead], /FOR UPDATE/)
   })
 
   it('rejects reusing one request id for a different catalog', async () => {

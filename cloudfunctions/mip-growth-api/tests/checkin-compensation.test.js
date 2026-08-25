@@ -39,7 +39,7 @@ function reversal(id, originalId, checkinVersion, registrationVersion) {
   }
 }
 
-function fixture() {
+function fixture({ serializeTransactions = false } = {}) {
   const transitions = new Map([[firstRecordedId, recorded(firstRecordedId, 1, 3)]])
   const entries = []
   const calls = []
@@ -60,50 +60,55 @@ function fixture() {
     status: 'ACTIVE',
   }
   let idCounter = 0
+  let transactionTail = Promise.resolve()
   const createId = () => `8${String(++idCounter).padStart(7, '0')}-0000-4000-8000-000000000001`
+
+  function resolveOne(sql, params) {
+    if (sql.includes('SELECT id, transition_type, reversal_of_transition_id')) {
+      return transitions.get(params[1]) || null
+    }
+    if (sql.includes('FROM mip_event_checkin_transitions transition')) {
+      const item = transitions.get(params[1])
+      return item?.transition_type === 'CHECKED_IN' ? item : null
+    }
+    if (sql.includes('FROM mip_event_checkins checkin')) return { id: checkinId }
+    if (sql.includes('reversal_of_transition_id = ?')) {
+      return [...transitions.values()].find(item => (
+        item.transition_type === 'REVOKED' && item.reversal_of_transition_id === params[1]
+      )) || null
+    }
+    if (sql.includes('FROM mip_growth_accounts')) return account
+    if (sql.includes('COALESCE(SUM(GREATEST(entry.delta_value, 0))')) {
+      const reversed = new Set([...transitions.values()]
+        .filter(item => item.transition_type === 'REVOKED')
+        .map(item => item.reversal_of_transition_id))
+      const total = entries
+        .filter(item => item.rule_id === params[2]
+          && item.delta_value > 0
+          && !(item.source_event_type === 'event.checked_in' && reversed.has(item.source_event_id)))
+        .reduce((sum, item) => sum + item.delta_value, 0)
+      return { total }
+    }
+    if (sql.includes('FROM mip_growth_entries')) {
+      const sourceType = sql.includes("source_event_type = 'event.checkin_revoked'")
+        ? 'event.checkin_revoked'
+        : 'event.checked_in'
+      return entries.find(item => item.source_event_type === sourceType
+        && item.source_event_id === params[2]
+        && item.metric === params[3]) || null
+    }
+    throw new Error(`unexpected one query: ${sql}`)
+  }
 
   const tx = {
     async one(sql, params) {
       calls.push({ kind: 'one', sql, params })
-      if (sql.includes('SELECT id, transition_type, reversal_of_transition_id')) {
-        return transitions.get(params[1]) || null
-      }
-      if (sql.includes('FROM mip_event_checkin_transitions transition')) {
-        const item = transitions.get(params[1])
-        return item?.transition_type === 'CHECKED_IN' ? item : null
-      }
-      if (sql.includes('FROM mip_event_checkins checkin')) return { id: checkinId }
-      if (sql.includes('reversal_of_transition_id = ?')) {
-        return [...transitions.values()].find(item => (
-          item.transition_type === 'REVOKED' && item.reversal_of_transition_id === params[1]
-        )) || null
-      }
-      if (sql.includes('FROM mip_growth_accounts')) return account
-      if (sql.includes('COALESCE(SUM(GREATEST(entry.delta_value, 0))')) {
-        const reversed = new Set([...transitions.values()]
-          .filter(item => item.transition_type === 'REVOKED')
-          .map(item => item.reversal_of_transition_id))
-        const total = entries
-          .filter(item => item.rule_id === params[2]
-            && item.delta_value > 0
-            && !(item.source_event_type === 'event.checked_in' && reversed.has(item.source_event_id)))
-          .reduce((sum, item) => sum + item.delta_value, 0)
-        return { total }
-      }
-      if (sql.includes('FROM mip_growth_entries')) {
-        const sourceType = sql.includes("source_event_type = 'event.checkin_revoked'")
-          ? 'event.checkin_revoked'
-          : 'event.checked_in'
-        return entries.find(item => item.source_event_type === sourceType
-          && item.source_event_id === params[2]
-          && item.metric === params[3]) || null
-      }
-      throw new Error(`unexpected one query: ${sql}`)
+      return resolveOne(sql, params)
     },
     async query(sql, params) {
       calls.push({ kind: 'query', sql, params })
       if (sql.includes('FROM mip_growth_rules')) return [rule]
-      if (sql.includes('FROM mip_growth_entries') && sql.includes('ORDER BY id FOR UPDATE')) {
+      if (sql.includes('FROM mip_growth_entries') && sql.includes('ORDER BY id')) {
         return entries.filter(item => item.source_event_type === 'event.checked_in'
           && item.source_event_id === params[2])
       }
@@ -139,7 +144,19 @@ function fixture() {
     account,
     calls,
     entries,
-    repository: createCheckInGrowthRepository({ transaction: work => work(tx) }, { createId }),
+    repository: createCheckInGrowthRepository({
+      async one(sql, params) {
+        calls.push({ kind: 'preflight', sql, params })
+        return resolveOne(sql, params)
+      },
+      transaction: (work) => {
+        calls.push({ kind: 'transaction' })
+        if (!serializeTransactions) return work(tx)
+        const result = transactionTail.then(() => work(tx))
+        transactionTail = result.catch(() => {})
+        return result
+      },
+    }, { createId }),
     transitions,
   }
 }
@@ -199,13 +216,57 @@ describe('check-in growth compensation', () => {
     assert.equal(state.account.experience_balance, 100)
   })
 
-  it('locks the recorded transition before its reversal and account', async () => {
+  it('uses the mutable account row as the only projection lock', async () => {
     const state = fixture()
     state.transitions.set(firstReversalId, reversal(firstReversalId, firstRecordedId, 2, 4))
     await state.repository.applyCheckInTransition({ appId, transitionId: firstReversalId })
-    const locks = state.calls.filter(call => /FOR UPDATE/.test(call.sql))
-    assert.match(locks[0].sql, /transition\.transition_type = 'CHECKED_IN'/)
-    assert.match(locks[1].sql, /reversal_of_transition_id = \?/)
-    assert.match(locks[2].sql, /mip_growth_accounts/)
+    const locks = state.calls.filter(call => typeof call.sql === 'string' && /FOR UPDATE/.test(call.sql))
+    assert.equal(locks.length, 1)
+    assert.match(locks[0].sql, /mip_growth_accounts/)
+    const transitionReads = state.calls.filter(call => (
+      typeof call.sql === 'string' && call.sql.includes('mip_event_checkin_transitions')
+    ))
+    assert.ok(transitionReads.length >= 3)
+    for (const call of transitionReads) {
+      assert.doesNotMatch(call.sql, /FOR UPDATE|FOR SHARE|LOCK IN SHARE MODE/)
+    }
+  })
+
+  it('serializes current entry reads behind the mutable account row', async () => {
+    const state = fixture()
+    const awarded = await state.repository.applyCheckInTransition({ appId, transitionId: firstRecordedId })
+    assert.equal(awarded.status, 'APPLIED')
+    const transactionIndex = state.calls.findIndex(call => call.kind === 'transaction')
+    const preflightIndexes = state.calls
+      .map((call, index) => call.kind === 'preflight' ? index : -1)
+      .filter(index => index >= 0)
+    assert.ok(preflightIndexes.length >= 2)
+    assert.ok(preflightIndexes.every(index => index < transactionIndex))
+    assert.match(state.calls[transactionIndex + 1].sql, /INSERT INTO mip_growth_accounts/)
+    const accountLockIndex = state.calls.findIndex(call => (
+      typeof call.sql === 'string'
+      && call.sql.includes('FROM mip_growth_accounts') && call.sql.includes('FOR UPDATE')
+    ))
+    const entryReadCalls = state.calls.filter(call => (
+      typeof call.sql === 'string' && call.sql.includes('FROM mip_growth_entries')
+    ))
+    assert.ok(accountLockIndex >= 0)
+    assert.ok(entryReadCalls.length >= 2)
+    for (const call of entryReadCalls) {
+      assert.doesNotMatch(call.sql, /FOR UPDATE|FOR SHARE|LOCK IN SHARE MODE/)
+      assert.ok(state.calls.indexOf(call) > accountLockIndex)
+    }
+  })
+
+  it('replays the unique entry when the same transition is projected concurrently', async () => {
+    const state = fixture({ serializeTransactions: true })
+    const results = await Promise.all([
+      state.repository.applyCheckInTransition({ appId, transitionId: firstRecordedId }),
+      state.repository.applyCheckInTransition({ appId, transitionId: firstRecordedId }),
+    ])
+    assert.deepEqual(results.map(result => result.status), ['APPLIED', 'APPLIED'])
+    assert.equal(state.entries.length, 1)
+    assert.deepEqual(results.map(result => result.awards[0]?.idempotent), [false, true])
+    assert.equal(state.account.experience_balance, 100)
   })
 })
