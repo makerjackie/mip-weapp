@@ -1,4 +1,4 @@
-<view id="admin-orders-page" class="min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+<view id="admin-orders-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
   <view class="flex items-start justify-between gap-3">
     <view>
       <view class="text-[length:40rpx] font-bold">{{eventId ? '活动订单' : '订单与退款'}}</view>
@@ -51,7 +51,7 @@
 
   <view wx:if="{{state === 'ready'}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-4">
     <view class="flex items-center justify-between"><view class="text-[length:27rpx] font-semibold">收费汇总</view><view class="text-[length:21rpx] text-muted">{{summary.orderCount}} 笔订单 · {{summary.paidOrderCount}} 笔已支付</view></view>
-    <view class="mt-3 grid grid-cols-2 gap-2 text-[length:22rpx]"><view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">活动收入</view><view class="mt-1 font-semibold">{{summary.eventGrossText}}</view></view><view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">会员收入</view><view class="mt-1 font-semibold">{{summary.membershipGrossText}}</view></view><view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">收费总额</view><view class="mt-1 font-semibold">{{summary.grossText}}</view></view><view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">退款金额</view><view class="mt-1 font-semibold">{{summary.refundedText}}</view></view></view>
+    <view class="mip-admin-summary-grid mt-3 grid grid-cols-2 gap-2 text-[length:22rpx]"><view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">活动收入</view><view class="mt-1 font-semibold">{{summary.eventGrossText}}</view></view><view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">会员收入</view><view class="mt-1 font-semibold">{{summary.membershipGrossText}}</view></view><view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">收费总额</view><view class="mt-1 font-semibold">{{summary.grossText}}</view></view><view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">退款金额</view><view class="mt-1 font-semibold">{{summary.refundedText}}</view></view></view>
     <view class="mt-3 flex items-end justify-between border-0 border-t border-solid border-line pt-3"><view class="text-[length:22rpx] text-muted">净收费</view><view class="text-[length:29rpx] font-bold text-brand">{{summary.netText}}</view></view>
   </view>
 
@@ -67,7 +67,7 @@
   <view wx:elif="{{orders.length === 0}}" class="mt-6">
     <app-empty-state title="暂无订单" description="符合筛选条件的订单会显示在这里。" />
   </view>
-  <view wx:else class="mt-5 flex flex-col gap-3">
+  <view wx:else class="mip-admin-card-list mt-5 flex flex-col gap-3">
     <view wx:for="{{orders}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
       <view class="flex items-start justify-between gap-3">
         <view class="min-w-0 flex-1">

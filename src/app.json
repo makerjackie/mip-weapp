@@ -151,6 +151,7 @@
     ]
   },
   "componentFramework": "glass-easel",
+  "resizable": true,
   "sitemapLocation": "sitemap.json",
   "lazyCodeLoading": "requiredComponents"
 }

@@ -55,3 +55,101 @@ textarea,
 input {
   box-sizing: border-box;
 }
+
+.mip-admin-page {
+  box-sizing: border-box;
+  width: 100%;
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.mip-admin-card-list,
+.mip-admin-form-grid,
+.mip-admin-menu-grid {
+  min-width: 0;
+}
+
+@media (max-width: 599px) {
+  .mip-admin-page {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 600px) and (max-width: 959px) {
+  .mip-admin-page {
+    max-width: 920px;
+    padding-right: 32px;
+    padding-left: 32px;
+  }
+
+  .mip-admin-card-list,
+  .mip-admin-menu-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mip-admin-metric-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .mip-admin-summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .mip-admin-popup-panel {
+    max-width: 720px;
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  .mip-admin-poster {
+    max-width: 360px;
+    height: 360px;
+    margin-right: auto;
+    margin-left: auto;
+  }
+}
+
+@media (min-width: 960px) {
+  .mip-admin-page {
+    max-width: 1280px;
+    padding-right: 40px;
+    padding-left: 40px;
+  }
+
+  .mip-admin-card-list,
+  .mip-admin-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mip-admin-menu-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .mip-admin-metric-grid {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+
+  .mip-admin-summary-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .mip-admin-span-wide {
+    grid-column: 1 / -1;
+  }
+
+  .mip-admin-popup-panel {
+    max-width: 760px;
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  .mip-admin-poster {
+    max-width: 420px;
+    height: 420px;
+    margin-right: auto;
+    margin-left: auto;
+  }
+}

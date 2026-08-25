@@ -1,4 +1,4 @@
-<view id="admin-events-page" class="min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+<view id="admin-events-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
   <view class="text-[length:40rpx] font-bold">{{eventId ? '编辑活动' : '新建活动'}}</view>
   <view class="mt-2 text-[length:23rpx] text-muted">活动保存后进入内容检查，通过后可以发布。</view>
 
@@ -15,13 +15,13 @@
     <app-empty-state title="活动配置加载失败" description="{{message}}" action-text="重新加载" bind:action="loadAccessAndBranches" />
   </view>
 
-  <view wx:else class="mt-5 flex flex-col gap-4">
-    <view id="admin-events-conflict-state" wx:if="{{conflict && !cancelConflict}}" class="rounded-[16rpx] border border-solid border-brand bg-brand-soft p-4">
+  <view wx:else class="mip-admin-form-grid mt-5 flex flex-col gap-4">
+    <view id="admin-events-conflict-state" wx:if="{{conflict && !cancelConflict}}" class="mip-admin-span-wide rounded-[16rpx] border border-solid border-brand bg-brand-soft p-4">
       <view class="text-[length:26rpx] font-semibold">活动信息已更新</view>
       <view class="mt-2 text-[length:23rpx] text-muted">{{message}}</view>
       <view class="mt-4"><t-button block variant="outline" bind:tap="refreshAfterConflict">载入最新版本</t-button></view>
     </view>
-    <view wx:if="{{cancelConflict}}" class="rounded-[16rpx] border border-solid border-brand bg-brand-soft p-4">
+    <view wx:if="{{cancelConflict}}" class="mip-admin-span-wide rounded-[16rpx] border border-solid border-brand bg-brand-soft p-4">
       <view class="text-[length:26rpx] font-semibold">取消操作需要重新确认</view>
       <view class="mt-2 text-[length:23rpx] text-muted">{{message}}</view>
       <view class="mt-4"><t-button block variant="outline" bind:tap="refreshAfterCancelConflict">载入最新版本</t-button></view>
@@ -135,13 +135,13 @@
 
     <t-button block theme="primary" loading="{{saving}}" disabled="{{coverUploading || conflict || eventStatus === 'CANCELLED' || eventStatus === 'ENDED'}}" bind:tap="save">保存活动</t-button>
     <t-button wx:if="{{eventId && eventStatus !== 'CANCELLED' && eventStatus !== 'ENDED'}}" block variant="outline" theme="danger" disabled="{{saving || cancelBusy || conflict}}" bind:tap="openCancelDialog">取消活动</t-button>
-    <view wx:if="{{cancelDialogVisible && !cancelConflict}}" class="rounded-[16rpx] bg-panel p-4">
+    <view wx:if="{{cancelDialogVisible && !cancelConflict}}" class="mip-admin-span-wide rounded-[16rpx] bg-panel p-4">
       <view class="text-[length:27rpx] font-semibold">取消活动</view>
       <view class="mb-2 mt-4 text-[length:23rpx] text-muted">取消原因（必填）</view>
       <t-textarea class="box-border max-w-full" value="{{cancelReason}}" maxlength="300" autosize placeholder="填写取消原因" bind:change="updateCancelReason" />
       <view class="mt-4 grid grid-cols-2 gap-3"><t-button block variant="outline" disabled="{{cancelBusy}}" bind:tap="closeCancelDialog">暂不取消</t-button><t-button block theme="danger" loading="{{cancelBusy}}" bind:tap="confirmCancelEvent">确认取消</t-button></view>
     </view>
-    <view wx:if="{{message}}" class="rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
+    <view wx:if="{{message}}" class="mip-admin-span-wide rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
   </view>
   <app-page-exit />
 </view>

@@ -1,10 +1,10 @@
-<view id="admin-dashboard-page" class="min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+<view id="admin-dashboard-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
   <view class="border-b border-line pb-5"><view class="text-[length:22rpx] font-semibold text-brand">MIP 管理</view><view class="mt-2 text-[length:40rpx] font-bold">运营工作台</view><view class="mt-2 text-[length:24rpx] text-muted">按当前账号权限显示可处理任务</view></view>
   <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel px-5 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载工作台" description="{{message}}" action-text="重新加载" bind:action="loadDashboard" /></view>
   <view id="admin-dashboard-forbidden-state" wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有运营权限" description="当前账号未获得管理权限。" action-text="重新验证" bind:action="loadDashboard" /></view>
   <view wx:else>
-    <view class="mt-6 grid grid-cols-2 gap-3">
+    <view class="mip-admin-metric-grid mt-6 grid grid-cols-2 gap-3">
       <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:36rpx] font-bold">{{counts.playerInteractionRate30d}}%</view><view class="mt-1 text-[length:22rpx] text-muted">玩家互动率（30 天）</view><view class="mt-2 text-[length:20rpx] text-muted">{{counts.interactingPlayers30d}} / {{counts.activePlayers}} 人</view></view>
       <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:36rpx] font-bold">{{counts.opportunityConversionRate}}%</view><view class="mt-1 text-[length:22rpx] text-muted">机会转化率</view><view class="mt-2 text-[length:20rpx] text-muted">{{counts.convertedOpportunities}} / {{counts.publishedLifecycleOpportunities}} 个</view></view>
       <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:36rpx] font-bold">{{counts.activePlayers}}</view><view class="mt-1 text-[length:22rpx] text-muted">有效玩家</view></view>
@@ -12,7 +12,7 @@
       <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:36rpx] font-bold">{{counts.pendingRefunds}}</view><view class="mt-1 text-[length:22rpx] text-muted">退款处理中</view></view>
       <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:36rpx] font-bold">{{counts.publishedOpportunities}}</view><view class="mt-1 text-[length:22rpx] text-muted">公开机会</view></view>
     </view>
-    <view class="mt-6 flex flex-col gap-3">
+    <view class="mip-admin-menu-grid mt-6 flex flex-col gap-3">
       <view wx:if="{{canBranches}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/branches/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">城市分会</view><view class="mt-1 text-[length:22rpx] text-muted">新增、编辑和启停城市分会</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
       <view wx:if="{{canCommunityReports}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/community-reports/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">举报审核</view><view class="mt-1 text-[length:22rpx] text-muted">领取举报并记录审核结果</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
       <view wx:if="{{canAnnouncements}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/announcements/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">公告管理</view><view class="mt-1 text-[length:22rpx] text-muted">维护平台和城市分会公告</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
