@@ -14,10 +14,10 @@
 
     <view wx:if="{{catalogEditorOpen}}" class="mt-4 rounded-[16rpx] border border-brand bg-panel px-4 py-4">
       <view class="flex items-center justify-between"><view class="text-[length:28rpx] font-semibold">{{catalogId ? '编辑目录' : '新增目录'}}</view><view class="min-h-[64rpx] px-2 py-2 text-[length:22rpx] text-muted" bind:tap="closeCatalogEditor">关闭</view></view>
-      <view class="mt-3 flex flex-col gap-2">
+      <view class="mip-admin-section-grid mt-3 flex flex-col gap-2">
         <t-input value="{{catalogKey}}" label="目录标识" placeholder="例如 benben-default" data-field="catalogKey" bind:change="updateCatalogField" />
         <t-input value="{{catalogName}}" label="目录名称" placeholder="盲盒名称" data-field="catalogName" bind:change="updateCatalogField" />
-        <t-input value="{{catalogSummary}}" label="目录说明" placeholder="选填" data-field="catalogSummary" bind:change="updateCatalogField" />
+        <view class="mip-admin-span-wide"><t-input value="{{catalogSummary}}" label="目录说明" placeholder="选填" data-field="catalogSummary" bind:change="updateCatalogField" /></view>
         <t-textarea value="{{rulesText}}" label="抽取规则" maxlength="4000" data-field="rulesText" bind:change="updateCatalogField" />
         <t-textarea value="{{redemptionRulesText}}" label="兑换规则" maxlength="4000" data-field="redemptionRulesText" bind:change="updateCatalogField" />
         <view class="grid grid-cols-2 gap-2"><t-input value="{{drawCostCoin}}" type="number" label="单抽游戏币" data-field="drawCostCoin" bind:change="updateCatalogField" /><t-input value="{{dailyDrawLimit}}" type="number" label="每日上限" data-field="dailyDrawLimit" bind:change="updateCatalogField" /></view>
@@ -35,10 +35,10 @@
 
     <view wx:if="{{cardEditorOpen}}" class="mt-4 rounded-[16rpx] border border-brand bg-panel px-4 py-4">
       <view class="flex items-center justify-between"><view class="text-[length:28rpx] font-semibold">{{cardId ? '编辑卡牌' : '新增卡牌'}}</view><view class="min-h-[64rpx] px-2 py-2 text-[length:22rpx] text-muted" bind:tap="closeCardEditor">关闭</view></view>
-      <view class="mt-3 flex flex-col gap-2">
+      <view class="mip-admin-section-grid mt-3 flex flex-col gap-2">
         <t-input value="{{cardKey}}" label="卡牌标识" placeholder="稳定英文标识" data-field="cardKey" bind:change="updateCardField" />
         <t-input value="{{cardName}}" label="卡牌名称" data-field="cardName" bind:change="updateCardField" />
-        <t-input value="{{cardSummary}}" label="卡牌说明" placeholder="选填" data-field="cardSummary" bind:change="updateCardField" />
+        <view class="mip-admin-span-wide"><t-input value="{{cardSummary}}" label="卡牌说明" placeholder="选填" data-field="cardSummary" bind:change="updateCardField" /></view>
         <picker class="box-border min-h-[88rpx] max-w-full rounded-[12rpx] bg-panel-raised px-3 py-3" range="{{rarityOptions}}" range-key="label" value="{{cardRarityIndex}}" bindchange="chooseCardRarity"><view class="text-[length:22rpx] text-muted">稀有度</view><view class="mt-1 text-[length:25rpx]">{{rarityOptions[cardRarityIndex].label}}</view></picker>
         <view class="grid grid-cols-2 gap-2"><t-input value="{{cardWeight}}" type="number" label="概率权重" data-field="cardWeight" bind:change="updateCardField" /><t-input value="{{stockTotal}}" type="number" label="总库存" data-field="stockTotal" bind:change="updateCardField" /></view>
         <t-input value="{{displayOrder}}" type="number" label="显示顺序" data-field="displayOrder" bind:change="updateCardField" />
@@ -47,7 +47,7 @@
     </view>
 
     <view wx:if="{{selectedCatalogId && !cards.length && !cardEditorOpen}}" class="mt-4"><app-empty-state title="暂无卡牌" description="新增卡牌并设置库存后可以发布目录。" action-text="新增卡牌" bind:action="openCreateCard" /></view>
-    <view wx:if="{{cards.length}}" class="mt-4 flex flex-col gap-3">
+    <view wx:if="{{cards.length}}" class="mip-admin-card-list mt-4 flex flex-col gap-3">
       <view wx:for="{{cards}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
         <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1"><view class="text-[length:26rpx] font-semibold">{{item.name}}</view><view class="mt-1 text-[length:21rpx] text-muted">{{item.rarityLabel}} · 权重 {{item.weight}} · 库存 {{item.stockRemaining}} / {{item.stockTotal}}</view><view wx:if="{{item.summary}}" class="mt-2 text-[length:22rpx] text-muted">{{item.summary}}</view></view><t-tag variant="outline">{{item.statusLabel}}</t-tag></view>
         <view class="mt-3 flex gap-2"><t-button size="small" variant="outline" data-id="{{item.id}}" bind:tap="editCard">编辑</t-button><t-button wx:if="{{item.status !== 'PUBLISHED'}}" size="small" theme="primary" data-id="{{item.id}}" data-status="PUBLISHED" bind:tap="changeCardStatus">上架</t-button><t-button wx:if="{{item.status === 'PUBLISHED'}}" size="small" variant="outline" data-id="{{item.id}}" data-status="UNPUBLISHED" bind:tap="changeCardStatus">下架</t-button></view>
