@@ -11,7 +11,7 @@ description: Use for membership, profile, event, order, community safety, or adm
 
 ## Scope
 
-`src/modules/membership`、`src/modules/admin`、`src/packages/**`、`cloudfunctions/membership-api`、`cloudfunctions/membership-admin-api`、`database/mysql`。
+`src/modules/membership`、`src/modules/mip-*`、`src/packages/**`、`cloudfunctions/mip-*`、`database/mysql/mip`。
 
 ## Read first
 
@@ -26,7 +26,7 @@ description: Use for membership, profile, event, order, community safety, or adm
 2. 所有查询带服务端 `app_id`。
 3. 活动写操作带 `expectedVersion`；冲突必须可恢复。
 4. 公开列表不得返回手机号、OpenID、完整票码。
-5. 改表必须追加 `database/mysql` 迁移并更新 `migrations.lock.json`。
+5. 改表必须追加 `database/mysql/mip` 迁移并更新 `migrations.lock.json`。
 
 ## Scripts
 

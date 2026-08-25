@@ -1,6 +1,6 @@
 # MIP MySQL 8 数据模型
 
-MIP 的运行时数据位于 `database/mysql/mip/`，迁移跟踪表为 `mip_schema_migrations`。所有业务表使用 InnoDB、`utf8mb4`、UTC `DATETIME(3)` 和可信 `app_id`；金额使用 CNY 整数分。历史 `database/mysql/001_member_schema.sql` 至 `014_event_owner_backfill_v2.sql` 不属于 MIP 运行时 schema，默认不应用。
+MIP 的运行时数据位于 `database/mysql/mip/`，迁移跟踪表为 `mip_schema_migrations`。所有业务表使用 InnoDB、`utf8mb4`、UTC `DATETIME(3)` 和可信 `app_id`；金额使用 CNY 整数分。仓库不保存或执行其他项目的 schema。
 
 ## 表清单
 

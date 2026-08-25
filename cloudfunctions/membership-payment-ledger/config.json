@@ -1,7 +1,0 @@
-{
-  "name": "membership-payment-ledger",
-  "type": "Event",
-  "runtime": "Nodejs20.19",
-  "handler": "index.main",
-  "timeout": 20
-}

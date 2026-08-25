@@ -24,7 +24,7 @@ MIP 权威结构在 `database/mysql/mip/` 和该目录的 `migrations.lock.json`
 
 `038_task_level_rules.sql` 以 `mip_task_level_rules` 保存任务与启用成长等级的精确允许集合；任务没有关联记录时表示全部等级可完成。关系替换由任务管理事务和任务版本保护，运行账号仅获得 `SELECT/INSERT/DELETE`；rollback 会先检测业务行，非空时在删除表前失败。
 
-根目录下 `database/mysql/001_member_schema.sql` 至 `014_event_owner_backfill_v2.sql` 是历史会员模板迁移，仅供迁移参考。默认命令不会应用、修复或回滚这些 `member_*` 对象；历史 `scripts/apply-mysql-schema.mjs` 默认禁用，只能在同时确认 legacy member schema 与隔离测试数据库的非 MIP 流程中运行，不属于任何 MIP 操作命令。活跃 MIP 合同见 [data-model.md](data-model.md)、[data-contract.md](data-contract.md)、[mip/ARCHITECTURE.md](mip/ARCHITECTURE.md) 和 `database/mysql/mip/`。
+仓库只保留 `database/mysql/mip/` 的当前迁移。共享数据库中既有的 `member_*`、`dating_*`、`sewing_*` 表不属于本仓库，不应用、不修复、不回滚，也不在迁移脚本中保留其结构副本。活跃合同见 [data-model.md](data-model.md)、[data-contract.md](data-contract.md) 和 [mip/ARCHITECTURE.md](mip/ARCHITECTURE.md)。
 
 只预览迁移范围，不连接数据库：
 

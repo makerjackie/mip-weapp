@@ -20,6 +20,6 @@
 - 云函数部署名只使用 `mip-*`，对象存储只使用 `mip/` 前缀。
 - 构建通过 `scripts/build.mjs` 在临时目录编译后同步 `dist/`。
 
-历史 `modules/membership`、`cloudfunctions/membership-*` 与 `member_*` 实现只作为迁移参考，不再扩展新业务，也不属于当前运行时部署清单。活跃路由迁入 MIP 领域模块后，静态门禁必须阻止它们回读共享旧表。
+`src/modules/membership` 是仍被部分页面使用的 MIP 兼容适配层，只指向隔离的 MIP 身份、活动和消息接口。仓库不再保留旧 `membership-*` 云函数、`member_*` 迁移或旧管理模块；静态门禁阻止当前代码回读共享旧表。
 
 数据库隔离见 [adr/0001-shared-cloudbase-isolation.md](adr/0001-shared-cloudbase-isolation.md)，支付名额决策见 [adr/0002-paid-event-registration.md](adr/0002-paid-event-registration.md)。

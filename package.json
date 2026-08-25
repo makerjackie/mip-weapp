@@ -31,7 +31,6 @@
     "verify:build": "node scripts/verify-build.mjs",
     "verify:analyze": "wv analyze --budget-check --json --output .tmp/analyze-budget.json",
     "verify:server": "node scripts/verify-server.mjs",
-    "verify:mysql:legacy": "node scripts/verify-mysql.mjs --confirm-test-database",
     "runtime:preflight": "node scripts/runtime-preflight.mjs",
     "verify:runtime": "node scripts/run-runtime-verify.mjs",
     "baseline:update": "node scripts/verify-runtime.mjs --update-baseline",

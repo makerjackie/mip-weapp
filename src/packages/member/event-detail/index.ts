@@ -259,7 +259,7 @@ Page({
   onShareAppMessage() {
     const event = this.data.event
     return {
-      title: event?.title || '同行会活动',
+      title: event?.title || 'MIP 活动',
       path: `/packages/member/event-detail/index?eventId=${encodeURIComponent(this.data.eventId)}`,
       imageUrl: event?.coverUrl || undefined,
     }
@@ -268,7 +268,7 @@ Page({
   onShareTimeline() {
     const event = this.data.event
     return {
-      title: event?.title || '同行会活动',
+      title: event?.title || 'MIP 活动',
       query: `eventId=${encodeURIComponent(this.data.eventId)}`,
       imageUrl: event?.coverUrl || undefined,
     }

@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "openapi": [
-      "phonenumber.getPhoneNumber",
-      "security.imgSecCheck",
-      "security.msgSecCheck"
-    ]
-  }
-}

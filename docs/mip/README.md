@@ -45,7 +45,7 @@ Figma 决定视觉与交互；服务端资格、金额、权限和状态机以�
 - [../KNOWLEDGE_CONTENT.md](../KNOWLEDGE_CONTENT.md)：热点、知识内容、采集、评论和单内容付费合同
 - [../../CONTEXT.md](../../CONTEXT.md)：统一业务语言
 
-根目录 `docs/page-specs.md` 与 `docs/component-map.md` 保留同行会时期的交互和视觉输入，仅用于追溯；它们不是当前路由清单。当前页面事实必须同时进入 `src/app.json` 与 `config/runtime-pages.json`，且页面职责与路由名称一致。
+当前页面事实必须同时进入 `src/app.json`、`config/runtime-pages.json` 与 [FIGMA_MAP.md](FIGMA_MAP.md)，且页面职责与路由名称一致。旧产品页面规格不再作为 MIP 的设计或验收输入。
 
 ## 更新规则
 

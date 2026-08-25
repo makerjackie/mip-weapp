@@ -1,7 +1,0 @@
-{
-  "name": "membership-cloudpay",
-  "runtime": "Nodejs20.19",
-  "handler": "index.main",
-  "timeout": 30,
-  "type": "Event"
-}

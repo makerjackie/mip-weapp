@@ -16,7 +16,7 @@ description: Use for visual, token, TabBar, empty/error/loading, or TDesign work
 ## Read first
 
 1. [DESIGN.md](../../../DESIGN.md)
-2. [docs/page-specs.md](../../../docs/page-specs.md)
+2. [docs/mip/FIGMA_MAP.md](../../../docs/mip/FIGMA_MAP.md)
 
 ## Steps
 

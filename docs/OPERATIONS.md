@@ -57,7 +57,7 @@ pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo
 
 公告管理向 `PLATFORM_OWNER`、`PLATFORM_OPERATIONS` 和 `BRANCH_ADMIN` 授予独立 `announcements.manage` capability。平台角色可维护全部范围，城市管理员只能维护自身分会；服务端同时校验编辑前范围与提交后的新范围，禁止借编辑跨范围移动。保存草稿执行内容安全检查，发布、撤回、置顶和编辑均校验版本并追加审计。公告不物理删除，公开端只读取已发布且位于展示窗口内的内容；详情关联只允许同 AppID 的活动或机会。
 
-通知和 outbox worker 默认不安装定时器。业务函数在同一事务写 outbox；运营可用 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10` 受控恢复积压。异常中心读取 `mip_outbox_events`、支付/退款、媒体、消息投递和 AI 草稿状态，不通过页面菜单越权修改事实，完整权限和脱敏合同见 [异常中心](OPERATIONAL_EXCEPTIONS.md)。旧 `membership-*` 运营函数不再部署。
+通知和 outbox worker 默认不安装定时器。业务函数在同一事务写 outbox；运营可用 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10` 受控恢复积压。异常中心读取 `mip_outbox_events`、支付/退款、媒体、消息投递和 AI 草稿状态，不通过页面菜单越权修改事实，完整权限和脱敏合同见 [异常中心](OPERATIONAL_EXCEPTIONS.md)。
 
 单场活动提醒使用独立的 `communications.publish` capability。管理端只提交活动、事件版本、幂等请求标识和是否尝试微信提醒；`mip-admin-api` 仅从当前 `REGISTERED` / `ATTENDED` 报名事实选择收件人，并从已发布活动生成标题、正文和模板字段。单次最多 500 位收件人，超限时整笔拒绝；每位收件人的运营消息、outbox、幂等结果和一条汇总审计在同一事务提交。站内提醒始终进入 outbox；微信提醒仅在模板已配置且参与者有可用授权时投递，缺少模板不会使站内提醒失败。
 
@@ -69,4 +69,4 @@ pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo
 
 AI 草稿默认保留 72 小时，`MIP_AI_DRAFT_TTL_HOURS` 只允许 1–168。确认、过期或删除草稿后，AI 页面会重试清理私有语音文件；无人访问的草稿使用 `pnpm ai:cleanup -- --confirm-env=<EnvID> --confirm-ai=mip-ai-api --limit=10` 手动分批清理，不安装定时器。命令使用已部署 AI HMAC、AppID allowlist、五分钟时间戳和完整 body 签名，只返回状态与数量。领取、外部删除和最终状态更新分离；任何外部或数据库不确定结果都保留 `PENDING`，后续重试，只有云存储删除成功且仍持有相同租约时才标记 `DELETED`。发布前需按数据处理约定确认正式留存时长。
 
-脚本产物不得写入 EnvID 或 OpenID。完整活动操作说明可参考仍保留的页面规格 `page-specs.md`。
+脚本产物不得写入 EnvID 或 OpenID。页面和交互事实以 `src/app.json`、`config/runtime-pages.json` 与 `docs/mip/FIGMA_MAP.md` 为准。

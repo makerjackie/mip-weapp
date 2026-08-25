@@ -40,7 +40,7 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 
 启用真实支付时，另外部署 `mip-cloudpay`、`mip-cloudpay-callback` 和 `mip-refund-worker`。它们是下单/查单适配器、回调入口和退款提交/恢复 worker，不计入 16 个核心函数；适配器不持有 MySQL 连接串，通过 HMAC 调用 `mip-payment-ledger`。退款 worker 另用 `MIP_REFUND_WORKER_HMAC_SECRET` 接受管理 API 和受控运营命令调用。
 
-`cloudfunctions/membership-*` 目录是迁移期间保留的历史实现，当前运行时不部署、不新增业务，也不能作为 MIP 的部署目标。部署脚本和云端验收只接受直接的 `mip-*` 源码与函数名。
+仓库只包含直接的 `mip-*` 函数源码。部署脚本和云端验收只接受当前 MIP 清单中的函数名，不修改共享环境中的其他项目函数。
 
 ## 数据和存储
 

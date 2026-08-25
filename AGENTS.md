@@ -16,7 +16,7 @@
 - `src/packages/member` 用户端二级页
 - `src/packages/admin` 运营端
 - `src/modules/membership` 用户领域
-- `src/modules/admin` 运营领域
+- `src/modules/mip-admin` 运营领域
 - `src/platform` / `src/shared` 平台原语（已从共享包内联）
 - `src/config` 品牌、功能开关、运行时
 - `cloudfunctions` 与 `database/mysql` 服务端事实

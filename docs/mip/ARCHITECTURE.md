@@ -41,7 +41,7 @@ MIP 是一个原生微信小程序、16 个核心 CloudBase 函数和三个可�
 | `mip-cloudpay` / `mip-cloudpay-callback` | CloudPay 参数、用户退款、查单和回调适配 | 支付启用时部署 |
 | `mip-refund-worker` | 管理退款提交、provider 查单和耐久退款恢复 | 仅内部 HMAC；支付启用时部署，无定时器 |
 
-历史 `membership-*` Cloud Functions 不属于当前部署清单。保留的旧目录仅用于迁移期参考，不能继续扩展或部署到共享环境。
+仓库只保留当前 `mip-*` Cloud Functions。共享环境里可能仍存在的其他项目函数不属于本仓库，也不由 MIP 部署脚本修改。
 
 ## 业务域
 
@@ -71,7 +71,7 @@ MIP 是一个原生微信小程序、16 个核心 CloudBase 函数和三个可�
 - `mip_orders` 统一承载会员、付费活动和单内容订单，不能再引入第二套订单事实。
 - 每张业务表使用可信 `app_id`；所有唯一约束、订单、管理员、幂等键、审计和对象 key 都按 AppID 隔离。
 - 对象存储只使用 `mip/` 前缀，数据库保存完整 `cloud://` 文件 ID、摘要和业务外键，不保存临时 URL。
-- 共享环境的 `member_*`、`dating_*`、`sewing_*` 表与历史 `membership-*` 运行时保持只读/不部署，不做跨表迁移。
+- 共享环境的 `member_*`、`dating_*`、`sewing_*` 表保持只读，不做跨表迁移；其他项目函数不在 MIP 部署清单内。
 - MIP runtime 账号只有精确的 `mip_*` 表级权限；无 schema-level ALL、无全局 DELETE。支付适配器不持有数据库凭证。
 
 ## 授权顺序

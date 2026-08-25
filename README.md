@@ -34,7 +34,7 @@ pnpm dev:open
 2. 配置 AppID：把 `.env.local` 的 `MINI_PROGRAM_APP_ID` 换成真实 `wx` AppID，再 `pnpm setup:local`
 3. 配置 CloudBase：填写 `CLOUDBASE_ENV_ID`，见 [docs/CLOUDBASE.md](docs/CLOUDBASE.md)
 4. 配置支付：`MIP_PAYMENT_MODE` 与商户绑定，见 [docs/WECHAT_PAY.md](docs/WECHAT_PAY.md)
-5. 初始化 MIP `mip_*` 数据库 / 云函数：见下方上线步骤。历史 `member_*` 表和 `membership-*` 函数不属于当前运行时。
+5. 初始化 MIP `mip_*` 数据库与 `mip-*` 云函数：见下方上线步骤。
 
 真实 AppID、EnvID、商户号只放 `.env.local` 和被忽略的 `project.private.config.json`。
 

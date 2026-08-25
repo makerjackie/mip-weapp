@@ -2,11 +2,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
-  assertLegacyMemberSchemaInvocation,
-  LEGACY_SCHEMA_CONFIRMATION,
-  TEST_DATABASE_CONFIRMATION,
-} from '../scripts/lib/legacy-member-schema-guard.mjs'
-import {
   MIP_DEPLOYMENT_STAGES,
   resolveMipDeploymentStage,
 } from '../scripts/lib/mip-deployment-stage.mjs'
@@ -15,25 +10,23 @@ const root = path.resolve(import.meta.dirname, '..')
 const read = (relativePath: string) => fs.readFileSync(path.join(root, relativePath), 'utf8')
 
 describe('MIP deployment safety guards', () => {
-  it('keeps the legacy member schema runner disabled without both test-only confirmations', () => {
-    expect(() => assertLegacyMemberSchemaInvocation([])).toThrow('disabled')
-    expect(() => assertLegacyMemberSchemaInvocation([LEGACY_SCHEMA_CONFIRMATION]))
-      .toThrow(TEST_DATABASE_CONFIRMATION)
-    expect(() => assertLegacyMemberSchemaInvocation([TEST_DATABASE_CONFIRMATION]))
-      .toThrow(LEGACY_SCHEMA_CONFIRMATION)
-    expect(assertLegacyMemberSchemaInvocation([
-      LEGACY_SCHEMA_CONFIRMATION,
-      TEST_DATABASE_CONFIRMATION,
-    ])).toEqual({ workflow: 'legacy-non-mip', testDatabaseConfirmed: true })
-  })
-
-  it('runs the legacy guard before loading local environment or calling CloudBase', () => {
-    const source = read('scripts/apply-mysql-schema.mjs')
-    const guard = source.indexOf('assertLegacyMemberSchemaInvocation(process.argv.slice(2))')
-    const environment = source.indexOf('const env = loadCaseEnv(root)')
-
-    expect(guard).toBeGreaterThan(0)
-    expect(guard).toBeLessThan(environment)
+  it('does not retain the Circle schema, cloud functions, assets, or runner', () => {
+    for (const relativePath of [
+      'assets/demo',
+      'cloudfunctions/membership-api',
+      'cloudfunctions/membership-admin-api',
+      'database/mysql/001_member_schema.sql',
+      'database/mysql/migrations.lock.json',
+      'database/mysql/rollback',
+      'scripts/apply-mysql-schema.mjs',
+      'scripts/verify-mysql.mjs',
+      'src/assets/brand/tongxinghui-logo.webp',
+      'src/modules/admin',
+    ]) {
+      expect(fs.existsSync(path.join(root, relativePath)), relativePath).toBe(false)
+    }
+    const packageJson = JSON.parse(read('package.json')) as { scripts?: Record<string, string> }
+    expect(packageJson.scripts?.['verify:mysql:legacy']).toBeUndefined()
   })
 
   it('accepts only known local deployment stages and separately confirms production', () => {
