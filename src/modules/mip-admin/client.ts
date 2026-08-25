@@ -1,6 +1,8 @@
 import type { AdminAnnouncementFilters } from './announcements'
+import type { ExportProgress } from './export-download'
 import type { AdminMessageCampaignStatus } from './message-campaigns'
 import type { AdminOperationalExceptionFilters } from './operational-exceptions'
+import type { PendingAdminExportStore } from './pending-export'
 import type {
   AdminCapability,
   AdminCapabilityGrant,
@@ -12,9 +14,16 @@ import type {
   MipAdminGateway,
 } from './types'
 import { createQueryCache } from '@weapp/shared/cache'
-import { createAndOpenExport } from './export-download'
+import {
+  createAndOpenExport,
+  getPendingAdminExportStatus,
+  resumeAndOpenPendingAdminExport,
+} from './export-download'
 
-export function createMipAdminModule(gateway: MipAdminGateway) {
+export function createMipAdminModule(
+  gateway: MipAdminGateway,
+  options: { pendingExportStore?: PendingAdminExportStore } = {},
+) {
   const cache = createQueryCache(15_000)
   const refresh = () => {
     cache.invalidate('mip-admin')
@@ -178,8 +187,26 @@ export function createMipAdminModule(gateway: MipAdminGateway) {
       refresh()
       return result
     },
-    exportAndOpen(input: Record<string, unknown>, onProgress?: (progress: 'creating' | 'preparing' | 'downloading' | 'opening') => void) {
-      return createAndOpenExport(gateway, input, { onProgress })
+    exportAndOpen(input: Record<string, unknown>, onProgress?: (progress: ExportProgress) => void) {
+      return createAndOpenExport(gateway, input, {
+        onProgress,
+        pendingStore: options.pendingExportStore,
+      })
+    },
+    getPendingExportStatus(onProgress?: (progress: ExportProgress) => void) {
+      return getPendingAdminExportStatus(gateway, {
+        onProgress,
+        pendingStore: options.pendingExportStore,
+      })
+    },
+    resumePendingExport(onProgress?: (progress: ExportProgress) => void) {
+      return resumeAndOpenPendingAdminExport(gateway, {
+        onProgress,
+        pendingStore: options.pendingExportStore,
+      })
+    },
+    clearPendingExport(ticketId?: string) {
+      options.pendingExportStore?.clear(ticketId)
     },
     clearSensitive() {
       cache.invalidate('mip-admin:users')
