@@ -195,6 +195,13 @@ describe('mip-weapp UI runtime contract', () => {
     expect(shared).toContain('\'forbidden\'')
   })
 
+  it('requires an enabled activity comment fixture for runtime success', () => {
+    const comments = contract.routes.find(route => route.path === 'packages/member/mip-events/comments/index')
+    expect(comments?.states).toEqual(expect.arrayContaining(['ready', 'empty', 'disabled']))
+    expect(comments?.acceptStates).toEqual(['ready', 'empty'])
+    expect(comments?.readyAssertion).toBe("state === 'ready' || state === 'empty'")
+  })
+
   it('does not render concrete identity, storage, or credential values in WXML', () => {
     for (const route of contract.routes) {
       const wxml = fs.readFileSync(wxmlPathForRoute(route.path), 'utf8')

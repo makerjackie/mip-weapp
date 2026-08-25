@@ -1138,8 +1138,8 @@
       "group": "member",
       "kind": "data",
       "states": ["loading", "ready", "empty", "access", "error", "forbidden", "conflict", "disabled"],
-      "acceptStates": ["ready", "empty", "disabled"],
-      "readyAssertion": "state === 'ready' || state === 'empty' || state === 'disabled'",
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'",
       "query": ["eventId"],
       "queryFixture": {
         "sourceRoute": "pages/events/index",
