@@ -9,6 +9,7 @@ const {
   visibilityForCapability,
 } = require('./capabilities')
 const { createAdminAccess } = require('./access')
+const { createAdminCommunityGovernance } = require('./community-governance')
 const { createAdminEvents } = require('./events')
 const { createAdminGovernance, PLATFORM_SCOPE_ID } = require('./governance')
 const { createAdminGrowth } = require('./growth')
@@ -20,10 +21,7 @@ const { exportFileName, workbookForExport } = require('./export-workbook')
 const { XLSX_CONTENT_TYPE, isXlsxBuffer } = require('../lib/xlsx')
 const {
   AdminError,
-  expectedVersion,
-  limit,
   requiredId,
-  text,
 } = require('./validation')
 
 function createAdminService({
@@ -54,6 +52,11 @@ function createAdminService({
     publicBindings,
     session,
   } = access
+  const {
+    claimCommunityReport,
+    closeCommunityReport,
+    listCommunityReports,
+  } = createAdminCommunityGovernance({ access, repository })
   const {
     getUser,
     listUsers,
@@ -235,83 +238,6 @@ function createAdminService({
       },
       counts,
     }
-  }
-
-  async function listCommunityReports(caller, input = {}) {
-    const context = await session(caller)
-    authorize(context.bindings, CAPABILITIES.COMMUNITY_REPORTS_MANAGE, {
-      scopeType: 'PLATFORM',
-      scopeId: null,
-    })
-    const status = normalizeCommunityReportStatus(input.status, { optional: true })
-    return {
-      items: await repository.listCommunityReports(
-        context.caller.appId,
-        status,
-        limit(input.limit, 50),
-      ),
-      nextCursor: null,
-    }
-  }
-
-  async function claimCommunityReport(caller, input = {}) {
-    const context = await session(caller)
-    const grant = authorize(context.bindings, CAPABILITIES.COMMUNITY_REPORTS_MANAGE, {
-      scopeType: 'PLATFORM',
-      scopeId: null,
-    })
-    const reportId = requiredId(input.reportId, '社区举报')
-    const version = expectedVersion(input.expectedVersion)
-    const reason = normalizedCommunityReportReason(input.reason)
-    return repository.claimCommunityReport({
-      appId: context.caller.appId,
-      actorUserId: context.caller.userId,
-      reportId,
-      expectedVersion: version,
-      authorization: mutationAuthorization(grant, CAPABILITIES.COMMUNITY_REPORTS_MANAGE),
-      audit: audit(context, grant, {
-        scopeType: 'PLATFORM',
-        scopeId: null,
-        action: 'admin.community_reports.claim',
-        resourceType: 'COMMUNITY_REPORT',
-        resourceId: reportId,
-        metadata: { expectedVersion: version, reason },
-      }),
-    })
-  }
-
-  async function closeCommunityReport(caller, input = {}) {
-    const context = await session(caller)
-    const grant = authorize(context.bindings, CAPABILITIES.COMMUNITY_REPORTS_MANAGE, {
-      scopeType: 'PLATFORM',
-      scopeId: null,
-    })
-    const reportId = requiredId(input.reportId, '社区举报')
-    const version = expectedVersion(input.expectedVersion)
-    const outcome = normalizeCommunityReportStatus(input.outcome)
-    if (!['RESOLVED', 'DISMISSED'].includes(outcome)) {
-      throw new AdminError('VALIDATION_FAILED', '举报处理结果无效')
-    }
-    const reason = normalizedCommunityReportReason(input.reason)
-    return repository.closeCommunityReport({
-      appId: context.caller.appId,
-      actorUserId: context.caller.userId,
-      reportId,
-      expectedVersion: version,
-      outcome,
-      reason,
-      authorization: mutationAuthorization(grant, CAPABILITIES.COMMUNITY_REPORTS_MANAGE),
-      audit: audit(context, grant, {
-        scopeType: 'PLATFORM',
-        scopeId: null,
-        action: outcome === 'RESOLVED'
-          ? 'admin.community_reports.resolve'
-          : 'admin.community_reports.dismiss',
-        resourceType: 'COMMUNITY_REPORT',
-        resourceId: reportId,
-        metadata: { expectedVersion: version, outcome, reason },
-      }),
-    })
   }
 
   async function createExport(caller, input) {
@@ -812,22 +738,6 @@ function exportError(error) {
   }
   if (known[code]) return new AdminError(code, known[code], ['EXPORT_BUSY', 'EXPORT_URL_UNAVAILABLE'].includes(code))
   return new AdminError('EXPORT_SERVICE_UNAVAILABLE', '导出服务暂时不可用', true)
-}
-
-function normalizeCommunityReportStatus(value, { optional = false } = {}) {
-  const status = typeof value === 'string' ? value.trim().toUpperCase() : ''
-  if (optional && !status) return ''
-  if (!['PENDING', 'REVIEWING', 'RESOLVED', 'DISMISSED'].includes(status)) {
-    throw new AdminError('VALIDATION_FAILED', '举报状态无效')
-  }
-  return status
-}
-
-function normalizedCommunityReportReason(value) {
-  const normalized = typeof value === 'string'
-    ? value.normalize('NFKC').trim().replace(/\s+/g, ' ')
-    : value
-  return text(normalized, 300, { required: true, label: '处理原因' })
 }
 
 function normalizeFilters(value) {
