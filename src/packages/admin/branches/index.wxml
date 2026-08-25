@@ -23,7 +23,7 @@
   <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载城市分会" description="{{message}}" action-text="重新加载" bind:action="loadBranches" /></view>
   <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有分会管理权限" description="当前账号不能维护城市分会。" /></view>
   <view wx:elif="{{branches.length === 0}}" class="mt-6"><app-empty-state title="暂无城市分会" description="新增后会显示在这里。" /></view>
-  <view wx:else class="mt-5 flex flex-col gap-3">
+  <view wx:else class="mip-admin-card-list mt-5 flex flex-col gap-3">
     <view wx:for="{{branches}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
       <view class="flex items-start justify-between gap-3">
         <view class="min-w-0 flex-1"><view class="text-[length:28rpx] font-semibold">{{item.name}}</view><view class="mt-1 text-[length:22rpx] text-muted">{{item.cityName}} · {{item.branchKey}}</view></view>

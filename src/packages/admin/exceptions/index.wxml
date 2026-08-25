@@ -2,7 +2,7 @@
   <view class="text-[length:40rpx] font-bold">异常中心</view>
   <view class="mt-2 text-[length:23rpx] text-muted">查看支付、通知和后台任务的异常状态</view>
 
-  <view wx:if="{{state !== 'forbidden'}}" class="mt-5 flex flex-col gap-3">
+  <view wx:if="{{state !== 'forbidden'}}" class="mip-admin-section-grid mt-5 grid gap-3">
     <view class="flex flex-wrap gap-2">
       <t-tag wx:for="{{typeOptions}}" wx:key="value" theme="{{item.value === type ? 'primary' : 'default'}}" variant="outline" data-value="{{item.value}}" bind:tap="chooseType">{{item.label}}</t-tag>
     </view>
@@ -15,7 +15,7 @@
   <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载异常" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
   <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有查看权限" description="当前账号不能查看异常中心。" /></view>
   <view wx:elif="{{state === 'empty'}}" class="mt-6"><app-empty-state title="暂无异常" description="当前筛选条件下没有异常记录。" /></view>
-  <view wx:else class="mt-5 flex flex-col gap-3">
+  <view wx:else class="mip-admin-card-list mt-5 flex flex-col gap-3">
     <view wx:for="{{items}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
       <view class="flex items-start justify-between gap-3">
         <view class="min-w-0 flex-1">

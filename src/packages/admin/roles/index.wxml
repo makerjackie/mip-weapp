@@ -30,7 +30,7 @@
     <view wx:if="{{selectedScopeType !== 'PLATFORM' && !scopeId}}" class="mt-3 text-[length:22rpx] text-danger">当前没有可管理的授权范围。</view>
 
     <view class="mt-3"><t-input value="{{query}}" placeholder="搜索用户昵称" bind:change="updateQuery" bind:enter="searchUsers" /></view>
-    <view wx:if="{{candidates.length}}" class="mt-2 flex flex-col gap-2">
+    <view wx:if="{{candidates.length}}" class="mip-admin-card-list mt-2 flex flex-col gap-2">
       <view wx:for="{{candidates}}" wx:key="id" class="rounded-[10rpx] bg-panel-raised px-3 py-3" data-id="{{item.id}}" data-name="{{item.nickname}}" bind:tap="chooseUser">
         <view class="text-[length:24rpx]">{{item.nickname}}</view>
         <view class="mt-1 text-[length:21rpx] text-muted">{{item.cityName || '未填写城市'}}</view>
@@ -50,7 +50,7 @@
       <text>{{selectedPolicyRoleLabel}}</text>
       <text>{{policySourceLabel}}</text>
     </view>
-    <view class="mt-3 flex flex-col gap-2">
+    <view class="mip-admin-card-list mt-3 flex flex-col gap-2">
       <view wx:for="{{policyCapabilities}}" wx:key="key" class="flex min-h-[88rpx] items-center justify-between rounded-[12rpx] bg-panel-raised px-3" data-capability="{{item.key}}" bind:tap="togglePolicyCapability">
         <view class="min-w-0 flex-1 pr-3 text-[length:24rpx]">{{item.label}}</view>
         <t-tag theme="{{item.enabled ? 'primary' : 'default'}}" variant="outline">{{item.enabled ? '已启用' : '未启用'}}</t-tag>
@@ -67,7 +67,7 @@
   <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载角色" description="{{message}}" action-text="重新加载" bind:action="loadRoles" /></view>
   <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有角色查看权限" description="当前账号不能查看角色设置。" /></view>
   <view wx:elif="{{roles.length === 0}}" class="mt-6"><app-empty-state title="暂无角色记录" description="授权范围内的角色设置后会显示在这里。" /></view>
-  <view wx:else class="mt-5 flex flex-col gap-3">
+  <view wx:else class="mip-admin-card-list mt-5 flex flex-col gap-3">
     <view wx:for="{{roles}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
       <view class="flex items-start justify-between gap-3">
         <view class="min-w-0 flex-1">

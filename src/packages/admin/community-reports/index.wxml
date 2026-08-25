@@ -20,7 +20,7 @@
   <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载举报" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
   <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有举报审核权限" description="当前账号不能查看或处理用户举报。" /></view>
   <view wx:elif="{{reports.length === 0}}" class="mt-6"><app-empty-state title="暂无举报" description="当前状态下没有待显示的举报。" /></view>
-  <view wx:else class="mt-5 flex flex-col gap-3">
+  <view wx:else class="mip-admin-card-list mt-5 flex flex-col gap-3">
     <view wx:for="{{reports}}" wx:key="reportId" class="rounded-[16rpx] bg-panel px-4 py-4">
       <view class="flex items-start justify-between gap-3">
         <view><view class="text-[length:27rpx] font-semibold">{{item.categoryLabel}}</view><view class="mt-1 text-[length:21rpx] text-muted">提交于 {{item.createdText}}</view></view>
