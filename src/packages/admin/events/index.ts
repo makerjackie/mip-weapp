@@ -1,5 +1,7 @@
+import type { EventPhonePreviewModel } from '../../../components/event-phone-preview/model'
 import type { AdminEventDetail } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
+import { buildEventPhonePreview } from '../../../components/event-phone-preview/model'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { mipBranchesModule } from '../../../modules/mip-identity/client'
 import { mipMediaModule } from '../../../modules/mip-media/client'
@@ -106,6 +108,8 @@ Page({
     coverUrl: '',
     coverUploading: false,
     contentUploading: false,
+    phonePreviewVisible: false,
+    phonePreview: null as EventPhonePreviewModel | null,
     message: '',
   },
   onLoad(query: Record<string, string>) {
@@ -419,6 +423,24 @@ Page({
   },
   toggleAlbum(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
     this.setData({ 'draft.albumEnabled': event.detail.value === true })
+  },
+  openPhonePreview() {
+    const branchName = this.data.draft.scopeType === 'BRANCH'
+      ? this.data.branches.find(item => item.id === this.data.draft.branchId)?.name || ''
+      : ''
+    const phonePreview = buildEventPhonePreview({
+      draft: this.data.draft,
+      coverUrl: this.data.coverUrl,
+      branchName,
+      startsDate: this.data.startsDate,
+      startsTime: this.data.startsTime,
+      endsDate: this.data.endsDate,
+      endsTime: this.data.endsTime,
+    })
+    this.setData({ phonePreview, phonePreviewVisible: true })
+  },
+  closePhonePreview() {
+    this.setData({ phonePreviewVisible: false })
   },
   async save() {
     if (this.data.saving) {
