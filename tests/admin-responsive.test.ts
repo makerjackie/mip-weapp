@@ -173,6 +173,9 @@ describe('MIP admin responsive foundation', () => {
       'display': 'grid',
       'grid-template-columns': 'repeat(2, minmax(0, 1fr))',
     })
+    expectDeclarations(medium, '.mip-admin-metric-grid', {
+      'grid-template-columns': 'repeat(3, minmax(0, 1fr))',
+    })
     expectDeclarations(medium, '.mip-admin-media-grid', {
       'display': 'grid',
       'grid-template-columns': 'repeat(3, minmax(0, 1fr))',
@@ -204,6 +207,9 @@ describe('MIP admin responsive foundation', () => {
     expectDeclarations(desktop, '.mip-admin-section-grid', {
       'display': 'grid',
       'grid-template-columns': 'repeat(2, minmax(0, 1fr))',
+    })
+    expectDeclarations(desktop, '.mip-admin-metric-grid', {
+      'grid-template-columns': 'repeat(2, minmax(240px, 1fr))',
     })
     expectDeclarations(desktop, '.mip-admin-media-grid', {
       'display': 'grid',
@@ -244,6 +250,14 @@ describe('MIP admin responsive foundation', () => {
       expect(source).toContain(`state === '${state}'`)
     }
     expect(source).toContain('wx:if="{{nextCursor}}"')
+  })
+
+  it('keeps dashboard metrics in two phone columns and gives desktop cards usable width', () => {
+    const source = read('src/packages/admin/dashboard/index.wxml')
+
+    expect(source).toContain('class="mip-admin-metric-grid mt-5 grid grid-cols-2 gap-3"')
+    expect(source.match(/wx:for="\{\{view\.summaryMetrics\}\}"/g)).toHaveLength(1)
+    expect(source).not.toMatch(/\b(?:break-all|whitespace-nowrap)\b/)
   })
 
   it('applies the shared shell to every registered admin page', () => {

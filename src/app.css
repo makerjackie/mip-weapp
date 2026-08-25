@@ -349,7 +349,7 @@ input {
   }
 
   .mip-admin-metric-grid {
-    grid-template-columns: repeat(6, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(240px, 1fr));
   }
 
   .mip-admin-summary-grid {
