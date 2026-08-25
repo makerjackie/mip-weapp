@@ -367,6 +367,7 @@ describe('admin handler and isolation contract', () => {
     const root = path.resolve(__dirname, '..')
     const repositoryFiles = [
       path.join(root, 'domain/repository.js'),
+      path.join(root, 'domain/repositories/access.js'),
       path.join(root, 'domain/repositories/users.js'),
     ]
     const files = [
