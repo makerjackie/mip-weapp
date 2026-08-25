@@ -54,10 +54,10 @@ Page({
     try {
       const [session, response, policy] = await Promise.all([
         mipAdminModule.getSession(force),
-        mipAdminModule.listEvents({
+        mipAdminModule.events.list({
           filters: { query: this.data.query.trim(), status: this.data.status },
         }, force),
-        mipAdminModule.getEventPolicy(force),
+        mipAdminModule.events.getPolicy(force),
       ])
       const canCreate = session.capabilities.some(item =>
         item.capability === 'events.write' && (item.scopeType === 'PLATFORM' || item.scopeType === 'BRANCH'))
@@ -85,7 +85,7 @@ Page({
     }
     this.setData({ loadingMore: true, message: '' })
     try {
-      const response = await mipAdminModule.listEvents({
+      const response = await mipAdminModule.events.list({
         cursor: this.data.nextCursor,
         filters: { query: this.data.query.trim(), status: this.data.status },
       })
@@ -133,7 +133,7 @@ Page({
     }
     this.setData({ processingId: eventId, message: '' })
     try {
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.archiveEvent({ eventId, expectedVersion: version, reason: modal.content }))
+      await mipAdminModule.events.archive({ eventId, expectedVersion: version, reason: modal.content })
       wx.showToast({ title: '活动已归档', icon: 'success' })
       await this.loadEvents(true)
     }
@@ -158,10 +158,10 @@ Page({
     }
     this.setData({ policySaving: true, message: '' })
     try {
-      const policy = await mipAdminModule.mutate(() => mipAdminModule.gateway.saveEventPolicy({
+      const policy = await mipAdminModule.events.savePolicy({
         cancellationHoursBeforeStart,
         version: this.data.policyVersion,
-      }))
+      })
       this.setData({ policyVersion: policy.version })
       wx.showToast({ title: '取消规则已保存', icon: 'success' })
     }

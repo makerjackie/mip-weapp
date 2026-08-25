@@ -5,12 +5,10 @@ import type {
   AdminCapability,
   AdminCapabilityGrant,
   AdminCommunityReportStatus,
-  AdminEventAlbumPhotoStatus,
-  AdminRosterAllListInput,
-  AdminRosterListInput,
   MipAdminGateway,
 } from './types'
 import { createQueryCache } from '@weapp/shared/cache'
+import { createMipEventsAdmin } from './events-admin'
 import {
   createAndOpenExport,
   getPendingAdminExportStatus,
@@ -31,6 +29,7 @@ export function createMipAdminModule(
     cache.invalidate('mip-admin')
   }
   const growth = createMipGrowthAdmin(gateway, cache)
+  const events = createMipEventsAdmin(gateway, cache)
   const messaging = createMipMessagingAdmin(gateway, cache)
   const opportunities = createMipOpportunityAdmin(gateway, cache)
   const orders = createMipOrdersAdmin(gateway, cache)
@@ -55,40 +54,13 @@ export function createMipAdminModule(
     listUsers: users.list,
     getUser: users.get,
     users,
-    listEvents: (input: Record<string, unknown> = {}, force = false) => cache.query(
-      `mip-admin:events:${JSON.stringify(input)}`,
-      () => gateway.listEvents(input),
-      { force },
-    ),
-    getEventPolicy: (force = false) => cache.query(
-      'mip-admin:event-policy',
-      gateway.getEventPolicy,
-      { force },
-    ),
-    getEvent: (eventId: string, force = false) => cache.query(
-      `mip-admin:event:${eventId}`,
-      () => gateway.getEvent(eventId),
-      { force },
-    ),
-    listEventAlbumPhotos: (eventId: string, status: AdminEventAlbumPhotoStatus, force = false) => cache.query(
-      `mip-admin:event-album:${eventId}:${status}`,
-      () => gateway.listEventAlbumPhotos(eventId, status),
-      { force },
-    ),
-    listRoster: (input: AdminRosterListInput, force = false) => input.includePhone === true
-      ? gateway.listRoster(input)
-      : cache.query(
-          `mip-admin:roster:${JSON.stringify(input)}`,
-          () => gateway.listRoster(input),
-          { force },
-        ),
-    listRosterAll: (input: AdminRosterAllListInput = {}, force = false) => input.includePhone === true
-      ? gateway.listRosterAll(input)
-      : cache.query(
-          `mip-admin:roster-all:${JSON.stringify(input)}`,
-          () => gateway.listRosterAll(input),
-          { force },
-        ),
+    listEvents: events.list,
+    getEventPolicy: events.getPolicy,
+    getEvent: events.get,
+    listEventAlbumPhotos: events.listAlbumPhotos,
+    listRoster: events.listRoster,
+    listRosterAll: events.listRosterAll,
+    events,
     listRoles: (force = false) => cache.query('mip-admin:roles', gateway.listRoles, { force }),
     listRoleCapabilityPolicies: (force = false) => cache.query(
       'mip-admin:role-capability-policies',
@@ -96,6 +68,11 @@ export function createMipAdminModule(
       { force },
     ),
     searchRoleCandidates: (eventId: string, query: string) => gateway.searchRoleCandidates(eventId, query),
+    async setRole(input: Parameters<MipAdminGateway['setRole']>[0]) {
+      const result = await gateway.setRole(input)
+      cache.invalidate('mip-admin:roles')
+      return result
+    },
     listOpportunities: opportunities.list,
     getOpportunity: opportunities.get,
     getOpportunityCommentAdminState: opportunities.getCommentState,

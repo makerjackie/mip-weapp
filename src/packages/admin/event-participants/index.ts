@@ -77,8 +77,8 @@ Page({
   async load(force = false) {
     try {
       const [page, events, branches, session] = await Promise.all([
-        mipAdminModule.listRosterAll({ includePhone: this.data.includePhone, filters: this.filters() }, force),
-        mipAdminModule.listEvents({ limit: 100 }, force),
+        mipAdminModule.events.listRosterAll({ includePhone: this.data.includePhone, filters: this.filters() }, force),
+        mipAdminModule.events.list({ limit: 100 }, force),
         mipAdminModule.listBranches(force),
         mipAdminModule.getSession(force),
       ])
@@ -145,7 +145,7 @@ Page({
     }
     this.setData({ loadingMore: true })
     try {
-      const page = await mipAdminModule.listRosterAll({ includePhone: this.data.includePhone, filters: this.filters(), cursor: this.data.nextCursor })
+      const page = await mipAdminModule.events.listRosterAll({ includePhone: this.data.includePhone, filters: this.filters(), cursor: this.data.nextCursor })
       this.setData({ items: this.data.items.concat(page.items.map(itemView)), nextCursor: page.nextCursor || null })
     }
     catch (error) {

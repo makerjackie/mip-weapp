@@ -162,7 +162,7 @@ Page({
   async loadEvent(force = false) {
     this.setData({ state: 'loading', message: '' })
     try {
-      const event = await mipAdminModule.getEvent(this.data.eventId, force)
+      const event = await mipAdminModule.events.get(this.data.eventId, force)
       this.applyEventToForm(event)
     }
     catch (error) {
@@ -484,11 +484,11 @@ Page({
         priceCents,
       }
       delete (draft as Partial<typeof draft>).priceYuan
-      const result = await mipAdminModule.mutate(() => mipAdminModule.gateway.saveEvent({
+      const result = await mipAdminModule.events.save({
         eventId: this.data.eventId || undefined,
         expectedVersion: this.data.version || undefined,
         draft,
-      }))
+      })
       this.setData({ eventId: result.id, eventStatus: result.status, version: result.version, state: 'ready' })
       wx.showToast({ title: '草稿已保存', icon: 'success' })
     }
@@ -546,12 +546,12 @@ Page({
       if (!modal.confirm) {
         return
       }
-      const result = await mipAdminModule.mutate(() => mipAdminModule.gateway.changeEventStatus({
+      const result = await mipAdminModule.events.changeStatus({
         eventId: this.data.eventId,
         expectedVersion: this.data.version,
         status: 'CANCELLED',
         reason,
-      }))
+      })
       this.setData({
         eventStatus: result.status,
         version: result.version,

@@ -46,7 +46,7 @@ Page({
     try {
       const [session, event, response] = await Promise.all([
         mipAdminModule.getSession(force),
-        mipAdminModule.getEvent(this.data.eventId, force),
+        mipAdminModule.events.get(this.data.eventId, force),
         mipAdminModule.listRoles(force),
       ])
       const scope = { scopeType: 'EVENT' as const, scopeId: this.data.eventId, branchId: event.branchId }
@@ -125,12 +125,12 @@ Page({
       if (!modal.confirm) {
         return
       }
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.setRole({
+      await mipAdminModule.setRole({
         userId,
         roleKey: this.data.selectedRole,
         scopeId: this.data.eventId,
         active: true,
-      }))
+      })
       wx.showToast({ title: '角色已设置', icon: 'success' })
       this.setData({ candidates: [], query: '' })
       await this.loadRoles(true)
@@ -154,12 +154,12 @@ Page({
       if (!modal.confirm) {
         return
       }
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.setRole({
+      await mipAdminModule.setRole({
         userId,
         roleKey,
         scopeId: this.data.eventId,
         active: false,
-      }))
+      })
       wx.showToast({ title: '角色已撤销', icon: 'success' })
       await this.loadRoles(true)
     }

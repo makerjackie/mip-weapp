@@ -146,8 +146,8 @@ Page({
     try {
       const [session, eventDetail, page] = await Promise.all([
         mipAdminModule.getSession(force),
-        mipAdminModule.getEvent(this.data.eventId, force),
-        mipAdminModule.listRoster({
+        mipAdminModule.events.get(this.data.eventId, force),
+        mipAdminModule.events.listRoster({
           eventId: this.data.eventId,
           includePhone: this.data.includePhone,
           filters: rosterFilters(this.data),
@@ -183,7 +183,7 @@ Page({
     }
     this.setData({ loadingMore: true, message: '' })
     try {
-      const page = await mipAdminModule.listRoster({
+      const page = await mipAdminModule.events.listRoster({
         eventId: this.data.eventId,
         includePhone: this.data.includePhone,
         cursor: this.data.nextCursor,
@@ -219,12 +219,12 @@ Page({
         return
       }
       this.setData({ processingId: id, message: '' })
-      const result = await mipAdminModule.mutate(() => mipAdminModule.gateway.reviewRegistration({
+      const result = await mipAdminModule.events.reviewRegistration({
         eventId: this.data.eventId,
         registrationId: id,
         expectedVersion: version,
         decision,
-      }))
+      })
       wx.showToast({
         title: result.status === 'REGISTERED' ? '报名已通过' : result.status === 'WAITLISTED' ? '已加入候补' : '报名已拒绝',
         icon: 'success',
@@ -271,11 +271,11 @@ Page({
     }
     this.setData({ processingId: id, message: '' })
     try {
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.checkIn({
+      await mipAdminModule.events.checkIn({
         eventId: this.data.eventId,
         registrationId: id,
         expectedVersion: version,
-      }))
+      })
       wx.showToast({ title: '已签到', icon: 'success' })
       await this.loadRoster(true)
     }
@@ -313,12 +313,12 @@ Page({
         return
       }
       this.setData({ processingId: id, message: '' })
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.undoCheckIn({
+      await mipAdminModule.events.undoCheckIn({
         eventId: this.data.eventId,
         registrationId: id,
         expectedVersion: version,
         reason,
-      }))
+      })
       wx.showToast({ title: '签到已撤销', icon: 'success' })
       await this.loadRoster(true)
     }
@@ -342,12 +342,12 @@ Page({
       if (!modal.confirm) {
         return
       }
-      const result = await mipAdminModule.mutate(() => mipAdminModule.exportAndOpen({
+      const result = await mipAdminModule.exportAndOpen({
         exportType: 'EVENT_ROSTER',
         eventId: this.data.eventId,
         includesPhone: this.data.includePhone,
         filters: rosterFilters(this.data),
-      }))
+      })
       wx.showToast({ title: `已导出 ${result.rowCount} 条`, icon: 'success' })
     }
     catch (error) {

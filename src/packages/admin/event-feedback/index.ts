@@ -77,7 +77,7 @@ Page({
     }
     try {
       const [event, session] = await Promise.all([
-        mipAdminModule.getEvent(this.data.eventId, force),
+        mipAdminModule.events.get(this.data.eventId, force),
         mipAdminModule.getSession(force),
       ])
       const canRead = hasScopedCapability(session.capabilities, 'events.feedback.read', {

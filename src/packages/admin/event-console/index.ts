@@ -121,7 +121,7 @@ Page({
     try {
       const [session, event] = await Promise.all([
         mipAdminModule.getSession(force),
-        mipAdminModule.getEvent(this.data.eventId, force),
+        mipAdminModule.events.get(this.data.eventId, force),
       ])
       const scope = { scopeType: 'EVENT' as const, scopeId: event.id, branchId: event.branchId }
       this.setData({
@@ -329,12 +329,12 @@ Page({
       message: '',
     })
     try {
-      const result = await mipAdminModule.mutate(() => mipAdminModule.gateway.publishEventReminder({
+      const result = await mipAdminModule.events.publishReminder({
         eventId: event.id,
         expectedVersion: event.version,
         idempotencyKey,
         sendWechatReminder,
-      }))
+      })
       const reminderSummary = result.recipientCount === 0
         ? '当前没有已确认参与者，未创建提醒。'
         : result.wechatDelivery === 'BEST_EFFORT'
@@ -389,11 +389,11 @@ Page({
       message: '',
     })
     try {
-      const result = await mipAdminModule.mutate(() => mipAdminModule.gateway.cloneEvent({
+      const result = await mipAdminModule.events.clone({
         sourceEventId: event.id,
         expectedVersion: event.version,
         idempotencyKey,
-      }))
+      })
       this.setData({ cloneRequestKey: '', cloneRequestVersion: 0 })
       wx.showToast({ title: '草稿已创建', icon: 'success' })
       await wx.navigateTo({ url: `/packages/admin/events/index?eventId=${encodeURIComponent(result.id)}` })
@@ -420,11 +420,11 @@ Page({
       if (!modal.confirm) {
         return
       }
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.changeEventStatus({
+      await mipAdminModule.events.changeStatus({
         eventId: this.data.eventId,
         status,
         expectedVersion: this.data.event?.version,
-      }))
+      })
       wx.showToast({ title: '状态已更新', icon: 'success' })
       await this.loadEvent(true)
     }
@@ -455,12 +455,12 @@ Page({
         this.setData({ message: '请填写取消原因。' })
         return
       }
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.changeEventStatus({
+      await mipAdminModule.events.changeStatus({
         eventId: this.data.eventId,
         status: 'CANCELLED',
         reason,
         expectedVersion: this.data.event?.version,
-      }))
+      })
       wx.showToast({ title: '活动已取消', icon: 'success' })
       await this.loadEvent(true)
     }

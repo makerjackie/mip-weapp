@@ -82,7 +82,7 @@ Page({
     }
     try {
       const [event, session] = await Promise.all([
-        mipAdminModule.getEvent(this.data.eventId, force),
+        mipAdminModule.events.get(this.data.eventId, force),
         mipAdminModule.getSession(force),
       ])
       const canManage = hasScopedCapability(session.capabilities, 'events.album.manage', {
@@ -94,7 +94,7 @@ Page({
         this.setData({ state: 'forbidden', canManage: false, photos: [], message: '' })
         return
       }
-      const page = await mipAdminModule.listEventAlbumPhotos(this.data.eventId, this.data.status, force)
+      const page = await mipAdminModule.events.listAlbumPhotos(this.data.eventId, this.data.status, force)
       const photos = page.items.map(photoView)
       this.setData({
         state: photos.length ? 'ready' : 'empty',
@@ -173,13 +173,13 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.reviewEventAlbumPhoto({
+      await mipAdminModule.events.reviewAlbumPhoto({
         eventId: this.data.eventId,
         photoId: this.data.actionPhotoId,
         decision,
         reason,
         expectedVersion: this.data.actionVersion,
-      }))
+      })
       void wx.showToast({ title: approving ? '照片已发布' : '照片已拒绝', icon: 'success' })
         .catch(() => null)
       this.cancelReview()
