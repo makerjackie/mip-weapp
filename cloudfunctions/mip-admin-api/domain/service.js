@@ -12,12 +12,11 @@ const {
 const { createAdminAccess } = require('./access')
 const { createAdminEvents } = require('./events')
 const { createAdminMessaging } = require('./messaging')
+const { createAdminOpportunities } = require('./opportunities')
 const { createAdminOrders } = require('./orders')
 const { createAdminUsers } = require('./users')
 const { configurableRoleKeys } = require('./role-capability-policies')
-const { createProfileRef } = require('../lib/profile-ref')
 const { exportFileName, workbookForExport } = require('./export-workbook')
-const { createOpportunityArchiveService } = require('./opportunity-archive')
 const {
   availableExceptionTypes,
   normalizeExceptionRequest,
@@ -131,6 +130,30 @@ function createAdminService({
   } = createAdminMessaging({
     access,
     contentSafety,
+    profileRefSecret,
+    repository,
+  })
+  const {
+    archiveOpportunity,
+    closeOpportunityCommentReport,
+    endOpportunity,
+    getMatchingAdminState,
+    getOpportunity,
+    getOpportunityCommentAdminState,
+    getOpportunityEditorOptions,
+    listOpportunities,
+    moderateOpportunityComment,
+    normalizeExportFilters: normalizeOpportunityFilters,
+    publishOpportunity,
+    recalculateOpportunityMatching,
+    saveMatchingSettings,
+    saveOpportunity,
+    saveOpportunityCommentSettings,
+    unpublishOpportunity,
+  } = createAdminOpportunities({
+    access,
+    contentSafety,
+    dispatchMatchingRecalculation: recalculateMatching,
     profileRefSecret,
     repository,
   })
@@ -402,6 +425,7 @@ function createAdminService({
       normalizeUserFilters,
       normalizeEventFilters,
       normalizeOrderFilters,
+      normalizeOpportunityFilters,
     )
     return repository.createExportTicket({
       appId: context.caller.appId,
@@ -822,385 +846,6 @@ function createAdminService({
     return roleCapabilityPolicyView(roleKey, policy, 'CUSTOM')
   }
 
-  async function listOpportunities(caller, input = {}) {
-    const context = await session(caller)
-    firstGrant(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE)
-    const readOpportunities = repository.listOpportunitiesV2 || repository.listOpportunities
-    const page = pageResult(await readOpportunities(
-        context.caller.appId,
-        visibilityForCapability(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE),
-        normalizeOpportunityFilters(input.filters),
-        limit(input.limit),
-        decodeCursor(input.cursor, ['updatedAt', 'id']),
-      ))
-    return page
-  }
-
-  async function getOpportunity(caller, input = {}) {
-    const context = await session(caller)
-    const opportunityId = requiredId(input.opportunityId, '机会')
-    const scope = await repository.getOpportunityScope(context.caller.appId, opportunityId)
-    if (!scope) throw new AdminError('NOT_FOUND', '机会不存在')
-    authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, scope)
-    const item = await repository.getOpportunityDetail(context.caller.appId, opportunityId)
-    if (!item) throw new AdminError('NOT_FOUND', '机会不存在')
-    return item
-  }
-
-  async function getOpportunityEditorOptions(caller) {
-    const context = await session(caller)
-    firstGrant(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE)
-    return repository.getOpportunityEditorOptions(context.caller.appId)
-  }
-
-  async function saveOpportunity(caller, input = {}) {
-    const context = await session(caller)
-    const draft = normalizeOpportunityDraft(input.draft)
-    const existingId = input.opportunityId ? requiredId(input.opportunityId, '机会') : null
-    let existingScope = null
-    let grant
-    if (existingId) {
-      existingScope = await repository.getOpportunityScope(context.caller.appId, existingId)
-      if (!existingScope) throw new AdminError('NOT_FOUND', '机会不存在')
-      grant = authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, existingScope)
-    }
-    else {
-      grant = authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, {
-        scopeType: draft.scopeType,
-        scopeId: draft.branchId,
-      })
-    }
-    const checked = await contentSafety({
-      title: draft.title,
-      summary: `${draft.valueSummary}\n${draft.targetSummary}`,
-      description: draft.description,
-    }, caller)
-    const contentSafetyStatus = checked === 'PASSED' || checked === 'APPROVED'
-      ? 'APPROVED'
-      : checked === 'REJECTED' ? 'REJECTED' : 'ERROR'
-    const version = existingId ? expectedVersion(input.expectedVersion) : 0
-    return repository.saveOpportunity({
-      appId: context.caller.appId,
-      actorUserId: context.caller.userId,
-      opportunityId: existingId,
-      expectedVersion: version,
-      draft,
-      contentSafetyStatus,
-      authorizedScope: existingScope,
-      authorization: mutationAuthorization(grant, CAPABILITIES.OPPORTUNITIES_MODERATE),
-      audit: opportunityId => audit(context, grant, {
-        scopeType: draft.scopeType, scopeId: draft.branchId,
-        action: existingId ? 'admin.opportunities.update' : 'admin.opportunities.create',
-        resourceType: 'OPPORTUNITY', resourceId: opportunityId,
-        metadata: { expectedVersion: version },
-      }),
-    })
-  }
-
-  async function publishOpportunity(caller, input = {}) {
-    const context = await session(caller)
-    const opportunityId = requiredId(input.opportunityId, '机会')
-    const scope = await repository.getOpportunityScope(context.caller.appId, opportunityId)
-    if (!scope) throw new AdminError('NOT_FOUND', '机会不存在')
-    const grant = authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, scope)
-    const version = expectedVersion(input.expectedVersion)
-    return repository.publishOpportunity({
-      appId: context.caller.appId,
-      actorUserId: context.caller.userId,
-      opportunityId,
-      expectedVersion: version,
-      authorizedScope: scope,
-      authorization: mutationAuthorization(grant, CAPABILITIES.OPPORTUNITIES_MODERATE),
-      audit: audit(context, grant, {
-        scopeType: scope.scopeType, scopeId: scope.scopeId,
-        action: 'admin.opportunities.publish', resourceType: 'OPPORTUNITY', resourceId: opportunityId,
-        metadata: { expectedVersion: version },
-      }),
-    })
-  }
-
-  async function endOpportunity(caller, input = {}) {
-    const context = await session(caller)
-    const opportunityId = requiredId(input.opportunityId, '机会')
-    const scope = await repository.getOpportunityScope(context.caller.appId, opportunityId)
-    if (!scope) throw new AdminError('NOT_FOUND', '机会不存在')
-    const grant = authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, scope)
-    const version = expectedVersion(input.expectedVersion)
-    return repository.endOpportunity({
-      appId: context.caller.appId,
-      actorUserId: context.caller.userId,
-      opportunityId,
-      expectedVersion: version,
-      authorizedScope: scope,
-      authorization: mutationAuthorization(grant, CAPABILITIES.OPPORTUNITIES_MODERATE),
-      audit: audit(context, grant, {
-        scopeType: scope.scopeType, scopeId: scope.scopeId,
-        action: 'admin.opportunities.end', resourceType: 'OPPORTUNITY', resourceId: opportunityId,
-        metadata: { expectedVersion: version },
-      }),
-    })
-  }
-
-  async function unpublishOpportunity(caller, input) {
-    const context = await session(caller)
-    const opportunityId = requiredId(input.opportunityId, '机会')
-    const scope = await repository.getOpportunityScope(context.caller.appId, opportunityId)
-    if (!scope) throw new AdminError('NOT_FOUND', '机会不存在')
-    const grant = authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, scope)
-    const reason = text(input.reason, 240, { required: true, label: '下架原因' })
-    const version = expectedVersion(input.expectedVersion)
-    return repository.unpublishOpportunity({
-      appId: context.caller.appId,
-      actorUserId: context.caller.userId,
-      opportunityId,
-      expectedVersion: version,
-      reason,
-      authorization: mutationAuthorization(grant, CAPABILITIES.OPPORTUNITIES_MODERATE),
-      authorizedScope: scope,
-      audit: audit(context, grant, {
-        scopeType: scope.scopeType, scopeId: scope.scopeId,
-        action: 'admin.opportunities.unpublish', resourceType: 'OPPORTUNITY', resourceId: opportunityId,
-        metadata: { reasonLength: reason.length, expectedVersion: version },
-      }),
-    })
-  }
-
-  async function archiveOpportunity(caller, input = {}) {
-    const context = await session(caller)
-    authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_ARCHIVE, {
-      scopeType: 'PLATFORM',
-      scopeId: null,
-    })
-    return createOpportunityArchiveService({
-      repository,
-      authorize: archiveContext => authorize(
-        archiveContext.bindings,
-        CAPABILITIES.OPPORTUNITIES_ARCHIVE,
-        { scopeType: 'PLATFORM', scopeId: null },
-      ),
-    }).archiveOpportunity(context, input)
-  }
-
-  async function getMatchingAdminState(caller, input = {}) {
-    const context = await session(caller)
-    const branchId = input.branchId ? requiredId(input.branchId, '城市分会') : null
-    if (branchId) {
-      authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, {
-        scopeType: 'BRANCH',
-        scopeId: branchId,
-      })
-    }
-    else {
-      authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, {
-        scopeType: 'PLATFORM',
-        scopeId: null,
-      })
-    }
-    return repository.getMatchingAdminState(
-      context.caller.appId,
-      visibilityForCapability(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE),
-      { branchId },
-    )
-  }
-
-  async function saveMatchingSettings(caller, input = {}) {
-    const context = await session(caller)
-    const branchId = input.branchId ? requiredId(input.branchId, '城市分会') : null
-    const scope = branchId
-      ? { scopeType: 'BRANCH', scopeId: branchId }
-      : { scopeType: 'PLATFORM', scopeId: null }
-    const grant = authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, scope)
-    const settings = normalizeMatchingSettings(input.settings)
-    const version = nonNegativeVersion(input.expectedVersion)
-    return repository.saveMatchingSettings({
-      appId: context.caller.appId,
-      actorUserId: context.caller.userId,
-      scope,
-      expectedVersion: version,
-      settings,
-      authorization: mutationAuthorization(grant, CAPABILITIES.OPPORTUNITIES_MODERATE),
-      audit: nextVersion => audit(context, grant, {
-        scopeType: scope.scopeType,
-        scopeId: scope.scopeId,
-        action: 'admin.matching.settings.update',
-        resourceType: 'MATCHING_SETTINGS',
-        resourceId: scope.scopeId,
-        metadata: { expectedVersion: version, nextVersion, ...settings },
-      }),
-    })
-  }
-
-  async function recalculateOpportunityMatching(caller, input = {}) {
-    const context = await session(caller)
-    const opportunityId = requiredId(input.opportunityId, '机会')
-    const target = await repository.getMatchingRecalculationTarget(context.caller.appId, opportunityId)
-    if (!target) throw new AdminError('NOT_FOUND', '机会不存在')
-    const scope = target.branch_id
-      ? { scopeType: 'BRANCH', scopeId: target.branch_id }
-      : { scopeType: 'PLATFORM', scopeId: null }
-    const grant = authorize(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE, scope)
-    if (target.status !== 'PUBLISHED') throw new AdminError('INVALID_STATE', '只有已发布机会可以重算撮合结果')
-    const idempotencyKey = text(input.idempotencyKey, 128, {
-      required: true,
-      label: '幂等标识',
-    })
-    if (idempotencyKey.length < 12) throw new AdminError('VALIDATION_FAILED', '幂等标识无效')
-    try {
-      const authorizedTarget = await repository.authorizeMatchingRecalculation({
-        appId: context.caller.appId,
-        actorUserId: context.caller.userId,
-        opportunityId,
-        expectedVersion: Number(target.version),
-        authorization: mutationAuthorization(grant, CAPABILITIES.OPPORTUNITIES_MODERATE),
-      })
-      return await recalculateMatching({
-        appId: context.caller.appId,
-        actorUserId: context.caller.userId,
-        requesterUserId: authorizedTarget.owner_user_id,
-        opportunityId,
-        sourceVersion: Number(authorizedTarget.version),
-        idempotencyKey,
-      })
-    }
-    catch (error) {
-      const code = String(error?.message || '')
-      if (['MATCHING_DISPATCH_CONFIG_REQUIRED', 'MATCHING_DISPATCH_UNAVAILABLE'].includes(code)) {
-        throw new AdminError(code, '机会撮合重算服务暂时不可用')
-      }
-      throw new AdminError('MATCHING_DISPATCH_UNAVAILABLE', '机会撮合重算服务暂时不可用')
-    }
-  }
-
-  async function opportunityCommentAuthorization(context, opportunityId) {
-    const scope = await repository.getOpportunityScope(context.caller.appId, opportunityId)
-    if (!scope) throw new AdminError('NOT_FOUND', '机会不存在')
-    return { scope, grant: authorize(context.bindings, CAPABILITIES.MESSAGES_MANAGE, scope) }
-  }
-
-  async function getOpportunityCommentAdminState(caller, input = {}) {
-    const context = await session(caller)
-    const opportunityId = requiredId(input.opportunityId, '机会')
-    await opportunityCommentAuthorization(context, opportunityId)
-    const state = await repository.getOpportunityCommentAdminState(context.caller.appId, opportunityId)
-    return {
-      settings: state.settings,
-      comments: state.comments.map(({ authorUserId, ...comment }) => ({
-        ...comment,
-        authorProfileRef: createProfileRef(
-          { appId: context.caller.appId, userId: authorUserId },
-          profileRefSecret,
-        ),
-      })),
-      reports: state.reports.map(({ reporterUserId, ...report }) => ({
-        ...report,
-        reporterProfileRef: createProfileRef(
-          { appId: context.caller.appId, userId: reporterUserId },
-          profileRefSecret,
-        ),
-      })),
-    }
-  }
-
-  async function saveOpportunityCommentSettings(caller, input = {}) {
-    const context = await session(caller)
-    const opportunityId = requiredId(input.opportunityId, '机会')
-    const { scope, grant } = await opportunityCommentAuthorization(context, opportunityId)
-    if (!input.settings || typeof input.settings !== 'object'
-      || typeof input.settings.commentsEnabled !== 'boolean'
-      || typeof input.settings.reviewsEnabled !== 'boolean'
-      || typeof input.settings.callsEnabled !== 'boolean'
-      || !['AUTO', 'REVIEW'].includes(input.settings.moderationMode)) {
-      throw new AdminError('VALIDATION_FAILED', '评论设置无效')
-    }
-    const version = nonNegativeVersion(input.expectedVersion)
-    return repository.saveOpportunityCommentSettings({
-      appId: context.caller.appId,
-      actorUserId: context.caller.userId,
-      opportunityId,
-      expectedVersion: version,
-      settings: {
-        commentsEnabled: input.settings.commentsEnabled,
-        reviewsEnabled: input.settings.reviewsEnabled,
-        callsEnabled: input.settings.callsEnabled,
-        moderationMode: input.settings.moderationMode,
-      },
-      authorization: mutationAuthorization(grant, CAPABILITIES.MESSAGES_MANAGE),
-      audit: nextVersion => audit(context, grant, {
-        scopeType: scope.scopeType,
-        scopeId: scope.scopeId,
-        action: 'admin.opportunity_comments.settings.update',
-        resourceType: 'OPPORTUNITY_COMMENT_SETTINGS',
-        resourceId: opportunityId,
-        metadata: { expectedVersion: version, nextVersion },
-      }),
-    })
-  }
-
-  async function moderateOpportunityComment(caller, input = {}) {
-    const context = await session(caller)
-    const opportunityId = requiredId(input.opportunityId, '机会')
-    const { scope, grant } = await opportunityCommentAuthorization(context, opportunityId)
-    const commentId = requiredId(input.commentId, '评论')
-    const action = ['PUBLISH', 'HIDE'].includes(input.action) ? input.action : null
-    if (!action) throw new AdminError('VALIDATION_FAILED', '审核操作无效')
-    const reason = text(input.reason, 300, { required: true, label: '审核原因' })
-    const version = expectedVersion(input.expectedVersion)
-    return repository.moderateOpportunityComment({
-      appId: context.caller.appId,
-      actorUserId: context.caller.userId,
-      commentId,
-      expectedVersion: version,
-      action,
-      reason,
-      authorization: mutationAuthorization(grant, CAPABILITIES.MESSAGES_MANAGE),
-      audit: (resourceOpportunityId, status) => {
-        if (resourceOpportunityId !== opportunityId) throw new AdminError('CONFLICT', '评论所属机会已变化')
-        return audit(context, grant, {
-          scopeType: scope.scopeType,
-          scopeId: scope.scopeId,
-          action: action === 'PUBLISH'
-            ? 'admin.opportunity_comments.publish'
-            : 'admin.opportunity_comments.hide',
-          resourceType: 'OPPORTUNITY_COMMENT',
-          resourceId: commentId,
-          metadata: { opportunityId, status, expectedVersion: version, reasonLength: reason.length },
-        })
-      },
-    })
-  }
-
-  async function closeOpportunityCommentReport(caller, input = {}) {
-    const context = await session(caller)
-    const opportunityId = requiredId(input.opportunityId, '机会')
-    const { scope, grant } = await opportunityCommentAuthorization(context, opportunityId)
-    const reportId = requiredId(input.reportId, '举报')
-    const decision = ['RESOLVED', 'DISMISSED'].includes(input.decision) ? input.decision : null
-    if (!decision) throw new AdminError('VALIDATION_FAILED', '举报处理结果无效')
-    const reason = text(input.reason, 300, { required: true, label: '处理原因' })
-    const version = expectedVersion(input.expectedVersion)
-    return repository.closeOpportunityCommentReport({
-      appId: context.caller.appId,
-      actorUserId: context.caller.userId,
-      opportunityId,
-      reportId,
-      expectedVersion: version,
-      decision,
-      reason,
-      authorization: mutationAuthorization(grant, CAPABILITIES.MESSAGES_MANAGE),
-      audit: (resourceOpportunityId, commentId, status) => {
-        if (resourceOpportunityId !== opportunityId) throw new AdminError('CONFLICT', '举报所属机会已变化')
-        return audit(context, grant, {
-          scopeType: scope.scopeType,
-          scopeId: scope.scopeId,
-          action: 'admin.opportunity_comment_reports.close',
-          resourceType: 'OPPORTUNITY_COMMENT_REPORT',
-          resourceId: reportId,
-          metadata: { opportunityId, commentId, status, expectedVersion: version, reasonLength: reason.length },
-        })
-      },
-    })
-  }
-
   async function listGrowthLevels(caller) {
     const context = await session(caller)
     firstGrant(context.bindings, CAPABILITIES.GROWTH_READ)
@@ -1552,33 +1197,6 @@ function hashExportToken(value) {
   return createHash('sha256').update(token).digest('hex')
 }
 
-function normalizeIdempotencyKey(value) {
-  const key = stableKey(value, '请求', 128)
-  if (key.length < 12) throw new AdminError('VALIDATION_FAILED', '请求标识无效')
-  return key
-}
-
-function normalizeMatchingSettings(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new AdminError('VALIDATION_FAILED', '撮合设置无效')
-  }
-  const talentMinScore = Number(value.talentMinScore)
-  const projectMinScore = Number(value.projectMinScore)
-  const maximumCandidates = Number(value.maximumCandidates)
-  if (!Number.isInteger(talentMinScore) || talentMinScore < 0 || talentMinScore > 100
-    || !Number.isInteger(projectMinScore) || projectMinScore < 0 || projectMinScore > 100
-    || !Number.isInteger(maximumCandidates) || maximumCandidates < 10 || maximumCandidates > 500
-    || typeof value.externalProviderEnabled !== 'boolean') {
-    throw new AdminError('VALIDATION_FAILED', '撮合设置无效')
-  }
-  return {
-    talentMinScore,
-    projectMinScore,
-    maximumCandidates,
-    externalProviderEnabled: value.externalProviderEnabled,
-  }
-}
-
 function exportStatus(ticket) {
   return {
     status: ticket.status,
@@ -1710,57 +1328,6 @@ function normalizeFilters(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? { ...value } : {}
 }
 
-function normalizeOpportunityFilters(value) {
-  const filters = normalizeFilters(value)
-  const updatedFrom = dateTimeFilter(filters.updatedFrom, '开始时间')
-  const updatedTo = dateTimeFilter(filters.updatedTo, '结束时间')
-  const deadlineFrom = dateTimeFilter(filters.deadlineFrom, '截止开始时间')
-  const deadlineTo = dateTimeFilter(filters.deadlineTo, '截止结束时间')
-  if (updatedFrom && updatedTo && updatedFrom > updatedTo) {
-    throw new AdminError('VALIDATION_FAILED', '机会开始时间不能晚于结束时间')
-  }
-  if (deadlineFrom && deadlineTo && deadlineFrom > deadlineTo) {
-    throw new AdminError('VALIDATION_FAILED', '机会截止开始时间不能晚于结束时间')
-  }
-  return {
-    query: text(filters.query, 80),
-    ownerQuery: text(filters.ownerQuery, 80),
-    cityQuery: text(filters.cityQuery, 80),
-    status: enumFilter(filters.status, ['DRAFT', 'PUBLISHED', 'ENDED', 'UNPUBLISHED', 'ARCHIVED'], '机会状态'),
-    updatedFrom,
-    updatedTo,
-    deadlineFrom,
-    deadlineTo,
-  }
-}
-
-function normalizeOpportunityDraft(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new AdminError('VALIDATION_FAILED', '机会内容无效')
-  }
-  const scopeType = value.scopeType === 'BRANCH' ? 'BRANCH' : 'PLATFORM'
-  const roleKeys = Array.isArray(value.roleKeys) ? [...new Set(value.roleKeys)] : []
-  const allowedRoles = new Set(['connector', 'business_builder', 'capital_operator', 'strategist', 'visual_designer', 'delivery_lead'])
-  if (roleKeys.length > 6 || roleKeys.some(item => !allowedRoles.has(item))) {
-    throw new AdminError('VALIDATION_FAILED', '合作角色无效')
-  }
-  const tagIds = Array.isArray(value.tagIds) ? [...new Set(value.tagIds.map(item => requiredId(item, '标签')))] : []
-  if (tagIds.length > 20) throw new AdminError('VALIDATION_FAILED', '标签数量过多')
-  return {
-    ownerUserId: requiredId(value.ownerUserId, '发布人'),
-    scopeType,
-    branchId: scopeType === 'BRANCH' ? requiredId(value.branchId, '城市分会') : null,
-    title: text(value.title, 120, { required: true, label: '机会标题' }),
-    valueSummary: text(value.valueSummary, 300, { required: true, label: '机会价值' }),
-    targetSummary: text(value.targetSummary, 300),
-    description: text(value.description, 5_000),
-    cityTagId: value.cityTagId ? requiredId(value.cityTagId, '城市') : null,
-    roleKeys,
-    tagIds,
-    deadlineAt: value.deadlineAt ? dateTimeFilter(value.deadlineAt, '截止时间') : null,
-  }
-}
-
 function normalizeGrowthBenefit(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new AdminError('VALIDATION_FAILED', '权益内容无效')
@@ -1814,7 +1381,15 @@ function dateTimeFilter(value, label) {
   return date.toISOString().slice(0, 23).replace('T', ' ')
 }
 
-function normalizeExportFilters(exportType, value, scope, normalizeUsers, normalizeEvents, normalizeOrders) {
+function normalizeExportFilters(
+  exportType,
+  value,
+  scope,
+  normalizeUsers,
+  normalizeEvents,
+  normalizeOrders,
+  normalizeOpportunities,
+) {
   const filters = normalizeFilters(value)
   const normalized = {}
   if (exportType === 'USERS') {
@@ -1836,7 +1411,7 @@ function normalizeExportFilters(exportType, value, scope, normalizeUsers, normal
     Object.assign(normalized, normalizeGrowthEntryFilters(filters))
   }
   else if (exportType === 'OPPORTUNITIES') {
-    Object.assign(normalized, normalizeOpportunityFilters(filters))
+    Object.assign(normalized, normalizeOpportunities(filters))
   }
   if (scope.scopeType === 'BRANCH') normalized.branchId = scope.scopeId
   return normalized
@@ -1970,12 +1545,6 @@ function normalizeRule(value) {
     sourceEventType: stableKey(value.sourceEventType, '来源事件', 80),
     status: ['DRAFT', 'ACTIVE', 'INACTIVE'].includes(value.status) ? value.status : 'DRAFT',
   }
-}
-
-function nonNegativeVersion(value) {
-  const version = Number(value)
-  if (!Number.isInteger(version) || version < 0) throw new AdminError('VALIDATION_FAILED', '记录版本无效')
-  return version
 }
 
 module.exports = { PLATFORM_SCOPE_ID, createAdminService }
