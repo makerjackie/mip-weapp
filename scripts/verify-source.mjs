@@ -9,6 +9,7 @@ import {
   MIP_MIGRATION_STEP_TABLE,
   MIP_MIGRATION_TRACKING_TABLE,
 } from './lib/mip-migrations.mjs'
+import { findLockingReadPrivilegeViolations } from './lib/mip-sql-isolation.mjs'
 import { RUNTIME_TABLE_PRIVILEGES } from './lib/mysql-privilege-assert.mjs'
 import {
   assertOfficialCustomTabBar,
@@ -47,10 +48,14 @@ function assert(condition, message) {
 }
 
 function sourceTree(relativePath, extension = /\.(?:js|ts)$/) {
-  return walk(relativePath)
-    .filter(file => extension.test(file) && !file.includes(`${path.sep}tests${path.sep}`))
+  return sourceFiles(relativePath, extension)
     .map(read)
     .join('\n')
+}
+
+function sourceFiles(relativePath, extension = /\.(?:js|ts)$/) {
+  return walk(relativePath)
+    .filter(file => extension.test(file) && !file.includes(`${path.sep}tests${path.sep}`))
 }
 
 function legacySqlReference(source) {
@@ -149,10 +154,27 @@ assert(cooperationCatalog.includes('replaceBeforeProduction: true'), 'Placeholde
 
 const functionNames = resolveMipFunctionNames({})
 const coreManifest = createMipCoreFunctionManifest(functionNames)
+const lockingReadDynamicRelationAllowlist = Object.freeze({
+  'cloudfunctions/mip-opportunities-api/domain/opportunities.js': {
+    tableName: ['mip_opportunities', 'mip_cooperation_cards', 'mip_super_cases'],
+  },
+  'cloudfunctions/mip-admin-api/domain/knowledge.js': {
+    table: [
+      'mip_knowledge_sources',
+      'mip_knowledge_categories',
+      'mip_knowledge_contents',
+      'mip_knowledge_products',
+      'mip_content_comments',
+      'mip_content_comment_reports',
+    ],
+  },
+})
+const lockingReadPrivilegeViolations = []
 for (const spec of coreManifest) {
   const relativeRoot = path.join('cloudfunctions', spec.source)
   const packageDefinition = JSON.parse(read(path.join(relativeRoot, 'package.json')))
-  const source = sourceTree(relativeRoot, /\.js$/)
+  const functionSourceFiles = sourceFiles(relativeRoot, /\.js$/)
+  const source = functionSourceFiles.map(read).join('\n')
   assert(packageDefinition.name === spec.source, `${spec.source} package name drifted`)
   assert(!JSON.stringify(packageDefinition).includes('workspace:'), `${spec.source} cannot use workspace dependencies`)
   assert(!legacySqlReference(source), `${spec.source} references a shared legacy SQL table`)
@@ -160,7 +182,18 @@ for (const spec of coreManifest) {
   assert(source.includes('MIP_DB_CONNECTION_URI'), `${spec.source} does not use the injected MIP MySQL connection`)
   assert(source.includes('MIP_ALLOWED_APP_IDS'), `${spec.source} does not fail closed on the MIP AppID allowlist`)
   assert(source.includes('persistence: \'cloudbase-mysql\'') && source.includes('SELECT 1 AS ok'), `${spec.source} health does not prove MySQL persistence`)
+  for (const sourceFile of functionSourceFiles) {
+    const normalizedSourceFile = sourceFile.split(path.sep).join('/')
+    lockingReadPrivilegeViolations.push(...findLockingReadPrivilegeViolations(
+      read(sourceFile),
+      RUNTIME_TABLE_PRIVILEGES,
+      { allowedDynamicRelations: lockingReadDynamicRelationAllowlist[normalizedSourceFile] },
+    ).map(violation => ({ file: normalizedSourceFile, functionName: spec.name, ...violation })))
+  }
 }
+assert(lockingReadPrivilegeViolations.length === 0, `Locking read exceeds runtime table grants: ${lockingReadPrivilegeViolations
+  .map(item => `${item.functionName}:${item.file}:${item.relation}:${item.clause}`)
+  .join(', ')}`)
 
 const eventsSource = sourceTree('cloudfunctions/mip-events-api', /\.js$/)
 const identitySource = sourceTree('cloudfunctions/mip-identity-api', /\.js$/)
