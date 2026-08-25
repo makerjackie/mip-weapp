@@ -1,7 +1,9 @@
+import { execFileSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
+  assertSeedSqlScope,
   buildSeedCollisionQuery,
   buildSeedOwnershipQuery,
   SEED_TABLES,
@@ -42,19 +44,70 @@ describe('MIP demo seed ownership safety', () => {
 
   it('runs the ownership probe before constructing or executing seed statements', () => {
     const source = fs.readFileSync(path.join(root, 'scripts/seed-demo.mjs'), 'utf8')
-    expect(source.indexOf('buildSeedOwnershipQuery(appId, seed)'))
-      .toBeLessThan(source.indexOf('const statements = ['))
-    expect(source.indexOf('buildSeedCollisionQuery(appId, seed)'))
-      .toBeLessThan(source.indexOf('const statements = ['))
+    expect(source.indexOf('const ownershipProbe ='))
+      .toBeLessThan(source.indexOf('for (const [index, sql] of statements.entries())'))
+    expect(source.indexOf('const collisionProbe ='))
+      .toBeLessThan(source.indexOf('for (const [index, sql] of statements.entries())'))
     expect(source).toContain('no seed writes were attempted')
   })
 
   it('makes every fixed-ID upsert fail when a duplicate belongs to another AppID', () => {
     const source = fs.readFileSync(path.join(root, 'scripts/seed-demo.mjs'), 'utf8')
     expect(source.match(/app_id = IF\(app_id = VALUES\(app_id\), app_id, NULL\)/g))
-      .toHaveLength(14)
+      .toHaveLength(Object.keys(SEED_TABLES).length)
     expect(source.match(/id = IF\(id = VALUES\(id\), id, NULL\)/g))
-      .toHaveLength(14)
+      .toHaveLength(Object.keys(SEED_TABLES).length)
+  })
+
+  it('keeps every top-level fixed-ID fixture group under the ownership preflight', () => {
+    const fixtureGroups = Object.entries(seed)
+      .filter(([, value]) => Array.isArray(value))
+      .map(([key]) => key)
+      .sort()
+    expect(Object.keys(SEED_TABLES).sort()).toEqual(fixtureGroups)
+  })
+
+  it('rejects SQL plans that leave the MIP table and AppID boundary', () => {
+    expect(assertSeedSqlScope([
+      'INSERT INTO mip_users (id, app_id) VALUES (\'id\', \'wx\')',
+      'SELECT id FROM mip_events WHERE app_id = \'wx\'',
+    ])).toMatchObject({ statementCount: 2 })
+    expect(() => assertSeedSqlScope(['SELECT id FROM legacy_users']))
+      .toThrow('references non-MIP table')
+    expect(() => assertSeedSqlScope(['DELETE FROM mip_users WHERE id = \'id\'']))
+      .toThrow('missing AppID scope')
+  })
+
+  it('rechecks the generated SQL boundary before normal-mode writes', () => {
+    const source = fs.readFileSync(path.join(root, 'scripts/seed-demo.mjs'), 'utf8')
+    const planIndex = source.lastIndexOf('const statements = buildSeedStatements()')
+    const scopeIndex = source.indexOf('assertSeedSqlScope(statements)', planIndex)
+    const writeIndex = source.indexOf('for (const [index, sql] of statements.entries())', planIndex)
+    expect(planIndex).toBeGreaterThan(-1)
+    expect(scopeIndex).toBeGreaterThan(planIndex)
+    expect(scopeIndex).toBeLessThan(writeIndex)
+  })
+
+  it('validates the full seed plan offline without database confirmation or writes', () => {
+    const output = execFileSync(process.execPath, [path.join(root, 'scripts/seed-demo.mjs'), '--validate-only'], {
+      cwd: root,
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        CLOUDBASE_ENV_ID: '',
+        MINI_PROGRAM_APP_ID: '',
+        MIP_DEPLOYMENT_STAGE: 'production',
+        MIP_PAYMENT_MODE: 'live',
+      },
+    })
+    const result = JSON.parse(output)
+    expect(result).toMatchObject({
+      valid: true,
+      seedVersion: seed.version,
+      fixtureGroups: Object.keys(SEED_TABLES).length,
+    })
+    expect(result.statementCount).toBeGreaterThan(Object.keys(SEED_TABLES).length)
+    expect(result.tableCount).toBeGreaterThan(Object.keys(SEED_TABLES).length)
   })
 
   it('registers every demo fixture in an explicit replace-before-production manifest', () => {
@@ -67,6 +120,11 @@ describe('MIP demo seed ownership safety', () => {
     expect(source).toContain('recordIds: Object.fromEntries')
     expect(source).toContain('recordsByTable: {')
     expect(source).toContain('seedSha256')
+    for (const table of Object.values(SEED_TABLES)) {
+      expect(source).toContain(`${table}:`)
+    }
+    expect(source).toContain('mip_message_template_revisions:')
+    expect(source).toContain('mip_game_ranking_entries:')
   })
 
   it('keeps demo users out of the platform-owner bootstrap path', () => {

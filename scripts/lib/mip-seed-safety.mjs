@@ -13,6 +13,25 @@ const SEED_TABLES = Object.freeze({
   opportunities: 'mip_opportunities',
   cooperationCards: 'mip_cooperation_cards',
   superCases: 'mip_super_cases',
+  announcements: 'mip_announcements',
+  knowledgeSources: 'mip_knowledge_sources',
+  knowledgeCategories: 'mip_knowledge_categories',
+  knowledgeContents: 'mip_knowledge_contents',
+  knowledgeProducts: 'mip_knowledge_products',
+  inboxMessages: 'mip_inbox_messages',
+  deliveryTasks: 'mip_delivery_tasks',
+  messageTemplates: 'mip_message_templates',
+  messageCampaigns: 'mip_message_campaigns',
+  tasks: 'mip_task_cards',
+  taskAssignments: 'mip_task_assignments',
+  growthEntries: 'mip_growth_entries',
+  gameSeasons: 'mip_game_seasons',
+  gameTeams: 'mip_game_teams',
+  gameTeamMemberships: 'mip_game_team_memberships',
+  gameWeeklyMatches: 'mip_game_weekly_matches',
+  gameRankingSnapshots: 'mip_game_ranking_snapshots',
+  blindBoxCatalogs: 'mip_blind_box_catalogs',
+  blindBoxCards: 'mip_blind_box_cards',
 })
 
 export function buildSeedOwnershipQuery(appId, seed) {
@@ -65,7 +84,64 @@ export function buildSeedCollisionQuery(appId, seed) {
   selects.push(alternateKeySelect(appId, 'mip_event_registrations', seed.eventRegistrations, item => `event_id = ${literal(item.eventId)} AND user_id = ${literal(item.userId)}`))
   selects.push(alternateKeySelect(appId, 'mip_cooperation_cards', seed.cooperationCards, item => `owner_user_id = ${literal(item.ownerUserId)}
       AND role_key = ${literal(item.roleKey)} AND status <> 'ARCHIVED'`))
+  selects.push(alternateKeySelect(appId, 'mip_announcements', seed.announcements, item => item.isPinned
+    ? `pin_scope_key = ${literal(item.scopeType === 'PLATFORM' ? 'PLATFORM' : `BRANCH:${item.branchId}`)}`
+    : 'FALSE'))
+  selects.push(alternateKeySelect(appId, 'mip_knowledge_sources', seed.knowledgeSources, item => `source_key = ${literal(item.key)}`))
+  selects.push(alternateKeySelect(appId, 'mip_knowledge_categories', seed.knowledgeCategories, item => `category_key = ${literal(item.key)}`))
+  selects.push(alternateKeySelect(appId, 'mip_knowledge_contents', seed.knowledgeContents, item => `source_id = ${literal(item.sourceId)}
+      AND source_external_id = ${literal(item.sourceExternalId)}`))
+  selects.push(alternateKeySelect(appId, 'mip_knowledge_products', seed.knowledgeProducts, item => `content_id = ${literal(item.contentId)} AND catalog_stage = 'TEST'`))
+  selects.push(alternateKeySelect(appId, 'mip_inbox_messages', seed.inboxMessages, item => `recipient_user_id = ${literal(item.recipientUserId)}
+      AND dedupe_key = ${literal(item.dedupeKey)}`))
+  selects.push(alternateKeySelect(appId, 'mip_delivery_tasks', seed.deliveryTasks, item => `inbox_message_id = ${literal(item.inboxMessageId)}
+      AND channel = ${literal(item.channel)}`))
+  selects.push(alternateKeySelect(appId, 'mip_task_assignments', seed.taskAssignments, item => `task_id = ${literal(item.taskId)}
+      AND user_id = ${literal(item.userId)}`))
+  selects.push(alternateKeySelect(appId, 'mip_growth_entries', seed.growthEntries, item => `user_id = ${literal(item.userId)}
+      AND source_event_type = ${literal(item.sourceEventType)}
+      AND source_event_id = ${literal(item.sourceEventId)} AND metric = ${literal(item.metric)}`))
+  selects.push(alternateKeySelect(appId, 'mip_game_seasons', seed.gameSeasons, item => `season_key = ${literal(item.key)}`))
+  selects.push(alternateKeySelect(appId, 'mip_game_teams', seed.gameTeams, item => `season_id = ${literal(item.seasonId)}
+      AND name = ${literal(item.name)}`))
+  selects.push(alternateKeySelect(appId, 'mip_game_team_memberships', seed.gameTeamMemberships, item => `season_id = ${literal(item.seasonId)}
+      AND user_id = ${literal(item.userId)} AND status = 'ACTIVE'`))
+  selects.push(alternateKeySelect(appId, 'mip_game_weekly_matches', seed.gameWeeklyMatches, item => `season_id = ${literal(item.seasonId)}
+      AND week_start = ${literal(item.weekStart)} AND team_a_id = ${literal(item.teamAId)}
+      AND team_b_id = ${literal(item.teamBId)}`))
+  selects.push(alternateKeySelect(appId, 'mip_blind_box_catalogs', seed.blindBoxCatalogs, item => `catalog_key = ${literal(item.key)}`))
+  selects.push(alternateKeySelect(appId, 'mip_blind_box_cards', seed.blindBoxCards, item => `catalog_id = ${literal(item.catalogId)}
+      AND card_key = ${literal(item.cardKey)}`))
   return `SELECT COUNT(*) AS conflicts FROM (\n${selects.join('\nUNION ALL\n')}\n) seed_same_app_collisions`
+}
+
+export function assertSeedSqlScope(statements) {
+  if (!Array.isArray(statements) || statements.length === 0) {
+    throw new Error('MIP demo seed SQL plan is empty')
+  }
+  const tables = new Set()
+  const tablePatterns = [
+    /\b(?:INSERT\s+INTO|DELETE\s+FROM|FROM|JOIN)\s+`?(\w+)`?/gi,
+    /^\s*UPDATE\s+`?(\w+)`?/gi,
+  ]
+  for (const statement of statements) {
+    if (typeof statement !== 'string' || !statement.trim()) {
+      throw new Error('MIP demo seed SQL statement is invalid')
+    }
+    for (const tablePattern of tablePatterns) {
+      for (const match of statement.matchAll(tablePattern)) {
+        const table = match[1]
+        if (!table.startsWith('mip_')) {
+          throw new Error(`MIP demo seed SQL references non-MIP table ${table}`)
+        }
+        tables.add(table)
+      }
+    }
+    if (/\b(?:INSERT|UPDATE|DELETE)\b/i.test(statement) && !/\bapp_id\b/i.test(statement)) {
+      throw new Error('MIP demo seed write is missing AppID scope')
+    }
+  }
+  return Object.freeze({ statementCount: statements.length, tables: Object.freeze([...tables].sort()) })
 }
 
 function seedIds(seed, group) {
