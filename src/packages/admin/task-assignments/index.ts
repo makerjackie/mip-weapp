@@ -41,7 +41,7 @@ Page({
 
   async onPullDownRefresh() {
     try {
-      await this.loadMembers()
+      await this.loadMembers(true)
     }
     finally {
       wx.stopPullDownRefresh()
@@ -51,24 +51,24 @@ Page({
   async loadPage() {
     this.setData({ state: 'loading', message: '' })
     try {
-      const task = await mipTasksModule.gateway.getAdminTask(this.data.taskId)
+      const task = await mipTasksModule.query.getAdminTask(this.data.taskId, true)
       if (task.assignmentMode !== 'SELECTED') {
         throw new Error('当前任务不是指定成员任务')
       }
       this.setData({ taskName: task.name, expectedVersion: task.version })
-      await this.loadMembers()
+      await this.loadMembers(true)
     }
     catch (error) {
       this.handleError(error, '任务派发加载失败')
     }
   },
 
-  async loadMembers() {
+  async loadMembers(force = false) {
     try {
-      const page = await mipTasksModule.gateway.listAssignableMembers({
+      const page = await mipTasksModule.query.listAssignableMembers({
         taskId: this.data.taskId,
         query: this.data.query,
-      }, undefined, 30)
+      }, undefined, 30, force)
       const members = page.items.map(item => memberView(item, this.data.selectedRefs))
       this.setData({
         state: members.length ? 'ready' : 'empty',
@@ -88,10 +88,10 @@ Page({
     }
     this.setData({ loadingMore: true, message: '' })
     try {
-      const page = await mipTasksModule.gateway.listAssignableMembers({
+      const page = await mipTasksModule.query.listAssignableMembers({
         taskId: this.data.taskId,
         query: this.data.query,
-      }, this.data.nextCursor, 30)
+      }, this.data.nextCursor, 30, true)
       this.setData({
         members: this.data.members.concat(page.items.map(item => memberView(item, this.data.selectedRefs))),
         nextCursor: page.nextCursor || '',
@@ -109,7 +109,7 @@ Page({
   searchMembers() {
     this.clearSelection()
     this.setData({ selectedOnly: false })
-    void this.loadMembers()
+    void this.loadMembers(true)
   },
   toggleSelectedOnly() { this.setData({ selectedOnly: !this.data.selectedOnly }) },
 
@@ -148,8 +148,16 @@ Page({
     this.setData({ processing: true, message: '' })
     try {
       const result = action === 'assign'
-        ? await mipTasksModule.gateway.assignMembers(this.data.taskId, this.data.expectedVersion, this.data.selectedRefs)
-        : await mipTasksModule.gateway.revokeMembers(this.data.taskId, this.data.expectedVersion, this.data.selectedRefs)
+        ? await mipTasksModule.mutation.assignMembers(
+            this.data.taskId,
+            this.data.expectedVersion,
+            this.data.selectedRefs,
+          )
+        : await mipTasksModule.mutation.revokeMembers(
+            this.data.taskId,
+            this.data.expectedVersion,
+            this.data.selectedRefs,
+          )
       wx.showToast({ title: `${label}完成 ${result.changedCount} 人`, icon: 'none' })
       this.clearSelection()
       await this.loadMembers()

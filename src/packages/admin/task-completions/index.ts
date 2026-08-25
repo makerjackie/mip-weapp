@@ -48,7 +48,7 @@ Page({
 
   async onPullDownRefresh() {
     try {
-      await this.loadCompletions()
+      await this.loadCompletions(true)
     }
     finally {
       wx.stopPullDownRefresh()
@@ -65,12 +65,17 @@ Page({
     }
   },
 
-  async loadCompletions() {
+  async loadCompletions(force = false) {
     if (!this.data.items.length) {
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const page = await mipTasksModule.gateway.listCompletions(this.filters(), undefined, 20)
+      const page = await mipTasksModule.query.listCompletions(
+        this.filters(),
+        undefined,
+        20,
+        force,
+      )
       const items = page.items.map(completionView)
       this.setData({
         state: items.length ? 'ready' : 'empty',
@@ -92,13 +97,13 @@ Page({
   updateQuery(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ query: event.detail.value }) },
   chooseResult(event: WechatMiniprogram.TouchEvent) {
     this.setData({ resultStatus: String(event.currentTarget.dataset.value || '') as TaskCompletionResult | '' })
-    void this.loadCompletions()
+    void this.loadCompletions(true)
   },
   chooseFrom(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ completedFrom: event.detail.value }) },
   chooseUntil(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ completedUntil: event.detail.value }) },
   clearFilters() {
     this.setData({ taskId: '', query: '', resultStatus: '', completedFrom: '', completedUntil: '' })
-    void this.loadCompletions()
+    void this.loadCompletions(true)
   },
 
   async loadMore() {
@@ -107,7 +112,12 @@ Page({
     }
     this.setData({ loadingMore: true, message: '' })
     try {
-      const page = await mipTasksModule.gateway.listCompletions(this.filters(), this.data.nextCursor, 20)
+      const page = await mipTasksModule.query.listCompletions(
+        this.filters(),
+        this.data.nextCursor,
+        20,
+        true,
+      )
       this.setData({
         items: this.data.items.concat(page.items.map(completionView)),
         nextCursor: page.nextCursor || '',
@@ -126,7 +136,9 @@ Page({
     }
     this.setData({ message: '' })
     try {
-      this.setData({ selected: completionView(await mipTasksModule.gateway.getCompletion(completionId)) })
+      this.setData({
+        selected: completionView(await mipTasksModule.query.getCompletion(completionId, true)),
+      })
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '任务流水详情加载失败' })

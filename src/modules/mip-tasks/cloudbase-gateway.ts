@@ -11,12 +11,12 @@ export function createMipTasksCloudbaseTransport(
   functionName = runtimeConfig.cloudbase.tasksFunctionName,
 ): MipTasksTransport {
   return {
-    async invoke(action, data = {}) {
+    async invoke(request) {
       try {
         const response = await retryTransport(async () => {
           const cloud = await requireCloudClient()
-          return cloud.callFunction({ name: functionName, data: { action, ...data } })
-        }, isRetryableTaskAction(action) ? COLD_START_READ_RETRY : { attempts: 1 })
+          return cloud.callFunction({ name: functionName, data: request })
+        }, isRetryableTaskAction(request.action) ? COLD_START_READ_RETRY : { attempts: 1 })
         const cloud = await requireCloudClient()
         return resolveCloudFileUrls(response.result, cloud)
       }

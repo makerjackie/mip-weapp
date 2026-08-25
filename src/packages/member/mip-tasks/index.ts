@@ -30,19 +30,19 @@ Page({
 
   async onPullDownRefresh() {
     try {
-      await this.loadTasks()
+      await this.loadTasks(true)
     }
     finally {
       wx.stopPullDownRefresh()
     }
   },
 
-  async loadTasks() {
+  async loadTasks(force = false) {
     if (!this.data.tasks.length) {
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const page = await mipTasksModule.gateway.listTasks(undefined, 20)
+      const page = await mipTasksModule.query.listTasks(undefined, 20, force)
       const tasks = page.items.map(taskView)
       this.setData({
         state: tasks.length ? 'ready' : 'empty',
@@ -65,7 +65,7 @@ Page({
     }
     this.setData({ loadingMore: true, message: '' })
     try {
-      const page = await mipTasksModule.gateway.listTasks(this.data.nextCursor, 20)
+      const page = await mipTasksModule.query.listTasks(this.data.nextCursor, 20)
       this.setData({
         tasks: this.data.tasks.concat(page.items.map(taskView)),
         nextCursor: page.nextCursor || '',

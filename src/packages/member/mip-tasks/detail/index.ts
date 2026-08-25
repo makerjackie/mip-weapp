@@ -30,7 +30,7 @@ Page({
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const task = await mipTasksModule.gateway.getTask(this.data.taskId)
+      const task = await mipTasksModule.query.getTask(this.data.taskId)
       this.setData({
         state: 'ready',
         task,
@@ -74,7 +74,7 @@ Page({
     }
     this.setData({ submitting: true, message: '' })
     try {
-      await mipTasksModule.gateway.completeTask(task.id, this.data.attachmentAssetId || undefined)
+      await mipTasksModule.mutation.completeTask(task.id, this.data.attachmentAssetId || undefined)
       wx.showToast({ title: '任务已完成', icon: 'success' })
       await this.loadTask()
     }

@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict')
 const test = require('node:test')
-const { createHandler } = require('../domain/handler')
+const { actions, createHandler } = require('../domain/handler')
 const {
   TASKS_CAPABILITY,
   adminCompletionDto,
@@ -650,6 +650,63 @@ test('handler returns stable client errors and never exposes internal messages',
   assert.equal(response.ok, false)
   assert.equal(response.error.code, 'SERVICE_UNAVAILABLE')
   assert.equal(response.error.message.includes('database'), false)
+})
+
+test('handler dispatches the nested v1 input and keeps legacy flat requests compatible', async () => {
+  const calls = []
+  const handler = createHandler({
+    resolveCaller: async () => ({ appId, userId }),
+    service: {
+      async getTask(_caller, input) {
+        calls.push(input)
+        return { id: input.taskId }
+      },
+    },
+  })
+  const v1 = await handler({
+    contractVersion: 1,
+    action: 'getTask',
+    input: { taskId },
+  })
+  const legacy = await handler({ action: 'getTask', taskId })
+  assert.deepEqual(v1, { ok: true, data: { id: taskId } })
+  assert.deepEqual(legacy, v1)
+  assert.deepEqual(calls, [{ taskId }, { taskId }])
+  assert.equal(Object.keys(actions).length, 17)
+})
+
+test('handler rejects flat v1 fields and nested action injection cannot replace the route', async () => {
+  const calls = []
+  const handler = createHandler({
+    resolveCaller: async () => ({ appId, userId }),
+    service: {
+      async listTasks(_caller, input) {
+        calls.push({ route: 'listTasks', input })
+        return { items: [] }
+      },
+      async transitionTask() {
+        calls.push({ route: 'admin.deleteTask' })
+        throw new Error('unexpected route')
+      },
+    },
+  })
+  const injected = await handler({
+    contractVersion: 1,
+    action: 'listTasks',
+    input: { action: 'admin.deleteTask', cursor: 'cursor-1' },
+  })
+  assert.equal(injected.ok, true)
+  assert.deepEqual(calls, [{ route: 'listTasks', input: { cursor: 'cursor-1' } }])
+
+  const flat = await handler({
+    contractVersion: 1,
+    action: 'listTasks',
+    input: {},
+    taskId,
+  })
+  assert.equal(flat.ok, false)
+  assert.equal(flat.error.code, 'VALIDATION_FAILED')
+  assert.equal(calls.length, 1)
 })
 
 test('workbook neutralizes formulas and builds an xlsx archive', () => {

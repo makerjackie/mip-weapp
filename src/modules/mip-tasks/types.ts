@@ -138,6 +138,75 @@ export interface TaskAdminSession {
   roleKey: 'PLATFORM_OWNER' | 'PLATFORM_OPERATIONS'
 }
 
+export interface AdminTaskSaveInput {
+  taskId?: string
+  expectedVersion?: number
+  task: AdminTaskDraft
+}
+
+export interface TaskVersionInput {
+  taskId: string
+  expectedVersion: number
+}
+
+export interface TaskAssignmentMutationInput extends TaskVersionInput {
+  memberRefs: string[]
+}
+
+export const MIP_TASKS_CONTRACT_VERSION = 1 as const
+
+export interface MipTasksActionInputMap {
+  'listTasks': { cursor?: string, limit?: number }
+  'getTask': { taskId: string }
+  'completeTask': { taskId: string, attachmentAssetId?: string }
+  'admin.getSession': Record<string, never>
+  'admin.getTask': { taskId: string }
+  'admin.listTasks': { filters?: AdminTaskFilters, cursor?: string, limit?: number }
+  'admin.listEligibleLevels': Record<string, never>
+  'admin.listAssignableMembers': {
+    filters: { taskId: string, query?: string }
+    cursor?: string
+    limit?: number
+  }
+  'admin.assignMembers': TaskAssignmentMutationInput
+  'admin.revokeMembers': TaskAssignmentMutationInput
+  'admin.saveTask': AdminTaskSaveInput
+  'admin.publishTask': TaskVersionInput
+  'admin.unpublishTask': TaskVersionInput
+  'admin.deleteTask': TaskVersionInput
+  'admin.listCompletions': { filters?: AdminCompletionFilters, cursor?: string, limit?: number }
+  'admin.getCompletion': { completionId: string }
+  'admin.exportCompletions': { filters?: AdminCompletionFilters }
+}
+
+export interface MipTasksActionResultMap {
+  'listTasks': TaskPage<UserTaskCard>
+  'getTask': UserTaskCard
+  'completeTask': TaskCompletion
+  'admin.getSession': TaskAdminSession
+  'admin.getTask': AdminTaskCard
+  'admin.listTasks': TaskPage<AdminTaskCard>
+  'admin.listEligibleLevels': TaskEligibleLevel[]
+  'admin.listAssignableMembers': TaskPage<AssignableTaskMember>
+  'admin.assignMembers': TaskAssignmentResult
+  'admin.revokeMembers': TaskAssignmentResult
+  'admin.saveTask': AdminTaskCard
+  'admin.publishTask': AdminTaskCard
+  'admin.unpublishTask': AdminTaskCard
+  'admin.deleteTask': AdminTaskCard
+  'admin.listCompletions': TaskPage<AdminTaskCompletion>
+  'admin.getCompletion': AdminTaskCompletion
+  'admin.exportCompletions': TaskExportResult
+}
+
+export type MipTasksAction = keyof MipTasksActionInputMap
+
+export interface MipTasksRequest<A extends MipTasksAction = MipTasksAction> {
+  contractVersion: typeof MIP_TASKS_CONTRACT_VERSION
+  action: A
+  input: MipTasksActionInputMap[A]
+}
+
 export interface MipTasksGateway {
   listTasks: (cursor?: string, limit?: number) => Promise<TaskPage<UserTaskCard>>
   getTask: (taskId: string) => Promise<UserTaskCard>
@@ -146,7 +215,7 @@ export interface MipTasksGateway {
   getAdminTask: (taskId: string) => Promise<AdminTaskCard>
   listAdminTasks: (filters?: AdminTaskFilters, cursor?: string, limit?: number) => Promise<TaskPage<AdminTaskCard>>
   listEligibleLevels: () => Promise<TaskEligibleLevel[]>
-  saveTask: (input: { taskId?: string, expectedVersion?: number, task: AdminTaskDraft }) => Promise<AdminTaskCard>
+  saveTask: (input: AdminTaskSaveInput) => Promise<AdminTaskCard>
   publishTask: (taskId: string, expectedVersion: number) => Promise<AdminTaskCard>
   unpublishTask: (taskId: string, expectedVersion: number) => Promise<AdminTaskCard>
   deleteTask: (taskId: string, expectedVersion: number) => Promise<AdminTaskCard>

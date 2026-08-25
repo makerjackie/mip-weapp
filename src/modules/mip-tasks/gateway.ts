@@ -1,19 +1,11 @@
 import type {
-  AdminCompletionFilters,
-  AdminTaskCard,
-  AdminTaskCompletion,
-  AdminTaskDraft,
-  AssignableTaskMember,
+  MipTasksAction,
+  MipTasksActionInputMap,
+  MipTasksActionResultMap,
   MipTasksGateway,
-  TaskAdminSession,
-  TaskAssignmentResult,
-  TaskCompletion,
-  TaskEligibleLevel,
-  TaskExportResult,
-  TaskPage,
-  UserTaskCard,
+  MipTasksRequest,
 } from './types'
-import { MipTasksError } from './types'
+import { MIP_TASKS_CONTRACT_VERSION, MipTasksError } from './types'
 
 interface TasksEnvelope<T> {
   ok: boolean
@@ -22,7 +14,7 @@ interface TasksEnvelope<T> {
 }
 
 export interface MipTasksTransport {
-  invoke: (action: string, data?: Record<string, unknown>) => Promise<unknown>
+  invoke: (request: MipTasksRequest) => Promise<unknown>
 }
 
 function unwrap<T>(value: unknown): T {
@@ -41,26 +33,49 @@ function unwrap<T>(value: unknown): T {
 }
 
 export function createMipTasksGateway(transport: MipTasksTransport): MipTasksGateway {
-  async function call<T>(action: string, data: Record<string, unknown> = {}) {
-    return unwrap<T>(await transport.invoke(action, data))
+  async function call<A extends MipTasksAction>(
+    action: A,
+    input: MipTasksActionInputMap[A],
+  ): Promise<MipTasksActionResultMap[A]> {
+    return unwrap<MipTasksActionResultMap[A]>(await transport.invoke({
+      contractVersion: MIP_TASKS_CONTRACT_VERSION,
+      action,
+      input,
+    }))
   }
   return {
-    listTasks: (cursor, limit) => call<TaskPage<UserTaskCard>>('listTasks', { cursor, limit }),
-    getTask: taskId => call<UserTaskCard>('getTask', { taskId }),
-    completeTask: (taskId, attachmentAssetId) => call<TaskCompletion>('completeTask', { taskId, attachmentAssetId }),
-    getAdminSession: () => call<TaskAdminSession>('admin.getSession'),
-    getAdminTask: taskId => call<AdminTaskCard>('admin.getTask', { taskId }),
-    listAdminTasks: (filters, cursor, limit) => call<TaskPage<AdminTaskCard>>('admin.listTasks', { filters, cursor, limit }),
-    listEligibleLevels: () => call<TaskEligibleLevel[]>('admin.listEligibleLevels'),
-    saveTask: (input: { taskId?: string, expectedVersion?: number, task: AdminTaskDraft }) => call<AdminTaskCard>('admin.saveTask', input),
-    publishTask: (taskId, expectedVersion) => call<AdminTaskCard>('admin.publishTask', { taskId, expectedVersion }),
-    unpublishTask: (taskId, expectedVersion) => call<AdminTaskCard>('admin.unpublishTask', { taskId, expectedVersion }),
-    deleteTask: (taskId, expectedVersion) => call<AdminTaskCard>('admin.deleteTask', { taskId, expectedVersion }),
-    listAssignableMembers: (filters, cursor, limit) => call<TaskPage<AssignableTaskMember>>('admin.listAssignableMembers', { filters, cursor, limit }),
-    assignMembers: (taskId, expectedVersion, memberRefs) => call<TaskAssignmentResult>('admin.assignMembers', { taskId, expectedVersion, memberRefs }),
-    revokeMembers: (taskId, expectedVersion, memberRefs) => call<TaskAssignmentResult>('admin.revokeMembers', { taskId, expectedVersion, memberRefs }),
-    listCompletions: (filters?: AdminCompletionFilters, cursor?: string, limit?: number) => call<TaskPage<AdminTaskCompletion>>('admin.listCompletions', { filters, cursor, limit }),
-    getCompletion: completionId => call<AdminTaskCompletion>('admin.getCompletion', { completionId }),
-    exportCompletions: (filters?: AdminCompletionFilters) => call<TaskExportResult>('admin.exportCompletions', { filters }),
+    listTasks: (cursor, limit) => call('listTasks', { cursor, limit }),
+    getTask: taskId => call('getTask', { taskId }),
+    completeTask: (taskId, attachmentAssetId) => call('completeTask', { taskId, attachmentAssetId }),
+    getAdminSession: () => call('admin.getSession', {}),
+    getAdminTask: taskId => call('admin.getTask', { taskId }),
+    listAdminTasks: (filters, cursor, limit) => call('admin.listTasks', { filters, cursor, limit }),
+    listEligibleLevels: () => call('admin.listEligibleLevels', {}),
+    saveTask: input => call('admin.saveTask', input),
+    publishTask: (taskId, expectedVersion) => call('admin.publishTask', { taskId, expectedVersion }),
+    unpublishTask: (taskId, expectedVersion) => call('admin.unpublishTask', { taskId, expectedVersion }),
+    deleteTask: (taskId, expectedVersion) => call('admin.deleteTask', { taskId, expectedVersion }),
+    listAssignableMembers: (filters, cursor, limit) => call('admin.listAssignableMembers', {
+      filters,
+      cursor,
+      limit,
+    }),
+    assignMembers: (taskId, expectedVersion, memberRefs) => call('admin.assignMembers', {
+      taskId,
+      expectedVersion,
+      memberRefs,
+    }),
+    revokeMembers: (taskId, expectedVersion, memberRefs) => call('admin.revokeMembers', {
+      taskId,
+      expectedVersion,
+      memberRefs,
+    }),
+    listCompletions: (filters, cursor, limit) => call('admin.listCompletions', {
+      filters,
+      cursor,
+      limit,
+    }),
+    getCompletion: completionId => call('admin.getCompletion', { completionId }),
+    exportCompletions: filters => call('admin.exportCompletions', { filters }),
   }
 }

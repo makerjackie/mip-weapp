@@ -96,14 +96,14 @@ Page({
   },
 
   onShow() {
-    void this.loadEligibleLevels()
-    void this.loadTasks()
+    void this.loadEligibleLevels(true)
+    void this.loadTasks(true)
   },
 
-  async loadEligibleLevels() {
+  async loadEligibleLevels(force = false) {
     this.setData({ eligibleLevelsState: 'loading', eligibleLevelsMessage: '' })
     try {
-      const levels = await mipTasksModule.gateway.listEligibleLevels()
+      const levels = await mipTasksModule.query.listEligibleLevels(force)
       const activeLevelIds = new Set(levels.map(level => level.id))
       const unavailableLevels = this.data.eligibleLevelOptions.filter(level => (
         level.selected && level.status !== 'ACTIVE' && !activeLevelIds.has(level.id)
@@ -126,22 +126,22 @@ Page({
 
   async onPullDownRefresh() {
     try {
-      await this.loadTasks()
+      await this.loadTasks(true)
     }
     finally {
       wx.stopPullDownRefresh()
     }
   },
 
-  async loadTasks() {
+  async loadTasks(force = false) {
     if (!this.data.tasks.length) {
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const page = await mipTasksModule.gateway.listAdminTasks({
+      const page = await mipTasksModule.query.listAdminTasks({
         status: this.data.status,
         query: this.data.query,
-      }, undefined, 20)
+      }, undefined, 20, force)
       const tasks = page.items.map(taskView)
       this.setData({
         state: tasks.length ? 'ready' : 'empty',
@@ -165,10 +165,10 @@ Page({
     }
     this.setData({ loadingMore: true, message: '' })
     try {
-      const page = await mipTasksModule.gateway.listAdminTasks({
+      const page = await mipTasksModule.query.listAdminTasks({
         status: this.data.status,
         query: this.data.query,
-      }, this.data.nextCursor, 20)
+      }, this.data.nextCursor, 20, true)
       this.setData({
         tasks: this.data.tasks.concat(page.items.map(taskView)),
         nextCursor: page.nextCursor || '',
@@ -186,7 +186,7 @@ Page({
 
   chooseStatus(event: WechatMiniprogram.TouchEvent) {
     this.setData({ status: String(event.currentTarget.dataset.status || '') as TaskCardStatus | '' })
-    void this.loadTasks()
+    void this.loadTasks(true)
   },
 
   openCreate() {
@@ -216,7 +216,7 @@ Page({
     }
     this.setData({ editorOpen: true, processing: true, message: '' })
     try {
-      const detail = await mipTasksModule.gateway.getAdminTask(task.id)
+      const detail = await mipTasksModule.query.getAdminTask(task.id, true)
       const endsAt = detail.endsAt ? new Date(detail.endsAt) : null
       const catalogIds = new Set(this.data.eligibleLevelOptions.map(level => level.id))
       const unavailableLevels = detail.eligibleLevels
@@ -316,7 +316,7 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      await mipTasksModule.gateway.saveTask({
+      await mipTasksModule.mutation.saveTask({
         taskId: this.data.editingId || undefined,
         expectedVersion: this.data.editingId ? this.data.expectedVersion : undefined,
         task: {
@@ -335,7 +335,7 @@ Page({
       await this.loadTasks()
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '任务保存失败' })
+      this.handleActionError(error, '任务保存失败')
     }
     finally { this.setData({ processing: false }) }
   },
@@ -363,19 +363,19 @@ Page({
     this.setData({ processing: true, message: '' })
     try {
       if (action === 'publish') {
-        await mipTasksModule.gateway.publishTask(task.id, task.version)
+        await mipTasksModule.mutation.publishTask(task.id, task.version)
       }
       if (action === 'unpublish') {
-        await mipTasksModule.gateway.unpublishTask(task.id, task.version)
+        await mipTasksModule.mutation.unpublishTask(task.id, task.version)
       }
       if (action === 'delete') {
-        await mipTasksModule.gateway.deleteTask(task.id, task.version)
+        await mipTasksModule.mutation.deleteTask(task.id, task.version)
       }
       wx.showToast({ title: `任务已${labels[key]}`, icon: 'success' })
       await this.loadTasks()
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '任务状态更新失败' })
+      this.handleActionError(error, '任务状态更新失败')
     }
     finally { this.setData({ processing: false }) }
   },
@@ -391,5 +391,18 @@ Page({
     if (taskId && version > 0) {
       void wx.navigateTo({ url: `/packages/admin/task-assignments/index?taskId=${taskId}&version=${version}` })
     }
+  },
+
+  handleActionError(error: unknown, fallback: string) {
+    const code = (error as { code?: string })?.code
+    if (code === 'FORBIDDEN') {
+      this.setData({ state: 'forbidden', editorOpen: false, message: error instanceof Error ? error.message : fallback })
+      return
+    }
+    if (code === 'CONFLICT') {
+      this.setData({ state: 'conflict', message: error instanceof Error ? error.message : fallback })
+      return
+    }
+    this.setData({ message: error instanceof Error ? error.message : fallback })
   },
 })

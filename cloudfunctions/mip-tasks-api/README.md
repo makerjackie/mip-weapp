@@ -9,3 +9,4 @@
 - 管理端更新任务时，省略 `eligibleLevelIds` 表示保留当前等级规则；只有显式提交 `[]` 才解除等级限制。
 - 附件只接受当前用户拥有的 `READY` / `TASK_ATTACHMENT` 图片素材。
 - 模板只接受平台运营经 `mip-media-api` 上传的 `READY` / `TASK_TEMPLATE` 图片素材。
+- 微信小程序和后续 Web 管理端统一使用 `{ contractVersion: 1, action, input }` 请求；服务端暂时兼容旧扁平请求，但只以顶层 `action` 路由，业务输入不能覆盖动作。
