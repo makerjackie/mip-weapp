@@ -3,6 +3,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
+import { buildDevtoolsPrivateConfig } from './lib/devtools-private-config.mjs'
 import { getProject, readEnv, readJson } from './lib/project.mjs'
 
 const example = getProject()
@@ -27,23 +28,12 @@ if (env.CLOUDBASE_RESOURCE_APP_ID && !env.CLOUDBASE_ENV_ID) {
 
 const privateConfigPath = path.join(example.root, 'project.private.config.json')
 const existing = fs.existsSync(privateConfigPath) ? readJson(privateConfigPath) : {}
-const routes = example.routes.map(route => ({
-  name: route.name,
-  pathName: route.pathName,
-  query: route.query || '',
-  scene: null,
-}))
-const config = {
-  ...existing,
+const config = buildDevtoolsPrivateConfig({
   appid,
-  projectname: env.MINI_PROGRAM_NAME || example.name,
-  setting: { ...existing.setting, compileHotReLoad: true },
-  condition: {
-    ...existing.condition,
-    miniprogram: { ...existing.condition?.miniprogram, list: routes },
-  },
-  libVersion: '3.15.2',
-}
+  existing,
+  projectName: env.MINI_PROGRAM_NAME || example.name,
+  routes: example.routes,
+})
 
 fs.writeFileSync(privateConfigPath, `${JSON.stringify(config, null, 2)}\n`)
 console.log('[setup:local] DevTools private config updated; no identity value was printed')

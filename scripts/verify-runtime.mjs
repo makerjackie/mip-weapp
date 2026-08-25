@@ -19,6 +19,13 @@ import {
 import { warmWechatDevtoolsProject } from './lib/devtools-project-warmup.mjs'
 import { installMiniprogramAutomatorCompatibility } from './lib/miniprogram-automator-compat.mjs'
 import {
+  assertViewportEvidence,
+  createObservedViewportEvidence,
+  createPendingViewportEvidence,
+  prepareRuntimeEvidenceDirectory,
+  resolveRuntimeEvidenceOptions,
+} from './lib/runtime-evidence.mjs'
+import {
   createRuntimeDiagnostics,
   isRecoverableRuntimeConnectionError,
   readRuntimeWarningAllowlist,
@@ -30,10 +37,10 @@ import { prepareRuntimeDevtools } from './lib/runtime-startup.mjs'
 import { comparePngBuffers } from './lib/visual-diff.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
-const outputDir = path.join(root, '.tmp', 'runtime')
+let outputDir = path.join(root, '.tmp', 'runtime')
 const baselineDir = path.join(root, '.screenshots', 'baseline')
-const reportPath = path.join(outputDir, 'report.json')
-const consolePath = path.join(outputDir, 'console.json')
+let reportPath = path.join(outputDir, 'report.json')
+let consolePath = path.join(outputDir, 'console.json')
 const warningAllowlistPath = path.join(root, 'config', 'runtime-warning-allowlist.json')
 const runtimePagesPath = path.join(root, 'config', 'runtime-pages.json')
 const sessionId = 'mip-weapp-runtime'
@@ -1104,19 +1111,13 @@ async function verifyNavigation(miniProgram, runtimePages, report, sensitivePatt
   }
 }
 
-function resetRuntimeArtifacts() {
-  fs.mkdirSync(outputDir, { recursive: true })
-  fs.mkdirSync(baselineDir, { recursive: true })
-  for (const entry of fs.readdirSync(outputDir, { withFileTypes: true })) {
-    if (entry.isFile()) {
-      fs.rmSync(path.join(outputDir, entry.name))
-    }
-  }
-}
-
 export async function main(runArgs = process.argv.slice(2)) {
   const runtimePages = JSON.parse(fs.readFileSync(runtimePagesPath, 'utf8'))
   validateRuntimeContract(runtimePages)
+  const evidenceOptions = resolveRuntimeEvidenceOptions(root, runArgs)
+  outputDir = evidenceOptions.outputDir
+  reportPath = path.join(outputDir, 'report.json')
+  consolePath = path.join(outputDir, 'console.json')
   if (runArgs.includes('--map-only') || runArgs.includes('--offline-only') || runArgs.includes('--contract-only')) {
     console.log(`MIP runtime contract passed (${runtimePages.routeCount} routes)`)
     return { status: 'contract-passed', routeCount: runtimePages.routeCount }
@@ -1132,7 +1133,8 @@ export async function main(runArgs = process.argv.slice(2)) {
   const sensitivePatterns = Array.isArray(runtimePages.sensitivePatterns) ? runtimePages.sensitivePatterns : []
   const runtimeRoutes = runtimePages.routes.map(route => route.path)
 
-  resetRuntimeArtifacts()
+  prepareRuntimeEvidenceDirectory(root, evidenceOptions)
+  fs.mkdirSync(baselineDir, { recursive: true })
   if (requireBaseline && !updateBaseline) {
     for (const route of runtimePages.routes) {
       assert(fs.existsSync(path.join(baselineDir, `${outputName(route.path)}.png`)), `Missing baseline for ${route.path}`)
@@ -1151,6 +1153,13 @@ export async function main(runArgs = process.argv.slice(2)) {
     representativeStates: [],
     interactions: [],
     deviceRequired: buildDeviceRequiredReport(runtimePages),
+    evidence: {
+      output: {
+        mode: evidenceOptions.isolated ? 'isolated' : 'default',
+        path: evidenceOptions.outputPath,
+      },
+      viewport: createPendingViewportEvidence(evidenceOptions.viewportProfile),
+    },
     routeContract: {
       source: 'config/runtime-pages.json',
       routeCount: runtimePages.routeCount,
@@ -1188,6 +1197,11 @@ export async function main(runArgs = process.argv.slice(2)) {
       }),
       baseRuntimeOptions.timeout * 2 + 15000,
     )
+    report.evidence.viewport = createObservedViewportEvidence(
+      await withProtocolTimeout('viewport measurement', () => miniProgram.systemInfo(), 15000),
+      evidenceOptions.viewportProfile,
+    )
+    assertViewportEvidence(report.evidence.viewport)
     miniProgram.on('console', payload => diagnostics.captureConsole(payload))
     miniProgram.on('exception', payload => diagnostics.captureException(payload))
 
