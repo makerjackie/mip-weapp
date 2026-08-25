@@ -52,6 +52,7 @@ const root = path.resolve(import.meta.dirname, '..')
 const contractPath = path.join(root, 'config', 'runtime-free-event-mutation.json')
 const warningAllowlistPath = path.join(root, 'config', 'runtime-warning-allowlist.json')
 const sessionId = 'mip-weapp-free-event-mutation'
+const runtimeAcceptanceStorageKey = 'mip:internal:free-event-runtime-acceptance:v1'
 const automatedTimeoutMs = 20_000
 const externalWaitStates = new Set(['access', 'blocked', 'disabled', 'forbidden'])
 const failedStates = new Set(['conflict', 'error', 'failed'])
@@ -142,42 +143,63 @@ function readDeploymentAttestation(env, options) {
 }
 
 async function readRuntimeAttestation(miniProgram, env, buildSha) {
-  const account = await miniProgram.callWxMethod('getAccountInfoSync')
-  const app = await miniProgram.evaluate(() => {
-    const value = globalThis.__mipRuntimeAcceptance
-    return value
-      ? {
-          buildSha: value.buildSha,
-          catalogStage: value.catalogStage,
-          cloudbaseEnvId: value.cloudbaseEnvId,
-          cloudbaseMode: value.cloudbaseMode,
-          paymentMode: value.paymentMode,
-        }
-      : null
-  })
-  const health = await miniProgram.evaluate(async (functionName) => {
-    const response = await wx.cloud.callFunction({
-      data: { action: 'health' },
-      name: functionName,
+  try {
+    const account = await miniProgram.callWxMethod('getAccountInfoSync')
+    const app = await readRuntimeAcceptanceStorage(miniProgram)
+    const health = await miniProgram.evaluate(async (functionName) => {
+      const response = await wx.cloud.callFunction({
+        data: { action: 'health' },
+        name: functionName,
+      })
+      return response.result
+    }, resolveMipFunctionNames(env).events)
+    return validateRuntimeAttestation({ account, app, health }, {
+      appId: env.MINI_PROGRAM_APP_ID,
+      buildSha,
+      envId: env.CLOUDBASE_ENV_ID,
+      paymentMode: env.MIP_PAYMENT_MODE,
     })
-    return response.result
-  }, resolveMipFunctionNames(env).events)
-  return validateRuntimeAttestation({ account, app, health }, {
-    appId: env.MINI_PROGRAM_APP_ID,
-    buildSha,
-    envId: env.CLOUDBASE_ENV_ID,
-    paymentMode: env.MIP_PAYMENT_MODE,
-  })
+  }
+  finally {
+    await clearRuntimeAcceptanceStorage(miniProgram)
+  }
+}
+
+async function readRuntimeAcceptanceStorage(miniProgram) {
+  const value = await miniProgram.callWxMethod('getStorageSync', runtimeAcceptanceStorageKey)
+  return value && typeof value === 'object'
+    ? {
+        buildSha: value.buildSha,
+        catalogStage: value.catalogStage,
+        cloudbaseEnvId: value.cloudbaseEnvId,
+        cloudbaseMode: value.cloudbaseMode,
+        paymentMode: value.paymentMode,
+      }
+    : null
+}
+
+async function clearRuntimeAcceptanceStorage(miniProgram) {
+  try {
+    await miniProgram.callWxMethod('removeStorageSync', runtimeAcceptanceStorageKey)
+    const remaining = await miniProgram.callWxMethod('getStorageSync', runtimeAcceptanceStorageKey)
+    if (remaining !== undefined && remaining !== null && remaining !== '') {
+      throw new RuntimeStateError('The mutation runtime acceptance storage handshake was not cleared')
+    }
+  }
+  catch (error) {
+    if (error instanceof RuntimeStateError) {
+      throw error
+    }
+    throw new RuntimeStateError('The mutation runtime acceptance storage handshake could not be cleared')
+  }
 }
 
 async function waitForOperatorBuild(miniProgram, buildSha, timeoutMs) {
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
     try {
-      const runningBuildSha = await miniProgram.evaluate(() => (
-        globalThis.__mipRuntimeAcceptance?.buildSha || null
-      ))
-      if (runningBuildSha === buildSha) {
+      const runningAcceptance = await readRuntimeAcceptanceStorage(miniProgram)
+      if (runningAcceptance?.buildSha === buildSha) {
         return
       }
     }
@@ -1047,6 +1069,15 @@ export async function main(runArgs = process.argv.slice(2)) {
     report.error = safeError(error, explicitSecrets)
   }
   finally {
+    if (miniProgram) {
+      try {
+        await clearRuntimeAcceptanceStorage(miniProgram)
+      }
+      catch (error) {
+        report.status = 'failed'
+        report.error = safeError(error, explicitSecrets)
+      }
+    }
     const cleanupStatus = await Promise.race([
       miniProgram
         ? closeSharedMiniProgram(

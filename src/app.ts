@@ -11,20 +11,13 @@ const popupForeground = createPopupForegroundCoordinator(
   mipPopupMessagePresenter,
 )
 
+const freeEventRuntimeAcceptanceStorageKey = 'mip:internal:free-event-runtime-acceptance:v1'
 const runtimeAcceptance = Object.freeze({
-  buildSha: runtimeConfig.buildSha,
+  buildSha: __BUILD_SHA__,
   catalogStage: runtimeConfig.catalogStage,
   cloudbaseEnvId: runtimeConfig.cloudbase.envId,
   cloudbaseMode: runtimeConfig.cloudbase.mode,
   paymentMode: runtimeConfig.paymentMode,
-})
-
-// DevTools can retain the service global across reloads, so each fresh bundle must replace the previous frozen value.
-Object.defineProperty(globalThis, '__mipRuntimeAcceptance', {
-  configurable: true,
-  enumerable: false,
-  value: runtimeAcceptance,
-  writable: false,
 })
 
 App({
@@ -33,6 +26,13 @@ App({
   },
 
   onLaunch(options) {
+    // A handshake is valid only when app.js and its loaded common.js come from the same mutation build.
+    if (
+      __BUILD_SHA__.startsWith('free-event-runtime-')
+      && runtimeConfig.buildSha === __BUILD_SHA__
+    ) {
+      wx.setStorageSync(freeEventRuntimeAcceptanceStorageKey, { ...runtimeAcceptance })
+    }
     prepareApp()
     mipCheckInResumeStore.prune()
     mipGlobalAccessGuard.ensureLaunch(options)

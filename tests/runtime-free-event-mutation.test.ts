@@ -297,33 +297,42 @@ describe('free event runtime evidence summaries', () => {
     expect(source).not.toContain('openWechatIdeProjectByHttp')
   })
 
-  it('reads the running build from a replaceable read-only global sentinel', () => {
+  it('uses an isolated storage handshake for the exact loaded mutation build', () => {
     const appSource = fs.readFileSync(path.join(root, 'src/app.ts'), 'utf8')
     const runnerSource = fs.readFileSync(path.join(root, 'scripts/verify-free-event-runtime.mjs'), 'utf8')
-    const sentinelValueSource = appSource.slice(
+    const acceptanceValueSource = appSource.slice(
       appSource.indexOf('const runtimeAcceptance'),
-      appSource.indexOf('Object.defineProperty'),
+      appSource.indexOf('App({'),
     )
+    const appStorageKey = appSource.match(/const freeEventRuntimeAcceptanceStorageKey = '([^']+)'/)?.[1]
+    const runnerStorageKey = runnerSource.match(/const runtimeAcceptanceStorageKey = '([^']+)'/)?.[1]
 
     expect(appSource).toContain('const runtimeAcceptance = Object.freeze({')
-    expect([...sentinelValueSource.matchAll(/^\s{2}(\w+):/gm)].map(match => match[1])).toEqual([
+    expect([...acceptanceValueSource.matchAll(/^\s{2}(\w+):/gm)].map(match => match[1])).toEqual([
       'buildSha',
       'catalogStage',
       'cloudbaseEnvId',
       'cloudbaseMode',
       'paymentMode',
     ])
-    expect(appSource).toContain('Object.defineProperty(globalThis, \'__mipRuntimeAcceptance\', {')
-    expect(appSource).toContain('configurable: true')
-    expect(appSource).toContain('enumerable: false')
-    expect(appSource).toContain('writable: false')
+    expect(appSource).toContain('buildSha: __BUILD_SHA__')
     expect(appSource).toContain('runtimeAcceptance: { ...runtimeAcceptance }')
+    expect(appSource).toContain('__BUILD_SHA__.startsWith(\'free-event-runtime-\')')
+    expect(appSource).toContain('runtimeConfig.buildSha === __BUILD_SHA__')
+    expect(appSource).toContain('wx.setStorageSync(freeEventRuntimeAcceptanceStorageKey, { ...runtimeAcceptance })')
+    expect(appSource).not.toContain('removeStorageSync')
+    expect(appStorageKey).toBe('mip:internal:free-event-runtime-acceptance:v1')
+    expect(runnerStorageKey).toBe(appStorageKey)
+    expect(runnerSource).toContain('miniProgram.callWxMethod(\'getStorageSync\', runtimeAcceptanceStorageKey)')
+    expect(runnerSource).toContain('miniProgram.callWxMethod(\'removeStorageSync\', runtimeAcceptanceStorageKey)')
+    expect(runnerSource).toContain('finally {\n    await clearRuntimeAcceptanceStorage(miniProgram)')
+    expect(runnerSource.match(/await clearRuntimeAcceptanceStorage\(miniProgram\)/g)).toHaveLength(2)
     expect(appSource).not.toContain('getRuntimeAcceptance')
-    expect(runnerSource.match(/globalThis\.__mipRuntimeAcceptance/g)).toHaveLength(2)
     expect(runnerSource).not.toContain('getRuntimeAcceptance')
     expect(runnerSource).not.toContain('getApp(')
     expect(runnerSource).not.toContain('globalData')
     expect(runnerSource).not.toContain('require(\'common.js\')')
+    expect(runnerSource).not.toContain('__mipRuntimeAcceptance')
   })
 
   it('records exact authoritative facts without profile, phone, body, or participant refs', () => {
