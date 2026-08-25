@@ -78,7 +78,7 @@ function createHandler(options) {
     try {
       const { action, input } = normalizeRequest(event)
       if (action === 'health') return success(await options.health())
-      const dispatch = actions[action]
+      const dispatch = Object.hasOwn(actions, action) ? actions[action] : null
       if (!dispatch) throw new Error('NOT_FOUND')
       const caller = await options.resolveCaller()
       if (action.startsWith('admin.')) await options.assertAdminReady(caller)

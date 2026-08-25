@@ -146,6 +146,24 @@ test('rejects extra v1 fields and strips nested routing metadata before score va
   assert.deepEqual(calls, [{ seasonId }])
 })
 
+test('rejects prototype action names before resolving game identity', async () => {
+  let resolved = false
+  const handler = createHandler({
+    health: async () => ({}),
+    resolveCaller: async () => { resolved = true; return { appId: 'app', userId: 'user' } },
+    assertPlayerReady: async () => { resolved = true },
+    assertAdminReady: async () => { resolved = true },
+    service: {},
+  })
+
+  for (const action of ['toString', 'constructor', '__proto__']) {
+    const result = await handler({ contractVersion: 1, action, input: {} })
+    assert.equal(result.ok, false)
+    assert.equal(result.error.code, 'NOT_FOUND')
+  }
+  assert.equal(resolved, false)
+})
+
 test('gates admin actions before dispatch and leaves member reads authenticated', async () => {
   const calls = []
   const handler = createHandler({

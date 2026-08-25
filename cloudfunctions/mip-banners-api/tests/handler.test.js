@@ -137,6 +137,24 @@ test('v1 rejects extra top-level business fields before resolving public or admi
   assert.equal(resolved, false)
 })
 
+test('prototype action names are not treated as public or admin operations', async () => {
+  let resolved = false
+  const handler = createHandler({
+    health: async () => ({}),
+    resolveAppId: () => { resolved = true; return 'wx-app' },
+    resolveCaller: async () => { resolved = true; return { appId: 'wx-app', userId: 'user' } },
+    assertAdminReady: async () => { resolved = true },
+    service: {},
+  })
+
+  for (const action of ['toString', 'constructor', '__proto__']) {
+    const result = await handler({ contractVersion: 1, action, input: {} })
+    assert.equal(result.ok, false)
+    assert.equal(result.error.code, 'NOT_FOUND')
+  }
+  assert.equal(resolved, false)
+})
+
 test('health proves persistence without identity resolution', async () => {
   let resolved = false
   const handler = createHandler({

@@ -26,6 +26,23 @@ const completionId = '33333333-3333-4333-8333-333333333333'
 const growthEntryId = '44444444-4444-4444-8444-444444444444'
 const profileRefSecret = 'task-assignment-profile-reference-secret-more-than-32'
 
+test('rejects prototype action names before resolving task identity', async () => {
+  let resolved = false
+  const handler = createHandler({
+    health: async () => ({}),
+    resolveCaller: async () => { resolved = true; return { appId, userId } },
+    assertAdminReady: async () => { resolved = true },
+    service: {},
+  })
+
+  for (const action of ['toString', 'constructor', '__proto__']) {
+    const result = await handler({ contractVersion: 1, action, input: {} })
+    assert.equal(result.ok, false)
+    assert.equal(result.error.code, 'NOT_FOUND')
+  }
+  assert.equal(resolved, false)
+})
+
 test('task input only accepts bounded server-owned reward configuration', () => {
   assert.deepEqual(normalizeTask({
     name: '提交合作记录',

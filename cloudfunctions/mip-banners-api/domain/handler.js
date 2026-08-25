@@ -66,11 +66,11 @@ function createHandler(options) {
     try {
       const { action, input } = normalizeRequest(event)
       if (action === 'health') return success(await options.health())
-      const publicDispatch = publicActions[action]
+      const publicDispatch = Object.hasOwn(publicActions, action) ? publicActions[action] : null
       if (publicDispatch) {
         return success(await publicDispatch(options.service, options.resolveAppId()))
       }
-      const adminDispatch = adminActions[action]
+      const adminDispatch = Object.hasOwn(adminActions, action) ? adminActions[action] : null
       if (!adminDispatch) throw new Error('NOT_FOUND')
       const caller = await options.resolveCaller()
       await options.assertAdminReady(caller)
