@@ -3,6 +3,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   createOpenedAutomatorOptions,
+  isReusableFreeEventRegistrationStatus,
   planRegistrationFieldActions,
   resolveFreeEventMutationOptions,
   resolveFreeEventRuntimeBuildSha,
@@ -226,6 +227,30 @@ describe('free offline event mutation runtime contract', () => {
       'pages/index/index',
       'packages/member/mip-events/registration/index',
     )).toBe('failed')
+  })
+
+  it('allows a fresh registration after completed cancellation without weakening fixture gates', () => {
+    expect(isReusableFreeEventRegistrationStatus(undefined)).toBe(true)
+    expect(isReusableFreeEventRegistrationStatus(null)).toBe(true)
+    expect(isReusableFreeEventRegistrationStatus('')).toBe(true)
+    expect(isReusableFreeEventRegistrationStatus('CANCELLED')).toBe(true)
+    for (const status of ['REGISTERED', 'CHECKED_IN', 'CANCELLATION_PENDING', 'PENDING']) {
+      expect(isReusableFreeEventRegistrationStatus(status)).toBe(false)
+    }
+
+    const source = fs.readFileSync(path.join(root, 'scripts/verify-free-event-runtime.mjs'), 'utf8')
+    for (const exactGate of [
+      'event.id !== options.eventId',
+      'event.accessType !== contract.event.accessType',
+      'event.mode !== contract.event.mode',
+      'event.status !== contract.event.status',
+      'event.registrationPolicy !== contract.event.registrationPolicy',
+      'summary.primaryAction !== \'register\'',
+      '!event.canRegister',
+      '!isReusableFreeEventRegistrationStatus(event.registrationStatus)',
+    ]) {
+      expect(source).toContain(exactGate)
+    }
   })
 
   it('fills supported registration fields only through bound field handlers', () => {

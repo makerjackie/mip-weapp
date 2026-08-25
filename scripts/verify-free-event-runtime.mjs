@@ -15,6 +15,7 @@ import { isLocalPortListening } from './lib/devtools-automator-session.mjs'
 import { callCloudbase } from './lib/example-cloudbase.mjs'
 import {
   createOpenedAutomatorOptions,
+  isReusableFreeEventRegistrationStatus,
   markerSha256,
   planRegistrationFieldActions,
   resolveFreeEventMutationOptions,
@@ -538,8 +539,10 @@ async function executeWorkflow({ contract, diagnostics, markers, miniProgram, op
       || event.registrationPolicy !== contract.event.registrationPolicy) {
       runtimeFixtureMismatch('The exact eventId is not a published, free, offline event with AUTO registration')
     }
-    if (summary.primaryAction !== 'register' || !event.canRegister || event.registrationStatus) {
-      runtimeFixtureMismatch('The current user must have no existing registration and the exact event must currently accept registration')
+    if (summary.primaryAction !== 'register'
+      || !event.canRegister
+      || !isReusableFreeEventRegistrationStatus(event.registrationStatus)) {
+      runtimeFixtureMismatch('The current user must have no active registration and the exact event must currently accept registration')
     }
   })
 

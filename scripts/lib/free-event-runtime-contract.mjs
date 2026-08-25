@@ -445,6 +445,10 @@ export function runtimeRouteDisposition(actualRoute, expectedRoute) {
   return normalizedActual === normalizedExpected ? 'matched' : 'failed'
 }
 
+export function isReusableFreeEventRegistrationStatus(status) {
+  return status === undefined || status === null || status === '' || status === 'CANCELLED'
+}
+
 export function summarizeMutationCleanup(steps, mutations) {
   const actions = steps
     .filter(step => step.mode === 'external-wait')
