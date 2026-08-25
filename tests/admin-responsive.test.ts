@@ -67,6 +67,19 @@ const gridPrimitives = [
   '.mip-admin-banner-grid',
 ]
 
+const recordPrimitives = [
+  '.mip-admin-record-list',
+  '.mip-admin-record-header',
+  '.mip-admin-record-row',
+  '.mip-admin-record-cell',
+  '.mip-admin-record-label',
+  '.mip-admin-record-actions',
+]
+
+const recordColumns = 'minmax(0, 2fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.5fr)'
+const recordColumnsDeclaration = `--mip-admin-record-columns: ${recordColumns};`
+const inheritedRecordColumns = `var(--mip-admin-record-columns, ${recordColumns})`
+
 describe('MIP admin responsive foundation', () => {
   it('allows the WeChat desktop window to be resized', () => {
     const app = JSON.parse(read('src/app.json')) as { resizable?: boolean }
@@ -90,6 +103,24 @@ describe('MIP admin responsive foundation', () => {
       'aspect-ratio': '16 / 9',
       'object-fit': 'cover',
     }, true)
+
+    for (const primitive of recordPrimitives) {
+      expectDeclarations(stylesheet, primitive, { 'min-width': '0' }, true)
+    }
+    expectDeclarations(stylesheet, '.mip-admin-record-row', {
+      'box-sizing': 'border-box',
+      'width': '100%',
+      'overflow-wrap': 'anywhere',
+    }, true)
+    expectDeclarations(stylesheet, '.mip-admin-record-actions', {
+      'display': 'flex',
+      'flex-direction': 'column',
+      'width': '100%',
+    }, true)
+    expectDeclarations(stylesheet, '.mip-admin-record-actions > *', {
+      'min-width': '0',
+      'min-height': '88rpx',
+    }, true)
   })
 
   it('defines one-column phone filters and sections with denser media', () => {
@@ -112,6 +143,14 @@ describe('MIP admin responsive foundation', () => {
       'display': 'grid',
       'grid-template-columns': 'minmax(0, 1fr)',
     })
+    expectDeclarations(phone, '.mip-admin-record-list', {
+      'grid-template-columns': 'minmax(0, 1fr)',
+    })
+    expectDeclarations(phone, '.mip-admin-record-header', { 'display': 'none' })
+    expectDeclarations(phone, '.mip-admin-record-row', {
+      'grid-template-columns': 'minmax(0, 1fr)',
+    })
+    expectDeclarations(phone, '.mip-admin-record-label', { 'display': 'block' })
   })
 
   it('defines two-column tablet workspaces and three-column media', () => {
@@ -136,6 +175,14 @@ describe('MIP admin responsive foundation', () => {
       'grid-template-columns': 'repeat(2, minmax(0, 1fr))',
     })
     expectDeclarations(medium, '.mip-admin-span-wide', { 'grid-column': '1 / -1' })
+    expectDeclarations(medium, '.mip-admin-record-list', {
+      'grid-template-columns': 'repeat(2, minmax(0, 1fr))',
+    })
+    expectDeclarations(medium, '.mip-admin-record-header', { 'display': 'none' })
+    expectDeclarations(medium, '.mip-admin-record-row', {
+      'grid-template-columns': 'minmax(0, 1fr)',
+    })
+    expectDeclarations(medium, '.mip-admin-record-label', { 'display': 'block' })
   })
 
   it('defines desktop density without changing page state', () => {
@@ -160,6 +207,36 @@ describe('MIP admin responsive foundation', () => {
       'grid-template-columns': 'repeat(3, minmax(0, 1fr))',
     })
     expectDeclarations(desktop, '.mip-admin-span-wide', { 'grid-column': '1 / -1' })
+    expectDeclarations(desktop, '.mip-admin-record-list', { 'display': 'block' })
+    expectDeclarations(desktop, '.mip-admin-record-header', {
+      'display': 'grid',
+      'grid-template-columns': inheritedRecordColumns,
+    })
+    expectDeclarations(desktop, '.mip-admin-record-row', {
+      'grid-template-columns': inheritedRecordColumns,
+    })
+    expectDeclarations(desktop, '.mip-admin-record-label', { 'display': 'none' })
+  })
+
+  it('uses the shared record contract for managed events without changing page actions', () => {
+    const source = read('src/packages/admin/managed-events/index.wxml')
+
+    expect(source).toContain(`class="mip-admin-record-list mt-5" style="${recordColumnsDeclaration}"`)
+    expect(source).toContain('class="mip-admin-record-header"')
+    expect(source).not.toContain('aria-hidden="true"')
+    expect(source).toContain('class="mip-admin-record-row"')
+    expect(source.match(/class="mip-admin-record-cell"/g)).toHaveLength(4)
+    expect(source.match(/class="mip-admin-record-label"/g)).toHaveLength(4)
+    for (const label of ['活动', '时间与城市', '报名与签到', '状态与操作']) {
+      expect(source).toContain(`<view class="mip-admin-record-label">${label}</view>`)
+    }
+    for (const handler of ['openEvent', 'cloneEvent', 'archiveEvent', 'loadMoreEvents']) {
+      expect(source).toContain(`tap="${handler}"`)
+    }
+    for (const state of ['loading', 'error', 'conflict', 'forbidden', 'ready']) {
+      expect(source).toContain(`state === '${state}'`)
+    }
+    expect(source).toContain('wx:if="{{nextCursor}}"')
   })
 
   it('applies the shared shell to every registered admin page', () => {

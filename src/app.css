@@ -132,6 +132,58 @@ input {
   object-fit: cover;
 }
 
+.mip-admin-record-list {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24rpx;
+  width: 100%;
+  min-width: 0;
+}
+
+.mip-admin-record-header {
+  display: none;
+  min-width: 0;
+}
+
+.mip-admin-record-row {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24rpx;
+  width: 100%;
+  min-width: 0;
+  padding: 32rpx;
+  overflow-wrap: anywhere;
+  background: var(--color-panel);
+  border-radius: 16rpx;
+}
+
+.mip-admin-record-cell {
+  min-width: 0;
+}
+
+.mip-admin-record-label {
+  display: block;
+  min-width: 0;
+  margin-bottom: 8rpx;
+  font-size: 22rpx;
+  line-height: 1.4;
+  color: var(--color-muted);
+}
+
+.mip-admin-record-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+  width: 100%;
+  min-width: 0;
+}
+
+.mip-admin-record-actions > * {
+  min-width: 0;
+  min-height: 88rpx;
+}
+
 @media (max-width: 599px) {
   .mip-member-page {
     --mip-member-shell-max-width: 100%;
@@ -151,6 +203,22 @@ input {
   .mip-admin-media-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mip-admin-record-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mip-admin-record-header {
+    display: none;
+  }
+
+  .mip-admin-record-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mip-admin-record-label {
+    display: block;
   }
 }
 
@@ -210,6 +278,22 @@ input {
     height: 360px;
     margin-right: auto;
     margin-left: auto;
+  }
+
+  .mip-admin-record-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mip-admin-record-header {
+    display: none;
+  }
+
+  .mip-admin-record-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mip-admin-record-label {
+    display: block;
   }
 }
 
@@ -287,5 +371,33 @@ input {
     height: 420px;
     margin-right: auto;
     margin-left: auto;
+  }
+
+  .mip-admin-record-list {
+    display: block;
+  }
+
+  .mip-admin-record-header {
+    display: grid;
+    grid-template-columns: var(--mip-admin-record-columns, minmax(0, 2fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.5fr));
+    column-gap: 24rpx;
+    padding: 0 32rpx 16rpx;
+    font-size: 22rpx;
+    line-height: 1.4;
+    color: var(--color-muted);
+  }
+
+  .mip-admin-record-row {
+    grid-template-columns: var(--mip-admin-record-columns, minmax(0, 2fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.5fr));
+    column-gap: 24rpx;
+    margin-bottom: 16rpx;
+  }
+
+  .mip-admin-record-row:last-child {
+    margin-bottom: 0;
+  }
+
+  .mip-admin-record-label {
+    display: none;
   }
 }
