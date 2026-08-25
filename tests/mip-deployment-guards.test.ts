@@ -58,6 +58,16 @@ describe('MIP deployment safety guards', () => {
     }
   })
 
+  it('limits a requested single-function deployment to one known core manifest entry', () => {
+    const deployment = read('scripts/deploy-functions.mjs')
+
+    expect(deployment).toContain('const requestedFunction = argumentValue(\'--only=\')')
+    expect(deployment).toContain('manifest.filter(spec => spec.name === requestedFunction)')
+    expect(deployment).toContain('deploymentManifest.length !== 1')
+    expect(deployment).toContain('for (const spec of deploymentManifest)')
+    expect(deployment).toContain('deploymentScope: requestedFunction ? \'single-function\' : \'all-core-functions\'')
+  })
+
   it('keeps the active MIP operations skill on the isolated schema runner', () => {
     const skill = read('.agents/skills/mip-operations/SKILL.md')
     expect(skill).toContain('scripts/apply-mip-schema.mjs')

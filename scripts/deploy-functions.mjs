@@ -39,6 +39,10 @@ const envId = String(env.CLOUDBASE_ENV_ID || '').trim()
 const appId = String(env.MINI_PROGRAM_APP_ID || '').trim()
 const functionNames = resolveMipFunctionNames(env)
 const manifest = createMipCoreFunctionManifest(functionNames)
+const requestedFunction = argumentValue('--only=')
+const deploymentManifest = requestedFunction
+  ? manifest.filter(spec => spec.name === requestedFunction)
+  : manifest
 const confirmedEnv = argumentValue('--confirm-env=')
 const replaceLegacyRuntime = process.argv.includes('--replace-legacy-runtime')
 const deploymentStage = resolveMipDeploymentStage(env.MIP_DEPLOYMENT_STAGE, process.argv.slice(2))
@@ -64,6 +68,9 @@ const legacyTimerNames = Object.freeze({
 
 if (!envId || confirmedEnv !== envId || !appId) {
   throw new Error('MIP deployment requires AppID and --confirm-env=<exact CLOUDBASE_ENV_ID>')
+}
+if (requestedFunction && deploymentManifest.length !== 1) {
+  throw new Error('--only must name exactly one function from the MIP core deployment manifest')
 }
 if (!allowedAppIds.includes(appId) || allowedAppIds.some(value => !/^wx[0-9a-f]{16}$/i.test(value))) {
   throw new Error('MIP_ALLOWED_APP_IDS must contain valid AppIDs and include MINI_PROGRAM_APP_ID')
@@ -116,7 +123,7 @@ for (const spec of manifest) {
 verifyLocalOpenApiDeclarations()
 const target = bindAndRequireMysqlEnvironment(root, envId)
 const existingDetails = new Map(manifest.map(spec => [spec.role, existingFunctionDetail(spec.name)]))
-for (const spec of manifest) {
+for (const spec of deploymentManifest) {
   if (!existingDetails.get(spec.role)) {
     continue
   }
@@ -127,8 +134,8 @@ for (const spec of manifest) {
 }
 const disabledPaymentFunctionsProtected = []
 if (paymentMode === 'disabled') {
-  for (const role of ['pay', 'callback', 'refund']) {
-    const functionName = functionNames[role]
+  for (const spec of deploymentManifest.filter(item => ['pay', 'callback', 'refund'].includes(item.role))) {
+    const { name: functionName, role } = spec
     if (!existingFunctionDetail(functionName)) {
       continue
     }
@@ -307,14 +314,14 @@ if (!Number.isInteger(matchingProviderTimeoutMs)
 const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mip-core-functions-'))
 const deployed = []
 try {
-  for (const spec of manifest) {
+  for (const spec of deploymentManifest) {
     fs.cpSync(path.join(sourceRoot, spec.source), path.join(stagingRoot, spec.name), {
       recursive: true,
       filter: source => path.basename(source) !== 'node_modules',
     })
   }
 
-  for (const spec of manifest) {
+  for (const spec of deploymentManifest) {
     const envVariables = environmentForRole(spec.role, {
       agreementsJson,
       aiAvatarProviderFunction,
@@ -394,7 +401,7 @@ finally {
   fs.rmSync(stagingRoot, { recursive: true, force: true })
 }
 
-for (const spec of manifest) {
+for (const spec of deploymentManifest) {
   if (legacyTimerNames[spec.role]) {
     removeOwnedLegacyTimer(spec.name, legacyTimerNames[spec.role])
   }
@@ -414,8 +421,9 @@ const artifact = {
   paymentMode,
   catalogStage,
   deploymentStage,
+  deploymentScope: requestedFunction ? 'single-function' : 'all-core-functions',
   deployed,
-  protectedFunctions: manifest.filter(item => !item.clientInvokable).map(item => item.name),
+  protectedFunctions: deploymentManifest.filter(item => !item.clientInvokable).map(item => item.name),
   disabledPaymentFunctionsProtected,
   functionTimersVerifiedAbsent: true,
   workerTimersVerifiedAbsent: true,

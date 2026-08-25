@@ -88,6 +88,8 @@ pnpm database:grants -- --confirm-env=<EnvID> --confirm-runtime-user=<exact-runt
 pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<.env.local 中的 MIP_DB_RUNTIME_USER>
 ```
 
+只更新一个现有核心函数时，可追加 `--only=<exact mip-* function name>`。单函数模式只复制、更新并复核该函数的代码、配置、定时器和调用规则；未知或非核心函数名会被拒绝。
+
 `pnpm cloud:status` 与 `pnpm cloud:auth` 都会显式执行 API Key 登录并验证目标 EnvID，成功后应为 `READY`；缺 Key 或 EnvID 时直接失败。`READY` 只表示凭证和环境绑定可用，不证明原始 SCF 管控面 action 可用。部署必须同时明确 `--confirm-env=<精确 EnvID>` 和环境专属 runtime 账号；当 `MIP_DEPLOYMENT_STAGE=production` 时命令还必须追加 `--confirm-production`。脚本不会自动设备授权、切换环境或处理其他项目的数据库账号；现有函数配置完全一致时只更新代码，任何配置漂移仍要求相应 SCF/VPC 权限并在失败时停止。
 
 设备码不由正常命令自动触发。只有维护者获得明确授权，或 API Key 的临时 STS 无法执行所需管控面 action 时，才允许显式运行：
