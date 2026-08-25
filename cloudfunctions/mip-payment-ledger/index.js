@@ -26,7 +26,7 @@ const outboxWakeup = createOutboxWakeup({
   sourceFunctionName: 'mip-payment-ledger',
   logger: console,
 })
-const handlers = {
+const handlers = Object.freeze(Object.assign(Object.create(null), {
   getPayableOrder: (db, event, appId) => ledger.getPayableOrder(db, { ...event, appId }),
   markPaymentCreated: (db, event, appId) => ledger.markPaymentCreated(db, { ...event, appId }),
   applyPaymentCallback: (db, event, appId) => ledger.applyPaymentCallback(db, { ...event, appId }),
@@ -37,23 +37,28 @@ const handlers = {
   markRefundFailed: (db, event, appId) => ledger.markRefundFailed(db, { ...event, appId }),
   markRefundManualReview: (db, event, appId) => ledger.markRefundManualReview(db, { ...event, appId }),
   applyRefundCallback: (db, event, appId) => ledger.applyRefundCallback(db, { ...event, appId }),
-}
+}))
 
 exports.main = async (event = {}) => {
+  const request = event && typeof event === 'object' ? event : {}
+  let action = ''
   try {
-    if (event.action === 'health') {
+    action = Object.hasOwn(request, 'action') && typeof request.action === 'string'
+      ? request.action
+      : ''
+    if (action === 'health') {
       await mysqlDatabase().one('SELECT 1 AS ok')
       return { ok: true, data: { service: 'mip-payment-ledger', persistence: 'cloudbase-mysql' } }
     }
-    const appId = assertInternalRequest(event, authOptions)
-    const handler = handlers[event.action]
-    if (!handler) {
+    const appId = assertInternalRequest(request, authOptions)
+    if (!Object.hasOwn(handlers, action)) {
       throw new Error('UNSUPPORTED_ACTION')
     }
-    const data = await handler(mysqlDatabase(), event, appId)
+    const handler = handlers[action]
+    const data = await handler(mysqlDatabase(), request, appId)
     await outboxWakeup.afterSuccessfulMutation({
       appId,
-      action: String(event.action || ''),
+      action,
       mutationActions: outboxMutationActions,
     })
     return { ok: true, data }
@@ -62,9 +67,9 @@ exports.main = async (event = {}) => {
     const code = error instanceof Error && /^[A-Z][A-Z0-9_:]+$/.test(error.message)
       ? error.message
       : 'INTERNAL_ERROR'
-    console.error('[mip-payment-ledger]', event.action, code)
+    console.error('[mip-payment-ledger]', action || 'unknown', code)
     return { ok: false, error: { code } }
   }
 }
 
-exports._test = { assertInternalRequest, outboxMutationActions }
+exports._test = { assertInternalRequest, handlers, outboxMutationActions }

@@ -11,12 +11,38 @@ const {
 
 const secret = '0123456789abcdef0123456789abcdef'
 const now = 1_777_000_000_000
+const legalActions = [
+  'getPayableOrder',
+  'markPaymentCreated',
+  'applyPaymentCallback',
+  'getRefundRequest',
+  'getRefundRequestForProvider',
+  'listPendingRefunds',
+  'markRefundCreated',
+  'markRefundFailed',
+  'markRefundManualReview',
+  'applyRefundCallback',
+]
 
 function sign(event) {
   return createHmac('sha256', secret).update(canonical(signedPayload(event))).digest('hex')
 }
 
 describe('mip payment ledger internal authentication', () => {
+  it('fails closed for prototype and unknown signed action names', () => {
+    for (const action of ['constructor', 'toString', '__proto__', 'unknownAction']) {
+      assert.throws(() => signedPayload({ action }), /FORBIDDEN/)
+    }
+    const inheritedAction = Object.create({ action: 'getPayableOrder' })
+    assert.throws(() => signedPayload(inheritedAction), /FORBIDDEN/)
+  })
+
+  it('keeps every supported business action in the signed-field registry', () => {
+    for (const action of legalActions) {
+      assert.deepEqual(signedPayload({ action }), { action })
+    }
+  })
+
   it('accepts only signed business fields for an allowed app', () => {
     const event = {
       action: 'getPayableOrder',

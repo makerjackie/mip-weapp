@@ -2,7 +2,7 @@
 
 const { createHmac, timingSafeEqual } = require('node:crypto')
 
-const signedFieldsByAction = Object.freeze({
+const signedFieldsByAction = Object.freeze(Object.assign(Object.create(null), {
   getPayableOrder: ['action', 'appId', 'signedAt', 'nonce', 'orderId', 'identityKey', 'paymentMode'],
   markPaymentCreated: [
     'action', 'appId', 'signedAt', 'nonce', 'orderId', 'identityKey', 'merchantOrderNo',
@@ -28,7 +28,7 @@ const signedFieldsByAction = Object.freeze({
     'action', 'appId', 'signedAt', 'nonce', 'refundId', 'merchantOrderNo',
     'merchantRefundNo', 'providerRefundId', 'amountCents',
   ],
-})
+}))
 
 function canonical(value) {
   if (Array.isArray(value)) {
@@ -41,10 +41,14 @@ function canonical(value) {
 }
 
 function signedPayload(event) {
-  const fields = signedFieldsByAction[event.action]
-  if (!fields) {
+  if (!event || typeof event !== 'object' || !Object.hasOwn(event, 'action')) {
     throw new Error('FORBIDDEN')
   }
+  const action = typeof event.action === 'string' ? event.action : ''
+  if (!Object.hasOwn(signedFieldsByAction, action)) {
+    throw new Error('FORBIDDEN')
+  }
+  const fields = signedFieldsByAction[action]
   return Object.fromEntries(fields
     .filter(field => event[field] !== undefined)
     .map(field => [field, event[field]]))
