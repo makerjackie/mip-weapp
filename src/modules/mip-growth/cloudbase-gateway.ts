@@ -1,6 +1,7 @@
 import type { MipGrowthGateway } from './types'
-import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
+import { retryTransport } from '@weapp/shared/retry'
 import { requireCloudClient } from '../platform/cloudbase'
+import { resolveMipGrowthRetryOptions } from './retry-policy'
 import { MipGrowthError } from './types'
 
 interface Envelope<T> {
@@ -10,6 +11,10 @@ interface Envelope<T> {
 }
 
 export const MIP_GROWTH_FUNCTION_NAME = 'mip-growth-api'
+
+export interface MipGrowthTransport {
+  invoke: (action: string, data?: Record<string, unknown>) => Promise<unknown>
+}
 
 function unwrap<T>(value: unknown): T {
   if (!value || typeof value !== 'object' || typeof (value as Envelope<T>).ok !== 'boolean') {
@@ -26,14 +31,27 @@ function unwrap<T>(value: unknown): T {
   return envelope.data as T
 }
 
-export function createMipGrowthGateway(functionName = MIP_GROWTH_FUNCTION_NAME): MipGrowthGateway {
+function createCloudBaseTransport(functionName: string): MipGrowthTransport {
+  return {
+    async invoke(action, data = {}) {
+      const cloud = await requireCloudClient()
+      const response = await cloud.callFunction({ name: functionName, data: { action, ...data } })
+      return response.result
+    },
+  }
+}
+
+export function createMipGrowthGateway(
+  functionName = MIP_GROWTH_FUNCTION_NAME,
+  transport: MipGrowthTransport = createCloudBaseTransport(functionName),
+): MipGrowthGateway {
   async function call<T>(action: string, data: Record<string, unknown> = {}) {
     try {
-      const response = await retryTransport(async () => {
-        const cloud = await requireCloudClient()
-        return cloud.callFunction({ name: functionName, data: { action, ...data } })
-      }, COLD_START_READ_RETRY)
-      return unwrap<T>(response.result)
+      const result = await retryTransport(
+        () => transport.invoke(action, data),
+        resolveMipGrowthRetryOptions(action),
+      )
+      return unwrap<T>(result)
     }
     catch (error) {
       if (error instanceof MipGrowthError) {
