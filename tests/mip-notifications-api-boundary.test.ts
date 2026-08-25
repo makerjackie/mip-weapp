@@ -37,8 +37,8 @@ describe('MIP notification function boundary', () => {
   it('keeps user and worker actions out of each other function', () => {
     const apiHandler = read('cloudfunctions/mip-notifications-api/domain/handler.js')
     const workerHandler = read('cloudfunctions/mip-notification-worker/domain/handler.js')
-    expect(apiHandler).toContain('\'recordCustomerServiceInteraction\'')
-    expect(apiHandler).toContain('\'recordSubscriptionDecision\'')
+    expect(apiHandler).toContain('recordCustomerServiceInteraction')
+    expect(apiHandler).toContain('recordSubscriptionDecision')
     expect(apiHandler).not.toContain('verifyInternal')
     expect(workerHandler).toContain('[\'publishMessage\', \'runDeliveryBatch\']')
     expect(workerHandler).toContain('options.verifyInternal(event)')

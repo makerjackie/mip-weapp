@@ -11,36 +11,54 @@ const messages = {
   VALIDATION_FAILED: '提交内容格式不正确',
 }
 
-const userActions = new Set([
-  'listInbox',
-  'markRead',
-  'recordCustomerServiceInteraction',
-  'recordSubscriptionDecision',
-])
+const CONTRACT_VERSION = 1
+
+const actions = Object.freeze({
+  listInbox: (service, caller, input) => service.listInbox(caller, input),
+  markRead: (service, caller, input) => service.markRead(caller, input),
+  recordCustomerServiceInteraction: (service, caller) => service.recordCustomerServiceInteraction(caller),
+  recordSubscriptionDecision: (service, caller, input) => service.recordSubscriptionDecision(caller, input),
+})
+
+function isRecord(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function businessInput(value) {
+  const {
+    action: _action,
+    contractVersion: _contractVersion,
+    input: _input,
+    ...input
+  } = value
+  return input
+}
+
+function normalizeRequest(event) {
+  if (!isRecord(event)) throw new Error('VALIDATION_FAILED')
+  const action = typeof event.action === 'string' ? event.action : ''
+  if (event.contractVersion === undefined) {
+    return { action, input: businessInput(event), legacy: true }
+  }
+  if (event.contractVersion !== CONTRACT_VERSION
+    || !isRecord(event.input)
+    || Object.keys(event).some(key => !['contractVersion', 'action', 'input'].includes(key))) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  return { action, input: businessInput(event.input), legacy: false }
+}
 
 function createHandler(options) {
   return async function main(event = {}) {
-    if (event.action === 'health') {
-      try {
+    try {
+      const request = normalizeRequest(event)
+      if (request.action === 'health') {
         return success(await options.health())
       }
-      catch (error) {
-        return failure(error)
-      }
-    }
-    try {
-      if (!userActions.has(event.action)) throw new Error('NOT_FOUND')
+      if (!Object.hasOwn(actions, request.action)) throw new Error('NOT_FOUND')
+      const dispatch = actions[request.action]
       const caller = await options.resolveCaller()
-      if (event.action === 'listInbox') {
-        return success(await options.service.listInbox(caller, event))
-      }
-      if (event.action === 'markRead') {
-        return success(await options.service.markRead(caller, event))
-      }
-      if (event.action === 'recordCustomerServiceInteraction') {
-        return success(await options.service.recordCustomerServiceInteraction(caller))
-      }
-      return success(await options.service.recordSubscriptionDecision(caller, event))
+      return success(await dispatch(options.service, caller, request.input))
     }
     catch (error) {
       return failure(error)
@@ -65,4 +83,11 @@ function failure(error) {
   }
 }
 
-module.exports = { createHandler, failure, success }
+module.exports = {
+  CONTRACT_VERSION,
+  actions,
+  createHandler,
+  failure,
+  normalizeRequest,
+  success,
+}

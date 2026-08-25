@@ -43,6 +43,11 @@ export interface InboxMessagePage {
   unreadCount: number
 }
 
+export interface MarkInboxMessageReadResult {
+  messageId: InboxMessageId
+  readAt: string
+}
+
 export interface NotificationGrant {
   channel: NotificationChannel
   templateKey: string
@@ -75,9 +80,33 @@ export interface ExternalDeliveryDecision {
   reason: 'READY' | 'CHANNEL_DISABLED' | 'TEMPLATE_MISSING' | 'GRANT_UNAVAILABLE'
 }
 
+export const MIP_MESSAGING_CONTRACT_VERSION = 1 as const
+
+export interface MipMessagingActionInputMap {
+  listInbox: { cursor?: string, limit?: number }
+  markRead: { messageId: InboxMessageId }
+  recordCustomerServiceInteraction: Record<string, never>
+  recordSubscriptionDecision: { templateKey: string, decision: SubscriptionDecision }
+}
+
+export interface MipMessagingActionResultMap {
+  listInbox: InboxMessagePage
+  markRead: MarkInboxMessageReadResult
+  recordCustomerServiceInteraction: CustomerServiceWindowResult
+  recordSubscriptionDecision: SubscriptionGrantResult
+}
+
+export type MipMessagingAction = keyof MipMessagingActionInputMap
+
+export interface MipMessagingRequest<A extends MipMessagingAction = MipMessagingAction> {
+  contractVersion: typeof MIP_MESSAGING_CONTRACT_VERSION
+  action: A
+  input: MipMessagingActionInputMap[A]
+}
+
 export interface MipMessagingGateway {
   listInbox: (cursor?: string, limit?: number) => Promise<InboxMessagePage>
-  markRead: (messageId: InboxMessageId) => Promise<{ messageId: InboxMessageId, readAt: string }>
+  markRead: (messageId: InboxMessageId) => Promise<MarkInboxMessageReadResult>
   recordSubscriptionDecision: (
     templateKey: string,
     decision: SubscriptionDecision,
