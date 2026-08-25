@@ -1,6 +1,9 @@
+import type { AtRule, Container, Root, Rule } from 'postcss'
+
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import postcss from 'postcss'
 import { describe, expect, it } from 'vitest'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -9,6 +12,61 @@ function read(relativePath: string) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8')
 }
 
+function findMedia(rootNode: Root, params: string) {
+  const matches = rootNode.nodes.filter(
+    (node): node is AtRule => node.type === 'atrule' && node.name === 'media' && node.params === params,
+  )
+
+  expect(matches).toHaveLength(1)
+  return matches[0]
+}
+
+function findRule(container: Container, selector: string, topLevel = false) {
+  const matches: Rule[] = []
+  const collect = (rule: Rule) => {
+    if (rule.selectors.includes(selector)) {
+      matches.push(rule)
+    }
+  }
+
+  if (topLevel) {
+    for (const node of container.nodes || []) {
+      if (node.type === 'rule') {
+        collect(node)
+      }
+    }
+  }
+  else {
+    container.walkRules(collect)
+  }
+
+  expect(matches).toHaveLength(1)
+  return matches[0]
+}
+
+function expectDeclarations(container: Container, selector: string, expected: Record<string, string>, topLevel = false) {
+  const rule = findRule(container, selector, topLevel)
+  const declarations = Object.fromEntries(
+    rule.nodes
+      .filter(node => node.type === 'decl')
+      .map(node => [node.prop, node.value]),
+  )
+
+  expect(declarations).toMatchObject(expected)
+}
+
+const gridPrimitives = [
+  '.mip-admin-card-list',
+  '.mip-admin-form-grid',
+  '.mip-admin-menu-grid',
+  '.mip-admin-metric-grid',
+  '.mip-admin-summary-grid',
+  '.mip-admin-filter-grid',
+  '.mip-admin-section-grid',
+  '.mip-admin-media-grid',
+  '.mip-admin-banner-grid',
+]
+
 describe('MIP admin responsive foundation', () => {
   it('allows the WeChat desktop window to be resized', () => {
     const app = JSON.parse(read('src/app.json')) as { resizable?: boolean }
@@ -16,16 +74,92 @@ describe('MIP admin responsive foundation', () => {
     expect(app.resizable).toBe(true)
   })
 
-  it('defines phone, medium, and desktop layout ranges without changing runtime state', () => {
+  it('keeps every shared grid and its direct items shrinkable', () => {
     const styles = read('src/app.css')
+    const stylesheet = postcss.parse(styles)
 
-    expect(styles).toContain('@media (max-width: 599px)')
-    expect(styles).toContain('@media (min-width: 600px) and (max-width: 959px)')
-    expect(styles).toContain('@media (min-width: 960px)')
-    expect(styles).toContain('max-width: 1280px')
-    expect(styles).toContain('.mip-admin-card-list')
-    expect(styles).toContain('.mip-admin-form-grid')
-    expect(styles).toContain('.mip-admin-menu-grid')
+    for (const primitive of gridPrimitives) {
+      expectDeclarations(stylesheet, primitive, { 'min-width': '0' }, true)
+      expectDeclarations(stylesheet, `${primitive} > *`, { 'min-width': '0' }, true)
+    }
+
+    expectDeclarations(stylesheet, '.mip-admin-banner-image', {
+      'display': 'block',
+      'width': '100%',
+      'height': 'auto',
+      'aspect-ratio': '16 / 9',
+      'object-fit': 'cover',
+    }, true)
+  })
+
+  it('defines one-column phone filters and sections with denser media', () => {
+    const phone = findMedia(postcss.parse(read('src/app.css')), '(max-width: 599px)')
+
+    expectDeclarations(phone, '.mip-admin-page', { 'max-width': '100%' })
+    expectDeclarations(phone, '.mip-admin-filter-grid', {
+      'display': 'grid',
+      'grid-template-columns': 'minmax(0, 1fr)',
+    })
+    expectDeclarations(phone, '.mip-admin-section-grid', {
+      'display': 'grid',
+      'grid-template-columns': 'minmax(0, 1fr)',
+    })
+    expectDeclarations(phone, '.mip-admin-media-grid', {
+      'display': 'grid',
+      'grid-template-columns': 'repeat(2, minmax(0, 1fr))',
+    })
+    expectDeclarations(phone, '.mip-admin-banner-grid', {
+      'display': 'grid',
+      'grid-template-columns': 'minmax(0, 1fr)',
+    })
+  })
+
+  it('defines two-column tablet workspaces and three-column media', () => {
+    const medium = findMedia(postcss.parse(read('src/app.css')), '(min-width: 600px) and (max-width: 959px)')
+
+    expectDeclarations(medium, '.mip-admin-page', { 'max-width': '920px' })
+    expectDeclarations(medium, '.mip-admin-filter-grid', {
+      'display': 'grid',
+      'grid-template-columns': 'repeat(2, minmax(0, 1fr))',
+    })
+    expectDeclarations(medium, '.mip-admin-filter-wide', { 'grid-column': 'span 2 / span 2' })
+    expectDeclarations(medium, '.mip-admin-section-grid', {
+      'display': 'grid',
+      'grid-template-columns': 'repeat(2, minmax(0, 1fr))',
+    })
+    expectDeclarations(medium, '.mip-admin-media-grid', {
+      'display': 'grid',
+      'grid-template-columns': 'repeat(3, minmax(0, 1fr))',
+    })
+    expectDeclarations(medium, '.mip-admin-banner-grid', {
+      'display': 'grid',
+      'grid-template-columns': 'repeat(2, minmax(0, 1fr))',
+    })
+    expectDeclarations(medium, '.mip-admin-span-wide', { 'grid-column': '1 / -1' })
+  })
+
+  it('defines desktop density without changing page state', () => {
+    const desktop = findMedia(postcss.parse(read('src/app.css')), '(min-width: 960px)')
+
+    expectDeclarations(desktop, '.mip-admin-page', { 'max-width': '1280px' })
+    expectDeclarations(desktop, '.mip-admin-filter-grid', {
+      'display': 'grid',
+      'grid-template-columns': 'repeat(4, minmax(0, 1fr))',
+    })
+    expectDeclarations(desktop, '.mip-admin-filter-wide', { 'grid-column': 'span 2 / span 2' })
+    expectDeclarations(desktop, '.mip-admin-section-grid', {
+      'display': 'grid',
+      'grid-template-columns': 'repeat(2, minmax(0, 1fr))',
+    })
+    expectDeclarations(desktop, '.mip-admin-media-grid', {
+      'display': 'grid',
+      'grid-template-columns': 'repeat(4, minmax(0, 1fr))',
+    })
+    expectDeclarations(desktop, '.mip-admin-banner-grid', {
+      'display': 'grid',
+      'grid-template-columns': 'repeat(3, minmax(0, 1fr))',
+    })
+    expectDeclarations(desktop, '.mip-admin-span-wide', { 'grid-column': '1 / -1' })
   })
 
   it('applies the shared shell to every registered admin page', () => {

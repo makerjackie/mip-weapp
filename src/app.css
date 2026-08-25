@@ -65,13 +65,51 @@ input {
 
 .mip-admin-card-list,
 .mip-admin-form-grid,
-.mip-admin-menu-grid {
+.mip-admin-menu-grid,
+.mip-admin-metric-grid,
+.mip-admin-summary-grid,
+.mip-admin-filter-grid,
+.mip-admin-section-grid,
+.mip-admin-media-grid,
+.mip-admin-banner-grid {
   min-width: 0;
+}
+
+.mip-admin-card-list > *,
+.mip-admin-form-grid > *,
+.mip-admin-menu-grid > *,
+.mip-admin-metric-grid > *,
+.mip-admin-summary-grid > *,
+.mip-admin-filter-grid > *,
+.mip-admin-section-grid > *,
+.mip-admin-media-grid > *,
+.mip-admin-banner-grid > * {
+  min-width: 0;
+}
+
+.mip-admin-banner-image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
 }
 
 @media (max-width: 599px) {
   .mip-admin-page {
     max-width: 100%;
+  }
+
+  .mip-admin-filter-grid,
+  .mip-admin-section-grid,
+  .mip-admin-banner-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mip-admin-media-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -88,12 +126,32 @@ input {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .mip-admin-filter-grid,
+  .mip-admin-section-grid,
+  .mip-admin-banner-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mip-admin-media-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .mip-admin-filter-wide {
+    grid-column: span 2 / span 2;
+  }
+
   .mip-admin-metric-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .mip-admin-summary-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .mip-admin-span-wide {
+    grid-column: 1 / -1;
   }
 
   .mip-admin-popup-panel {
@@ -126,6 +184,30 @@ input {
   .mip-admin-menu-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .mip-admin-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .mip-admin-section-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mip-admin-media-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .mip-admin-banner-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .mip-admin-filter-wide {
+    grid-column: span 2 / span 2;
   }
 
   .mip-admin-metric-grid {
