@@ -1,8 +1,18 @@
 <view id="admin-event-registrations-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
   <mip-admin-workspace-nav />
-  <view class="text-[length:40rpx] font-bold">参与者与签到</view>
+  <view class="min-w-0">
+    <view class="text-[length:40rpx] font-bold">参与者与签到</view>
+    <view wx:if="{{eventTitle}}" class="mt-2 break-all text-[length:23rpx] text-muted">{{eventTitle}}</view>
+  </view>
+  <view wx:if="{{state === 'ready' && (canCheckIn || canOrders)}}" class="mip-admin-section-grid mt-4 grid gap-2">
+    <t-button wx:if="{{canCheckIn}}" block variant="outline" bind:tap="openCheckInTools">签到码与海报</t-button>
+    <t-button wx:if="{{canOrders}}" block variant="outline" bind:tap="openEventOrders">活动订单与退款</t-button>
+  </view>
   <view class="mip-admin-filter-grid mt-5 grid gap-3 rounded-[16rpx] bg-panel p-3">
-    <view class="mip-admin-filter-wide"><t-input value="{{query}}" placeholder="搜索昵称" bind:change="updateQuery" bind:enter="search" /></view>
+    <view class="mip-admin-filter-wide">
+      <t-input class="box-border max-w-full" value="{{query}}" placeholder="搜索昵称" bind:change="updateQuery" bind:enter="search" />
+      <view class="mt-3"><t-button block size="small" variant="outline" bind:tap="search">查询</t-button></view>
+    </view>
     <view class="mip-admin-span-wide flex flex-wrap gap-2" role="radiogroup" aria-label="报名状态">
       <view class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{status === ''}}"><t-tag variant="outline" theme="{{status === '' ? 'primary' : 'default'}}" data-value="" bind:tap="chooseStatus">全部</t-tag></view>
       <view class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{status === 'PENDING_REVIEW'}}"><t-tag variant="outline" theme="{{status === 'PENDING_REVIEW' ? 'primary' : 'default'}}" data-value="PENDING_REVIEW" bind:tap="chooseStatus">待审核</t-tag></view>
@@ -19,10 +29,14 @@
       <picker mode="date" value="{{createdToDate}}" data-field="createdToDate" bindchange="changeCreatedDate"><view class="flex min-h-[88rpx] flex-col justify-center rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]"><view class="text-muted">报名日期止</view><view class="mt-1">{{createdToDate || '不限'}}</view></view></picker>
     </view>
     <view wx:if="{{createdFromDate || createdToDate}}" class="flex min-h-[88rpx] items-center justify-end text-[length:21rpx] text-muted" role="button" bind:tap="clearCreatedDates">清除日期</view>
-    <view class="flex min-h-[88rpx] items-center gap-2">
+    <view class="flex min-h-[88rpx] flex-wrap items-center gap-2">
       <t-button wx:if="{{canPhone && !includePhone}}" size="small" variant="outline" bind:tap="showPhones">查看联系电话</t-button>
       <t-button wx:if="{{canExport}}" size="small" variant="outline" loading="{{exportPending}}" bind:tap="createExport">创建导出</t-button>
     </view>
+  </view>
+
+  <view id="admin-event-registrations-disabled-state" wx:if="{{state === 'ready' && !canReview && !canCheckIn && !canUndoCheckIn}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:22rpx] text-muted">
+    当前名单仅供查看，报名审核和签到操作不可用。
   </view>
 
   <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5">
@@ -37,51 +51,55 @@
   <view wx:elif="{{items.length === 0}}" class="mt-6">
     <app-empty-state title="暂无参与者" description="符合筛选条件的参与者会显示在这里。" />
   </view>
-  <view wx:else class="mip-admin-card-list mt-5 flex flex-col gap-3">
-    <view wx:for="{{items}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
-      <view class="flex items-start justify-between gap-3">
-        <view>
-          <view class="text-[length:28rpx] font-semibold">{{item.nickname}}</view>
-          <view class="mt-1 text-[length:22rpx] text-muted">{{item.cityName || '未填写城市'}}</view>
+  <view wx:else class="mip-admin-record-list mt-5" style="--mip-admin-record-columns: minmax(0, 1.25fr) minmax(0, 1.75fr) minmax(0, 1.2fr) minmax(0, 1.25fr);">
+    <view class="mip-admin-record-header">
+      <view>参与者</view><view>报名信息</view><view>状态与时间</view><view>操作</view>
+    </view>
+    <view wx:for="{{items}}" wx:key="id" class="mip-admin-record-row">
+      <view class="mip-admin-record-cell">
+        <view class="mip-admin-record-label">参与者</view>
+        <view class="break-all text-[length:28rpx] font-semibold">{{item.nickname}}</view>
+        <view class="mt-1 break-all text-[length:22rpx] text-muted">{{item.cityName || '未填写城市'}}</view>
+        <view wx:if="{{includePhone}}" class="mt-3 break-all text-[length:24rpx]">联系电话：{{item.phoneNumber || '未绑定'}}</view>
+        <view wx:elif="{{item.phoneBound}}" class="mt-3 text-[length:22rpx] text-muted">手机已绑定</view>
+        <view wx:else class="mt-3 text-[length:22rpx] text-muted">手机未绑定</view>
+      </view>
+      <view class="mip-admin-record-cell">
+        <view class="mip-admin-record-label">报名信息</view>
+        <view wx:if="{{item.answerItems.length === 0}}" class="text-[length:22rpx] text-muted">未填写报名信息</view>
+        <view wx:for="{{item.answerItems}}" wx:for-item="answer" wx:key="key" class="mt-2 min-w-0 text-[length:22rpx]">
+          <view class="break-all text-muted">{{answer.label}}</view>
+          <view class="mt-1 break-all whitespace-pre-wrap">{{answer.value || '未填写'}}</view>
         </view>
+      </view>
+      <view class="mip-admin-record-cell">
+        <view class="mip-admin-record-label">状态与时间</view>
         <t-tag variant="outline" theme="{{item.statusTheme}}">{{item.statusText}}</t-tag>
-      </view>
-      <view wx:if="{{includePhone}}" class="mt-3 text-[length:24rpx]">联系电话：{{item.phoneNumber || '未绑定'}}</view>
-      <view wx:elif="{{item.phoneBound}}" class="mt-3 text-[length:22rpx] text-muted">手机已绑定</view>
-      <view wx:else class="mt-3 text-[length:22rpx] text-muted">手机未绑定</view>
-
-      <view class="mt-3 rounded-[12rpx] bg-panel-raised px-3 py-3">
-        <view class="text-[length:23rpx] font-semibold">报名信息</view>
-        <view wx:if="{{item.answerItems.length === 0}}" class="mt-2 text-[length:22rpx] text-muted">未填写报名信息</view>
-        <view wx:for="{{item.answerItems}}" wx:for-item="answer" wx:key="key" class="mt-2 text-[length:22rpx]">
-          <text class="text-muted">{{answer.label}}：</text>{{answer.value || '未填写'}}
+        <view class="mt-3 text-[length:22rpx] text-muted">
+          <view class="break-all">报名提交：{{item.submittedText}}</view>
+          <view class="mt-1 break-all">报名确认：{{item.registeredText || '未确认'}}</view>
+          <view class="mt-1 break-all">签到时间：{{item.checkedInText || '未签到'}}</view>
         </view>
       </view>
-      <view class="mt-3 border-t border-line pt-3 text-[length:22rpx] text-muted">
-        <view>报名提交：{{item.submittedText}}</view>
-        <view class="mt-1">报名确认：{{item.registeredText || '未确认'}}</view>
-        <view class="mt-1">签到时间：{{item.checkedInText || '未签到'}}</view>
-      </view>
-
-      <view wx:if="{{canReview && item.status === 'PENDING_REVIEW'}}" class="mt-4 flex gap-2">
-        <view class="min-w-0 flex-1">
-          <t-button block theme="primary" loading="{{processingId === item.id}}" data-id="{{item.id}}" data-version="{{item.version}}" data-decision="APPROVE" bind:tap="reviewRegistration">通过报名</t-button>
+      <view class="mip-admin-record-cell">
+        <view class="mip-admin-record-label">操作</view>
+        <view wx:if="{{canReview && item.status === 'PENDING_REVIEW'}}" class="mip-admin-record-actions">
+          <t-button block theme="primary" loading="{{processingId === item.id}}" disabled="{{processingId !== '' || exportPending}}" data-id="{{item.id}}" data-version="{{item.version}}" data-decision="APPROVE" bind:tap="reviewRegistration">通过报名</t-button>
+          <t-button block variant="outline" theme="danger" disabled="{{processingId !== '' || exportPending}}" data-id="{{item.id}}" data-version="{{item.version}}" data-decision="REJECT" bind:tap="reviewRegistration">拒绝报名</t-button>
         </view>
-        <view class="min-w-0 flex-1">
-          <t-button block variant="outline" theme="danger" disabled="{{processingId === item.id}}" data-id="{{item.id}}" data-version="{{item.version}}" data-decision="REJECT" bind:tap="reviewRegistration">拒绝报名</t-button>
+        <view wx:elif="{{canCheckIn && item.status === 'REGISTERED'}}" class="mip-admin-record-actions">
+          <t-button block theme="primary" loading="{{processingId === item.id}}" disabled="{{processingId !== '' || exportPending}}" data-id="{{item.id}}" data-version="{{item.version}}" bind:tap="checkIn">确认签到</t-button>
         </view>
-      </view>
-      <view wx:if="{{canCheckIn && item.status === 'REGISTERED'}}" class="mt-4">
-        <t-button block theme="primary" loading="{{processingId === item.id}}" data-id="{{item.id}}" data-version="{{item.version}}" bind:tap="checkIn">确认签到</t-button>
-      </view>
-      <view wx:if="{{canUndoCheckIn && item.status === 'ATTENDED'}}" class="mt-4">
-        <t-button block variant="outline" theme="danger" loading="{{processingId === item.id}}" data-id="{{item.id}}" data-version="{{item.version}}" bind:tap="undoCheckIn">撤销签到</t-button>
+        <view wx:elif="{{canUndoCheckIn && item.status === 'ATTENDED'}}" class="mip-admin-record-actions">
+          <t-button block variant="outline" theme="danger" loading="{{processingId === item.id}}" disabled="{{processingId !== '' || exportPending}}" data-id="{{item.id}}" data-version="{{item.version}}" bind:tap="undoCheckIn">撤销签到</t-button>
+        </view>
+        <view wx:else class="text-[length:22rpx] text-muted">当前状态没有可用操作</view>
       </view>
     </view>
   </view>
-  <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
+  <view wx:if="{{message && state === 'ready'}}" class="mt-4 break-all rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
   <view wx:if="{{nextCursor}}" class="mt-4">
-    <t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMoreRoster">加载更多</t-button>
+    <t-button block variant="outline" loading="{{loadingMore}}" disabled="{{loadingMore || processingId !== ''}}" bind:tap="loadMoreRoster">加载更多</t-button>
   </view>
   <app-page-exit />
 </view>

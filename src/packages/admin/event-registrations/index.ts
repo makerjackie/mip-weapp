@@ -80,6 +80,7 @@ Page({
   data: {
     state: 'loading' as AdminPageState,
     eventId: '',
+    eventTitle: '',
     items: [] as RosterView[],
     query: '',
     status: '' as AdminRosterStatus | '',
@@ -91,6 +92,7 @@ Page({
     canReview: false,
     canCheckIn: false,
     canUndoCheckIn: false,
+    canOrders: false,
     processingId: '',
     exportPending: false,
     message: '',
@@ -159,12 +161,14 @@ Page({
       const scope = { scopeType: 'EVENT' as const, scopeId: this.data.eventId, branchId: eventDetail.branchId }
       this.setData({
         state: 'ready',
+        eventTitle: eventDetail.title,
         items: page.items.map(rosterView),
         canPhone: hasScopedCapability(session.capabilities, 'users.phone.read', scope),
         canExport: hasScopedCapability(session.capabilities, 'exports.create', scope),
         canReview: hasScopedCapability(session.capabilities, 'events.registrations.manage', scope),
         canCheckIn: hasScopedCapability(session.capabilities, 'events.checkin.manage', scope),
         canUndoCheckIn: hasScopedCapability(session.capabilities, 'events.checkin.undo', scope),
+        canOrders: hasScopedCapability(session.capabilities, 'orders.read', scope),
         nextCursor: page.nextCursor || null,
         loadingMore: false,
         message: '',
@@ -266,7 +270,7 @@ Page({
   async checkIn(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || '')
     const version = Number(event.currentTarget.dataset.version)
-    if (!id || this.data.processingId || this.data.exportPending || this.confirmationBusy) {
+    if (!id || !this.data.canCheckIn || this.data.processingId || this.data.exportPending || this.confirmationBusy) {
       return
     }
     this.setData({ processingId: id, message: '' })
@@ -357,5 +361,21 @@ Page({
       this.confirmationBusy = false
       this.setData({ exportPending: false })
     }
+  },
+  openEventOrders() {
+    if (!this.data.canOrders || !this.data.eventId) {
+      return
+    }
+    void wx.navigateTo({
+      url: `/packages/admin/orders/index?eventId=${encodeURIComponent(this.data.eventId)}`,
+    })
+  },
+  openCheckInTools() {
+    if (!this.data.canCheckIn || !this.data.eventId) {
+      return
+    }
+    void wx.navigateTo({
+      url: `/packages/admin/event-console/index?eventId=${encodeURIComponent(this.data.eventId)}`,
+    })
   },
 })
