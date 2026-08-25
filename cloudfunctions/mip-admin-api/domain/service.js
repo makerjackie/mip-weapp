@@ -10,6 +10,7 @@ const {
   visibilityForCapability,
 } = require('./capabilities')
 const { createAdminAccess } = require('./access')
+const { createAdminUsers } = require('./users')
 const { configurableRoleKeys } = require('./role-capability-policies')
 const {
   normalizeAnnouncementDraft,
@@ -74,6 +75,7 @@ function createAdminService({
   profileRefSecret = '',
   recalculateMatching = async () => { throw new AdminError('MATCHING_DISPATCH_CONFIG_REQUIRED', '机会撮合重算服务尚未配置') },
 }) {
+  const access = createAdminAccess({ repository })
   const {
     audit,
     eventAuthorization,
@@ -82,7 +84,18 @@ function createAdminService({
     requirePlatformOwner,
     session,
     userAuthorization,
-  } = createAdminAccess({ repository })
+  } = access
+  const {
+    getUser,
+    listUsers,
+    normalizeExportFilters: normalizeUserFilters,
+    setUserControl,
+    updateUser,
+  } = createAdminUsers({
+    access,
+    phoneEncryptionKey,
+    repository,
+  })
 
   function pageResult(value) {
     if (Array.isArray(value)) return { items: value, nextCursor: null }
@@ -681,127 +694,6 @@ function createAdminService({
     })
   }
 
-  async function listUsers(caller, input = {}) {
-    const context = await session(caller)
-    const grant = firstGrant(context.bindings, CAPABILITIES.USERS_READ)
-    const filters = normalizeUserFilters(input.filters || {})
-    const includePhone = input.includePhone === true
-    const phoneGrant = includePhone
-      ? firstGrant(context.bindings, CAPABILITIES.USERS_PHONE_READ)
-      : null
-    const pageLimit = limit(input.limit)
-    const cursor = decodeCursor(input.cursor, ['updatedAt', 'id'])
-    const page = pageResult(await repository.listUsers(
-      context.caller.appId,
-      visibilityForCapability(context.bindings, CAPABILITIES.USERS_READ),
-      filters,
-      pageLimit,
-      cursor,
-    ))
-    const result = page.items.map((item) => {
-      const rawPhone = includePhone && item.phoneCiphertext
-        ? decryptPhone(item.phoneCiphertext, phoneEncryptionKey, { appId: context.caller.appId, userId: item.id })
-        : null
-      const { phoneCiphertext, ...safe } = item
-      return {
-        ...safe,
-        phoneNumber: rawPhone,
-      }
-    })
-    if (includePhone) {
-      await repository.recordAudit(audit(context, phoneGrant, {
-        scopeType: phoneGrant.scopeType,
-        scopeId: phoneGrant.scopeId,
-        action: 'admin.users.phone.view',
-        resourceType: 'USER_LIST',
-        metadata: { count: result.length, filters, cursor: Boolean(cursor) },
-      }))
-    }
-    return { items: result, nextCursor: page.nextCursor }
-  }
-
-  async function getUser(caller, input = {}) {
-    const context = await session(caller)
-    const userId = requiredId(input.userId, '用户')
-    const { scope } = await userAuthorization(context, userId, CAPABILITIES.USERS_READ)
-    const includePhone = input.includePhone === true
-    const phoneGrant = includePhone
-      ? authorize(context.bindings, CAPABILITIES.USERS_PHONE_READ, scope)
-      : null
-    const item = await repository.getUserDetail(context.caller.appId, userId)
-    if (!item) throw new AdminError('NOT_FOUND', '用户不存在')
-    const rawPhone = includePhone && item.phoneCiphertext
-      ? decryptPhone(item.phoneCiphertext, phoneEncryptionKey, { appId: context.caller.appId, userId })
-      : null
-    const { phoneCiphertext, ...safe } = item
-    if (includePhone) {
-      await repository.recordAudit(audit(context, phoneGrant, {
-        scopeType: scope.scopeType,
-        scopeId: scope.scopeId,
-        action: 'admin.users.phone.view',
-        resourceType: 'USER',
-        resourceId: userId,
-        metadata: { detail: true },
-      }))
-    }
-    const relatedRecords = typeof repository.getUserRelatedRecords === 'function'
-      ? await repository.getUserRelatedRecords(context.caller.appId, userId)
-      : { superCases: [], opportunities: [], registrations: [], orders: [] }
-    return { ...safe, phoneNumber: rawPhone, relatedRecords }
-  }
-
-  async function updateUser(caller, input) {
-    const context = await session(caller)
-    const userId = requiredId(input.userId, '用户')
-    const { scope, grant } = await userAuthorization(context, userId, CAPABILITIES.USERS_EDIT)
-    const fields = normalizeEditableFields(input.fields)
-    const version = nonNegativeVersion(input.expectedVersion)
-    return repository.updateUserFields({
-      appId: context.caller.appId,
-      actorUserId: context.caller.userId,
-      userId,
-      expectedVersion: version,
-      fields,
-      authorizedScope: scope,
-      authorization: mutationAuthorization(grant, CAPABILITIES.USERS_EDIT),
-      audit: audit(context, grant, {
-        scopeType: scope.scopeType,
-        scopeId: scope.scopeId,
-        action: 'admin.users.fields.update',
-        resourceType: 'USER',
-        resourceId: userId,
-        metadata: { fields: Object.keys(fields), expectedVersion: version },
-      }),
-    })
-  }
-
-  async function setUserControl(caller, input) {
-    const context = await session(caller)
-    const userId = requiredId(input.userId, '用户')
-    const { scope, grant } = await userAuthorization(context, userId, CAPABILITIES.USERS_CONTROL)
-    const controlType = ['ALLOWLIST', 'BLOCKLIST'].includes(input.controlType) ? input.controlType : null
-    if (!controlType || typeof input.active !== 'boolean') throw new AdminError('VALIDATION_FAILED', '名单设置无效')
-    const reason = text(input.reason, 300, { required: true, label: '原因' })
-    return repository.setUserControl({
-      appId: context.caller.appId,
-      actorUserId: context.caller.userId,
-      userId,
-      controlType,
-      active: input.active,
-      reason,
-      authorizedScope: scope,
-      authorization: mutationAuthorization(grant, CAPABILITIES.USERS_CONTROL),
-      audit: audit(context, grant, {
-        scopeType: scope.scopeType,
-        scopeId: scope.scopeId,
-        action: input.active ? 'admin.users.access.activate' : 'admin.users.access.revoke',
-        resourceType: 'USER_ACCESS_CONTROL',
-        resourceId: userId,
-        metadata: { controlType, reasonLength: reason.length },
-      }),
-    })
-  }
-
   async function createExport(caller, input) {
     const context = await session(caller)
     const exportType = [
@@ -824,7 +716,12 @@ function createAdminService({
     const phoneGrant = includesPhone
       ? authorize(context.bindings, CAPABILITIES.USERS_PHONE_READ, scope)
       : null
-    const filters = normalizeExportFilters(exportType, input.filters, scope)
+    const filters = normalizeExportFilters(
+      exportType,
+      input.filters,
+      scope,
+      normalizeUserFilters,
+    )
     return repository.createExportTicket({
       appId: context.caller.appId,
       actorUserId: context.caller.userId,
@@ -2659,46 +2556,6 @@ function exportError(error) {
   return new AdminError('EXPORT_SERVICE_UNAVAILABLE', '导出服务暂时不可用', true)
 }
 
-function normalizeUserFilters(value) {
-  const filters = normalizeFilters(value)
-  const createdFrom = dateTimeFilter(filters.createdFrom, '开始时间')
-  const createdTo = dateTimeFilter(filters.createdTo, '结束时间')
-  if (createdFrom && createdTo && createdFrom > createdTo) {
-    throw new AdminError('VALIDATION_FAILED', '注册开始时间不能晚于结束时间')
-  }
-  const experienceMin = nonNegativeIntegerFilter(filters.experienceMin, '最低经验值')
-  const experienceMax = nonNegativeIntegerFilter(filters.experienceMax, '最高经验值')
-  if (experienceMin !== null && experienceMax !== null && experienceMin > experienceMax) {
-    throw new AdminError('VALIDATION_FAILED', '最低经验值不能大于最高经验值')
-  }
-  return {
-    query: text(filters.query, 80),
-    status: ['ACTIVE', 'BLOCKED', 'CLOSED'].includes(filters.status) ? filters.status : '',
-    kind: ['PLAYER', 'GUEST'].includes(filters.kind) ? filters.kind : '',
-    branchId: filters.branchId ? requiredId(filters.branchId, '城市分会') : '',
-    levelId: filters.levelId ? requiredId(filters.levelId, '成长等级') : '',
-    controlType: ['ALLOWLIST', 'BLOCKLIST'].includes(filters.controlType) ? filters.controlType : '',
-    phoneBound: ['BOUND', 'UNBOUND'].includes(filters.phoneBound) ? filters.phoneBound : '',
-    profileComplete: ['COMPLETE', 'INCOMPLETE'].includes(filters.profileComplete) ? filters.profileComplete : '',
-    joinedWithinDays: [7, 30, 90].includes(Number(filters.joinedWithinDays))
-      ? Number(filters.joinedWithinDays)
-      : 0,
-    experienceMin,
-    experienceMax,
-    createdFrom,
-    createdTo,
-  }
-}
-
-function nonNegativeIntegerFilter(value, label) {
-  if (value === null || value === undefined || value === '') return null
-  const number = Number(value)
-  if (!Number.isInteger(number) || number < 0 || number > 1_000_000_000) {
-    throw new AdminError('VALIDATION_FAILED', `${label}无效`)
-  }
-  return number
-}
-
 function normalizeBranchDraft(value, { includeKey = false } = {}) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new AdminError('VALIDATION_FAILED', '分会内容无效')
@@ -2895,11 +2752,11 @@ function dateTimeFilter(value, label) {
   return date.toISOString().slice(0, 23).replace('T', ' ')
 }
 
-function normalizeExportFilters(exportType, value, scope) {
+function normalizeExportFilters(exportType, value, scope, normalizeUsers) {
   const filters = normalizeFilters(value)
   const normalized = {}
   if (exportType === 'USERS') {
-    Object.assign(normalized, normalizeUserFilters(filters))
+    Object.assign(normalized, normalizeUsers(filters))
   }
   else if (exportType === 'EVENT_ROSTER') {
     Object.assign(normalized, normalizeRosterFilters(filters), { eventId: scope.scopeId })
@@ -2921,28 +2778,6 @@ function normalizeExportFilters(exportType, value, scope) {
   }
   if (scope.scopeType === 'BRANCH') normalized.branchId = scope.scopeId
   return normalized
-}
-
-function normalizeEditableFields(value) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new AdminError('VALIDATION_FAILED', '可编辑字段无效')
-  }
-  const allowed = new Set(['nickname', 'headline', 'introduction', 'visibility'])
-  const keys = Object.keys(value)
-  if (!keys.length || keys.some(key => !allowed.has(key))) {
-    throw new AdminError('VALIDATION_FAILED', '包含未授权的资料字段')
-  }
-  const fields = {}
-  if ('nickname' in value) fields.nickname = text(value.nickname, 64, { required: true, label: '昵称' })
-  if ('headline' in value) fields.headline = text(value.headline, 160, { label: '简介标题' })
-  if ('introduction' in value) fields.introduction = text(value.introduction, 600, { label: '个人介绍' })
-  if ('visibility' in value) {
-    if (!value.visibility || typeof value.visibility !== 'object' || Array.isArray(value.visibility)) {
-      throw new AdminError('VALIDATION_FAILED', '隐私设置无效')
-    }
-    fields.visibility = value.visibility
-  }
-  return fields
 }
 
 function normalizeEventDraft(value) {
