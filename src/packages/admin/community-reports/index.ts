@@ -103,13 +103,13 @@ Page({
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const session = await mipAdminModule.getSession(force)
+      const session = await mipAdminModule.governance.getSession(force)
       const canManage = hasCapability(session.capabilities, 'community.reports.manage')
       if (!canManage) {
         this.setData({ state: 'forbidden', canManage: false, reports: [], message: '' })
         return
       }
-      const response = await mipAdminModule.listCommunityReports(this.data.status, force)
+      const response = await mipAdminModule.community.listReports(this.data.status, force)
       this.setData({
         state: 'ready',
         canManage: true,
@@ -198,19 +198,19 @@ Page({
     this.setData({ processing: true, message: '' })
     try {
       if (action === 'CLAIM') {
-        await mipAdminModule.mutate(() => mipAdminModule.gateway.claimCommunityReport({
+        await mipAdminModule.community.claimReport({
           reportId: this.data.actionReportId,
           expectedVersion: this.data.actionVersion,
           reason,
-        }))
+        })
       }
       else {
-        await mipAdminModule.mutate(() => mipAdminModule.gateway.closeCommunityReport({
+        await mipAdminModule.community.closeReport({
           reportId: this.data.actionReportId,
           expectedVersion: this.data.actionVersion,
           outcome: action,
           reason,
-        }))
+        })
       }
       wx.showToast({ title: copy.success, icon: 'success' })
       this.cancelAction()

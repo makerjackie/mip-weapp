@@ -3,10 +3,10 @@ import type { PendingAdminExportStore } from './pending-export'
 import type {
   AdminCapability,
   AdminCapabilityGrant,
-  AdminCommunityReportStatus,
   MipAdminGateway,
 } from './types'
 import { createQueryCache } from '@weapp/shared/cache'
+import { createMipCommunityAdmin } from './community-admin'
 import { createMipEventsAdmin } from './events-admin'
 import {
   createAndOpenExport,
@@ -28,6 +28,7 @@ export function createMipAdminModule(
   const refresh = () => {
     cache.invalidate('mip-admin')
   }
+  const community = createMipCommunityAdmin(gateway, cache)
   const growth = createMipGrowthAdmin(gateway, cache)
   const events = createMipEventsAdmin(gateway, cache)
   const governance = createMipGovernanceAdmin(gateway, cache)
@@ -47,11 +48,8 @@ export function createMipAdminModule(
     getMessageCampaign: messaging.getCampaign,
     searchMessageRecipients: messaging.searchRecipients,
     messaging,
-    listCommunityReports: (status: AdminCommunityReportStatus, force = false) => cache.query(
-      `mip-admin:community-reports:${status}`,
-      () => gateway.listCommunityReports(status),
-      { force },
-    ),
+    listCommunityReports: community.listReports,
+    community,
     listUsers: users.list,
     getUser: users.get,
     users,
