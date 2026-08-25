@@ -144,7 +144,7 @@ describe('operational exception reader', () => {
     database.query = async (sql, params) => {
       const rows = await query(sql, params)
       if (sql.includes('FROM mip_delivery_tasks')) {
-        return rows.map(row => ({ ...row, status: 'FAILED', last_error_code: 'DELIVERY_OUTCOME_UNKNOWN' }))
+        return rows.map(row => ({ ...row, status: 'CANCELLED', last_error_code: 'DELIVERY_OUTCOME_UNKNOWN' }))
       }
       return rows
     }
@@ -157,6 +157,9 @@ describe('operational exception reader', () => {
     })
     assert.equal(items[0].status, 'FAILED')
     assert.equal(items[0].reasonCode, 'DELIVERY_OUTCOME_UNKNOWN')
+    const deliveryQuery = database.calls.find(call => call.sql.includes('FROM mip_delivery_tasks')).sql
+    assert.match(deliveryQuery, /task\.status = 'FAILED'/)
+    assert.match(deliveryQuery, /task\.status = 'CANCELLED' AND task\.last_error_code IS NOT NULL/)
   })
 
   it('does not forward unknown or malformed navigation targets', () => {

@@ -447,7 +447,10 @@ function campaignSelect(includeAudience) {
        AND ready_outbox.aggregate_type = 'OPERATIONS_MESSAGE'
        AND ready_outbox.aggregate_id = ready_message.id
        AND ready_outbox.event_type = 'operations.notification_published'
-       AND ready_outbox.status = 'DELIVERED'
+      INNER JOIN mip_inbox_messages ready_inbox
+        ON ready_inbox.app_id = ready_message.app_id
+       AND ready_inbox.recipient_user_id = ready_message.recipient_user_id
+       AND ready_inbox.dedupe_key = CONCAT('outbox:', ready_outbox.id, ':operations')
       WHERE ready_message.app_id = campaign.app_id AND ready_message.publication_id = campaign.id
     ) AS inbox_ready_count,
     (SELECT COUNT(*) FROM mip_operations_messages failed_message
@@ -459,6 +462,16 @@ function campaignSelect(includeAudience) {
        AND failed_outbox.status IN ('FAILED', 'CANCELLED')
       WHERE failed_message.app_id = campaign.app_id AND failed_message.publication_id = campaign.id
     ) AS failed_count,
+    ${campaignOutboxCount("= 'PENDING'")} AS outbox_pending_count,
+    ${campaignOutboxCount("= 'PROCESSING'")} AS outbox_processing_count,
+    ${campaignOutboxCount("= 'FAILED'")} AS outbox_retrying_count,
+    ${campaignOutboxCount("= 'DELIVERED'")} AS outbox_delivered_count,
+    ${campaignOutboxCount("= 'CANCELLED'")} AS outbox_terminal_count,
+    ${campaignExternalTaskCount("= 'PENDING'")} AS external_task_pending_count,
+    ${campaignExternalTaskCount("= 'PROCESSING'")} AS external_task_processing_count,
+    ${campaignExternalTaskCount("= 'FAILED'")} AS external_task_retrying_count,
+    ${campaignExternalTaskCount("= 'DELIVERED'")} AS external_task_delivered_count,
+    ${campaignExternalTaskCount("= 'CANCELLED'")} AS external_task_terminal_count,
     campaign.snapshot_at, campaign.published_at, campaign.withdrawn_at,
     ${includeAudience ? 'campaign.withdrawal_reason, campaign.publish_idempotency_key, campaign.publish_request_hash,' : ''}
     campaign.version, campaign.updated_at
@@ -487,6 +500,20 @@ function campaignDto(row) {
       submittedCount: Number(row.submitted_count || 0),
       inboxReadyCount: Number(row.inbox_ready_count || 0),
       failedCount: Number(row.failed_count || 0),
+      outboxStats: {
+        pendingCount: Number(row.outbox_pending_count || 0),
+        processingCount: Number(row.outbox_processing_count || 0),
+        retryingCount: Number(row.outbox_retrying_count || 0),
+        deliveredCount: Number(row.outbox_delivered_count || 0),
+        terminalCount: Number(row.outbox_terminal_count || 0),
+      },
+      externalTaskStats: {
+        pendingCount: Number(row.external_task_pending_count || 0),
+        processingCount: Number(row.external_task_processing_count || 0),
+        retryingCount: Number(row.external_task_retrying_count || 0),
+        deliveredCount: Number(row.external_task_delivered_count || 0),
+        terminalCount: Number(row.external_task_terminal_count || 0),
+      },
     },
     snapshotAt: iso(row.snapshot_at),
     publishedAt: iso(row.published_at),
@@ -501,6 +528,37 @@ function campaignDto(row) {
     version: Number(row.version),
     updatedAt: iso(row.updated_at),
   }
+}
+
+function campaignOutboxCount(statusCondition) {
+  return `(SELECT COUNT(*) FROM mip_operations_messages counted_message
+    INNER JOIN mip_outbox_events counted_outbox
+      ON counted_outbox.app_id = counted_message.app_id
+     AND counted_outbox.aggregate_type = 'OPERATIONS_MESSAGE'
+     AND counted_outbox.aggregate_id = counted_message.id
+     AND counted_outbox.event_type = 'operations.notification_published'
+     AND counted_outbox.status ${statusCondition}
+    WHERE counted_message.app_id = campaign.app_id
+      AND counted_message.publication_id = campaign.id)`
+}
+
+function campaignExternalTaskCount(statusCondition) {
+  return `(SELECT COUNT(*) FROM mip_operations_messages external_message
+    INNER JOIN mip_outbox_events external_outbox
+      ON external_outbox.app_id = external_message.app_id
+     AND external_outbox.aggregate_type = 'OPERATIONS_MESSAGE'
+     AND external_outbox.aggregate_id = external_message.id
+     AND external_outbox.event_type = 'operations.notification_published'
+    INNER JOIN mip_inbox_messages external_inbox
+      ON external_inbox.app_id = external_message.app_id
+     AND external_inbox.recipient_user_id = external_message.recipient_user_id
+     AND external_inbox.dedupe_key = CONCAT('outbox:', external_outbox.id, ':operations')
+    INNER JOIN mip_delivery_tasks external_task
+      ON external_task.app_id = external_inbox.app_id
+     AND external_task.inbox_message_id = external_inbox.id
+     AND external_task.status ${statusCondition}
+    WHERE external_message.app_id = campaign.app_id
+      AND external_message.publication_id = campaign.id)`
 }
 
 function campaignScope(value) {

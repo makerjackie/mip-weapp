@@ -188,7 +188,9 @@ async function readMedia(database, appId, now, statuses, limit) {
 async function readDeliveries(database, appId, now, statuses, limit) {
   const conditions = []
   const params = [appId]
-  if (statuses.includes('FAILED')) conditions.push("task.status = 'FAILED'")
+  if (statuses.includes('FAILED')) {
+    conditions.push("(task.status = 'FAILED' OR (task.status = 'CANCELLED' AND task.last_error_code IS NOT NULL))")
+  }
   if (statuses.includes('STALLED')) {
     conditions.push(`(task.status = 'PROCESSING' AND (
       (task.lease_expires_at IS NOT NULL AND task.lease_expires_at < ?)

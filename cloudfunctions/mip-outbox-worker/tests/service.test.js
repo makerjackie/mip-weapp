@@ -195,7 +195,7 @@ describe('outbox service', () => {
     assert.equal(result.ignored, 1)
   })
 
-  it('drains bounded batches and invokes external notification delivery before completing', async () => {
+  it('completes the durable outbox fact before best-effort external notification delivery', async () => {
     let leased = 0
     const order = []
     const service = createOutboxService({
@@ -221,7 +221,7 @@ describe('outbox service', () => {
         async publishMessage() { order.push('publish') },
         async runNotificationBatch() {
           order.push('deliver')
-          return { failed: 0, pending: 0, terminal: 0 }
+          return { delivered: 1, failed: 0, pending: 0, terminal: 0 }
         },
       },
     })
@@ -229,23 +229,37 @@ describe('outbox service', () => {
     const result = await service.runBatch({ appId: 'wx-app', drain: true, limit: 1, maxBatches: 2 })
     assert.equal(result.batches, 2)
     assert.equal(result.delivered, 1)
-    assert.deepEqual(order, ['publish', 'deliver', 'complete'])
+    assert.deepEqual(order, ['publish', 'complete', 'deliver'])
+    assert.deepEqual(result.results[0].externalDelivery, {
+      requested: true,
+      status: 'COMPLETED',
+      deliveredCount: 1,
+      pendingCount: 0,
+      terminalCount: 0,
+    })
+    assert.deepEqual(result.externalDelivery, {
+      requestedEvents: 1,
+      completedEvents: 1,
+      pendingEvents: 0,
+      terminalEvents: 0,
+      wakeFailedEvents: 0,
+      deliveredCount: 1,
+      pendingCount: 0,
+      terminalCount: 0,
+    })
   })
 
-  it('does not complete while notification delivery remains pending', async () => {
+  it('does not retry a completed outbox fact while the external task remains pending', async () => {
     let completed = false
+    let retried = false
     const service = createOutboxService({
       repository: {
         async leaseBatch() { return { events: [event], reaped: [] } },
-        async completeEvent() { completed = true },
-        async retryEvent(_event, code) {
-          return {
-            eventId: event.id,
-            status: 'RETRY',
-            errorCode: code,
-            nextAttemptAt: '2026-08-24T01:00:00.250Z',
-          }
+        async completeEvent() {
+          completed = true
+          return { eventId: event.id, status: 'DELIVERED' }
         },
+        async retryEvent() { retried = true },
       },
       projectEvent: async () => ({
         supported: true,
@@ -254,27 +268,37 @@ describe('outbox service', () => {
       }),
       clients: {
         async publishMessage() {},
-        async runNotificationBatch() { return { failed: 1, pending: 1, terminal: 0 } },
+        async runNotificationBatch() {
+          return { delivered: 0, failed: 1, pending: 1, terminal: 0 }
+        },
       },
     })
 
     const result = await service.runBatch({ appId: 'wx-app' })
-    assert.equal(result.retried, 1)
-    assert.equal(completed, false)
-    assert.equal(result.results[0].errorCode, 'NOTIFICATION_DELIVERY_PENDING')
+    assert.equal(result.delivered, 1)
+    assert.equal(result.retried, 0)
+    assert.equal(completed, true)
+    assert.equal(retried, false)
+    assert.deepEqual(result.results[0].externalDelivery, {
+      requested: true,
+      status: 'PENDING',
+      deliveredCount: 0,
+      pendingCount: 1,
+      terminalCount: 0,
+    })
   })
 
-  it('moves a terminal notification failure to the outbox dead state', async () => {
+  it('does not cancel a completed outbox fact for a terminal external task', async () => {
     let completed = false
-    let deadCode
+    let dead = false
     const service = createOutboxService({
       repository: {
         async leaseBatch() { return { events: [event], reaped: [] } },
-        async completeEvent() { completed = true },
-        async deadEvent(_event, code) {
-          deadCode = code
-          return { eventId: event.id, status: 'DEAD', errorCode: code }
+        async completeEvent() {
+          completed = true
+          return { eventId: event.id, status: 'DELIVERED' }
         },
+        async deadEvent() { dead = true },
       },
       projectEvent: async () => ({
         supported: true,
@@ -283,14 +307,61 @@ describe('outbox service', () => {
       }),
       clients: {
         async publishMessage() {},
-        async runNotificationBatch() { return { failed: 0, pending: 0, terminal: 1 } },
+        async runNotificationBatch() {
+          return { delivered: 0, failed: 0, pending: 0, terminal: 1 }
+        },
       },
     })
 
     const result = await service.runBatch({ appId: 'wx-app' })
-    assert.equal(result.dead, 1)
-    assert.equal(completed, false)
-    assert.equal(deadCode, 'NOTIFICATION_DELIVERY_TERMINAL')
+    assert.equal(result.delivered, 1)
+    assert.equal(result.dead, 0)
+    assert.equal(completed, true)
+    assert.equal(dead, false)
+    assert.deepEqual(result.results[0].externalDelivery, {
+      requested: true,
+      status: 'TERMINAL',
+      deliveredCount: 0,
+      pendingCount: 0,
+      terminalCount: 1,
+    })
+  })
+
+  it('contains external wake failures after completing the durable outbox fact', async () => {
+    let completed = false
+    let retried = false
+    const service = createOutboxService({
+      repository: {
+        async leaseBatch() { return { events: [event], reaped: [] } },
+        async completeEvent() {
+          completed = true
+          return { eventId: event.id, status: 'DELIVERED' }
+        },
+        async retryEvent() { retried = true },
+      },
+      projectEvent: async () => ({
+        supported: true,
+        notifications: [{ external: { channel: 'WECHAT_SUBSCRIPTION' } }],
+        growth: [],
+      }),
+      clients: {
+        async publishMessage() {},
+        async runNotificationBatch() { throw new Error('PROVIDER_SECRET_MUST_NOT_LEAK') },
+      },
+    })
+
+    const result = await service.runBatch({ appId: 'wx-app' })
+    assert.equal(result.delivered, 1)
+    assert.equal(completed, true)
+    assert.equal(retried, false)
+    assert.deepEqual(result.results[0].externalDelivery, {
+      requested: true,
+      status: 'WAKE_FAILED',
+      deliveredCount: 0,
+      pendingCount: 0,
+      terminalCount: 0,
+    })
+    assert.equal(JSON.stringify(result).includes('PROVIDER_SECRET_MUST_NOT_LEAK'), false)
   })
 
   it('retries an internal target failure and completes within the same wake', async () => {

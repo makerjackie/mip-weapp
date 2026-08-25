@@ -15,6 +15,14 @@ export interface AdminMessageRecipientCandidate {
   branchName: string
 }
 
+export interface AdminMessageDeliveryStageStats {
+  pendingCount: number
+  processingCount: number
+  retryingCount: number
+  deliveredCount: number
+  terminalCount: number
+}
+
 export interface AdminMessageCampaign {
   id: string
   scopeType: 'PLATFORM' | 'BRANCH'
@@ -32,6 +40,8 @@ export interface AdminMessageCampaign {
     submittedCount: number
     inboxReadyCount: number
     failedCount: number
+    outboxStats: AdminMessageDeliveryStageStats
+    externalTaskStats: AdminMessageDeliveryStageStats
   }
   snapshotAt: string | null
   publishedAt: string | null
@@ -88,6 +98,34 @@ function nullableDate(value: unknown) {
   return typeof value === 'string' && Number.isFinite(Date.parse(value)) ? value : undefined
 }
 
+function parseDeliveryStageStats(value: unknown): AdminMessageDeliveryStageStats {
+  if (value === undefined) {
+    return {
+      pendingCount: 0,
+      processingCount: 0,
+      retryingCount: 0,
+      deliveredCount: 0,
+      terminalCount: 0,
+    }
+  }
+  if (!record(value)
+    || !hasOnlyKeys(value, [
+      'pendingCount',
+      'processingCount',
+      'retryingCount',
+      'deliveredCount',
+      'terminalCount',
+    ])
+    || !Number.isInteger(value.pendingCount) || Number(value.pendingCount) < 0
+    || !Number.isInteger(value.processingCount) || Number(value.processingCount) < 0
+    || !Number.isInteger(value.retryingCount) || Number(value.retryingCount) < 0
+    || !Number.isInteger(value.deliveredCount) || Number(value.deliveredCount) < 0
+    || !Number.isInteger(value.terminalCount) || Number(value.terminalCount) < 0) {
+    invalid()
+  }
+  return value as unknown as AdminMessageDeliveryStageStats
+}
+
 export function parseMessageCampaignScopes(value: unknown): AdminMessageCampaignScope {
   if (!record(value) || !hasOnlyKeys(value, ['platform', 'branches'])
     || typeof value.platform !== 'boolean' || !Array.isArray(value.branches)) {
@@ -140,7 +178,13 @@ export function parseMessageCampaign(value: unknown): AdminMessageCampaign {
     || !safetyStatuses.has(String(value.contentSafetyStatus))
     || !Number.isInteger(value.recipientCount) || Number(value.recipientCount) < 0 || Number(value.recipientCount) > 1000
     || !record(value.deliveryStats)
-    || !hasOnlyKeys(value.deliveryStats, ['submittedCount', 'inboxReadyCount', 'failedCount'])
+    || !hasOnlyKeys(value.deliveryStats, [
+      'submittedCount',
+      'inboxReadyCount',
+      'failedCount',
+      'outboxStats',
+      'externalTaskStats',
+    ])
     || !Number.isInteger(value.deliveryStats.submittedCount) || Number(value.deliveryStats.submittedCount) < 0
     || !Number.isInteger(value.deliveryStats.inboxReadyCount) || Number(value.deliveryStats.inboxReadyCount) < 0
     || !Number.isInteger(value.deliveryStats.failedCount) || Number(value.deliveryStats.failedCount) < 0
@@ -155,7 +199,17 @@ export function parseMessageCampaign(value: unknown): AdminMessageCampaign {
   if ((value.scopeType === 'PLATFORM') !== (value.branchId === null)) {
     invalid()
   }
-  return value as unknown as AdminMessageCampaign
+  const deliveryStats = value.deliveryStats as Record<string, unknown>
+  return {
+    ...(value as unknown as AdminMessageCampaign),
+    deliveryStats: {
+      submittedCount: Number(deliveryStats.submittedCount),
+      inboxReadyCount: Number(deliveryStats.inboxReadyCount),
+      failedCount: Number(deliveryStats.failedCount),
+      outboxStats: parseDeliveryStageStats(deliveryStats.outboxStats),
+      externalTaskStats: parseDeliveryStageStats(deliveryStats.externalTaskStats),
+    },
+  }
 }
 
 export function parseMessageCampaignPage(value: unknown) {

@@ -30,7 +30,22 @@ const campaign = {
 
 describe('MIP message campaign admin contract', () => {
   it('parses bounded campaign, recipient and publication responses without internal user ids', () => {
-    expect(parseMessageCampaign(campaign).recipientCount).toBe(12)
+    const parsedCampaign = parseMessageCampaign(campaign)
+    expect(parsedCampaign.recipientCount).toBe(12)
+    expect(parsedCampaign.deliveryStats.outboxStats).toEqual({
+      pendingCount: 0,
+      processingCount: 0,
+      retryingCount: 0,
+      deliveredCount: 0,
+      terminalCount: 0,
+    })
+    expect(parsedCampaign.deliveryStats.externalTaskStats).toEqual({
+      pendingCount: 0,
+      processingCount: 0,
+      retryingCount: 0,
+      deliveredCount: 0,
+      terminalCount: 0,
+    })
     const profileRef = `p1.${'a'.repeat(16)}.${'b'.repeat(48)}.${'c'.repeat(22)}`
     const recipients = parseMessageRecipientPage({
       items: [{ profileRef, nickname: '林然', headline: '产品经理', branchName: '深圳分会' }],
@@ -49,6 +64,49 @@ describe('MIP message campaign admin contract', () => {
     expect(() => parseMessageRecipientPage({
       items: [{ profileRef, nickname: '林然', headline: '', branchName: '', userId: 'hidden' }],
       nextCursor: null,
+    })).toThrow()
+  })
+
+  it('accepts typed outbox and external task breakdowns without weakening response validation', () => {
+    const parsed = parseMessageCampaign({
+      ...campaign,
+      deliveryStats: {
+        submittedCount: 4,
+        inboxReadyCount: 3,
+        failedCount: 1,
+        outboxStats: {
+          pendingCount: 0,
+          processingCount: 0,
+          retryingCount: 1,
+          deliveredCount: 3,
+          terminalCount: 0,
+        },
+        externalTaskStats: {
+          pendingCount: 0,
+          processingCount: 0,
+          retryingCount: 1,
+          deliveredCount: 1,
+          terminalCount: 1,
+        },
+      },
+    })
+
+    expect(parsed.deliveryStats.outboxStats.deliveredCount).toBe(3)
+    expect(parsed.deliveryStats.externalTaskStats.terminalCount).toBe(1)
+    expect(() => parseMessageCampaign({
+      ...campaign,
+      deliveryStats: {
+        submittedCount: 1,
+        inboxReadyCount: 1,
+        failedCount: 0,
+        outboxStats: {
+          pendingCount: 0,
+          processingCount: 0,
+          retryingCount: 0,
+          deliveredCount: 1,
+          terminalCount: -1,
+        },
+      },
     })).toThrow()
   })
 

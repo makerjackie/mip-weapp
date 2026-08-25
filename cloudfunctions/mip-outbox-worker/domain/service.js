@@ -45,6 +45,7 @@ function createOutboxService(options) {
         retried: results.filter(item => item.status === 'RETRY').length,
         dead: results.filter(item => item.status === 'DEAD').length,
         ignored: results.filter(item => item.status === 'IGNORED').length,
+        externalDelivery: aggregateExternalDelivery(results),
         results,
       }
     },
@@ -73,17 +74,17 @@ function createOutboxService(options) {
       if (projected.continuation) {
         await repository.enqueueContinuation(event, projected.continuation)
       }
-      if (projected.notifications.some(notification => notification.external)) {
-        const delivery = await clients.runNotificationBatch(event.app_id, 20)
-        assertNotificationBatch(delivery)
-      }
       const completed = await repository.completeEvent(event)
+      const externalDelivery = projected.notifications.some(notification => notification.external)
+        ? await observeExternalDelivery(clients, event.app_id)
+        : externalDeliverySummary('NOT_REQUESTED')
       return {
         ...completed,
         notifications: projected.notifications.length,
         growthEvents: projected.growth.length,
         continuation: Boolean(projected.continuation),
         projection: projected.reason,
+        externalDelivery,
       }
     }
     catch (error) {
@@ -115,13 +116,75 @@ function createOutboxService(options) {
   }
 }
 
-function assertNotificationBatch(result) {
-  if (!result || !Number.isInteger(result.failed)
-    || !Number.isInteger(result.pending) || !Number.isInteger(result.terminal)) {
-    throw new Error('INTERNAL_FUNCTION_FAILED')
+async function observeExternalDelivery(clients, appId) {
+  try {
+    return summarizeNotificationBatch(await clients.runNotificationBatch(appId, 20))
   }
-  if (result.terminal > 0) throw new Error('NOTIFICATION_DELIVERY_TERMINAL')
-  if (result.failed > 0 || result.pending > 0) throw new Error('NOTIFICATION_DELIVERY_PENDING')
+  catch {
+    return externalDeliverySummary('WAKE_FAILED')
+  }
+}
+
+function summarizeNotificationBatch(result) {
+  if (!result || typeof result !== 'object') return externalDeliverySummary('WAKE_FAILED')
+  const deliveredCount = nonnegativeInteger(result.delivered)
+  const failedCount = nonnegativeInteger(result.failed)
+  const pendingCount = nonnegativeInteger(result.pending)
+  const terminalCount = nonnegativeInteger(result.terminal)
+  if ([deliveredCount, failedCount, pendingCount, terminalCount].some(value => value === null)) {
+    return externalDeliverySummary('WAKE_FAILED')
+  }
+  const retryableCount = Math.max(failedCount, pendingCount)
+  const status = terminalCount > 0
+    ? 'TERMINAL'
+    : retryableCount > 0
+      ? 'PENDING'
+      : 'COMPLETED'
+  return externalDeliverySummary(status, {
+    deliveredCount,
+    pendingCount: retryableCount,
+    terminalCount,
+  })
+}
+
+function externalDeliverySummary(status, counts = {}) {
+  return {
+    requested: status !== 'NOT_REQUESTED',
+    status,
+    deliveredCount: counts.deliveredCount || 0,
+    pendingCount: counts.pendingCount || 0,
+    terminalCount: counts.terminalCount || 0,
+  }
+}
+
+function aggregateExternalDelivery(results) {
+  const summary = {
+    requestedEvents: 0,
+    completedEvents: 0,
+    pendingEvents: 0,
+    terminalEvents: 0,
+    wakeFailedEvents: 0,
+    deliveredCount: 0,
+    pendingCount: 0,
+    terminalCount: 0,
+  }
+  for (const result of results) {
+    const external = result?.externalDelivery
+    if (!external?.requested) continue
+    summary.requestedEvents += 1
+    if (external.status === 'COMPLETED') summary.completedEvents += 1
+    if (external.status === 'PENDING') summary.pendingEvents += 1
+    if (external.status === 'TERMINAL') summary.terminalEvents += 1
+    if (external.status === 'WAKE_FAILED') summary.wakeFailedEvents += 1
+    summary.deliveredCount += external.deliveredCount
+    summary.pendingCount += external.pendingCount
+    summary.terminalCount += external.terminalCount
+  }
+  return summary
+}
+
+function nonnegativeInteger(value) {
+  return Number.isSafeInteger(value) && value >= 0 ? value : null
 }
 
 function earliestRetryAt(results) {
@@ -154,11 +217,14 @@ function safeError(error) {
 }
 
 module.exports = {
-  assertNotificationBatch,
+  aggregateExternalDelivery,
   createOutboxService,
   earliestRetryAt,
+  externalDeliverySummary,
   normalizeLimit,
   normalizeMaxBatches,
+  observeExternalDelivery,
   safeError,
+  summarizeNotificationBatch,
   terminalErrors,
 }

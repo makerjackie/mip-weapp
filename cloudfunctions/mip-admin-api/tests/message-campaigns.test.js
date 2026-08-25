@@ -4,6 +4,7 @@ const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const { CAPABILITIES, roleCapabilities } = require('../domain/capabilities')
 const {
+  campaignDto,
   createMessageCampaignRepository,
   publishRequestHash,
 } = require('../domain/message-campaigns')
@@ -32,6 +33,16 @@ function row(overrides = {}) {
     submitted_count: 0,
     inbox_ready_count: 0,
     failed_count: 0,
+    outbox_pending_count: 0,
+    outbox_processing_count: 0,
+    outbox_retrying_count: 0,
+    outbox_delivered_count: 0,
+    outbox_terminal_count: 0,
+    external_task_pending_count: 0,
+    external_task_processing_count: 0,
+    external_task_retrying_count: 0,
+    external_task_delivered_count: 0,
+    external_task_terminal_count: 0,
     snapshot_at: new Date('2026-08-24T08:00:00.000Z'),
     published_at: null,
     withdrawn_at: null,
@@ -76,6 +87,75 @@ describe('admin message campaigns', () => {
     for (const role of ['PLATFORM_FINANCE', 'EVENT_OWNER', 'EVENT_MANAGER', 'EVENT_STAFF']) {
       assert.equal(roleCapabilities[role].includes(CAPABILITIES.MESSAGES_MANAGE), false)
     }
+  })
+
+  it('reports inbox, business outbox, and external delivery task facts independently', () => {
+    const campaign = campaignDto(row({
+      submitted_count: 4,
+      inbox_ready_count: 3,
+      failed_count: 1,
+      outbox_pending_count: 0,
+      outbox_processing_count: 0,
+      outbox_retrying_count: 1,
+      outbox_delivered_count: 3,
+      outbox_terminal_count: 0,
+      external_task_pending_count: 0,
+      external_task_processing_count: 0,
+      external_task_retrying_count: 1,
+      external_task_delivered_count: 1,
+      external_task_terminal_count: 1,
+    }))
+
+    assert.deepEqual(campaign.deliveryStats, {
+      submittedCount: 4,
+      inboxReadyCount: 3,
+      failedCount: 1,
+      outboxStats: {
+        pendingCount: 0,
+        processingCount: 0,
+        retryingCount: 1,
+        deliveredCount: 3,
+        terminalCount: 0,
+      },
+      externalTaskStats: {
+        pendingCount: 0,
+        processingCount: 0,
+        retryingCount: 1,
+        deliveredCount: 1,
+        terminalCount: 1,
+      },
+    })
+  })
+
+  it('derives inbox readiness from the durable inbox row rather than outbox or external status', async () => {
+    const calls = []
+    const tx = {
+      async one() { return null },
+      async query(sql, params) {
+        calls.push({ sql, params })
+        return [row()]
+      },
+    }
+
+    await repository(tx).listCampaigns(
+      appId,
+      { platform: true, branchIds: [] },
+      {},
+      20,
+    )
+    const sql = calls[0].sql
+    const inboxStart = sql.indexOf('(SELECT COUNT(*) FROM mip_operations_messages ready_message')
+    const inboxEnd = sql.indexOf(') AS inbox_ready_count')
+    const inboxSql = sql.slice(inboxStart, inboxEnd)
+    assert.match(inboxSql, /INNER JOIN mip_inbox_messages ready_inbox/)
+    assert.match(inboxSql, /ready_inbox\.recipient_user_id = ready_message\.recipient_user_id/)
+    assert.match(inboxSql, /ready_inbox\.dedupe_key = CONCAT\('outbox:', ready_outbox\.id, ':operations'\)/)
+    assert.doesNotMatch(inboxSql, /ready_outbox\.status/)
+    assert.match(sql, /counted_outbox\.status = 'FAILED'/)
+    assert.match(sql, /counted_outbox\.status = 'CANCELLED'/)
+    assert.match(sql, /INNER JOIN mip_delivery_tasks external_task/)
+    assert.match(sql, /external_task\.status = 'FAILED'/)
+    assert.match(sql, /external_task\.status = 'CANCELLED'/)
   })
 
   it('creates an immutable recipient snapshot from current app-scoped server facts', async () => {
