@@ -5,13 +5,17 @@ import type {
   AccountClosureResult,
   AgreementAcceptanceInput,
   IdentityAccessSnapshot,
+  MipIdentityAction,
+  MipIdentityActionInputMap,
   MipIdentityGateway,
+  MipIdentityRequest,
   MipProfileSnapshot,
   ProfileOrganization,
   ProfileTagOption,
   ProfileUpdateInput,
   PublicMipProfile,
 } from './contracts'
+import { MIP_IDENTITY_CONTRACT_VERSION } from './contracts'
 
 interface FunctionEnvelope {
   ok: boolean
@@ -20,7 +24,7 @@ interface FunctionEnvelope {
 }
 
 export interface MipIdentityTransport {
-  invoke: (action: string, data?: Record<string, unknown>) => Promise<unknown>
+  invoke: <A extends MipIdentityAction>(request: MipIdentityRequest<A>) => Promise<unknown>
 }
 
 export class MipIdentityGatewayError extends Error {
@@ -166,18 +170,26 @@ function accountClosure(value: unknown): AccountClosureResult {
   }
 }
 
-async function call(transport: MipIdentityTransport, action: string, data?: Record<string, unknown>) {
-  return unwrap(await transport.invoke(action, data))
+async function call<A extends MipIdentityAction>(
+  transport: MipIdentityTransport,
+  action: A,
+  input: MipIdentityActionInputMap[A],
+) {
+  return unwrap(await transport.invoke({
+    contractVersion: MIP_IDENTITY_CONTRACT_VERSION,
+    action,
+    input,
+  }))
 }
 
 export function createMipIdentityGateway(transport: MipIdentityTransport): MipIdentityGateway {
   return {
     async getAccessSnapshot() {
-      return snapshot(await call(transport, 'getAccessSnapshot'))
+      return snapshot(await call(transport, 'getAccessSnapshot', {}))
     },
 
     async acceptAgreements(input: AgreementAcceptanceInput) {
-      return snapshot(await call(transport, 'acceptAgreements', { input }))
+      return snapshot(await call(transport, 'acceptAgreements', input))
     },
 
     async bindWechatPhone(code: string) {
@@ -185,11 +197,11 @@ export function createMipIdentityGateway(transport: MipIdentityTransport): MipId
     },
 
     async closeAccount(input: AccountClosureInput) {
-      return accountClosure(await call(transport, 'closeAccount', { input }))
+      return accountClosure(await call(transport, 'closeAccount', input))
     },
 
     async getProfile() {
-      return profile(await call(transport, 'getProfile'))
+      return profile(await call(transport, 'getProfile', {}))
     },
 
     async getPublicProfile(profileRef: string) {
@@ -197,11 +209,11 @@ export function createMipIdentityGateway(transport: MipIdentityTransport): MipId
     },
 
     async updateProfile(input: ProfileUpdateInput) {
-      return snapshot(await call(transport, 'updateProfile', { input }))
+      return snapshot(await call(transport, 'updateProfile', input))
     },
 
     async listProfileTags() {
-      const value = await call(transport, 'listProfileTags')
+      const value = await call(transport, 'listProfileTags', {})
       if (!Array.isArray(value)) {
         throw new MipIdentityGatewayError('INVALID_RESPONSE', '身份服务返回了无效标签')
       }
@@ -209,7 +221,7 @@ export function createMipIdentityGateway(transport: MipIdentityTransport): MipId
     },
 
     async listBranches() {
-      const value = await call(transport, 'listBranches')
+      const value = await call(transport, 'listBranches', {})
       if (!Array.isArray(value)) {
         throw new MipIdentityGatewayError('INVALID_RESPONSE', '身份服务返回了无效分会列表')
       }
@@ -217,7 +229,7 @@ export function createMipIdentityGateway(transport: MipIdentityTransport): MipId
     },
 
     async setPrimaryBranch(input: SetPrimaryBranchInput) {
-      const value = await call(transport, 'setPrimaryBranch', { input })
+      const value = await call(transport, 'setPrimaryBranch', input)
       if (!isRecord(value) || !Array.isArray(value.branches) || !Number.isInteger(value.userVersion)) {
         throw new MipIdentityGatewayError('INVALID_RESPONSE', '身份服务返回了无效分会状态')
       }

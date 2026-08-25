@@ -2,9 +2,175 @@
 
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
-const { createHandler } = require('../domain/handler')
+const {
+  CONTRACT_VERSION,
+  actions,
+  createHandler,
+  normalizeRequest,
+} = require('../domain/handler')
 
 describe('MIP identity handler', () => {
+  it('fixes the public contract at ten business actions plus health', async () => {
+    assert.equal(CONTRACT_VERSION, 1)
+    assert.deepEqual(Object.keys(actions).sort(), [
+      'acceptAgreements',
+      'bindWechatPhone',
+      'closeAccount',
+      'getAccessSnapshot',
+      'getProfile',
+      'getPublicProfile',
+      'listBranches',
+      'listProfileTags',
+      'setPrimaryBranch',
+      'updateProfile',
+    ])
+
+    let resolved = false
+    const handler = createHandler({
+      getContext: () => ({}),
+      resolveCaller: () => {
+        resolved = true
+        return {}
+      },
+      service: {},
+    })
+    assert.deepEqual(await handler({ contractVersion: 1, action: 'health', input: {} }), {
+      ok: true,
+      data: { status: 'ok' },
+    })
+    assert.equal(resolved, false)
+  })
+
+  it('dispatches direct v1 business input through the existing service signatures', async () => {
+    const calls = []
+    const caller = { appId: 'trusted-app', identityKey: 'a'.repeat(64) }
+    const handler = createHandler({
+      getContext: () => ({ APPID: 'trusted-app' }),
+      resolveCaller: () => caller,
+      service: {
+        async acceptAgreements(receivedCaller, value) {
+          calls.push({ action: 'acceptAgreements', receivedCaller, value })
+          return { accepted: true }
+        },
+        async updateProfile(receivedCaller, value) {
+          calls.push({ action: 'updateProfile', receivedCaller, value })
+          return { updated: true }
+        },
+      },
+    })
+
+    assert.deepEqual(await handler({
+      contractVersion: 1,
+      action: 'acceptAgreements',
+      input: { agreements: [{ key: 'SERVICE_AGREEMENT', version: '1' }] },
+    }), { ok: true, data: { accepted: true } })
+    assert.deepEqual(await handler({
+      contractVersion: 1,
+      action: 'updateProfile',
+      input: { expectedVersion: 2, nickname: '测试用户' },
+    }), { ok: true, data: { updated: true } })
+    assert.deepEqual(calls, [
+      {
+        action: 'acceptAgreements',
+        receivedCaller: caller,
+        value: { input: { agreements: [{ key: 'SERVICE_AGREEMENT', version: '1' }] } },
+      },
+      {
+        action: 'updateProfile',
+        receivedCaller: caller,
+        value: { input: { expectedVersion: 2, nickname: '测试用户' } },
+      },
+    ])
+    assert.equal(Object.hasOwn(calls[0].value.input, 'input'), false)
+  })
+
+  it('keeps legacy flat and previously nested requests compatible', async () => {
+    assert.deepEqual(normalizeRequest({
+      action: 'bindWechatPhone',
+      code: 'legacy-code',
+    }), {
+      action: 'bindWechatPhone',
+      input: { code: 'legacy-code' },
+      legacy: true,
+    })
+    assert.deepEqual(normalizeRequest({
+      action: 'setPrimaryBranch',
+      input: { branchId: 'branch-1', expectedVersion: 2 },
+    }), {
+      action: 'setPrimaryBranch',
+      input: { branchId: 'branch-1', expectedVersion: 2 },
+      legacy: true,
+    })
+  })
+
+  it('rejects v1 top-level business fields and strips nested route injection', async () => {
+    const calls = []
+    const handler = createHandler({
+      getContext: () => ({ APPID: 'trusted-app' }),
+      resolveCaller: () => ({ appId: 'trusted-app', identityKey: 'a'.repeat(64) }),
+      service: {
+        async bindWechatPhone(_caller, value) {
+          calls.push(value)
+          return { phoneBound: true }
+        },
+        async closeAccount() {
+          throw new Error('FORBIDDEN')
+        },
+      },
+    })
+
+    assert.deepEqual(await handler({
+      contractVersion: 1,
+      action: 'bindWechatPhone',
+      input: { code: 'trusted-route-code' },
+      code: 'flat-code',
+    }), {
+      ok: false,
+      error: {
+        code: 'VALIDATION_FAILED',
+        message: '提交的资料格式不正确',
+        retryable: false,
+      },
+    })
+    assert.deepEqual(await handler({
+      contractVersion: 1,
+      action: 'bindWechatPhone',
+      input: {
+        action: 'closeAccount',
+        contractVersion: 999,
+        input: { confirmationPhrase: '确认注销账号' },
+        code: 'trusted-route-code',
+      },
+    }), { ok: true, data: { phoneBound: true } })
+    assert.deepEqual(calls, [{ code: 'trusted-route-code' }])
+  })
+
+  it('rejects unknown and prototype actions before resolving caller or service', async () => {
+    let resolverCalls = 0
+    const handler = createHandler({
+      getContext: () => {
+        throw new Error('MUST_NOT_READ_CONTEXT')
+      },
+      resolveCaller: () => {
+        resolverCalls += 1
+        throw new Error('MUST_NOT_RESOLVE_CALLER')
+      },
+      service: {},
+    })
+    const expected = {
+      ok: false,
+      error: {
+        code: 'UNSUPPORTED_ACTION',
+        message: '不支持该操作',
+        retryable: false,
+      },
+    }
+    for (const action of ['unknownAction', 'toString', 'constructor', '__proto__']) {
+      assert.deepEqual(await handler({ contractVersion: 1, action, input: {} }), expected)
+    }
+    assert.equal(resolverCalls, 0)
+  })
+
   it('builds caller scope only from the trusted context resolver', async () => {
     const calls = []
     const handler = createHandler({

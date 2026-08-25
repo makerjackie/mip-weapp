@@ -37,31 +37,72 @@ const retryableCodes = new Set([
   'PHONE_SERVICE_UNAVAILABLE',
 ])
 
-function createHandler(options) {
-  const handlers = {
-    acceptAgreements: (caller, event) => options.service.acceptAgreements(caller, event),
-    bindWechatPhone: (caller, event) => options.service.bindWechatPhone(caller, event),
-    closeAccount: (caller, event) => options.service.closeAccount(caller, event),
-    getAccessSnapshot: caller => options.service.getAccessSnapshot(caller),
-    getProfile: caller => options.service.getProfile(caller),
-    getPublicProfile: (caller, event) => options.service.getPublicProfile(caller, event),
-    listBranches: caller => options.service.listBranches(caller),
-    listProfileTags: caller => options.service.listProfileTags(caller),
-    setPrimaryBranch: (caller, event) => options.service.setPrimaryBranch(caller, event),
-    updateProfile: (caller, event) => options.service.updateProfile(caller, event),
-  }
+const CONTRACT_VERSION = 1
 
-  return async function main(event = {}) {
-    if (event.action === 'health') {
-      return success({ status: 'ok' })
+const actions = Object.freeze({
+  acceptAgreements: (service, caller, input) => service.acceptAgreements(caller, { input }),
+  bindWechatPhone: (service, caller, input) => service.bindWechatPhone(caller, { code: input.code }),
+  closeAccount: (service, caller, input) => service.closeAccount(caller, { input }),
+  getAccessSnapshot: (service, caller) => service.getAccessSnapshot(caller),
+  getProfile: (service, caller) => service.getProfile(caller),
+  getPublicProfile: (service, caller, input) => service.getPublicProfile(caller, {
+    profileRef: input.profileRef,
+  }),
+  listBranches: (service, caller) => service.listBranches(caller),
+  listProfileTags: (service, caller) => service.listProfileTags(caller),
+  setPrimaryBranch: (service, caller, input) => service.setPrimaryBranch(caller, { input }),
+  updateProfile: (service, caller, input) => service.updateProfile(caller, { input }),
+})
+
+function isRecord(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function businessInput(value) {
+  const {
+    action: _action,
+    contractVersion: _contractVersion,
+    input: _input,
+    ...input
+  } = value
+  return input
+}
+
+function normalizeRequest(event) {
+  if (!isRecord(event)) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  const action = typeof event.action === 'string' ? event.action : ''
+  if (event.contractVersion === undefined) {
+    const flatInput = businessInput(event)
+    const nestedInput = isRecord(event.input) ? businessInput(event.input) : {}
+    return {
+      action,
+      input: Object.keys(flatInput).length ? flatInput : nestedInput,
+      legacy: true,
     }
+  }
+  if (event.contractVersion !== CONTRACT_VERSION
+    || !isRecord(event.input)
+    || Object.keys(event).some(key => !['contractVersion', 'action', 'input'].includes(key))) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  return { action, input: businessInput(event.input), legacy: false }
+}
+
+function createHandler(options) {
+  return async function main(event = {}) {
     try {
-      const handler = handlers[event.action]
-      if (!handler) {
+      const request = normalizeRequest(event)
+      if (request.action === 'health') {
+        return success({ status: 'ok' })
+      }
+      if (!Object.hasOwn(actions, request.action)) {
         throw new Error('UNSUPPORTED_ACTION')
       }
+      const dispatch = actions[request.action]
       const caller = options.resolveCaller(options.getContext())
-      return success(await handler(caller, event))
+      return success(await dispatch(options.service, caller, request.input))
     }
     catch (error) {
       return failure(error)
@@ -86,4 +127,11 @@ function failure(error) {
   }
 }
 
-module.exports = { createHandler, failure, success }
+module.exports = {
+  CONTRACT_VERSION,
+  actions,
+  createHandler,
+  failure,
+  normalizeRequest,
+  success,
+}

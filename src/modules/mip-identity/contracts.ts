@@ -200,6 +200,42 @@ export interface ProfileTagOption {
   popular?: boolean
 }
 
+export const MIP_IDENTITY_CONTRACT_VERSION = 1 as const
+
+export interface MipIdentityActionInputMap {
+  getAccessSnapshot: Record<string, never>
+  acceptAgreements: AgreementAcceptanceInput
+  bindWechatPhone: { code: string }
+  closeAccount: AccountClosureInput
+  getProfile: Record<string, never>
+  getPublicProfile: { profileRef: string }
+  updateProfile: ProfileUpdateInput
+  listProfileTags: Record<string, never>
+  listBranches: Record<string, never>
+  setPrimaryBranch: SetPrimaryBranchInput
+}
+
+export interface MipIdentityActionResultMap {
+  getAccessSnapshot: IdentityAccessSnapshot
+  acceptAgreements: IdentityAccessSnapshot
+  bindWechatPhone: IdentityAccessSnapshot
+  closeAccount: AccountClosureResult
+  getProfile: MipProfileSnapshot
+  getPublicProfile: PublicMipProfile
+  updateProfile: IdentityAccessSnapshot
+  listProfileTags: ProfileTagOption[]
+  listBranches: CityBranchSummary[]
+  setPrimaryBranch: BranchSelectionSnapshot
+}
+
+export type MipIdentityAction = keyof MipIdentityActionInputMap
+
+export interface MipIdentityRequest<A extends MipIdentityAction = MipIdentityAction> {
+  contractVersion: typeof MIP_IDENTITY_CONTRACT_VERSION
+  action: A
+  input: MipIdentityActionInputMap[A]
+}
+
 export interface MipIdentityGateway {
   getAccessSnapshot: () => Promise<IdentityAccessSnapshot>
   acceptAgreements: (input: AgreementAcceptanceInput) => Promise<IdentityAccessSnapshot>
