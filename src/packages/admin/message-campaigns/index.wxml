@@ -1,84 +1,174 @@
 <view id="admin-message-campaigns-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
   <view class="flex items-center justify-between gap-4">
-    <view><view class="text-[length:40rpx] font-bold">消息管理</view><view class="mt-2 text-[length:23rpx] text-muted">创建并发布定向站内消息</view></view>
-    <t-button wx:if="{{mode === 'list'}}" size="small" theme="primary" bind:tap="createCampaign">新建</t-button>
-    <t-button wx:else size="small" variant="outline" bind:tap="backToList">返回列表</t-button>
+    <view class="min-w-0 flex-1"><view class="text-[length:40rpx] font-bold">消息管理</view><view class="mt-2 text-[length:23rpx] text-muted">维护消息活动与消息模板</view></view>
+    <block wx:if="{{section === 'campaigns'}}">
+      <t-button wx:if="{{mode === 'list'}}" size="small" theme="primary" bind:tap="createCampaign">新建活动</t-button>
+      <t-button wx:else size="small" variant="outline" bind:tap="backToList">返回列表</t-button>
+    </block>
+    <block wx:else>
+      <t-button wx:if="{{templateMode === 'list'}}" size="small" theme="primary" bind:tap="createTemplate">新建模板</t-button>
+      <t-button wx:else size="small" variant="outline" bind:tap="backToTemplateList">返回列表</t-button>
+    </block>
   </view>
 
-  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel px-5 py-6"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载消息活动" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
-  <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有消息管理权限" description="当前账号不能维护消息活动。" /></view>
+  <view class="mt-5 grid grid-cols-2 gap-2 rounded-[16rpx] bg-panel p-2">
+    <view class="min-h-[72rpx] rounded-[12rpx] px-3 py-3 text-center text-[length:24rpx] {{section === 'campaigns' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-section="campaigns" bind:tap="chooseSection">消息活动</view>
+    <view class="min-h-[72rpx] rounded-[12rpx] px-3 py-3 text-center text-[length:24rpx] {{section === 'templates' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-section="templates" bind:tap="chooseSection">消息模板</view>
+  </view>
 
-  <block wx:elif="{{mode === 'list'}}">
-    <scroll-view class="mt-5 whitespace-nowrap" scroll-x enhanced show-scrollbar="{{false}}">
-      <view class="inline-flex gap-2">
-        <view class="rounded-full px-4 py-2 text-[length:23rpx] {{statusFilter === '' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-status="" bind:tap="chooseStatus">全部</view>
-        <view class="rounded-full px-4 py-2 text-[length:23rpx] {{statusFilter === 'DRAFT' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-status="DRAFT" bind:tap="chooseStatus">草稿</view>
-        <view class="rounded-full px-4 py-2 text-[length:23rpx] {{statusFilter === 'READY' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-status="READY" bind:tap="chooseStatus">待发布</view>
-        <view class="rounded-full px-4 py-2 text-[length:23rpx] {{statusFilter === 'PUBLISHED' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-status="PUBLISHED" bind:tap="chooseStatus">已发布</view>
-        <view class="rounded-full px-4 py-2 text-[length:23rpx] {{statusFilter === 'WITHDRAWN' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-status="WITHDRAWN" bind:tap="chooseStatus">已撤销</view>
+  <block wx:if="{{section === 'campaigns'}}">
+    <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel px-5 py-6"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+    <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载消息活动" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
+    <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有消息管理权限" description="当前账号不能维护消息活动。" /></view>
+
+    <block wx:elif="{{mode === 'list'}}">
+      <scroll-view class="mt-5 whitespace-nowrap" scroll-x enhanced show-scrollbar="{{false}}">
+        <view class="inline-flex gap-2">
+          <view class="rounded-full px-4 py-2 text-[length:23rpx] {{statusFilter === '' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-status="" bind:tap="chooseStatus">全部</view>
+          <view class="rounded-full px-4 py-2 text-[length:23rpx] {{statusFilter === 'DRAFT' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-status="DRAFT" bind:tap="chooseStatus">草稿</view>
+          <view class="rounded-full px-4 py-2 text-[length:23rpx] {{statusFilter === 'READY' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-status="READY" bind:tap="chooseStatus">待发布</view>
+          <view class="rounded-full px-4 py-2 text-[length:23rpx] {{statusFilter === 'PUBLISHED' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-status="PUBLISHED" bind:tap="chooseStatus">已发布</view>
+          <view class="rounded-full px-4 py-2 text-[length:23rpx] {{statusFilter === 'WITHDRAWN' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-status="WITHDRAWN" bind:tap="chooseStatus">已撤销</view>
+        </view>
+      </scroll-view>
+      <view wx:if="{{state === 'empty'}}" class="mt-6"><app-empty-state title="暂无消息活动" description="新消息活动会先保存为草稿。" action-text="新建消息活动" bind:action="createCampaign" /></view>
+      <view wx:else class="mip-admin-card-list mt-5 flex flex-col gap-3">
+        <view wx:for="{{items}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4" data-id="{{item.id}}" bind:tap="openCampaign">
+          <view class="flex items-start gap-2"><view class="min-w-0 flex-1 text-[length:28rpx] font-semibold">{{item.name}}</view><t-tag size="small" variant="outline">{{item.statusText}}</t-tag></view>
+          <view class="mt-2 text-[length:24rpx]">{{item.title}}</view>
+          <view class="mt-3 flex flex-wrap gap-2 text-[length:21rpx] text-muted"><text>{{item.scopeText}}</text><text>{{item.audienceType === 'ALL' ? '范围内全部用户' : '指定用户'}}</text><text wx:if="{{item.recipientCount}}">{{item.recipientCount}} 人</text></view>
+          <view class="mt-2 text-[length:20rpx] text-muted">更新于 {{item.updatedText}}</view>
+        </view>
       </view>
-    </scroll-view>
-    <view wx:if="{{state === 'empty'}}" class="mt-6"><app-empty-state title="暂无消息活动" description="新消息活动会先保存为草稿。" action-text="新建消息活动" bind:action="createCampaign" /></view>
-    <view wx:else class="mt-5 flex flex-col gap-3">
-      <view wx:for="{{items}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4" data-id="{{item.id}}" bind:tap="openCampaign">
-        <view class="flex items-start gap-2"><view class="min-w-0 flex-1 text-[length:28rpx] font-semibold">{{item.name}}</view><t-tag size="small" variant="outline">{{item.statusText}}</t-tag></view>
-        <view class="mt-2 text-[length:24rpx]">{{item.title}}</view>
-        <view class="mt-3 flex flex-wrap gap-2 text-[length:21rpx] text-muted"><text>{{item.scopeText}}</text><text>{{item.audienceType === 'ALL' ? '范围内全部用户' : '指定用户'}}</text><text wx:if="{{item.recipientCount}}">{{item.recipientCount}} 人</text></view>
-        <view class="mt-2 text-[length:20rpx] text-muted">更新于 {{item.updatedText}}</view>
+    </block>
+
+    <view wx:else class="mip-admin-section-grid mt-5 flex flex-col gap-4">
+      <view wx:if="{{campaignId}}" class="mip-admin-span-wide rounded-[16rpx] bg-panel px-4 py-4">
+        <view class="flex items-center justify-between"><text class="text-[length:24rpx]">活动状态</text><text class="text-[length:23rpx] text-muted">{{statusText}}</text></view>
+        <view class="mt-3 flex items-center justify-between"><text class="text-[length:24rpx]">内容检查</text><text class="text-[length:23rpx] text-muted">{{safetyText}}</text></view>
+        <view wx:if="{{campaignStatus !== 'DRAFT'}}" class="mt-3 flex items-center justify-between"><text class="text-[length:24rpx]">快照人数</text><text class="text-[length:23rpx] text-muted">{{recipientCount}} 人</text></view>
+        <view wx:if="{{campaignStatus === 'PUBLISHED' || campaignStatus === 'WITHDRAWN'}}" class="mt-3 grid grid-cols-3 gap-2 text-center"><view class="rounded-[10rpx] bg-panel-raised px-2 py-2"><view class="text-[length:26rpx] font-semibold">{{deliveryStats.submittedCount}}</view><view class="mt-1 text-[length:20rpx] text-muted">已提交</view></view><view class="rounded-[10rpx] bg-panel-raised px-2 py-2"><view class="text-[length:26rpx] font-semibold">{{deliveryStats.inboxReadyCount}}</view><view class="mt-1 text-[length:20rpx] text-muted">站内可见</view></view><view class="rounded-[10rpx] bg-panel-raised px-2 py-2"><view class="text-[length:26rpx] font-semibold">{{deliveryStats.failedCount}}</view><view class="mt-1 text-[length:20rpx] text-muted">处理失败</view></view></view>
       </view>
-    </view>
-  </block>
 
-  <view wx:else class="mt-5 flex flex-col gap-4">
-    <view wx:if="{{campaignId}}" class="rounded-[16rpx] bg-panel px-4 py-4">
-      <view class="flex items-center justify-between"><text class="text-[length:24rpx]">活动状态</text><text class="text-[length:23rpx] text-muted">{{statusText}}</text></view>
-      <view class="mt-3 flex items-center justify-between"><text class="text-[length:24rpx]">内容检查</text><text class="text-[length:23rpx] text-muted">{{safetyText}}</text></view>
-      <view wx:if="{{campaignStatus !== 'DRAFT'}}" class="mt-3 flex items-center justify-between"><text class="text-[length:24rpx]">快照人数</text><text class="text-[length:23rpx] text-muted">{{recipientCount}} 人</text></view>
-      <view wx:if="{{campaignStatus === 'PUBLISHED' || campaignStatus === 'WITHDRAWN'}}" class="mt-3 grid grid-cols-3 gap-2 text-center"><view class="rounded-[10rpx] bg-panel-raised px-2 py-2"><view class="text-[length:26rpx] font-semibold">{{deliveryStats.submittedCount}}</view><view class="mt-1 text-[length:20rpx] text-muted">已提交</view></view><view class="rounded-[10rpx] bg-panel-raised px-2 py-2"><view class="text-[length:26rpx] font-semibold">{{deliveryStats.inboxReadyCount}}</view><view class="mt-1 text-[length:20rpx] text-muted">站内可见</view></view><view class="rounded-[10rpx] bg-panel-raised px-2 py-2"><view class="text-[length:26rpx] font-semibold">{{deliveryStats.failedCount}}</view><view class="mt-1 text-[length:20rpx] text-muted">处理失败</view></view></view>
-    </view>
+      <view class="rounded-[16rpx] bg-panel px-4 py-4">
+        <view class="text-[length:26rpx] font-semibold">管理范围</view>
+        <view class="mt-3 grid grid-cols-2 gap-2"><view wx:if="{{platformAllowed}}" class="rounded-[12rpx] px-3 py-3 text-center text-[length:23rpx] {{draft.scopeType === 'PLATFORM' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-scope="PLATFORM" bind:tap="chooseScope">全平台</view><view wx:if="{{branches.length}}" class="rounded-[12rpx] px-3 py-3 text-center text-[length:23rpx] {{draft.scopeType === 'BRANCH' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-scope="BRANCH" bind:tap="chooseScope">城市分会</view></view>
+        <picker wx:if="{{draft.scopeType === 'BRANCH'}}" class="mt-3" range="{{branches}}" range-key="name" value="{{branchIndex}}" disabled="{{!editable}}" bindchange="changeBranch"><view class="min-h-[72rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:24rpx]">{{branchIndex >= 0 ? branches[branchIndex].name : '选择城市分会'}}</view></picker>
+      </view>
 
-    <view class="rounded-[16rpx] bg-panel px-4 py-4">
-      <view class="text-[length:26rpx] font-semibold">管理范围</view>
-      <view class="mt-3 grid grid-cols-2 gap-2"><view wx:if="{{platformAllowed}}" class="rounded-[12rpx] px-3 py-3 text-center text-[length:23rpx] {{draft.scopeType === 'PLATFORM' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-scope="PLATFORM" bind:tap="chooseScope">全平台</view><view wx:if="{{branches.length}}" class="rounded-[12rpx] px-3 py-3 text-center text-[length:23rpx] {{draft.scopeType === 'BRANCH' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-scope="BRANCH" bind:tap="chooseScope">城市分会</view></view>
-      <picker wx:if="{{draft.scopeType === 'BRANCH'}}" class="mt-3" range="{{branches}}" range-key="name" value="{{branchIndex}}" disabled="{{!editable}}" bindchange="changeBranch"><view class="min-h-[72rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:24rpx]">{{branchIndex >= 0 ? branches[branchIndex].name : '选择城市分会'}}</view></picker>
-    </view>
+      <view wx:if="{{editable}}" class="mip-admin-span-wide rounded-[16rpx] bg-panel px-4 py-4">
+        <view class="flex items-center justify-between gap-3"><view><view class="text-[length:26rpx] font-semibold">应用消息模板</view><view class="mt-1 text-[length:22rpx] text-muted">只复制模板当前的消息标题和正文</view></view><t-button size="small" variant="outline" loading="{{campaignTemplateLoading}}" bind:tap="retryCampaignTemplates">刷新</t-button></view>
+        <view wx:if="{{campaignTemplateLoading && !campaignTemplateOptions.length}}" class="mt-4"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+        <view wx:elif="{{campaignTemplateError && !campaignTemplateOptions.length}}" class="mt-4 rounded-[12rpx] bg-panel-raised px-3 py-4 text-[length:23rpx] text-danger">{{campaignTemplateError}}</view>
+        <view wx:elif="{{!campaignTemplateOptions.length}}" class="mt-4 rounded-[12rpx] bg-panel-raised px-3 py-4 text-[length:23rpx] text-muted">当前范围暂无可用模板，仍可直接填写消息。</view>
+        <view wx:else class="mip-admin-card-list mt-4 flex flex-col gap-2">
+          <view wx:for="{{campaignTemplateOptions}}" wx:key="id" class="min-h-[104rpx] rounded-[12rpx] border border-solid px-3 py-3 {{selectedTemplateId === item.id ? 'border-brand bg-brand-soft' : 'border-line bg-panel-raised'}}" data-id="{{item.id}}" bind:tap="applyCampaignTemplate">
+            <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1"><view class="text-[length:24rpx] font-semibold">{{item.name}}</view><view class="mt-1 text-[length:22rpx]">{{item.title}}</view></view><text class="shrink-0 text-[length:22rpx] text-brand">{{selectedTemplateId === item.id ? '已复制' : '应用'}}</text></view>
+            <view class="mt-2 text-[length:21rpx] text-muted">{{item.scopeText}}</view>
+          </view>
+        </view>
+        <view wx:if="{{campaignTemplateError && campaignTemplateOptions.length}}" class="mt-3 text-[length:22rpx] text-danger">{{campaignTemplateError}}</view>
+        <view wx:if="{{templateCopyNotice}}" class="mt-3 rounded-[12rpx] bg-brand-soft px-3 py-3 text-[length:22rpx] leading-[1.6]">{{templateCopyNotice}}</view>
+      </view>
 
-    <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:24rpx] font-semibold">活动名称</view><view class="mt-3"><t-input value="{{draft.name}}" maxlength="100" placeholder="用于运营端识别" disabled="{{!editable}}" data-field="name" bind:change="updateField" /></view></view>
-    <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:24rpx] font-semibold">消息标题</view><view class="mt-3"><t-input value="{{draft.title}}" maxlength="100" placeholder="填写用户看到的标题" disabled="{{!editable}}" data-field="title" bind:change="updateField" /></view></view>
-    <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:24rpx] font-semibold">消息正文</view><textarea class="mt-3 box-border h-[260rpx] w-full rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:24rpx] leading-[1.7]" value="{{draft.body}}" maxlength="500" placeholder="填写消息正文" disabled="{{!editable}}" data-field="body" bindinput="updateField" /></view>
+      <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:24rpx] font-semibold">活动名称</view><view class="mt-3"><t-input value="{{draft.name}}" maxlength="100" placeholder="用于运营端识别" disabled="{{!editable}}" data-field="name" bind:change="updateField" /></view></view>
+      <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:24rpx] font-semibold">消息标题</view><view class="mt-3"><t-input value="{{draft.title}}" maxlength="100" placeholder="填写用户看到的标题" disabled="{{!editable}}" data-field="title" bind:change="updateField" /></view></view>
+      <view class="mip-admin-span-wide rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:24rpx] font-semibold">消息正文</view><textarea class="mt-3 box-border h-[260rpx] w-full rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:24rpx] leading-[1.7]" value="{{draft.body}}" maxlength="500" placeholder="填写消息正文" disabled="{{!editable}}" data-field="body" bindinput="updateField" /></view>
 
-    <view class="rounded-[16rpx] bg-panel px-4 py-4">
-      <view class="text-[length:26rpx] font-semibold">收件人</view>
-      <view class="mt-3 grid grid-cols-2 gap-2"><view class="rounded-[12rpx] px-3 py-3 text-center text-[length:23rpx] {{draft.audienceType === 'ALL' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-audience="ALL" bind:tap="chooseAudience">范围内全部用户</view><view class="rounded-[12rpx] px-3 py-3 text-center text-[length:23rpx] {{draft.audienceType === 'EXPLICIT' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-audience="EXPLICIT" bind:tap="chooseAudience">指定用户</view></view>
-      <view wx:if="{{draft.audienceType === 'EXPLICIT'}}" class="mt-4">
-        <view class="flex items-center gap-2"><view class="min-w-0 flex-1"><t-input value="{{candidateQuery}}" placeholder="搜索昵称或职业" clearable bind:change="updateCandidateQuery" /></view><t-button size="small" variant="outline" loading="{{candidateLoading}}" bind:tap="searchCandidates">搜索</t-button></view>
-        <view class="mt-3 text-[length:22rpx] text-muted">已选择 {{selectedRecipientCount}} 人，最多 100 人</view>
-        <view wx:if="{{!candidateLoading && !candidates.length}}" class="mt-3 rounded-[12rpx] bg-panel-raised px-3 py-4 text-[length:23rpx] text-muted">暂无可选用户</view>
-        <view wx:else class="mt-3 flex max-h-[520rpx] flex-col gap-2 overflow-y-auto">
-          <view wx:for="{{candidates}}" wx:key="profileRef" class="flex min-h-[88rpx] items-center gap-3 rounded-[12rpx] bg-panel-raised px-3 py-3" data-ref="{{item.profileRef}}" bind:tap="toggleCandidate">
-            <view class="min-w-0 flex-1"><view class="text-[length:24rpx]">{{item.nickname}}</view><view class="mt-1 truncate text-[length:21rpx] text-muted">{{item.headline || item.branchName || '资料已完成'}}</view></view>
-            <t-icon name="{{item.selected ? 'check-circle-filled' : 'circle'}}" size="34rpx" color="{{item.selected ? 'var(--color-brand)' : 'var(--color-muted)'}}" />
+      <view class="mip-admin-span-wide rounded-[16rpx] bg-panel px-4 py-4">
+        <view class="text-[length:26rpx] font-semibold">收件人</view>
+        <view class="mt-3 grid grid-cols-2 gap-2"><view class="rounded-[12rpx] px-3 py-3 text-center text-[length:23rpx] {{draft.audienceType === 'ALL' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-audience="ALL" bind:tap="chooseAudience">范围内全部用户</view><view class="rounded-[12rpx] px-3 py-3 text-center text-[length:23rpx] {{draft.audienceType === 'EXPLICIT' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-audience="EXPLICIT" bind:tap="chooseAudience">指定用户</view></view>
+        <view wx:if="{{draft.audienceType === 'EXPLICIT'}}" class="mt-4">
+          <view class="flex items-center gap-2"><view class="min-w-0 flex-1"><t-input value="{{candidateQuery}}" placeholder="搜索昵称或职业" clearable bind:change="updateCandidateQuery" /></view><t-button size="small" variant="outline" loading="{{candidateLoading}}" bind:tap="searchCandidates">搜索</t-button></view>
+          <view class="mt-3 text-[length:22rpx] text-muted">已选择 {{selectedRecipientCount}} 人，最多 100 人</view>
+          <view wx:if="{{!candidateLoading && !candidates.length}}" class="mt-3 rounded-[12rpx] bg-panel-raised px-3 py-4 text-[length:23rpx] text-muted">暂无可选用户</view>
+          <view wx:else class="mt-3 flex max-h-[520rpx] flex-col gap-2 overflow-y-auto">
+            <view wx:for="{{candidates}}" wx:key="profileRef" class="flex min-h-[88rpx] items-center gap-3 rounded-[12rpx] bg-panel-raised px-3 py-3" data-ref="{{item.profileRef}}" bind:tap="toggleCandidate">
+              <view class="min-w-0 flex-1"><view class="text-[length:24rpx]">{{item.nickname}}</view><view class="mt-1 truncate text-[length:21rpx] text-muted">{{item.headline || item.branchName || '资料已完成'}}</view></view>
+              <t-icon name="{{item.selected ? 'check-circle-filled' : 'circle'}}" size="34rpx" color="{{item.selected ? 'var(--color-brand)' : 'var(--color-muted)'}}" />
+            </view>
           </view>
         </view>
       </view>
+
+      <view wx:if="{{campaignStatus !== 'DRAFT'}}" class="mip-admin-span-wide rounded-[16rpx] border border-line bg-panel px-4 py-4">
+        <view class="text-[length:26rpx] font-semibold">发布预览</view>
+        <view class="mt-3 text-[length:27rpx] font-semibold">{{draft.title}}</view>
+        <view class="mt-2 whitespace-pre-wrap text-[length:24rpx] leading-[1.7] text-muted">{{draft.body}}</view>
+        <view class="mt-3 text-[length:22rpx] text-muted">收件人快照：{{recipientCount}} 人</view>
+        <view wx:if="{{campaignStatus === 'PUBLISHED'}}" class="mt-3 text-[length:22rpx] text-muted">已提交站内消息。送达结果以用户消息列表为准，微信提醒未启用。</view>
+        <view wx:if="{{campaignStatus === 'WITHDRAWN'}}" class="mt-3 text-[length:22rpx] text-muted">活动已撤销，已提交的消息仍保留。</view>
+      </view>
+
+      <view class="mip-admin-span-wide flex flex-col gap-3">
+        <t-button wx:if="{{editable}}" block theme="primary" loading="{{processing === 'save'}}" bind:tap="saveDraft">保存草稿</t-button>
+        <t-button wx:if="{{editable && campaignId}}" block variant="outline" loading="{{processing === 'snapshot'}}" disabled="{{safetyStatus !== 'PASSED'}}" bind:tap="createSnapshot">生成收件人快照</t-button>
+        <t-button wx:if="{{campaignStatus === 'READY'}}" block theme="primary" loading="{{processing === 'publish'}}" bind:tap="publishCampaign">发布消息</t-button>
+        <t-button wx:if="{{campaignStatus === 'PUBLISHED'}}" block variant="outline" theme="danger" loading="{{processing === 'withdraw'}}" bind:tap="withdrawCampaign">撤销活动</t-button>
+      </view>
     </view>
 
-    <view wx:if="{{campaignStatus !== 'DRAFT'}}" class="rounded-[16rpx] border border-line bg-panel px-4 py-4">
-      <view class="text-[length:26rpx] font-semibold">发布预览</view>
-      <view class="mt-3 text-[length:27rpx] font-semibold">{{draft.title}}</view>
-      <view class="mt-2 whitespace-pre-wrap text-[length:24rpx] leading-[1.7] text-muted">{{draft.body}}</view>
-      <view class="mt-3 text-[length:22rpx] text-muted">收件人快照：{{recipientCount}} 人</view>
-      <view wx:if="{{campaignStatus === 'PUBLISHED'}}" class="mt-3 text-[length:22rpx] text-muted">已提交站内消息。送达结果以用户消息列表为准，微信提醒未启用。</view>
-      <view wx:if="{{campaignStatus === 'WITHDRAWN'}}" class="mt-3 text-[length:22rpx] text-muted">活动已撤销，已提交的消息仍保留。</view>
+    <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
+  </block>
+
+  <block wx:else>
+    <view wx:if="{{templateState === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel px-5 py-6"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+    <view wx:elif="{{templateState === 'error' || templateState === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载消息模板" description="{{templateMessage}}" action-text="重新加载" bind:action="retryLoad" /></view>
+    <view wx:elif="{{templateState === 'forbidden'}}" class="mt-6"><app-empty-state title="没有消息管理权限" description="当前账号不能维护消息模板。" /></view>
+
+    <block wx:elif="{{templateMode === 'list'}}">
+      <scroll-view class="mt-5 whitespace-nowrap" scroll-x enhanced show-scrollbar="{{false}}">
+        <view class="inline-flex gap-2">
+          <view class="rounded-full px-4 py-2 text-[length:23rpx] {{templateStatusFilter === '' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-status="" bind:tap="chooseTemplateStatus">全部</view>
+          <view class="rounded-full px-4 py-2 text-[length:23rpx] {{templateStatusFilter === 'DRAFT' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-status="DRAFT" bind:tap="chooseTemplateStatus">草稿</view>
+          <view class="rounded-full px-4 py-2 text-[length:23rpx] {{templateStatusFilter === 'ACTIVE' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-status="ACTIVE" bind:tap="chooseTemplateStatus">启用</view>
+          <view class="rounded-full px-4 py-2 text-[length:23rpx] {{templateStatusFilter === 'ARCHIVED' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-status="ARCHIVED" bind:tap="chooseTemplateStatus">归档</view>
+        </view>
+      </scroll-view>
+      <view wx:if="{{templateState === 'empty'}}" class="mt-6"><app-empty-state title="暂无消息模板" description="模板保存后会生成草稿版本。" action-text="新建消息模板" bind:action="createTemplate" /></view>
+      <view wx:else class="mip-admin-card-list mt-5 flex flex-col gap-3">
+        <view wx:for="{{templateItems}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4" data-id="{{item.id}}" bind:tap="openTemplate">
+          <view class="flex items-start gap-2"><view class="min-w-0 flex-1 text-[length:28rpx] font-semibold">{{item.name}}</view><t-tag size="small" variant="outline">{{item.statusText}}</t-tag></view>
+          <view class="mt-2 text-[length:24rpx]">{{item.title}}</view>
+          <view class="mt-3 flex flex-wrap gap-2 text-[length:21rpx] text-muted"><text>{{item.scopeText}}</text><text>版本 {{item.currentRevisionNumber}}</text><text>内容检查：{{item.safetyText}}</text></view>
+          <view class="mt-2 text-[length:20rpx] text-muted">更新于 {{item.updatedText}}</view>
+        </view>
+      </view>
+    </block>
+
+    <view wx:else class="mip-admin-form-grid mt-5 flex flex-col gap-4">
+      <view wx:if="{{templateId}}" class="mip-admin-span-wide rounded-[16rpx] bg-panel px-4 py-4">
+        <view class="flex items-center justify-between"><text class="text-[length:24rpx]">模板状态</text><text class="text-[length:23rpx] text-muted">{{templateStatusText}}</text></view>
+        <view class="mt-3 flex items-center justify-between"><text class="text-[length:24rpx]">内容检查</text><text class="text-[length:23rpx] text-muted">{{templateSafetyText}}</text></view>
+        <view class="mt-3 flex items-center justify-between"><text class="text-[length:24rpx]">当前版本</text><text class="text-[length:23rpx] text-muted">{{templateRevisionNumber}}</text></view>
+        <view class="mt-3 flex items-center justify-between"><text class="text-[length:24rpx]">更新时间</text><text class="text-[length:23rpx] text-muted">{{templateUpdatedText}}</text></view>
+      </view>
+
+      <view class="rounded-[16rpx] bg-panel px-4 py-4">
+        <view class="text-[length:26rpx] font-semibold">适用范围</view>
+        <view class="mt-3 grid grid-cols-2 gap-2"><view wx:if="{{platformAllowed}}" class="rounded-[12rpx] px-3 py-3 text-center text-[length:23rpx] {{templateDraft.scopeType === 'PLATFORM' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-scope="PLATFORM" bind:tap="chooseTemplateScope">全平台</view><view wx:if="{{branches.length}}" class="rounded-[12rpx] px-3 py-3 text-center text-[length:23rpx] {{templateDraft.scopeType === 'BRANCH' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-scope="BRANCH" bind:tap="chooseTemplateScope">城市分会</view></view>
+        <picker wx:if="{{templateDraft.scopeType === 'BRANCH'}}" class="mt-3" range="{{branches}}" range-key="name" value="{{templateBranchIndex}}" disabled="{{!templateEditable}}" bindchange="changeTemplateBranch"><view class="min-h-[72rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:24rpx]">{{templateBranchIndex >= 0 ? branches[templateBranchIndex].name : '选择城市分会'}}</view></picker>
+      </view>
+
+      <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:24rpx] font-semibold">模板名称</view><view class="mt-3"><t-input value="{{templateDraft.name}}" maxlength="100" placeholder="用于运营端识别" disabled="{{!templateEditable}}" data-field="name" bind:change="updateTemplateField" /></view></view>
+      <view class="rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:24rpx] font-semibold">消息标题</view><view class="mt-3"><t-input value="{{templateDraft.title}}" maxlength="100" placeholder="填写模板标题" disabled="{{!templateEditable}}" data-field="title" bind:change="updateTemplateField" /></view></view>
+      <view class="mip-admin-span-wide rounded-[16rpx] bg-panel px-4 py-4"><view class="text-[length:24rpx] font-semibold">消息正文</view><textarea class="mt-3 box-border h-[260rpx] w-full rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:24rpx] leading-[1.7]" value="{{templateDraft.body}}" maxlength="500" placeholder="填写模板正文" disabled="{{!templateEditable}}" data-field="body" bindinput="updateTemplateField" /></view>
+
+      <view class="mip-admin-span-wide rounded-[16rpx] border border-line bg-panel px-4 py-4 text-[length:22rpx] leading-[1.7] text-muted">
+        <view>每次保存都会生成新版本，保存后的模板状态为草稿。</view>
+        <view wx:if="{{templateStatus === 'ACTIVE'}}" class="mt-2">当前模板已启用。保存修改后需要重新启用。</view>
+        <view wx:if="{{templateStatus === 'ARCHIVED'}}" class="mt-2">此模板已归档，不能继续编辑或启用。</view>
+      </view>
+
+      <view class="mip-admin-span-wide flex flex-col gap-3">
+        <t-button wx:if="{{templateEditable}}" block theme="primary" loading="{{templateProcessing === 'save'}}" bind:tap="saveTemplateDraft">{{templateId ? '保存新版本' : '保存模板'}}</t-button>
+        <t-button wx:if="{{templateId && templateStatus === 'DRAFT'}}" block variant="outline" loading="{{templateProcessing === 'activate'}}" disabled="{{templateSafetyStatus !== 'PASSED'}}" bind:tap="activateTemplate">启用模板</t-button>
+        <t-button wx:if="{{templateId && templateStatus !== 'ARCHIVED'}}" block variant="outline" theme="danger" loading="{{templateProcessing === 'archive'}}" bind:tap="archiveTemplate">归档模板</t-button>
+      </view>
     </view>
 
-    <t-button wx:if="{{editable}}" block theme="primary" loading="{{processing === 'save'}}" bind:tap="saveDraft">保存草稿</t-button>
-    <t-button wx:if="{{editable && campaignId}}" block variant="outline" loading="{{processing === 'snapshot'}}" disabled="{{safetyStatus !== 'PASSED'}}" bind:tap="createSnapshot">生成收件人快照</t-button>
-    <t-button wx:if="{{campaignStatus === 'READY'}}" block theme="primary" loading="{{processing === 'publish'}}" bind:tap="publishCampaign">发布消息</t-button>
-    <t-button wx:if="{{campaignStatus === 'PUBLISHED'}}" block variant="outline" theme="danger" loading="{{processing === 'withdraw'}}" bind:tap="withdrawCampaign">撤销活动</t-button>
-  </view>
+    <view wx:if="{{templateMessage && templateState === 'ready'}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{templateMessage}}</view>
+  </block>
 
-  <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
   <app-page-exit />
 </view>

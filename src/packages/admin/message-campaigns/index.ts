@@ -4,11 +4,19 @@ import type {
   AdminMessageCampaignSafetyStatus,
   AdminMessageCampaignStatus,
   AdminMessageRecipientCandidate,
+  AdminMessageTemplate,
+  AdminMessageTemplateDraft,
+  AdminMessageTemplateSafetyStatus,
+  AdminMessageTemplateStatus,
 } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { formatLocalDateTime } from '../../../utils/date'
-import { adminLoadFailure, isAdminVersionConflict } from '../shared/page-state'
+import {
+  adminLoadFailure,
+  isAdminForbiddenError,
+  isAdminVersionConflict,
+} from '../shared/page-state'
 
 type PageState = AdminPageState | 'empty'
 type CampaignView = AdminMessageCampaign & {
@@ -17,6 +25,12 @@ type CampaignView = AdminMessageCampaign & {
   updatedText: string
 }
 type CandidateView = AdminMessageRecipientCandidate & { selected: boolean }
+type TemplateView = AdminMessageTemplate & {
+  statusText: string
+  safetyText: string
+  scopeText: string
+  updatedText: string
+}
 
 const statusLabels: Record<AdminMessageCampaignStatus, string> = {
   DRAFT: '草稿',
@@ -25,6 +39,17 @@ const statusLabels: Record<AdminMessageCampaignStatus, string> = {
   WITHDRAWN: '已撤销',
 }
 const safetyLabels: Record<AdminMessageCampaignSafetyStatus, string> = {
+  PENDING: '待检查',
+  PASSED: '已通过',
+  REJECTED: '未通过',
+  ERROR: '检查失败',
+}
+const templateStatusLabels: Record<AdminMessageTemplateStatus, string> = {
+  DRAFT: '草稿',
+  ACTIVE: '启用',
+  ARCHIVED: '归档',
+}
+const templateSafetyLabels: Record<AdminMessageTemplateSafetyStatus, string> = {
   PENDING: '待检查',
   PASSED: '已通过',
   REJECTED: '未通过',
@@ -43,6 +68,19 @@ function initialDraft(scopeType: 'PLATFORM' | 'BRANCH', branchId: string | null)
   }
 }
 
+function initialTemplateDraft(
+  scopeType: 'PLATFORM' | 'BRANCH',
+  branchId: string | null,
+): AdminMessageTemplateDraft {
+  return {
+    scopeType,
+    branchId,
+    name: '',
+    title: '',
+    body: '',
+  }
+}
+
 function campaignView(item: AdminMessageCampaign): CampaignView {
   return {
     ...item,
@@ -52,8 +90,36 @@ function campaignView(item: AdminMessageCampaign): CampaignView {
   }
 }
 
+function templateView(item: AdminMessageTemplate): TemplateView {
+  return {
+    ...item,
+    statusText: templateStatusLabels[item.status],
+    safetyText: templateSafetyLabels[item.contentSafetyStatus],
+    scopeText: item.scopeType === 'PLATFORM' ? '全平台' : item.branchName,
+    updatedText: item.updatedAt ? formatLocalDateTime(item.updatedAt) : '—',
+  }
+}
+
+function compatibleCampaignTemplates(
+  items: TemplateView[],
+  scopeType: 'PLATFORM' | 'BRANCH',
+  branchId: string | null,
+) {
+  return items.filter((item) => {
+    if (item.status !== 'ACTIVE') {
+      return false
+    }
+    if (scopeType === 'PLATFORM') {
+      return item.scopeType === 'PLATFORM'
+    }
+    return item.scopeType === 'PLATFORM'
+      || (item.scopeType === 'BRANCH' && item.branchId === branchId)
+  })
+}
+
 Page({
   data: {
+    section: 'campaigns' as 'campaigns' | 'templates',
     state: 'loading' as PageState,
     mode: 'list' as 'list' | 'editor',
     statusFilter: '' as AdminMessageCampaignStatus | '',
@@ -78,17 +144,55 @@ Page({
     processing: '' as '' | 'save' | 'snapshot' | 'publish' | 'withdraw',
     publishRequestKey: '',
     message: '',
+    campaignTemplatePool: [] as TemplateView[],
+    campaignTemplateOptions: [] as TemplateView[],
+    campaignTemplateLoading: false,
+    campaignTemplateError: '',
+    selectedTemplateId: '',
+    templateCopyNotice: '',
+    templateState: 'loading' as PageState,
+    templateMode: 'list' as 'list' | 'editor',
+    templateStatusFilter: '' as AdminMessageTemplateStatus | '',
+    templateItems: [] as TemplateView[],
+    templateId: '',
+    templateVersion: 0,
+    templateStatus: 'DRAFT' as AdminMessageTemplateStatus,
+    templateStatusText: templateStatusLabels.DRAFT,
+    templateSafetyStatus: 'PENDING' as AdminMessageTemplateSafetyStatus,
+    templateSafetyText: templateSafetyLabels.PENDING,
+    templateRevisionNumber: 0,
+    templateUpdatedText: '—',
+    templateDraft: initialTemplateDraft('PLATFORM', null),
+    templateBranchIndex: -1,
+    templateEditable: true,
+    templateProcessing: '' as '' | 'save' | 'activate' | 'archive',
+    templateMessage: '',
   },
 
   onShow() {
-    if (this.data.mode === 'list') {
+    if (this.data.section === 'templates' && this.data.templateMode === 'list') {
+      void this.loadTemplateList()
+    }
+    else if (this.data.section === 'campaigns' && this.data.mode === 'list') {
       void this.loadList()
     }
   },
 
   async onPullDownRefresh() {
     try {
-      if (this.data.mode === 'list') {
+      if (this.data.section === 'templates' && this.data.templateMode === 'list') {
+        await this.loadTemplateList(true)
+      }
+      else if (this.data.section === 'templates' && this.data.templateId) {
+        await this.openTemplateById(this.data.templateId, true)
+      }
+      else if (this.data.section === 'templates') {
+        const scopes = await this.loadBase(true)
+        if (scopes) {
+          this.setData({ templateState: 'ready', templateMessage: '' })
+        }
+      }
+      else if (this.data.mode === 'list') {
         await this.loadList(true)
       }
       else if (this.data.campaignId) {
@@ -101,14 +205,23 @@ Page({
   },
 
   retryLoad() {
-    if (this.data.mode === 'list') {
+    if (this.data.section === 'templates' && this.data.templateMode === 'list') {
+      void this.loadTemplateList(true)
+    }
+    else if (this.data.section === 'templates' && this.data.templateId) {
+      void this.openTemplateById(this.data.templateId, true)
+    }
+    else if (this.data.section === 'templates') {
+      void this.createTemplate()
+    }
+    else if (this.data.mode === 'list') {
       void this.loadList(true)
     }
     else if (this.data.campaignId) {
       void this.openCampaignById(this.data.campaignId, true)
     }
     else {
-      void this.loadBase(true)
+      void this.createCampaign()
     }
   },
 
@@ -119,11 +232,32 @@ Page({
     ])
     if (!hasCapability(session.capabilities, 'messages.manage')
       || (!scopes.platform && !scopes.branches.length)) {
-      this.setData({ state: 'forbidden', message: '' })
+      this.setData({
+        state: 'forbidden',
+        message: '',
+        templateState: 'forbidden',
+        templateMessage: '',
+      })
       return null
     }
     this.setData({ platformAllowed: scopes.platform, branches: scopes.branches })
     return scopes
+  },
+
+  chooseSection(event: WechatMiniprogram.TouchEvent) {
+    const section = String(event.currentTarget.dataset.section || '') as 'campaigns' | 'templates'
+    if (!['campaigns', 'templates'].includes(section) || section === this.data.section) {
+      return
+    }
+    this.setData({ section })
+    if (section === 'templates'
+      && this.data.templateMode === 'list'
+      && !this.data.templateItems.length) {
+      void this.loadTemplateList()
+    }
+    else if (section === 'campaigns' && this.data.mode === 'list' && !this.data.items.length) {
+      void this.loadList()
+    }
   },
 
   async loadList(force = false) {
@@ -148,6 +282,37 @@ Page({
     }
   },
 
+  async loadTemplateList(force = false) {
+    const hasContent = this.data.templateItems.length > 0
+    if (!hasContent) {
+      this.setData({ templateState: 'loading', templateMessage: '' })
+    }
+    try {
+      const scopes = await this.loadBase(force)
+      if (!scopes) {
+        return
+      }
+      const page = await mipAdminModule.messaging.listTemplates({
+        status: this.data.templateStatusFilter,
+      }, force)
+      this.setData({
+        templateState: page.items.length ? 'ready' : 'empty',
+        templateItems: page.items.map(templateView),
+        templateMessage: '',
+      })
+    }
+    catch (error) {
+      const failure = adminLoadFailure(error, {
+        hasContent,
+        fallbackMessage: '消息模板列表加载失败',
+      })
+      this.setData({
+        ...(failure.state ? { templateState: failure.state } : {}),
+        templateMessage: failure.message,
+      })
+    }
+  },
+
   chooseStatus(event: WechatMiniprogram.TouchEvent) {
     const status = String(event.currentTarget.dataset.status || '') as AdminMessageCampaignStatus | ''
     if (status === this.data.statusFilter || !['', 'DRAFT', 'READY', 'PUBLISHED', 'WITHDRAWN'].includes(status)) {
@@ -155,6 +320,21 @@ Page({
     }
     this.setData({ statusFilter: status, state: 'loading', items: [], message: '' })
     void this.loadList(true)
+  },
+
+  chooseTemplateStatus(event: WechatMiniprogram.TouchEvent) {
+    const status = String(event.currentTarget.dataset.status || '') as AdminMessageTemplateStatus | ''
+    if (status === this.data.templateStatusFilter
+      || !['', 'DRAFT', 'ACTIVE', 'ARCHIVED'].includes(status)) {
+      return
+    }
+    this.setData({
+      templateStatusFilter: status,
+      templateState: 'loading',
+      templateItems: [],
+      templateMessage: '',
+    })
+    void this.loadTemplateList(true)
   },
 
   async createCampaign() {
@@ -184,7 +364,13 @@ Page({
         processing: '',
         publishRequestKey: '',
         message: '',
+        campaignTemplatePool: [],
+        campaignTemplateOptions: [],
+        campaignTemplateError: '',
+        selectedTemplateId: '',
+        templateCopyNotice: '',
       })
+      await this.loadCampaignTemplates()
     }
     catch (error) {
       this.setData(adminLoadFailure(error, { hasContent: false, fallbackMessage: '消息活动信息加载失败' }))
@@ -199,13 +385,25 @@ Page({
   },
 
   async openCampaignById(campaignId: string, force = false) {
-    this.setData({ mode: 'editor', state: 'loading', message: '' })
+    this.setData({
+      mode: 'editor',
+      state: 'loading',
+      message: '',
+      campaignTemplatePool: [],
+      campaignTemplateOptions: [],
+      campaignTemplateError: '',
+      selectedTemplateId: '',
+      templateCopyNotice: '',
+    })
     try {
       const [, item] = await Promise.all([
         this.loadBase(force),
         mipAdminModule.messaging.getCampaign(campaignId, force),
       ])
       this.applyCampaign(item)
+      if (item.status === 'DRAFT') {
+        await this.loadCampaignTemplates(force)
+      }
       if (item.audienceType === 'EXPLICIT') {
         await this.loadCandidates()
       }
@@ -215,7 +413,7 @@ Page({
     }
   },
 
-  applyCampaign(item: AdminMessageCampaign) {
+  applyCampaign(item: AdminMessageCampaign, preserveTemplateSelection = false) {
     this.setData({
       state: 'ready',
       mode: 'editor',
@@ -244,12 +442,82 @@ Page({
       candidates: [],
       processing: '',
       message: '',
+      ...(preserveTemplateSelection
+        ? {}
+        : { selectedTemplateId: '', templateCopyNotice: '' }),
     })
   },
 
   backToList() {
     this.setData({ mode: 'list', state: 'loading', candidates: [], message: '' })
     void this.loadList(true)
+  },
+
+  async loadCampaignTemplates(force = false) {
+    if (!this.data.editable) {
+      return
+    }
+    const hasContent = this.data.campaignTemplatePool.length > 0
+    this.setData({ campaignTemplateLoading: true, campaignTemplateError: '' })
+    try {
+      const page = await mipAdminModule.messaging.listTemplates({ status: 'ACTIVE' }, force)
+      const pool = page.items.map(templateView)
+      this.setData({ campaignTemplatePool: pool })
+      this.syncCampaignTemplateOptions(this.data.draft.scopeType, this.data.draft.branchId)
+    }
+    catch (error) {
+      this.setData({
+        campaignTemplateError: hasContent
+          ? '消息模板刷新失败，已保留上次结果。'
+          : error instanceof Error ? error.message : '消息模板加载失败',
+      })
+    }
+    finally {
+      this.setData({ campaignTemplateLoading: false })
+    }
+  },
+
+  retryCampaignTemplates() {
+    void this.loadCampaignTemplates(true)
+  },
+
+  syncCampaignTemplateOptions(
+    scopeType: 'PLATFORM' | 'BRANCH',
+    branchId: string | null,
+  ) {
+    const options = compatibleCampaignTemplates(
+      this.data.campaignTemplatePool,
+      scopeType,
+      branchId,
+    )
+    const selectedStillCompatible = !this.data.selectedTemplateId
+      || options.some(item => item.id === this.data.selectedTemplateId)
+    this.setData({
+      campaignTemplateOptions: options,
+      ...(selectedStillCompatible
+        ? {}
+        : {
+            selectedTemplateId: '',
+            templateCopyNotice: '管理范围已变化，模板选择已清除；已复制的消息标题和正文保持不变。',
+          }),
+    })
+  },
+
+  applyCampaignTemplate(event: WechatMiniprogram.TouchEvent) {
+    if (!this.data.editable) {
+      return
+    }
+    const templateId = String(event.currentTarget.dataset.id || '')
+    const selected = this.data.campaignTemplateOptions.find(item => item.id === templateId)
+    if (!selected) {
+      return
+    }
+    this.setData({
+      'draft.title': selected.title,
+      'draft.body': selected.body,
+      'selectedTemplateId': selected.id,
+      'templateCopyNotice': '已复制模板当前标题和正文。模板后续修改不会影响当前消息活动。',
+    })
   },
 
   updateField(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
@@ -274,17 +542,20 @@ Page({
         'candidates': [],
         'selectedRecipientCount': 0,
       })
+      this.syncCampaignTemplateOptions('PLATFORM', null)
     }
     else if (scope === 'BRANCH' && this.data.branches.length) {
       const index = this.data.branchIndex >= 0 ? this.data.branchIndex : 0
+      const branchId = this.data.branches[index].id
       this.setData({
         'draft.scopeType': 'BRANCH',
-        'draft.branchId': this.data.branches[index].id,
+        'draft.branchId': branchId,
         'draft.recipientRefs': [],
         'branchIndex': index,
         'candidates': [],
         'selectedRecipientCount': 0,
       })
+      this.syncCampaignTemplateOptions('BRANCH', branchId)
     }
   },
 
@@ -304,6 +575,7 @@ Page({
       'candidates': [],
       'selectedRecipientCount': 0,
     })
+    this.syncCampaignTemplateOptions('BRANCH', branch.id)
     if (this.data.draft.audienceType === 'EXPLICIT') {
       void this.loadCandidates()
     }
@@ -385,13 +657,20 @@ Page({
     }
     this.setData({ processing: 'save', message: '' })
     try {
+      const draft = this.data.draft
       const item = await mipAdminModule.messaging.saveCampaign({
-        ...this.data.draft,
+        scopeType: draft.scopeType,
+        branchId: draft.branchId,
+        audienceType: draft.audienceType,
+        recipientRefs: [...draft.recipientRefs],
+        name: draft.name,
+        title: draft.title,
+        body: draft.body,
         ...(this.data.campaignId
           ? { campaignId: this.data.campaignId, expectedVersion: this.data.version }
           : {}),
       })
-      this.applyCampaign(item)
+      this.applyCampaign(item, true)
       wx.showToast({ title: '草稿已保存', icon: 'success' })
     }
     catch (error) {
@@ -495,6 +774,282 @@ Page({
     finally {
       this.setData({ processing: '' })
     }
+  },
+
+  async createTemplate() {
+    try {
+      const scopes = await this.loadBase()
+      if (!scopes) {
+        return
+      }
+      const branch = scopes.platform ? null : scopes.branches[0] || null
+      this.setData({
+        templateState: 'ready',
+        templateMode: 'editor',
+        templateId: '',
+        templateVersion: 0,
+        templateStatus: 'DRAFT',
+        templateStatusText: templateStatusLabels.DRAFT,
+        templateSafetyStatus: 'PENDING',
+        templateSafetyText: templateSafetyLabels.PENDING,
+        templateRevisionNumber: 0,
+        templateUpdatedText: '—',
+        templateDraft: initialTemplateDraft(branch ? 'BRANCH' : 'PLATFORM', branch?.id || null),
+        templateBranchIndex: branch ? 0 : -1,
+        templateEditable: true,
+        templateProcessing: '',
+        templateMessage: '',
+      })
+    }
+    catch (error) {
+      const failure = adminLoadFailure(error, {
+        hasContent: false,
+        fallbackMessage: '消息模板信息加载失败',
+      })
+      this.setData({
+        templateState: failure.state || 'error',
+        templateMessage: failure.message,
+      })
+    }
+  },
+
+  openTemplate(event: WechatMiniprogram.TouchEvent) {
+    const templateId = String(event.currentTarget.dataset.id || '')
+    if (templateId) {
+      void this.openTemplateById(templateId)
+    }
+  },
+
+  async openTemplateById(templateId: string, force = false) {
+    this.setData({ templateMode: 'editor', templateState: 'loading', templateMessage: '' })
+    try {
+      const [scopes, item] = await Promise.all([
+        this.loadBase(force),
+        mipAdminModule.messaging.getTemplate(templateId, force),
+      ])
+      if (!scopes) {
+        return
+      }
+      this.applyTemplate(item)
+    }
+    catch (error) {
+      const failure = adminLoadFailure(error, {
+        hasContent: false,
+        fallbackMessage: '消息模板信息加载失败',
+      })
+      this.setData({
+        templateState: failure.state || 'error',
+        templateMessage: failure.message,
+      })
+    }
+  },
+
+  applyTemplate(item: AdminMessageTemplate) {
+    this.setData({
+      templateState: 'ready',
+      templateMode: 'editor',
+      templateId: item.id,
+      templateVersion: item.version,
+      templateStatus: item.status,
+      templateStatusText: templateStatusLabels[item.status],
+      templateSafetyStatus: item.contentSafetyStatus,
+      templateSafetyText: templateSafetyLabels[item.contentSafetyStatus],
+      templateRevisionNumber: item.currentRevisionNumber,
+      templateUpdatedText: item.updatedAt ? formatLocalDateTime(item.updatedAt) : '—',
+      templateDraft: {
+        scopeType: item.scopeType,
+        branchId: item.branchId,
+        name: item.name,
+        title: item.title,
+        body: item.body,
+      },
+      templateBranchIndex: this.data.branches.findIndex(branch => branch.id === item.branchId),
+      templateEditable: item.status !== 'ARCHIVED',
+      templateProcessing: '',
+      templateMessage: '',
+    })
+  },
+
+  backToTemplateList() {
+    this.setData({
+      templateMode: 'list',
+      templateState: 'loading',
+      templateMessage: '',
+    })
+    void this.loadTemplateList(true)
+  },
+
+  updateTemplateField(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const field = String(event.currentTarget.dataset.field || '')
+    if (!this.data.templateEditable || !['name', 'title', 'body'].includes(field)) {
+      return
+    }
+    this.setData({ [`templateDraft.${field}`]: event.detail.value })
+  },
+
+  chooseTemplateScope(event: WechatMiniprogram.TouchEvent) {
+    if (!this.data.templateEditable) {
+      return
+    }
+    const scope = String(event.currentTarget.dataset.scope || '')
+    if (scope === 'PLATFORM' && this.data.platformAllowed) {
+      this.setData({
+        'templateDraft.scopeType': 'PLATFORM',
+        'templateDraft.branchId': null,
+        'templateBranchIndex': -1,
+      })
+    }
+    else if (scope === 'BRANCH' && this.data.branches.length) {
+      const index = this.data.templateBranchIndex >= 0 ? this.data.templateBranchIndex : 0
+      this.setData({
+        'templateDraft.scopeType': 'BRANCH',
+        'templateDraft.branchId': this.data.branches[index].id,
+        'templateBranchIndex': index,
+      })
+    }
+  },
+
+  changeTemplateBranch(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    if (!this.data.templateEditable) {
+      return
+    }
+    const index = Number(event.detail.value)
+    const branch = this.data.branches[index]
+    if (!branch) {
+      return
+    }
+    this.setData({
+      'templateDraft.branchId': branch.id,
+      'templateBranchIndex': index,
+    })
+  },
+
+  async saveTemplateDraft() {
+    if (!this.data.templateEditable || this.data.templateProcessing) {
+      return
+    }
+    if (this.data.templateStatus === 'ACTIVE') {
+      const confirmed = await wx.showModal({
+        title: '保存模板新版本',
+        content: '保存后模板会变为草稿，需要重新通过内容检查后启用。',
+        confirmText: '继续保存',
+      }).catch(() => null)
+      if (!confirmed?.confirm) {
+        return
+      }
+    }
+    const draft = this.data.templateDraft
+    const input: AdminMessageTemplateDraft = this.data.templateId
+      ? {
+          templateId: this.data.templateId,
+          expectedVersion: this.data.templateVersion,
+          scopeType: draft.scopeType,
+          branchId: draft.branchId,
+          name: draft.name,
+          title: draft.title,
+          body: draft.body,
+        }
+      : {
+          scopeType: draft.scopeType,
+          branchId: draft.branchId,
+          name: draft.name,
+          title: draft.title,
+          body: draft.body,
+        }
+    this.setData({ templateProcessing: 'save', templateMessage: '' })
+    try {
+      const item = await mipAdminModule.messaging.saveTemplate(input)
+      this.applyTemplate(item)
+      wx.showToast({ title: '模板已保存', icon: 'success' })
+    }
+    catch (error) {
+      this.handleTemplateMutationFailure(error, '模板保存失败')
+    }
+    finally {
+      this.setData({ templateProcessing: '' })
+    }
+  },
+
+  async activateTemplate() {
+    if (!this.data.templateId
+      || this.data.templateStatus !== 'DRAFT'
+      || this.data.templateSafetyStatus !== 'PASSED'
+      || this.data.templateProcessing) {
+      return
+    }
+    const confirmed = await wx.showModal({
+      title: '启用消息模板',
+      content: '启用后，创建消息活动时可以选择此模板。',
+      confirmText: '启用',
+    }).catch(() => null)
+    if (!confirmed?.confirm) {
+      return
+    }
+    this.setData({ templateProcessing: 'activate', templateMessage: '' })
+    try {
+      const item = await mipAdminModule.messaging.activateTemplate(
+        this.data.templateId,
+        this.data.templateVersion,
+      )
+      this.applyTemplate(item)
+      wx.showToast({ title: '模板已启用', icon: 'success' })
+    }
+    catch (error) {
+      this.handleTemplateMutationFailure(error, '模板启用失败')
+    }
+    finally {
+      this.setData({ templateProcessing: '' })
+    }
+  },
+
+  async archiveTemplate() {
+    if (!this.data.templateId
+      || !['DRAFT', 'ACTIVE'].includes(this.data.templateStatus)
+      || this.data.templateProcessing) {
+      return
+    }
+    const confirmed = await wx.showModal({
+      title: '归档消息模板',
+      content: '归档后不能继续编辑，也不会出现在可选模板中。',
+      confirmText: '归档',
+      confirmColor: '#E65C5C',
+    }).catch(() => null)
+    if (!confirmed?.confirm) {
+      return
+    }
+    this.setData({ templateProcessing: 'archive', templateMessage: '' })
+    try {
+      const item = await mipAdminModule.messaging.archiveTemplate(
+        this.data.templateId,
+        this.data.templateVersion,
+      )
+      this.applyTemplate(item)
+      wx.showToast({ title: '模板已归档', icon: 'success' })
+    }
+    catch (error) {
+      this.handleTemplateMutationFailure(error, '模板归档失败')
+    }
+    finally {
+      this.setData({ templateProcessing: '' })
+    }
+  },
+
+  handleTemplateMutationFailure(error: unknown, fallback: string) {
+    if (isAdminVersionConflict(error)) {
+      this.setData({
+        templateState: 'conflict',
+        templateMessage: '消息模板状态已变化，请重新加载后再操作。',
+      })
+      return
+    }
+    if (isAdminForbiddenError(error)) {
+      this.setData({
+        templateState: 'forbidden',
+        templateMessage: '当前账号不能维护消息模板。',
+      })
+      return
+    }
+    this.setData({ templateMessage: error instanceof Error ? error.message : fallback })
   },
 
   handleMutationFailure(error: unknown, fallback: string) {
