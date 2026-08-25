@@ -5,10 +5,18 @@ import type {
   ProfileUpdateInput,
 } from '../src/modules/mip-identity'
 import { readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createMipIdentityCloudbaseTransport } from '../src/modules/mip-identity/cloudbase-gateway'
 import { createMipIdentityGateway } from '../src/modules/mip-identity/gateway'
 import { isRetryableIdentityAction } from '../src/modules/mip-identity/retry-policy'
+
+const require = createRequire(import.meta.url)
+const { createHandler } = require('../cloudfunctions/mip-identity-api/domain/handler.js')
+const {
+  createIdentityService,
+  defaultAgreements,
+} = require('../cloudfunctions/mip-identity-api/domain/service.js')
 
 const cloudHarness = vi.hoisted(() => ({
   callFunction: vi.fn(),
@@ -59,6 +67,10 @@ const snapshot = {
 } satisfies IdentityAccessSnapshot
 
 const profileRef = `p1.${'a'.repeat(16)}.${'b'.repeat(48)}.${'c'.repeat(22)}`
+interface AgreementPair {
+  key: string
+  version: string
+}
 
 const profileInput = {
   expectedVersion: 2,
@@ -101,12 +113,130 @@ function responseFor(action: MipIdentityAction) {
   return snapshot
 }
 
+function currentAgreementPairs(): AgreementPair[] {
+  return defaultAgreements.map(
+    ({ key, version }: AgreementPair) => ({ key, version }),
+  )
+}
+
+function createAgreementServerHarness() {
+  const acceptances: Array<{ agreement_key: string, agreement_version: string }> = []
+  const acceptedCatalogs: AgreementPair[][] = []
+  const user = {
+    id: '10000000-0000-4000-8000-000000000001',
+    status: 'ACTIVE',
+    primary_branch_id: null,
+    version: 1,
+  }
+  const repository = {
+    ensureUser: vi.fn(async () => user),
+    loadFacts: vi.fn(async () => ({
+      user,
+      profile: null,
+      privateProfile: null,
+      acceptances,
+      profileTags: [],
+      roles: [],
+    })),
+    loadEntitlement: vi.fn(async () => ({ source: 'NONE', entitlement: null })),
+    acceptAgreements: vi.fn(async (
+      _appId: string,
+      _userId: string,
+      agreements: AgreementPair[],
+    ) => {
+      acceptedCatalogs.push(agreements.map(({ key, version }) => ({ key, version })))
+      acceptances.push(...agreements.map(({ key, version }) => ({
+        agreement_key: key,
+        agreement_version: version,
+      })))
+    }),
+  }
+  const service = createIdentityService({ repository })
+  const handler = createHandler({
+    getContext: () => ({ APPID: 'trusted-app' }),
+    resolveCaller: () => ({ appId: 'trusted-app', identityKey: 'a'.repeat(64) }),
+    service,
+  })
+  return { acceptedCatalogs, handler }
+}
+
 afterEach(() => {
   cloudHarness.callFunction.mockReset()
   vi.useRealTimers()
 })
 
 describe('MIP identity v1 client contract', () => {
+  it('accepts the canonical gateway envelope after CloudBase adds caller metadata', async () => {
+    const { acceptedCatalogs, handler } = createAgreementServerHarness()
+    const gateway = createMipIdentityGateway({
+      invoke: request => handler({
+        ...request,
+        // Mini Program CloudBase injects this transport metadata beside `data`.
+        userInfo: { openId: 'transport-only-open-id' },
+      }),
+    })
+
+    const result = await gateway.acceptAgreements({
+      agreements: currentAgreementPairs(),
+    })
+
+    expect(result.agreements.every(agreement => agreement.accepted)).toBe(true)
+    expect(acceptedCatalogs).toEqual([currentAgreementPairs()])
+  })
+
+  it('does not let CloudBase metadata replace a retained legacy nested input', async () => {
+    const { acceptedCatalogs, handler } = createAgreementServerHarness()
+
+    const response = await handler({
+      action: 'acceptAgreements',
+      input: { agreements: currentAgreementPairs() },
+      userInfo: { openId: 'transport-only-open-id' },
+    })
+
+    expect(response).toMatchObject({ ok: true })
+    expect(acceptedCatalogs).toEqual([currentAgreementPairs()])
+  })
+
+  it('keeps legacy agreement compatibility fail-closed for stale and unknown input', async () => {
+    const { acceptedCatalogs, handler } = createAgreementServerHarness()
+    const current = currentAgreementPairs()
+    const requests = [
+      {
+        action: 'acceptAgreements',
+        input: { agreements: [{ ...current[0], version: 'draft-older' }, current[1]] },
+        userInfo: { openId: 'transport-only-open-id' },
+        expectedCode: 'AGREEMENT_VERSION_CHANGED',
+      },
+      {
+        action: 'acceptAgreements',
+        input: { agreements: current, acceptedByClient: true },
+        userInfo: { openId: 'transport-only-open-id' },
+        expectedCode: 'AGREEMENT_VERSION_CHANGED',
+      },
+      {
+        action: 'acceptAgreements',
+        input: { input: { agreements: current } },
+        userInfo: { openId: 'transport-only-open-id' },
+        expectedCode: 'VALIDATION_FAILED',
+      },
+      {
+        action: 'acceptAgreements',
+        input: { agreements: current },
+        userInfo: { openId: 'transport-only-open-id' },
+        unexpected: true,
+        expectedCode: 'VALIDATION_FAILED',
+      },
+    ]
+
+    for (const { expectedCode, ...request } of requests) {
+      await expect(handler(request)).resolves.toMatchObject({
+        ok: false,
+        error: { code: expectedCode },
+      })
+    }
+    expect(acceptedCatalogs).toEqual([])
+  })
+
   it('sends all ten actions as direct business input in the neutral envelope', async () => {
     const calls: MipIdentityRequest[] = []
     const gateway = createMipIdentityGateway({

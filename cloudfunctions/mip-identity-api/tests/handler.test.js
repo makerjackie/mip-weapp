@@ -41,7 +41,7 @@ describe('MIP identity handler', () => {
     assert.equal(resolved, false)
   })
 
-  it('dispatches direct v1 business input through the existing service signatures', async () => {
+  it('dispatches direct v1 business input without rebuilding a nested service envelope', async () => {
     const calls = []
     const caller = { appId: 'trusted-app', identityKey: 'a'.repeat(64) }
     const handler = createHandler({
@@ -73,7 +73,7 @@ describe('MIP identity handler', () => {
       {
         action: 'acceptAgreements',
         receivedCaller: caller,
-        value: { input: { agreements: [{ key: 'SERVICE_AGREEMENT', version: '1' }] } },
+        value: { agreements: [{ key: 'SERVICE_AGREEMENT', version: '1' }] },
       },
       {
         action: 'updateProfile',
@@ -81,10 +81,10 @@ describe('MIP identity handler', () => {
         value: { input: { expectedVersion: 2, nickname: '测试用户' } },
       },
     ])
-    assert.equal(Object.hasOwn(calls[0].value.input, 'input'), false)
+    assert.equal(Object.hasOwn(calls[0].value, 'input'), false)
   })
 
-  it('keeps legacy flat and previously nested requests compatible', async () => {
+  it('keeps legacy flat and previously nested requests compatible after CloudBase metadata injection', async () => {
     assert.deepEqual(normalizeRequest({
       action: 'bindWechatPhone',
       code: 'legacy-code',
@@ -96,14 +96,25 @@ describe('MIP identity handler', () => {
     assert.deepEqual(normalizeRequest({
       action: 'setPrimaryBranch',
       input: { branchId: 'branch-1', expectedVersion: 2 },
+      userInfo: { openId: 'transport-only-open-id' },
     }), {
       action: 'setPrimaryBranch',
       input: { branchId: 'branch-1', expectedVersion: 2 },
       legacy: true,
     })
+    assert.deepEqual(normalizeRequest({
+      contractVersion: 1,
+      action: 'acceptAgreements',
+      input: { agreements: [{ key: 'SERVICE_AGREEMENT', version: '1' }] },
+      userInfo: { openId: 'transport-only-open-id' },
+    }), {
+      action: 'acceptAgreements',
+      input: { agreements: [{ key: 'SERVICE_AGREEMENT', version: '1' }] },
+      legacy: false,
+    })
   })
 
-  it('rejects v1 top-level business fields and strips nested route injection', async () => {
+  it('rejects v1 top-level business fields and nested route injection', async () => {
     const calls = []
     const handler = createHandler({
       getContext: () => ({ APPID: 'trusted-app' }),
@@ -141,8 +152,52 @@ describe('MIP identity handler', () => {
         input: { confirmationPhrase: '确认注销账号' },
         code: 'trusted-route-code',
       },
-    }), { ok: true, data: { phoneBound: true } })
-    assert.deepEqual(calls, [{ code: 'trusted-route-code' }])
+    }), {
+      ok: false,
+      error: {
+        code: 'VALIDATION_FAILED',
+        message: '提交的资料格式不正确',
+        retryable: false,
+      },
+    })
+    assert.deepEqual(calls, [])
+  })
+
+  it('rejects malformed platform metadata, double envelopes, and unknown top-level fields', () => {
+    assert.throws(
+      () => normalizeRequest({
+        contractVersion: 1,
+        action: 'acceptAgreements',
+        input: { agreements: [] },
+        userInfo: 'forged-open-id',
+      }),
+      /VALIDATION_FAILED/,
+    )
+    assert.throws(
+      () => normalizeRequest({
+        contractVersion: 1,
+        action: 'acceptAgreements',
+        input: { input: { agreements: [] } },
+      }),
+      /VALIDATION_FAILED/,
+    )
+    assert.throws(
+      () => normalizeRequest({
+        contractVersion: 1,
+        action: 'acceptAgreements',
+        input: { agreements: [] },
+        platformInfo: {},
+      }),
+      /VALIDATION_FAILED/,
+    )
+    assert.throws(
+      () => normalizeRequest({
+        action: 'acceptAgreements',
+        input: { agreements: [] },
+        unexpected: true,
+      }),
+      /VALIDATION_FAILED/,
+    )
   })
 
   it('rejects unknown and prototype actions before resolving caller or service', async () => {

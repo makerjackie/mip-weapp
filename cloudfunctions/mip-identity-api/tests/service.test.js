@@ -2,8 +2,12 @@
 
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
-const { createIdentityService, membershipProjection } = require('../domain/service')
-const { normalizeProfileInput } = require('../domain/service')
+const {
+  createIdentityService,
+  defaultAgreements,
+  membershipProjection,
+  normalizeProfileInput,
+} = require('../domain/service')
 
 const caller = { appId: 'wx0000000000000001', identityKey: 'a'.repeat(64) }
 
@@ -63,6 +67,58 @@ function repository(overrides = {}) {
 }
 
 describe('MIP identity service', () => {
+  it('accepts every current agreement exactly once and persists only the server catalog', async () => {
+    const writes = []
+    const service = createIdentityService({
+      repository: repository({
+        acceptAgreements: async (appId, userId, agreements) => {
+          writes.push({ appId, userId, agreements })
+        },
+      }),
+    })
+    const submitted = defaultAgreements
+      .map(({ key, version }) => ({ key, version }))
+      .reverse()
+
+    await service.acceptAgreements(caller, { agreements: submitted })
+
+    assert.deepEqual(writes, [{
+      appId: caller.appId,
+      userId: facts().user.id,
+      agreements: defaultAgreements,
+    }])
+  })
+
+  it('rejects missing, duplicate, stale, extra, arbitrary, and loosely shaped agreements', async () => {
+    const current = defaultAgreements.map(({ key, version }) => ({ key, version }))
+    const invalidInputs = [
+      { agreements: current.slice(0, 1) },
+      { agreements: [current[0], current[0]] },
+      { agreements: [{ ...current[0], version: 'draft-older' }, current[1]] },
+      { agreements: [...current, { key: 'EXTRA_AGREEMENT', version: '1' }] },
+      { agreements: [{ key: current[0].key, version: 'client-selected' }, current[1]] },
+      { agreements: [{ ...current[0], accepted: true }, current[1]] },
+      { agreements: current, acceptedByClient: true },
+      { input: { agreements: current } },
+    ]
+
+    for (const input of invalidInputs) {
+      let writes = 0
+      const service = createIdentityService({
+        repository: repository({
+          acceptAgreements: async () => {
+            writes += 1
+          },
+        }),
+      })
+      await assert.rejects(
+        () => service.acceptAgreements(caller, input),
+        /AGREEMENT_VERSION_CHANGED/,
+      )
+      assert.equal(writes, 0)
+    }
+  })
+
   it('returns an opaque self profile reference for card sharing', async () => {
     const service = createIdentityService({
       repository: repository(),

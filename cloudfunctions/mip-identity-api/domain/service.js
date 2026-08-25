@@ -41,14 +41,8 @@ function createIdentityService(options) {
     return snapshotDto(facts, agreements, membership, profileRef)
   }
 
-  async function acceptAgreements(caller, value) {
-    const input = value?.input
-    const submitted = Array.isArray(input?.agreements) ? input.agreements : []
-    if (submitted.length !== agreements.length || agreements.some((requirement) => {
-      return !submitted.some(item => item?.key === requirement.key && item?.version === requirement.version)
-    })) {
-      throw new Error('AGREEMENT_VERSION_CHANGED')
-    }
+  async function acceptAgreements(caller, input) {
+    assertCurrentAgreementAcceptance(input, agreements)
     const user = await repository.ensureUser(caller)
     assertActiveUser(user)
     await repository.acceptAgreements(caller.appId, user.id, agreements)
@@ -184,6 +178,39 @@ function normalizeAccountClosureInput(value) {
 function assertActiveUser(user) {
   if (!user || user.status !== 'ACTIVE') {
     throw new Error('FORBIDDEN')
+  }
+}
+
+function assertCurrentAgreementAcceptance(input, agreements) {
+  if (!input || typeof input !== 'object' || Array.isArray(input)
+    || Object.keys(input).length !== 1
+    || !Object.hasOwn(input, 'agreements')
+    || !Array.isArray(input.agreements)
+    || input.agreements.length !== agreements.length) {
+    throw new Error('AGREEMENT_VERSION_CHANGED')
+  }
+
+  const expected = new Set(agreements.map(
+    agreement => `${agreement.key}\u0000${agreement.version}`,
+  ))
+  const submitted = new Set()
+  for (const agreement of input.agreements) {
+    if (!agreement || typeof agreement !== 'object' || Array.isArray(agreement)
+      || Object.keys(agreement).length !== 2
+      || !Object.hasOwn(agreement, 'key')
+      || !Object.hasOwn(agreement, 'version')
+      || typeof agreement.key !== 'string'
+      || typeof agreement.version !== 'string') {
+      throw new Error('AGREEMENT_VERSION_CHANGED')
+    }
+    const signature = `${agreement.key}\u0000${agreement.version}`
+    if (!expected.has(signature) || submitted.has(signature)) {
+      throw new Error('AGREEMENT_VERSION_CHANGED')
+    }
+    submitted.add(signature)
+  }
+  if (submitted.size !== expected.size) {
+    throw new Error('AGREEMENT_VERSION_CHANGED')
   }
 }
 
@@ -438,6 +465,7 @@ function isUuid(value) {
 
 module.exports = {
   ACCOUNT_CLOSURE_CONFIRMATION_PHRASE,
+  assertCurrentAgreementAcceptance,
   createIdentityService,
   defaultAgreements,
   membershipProjection,

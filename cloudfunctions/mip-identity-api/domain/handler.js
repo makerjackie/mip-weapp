@@ -40,7 +40,7 @@ const retryableCodes = new Set([
 const CONTRACT_VERSION = 1
 
 const actions = Object.freeze({
-  acceptAgreements: (service, caller, input) => service.acceptAgreements(caller, { input }),
+  acceptAgreements: (service, caller, input) => service.acceptAgreements(caller, input),
   bindWechatPhone: (service, caller, input) => service.bindWechatPhone(caller, { code: input.code }),
   closeAccount: (service, caller, input) => service.closeAccount(caller, { input }),
   getAccessSnapshot: (service, caller) => service.getAccessSnapshot(caller),
@@ -58,6 +58,17 @@ function isRecord(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }
 
+function withoutCloudbaseMetadata(event) {
+  if (!Object.hasOwn(event, 'userInfo')) {
+    return event
+  }
+  if (!isRecord(event.userInfo)) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  const { userInfo: _userInfo, ...request } = event
+  return request
+}
+
 function businessInput(value) {
   const {
     action: _action,
@@ -68,26 +79,42 @@ function businessInput(value) {
   return input
 }
 
-function normalizeRequest(event) {
-  if (!isRecord(event)) {
+function containsRouteField(value) {
+  return Object.keys(value).some(key => ['action', 'contractVersion', 'input'].includes(key))
+}
+
+function normalizeRequest(rawEvent) {
+  if (!isRecord(rawEvent)) {
     throw new Error('VALIDATION_FAILED')
   }
+  const event = withoutCloudbaseMetadata(rawEvent)
   const action = typeof event.action === 'string' ? event.action : ''
   if (event.contractVersion === undefined) {
-    const flatInput = businessInput(event)
-    const nestedInput = isRecord(event.input) ? businessInput(event.input) : {}
+    if (Object.hasOwn(event, 'input')) {
+      if (!isRecord(event.input)
+        || Object.keys(event).some(key => !['action', 'input'].includes(key))
+        || containsRouteField(event.input)) {
+        throw new Error('VALIDATION_FAILED')
+      }
+      return {
+        action,
+        input: { ...event.input },
+        legacy: true,
+      }
+    }
     return {
       action,
-      input: Object.keys(flatInput).length ? flatInput : nestedInput,
+      input: businessInput(event),
       legacy: true,
     }
   }
   if (event.contractVersion !== CONTRACT_VERSION
     || !isRecord(event.input)
-    || Object.keys(event).some(key => !['contractVersion', 'action', 'input'].includes(key))) {
+    || Object.keys(event).some(key => !['contractVersion', 'action', 'input'].includes(key))
+    || containsRouteField(event.input)) {
     throw new Error('VALIDATION_FAILED')
   }
-  return { action, input: businessInput(event.input), legacy: false }
+  return { action, input: { ...event.input }, legacy: false }
 }
 
 function createHandler(options) {
