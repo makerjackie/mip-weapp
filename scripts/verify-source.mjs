@@ -131,7 +131,8 @@ assertValidTDesignIconNames({
   label: 'MIP source UI',
 })
 assertSemanticIconColors({ sources: [allWxml], assert, label: 'MIP source UI' })
-for (const file of [...walk('src/packages/member'), ...walk('src/packages/admin')].filter(item => item.endsWith('.wxml'))) {
+for (const route of declaredRoutes.filter(item => item.startsWith('packages/member/') || item.startsWith('packages/admin/'))) {
+  const file = `src/${route}.wxml`
   assert(read(file).includes('<app-page-exit'), `${file} must provide a stable way out of its subpackage page`)
 }
 assert(fs.existsSync(path.join(root, 'src/assets/brand/mip-logo-yellow.png')), 'MIP primary logo is missing')
