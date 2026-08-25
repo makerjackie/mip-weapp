@@ -98,6 +98,7 @@ function createAdminService({
   const {
     activateMessageTemplate,
     archiveMessageTemplate,
+    cancelMessageCampaignSchedule,
     getAnnouncement,
     getMessageCampaign,
     getMessageTemplate,
@@ -112,6 +113,7 @@ function createAdminService({
     saveMessageCampaign,
     saveMessageTemplate,
     searchMessageRecipients,
+    scheduleMessageCampaign,
     setAnnouncementPinned,
     snapshotMessageCampaign,
     withdrawAnnouncement,
@@ -262,6 +264,7 @@ function createAdminService({
 
   return {
     activateMessageTemplate,
+    cancelMessageCampaignSchedule,
     getAnnouncement,
     adjustGrowth,
     archiveEvent,
@@ -345,6 +348,7 @@ function createAdminService({
     revokeBadge,
     setAnnouncementPinned,
     searchMessageRecipients,
+    scheduleMessageCampaign,
     snapshotMessageCampaign,
     withdrawAnnouncement,
     withdrawMessageCampaign,

@@ -1,5 +1,6 @@
 import type {
   AdminMessageCampaign,
+  AdminMessageCampaignDispatch,
   AdminMessageCampaignDraft,
   AdminMessageCampaignSafetyStatus,
   AdminMessageCampaignStatus,
@@ -23,8 +24,17 @@ type CampaignView = AdminMessageCampaign & {
   statusText: string
   scopeText: string
   updatedText: string
+  dispatchText: string
 }
 type CandidateView = AdminMessageRecipientCandidate & { selected: boolean }
+type DispatchView = AdminMessageCampaignDispatch & {
+  statusText: string
+  scheduledText: string
+  noteText: string
+  needsManualReview: boolean
+  canModify: boolean
+  canCancel: boolean
+}
 type TemplateView = AdminMessageTemplate & {
   statusText: string
   safetyText: string
@@ -55,6 +65,102 @@ const templateSafetyLabels: Record<AdminMessageTemplateSafetyStatus, string> = {
   REJECTED: '未通过',
   ERROR: '检查失败',
 }
+const dispatchStatusLabels: Record<AdminMessageCampaignDispatch['status'], string> = {
+  SCHEDULED: '已计划',
+  PROCESSING: '正在发送',
+  FAILED: '发送未完成',
+}
+const minimumScheduleLeadMs = 5 * 60 * 1000
+const defaultScheduleBufferMs = 60 * 1000
+
+function padDatePart(value: number) {
+  return String(value).padStart(2, '0')
+}
+
+function localPickerParts(value: Date) {
+  return {
+    date: `${value.getFullYear()}-${padDatePart(value.getMonth() + 1)}-${padDatePart(value.getDate())}`,
+    time: `${padDatePart(value.getHours())}:${padDatePart(value.getMinutes())}`,
+  }
+}
+
+function minimumScheduleDate() {
+  return new Date(Math.ceil((Date.now() + minimumScheduleLeadMs) / 60_000) * 60_000)
+}
+
+function defaultScheduleDate() {
+  return new Date(Math.ceil(
+    (Date.now() + minimumScheduleLeadMs + defaultScheduleBufferMs) / 60_000,
+  ) * 60_000)
+}
+
+function localPickerDate(date: string, time: string) {
+  const dateMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date)
+  const timeMatch = /^(\d{2}):(\d{2})$/.exec(time)
+  if (!dateMatch || !timeMatch) {
+    return null
+  }
+  const parts = [
+    Number(dateMatch[1]),
+    Number(dateMatch[2]),
+    Number(dateMatch[3]),
+    Number(timeMatch[1]),
+    Number(timeMatch[2]),
+  ]
+  const [year, month, day, hour, minute] = parts
+  const value = new Date(year, month - 1, day, hour, minute, 0, 0)
+  if (!Number.isFinite(value.getTime())
+    || value.getFullYear() !== year
+    || value.getMonth() !== month - 1
+    || value.getDate() !== day
+    || value.getHours() !== hour
+    || value.getMinutes() !== minute) {
+    return null
+  }
+  return value
+}
+
+function schedulePickerState(activeDispatch: AdminMessageCampaignDispatch | null) {
+  const minimum = minimumScheduleDate()
+  const fallback = defaultScheduleDate()
+  const scheduled = activeDispatch ? new Date(activeDispatch.scheduledFor) : null
+  const value = scheduled && scheduled.getTime() >= minimum.getTime() ? scheduled : fallback
+  const selected = localPickerParts(value)
+  const lowerBound = localPickerParts(minimum)
+  return {
+    scheduleDate: selected.date,
+    scheduleTime: selected.time,
+    scheduleMinDate: lowerBound.date,
+    scheduleTimeStart: selected.date === lowerBound.date ? lowerBound.time : '00:00',
+  }
+}
+
+function dispatchView(item: AdminMessageCampaignDispatch): DispatchView {
+  const needsManualReview = item.lastOutcome === 'UNKNOWN'
+    || item.retryDisposition === 'MANUAL_REVIEW'
+  const canModify = !needsManualReview && (
+    item.status === 'SCHEDULED'
+    || (item.status === 'FAILED' && item.retryDisposition === 'RETRIABLE')
+  )
+  const noteText = needsManualReview
+    ? '需要人工核对'
+    : item.status === 'PROCESSING'
+      ? '发送任务正在处理'
+      : item.status === 'FAILED' && item.retryDisposition === 'RETRIABLE'
+        ? '可修改发送计划'
+        : item.status === 'FAILED'
+          ? '本次计划不能继续发送'
+          : '等待计划时间到达后发送'
+  return {
+    ...item,
+    statusText: dispatchStatusLabels[item.status],
+    scheduledText: formatLocalDateTime(item.scheduledFor),
+    noteText,
+    needsManualReview,
+    canModify,
+    canCancel: item.status !== 'PROCESSING' && !needsManualReview,
+  }
+}
 
 function initialDraft(scopeType: 'PLATFORM' | 'BRANCH', branchId: string | null): AdminMessageCampaignDraft {
   return {
@@ -82,11 +188,15 @@ function initialTemplateDraft(
 }
 
 function campaignView(item: AdminMessageCampaign): CampaignView {
+  const activeDispatch = item.activeDispatch ? dispatchView(item.activeDispatch) : null
   return {
     ...item,
     statusText: statusLabels[item.status],
     scopeText: item.scopeType === 'PLATFORM' ? '全平台' : item.branchName,
     updatedText: item.updatedAt ? formatLocalDateTime(item.updatedAt) : '—',
+    dispatchText: activeDispatch
+      ? `${activeDispatch.needsManualReview ? '需要人工核对' : activeDispatch.statusText} · ${activeDispatch.scheduledText}`
+      : '',
   }
 }
 
@@ -135,14 +245,21 @@ Page({
     safetyText: safetyLabels.PENDING,
     recipientCount: 0,
     deliveryStats: { submittedCount: 0, inboxReadyCount: 0, failedCount: 0 },
+    activeDispatch: null as DispatchView | null,
+    canScheduleCampaign: true,
+    scheduleActionText: '定时发送',
+    ...schedulePickerState(null),
     draft: initialDraft('PLATFORM', null),
     editable: true,
     candidates: [] as CandidateView[],
     candidateQuery: '',
     candidateLoading: false,
     selectedRecipientCount: 0,
-    processing: '' as '' | 'save' | 'snapshot' | 'publish' | 'withdraw',
+    processing: '' as '' | 'save' | 'snapshot' | 'publish' | 'schedule' | 'cancelSchedule' | 'withdraw',
     publishRequestKey: '',
+    scheduleRequestKey: '',
+    cancelScheduleRequestKey: '',
+    cancelScheduleRequestReason: '',
     message: '',
     campaignTemplatePool: [] as TemplateView[],
     campaignTemplateOptions: [] as TemplateView[],
@@ -355,6 +472,10 @@ Page({
         safetyText: safetyLabels.PENDING,
         recipientCount: 0,
         deliveryStats: { submittedCount: 0, inboxReadyCount: 0, failedCount: 0 },
+        activeDispatch: null,
+        canScheduleCampaign: true,
+        scheduleActionText: '定时发送',
+        ...schedulePickerState(null),
         draft: initialDraft(branch ? 'BRANCH' : 'PLATFORM', branch?.id || null),
         branchIndex: branch ? 0 : -1,
         editable: true,
@@ -363,6 +484,9 @@ Page({
         selectedRecipientCount: 0,
         processing: '',
         publishRequestKey: '',
+        scheduleRequestKey: '',
+        cancelScheduleRequestKey: '',
+        cancelScheduleRequestReason: '',
         message: '',
         campaignTemplatePool: [],
         campaignTemplateOptions: [],
@@ -414,6 +538,7 @@ Page({
   },
 
   applyCampaign(item: AdminMessageCampaign, preserveTemplateSelection = false) {
+    const activeDispatch = item.activeDispatch ? dispatchView(item.activeDispatch) : null
     this.setData({
       state: 'ready',
       mode: 'editor',
@@ -425,6 +550,10 @@ Page({
       safetyText: safetyLabels[item.contentSafetyStatus],
       recipientCount: item.recipientCount,
       deliveryStats: item.deliveryStats,
+      activeDispatch,
+      canScheduleCampaign: !activeDispatch || activeDispatch.canModify,
+      scheduleActionText: activeDispatch ? '修改计划' : '定时发送',
+      ...schedulePickerState(item.activeDispatch),
       draft: {
         campaignId: item.id,
         expectedVersion: item.version,
@@ -441,6 +570,10 @@ Page({
       selectedRecipientCount: item.recipientRefs.length,
       candidates: [],
       processing: '',
+      publishRequestKey: '',
+      scheduleRequestKey: '',
+      cancelScheduleRequestKey: '',
+      cancelScheduleRequestReason: '',
       message: '',
       ...(preserveTemplateSelection
         ? {}
@@ -710,14 +843,186 @@ Page({
     }
   },
 
+  changeScheduleDate(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    if (!this.data.canScheduleCampaign || this.data.processing) {
+      return
+    }
+    const requestedDate = String(event.detail.value || '')
+    const minimum = localPickerParts(minimumScheduleDate())
+    const scheduleDate = requestedDate >= minimum.date ? requestedDate : minimum.date
+    const scheduleTimeStart = scheduleDate === minimum.date ? minimum.time : '00:00'
+    const scheduleTime = scheduleDate === minimum.date && this.data.scheduleTime < scheduleTimeStart
+      ? scheduleTimeStart
+      : this.data.scheduleTime
+    this.setData({
+      scheduleDate,
+      scheduleTime,
+      scheduleMinDate: minimum.date,
+      scheduleTimeStart,
+      scheduleRequestKey: '',
+      message: '',
+    })
+  },
+
+  changeScheduleTime(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    if (!this.data.canScheduleCampaign || this.data.processing) {
+      return
+    }
+    const minimum = localPickerParts(minimumScheduleDate())
+    const scheduleTimeStart = this.data.scheduleDate === minimum.date ? minimum.time : '00:00'
+    const requestedTime = String(event.detail.value || '')
+    this.setData({
+      scheduleTime: this.data.scheduleDate === minimum.date && requestedTime < scheduleTimeStart
+        ? scheduleTimeStart
+        : requestedTime,
+      scheduleMinDate: minimum.date,
+      scheduleTimeStart,
+      scheduleRequestKey: '',
+      message: '',
+    })
+  },
+
+  async reloadCampaignAndList(campaignId: string) {
+    const [item, page] = await Promise.all([
+      mipAdminModule.messaging.getCampaign(campaignId, true),
+      mipAdminModule.messaging.listCampaigns({ status: this.data.statusFilter }, true),
+    ])
+    this.setData({
+      items: page.items.map(campaignView),
+    })
+    this.applyCampaign(item)
+  },
+
+  async scheduleCampaign() {
+    if (!this.data.campaignId
+      || this.data.campaignStatus !== 'READY'
+      || !this.data.canScheduleCampaign
+      || this.data.processing) {
+      return
+    }
+    const scheduled = localPickerDate(this.data.scheduleDate, this.data.scheduleTime)
+    const minimum = minimumScheduleDate()
+    if (!scheduled || scheduled.getTime() < minimum.getTime()) {
+      const picker = schedulePickerState(null)
+      this.setData({
+        ...picker,
+        scheduleRequestKey: '',
+        message: '发送时间需至少晚于当前时间 5 分钟。',
+      })
+      return
+    }
+    const activeDispatch = this.data.activeDispatch
+    const modifying = Boolean(activeDispatch)
+    const confirmed = await wx.showModal({
+      title: modifying ? '修改发送计划' : '设置发送计划',
+      content: `将于 ${formatLocalDateTime(scheduled.toISOString())} 向快照中的 ${this.data.recipientCount} 名用户发送消息。`,
+      confirmText: modifying ? '修改计划' : '定时发送',
+    }).catch(() => null)
+    if (!confirmed?.confirm) {
+      return
+    }
+    const requestKey = this.data.scheduleRequestKey
+      || `message-campaign-schedule-${this.data.campaignId}-${Date.now()}`
+    this.setData({ processing: 'schedule', scheduleRequestKey: requestKey, message: '' })
+    try {
+      await mipAdminModule.messaging.scheduleCampaign({
+        campaignId: this.data.campaignId,
+        expectedVersion: this.data.version,
+        scheduledFor: scheduled.toISOString(),
+        idempotencyKey: requestKey,
+        ...(activeDispatch
+          ? { expectedDispatchVersion: activeDispatch.version }
+          : {}),
+      })
+      await this.reloadCampaignAndList(this.data.campaignId)
+      wx.showToast({ title: modifying ? '发送计划已修改' : '发送计划已设置', icon: 'success' })
+    }
+    catch (error) {
+      this.handleMutationFailure(error, '发送计划保存失败')
+    }
+    finally {
+      this.setData({ processing: '' })
+    }
+  },
+
+  async cancelCampaignSchedule() {
+    const activeDispatch = this.data.activeDispatch
+    if (!this.data.campaignId
+      || this.data.campaignStatus !== 'READY'
+      || !activeDispatch?.canCancel
+      || this.data.processing) {
+      return
+    }
+    const result = await wx.showModal({
+      title: '取消发送计划',
+      content: '填写取消原因。取消后不会发送此计划。',
+      editable: true,
+      placeholderText: '取消原因',
+      confirmText: '取消计划',
+      confirmColor: '#E65C5C',
+    }).catch(() => null)
+    const reason = result?.content?.trim() || ''
+    if (!result?.confirm || !reason) {
+      if (result?.confirm) {
+        this.setData({ message: '请填写取消原因。' })
+      }
+      return
+    }
+    const requestKey = this.data.cancelScheduleRequestKey
+      && this.data.cancelScheduleRequestReason === reason
+      ? this.data.cancelScheduleRequestKey
+      : `message-campaign-cancel-schedule-${this.data.campaignId}-${Date.now()}`
+    this.setData({
+      processing: 'cancelSchedule',
+      cancelScheduleRequestKey: requestKey,
+      cancelScheduleRequestReason: reason,
+      message: '',
+    })
+    try {
+      await mipAdminModule.messaging.cancelCampaignSchedule({
+        campaignId: this.data.campaignId,
+        expectedVersion: this.data.version,
+        expectedDispatchVersion: activeDispatch.version,
+        reason,
+        idempotencyKey: requestKey,
+      })
+      await this.reloadCampaignAndList(this.data.campaignId)
+      wx.showToast({ title: '发送计划已取消', icon: 'success' })
+    }
+    catch (error) {
+      this.handleMutationFailure(error, '发送计划取消失败')
+    }
+    finally {
+      this.setData({ processing: '' })
+    }
+  },
+
   async publishCampaign() {
     if (!this.data.campaignId || this.data.campaignStatus !== 'READY' || this.data.processing) {
       return
     }
+    if (this.data.activeDispatch) {
+      if (this.data.activeDispatch.needsManualReview) {
+        await wx.showModal({
+          title: '需要人工核对',
+          content: '发送结果待人工核对，核对完成前不能立即发布。',
+          showCancel: false,
+          confirmText: '知道了',
+        }).catch(() => null)
+        return
+      }
+      await wx.showModal({
+        title: '先取消发送计划',
+        content: '当前消息活动已有发送计划。请先取消计划，再立即发布。',
+        showCancel: false,
+        confirmText: '知道了',
+      }).catch(() => null)
+      return
+    }
     const confirmed = await wx.showModal({
-      title: '发布消息',
+      title: '立即发布',
       content: `将向快照中的 ${this.data.recipientCount} 名用户提交站内消息。`,
-      confirmText: '发布',
+      confirmText: '立即发布',
     }).catch(() => null)
     if (!confirmed?.confirm) {
       return
@@ -730,8 +1035,7 @@ Page({
         this.data.version,
         requestKey,
       )
-      const item = await mipAdminModule.messaging.getCampaign(this.data.campaignId, true)
-      this.applyCampaign(item)
+      await this.reloadCampaignAndList(this.data.campaignId)
       wx.showToast({ title: `已提交 ${result.queuedCount} 条`, icon: 'success' })
     }
     catch (error) {

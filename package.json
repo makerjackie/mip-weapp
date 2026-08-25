@@ -52,6 +52,7 @@
     "cloud:deploy-payment": "node scripts/deploy-payment-function.mjs",
     "cloud:verify": "node scripts/verify-cloud.mjs",
     "outbox:run": "node scripts/run-outbox.mjs",
+    "message-campaigns:run-due": "node scripts/run-message-campaigns.mjs",
     "refunds:run": "node scripts/run-refunds.mjs",
     "media:cleanup": "node scripts/run-media-cleanup.mjs",
     "ai:cleanup": "node scripts/run-ai-cleanup.mjs",

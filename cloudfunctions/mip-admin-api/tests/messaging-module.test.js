@@ -141,6 +141,33 @@ function repository(overrides = {}) {
         idempotent: false,
       }
     },
+    async scheduleCampaign(input) {
+      repo.calls.push({ type: 'campaignSchedule', input })
+      return campaignRow({
+        status: 'READY',
+        activeDispatchId: 'private-dispatch-id',
+        activeDispatch: {
+          status: 'SCHEDULED',
+          scheduledFor: input.scheduledFor.toISOString(),
+          attempts: 0,
+          lastOutcome: 'NOT_ATTEMPTED',
+          retryDisposition: 'RETRIABLE',
+          lastErrorCode: null,
+          version: 1,
+          updatedAt: '2030-08-24T08:00:00.000Z',
+        },
+        version: input.expectedVersion + 1,
+      })
+    },
+    async cancelScheduledCampaign(input) {
+      repo.calls.push({ type: 'campaignCancelSchedule', input })
+      return campaignRow({
+        status: 'READY',
+        activeDispatchId: null,
+        activeDispatch: null,
+        version: input.expectedVersion + 1,
+      })
+    },
     async withdrawCampaign(input) {
       repo.calls.push({ type: 'campaignWithdraw', input })
       return campaignRow({ status: 'WITHDRAWN', version: input.expectedVersion + 1 })
@@ -257,6 +284,8 @@ function campaignRow(overrides = {}) {
     status: 'DRAFT',
     contentSafetyStatus: 'PASSED',
     recipientCount: 0,
+    activeDispatchId: null,
+    activeDispatch: null,
     publishIdempotencyKey: 'private-publish-key',
     publishRequestHash: 'private-request-hash',
     version: 4,
@@ -302,6 +331,7 @@ describe('admin messaging deep module', () => {
     assert.deepEqual(Object.keys(api).sort(), [
       'activateMessageTemplate',
       'archiveMessageTemplate',
+      'cancelMessageCampaignSchedule',
       'getAnnouncement',
       'getMessageCampaign',
       'getMessageTemplate',
@@ -315,6 +345,7 @@ describe('admin messaging deep module', () => {
       'saveAnnouncement',
       'saveMessageCampaign',
       'saveMessageTemplate',
+      'scheduleMessageCampaign',
       'searchMessageRecipients',
       'setAnnouncementPinned',
       'snapshotMessageCampaign',
@@ -677,6 +708,51 @@ describe('admin messaging deep module', () => {
     await assert.rejects(() => service.snapshotMessageCampaign(caller, {
       campaignId: CAMPAIGN_ID, expectedVersion: 4,
     }), error => error?.code === 'MESSAGE_CAMPAIGN_IMMUTABLE')
+  })
+
+  it('returns only the public active-dispatch contract for schedule and cancellation', async () => {
+    const repo = repository()
+    repo.roleBindings = [{ roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', scopeId: BRANCH_A }]
+    const service = messaging(repo, { now: () => new Date('2030-08-25T08:00:00.000Z') })
+
+    const scheduled = await service.scheduleMessageCampaign(caller, {
+      campaignId: CAMPAIGN_ID,
+      expectedVersion: 4,
+      scheduledFor: '2030-08-25T08:05:00.000Z',
+      idempotencyKey: '  campaign-schedule-2030-001  ',
+    })
+    assert.equal(Object.hasOwn(scheduled, 'activeDispatchId'), false)
+    assert.equal(Object.hasOwn(scheduled, 'publishIdempotencyKey'), false)
+    assert.equal(Object.hasOwn(scheduled, 'publishRequestHash'), false)
+    assert.deepEqual(scheduled.activeDispatch, {
+      status: 'SCHEDULED',
+      scheduledFor: '2030-08-25T08:05:00.000Z',
+      attempts: 0,
+      lastOutcome: 'NOT_ATTEMPTED',
+      retryDisposition: 'RETRIABLE',
+      lastErrorCode: null,
+      version: 1,
+      updatedAt: '2030-08-24T08:00:00.000Z',
+    })
+    const scheduleInput = repo.calls.find(call => call.type === 'campaignSchedule').input
+    assert.equal(scheduleInput.scheduledFor.toISOString(), '2030-08-25T08:05:00.000Z')
+    assert.equal(scheduleInput.idempotencyKey, 'campaign-schedule-2030-001')
+    assert.equal(scheduleInput.expectedDispatchVersion, null)
+    assert.equal(scheduleInput.authorization.capability, CAPABILITIES.MESSAGES_MANAGE)
+
+    const cancelled = await service.cancelMessageCampaignSchedule(caller, {
+      campaignId: CAMPAIGN_ID,
+      expectedVersion: 5,
+      expectedDispatchVersion: 1,
+      reason: '  调整发布时间  ',
+      idempotencyKey: 'campaign-cancel-schedule-2030-001',
+    })
+    assert.equal(Object.hasOwn(cancelled, 'activeDispatchId'), false)
+    assert.equal(cancelled.activeDispatch, null)
+    const cancelInput = repo.calls.find(call => call.type === 'campaignCancelSchedule').input
+    assert.equal(cancelInput.reason, '调整发布时间')
+    assert.equal(cancelInput.expectedDispatchVersion, 1)
+
   })
 
   it('authorizes template scope before safety and preserves CAS, audit, activate, and archive inputs', async () => {

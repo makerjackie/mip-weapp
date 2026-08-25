@@ -6,8 +6,10 @@ import type {
 } from './announcements'
 import type {
   AdminMessageCampaign,
+  AdminMessageCampaignCancelScheduleInput,
   AdminMessageCampaignDraft,
   AdminMessageCampaignPublication,
+  AdminMessageCampaignScheduleInput,
   AdminMessageCampaignScope,
   AdminMessageCampaignStatus,
   AdminMessageRecipientCandidate,
@@ -838,6 +840,8 @@ export interface MipAdminGateway {
   saveMessageCampaign: (input: AdminMessageCampaignDraft) => Promise<AdminMessageCampaign>
   snapshotMessageCampaign: (campaignId: string, expectedVersion: number) => Promise<AdminMessageCampaign>
   publishMessageCampaign: (campaignId: string, expectedVersion: number, idempotencyKey: string) => Promise<AdminMessageCampaignPublication>
+  scheduleMessageCampaign: (input: AdminMessageCampaignScheduleInput) => Promise<AdminMessageCampaign>
+  cancelMessageCampaignSchedule: (input: AdminMessageCampaignCancelScheduleInput) => Promise<AdminMessageCampaign>
   withdrawMessageCampaign: (campaignId: string, expectedVersion: number, reason: string) => Promise<AdminMessageCampaign>
   listMessageTemplates: (input?: AdminMessageTemplateFilters) => Promise<AdminPage<AdminMessageTemplate>>
   getMessageTemplate: (templateId: string) => Promise<AdminMessageTemplate>

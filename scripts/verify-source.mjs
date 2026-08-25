@@ -174,6 +174,10 @@ const paySource = sourceTree('cloudfunctions/mip-cloudpay', /\.js$/)
 const callbackSource = sourceTree('cloudfunctions/mip-cloudpay-callback', /\.js$/)
 const refundSource = sourceTree('cloudfunctions/mip-refund-worker', /\.js$/)
 const adminSource = sourceTree('cloudfunctions/mip-admin-api', /\.js$/)
+const adminIndex = read('cloudfunctions/mip-admin-api/index.js')
+const messageDispatchRoute = read('cloudfunctions/mip-admin-api/lib/message-dispatch-route.js')
+const internalDispatchIndex = adminIndex.indexOf('event?.action === RUN_DUE_ACTION')
+const userHandlerIndex = adminIndex.indexOf('handler(event)')
 const growthSource = sourceTree('cloudfunctions/mip-growth-api', /\.js$/)
 const notificationsSource = sourceTree('cloudfunctions/mip-notifications-api', /\.js$/)
 const notificationSource = sourceTree('cloudfunctions/mip-notification-worker', /\.js$/)
@@ -221,6 +225,14 @@ assert(adminSource.includes('PLATFORM_OWNER')
   && adminSource.includes('EVENT_STAFF')
   && adminSource.includes('MIP_PHONE_ENCRYPTION_KEY')
   && adminSource.includes('mip/exports/'), 'Scoped admin RBAC, private phone access, or exports are incomplete')
+assert(adminSource.includes('MIP_MESSAGE_DISPATCH_HMAC_SECRET')
+  && adminSource.includes('runDueMessageCampaigns')
+  && adminSource.includes('FOR UPDATE SKIP LOCKED')
+  && adminSource.includes('MESSAGE_SCHEDULE_AUTH_REVOKED')
+  && adminSource.includes('timingSafeEqual'), 'Scheduled message dispatch is not durably claimed or internally authenticated')
+assert(internalDispatchIndex >= 0 && userHandlerIndex > internalDispatchIndex
+  && messageDispatchRoute.includes('outboxWakeup.afterSuccessfulMutation')
+  && !messageDispatchRoute.includes('data.completed > 0'), 'Internal message dispatch must run before user identity and always retry outbox wakeup')
 assert(!/DELETE\s+FROM\s+mip_(?:users|orders|audit_logs|events|membership_entitlements)\b/i.test(adminSource), 'Admin API must not physically delete durable business facts')
 assert(growthSource.includes('mip_growth_entries') && growthSource.includes('MIP_GROWTH_HMAC_SECRET'), 'Growth ledger is incomplete')
 assert(notificationsSource.includes('mip_inbox_messages')
@@ -278,6 +290,7 @@ assert(!legacySqlReference(migrationSource), 'MIP migration chain references a l
 const cloudDeploy = read('scripts/deploy-functions.mjs')
 const paymentDeploy = read('scripts/deploy-payment-function.mjs')
 const refundRecovery = read('scripts/run-refunds.mjs')
+const messageDispatchRecovery = read('scripts/run-message-campaigns.mjs')
 const cloudVerify = read('scripts/verify-cloud.mjs')
 const demoSeed = read('scripts/seed-demo.mjs')
 const ownerBootstrap = read('scripts/bootstrap-owner.mjs')
@@ -303,6 +316,7 @@ for (const [label, source] of [
   ['core deploy', cloudDeploy],
   ['payment deploy', paymentDeploy],
   ['refund recovery', refundRecovery],
+  ['message dispatch recovery', messageDispatchRecovery],
   ['cloud verification', cloudVerify],
   ['demo seed', demoSeed],
   ['owner bootstrap', ownerBootstrap],
@@ -337,6 +351,12 @@ assert(refundRecovery.includes('--confirm-env=')
   && refundRecovery.includes('--confirm-refund=')
   && refundRecovery.includes('MIP_REFUND_WORKER_HMAC_SECRET')
   && refundRecovery.includes('action: \'runBatch\''), 'Refund recovery command must require exact environment confirmation and signed bounded dispatch')
+assert(messageDispatchRecovery.includes('--confirm-env=')
+  && messageDispatchRecovery.includes('--confirm-message-dispatch=')
+  && messageDispatchRecovery.includes('MIP_MESSAGE_DISPATCH_HMAC_SECRET')
+  && messageDispatchRecovery.includes('action: \'runDueMessageCampaigns\'')
+  && messageDispatchRecovery.includes('MIP_OUTBOX_HMAC_SECRET')
+  && messageDispatchRecovery.includes('output.outboxWakeup === \'FAILED\''), 'Message scheduling recovery must require exact confirmation and controlled outbox wakeup')
 assert(cloudVerify.includes('assertRuntimePrivilegesExact')
   && !cloudVerify.includes('tableCounts'), 'Cloud verification must prove isolation without persisting business rows')
 assert(demoSeed.includes('MIP_CATALOG_STAGE=TEST')
@@ -350,6 +370,7 @@ for (const [script, expected] of [
   ['cloud:deploy-payment', 'node scripts/deploy-payment-function.mjs'],
   ['cloud:verify', 'node scripts/verify-cloud.mjs'],
   ['outbox:run', 'node scripts/run-outbox.mjs'],
+  ['message-campaigns:run-due', 'node scripts/run-message-campaigns.mjs'],
   ['refunds:run', 'node scripts/run-refunds.mjs'],
 ]) {
   assert(packageJson.scripts[script] === expected, `${script} does not use the isolated MIP workflow`)

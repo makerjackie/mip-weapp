@@ -532,6 +532,12 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
     publishMessageCampaign: async (campaignId, expectedVersion, idempotencyKey) => parseMessageCampaignPublication(
       await call('mip.admin.messageCampaigns.publish', { campaignId, expectedVersion, idempotencyKey }),
     ),
+    scheduleMessageCampaign: async input => parseMessageCampaign(
+      await call('mip.admin.messageCampaigns.schedule', { ...input }),
+    ),
+    cancelMessageCampaignSchedule: async input => parseMessageCampaign(
+      await call('mip.admin.messageCampaigns.cancelSchedule', { ...input }),
+    ),
     withdrawMessageCampaign: async (campaignId, expectedVersion, reason) => parseMessageCampaign(
       await call('mip.admin.messageCampaigns.withdraw', { campaignId, expectedVersion, reason }),
     ),

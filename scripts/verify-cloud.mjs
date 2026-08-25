@@ -289,8 +289,9 @@ function assertOutboxEnvironment(detail) {
 function assertRefundDispatchEnvironment(detail) {
   const variables = environmentVariables(detail)
   if (variables.MIP_REFUND_FUNCTION_NAME !== functionNames.refund
-    || String(variables.MIP_REFUND_WORKER_HMAC_SECRET || '').length < 32) {
-    throw new Error('Admin refund worker link or HMAC configuration is incomplete')
+    || String(variables.MIP_REFUND_WORKER_HMAC_SECRET || '').length < 32
+    || String(variables.MIP_MESSAGE_DISPATCH_HMAC_SECRET || '').length < 32) {
+    throw new Error('Admin worker links or internal HMAC configuration are incomplete')
   }
 }
 

@@ -40,6 +40,8 @@ export interface MipMessagingAdmin {
   saveCampaign: MipAdminGateway['saveMessageCampaign']
   snapshotCampaign: MipAdminGateway['snapshotMessageCampaign']
   publishCampaign: MipAdminGateway['publishMessageCampaign']
+  scheduleCampaign: MipAdminGateway['scheduleMessageCampaign']
+  cancelCampaignSchedule: MipAdminGateway['cancelMessageCampaignSchedule']
   withdrawCampaign: MipAdminGateway['withdrawMessageCampaign']
   listTemplates: (
     input?: TemplateListInput,
@@ -145,6 +147,14 @@ export function createMipMessagingAdmin(
     publishCampaign: (campaignId, expectedVersion, idempotencyKey) => mutate(
       invalidateCampaigns,
       () => gateway.publishMessageCampaign(campaignId, expectedVersion, idempotencyKey),
+    ),
+    scheduleCampaign: input => mutate(
+      invalidateCampaigns,
+      () => gateway.scheduleMessageCampaign(input),
+    ),
+    cancelCampaignSchedule: input => mutate(
+      invalidateCampaigns,
+      () => gateway.cancelMessageCampaignSchedule(input),
     ),
     withdrawCampaign: (campaignId, expectedVersion, reason) => mutate(
       invalidateCampaigns,

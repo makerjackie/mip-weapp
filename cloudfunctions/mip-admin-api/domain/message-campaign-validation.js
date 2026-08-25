@@ -48,6 +48,26 @@ function normalizePublishKey(value) {
   return key
 }
 
+function normalizeScheduledFor(value) {
+  const source = typeof value === 'string' ? value.trim() : ''
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/.test(source)) {
+    throw new AdminError('VALIDATION_FAILED', '定时发布时间必须使用 UTC 时间')
+  }
+  const scheduledFor = new Date(source)
+  if (!Number.isFinite(scheduledFor.getTime())) {
+    throw new AdminError('VALIDATION_FAILED', '定时发布时间无效')
+  }
+  return scheduledFor
+}
+
+function normalizeOptionalDispatchVersion(value) {
+  if (value === undefined || value === null) return null
+  if (!Number.isInteger(value) || value < 1) {
+    throw new AdminError('VALIDATION_FAILED', '定时计划版本无效')
+  }
+  return value
+}
+
 function profileRefs(value) {
   if (!Array.isArray(value) || !value.length || value.length > 100) {
     throw new AdminError('VALIDATION_FAILED', '请选择 1 至 100 个收件人')
@@ -62,6 +82,8 @@ function profileRefs(value) {
 module.exports = {
   normalizeMessageCampaignDraft,
   normalizeMessageCampaignFilters,
+  normalizeOptionalDispatchVersion,
   normalizePublishKey,
   normalizeRecipientSearch,
+  normalizeScheduledFor,
 }

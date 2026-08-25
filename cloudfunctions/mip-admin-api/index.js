@@ -13,6 +13,11 @@ const { createRefundWorkerClient } = require('./lib/refund-worker-client')
 const { createCloudExportStorage } = require('./lib/export-storage')
 const { createMatchingClient } = require('./lib/matching-client')
 const { createOutboxWakeup, trustedContextAppId } = require('./lib/outbox-wakeup')
+const {
+  RUN_DUE_ACTION,
+  verifyMessageDispatchRequest,
+} = require('./lib/message-dispatch-auth')
+const { createMessageDispatchRoute, normalizeDispatchRun } = require('./lib/message-dispatch-route')
 const { createKnowledgeAdminService, configuredHosts, safeExternalUrl } = require('./domain/knowledge')
 const { checkCompleteContentSafety } = require('./lib/content-safety')
 const { fetchPinnedHttpsText } = require('./lib/safe-http')
@@ -186,8 +191,18 @@ const handler = createHandler({
   getContext: () => cloud.getWXContext(),
   issuePrincipal: principalIssuer.issue,
 })
+const runDueMessageCampaigns = createMessageDispatchRoute({
+  allowedAppIds,
+  logger: console,
+  outboxWakeup,
+  repository,
+  secret: process.env.MIP_MESSAGE_DISPATCH_HMAC_SECRET,
+})
 
 exports.main = async (event = {}) => {
+  if (event?.action === RUN_DUE_ACTION) {
+    return runDueMessageCampaigns(event)
+  }
   const result = await handler(event)
   if (result?.ok === true) {
     const routeAction = normalizeAdminRequest(event).action
@@ -207,7 +222,10 @@ exports._test = {
   contentSafety,
   fetchKnowledgeSource,
   jsonFeedItems,
+  normalizeDispatchRun,
   outboxMutationActions,
   resolveTrustedIdentity,
   rssItems,
+  runDueMessageCampaigns,
+  verifyMessageDispatchRequest,
 }

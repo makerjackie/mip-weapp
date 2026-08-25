@@ -76,6 +76,8 @@ const expectedOperations = Object.freeze({
   'mip.admin.announcements.pin': ['MESSAGING', 'MUTATION', 'setAnnouncementPinned'],
   'mip.admin.messageCampaigns.save': ['MESSAGING', 'MUTATION', 'saveMessageCampaign'],
   'mip.admin.messageCampaigns.snapshot': ['MESSAGING', 'MUTATION', 'snapshotMessageCampaign'],
+  'mip.admin.messageCampaigns.schedule': ['MESSAGING', 'MUTATION', 'scheduleMessageCampaign'],
+  'mip.admin.messageCampaigns.cancelSchedule': ['MESSAGING', 'MUTATION', 'cancelMessageCampaignSchedule'],
   'mip.admin.messageCampaigns.publish': ['MESSAGING', 'MUTATION', 'publishMessageCampaign'],
   'mip.admin.messageCampaigns.withdraw': ['MESSAGING', 'MUTATION', 'withdrawMessageCampaign'],
   'mip.admin.messageTemplates.save': ['MESSAGING', 'MUTATION', 'saveMessageTemplate'],
@@ -174,12 +176,12 @@ function manifest(owner, operations) {
 }
 
 describe('admin operation catalog', () => {
-  it('freezes the exact 103 business actions, owners, and kinds while keeping health separate', () => {
+  it('freezes the exact 105 business actions, owners, and kinds while keeping health separate', () => {
     const handlerActions = Object.keys(actions).filter(action => action !== 'health')
     const expectedActions = Object.keys(expectedOperations)
 
-    assert.equal(expectedActions.length, 103)
-    assert.equal(operationCatalog.length, 103)
+    assert.equal(expectedActions.length, 105)
+    assert.equal(operationCatalog.length, 105)
     assert.deepEqual(sorted(handlerActions), sorted(expectedActions))
     assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(expectedActions))
     assert.equal(operationByAction.health, undefined)

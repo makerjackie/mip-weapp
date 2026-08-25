@@ -18,6 +18,8 @@ module.exports = defineManifest('MESSAGING', [
   serviceOperation('mip.admin.announcements.pin', 'MUTATION', 'setAnnouncementPinned'),
   serviceOperation('mip.admin.messageCampaigns.save', 'MUTATION', 'saveMessageCampaign'),
   serviceOperation('mip.admin.messageCampaigns.snapshot', 'MUTATION', 'snapshotMessageCampaign'),
+  serviceOperation('mip.admin.messageCampaigns.schedule', 'MUTATION', 'scheduleMessageCampaign'),
+  serviceOperation('mip.admin.messageCampaigns.cancelSchedule', 'MUTATION', 'cancelMessageCampaignSchedule'),
   serviceOperation('mip.admin.messageCampaigns.publish', 'MUTATION', 'publishMessageCampaign', { wakesOutbox: true }),
   serviceOperation('mip.admin.messageCampaigns.withdraw', 'MUTATION', 'withdrawMessageCampaign'),
   serviceOperation('mip.admin.messageTemplates.save', 'MUTATION', 'saveMessageTemplate'),

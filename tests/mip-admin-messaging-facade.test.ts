@@ -47,6 +47,7 @@ const campaign: AdminMessageCampaign = {
   publishedAt: null,
   withdrawnAt: null,
   withdrawalReason: '',
+  activeDispatch: null,
   version: 1,
   updatedAt: '2026-08-25T08:00:00.000Z',
 }
@@ -110,6 +111,27 @@ function createHarness() {
       wechatDelivery: 'NOT_CONFIGURED',
       version: 2,
       idempotent: false,
+    })),
+    scheduleMessageCampaign: vi.fn<MipAdminGateway['scheduleMessageCampaign']>(async () => ({
+      ...campaign,
+      status: 'READY',
+      activeDispatch: {
+        status: 'SCHEDULED',
+        scheduledFor: '2030-09-01T08:00:00.000Z',
+        attempts: 0,
+        lastOutcome: 'NOT_ATTEMPTED',
+        retryDisposition: 'RETRIABLE',
+        lastErrorCode: null,
+        version: 1,
+        updatedAt: '2026-08-25T08:00:00.000Z',
+      },
+      version: 2,
+    })),
+    cancelMessageCampaignSchedule: vi.fn<MipAdminGateway['cancelMessageCampaignSchedule']>(async () => ({
+      ...campaign,
+      status: 'READY',
+      activeDispatch: null,
+      version: 2,
     })),
     withdrawMessageCampaign: vi.fn<MipAdminGateway['withdrawMessageCampaign']>(async () => ({
       ...campaign,
@@ -210,6 +232,27 @@ function mutationCases(): MutationCase[] {
       invalidated: ['listMessageCampaigns', 'getMessageCampaign'],
     },
     {
+      name: 'scheduleCampaign',
+      execute: messaging => messaging.scheduleCampaign({
+        campaignId: campaign.id,
+        expectedVersion: 1,
+        scheduledFor: '2030-09-01T08:00:00.000Z',
+        idempotencyKey: 'schedule-a',
+      }),
+      invalidated: ['listMessageCampaigns', 'getMessageCampaign'],
+    },
+    {
+      name: 'cancelCampaignSchedule',
+      execute: messaging => messaging.cancelCampaignSchedule({
+        campaignId: campaign.id,
+        expectedVersion: 1,
+        expectedDispatchVersion: 2,
+        reason: '安排调整',
+        idempotencyKey: 'cancel-schedule-a',
+      }),
+      invalidated: ['listMessageCampaigns', 'getMessageCampaign'],
+    },
+    {
       name: 'withdrawCampaign',
       execute: messaging => messaging.withdrawCampaign(campaign.id, 1, '内容调整'),
       invalidated: ['listMessageCampaigns', 'getMessageCampaign'],
@@ -288,6 +331,19 @@ describe('MIP admin messaging facade', () => {
     await module.messaging.saveCampaign(campaignDraft)
     await module.messaging.snapshotCampaign(campaign.id, 1)
     await module.messaging.publishCampaign(campaign.id, 1, 'publish-a')
+    await module.messaging.scheduleCampaign({
+      campaignId: campaign.id,
+      expectedVersion: 1,
+      scheduledFor: '2030-09-01T08:00:00.000Z',
+      idempotencyKey: 'schedule-a',
+    })
+    await module.messaging.cancelCampaignSchedule({
+      campaignId: campaign.id,
+      expectedVersion: 1,
+      expectedDispatchVersion: 2,
+      reason: '安排调整',
+      idempotencyKey: 'cancel-schedule-a',
+    })
     await module.messaging.withdrawCampaign(campaign.id, 1, '内容调整')
 
     expect(spies.saveAnnouncement.mock.calls[0]?.[0]).toBe(announcementDraft)
@@ -297,6 +353,19 @@ describe('MIP admin messaging facade', () => {
     expect(spies.saveMessageCampaign.mock.calls[0]?.[0]).toBe(campaignDraft)
     expect(spies.snapshotMessageCampaign.mock.calls[0]).toEqual([campaign.id, 1])
     expect(spies.publishMessageCampaign.mock.calls[0]).toEqual([campaign.id, 1, 'publish-a'])
+    expect(spies.scheduleMessageCampaign.mock.calls[0]?.[0]).toEqual({
+      campaignId: campaign.id,
+      expectedVersion: 1,
+      scheduledFor: '2030-09-01T08:00:00.000Z',
+      idempotencyKey: 'schedule-a',
+    })
+    expect(spies.cancelMessageCampaignSchedule.mock.calls[0]?.[0]).toEqual({
+      campaignId: campaign.id,
+      expectedVersion: 1,
+      expectedDispatchVersion: 2,
+      reason: '安排调整',
+      idempotencyKey: 'cancel-schedule-a',
+    })
     expect(spies.withdrawMessageCampaign.mock.calls[0]).toEqual([campaign.id, 1, '内容调整'])
   })
 
@@ -354,11 +423,13 @@ describe('MIP admin messaging facade', () => {
       expect(source).not.toContain('mipAdminModule.mutate')
     }
     const mutationCalls = [...sources.join('\n').matchAll(
-      /mipAdminModule\.messaging\.(saveAnnouncement|publishAnnouncement|withdrawAnnouncement|setAnnouncementPinned|saveCampaign|snapshotCampaign|publishCampaign|withdrawCampaign)\(/g,
+      /mipAdminModule\.messaging\.(saveAnnouncement|publishAnnouncement|withdrawAnnouncement|setAnnouncementPinned|saveCampaign|snapshotCampaign|publishCampaign|scheduleCampaign|cancelCampaignSchedule|withdrawCampaign)\(/g,
     )].map(match => match[1])
     expect(mutationCalls.sort()).toEqual([
       'publishAnnouncement',
       'publishCampaign',
+      'scheduleCampaign',
+      'cancelCampaignSchedule',
       'saveAnnouncement',
       'saveCampaign',
       'setAnnouncementPinned',

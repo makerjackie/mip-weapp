@@ -2,6 +2,9 @@ import { MipAdminError } from './types'
 
 export type AdminMessageCampaignStatus = 'DRAFT' | 'READY' | 'PUBLISHED' | 'WITHDRAWN'
 export type AdminMessageCampaignSafetyStatus = 'PENDING' | 'PASSED' | 'REJECTED' | 'ERROR'
+export type AdminMessageCampaignDispatchStatus = 'SCHEDULED' | 'PROCESSING' | 'FAILED'
+export type AdminMessageCampaignDispatchOutcome = 'NOT_ATTEMPTED' | 'SUCCEEDED' | 'KNOWN_FAILED' | 'UNKNOWN'
+export type AdminMessageCampaignRetryDisposition = 'RETRIABLE' | 'TERMINAL' | 'MANUAL_REVIEW'
 
 export interface AdminMessageCampaignScope {
   platform: boolean
@@ -21,6 +24,17 @@ export interface AdminMessageDeliveryStageStats {
   retryingCount: number
   deliveredCount: number
   terminalCount: number
+}
+
+export interface AdminMessageCampaignDispatch {
+  status: AdminMessageCampaignDispatchStatus
+  scheduledFor: string
+  attempts: number
+  lastOutcome: AdminMessageCampaignDispatchOutcome
+  retryDisposition: AdminMessageCampaignRetryDisposition
+  lastErrorCode: string | null
+  version: number
+  updatedAt: string
 }
 
 export interface AdminMessageCampaign {
@@ -47,6 +61,7 @@ export interface AdminMessageCampaign {
   publishedAt: string | null
   withdrawnAt: string | null
   withdrawalReason?: string
+  activeDispatch: AdminMessageCampaignDispatch | null
   version: number
   updatedAt: string | null
 }
@@ -73,10 +88,29 @@ export interface AdminMessageCampaignPublication {
   idempotent: boolean
 }
 
+export interface AdminMessageCampaignScheduleInput {
+  campaignId: string
+  expectedVersion: number
+  scheduledFor: string
+  idempotencyKey: string
+  expectedDispatchVersion?: number
+}
+
+export interface AdminMessageCampaignCancelScheduleInput {
+  campaignId: string
+  expectedVersion: number
+  expectedDispatchVersion: number
+  reason: string
+  idempotencyKey: string
+}
+
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const profileRefPattern = /^p1\.[\w-]{16}\.[\w-]{48}\.[\w-]{22}$/
 const statuses = new Set(['DRAFT', 'READY', 'PUBLISHED', 'WITHDRAWN'])
 const safetyStatuses = new Set(['PENDING', 'PASSED', 'REJECTED', 'ERROR'])
+const dispatchStatuses = new Set(['SCHEDULED', 'PROCESSING', 'FAILED'])
+const dispatchOutcomes = new Set(['NOT_ATTEMPTED', 'SUCCEEDED', 'KNOWN_FAILED', 'UNKNOWN'])
+const retryDispositions = new Set(['RETRIABLE', 'TERMINAL', 'MANUAL_REVIEW'])
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -96,6 +130,54 @@ function nullableDate(value: unknown) {
     return null
   }
   return typeof value === 'string' && Number.isFinite(Date.parse(value)) ? value : undefined
+}
+
+function utcDate(value: unknown) {
+  if (typeof value !== 'string'
+    || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(value)) {
+    return undefined
+  }
+  const date = new Date(value)
+  return Number.isFinite(date.getTime()) && date.toISOString() === value ? value : undefined
+}
+
+function parseActiveDispatch(value: unknown): AdminMessageCampaignDispatch | null {
+  if (value === null) {
+    return null
+  }
+  if (!record(value)) {
+    invalid()
+  }
+  const attemptsValid = Number.isSafeInteger(value.attempts)
+    && Number(value.attempts) >= 0
+    && Number(value.attempts) <= 5
+  const versionValid = Number.isSafeInteger(value.version) && Number(value.version) >= 1
+  const errorCodeValid = value.lastErrorCode === null
+    || (typeof value.lastErrorCode === 'string'
+      && value.lastErrorCode.length > 0
+      && value.lastErrorCode.length <= 128)
+  const keysValid = hasOnlyKeys(value, [
+    'status',
+    'scheduledFor',
+    'attempts',
+    'lastOutcome',
+    'retryDisposition',
+    'lastErrorCode',
+    'version',
+    'updatedAt',
+  ])
+  if (!keysValid
+    || !dispatchStatuses.has(String(value.status))
+    || utcDate(value.scheduledFor) === undefined
+    || !attemptsValid
+    || !dispatchOutcomes.has(String(value.lastOutcome))
+    || !retryDispositions.has(String(value.retryDisposition))
+    || !errorCodeValid
+    || !versionValid
+    || utcDate(value.updatedAt) === undefined) {
+    invalid()
+  }
+  return value as unknown as AdminMessageCampaignDispatch
 }
 
 function parseDeliveryStageStats(value: unknown): AdminMessageDeliveryStageStats {
@@ -162,6 +244,7 @@ export function parseMessageCampaign(value: unknown): AdminMessageCampaign {
       'publishedAt',
       'withdrawnAt',
       'withdrawalReason',
+      'activeDispatch',
       'version',
       'updatedAt',
     ])
@@ -192,6 +275,7 @@ export function parseMessageCampaign(value: unknown): AdminMessageCampaign {
     || nullableDate(value.publishedAt) === undefined
     || nullableDate(value.withdrawnAt) === undefined
     || !(value.withdrawalReason === undefined || typeof value.withdrawalReason === 'string')
+    || !Object.hasOwn(value, 'activeDispatch')
     || !Number.isInteger(value.version) || Number(value.version) < 1
     || nullableDate(value.updatedAt) === undefined) {
     invalid()
@@ -200,8 +284,10 @@ export function parseMessageCampaign(value: unknown): AdminMessageCampaign {
     invalid()
   }
   const deliveryStats = value.deliveryStats as Record<string, unknown>
+  const activeDispatch = parseActiveDispatch(value.activeDispatch)
   return {
     ...(value as unknown as AdminMessageCampaign),
+    activeDispatch,
     deliveryStats: {
       submittedCount: Number(deliveryStats.submittedCount),
       inboxReadyCount: Number(deliveryStats.inboxReadyCount),

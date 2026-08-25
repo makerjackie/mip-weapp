@@ -14,8 +14,10 @@ const {
 const {
   normalizeMessageCampaignDraft,
   normalizeMessageCampaignFilters,
+  normalizeOptionalDispatchVersion,
   normalizePublishKey,
   normalizeRecipientSearch,
+  normalizeScheduledFor,
 } = require('./message-campaign-validation')
 const {
   normalizeMessageTemplateDraft,
@@ -210,6 +212,7 @@ function createAdminMessaging({
   function publicCampaign(item, appId) {
     const {
       audienceUserIds = [],
+      activeDispatchId: _activeDispatchId,
       publishIdempotencyKey: _publishIdempotencyKey,
       publishRequestHash: _publishRequestHash,
       ...safe
@@ -359,6 +362,62 @@ function createAdminMessaging({
     })
   }
 
+  async function scheduleMessageCampaign(caller, input = {}) {
+    const context = await access.session(caller)
+    const campaignId = requiredId(input.campaignId, '消息活动')
+    const { scope, grant } = await messageCampaignAuthorization(context, campaignId)
+    const item = await repository.scheduleCampaign({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      campaignId,
+      expectedVersion: expectedVersion(input.expectedVersion),
+      expectedDispatchVersion: normalizeOptionalDispatchVersion(input.expectedDispatchVersion),
+      scheduledFor: normalizeScheduledFor(input.scheduledFor),
+      idempotencyKey: normalizePublishKey(input.idempotencyKey),
+      authorization: access.mutationAuthorization(grant, CAPABILITIES.MESSAGES_MANAGE),
+      authorizedScope: scope,
+      audit: (resourceId, action, metadata) => access.audit(context, grant, {
+        scopeType: scope.scopeType,
+        scopeId: scope.scopeId,
+        action,
+        resourceType: 'MESSAGE_CAMPAIGN',
+        resourceId,
+        metadata,
+      }),
+    })
+    return publicCampaign(item, context.caller.appId)
+  }
+
+  async function cancelMessageCampaignSchedule(caller, input = {}) {
+    const context = await access.session(caller)
+    const campaignId = requiredId(input.campaignId, '消息活动')
+    const { scope, grant } = await messageCampaignAuthorization(context, campaignId)
+    const dispatchVersion = normalizeOptionalDispatchVersion(input.expectedDispatchVersion)
+    if (dispatchVersion === null) {
+      throw new AdminError('VALIDATION_FAILED', '定时计划版本无效')
+    }
+    const item = await repository.cancelScheduledCampaign({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      campaignId,
+      expectedVersion: expectedVersion(input.expectedVersion),
+      expectedDispatchVersion: dispatchVersion,
+      reason: text(input.reason, 300, { required: true, label: '取消原因' }),
+      idempotencyKey: normalizePublishKey(input.idempotencyKey),
+      authorization: access.mutationAuthorization(grant, CAPABILITIES.MESSAGES_MANAGE),
+      authorizedScope: scope,
+      audit: (resourceId, action, metadata) => access.audit(context, grant, {
+        scopeType: scope.scopeType,
+        scopeId: scope.scopeId,
+        action,
+        resourceType: 'MESSAGE_CAMPAIGN',
+        resourceId,
+        metadata,
+      }),
+    })
+    return publicCampaign(item, context.caller.appId)
+  }
+
   async function withdrawMessageCampaign(caller, input = {}) {
     const context = await access.session(caller)
     const campaignId = requiredId(input.campaignId, '消息活动')
@@ -496,6 +555,7 @@ function createAdminMessaging({
   return {
     activateMessageTemplate,
     archiveMessageTemplate,
+    cancelMessageCampaignSchedule,
     getAnnouncement,
     getMessageCampaign,
     getMessageTemplate,
@@ -510,6 +570,7 @@ function createAdminMessaging({
     saveMessageCampaign,
     saveMessageTemplate,
     searchMessageRecipients,
+    scheduleMessageCampaign,
     setAnnouncementPinned,
     snapshotMessageCampaign,
     withdrawAnnouncement,

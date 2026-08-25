@@ -24,6 +24,7 @@ const campaign = {
   publishedAt: null,
   withdrawnAt: null,
   withdrawalReason: '',
+  activeDispatch: null,
   version: 3,
   updatedAt: '2026-08-24T08:00:00.000Z',
 }
@@ -108,6 +109,46 @@ describe('MIP message campaign admin contract', () => {
         },
       },
     })).toThrow()
+  })
+
+  it('strictly parses the public active dispatch and rejects malformed or internal scheduling data', () => {
+    const activeDispatch = {
+      status: 'FAILED',
+      scheduledFor: '2030-08-24T08:00:00.000Z',
+      attempts: 2,
+      lastOutcome: 'KNOWN_FAILED',
+      retryDisposition: 'RETRIABLE',
+      lastErrorCode: 'PROVIDER_UNAVAILABLE',
+      version: 3,
+      updatedAt: '2030-08-24T08:01:00.000Z',
+    }
+    expect(parseMessageCampaign({ ...campaign, activeDispatch }).activeDispatch).toEqual(activeDispatch)
+    expect(() => parseMessageCampaign({
+      ...campaign,
+      activeDispatch: { ...activeDispatch, retryDisposition: 'AUTO_RETRY' },
+    })).toThrow()
+    expect(() => parseMessageCampaign({
+      ...campaign,
+      activeDispatch: { ...activeDispatch, scheduledFor: '2030-08-24 16:00' },
+    })).toThrow()
+    expect(() => parseMessageCampaign({
+      ...campaign,
+      activeDispatch: { ...activeDispatch, scheduledFor: '2030-02-31T08:00:00.000Z' },
+    })).toThrow()
+    expect(() => parseMessageCampaign({
+      ...campaign,
+      activeDispatch: { ...activeDispatch, version: 0 },
+    })).toThrow()
+    expect(() => parseMessageCampaign({
+      ...campaign,
+      activeDispatch: { ...activeDispatch, attempts: 6 },
+    })).toThrow()
+    expect(() => parseMessageCampaign({
+      ...campaign,
+      activeDispatch: { ...activeDispatch, leaseToken: 'private' },
+    })).toThrow()
+    const { activeDispatch: _activeDispatch, ...missingDispatch } = campaign
+    expect(() => parseMessageCampaign(missingDispatch)).toThrow()
   })
 
   it('keeps message management separate from announcements and exposes complete page states', () => {

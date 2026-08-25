@@ -100,6 +100,7 @@ function campaign(overrides: Partial<AdminMessageCampaign> = {}): AdminMessageCa
     snapshotAt: null,
     publishedAt: null,
     withdrawnAt: null,
+    activeDispatch: null,
     version: 3,
     updatedAt: '2030-09-01T08:00:00.000Z',
     ...overrides,

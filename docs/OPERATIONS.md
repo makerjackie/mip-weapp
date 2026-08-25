@@ -63,6 +63,17 @@ pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo
 
 通知和 outbox worker 默认不安装定时器。业务函数在同一事务写 outbox；运营可用 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10` 受控恢复积压。异常中心读取 `mip_outbox_events`、支付/退款、媒体、消息投递和 AI 草稿状态，不通过页面菜单越权修改事实，完整权限和脱敏合同见 [异常中心](OPERATIONAL_EXCEPTIONS.md)。
 
+消息活动可在 `READY` 状态设置 UTC 定时发布时间。计划、活动指针、权限快照来源和执行结果保存在 MySQL；到期执行会重新校验发起人状态、实时角色、策略和管理范围。调度不安装 timer，需要处理到期计划时显式运行：
+
+```bash
+pnpm message-campaigns:run-due -- \
+  --confirm-env=<EnvID> \
+  --confirm-message-dispatch=mip-admin-api \
+  --limit=5
+```
+
+需要排空时追加 `--drain --max-batches=100`；单批 `--limit` 只允许 1–10。命令读取已部署 `mip-admin-api` 的 `MIP_MESSAGE_DISPATCH_HMAC_SECRET`、AppID allowlist 和 outbox 连接配置，对完整请求体签名，只输出数量与唤醒状态。每次运行都会受控唤醒 outbox，因此上一次发布已提交但唤醒失败时可直接重跑；人工复核、终止失败、提交结果待对账或 outbox 唤醒失败都会返回非零退出码。该 HMAC 由部署流程按稳定密钥规则复用或生成，不应手工轮换、打印或提交。
+
 单场活动提醒使用独立的 `communications.publish` capability。管理端只提交活动、事件版本、幂等请求标识和是否尝试微信提醒；`mip-admin-api` 仅从当前 `REGISTERED` / `ATTENDED` 报名事实选择收件人，并从已发布活动生成标题、正文和模板字段。单次最多 500 位收件人，超限时整笔拒绝；每位收件人的运营消息、outbox、幂等结果和一条汇总审计在同一事务提交。站内提醒始终进入 outbox；微信提醒仅在模板已配置且参与者有可用授权时投递，缺少模板不会使站内提醒失败。
 
 活动相册使用独立 `events.album.manage` capability，并按平台、分会或活动范围重新鉴权。运营端只提交活动、照片、审核结论、原因和 `expectedVersion`；批准时服务端重新校验照片仍引用 `READY` 的 `EVENT_ALBUM` 素材。只有待审照片可以批准或拒绝，成功事务追加审计；拒绝和参与者撤回都保留照片事实，不物理删除。
