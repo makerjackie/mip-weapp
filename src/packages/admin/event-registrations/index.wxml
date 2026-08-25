@@ -1,4 +1,4 @@
-<view id="admin-event-registrations-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+<view id="admin-event-registrations-page" class="mip-admin-operations-workspace mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
   <mip-admin-workspace-nav />
   <view class="min-w-0">
     <view class="text-[length:40rpx] font-bold">参与者与签到</view>
@@ -29,9 +29,9 @@
       <picker mode="date" value="{{createdToDate}}" data-field="createdToDate" bindchange="changeCreatedDate"><view class="flex min-h-[88rpx] flex-col justify-center rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]"><view class="text-muted">报名日期止</view><view class="mt-1">{{createdToDate || '不限'}}</view></view></picker>
     </view>
     <view wx:if="{{createdFromDate || createdToDate}}" class="flex min-h-[88rpx] items-center justify-end text-[length:21rpx] text-muted" role="button" bind:tap="clearCreatedDates">清除日期</view>
-    <view class="flex min-h-[88rpx] flex-wrap items-center gap-2">
-      <t-button wx:if="{{canPhone && !includePhone}}" size="small" variant="outline" bind:tap="showPhones">查看联系电话</t-button>
-      <t-button wx:if="{{canExport}}" size="small" variant="outline" loading="{{exportPending}}" bind:tap="createExport">创建导出</t-button>
+    <view class="mip-admin-filter-actions min-h-[88rpx] items-center">
+      <t-button wx:if="{{canPhone && !includePhone}}" block size="small" variant="outline" bind:tap="showPhones">查看联系电话</t-button>
+      <t-button wx:if="{{canExport}}" block size="small" variant="outline" loading="{{exportPending}}" bind:tap="createExport">创建导出</t-button>
     </view>
   </view>
 

@@ -1,16 +1,16 @@
-<view id="admin-orders-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+<view id="admin-orders-page" class="mip-admin-operations-workspace mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
   <mip-admin-workspace-nav />
-  <view class="flex items-start justify-between gap-3">
-    <view>
+  <view class="flex flex-wrap items-start justify-between gap-3">
+    <view class="min-w-0 flex-1">
       <view class="text-[length:40rpx] font-bold">{{eventId ? '活动订单' : '订单与退款'}}</view>
       <view class="mt-2 text-[length:23rpx] text-muted">金额、退款状态和可用操作以服务端记录为准</view>
     </view>
-    <t-button wx:if="{{canExport}}" size="small" variant="outline" loading="{{exportPending}}" bind:tap="createExport">导出订单</t-button>
+    <t-button wx:if="{{canExport}}" class="shrink-0" size="small" variant="outline" loading="{{exportPending}}" bind:tap="createExport">导出订单</t-button>
   </view>
 
   <view class="mip-admin-filter-grid mt-5 grid gap-3 rounded-[16rpx] bg-panel p-3">
     <view class="mip-admin-filter-wide">
-      <t-input value="{{query}}" placeholder="搜索昵称、订单号或业务资源" bind:change="updateQuery" bind:enter="search" />
+      <t-input class="box-border max-w-full" value="{{query}}" placeholder="搜索昵称、订单号或业务资源" bind:change="updateQuery" bind:enter="search" />
       <view class="mt-3"><t-button block size="small" variant="outline" bind:tap="search">查询</t-button></view>
     </view>
     <view class="mip-admin-filter-wide grid grid-cols-2 gap-2">

@@ -184,6 +184,21 @@ input {
   min-height: 88rpx;
 }
 
+.mip-admin-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  width: 100%;
+  min-width: 0;
+}
+
+.mip-admin-filter-actions > * {
+  box-sizing: border-box;
+  flex: 1 1 200px;
+  min-width: 0;
+  max-width: 100%;
+}
+
 @media (max-width: 599px) {
   .mip-member-page {
     --mip-member-shell-max-width: 100%;
@@ -293,6 +308,26 @@ input {
   }
 
   .mip-admin-record-label {
+    display: block;
+  }
+
+  .mip-admin-operations-workspace .mip-admin-section-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mip-admin-operations-workspace .mip-admin-record-list {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mip-admin-operations-workspace .mip-admin-record-header {
+    display: none;
+  }
+
+  .mip-admin-operations-workspace .mip-admin-record-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mip-admin-operations-workspace .mip-admin-record-label {
     display: block;
   }
 }
@@ -405,5 +440,36 @@ input {
 
   .mip-admin-record-label {
     display: none;
+  }
+
+  .mip-admin-operations-workspace .mip-admin-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mip-admin-operations-workspace .mip-admin-filter-wide {
+    grid-column: span 2 / span 2;
+  }
+
+  .mip-admin-operations-workspace .mip-admin-section-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mip-admin-operations-workspace .mip-admin-record-list {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24rpx;
+  }
+
+  .mip-admin-operations-workspace .mip-admin-record-header {
+    display: none;
+  }
+
+  .mip-admin-operations-workspace .mip-admin-record-row {
+    grid-template-columns: minmax(0, 1fr);
+    margin-bottom: 0;
+  }
+
+  .mip-admin-operations-workspace .mip-admin-record-label {
+    display: block;
   }
 }
