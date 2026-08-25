@@ -297,15 +297,14 @@ describe('free event runtime evidence summaries', () => {
     expect(source).not.toContain('openWechatIdeProjectByHttp')
   })
 
-  it('reads the running build through an App method exposed to Automator', () => {
+  it('reads the running build from the loaded common bundle visible to Automator', () => {
     const appSource = fs.readFileSync(path.join(root, 'src/app.ts'), 'utf8')
     const runnerSource = fs.readFileSync(path.join(root, 'scripts/verify-free-event-runtime.mjs'), 'utf8')
 
-    expect(appSource).toContain('const runtimeAcceptance = {')
-    expect(appSource).toContain('runtimeAcceptance: { ...runtimeAcceptance }')
-    expect(appSource).toContain('getRuntimeAcceptance()')
-    expect(appSource).toContain('return { ...runtimeAcceptance }')
-    expect(runnerSource).toContain('getApp()?.getRuntimeAcceptance?.()')
+    expect(appSource).toContain('runtimeAcceptance: {')
+    expect(appSource).not.toContain('getRuntimeAcceptance')
+    expect(runnerSource.match(/require\('common\.js'\)\.runtimeConfig/g)).toHaveLength(2)
+    expect(runnerSource).not.toContain('getRuntimeAcceptance')
     expect(runnerSource).not.toContain('getApp()?.globalData?.runtimeAcceptance')
   })
 

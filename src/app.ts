@@ -11,21 +11,15 @@ const popupForeground = createPopupForegroundCoordinator(
   mipPopupMessagePresenter,
 )
 
-const runtimeAcceptance = {
-  buildSha: runtimeConfig.buildSha,
-  catalogStage: runtimeConfig.catalogStage,
-  cloudbaseEnvId: runtimeConfig.cloudbase.envId,
-  cloudbaseMode: runtimeConfig.cloudbase.mode,
-  paymentMode: runtimeConfig.paymentMode,
-} as const
-
 App({
   globalData: {
-    runtimeAcceptance: { ...runtimeAcceptance },
-  },
-
-  getRuntimeAcceptance() {
-    return { ...runtimeAcceptance }
+    runtimeAcceptance: {
+      buildSha: runtimeConfig.buildSha,
+      catalogStage: runtimeConfig.catalogStage,
+      cloudbaseEnvId: runtimeConfig.cloudbase.envId,
+      cloudbaseMode: runtimeConfig.cloudbase.mode,
+      paymentMode: runtimeConfig.paymentMode,
+    },
   },
 
   onLaunch(options) {
