@@ -12,12 +12,13 @@ import {
 } from './lib/example-cloudbase.mjs'
 import {
   buildOwnerCandidateQuery,
+  buildOwnerRoleUpsertQuery,
+  buildOwnerVerificationQuery,
   currentAgreementVersions,
   resolveOwnerPhoneHash,
   selectOwnerCandidateId,
 } from './lib/mip-owner-bootstrap.mjs'
 
-const PLATFORM_SCOPE_ID = '00000000-0000-0000-0000-000000000000'
 const root = path.resolve(import.meta.dirname, '..')
 const demoSeed = JSON.parse(fs.readFileSync(path.join(root, 'database', 'mysql', 'mip', 'seed.demo.json'), 'utf8'))
 const demoUserIds = new Set((Array.isArray(demoSeed?.users) ? demoSeed.users : [])
@@ -69,24 +70,14 @@ const candidates = callOwnerCloudbase('queryMysqlDatabase', {
   limit: 2,
 }, 'MIP owner candidate lookup failed')
 const selectedUserId = selectOwnerCandidateId(candidates, userId)
-const selectedCandidateQuery = buildOwnerCandidateQuery({
+const selectedOwnerOptions = {
   ...ownerCandidateOptions,
   userId: selectedUserId,
-})
+}
 
 const upsert = callOwnerCloudbase('manageMysqlDatabase', {
   action: 'runStatement',
-  sql: `INSERT INTO mip_admin_role_bindings (
-      id, app_id, user_id, scope_type, scope_id, role_key, status,
-      granted_by_user_id, granted_at, revoked_at
-    ) SELECT
-      UUID(), ${sqlLiteral(appId)}, eligible.candidateId, 'PLATFORM',
-      ${sqlLiteral(PLATFORM_SCOPE_ID)}, 'PLATFORM_OWNER', 'ACTIVE',
-      eligible.candidateId, UTC_TIMESTAMP(3), NULL
-    FROM (${selectedCandidateQuery}) eligible
-    ON DUPLICATE KEY UPDATE
-      status = 'ACTIVE', granted_by_user_id = VALUES(granted_by_user_id),
-      granted_at = UTC_TIMESTAMP(3), revoked_at = NULL`,
+  sql: buildOwnerRoleUpsertQuery(selectedOwnerOptions),
 }, 'MIP owner role bootstrap failed')
 if (upsert?.success === false) {
   throw new Error('MIP owner role bootstrap failed')
@@ -94,22 +85,14 @@ if (upsert?.success === false) {
 
 const verification = callOwnerCloudbase('queryMysqlDatabase', {
   action: 'runQuery',
-  sql: `SELECT COUNT(*) AS ownerCount
-    FROM mip_admin_role_bindings binding
-    INNER JOIN (${selectedCandidateQuery}) eligible
-      ON eligible.candidateId = binding.user_id
-    WHERE binding.app_id = ${sqlLiteral(appId)}
-      AND binding.scope_type = 'PLATFORM'
-      AND binding.scope_id = ${sqlLiteral(PLATFORM_SCOPE_ID)}
-      AND binding.role_key = 'PLATFORM_OWNER'
-      AND binding.status = 'ACTIVE'`,
+  sql: buildOwnerVerificationQuery(selectedOwnerOptions),
 }, 'MIP owner role verification failed')
 const ownerCount = Number(collectFieldValues(verification, ['ownerCount', 'owner_count'])[0])
 if (ownerCount !== 1) {
   throw new Error('MIP owner role verification failed')
 }
 
-callOwnerCloudbase('manageMysqlDatabase', {
+const audit = callOwnerCloudbase('manageMysqlDatabase', {
   action: 'runStatement',
   sql: `INSERT INTO mip_audit_logs (
       app_id, actor_user_id, actor_type, scope_type, scope_id, action,
@@ -120,6 +103,9 @@ callOwnerCloudbase('manageMysqlDatabase', {
       'PLATFORM_OWNER', ${sqlJson({ source: 'owner-bootstrap' })}
     )`,
 }, 'MIP owner audit write failed')
+if (audit?.success === false) {
+  throw new Error('MIP owner audit write failed')
+}
 
 fs.mkdirSync(path.join(root, '.tmp'), { recursive: true })
 fs.writeFileSync(path.join(root, '.tmp', 'bootstrap-owner-result.json'), `${JSON.stringify({

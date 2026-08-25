@@ -60,6 +60,7 @@ const activePaths = [
   'scripts/deploy-functions.mjs',
   'scripts/deploy-payment-function.mjs',
   'scripts/lib/mip-migrations.mjs',
+  'scripts/lib/mip-owner-bootstrap.mjs',
   'scripts/seed-demo.mjs',
   'scripts/verify-cloud.mjs',
   ...listMipCloudFunctionDirectories(),
