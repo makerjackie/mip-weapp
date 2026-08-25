@@ -163,6 +163,11 @@ Page({
     if (!eventId || !registrationId || this.data.cancelingId) {
       return
     }
+    if (!Number.isInteger(version) || version < 1) {
+      this.setData({ message: '报名状态已变化，正在加载最新状态。' })
+      await this.loadRegistrations()
+      return
+    }
     const confirmation = await wx.showModal({
       title: retryRefund ? '继续处理退款' : '取消报名',
       content: retryRefund ? '将继续查询或提交现有退款，不会重复创建退款。' : '取消资格和退款状态将由服务端核对。',
@@ -176,7 +181,7 @@ Page({
     try {
       const result = await mipEventsModule.cancelRegistration(
         eventId,
-        Number.isInteger(version) && version > 0 ? version : undefined,
+        version,
       )
       mipCheckInResumeStore.clear(String(eventId))
       wx.showToast({

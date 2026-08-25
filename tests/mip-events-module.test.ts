@@ -126,7 +126,14 @@ function createGateway() {
     getHeart: vi.fn(async () => ({ received: [], version: 0 })),
     setHeart: vi.fn(async () => ({ received: [], version: 1 })),
     getFeedback: vi.fn(async () => null),
-    saveFeedback: vi.fn(async (_eventId, draft) => ({ id: 'feedback-1', ...draft, version: 1, submittedAt: '', updatedAt: '' })),
+    saveFeedback: vi.fn(async (_eventId, draft) => ({
+      id: 'feedback-1',
+      rating: draft.rating,
+      body: draft.body,
+      version: 1,
+      submittedAt: '',
+      updatedAt: '',
+    })),
     listAdminFeedback: vi.fn(async () => ({ items: [], nextCursor: undefined })),
     createInvitation: vi.fn(async () => ({ token: 'invitation-token' })),
   } satisfies MipEventsGateway
@@ -260,11 +267,18 @@ describe('MIP events client module', () => {
     const module = createMipEventsModule(gateway, {
       submitRefund: vi.fn(async () => { throw new Error('provider unavailable') }),
     })
-    await expect(module.cancelRegistration(eventId)).resolves.toMatchObject({
+    await expect(module.cancelRegistration(eventId, 3)).resolves.toMatchObject({
       status: 'CANCELLATION_PENDING',
       refundId: 'refund-1',
       refundSubmission: 'PENDING_RETRY',
     })
+  })
+
+  it('rejects an invalid cancellation version before calling the gateway', async () => {
+    const gateway = createGateway()
+    const module = createMipEventsModule(gateway)
+    await expect(module.cancelRegistration(eventId, Number.NaN)).rejects.toThrow('报名状态已变化')
+    expect(gateway.cancelRegistration).not.toHaveBeenCalled()
   })
 
   it('reads and updates the current registration with an idempotency key and expected version', async () => {
@@ -297,9 +311,18 @@ describe('MIP events client module', () => {
   it('validates feedback locally while leaving attendance authorization to the server', async () => {
     const gateway = createGateway()
     const module = createMipEventsModule(gateway)
-    await expect(module.saveFeedback(eventId, { rating: 5, body: '  有收获  ' })).resolves.toMatchObject({ body: '有收获' })
-    await expect(module.saveFeedback(eventId, { rating: 6, body: '内容' })).rejects.toThrow('请选择 1–5 分')
+    await expect(module.saveFeedback(eventId, { rating: 5, body: '  有收获  ', expectedVersion: 0 }))
+      .resolves
+      .toMatchObject({ body: '有收获' })
+    await expect(module.saveFeedback(eventId, { rating: 6, body: '内容', expectedVersion: 0 }))
+      .rejects
+      .toThrow('请选择 1–5 分')
     expect(gateway.saveFeedback).toHaveBeenCalledTimes(1)
+    expect(gateway.saveFeedback).toHaveBeenCalledWith(eventId, {
+      rating: 5,
+      body: '有收获',
+      expectedVersion: 0,
+    })
   })
 
   it('normalizes admin feedback filters and leaves authorization on the server', async () => {

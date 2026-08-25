@@ -202,7 +202,7 @@ Page({
       const feedback = await mipEventsModule.saveFeedback(this.data.eventId, {
         rating: this.data.rating,
         body: this.data.body,
-        version: this.data.feedback?.version,
+        expectedVersion: this.data.feedback?.version || 0,
       })
       this.setData({ feedback, body: feedback.body, rating: feedback.rating || 5 })
       wx.showToast({ title: '反馈已保存', icon: 'success' })

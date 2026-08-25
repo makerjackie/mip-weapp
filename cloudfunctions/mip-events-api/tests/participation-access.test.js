@@ -329,6 +329,7 @@ describe('current participation access for event actions', () => {
           appId,
           userId,
           eventId,
+          expectedVersion: 0,
           draft: { rating: 5, body: '活动反馈' },
           participationAccessPolicy: accessPolicy,
           now,

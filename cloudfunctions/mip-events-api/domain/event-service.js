@@ -40,6 +40,13 @@ function iso(value) {
   return Number.isFinite(date.getTime()) ? date.toISOString() : ''
 }
 
+function requireExpectedVersion(value, { minimum, message }) {
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < minimum) {
+    throw new DomainError('CONFLICT', message, true)
+  }
+  return value
+}
+
 function registeredOnlineUrl(row) {
   if (!['ONLINE', 'HYBRID'].includes(row.event_mode)
     || !['REGISTERED', 'ATTENDED'].includes(row.registration_status)
@@ -800,6 +807,7 @@ async function getEvent(db, {
        registration_order.status AS order_status,
        latest_refund.status AS refund_status,
        latest_refund.last_error_code AS refund_last_error_code,
+       r.version AS registration_version,
        CASE WHEN e.status = 'PUBLISHED' AND e.ends_at < ? THEN 'ENDED' ELSE e.status END AS public_status,
        (SELECT COUNT(*) FROM mip_event_registrations rc
         WHERE rc.app_id = e.app_id AND rc.event_id = e.id
@@ -898,6 +906,7 @@ async function getEvent(db, {
     canCancel: cancellableRegistrationStatuses.has(row.registration_status)
       && timestamp < cancellationDeadline.getTime(),
     canRetryRefund: canRetryRegistrationRefund(row),
+    ...(row.registration_status ? { registrationVersion: Number(row.registration_version) } : {}),
     canCheckIn: ['REGISTERED', 'ATTENDED'].includes(row.registration_status),
     canInteract: row.registration_status === 'ATTENDED',
     albumSubmissionPolicy: row.album_submission_policy,
@@ -1969,6 +1978,10 @@ async function cancelRegistration(db, {
   now = new Date(),
   paymentAvailable = false,
 }) {
+  const version = requireExpectedVersion(expectedVersion, {
+    minimum: 1,
+    message: '报名状态已变化，请刷新后重试',
+  })
   return db.transaction(async (tx) => {
     await requireActiveUserForMutation(tx, appId, userId)
     const event = await tx.one(
@@ -1994,9 +2007,15 @@ async function cancelRegistration(db, {
       [appId, registration.id],
     )
     if (registration.status === 'CANCELLED') {
+      if (![Number(registration.version), Number(registration.version) - 1].includes(version)) {
+        throw new DomainError('CONFLICT', '报名状态已变化，请刷新后重试', true)
+      }
       return { registrationId: registration.id, status: 'CANCELLED', refundRequired: false, paymentAvailable }
     }
     if (registration.status === 'CANCELLATION_PENDING') {
+      if (![Number(registration.version), Number(registration.version) - 1].includes(version)) {
+        throw new DomainError('CONFLICT', '报名状态已变化，请刷新后重试', true)
+      }
       if (!registration.order_id
         || !['PAID', 'PARTIALLY_REFUNDED', 'REFUND_PENDING'].includes(registration.order_status)
         || activeCheckin) {
@@ -2035,7 +2054,7 @@ async function cancelRegistration(db, {
     if (now.getTime() >= cancellationDeadline.getTime()) {
       throw new DomainError('CONFLICT', '已超过可取消时间')
     }
-    if (expectedVersion !== undefined && Number(expectedVersion) !== Number(registration.version)) {
+    if (version !== Number(registration.version)) {
       throw new DomainError('CONFLICT', '报名状态已变化，请刷新后重试', true)
     }
     if (activeCheckin) {
@@ -2693,10 +2712,15 @@ async function saveFeedback(db, {
   appId,
   eventId,
   userId,
+  expectedVersion,
   draft,
   participationAccessPolicy,
   now = new Date(),
 }) {
+  const version = requireExpectedVersion(expectedVersion, {
+    minimum: 0,
+    message: '反馈已变化，请刷新后重试',
+  })
   const normalized = validateFeedback(draft || {})
   return db.transaction(async (tx) => {
     await requireActiveUserForMutation(tx, appId, userId)
@@ -2707,25 +2731,40 @@ async function saveFeedback(db, {
        WHERE app_id = ? AND event_id = ? AND user_id = ? FOR UPDATE`,
       [appId, eventId, userId],
     )
-    if (draft?.version !== undefined && Number(draft.version) !== Number(existing?.version || 0)) {
+    if (version !== Number(existing?.version || 0)) {
       throw new DomainError('CONFLICT', '反馈已变化，请刷新后重试', true)
     }
     const feedbackId = existing?.id || randomUUID()
     const nextVersion = Number(existing?.version || 0) + 1
     if (existing) {
-      await tx.query(
+      const updated = await tx.query(
         `UPDATE mip_event_feedback SET rating = ?, body = ?, version = version + 1
          WHERE app_id = ? AND id = ? AND version = ?`,
         [normalized.rating, normalized.body, appId, feedbackId, existing.version],
       )
+      if (Number(updated?.affectedRows) !== 1) {
+        throw new DomainError('CONFLICT', '反馈已变化，请刷新后重试', true)
+      }
     }
     else {
-      await tx.query(
-        `INSERT INTO mip_event_feedback (
-          id, app_id, event_id, user_id, rating, body, version, submitted_at
-        ) VALUES (?, ?, ?, ?, ?, ?, 1, ?)`,
-        [feedbackId, appId, eventId, userId, normalized.rating, normalized.body, now],
-      )
+      try {
+        const inserted = await tx.query(
+          `INSERT INTO mip_event_feedback (
+            id, app_id, event_id, user_id, rating, body, version, submitted_at
+          ) VALUES (?, ?, ?, ?, ?, ?, 1, ?)`,
+          [feedbackId, appId, eventId, userId, normalized.rating, normalized.body, now],
+        )
+        if (Number(inserted?.affectedRows) !== 1) {
+          throw new DomainError('CONFLICT', '反馈已变化，请刷新后重试', true)
+        }
+      }
+      catch (error) {
+        if (error instanceof DomainError) throw error
+        if (error?.code === 'ER_DUP_ENTRY' || Number(error?.errno) === 1062) {
+          throw new DomainError('CONFLICT', '反馈已变化，请刷新后重试', true)
+        }
+        throw error
+      }
     }
     await writeAudit(tx, {
       appId,

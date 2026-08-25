@@ -139,6 +139,7 @@ export interface MipEventDetail extends MipEventListItem {
   canRegister: boolean
   canCancel: boolean
   canRetryRefund: boolean
+  registrationVersion?: number
   canCheckIn: boolean
   canInteract: boolean
   albumSubmissionPolicy: EventAlbumSubmissionPolicy
@@ -352,11 +353,13 @@ export interface HeartHistoryPage {
 export interface EventFeedbackDraft {
   rating?: number
   body: string
-  version?: number
+  expectedVersion: number
 }
 
-export interface EventFeedback extends EventFeedbackDraft {
+export interface EventFeedback {
   id: string
+  rating?: number
+  body: string
   version: number
   submittedAt: string
   updatedAt: string
@@ -395,7 +398,7 @@ export interface MipEventsGateway {
   getMyRegistration: (eventId: EventId) => Promise<MyEventRegistration | null>
   register: (input: RegistrationIntent) => Promise<RegistrationOutcome>
   updateRegistration: (input: RegistrationUpdateIntent) => Promise<MyEventRegistration>
-  cancelRegistration: (eventId: EventId, expectedVersion?: number) => Promise<RegistrationCancellation>
+  cancelRegistration: (eventId: EventId, expectedVersion: number) => Promise<RegistrationCancellation>
   checkIn: (resumeToken: string, idempotencyKey: string) => Promise<CheckInOutcome>
   resolveCheckInScene: (scene: string) => Promise<CheckInScene>
   resolveInvitationScene: (scene: string) => Promise<InvitationSceneResolution>

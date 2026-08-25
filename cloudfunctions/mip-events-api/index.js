@@ -199,6 +199,7 @@ async function dispatch(event) {
       return service.saveFeedback(mysqlDatabase(), {
         ...shared,
         eventId: event.eventId,
+        expectedVersion: event.expectedVersion,
         draft: event.draft,
         participationAccessPolicy,
       })

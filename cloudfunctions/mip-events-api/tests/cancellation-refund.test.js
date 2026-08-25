@@ -14,6 +14,7 @@ const now = new Date('2026-08-25T00:00:00.000Z')
 
 function cancellationDatabase({
   registrationStatus = 'REGISTERED',
+  registrationVersion = 3,
   orderStatus = 'PAID',
   orderVersion = 2,
   existingRefund = null,
@@ -43,7 +44,7 @@ function cancellationDatabase({
           user_id: userId,
           order_id: orderId,
           status: registrationStatus,
-          version: 3,
+          version: registrationVersion,
           order_status: orderStatus,
           amount_cents: 9900,
           order_version: orderVersion,
@@ -103,7 +104,7 @@ describe('event cancellation refund transaction', () => {
       reservedCents: 2000,
     })
     const result = await cancelRegistration(db, {
-      appId, userId, eventId, now, paymentAvailable: true,
+      appId, userId, eventId, expectedVersion: 3, now, paymentAvailable: true,
     })
     assert.notEqual(result.refundId, refundId)
     assert.equal(result.refundStatus, 'PENDING')
@@ -120,11 +121,36 @@ describe('event cancellation refund transaction', () => {
       affectedRows: sql => sql.includes("mip_orders SET status = 'REFUND_PENDING'") ? 0 : 1,
     })
     await assert.rejects(
-      cancelRegistration(db, { appId, userId, eventId, now, paymentAvailable: true }),
+      cancelRegistration(db, { appId, userId, eventId, expectedVersion: 3, now, paymentAvailable: true }),
       error => error?.code === 'CONFLICT',
     )
     assert.equal(db.calls.some(call => call.sql.includes('INSERT INTO mip_refunds')), false)
     assert.equal(db.calls.some(call => call.sql.includes('INSERT INTO mip_outbox_events')), false)
+  })
+
+  it('rejects missing and malformed versions as retryable conflicts before reading event facts', async () => {
+    for (const expectedVersion of [undefined, null, '3', 0, 1.5]) {
+      const db = cancellationDatabase()
+      await assert.rejects(
+        cancelRegistration(db, { appId, userId, eventId, expectedVersion, now }),
+        error => error?.code === 'CONFLICT' && error?.retryable === true,
+      )
+      assert.equal(db.calls.length, 0)
+    }
+  })
+
+  it('keeps only the current and immediately preceding version idempotent while refund is pending', async () => {
+    const replay = cancellationDatabase({
+      registrationStatus: 'CANCELLATION_PENDING',
+      registrationVersion: 3,
+      orderStatus: 'REFUND_PENDING',
+      existingRefund: { id: refundId, status: 'PROCESSING', version: 4 },
+    })
+    await assert.rejects(
+      cancelRegistration(replay, { appId, userId, eventId, expectedVersion: 1, now }),
+      error => error?.code === 'CONFLICT' && error?.retryable === true,
+    )
+    assert.equal(replay.calls.some(call => call.sql.includes('mip_refunds')), false)
   })
 
   it('rejects cancellation while an active check-in is locked', async () => {

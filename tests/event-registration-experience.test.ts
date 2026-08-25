@@ -76,7 +76,9 @@ describe('event registration experience', () => {
     expect(mine).toContain('listMyRegistrations(undefined, category)')
     expect(mine).toContain('result.counts || this.data.counts')
     expect(mine).toContain('mipEventsModule.cancelRegistration')
-    expect(mine).toContain('Number.isInteger(version) && version > 0 ? version : undefined')
+    expect(mine).toContain('!Number.isInteger(version) || version < 1')
+    expect(mine).toContain('await this.loadRegistrations()')
+    expect(mineView).toContain('data-version="{{item.version}}"')
     expect(mineView).toContain('待参加({{counts.upcoming}})')
     expect(mineView).toContain('已参加({{counts.attended}})')
     expect(mineView).toContain('item.event.participantPreview')
@@ -87,6 +89,7 @@ describe('event registration experience', () => {
     expect(service).toContain('category === \'UPCOMING\'')
     expect(service).toContain('canCancel: canCancelRegistration')
     expect(service).toContain('canRetryRefund: canRetryRegistrationRefund')
+    expect(service).toContain('registrationVersion: Number(row.registration_version)')
   })
 
   it('reuses the same cancellation orchestration for refund retry on both activity pages', () => {
@@ -96,13 +99,28 @@ describe('event registration experience', () => {
     const mineView = read('src/packages/member/mip-events/mine/index.wxml')
 
     expect(detail).toContain('currentEvent?.canRetryRefund === true')
-    expect(detail).toContain('mipEventsModule.cancelRegistration(this.data.eventId)')
+    expect(detail).toContain('currentEvent.registrationVersion')
+    expect(detail).toContain('error instanceof MipEventsError && error.code === \'CONFLICT\'')
+    expect(detail).toContain('await this.loadEvent({ force: true })')
     expect(detailView).toContain('event.canRetryRefund')
     expect(detailView).toContain('继续处理退款')
     expect(mine).toContain('dataset.refundRetry === \'true\'')
     expect(mine).toContain('mipEventsModule.cancelRegistration')
     expect(mineView).toContain('data-refund-retry="{{true}}"')
     expect(mineView).toContain('继续处理退款')
+  })
+
+  it('carries optimistic versions for cancellation and first or subsequent feedback saves', () => {
+    const detail = read('src/packages/member/mip-events/detail/index.ts')
+    const interaction = read('src/packages/member/mip-events/interaction/index.ts')
+    const gateway = read('src/modules/mip-events/cloudbase-gateway.ts')
+    const entry = read('cloudfunctions/mip-events-api/index.js')
+
+    expect(detail).toContain('currentEvent.registrationVersion')
+    expect(interaction).toContain('expectedVersion: this.data.feedback?.version || 0')
+    expect(gateway).toContain('const { expectedVersion, ...feedback } = draft')
+    expect(gateway).toMatch(/eventId,[\s\S]*expectedVersion,[\s\S]*draft: feedback/)
+    expect(entry).toContain('expectedVersion: event.expectedVersion')
   })
 
   it('uses the configured MIP logo and image-led event cards on the discover page', () => {

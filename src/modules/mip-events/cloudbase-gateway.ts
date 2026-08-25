@@ -145,7 +145,7 @@ export const cloudbaseMipEventsGateway: MipEventsGateway = {
     return callEvents<MyEventRegistration>('mip.events.updateRegistration', input as unknown as Record<string, unknown>)
   },
 
-  cancelRegistration(eventId: EventId, expectedVersion?: number) {
+  cancelRegistration(eventId: EventId, expectedVersion: number) {
     return callEvents<RegistrationCancellation>('mip.events.cancelRegistration', { eventId, expectedVersion })
   },
 
@@ -190,7 +190,12 @@ export const cloudbaseMipEventsGateway: MipEventsGateway = {
   },
 
   saveFeedback(eventId: EventId, draft: EventFeedbackDraft) {
-    return callEvents<EventFeedback>('mip.events.saveFeedback', { eventId, draft })
+    const { expectedVersion, ...feedback } = draft
+    return callEvents<EventFeedback>('mip.events.saveFeedback', {
+      eventId,
+      expectedVersion,
+      draft: feedback,
+    })
   },
 
   listAdminFeedback(eventId: EventId, query: AdminEventFeedbackQuery = {}) {

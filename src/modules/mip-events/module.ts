@@ -159,7 +159,10 @@ export function createMipEventsModule(
       return outcome
     },
 
-    async cancelRegistration(eventId: EventId, expectedVersion?: number) {
+    async cancelRegistration(eventId: EventId, expectedVersion: number) {
+      if (!Number.isInteger(expectedVersion) || expectedVersion < 1) {
+        throw new Error('报名状态已变化，请刷新后重试')
+      }
       const outcome = await gateway.cancelRegistration(eventId, expectedVersion)
       feedCache.clear()
       eventCache.delete(String(eventId))

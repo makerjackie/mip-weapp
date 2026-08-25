@@ -37,6 +37,7 @@ function eventRow(overrides = {}) {
     capacity: 10,
     registration_count: 0,
     registration_status: null,
+    registration_version: null,
     ...overrides,
   }
 }
@@ -78,6 +79,7 @@ describe('MIP public event detail', () => {
     assert.equal('answers' in result, false)
     assert.equal('phoneNumber' in result, false)
     assert.equal('ticketHash' in result, false)
+    assert.equal('registrationVersion' in result, false)
     assert.equal(result.organizer.nickname, '公开主办方')
     assert.equal(result.organizer.avatarUrl, 'cloud://organizer-avatar')
     assert.equal('headline' in result.organizer, false)
@@ -92,7 +94,10 @@ describe('MIP public event detail', () => {
 
   it('returns an HTTPS online link only to a confirmed participant', async () => {
     for (const registrationStatus of ['REGISTERED', 'ATTENDED']) {
-      const result = await getEvent(eventDatabase(eventRow({ registration_status: registrationStatus })), {
+      const result = await getEvent(eventDatabase(eventRow({
+        registration_status: registrationStatus,
+        registration_version: 7,
+      })), {
         appId: 'wx-app',
         userId: 'participant-1',
         eventId: 'event-1',
@@ -102,6 +107,7 @@ describe('MIP public event detail', () => {
       })
       assert.equal(result.onlineAccessAvailable, true)
       assert.equal(result.onlineUrl, 'https://private.example.test/meeting')
+      assert.equal(result.registrationVersion, 7)
     }
   })
 

@@ -1,7 +1,7 @@
 import type { EventId, OrderId } from '../../../../modules/mip'
 import type { MipEventDetail } from '../../../../modules/mip-events'
 import { mipOperationsConfig } from '../../../../config/mip-operations'
-import { eventInvitationPath, eventRichTextNodes, safeHttpsEventUrl } from '../../../../modules/mip-events'
+import { eventInvitationPath, eventRichTextNodes, MipEventsError, safeHttpsEventUrl } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
 import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
@@ -654,6 +654,14 @@ Page({
     if ((!currentEvent?.canCancel && !retryRefund) || this.data.busy) {
       return
     }
+    const registrationVersion = currentEvent.registrationVersion
+    if (typeof registrationVersion !== 'number'
+      || !Number.isInteger(registrationVersion)
+      || registrationVersion < 1) {
+      this.setData({ message: '报名状态已变化，正在加载最新状态。' })
+      await this.loadEvent({ force: true })
+      return
+    }
     this.setData({ busy: true, message: '' })
     try {
       const modal = await wx.showModal({
@@ -666,7 +674,10 @@ Page({
       if (!modal.confirm) {
         return
       }
-      const result = await mipEventsModule.cancelRegistration(this.data.eventId)
+      const result = await mipEventsModule.cancelRegistration(
+        this.data.eventId,
+        registrationVersion,
+      )
       mipCheckInResumeStore.clear(String(this.data.eventId))
       this.setData({ hasCheckInIntent: false })
       wx.showToast({
@@ -678,7 +689,13 @@ Page({
       await this.loadEvent({ force: true })
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '暂时无法取消报名' })
+      if (error instanceof MipEventsError && error.code === 'CONFLICT') {
+        await this.loadEvent({ force: true })
+        this.setData({ message: '报名状态已变化，已加载最新状态。' })
+      }
+      else {
+        this.setData({ message: error instanceof Error ? error.message : '暂时无法取消报名' })
+      }
     }
     finally {
       this.setData({ busy: false })
