@@ -87,6 +87,7 @@ function commentDto(row, caller) {
 
 async function getOpportunityCommentSettings(database, caller, input = {}) {
   if (!uuid(input.opportunityId)) throw new Error('NOT_FOUND')
+  const ownerVisibility = mutualBlockFilter(caller.userId, 'o.owner_user_id', 'o.app_id')
   const opportunity = await database.one(
     `SELECT o.id, o.status,
             (
@@ -97,8 +98,9 @@ async function getOpportunityCommentSettings(database, caller, input = {}) {
               )
             ) AS caller_can_call
      FROM mip_opportunities o
-     WHERE o.app_id = ? AND o.id = ? AND o.status IN ('PUBLISHED', 'ENDED')`,
-    [caller.userId, caller.userId, caller.appId, input.opportunityId],
+     WHERE o.app_id = ? AND o.id = ? AND o.status IN ('PUBLISHED', 'ENDED')
+       ${ownerVisibility.sql ? `AND ${ownerVisibility.sql}` : ''}`,
+    [caller.userId, caller.userId, caller.appId, input.opportunityId, ...ownerVisibility.params],
   )
   if (!opportunity) throw new Error('NOT_FOUND')
   const row = await database.one(
@@ -118,16 +120,25 @@ async function listOpportunityComments(database, caller, input = {}) {
   const cursor = decodeCursor(input.cursor)
   const limit = pageLimit(input.limit)
   const settings = await getOpportunityCommentSettings(database, caller, input)
-  const block = mutualBlockFilter(caller.userId, 'comment.author_user_id', 'comment.app_id')
+  const authorVisibility = mutualBlockFilter(caller.userId, 'comment.author_user_id', 'comment.app_id')
+  const ownerVisibility = mutualBlockFilter(
+    caller.userId,
+    'opportunity.owner_user_id',
+    'opportunity.app_id',
+  )
   const clauses = [
     'comment.app_id = ?',
     'comment.opportunity_id = ?',
     "(comment.status = 'PUBLISHED' OR (comment.author_user_id = ? AND comment.status = 'PENDING'))",
   ]
   const params = [caller.appId, input.opportunityId, caller.userId]
-  if (block.sql) {
-    clauses.push(block.sql)
-    params.push(...block.params)
+  if (authorVisibility.sql) {
+    clauses.push(authorVisibility.sql)
+    params.push(...authorVisibility.params)
+  }
+  if (ownerVisibility.sql) {
+    clauses.push(ownerVisibility.sql)
+    params.push(...ownerVisibility.params)
   }
   if (cursor) {
     clauses.push('(comment.created_at < ? OR (comment.created_at = ? AND comment.id < ?))')
@@ -146,6 +157,8 @@ async function listOpportunityComments(database, caller, input = {}) {
             ) AS call_active,
             (comment.created_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 30 MINUTE)) AS within_edit_window
      FROM mip_opportunity_comments comment
+     INNER JOIN mip_opportunities opportunity
+       ON opportunity.app_id = comment.app_id AND opportunity.id = comment.opportunity_id
      INNER JOIN mip_users author
        ON author.app_id = comment.app_id AND author.id = comment.author_user_id AND author.status = 'ACTIVE'
      INNER JOIN mip_profiles profile
@@ -168,6 +181,7 @@ async function listOpportunityComments(database, caller, input = {}) {
 }
 
 async function opportunityFacts(tx, caller, opportunityId) {
+  const ownerVisibility = mutualBlockFilter(caller.userId, 'o.owner_user_id', 'o.app_id')
   const row = await tx.one(
     `SELECT o.id, o.owner_user_id, o.status,
             COALESCE(settings.comments_enabled, 1) AS comments_enabled,
@@ -185,8 +199,9 @@ async function opportunityFacts(tx, caller, opportunityId) {
      LEFT JOIN mip_opportunity_comment_settings settings
        ON settings.app_id = o.app_id AND settings.opportunity_id = o.id
      WHERE o.app_id = ? AND o.id = ?
+       ${ownerVisibility.sql ? `AND ${ownerVisibility.sql}` : ''}
      FOR UPDATE`,
-    [caller.userId, caller.userId, caller.appId, opportunityId],
+    [caller.userId, caller.userId, caller.appId, opportunityId, ...ownerVisibility.params],
   )
   if (!row || !['PUBLISHED', 'ENDED'].includes(row.status)) throw new Error('NOT_FOUND')
   return row
@@ -306,6 +321,11 @@ async function setOpportunityCommentCall(database, caller, input = {}) {
     request: { commentId: input.commentId, active },
   }, async (tx) => {
     await lockActiveContributor(tx, caller)
+    const ownerVisibility = mutualBlockFilter(
+      caller.userId,
+      'opportunity.owner_user_id',
+      'opportunity.app_id',
+    )
     const comment = await tx.one(
       `SELECT comment.author_user_id, comment.status, comment.call_count,
               COALESCE(settings.calls_enabled, 1) AS calls_enabled,
@@ -322,8 +342,10 @@ async function setOpportunityCommentCall(database, caller, input = {}) {
          ON opportunity.app_id = comment.app_id AND opportunity.id = comment.opportunity_id
        LEFT JOIN mip_opportunity_comment_settings settings
          ON settings.app_id = comment.app_id AND settings.opportunity_id = comment.opportunity_id
-       WHERE comment.app_id = ? AND comment.id = ? FOR UPDATE`,
-      [caller.userId, caller.userId, caller.appId, input.commentId],
+       WHERE comment.app_id = ? AND comment.id = ?
+         ${ownerVisibility.sql ? `AND ${ownerVisibility.sql}` : ''}
+       FOR UPDATE`,
+      [caller.userId, caller.userId, caller.appId, input.commentId, ...ownerVisibility.params],
     )
     if (!comment || comment.status !== 'PUBLISHED') throw new Error('NOT_FOUND')
     if (!Number(comment.calls_enabled)) throw new Error('CALLS_DISABLED')
@@ -391,12 +413,21 @@ async function reportOpportunityComment(database, caller, input = {}) {
     request: { commentId: input.commentId, category, description, requestId },
   }, async (tx) => {
     await lockActiveContributor(tx, caller)
-    const block = mutualBlockFilter(caller.userId, 'comment.author_user_id', 'comment.app_id')
+    const authorVisibility = mutualBlockFilter(caller.userId, 'comment.author_user_id', 'comment.app_id')
+    const ownerVisibility = mutualBlockFilter(
+      caller.userId,
+      'opportunity.owner_user_id',
+      'opportunity.app_id',
+    )
     const comment = await tx.one(
       `SELECT comment.author_user_id FROM mip_opportunity_comments comment
+       INNER JOIN mip_opportunities opportunity
+         ON opportunity.app_id = comment.app_id AND opportunity.id = comment.opportunity_id
        WHERE comment.app_id = ? AND comment.id = ? AND comment.status = 'PUBLISHED'
-         AND ${block.sql} FOR UPDATE`,
-      [caller.appId, input.commentId, ...block.params],
+         AND ${authorVisibility.sql}
+         AND ${ownerVisibility.sql}
+       FOR UPDATE`,
+      [caller.appId, input.commentId, ...authorVisibility.params, ...ownerVisibility.params],
     )
     if (!comment) throw new Error('NOT_FOUND')
     if (comment.author_user_id === caller.userId) throw new Error('SELF_REPORT_FORBIDDEN')
