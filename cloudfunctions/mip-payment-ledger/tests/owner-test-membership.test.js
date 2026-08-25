@@ -51,6 +51,27 @@ describe('Owner TEST membership ledger operations', () => {
     }), /TEST_MEMBERSHIP_PLAN_INVALID/)
   })
 
+  it('maps storage failures to a safe operation stage without returning database details', async () => {
+    const logs = []
+    const originalError = console.error
+    console.error = (...values) => logs.push(values)
+    try {
+      await assert.rejects(() => grantOwnerTestMembership({
+        transaction: work => work({
+          query: async () => { throw new Error('sensitive database diagnostic') },
+        }),
+      }, environment), /TEST_MEMBERSHIP_CONTEXT_STORAGE_ERROR/)
+    }
+    finally {
+      console.error = originalError
+    }
+    assert.deepEqual(logs, [[
+      '[owner-test-membership]',
+      'TEST_MEMBERSHIP_CONTEXT_STORAGE_ERROR',
+      'UNKNOWN',
+    ]])
+  })
+
   it('writes a TEST order, payment attempt, entitlement, outbox, and audit in one transaction', async () => {
     const calls = []
     const ids = idFactory([

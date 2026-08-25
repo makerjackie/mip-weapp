@@ -11,14 +11,23 @@ async function grantOwnerTestMembership(db, input, options = {}) {
   const createId = options.createId || randomUUID
   const now = options.now || (() => new Date())
   return db.transaction(async (tx) => {
-    const { owner, plan } = await ownerTestMembershipContext(tx, input, { requireActivePlan: true })
-    const managed = await activeOwnerTestMembershipOrders(tx, input.appId, owner.id)
+    const { owner, plan } = await storageStep(
+      'TEST_MEMBERSHIP_CONTEXT_STORAGE_ERROR',
+      () => ownerTestMembershipContext(tx, input, { requireActivePlan: true }),
+    )
+    const managed = await storageStep(
+      'TEST_MEMBERSHIP_MANAGED_READ_STORAGE_ERROR',
+      () => activeOwnerTestMembershipOrders(tx, input.appId, owner.id),
+    )
     if (managed.length > 1) throw new Error('TEST_MEMBERSHIP_STATE_CONFLICT')
     if (managed.length === 1) {
       assertManagedTestMembershipOrder(managed[0], plan)
       return result('GRANT', true, true, true)
     }
-    const existingMembership = await activeMembership(tx, input.appId, owner.id)
+    const existingMembership = await storageStep(
+      'TEST_MEMBERSHIP_ACTIVE_READ_STORAGE_ERROR',
+      () => activeMembership(tx, input.appId, owner.id),
+    )
     if (existingMembership) return result('GRANT', true, false, true)
 
     const paidAt = now()
@@ -33,7 +42,7 @@ async function grantOwnerTestMembership(db, input, options = {}) {
       planKey: plan.plan_key,
       userId: owner.id,
     })).digest('hex')
-    await tx.query(
+    await storageStep('TEST_MEMBERSHIP_ORDER_WRITE_STORAGE_ERROR', () => tx.query(
       `INSERT INTO mip_orders (
         id, app_id, user_id, order_type, membership_plan_id, merchant_order_no,
         provider_transaction_id, idempotency_key, amount_cents, currency, status,
@@ -49,29 +58,32 @@ async function grantOwnerTestMembership(db, input, options = {}) {
         Number(plan.price_cents),
         JSON.stringify(ownerTestMembershipSnapshot(plan)),
       ],
-    )
-    await tx.query(
+    ))
+    await storageStep('TEST_MEMBERSHIP_ATTEMPT_WRITE_STORAGE_ERROR', () => tx.query(
       `INSERT INTO mip_payment_attempts (
         id, app_id, order_id, provider, provider_payment_id, prepay_id,
         request_hash, status
       ) VALUES (?, ?, ?, 'TEST', NULL, NULL, ?, 'PARAMETERS_ISSUED')`,
       [attemptId, input.appId, orderId, requestHash],
-    )
-    assertAffected(await tx.query(
+    ))
+    assertAffected(await storageStep('TEST_MEMBERSHIP_ORDER_TRANSITION_STORAGE_ERROR', () => tx.query(
       `UPDATE mip_orders
        SET status = 'PAID', provider_transaction_id = ?, paid_at = ?, version = version + 1
        WHERE app_id = ? AND id = ? AND status = 'PAYMENT_CREATED' AND version = 1`,
       [providerTransactionId, paidAt, input.appId, orderId],
-    ), 'ORDER_STATUS_CONFLICT')
-    assertAffected(await tx.query(
+    )), 'ORDER_STATUS_CONFLICT')
+    assertAffected(await storageStep('TEST_MEMBERSHIP_ATTEMPT_TRANSITION_STORAGE_ERROR', () => tx.query(
       `UPDATE mip_payment_attempts
        SET provider_payment_id = ?, status = 'SUCCEEDED', version = version + 1
        WHERE app_id = ? AND id = ? AND order_id = ?
          AND provider = 'TEST' AND status = 'PARAMETERS_ISSUED' AND version = 1`,
       [providerTransactionId, input.appId, attemptId, orderId],
-    ), 'PAYMENT_ATTEMPT_STATUS_CONFLICT')
-    await rebuildMembershipEntitlements(tx, input.appId, owner.id, { createId, now })
-    await writeOutbox(tx, {
+    )), 'PAYMENT_ATTEMPT_STATUS_CONFLICT')
+    await storageStep(
+      'TEST_MEMBERSHIP_ENTITLEMENT_WRITE_STORAGE_ERROR',
+      () => rebuildMembershipEntitlements(tx, input.appId, owner.id, { createId, now }),
+    )
+    await storageStep('TEST_MEMBERSHIP_OUTBOX_WRITE_STORAGE_ERROR', () => writeOutbox(tx, {
       id: createId(),
       appId: input.appId,
       aggregateType: 'ORDER',
@@ -79,14 +91,14 @@ async function grantOwnerTestMembership(db, input, options = {}) {
       eventType: 'membership.payment_confirmed',
       sourceVersion: 2,
       payload: { orderId, userId: owner.id, orderType: 'MEMBERSHIP' },
-    })
-    await writeAudit(tx, {
+    }))
+    await storageStep('TEST_MEMBERSHIP_AUDIT_WRITE_STORAGE_ERROR', () => writeAudit(tx, {
       appId: input.appId,
       action: 'OWNER_TEST_MEMBERSHIP_GRANTED',
       resourceType: 'ORDER',
       resourceId: orderId,
       metadata: { catalogStage: 'TEST', planKey: plan.plan_key, source: ownerTestMembershipSource },
-    })
+    }))
     return result('GRANT', true, true, false)
   })
 }
@@ -96,11 +108,21 @@ async function revokeOwnerTestMembership(db, input, options = {}) {
   const createId = options.createId || randomUUID
   const now = options.now || (() => new Date())
   return db.transaction(async (tx) => {
-    const { owner, plan } = await ownerTestMembershipContext(tx, input, { requireActivePlan: false })
-    const managed = await activeOwnerTestMembershipOrders(tx, input.appId, owner.id)
+    const { owner, plan } = await storageStep(
+      'TEST_MEMBERSHIP_CONTEXT_STORAGE_ERROR',
+      () => ownerTestMembershipContext(tx, input, { requireActivePlan: false }),
+    )
+    const managed = await storageStep(
+      'TEST_MEMBERSHIP_MANAGED_READ_STORAGE_ERROR',
+      () => activeOwnerTestMembershipOrders(tx, input.appId, owner.id),
+    )
     if (managed.length > 1) throw new Error('TEST_MEMBERSHIP_STATE_CONFLICT')
     if (managed.length === 0) {
-      return result('REVOKE', Boolean(await activeMembership(tx, input.appId, owner.id)), false, true)
+      const existingMembership = await storageStep(
+        'TEST_MEMBERSHIP_ACTIVE_READ_STORAGE_ERROR',
+        () => activeMembership(tx, input.appId, owner.id),
+      )
+      return result('REVOKE', Boolean(existingMembership), false, true)
     }
     const order = managed[0]
     assertManagedTestMembershipOrder(order, plan)
@@ -108,7 +130,7 @@ async function revokeOwnerTestMembership(db, input, options = {}) {
     if (!Number.isFinite(revokedAt.getTime())) throw new Error('TEST_MEMBERSHIP_TIME_INVALID')
     const refundId = createId()
     const providerRefundId = testProviderNumber('TESTREFUND', refundId)
-    await tx.query(
+    await storageStep('TEST_MEMBERSHIP_REFUND_WRITE_STORAGE_ERROR', () => tx.query(
       `INSERT INTO mip_refunds (
         id, app_id, order_id, requested_by_user_id, provider_refund_id,
         merchant_refund_no, idempotency_key, amount_cents, reason, status, refunded_at
@@ -121,27 +143,30 @@ async function revokeOwnerTestMembership(db, input, options = {}) {
         `owner-test-membership-revoke:${order.id}`,
         Number(order.amount_cents),
       ],
-    )
-    assertAffected(await tx.query(
+    ))
+    assertAffected(await storageStep('TEST_MEMBERSHIP_REFUND_ORDER_TRANSITION_STORAGE_ERROR', () => tx.query(
       `UPDATE mip_orders
        SET status = 'REFUND_PENDING', version = version + 1
        WHERE app_id = ? AND id = ? AND status = 'PAID' AND version = ?`,
       [input.appId, order.id, order.version],
-    ), 'ORDER_STATUS_CONFLICT')
-    assertAffected(await tx.query(
+    )), 'ORDER_STATUS_CONFLICT')
+    assertAffected(await storageStep('TEST_MEMBERSHIP_REFUND_TRANSITION_STORAGE_ERROR', () => tx.query(
       `UPDATE mip_refunds
        SET status = 'SUCCEEDED', provider_refund_id = ?, refunded_at = ?, version = version + 1
        WHERE app_id = ? AND id = ? AND order_id = ? AND status = 'PENDING' AND version = 1`,
       [providerRefundId, revokedAt, input.appId, refundId, order.id],
-    ), 'REFUND_STATUS_CONFLICT')
-    assertAffected(await tx.query(
+    )), 'REFUND_STATUS_CONFLICT')
+    assertAffected(await storageStep('TEST_MEMBERSHIP_REFUND_ORDER_FINALIZE_STORAGE_ERROR', () => tx.query(
       `UPDATE mip_orders
        SET status = 'REFUNDED', version = version + 1
        WHERE app_id = ? AND id = ? AND status = 'REFUND_PENDING' AND version = ?`,
       [input.appId, order.id, Number(order.version) + 1],
-    ), 'ORDER_STATUS_CONFLICT')
-    await rebuildMembershipEntitlements(tx, input.appId, owner.id, { createId, now })
-    await writeOutbox(tx, {
+    )), 'ORDER_STATUS_CONFLICT')
+    await storageStep(
+      'TEST_MEMBERSHIP_ENTITLEMENT_WRITE_STORAGE_ERROR',
+      () => rebuildMembershipEntitlements(tx, input.appId, owner.id, { createId, now }),
+    )
+    await storageStep('TEST_MEMBERSHIP_OUTBOX_WRITE_STORAGE_ERROR', () => writeOutbox(tx, {
       id: createId(),
       appId: input.appId,
       aggregateType: 'REFUND',
@@ -149,15 +174,19 @@ async function revokeOwnerTestMembership(db, input, options = {}) {
       eventType: 'membership.refund_confirmed',
       sourceVersion: 2,
       payload: { refundId, orderId: order.id, userId: owner.id, orderStatus: 'REFUNDED' },
-    })
-    await writeAudit(tx, {
+    }))
+    await storageStep('TEST_MEMBERSHIP_AUDIT_WRITE_STORAGE_ERROR', () => writeAudit(tx, {
       appId: input.appId,
       action: 'OWNER_TEST_MEMBERSHIP_REVOKED',
       resourceType: 'REFUND',
       resourceId: refundId,
       metadata: { catalogStage: 'TEST', orderId: order.id, planKey: plan.plan_key, source: ownerTestMembershipSource },
-    })
-    return result('REVOKE', Boolean(await activeMembership(tx, input.appId, owner.id)), true, false)
+    }))
+    const remainingMembership = await storageStep(
+      'TEST_MEMBERSHIP_ACTIVE_READ_STORAGE_ERROR',
+      () => activeMembership(tx, input.appId, owner.id),
+    )
+    return result('REVOKE', Boolean(remainingMembership), true, false)
   })
 }
 
@@ -305,6 +334,22 @@ function testProviderNumber(prefix, id) {
 
 function assertAffected(value, code) {
   if (!value || value.affectedRows !== 1) throw new Error(code)
+}
+
+async function storageStep(code, work) {
+  try {
+    return await work()
+  }
+  catch (error) {
+    if (error instanceof Error && /^[A-Z][A-Z0-9_:]+$/.test(error.message)) {
+      throw error
+    }
+    const storageCode = typeof error?.code === 'string' && /^[A-Z][A-Z0-9_]+$/.test(error.code)
+      ? error.code
+      : 'UNKNOWN'
+    console.error('[owner-test-membership]', code, storageCode)
+    throw new Error(code)
+  }
 }
 
 async function writeOutbox(tx, event) {
