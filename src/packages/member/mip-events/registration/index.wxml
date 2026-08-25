@@ -1,4 +1,4 @@
-<view id="mip-event-registration-page" class="min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+176rpx)] pt-3 text-ink">
+<view id="mip-event-registration-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+176rpx)] pt-3 text-ink">
   <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="无法打开报名" description="{{message || '请稍后重试。'}}" action-text="重新加载" bind:action="loadEvent" /><app-page-exit /></view>
   <view wx:elif="{{state === 'blocked'}}"><app-empty-state title="当前不能修改报名" description="{{message}}" action-text="查看我的活动" bind:action="openMine" /><app-page-exit /></view>
@@ -58,7 +58,7 @@
     </view>
     <view wx:if="{{message}}" class="mt-3 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
     <app-page-exit />
-    <view class="fixed bottom-0 left-0 right-0 z-50 border-t border-line bg-panel px-3 pb-[calc(env(safe-area-inset-bottom)+16rpx)] pt-3">
+    <view class="mip-member-fixed-edge fixed bottom-0 left-0 right-0 z-50 border-t border-line bg-panel px-3 pb-[calc(env(safe-area-inset-bottom)+16rpx)] pt-3">
       <view class="flex h-[104rpx] items-center gap-3 rounded-full bg-brand-soft p-2">
         <view class="flex min-w-[152rpx] items-center justify-center text-[length:26rpx] font-semibold text-brand">{{priceText}}</view>
         <t-button class="min-w-0 flex-1" block size="large" theme="primary" loading="{{busy}}" bind:tap="submit">{{editing ? '保存修改' : '提交报名'}}</t-button>

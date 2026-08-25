@@ -1,4 +1,4 @@
-<view id="member-announcement-detail-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="member-announcement-detail-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view wx:if="{{state === 'loading'}}" class="rounded-[24rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="公告暂时无法打开" description="{{message}}" action-text="重新加载" bind:action="loadAnnouncement" /></view>
   <view wx:else class="rounded-[28rpx] bg-panel px-5 py-6">

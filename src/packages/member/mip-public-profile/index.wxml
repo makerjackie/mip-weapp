@@ -1,4 +1,4 @@
-<view id="mip-public-profile-page" class="min-h-screen bg-[#080808] px-3 pb-[calc(env(safe-area-inset-bottom)+176rpx)] text-ink">
+<view id="mip-public-profile-page" class="mip-member-page min-h-screen bg-[#080808] px-3 pb-[calc(env(safe-area-inset-bottom)+176rpx)] text-ink">
   <view wx:if="{{state === 'loading'}}" class="pt-3">
     <view class="rounded-[16rpx] bg-panel px-3 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   </view>
@@ -107,7 +107,7 @@
       <view wx:if="{{canRetryReport}}" class="mt-3"><t-button block variant="outline" bind:tap="retryReport">重新提交举报</t-button></view>
     </view>
 
-    <view wx:if="{{!isSelf}}" class="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-2 rounded-full border border-[#5c5320] bg-[rgba(255,221,2,0.1)] p-2">
+    <view wx:if="{{!isSelf}}" class="mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-2 rounded-full border border-[#5c5320] bg-[rgba(255,221,2,0.1)] p-2">
       <view class="flex h-[80rpx] min-w-0 flex-1 items-center px-3"><view class="min-w-0"><view class="truncate text-[length:22rpx] font-medium">{{profile.displayName}}</view><view class="mt-1 text-[length:18rpx] text-muted">{{interestActive ? '已标记感兴趣' : '公开档案'}}</view></view></view>
       <view wx:if="{{interestState === 'access'}}" class="flex min-h-[88rpx] w-[336rpx] shrink-0 items-center justify-center rounded-full bg-brand px-3 text-center text-[length:24rpx] font-medium text-on-brand" aria-role="button" bind:tap="openAccess">完成身份信息后继续</view>
       <view wx:else class="flex min-h-[88rpx] w-[336rpx] shrink-0 items-center justify-center rounded-full bg-brand px-3 text-[length:28rpx] font-medium text-on-brand active:bg-brand-active {{interestState === 'loading' || interestState === 'processing' ? 'opacity-50' : ''}}" aria-role="button" aria-disabled="{{interestState === 'loading' || interestState === 'processing'}}" bind:tap="toggleInterest">{{interestState === 'processing' ? '处理中' : (interestActive ? '取消感兴趣' : '我感兴趣')}}</view>

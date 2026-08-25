@@ -1,4 +1,4 @@
-<view id="mip-event-detail-page" class="min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+150rpx)] text-ink">
+<view id="mip-event-detail-page" class="mip-member-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+150rpx)] text-ink">
   <web-view wx:if="{{onlineMode}}" src="{{onlineUrl}}" binderror="handleOnlineError" />
   <block wx:else>
     <view wx:if="{{state === 'loading'}}" class="mx-3 mt-3 rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
@@ -91,7 +91,7 @@
         <app-page-exit />
       </view>
 
-      <view class="fixed bottom-0 left-0 right-0 z-50 border-t border-line bg-panel px-3 pb-[calc(env(safe-area-inset-bottom)+16rpx)] pt-3">
+      <view class="mip-member-fixed-edge fixed bottom-0 left-0 right-0 z-50 border-t border-line bg-panel px-3 pb-[calc(env(safe-area-inset-bottom)+16rpx)] pt-3">
         <view class="flex h-[120rpx] items-center gap-3 rounded-full bg-brand-soft p-2">
           <button class="m-0 flex h-[88rpx] w-[112rpx] flex-col items-center justify-center rounded-full border border-line bg-panel p-0 text-[length:20rpx] leading-5 text-brand" bind:tap="callSupport"><t-icon name="service" size="36rpx" color="var(--color-brand)" /><text>客服</text></button>
           <button class="m-0 flex h-[88rpx] w-[112rpx] flex-col items-center justify-center rounded-full border border-line bg-panel p-0 text-[length:20rpx] leading-5 text-brand" bind:tap="openShare"><t-icon name="share" size="36rpx" color="var(--color-brand)" /><text>分享</text></button>

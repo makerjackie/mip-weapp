@@ -1,4 +1,4 @@
-<view id="mip-game-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="mip-game-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view class="text-[length:38rpx] font-bold">团队 PK</view>
   <view class="mt-2 text-[length:23rpx] text-muted">查看赛季、每周对阵和排行榜</view>
 

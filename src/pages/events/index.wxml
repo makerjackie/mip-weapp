@@ -1,4 +1,4 @@
-<view id="mip-events-page" class="min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+220rpx)] text-ink">
+<view id="mip-events-page" class="mip-member-page mip-member-tab-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+220rpx)] text-ink">
   <view class="flex min-h-[88rpx] items-center">
     <view class="flex min-h-[88rpx] items-center gap-1 text-[length:28rpx] font-semibold" aria-role="button" bind:tap="selectCity">
       <text>{{selectedCity || '全部城市'}}</text>

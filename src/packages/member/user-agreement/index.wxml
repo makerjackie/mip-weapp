@@ -1,4 +1,4 @@
-<view id="mip-user-agreement-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="mip-user-agreement-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view class="text-[length:38rpx] font-bold">用户协议</view>
   <view class="mt-2 text-[length:21rpx] text-muted">生效日期：{{effectiveDate}}</view>
   <view class="mt-5 flex flex-col gap-3">

@@ -1,4 +1,4 @@
-<view id="mip-opportunity-mine-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="mip-opportunity-mine-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view class="flex items-center justify-between"><view class="text-[length:36rpx] font-bold">相关机会</view><view class="rounded-[12rpx] bg-brand px-4 py-3 text-[length:22rpx] font-semibold text-on-brand" bind:tap="create">发布机会</view></view>
   <view class="mt-4 grid grid-cols-2 border-b border-line text-center text-[length:24rpx]">
     <view wx:if="{{tab === 'PUBLISHED'}}" class="min-h-[84rpx] border-b-[4rpx] border-brand py-4 text-brand" data-tab="PUBLISHED" bind:tap="changeTab">我发布的</view><view wx:else class="min-h-[84rpx] border-b-[4rpx] border-transparent py-4 text-muted" data-tab="PUBLISHED" bind:tap="changeTab">我发布的</view>

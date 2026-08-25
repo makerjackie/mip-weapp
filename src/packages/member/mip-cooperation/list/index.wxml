@@ -1,4 +1,4 @@
-<view id="mip-cooperation-list-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="mip-cooperation-list-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view class="flex items-center justify-between gap-3">
     <view class="min-w-0 flex-1">
       <view class="text-[length:36rpx] font-bold">{{mine ? '我的合作卡' : '人才合作'}}</view>

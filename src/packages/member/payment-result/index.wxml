@@ -1,4 +1,4 @@
-<view id="payment-result-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-[96rpx] text-center text-ink">
+<view id="payment-result-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-[96rpx] text-center text-ink">
   <view wx:if="{{result === 'checking'}}" class="mx-auto flex h-[120rpx] w-[120rpx] items-center justify-center rounded-full bg-brand-soft"><t-icon name="pending" size="58rpx" color="var(--color-brand)" /></view>
   <view wx:elif="{{result === 'success'}}" class="mx-auto flex h-[120rpx] w-[120rpx] items-center justify-center rounded-full bg-brand-soft"><t-icon name="check" size="60rpx" color="var(--color-brand)" /></view>
   <view wx:elif="{{result === 'failed'}}" class="mx-auto flex h-[120rpx] w-[120rpx] items-center justify-center rounded-full bg-panel-raised"><t-icon name="close" size="60rpx" color="var(--color-danger)" /></view>

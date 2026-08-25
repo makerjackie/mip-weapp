@@ -1,4 +1,4 @@
-<view id="member-orders-page" class="min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="member-orders-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view class="text-[length:38rpx] font-bold">我的订单</view>
   <view id="order-filter-tabs" class="mt-4 grid grid-cols-4 border-b border-line text-center text-[length:22rpx]">
     <view wx:if="{{filter === 'all'}}" class="min-h-[76rpx] border-b-[4rpx] border-brand py-3 text-brand" data-filter="all" bind:tap="changeFilter">全部</view><view wx:else class="min-h-[76rpx] border-b-[4rpx] border-transparent py-3 text-muted" data-filter="all" bind:tap="changeFilter">全部</view>

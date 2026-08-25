@@ -1,4 +1,4 @@
-<view id="mip-member-card-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-5 text-ink">
+<view id="mip-member-card-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-5 text-ink">
   <view class="text-[length:40rpx] font-bold">我的名片</view>
   <view class="mt-2 text-[length:23rpx] text-muted">名片只展示公开档案中的信息。</view>
 

@@ -56,6 +56,43 @@ input {
   box-sizing: border-box;
 }
 
+.mip-member-page {
+  --mip-member-shell-max-width: 100%;
+
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  max-width: var(--mip-member-shell-max-width);
+  margin-right: auto;
+  margin-left: auto;
+}
+
+.mip-member-page > * {
+  min-width: 0;
+}
+
+.mip-member-tab-page {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 220rpx);
+}
+
+.mip-member-fixed-edge,
+.mip-member-fixed-inset {
+  right: auto;
+  left: 50%;
+  box-sizing: border-box;
+  transform: translateX(-50%);
+}
+
+.mip-member-fixed-edge {
+  width: 100%;
+  max-width: var(--mip-member-shell-max-width);
+}
+
+.mip-member-fixed-inset {
+  width: calc(100% - 48rpx);
+  max-width: calc(var(--mip-member-shell-max-width) - 48rpx);
+}
+
 .mip-admin-page {
   box-sizing: border-box;
   width: 100%;
@@ -96,6 +133,10 @@ input {
 }
 
 @media (max-width: 599px) {
+  .mip-member-page {
+    --mip-member-shell-max-width: 100%;
+  }
+
   .mip-admin-page {
     max-width: 100%;
   }
@@ -114,6 +155,10 @@ input {
 }
 
 @media (min-width: 600px) and (max-width: 959px) {
+  .mip-member-page {
+    --mip-member-shell-max-width: 720px;
+  }
+
   .mip-admin-page {
     max-width: 920px;
     padding-right: 32px;
@@ -169,6 +214,10 @@ input {
 }
 
 @media (min-width: 960px) {
+  .mip-member-page {
+    --mip-member-shell-max-width: 840px;
+  }
+
   .mip-admin-page {
     max-width: 1280px;
     padding-right: 40px;

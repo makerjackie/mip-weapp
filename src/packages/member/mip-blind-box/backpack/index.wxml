@@ -1,4 +1,4 @@
-<view id="mip-blind-box-backpack-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-5 text-ink">
+<view id="mip-blind-box-backpack-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-5 text-ink">
   <view class="text-[length:40rpx] font-bold">卡牌背包</view><view class="mt-2 text-[length:23rpx] text-muted">查看已获得的盲盒卡牌</view>
   <view wx:if="{{state === 'loading'}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载背包" description="{{message}}" action-text="重新加载" bind:action="loadInventory" /></view>

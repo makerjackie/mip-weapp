@@ -1,4 +1,4 @@
-<view id="mip-account-page" class="profile-page">
+<view id="mip-account-page" class="mip-member-page mip-member-tab-page profile-page">
   <view wx:if="{{state === 'loading'}}" class="profile-loading">
     <view class="profile-loading-card"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <view class="profile-loading-card"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>

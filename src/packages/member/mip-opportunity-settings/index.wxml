@@ -1,4 +1,4 @@
-<view id="mip-opportunity-settings-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="mip-opportunity-settings-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view class="text-[length:36rpx] font-bold">消息与机会权限</view><view class="mt-1 text-[length:22rpx] text-muted">设置仅影响当前账号，修改后由服务端执行。</view>
   <view wx:if="{{state === 'loading'}}" class="mt-5 rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载权限设置" description="{{message}}" action-text="重新加载" bind:action="load" /></view>

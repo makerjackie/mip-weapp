@@ -1,4 +1,4 @@
-<view id="mip-home-page" class="min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+220rpx)] pt-4 text-ink">
+<view id="mip-home-page" class="mip-member-page mip-member-tab-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+220rpx)] pt-4 text-ink">
   <view class="flex min-h-[88rpx] items-center justify-between">
     <view class="flex items-center gap-3">
       <image class="h-[58rpx] w-[58rpx] rounded-[14rpx]" mode="aspectFit" fade-show="{{false}}" src="{{logoPath}}" />

@@ -1,4 +1,4 @@
-<view id="mip-opportunity-editor-page" class="min-h-screen bg-[#080808] px-3 pb-[calc(env(safe-area-inset-bottom)+176rpx)] text-ink">
+<view id="mip-opportunity-editor-page" class="mip-member-page min-h-screen bg-[#080808] px-3 pb-[calc(env(safe-area-inset-bottom)+176rpx)] text-ink">
   <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法编辑机会" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit /></view>
   <block wx:else>
@@ -40,7 +40,7 @@
     </view>
     <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] border border-danger px-4 py-3 text-[length:22rpx] text-danger">{{message}}</view>
     <view class="mt-5"><t-button block size="large" variant="outline" theme="primary" disabled="{{saving || coverUploading}}" bind:tap="saveDraft">保存草稿</t-button></view>
-    <view class="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center rounded-full border border-[#5c5320] bg-[rgba(255,221,2,0.1)] p-2">
+    <view class="mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center rounded-full border border-[#5c5320] bg-[rgba(255,221,2,0.1)] p-2">
       <view class="flex h-[80rpx] w-full items-center justify-center rounded-full border border-[#080808] bg-brand text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" aria-disabled="{{saving || coverUploading}}" bind:tap="publish">{{id ? '确认修改' : '确认发布'}}</view>
     </view>
     <app-page-exit label="取消" />

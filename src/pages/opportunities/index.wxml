@@ -1,5 +1,4 @@
-<view id="mip-opportunities-page" class="min-h-screen bg-[#080808] pb-[calc(env(safe-area-inset-bottom)+220rpx)] text-ink">
-  <view class="opportunities-safe-area" style="height: {{statusBarHeight}}px" />
+<view id="mip-opportunities-page" class="mip-member-page mip-member-tab-page min-h-screen bg-[#080808] pb-[calc(env(safe-area-inset-bottom)+220rpx)] text-ink">
   <view class="flex h-[88rpx] items-center px-3">
     <view id="opportunities-filter-toggle" class="flex h-[88rpx] min-w-0 items-center gap-1 text-[length:32rpx] font-medium" aria-role="button" aria-expanded="{{filterOpen}}" bind:tap="toggleFilters">
       <text class="max-w-[200rpx] truncate">{{cityOptions[cityIndex].label}}</text>

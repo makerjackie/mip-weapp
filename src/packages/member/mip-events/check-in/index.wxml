@@ -1,4 +1,4 @@
-<view id="mip-event-check-in-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+40rpx)] pt-12 text-ink">
+<view id="mip-event-check-in-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+40rpx)] pt-12 text-ink">
   <view class="rounded-[16rpx] bg-panel px-5 py-8 text-center">
     <view class="mx-auto flex h-[96rpx] w-[96rpx] items-center justify-center rounded-full bg-brand-soft"><t-icon name="scan" size="52rpx" color="var(--color-brand)" /></view>
     <view class="mt-5 text-[length:32rpx] font-bold">活动签到</view>

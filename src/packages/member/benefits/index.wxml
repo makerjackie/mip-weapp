@@ -1,4 +1,4 @@
-<view id="member-benefits-page" class="min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="member-benefits-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view class="rounded-[20rpx] bg-brand px-5 py-5 text-on-brand"><view class="text-[length:22rpx] font-semibold">{{membershipLabel}}</view><view class="mt-2 text-[length:36rpx] font-bold">会员权益</view><view class="mt-3 text-[length:22rpx] opacity-70">{{membershipDescription}}</view><view wx:if="{{membershipEndsText}}" class="mt-2 text-[length:21rpx] opacity-70">会员有效期至 {{membershipEndsText}}</view></view>
 
   <view wx:if="{{state === 'loading'}}" class="mt-4 flex flex-col gap-3"><view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view><view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>

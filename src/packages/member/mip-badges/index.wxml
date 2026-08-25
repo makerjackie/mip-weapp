@@ -1,4 +1,4 @@
-<view id="mip-badges-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-5 text-ink">
+<view id="mip-badges-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-5 text-ink">
   <view class="text-[length:40rpx] font-bold">我的勋章</view>
   <view class="mt-2 text-[length:23rpx] text-muted">已获得的勋章会保存在这里，最多佩戴 3 个。</view>
 

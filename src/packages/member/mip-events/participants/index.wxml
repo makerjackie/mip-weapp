@@ -1,4 +1,4 @@
-<view id="mip-event-participants-page" class="min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-3 text-ink">
+<view id="mip-event-participants-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-3 text-ink">
   <view class="flex items-center gap-2 rounded-[16rpx] bg-panel px-3">
     <t-icon name="search" size="36rpx" color="var(--color-muted)" />
     <input class="box-border h-[88rpx] min-w-0 flex-1 max-w-full text-[length:26rpx]" value="{{searchInput}}" maxlength="80" confirm-type="search" placeholder="搜索姓名、行业或简介" bindinput="onSearchInput" bindconfirm="onSearchConfirm" />

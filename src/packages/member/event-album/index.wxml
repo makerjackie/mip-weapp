@@ -1,4 +1,4 @@
-<view id="event-album-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+56rpx)] pt-4 text-ink">
+<view id="event-album-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+56rpx)] pt-4 text-ink">
   <view class="flex items-center justify-between gap-3">
     <view>
       <view class="text-[length:36rpx] font-bold">活动相册</view>

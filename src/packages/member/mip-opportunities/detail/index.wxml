@@ -1,4 +1,4 @@
-<view id="mip-opportunity-detail-page" class="min-h-screen bg-[#080808] px-3 pb-[calc(env(safe-area-inset-bottom)+176rpx)] pt-3 text-ink">
+<view id="mip-opportunity-detail-page" class="mip-member-page min-h-screen bg-[#080808] px-3 pb-[calc(env(safe-area-inset-bottom)+176rpx)] pt-3 text-ink">
   <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法查看机会" description="{{message}}" action-text="重新加载" bind:action="load" /><app-page-exit /></view>
   <block wx:elif="{{item}}">
@@ -79,12 +79,12 @@
       </view>
       <view wx:if="{{commentsMessage && commentsState === 'ready'}}" class="mt-3 text-[length:21rpx] text-danger">{{commentsMessage}}</view>
     </view>
-    <view wx:if="{{item.canEdit}}" class="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full border border-[#5c5320] bg-[rgba(255,221,2,0.1)] p-2">
+    <view wx:if="{{item.canEdit}}" class="mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full border border-[#5c5320] bg-[rgba(255,221,2,0.1)] p-2">
       <view class="flex h-[80rpx] w-[176rpx] shrink-0 items-center justify-center gap-2 rounded-full border border-[#080808] bg-panel text-[length:32rpx] font-medium text-brand active:bg-panel-raised" aria-role="button" bind:tap="edit"><image class="h-[40rpx] w-[40rpx]" src="/assets/figma/opportunities/edit-draft.svg" mode="aspectFit" /><text>编辑</text></view>
       <view wx:if="{{item.status === 'PUBLISHED'}}" class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full border border-[#080808] bg-brand px-4 text-center text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" bind:tap="end">已完成招募，结束机会</view>
       <view wx:else class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-panel-raised px-4 text-center text-[length:28rpx] text-muted">机会已结束</view>
     </view>
-    <view wx:elif="{{!item.mine && item.status === 'PUBLISHED'}}" class="fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full border border-[#5c5320] bg-[rgba(255,221,2,0.1)] p-2">
+    <view wx:elif="{{!item.mine && item.status === 'PUBLISHED'}}" class="mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full border border-[#5c5320] bg-[rgba(255,221,2,0.1)] p-2">
       <view class="flex h-[80rpx] min-w-[176rpx] shrink-0 items-center justify-center rounded-full bg-panel px-3 text-[length:26rpx] font-medium text-brand">+{{item.referralCount}}引荐</view>
       <view wx:if="{{item.referralActive}}" class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" aria-disabled="{{acting}}" bind:tap="changeReferralTarget">更换引荐人</view>
       <view wx:else class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" aria-disabled="{{acting}}" bind:tap="toggleReferral">我想引荐</view>
