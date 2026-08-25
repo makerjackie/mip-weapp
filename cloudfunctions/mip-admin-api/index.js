@@ -4,6 +4,7 @@ const cloud = require('wx-server-sdk')
 const { createAdminApplication } = require('./domain/application')
 const { createHandler, normalizeAdminRequest } = require('./domain/handler')
 const { configuredAgreements, createFullAccessPolicy } = require('./domain/full-access')
+const { outboxMutationActions } = require('./domain/operation-registry')
 const { createAdminRepository } = require('./domain/repository')
 const { createAdminService } = require('./domain/service')
 const { createTrustedPrincipalIssuer, resolveTrustedIdentity } = require('./lib/identity')
@@ -26,22 +27,6 @@ const allowedAppIds = new Set(
 )
 const knowledgeSourceAllowedHosts = configuredHosts(process.env.MIP_KNOWLEDGE_SOURCE_ALLOWED_HOSTS)
 const knowledgeWebviewAllowedHosts = configuredHosts(process.env.MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS)
-const outboxMutationActions = new Set([
-  'mip.admin.announcements.publish',
-  'mip.admin.announcements.withdraw',
-  'mip.admin.messageCampaigns.publish',
-  'mip.admin.events.save',
-  'mip.admin.events.clone',
-  'mip.admin.events.changeStatus',
-  'mip.admin.communications.publishEventReminder',
-  'mip.admin.events.registrations.review',
-  'mip.admin.events.checkIn',
-  'mip.admin.events.undoCheckIn',
-  'mip.admin.growth.adjust',
-  'mip.admin.refunds.submit',
-  'mip.admin.knowledge.contents.review',
-  'mip.admin.opportunityComments.moderate',
-])
 const outboxWakeup = createOutboxWakeup({
   cloud,
   functionName: process.env.MIP_OUTBOX_FUNCTION_NAME,

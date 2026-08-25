@@ -1,0 +1,22 @@
+'use strict'
+
+const { defineManifest, serviceOperation } = require('./manifest')
+
+module.exports = defineManifest('EVENTS', [
+  serviceOperation('mip.admin.events.list', 'QUERY', 'listEvents'),
+  serviceOperation('mip.admin.events.policy.get', 'QUERY', 'getEventPolicy'),
+  serviceOperation('mip.admin.events.get', 'QUERY', 'getEvent'),
+  serviceOperation('mip.admin.events.album.list', 'QUERY', 'listEventAlbumPhotos'),
+  serviceOperation('mip.admin.events.roster', 'QUERY', 'listRoster'),
+  serviceOperation('mip.admin.events.rosterAll', 'QUERY', 'listRosterAll'),
+  serviceOperation('mip.admin.events.policy.save', 'MUTATION', 'saveEventPolicy'),
+  serviceOperation('mip.admin.events.save', 'MUTATION', 'saveEvent', { wakesOutbox: true }),
+  serviceOperation('mip.admin.events.clone', 'MUTATION', 'cloneEvent', { wakesOutbox: true }),
+  serviceOperation('mip.admin.events.changeStatus', 'MUTATION', 'changeEventStatus', { wakesOutbox: true }),
+  serviceOperation('mip.admin.events.archive', 'MUTATION', 'archiveEvent'),
+  serviceOperation('mip.admin.events.album.review', 'MUTATION', 'reviewEventAlbumPhoto'),
+  serviceOperation('mip.admin.communications.publishEventReminder', 'MUTATION', 'publishEventReminder', { wakesOutbox: true }),
+  serviceOperation('mip.admin.events.registrations.review', 'MUTATION', 'reviewRegistration', { wakesOutbox: true }),
+  serviceOperation('mip.admin.events.checkIn', 'MUTATION', 'checkIn', { wakesOutbox: true }),
+  serviceOperation('mip.admin.events.undoCheckIn', 'MUTATION', 'undoCheckIn', { wakesOutbox: true }),
+])

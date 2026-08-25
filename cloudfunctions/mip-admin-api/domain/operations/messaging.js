@@ -1,0 +1,21 @@
+'use strict'
+
+const { defineManifest, serviceOperation } = require('./manifest')
+
+module.exports = defineManifest('MESSAGING', [
+  serviceOperation('mip.admin.announcements.scopes', 'QUERY', 'listAnnouncementScopes'),
+  serviceOperation('mip.admin.announcements.list', 'QUERY', 'listAnnouncements'),
+  serviceOperation('mip.admin.announcements.get', 'QUERY', 'getAnnouncement'),
+  serviceOperation('mip.admin.messageCampaigns.scopes', 'QUERY', 'listMessageCampaignScopes', { usesInput: false }),
+  serviceOperation('mip.admin.messageCampaigns.list', 'QUERY', 'listMessageCampaigns'),
+  serviceOperation('mip.admin.messageCampaigns.get', 'QUERY', 'getMessageCampaign'),
+  serviceOperation('mip.admin.messageCampaigns.recipients', 'QUERY', 'searchMessageRecipients'),
+  serviceOperation('mip.admin.announcements.save', 'MUTATION', 'saveAnnouncement'),
+  serviceOperation('mip.admin.announcements.publish', 'MUTATION', 'publishAnnouncement', { wakesOutbox: true }),
+  serviceOperation('mip.admin.announcements.withdraw', 'MUTATION', 'withdrawAnnouncement', { wakesOutbox: true }),
+  serviceOperation('mip.admin.announcements.pin', 'MUTATION', 'setAnnouncementPinned'),
+  serviceOperation('mip.admin.messageCampaigns.save', 'MUTATION', 'saveMessageCampaign'),
+  serviceOperation('mip.admin.messageCampaigns.snapshot', 'MUTATION', 'snapshotMessageCampaign'),
+  serviceOperation('mip.admin.messageCampaigns.publish', 'MUTATION', 'publishMessageCampaign', { wakesOutbox: true }),
+  serviceOperation('mip.admin.messageCampaigns.withdraw', 'MUTATION', 'withdrawMessageCampaign'),
+])
