@@ -359,6 +359,11 @@ export function createOpenedAutomatorOptions({ contract, devtoolsRoot, port, ses
   }
 }
 
+export function runtimeCompileDisposition(error) {
+  const message = typeof error === 'string' ? error : error?.message
+  return message === 'unimplemented' ? 'operator-wait' : 'failed'
+}
+
 function registrationText(marker, maxLength) {
   const maximum = Number.isInteger(maxLength) && maxLength > 0 ? maxLength : 200
   return marker.slice(0, maximum) || '验'

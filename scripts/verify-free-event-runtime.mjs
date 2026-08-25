@@ -19,6 +19,7 @@ import {
   planRegistrationFieldActions,
   resolveFreeEventMutationOptions,
   resolveFreeEventRuntimeEnvironment,
+  runtimeCompileDisposition,
   runtimeRouteDisposition,
   summarizeAdminFeedback,
   summarizeCommentPage,
@@ -167,6 +168,25 @@ async function readRuntimeAttestation(miniProgram, env, buildSha) {
     envId: env.CLOUDBASE_ENV_ID,
     paymentMode: env.MIP_PAYMENT_MODE,
   })
+}
+
+async function waitForOperatorBuild(miniProgram, buildSha, timeoutMs) {
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    try {
+      const runningBuildSha = await miniProgram.evaluate(() => (
+        getApp()?.globalData?.runtimeAcceptance?.buildSha || null
+      ))
+      if (runningBuildSha === buildSha) {
+        return
+      }
+    }
+    catch {
+      // The operator may be compiling or reloading the opened project.
+    }
+    await delay(500)
+  }
+  throw new ExternalWaitError('The opened DevTools Automator does not support compile(); click Compile in the existing DevTools window and wait for the fresh runtime bundle to load')
 }
 
 function writeJsonAtomic(filePath, value) {
@@ -978,13 +998,27 @@ export async function main(runArgs = process.argv.slice(2)) {
     miniProgram.on('console', payload => diagnostics.captureConsole(payload))
     miniProgram.on('exception', payload => diagnostics.captureException(payload))
     try {
-      await miniProgram.compile({ force: true })
+      try {
+        await miniProgram.compile({ force: true })
+        report.build.compileMode = 'automator'
+      }
+      catch (error) {
+        if (runtimeCompileDisposition(error) !== 'operator-wait') {
+          throw new RuntimeStateError(`The opened DevTools compile failed: ${safeError(error, explicitSecrets)}`)
+        }
+        report.build.compileMode = 'operator-required'
+        persist()
+        await waitForOperatorBuild(miniProgram, buildSha, options.externalWaitTimeoutMs)
+      }
       await miniProgram.waitForAppReady(60_000)
       report.build.compiledByDevtools = true
       report.runtimeAttestation = await readRuntimeAttestation(miniProgram, env, buildSha)
       report.build.runtimeShaMatched = report.runtimeAttestation.buildShaMatched
     }
     catch (error) {
+      if (error instanceof RuntimeStateError) {
+        throw error
+      }
       throw new ExternalWaitError(`The opened DevTools runtime could not prove its AppID, fresh build, CloudBase environment, and health: ${safeError(error, explicitSecrets)}`)
     }
     report.viewport = createObservedViewportEvidence(await miniProgram.systemInfo(), options.evidence.viewportProfile)

@@ -6,6 +6,7 @@ import {
   planRegistrationFieldActions,
   resolveFreeEventMutationOptions,
   resolveFreeEventRuntimeEnvironment,
+  runtimeCompileDisposition,
   runtimeRouteDisposition,
   summarizeAdminFeedback,
   summarizeCommentPage,
@@ -282,6 +283,20 @@ describe('free offline event mutation runtime contract', () => {
 })
 
 describe('free event runtime evidence summaries', () => {
+  it('waits for the operator only when Automator compile is exactly unimplemented', () => {
+    expect(runtimeCompileDisposition(new Error('unimplemented'))).toBe('operator-wait')
+    expect(runtimeCompileDisposition({ message: 'unimplemented' })).toBe('operator-wait')
+    expect(runtimeCompileDisposition('unimplemented')).toBe('operator-wait')
+    expect(runtimeCompileDisposition(new Error('compile failed'))).toBe('failed')
+    expect(runtimeCompileDisposition({ message: 'unimplemented: unsupported option' })).toBe('failed')
+
+    const source = fs.readFileSync(path.join(root, 'scripts/verify-free-event-runtime.mjs'), 'utf8')
+    expect(source).toContain('report.build.compileMode = \'operator-required\'')
+    expect(source).toContain('waitForOperatorBuild(miniProgram, buildSha, options.externalWaitTimeoutMs)')
+    expect(source).toContain('new RuntimeStateError(`The opened DevTools compile failed:')
+    expect(source).not.toContain('openWechatIdeProjectByHttp')
+  })
+
   it('records exact authoritative facts without profile, phone, body, or participant refs', () => {
     const sensitiveValues = ['测试昵称', '18819253403', 'profile-secret', 'participant-secret', 'marker-body']
     const summaries = [
