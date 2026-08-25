@@ -495,6 +495,25 @@ describe('dashboard overview repository', () => {
     assert.equal(harness.calls.filter(call => call.sql).length, 2)
   })
 
+  it('does not expose recent participant identities through events read alone', async () => {
+    const harness = databaseHarness({
+      bindings: [{
+        scope_type: 'PLATFORM',
+        scope_id: '',
+        role_key: 'PLATFORM_OPERATIONS',
+        policy_capabilities_json: ['admin.dashboard', 'events.read'],
+      }],
+    })
+    const repository = createDashboardOverviewRepository(harness.database)
+
+    const result = await repository.readOverviewSnapshot(overviewInput())
+
+    assert.equal(result.events.availability, 'AVAILABLE')
+    assert.equal(result.operations.availability, 'RESTRICTED')
+    const sql = harness.calls.map(call => call.sql || '').join('\n')
+    assert.doesNotMatch(sql, /outbox\.event_type = 'event\.registration_confirmed'/)
+  })
+
   it('fails before aggregates for cross-app targets and unauthorized scopes', async () => {
     const missing = databaseHarness({ branch: null })
     await assert.rejects(

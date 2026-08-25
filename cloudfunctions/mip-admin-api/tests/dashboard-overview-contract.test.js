@@ -24,19 +24,39 @@ function snapshot() {
 
 function fixture(options = {}) {
   const calls = []
+  const audits = []
   const sessionCalls = []
+  const defaultSession = {
+    caller: { appId: APP_ID, userId: ACTOR_USER_ID },
+    bindings: [{ roleKey: 'PLATFORM_OWNER', scopeType: 'PLATFORM', scopeId: null }],
+  }
   const access = {
+    audit(context, grant, input) {
+      return {
+        appId: context.caller.appId,
+        actorUserId: context.caller.userId,
+        effectiveRole: grant.roleKey,
+        ...input,
+      }
+    },
     async session(input) {
       sessionCalls.push(input)
       if (options.sessionError) {
         throw options.sessionError
       }
-      return options.session || {
-        caller: { appId: APP_ID, userId: ACTOR_USER_ID },
-      }
+      return options.session
+        ? {
+            ...defaultSession,
+            ...options.session,
+            caller: { ...defaultSession.caller, ...options.session.caller },
+          }
+        : defaultSession
     },
   }
   const repository = {
+    async recordAudit(input) {
+      audits.push(input)
+    },
     async readOverviewSnapshot(input) {
       calls.push(input)
       if (options.error) {
@@ -50,7 +70,7 @@ function fixture(options = {}) {
     repository,
     clock: () => options.asOf || AS_OF,
   })
-  return { calls, module, sessionCalls }
+  return { audits, calls, module, sessionCalls }
 }
 
 function caller() {
@@ -59,7 +79,7 @@ function caller() {
 
 describe('dashboard overview neutral v1 contract', () => {
   it('keeps one deep read interface with authorized month defaults', async () => {
-    const { calls, module, sessionCalls } = fixture()
+    const { audits, calls, module, sessionCalls } = fixture()
     assert.deepEqual(Object.keys(module), ['getOverview'])
 
     const result = await module.getOverview(caller(), {})
@@ -88,6 +108,16 @@ describe('dashboard overview neutral v1 contract', () => {
       '2026-08-02',
     ])
     assert.equal(calls[0].period.bucketStartDates.at(-1), '2026-08-25')
+    assert.deepEqual(audits, [{
+      appId: APP_ID,
+      actorUserId: ACTOR_USER_ID,
+      scopeType: 'PLATFORM',
+      scopeId: null,
+      action: 'admin.session.enter',
+      resourceType: 'ADMIN_SESSION',
+      effectiveRole: 'PLATFORM_OWNER',
+      metadata: {},
+    }])
   })
 
   it('normalizes explicit UUID scope without accepting client ownership facts', async () => {

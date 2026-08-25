@@ -15,6 +15,7 @@ const { createMatchingAdminRepository } = require('./matching-admin')
 const { createOpportunityArchiveRepository } = require('./opportunity-archive')
 const { createOpportunityCommentAdminRepository } = require('./opportunity-comments')
 const { createAdminAccessRepository } = require('./repositories/access')
+const { createDashboardOverviewRepository } = require('./repositories/dashboard-overview')
 const { createAdminUserRepository } = require('./repositories/users')
 const { createRoleCapabilityPolicyRepository } = require('./role-capability-policies')
 const { listOperationalExceptions: readOperationalExceptions } = require('./operational-exceptions')
@@ -356,6 +357,7 @@ function createAdminRepository(database, options = {}) {
     lockMutationAuthorization: lockMutation,
   })
   const eventInsightsRepository = createEventInsightsRepository(database)
+  const dashboardOverviewRepository = createDashboardOverviewRepository(database)
   const opportunityArchiveRepository = createOpportunityArchiveRepository(database, {
     assertScope,
     lockMutation,
@@ -2831,6 +2833,7 @@ function createAdminRepository(database, options = {}) {
     ...badgeAdminRepository,
     ...eventCommentAdminRepository,
     ...eventInsightsRepository,
+    ...dashboardOverviewRepository,
     ...messageCampaignRepository,
     ...messageDeliveryReviewRepository,
     ...messageTemplateRepository,

@@ -160,6 +160,42 @@ describe('admin service', () => {
     })
   })
 
+  it('routes the neutral dashboard overview through the unified session and trusted repository input', async () => {
+    const repo = repository('BRANCH_ADMIN', 'BRANCH', 'branch-a')
+    let captured
+    repo.readOverviewSnapshot = async (input) => {
+      captured = input
+      return {
+        scope: { type: 'AUTHORIZED', id: null },
+        people: { availability: 'RESTRICTED' },
+        membership: { availability: 'RESTRICTED' },
+        events: { availability: 'RESTRICTED' },
+        opportunities: { availability: 'RESTRICTED' },
+        tasks: { availability: 'RESTRICTED' },
+        operations: { availability: 'RESTRICTED' },
+      }
+    }
+    const asOf = new Date('2030-08-26T04:00:00.000Z')
+    const service = createAdminService({
+      repository: repo,
+      phoneEncryptionKey: secret,
+      now: () => asOf,
+    })
+
+    const result = await service.getDashboardOverview(caller, {
+      period: { preset: 'TODAY' },
+    })
+
+    assert.equal(result.schemaVersion, 1)
+    assert.equal(result.asOf, asOf.toISOString())
+    assert.equal(captured.appId, caller.appId)
+    assert.equal(captured.actorUserId, 'admin-user')
+    assert.deepEqual(captured.scope, { type: 'AUTHORIZED', id: null })
+    assert.equal(captured.period.preset, 'TODAY')
+    assert.equal(repo.audits.at(-1).action, 'admin.session.enter')
+    assert.equal(repo.audits.at(-1).effectiveRole, 'BRANCH_ADMIN')
+  })
+
   it('rejects a role whose key and stored scope type do not match', async () => {
     const repo = repository('PLATFORM_OWNER', 'BRANCH', 'branch-a')
     const service = createAdminService({ repository: repo, phoneEncryptionKey: secret })

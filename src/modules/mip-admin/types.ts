@@ -5,6 +5,10 @@ import type {
   AdminAnnouncementScope,
 } from './announcements'
 import type {
+  AdminDashboardOverview,
+  AdminDashboardOverviewInput,
+} from './dashboard-overview'
+import type {
   AdminEventCommentMutationResult,
   AdminEventCommentReportMutationResult,
   AdminEventCommentSettings,
@@ -838,6 +842,7 @@ export interface AdminPage<T> {
 export interface MipAdminGateway {
   getSession: () => Promise<MipAdminSession>
   getDashboard: () => Promise<AdminDashboard>
+  getDashboardOverview: (input?: AdminDashboardOverviewInput) => Promise<AdminDashboardOverview>
   listBranches: () => Promise<AdminPage<AdminBranch>>
   createBranch: (input: AdminBranchCreateInput) => Promise<AdminBranch>
   updateBranch: (input: AdminBranchUpdateInput) => Promise<AdminBranch>

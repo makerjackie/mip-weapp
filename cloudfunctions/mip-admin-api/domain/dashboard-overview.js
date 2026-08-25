@@ -1,5 +1,6 @@
 'use strict'
 
+const { CAPABILITIES, firstGrant } = require('./capabilities')
 const { AdminError } = require('./validation')
 
 const CONTRACT_VERSION = 1
@@ -17,15 +18,20 @@ function createDashboardOverview({ access, repository, clock = () => new Date() 
   if (!access || typeof access.session !== 'function') {
     throw new TypeError('DASHBOARD_OVERVIEW_ACCESS_REQUIRED')
   }
-  if (!repository || typeof repository.readOverviewSnapshot !== 'function') {
-    throw new TypeError('DASHBOARD_OVERVIEW_REPOSITORY_REQUIRED')
-  }
   if (typeof clock !== 'function') {
     throw new TypeError('DASHBOARD_OVERVIEW_CLOCK_REQUIRED')
   }
 
   async function getOverview(caller, value = {}) {
     const context = await access.session(caller)
+    if (typeof access.audit !== 'function') {
+      throw new TypeError('DASHBOARD_OVERVIEW_AUDIT_REQUIRED')
+    }
+    if (!repository
+      || typeof repository.readOverviewSnapshot !== 'function'
+      || typeof repository.recordAudit !== 'function') {
+      throw new TypeError('DASHBOARD_OVERVIEW_REPOSITORY_REQUIRED')
+    }
     const trusted = trustedCaller(context?.caller)
     const request = overviewRequest(value)
     const asOf = validDate(clock(), 'DASHBOARD_OVERVIEW_CLOCK_INVALID')
@@ -38,6 +44,14 @@ function createDashboardOverview({ access, repository, clock = () => new Date() 
       asOf,
     })
     assertSnapshot(snapshot)
+    const grant = firstGrant(context.bindings, CAPABILITIES.DASHBOARD)
+    await repository.recordAudit(access.audit(context, grant, {
+      scopeType: grant.scopeType,
+      scopeId: grant.scopeId,
+      action: 'admin.session.enter',
+      resourceType: 'ADMIN_SESSION',
+      metadata: {},
+    }))
     return {
       schemaVersion: CONTRACT_VERSION,
       asOf: asOf.toISOString(),

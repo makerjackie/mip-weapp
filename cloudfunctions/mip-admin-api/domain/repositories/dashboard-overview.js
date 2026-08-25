@@ -121,7 +121,7 @@ function createDashboardOverviewRepository(database) {
       const tasks = await readTasks(tx, input, resolvedScope, tasksVisibility)
       const operations = await readOperations(tx, input, resolvedScope, {
         audit: visibility(CAPABILITIES.AUDIT_READ),
-        events: eventsVisibility,
+        eventRoster: visibility(CAPABILITIES.EVENTS_ROSTER),
         orders: visibility(CAPABILITIES.ORDERS_READ),
         tasks: tasksVisibility,
       })
@@ -975,7 +975,7 @@ async function readTasks(tx, input, scope, taskVisibility) {
 
 async function readOperations(tx, input, scope, visibilityByCapability) {
   const sources = []
-  const eventScope = eventWhere(visibilityByCapability.events, 'event')
+  const eventScope = eventWhere(visibilityByCapability.eventRoster, 'event')
   if (eventScope) {
     sources.push(await eventActivity(tx, input, eventScope))
   }

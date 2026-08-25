@@ -32,6 +32,11 @@ export function createMipAdminModule(
   return {
     getSession: governance.getSession,
     getDashboard: (force = false) => cache.query('mip-admin:dashboard', gateway.getDashboard, { force }),
+    getDashboardOverview: (input: Parameters<MipAdminGateway['getDashboardOverview']>[0] = {}, force = false) => cache.query(
+      `mip-admin:dashboard-overview:${JSON.stringify(input)}`,
+      () => gateway.getDashboardOverview(input),
+      { force },
+    ),
     listBranches: governance.listBranches,
     getAnnouncementScopes: messaging.getAnnouncementScopes,
     listAnnouncements: messaging.listAnnouncements,

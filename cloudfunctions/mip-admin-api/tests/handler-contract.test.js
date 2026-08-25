@@ -209,7 +209,7 @@ describe('admin handler and isolation contract', () => {
     assert.equal(issues, 0)
   })
 
-  it('keeps all 115 business actions compatible with the handler configuration', async () => {
+  it('keeps all 116 business actions compatible with the handler configuration', async () => {
     const caller = { appId: 'wx', identityKey: 'key' }
     const calls = []
     const service = new Proxy({}, {
@@ -230,7 +230,7 @@ describe('admin handler and isolation contract', () => {
     })
     const businessActions = Object.keys(actions).filter(action => action !== 'health')
 
-    assert.equal(businessActions.length, 115)
+    assert.equal(businessActions.length, 116)
     for (const action of businessActions) {
       const before = calls.length
       const response = await handler({ contractVersion: 1, action, input: { marker: action } })

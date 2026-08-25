@@ -1,5 +1,6 @@
 export * from './announcements'
 export * from './client'
+export * from './dashboard-overview'
 export * from './event-comments'
 export * from './export-download'
 export * from './message-campaigns'

@@ -1,30 +1,22 @@
-import type { AdminDashboard } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
+import type { AdminDashboardActivityView, AdminDashboardPeriodOption } from './model'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
-import { adminLoadFailure } from '../shared/page-state'
-
-const emptyCounts: AdminDashboard['counts'] = {
-  totalUsers: 0,
-  newUsers7d: 0,
-  activePlayers: 0,
-  interactingPlayers30d: 0,
-  playerInteractionRate30d: 0,
-  totalEvents: 0,
-  publishedEvents: 0,
-  pendingRegistrations: 0,
-  paidOrders: 0,
-  pendingRefunds: 0,
-  totalOpportunities: 0,
-  publishedOpportunities: 0,
-  publishedLifecycleOpportunities: 0,
-  convertedOpportunities: 0,
-  opportunityConversionRate: 0,
-}
+import { adminLoadFailure, isAdminForbiddenError } from '../shared/page-state'
+import {
+  buildDashboardViewModel,
+  dashboardPeriodOptions,
+  emptyDashboardViewModel,
+} from './model'
 
 Page({
   data: {
     state: 'loading' as AdminPageState,
-    counts: emptyCounts,
+    view: emptyDashboardViewModel,
+    periodOptions: dashboardPeriodOptions,
+    selectedPreset: 'THIS_MONTH' as AdminDashboardPeriodOption,
+    successfulPreset: 'THIS_MONTH' as AdminDashboardPeriodOption,
+    activityDetailOpen: false,
+    selectedActivity: null as AdminDashboardActivityView | null,
     canUsers: false,
     canBranches: false,
     canCommunityReports: false,
@@ -44,22 +36,37 @@ Page({
     canAudit: false,
     message: '',
   },
+  requestSeq: 0,
 
   onShow() {
     void this.loadDashboard()
   },
 
+  onUnload() {
+    this.requestSeq += 1
+  },
+
   async loadDashboard(force = false) {
     const hasContent = this.data.state === 'ready'
-    if (!hasContent) {
-      this.setData({ state: 'loading', message: '' })
-    }
+    const requestedPreset = this.data.selectedPreset
+    const seq = this.requestSeq + 1
+    this.requestSeq = seq
+    this.setData(hasContent ? { message: '' } : { state: 'loading', message: '' })
     try {
-      const dashboard = await mipAdminModule.getDashboard(force)
-      const grants = dashboard.session.capabilities
+      const [session, overview] = await Promise.all([
+        mipAdminModule.getSession(force),
+        mipAdminModule.getDashboardOverview({
+          period: { preset: requestedPreset },
+        }, force),
+      ])
+      if (seq !== this.requestSeq) {
+        return
+      }
+      const grants = session.capabilities
       this.setData({
         state: 'ready',
-        counts: dashboard.counts,
+        view: buildDashboardViewModel(overview),
+        successfulPreset: requestedPreset,
         canUsers: hasCapability(grants, 'users.read'),
         canBranches: hasCapability(grants, 'branches.manage'),
         canCommunityReports: hasCapability(grants, 'community.reports.manage'),
@@ -82,7 +89,53 @@ Page({
       })
     }
     catch (error) {
-      this.setData(adminLoadFailure(error, { hasContent, fallbackMessage: '运营工作台加载失败' }))
+      if (seq !== this.requestSeq) {
+        return
+      }
+      const accessRevoked = isAdminForbiddenError(error)
+      this.setData({
+        ...adminLoadFailure(error, {
+          hasContent: hasContent && !accessRevoked,
+          fallbackMessage: '数据概览加载失败',
+        }),
+        selectedPreset: this.data.successfulPreset,
+        ...(accessRevoked
+          ? {
+              view: emptyDashboardViewModel,
+              activityDetailOpen: false,
+              selectedActivity: null,
+            }
+          : {}),
+      })
+    }
+  },
+
+  changePeriod(event: WechatMiniprogram.TouchEvent) {
+    const preset = String(event.currentTarget.dataset.preset || '') as AdminDashboardPeriodOption
+    if (!dashboardPeriodOptions.some(item => item.key === preset)
+      || preset === this.data.selectedPreset) {
+      return
+    }
+    this.setData({ selectedPreset: preset })
+    void this.loadDashboard(true)
+  },
+
+  openActivity(event: WechatMiniprogram.TouchEvent) {
+    const activity = this.data.view.activities.find(
+      item => item.id === String(event.currentTarget.dataset.id || ''),
+    )
+    if (activity) {
+      this.setData({ activityDetailOpen: true, selectedActivity: activity })
+    }
+  },
+
+  closeActivity() {
+    this.setData({ activityDetailOpen: false, selectedActivity: null })
+  },
+
+  handleActivityVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {
+    if (!event.detail.visible) {
+      this.closeActivity()
     }
   },
 

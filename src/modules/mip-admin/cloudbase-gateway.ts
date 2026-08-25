@@ -24,6 +24,9 @@ import {
 } from './announcements'
 import { cloudbaseAdminTransport } from './cloudbase-transport'
 import {
+  parseDashboardOverview,
+} from './dashboard-overview'
+import {
   parseEventCommentMutationResult,
   parseEventCommentReportClaimResult,
   parseEventCommentReportCloseResult,
@@ -503,6 +506,9 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
   return {
     getSession: () => call('mip.admin.session'),
     getDashboard: () => call('mip.admin.dashboard'),
+    getDashboardOverview: async input => parseDashboardOverview(
+      await call('mip.admin.dashboard.overview.get', { ...(input || {}) }),
+    ),
     listBranches: async () => parseBranchPage(await call('mip.admin.branches.list')),
     createBranch: async input => parseBranch(await call('mip.admin.branches.create', { ...input })),
     updateBranch: async input => parseBranch(await call('mip.admin.branches.update', { ...input })),

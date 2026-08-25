@@ -15,6 +15,7 @@ interface Envelope<T> {
 export const readActions = new Set([
   'mip.admin.session',
   'mip.admin.dashboard',
+  'mip.admin.dashboard.overview.get',
   'mip.admin.branches.list',
   'mip.admin.announcements.scopes',
   'mip.admin.announcements.list',

@@ -7,6 +7,7 @@ const {
 } = require('./capabilities')
 const { createAdminAccess } = require('./access')
 const { createAdminCommunityGovernance } = require('./community-governance')
+const { createDashboardOverview } = require('./dashboard-overview')
 const { createAdminEventComments } = require('./event-comments')
 const { createAdminEvents } = require('./events')
 const { createAdminExports } = require('./exports')
@@ -286,6 +287,11 @@ function createAdminService({
     }
   }
 
+  async function getDashboardOverview(caller, input) {
+    return createDashboardOverview({ access, repository, clock: now })
+      .getOverview(caller, input)
+  }
+
   return {
     activateMessageTemplate,
     cancelMessageCampaignSchedule,
@@ -308,6 +314,7 @@ function createAdminService({
     createBranch,
     createExport,
     getDashboard,
+    getDashboardOverview,
     getEvent,
     getEventCommentAdminState,
     getEventInsights,

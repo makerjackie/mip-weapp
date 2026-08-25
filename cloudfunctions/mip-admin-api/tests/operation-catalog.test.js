@@ -136,6 +136,7 @@ const expectedOperations = Object.freeze({
   'mip.admin.badges.revoke': ['GROWTH', 'MUTATION', 'revokeBadge'],
 
   'mip.admin.dashboard': ['APPLICATION_WORKFLOW', 'QUERY', 'getDashboard'],
+  'mip.admin.dashboard.overview.get': ['APPLICATION_WORKFLOW', 'QUERY', 'getDashboardOverview'],
   'mip.admin.exports.status': ['APPLICATION_WORKFLOW', 'QUERY', 'getExportStatus'],
   'mip.admin.exceptions.list': ['APPLICATION_WORKFLOW', 'QUERY', 'listOperationalExceptions'],
   'mip.admin.exports.create': ['APPLICATION_WORKFLOW', 'MUTATION', 'createExport'],
@@ -186,12 +187,12 @@ function manifest(owner, operations) {
 }
 
 describe('admin operation catalog', () => {
-  it('freezes the exact 115 business actions, owners, and kinds while keeping health separate', () => {
+  it('freezes the exact 116 business actions, owners, and kinds while keeping health separate', () => {
     const handlerActions = Object.keys(actions).filter(action => action !== 'health')
     const expectedActions = Object.keys(expectedOperations)
 
-    assert.equal(expectedActions.length, 115)
-    assert.equal(operationCatalog.length, 115)
+    assert.equal(expectedActions.length, 116)
+    assert.equal(operationCatalog.length, 116)
     assert.deepEqual(sorted(handlerActions), sorted(expectedActions))
     assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(expectedActions))
     assert.equal(operationByAction.health, undefined)
