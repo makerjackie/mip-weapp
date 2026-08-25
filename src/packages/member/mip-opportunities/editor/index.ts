@@ -90,6 +90,15 @@ Page({
         opportunityModule.getCatalogs(),
         this.data.id ? opportunityModule.get(this.data.id) : Promise.resolve(null),
       ])
+      if (detail && !detail.canEdit) {
+        this.setData({
+          state: 'error',
+          message: detail.status === 'ENDED'
+            ? '机会已结束，不能继续编辑。'
+            : '当前机会不能继续编辑。',
+        })
+        return
+      }
       this.applyCatalog(catalog, detail)
       this.setData({ state: 'ready' })
     }

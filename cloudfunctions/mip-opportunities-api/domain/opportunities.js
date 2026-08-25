@@ -18,6 +18,12 @@ const {
   uuid,
 } = require('./common')
 
+const OWNER_EDITABLE_OPPORTUNITY_STATUSES = new Set(['DRAFT', 'PUBLISHED'])
+
+function canOwnerEditOpportunity(status) {
+  return OWNER_EDITABLE_OPPORTUNITY_STATUSES.has(status)
+}
+
 function limit(value, fallback = 12) {
   const parsed = Number(value)
   return Math.min(30, Math.max(1, Number.isInteger(parsed) ? parsed : fallback))
@@ -429,7 +435,7 @@ async function getOpportunity(database, caller, id) {
     referralActive,
     referralTarget,
     interestActive,
-    canEdit: mine && !['UNPUBLISHED', 'ARCHIVED'].includes(row.status),
+    canEdit: mine && canOwnerEditOpportunity(row.status),
   }
 }
 
@@ -615,7 +621,7 @@ async function saveOpportunity(database, contentSafety, caller, input) {
       )
       if (!existing) throw new Error('NOT_FOUND')
       if (existing.owner_user_id !== caller.userId) throw new Error('FORBIDDEN')
-      if (['UNPUBLISHED', 'ARCHIVED'].includes(existing.status)) throw new Error('FORBIDDEN')
+      if (!canOwnerEditOpportunity(existing.status)) throw new Error('FORBIDDEN')
       if (!Number.isInteger(draft.expectedVersion) || draft.expectedVersion !== Number(existing.version)) {
         throw new Error('CONFLICT')
       }
@@ -963,6 +969,7 @@ async function setProfileInterest(database, caller, input) {
 module.exports = {
   assertReferences,
   assertSelectableTags,
+  canOwnerEditOpportunity,
   endOpportunity,
   getCatalogs,
   getOpportunity,
