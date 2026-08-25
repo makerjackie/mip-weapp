@@ -2,13 +2,13 @@ export const ADMIN_RESPONSIVE_PANEL_BREAKPOINT = 960
 
 export type AdminResponsivePanelPlacement = 'bottom' | 'right'
 
-type WindowResizeResult = {
+interface WindowResizeResult {
   size: {
     windowWidth: number
   }
 }
 
-export type ResponsivePanelWindowApi = {
+export interface ResponsivePanelWindowApi {
   getWindowInfo: () => { windowWidth: number }
   onWindowResize: (listener: (result: WindowResizeResult) => void) => void
   offWindowResize: (listener: (result: WindowResizeResult) => void) => void

@@ -101,7 +101,7 @@ describe('MIP admin responsive panel', () => {
 
     expect(source).toContain('createAdminResponsivePanelController(wx')
     expect(source).toContain('this.setData({ placement })')
-    expect(source).not.toMatch(/setData\(\{[^}]*\b(?:visible|query|filter|selected|detail)\b/s)
+    expect(source).not.toMatch(/setData\(\{[^}]*\b(?:visible|query|filter|selected|detail)\b/)
     expect(source).not.toContain('wx.setWindowSize')
   })
 
@@ -137,8 +137,8 @@ describe('MIP admin responsive panel', () => {
     expect(source).toContain('placement="{{placement}}"')
     expect(source).toContain('bind:visible-change="handleVisibleChange"')
     expect(source).toContain('bind:tap="handleClose"')
-    expect(script).toContain("this.triggerEvent('close', { trigger: 'close-button' })")
-    expect(script).toContain("this.triggerEvent('visible-change', {")
+    expect(script).toContain('this.triggerEvent(\'close\', { trigger: \'close-button\' })')
+    expect(script).toContain('this.triggerEvent(\'visible-change\', {')
   })
 
   it('reuses the profiles detail state, content, and handlers without adding business requests', () => {

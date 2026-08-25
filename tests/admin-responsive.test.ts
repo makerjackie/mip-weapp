@@ -146,11 +146,11 @@ describe('MIP admin responsive foundation', () => {
     expectDeclarations(phone, '.mip-admin-record-list', {
       'grid-template-columns': 'minmax(0, 1fr)',
     })
-    expectDeclarations(phone, '.mip-admin-record-header', { 'display': 'none' })
+    expectDeclarations(phone, '.mip-admin-record-header', { display: 'none' })
     expectDeclarations(phone, '.mip-admin-record-row', {
       'grid-template-columns': 'minmax(0, 1fr)',
     })
-    expectDeclarations(phone, '.mip-admin-record-label', { 'display': 'block' })
+    expectDeclarations(phone, '.mip-admin-record-label', { display: 'block' })
   })
 
   it('defines two-column tablet workspaces and three-column media', () => {
@@ -178,11 +178,11 @@ describe('MIP admin responsive foundation', () => {
     expectDeclarations(medium, '.mip-admin-record-list', {
       'grid-template-columns': 'repeat(2, minmax(0, 1fr))',
     })
-    expectDeclarations(medium, '.mip-admin-record-header', { 'display': 'none' })
+    expectDeclarations(medium, '.mip-admin-record-header', { display: 'none' })
     expectDeclarations(medium, '.mip-admin-record-row', {
       'grid-template-columns': 'minmax(0, 1fr)',
     })
-    expectDeclarations(medium, '.mip-admin-record-label', { 'display': 'block' })
+    expectDeclarations(medium, '.mip-admin-record-label', { display: 'block' })
   })
 
   it('defines desktop density without changing page state', () => {
@@ -207,7 +207,7 @@ describe('MIP admin responsive foundation', () => {
       'grid-template-columns': 'repeat(3, minmax(0, 1fr))',
     })
     expectDeclarations(desktop, '.mip-admin-span-wide', { 'grid-column': '1 / -1' })
-    expectDeclarations(desktop, '.mip-admin-record-list', { 'display': 'block' })
+    expectDeclarations(desktop, '.mip-admin-record-list', { display: 'block' })
     expectDeclarations(desktop, '.mip-admin-record-header', {
       'display': 'grid',
       'grid-template-columns': inheritedRecordColumns,
@@ -215,7 +215,7 @@ describe('MIP admin responsive foundation', () => {
     expectDeclarations(desktop, '.mip-admin-record-row', {
       'grid-template-columns': inheritedRecordColumns,
     })
-    expectDeclarations(desktop, '.mip-admin-record-label', { 'display': 'none' })
+    expectDeclarations(desktop, '.mip-admin-record-label', { display: 'none' })
   })
 
   it('uses the shared record contract for managed events without changing page actions', () => {
