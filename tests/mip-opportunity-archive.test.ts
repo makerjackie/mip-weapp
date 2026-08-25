@@ -30,6 +30,7 @@ describe('MIP opportunity archive client contract', () => {
     const source = read('cloudfunctions/mip-opportunities-api/domain/opportunities.js')
     expect(source).toContain('o.status <> \'ARCHIVED\'')
     expect(source).toContain('if (row.status === \'ARCHIVED\') throw new Error(\'NOT_FOUND\')')
-    expect(source).toContain('[\'UNPUBLISHED\', \'ARCHIVED\'].includes(existing.status)')
+    expect(source).toContain('const OWNER_EDITABLE_OPPORTUNITY_STATUSES = new Set([\'DRAFT\', \'PUBLISHED\'])')
+    expect(source).toContain('if (!canOwnerEditOpportunity(existing.status)) throw new Error(\'FORBIDDEN\')')
   })
 })

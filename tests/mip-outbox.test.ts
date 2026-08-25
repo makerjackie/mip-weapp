@@ -37,8 +37,15 @@ describe('MIP durable outbox contract', () => {
     expect(wakeupRolesSource).not.toBeNull()
     const wakeupRoles = [...wakeupRolesSource![1].matchAll(/'([^']+)'/g)].map(match => match[1])
     expect(wakeupRoles).toEqual([
-      'identity', 'events', 'opportunities', 'community', 'commerce',
-      'admin', 'game', 'tasks', 'ledger',
+      'identity',
+      'events',
+      'opportunities',
+      'community',
+      'commerce',
+      'admin',
+      'game',
+      'tasks',
+      'ledger',
     ])
     expect(deployment).toContain('MIP_OUTBOX_FUNCTION_NAME: options.functionNames.outbox')
     expect(deployment).toContain('MIP_OUTBOX_HMAC_SECRET: options.secrets.outboxHmac')
@@ -53,7 +60,7 @@ describe('MIP durable outbox contract', () => {
     const community = read('cloudfunctions/mip-community-api/index.js')
     expect(community).toContain('sourceFunctionName: \'mip-community-api\'')
     expect(community).toContain('wakeOutboxAfterMutation(options')
-    expect(community).toContain("input?.result?.status !== 'PUBLISHED'")
+    expect(community).toContain('input?.result?.status !== \'PUBLISHED\'')
   })
 
   it('uses event-driven bounded draining and triggers external delivery without a timer', () => {

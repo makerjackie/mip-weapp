@@ -199,7 +199,7 @@ describe('mip-weapp UI runtime contract', () => {
     const comments = contract.routes.find(route => route.path === 'packages/member/mip-events/comments/index')
     expect(comments?.states).toEqual(expect.arrayContaining(['ready', 'empty', 'disabled']))
     expect(comments?.acceptStates).toEqual(['ready', 'empty'])
-    expect(comments?.readyAssertion).toBe("state === 'ready' || state === 'empty'")
+    expect(comments?.readyAssertion).toBe('state === \'ready\' || state === \'empty\'')
   })
 
   it('does not render concrete identity, storage, or credential values in WXML', () => {

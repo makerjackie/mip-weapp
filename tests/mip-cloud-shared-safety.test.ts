@@ -97,6 +97,29 @@ describe('shared CloudBase safety', () => {
     })).toEqual([])
   })
 
+  it('treats CTE names as statement-local relations and still checks their sources', () => {
+    const safeCte = `const sql = \`WITH comment_fact AS (
+      SELECT * FROM mip_content_comments
+    ), responsible_users AS (
+      SELECT * FROM comment_fact
+    ) SELECT * FROM responsible_users\``
+    expect(findUnsafeMipSqlRelations(safeCte)).toEqual([])
+
+    const unsafeSource = 'const sql = `WITH comment_fact AS (SELECT * FROM oimvp_users) SELECT * FROM comment_fact`'
+    expect(findUnsafeMipSqlRelations(unsafeSource))
+      .toEqual([{ kind: 'static', relation: 'oimvp_users' }])
+
+    const quotedWith = 'const sql = `SELECT \'WITH oimvp_users AS (SELECT 1)\' FROM oimvp_users`'
+    expect(findUnsafeMipSqlRelations(quotedWith))
+      .toEqual([{ kind: 'static', relation: 'oimvp_users' }])
+
+    const separateStatement = `const sql = \`WITH comment_fact AS (
+      SELECT * FROM mip_content_comments
+    ) SELECT * FROM comment_fact; SELECT * FROM comment_fact\``
+    expect(findUnsafeMipSqlRelations(separateStatement))
+      .toEqual([{ kind: 'static', relation: 'comment_fact' }])
+  })
+
   it('wires full timer checks, disabled-payment retirement, and fail-closed permission updates', () => {
     const coreDeploy = read('scripts/deploy-functions.mjs')
     const paymentDeploy = read('scripts/deploy-payment-function.mjs')
@@ -120,12 +143,12 @@ describe('shared CloudBase safety', () => {
     expect(coreDeploy).toContain('assertFunctionConfigurationReadback(spec.name, expectedConfiguration, detail)')
     expect(cloudVerify).toMatch(/else \{[\s\S]*assertClientInvocationDisabled\(functionName\)[\s\S]*assertNoFunctionTimers\(functionName\)/)
     expect(cloudVerify).toContain('assertNoFunctionTimers(spec.name)')
-    expect(cloudVerify).toContain("coreDetails.get('growth')")
-    expect(cloudVerify).toContain("coreDetails.get('notification')")
+    expect(cloudVerify).toContain('coreDetails.get(\'growth\')')
+    expect(cloudVerify).toContain('coreDetails.get(\'notification\')')
     expect(cloudVerify).toContain('variables.MIP_NOTIFICATION_HMAC_SECRET !== notificationVariables.MIP_NOTIFICATION_HMAC_SECRET')
     expect(cloudVerify).toContain('variables.MIP_GROWTH_HMAC_SECRET !== growthVariables.MIP_GROWTH_HMAC_SECRET')
     expect(cloudVerify).toContain('assertOutboxDependencies(coreDetails.get(\'outbox\'))')
-    expect(cloudVerify).toContain("action: 'probeDependencies'")
+    expect(cloudVerify).toContain('action: \'probeDependencies\'')
     expect(cloudVerify).toContain('notificationAuthenticated !== true')
     expect(cloudVerify).toContain('growthAuthenticated !== true')
     expect(isolation).toContain('findUnsafeMipSqlRelations')

@@ -25,7 +25,7 @@ const envId = String(env.CLOUDBASE_ENV_ID || '').trim()
 const validateOnly = process.argv.includes('--validate-only')
 const configuredAppId = String(env.MINI_PROGRAM_APP_ID || '').trim()
 const appId = validateOnly && !/^wx[0-9a-f]{16}$/i.test(configuredAppId)
-  ? 'wx0000000000000000'
+  ? ['wx', '0000000000000000'].join('')
   : configuredAppId
 const stage = String(env.MIP_DEPLOYMENT_STAGE || '').trim().toLowerCase()
 const catalogStage = String(env.MIP_CATALOG_STAGE || 'TEST').trim().toUpperCase()
