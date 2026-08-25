@@ -47,6 +47,8 @@ export const readActions = new Set([
   'mip.admin.badges.list',
   'mip.admin.badges.awards',
   'mip.admin.orders.list',
+  'mip.admin.knowledge.list',
+  'mip.admin.knowledge.get',
   'mip.admin.exceptions.list',
   'mip.admin.audit.list',
   'mip.admin.exports.status',

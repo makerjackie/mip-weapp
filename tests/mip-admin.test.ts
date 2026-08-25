@@ -93,9 +93,10 @@ describe('MIP admin client module', () => {
     await module.listUsers({ filters: { kind: 'PLAYER' } })
     await module.listUsers({ filters: { kind: 'PLAYER' } })
     expect(source.listUsers).toHaveBeenCalledTimes(1)
-    await module.mutate(async () => ({ ok: true }))
+    await module.users.update({ userId: 'user-a', expectedVersion: 1, fields: { headline: '顾问' } })
     await module.listUsers({ filters: { kind: 'PLAYER' } })
     expect(source.listUsers).toHaveBeenCalledTimes(2)
+    expect(source.updateUser).toHaveBeenCalledTimes(1)
   })
 
   it('caches the branch directory and invalidates it after a successful mutation', async () => {
@@ -104,9 +105,21 @@ describe('MIP admin client module', () => {
     await module.listBranches()
     await module.listBranches()
     expect(source.listBranches).toHaveBeenCalledTimes(1)
-    await module.mutate(async () => ({ ok: true }))
+    await module.governance.createBranch({
+      branchKey: 'guangzhou',
+      name: '广州分会',
+      cityName: '广州',
+      summary: '广州城市分会',
+    })
     await module.listBranches()
     expect(source.listBranches).toHaveBeenCalledTimes(2)
+    expect(source.createBranch).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not expose the raw gateway or a generic mutation escape hatch', () => {
+    const module = createMipAdminModule(gateway())
+    expect(module).not.toHaveProperty('gateway')
+    expect(module).not.toHaveProperty('mutate')
   })
 
   it('caches each community report status and invalidates the list after a mutation', async () => {

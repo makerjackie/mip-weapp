@@ -20,9 +20,6 @@ export function createMipAdminModule(
   options: { pendingExportStore?: PendingAdminExportStore } = {},
 ) {
   const cache = createQueryCache(15_000)
-  const refresh = () => {
-    cache.invalidate('mip-admin')
-  }
   const community = createMipCommunityAdmin(gateway, cache)
   const growth = createMipGrowthAdmin(gateway, cache)
   const events = createMipEventsAdmin(gateway, cache)
@@ -77,11 +74,6 @@ export function createMipAdminModule(
     orders,
     listOperationalExceptions: governance.listOperationalExceptions,
     listAudit: governance.listAudit,
-    async mutate<T>(work: () => Promise<T>) {
-      const result = await work()
-      refresh()
-      return result
-    },
     exportAndOpen: exports.createAndOpen,
     getPendingExportStatus: exports.getPendingStatus,
     resumePendingExport: exports.resumeAndOpen,
@@ -91,7 +83,6 @@ export function createMipAdminModule(
       cache.invalidate('mip-admin:users')
       cache.invalidate('mip-admin:roster')
     },
-    gateway,
   }
 }
 

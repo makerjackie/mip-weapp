@@ -96,6 +96,49 @@ describe('MIP admin transports', () => {
     expect(inMemoryHandler).toHaveBeenCalledTimes(1)
   })
 
+  it('retries knowledge reads, keeps writes single-shot, and never replays business errors', async () => {
+    const knowledgeRead = vi.fn()
+      .mockRejectedValueOnce(new Error('cold start'))
+      .mockResolvedValueOnce({ result: { ok: true, data: { items: [] } } })
+    const readTransport = createCloudBaseAdminTransport({
+      cloudClient: { callFunction: knowledgeRead },
+    })
+
+    await expect(readTransport.request(createAdminRequest('mip.admin.knowledge.list')))
+      .resolves
+      .toEqual({ items: [] })
+    expect(knowledgeRead).toHaveBeenCalledTimes(2)
+
+    const responseLost = vi.fn(async () => {
+      throw new Error('response lost')
+    })
+    const writeTransport = createCloudBaseAdminTransport({
+      cloudClient: { callFunction: responseLost },
+    })
+    await expect(writeTransport.request(createAdminRequest('mip.admin.knowledge.contents.save', {
+      contentId: 'content-a',
+    }))).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE', retryable: true })
+    expect(responseLost).toHaveBeenCalledOnce()
+
+    const businessError = vi.fn(async () => ({
+      result: {
+        ok: false,
+        error: { code: 'CONFLICT', message: '内容状态已变化', retryable: true },
+      },
+    }))
+    const errorTransport = createCloudBaseAdminTransport({
+      cloudClient: { callFunction: businessError },
+    })
+    await expect(errorTransport.request(createAdminRequest('mip.admin.knowledge.get', {
+      contentId: 'content-a',
+    }))).rejects.toMatchObject({
+      code: 'CONFLICT',
+      message: '内容状态已变化',
+      retryable: true,
+    })
+    expect(businessError).toHaveBeenCalledOnce()
+  })
+
   it('exposes the same stable error contract for remote and in-memory failures', async () => {
     const callFunction = vi.fn(async () => ({
       result: {
