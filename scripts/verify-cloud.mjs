@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import fs from 'node:fs'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 import process from 'node:process'
 import { assertNoTimerTriggers } from './lib/cloud-function-safety.mjs'
@@ -21,6 +22,9 @@ import {
   RUNTIME_TABLE_PRIVILEGES,
   runtimeUserForEnvironment,
 } from './lib/mysql-privilege-assert.mjs'
+
+const require = createRequire(import.meta.url)
+const { signInternalEvent: signOutboxInternalEvent } = require('../cloudfunctions/mip-outbox-worker/lib/internal-auth')
 
 const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
@@ -80,7 +84,12 @@ for (const spec of coreManifest) {
 }
 
 assertRuntimeAccount(coreDetails.get('identity'))
-assertOutboxEnvironment(coreDetails.get('outbox'))
+assertOutboxEnvironment(
+  coreDetails.get('outbox'),
+  coreDetails.get('growth'),
+  coreDetails.get('notification'),
+)
+assertOutboxDependencies(coreDetails.get('outbox'))
 assertNotificationEnvironment(coreDetails.get('notifications'), coreDetails.get('notification'))
 assertRefundDispatchEnvironment(coreDetails.get('admin'))
 assertKnowledgeEnvironment(coreDetails.get('admin'))
@@ -299,14 +308,41 @@ function assertOwnerTestMembershipEnvironment(detail) {
   }
 }
 
-function assertOutboxEnvironment(detail) {
+function assertOutboxEnvironment(detail, growthDetail, notificationDetail) {
   const variables = environmentVariables(detail)
+  const growthVariables = environmentVariables(growthDetail)
+  const notificationVariables = environmentVariables(notificationDetail)
   if (variables.MIP_NOTIFICATION_FUNCTION_NAME !== functionNames.notification
     || variables.MIP_GROWTH_FUNCTION_NAME !== functionNames.growth
     || String(variables.MIP_OUTBOX_HMAC_SECRET || '').length < 32
     || String(variables.MIP_NOTIFICATION_HMAC_SECRET || '').length < 32
-    || String(variables.MIP_GROWTH_HMAC_SECRET || '').length < 32) {
+    || String(variables.MIP_GROWTH_HMAC_SECRET || '').length < 32
+    || variables.MIP_NOTIFICATION_HMAC_SECRET !== notificationVariables.MIP_NOTIFICATION_HMAC_SECRET
+    || variables.MIP_GROWTH_HMAC_SECRET !== growthVariables.MIP_GROWTH_HMAC_SECRET) {
     throw new Error('Outbox worker internal function links or HMAC configuration are incomplete')
+  }
+}
+
+function assertOutboxDependencies(detail) {
+  const variables = environmentVariables(detail)
+  const request = {
+    action: 'probeDependencies',
+    appId,
+    timestamp: Date.now(),
+  }
+  const response = callCloudbase(root, 'manageFunctions', {
+    action: 'invokeFunction',
+    functionName: functionNames.outbox,
+    params: {
+      ...request,
+      signature: signOutboxInternalEvent(request, variables.MIP_OUTBOX_HMAC_SECRET),
+    },
+  }, 120000)
+  const result = cloudFunctionResult(response)
+  if (result?.ok !== true
+    || result?.data?.notificationAuthenticated !== true
+    || result?.data?.growthAuthenticated !== true) {
+    throw new Error('Outbox worker internal function authentication probe failed')
   }
 }
 

@@ -10,6 +10,45 @@ const notificationSecret = 'notification-secret-with-at-least-thirty-two-bytes'
 const growthSecret = 'growth-secret-with-at-least-thirty-two-bytes'
 
 describe('outbox internal clients', () => {
+  it('proves the real chained HMAC boundary without writing downstream facts', async () => {
+    const now = 1_780_000_000_000
+    const clients = createInternalClients({
+      cloud: {
+        async callFunction(input) {
+          const received = {
+            ...input.data,
+            userInfo: { appId: 'framework-injected', openId: 'framework-injected' },
+          }
+          if (input.name === 'mip-notification-worker') {
+            verifyNotification(received, {
+              secret: notificationSecret,
+              allowedAppIds: new Set(['wx-app']),
+              now,
+            })
+          }
+          else {
+            verifyGrowth(received, {
+              secret: growthSecret,
+              allowedAppIds: new Set(['wx-app']),
+              now,
+            })
+          }
+          return { result: { ok: false, error: { code: 'VALIDATION_FAILED' } } }
+        },
+      },
+      notificationFunctionName: 'mip-notification-worker',
+      notificationSecret,
+      growthFunctionName: 'mip-growth-api',
+      growthSecret,
+      now: () => now,
+    })
+
+    assert.deepEqual(await clients.probeDependencies('wx-app'), {
+      growthAuthenticated: true,
+      notificationAuthenticated: true,
+    })
+  })
+
   it('uses each target function HMAC contract and propagates only successful envelopes', async () => {
     const calls = []
     const now = 1_780_000_000_000

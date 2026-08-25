@@ -10,6 +10,44 @@ function createInternalClients(options) {
   const now = options.now || Date.now
 
   return {
+    async probeDependencies(appId) {
+      assertFunctionName(options.notificationFunctionName)
+      assertSecret(options.notificationSecret, 'NOTIFICATION_CLIENT_CONFIG_REQUIRED')
+      assertFunctionName(options.growthFunctionName)
+      assertSecret(options.growthSecret, 'GROWTH_CLIENT_CONFIG_REQUIRED')
+
+      const notificationEvent = {
+        action: 'publishMessage',
+        appId,
+        message: {},
+        timestamp: Number(now()),
+      }
+      const notificationSignature = signNotificationEvent(notificationEvent, options.notificationSecret)
+      const notificationAuthenticated = await invokeExpectingError(
+        options.cloud,
+        options.notificationFunctionName,
+        { ...notificationEvent, signature: notificationSignature },
+        'VALIDATION_FAILED',
+      )
+
+      const growthEvent = {
+        action: 'recordConfirmedEvent',
+        appId,
+        userId: '',
+        sourceEventType: '',
+        sourceEventId: '',
+        timestamp: Number(now()),
+      }
+      const growthSignature = signGrowthEvent(growthEvent, options.growthSecret)
+      const growthAuthenticated = await invokeExpectingError(
+        options.cloud,
+        options.growthFunctionName,
+        { ...growthEvent, signature: growthSignature },
+        'VALIDATION_FAILED',
+      )
+      return { growthAuthenticated, notificationAuthenticated }
+    },
+
     async publishMessage(appId, message) {
       assertFunctionName(options.notificationFunctionName)
       assertSecret(options.notificationSecret, 'NOTIFICATION_CLIENT_CONFIG_REQUIRED')
@@ -98,6 +136,12 @@ async function invoke(cloud, functionName, data) {
     throw new Error(/^[A-Z][A-Z0-9_]{2,63}$/.test(code) ? code : 'INTERNAL_FUNCTION_FAILED')
   }
   return envelope.data
+}
+
+async function invokeExpectingError(cloud, functionName, data, expectedCode) {
+  const response = await cloud.callFunction({ name: functionName, data })
+  const envelope = response?.result
+  return envelope?.ok === false && text(envelope?.error?.code) === expectedCode
 }
 
 function assertFunctionName(value) {

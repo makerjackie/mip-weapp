@@ -31,6 +31,7 @@ const service = createOutboxService({
 
 exports.main = createHandler({
   service,
+  probeDependencies: input => clients.probeDependencies(input.appId),
   async health() {
     await database.one('SELECT 1 AS ok')
     return {

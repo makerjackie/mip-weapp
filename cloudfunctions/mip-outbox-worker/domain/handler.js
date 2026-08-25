@@ -17,6 +17,9 @@ function createHandler(options) {
       }
     }
     try {
+      if (event.action === 'probeDependencies') {
+        return success(await options.probeDependencies(options.verifyInternal(event)))
+      }
       if (event.action === 'runBatch') {
         return success(await options.service.runBatch(options.verifyInternal(event)))
       }

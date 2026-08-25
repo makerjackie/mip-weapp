@@ -13,7 +13,9 @@ function stableJson(value) {
 }
 
 function businessPayload(event) {
-  const body = Object.fromEntries(Object.entries(event).filter(([key]) => !['signature', 'timestamp'].includes(key)))
+  const body = Object.fromEntries(
+    Object.entries(event).filter(([key]) => !['signature', 'timestamp', 'userInfo'].includes(key)),
+  )
   return [
     Number(event.timestamp),
     text(event.action),

@@ -7,7 +7,7 @@ const { signInternalEvent, verifyInternalEvent } = require('../lib/internal-auth
 const secret = 'notification-internal-secret-longer-than-thirty-two'
 const now = 1_800_000_000_000
 
-test('signature covers the complete message body', () => {
+test('signature covers the complete business body and tolerates CloudBase caller metadata', () => {
   const event = {
     action: 'publishMessage',
     timestamp: now,
@@ -19,7 +19,10 @@ test('signature covers the complete message body', () => {
     },
   }
   const signed = { ...event, signature: signInternalEvent(event, secret) }
-  assert.equal(verifyInternalEvent(signed, {
+  assert.equal(verifyInternalEvent({
+    ...signed,
+    userInfo: { appId: 'framework-injected', openId: 'framework-injected' },
+  }, {
     secret,
     now,
     allowedAppIds: new Set(['wx-app']),
@@ -27,6 +30,14 @@ test('signature covers the complete message body', () => {
   assert.throws(() => verifyInternalEvent({
     ...signed,
     message: { ...signed.message, body: '已被修改' },
+  }, {
+    secret,
+    now,
+    allowedAppIds: new Set(['wx-app']),
+  }), /FORBIDDEN/)
+  assert.throws(() => verifyInternalEvent({
+    ...signed,
+    unsignedBusinessField: true,
   }, {
     secret,
     now,
