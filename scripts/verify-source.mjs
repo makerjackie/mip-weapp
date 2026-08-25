@@ -109,7 +109,7 @@ assert(runtimeConfig.includes('membershipFunctionName: __MIP_IDENTITY_FUNCTION_N
 assert(appCss.includes('@source "./**/*.{wxml,js,ts}"'), 'Tailwind v4 source glob is missing')
 assert(!pageScripts.includes('wx.cloud.') && !pageScripts.includes('wx.requestPayment'), 'Pages must call domain modules instead of platform APIs')
 assert(!/\bwx\.(?:saveFile|removeSavedFile)\b/.test(clientSources), 'Client source uses deprecated saved-file APIs')
-assert(!/MIP_DB_CONNECTION_URI|MIP_LEDGER_SECRET|MIP_IDENTITY_PEPPER|MIP_MEDIA_SCOPE_SECRET|MIP_PHONE_ENCRYPTION_KEY/.test(clientSources), 'Server-only MIP configuration entered client source')
+assert(!/MIP_DB_CONNECTION_URI|MIP_LEDGER_SECRET|MIP_TEST_MEMBERSHIP_HMAC_SECRET|MIP_IDENTITY_PEPPER|MIP_MEDIA_SCOPE_SECRET|MIP_PHONE_ENCRYPTION_KEY/.test(clientSources), 'Server-only MIP configuration entered client source')
 assert(packageJson.scripts['cloud:auth'] === 'node scripts/cloudbase-auth.mjs', 'cloud:auth must use the API-key-only entrypoint')
 assert(packageJson.scripts['cloud:auth:device'] === 'node scripts/cloudbase-device-auth.mjs', 'Maintainer device authorization entrypoint is missing')
 assert(scriptsWithDeviceAuth.length === 1 && scriptsWithDeviceAuth[0] === 'scripts/cloudbase-device-auth.mjs', 'Device authorization must exist only in the explicit maintainer emergency command')
@@ -296,6 +296,8 @@ const messageSchedulerRecovery = read('scripts/lib/message-scheduler-recovery.mj
 const cloudVerify = read('scripts/verify-cloud.mjs')
 const demoSeed = read('scripts/seed-demo.mjs')
 const ownerBootstrap = read('scripts/bootstrap-owner.mjs')
+const ownerTestMembership = read('scripts/manage-owner-test-membership.mjs')
+const ownerTestMembershipContract = `${ownerTestMembership}\n${read('scripts/lib/mip-owner-test-membership.mjs')}`
 const removedLegacyArtifacts = [
   'assets/demo',
   'cloudfunctions/membership-api',
@@ -323,9 +325,10 @@ for (const [label, source] of [
   ['cloud verification', cloudVerify],
   ['demo seed', demoSeed],
   ['owner bootstrap', ownerBootstrap],
+  ['owner test membership', ownerTestMembership],
 ]) {
   assert(!legacySqlReference(source), `${label} references a legacy shared SQL table`)
-  assert(!source.includes('MEMBERSHIP_'), `${label} reads legacy MEMBERSHIP_* configuration`)
+  assert(!/(?:^|[^A-Z0-9_])MEMBERSHIP_[A-Z0-9_]+/.test(source), `${label} reads legacy MEMBERSHIP_* configuration`)
 }
 assert(cloudDeploy.includes('createMipCoreFunctionManifest')
   && cloudDeploy.includes('buildRuntimeRevokeStatements')
@@ -370,6 +373,11 @@ assert(demoSeed.includes('MIP_CATALOG_STAGE=TEST')
   && read('database/mysql/mip/seed.demo.json').includes('"replaceBeforeProduction": true'), 'Demo data must stay replaceable and TEST-only')
 assert(ownerBootstrap.includes('\'PLATFORM_OWNER\'')
   && ownerBootstrap.includes('mip_audit_logs'), 'Owner bootstrap must create an audited MIP platform role')
+assert(ownerTestMembershipContract.includes('--confirm-test-membership=')
+  && ownerTestMembershipContract.includes('--confirm-app-id=')
+  && ownerTestMembershipContract.includes('--confirm-ledger=')
+  && ownerTestMembership.includes('signInternalRequest(request, secret)')
+  && !ownerTestMembershipContract.includes('manageMysqlDatabase'), 'Owner TEST membership must use the protected ledger instead of direct SQL')
 
 for (const [script, expected] of [
   ['database:setup', 'node scripts/apply-mip-schema.mjs'],
@@ -379,6 +387,7 @@ for (const [script, expected] of [
   ['outbox:run', 'node scripts/run-outbox.mjs'],
   ['message-campaigns:run-due', 'node scripts/run-message-campaigns.mjs'],
   ['refunds:run', 'node scripts/run-refunds.mjs'],
+  ['membership:test', 'node scripts/manage-owner-test-membership.mjs'],
 ]) {
   assert(packageJson.scripts[script] === expected, `${script} does not use the isolated MIP workflow`)
 }

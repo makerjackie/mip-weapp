@@ -2,6 +2,7 @@
 
 const cloud = require('wx-server-sdk')
 const ledger = require('./domain/ledger')
+const ownerTestMembership = require('./domain/owner-test-membership')
 const { assertInternalRequest } = require('./lib/internal-auth')
 const { mysqlDatabase } = require('./lib/mysql')
 const { createOutboxWakeup } = require('./lib/outbox-wakeup')
@@ -18,7 +19,24 @@ const authOptions = {
   allowedAppIds,
   secrets: [process.env.MIP_LEDGER_SECRET, process.env.MIP_LEDGER_PREVIOUS_SECRET],
 }
-const outboxMutationActions = new Set(['applyPaymentCallback', 'applyRefundCallback'])
+const ownerTestMembershipActions = new Set([
+  'grantOwnerTestMembership',
+  'revokeOwnerTestMembership',
+])
+const ownerTestMembershipAuthOptions = {
+  allowedAppIds,
+  secrets: [process.env.MIP_TEST_MEMBERSHIP_HMAC_SECRET],
+}
+const ownerTestMembershipEnvironment = Object.freeze({
+  deploymentStage: process.env.MIP_DEPLOYMENT_STAGE,
+  catalogStage: process.env.MIP_CATALOG_STAGE,
+  paymentMode: process.env.MIP_PAYMENT_MODE,
+})
+const outboxMutationActions = new Set([
+  'applyPaymentCallback',
+  'applyRefundCallback',
+  ...ownerTestMembershipActions,
+])
 const outboxWakeup = createOutboxWakeup({
   cloud,
   functionName: process.env.MIP_OUTBOX_FUNCTION_NAME,
@@ -37,6 +55,16 @@ const handlers = Object.freeze(Object.assign(Object.create(null), {
   markRefundFailed: (db, event, appId) => ledger.markRefundFailed(db, { ...event, appId }),
   markRefundManualReview: (db, event, appId) => ledger.markRefundManualReview(db, { ...event, appId }),
   applyRefundCallback: (db, event, appId) => ledger.applyRefundCallback(db, { ...event, appId }),
+  grantOwnerTestMembership: (db, event, appId) => ownerTestMembership.grantOwnerTestMembership(db, {
+    ...event,
+    ...ownerTestMembershipEnvironment,
+    appId,
+  }),
+  revokeOwnerTestMembership: (db, event, appId) => ownerTestMembership.revokeOwnerTestMembership(db, {
+    ...event,
+    ...ownerTestMembershipEnvironment,
+    appId,
+  }),
 }))
 
 exports.main = async (event = {}) => {
@@ -50,7 +78,10 @@ exports.main = async (event = {}) => {
       await mysqlDatabase().one('SELECT 1 AS ok')
       return { ok: true, data: { service: 'mip-payment-ledger', persistence: 'cloudbase-mysql' } }
     }
-    const appId = assertInternalRequest(request, authOptions)
+    const appId = assertInternalRequest(
+      request,
+      ownerTestMembershipActions.has(action) ? ownerTestMembershipAuthOptions : authOptions,
+    )
     if (!Object.hasOwn(handlers, action)) {
       throw new Error('UNSUPPORTED_ACTION')
     }
@@ -72,4 +103,10 @@ exports.main = async (event = {}) => {
   }
 }
 
-exports._test = { assertInternalRequest, handlers, outboxMutationActions }
+exports._test = {
+  assertInternalRequest,
+  handlers,
+  outboxMutationActions,
+  ownerTestMembershipActions,
+  ownerTestMembershipEnvironment,
+}

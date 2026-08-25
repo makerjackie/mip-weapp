@@ -28,6 +28,8 @@ const signedFieldsByAction = Object.freeze(Object.assign(Object.create(null), {
     'action', 'appId', 'signedAt', 'nonce', 'refundId', 'merchantOrderNo',
     'merchantRefundNo', 'providerRefundId', 'amountCents',
   ],
+  grantOwnerTestMembership: ['action', 'appId', 'signedAt', 'nonce', 'planKey'],
+  revokeOwnerTestMembership: ['action', 'appId', 'signedAt', 'nonce', 'planKey'],
 }))
 
 function canonical(value) {
@@ -78,4 +80,11 @@ function assertInternalRequest(event, options = {}) {
   return appId
 }
 
-module.exports = { assertInternalRequest, canonical, signedPayload }
+function signInternalRequest(event, secret) {
+  if (typeof secret !== 'string' || secret.length < 32) {
+    throw new Error('INTERNAL_AUTH_NOT_CONFIGURED')
+  }
+  return createHmac('sha256', secret).update(canonical(signedPayload(event))).digest('hex')
+}
+
+module.exports = { assertInternalRequest, canonical, signInternalRequest, signedPayload }

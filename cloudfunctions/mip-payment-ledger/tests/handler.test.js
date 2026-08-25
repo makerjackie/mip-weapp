@@ -15,12 +15,14 @@ const legalActions = [
   'markRefundFailed',
   'markRefundManualReview',
   'applyRefundCallback',
+  'grantOwnerTestMembership',
+  'revokeOwnerTestMembership',
 ]
 
 function loadHandlerWithTrustedAuth() {
   const indexPath = require.resolve('../index')
   delete require.cache[indexPath]
-  const metrics = { databaseFactories: 0, queries: 0 }
+  const metrics = { authSecrets: [], databaseFactories: 0, queries: 0 }
   const originalLoad = Module._load
   Module._load = function load(request, parent, isMain) {
     if (request === 'wx-server-sdk') {
@@ -30,7 +32,12 @@ function loadHandlerWithTrustedAuth() {
       }
     }
     if (request === './lib/internal-auth' && parent?.filename === indexPath) {
-      return { assertInternalRequest: () => 'app-1' }
+      return {
+        assertInternalRequest(event, options) {
+          metrics.authSecrets.push(options.secrets)
+          return 'app-1'
+        },
+      }
     }
     if (request === './lib/mysql' && parent?.filename === indexPath) {
       return {
@@ -92,5 +99,28 @@ describe('mip payment ledger action dispatch', () => {
   it('keeps health outside the signed business action table', () => {
     const { ledgerFunction } = loadHandlerWithTrustedAuth()
     assert.equal(Object.hasOwn(ledgerFunction._test.handlers, 'health'), false)
+  })
+
+  it('uses a dedicated secret domain for Owner TEST membership actions', async () => {
+    const previousLedgerSecret = process.env.MIP_LEDGER_SECRET
+    const previousTestSecret = process.env.MIP_TEST_MEMBERSHIP_HMAC_SECRET
+    process.env.MIP_LEDGER_SECRET = 'ledger-secret'.repeat(4)
+    process.env.MIP_TEST_MEMBERSHIP_HMAC_SECRET = 'test-membership-secret'.repeat(2)
+    const { ledgerFunction, metrics } = loadHandlerWithTrustedAuth()
+    if (previousLedgerSecret === undefined) delete process.env.MIP_LEDGER_SECRET
+    else process.env.MIP_LEDGER_SECRET = previousLedgerSecret
+    if (previousTestSecret === undefined) delete process.env.MIP_TEST_MEMBERSHIP_HMAC_SECRET
+    else process.env.MIP_TEST_MEMBERSHIP_HMAC_SECRET = previousTestSecret
+    const originalError = console.error
+    console.error = () => {}
+    try {
+      await ledgerFunction.main({ action: 'grantOwnerTestMembership' })
+      await ledgerFunction.main({ action: 'getPayableOrder' })
+    }
+    finally {
+      console.error = originalError
+    }
+    assert.deepEqual(metrics.authSecrets[0], ['test-membership-secrettest-membership-secret'])
+    assert.deepEqual(metrics.authSecrets[1], ['ledger-secretledger-secretledger-secretledger-secret', undefined])
   })
 })

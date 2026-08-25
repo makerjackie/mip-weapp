@@ -27,6 +27,8 @@ const env = loadCaseEnv(root)
 const envId = String(env.CLOUDBASE_ENV_ID || '').trim()
 const appId = String(env.MINI_PROGRAM_APP_ID || '').trim()
 const paymentMode = String(env.MIP_PAYMENT_MODE || 'disabled').trim().toLowerCase()
+const catalogStage = String(env.MIP_CATALOG_STAGE || 'TEST').trim().toUpperCase()
+const deploymentStage = String(env.MIP_DEPLOYMENT_STAGE || '').trim().toLowerCase()
 const functionNames = resolveMipFunctionNames(env)
 const coreManifest = createMipCoreFunctionManifest(functionNames)
 const confirmedEnv = process.argv.find(value => value.startsWith('--confirm-env='))?.slice('--confirm-env='.length)
@@ -36,6 +38,10 @@ if (!envId || confirmedEnv !== envId || !/^wx[0-9a-f]{16}$/i.test(appId)) {
 }
 if (!['disabled', 'test', 'live'].includes(paymentMode)) {
   throw new Error('MIP_PAYMENT_MODE must be disabled, test, or live')
+}
+if (!['TEST', 'LIVE'].includes(catalogStage)
+  || !['development', 'test', 'staging', 'production'].includes(deploymentStage)) {
+  throw new Error('MIP catalog or deployment stage is invalid')
 }
 
 bindAndRequireMysqlEnvironment(root, envId)
@@ -78,6 +84,7 @@ assertOutboxEnvironment(coreDetails.get('outbox'))
 assertNotificationEnvironment(coreDetails.get('notifications'), coreDetails.get('notification'))
 assertRefundDispatchEnvironment(coreDetails.get('admin'))
 assertKnowledgeEnvironment(coreDetails.get('admin'))
+assertOwnerTestMembershipEnvironment(coreDetails.get('ledger'))
 for (const spec of coreManifest) {
   if (spec.clientInvokable) {
     assertClientInvocationEnabled(spec.name)
@@ -137,6 +144,7 @@ fs.writeFileSync(path.join(root, '.tmp', 'verify-cloud-result.json'), `${JSON.st
   disabledPaymentFunctionsProtected,
   functionTimersVerifiedAbsent: true,
   workerTimersVerifiedAbsent: true,
+  ownerTestMembershipRestricted: true,
   verifiedAt: new Date().toISOString(),
 }, null, 2)}\n`)
 console.log('[mip-cloud-verify] schema, least-privilege grants, functions, health, and protected invocation rules verified')
@@ -273,6 +281,22 @@ function assertRuntimeAccount(referenceDetail) {
     requiredMap: RUNTIME_TABLE_PRIVILEGES,
     grantee,
   })
+}
+
+function assertOwnerTestMembershipEnvironment(detail) {
+  const variables = environmentVariables(detail)
+  if (variables.MIP_DEPLOYMENT_STAGE !== deploymentStage
+    || variables.MIP_CATALOG_STAGE !== catalogStage
+    || variables.MIP_PAYMENT_MODE !== paymentMode) {
+    throw new Error('Payment ledger test-membership environment does not match the verified deployment')
+  }
+  const shouldEnable = ['development', 'test'].includes(deploymentStage)
+    && catalogStage === 'TEST'
+    && ['disabled', 'test'].includes(paymentMode)
+  const configured = String(variables.MIP_TEST_MEMBERSHIP_HMAC_SECRET || '').length >= 32
+  if (configured !== shouldEnable) {
+    throw new Error('Payment ledger test-membership maintenance boundary is not converged')
+  }
 }
 
 function assertOutboxEnvironment(detail) {

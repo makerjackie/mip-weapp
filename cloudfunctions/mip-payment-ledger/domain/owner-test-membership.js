@@ -1,0 +1,356 @@
+'use strict'
+
+const { createHash, randomUUID } = require('node:crypto')
+const { rebuildMembershipEntitlements } = require('./ledger')
+
+const ownerTestMembershipSource = 'OWNER_TEST_MEMBERSHIP'
+const platformScopeId = '00000000-0000-0000-0000-000000000000'
+
+async function grantOwnerTestMembership(db, input, options = {}) {
+  assertOwnerTestMembershipEnvironment(input)
+  const createId = options.createId || randomUUID
+  const now = options.now || (() => new Date())
+  return db.transaction(async (tx) => {
+    const { owner, plan } = await ownerTestMembershipContext(tx, input, { requireActivePlan: true })
+    const managed = await activeOwnerTestMembershipOrders(tx, input.appId, owner.id)
+    if (managed.length > 1) throw new Error('TEST_MEMBERSHIP_STATE_CONFLICT')
+    if (managed.length === 1) {
+      assertManagedTestMembershipOrder(managed[0], plan)
+      return result('GRANT', true, true, true)
+    }
+    const existingMembership = await activeMembership(tx, input.appId, owner.id)
+    if (existingMembership) return result('GRANT', true, false, true)
+
+    const paidAt = now()
+    if (!Number.isFinite(paidAt.getTime())) throw new Error('TEST_MEMBERSHIP_TIME_INVALID')
+    const orderId = createId()
+    const attemptId = createId()
+    const providerTransactionId = testProviderNumber('TESTPAY', orderId)
+    const requestHash = createHash('sha256').update(JSON.stringify({
+      appId: input.appId,
+      operation: 'GRANT',
+      orderId,
+      planKey: plan.plan_key,
+      userId: owner.id,
+    })).digest('hex')
+    await tx.query(
+      `INSERT INTO mip_orders (
+        id, app_id, user_id, order_type, membership_plan_id, merchant_order_no,
+        provider_transaction_id, idempotency_key, amount_cents, currency, status,
+        product_snapshot_json, paid_at
+      ) VALUES (?, ?, ?, 'MEMBERSHIP', ?, ?, NULL, ?, ?, 'CNY', 'PAYMENT_CREATED', ?, NULL)`,
+      [
+        orderId,
+        input.appId,
+        owner.id,
+        plan.id,
+        testProviderNumber('MIPT', orderId),
+        `owner-test-membership:${orderId}`,
+        Number(plan.price_cents),
+        JSON.stringify(ownerTestMembershipSnapshot(plan)),
+      ],
+    )
+    await tx.query(
+      `INSERT INTO mip_payment_attempts (
+        id, app_id, order_id, provider, provider_payment_id, prepay_id,
+        request_hash, status
+      ) VALUES (?, ?, ?, 'TEST', NULL, NULL, ?, 'PARAMETERS_ISSUED')`,
+      [attemptId, input.appId, orderId, requestHash],
+    )
+    assertAffected(await tx.query(
+      `UPDATE mip_orders
+       SET status = 'PAID', provider_transaction_id = ?, paid_at = ?, version = version + 1
+       WHERE app_id = ? AND id = ? AND status = 'PAYMENT_CREATED' AND version = 1`,
+      [providerTransactionId, paidAt, input.appId, orderId],
+    ), 'ORDER_STATUS_CONFLICT')
+    assertAffected(await tx.query(
+      `UPDATE mip_payment_attempts
+       SET provider_payment_id = ?, status = 'SUCCEEDED', version = version + 1
+       WHERE app_id = ? AND id = ? AND order_id = ?
+         AND provider = 'TEST' AND status = 'PARAMETERS_ISSUED' AND version = 1`,
+      [providerTransactionId, input.appId, attemptId, orderId],
+    ), 'PAYMENT_ATTEMPT_STATUS_CONFLICT')
+    await rebuildMembershipEntitlements(tx, input.appId, owner.id, { createId, now })
+    await writeOutbox(tx, {
+      id: createId(),
+      appId: input.appId,
+      aggregateType: 'ORDER',
+      aggregateId: orderId,
+      eventType: 'membership.payment_confirmed',
+      sourceVersion: 2,
+      payload: { orderId, userId: owner.id, orderType: 'MEMBERSHIP' },
+    })
+    await writeAudit(tx, {
+      appId: input.appId,
+      action: 'OWNER_TEST_MEMBERSHIP_GRANTED',
+      resourceType: 'ORDER',
+      resourceId: orderId,
+      metadata: { catalogStage: 'TEST', planKey: plan.plan_key, source: ownerTestMembershipSource },
+    })
+    return result('GRANT', true, true, false)
+  })
+}
+
+async function revokeOwnerTestMembership(db, input, options = {}) {
+  assertOwnerTestMembershipEnvironment(input)
+  const createId = options.createId || randomUUID
+  const now = options.now || (() => new Date())
+  return db.transaction(async (tx) => {
+    const { owner, plan } = await ownerTestMembershipContext(tx, input, { requireActivePlan: false })
+    const managed = await activeOwnerTestMembershipOrders(tx, input.appId, owner.id)
+    if (managed.length > 1) throw new Error('TEST_MEMBERSHIP_STATE_CONFLICT')
+    if (managed.length === 0) {
+      return result('REVOKE', Boolean(await activeMembership(tx, input.appId, owner.id)), false, true)
+    }
+    const order = managed[0]
+    assertManagedTestMembershipOrder(order, plan)
+    const revokedAt = now()
+    if (!Number.isFinite(revokedAt.getTime())) throw new Error('TEST_MEMBERSHIP_TIME_INVALID')
+    const refundId = createId()
+    const providerRefundId = testProviderNumber('TESTREFUND', refundId)
+    await tx.query(
+      `INSERT INTO mip_refunds (
+        id, app_id, order_id, requested_by_user_id, provider_refund_id,
+        merchant_refund_no, idempotency_key, amount_cents, reason, status, refunded_at
+      ) VALUES (?, ?, ?, NULL, NULL, ?, ?, ?, '撤销 Owner 测试会员', 'PENDING', NULL)`,
+      [
+        refundId,
+        input.appId,
+        order.id,
+        testProviderNumber('MIPTR', refundId),
+        `owner-test-membership-revoke:${order.id}`,
+        Number(order.amount_cents),
+      ],
+    )
+    assertAffected(await tx.query(
+      `UPDATE mip_orders
+       SET status = 'REFUND_PENDING', version = version + 1
+       WHERE app_id = ? AND id = ? AND status = 'PAID' AND version = ?`,
+      [input.appId, order.id, order.version],
+    ), 'ORDER_STATUS_CONFLICT')
+    assertAffected(await tx.query(
+      `UPDATE mip_refunds
+       SET status = 'SUCCEEDED', provider_refund_id = ?, refunded_at = ?, version = version + 1
+       WHERE app_id = ? AND id = ? AND order_id = ? AND status = 'PENDING' AND version = 1`,
+      [providerRefundId, revokedAt, input.appId, refundId, order.id],
+    ), 'REFUND_STATUS_CONFLICT')
+    assertAffected(await tx.query(
+      `UPDATE mip_orders
+       SET status = 'REFUNDED', version = version + 1
+       WHERE app_id = ? AND id = ? AND status = 'REFUND_PENDING' AND version = ?`,
+      [input.appId, order.id, Number(order.version) + 1],
+    ), 'ORDER_STATUS_CONFLICT')
+    await rebuildMembershipEntitlements(tx, input.appId, owner.id, { createId, now })
+    await writeOutbox(tx, {
+      id: createId(),
+      appId: input.appId,
+      aggregateType: 'REFUND',
+      aggregateId: refundId,
+      eventType: 'membership.refund_confirmed',
+      sourceVersion: 2,
+      payload: { refundId, orderId: order.id, userId: owner.id, orderStatus: 'REFUNDED' },
+    })
+    await writeAudit(tx, {
+      appId: input.appId,
+      action: 'OWNER_TEST_MEMBERSHIP_REVOKED',
+      resourceType: 'REFUND',
+      resourceId: refundId,
+      metadata: { catalogStage: 'TEST', orderId: order.id, planKey: plan.plan_key, source: ownerTestMembershipSource },
+    })
+    return result('REVOKE', Boolean(await activeMembership(tx, input.appId, owner.id)), true, false)
+  })
+}
+
+function assertOwnerTestMembershipEnvironment(input) {
+  const deploymentStage = String(input.deploymentStage || '').trim().toLowerCase()
+  const catalogStage = String(input.catalogStage || '').trim().toUpperCase()
+  const paymentMode = String(input.paymentMode || '').trim().toLowerCase()
+  if (!['development', 'test'].includes(deploymentStage)
+    || catalogStage !== 'TEST'
+    || !['disabled', 'test'].includes(paymentMode)) {
+    throw new Error('TEST_MEMBERSHIP_DISABLED')
+  }
+  if (!/^[a-z0-9][a-z0-9_-]{1,63}$/.test(String(input.planKey || ''))) {
+    throw new Error('TEST_MEMBERSHIP_PLAN_INVALID')
+  }
+}
+
+async function ownerTestMembershipContext(tx, input, options = {}) {
+  const owners = await tx.query(
+    `SELECT user_row.id
+     FROM mip_users user_row
+     INNER JOIN mip_user_identities identity
+       ON identity.app_id = user_row.app_id AND identity.user_id = user_row.id
+        AND identity.provider = 'WECHAT_MINIPROGRAM'
+     INNER JOIN mip_admin_role_bindings binding
+       ON binding.app_id = user_row.app_id AND binding.user_id = user_row.id
+        AND binding.scope_type = 'PLATFORM' AND binding.scope_id = ?
+        AND binding.role_key = 'PLATFORM_OWNER' AND binding.status = 'ACTIVE'
+     WHERE user_row.app_id = ? AND user_row.status = 'ACTIVE'
+       AND NOT EXISTS (
+         SELECT 1 FROM mip_app_settings demo_manifest
+         WHERE demo_manifest.app_id = user_row.app_id
+           AND demo_manifest.setting_key LIKE 'demo_seed_manifest%'
+           AND JSON_UNQUOTE(JSON_EXTRACT(demo_manifest.value_json, '$.is_demo')) = '1'
+           AND JSON_SEARCH(
+             JSON_EXTRACT(demo_manifest.value_json, '$.recordIds.users'),
+             'one', user_row.id
+           ) IS NOT NULL
+       )
+     ORDER BY user_row.id LIMIT 2 FOR UPDATE`,
+    [platformScopeId, input.appId],
+  )
+  if (owners.length !== 1) throw new Error('OWNER_NOT_UNIQUE')
+  const plan = await tx.one(
+    `SELECT id, plan_key, catalog_stage, name, duration_days, price_cents,
+            currency, benefits_json, status, version
+     FROM mip_membership_plans
+     WHERE app_id = ? AND catalog_stage = 'TEST' AND plan_key = ?
+     LIMIT 1 FOR UPDATE`,
+    [input.appId, input.planKey],
+  )
+  if (!plan || (options.requireActivePlan && plan.status !== 'ACTIVE')) {
+    throw new Error('TEST_MEMBERSHIP_PLAN_NOT_AVAILABLE')
+  }
+  const durationDays = Number(plan.duration_days)
+  const amountCents = Number(plan.price_cents)
+  if (!Number.isInteger(durationDays)
+    || durationDays < 1
+    || !Number.isInteger(amountCents)
+    || amountCents < 1
+    || plan.currency !== 'CNY') {
+    throw new Error('TEST_MEMBERSHIP_PLAN_INVALID')
+  }
+  return { owner: owners[0], plan }
+}
+
+async function activeOwnerTestMembershipOrders(tx, appId, userId) {
+  return tx.query(
+    `SELECT order_row.id, order_row.membership_plan_id, order_row.amount_cents,
+            order_row.status, order_row.version, plan.catalog_stage, plan.plan_key
+     FROM mip_orders order_row
+     INNER JOIN mip_membership_plans plan
+       ON plan.app_id = order_row.app_id AND plan.id = order_row.membership_plan_id
+     INNER JOIN mip_membership_entitlements entitlement
+       ON entitlement.app_id = order_row.app_id AND entitlement.order_id = order_row.id
+        AND entitlement.user_id = order_row.user_id
+     WHERE order_row.app_id = ? AND order_row.user_id = ?
+       AND order_row.order_type = 'MEMBERSHIP' AND order_row.status = 'PAID'
+       AND JSON_UNQUOTE(JSON_EXTRACT(order_row.product_snapshot_json, '$.operationSource')) = ?
+       AND entitlement.status = 'ACTIVE'
+       AND entitlement.starts_at <= UTC_TIMESTAMP(3) AND entitlement.ends_at > UTC_TIMESTAMP(3)
+     ORDER BY entitlement.ends_at DESC, order_row.id LIMIT 2 FOR UPDATE`,
+    [appId, userId, ownerTestMembershipSource],
+  )
+}
+
+function assertManagedTestMembershipOrder(order, plan) {
+  if (!order
+    || order.status !== 'PAID'
+    || order.catalog_stage !== 'TEST'
+    || order.membership_plan_id !== plan.id
+    || order.plan_key !== plan.plan_key) {
+    throw new Error('TEST_MEMBERSHIP_STATE_CONFLICT')
+  }
+}
+
+async function activeMembership(tx, appId, userId) {
+  return tx.one(
+    `SELECT entitlement.id
+     FROM mip_membership_entitlements entitlement
+     INNER JOIN mip_orders order_row
+       ON order_row.app_id = entitlement.app_id AND order_row.id = entitlement.order_id
+     WHERE entitlement.app_id = ? AND entitlement.user_id = ?
+       AND entitlement.status = 'ACTIVE'
+       AND entitlement.starts_at <= UTC_TIMESTAMP(3) AND entitlement.ends_at > UTC_TIMESTAMP(3)
+       AND order_row.status = 'PAID'
+     ORDER BY entitlement.ends_at DESC, entitlement.id LIMIT 1 FOR UPDATE`,
+    [appId, userId],
+  )
+}
+
+function ownerTestMembershipSnapshot(plan) {
+  const benefits = parseJson(plan.benefits_json)
+  return {
+    planKey: plan.plan_key,
+    name: plan.name,
+    durationDays: Number(plan.duration_days),
+    priceCents: Number(plan.price_cents),
+    currency: 'CNY',
+    catalogStage: 'TEST',
+    benefits: Array.isArray(benefits)
+      ? benefits.filter(value => typeof value === 'string').slice(0, 30)
+      : [],
+    version: Number(plan.version),
+    attribution: { sourceType: 'PLATFORM' },
+    operationSource: ownerTestMembershipSource,
+  }
+}
+
+function result(operation, membershipActive, managed, idempotent) {
+  return {
+    operation,
+    status: membershipActive ? 'ACTIVE' : 'INACTIVE',
+    membershipActive,
+    managed,
+    idempotent,
+  }
+}
+
+function testProviderNumber(prefix, id) {
+  const compact = String(id || '').replace(/[^0-9A-Za-z]/g, '').toUpperCase()
+  if (!compact) throw new Error('TEST_MEMBERSHIP_ID_INVALID')
+  return `${prefix}${compact}`.slice(0, 64)
+}
+
+function assertAffected(value, code) {
+  if (!value || value.affectedRows !== 1) throw new Error(code)
+}
+
+async function writeOutbox(tx, event) {
+  await tx.query(
+    `INSERT INTO mip_outbox_events (
+      id, app_id, aggregate_type, aggregate_id, event_type, source_version, payload_json
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [
+      event.id,
+      event.appId,
+      event.aggregateType,
+      event.aggregateId,
+      event.eventType,
+      event.sourceVersion,
+      JSON.stringify(event.payload),
+    ],
+  )
+}
+
+async function writeAudit(tx, audit) {
+  await tx.query(
+    `INSERT INTO mip_audit_logs (
+      app_id, actor_type, scope_type, action, resource_type, resource_id, metadata_json
+    ) VALUES (?, 'PAYMENT', 'PLATFORM', ?, ?, ?, ?)`,
+    [
+      audit.appId,
+      audit.action,
+      audit.resourceType,
+      audit.resourceId,
+      JSON.stringify(audit.metadata),
+    ],
+  )
+}
+
+function parseJson(value) {
+  if (value && typeof value === 'object') return value
+  try {
+    return JSON.parse(value || '{}')
+  }
+  catch {
+    return {}
+  }
+}
+
+module.exports = {
+  assertOwnerTestMembershipEnvironment,
+  grantOwnerTestMembership,
+  revokeOwnerTestMembership,
+}

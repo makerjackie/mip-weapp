@@ -22,6 +22,8 @@ const legalActions = [
   'markRefundFailed',
   'markRefundManualReview',
   'applyRefundCallback',
+  'grantOwnerTestMembership',
+  'revokeOwnerTestMembership',
 ]
 
 function sign(event) {
@@ -116,5 +118,22 @@ describe('mip payment ledger internal authentication', () => {
       secrets: [secret],
       now: () => now,
     }), 'app-1')
+  })
+
+  it('signs every field that selects an Owner TEST membership operation', () => {
+    const event = {
+      action: 'grantOwnerTestMembership',
+      appId: 'app-1',
+      signedAt: now,
+      nonce: 'nonce-1',
+      planKey: 'five_year_test',
+    }
+    event.signature = sign(event)
+    event.planKey = 'another_test_plan'
+    assert.throws(() => assertInternalRequest(event, {
+      allowedAppIds: new Set(['app-1']),
+      secrets: [secret],
+      now: () => now,
+    }), /FORBIDDEN/)
   })
 })

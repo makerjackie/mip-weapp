@@ -268,6 +268,7 @@ const secrets = Object.freeze({
   phoneEncryption: stableSecretValues.MIP_PHONE_ENCRYPTION_KEY,
   eventToken: stableSecretValues.MIP_EVENT_TOKEN_SECRET,
   ledger: stableSecretValues.MIP_LEDGER_SECRET,
+  testMembershipHmac: stableSecretValues.MIP_TEST_MEMBERSHIP_HMAC_SECRET,
   growthHmac: stableSecretValues.MIP_GROWTH_HMAC_SECRET,
   notificationHmac: stableSecretValues.MIP_NOTIFICATION_HMAC_SECRET,
   outboxHmac: stableSecretValues.MIP_OUTBOX_HMAC_SECRET,
@@ -921,7 +922,16 @@ function environmentForRole(role, options) {
       MIP_SUBSCRIBE_TEMPLATES_JSON: options.subscribeTemplatesJson,
       MIP_CUSTOMER_SERVICE_ENABLED: String(options.customerServiceEnabled),
     },
-    ledger: { MIP_LEDGER_SECRET: options.secrets.ledger },
+    ledger: {
+      MIP_LEDGER_SECRET: options.secrets.ledger,
+      MIP_CATALOG_STAGE: options.catalogStage,
+      MIP_PAYMENT_MODE: options.paymentMode,
+      ...(['development', 'test'].includes(options.deploymentStage)
+        && options.catalogStage === 'TEST'
+        && ['disabled', 'test'].includes(options.paymentMode)
+        ? { MIP_TEST_MEMBERSHIP_HMAC_SECRET: options.secrets.testMembershipHmac }
+        : {}),
+    },
     notification: {
       MIP_NOTIFICATION_HMAC_SECRET: options.secrets.notificationHmac,
       MIP_NOTIFICATION_ENCRYPTION_KEY: options.secrets.notificationEncryption,
