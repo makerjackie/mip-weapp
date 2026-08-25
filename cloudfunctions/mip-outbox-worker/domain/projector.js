@@ -1102,18 +1102,54 @@ async function projectReferral(database, event) {
 async function projectInterest(database, event) {
   assertAggregate(event, 'PROFILE_INTEREST')
   const row = await database.one(
-    `SELECT i.status, i.version, i.target_user_id, i.source_type, i.source_id
+    `SELECT i.status, i.version, i.actor_user_id, i.target_user_id, i.source_type, i.source_id
      FROM mip_profile_interests i
-     INNER JOIN mip_users u
-       ON u.app_id = i.app_id AND u.id = i.target_user_id AND u.status = 'ACTIVE'
-     WHERE i.app_id = ? AND i.id = ?`,
-    [event.app_id, event.aggregate_id],
+     INNER JOIN mip_users actor
+       ON actor.app_id = i.app_id AND actor.id = i.actor_user_id AND actor.status = 'ACTIVE'
+     INNER JOIN mip_users recipient
+       ON recipient.app_id = i.app_id AND recipient.id = i.target_user_id AND recipient.status = 'ACTIVE'
+     LEFT JOIN mip_opportunities opportunity
+       ON i.source_type = 'OPPORTUNITY' AND opportunity.app_id = i.app_id
+         AND opportunity.id = i.source_id AND opportunity.owner_user_id = i.target_user_id
+         AND opportunity.status IN ('PUBLISHED', 'ENDED')
+     LEFT JOIN mip_cooperation_cards cooperation
+       ON i.source_type = 'COOPERATION_CARD' AND cooperation.app_id = i.app_id
+         AND cooperation.id = i.source_id AND cooperation.owner_user_id = i.target_user_id
+         AND cooperation.status = 'PUBLISHED'
+     LEFT JOIN mip_super_cases super_case
+       ON i.source_type = 'SUPER_CASE' AND super_case.app_id = i.app_id
+         AND super_case.id = i.source_id AND super_case.owner_user_id = i.target_user_id
+         AND super_case.status = 'PUBLISHED'
+     LEFT JOIN mip_users profile_source
+       ON i.source_type = 'PROFILE' AND profile_source.app_id = i.app_id
+         AND profile_source.id = i.source_id AND profile_source.id = i.target_user_id
+         AND profile_source.status = 'ACTIVE'
+     LEFT JOIN mip_profiles source_profile
+       ON i.source_type = 'PROFILE' AND source_profile.app_id = profile_source.app_id
+         AND source_profile.user_id = profile_source.id
+     WHERE i.app_id = ? AND i.id = ? AND i.status = 'ACTIVE' AND i.version = ?
+       AND NOT EXISTS (
+         SELECT 1 FROM mip_user_blocks visibility_block
+         WHERE visibility_block.app_id = i.app_id AND visibility_block.status = 'ACTIVE'
+           AND (
+             (visibility_block.blocker_user_id = i.actor_user_id
+               AND visibility_block.blocked_user_id = i.target_user_id)
+             OR
+             (visibility_block.blocker_user_id = i.target_user_id
+               AND visibility_block.blocked_user_id = i.actor_user_id)
+           )
+       )
+       AND (
+         (i.source_type = 'OPPORTUNITY' AND opportunity.id IS NOT NULL)
+         OR (i.source_type = 'COOPERATION_CARD' AND cooperation.id IS NOT NULL)
+         OR (i.source_type = 'SUPER_CASE' AND super_case.id IS NOT NULL)
+         OR (i.source_type = 'PROFILE' AND source_profile.user_id IS NOT NULL)
+       )`,
+    [event.app_id, event.aggregate_id, event.source_version],
   )
   if (!row || row.status !== 'ACTIVE' || Number(row.version) !== Number(event.source_version)) {
     return projection([], [], 'FACT_NO_LONGER_CURRENT')
   }
-  const source = await activeInterestSource(database, event.app_id, row.source_type, row.source_id)
-  if (!source) return projection([], [], 'FACT_NO_LONGER_CURRENT')
   const labels = {
     OPPORTUNITY: ['opportunity-interest', '机会收到新的关注', '你的机会收到新的感兴趣标记。'],
     COOPERATION_CARD: ['cooperation-interest', '合作卡收到新的关注', '你的合作卡收到新的感兴趣标记。'],
@@ -1121,6 +1157,7 @@ async function projectInterest(database, event) {
     PROFILE: ['profile-interest', '公开档案收到新的关注', '有人对你的公开档案标记感兴趣。'],
   }
   const label = labels[row.source_type]
+  if (!label) return projection([], [], 'FACT_NO_LONGER_CURRENT')
   const target = row.source_type === 'OPPORTUNITY'
     ? { targetType: 'OPPORTUNITY', targetId: row.source_id }
     : {}
@@ -1137,21 +1174,6 @@ async function projectInterest(database, event) {
       },
     }),
   ], [], 'PROJECTED')
-}
-
-async function activeInterestSource(database, appId, sourceType, sourceId) {
-  const queries = {
-    OPPORTUNITY: `SELECT id FROM mip_opportunities
-      WHERE app_id = ? AND id = ? AND status IN ('PUBLISHED', 'ENDED')`,
-    COOPERATION_CARD: `SELECT id FROM mip_cooperation_cards
-      WHERE app_id = ? AND id = ? AND status = 'PUBLISHED'`,
-    SUPER_CASE: `SELECT id FROM mip_super_cases
-      WHERE app_id = ? AND id = ? AND status = 'PUBLISHED'`,
-    PROFILE: `SELECT target.id FROM mip_users target
-      INNER JOIN mip_profiles profile ON profile.app_id = target.app_id AND profile.user_id = target.id
-      WHERE target.app_id = ? AND target.id = ? AND target.status = 'ACTIVE'`,
-  }
-  return queries[sourceType] ? database.one(queries[sourceType], [appId, sourceId]) : null
 }
 
 function projection(notifications, growthEvents, reason, continuation = null) {
