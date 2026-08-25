@@ -91,14 +91,14 @@ Page({
 
   async onPullDownRefresh() {
     try {
-      await this.loadDetail(true)
+      await this.loadDetail(true, true)
     }
     finally {
       wx.stopPullDownRefresh()
     }
   },
 
-  async loadDetail(preserveResult = false) {
+  async loadDetail(preserveResult = false, force = false) {
     const catalogId = this.data.catalogId
     if (!catalogId) {
       this.setData({ state: 'error', message: '盲盒参数无效。' })
@@ -109,8 +109,8 @@ Page({
     }
     try {
       const [detail, catalogPage] = await Promise.all([
-        mipGameModule.gateway.getBlindBox(catalogId),
-        mipGameModule.gateway.listBlindBoxes(),
+        mipGameModule.query.getBlindBox(catalogId, force),
+        mipGameModule.query.listBlindBoxes(force),
       ])
       this.setData({
         state: 'ready',
@@ -159,7 +159,7 @@ Page({
     })
     const animation = wait(900)
     try {
-      const result = await mipGameModule.gateway.drawBlindBox(detail.id, stableRequestId)
+      const result = await mipGameModule.mutation.drawBlindBox(detail.id, stableRequestId)
       try {
         mipGamePendingDrawStore.clear(drawUserId, detail.id, stableRequestId)
       }
@@ -219,8 +219,8 @@ Page({
   async refreshCatalogFact() {
     try {
       const [detail, catalogPage] = await Promise.all([
-        mipGameModule.gateway.getBlindBox(this.data.catalogId),
-        mipGameModule.gateway.listBlindBoxes(),
+        mipGameModule.query.getBlindBox(this.data.catalogId, true),
+        mipGameModule.query.listBlindBoxes(true),
       ])
       if (this.active) {
         this.setData({ detail: detailView(detail), coinBalance: catalogPage.coinBalance })

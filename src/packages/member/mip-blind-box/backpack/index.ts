@@ -45,19 +45,22 @@ Page({
 
   async onPullDownRefresh() {
     try {
-      await this.loadInventory()
+      await this.loadInventory(true)
     }
     finally {
       wx.stopPullDownRefresh()
     }
   },
 
-  async loadInventory() {
+  async loadInventory(force = false) {
     if (!this.data.items.length) {
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const inventory = await mipGameModule.gateway.getBlindBoxInventory(this.data.catalogId || undefined)
+      const inventory = await mipGameModule.query.getBlindBoxInventory(
+        this.data.catalogId || undefined,
+        force,
+      )
       this.setData({
         state: inventory.items.length ? 'ready' : 'empty',
         items: inventory.items.map(inventoryView),

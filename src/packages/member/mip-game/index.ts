@@ -34,29 +34,29 @@ Page({
     message: '',
   },
 
-  onShow() { void this.load() },
+  onShow() { void this.load(true) },
 
   async onPullDownRefresh() {
     try {
-      await this.load()
+      await this.load(true)
     }
     finally {
       wx.stopPullDownRefresh()
     }
   },
 
-  async load() {
+  async load(force = false) {
     this.setData({ state: 'loading', message: '' })
     try {
-      const overview = await mipGameModule.gateway.getOverview()
+      const overview = await mipGameModule.query.getOverview(undefined, force)
       if (!overview.season) {
         this.setData({ state: 'empty', overview, matches: [], rankings: [] })
         return
       }
       const rankingType: GameRankingType = overview.season.periodKind === 'YEAR' ? 'TEAM_YEAR' : 'TEAM_HALF_YEAR'
       const [ranking, history] = await Promise.all([
-        mipGameModule.gateway.listRankings(overview.season.id, rankingType),
-        mipGameModule.gateway.listHistory(overview.season.id),
+        mipGameModule.query.listRankings(overview.season.id, rankingType, undefined, force),
+        mipGameModule.query.listHistory(overview.season.id, force),
       ])
       this.setData({
         state: 'ready',
@@ -81,22 +81,27 @@ Page({
       return
     }
     this.setData({ rankingType, branchId: '' })
-    await this.loadRanking()
+    await this.loadRanking(true)
   },
 
   async changeBranch(event: WechatMiniprogram.TouchEvent) {
     this.setData({ branchId: String(event.currentTarget.dataset.id || '') })
-    await this.loadRanking()
+    await this.loadRanking(true)
   },
 
-  async loadRanking() {
+  async loadRanking(force = false) {
     const seasonId = this.data.overview?.season?.id
     if (!seasonId || this.data.loadingRanking) {
       return
     }
     this.setData({ loadingRanking: true, message: '' })
     try {
-      const ranking = await mipGameModule.gateway.listRankings(seasonId, this.data.rankingType, this.data.branchId || undefined)
+      const ranking = await mipGameModule.query.listRankings(
+        seasonId,
+        this.data.rankingType,
+        this.data.branchId || undefined,
+        force,
+      )
       this.setData({ rankings: ranking.items, branches: ranking.branches })
     }
     catch (error) {

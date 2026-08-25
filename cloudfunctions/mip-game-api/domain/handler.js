@@ -56,18 +56,48 @@ const messages = Object.freeze({
   VALIDATION_FAILED: '提交内容格式不正确，请检查后重试',
 })
 
+const CONTRACT_VERSION = 1
+
+function isRecord(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function businessInput(value) {
+  const {
+    action: _action,
+    contractVersion: _contractVersion,
+    input: _input,
+    ...input
+  } = value
+  return input
+}
+
+function normalizeRequest(event) {
+  if (!isRecord(event)) throw new Error('VALIDATION_FAILED')
+  const action = typeof event.action === 'string' ? event.action : ''
+  if (event.contractVersion === undefined) {
+    return { action, input: businessInput(event), legacy: true }
+  }
+  if (event.contractVersion !== CONTRACT_VERSION
+    || !isRecord(event.input)
+    || Object.keys(event).some(key => !['contractVersion', 'action', 'input'].includes(key))) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  return { action, input: businessInput(event.input), legacy: false }
+}
+
 function createHandler(options) {
   return async function handler(event = {}) {
     try {
-      if (event.action === 'health') return success(await options.health())
-      const action = typeof event.action === 'string' ? event.action : ''
+      const { action, input } = normalizeRequest(event)
+      if (action === 'health') return success(await options.health())
       const dispatch = actions[action]
       if (!dispatch) throw new Error('NOT_FOUND')
-      assertNoClientScore(event)
+      assertNoClientScore(input)
       const caller = await options.resolveCaller()
       if (action.startsWith('admin.')) await options.assertAdminReady(caller)
       else await options.assertPlayerReady(caller)
-      return success(await dispatch(options.service, caller, event))
+      return success(await dispatch(options.service, caller, input))
     }
     catch (error) {
       return failure(error)
@@ -90,4 +120,4 @@ function failure(error) {
   }
 }
 
-module.exports = { actions, createHandler, failure, success }
+module.exports = { CONTRACT_VERSION, actions, createHandler, failure, normalizeRequest, success }

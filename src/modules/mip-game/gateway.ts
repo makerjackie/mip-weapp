@@ -1,29 +1,11 @@
 import type {
-  AssignableGameMember,
-  BlindBoxCardAdmin,
-  BlindBoxCardDraft,
-  BlindBoxCatalogAdmin,
-  BlindBoxCatalogDraft,
-  BlindBoxCatalogSummary,
-  BlindBoxCoinEntry,
-  BlindBoxDetail,
-  BlindBoxDrawResult,
-  BlindBoxInventoryItem,
-  GameAdminSession,
-  GameMatch,
-  GameMemberAssignment,
-  GameOverview,
-  GameRankingPage,
-  GameRankingType,
-  GameRules,
-  GameSeason,
-  GameSeasonDraft,
-  GameTeam,
-  GameTeamDetail,
-  GameTeamDraft,
+  MipGameAction,
+  MipGameActionInputMap,
+  MipGameActionResultMap,
   MipGameGateway,
+  MipGameRequest,
 } from './types'
-import { MipGameError } from './types'
+import { MIP_GAME_CONTRACT_VERSION, MipGameError } from './types'
 
 interface GameEnvelope<T> {
   ok: boolean
@@ -32,7 +14,7 @@ interface GameEnvelope<T> {
 }
 
 export interface MipGameTransport {
-  invoke: (action: string, data?: Record<string, unknown>) => Promise<unknown>
+  invoke: (request: MipGameRequest) => Promise<unknown>
 }
 
 function unwrap<T>(value: unknown): T {
@@ -51,38 +33,45 @@ function unwrap<T>(value: unknown): T {
 }
 
 export function createMipGameGateway(transport: MipGameTransport): MipGameGateway {
-  async function call<T>(action: string, data: Record<string, unknown> = {}) {
-    return unwrap<T>(await transport.invoke(action, data))
+  async function call<A extends MipGameAction>(
+    action: A,
+    input: MipGameActionInputMap[A],
+  ): Promise<MipGameActionResultMap[A]> {
+    return unwrap<MipGameActionResultMap[A]>(await transport.invoke({
+      contractVersion: MIP_GAME_CONTRACT_VERSION,
+      action,
+      input,
+    }))
   }
   return {
-    listBlindBoxes: () => call<{ coinBalance: number, items: BlindBoxCatalogSummary[] }>('listBlindBoxes'),
-    getBlindBox: catalogId => call<BlindBoxDetail>('getBlindBox', { catalogId }),
-    drawBlindBox: (catalogId, requestId) => call<BlindBoxDrawResult>('drawBlindBox', { catalogId, requestId }),
-    getBlindBoxInventory: catalogId => call<{ items: BlindBoxInventoryItem[] }>('getBlindBoxInventory', { catalogId }),
-    listBlindBoxCoinEntries: limit => call<{ coinBalance: number, items: BlindBoxCoinEntry[] }>('listBlindBoxCoinEntries', { limit }),
-    getOverview: seasonId => call<GameOverview>('getOverview', { seasonId }),
-    getRules: seasonId => call<{ seasonId: string, seasonName: string, rulesText: string, rules: GameRules }>('getRules', { seasonId }),
-    getTeam: teamId => call<GameTeamDetail>('getTeam', { teamId }),
-    listHistory: seasonId => call<{ season: GameSeason | null, items: GameMatch[] }>('listHistory', { seasonId }),
-    listRankings: (seasonId, rankingType, branchId) => call<GameRankingPage>('listRankings', { seasonId, rankingType, branchId }),
-    getAdminSession: () => call<GameAdminSession>('admin.getSession'),
-    listAdminRankings: (seasonId, rankingType, branchId) => call<GameRankingPage>('admin.listRankings', { seasonId, rankingType, branchId }),
-    listSeasons: () => call<{ items: GameSeason[] }>('admin.listSeasons'),
-    saveSeason: (input: { seasonId?: string, expectedVersion?: number, season: GameSeasonDraft }) => call<GameSeason>('admin.saveSeason', input),
-    changeSeasonStatus: (seasonId, expectedVersion, status) => call<GameSeason>('admin.changeSeasonStatus', { seasonId, expectedVersion, status }),
-    listTeams: seasonId => call<{ items: GameTeam[] }>('admin.listTeams', { seasonId }),
-    saveTeam: (input: { teamId?: string, expectedVersion?: number, team: GameTeamDraft }) => call<GameTeam>('admin.saveTeam', input),
-    listAssignableMembers: (seasonId, query) => call<{ items: AssignableGameMember[] }>('admin.listAssignableMembers', { seasonId, query }),
-    replaceTeamMembers: (seasonId: string, teamId: string, expectedVersion: number, members: GameMemberAssignment[]) => call('admin.replaceTeamMembers', { seasonId, teamId, expectedVersion, members }),
-    listAdminMatches: seasonId => call<{ items: GameMatch[] }>('admin.listMatches', { seasonId }),
-    saveWeeklyMatch: match => call<GameMatch>('admin.saveWeeklyMatch', { match }),
-    finalizeWeeklyMatch: (matchId, expectedVersion) => call<GameMatch>('admin.finalizeWeeklyMatch', { matchId, expectedVersion }),
-    generateRankingSnapshot: (seasonId: string, rankingType: GameRankingType) => call('admin.generateRankingSnapshot', { seasonId, rankingType }),
-    adminListBlindBoxCatalogs: () => call<{ items: BlindBoxCatalogAdmin[] }>('admin.listBlindBoxCatalogs'),
-    adminSaveBlindBoxCatalog: (input: { catalogId?: string, expectedVersion?: number, catalog: BlindBoxCatalogDraft }) => call<BlindBoxCatalogAdmin>('admin.saveBlindBoxCatalog', input),
+    listBlindBoxes: () => call('listBlindBoxes', {}),
+    getBlindBox: catalogId => call('getBlindBox', { catalogId }),
+    drawBlindBox: (catalogId, requestId) => call('drawBlindBox', { catalogId, requestId }),
+    getBlindBoxInventory: catalogId => call('getBlindBoxInventory', { catalogId }),
+    listBlindBoxCoinEntries: limit => call('listBlindBoxCoinEntries', { limit }),
+    getOverview: seasonId => call('getOverview', { seasonId }),
+    getRules: seasonId => call('getRules', { seasonId }),
+    getTeam: teamId => call('getTeam', { teamId }),
+    listHistory: seasonId => call('listHistory', { seasonId }),
+    listRankings: (seasonId, rankingType, branchId) => call('listRankings', { seasonId, rankingType, branchId }),
+    getAdminSession: () => call('admin.getSession', {}),
+    listAdminRankings: (seasonId, rankingType, branchId) => call('admin.listRankings', { seasonId, rankingType, branchId }),
+    listSeasons: () => call('admin.listSeasons', {}),
+    saveSeason: input => call('admin.saveSeason', input),
+    changeSeasonStatus: (seasonId, expectedVersion, status) => call('admin.changeSeasonStatus', { seasonId, expectedVersion, status }),
+    listTeams: seasonId => call('admin.listTeams', { seasonId }),
+    saveTeam: input => call('admin.saveTeam', input),
+    listAssignableMembers: (seasonId, query) => call('admin.listAssignableMembers', { seasonId, query }),
+    replaceTeamMembers: (seasonId, teamId, expectedVersion, members) => call('admin.replaceTeamMembers', { seasonId, teamId, expectedVersion, members }),
+    listAdminMatches: seasonId => call('admin.listMatches', { seasonId }),
+    saveWeeklyMatch: match => call('admin.saveWeeklyMatch', { match }),
+    finalizeWeeklyMatch: (matchId, expectedVersion) => call('admin.finalizeWeeklyMatch', { matchId, expectedVersion }),
+    generateRankingSnapshot: (seasonId, rankingType) => call('admin.generateRankingSnapshot', { seasonId, rankingType }),
+    adminListBlindBoxCatalogs: () => call('admin.listBlindBoxCatalogs', {}),
+    adminSaveBlindBoxCatalog: input => call('admin.saveBlindBoxCatalog', input),
     adminChangeBlindBoxCatalogStatus: (catalogId, expectedVersion, status) => call('admin.changeBlindBoxCatalogStatus', { catalogId, expectedVersion, status }),
-    adminListBlindBoxCards: catalogId => call<{ items: BlindBoxCardAdmin[] }>('admin.listBlindBoxCards', { catalogId }),
-    adminSaveBlindBoxCard: (input: { cardId?: string, expectedVersion?: number, card: BlindBoxCardDraft }) => call<BlindBoxCardAdmin>('admin.saveBlindBoxCard', input),
+    adminListBlindBoxCards: catalogId => call('admin.listBlindBoxCards', { catalogId }),
+    adminSaveBlindBoxCard: input => call('admin.saveBlindBoxCard', input),
     adminChangeBlindBoxCardStatus: (cardId, expectedVersion, status) => call('admin.changeBlindBoxCardStatus', { cardId, expectedVersion, status }),
   }
 }

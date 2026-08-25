@@ -36,19 +36,19 @@ Page({
 
   async onPullDownRefresh() {
     try {
-      await this.loadEntries()
+      await this.loadEntries(true)
     }
     finally {
       wx.stopPullDownRefresh()
     }
   },
 
-  async loadEntries() {
+  async loadEntries(force = false) {
     if (!this.data.items.length) {
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const page = await mipGameModule.gateway.listBlindBoxCoinEntries(50)
+      const page = await mipGameModule.query.listBlindBoxCoinEntries(50, force)
       this.setData({
         state: page.items.length ? 'ready' : 'empty',
         coinBalance: page.coinBalance,

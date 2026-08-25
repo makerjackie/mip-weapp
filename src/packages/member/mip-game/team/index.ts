@@ -35,7 +35,7 @@ Page({
     }
     this.setData({ state: 'loading', message: '' })
     try {
-      const team = await mipGameModule.gateway.getTeam(this.data.teamId)
+      const team = await mipGameModule.query.getTeam(this.data.teamId)
       this.setData({
         state: 'ready',
         team: {

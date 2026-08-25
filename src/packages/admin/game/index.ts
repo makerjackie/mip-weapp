@@ -53,27 +53,27 @@ Page({
     message: '',
   },
 
-  onShow() { void this.load() },
+  onShow() { void this.load(true) },
   async onPullDownRefresh() {
     try {
-      await this.load()
+      await this.load(true)
     }
     finally {
       wx.stopPullDownRefresh()
     }
   },
 
-  async load() {
+  async load(force = false) {
     this.setData({ state: 'loading', message: '' })
     try {
-      await mipGameModule.gateway.getAdminSession()
-      const result = await mipGameModule.gateway.listSeasons()
+      await mipGameModule.query.getAdminSession(force)
+      const result = await mipGameModule.query.listSeasons(force)
       const selectedSeasonId = this.data.selectedSeasonId && result.items.some(item => item.id === this.data.selectedSeasonId)
         ? this.data.selectedSeasonId
         : (result.items[0]?.id || '')
       this.setData({ seasons: result.items, selectedSeasonId, state: 'ready' })
       if (selectedSeasonId) {
-        await this.loadSeasonData()
+        await this.loadSeasonData(force)
       }
       else {
         this.setData({ teams: [], matches: [], branches: [] })
@@ -88,7 +88,7 @@ Page({
     }
   },
 
-  async loadSeasonData() {
+  async loadSeasonData(force = false) {
     const seasonId = this.data.selectedSeasonId
     if (!seasonId) {
       return
@@ -96,9 +96,9 @@ Page({
     const season = this.data.seasons.find(item => item.id === seasonId)
     const rankingType: GameRankingType = season?.periodKind === 'YEAR' ? 'TEAM_YEAR' : 'TEAM_HALF_YEAR'
     const [teams, matches, ranking] = await Promise.all([
-      mipGameModule.gateway.listTeams(seasonId),
-      mipGameModule.gateway.listAdminMatches(seasonId),
-      mipGameModule.gateway.listAdminRankings(seasonId, rankingType),
+      mipGameModule.query.listTeams(seasonId, force),
+      mipGameModule.query.listAdminMatches(seasonId, force),
+      mipGameModule.query.listAdminRankings(seasonId, rankingType, undefined, force),
     ])
     this.setData({ teams: teams.items, matches: matches.items, branches: ranking.branches })
   },
@@ -107,7 +107,7 @@ Page({
     const selectedSeasonId = String(event.currentTarget.dataset.id || '')
     this.setData({ selectedSeasonId, memberPanelOpen: false, message: '' })
     try {
-      await this.loadSeasonData()
+      await this.loadSeasonData(true)
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '赛季数据加载失败' })
@@ -176,7 +176,7 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      const saved = await mipGameModule.gateway.saveSeason({
+      const saved = await mipGameModule.mutation.saveSeason({
         seasonId: this.data.editingSeasonId || undefined,
         expectedVersion: this.data.editingSeasonId ? this.data.expectedSeasonVersion : undefined,
         season: {
@@ -213,7 +213,7 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      await mipGameModule.gateway.changeSeasonStatus(season.id, season.version, status)
+      await mipGameModule.mutation.changeSeasonStatus(season.id, season.version, status)
       await this.load()
     }
     catch (error) {
@@ -233,7 +233,7 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      await mipGameModule.gateway.saveTeam({ team: {
+      await mipGameModule.mutation.saveTeam({ team: {
         seasonId: this.data.selectedSeasonId,
         branchId: this.data.branches[this.data.teamBranchIndex]?.id,
         name: this.data.teamName,
@@ -257,7 +257,7 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      const result = await mipGameModule.gateway.listAssignableMembers(this.data.selectedSeasonId)
+      const result = await mipGameModule.query.listAssignableMembers(this.data.selectedSeasonId, undefined, true)
       this.setData({
         memberPanelOpen: true,
         memberTeamId: team.id,
@@ -301,7 +301,7 @@ Page({
       .map(item => ({ memberRef: item.memberRef, role: item.selectedRole }))
     this.setData({ processing: true, message: '' })
     try {
-      await mipGameModule.gateway.replaceTeamMembers(
+      await mipGameModule.mutation.replaceTeamMembers(
         this.data.selectedSeasonId,
         this.data.memberTeamId,
         this.data.memberTeamVersion,
@@ -339,7 +339,7 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      await mipGameModule.gateway.saveWeeklyMatch({
+      await mipGameModule.mutation.saveWeeklyMatch({
         seasonId: this.data.selectedSeasonId,
         teamAId: teamA.id,
         teamBId: teamB.id,
@@ -363,7 +363,7 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      await mipGameModule.gateway.finalizeWeeklyMatch(match.id, match.version)
+      await mipGameModule.mutation.finalizeWeeklyMatch(match.id, match.version)
       await this.loadSeasonData()
     }
     catch (error) {
@@ -381,8 +381,9 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      const result = await mipGameModule.gateway.generateRankingSnapshot(this.data.selectedSeasonId, type)
+      const result = await mipGameModule.mutation.generateRankingSnapshot(this.data.selectedSeasonId, type)
       wx.showToast({ title: `已生成 ${result.entryCount} 条`, icon: 'none' })
+      await this.loadSeasonData()
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '排行榜生成失败' })

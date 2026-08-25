@@ -21,24 +21,24 @@ Page({
   },
 
   onShow() {
-    void this.loadCatalogs()
+    void this.loadCatalogs(true)
   },
 
   async onPullDownRefresh() {
     try {
-      await this.loadCatalogs()
+      await this.loadCatalogs(true)
     }
     finally {
       wx.stopPullDownRefresh()
     }
   },
 
-  async loadCatalogs() {
+  async loadCatalogs(force = false) {
     if (!this.data.items.length) {
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const page = await mipGameModule.gateway.listBlindBoxes()
+      const page = await mipGameModule.query.listBlindBoxes(force)
       this.setData({
         state: page.items.length ? 'ready' : 'empty',
         coinBalance: page.coinBalance,

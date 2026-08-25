@@ -1,11 +1,15 @@
+import type { MipGameGateway, MipGameRequest } from '../src/modules/mip-game/types'
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { createMipGameGateway } from '../src/modules/mip-game/gateway'
+import { createMipGameModule } from '../src/modules/mip-game/module'
 import {
   createBlindBoxPendingDrawStore,
   shouldRetainPendingDraw,
 } from '../src/modules/mip-game/pending-draw'
+import { isRetryableGameAction } from '../src/modules/mip-game/retry-policy'
+import { MipGameError } from '../src/modules/mip-game/types'
 
 const seasonId = '10000000-0000-4000-8000-000000000001'
 const teamAId = '20000000-0000-4000-8000-000000000001'
@@ -15,10 +19,10 @@ const drawRequestId = '40000000-0000-4000-8000-000000000001'
 
 describe('MIP game client contract', () => {
   it('submits matchup intent without any client score', async () => {
-    const calls: Array<{ action: string, data?: Record<string, unknown> }> = []
+    const calls: MipGameRequest[] = []
     const gateway = createMipGameGateway({
-      async invoke(action, data) {
-        calls.push({ action, data })
+      async invoke(request) {
+        calls.push(request)
         return { ok: true, data: { id: 'match', status: 'SCHEDULED' } }
       },
     })
@@ -30,8 +34,9 @@ describe('MIP game client contract', () => {
       teamBId,
     })
     expect(calls[0]).toEqual({
+      contractVersion: 1,
       action: 'admin.saveWeeklyMatch',
-      data: {
+      input: {
         match: { seasonId, weekStart: '2026-08-24', weekEnd: '2026-08-30', teamAId, teamBId },
       },
     })
@@ -39,40 +44,42 @@ describe('MIP game client contract', () => {
   })
 
   it('generates a typed snapshot without a score or date range payload', async () => {
-    const calls: Array<{ action: string, data?: Record<string, unknown> }> = []
+    const calls: MipGameRequest[] = []
     const gateway = createMipGameGateway({
-      async invoke(action, data) {
-        calls.push({ action, data })
+      async invoke(request) {
+        calls.push(request)
         return { ok: true, data: { snapshotId: 'snapshot', rankingType: 'TEAM_HALF_YEAR', entryCount: 2, generatedAt: '' } }
       },
     })
     await gateway.generateRankingSnapshot(seasonId, 'TEAM_HALF_YEAR')
     expect(calls[0]).toEqual({
+      contractVersion: 1,
       action: 'admin.generateRankingSnapshot',
-      data: { seasonId, rankingType: 'TEAM_HALF_YEAR' },
+      input: { seasonId, rankingType: 'TEAM_HALF_YEAR' },
     })
   })
 
   it('uses a capability-protected action for admin ranking previews', async () => {
-    const calls: Array<{ action: string, data?: Record<string, unknown> }> = []
+    const calls: MipGameRequest[] = []
     const gateway = createMipGameGateway({
-      async invoke(action, data) {
-        calls.push({ action, data })
+      async invoke(request) {
+        calls.push(request)
         return { ok: true, data: { rankingType: 'TEAM_YEAR', generatedAt: '', branches: [], items: [] } }
       },
     })
     await gateway.listAdminRankings(seasonId, 'TEAM_YEAR')
     expect(calls[0]).toEqual({
+      contractVersion: 1,
       action: 'admin.listRankings',
-      data: { seasonId, rankingType: 'TEAM_YEAR', branchId: undefined },
+      input: { seasonId, rankingType: 'TEAM_YEAR', branchId: undefined },
     })
   })
 
   it('submits only a catalog and idempotency intent for a blind-box draw', async () => {
-    const calls: Array<{ action: string, data?: Record<string, unknown> }> = []
+    const calls: MipGameRequest[] = []
     const gateway = createMipGameGateway({
-      async invoke(action, data) {
-        calls.push({ action, data })
+      async invoke(request) {
+        calls.push(request)
         return {
           ok: true,
           data: {
@@ -93,27 +100,153 @@ describe('MIP game client contract', () => {
     })
 
     await gateway.drawBlindBox(catalogId, drawRequestId)
-    expect(calls).toEqual([{ action: 'drawBlindBox', data: { catalogId, requestId: drawRequestId } }])
-    expect(calls[0]?.data).not.toHaveProperty('costCoin')
-    expect(calls[0]?.data).not.toHaveProperty('rarity')
-    expect(calls[0]?.data).not.toHaveProperty('cardId')
+    expect(calls).toEqual([{
+      contractVersion: 1,
+      action: 'drawBlindBox',
+      input: { catalogId, requestId: drawRequestId },
+    }])
+    expect(calls[0]?.input).not.toHaveProperty('costCoin')
+    expect(calls[0]?.input).not.toHaveProperty('rarity')
+    expect(calls[0]?.input).not.toHaveProperty('cardId')
   })
 
   it('keeps blind-box configuration behind game.manage admin actions', async () => {
-    const calls: Array<{ action: string, data?: Record<string, unknown> }> = []
+    const calls: MipGameRequest[] = []
     const gateway = createMipGameGateway({
-      async invoke(action, data) {
-        calls.push({ action, data })
+      async invoke(request) {
+        calls.push(request)
         return { ok: true, data: { items: [] } }
       },
     })
     await gateway.adminListBlindBoxCatalogs()
     await gateway.adminListBlindBoxCards(catalogId)
     expect(calls).toEqual([
-      { action: 'admin.listBlindBoxCatalogs', data: {} },
-      { action: 'admin.listBlindBoxCards', data: { catalogId } },
+      { contractVersion: 1, action: 'admin.listBlindBoxCatalogs', input: {} },
+      { contractVersion: 1, action: 'admin.listBlindBoxCards', input: { catalogId } },
     ])
   })
+
+  it('retries every read action and never retries draws or mutations', () => {
+    for (const action of [
+      'listBlindBoxes',
+      'getBlindBox',
+      'getBlindBoxInventory',
+      'listBlindBoxCoinEntries',
+      'getOverview',
+      'getRules',
+      'getTeam',
+      'listHistory',
+      'listRankings',
+      'admin.getSession',
+      'admin.listRankings',
+      'admin.listSeasons',
+      'admin.listTeams',
+      'admin.listAssignableMembers',
+      'admin.listMatches',
+      'admin.listBlindBoxCatalogs',
+      'admin.listBlindBoxCards',
+    ] as const) {
+      expect(isRetryableGameAction(action), action).toBe(true)
+    }
+    for (const action of [
+      'drawBlindBox',
+      'admin.saveSeason',
+      'admin.changeSeasonStatus',
+      'admin.saveTeam',
+      'admin.replaceTeamMembers',
+      'admin.saveWeeklyMatch',
+      'admin.finalizeWeeklyMatch',
+      'admin.generateRankingSnapshot',
+      'admin.saveBlindBoxCatalog',
+      'admin.changeBlindBoxCatalogStatus',
+      'admin.saveBlindBoxCard',
+      'admin.changeBlindBoxCardStatus',
+    ] as const) {
+      expect(isRetryableGameAction(action), action).toBe(false)
+    }
+  })
+
+  it('invalidates only the successful mutation dependency', async () => {
+    let seasonReads = 0
+    let blindBoxReads = 0
+    const gateway = {
+      async listSeasons() {
+        seasonReads += 1
+        return { items: [] }
+      },
+      async listBlindBoxes() {
+        blindBoxReads += 1
+        return { coinBalance: 0, items: [] }
+      },
+      async saveSeason() {
+        return { id: seasonId }
+      },
+      async drawBlindBox() {
+        return { drawId: 'draw-1' }
+      },
+    } as unknown as MipGameGateway
+    const module = createMipGameModule(gateway)
+
+    await module.query.listSeasons()
+    await module.query.listSeasons()
+    await module.query.listBlindBoxes()
+    await module.query.listBlindBoxes()
+    expect({ blindBoxReads, seasonReads }).toEqual({ blindBoxReads: 1, seasonReads: 1 })
+
+    await module.mutation.saveSeason({
+      season: {
+        seasonKey: 'season-1',
+        name: '赛季',
+        summary: '',
+        rulesText: '规则',
+        periodKind: 'HALF_YEAR',
+        startsAt: '2026-01-01T00:00:00.000Z',
+        endsAt: '2026-06-30T23:59:59.000Z',
+      },
+    })
+    await module.query.listSeasons()
+    await module.query.listBlindBoxes()
+    expect({ blindBoxReads, seasonReads }).toEqual({ blindBoxReads: 1, seasonReads: 2 })
+
+    await module.mutation.drawBlindBox(catalogId, drawRequestId)
+    await module.query.listSeasons()
+    await module.query.listBlindBoxes()
+    expect({ blindBoxReads, seasonReads }).toEqual({ blindBoxReads: 2, seasonReads: 2 })
+  })
+
+  it.each(['CONFLICT', 'FORBIDDEN'] as const)(
+    'preserves %s mutation errors without clearing cached reads',
+    async (code) => {
+      let reads = 0
+      const failure = new MipGameError(code, `${code} message`, code === 'CONFLICT')
+      const gateway = {
+        async listSeasons() {
+          reads += 1
+          return { items: [] }
+        },
+        async saveSeason() {
+          throw failure
+        },
+      } as unknown as MipGameGateway
+      const module = createMipGameModule(gateway)
+      const input = {
+        season: {
+          seasonKey: 'season-1',
+          name: '赛季',
+          summary: '',
+          rulesText: '规则',
+          periodKind: 'HALF_YEAR' as const,
+          startsAt: '2026-01-01T00:00:00.000Z',
+          endsAt: '2026-06-30T23:59:59.000Z',
+        },
+      }
+
+      await module.query.listSeasons()
+      await expect(module.mutation.saveSeason(input)).rejects.toBe(failure)
+      await module.query.listSeasons()
+      expect(reads).toBe(1)
+    },
+  )
 
   it('persists one pending draw per user and catalog until a matching clear', () => {
     const values = new Map<string, unknown>()
@@ -162,6 +295,18 @@ describe('MIP game client contract', () => {
     const blindBoxDetail = fs.readFileSync(path.join(root, 'src/packages/member/mip-blind-box/detail/index.wxml'), 'utf8')
     const blindBoxAdmin = fs.readFileSync(path.join(root, 'src/packages/admin/blind-box/index.wxml'), 'utf8')
     const blindBoxDetailPage = fs.readFileSync(path.join(root, 'src/packages/member/mip-blind-box/detail/index.ts'), 'utf8')
+    const pageSources = [
+      'src/packages/admin/game/index.ts',
+      'src/packages/admin/blind-box/index.ts',
+      'src/packages/member/mip-game/index.ts',
+      'src/packages/member/mip-game/team/index.ts',
+      'src/packages/member/mip-blind-box/index.ts',
+      'src/packages/member/mip-blind-box/detail/index.ts',
+      'src/packages/member/mip-blind-box/backpack/index.ts',
+      'src/packages/member/mip-blind-box/coin-entries/index.ts',
+    ].map(file => fs.readFileSync(path.join(root, file), 'utf8'))
+    const moduleSource = fs.readFileSync(path.join(root, 'src/modules/mip-game/module.ts'), 'utf8')
+    const cloudbaseTransport = fs.readFileSync(path.join(root, 'src/modules/mip-game/cloudbase-gateway.ts'), 'utf8')
     const migration = fs.readFileSync(path.join(root, 'database/mysql/mip/035_mip_blind_box.sql'), 'utf8')
     const rollback = fs.readFileSync(path.join(root, 'database/mysql/mip/rollback/035_mip_blind_box.sql'), 'utf8')
     expect(member).toContain('每周对阵')
@@ -182,6 +327,14 @@ describe('MIP game client contract', () => {
     expect(blindBoxDetail).toContain('保底最低')
     expect(blindBoxDetailPage).toContain('mipGamePendingDrawStore.ensure')
     expect(blindBoxDetailPage).toContain('shouldRetainPendingDraw(error)')
+    for (const source of pageSources) {
+      expect(source).not.toContain('mipGameModule.gateway')
+      expect(source).toContain('mipGameModule.query')
+    }
+    expect(pageSources.join('\n')).toContain('mipGameModule.mutation.drawBlindBox')
+    expect(moduleSource).not.toMatch(/return\s*\{\s*gateway,/)
+    expect(cloudbaseTransport).toContain('data: request')
+    expect(cloudbaseTransport).not.toContain('{ action, ...data }')
     expect(blindBoxAdmin).toContain('概率权重')
     expect(blindBoxAdmin).toContain('总库存')
     expect(migration).toContain('mip_blind_box_draws')

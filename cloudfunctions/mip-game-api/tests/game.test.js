@@ -4,7 +4,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const test = require('node:test')
-const { createHandler } = require('../domain/handler')
+const { actions, createHandler } = require('../domain/handler')
 const { createGameRepository, headquartersLevel, individualRankingRows, rankingPeriod } = require('../domain/repository')
 const { assertNoClientScore, normalizeMatch, normalizeSeason } = require('../domain/validation')
 
@@ -58,6 +58,92 @@ test('rejects client-provided score fields before resolving identity or writing'
   assert.equal(result.error.code, 'SCORE_NOT_ACCEPTED')
   assert.equal(resolved, false)
   assert.equal(called, false)
+})
+
+test('dispatches nested v1 input, keeps legacy flat requests and preserves health checks', async () => {
+  const calls = []
+  const handler = createHandler({
+    health: async () => ({ service: 'mip-game-api' }),
+    resolveCaller: async () => ({ appId: 'app', userId: 'user' }),
+    assertPlayerReady: async () => {},
+    assertAdminReady: async () => {},
+    service: {
+      getOverview: async (_caller, input) => {
+        calls.push(input)
+        return { season: null }
+      },
+    },
+  })
+  const v1 = await handler({
+    contractVersion: 1,
+    action: 'getOverview',
+    input: { seasonId },
+  })
+  const legacy = await handler({ action: 'getOverview', seasonId })
+  assert.deepEqual(v1, { ok: true, data: { season: null } })
+  assert.deepEqual(legacy, v1)
+  assert.deepEqual(calls, [{ seasonId }, { seasonId }])
+  assert.deepEqual(await handler({ action: 'health' }), {
+    ok: true,
+    data: { service: 'mip-game-api' },
+  })
+  assert.deepEqual(await handler({ contractVersion: 1, action: 'health', input: {} }), {
+    ok: true,
+    data: { service: 'mip-game-api' },
+  })
+  assert.equal(Object.keys(actions).length, 29)
+})
+
+test('rejects extra v1 fields and strips nested routing metadata before score validation', async () => {
+  const calls = []
+  let resolved = false
+  const handler = createHandler({
+    health: async () => ({}),
+    resolveCaller: async () => { resolved = true; return { appId: 'app', userId: 'user' } },
+    assertPlayerReady: async () => {},
+    assertAdminReady: async () => {},
+    service: {
+      getOverview: async (_caller, input) => {
+        calls.push(input)
+        return { season: null }
+      },
+      saveWeeklyMatch: async () => {
+        calls.push({ route: 'admin.saveWeeklyMatch' })
+      },
+    },
+  })
+  const injected = await handler({
+    contractVersion: 1,
+    action: 'getOverview',
+    input: {
+      action: 'admin.saveWeeklyMatch',
+      contractVersion: 999,
+      input: { action: 'admin.saveWeeklyMatch' },
+      seasonId,
+    },
+  })
+  assert.equal(injected.ok, true)
+  assert.deepEqual(calls, [{ seasonId }])
+
+  const flat = await handler({
+    contractVersion: 1,
+    action: 'getOverview',
+    input: {},
+    seasonId,
+  })
+  assert.equal(flat.ok, false)
+  assert.equal(flat.error.code, 'VALIDATION_FAILED')
+
+  resolved = false
+  const score = await handler({
+    contractVersion: 1,
+    action: 'admin.saveWeeklyMatch',
+    input: { match: { seasonId, teamAScore: 9000 } },
+  })
+  assert.equal(score.ok, false)
+  assert.equal(score.error.code, 'SCORE_NOT_ACCEPTED')
+  assert.equal(resolved, false)
+  assert.deepEqual(calls, [{ seasonId }])
 })
 
 test('gates admin actions before dispatch and leaves member reads authenticated', async () => {

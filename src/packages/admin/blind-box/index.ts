@@ -69,28 +69,28 @@ Page({
   },
 
   onShow() {
-    void this.load()
+    void this.load(true)
   },
   async onPullDownRefresh() {
     try {
-      await this.load()
+      await this.load(true)
     }
     finally {
       wx.stopPullDownRefresh()
     }
   },
 
-  async load() {
+  async load(force = false) {
     this.setData({ state: 'loading', message: '' })
     try {
-      await mipGameModule.gateway.getAdminSession()
-      const result = await mipGameModule.gateway.adminListBlindBoxCatalogs()
+      await mipGameModule.query.getAdminSession(force)
+      const result = await mipGameModule.query.adminListBlindBoxCatalogs(force)
       const selectedCatalogId = this.data.selectedCatalogId
         && result.items.some(item => item.id === this.data.selectedCatalogId)
         ? this.data.selectedCatalogId
         : (result.items[0]?.id || '')
       this.setData({ catalogs: result.items.map(catalogView), selectedCatalogId, state: 'ready' })
-      await this.loadCards()
+      await this.loadCards(force)
     }
     catch (error) {
       const code = (error as { code?: string })?.code
@@ -101,19 +101,19 @@ Page({
     }
   },
 
-  async loadCards() {
+  async loadCards(force = false) {
     if (!this.data.selectedCatalogId) {
       this.setData({ cards: [] })
       return
     }
-    const result = await mipGameModule.gateway.adminListBlindBoxCards(this.data.selectedCatalogId)
+    const result = await mipGameModule.query.adminListBlindBoxCards(this.data.selectedCatalogId, force)
     this.setData({ cards: result.items.map(cardView) })
   },
 
   async chooseCatalog(event: WechatMiniprogram.TouchEvent) {
     this.setData({ selectedCatalogId: String(event.currentTarget.dataset.id || ''), message: '' })
     try {
-      await this.loadCards()
+      await this.loadCards(true)
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '卡牌目录加载失败' })
@@ -191,7 +191,7 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      const saved = await mipGameModule.gateway.adminSaveBlindBoxCatalog({
+      const saved = await mipGameModule.mutation.adminSaveBlindBoxCatalog({
         catalogId: this.data.catalogId || undefined,
         expectedVersion: this.data.catalogId ? this.data.catalogVersion : undefined,
         catalog: {
@@ -232,7 +232,7 @@ Page({
       return
     }
     await this.runMutation(async () => {
-      await mipGameModule.gateway.adminChangeBlindBoxCatalogStatus(catalog.id, catalog.version, status)
+      await mipGameModule.mutation.adminChangeBlindBoxCatalogStatus(catalog.id, catalog.version, status)
       await this.load()
     }, '目录状态更新失败')
   },
@@ -308,7 +308,7 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      await mipGameModule.gateway.adminSaveBlindBoxCard({
+      await mipGameModule.mutation.adminSaveBlindBoxCard({
         cardId: this.data.cardId || undefined,
         expectedVersion: this.data.cardId ? this.data.cardVersion : undefined,
         card: {
@@ -325,7 +325,7 @@ Page({
       this.setData({ cardEditorOpen: false })
       wx.showToast({ title: '卡牌已保存', icon: 'success' })
       await this.loadCards()
-      const catalogs = await mipGameModule.gateway.adminListBlindBoxCatalogs()
+      const catalogs = await mipGameModule.query.adminListBlindBoxCatalogs()
       this.setData({ catalogs: catalogs.items.map(catalogView) })
     }
     catch (error) {
@@ -343,8 +343,8 @@ Page({
       return
     }
     await this.runMutation(async () => {
-      await mipGameModule.gateway.adminChangeBlindBoxCardStatus(card.id, card.version, status)
-      await this.loadCards()
+      await mipGameModule.mutation.adminChangeBlindBoxCardStatus(card.id, card.version, status)
+      await this.load()
     }, '卡牌状态更新失败')
   },
 
