@@ -543,6 +543,19 @@
         "mip_task_level_rules"
       ],
       "altersTables": []
+    },
+    {
+      "version": "20260824390000",
+      "name": "mip_message_templates",
+      "sql": "database/mysql/mip/039_message_templates.sql",
+      "sqlSha256": "66d32adb047414059a63086d92a6e9b5c8dbd5461edd8e8085c28b58be25f4c1",
+      "rollback": "database/mysql/mip/rollback/039_message_templates.sql",
+      "rollbackSha256": "cd272c9df12548f8015d343266543db350a7e0e204d17a848d07dc6a3485d6b6",
+      "createsTables": [
+        "mip_message_templates",
+        "mip_message_template_revisions"
+      ],
+      "altersTables": []
     }
   ]
 }

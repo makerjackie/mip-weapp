@@ -10,6 +10,8 @@ module.exports = defineManifest('MESSAGING', [
   serviceOperation('mip.admin.messageCampaigns.list', 'QUERY', 'listMessageCampaigns'),
   serviceOperation('mip.admin.messageCampaigns.get', 'QUERY', 'getMessageCampaign'),
   serviceOperation('mip.admin.messageCampaigns.recipients', 'QUERY', 'searchMessageRecipients'),
+  serviceOperation('mip.admin.messageTemplates.list', 'QUERY', 'listMessageTemplates'),
+  serviceOperation('mip.admin.messageTemplates.get', 'QUERY', 'getMessageTemplate'),
   serviceOperation('mip.admin.announcements.save', 'MUTATION', 'saveAnnouncement'),
   serviceOperation('mip.admin.announcements.publish', 'MUTATION', 'publishAnnouncement', { wakesOutbox: true }),
   serviceOperation('mip.admin.announcements.withdraw', 'MUTATION', 'withdrawAnnouncement', { wakesOutbox: true }),
@@ -18,4 +20,7 @@ module.exports = defineManifest('MESSAGING', [
   serviceOperation('mip.admin.messageCampaigns.snapshot', 'MUTATION', 'snapshotMessageCampaign'),
   serviceOperation('mip.admin.messageCampaigns.publish', 'MUTATION', 'publishMessageCampaign', { wakesOutbox: true }),
   serviceOperation('mip.admin.messageCampaigns.withdraw', 'MUTATION', 'withdrawMessageCampaign'),
+  serviceOperation('mip.admin.messageTemplates.save', 'MUTATION', 'saveMessageTemplate'),
+  serviceOperation('mip.admin.messageTemplates.activate', 'MUTATION', 'activateMessageTemplate'),
+  serviceOperation('mip.admin.messageTemplates.archive', 'MUTATION', 'archiveMessageTemplate'),
 ])

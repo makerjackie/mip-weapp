@@ -67,6 +67,8 @@ const expectedOperations = Object.freeze({
   'mip.admin.messageCampaigns.list': ['MESSAGING', 'QUERY', 'listMessageCampaigns'],
   'mip.admin.messageCampaigns.get': ['MESSAGING', 'QUERY', 'getMessageCampaign'],
   'mip.admin.messageCampaigns.recipients': ['MESSAGING', 'QUERY', 'searchMessageRecipients'],
+  'mip.admin.messageTemplates.list': ['MESSAGING', 'QUERY', 'listMessageTemplates'],
+  'mip.admin.messageTemplates.get': ['MESSAGING', 'QUERY', 'getMessageTemplate'],
   'mip.admin.announcements.save': ['MESSAGING', 'MUTATION', 'saveAnnouncement'],
   'mip.admin.announcements.publish': ['MESSAGING', 'MUTATION', 'publishAnnouncement'],
   'mip.admin.announcements.withdraw': ['MESSAGING', 'MUTATION', 'withdrawAnnouncement'],
@@ -75,6 +77,9 @@ const expectedOperations = Object.freeze({
   'mip.admin.messageCampaigns.snapshot': ['MESSAGING', 'MUTATION', 'snapshotMessageCampaign'],
   'mip.admin.messageCampaigns.publish': ['MESSAGING', 'MUTATION', 'publishMessageCampaign'],
   'mip.admin.messageCampaigns.withdraw': ['MESSAGING', 'MUTATION', 'withdrawMessageCampaign'],
+  'mip.admin.messageTemplates.save': ['MESSAGING', 'MUTATION', 'saveMessageTemplate'],
+  'mip.admin.messageTemplates.activate': ['MESSAGING', 'MUTATION', 'activateMessageTemplate'],
+  'mip.admin.messageTemplates.archive': ['MESSAGING', 'MUTATION', 'archiveMessageTemplate'],
 
   'mip.admin.knowledge.list': ['KNOWLEDGE', 'QUERY', 'listKnowledgeAdmin', 'SESSION_FIRST'],
   'mip.admin.knowledge.get': ['KNOWLEDGE', 'QUERY', 'getKnowledgeAdminContent', 'SESSION_FIRST'],
@@ -168,12 +173,12 @@ function manifest(owner, operations) {
 }
 
 describe('admin operation catalog', () => {
-  it('freezes the exact 97 business actions, owners, and kinds while keeping health separate', () => {
+  it('freezes the exact 102 business actions, owners, and kinds while keeping health separate', () => {
     const handlerActions = Object.keys(actions).filter(action => action !== 'health')
     const expectedActions = Object.keys(expectedOperations)
 
-    assert.equal(expectedActions.length, 97)
-    assert.equal(operationCatalog.length, 97)
+    assert.equal(expectedActions.length, 102)
+    assert.equal(operationCatalog.length, 102)
     assert.deepEqual(sorted(handlerActions), sorted(expectedActions))
     assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(expectedActions))
     assert.equal(operationByAction.health, undefined)

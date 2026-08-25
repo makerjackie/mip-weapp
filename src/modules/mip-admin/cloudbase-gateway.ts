@@ -30,6 +30,10 @@ import {
   parseMessageCampaignScopes,
   parseMessageRecipientPage,
 } from './message-campaigns'
+import {
+  parseMessageTemplate,
+  parseMessageTemplatePage,
+} from './message-templates'
 import { parseOperationalExceptionPage } from './operational-exceptions'
 import {
   parseOpportunityCommentSettings,
@@ -529,6 +533,21 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
     ),
     withdrawMessageCampaign: async (campaignId, expectedVersion, reason) => parseMessageCampaign(
       await call('mip.admin.messageCampaigns.withdraw', { campaignId, expectedVersion, reason }),
+    ),
+    listMessageTemplates: async input => parseMessageTemplatePage(
+      await call('mip.admin.messageTemplates.list', { ...(input || {}) }),
+    ),
+    getMessageTemplate: async templateId => parseMessageTemplate(
+      await call('mip.admin.messageTemplates.get', { templateId }),
+    ),
+    saveMessageTemplate: async input => parseMessageTemplate(
+      await call('mip.admin.messageTemplates.save', { ...input }),
+    ),
+    activateMessageTemplate: async (templateId, expectedVersion) => parseMessageTemplate(
+      await call('mip.admin.messageTemplates.activate', { templateId, expectedVersion }),
+    ),
+    archiveMessageTemplate: async (templateId, expectedVersion) => parseMessageTemplate(
+      await call('mip.admin.messageTemplates.archive', { templateId, expectedVersion }),
     ),
     listCommunityReports: async status => parseCommunityReportPage(
       await call('mip.admin.communityReports.list', { status }),

@@ -7,6 +7,7 @@ const { createBadgeAdminRepository } = require('./badges')
 const { createFullAccessPolicy } = require('./full-access')
 const { assertFixedGrowthRuleUpdate } = require('./growth-rule-catalog')
 const { createMessageCampaignRepository } = require('./message-campaigns')
+const { createMessageTemplateRepository } = require('./message-templates')
 const { createMatchingAdminRepository } = require('./matching-admin')
 const { createOpportunityArchiveRepository } = require('./opportunity-archive')
 const { createOpportunityCommentAdminRepository } = require('./opportunity-comments')
@@ -403,6 +404,11 @@ function createAdminRepository(database, options = {}) {
     lockMutationAuthorization: lockMutation,
     maximumRecipients: options.maximumMessageCampaignRecipients,
     now,
+  })
+  const messageTemplateRepository = createMessageTemplateRepository(database, {
+    assertMutationScope: assertScope,
+    createId: id,
+    lockMutationAuthorization: lockMutation,
   })
 
   async function health() {
@@ -3503,6 +3509,7 @@ function createAdminRepository(database, options = {}) {
     ...adminPrdExtensions,
     ...badgeAdminRepository,
     ...messageCampaignRepository,
+    ...messageTemplateRepository,
     ...opportunityArchiveRepository,
     ...opportunityCommentAdminRepository,
     ...matchingAdminRepository,

@@ -40,6 +40,8 @@ export function createMipAdminModule(
     listMessageCampaigns: messaging.listCampaigns,
     getMessageCampaign: messaging.getCampaign,
     searchMessageRecipients: messaging.searchRecipients,
+    listMessageTemplates: messaging.listTemplates,
+    getMessageTemplate: messaging.getTemplate,
     messaging,
     listCommunityReports: community.listReports,
     community,

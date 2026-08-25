@@ -13,6 +13,11 @@ import type {
   AdminMessageRecipientCandidate,
 } from './message-campaigns'
 import type {
+  AdminMessageTemplate,
+  AdminMessageTemplateDraft,
+  AdminMessageTemplateFilters,
+} from './message-templates'
+import type {
   AdminOperationalExceptionFilters,
   AdminOperationalExceptionPage,
 } from './operational-exceptions'
@@ -785,6 +790,11 @@ export interface MipAdminGateway {
   snapshotMessageCampaign: (campaignId: string, expectedVersion: number) => Promise<AdminMessageCampaign>
   publishMessageCampaign: (campaignId: string, expectedVersion: number, idempotencyKey: string) => Promise<AdminMessageCampaignPublication>
   withdrawMessageCampaign: (campaignId: string, expectedVersion: number, reason: string) => Promise<AdminMessageCampaign>
+  listMessageTemplates: (input?: AdminMessageTemplateFilters) => Promise<AdminPage<AdminMessageTemplate>>
+  getMessageTemplate: (templateId: string) => Promise<AdminMessageTemplate>
+  saveMessageTemplate: (input: AdminMessageTemplateDraft) => Promise<AdminMessageTemplate>
+  activateMessageTemplate: (templateId: string, expectedVersion: number) => Promise<AdminMessageTemplate>
+  archiveMessageTemplate: (templateId: string, expectedVersion: number) => Promise<AdminMessageTemplate>
   listCommunityReports: (status: AdminCommunityReportStatus) => Promise<AdminPage<AdminCommunityReport>>
   claimCommunityReport: (input: AdminCommunityReportClaimInput) => Promise<AdminCommunityReport>
   closeCommunityReport: (input: AdminCommunityReportCloseInput) => Promise<AdminCommunityReport>

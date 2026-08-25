@@ -18,6 +18,7 @@ const CAMPAIGN_ID = '40000000-0000-4000-8000-000000000004'
 const EVENT_ID = '50000000-0000-4000-8000-000000000005'
 const BRANCH_A = '60000000-0000-4000-8000-000000000006'
 const BRANCH_B = '70000000-0000-4000-8000-000000000007'
+const TEMPLATE_ID = '80000000-0000-4000-8000-000000000008'
 const PROFILE_REF_SECRET = 'messaging-profile-reference-secret-2026'
 const caller = { appId: APP_ID, identityKey: 'wechat-identity' }
 
@@ -33,10 +34,12 @@ function repository(overrides = {}) {
     roleBindings: [{ roleKey: 'PLATFORM_OPERATIONS', scopeType: 'PLATFORM', scopeId: null }],
     announcementScope: { scopeType: 'BRANCH', scopeId: BRANCH_A, status: 'DRAFT' },
     campaignScope: { scopeType: 'BRANCH', scopeId: BRANCH_A, status: 'DRAFT' },
+    templateScope: { scopeType: 'BRANCH', scopeId: BRANCH_A, status: 'DRAFT' },
     calls: [],
     resolveReads: 0,
     announcementReads: 0,
     campaignReads: 0,
+    templateReads: 0,
     recipientReads: 0,
     async resolveUser() {
       repo.resolveReads += 1
@@ -142,6 +145,39 @@ function repository(overrides = {}) {
       repo.calls.push({ type: 'campaignWithdraw', input })
       return campaignRow({ status: 'WITHDRAWN', version: input.expectedVersion + 1 })
     },
+    async listTemplates(appId, visibility, filters, pageLimit) {
+      repo.calls.push({ type: 'templateList', appId, visibility, filters, pageLimit })
+      return [templateRow()]
+    },
+    async getTemplateScope(_appId, templateId) {
+      repo.calls.push({ type: 'templateScope', templateId })
+      return templateId === 'missing-template' ? null : repo.templateScope
+    },
+    async getTemplate(_appId, templateId) {
+      repo.templateReads += 1
+      return templateRow({ id: templateId })
+    },
+    async saveTemplate(input) {
+      repo.calls.push({ type: 'templateSave', input })
+      return templateRow({
+        id: input.templateId || TEMPLATE_ID,
+        scopeType: input.draft.scopeType,
+        branchId: input.draft.branchId,
+        name: input.draft.name,
+        title: input.draft.title,
+        body: input.draft.body,
+        currentRevisionNumber: input.templateId ? 3 : 1,
+        version: input.templateId ? input.expectedVersion + 1 : 1,
+      })
+    },
+    async activateTemplate(input) {
+      repo.calls.push({ type: 'templateActivate', input })
+      return templateRow({ status: 'ACTIVE', version: input.expectedVersion + 1 })
+    },
+    async archiveTemplate(input) {
+      repo.calls.push({ type: 'templateArchive', input })
+      return templateRow({ status: 'ARCHIVED', version: input.expectedVersion + 1 })
+    },
     ...overrides,
   }
   return repo
@@ -229,20 +265,56 @@ function campaignRow(overrides = {}) {
   }
 }
 
+function templateDraft(overrides = {}) {
+  return {
+    scopeType: 'BRANCH',
+    branchId: BRANCH_A,
+    name: '活动提醒',
+    title: '活动即将开始',
+    body: '请在活动页查看最新安排。',
+    ...overrides,
+  }
+}
+
+function templateRow(overrides = {}) {
+  return {
+    id: TEMPLATE_ID,
+    scopeType: 'BRANCH',
+    branchId: BRANCH_A,
+    branchName: '广州分会',
+    status: 'DRAFT',
+    currentRevisionNumber: 2,
+    name: '活动提醒',
+    title: '活动即将开始',
+    body: '请在活动页查看最新安排。',
+    contentSafetyStatus: 'PASSED',
+    revisionCreatedAt: '2030-08-24T08:00:00.000Z',
+    version: 4,
+    createdAt: '2030-08-20T08:00:00.000Z',
+    updatedAt: '2030-08-24T08:00:00.000Z',
+    ...overrides,
+  }
+}
+
 describe('admin messaging deep module', () => {
-  it('exposes only announcement and message-campaign administration', () => {
+  it('exposes only announcement, campaign, and template administration', () => {
     const api = createAdminMessaging({ repository: {}, access: {} })
     assert.deepEqual(Object.keys(api).sort(), [
+      'activateMessageTemplate',
+      'archiveMessageTemplate',
       'getAnnouncement',
       'getMessageCampaign',
+      'getMessageTemplate',
       'listAnnouncementScopes',
       'listAnnouncements',
       'listMessageCampaignScopes',
       'listMessageCampaigns',
+      'listMessageTemplates',
       'publishAnnouncement',
       'publishMessageCampaign',
       'saveAnnouncement',
       'saveMessageCampaign',
+      'saveMessageTemplate',
       'searchMessageRecipients',
       'setAnnouncementPinned',
       'snapshotMessageCampaign',
@@ -282,12 +354,17 @@ describe('admin messaging deep module', () => {
 
     await service.listAnnouncements(caller, { status: 'draft' })
     await service.listMessageCampaigns(caller, { status: 'draft' })
+    await service.listMessageTemplates(caller, { status: 'draft', limit: 200 })
     const announcementList = repo.calls.find(call => call.type === 'announcementList')
     const campaignList = repo.calls.find(call => call.type === 'campaignList')
+    const templateList = repo.calls.find(call => call.type === 'templateList')
     assert.deepEqual(announcementList.visibility, {
       platform: false, branchIds: [BRANCH_A], eventIds: [],
     })
     assert.deepEqual(campaignList.visibility, announcementList.visibility)
+    assert.deepEqual(templateList.visibility, announcementList.visibility)
+    assert.deepEqual(templateList.filters, { status: 'DRAFT', query: '' })
+    assert.equal(templateList.pageLimit, 50)
 
     repo.announcementScope = { scopeType: 'BRANCH', scopeId: BRANCH_B, status: 'DRAFT' }
     await assert.rejects(
@@ -309,6 +386,28 @@ describe('admin messaging deep module', () => {
     )
     assert.equal(repo.announcementReads, 0)
     assert.equal(repo.campaignReads, 0)
+
+    repo.templateScope = { scopeType: 'BRANCH', scopeId: BRANCH_B, status: 'DRAFT' }
+    await assert.rejects(
+      () => service.getMessageTemplate(caller, { templateId: TEMPLATE_ID }),
+      error => error?.code === 'FORBIDDEN',
+    )
+    await assert.rejects(
+      () => service.getMessageTemplate(caller, { templateId: 'missing-template' }),
+      error => error?.code === 'NOT_FOUND',
+    )
+    assert.equal(repo.templateReads, 0)
+
+    repo.templateScope = { scopeType: 'BRANCH', scopeId: BRANCH_A, status: 'DRAFT' }
+    repo.getTemplate = async () => {
+      repo.templateReads += 1
+      return templateRow({ branchId: BRANCH_B })
+    }
+    await assert.rejects(
+      () => service.getMessageTemplate(caller, { templateId: TEMPLATE_ID }),
+      error => error?.code === 'CONFLICT',
+    )
+    assert.equal(repo.templateReads, 1)
 
     repo.roleBindings = [{ roleKey: 'EVENT_MANAGER', scopeType: 'EVENT', scopeId: EVENT_ID }]
     await assert.rejects(
@@ -578,5 +677,77 @@ describe('admin messaging deep module', () => {
     await assert.rejects(() => service.snapshotMessageCampaign(caller, {
       campaignId: CAMPAIGN_ID, expectedVersion: 4,
     }), error => error?.code === 'MESSAGE_CAMPAIGN_IMMUTABLE')
+  })
+
+  it('authorizes template scope before safety and preserves CAS, audit, activate, and archive inputs', async () => {
+    const repo = repository()
+    repo.roleBindings = [{ roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', scopeId: BRANCH_A }]
+    const checked = []
+    const service = messaging(repo, {
+      contentSafety: async (content, checkedCaller) => {
+        checked.push({ content, caller: checkedCaller })
+        return 'PASSED'
+      },
+    })
+
+    const saved = await service.saveMessageTemplate(caller, {
+      templateId: TEMPLATE_ID,
+      expectedVersion: 4,
+      ...templateDraft(),
+    })
+    const saveInput = repo.calls.find(call => call.type === 'templateSave').input
+    assert.equal(saved.version, 5)
+    assert.deepEqual(checked, [{
+      content: {
+        name: '活动提醒',
+        title: '活动即将开始',
+        body: '请在活动页查看最新安排。',
+      },
+      caller,
+    }])
+    assert.equal(saveInput.expectedVersion, 4)
+    assert.deepEqual(saveInput.authorizedExistingScope, repo.templateScope)
+    assert.equal(saveInput.authorization.capability, CAPABILITIES.MESSAGES_MANAGE)
+    assert.equal(saveInput.audit(TEMPLATE_ID, 'admin.message_templates.update', {}).resourceType, 'MESSAGE_TEMPLATE')
+
+    await service.activateMessageTemplate(caller, { templateId: TEMPLATE_ID, expectedVersion: 5 })
+    await service.archiveMessageTemplate(caller, { templateId: TEMPLATE_ID, expectedVersion: 6 })
+    const activated = repo.calls.find(call => call.type === 'templateActivate').input
+    const archived = repo.calls.find(call => call.type === 'templateArchive').input
+    assert.equal(activated.expectedVersion, 5)
+    assert.deepEqual(activated.authorizedScope, repo.templateScope)
+    assert.equal(archived.expectedVersion, 6)
+    assert.equal(activated.audit(TEMPLATE_ID, 'admin.message_templates.activate', {}).effectiveRole, 'BRANCH_ADMIN')
+
+    const savesBeforeForbidden = repo.calls.filter(call => call.type === 'templateSave').length
+    const checksBeforeInvalidIdentity = checked.length
+    for (const templateId of ['', null, false, 0]) {
+      await assert.rejects(() => service.saveMessageTemplate(caller, {
+        templateId,
+        expectedVersion: 4,
+        ...templateDraft(),
+      }), error => error?.code === 'VALIDATION_FAILED')
+    }
+    await assert.rejects(() => service.saveMessageTemplate(caller, {
+      expectedVersion: 4,
+      ...templateDraft(),
+    }), error => error?.code === 'VALIDATION_FAILED')
+    assert.equal(repo.calls.filter(call => call.type === 'templateSave').length, savesBeforeForbidden)
+    assert.equal(checked.length, checksBeforeInvalidIdentity)
+
+    await assert.rejects(() => service.saveMessageTemplate(caller, {
+      templateId: TEMPLATE_ID,
+      expectedVersion: 4,
+      ...templateDraft({ branchId: BRANCH_B }),
+    }), error => error?.code === 'FORBIDDEN')
+    assert.equal(repo.calls.filter(call => call.type === 'templateSave').length, savesBeforeForbidden)
+    assert.equal(checked.length, 1)
+
+    repo.saveTemplate = async () => { throw new AdminError('CONFLICT', '记录已变更') }
+    await assert.rejects(() => service.saveMessageTemplate(caller, {
+      templateId: TEMPLATE_ID,
+      expectedVersion: 4,
+      ...templateDraft(),
+    }), error => error?.code === 'CONFLICT')
   })
 })

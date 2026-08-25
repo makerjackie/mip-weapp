@@ -8,6 +8,7 @@ interface MessagingAdminCache {
 type AnnouncementListInput = NonNullable<Parameters<MipAdminGateway['listAnnouncements']>[0]>
 type CampaignListInput = NonNullable<Parameters<MipAdminGateway['listMessageCampaigns']>[0]>
 type RecipientSearchInput = NonNullable<Parameters<MipAdminGateway['searchMessageRecipients']>[0]>
+type TemplateListInput = NonNullable<Parameters<MipAdminGateway['listMessageTemplates']>[0]>
 
 export interface MipMessagingAdmin {
   getAnnouncementScopes: (force?: boolean) => ReturnType<MipAdminGateway['getAnnouncementScopes']>
@@ -40,6 +41,17 @@ export interface MipMessagingAdmin {
   snapshotCampaign: MipAdminGateway['snapshotMessageCampaign']
   publishCampaign: MipAdminGateway['publishMessageCampaign']
   withdrawCampaign: MipAdminGateway['withdrawMessageCampaign']
+  listTemplates: (
+    input?: TemplateListInput,
+    force?: boolean,
+  ) => ReturnType<MipAdminGateway['listMessageTemplates']>
+  getTemplate: (
+    templateId: Parameters<MipAdminGateway['getMessageTemplate']>[0],
+    force?: boolean,
+  ) => ReturnType<MipAdminGateway['getMessageTemplate']>
+  saveTemplate: MipAdminGateway['saveMessageTemplate']
+  activateTemplate: MipAdminGateway['activateMessageTemplate']
+  archiveTemplate: MipAdminGateway['archiveMessageTemplate']
 }
 
 const cacheKeys = {
@@ -50,6 +62,8 @@ const cacheKeys = {
   campaigns: 'mip-admin:message-campaigns',
   campaign: 'mip-admin:message-campaign',
   recipients: 'mip-admin:message-recipients',
+  templates: 'mip-admin:message-templates',
+  template: 'mip-admin:message-template',
 } as const
 
 function inputCacheKey(prefix: string, input: object) {
@@ -69,6 +83,7 @@ export function createMipMessagingAdmin(
   }
   const invalidateAnnouncements = [cacheKeys.announcements, cacheKeys.announcement]
   const invalidateCampaigns = [cacheKeys.campaigns, cacheKeys.campaign]
+  const invalidateTemplates = [cacheKeys.templates, cacheKeys.template]
 
   return {
     getAnnouncementScopes: (force = false) => cache.query(
@@ -134,6 +149,25 @@ export function createMipMessagingAdmin(
     withdrawCampaign: (campaignId, expectedVersion, reason) => mutate(
       invalidateCampaigns,
       () => gateway.withdrawMessageCampaign(campaignId, expectedVersion, reason),
+    ),
+    listTemplates: (input: TemplateListInput = {}, force = false) => cache.query(
+      inputCacheKey(cacheKeys.templates, input),
+      () => gateway.listMessageTemplates(input),
+      { force },
+    ),
+    getTemplate: (templateId, force = false) => cache.query(
+      `${cacheKeys.template}:${templateId}`,
+      () => gateway.getMessageTemplate(templateId),
+      { force },
+    ),
+    saveTemplate: input => mutate(invalidateTemplates, () => gateway.saveMessageTemplate(input)),
+    activateTemplate: (templateId, expectedVersion) => mutate(
+      invalidateTemplates,
+      () => gateway.activateMessageTemplate(templateId, expectedVersion),
+    ),
+    archiveTemplate: (templateId, expectedVersion) => mutate(
+      invalidateTemplates,
+      () => gateway.archiveMessageTemplate(templateId, expectedVersion),
     ),
   }
 }
