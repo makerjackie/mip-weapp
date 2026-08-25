@@ -144,7 +144,7 @@ function readDeploymentAttestation(env, options) {
 async function readRuntimeAttestation(miniProgram, env, buildSha) {
   const account = await miniProgram.callWxMethod('getAccountInfoSync')
   const app = await miniProgram.evaluate(() => {
-    const value = getApp()?.globalData?.runtimeAcceptance
+    const value = getApp()?.getRuntimeAcceptance?.()
     return value
       ? {
           buildSha: value.buildSha,
@@ -175,7 +175,7 @@ async function waitForOperatorBuild(miniProgram, buildSha, timeoutMs) {
   while (Date.now() < deadline) {
     try {
       const runningBuildSha = await miniProgram.evaluate(() => (
-        getApp()?.globalData?.runtimeAcceptance?.buildSha || null
+        getApp()?.getRuntimeAcceptance?.()?.buildSha || null
       ))
       if (runningBuildSha === buildSha) {
         return
