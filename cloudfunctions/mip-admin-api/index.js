@@ -2,7 +2,7 @@
 
 const cloud = require('wx-server-sdk')
 const { createHandler, normalizeAdminRequest } = require('./domain/handler')
-const { configuredAgreements } = require('./domain/full-access')
+const { configuredAgreements, createFullAccessPolicy } = require('./domain/full-access')
 const { createAdminRepository } = require('./domain/repository')
 const { createAdminService } = require('./domain/service')
 const { resolveTrustedIdentity } = require('./lib/identity')
@@ -54,9 +54,8 @@ async function contentSafety(draft, caller) {
   return checkCompleteContentSafety(draft, caller, checker)
 }
 
-const repository = createAdminRepository(mysqlDatabase(), {
-  agreements: configuredAgreements(),
-})
+const fullAccessPolicy = createFullAccessPolicy({ agreements: configuredAgreements() })
+const repository = createAdminRepository(mysqlDatabase(), { fullAccessPolicy })
 const exportStorage = createCloudExportStorage(cloud)
 const matchingClient = createMatchingClient({
   cloud,
@@ -97,6 +96,7 @@ Object.assign(service, createKnowledgeAdminService(mysqlDatabase(), {
   contentSafety,
   defaultTestPriceCents: process.env.MIP_KNOWLEDGE_TEST_PRICE_CENTS,
   fetchSource: fetchKnowledgeSource,
+  fullAccessPolicy,
   sourceAllowedHosts: knowledgeSourceAllowedHosts,
   webviewAllowedHosts: knowledgeWebviewAllowedHosts,
 }))

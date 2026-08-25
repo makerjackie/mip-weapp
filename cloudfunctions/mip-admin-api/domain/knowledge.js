@@ -3,6 +3,7 @@
 const { createHash, randomUUID } = require('node:crypto')
 const net = require('node:net')
 const { capabilitiesForBinding } = require('./capabilities')
+const { assertFullAccessUser, createFullAccessPolicy } = require('./full-access')
 
 const PLATFORM_SCOPE_ID = '00000000-0000-0000-0000-000000000000'
 const CONTENT_TYPES = new Set(['HOT_NEWS', 'ARTICLE', 'WEB', 'VIDEO', 'PRIVATE_CHANNEL', 'EXPERT_SHARE'])
@@ -13,6 +14,9 @@ const REPORT_CATEGORIES = new Set([
 
 function createKnowledgeAdminService(database, options = {}) {
   const createId = options.id || randomUUID
+  const fullAccessPolicy = options.fullAccessPolicy || createFullAccessPolicy({
+    agreements: options.agreements,
+  })
   const catalogStage = options.catalogStage === 'LIVE' ? 'LIVE' : 'TEST'
   const defaultTestPriceCents = boundedInteger(options.defaultTestPriceCents, 990, 1, 10_000_000)
   const contentSafety = options.contentSafety || (async () => 'ERROR')
@@ -31,34 +35,9 @@ function createKnowledgeAdminService(database, options = {}) {
   }
 
   async function authorizedAdmin(queryable, caller, lock) {
-    const user = await queryable.one(
-      `SELECT user.id, user.status,
-              EXISTS(
-                SELECT 1 FROM mip_profiles profile
-                WHERE profile.app_id = user.app_id AND profile.user_id = user.id
-                  AND NULLIF(TRIM(profile.nickname), '') IS NOT NULL
-              ) AS has_profile,
-              EXISTS(
-                SELECT 1 FROM mip_private_profiles private_profile
-                WHERE private_profile.app_id = user.app_id AND private_profile.user_id = user.id
-                  AND private_profile.phone_verified_at IS NOT NULL
-              ) AS has_phone,
-              EXISTS(
-                SELECT 1 FROM mip_agreement_acceptances acceptance
-                WHERE acceptance.app_id = user.app_id AND acceptance.user_id = user.id
-              ) AS has_agreement
-       FROM mip_user_identities identity
-       INNER JOIN mip_users user
-         ON user.app_id = identity.app_id AND user.id = identity.user_id
-       WHERE identity.app_id = ? AND identity.provider = 'WECHAT_MINIPROGRAM'
-         AND identity.identity_key = ? LIMIT 1${lock ? ' FOR UPDATE' : ''}`,
-      [caller.appId, caller.identityKey],
+    const user = assertFullAccessUser(
+      await fullAccessPolicy.loadByIdentity(queryable, caller, { lock }),
     )
-    if (!user) throw codeError('AUTH_REQUIRED')
-    if (user.status !== 'ACTIVE') throw codeError('FORBIDDEN')
-    if (!Number(user.has_agreement)) throw codeError('AGREEMENT_REQUIRED')
-    if (!Number(user.has_phone)) throw codeError('PHONE_REQUIRED')
-    if (!Number(user.has_profile)) throw codeError('PROFILE_REQUIRED')
     const rows = await queryable.query(
       `SELECT binding.role_key, binding.scope_type, binding.scope_id,
               policy.policy_mode, policy.capabilities_json

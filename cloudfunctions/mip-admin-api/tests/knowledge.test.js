@@ -4,6 +4,24 @@ const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const { createKnowledgeAdminService, normalizeIngestionItem, safeExternalUrl } = require('../domain/knowledge')
 
+const caller = { appId: 'app', identityKey: 'identity' }
+const platformKnowledgeGrant = [
+  { role_key: 'PLATFORM_OPERATIONS', scope_type: 'PLATFORM', scope_id: null },
+]
+
+function accessRow(overrides = {}) {
+  return {
+    id: 'user',
+    status: 'ACTIVE',
+    primary_branch_id: 'branch-a',
+    nickname: '运营人员',
+    phone_verified_at: new Date('2026-08-24T00:00:00.000Z'),
+    agreement_0_accepted: 1,
+    agreement_1_accepted: 1,
+    ...overrides,
+  }
+}
+
 describe('knowledge admin service', () => {
   it('rejects local or credential-bearing ingestion endpoints', () => {
     const policy = { allowedHosts: new Set(['example.com']) }
@@ -27,30 +45,120 @@ describe('knowledge admin service', () => {
     const database = {
       async one(sql, params) {
         calls.push({ sql, params })
-        return { id: 'user', status: 'ACTIVE', has_profile: 1, has_phone: 1, has_agreement: 1 }
+        return accessRow()
       },
       async query(sql, params) {
         calls.push({ sql, params })
         if (sql.includes('mip_admin_role_bindings')) {
-          return [{ role_key: 'PLATFORM_OPERATIONS', scope_type: 'PLATFORM', scope_id: null }]
+          return platformKnowledgeGrant
         }
         return []
       },
     }
     const service = createKnowledgeAdminService(database)
-    const result = await service.listKnowledgeAdmin({ appId: 'app', identityKey: 'identity' }, { section: 'SOURCES' })
+    const result = await service.listKnowledgeAdmin(caller, { section: 'SOURCES' })
     assert.deepEqual(result.items, [])
     assert.match(calls[2].sql, /mip_knowledge_sources/)
     assert.deepEqual(calls[2].params, ['app', 50])
   })
 
-  it('rechecks the active knowledge grant inside the mutation transaction', async () => {
-    const user = { id: 'user', status: 'ACTIVE', has_profile: 1, has_phone: 1, has_agreement: 1 }
+  it('checks every current agreement and the primary branch before platform capability', async () => {
+    const cases = [
+      {
+        name: 'one current agreement is missing',
+        row: accessRow({ agreement_1_accepted: 0 }),
+        error: /AGREEMENT_REQUIRED/,
+      },
+      {
+        name: 'only an old agreement was accepted',
+        row: accessRow({ agreement_0_accepted: 0, has_agreement: 1 }),
+        error: /AGREEMENT_REQUIRED/,
+      },
+      {
+        name: 'primary branch is missing',
+        row: accessRow({ primary_branch_id: null, has_profile: 1 }),
+        error: /PROFILE_REQUIRED/,
+      },
+    ]
+
+    for (const testCase of cases) {
+      let roleReads = 0
+      const service = createKnowledgeAdminService({
+        async one() { return testCase.row },
+        async query() {
+          roleReads += 1
+          return platformKnowledgeGrant
+        },
+      })
+      await assert.rejects(
+        () => service.listKnowledgeAdmin(caller, { section: 'SOURCES' }),
+        testCase.error,
+        testCase.name,
+      )
+      assert.equal(roleReads, 0, testCase.name)
+    }
+  })
+
+  it('reuses the injected full-access policy for the locked mutation recheck', async () => {
+    const unlockedUser = {
+      id: 'user',
+      status: 'ACTIVE',
+      agreementsAccepted: true,
+      phoneBound: true,
+      profileComplete: true,
+    }
+    const policyCalls = []
+    const fullAccessPolicy = {
+      async loadByIdentity(queryable, actualCaller, options = {}) {
+        policyCalls.push({ queryable, caller: actualCaller, lock: options.lock === true })
+        return options.lock === true
+          ? { ...unlockedUser, agreementsAccepted: false }
+          : unlockedUser
+      },
+    }
+    const transactionEffects = []
+    let tx
+    const database = {
+      async query(sql) {
+        return sql.includes('mip_admin_role_bindings') ? platformKnowledgeGrant : []
+      },
+      async transaction(work) {
+        tx = {
+          async query(sql) {
+            transactionEffects.push(sql)
+            return sql.includes('mip_admin_role_bindings') ? platformKnowledgeGrant : []
+          },
+        }
+        return work(tx)
+      },
+    }
+    const service = createKnowledgeAdminService(database, { fullAccessPolicy })
+
+    await assert.rejects(() => service.moderateKnowledgeComment(caller, {
+      commentId: '10000000-0000-4000-8000-000000000001',
+      expectedVersion: 1,
+      decision: 'HIDE',
+      reason: '违规',
+    }), /AGREEMENT_REQUIRED/)
+
+    assert.equal(policyCalls.length, 2)
+    assert.equal(policyCalls[0].queryable, database)
+    assert.equal(policyCalls[0].caller, caller)
+    assert.equal(policyCalls[0].lock, false)
+    assert.equal(policyCalls[1].queryable, tx)
+    assert.equal(policyCalls[1].caller, caller)
+    assert.equal(policyCalls[1].lock, true)
+    assert.deepEqual(transactionEffects, [])
+  })
+
+  it('does not write facts or audit after the knowledge grant is revoked in the transaction', async () => {
+    const user = accessRow()
+    const transactionEffects = []
     const database = {
       async one() { return user },
       async query(sql) {
         return sql.includes('mip_admin_role_bindings')
-          ? [{ role_key: 'PLATFORM_OPERATIONS', scope_type: 'PLATFORM', scope_id: null }]
+          ? platformKnowledgeGrant
           : []
       },
       async transaction(work) {
@@ -58,14 +166,15 @@ describe('knowledge admin service', () => {
           async one() { return user },
           async query(sql) {
             if (sql.includes('mip_admin_role_bindings')) return []
-            assert.fail(`mutation reached after revocation: ${sql}`)
+            transactionEffects.push(sql)
+            return []
           },
         })
       },
     }
     const service = createKnowledgeAdminService(database)
     await assert.rejects(() => service.moderateKnowledgeComment(
-      { appId: 'app', identityKey: 'identity' },
+      caller,
       {
         commentId: '10000000-0000-4000-8000-000000000001',
         expectedVersion: 1,
@@ -73,15 +182,16 @@ describe('knowledge admin service', () => {
         reason: '违规',
       },
     ), /FORBIDDEN/)
+    assert.deepEqual(transactionEffects, [])
   })
 
   it('rechecks account status inside the mutation transaction', async () => {
-    const active = { id: 'user', status: 'ACTIVE', has_profile: 1, has_phone: 1, has_agreement: 1 }
+    const active = accessRow()
     const database = {
       async one() { return active },
       async query(sql) {
         return sql.includes('mip_admin_role_bindings')
-          ? [{ role_key: 'PLATFORM_OPERATIONS', scope_type: 'PLATFORM', scope_id: null }]
+          ? platformKnowledgeGrant
           : []
       },
       async transaction(work) {
@@ -93,7 +203,7 @@ describe('knowledge admin service', () => {
     }
     const service = createKnowledgeAdminService(database)
     await assert.rejects(() => service.moderateKnowledgeComment(
-      { appId: 'app', identityKey: 'identity' },
+      caller,
       {
         commentId: '10000000-0000-4000-8000-000000000001',
         expectedVersion: 1,
@@ -104,12 +214,11 @@ describe('knowledge admin service', () => {
   })
 
   it('refuses to moderate comments and reports outside the KNOWLEDGE target', async () => {
-    const user = { id: 'user', status: 'ACTIVE', has_profile: 1, has_phone: 1, has_agreement: 1 }
+    const user = accessRow()
     const inspected = []
-    const grant = [{ role_key: 'PLATFORM_OPERATIONS', scope_type: 'PLATFORM', scope_id: null }]
     const database = {
       async one() { return user },
-      async query(sql) { return sql.includes('mip_admin_role_bindings') ? grant : [] },
+      async query(sql) { return sql.includes('mip_admin_role_bindings') ? platformKnowledgeGrant : [] },
       async transaction(work) {
         return work({
           async one(sql) {
@@ -117,20 +226,20 @@ describe('knowledge admin service', () => {
             inspected.push(sql)
             return null
           },
-          async query(sql) { return sql.includes('mip_admin_role_bindings') ? grant : [] },
+          async query(sql) { return sql.includes('mip_admin_role_bindings') ? platformKnowledgeGrant : [] },
         })
       },
     }
     const service = createKnowledgeAdminService(database)
     await assert.rejects(() => service.moderateKnowledgeComment(
-      { appId: 'app', identityKey: 'identity' },
+      caller,
       {
         commentId: '10000000-0000-4000-8000-000000000001', expectedVersion: 1,
         decision: 'HIDE', reason: '违规',
       },
     ), /NOT_FOUND/)
     await assert.rejects(() => service.closeKnowledgeCommentReport(
-      { appId: 'app', identityKey: 'identity' },
+      caller,
       {
         reportId: '20000000-0000-4000-8000-000000000001', expectedVersion: 1,
         status: 'DISMISSED', reason: '不成立',

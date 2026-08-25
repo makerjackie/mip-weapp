@@ -44,7 +44,8 @@ function configuredAgreements(source = process.env.MIP_AGREEMENTS_JSON) {
 function createFullAccessPolicy(options = {}) {
   const agreements = normalizeAgreementRequirements(options.agreements || defaultAgreements)
 
-  async function loadByIdentity(queryable, caller) {
+  async function loadByIdentity(queryable, caller, options = {}) {
+    const lock = options.lock === true
     const agreementFacts = agreementSelections(agreements)
     const row = await queryable.one(
       `SELECT u.id, u.status, u.primary_branch_id,
@@ -60,7 +61,7 @@ function createFullAccessPolicy(options = {}) {
        WHERE identity.app_id = ?
          AND identity.provider = 'WECHAT_MINIPROGRAM'
          AND identity.identity_key = ?
-       LIMIT 1`,
+       LIMIT 1${lock ? ' FOR UPDATE' : ''}`,
       [...agreementFacts.params, caller.appId, caller.identityKey],
     )
     return accessUser(row, agreements)
