@@ -89,6 +89,7 @@ export const RUNTIME_TABLE_PRIVILEGES = Object.freeze({
   mip_ai_drafts: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_digital_avatar_generations: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_message_campaigns: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_message_campaign_dispatches: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_message_campaign_recipients: Object.freeze(['SELECT', 'INSERT']),
   mip_message_templates: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_message_template_revisions: Object.freeze(['SELECT', 'INSERT']),

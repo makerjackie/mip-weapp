@@ -76,13 +76,14 @@ function createNotificationService(options) {
       }
 
       let request
+      let sender
       try {
         request = buildDeliveryRequest(reservation, options)
+        sender = resolveSender(reservation.channel, options)
       }
       catch (error) {
         results.push(await settleFailure(
           () => repository.failReservedTask(reservation, safeDeliveryError(error), {
-            externalAttempted: false,
             now: currentTime,
           }),
           task.id,
@@ -91,7 +92,6 @@ function createNotificationService(options) {
       }
 
       try {
-        const sender = resolveSender(reservation.channel, options)
         results.push(await repository.deliverReservedTask(
           reservation,
           () => sender(request),

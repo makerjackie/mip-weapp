@@ -4,6 +4,29 @@ const { randomUUID } = require('node:crypto')
 
 const MAX_ATTEMPTS = 5
 const TASK_LEASE_MS = 2 * 60 * 1000
+const RETRYABLE_PRE_PROVIDER_CODES = new Set([
+  'CHANNEL_UNAVAILABLE',
+  'GRANT_UNAVAILABLE',
+  'TEMPLATE_MISSING',
+])
+const TERMINAL_PRE_PROVIDER_CODES = new Set([
+  'CHANNEL_UNSUPPORTED',
+  'DELIVERY_PAYLOAD_INVALID',
+  'DELIVERY_RECIPIENT_INACTIVE',
+  'DELIVERY_SENDER_INVALID',
+  'DELIVERY_WINDOW_EXPIRED',
+  'NOTIFICATION_RECIPIENT_INVALID',
+])
+const KNOWN_PROVIDER_FAILURE_CODES = new Set([
+  'SERVICE_ACCOUNT_DELIVERY_REJECTED',
+  'SERVICE_ACCOUNT_RATE_LIMITED',
+  'WECHAT_DELIVERY_REJECTED',
+  'WECHAT_PROVIDER_BUSY',
+])
+const RETRYABLE_PROVIDER_FAILURE_CODES = new Set([
+  'SERVICE_ACCOUNT_RATE_LIMITED',
+  'WECHAT_PROVIDER_BUSY',
+])
 
 function createNotificationRepository(database, options = {}) {
   const createId = options.createId || randomUUID
@@ -45,8 +68,9 @@ function createNotificationRepository(database, options = {}) {
       if (message.external) {
         await tx.query(
           `INSERT INTO mip_delivery_tasks (
-             id, app_id, inbox_message_id, channel, template_key, payload_json, status
-           ) VALUES (?, ?, ?, ?, ?, ?, 'PENDING')
+             id, app_id, inbox_message_id, channel, template_key, payload_json,
+             status, last_outcome, retry_disposition
+           ) VALUES (?, ?, ?, ?, ?, ?, 'PENDING', 'NOT_ATTEMPTED', 'RETRIABLE')
            ON DUPLICATE KEY UPDATE inbox_message_id = VALUES(inbox_message_id)`,
           [
             createId(),
@@ -66,47 +90,55 @@ function createNotificationRepository(database, options = {}) {
     const batchSize = Math.min(20, Math.max(1, Number(limit) || 10))
     const leaseExpiresAt = new Date(now.getTime() + TASK_LEASE_MS)
     return database.transaction(async (tx) => {
-      const exhausted = await tx.query(
+      const abandoned = await tx.query(
         `SELECT id FROM mip_delivery_tasks
-         WHERE app_id = ? AND status = 'PROCESSING' AND attempts >= ?
-           AND lease_expires_at < ?
+         WHERE app_id = ? AND status = 'PROCESSING' AND lease_expires_at < ?
          ORDER BY lease_expires_at, id LIMIT ? FOR UPDATE SKIP LOCKED`,
-        [appId, MAX_ATTEMPTS, now, batchSize],
+        [appId, now, batchSize],
       )
-      if (exhausted.length) {
-        const exhaustedIds = exhausted.map(row => row.id)
-        const exhaustedPlaceholders = exhaustedIds.map(() => '?').join(', ')
+      if (abandoned.length) {
+        const abandonedIds = abandoned.map(row => row.id)
+        const abandonedPlaceholders = abandonedIds.map(() => '?').join(', ')
         await tx.query(
           `UPDATE mip_notification_grants
            SET status = 'EXPIRED', reservation_task_id = NULL,
                reservation_token = NULL, reservation_expires_at = NULL
            WHERE app_id = ? AND status = 'RESERVED'
-             AND reservation_task_id IN (${exhaustedPlaceholders})`,
-          [appId, ...exhaustedIds],
+             AND reservation_task_id IN (${abandonedPlaceholders})`,
+          [appId, ...abandonedIds],
         )
         await tx.query(
           `UPDATE mip_delivery_tasks
            SET status = 'CANCELLED', lease_expires_at = NULL,
-               last_error_code = 'DELIVERY_OUTCOME_UNKNOWN'
-           WHERE app_id = ? AND status = 'PROCESSING' AND attempts >= ?
-             AND id IN (${exhaustedPlaceholders})`,
-          [appId, MAX_ATTEMPTS, ...exhaustedIds],
+               last_error_code = 'DELIVERY_OUTCOME_UNKNOWN',
+               last_outcome = 'UNKNOWN', retry_disposition = 'MANUAL_REVIEW',
+               outcome_updated_at = UTC_TIMESTAMP(3)
+           WHERE app_id = ? AND status = 'PROCESSING'
+             AND id IN (${abandonedPlaceholders})`,
+          [appId, ...abandonedIds],
         )
       }
 
       const rows = await tx.query(
         `SELECT id FROM mip_delivery_tasks
          WHERE app_id = ? AND attempts < ? AND available_at <= ?
-           AND (status IN ('PENDING', 'FAILED') OR (status = 'PROCESSING' AND lease_expires_at < ?))
+           AND (
+             (status = 'PENDING' AND last_outcome = 'NOT_ATTEMPTED'
+               AND retry_disposition = 'RETRIABLE')
+             OR (status = 'FAILED' AND retry_disposition = 'RETRIABLE'
+               AND last_outcome IN ('NOT_ATTEMPTED', 'KNOWN_FAILED'))
+           )
          ORDER BY available_at, id LIMIT ? FOR UPDATE SKIP LOCKED`,
-        [appId, MAX_ATTEMPTS, now, now, batchSize],
+        [appId, MAX_ATTEMPTS, now, batchSize],
       )
       if (!rows.length) return []
       const ids = rows.map(row => row.id)
       const placeholders = ids.map(() => '?').join(', ')
       await tx.query(
         `UPDATE mip_delivery_tasks
-         SET status = 'PROCESSING', attempts = attempts + 1, lease_expires_at = ?, last_error_code = NULL
+         SET status = 'PROCESSING', attempts = attempts + 1, lease_expires_at = ?,
+             last_error_code = NULL, last_outcome = 'UNKNOWN',
+             retry_disposition = 'MANUAL_REVIEW', outcome_updated_at = UTC_TIMESTAMP(3)
          WHERE app_id = ? AND id IN (${placeholders})`,
         [leaseExpiresAt, appId, ...ids],
       )
@@ -226,7 +258,9 @@ function createNotificationRepository(database, options = {}) {
         const taskUpdate = await tx.query(
           `UPDATE mip_delivery_tasks
            SET status = 'CANCELLED', lease_expires_at = NULL,
-               last_error_code = 'DELIVERY_RECIPIENT_INACTIVE'
+               last_error_code = 'DELIVERY_RECIPIENT_INACTIVE',
+               last_outcome = 'NOT_ATTEMPTED', retry_disposition = 'TERMINAL',
+               outcome_updated_at = UTC_TIMESTAMP(3)
            WHERE app_id = ? AND id = ? AND status = 'PROCESSING' AND lease_expires_at = ?`,
           [reservation.app_id, reservation.taskId, reservation.lease_expires_at],
         )
@@ -244,7 +278,9 @@ function createNotificationRepository(database, options = {}) {
         const taskUpdate = await tx.query(
           `UPDATE mip_delivery_tasks
            SET status = 'CANCELLED', lease_expires_at = NULL,
-               last_error_code = 'DELIVERY_WINDOW_EXPIRED'
+               last_error_code = 'DELIVERY_WINDOW_EXPIRED',
+               last_outcome = 'NOT_ATTEMPTED', retry_disposition = 'TERMINAL',
+               outcome_updated_at = UTC_TIMESTAMP(3)
            WHERE app_id = ? AND id = ? AND status = 'PROCESSING' AND lease_expires_at = ?`,
           [reservation.app_id, reservation.taskId, reservation.lease_expires_at],
         )
@@ -274,7 +310,9 @@ function createNotificationRepository(database, options = {}) {
         : null
       const taskUpdate = await tx.query(
         `UPDATE mip_delivery_tasks
-         SET status = 'DELIVERED', delivered_at = UTC_TIMESTAMP(3), lease_expires_at = NULL
+         SET status = 'DELIVERED', delivered_at = UTC_TIMESTAMP(3), lease_expires_at = NULL,
+             last_error_code = NULL, last_outcome = 'SUCCEEDED',
+             retry_disposition = 'TERMINAL', outcome_updated_at = UTC_TIMESTAMP(3)
          WHERE app_id = ? AND id = ? AND status = 'PROCESSING' AND lease_expires_at = ?`,
         [reservation.app_id, reservation.taskId, reservation.lease_expires_at],
       )
@@ -286,7 +324,6 @@ function createNotificationRepository(database, options = {}) {
 
   async function failReservedTask(reservation, errorCode, input = {}) {
     const now = input.now || new Date()
-    const externalAttempted = input.externalAttempted === true
     const code = safeErrorCode(errorCode)
     return database.transaction(async (tx) => {
       const current = await tx.one(
@@ -306,18 +343,15 @@ function createNotificationRepository(database, options = {}) {
         : null
       if (reservation.grant) assertGrantReservation(grant, reservation)
 
-      const terminal = Number(current.attempts) >= MAX_ATTEMPTS
-      if (reservation.grant && (!externalAttempted || terminal)) {
-        const nextGrantStatus = externalAttempted
-          && reservation.channel !== 'WECHAT_CUSTOMER_SERVICE' ? 'EXPIRED' : 'AVAILABLE'
+      const failure = classifyPreProviderFailure(code, Number(current.attempts))
+      if (reservation.grant) {
         const grantUpdate = await tx.query(
           `UPDATE mip_notification_grants
-           SET status = ?, reservation_task_id = NULL, reservation_token = NULL,
+           SET status = 'AVAILABLE', reservation_task_id = NULL, reservation_token = NULL,
                reservation_expires_at = NULL
            WHERE app_id = ? AND id = ? AND status = 'RESERVED'
              AND reservation_task_id = ? AND reservation_token = ?`,
           [
-            nextGrantStatus,
             reservation.app_id,
             reservation.grant.id,
             reservation.taskId,
@@ -327,16 +361,17 @@ function createNotificationRepository(database, options = {}) {
         assertAffected(grantUpdate, 'DELIVERY_RESERVATION_LOST')
       }
 
-      const status = terminal ? 'CANCELLED' : 'FAILED'
       const availableAt = new Date(now.getTime() + retryDelayMs(Number(current.attempts)))
       const taskUpdate = await tx.query(
         `UPDATE mip_delivery_tasks
-         SET status = ?, available_at = ?, lease_expires_at = NULL, last_error_code = ?
+         SET status = ?, available_at = ?, lease_expires_at = NULL, last_error_code = ?,
+             last_outcome = ?, retry_disposition = ?, outcome_updated_at = UTC_TIMESTAMP(3)
          WHERE app_id = ? AND id = ? AND status = 'PROCESSING' AND lease_expires_at = ?`,
-        [status, availableAt, code, reservation.app_id, reservation.taskId, reservation.lease_expires_at],
+        [failure.status, availableAt, code, failure.outcome, failure.retryDisposition,
+          reservation.app_id, reservation.taskId, reservation.lease_expires_at],
       )
       assertAffected(taskUpdate, 'DELIVERY_LEASE_LOST')
-      return failureResult(reservation.taskId, status, code, availableAt)
+      return failureResult(reservation.taskId, failure.status, code, availableAt)
     })
   }
 
@@ -350,26 +385,28 @@ function createNotificationRepository(database, options = {}) {
         [task.app_id, task.id],
       )
       assertTaskLease(current, task)
-      const terminal = Number(current.attempts) >= MAX_ATTEMPTS
-      if (terminal) {
+      const failure = classifyPreProviderFailure(code, Number(current.attempts))
+      if (failure.retryDisposition !== 'RETRIABLE') {
+        const nextGrantStatus = failure.outcome === 'UNKNOWN' ? 'EXPIRED' : 'AVAILABLE'
         await tx.query(
           `UPDATE mip_notification_grants
-           SET status = 'EXPIRED', reservation_task_id = NULL,
+           SET status = ?, reservation_task_id = NULL,
                reservation_token = NULL, reservation_expires_at = NULL
            WHERE app_id = ? AND status = 'RESERVED' AND reservation_task_id = ?`,
-          [task.app_id, task.id],
+          [nextGrantStatus, task.app_id, task.id],
         )
       }
-      const status = terminal ? 'CANCELLED' : 'FAILED'
       const availableAt = new Date(now.getTime() + retryDelayMs(Number(current.attempts)))
       const update = await tx.query(
         `UPDATE mip_delivery_tasks
-         SET status = ?, available_at = ?, lease_expires_at = NULL, last_error_code = ?
+         SET status = ?, available_at = ?, lease_expires_at = NULL, last_error_code = ?,
+             last_outcome = ?, retry_disposition = ?, outcome_updated_at = UTC_TIMESTAMP(3)
          WHERE app_id = ? AND id = ? AND status = 'PROCESSING' AND lease_expires_at = ?`,
-        [status, availableAt, code, task.app_id, task.id, current.lease_expires_at],
+        [failure.status, availableAt, code, failure.outcome, failure.retryDisposition,
+          task.app_id, task.id, current.lease_expires_at],
       )
       assertAffected(update, 'DELIVERY_LEASE_LOST')
-      return failureResult(task.id, status, code, availableAt)
+      return failureResult(task.id, failure.status, code, availableAt)
     })
   }
 
@@ -434,23 +471,67 @@ function assertGrantScope(grant, reservation) {
 }
 
 async function settleAttemptedFailure(tx, current, reservation, errorCode, now) {
-  const terminal = Number(current.attempts) >= MAX_ATTEMPTS
-  if (reservation.grant && (terminal || reservation.channel === 'WECHAT_CUSTOMER_SERVICE')) {
+  const failure = classifyProviderFailure(errorCode, Number(current.attempts))
+  if (reservation.grant
+    && (failure.retryDisposition !== 'RETRIABLE'
+      || reservation.channel === 'WECHAT_CUSTOMER_SERVICE')) {
     const grantUpdate = reservation.channel === 'WECHAT_CUSTOMER_SERVICE'
       ? await releaseReservationGrant(tx, reservation)
       : await expireReservationGrant(tx, reservation)
     assertAffected(grantUpdate, 'DELIVERY_RESERVATION_LOST')
   }
   const availableAt = new Date(now.getTime() + retryDelayMs(Number(current.attempts)))
-  const status = terminal ? 'CANCELLED' : 'FAILED'
   const taskUpdate = await tx.query(
     `UPDATE mip_delivery_tasks
-     SET status = ?, available_at = ?, lease_expires_at = NULL, last_error_code = ?
+     SET status = ?, available_at = ?, lease_expires_at = NULL, last_error_code = ?,
+         last_outcome = ?, retry_disposition = ?, outcome_updated_at = UTC_TIMESTAMP(3)
      WHERE app_id = ? AND id = ? AND status = 'PROCESSING' AND lease_expires_at = ?`,
-    [status, availableAt, errorCode, reservation.app_id, reservation.taskId, reservation.lease_expires_at],
+    [failure.status, availableAt, failure.errorCode, failure.outcome, failure.retryDisposition,
+      reservation.app_id, reservation.taskId, reservation.lease_expires_at],
   )
   assertAffected(taskUpdate, 'DELIVERY_LEASE_LOST')
-  return failureResult(reservation.taskId, status, errorCode, availableAt)
+  return failureResult(reservation.taskId, failure.status, failure.errorCode, availableAt)
+}
+
+function classifyPreProviderFailure(errorCode, attempts) {
+  if (RETRYABLE_PRE_PROVIDER_CODES.has(errorCode) && attempts < MAX_ATTEMPTS) {
+    return {
+      status: 'FAILED',
+      outcome: 'NOT_ATTEMPTED',
+      retryDisposition: 'RETRIABLE',
+    }
+  }
+  if (TERMINAL_PRE_PROVIDER_CODES.has(errorCode)
+    || RETRYABLE_PRE_PROVIDER_CODES.has(errorCode)) {
+    return {
+      status: 'CANCELLED',
+      outcome: 'NOT_ATTEMPTED',
+      retryDisposition: 'TERMINAL',
+    }
+  }
+  return {
+    status: 'CANCELLED',
+    outcome: 'UNKNOWN',
+    retryDisposition: 'MANUAL_REVIEW',
+  }
+}
+
+function classifyProviderFailure(errorCode, attempts) {
+  if (!KNOWN_PROVIDER_FAILURE_CODES.has(errorCode)) {
+    return {
+      status: 'CANCELLED',
+      outcome: 'UNKNOWN',
+      retryDisposition: 'MANUAL_REVIEW',
+      errorCode: 'DELIVERY_OUTCOME_UNKNOWN',
+    }
+  }
+  const retryable = RETRYABLE_PROVIDER_FAILURE_CODES.has(errorCode) && attempts < MAX_ATTEMPTS
+  return {
+    status: retryable ? 'FAILED' : 'CANCELLED',
+    outcome: 'KNOWN_FAILED',
+    retryDisposition: retryable ? 'RETRIABLE' : 'TERMINAL',
+    errorCode,
+  }
 }
 
 function completeReservationGrant(tx, reservation) {
@@ -550,6 +631,8 @@ function iso(value) {
 
 module.exports = {
   MAX_ATTEMPTS,
+  classifyPreProviderFailure,
+  classifyProviderFailure,
   createNotificationRepository,
   messageDto,
   retryDelayMs,

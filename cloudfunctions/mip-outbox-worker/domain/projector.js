@@ -858,7 +858,8 @@ async function projectOperationsNotification(database, event) {
     `SELECT message.id, message.recipient_user_id, message.title, message.body,
             message.target_type, message.target_id, message.event_id,
             message.template_key, message.template_payload_json,
-            message.status, message.version
+            message.status, message.version,
+            campaign.id AS campaign_id, campaign.status AS campaign_status
      FROM mip_operations_messages message
      INNER JOIN mip_users recipient
        ON recipient.app_id = message.app_id
@@ -870,12 +871,20 @@ async function projectOperationsNotification(database, event) {
      LEFT JOIN mip_events event_fact
        ON event_fact.app_id = message.app_id
       AND event_fact.id = message.event_id
+     LEFT JOIN mip_message_campaigns campaign
+       ON campaign.app_id = message.app_id
+      AND campaign.id = message.publication_id
      WHERE message.app_id = ? AND message.id = ?
        AND (message.event_id IS NULL OR event_fact.id IS NOT NULL)`,
     [event.app_id, event.aggregate_id],
   )
   if (!row || row.status !== 'PUBLISHED' || Number(row.version) !== Number(event.source_version)) {
     return projection([], [], 'FACT_NO_LONGER_CURRENT')
+  }
+  if (row.campaign_id && row.campaign_status !== 'PUBLISHED') {
+    return projection([], [], row.campaign_status === 'WITHDRAWN'
+      ? 'CAMPAIGN_WITHDRAWN'
+      : 'FACT_NO_LONGER_CURRENT')
   }
   const title = boundedText(row.title, 100)
   const body = boundedText(row.body, 500)

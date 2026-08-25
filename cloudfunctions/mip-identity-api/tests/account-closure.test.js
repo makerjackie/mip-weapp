@@ -2,7 +2,10 @@
 
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
-const { createAccountClosureRepository } = require('../domain/account-closure')
+const {
+  classifyDeliveryClosureState,
+  createAccountClosureRepository,
+} = require('../domain/account-closure')
 const { createIdentityRepository } = require('../domain/repository')
 const {
   ACCOUNT_CLOSURE_CONFIRMATION_PHRASE,
@@ -107,6 +110,17 @@ describe('MIP account closure repository', () => {
     assert.match(source, /status = CASE WHEN status IN \('AVAILABLE', 'RESERVED'\) THEN 'REVOKED' ELSE status END/)
     assert.match(source, /reservation_task_id = NULL/)
     assert.ok(source.indexOf('UPDATE mip_delivery_tasks') < source.indexOf('UPDATE mip_notification_grants'))
+    const deliveryCall = calls.find(call => call.sql.includes('UPDATE mip_delivery_tasks'))
+    assert.match(deliveryCall.sql, /last_outcome IN \('NOT_ATTEMPTED', 'KNOWN_FAILED'\)/)
+    assert.match(deliveryCall.sql, /ELSE 'UNKNOWN'/)
+    assert.match(deliveryCall.sql, /THEN 'TERMINAL'/)
+    assert.match(deliveryCall.sql, /ELSE 'MANUAL_REVIEW'/)
+    assert.match(deliveryCall.sql, /outcome_updated_at = \?, task\.lease_expires_at = NULL/)
+    assert.deepEqual(deliveryCall.params, [
+      new Date('2026-08-24T08:00:00.000Z'),
+      appId,
+      userId,
+    ])
     assert.match(source, /UPDATE mip_ai_drafts/)
     assert.doesNotMatch(source, /UPDATE mip_orders/)
     assert.doesNotMatch(source, /UPDATE mip_payment_attempts/)
@@ -121,6 +135,33 @@ describe('MIP account closure repository', () => {
     for (const call of calls.filter(item => item.sql.includes('UPDATE mip_'))) {
       assert.equal(call.params.includes(appId), true)
     }
+  })
+
+  it('keeps uncertain deliveries in manual review and terminates only known outcomes', () => {
+    assert.deepEqual(classifyDeliveryClosureState('PROCESSING', 'NOT_ATTEMPTED'), {
+      lastOutcome: 'UNKNOWN',
+      retryDisposition: 'MANUAL_REVIEW',
+      lastErrorCode: 'DELIVERY_OUTCOME_UNKNOWN',
+    })
+    assert.deepEqual(classifyDeliveryClosureState('PENDING', 'NOT_ATTEMPTED'), {
+      lastOutcome: 'NOT_ATTEMPTED',
+      retryDisposition: 'TERMINAL',
+      lastErrorCode: 'DELIVERY_RECIPIENT_INACTIVE',
+    })
+    assert.deepEqual(classifyDeliveryClosureState(
+      'FAILED',
+      'KNOWN_FAILED',
+      'WECHAT_DELIVERY_REJECTED',
+    ), {
+      lastOutcome: 'KNOWN_FAILED',
+      retryDisposition: 'TERMINAL',
+      lastErrorCode: 'WECHAT_DELIVERY_REJECTED',
+    })
+    assert.deepEqual(classifyDeliveryClosureState('FAILED', 'UNKNOWN', 'DELIVERY_FAILED'), {
+      lastOutcome: 'UNKNOWN',
+      retryDisposition: 'MANUAL_REVIEW',
+      lastErrorCode: 'DELIVERY_FAILED',
+    })
   })
 
   it('fails closed for every unsettled payment, refund, registration, or seat-hold source', async () => {

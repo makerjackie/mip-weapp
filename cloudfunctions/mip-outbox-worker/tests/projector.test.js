@@ -701,6 +701,8 @@ describe('outbox event projector', () => {
         assert.match(sql, /FROM mip_operations_messages message/)
         assert.match(sql, /recipient\.app_id = message\.app_id/)
         assert.match(sql, /event_fact\.app_id = message\.app_id/)
+        assert.match(sql, /campaign\.app_id = message\.app_id/)
+        assert.match(sql, /campaign\.id = message\.publication_id/)
         assert.deepEqual(params, ['wx-app', event.aggregate_id])
         return {
           id: event.aggregate_id,
@@ -720,6 +722,8 @@ describe('outbox event projector', () => {
           }),
           status: 'PUBLISHED',
           version: 2,
+          campaign_id: '64000000-0000-4000-8000-000000000001',
+          campaign_status: 'PUBLISHED',
         }
       },
     }, event)
@@ -741,6 +745,38 @@ describe('outbox event projector', () => {
         },
       },
     }])
+  })
+
+  it('converges a withdrawn campaign outbox fact without creating another inbox message', async () => {
+    const event = {
+      ...base,
+      aggregate_type: 'OPERATIONS_MESSAGE',
+      aggregate_id: '61000000-0000-4000-8000-000000000003',
+      event_type: 'operations.notification_published',
+      source_version: 1,
+    }
+    const result = await projectEvent({
+      async one() {
+        return {
+          id: event.aggregate_id,
+          recipient_user_id: '62000000-0000-4000-8000-000000000001',
+          title: '活动通知',
+          body: '活动信息已更新。',
+          target_type: null,
+          target_id: null,
+          event_id: null,
+          template_key: null,
+          template_payload_json: null,
+          status: 'PUBLISHED',
+          version: 1,
+          campaign_id: '64000000-0000-4000-8000-000000000002',
+          campaign_status: 'WITHDRAWN',
+        }
+      },
+    }, event)
+    assert.equal(result.supported, true)
+    assert.equal(result.reason, 'CAMPAIGN_WITHDRAWN')
+    assert.deepEqual(result.notifications, [])
   })
 
   it('does not project an operations message missing from the current app scope', async () => {

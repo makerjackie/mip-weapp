@@ -100,10 +100,24 @@ function createServiceAccountSender(options) {
       })
     }
     catch {
-      throw new Error('WECHAT_SERVICE_ACCOUNT_FAILED')
+      throw new Error('DELIVERY_OUTCOME_UNKNOWN')
     }
-    if (!response || !response.ok) throw new Error('WECHAT_SERVICE_ACCOUNT_FAILED')
+    if (!response) throw new Error('DELIVERY_OUTCOME_UNKNOWN')
+    const status = Number(response.status)
+    if (!Number.isInteger(status)) throw new Error('DELIVERY_OUTCOME_UNKNOWN')
+    if (status === 429) throw new Error('SERVICE_ACCOUNT_RATE_LIMITED')
+    if (!response.ok) throw new Error('SERVICE_ACCOUNT_DELIVERY_REJECTED')
   }
+}
+
+function assertWechatSuccess(result) {
+  const rawCode = result?.errCode ?? result?.errcode
+  const errorCode = typeof rawCode === 'number'
+    ? rawCode
+    : (/^-?\d+$/.test(String(rawCode || '').trim()) ? Number(rawCode) : Number.NaN)
+  if (!Number.isInteger(errorCode)) throw new Error('DELIVERY_OUTCOME_UNKNOWN')
+  if (errorCode === -1) throw new Error('WECHAT_PROVIDER_BUSY')
+  if (errorCode !== 0) throw new Error('WECHAT_DELIVERY_REJECTED')
 }
 
 function normalizeFields(value) {
@@ -140,6 +154,7 @@ function text(value) {
 
 module.exports = {
   CUSTOMER_SERVICE_TEMPLATE_KEY,
+  assertWechatSuccess,
   buildCustomerServiceRequest,
   buildServiceAccountRequest,
   createServiceAccountSender,

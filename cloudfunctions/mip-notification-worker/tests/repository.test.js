@@ -55,6 +55,7 @@ describe('notification repository', () => {
     })
     assert.match(writes[0].sql, /ON DUPLICATE KEY UPDATE dedupe_key = VALUES\(dedupe_key\)/)
     assert.match(writes[1].sql, /ON DUPLICATE KEY UPDATE inbox_message_id = VALUES\(inbox_message_id\)/)
+    assert.match(writes[1].sql, /'PENDING', 'NOT_ATTEMPTED', 'RETRIABLE'/)
     assert.equal(writes[0].params.at(-1), 'outbox:event:operations')
   })
 
@@ -352,7 +353,7 @@ describe('notification repository', () => {
     ])
   })
 
-  it('pins the reservation and records retry state before releasing the user lock on sender failure', async () => {
+  it('quarantines an unknown provider outcome before releasing the user lock', async () => {
     const lease = new Date('2026-08-24T01:02:00.000Z')
     const writes = []
     let transactionActive = false
@@ -396,16 +397,18 @@ describe('notification repository', () => {
       reservationToken: 'reservation-id', grant: { id: 'grant-id' },
     }, async () => {
       assert.equal(transactionActive, true)
-      throw new Error('WECHAT_DELIVERY_FAILED')
+      throw new Error('NETWORK_RESULT_UNCERTAIN')
     }, { now: new Date('2026-08-24T01:00:00.000Z') })
     assert.deepEqual(result, {
-      taskId: 'task-id', status: 'FAILED', errorCode: 'WECHAT_DELIVERY_FAILED',
-      retryAt: '2026-08-24T01:00:01.000Z',
+      taskId: 'task-id', status: 'CANCELLED', errorCode: 'DELIVERY_OUTCOME_UNKNOWN',
     })
-    assert.equal(writes.length, 1)
-    assert.match(writes[0].sql, /SET status = \?/)
-    assert.equal(writes[0].params[0], 'FAILED')
-    assert.equal(writes[0].params.at(-1), lease)
+    assert.equal(writes.length, 2)
+    assert.match(writes[0].sql, /status = 'EXPIRED'/)
+    assert.match(writes[1].sql, /SET status = \?/)
+    assert.equal(writes[1].params[0], 'CANCELLED')
+    assert.equal(writes[1].params[3], 'UNKNOWN')
+    assert.equal(writes[1].params[4], 'MANUAL_REVIEW')
+    assert.equal(writes[1].params.at(-1), lease)
   })
 
   it('releases a reservation only when external delivery was not attempted', async () => {
@@ -423,7 +426,8 @@ describe('notification repository', () => {
             }
           }
           return {
-            id: 'grant-id', status: 'RESERVED', reservation_task_id: 'task-id',
+            id: 'grant-id', user_id: userId, channel: 'WECHAT_SUBSCRIPTION',
+            template_key: 'EVENT_REMINDER', status: 'RESERVED', reservation_task_id: 'task-id',
             reservation_token: 'reservation-id',
           }
         },
@@ -437,28 +441,32 @@ describe('notification repository', () => {
     const result = await repository.failReservedTask({
       taskId: 'task-id', app_id: appId, leaseKey: lease.toISOString(), lease_expires_at: lease,
       reservationToken: 'reservation-id', grant: { id: 'grant-id' },
-    }, 'DELIVERY_PAYLOAD_INVALID', { externalAttempted: false, now: new Date('2026-08-24T01:00:00.000Z') })
-    assert.equal(result.status, 'FAILED')
-    assert.equal(writes[0].params[0], 'AVAILABLE')
+    }, 'DELIVERY_PAYLOAD_INVALID', { now: new Date('2026-08-24T01:00:00.000Z') })
+    assert.equal(result.status, 'CANCELLED')
+    assert.match(writes[0].sql, /SET status = 'AVAILABLE'/)
     assert.match(writes[0].sql, /reservation_task_id = NULL/)
+    assert.equal(writes[1].params[3], 'NOT_ATTEMPTED')
+    assert.equal(writes[1].params[4], 'TERMINAL')
   })
 
-  it('pins an attempted grant to the same task until retry or terminal expiry', async () => {
+  it('retries only an explicitly allowlisted provider rejection and pins its grant', async () => {
     const lease = new Date('2026-08-24T01:02:00.000Z')
     const writes = []
     let read = 0
     const database = {
       transaction: async callback => callback({
-        async one() {
+        async one(sql) {
+          if (sql.includes('FROM mip_users')) return { id: userId, status: 'ACTIVE' }
           read += 1
-          if (read === 1) {
+          if (sql.includes('FROM mip_delivery_tasks')) {
             return {
               id: 'task-id', app_id: appId, status: 'PROCESSING', attempts: 2,
               lease_expires_at: lease,
             }
           }
           return {
-            id: 'grant-id', status: 'RESERVED', reservation_task_id: 'task-id',
+            id: 'grant-id', user_id: userId, channel: 'WECHAT_SUBSCRIPTION',
+            template_key: 'EVENT_REMINDER', status: 'RESERVED', reservation_task_id: 'task-id',
             reservation_token: 'reservation-id',
           }
         },
@@ -469,31 +477,39 @@ describe('notification repository', () => {
       }),
     }
     const repository = createNotificationRepository(database)
-    const result = await repository.failReservedTask({
-      taskId: 'task-id', app_id: appId, leaseKey: lease.toISOString(), lease_expires_at: lease,
+    const result = await repository.deliverReservedTask({
+      taskId: 'task-id', app_id: appId, channel: 'WECHAT_SUBSCRIPTION',
+      template_key: 'EVENT_REMINDER', recipient_user_id: userId,
+      leaseKey: lease.toISOString(), lease_expires_at: lease,
       reservationToken: 'reservation-id', grant: { id: 'grant-id' },
-    }, 'WECHAT_DELIVERY_FAILED', { externalAttempted: true, now: new Date('2026-08-24T01:00:00.000Z') })
+    }, async () => { throw new Error('WECHAT_PROVIDER_BUSY') }, {
+      now: new Date('2026-08-24T01:00:00.000Z'),
+    })
     assert.equal(result.status, 'FAILED')
     assert.equal(writes.length, 1)
     assert.match(writes[0].sql, /UPDATE mip_delivery_tasks/)
+    assert.equal(writes[0].params[3], 'KNOWN_FAILED')
+    assert.equal(writes[0].params[4], 'RETRIABLE')
   })
 
-  it('expires an attempted grant instead of releasing it after the final failure', async () => {
+  it('expires an attempted grant after the final known provider failure', async () => {
     const lease = new Date('2026-08-24T01:02:00.000Z')
     const writes = []
     let read = 0
     const database = {
       transaction: async callback => callback({
-        async one() {
+        async one(sql) {
+          if (sql.includes('FROM mip_users')) return { id: userId, status: 'ACTIVE' }
           read += 1
-          if (read === 1) {
+          if (sql.includes('FROM mip_delivery_tasks')) {
             return {
               id: 'task-id', app_id: appId, status: 'PROCESSING', attempts: 5,
               lease_expires_at: lease,
             }
           }
           return {
-            id: 'grant-id', status: 'RESERVED', reservation_task_id: 'task-id',
+            id: 'grant-id', user_id: userId, channel: 'WECHAT_SUBSCRIPTION',
+            template_key: 'EVENT_REMINDER', status: 'RESERVED', reservation_task_id: 'task-id',
             reservation_token: 'reservation-id',
           }
         },
@@ -504,13 +520,54 @@ describe('notification repository', () => {
       }),
     }
     const repository = createNotificationRepository(database)
-    const result = await repository.failReservedTask({
-      taskId: 'task-id', app_id: appId, leaseKey: lease.toISOString(), lease_expires_at: lease,
+    const result = await repository.deliverReservedTask({
+      taskId: 'task-id', app_id: appId, channel: 'WECHAT_SUBSCRIPTION',
+      template_key: 'EVENT_REMINDER', recipient_user_id: userId,
+      leaseKey: lease.toISOString(), lease_expires_at: lease,
       reservationToken: 'reservation-id', grant: { id: 'grant-id' },
-    }, 'WECHAT_DELIVERY_FAILED', { externalAttempted: true, now: new Date('2026-08-24T01:00:00.000Z') })
+    }, async () => { throw new Error('WECHAT_PROVIDER_BUSY') }, {
+      now: new Date('2026-08-24T01:00:00.000Z'),
+    })
     assert.equal(result.status, 'CANCELLED')
-    assert.equal(writes[0].params[0], 'EXPIRED')
+    assert.match(writes[0].sql, /status = 'EXPIRED'/)
     assert.match(writes[1].sql, /UPDATE mip_delivery_tasks/)
+    assert.equal(writes[1].params[3], 'KNOWN_FAILED')
+    assert.equal(writes[1].params[4], 'TERMINAL')
+  })
+
+  it('leases only not-attempted or explicitly known-failed retryable tasks', async () => {
+    const now = new Date('2026-08-24T01:10:00.000Z')
+    const reads = []
+    const writes = []
+    const database = {
+      transaction: async callback => callback({
+        async query(sql, params) {
+          if (sql.startsWith('SELECT id FROM mip_delivery_tasks')) {
+            reads.push({ sql, params })
+            return sql.includes("status = 'PROCESSING'") ? [] : [{ id: 'task-id' }]
+          }
+          if (sql.includes('SELECT id, app_id, attempts, lease_expires_at')) {
+            return [{
+              id: 'task-id', app_id: appId, attempts: 1,
+              lease_expires_at: new Date('2026-08-24T01:12:00.000Z'),
+            }]
+          }
+          writes.push({ sql, params })
+          return { affectedRows: 1 }
+        },
+      }),
+    }
+    const repository = createNotificationRepository(database)
+    const tasks = await repository.leaseTasks(appId, 10, now)
+    assert.equal(tasks.length, 1)
+    assert.equal(reads.length, 2)
+    assert.match(reads[1].sql, /status = 'PENDING'/)
+    assert.match(reads[1].sql, /status = 'FAILED'/)
+    assert.match(reads[1].sql, /retry_disposition = 'RETRIABLE'/)
+    assert.match(reads[1].sql, /last_outcome IN \('NOT_ATTEMPTED', 'KNOWN_FAILED'\)/)
+    assert.doesNotMatch(reads[1].sql, /status = 'PROCESSING'/)
+    assert.match(writes[0].sql, /last_outcome = 'UNKNOWN'/)
+    assert.match(writes[0].sql, /retry_disposition = 'MANUAL_REVIEW'/)
   })
 
   it('reaps a crashed final attempt without making its reserved grant available', async () => {
@@ -520,10 +577,10 @@ describe('notification repository', () => {
       transaction: async callback => callback({
         async one() { return null },
         async query(sql, params) {
-          if (/SELECT id FROM mip_delivery_tasks/.test(sql) && /attempts >=/.test(sql)) {
+          if (/SELECT id FROM mip_delivery_tasks/.test(sql) && /status = 'PROCESSING'/.test(sql)) {
             return [{ id: 'task-id' }]
           }
-          if (/SELECT id FROM mip_delivery_tasks/.test(sql) && /attempts </.test(sql)) {
+          if (/SELECT id FROM mip_delivery_tasks/.test(sql) && /status = 'PENDING'/.test(sql)) {
             return []
           }
           writes.push({ sql, params })
@@ -537,6 +594,7 @@ describe('notification repository', () => {
     assert.doesNotMatch(writes[0].sql, /status = 'AVAILABLE'/)
     assert.match(writes[1].sql, /status = 'CANCELLED'/)
     assert.match(writes[1].sql, /DELIVERY_OUTCOME_UNKNOWN/)
+    assert.match(writes[1].sql, /retry_disposition = 'MANUAL_REVIEW'/)
   })
 
   it('expires an unknown reservation when the final lease cannot be reserved', async () => {
@@ -561,8 +619,11 @@ describe('notification repository', () => {
       id: 'task-id', app_id: appId, leaseKey: lease.toISOString(),
     }, 'DELIVERY_RESERVATION_LOST', new Date('2026-08-24T01:00:00.000Z'))
     assert.equal(result.status, 'CANCELLED')
-    assert.match(writes[0].sql, /status = 'EXPIRED'/)
+    assert.match(writes[0].sql, /SET status = \?/)
+    assert.equal(writes[0].params[0], 'EXPIRED')
     assert.match(writes[1].sql, /status = \?/)
+    assert.equal(writes[1].params[3], 'UNKNOWN')
+    assert.equal(writes[1].params[4], 'MANUAL_REVIEW')
   })
 
   it('delivers a service-account task without reading or consuming a recipient grant', async () => {

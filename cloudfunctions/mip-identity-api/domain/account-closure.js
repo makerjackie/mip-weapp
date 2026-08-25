@@ -3,6 +3,10 @@
 const { createHash, randomUUID } = require('node:crypto')
 
 const OPERATION = 'identity.closeAccount'
+const TERMINAL_DELIVERY_OUTCOMES = Object.freeze(['NOT_ATTEMPTED', 'KNOWN_FAILED'])
+const TERMINAL_DELIVERY_OUTCOMES_SQL = TERMINAL_DELIVERY_OUTCOMES
+  .map(value => `'${value}'`)
+  .join(', ')
 const CLOSED_PROFILE_VISIBILITY = Object.freeze({
   nickname: false,
   avatar: false,
@@ -232,10 +236,29 @@ async function revokeAndMinimize(tx, input) {
     `UPDATE mip_delivery_tasks task
      INNER JOIN mip_inbox_messages message
        ON message.app_id = task.app_id AND message.id = task.inbox_message_id
-     SET task.status = 'CANCELLED', task.lease_expires_at = NULL
+     SET task.last_error_code = COALESCE(
+           task.last_error_code,
+           CASE WHEN task.status <> 'PROCESSING'
+             AND task.last_outcome IN (${TERMINAL_DELIVERY_OUTCOMES_SQL})
+             THEN 'DELIVERY_RECIPIENT_INACTIVE'
+             ELSE 'DELIVERY_OUTCOME_UNKNOWN'
+           END
+         ),
+       task.last_outcome = CASE
+         WHEN task.status <> 'PROCESSING'
+           AND task.last_outcome IN (${TERMINAL_DELIVERY_OUTCOMES_SQL}) THEN task.last_outcome
+         ELSE 'UNKNOWN'
+       END,
+       task.retry_disposition = CASE
+         WHEN task.status <> 'PROCESSING'
+           AND task.last_outcome IN (${TERMINAL_DELIVERY_OUTCOMES_SQL}) THEN 'TERMINAL'
+         ELSE 'MANUAL_REVIEW'
+       END,
+       task.outcome_updated_at = ?, task.lease_expires_at = NULL,
+       task.status = 'CANCELLED'
      WHERE message.app_id = ? AND message.recipient_user_id = ?
        AND task.status IN ('PENDING', 'PROCESSING', 'FAILED')`,
-    [appId, user.id],
+    [closedAt, appId, user.id],
   ))
   effects.notificationGrants = affected(await tx.query(
     `UPDATE mip_notification_grants
@@ -409,7 +432,21 @@ function iso(value) {
   return Number.isNaN(date.getTime()) ? '' : date.toISOString()
 }
 
+function classifyDeliveryClosureState(status, lastOutcome, lastErrorCode = '') {
+  const outcome = status !== 'PROCESSING' && TERMINAL_DELIVERY_OUTCOMES.includes(lastOutcome)
+    ? lastOutcome
+    : 'UNKNOWN'
+  return {
+    lastOutcome: outcome,
+    retryDisposition: outcome === 'UNKNOWN' ? 'MANUAL_REVIEW' : 'TERMINAL',
+    lastErrorCode: lastErrorCode || (outcome === 'UNKNOWN'
+      ? 'DELIVERY_OUTCOME_UNKNOWN'
+      : 'DELIVERY_RECIPIENT_INACTIVE'),
+  }
+}
+
 module.exports = {
   CLOSED_PROFILE_VISIBILITY,
+  classifyDeliveryClosureState,
   createAccountClosureRepository,
 }

@@ -121,7 +121,7 @@ test('releases a reservation when local request validation fails before sender i
   })
   const result = await service.runDeliveryBatch({ appId })
   assert.equal(senderCalls, 0)
-  assert.equal(failureInput.input.externalAttempted, false)
+  assert.equal(Object.hasOwn(failureInput.input, 'externalAttempted'), false)
   assert.equal(result.failed, 1)
   assert.equal(JSON.stringify(result).includes('recipient_ciphertext'), false)
 })

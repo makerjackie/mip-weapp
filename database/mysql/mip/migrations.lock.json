@@ -556,6 +556,21 @@
         "mip_message_template_revisions"
       ],
       "altersTables": []
+    },
+    {
+      "version": "20260824400000",
+      "name": "mip_message_dispatch_safety",
+      "sql": "database/mysql/mip/040_message_dispatch_safety.sql",
+      "sqlSha256": "a21bd5de6488cc682a12c4874824bbc5342ab23d484091197c6d8423dc440e3c",
+      "rollback": "database/mysql/mip/rollback/040_message_dispatch_safety.sql",
+      "rollbackSha256": "c4c41b92d12bd901a3a4c167ead6df83d580a76bd662ca0b462b5ee3ac7e414e",
+      "createsTables": [
+        "mip_message_campaign_dispatches"
+      ],
+      "altersTables": [
+        "mip_message_campaigns",
+        "mip_delivery_tasks"
+      ]
     }
   ]
 }

@@ -3,6 +3,7 @@
 const assert = require('node:assert/strict')
 const test = require('node:test')
 const {
+  assertWechatSuccess,
   buildCustomerServiceRequest,
   buildServiceAccountRequest,
   createServiceAccountSender,
@@ -15,6 +16,14 @@ const task = {
   recipient_user_id: '10000000-0000-4000-8000-000000000001',
   target_route: '/packages/member/mip-events/detail/index?eventId=40000000-0000-4000-8000-000000000001',
 }
+
+test('classifies WeChat acknowledgements without retrying an unknown result', () => {
+  assert.doesNotThrow(() => assertWechatSuccess({ errCode: 0 }))
+  assert.throws(() => assertWechatSuccess({ errcode: -1 }), /WECHAT_PROVIDER_BUSY/)
+  assert.throws(() => assertWechatSuccess({ errCode: 45009 }), /WECHAT_DELIVERY_REJECTED/)
+  assert.throws(() => assertWechatSuccess({}), /DELIVERY_OUTCOME_UNKNOWN/)
+  assert.throws(() => assertWechatSuccess({ errCode: '' }), /DELIVERY_OUTCOME_UNKNOWN/)
+})
 
 test('builds customer-service text without exposing an internal user id', () => {
   assert.deepEqual(buildCustomerServiceRequest({
@@ -55,7 +64,7 @@ test('signs service-account adapter calls and reports only a stable error code',
     clock: () => Date.parse('2026-08-24T00:00:00.000Z'),
     async fetchImpl(endpoint, options) {
       captured = { endpoint, options }
-      return { ok: true }
+      return { ok: true, status: 200 }
     },
   })
   await sender({ ...task, idempotencyKey: task.taskId })
@@ -67,10 +76,37 @@ test('signs service-account adapter calls and reports only a stable error code',
   const failed = createServiceAccountSender({
     config,
     secret: 'service-account-adapter-secret-longer-than-32-bytes',
-    async fetchImpl() { return { ok: false } },
+    async fetchImpl() { return { ok: false, status: 400 } },
   })
   await assert.rejects(() => failed({ ...task, idempotencyKey: task.taskId }), {
-    message: 'WECHAT_SERVICE_ACCOUNT_FAILED',
+    message: 'SERVICE_ACCOUNT_DELIVERY_REJECTED',
+  })
+
+  const rateLimited = createServiceAccountSender({
+    config,
+    secret: 'service-account-adapter-secret-longer-than-32-bytes',
+    async fetchImpl() { return { ok: false, status: 429 } },
+  })
+  await assert.rejects(() => rateLimited({ ...task, idempotencyKey: task.taskId }), {
+    message: 'SERVICE_ACCOUNT_RATE_LIMITED',
+  })
+
+  const uncertain = createServiceAccountSender({
+    config,
+    secret: 'service-account-adapter-secret-longer-than-32-bytes',
+    async fetchImpl() { throw new Error('socket closed') },
+  })
+  await assert.rejects(() => uncertain({ ...task, idempotencyKey: task.taskId }), {
+    message: 'DELIVERY_OUTCOME_UNKNOWN',
+  })
+
+  const malformed = createServiceAccountSender({
+    config,
+    secret: 'service-account-adapter-secret-longer-than-32-bytes',
+    async fetchImpl() { return { ok: true } },
+  })
+  await assert.rejects(() => malformed({ ...task, idempotencyKey: task.taskId }), {
+    message: 'DELIVERY_OUTCOME_UNKNOWN',
   })
 })
 

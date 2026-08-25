@@ -6,6 +6,7 @@ const { createNotificationRepository } = require('./domain/repository')
 const { createNotificationService } = require('./domain/service')
 const { verifyInternalEvent } = require('./lib/internal-auth')
 const {
+  assertWechatSuccess,
   createServiceAccountSender,
   parseServiceAccountConfig,
 } = require('./lib/channel-adapters')
@@ -49,11 +50,6 @@ const service = createNotificationService({
   miniprogramState: process.env.MIP_MINIPROGRAM_STATE || 'trial',
   senders,
 })
-
-function assertWechatSuccess(result) {
-  const errorCode = Number(result?.errCode ?? result?.errcode ?? 0)
-  if (errorCode !== 0) throw new Error('WECHAT_DELIVERY_FAILED')
-}
 
 exports.main = createHandler({
   service,
