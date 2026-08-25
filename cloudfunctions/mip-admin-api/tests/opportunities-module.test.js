@@ -66,7 +66,8 @@ function repository(overrides = {}) {
       repo.detailReads += 1
       return opportunityRow({ id: opportunityId, ownerUserId: OWNER_ID })
     },
-    async getOpportunityEditorOptions() {
+    async getOpportunityEditorOptions(appId, visibility) {
+      repo.calls.push({ type: 'options', appId, visibility })
       return { branches: [], owners: [], cities: [], tags: [], roles: [] }
     },
     async saveOpportunity(input) {
@@ -316,6 +317,12 @@ describe('admin opportunities deep module', () => {
       platform: false,
       branchIds: [BRANCH_A],
       eventIds: [],
+    })
+    await service.getOpportunityEditorOptions(caller)
+    assert.deepEqual(repo.calls.find(call => call.type === 'options'), {
+      type: 'options',
+      appId: APP_ID,
+      visibility: { platform: false, branchIds: [BRANCH_A], eventIds: [] },
     })
     assert.deepEqual(repo.calls.find(call => call.type === 'list').filters, {
       query: '品牌',

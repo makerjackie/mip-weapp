@@ -77,7 +77,10 @@ function createAdminOpportunities({
   async function getOpportunityEditorOptions(caller) {
     const context = await access.session(caller)
     firstGrant(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE)
-    return repository.getOpportunityEditorOptions(context.caller.appId)
+    return repository.getOpportunityEditorOptions(
+      context.caller.appId,
+      visibilityForCapability(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE),
+    )
   }
 
   async function saveOpportunity(caller, input = {}) {

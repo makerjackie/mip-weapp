@@ -26,6 +26,50 @@ function audit(resourceId) {
 }
 
 describe('admin PRD extension persistence', () => {
+  it('maps editor options in query order and limits branch operators to their branch', async () => {
+    const calls = []
+    const repository = extensions(database({
+      async query(sql, params) {
+        calls.push({ sql, params })
+        if (sql.includes('FROM mip_city_branches')) {
+          return [{ id: 'branch-a', name: '深圳分会', city_name: '深圳' }]
+        }
+        if (sql.includes('FROM mip_users')) {
+          return [{ id: 'owner-a', nickname: '负责人', branch_name: '深圳分会' }]
+        }
+        if (sql.includes('FROM mip_tags')) {
+          return [
+            { id: 'city-a', kind: 'CITY', label: '深圳' },
+            { id: 'tag-a', kind: 'INDUSTRY', label: '企业服务' },
+          ]
+        }
+        return []
+      },
+    }))
+
+    const result = await repository.getOpportunityEditorOptions('wx-app', {
+      platform: false,
+      branchIds: ['branch-a'],
+      eventIds: [],
+    })
+
+    assert.deepEqual(result.branches, [{ id: 'branch-a', name: '深圳分会', cityName: '深圳' }])
+    assert.deepEqual(result.owners, [{ id: 'owner-a', nickname: '负责人', branchName: '深圳分会' }])
+    assert.deepEqual(result.cities, [{ id: 'city-a', label: '深圳' }])
+    assert.deepEqual(result.tags, [{ id: 'tag-a', kind: 'INDUSTRY', label: '企业服务' }])
+    assert.deepEqual(calls.find(call => call.sql.includes('FROM mip_city_branches')).params, ['wx-app', 'branch-a'])
+    assert.deepEqual(calls.find(call => call.sql.includes('FROM mip_users')).params, ['wx-app', 'branch-a'])
+
+    calls.length = 0
+    await repository.getOpportunityEditorOptions('wx-app', {
+      platform: true,
+      branchIds: [],
+      eventIds: [],
+    })
+    assert.deepEqual(calls.find(call => call.sql.includes('FROM mip_city_branches')).params, ['wx-app'])
+    assert.deepEqual(calls.find(call => call.sql.includes('FROM mip_users')).params, ['wx-app'])
+  })
+
   it('returns the opportunity deadline, editable relationships, and app-scoped audit history', async () => {
     const calls = []
     const repository = extensions(database({
@@ -102,6 +146,32 @@ describe('admin PRD extension persistence', () => {
     assert.ok(writes.some(call => /INSERT INTO mip_opportunity_roles/.test(call.sql)))
     assert.ok(writes.some(call => /INSERT INTO mip_opportunity_tags/.test(call.sql)))
     assert.ok(writes.some(call => /INSERT INTO mip_audit_logs/.test(call.sql)))
+  })
+
+  it('rejects a branch opportunity owner from another primary branch before writing', async () => {
+    const writes = []
+    const repository = extensions(database({
+      async one(sql) {
+        if (sql.includes('FROM mip_users')) return { id: 'owner-b', primary_branch_id: 'branch-b' }
+        return null
+      },
+      async query(sql, params) {
+        writes.push({ sql, params })
+        return { affectedRows: 1 }
+      },
+    }))
+
+    await assert.rejects(() => repository.saveOpportunity({
+      appId: 'wx-app', actorUserId: 'admin-user', opportunityId: null, expectedVersion: 0,
+      authorizedScope: null, authorization: {}, contentSafetyStatus: 'APPROVED',
+      draft: {
+        ownerUserId: 'owner-b', scopeType: 'BRANCH', branchId: 'branch-a', title: '机会',
+        valueSummary: '价值', targetSummary: '', description: '', cityTagId: null,
+        deadlineAt: null, roleKeys: [], tagIds: [],
+      },
+      audit,
+    }), error => error?.code === 'FORBIDDEN')
+    assert.equal(writes.length, 0)
   })
 
   it('reads independent benefits and preserves legacy benefit copy for migration compatibility', async () => {

@@ -227,21 +227,33 @@ function createAdminPrdExtensions(database, options = {}) {
     })
   }
 
-  async function getOpportunityEditorOptions(appId) {
-    const [branches, tags, owners] = await Promise.all([
+  async function getOpportunityEditorOptions(appId, visibility) {
+    const branchIds = visibility?.platform ? [] : [...new Set(visibility?.branchIds || [])]
+    const branchAccess = visibility?.platform
+      ? { sql: '1 = 1', params: [] }
+      : branchIds.length
+        ? { sql: `id IN (${placeholders(branchIds)})`, params: branchIds }
+        : { sql: '1 = 0', params: [] }
+    const ownerAccess = visibility?.platform
+      ? { sql: '1 = 1', params: [] }
+      : branchIds.length
+        ? { sql: `u.primary_branch_id IN (${placeholders(branchIds)})`, params: branchIds }
+        : { sql: '1 = 0', params: [] }
+    const [branches, owners, tags] = await Promise.all([
       database.query(
         `SELECT id, name, city_name FROM mip_city_branches
-         WHERE app_id = ? AND status = 'ACTIVE' ORDER BY city_name, name, id`,
-        [appId],
+         WHERE app_id = ? AND status = 'ACTIVE' AND ${branchAccess.sql}
+         ORDER BY city_name, name, id`,
+        [appId, ...branchAccess.params],
       ),
       database.query(
         `SELECT u.id, p.nickname, b.name AS branch_name
          FROM mip_users u
          LEFT JOIN mip_profiles p ON p.app_id = u.app_id AND p.user_id = u.id
          LEFT JOIN mip_city_branches b ON b.app_id = u.app_id AND b.id = u.primary_branch_id
-         WHERE u.app_id = ? AND u.status = 'ACTIVE'
+         WHERE u.app_id = ? AND u.status = 'ACTIVE' AND ${ownerAccess.sql}
          ORDER BY p.nickname, u.id LIMIT 500`,
-        [appId],
+        [appId, ...ownerAccess.params],
       ),
       database.query(
         `SELECT id, kind, label, popular, sort_order FROM mip_tags
@@ -291,10 +303,14 @@ function createAdminPrdExtensions(database, options = {}) {
         version = Number(current.version) + 1
       }
       const owner = await tx.one(
-        `SELECT id FROM mip_users WHERE app_id = ? AND id = ? AND status = 'ACTIVE' FOR UPDATE`,
+        `SELECT id, primary_branch_id FROM mip_users
+         WHERE app_id = ? AND id = ? AND status = 'ACTIVE' FOR UPDATE`,
         [input.appId, input.draft.ownerUserId],
       )
       if (!owner) throw codeError('VALIDATION_FAILED')
+      if (draftScope.scopeType === 'BRANCH' && owner.primary_branch_id !== draftScope.scopeId) {
+        throw codeError('FORBIDDEN')
+      }
       if (input.draft.cityTagId) {
         const city = await tx.one(
           `SELECT id FROM mip_tags WHERE app_id = ? AND id = ? AND kind = 'CITY' AND enabled = 1 FOR UPDATE`,
