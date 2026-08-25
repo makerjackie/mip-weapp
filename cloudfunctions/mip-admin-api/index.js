@@ -1,7 +1,7 @@
 'use strict'
 
 const cloud = require('wx-server-sdk')
-const { createHandler } = require('./domain/handler')
+const { createHandler, normalizeAdminRequest } = require('./domain/handler')
 const { configuredAgreements } = require('./domain/full-access')
 const { createAdminRepository } = require('./domain/repository')
 const { createAdminService } = require('./domain/service')
@@ -199,9 +199,10 @@ const handler = createHandler({
 exports.main = async (event = {}) => {
   const result = await handler(event)
   if (result?.ok === true) {
+    const routeAction = normalizeAdminRequest(event).action
     await outboxWakeup.afterSuccessfulMutation({
       appId: trustedContextAppId(cloud.getWXContext(), allowedAppIds),
-      action: String(event.action || ''),
+      action: routeAction,
       mutationActions: outboxMutationActions,
     })
   }

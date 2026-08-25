@@ -1,5 +1,6 @@
 import { runtimeConfig } from '../../config/runtime'
 import { MipAdminError } from '../mip-admin'
+import { createAdminRequest } from '../mip-admin/request-contract'
 import { requireCloudClient } from '../platform/cloudbase'
 
 export type KnowledgeAdminSection = 'CONTENTS' | 'SOURCES' | 'CATEGORIES' | 'COMMENTS' | 'REPORTS' | 'RUNS'
@@ -14,7 +15,7 @@ async function invoke<T>(action: string, input: Record<string, unknown> = {}) {
   const cloud = await requireCloudClient()
   const response = await cloud.callFunction({
     name: runtimeConfig.cloudbase.adminFunctionName,
-    data: { action, ...input },
+    data: createAdminRequest(action, input),
   })
   const envelope = response.result as Envelope<T>
   if (!envelope || typeof envelope.ok !== 'boolean') {

@@ -37,6 +37,7 @@ import {
   parseOpportunityCommentState,
 } from './opportunity-comments'
 import { parseAdminOrderPage, parseAdminRosterPage } from './order-roster'
+import { createAdminRequest } from './request-contract'
 import { MipAdminError } from './types'
 
 interface Envelope<T> {
@@ -542,7 +543,7 @@ async function call<T>(action: string, data: Record<string, unknown> = {}) {
       const cloud = await requireCloudClient()
       return cloud.callFunction({
         name: runtimeConfig.cloudbase.adminFunctionName,
-        data: { action, ...data },
+        data: createAdminRequest(action, data),
       })
     }, readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 })
     return unwrap<T>(response.result)

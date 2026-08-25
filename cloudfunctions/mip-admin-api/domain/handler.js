@@ -2,6 +2,64 @@
 
 const { AdminError } = require('./validation')
 
+const ADMIN_REQUEST_CONTRACT_VERSION = 1
+const adminRequestKeys = new Set(['contractVersion', 'action', 'input', 'idempotencyKey'])
+
+function hasOwn(value, key) {
+  return Object.prototype.hasOwnProperty.call(value, key)
+}
+
+function isPlainObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
+}
+
+function invalidAdminRequest() {
+  return new AdminError('VALIDATION_FAILED', '运营请求格式无效')
+}
+
+function isLegacyOpportunityCommentModeration(event) {
+  return ['PUBLISH', 'HIDE'].includes(event.action)
+    && ['opportunityId', 'commentId', 'expectedVersion', 'reason'].every(key => hasOwn(event, key))
+}
+
+function normalizeAdminRequest(event = {}) {
+  if (event && typeof event === 'object' && hasOwn(event, 'contractVersion')) {
+    if (!isPlainObject(event)) throw invalidAdminRequest()
+    if (event.contractVersion !== ADMIN_REQUEST_CONTRACT_VERSION) {
+      throw new AdminError('CONTRACT_VERSION_UNSUPPORTED', '管理请求协议版本不受支持')
+    }
+    if (Reflect.ownKeys(event).some(key => typeof key !== 'string' || !adminRequestKeys.has(key))) {
+      throw invalidAdminRequest()
+    }
+    if (typeof event.action !== 'string' || !event.action) throw invalidAdminRequest()
+    if (!isPlainObject(event.input)) throw invalidAdminRequest()
+    if (hasOwn(event, 'idempotencyKey') && hasOwn(event.input, 'idempotencyKey')) {
+      throw invalidAdminRequest()
+    }
+    if (hasOwn(event, 'idempotencyKey') && typeof event.idempotencyKey !== 'string') {
+      throw invalidAdminRequest()
+    }
+
+    const input = { ...event.input }
+    if (hasOwn(event, 'idempotencyKey')) input.idempotencyKey = event.idempotencyKey
+    return { action: event.action, input }
+  }
+
+  const legacyEvent = event && typeof event === 'object' && !Array.isArray(event) ? event : {}
+  if (isLegacyOpportunityCommentModeration(legacyEvent)) {
+    return {
+      action: 'mip.admin.opportunityComments.moderate',
+      input: { ...legacyEvent },
+    }
+  }
+  const action = typeof legacyEvent.action === 'string' ? legacyEvent.action : ''
+  const input = { ...legacyEvent }
+  delete input.action
+  return { action, input }
+}
+
 const actions = Object.freeze({
   health: service => service.health(),
   'mip.admin.session': (service, caller, event) => service.getSession(caller, event),
@@ -111,12 +169,13 @@ async function knowledgeAction(service, caller, event, method) {
 function createHandler({ service, getContext, resolveCaller }) {
   return async function handler(event = {}) {
     try {
-      const action = typeof event.action === 'string' ? event.action : ''
+      const request = normalizeAdminRequest(event)
+      const { action, input } = request
       const dispatch = actions[action]
       if (!dispatch) throw new AdminError('NOT_FOUND', '运营操作不存在')
-      if (action === 'health') return { ok: true, data: await dispatch(service, null, event) }
+      if (action === 'health') return { ok: true, data: await dispatch(service, null, input) }
       const caller = resolveCaller(getContext())
-      return { ok: true, data: await dispatch(service, caller, event) }
+      return { ok: true, data: await dispatch(service, caller, input) }
     }
     catch (error) {
       return errorResponse(error)
@@ -133,6 +192,7 @@ function errorResponse(error) {
     NOT_FOUND: '记录不存在',
     PHONE_REQUIRED: '请先绑定手机号',
     PROFILE_REQUIRED: '请先完成身份资料',
+    CONTRACT_VERSION_UNSUPPORTED: '管理请求协议版本不受支持',
     VALIDATION_FAILED: '提交内容无效',
     CONFLICT: '记录状态已变化，请刷新后重试',
     INVALID_STATE: '当前状态不支持此操作',
@@ -242,4 +302,4 @@ function opportunityArchiveBlockerDetails(code, details) {
   return blockers.length ? { blockers } : null
 }
 
-module.exports = { actions, createHandler, errorResponse }
+module.exports = { actions, createHandler, errorResponse, normalizeAdminRequest }

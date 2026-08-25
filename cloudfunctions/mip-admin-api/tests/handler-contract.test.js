@@ -4,9 +4,176 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const { describe, it } = require('node:test')
-const { createHandler } = require('../domain/handler')
+const { createHandler, normalizeAdminRequest } = require('../domain/handler')
 
 describe('admin handler and isolation contract', () => {
+  it('normalizes v1 requests without mixing route and business fields', () => {
+    const event = {
+      contractVersion: 1,
+      action: 'mip.admin.opportunityComments.moderate',
+      input: {
+        opportunityId: 'opportunity-a',
+        commentId: 'comment-a',
+        expectedVersion: 3,
+        action: 'PUBLISH',
+        reason: '内容符合要求',
+      },
+      idempotencyKey: 'moderate-comment-request-a',
+    }
+
+    assert.deepEqual(normalizeAdminRequest(event), {
+      action: 'mip.admin.opportunityComments.moderate',
+      input: {
+        opportunityId: 'opportunity-a',
+        commentId: 'comment-a',
+        expectedVersion: 3,
+        action: 'PUBLISH',
+        reason: '内容符合要求',
+        idempotencyKey: 'moderate-comment-request-a',
+      },
+    })
+    assert.equal(Object.hasOwn(event.input, 'idempotencyKey'), false)
+  })
+
+  it('passes only normalized v1 input to the business dispatch', async () => {
+    let received
+    const handler = createHandler({
+      getContext: () => ({ APPID: 'wx', OPENID: 'openid' }),
+      resolveCaller: () => ({ appId: 'wx', identityKey: 'key' }),
+      service: {
+        async updateUser(_caller, input) {
+          received = input
+          return { userId: input.userId, version: input.expectedVersion + 1 }
+        },
+      },
+    })
+    const response = await handler({
+      contractVersion: 1,
+      action: 'mip.admin.users.update',
+      input: { userId: 'user-a', expectedVersion: 4, fields: { nickname: '示例用户' } },
+      idempotencyKey: 'update-user-request-a',
+    })
+
+    assert.equal(response.ok, true)
+    assert.deepEqual(received, {
+      userId: 'user-a',
+      expectedVersion: 4,
+      fields: { nickname: '示例用户' },
+      idempotencyKey: 'update-user-request-a',
+    })
+  })
+
+  it('keeps the flat legacy request compatible while removing its route action from input', () => {
+    const legacy = {
+      action: 'mip.admin.users.get',
+      userId: 'user-a',
+      includePhone: true,
+    }
+    assert.deepEqual(normalizeAdminRequest(legacy), {
+      action: 'mip.admin.users.get',
+      input: { userId: 'user-a', includePhone: true },
+    })
+    assert.deepEqual(legacy, {
+      action: 'mip.admin.users.get',
+      userId: 'user-a',
+      includePhone: true,
+    })
+  })
+
+  it('repairs the legacy opportunity comment action collision', async () => {
+    let received
+    const handler = createHandler({
+      getContext: () => ({}),
+      resolveCaller: () => ({ appId: 'wx', identityKey: 'key' }),
+      service: {
+        async moderateOpportunityComment(_caller, input) {
+          received = input
+          return { id: input.commentId, status: input.action, version: input.expectedVersion + 1 }
+        },
+      },
+    })
+    const response = await handler({
+      action: 'HIDE',
+      opportunityId: 'opportunity-a',
+      commentId: 'comment-a',
+      expectedVersion: 2,
+      reason: '内容不符合要求',
+    })
+
+    assert.equal(response.ok, true)
+    assert.deepEqual(received, {
+      action: 'HIDE',
+      opportunityId: 'opportunity-a',
+      commentId: 'comment-a',
+      expectedVersion: 2,
+      reason: '内容不符合要求',
+    })
+  })
+
+  it('uses v1 only for an own contractVersion property', () => {
+    const event = Object.create({ contractVersion: 99 })
+    event.action = 'mip.admin.session'
+    event.sentinel = 'legacy'
+    assert.deepEqual(normalizeAdminRequest(event), {
+      action: 'mip.admin.session',
+      input: { sentinel: 'legacy' },
+    })
+  })
+
+  it('rejects unsupported versions, extra envelope fields, non-object input, and duplicate idempotency', async () => {
+    const handler = createHandler({
+      getContext: () => ({}),
+      resolveCaller: () => { throw new Error('must not resolve invalid request') },
+      service: {},
+    })
+    const cases = [
+      {
+        event: { contractVersion: 2, action: 'mip.admin.session', input: {} },
+        code: 'CONTRACT_VERSION_UNSUPPORTED',
+        message: '管理请求协议版本不受支持',
+      },
+      {
+        event: { contractVersion: 1, action: 'mip.admin.session', input: {}, appId: 'untrusted' },
+        code: 'VALIDATION_FAILED',
+        message: '运营请求格式无效',
+      },
+      {
+        event: { contractVersion: 1, action: 'mip.admin.session', input: [] },
+        code: 'VALIDATION_FAILED',
+        message: '运营请求格式无效',
+      },
+      {
+        event: {
+          contractVersion: 1,
+          action: 'mip.admin.growth.adjust',
+          input: { idempotencyKey: 'nested-request-key' },
+          idempotencyKey: 'top-level-request-key',
+        },
+        code: 'VALIDATION_FAILED',
+        message: '运营请求格式无效',
+      },
+      {
+        event: {
+          contractVersion: 1,
+          action: 'mip.admin.growth.adjust',
+          input: {},
+          idempotencyKey: 42,
+        },
+        code: 'VALIDATION_FAILED',
+        message: '运营请求格式无效',
+      },
+    ]
+
+    for (const testCase of cases) {
+      const response = await handler(testCase.event)
+      assert.deepEqual(response.error, {
+        code: testCase.code,
+        message: testCase.message,
+        retryable: false,
+      })
+    }
+  })
+
   it('runs the public health probe against MySQL without resolving a user', async () => {
     let resolved = false
     const handler = createHandler({
