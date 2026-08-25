@@ -9,6 +9,8 @@ import {
   cloudFunctionResult,
   loadCaseEnv,
 } from './lib/example-cloudbase.mjs'
+import { schedulerScfCloudApiRequest } from './lib/message-scheduler-cloud.mjs'
+import { reconcileMessageScheduler } from './lib/message-scheduler-recovery.mjs'
 import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
 
 const require = createRequire(import.meta.url)
@@ -18,19 +20,23 @@ const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
 const envId = String(env.CLOUDBASE_ENV_ID || '').trim()
 const appId = String(env.MINI_PROGRAM_APP_ID || '').trim()
+const region = String(env.MIP_SCF_REGION || '').trim()
 const confirmedEnv = argumentValue('--confirm-env=')
 const confirmedFunction = argumentValue('--confirm-message-dispatch=')
+const confirmedScheduler = argumentValue('--confirm-message-scheduler=')
 const limit = Number(argumentValue('--limit=') || 5)
 const drain = process.argv.includes('--drain')
 const maxBatches = Number(argumentValue('--max-batches=') || (drain ? 100 : 1))
 const functionNames = resolveMipFunctionNames(env)
 const functionName = functionNames.admin
+const schedulerFunctionName = functionNames.scheduler
 
 if (!envId
   || confirmedEnv !== envId
   || confirmedFunction !== functionName
+  || confirmedScheduler !== schedulerFunctionName
   || !/^wx[0-9a-f]{16}$/i.test(appId)) {
-  throw new Error('Message dispatch requires configured EnvID/AppID and exact --confirm-env / --confirm-message-dispatch')
+  throw new Error('Message dispatch requires configured EnvID/AppID and exact dispatch/scheduler confirmations')
 }
 if (!Number.isInteger(limit) || limit < 1 || limit > 10) {
   throw new Error('--limit must be an integer between 1 and 10')
@@ -40,12 +46,13 @@ if (!Number.isInteger(maxBatches) || maxBatches < 1 || maxBatches > 100
   throw new Error('--max-batches must be 1 without --drain, or an integer between 1 and 100 with --drain')
 }
 
+const adminFunctionReadRequest = schedulerScfCloudApiRequest(
+  { region },
+  'GetFunction',
+  { FunctionName: functionName, Namespace: envId, ShowCode: 'FALSE' },
+)
 bindAndRequireMysqlEnvironment(root, envId)
-const detail = callCloudbase(root, 'callCloudApi', {
-  service: 'scf',
-  action: 'GetFunction',
-  params: { FunctionName: functionName, Namespace: envId, ShowCode: 'FALSE' },
-})
+const detail = callCloudbase(root, 'callCloudApi', adminFunctionReadRequest)
 const variables = environmentVariables(detail)
 const allowedAppIds = String(variables.MIP_ALLOWED_APP_IDS || '')
   .split(',')
@@ -54,6 +61,7 @@ const allowedAppIds = String(variables.MIP_ALLOWED_APP_IDS || '')
 const secret = String(variables.MIP_MESSAGE_DISPATCH_HMAC_SECRET || '')
 if (!allowedAppIds.includes(appId)
   || secret.length < 32
+  || variables.MIP_MESSAGE_SCHEDULER_FUNCTION_NAME !== schedulerFunctionName
   || variables.MIP_OUTBOX_FUNCTION_NAME !== functionNames.outbox
   || String(variables.MIP_OUTBOX_HMAC_SECRET || '').length < 32) {
   throw new Error('Deployed admin function does not match the configured AppID or controlled worker authentication')
@@ -77,6 +85,16 @@ if (result?.ok !== true) {
   throw new Error(result?.error?.code || 'Message dispatch invocation failed')
 }
 const summary = result.data || {}
+const schedulerAutomation = await reconcileMessageScheduler({
+  appId,
+  functionName: schedulerFunctionName,
+  secret,
+  invoke: ({ functionName: target, request: schedulerRequest }) => cloudFunctionResult(callCloudbase(root, 'manageFunctions', {
+    action: 'invokeFunction',
+    functionName: target,
+    params: schedulerRequest,
+  }, 120000)),
+})
 const output = {
   batches: count(summary.batches),
   leased: count(summary.leased),
@@ -89,6 +107,8 @@ const output = {
   outboxWakeup: ['INVOKED', 'FAILED', 'SKIPPED'].includes(summary.outboxWakeup)
     ? summary.outboxWakeup
     : 'FAILED',
+  schedulerReconcile: schedulerAutomation.status,
+  nextWakeConfigured: schedulerAutomation.nextWakeConfigured,
 }
 console.log(JSON.stringify(output, null, 2))
 if (output.terminal > 0

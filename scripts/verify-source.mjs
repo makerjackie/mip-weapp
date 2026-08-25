@@ -177,7 +177,7 @@ const refundSource = sourceTree('cloudfunctions/mip-refund-worker', /\.js$/)
 const adminSource = sourceTree('cloudfunctions/mip-admin-api', /\.js$/)
 const adminIndex = read('cloudfunctions/mip-admin-api/index.js')
 const messageDispatchRoute = read('cloudfunctions/mip-admin-api/lib/message-dispatch-route.js')
-const internalDispatchIndex = adminIndex.indexOf('event?.action === RUN_DUE_ACTION')
+const internalDispatchIndex = adminIndex.indexOf('MESSAGE_DISPATCH_ACTIONS.has(event?.action)')
 const userHandlerIndex = adminIndex.indexOf('handler(event)')
 const growthSource = sourceTree('cloudfunctions/mip-growth-api', /\.js$/)
 const notificationsSource = sourceTree('cloudfunctions/mip-notifications-api', /\.js$/)
@@ -292,6 +292,7 @@ const cloudDeploy = read('scripts/deploy-functions.mjs')
 const paymentDeploy = read('scripts/deploy-payment-function.mjs')
 const refundRecovery = read('scripts/run-refunds.mjs')
 const messageDispatchRecovery = read('scripts/run-message-campaigns.mjs')
+const messageSchedulerRecovery = read('scripts/lib/message-scheduler-recovery.mjs')
 const cloudVerify = read('scripts/verify-cloud.mjs')
 const demoSeed = read('scripts/seed-demo.mjs')
 const ownerBootstrap = read('scripts/bootstrap-owner.mjs')
@@ -318,6 +319,7 @@ for (const [label, source] of [
   ['payment deploy', paymentDeploy],
   ['refund recovery', refundRecovery],
   ['message dispatch recovery', messageDispatchRecovery],
+  ['message scheduler recovery', messageSchedulerRecovery],
   ['cloud verification', cloudVerify],
   ['demo seed', demoSeed],
   ['owner bootstrap', ownerBootstrap],
@@ -354,8 +356,12 @@ assert(refundRecovery.includes('--confirm-env=')
   && refundRecovery.includes('action: \'runBatch\''), 'Refund recovery command must require exact environment confirmation and signed bounded dispatch')
 assert(messageDispatchRecovery.includes('--confirm-env=')
   && messageDispatchRecovery.includes('--confirm-message-dispatch=')
+  && messageDispatchRecovery.includes('--confirm-message-scheduler=')
   && messageDispatchRecovery.includes('MIP_MESSAGE_DISPATCH_HMAC_SECRET')
   && messageDispatchRecovery.includes('action: \'runDueMessageCampaigns\'')
+  && messageDispatchRecovery.includes('reconcileMessageScheduler({')
+  && messageSchedulerRecovery.includes('signSchedulerReconcile(request, secret)')
+  && messageSchedulerRecovery.includes('result?.data?.verified !== true')
   && messageDispatchRecovery.includes('MIP_OUTBOX_HMAC_SECRET')
   && messageDispatchRecovery.includes('output.outboxWakeup === \'FAILED\''), 'Message scheduling recovery must require exact confirmation and controlled outbox wakeup')
 assert(cloudVerify.includes('assertRuntimePrivilegesExact')

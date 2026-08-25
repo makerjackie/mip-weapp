@@ -1,12 +1,14 @@
 'use strict'
 
 const {
+  GET_WAKE_PLAN_ACTION,
   RUN_DUE_ACTION,
   verifyMessageDispatchRequest,
 } = require('./message-dispatch-auth')
 
 function createMessageDispatchRoute(options = {}) {
   if (!options.repository || typeof options.repository.runDueMessageCampaigns !== 'function'
+    || typeof options.repository.getMessageCampaignWakePlan !== 'function'
     || !options.outboxWakeup || typeof options.outboxWakeup.afterSuccessfulMutation !== 'function') {
     throw new TypeError('Message dispatch route dependencies are invalid')
   }
@@ -17,14 +19,19 @@ function createMessageDispatchRoute(options = {}) {
         allowedAppIds: options.allowedAppIds,
         now: options.now,
       })
+      if (trusted.action === GET_WAKE_PLAN_ACTION) {
+        const data = await options.repository.getMessageCampaignWakePlan({ appId: trusted.appId })
+        return { ok: true, data }
+      }
       const input = normalizeDispatchRun(trusted)
       const data = await options.repository.runDueMessageCampaigns(input)
+      const wakePlan = await options.repository.getMessageCampaignWakePlan({ appId: trusted.appId })
       const wakeup = await options.outboxWakeup.afterSuccessfulMutation({
         appId: trusted.appId,
         action: RUN_DUE_ACTION,
         mutationActions: new Set([RUN_DUE_ACTION]),
       })
-      return { ok: true, data: { ...data, outboxWakeup: wakeup.status } }
+      return { ok: true, data: { ...data, ...wakePlan, outboxWakeup: wakeup.status } }
     }
     catch (error) {
       const code = error?.message === 'FORBIDDEN' || error?.message === 'INTERNAL_AUTH_NOT_CONFIGURED'

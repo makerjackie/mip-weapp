@@ -824,6 +824,7 @@ function environmentForRole(role, options) {
       MIP_EXPORT_MAX_BYTES: String(options.exportMaxBytes),
       MIP_MATCHING_INTERNAL_HMAC_SECRET: options.secrets.matchingInternalHmac,
       MIP_MESSAGE_DISPATCH_HMAC_SECRET: options.secrets.messageDispatchHmac,
+      MIP_MESSAGE_SCHEDULER_FUNCTION_NAME: options.functionNames.scheduler,
       MIP_OPPORTUNITIES_FUNCTION_NAME: options.functionNames.opportunities,
       MIP_CATALOG_STAGE: options.catalogStage,
       MIP_KNOWLEDGE_TEST_PRICE_CENTS: String(options.knowledgeTestPriceCents),

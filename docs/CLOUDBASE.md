@@ -42,6 +42,8 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 
 仓库只包含直接的 `mip-*` 函数源码。部署脚本和云端验收只接受当前 MIP 清单中的函数名，不修改共享环境中的其他项目函数。
 
+消息定时另有一个不计入 16 个数据库核心函数的 `mip-message-scheduler`。它不配置 MySQL URI 或 VPC，只用一个固定滚动单次 timer 调用 `mip-admin-api` 的内部 HMAC 契约。函数使用专用 CAM 角色、128 MB 内存和 128 MB 预留并发，使同一时刻最多一个调度实例运行；运行时仅有 `UpdateTrigger`、`ListTriggers` 和 `InvokeFunction`。腾讯云 [CAM 权限粒度表](https://intl.cloud.tencent.com/document/product/598/57149) 当前把 `InvokeFunction` 定义为不支持资源级授权的操作，因此该 action 的 policy resource 必须是 `*`，不能在 CAM 层收窄到管理函数；运行时代码固定目标为 `mip-admin-api`，再由独立 HMAC、AppID allowlist 和专用角色限制用途。角色信任载体固定为腾讯云 SCF 官方文档定义的 [`scf.qcloud.com`](https://intl.cloud.tencent.com/zh/document/product/583/38176)，部署和验收均回读完整 trust policy。新建函数不使用会默认注入共享 `TCB_QcsRole` 的 CloudBase create 路径，而是用 raw SCF `CreateFunction` 在首个写入中绑定专用角色；创建 trigger、角色、异步失败重试和预留并发只在独立部署脚本中执行。
+
 ## 数据和存储
 
 - 新业务只使用 `mip_*` 表，迁移记录写入 `mip_schema_migrations`；`database/mysql/mip/migrations.lock.json` 是迁移顺序、校验和和表清单的权威来源。
@@ -63,6 +65,8 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 `mip-notification-worker`、`mip-outbox-worker` 和 `mip-refund-worker` 只保留函数，不安装高频定时触发器。`mip-notifications-api` 显式允许已登录小程序调用，三个 worker 与 payment ledger 显式禁止客户端调用；部署和云端验收会收敛并复核这些函数级权限。任何访问 MySQL 的 5 分钟级 timer 都会阻止 Serverless MySQL 自动暂停并产生持续 CCU 消耗。业务事实与 outbox 在同一事务提交；身份、活动、机会、交易、任务、管理 API 以及 payment ledger 在成功提交且对应 action 可能写入 outbox 后，以可信 AppID 和内部 HMAC 唤醒有数量与 45 秒时限的批量排空。每批最多并行处理 10 条，单次最多 100 批；存在微信订阅任务时，在 outbox 事实完成前同步触发通知 worker，失败会保留可重试事实。Payment ledger 只使用其已通过内部 HMAC 校验的 AppID；缺少 `MIP_OUTBOX_HMAC_SECRET` 时安全跳过，调用失败只记录不含密钥的结构化错误，不回滚已提交业务。成长 API 的内部投影 action 不反向唤醒 outbox，避免 worker 递归。通知授权先由 reservation 短事务独占，实际微信调用和最终状态写入再由锁定 `ACTIVE` 用户的专用投递事务串行化，避免账号注销提交后继续发信。微信接收与 MySQL 提交仍是 at-least-once 外部边界，详见 [NOTIFICATIONS.md](NOTIFICATIONS.md)。极端积压仍可由运营命令显式恢复：
 
 函数安全规则属于共享环境配置。部署只允许修改当前 `mip-*` 函数的命名条目；规则读取、JSON 解析或通配规则缺失时立即停止，更新后必须证明 `*` 和其他项目的全部条目没有变化。部署和验收会检查所有核心 MIP 函数的完整 trigger 列表并拒绝任何 timer；脚本只会自动删除 `mip-notification-every-5m`、`mip-outbox-every-5m` 和 `mip-refund-every-5m` 三个已知历史名称，其他 timer 一律保留现场并停止。`MIP_PAYMENT_MODE=disabled` 时不删除可能承载晚到回调的支付函数，但会把已存在的支付适配器、回调和退款 worker 的客户端调用全部收敛为禁止，并复核它们没有 timer。
+
+调度函数例外由独立验收管理：`ListTriggers` 必须完整回读且只能存在 `mip-message-campaign-next` 一个 `$DEFAULT` timer，签名参数必须包含 namespace、函数、trigger、UTC fireAt、generation、activation generation 和用途；无计划时该 timer 为关闭状态，不创建 2099 占位。SCF cron 时区必须先用同一 trigger 的 canary 实测并回读；从 canary 打开到匹配 timer 关闭并由带 generation 的激活请求完成状态切换之前，普通排期 reconcile 都不能覆盖它。激活后的滚动 DISPATCH 参数持续保留本轮 canary generation，同一激活命令可以在转换后 reconcile 失败时幂等续跑。异步 timer 用户代码失败配置为重试 2 次、消息保留 3600 秒，并由部署后 API readback 验证。手动 runner 始终保留作为恢复通道。
 
 ```bash
 pnpm outbox:run -- --confirm-env=<EnvID> --limit=10

@@ -63,16 +63,23 @@ pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo
 
 通知和 outbox worker 默认不安装定时器。业务函数在同一事务写 outbox；运营可用 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10` 受控恢复积压。异常中心读取 `mip_outbox_events`、支付/退款、媒体、消息投递和 AI 草稿状态，不通过页面菜单越权修改事实，完整权限和脱敏合同见 [异常中心](OPERATIONAL_EXCEPTIONS.md)。
 
-消息活动可在 `READY` 状态设置 UTC 定时发布时间。计划、活动指针、权限快照来源和执行结果保存在 MySQL；到期执行会重新校验发起人状态、实时角色、策略和管理范围。调度不安装 timer，需要处理到期计划时显式运行：
+消息活动可在 `READY` 状态设置 UTC 定时发布时间。计划、活动指针、权限快照来源和执行结果保存在 MySQL；到期执行会重新校验发起人状态、实时角色、策略和管理范围。独立的 `mip-message-scheduler` 不连接 MySQL，只保留一个 `mip-message-campaign-next` 滚动单次 timer：每次指向所有允许 AppID 中最早的可执行计划，没有计划时关闭。任何连接数据库的函数仍不安装 timer，也不使用固定频率轮询。
+
+调度函数运行时只允许更新/读取自身 trigger，以及调用固定的 `mip-admin-api`；由于腾讯云 CAM 的 `InvokeFunction` 不支持资源级授权，该 action 的资源只能填 `*`，目标限制由固定函数名、内部 HMAC 和专用角色共同完成。新建函数由确认式部署命令使用 raw SCF `CreateFunction` 直接绑定专用角色，不经过会默认注入共享 `TCB_QcsRole` 的 CloudBase 创建路径；创建 trigger、配置 128 MB 预留并发和异步失败重试也只由该命令完成。SCF cron 时区不靠代码猜测：首次部署先启动 canary，确认同一个 trigger 已按预期时间触发并自动关闭，再用匹配 generation 的独立激活 HMAC 切换到普通排期。激活后的 DISPATCH 参数持续保留 canary generation，转换后 reconcile 中断时可用同一激活命令续跑。排期只接受 2100 年以前的 UTC 时间。
+
+业务数据库提交与 post-commit scheduler 调用不是同一个原子事务。进程若恰好在数据库提交后、调用 scheduler 前崩溃，本架构无法消除该窗口；运营应使用同一幂等请求重试，或运行下方手工 runner 重新处理并恢复最近唤醒计划。
+
+自动唤醒无法确认或需要人工恢复时，继续使用原有五分钟 HMAC 有效期的受控命令：
 
 ```bash
 pnpm message-campaigns:run-due -- \
   --confirm-env=<EnvID> \
   --confirm-message-dispatch=mip-admin-api \
+  --confirm-message-scheduler=mip-message-scheduler \
   --limit=5
 ```
 
-需要排空时追加 `--drain --max-batches=100`；单批 `--limit` 只允许 1–10。命令读取已部署 `mip-admin-api` 的 `MIP_MESSAGE_DISPATCH_HMAC_SECRET`、AppID allowlist 和 outbox 连接配置，对完整请求体签名，只输出数量与唤醒状态。每次运行都会受控唤醒 outbox，因此上一次发布已提交但唤醒失败时可直接重跑；人工复核、终止失败、提交结果待对账或 outbox 唤醒失败都会返回非零退出码。该 HMAC 由部署流程按稳定密钥规则复用或生成，不应手工轮换、打印或提交。
+需要排空时追加 `--drain --max-batches=100`；单批 `--limit` 只允许 1–10。命令读取已部署 `mip-admin-api` 的 `MIP_MESSAGE_DISPATCH_HMAC_SECRET`、AppID allowlist、scheduler 函数名和 outbox 连接配置；先签名执行到期活动，再对 `mip-message-scheduler` 发起独立分域 reconcile HMAC，并仅在返回 `verified` 后成功退出。这样未来排期的 post-commit 崩溃窗口和 timer 重试耗尽都能重新布置最近唤醒时间。每次运行也会受控唤醒 outbox；人工复核、终止失败、提交结果待对账、outbox 唤醒失败或 scheduler reconcile 未确认都会返回非零退出码。命令只输出数量与布置状态，不打印密钥；稳定 HMAC 不应手工轮换、打印或提交。
 
 单场活动提醒使用独立的 `communications.publish` capability。管理端只提交活动、事件版本、幂等请求标识和是否尝试微信提醒；`mip-admin-api` 仅从当前 `REGISTERED` / `ATTENDED` 报名事实选择收件人，并从已发布活动生成标题、正文和模板字段。单次最多 500 位收件人，超限时整笔拒绝；每位收件人的运营消息、outbox、幂等结果和一条汇总审计在同一事务提交。站内提醒始终进入 outbox；微信提醒仅在模板已配置且参与者有可用授权时投递，缺少模板不会使站内提醒失败。
 

@@ -17,6 +17,8 @@
 | 消息页提示无权调用 `mip-notification-worker` | 客户端只能调用 `mip-notifications-api`。检查构建配置中的 `MIP_NOTIFICATIONS_FUNCTION_NAME`，再重新部署并运行云端验收；不要开放 worker 的客户端权限。 |
 | worker 触发 MySQL 资源持续增长 | 检查 CloudBase 定时触发器，删除 `mip-notification-every-5m`、`mip-outbox-every-5m`、`mip-refund-every-5m` 或其他高频 timer。三个 worker 都只保留函数，由受控内部调用触发。 |
 | `mip_outbox_events` 长时间停留在 `PENDING` / `FAILED` | 先检查核心函数健康与 HMAC 配置，再运行 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10`。重试耗尽或未知事件会进入 `CANCELLED`，原因写入 `last_error_code` 和系统审计。 |
+| 保存定时消息后返回 `MESSAGE_SCHEDULE_AUTOMATION_UNVERIFIED`，或进程在数据库提交后、scheduler 调用前中断 | 数据库计划可能已经提交；这两个步骤不是原子事务。不要换请求标识，使用同一幂等请求重试。检查 `mip-message-scheduler` 的专用角色、128 MB 预留并发、异步重试、固定 `$DEFAULT` trigger 和 canary 回读；必要时用 `pnpm message-campaigns:run-due` 恢复。 |
+| scheduler 首次部署后提示函数已有但固定 trigger 缺失 | raw `CreateFunction` 可能成功后发生进程中断。先保留现场；只有部署脚本确认精确函数身份、专用角色、无 VPC、完整配置及当前源码 marker 全部一致时，才用原 `--start-canary` 命令追加 `--confirm-resume-missing-trigger=mip-message-scheduler`。不要手工创建 trigger，也不要对陌生或 marker 不匹配的函数使用恢复确认。 |
 | 页面显示“会员服务尚未配置”或支付按钮不可用 | 检查 EnvID 和 `MIP_PAYMENT_MODE`。`disabled` 是关闭状态；未配置真实商户时必须失败关闭，不能用本地 UI 通过冒充支付成功。 |
 | `PAYMENT_MODE_MISMATCH` / `PAYMENT_CONFIG_REQUIRED` | 确认会员订单的方案目录阶段与 `MIP_PAYMENT_MODE` 匹配（`TEST`/`LIVE`），并检查商户号、回调函数、EnvID、AppID 配置。真实支付需 `--confirm-live` 和生产配置。 |
 | `wx.requestPayment` 成功但订单仍待确认 | 这是预期状态。等待 `mip-cloudpay-callback` 或权威查单；只有 `mip_orders.status=PAID` 才发放权益或完成付费活动报名。 |

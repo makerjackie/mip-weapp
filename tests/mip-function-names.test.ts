@@ -20,6 +20,7 @@ describe('MIP Cloud Function names', () => {
       ledger: 'mip-payment-ledger',
       notification: 'mip-notification-worker',
       outbox: 'mip-outbox-worker',
+      scheduler: 'mip-message-scheduler',
       pay: 'mip-cloudpay',
       callback: 'mip-cloudpay-callback',
       refund: 'mip-refund-worker',

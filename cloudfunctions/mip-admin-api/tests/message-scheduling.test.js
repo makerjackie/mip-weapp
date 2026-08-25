@@ -8,6 +8,7 @@ const { describe, it } = require('node:test')
 const { CAPABILITIES } = require('../domain/capabilities')
 const {
   createMessageCampaignRepository,
+  roundedWakeAt,
   scheduleRequestHash,
   scheduledPublicationHash,
 } = require('../domain/message-campaigns')
@@ -67,11 +68,28 @@ describe('message campaign scheduling safety', () => {
       /FORBIDDEN/,
     )
     assert.equal(operationByAction.runDueMessageCampaigns, undefined)
+
+    const planRequest = {
+      action: 'getMessageCampaignWakePlan',
+      appId: APP_ID,
+      timestamp: CURRENT_TIME.getTime(),
+    }
+    const signedPlan = {
+      ...planRequest,
+      signature: signMessageDispatchRequest(planRequest, secret),
+    }
+    assert.deepEqual(verifyMessageDispatchRequest(signedPlan, {
+      secret,
+      allowedAppIds: new Set([APP_ID]),
+      now: () => CURRENT_TIME.getTime(),
+    }), planRequest)
+    assert.equal(operationByAction.getMessageCampaignWakePlan, undefined)
   })
 
   it('routes signed internal requests before user identity and returns bounded public error states', async () => {
     const secret = 'message-dispatch-route-secret-at-least-32-bytes'
     const repositoryCalls = []
+    const planCalls = []
     const wakeupCalls = []
     const repository = {
       async runDueMessageCampaigns(input) {
@@ -86,6 +104,10 @@ describe('message campaign scheduling safety', () => {
           manualReview: 0,
           pendingReconciliation: 0,
         }
+      },
+      async getMessageCampaignWakePlan(input) {
+        planCalls.push(input)
+        return { nextWakeAt: '2030-08-25T10:05:00.000Z' }
       },
     }
     const route = createMessageDispatchRoute({
@@ -114,6 +136,8 @@ describe('message campaign scheduling safety', () => {
     assert.equal(success.ok, true)
     assert.equal(success.data.outboxWakeup, 'FAILED')
     assert.deepEqual(repositoryCalls, [{ appId: APP_ID, limit: 5, drain: false, maxBatches: 1 }])
+    assert.deepEqual(planCalls, [{ appId: APP_ID }])
+    assert.equal(success.data.nextWakeAt, '2030-08-25T10:05:00.000Z')
     assert.equal(wakeupCalls.length, 1)
     assert.equal(wakeupCalls[0].appId, APP_ID)
     assert.equal(wakeupCalls[0].mutationActions.has('runDueMessageCampaigns'), true)
@@ -143,8 +167,21 @@ describe('message campaign scheduling safety', () => {
     })
     assert.equal(wakeupCalls.length, 1)
 
+    repository.runDueMessageCampaigns = async () => ({ batches: 0 })
+    const planBody = {
+      action: 'getMessageCampaignWakePlan',
+      appId: APP_ID,
+      timestamp: CURRENT_TIME.getTime(),
+    }
+    const plan = await route({
+      ...planBody,
+      signature: signMessageDispatchRequest(planBody, secret),
+    })
+    assert.deepEqual(plan, { ok: true, data: { nextWakeAt: '2030-08-25T10:05:00.000Z' } })
+    assert.equal(wakeupCalls.length, 1)
+
     const indexSource = fs.readFileSync(path.join(root, 'cloudfunctions/mip-admin-api/index.js'), 'utf8')
-    const internalDispatchIndex = indexSource.indexOf('event?.action === RUN_DUE_ACTION')
+    const internalDispatchIndex = indexSource.indexOf('MESSAGE_DISPATCH_ACTIONS.has(event?.action)')
     assert.notEqual(internalDispatchIndex, -1)
     assert.ok(internalDispatchIndex < indexSource.indexOf('handler(event)'))
   })
@@ -162,12 +199,38 @@ describe('message campaign scheduling safety', () => {
       () => normalizeScheduledFor('2030-08-25T18:05:00+08:00', CURRENT_TIME),
       error => error?.code === 'VALIDATION_FAILED',
     )
+    assert.throws(
+      () => normalizeScheduledFor('2100-01-01T00:00:00.000Z'),
+      error => error?.code === 'VALIDATION_FAILED',
+    )
+    assert.equal(roundedWakeAt('2030-08-25T10:05:00.001Z'), '2030-08-25T10:05:01.000Z')
     assert.equal(normalizeOptionalDispatchVersion(undefined), null)
     assert.equal(normalizeOptionalDispatchVersion(2), 2)
     assert.throws(
       () => normalizeOptionalDispatchVersion(0),
       error => error?.code === 'VALIDATION_FAILED',
     )
+  })
+
+  it('plans the earliest scheduled, retryable, or expired-lease wake and rounds milliseconds up', async () => {
+    const calls = []
+    const repository = createMessageCampaignRepository({
+      async one(sql, params) {
+        calls.push({ sql, params })
+        return { next_wake_at: new Date('2030-08-25T10:05:00.001Z') }
+      },
+    }, {
+      assertMutationScope() {},
+      lockMutationAuthorization() {},
+    })
+    assert.deepEqual(await repository.getMessageCampaignWakePlan({ appId: APP_ID }), {
+      nextWakeAt: '2030-08-25T10:05:01.000Z',
+    })
+    assert.match(calls[0].sql, /GREATEST\(scheduled_for, available_at\)/)
+    assert.match(calls[0].sql, /status IN \('SCHEDULED', 'FAILED'\)/)
+    assert.match(calls[0].sql, /status = 'PROCESSING'/)
+    assert.match(calls[0].sql, /lease_expires_at IS NOT NULL/)
+    assert.deepEqual(calls[0].params, [APP_ID, 5, APP_ID])
   })
 
   it('creates a new schedule and campaign pointer atomically', async () => {

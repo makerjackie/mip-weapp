@@ -31,6 +31,7 @@ for (const key of ['pay', 'callback', 'refund']) {
     names.add(functionNames[key])
   }
 }
+names.add(functionNames.scheduler)
 
 const deployedEnvironments = []
 for (const functionName of names) {

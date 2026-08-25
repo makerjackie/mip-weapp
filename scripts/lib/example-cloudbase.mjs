@@ -81,6 +81,18 @@ function findEnvInfo(value) {
 }
 
 export function bindAndRequireMysqlEnvironment(caseRoot, envId, { development = false, stage } = {}) {
+  const environment = bindAndRequireCloudbaseEnvironment(caseRoot, envId)
+  const mysql = callCloudbase(caseRoot, 'queryMysqlDatabase', { action: 'getInstanceInfo' })
+  if (!/mysql|cynosdb/i.test(JSON.stringify(mysql))) {
+    throw new Error('Target CloudBase environment has no ready MySQL instance')
+  }
+  if (development && !['development', 'test'].includes(stage)) {
+    throw new Error('Demo data requires a development or test deployment stage')
+  }
+  return { environment, mysql }
+}
+
+export function bindAndRequireCloudbaseEnvironment(caseRoot, envId) {
   const status = cloudbaseAuthStatus(workspaceRoot(caseRoot))
   if (status.authStatus !== 'READY') {
     throw new Error('CloudBase MCP is not READY. Set the environment-level CLOUDBASE_API_KEY and CLOUDBASE_ENV_ID in .env.local, then run pnpm cloud:auth; normal commands never start device authorization.')
@@ -99,14 +111,7 @@ export function bindAndRequireMysqlEnvironment(caseRoot, envId, { development = 
   if (resolvedId !== envId) {
     throw new Error('Target CloudBase environment identity does not match')
   }
-  const mysql = callCloudbase(caseRoot, 'queryMysqlDatabase', { action: 'getInstanceInfo' })
-  if (!/mysql|cynosdb/i.test(JSON.stringify(mysql))) {
-    throw new Error('Target CloudBase environment has no ready MySQL instance')
-  }
-  if (development && !['development', 'test'].includes(stage)) {
-    throw new Error('Demo data requires a development or test deployment stage')
-  }
-  return { environment: info, mysql }
+  return info
 }
 
 export function sqlLiteral(value) {

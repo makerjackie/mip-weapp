@@ -459,6 +459,26 @@ function createMessageCampaignRepository(database, options = {}) {
     }
   }
 
+  async function getMessageCampaignWakePlan(input) {
+    const row = await database.one(
+      `SELECT MIN(candidate.actionable_at) AS next_wake_at
+       FROM (
+         SELECT GREATEST(scheduled_for, available_at) AS actionable_at
+         FROM mip_message_campaign_dispatches
+         WHERE app_id = ?
+           AND status IN ('SCHEDULED', 'FAILED')
+           AND retry_disposition = 'RETRIABLE' AND attempts < ?
+         UNION ALL
+         SELECT lease_expires_at AS actionable_at
+         FROM mip_message_campaign_dispatches
+         WHERE app_id = ? AND status = 'PROCESSING'
+           AND lease_expires_at IS NOT NULL
+       ) candidate`,
+      [input.appId, MAX_DISPATCH_ATTEMPTS, input.appId],
+    )
+    return { nextWakeAt: roundedWakeAt(row?.next_wake_at) }
+  }
+
   async function claimDispatchBatch(appId, limit) {
     return database.transaction(async (tx) => {
       const currentTime = now()
@@ -653,6 +673,7 @@ function createMessageCampaignRepository(database, options = {}) {
     cancelScheduledCampaign,
     getCampaign,
     getCampaignScope,
+    getMessageCampaignWakePlan,
     listCampaigns,
     listScopes,
     publishCampaign,
@@ -1387,9 +1408,19 @@ function boundedMaximum(value) {
 
 function assertScheduledDate(scheduledFor) {
   if (!(scheduledFor instanceof Date)
-    || !Number.isFinite(scheduledFor.getTime())) {
+    || !Number.isFinite(scheduledFor.getTime())
+    || scheduledFor.getUTCFullYear() >= 2100) {
     throw codeError('VALIDATION_FAILED')
   }
+}
+
+function roundedWakeAt(value) {
+  if (!value) return null
+  const date = value instanceof Date ? value : new Date(value)
+  if (!Number.isFinite(date.getTime())) throw codeError('MESSAGE_SCHEDULE_WAKE_PLAN_INVALID')
+  const rounded = new Date(Math.ceil(date.getTime() / 1000) * 1000)
+  if (rounded.getUTCFullYear() >= 2100) throw codeError('MESSAGE_SCHEDULE_WAKE_PLAN_INVALID')
+  return rounded.toISOString()
 }
 
 function assertScheduleLeadTime(scheduledFor, currentTime) {
@@ -1425,4 +1456,5 @@ module.exports = {
   publishRequestHash,
   scheduleRequestHash,
   scheduledPublicationHash,
+  roundedWakeAt,
 }

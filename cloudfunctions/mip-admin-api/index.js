@@ -4,7 +4,6 @@ const cloud = require('wx-server-sdk')
 const { createAdminApplication } = require('./domain/application')
 const { createHandler, normalizeAdminRequest } = require('./domain/handler')
 const { configuredAgreements, createFullAccessPolicy } = require('./domain/full-access')
-const { outboxMutationActions } = require('./domain/operation-registry')
 const { createAdminRepository } = require('./domain/repository')
 const { createAdminService } = require('./domain/service')
 const { createTrustedPrincipalIssuer, resolveTrustedIdentity } = require('./lib/identity')
@@ -14,10 +13,16 @@ const { createCloudExportStorage } = require('./lib/export-storage')
 const { createMatchingClient } = require('./lib/matching-client')
 const { createOutboxWakeup, trustedContextAppId } = require('./lib/outbox-wakeup')
 const {
-  RUN_DUE_ACTION,
+  MESSAGE_DISPATCH_ACTIONS,
   verifyMessageDispatchRequest,
 } = require('./lib/message-dispatch-auth')
 const { createMessageDispatchRoute, normalizeDispatchRun } = require('./lib/message-dispatch-route')
+const { createMessageSchedulerClient } = require('./lib/message-scheduler-client')
+const {
+  messageScheduleMutationActions,
+  outboxMutationActions,
+  postCommitAutomationFor,
+} = require('./lib/post-commit-automation')
 const { createKnowledgeAdminService, configuredHosts, safeExternalUrl } = require('./domain/knowledge')
 const { checkCompleteContentSafety } = require('./lib/content-safety')
 const { fetchPinnedHttpsText } = require('./lib/safe-http')
@@ -39,7 +44,13 @@ const outboxWakeup = createOutboxWakeup({
   sourceFunctionName: 'mip-admin-api',
   logger: console,
 })
-
+const messageSchedulerClient = createMessageSchedulerClient({
+  cloud,
+  functionName: process.env.MIP_MESSAGE_SCHEDULER_FUNCTION_NAME || 'mip-message-scheduler',
+  secret: process.env.MIP_MESSAGE_DISPATCH_HMAC_SECRET,
+  sourceFunction: 'mip-admin-api',
+  logger: console,
+})
 async function contentSafety(draft, caller) {
   const checker = cloud.openapi?.security?.msgSecCheck
   return checkCompleteContentSafety(draft, caller, checker)
@@ -200,18 +211,39 @@ const runDueMessageCampaigns = createMessageDispatchRoute({
 })
 
 exports.main = async (event = {}) => {
-  if (event?.action === RUN_DUE_ACTION) {
+  if (MESSAGE_DISPATCH_ACTIONS.has(event?.action)) {
     return runDueMessageCampaigns(event)
   }
   const result = await handler(event)
   if (result?.ok === true) {
     const routeAction = normalizeAdminRequest(event).action
-    if (outboxMutationActions.has(routeAction)) {
-      await outboxWakeup.afterSuccessfulMutation({
-        appId: trustedContextAppId(cloud.getWXContext(), allowedAppIds),
-        action: routeAction,
-        mutationActions: outboxMutationActions,
-      })
+    const routeAutomation = postCommitAutomationFor(routeAction)
+    if (routeAutomation.requiresTrustedAppId) {
+      const appId = trustedContextAppId(cloud.getWXContext(), allowedAppIds)
+      if (routeAutomation.messageSchedule) {
+        const schedulerAutomation = await messageSchedulerClient.afterSuccessfulMutation({
+          appId,
+          action: routeAction,
+          mutationActions: messageScheduleMutationActions,
+        })
+        if (schedulerAutomation.status !== 'VERIFIED') {
+          return {
+            ok: false,
+            error: {
+              code: 'MESSAGE_SCHEDULE_AUTOMATION_UNVERIFIED',
+              message: '定时计划已保存，但自动执行状态尚未确认，请使用同一请求重试',
+              retryable: true,
+            },
+          }
+        }
+      }
+      if (routeAutomation.outbox) {
+        await outboxWakeup.afterSuccessfulMutation({
+          appId,
+          action: routeAction,
+          mutationActions: outboxMutationActions,
+        })
+      }
     }
   }
   return result
@@ -223,6 +255,7 @@ exports._test = {
   fetchKnowledgeSource,
   jsonFeedItems,
   normalizeDispatchRun,
+  messageScheduleMutationActions,
   outboxMutationActions,
   resolveTrustedIdentity,
   rssItems,

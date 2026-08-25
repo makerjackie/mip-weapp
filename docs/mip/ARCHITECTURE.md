@@ -38,6 +38,7 @@ MIP 是一个原生微信小程序、16 个核心 CloudBase 函数和三个可�
 | `mip-payment-ledger` | 支付、退款、权益和订单事务 | 仅内部 HMAC |
 | `mip-notification-worker` | 站内消息写入和可选微信订阅消息投递 | 仅内部 HMAC，无定时器 |
 | `mip-outbox-worker` | 业务事件领取、站内消息与成长投影 | 仅内部 HMAC，无定时器 |
+| `mip-message-scheduler` | 消息活动最近一次 UTC 唤醒与 trigger 收敛 | 仅内部 HMAC；无 MySQL/VPC；一个滚动单次 timer |
 | `mip-cloudpay` / `mip-cloudpay-callback` | CloudPay 参数、用户退款、查单和回调适配 | 支付启用时部署 |
 | `mip-refund-worker` | 管理退款提交、provider 查单和耐久退款恢复 | 仅内部 HMAC；支付启用时部署，无定时器 |
 
@@ -90,6 +91,6 @@ MIP 是一个原生微信小程序、16 个核心 CloudBase 函数和三个可�
 
 ## 运行时和迁移边界
 
-`mip-notification-worker`、`mip-outbox-worker` 和 `mip-refund-worker` 不安装高频 timer。Outbox worker 按 AppID 领取事件，回查服务端事实后，以内部 HMAC 和幂等键调用消息与成长服务；退款 worker 只从 ledger 读取金额和商户单号，使用不可变退款单号向 provider 提交或查单。需要处理积压时分别运行 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10` 和 `pnpm refunds:run -- --confirm-env=<EnvID> --confirm-refund=mip-refund-worker --limit=10`。未知事件或重试耗尽会终止并写系统审计。短期共享环境的变更流程是：仓库外逻辑备份 → `mip_` 前缀 dry-run → 迁移 → `pnpm database:grants` 收敛运行时表级权限 → 函数部署 → 只读健康检查。未来独立环境迁移时，只复制经过校验的 MIP 表、`mip/` 对象和 MIP 配置，重新绑定 AppID，不迁移旧项目资源。
+`mip-notification-worker`、`mip-outbox-worker` 和 `mip-refund-worker` 不安装高频 timer。消息排期由不连接数据库的 `mip-message-scheduler` 维护唯一滚动单次 timer；它只调用管理 API 的内部计划/执行契约，无计划即关闭，并保留手动 runner 恢复路径。Outbox worker 按 AppID 领取事件，回查服务端事实后，以内部 HMAC 和幂等键调用消息与成长服务；退款 worker 只从 ledger 读取金额和商户单号，使用不可变退款单号向 provider 提交或查单。需要处理积压时分别运行 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10` 和 `pnpm refunds:run -- --confirm-env=<EnvID> --confirm-refund=mip-refund-worker --limit=10`。未知事件或重试耗尽会终止并写系统审计。短期共享环境的变更流程是：仓库外逻辑备份 → `mip_` 前缀 dry-run → 迁移 → `pnpm database:grants` 收敛运行时表级权限 → 函数部署 → 只读健康检查。未来独立环境迁移时，只复制经过校验的 MIP 表、`mip/` 对象和 MIP 配置，重新绑定 AppID，不迁移旧项目资源。
 
 并行开发前冻结 `UserId`、`BranchId`、`EventId`、`OpportunityId`、`OrderId`、caller context、错误码、分页游标、审计 envelope、状态机和跨域事件名。各域不能自行创建第二套身份、订单或权限模型。

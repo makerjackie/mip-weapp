@@ -54,7 +54,7 @@ function normalizeScheduledFor(value) {
     throw new AdminError('VALIDATION_FAILED', '定时发布时间必须使用 UTC 时间')
   }
   const scheduledFor = new Date(source)
-  if (!Number.isFinite(scheduledFor.getTime())) {
+  if (!Number.isFinite(scheduledFor.getTime()) || scheduledFor.getUTCFullYear() >= 2100) {
     throw new AdminError('VALIDATION_FAILED', '定时发布时间无效')
   }
   return scheduledFor

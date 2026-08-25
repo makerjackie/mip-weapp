@@ -42,7 +42,9 @@ describe('MIP durable outbox contract', () => {
     const admin = read('cloudfunctions/mip-admin-api/index.js')
     const messagingOperations = read('cloudfunctions/mip-admin-api/domain/operations/messaging.js')
     expect(messagingOperations).toMatch(/mip\.admin\.messageCampaigns\.publish[^\n]+wakesOutbox: true/)
-    expect(admin).toContain('outboxMutationActions.has(routeAction)')
+    expect(admin).toContain('if (routeAutomation.outbox)')
+    expect(read('cloudfunctions/mip-admin-api/lib/post-commit-automation.js'))
+      .toContain('outboxMutationActions.has(action)')
     expect(admin).toContain('sourceFunctionName: \'mip-admin-api\'')
   })
 
