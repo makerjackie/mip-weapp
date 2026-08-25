@@ -17,7 +17,7 @@
   <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="{{state === 'conflict' ? '照片状态已更新' : '相册照片加载失败'}}" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
   <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有相册审核权限" description="当前账号不能查看或审核本场活动照片。" /></view>
   <view wx:elif="{{state === 'empty'}}" class="mt-6"><app-empty-state title="暂无照片" description="当前筛选状态下没有照片。" /></view>
-  <view wx:else class="mt-5 grid grid-cols-2 gap-3">
+  <view wx:else class="mip-admin-media-grid mt-5 grid grid-cols-2 gap-3">
     <view wx:for="{{photos}}" wx:key="id" class="overflow-hidden rounded-[16rpx] bg-panel">
       <image wx:if="{{item.imageUrl}}" class="h-[300rpx] w-full bg-panel-raised" mode="aspectFill" src="{{item.imageUrl}}" data-url="{{item.imageUrl}}" bind:tap="preview" />
       <view wx:else class="flex h-[300rpx] items-center justify-center bg-panel-raised px-3 text-center text-[length:22rpx] text-muted">照片文件不可用</view>

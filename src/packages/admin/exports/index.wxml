@@ -11,8 +11,8 @@
   <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6">
     <app-empty-state title="暂时无法加载" description="{{message}}" action-text="重新加载" bind:action="loadCapabilities" />
   </view>
-  <view wx:else class="mt-6 flex flex-col gap-4">
-    <view wx:if="{{pendingState !== 'none'}}" class="rounded-[16rpx] border border-line bg-panel px-5 py-5">
+  <view wx:else class="mip-admin-section-grid mt-6 flex flex-col gap-4">
+    <view wx:if="{{pendingState !== 'none'}}" class="mip-admin-span-wide rounded-[16rpx] border border-line bg-panel px-5 py-5">
       <view class="text-[length:29rpx] font-semibold">
         {{pendingState === 'checking' ? '正在确认导出' : pendingState === 'conflict' ? '导出状态已变化' : pendingState === 'retry' ? '导出需要重试' : pendingState === 'resumable' ? '有未完成的导出' : '上次导出'}}
       </view>
@@ -42,7 +42,7 @@
       </view>
     </view>
 
-    <view wx:if="{{lastTicketId}}" class="rounded-[16rpx] border border-line bg-panel px-4 py-4">
+    <view wx:if="{{lastTicketId}}" class="mip-admin-span-wide rounded-[16rpx] border border-line bg-panel px-4 py-4">
       <view class="text-[length:24rpx]">导出文件已打开</view>
       <view class="mt-1 text-[length:21rpx] text-muted">{{expiresAt}}</view>
     </view>
