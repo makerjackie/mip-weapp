@@ -115,7 +115,7 @@ Page({
   async loadBase(force = false) {
     const [session, scopes] = await Promise.all([
       mipAdminModule.getSession(force),
-      mipAdminModule.getMessageCampaignScopes(force),
+      mipAdminModule.messaging.getCampaignScopes(force),
     ])
     if (!hasCapability(session.capabilities, 'messages.manage')
       || (!scopes.platform && !scopes.branches.length)) {
@@ -136,7 +136,7 @@ Page({
       if (!scopes) {
         return
       }
-      const page = await mipAdminModule.listMessageCampaigns({ status: this.data.statusFilter }, force)
+      const page = await mipAdminModule.messaging.listCampaigns({ status: this.data.statusFilter }, force)
       this.setData({
         state: page.items.length ? 'ready' : 'empty',
         items: page.items.map(campaignView),
@@ -203,7 +203,7 @@ Page({
     try {
       const [, item] = await Promise.all([
         this.loadBase(force),
-        mipAdminModule.getMessageCampaign(campaignId, force),
+        mipAdminModule.messaging.getCampaign(campaignId, force),
       ])
       this.applyCampaign(item)
       if (item.audienceType === 'EXPLICIT') {
@@ -342,7 +342,7 @@ Page({
     }
     this.setData({ candidateLoading: true, message: '' })
     try {
-      const page = await mipAdminModule.searchMessageRecipients({
+      const page = await mipAdminModule.messaging.searchRecipients({
         branchId: this.data.draft.scopeType === 'BRANCH' ? this.data.draft.branchId : null,
         query: this.data.candidateQuery,
       })
@@ -385,12 +385,12 @@ Page({
     }
     this.setData({ processing: 'save', message: '' })
     try {
-      const item = await mipAdminModule.mutate(() => mipAdminModule.gateway.saveMessageCampaign({
+      const item = await mipAdminModule.messaging.saveCampaign({
         ...this.data.draft,
         ...(this.data.campaignId
           ? { campaignId: this.data.campaignId, expectedVersion: this.data.version }
           : {}),
-      }))
+      })
       this.applyCampaign(item)
       wx.showToast({ title: '草稿已保存', icon: 'success' })
     }
@@ -416,10 +416,10 @@ Page({
     }
     this.setData({ processing: 'snapshot', message: '' })
     try {
-      const item = await mipAdminModule.mutate(() => mipAdminModule.gateway.snapshotMessageCampaign(
+      const item = await mipAdminModule.messaging.snapshotCampaign(
         this.data.campaignId,
         this.data.version,
-      ))
+      )
       this.applyCampaign(item)
       wx.showToast({ title: '快照已生成', icon: 'success' })
     }
@@ -446,12 +446,12 @@ Page({
     const requestKey = this.data.publishRequestKey || `message-campaign-${this.data.campaignId}-${Date.now()}`
     this.setData({ processing: 'publish', publishRequestKey: requestKey, message: '' })
     try {
-      const result = await mipAdminModule.mutate(() => mipAdminModule.gateway.publishMessageCampaign(
+      const result = await mipAdminModule.messaging.publishCampaign(
         this.data.campaignId,
         this.data.version,
         requestKey,
-      ))
-      const item = await mipAdminModule.getMessageCampaign(this.data.campaignId, true)
+      )
+      const item = await mipAdminModule.messaging.getCampaign(this.data.campaignId, true)
       this.applyCampaign(item)
       wx.showToast({ title: `已提交 ${result.queuedCount} 条`, icon: 'success' })
     }
@@ -481,11 +481,11 @@ Page({
     }
     this.setData({ processing: 'withdraw', message: '' })
     try {
-      const item = await mipAdminModule.mutate(() => mipAdminModule.gateway.withdrawMessageCampaign(
+      const item = await mipAdminModule.messaging.withdrawCampaign(
         this.data.campaignId,
         this.data.version,
         reason,
-      ))
+      )
       this.applyCampaign(item)
       wx.showToast({ title: '消息活动已撤销', icon: 'success' })
     }

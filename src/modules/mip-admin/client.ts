@@ -1,6 +1,4 @@
-import type { AdminAnnouncementFilters } from './announcements'
 import type { ExportProgress } from './export-download'
-import type { AdminMessageCampaignStatus } from './message-campaigns'
 import type { AdminOperationalExceptionFilters } from './operational-exceptions'
 import type { PendingAdminExportStore } from './pending-export'
 import type {
@@ -20,6 +18,7 @@ import {
   resumeAndOpenPendingAdminExport,
 } from './export-download'
 import { createMipGrowthAdmin } from './growth-admin'
+import { createMipMessagingAdmin } from './messaging-admin'
 import { createMipOpportunityAdmin } from './opportunity-admin'
 
 export function createMipAdminModule(
@@ -31,47 +30,20 @@ export function createMipAdminModule(
     cache.invalidate('mip-admin')
   }
   const growth = createMipGrowthAdmin(gateway, cache)
+  const messaging = createMipMessagingAdmin(gateway, cache)
   const opportunities = createMipOpportunityAdmin(gateway, cache)
   return {
     getSession: (force = false) => cache.query('mip-admin:session', gateway.getSession, { force }),
     getDashboard: (force = false) => cache.query('mip-admin:dashboard', gateway.getDashboard, { force }),
     listBranches: (force = false) => cache.query('mip-admin:branches', gateway.listBranches, { force }),
-    getAnnouncementScopes: (force = false) => cache.query(
-      'mip-admin:announcement-scopes',
-      gateway.getAnnouncementScopes,
-      { force },
-    ),
-    listAnnouncements: (input: AdminAnnouncementFilters = {}, force = false) => cache.query(
-      `mip-admin:announcements:${JSON.stringify(input)}`,
-      () => gateway.listAnnouncements(input),
-      { force },
-    ),
-    getAnnouncement: (announcementId: string, force = false) => cache.query(
-      `mip-admin:announcement:${announcementId}`,
-      () => gateway.getAnnouncement(announcementId),
-      { force },
-    ),
-    getMessageCampaignScopes: (force = false) => cache.query(
-      'mip-admin:message-campaign-scopes',
-      gateway.getMessageCampaignScopes,
-      { force },
-    ),
-    listMessageCampaigns: (
-      input: { status?: AdminMessageCampaignStatus | '', query?: string } = {},
-      force = false,
-    ) => cache.query(
-      `mip-admin:message-campaigns:${JSON.stringify(input)}`,
-      () => gateway.listMessageCampaigns(input),
-      { force },
-    ),
-    getMessageCampaign: (campaignId: string, force = false) => cache.query(
-      `mip-admin:message-campaign:${campaignId}`,
-      () => gateway.getMessageCampaign(campaignId),
-      { force },
-    ),
-    searchMessageRecipients: (input: { branchId?: string | null, query?: string } = {}) => (
-      gateway.searchMessageRecipients(input)
-    ),
+    getAnnouncementScopes: messaging.getAnnouncementScopes,
+    listAnnouncements: messaging.listAnnouncements,
+    getAnnouncement: messaging.getAnnouncement,
+    getMessageCampaignScopes: messaging.getCampaignScopes,
+    listMessageCampaigns: messaging.listCampaigns,
+    getMessageCampaign: messaging.getCampaign,
+    searchMessageRecipients: messaging.searchRecipients,
+    messaging,
     listCommunityReports: (status: AdminCommunityReportStatus, force = false) => cache.query(
       `mip-admin:community-reports:${status}`,
       () => gateway.listCommunityReports(status),

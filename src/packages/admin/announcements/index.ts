@@ -82,7 +82,7 @@ Page({
         this.setData({ state: 'forbidden', items: [], message: '' })
         return
       }
-      const response = await mipAdminModule.listAnnouncements({ status: this.data.status, limit: 50 }, force)
+      const response = await mipAdminModule.messaging.listAnnouncements({ status: this.data.status, limit: 50 }, force)
       this.setData({
         state: response.items.length ? 'ready' : 'empty',
         items: response.items.map(view),
@@ -119,11 +119,11 @@ Page({
     }
     this.setData({ processingId: item.id, message: '' })
     try {
-      await mipAdminModule.mutate(() => transition === 'PUBLISH'
-        ? mipAdminModule.gateway.publishAnnouncement(item.id, item.version)
+      await (transition === 'PUBLISH'
+        ? mipAdminModule.messaging.publishAnnouncement(item.id, item.version)
         : transition === 'WITHDRAW'
-          ? mipAdminModule.gateway.withdrawAnnouncement(item.id, item.version, confirmation.reason)
-          : mipAdminModule.gateway.setAnnouncementPinned(item.id, transition === 'PIN', item.version))
+          ? mipAdminModule.messaging.withdrawAnnouncement(item.id, item.version, confirmation.reason)
+          : mipAdminModule.messaging.setAnnouncementPinned(item.id, transition === 'PIN', item.version))
       wx.showToast({ title: '公告状态已更新', icon: 'success' })
       await this.loadItems(true)
     }

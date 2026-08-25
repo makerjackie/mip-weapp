@@ -106,9 +106,9 @@ Page({
     try {
       const [session, scopes, announcement] = await Promise.all([
         mipAdminModule.getSession(force),
-        mipAdminModule.getAnnouncementScopes(force),
+        mipAdminModule.messaging.getAnnouncementScopes(force),
         this.data.announcementId
-          ? mipAdminModule.getAnnouncement(this.data.announcementId, force)
+          ? mipAdminModule.messaging.getAnnouncement(this.data.announcementId, force)
           : Promise.resolve(null),
       ])
       if (!hasCapability(session.capabilities, 'announcements.manage')
@@ -334,7 +334,7 @@ Page({
     }
     this.setData({ saving: true, message: '' })
     try {
-      const saved = await mipAdminModule.mutate(() => mipAdminModule.gateway.saveAnnouncement({
+      const saved = await mipAdminModule.messaging.saveAnnouncement({
         ...(this.data.announcementId
           ? { announcementId: this.data.announcementId, expectedVersion: this.data.version }
           : {}),
@@ -347,7 +347,7 @@ Page({
         targetId: this.data.draft.targetId,
         visibleFrom,
         visibleUntil,
-      }))
+      })
       this.setData({ announcementId: saved.id, version: saved.version })
       wx.showToast({ title: '草稿已保存', icon: 'success' })
       setTimeout(leaveSecondaryPage, 500, '/packages/admin/announcements/index')
