@@ -1,4 +1,4 @@
-<view id="admin-opportunity-detail-page" class="min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+<view id="admin-opportunity-detail-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
   <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel p-5"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <app-empty-state wx:elif="{{state === 'forbidden'}}" title="无运营权限" description="{{message}}" />
   <app-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载机会" description="{{message}}" action-text="重新加载" bind:action="load" />

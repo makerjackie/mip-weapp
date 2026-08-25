@@ -1,4 +1,4 @@
-<view id="admin-knowledge-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="admin-knowledge-page" class="mip-admin-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view class="flex items-start justify-between gap-3">
     <view><view class="text-[length:38rpx] font-bold">知识内容管理</view><view class="mt-2 text-[length:23rpx] text-muted">维护信息源、分类、内容、付费目录和评论审核</view></view>
     <t-button wx:if="{{section === 'CONTENTS' || section === 'SOURCES' || section === 'CATEGORIES'}}" size="small" theme="primary" bind:tap="openCreate">新增</t-button>

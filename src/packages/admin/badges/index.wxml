@@ -1,4 +1,4 @@
-<view id="admin-badges-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-5 text-ink">
+<view id="admin-badges-page" class="mip-admin-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-5 text-ink">
   <view class="text-[length:40rpx] font-bold">勋章管理</view>
   <view class="mt-2 text-[length:23rpx] text-muted">维护勋章目录并管理用户获授记录。</view>
 

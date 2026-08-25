@@ -28,27 +28,28 @@ describe('MIP admin responsive foundation', () => {
     expect(styles).toContain('.mip-admin-menu-grid')
   })
 
-  it('applies the shared layout only to representative admin pages', () => {
-    const pages = [
-      'dashboard',
-      'profiles',
-      'managed-events',
-      'event-console',
-      'events',
-      'event-registrations',
-      'orders',
-    ]
-
-    for (const page of pages) {
-      expect(read(`src/packages/admin/${page}/index.wxml`)).toContain('mip-admin-page')
+  it('applies the shared shell to every registered admin page', () => {
+    const app = JSON.parse(read('src/app.json')) as {
+      subPackages?: Array<{ root: string, pages: string[] }>
     }
+    const adminPackage = app.subPackages?.find(item => item.root === 'packages/admin')
 
-    expect(read('src/packages/admin/dashboard/index.wxml')).toContain('mip-admin-metric-grid')
-    expect(read('src/packages/admin/profiles/index.wxml')).toContain('mip-admin-card-list')
-    expect(read('src/packages/admin/managed-events/index.wxml')).toContain('mip-admin-card-list')
-    expect(read('src/packages/admin/event-console/index.wxml')).toContain('mip-admin-menu-grid')
-    expect(read('src/packages/admin/events/index.wxml')).toContain('mip-admin-form-grid')
-    expect(read('src/packages/admin/event-registrations/index.wxml')).toContain('mip-admin-card-list')
-    expect(read('src/packages/admin/orders/index.wxml')).toContain('mip-admin-summary-grid')
+    expect(adminPackage).toBeDefined()
+    if (!adminPackage) {
+      return
+    }
+    expect(adminPackage.pages.length).toBeGreaterThan(0)
+    for (const page of adminPackage.pages) {
+      const routeName = page.replace(/\/index$/, '').replaceAll('/', '-')
+      const source = read(`src/${adminPackage.root}/${page}.wxml`)
+      const rootView = source.match(/^\s*<view\b[^>]*>/)?.[0] || ''
+      const className = rootView.match(/\bclass="([^"]+)"/)?.[1] || ''
+      const classTokens = className.split(/\s+/)
+
+      expect(rootView).toContain(`id="admin-${routeName}-page"`)
+      expect(classTokens).toContain('mip-admin-page')
+      expect(classTokens).toContain('min-h-screen')
+      expect(className).toContain('pb-[calc(env(safe-area-inset-bottom)+48rpx)]')
+    }
   })
 })

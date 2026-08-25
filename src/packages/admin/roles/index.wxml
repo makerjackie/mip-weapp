@@ -1,4 +1,4 @@
-<view id="admin-roles-page" class="min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+<view id="admin-roles-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
   <view class="text-[length:40rpx] font-bold">角色与权限</view>
   <view class="mt-2 text-[length:23rpx] text-muted">角色仅在对应的平台、城市分会或活动范围内生效。</view>
 

@@ -1,4 +1,4 @@
-<view id="admin-task-assignments-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="admin-task-assignments-page" class="mip-admin-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view class="text-[length:38rpx] font-bold">任务派发</view>
   <view class="mt-2 text-[length:23rpx] text-muted">{{taskName || '指定成员任务'}}</view>
   <view class="mt-5 rounded-[16rpx] bg-panel px-4 py-4">

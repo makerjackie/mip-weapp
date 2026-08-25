@@ -1,4 +1,4 @@
-<view id="admin-game-page" class="min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="admin-game-page" class="mip-admin-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view class="flex items-start justify-between gap-3"><view><view class="text-[length:38rpx] font-bold">赛季管理</view><view class="mt-2 text-[length:23rpx] text-muted">配置赛季、队伍、对阵和排行榜</view></view><t-button size="small" theme="primary" bind:tap="openCreateSeason">新增赛季</t-button></view>
   <view wx:if="{{state === 'loading'}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载赛季管理" description="{{message}}" action-text="重新加载" bind:action="load" /></view>
