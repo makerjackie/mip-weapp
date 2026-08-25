@@ -66,6 +66,7 @@
 | `mip_operations_messages` | 按收件人展开的不可变运营通知、范围和模板快照 | 受 capability 约束的管理事务只追加 |
 | `mip_inbox_messages` | 用户可回查的站内消息 | `mip-notification-worker` 写入；`mip-notifications-api` 读取和标记已读 |
 | `mip_notification_grants` / `mip_delivery_tasks` | 订阅授权消耗和外部投递任务 | `mip-notifications-api` 记录授权；`mip-notification-worker` 消耗授权并投递 |
+| `mip_message_delivery_reviews` | 消息活动派发和投递任务的证据版本、认领租约及复核结论 | `mip-admin-api` 以平台复核权限和幂等合同维护；不复制或改写业务事实 |
 | `mip_ai_drafts` | 音频、转写、结构化草稿及确认关系 | `mip-ai-api` |
 | `mip_admin_export_tickets` | 脱敏/含手机号导出的短期票据、文件摘要和消费状态 | `mip-admin-api` |
 
@@ -110,6 +111,7 @@
 - 周赛结算在游戏事实事务中追加 `game.match.finalized`；outbox 按结算周期末的队伍成员事实产生固定游戏币事件，再由游戏币流水产生 `GAME` 站内消息。经验值只有跨越当前启用等级门槛时才产生 `GROWTH_LEVEL_UP` 弹窗类型。
 - 运营发布先在同一事务按收件人追加 `mip_operations_messages` 与 `operations.notification_published` outbox；投影时重新按 `app_id` 回查有效收件人、正文、活动目标和模板字段。Outbox payload 不承载收件人或文案事实。
 - `mip_inbox_messages` 是定向通知的权威回查入口。小程序只通过 `mip-notifications-api` 读取本人消息、标记已读和记录真实订阅授权选择；`mip-notification-worker` 不开放客户端调用，只通过内部 HMAC 写入消息、保留/消费授权和领取投递任务。同一授权由 reservation 独占；实际微信调用和最终状态写入由锁定 `ACTIVE` 用户、任务、授权及 reservation token 的专用投递事务串行化，调用后失败只由原任务重试。没有模板、授权或外部送达时，不阻断站内消息。完整边界见 [NOTIFICATIONS.md](NOTIFICATIONS.md)。
+- `mip_message_delivery_reviews` 只表达运营复核流程。列表默认返回未闭环项，以及新证据再次属于处理超时、结果未知或终止失败的 `ACTIVE` 项；显式 `RESOLVED` / `ALL` 由工作流行驱动并实时读取当前来源事实。已闭环记录不会因为活动完成或任务送达而消失，成功或安全自动重试也不会重新打开人工流程。认领、核对和结束均校验证据哈希、版本、15 分钟租约和幂等键。同一来源行只反映最新复核状态，操作过程由审计流水留痕，列表不保留旧说明或证据引用。`UNKNOWN` 绝不自动重放，`resolve` 也不能把来源改成成功。
 - 机会撮合默认使用确定性本地 provider，并保存来源机会、阈值和结果版本。客户端和外部 provider 只接收请求范围内的签名候选引用；provider 的其余输入仅含候选类型、本地分数和匿名信号键/权重，不含人才用户 ID、分会/城市/标签内部主键。非法响应、超时或异常降级到本地结果。候选生成和结果读取均按 AppID 回查有效用户、公开字段、分会范围、机会状态、用户可发现偏好和双向屏蔽，最终写入再次锁定偏好与阈值版本。
 - `mip_ai_drafts` 在用户明确确认前只能是临时草稿；转写 provider 通过内部鉴权调用，不直接写正式档案、合作卡或超级案例。
 

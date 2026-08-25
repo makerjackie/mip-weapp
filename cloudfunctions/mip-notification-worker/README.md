@@ -2,7 +2,7 @@
 
 MIP 站内消息写入与微信补充通知投递函数。站内消息先落库并保持可回查；外部送达不改变业务事实。订阅消息消费逐次授权；客服消息只使用实际客服会话登记的 48 小时窗口；服务号通过受控 HTTPS adapter 投递。
 
-本函数不开放客户端调用，也不配置定时触发器。`publishMessage` 与 `runDeliveryBatch` 只接受受控 HMAC 调用。
+本函数不开放客户端调用，也不配置定时触发器。`publishMessage`、`reconcileDeliveryTask` 与 `runDeliveryBatch` 只接受受控 HMAC 调用。`reconcileDeliveryTask` 只在证据版本匹配时收敛过期 `PROCESSING` 或读取既有失败事实，不调用外部 provider；`UNKNOWN` / `MANUAL_REVIEW` 不自动重放，也不会被伪造为 `DELIVERED`。
 
 `MIP_SUBSCRIBE_TEMPLATES_JSON` 只配置实际已启用的模板。没有对应模板时仍写站内消息，不创建外部投递任务。`EVENT_REMINDER` 的逻辑字段合同为 `title`、`startsAt`、`location`；配置将实际模板关键词映射到这些字段，例如：
 

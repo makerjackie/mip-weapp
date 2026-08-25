@@ -969,7 +969,8 @@ async function lockScheduledAuthorization(tx, appId, userId, scope) {
 
 async function reconcileExpiredDispatches(tx, appId, currentTime, limit) {
   const expired = await tx.query(
-    `SELECT id, campaign_id, scheduled_by_user_id, attempts, version
+    `SELECT id, campaign_id, scheduled_by_user_id, status, attempts,
+      lease_expires_at, last_outcome, retry_disposition, version
      FROM mip_message_campaign_dispatches
      WHERE app_id = ? AND status = 'PROCESSING' AND lease_expires_at <= ?
      ORDER BY lease_expires_at, id LIMIT ? FOR UPDATE SKIP LOCKED`,
@@ -977,76 +978,90 @@ async function reconcileExpiredDispatches(tx, appId, currentTime, limit) {
   )
   const results = []
   for (const dispatch of expired) {
-    const campaign = await lockPublicationCampaign(tx, appId, dispatch.campaign_id)
-    const fact = await tx.one(
-      `SELECT COUNT(DISTINCT message.id) AS submitted_count,
-        COUNT(DISTINCT CASE WHEN outbox.id IS NOT NULL THEN message.id END) AS outbox_covered_count,
-        COUNT(outbox.id) AS outbox_count
-       FROM mip_operations_messages message
-       LEFT JOIN mip_outbox_events outbox
-         ON outbox.app_id = message.app_id
-        AND outbox.aggregate_type = 'OPERATIONS_MESSAGE'
-        AND outbox.aggregate_id = message.id
-        AND outbox.event_type = 'operations.notification_published'
-       WHERE message.app_id = ? AND message.publication_id = ?`,
-      [appId, dispatch.campaign_id],
-    )
-    const submittedCount = Number(fact?.submitted_count || 0)
-    const outboxCoveredCount = Number(fact?.outbox_covered_count || 0)
-    const outboxCount = Number(fact?.outbox_count || 0)
-    const exactPublication = campaign
-      && ['PUBLISHED', 'WITHDRAWN'].includes(campaign.status)
-      && campaign.activeDispatchId === null
-      && campaign.publishIdempotencyKey === scheduledPublicationKey(dispatch.id)
-      && campaign.publishRequestHash === scheduledPublicationHash(dispatch.id, campaign.id)
-      && submittedCount > 0
-      && submittedCount === campaign.recipientCount
-      && outboxCoveredCount === campaign.recipientCount
-      && outboxCount === campaign.recipientCount
-    if (exactPublication) {
-      await tx.query(
-        `UPDATE mip_message_campaign_dispatches
-         SET status = 'COMPLETED', completed_at = ?, lease_token = NULL,
-           lease_expires_at = NULL, last_error_code = NULL,
-           last_outcome = 'SUCCEEDED', retry_disposition = 'TERMINAL', version = version + 1
-         WHERE app_id = ? AND id = ? AND version = ? AND status = 'PROCESSING'`,
-        [campaign.publishedAt || currentTime, appId, dispatch.id, Number(dispatch.version)],
-      )
-      results.push({ status: 'COMPLETED', retryDisposition: 'TERMINAL' })
-      continue
-    }
-    const safeToRetry = campaign
-      && campaign.status === 'READY'
-      && campaign.activeDispatchId === dispatch.id
-      && submittedCount === 0
-      && outboxCoveredCount === 0
-      && outboxCount === 0
-    if (safeToRetry) {
-      const exhausted = Number(dispatch.attempts) >= MAX_DISPATCH_ATTEMPTS
-      await tx.query(
-        `UPDATE mip_message_campaign_dispatches
-         SET status = 'FAILED', available_at = ?, lease_token = NULL, lease_expires_at = NULL,
-           last_error_code = ?, last_outcome = 'NOT_ATTEMPTED', retry_disposition = ?,
-           version = version + 1
-         WHERE app_id = ? AND id = ? AND version = ? AND status = 'PROCESSING'`,
-        [currentTime,
-          exhausted ? 'MESSAGE_SCHEDULE_ATTEMPTS_EXHAUSTED' : 'MESSAGE_SCHEDULE_LEASE_EXPIRED',
-          exhausted ? 'TERMINAL' : 'RETRIABLE', appId, dispatch.id, Number(dispatch.version)],
-      )
-      results.push({ status: 'FAILED', retryDisposition: exhausted ? 'TERMINAL' : 'RETRIABLE' })
-      continue
-    }
-    await tx.query(
-      `UPDATE mip_message_campaign_dispatches
-       SET status = 'FAILED', lease_token = NULL, lease_expires_at = NULL,
-         last_error_code = 'MESSAGE_SCHEDULE_OUTCOME_UNKNOWN', last_outcome = 'UNKNOWN',
-         retry_disposition = 'MANUAL_REVIEW', version = version + 1
-       WHERE app_id = ? AND id = ? AND version = ? AND status = 'PROCESSING'`,
-      [appId, dispatch.id, Number(dispatch.version)],
-    )
-    results.push({ status: 'FAILED', retryDisposition: 'MANUAL_REVIEW' })
+    results.push(await reconcileMessageCampaignDispatch(tx, appId, dispatch, currentTime))
   }
   return results
+}
+
+async function reconcileMessageCampaignDispatch(tx, appId, dispatch, currentTime) {
+  const campaign = await lockPublicationCampaign(tx, appId, dispatch.campaign_id)
+  const fact = await tx.one(
+    `SELECT COUNT(DISTINCT message.id) AS submitted_count,
+      COUNT(DISTINCT CASE WHEN outbox.id IS NOT NULL THEN message.id END) AS outbox_covered_count,
+      COUNT(outbox.id) AS outbox_count
+     FROM mip_operations_messages message
+     LEFT JOIN mip_outbox_events outbox
+       ON outbox.app_id = message.app_id
+      AND outbox.aggregate_type = 'OPERATIONS_MESSAGE'
+      AND outbox.aggregate_id = message.id
+      AND outbox.event_type = 'operations.notification_published'
+     WHERE message.app_id = ? AND message.publication_id = ?`,
+    [appId, dispatch.campaign_id],
+  )
+  const submittedCount = Number(fact?.submitted_count || 0)
+  const outboxCoveredCount = Number(fact?.outbox_covered_count || 0)
+  const outboxCount = Number(fact?.outbox_count || 0)
+  const exactPublication = campaign
+    && ['PUBLISHED', 'WITHDRAWN'].includes(campaign.status)
+    && campaign.activeDispatchId === null
+    && campaign.publishIdempotencyKey === scheduledPublicationKey(dispatch.id)
+    && campaign.publishRequestHash === scheduledPublicationHash(dispatch.id, campaign.id)
+    && submittedCount > 0
+    && submittedCount === campaign.recipientCount
+    && outboxCoveredCount === campaign.recipientCount
+    && outboxCount === campaign.recipientCount
+  if (exactPublication) {
+    const update = await tx.query(
+      `UPDATE mip_message_campaign_dispatches
+       SET status = 'COMPLETED', completed_at = ?, lease_token = NULL,
+         lease_expires_at = NULL, last_error_code = NULL,
+         last_outcome = 'SUCCEEDED', retry_disposition = 'TERMINAL', version = version + 1
+       WHERE app_id = ? AND id = ? AND version = ? AND status IN ('PROCESSING', 'FAILED')`,
+      [campaign.publishedAt || currentTime, appId, dispatch.id, Number(dispatch.version)],
+    )
+    if (Number(update.affectedRows) !== 1) throw codeError('CONFLICT')
+    return { status: 'COMPLETED', retryDisposition: 'TERMINAL', effect: 'CONFIRMED' }
+  }
+  const safeToRetry = campaign
+    && campaign.status === 'READY'
+    && campaign.activeDispatchId === dispatch.id
+    && submittedCount === 0
+    && outboxCoveredCount === 0
+    && outboxCount === 0
+  if (safeToRetry) {
+    const exhausted = Number(dispatch.attempts) >= MAX_DISPATCH_ATTEMPTS
+    const update = await tx.query(
+      `UPDATE mip_message_campaign_dispatches
+       SET status = 'FAILED', available_at = ?, lease_token = NULL, lease_expires_at = NULL,
+         last_error_code = ?, last_outcome = 'NOT_ATTEMPTED', retry_disposition = ?,
+         version = version + 1
+       WHERE app_id = ? AND id = ? AND version = ? AND status IN ('PROCESSING', 'FAILED')`,
+      [currentTime,
+        exhausted ? 'MESSAGE_SCHEDULE_ATTEMPTS_EXHAUSTED' : 'MESSAGE_SCHEDULE_LEASE_EXPIRED',
+        exhausted ? 'TERMINAL' : 'RETRIABLE', appId, dispatch.id, Number(dispatch.version)],
+    )
+    if (Number(update.affectedRows) !== 1) throw codeError('CONFLICT')
+    return {
+      status: 'FAILED',
+      retryDisposition: exhausted ? 'TERMINAL' : 'RETRIABLE',
+      effect: exhausted ? 'TERMINATED' : 'RETRY_ARMED',
+    }
+  }
+  if (dispatch.status === 'FAILED'
+    && dispatch.last_outcome === 'UNKNOWN'
+    && dispatch.retry_disposition === 'MANUAL_REVIEW') {
+    return { status: 'FAILED', retryDisposition: 'MANUAL_REVIEW', effect: 'UNCHANGED' }
+  }
+  const update = await tx.query(
+    `UPDATE mip_message_campaign_dispatches
+     SET status = 'FAILED', lease_token = NULL, lease_expires_at = NULL,
+       last_error_code = 'MESSAGE_SCHEDULE_OUTCOME_UNKNOWN', last_outcome = 'UNKNOWN',
+       retry_disposition = 'MANUAL_REVIEW', version = version + 1
+     WHERE app_id = ? AND id = ? AND version = ? AND status = 'PROCESSING'`,
+    [appId, dispatch.id, Number(dispatch.version)],
+  )
+  if (Number(update.affectedRows) !== 1) throw codeError('CONFLICT')
+  return { status: 'FAILED', retryDisposition: 'MANUAL_REVIEW', effect: 'QUARANTINED' }
 }
 
 async function markDispatchTerminal(tx, appId, dispatch, errorCode) {
@@ -1454,6 +1469,7 @@ module.exports = {
   cancelScheduleRequestHash,
   createMessageCampaignRepository,
   publishRequestHash,
+  reconcileMessageCampaignDispatch,
   scheduleRequestHash,
   scheduledPublicationHash,
   roundedWakeAt,

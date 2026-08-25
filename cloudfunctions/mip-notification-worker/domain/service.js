@@ -23,6 +23,17 @@ function createNotificationService(options) {
       return repository.publishMessage(input.appId, message)
     },
 
+    reconcileDeliveryTask(input) {
+      return repository.reconcileDeliveryTask({
+        appId: input.appId,
+        actorUserId: uuid(input.actorUserId),
+        taskId: uuid(input.taskId),
+        expectedEvidenceRevision: evidenceRevision(input.expectedEvidenceRevision),
+        idempotencyKey: idempotencyKey(input.idempotencyKey),
+        now: new Date(Number(clock())),
+      })
+    },
+
     async runDeliveryBatch(input) {
       const limit = normalizeLimit(input.limit)
       const maxBatches = input.drain === true ? normalizeMaxBatches(input.maxBatches) : 1
@@ -111,6 +122,28 @@ function createNotificationService(options) {
       results,
     }
   }
+}
+
+function uuid(value) {
+  const normalized = typeof value === 'string' ? value.trim() : ''
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(normalized)) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  return normalized
+}
+
+function evidenceRevision(value) {
+  const normalized = typeof value === 'string' ? value.trim().toLowerCase() : ''
+  if (!/^[0-9a-f]{64}$/.test(normalized)) throw new Error('VALIDATION_FAILED')
+  return normalized
+}
+
+function idempotencyKey(value) {
+  const normalized = typeof value === 'string' ? value.trim() : ''
+  if (normalized.length < 12 || normalized.length > 128 || !/^[A-Za-z0-9_.:-]+$/.test(normalized)) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  return normalized
 }
 
 function earliestRetryAt(results) {
@@ -225,4 +258,7 @@ module.exports = {
   normalizeMaxBatches,
   isChannelConfigured,
   resolveSender,
+  evidenceRevision,
+  idempotencyKey,
+  uuid,
 }

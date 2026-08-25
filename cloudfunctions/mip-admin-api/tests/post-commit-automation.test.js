@@ -34,6 +34,22 @@ describe('admin post-commit automation routing', () => {
       outbox: false,
       requiresTrustedAppId: true,
     })
+    assert.deepEqual(postCommitAutomationFor(
+      'mip.admin.messageDeliveryReviews.reconcile',
+      { schedulerReconcileRequired: false },
+    ), {
+      messageSchedule: false,
+      outbox: false,
+      requiresTrustedAppId: false,
+    })
+    assert.deepEqual(postCommitAutomationFor(
+      'mip.admin.messageDeliveryReviews.reconcile',
+      { schedulerReconcileRequired: true },
+    ), {
+      messageSchedule: true,
+      outbox: false,
+      requiresTrustedAppId: true,
+    })
     const outboxMutation = outboxMutationActions.values().next().value
     assert.equal(postCommitAutomationFor(outboxMutation).requiresTrustedAppId, true)
   })

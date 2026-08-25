@@ -18,6 +18,7 @@ const {
 } = require('./lib/message-dispatch-auth')
 const { createMessageDispatchRoute, normalizeDispatchRun } = require('./lib/message-dispatch-route')
 const { createMessageSchedulerClient } = require('./lib/message-scheduler-client')
+const { createNotificationReconcileClient } = require('./lib/notification-reconcile-client')
 const {
   messageScheduleMutationActions,
   outboxMutationActions,
@@ -50,6 +51,11 @@ const messageSchedulerClient = createMessageSchedulerClient({
   secret: process.env.MIP_MESSAGE_DISPATCH_HMAC_SECRET,
   sourceFunction: 'mip-admin-api',
   logger: console,
+})
+const notificationReconcileClient = createNotificationReconcileClient({
+  cloud,
+  functionName: process.env.MIP_NOTIFICATION_FUNCTION_NAME || 'mip-notification-worker',
+  secret: process.env.MIP_NOTIFICATION_HMAC_SECRET,
 })
 async function contentSafety(draft, caller) {
   const checker = cloud.openapi?.security?.msgSecCheck
@@ -88,6 +94,7 @@ const service = createAdminService({
   dispatchRefund,
   dispatchRefunds,
   exportStorage,
+  reconcileNotificationDelivery: input => notificationReconcileClient.reconcile(input),
   recalculateMatching: input => matchingClient.recalculate(input),
   profileRefSecret: process.env.MIP_IDENTITY_PEPPER,
   exportMaxRows: boundedInteger(process.env.MIP_EXPORT_MAX_ROWS, 5_000, 100, 20_000),
@@ -217,7 +224,7 @@ exports.main = async (event = {}) => {
   const result = await handler(event)
   if (result?.ok === true) {
     const routeAction = normalizeAdminRequest(event).action
-    const routeAutomation = postCommitAutomationFor(routeAction)
+    const routeAutomation = postCommitAutomationFor(routeAction, result.data)
     if (routeAutomation.requiresTrustedAppId) {
       const appId = trustedContextAppId(cloud.getWXContext(), allowedAppIds)
       if (routeAutomation.messageSchedule) {

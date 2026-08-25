@@ -5,10 +5,13 @@ const { outboxMutationActions } = require('../domain/operation-registry')
 const messageScheduleMutationActions = new Set([
   'mip.admin.messageCampaigns.schedule',
   'mip.admin.messageCampaigns.cancelSchedule',
+  'mip.admin.messageDeliveryReviews.reconcile',
 ])
 
-function postCommitAutomationFor(action) {
+function postCommitAutomationFor(action, resultData = null) {
   const messageSchedule = messageScheduleMutationActions.has(action)
+    && (action !== 'mip.admin.messageDeliveryReviews.reconcile'
+      || resultData?.schedulerReconcileRequired === true)
   const outbox = outboxMutationActions.has(action)
   return Object.freeze({
     messageSchedule,

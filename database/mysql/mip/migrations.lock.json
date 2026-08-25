@@ -571,6 +571,18 @@
         "mip_message_campaigns",
         "mip_delivery_tasks"
       ]
+    },
+    {
+      "version": "20260824410000",
+      "name": "mip_message_delivery_reviews",
+      "sql": "database/mysql/mip/041_message_delivery_reviews.sql",
+      "sqlSha256": "28eb31ed8f79d7c2987f7e8f7a2a967a057cac0de9ad43ee5b0b9b49b1b76a03",
+      "rollback": "database/mysql/mip/rollback/041_message_delivery_reviews.sql",
+      "rollbackSha256": "1f47b4e6aed782e500f6d62fd96bab0c978398f4a956fecc75f73752b6e464ee",
+      "createsTables": [
+        "mip_message_delivery_reviews"
+      ],
+      "altersTables": []
     }
   ]
 }

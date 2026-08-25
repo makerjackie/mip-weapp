@@ -12,7 +12,7 @@ MIP 的运行时数据位于 `database/mysql/mip/`，迁移跟踪表为 `mip_sch
 | 社区安全 | `mip_user_blocks`, `mip_reports` |
 | 公告 | `mip_announcements` |
 | 支付和权益 | `mip_payment_attempts`, `mip_refunds`, `mip_membership_entitlements`, `mip_membership_attributions`, `mip_payment_callbacks` |
-| 成长、消息和 AI | `mip_growth_levels`, `mip_growth_rules`, `mip_growth_accounts`, `mip_growth_entries`, `mip_operations_messages`, `mip_inbox_messages`, `mip_notification_grants`, `mip_delivery_tasks`, `mip_ai_drafts` |
+| 成长、消息和 AI | `mip_growth_levels`, `mip_growth_rules`, `mip_growth_accounts`, `mip_growth_entries`, `mip_operations_messages`, `mip_inbox_messages`, `mip_notification_grants`, `mip_delivery_tasks`, `mip_message_delivery_reviews`, `mip_ai_drafts` |
 | 管理 | `mip_user_access_controls`, `mip_admin_export_tickets` |
 
 迁移文件和 lock 文件是字段、CHECK、外键、索引、版本与 checksum 的唯一事实；本文只说明跨域关系和运行时约束，不替代 SQL。
@@ -75,6 +75,7 @@ mip_users
 - `mip_announcements` 保存平台或城市分会公告、展示窗口、内容安全结果和可选活动/机会关联；草稿、发布、撤回和置顶都保留版本与审计，不提供物理删除。
 - `mip_growth_levels` 和 `mip_growth_rules` 是配置；`mip_growth_accounts` 是余额快照；`mip_growth_entries` 只追加，每个用户/来源/指标保持幂等。签到撤销的反向流水引用撤销 transition，delta 等于原实际入账值的反数，不依赖后续修改的规则。
 - `mip_inbox_messages` 以收件人和 dedupe key 唯一，是站内消息事实；`mip_notification_grants` 记录用户手势授权，并用任务、随机 token 和租约表达 `RESERVED` 状态；`mip_delivery_tasks` 使用 lease、attempts 和可恢复状态，不由高频 timer 驱动。reservation 使用短事务；实际微信调用和最终状态写入由锁定 `ACTIVE` 用户、任务及授权的专用投递事务串行化，完整边界见 [NOTIFICATIONS.md](NOTIFICATIONS.md)。
+- `mip_message_delivery_reviews` 通过 `(app_id, source_type, source_id)` 唯一关联消息活动派发或投递任务，只保存证据哈希和 `OPEN | CLAIMED | RESOLVED` 工作流。来源状态、正文、收件人和 provider 结论不复制到该表；已闭环来源只有在新证据再次属于处理超时、结果未知或终止失败时重新成为活动项，后续成功或安全自动重试保持已闭环。同一行只表达最新复核状态，状态变更由审计流水留痕。
 - `mip_operations_messages` 是按收件人展开的不可变运营发布事实，以 `(app_id, publication_id, recipient_user_id)` 去重。范围、创建者、活动目标和可选订阅消息快照都保留在服务端；runtime 账号只允许读取和追加。
 - `mip_ai_drafts` 的状态由 `UPLOADED`、`TRANSCRIBING`、`STRUCTURING`、`DRAFT_READY`、`FAILED`、`CONFIRMED`、`EXPIRED`、`DELETED` 组成。只有 `CONFIRMED` 才能关联正式资源。
 

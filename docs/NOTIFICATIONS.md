@@ -29,9 +29,19 @@
 
 `DELIVERY_OUTCOME_UNKNOWN` 表示无法证明外部调用结论。异常中心只返回脱敏状态；受控运营核对 provider 记录和站内消息后，才能决定是否创建新的业务通知。不得手工把 `RESERVED` 授权改回 `AVAILABLE`。
 
+## 投递复核
+
+消息活动派发和外部投递任务共用独立的复核工作流，但不复制或覆盖业务事实。`mip_message_delivery_reviews` 只保存来源引用、证据哈希、`OPEN | CLAIMED | RESOLVED`、15 分钟认领租约、处理结论和版本；当前任务、活动、授权及外部结论仍以各自业务表为准。已闭环记录只在新证据再次属于处理超时、结果未知或终止失败时重新呈现为待处理；后续成功或安全自动重试继续保持已闭环。同一来源行只反映最新复核状态，认领、核对和闭环由审计流水留痕，先前填写的说明与证据引用不作为列表历史保留。
+
+只有平台负责人和平台运营通过 `messages.delivery.review` capability 才能调用管理端 v1 合同的 `list`、`get`、`claim`、`reconcile`、`resolve`。所有写操作都要求当前 `evidenceRevision`、`reviewVersion` 和 12–128 字符幂等键；相同幂等键只能重放相同请求。返回和审计只包含来源类型、状态、分类、证据版本和固定处理结果，不包含 OpenID、手机号、密文、消息正文、provider 原始响应或密钥。
+
+`reconcile` 只按当前持久化证据收敛可证明的状态。消息活动可以根据现有派发事实完成、重新进入受控重试或继续隔离；投递任务通过 admin 到 worker 的独立 HMAC 调用处理过期 `PROCESSING`，不会调用微信 provider。`UNKNOWN` 和 `MANUAL_REVIEW` 绝不自动重放外部发送，也不能被改写成 `DELIVERED`。无法证明结论时，运营只能在认领后以 `UNKNOWN_NO_REPLAY` 加必填说明结束本次复核；这只关闭工作流，不伪造投递成功，也不创建新的业务通知。
+
+没有既有复核记录的普通可重试失败继续留在自动投递通道，不进入人工复核列表。若运营认领后来源被正常 worker 收敛为成功或可重试状态，证据变化会要求重新认领；随后 `reconcile` 只把新证据保存为 `AUTO_CONVERGED` 并关闭复核，不再次执行活动发布或外部发送。
+
 ## 权限和运行
 
-worker 仅通过内部 HMAC 调用，不开放客户端权限，不安装高频定时器。runtime MySQL 账号对 `mip_notification_grants` 和 `mip_delivery_tasks` 只需要 `SELECT`、`INSERT`、`UPDATE`，不需要 `DELETE`、schema-level 或全局权限。
+worker 仅通过内部 HMAC 调用，不开放客户端权限，不安装高频定时器。runtime MySQL 账号对 `mip_notification_grants`、`mip_delivery_tasks` 和复核工作流表只需要精确的 `SELECT`、`INSERT`、`UPDATE`，不需要 `DELETE`、schema-level 或全局权限。
 
 模板、adapter endpoint、AppID allowlist、HMAC 和收件人加密密钥只放函数环境变量。手机号、OpenID、ciphertext、provider 原始响应和连接串不得写入响应或日志。
 

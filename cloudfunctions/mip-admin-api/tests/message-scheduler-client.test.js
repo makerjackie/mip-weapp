@@ -92,7 +92,7 @@ describe('admin message scheduler handoff', () => {
 
   it('keeps schedule and cancel retries on the post-handler path', () => {
     const source = fs.readFileSync(path.join(root, 'cloudfunctions/mip-admin-api/index.js'), 'utf8')
-    assert.match(source, /postCommitAutomationFor\(routeAction\)/)
+    assert.match(source, /postCommitAutomationFor\(routeAction, result\.data\)/)
     assert.match(source, /if \(routeAutomation\.requiresTrustedAppId\)/)
     assert.match(source, /MESSAGE_SCHEDULE_AUTOMATION_UNVERIFIED/)
     assert.match(source, /retryable: true/)

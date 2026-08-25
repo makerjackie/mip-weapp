@@ -72,6 +72,8 @@ const expectedOperations = Object.freeze({
   'mip.admin.messageCampaigns.scopes': ['MESSAGING', 'QUERY', 'listMessageCampaignScopes', 'NO_INPUT'],
   'mip.admin.messageCampaigns.list': ['MESSAGING', 'QUERY', 'listMessageCampaigns'],
   'mip.admin.messageCampaigns.get': ['MESSAGING', 'QUERY', 'getMessageCampaign'],
+  'mip.admin.messageDeliveryReviews.list': ['MESSAGING', 'QUERY', 'listMessageDeliveryReviews'],
+  'mip.admin.messageDeliveryReviews.get': ['MESSAGING', 'QUERY', 'getMessageDeliveryReview'],
   'mip.admin.messageCampaigns.recipients': ['MESSAGING', 'QUERY', 'searchMessageRecipients'],
   'mip.admin.messageTemplates.list': ['MESSAGING', 'QUERY', 'listMessageTemplates'],
   'mip.admin.messageTemplates.get': ['MESSAGING', 'QUERY', 'getMessageTemplate'],
@@ -85,6 +87,9 @@ const expectedOperations = Object.freeze({
   'mip.admin.messageCampaigns.cancelSchedule': ['MESSAGING', 'MUTATION', 'cancelMessageCampaignSchedule'],
   'mip.admin.messageCampaigns.publish': ['MESSAGING', 'MUTATION', 'publishMessageCampaign'],
   'mip.admin.messageCampaigns.withdraw': ['MESSAGING', 'MUTATION', 'withdrawMessageCampaign'],
+  'mip.admin.messageDeliveryReviews.claim': ['MESSAGING', 'MUTATION', 'claimMessageDeliveryReview'],
+  'mip.admin.messageDeliveryReviews.reconcile': ['MESSAGING', 'MUTATION', 'reconcileMessageDeliveryReview'],
+  'mip.admin.messageDeliveryReviews.resolve': ['MESSAGING', 'MUTATION', 'resolveMessageDeliveryReview'],
   'mip.admin.messageTemplates.save': ['MESSAGING', 'MUTATION', 'saveMessageTemplate'],
   'mip.admin.messageTemplates.activate': ['MESSAGING', 'MUTATION', 'activateMessageTemplate'],
   'mip.admin.messageTemplates.archive': ['MESSAGING', 'MUTATION', 'archiveMessageTemplate'],
@@ -181,12 +186,12 @@ function manifest(owner, operations) {
 }
 
 describe('admin operation catalog', () => {
-  it('freezes the exact 110 business actions, owners, and kinds while keeping health separate', () => {
+  it('freezes the exact 115 business actions, owners, and kinds while keeping health separate', () => {
     const handlerActions = Object.keys(actions).filter(action => action !== 'health')
     const expectedActions = Object.keys(expectedOperations)
 
-    assert.equal(expectedActions.length, 110)
-    assert.equal(operationCatalog.length, 110)
+    assert.equal(expectedActions.length, 115)
+    assert.equal(operationCatalog.length, 115)
     assert.deepEqual(sorted(handlerActions), sorted(expectedActions))
     assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(expectedActions))
     assert.equal(operationByAction.health, undefined)

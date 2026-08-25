@@ -35,6 +35,24 @@ test('accepts worker actions only after internal verification', async () => {
   })
 })
 
+test('routes a signed delivery reconcile without exposing it to clients', async () => {
+  const handler = createHandler({
+    verifyInternal(event) {
+      assert.equal(event.signature, 'signed')
+      return { taskId: 'task-a', actorUserId: 'operator-a' }
+    },
+    service: {
+      async reconcileDeliveryTask(input) {
+        return { taskId: input.taskId, effect: 'UNCHANGED' }
+      },
+    },
+  })
+  assert.deepEqual(await handler({ action: 'reconcileDeliveryTask', signature: 'signed' }), {
+    ok: true,
+    data: { taskId: 'task-a', effect: 'UNCHANGED' },
+  })
+})
+
 test('does not expose user inbox actions', async () => {
   let verified = false
   const handler = createHandler({

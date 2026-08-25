@@ -1,6 +1,7 @@
 'use strict'
 
-const { randomUUID } = require('node:crypto')
+const { createHash, randomUUID } = require('node:crypto')
+const { deliveryEvidenceRevision, normalizedDeliveryEvidence } = require('./delivery-evidence')
 
 const MAX_ATTEMPTS = 5
 const TASK_LEASE_MS = 2 * 60 * 1000
@@ -410,14 +411,214 @@ function createNotificationRepository(database, options = {}) {
     })
   }
 
+  async function reconcileDeliveryTask(input) {
+    const requestHash = createHash('sha256').update(JSON.stringify([
+      input.taskId,
+      input.actorUserId,
+      input.expectedEvidenceRevision,
+    ])).digest('hex')
+    return database.transaction(async (tx) => {
+      const operation = await claimReconcileRequest(tx, {
+        ...input,
+        createId,
+        requestHash,
+      })
+      if (operation.replay) return operation.replay
+
+      const before = await lockDeliveryEvidence(tx, input.appId, input.taskId)
+      if (!before) throw new Error('NOT_FOUND')
+      const beforeEvidence = normalizedDeliveryEvidence(before.task, before.grant)
+      const beforeEvidenceRevision = deliveryEvidenceRevision(beforeEvidence)
+      if (beforeEvidenceRevision !== input.expectedEvidenceRevision) {
+        throw new Error('EVIDENCE_CHANGED')
+      }
+
+      let effect = 'UNCHANGED'
+      if (before.task.status === 'PROCESSING') {
+        const leaseExpiresAt = new Date(before.task.lease_expires_at).getTime()
+        if (Number.isFinite(leaseExpiresAt) && leaseExpiresAt > input.now.getTime()) {
+          throw new Error('NOT_ACTIONABLE')
+        }
+        if (before.grant) {
+          const expired = await tx.query(
+            `UPDATE mip_notification_grants
+             SET status = 'EXPIRED', reservation_task_id = NULL,
+                 reservation_token = NULL, reservation_expires_at = NULL
+             WHERE app_id = ? AND id = ? AND status = 'RESERVED'
+               AND reservation_task_id = ?`,
+            [input.appId, before.grant.id, input.taskId],
+          )
+          assertAffected(expired, 'DELIVERY_RESERVATION_LOST')
+        }
+        const quarantined = await tx.query(
+          `UPDATE mip_delivery_tasks
+           SET status = 'CANCELLED', lease_expires_at = NULL,
+               last_error_code = 'DELIVERY_OUTCOME_UNKNOWN',
+               last_outcome = 'UNKNOWN', retry_disposition = 'MANUAL_REVIEW',
+               outcome_updated_at = UTC_TIMESTAMP(3)
+           WHERE app_id = ? AND id = ? AND status = 'PROCESSING'
+             AND (lease_expires_at <=> ?)`,
+          [input.appId, input.taskId, before.task.lease_expires_at || null],
+        )
+        assertAffected(quarantined, 'DELIVERY_LEASE_LOST')
+        effect = 'QUARANTINED'
+      }
+      else if (before.task.status === 'FAILED'
+        && before.task.retry_disposition === 'RETRIABLE'
+        && ['NOT_ATTEMPTED', 'KNOWN_FAILED'].includes(before.task.last_outcome)) {
+        effect = 'RETRYABLE_UNCHANGED'
+      }
+
+      const after = await lockDeliveryEvidence(tx, input.appId, input.taskId)
+      const afterEvidence = normalizedDeliveryEvidence(after.task, after.grant)
+      const response = {
+        taskId: input.taskId,
+        effect,
+        beforeEvidenceRevision,
+        afterEvidenceRevision: deliveryEvidenceRevision(afterEvidence),
+        source: deliverySourceDto(afterEvidence),
+      }
+      await writeDeliveryReconcileAudit(tx, {
+        ...input,
+        before: beforeEvidence,
+        after: afterEvidence,
+        response,
+      })
+      await completeReconcileRequest(tx, {
+        ...input,
+        requestHash,
+        response,
+      })
+      return response
+    })
+  }
+
   return {
     deliverReservedTask,
     failLeasedTask,
     failReservedTask,
     leaseTasks,
     publishMessage,
+    reconcileDeliveryTask,
     reserveTask,
   }
+}
+
+async function lockDeliveryEvidence(tx, appId, taskId) {
+  const task = await tx.one(
+    `SELECT id, status, attempts, available_at, lease_expires_at, delivered_at,
+      last_error_code, last_outcome, retry_disposition, outcome_updated_at
+     FROM mip_delivery_tasks WHERE app_id = ? AND id = ? FOR UPDATE`,
+    [appId, taskId],
+  )
+  if (!task) return null
+  const grant = await tx.one(
+    `SELECT id, reservation_expires_at
+     FROM mip_notification_grants
+     WHERE app_id = ? AND status = 'RESERVED' AND reservation_task_id = ?
+     FOR UPDATE`,
+    [appId, taskId],
+  )
+  return { task, grant }
+}
+
+async function claimReconcileRequest(tx, input) {
+  try {
+    await tx.query(
+      `INSERT INTO mip_idempotency_keys (
+        id, app_id, actor_user_id, operation, idempotency_key,
+        request_hash, status, expires_at
+      ) VALUES (?, ?, ?, 'notification.delivery.reconcile', ?, ?, 'RUNNING',
+        DATE_ADD(UTC_TIMESTAMP(3), INTERVAL 24 HOUR))`,
+      [input.createId(), input.appId, input.actorUserId, input.idempotencyKey, input.requestHash],
+    )
+    return { replay: null }
+  }
+  catch (error) {
+    if (!duplicateError(error)) throw error
+  }
+  const stored = await tx.one(
+    `SELECT request_hash, status, response_json
+     FROM mip_idempotency_keys
+     WHERE app_id = ? AND actor_user_id = ?
+       AND operation = 'notification.delivery.reconcile' AND idempotency_key = ?
+     FOR UPDATE`,
+    [input.appId, input.actorUserId, input.idempotencyKey],
+  )
+  if (!stored || stored.request_hash !== input.requestHash) {
+    throw new Error('IDEMPOTENCY_CONFLICT')
+  }
+  if (stored.status !== 'COMPLETED') throw new Error('REQUEST_IN_PROGRESS')
+  const replay = parseReconcileResponse(stored.response_json, input.taskId)
+  if (!replay) throw new Error('IDEMPOTENCY_CONFLICT')
+  return { replay }
+}
+
+async function completeReconcileRequest(tx, input) {
+  const completed = await tx.query(
+    `UPDATE mip_idempotency_keys SET status = 'COMPLETED', response_json = ?
+     WHERE app_id = ? AND actor_user_id = ?
+       AND operation = 'notification.delivery.reconcile' AND idempotency_key = ?
+       AND request_hash = ? AND status = 'RUNNING'`,
+    [JSON.stringify(input.response), input.appId, input.actorUserId,
+      input.idempotencyKey, input.requestHash],
+  )
+  assertAffected(completed, 'CONFLICT')
+}
+
+async function writeDeliveryReconcileAudit(tx, input) {
+  await tx.query(
+    `INSERT INTO mip_audit_logs (
+      app_id, actor_user_id, actor_type, scope_type, scope_id, action,
+      resource_type, resource_id, effective_role, metadata_json
+    ) VALUES (?, ?, 'ADMIN', 'PLATFORM', NULL,
+      'admin.message_delivery_reviews.delivery_task_reconcile',
+      'DELIVERY_TASK', ?, NULL, ?)`,
+    [input.appId, input.actorUserId, input.taskId, JSON.stringify({
+      effect: input.response.effect,
+      beforeStatus: input.before.status,
+      afterStatus: input.after.status,
+      beforeOutcome: input.before.lastOutcome,
+      afterOutcome: input.after.lastOutcome,
+      beforeEvidenceRevision: input.response.beforeEvidenceRevision,
+      afterEvidenceRevision: input.response.afterEvidenceRevision,
+    })],
+  )
+}
+
+function parseReconcileResponse(value, taskId) {
+  let parsed = value
+  if (typeof value === 'string') {
+    try { parsed = JSON.parse(value) }
+    catch { return null }
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)
+    || parsed.taskId !== taskId
+    || !['QUARANTINED', 'UNCHANGED', 'RETRYABLE_UNCHANGED'].includes(parsed.effect)
+    || !/^[0-9a-f]{64}$/.test(parsed.beforeEvidenceRevision || '')
+    || !/^[0-9a-f]{64}$/.test(parsed.afterEvidenceRevision || '')) {
+    return null
+  }
+  return parsed
+}
+
+function deliverySourceDto(evidence) {
+  return {
+    status: evidence.status,
+    attempts: evidence.attempts,
+    availableAt: iso(evidence.availableAt) || null,
+    leaseExpiresAt: iso(evidence.leaseExpiresAt) || null,
+    deliveredAt: iso(evidence.deliveredAt) || null,
+    lastErrorCode: evidence.lastErrorCode,
+    lastOutcome: evidence.lastOutcome,
+    retryDisposition: evidence.retryDisposition,
+    outcomeUpdatedAt: iso(evidence.outcomeUpdatedAt) || null,
+    reservedGrantCount: evidence.reservedGrantCount,
+  }
+}
+
+function duplicateError(error) {
+  return error?.code === 'ER_DUP_ENTRY' || Number(error?.errno) === 1062
 }
 
 function reservationDto(task, grant, reservationToken) {

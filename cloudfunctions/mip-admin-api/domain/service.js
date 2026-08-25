@@ -13,6 +13,7 @@ const { createAdminExports } = require('./exports')
 const { createAdminGovernance, PLATFORM_SCOPE_ID } = require('./governance')
 const { createAdminGrowth } = require('./growth')
 const { createAdminMessaging } = require('./messaging')
+const { createAdminMessageDeliveryReviews } = require('./message-delivery-review-service')
 const { createAdminOpportunities } = require('./opportunities')
 const { createAdminOrders } = require('./orders')
 const { createAdminUsers } = require('./users')
@@ -36,6 +37,9 @@ function createAdminService({
   exportMaxBytes = 8 * 1024 * 1024,
   exportIssuanceTimeoutMs = 15_000,
   profileRefSecret = '',
+  reconcileNotificationDelivery = async () => {
+    throw new AdminError('DELIVERY_RECONCILE_CONFIG_REQUIRED', '通知投递复核服务尚未配置')
+  },
   recalculateMatching = async () => { throw new AdminError('MATCHING_DISPATCH_CONFIG_REQUIRED', '机会撮合重算服务尚未配置') },
 }) {
   const access = createAdminAccess({ repository })
@@ -130,6 +134,18 @@ function createAdminService({
     access,
     contentSafety,
     profileRefSecret,
+    repository,
+  })
+  const {
+    claimMessageDeliveryReview,
+    getMessageDeliveryReview,
+    listMessageDeliveryReviews,
+    reconcileMessageDeliveryReview,
+    resolveMessageDeliveryReview,
+  } = createAdminMessageDeliveryReviews({
+    access,
+    now,
+    reconcileNotificationDelivery,
     repository,
   })
   const {
@@ -284,6 +300,7 @@ function createAdminService({
     checkIn,
     claimEventCommentReport,
     claimCommunityReport,
+    claimMessageDeliveryReview,
     cloneEvent,
     closeCommunityReport,
     closeEventCommentReport,
@@ -300,6 +317,7 @@ function createAdminService({
     getOpportunityCommentAdminState,
     getOpportunityEditorOptions,
     getMessageCampaign,
+    getMessageDeliveryReview,
     getMessageTemplate,
     endOpportunity,
     getExportStatus,
@@ -324,6 +342,7 @@ function createAdminService({
     listOperationalExceptions,
     listMessageCampaignScopes,
     listMessageCampaigns,
+    listMessageDeliveryReviews,
     listMessageTemplates,
     listRoles,
     listRoster,
@@ -338,6 +357,7 @@ function createAdminService({
     publishMessageCampaign,
     publishOpportunity,
     recalculateOpportunityMatching,
+    reconcileMessageDeliveryReview,
     moderateOpportunityComment,
     moderateEventComment,
     publishAnnouncement,
@@ -359,6 +379,7 @@ function createAdminService({
     setUserControl,
     submitRefund,
     revokeBadge,
+    resolveMessageDeliveryReview,
     setAnnouncementPinned,
     searchMessageRecipients,
     scheduleMessageCampaign,

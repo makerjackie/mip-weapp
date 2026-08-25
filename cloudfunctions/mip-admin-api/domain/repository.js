@@ -9,6 +9,7 @@ const { createEventInsightsRepository } = require('./event-insights')
 const { createFullAccessPolicy } = require('./full-access')
 const { assertFixedGrowthRuleUpdate } = require('./growth-rule-catalog')
 const { createMessageCampaignRepository } = require('./message-campaigns')
+const { createMessageDeliveryReviewRepository } = require('./message-delivery-reviews')
 const { createMessageTemplateRepository } = require('./message-templates')
 const { createMatchingAdminRepository } = require('./matching-admin')
 const { createOpportunityArchiveRepository } = require('./opportunity-archive')
@@ -390,6 +391,12 @@ function createAdminRepository(database, options = {}) {
     createId: id,
     lockMutationAuthorization: lockMutation,
     maximumRecipients: options.maximumMessageCampaignRecipients,
+    now,
+  })
+  const messageDeliveryReviewRepository = createMessageDeliveryReviewRepository(database, {
+    assertMutationScope: assertScope,
+    createId: id,
+    lockMutationAuthorization: lockMutation,
     now,
   })
   const messageTemplateRepository = createMessageTemplateRepository(database, {
@@ -2825,6 +2832,7 @@ function createAdminRepository(database, options = {}) {
     ...eventCommentAdminRepository,
     ...eventInsightsRepository,
     ...messageCampaignRepository,
+    ...messageDeliveryReviewRepository,
     ...messageTemplateRepository,
     ...opportunityArchiveRepository,
     ...opportunityCommentAdminRepository,

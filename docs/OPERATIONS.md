@@ -63,6 +63,10 @@ pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo
 
 通知和 outbox worker 默认不安装定时器。业务函数在同一事务写 outbox；运营可用 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10` 受控恢复积压。异常中心读取 `mip_outbox_events`、支付/退款、媒体、消息投递和 AI 草稿状态，不通过页面菜单越权修改事实，完整权限和脱敏合同见 [异常中心](OPERATIONAL_EXCEPTIONS.md)。
 
+消息投递复核由拥有平台范围 `messages.delivery.review` 的负责人或运营在异常中心执行：先刷新证据并认领，再选择核对或结束。核对只读取并收敛当前数据库事实；投递任务的核对由 `mip-admin-api` 使用 `MIP_NOTIFICATION_FUNCTION_NAME` 和 `MIP_NOTIFICATION_HMAC_SECRET` 签名调用 `mip-notification-worker`，不得从客户端直调。`UNKNOWN` 不允许自动重放；运营核对 provider 记录后只能以 `UNKNOWN_NO_REPLAY` 和必填说明关闭本次复核，如需新发消息必须走新的业务发布流程。网络失败时保留同一幂等键重试；证据或版本变化时刷新记录后重新操作。
+
+部署前必须给 admin 函数配置与 worker 一致的内部 HMAC 密钥，并读回确认 worker 仍禁止客户端调用。仓库中的迁移 lock 与函数代码不代表目标环境已经部署；必须在目标环境应用 `041_message_delivery_reviews.sql`、部署 admin/worker 配置，并读回验证数据库权限、函数环境变量和客户端调用规则。
+
 消息活动可在 `READY` 状态设置 UTC 定时发布时间。计划、活动指针、权限快照来源和执行结果保存在 MySQL；到期执行会重新校验发起人状态、实时角色、策略和管理范围。独立的 `mip-message-scheduler` 不连接 MySQL，只保留一个 `mip-message-campaign-next` 滚动单次 timer：每次指向所有允许 AppID 中最早的可执行计划，没有计划时关闭。任何连接数据库的函数仍不安装 timer，也不使用固定频率轮询。
 
 调度函数运行时只允许更新/读取自身 trigger，以及调用固定的 `mip-admin-api`；由于腾讯云 CAM 的 `InvokeFunction` 不支持资源级授权，该 action 的资源只能填 `*`，目标限制由固定函数名、内部 HMAC 和专用角色共同完成。新建函数由确认式部署命令使用 raw SCF `CreateFunction` 直接绑定专用角色，不经过会默认注入共享 `TCB_QcsRole` 的 CloudBase 创建路径；创建 trigger、配置 128 MB 预留并发和异步失败重试也只由该命令完成。SCF cron 时区不靠代码猜测：首次部署先启动 canary，确认同一个 trigger 已按预期时间触发并自动关闭，再用匹配 generation 的独立激活 HMAC 切换到普通排期。激活后的 DISPATCH 参数持续保留 canary generation，转换后 reconcile 中断时可用同一激活命令续跑。排期只接受 2100 年以前的 UTC 时间。
