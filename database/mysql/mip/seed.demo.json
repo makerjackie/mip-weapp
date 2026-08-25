@@ -1,5 +1,5 @@
 {
-  "version": "2026-08-26-demo.6",
+  "version": "2026-08-26-demo.7",
   "replaceBeforeProduction": true,
   "branches": [
     {
@@ -315,6 +315,96 @@
       "tagIds": ["21000000-0000-4000-8000-000000000008", "22000000-0000-4000-8000-000000000003"]
     }
   ],
+  "opportunityTeamMembers": [
+    {
+      "id": "72000000-0000-4000-8000-000000000001",
+      "key": "demo_opportunity_team_channels",
+      "opportunityId": "62000000-0000-4000-8000-000000000001",
+      "userId": "50000000-0000-4000-8000-000000000003",
+      "sortOrder": 0
+    }
+  ],
+  "referralIntents": [
+    {
+      "id": "72100000-0000-4000-8000-000000000001",
+      "key": "demo_referral_channels",
+      "opportunityId": "62000000-0000-4000-8000-000000000001",
+      "actorUserId": "50000000-0000-4000-8000-000000000002",
+      "targetUserId": "50000000-0000-4000-8000-000000000005",
+      "status": "ACTIVE",
+      "note": "可引荐企业服务渠道合作伙伴"
+    }
+  ],
+  "profileInterests": [
+    {
+      "id": "72200000-0000-4000-8000-000000000001",
+      "key": "demo_interest_channels",
+      "actorUserId": "50000000-0000-4000-8000-000000000003",
+      "targetUserId": "50000000-0000-4000-8000-000000000001",
+      "status": "ACTIVE",
+      "sourceType": "OPPORTUNITY",
+      "sourceId": "62000000-0000-4000-8000-000000000001"
+    }
+  ],
+  "opportunityComments": [
+    {
+      "id": "72300000-0000-4000-8000-000000000001",
+      "key": "demo_opportunity_comment_channels",
+      "opportunityId": "62000000-0000-4000-8000-000000000001",
+      "authorUserId": "50000000-0000-4000-8000-000000000002",
+      "type": "COMMENT",
+      "body": "渠道合作目标清晰，可以先确认线索标准和交付负责人。",
+      "rating": null,
+      "authorIsParticipant": false,
+      "status": "PUBLISHED",
+      "publishedAt": "2026-08-25 15:00:00.000",
+      "createdAt": "2026-08-25 15:00:00.000"
+    }
+  ],
+  "opportunityCommentReports": [
+    {
+      "id": "72400000-0000-4000-8000-000000000001",
+      "key": "demo_opportunity_comment_report",
+      "commentId": "72300000-0000-4000-8000-000000000001",
+      "reporterUserId": "50000000-0000-4000-8000-000000000005",
+      "category": "OTHER",
+      "description": "用于验证评论举报审核列表的演示记录。",
+      "requestId": "mip-demo-comment-report-1",
+      "status": "PENDING",
+      "createdAt": "2026-08-25 15:10:00.000"
+    }
+  ],
+  "matchingRequests": [
+    {
+      "id": "72500000-0000-4000-8000-000000000001",
+      "key": "demo_matching_request_channels",
+      "requesterUserId": "50000000-0000-4000-8000-000000000001",
+      "sourceOpportunityId": "62000000-0000-4000-8000-000000000001",
+      "requestedByType": "USER",
+      "requestedByUserId": "50000000-0000-4000-8000-000000000001",
+      "idempotencyKey": "mip-demo-matching-request-1",
+      "providerKey": "LOCAL",
+      "settingsScopeKey": "BRANCH:10000000-0000-4000-8000-000000000001",
+      "resultVersion": 1,
+      "completedAt": "2026-08-25 15:30:00.000",
+      "createdAt": "2026-08-25 15:30:00.000"
+    }
+  ],
+  "matchingFeedback": [
+    {
+      "id": "72600000-0000-4000-8000-000000000001",
+      "key": "demo_matching_feedback_helpful",
+      "requestId": "72500000-0000-4000-8000-000000000001",
+      "resultVersion": 1,
+      "candidateType": "TALENT",
+      "candidateId": "50000000-0000-4000-8000-000000000002",
+      "actorUserId": "50000000-0000-4000-8000-000000000001",
+      "feedbackType": "HELPFUL",
+      "reason": "合作角色与当前机会需求一致。",
+      "idempotencyKey": "mip-demo-matching-feedback-1",
+      "createdAt": "2026-08-25 15:35:00.000"
+    }
+  ],
   "cooperationCards": [
     { "id": "63000000-0000-4000-8000-000000000001", "key": "demo_card_connector", "ownerUserId": "50000000-0000-4000-8000-000000000001", "roleKey": "connector", "positioning": "连接企业服务客户与交付团队", "targetSummary": "完成 12 次有效引荐", "roleFields": { "circles": ["企业服务", "创业团队"], "resources": "华南企业客户与服务商资源", "target": "完成 12 次有效引荐" } },
     { "id": "63000000-0000-4000-8000-000000000002", "key": "demo_card_business_builder", "ownerUserId": "50000000-0000-4000-8000-000000000002", "roleKey": "business_builder", "positioning": "设计可验证的商业模式和增长方案", "targetSummary": "协助 6 个项目完成模式验证", "roleFields": { "industries": ["商业咨询", "消费品牌"], "business_models": "订阅服务、渠道合作和项目制服务", "target": "协助 6 个项目完成模式验证" } },
@@ -328,6 +418,80 @@
     { "id": "64000000-0000-4000-8000-000000000002", "key": "demo_case_growth", "ownerUserId": "50000000-0000-4000-8000-000000000002", "projectName": "消费品牌增长方案", "summary": "通过产品组合和渠道测试验证增长路径", "startedOn": "2025-06-01", "endedOn": "2026-05-31", "responsibility": "商业模式设计、财务测算和增长实验", "cityTagId": "20000000-0000-4000-8000-000000000002", "industryTagId": "21000000-0000-4000-8000-000000000006", "caseType": "商业增长", "description": "完成阶段目标、收入模型和渠道实验设计。本案例为虚构演示数据。" },
     { "id": "64000000-0000-4000-8000-000000000003", "key": "demo_case_visual", "ownerUserId": "50000000-0000-4000-8000-000000000005", "projectName": "城市活动视觉识别系统", "summary": "建立适用于多场活动的统一视觉规范", "startedOn": "2025-09-01", "endedOn": "2026-04-30", "responsibility": "视觉策略、设计系统和交付模板", "cityTagId": "20000000-0000-4000-8000-000000000001", "industryTagId": "21000000-0000-4000-8000-000000000005", "caseType": "品牌视觉", "description": "完成主视觉、物料模板和使用规范。本案例为虚构演示数据。" }
   ],
+  "opportunityInteractions": {
+    "commentSettings": [
+      {
+        "opportunityId": "62000000-0000-4000-8000-000000000001",
+        "commentsEnabled": true,
+        "reviewsEnabled": true,
+        "callsEnabled": true,
+        "moderationMode": "AUTO",
+        "updatedByUserId": "50000000-0000-4000-8000-000000000001"
+      }
+    ],
+    "commentCalls": [
+      {
+        "commentId": "72300000-0000-4000-8000-000000000001",
+        "actorUserId": "50000000-0000-4000-8000-000000000003",
+        "status": "ACTIVE",
+        "calledAt": "2026-08-25 15:05:00.000"
+      }
+    ],
+    "userBlocks": [
+      {
+        "blockerUserId": "50000000-0000-4000-8000-000000000004",
+        "blockedUserId": "50000000-0000-4000-8000-000000000006",
+        "status": "ACTIVE",
+        "blockedAt": "2026-08-25 15:15:00.000"
+      }
+    ],
+    "userOpportunityPreferences": [
+      {
+        "userId": "50000000-0000-4000-8000-000000000002",
+        "matchingEnabled": true,
+        "talentRecommendationsEnabled": true,
+        "projectRecommendationsEnabled": true,
+        "discoverableForMatching": true,
+        "matchingScope": "PLATFORM"
+      }
+    ],
+    "matchingSettings": [
+      {
+        "scopeKey": "BRANCH:10000000-0000-4000-8000-000000000001",
+        "scopeType": "BRANCH",
+        "scopeId": "10000000-0000-4000-8000-000000000001",
+        "talentMinScore": 35,
+        "projectMinScore": 10,
+        "maximumCandidates": 100,
+        "externalProviderEnabled": false,
+        "updatedByUserId": "50000000-0000-4000-8000-000000000001"
+      }
+    ],
+    "matchingResults": [
+      {
+        "requestId": "72500000-0000-4000-8000-000000000001",
+        "resultVersion": 1,
+        "candidateType": "TALENT",
+        "candidateId": "50000000-0000-4000-8000-000000000002",
+        "rankNo": 1,
+        "score": 45,
+        "explanation": [
+          { "key": "ROLE", "label": "合作角色符合机会需求", "weight": 45 }
+        ]
+      },
+      {
+        "requestId": "72500000-0000-4000-8000-000000000001",
+        "resultVersion": 1,
+        "candidateType": "PROJECT",
+        "candidateId": "62000000-0000-4000-8000-000000000002",
+        "rankNo": 1,
+        "score": 15,
+        "explanation": [
+          { "key": "BRANCH", "label": "城市分会范围相符", "weight": 15 }
+        ]
+      }
+    ]
+  },
   "announcements": [
     {
       "id": "65000000-0000-4000-8000-000000000001",

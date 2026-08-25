@@ -11,6 +11,13 @@ const SEED_TABLES = Object.freeze({
   events: 'mip_events',
   eventRegistrations: 'mip_event_registrations',
   opportunities: 'mip_opportunities',
+  opportunityTeamMembers: 'mip_opportunity_team_members',
+  referralIntents: 'mip_referral_intents',
+  profileInterests: 'mip_profile_interests',
+  opportunityComments: 'mip_opportunity_comments',
+  opportunityCommentReports: 'mip_opportunity_comment_reports',
+  matchingRequests: 'mip_matching_requests',
+  matchingFeedback: 'mip_matching_feedback',
   cooperationCards: 'mip_cooperation_cards',
   superCases: 'mip_super_cases',
   announcements: 'mip_announcements',
@@ -82,6 +89,18 @@ export function buildSeedCollisionQuery(appId, seed) {
         AND idempotency_key = ${literal(item.key)}))`))
   selects.push(alternateKeySelect(appId, 'mip_membership_entitlements', seed.entitlements, item => `order_id = ${literal(item.orderId)}`))
   selects.push(alternateKeySelect(appId, 'mip_event_registrations', seed.eventRegistrations, item => `event_id = ${literal(item.eventId)} AND user_id = ${literal(item.userId)}`))
+  selects.push(alternateKeySelect(appId, 'mip_opportunity_team_members', seed.opportunityTeamMembers, item => `opportunity_id = ${literal(item.opportunityId)}
+      AND user_id = ${literal(item.userId)}`))
+  selects.push(alternateKeySelect(appId, 'mip_referral_intents', seed.referralIntents, item => `opportunity_id = ${literal(item.opportunityId)}
+      AND actor_user_id = ${literal(item.actorUserId)}`))
+  selects.push(alternateKeySelect(appId, 'mip_profile_interests', seed.profileInterests, item => `actor_user_id = ${literal(item.actorUserId)}
+      AND target_user_id = ${literal(item.targetUserId)}`))
+  selects.push(alternateKeySelect(appId, 'mip_opportunity_comment_reports', seed.opportunityCommentReports, item => `reporter_user_id = ${literal(item.reporterUserId)}
+      AND request_id = ${literal(item.requestId)}`))
+  selects.push(alternateKeySelect(appId, 'mip_matching_requests', seed.matchingRequests, item => `requested_by_user_id = ${literal(item.requestedByUserId)}
+      AND idempotency_key = ${literal(item.idempotencyKey)}`))
+  selects.push(alternateKeySelect(appId, 'mip_matching_feedback', seed.matchingFeedback, item => `actor_user_id = ${literal(item.actorUserId)}
+      AND idempotency_key = ${literal(item.idempotencyKey)}`))
   selects.push(alternateKeySelect(appId, 'mip_cooperation_cards', seed.cooperationCards, item => `owner_user_id = ${literal(item.ownerUserId)}
       AND role_key = ${literal(item.roleKey)} AND status <> 'ARCHIVED'`))
   selects.push(alternateKeySelect(appId, 'mip_announcements', seed.announcements, item => item.isPinned
@@ -112,6 +131,62 @@ export function buildSeedCollisionQuery(appId, seed) {
   selects.push(alternateKeySelect(appId, 'mip_blind_box_catalogs', seed.blindBoxCatalogs, item => `catalog_key = ${literal(item.key)}`))
   selects.push(alternateKeySelect(appId, 'mip_blind_box_cards', seed.blindBoxCards, item => `catalog_id = ${literal(item.catalogId)}
       AND card_key = ${literal(item.cardKey)}`))
+  const interactions = seed.opportunityInteractions
+  selects.push(compositeManifestCollisionSelect({
+    appId,
+    table: 'mip_opportunity_comment_settings',
+    alias: 'comment_setting',
+    items: interactions.commentSettings,
+    condition: item => `opportunity_id = ${literal(item.opportunityId)}`,
+    recordFields: { opportunityId: 'opportunity_id' },
+  }))
+  selects.push(compositeManifestCollisionSelect({
+    appId,
+    table: 'mip_opportunity_comment_calls',
+    alias: 'comment_call',
+    items: interactions.commentCalls,
+    condition: item => `comment_id = ${literal(item.commentId)} AND actor_user_id = ${literal(item.actorUserId)}`,
+    recordFields: { commentId: 'comment_id', actorUserId: 'actor_user_id' },
+  }))
+  selects.push(compositeManifestCollisionSelect({
+    appId,
+    table: 'mip_user_blocks',
+    alias: 'user_block',
+    items: interactions.userBlocks,
+    condition: item => `blocker_user_id = ${literal(item.blockerUserId)} AND blocked_user_id = ${literal(item.blockedUserId)}`,
+    recordFields: { blockerUserId: 'blocker_user_id', blockedUserId: 'blocked_user_id' },
+  }))
+  selects.push(compositeManifestCollisionSelect({
+    appId,
+    table: 'mip_user_opportunity_preferences',
+    alias: 'matching_preference',
+    items: interactions.userOpportunityPreferences,
+    condition: item => `user_id = ${literal(item.userId)}`,
+    recordFields: { userId: 'user_id' },
+  }))
+  selects.push(compositeManifestCollisionSelect({
+    appId,
+    table: 'mip_matching_settings',
+    alias: 'matching_setting',
+    items: interactions.matchingSettings,
+    condition: item => `scope_key = ${literal(item.scopeKey)}`,
+    recordFields: { scopeKey: 'scope_key' },
+  }))
+  selects.push(compositeManifestCollisionSelect({
+    appId,
+    table: 'mip_matching_results',
+    alias: 'matching_result',
+    items: interactions.matchingResults,
+    condition: item => `request_id = ${literal(item.requestId)} AND result_version = ${Number(item.resultVersion)}
+      AND candidate_type = ${literal(item.candidateType)}
+      AND (candidate_id = ${literal(item.candidateId)} OR rank_no = ${Number(item.rankNo)})`,
+    recordFields: {
+      requestId: 'request_id',
+      resultVersion: 'result_version',
+      candidateType: 'candidate_type',
+      candidateId: 'candidate_id',
+    },
+  }))
   return `SELECT COUNT(*) AS conflicts FROM (\n${selects.join('\nUNION ALL\n')}\n) seed_same_app_collisions`
 }
 
@@ -159,6 +234,28 @@ function alternateKeySelect(appId, table, items, condition) {
   return `SELECT id FROM ${table}
     WHERE app_id = ${literal(appId)}
       AND (${items.map((item, index) => `((${condition(item, index)}) AND id <> ${literal(item.id)})`).join('\n        OR ')})`
+}
+
+function compositeManifestCollisionSelect({ appId, table, alias, items, condition, recordFields }) {
+  if (!Array.isArray(items) || !items.length) {
+    throw new Error(`MIP demo seed ${table} composite identities are invalid`)
+  }
+  const jsonObject = Object.entries(recordFields)
+    .flatMap(([key, column]) => [literal(key), `${alias}.${column}`])
+    .join(', ')
+  return `SELECT ${alias}.app_id AS id FROM ${table} ${alias}
+    WHERE ${alias}.app_id = ${literal(appId)}
+      AND (${items.map(item => `((${condition(item)}))`).join('\n        OR ')})
+      AND NOT EXISTS (
+        SELECT 1 FROM mip_app_settings demo_manifest
+        WHERE demo_manifest.app_id = ${alias}.app_id
+          AND demo_manifest.setting_key LIKE 'demo_seed_manifest%'
+          AND JSON_UNQUOTE(JSON_EXTRACT(demo_manifest.value_json, '$.is_demo')) = '1'
+          AND JSON_CONTAINS(
+            JSON_EXTRACT(demo_manifest.value_json, '$.recordsByTable.${table}'),
+            JSON_OBJECT(${jsonObject})
+          ) = 1
+      )`
 }
 
 function literal(value) {

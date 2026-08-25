@@ -35,6 +35,24 @@ describe('MIP demo seed ownership safety', () => {
     expect(query).toContain('seed_same_app_collisions')
   })
 
+  it('protects composite opportunity interaction rows with the demo manifest', () => {
+    const query = buildSeedCollisionQuery('wx1111111111111111', seed)
+    for (const table of [
+      'mip_opportunity_comment_settings',
+      'mip_opportunity_comment_calls',
+      'mip_user_blocks',
+      'mip_user_opportunity_preferences',
+      'mip_matching_settings',
+      'mip_matching_results',
+    ]) {
+      expect(query).toContain(`FROM ${table}`)
+      expect(query).toContain(`'$.recordsByTable.${table}'`)
+    }
+    expect(query).toContain('JSON_CONTAINS(')
+    expect(query).toContain('JSON_OBJECT(\'commentId\', comment_call.comment_id')
+    expect(query).toContain('JSON_OBJECT(\'requestId\', matching_result.request_id')
+  })
+
   it('fails closed when the management API response has no trustworthy count', () => {
     expect(seedOwnershipConflictCount({ data: { rows: [{ conflicts: '0' }] } })).toBe(0)
     expect(seedOwnershipConflictCount({ data: { rows: [{ conflicts: 2 }] } })).toBe(2)
@@ -108,6 +126,83 @@ describe('MIP demo seed ownership safety', () => {
     })
     expect(result.statementCount).toBeGreaterThan(Object.keys(SEED_TABLES).length)
     expect(result.tableCount).toBeGreaterThan(Object.keys(SEED_TABLES).length)
+    expect(result.fixtureGroups).toBe(40)
+    expect(result.tableCount).toBe(55)
+    expect(result.maxStatementBytes).toBeLessThan(30 * 1024)
+  })
+
+  it('seeds a coherent opportunity interaction and matching path', () => {
+    const interactions = seed.opportunityInteractions
+    const source = seed.opportunities.find((item: { id: string }) => (
+      item.id === seed.referralIntents[0].opportunityId
+    ))
+    const teamUserIds = new Set(seed.opportunityTeamMembers
+      .filter((item: { opportunityId: string }) => item.opportunityId === source.id)
+      .map((item: { userId: string }) => item.userId))
+    const entitledUserIds = new Set(seed.entitlements.map((item: { userId: string }) => item.userId))
+    expect([...teamUserIds].every(userId => entitledUserIds.has(userId))).toBe(true)
+    expect(seed.referralIntents).toEqual(expect.arrayContaining([
+      expect.objectContaining({ opportunityId: source.id, status: 'ACTIVE' }),
+    ]))
+    expect(seed.profileInterests).toEqual(expect.arrayContaining([
+      expect.objectContaining({ sourceType: 'OPPORTUNITY', sourceId: source.id, status: 'ACTIVE' }),
+    ]))
+
+    const comment = seed.opportunityComments[0]
+    expect(interactions.commentSettings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ opportunityId: source.id, moderationMode: 'AUTO' }),
+    ]))
+    expect(comment).toMatchObject({ opportunityId: source.id, status: 'PUBLISHED' })
+    expect(interactions.commentCalls).toEqual(expect.arrayContaining([
+      expect.objectContaining({ commentId: comment.id, status: 'ACTIVE' }),
+    ]))
+    expect(seed.opportunityCommentReports).toEqual(expect.arrayContaining([
+      expect.objectContaining({ commentId: comment.id, status: 'PENDING' }),
+    ]))
+
+    const request = seed.matchingRequests[0]
+    const results = interactions.matchingResults.filter((item: { requestId: string }) => (
+      item.requestId === request.id
+    ))
+    expect(request).toMatchObject({ sourceOpportunityId: source.id, providerKey: 'LOCAL' })
+    expect(new Set(results.map((item: { candidateType: string }) => item.candidateType)))
+      .toEqual(new Set(['TALENT', 'PROJECT']))
+    expect(seed.matchingFeedback[0]).toMatchObject({
+      requestId: request.id,
+      candidateType: 'TALENT',
+      feedbackType: 'HELPFUL',
+    })
+  })
+
+  it('keeps the active block independent and synchronizes denormalized counters', () => {
+    const interactions = seed.opportunityInteractions
+    const primaryUsers = new Set([
+      ...seed.opportunities.map((item: { ownerUserId: string }) => item.ownerUserId),
+      ...seed.opportunityTeamMembers.map((item: { userId: string }) => item.userId),
+      ...seed.referralIntents.flatMap((item: { actorUserId: string, targetUserId: string }) => (
+        [item.actorUserId, item.targetUserId]
+      )),
+      ...seed.profileInterests.flatMap((item: { actorUserId: string, targetUserId: string }) => (
+        [item.actorUserId, item.targetUserId]
+      )),
+      ...seed.opportunityComments.map((item: { authorUserId: string }) => item.authorUserId),
+      ...interactions.commentCalls.map((item: { actorUserId: string }) => item.actorUserId),
+      ...seed.opportunityCommentReports.map((item: { reporterUserId: string }) => item.reporterUserId),
+      ...seed.matchingRequests.map((item: { requesterUserId: string }) => item.requesterUserId),
+      ...interactions.matchingResults.map((item: { candidateId: string }) => item.candidateId),
+    ])
+    for (const block of interactions.userBlocks) {
+      expect(block.status).toBe('ACTIVE')
+      expect(primaryUsers.has(block.blockerUserId)).toBe(false)
+      expect(primaryUsers.has(block.blockedUserId)).toBe(false)
+    }
+    const source = fs.readFileSync(path.join(root, 'scripts/seed-demo.mjs'), 'utf8')
+    expect(source).toMatch(/SET referral_count = \([\s\S]+mip_referral_intents/)
+    expect(source).toMatch(/SET call_count = \([\s\S]+mip_opportunity_comment_calls/)
+    expect(source).toContain('opportunityReferralCountsSynced')
+    expect(source).toContain('opportunityCommentCallCountsSynced')
+    expect(fs.readFileSync(path.join(root, 'src/config/mip-catalogs.ts'), 'utf8'))
+      .toContain(`version: '${seed.version}'`)
   })
 
   it('registers every demo fixture in an explicit replace-before-production manifest', () => {

@@ -51,6 +51,7 @@ const seedSource = fs.readFileSync(seedPath, 'utf8')
 const seed = JSON.parse(seedSource)
 const seedSha256 = createHash('sha256').update(seedSource).digest('hex')
 assertSeed(seed)
+const opportunityInteractions = seed.opportunityInteractions
 
 if (validateOnly) {
   const statements = buildSeedStatements()
@@ -92,6 +93,19 @@ assertTablesExist([
   'mip_opportunities',
   'mip_opportunity_roles',
   'mip_opportunity_tags',
+  'mip_opportunity_team_members',
+  'mip_referral_intents',
+  'mip_profile_interests',
+  'mip_opportunity_comment_settings',
+  'mip_opportunity_comments',
+  'mip_opportunity_comment_calls',
+  'mip_opportunity_comment_reports',
+  'mip_user_blocks',
+  'mip_user_opportunity_preferences',
+  'mip_matching_settings',
+  'mip_matching_requests',
+  'mip_matching_results',
+  'mip_matching_feedback',
   'mip_cooperation_cards',
   'mip_super_cases',
   'mip_announcements',
@@ -198,6 +212,61 @@ const verification = callCloudbase(root, 'queryMysqlDatabase', {
     (SELECT COUNT(*) FROM mip_opportunities
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.opportunities.map(item => sqlLiteral(item.id)).join(', ')})) AS opportunities,
+    (SELECT COUNT(*) FROM mip_opportunity_team_members
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.opportunityTeamMembers.map(item => sqlLiteral(item.id)).join(', ')})) AS opportunityTeamMembers,
+    (SELECT COUNT(*) FROM mip_referral_intents
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.referralIntents.map(item => sqlLiteral(item.id)).join(', ')})) AS referralIntents,
+    (SELECT COUNT(*) FROM mip_profile_interests
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.profileInterests.map(item => sqlLiteral(item.id)).join(', ')})) AS profileInterests,
+    (SELECT COUNT(*) FROM mip_opportunity_comment_settings
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND opportunity_id IN (${opportunityInteractions.commentSettings.map(item => sqlLiteral(item.opportunityId)).join(', ')})) AS opportunityCommentSettings,
+    (SELECT COUNT(*) FROM mip_opportunity_comments
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.opportunityComments.map(item => sqlLiteral(item.id)).join(', ')})) AS opportunityComments,
+    (SELECT COUNT(*) FROM mip_opportunity_comment_calls
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND (${opportunityInteractions.commentCalls.map(item => `(comment_id = ${sqlLiteral(item.commentId)} AND actor_user_id = ${sqlLiteral(item.actorUserId)})`).join(' OR ')})) AS opportunityCommentCalls,
+    (SELECT COUNT(*) FROM mip_opportunity_comment_reports
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.opportunityCommentReports.map(item => sqlLiteral(item.id)).join(', ')})) AS opportunityCommentReports,
+    (SELECT COUNT(*) FROM mip_user_blocks
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND (${opportunityInteractions.userBlocks.map(item => `(blocker_user_id = ${sqlLiteral(item.blockerUserId)} AND blocked_user_id = ${sqlLiteral(item.blockedUserId)})`).join(' OR ')})) AS userBlocks,
+    (SELECT COUNT(*) FROM mip_user_opportunity_preferences
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND user_id IN (${opportunityInteractions.userOpportunityPreferences.map(item => sqlLiteral(item.userId)).join(', ')})) AS userOpportunityPreferences,
+    (SELECT COUNT(*) FROM mip_matching_settings
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND scope_key IN (${opportunityInteractions.matchingSettings.map(item => sqlLiteral(item.scopeKey)).join(', ')})) AS matchingSettings,
+    (SELECT COUNT(*) FROM mip_matching_requests
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.matchingRequests.map(item => sqlLiteral(item.id)).join(', ')})) AS matchingRequests,
+    (SELECT COUNT(*) FROM mip_matching_results
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND (${opportunityInteractions.matchingResults.map(item => `(request_id = ${sqlLiteral(item.requestId)} AND result_version = ${Number(item.resultVersion)} AND candidate_type = ${sqlLiteral(item.candidateType)} AND candidate_id = ${sqlLiteral(item.candidateId)})`).join(' OR ')})) AS matchingResults,
+    (SELECT COUNT(*) FROM mip_matching_feedback
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.matchingFeedback.map(item => sqlLiteral(item.id)).join(', ')})) AS matchingFeedback,
+    (SELECT COUNT(*) FROM mip_opportunities opportunity
+      WHERE opportunity.app_id = ${sqlLiteral(appId)}
+        AND opportunity.id IN (${seed.opportunities.map(item => sqlLiteral(item.id)).join(', ')})
+        AND opportunity.referral_count = (
+          SELECT COUNT(*) FROM mip_referral_intents referral
+          WHERE referral.app_id = opportunity.app_id
+            AND referral.opportunity_id = opportunity.id AND referral.status = 'ACTIVE'
+        )) AS opportunityReferralCountsSynced,
+    (SELECT COUNT(*) FROM mip_opportunity_comments comment
+      WHERE comment.app_id = ${sqlLiteral(appId)}
+        AND comment.id IN (${seed.opportunityComments.map(item => sqlLiteral(item.id)).join(', ')})
+        AND comment.call_count = (
+          SELECT COUNT(*) FROM mip_opportunity_comment_calls comment_call
+          WHERE comment_call.app_id = comment.app_id
+            AND comment_call.comment_id = comment.id AND comment_call.status = 'ACTIVE'
+        )) AS opportunityCommentCallCountsSynced,
     (SELECT COUNT(*) FROM mip_cooperation_cards
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.cooperationCards.map(item => sqlLiteral(item.id)).join(', ')})) AS cooperationCards,
@@ -281,6 +350,21 @@ const expected = {
   events: seed.events.length,
   eventRegistrations: seed.eventRegistrations.length,
   opportunities: seed.opportunities.length,
+  opportunityTeamMembers: seed.opportunityTeamMembers.length,
+  referralIntents: seed.referralIntents.length,
+  profileInterests: seed.profileInterests.length,
+  opportunityCommentSettings: opportunityInteractions.commentSettings.length,
+  opportunityComments: seed.opportunityComments.length,
+  opportunityCommentCalls: opportunityInteractions.commentCalls.length,
+  opportunityCommentReports: seed.opportunityCommentReports.length,
+  userBlocks: opportunityInteractions.userBlocks.length,
+  userOpportunityPreferences: opportunityInteractions.userOpportunityPreferences.length,
+  matchingSettings: opportunityInteractions.matchingSettings.length,
+  matchingRequests: seed.matchingRequests.length,
+  matchingResults: opportunityInteractions.matchingResults.length,
+  matchingFeedback: seed.matchingFeedback.length,
+  opportunityReferralCountsSynced: seed.opportunities.length,
+  opportunityCommentCallCountsSynced: seed.opportunityComments.length,
   cooperationCards: seed.cooperationCards.length,
   superCases: seed.superCases.length,
   announcements: seed.announcements.length,
@@ -343,13 +427,28 @@ function buildSeedStatements() {
     entitlementStatement(seed.entitlements, seed.membershipPlans),
     eventStatement(seed.events),
     eventRegistrationStatement(seed.eventRegistrations),
-    opportunityStatement(seed.opportunities),
+    opportunityStatement(seed.opportunities, seed.referralIntents),
     opportunityRoleResetStatement(seed.opportunities),
     opportunityRoleStatement(seed.opportunities),
     opportunityTagResetStatement(seed.opportunities),
     opportunityTagStatement(seed.opportunities, seed.tags),
+    opportunityTeamMemberStatement(seed.opportunityTeamMembers),
+    referralIntentStatement(seed.referralIntents),
+    opportunityReferralCountStatement(seed.opportunities),
+    profileInterestStatement(seed.profileInterests),
     cooperationCardStatement(seed.cooperationCards),
     superCaseStatement(seed.superCases),
+    opportunityCommentSettingsStatement(opportunityInteractions.commentSettings),
+    opportunityCommentStatement(seed.opportunityComments, opportunityInteractions.commentCalls),
+    opportunityCommentCallStatement(opportunityInteractions.commentCalls),
+    opportunityCommentCallCountStatement(seed.opportunityComments),
+    opportunityCommentReportStatement(seed.opportunityCommentReports),
+    userBlockStatement(opportunityInteractions.userBlocks),
+    userOpportunityPreferenceStatement(opportunityInteractions.userOpportunityPreferences),
+    matchingSettingStatement(opportunityInteractions.matchingSettings),
+    matchingRequestStatement(seed.matchingRequests, opportunityInteractions.matchingResults),
+    matchingResultStatement(opportunityInteractions.matchingResults),
+    matchingFeedbackStatement(seed.matchingFeedback),
     announcementStatement(seed.announcements),
     knowledgeSourceStatement(seed.knowledgeSources),
     knowledgeCategoryStatement(seed.knowledgeCategories),
@@ -737,12 +836,22 @@ function eventRegistrationStatement(items) {
     cancellation_reason = NULL, cancelled_by_type = NULL, version = version + 1`
 }
 
-function opportunityStatement(items) {
+function opportunityStatement(items, referrals) {
+  const activeReferralCountByOpportunity = new Map()
+  for (const referral of referrals) {
+    if (referral.status !== 'ACTIVE') {
+      continue
+    }
+    activeReferralCountByOpportunity.set(
+      referral.opportunityId,
+      (activeReferralCountByOpportunity.get(referral.opportunityId) || 0) + 1,
+    )
+  }
   const values = items.map(item => `(
     ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.ownerUserId)},
     'BRANCH', ${sqlLiteral(item.branchId)}, ${sqlLiteral(item.title)},
     ${sqlLiteral(item.valueSummary)}, ${sqlLiteral(item.targetSummary)}, ${sqlLiteral(item.description)},
-    ${sqlLiteral(item.cityTagId)}, NULL, 'PUBLISHED', 'APPROVED', 0, 1,
+    ${sqlLiteral(item.cityTagId)}, NULL, 'PUBLISHED', 'APPROVED', ${activeReferralCountByOpportunity.get(item.id) || 0}, 1,
     '2026-08-25 12:00:00.000', NULL, NULL, NULL, NULL, '2030-12-31 23:59:59.000',
     NULL, NULL, NULL
   )`).join(',\n')
@@ -759,7 +868,7 @@ function opportunityStatement(items) {
     owner_user_id = VALUES(owner_user_id), scope_type = 'BRANCH', branch_id = VALUES(branch_id),
     title = VALUES(title), value_summary = VALUES(value_summary), target_summary = VALUES(target_summary),
     description = VALUES(description), city_tag_id = VALUES(city_tag_id), cover_asset_id = NULL,
-    status = 'PUBLISHED', content_safety_status = 'APPROVED', referral_count = 0,
+    status = 'PUBLISHED', content_safety_status = 'APPROVED', referral_count = VALUES(referral_count),
     version = version + 1, published_at = VALUES(published_at), ended_at = NULL,
     moderated_at = NULL, moderated_by_user_id = NULL, moderation_reason = NULL,
     deadline_at = VALUES(deadline_at), archived_at = NULL, archived_by_user_id = NULL,
@@ -798,6 +907,304 @@ function opportunityTagResetStatement(items) {
   return `DELETE FROM mip_opportunity_tags
     WHERE app_id = ${sqlLiteral(appId)}
       AND opportunity_id IN (${items.map(item => sqlLiteral(item.id)).join(', ')})`
+}
+
+function opportunityTeamMemberStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.opportunityId)},
+    ${sqlLiteral(item.userId)}, 'ACTIVE', ${Number(item.sortOrder)},
+    '2026-08-25 14:30:00.000', NULL
+  )`).join(',\n')
+  return `INSERT INTO mip_opportunity_team_members (
+    id, app_id, opportunity_id, user_id, status, sort_order, added_at, removed_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    opportunity_id = VALUES(opportunity_id), user_id = VALUES(user_id),
+    status = 'ACTIVE', sort_order = VALUES(sort_order),
+    added_at = VALUES(added_at), removed_at = NULL`
+}
+
+function referralIntentStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.opportunityId)},
+    ${sqlLiteral(item.actorUserId)}, ${sqlLiteral(item.targetUserId)}, ${sqlLiteral(item.status)},
+    ${sqlLiteral(item.note)}, 1, '2026-08-25 14:35:00.000',
+    ${item.status === 'CANCELLED' ? '\'2026-08-25 14:40:00.000\'' : 'NULL'}
+  )`).join(',\n')
+  return `INSERT INTO mip_referral_intents (
+    id, app_id, opportunity_id, actor_user_id, target_user_id, status, note,
+    version, activated_at, cancelled_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    opportunity_id = VALUES(opportunity_id), actor_user_id = VALUES(actor_user_id),
+    target_user_id = VALUES(target_user_id), status = VALUES(status), note = VALUES(note),
+    activated_at = VALUES(activated_at), cancelled_at = VALUES(cancelled_at),
+    version = version + 1`
+}
+
+function opportunityReferralCountStatement(items) {
+  return `UPDATE mip_opportunities opportunity
+    SET referral_count = (
+      SELECT COUNT(*) FROM mip_referral_intents referral
+      WHERE referral.app_id = opportunity.app_id
+        AND referral.opportunity_id = opportunity.id AND referral.status = 'ACTIVE'
+    )
+    WHERE opportunity.app_id = ${sqlLiteral(appId)}
+      AND opportunity.id IN (${items.map(item => sqlLiteral(item.id)).join(', ')})`
+}
+
+function profileInterestStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.actorUserId)},
+    ${sqlLiteral(item.targetUserId)}, ${sqlLiteral(item.status)}, ${sqlLiteral(item.sourceType)},
+    ${sqlLiteral(item.sourceId)}, 1, '2026-08-25 14:45:00.000',
+    ${item.status === 'CANCELLED' ? '\'2026-08-25 14:50:00.000\'' : 'NULL'}
+  )`).join(',\n')
+  return `INSERT INTO mip_profile_interests (
+    id, app_id, actor_user_id, target_user_id, status, source_type, source_id,
+    version, activated_at, cancelled_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    actor_user_id = VALUES(actor_user_id), target_user_id = VALUES(target_user_id),
+    status = VALUES(status), source_type = VALUES(source_type), source_id = VALUES(source_id),
+    activated_at = VALUES(activated_at), cancelled_at = VALUES(cancelled_at),
+    version = version + 1`
+}
+
+function opportunityCommentSettingsStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.opportunityId)},
+    ${item.commentsEnabled ? 1 : 0}, ${item.reviewsEnabled ? 1 : 0}, ${item.callsEnabled ? 1 : 0},
+    ${sqlLiteral(item.moderationMode)}, 1, ${sqlLiteral(item.updatedByUserId)}
+  )`).join(',\n')
+  return `INSERT INTO mip_opportunity_comment_settings (
+    app_id, opportunity_id, comments_enabled, reviews_enabled, calls_enabled,
+    moderation_mode, version, updated_by_user_id
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    comments_enabled = VALUES(comments_enabled), reviews_enabled = VALUES(reviews_enabled),
+    calls_enabled = VALUES(calls_enabled), moderation_mode = VALUES(moderation_mode),
+    updated_by_user_id = VALUES(updated_by_user_id), version = version + 1`
+}
+
+function opportunityCommentStatement(items, calls) {
+  const activeCallsByComment = new Map()
+  for (const call of calls) {
+    if (call.status !== 'ACTIVE') {
+      continue
+    }
+    activeCallsByComment.set(call.commentId, (activeCallsByComment.get(call.commentId) || 0) + 1)
+  }
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.opportunityId)},
+    ${sqlLiteral(item.authorUserId)}, ${sqlLiteral(item.type)}, ${sqlLiteral(item.body)},
+    ${sqlLiteral(item.rating)}, ${item.authorIsParticipant ? 1 : 0}, ${sqlLiteral(item.status)},
+    'PASSED', ${activeCallsByComment.get(item.id) || 0}, 1, ${sqlLiteral(item.publishedAt)},
+    NULL, NULL, NULL, NULL, NULL, ${sqlLiteral(item.createdAt)}
+  )`).join(',\n')
+  return `INSERT INTO mip_opportunity_comments (
+    id, app_id, opportunity_id, author_user_id, comment_type, body, rating,
+    author_is_participant, status, content_safety_status, call_count, version,
+    published_at, edited_at, deleted_at, moderated_at, moderated_by_user_id,
+    moderation_reason, created_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    opportunity_id = VALUES(opportunity_id), author_user_id = VALUES(author_user_id),
+    comment_type = VALUES(comment_type), body = VALUES(body), rating = VALUES(rating),
+    author_is_participant = VALUES(author_is_participant), status = VALUES(status),
+    content_safety_status = 'PASSED', call_count = VALUES(call_count),
+    published_at = VALUES(published_at), edited_at = NULL, deleted_at = NULL,
+    moderated_at = NULL, moderated_by_user_id = NULL, moderation_reason = NULL,
+    version = version + 1`
+}
+
+function opportunityCommentCallStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.commentId)}, ${sqlLiteral(item.actorUserId)},
+    ${sqlLiteral(item.status)}, 1, ${sqlLiteral(item.calledAt)},
+    ${item.status === 'CANCELLED' ? sqlLiteral(item.calledAt) : 'NULL'}
+  )`).join(',\n')
+  return `INSERT INTO mip_opportunity_comment_calls (
+    app_id, comment_id, actor_user_id, status, version, called_at, cancelled_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    status = VALUES(status), called_at = VALUES(called_at),
+    cancelled_at = VALUES(cancelled_at), version = version + 1`
+}
+
+function opportunityCommentCallCountStatement(items) {
+  return `UPDATE mip_opportunity_comments comment
+    SET call_count = (
+      SELECT COUNT(*) FROM mip_opportunity_comment_calls comment_call
+      WHERE comment_call.app_id = comment.app_id
+        AND comment_call.comment_id = comment.id AND comment_call.status = 'ACTIVE'
+    )
+    WHERE comment.app_id = ${sqlLiteral(appId)}
+      AND comment.id IN (${items.map(item => sqlLiteral(item.id)).join(', ')})`
+}
+
+function opportunityCommentReportStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.commentId)},
+    ${sqlLiteral(item.reporterUserId)}, ${sqlLiteral(item.category)},
+    ${sqlLiteral(item.description)}, ${sqlLiteral(item.requestId)}, 'PENDING', 1,
+    NULL, NULL, NULL, ${sqlLiteral(item.createdAt)}
+  )`).join(',\n')
+  return `INSERT INTO mip_opportunity_comment_reports (
+    id, app_id, comment_id, reporter_user_id, category, description, request_id,
+    status, version, reviewed_by_user_id, reviewed_at, resolution_reason, created_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    comment_id = VALUES(comment_id), reporter_user_id = VALUES(reporter_user_id),
+    category = VALUES(category), description = VALUES(description), request_id = VALUES(request_id),
+    status = 'PENDING', reviewed_by_user_id = NULL, reviewed_at = NULL,
+    resolution_reason = NULL, version = version + 1`
+}
+
+function userBlockStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.blockerUserId)}, ${sqlLiteral(item.blockedUserId)},
+    ${sqlLiteral(item.status)}, 1, ${sqlLiteral(item.blockedAt)},
+    ${item.status === 'INACTIVE' ? sqlLiteral(item.blockedAt) : 'NULL'}
+  )`).join(',\n')
+  return `INSERT INTO mip_user_blocks (
+    app_id, blocker_user_id, blocked_user_id, status, version, blocked_at, unblocked_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    status = VALUES(status), blocked_at = VALUES(blocked_at),
+    unblocked_at = VALUES(unblocked_at), version = version + 1`
+}
+
+function userOpportunityPreferenceStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.userId)}, ${item.matchingEnabled ? 1 : 0},
+    ${item.talentRecommendationsEnabled ? 1 : 0}, ${item.projectRecommendationsEnabled ? 1 : 0},
+    ${item.discoverableForMatching ? 1 : 0}, ${sqlLiteral(item.matchingScope)}, 1
+  )`).join(',\n')
+  return `INSERT INTO mip_user_opportunity_preferences (
+    app_id, user_id, matching_enabled, talent_recommendations_enabled,
+    project_recommendations_enabled, discoverable_for_matching, matching_scope, version
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    matching_enabled = VALUES(matching_enabled),
+    talent_recommendations_enabled = VALUES(talent_recommendations_enabled),
+    project_recommendations_enabled = VALUES(project_recommendations_enabled),
+    discoverable_for_matching = VALUES(discoverable_for_matching),
+    matching_scope = VALUES(matching_scope), version = version + 1`
+}
+
+function matchingSettingStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.scopeKey)}, ${sqlLiteral(item.scopeType)},
+    ${sqlLiteral(item.scopeId)}, ${Number(item.talentMinScore)}, ${Number(item.projectMinScore)},
+    ${Number(item.maximumCandidates)}, ${item.externalProviderEnabled ? 1 : 0}, 1,
+    ${sqlLiteral(item.updatedByUserId)}
+  )`).join(',\n')
+  return `INSERT INTO mip_matching_settings (
+    app_id, scope_key, scope_type, scope_id, talent_min_score, project_min_score,
+    maximum_candidates, external_provider_enabled, version, updated_by_user_id
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    scope_type = VALUES(scope_type), scope_id = VALUES(scope_id),
+    talent_min_score = VALUES(talent_min_score), project_min_score = VALUES(project_min_score),
+    maximum_candidates = VALUES(maximum_candidates),
+    external_provider_enabled = VALUES(external_provider_enabled),
+    updated_by_user_id = VALUES(updated_by_user_id), version = version + 1`
+}
+
+function matchingRequestStatement(items, results) {
+  const resultCountByRequest = new Map()
+  for (const result of results) {
+    resultCountByRequest.set(result.requestId, (resultCountByRequest.get(result.requestId) || 0) + 1)
+  }
+  const values = items.map((item) => {
+    const requestHash = createHash('sha256').update(JSON.stringify({
+      sourceId: item.sourceOpportunityId,
+      requestedByType: item.requestedByType,
+      requesterUserId: item.requesterUserId,
+    })).digest('hex')
+    return `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.requesterUserId)},
+    ${sqlLiteral(item.sourceOpportunityId)}, ${sqlLiteral(item.requestedByType)},
+    ${sqlLiteral(item.requestedByUserId)}, ${sqlLiteral(item.idempotencyKey)},
+    ${sqlLiteral(requestHash)}, 'COMPLETED', ${sqlLiteral(item.providerKey)}, NULL,
+    ${sqlLiteral(item.settingsScopeKey)},
+    (SELECT version FROM mip_matching_settings WHERE app_id = ${sqlLiteral(appId)} AND scope_key = ${sqlLiteral(item.settingsScopeKey)}),
+    (SELECT version FROM mip_opportunities WHERE app_id = ${sqlLiteral(appId)} AND id = ${sqlLiteral(item.sourceOpportunityId)}),
+    ${Number(item.resultVersion)}, ${resultCountByRequest.get(item.id) || 0}, NULL,
+    ${sqlLiteral(item.completedAt)}, ${sqlLiteral(item.createdAt)}
+  )`
+  }).join(',\n')
+  return `INSERT INTO mip_matching_requests (
+    id, app_id, requester_user_id, source_opportunity_id, requested_by_type,
+    requested_by_user_id, idempotency_key, request_hash, status, provider_key,
+    provider_fallback_reason, settings_scope_key, settings_version, source_version,
+    result_version, result_count, error_code, completed_at, created_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    requester_user_id = VALUES(requester_user_id),
+    source_opportunity_id = VALUES(source_opportunity_id),
+    requested_by_type = VALUES(requested_by_type),
+    requested_by_user_id = VALUES(requested_by_user_id),
+    idempotency_key = VALUES(idempotency_key), request_hash = VALUES(request_hash),
+    status = 'COMPLETED', provider_key = VALUES(provider_key), provider_fallback_reason = NULL,
+    settings_scope_key = VALUES(settings_scope_key), settings_version = VALUES(settings_version),
+    source_version = VALUES(source_version), result_version = VALUES(result_version),
+    result_count = VALUES(result_count), error_code = NULL, completed_at = VALUES(completed_at)`
+}
+
+function matchingResultStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.requestId)}, ${Number(item.resultVersion)},
+    ${sqlLiteral(item.candidateType)}, ${sqlLiteral(item.candidateId)},
+    ${Number(item.rankNo)}, ${Number(item.score)}, ${sqlJson(item.explanation)},
+    '2026-08-25 15:30:00.000'
+  )`).join(',\n')
+  return `INSERT INTO mip_matching_results (
+    app_id, request_id, result_version, candidate_type, candidate_id,
+    rank_no, score, explanation_json, created_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    rank_no = VALUES(rank_no), score = VALUES(score), explanation_json = VALUES(explanation_json)`
+}
+
+function matchingFeedbackStatement(items) {
+  const values = items.map((item) => {
+    const requestHash = createHash('sha256').update(JSON.stringify({
+      requestId: item.requestId,
+      resultVersion: item.resultVersion,
+      candidateType: item.candidateType,
+      candidateId: item.candidateId,
+      feedbackType: item.feedbackType,
+      reason: item.reason,
+    })).digest('hex')
+    return `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.requestId)},
+    ${Number(item.resultVersion)}, ${sqlLiteral(item.candidateType)},
+    ${sqlLiteral(item.candidateId)}, ${sqlLiteral(item.actorUserId)},
+    ${sqlLiteral(item.feedbackType)}, ${sqlLiteral(item.reason)},
+    ${sqlLiteral(item.idempotencyKey)}, ${sqlLiteral(requestHash)}, ${sqlLiteral(item.createdAt)}
+  )`
+  }).join(',\n')
+  return `INSERT INTO mip_matching_feedback (
+    id, app_id, request_id, result_version, candidate_type, candidate_id,
+    actor_user_id, feedback_type, reason, idempotency_key, request_hash, created_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL)`
 }
 
 function cooperationCardStatement(items) {
@@ -1315,6 +1722,26 @@ function buildDemoManifest(value, state) {
       branchMembershipUserIds: value.users.map(item => item.id),
       profileUserIds: value.users.map(item => item.id),
       opportunityIds: value.opportunities.map(item => item.id),
+      commentSettingOpportunityIds: value.opportunityInteractions.commentSettings
+        .map(item => item.opportunityId),
+      commentCallKeys: value.opportunityInteractions.commentCalls.map(item => ({
+        commentId: item.commentId,
+        actorUserId: item.actorUserId,
+      })),
+      userBlockKeys: value.opportunityInteractions.userBlocks.map(item => ({
+        blockerUserId: item.blockerUserId,
+        blockedUserId: item.blockedUserId,
+      })),
+      userOpportunityPreferenceUserIds: value.opportunityInteractions.userOpportunityPreferences
+        .map(item => item.userId),
+      matchingSettingScopeKeys: value.opportunityInteractions.matchingSettings
+        .map(item => item.scopeKey),
+      matchingResultKeys: value.opportunityInteractions.matchingResults.map(item => ({
+        requestId: item.requestId,
+        resultVersion: item.resultVersion,
+        candidateType: item.candidateType,
+        candidateId: item.candidateId,
+      })),
       templateRevisionKeys: value.messageTemplates.map(item => ({
         templateId: item.id,
         revisionNumber: item.revision.number,
@@ -1352,6 +1779,35 @@ function buildDemoManifest(value, state) {
         tagId,
         relation: tagKindById.get(tagId) === 'ABILITY' ? 'ABILITY' : 'INDUSTRY',
       }))),
+      mip_opportunity_team_members: value.opportunityTeamMembers.map(item => ({ id: item.id })),
+      mip_referral_intents: value.referralIntents.map(item => ({ id: item.id })),
+      mip_profile_interests: value.profileInterests.map(item => ({ id: item.id })),
+      mip_opportunity_comment_settings: value.opportunityInteractions.commentSettings.map(item => ({
+        opportunityId: item.opportunityId,
+      })),
+      mip_opportunity_comments: value.opportunityComments.map(item => ({ id: item.id })),
+      mip_opportunity_comment_calls: value.opportunityInteractions.commentCalls.map(item => ({
+        commentId: item.commentId,
+        actorUserId: item.actorUserId,
+      })),
+      mip_opportunity_comment_reports: value.opportunityCommentReports.map(item => ({ id: item.id })),
+      mip_user_blocks: value.opportunityInteractions.userBlocks.map(item => ({
+        blockerUserId: item.blockerUserId,
+        blockedUserId: item.blockedUserId,
+      })),
+      mip_user_opportunity_preferences: value.opportunityInteractions.userOpportunityPreferences
+        .map(item => ({ userId: item.userId })),
+      mip_matching_settings: value.opportunityInteractions.matchingSettings.map(item => ({
+        scopeKey: item.scopeKey,
+      })),
+      mip_matching_requests: value.matchingRequests.map(item => ({ id: item.id })),
+      mip_matching_results: value.opportunityInteractions.matchingResults.map(item => ({
+        requestId: item.requestId,
+        resultVersion: item.resultVersion,
+        candidateType: item.candidateType,
+        candidateId: item.candidateId,
+      })),
+      mip_matching_feedback: value.matchingFeedback.map(item => ({ id: item.id })),
       mip_cooperation_cards: value.cooperationCards.map(item => ({ id: item.id })),
       mip_super_cases: value.superCases.map(item => ({ id: item.id })),
       mip_announcements: value.announcements.map(item => ({ id: item.id })),
@@ -1402,6 +1858,13 @@ function assertSeed(value) {
     'events',
     'eventRegistrations',
     'opportunities',
+    'opportunityTeamMembers',
+    'referralIntents',
+    'profileInterests',
+    'opportunityComments',
+    'opportunityCommentReports',
+    'matchingRequests',
+    'matchingFeedback',
     'cooperationCards',
     'superCases',
     'announcements',
@@ -1455,6 +1918,8 @@ function assertDemoRelations(value) {
   const orderById = new Map(value.membershipOrders.map(item => [item.id, item]))
   const eventIds = new Set(value.events.map(item => item.id))
   const opportunityIds = new Set(value.opportunities.map(item => item.id))
+  const opportunityById = new Map(value.opportunities.map(item => [item.id, item]))
+  const playerIds = new Set(value.entitlements.map(item => item.userId))
   const roleKeys = new Set([
     'connector',
     'business_builder',
@@ -1521,6 +1986,236 @@ function assertDemoRelations(value) {
     || value.cooperationCards.some(item => !userIds.has(item.ownerUserId) || !roleKeys.has(item.roleKey))) {
     throw new Error('Demo cooperation cards must cover the six roles')
   }
+  const activeTeamUsersByOpportunity = new Map()
+  for (const item of value.opportunityTeamMembers) {
+    const opportunity = opportunityById.get(item.opportunityId)
+    if (!opportunity || !playerIds.has(item.userId)
+      || item.userId === opportunity.ownerUserId
+      || !Number.isInteger(item.sortOrder) || item.sortOrder < 0) {
+      throw new Error('Demo opportunity team references are invalid')
+    }
+    const members = activeTeamUsersByOpportunity.get(item.opportunityId) || new Set()
+    if (members.has(item.userId)) {
+      throw new Error('Demo opportunity team contains duplicate users')
+    }
+    members.add(item.userId)
+    activeTeamUsersByOpportunity.set(item.opportunityId, members)
+  }
+
+  for (const item of value.referralIntents) {
+    const opportunity = opportunityById.get(item.opportunityId)
+    if (!opportunity || !userIds.has(item.actorUserId) || !userIds.has(item.targetUserId)
+      || item.actorUserId === opportunity.ownerUserId || item.actorUserId === item.targetUserId
+      || !['ACTIVE', 'CANCELLED'].includes(item.status)) {
+      throw new Error('Demo referral references are invalid')
+    }
+  }
+
+  for (const item of value.profileInterests) {
+    const source = opportunityById.get(item.sourceId)
+    if (!userIds.has(item.actorUserId) || !userIds.has(item.targetUserId)
+      || item.actorUserId === item.targetUserId || item.sourceType !== 'OPPORTUNITY'
+      || source?.ownerUserId !== item.targetUserId
+      || !['ACTIVE', 'CANCELLED'].includes(item.status)) {
+      throw new Error('Demo profile interest references are invalid')
+    }
+  }
+
+  const interactions = value.opportunityInteractions
+  if (!interactions || typeof interactions !== 'object' || Array.isArray(interactions)) {
+    throw new Error('Demo opportunity interactions are invalid')
+  }
+  for (const key of [
+    'commentSettings',
+    'commentCalls',
+    'userBlocks',
+    'userOpportunityPreferences',
+    'matchingSettings',
+    'matchingResults',
+  ]) {
+    if (!Array.isArray(interactions[key]) || interactions[key].length === 0) {
+      throw new Error(`Demo opportunity interaction ${key} is empty`)
+    }
+  }
+  const commentSettingsByOpportunity = new Map()
+  for (const item of interactions.commentSettings) {
+    if (!opportunityIds.has(item.opportunityId) || !userIds.has(item.updatedByUserId)
+      || !['AUTO', 'REVIEW'].includes(item.moderationMode)
+      || [item.commentsEnabled, item.reviewsEnabled, item.callsEnabled]
+        .some(flag => typeof flag !== 'boolean')
+        || commentSettingsByOpportunity.has(item.opportunityId)) {
+      throw new Error('Demo opportunity comment settings are invalid')
+    }
+    commentSettingsByOpportunity.set(item.opportunityId, item)
+  }
+
+  const commentById = new Map()
+  for (const item of value.opportunityComments) {
+    const opportunity = opportunityById.get(item.opportunityId)
+    const participant = item.authorUserId === opportunity?.ownerUserId
+      || activeTeamUsersByOpportunity.get(item.opportunityId)?.has(item.authorUserId)
+    const ratingValid = item.type === 'COMMENT'
+      ? item.rating === null
+      : item.type === 'REVIEW' && Number.isInteger(item.rating)
+        && item.rating >= 1 && item.rating <= 5
+    if (!opportunity || !userIds.has(item.authorUserId)
+      || !commentSettingsByOpportunity.has(item.opportunityId)
+      || !ratingValid || item.status !== 'PUBLISHED' || !item.publishedAt
+      || Boolean(item.authorIsParticipant) !== Boolean(participant)) {
+      throw new Error('Demo opportunity comment references are invalid')
+    }
+    commentById.set(item.id, item)
+  }
+
+  const activeCallCountByComment = new Map()
+  for (const item of interactions.commentCalls) {
+    const comment = commentById.get(item.commentId)
+    const opportunity = comment && opportunityById.get(comment.opportunityId)
+    const participant = item.actorUserId === opportunity?.ownerUserId
+      || activeTeamUsersByOpportunity.get(comment?.opportunityId)?.has(item.actorUserId)
+    if (!comment || !participant || item.actorUserId === comment.authorUserId
+      || !['ACTIVE', 'CANCELLED'].includes(item.status)) {
+      throw new Error('Demo opportunity comment call references are invalid')
+    }
+    if (item.status === 'ACTIVE') {
+      activeCallCountByComment.set(item.commentId, (activeCallCountByComment.get(item.commentId) || 0) + 1)
+    }
+  }
+  if ([...commentById].some(([id]) => !Number.isInteger(activeCallCountByComment.get(id) || 0))) {
+    throw new Error('Demo opportunity comment call counts are invalid')
+  }
+
+  const reportCategories = new Set([
+    'SPAM',
+    'HARASSMENT',
+    'FRAUD',
+    'INAPPROPRIATE_CONTENT',
+    'IMPERSONATION',
+    'OTHER',
+  ])
+  for (const item of value.opportunityCommentReports) {
+    const comment = commentById.get(item.commentId)
+    if (!comment || !userIds.has(item.reporterUserId)
+      || item.reporterUserId === comment.authorUserId || !reportCategories.has(item.category)
+      || item.status !== 'PENDING' || String(item.requestId || '').length < 12) {
+      throw new Error('Demo opportunity comment report references are invalid')
+    }
+  }
+
+  const preferenceByUser = new Map()
+  for (const item of interactions.userOpportunityPreferences) {
+    if (!userIds.has(item.userId) || !['PLATFORM', 'PRIMARY_BRANCH'].includes(item.matchingScope)
+      || [item.matchingEnabled, item.talentRecommendationsEnabled, item.projectRecommendationsEnabled, item.discoverableForMatching]
+        .some(flag => typeof flag !== 'boolean')
+        || preferenceByUser.has(item.userId)) {
+      throw new Error('Demo user opportunity preferences are invalid')
+    }
+    preferenceByUser.set(item.userId, item)
+  }
+
+  const matchingSettingByKey = new Map()
+  for (const item of interactions.matchingSettings) {
+    const scopeValid = item.scopeType === 'PLATFORM'
+      ? item.scopeKey === 'PLATFORM' && item.scopeId === null
+      : item.scopeType === 'BRANCH' && branchIds.has(item.scopeId)
+        && item.scopeKey === `BRANCH:${item.scopeId}`
+    if (!scopeValid || !userIds.has(item.updatedByUserId)
+      || !Number.isInteger(item.talentMinScore) || item.talentMinScore < 0 || item.talentMinScore > 100
+      || !Number.isInteger(item.projectMinScore) || item.projectMinScore < 0 || item.projectMinScore > 100
+      || !Number.isInteger(item.maximumCandidates)
+      || item.maximumCandidates < 10 || item.maximumCandidates > 500
+      || typeof item.externalProviderEnabled !== 'boolean'
+      || matchingSettingByKey.has(item.scopeKey)) {
+      throw new Error('Demo matching settings are invalid')
+    }
+    matchingSettingByKey.set(item.scopeKey, item)
+  }
+
+  const matchingRequestById = new Map()
+  for (const item of value.matchingRequests) {
+    const source = opportunityById.get(item.sourceOpportunityId)
+    const requesterCanUseSource = item.requesterUserId === source?.ownerUserId
+      || activeTeamUsersByOpportunity.get(item.sourceOpportunityId)?.has(item.requesterUserId)
+    if (!source || !userIds.has(item.requesterUserId) || !userIds.has(item.requestedByUserId)
+      || !['USER', 'ADMIN'].includes(item.requestedByType)
+      || (item.requestedByType === 'USER' && !requesterCanUseSource)
+      || !matchingSettingByKey.has(item.settingsScopeKey)
+      || item.providerKey !== 'LOCAL' || item.resultVersion !== 1) {
+      throw new Error('Demo matching request references are invalid')
+    }
+    matchingRequestById.set(item.id, item)
+  }
+
+  const matchingResultKeys = new Set()
+  const matchingRankKeys = new Set()
+  for (const item of interactions.matchingResults) {
+    const request = matchingRequestById.get(item.requestId)
+    const source = request && opportunityById.get(request.sourceOpportunityId)
+    const candidateValid = item.candidateType === 'TALENT'
+      ? userIds.has(item.candidateId)
+      && value.cooperationCards.some(card => card.ownerUserId === item.candidateId)
+      && (preferenceByUser.get(item.candidateId)?.matchingScope === 'PLATFORM'
+        || value.users.find(user => user.id === item.candidateId)?.branchId === source?.branchId)
+      : item.candidateType === 'PROJECT'
+        ? opportunityIds.has(item.candidateId) && item.candidateId !== source?.id
+        && opportunityById.get(item.candidateId)?.branchId === source?.branchId
+        : false
+    const setting = request && matchingSettingByKey.get(request.settingsScopeKey)
+    const minimumScore = item.candidateType === 'TALENT'
+      ? setting?.talentMinScore
+      : setting?.projectMinScore
+    const resultKey = `${item.requestId}:${item.resultVersion}:${item.candidateType}:${item.candidateId}`
+    const rankKey = `${item.requestId}:${item.resultVersion}:${item.candidateType}:${item.rankNo}`
+    const explanationScore = Array.isArray(item.explanation)
+      ? item.explanation.reduce((sum, entry) => sum + Number(entry.weight), 0)
+      : Number.NaN
+    if (!request || item.resultVersion !== request.resultVersion || !candidateValid
+      || !Number.isInteger(item.rankNo) || item.rankNo < 1
+      || !Number.isInteger(item.score) || item.score < minimumScore || item.score > 100
+      || !Array.isArray(item.explanation) || !item.explanation.length
+      || explanationScore !== item.score || matchingResultKeys.has(resultKey)
+      || matchingRankKeys.has(rankKey)) {
+      throw new Error('Demo matching result references are invalid')
+    }
+    matchingResultKeys.add(resultKey)
+    matchingRankKeys.add(rankKey)
+  }
+  if (value.matchingRequests.some(item => !interactions.matchingResults
+    .some(result => result.requestId === item.id))) {
+    throw new Error('Demo matching requests require results')
+  }
+
+  const feedbackTypes = new Set(['HELPFUL', 'NOT_RELEVANT', 'CONTACTED', 'DISMISSED'])
+  for (const item of value.matchingFeedback) {
+    const request = matchingRequestById.get(item.requestId)
+    const resultKey = `${item.requestId}:${item.resultVersion}:${item.candidateType}:${item.candidateId}`
+    if (!request || item.actorUserId !== request.requesterUserId
+      || !matchingResultKeys.has(resultKey) || !feedbackTypes.has(item.feedbackType)) {
+      throw new Error('Demo matching feedback references are invalid')
+    }
+  }
+
+  const interactionUsers = new Set([
+    ...value.opportunities.map(item => item.ownerUserId),
+    ...value.opportunityTeamMembers.map(item => item.userId),
+    ...value.referralIntents.flatMap(item => [item.actorUserId, item.targetUserId]),
+    ...value.profileInterests.flatMap(item => [item.actorUserId, item.targetUserId]),
+    ...value.opportunityComments.map(item => item.authorUserId),
+    ...interactions.commentCalls.map(item => item.actorUserId),
+    ...value.opportunityCommentReports.map(item => item.reporterUserId),
+    ...value.matchingRequests.flatMap(item => [item.requesterUserId, item.requestedByUserId]),
+    ...interactions.matchingResults.map(item => item.candidateType === 'TALENT'
+      ? item.candidateId
+      : opportunityById.get(item.candidateId)?.ownerUserId),
+  ])
+  for (const item of interactions.userBlocks) {
+    if (!userIds.has(item.blockerUserId) || !userIds.has(item.blockedUserId)
+      || item.blockerUserId === item.blockedUserId || item.status !== 'ACTIVE'
+      || interactionUsers.has(item.blockerUserId) || interactionUsers.has(item.blockedUserId)) {
+      throw new Error('Demo user block must remain isolated from primary opportunity fixtures')
+    }
+  }
+
   for (const item of value.superCases) {
     if (!userIds.has(item.ownerUserId)
       || tagById.get(item.cityTagId)?.kind !== 'CITY'
@@ -1644,7 +2339,6 @@ function assertDemoRelations(value) {
 
   const seasonIds = new Set(value.gameSeasons.map(item => item.id))
   const teamById = new Map(value.gameTeams.map(item => [item.id, item]))
-  const playerIds = new Set(value.entitlements.map(item => item.userId))
   if (value.gameSeasons.some(item => !userIds.has(item.actorUserId)
     || item.endsAt <= item.startsAt)) {
     throw new Error('Demo game season references are invalid')
