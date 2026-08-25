@@ -11,6 +11,10 @@ import {
   sqlLiteral,
 } from './lib/example-cloudbase.mjs'
 import {
+  assertBackupCompletedWithinMaxAge,
+  resolveBackupMaxAgeHours,
+} from './lib/mip-backup-policy.mjs'
+import {
   assertMipMigrationSql,
   loadMipMigrationLock,
   MIP_MIGRATION_STEP_TABLE,
@@ -24,6 +28,7 @@ const envId = env.CLOUDBASE_ENV_ID
 const confirmedEnv = argumentValue('--confirm-env=')
 const confirmedPrefix = argumentValue('--confirm-prefix=')
 const backupManifestPath = argumentValue('--backup-manifest=')
+const backupMaxAgeHours = resolveBackupMaxAgeHours(process.argv.slice(2))
 const dryRun = process.argv.includes('--dry-run')
 
 if (!envId || confirmedEnv !== envId) {
@@ -119,9 +124,10 @@ const backup = validateBackupManifest({
   manifestPath: backupManifestPath,
   envId,
   repoRoot: root,
+  maxAgeHours: backupMaxAgeHours,
 })
 console.log(
-  `[mip-schema] stable backup verified (${backup.tableCount} tables, ${backup.rowCount} rows)`,
+  `[mip-schema] stable backup verified (${backup.tableCount} tables, ${backup.rowCount} rows; maximum age ${backupMaxAgeHours} hours)`,
 )
 
 if (!trackingExists) {
@@ -341,7 +347,7 @@ function verifyRequiredTables(requiredTables) {
   }
 }
 
-function validateBackupManifest({ manifestPath, envId, repoRoot }) {
+function validateBackupManifest({ manifestPath, envId, repoRoot, maxAgeHours }) {
   if (!manifestPath) {
     throw new Error('Pending MIP migrations require --backup-manifest=<absolute manifest.json>')
   }
@@ -365,11 +371,10 @@ function validateBackupManifest({ manifestPath, envId, repoRoot }) {
     throw new Error('Database backup manifest is incompatible, unstable, or for another environment')
   }
 
-  const completedAt = Date.parse(manifest.completedAt)
-  const age = Date.now() - completedAt
-  if (!Number.isFinite(completedAt) || age < -300_000 || age > 86_400_000) {
-    throw new Error('Database backup must be completed within the last 24 hours')
-  }
+  assertBackupCompletedWithinMaxAge({
+    completedAt: manifest.completedAt,
+    maxAgeHours,
+  })
   if (!Array.isArray(manifest.tables) || manifest.tables.length !== manifest.tableCount) {
     throw new Error('Database backup table manifest is incomplete')
   }
