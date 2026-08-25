@@ -18,6 +18,7 @@ import {
   markerSha256,
   planRegistrationFieldActions,
   resolveFreeEventMutationOptions,
+  resolveFreeEventRuntimeBuildSha,
   resolveFreeEventRuntimeEnvironment,
   runtimeCompileDisposition,
   runtimeRouteDisposition,
@@ -100,6 +101,27 @@ function runBuild(buildSha) {
     throw result.error
   }
   invariant(result.status === 0, 'pnpm build failed before mutating runtime acceptance')
+}
+
+function runGit(args) {
+  const result = spawnSync('git', args, {
+    cwd: root,
+    encoding: 'utf8',
+    maxBuffer: 4 * 1024 * 1024,
+  })
+  invariant(!result.error && result.status === 0, 'Git state could not be read before mutating runtime acceptance')
+  return String(result.stdout || '')
+}
+
+function readStableRuntimeBuildSha() {
+  const headSha = runGit(['rev-parse', '--verify', 'HEAD']).trim()
+  const trackedChanges = runGit(['diff', '--name-only', '--no-ext-diff', '--no-renames', '-z', 'HEAD', '--'])
+    .split('\0')
+    .filter(Boolean)
+  const untrackedChanges = runGit(['ls-files', '--others', '--exclude-standard', '-z', '--'])
+    .split('\0')
+    .filter(Boolean)
+  return resolveFreeEventRuntimeBuildSha(headSha, [...trackedChanges, ...untrackedChanges])
 }
 
 function functionDetail(value) {
@@ -927,6 +949,7 @@ export async function main(runArgs = process.argv.slice(2)) {
   const localEnv = readEnv(path.join(root, '.env.local'))
   const env = resolveFreeEventRuntimeEnvironment(localEnv, process.env)
   const options = resolveFreeEventMutationOptions(root, runArgs, env)
+  const buildSha = readStableRuntimeBuildSha()
 
   prepareRuntimeEvidenceDirectory(root, options.evidence)
   const outputDir = options.evidence.outputDir
@@ -942,7 +965,6 @@ export async function main(runArgs = process.argv.slice(2)) {
     explicitSecrets,
   })
   const markers = createMarkers()
-  const buildSha = `free-event-runtime-${randomUUID()}`
   const report = createReport(contract, options, markers)
   let miniProgram
 

@@ -5,6 +5,7 @@ import {
   createOpenedAutomatorOptions,
   planRegistrationFieldActions,
   resolveFreeEventMutationOptions,
+  resolveFreeEventRuntimeBuildSha,
   resolveFreeEventRuntimeEnvironment,
   runtimeCompileDisposition,
   runtimeRouteDisposition,
@@ -186,6 +187,32 @@ describe('free offline event mutation runtime contract', () => {
     })
   })
 
+  it('uses one stable clean Git commit as the mutation build identity', () => {
+    const headSha = 'A'.repeat(40)
+    expect(resolveFreeEventRuntimeBuildSha(headSha, [
+      'docs/mip/PROJECT_STATUS.md',
+      'docs/research/legacy-mip-app/README.md',
+    ])).toBe(`free-event-runtime-${headSha.toLowerCase()}`)
+    expect(() => resolveFreeEventRuntimeBuildSha('a'.repeat(39), []))
+      .toThrow('one exact 40-character Git HEAD')
+
+    for (const dirtyPath of [
+      'src/app.ts',
+      'config/runtime-pages.json',
+      'scripts/verify-free-event-runtime.mjs',
+      'weapp-vite.config.ts',
+      'package.json',
+      'pnpm-lock.yaml',
+      'pnpm-workspace.yaml',
+      'postcss.config.js',
+      'project.config.json',
+      'tsconfig.json',
+    ]) {
+      expect(() => resolveFreeEventRuntimeBuildSha(headSha, [dirtyPath]))
+        .toThrow(`committed executable inputs: ${dirtyPath}`)
+    }
+  })
+
   it('turns identity, agreement, phone, and profile access redirects into external waits', () => {
     expect(runtimeRouteDisposition(
       '/packages/member/mip-access/index?token=redacted',
@@ -333,6 +360,12 @@ describe('free event runtime evidence summaries', () => {
     expect(runnerSource).not.toContain('globalData')
     expect(runnerSource).not.toContain('require(\'common.js\')')
     expect(runnerSource).not.toContain('__mipRuntimeAcceptance')
+    expect(runnerSource).toContain('const buildSha = readStableRuntimeBuildSha()')
+    expect(runnerSource).toContain('runGit([\'diff\', \'--name-only\', \'--no-ext-diff\', \'--no-renames\', \'-z\', \'HEAD\', \'--\'])')
+    expect(runnerSource).toContain('runGit([\'ls-files\', \'--others\', \'--exclude-standard\', \'-z\', \'--\'])')
+    expect(runnerSource).toContain('randomUUID().slice(0, 8)')
+    expect(runnerSource).not.toMatch(/free-event-runtime-\$\{randomUUID\(\)\}/)
+    expect(runnerSource).not.toContain('report.buildSha')
   })
 
   it('records exact authoritative facts without profile, phone, body, or participant refs', () => {

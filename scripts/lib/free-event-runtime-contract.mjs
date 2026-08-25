@@ -116,11 +116,47 @@ const guardedEnvironmentKeys = [
   'MIP_EVENTS_FUNCTION_NAME',
   'MIP_PAYMENT_MODE',
 ]
+const gitHeadPattern = /^[0-9a-f]{40}$/i
+const runtimeInputPrefixes = ['config/', 'scripts/', 'src/']
+const runtimeInputFiles = new Set([
+  'package.json',
+  'pnpm-lock.yaml',
+  'pnpm-workspace.yaml',
+  'postcss.config.js',
+  'project.config.json',
+  'tsconfig.json',
+  'weapp-vite.config.ts',
+])
 
 function invariant(condition, message) {
   if (!condition) {
     throw new Error(message)
   }
+}
+
+function normalizedRepoPath(value) {
+  return String(value || '').replaceAll('\\', '/').replace(/^\.\/+/, '')
+}
+
+function isRuntimeInputPath(value) {
+  const candidate = normalizedRepoPath(value)
+  return runtimeInputFiles.has(candidate)
+    || runtimeInputPrefixes.some(prefix => candidate === prefix.slice(0, -1) || candidate.startsWith(prefix))
+}
+
+export function resolveFreeEventRuntimeBuildSha(headSha, dirtyPaths = []) {
+  const normalizedHead = String(headSha || '').trim().toLowerCase()
+  invariant(gitHeadPattern.test(normalizedHead), 'Mutating runtime requires one exact 40-character Git HEAD')
+  invariant(Array.isArray(dirtyPaths), 'Mutating runtime dirty paths must be an array')
+  const blockingPaths = [...new Set(dirtyPaths
+    .map(normalizedRepoPath)
+    .filter(isRuntimeInputPath))]
+    .sort()
+  invariant(
+    blockingPaths.length === 0,
+    `Mutating runtime requires committed executable inputs: ${blockingPaths.join(', ')}`,
+  )
+  return `free-event-runtime-${normalizedHead}`
 }
 
 function optionName(argument) {
