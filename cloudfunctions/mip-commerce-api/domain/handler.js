@@ -26,12 +26,15 @@ const knownErrors = new Set([
 function createHandler(options) {
   return async function main(event = {}) {
     try {
-      const caller = options.resolveCaller(options.getContext())
       const action = String(event.action || '')
+      if (!Object.hasOwn(options.service, action)) {
+        throw new Error('NOT_FOUND')
+      }
       const method = options.service[action]
       if (typeof method !== 'function') {
         throw new Error('NOT_FOUND')
       }
+      const caller = options.resolveCaller(options.getContext())
       return { ok: true, data: await method(caller, event) }
     }
     catch (error) {
