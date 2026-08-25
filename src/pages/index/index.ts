@@ -193,7 +193,9 @@ Page({
       this.setData({ eventState: 'ready', events: cached.items.slice(0, 3).map(presentEvent) })
     }
     try {
-      const feed = await mipEventsModule.listEvents(query, options)
+      const feed = await mipEventsModule.listEvents(query, {
+        force: options.force === true || Boolean(cached),
+      })
       this.setData({ eventState: 'ready', events: feed.items.slice(0, 3).map(presentEvent) })
     }
     catch {

@@ -35,6 +35,14 @@ describe('MIP event experience contracts', () => {
     expect(page).not.toMatch(/setStorageSync|setStorage\(/)
   })
 
+  it('revalidates cached activity feeds when a page returns to the foreground', () => {
+    const eventPage = source('src/pages/events/index.ts')
+    const discoverPage = source('src/pages/index/index.ts')
+
+    expect(eventPage).toContain('force: options.force === true || Boolean(cached)')
+    expect(discoverPage).toContain('force: options.force === true || Boolean(cached)')
+  })
+
   it('accepts only HTTPS online activity addresses in the client entry', () => {
     expect(safeHttpsEventUrl('https://meeting.example.com/room')).toBe('https://meeting.example.com/room')
     expect(safeHttpsEventUrl(' http://meeting.example.com/room ')).toBe('')

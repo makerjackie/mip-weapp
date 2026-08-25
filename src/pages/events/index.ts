@@ -235,7 +235,9 @@ Page({
     const requestSeq = this.requestSeq + 1
     this.requestSeq = requestSeq
     try {
-      const feed = await mipEventsModule.listEvents(query, options)
+      const feed = await mipEventsModule.listEvents(query, {
+        force: options.force === true || Boolean(cached),
+      })
       if (requestSeq !== this.requestSeq) {
         return
       }
