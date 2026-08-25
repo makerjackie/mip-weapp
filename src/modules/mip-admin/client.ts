@@ -20,6 +20,7 @@ import { createMipGrowthAdmin } from './growth-admin'
 import { createMipMessagingAdmin } from './messaging-admin'
 import { createMipOpportunityAdmin } from './opportunity-admin'
 import { createMipOrdersAdmin } from './orders-admin'
+import { createMipUsersAdmin } from './users-admin'
 
 export function createMipAdminModule(
   gateway: MipAdminGateway,
@@ -33,6 +34,7 @@ export function createMipAdminModule(
   const messaging = createMipMessagingAdmin(gateway, cache)
   const opportunities = createMipOpportunityAdmin(gateway, cache)
   const orders = createMipOrdersAdmin(gateway, cache)
+  const users = createMipUsersAdmin(gateway, cache)
   return {
     getSession: (force = false) => cache.query('mip-admin:session', gateway.getSession, { force }),
     getDashboard: (force = false) => cache.query('mip-admin:dashboard', gateway.getDashboard, { force }),
@@ -50,20 +52,9 @@ export function createMipAdminModule(
       () => gateway.listCommunityReports(status),
       { force },
     ),
-    listUsers: (input: Record<string, unknown> = {}, force = false) => input.includePhone === true
-      ? gateway.listUsers(input)
-      : cache.query(
-          `mip-admin:users:${JSON.stringify(input)}`,
-          () => gateway.listUsers(input),
-          { force },
-        ),
-    getUser: (userId: string, includePhone = false, force = false) => includePhone
-      ? gateway.getUser(userId, true)
-      : cache.query(
-          `mip-admin:user:${userId}`,
-          () => gateway.getUser(userId, false),
-          { force },
-        ),
+    listUsers: users.list,
+    getUser: users.get,
+    users,
     listEvents: (input: Record<string, unknown> = {}, force = false) => cache.query(
       `mip-admin:events:${JSON.stringify(input)}`,
       () => gateway.listEvents(input),

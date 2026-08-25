@@ -77,7 +77,7 @@ describe('MIP admin roster contract', () => {
   })
 
   it('prevents stale responses and clears original phone data on page exit', () => {
-    const client = read('src/modules/mip-admin/client.ts')
+    const usersAdmin = read('src/modules/mip-admin/users-admin.ts')
     const pageTs = read('src/packages/admin/event-registrations/index.ts')
     const pageWxml = read('src/packages/admin/event-registrations/index.wxml')
 
@@ -88,7 +88,7 @@ describe('MIP admin roster contract', () => {
     expect(pageTs).toContain('onHide()')
     expect(pageTs).toContain('phoneNumber: null')
     expect(pageTs).toContain('mipAdminModule.clearSensitive()')
-    expect(client).toContain('input.includePhone === true')
+    expect(usersAdmin).toContain('input.includePhone === true')
     expect(pageWxml).toContain('手机已绑定')
     expect(pageWxml).toContain('item.phoneNumber || \'未绑定\'')
     expect(pageWxml).not.toContain('phoneMasked')

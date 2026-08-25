@@ -183,7 +183,7 @@ Page({
     try {
       const [session, response] = await Promise.all([
         mipAdminModule.getSession(force),
-        mipAdminModule.listUsers({
+        mipAdminModule.users.list({
           includePhone: this.data.includePhone,
           filters: {
             query: this.data.query.trim(),
@@ -237,7 +237,7 @@ Page({
     }
     this.setData({ loadingMore: true, message: '' })
     try {
-      const response = await mipAdminModule.listUsers({
+      const response = await mipAdminModule.users.list({
         includePhone: this.data.includePhone,
         cursor: this.data.nextCursor,
         filters: {
@@ -322,7 +322,7 @@ Page({
     }
     this.setData({ detailOpen: true, detailState: 'loading', detail: null, detailMessage: '' })
     try {
-      const detail = await mipAdminModule.getUser(userId, this.data.includePhone, true)
+      const detail = await mipAdminModule.users.get(userId, this.data.includePhone, true)
       if (!this.data.detailOpen) {
         return
       }
@@ -373,7 +373,7 @@ Page({
       this.setData({ includePhone: true })
       await this.loadUsers(true)
       if (this.data.detailOpen && this.data.detail?.id) {
-        this.setData({ detail: userDetailView(await mipAdminModule.getUser(this.data.detail.id, true, true)) })
+        this.setData({ detail: userDetailView(await mipAdminModule.users.get(this.data.detail.id, true, true)) })
       }
     }
     catch (error) {
@@ -405,11 +405,11 @@ Page({
       if (!modal.confirm) {
         return
       }
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.updateUser({
+      await mipAdminModule.users.update({
         userId,
         expectedVersion: version,
         fields: { [field]: modal.content },
-      }))
+      })
       wx.showToast({ title: '资料已更新', icon: 'success' })
       await this.loadUsers(true)
     }
@@ -433,7 +433,7 @@ Page({
       if (!modal.confirm || !modal.content.trim()) {
         return
       }
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.setUserControl({ userId, controlType, active, reason: modal.content }))
+      await mipAdminModule.users.setControl({ userId, controlType, active, reason: modal.content })
       wx.showToast({ title: '名单状态已更新', icon: 'success' })
       await this.loadUsers(true)
     }
@@ -458,7 +458,7 @@ Page({
       if (!modal.confirm) {
         return
       }
-      const result = await mipAdminModule.mutate(() => mipAdminModule.exportAndOpen({
+      const result = await mipAdminModule.exportAndOpen({
         exportType: 'USERS',
         includesPhone: this.data.includePhone,
         filters: {
@@ -476,7 +476,7 @@ Page({
           createdFrom: this.data.createdFromDate ? dateBoundary(this.data.createdFromDate, false) : '',
           createdTo: this.data.createdToDate ? dateBoundary(this.data.createdToDate, true) : '',
         },
-      }))
+      })
       wx.showToast({ title: `已导出 ${result.rowCount} 条`, icon: 'success' })
     }
     catch (error) {
