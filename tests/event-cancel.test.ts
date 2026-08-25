@@ -29,7 +29,7 @@ describe('MIP event cancellation convergence contract', () => {
   })
 
   it('requires a reason, expected version, and an explicit confirmation latch', () => {
-    const service = read('cloudfunctions/mip-admin-api/domain/service.js')
+    const service = read('cloudfunctions/mip-admin-api/domain/events.js')
     const pageTs = read('src/packages/admin/events/index.ts')
     const pageWxml = read('src/packages/admin/events/index.wxml')
 
@@ -56,13 +56,15 @@ describe('MIP event cancellation convergence contract', () => {
   })
 
   it('dispatches committed refund ids and exposes recoverable provider status in the order page', () => {
+    const events = read('cloudfunctions/mip-admin-api/domain/events.js')
     const service = read('cloudfunctions/mip-admin-api/domain/service.js')
     const gateway = read('src/modules/mip-admin/cloudbase-gateway.ts')
     const pageTs = read('src/packages/admin/orders/index.ts')
     const pageWxml = read('src/packages/admin/orders/index.wxml')
 
-    expect(service).toMatch(/await repository\.changeEventStatus\([\s\S]*?const refundIds = Array\.isArray\(result\.refundIds\)/)
-    expect(service).toContain('dispatchRefundBatchSafely(context.caller.appId, refundIds)')
+    expect(events).toMatch(/await repository\.changeEventStatus\([\s\S]*?const refundIds = Array\.isArray\(result\.refundIds\)/)
+    expect(events).toContain('dispatchCancellationRefunds(context.caller.appId, refundIds)')
+    expect(service).toContain('dispatchCancellationRefunds: dispatchRefundBatchSafely')
     expect(gateway).toContain('call(\'mip.admin.refunds.retry\', { refundId })')
     expect(pageTs).toContain('gateway.retryRefund(refundId)')
     expect(pageTs).toContain('\'退款处理失败\'')

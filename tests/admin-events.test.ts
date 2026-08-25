@@ -12,7 +12,7 @@ function read(relativePath: string) {
 describe('MIP admin event contract', () => {
   it('keeps the full scoped event model in the MIP admin boundary', () => {
     const types = read('src/modules/mip-admin/types.ts')
-    const service = read('cloudfunctions/mip-admin-api/domain/service.js')
+    const service = read('cloudfunctions/mip-admin-api/domain/events.js')
 
     expect(types).toContain('accessType: \'FREE\' | \'MEMBER_INCLUDED\' | \'PAID\'')
     expect(types).toContain('registrationPolicy: \'AUTO\' | \'APPROVAL\'')

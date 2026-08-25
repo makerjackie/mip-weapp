@@ -31,7 +31,7 @@ describe('MIP event native actions', () => {
 
   it('stores map coordinates only through the validated event draft', () => {
     const adminPage = read('src/packages/admin/events/index.ts')
-    const service = read('cloudfunctions/mip-admin-api/domain/service.js')
+    const service = read('cloudfunctions/mip-admin-api/domain/events.js')
     const repository = read('cloudfunctions/mip-admin-api/domain/repository.js')
 
     expect(adminPage).toContain('wx.chooseLocation')

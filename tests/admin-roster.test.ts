@@ -63,7 +63,7 @@ describe('MIP admin roster contract', () => {
 
   it('exposes only binding state until an audited phone request', () => {
     const types = read('src/modules/mip-admin/types.ts')
-    const service = read('cloudfunctions/mip-admin-api/domain/service.js')
+    const service = read('cloudfunctions/mip-admin-api/domain/events.js')
     const rosterType = types.slice(
       types.indexOf('export interface AdminRosterItem'),
       types.indexOf('export interface AdminRoleItem'),

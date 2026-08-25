@@ -103,7 +103,7 @@ describe('phase9 final gap contracts', () => {
 
   it('default MIP roster exposes only phoneBound until an audited phone request', () => {
     const types = read('src/modules/mip-admin/types.ts')
-    const service = read('cloudfunctions/mip-admin-api/domain/service.js')
+    const service = read('cloudfunctions/mip-admin-api/domain/events.js')
     const repository = read('cloudfunctions/mip-admin-api/domain/repository.js')
     const wxml = read('src/packages/admin/event-registrations/index.wxml')
     const rosterType = types.slice(

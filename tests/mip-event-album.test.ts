@@ -14,7 +14,7 @@ describe('MIP event album vertical slice', () => {
   const eventService = read('cloudfunctions/mip-events-api/domain/event-service.js')
   const eventHandler = read('cloudfunctions/mip-events-api/index.js')
   const adminRepository = read('cloudfunctions/mip-admin-api/domain/repository.js')
-  const adminService = read('cloudfunctions/mip-admin-api/domain/service.js')
+  const adminService = read('cloudfunctions/mip-admin-api/domain/events.js')
   const mediaService = read('cloudfunctions/mip-media-api/domain/service.js')
   const mediaImage = read('cloudfunctions/mip-media-api/domain/image.js')
 
