@@ -10,6 +10,14 @@ const ARCHIVE_BLOCKER_KEYS = Object.freeze([
   'OUTBOX_EVENTS',
 ])
 
+const ARCHIVE_BLOCKER_COLUMNS = Object.freeze({
+  REFERRAL_INTENTS: 'referral_intents',
+  PROFILE_INTERESTS: 'profile_interests',
+  ORDERS: 'orders',
+  ANNOUNCEMENTS: 'announcements',
+  OUTBOX_EVENTS: 'outbox_events',
+})
+
 const ARCHIVE_ROLE_KEYS = new Set(['PLATFORM_OWNER', 'PLATFORM_OPERATIONS'])
 
 class OpportunityArchiveError extends Error {
@@ -101,11 +109,46 @@ function createOpportunityArchiveRepository(database, {
       )
       if (!row) throw codeError('NOT_FOUND')
       if (Number(row.version) !== input.expectedVersion) throw codeError('CONFLICT')
-      if (!['DRAFT', 'UNPUBLISHED', 'ENDED'].includes(row.status)) throw codeError('INVALID_STATE')
+      if (row.status !== 'DRAFT') throw codeError('INVALID_STATE')
 
       const lockedScope = scopeFromRow(row)
       assertScope(authorization, lockedScope)
       if (!sameScope(lockedScope, input.authorizedScope)) throw codeError('CONFLICT')
+
+      const relatedFacts = await tx.one(
+        `SELECT
+          EXISTS(
+            SELECT 1 FROM mip_referral_intents referral
+            WHERE referral.app_id = ? AND referral.opportunity_id = ?
+          ) AS referral_intents,
+          EXISTS(
+            SELECT 1 FROM mip_profile_interests interest
+            WHERE interest.app_id = ? AND interest.source_type = 'OPPORTUNITY'
+              AND interest.source_id = ?
+          ) AS profile_interests,
+          EXISTS(
+            SELECT 1 FROM mip_orders related_order
+            WHERE related_order.app_id = ? AND related_order.resource_id = ?
+          ) AS orders,
+          EXISTS(
+            SELECT 1 FROM mip_announcements announcement
+            WHERE announcement.app_id = ? AND announcement.target_type = 'OPPORTUNITY'
+              AND announcement.target_id = ?
+          ) AS announcements,
+          EXISTS(
+            SELECT 1 FROM mip_outbox_events outbox
+            WHERE outbox.app_id = ? AND outbox.aggregate_type = 'OPPORTUNITY'
+              AND outbox.aggregate_id = ?
+          ) AS outbox_events`,
+        ARCHIVE_BLOCKER_KEYS.flatMap(() => [input.appId, input.opportunityId]),
+      )
+      const blockers = ARCHIVE_BLOCKER_KEYS.filter((key) => {
+        if (key === 'REFERRAL_INTENTS' && Number(row.referral_count || 0) > 0) return true
+        return Number(relatedFacts?.[ARCHIVE_BLOCKER_COLUMNS[key]] || 0) > 0
+      })
+      if (blockers.length) {
+        throw codeError('OPPORTUNITY_ARCHIVE_BLOCKED', { blockers })
+      }
 
       const archivedAt = now()
       if (!(archivedAt instanceof Date) || !Number.isFinite(archivedAt.getTime())) {
@@ -116,7 +159,7 @@ function createOpportunityArchiveRepository(database, {
          SET status = 'ARCHIVED', archived_at = ?, archived_by_user_id = ?,
            archive_reason = ?, version = version + 1
          WHERE app_id = ? AND id = ? AND version = ?
-           AND status IN ('DRAFT', 'UNPUBLISHED', 'ENDED')`,
+           AND status = 'DRAFT'`,
         [archivedAt, input.actorUserId, input.reason, input.appId,
           input.opportunityId, input.expectedVersion],
       )

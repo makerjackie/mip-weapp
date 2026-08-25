@@ -276,10 +276,11 @@ Page({
     }
   },
   async archive() {
-    if (!this.data.item || this.data.processing || !this.data.canArchive) {
+    if (!this.data.item || this.data.item.status !== 'DRAFT'
+      || this.data.processing || !this.data.canArchive) {
       return
     }
-    const modal = await wx.showModal({ title: '归档机会', editable: true, placeholderText: '填写归档原因' })
+    const modal = await wx.showModal({ title: '归档机会草稿', editable: true, placeholderText: '填写归档原因' })
     if (!modal.confirm || !modal.content.trim()) {
       return
     }

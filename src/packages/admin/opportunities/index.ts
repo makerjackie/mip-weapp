@@ -246,8 +246,9 @@ Page({
   },
   async archive(event: WechatMiniprogram.TouchEvent) {
     const opportunityId = String(event.currentTarget.dataset.id || '')
+    const status = String(event.currentTarget.dataset.status || '')
     const version = Number(event.currentTarget.dataset.version)
-    if (!this.data.canArchive || !opportunityId || this.data.processingId) {
+    if (!this.data.canArchive || status !== 'DRAFT' || !opportunityId || this.data.processingId) {
       return
     }
     this.setData({ processingId: opportunityId, message: '' })

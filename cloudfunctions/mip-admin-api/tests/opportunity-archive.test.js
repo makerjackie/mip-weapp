@@ -34,6 +34,17 @@ function opportunity(overrides = {}) {
   }
 }
 
+function blockerFacts(overrides = {}) {
+  return {
+    referral_intents: 0,
+    profile_interests: 0,
+    orders: 0,
+    announcements: 0,
+    outbox_events: 0,
+    ...overrides,
+  }
+}
+
 function transactionDatabase({ one, query } = {}) {
   const tx = {
     one: one || (async () => null),
@@ -93,7 +104,7 @@ describe('opportunity archive repository', () => {
     assert.ok(updateIndex > 0 && auditIndex > updateIndex)
     assert.match(calls[updateIndex].sql, /status = 'ARCHIVED'/)
     assert.match(calls[updateIndex].sql, /version = version \+ 1/)
-    assert.match(calls[updateIndex].sql, /status IN \('DRAFT', 'UNPUBLISHED', 'ENDED'\)/)
+    assert.match(calls[updateIndex].sql, /AND status = 'DRAFT'/)
     assert.deepEqual(calls[updateIndex].params, [
       ARCHIVED_AT,
       ADMIN_ID,
@@ -114,53 +125,74 @@ describe('opportunity archive repository', () => {
     assert.equal(calls.some(call => /\bDELETE\s+FROM\b/i.test(call.sql)), false)
   })
 
-  it('archives while preserving every durable business fact', async () => {
-    const markers = {
-      REFERRAL_INTENTS: 'mip_referral_intents',
-      PROFILE_INTERESTS: 'mip_profile_interests',
-      ORDERS: 'mip_orders',
-      ANNOUNCEMENTS: 'mip_announcements',
-      OUTBOX_EVENTS: 'mip_outbox_events',
-    }
-    for (const marker of Object.values(markers)) {
+  it('blocks each allowlisted durable business fact without updating or auditing', async () => {
+    const cases = [
+      ['REFERRAL_INTENTS', 'referral_intents'],
+      ['PROFILE_INTERESTS', 'profile_interests'],
+      ['ORDERS', 'orders'],
+      ['ANNOUNCEMENTS', 'announcements'],
+      ['OUTBOX_EVENTS', 'outbox_events'],
+    ]
+    for (const [blockerKey, blockerColumn] of cases) {
       const writes = []
+      let blockerRead
       const repository = createOpportunityArchiveRepository(transactionDatabase({
-        async one(sql) {
+        async one(sql, params) {
           if (sql.includes('FROM mip_opportunities')) return opportunity()
-          return sql.includes(marker) ? { id: 'durable-fact' } : null
+          blockerRead = { sql, params }
+          return blockerFacts({ [blockerColumn]: 1 })
         },
         async query(sql) {
           writes.push(sql)
           return { affectedRows: 1 }
         },
       }))
-      const result = await repository.archiveOpportunity(archiveInput())
-      assert.equal(result.status, 'ARCHIVED')
-      assert.equal(writes.some(sql => /DELETE\s+FROM/i.test(sql)), false)
+      await assert.rejects(
+        () => repository.archiveOpportunity(archiveInput()),
+        error => error.code === 'OPPORTUNITY_ARCHIVE_BLOCKED'
+          && JSON.stringify(error.details) === JSON.stringify({ blockers: [blockerKey] }),
+      )
+      assert.deepEqual(blockerRead.params, Array.from(
+        { length: 5 },
+        () => [APP_ID, OPPORTUNITY_ID],
+      ).flat())
+      assert.match(blockerRead.sql, /mip_referral_intents[\s\S]*opportunity_id = \?/)
+      assert.match(blockerRead.sql, /mip_profile_interests[\s\S]*source_type = 'OPPORTUNITY'[\s\S]*source_id = \?/)
+      assert.match(blockerRead.sql, /mip_orders[\s\S]*resource_id = \?/)
+      assert.doesNotMatch(blockerRead.sql, /order_type = 'OPPORTUNITY'/)
+      assert.match(blockerRead.sql, /mip_announcements[\s\S]*target_type = 'OPPORTUNITY'[\s\S]*target_id = \?/)
+      assert.match(blockerRead.sql, /mip_outbox_events[\s\S]*aggregate_type = 'OPPORTUNITY'[\s\S]*aggregate_id = \?/)
+      assert.equal(writes.length, 0)
     }
   })
 
-  it('keeps referral history when the denormalized count is non-zero', async () => {
+  it('fails closed when the denormalized referral count is non-zero', async () => {
     const writes = []
     const repository = createOpportunityArchiveRepository(transactionDatabase({
       async one(sql) {
         if (sql.includes('FROM mip_opportunities')) return opportunity({ referral_count: 2 })
-        return null
+        return blockerFacts()
       },
       async query(sql) {
         writes.push(sql)
         return { affectedRows: 1 }
       },
     }))
-    const result = await repository.archiveOpportunity(archiveInput())
-    assert.equal(result.status, 'ARCHIVED')
-    assert.equal(writes.some(sql => /DELETE\s+FROM/i.test(sql)), false)
+    await assert.rejects(
+      () => repository.archiveOpportunity(archiveInput()),
+      error => error.code === 'OPPORTUNITY_ARCHIVE_BLOCKED'
+        && JSON.stringify(error.details) === JSON.stringify({ blockers: ['REFERRAL_INTENTS'] }),
+    )
+    assert.equal(writes.length, 0)
   })
 
-  it('rejects stale, non-draft and re-scoped records before mutation', async () => {
+  it('rejects stale, every non-draft state and re-scoped records before mutation', async () => {
     const scenarios = [
       { row: opportunity({ version: 5 }), input: archiveInput(), code: 'CONFLICT' },
       { row: opportunity({ status: 'PUBLISHED' }), input: archiveInput(), code: 'INVALID_STATE' },
+      { row: opportunity({ status: 'UNPUBLISHED' }), input: archiveInput(), code: 'INVALID_STATE' },
+      { row: opportunity({ status: 'ENDED' }), input: archiveInput(), code: 'INVALID_STATE' },
+      { row: opportunity({ status: 'ARCHIVED' }), input: archiveInput(), code: 'INVALID_STATE' },
       {
         row: opportunity(),
         input: archiveInput({ authorizedScope: { scopeType: 'BRANCH', scopeId: ADMIN_ID } }),
@@ -190,7 +222,7 @@ describe('opportunity archive repository', () => {
     const writes = []
     const repository = createOpportunityArchiveRepository(transactionDatabase({
       async one(sql) {
-        return sql.includes('FROM mip_opportunities') ? opportunity() : null
+        return sql.includes('FROM mip_opportunities') ? opportunity() : blockerFacts()
       },
       async query(sql) {
         writes.push(sql)
@@ -332,10 +364,14 @@ describe('opportunity archive API contract', () => {
 })
 
 describe('opportunity archive migration', () => {
-  it('adds a constrained archive state without physical deletion', () => {
+  it('keeps the draft-only update compatible with the archive database constraints', () => {
     const root = path.resolve(__dirname, '../../..')
     const migration = fs.readFileSync(
       path.join(root, 'database/mysql/mip/014_opportunity_archive.sql'),
+      'utf8',
+    )
+    const archiveSource = fs.readFileSync(
+      path.join(root, 'cloudfunctions/mip-admin-api/domain/opportunity-archive.js'),
       'utf8',
     )
     const rollback = fs.readFileSync(
@@ -343,10 +379,13 @@ describe('opportunity archive migration', () => {
       'utf8',
     )
     assert.match(migration, /status IN \('DRAFT', 'PUBLISHED', 'ENDED', 'UNPUBLISHED', 'ARCHIVED'\)/)
+    assert.match(migration, /status IN \('DRAFT', 'ARCHIVED'\) AND published_at IS NULL/)
     assert.match(migration, /archived_by_user_id/)
     assert.match(migration, /mip_opportunities_archive_ck/)
     assert.match(migration, /REFERENCES mip_users \(app_id, id\) ON DELETE RESTRICT/)
     assert.doesNotMatch(migration, /\bDELETE\s+FROM\b/i)
+    assert.match(archiveSource, /WHERE app_id = \? AND id = \? AND version = \?[\s\S]*AND status = 'DRAFT'/)
+    assert.doesNotMatch(archiveSource, /status IN \('DRAFT', 'UNPUBLISHED', 'ENDED'\)/)
     assert.match(rollback, /fails closed while any archived opportunity remains/)
     assert.doesNotMatch(rollback, /\b(?:UPDATE|DELETE)\s+mip_/i)
   })

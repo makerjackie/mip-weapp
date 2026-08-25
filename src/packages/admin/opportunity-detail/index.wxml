@@ -45,7 +45,7 @@
     </view>
     <view wx:if="{{item.status !== 'ARCHIVED'}}" class="mt-4 grid grid-cols-2 gap-2"><t-button block variant="outline" bind:tap="edit">编辑</t-button><t-button wx:if="{{item.status === 'DRAFT' || item.status === 'UNPUBLISHED'}}" block theme="primary" loading="{{processing}}" bind:tap="publish">发布</t-button><t-button wx:elif="{{item.status === 'PUBLISHED'}}" block theme="primary" loading="{{processing}}" bind:tap="end">结束</t-button><t-button wx:else block variant="outline" theme="danger" loading="{{processing}}" bind:tap="unpublish">下架</t-button></view>
     <view wx:if="{{item.status === 'PUBLISHED'}}" class="mt-3"><t-button block variant="outline" theme="danger" loading="{{processing}}" bind:tap="unpublish">下架</t-button></view>
-    <view wx:if="{{canArchive && item.status !== 'PUBLISHED' && item.status !== 'ARCHIVED'}}" class="mt-3"><t-button block variant="outline" theme="danger" loading="{{processing}}" bind:tap="archive">归档</t-button></view>
+    <view wx:if="{{canArchive && item.status === 'DRAFT'}}" class="mt-3"><t-button block variant="outline" theme="danger" loading="{{processing}}" bind:tap="archive">归档草稿</t-button></view>
     <view class="mt-6 text-[length:28rpx] font-semibold">操作记录</view><view wx:if="{{history.length}}" class="mip-admin-card-list mt-3 flex flex-col gap-2"><view wx:for="{{history}}" wx:key="id" class="rounded-[12rpx] bg-panel px-4 py-3"><view>{{item.actionText}}</view><view class="mt-1 text-[length:21rpx] text-muted">{{item.actorNickname}} · {{item.createdText || '未记录'}}</view></view></view><app-empty-state wx:else class="mt-3" title="暂无操作记录" description="后续发生的操作会记录在这里。" />
     <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-danger">{{message}}</view>
   </block>
