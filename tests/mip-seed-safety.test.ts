@@ -71,8 +71,9 @@ describe('MIP demo seed ownership safety', () => {
 
   it('keeps demo users out of the platform-owner bootstrap path', () => {
     const source = fs.readFileSync(path.join(root, 'scripts/bootstrap-owner.mjs'), 'utf8')
+    const selection = fs.readFileSync(path.join(root, 'scripts/lib/mip-owner-bootstrap.mjs'), 'utf8')
     expect(source).toContain('Demo seed users cannot become platform owners')
-    expect(source).toContain('setting_key LIKE \'demo_seed_manifest%\'')
-    expect(source).toContain('JSON_EXTRACT(demo_manifest.value_json, \'$.recordIds.users\')')
+    expect(selection).toContain('setting_key LIKE \'demo_seed_manifest%\'')
+    expect(selection).toContain('JSON_EXTRACT(demo_manifest.value_json, \'$.recordIds.users\')')
   })
 })

@@ -20,7 +20,7 @@
 6. 仅在 development/test 环境需要占位目录时执行 `pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo`；生产环境不得运行 demo seed。
 7. API Key 的临时 STS 无法执行所需 SCF action 时，经维护者明确授权运行 `pnpm cloud:auth:device -- --allow-device-auth`，再使用 `CLOUDBASE_AUTH_MODE=local pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<.env.local 中的 MIP_DB_RUNTIME_USER>` 部署 16 个核心 `mip-*` 函数。不要在控制台手工补配置。部署脚本会从真实 MySQL 连接详情解析目标 VPC/子网，严格比较运行时、handler、超时、VPC 和完整环境变量；配置完全一致时只更新代码，配置漂移时才请求配置更新。production 仍需 `--confirm-production`。函数安全规则读取或解析失败时部署会停止，且更新前后的全部非目标条目必须保持不变。脚本会复核所有核心函数都没有 timer，只自动删除三个明确的历史 timer 名称；遇到其他 timer 保留现场并停止。支付模式为 `disabled` 时，已存在的支付函数不会被删除，但其客户端调用会被禁止。
 8. 配置支付后，执行 `pnpm cloud:deploy-payment -- --confirm-env=<EnvID> --confirm-function=mip-cloudpay --confirm-callback=mip-cloudpay-callback --confirm-refund=mip-refund-worker` 部署三个支付函数；`MIP_PAYMENT_MODE=live` 时必须追加 `--confirm-live`，测试/生产目录和商户配置必须隔离。
-9. 执行 `pnpm admin:bootstrap -- --confirm-env=<EnvID> --confirm-owner` 配置首个 owner；有多个候选资料时追加 `--user-id=<用户 UUID>`，demo 身份会被拒绝。
+9. 在本机 `.env.local` 写入空仓库示例对应的 `MIP_OWNER_PHONE`，确认该号码已通过当前 AppID 的微信真机流程绑定，并完成昵称、主分会和当前全部协议；再执行 `pnpm admin:bootstrap -- --confirm-env=<EnvID> --confirm-owner` 配置首个 owner。脚本只以身份服务的 AppID 范围哈希定位唯一 ACTIVE 非 demo 用户，不输出号码、哈希或用户 ID；可追加 `--user-id=<用户 UUID>` 做严格一致性确认。
 10. 部署后或发现 outbox 积压时，运行 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10` 做一次受控处理；退款停留在活动状态时，运行 `pnpm refunds:run -- --confirm-env=<EnvID> --confirm-refund=mip-refund-worker --limit=10`。两个命令都读取已部署函数配置完成 HMAC 调用，不打印密钥。
 11. 微信后台配置服务器域名、与 `MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS` 完全一致的业务域名、用户隐私协议，完成上传与提审。
 

@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
-const { protectPhone } = require('../lib/private-data')
+const { hashPhone, protectPhone } = require('../lib/private-data')
 
 describe('private phone data', () => {
   it('stores a stable hash and authenticated ciphertext instead of plaintext', () => {
@@ -20,6 +20,12 @@ describe('private phone data', () => {
     )
 
     assert.equal(first.phoneHash, second.phoneHash)
+    assert.equal(first.phoneHash, '11a3ac4da069becebb56afbe467583ad259b3a253a24118a035a785a2f64dbb1')
+    assert.equal(first.phoneHash, hashPhone(
+      { countryCode: '86', purePhoneNumber: '13800138000' },
+      secret,
+      { appId: context.appId },
+    ))
     assert.notDeepEqual(first.phoneCiphertext, second.phoneCiphertext)
     assert.equal(first.phoneCiphertext.includes(Buffer.from('13800138000')), false)
   })

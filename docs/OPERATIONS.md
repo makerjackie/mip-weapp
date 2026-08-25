@@ -27,7 +27,9 @@ pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo
 
 核心函数需要最小化更新时，使用 `pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<exact-runtime-user> --only=<exact mip-* function name>`；目标必须精确命中核心部署清单中的单个函数。
 
-支付模式为 `live` 时，支付部署命令还必须追加 `--confirm-live`。demo seed 只允许用于 development/test 环境，会以固定 ID 写入可重复执行的城市、标签、玩家/嘉宾、测试会员订单与权益、2030 活动、报名、机会、合作卡和案例。执行前写入 `PENDING` 清单，完整验证后改为 `READY`，并保留版本化清单；Owner 初始化始终排除其中的演示用户。owner 候选不唯一时，bootstrap 命令追加 `--user-id=<用户 UUID>`。
+首个 Owner 通过本机 `.env.local` 的 `MIP_OWNER_PHONE` 定位。该手机号必须已由同一 AppID 的微信真机流程绑定；脚本只使用与身份服务相同的 AppID 范围哈希查询，不解密或输出号码。候选还必须是 ACTIVE、非 demo、已有昵称和主分会，并已接受当前 `MIP_AGREEMENTS_JSON` 的全部协议版本。需要额外消除操作歧义时可传 `--user-id=<用户 UUID>`，但该 ID 必须与手机号唯一命中的用户严格一致。
+
+支付模式为 `live` 时，支付部署命令还必须追加 `--confirm-live`。demo seed 只允许用于 development/test 环境，会以固定 ID 写入可重复执行的城市、标签、玩家/嘉宾、测试会员订单与权益、2030 活动、报名、机会、合作卡和案例。执行前写入 `PENDING` 清单，完整验证后改为 `READY`，并保留版本化清单；Owner 初始化始终排除其中的演示用户。手机号未绑定、候选资料或协议不完整、命中不唯一，以及可选 user ID 不一致时都会停止且不授予权限。
 
 活动创建/编辑、状态变更和撤销签到只通过 `mip-admin-api` 执行。`mip-events-api` 不接受这些管理写操作，避免同一活动事实存在第二套状态机、退款和权限路径。
 

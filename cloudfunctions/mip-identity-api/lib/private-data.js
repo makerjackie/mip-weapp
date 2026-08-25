@@ -19,11 +19,18 @@ function protectPhone(phoneInfo, secret, context = {}) {
   const ciphertext = Buffer.concat([cipher.update(phoneNumber, 'utf8'), cipher.final()])
   const authTag = cipher.getAuthTag()
   return {
-    phoneHash: createHmac('sha256', keys.hash)
-      .update(`${context.appId}\0${phoneNumber}`)
-      .digest('hex'),
+    phoneHash: hashNormalizedPhone(phoneNumber, keys.hash, context.appId),
     phoneCiphertext: Buffer.concat([Buffer.from([1]), iv, authTag, ciphertext]),
   }
+}
+
+function hashPhone(phoneInfo, secret, context = {}) {
+  const phoneNumber = normalizePhone(phoneInfo)
+  const keys = privateKeys(secret)
+  if (!context.appId) {
+    throw new Error('PHONE_ENCRYPTION_NOT_CONFIGURED')
+  }
+  return hashNormalizedPhone(phoneNumber, keys.hash, context.appId)
 }
 
 function normalizePhone(phoneInfo = {}) {
@@ -48,4 +55,10 @@ function privateKeys(secret) {
   }
 }
 
-module.exports = { normalizePhone, protectPhone }
+function hashNormalizedPhone(phoneNumber, hashKey, appId) {
+  return createHmac('sha256', hashKey)
+    .update(`${appId}\0${phoneNumber}`)
+    .digest('hex')
+}
+
+module.exports = { hashPhone, normalizePhone, protectPhone }
