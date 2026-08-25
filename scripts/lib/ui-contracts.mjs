@@ -69,6 +69,7 @@ export function assertTabBarParity(leftSource, rightSource, assert, label) {
 
 export function assertOfficialCustomTabBar(source, appJson, assert, label, { compiled = false, wxss = '' } = {}) {
   assert(!source.includes('theme="tag"'), `${label} must not use TDesign theme="tag"`)
+  assert(!source.includes('<cover-view'), `${label} must not place a native cover-view over the interactive TabBar`)
   const combined = `${source}\n${wxss}`
   assert(combined.includes('env(safe-area-inset-bottom)') || combined.includes('safe-area-inset-bottom'), `${label} must reserve the device safe area`)
   assert(

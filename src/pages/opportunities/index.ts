@@ -13,6 +13,7 @@ import { mipAccessPageUrl } from '../../modules/mip-identity'
 import { mipIdentityModule } from '../../modules/mip-identity/client'
 import { groupedCityBranches, opportunityModule } from '../../modules/mip-opportunities'
 import { caseNavigateTo, syncCaseNavigation } from '../../modules/platform/case-navigation'
+import { getCustomNavigationStatusBarHeight } from '../../platform/navigation'
 
 type PageMode = 'opportunities' | 'cooperation'
 interface CooperationCardView extends CooperationCardSummary { roleName: string }
@@ -43,6 +44,7 @@ function cityGroupsFor(mode: PageMode, cityOptions: CityOption[]): CatalogSelect
 
 Page({
   data: {
+    statusBarHeight: 20,
     state: 'loading' as 'loading' | 'ready' | 'error',
     mode: 'opportunities' as PageMode,
     status: 'RECRUITING' as OpportunityFilter['status'],
@@ -76,6 +78,10 @@ Page({
   },
   requestSequence: 0,
   resumeDestination: '',
+
+  onLoad() {
+    this.setData({ statusBarHeight: getCustomNavigationStatusBarHeight() })
+  },
 
   onShow() {
     syncCaseNavigation(this, 'pages/opportunities/index')

@@ -1,5 +1,5 @@
 .opportunities-safe-area {
-  height: env(safe-area-inset-top);
+  width: 100%;
 }
 
 .opportunities-tab-hit {

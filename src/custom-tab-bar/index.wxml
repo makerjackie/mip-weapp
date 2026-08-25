@@ -1,4 +1,3 @@
-<cover-view class="tab-bar-surface"></cover-view>
 <view class="tab-bar">
   <view class="tab-bar-row">
     <view

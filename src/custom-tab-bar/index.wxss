@@ -1,4 +1,3 @@
-.tab-bar-surface,
 .tab-bar {
   --color-brand: #fcdf03;
   --color-muted: #b3b3b3;
@@ -12,11 +11,6 @@
   padding-bottom: env(safe-area-inset-bottom);
   background-color: #202020;
   border-top: 1rpx solid #363636;
-}
-
-.tab-bar-surface {
-  z-index: 9998;
-  height: calc(96rpx + env(safe-area-inset-bottom));
 }
 
 .tab-bar {
