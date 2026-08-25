@@ -365,13 +365,17 @@ describe('admin handler and isolation contract', () => {
 
   it('references only mip-prefixed SQL facts and never issues physical business deletes', () => {
     const root = path.resolve(__dirname, '..')
-    const files = [
+    const repositoryFiles = [
       path.join(root, 'domain/repository.js'),
+      path.join(root, 'domain/repositories/users.js'),
+    ]
+    const files = [
+      ...repositoryFiles,
       path.resolve(root, '../../database/mysql/mip/006_admin.sql'),
     ]
     const source = files.map(file => fs.readFileSync(file, 'utf8')).join('\n')
     assert.doesNotMatch(source, /\b(?:FROM|JOIN|UPDATE|INTO)\s+(?:member|dating|sewing)_\w+/i)
-    assert.doesNotMatch(fs.readFileSync(files[0], 'utf8'), /\bDELETE\s+FROM\b/i)
+    assert.doesNotMatch(repositoryFiles.map(file => fs.readFileSync(file, 'utf8')).join('\n'), /\bDELETE\s+FROM\b/i)
     assert.match(source, /mip_audit_logs/)
     assert.match(source, /mip_admin_export_tickets/)
   })
