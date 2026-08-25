@@ -13,15 +13,31 @@ function stableJson(value) {
 }
 
 function businessPayload(event) {
-  const body = Object.fromEntries(
-    Object.entries(event).filter(([key]) => !['signature', 'timestamp', 'userInfo'].includes(key)),
-  )
+  const body = signedBusinessBody(event)
   return [
     Number(event.timestamp),
     text(event.action),
     text(event.appId),
     createHash('sha256').update(stableJson(body)).digest('hex'),
   ].join('\n')
+}
+
+function signedBusinessBody(event) {
+  const fields = {
+    publishMessage: ['action', 'appId', 'message'],
+    reconcileDeliveryTask: [
+      'action',
+      'appId',
+      'actorUserId',
+      'taskId',
+      'expectedEvidenceRevision',
+      'idempotencyKey',
+      'nonce',
+    ],
+    runDeliveryBatch: ['action', 'appId', 'limit', 'drain', 'maxBatches'],
+  }[text(event.action)]
+  if (!fields) throw new Error('FORBIDDEN')
+  return Object.fromEntries(fields.map(key => [key, event[key]]))
 }
 
 function signInternalEvent(event, secret) {
@@ -56,4 +72,4 @@ function text(value) {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-module.exports = { businessPayload, signInternalEvent, stableJson, verifyInternalEvent }
+module.exports = { businessPayload, signInternalEvent, signedBusinessBody, stableJson, verifyInternalEvent }

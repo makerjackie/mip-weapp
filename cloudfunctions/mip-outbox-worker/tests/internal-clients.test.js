@@ -17,6 +17,7 @@ describe('outbox internal clients', () => {
         async callFunction(input) {
           const received = {
             ...input.data,
+            frameworkContext: { requestId: 'framework-injected' },
             userInfo: { appId: 'framework-injected', openId: 'framework-injected' },
           }
           if (input.name === 'mip-notification-worker') {
