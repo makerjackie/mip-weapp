@@ -49,7 +49,14 @@ function expectDeclarations(container: Container, selector: string, expected: Re
   const declarations = Object.fromEntries(
     rule.nodes
       .filter(node => node.type === 'decl')
-      .map(node => [node.prop, node.value]),
+      .map(node => [
+        node.prop,
+        node.value
+          .replace(/\s+/g, ' ')
+          .replace(/\(\s+/g, '(')
+          .replace(/\s+\)/g, ')')
+          .trim(),
+      ]),
   )
 
   expect(declarations).toMatchObject(expected)

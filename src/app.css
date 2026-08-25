@@ -379,7 +379,10 @@ input {
 
   .mip-admin-record-header {
     display: grid;
-    grid-template-columns: var(--mip-admin-record-columns, minmax(0, 2fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.5fr));
+    grid-template-columns: var(
+      --mip-admin-record-columns,
+      minmax(0, 2fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.5fr)
+    );
     column-gap: 24rpx;
     padding: 0 32rpx 16rpx;
     font-size: 22rpx;
@@ -388,7 +391,10 @@ input {
   }
 
   .mip-admin-record-row {
-    grid-template-columns: var(--mip-admin-record-columns, minmax(0, 2fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.5fr));
+    grid-template-columns: var(
+      --mip-admin-record-columns,
+      minmax(0, 2fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.5fr)
+    );
     column-gap: 24rpx;
     margin-bottom: 16rpx;
   }
