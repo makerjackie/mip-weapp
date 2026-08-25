@@ -86,7 +86,7 @@
     </view>
     <view wx:elif="{{!item.mine && item.status === 'PUBLISHED'}}" class="mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full border border-[#5c5320] bg-[rgba(255,221,2,0.1)] p-2">
       <view class="flex h-[80rpx] min-w-[176rpx] shrink-0 items-center justify-center rounded-full bg-panel px-3 text-[length:26rpx] font-medium text-brand">+{{item.referralCount}}引荐</view>
-      <view wx:if="{{item.referralActive}}" class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" aria-disabled="{{acting}}" bind:tap="changeReferralTarget">更换引荐人</view>
+      <view wx:if="{{item.referralActive}}" class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" aria-disabled="{{acting}}" bind:tap="changeReferralTarget">更换被引荐人</view>
       <view wx:else class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" aria-disabled="{{acting}}" bind:tap="toggleReferral">我想引荐</view>
     </view>
     <app-page-exit label="返回机会" />

@@ -36,6 +36,8 @@ describe('MIP related opportunity flow', () => {
     expect(detail).toContain('item => !item.isSelf')
     expect(detail).toContain('setReferral(item.id, true, target.profileRef)')
     expect(view).toContain('选择被引荐人')
+    expect(view).toContain('更换被引荐人')
+    expect(view).not.toContain('更换引荐人')
     expect(view).toContain('玩家和嘉宾均可选择')
     expect(view).toContain('确认引荐')
     expect(client).toContain('targetProfileRef: targetProfileRef.trim()')
