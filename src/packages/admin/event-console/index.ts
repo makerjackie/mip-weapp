@@ -433,6 +433,44 @@ Page({
       void wx.navigateTo({ url: `/packages/admin/${page}/index?eventId=${encodeURIComponent(this.data.eventId)}` })
     }
   },
+  async unpublishBeforeEdit() {
+    const event = this.data.event
+    if (!event || !this.data.canEdit || event.status !== 'PUBLISHED'
+      || this.data.processing || this.data.cloneBusy) {
+      return
+    }
+    this.setData({ processing: true, message: '' })
+    try {
+      const modal = await wx.showModal({
+        title: '下架后编辑',
+        content: '已发布活动需要先下架。下架后用户端会暂时隐藏，重新发布后恢复展示。',
+        confirmText: '下架并编辑',
+      })
+      if (!modal.confirm) {
+        return
+      }
+      await mipAdminModule.events.changeStatus({
+        eventId: event.id,
+        status: 'UNPUBLISHED',
+        expectedVersion: event.version,
+      })
+      await this.loadEvent(true)
+      wx.showToast({ title: '活动已下架', icon: 'success' })
+      try {
+        await wx.navigateTo({ url: `/packages/admin/events/index?eventId=${encodeURIComponent(event.id)}` })
+      }
+      catch {
+        this.setData({ message: '活动已下架，请从活动信息入口继续编辑。' })
+      }
+    }
+    catch (error) {
+      const failure = adminLoadFailure(error, { hasContent: true, fallbackMessage: '活动下架失败' })
+      this.setData({ message: failure.message, state: failure.state || 'ready' })
+    }
+    finally {
+      this.setData({ processing: false })
+    }
+  },
   async cloneEvent() {
     const event = this.data.event
     if (!event || !this.data.canClone || this.data.cloneBusy || this.data.processing
