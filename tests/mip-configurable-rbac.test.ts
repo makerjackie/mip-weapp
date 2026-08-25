@@ -32,9 +32,9 @@ describe('MIP configurable RBAC', () => {
       'utf8',
     )
     expect(dashboard).toContain('canRoles: hasCapability(grants, \'roles.change\')')
-    expect(page).toContain('mipAdminModule.listRoleCapabilityPolicies')
-    expect(page).toContain('mipAdminModule.gateway.updateRoleCapabilityPolicy')
-    expect(page).toContain('mipAdminModule.gateway.resetRoleCapabilityPolicy')
+    expect(page).toContain('mipAdminModule.governance.listRoleCapabilityPolicies')
+    expect(page).toContain('mipAdminModule.governance.updateRoleCapabilityPolicy')
+    expect(page).toContain('mipAdminModule.governance.resetRoleCapabilityPolicy')
     expect(page).toContain('role.roleKey === \'PLATFORM_OWNER\'')
     expect(template).toContain('权限模板')
     expect(template).toContain('保存权限')
@@ -42,8 +42,8 @@ describe('MIP configurable RBAC', () => {
   })
 
   it('resets a custom policy through the existing mutation route and returns the default template', () => {
-    const service = fs.readFileSync(
-      path.resolve(import.meta.dirname, '../cloudfunctions/mip-admin-api/domain/service.js'),
+    const governance = fs.readFileSync(
+      path.resolve(import.meta.dirname, '../cloudfunctions/mip-admin-api/domain/governance.js'),
       'utf8',
     )
     const repository = fs.readFileSync(
@@ -57,8 +57,8 @@ describe('MIP configurable RBAC', () => {
     expect(repository).toContain('SET policy_mode = \'DEFAULT\'')
     expect(repository).not.toContain('DELETE FROM mip_role_capability_policies')
     expect(repository).toContain('AND version = ?')
-    expect(service).toContain('\'admin.role_capability_policies.reset\'')
-    expect(service).toContain('roleCapabilityPolicyView(roleKey, policy, \'DEFAULT\')')
+    expect(governance).toContain('\'admin.role_capability_policies.reset\'')
+    expect(governance).toContain('roleCapabilityPolicyView(roleKey, policy, \'DEFAULT\')')
     expect(gateway).toContain('call(\'mip.admin.rolePolicies.update\', { ...input, reset: true })')
   })
 })

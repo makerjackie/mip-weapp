@@ -177,7 +177,7 @@ Page({
     const items: AdminEvent[] = []
     let cursor: string | null = null
     for (let page = 0; page < 10; page += 1) {
-      const response = await mipAdminModule.listEvents({ limit: 50, ...(cursor ? { cursor } : {}) }, force)
+      const response = await mipAdminModule.events.list({ limit: 50, ...(cursor ? { cursor } : {}) }, force)
       items.push(...response.items)
       cursor = response.nextCursor || null
       if (!cursor) {
@@ -275,17 +275,17 @@ Page({
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const session = await mipAdminModule.getSession(force)
+      const session = await mipAdminModule.governance.getSession(force)
       const canConfigurePolicies = session.roles.some(role => role.roleKey === 'PLATFORM_OWNER'
         && role.scopeType === 'PLATFORM')
       const [response, events, branchResponse, policyResponse] = await Promise.all([
-        mipAdminModule.listRoles(force),
+        mipAdminModule.governance.listRoles(force),
         this.loadEventCatalog(force),
         hasCapability(session.capabilities, 'branches.manage')
-          ? mipAdminModule.listBranches(force)
+          ? mipAdminModule.governance.listBranches(force)
           : Promise.resolve({ items: [] as AdminBranch[], nextCursor: null }),
         canConfigurePolicies
-          ? mipAdminModule.listRoleCapabilityPolicies(force)
+          ? mipAdminModule.governance.listRoleCapabilityPolicies(force)
           : Promise.resolve({ items: [] as AdminRoleCapabilityPolicy[], nextCursor: null }),
       ])
       this.actorRoles = session.roles
@@ -400,10 +400,10 @@ Page({
       if (!modal.confirm) {
         return
       }
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.resetRoleCapabilityPolicy({
+      await mipAdminModule.governance.resetRoleCapabilityPolicy({
         roleKey: policy.roleKey,
         expectedVersion: policy.version,
-      }))
+      })
       wx.showToast({ title: '已恢复默认权限', icon: 'success' })
       await this.loadRoles(true)
     }
@@ -428,11 +428,11 @@ Page({
     }
     this.setData({ policySaving: true, policyMessage: '' })
     try {
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.updateRoleCapabilityPolicy({
+      await mipAdminModule.governance.updateRoleCapabilityPolicy({
         roleKey: policy.roleKey,
         capabilities: policy.allowedCapabilities.filter(item => this.pendingPolicyCapabilities.has(item)),
         expectedVersion: policy.version,
-      }))
+      })
       wx.showToast({ title: '权限已保存', icon: 'success' })
       await this.loadRoles(true)
     }
@@ -478,8 +478,8 @@ Page({
     }
     try {
       const response = this.data.selectedScopeType === 'EVENT'
-        ? await mipAdminModule.searchRoleCandidates(this.data.scopeId, query)
-        : await mipAdminModule.listUsers({ includePhone: false, filters: { query } }, true)
+        ? await mipAdminModule.governance.searchRoleCandidates(this.data.scopeId, query)
+        : await mipAdminModule.users.list({ includePhone: false, filters: { query } }, true)
       this.setData({
         candidates: response.items.map(item => ({
           id: item.id,
@@ -520,12 +520,12 @@ Page({
       if (!modal.confirm) {
         return
       }
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.setRole({
+      await mipAdminModule.governance.setRole({
         userId: this.data.selectedUserId,
         roleKey: this.data.selectedRole,
         ...(scope.scopeId ? { scopeId: scope.scopeId } : {}),
         active: true,
-      }))
+      })
       wx.showToast({ title: '角色已设置', icon: 'success' })
       this.setData({ selectedUserId: '', selectedUserName: '', query: '' })
       await this.loadRoles(true)
@@ -553,12 +553,12 @@ Page({
       if (!modal.confirm) {
         return
       }
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.setRole({
+      await mipAdminModule.governance.setRole({
         userId: role.userId,
         roleKey: role.roleKey,
         ...(role.scopeId ? { scopeId: role.scopeId } : {}),
         active: false,
-      }))
+      })
       wx.showToast({ title: '角色已撤销', icon: 'success' })
       await this.loadRoles(true)
     }

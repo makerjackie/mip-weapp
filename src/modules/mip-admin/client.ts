@@ -1,5 +1,4 @@
 import type { ExportProgress } from './export-download'
-import type { AdminOperationalExceptionFilters } from './operational-exceptions'
 import type { PendingAdminExportStore } from './pending-export'
 import type {
   AdminCapability,
@@ -14,6 +13,7 @@ import {
   getPendingAdminExportStatus,
   resumeAndOpenPendingAdminExport,
 } from './export-download'
+import { createMipGovernanceAdmin } from './governance-admin'
 import { createMipGrowthAdmin } from './growth-admin'
 import { createMipMessagingAdmin } from './messaging-admin'
 import { createMipOpportunityAdmin } from './opportunity-admin'
@@ -30,14 +30,15 @@ export function createMipAdminModule(
   }
   const growth = createMipGrowthAdmin(gateway, cache)
   const events = createMipEventsAdmin(gateway, cache)
+  const governance = createMipGovernanceAdmin(gateway, cache)
   const messaging = createMipMessagingAdmin(gateway, cache)
   const opportunities = createMipOpportunityAdmin(gateway, cache)
   const orders = createMipOrdersAdmin(gateway, cache)
   const users = createMipUsersAdmin(gateway, cache)
   return {
-    getSession: (force = false) => cache.query('mip-admin:session', gateway.getSession, { force }),
+    getSession: governance.getSession,
     getDashboard: (force = false) => cache.query('mip-admin:dashboard', gateway.getDashboard, { force }),
-    listBranches: (force = false) => cache.query('mip-admin:branches', gateway.listBranches, { force }),
+    listBranches: governance.listBranches,
     getAnnouncementScopes: messaging.getAnnouncementScopes,
     listAnnouncements: messaging.listAnnouncements,
     getAnnouncement: messaging.getAnnouncement,
@@ -61,18 +62,10 @@ export function createMipAdminModule(
     listRoster: events.listRoster,
     listRosterAll: events.listRosterAll,
     events,
-    listRoles: (force = false) => cache.query('mip-admin:roles', gateway.listRoles, { force }),
-    listRoleCapabilityPolicies: (force = false) => cache.query(
-      'mip-admin:role-capability-policies',
-      gateway.listRoleCapabilityPolicies,
-      { force },
-    ),
-    searchRoleCandidates: (eventId: string, query: string) => gateway.searchRoleCandidates(eventId, query),
-    async setRole(input: Parameters<MipAdminGateway['setRole']>[0]) {
-      const result = await gateway.setRole(input)
-      cache.invalidate('mip-admin:roles')
-      return result
-    },
+    listRoles: governance.listRoles,
+    listRoleCapabilityPolicies: governance.listRoleCapabilityPolicies,
+    searchRoleCandidates: governance.searchRoleCandidates,
+    governance,
     listOpportunities: opportunities.list,
     getOpportunity: opportunities.get,
     getOpportunityCommentAdminState: opportunities.getCommentState,
@@ -88,16 +81,8 @@ export function createMipAdminModule(
     growth,
     listOrders: orders.list,
     orders,
-    listOperationalExceptions: (input: AdminOperationalExceptionFilters = {}, force = false) => cache.query(
-      `mip-admin:exceptions:${JSON.stringify(input)}`,
-      () => gateway.listOperationalExceptions(input),
-      { force },
-    ),
-    listAudit: (input: Record<string, unknown> = {}, force = false) => cache.query(
-      `mip-admin:audit:${JSON.stringify(input)}`,
-      () => gateway.listAudit(input),
-      { force },
-    ),
+    listOperationalExceptions: governance.listOperationalExceptions,
+    listAudit: governance.listAudit,
     async mutate<T>(work: () => Promise<T>) {
       const result = await work()
       refresh()

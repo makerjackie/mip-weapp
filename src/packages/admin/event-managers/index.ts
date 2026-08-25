@@ -45,9 +45,9 @@ Page({
     }
     try {
       const [session, event, response] = await Promise.all([
-        mipAdminModule.getSession(force),
+        mipAdminModule.governance.getSession(force),
         mipAdminModule.events.get(this.data.eventId, force),
-        mipAdminModule.listRoles(force),
+        mipAdminModule.governance.listRoles(force),
       ])
       const scope = { scopeType: 'EVENT' as const, scopeId: this.data.eventId, branchId: event.branchId }
       const canChange = hasScopedCapability(session.capabilities, 'roles.change', scope)
@@ -104,7 +104,7 @@ Page({
       return
     }
     try {
-      const response = await mipAdminModule.searchRoleCandidates(this.data.eventId, query)
+      const response = await mipAdminModule.governance.searchRoleCandidates(this.data.eventId, query)
       this.setData({ candidates: response.items, message: '' })
     }
     catch (error) {
@@ -125,7 +125,7 @@ Page({
       if (!modal.confirm) {
         return
       }
-      await mipAdminModule.setRole({
+      await mipAdminModule.governance.setRole({
         userId,
         roleKey: this.data.selectedRole,
         scopeId: this.data.eventId,
@@ -154,7 +154,7 @@ Page({
       if (!modal.confirm) {
         return
       }
-      await mipAdminModule.setRole({
+      await mipAdminModule.governance.setRole({
         userId,
         roleKey,
         scopeId: this.data.eventId,

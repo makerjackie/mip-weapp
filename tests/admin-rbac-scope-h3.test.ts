@@ -44,7 +44,7 @@ describe('MIP admin role scope', () => {
       expect(template).toContain(`data-role="${role}"`)
     }
     expect(template).toContain('授权范围：{{item.scopeLabel}}')
-    expect(script).toContain('mipAdminModule.gateway.setRole')
+    expect(script).toContain('mipAdminModule.governance.setRole')
     expect(script).not.toMatch(/wx\.cloud|wx\.request/)
   })
 

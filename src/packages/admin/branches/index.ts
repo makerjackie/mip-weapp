@@ -68,13 +68,13 @@ Page({
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const session = await mipAdminModule.getSession(force)
+      const session = await mipAdminModule.governance.getSession(force)
       const canManage = hasCapability(session.capabilities, 'branches.manage')
       if (!canManage) {
         this.setData({ state: 'forbidden', canManage: false, branches: [], message: '' })
         return
       }
-      const response = await mipAdminModule.listBranches(force)
+      const response = await mipAdminModule.governance.listBranches(force)
       this.setData({
         state: 'ready',
         canManage: true,
@@ -128,21 +128,21 @@ Page({
     this.setData({ processing: true, message: '' })
     try {
       if (this.data.editorId) {
-        await mipAdminModule.mutate(() => mipAdminModule.gateway.updateBranch({
+        await mipAdminModule.governance.updateBranch({
           branchId: this.data.editorId,
           expectedVersion: this.data.editorVersion,
           name: this.data.name,
           cityName: this.data.cityName,
           summary: this.data.summary,
-        }))
+        })
       }
       else {
-        await mipAdminModule.mutate(() => mipAdminModule.gateway.createBranch({
+        await mipAdminModule.governance.createBranch({
           branchKey: this.data.branchKey,
           name: this.data.name,
           cityName: this.data.cityName,
           summary: this.data.summary,
-        }))
+        })
       }
       wx.showToast({ title: '分会已保存', icon: 'success' })
       this.resetEditor()
@@ -180,11 +180,11 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.changeBranchStatus({
+      await mipAdminModule.governance.changeBranchStatus({
         branchId: branch.id,
         status,
         expectedVersion: branch.version,
-      }))
+      })
       wx.showToast({ title: status === 'INACTIVE' ? '分会已停用' : '分会已启用', icon: 'success' })
       await this.loadBranches(true)
     }

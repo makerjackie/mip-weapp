@@ -115,12 +115,12 @@ Page({
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const session = await mipAdminModule.getSession(force)
+      const session = await mipAdminModule.governance.getSession(force)
       if (!hasCapability(session.capabilities, 'operations.exceptions.read')) {
         this.setData({ state: 'forbidden', items: [], message: '' })
         return
       }
-      const response = await mipAdminModule.listOperationalExceptions({
+      const response = await mipAdminModule.governance.listOperationalExceptions({
         type: this.data.type,
         status: this.data.status,
         limit: 50,

@@ -178,8 +178,6 @@ function createHarness() {
       status: 'PUBLISHED',
       version: 2,
     })),
-    listRoles: vi.fn<MipAdminGateway['listRoles']>(async () => ({ items: [], nextCursor: null })),
-    setRole: vi.fn<MipAdminGateway['setRole']>(async () => ({ active: true })),
   }
   const gateway = spies as unknown as MipAdminGateway
   return { module: createMipAdminModule(gateway), spies }
@@ -258,7 +256,7 @@ const querySpies: QuerySpyName[] = [
 interface MutationCase {
   name: string
   execute: (events: MipEventsAdmin) => Promise<unknown>
-  spy: Exclude<keyof ReturnType<typeof createHarness>['spies'], QuerySpyName | 'listRoles' | 'setRole'>
+  spy: Exclude<keyof ReturnType<typeof createHarness>['spies'], QuerySpyName>
   input: unknown
   invalidated: QuerySpyName[]
 }
@@ -491,19 +489,6 @@ describe('MIP admin events facade', () => {
     }
   })
 
-  it('keeps event-scoped role writes behind the narrow top-level wrapper', async () => {
-    const { module, spies } = createHarness()
-    const roleInput = { userId: 'user-a', roleKey: 'EVENT_STAFF', scopeId: eventId, active: true }
-    await module.listRoles()
-    await module.listRoles()
-
-    await module.setRole(roleInput)
-    await module.listRoles()
-
-    expect(spies.setRole.mock.calls[0]?.[0]).toBe(roleInput)
-    expect(spies.listRoles).toHaveBeenCalledTimes(2)
-  })
-
   it('keeps all event administration pages behind typed module boundaries', () => {
     const root = path.resolve(import.meta.dirname, '..')
     const pages = [
@@ -539,7 +524,7 @@ describe('MIP admin events facade', () => {
       'savePolicy',
       'undoCheckIn',
     ].sort())
-    expect(sources.join('\n')).toContain('mipAdminModule.setRole(')
+    expect(sources.join('\n')).toContain('mipAdminModule.governance.setRole(')
     expect(sources.join('\n')).toContain('mipAdminModule.exportAndOpen(')
   })
 })

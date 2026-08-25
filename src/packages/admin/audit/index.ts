@@ -57,7 +57,7 @@ Page({
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const response = await mipAdminModule.listAudit({
+      const response = await mipAdminModule.governance.listAudit({
         filters: { action: this.data.action.trim(), resourceType: this.data.resourceType.trim() },
       }, force)
       this.setData({
@@ -78,7 +78,7 @@ Page({
     }
     this.setData({ loadingMore: true, message: '' })
     try {
-      const response = await mipAdminModule.listAudit({
+      const response = await mipAdminModule.governance.listAudit({
         cursor: this.data.nextCursor,
         filters: { action: this.data.action.trim(), resourceType: this.data.resourceType.trim() },
       })
