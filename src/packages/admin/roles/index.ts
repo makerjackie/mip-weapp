@@ -71,6 +71,7 @@ const capabilityLabels: Record<AdminCapability, string> = {
   'events.comments.manage': '活动评论管理',
   'announcements.manage': '公告管理',
   'messages.manage': '消息管理',
+  'messages.delivery.review': '消息投递复核',
   'communications.publish': '活动提醒发布',
   'community.reports.manage': '举报审核',
   'opportunities.moderate': '机会管理',

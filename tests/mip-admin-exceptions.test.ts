@@ -43,17 +43,22 @@ describe('MIP admin operational exceptions', () => {
     }))).toThrow(MipAdminError)
   })
 
-  it('keeps the page read-only and renders all required public states', () => {
+  it('keeps generic exceptions read-only and isolates delivery review mutations', () => {
     const root = path.resolve(import.meta.dirname, '../src/packages/admin/exceptions')
     const script = fs.readFileSync(path.join(root, 'index.ts'), 'utf8')
     const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
     expect(script).toContain('\'operations.exceptions.read\'')
-    expect(script).not.toMatch(/retryOperational|submitRefund|changeStatus|\.mutate\(/)
+    expect(script).toContain('\'messages.delivery.review\'')
+    expect(script).not.toMatch(/retryOperational|submitRefund|changeStatus/)
+    expect(script).toContain('mutateReview(\'reconcile\'')
+    expect(script).toContain('resolutionCode: item.requiresNote ? \'UNKNOWN_NO_REPLAY\'')
+    expect(script).toContain('AUTO_CONVERGED: \'系统状态已收敛\'')
+    expect(script).toMatch(/错误码 \$\{item\.sourceState\.lastErrorCode\}/)
     expect(template).toContain('state === \'loading\'')
-    expect(template).toContain('state === \'empty\'')
+    expect(template).toContain('reviewState === \'empty\'')
     expect(template).toContain('state === \'error\'')
     expect(template).toContain('state === \'forbidden\'')
-    expect(template).toContain('异常中心仅展示状态，不会修改业务记录。')
+    expect(template).toContain('核对投递状态不会重新发送消息')
   })
 
   it('connects the route, dashboard capability and read-only gateway action', () => {

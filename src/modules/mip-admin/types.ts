@@ -21,6 +21,14 @@ import type {
   AdminMessageRecipientCandidate,
 } from './message-campaigns'
 import type {
+  AdminDeliveryReviewItem,
+  AdminDeliveryReviewListInput,
+  AdminDeliveryReviewMutationInput,
+  AdminDeliveryReviewPage,
+  AdminDeliveryReviewResolveInput,
+  AdminDeliveryReviewResourceRef,
+} from './message-delivery-reviews'
+import type {
   AdminMessageTemplate,
   AdminMessageTemplateDraft,
   AdminMessageTemplateFilters,
@@ -63,6 +71,7 @@ export type AdminCapability
     | 'events.comments.manage'
     | 'announcements.manage'
     | 'messages.manage'
+    | 'messages.delivery.review'
     | 'communications.publish'
     | 'branches.manage'
     | 'community.reports.manage'
@@ -850,6 +859,11 @@ export interface MipAdminGateway {
   scheduleMessageCampaign: (input: AdminMessageCampaignScheduleInput) => Promise<AdminMessageCampaign>
   cancelMessageCampaignSchedule: (input: AdminMessageCampaignCancelScheduleInput) => Promise<AdminMessageCampaign>
   withdrawMessageCampaign: (campaignId: string, expectedVersion: number, reason: string) => Promise<AdminMessageCampaign>
+  listMessageDeliveryReviews: (input?: AdminDeliveryReviewListInput) => Promise<AdminDeliveryReviewPage>
+  getMessageDeliveryReview: (resourceRef: AdminDeliveryReviewResourceRef) => Promise<AdminDeliveryReviewItem>
+  claimMessageDeliveryReview: (input: AdminDeliveryReviewMutationInput) => Promise<AdminDeliveryReviewItem>
+  reconcileMessageDeliveryReview: (input: AdminDeliveryReviewMutationInput) => Promise<AdminDeliveryReviewItem>
+  resolveMessageDeliveryReview: (input: AdminDeliveryReviewResolveInput) => Promise<AdminDeliveryReviewItem>
   listMessageTemplates: (input?: AdminMessageTemplateFilters) => Promise<AdminPage<AdminMessageTemplate>>
   getMessageTemplate: (templateId: string) => Promise<AdminMessageTemplate>
   saveMessageTemplate: (input: AdminMessageTemplateDraft) => Promise<AdminMessageTemplate>

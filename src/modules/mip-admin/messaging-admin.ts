@@ -9,6 +9,7 @@ type AnnouncementListInput = NonNullable<Parameters<MipAdminGateway['listAnnounc
 type CampaignListInput = NonNullable<Parameters<MipAdminGateway['listMessageCampaigns']>[0]>
 type RecipientSearchInput = NonNullable<Parameters<MipAdminGateway['searchMessageRecipients']>[0]>
 type TemplateListInput = NonNullable<Parameters<MipAdminGateway['listMessageTemplates']>[0]>
+type DeliveryReviewListInput = NonNullable<Parameters<MipAdminGateway['listMessageDeliveryReviews']>[0]>
 
 export interface MipMessagingAdmin {
   getAnnouncementScopes: (force?: boolean) => ReturnType<MipAdminGateway['getAnnouncementScopes']>
@@ -54,6 +55,17 @@ export interface MipMessagingAdmin {
   saveTemplate: MipAdminGateway['saveMessageTemplate']
   activateTemplate: MipAdminGateway['activateMessageTemplate']
   archiveTemplate: MipAdminGateway['archiveMessageTemplate']
+  listDeliveryReviews: (
+    input?: DeliveryReviewListInput,
+    force?: boolean,
+  ) => ReturnType<MipAdminGateway['listMessageDeliveryReviews']>
+  getDeliveryReview: (
+    resourceRef: Parameters<MipAdminGateway['getMessageDeliveryReview']>[0],
+    force?: boolean,
+  ) => ReturnType<MipAdminGateway['getMessageDeliveryReview']>
+  claimDeliveryReview: MipAdminGateway['claimMessageDeliveryReview']
+  reconcileDeliveryReview: MipAdminGateway['reconcileMessageDeliveryReview']
+  resolveDeliveryReview: MipAdminGateway['resolveMessageDeliveryReview']
 }
 
 const cacheKeys = {
@@ -66,6 +78,8 @@ const cacheKeys = {
   recipients: 'mip-admin:message-recipients',
   templates: 'mip-admin:message-templates',
   template: 'mip-admin:message-template',
+  deliveryReviews: 'mip-admin:message-delivery-reviews',
+  deliveryReview: 'mip-admin:message-delivery-review',
 } as const
 
 function inputCacheKey(prefix: string, input: object) {
@@ -86,6 +100,7 @@ export function createMipMessagingAdmin(
   const invalidateAnnouncements = [cacheKeys.announcements, cacheKeys.announcement]
   const invalidateCampaigns = [cacheKeys.campaigns, cacheKeys.campaign]
   const invalidateTemplates = [cacheKeys.templates, cacheKeys.template]
+  const invalidateDeliveryReviews = [cacheKeys.deliveryReviews, cacheKeys.deliveryReview]
 
   return {
     getAnnouncementScopes: (force = false) => cache.query(
@@ -178,6 +193,28 @@ export function createMipMessagingAdmin(
     archiveTemplate: (templateId, expectedVersion) => mutate(
       invalidateTemplates,
       () => gateway.archiveMessageTemplate(templateId, expectedVersion),
+    ),
+    listDeliveryReviews: (input: DeliveryReviewListInput = {}, force = false) => cache.query(
+      inputCacheKey(cacheKeys.deliveryReviews, input),
+      () => gateway.listMessageDeliveryReviews(input),
+      { force },
+    ),
+    getDeliveryReview: (resourceRef, force = false) => cache.query(
+      inputCacheKey(cacheKeys.deliveryReview, resourceRef),
+      () => gateway.getMessageDeliveryReview(resourceRef),
+      { force },
+    ),
+    claimDeliveryReview: input => mutate(
+      invalidateDeliveryReviews,
+      () => gateway.claimMessageDeliveryReview(input),
+    ),
+    reconcileDeliveryReview: input => mutate(
+      invalidateDeliveryReviews,
+      () => gateway.reconcileMessageDeliveryReview(input),
+    ),
+    resolveDeliveryReview: input => mutate(
+      invalidateDeliveryReviews,
+      () => gateway.resolveMessageDeliveryReview(input),
     ),
   }
 }

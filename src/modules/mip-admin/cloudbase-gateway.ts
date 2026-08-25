@@ -39,6 +39,10 @@ import {
   parseMessageRecipientPage,
 } from './message-campaigns'
 import {
+  parseDeliveryReview,
+  parseDeliveryReviewPage,
+} from './message-delivery-reviews'
+import {
   parseMessageTemplate,
   parseMessageTemplatePage,
 } from './message-templates'
@@ -87,6 +91,7 @@ const adminCapabilities = new Set<AdminCapability>([
   'events.comments.manage',
   'announcements.manage',
   'messages.manage',
+  'messages.delivery.review',
   'communications.publish',
   'community.reports.manage',
   'opportunities.moderate',
@@ -552,6 +557,21 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
     ),
     withdrawMessageCampaign: async (campaignId, expectedVersion, reason) => parseMessageCampaign(
       await call('mip.admin.messageCampaigns.withdraw', { campaignId, expectedVersion, reason }),
+    ),
+    listMessageDeliveryReviews: async input => parseDeliveryReviewPage(
+      await call('mip.admin.messageDeliveryReviews.list', { ...(input || {}) }),
+    ),
+    getMessageDeliveryReview: async resourceRef => parseDeliveryReview(
+      await call('mip.admin.messageDeliveryReviews.get', { resourceRef }),
+    ),
+    claimMessageDeliveryReview: async input => parseDeliveryReview(
+      await call('mip.admin.messageDeliveryReviews.claim', { ...input }),
+    ),
+    reconcileMessageDeliveryReview: async input => parseDeliveryReview(
+      await call('mip.admin.messageDeliveryReviews.reconcile', { ...input }),
+    ),
+    resolveMessageDeliveryReview: async input => parseDeliveryReview(
+      await call('mip.admin.messageDeliveryReviews.resolve', { ...input }),
     ),
     listMessageTemplates: async input => parseMessageTemplatePage(
       await call('mip.admin.messageTemplates.list', { ...(input || {}) }),

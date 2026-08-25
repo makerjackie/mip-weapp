@@ -22,6 +22,8 @@ export const readActions = new Set([
   'mip.admin.messageCampaigns.scopes',
   'mip.admin.messageCampaigns.list',
   'mip.admin.messageCampaigns.get',
+  'mip.admin.messageDeliveryReviews.list',
+  'mip.admin.messageDeliveryReviews.get',
   'mip.admin.messageCampaigns.recipients',
   'mip.admin.messageTemplates.list',
   'mip.admin.messageTemplates.get',

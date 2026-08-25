@@ -74,7 +74,8 @@ Page({
         canBadges: hasCapability(grants, 'badges.manage'),
         canGame: hasCapability(grants, 'game.manage'),
         canKnowledge: hasCapability(grants, 'knowledge.manage'),
-        canExceptions: hasCapability(grants, 'operations.exceptions.read'),
+        canExceptions: hasCapability(grants, 'operations.exceptions.read')
+          || hasCapability(grants, 'messages.delivery.review'),
         canRoles: hasCapability(grants, 'roles.change'),
         canAudit: hasCapability(grants, 'audit.read'),
         message: '',
