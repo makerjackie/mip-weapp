@@ -297,15 +297,33 @@ describe('free event runtime evidence summaries', () => {
     expect(source).not.toContain('openWechatIdeProjectByHttp')
   })
 
-  it('reads the running build from the loaded common bundle visible to Automator', () => {
+  it('reads the running build from a replaceable read-only global sentinel', () => {
     const appSource = fs.readFileSync(path.join(root, 'src/app.ts'), 'utf8')
     const runnerSource = fs.readFileSync(path.join(root, 'scripts/verify-free-event-runtime.mjs'), 'utf8')
+    const sentinelValueSource = appSource.slice(
+      appSource.indexOf('const runtimeAcceptance'),
+      appSource.indexOf('Object.defineProperty'),
+    )
 
-    expect(appSource).toContain('runtimeAcceptance: {')
+    expect(appSource).toContain('const runtimeAcceptance = Object.freeze({')
+    expect([...sentinelValueSource.matchAll(/^\s{2}(\w+):/gm)].map(match => match[1])).toEqual([
+      'buildSha',
+      'catalogStage',
+      'cloudbaseEnvId',
+      'cloudbaseMode',
+      'paymentMode',
+    ])
+    expect(appSource).toContain('Object.defineProperty(globalThis, \'__mipRuntimeAcceptance\', {')
+    expect(appSource).toContain('configurable: true')
+    expect(appSource).toContain('enumerable: false')
+    expect(appSource).toContain('writable: false')
+    expect(appSource).toContain('runtimeAcceptance: { ...runtimeAcceptance }')
     expect(appSource).not.toContain('getRuntimeAcceptance')
-    expect(runnerSource.match(/require\('common\.js'\)\.runtimeConfig/g)).toHaveLength(2)
+    expect(runnerSource.match(/globalThis\.__mipRuntimeAcceptance/g)).toHaveLength(2)
     expect(runnerSource).not.toContain('getRuntimeAcceptance')
-    expect(runnerSource).not.toContain('getApp()?.globalData?.runtimeAcceptance')
+    expect(runnerSource).not.toContain('getApp(')
+    expect(runnerSource).not.toContain('globalData')
+    expect(runnerSource).not.toContain('require(\'common.js\')')
   })
 
   it('records exact authoritative facts without profile, phone, body, or participant refs', () => {

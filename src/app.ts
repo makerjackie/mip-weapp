@@ -11,15 +11,25 @@ const popupForeground = createPopupForegroundCoordinator(
   mipPopupMessagePresenter,
 )
 
+const runtimeAcceptance = Object.freeze({
+  buildSha: runtimeConfig.buildSha,
+  catalogStage: runtimeConfig.catalogStage,
+  cloudbaseEnvId: runtimeConfig.cloudbase.envId,
+  cloudbaseMode: runtimeConfig.cloudbase.mode,
+  paymentMode: runtimeConfig.paymentMode,
+})
+
+// DevTools can retain the service global across reloads, so each fresh bundle must replace the previous frozen value.
+Object.defineProperty(globalThis, '__mipRuntimeAcceptance', {
+  configurable: true,
+  enumerable: false,
+  value: runtimeAcceptance,
+  writable: false,
+})
+
 App({
   globalData: {
-    runtimeAcceptance: {
-      buildSha: runtimeConfig.buildSha,
-      catalogStage: runtimeConfig.catalogStage,
-      cloudbaseEnvId: runtimeConfig.cloudbase.envId,
-      cloudbaseMode: runtimeConfig.cloudbase.mode,
-      paymentMode: runtimeConfig.paymentMode,
-    },
+    runtimeAcceptance: { ...runtimeAcceptance },
   },
 
   onLaunch(options) {
