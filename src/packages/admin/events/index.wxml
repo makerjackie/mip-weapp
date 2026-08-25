@@ -1,4 +1,5 @@
-<view id="admin-events-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+<view id="admin-events-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+  <mip-admin-workspace-nav />
   <view class="text-[length:40rpx] font-bold">{{eventId ? '编辑活动' : '新建活动'}}</view>
   <view class="mt-2 text-[length:23rpx] text-muted">活动保存后进入内容检查，通过后可以发布。</view>
 

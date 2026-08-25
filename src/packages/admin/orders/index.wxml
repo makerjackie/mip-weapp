@@ -1,4 +1,5 @@
-<view id="admin-orders-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+<view id="admin-orders-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+  <mip-admin-workspace-nav />
   <view class="flex items-start justify-between gap-3">
     <view>
       <view class="text-[length:40rpx] font-bold">{{eventId ? '活动订单' : '订单与退款'}}</view>

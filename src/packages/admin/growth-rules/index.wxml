@@ -1,4 +1,5 @@
-<view id="admin-growth-rules-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+<view id="admin-growth-rules-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+  <mip-admin-workspace-nav />
   <view class="text-[length:40rpx] font-bold">奖励规则</view>
   <view class="mt-2 text-[length:23rpx] text-muted">奖励行为和成长类型由服务端固定，可调整奖励数值、每日上限和状态。</view>
   <view wx:if="{{canConfigure && !editorId}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-3 text-[length:23rpx] text-muted">选择下方规则进行编辑。</view>

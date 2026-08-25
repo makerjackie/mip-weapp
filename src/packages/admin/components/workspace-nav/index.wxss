@@ -1,0 +1,124 @@
+.mip-admin-workspace-nav {
+  display: none;
+}
+
+@media (min-width: 960px) {
+  .mip-admin-workspace-nav {
+    position: fixed;
+    top: 24px;
+    bottom: 24px;
+    left: 24px;
+    z-index: 20;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    width: 232px;
+    min-height: 0;
+    padding: 20px 12px 12px;
+    overflow: hidden;
+    color: #fff;
+    background: #202020;
+    border: 1px solid #363636;
+    border-radius: 16px;
+  }
+
+  .mip-admin-workspace-brand {
+    display: flex;
+    flex: none;
+    gap: 12px;
+    align-items: center;
+    padding: 0 8px 18px;
+    border-bottom: 1px solid #363636;
+  }
+
+  .mip-admin-workspace-mark {
+    display: flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #040000;
+    background: #fcdf03;
+    border-radius: 12px;
+  }
+
+  .mip-admin-workspace-brand-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .mip-admin-workspace-product {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+  }
+
+  .mip-admin-workspace-subtitle,
+  .mip-admin-workspace-group-label {
+    color: #a3a3a3;
+  }
+
+  .mip-admin-workspace-subtitle {
+    font-size: 12px;
+  }
+
+  .mip-admin-workspace-scroll {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    margin-top: 8px;
+  }
+
+  .mip-admin-workspace-group {
+    padding: 10px 0 4px;
+  }
+
+  .mip-admin-workspace-group-label {
+    display: block;
+    padding: 0 10px 6px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .mip-admin-workspace-link {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    min-height: 44px;
+    padding: 10px 12px;
+    margin-bottom: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #fff;
+    border-radius: 12px;
+  }
+
+  .mip-admin-workspace-link[data-active='true'] {
+    font-weight: 700;
+    color: #040000;
+    background: #fcdf03;
+  }
+
+  .mip-admin-workspace-link--pressed {
+    background: #2a2a2a;
+  }
+
+  .mip-admin-workspace-link[data-active='true'].mip-admin-workspace-link--pressed {
+    background: #e3c900;
+  }
+}
+
+@media (min-width: 1280px) {
+  .mip-admin-workspace-nav {
+    left: calc(50% - 616px);
+  }
+}

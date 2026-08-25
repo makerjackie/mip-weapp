@@ -224,6 +224,11 @@ input {
     padding-left: 40px;
   }
 
+  .mip-admin-workspace-page {
+    min-width: 0;
+    padding-left: 296px;
+  }
+
   .mip-admin-card-list,
   .mip-admin-form-grid {
     display: grid;

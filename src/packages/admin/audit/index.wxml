@@ -1,4 +1,5 @@
-<view id="admin-audit-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+<view id="admin-audit-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+  <mip-admin-workspace-nav />
   <view class="text-[length:40rpx] font-bold">审计记录</view><view class="mt-2 text-[length:23rpx] text-muted">敏感读取和管理变更只追加记录</view>
   <view class="mip-admin-filter-grid mt-5 grid gap-3 rounded-[16rpx] bg-panel p-3"><t-input value="{{action}}" placeholder="操作名称" bind:change="updateAction" /><view><t-input value="{{resourceType}}" placeholder="资源类型" bind:change="updateResource" bind:enter="search" /></view><view class="mip-admin-filter-wide"><t-button block variant="outline" bind:tap="search">筛选</t-button></view></view>
   <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>

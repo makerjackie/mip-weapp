@@ -1,4 +1,5 @@
-<view id="admin-opportunities-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+<view id="admin-opportunities-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+  <mip-admin-workspace-nav />
   <view class="flex items-start justify-between gap-3"><view><view class="text-[length:40rpx] font-bold">机会管理</view><view class="mt-2 text-[length:23rpx] text-muted">查询机会明细、状态和运营记录</view></view><t-button size="small" theme="primary" bind:tap="createOpportunity">新增机会</t-button></view>
 
   <view class="mip-admin-filter-grid mt-5 grid gap-3 rounded-[16rpx] bg-panel p-3">

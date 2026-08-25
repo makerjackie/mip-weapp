@@ -1,4 +1,5 @@
-<view id="admin-growth-levels-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+<view id="admin-growth-levels-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+  <mip-admin-workspace-nav />
   <view class="text-[length:40rpx] font-bold">成长等级</view><view class="mt-2 text-[length:23rpx] text-muted">等级门槛必须递增，已使用等级可以停用。</view>
   <view class="mt-5 grid grid-cols-3 gap-2"><t-button block variant="outline" bind:tap="openBenefits">权益</t-button><t-button block variant="outline" bind:tap="openRules">奖励规则</t-button><t-button block variant="outline" bind:tap="openEntries">成长流水</t-button></view>
   <view wx:if="{{canConfigure}}" class="mt-5 rounded-[16rpx] bg-panel p-4">

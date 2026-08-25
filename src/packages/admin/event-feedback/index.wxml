@@ -1,4 +1,5 @@
-<view id="admin-event-feedback-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+<view id="admin-event-feedback-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+  <mip-admin-workspace-nav />
   <view class="text-[length:40rpx] font-bold">活动反馈</view>
   <view class="mt-2 text-[length:23rpx] text-muted">{{eventTitle || '查看活动参与反馈'}}</view>
 

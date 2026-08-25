@@ -3,6 +3,7 @@
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",
     "app-page-exit": "/components/page-exit/index",
+    "mip-admin-workspace-nav": "/packages/admin/components/workspace-nav/index",
     "event-phone-preview": "/components/event-phone-preview/index",
     "t-button": "tdesign-miniprogram/button/button",
     "t-input": "tdesign-miniprogram/input/input",

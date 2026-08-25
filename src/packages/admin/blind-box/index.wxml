@@ -1,4 +1,5 @@
-<view id="admin-blind-box-page" class="mip-admin-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="admin-blind-box-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <mip-admin-workspace-nav />
   <view class="flex items-start justify-between gap-3">
     <view><view class="text-[length:38rpx] font-bold">盲盒管理</view><view class="mt-2 text-[length:23rpx] text-muted">配置目录、抽取规则、卡牌概率和库存</view></view>
     <t-button size="small" theme="primary" bind:tap="openCreateCatalog">新增目录</t-button>
