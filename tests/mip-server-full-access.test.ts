@@ -15,12 +15,15 @@ function agreementVersions(value: Array<{ key: string, version: string }>) {
 }
 
 describe('server full access contract', () => {
-  it('uses the identity domain current agreement defaults in commerce and admin', () => {
+  it('uses the identity domain current agreement defaults in commerce, events, and admin', () => {
     const admin = require('../cloudfunctions/mip-admin-api/domain/full-access.js')
     const commerce = require('../cloudfunctions/mip-commerce-api/domain/full-access.js')
+    const events = require('../cloudfunctions/mip-events-api/domain/participation-access.js')
     const identity = require('../cloudfunctions/mip-identity-api/domain/service.js')
 
     expect(agreementVersions(commerce.defaultAgreements))
+      .toEqual(agreementVersions(identity.defaultAgreements))
+    expect(agreementVersions(events.defaultAgreements))
       .toEqual(agreementVersions(identity.defaultAgreements))
     expect(agreementVersions(admin.defaultAgreements))
       .toEqual(agreementVersions(identity.defaultAgreements))
@@ -29,9 +32,20 @@ describe('server full access contract', () => {
   it('deploys one optional current-agreement configuration to every full-access service', () => {
     const source = read('scripts/deploy-functions.mjs')
     expect(source).toContain('const agreementEnvironment = options.agreementsJson')
+    expect(source).toMatch(/events:\s*\{\s*\.\.\.agreementEnvironment/)
     expect(source).toMatch(/opportunities:\s*\{\s*\.\.\.agreementEnvironment/)
-    expect(source.match(/\.\.\.agreementEnvironment/g)).toHaveLength(4)
+    expect(source.match(/\.\.\.agreementEnvironment/g)).toHaveLength(5)
     expect(source).toContain('if (parsed.length === 0)')
+  })
+
+  it('constructs and injects the events participation policy from current agreement configuration', () => {
+    const source = read('cloudfunctions/mip-events-api/index.js')
+    expect(source).toContain('createParticipationAccessPolicy({ agreements: configuredAgreements() })')
+    const registrationDispatch = source.slice(
+      source.indexOf('case \'mip.events.register\':'),
+      source.indexOf('case \'mip.events.updateRegistration\':'),
+    )
+    expect(registrationDispatch).toContain('participationAccessPolicy')
   })
 
   it('gates only new membership checkout after idempotent recovery and before plan use', () => {

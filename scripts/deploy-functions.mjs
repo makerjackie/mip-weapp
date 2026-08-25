@@ -790,6 +790,7 @@ function environmentForRole(role, options) {
       MIP_MEDIA_MAINTENANCE_HMAC_SECRET: options.secrets.mediaMaintenanceHmac,
     },
     events: {
+      ...agreementEnvironment,
       MIP_EVENT_TOKEN_SECRET: options.secrets.eventToken,
       MIP_MEDIA_SCOPE_SECRET: options.secrets.mediaScope,
       MIP_PAYMENT_MODE: options.paymentMode,

@@ -22,7 +22,7 @@ describe('phase9 final gap contracts', () => {
     )
     const existingBranch = registrationFlow.slice(
       registrationFlow.indexOf('if (existing && activeRegistrationStatuses.has(existing.status))'),
-      registrationFlow.indexOf('await requireParticipationAccess'),
+      registrationFlow.indexOf('await participationAccessPolicy.requireAccess'),
     )
 
     expect(registrationFlow).toContain('operation: \'event.register\'')

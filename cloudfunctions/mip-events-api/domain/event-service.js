@@ -414,36 +414,6 @@ async function defaultResolveUserKind(tx, appId, userId, now) {
   return entitlement ? 'PLAYER' : 'GUEST'
 }
 
-async function requireParticipationAccess(tx, appId, userId) {
-  const [profile, privateProfile, agreements] = await Promise.all([
-    tx.one(
-      `SELECT user_id FROM mip_profiles
-       WHERE app_id = ? AND user_id = ? AND nickname <> ''`,
-      [appId, userId],
-    ),
-    tx.one(
-      `SELECT user_id FROM mip_private_profiles
-       WHERE app_id = ? AND user_id = ? AND phone_verified_at IS NOT NULL`,
-      [appId, userId],
-    ),
-    tx.one(
-      `SELECT COUNT(DISTINCT agreement_key) AS total
-       FROM mip_agreement_acceptances
-       WHERE app_id = ? AND user_id = ?`,
-      [appId, userId],
-    ),
-  ])
-  if (Number(agreements?.total || 0) < 2) {
-    throw new DomainError('AGREEMENT_REQUIRED', '请先确认服务协议和隐私政策')
-  }
-  if (!privateProfile) {
-    throw new DomainError('PHONE_REQUIRED', '请先绑定手机号')
-  }
-  if (!profile) {
-    throw new DomainError('PROFILE_REQUIRED', '请先完善个人资料')
-  }
-}
-
 async function requireActiveUserForMutation(tx, appId, userId) {
   const user = await tx.one(
     `SELECT id, status FROM mip_users
@@ -1613,6 +1583,7 @@ async function createRegistration(db, {
   tokenSecret,
   paymentAvailable = false,
   resolveUserKind = defaultResolveUserKind,
+  participationAccessPolicy,
 }) {
   const eventId = typeof input.eventId === 'string' ? input.eventId : ''
   const submittedAnswers = normalizeRegistrationAnswerPayload(input.answers)
@@ -1649,7 +1620,10 @@ async function createRegistration(db, {
       await completeIdempotency(tx, claim, { appId, userId, operation: 'event.register', response: outcome })
       return outcome
     }
-    await requireParticipationAccess(tx, appId, userId)
+    if (!participationAccessPolicy || typeof participationAccessPolicy.requireAccess !== 'function') {
+      throw new DomainError('SERVICE_UNAVAILABLE', '活动报名服务暂时不可用', true)
+    }
+    await participationAccessPolicy.requireAccess(tx, appId, userId)
     if (!event || Number(event.form_version) !== formVersion) {
       throw new DomainError(event ? 'CONFLICT' : 'NOT_FOUND', event ? '报名表已更新，请刷新后重试' : '活动不存在')
     }

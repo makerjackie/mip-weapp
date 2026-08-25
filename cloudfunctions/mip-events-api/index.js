@@ -3,6 +3,7 @@
 const cloud = require('wx-server-sdk')
 const { DomainError } = require('./domain/rules')
 const service = require('./domain/event-service')
+const { configuredAgreements, createParticipationAccessPolicy } = require('./domain/participation-access')
 const { identityKey, resolveMipUser, trustedWechatIdentity } = require('./lib/identity')
 const { createCheckInCodeAsset, createInvitationCodeAsset } = require('./lib/checkin-poster')
 const { mysqlDatabase } = require('./lib/mysql')
@@ -27,6 +28,7 @@ const outboxWakeup = createOutboxWakeup({
   sourceFunctionName: 'mip-events-api',
   logger: console,
 })
+const participationAccessPolicy = createParticipationAccessPolicy({ agreements: configuredAgreements() })
 
 const publicActions = new Set([
   'mip.events.list',
@@ -152,6 +154,7 @@ async function dispatch(event) {
         ...shared,
         input: event,
         paymentAvailable: paymentAvailable(),
+        participationAccessPolicy,
       })
     case 'mip.events.updateRegistration':
       return service.updateRegistration(mysqlDatabase(), { ...shared, input: event })
