@@ -48,13 +48,16 @@ describe('MIP event comments vertical contract', () => {
     expect(detailView).toContain('活动评论')
     expect(page).toContain('consumePendingResume(\'packages/member/mip-events/comments/index\')')
     expect(page).toContain('resumed?.action === \'INTERACT\'')
-    expect(page).toContain('[\'CONFLICT\', \'COMMENT_EDIT_WINDOW_CLOSED\']')
-    for (const state of ['loading', 'access', 'error']) {
+    expect(page).toContain('\'COMMENT_EDIT_WINDOW_CLOSED\'')
+    expect(page).toContain('\'COMMENT_NOT_FOUND\'')
+    for (const state of ['loading', 'access', 'error', 'forbidden', 'conflict']) {
       expect(view).toContain(`state === '${state}'`)
     }
+    expect(page).toContain('\'disabled\'')
     expect(view).toContain('comments.length === 0')
     expect(view).toContain('disabled="{{!draft || submitting}}"')
     expect(view).toContain('loading="{{loadingMore}}"')
+    expect(read('config/runtime-pages.json')).toContain('"forbidden", "conflict", "disabled"')
   })
 
   it('retains mutation identifiers until content or server version changes', () => {

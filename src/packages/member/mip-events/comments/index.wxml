@@ -8,11 +8,16 @@
     <app-empty-state title="暂时无法加载评论" description="{{message || '请检查网络后重试。'}}" action-text="重新加载" bind:action="retry" />
     <app-page-exit />
   </view>
+  <view wx:elif="{{state === 'forbidden'}}">
+    <app-empty-state title="活动评论不可查看" description="{{message || '当前账号无法查看此活动的评论。'}}" />
+    <app-page-exit />
+  </view>
   <block wx:else>
     <view class="rounded-[16rpx] bg-panel px-4 py-4">
       <view class="text-[length:30rpx] font-semibold">{{eventTitle || '活动评论'}}</view>
       <view class="mt-2 text-[length:21rpx] text-muted">{{eventStatus === 'PUBLISHED' ? '活动进行中' : eventStatus === 'ENDED' ? '活动已结束' : '活动已取消'}}</view>
     </view>
+    <view wx:if="{{state === 'conflict' && message}}" class="mt-3 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
 
     <view wx:if="{{commentsEnabled}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-4">
       <view class="flex items-center justify-between gap-3">
@@ -52,7 +57,7 @@
     </view>
 
     <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" disabled="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
-    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
+    <view wx:if="{{message && state !== 'conflict'}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
     <app-page-exit />
   </block>
 </view>

@@ -1137,9 +1137,9 @@
       "selector": "#mip-event-comments-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "access", "error"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'",
+      "states": ["loading", "ready", "empty", "access", "error", "forbidden", "conflict", "disabled"],
+      "acceptStates": ["ready", "empty", "disabled"],
+      "readyAssertion": "state === 'ready' || state === 'empty' || state === 'disabled'",
       "query": ["eventId"],
       "queryFixture": {
         "sourceRoute": "pages/events/index",

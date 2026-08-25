@@ -104,19 +104,25 @@ function createEventCommentsService(database, options = {}) {
           || Number(stored.version) !== draft.expectedVersion) {
           throw new Error('CONFLICT')
         }
+        const status = event.moderation_mode === 'REVIEW' ? 'PENDING' : stored.status
         const update = await tx.query(
           `UPDATE mip_content_comments
-           SET body = ?, content_safety_status = 'PASSED', edited_at = UTC_TIMESTAMP(3),
-               version = version + 1
+           SET body = ?, status = ?, content_safety_status = 'PASSED',
+               published_at = CASE WHEN ? = 'PENDING' THEN NULL ELSE published_at END,
+               moderated_at = CASE WHEN ? = 'PENDING' THEN NULL ELSE moderated_at END,
+               moderated_by_user_id = CASE WHEN ? = 'PENDING' THEN NULL ELSE moderated_by_user_id END,
+               moderation_reason = CASE WHEN ? = 'PENDING' THEN NULL ELSE moderation_reason END,
+               edited_at = UTC_TIMESTAMP(3), version = version + 1
            WHERE app_id = ? AND id = ? AND target_type = 'EVENT' AND target_id = ?
              AND version = ?
              AND created_at >= DATE_SUB(UTC_TIMESTAMP(3), INTERVAL 30 MINUTE)`,
-          [draft.body, caller.appId, draft.commentId, eventId, draft.expectedVersion],
+          [draft.body, status, status, status, status, status,
+            caller.appId, draft.commentId, eventId, draft.expectedVersion],
         )
         if (Number(update.affectedRows) !== 1) throw new Error('COMMENT_EDIT_WINDOW_CLOSED')
         return {
           id: draft.commentId,
-          status: stored.status,
+          status,
           version: draft.expectedVersion + 1,
         }
       }

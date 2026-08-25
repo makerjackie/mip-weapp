@@ -275,7 +275,33 @@ describe('event comment service', () => {
     assert.match(update.sql, /target_type = 'EVENT'/)
     assert.match(update.sql, /target_id = \?/)
     assert.match(update.sql, /INTERVAL 30 MINUTE/)
-    assert.deepEqual(update.params, ['更新后的评论', appId, commentId, eventId, 3])
+    assert.deepEqual(update.params, [
+      '更新后的评论', 'PUBLISHED', 'PUBLISHED', 'PUBLISHED', 'PUBLISHED', 'PUBLISHED',
+      appId, commentId, eventId, 3,
+    ])
+  })
+
+  it('returns an edited published comment to pending when manual review is active', async () => {
+    const { database, writes } = mutationDatabase({
+      event: eventRow({ moderation_mode: 'REVIEW' }),
+      stored: { author_user_id: userId, status: 'PUBLISHED', version: 3 },
+    })
+    const result = await service(database).saveEventComment(caller, {
+      eventId,
+      commentId,
+      expectedVersion: 3,
+      body: '需要重新审核的评论',
+      idempotencyKey: 'event-comment-edit-review-0001',
+    })
+    assert.deepEqual(result, { id: commentId, status: 'PENDING', version: 4 })
+    const update = writes.find(item => item.sql.includes('UPDATE mip_content_comments'))
+    assert.match(update.sql, /status = \?/)
+    assert.match(update.sql, /published_at = CASE WHEN \? = 'PENDING' THEN NULL/)
+    assert.match(update.sql, /moderated_by_user_id = CASE WHEN \? = 'PENDING' THEN NULL/)
+    assert.deepEqual(update.params, [
+      '需要重新审核的评论', 'PENDING', 'PENDING', 'PENDING', 'PENDING', 'PENDING',
+      appId, commentId, eventId, 3,
+    ])
   })
 
   it('soft deletes only the event-scoped owner version after current access is rechecked', async () => {

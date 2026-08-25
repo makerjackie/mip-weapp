@@ -19,7 +19,7 @@ import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
 
-type PageState = 'loading' | 'ready' | 'empty' | 'error' | 'access'
+type PageState = 'loading' | 'ready' | 'empty' | 'error' | 'access' | 'forbidden' | 'conflict' | 'disabled'
 type PendingAction
   = | { kind: 'SAVE', input: EventCommentSubmissionInput }
     | { kind: 'DELETE', comment: EventComment }
@@ -36,6 +36,15 @@ const accessErrorCodes = new Set([
   'PHONE_REQUIRED',
   'PROFILE_REQUIRED',
 ])
+
+const forbiddenErrorCodes = new Set(['FORBIDDEN', 'EVENT_NOT_FOUND'])
+
+function contentState(commentsEnabled: boolean, commentCount: number): PageState {
+  if (!commentsEnabled) {
+    return 'disabled'
+  }
+  return commentCount ? 'ready' : 'empty'
+}
 
 function formatTime(value?: string) {
   if (!value) {
@@ -66,6 +75,10 @@ function present(comment: EventComment): PresentedComment {
 
 function isAccessError(error: unknown) {
   return error instanceof MipCommunityError && accessErrorCodes.has(error.code)
+}
+
+function isForbiddenError(error: unknown): error is MipCommunityError {
+  return error instanceof MipCommunityError && forbiddenErrorCodes.has(error.code)
 }
 
 Page({
@@ -186,7 +199,7 @@ Page({
         ? page.items.map(present)
         : [...this.data.comments, ...page.items.map(present)]
       this.setData({
-        state: comments.length ? 'ready' : 'empty',
+        state: contentState(page.settings.commentsEnabled, comments.length),
         eventTitle: page.event.title,
         eventStatus: page.event.status,
         comments,
@@ -202,8 +215,19 @@ Page({
         await this.recoverAccess(null)
         return
       }
+      if (isForbiddenError(error)) {
+        this.accessReady = false
+        this.setData({
+          state: 'forbidden',
+          message: error instanceof Error ? error.message : '当前活动评论不可查看。',
+        })
+        return
+      }
       this.setData(this.data.comments.length
-        ? { state: 'ready', message: '评论更新失败，已保留当前结果。' }
+        ? {
+            state: contentState(this.data.commentsEnabled, this.data.comments.length),
+            message: '评论更新失败，已保留当前结果。',
+          }
         : {
             state: 'error',
             message: error instanceof Error ? error.message : '活动评论加载失败。',
@@ -289,8 +313,16 @@ Page({
         this.setData({ submitting: false })
         await this.recoverAccess({ kind: 'SAVE', input })
       }
+      else if (isForbiddenError(error)) {
+        this.accessReady = false
+        this.setData({ state: 'forbidden', message: error.message })
+      }
+      else if (error instanceof MipCommunityError && error.code === 'COMMENTS_DISABLED') {
+        await this.loadComments(true)
+        this.setData({ state: 'disabled', message: '当前活动已关闭评论。' })
+      }
       else if (error instanceof MipCommunityError
-        && ['CONFLICT', 'COMMENT_EDIT_WINDOW_CLOSED'].includes(error.code)) {
+        && ['CONFLICT', 'COMMENT_EDIT_WINDOW_CLOSED', 'COMMENT_NOT_FOUND'].includes(error.code)) {
         await this.recoverConflict(input.commentId, error.code === 'COMMENT_EDIT_WINDOW_CLOSED')
       }
       else {
@@ -342,7 +374,10 @@ Page({
       )
       this.deleteIntent = null
       const comments = this.data.comments.filter(item => item.id !== comment.id)
-      this.setData({ comments, state: comments.length ? 'ready' : 'empty' })
+      this.setData({
+        comments,
+        state: contentState(this.data.commentsEnabled, comments.length),
+      })
       wx.showToast({ title: '已删除', icon: 'none' })
     }
     catch (error) {
@@ -350,7 +385,12 @@ Page({
         this.setData({ actingCommentId: '' })
         await this.recoverAccess({ kind: 'DELETE', comment })
       }
-      else if (error instanceof MipCommunityError && error.code === 'CONFLICT') {
+      else if (isForbiddenError(error)) {
+        this.accessReady = false
+        this.setData({ state: 'forbidden', message: error.message })
+      }
+      else if (error instanceof MipCommunityError
+        && ['CONFLICT', 'COMMENT_NOT_FOUND'].includes(error.code)) {
         await this.recoverConflict()
       }
       else {
@@ -407,7 +447,12 @@ Page({
         this.setData({ actingCommentId: '' })
         await this.recoverAccess({ kind: 'REPORT', comment, category })
       }
-      else if (error instanceof MipCommunityError && error.code === 'CONFLICT') {
+      else if (isForbiddenError(error)) {
+        this.accessReady = false
+        this.setData({ state: 'forbidden', message: error.message })
+      }
+      else if (error instanceof MipCommunityError
+        && ['CONFLICT', 'COMMENT_NOT_FOUND'].includes(error.code)) {
         await this.recoverConflict()
       }
       else {
@@ -488,10 +533,13 @@ Page({
         this.setData({ draft: '', editingCommentId: '', editingVersion: 0 })
       }
     }
-    this.setData({
-      message: editWindowClosed
-        ? '评论已超过可编辑时间，最新状态已加载。'
-        : '评论状态已更新，请确认后重新操作。',
-    })
+    if (['ready', 'empty', 'disabled'].includes(this.data.state)) {
+      this.setData({
+        state: 'conflict',
+        message: editWindowClosed
+          ? '评论已超过可编辑时间，最新状态已加载。'
+          : '评论状态已更新，请确认后重新操作。',
+      })
+    }
   },
 })
