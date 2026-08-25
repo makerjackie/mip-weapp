@@ -23,6 +23,7 @@ type OrderView = AdminOrder & {
   orderTypeText: string
   statusText: string
   refundStatusText: string
+  resourceTypeText: string
   canSubmitRefund: boolean
   canRetryRefund: boolean
   entitlementWindowText: string
@@ -90,6 +91,11 @@ const refundStatusOptions: Array<FilterOption<AdminRefundStatus | 'NONE'>> = [
 const orderTypeLabels = Object.fromEntries(orderTypeOptions.map(item => [item.value, item.label]))
 const statusLabels = Object.fromEntries(statusOptions.map(item => [item.value, item.label]))
 const refundStatusLabels = Object.fromEntries(refundStatusOptions.map(item => [item.value, item.label]))
+const resourceTypeLabels: Record<AdminOrder['resourceType'], string> = {
+  EVENT: '活动',
+  KNOWLEDGE_CONTENT: '内容商品',
+  MEMBERSHIP_PLAN: '会员方案',
+}
 
 function dateBoundary(value: string, endOfDay: boolean) {
   const parts = value.split('-').map(Number)
@@ -138,6 +144,7 @@ function orderView(item: AdminOrder): OrderView {
     orderTypeText: orderTypeLabels[item.orderType] || item.orderType,
     statusText: statusLabels[item.status] || item.status,
     refundStatusText: item.refundStatus ? refundStatusLabels[item.refundStatus] || item.refundStatus : '无退款记录',
+    resourceTypeText: resourceTypeLabels[item.resourceType],
     entitlementWindowText: item.orderType === 'MEMBERSHIP' && item.entitlementStartsAt && item.entitlementEndsAt
       ? `${formatLocalDateTime(item.entitlementStartsAt)} 至 ${formatLocalDateTime(item.entitlementEndsAt)}`
       : '',

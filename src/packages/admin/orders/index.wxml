@@ -68,41 +68,42 @@
   <view wx:elif="{{orders.length === 0}}" class="mt-6">
     <app-empty-state title="暂无订单" description="符合筛选条件的订单会显示在这里。" />
   </view>
-  <view wx:else class="mip-admin-card-list mt-5 flex flex-col gap-3">
-    <view wx:for="{{orders}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
-      <view class="flex items-start justify-between gap-3">
-        <view class="min-w-0 flex-1">
-          <view class="text-[length:27rpx] font-semibold">{{item.nickname}}</view>
-          <view class="mt-1 text-[length:22rpx] text-muted">{{item.orderTypeText}} · {{item.merchantOrderNoMasked}}</view>
-        </view>
+  <view wx:else class="mip-admin-record-list mt-5" style="--mip-admin-record-columns: minmax(0, 1.35fr) minmax(0, 1.65fr) minmax(0, 1.25fr) minmax(0, 1.45fr);">
+    <view class="mip-admin-record-header">
+      <view>用户与订单</view><view>业务资源</view><view>金额与时间</view><view>状态与操作</view>
+    </view>
+    <view wx:for="{{orders}}" wx:key="id" class="mip-admin-record-row">
+      <view class="mip-admin-record-cell">
+        <view class="mip-admin-record-label">用户与订单</view>
+        <view class="break-all text-[length:27rpx] font-semibold">{{item.nickname}}</view>
+        <view class="mt-1 text-[length:22rpx] text-muted">{{item.orderTypeText}}</view>
+        <view class="mt-1 break-all text-[length:21rpx] text-muted">订单号：{{item.merchantOrderNoMasked}}</view>
+      </view>
+      <view class="mip-admin-record-cell">
+        <view class="mip-admin-record-label">业务资源</view>
+        <view class="break-all text-[length:24rpx] font-semibold">{{item.resourceTitle}}</view>
+        <view class="mt-1 text-[length:21rpx] text-muted">{{item.resourceTypeText}}{{item.resourceBranchName ? ' · ' + item.resourceBranchName : ''}}</view>
+        <view wx:if="{{item.providerTransactionIdMasked}}" class="mt-2 break-all text-[length:21rpx] text-muted">微信支付单号：{{item.providerTransactionIdMasked}}</view>
+        <view wx:if="{{item.entitlementWindowText}}" class="mt-2 break-all text-[length:21rpx] text-muted">会员权益有效期：{{item.entitlementWindowText}}</view>
+      </view>
+      <view class="mip-admin-record-cell">
+        <view class="mip-admin-record-label">金额与时间</view>
+        <view class="text-[length:21rpx] text-muted">订单金额</view>
+        <view class="mt-1 text-[length:27rpx] font-semibold">{{item.amountText}}</view>
+        <view class="mt-2 text-[length:21rpx] text-muted">已退金额：{{item.refundedText}}</view>
+        <view class="mt-2 text-[length:21rpx] text-muted">创建：{{item.createdText}}</view>
+        <view class="mt-1 text-[length:21rpx] text-muted">支付：{{item.paidText || '未支付'}}</view>
+      </view>
+      <view class="mip-admin-record-cell">
+        <view class="mip-admin-record-label">状态与操作</view>
         <t-tag variant="outline" theme="{{item.statusTheme}}">{{item.statusText}}</t-tag>
-      </view>
-      <view class="mt-3 rounded-[12rpx] bg-panel-raised px-3 py-3">
-        <view class="text-[length:23rpx] font-semibold">{{item.resourceTitle}}</view>
-        <view class="mt-1 text-[length:21rpx] text-muted">{{item.resourceType === 'EVENT' ? '活动' : '会员方案'}}{{item.resourceBranchName ? ' · ' + item.resourceBranchName : ''}}</view>
-      </view>
-      <view wx:if="{{item.providerTransactionIdMasked}}" class="mt-2 text-[length:22rpx] text-muted">微信支付单号：{{item.providerTransactionIdMasked}}</view>
-      <view wx:if="{{item.entitlementWindowText}}" class="mt-2 rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]">会员权益有效期：{{item.entitlementWindowText}}</view>
-      <view class="mt-3 flex items-end justify-between gap-3">
-        <view>
-          <view class="text-[length:21rpx] text-muted">订单金额</view>
-          <view class="mt-1 text-[length:28rpx] font-semibold">{{item.amountText}}</view>
+        <view class="mt-2 text-[length:22rpx] text-muted">退款状态：{{item.refundStatusText}}</view>
+        <view wx:if="{{item.canSubmitRefund && (item.status === 'PAID' || item.status === 'PARTIALLY_REFUNDED')}}" class="mip-admin-record-actions mt-3">
+          <t-button block variant="outline" theme="danger" loading="{{processingId === item.id}}" data-id="{{item.id}}" bind:tap="submitRefund">提交退款</t-button>
         </view>
-        <view class="text-right">
-          <view class="text-[length:21rpx] text-muted">已退金额</view>
-          <view class="mt-1 text-[length:24rpx]">{{item.refundedText}}</view>
+        <view wx:if="{{item.canRetryRefund && item.status === 'REFUND_PENDING' && item.refundId && (item.refundStatus === 'PENDING' || item.refundStatus === 'PROVIDER_CREATED' || item.refundStatus === 'PROCESSING')}}" class="mip-admin-record-actions mt-3">
+          <t-button block variant="outline" loading="{{processingId === item.id}}" data-order-id="{{item.id}}" data-refund-id="{{item.refundId}}" bind:tap="retryRefund">重试退款处理</t-button>
         </view>
-      </view>
-      <view class="mt-3 border-0 border-t border-solid border-line pt-3 text-[length:22rpx] text-muted">
-        <view>退款状态：{{item.refundStatusText}}</view>
-        <view class="mt-1">创建时间：{{item.createdText}}</view>
-        <view class="mt-1">支付时间：{{item.paidText || '未支付'}}</view>
-      </view>
-      <view wx:if="{{item.canSubmitRefund && (item.status === 'PAID' || item.status === 'PARTIALLY_REFUNDED')}}" class="mt-4">
-        <t-button block variant="outline" theme="danger" loading="{{processingId === item.id}}" data-id="{{item.id}}" bind:tap="submitRefund">提交退款</t-button>
-      </view>
-      <view wx:if="{{item.canRetryRefund && item.status === 'REFUND_PENDING' && item.refundId && (item.refundStatus === 'PENDING' || item.refundStatus === 'PROVIDER_CREATED' || item.refundStatus === 'PROCESSING')}}" class="mt-4">
-        <t-button block variant="outline" loading="{{processingId === item.id}}" data-order-id="{{item.id}}" data-refund-id="{{item.refundId}}" bind:tap="retryRefund">重试退款处理</t-button>
       </view>
     </view>
   </view>
