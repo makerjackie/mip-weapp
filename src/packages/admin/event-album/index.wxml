@@ -6,7 +6,7 @@
     <t-tag wx:for="{{statusOptions}}" wx:key="value" theme="{{item.value === status ? 'primary' : 'default'}}" variant="outline" data-status="{{item.value}}" bind:tap="chooseStatus">{{item.label}}</t-tag>
   </view>
 
-  <view wx:if="{{actionPhotoId && state === 'ready'}}" class="mt-5 rounded-[16rpx] border border-line bg-panel p-4">
+  <view wx:if="{{actionPhotoId && state === 'ready'}}" class="mip-admin-popup-panel mt-5 rounded-[16rpx] border border-line bg-panel p-4">
     <view class="text-[length:28rpx] font-semibold">{{decision === 'APPROVE' ? '批准照片' : '拒绝照片'}}</view>
     <view class="mt-2 text-[length:22rpx] text-muted">请填写本次处理原因。</view>
     <view class="mt-3"><t-textarea class="box-border max-w-full" value="{{reason}}" maxlength="300" autosize placeholder="填写审核原因" bind:change="updateReason" /></view>
@@ -19,8 +19,8 @@
   <view wx:elif="{{state === 'empty'}}" class="mt-6"><app-empty-state title="暂无照片" description="当前筛选状态下没有照片。" /></view>
   <view wx:else class="mip-admin-media-grid mt-5 grid grid-cols-2 gap-3">
     <view wx:for="{{photos}}" wx:key="id" class="overflow-hidden rounded-[16rpx] bg-panel">
-      <image wx:if="{{item.imageUrl}}" class="h-[300rpx] w-full bg-panel-raised" mode="aspectFill" src="{{item.imageUrl}}" data-url="{{item.imageUrl}}" bind:tap="preview" />
-      <view wx:else class="flex h-[300rpx] items-center justify-center bg-panel-raised px-3 text-center text-[length:22rpx] text-muted">照片文件不可用</view>
+      <image wx:if="{{item.imageUrl}}" class="block aspect-square w-full bg-panel-raised" mode="aspectFill" src="{{item.imageUrl}}" data-url="{{item.imageUrl}}" bind:tap="preview" />
+      <view wx:else class="flex aspect-square w-full items-center justify-center bg-panel-raised px-3 text-center text-[length:22rpx] text-muted">照片文件不可用</view>
       <view class="px-3 py-3">
         <view class="truncate text-[length:23rpx] font-semibold">{{item.nickname}}</view>
         <view wx:if="{{item.caption}}" class="mt-1 line-clamp-2 text-[length:21rpx] text-muted">{{item.caption}}</view>

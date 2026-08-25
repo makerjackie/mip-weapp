@@ -7,10 +7,15 @@
     <scroll-view wx:if="{{seasons.length}}" scroll-x class="mt-5 whitespace-nowrap"><view class="inline-flex gap-2"><t-tag wx:for="{{seasons}}" wx:key="id" variant="{{selectedSeasonId === item.id ? 'light' : 'outline'}}" theme="warning" data-id="{{item.id}}" bind:tap="chooseSeason">{{item.name}}</t-tag></view></scroll-view>
     <view wx:if="{{editorOpen}}" class="mt-4 rounded-[16rpx] border border-brand bg-panel px-4 py-4">
       <view class="flex items-center justify-between"><view class="text-[length:28rpx] font-semibold">{{editingSeasonId ? '编辑赛季' : '新增赛季'}}</view><view class="text-[length:22rpx] text-muted" bind:tap="closeEditor">关闭</view></view>
-      <view class="mt-3"><t-input value="{{seasonKey}}" placeholder="赛季标识" data-field="seasonKey" bind:change="updateField" /></view><view class="mt-2"><t-input value="{{seasonName}}" placeholder="赛季名称" data-field="seasonName" bind:change="updateField" /></view><view class="mt-2"><t-input value="{{seasonSummary}}" placeholder="赛季说明（选填）" data-field="seasonSummary" bind:change="updateField" /></view><view class="mt-2"><t-textarea value="{{rulesText}}" maxlength="4000" placeholder="用户可见规则" data-field="rulesText" bind:change="updateField" /></view>
-      <view class="mt-3 flex gap-2"><t-tag variant="{{periodKind === 'HALF_YEAR' ? 'light' : 'outline'}}" data-kind="HALF_YEAR" bind:tap="choosePeriod">半年</t-tag><t-tag variant="{{periodKind === 'YEAR' ? 'light' : 'outline'}}" data-kind="YEAR" bind:tap="choosePeriod">年度</t-tag><t-tag variant="{{periodKind === 'CUSTOM' ? 'light' : 'outline'}}" data-kind="CUSTOM" bind:tap="choosePeriod">自定义</t-tag></view>
-      <view class="mt-3 grid grid-cols-2 gap-2"><picker class="min-h-[80rpx] rounded-[12rpx] bg-panel-raised px-3 py-3" mode="date" value="{{startsDate}}" bindchange="updateStartsDate"><view>{{startsDate || '开始日期'}}</view></picker><picker class="min-h-[80rpx] rounded-[12rpx] bg-panel-raised px-3 py-3" mode="date" value="{{endsDate}}" bindchange="updateEndsDate"><view>{{endsDate || '结束日期'}}</view></picker></view>
-      <view class="mt-4"><t-button block theme="primary" loading="{{processing}}" bind:tap="saveSeason">保存赛季</t-button></view>
+      <view class="mip-admin-section-grid mt-3 grid gap-3">
+        <view><t-input value="{{seasonKey}}" placeholder="赛季标识" data-field="seasonKey" bind:change="updateField" /></view>
+        <view><t-input value="{{seasonName}}" placeholder="赛季名称" data-field="seasonName" bind:change="updateField" /></view>
+        <view class="mip-admin-span-wide"><t-input value="{{seasonSummary}}" placeholder="赛季说明（选填）" data-field="seasonSummary" bind:change="updateField" /></view>
+        <view class="mip-admin-span-wide"><t-textarea value="{{rulesText}}" maxlength="4000" placeholder="用户可见规则" data-field="rulesText" bind:change="updateField" /></view>
+        <view class="mip-admin-span-wide flex gap-2"><t-tag variant="{{periodKind === 'HALF_YEAR' ? 'light' : 'outline'}}" data-kind="HALF_YEAR" bind:tap="choosePeriod">半年</t-tag><t-tag variant="{{periodKind === 'YEAR' ? 'light' : 'outline'}}" data-kind="YEAR" bind:tap="choosePeriod">年度</t-tag><t-tag variant="{{periodKind === 'CUSTOM' ? 'light' : 'outline'}}" data-kind="CUSTOM" bind:tap="choosePeriod">自定义</t-tag></view>
+        <view class="mip-admin-span-wide grid grid-cols-2 gap-2"><picker class="min-h-[80rpx] rounded-[12rpx] bg-panel-raised px-3 py-3" mode="date" value="{{startsDate}}" bindchange="updateStartsDate"><view>{{startsDate || '开始日期'}}</view></picker><picker class="min-h-[80rpx] rounded-[12rpx] bg-panel-raised px-3 py-3" mode="date" value="{{endsDate}}" bindchange="updateEndsDate"><view>{{endsDate || '结束日期'}}</view></picker></view>
+        <view class="mip-admin-span-wide"><t-button block theme="primary" loading="{{processing}}" bind:tap="saveSeason">保存赛季</t-button></view>
+      </view>
     </view>
 
     <view wx:if="{{selectedSeasonId}}" class="mip-admin-section-grid mt-4 grid gap-3">

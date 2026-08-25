@@ -7,12 +7,12 @@
     <t-button wx:if="{{canExport}}" size="small" variant="outline" loading="{{exportPending}}" bind:tap="createExport">导出订单</t-button>
   </view>
 
-  <view class="mt-5 rounded-[16rpx] bg-panel p-3">
-    <t-input value="{{query}}" placeholder="搜索昵称、订单号或业务资源" bind:change="updateQuery" bind:enter="search" />
-    <view class="mt-3">
-      <t-button block size="small" variant="outline" bind:tap="search">查询</t-button>
+  <view class="mip-admin-filter-grid mt-5 grid gap-3 rounded-[16rpx] bg-panel p-3">
+    <view class="mip-admin-filter-wide">
+      <t-input value="{{query}}" placeholder="搜索昵称、订单号或业务资源" bind:change="updateQuery" bind:enter="search" />
+      <view class="mt-3"><t-button block size="small" variant="outline" bind:tap="search">查询</t-button></view>
     </view>
-    <view class="mt-3 grid grid-cols-2 gap-2">
+    <view class="mip-admin-filter-wide grid grid-cols-2 gap-2">
       <picker wx:if="{{!eventId}}" range="{{orderTypeOptions}}" range-key="label" value="{{orderTypeIndex}}" bindchange="changeOrderType">
         <view class="rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]">
           <view class="text-muted">订单类型</view>
@@ -32,7 +32,7 @@
         </view>
       </picker>
     </view>
-    <view class="mt-3 grid grid-cols-2 gap-2">
+    <view class="mip-admin-filter-wide grid grid-cols-2 gap-2">
       <picker mode="date" value="{{createdFromDate}}" data-field="createdFromDate" bindchange="changeCreatedDate">
         <view class="rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]">
           <view class="text-muted">创建日期起</view>
@@ -46,7 +46,7 @@
         </view>
       </picker>
     </view>
-    <view wx:if="{{createdFromDate || createdToDate}}" class="mt-2 text-right text-[length:21rpx] text-muted" bind:tap="clearCreatedDates">清除日期</view>
+    <view wx:if="{{createdFromDate || createdToDate}}" class="flex min-h-[80rpx] items-center justify-end text-[length:21rpx] text-muted" bind:tap="clearCreatedDates">清除日期</view>
   </view>
 
   <view wx:if="{{state === 'ready'}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-4">

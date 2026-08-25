@@ -15,7 +15,7 @@
     <app-empty-state title="活动配置加载失败" description="{{message}}" action-text="重新加载" bind:action="loadAccessAndBranches" />
   </view>
 
-  <view wx:else class="mip-admin-form-grid mt-5 flex flex-col gap-4">
+  <view wx:else class="mip-admin-section-grid mt-5 grid gap-4">
     <view class="mip-admin-span-wide rounded-[16rpx] bg-panel p-4">
       <view class="text-[length:27rpx] font-semibold">手机预览</view>
       <view class="mt-2 text-[length:23rpx] text-muted">查看当前填写内容在手机上的展示效果。</view>
@@ -32,7 +32,7 @@
       <view class="mt-4"><t-button block variant="outline" bind:tap="refreshAfterCancelConflict">载入最新版本</t-button></view>
     </view>
 
-    <view class="rounded-[16rpx] bg-panel p-4">
+    <view class="mip-admin-span-wide rounded-[16rpx] bg-panel p-4">
       <view class="mb-3 text-[length:27rpx] font-semibold">基本信息</view>
       <view class="mb-2 text-[length:23rpx] text-muted">活动名称</view>
       <t-input class="box-border max-w-full" value="{{draft.title}}" maxlength="120" data-field="title" bind:change="updateField" />
@@ -42,13 +42,15 @@
       <t-textarea class="box-border max-w-full" value="{{draft.description}}" maxlength="20000" autosize data-field="description" bind:change="updateField" />
       <view class="mt-2 text-[length:20rpx] leading-5 text-muted">可使用 # 标题、- 列表和 ![图片说明](https://图片地址) 排版活动介绍。</view>
       <view class="mb-2 mt-4 text-[length:23rpx] text-muted">活动介绍图片</view>
-      <view wx:for="{{draft.contentMedia}}" wx:key="assetId" class="mb-3 rounded-[12rpx] bg-panel-raised p-3">
-        <image class="h-[260rpx] w-full rounded-[10rpx] bg-canvas" mode="aspectFill" src="{{item.imageUrl}}" data-index="{{index}}" bind:tap="previewContentImage" />
-        <t-input class="box-border mt-2 max-w-full" value="{{item.caption}}" maxlength="120" placeholder="图片说明（选填）" data-index="{{index}}" bind:change="updateContentCaption" />
-        <view class="mt-2 grid grid-cols-3 gap-2">
-          <t-button size="small" variant="outline" disabled="{{index === 0}}" data-index="{{index}}" data-direction="-1" bind:tap="moveContentImage">上移</t-button>
-          <t-button size="small" variant="outline" disabled="{{index === draft.contentMedia.length - 1}}" data-index="{{index}}" data-direction="1" bind:tap="moveContentImage">下移</t-button>
-          <t-button size="small" variant="text" theme="danger" data-index="{{index}}" bind:tap="removeContentImage">移除</t-button>
+      <view wx:if="{{draft.contentMedia.length}}" class="mip-admin-media-grid mb-3 grid gap-3">
+        <view wx:for="{{draft.contentMedia}}" wx:key="assetId" class="rounded-[12rpx] bg-panel-raised p-3">
+          <image class="block aspect-square w-full rounded-[10rpx] bg-canvas" mode="aspectFill" src="{{item.imageUrl}}" data-index="{{index}}" bind:tap="previewContentImage" />
+          <t-input class="box-border mt-2 max-w-full" value="{{item.caption}}" maxlength="120" placeholder="图片说明（选填）" data-index="{{index}}" bind:change="updateContentCaption" />
+          <view class="mt-2 grid grid-cols-3 gap-2">
+            <t-button size="small" variant="outline" disabled="{{index === 0}}" data-index="{{index}}" data-direction="-1" bind:tap="moveContentImage">上移</t-button>
+            <t-button size="small" variant="outline" disabled="{{index === draft.contentMedia.length - 1}}" data-index="{{index}}" data-direction="1" bind:tap="moveContentImage">下移</t-button>
+            <t-button size="small" variant="text" theme="danger" data-index="{{index}}" bind:tap="removeContentImage">移除</t-button>
+          </view>
         </view>
       </view>
       <t-button block variant="outline" loading="{{contentUploading}}" disabled="{{saving || cancelBusy || draft.contentMedia.length >= 12}}" bind:tap="chooseContentImage">上传介绍图片</t-button>
@@ -58,8 +60,8 @@
 
     <view class="rounded-[16rpx] bg-panel p-4">
       <view class="mb-3 text-[length:27rpx] font-semibold">活动封面</view>
-      <image wx:if="{{coverUrl}}" class="h-[320rpx] w-full rounded-[12rpx] bg-panel-raised" mode="aspectFill" src="{{coverUrl}}" />
-      <view wx:else class="flex h-[240rpx] items-center justify-center rounded-[12rpx] bg-panel-raised text-[length:23rpx] text-muted">暂未上传封面</view>
+      <image wx:if="{{coverUrl}}" class="mip-admin-banner-image rounded-[12rpx] bg-panel-raised" mode="aspectFill" src="{{coverUrl}}" />
+      <view wx:else class="mip-admin-banner-image flex items-center justify-center rounded-[12rpx] bg-panel-raised text-[length:23rpx] text-muted">暂未上传封面</view>
       <view class="mt-3"><t-button block variant="outline" loading="{{coverUploading}}" disabled="{{saving || cancelBusy}}" bind:tap="chooseCover">{{coverUrl ? '更换封面' : '上传封面'}}</t-button></view>
     </view>
 
