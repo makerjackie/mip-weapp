@@ -1,6 +1,7 @@
 import type { AdminGrowthRule } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
+import { growthAdminActionFailure } from '../growth-entries/action-state'
 import { adminLoadFailure } from '../shared/page-state'
 
 interface GrowthRuleView extends AdminGrowthRule {
@@ -69,7 +70,7 @@ Page({
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const [session, response] = await Promise.all([mipAdminModule.getSession(force), mipAdminModule.listGrowthRules(force)])
+      const [session, response] = await Promise.all([mipAdminModule.getSession(force), mipAdminModule.growth.listRules(force)])
       this.setData({
         state: 'ready',
         rules: response.items.map(toView),
@@ -128,17 +129,17 @@ Page({
     }
     this.setData({ saving: true, message: '' })
     try {
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.saveGrowthRule({
+      await mipAdminModule.growth.saveRule({
         ruleId: this.data.editorId || undefined,
         expectedVersion: this.data.editorVersion || undefined,
         draft: { ruleKey: this.data.ruleKey.trim(), name: this.data.name.trim(), metric: this.data.metric, deltaValue, dailyLimitValue, sourceEventType: this.data.sourceEventType.trim(), status: this.data.status },
-      }))
+      })
       wx.showToast({ title: '规则已保存', icon: 'success' })
       this.resetEditor()
       await this.loadRules(true)
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '规则保存失败' })
+      this.setData(growthAdminActionFailure(error, '规则保存失败'))
     }
     finally {
       this.setData({ saving: false })

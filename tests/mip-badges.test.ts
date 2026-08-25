@@ -45,7 +45,7 @@ describe('MIP badge collection', () => {
     expect(routes).toContain('packages/admin/badges/index')
     expect(runtime.routeCount).toBe(runtime.routes.length)
     expect(source('src/packages/member/mip-badges/index.ts')).toContain('mipGrowthModule.equipBadges')
-    expect(source('src/packages/admin/badges/index.ts')).toContain('mipAdminModule.gateway.grantBadge')
+    expect(source('src/packages/admin/badges/index.ts')).toContain('mipAdminModule.growth.grantBadge')
     expect(`${source('src/packages/member/mip-badges/index.ts')}\n${source('src/packages/admin/badges/index.ts')}`)
       .not
       .toContain('wx.cloud')

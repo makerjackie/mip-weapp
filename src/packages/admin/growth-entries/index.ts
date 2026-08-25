@@ -3,6 +3,7 @@ import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { formatLocalDateTime } from '../../../utils/date'
 import { adminLoadFailure } from '../shared/page-state'
+import { growthAdminActionFailure } from './action-state'
 
 type GrowthEntryView = AdminGrowthEntry & { createdText: string, sourceLabel: string }
 
@@ -104,7 +105,7 @@ Page({
     try {
       const [session, response] = await Promise.all([
         mipAdminModule.getSession(force),
-        mipAdminModule.listGrowthEntries({ filters: entryFilters(this.data) }, force),
+        mipAdminModule.growth.listEntries({ filters: entryFilters(this.data) }, force),
       ])
       this.setData({ state: 'ready', entries: response.items.map(entryView), canAdjust: hasCapability(session.capabilities, 'growth.adjust'), canExport: hasCapability(session.capabilities, 'exports.create'), nextCursor: response.nextCursor || null, loadingMore: false, message: '' })
     }
@@ -118,7 +119,7 @@ Page({
     }
     this.setData({ loadingMore: true, message: '' })
     try {
-      const response = await mipAdminModule.listGrowthEntries({
+      const response = await mipAdminModule.growth.listEntries({
         cursor: this.data.nextCursor,
         filters: entryFilters(this.data),
       })
@@ -187,13 +188,13 @@ Page({
       if (!modal.confirm) {
         return
       }
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.adjustGrowth({
+      await mipAdminModule.growth.adjust({
         userId: this.data.selectedUserId,
         metric: this.data.metric,
         deltaValue: Number(this.data.deltaValue),
         reason: this.data.reason,
         idempotencyKey: `admin-growth-${this.data.selectedUserId}-${Date.now()}`,
-      }))
+      })
       wx.showToast({
         title: `${metricLabel(this.data.metric as AdminGrowthEntry['metric'])}已调整`,
         icon: 'success',
@@ -202,7 +203,7 @@ Page({
       await this.loadEntries(true)
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '成长值调整失败' })
+      this.setData(growthAdminActionFailure(error, '成长值调整失败'))
     }
     finally {
       this.setData({ processing: false })
@@ -214,7 +215,7 @@ Page({
     }
     this.setData({ exportPending: true, message: '' })
     try {
-      const result = await mipAdminModule.mutate(() => mipAdminModule.exportAndOpen({ exportType: 'GROWTH_ENTRIES', includesPhone: false, filters: entryFilters(this.data) }))
+      const result = await mipAdminModule.exportAndOpen({ exportType: 'GROWTH_ENTRIES', includesPhone: false, filters: entryFilters(this.data) })
       wx.showToast({ title: `已导出 ${result.rowCount} 条`, icon: 'success' })
     }
     catch (error) {

@@ -1,6 +1,7 @@
 import type { AdminGrowthBenefit } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
+import { growthAdminActionFailure } from '../growth-entries/action-state'
 import { adminLoadFailure } from '../shared/page-state'
 
 type BenefitView = AdminGrowthBenefit & { statusText: string, statusTheme: string }
@@ -26,7 +27,7 @@ Page({
   onShow() { void this.load() },
   async load(force = false) {
     try {
-      const [page, session] = await Promise.all([mipAdminModule.listGrowthBenefits(force), mipAdminModule.getSession(force)])
+      const [page, session] = await Promise.all([mipAdminModule.growth.listBenefits(force), mipAdminModule.getSession(force)])
       this.setData({ state: 'ready', items: page.items.map(view), canConfigure: hasCapability(session.capabilities, 'growth.configure'), message: '' })
     }
     catch (error) {
@@ -61,16 +62,16 @@ Page({
     }
     this.setData({ saving: true, message: '' })
     try {
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.saveGrowthBenefit({
+      await mipAdminModule.growth.saveBenefit({
         benefitId: this.data.editorId || undefined,
         expectedVersion: this.data.editorId ? this.data.editorVersion : undefined,
         draft: { name: this.data.name, description: this.data.description, sortOrder: Number(this.data.sortOrder), status: this.data.status },
-      }))
+      })
       wx.showToast({ title: '权益已保存', icon: 'success' })
       this.reset()
       await this.load(true)
     }
-    catch (error) { this.setData({ message: error instanceof Error ? error.message : '权益保存失败' }) }
+    catch (error) { this.setData(growthAdminActionFailure(error, '权益保存失败')) }
     finally { this.setData({ saving: false }) }
   },
 })

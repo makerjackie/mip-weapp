@@ -19,6 +19,7 @@ import {
   getPendingAdminExportStatus,
   resumeAndOpenPendingAdminExport,
 } from './export-download'
+import { createMipGrowthAdmin } from './growth-admin'
 import { createMipOpportunityAdmin } from './opportunity-admin'
 
 export function createMipAdminModule(
@@ -29,6 +30,7 @@ export function createMipAdminModule(
   const refresh = () => {
     cache.invalidate('mip-admin')
   }
+  const growth = createMipGrowthAdmin(gateway, cache)
   const opportunities = createMipOpportunityAdmin(gateway, cache)
   return {
     getSession: (force = false) => cache.query('mip-admin:session', gateway.getSession, { force }),
@@ -136,20 +138,13 @@ export function createMipAdminModule(
     getMatchingAdminState: opportunities.getMatchingState,
     getOpportunityEditorOptions: opportunities.getEditorOptions,
     opportunities,
-    listGrowthLevels: (force = false) => cache.query('mip-admin:growth-levels', gateway.listGrowthLevels, { force }),
-    listGrowthBenefits: (force = false) => cache.query('mip-admin:growth-benefits', gateway.listGrowthBenefits, { force }),
-    listGrowthRules: (force = false) => cache.query('mip-admin:growth-rules', gateway.listGrowthRules, { force }),
-    listGrowthEntries: (input: Record<string, unknown> = {}, force = false) => cache.query(
-      `mip-admin:growth-entries:${JSON.stringify(input)}`,
-      () => gateway.listGrowthEntries(input),
-      { force },
-    ),
-    listBadges: (force = false) => cache.query('mip-admin:badges', gateway.listBadges, { force }),
-    listBadgeAwards: (input: { query?: string, status?: 'ACTIVE' | 'REVOKED' | '' } = {}, force = false) => cache.query(
-      `mip-admin:badge-awards:${JSON.stringify(input)}`,
-      () => gateway.listBadgeAwards(input),
-      { force },
-    ),
+    listGrowthLevels: growth.listLevels,
+    listGrowthBenefits: growth.listBenefits,
+    listGrowthRules: growth.listRules,
+    listGrowthEntries: growth.listEntries,
+    listBadges: growth.listBadges,
+    listBadgeAwards: growth.listBadgeAwards,
+    growth,
     listOrders: (input: AdminOrderListInput = {}, force = false) => cache.query(
       `mip-admin:orders:${JSON.stringify(input)}`,
       () => gateway.listOrders(input),

@@ -1,6 +1,7 @@
 import type { AdminBadge, AdminBadgeAward } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
+import { growthAdminActionFailure } from '../growth-entries/action-state'
 import { adminLoadFailure } from '../shared/page-state'
 
 const statusText = { DRAFT: '草稿', ACTIVE: '启用', INACTIVE: '停用' } as const
@@ -43,8 +44,8 @@ Page({
     try {
       const [session, badges, awards] = await Promise.all([
         mipAdminModule.getSession(force),
-        mipAdminModule.listBadges(force),
-        mipAdminModule.listBadgeAwards(
+        mipAdminModule.growth.listBadges(force),
+        mipAdminModule.growth.listBadgeAwards(
           { query: this.data.awardQuery.trim(), status: '' },
           force,
         ),
@@ -132,7 +133,7 @@ Page({
     }
     this.setData({ saving: true, message: '' })
     try {
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.saveBadge({
+      await mipAdminModule.growth.saveBadge({
         badgeId: this.data.editorId || undefined,
         expectedVersion: this.data.editorId ? this.data.editorVersion : undefined,
         draft: {
@@ -145,13 +146,13 @@ Page({
           sortOrder: Number(this.data.sortOrder),
           status: this.data.status,
         },
-      }))
+      })
       this.resetEditor()
       await this.loadPage(true)
       wx.showToast({ title: '勋章已保存', icon: 'success' })
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '勋章保存失败' })
+      this.setData(growthAdminActionFailure(error, '勋章保存失败'))
     }
     finally {
       this.setData({ saving: false })
@@ -164,17 +165,17 @@ Page({
     }
     this.setData({ saving: true, message: '' })
     try {
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.grantBadge({
+      await mipAdminModule.growth.grantBadge({
         userId: this.data.awardUserId.trim(),
         badgeId: this.data.awardBadgeId,
         reason: this.data.awardReason.trim(),
-      }))
+      })
       this.setData({ awardReason: '' })
       await this.loadPage(true)
       wx.showToast({ title: '勋章已授予', icon: 'success' })
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '勋章授予失败' })
+      this.setData(growthAdminActionFailure(error, '勋章授予失败'))
     }
     finally {
       this.setData({ saving: false })
@@ -198,16 +199,16 @@ Page({
     }
     this.setData({ saving: true, message: '' })
     try {
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.revokeBadge({
+      await mipAdminModule.growth.revokeBadge({
         awardId: award.id,
         expectedVersion: award.version,
         reason: String(confirmation.content || '').trim(),
-      }))
+      })
       await this.loadPage(true)
       wx.showToast({ title: '勋章已撤销', icon: 'success' })
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '勋章撤销失败' })
+      this.setData(growthAdminActionFailure(error, '勋章撤销失败'))
     }
     finally {
       this.setData({ saving: false })
