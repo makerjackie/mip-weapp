@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { Buffer } from 'node:buffer'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
@@ -53,6 +54,7 @@ assertSeed(seed)
 
 if (validateOnly) {
   const statements = buildSeedStatements()
+  const statementBytes = statements.map(statement => Buffer.byteLength(statement, 'utf8'))
   const scope = assertSeedSqlScope([
     buildSeedOwnershipQuery(appId, seed),
     buildSeedCollisionQuery(appId, seed),
@@ -64,6 +66,8 @@ if (validateOnly) {
     fixtureGroups: Object.keys(seed).filter(key => Array.isArray(seed[key])).length,
     statementCount: scope.statementCount,
     tableCount: scope.tables.length,
+    firstStatementBytes: statementBytes[0],
+    maxStatementBytes: Math.max(...statementBytes),
   }))
   process.exit(0)
 }
@@ -319,7 +323,7 @@ console.log('[mip-seed] placeholder catalogs and fixed-ID demo fixtures verified
 
 function buildSeedStatements() {
   return [
-    demoManifestStatement(seed, 'PENDING'),
+    ...demoManifestStatements(seed, 'PENDING'),
     branchStatement(seed.branches),
     ...tagStatements(seed.tags),
     membershipPlanStatement(seed.membershipPlans),
@@ -374,7 +378,7 @@ function buildSeedStatements() {
        ${sqlJson({ version: seed.version, replaceBeforeProduction: true })}, 1, NULL
      ) ON DUPLICATE KEY UPDATE
        value_json = VALUES(value_json), version = version + 1, updated_by_user_id = NULL`,
-    demoManifestStatement(seed, 'READY'),
+    ...demoManifestStatements(seed, 'READY'),
   ]
 }
 
@@ -1285,16 +1289,15 @@ function blindBoxCardStatement(items) {
     updated_by_user_id = VALUES(updated_by_user_id), version = version + 1`
 }
 
-function demoManifestStatement(value, state) {
+function demoManifestStatements(value, state) {
   const manifest = buildDemoManifest(value, state)
-  const versionedKey = `demo_seed_manifest:${value.version}`
-  return `INSERT INTO mip_app_settings (
+  return ['demo_seed_manifest', `demo_seed_manifest:${value.version}`].map(settingKey => `INSERT INTO mip_app_settings (
     app_id, setting_key, value_json, version, updated_by_user_id
-  ) VALUES
-    (${sqlLiteral(appId)}, 'demo_seed_manifest', ${sqlJson(manifest)}, 1, NULL),
-    (${sqlLiteral(appId)}, ${sqlLiteral(versionedKey)}, ${sqlJson(manifest)}, 1, NULL)
+  ) VALUES (
+    ${sqlLiteral(appId)}, ${sqlLiteral(settingKey)}, ${sqlJson(manifest)}, 1, NULL
+  )
   ON DUPLICATE KEY UPDATE
-    value_json = VALUES(value_json), version = version + 1, updated_by_user_id = NULL`
+    value_json = VALUES(value_json), version = version + 1, updated_by_user_id = NULL`)
 }
 
 function buildDemoManifest(value, state) {
