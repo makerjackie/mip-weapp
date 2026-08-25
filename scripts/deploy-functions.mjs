@@ -13,6 +13,15 @@ import {
   updateMipFunctionInvocationRule,
 } from './lib/cloud-function-safety.mjs'
 import {
+  assertExistingFunctionAfterCode,
+  assertExistingFunctionAfterConfiguration,
+  assertScfRegion,
+  existingFunctionCodeConverged,
+  existingFunctionConfigurationConverged,
+  functionConfigurationSnapshot,
+  planExistingFunctionConfigurationUpdate,
+} from './lib/core-function-config-update.mjs'
+import {
   bindAndRequireMysqlEnvironment,
   callCloudbase,
   cloudFunctionResult,
@@ -122,7 +131,28 @@ for (const spec of manifest) {
 
 verifyLocalOpenApiDeclarations()
 const target = bindAndRequireMysqlEnvironment(root, envId)
+const scfRegion = String(env.MIP_SCF_REGION || findString(target.environment, ['region']) || '').trim()
 const existingDetails = new Map(manifest.map(spec => [spec.role, existingFunctionDetail(spec.name)]))
+
+let vpcId = String(env.MIP_DB_VPC_ID || findString(target.mysql, ['vpcid', 'vpc_id']) || '').trim()
+let subnetId = String(env.MIP_DB_SUBNET_ID || findString(target.mysql, ['subnetid', 'subnet_id']) || '').trim()
+if (!vpcId || !subnetId) {
+  // Current MCP lifecycle responses omit network metadata; request the explicit TCP payload only when deployment needs it.
+  const connectionInfo = callCloudbase(root, 'queryMysqlDatabase', { action: 'getConnectionInfo' })
+  vpcId ||= String(findString(connectionInfo, ['vpcid', 'vpc_id']) || '').trim()
+  subnetId ||= String(findString(connectionInfo, ['subnetid', 'subnet_id']) || '').trim()
+}
+if (!vpcId || !subnetId) {
+  throw new Error('CloudBase MySQL VPC/subnet is unavailable; configure MIP_DB_VPC_ID and MIP_DB_SUBNET_ID')
+}
+
+for (const spec of deploymentManifest) {
+  const detail = existingDetails.get(spec.role)
+  if (detail) {
+    assertScfRegion(scfRegion)
+    preflightExistingFunction(spec.name, detail, { runtime: 'Nodejs20.19', subnetId, vpcId })
+  }
+}
 for (const spec of deploymentManifest) {
   if (!existingDetails.get(spec.role)) {
     continue
@@ -150,18 +180,6 @@ if (paymentMode === 'disabled') {
 
 const requiredTables = Object.keys(RUNTIME_TABLE_PRIVILEGES)
 assertRequiredTablesExist(requiredTables)
-
-let vpcId = String(env.MIP_DB_VPC_ID || findString(target.mysql, ['vpcid', 'vpc_id']) || '').trim()
-let subnetId = String(env.MIP_DB_SUBNET_ID || findString(target.mysql, ['subnetid', 'subnet_id']) || '').trim()
-if (!vpcId || !subnetId) {
-  // Current MCP lifecycle responses omit network metadata; request the explicit TCP payload only when deployment needs it.
-  const connectionInfo = callCloudbase(root, 'queryMysqlDatabase', { action: 'getConnectionInfo' })
-  vpcId ||= String(findString(connectionInfo, ['vpcid', 'vpc_id']) || '').trim()
-  subnetId ||= String(findString(connectionInfo, ['subnetid', 'subnet_id']) || '').trim()
-}
-if (!vpcId || !subnetId) {
-  throw new Error('CloudBase MySQL VPC/subnet is unavailable; configure MIP_DB_VPC_ID and MIP_DB_SUBNET_ID')
-}
 
 let connectionUri = configuredOrExistingValue('MIP_DB_CONNECTION_URI', existingDetails)
 let credentialSource = connectionUri ? (env.MIP_DB_CONNECTION_URI ? 'configured' : 'existing-mip-function') : ''
@@ -349,7 +367,6 @@ try {
       subscribeTemplatesJson,
       unionIdRebindEnabled,
     })
-    await ensureCompatibleRuntime(spec.name)
     const expectedConfiguration = {
       envVariables,
       handler: 'index.main',
@@ -358,11 +375,11 @@ try {
       timeout: spec.timeout,
       vpcId,
     }
+    await ensureCompatibleRuntime(spec.name, expectedConfiguration)
     const currentDetail = existingFunctionDetail(spec.name)
-    if (functionConfigurationMatches(currentDetail, expectedConfiguration)) {
-      console.log(`[mip-cloud-deploy] configuration already current ${spec.name}`)
-    }
-    else {
+    let existingUpdatePlan = null
+    let expectedExistingConfiguration = null
+    if (!currentDetail) {
       const creation = callCloudbase(root, 'manageFunctions', {
         action: 'createFunction',
         functionRootPath: stagingRoot,
@@ -385,14 +402,68 @@ try {
       }
       await waitForFunctionActive(spec.name)
     }
-    callCloudbase(root, 'manageFunctions', {
+    else {
+      const currentConfiguration = functionConfigurationSnapshot(currentDetail)
+      expectedExistingConfiguration = {
+        environment: envVariables,
+        handler: expectedConfiguration.handler,
+        role: currentConfiguration.role,
+        runtime: expectedConfiguration.runtime,
+        subnetId: expectedConfiguration.subnetId,
+        timeout: expectedConfiguration.timeout,
+        vpcId: expectedConfiguration.vpcId,
+      }
+      existingUpdatePlan = planExistingFunctionConfigurationUpdate({
+        current: currentConfiguration,
+        expected: expectedExistingConfiguration,
+        functionName: spec.name,
+        namespace: envId,
+        region: scfRegion,
+      })
+      if (existingUpdatePlan.configurationCall) {
+        updateExistingFunctionConfiguration(spec.name, existingUpdatePlan.configurationCall)
+        const configuredDetail = await waitForExistingFunctionConfiguration({
+          before: existingUpdatePlan.before,
+          expected: expectedExistingConfiguration,
+          functionName: spec.name,
+        })
+        assertExistingFunctionAfterConfiguration({
+          actual: functionConfigurationSnapshot(configuredDetail),
+          before: existingUpdatePlan.before,
+          expected: expectedExistingConfiguration,
+          functionName: spec.name,
+        })
+        console.log(`[mip-cloud-deploy] configuration verified ${spec.name}`)
+      }
+      else {
+        console.log(`[mip-cloud-deploy] configuration already current ${spec.name}`)
+      }
+    }
+    const codeUpdate = {
       action: 'updateFunctionCode',
       functionName: spec.name,
       functionRootPath: stagingRoot,
       force: true,
-    }, 300000)
-    const detail = await waitForFunctionActive(spec.name)
-    assertFunctionConfigurationReadback(spec.name, expectedConfiguration, detail)
+      ...(existingUpdatePlan?.handlerChanged ? { handler: expectedConfiguration.handler } : {}),
+    }
+    callCloudbase(root, 'manageFunctions', codeUpdate, 300000)
+    if (existingUpdatePlan) {
+      const detail = await waitForExistingFunctionCode({
+        before: existingUpdatePlan.before,
+        expected: expectedExistingConfiguration,
+        functionName: spec.name,
+      })
+      assertExistingFunctionAfterCode({
+        actual: functionConfigurationSnapshot(detail),
+        before: existingUpdatePlan.before,
+        expected: expectedExistingConfiguration,
+        functionName: spec.name,
+      })
+    }
+    else {
+      const detail = await waitForFunctionActive(spec.name)
+      assertFunctionConfigurationReadback(spec.name, expectedConfiguration, detail)
+    }
     assertHealthy(spec.name)
     deployed.push(spec.name)
     console.log(`[mip-cloud-deploy] verified ${spec.name}`)
@@ -913,9 +984,56 @@ async function waitForFunctionActive(functionName) {
   throw new Error(`${functionName} did not become active after deployment`)
 }
 
-async function ensureCompatibleRuntime(functionName) {
+async function waitForExistingFunctionConfiguration({ before, expected, functionName }) {
+  return waitForExistingFunctionConvergence({
+    before,
+    expected,
+    functionName,
+    phase: 'configuration',
+    converged: existingFunctionConfigurationConverged,
+  })
+}
+
+async function waitForExistingFunctionCode({ before, expected, functionName }) {
+  return waitForExistingFunctionConvergence({
+    before,
+    expected,
+    functionName,
+    phase: 'code',
+    converged: existingFunctionCodeConverged,
+  })
+}
+
+async function waitForExistingFunctionConvergence({ before, expected, functionName, phase, converged }) {
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const detail = existingFunctionDetail(functionName)
+    const value = functionDetail(detail)
+    const readbackConverged = converged({
+      actual: functionConfigurationSnapshot(detail),
+      before,
+      expected,
+      functionName,
+    })
+    if (value?.Status === 'Active'
+      && value?.AvailableStatus === 'Available'
+      && readbackConverged) {
+      return detail
+    }
+    await delay(1000)
+  }
+  throw new Error(`${functionName} ${phase} readback did not converge`)
+}
+
+async function ensureCompatibleRuntime(functionName, expected) {
   const detail = existingFunctionDetail(functionName)
-  if (!detail || functionDetail(detail)?.Runtime === 'Nodejs20.19') {
+  if (!detail) {
+    return
+  }
+  const current = validatedExistingFunctionConfiguration(functionName, detail)
+  if (current.vpcId !== expected.vpcId || current.subnetId !== expected.subnetId) {
+    throw new Error(`${functionName} VPC configuration drift; refusing runtime replacement`)
+  }
+  if (current.runtime === expected.runtime) {
     return
   }
   if (!replaceLegacyRuntime) {
@@ -933,6 +1051,38 @@ async function ensureCompatibleRuntime(functionName) {
     await delay(1000)
   }
   throw new Error(`${functionName} was not removed before runtime recreation`)
+}
+
+function preflightExistingFunction(functionName, detail, expected) {
+  const current = validatedExistingFunctionConfiguration(functionName, detail)
+  if (current.vpcId !== expected.vpcId || current.subnetId !== expected.subnetId) {
+    throw new Error(`${functionName} VPC configuration drift; refusing deployment writes`)
+  }
+  if (current.runtime !== expected.runtime && !replaceLegacyRuntime) {
+    throw new Error(`${functionName} uses an incompatible runtime; pass --replace-legacy-runtime to recreate only this mip-* function`)
+  }
+}
+
+function validatedExistingFunctionConfiguration(functionName, detail) {
+  const current = functionConfigurationSnapshot(detail)
+  planExistingFunctionConfigurationUpdate({
+    current,
+    expected: current,
+    functionName,
+    namespace: envId,
+    region: scfRegion,
+  })
+  return current
+}
+
+function updateExistingFunctionConfiguration(functionName, configurationCall) {
+  try {
+    callCloudbase(root, 'callCloudApi', configurationCall, 300000)
+  }
+  catch {
+    // The raw control-plane response can echo Environment; never propagate it into deployment logs.
+    throw new Error(`${functionName} configuration update failed`)
+  }
 }
 
 function assertEnvironmentReadback(functionName, expected, detail) {
