@@ -20,12 +20,24 @@ function invalidAdminRequest() {
   return new AdminError('VALIDATION_FAILED', '运营请求格式无效')
 }
 
+function withoutCloudbaseMetadata(value) {
+  if (!isPlainObject(value)) return value
+  const request = { ...value }
+  for (const key of ['userInfo', 'tcbContext']) {
+    if (!hasOwn(request, key)) continue
+    if (!isPlainObject(request[key])) throw invalidAdminRequest()
+    delete request[key]
+  }
+  return request
+}
+
 function isLegacyOpportunityCommentModeration(event) {
   return ['PUBLISH', 'HIDE'].includes(event.action)
     && ['opportunityId', 'commentId', 'expectedVersion', 'reason'].every(key => hasOwn(event, key))
 }
 
-function normalizeAdminRequest(event = {}) {
+function normalizeAdminRequest(rawEvent = {}) {
+  const event = withoutCloudbaseMetadata(rawEvent)
   if (event && typeof event === 'object' && hasOwn(event, 'contractVersion')) {
     if (!isPlainObject(event)) throw invalidAdminRequest()
     if (event.contractVersion !== ADMIN_REQUEST_CONTRACT_VERSION) {

@@ -37,6 +37,32 @@ describe('admin handler and isolation contract', () => {
     assert.equal(Object.hasOwn(event.input, 'idempotencyKey'), false)
   })
 
+  it('removes CloudBase transport metadata without trusting it as caller identity', async () => {
+    let issuedContext
+    const handler = createHandler({
+      application: {
+        execute: async (_principal, action, input) => ({ action, input }),
+        probe: async () => ({ status: 'ok' }),
+      },
+      getContext: () => ({ APPID: 'trusted-app-id', OPENID: 'trusted-open-id' }),
+      issuePrincipal: (context) => {
+        issuedContext = context
+        return { appId: context.APPID, actorUserId: 'user-a' }
+      },
+    })
+    const response = await handler({
+      contractVersion: 1,
+      action: 'mip.admin.session',
+      input: {},
+      tcbContext: {},
+      userInfo: { appId: 'untrusted-app-id', openId: 'untrusted-open-id' },
+    })
+
+    assert.equal(response.ok, true)
+    assert.deepEqual(issuedContext, { APPID: 'trusted-app-id', OPENID: 'trusted-open-id' })
+    assert.deepEqual(response.data, { action: 'mip.admin.session', input: {} })
+  })
+
   it('passes only normalized v1 input to the business dispatch', async () => {
     let received
     const handler = createHandler({
@@ -136,6 +162,16 @@ describe('admin handler and isolation contract', () => {
       },
       {
         event: { contractVersion: 1, action: 'mip.admin.session', input: {}, appId: 'untrusted' },
+        code: 'VALIDATION_FAILED',
+        message: '运营请求格式无效',
+      },
+      {
+        event: { contractVersion: 1, action: 'mip.admin.session', input: {}, userInfo: 'untrusted' },
+        code: 'VALIDATION_FAILED',
+        message: '运营请求格式无效',
+      },
+      {
+        event: { contractVersion: 1, action: 'mip.admin.session', input: {}, tcbContext: [] },
         code: 'VALIDATION_FAILED',
         message: '运营请求格式无效',
       },
