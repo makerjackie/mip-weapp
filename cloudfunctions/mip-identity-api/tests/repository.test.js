@@ -272,7 +272,7 @@ describe('profile and primary branch transaction', () => {
       expectedUserVersion: 2,
       primaryBranchId: '20000000-0000-4000-8000-000000000001',
       nickname: '测试用户',
-      identityStatus: '',
+      identityStatus: '产品与技术',
       headline: '',
       introduction: '',
       companies: [],
@@ -285,6 +285,8 @@ describe('profile and primary branch transaction', () => {
     assert.equal(queries.some(call => call.sql.includes('INSERT INTO mip_branch_memberships')), true)
     assert.equal(queries.some(call => call.sql.includes('UPDATE mip_users SET primary_branch_id')), true)
     assert.equal(queries.some(call => call.sql.includes('INSERT INTO mip_profiles')), true)
+    const profileWrite = queries.find(call => call.sql.includes('INSERT INTO mip_profiles'))
+    assert.equal(profileWrite.params[4], '产品与技术')
     assert.equal(queries.some(call => call.sql.includes("'identity.profile_completed'")), true)
   })
 

@@ -96,6 +96,28 @@ describe('MIP migrations', () => {
     expect(rollback.trim()).toBe('DROP TABLE IF EXISTS mip_event_content_media;')
   })
 
+  it('stores profile identity status as unicode and refuses a lossy rollback', () => {
+    const migration = fs.readFileSync(
+      path.join(root, 'database/mysql/mip/042_profile_identity_status_unicode.sql'),
+      'utf8',
+    )
+    const rollback = fs.readFileSync(
+      path.join(root, 'database/mysql/mip/rollback/042_profile_identity_status_unicode.sql'),
+      'utf8',
+    )
+    const lock = loadMipMigrationLock(root)
+    const entry = lock.migrations.find(item => item.name === 'mip_profile_identity_status_unicode')
+
+    expect(entry?.createsTables).toEqual([])
+    expect(entry?.altersTables).toEqual(['mip_profiles'])
+    expect(migration).toMatch(/MODIFY COLUMN identity_status VARCHAR\(32\)/)
+    expect(migration).toContain('CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci')
+    expect(migration).not.toMatch(/\bDROP\b|\bDELETE\b|CHARACTER SET ascii/i)
+    expect(rollback).toContain('mip_profile_identity_status_rollback_guard')
+    expect(rollback).toContain('CHAR_LENGTH(identity_status) <> LENGTH(identity_status)')
+    expect(rollback).toContain('CHARACTER SET ascii COLLATE ascii_bin')
+  })
+
   it('fails closed on unknown or incomplete durable step journals', () => {
     const source = fs.readFileSync(path.join(root, 'scripts/apply-mip-schema.mjs'), 'utf8')
     expect(source).toContain('unknownStepVersions')

@@ -583,6 +583,18 @@
         "mip_message_delivery_reviews"
       ],
       "altersTables": []
+    },
+    {
+      "version": "20260826420000",
+      "name": "mip_profile_identity_status_unicode",
+      "sql": "database/mysql/mip/042_profile_identity_status_unicode.sql",
+      "sqlSha256": "32072512ac6edaae7e4b681686beca56985f4a824bb952d1e71e809ccbacee38",
+      "rollback": "database/mysql/mip/rollback/042_profile_identity_status_unicode.sql",
+      "rollbackSha256": "bbd2ee12a01df976df91afca8c7ca16f73f3cec47da5e1699f6c16207d0be69a",
+      "createsTables": [],
+      "altersTables": [
+        "mip_profiles"
+      ]
     }
   ]
 }
