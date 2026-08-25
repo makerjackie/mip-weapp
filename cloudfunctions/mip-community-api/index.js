@@ -9,6 +9,7 @@ const {
   trustedWechatIdentity,
 } = require('./lib/identity')
 const { mysqlDatabase } = require('./lib/mysql')
+const { createOutboxWakeup } = require('./lib/outbox-wakeup')
 const { createProfileRef, readProfileRef } = require('./lib/profile-ref')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
@@ -41,6 +42,10 @@ const eventCommentActions = new Set([
   'saveEventComment',
   'deleteEventComment',
   'reportEventComment',
+])
+const outboxMutationActions = new Set([
+  'createKnowledgeComment',
+  'saveEventComment',
 ])
 
 function success(data) {
@@ -97,11 +102,19 @@ function createHandler(options) {
         case 'unblockProfile': return success(await options.service.unblockProfile(caller, event))
         case 'listBlocked': return success(await options.service.listBlocked(caller, event))
         case 'reportProfile': return success(await options.service.reportProfile(caller, event))
-        case 'createKnowledgeComment': return success(await options.service.createKnowledgeComment(caller, event))
+        case 'createKnowledgeComment': {
+          const data = await options.service.createKnowledgeComment(caller, event)
+          await wakeOutboxAfterMutation(options, { action, appId: caller.appId, event, result: data })
+          return success(data)
+        }
         case 'deleteKnowledgeComment': return success(await options.service.deleteKnowledgeComment(caller, event))
         case 'reportKnowledgeComment': return success(await options.service.reportKnowledgeComment(caller, event))
         case 'listEventComments': return success(await options.service.listEventComments(caller, event))
-        case 'saveEventComment': return success(await options.service.saveEventComment(caller, event))
+        case 'saveEventComment': {
+          const data = await options.service.saveEventComment(caller, event)
+          await wakeOutboxAfterMutation(options, { action, appId: caller.appId, event, result: data })
+          return success(data)
+        }
         case 'deleteEventComment': return success(await options.service.deleteEventComment(caller, event))
         case 'reportEventComment': return success(await options.service.reportEventComment(caller, event))
         default: throw new Error('UNSUPPORTED_ACTION')
@@ -113,8 +126,42 @@ function createHandler(options) {
   }
 }
 
+async function wakeOutboxAfterMutation(options, input) {
+  if (!shouldWakeOutbox(input)) return
+  try {
+    await options.outboxWakeup?.afterSuccessfulMutation({
+      appId: input.appId,
+      action: input.action,
+      mutationActions: outboxMutationActions,
+    })
+  }
+  catch {
+    try {
+      options.logger?.warn('[mip-community-api]', {
+        event: 'outbox_wakeup_failed',
+        sourceAction: input.action,
+        code: 'INTERNAL_FUNCTION_FAILED',
+      })
+    }
+    catch {}
+  }
+}
+
+function shouldWakeOutbox(input) {
+  if (input?.result?.status !== 'PUBLISHED') return false
+  if (input.action === 'createKnowledgeComment') return true
+  return input.action === 'saveEventComment' && !input.event?.commentId
+}
+
 const database = mysqlDatabase()
 const agreementRequirements = configuredAgreementRequirements()
+const outboxWakeup = createOutboxWakeup({
+  cloud,
+  functionName: process.env.MIP_OUTBOX_FUNCTION_NAME,
+  secret: process.env.MIP_OUTBOX_HMAC_SECRET,
+  sourceFunctionName: 'mip-community-api',
+  logger: console,
+})
 async function assertCommentSafe(identity, body) {
   const checker = cloud.openapi?.security?.msgSecCheck
   if (typeof checker !== 'function') throw new Error('SERVICE_UNAVAILABLE')
@@ -145,10 +192,12 @@ const handler = createHandler({
   assertReady: assertInteractionReady,
   database,
   getContext: () => cloud.getWXContext(),
+  logger: console,
+  outboxWakeup,
   resolveIdentity: trustedWechatIdentity,
   resolveUser: resolveActiveUser,
   service,
 })
 
 exports.main = handler
-exports._test = { createHandler, failure, success }
+exports._test = { createHandler, failure, outboxMutationActions, shouldWakeOutbox, success }

@@ -234,6 +234,21 @@ describe('admin event comment repository', () => {
     assert.deepEqual(published, { id: COMMENT_ID, status: 'PUBLISHED', version: 3 })
     assert.match(writes.find(item => item.sql.includes('UPDATE mip_content_comments')).sql, /target_type = 'EVENT'/)
     assert.equal(writes.filter(item => item.sql.includes('INSERT INTO mip_audit_logs')).length, 1)
+    const outbox = writes.find(item => item.sql.includes('INSERT INTO mip_outbox_events'))
+    assert.match(outbox.sql, /'EVENT_COMMENT'/)
+    assert.match(outbox.sql, /'event\.comment_published'/)
+    assert.match(outbox.params[0], /^[0-9a-f-]{36}$/i)
+    assert.deepEqual(outbox.params.slice(1), [APP_ID, COMMENT_ID, 3])
+
+    writes.length = 0
+    comment = { id: COMMENT_ID, status: 'PUBLISHED', version: 3 }
+    const hidden = await repository.moderateEventComment({
+      ...input,
+      action: 'HIDE',
+      expectedVersion: 3,
+    })
+    assert.deepEqual(hidden, { id: COMMENT_ID, status: 'HIDDEN', version: 4 })
+    assert.equal(writes.some(item => item.sql.includes('INSERT INTO mip_outbox_events')), false)
   })
 
   it('requires an exact claim before the same operator can close a report', async () => {

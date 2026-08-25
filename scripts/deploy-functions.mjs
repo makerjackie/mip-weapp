@@ -839,6 +839,7 @@ function environmentForRole(role, options) {
     'identity',
     'events',
     'opportunities',
+    'community',
     'commerce',
     'admin',
     'game',

@@ -151,6 +151,7 @@ const expectedOutboxActions = Object.freeze([
   'mip.admin.events.save',
   'mip.admin.events.clone',
   'mip.admin.events.changeStatus',
+  'mip.admin.events.comments.moderate',
   'mip.admin.communications.publishEventReminder',
   'mip.admin.events.registrations.review',
   'mip.admin.events.checkIn',

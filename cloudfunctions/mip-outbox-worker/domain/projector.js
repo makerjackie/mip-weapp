@@ -1,5 +1,7 @@
 'use strict'
 
+const { hasEffectiveEventCommentCapability } = require('./event-comment-policy')
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const KNOWLEDGE_RECIPIENT_PAGE_SIZE = 50
 
@@ -104,6 +106,8 @@ async function projectEvent(database, event) {
       return projectMatchingRecommendation(database, event)
     case 'opportunity.comment_published':
       return projectOpportunityComment(database, event)
+    case 'event.comment_published':
+      return projectEventComment(database, event)
     default:
       return NO_PROJECTION_EVENT_TYPES.has(event.event_type)
         ? projection([], [], 'NO_PROJECTION_REQUIRED')
@@ -316,6 +320,101 @@ async function projectOpportunityComment(database, event) {
       },
     }),
   ], [], 'PROJECTED')
+}
+
+async function projectEventComment(database, event) {
+  assertAggregate(event, 'EVENT_COMMENT')
+  const recipients = await database.query(
+    `WITH comment_fact AS (
+       SELECT comment.app_id, comment.author_user_id, comment.target_id AS event_id,
+              current_event.branch_id, current_event.organizer_user_id
+       FROM mip_content_comments comment
+       INNER JOIN mip_events current_event
+         ON current_event.app_id = comment.app_id AND current_event.id = comment.target_id
+       INNER JOIN mip_users author
+         ON author.app_id = comment.app_id AND author.id = comment.author_user_id
+          AND author.status = 'ACTIVE'
+       WHERE comment.app_id = ? AND comment.id = ? AND comment.version = ?
+         AND comment.target_type = 'EVENT' AND comment.status = 'PUBLISHED'
+         AND comment.content_safety_status = 'PASSED'
+         AND current_event.published_at IS NOT NULL
+         AND current_event.status IN ('PUBLISHED', 'CANCELLED', 'ENDED')
+     ), responsible_users AS (
+       SELECT fact.app_id, fact.event_id, fact.author_user_id,
+              fact.organizer_user_id AS recipient_user_id,
+              'ORGANIZER' AS responsibility_kind,
+              NULL AS role_key, NULL AS policy_mode, NULL AS capabilities_json
+       FROM comment_fact fact
+       UNION ALL
+       SELECT fact.app_id, fact.event_id, fact.author_user_id,
+              binding.user_id AS recipient_user_id,
+              'MANAGEMENT' AS responsibility_kind,
+              binding.role_key, policy.policy_mode, policy.capabilities_json
+       FROM comment_fact fact
+       INNER JOIN mip_admin_role_bindings binding
+         ON binding.app_id = fact.app_id AND binding.status = 'ACTIVE'
+       LEFT JOIN mip_role_capability_policies policy
+         ON policy.app_id = binding.app_id AND policy.role_key = binding.role_key
+       WHERE (
+           (binding.role_key IN ('PLATFORM_OWNER', 'PLATFORM_OPERATIONS')
+             AND binding.scope_type = 'PLATFORM'
+             AND binding.scope_id = '00000000-0000-0000-0000-000000000000')
+           OR (binding.role_key = 'BRANCH_ADMIN'
+             AND binding.scope_type = 'BRANCH' AND binding.scope_id = fact.branch_id)
+           OR (binding.role_key IN ('EVENT_OWNER', 'EVENT_MANAGER')
+             AND binding.scope_type = 'EVENT' AND binding.scope_id = fact.event_id)
+         )
+     )
+     SELECT responsibility.recipient_user_id, responsibility.event_id,
+            responsibility.responsibility_kind, responsibility.role_key,
+            responsibility.policy_mode, responsibility.capabilities_json
+     FROM responsible_users responsibility
+     INNER JOIN mip_users recipient
+       ON recipient.app_id = responsibility.app_id
+        AND recipient.id = responsibility.recipient_user_id
+        AND recipient.status = 'ACTIVE'
+     LEFT JOIN mip_user_notification_preferences preference
+       ON preference.app_id = recipient.app_id AND preference.user_id = recipient.id
+     WHERE responsibility.recipient_user_id <> responsibility.author_user_id
+       AND COALESCE(preference.comment_notifications_enabled, 1) = 1
+       AND NOT EXISTS (
+         SELECT 1 FROM mip_user_blocks block
+         WHERE block.app_id = responsibility.app_id AND block.status = 'ACTIVE'
+           AND (
+             (block.blocker_user_id = responsibility.author_user_id
+               AND block.blocked_user_id = responsibility.recipient_user_id)
+             OR (block.blocker_user_id = responsibility.recipient_user_id
+               AND block.blocked_user_id = responsibility.author_user_id)
+           )
+       )
+     ORDER BY responsibility.recipient_user_id, responsibility.responsibility_kind,
+       responsibility.role_key`,
+    [event.app_id, event.aggregate_id, event.source_version],
+  )
+  const effectiveRecipients = new Map()
+  for (const row of recipients) {
+    if (!hasEffectiveEventCommentCapability(row)) continue
+    if (!UUID_PATTERN.test(String(row.recipient_user_id || ''))
+      || !UUID_PATTERN.test(String(row.event_id || ''))) {
+      throw new Error('OUTBOX_EVENT_INVALID')
+    }
+    effectiveRecipients.set(row.recipient_user_id, row)
+  }
+  if (!effectiveRecipients.size) return projection([], [], 'NO_EFFECTIVE_RECIPIENTS')
+  return projection([...effectiveRecipients.values()].map((row) => {
+    return message(event, row.recipient_user_id, `recipient:${row.recipient_user_id}`, {
+      messageType: 'EVENT',
+      title: '活动收到新评论',
+      body: '你负责的活动收到一条新评论。',
+      targetType: 'EVENT',
+      targetId: row.event_id,
+      external: {
+        channel: 'WECHAT_CUSTOMER_SERVICE',
+        templateKey: 'CUSTOMER_SERVICE_TEXT',
+        fields: { content: '你负责的活动收到一条新评论，请在小程序内查看。' },
+      },
+    })
+  }), [], 'PROJECTED')
 }
 
 async function projectProfileCompleted(database, event) {

@@ -18,7 +18,7 @@ module.exports = defineManifest('EVENTS', [
   serviceOperation('mip.admin.events.archive', 'MUTATION', 'archiveEvent'),
   serviceOperation('mip.admin.events.album.review', 'MUTATION', 'reviewEventAlbumPhoto'),
   serviceOperation('mip.admin.events.comments.settings.save', 'MUTATION', 'saveEventCommentSettings'),
-  serviceOperation('mip.admin.events.comments.moderate', 'MUTATION', 'moderateEventComment'),
+  serviceOperation('mip.admin.events.comments.moderate', 'MUTATION', 'moderateEventComment', { wakesOutbox: true }),
   serviceOperation('mip.admin.events.comments.reports.claim', 'MUTATION', 'claimEventCommentReport'),
   serviceOperation('mip.admin.events.comments.reports.close', 'MUTATION', 'closeEventCommentReport'),
   serviceOperation('mip.admin.communications.publishEventReminder', 'MUTATION', 'publishEventReminder', { wakesOutbox: true }),

@@ -11,6 +11,7 @@ function createEventCommentsService(database, options = {}) {
   const assertSafe = options.assertSafe || (async () => true)
   const agreementRequirements = options.agreementRequirements
   const createId = options.id || randomUUID
+  const createOutboxId = options.outboxId || randomUUID
   const createProfileRef = options.createProfileRef
   const profileRefSecret = options.profileRefSecret
 
@@ -120,6 +121,19 @@ function createEventCommentsService(database, options = {}) {
             caller.appId, draft.commentId, eventId, draft.expectedVersion],
         )
         if (Number(update.affectedRows) !== 1) throw new Error('COMMENT_EDIT_WINDOW_CLOSED')
+        await appendAudit(tx, {
+          action: 'event.comment.edit',
+          appId: caller.appId,
+          actorUserId: caller.userId,
+          eventId,
+          metadata: {
+            previousStatus: stored.status,
+            status,
+            version: draft.expectedVersion + 1,
+          },
+          resourceId: draft.commentId,
+          resourceType: 'EVENT_COMMENT',
+        })
         return {
           id: draft.commentId,
           status,
@@ -136,6 +150,23 @@ function createEventCommentsService(database, options = {}) {
           CASE WHEN ? = 'PUBLISHED' THEN UTC_TIMESTAMP(3) ELSE NULL END)`,
         [commentId, caller.appId, eventId, caller.userId, draft.body, status, status],
       )
+      await appendAudit(tx, {
+        action: 'event.comment.create',
+        appId: caller.appId,
+        actorUserId: caller.userId,
+        eventId,
+        metadata: { status, version: 1 },
+        resourceId: commentId,
+        resourceType: 'EVENT_COMMENT',
+      })
+      if (status === 'PUBLISHED') {
+        await appendOutbox(tx, {
+          appId: caller.appId,
+          commentId,
+          outboxId: createOutboxId(),
+          sourceVersion: 1,
+        })
+      }
       return { id: commentId, status, version: 1 }
     }, {
       authorize: queryable => requireReady(queryable, caller),
@@ -174,6 +205,19 @@ function createEventCommentsService(database, options = {}) {
         [caller.appId, commentId, eventId, expectedVersion],
       )
       if (Number(update.affectedRows) !== 1) throw new Error('CONFLICT')
+      await appendAudit(tx, {
+        action: 'event.comment.delete',
+        appId: caller.appId,
+        actorUserId: caller.userId,
+        eventId,
+        metadata: {
+          previousStatus: stored.status,
+          status: 'DELETED',
+          version: expectedVersion + 1,
+        },
+        resourceId: commentId,
+        resourceType: 'EVENT_COMMENT',
+      })
       return { id: commentId, status: 'DELETED', version: expectedVersion + 1 }
     }, {
       authorize: queryable => requireReady(queryable, caller),
@@ -217,6 +261,15 @@ function createEventCommentsService(database, options = {}) {
         ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
         [reportId, caller.appId, commentId, caller.userId, category, description || null, requestId],
       )
+      await appendAudit(tx, {
+        action: 'event.comment.report',
+        appId: caller.appId,
+        actorUserId: caller.userId,
+        eventId,
+        metadata: { category, commentId, status: 'PENDING' },
+        resourceId: reportId,
+        resourceType: 'EVENT_COMMENT_REPORT',
+      })
       return { reportId, status: 'PENDING' }
     }, {
       authorize: queryable => requireReady(queryable, caller),
@@ -297,6 +350,34 @@ function commentDto(row, caller, createProfileRef, secret) {
     createdAt: iso(row.created_at),
     editedAt: iso(row.edited_at),
   }
+}
+
+async function appendAudit(tx, input) {
+  await tx.query(
+    `INSERT INTO mip_audit_logs (
+      app_id, actor_user_id, actor_type, scope_type, scope_id, action,
+      resource_type, resource_id, effective_role, metadata_json
+    ) VALUES (?, ?, 'USER', 'EVENT', ?, ?, ?, ?, NULL, ?)`,
+    [
+      input.appId,
+      input.actorUserId,
+      input.eventId,
+      input.action,
+      input.resourceType,
+      input.resourceId,
+      JSON.stringify(input.metadata || {}),
+    ],
+  )
+}
+
+async function appendOutbox(tx, input) {
+  await tx.query(
+    `INSERT INTO mip_outbox_events (
+      id, app_id, aggregate_type, aggregate_id, event_type,
+      source_version, payload_json
+    ) VALUES (?, ?, 'EVENT_COMMENT', ?, 'event.comment_published', ?, JSON_OBJECT())`,
+    [input.outboxId, input.appId, input.commentId, input.sourceVersion],
+  )
 }
 
 async function idempotentMutation(database, caller, operation, rawKey, request, work, options = {}) {

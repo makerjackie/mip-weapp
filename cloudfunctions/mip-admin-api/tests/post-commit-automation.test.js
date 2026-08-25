@@ -54,6 +54,26 @@ describe('admin post-commit automation routing', () => {
     assert.equal(postCommitAutomationFor(outboxMutation).requiresTrustedAppId, true)
   })
 
+  it('wakes event comment moderation only when the committed result is published', () => {
+    const action = 'mip.admin.events.comments.moderate'
+    assert.deepEqual(postCommitAutomationFor(action, { status: 'PUBLISHED' }), {
+      messageSchedule: false,
+      outbox: true,
+      requiresTrustedAppId: true,
+    })
+    for (const resultData of [{ status: 'HIDDEN' }, null]) {
+      assert.deepEqual(postCommitAutomationFor(action, resultData), {
+        messageSchedule: false,
+        outbox: false,
+        requiresTrustedAppId: false,
+      })
+    }
+    assert.equal(postCommitAutomationFor(
+      'mip.admin.announcements.publish',
+      { status: 'PUBLISHED' },
+    ).outbox, true)
+  })
+
   it('imports the shared outbox action set used by the cloud-function entrypoint', () => {
     const source = fs.readFileSync(path.resolve(__dirname, '..', 'index.js'), 'utf8')
     assert.match(source, /messageScheduleMutationActions,\s*outboxMutationActions,\s*postCommitAutomationFor,/)

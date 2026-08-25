@@ -1,5 +1,7 @@
 'use strict'
 
+const { randomUUID } = require('node:crypto')
+
 function createEventCommentAdminRepository(database, options = {}) {
   const lockMutation = options.lockMutationAuthorization
   const assertScope = options.assertMutationScope
@@ -175,6 +177,16 @@ function createEventCommentAdminRepository(database, options = {}) {
       }
       const version = input.expectedVersion + 1
       await writeAudit(tx, input.audit(status, version))
+      if (status === 'PUBLISHED') {
+        await tx.query(
+          `INSERT INTO mip_outbox_events (
+             id, app_id, aggregate_type, aggregate_id, event_type,
+             source_version, payload_json
+           ) VALUES (?, ?, 'EVENT_COMMENT', ?,
+             'event.comment_published', ?, JSON_OBJECT())`,
+          [randomUUID(), input.appId, input.commentId, version],
+        )
+      }
       return { id: input.commentId, status, version }
     })
   }

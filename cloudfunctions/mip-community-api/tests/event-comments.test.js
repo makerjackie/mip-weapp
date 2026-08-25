@@ -11,6 +11,7 @@ const userId = '10000000-0000-4000-8000-000000000001'
 const authorId = '20000000-0000-4000-8000-000000000002'
 const eventId = '30000000-0000-4000-8000-000000000003'
 const commentId = '40000000-0000-4000-8000-000000000004'
+const outboxId = '70000000-0000-4000-8000-000000000007'
 const pepper = 'event-comment-profile-ref-pepper-over-32'
 const caller = { appId, userId, primaryBranchId: 'branch-1' }
 const agreements = [{ key: 'SERVICE_AGREEMENT', version: 'service-v2' }]
@@ -35,6 +36,7 @@ function service(database, options = {}) {
     assertSafe: options.assertSafe || (async () => undefined),
     createProfileRef,
     id: options.id || (() => commentId),
+    outboxId: options.outboxId || (() => outboxId),
     profileRefSecret: pepper,
   })
 }
@@ -172,6 +174,30 @@ describe('event comment service', () => {
     assert.match(writes[1].sql, /INSERT INTO mip_content_comments/)
     assert.match(writes[1].sql, /'EVENT'/)
     assert.deepEqual(writes[1].params.slice(0, 5), [commentId, appId, eventId, userId, '活动信息明确。'])
+    const audit = writes.find(item => item.sql.includes('INSERT INTO mip_audit_logs'))
+    assert.deepEqual(audit.params.slice(0, 6), [
+      appId, userId, eventId, 'event.comment.create', 'EVENT_COMMENT', commentId,
+    ])
+    assert.deepEqual(JSON.parse(audit.params[6]), { status: 'PUBLISHED', version: 1 })
+    const outbox = writes.find(item => item.sql.includes('INSERT INTO mip_outbox_events'))
+    assert.match(outbox.sql, /'EVENT_COMMENT'/)
+    assert.match(outbox.sql, /'event\.comment_published'/)
+    assert.deepEqual(outbox.params, [outboxId, appId, commentId, 1])
+  })
+
+  it('keeps a review-mode comment pending without publishing an outbox event', async () => {
+    const { database, writes } = mutationDatabase({
+      event: eventRow({ moderation_mode: 'REVIEW' }),
+    })
+    const result = await service(database).saveEventComment(caller, {
+      eventId,
+      body: '等待运营审核的评论',
+      idempotencyKey: 'event-comment-create-review-0001',
+    })
+    assert.deepEqual(result, { id: commentId, status: 'PENDING', version: 1 })
+    assert.equal(writes.some(item => item.sql.includes('INSERT INTO mip_outbox_events')), false)
+    const audit = writes.find(item => item.sql.includes('INSERT INTO mip_audit_logs'))
+    assert.deepEqual(JSON.parse(audit.params[6]), { status: 'PENDING', version: 1 })
   })
 
   it('replays an existing successful create before content safety and current access checks', async () => {
@@ -279,6 +305,14 @@ describe('event comment service', () => {
       '更新后的评论', 'PUBLISHED', 'PUBLISHED', 'PUBLISHED', 'PUBLISHED', 'PUBLISHED',
       appId, commentId, eventId, 3,
     ])
+    assert.equal(writes.some(item => item.sql.includes('INSERT INTO mip_outbox_events')), false)
+    const audit = writes.find(item => item.sql.includes('INSERT INTO mip_audit_logs'))
+    assert.deepEqual(audit.params.slice(0, 6), [
+      appId, userId, eventId, 'event.comment.edit', 'EVENT_COMMENT', commentId,
+    ])
+    assert.deepEqual(JSON.parse(audit.params[6]), {
+      previousStatus: 'PUBLISHED', status: 'PUBLISHED', version: 4,
+    })
   })
 
   it('returns an edited published comment to pending when manual review is active', async () => {
@@ -324,6 +358,13 @@ describe('event comment service', () => {
     assert.match(update.sql, /body = '\[已删除\]'/)
     assert.match(update.sql, /target_type = 'EVENT'/)
     assert.deepEqual(update.params, [appId, commentId, eventId, 2])
+    const audit = writes.find(item => item.sql.includes('INSERT INTO mip_audit_logs'))
+    assert.deepEqual(audit.params.slice(0, 6), [
+      appId, userId, eventId, 'event.comment.delete', 'EVENT_COMMENT', commentId,
+    ])
+    assert.deepEqual(JSON.parse(audit.params[6]), {
+      previousStatus: 'PUBLISHED', status: 'DELETED', version: 3,
+    })
   })
 
   it('reports only a visible unblocked event comment without returning user identifiers', async () => {
@@ -346,5 +387,12 @@ describe('event comment service', () => {
     const insert = writes.find(item => item.sql.includes('INSERT INTO mip_content_comment_reports'))
     assert.deepEqual(insert.params, [commentId, appId, commentId, userId, 'SPAM', null, 'event-comment-report-request-0001'])
     assert.match(insert.sql, /mip_content_comment_reports/)
+    const audit = writes.find(item => item.sql.includes('INSERT INTO mip_audit_logs'))
+    assert.deepEqual(audit.params.slice(0, 6), [
+      appId, userId, eventId, 'event.comment.report', 'EVENT_COMMENT_REPORT', commentId,
+    ])
+    assert.deepEqual(JSON.parse(audit.params[6]), {
+      category: 'SPAM', commentId, status: 'PENDING',
+    })
   })
 })
