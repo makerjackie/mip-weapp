@@ -8,6 +8,7 @@ import type {
 import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, hasScopedCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { formatLocalDateTime } from '../../../utils/date'
+import { opportunityActionFailure } from '../opportunities/action-state'
 import { adminLoadFailure } from '../shared/page-state'
 
 const actionLabels: Record<string, string> = {
@@ -56,7 +57,7 @@ Page({
   async load() {
     try {
       const [item, session] = await Promise.all([
-        mipAdminModule.getOpportunity(this.data.opportunityId, true),
+        mipAdminModule.opportunities.get(this.data.opportunityId, true),
         mipAdminModule.getSession(),
       ])
       const canManageComments = hasScopedCapability(session.capabilities, 'messages.manage', {
@@ -64,7 +65,7 @@ Page({
         scopeId: item.branchId || null,
       })
       const commentState = canManageComments
-        ? await mipAdminModule.getOpportunityCommentAdminState(this.data.opportunityId, true)
+        ? await mipAdminModule.opportunities.getCommentState(this.data.opportunityId, true)
         : null
       this.setData({
         state: 'ready',
@@ -124,7 +125,7 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.saveOpportunityCommentSettings({
+      await mipAdminModule.opportunities.saveCommentSettings({
         opportunityId: this.data.opportunityId,
         expectedVersion: settings.version,
         settings: {
@@ -133,12 +134,12 @@ Page({
           callsEnabled: settings.callsEnabled,
           moderationMode: settings.moderationMode,
         },
-      }))
+      })
       await this.load()
       wx.showToast({ title: '评论设置已保存', icon: 'success' })
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '评论设置保存失败' })
+      this.setData(opportunityActionFailure(error, '评论设置保存失败'))
     }
     finally {
       this.setData({ processing: false })
@@ -161,17 +162,17 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.moderateOpportunityComment({
+      await mipAdminModule.opportunities.moderateComment({
         opportunityId: this.data.opportunityId,
         commentId,
         expectedVersion: comment.version,
         action,
         reason: modal.content,
-      }))
+      })
       await this.load()
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '评论审核失败' })
+      this.setData(opportunityActionFailure(error, '评论审核失败'))
     }
     finally {
       this.setData({ processing: false })
@@ -194,17 +195,17 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.closeOpportunityCommentReport({
+      await mipAdminModule.opportunities.closeCommentReport({
         opportunityId: this.data.opportunityId,
         reportId,
         expectedVersion: report.version,
         decision,
         reason: modal.content,
-      }))
+      })
       await this.load()
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '举报处理失败' })
+      this.setData(opportunityActionFailure(error, '举报处理失败'))
     }
     finally {
       this.setData({ processing: false })
@@ -219,12 +220,12 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.publishOpportunity({ opportunityId: this.data.item!.id, expectedVersion: this.data.item!.version }))
+      await mipAdminModule.opportunities.publish({ opportunityId: this.data.item!.id, expectedVersion: this.data.item!.version })
       wx.showToast({ title: '机会已发布', icon: 'success' })
       await this.load()
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '机会发布失败' })
+      this.setData(opportunityActionFailure(error, '机会发布失败'))
     }
     finally {
       this.setData({ processing: false })
@@ -240,15 +241,15 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.endOpportunity({
+      await mipAdminModule.opportunities.end({
         opportunityId: this.data.item!.id,
         expectedVersion: this.data.item!.version,
-      }))
+      })
       wx.showToast({ title: '机会已结束', icon: 'success' })
       await this.load()
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '机会结束失败' })
+      this.setData(opportunityActionFailure(error, '机会结束失败'))
     }
     finally {
       this.setData({ processing: false })
@@ -264,11 +265,11 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.unpublishOpportunity({ opportunityId: this.data.item!.id, expectedVersion: this.data.item!.version, reason: modal.content }))
+      await mipAdminModule.opportunities.unpublish({ opportunityId: this.data.item!.id, expectedVersion: this.data.item!.version, reason: modal.content })
       await this.load()
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '机会下架失败' })
+      this.setData(opportunityActionFailure(error, '机会下架失败'))
     }
     finally {
       this.setData({ processing: false })
@@ -284,11 +285,11 @@ Page({
     }
     this.setData({ processing: true, message: '' })
     try {
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.archiveOpportunity({ opportunityId: this.data.item!.id, expectedVersion: this.data.item!.version, reason: modal.content }))
+      await mipAdminModule.opportunities.archive({ opportunityId: this.data.item!.id, expectedVersion: this.data.item!.version, reason: modal.content })
       await this.load()
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '机会归档失败' })
+      this.setData(opportunityActionFailure(error, '机会归档失败'))
     }
     finally {
       this.setData({ processing: false })

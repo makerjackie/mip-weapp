@@ -1,6 +1,7 @@
 import type { AdminOpportunityDetail, AdminOpportunityEditorOptions } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
 import { mipAdminModule } from '../../../modules/mip-admin'
+import { opportunityActionFailure } from '../opportunities/action-state'
 import { adminLoadFailure } from '../shared/page-state'
 
 interface Choice { id: string, label: string, selected?: boolean }
@@ -36,8 +37,8 @@ Page({
   async load() {
     try {
       const [options, item] = await Promise.all([
-        mipAdminModule.getOpportunityEditorOptions(true),
-        this.data.opportunityId ? mipAdminModule.getOpportunity(this.data.opportunityId, true) : Promise.resolve(null),
+        mipAdminModule.opportunities.getEditorOptions(true),
+        this.data.opportunityId ? mipAdminModule.opportunities.get(this.data.opportunityId, true) : Promise.resolve(null),
       ])
       const detail = item as AdminOpportunityDetail | null
       const ownerIndex = Math.max(0, options.owners.findIndex(owner => owner.id === detail?.ownerUserId))
@@ -109,7 +110,7 @@ Page({
     }
     this.setData({ saving: true, message: '' })
     try {
-      const result = await mipAdminModule.mutate(() => mipAdminModule.gateway.saveOpportunity({
+      const result = await mipAdminModule.opportunities.save({
         opportunityId: this.data.opportunityId || undefined,
         expectedVersion: this.data.opportunityId ? this.data.version : undefined,
         draft: {
@@ -125,12 +126,12 @@ Page({
           roleKeys: this.data.roles.filter(item => item.selected).map(item => item.key),
           tagIds: this.data.tags.filter(item => item.selected).map(item => item.id),
         },
-      }))
+      })
       wx.showToast({ title: '机会已保存', icon: 'success' })
       void wx.redirectTo({ url: `/packages/admin/opportunity-detail/index?id=${result.id}` })
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '机会保存失败' })
+      this.setData(opportunityActionFailure(error, '机会保存失败'))
     }
     finally { this.setData({ saving: false }) }
   },

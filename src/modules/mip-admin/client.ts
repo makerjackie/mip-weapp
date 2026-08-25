@@ -19,6 +19,7 @@ import {
   getPendingAdminExportStatus,
   resumeAndOpenPendingAdminExport,
 } from './export-download'
+import { createMipOpportunityAdmin } from './opportunity-admin'
 
 export function createMipAdminModule(
   gateway: MipAdminGateway,
@@ -28,6 +29,7 @@ export function createMipAdminModule(
   const refresh = () => {
     cache.invalidate('mip-admin')
   }
+  const opportunities = createMipOpportunityAdmin(gateway, cache)
   return {
     getSession: (force = false) => cache.query('mip-admin:session', gateway.getSession, { force }),
     getDashboard: (force = false) => cache.query('mip-admin:dashboard', gateway.getDashboard, { force }),
@@ -128,31 +130,12 @@ export function createMipAdminModule(
       { force },
     ),
     searchRoleCandidates: (eventId: string, query: string) => gateway.searchRoleCandidates(eventId, query),
-    listOpportunities: (input: Record<string, unknown> = {}, force = false) => cache.query(
-      `mip-admin:opportunities:${JSON.stringify(input)}`,
-      () => gateway.listOpportunities(input),
-      { force },
-    ),
-    getOpportunity: (opportunityId: string, force = false) => cache.query(
-      `mip-admin:opportunity:${opportunityId}`,
-      () => gateway.getOpportunity(opportunityId),
-      { force },
-    ),
-    getOpportunityCommentAdminState: (opportunityId: string, force = false) => cache.query(
-      `mip-admin:opportunity-comments:${opportunityId}`,
-      () => gateway.getOpportunityCommentAdminState(opportunityId),
-      { force },
-    ),
-    getMatchingAdminState: (branchId?: string, force = false) => cache.query(
-      `mip-admin:matching:${branchId || 'PLATFORM'}`,
-      () => gateway.getMatchingAdminState(branchId),
-      { force },
-    ),
-    getOpportunityEditorOptions: (force = false) => cache.query(
-      'mip-admin:opportunity-options',
-      gateway.getOpportunityEditorOptions,
-      { force },
-    ),
+    listOpportunities: opportunities.list,
+    getOpportunity: opportunities.get,
+    getOpportunityCommentAdminState: opportunities.getCommentState,
+    getMatchingAdminState: opportunities.getMatchingState,
+    getOpportunityEditorOptions: opportunities.getEditorOptions,
+    opportunities,
     listGrowthLevels: (force = false) => cache.query('mip-admin:growth-levels', gateway.listGrowthLevels, { force }),
     listGrowthBenefits: (force = false) => cache.query('mip-admin:growth-benefits', gateway.listGrowthBenefits, { force }),
     listGrowthRules: (force = false) => cache.query('mip-admin:growth-rules', gateway.listGrowthRules, { force }),

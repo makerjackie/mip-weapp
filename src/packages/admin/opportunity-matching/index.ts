@@ -1,5 +1,6 @@
 import type { AdminMatchingRequest, AdminMatchingSettings } from '../../../modules/mip-admin'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
+import { opportunityActionFailure } from '../opportunities/action-state'
 import { adminLoadFailure } from '../shared/page-state'
 
 type PageState = 'loading' | 'ready' | 'error' | 'forbidden'
@@ -38,7 +39,7 @@ Page({
       }
       const grant = session.capabilities.find(item => item.capability === 'opportunities.moderate')
       const branchId = grant?.scopeType === 'BRANCH' ? grant.scopeId || '' : ''
-      const result = await mipAdminModule.getMatchingAdminState(branchId || undefined, true)
+      const result = await mipAdminModule.opportunities.getMatchingState(branchId || undefined, true)
       this.setData({
         state: 'ready',
         branchId,
@@ -81,7 +82,7 @@ Page({
     }
     this.setData({ saving: true, message: '' })
     try {
-      const result = await mipAdminModule.mutate(() => mipAdminModule.gateway.saveMatchingSettings({
+      const result = await mipAdminModule.opportunities.saveMatchingSettings({
         branchId: this.data.branchId || undefined,
         expectedVersion: settings.version,
         settings: {
@@ -90,12 +91,12 @@ Page({
           maximumCandidates: Number(this.data.maximumCandidates),
           externalProviderEnabled: this.data.externalProviderEnabled,
         },
-      }))
+      })
       this.setData({ settings: result })
       wx.showToast({ title: '设置已保存', icon: 'success' })
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '设置保存失败' })
+      this.setData(opportunityActionFailure(error, '设置保存失败'))
     }
     finally {
       this.setData({ saving: false })
@@ -108,15 +109,15 @@ Page({
     }
     this.setData({ recalculating: true, message: '' })
     try {
-      const result = await mipAdminModule.mutate(() => mipAdminModule.gateway.recalculateOpportunityMatching({
+      const result = await mipAdminModule.opportunities.recalculateMatching({
         opportunityId: this.data.opportunityId,
         idempotencyKey: requestKey('admin-matching-recalculate'),
-      }))
+      })
       wx.showToast({ title: `已生成 ${result.resultCount} 条`, icon: 'none' })
       await this.load()
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '撮合重算失败' })
+      this.setData(opportunityActionFailure(error, '撮合重算失败'))
     }
     finally {
       this.setData({ recalculating: false })

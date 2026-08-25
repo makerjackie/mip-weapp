@@ -3,6 +3,7 @@ import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { formatLocalDateTime } from '../../../utils/date'
 import { adminLoadFailure } from '../shared/page-state'
+import { opportunityActionFailure } from './action-state'
 
 type AdminOpportunityView = AdminOpportunity & {
   statusText: string
@@ -174,7 +175,7 @@ Page({
     }
     try {
       const [response, session] = await Promise.all([
-        mipAdminModule.listOpportunities({
+        mipAdminModule.opportunities.list({
           filters: filters(this.data),
         }, force),
         mipAdminModule.getSession(force),
@@ -198,7 +199,7 @@ Page({
     }
     this.setData({ loadingMore: true, message: '' })
     try {
-      const response = await mipAdminModule.listOpportunities({
+      const response = await mipAdminModule.opportunities.list({
         cursor: this.data.nextCursor,
         filters: filters(this.data),
       })
@@ -228,16 +229,16 @@ Page({
       if (!modal.confirm || !modal.content.trim()) {
         return
       }
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.unpublishOpportunity({
+      await mipAdminModule.opportunities.unpublish({
         opportunityId,
         expectedVersion: version,
         reason: modal.content,
-      }))
+      })
       wx.showToast({ title: '机会已下架', icon: 'success' })
       await this.loadOpportunities(true)
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '机会下架失败' })
+      this.setData(opportunityActionFailure(error, '机会下架失败'))
     }
     finally {
       this.setData({ processingId: '' })
@@ -261,16 +262,16 @@ Page({
       if (!modal.confirm || !reason) {
         return
       }
-      await mipAdminModule.mutate(() => mipAdminModule.gateway.archiveOpportunity({
+      await mipAdminModule.opportunities.archive({
         opportunityId,
         expectedVersion: version,
         reason,
-      }))
+      })
       wx.showToast({ title: '草稿已归档', icon: 'success' })
       await this.loadOpportunities(true)
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '机会归档失败' })
+      this.setData(opportunityActionFailure(error, '机会归档失败'))
     }
     finally {
       this.setData({ processingId: '' })
