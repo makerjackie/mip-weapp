@@ -1,7 +1,6 @@
 {
   "navigationBarTitleText": "活动",
   "enablePullDownRefresh": true,
-  "enableShareAppMessage": true,
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",
     "t-calendar": "tdesign-miniprogram/calendar/calendar",

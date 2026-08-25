@@ -1,6 +1,5 @@
 {
   "navigationBarTitleText": "活动详情",
-  "enableShareAppMessage": true,
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",
     "app-page-exit": "/components/page-exit/index",
