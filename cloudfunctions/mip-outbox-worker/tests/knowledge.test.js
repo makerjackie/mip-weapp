@@ -27,6 +27,65 @@ describe('knowledge outbox projection', () => {
     assert.equal(result.notifications[0].recipientUserId, '20000000-0000-4000-8000-000000000001')
   })
 
+  it('routes a published comment to the current content creator from current facts', async () => {
+    const creatorId = '20000000-0000-4000-8000-000000000001'
+    const contentId = '30000000-0000-4000-8000-000000000001'
+    const event = {
+      ...base,
+      aggregate_type: 'KNOWLEDGE_COMMENT',
+      event_type: 'knowledge.comment_published',
+      source_version: 4,
+      payload_json: {
+        recipientUserId: 'attacker-controlled-recipient',
+        contentId: 'attacker-controlled-content',
+      },
+    }
+    const result = await projectEvent({
+      async one(sql, params) {
+        assert.match(sql, /comment\.target_type = 'KNOWLEDGE'/)
+        assert.match(sql, /content\.status = 'PUBLISHED'/)
+        assert.match(sql, /content\.published_at <= UTC_TIMESTAMP\(3\)/)
+        assert.match(sql, /author\.id = comment\.author_user_id/)
+        assert.match(sql, /author\.status = 'ACTIVE'/)
+        assert.match(sql, /creator\.id = content\.created_by_user_id/)
+        assert.match(sql, /creator\.status = 'ACTIVE'/)
+        assert.match(sql, /comment\.version = \?/)
+        assert.match(sql, /comment\.status = 'PUBLISHED'/)
+        assert.match(sql, /comment\.content_safety_status = 'PASSED'/)
+        assert.match(sql, /comment_notifications_enabled/)
+        assert.match(sql, /mip_user_blocks/)
+        assert.match(sql, /block\.blocker_user_id = comment\.author_user_id/)
+        assert.match(sql, /block\.blocked_user_id = creator\.id/)
+        assert.match(sql, /block\.blocker_user_id = creator\.id/)
+        assert.match(sql, /block\.blocked_user_id = comment\.author_user_id/)
+        assert.deepEqual(params, [event.app_id, event.aggregate_id, event.source_version])
+        return {
+          author_user_id: '40000000-0000-4000-8000-000000000001',
+          created_by_user_id: creatorId,
+          content_id: contentId,
+        }
+      },
+    }, event)
+
+    assert.equal(result.reason, 'PROJECTED')
+    assert.equal(result.notifications[0].recipientUserId, creatorId)
+    assert.equal(result.notifications[0].targetType, 'KNOWLEDGE')
+    assert.equal(result.notifications[0].targetId, contentId)
+    assert.equal(JSON.stringify(result).includes('attacker-controlled'), false)
+  })
+
+  it('suppresses a knowledge comment when a current fact no longer matches', async () => {
+    const event = {
+      ...base,
+      aggregate_type: 'KNOWLEDGE_COMMENT',
+      event_type: 'knowledge.comment_published',
+      source_version: 2,
+    }
+    const result = await projectEvent({ one: async () => null }, event)
+    assert.equal(result.reason, 'FACT_NO_LONGER_CURRENT')
+    assert.deepEqual(result.notifications, [])
+  })
+
   it('publishes hotspot messages only to server-selected opt-in recipients', async () => {
     const event = { ...base, aggregate_type: 'KNOWLEDGE_CONTENT', event_type: 'knowledge.content_published' }
     const database = {

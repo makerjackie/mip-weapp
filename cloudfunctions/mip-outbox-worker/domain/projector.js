@@ -172,28 +172,33 @@ async function projectKnowledgeRefund(database, event) {
 async function projectKnowledgeComment(database, event) {
   assertAggregate(event, 'KNOWLEDGE_COMMENT')
   const row = await database.one(
-    `SELECT comment.author_user_id, content.created_by_user_id, content.id AS content_id
+    `SELECT comment.author_user_id, creator.id AS created_by_user_id, content.id AS content_id
      FROM mip_content_comments comment
      INNER JOIN mip_knowledge_contents content
        ON content.app_id = comment.app_id AND content.id = comment.target_id
         AND comment.target_type = 'KNOWLEDGE' AND content.status = 'PUBLISHED'
-     INNER JOIN mip_users recipient
-       ON recipient.app_id = content.app_id AND recipient.id = content.created_by_user_id
-        AND recipient.status = 'ACTIVE'
+        AND content.published_at <= UTC_TIMESTAMP(3)
+     INNER JOIN mip_users author
+       ON author.app_id = comment.app_id AND author.id = comment.author_user_id
+        AND author.status = 'ACTIVE'
+     INNER JOIN mip_users creator
+       ON creator.app_id = content.app_id AND creator.id = content.created_by_user_id
+        AND creator.status = 'ACTIVE'
      LEFT JOIN mip_user_notification_preferences preference
-       ON preference.app_id = recipient.app_id AND preference.user_id = recipient.id
-     WHERE comment.app_id = ? AND comment.id = ? AND comment.status = 'PUBLISHED'
-       AND content.created_by_user_id <> comment.author_user_id
+       ON preference.app_id = creator.app_id AND preference.user_id = creator.id
+     WHERE comment.app_id = ? AND comment.id = ? AND comment.version = ?
+       AND comment.status = 'PUBLISHED' AND comment.content_safety_status = 'PASSED'
+       AND creator.id <> comment.author_user_id
        AND COALESCE(preference.comment_notifications_enabled, 1) = 1
        AND NOT EXISTS (
          SELECT 1 FROM mip_user_blocks block
          WHERE block.app_id = comment.app_id AND block.status = 'ACTIVE'
            AND ((block.blocker_user_id = comment.author_user_id
-             AND block.blocked_user_id = content.created_by_user_id)
-             OR (block.blocker_user_id = content.created_by_user_id
+             AND block.blocked_user_id = creator.id)
+             OR (block.blocker_user_id = creator.id
              AND block.blocked_user_id = comment.author_user_id))
        )`,
-    [event.app_id, event.aggregate_id],
+    [event.app_id, event.aggregate_id, event.source_version],
   )
   if (!row) return projection([], [], 'FACT_NO_LONGER_CURRENT')
   return projection([
@@ -280,30 +285,34 @@ async function projectMatchingRecommendation(database, event) {
 async function projectOpportunityComment(database, event) {
   assertAggregate(event, 'OPPORTUNITY_COMMENT')
   const row = await database.one(
-    `SELECT comment.author_user_id, opportunity.owner_user_id, opportunity.id AS opportunity_id
+    `SELECT comment.author_user_id, owner.id AS owner_user_id, opportunity.id AS opportunity_id
      FROM mip_opportunity_comments comment
      INNER JOIN mip_opportunities opportunity
        ON opportunity.app_id = comment.app_id AND opportunity.id = comment.opportunity_id
-         AND opportunity.status IN ('PUBLISHED', 'ENDED')
+         AND opportunity.status IN ('PUBLISHED', 'ENDED') AND opportunity.published_at IS NOT NULL
+     INNER JOIN mip_users author
+       ON author.app_id = comment.app_id AND author.id = comment.author_user_id
+        AND author.status = 'ACTIVE'
      INNER JOIN mip_users owner
        ON owner.app_id = opportunity.app_id AND owner.id = opportunity.owner_user_id
          AND owner.status = 'ACTIVE'
      LEFT JOIN mip_user_notification_preferences preference
        ON preference.app_id = owner.app_id AND preference.user_id = owner.id
-     WHERE comment.app_id = ? AND comment.id = ? AND comment.status = 'PUBLISHED'
-       AND comment.author_user_id <> opportunity.owner_user_id
+     WHERE comment.app_id = ? AND comment.id = ? AND comment.version = ?
+       AND comment.status = 'PUBLISHED' AND comment.content_safety_status = 'PASSED'
+       AND comment.author_user_id <> owner.id
        AND COALESCE(preference.comment_notifications_enabled, 1) = 1
        AND NOT EXISTS (
          SELECT 1 FROM mip_user_blocks block
          WHERE block.app_id = comment.app_id AND block.status = 'ACTIVE'
            AND (
              (block.blocker_user_id = comment.author_user_id
-               AND block.blocked_user_id = opportunity.owner_user_id)
-             OR (block.blocker_user_id = opportunity.owner_user_id
+               AND block.blocked_user_id = owner.id)
+             OR (block.blocker_user_id = owner.id
                AND block.blocked_user_id = comment.author_user_id)
            )
        )`,
-    [event.app_id, event.aggregate_id],
+    [event.app_id, event.aggregate_id, event.source_version],
   )
   if (!row) return projection([], [], 'FACT_NO_LONGER_CURRENT')
   return projection([
