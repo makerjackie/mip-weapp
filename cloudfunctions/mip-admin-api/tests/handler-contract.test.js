@@ -4,7 +4,9 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const { describe, it } = require('node:test')
-const { createHandler, normalizeAdminRequest } = require('../domain/handler')
+const { createAdminApplication } = require('../domain/application')
+const { actions, createHandler, normalizeAdminRequest } = require('../domain/handler')
+const { createTrustedPrincipalIssuer } = require('../lib/identity')
 
 describe('admin handler and isolation contract', () => {
   it('normalizes v1 requests without mixing route and business fields', () => {
@@ -187,6 +189,95 @@ describe('admin handler and isolation contract', () => {
     assert.equal(resolved, false)
   })
 
+  it('runs the modern health probe without reading context or issuing a principal', async () => {
+    let contexts = 0
+    let issues = 0
+    const application = createAdminApplication({
+      assertPrincipal() { throw new Error('unexpected principal check') },
+      service: { health: async () => ({ persistence: 'cloudbase-mysql' }) },
+    })
+    const handler = createHandler({
+      application,
+      getContext() { contexts += 1; return {} },
+      issuePrincipal() { issues += 1; throw new Error('unexpected principal issue') },
+    })
+
+    assert.deepEqual(await handler({ action: 'health' }), {
+      ok: true, data: { persistence: 'cloudbase-mysql' },
+    })
+    assert.equal(contexts, 0)
+    assert.equal(issues, 0)
+  })
+
+  it('keeps all 97 business actions compatible with the legacy handler configuration', async () => {
+    const caller = { appId: 'wx', identityKey: 'key' }
+    const calls = []
+    const service = new Proxy({}, {
+      get(target, method) {
+        if (!Object.hasOwn(target, method)) {
+          target[method] = async (...args) => {
+            calls.push({ method, args })
+            return { method }
+          }
+        }
+        return target[method]
+      },
+    })
+    const handler = createHandler({
+      getContext: () => ({ APPID: 'wx', OPENID: 'openid' }),
+      resolveCaller: () => caller,
+      service,
+    })
+    const businessActions = Object.keys(actions).filter(action => action !== 'health')
+
+    assert.equal(businessActions.length, 97)
+    for (const action of businessActions) {
+      const before = calls.length
+      const response = await handler({ contractVersion: 1, action, input: { marker: action } })
+      assert.equal(response.ok, true, action)
+      assert.ok(calls.length > before, action)
+      assert.equal(calls.at(-1).args[0], caller, action)
+    }
+  })
+
+  it('maps modern application errors through the existing response envelope', async () => {
+    const options = {
+      allowedAppIds: new Set(['wx']),
+      pepper: 'identity-pepper-with-at-least-thirty-two-characters',
+    }
+    const issuer = createTrustedPrincipalIssuer(options)
+    const application = createAdminApplication({
+      assertPrincipal: issuer.assert,
+      service: {
+        async getSession() {
+          const error = new Error('CONFLICT')
+          error.code = 'CONFLICT'
+          throw error
+        },
+      },
+    })
+    const handler = createHandler({
+      application,
+      getContext: () => ({ APPID: 'wx', OPENID: 'openid' }),
+      issuePrincipal: issuer.issue,
+    })
+
+    assert.deepEqual((await handler({ action: 'mip.admin.session' })).error, {
+      code: 'CONFLICT', message: '记录状态已变化，请刷新后重试', retryable: true,
+    })
+  })
+
+  it('rejects mixed modern and legacy handler dependencies', () => {
+    const dependencies = {
+      application: { execute() {}, probe() {} },
+      getContext: () => ({}),
+      issuePrincipal: () => ({}),
+      resolveCaller: () => ({}),
+      service: {},
+    }
+    assert.throws(() => createHandler(dependencies), /HANDLER_CONFIG_INVALID/)
+  })
+
   it('keeps the transport handler reusable and maps conflicts to retryable responses', async () => {
     const handler = createHandler({
       getContext: () => ({ FROM_APPID: 'wx', FROM_OPENID: 'openid' }),
@@ -258,6 +349,18 @@ describe('admin handler and isolation contract', () => {
     const response = await handler({ action: 'mip.admin.deleteEverything' })
     assert.equal(response.ok, false)
     assert.equal(response.error.code, 'NOT_FOUND')
+  })
+
+  it('rejects unknown operations in modern mode before reading context or issuing a principal', async () => {
+    let touched = false
+    const handler = createHandler({
+      application: { execute() { touched = true }, probe() { touched = true } },
+      getContext() { touched = true },
+      issuePrincipal() { touched = true },
+    })
+    const response = await handler({ action: 'mip.admin.deleteEverything' })
+    assert.equal(response.error.code, 'NOT_FOUND')
+    assert.equal(touched, false)
   })
 
   it('references only mip-prefixed SQL facts and never issues physical business deletes', () => {

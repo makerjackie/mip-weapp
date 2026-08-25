@@ -1,11 +1,12 @@
 'use strict'
 
 const cloud = require('wx-server-sdk')
+const { createAdminApplication } = require('./domain/application')
 const { createHandler, normalizeAdminRequest } = require('./domain/handler')
 const { configuredAgreements, createFullAccessPolicy } = require('./domain/full-access')
 const { createAdminRepository } = require('./domain/repository')
 const { createAdminService } = require('./domain/service')
-const { resolveTrustedIdentity } = require('./lib/identity')
+const { createTrustedPrincipalIssuer, resolveTrustedIdentity } = require('./lib/identity')
 const { mysqlDatabase } = require('./lib/mysql')
 const { createRefundWorkerClient } = require('./lib/refund-worker-client')
 const { createCloudExportStorage } = require('./lib/export-storage')
@@ -187,24 +188,31 @@ function boundedInteger(value, fallback, minimum, maximum) {
   return Number.isInteger(parsed) && parsed >= minimum && parsed <= maximum ? parsed : fallback
 }
 
-const handler = createHandler({
+const principalIssuer = createTrustedPrincipalIssuer({
+  allowedAppIds,
+  pepper: process.env.MIP_IDENTITY_PEPPER,
+})
+const application = createAdminApplication({
   service,
+  assertPrincipal: principalIssuer.assert,
+})
+const handler = createHandler({
+  application,
   getContext: () => cloud.getWXContext(),
-  resolveCaller: context => resolveTrustedIdentity(context, {
-    allowedAppIds,
-    pepper: process.env.MIP_IDENTITY_PEPPER,
-  }),
+  issuePrincipal: principalIssuer.issue,
 })
 
 exports.main = async (event = {}) => {
   const result = await handler(event)
   if (result?.ok === true) {
     const routeAction = normalizeAdminRequest(event).action
-    await outboxWakeup.afterSuccessfulMutation({
-      appId: trustedContextAppId(cloud.getWXContext(), allowedAppIds),
-      action: routeAction,
-      mutationActions: outboxMutationActions,
-    })
+    if (outboxMutationActions.has(routeAction)) {
+      await outboxWakeup.afterSuccessfulMutation({
+        appId: trustedContextAppId(cloud.getWXContext(), allowedAppIds),
+        action: routeAction,
+        mutationActions: outboxMutationActions,
+      })
+    }
   }
   return result
 }

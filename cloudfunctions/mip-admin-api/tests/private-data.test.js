@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict')
 const { createCipheriv, createHash, createHmac, randomBytes } = require('node:crypto')
 const { describe, it } = require('node:test')
-const { resolveTrustedIdentity } = require('../lib/identity')
+const { createTrustedPrincipalIssuer, resolveTrustedIdentity } = require('../lib/identity')
 const { decryptPhone, maskPhone } = require('../lib/phone')
 
 function encryptPhone(phone, secret, context) {
@@ -30,6 +30,23 @@ describe('trusted identity and private phone', () => {
     assert.throws(() => resolveTrustedIdentity({ FROM_APPID: 'wx-other', FROM_OPENID: 'openid' }, {
       allowedAppIds: new Set(['wx-trusted']), pepper,
     }), /AUTH_REQUIRED/)
+  })
+
+  it('preserves the resolver contract while issuing an authority-scoped principal', () => {
+    const options = {
+      allowedAppIds: new Set(['wx-trusted']),
+      pepper: 'identity-pepper-with-at-least-thirty-two-characters',
+    }
+    const context = { APPID: 'wx-trusted', OPENID: 'openid-trusted' }
+    const resolved = resolveTrustedIdentity(context, options)
+    const issuer = createTrustedPrincipalIssuer(options)
+    const principal = issuer.issue(context)
+
+    assert.deepEqual(principal, resolved)
+    assert.equal(Object.isFrozen(resolved), false)
+    assert.equal(Object.isFrozen(principal), true)
+    assert.equal(issuer.assert(principal), principal)
+    assert.throws(() => issuer.assert({ ...principal }), /AUTH_REQUIRED/)
   })
 
   it('decrypts only with the dedicated key and matching app/user AAD', () => {

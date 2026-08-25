@@ -33,4 +33,27 @@ function resolveTrustedIdentity(context = {}, { allowedAppIds, pepper } = {}) {
   }
 }
 
-module.exports = { resolveTrustedIdentity }
+function createTrustedPrincipalIssuer(options = {}) {
+  const identityOptions = {
+    allowedAppIds: options.allowedAppIds instanceof Set
+      ? new Set(options.allowedAppIds)
+      : options.allowedAppIds,
+    pepper: options.pepper,
+  }
+  const issuedPrincipals = new WeakSet()
+
+  function issue(context) {
+    const principal = Object.freeze(resolveTrustedIdentity(context, identityOptions))
+    issuedPrincipals.add(principal)
+    return principal
+  }
+
+  function assert(principal) {
+    if (!issuedPrincipals.has(principal)) throw new Error('AUTH_REQUIRED')
+    return principal
+  }
+
+  return Object.freeze({ assert, issue })
+}
+
+module.exports = { createTrustedPrincipalIssuer, resolveTrustedIdentity }
