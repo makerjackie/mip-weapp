@@ -37,7 +37,8 @@ describe('account closure experience', () => {
     const page = read('src/packages/member/privacy/index.ts')
     const gateway = read('src/modules/mip-identity/gateway.ts')
     expect(page).toContain('mipIdentityModule.closeAccount')
-    expect(gateway).toContain('call(transport, \'closeAccount\', { input })')
+    expect(gateway).toContain('call(transport, \'closeAccount\', input)')
+    expect(gateway).toContain('contractVersion: MIP_IDENTITY_CONTRACT_VERSION')
     expect(`${page}\n${gateway}`).not.toMatch(/membership-(?:api|admin|payment)/)
   })
 
