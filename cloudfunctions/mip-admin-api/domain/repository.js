@@ -1986,7 +1986,7 @@ function createAdminRepository(database, options = {}) {
       const recordedTransition = await tx.one(
         `SELECT id FROM mip_event_checkin_transitions
          WHERE app_id = ? AND checkin_id = ? AND transition_type = 'CHECKED_IN'
-           AND checkin_version = ? FOR UPDATE`,
+           AND checkin_version = ?`,
         [input.appId, checkin.id, checkin.version],
       )
       if (!recordedTransition) throw codeError('CONFLICT')

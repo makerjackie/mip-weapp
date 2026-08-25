@@ -102,6 +102,10 @@ describe('MIP admin check-in repository', () => {
     assert.match(source, /INSERT INTO mip_event_checkin_transitions/)
     assert.match(source, /INSERT INTO mip_audit_logs/)
     assert.doesNotMatch(source, /DELETE FROM/)
+    const recordedTransitionQuery = calls.find(call => call.kind === 'one'
+      && call.sql.includes('FROM mip_event_checkin_transitions'))
+    assert.ok(recordedTransitionQuery)
+    assert.doesNotMatch(recordedTransitionQuery.sql, /FOR UPDATE/)
     const transition = calls.find(call => call.sql.includes('INSERT INTO mip_event_checkin_transitions'))
     const outbox = calls.find(call => call.sql.includes('INSERT INTO mip_outbox_events'))
     assert.equal(transition.params[6], 'REVOKED')

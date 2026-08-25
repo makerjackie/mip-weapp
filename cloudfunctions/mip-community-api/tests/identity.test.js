@@ -73,7 +73,7 @@ test('interaction readiness is rebuilt from server facts', async () => {
   assert.match(calls[0].sql, /mip_users[\s\S]*FOR UPDATE/)
   assert.deepEqual(calls[0].params, ['wx-community-test', 'user-1'])
   assert.match(calls[1].sql, /agreement_key, agreement_version/)
-  assert.match(calls[1].sql, /FOR UPDATE/)
+  assert.doesNotMatch(calls[1].sql, /FOR UPDATE/)
 
   await assert.rejects(assertInteractionReady({
     async one() {

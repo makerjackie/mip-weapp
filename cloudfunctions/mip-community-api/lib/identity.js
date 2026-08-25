@@ -111,8 +111,7 @@ async function assertInteractionReady(
   const acceptances = await database.query(
     `SELECT agreement_key, agreement_version
      FROM mip_agreement_acceptances
-     WHERE app_id = ? AND user_id = ?
-     FOR UPDATE`,
+     WHERE app_id = ? AND user_id = ?`,
     [caller.appId, caller.userId],
   )
   const accepted = new Set((Array.isArray(acceptances) ? acceptances : []).map(
