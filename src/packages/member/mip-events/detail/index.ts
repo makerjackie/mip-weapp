@@ -536,6 +536,10 @@ Page({
     caseNavigateTo({ url: `/packages/member/mip-events/participants/index?eventId=${encodeURIComponent(this.data.eventId)}` })
   },
 
+  openComments() {
+    caseNavigateTo({ url: `/packages/member/mip-events/comments/index?eventId=${encodeURIComponent(this.data.eventId)}` })
+  },
+
   openInteraction() {
     if (!this.data.event?.canInteract) {
       return

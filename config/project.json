@@ -93,6 +93,10 @@
       "pathName": "packages/member/mip-events/interaction/index"
     },
     {
+      "name": "活动评论",
+      "pathName": "packages/member/mip-events/comments/index"
+    },
+    {
       "name": "机会详情",
       "pathName": "packages/member/mip-opportunities/detail/index"
     },

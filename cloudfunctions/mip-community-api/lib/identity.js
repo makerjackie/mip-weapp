@@ -2,6 +2,11 @@
 
 const { createHmac } = require('node:crypto')
 
+const defaultAgreementRequirements = Object.freeze([
+  Object.freeze({ key: 'SERVICE_AGREEMENT', version: 'draft-2026-08-24' }),
+  Object.freeze({ key: 'PRIVACY_POLICY', version: 'draft-2026-08-24' }),
+])
+
 function configuredAllowedAppIds() {
   return new Set(String(process.env.MIP_ALLOWED_APP_IDS || '')
     .split(',')
@@ -53,32 +58,80 @@ async function resolveActiveUser(database, identity) {
   return { appId: identity.appId, userId: user.id, primaryBranchId: user.primary_branch_id || null }
 }
 
-async function assertInteractionReady(database, caller) {
+function configuredAgreementRequirements(source = process.env.MIP_AGREEMENTS_JSON) {
+  const serialized = String(source || '').trim()
+  if (!serialized) {
+    return defaultAgreementRequirements.map(requirement => ({ ...requirement }))
+  }
+  let parsed
+  try {
+    parsed = JSON.parse(serialized)
+  }
+  catch {
+    throw new Error('AGREEMENT_CONFIG_INVALID')
+  }
+  if (!Array.isArray(parsed) || parsed.length < 1 || parsed.length > 5) {
+    throw new Error('AGREEMENT_CONFIG_INVALID')
+  }
+  return parsed.map((agreement) => {
+    if (!agreement
+      || typeof agreement.key !== 'string'
+      || !/^[A-Z][A-Z0-9_]{2,63}$/.test(agreement.key)
+      || typeof agreement.version !== 'string') {
+      throw new Error('AGREEMENT_CONFIG_INVALID')
+    }
+    return {
+      key: agreement.key,
+      version: agreement.version.slice(0, 32),
+    }
+  })
+}
+
+async function assertInteractionReady(
+  database,
+  caller,
+  agreementRequirements = configuredAgreementRequirements(),
+) {
+  if (!Array.isArray(agreementRequirements) || !agreementRequirements.length) {
+    throw new Error('AGREEMENT_CONFIG_INVALID')
+  }
   const facts = await database.one(
-    `SELECT
-       EXISTS(
-         SELECT 1 FROM mip_profiles p
-         WHERE p.app_id = ? AND p.user_id = ? AND p.nickname <> ''
-       ) AS has_profile,
-       EXISTS(
-         SELECT 1 FROM mip_private_profiles private_profile
-         WHERE private_profile.app_id = ? AND private_profile.user_id = ?
-           AND private_profile.phone_verified_at IS NOT NULL
-       ) AS has_phone,
-       EXISTS(
-         SELECT 1 FROM mip_agreement_acceptances acceptance
-         WHERE acceptance.app_id = ? AND acceptance.user_id = ?
-       ) AS has_agreement`,
-    [caller.appId, caller.userId, caller.appId, caller.userId, caller.appId, caller.userId],
+    `SELECT user.status AS user_status, user.primary_branch_id,
+            profile.nickname, private_profile.phone_verified_at
+     FROM mip_users user
+     LEFT JOIN mip_profiles profile
+       ON profile.app_id = user.app_id AND profile.user_id = user.id
+     LEFT JOIN mip_private_profiles private_profile
+       ON private_profile.app_id = user.app_id AND private_profile.user_id = user.id
+     WHERE user.app_id = ? AND user.id = ?
+     LIMIT 1 FOR UPDATE`,
+    [caller.appId, caller.userId],
   )
-  if (!Number(facts?.has_agreement)) throw new Error('AGREEMENT_REQUIRED')
-  if (!Number(facts?.has_phone)) throw new Error('PHONE_REQUIRED')
-  if (!Number(facts?.has_profile) || !caller.primaryBranchId) throw new Error('PROFILE_REQUIRED')
+  if (!facts || facts.user_status !== 'ACTIVE') throw new Error('FORBIDDEN')
+  const acceptances = await database.query(
+    `SELECT agreement_key, agreement_version
+     FROM mip_agreement_acceptances
+     WHERE app_id = ? AND user_id = ?
+     FOR UPDATE`,
+    [caller.appId, caller.userId],
+  )
+  const accepted = new Set((Array.isArray(acceptances) ? acceptances : []).map(
+    row => `${row.agreement_key}:${row.agreement_version}`,
+  ))
+  if (!agreementRequirements.every(
+    requirement => accepted.has(`${requirement.key}:${requirement.version}`),
+  )) throw new Error('AGREEMENT_REQUIRED')
+  if (!facts.phone_verified_at) throw new Error('PHONE_REQUIRED')
+  if (!facts.primary_branch_id
+    || typeof facts.nickname !== 'string'
+    || !facts.nickname.trim()) throw new Error('PROFILE_REQUIRED')
 }
 
 module.exports = {
   assertInteractionReady,
+  configuredAgreementRequirements,
   configuredAllowedAppIds,
+  defaultAgreementRequirements,
   resolveActiveUser,
   trustedWechatIdentity,
 }

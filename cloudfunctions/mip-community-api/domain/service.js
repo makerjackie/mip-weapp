@@ -1,6 +1,7 @@
 'use strict'
 
 const { randomUUID } = require('node:crypto')
+const { createEventCommentsService } = require('./event-comments')
 const { createKnowledgeService } = require('./knowledge')
 
 const REPORT_CATEGORIES = new Set([
@@ -26,6 +27,14 @@ function createCommunityService(database, options) {
   const readProfileRef = options.readProfileRef
   const createProfileRef = options.createProfileRef
   const profileRefSecret = options.profileRefSecret
+  const eventComments = createEventCommentsService(database, {
+    agreementRequirements: options.agreementRequirements,
+    assertReady: options.assertReady,
+    assertSafe: options.assertCommentSafe,
+    createProfileRef,
+    id: options.id,
+    profileRefSecret,
+  })
   const knowledge = createKnowledgeService(database, {
     assertSafe: options.assertKnowledgeSafe,
     catalogStage: options.catalogStage,
@@ -238,6 +247,7 @@ function createCommunityService(database, options) {
   }
 
   return {
+    ...eventComments,
     ...knowledge,
     blockProfile: (caller, input) => setBlock(caller, input, true),
     getAnnouncement,

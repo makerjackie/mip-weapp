@@ -15,13 +15,16 @@ function agreementVersions(value: Array<{ key: string, version: string }>) {
 }
 
 describe('server full access contract', () => {
-  it('uses the identity domain current agreement defaults in commerce, events, and admin', () => {
+  it('uses the identity domain current agreement defaults in protected domain services', () => {
     const admin = require('../cloudfunctions/mip-admin-api/domain/full-access.js')
     const commerce = require('../cloudfunctions/mip-commerce-api/domain/full-access.js')
+    const community = require('../cloudfunctions/mip-community-api/lib/identity.js')
     const events = require('../cloudfunctions/mip-events-api/domain/participation-access.js')
     const identity = require('../cloudfunctions/mip-identity-api/domain/service.js')
 
     expect(agreementVersions(commerce.defaultAgreements))
+      .toEqual(agreementVersions(identity.defaultAgreements))
+    expect(agreementVersions(community.defaultAgreementRequirements))
       .toEqual(agreementVersions(identity.defaultAgreements))
     expect(agreementVersions(events.defaultAgreements))
       .toEqual(agreementVersions(identity.defaultAgreements))
@@ -32,10 +35,21 @@ describe('server full access contract', () => {
   it('deploys one optional current-agreement configuration to every full-access service', () => {
     const source = read('scripts/deploy-functions.mjs')
     expect(source).toContain('const agreementEnvironment = options.agreementsJson')
+    expect(source).toMatch(/community:\s*\{\s*\.\.\.agreementEnvironment/)
     expect(source).toMatch(/events:\s*\{\s*\.\.\.agreementEnvironment/)
     expect(source).toMatch(/opportunities:\s*\{\s*\.\.\.agreementEnvironment/)
-    expect(source.match(/\.\.\.agreementEnvironment/g)).toHaveLength(5)
+    expect(source.match(/\.\.\.agreementEnvironment/g)).toHaveLength(6)
+    expect(source).toContain('game: agreementEnvironment')
+    expect(source).toContain('tasks: agreementEnvironment')
+    expect(source).toContain('banners: agreementEnvironment')
     expect(source).toContain('if (parsed.length === 0)')
+  })
+
+  it('freezes the community content-safety permission in deployment preflight', () => {
+    const source = read('scripts/deploy-functions.mjs')
+    const config = JSON.parse(read('cloudfunctions/mip-community-api/config.json'))
+    expect(source).toContain('community: [\'security.msgSecCheck\']')
+    expect(config.permissions.openapi).toContain('security.msgSecCheck')
   })
 
   it('constructs and injects the events participation policy from current agreement configuration', () => {

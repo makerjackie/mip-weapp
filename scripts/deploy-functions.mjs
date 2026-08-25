@@ -804,7 +804,10 @@ function environmentForRole(role, options) {
         : {}),
       MIP_MATCHING_PROVIDER_TIMEOUT_MS: String(options.matchingProviderTimeoutMs),
     },
-    community: { MIP_CATALOG_STAGE: options.catalogStage },
+    community: {
+      ...agreementEnvironment,
+      MIP_CATALOG_STAGE: options.catalogStage,
+    },
     commerce: {
       ...agreementEnvironment,
       MIP_CATALOG_STAGE: options.catalogStage,
@@ -874,6 +877,7 @@ function verifyLocalOpenApiDeclarations() {
     media: ['security.imgSecCheck'],
     events: ['security.msgSecCheck', 'wxacode.getUnlimited'],
     opportunities: ['security.msgSecCheck'],
+    community: ['security.msgSecCheck'],
     tasks: ['security.msgSecCheck'],
     banners: ['security.msgSecCheck'],
     ai: ['security.imgSecCheck'],

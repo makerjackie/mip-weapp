@@ -3,6 +3,11 @@ import type {
   BlockedProfilePage,
   BlockMutationResult,
   CommunityRelationship,
+  EventComment,
+  EventCommentPage,
+  EventCommentStatus,
+  EventCommentSubmissionInput,
+  ReportCategory,
   ReportReceipt,
 } from './types'
 
@@ -92,6 +97,92 @@ function receiptDto(value: unknown): ReportReceipt {
   }
 }
 
+function eventCommentDto(value: unknown): EventComment {
+  const source = record(value)
+  const author = record(source.author)
+  const statuses = new Set<EventCommentStatus>(['PENDING', 'PUBLISHED', 'HIDDEN', 'DELETED'])
+  if (typeof source.id !== 'string'
+    || typeof source.body !== 'string'
+    || !statuses.has(source.status as EventCommentStatus)
+    || typeof author.nickname !== 'string'
+    || typeof author.headline !== 'string'
+    || typeof author.avatarUrl !== 'string'
+    || typeof source.mine !== 'boolean'
+    || typeof source.canEdit !== 'boolean'
+    || typeof source.canDelete !== 'boolean'
+    || !Number.isInteger(source.version)) {
+    throw new TypeError('社区安全服务返回了无效响应')
+  }
+  return {
+    id: source.id,
+    body: source.body,
+    status: source.status as EventCommentStatus,
+    author: {
+      profileRef: profileRef(author.profileRef),
+      nickname: author.nickname,
+      headline: author.headline,
+      avatarUrl: author.avatarUrl,
+    },
+    mine: source.mine,
+    canEdit: source.canEdit,
+    canDelete: source.canDelete,
+    version: Number(source.version),
+    ...(optionalText(source.createdAt) ? { createdAt: optionalText(source.createdAt) } : {}),
+    ...(optionalText(source.editedAt) ? { editedAt: optionalText(source.editedAt) } : {}),
+  }
+}
+
+function eventCommentPageDto(value: unknown): EventCommentPage {
+  const source = record(value)
+  const event = record(source.event)
+  const settings = record(source.settings)
+  if (typeof event.id !== 'string'
+    || typeof event.title !== 'string'
+    || !['PUBLISHED', 'CANCELLED', 'ENDED'].includes(String(event.status))
+    || typeof settings.commentsEnabled !== 'boolean'
+    || !['AUTO', 'REVIEW'].includes(String(settings.moderationMode))
+    || !Number.isInteger(settings.version)
+    || !Array.isArray(source.items)) {
+    throw new TypeError('社区安全服务返回了无效响应')
+  }
+  return {
+    event: {
+      id: event.id,
+      title: event.title,
+      status: event.status as EventCommentPage['event']['status'],
+    },
+    settings: {
+      commentsEnabled: settings.commentsEnabled,
+      moderationMode: settings.moderationMode as EventCommentPage['settings']['moderationMode'],
+      version: Number(settings.version),
+    },
+    items: source.items.map(eventCommentDto),
+    ...(optionalText(source.nextCursor) ? { nextCursor: optionalText(source.nextCursor) } : {}),
+  }
+}
+
+function commentMutationDto(value: unknown) {
+  const source = record(value)
+  if (typeof source.id !== 'string'
+    || !['PENDING', 'PUBLISHED', 'DELETED'].includes(String(source.status))
+    || !Number.isInteger(source.version)) {
+    throw new TypeError('社区安全服务返回了无效响应')
+  }
+  return {
+    id: source.id,
+    status: source.status as 'PENDING' | 'PUBLISHED' | 'DELETED',
+    version: Number(source.version),
+  }
+}
+
+function commentReportDto(value: unknown) {
+  const source = record(value)
+  if (typeof source.reportId !== 'string' || source.status !== 'PENDING') {
+    throw new TypeError('社区安全服务返回了无效响应')
+  }
+  return { reportId: source.reportId, status: 'PENDING' as const }
+}
+
 export function createMipCommunityGateway(transport: CommunityTransport) {
   return {
     async relationship(profileRefValue: string) {
@@ -113,6 +204,43 @@ export function createMipCommunityGateway(transport: CommunityTransport) {
       requestId: string
     }) {
       return receiptDto(await transport.invoke('reportProfile', input))
+    },
+    async listEventComments(eventId: string, cursor?: string) {
+      return eventCommentPageDto(await transport.invoke('listEventComments', {
+        eventId,
+        cursor,
+        limit: 20,
+      }))
+    },
+    async saveEventComment(input: EventCommentSubmissionInput, idempotencyKey: string) {
+      return commentMutationDto(await transport.invoke('saveEventComment', {
+        ...input,
+        idempotencyKey,
+      }))
+    },
+    async deleteEventComment(
+      eventId: string,
+      commentId: string,
+      expectedVersion: number,
+      idempotencyKey: string,
+    ) {
+      return commentMutationDto(await transport.invoke('deleteEventComment', {
+        eventId,
+        commentId,
+        expectedVersion,
+        idempotencyKey,
+      }))
+    },
+    async reportEventComment(input: {
+      eventId: string
+      commentId: string
+      expectedVersion: number
+      category: ReportCategory
+      description: string
+      requestId: string
+      idempotencyKey: string
+    }) {
+      return commentReportDto(await transport.invoke('reportEventComment', input))
     },
   }
 }

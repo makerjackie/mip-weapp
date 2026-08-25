@@ -1,4 +1,5 @@
 export * from './client'
+export * from './event-comment-intent'
 export * from './gateway'
 export * from './report-intent'
 export * from './types'

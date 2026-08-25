@@ -26,7 +26,7 @@
 
 核心函数部署后必须使用同一授权模式单独执行 `CLOUDBASE_AUTH_MODE=local pnpm cloud:verify -- --confirm-env=<EnvID>`。空函数壳、控制台可见、单个函数创建成功或 API Key 状态为 `READY` 都不能代替该验收；只有所有核心函数配置回读、MySQL 健康、最小权限调用规则和禁止 timer 检查通过，云端运行时才算完成。
 
-`MIP_AGREEMENTS_JSON` 留空时四个受保护服务共同使用仓库默认协议版本；替换正式协议时，必须一次性提供同一份非空 JSON 数组。部署脚本会把它同时注入 `mip-identity-api`、`mip-commerce-api`、`mip-opportunities-api` 和 `mip-admin-api`，避免客户端展示版本与服务端门禁版本漂移。
+`MIP_AGREEMENTS_JSON` 留空时，受保护服务共同使用仓库默认协议版本；替换正式协议时，必须一次性提供同一份非空 JSON 数组。部署脚本会把它同时注入 `mip-identity-api`、`mip-events-api`、`mip-opportunities-api`、`mip-community-api`、`mip-commerce-api`、`mip-admin-api`、`mip-game-api`、`mip-tasks-api` 和 `mip-banners-api`，避免客户端展示版本与服务端门禁版本漂移。
 
 迁移若报告 `uncertain DDL step`，表示数据库可能已执行该语句，但 journal 未能确认。停止后续部署，保留日志和备份，先恢复变更前备份或人工核对结构；不得直接重跑迁移，也不得手工把 `RUNNING` 改成 `APPLIED`。
 

@@ -48,3 +48,81 @@ export interface CommunityReportIntent {
   description: string
   requestId: string
 }
+
+export type EventCommentStatus = 'PENDING' | 'PUBLISHED' | 'HIDDEN' | 'DELETED'
+
+export interface EventComment {
+  id: string
+  body: string
+  status: EventCommentStatus
+  author: {
+    profileRef: string
+    nickname: string
+    headline: string
+    avatarUrl: string
+  }
+  mine: boolean
+  canEdit: boolean
+  canDelete: boolean
+  version: number
+  createdAt?: string
+  editedAt?: string
+}
+
+export interface EventCommentPage {
+  event: {
+    id: string
+    title: string
+    status: 'PUBLISHED' | 'CANCELLED' | 'ENDED'
+  }
+  settings: {
+    commentsEnabled: boolean
+    moderationMode: 'AUTO' | 'REVIEW'
+    version: number
+  }
+  items: EventComment[]
+  nextCursor?: string
+}
+
+export interface EventCommentSubmissionInput {
+  eventId: string
+  body: string
+  commentId?: string
+  expectedVersion?: number
+}
+
+export interface EventCommentSubmissionIntent {
+  fingerprint: string
+  idempotencyKey: string
+}
+
+export interface EventCommentDeleteIntent {
+  fingerprint: string
+  idempotencyKey: string
+}
+
+export interface EventCommentReportInput {
+  eventId: string
+  commentId: string
+  expectedVersion: number
+  category: ReportCategory
+  description?: string
+}
+
+export interface EventCommentReportIntent {
+  fingerprint: string
+  idempotencyKey: string
+  requestId: string
+}
+
+export class MipCommunityError extends Error {
+  readonly code: string
+  readonly retryable: boolean
+
+  constructor(code: string, message: string, retryable = false) {
+    super(message)
+    this.name = 'MipCommunityError'
+    this.code = code
+    this.retryable = retryable
+  }
+}

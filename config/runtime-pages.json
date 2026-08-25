@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 95,
+  "routeCount": 96,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 95 paths.",
+    "config/project.json routes must list the same 96 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -1128,6 +1128,23 @@
         "dataPath": "registrations",
         "where": { "status": "ATTENDED" },
         "values": { "eventId": "event.id" }
+      }
+    },
+    {
+      "id": "M47",
+      "name": "活动评论",
+      "path": "packages/member/mip-events/comments/index",
+      "selector": "#mip-event-comments-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "access", "error"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'",
+      "query": ["eventId"],
+      "queryFixture": {
+        "sourceRoute": "pages/events/index",
+        "dataPath": "events",
+        "values": { "eventId": "id" }
       }
     },
     {

@@ -26,6 +26,7 @@
         "mip-events/mine/index",
         "mip-events/check-in/index",
         "mip-events/interaction/index",
+        "mip-events/comments/index",
         "mip-opportunities/detail/index",
         "mip-opportunities/editor/index",
         "mip-opportunities/mine/index",
