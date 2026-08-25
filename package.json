@@ -32,6 +32,7 @@
     "verify:analyze": "wv analyze --budget-check --json --output .tmp/analyze-budget.json",
     "verify:server": "node scripts/verify-server.mjs",
     "runtime:preflight": "node scripts/runtime-preflight.mjs",
+    "runtime:free-event": "node scripts/verify-free-event-runtime.mjs",
     "verify:runtime": "node scripts/run-runtime-verify.mjs",
     "baseline:update": "node scripts/verify-runtime.mjs --update-baseline",
     "verify": "node scripts/verify.mjs",

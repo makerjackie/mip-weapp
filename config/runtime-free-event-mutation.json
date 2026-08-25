@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "id": "mip-free-offline-event-mutation",
+  "description": "Free offline event mutation acceptance against one exact development/test fixture.",
+  "mutating": true,
+  "confirmationFlag": "--confirm-mutating-runtime",
+  "allowedStages": [
+    "development",
+    "test"
+  ],
+  "event": {
+    "idFormat": "uuid",
+    "accessType": "FREE",
+    "mode": "OFFLINE",
+    "status": "PUBLISHED",
+    "registrationPolicy": "AUTO"
+  },
+  "connection": {
+    "openedOnly": true,
+    "preferOpenedSession": true,
+    "sharedSession": true,
+    "allowProjectWarmup": false,
+    "allowSecondDevtoolsInstance": false,
+    "allowDirectDatabaseWrites": false
+  },
+  "runtimeAttestation": {
+    "requirePrivateConfigAppId": true,
+    "requireDevelopEnvVersion": true,
+    "requireFreshBuildSha": true,
+    "requireDevtoolsCompile": true,
+    "requireEventsMysqlHealth": true
+  },
+  "deploymentAttestation": {
+    "roles": [
+      "events",
+      "community",
+      "admin"
+    ],
+    "requireExactStage": true,
+    "requireTestCatalog": true,
+    "rejectLivePayment": true
+  },
+  "steps": [
+    {
+      "id": "member-event-detail",
+      "route": "packages/member/mip-events/detail/index",
+      "selector": "#mip-event-detail-page",
+      "mode": "automated-read"
+    },
+    {
+      "id": "member-registration",
+      "route": "packages/member/mip-events/registration/index",
+      "selector": "#mip-event-registration-page",
+      "mode": "automated-mutation",
+      "handlers": [
+        "onTextInput",
+        "onSelectChange",
+        "onBooleanChange",
+        "onShareProfileChange",
+        "submit"
+      ]
+    },
+    {
+      "id": "member-registration-fact",
+      "route": "packages/member/mip-events/mine/index",
+      "selector": "#mip-events-mine-page",
+      "mode": "automated-read"
+    },
+    {
+      "id": "admin-roster",
+      "route": "packages/admin/event-registrations/index",
+      "selector": "#admin-event-registrations-page",
+      "mode": "automated-read"
+    },
+    {
+      "id": "admin-check-in",
+      "route": "packages/admin/event-registrations/index",
+      "selector": "#admin-event-registrations-page",
+      "mode": "automated-mutation",
+      "handlers": [
+        "checkIn"
+      ]
+    },
+    {
+      "id": "member-heart",
+      "route": "packages/member/mip-events/interaction/index",
+      "selector": "#mip-event-interaction-page",
+      "mode": "automated-mutation",
+      "handlers": [
+        "chooseHeart"
+      ],
+      "unavailable": "external-wait-continue"
+    },
+    {
+      "id": "member-feedback",
+      "route": "packages/member/mip-events/interaction/index",
+      "selector": "#mip-event-interaction-page",
+      "mode": "automated-mutation",
+      "handlers": [
+        "changeView",
+        "onRatingChange",
+        "onBodyInput",
+        "saveFeedback"
+      ]
+    },
+    {
+      "id": "member-comment",
+      "route": "packages/member/mip-events/comments/index",
+      "selector": "#mip-event-comments-page",
+      "mode": "automated-mutation",
+      "handlers": [
+        "updateDraft",
+        "submitComment"
+      ]
+    },
+    {
+      "id": "admin-feedback",
+      "route": "packages/admin/event-feedback/index",
+      "selector": "#admin-event-feedback-page",
+      "mode": "automated-read"
+    },
+    {
+      "id": "external-undo-check-in",
+      "route": "packages/admin/event-registrations/index",
+      "selector": "#admin-event-registrations-page",
+      "mode": "external-wait",
+      "handler": "undoCheckIn",
+      "reason": "The bound handler requires an editable WeChat confirmation modal. The runner opens the authoritative roster and waits for the operator-confirmed status change."
+    },
+    {
+      "id": "external-delete-comment",
+      "route": "packages/member/mip-events/comments/index",
+      "selector": "#mip-event-comments-page",
+      "mode": "external-wait",
+      "handler": "deleteComment",
+      "reason": "The bound handler requires a WeChat delete confirmation modal. The runner waits for the created comment to disappear from the current authoritative page state."
+    },
+    {
+      "id": "external-cancel-registration",
+      "route": "packages/member/mip-events/mine/index",
+      "selector": "#mip-events-mine-page",
+      "mode": "external-wait",
+      "handler": "cancelRegistration",
+      "reason": "The bound handler requires a WeChat cancellation confirmation modal. The runner waits for the operator action and verifies cancellation again on event detail."
+    }
+  ],
+  "deviceRequiredRemaining": [
+    {
+      "id": "qr-check-in",
+      "reason": "The runner covers the admin manual check-in path only; WeChat scan scene delivery still requires a real device."
+    }
+  ]
+}

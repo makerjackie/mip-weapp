@@ -1,4 +1,5 @@
 import { prepareApp } from './bootstrap'
+import { runtimeConfig } from './config/runtime'
 import { mipCheckInResumeStore } from './modules/mip-events/client'
 import { mipIdentityModule } from './modules/mip-identity/client'
 import { mipGlobalAccessGuard } from './modules/mip-identity/runtime'
@@ -11,6 +12,16 @@ const popupForeground = createPopupForegroundCoordinator(
 )
 
 App({
+  globalData: {
+    runtimeAcceptance: {
+      buildSha: runtimeConfig.buildSha,
+      catalogStage: runtimeConfig.catalogStage,
+      cloudbaseEnvId: runtimeConfig.cloudbase.envId,
+      cloudbaseMode: runtimeConfig.cloudbase.mode,
+      paymentMode: runtimeConfig.paymentMode,
+    },
+  },
+
   onLaunch(options) {
     prepareApp()
     mipCheckInResumeStore.prune()
