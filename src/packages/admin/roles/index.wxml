@@ -4,40 +4,36 @@
 
   <view wx:if="{{canChange}}" class="mt-5 rounded-[16rpx] bg-panel p-4">
     <view class="text-[length:27rpx] font-semibold">设置角色</view>
-    <view class="mt-3 flex flex-wrap gap-2">
-      <t-tag wx:if="{{canGrantPlatformOwner}}" theme="{{selectedRole === 'PLATFORM_OWNER' ? 'primary' : 'default'}}" variant="outline" data-role="PLATFORM_OWNER" bind:tap="chooseRole">平台超级管理员</t-tag>
-      <t-tag wx:if="{{canGrantPlatformOperations}}" theme="{{selectedRole === 'PLATFORM_OPERATIONS' ? 'primary' : 'default'}}" variant="outline" data-role="PLATFORM_OPERATIONS" bind:tap="chooseRole">平台运营</t-tag>
-      <t-tag wx:if="{{canGrantPlatformFinance}}" theme="{{selectedRole === 'PLATFORM_FINANCE' ? 'primary' : 'default'}}" variant="outline" data-role="PLATFORM_FINANCE" bind:tap="chooseRole">平台财务</t-tag>
-      <t-tag wx:if="{{canGrantBranchAdmin}}" theme="{{selectedRole === 'BRANCH_ADMIN' ? 'primary' : 'default'}}" variant="outline" data-role="BRANCH_ADMIN" bind:tap="chooseRole">城市管理员</t-tag>
-      <t-tag wx:if="{{canGrantEventOwner}}" theme="{{selectedRole === 'EVENT_OWNER' ? 'primary' : 'default'}}" variant="outline" data-role="EVENT_OWNER" bind:tap="chooseRole">活动负责人</t-tag>
-      <t-tag wx:if="{{canGrantEventManager}}" theme="{{selectedRole === 'EVENT_MANAGER' ? 'primary' : 'default'}}" variant="outline" data-role="EVENT_MANAGER" bind:tap="chooseRole">活动管理员</t-tag>
-      <t-tag wx:if="{{canGrantEventStaff}}" theme="{{selectedRole === 'EVENT_STAFF' ? 'primary' : 'default'}}" variant="outline" data-role="EVENT_STAFF" bind:tap="chooseRole">现场人员</t-tag>
+    <view class="mip-admin-section-grid mt-3 grid gap-3">
+      <view class="mip-admin-span-wide">
+        <view class="flex flex-wrap gap-2">
+          <t-tag wx:if="{{canGrantPlatformOwner}}" theme="{{selectedRole === 'PLATFORM_OWNER' ? 'primary' : 'default'}}" variant="outline" data-role="PLATFORM_OWNER" bind:tap="chooseRole">平台超级管理员</t-tag>
+          <t-tag wx:if="{{canGrantPlatformOperations}}" theme="{{selectedRole === 'PLATFORM_OPERATIONS' ? 'primary' : 'default'}}" variant="outline" data-role="PLATFORM_OPERATIONS" bind:tap="chooseRole">平台运营</t-tag>
+          <t-tag wx:if="{{canGrantPlatformFinance}}" theme="{{selectedRole === 'PLATFORM_FINANCE' ? 'primary' : 'default'}}" variant="outline" data-role="PLATFORM_FINANCE" bind:tap="chooseRole">平台财务</t-tag>
+          <t-tag wx:if="{{canGrantBranchAdmin}}" theme="{{selectedRole === 'BRANCH_ADMIN' ? 'primary' : 'default'}}" variant="outline" data-role="BRANCH_ADMIN" bind:tap="chooseRole">城市管理员</t-tag>
+          <t-tag wx:if="{{canGrantEventOwner}}" theme="{{selectedRole === 'EVENT_OWNER' ? 'primary' : 'default'}}" variant="outline" data-role="EVENT_OWNER" bind:tap="chooseRole">活动负责人</t-tag>
+          <t-tag wx:if="{{canGrantEventManager}}" theme="{{selectedRole === 'EVENT_MANAGER' ? 'primary' : 'default'}}" variant="outline" data-role="EVENT_MANAGER" bind:tap="chooseRole">活动管理员</t-tag>
+          <t-tag wx:if="{{canGrantEventStaff}}" theme="{{selectedRole === 'EVENT_STAFF' ? 'primary' : 'default'}}" variant="outline" data-role="EVENT_STAFF" bind:tap="chooseRole">现场人员</t-tag>
+        </view>
+        <view class="mt-3 text-[length:22rpx] text-muted">当前角色：{{selectedRoleLabel}}</view>
+      </view>
+      <picker wx:if="{{selectedScopeType === 'BRANCH' && branches.length}}" mode="selector" range="{{branches}}" range-key="name" value="{{branchIndex}}" bindchange="changeBranch">
+        <view class="box-border flex min-h-[80rpx] max-w-full items-center justify-between rounded-[12rpx] bg-panel-raised px-3 text-[length:23rpx]"><text>{{branchIndex >= 0 ? branches[branchIndex].name : '选择城市分会'}}</text><text class="text-muted">选择</text></view>
+      </picker>
+      <picker wx:if="{{selectedScopeType === 'EVENT' && events.length}}" mode="selector" range="{{events}}" range-key="title" value="{{eventIndex}}" bindchange="changeEvent">
+        <view class="box-border flex min-h-[80rpx] max-w-full items-center justify-between rounded-[12rpx] bg-panel-raised px-3 text-[length:23rpx]"><text>{{eventIndex >= 0 ? events[eventIndex].title : '选择活动'}}</text><text class="text-muted">选择</text></view>
+      </picker>
+      <view wx:if="{{selectedScopeType !== 'PLATFORM' && !scopeId}}" class="mip-admin-span-wide text-[length:22rpx] text-danger">当前没有可管理的授权范围。</view>
+      <view class="mip-admin-span-wide"><t-input value="{{query}}" placeholder="搜索用户昵称" bind:change="updateQuery" bind:enter="searchUsers" /></view>
+      <view wx:if="{{candidates.length}}" class="mip-admin-card-list mip-admin-span-wide grid gap-2">
+        <view wx:for="{{candidates}}" wx:key="id" class="rounded-[10rpx] bg-panel-raised px-3 py-3" data-id="{{item.id}}" data-name="{{item.nickname}}" bind:tap="chooseUser">
+          <view class="text-[length:24rpx]">{{item.nickname}}</view>
+          <view class="mt-1 text-[length:21rpx] text-muted">{{item.cityName || '未填写城市'}}</view>
+        </view>
+      </view>
+      <view wx:if="{{selectedUserName}}" class="mip-admin-span-wide text-[length:23rpx] text-brand">已选择：{{selectedUserName}}</view>
+      <view class="mip-admin-span-wide"><t-button block theme="primary" disabled="{{!selectedUserId || (selectedScopeType !== 'PLATFORM' && !scopeId)}}" loading="{{processingId === selectedUserId}}" bind:tap="grant">确认设置</t-button></view>
     </view>
-    <view class="mt-3 text-[length:22rpx] text-muted">当前角色：{{selectedRoleLabel}}</view>
-
-    <picker wx:if="{{selectedScopeType === 'BRANCH' && branches.length}}" class="mt-3" mode="selector" range="{{branches}}" range-key="name" value="{{branchIndex}}" bindchange="changeBranch">
-      <view class="box-border flex min-h-[80rpx] max-w-full items-center justify-between rounded-[12rpx] bg-panel-raised px-3 text-[length:23rpx]">
-        <text>{{branchIndex >= 0 ? branches[branchIndex].name : '选择城市分会'}}</text>
-        <text class="text-muted">选择</text>
-      </view>
-    </picker>
-    <picker wx:if="{{selectedScopeType === 'EVENT' && events.length}}" class="mt-3" mode="selector" range="{{events}}" range-key="title" value="{{eventIndex}}" bindchange="changeEvent">
-      <view class="box-border flex min-h-[80rpx] max-w-full items-center justify-between rounded-[12rpx] bg-panel-raised px-3 text-[length:23rpx]">
-        <text>{{eventIndex >= 0 ? events[eventIndex].title : '选择活动'}}</text>
-        <text class="text-muted">选择</text>
-      </view>
-    </picker>
-    <view wx:if="{{selectedScopeType !== 'PLATFORM' && !scopeId}}" class="mt-3 text-[length:22rpx] text-danger">当前没有可管理的授权范围。</view>
-
-    <view class="mt-3"><t-input value="{{query}}" placeholder="搜索用户昵称" bind:change="updateQuery" bind:enter="searchUsers" /></view>
-    <view wx:if="{{candidates.length}}" class="mip-admin-card-list mt-2 flex flex-col gap-2">
-      <view wx:for="{{candidates}}" wx:key="id" class="rounded-[10rpx] bg-panel-raised px-3 py-3" data-id="{{item.id}}" data-name="{{item.nickname}}" bind:tap="chooseUser">
-        <view class="text-[length:24rpx]">{{item.nickname}}</view>
-        <view class="mt-1 text-[length:21rpx] text-muted">{{item.cityName || '未填写城市'}}</view>
-      </view>
-    </view>
-    <view wx:if="{{selectedUserName}}" class="mt-3 text-[length:23rpx] text-brand">已选择：{{selectedUserName}}</view>
-    <view class="mt-4"><t-button block theme="primary" disabled="{{!selectedUserId || (selectedScopeType !== 'PLATFORM' && !scopeId)}}" loading="{{processingId === selectedUserId}}" bind:tap="grant">确认设置</t-button></view>
   </view>
 
   <view wx:if="{{canConfigurePolicies}}" class="mt-5 rounded-[16rpx] bg-panel p-4">
