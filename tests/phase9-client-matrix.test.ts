@@ -22,10 +22,10 @@ function extractRetryableActions(source: string): string[] {
 
 describe('phase9 gateway retry policy (read-only)', () => {
   it('MIP admin and event gateways retry only declared read actions', () => {
-    const adminGateway = read('src/modules/mip-admin/cloudbase-gateway.ts')
+    const adminTransport = read('src/modules/mip-admin/cloudbase-transport.ts')
     const eventGateway = read('src/modules/mip-events/cloudbase-gateway.ts')
 
-    const adminReads = extractRetryableActions(adminGateway)
+    const adminReads = extractRetryableActions(adminTransport)
     const eventReads = extractRetryableActions(eventGateway)
 
     expect(adminReads.length).toBeGreaterThan(0)
@@ -58,7 +58,7 @@ describe('phase9 gateway retry policy (read-only)', () => {
     }
     expect(eventReads).toContain('mip.events.myRegistration')
 
-    expect(adminGateway).toContain('readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 }')
+    expect(adminTransport).toContain('readActions.has(request.action) ? COLD_START_READ_RETRY : { attempts: 1 }')
     expect(eventGateway).toContain('readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 }')
     expect(COLD_START_READ_RETRY.attempts).toBeGreaterThan(1)
   })

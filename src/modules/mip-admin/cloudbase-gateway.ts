@@ -1,3 +1,4 @@
+import type { AdminTransport } from './transport'
 import type {
   AdminBranch,
   AdminCapability,
@@ -15,15 +16,13 @@ import type {
   AdminRoleItem,
   MipAdminGateway,
 } from './types'
-import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
-import { runtimeConfig } from '../../config/runtime'
 import { resolveCloudFileUrls } from '../platform/cloud-media'
-import { requireCloudClient } from '../platform/cloudbase'
 import {
   parseAdminAnnouncementDetail,
   parseAdminAnnouncementPage,
   parseAdminAnnouncementScopes,
 } from './announcements'
+import { cloudbaseAdminTransport } from './cloudbase-transport'
 import {
   parseMessageCampaign,
   parseMessageCampaignPage,
@@ -39,52 +38,6 @@ import {
 import { parseAdminOrderPage, parseAdminRosterPage } from './order-roster'
 import { createAdminRequest } from './request-contract'
 import { MipAdminError } from './types'
-
-interface Envelope<T> {
-  ok: boolean
-  data?: T
-  error?: { code?: string, message?: string, retryable?: boolean, details?: unknown }
-}
-
-const readActions = new Set([
-  'mip.admin.session',
-  'mip.admin.dashboard',
-  'mip.admin.branches.list',
-  'mip.admin.announcements.scopes',
-  'mip.admin.announcements.list',
-  'mip.admin.announcements.get',
-  'mip.admin.messageCampaigns.scopes',
-  'mip.admin.messageCampaigns.list',
-  'mip.admin.messageCampaigns.get',
-  'mip.admin.messageCampaigns.recipients',
-  'mip.admin.communityReports.list',
-  'mip.admin.users.list',
-  'mip.admin.users.get',
-  'mip.admin.events.list',
-  'mip.admin.events.policy.get',
-  'mip.admin.events.get',
-  'mip.admin.events.album.list',
-  'mip.admin.events.roster',
-  'mip.admin.events.rosterAll',
-  'mip.admin.roles.list',
-  'mip.admin.roles.candidates',
-  'mip.admin.rolePolicies.list',
-  'mip.admin.opportunities.list',
-  'mip.admin.opportunities.get',
-  'mip.admin.opportunities.options',
-  'mip.admin.opportunityComments.get',
-  'mip.admin.matching.get',
-  'mip.admin.growth.levels',
-  'mip.admin.growth.benefits',
-  'mip.admin.growth.rules',
-  'mip.admin.growth.entries',
-  'mip.admin.badges.list',
-  'mip.admin.badges.awards',
-  'mip.admin.orders.list',
-  'mip.admin.exceptions.list',
-  'mip.admin.audit.list',
-  'mip.admin.exports.status',
-])
 
 const exportStatuses = new Set(['PENDING', 'READY', 'RESERVED', 'CONSUMED', 'EXPIRED', 'REVOKED', 'FAILED'])
 const xlsxType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -521,199 +474,171 @@ function parseEventAlbumPage(value: unknown) {
   return { items: value.items.map(parseEventAlbumPhoto), nextCursor: value.nextCursor }
 }
 
-function unwrap<T>(value: unknown): T {
-  if (!value || typeof value !== 'object' || typeof (value as Envelope<T>).ok !== 'boolean') {
-    throw new MipAdminError('SERVICE_UNAVAILABLE', '运营服务返回了无效响应', true)
+export function createMipAdminGateway(transport: AdminTransport): MipAdminGateway {
+  const call = <T>(action: string, data: Record<string, unknown> = {}) => (
+    transport.request<T>(createAdminRequest(action, data))
+  )
+  return {
+    getSession: () => call('mip.admin.session'),
+    getDashboard: () => call('mip.admin.dashboard'),
+    listBranches: async () => parseBranchPage(await call('mip.admin.branches.list')),
+    createBranch: async input => parseBranch(await call('mip.admin.branches.create', { ...input })),
+    updateBranch: async input => parseBranch(await call('mip.admin.branches.update', { ...input })),
+    changeBranchStatus: async input => parseBranch(await call('mip.admin.branches.changeStatus', { ...input })),
+    getAnnouncementScopes: async () => parseAdminAnnouncementScopes(
+      await call('mip.admin.announcements.scopes'),
+    ),
+    listAnnouncements: async input => parseAdminAnnouncementPage(
+      await call('mip.admin.announcements.list', { ...(input || {}) }),
+    ),
+    getAnnouncement: async announcementId => parseAdminAnnouncementDetail(
+      await call('mip.admin.announcements.get', { announcementId }),
+    ),
+    saveAnnouncement: async input => parseAdminAnnouncementDetail(
+      await call('mip.admin.announcements.save', { ...input }),
+    ),
+    publishAnnouncement: async (announcementId, expectedVersion) => parseAdminAnnouncementDetail(
+      await call('mip.admin.announcements.publish', { announcementId, expectedVersion }),
+    ),
+    withdrawAnnouncement: async (announcementId, expectedVersion, reason) => parseAdminAnnouncementDetail(
+      await call('mip.admin.announcements.withdraw', { announcementId, expectedVersion, reason }),
+    ),
+    setAnnouncementPinned: async (announcementId, pinned, expectedVersion) => parseAdminAnnouncementDetail(
+      await call('mip.admin.announcements.pin', { announcementId, pinned, expectedVersion }),
+    ),
+    getMessageCampaignScopes: async () => parseMessageCampaignScopes(
+      await call('mip.admin.messageCampaigns.scopes'),
+    ),
+    listMessageCampaigns: async input => parseMessageCampaignPage(
+      await call('mip.admin.messageCampaigns.list', { ...(input || {}) }),
+    ),
+    getMessageCampaign: async campaignId => parseMessageCampaign(
+      await call('mip.admin.messageCampaigns.get', { campaignId }),
+    ),
+    searchMessageRecipients: async input => parseMessageRecipientPage(
+      await call('mip.admin.messageCampaigns.recipients', { ...(input || {}) }),
+    ),
+    saveMessageCampaign: async input => parseMessageCampaign(
+      await call('mip.admin.messageCampaigns.save', { ...input }),
+    ),
+    snapshotMessageCampaign: async (campaignId, expectedVersion) => parseMessageCampaign(
+      await call('mip.admin.messageCampaigns.snapshot', { campaignId, expectedVersion }),
+    ),
+    publishMessageCampaign: async (campaignId, expectedVersion, idempotencyKey) => parseMessageCampaignPublication(
+      await call('mip.admin.messageCampaigns.publish', { campaignId, expectedVersion, idempotencyKey }),
+    ),
+    withdrawMessageCampaign: async (campaignId, expectedVersion, reason) => parseMessageCampaign(
+      await call('mip.admin.messageCampaigns.withdraw', { campaignId, expectedVersion, reason }),
+    ),
+    listCommunityReports: async status => parseCommunityReportPage(
+      await call('mip.admin.communityReports.list', { status }),
+    ),
+    claimCommunityReport: async input => parseCommunityReport(
+      await call('mip.admin.communityReports.claim', { ...input }),
+    ),
+    closeCommunityReport: async input => parseCommunityReport(
+      await call('mip.admin.communityReports.close', { ...input }),
+    ),
+    listUsers: input => call('mip.admin.users.list', input || {}),
+    getUser: (userId, includePhone = false) => call('mip.admin.users.get', { userId, includePhone }),
+    updateUser: input => call('mip.admin.users.update', input),
+    setUserControl: input => call('mip.admin.users.setControl', input),
+    createExport: async input => parseExportTicket(await call('mip.admin.exports.create', input)),
+    prepareExport: async (ticketId, token) => parseExportStatus(await call('mip.admin.exports.prepare', { ticketId, token })),
+    getExportStatus: async (ticketId, token) => parseExportStatus(await call('mip.admin.exports.status', { ticketId, token })),
+    reserveExport: async (ticketId, token) => parseExportReservation(await call('mip.admin.exports.reserve', { ticketId, token })),
+    completeExport: async (ticketId, token) => {
+      const value = await call<Record<string, unknown>>('mip.admin.exports.complete', { ticketId, token })
+      if (!record(value) || value.status !== 'CONSUMED' || typeof value.consumedAt !== 'string') {
+        throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的导出消费状态')
+      }
+      return { status: 'CONSUMED' as const, consumedAt: value.consumedAt }
+    },
+    listEvents: input => call('mip.admin.events.list', input || {}),
+    getEventPolicy: async () => parseEventPolicy(await call('mip.admin.events.policy.get')),
+    saveEventPolicy: async input => parseEventPolicy(await call('mip.admin.events.policy.save', {
+      cancellationHoursBeforeStart: input.cancellationHoursBeforeStart,
+      expectedVersion: input.version,
+    })),
+    getEvent: async eventId => resolveCloudFileUrls(
+      await call('mip.admin.events.get', { eventId }),
+    ),
+    listEventAlbumPhotos: async (eventId: string, status: AdminEventAlbumPhotoStatus) => {
+      const page = parseEventAlbumPage(await call('mip.admin.events.album.list', { eventId, status }))
+      return resolveCloudFileUrls(page)
+    },
+    reviewEventAlbumPhoto: async (input) => {
+      const photo = parseEventAlbumPhoto(await call('mip.admin.events.album.review', { ...input }))
+      return resolveCloudFileUrls(photo)
+    },
+    saveEvent: input => call('mip.admin.events.save', input),
+    cloneEvent: async input => parseEventClone(await call('mip.admin.events.clone', { ...input })),
+    changeEventStatus: input => call('mip.admin.events.changeStatus', input),
+    archiveEvent: input => call('mip.admin.events.archive', input),
+    publishEventReminder: async input => parseEventReminderPublication(
+      await call('mip.admin.communications.publishEventReminder', { ...input }),
+    ),
+    listRoster: async input => parseAdminRosterPage(await call('mip.admin.events.roster', { ...input })),
+    listRosterAll: input => call('mip.admin.events.rosterAll', { ...input }),
+    reviewRegistration: input => call('mip.admin.events.registrations.review', input),
+    checkIn: input => call('mip.admin.events.checkIn', input),
+    undoCheckIn: input => call('mip.admin.events.undoCheckIn', input),
+    listRoles: async () => parseAdminRolePage(await call('mip.admin.roles.list')),
+    searchRoleCandidates: async (eventId, query) => parseAdminRoleCandidatePage(
+      await call('mip.admin.roles.candidates', { eventId, query }),
+    ),
+    setRole: input => call('mip.admin.roles.set', input),
+    listRoleCapabilityPolicies: async () => parseAdminRoleCapabilityPolicyPage(
+      await call('mip.admin.rolePolicies.list'),
+    ),
+    updateRoleCapabilityPolicy: async input => parseAdminRoleCapabilityPolicy(
+      await call('mip.admin.rolePolicies.update', { ...input }),
+    ),
+    resetRoleCapabilityPolicy: async input => parseAdminRoleCapabilityPolicy(
+      await call('mip.admin.rolePolicies.update', { ...input, reset: true }),
+    ),
+    listOpportunities: input => call('mip.admin.opportunities.list', input || {}),
+    getOpportunity: async opportunityId => resolveCloudFileUrls(
+      await call('mip.admin.opportunities.get', { opportunityId }),
+    ),
+    getOpportunityEditorOptions: () => call('mip.admin.opportunities.options'),
+    saveOpportunity: input => call('mip.admin.opportunities.save', input),
+    publishOpportunity: input => call('mip.admin.opportunities.publish', input),
+    endOpportunity: input => call('mip.admin.opportunities.end', input),
+    unpublishOpportunity: input => call('mip.admin.opportunities.unpublish', input),
+    archiveOpportunity: input => call('mip.admin.opportunities.archive', input),
+    getOpportunityCommentAdminState: async opportunityId => parseOpportunityCommentState(
+      await call('mip.admin.opportunityComments.get', { opportunityId }),
+    ),
+    saveOpportunityCommentSettings: async input => parseOpportunityCommentSettings(
+      await call('mip.admin.opportunityComments.settings.save', { ...input }),
+    ),
+    moderateOpportunityComment: input => call('mip.admin.opportunityComments.moderate', { ...input }),
+    closeOpportunityCommentReport: input => call('mip.admin.opportunityComments.reports.close', { ...input }),
+    getMatchingAdminState: branchId => call('mip.admin.matching.get', { branchId }),
+    saveMatchingSettings: input => call('mip.admin.matching.settings.save', { ...input }),
+    recalculateOpportunityMatching: input => call('mip.admin.matching.recalculate', { ...input }),
+    listGrowthLevels: () => call('mip.admin.growth.levels'),
+    listGrowthBenefits: () => call('mip.admin.growth.benefits'),
+    saveGrowthBenefit: input => call('mip.admin.growth.saveBenefit', input),
+    saveGrowthLevel: input => call('mip.admin.growth.saveLevel', input),
+    listGrowthRules: () => call('mip.admin.growth.rules'),
+    saveGrowthRule: input => call('mip.admin.growth.saveRule', input),
+    listGrowthEntries: input => call('mip.admin.growth.entries', input || {}),
+    adjustGrowth: input => call('mip.admin.growth.adjust', input),
+    listBadges: () => call('mip.admin.badges.list'),
+    saveBadge: input => call('mip.admin.badges.save', input),
+    listBadgeAwards: input => call('mip.admin.badges.awards', input || {}),
+    grantBadge: input => call('mip.admin.badges.grant', input),
+    revokeBadge: input => call('mip.admin.badges.revoke', input),
+    listOrders: async input => parseAdminOrderPage(await call('mip.admin.orders.list', { ...(input || {}) })),
+    submitRefund: input => call('mip.admin.refunds.submit', input),
+    retryRefund: refundId => call('mip.admin.refunds.retry', { refundId }),
+    listOperationalExceptions: async input => parseOperationalExceptionPage(
+      await call('mip.admin.exceptions.list', { ...(input || {}) }),
+    ),
+    listAudit: input => call('mip.admin.audit.list', input || {}),
   }
-  const envelope = value as Envelope<T>
-  if (!envelope.ok) {
-    throw new MipAdminError(
-      envelope.error?.code || 'SERVICE_UNAVAILABLE',
-      envelope.error?.message || '运营服务请求失败',
-      envelope.error?.retryable === true,
-      record(envelope.error?.details) ? envelope.error.details : null,
-    )
-  }
-  return envelope.data as T
 }
 
-async function call<T>(action: string, data: Record<string, unknown> = {}) {
-  try {
-    const response = await retryTransport(async () => {
-      const cloud = await requireCloudClient()
-      return cloud.callFunction({
-        name: runtimeConfig.cloudbase.adminFunctionName,
-        data: createAdminRequest(action, data),
-      })
-    }, readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 })
-    return unwrap<T>(response.result)
-  }
-  catch (error) {
-    if (error instanceof MipAdminError) {
-      throw error
-    }
-    throw new MipAdminError('SERVICE_UNAVAILABLE', '运营服务暂时不可用，请稍后重试', true)
-  }
-}
-
-export const cloudbaseMipAdminGateway: MipAdminGateway = {
-  getSession: () => call('mip.admin.session'),
-  getDashboard: () => call('mip.admin.dashboard'),
-  listBranches: async () => parseBranchPage(await call('mip.admin.branches.list')),
-  createBranch: async input => parseBranch(await call('mip.admin.branches.create', { ...input })),
-  updateBranch: async input => parseBranch(await call('mip.admin.branches.update', { ...input })),
-  changeBranchStatus: async input => parseBranch(await call('mip.admin.branches.changeStatus', { ...input })),
-  getAnnouncementScopes: async () => parseAdminAnnouncementScopes(
-    await call('mip.admin.announcements.scopes'),
-  ),
-  listAnnouncements: async input => parseAdminAnnouncementPage(
-    await call('mip.admin.announcements.list', { ...(input || {}) }),
-  ),
-  getAnnouncement: async announcementId => parseAdminAnnouncementDetail(
-    await call('mip.admin.announcements.get', { announcementId }),
-  ),
-  saveAnnouncement: async input => parseAdminAnnouncementDetail(
-    await call('mip.admin.announcements.save', { ...input }),
-  ),
-  publishAnnouncement: async (announcementId, expectedVersion) => parseAdminAnnouncementDetail(
-    await call('mip.admin.announcements.publish', { announcementId, expectedVersion }),
-  ),
-  withdrawAnnouncement: async (announcementId, expectedVersion, reason) => parseAdminAnnouncementDetail(
-    await call('mip.admin.announcements.withdraw', { announcementId, expectedVersion, reason }),
-  ),
-  setAnnouncementPinned: async (announcementId, pinned, expectedVersion) => parseAdminAnnouncementDetail(
-    await call('mip.admin.announcements.pin', { announcementId, pinned, expectedVersion }),
-  ),
-  getMessageCampaignScopes: async () => parseMessageCampaignScopes(
-    await call('mip.admin.messageCampaigns.scopes'),
-  ),
-  listMessageCampaigns: async input => parseMessageCampaignPage(
-    await call('mip.admin.messageCampaigns.list', { ...(input || {}) }),
-  ),
-  getMessageCampaign: async campaignId => parseMessageCampaign(
-    await call('mip.admin.messageCampaigns.get', { campaignId }),
-  ),
-  searchMessageRecipients: async input => parseMessageRecipientPage(
-    await call('mip.admin.messageCampaigns.recipients', { ...(input || {}) }),
-  ),
-  saveMessageCampaign: async input => parseMessageCampaign(
-    await call('mip.admin.messageCampaigns.save', { ...input }),
-  ),
-  snapshotMessageCampaign: async (campaignId, expectedVersion) => parseMessageCampaign(
-    await call('mip.admin.messageCampaigns.snapshot', { campaignId, expectedVersion }),
-  ),
-  publishMessageCampaign: async (campaignId, expectedVersion, idempotencyKey) => parseMessageCampaignPublication(
-    await call('mip.admin.messageCampaigns.publish', { campaignId, expectedVersion, idempotencyKey }),
-  ),
-  withdrawMessageCampaign: async (campaignId, expectedVersion, reason) => parseMessageCampaign(
-    await call('mip.admin.messageCampaigns.withdraw', { campaignId, expectedVersion, reason }),
-  ),
-  listCommunityReports: async status => parseCommunityReportPage(
-    await call('mip.admin.communityReports.list', { status }),
-  ),
-  claimCommunityReport: async input => parseCommunityReport(
-    await call('mip.admin.communityReports.claim', { ...input }),
-  ),
-  closeCommunityReport: async input => parseCommunityReport(
-    await call('mip.admin.communityReports.close', { ...input }),
-  ),
-  listUsers: input => call('mip.admin.users.list', input || {}),
-  getUser: (userId, includePhone = false) => call('mip.admin.users.get', { userId, includePhone }),
-  updateUser: input => call('mip.admin.users.update', input),
-  setUserControl: input => call('mip.admin.users.setControl', input),
-  createExport: async input => parseExportTicket(await call('mip.admin.exports.create', input)),
-  prepareExport: async (ticketId, token) => parseExportStatus(await call('mip.admin.exports.prepare', { ticketId, token })),
-  getExportStatus: async (ticketId, token) => parseExportStatus(await call('mip.admin.exports.status', { ticketId, token })),
-  reserveExport: async (ticketId, token) => parseExportReservation(await call('mip.admin.exports.reserve', { ticketId, token })),
-  completeExport: async (ticketId, token) => {
-    const value = await call<Record<string, unknown>>('mip.admin.exports.complete', { ticketId, token })
-    if (!record(value) || value.status !== 'CONSUMED' || typeof value.consumedAt !== 'string') {
-      throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的导出消费状态')
-    }
-    return { status: 'CONSUMED' as const, consumedAt: value.consumedAt }
-  },
-  listEvents: input => call('mip.admin.events.list', input || {}),
-  getEventPolicy: async () => parseEventPolicy(await call('mip.admin.events.policy.get')),
-  saveEventPolicy: async input => parseEventPolicy(await call('mip.admin.events.policy.save', {
-    cancellationHoursBeforeStart: input.cancellationHoursBeforeStart,
-    expectedVersion: input.version,
-  })),
-  getEvent: async eventId => resolveCloudFileUrls(
-    await call('mip.admin.events.get', { eventId }),
-  ),
-  listEventAlbumPhotos: async (eventId: string, status: AdminEventAlbumPhotoStatus) => {
-    const page = parseEventAlbumPage(await call('mip.admin.events.album.list', { eventId, status }))
-    return resolveCloudFileUrls(page)
-  },
-  reviewEventAlbumPhoto: async (input) => {
-    const photo = parseEventAlbumPhoto(await call('mip.admin.events.album.review', { ...input }))
-    return resolveCloudFileUrls(photo)
-  },
-  saveEvent: input => call('mip.admin.events.save', input),
-  cloneEvent: async input => parseEventClone(await call('mip.admin.events.clone', { ...input })),
-  changeEventStatus: input => call('mip.admin.events.changeStatus', input),
-  archiveEvent: input => call('mip.admin.events.archive', input),
-  publishEventReminder: async input => parseEventReminderPublication(
-    await call('mip.admin.communications.publishEventReminder', { ...input }),
-  ),
-  listRoster: async input => parseAdminRosterPage(await call('mip.admin.events.roster', { ...input })),
-  listRosterAll: input => call('mip.admin.events.rosterAll', { ...input }),
-  reviewRegistration: input => call('mip.admin.events.registrations.review', input),
-  checkIn: input => call('mip.admin.events.checkIn', input),
-  undoCheckIn: input => call('mip.admin.events.undoCheckIn', input),
-  listRoles: async () => parseAdminRolePage(await call('mip.admin.roles.list')),
-  searchRoleCandidates: async (eventId, query) => parseAdminRoleCandidatePage(
-    await call('mip.admin.roles.candidates', { eventId, query }),
-  ),
-  setRole: input => call('mip.admin.roles.set', input),
-  listRoleCapabilityPolicies: async () => parseAdminRoleCapabilityPolicyPage(
-    await call('mip.admin.rolePolicies.list'),
-  ),
-  updateRoleCapabilityPolicy: async input => parseAdminRoleCapabilityPolicy(
-    await call('mip.admin.rolePolicies.update', { ...input }),
-  ),
-  resetRoleCapabilityPolicy: async input => parseAdminRoleCapabilityPolicy(
-    await call('mip.admin.rolePolicies.update', { ...input, reset: true }),
-  ),
-  listOpportunities: input => call('mip.admin.opportunities.list', input || {}),
-  getOpportunity: async opportunityId => resolveCloudFileUrls(
-    await call('mip.admin.opportunities.get', { opportunityId }),
-  ),
-  getOpportunityEditorOptions: () => call('mip.admin.opportunities.options'),
-  saveOpportunity: input => call('mip.admin.opportunities.save', input),
-  publishOpportunity: input => call('mip.admin.opportunities.publish', input),
-  endOpportunity: input => call('mip.admin.opportunities.end', input),
-  unpublishOpportunity: input => call('mip.admin.opportunities.unpublish', input),
-  archiveOpportunity: input => call('mip.admin.opportunities.archive', input),
-  getOpportunityCommentAdminState: async opportunityId => parseOpportunityCommentState(
-    await call('mip.admin.opportunityComments.get', { opportunityId }),
-  ),
-  saveOpportunityCommentSettings: async input => parseOpportunityCommentSettings(
-    await call('mip.admin.opportunityComments.settings.save', { ...input }),
-  ),
-  moderateOpportunityComment: input => call('mip.admin.opportunityComments.moderate', { ...input }),
-  closeOpportunityCommentReport: input => call('mip.admin.opportunityComments.reports.close', { ...input }),
-  getMatchingAdminState: branchId => call('mip.admin.matching.get', { branchId }),
-  saveMatchingSettings: input => call('mip.admin.matching.settings.save', { ...input }),
-  recalculateOpportunityMatching: input => call('mip.admin.matching.recalculate', { ...input }),
-  listGrowthLevels: () => call('mip.admin.growth.levels'),
-  listGrowthBenefits: () => call('mip.admin.growth.benefits'),
-  saveGrowthBenefit: input => call('mip.admin.growth.saveBenefit', input),
-  saveGrowthLevel: input => call('mip.admin.growth.saveLevel', input),
-  listGrowthRules: () => call('mip.admin.growth.rules'),
-  saveGrowthRule: input => call('mip.admin.growth.saveRule', input),
-  listGrowthEntries: input => call('mip.admin.growth.entries', input || {}),
-  adjustGrowth: input => call('mip.admin.growth.adjust', input),
-  listBadges: () => call('mip.admin.badges.list'),
-  saveBadge: input => call('mip.admin.badges.save', input),
-  listBadgeAwards: input => call('mip.admin.badges.awards', input || {}),
-  grantBadge: input => call('mip.admin.badges.grant', input),
-  revokeBadge: input => call('mip.admin.badges.revoke', input),
-  listOrders: async input => parseAdminOrderPage(await call('mip.admin.orders.list', { ...(input || {}) })),
-  submitRefund: input => call('mip.admin.refunds.submit', input),
-  retryRefund: refundId => call('mip.admin.refunds.retry', { refundId }),
-  listOperationalExceptions: async input => parseOperationalExceptionPage(
-    await call('mip.admin.exceptions.list', { ...(input || {}) }),
-  ),
-  listAudit: input => call('mip.admin.audit.list', input || {}),
-}
+export const cloudbaseMipAdminGateway = createMipAdminGateway(cloudbaseAdminTransport)

@@ -55,7 +55,7 @@ describe('admin operation catalog', () => {
 
   it('classifies every client read retry action as a query', () => {
     const readActions = setLiteralStrings(
-      path.join(root, 'src/modules/mip-admin/cloudbase-gateway.ts'),
+      path.join(root, 'src/modules/mip-admin/cloudbase-transport.ts'),
       'readActions',
     )
 
