@@ -389,6 +389,10 @@
       "pathName": "packages/admin/exceptions/index"
     },
     {
+      "name": "消息投递复核明细",
+      "pathName": "packages/admin/message-delivery-review/index"
+    },
+    {
       "name": "运营审计",
       "pathName": "packages/admin/audit/index"
     },

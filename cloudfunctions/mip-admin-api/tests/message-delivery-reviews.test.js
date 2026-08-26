@@ -35,6 +35,45 @@ const CURRENT_TIME = new Date('2030-08-25T10:00:00.000Z')
 const SECRET = 'notification-review-secret-at-least-32-bytes'
 
 describe('message delivery review contract', () => {
+  it('keeps the detail DTO limited to safe operational evidence', () => {
+    const source = deliverySource({
+      id: idFor(900),
+      channel: 'WECHAT_SUBSCRIPTION',
+      status: 'CANCELLED',
+      attempts: 1,
+      available_at: null,
+      lease_expires_at: null,
+      delivered_at: null,
+      last_error_code: 'DELIVERY_OUTCOME_UNKNOWN',
+      last_outcome: 'UNKNOWN',
+      retry_disposition: 'MANUAL_REVIEW',
+      outcome_updated_at: CURRENT_TIME,
+      updated_at: CURRENT_TIME,
+    }, null, {
+      target_type: 'USER',
+      target_id: idFor(901),
+    }, null)
+    const dto = reviewDto(source, ACTOR_ID, CURRENT_TIME)
+    const serialized = JSON.stringify(dto).toLowerCase()
+    for (const forbidden of ['openid', 'phone', 'ciphertext', 'provider', 'payload']) {
+      assert.equal(serialized.includes(forbidden), false)
+    }
+    assert.deepEqual(Object.keys(dto), [
+      'resourceRef',
+      'classification',
+      'evidenceRevision',
+      'sourceState',
+      'evidence',
+      'workflow',
+      'actions',
+    ])
+    assert.deepEqual(dto.evidence, {
+      channel: 'WECHAT_SUBSCRIPTION',
+      reservedGrantCount: 0,
+      targetRef: { type: 'USER', id: idFor(901) },
+    })
+  })
+
   it('defaults lists to active workflow, validates explicit history, and requires an unknown note', () => {
     assert.deepEqual(normalizeReviewListInput({}), {
       sourceType: null,

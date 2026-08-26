@@ -111,6 +111,7 @@
         "banner-editor/index",
         "community-reports/index",
         "exceptions/index",
+        "message-delivery-review/index",
         "audit/index",
         "roles/index"
       ]

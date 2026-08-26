@@ -355,6 +355,17 @@ Page({
     })
   },
 
+  openReview(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    const item = this.data.reviewItems.find(candidate => candidate.id === id)
+    if (!item || this.data.busyReviewId) {
+      return
+    }
+    void wx.navigateTo({
+      url: `/packages/admin/message-delivery-review/index?sourceType=${encodeURIComponent(item.resourceRef.type)}&sourceId=${encodeURIComponent(item.resourceRef.id)}`,
+    })
+  },
+
   updateResolutionNote(event: WechatMiniprogram.Input) {
     this.setData({ resolutionNote: String(event.detail.value || '').slice(0, 500) })
   },

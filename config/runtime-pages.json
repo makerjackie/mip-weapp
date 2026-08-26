@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 102,
+  "routeCount": 103,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 102 paths.",
+    "config/project.json routes must list the same 103 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -1049,6 +1049,23 @@
       "states": ["loading", "ready", "empty", "error", "forbidden"],
       "acceptStates": ["ready", "empty"],
       "readyAssertion": "state === 'ready' || state === 'empty'"
+    },
+    {
+      "id": "A44",
+      "name": "消息投递复核明细",
+      "path": "packages/admin/message-delivery-review/index",
+      "selector": "#admin-message-delivery-review-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "error", "forbidden", "conflict"],
+      "acceptStates": ["ready"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["sourceType", "sourceId"],
+      "queryFixture": {
+        "sourceRoute": "packages/admin/exceptions/index",
+        "dataPath": "reviewItems",
+        "values": { "sourceType": "resourceRef.type", "sourceId": "resourceRef.id" }
+      }
     },
     {
       "id": "A10",
