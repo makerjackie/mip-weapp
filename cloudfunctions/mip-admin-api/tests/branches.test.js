@@ -54,6 +54,8 @@ function branch(overrides = {}) {
       publishedEvents: 0,
       publishedOpportunities: 0,
     },
+    currentPlayerCount: 0,
+    branchAdminNames: [],
     ...overrides,
   }
 }
@@ -226,7 +228,9 @@ describe('admin branch management', () => {
         return [{
           id: 'branch-a', branch_key: 'shenzhen', name: '深圳分会', city_name: '深圳',
           summary: null, status: 'ACTIVE', version: 7, active_memberships: 12,
-          active_branch_admins: 2, published_events: 3, published_opportunities: 4,
+          current_player_count: 8,
+          branch_admin_names_json: '["管理员甲","管理员乙"]', active_branch_admins: 2,
+          published_events: 3, published_opportunities: 4,
         }]
       },
     }))
@@ -234,6 +238,8 @@ describe('admin branch management', () => {
     assert.deepEqual(result, [branch({
       summary: '',
       version: 7,
+      currentPlayerCount: 8,
+      branchAdminNames: ['管理员甲', '管理员乙'],
       blockers: {
         activeMemberships: 12,
         activeBranchAdmins: 2,
@@ -244,6 +250,8 @@ describe('admin branch management', () => {
     assert.deepEqual(calls[0].params, ['wx-app'])
     assert.match(calls[0].sql, /FROM mip_city_branches b[\s\S]*WHERE b\.app_id = \?/)
     assert.match(calls[0].sql, /FROM mip_branch_memberships/)
+    assert.match(calls[0].sql, /mip_membership_entitlements/)
+    assert.match(calls[0].sql, /mip_profiles/)
     assert.match(calls[0].sql, /FROM mip_admin_role_bindings/)
     assert.match(calls[0].sql, /FROM mip_events/)
     assert.match(calls[0].sql, /FROM mip_opportunities/)

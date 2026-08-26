@@ -406,6 +406,10 @@ function parseBranch(value: unknown): AdminBranch {
     || !['ACTIVE', 'INACTIVE'].includes(String(value.status))
     || !Number.isInteger(value.version)
     || Number(value.version) < 1
+    || !Number.isInteger(value.currentPlayerCount)
+    || Number(value.currentPlayerCount) < 0
+    || !Array.isArray(value.branchAdminNames)
+    || value.branchAdminNames.some(name => typeof name !== 'string' || name.length === 0)
     || !record(value.blockers)) {
     throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的分会信息')
   }

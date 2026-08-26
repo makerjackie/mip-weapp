@@ -3,12 +3,17 @@ import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, MipAdminError, mipAdminModule } from '../../../modules/mip-admin'
 import { adminLoadFailure, isAdminVersionConflict } from '../shared/page-state'
 
-type BranchView = AdminBranch & { statusText: string }
+type BranchView = AdminBranch & { statusText: string, branchAdminSummary: string }
 
 function branchView(branch: AdminBranch): BranchView {
   return {
     ...branch,
     statusText: branch.status === 'ACTIVE' ? '启用' : '停用',
+    branchAdminSummary: branch.branchAdminNames.length > 0
+      ? branch.branchAdminNames.join('、')
+      : branch.blockers.activeBranchAdmins > 0
+        ? `${branch.blockers.activeBranchAdmins} 人未设置姓名`
+        : '暂无',
   }
 }
 

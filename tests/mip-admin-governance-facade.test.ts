@@ -14,6 +14,8 @@ const branch: AdminBranch = {
   summary: '深圳城市分会',
   status: 'ACTIVE',
   version: 1,
+  currentPlayerCount: 4,
+  branchAdminNames: ['管理员甲'],
   blockers: {
     activeMemberships: 0,
     activeBranchAdmins: 0,

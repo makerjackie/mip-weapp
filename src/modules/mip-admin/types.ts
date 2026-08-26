@@ -540,6 +540,8 @@ export interface AdminBranch {
   summary: string
   status: 'ACTIVE' | 'INACTIVE'
   version: number
+  currentPlayerCount: number
+  branchAdminNames: string[]
   blockers: AdminBranchBlockers
 }
 
