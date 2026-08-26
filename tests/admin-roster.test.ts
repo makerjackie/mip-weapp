@@ -76,7 +76,7 @@ describe('MIP admin roster contract', () => {
     expect(service).toContain('const { phoneCiphertext, userId, ...safe } = item')
   })
 
-  it('prevents stale responses and clears original phone data on page exit', () => {
+  it('prevents stale responses and keeps original phone data outside page data', () => {
     const usersAdmin = read('src/modules/mip-admin/users-admin.ts')
     const pageTs = read('src/packages/admin/event-registrations/index.ts')
     const pageWxml = read('src/packages/admin/event-registrations/index.wxml')
@@ -86,12 +86,14 @@ describe('MIP admin roster contract', () => {
     expect(pageTs).toContain('confirmationBusy = true')
     expect(pageTs).toMatch(/confirmationBusy = true[\s\S]*?wx\.showModal/)
     expect(pageTs).toContain('onHide()')
-    expect(pageTs).toContain('phoneNumber: null')
+    expect(pageTs).toContain('clearPrivatePhones(this)')
+    expect(pageTs).toContain('phoneNumberMasked: maskedPhone(phoneNumber)')
     expect(pageTs).toContain('mipAdminModule.clearSensitive()')
     expect(usersAdmin).toContain('input.includePhone === true')
     expect(pageWxml).toContain('手机已绑定')
-    expect(pageWxml).toContain('item.phoneNumber || \'未绑定\'')
-    expect(pageWxml).not.toContain('phoneMasked')
+    expect(pageWxml).toContain('item.phoneNumberMasked')
+    expect(pageWxml).toContain('bind:tap="revealPhone"')
+    expect(pageWxml).not.toMatch(/\{\{item\.phoneNumber[\s|}]/)
     expect(pageWxml).toContain('创建导出')
   })
 

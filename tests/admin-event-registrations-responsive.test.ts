@@ -31,7 +31,8 @@ describe('admin event registrations responsive workspace', () => {
 
     expect(source).toContain('class="break-all text-[length:28rpx] font-semibold">{{item.nickname}}')
     expect(source).toContain('class="mt-1 break-all whitespace-pre-wrap">{{answer.value || \'未填写\'}}')
-    expect(source).toContain('class="mt-3 break-all text-[length:24rpx]">联系电话：{{item.phoneNumber || \'未绑定\'}}')
+    expect(source).toContain('联系电话：{{item.phoneNumberMasked')
+    expect(source).toContain('bind:tap="revealPhone">查看完整号码')
     for (const projection of [
       'item.answerItems',
       'item.submittedText',

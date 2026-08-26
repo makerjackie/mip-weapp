@@ -55,6 +55,7 @@
         <view class="mip-admin-record-label">用户与联系</view>
         <view class="break-all text-[length:28rpx] font-semibold">{{item.nickname}}</view>
         <view class="mt-2 break-all text-[length:22rpx] text-muted">手机号：{{item.phoneText}}</view>
+        <view wx:if="{{includePhone && item.phoneText !== '已绑定' && item.phoneText !== '未绑定'}}" class="mt-2 flex min-h-[88rpx] items-center text-[length:22rpx] text-brand" role="button" data-id="{{item.id}}" bind:tap="revealPhone">查看完整号码</view>
       </view>
       <view class="mip-admin-record-cell">
         <view class="mip-admin-record-label">活动与分会</view>

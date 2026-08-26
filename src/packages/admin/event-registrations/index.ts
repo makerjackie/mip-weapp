@@ -3,8 +3,16 @@ import type { AdminPageState } from '../shared/page-state'
 import { hasScopedCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { formatLocalDateTime } from '../../../utils/date'
 import { adminLoadFailure } from '../shared/page-state'
+import {
+  appendPrivatePhones,
+  clearPrivatePhones,
+  maskedPhone,
+  privatePhone,
+  replacePrivatePhones,
+} from '../shared/private-phone'
 
-type RosterView = AdminRosterItem & {
+type RosterView = Omit<AdminRosterItem, 'phoneNumber'> & {
+  phoneNumberMasked: string
   statusText: string
   statusTheme: 'default' | 'primary' | 'success' | 'warning' | 'danger'
   submittedText: string
@@ -66,8 +74,10 @@ function rosterFilters(data: {
 }
 
 function rosterView(item: AdminRosterItem): RosterView {
+  const { phoneNumber, ...publicItem } = item
   return {
-    ...item,
+    ...publicItem,
+    phoneNumberMasked: maskedPhone(phoneNumber),
     statusText: statusLabels[item.status],
     statusTheme: statusThemes[item.status],
     submittedText: formatLocalDateTime(item.submittedAt),
@@ -110,14 +120,16 @@ Page({
   onHide() {
     this.requestSeq += 1
     mipAdminModule.clearSensitive()
+    clearPrivatePhones(this)
     this.setData({
       includePhone: false,
-      items: this.data.items.map(item => ({ ...item, phoneNumber: null })),
+      items: this.data.items.map(item => ({ ...item, phoneNumberMasked: '' })),
     })
   },
   onUnload() {
     this.requestSeq += 1
     mipAdminModule.clearSensitive()
+    clearPrivatePhones(this)
   },
   updateQuery(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ query: event.detail.value }) },
   changeCreatedDate(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
@@ -145,6 +157,7 @@ Page({
     }
     const seq = this.requestSeq + 1
     this.requestSeq = seq
+    clearPrivatePhones(this)
     try {
       const [session, eventDetail, page] = await Promise.all([
         mipAdminModule.getSession(force),
@@ -159,11 +172,15 @@ Page({
         return
       }
       const scope = { scopeType: 'EVENT' as const, scopeId: this.data.eventId, branchId: eventDetail.branchId }
+      const canPhone = hasScopedCapability(session.capabilities, 'users.phone.read', scope)
+      if (canPhone && this.data.includePhone) {
+        replacePrivatePhones(this, page.items)
+      }
       this.setData({
         state: 'ready',
         eventTitle: eventDetail.title,
         items: page.items.map(rosterView),
-        canPhone: hasScopedCapability(session.capabilities, 'users.phone.read', scope),
+        canPhone,
         canExport: hasScopedCapability(session.capabilities, 'exports.create', scope),
         canReview: hasScopedCapability(session.capabilities, 'events.registrations.manage', scope),
         canCheckIn: hasScopedCapability(session.capabilities, 'events.checkin.manage', scope),
@@ -193,6 +210,9 @@ Page({
         cursor: this.data.nextCursor,
         filters: rosterFilters(this.data),
       })
+      if (this.data.canPhone && this.data.includePhone) {
+        appendPrivatePhones(this, page.items)
+      }
       this.setData({ items: this.data.items.concat(page.items.map(rosterView)), nextCursor: page.nextCursor || null })
     }
     catch (error) {
@@ -265,6 +285,25 @@ Page({
     }
     finally {
       this.confirmationBusy = false
+    }
+  },
+  async revealPhone(event: WechatMiniprogram.TouchEvent) {
+    if (!this.data.canPhone || !this.data.includePhone) {
+      return
+    }
+    const phone = privatePhone(this, String(event.currentTarget.dataset.id || ''))
+    if (!phone) {
+      wx.showToast({ title: '联系电话暂不可用', icon: 'none' })
+      return
+    }
+    const modal = await wx.showModal({
+      title: '联系电话',
+      content: phone,
+      confirmText: '复制号码',
+      cancelText: '关闭',
+    })
+    if (modal.confirm) {
+      await wx.setClipboardData({ data: phone })
     }
   },
   async checkIn(event: WechatMiniprogram.TouchEvent) {

@@ -60,7 +60,10 @@
         <view class="mip-admin-record-label">参与者</view>
         <view class="break-all text-[length:28rpx] font-semibold">{{item.nickname}}</view>
         <view class="mt-1 break-all text-[length:22rpx] text-muted">{{item.cityName || '未填写城市'}}</view>
-        <view wx:if="{{includePhone}}" class="mt-3 break-all text-[length:24rpx]">联系电话：{{item.phoneNumber || '未绑定'}}</view>
+        <view wx:if="{{includePhone}}" class="mt-3 flex min-h-[88rpx] items-center justify-between gap-2 text-[length:24rpx]">
+          <text class="min-w-0 break-all">联系电话：{{item.phoneNumberMasked || (item.phoneBound ? '暂不可用' : '未绑定')}}</text>
+          <text wx:if="{{item.phoneNumberMasked}}" class="shrink-0 text-[length:22rpx] text-brand" role="button" data-id="{{item.id}}" bind:tap="revealPhone">查看完整号码</text>
+        </view>
         <view wx:elif="{{item.phoneBound}}" class="mt-3 text-[length:22rpx] text-muted">手机已绑定</view>
         <view wx:else class="mt-3 text-[length:22rpx] text-muted">手机未绑定</view>
       </view>

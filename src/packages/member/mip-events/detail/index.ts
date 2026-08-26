@@ -123,7 +123,6 @@ Page({
     onlineMode: false,
     onlineUrl: '',
     hasCoordinates: false,
-    supportPhone: mipOperationsConfig.supportPhone,
     contentSection: 'INTRO' as 'INTRO' | 'ORGANIZER' | 'NOTICE',
   },
   requestSeq: 0,
@@ -616,11 +615,12 @@ Page({
   },
 
   callSupport() {
-    if (!this.data.supportPhone) {
+    const supportPhone = mipOperationsConfig.supportPhone
+    if (!supportPhone) {
       wx.showToast({ title: '联系电话暂未配置', icon: 'none' })
       return
     }
-    wx.makePhoneCall({ phoneNumber: this.data.supportPhone })
+    wx.makePhoneCall({ phoneNumber: supportPhone })
   },
 
   openOrganizer() {

@@ -3,8 +3,15 @@ import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { formatLocalDateTime } from '../../../utils/date'
 import { adminLoadFailure } from '../shared/page-state'
+import {
+  appendPrivatePhones,
+  clearPrivatePhones,
+  maskedPhone,
+  privatePhone,
+  replacePrivatePhones,
+} from '../shared/private-phone'
 
-type ItemView = AdminRosterAllItem & { statusText: string, statusTheme: string, submittedText: string, phoneText: string }
+type ItemView = Omit<AdminRosterAllItem, 'phoneNumber'> & { statusText: string, statusTheme: string, submittedText: string, phoneText: string }
 const statuses: Array<{ value: AdminRosterStatus | '', label: string }> = [
   { value: '', label: '全部' },
   { value: 'PENDING_REVIEW', label: '待审核' },
@@ -24,12 +31,13 @@ const labels: Record<AdminRosterStatus, string> = {
   ATTENDED: '已参加',
 }
 function itemView(item: AdminRosterAllItem): ItemView {
+  const { phoneNumber, ...publicItem } = item
   return {
-    ...item,
+    ...publicItem,
     statusText: labels[item.status],
     statusTheme: item.status === 'ATTENDED' || item.status === 'REGISTERED' ? 'success' : item.status === 'REJECTED' || item.status === 'CANCELLED' ? 'danger' : 'warning',
     submittedText: formatLocalDateTime(item.submittedAt),
-    phoneText: item.phoneNumber || (item.phoneBound ? '已绑定' : '未绑定'),
+    phoneText: maskedPhone(phoneNumber) || (item.phoneBound ? '已绑定' : '未绑定'),
   }
 }
 function boundary(value: string, end: boolean) {
@@ -56,13 +64,18 @@ Page({
     loadingMore: false,
     message: '',
   },
+  requestSeq: 0,
   onShow() { void this.load(true) },
   onHide() {
+    this.requestSeq += 1
     mipAdminModule.clearSensitive()
-    this.setData({ includePhone: false, items: this.data.items.map(item => ({ ...item, phoneNumber: null, phoneText: item.phoneBound ? '已绑定' : '未绑定' })) })
+    clearPrivatePhones(this)
+    this.setData({ includePhone: false, loadingMore: false, items: this.data.items.map(item => ({ ...item, phoneText: item.phoneBound ? '已绑定' : '未绑定' })) })
   },
   onUnload() {
+    this.requestSeq += 1
     mipAdminModule.clearSensitive()
+    clearPrivatePhones(this)
   },
   filters() {
     return {
@@ -75,6 +88,9 @@ Page({
     }
   },
   async load(force = false) {
+    const seq = this.requestSeq + 1
+    this.requestSeq = seq
+    clearPrivatePhones(this)
     try {
       const [page, events, branches, session] = await Promise.all([
         mipAdminModule.events.listRosterAll({ includePhone: this.data.includePhone, filters: this.filters() }, force),
@@ -82,18 +98,29 @@ Page({
         mipAdminModule.listBranches(force),
         mipAdminModule.getSession(force),
       ])
+      if (seq !== this.requestSeq) {
+        return
+      }
+      const canPhone = hasCapability(session.capabilities, 'users.phone.read')
+      if (canPhone && this.data.includePhone) {
+        replacePrivatePhones(this, page.items)
+      }
       this.setData({
         state: 'ready',
         items: page.items.map(itemView),
         events: [{ id: '', title: '全部活动' }, ...events.items.map(item => ({ id: item.id, title: item.title }))],
         branches: [{ id: '', name: '全部分会' }, ...branches.items.map(item => ({ id: item.id, name: item.name }))],
-        canPhone: hasCapability(session.capabilities, 'users.phone.read'),
+        canPhone,
         canExport: hasCapability(session.capabilities, 'exports.create'),
         nextCursor: page.nextCursor || null,
+        loadingMore: false,
         message: '',
       })
     }
     catch (error) {
+      if (seq !== this.requestSeq) {
+        return
+      }
       this.setData(adminLoadFailure(error, {
         hasContent: this.data.items.length > 0,
         fallbackMessage: '参与者加载失败',
@@ -132,8 +159,31 @@ Page({
         return
       }
     }
-    this.setData({ includePhone: !this.data.includePhone })
+    const includePhone = !this.data.includePhone
+    if (!includePhone) {
+      clearPrivatePhones(this)
+    }
+    this.setData({ includePhone })
     await this.load(true)
+  },
+  async revealPhone(event: WechatMiniprogram.TouchEvent) {
+    if (!this.data.canPhone || !this.data.includePhone) {
+      return
+    }
+    const phone = privatePhone(this, String(event.currentTarget.dataset.id || ''))
+    if (!phone) {
+      wx.showToast({ title: '联系电话暂不可用', icon: 'none' })
+      return
+    }
+    const modal = await wx.showModal({
+      title: '联系电话',
+      content: phone,
+      confirmText: '复制号码',
+      cancelText: '关闭',
+    })
+    if (modal.confirm) {
+      await wx.setClipboardData({ data: phone })
+    }
   },
   search() { void this.load(true) },
   openRoster(event: WechatMiniprogram.TouchEvent) {
@@ -143,16 +193,28 @@ Page({
     if (!this.data.nextCursor || this.data.loadingMore) {
       return
     }
+    const seq = this.requestSeq
     this.setData({ loadingMore: true })
     try {
       const page = await mipAdminModule.events.listRosterAll({ includePhone: this.data.includePhone, filters: this.filters(), cursor: this.data.nextCursor })
+      if (seq !== this.requestSeq) {
+        return
+      }
+      if (this.data.canPhone && this.data.includePhone) {
+        appendPrivatePhones(this, page.items)
+      }
       this.setData({ items: this.data.items.concat(page.items.map(itemView)), nextCursor: page.nextCursor || null })
     }
     catch (error) {
+      if (seq !== this.requestSeq) {
+        return
+      }
       this.setData({ message: error instanceof Error ? error.message : '更多参与者加载失败' })
     }
     finally {
-      this.setData({ loadingMore: false })
+      if (seq === this.requestSeq) {
+        this.setData({ loadingMore: false })
+      }
     }
   },
   async exportRows() {

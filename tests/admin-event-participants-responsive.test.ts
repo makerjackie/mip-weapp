@@ -79,12 +79,14 @@ describe('admin event participants responsive workspace', () => {
     expect(source).toContain('title="没有符合条件的参与者"')
   })
 
-  it('keeps sensitive phone data cleared when the page leaves', () => {
+  it('keeps sensitive phone data outside page data and clears the private store on exit', () => {
     const page = read('src/packages/admin/event-participants/index.ts')
 
     expect(page.match(/mipAdminModule\.clearSensitive\(\)/g)).toHaveLength(2)
     expect(page).toContain('includePhone: false')
-    expect(page).toContain('phoneNumber: null')
+    expect(page.match(/clearPrivatePhones\(this\)/g)).toHaveLength(4)
+    expect(page).toContain('seq !== this.requestSeq')
+    expect(page).toContain('const { phoneNumber, ...publicItem } = item')
     expect(page).toContain(`phoneText: item.phoneBound ? '已绑定' : '未绑定'`)
   })
 })
