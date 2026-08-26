@@ -219,6 +219,7 @@ function createAdminService({
   const {
     getMembership,
     grantMembership,
+    listMembershipTimeline,
   } = createAdminMemberships({ access, repository })
   const {
     changeBranchStatus,
@@ -366,6 +367,7 @@ function createAdminService({
     getMessageDeliveryReview,
     getMessageTemplate,
     getMembership,
+    listMembershipTimeline,
     endOpportunity,
     getExportStatus,
     health,

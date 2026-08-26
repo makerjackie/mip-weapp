@@ -327,7 +327,7 @@ function createAdminRepository(database, options = {}) {
     createId: id,
     lockMutationAuthorization: lockMutation,
     now,
-    repositorySupport: { codeError, duplicateConstraint, iso },
+    repositorySupport: { codeError, duplicateConstraint, escapeLike, iso },
     writeAudit,
     writeOutbox,
   })

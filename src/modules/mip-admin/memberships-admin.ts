@@ -1,6 +1,10 @@
-import type { AdminMembershipGrantInput } from './memberships'
+import type {
+  AdminMembershipGrantInput,
+  AdminMembershipTimelineFilters,
+  AdminMembershipTimelinePage,
+} from './memberships'
 import type { MipAdminGateway } from './types'
-import { createAdminMembershipGetRequest } from './memberships'
+import { createAdminMembershipGetRequest, createAdminMembershipTimelineRequest } from './memberships'
 
 interface MembershipsAdminCache {
   query: <T>(key: string, loader: () => Promise<T>, options?: { force?: boolean }) => Promise<T>
@@ -9,6 +13,11 @@ interface MembershipsAdminCache {
 
 export interface MipMembershipsAdmin {
   get: (userId: string, force?: boolean) => ReturnType<MipAdminGateway['getMembership']>
+  listTimeline: (input?: {
+    filters?: AdminMembershipTimelineFilters
+    limit?: number
+    cursor?: string | null
+  }, force?: boolean) => Promise<AdminMembershipTimelinePage>
   grant: (input: AdminMembershipGrantInput) => ReturnType<MipAdminGateway['grantMembership']>
 }
 
@@ -28,6 +37,14 @@ export function createMipMembershipsAdmin(
       return cache.query(
         `${cacheKeys.detail}:${request.userId}`,
         () => gateway.getMembership(request.userId),
+        { force },
+      )
+    },
+    listTimeline: (input = {}, force = false) => {
+      const request = createAdminMembershipTimelineRequest(input)
+      return cache.query(
+        `${cacheKeys.detail}:timeline:${JSON.stringify(request)}`,
+        () => gateway.listMembershipTimeline(request),
         { force },
       )
     },

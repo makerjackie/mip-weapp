@@ -35,6 +35,8 @@ import type {
   AdminMembershipDetail,
   AdminMembershipGrantInput,
   AdminMembershipGrantResult,
+  AdminMembershipTimelineFilters,
+  AdminMembershipTimelinePage,
 } from './memberships'
 import type {
   AdminMessageCampaign,
@@ -1125,6 +1127,11 @@ export interface MipAdminGateway {
   listUsers: (input?: Record<string, unknown>) => Promise<AdminPage<AdminUser>>
   getUser: (userId: string, includePhone?: boolean) => Promise<AdminUserDetail>
   getMembership: (userId: string) => Promise<AdminMembershipDetail>
+  listMembershipTimeline: (input?: {
+    filters?: AdminMembershipTimelineFilters
+    limit?: number
+    cursor?: string | null
+  }) => Promise<AdminMembershipTimelinePage>
   grantMembership: (input: AdminMembershipGrantInput) => Promise<AdminMembershipGrantResult>
   listUserInfluence: (input: AdminUserInfluenceListInput) => Promise<AdminUserInfluencePage>
   listUserContent: (input?: AdminUserContentListInput) => Promise<AdminUserContentPage>

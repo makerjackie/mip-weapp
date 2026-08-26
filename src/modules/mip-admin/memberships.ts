@@ -44,6 +44,47 @@ export interface AdminMembershipDetail {
   entitlements: AdminMembershipEntitlement[]
 }
 
+export interface AdminMembershipTimelineFilters {
+  userId?: string
+  userQuery?: string
+  status?: AdminMembershipEntitlementStatus | ''
+  sourceType?: AdminMembershipSourceType | ''
+  createdFrom?: string
+  createdTo?: string
+}
+
+export interface AdminMembershipTimelineItem {
+  id: string
+  user: {
+    id: string
+    nickname: string
+    status: 'ACTIVE' | 'BLOCKED' | 'CLOSED'
+    playerNumber: number | null
+  }
+  sourceType: AdminMembershipSourceType
+  status: AdminMembershipEntitlementStatus
+  startsAt: string
+  endsAt: string
+  currentlyActive: boolean
+  createdAt: string
+  updatedAt: string
+  order: null | {
+    id: string
+    status: string
+    amountCents: number
+    currency: string
+    paidAt: string | null
+    refundStatus: string | null
+    refundedAmountCents: number
+  }
+  adjustment: AdminMembershipAdjustment | null
+}
+
+export interface AdminMembershipTimelinePage {
+  items: AdminMembershipTimelineItem[]
+  nextCursor?: string | null
+}
+
 export interface AdminMembershipGrantInput {
   userId: string
   durationMonths: AdminMembershipDurationMonths
@@ -184,6 +225,123 @@ function parseEntitlement(value: unknown): AdminMembershipEntitlement {
       ? parseAdjustment(value.adjustment)
       : null,
   } as AdminMembershipEntitlement
+}
+
+function parseTimelineItem(value: unknown): AdminMembershipTimelineItem {
+  if (!record(value)
+    || !hasOnlyKeys(value, [
+      'id',
+      'user',
+      'sourceType',
+      'status',
+      'startsAt',
+      'endsAt',
+      'currentlyActive',
+      'createdAt',
+      'updatedAt',
+      'order',
+      'adjustment',
+    ])
+    || !validId(value.id)
+    || !record(value.user)
+    || !hasOnlyKeys(value.user, ['id', 'nickname', 'status', 'playerNumber'])
+    || !validId(value.user.id)
+    || typeof value.user.nickname !== 'string'
+    || value.user.nickname.trim().length < 1
+    || value.user.nickname.length > 64
+    || !userStatuses.has(String(value.user.status))
+    || !(value.user.playerNumber === null
+      || (Number.isSafeInteger(value.user.playerNumber) && (value.user.playerNumber as number) >= 1))
+    || !sourceTypes.has(String(value.sourceType))
+    || !entitlementStatuses.has(String(value.status))
+    || !validDate(value.startsAt)
+    || !validDate(value.endsAt)
+    || Date.parse(value.endsAt) <= Date.parse(value.startsAt)
+    || typeof value.currentlyActive !== 'boolean'
+    || !validDate(value.createdAt)
+    || !validDate(value.updatedAt)
+    || (value.order !== null && !record(value.order))
+    || (value.order !== null && (!hasOnlyKeys(value.order, [
+      'id',
+      'status',
+      'amountCents',
+      'currency',
+      'paidAt',
+      'refundStatus',
+      'refundedAmountCents',
+    ])
+    || !validId(value.order.id)
+    || typeof value.order.status !== 'string'
+    || value.order.status.length > 32
+    || !Number.isSafeInteger(value.order.amountCents)
+    || (value.order.amountCents as number) < 0
+    || typeof value.order.currency !== 'string'
+    || value.order.currency.length < 1
+    || value.order.currency.length > 8
+    || !validNullableDate(value.order.paidAt)
+    || (value.order.refundStatus !== null && typeof value.order.refundStatus !== 'string')
+    || (typeof value.order.refundStatus === 'string' && value.order.refundStatus.length > 32)
+    || !Number.isSafeInteger(value.order.refundedAmountCents)
+    || (value.order.refundedAmountCents as number) < 0))
+  || (value.sourceType === 'ORDER' && (value.order === null || value.adjustment !== null))
+  || (value.sourceType === 'ADMIN_ADJUSTMENT' && (value.order !== null || value.adjustment === null))) {
+    invalidMembershipResponse()
+  }
+  return {
+    ...value,
+    user: value.user as AdminMembershipTimelineItem['user'],
+    sourceType: value.sourceType as AdminMembershipSourceType,
+    status: value.status as AdminMembershipEntitlementStatus,
+    order: value.order as AdminMembershipTimelineItem['order'],
+    adjustment: value.adjustment === null ? null : parseAdjustment(value.adjustment),
+  } as AdminMembershipTimelineItem
+}
+
+export function parseAdminMembershipTimelinePage(value: unknown): AdminMembershipTimelinePage {
+  if (!record(value)
+    || !hasOnlyKeys(value, ['items', 'nextCursor'])
+    || !Array.isArray(value.items)
+    || !(value.nextCursor === undefined || value.nextCursor === null || typeof value.nextCursor === 'string')) {
+    invalidMembershipResponse()
+  }
+  return {
+    items: value.items.map(parseTimelineItem),
+    nextCursor: value.nextCursor === undefined ? null : value.nextCursor,
+  }
+}
+
+export function createAdminMembershipTimelineRequest(input: {
+  filters?: AdminMembershipTimelineFilters
+  limit?: number
+  cursor?: string | null
+} = {}) {
+  const filters = input.filters || {}
+  const normalizedFilters: AdminMembershipTimelineFilters = {
+    ...(filters.userId ? { userId: filters.userId.trim().toLowerCase() } : {}),
+    ...(filters.userQuery ? { userQuery: filters.userQuery.trim() } : {}),
+    ...(filters.status ? { status: filters.status } : {}),
+    ...(filters.sourceType ? { sourceType: filters.sourceType } : {}),
+    ...(filters.createdFrom ? { createdFrom: filters.createdFrom } : {}),
+    ...(filters.createdTo ? { createdTo: filters.createdTo } : {}),
+  }
+  if (normalizedFilters.userId && !validId(normalizedFilters.userId)) {
+    throw new TypeError('Invalid admin membership timeline user ID')
+  }
+  if (normalizedFilters.userQuery
+    && (normalizedFilters.userQuery.length > 64 || /[\u0000-\u001f\u007f]/.test(normalizedFilters.userQuery))) {
+    throw new TypeError('Invalid admin membership timeline user query')
+  }
+  if (normalizedFilters.status && !entitlementStatuses.has(normalizedFilters.status)) {
+    throw new TypeError('Invalid admin membership timeline status')
+  }
+  if (normalizedFilters.sourceType && !sourceTypes.has(normalizedFilters.sourceType)) {
+    throw new TypeError('Invalid admin membership timeline source')
+  }
+  return {
+    filters: normalizedFilters,
+    ...(input.limit === undefined ? {} : { limit: input.limit }),
+    ...(input.cursor ? { cursor: input.cursor } : {}),
+  }
 }
 
 export function parseAdminMembershipDetail(value: unknown): AdminMembershipDetail {

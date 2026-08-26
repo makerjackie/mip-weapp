@@ -102,6 +102,11 @@ Page({
   retry() {
     void this.loadMembership(true)
   },
+  openLedger() {
+    wx.navigateTo({
+      url: `/packages/admin/membership-ledger/index?userId=${encodeURIComponent(this.data.userId)}`,
+    })
+  },
   chooseDuration(event: WechatMiniprogram.TouchEvent) {
     if (this.data.submitting || this.data.detail?.user.status === 'CLOSED') {
       return

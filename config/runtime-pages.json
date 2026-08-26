@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 103,
+  "routeCount": 104,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 103 paths.",
+    "config/project.json routes must list the same 104 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -835,6 +835,17 @@
       "group": "admin",
       "kind": "data",
       "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A43",
+      "name": "会员权益台账",
+      "path": "packages/admin/membership-ledger/index",
+      "selector": "#admin-membership-ledger-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "error", "forbidden"],
+      "acceptStates": ["ready"],
       "readyAssertion": "state === 'ready'"
     },
     {

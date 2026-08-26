@@ -2,6 +2,8 @@
 
 const { createHash } = require('node:crypto')
 const { CAPABILITIES, authorize } = require('./capabilities')
+const { decodeCursor } = require('./pagination')
+const { limit } = require('./validation')
 const { AdminError } = require('./validation')
 
 const durationMonths = new Set([1, 3, 6, 12])
@@ -12,6 +14,16 @@ const grantInputKeys = new Set([
   'idempotencyKey',
   'reason',
   'userId',
+])
+const timelineStatuses = new Set(['PENDING', 'ACTIVE', 'EXPIRED', 'REVOKED', 'REFUNDED'])
+const timelineSources = new Set(['ORDER', 'ADMIN_ADJUSTMENT'])
+const timelineFilterKeys = new Set([
+  'createdFrom',
+  'createdTo',
+  'sourceType',
+  'status',
+  'userId',
+  'userQuery',
 ])
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -60,7 +72,64 @@ function createAdminMemberships({ repository, access }) {
     })
   }
 
-  return { getMembership, grantMembership }
+  async function listMembershipTimeline(caller, input = {}) {
+    const context = await access.session(caller)
+    const grant = platformGrant(context, CAPABILITIES.MEMBERSHIPS_READ)
+    const filters = normalizeTimelineFilters(input.filters)
+    const page = await repository.listMembershipTimeline({
+      appId: context.caller.appId,
+      ...filters,
+      pageLimit: limit(input.limit),
+      cursor: decodeCursor(input.cursor, ['createdAt', 'id']),
+    })
+    if (typeof repository.recordAudit === 'function') {
+      await repository.recordAudit(access.audit(context, grant, {
+        scopeType: 'PLATFORM',
+        action: 'admin.memberships.timeline.view',
+        resourceType: 'MEMBERSHIP_ENTITLEMENT_LIST',
+        metadata: { count: page?.items?.length || 0, filters, cursor: Boolean(input.cursor) },
+      }))
+    }
+    return page
+  }
+
+  return { getMembership, grantMembership, listMembershipTimeline }
+}
+
+function normalizeTimelineFilters(value) {
+  const filters = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  if (Reflect.ownKeys(filters).some(key => typeof key !== 'string' || !timelineFilterKeys.has(key))) {
+    throw validationError('会员筛选条件无效')
+  }
+  const userId = filters.userId ? strictUuid(filters.userId) : ''
+  const userQuery = timelineUserQuery(filters.userQuery)
+  const status = filters.status || ''
+  const sourceType = filters.sourceType || ''
+  if (status && !timelineStatuses.has(status)) throw validationError('会员状态无效')
+  if (sourceType && !timelineSources.has(sourceType)) throw validationError('会员来源无效')
+  const createdFrom = timelineDateFilter(filters.createdFrom, '开始时间')
+  const createdTo = timelineDateFilter(filters.createdTo, '结束时间')
+  if (createdFrom && createdTo && createdFrom > createdTo) {
+    throw validationError('会员时间范围无效')
+  }
+  return { userId, userQuery, status, sourceType, createdFrom, createdTo }
+}
+
+function timelineUserQuery(value) {
+  if (value === null || value === undefined || value === '') return ''
+  const normalized = typeof value === 'string' ? value.trim() : ''
+  if (!normalized || normalized.length > 64 || /[\u0000-\u001f\u007f]/.test(normalized)) {
+    throw validationError('用户搜索条件无效')
+  }
+  return normalized
+}
+
+function timelineDateFilter(value, label) {
+  if (value === null || value === undefined || value === '') return ''
+  if (typeof value !== 'string' || value.length > 40) throw validationError(`${label}无效`)
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) throw validationError(`${label}无效`)
+  return date.toISOString().slice(0, 23).replace('T', ' ')
 }
 
 function assertExactInput(value, allowedKeys) {

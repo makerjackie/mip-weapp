@@ -72,6 +72,7 @@ export function createMipAdminModule(
     users,
     userContent,
     getMembership: memberships.get,
+    listMembershipTimeline: memberships.listTimeline,
     grantMembership: memberships.grant,
     memberships,
     listEvents: events.list,

@@ -309,6 +309,10 @@
       "pathName": "packages/admin/membership/index"
     },
     {
+      "name": "会员权益台账",
+      "pathName": "packages/admin/membership-ledger/index"
+    },
+    {
       "name": "订单运营",
       "pathName": "packages/admin/orders/index"
     },

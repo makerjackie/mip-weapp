@@ -98,6 +98,13 @@ export const adminWorkspaceGroups: readonly AdminWorkspaceNavGroup[] = [
         route: 'packages/admin/orders/index',
         capabilities: ['orders.read'],
       },
+      {
+        key: 'membership-ledger',
+        label: '会员权益台账',
+        route: 'packages/admin/membership-ledger/index',
+        capabilities: ['memberships.read'],
+        platformOnly: true,
+      },
     ],
   },
   {

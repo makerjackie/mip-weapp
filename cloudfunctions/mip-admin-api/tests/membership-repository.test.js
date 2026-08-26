@@ -134,9 +134,9 @@ function replayRow(overrides = {}) {
 }
 
 describe('membership repository', () => {
-  it('keeps a two-operation repository surface', () => {
+  it('keeps the membership query and mutation surface', () => {
     const { repository } = createRepository({ query: async () => [] })
-    assert.deepEqual(Object.keys(repository).sort(), ['getMembership', 'grantMembership'])
+    assert.deepEqual(Object.keys(repository).sort(), ['getMembership', 'grantMembership', 'listMembershipTimeline'])
   })
 
   it('returns the privileged membership projection and derives active and scheduled windows', async () => {
@@ -208,6 +208,84 @@ describe('membership repository', () => {
     assert.equal(result.entitlements[0].currentlyActive, false)
     assert.equal(result.entitlements[1].currentlyActive, true)
     assert.equal(result.entitlements[1].adjustment, null)
+  })
+
+  it('returns a paginated, app-scoped timeline with order and refund facts', async () => {
+    let captured
+    const rows = [{
+      entitlement_id: ENTITLEMENT_ID,
+      user_id: USER_ID,
+      user_status: 'ACTIVE',
+      nickname: '台账用户',
+      player_number: 42,
+      source_type: 'ORDER',
+      entitlement_status: 'REFUNDED',
+      starts_at: new Date('2030-01-01T00:00:00.000Z'),
+      ends_at: new Date('2030-02-01T00:00:00.000Z'),
+      created_at: new Date('2030-01-01T00:00:00.000Z'),
+      updated_at: new Date('2030-01-03T00:00:00.000Z'),
+      order_id: '70000000-0000-4000-8000-000000000007',
+      plan_id: '80000000-0000-4000-8000-000000000008',
+      source_adjustment_id: null,
+      adjustment_id: null,
+      order_status: 'REFUNDED',
+      order_amount_cents: 79900,
+      order_currency: 'CNY',
+      order_paid_at: new Date('2030-01-01T00:01:00.000Z'),
+      refund_status: 'SUCCEEDED',
+      refunded_amount_cents: 79900,
+    }]
+    const { repository } = createRepository({
+      async query(sql, params) {
+        captured = { sql: normalized(sql), params }
+        return rows
+      },
+    }, { now: () => new Date('2030-01-04T00:00:00.000Z') })
+
+    const result = await repository.listMembershipTimeline({
+      appId: APP_ID,
+      userId: USER_ID,
+      userQuery: '台账_42%',
+      status: 'REFUNDED',
+      sourceType: 'ORDER',
+      createdFrom: '2030-01-01 00:00:00.000',
+      createdTo: '2030-01-31 23:59:59.999',
+      pageLimit: 1,
+      cursor: { createdAt: '2030-02-01 00:00:00.000', id: '90000000-0000-4000-8000-000000000009' },
+    })
+
+    assert.deepEqual(captured.params, [
+      APP_ID, USER_ID, '%台账\\_42\\%%', '%台账\\_42\\%%', 'REFUNDED', 'ORDER',
+      '2030-01-01 00:00:00.000', '2030-01-31 23:59:59.999',
+      '2030-02-01 00:00:00.000', '2030-02-01 00:00:00.000',
+      '90000000-0000-4000-8000-000000000009', 2,
+    ])
+    assert.match(captured.sql, /entitlement\.app_id = \?/)
+    assert.match(captured.sql, /profile\.nickname LIKE \? ESCAPE/)
+    assert.match(captured.sql, /player_lifecycle\.player_number/)
+    assert.match(captured.sql, /ORDER BY entitlement\.created_at DESC, entitlement\.id DESC/)
+    assert.deepEqual(result.items[0], {
+      id: ENTITLEMENT_ID,
+      user: { id: USER_ID, nickname: '台账用户', status: 'ACTIVE', playerNumber: 42 },
+      sourceType: 'ORDER',
+      status: 'REFUNDED',
+      startsAt: '2030-01-01T00:00:00.000Z',
+      endsAt: '2030-02-01T00:00:00.000Z',
+      currentlyActive: false,
+      createdAt: '2030-01-01T00:00:00.000Z',
+      updatedAt: '2030-01-03T00:00:00.000Z',
+      order: {
+        id: '70000000-0000-4000-8000-000000000007',
+        status: 'REFUNDED',
+        amountCents: 79900,
+        currency: 'CNY',
+        paidAt: '2030-01-01T00:01:00.000Z',
+        refundStatus: 'SUCCEEDED',
+        refundedAmountCents: 79900,
+      },
+      adjustment: null,
+    })
+    assert.equal(result.nextCursor, null)
   })
 
   it('returns an inactive empty projection and fails closed when the chain is missing', async () => {

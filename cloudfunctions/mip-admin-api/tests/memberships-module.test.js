@@ -7,6 +7,7 @@ const { createAdminAccess } = require('../domain/access')
 const { CAPABILITIES } = require('../domain/capabilities')
 const { createAdminMemberships } = require('../domain/memberships')
 const { errorResponse } = require('../domain/handler')
+const { encodeCursor } = require('../domain/pagination')
 
 const APP_ID = 'wx-membership-app'
 const ACTOR_ID = '10000000-0000-4000-8000-000000000001'
@@ -73,11 +74,65 @@ function grantInput(overrides = {}) {
 }
 
 describe('admin membership service', () => {
-  it('keeps a two-operation public surface', () => {
+  it('keeps the membership query and mutation surface', () => {
     assert.deepEqual(Object.keys(createAdminMemberships({ repository: {}, access: {} })).sort(), [
       'getMembership',
       'grantMembership',
+      'listMembershipTimeline',
     ])
+  })
+
+  it('lists a normalized, platform-scoped timeline with cursor pagination', async () => {
+    const repo = repository({
+      async listMembershipTimeline(input) {
+        repo.calls.push({ type: 'listMembershipTimeline', input })
+        return { items: [], nextCursor: null }
+      },
+    })
+    await memberships(repo).listMembershipTimeline(caller, {
+      filters: {
+        userId: USER_ID.toUpperCase(),
+        userQuery: '  玩家 42  ',
+        status: 'ACTIVE',
+        sourceType: 'ORDER',
+        createdFrom: '2030-01-01T00:00:00.000Z',
+        createdTo: '2030-01-31T23:59:59.999Z',
+      },
+      limit: 20,
+      cursor: encodeCursor({ createdAt: '2030-02-01T00:00:00.000Z', id: USER_ID }),
+    })
+    assert.deepEqual(repo.calls.at(-1), {
+      type: 'listMembershipTimeline',
+      input: {
+        appId: APP_ID,
+        userId: USER_ID,
+        userQuery: '玩家 42',
+        status: 'ACTIVE',
+        sourceType: 'ORDER',
+        createdFrom: '2030-01-01 00:00:00.000',
+        createdTo: '2030-01-31 23:59:59.999',
+        pageLimit: 20,
+        cursor: { v: 1, createdAt: '2030-02-01T00:00:00.000Z', id: USER_ID },
+      },
+    })
+  })
+
+  it('rejects invalid timeline filters before repository access', async () => {
+    for (const filters of [
+      { userId: 'user-a' },
+      { userQuery: 'a'.repeat(65) },
+      { unexpected: true },
+      { status: 'UNKNOWN' },
+      { sourceType: 'UNKNOWN' },
+      { createdFrom: '2030-02-01', createdTo: '2030-01-01' },
+    ]) {
+      const repo = repository({ listMembershipTimeline: async () => ({ items: [], nextCursor: null }) })
+      await assert.rejects(
+        () => memberships(repo).listMembershipTimeline(caller, { filters }),
+        error => error?.code === 'VALIDATION_FAILED',
+      )
+      assert.equal(repo.calls.some(call => call.type === 'listMembershipTimeline'), false)
+    }
   })
 
   it('reloads server identity and grants a platform-scoped membership read', async () => {

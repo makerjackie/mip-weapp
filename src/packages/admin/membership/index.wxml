@@ -67,6 +67,7 @@
         <view class="text-[length:29rpx] font-semibold">权益记录</view>
         <view class="mt-1 text-[length:21rpx] text-muted">按服务端返回顺序展示购买与人工开通记录。</view>
       </view>
+      <t-button size="small" variant="outline" bind:tap="openLedger">查看全量台账</t-button>
     </view>
     <view wx:if="{{detail.entitlements.length === 0}}" class="mt-4">
       <app-empty-state title="暂无权益记录" description="该用户当前没有会员权益记录。" />

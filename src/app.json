@@ -82,6 +82,7 @@
         "profiles/index",
         "user-content/index",
         "membership/index",
+        "membership-ledger/index",
         "events/index",
         "event-managers/index",
         "event-album/index",

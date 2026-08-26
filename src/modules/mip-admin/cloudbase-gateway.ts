@@ -59,8 +59,10 @@ import {
 import {
   createAdminMembershipGetRequest,
   createAdminMembershipGrantRequest,
+  createAdminMembershipTimelineRequest,
   parseAdminMembershipDetail,
   parseAdminMembershipGrantResult,
+  parseAdminMembershipTimelinePage,
 } from './memberships'
 import {
   parseMessageCampaign,
@@ -780,6 +782,12 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
       const request = createAdminMembershipGetRequest(userId)
       return parseAdminMembershipDetail(
         await call('mip.admin.memberships.get', request),
+      )
+    },
+    listMembershipTimeline: async (input) => {
+      const request = createAdminMembershipTimelineRequest(input)
+      return parseAdminMembershipTimelinePage(
+        await call('mip.admin.memberships.timeline', request),
       )
     },
     grantMembership: async (input) => {

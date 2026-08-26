@@ -1,8 +1,10 @@
 'use strict'
 
 const { randomUUID } = require('node:crypto')
+const { encodeCursor } = require('../pagination')
 
 const entitlementStatuses = new Set(['PENDING', 'ACTIVE', 'EXPIRED', 'REVOKED', 'REFUNDED'])
+const sourceTypes = new Set(['ORDER', 'ADMIN_ADJUSTMENT'])
 const platformScope = Object.freeze({ scopeType: 'PLATFORM', scopeId: null })
 
 function createMembershipRepository(database, options = {}) {
@@ -13,6 +15,7 @@ function createMembershipRepository(database, options = {}) {
   const support = options.repositorySupport || {}
   const codeError = support.codeError || defaultCodeError
   const duplicateConstraint = support.duplicateConstraint || defaultDuplicateConstraint
+  const escapeLike = support.escapeLike || defaultEscapeLike
   const iso = support.iso || defaultIso
   const writeAudit = options.writeAudit
   const writeOutbox = options.writeOutbox
@@ -66,6 +69,99 @@ function createMembershipRepository(database, options = {}) {
       chainVersion,
       membership: membershipSummary(entitlements, evaluatedAt),
       entitlements,
+    }
+  }
+
+  async function listMembershipTimeline(input) {
+    const clauses = ['entitlement.app_id = ?']
+    const params = [input.appId]
+    if (input.userId) {
+      clauses.push('entitlement.user_id = ?')
+      params.push(input.userId)
+    }
+    if (input.userQuery) {
+      clauses.push(`(profile.nickname LIKE ? ESCAPE '\\\\'
+        OR CAST(player_lifecycle.player_number AS CHAR) LIKE ? ESCAPE '\\\\')`)
+      const query = `%${escapeLike(input.userQuery)}%`
+      params.push(query, query)
+    }
+    if (input.status) {
+      clauses.push('entitlement.status = ?')
+      params.push(input.status)
+    }
+    if (input.sourceType) {
+      clauses.push('entitlement.source_type = ?')
+      params.push(input.sourceType)
+    }
+    if (input.createdFrom) {
+      clauses.push('entitlement.created_at >= ?')
+      params.push(input.createdFrom)
+    }
+    if (input.createdTo) {
+      clauses.push('entitlement.created_at <= ?')
+      params.push(input.createdTo)
+    }
+    const cursorWhere = input.cursor
+      ? ` AND (entitlement.created_at < ? OR (entitlement.created_at = ? AND entitlement.id < ?))`
+      : ''
+    const cursorParams = input.cursor
+      ? [input.cursor.createdAt, input.cursor.createdAt, input.cursor.id]
+      : []
+    const rows = await database.query(
+      `SELECT entitlement.id AS entitlement_id, entitlement.user_id,
+              user_row.status AS user_status, profile.nickname,
+              player_lifecycle.player_number,
+              entitlement.source_type, entitlement.status AS entitlement_status,
+              entitlement.starts_at, entitlement.ends_at, entitlement.created_at,
+              entitlement.updated_at, entitlement.order_id, entitlement.plan_id,
+              entitlement.source_adjustment_id,
+              adjustment.id AS adjustment_id,
+              adjustment.duration_months AS adjustment_duration_months,
+              adjustment.reason AS adjustment_reason,
+              adjustment.created_at AS adjustment_created_at,
+              adjustment.expected_chain_version,
+              adjustment.result_chain_version,
+              actor_profile.nickname AS actor_nickname,
+              order_row.status AS order_status,
+              order_row.amount_cents AS order_amount_cents,
+              order_row.currency AS order_currency,
+              order_row.paid_at AS order_paid_at,
+              (SELECT refund.status FROM mip_refunds refund
+               WHERE refund.app_id = order_row.app_id AND refund.order_id = order_row.id
+               ORDER BY refund.created_at DESC, refund.id DESC LIMIT 1) AS refund_status,
+              COALESCE((SELECT SUM(refund.amount_cents) FROM mip_refunds refund
+               WHERE refund.app_id = order_row.app_id AND refund.order_id = order_row.id
+                 AND refund.status = 'SUCCEEDED'), 0) AS refunded_amount_cents
+       FROM mip_membership_entitlements entitlement
+       INNER JOIN mip_users user_row
+         ON user_row.app_id = entitlement.app_id AND user_row.id = entitlement.user_id
+       LEFT JOIN mip_profiles profile
+         ON profile.app_id = entitlement.app_id AND profile.user_id = entitlement.user_id
+       LEFT JOIN mip_player_lifecycles player_lifecycle
+         ON player_lifecycle.app_id = entitlement.app_id
+           AND player_lifecycle.user_id = entitlement.user_id
+       LEFT JOIN mip_membership_adjustments adjustment
+         ON adjustment.app_id = entitlement.app_id
+           AND adjustment.user_id = entitlement.user_id
+           AND adjustment.id = entitlement.source_adjustment_id
+       LEFT JOIN mip_profiles actor_profile
+         ON actor_profile.app_id = adjustment.app_id
+           AND actor_profile.user_id = adjustment.actor_user_id
+       LEFT JOIN mip_orders order_row
+         ON order_row.app_id = entitlement.app_id AND order_row.id = entitlement.order_id
+       WHERE ${clauses.join(' AND ')}${cursorWhere}
+       ORDER BY entitlement.created_at DESC, entitlement.id DESC LIMIT ?`,
+      [...params, ...cursorParams, input.pageLimit + 1],
+    )
+    const items = rows.map(row => membershipTimelineDto(row, { codeError, iso, now }))
+    const hasMore = items.length > input.pageLimit
+    const pageItems = hasMore ? items.slice(0, input.pageLimit) : items
+    const last = pageItems[pageItems.length - 1]
+    return {
+      items: pageItems,
+      nextCursor: hasMore && last
+        ? encodeCursor({ createdAt: last.createdAt, id: last.id })
+        : null,
     }
   }
 
@@ -219,7 +315,61 @@ function createMembershipRepository(database, options = {}) {
     )
   }
 
-  return { getMembership, grantMembership }
+  return { getMembership, listMembershipTimeline, grantMembership }
+}
+
+function membershipTimelineDto(row, dependencies) {
+  const { codeError, iso, now } = dependencies
+  if (!entitlementStatuses.has(row.entitlement_status) || !sourceTypes.has(row.source_type)) {
+    throw codeError('INVALID_STATE')
+  }
+  const startsAt = validDate(row.starts_at, codeError)
+  const endsAt = validDate(row.ends_at, codeError)
+  if (endsAt.getTime() <= startsAt.getTime()) throw codeError('INVALID_STATE')
+  const createdAt = validDate(row.created_at, codeError)
+  const updatedAt = validDate(row.updated_at, codeError)
+  const evaluatedAt = validDate(now(), codeError)
+  const manual = row.source_type === 'ADMIN_ADJUSTMENT'
+  if ((manual && (row.order_id !== null || row.plan_id !== null || !row.source_adjustment_id
+    || row.adjustment_id !== row.source_adjustment_id))
+    || (!manual && (!row.order_id || !row.plan_id || row.source_adjustment_id !== null))) {
+    throw codeError('INVALID_STATE')
+  }
+  const order = manual ? null : {
+    id: String(row.order_id),
+    status: row.order_status || 'UNKNOWN',
+    amountCents: Number(row.order_amount_cents || 0),
+    currency: row.order_currency || 'CNY',
+    paidAt: row.order_paid_at ? iso(validDate(row.order_paid_at, codeError)) : null,
+    refundStatus: row.refund_status || null,
+    refundedAmountCents: Number(row.refunded_amount_cents || 0),
+  }
+  return {
+    id: String(row.entitlement_id),
+    user: {
+      id: String(row.user_id),
+      nickname: displayName(row.nickname),
+      status: row.user_status,
+      playerNumber: row.player_number === null || row.player_number === undefined
+        ? null
+        : Number(row.player_number),
+    },
+    sourceType: row.source_type,
+    status: row.entitlement_status,
+    startsAt: iso(startsAt),
+    endsAt: iso(endsAt),
+    currentlyActive: row.entitlement_status === 'ACTIVE'
+      && startsAt.getTime() <= evaluatedAt.getTime()
+      && endsAt.getTime() > evaluatedAt.getTime(),
+    createdAt: iso(createdAt),
+    updatedAt: iso(updatedAt),
+    order,
+    adjustment: manual ? adjustmentDto(row, { codeError, iso }) : null,
+  }
+}
+
+function defaultEscapeLike(value) {
+  return String(value).replace(/[\\%_]/g, character => `\\${character}`)
 }
 
 function entitlementDto(row, evaluatedAt, dependencies) {
