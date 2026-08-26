@@ -15,6 +15,7 @@ const {
 } = require('./validation')
 const { buildTaskWorkbook } = require('./workbook')
 const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
+const { createUserTaskCursor, readUserTaskCursor } = require('../lib/user-task-cursor')
 
 const PLATFORM_SCOPE_ID = '00000000-0000-0000-0000-000000000000'
 const TASKS_CAPABILITY = 'tasks.manage'
@@ -30,13 +31,18 @@ function createTaskRepository(database, options = {}) {
 
   async function listTasks(caller, event = {}) {
     const limit = pageLimit(event.limit)
-    const cursor = decodeCursor(event.cursor)
+    const cursor = event.cursor
+      ? readUserTaskCursor(event.cursor, caller, caller.profileRefSecret)
+      : null
+    const snapshotAt = cursor?.snapshotAt || await currentTimestamp(database)
     const params = [caller.userId, caller.appId, caller.userId, caller.userId]
     let cursorSql = ''
     if (cursor) {
       cursorSql = 'AND (task.published_at < ? OR (task.published_at = ? AND task.id < ?))'
-      params.push(cursor.at, cursor.at, cursor.id)
+      const publishedAt = new Date(cursor.publishedAt)
+      params.push(publishedAt, publishedAt, cursor.taskId)
     }
+    params.push(new Date(snapshotAt))
     params.push(limit + 1)
     const rows = await database.query(
       `SELECT task.*, completion.id AS completion_id, completion.completed_at,
@@ -52,13 +58,18 @@ function createTaskRepository(database, options = {}) {
              AND assignment.user_id = ? AND assignment.status = 'ACTIVE'
          ))
          AND ${taskLevelEligibilitySql()} ${cursorSql}
+         AND task.published_at <= ?
        ORDER BY task.published_at DESC, task.id DESC LIMIT ?`,
       params,
     )
     const page = rows.slice(0, limit)
     return {
       items: page.map(row => userTaskDto(row)),
-      nextCursor: rows.length > limit ? encodeCursor({ ...page.at(-1), updated_at: page.at(-1).published_at }) : undefined,
+      nextCursor: rows.length > limit ? createUserTaskCursor(caller, {
+        snapshotAt,
+        publishedAt: iso(page.at(-1).published_at),
+        taskId: page.at(-1).id,
+      }, caller.profileRefSecret) : undefined,
     }
   }
 
@@ -595,6 +606,13 @@ function createTaskRepository(database, options = {}) {
     revokeMembers: (caller, value) => changeAssignments(caller, value, 'REVOKED'),
     transitionTask,
   }
+}
+
+async function currentTimestamp(adapter) {
+  const row = await adapter.one('SELECT UTC_TIMESTAMP(3) AS snapshot_at')
+  const value = iso(row?.snapshot_at)
+  if (!value) throw new Error('SERVICE_UNAVAILABLE')
+  return value
 }
 
 function taskLevelEligibilitySql() {

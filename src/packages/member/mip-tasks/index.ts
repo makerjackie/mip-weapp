@@ -66,6 +66,10 @@ Page({
     this.setData({ loadingMore: true, message: '' })
     try {
       const page = await mipTasksModule.query.listTasks(this.data.nextCursor, 20)
+      const knownTaskIds = new Set(this.data.tasks.map(task => task.id))
+      if (page.items.some(task => knownTaskIds.has(task.id))) {
+        throw new Error('任务列表返回了重复内容，请刷新后重试')
+      }
       this.setData({
         tasks: this.data.tasks.concat(page.items.map(taskView)),
         nextCursor: page.nextCursor || '',

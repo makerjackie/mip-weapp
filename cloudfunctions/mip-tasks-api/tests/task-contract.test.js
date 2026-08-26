@@ -18,6 +18,7 @@ const { createTaskService } = require('../domain/service')
 const { normalizeCompletionFilters, normalizeTask } = require('../domain/validation')
 const { buildTaskWorkbook, safeCell } = require('../domain/workbook')
 const { createProfileRef } = require('../lib/profile-ref')
+const { createUserTaskCursor, readUserTaskCursor } = require('../lib/user-task-cursor')
 
 const appId = 'wx1234567890abcdef'
 const userId = '11111111-1111-4111-8111-111111111111'
@@ -348,14 +349,105 @@ test('an ended task still returns the prior completion for an idempotent retry',
 test('selected tasks require an active app-scoped assignment', async () => {
   let listSql = ''
   const repository = createTaskRepository({
+    async one() { return { snapshot_at: new Date('2026-08-26T08:00:00.000Z') } },
     async query(sql) { listSql = sql; return [] },
   })
-  await repository.listTasks({ appId, userId }, {})
+  await repository.listTasks({ appId, userId, profileRefSecret }, {})
   assert.match(listSql, /assignment\.user_id = \? AND assignment\.status = 'ACTIVE'/)
   assert.match(listSql, /task\.assignment_mode = 'ALL'/)
   assert.match(listSql, /mip_task_level_rules/)
   assert.match(listSql, /mip_growth_accounts/)
   assert.match(listSql, /current_level\.minimum_experience DESC/)
+  assert.match(listSql, /task\.published_at <= \?/)
+})
+
+test('user task cursors are authenticated and bound to the trusted app and user', () => {
+  const payload = {
+    snapshotAt: '2026-08-26T08:00:00.000Z',
+    publishedAt: '2026-08-25T08:00:00.000Z',
+    taskId,
+  }
+  const cursor = createUserTaskCursor({ appId, userId }, payload, profileRefSecret)
+  assert.deepEqual(readUserTaskCursor(cursor, { appId, userId }, profileRefSecret), payload)
+  const parts = cursor.split('.')
+  parts[2] = `${parts[2][0] === 'a' ? 'b' : 'a'}${parts[2].slice(1)}`
+  assert.throws(
+    () => readUserTaskCursor(parts.join('.'), { appId, userId }, profileRefSecret),
+    /VALIDATION_FAILED/,
+  )
+  assert.throws(
+    () => readUserTaskCursor(cursor, { appId: 'wx-other-app', userId }, profileRefSecret),
+    /VALIDATION_FAILED/,
+  )
+  assert.throws(
+    () => readUserTaskCursor(cursor, {
+      appId,
+      userId: '99999999-9999-4999-8999-999999999999',
+    }, profileRefSecret),
+    /VALIDATION_FAILED/,
+  )
+})
+
+test('completion rejects an inactive caller before reading or rewarding a task', async () => {
+  const reads = []
+  const repository = createTaskRepository({
+    transaction: work => work({
+      async one(sql) {
+        reads.push(sql)
+        if (sql.includes('FROM mip_users')) return { status: 'SUSPENDED' }
+        throw new Error('must not read another fact')
+      },
+      async query() { throw new Error('must not write') },
+    }),
+  })
+  await assert.rejects(repository.completeTask({ appId, userId }, { taskId }), /FORBIDDEN/)
+  assert.equal(reads.length, 1)
+})
+
+test('user task pagination preserves its first-page snapshot and exact keyset', async () => {
+  const publishedAt = new Date('2026-08-25T08:00:00.000Z')
+  const rows = [
+    {
+      id: taskId,
+      name: '任务一',
+      content: '说明',
+      reward_experience: 10,
+      attachment_required: 0,
+      published_at: publishedAt,
+      version: 1,
+    },
+    {
+      id: '99999999-9999-4999-8999-999999999999',
+      name: '任务二',
+      content: '说明',
+      reward_experience: 10,
+      attachment_required: 0,
+      published_at: new Date('2026-08-24T08:00:00.000Z'),
+      version: 1,
+    },
+  ]
+  const queries = []
+  const database = {
+    async one(sql) {
+      assert.match(sql, /UTC_TIMESTAMP/)
+      return { snapshot_at: new Date('2026-08-26T08:00:00.000Z') }
+    },
+    async query(sql, params) {
+      queries.push({ sql, params })
+      return queries.length === 1 ? rows : []
+    },
+  }
+  const repository = createTaskRepository(database)
+  const caller = { appId, userId, profileRefSecret }
+  const first = await repository.listTasks(caller, { limit: 1 })
+  assert.equal(first.items.length, 1)
+  assert.ok(first.nextCursor)
+  await repository.listTasks(caller, { limit: 1, cursor: first.nextCursor })
+  const dates = queries[1].params.filter(value => value instanceof Date).map(value => value.toISOString())
+  assert.equal(dates.includes('2026-08-26T08:00:00.000Z'), true)
+  assert.equal(dates.includes('2026-08-25T08:00:00.000Z'), true)
+  assert.equal(queries[1].params.includes(taskId), true)
+  assert.equal(queries[1].sql.includes('task.published_at <= ?'), true)
 })
 
 test('completion rechecks the server growth account and rejects a client-bypassed level', async () => {

@@ -207,7 +207,7 @@ describe('MIP tasks client contract', () => {
           return {
             ok: true,
             data: {
-              id: 'completion-1',
+              id: '20000000-0000-4000-8000-000000000001',
               taskId: task.id,
               taskName: task.name,
               rewardExperience: 20,
@@ -275,6 +275,61 @@ describe('MIP tasks client contract', () => {
       expect(listCalls).toBe(1)
     },
   )
+
+  it.each([
+    { items: [{ ...task, rewardExperience: '20' }] },
+    { items: [{ ...task }, { ...task }] },
+    { items: [{ ...task, status: 'COMPLETED' }] },
+    { items: [task], nextCursor: 'eyJpZCI6InRhc2staWQifQ' },
+    { items: [task], unexpected: true },
+  ])('fails the entire user task page closed for malformed data %#', async (data) => {
+    const gateway = createMipTasksGateway({
+      async invoke() {
+        return { ok: true, data }
+      },
+    })
+    await expect(gateway.listTasks()).rejects.toEqual(expect.objectContaining({
+      code: 'SERVICE_UNAVAILABLE',
+      retryable: true,
+    }))
+  })
+
+  it('strictly validates task detail and completion facts', async () => {
+    const malformedDetail = createMipTasksGateway({
+      async invoke() { return { ok: true, data: { ...task, hasTemplate: true } } },
+    })
+    await expect(malformedDetail.getTask(task.id)).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
+
+    const malformedCompletion = createMipTasksGateway({
+      async invoke() {
+        return {
+          ok: true,
+          data: {
+            id: '20000000-0000-4000-8000-000000000001',
+            taskId: task.id,
+            taskName: task.name,
+            rewardExperience: 20,
+            resultStatus: 'SUCCESS',
+            completedAt: 'not-a-date',
+            alreadyCompleted: false,
+          },
+        }
+      },
+    })
+    await expect(malformedCompletion.completeTask(task.id)).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
+  })
+
+  it('rejects malformed success and error envelopes before using their contents', async () => {
+    const extraSuccess = createMipTasksGateway({
+      async invoke() { return { ok: true, data: { items: [] }, debug: true } },
+    })
+    await expect(extraSuccess.listTasks()).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
+
+    const malformedError = createMipTasksGateway({
+      async invoke() { return { ok: false, error: { code: 'FORBIDDEN', message: '无权限' } } },
+    })
+    await expect(malformedError.listTasks()).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
+  })
 
   it('keeps task configuration, completion detail, filtering, export and user upload reachable', () => {
     const app = fs.readFileSync(path.join(process.cwd(), 'src/app.json'), 'utf8')
