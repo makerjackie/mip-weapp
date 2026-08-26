@@ -1,12 +1,36 @@
 import type { SuperCaseSummary } from '../../../../modules/mip-cases'
-import { mipOperationsConfig } from '../../../../config/mip-operations'
 import { superCaseModule } from '../../../../modules/mip-cases'
 import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
 
-function presentCase(item: SuperCaseSummary): SuperCaseSummary {
+interface SuperCaseListItem extends SuperCaseSummary {
+  publishedText: string
+  statusText: string
+  classificationText: string
+}
+
+const CASE_STATUS_LABELS = {
+  DRAFT: '草稿',
+  PUBLISHED: '已发布',
+  UNPUBLISHED: '已下架',
+  ARCHIVED: '已删除',
+} as const
+
+function formatPublishedMonth(value: string) {
+  const match = /^(\d{4})-(\d{2})/.exec(value)
+  if (!match) {
+    return ''
+  }
+  return `${match[1]}年 ${Number(match[2])}月`
+}
+
+function presentCase(item: SuperCaseSummary): SuperCaseListItem {
   return {
     ...item,
-    coverUrl: item.coverUrl || mipOperationsConfig.defaultCoverPaths.superCase,
+    publishedText: formatPublishedMonth(item.publishedAt),
+    statusText: CASE_STATUS_LABELS[item.status],
+    classificationText: [item.cityLabel, item.industryLabel || item.caseType]
+      .filter(Boolean)
+      .join(' · '),
   }
 }
 
@@ -14,7 +38,7 @@ Page({
   data: {
     mine: false,
     state: 'loading' as 'loading' | 'ready' | 'error',
-    items: [] as SuperCaseSummary[],
+    items: [] as SuperCaseListItem[],
     nextCursor: '',
     loadingMore: false,
     archivingId: '',
@@ -44,10 +68,14 @@ Page({
           ? page.items.map(presentCase)
           : [...this.data.items, ...page.items.map(presentCase)],
         nextCursor: page.nextCursor || '',
+        message: '',
       })
     }
     catch (error) {
-      this.setData({ state: 'error', message: error instanceof Error ? error.message : '案例加载失败' })
+      this.setData({
+        state: reset ? 'error' : 'ready',
+        message: error instanceof Error ? error.message : '案例加载失败',
+      })
     }
     finally {
       this.setData({ loadingMore: false })
@@ -60,9 +88,21 @@ Page({
     }
   },
 
-  toggleMine() {
-    this.setData({ mine: !this.data.mine })
+  selectScope(event: WechatMiniprogram.TouchEvent) {
+    const mine = String(event.currentTarget.dataset.mine || '') === '1'
+    if (mine === this.data.mine) {
+      return
+    }
+    this.setData({ mine })
     void this.load(true)
+  },
+
+  retry() { void this.load(true) },
+
+  retryMore() {
+    if (this.data.nextCursor && !this.data.loadingMore) {
+      void this.load(false)
+    }
   },
 
   create() { caseNavigateTo({ url: '/packages/member/mip-cases/editor/index' }) },

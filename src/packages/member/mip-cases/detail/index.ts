@@ -6,11 +6,45 @@ import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { caseNavigateTo, leaveSecondaryPage } from '../../../../modules/platform/case-navigation'
 
+interface SuperCaseDetailView extends SuperCaseDetail {
+  coverUrl: string
+  periodText: string
+  classificationText: string
+  statusText: string
+}
+
+const CASE_STATUS_LABELS = {
+  DRAFT: '草稿',
+  PUBLISHED: '已发布',
+  UNPUBLISHED: '已下架',
+  ARCHIVED: '已删除',
+} as const
+
+function formatCaseDate(value?: string) {
+  return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value.replace(/-/g, '.') : value || ''
+}
+
+function presentCase(item: SuperCaseDetail): SuperCaseDetailView {
+  const startedOn = formatCaseDate(item.startedOn)
+  const endedOn = formatCaseDate(item.endedOn)
+  return {
+    ...item,
+    coverUrl: item.coverUrl || mipOperationsConfig.defaultCoverPaths.superCase,
+    periodText: startedOn && endedOn
+      ? `${startedOn} 至 ${endedOn}`
+      : startedOn
+        ? `${startedOn} 至今`
+        : endedOn || '未填写',
+    classificationText: [...new Set([item.industryLabel, item.caseType].filter(Boolean))].join('、') || '未填写',
+    statusText: CASE_STATUS_LABELS[item.status],
+  }
+}
+
 Page({
   data: {
     id: '' as SuperCaseId,
     state: 'loading' as 'loading' | 'ready' | 'error',
-    item: null as SuperCaseDetail | null,
+    item: null as SuperCaseDetailView | null,
     mediaUrls: [] as string[],
     acting: false,
     message: '',
@@ -38,12 +72,10 @@ Page({
       this.setData({ state: 'error', message: '案例信息不完整' })
       return
     }
+    this.setData({ state: 'loading', message: '' })
     try {
       const item = await superCaseModule.get(this.data.id)
-      const presented = {
-        ...item,
-        coverUrl: item.coverUrl || mipOperationsConfig.defaultCoverPaths.superCase,
-      }
+      const presented = presentCase(item)
       this.setData({
         state: 'ready',
         item: presented,
@@ -120,7 +152,7 @@ Page({
   },
 
   edit() {
-    if (this.data.item?.canEdit) {
+    if (this.data.item?.canEdit && !this.data.acting) {
       caseNavigateTo({ url: `/packages/member/mip-cases/editor/index?id=${encodeURIComponent(this.data.id)}` })
     }
   },
@@ -146,6 +178,7 @@ Page({
         'item.status': result.status,
         'item.version': result.version,
         'item.canEdit': true,
+        'item.statusText': CASE_STATUS_LABELS[result.status],
       })
       wx.showToast({ title: '案例已下架', icon: 'success' })
     }
