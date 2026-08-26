@@ -38,6 +38,7 @@ describe('MIP demo seed ownership safety', () => {
     expect(query).toContain('event_id =')
     expect(query).toContain('owner_user_id =')
     expect(query).toContain('FROM mip_event_invitation_attributions event_invitation')
+    expect(query).toContain('FROM mip_event_tag_assignments event_tag_assignment')
     expect(query).toContain('FROM mip_event_hearts event_heart')
     expect(query).toContain('FROM mip_profile_visits profile_visit')
     expect(query).toContain('voter_user_id =')
@@ -136,8 +137,8 @@ describe('MIP demo seed ownership safety', () => {
     })
     expect(result.statementCount).toBeGreaterThan(Object.keys(SEED_TABLES).length)
     expect(result.tableCount).toBeGreaterThan(Object.keys(SEED_TABLES).length)
-    expect(result.fixtureGroups).toBe(42)
-    expect(result.tableCount).toBe(62)
+    expect(result.fixtureGroups).toBe(43)
+    expect(result.tableCount).toBe(64)
     expect(result.maxStatementBytes).toBeLessThan(30 * 1024)
   })
 

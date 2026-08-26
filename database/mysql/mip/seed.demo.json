@@ -1,5 +1,5 @@
 {
-  "version": "2026-08-26-demo.10",
+  "version": "2026-08-26-demo.11",
   "replaceBeforeProduction": true,
   "branches": [
     {
@@ -221,6 +221,11 @@
     { "id": "52000000-0000-4000-8000-000000000002", "key": "demo_player_entitlement_2", "userId": "50000000-0000-4000-8000-000000000002", "orderId": "51000000-0000-4000-8000-000000000002", "planId": "30000000-0000-4000-8000-000000000001" },
     { "id": "52000000-0000-4000-8000-000000000003", "key": "demo_player_entitlement_3", "userId": "50000000-0000-4000-8000-000000000003", "orderId": "51000000-0000-4000-8000-000000000003", "planId": "30000000-0000-4000-8000-000000000001" }
   ],
+  "eventTags": [
+    { "id": "60400000-0000-4000-8000-000000000001", "key": "city_exchange", "name": "城市交流", "description": "城市分会交流相关活动", "sortOrder": 10, "actorUserId": "50000000-0000-4000-8000-000000000001" },
+    { "id": "60400000-0000-4000-8000-000000000002", "key": "project_collaboration", "name": "项目协作", "description": "围绕项目协作开展的活动", "sortOrder": 20, "actorUserId": "50000000-0000-4000-8000-000000000001" },
+    { "id": "60400000-0000-4000-8000-000000000003", "key": "resource_exchange", "name": "资源交流", "description": "包含资源交流环节的活动", "sortOrder": 30, "actorUserId": "50000000-0000-4000-8000-000000000001" }
+  ],
   "events": [
     {
       "id": "60000000-0000-4000-8000-000000000001",
@@ -232,6 +237,7 @@
       "description": "围绕城市资源、合作需求和项目进展进行交流。本活动为虚构演示数据。",
       "notices": "请按报名信息参加，现场流程以测试说明为准。",
       "eventTypeKey": "community",
+      "tagIds": ["60400000-0000-4000-8000-000000000001"],
       "eventMode": "OFFLINE",
       "accessType": "FREE",
       "status": "PUBLISHED",
@@ -259,6 +265,7 @@
       "description": "参与者围绕真实业务问题形成合作方案。本活动为虚构演示数据。",
       "notices": "仅用于开发测试，不代表正式活动安排。",
       "eventTypeKey": "workshop",
+      "tagIds": ["60400000-0000-4000-8000-000000000002", "60400000-0000-4000-8000-000000000003"],
       "eventMode": "OFFLINE",
       "accessType": "MEMBER_INCLUDED",
       "status": "PUBLISHED",
@@ -286,6 +293,7 @@
       "description": "三位演示玩家已完成报名和签到，可用于验证活动后的互动记录。",
       "notices": "本活动为虚构演示数据。",
       "eventTypeKey": "community",
+      "tagIds": ["60400000-0000-4000-8000-000000000001", "60400000-0000-4000-8000-000000000003"],
       "eventMode": "OFFLINE",
       "accessType": "FREE",
       "status": "ENDED",

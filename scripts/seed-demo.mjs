@@ -90,6 +90,8 @@ assertTablesExist([
   'mip_orders',
   'mip_membership_entitlements',
   'mip_event_types',
+  'mip_event_tags',
+  'mip_event_tag_assignments',
   'mip_events',
   'mip_event_registrations',
   'mip_event_invitation_attributions',
@@ -216,6 +218,22 @@ const verification = callCloudbase(root, 'queryMysqlDatabase', {
     (SELECT COUNT(*) FROM mip_event_types
       WHERE app_id = ${sqlLiteral(appId)}
         AND type_key IN (${demoEventTypes(seed.events).map(item => sqlLiteral(item.key)).join(', ')})) AS eventTypes,
+    (SELECT COUNT(*) FROM mip_event_tags
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND (${seed.eventTags.map(item => `(
+          id = ${sqlLiteral(item.id)} AND tag_key = ${sqlLiteral(item.key)}
+          AND name = ${sqlLiteral(item.name)} AND description = ${sqlLiteral(item.description)}
+          AND sort_order = ${Number(item.sortOrder)} AND status = 'ACTIVE'
+          AND created_by_user_id = ${sqlLiteral(item.actorUserId)}
+          AND updated_by_user_id = ${sqlLiteral(item.actorUserId)} AND archived_at IS NULL
+        )`).join(' OR ')})) AS eventTags,
+    (SELECT COUNT(*) FROM mip_event_tag_assignments
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND (${demoEventTagAssignments(seed.events).map(item => `(
+          event_id = ${sqlLiteral(item.eventId)} AND tag_id = ${sqlLiteral(item.tagId)}
+          AND status = 'ACTIVE' AND assigned_by_user_id = ${sqlLiteral(item.actorUserId)}
+          AND removed_by_user_id IS NULL AND removed_at IS NULL
+        )`).join(' OR ')})) AS eventTagAssignments,
     (SELECT COUNT(*) FROM mip_events
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.events.map(item => sqlLiteral(item.id)).join(', ')})) AS events,
@@ -451,6 +469,8 @@ const expected = {
   membershipOrders: seed.membershipOrders.length,
   entitlements: seed.entitlements.length,
   eventTypes: demoEventTypes(seed.events).length,
+  eventTags: seed.eventTags.length,
+  eventTagAssignments: demoEventTagAssignments(seed.events).length,
   events: seed.events.length,
   eventTimelineSettings: seed.events.length,
   eventAlbumSettings: seed.events.length,
@@ -541,6 +561,8 @@ function buildSeedStatements() {
     entitlementStatement(seed.entitlements, seed.membershipPlans),
     eventTypeStatement(seed.events),
     eventStatement(seed.events),
+    eventTagStatement(seed.eventTags),
+    eventTagAssignmentStatement(seed.events),
     eventRegistrationStatement(seed.eventRegistrations),
     eventInvitationAttributionStatement(seed.userInfluence.eventInvitationAttributions),
     eventCheckinStatement(seed.eventCheckins),
@@ -935,6 +957,58 @@ function eventTypeStatement(items) {
     created_by_user_id, updated_by_user_id
   )
   ${selects.join('\n  UNION ALL\n  ')}`
+}
+
+function eventTagStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.key)},
+    ${sqlLiteral(item.name)}, ${sqlLiteral(item.description)}, ${Number(item.sortOrder)},
+    'ACTIVE', 1, ${sqlLiteral(item.actorUserId)}, ${sqlLiteral(item.actorUserId)}, NULL
+  )`).join(',\n')
+  return `INSERT INTO mip_event_tags (
+    id, app_id, tag_key, name, description, sort_order, status, version,
+    created_by_user_id, updated_by_user_id, archived_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    version = IF(
+      name = VALUES(name) AND description = VALUES(description)
+      AND sort_order = VALUES(sort_order) AND status = 'ACTIVE'
+      AND created_by_user_id = VALUES(created_by_user_id)
+      AND updated_by_user_id = VALUES(updated_by_user_id) AND archived_at IS NULL,
+      version, version + 1
+    ),
+    name = VALUES(name), description = VALUES(description), sort_order = VALUES(sort_order),
+    status = 'ACTIVE', created_by_user_id = VALUES(created_by_user_id),
+    updated_by_user_id = VALUES(updated_by_user_id), archived_at = NULL`
+}
+
+function demoEventTagAssignments(items) {
+  return items.flatMap(item => item.tagIds.map(tagId => ({
+    eventId: item.id,
+    tagId,
+    actorUserId: item.organizerUserId,
+  })))
+}
+
+function eventTagAssignmentStatement(items) {
+  const values = demoEventTagAssignments(items).map(item => `(
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.eventId)}, ${sqlLiteral(item.tagId)},
+    'ACTIVE', 1, ${sqlLiteral(item.actorUserId)}, NULL, NULL
+  )`).join(',\n')
+  return `INSERT INTO mip_event_tag_assignments (
+    app_id, event_id, tag_id, status, version,
+    assigned_by_user_id, removed_by_user_id, removed_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    version = IF(
+      status = 'ACTIVE' AND assigned_by_user_id = VALUES(assigned_by_user_id)
+      AND removed_by_user_id IS NULL AND removed_at IS NULL,
+      version, version + 1
+    ),
+    status = 'ACTIVE', assigned_by_user_id = VALUES(assigned_by_user_id),
+    removed_by_user_id = NULL, removed_at = NULL`
 }
 
 function eventStatement(items) {
@@ -2035,6 +2109,10 @@ function buildDemoManifest(value, state) {
         .map(item => item.registrationId),
       influenceEventHeartIds: value.userInfluence.eventHearts.map(item => item.id),
       influenceProfileVisitIds: value.userInfluence.profileVisits.map(item => item.id),
+      eventTagAssignmentKeys: demoEventTagAssignments(value.events).map(item => ({
+        eventId: item.eventId,
+        tagId: item.tagId,
+      })),
     },
     recordsByTable: {
       mip_city_branches: value.branches.map(item => ({ id: item.id })),
@@ -2055,7 +2133,12 @@ function buildDemoManifest(value, state) {
       mip_growth_entries: value.growthEntries.map(item => ({ id: item.id })),
       mip_orders: value.membershipOrders.map(item => ({ id: item.id })),
       mip_membership_entitlements: value.entitlements.map(item => ({ id: item.id })),
+      mip_event_tags: value.eventTags.map(item => ({ id: item.id })),
       mip_events: value.events.map(item => ({ id: item.id })),
+      mip_event_tag_assignments: demoEventTagAssignments(value.events).map(item => ({
+        eventId: item.eventId,
+        tagId: item.tagId,
+      })),
       mip_event_registrations: value.eventRegistrations.map(item => ({ id: item.id })),
       mip_event_checkins: value.eventCheckins.map(item => ({ id: item.id })),
       mip_event_checkin_transitions: value.eventCheckinTransitions.map(item => ({ id: item.id })),
@@ -2147,6 +2230,7 @@ function assertSeed(value) {
     'users',
     'membershipOrders',
     'entitlements',
+    'eventTags',
     'events',
     'eventRegistrations',
     'eventCheckins',
@@ -2238,6 +2322,7 @@ function assertDemoRelations(value) {
   const orderById = new Map(value.membershipOrders.map(item => [item.id, item]))
   const eventIds = new Set(value.events.map(item => item.id))
   const eventById = new Map(value.events.map(item => [item.id, item]))
+  const eventTagById = new Map(value.eventTags.map(item => [item.id, item]))
   const opportunityIds = new Set(value.opportunities.map(item => item.id))
   const opportunityById = new Map(value.opportunities.map(item => [item.id, item]))
   const playerIds = new Set(value.entitlements.map(item => item.userId))
@@ -2249,6 +2334,20 @@ function assertDemoRelations(value) {
     'visual_designer',
     'delivery_lead',
   ])
+  if (value.eventTags.length < 3 || eventTagById.size !== value.eventTags.length) {
+    throw new Error('Demo event tags require at least three unique fixtures')
+  }
+  const eventTagKeys = new Set()
+  for (const tag of value.eventTags) {
+    if (eventTagKeys.has(tag.key)
+      || typeof tag.name !== 'string' || !tag.name.trim() || tag.name.length > 80
+      || typeof tag.description !== 'string' || tag.description.length > 300
+      || !Number.isInteger(tag.sortOrder) || tag.sortOrder < 0
+      || !userIds.has(tag.actorUserId)) {
+      throw new Error('Demo event tag catalog is invalid')
+    }
+    eventTagKeys.add(tag.key)
+  }
   for (const user of value.users) {
     if (!branchIds.has(user.branchId)
       || tagById.get(user.industryTagId)?.kind !== 'INDUSTRY'
@@ -2282,6 +2381,9 @@ function assertDemoRelations(value) {
   for (const event of value.events) {
     if (!branchIds.has(event.branchId)
       || !userIds.has(event.organizerUserId)
+      || !Array.isArray(event.tagIds) || event.tagIds.length === 0 || event.tagIds.length > 12
+      || new Set(event.tagIds).size !== event.tagIds.length
+      || event.tagIds.some(tagId => !eventTagById.has(tagId))
       || typeof event.albumEnabled !== 'boolean'
       || !['AUTO', 'REVIEW'].includes(event.albumSubmissionPolicy)
       || !['PUBLISHED', 'ENDED'].includes(event.status)
@@ -2306,6 +2408,13 @@ function assertDemoRelations(value) {
   || !value.events.some(event => event.status === 'ENDED'
     && event.endsAt < '2026-08-26 00:00:00.000')) {
     throw new Error('Demo events require both long-lived and historical interaction fixtures')
+  }
+  const longLivedEvents = value.events.filter(event => event.startsAt.startsWith('2030-'))
+  if (!longLivedEvents.length
+    || !longLivedEvents.some(event => event.tagIds.length === 1)
+    || !longLivedEvents.some(event => event.tagIds.length > 1)
+    || value.eventTags.some(tag => !value.events.some(event => event.tagIds.includes(tag.id)))) {
+    throw new Error('Demo event tags require single-tag, multi-tag, and complete catalog coverage')
   }
   const registrationById = new Map()
   const registrationByEventUser = new Map()

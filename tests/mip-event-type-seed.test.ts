@@ -24,12 +24,12 @@ describe('MIP demo event-type catalog safety', () => {
     expect(plan.indexOf('eventTypeStatement(seed.events)')).toBeGreaterThan(-1)
     expect(plan.indexOf('eventTypeStatement(seed.events)'))
       .toBeLessThan(plan.indexOf('eventStatement(seed.events)'))
-    expect(source).toContain('\'mip_event_types\',\n  \'mip_events\'')
+    expect(source).toContain('\'mip_event_types\',\n  \'mip_event_tags\',\n  \'mip_event_tag_assignments\',\n  \'mip_events\'')
     expect(new Set(seed.events.map(event => event.eventTypeKey)).size).toBeGreaterThan(0)
   })
 
   it('creates only missing ACTIVE name-equals-key rows under the AppID and demo organizer', () => {
-    const statement = sourceFunction('eventTypeStatement(items)', 'eventStatement')
+    const statement = sourceFunction('eventTypeStatement(items)', 'eventTagStatement')
     expect(statement).toContain('INSERT INTO mip_event_types')
     expect(statement).toContain('type_key, name, description, sort_order, status, version')
     expect(statement).toContain('\'\', 0, \'ACTIVE\', 1')
@@ -43,7 +43,7 @@ describe('MIP demo event-type catalog safety', () => {
   it('verifies the AppID-bound type keys without rewriting pre-existing metadata', () => {
     const verification = source.slice(
       source.indexOf('(SELECT COUNT(*) FROM mip_event_types'),
-      source.indexOf('(SELECT COUNT(*) FROM mip_events'),
+      source.indexOf('(SELECT COUNT(*) FROM mip_event_tags'),
     )
     expect(verification).toMatch(/WHERE app_id = \$\{sqlLiteral\(appId\)\}/)
     expect(verification).toContain('demoEventTypes(seed.events)')

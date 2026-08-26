@@ -8,6 +8,7 @@ const SEED_TABLES = Object.freeze({
   users: 'mip_users',
   membershipOrders: 'mip_orders',
   entitlements: 'mip_membership_entitlements',
+  eventTags: 'mip_event_tags',
   events: 'mip_events',
   eventRegistrations: 'mip_event_registrations',
   eventCheckins: 'mip_event_checkins',
@@ -117,6 +118,7 @@ export function buildSeedCollisionQuery(appId, seed) {
       OR (user_id = ${literal(item.userId)} AND order_type = 'MEMBERSHIP'
         AND idempotency_key = ${literal(item.key)}))`))
   selects.push(alternateKeySelect(appId, 'mip_membership_entitlements', seed.entitlements, item => `order_id = ${literal(item.orderId)}`))
+  selects.push(alternateKeySelect(appId, 'mip_event_tags', seed.eventTags, item => `tag_key = ${literal(item.key)}`))
   selects.push(alternateKeySelect(appId, 'mip_event_registrations', seed.eventRegistrations, item => `event_id = ${literal(item.eventId)} AND user_id = ${literal(item.userId)}`))
   selects.push(alternateKeySelect(appId, 'mip_event_checkins', seed.eventCheckins, item => `registration_id = ${literal(item.registrationId)}`))
   selects.push(alternateKeySelect(
@@ -169,6 +171,14 @@ export function buildSeedCollisionQuery(appId, seed) {
       AND card_key = ${literal(item.cardKey)}`))
   const interactions = seed.opportunityInteractions
   const influence = userInfluenceFixtures(seed)
+  selects.push(compositeManifestCollisionSelect({
+    appId,
+    table: 'mip_event_tag_assignments',
+    alias: 'event_tag_assignment',
+    items: eventTagAssignmentFixtures(seed),
+    condition: item => `event_id = ${literal(item.eventId)} AND tag_id = ${literal(item.tagId)}`,
+    recordFields: { eventId: 'event_id', tagId: 'tag_id' },
+  }))
   selects.push(compositeManifestCollisionSelect({
     appId,
     table: 'mip_event_invitation_attributions',
@@ -317,6 +327,21 @@ function userInfluenceFixtures(seed) {
     throw new Error('MIP demo seed user influence identities are invalid')
   }
   return influence
+}
+
+function eventTagAssignmentFixtures(seed) {
+  if (!Array.isArray(seed?.events) || !seed.events.length) {
+    throw new Error('MIP demo event tag assignments are invalid')
+  }
+  const assignments = seed.events.flatMap(event => (
+    Array.isArray(event?.tagIds)
+      ? event.tagIds.map(tagId => ({ eventId: event.id, tagId }))
+      : []
+  ))
+  if (!assignments.length || assignments.some(item => !isUuid(item.eventId) || !isUuid(item.tagId))) {
+    throw new Error('MIP demo event tag assignments are invalid')
+  }
+  return assignments
 }
 
 function isUuid(value) {
