@@ -1,42 +1,130 @@
-<view id="mip-case-editor-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="mip-case-editor-page" class="mip-member-page case-editor-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+200rpx)] text-ink">
   <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法编辑案例" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit /></view>
   <block wx:else>
-    <view class="text-[length:36rpx] font-bold">{{id ? '编辑超级案例' : '创建超级案例'}}</view>
-    <view class="mt-3 rounded-[16rpx] bg-brand px-4 py-4 text-[length:23rpx] leading-6 text-on-brand">填写真实项目经历。发布前可以先保存草稿，发布后其他成员可在案例列表查看。</view>
-    <view wx:if="{{aiDraftLoaded}}" class="mt-4 rounded-[14rpx] bg-brand-soft px-4 py-3 text-[length:23rpx] text-brand">已载入 AI 草稿，可继续修改后保存。</view>
-    <view class="mt-4 flex min-h-[112rpx] items-center gap-3 rounded-[16rpx] border border-brand bg-panel px-4" bind:tap="openAiAssistant"><view class="flex h-[68rpx] w-[68rpx] shrink-0 items-center justify-center rounded-full bg-brand"><t-icon name="chat" size="34rpx" color="var(--color-on-brand)" /></view><view class="min-w-0 flex-1"><view class="text-[length:26rpx] font-semibold">AI 草稿助手</view><view class="mt-1 text-[length:21rpx] text-muted">可通过文字或语音整理案例草稿</view></view><t-icon name="chevron-right" size="30rpx" color="var(--color-muted)" /></view>
-    <view class="mt-5 flex flex-col gap-4 rounded-[16rpx] bg-panel px-4 py-5">
-      <view><view class="mb-2 text-[length:23rpx] text-muted">项目名称</view><input class="box-border h-[80rpx] w-full max-w-full rounded-[12rpx] bg-panel-raised px-3 text-[length:25rpx]" value="{{projectName}}" maxlength="120" placeholder="填写项目名称" data-field="projectName" bindinput="updateText" /></view>
-      <view><view class="mb-2 text-[length:23rpx] text-muted">一句话说明</view><textarea class="box-border min-h-[140rpx] w-full max-w-full rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:25rpx]" value="{{summary}}" maxlength="240" placeholder="概括项目和结果" data-field="summary" bindinput="updateText" /></view>
-      <view><view class="mb-2 text-[length:23rpx] text-muted">职责</view><textarea class="box-border min-h-[160rpx] w-full max-w-full rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:25rpx]" value="{{responsibility}}" maxlength="500" placeholder="说明你负责的工作" data-field="responsibility" bindinput="updateText" /></view>
-      <view><view class="mb-2 text-[length:23rpx] text-muted">详细说明</view><textarea class="box-border min-h-[280rpx] w-full max-w-full rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:25rpx]" value="{{description}}" maxlength="8000" placeholder="说明背景、过程和结果" data-field="description" bindinput="updateText" /></view>
+    <view class="case-editor-guidance -mx-3 flex min-h-[64rpx] items-center justify-center bg-brand px-4 text-center text-[length:26rpx] font-medium text-on-brand">填写展现能力的超级案例</view>
+
+    <view id="case-editor-ai-assistant" class="case-editor-ai mt-3 flex min-h-[200rpx] items-center justify-center rounded-[16rpx] border border-brand bg-panel active:bg-panel-raised" aria-role="button" aria-label="打开 AI 助手" bind:tap="openAiAssistant">
+      <view class="case-editor-ai__label flex items-center gap-2 text-[length:28rpx] font-medium text-brand">
+        <image class="case-editor-ai__icon h-[48rpx] w-[48rpx]" src="/packages/member/mip-cases/editor/assets/ai-assistant.svg" mode="aspectFit" />
+        <text>AI 助手</text>
+      </view>
     </view>
-    <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
-      <view class="text-[length:26rpx] font-semibold">时间和分类</view><view class="mt-3 grid grid-cols-2 gap-2"><picker mode="date" value="{{startedOn}}" bindchange="changeStart"><view class="rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]">开始：{{startedOn || '未填写'}}</view></picker><picker mode="date" value="{{endedOn}}" bindchange="changeEnd"><view class="rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]">结束：{{endedOn || '未填写'}}</view></picker></view><view class="mt-2 text-right text-[length:21rpx] text-muted" bind:tap="clearDates">清除日期</view>
-      <picker mode="selector" range="{{cityOptions}}" range-key="label" value="{{cityIndex}}" bindchange="changeCity"><view class="mt-3 flex h-[80rpx] items-center justify-between rounded-[12rpx] bg-panel-raised px-3 text-[length:24rpx]"><text>主营城市：{{cityOptions[cityIndex].label}}</text><t-icon name="chevron-right" size="30rpx" color="var(--color-muted)" /></view></picker>
-      <picker mode="selector" range="{{industryOptions}}" range-key="label" value="{{industryIndex}}" bindchange="changeIndustry"><view class="mt-3 flex h-[80rpx] items-center justify-between rounded-[12rpx] bg-panel-raised px-3 text-[length:24rpx]"><text>行业：{{industryOptions[industryIndex].label}}</text><t-icon name="chevron-right" size="30rpx" color="var(--color-muted)" /></view></picker>
-      <view class="mt-3"><view class="mb-2 text-[length:23rpx] text-muted">案例类型</view><input class="box-border h-[80rpx] w-full max-w-full rounded-[12rpx] bg-panel-raised px-3 text-[length:25rpx]" value="{{caseType}}" maxlength="80" placeholder="例如品牌升级、产品策划" data-field="caseType" bindinput="updateText" /></view>
+
+    <view wx:if="{{aiDraftLoaded}}" class="mt-3 rounded-[14rpx] bg-brand-soft px-4 py-3 text-[length:23rpx] leading-6 text-brand">已载入 AI 草稿，可继续修改后保存。</view>
+
+    <view class="case-editor-section-heading mt-4 flex min-h-[56rpx] items-center justify-between gap-3">
+      <view class="flex min-w-0 items-center gap-2">
+        <image class="case-editor-section-icon h-[32rpx] w-[32rpx] shrink-0" src="/packages/member/mip-cases/editor/assets/case-section.svg" mode="aspectFit" />
+        <view class="case-editor-section-title text-[length:32rpx] font-medium">我的案例</view>
+      </view>
+      <view wx:if="{{publicationStatus === 'PUBLISHED'}}" class="case-editor-status shrink-0 rounded-full bg-brand px-3 py-1 text-[length:21rpx] font-medium text-on-brand">{{publicationStatusText}}</view>
+      <view wx:else class="case-editor-status shrink-0 rounded-full border border-line bg-panel px-3 py-1 text-[length:21rpx] text-muted">{{publicationStatusText}}</view>
     </view>
-    <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
-      <view class="text-[length:26rpx] font-semibold">案例封面</view>
-      <image wx:if="{{coverUrl}}" class="mt-3 h-[320rpx] w-full rounded-[12rpx] bg-panel-raised" mode="aspectFill" src="{{coverUrl}}" />
-      <view wx:else class="mt-3 flex h-[240rpx] items-center justify-center rounded-[12rpx] bg-panel-raised text-[length:23rpx] text-muted">暂未上传封面</view>
-      <view class="mt-3"><t-button block variant="outline" loading="{{coverUploading}}" disabled="{{saving || mediaUploading}}" bind:tap="chooseCover">{{coverUrl ? '更换封面' : '上传封面'}}</t-button></view>
-    </view>
-    <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
-      <view class="flex items-center justify-between"><view class="text-[length:26rpx] font-semibold">展示素材</view><view class="text-[length:22rpx] text-muted">{{mediaAssets.length}} / 12</view></view>
-      <view wx:if="{{mediaAssets.length}}" class="mt-3 grid grid-cols-3 gap-2">
-        <view wx:for="{{mediaAssets}}" wx:key="assetId" class="relative overflow-hidden rounded-[10rpx] bg-panel-raised">
-          <image class="h-[180rpx] w-full" mode="aspectFill" src="{{item.imageUrl}}" data-url="{{item.imageUrl}}" bind:tap="previewMedia" />
-          <view class="flex min-h-[88rpx] items-center justify-center text-[length:22rpx] text-muted" aria-role="button" data-asset-id="{{item.assetId}}" bind:tap="removeMedia">移除</view>
+
+    <view class="case-editor-form-layout mt-2">
+      <view class="case-editor-field-group">
+        <view class="case-editor-field-row">
+          <view class="case-editor-field__label">项目名称</view>
+          <input class="case-editor-field__control" value="{{projectName}}" maxlength="120" placeholder="填写项目名称" placeholder-class="case-editor-field__placeholder" data-field="projectName" bindinput="updateText" />
+        </view>
+        <view class="case-editor-field-row">
+          <view class="case-editor-field__label">一句话说明</view>
+          <input class="case-editor-field__control" value="{{summary}}" maxlength="240" placeholder="概括项目和结果" placeholder-class="case-editor-field__placeholder" data-field="summary" bindinput="updateText" />
+        </view>
+        <picker class="case-editor-field-row" mode="date" value="{{startedOn}}" bindchange="changeStart">
+          <view class="case-editor-field__label">开始时间</view>
+          <view class="case-editor-field__value">
+            <text class="case-editor-field__value-text">{{startedOn || '请选择'}}</text>
+            <image class="case-editor-field-icon h-[40rpx] w-[40rpx] shrink-0" src="/packages/member/mip-cases/editor/assets/calendar.svg" mode="aspectFit" />
+          </view>
+        </picker>
+        <view class="case-editor-field-row">
+          <view class="case-editor-field__label">担任职责</view>
+          <input class="case-editor-field__control" value="{{responsibility}}" maxlength="500" placeholder="填写承担的职责" placeholder-class="case-editor-field__placeholder" data-field="responsibility" bindinput="updateText" />
+        </view>
+        <picker class="case-editor-field-row case-editor-field-row--last" mode="selector" range="{{cityOptions}}" range-key="label" value="{{cityIndex}}" bindchange="changeCity">
+          <view class="case-editor-field__label">主营城市</view>
+          <view class="case-editor-field__value">
+            <text class="case-editor-field__value-text">{{cityOptions[cityIndex].label}}</text>
+            <image class="case-editor-chevron h-[32rpx] w-[32rpx] shrink-0" src="/packages/member/mip-cases/editor/assets/chevron.svg" mode="aspectFit" />
+          </view>
+        </picker>
+      </view>
+
+      <view class="case-editor-field-group">
+        <picker class="case-editor-field-row" mode="date" value="{{endedOn}}" bindchange="changeEnd">
+          <view class="case-editor-field__label">结束时间</view>
+          <view class="case-editor-field__value">
+            <text class="case-editor-field__value-text">{{endedOn || '选填'}}</text>
+            <image class="case-editor-field-icon h-[40rpx] w-[40rpx] shrink-0" src="/packages/member/mip-cases/editor/assets/calendar.svg" mode="aspectFit" />
+          </view>
+        </picker>
+        <view wx:if="{{startedOn || endedOn}}" class="case-editor-field-row case-editor-field-row--action" aria-role="button" bind:tap="clearDates">
+          <view class="case-editor-field__label">项目时间</view>
+          <view class="case-editor-field__value text-brand">清除时间</view>
+        </view>
+        <picker class="case-editor-field-row" mode="selector" range="{{industryOptions}}" range-key="label" value="{{industryIndex}}" bindchange="changeIndustry">
+          <view class="case-editor-field__label">所属行业</view>
+          <view class="case-editor-field__value">
+            <text class="case-editor-field__value-text">{{industryOptions[industryIndex].label}}</text>
+            <image class="case-editor-chevron h-[32rpx] w-[32rpx] shrink-0" src="/packages/member/mip-cases/editor/assets/chevron.svg" mode="aspectFit" />
+          </view>
+        </picker>
+        <view class="case-editor-field-row">
+          <view class="case-editor-field__label">案例类型</view>
+          <input class="case-editor-field__control" value="{{caseType}}" maxlength="80" placeholder="填写案例类型" placeholder-class="case-editor-field__placeholder" data-field="caseType" bindinput="updateText" />
+        </view>
+        <view class="case-editor-description">
+          <view class="text-[length:28rpx] font-medium">详细说明</view>
+          <textarea class="case-editor-description__control" value="{{description}}" maxlength="8000" placeholder="说明项目背景、过程和结果" placeholder-class="case-editor-field__placeholder" data-field="description" bindinput="updateText" />
+          <view class="text-right text-[length:22rpx] text-muted">{{description.length}}/8000</view>
         </view>
       </view>
-      <view wx:else class="mt-3 rounded-[12rpx] bg-panel-raised px-4 py-6 text-center text-[length:23rpx] text-muted">暂未上传展示素材</view>
-      <view class="mt-3"><t-button block variant="outline" loading="{{mediaUploading}}" disabled="{{saving || coverUploading || mediaAssets.length >= 12}}" bind:tap="addMedia">添加展示素材</t-button></view>
     </view>
-    <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] border border-danger px-4 py-3 text-[length:22rpx] text-danger">{{message}}</view>
-    <view class="mt-5 rounded-[24rpx] border border-line bg-panel p-2"><view class="flex gap-2"><t-button class="min-w-0 flex-1" block size="large" variant="outline" theme="primary" disabled="{{saving || coverUploading || mediaUploading}}" bind:tap="saveDraft">保存草稿</t-button><t-button class="min-w-0 flex-1" block size="large" theme="primary" loading="{{saving}}" disabled="{{coverUploading || mediaUploading}}" bind:tap="publish">发布案例</t-button></view></view>
+
+    <view class="case-editor-section-heading mt-6 flex min-h-[56rpx] items-center">
+      <view class="case-editor-section-title text-[length:32rpx] font-medium">案例素材</view>
+    </view>
+    <view class="case-editor-media-layout mt-2">
+      <view class="case-editor-media-panel rounded-[16rpx] bg-panel px-4 py-4">
+        <view class="flex items-start justify-between gap-3">
+          <view>
+            <view class="text-[length:27rpx] font-medium">案例封面</view>
+            <view class="mt-1 text-[length:21rpx] text-muted">用于案例列表和详情页</view>
+          </view>
+          <view wx:if="{{coverUploading}}" class="shrink-0 text-[length:21rpx] text-brand">上传中</view>
+        </view>
+        <image wx:if="{{coverUrl}}" class="mt-3 h-[300rpx] w-full rounded-[12rpx] bg-panel-raised" mode="aspectFill" src="{{coverUrl}}" />
+        <view wx:else class="mt-3 flex h-[240rpx] items-center justify-center rounded-[12rpx] border border-dashed border-line bg-panel-raised text-[length:23rpx] text-muted">暂未上传封面</view>
+        <view class="mt-3"><t-button block variant="outline" loading="{{coverUploading}}" disabled="{{saving || mediaUploading}}" bind:tap="chooseCover">{{coverUrl ? '更换封面' : '上传封面'}}</t-button></view>
+      </view>
+
+      <view class="case-editor-media-panel rounded-[16rpx] bg-panel px-4 py-4">
+        <view class="flex items-start justify-between gap-3">
+          <view>
+            <view class="text-[length:27rpx] font-medium">展示素材</view>
+            <view class="mt-1 text-[length:21rpx] text-muted">最多上传 12 张图片</view>
+          </view>
+          <view class="shrink-0 text-[length:22rpx] text-muted">{{mediaAssets.length}} / 12</view>
+        </view>
+        <view wx:if="{{mediaAssets.length}}" class="case-editor-media-grid mt-3">
+          <view wx:for="{{mediaAssets}}" wx:key="assetId" class="case-editor-media-item overflow-hidden rounded-[10rpx] bg-panel-raised">
+            <image class="case-editor-media-item__image w-full" mode="aspectFill" src="{{item.imageUrl}}" data-url="{{item.imageUrl}}" bind:tap="previewMedia" />
+            <view class="flex min-h-[88rpx] items-center justify-center text-[length:22rpx] text-danger" aria-role="button" data-asset-id="{{item.assetId}}" bind:tap="removeMedia">移除</view>
+          </view>
+        </view>
+        <view wx:else class="mt-3 flex min-h-[240rpx] items-center justify-center rounded-[12rpx] border border-dashed border-line bg-panel-raised px-4 text-center text-[length:23rpx] text-muted">暂未上传展示素材</view>
+        <view class="mt-3"><t-button block variant="outline" loading="{{mediaUploading}}" disabled="{{saving || coverUploading || mediaAssets.length >= 12}}" bind:tap="addMedia">添加展示素材</t-button></view>
+      </view>
+    </view>
+
+    <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] border border-danger px-4 py-3 text-[length:22rpx] leading-6 text-danger" aria-live="polite">{{message}}</view>
     <app-page-exit label="取消" />
+
+    <view id="case-editor-fixed-actions" class="mip-member-fixed-inset case-editor-actions fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 grid min-h-[112rpx] grid-cols-2 items-center gap-2 rounded-full border border-brand bg-brand-soft p-2">
+      <view class="case-editor-action min-w-0"><t-button block size="large" variant="outline" theme="primary" loading="{{savingIntent === 'draft'}}" disabled="{{saving || coverUploading || mediaUploading}}" bind:tap="saveDraft">保存草稿</t-button></view>
+      <view class="case-editor-action min-w-0"><t-button block size="large" theme="primary" loading="{{savingIntent === 'publish'}}" disabled="{{saving || coverUploading || mediaUploading}}" bind:tap="publish">{{publicationStatus === 'PUBLISHED' ? '保存修改' : '发布案例'}}</t-button></view>
+    </view>
   </block>
 </view>

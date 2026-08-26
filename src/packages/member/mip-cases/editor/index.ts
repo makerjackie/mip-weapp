@@ -1,6 +1,6 @@
 import type { SuperCaseId } from '../../../../modules/mip'
 import type { AiDraftSourceConfirmation } from '../../../../modules/mip-ai'
-import type { SuperCaseDetail } from '../../../../modules/mip-cases'
+import type { SuperCaseDetail, SuperCaseStatus } from '../../../../modules/mip-cases'
 import type { OpportunityCatalog } from '../../../../modules/mip-opportunities'
 import { aiText } from '../../../../modules/mip-ai/editor'
 import { loadAiEditorDraft } from '../../../../modules/mip-ai/editor-loader'
@@ -11,6 +11,25 @@ import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
 import { chooseMultipleImages, chooseSingleImage } from '../../../../modules/platform/image-upload'
 
 interface CaseMediaDraft { assetId: string, imageUrl: string }
+
+type CaseEditorPublicationStatus = SuperCaseStatus | 'NEW'
+
+function publicationStatus(value: unknown): CaseEditorPublicationStatus {
+  const status = String(value)
+  return ['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'ARCHIVED'].includes(status)
+    ? status as SuperCaseStatus
+    : 'NEW'
+}
+
+function publicationStatusText(value: CaseEditorPublicationStatus) {
+  return {
+    NEW: '新案例',
+    DRAFT: '草稿',
+    PUBLISHED: '已发布',
+    UNPUBLISHED: '已下架',
+    ARCHIVED: '已归档',
+  }[value]
+}
 
 function aiDate(value: unknown) {
   const text = typeof value === 'string' ? value.trim() : ''
@@ -25,7 +44,10 @@ Page({
     version: 0,
     state: 'loading' as 'loading' | 'ready' | 'error',
     saving: false,
+    savingIntent: '' as '' | 'draft' | 'publish',
     message: '',
+    publicationStatus: 'NEW' as CaseEditorPublicationStatus,
+    publicationStatusText: publicationStatusText('NEW'),
     aiDraftId: '',
     aiConfirmation: null as AiDraftSourceConfirmation | null,
     aiDraftLoaded: false,
@@ -103,6 +125,7 @@ Page({
     const industryIndex = detail?.industryLabel
       ? Math.max(0, industryOptions.findIndex(item => item.label === detail.industryLabel))
       : 0
+    const status = publicationStatus(detail?.status)
     this.setData({
       cityOptions,
       industryOptions,
@@ -125,6 +148,8 @@ Page({
         imageUrl: detail?.media[index]?.url || '',
       })),
       version: detail?.version || 0,
+      publicationStatus: status,
+      publicationStatusText: publicationStatusText(status),
     })
   },
 
@@ -239,7 +264,11 @@ Page({
     if (this.data.saving || this.data.coverUploading || this.data.mediaUploading) {
       return
     }
-    this.setData({ saving: true, message: '' })
+    this.setData({
+      saving: true,
+      savingIntent: publish ? 'publish' : 'draft',
+      message: '',
+    })
     try {
       const result = await superCaseModule.save({
         id: this.data.id || undefined,
@@ -258,7 +287,13 @@ Page({
         publish,
         aiConfirmation: this.data.aiConfirmation || undefined,
       })
-      this.setData({ id: result.id, version: result.version })
+      const status = publicationStatus(result.status)
+      this.setData({
+        id: result.id,
+        version: result.version,
+        publicationStatus: status,
+        publicationStatusText: publicationStatusText(status),
+      })
       wx.showToast({ title: result.status === 'PUBLISHED' ? '案例已发布' : '草稿已保存', icon: 'success' })
       setTimeout(() => wx.navigateBack(), 500)
     }
@@ -266,7 +301,7 @@ Page({
       this.setData({ message: error instanceof Error ? error.message : '保存失败' })
     }
     finally {
-      this.setData({ saving: false })
+      this.setData({ saving: false, savingIntent: '' })
     }
   },
 })
