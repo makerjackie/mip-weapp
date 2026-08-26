@@ -94,6 +94,7 @@ Page({
         state: 'ready',
         options,
         detail: item,
+        version: item?.version || 0,
         ownerIndex,
         industryOptions: industries,
         ownerName: ownerLabel(options.owners[ownerIndex]),

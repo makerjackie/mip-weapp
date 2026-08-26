@@ -15,7 +15,7 @@ const {
 } = require('./validation')
 
 const KINDS = new Set(['COOPERATION_CARD', 'SUPER_CASE'])
-const STATUSES = new Set(['PUBLISHED', 'UNPUBLISHED', 'ARCHIVED', 'ALL'])
+const STATUSES = new Set(['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'ARCHIVED', 'ALL'])
 const SAFETY_STATUSES = new Set(['PENDING', 'APPROVED', 'REJECTED', 'ERROR'])
 const ROLE_KEYS = new Set([
   'connector',

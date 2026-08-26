@@ -71,6 +71,22 @@ describe('admin user content governance service', () => {
     assert.equal(captured[3], 50)
   })
 
+  it('accepts the draft status used by the management editor list', async () => {
+    let filters
+    const service = createAdminUserContentGovernance({
+      access: accessFixture({ roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', scopeId: BRANCH_A }),
+      repository: {
+        async listUserContent(_appId, _visibility, normalized) {
+          filters = normalized
+          return { items: [], nextCursor: null }
+        },
+      },
+    })
+
+    await service.listUserContent({ appId: APP_ID }, { status: 'DRAFT' })
+    assert.equal(filters.status, 'DRAFT')
+  })
+
   it('requires a reason and sends a scoped, versioned, auditable unpublish intent', async () => {
     let captured
     const service = createAdminUserContentGovernance({
