@@ -88,7 +88,7 @@ function createKnowledgeAdminService(database, options = {}) {
          FROM mip_knowledge_categories category
          LEFT JOIN mip_knowledge_contents content
            ON content.app_id = category.app_id AND content.category_id = category.id
-         WHERE category.app_id = ? GROUP BY category.id
+         WHERE category.app_id = ? GROUP BY category.app_id, category.id
          ORDER BY category.sort_order ASC, category.id ASC LIMIT ?`,
         [context.appId, limit],
       )
@@ -111,7 +111,8 @@ function createKnowledgeAdminService(database, options = {}) {
            ON report.app_id = comment.app_id AND report.comment_id = comment.id
             AND report.status IN ('PENDING', 'REVIEWING')
          WHERE comment.app_id = ? AND (? IS NULL OR comment.status = ?)
-         GROUP BY comment.id ORDER BY comment.created_at DESC, comment.id DESC LIMIT ?`,
+         GROUP BY comment.app_id, comment.id
+         ORDER BY comment.created_at DESC, comment.id DESC LIMIT ?`,
         [context.appId, status, status, limit],
       )
       return { section, items: rows.map(commentAdminDto), nextCursor: null }

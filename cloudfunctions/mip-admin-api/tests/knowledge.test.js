@@ -62,6 +62,29 @@ describe('knowledge admin service', () => {
     assert.deepEqual(calls[2].params, ['app', 50])
   })
 
+  it('groups aggregate lists by the complete app-scoped primary key', async () => {
+    const calls = []
+    const database = {
+      async one() { return accessRow() },
+      async query(sql, params) {
+        calls.push({ sql, params })
+        if (sql.includes('mip_admin_role_bindings')) return platformKnowledgeGrant
+        return []
+      },
+    }
+    const service = createKnowledgeAdminService(database)
+
+    await service.listKnowledgeAdmin(caller, { section: 'CATEGORIES' })
+    await service.listKnowledgeAdmin(caller, { section: 'COMMENTS' })
+
+    const categoryQuery = calls.find(call => call.sql.includes('FROM mip_knowledge_categories category'))
+    const commentQuery = calls.find(call => call.sql.includes('FROM mip_content_comments comment'))
+    assert.match(categoryQuery.sql, /GROUP BY category\.app_id, category\.id/)
+    assert.match(commentQuery.sql, /GROUP BY comment\.app_id, comment\.id/)
+    assert.deepEqual(categoryQuery.params, ['app', 50])
+    assert.deepEqual(commentQuery.params, ['app', null, null, 50])
+  })
+
   it('checks every current agreement and the primary branch before platform capability', async () => {
     const cases = [
       {
