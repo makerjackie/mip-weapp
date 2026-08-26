@@ -32,7 +32,7 @@ function createMessageDeliveryReviewRepository(database, options = {}) {
     const currentTime = input.now || now()
     const visible = []
     let cursor = input.cursor
-    while (visible.length <= input.limit) {
+    while (input.unbounded === true || visible.length <= input.limit) {
       const candidateRows = await listCandidates(database, {
         ...input,
         cursor,
@@ -50,6 +50,9 @@ function createMessageDeliveryReviewRepository(database, options = {}) {
       if (candidateRows.length < LIST_SCAN_BATCH_SIZE) break
       const last = candidateRows[candidateRows.length - 1]
       cursor = { occurredAt: last.occurred_at, id: last.incident_id }
+    }
+    if (input.unbounded === true) {
+      return { items: visible, nextCursor: null }
     }
     return pageRows(visible, input.limit, item => ({
       occurredAt: item.sourceState.occurredAt,

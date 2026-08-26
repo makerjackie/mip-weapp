@@ -218,6 +218,8 @@ Page({
     reviewMessage: '',
     queueItems: [] as QueueView[],
     queueAllItems: [] as QueueView[],
+    queueNextCursor: null as string | null,
+    queueLoadingMore: false,
     queueState: '' as AdminOperationsQueueState | '',
     queueMessage: '',
   },
@@ -347,15 +349,32 @@ Page({
     }
   },
 
-  async loadQueue(force = false) {
+  async loadQueue(force = false, append = false) {
+    if (append) {
+      if (!this.data.queueNextCursor || this.data.queueLoadingMore) {
+        return
+      }
+      this.setData({ queueLoadingMore: true, queueMessage: '' })
+    }
+    else {
+      this.setData({ queueNextCursor: null, queueMessage: '' })
+    }
     try {
-      const response = await mipAdminModule.governance.listOperationsQueue({ limit: 50 }, force)
-      const queueAllItems = response.items.map(queueView)
+      const response = await mipAdminModule.governance.listOperationsQueue({
+        limit: 50,
+        ...(this.data.queueState ? { state: this.data.queueState } : {}),
+        ...(append && this.data.queueNextCursor ? { cursor: this.data.queueNextCursor } : {}),
+      }, force)
+      const loadedItems = response.items.map(queueView)
+      const queueAllItems = append
+        ? [...this.data.queueAllItems, ...loadedItems].filter((item, index, items) => (
+            items.findIndex(candidate => candidate.id === item.id) === index
+          ))
+        : loadedItems
       this.setData({
         queueAllItems,
-        queueItems: this.data.queueState
-          ? queueAllItems.filter(item => item.state === this.data.queueState)
-          : queueAllItems,
+        queueItems: queueAllItems,
+        queueNextCursor: response.nextCursor,
         queueMessage: '',
       })
     }
@@ -366,16 +385,13 @@ Page({
       })
       this.setData({ queueMessage: failure.message })
     }
+    finally {
+      this.setData({ queueLoadingMore: false })
+    }
   },
 
-  refreshQueue() {
-    const filtered = this.data.queueState
-      ? this.data.queueAllItems.filter(item => item.state === this.data.queueState)
-      : this.data.queueAllItems
-    this.setData({
-      queueItems: filtered,
-      queueMessage: '',
-    })
+  loadMoreQueue() {
+    void this.loadQueue(false, true)
   },
 
   chooseQueueState(event: WechatMiniprogram.TouchEvent) {
@@ -383,8 +399,13 @@ Page({
     if (value !== '' && !Object.hasOwn(queueStateLabels, value)) {
       return
     }
-    this.setData({ queueState: value })
-    this.refreshQueue()
+    this.setData({
+      queueState: value,
+      queueItems: [],
+      queueAllItems: [],
+      queueNextCursor: null,
+    })
+    void this.loadQueue(true)
   },
 
   openQueueItem(event: WechatMiniprogram.TouchEvent) {
@@ -393,8 +414,9 @@ Page({
       return
     }
     if (item.reviewRef) {
-      const reviewId = `${item.reviewRef.type}:${item.reviewRef.id}`
-      this.toggleReview({ currentTarget: { dataset: { id: reviewId } } } as unknown as WechatMiniprogram.TouchEvent)
+      void wx.navigateTo({
+        url: `/packages/admin/message-delivery-review/index?sourceType=${encodeURIComponent(item.reviewRef.type)}&sourceId=${encodeURIComponent(item.reviewRef.id)}`,
+      })
       return
     }
     if (item.target?.route.startsWith('/packages/admin/')) {

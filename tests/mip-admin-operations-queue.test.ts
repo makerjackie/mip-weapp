@@ -1,5 +1,7 @@
 import type { AdminDeliveryReviewItem } from '../src/modules/mip-admin/message-delivery-reviews'
 import type { AdminOperationalException } from '../src/modules/mip-admin/operational-exceptions'
+import fs from 'node:fs'
+import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { deriveOperationsQueue, parseOperationsQueuePage } from '../src/modules/mip-admin/operations-queue'
 
@@ -68,5 +70,17 @@ describe('operations queue', () => {
     const page = deriveOperationsQueue([exception('FAILED')], [])
     expect(parseOperationsQueuePage(page)).toEqual(page)
     expect(() => parseOperationsQueuePage({ ...page, extra: true })).toThrow('无效的待办队列')
+  })
+
+  it('opens delivery reviews in the existing detail page and requests subsequent queue pages', () => {
+    const script = fs.readFileSync(
+      path.resolve(import.meta.dirname, '../src/packages/admin/exceptions/index.ts'),
+      'utf8',
+    )
+
+    expect(script).toContain('/packages/admin/message-delivery-review/index?sourceType=')
+    expect(script).toContain('loadMoreQueue')
+    expect(script).toContain('queueNextCursor')
+    expect(script).not.toContain('this.toggleReview({ currentTarget: { dataset: { id: reviewId } } }')
   })
 })

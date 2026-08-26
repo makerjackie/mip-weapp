@@ -26,7 +26,7 @@ function createAdminOperationsQueue({ access, repository, now = () => new Date()
         ? repository.listOperationalExceptions(context.caller.appId, {
             types: exceptionTypes,
             statuses: ['FAILED', 'STALLED', 'REJECTED', 'EXPIRED', 'CLEANUP_PENDING'],
-            limit: 100,
+            unbounded: true,
           })
         : [],
       canReadDeliveryReviews
@@ -35,7 +35,8 @@ function createAdminOperationsQueue({ access, repository, now = () => new Date()
             actorUserId: context.caller.userId,
             workflowStatus: 'ACTIVE',
             cursor: null,
-            limit: 50,
+            limit: request.limit,
+            unbounded: true,
             now: currentTime,
           })
         : { items: [] },

@@ -2,7 +2,11 @@
 
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
-const { deriveQueueItems, normalizeQueueInput } = require('../domain/operations-queue')
+const {
+  createAdminOperationsQueue,
+  deriveQueueItems,
+  normalizeQueueInput,
+} = require('../domain/operations-queue')
 
 const id = '00000000-0000-4000-8000-000000000001'
 
@@ -45,5 +49,43 @@ describe('operations queue server contract', () => {
     assert.deepEqual(normalizeQueueInput({ state: 'PROCESSING', limit: 100 }).state, 'PROCESSING')
     assert.throws(() => normalizeQueueInput({ unknown: true }), error => error.code === 'VALIDATION_FAILED')
     assert.throws(() => normalizeQueueInput({ state: 'DONE' }), error => error.code === 'VALIDATION_FAILED')
+  })
+
+  it('scans both source collections before applying the shared page cursor', async () => {
+    const calls = []
+    const access = {
+      async session() {
+        return {
+          caller: { appId: 'app-id', userId: 'user-id' },
+          bindings: [{ roleKey: 'PLATFORM_OWNER', scopeType: 'PLATFORM', scopeId: null }],
+        }
+      },
+      audit: (_context, _grant, input) => input,
+    }
+    const repository = {
+      async listOperationalExceptions(appId, input) {
+        calls.push({ type: 'exceptions', appId, input })
+        return [exception('FAILED')]
+      },
+      async listMessageDeliveryReviews(input) {
+        calls.push({ type: 'reviews', input })
+        return { items: [review('MANUAL_REVIEW')] }
+      },
+      async recordAudit(input) {
+        calls.push({ type: 'audit', input })
+      },
+    }
+    const queue = createAdminOperationsQueue({ access, repository })
+
+    const page = await queue.listOperationsQueue(
+      { appId: 'app-id', userId: 'user-id' },
+      { limit: 1 },
+    )
+
+    assert.equal(calls.find(call => call.type === 'exceptions').input.unbounded, true)
+    assert.equal(calls.find(call => call.type === 'exceptions').input.limit, undefined)
+    assert.equal(calls.find(call => call.type === 'reviews').input.unbounded, true)
+    assert.equal(page.items.length, 1)
+    assert.equal(typeof page.nextCursor, 'string')
   })
 })

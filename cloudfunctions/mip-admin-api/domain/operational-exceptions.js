@@ -51,7 +51,9 @@ async function listOperationalExceptions(database, input) {
     throw new Error('OPERATIONAL_EXCEPTION_APP_INVALID')
   }
   const now = input.now instanceof Date ? input.now : new Date(input.now || Date.now())
-  const pageLimit = Math.min(100, Math.max(1, Number(input.limit) || 50))
+  const pageLimit = input.unbounded === true
+    ? null
+    : Math.min(100, Math.max(1, Number(input.limit) || 50))
   const selectedTypes = normalizedSelection(input.types, EXCEPTION_TYPES)
   const selectedStatuses = normalizedSelection(input.statuses, EXCEPTION_STATUSES)
   const readers = {
@@ -69,9 +71,8 @@ async function listOperationalExceptions(database, input) {
     selectedStatuses,
     pageLimit,
   )))
-  return pages.flat()
-    .sort((left, right) => compareExceptions(left, right))
-    .slice(0, pageLimit)
+  const items = pages.flat().sort((left, right) => compareExceptions(left, right))
+  return pageLimit === null ? items : items.slice(0, pageLimit)
 }
 
 function normalizedSelection(value, allowed) {
@@ -94,12 +95,13 @@ async function readOutbox(database, appId, now, statuses, limit) {
     params.push(now, now)
   }
   if (!conditions.length) return []
-  const rows = await database.query(
+  const rows = await limitedQuery(database,
     `SELECT id, aggregate_type, aggregate_id, status, attempts, updated_at
      FROM mip_outbox_events
      WHERE app_id = ? AND (${conditions.join(' OR ')})
-     ORDER BY updated_at DESC, id DESC LIMIT ?`,
-    [...params, limit],
+     ORDER BY updated_at DESC, id DESC`,
+    params,
+    limit,
   )
   return rows.map(row => exceptionDto({
     id: row.id,
@@ -119,12 +121,13 @@ async function readRefunds(database, appId, now, statuses, limit) {
     params.push(now)
   }
   if (!conditions.length) return []
-  const rows = await database.query(
+  const rows = await limitedQuery(database,
     `SELECT id, order_id, status, updated_at
      FROM mip_refunds
      WHERE app_id = ? AND (${conditions.join(' OR ')})
-     ORDER BY updated_at DESC, id DESC LIMIT ?`,
-    [...params, limit],
+     ORDER BY updated_at DESC, id DESC`,
+    params,
+    limit,
   )
   return rows.map(row => exceptionDto({
     id: row.id,
@@ -144,12 +147,13 @@ async function readPayments(database, appId, now, statuses, limit) {
     params.push(now)
   }
   if (!conditions.length) return []
-  const rows = await database.query(
+  const rows = await limitedQuery(database,
     `SELECT id, order_id, status, updated_at
      FROM mip_payment_attempts
      WHERE app_id = ? AND (${conditions.join(' OR ')})
-     ORDER BY updated_at DESC, id DESC LIMIT ?`,
-    [...params, limit],
+     ORDER BY updated_at DESC, id DESC`,
+    params,
+    limit,
   )
   return rows.map(row => exceptionDto({
     id: row.id,
@@ -169,12 +173,13 @@ async function readMedia(database, appId, now, statuses, limit) {
     params.push(now)
   }
   if (!conditions.length) return []
-  const rows = await database.query(
+  const rows = await limitedQuery(database,
     `SELECT id, status, updated_at
      FROM mip_media_assets
      WHERE app_id = ? AND (${conditions.join(' OR ')})
-     ORDER BY updated_at DESC, id DESC LIMIT ?`,
-    [...params, limit],
+     ORDER BY updated_at DESC, id DESC`,
+    params,
+    limit,
   )
   return rows.map(row => exceptionDto({
     id: row.id,
@@ -199,15 +204,16 @@ async function readDeliveries(database, appId, now, statuses, limit) {
     params.push(now, now)
   }
   if (!conditions.length) return []
-  const rows = await database.query(
+  const rows = await limitedQuery(database,
     `SELECT task.id, task.status, task.last_error_code, task.updated_at,
             message.target_type, message.target_id
      FROM mip_delivery_tasks task
      INNER JOIN mip_inbox_messages message
        ON message.app_id = task.app_id AND message.id = task.inbox_message_id
      WHERE task.app_id = ? AND (${conditions.join(' OR ')})
-     ORDER BY task.updated_at DESC, task.id DESC LIMIT ?`,
-    [...params, limit],
+     ORDER BY task.updated_at DESC, task.id DESC`,
+    params,
+    limit,
   )
   return rows.map(row => exceptionDto({
     id: row.id,
@@ -233,15 +239,16 @@ async function readAi(database, appId, now, statuses, limit) {
       AND asset.owner_user_id = draft.user_id)`)
   }
   if (!conditions.length) return []
-  const rows = await database.query(
+  const rows = await limitedQuery(database,
     `SELECT draft.id, draft.status, draft.expires_at, draft.updated_at,
             asset.status AS audio_status
      FROM mip_ai_drafts draft
      LEFT JOIN mip_media_assets asset
        ON asset.app_id = draft.app_id AND asset.id = draft.audio_asset_id
      WHERE draft.app_id = ? AND (${conditions.join(' OR ')})
-     ORDER BY draft.updated_at DESC, draft.id DESC LIMIT ?`,
-    [...params, limit],
+     ORDER BY draft.updated_at DESC, draft.id DESC`,
+    params,
+    limit,
   )
   return rows.map((row) => {
     const status = ['CONFIRMED', 'EXPIRED', 'DELETED'].includes(row.status)
@@ -258,6 +265,13 @@ async function readAi(database, appId, now, statuses, limit) {
       target: null,
     })
   })
+}
+
+function limitedQuery(database, sql, params, rowLimit) {
+  return database.query(
+    rowLimit === null ? sql : `${sql} LIMIT ?`,
+    rowLimit === null ? params : [...params, rowLimit],
+  )
 }
 
 function exceptionDto(input) {
