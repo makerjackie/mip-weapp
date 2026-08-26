@@ -35,6 +35,9 @@ describe('MIP opportunity contracts', () => {
     expect(normalizeOpportunityFilter({
       status: 'COMPLETED',
       keyword: '  品牌升级  ',
+      minAmountCents: 100_000,
+      maxAmountCents: 500_000,
+      locationTypes: ['CITY', 'REMOTE'],
       roleKey: 'strategist',
       industryTagIds: ['industry-1', 'industry-1'],
       abilityTagIds: ['ability-1'],
@@ -43,6 +46,10 @@ describe('MIP opportunity contracts', () => {
       status: 'COMPLETED',
       keyword: '品牌升级',
       cityTagId: undefined,
+      minAmountCents: 100_000,
+      maxAmountCents: 500_000,
+      locationTypes: ['CITY', 'REMOTE'],
+      locationCityTagIds: [],
       branchId: undefined,
       roleKey: 'strategist',
       industryTagIds: ['industry-1'],
@@ -55,6 +62,11 @@ describe('MIP opportunity contracts', () => {
       status: 'RECRUITING',
       roleKey: 'unknown' as CooperationRoleKey,
     }).roleKey).toBeUndefined()
+    expect(() => normalizeOpportunityFilter({
+      status: 'RECRUITING',
+      minAmountCents: 500,
+      maxAmountCents: 100,
+    })).toThrow('金额区间格式不正确')
   })
 
   it('requires a branch only for branch-scoped opportunities', () => {

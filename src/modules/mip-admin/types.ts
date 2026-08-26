@@ -709,6 +709,17 @@ export interface AdminOpportunity {
   ownerUserId: string
   cityTagId: string | null
   tagIds: string[]
+  commercialTerms?: AdminOpportunityCommercialTerms
+}
+
+export interface AdminOpportunityCommercialTerms {
+  currency: 'CNY'
+  amountUnit: 'CNY_CENTS'
+  minAmountCents?: number
+  maxAmountCents?: number
+  amountDisplay: string
+  locationDisplay: string
+  locations: Array<{ type: 'CITY' | 'NATIONAL' | 'REMOTE', cityTagId?: string, cityName?: string }>
 }
 
 export interface AdminOpportunityTeamMember {

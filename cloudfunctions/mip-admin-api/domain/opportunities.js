@@ -9,6 +9,7 @@ const {
 } = require('./capabilities')
 const { createOpportunityArchiveService } = require('./opportunity-archive')
 const { decodeCursor } = require('./pagination')
+const { normalizeCommercialTerms } = require('./opportunity-commercial-terms')
 const {
   AdminError,
   expectedVersion,
@@ -509,6 +510,19 @@ function normalizeOpportunityFilters(value) {
   const updatedTo = dateTimeFilter(filters.updatedTo, '结束时间')
   const deadlineFrom = dateTimeFilter(filters.deadlineFrom, '截止开始时间')
   const deadlineTo = dateTimeFilter(filters.deadlineTo, '截止结束时间')
+  const minAmountCents = filters.minAmountCents === undefined || filters.minAmountCents === '' ? undefined : Number(filters.minAmountCents)
+  const maxAmountCents = filters.maxAmountCents === undefined || filters.maxAmountCents === '' ? undefined : Number(filters.maxAmountCents)
+  if ((minAmountCents !== undefined && (!Number.isSafeInteger(minAmountCents) || minAmountCents < 0))
+    || (maxAmountCents !== undefined && (!Number.isSafeInteger(maxAmountCents) || maxAmountCents < 0))
+    || (minAmountCents !== undefined && maxAmountCents !== undefined && minAmountCents > maxAmountCents)) {
+    throw new AdminError('VALIDATION_FAILED', '金额区间无效')
+  }
+  const locationTypes = Array.isArray(filters.locationTypes) ? [...new Set(filters.locationTypes)] : []
+  if (locationTypes.length > 3 || locationTypes.some(item => !['CITY', 'NATIONAL', 'REMOTE'].includes(item))) throw new AdminError('VALIDATION_FAILED', '合作范围无效')
+  const locationCityTagIds = Array.isArray(filters.locationCityTagIds)
+    ? [...new Set(filters.locationCityTagIds.map(item => requiredId(item, '合作城市')))]
+    : []
+  if (locationCityTagIds.length > 16) throw new AdminError('VALIDATION_FAILED', '合作城市过多')
   if (updatedFrom && updatedTo && updatedFrom > updatedTo) {
     throw new AdminError('VALIDATION_FAILED', '机会开始时间不能晚于结束时间')
   }
@@ -524,6 +538,10 @@ function normalizeOpportunityFilters(value) {
     updatedTo,
     deadlineFrom,
     deadlineTo,
+    ...(minAmountCents === undefined ? {} : { minAmountCents }),
+    ...(maxAmountCents === undefined ? {} : { maxAmountCents }),
+    ...(locationTypes.length ? { locationTypes } : {}),
+    ...(locationCityTagIds.length ? { locationCityTagIds } : {}),
   }
 }
 
@@ -551,6 +569,7 @@ function normalizeOpportunityDraft(value) {
     targetSummary: text(value.targetSummary, 300),
     description: text(value.description, 5_000),
     cityTagId: value.cityTagId ? requiredId(value.cityTagId, '城市') : null,
+    commercialTerms: normalizeCommercialTerms(value.commercialTerms),
     roleKeys,
     tagIds,
     deadlineAt: value.deadlineAt ? dateTimeFilter(value.deadlineAt, '截止时间') : null,

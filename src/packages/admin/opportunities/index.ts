@@ -76,7 +76,11 @@ function filters(data: {
   updatedToDate: string
   deadlineFromDate: string
   deadlineToDate: string
+  locationTypes?: string[]
+  minAmountYuan: string
+  maxAmountYuan: string
 }) {
+  const { minAmountCents, maxAmountCents } = amountRange(data.minAmountYuan, data.maxAmountYuan)
   return {
     query: data.query.trim(),
     ownerQuery: data.ownerQuery.trim(),
@@ -86,7 +90,28 @@ function filters(data: {
     updatedTo: data.updatedToDate ? dateBoundary(data.updatedToDate, true) : '',
     deadlineFrom: data.deadlineFromDate ? dateBoundary(data.deadlineFromDate, false) : '',
     deadlineTo: data.deadlineToDate ? dateBoundary(data.deadlineToDate, true) : '',
+    locationTypes: data.locationTypes || [],
+    ...(minAmountCents === undefined ? {} : { minAmountCents }),
+    ...(maxAmountCents === undefined ? {} : { maxAmountCents }),
   }
+}
+
+function amountRange(minimum: string, maximum: string) {
+  const toCents = (value: string) => {
+    if (!value.trim()) return undefined
+    const yuan = Number(value)
+    const cents = Math.round(yuan * 100)
+    if (!Number.isFinite(yuan) || yuan < 0 || !Number.isSafeInteger(cents)) {
+      throw new Error('请填写有效的金额区间。')
+    }
+    return cents
+  }
+  const minAmountCents = toCents(minimum)
+  const maxAmountCents = toCents(maximum)
+  if (minAmountCents !== undefined && maxAmountCents !== undefined && minAmountCents > maxAmountCents) {
+    throw new Error('最低金额不能大于最高金额。')
+  }
+  return { minAmountCents, maxAmountCents }
 }
 
 function opportunityView(item: AdminOpportunity): AdminOpportunityView {
@@ -117,6 +142,9 @@ Page({
     updatedToDate: '',
     deadlineFromDate: '',
     deadlineToDate: '',
+    locationTypes: [] as string[],
+    minAmountYuan: '',
+    maxAmountYuan: '',
     canArchive: false,
     processingId: '',
     expandedId: '',
@@ -128,7 +156,7 @@ Page({
   updateQuery(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ query: event.detail.value }) },
   updateFilter(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const field = String(event.currentTarget.dataset.field || '')
-    if (['ownerQuery', 'cityQuery'].includes(field)) {
+    if (['ownerQuery', 'cityQuery', 'minAmountYuan', 'maxAmountYuan'].includes(field)) {
       this.setData({ [field]: event.detail.value })
     }
   },
@@ -152,7 +180,24 @@ Page({
     this.setData({ status: String(event.currentTarget.dataset.value || '') })
     void this.loadOpportunities(true)
   },
-  search() { void this.loadOpportunities(true) },
+  toggleLocationType(event: WechatMiniprogram.TouchEvent) {
+    const type = String(event.currentTarget.dataset.type || '')
+    if (!['NATIONAL', 'REMOTE', 'CITY'].includes(type)) return
+    const selected = new Set(this.data.locationTypes)
+    if (selected.has(type)) selected.delete(type)
+    else selected.add(type)
+    this.setData({ locationTypes: [...selected], opportunities: [], nextCursor: null })
+    void this.loadOpportunities(true)
+  },
+  search() {
+    try {
+      amountRange(this.data.minAmountYuan, this.data.maxAmountYuan)
+      void this.loadOpportunities(true)
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '金额区间无效' })
+    }
+  },
   createOpportunity() { void wx.navigateTo({ url: '/packages/admin/opportunity-editor/index' }) },
   editOpportunity(event: WechatMiniprogram.TouchEvent) {
     void wx.navigateTo({ url: `/packages/admin/opportunity-editor/index?id=${String(event.currentTarget.dataset.id || '')}` })

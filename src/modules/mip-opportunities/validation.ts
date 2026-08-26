@@ -1,6 +1,10 @@
 import type { BranchId, CooperationRoleKey } from '../mip'
 import type {
   OpportunityDraft,
+  OpportunityCommercialTerms,
+  OpportunityDetail,
+  OpportunityLocationType,
+  OpportunityPage,
   OpportunityFilter,
   OpportunityTag,
   PeopleFilter,
@@ -44,6 +48,50 @@ function profileRefs(value: unknown) {
   return result
 }
 
+const locationTypes = new Set<OpportunityLocationType>(['CITY', 'NATIONAL', 'REMOTE'])
+
+function cents(value: unknown, field: string) {
+  if (value === undefined || value === null || value === '') return undefined
+  const result = typeof value === 'number' ? value : Number(value)
+  if (!Number.isSafeInteger(result) || result < 0) throw new Error(`${field}格式不正确`)
+  return result
+}
+
+export function normalizeOpportunityCommercialTerms(value: unknown): OpportunityCommercialTerms | null | undefined {
+  if (value === undefined) return undefined
+  if (value === null) return null
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('商业条件格式不正确')
+  const source = value as Record<string, unknown>
+  if (source.currency !== undefined && source.currency !== 'CNY') throw new Error('金额币种格式不正确')
+  if (source.amountUnit !== undefined && source.amountUnit !== 'CNY_CENTS') throw new Error('金额单位格式不正确')
+  const minAmountCents = cents(source.minAmountCents, '最低金额')
+  const maxAmountCents = cents(source.maxAmountCents, '最高金额')
+  if (minAmountCents !== undefined && maxAmountCents !== undefined && minAmountCents > maxAmountCents) {
+    throw new Error('金额区间格式不正确')
+  }
+  if (!Array.isArray(source.locations) || source.locations.length > 16) throw new Error('合作范围格式不正确')
+  const seen = new Set<string>()
+  const locations = source.locations.map((item) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('合作范围格式不正确')
+    const location = item as Record<string, unknown>
+    const type = location.type as OpportunityLocationType
+    if (!locationTypes.has(type)) throw new Error('合作范围格式不正确')
+    const cityTagId = type === 'CITY' ? text(location.cityTagId, 64, '城市') : ''
+    const key = type === 'CITY' ? `CITY:${cityTagId}` : type
+    if (seen.has(key)) throw new Error('合作范围格式不正确')
+    seen.add(key)
+    return type === 'CITY' ? { type, cityTagId } : { type }
+  })
+  return {
+    currency: 'CNY',
+    amountUnit: 'CNY_CENTS',
+    ...(minAmountCents === undefined ? {} : { minAmountCents }),
+    ...(maxAmountCents === undefined ? {} : { maxAmountCents }),
+    amountDisplay: '',
+    locations,
+  } as OpportunityCommercialTerms
+}
+
 export function normalizeOpportunityDraft(value: OpportunityDraft): OpportunityDraft {
   const roleKeys = uniqueStrings(value.roleKeys, 6, '合作角色')
   if (!roleKeys.length || !roleKeys.every(isCooperationRoleKey)) {
@@ -62,6 +110,7 @@ export function normalizeOpportunityDraft(value: OpportunityDraft): OpportunityD
     scopeType,
     branchId: scopeType === 'BRANCH' ? value.branchId : undefined,
     cityTagId: text(value.cityTagId, 64, '城市', false) || undefined,
+    commercialTerms: normalizeOpportunityCommercialTerms(value.commercialTerms),
     coverAssetId: text(value.coverAssetId, 64, '封面', false) || undefined,
     roleKeys: roleKeys as CooperationRoleKey[],
     industryTagIds: uniqueStrings(value.industryTagIds, 8, '行业标签'),
@@ -75,10 +124,24 @@ export function normalizeOpportunityDraft(value: OpportunityDraft): OpportunityD
 }
 
 export function normalizeOpportunityFilter(value: OpportunityFilter): OpportunityFilter {
+  const minAmountCents = cents(value.minAmountCents, '最低金额')
+  const maxAmountCents = cents(value.maxAmountCents, '最高金额')
+  if (minAmountCents !== undefined && maxAmountCents !== undefined && minAmountCents > maxAmountCents) {
+    throw new Error('金额区间格式不正确')
+  }
   return {
     status: value.status === 'COMPLETED' ? 'COMPLETED' : 'RECRUITING',
     keyword: text(value.keyword, 80, '关键词', false) || undefined,
     cityTagId: text(value.cityTagId, 64, '城市', false) || undefined,
+    minAmountCents,
+    maxAmountCents,
+    locationTypes: Array.isArray(value.locationTypes)
+      ? [...new Set(value.locationTypes)].map(item => {
+        if (!locationTypes.has(item as OpportunityLocationType)) throw new Error('合作范围格式不正确')
+        return item as OpportunityLocationType
+      })
+      : [],
+    locationCityTagIds: uniqueStrings(value.locationCityTagIds, 8, '合作城市'),
     branchId: value.branchId,
     roleKey: value.roleKey && isCooperationRoleKey(value.roleKey) ? value.roleKey : undefined,
     industryTagIds: uniqueStrings(value.industryTagIds, 8, '行业标签'),
@@ -86,6 +149,68 @@ export function normalizeOpportunityFilter(value: OpportunityFilter): Opportunit
     cursor: text(value.cursor, 512, '分页位置', false) || undefined,
     limit: Math.min(30, Math.max(1, Math.trunc(value.limit || 12))),
   }
+}
+
+function parseOpportunityCommercialTerms(value: unknown): OpportunityCommercialTerms {
+  const terms = record(value)
+  const minAmountCents = cents(terms.minAmountCents, '最低金额')
+  const maxAmountCents = cents(terms.maxAmountCents, '最高金额')
+  if (terms.currency !== 'CNY' || terms.amountUnit !== 'CNY_CENTS'
+    || typeof terms.amountDisplay !== 'string' || typeof terms.locationDisplay !== 'string'
+    || !Array.isArray(terms.locations)
+    || terms.locations.length > 16
+    || (minAmountCents !== undefined && maxAmountCents !== undefined && minAmountCents > maxAmountCents)) {
+    throw new Error('机会服务返回了无效响应')
+  }
+  const seen = new Set<string>()
+  const locations = terms.locations.map((item) => {
+    const location = record(item)
+    const type = location.type as OpportunityLocationType
+    if (!locationTypes.has(type)) throw new Error('机会服务返回了无效响应')
+    if (type === 'CITY') {
+      const city = record(location.city)
+      if (typeof city.id !== 'string' || !city.id || typeof city.key !== 'string' || typeof city.label !== 'string') {
+        throw new Error('机会服务返回了无效响应')
+      }
+      const key = `CITY:${city.id}`
+      if (seen.has(key)) throw new Error('机会服务返回了无效响应')
+      seen.add(key)
+      return { type, city: { id: city.id, key: city.key, label: city.label } }
+    }
+    if (seen.has(type)) throw new Error('机会服务返回了无效响应')
+    seen.add(type)
+    return { type }
+  })
+  return {
+    currency: 'CNY',
+    amountUnit: 'CNY_CENTS',
+    ...(minAmountCents === undefined ? {} : { minAmountCents }),
+    ...(maxAmountCents === undefined ? {} : { maxAmountCents }),
+    amountDisplay: terms.amountDisplay,
+    locationDisplay: terms.locationDisplay,
+    locations,
+  }
+}
+
+function parseOpportunityResponse(value: unknown) {
+  const source = record(value)
+  if (source.commercialTerms !== undefined && source.commercialTerms !== null) {
+    return { ...source, commercialTerms: parseOpportunityCommercialTerms(source.commercialTerms) }
+  }
+  return source
+}
+
+export function parseOpportunityPage(value: unknown): OpportunityPage {
+  const source = record(value)
+  if (!Array.isArray(source.items)
+    || !(source.nextCursor === undefined || typeof source.nextCursor === 'string')) {
+    throw new Error('机会服务返回了无效响应')
+  }
+  return { items: source.items.map(parseOpportunityResponse) as unknown as OpportunityPage['items'], nextCursor: source.nextCursor }
+}
+
+export function parseOpportunityDetail(value: unknown): OpportunityDetail {
+  return parseOpportunityResponse(value) as unknown as OpportunityDetail
 }
 
 export function normalizePeopleFilter(value: PeopleFilter): PeopleFilter {

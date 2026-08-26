@@ -30,6 +30,8 @@ import {
   normalizeOpportunityFilter,
   normalizePeopleFilter,
   parsePeoplePage,
+  parseOpportunityDetail,
+  parseOpportunityPage,
   parseProfileInfluence,
   parsePublicProfileAggregate,
 } from './validation'
@@ -39,14 +41,14 @@ export const opportunityModule = {
     return callOpportunityApi<OpportunityCatalog>('getCatalogs')
   },
 
-  list(filter: OpportunityFilter) {
-    return callOpportunityApi<OpportunityPage>('listOpportunities', {
+  async list(filter: OpportunityFilter) {
+    return parseOpportunityPage(await callOpportunityApi<OpportunityPage>('listOpportunities', {
       filter: normalizeOpportunityFilter(filter),
-    })
+    }))
   },
 
-  get(id: OpportunityId) {
-    return callOpportunityApi<OpportunityDetail>('getOpportunity', { id })
+  async get(id: OpportunityId) {
+    return parseOpportunityDetail(await callOpportunityApi<OpportunityDetail>('getOpportunity', { id }))
   },
 
   async listPeople(filter: PeopleFilter) {
@@ -77,7 +79,7 @@ export const opportunityModule = {
   },
 
   listMine(cursor?: string) {
-    return callOpportunityApi<OpportunityPage>('listMine', { cursor, limit: 20 })
+    return callOpportunityApi<OpportunityPage>('listMine', { cursor, limit: 20 }).then(parseOpportunityPage)
   },
 
   listReceived(category: ReceivedInteractionCategory, cursor?: string) {

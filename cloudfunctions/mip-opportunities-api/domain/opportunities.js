@@ -4,6 +4,13 @@ const { randomUUID } = require('node:crypto')
 const { lockActiveContributor } = require('../lib/auth')
 const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
 const {
+  assertCommercialTerms,
+  legacyTerms,
+  loadCommercialTerms,
+  normalizeCommercialTerms,
+  syncCommercialTerms,
+} = require('./commercial-terms')
+const {
   ROLE_KEYS,
   appendAudit,
   appendOutbox,
@@ -40,10 +47,30 @@ function normalizeFilter(value = {}) {
   const branchId = stringValue(value.branchId, 36, 'VALIDATION_FAILED', false)
   const roleKey = stringValue(value.roleKey, 32, 'VALIDATION_FAILED', false)
   if (roleKey && !ROLE_KEYS.has(roleKey)) throw new Error('VALIDATION_FAILED')
+  const locationTypes = [...new Set(Array.isArray(value.locationTypes) ? value.locationTypes : [])]
+  if (locationTypes.some(item => !['CITY', 'NATIONAL', 'REMOTE'].includes(item)) || locationTypes.length > 3) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  const locationCityTagIds = stringList(value.locationCityTagIds, 8, 'VALIDATION_FAILED', uuid)
+  const minAmountCents = value.minAmountCents === undefined || value.minAmountCents === ''
+    ? undefined
+    : Number(value.minAmountCents)
+  const maxAmountCents = value.maxAmountCents === undefined || value.maxAmountCents === ''
+    ? undefined
+    : Number(value.maxAmountCents)
+  if ((minAmountCents !== undefined && (!Number.isSafeInteger(minAmountCents) || minAmountCents < 0))
+    || (maxAmountCents !== undefined && (!Number.isSafeInteger(maxAmountCents) || maxAmountCents < 0))
+    || (minAmountCents !== undefined && maxAmountCents !== undefined && minAmountCents > maxAmountCents)) {
+    throw new Error('VALIDATION_FAILED')
+  }
   return {
     status,
     keyword,
     cityTagId,
+    locationTypes,
+    locationCityTagIds,
+    minAmountCents,
+    maxAmountCents,
     branchId,
     roleKey,
     industryTagIds: stringList(value.industryTagIds, 8, 'VALIDATION_FAILED', uuid),
@@ -74,6 +101,7 @@ function normalizeDraft(value = {}) {
     scopeType,
     branchId,
     cityTagId,
+    commercialTerms: normalizeCommercialTerms(value.commercialTerms),
     coverAssetId,
     roleKeys,
     industryTagIds: stringList(value.industryTagIds, 8, 'VALIDATION_FAILED', uuid),
@@ -155,10 +183,10 @@ async function getCatalogs(database, caller) {
 }
 
 async function relatedData(database, caller, ids) {
-  if (!ids.length) return { roles: new Map(), industry: new Map(), ability: new Map(), team: new Map() }
+  if (!ids.length) return { roles: new Map(), industry: new Map(), ability: new Map(), team: new Map(), commercialTerms: new Map() }
   const placeholders = ids.map(() => '?').join(', ')
   const blockFilter = mutualBlockFilter(caller.userId, 'u.id', 'u.app_id')
-  const [roles, tags, team] = await Promise.all([
+  const [roles, tags, team, commercialTerms] = await Promise.all([
     database.query(
       `SELECT opportunity_id, role_key
        FROM mip_opportunity_roles
@@ -197,8 +225,9 @@ async function relatedData(database, caller, ids) {
        ORDER BY member.opportunity_id, member.sort_order, member.id`,
       [caller.appId, ...ids, ...blockFilter.params],
     ),
+    loadCommercialTerms(database, caller.appId, ids),
   ])
-  const result = { roles: new Map(), industry: new Map(), ability: new Map(), team: new Map() }
+  const result = { roles: new Map(), industry: new Map(), ability: new Map(), team: new Map(), commercialTerms }
   for (const row of roles) {
     const list = result.roles.get(row.opportunity_id) || []
     list.push(row.role_key)
@@ -227,12 +256,14 @@ async function relatedData(database, caller, ids) {
 
 function opportunitySummary(row, related, caller) {
   const profileVisibility = jsonObject(row.visibility_json)
+  const commercialTerms = related.commercialTerms.get(row.id) || legacyTerms(row)
   return {
     id: row.id,
     title: row.title,
     valueSummary: row.value_summary,
     targetSummary: row.target_summary,
     city: row.city_tag_id ? { id: row.city_tag_id, key: row.city_key, label: row.city_label } : undefined,
+    ...(commercialTerms ? { commercialTerms } : {}),
     branchId: row.branch_id || undefined,
     branchName: row.branch_name || undefined,
     coverUrl: row.cover_file_id || undefined,
@@ -295,8 +326,44 @@ async function listOpportunities(database, caller, rawFilter) {
   }
   if (filter.cityTagId) {
     if (!uuid(filter.cityTagId)) throw new Error('VALIDATION_FAILED')
-    where.push('o.city_tag_id = ?')
-    params.push(filter.cityTagId)
+    where.push(`(o.city_tag_id = ? OR EXISTS (
+      SELECT 1 FROM mip_opportunity_locations location
+      WHERE location.app_id = o.app_id AND location.opportunity_id = o.id
+        AND location.location_type = 'CITY' AND location.city_tag_id = ?
+    ))`)
+    params.push(filter.cityTagId, filter.cityTagId)
+  }
+  if (filter.locationTypes.length) {
+    where.push(`EXISTS (
+      SELECT 1 FROM mip_opportunity_locations location
+      WHERE location.app_id = o.app_id AND location.opportunity_id = o.id
+        AND location.location_type IN (${filter.locationTypes.map(() => '?').join(', ')})
+    )`)
+    params.push(...filter.locationTypes)
+  }
+  if (filter.locationCityTagIds.length) {
+    where.push(`EXISTS (
+      SELECT 1 FROM mip_opportunity_locations location
+      WHERE location.app_id = o.app_id AND location.opportunity_id = o.id
+        AND location.location_type = 'CITY' AND location.city_tag_id IN (${filter.locationCityTagIds.map(() => '?').join(', ')})
+    )`)
+    params.push(...filter.locationCityTagIds)
+  }
+  if (filter.minAmountCents !== undefined) {
+    where.push(`EXISTS (
+      SELECT 1 FROM mip_opportunity_commercial_terms terms
+      WHERE terms.app_id = o.app_id AND terms.opportunity_id = o.id
+        AND COALESCE(terms.max_amount_cents, 18446744073709551615) >= ?
+    )`)
+    params.push(filter.minAmountCents)
+  }
+  if (filter.maxAmountCents !== undefined) {
+    where.push(`EXISTS (
+      SELECT 1 FROM mip_opportunity_commercial_terms terms
+      WHERE terms.app_id = o.app_id AND terms.opportunity_id = o.id
+        AND COALESCE(terms.min_amount_cents, 0) <= ?
+    )`)
+    params.push(filter.maxAmountCents)
   }
   if (filter.branchId) {
     if (!uuid(filter.branchId)) throw new Error('VALIDATION_FAILED')
@@ -481,6 +548,7 @@ async function assertReferences(tx, caller, draft) {
     ...draft.abilityTagIds.map(id => [id, 'ABILITY']),
   ]
   await assertSelectableTags(tx, caller.appId, expectedTags)
+  await assertCommercialTerms(tx, caller.appId, draft.commercialTerms)
 }
 
 async function resolveTeamUserIds(tx, caller, profileRefs) {
@@ -628,6 +696,9 @@ async function saveOpportunity(database, contentSafety, caller, input) {
     }
     const status = draft.publish ? 'PUBLISHED' : (existing?.status === 'PUBLISHED' ? 'PUBLISHED' : 'DRAFT')
     const published = status === 'PUBLISHED'
+    const legacyCityTagId = draft.commercialTerms
+      ? (draft.commercialTerms.locations.find(location => location.type === 'CITY')?.cityTagId || null)
+      : draft.cityTagId
     if (existing) {
       await tx.query(
         `UPDATE mip_opportunities
@@ -639,7 +710,7 @@ async function saveOpportunity(database, contentSafety, caller, input) {
          WHERE app_id = ? AND id = ? AND version = ?`,
         [
           draft.scopeType, draft.branchId, draft.title, draft.valueSummary,
-          draft.targetSummary, draft.description, draft.cityTagId, draft.coverAssetId,
+          draft.targetSummary, draft.description, legacyCityTagId, draft.coverAssetId,
           status, published ? 1 : 0, caller.appId, id, draft.expectedVersion,
         ],
       )
@@ -655,10 +726,11 @@ async function saveOpportunity(database, contentSafety, caller, input) {
         [
           id, caller.appId, caller.userId, draft.scopeType, draft.branchId,
           draft.title, draft.valueSummary, draft.targetSummary, draft.description,
-          draft.cityTagId, draft.coverAssetId, status, published ? 1 : 0,
+          legacyCityTagId, draft.coverAssetId, status, published ? 1 : 0,
         ],
       )
     }
+    await syncCommercialTerms(tx, caller.appId, id, draft.commercialTerms, existing ? Number(existing.version) + 1 : 1)
     await tx.query(
       'DELETE FROM mip_opportunity_roles WHERE app_id = ? AND opportunity_id = ?',
       [caller.appId, id],
@@ -693,7 +765,13 @@ async function saveOpportunity(database, contentSafety, caller, input) {
       action: existing ? 'OPPORTUNITY_UPDATED' : 'OPPORTUNITY_CREATED',
       resourceType: 'OPPORTUNITY',
       resourceId: id,
-      metadata: { status, version, teamMemberCount: teamUserIds.length },
+      metadata: {
+        status,
+        version,
+        teamMemberCount: teamUserIds.length,
+        commercialTermsConfigured: draft.commercialTerms !== undefined && draft.commercialTerms !== null,
+        locationCount: draft.commercialTerms?.locations?.length || 0,
+      },
     })
     if (published) {
       await appendOutbox(tx, {

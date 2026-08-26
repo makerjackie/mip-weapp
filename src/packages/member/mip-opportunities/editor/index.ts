@@ -1,5 +1,5 @@
 import type { BranchId, CooperationRoleKey, OpportunityId } from '../../../../modules/mip'
-import type { OpportunityCatalog, OpportunityDetail, PublicPerson } from '../../../../modules/mip-opportunities'
+import type { OpportunityCatalog, OpportunityDetail, OpportunityLocationType, PublicPerson } from '../../../../modules/mip-opportunities'
 import type { OpportunityTextDraft } from '../../../../modules/mip-opportunities/text-parser'
 import { cooperationRoles } from '../../../../config/mip-catalogs'
 import { mipMediaModule } from '../../../../modules/mip-media/client'
@@ -58,6 +58,10 @@ Page({
     branchIndex: 0,
     cityTagId: '',
     cityIndex: 0,
+    minAmountYuan: '',
+    maxAmountYuan: '',
+    locationTypes: [] as OpportunityLocationType[],
+    locationCityTagIds: [] as string[],
     coverAssetId: '',
     coverUrl: '',
     coverUploading: false,
@@ -119,6 +123,9 @@ Page({
     const cityIndex = detail?.city?.id
       ? Math.max(0, cityOptions.findIndex(item => item.id === detail.city?.id))
       : 0
+    const terms = detail?.commercialTerms
+    const locationTypes = terms?.locations.filter(item => item.type !== 'CITY').map(item => item.type) || []
+    const locationCityTagIds = terms?.locations.filter(item => item.type === 'CITY').map(item => item.city?.id || item.cityTagId || '').filter(Boolean) || []
     this.setData({
       catalog,
       branchOptions,
@@ -133,6 +140,10 @@ Page({
       scopeType: detail?.branchId ? 'BRANCH' : 'PLATFORM',
       branchId: detail?.branchId || '',
       cityTagId: detail?.city?.id || '',
+      minAmountYuan: terms?.minAmountCents === undefined ? '' : String(terms.minAmountCents / 100),
+      maxAmountYuan: terms?.maxAmountCents === undefined ? '' : String(terms.maxAmountCents / 100),
+      locationTypes,
+      locationCityTagIds,
       coverAssetId: detail?.coverAssetId || '',
       coverUrl: detail?.coverUrl || '',
       version: detail?.version || 0,
@@ -196,6 +207,29 @@ Page({
       return
     }
     this.setData({ cityIndex, cityTagId })
+  },
+
+  updateAmount(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const field = String(event.currentTarget.dataset.field || '')
+    if (field === 'minAmountYuan' || field === 'maxAmountYuan') this.setData({ [field]: event.detail.value })
+  },
+
+  toggleLocationType(event: WechatMiniprogram.TouchEvent) {
+    const type = String(event.currentTarget.dataset.type || '') as OpportunityLocationType
+    if (!['NATIONAL', 'REMOTE'].includes(type)) return
+    const selected = new Set(this.data.locationTypes)
+    if (selected.has(type)) selected.delete(type)
+    else selected.add(type)
+    this.setData({ locationTypes: [...selected] })
+  },
+
+  toggleLocationCity(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    if (!id) return
+    const selected = new Set(this.data.locationCityTagIds)
+    if (selected.has(id)) selected.delete(id)
+    else if (selected.size < 16) selected.add(id)
+    this.setData({ locationCityTagIds: [...selected] })
   },
 
   async pasteAndRecognize() {
@@ -382,6 +416,13 @@ Page({
     }
     this.setData({ saving: true, message: '' })
     try {
+      const minAmountCents = this.data.minAmountYuan.trim() ? Math.round(Number(this.data.minAmountYuan) * 100) : undefined
+      const maxAmountCents = this.data.maxAmountYuan.trim() ? Math.round(Number(this.data.maxAmountYuan) * 100) : undefined
+      const structuredLocations = [
+        ...this.data.locationCityTagIds.map(cityTagId => ({ type: 'CITY' as const, cityTagId })),
+        ...this.data.locationTypes.map(type => ({ type })),
+      ]
+      const hasCommercialTerms = structuredLocations.length > 0 || minAmountCents !== undefined || maxAmountCents !== undefined
       const result = await opportunityModule.save({
         id: this.data.id || undefined,
         expectedVersion: this.data.id ? this.data.version : undefined,
@@ -392,6 +433,9 @@ Page({
         scopeType: this.data.scopeType,
         branchId: this.data.branchId || undefined,
         cityTagId: this.data.cityTagId || undefined,
+        ...(hasCommercialTerms ? {
+          commercialTerms: { currency: 'CNY' as const, amountUnit: 'CNY_CENTS' as const, minAmountCents, maxAmountCents, locations: structuredLocations },
+        } : {}),
         coverAssetId: this.data.coverAssetId || undefined,
         roleKeys: this.data.roleOptions.filter(item => item.selected).map(item => item.key),
         industryTagIds: this.data.industryGroups

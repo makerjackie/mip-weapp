@@ -6,6 +6,7 @@ const {
   assertMutationScope,
   lockMutationAuthorization,
 } = require('./mutation-authorization')
+const { load: loadCommercialTerms, sync: syncCommercialTerms } = require('./opportunity-commercial-terms')
 
 function codeError(code, details = null) {
   const error = new Error(code)
@@ -84,7 +85,7 @@ async function writeAudit(tx, audit) {
   )
 }
 
-function opportunityDto(row, { history = [], teamMembers = [] } = {}) {
+function opportunityDto(row, { history = [], teamMembers = [], commercialTerms } = {}) {
   return {
     id: String(row.id),
     ownerUserId: row.owner_user_id || '',
@@ -100,6 +101,12 @@ function opportunityDto(row, { history = [], teamMembers = [] } = {}) {
     branchName: row.branch_name || '',
     cityTagId: row.city_tag_id || null,
     cityName: row.city_name || '',
+    ...(commercialTerms ? { commercialTerms } : row.city_tag_id ? {
+      commercialTerms: {
+        currency: 'CNY', amountUnit: 'CNY_CENTS', amountDisplay: '',
+        locations: [{ type: 'CITY', cityTagId: row.city_tag_id, cityName: row.city_name || '' }],
+      },
+    } : {}),
     roleKeys: row.role_keys ? String(row.role_keys).split(',').filter(Boolean) : [],
     tagIds: row.tag_ids ? String(row.tag_ids).split(',').filter(Boolean) : [],
     tags: row.tag_labels ? String(row.tag_labels).split(',').filter(Boolean) : [],
@@ -168,9 +175,25 @@ function createAdminPrdExtensions(database, options = {}) {
     }
     if (filters.ownerQuery) { clauses.push("owner_profile.nickname LIKE ? ESCAPE '\\\\'"); params.push(`%${escapeLike(filters.ownerQuery)}%`) }
     if (filters.cityQuery) {
-      clauses.push("(b.city_name LIKE ? ESCAPE '\\\\' OR city_tag.label LIKE ? ESCAPE '\\\\')")
+      clauses.push("(b.city_name LIKE ? ESCAPE '\\\\' OR city_tag.label LIKE ? ESCAPE '\\\\' OR EXISTS (SELECT 1 FROM mip_opportunity_locations location LEFT JOIN mip_tags location_city ON location_city.app_id = location.app_id AND location_city.id = location.city_tag_id WHERE location.app_id = o.app_id AND location.opportunity_id = o.id AND location_city.label LIKE ? ESCAPE '\\\\'))")
       const query = `%${escapeLike(filters.cityQuery)}%`
-      params.push(query, query)
+      params.push(query, query, query)
+    }
+    if (filters.locationTypes?.length) {
+      clauses.push(`EXISTS (SELECT 1 FROM mip_opportunity_locations location WHERE location.app_id = o.app_id AND location.opportunity_id = o.id AND location.location_type IN (${placeholders(filters.locationTypes)}))`)
+      params.push(...filters.locationTypes)
+    }
+    if (filters.locationCityTagIds?.length) {
+      clauses.push(`EXISTS (SELECT 1 FROM mip_opportunity_locations location WHERE location.app_id = o.app_id AND location.opportunity_id = o.id AND location.location_type = 'CITY' AND location.city_tag_id IN (${placeholders(filters.locationCityTagIds)}))`)
+      params.push(...filters.locationCityTagIds)
+    }
+    if (filters.minAmountCents !== undefined) {
+      clauses.push('EXISTS (SELECT 1 FROM mip_opportunity_commercial_terms terms WHERE terms.app_id = o.app_id AND terms.opportunity_id = o.id AND COALESCE(terms.max_amount_cents, 18446744073709551615) >= ?)')
+      params.push(filters.minAmountCents)
+    }
+    if (filters.maxAmountCents !== undefined) {
+      clauses.push('EXISTS (SELECT 1 FROM mip_opportunity_commercial_terms terms WHERE terms.app_id = o.app_id AND terms.opportunity_id = o.id AND COALESCE(terms.min_amount_cents, 0) <= ?)')
+      params.push(filters.maxAmountCents)
     }
     if (filters.deadlineFrom) { clauses.push('o.deadline_at >= ?'); params.push(filters.deadlineFrom) }
     if (filters.deadlineTo) { clauses.push('o.deadline_at <= ?'); params.push(filters.deadlineTo) }
@@ -181,14 +204,15 @@ function createAdminPrdExtensions(database, options = {}) {
       opportunitySelect(clauses.join(' AND '), `${cursorWhere.sql} ORDER BY o.updated_at DESC, o.id DESC LIMIT ?`),
       [...params, ...cursorWhere.params, pageLimit + 1],
     )
-    const items = rows.map(row => opportunityDto(row))
+    const terms = await Promise.all(rows.map(row => loadCommercialTerms(database, appId, row.id)))
+    const items = rows.map((row, index) => opportunityDto(row, { commercialTerms: terms[index] }))
     return pageRows(items, pageLimit, row => ({ updatedAt: row.updatedAt, id: row.id }))
   }
 
   async function getOpportunityDetail(appId, opportunityId) {
     const row = await database.one(opportunitySelect('o.app_id = ? AND o.id = ?'), [appId, opportunityId])
     if (!row) return null
-    const [auditRows, teamRows] = await Promise.all([
+    const [auditRows, teamRows, commercialTerms] = await Promise.all([
       database.query(
         `SELECT a.id, a.action, a.metadata_json, a.created_at, p.nickname AS actor_nickname
          FROM mip_audit_logs a
@@ -210,8 +234,9 @@ function createAdminPrdExtensions(database, options = {}) {
          ORDER BY member.sort_order, member.id`,
         [appId, opportunityId],
       ),
+      loadCommercialTerms(database, appId, opportunityId),
     ])
-    return opportunityDto(row, {
+    return opportunityDto(row, { commercialTerms,
       history: auditRows.map(item => ({
         id: String(item.id),
         action: item.action,
@@ -318,6 +343,20 @@ function createAdminPrdExtensions(database, options = {}) {
         )
         if (!city) throw codeError('VALIDATION_FAILED')
       }
+      const legacyCityTagId = input.draft.commercialTerms
+        ? (input.draft.commercialTerms.locations.find(location => location.type === 'CITY')?.cityTagId || null)
+        : input.draft.cityTagId
+      if (input.draft.commercialTerms) {
+        const cityIds = input.draft.commercialTerms.locations.filter(item => item.type === 'CITY').map(item => item.cityTagId)
+        if (cityIds.length) {
+          const cities = await tx.query(
+            `SELECT id FROM mip_tags WHERE app_id = ? AND kind = 'CITY' AND enabled = 1
+             AND id IN (${placeholders(cityIds)}) FOR SHARE`,
+            [input.appId, ...cityIds],
+          )
+          if (new Set(cities.map(row => row.id)).size !== cityIds.length) throw codeError('VALIDATION_FAILED')
+        }
+      }
       let selectedTags = []
       if (input.draft.tagIds.length) {
         selectedTags = await tx.query(
@@ -335,7 +374,7 @@ function createAdminPrdExtensions(database, options = {}) {
            WHERE app_id = ? AND id = ? AND version = ? AND status <> 'ARCHIVED'`,
           [input.draft.ownerUserId, input.draft.scopeType, input.draft.branchId,
             input.draft.title, input.draft.valueSummary, input.draft.targetSummary,
-            input.draft.description, input.draft.cityTagId, input.draft.deadlineAt,
+            input.draft.description, legacyCityTagId, input.draft.deadlineAt,
             input.contentSafetyStatus, input.appId, opportunityId, input.expectedVersion],
         )
         if (Number(updated.affectedRows) !== 1) throw codeError('CONFLICT')
@@ -348,10 +387,11 @@ function createAdminPrdExtensions(database, options = {}) {
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?)`,
           [opportunityId, input.appId, input.draft.ownerUserId, input.draft.scopeType,
             input.draft.branchId, input.draft.title, input.draft.valueSummary,
-            input.draft.targetSummary, input.draft.description, input.draft.cityTagId,
+            input.draft.targetSummary, input.draft.description, legacyCityTagId,
             input.contentSafetyStatus, input.draft.deadlineAt],
         )
       }
+      await syncCommercialTerms(tx, input.appId, opportunityId, input.draft.commercialTerms, version)
       await tx.query('DELETE FROM mip_opportunity_roles WHERE app_id = ? AND opportunity_id = ?', [input.appId, opportunityId])
       for (const roleKey of input.draft.roleKeys) {
         await tx.query(

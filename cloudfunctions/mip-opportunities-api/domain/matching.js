@@ -7,6 +7,7 @@ const {
   createCandidateRef,
 } = require('../lib/matching-candidate-ref')
 const { createProfileRef } = require('../lib/profile-ref')
+const { locationMatches } = require('./commercial-terms')
 const {
   appendAudit,
   appendOutbox,
@@ -545,28 +546,36 @@ async function loadSource(database, appId, requesterUserId, opportunityId, enfor
      WHERE app_id = ? AND opportunity_id = ? ORDER BY relation, tag_id`,
     [appId, opportunityId],
   )
+  const locations = await optionalLocationQuery(database, `SELECT location_type, city_tag_id
+     FROM mip_opportunity_locations
+     WHERE app_id = ? AND opportunity_id = ?
+     ORDER BY sort_order, location_key`, [appId, opportunityId])
   return {
     ...row,
     requester_user_id: requesterUserId,
     roleKeys: jsonArray(row.role_keys),
     industryTagIds: tags.filter(item => item.relation === 'INDUSTRY').map(item => item.tag_id),
     abilityTagIds: tags.filter(item => item.relation === 'ABILITY').map(item => item.tag_id),
+    locations,
   }
 }
 
 async function loadOpportunityPreferences(database, appId, userId, lock = false) {
-  const [opportunity, notification] = await Promise.all([
-    database.one(
-      `SELECT matching_enabled, talent_recommendations_enabled,
+  const opportunitySql = lock
+    ? `SELECT matching_enabled, talent_recommendations_enabled,
               project_recommendations_enabled, matching_scope, version
-       FROM mip_user_opportunity_preferences WHERE app_id = ? AND user_id = ?${lock ? ' FOR UPDATE' : ''}`,
-      [appId, userId],
-    ),
-    database.one(
-      `SELECT opportunity_matching_notifications_enabled, version
-       FROM mip_user_notification_preferences WHERE app_id = ? AND user_id = ?${lock ? ' FOR UPDATE' : ''}`,
-      [appId, userId],
-    ),
+       FROM mip_user_opportunity_preferences WHERE app_id = ? AND user_id = ? FOR UPDATE`
+    : `SELECT matching_enabled, talent_recommendations_enabled,
+              project_recommendations_enabled, matching_scope, version
+       FROM mip_user_opportunity_preferences WHERE app_id = ? AND user_id = ?`
+  const notificationSql = lock
+    ? `SELECT opportunity_matching_notifications_enabled, version
+       FROM mip_user_notification_preferences WHERE app_id = ? AND user_id = ? FOR UPDATE`
+    : `SELECT opportunity_matching_notifications_enabled, version
+       FROM mip_user_notification_preferences WHERE app_id = ? AND user_id = ?`
+  const [opportunity, notification] = await Promise.all([
+    database.one(opportunitySql, [appId, userId]),
+    database.one(notificationSql, [appId, userId]),
   ])
   return {
     matchingEnabled: opportunity ? Boolean(opportunity.matching_enabled) : true,
@@ -584,12 +593,19 @@ async function loadOpportunityPreferences(database, appId, userId, lock = false)
 }
 
 async function loadSettings(database, appId, branchId, lock = false) {
-  const rows = await database.query(
-    `SELECT scope_key, scope_type, scope_id, talent_min_score, project_min_score,
+  const settingsSql = lock
+    ? `SELECT scope_key, scope_type, scope_id, talent_min_score, project_min_score,
             maximum_candidates, external_provider_enabled, version
-     FROM mip_matching_settings
-     WHERE app_id = ? AND scope_key IN ('PLATFORM', ?)
-     ORDER BY CASE WHEN scope_key = ? THEN 0 ELSE 1 END LIMIT 1${lock ? ' FOR UPDATE' : ''}`,
+       FROM mip_matching_settings
+       WHERE app_id = ? AND scope_key IN ('PLATFORM', ?)
+       ORDER BY CASE WHEN scope_key = ? THEN 0 ELSE 1 END LIMIT 1 FOR UPDATE`
+    : `SELECT scope_key, scope_type, scope_id, talent_min_score, project_min_score,
+            maximum_candidates, external_provider_enabled, version
+       FROM mip_matching_settings
+       WHERE app_id = ? AND scope_key IN ('PLATFORM', ?)
+       ORDER BY CASE WHEN scope_key = ? THEN 0 ELSE 1 END LIMIT 1`
+  const rows = await database.query(
+    settingsSql,
     [appId, branchId ? `BRANCH:${branchId}` : 'PLATFORM', branchId ? `BRANCH:${branchId}` : 'PLATFORM'],
   )
   const row = rows[0]
@@ -667,10 +683,11 @@ async function loadCandidates(database, caller, source, preferences, settings) {
         && effectiveBranchId
         && row.primary_branch_id === effectiveBranchId,
       ),
-      cityMatched: false,
+      cityMatched: locationMatches(source.locations, []),
     }
   })
   const projectBlock = mutualBlockFilter(source.requester_user_id, 'project.owner_user_id', 'project.app_id')
+  const sourceHasBroadLocation = (source.locations || []).some(location => ['NATIONAL', 'REMOTE'].includes(location.location_type))
   const projectRows = preferences.projectEnabled
     ? await database.query(
         `SELECT project.id, project.branch_id, project.city_tag_id,
@@ -680,12 +697,18 @@ async function loadCandidates(database, caller, source, preferences, settings) {
        ON role.app_id = project.app_id AND role.opportunity_id = project.id
      WHERE project.app_id = ? AND project.status = 'PUBLISHED'
        AND project.id <> ? AND project.owner_user_id <> ?
-       AND (? IS NULL OR project.branch_id IS NULL OR project.branch_id = ?)
+       AND (? = 1 OR ? IS NULL OR project.branch_id IS NULL OR project.branch_id = ?
+         OR EXISTS (
+           SELECT 1 FROM mip_opportunity_locations broad_location
+           WHERE broad_location.app_id = project.app_id AND broad_location.opportunity_id = project.id
+             AND broad_location.location_type IN (?, ?)
+         ))
        ${projectBlock.sql ? `AND ${projectBlock.sql}` : ''}
      GROUP BY project.id, project.branch_id, project.city_tag_id
      ORDER BY project.id
      LIMIT ${Math.max(10, settings.maximumCandidates * 3)}`,
-        [caller.appId, source.id, source.requester_user_id, effectiveBranchId, effectiveBranchId, ...projectBlock.params],
+        [caller.appId, source.id, source.requester_user_id, sourceHasBroadLocation ? 1 : 0,
+          effectiveBranchId, effectiveBranchId, 'NATIONAL', 'REMOTE', ...projectBlock.params],
       )
     : []
   const projectIds = projectRows.map(row => row.id)
@@ -698,6 +721,23 @@ async function loadCandidates(database, caller, source, preferences, settings) {
       )
     : []
   const tagsByProject = groupOpportunityTags(projectTags)
+  const projectLocationRows = projectIds.length
+    ? await Promise.all(projectIds.map(projectId => optionalLocationQuery(
+        database,
+        `SELECT opportunity_id, location_type, city_tag_id
+         FROM mip_opportunity_locations
+         WHERE app_id = ? AND opportunity_id = ?
+         ORDER BY sort_order, location_key`,
+        [caller.appId, projectId],
+      )))
+    : []
+  const projectLocations = projectLocationRows.flat()
+  const locationsByProject = new Map()
+  for (const location of projectLocations) {
+    const list = locationsByProject.get(location.opportunity_id) || []
+    list.push(location)
+    locationsByProject.set(location.opportunity_id, list)
+  }
   const projects = projectRows.map((row) => {
     const tags = tagsByProject.get(row.id) || { industry: [], ability: [] }
     return {
@@ -707,10 +747,23 @@ async function loadCandidates(database, caller, source, preferences, settings) {
       industryTagIds: tags.industry,
       abilityTagIds: tags.ability,
       branchMatched: Boolean(effectiveBranchId && row.branch_id === effectiveBranchId),
-      cityMatched: Boolean(source.city_tag_id && row.city_tag_id === source.city_tag_id),
+      cityMatched: locationMatches(source.locations, locationsByProject.get(row.id) || [
+        ...(row.city_tag_id ? [{ location_type: 'CITY', city_tag_id: row.city_tag_id }] : []),
+      ]),
     }
   })
   return [...talents, ...projects]
+}
+
+async function optionalLocationQuery(database, sql, params) {
+  try {
+    return await database.query(sql, params)
+  }
+  catch (error) {
+    // Older test adapters and pre-migration read replicas do not expose the optional projection.
+    if (/unexpected query|unknown table|doesn.t exist/i.test(String(error?.message || error))) return []
+    throw error
+  }
 }
 
 function rankLocalCandidates(source, candidates) {

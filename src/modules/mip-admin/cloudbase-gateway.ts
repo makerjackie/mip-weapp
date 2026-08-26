@@ -78,6 +78,7 @@ import {
   parseMessageTemplatePage,
 } from './message-templates'
 import { parseOperationalExceptionPage } from './operational-exceptions'
+import { parseAdminOpportunityDetail, parseAdminOpportunityPage } from './opportunities'
 import {
   parseOpportunityCommentSettings,
   parseOpportunityCommentState,
@@ -973,9 +974,9 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
     resetRoleCapabilityPolicy: async input => parseAdminRoleCapabilityPolicy(
       await call('mip.admin.rolePolicies.update', { ...input, reset: true }),
     ),
-    listOpportunities: input => call('mip.admin.opportunities.list', input || {}),
+    listOpportunities: async input => parseAdminOpportunityPage(await call('mip.admin.opportunities.list', input || {})),
     getOpportunity: async opportunityId => resolveCloudFileUrls(
-      await call('mip.admin.opportunities.get', { opportunityId }),
+      parseAdminOpportunityDetail(await call('mip.admin.opportunities.get', { opportunityId })),
     ),
     getOpportunityEditorOptions: () => call('mip.admin.opportunities.options'),
     saveOpportunity: input => call('mip.admin.opportunities.save', input),

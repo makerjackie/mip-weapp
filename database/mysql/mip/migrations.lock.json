@@ -678,6 +678,19 @@
         "mip_player_lifecycles"
       ],
       "altersTables": []
+    },
+    {
+      "version": "20260827490000",
+      "name": "mip_opportunity_commercial_terms",
+      "sql": "database/mysql/mip/049_opportunity_commercial_terms.sql",
+      "sqlSha256": "e68f6bf06eaff35f697cc6582a49f13cfd3f238709b8f1bcb517f552ffa6e242",
+      "rollback": "database/mysql/mip/rollback/049_opportunity_commercial_terms.sql",
+      "rollbackSha256": "50b38120e519f37098bf9e783fd170220f6d9b1c8ef4e5a354f7bb197a7c8c46",
+      "createsTables": [
+        "mip_opportunity_commercial_terms",
+        "mip_opportunity_locations"
+      ],
+      "altersTables": []
     }
   ]
 }

@@ -25,12 +25,31 @@ export interface OpportunityTeamMember extends OpportunityAuthor {
   userKind: 'PLAYER'
 }
 
+export type OpportunityLocationType = 'CITY' | 'NATIONAL' | 'REMOTE'
+
+export interface OpportunityLocation {
+  type: OpportunityLocationType
+  city?: OpportunityTag
+  cityTagId?: string
+}
+
+export interface OpportunityCommercialTerms {
+  currency: 'CNY'
+  amountUnit: 'CNY_CENTS'
+  minAmountCents?: number
+  maxAmountCents?: number
+  amountDisplay?: string
+  locationDisplay?: string
+  locations: OpportunityLocation[]
+}
+
 export interface OpportunitySummary {
   id: OpportunityId
   title: string
   valueSummary: string
   targetSummary: string
   city?: OpportunityTag
+  commercialTerms?: OpportunityCommercialTerms
   branchId?: BranchId
   branchName?: string
   coverUrl?: string
@@ -59,6 +78,10 @@ export interface OpportunityFilter {
   status: OpportunityStatusFilter
   keyword?: string
   cityTagId?: string
+  minAmountCents?: number
+  maxAmountCents?: number
+  locationTypes?: OpportunityLocationType[]
+  locationCityTagIds?: string[]
   branchId?: BranchId
   roleKey?: CooperationRoleKey
   industryTagIds?: string[]
@@ -256,6 +279,7 @@ export interface OpportunityDraft {
   scopeType: 'PLATFORM' | 'BRANCH'
   branchId?: BranchId
   cityTagId?: string
+  commercialTerms?: OpportunityCommercialTerms | null
   coverAssetId?: string
   roleKeys: CooperationRoleKey[]
   industryTagIds: string[]

@@ -5,6 +5,7 @@ import type { ProtectedActionKey } from '../../modules/mip-identity'
 import type {
   OpportunityCatalog,
   OpportunityFilter,
+  OpportunityLocationType,
   OpportunitySummary,
 } from '../../modules/mip-opportunities'
 import { cooperationRoles } from '../../config/mip-catalogs'
@@ -28,6 +29,24 @@ interface CityOption { id: string, label: string, popular?: boolean }
 
 const allRoleOptions = [{ key: '', name: '全部角色' }, ...cooperationRoles]
 const nationwideOption: CityOption = { id: '', label: '全国' }
+
+function amountRange(minimum: string, maximum: string) {
+  const toCents = (value: string) => {
+    if (!value.trim()) return undefined
+    const yuan = Number(value)
+    const cents = Math.round(yuan * 100)
+    if (!Number.isFinite(yuan) || yuan < 0 || !Number.isSafeInteger(cents)) {
+      throw new Error('请填写有效的金额区间。')
+    }
+    return cents
+  }
+  const minAmountCents = toCents(minimum)
+  const maxAmountCents = toCents(maximum)
+  if (minAmountCents !== undefined && maxAmountCents !== undefined && minAmountCents > maxAmountCents) {
+    throw new Error('最低金额不能大于最高金额。')
+  }
+  return { minAmountCents, maxAmountCents }
+}
 
 function cityOptionsFor(mode: PageMode, catalog: OpportunityCatalog): CityOption[] {
   return mode === 'cooperation'
@@ -72,6 +91,12 @@ Page({
     selectedIndustryTagIds: [] as string[],
     draftAbilityTagIds: [] as string[],
     selectedAbilityTagIds: [] as string[],
+    draftLocationTypes: [] as OpportunityLocationType[],
+    selectedLocationTypes: [] as OpportunityLocationType[],
+    draftMinAmountYuan: '',
+    draftMaxAmountYuan: '',
+    selectedMinAmountCents: undefined as number | undefined,
+    selectedMaxAmountCents: undefined as number | undefined,
     industryGroups: [] as IndustryGroupView[],
     abilityOptions: [] as TagView[],
     hasAppliedFilters: false,
@@ -150,6 +175,9 @@ Page({
           status: this.data.status,
           keyword: this.data.keyword,
           cityTagId: this.data.selectedCityTagId || undefined,
+          locationTypes: this.data.selectedLocationTypes,
+          minAmountCents: this.data.selectedMinAmountCents,
+          maxAmountCents: this.data.selectedMaxAmountCents,
           roleKey: this.data.selectedRoleKey || undefined,
           industryTagIds: this.data.selectedIndustryTagIds,
           abilityTagIds: this.data.selectedAbilityTagIds,
@@ -250,7 +278,12 @@ Page({
       || this.data.selectedRoleKey
       || this.data.selectedIndustryTagIds.length
       || (mode === 'cooperation' ? this.data.selectedCooperationBranchId : this.data.selectedCityTagId)
-      || (mode === 'opportunities' && this.data.selectedAbilityTagIds.length),
+      || (mode === 'opportunities' && (
+        this.data.selectedAbilityTagIds.length
+        || this.data.selectedLocationTypes.length
+        || this.data.selectedMinAmountCents !== undefined
+        || this.data.selectedMaxAmountCents !== undefined
+      )),
     )
     this.setData({
       mode,
@@ -264,6 +297,9 @@ Page({
       draftRoleKey: this.data.selectedRoleKey,
       draftIndustryTagIds: [...this.data.selectedIndustryTagIds],
       draftAbilityTagIds: [...this.data.selectedAbilityTagIds],
+      draftLocationTypes: [...this.data.selectedLocationTypes],
+      draftMinAmountYuan: this.data.selectedMinAmountCents === undefined ? '' : String(this.data.selectedMinAmountCents / 100),
+      draftMaxAmountYuan: this.data.selectedMaxAmountCents === undefined ? '' : String(this.data.selectedMaxAmountCents / 100),
       industryGroups: this.data.industryGroups.map(group => ({
         ...group,
         options: group.options.map(item => ({
@@ -310,6 +346,9 @@ Page({
       draftRoleKey: this.data.selectedRoleKey,
       draftIndustryTagIds: [...this.data.selectedIndustryTagIds],
       draftAbilityTagIds: [...this.data.selectedAbilityTagIds],
+      draftLocationTypes: [...this.data.selectedLocationTypes],
+      draftMinAmountYuan: this.data.selectedMinAmountCents === undefined ? '' : String(this.data.selectedMinAmountCents / 100),
+      draftMaxAmountYuan: this.data.selectedMaxAmountCents === undefined ? '' : String(this.data.selectedMaxAmountCents / 100),
       cityIndex: Math.max(0, this.data.cityOptions.findIndex(item => item.id === cityId)),
       citySelectionIds: cityId ? [cityId] : [],
       industryGroups: this.data.industryGroups.map(group => ({
@@ -379,6 +418,9 @@ Page({
       draftRoleKey: this.data.selectedRoleKey,
       draftIndustryTagIds: [...this.data.selectedIndustryTagIds],
       draftAbilityTagIds: [...this.data.selectedAbilityTagIds],
+      draftLocationTypes: [...this.data.selectedLocationTypes],
+      draftMinAmountYuan: this.data.selectedMinAmountCents === undefined ? '' : String(this.data.selectedMinAmountCents / 100),
+      draftMaxAmountYuan: this.data.selectedMaxAmountCents === undefined ? '' : String(this.data.selectedMaxAmountCents / 100),
       cityIndex: Math.max(0, this.data.cityOptions.findIndex(item => item.id === cityId)),
       citySelectionIds: cityId ? [cityId] : [],
       industryGroups: this.data.industryGroups.map(group => ({
@@ -418,6 +460,22 @@ Page({
     })
   },
 
+  toggleLocationType(event: WechatMiniprogram.TouchEvent) {
+    const type = String(event.currentTarget.dataset.type || '') as OpportunityLocationType
+    if (!['CITY', 'NATIONAL', 'REMOTE'].includes(type)) return
+    const selected = new Set(this.data.draftLocationTypes)
+    if (selected.has(type)) selected.delete(type)
+    else selected.add(type)
+    this.setData({ draftLocationTypes: [...selected] })
+  },
+
+  updateAmount(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const field = String(event.currentTarget.dataset.field || '')
+    if (field === 'draftMinAmountYuan' || field === 'draftMaxAmountYuan') {
+      this.setData({ [field]: event.detail.value })
+    }
+  },
+
   resetFilters() {
     const cityOptions = cityOptionsFor(this.data.mode, this.data.catalog)
     this.setData({
@@ -431,6 +489,9 @@ Page({
       draftRoleKey: '',
       draftIndustryTagIds: [],
       draftAbilityTagIds: [],
+      draftLocationTypes: [],
+      draftMinAmountYuan: '',
+      draftMaxAmountYuan: '',
       industryGroups: this.data.industryGroups.map(group => ({
         ...group,
         options: group.options.map(item => ({ ...item, selected: false })),
@@ -440,6 +501,14 @@ Page({
   },
 
   applyFilters() {
+    let amounts: ReturnType<typeof amountRange>
+    try {
+      amounts = amountRange(this.data.draftMinAmountYuan, this.data.draftMaxAmountYuan)
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '金额区间无效' })
+      return
+    }
     const keyword = this.data.keywordInput.trim()
     const selectedCityTagId = this.data.mode === 'opportunities'
       ? this.data.draftOpportunityCityTagId
@@ -455,7 +524,12 @@ Page({
       || this.data.draftRoleKey
       || this.data.draftIndustryTagIds.length
       || (this.data.mode === 'cooperation' ? selectedCooperationBranchId : selectedCityTagId)
-      || (this.data.mode === 'opportunities' && selectedAbilityTagIds.length),
+      || (this.data.mode === 'opportunities' && (
+        selectedAbilityTagIds.length
+        || this.data.draftLocationTypes.length
+        || amounts.minAmountCents !== undefined
+        || amounts.maxAmountCents !== undefined
+      )),
     )
     this.setData({
       keyword,
@@ -464,6 +538,9 @@ Page({
       selectedRoleKey: this.data.draftRoleKey,
       selectedIndustryTagIds: [...this.data.draftIndustryTagIds],
       selectedAbilityTagIds,
+      selectedLocationTypes: this.data.mode === 'opportunities' ? [...this.data.draftLocationTypes] : this.data.selectedLocationTypes,
+      selectedMinAmountCents: this.data.mode === 'opportunities' ? amounts.minAmountCents : this.data.selectedMinAmountCents,
+      selectedMaxAmountCents: this.data.mode === 'opportunities' ? amounts.maxAmountCents : this.data.selectedMaxAmountCents,
       hasAppliedFilters,
       filterOpen: false,
     }, () => void this.loadContent(true))
@@ -488,6 +565,12 @@ Page({
       selectedIndustryTagIds: [],
       draftAbilityTagIds: [],
       selectedAbilityTagIds: [],
+      draftLocationTypes: [],
+      selectedLocationTypes: [],
+      draftMinAmountYuan: '',
+      draftMaxAmountYuan: '',
+      selectedMinAmountCents: undefined,
+      selectedMaxAmountCents: undefined,
       industryGroups: this.data.industryGroups.map(group => ({
         ...group,
         options: group.options.map(item => ({ ...item, selected: false })),
