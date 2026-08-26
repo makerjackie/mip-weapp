@@ -1,8 +1,14 @@
-import type { KnowledgeAdminSection } from '../../../modules/mip-knowledge'
+import type {
+  KnowledgeAdminListSection,
+  KnowledgeAdminSection,
+  KnowledgeSchedule,
+  KnowledgeScheduleSaveInput,
+  KnowledgeScheduleStatus,
+} from '../../../modules/mip-knowledge'
 import { mipKnowledgeAdminModule } from '../../../modules/mip-knowledge'
 import { adminLoadFailure } from '../shared/page-state'
 
-type EditorKind = '' | 'SOURCE' | 'CATEGORY' | 'CONTENT'
+type EditorKind = '' | 'SOURCE' | 'CATEGORY' | 'CONTENT' | 'SCHEDULE'
 
 interface AdminItem extends Record<string, unknown> {
   id: string
@@ -32,6 +38,22 @@ interface PickerItem {
   name: string
 }
 
+interface SchedulePickerItem extends PickerItem {
+  status: string
+  sourceType?: string
+}
+
+interface PresentedKnowledgeSchedule extends KnowledgeSchedule {
+  statusLabel: string
+  nextRunLabel: string
+  lastStartedLabel: string
+  lastCompletedLabel: string
+}
+
+interface PendingScheduleSave {
+  input: KnowledgeScheduleSaveInput
+}
+
 interface AdminProduct {
   id: string
   name: string
@@ -47,6 +69,7 @@ const sectionOptions: Array<{ value: KnowledgeAdminSection, label: string }> = [
   { value: 'CONTENTS', label: '内容' },
   { value: 'SOURCES', label: '信息源' },
   { value: 'CATEGORIES', label: '分类' },
+  { value: 'SCHEDULES', label: '采集计划' },
   { value: 'COMMENTS', label: '评论' },
   { value: 'REPORTS', label: '举报' },
   { value: 'RUNS', label: '抓取记录' },
@@ -72,6 +95,7 @@ const accessTypeOptions = [
 
 const statusLabels: Record<string, string> = {
   ACTIVE: '启用',
+  PAUSED: '暂停',
   INACTIVE: '停用',
   DRAFT: '草稿',
   PENDING_REVIEW: '待审核',
@@ -105,7 +129,7 @@ function productValue(value: unknown): AdminProduct | null {
   return value as AdminProduct
 }
 
-function presentItems(section: KnowledgeAdminSection, rows: Array<Record<string, unknown>>): AdminItem[] {
+function presentItems(section: KnowledgeAdminListSection, rows: Array<Record<string, unknown>>): AdminItem[] {
   return rows.map((row) => {
     const status = textValue(row.status)
     let detailLabel = ''
@@ -142,6 +166,34 @@ function presentItems(section: KnowledgeAdminSection, rows: Array<Record<string,
   })
 }
 
+function presentServerTime(value: string | null | undefined) {
+  if (!value) {
+    return ''
+  }
+  const match = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}):\d{2}(?:\.\d{3})?Z$/.exec(value)
+  return match ? `${match[1]} ${match[2]} UTC` : value
+}
+
+function presentSchedules(rows: KnowledgeSchedule[]): PresentedKnowledgeSchedule[] {
+  return rows.map(row => ({
+    ...row,
+    statusLabel: statusLabels[row.status] || row.status,
+    nextRunLabel: presentServerTime(row.nextRunAt),
+    lastStartedLabel: presentServerTime(row.lastStartedAt),
+    lastCompletedLabel: presentServerTime(row.lastCompletedAt),
+  }))
+}
+
+function scheduleRequestId() {
+  return `knowledge-schedule-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`
+}
+
+function errorCode(error: unknown) {
+  return error && typeof error === 'object' && typeof (error as { code?: unknown }).code === 'string'
+    ? (error as { code: string }).code
+    : ''
+}
+
 function optionIndex(options: Array<{ value: string }>, value: unknown) {
   return Math.max(0, options.findIndex(option => option.value === value))
 }
@@ -152,9 +204,12 @@ Page({
     sectionOptions,
     section: 'CONTENTS' as KnowledgeAdminSection,
     items: [] as AdminItem[],
+    schedules: [] as PresentedKnowledgeSchedule[],
     sources: [] as AdminItem[],
     sourcePickerOptions: [{ id: '', name: '不关联信息源' }] as PickerItem[],
     categories: [] as AdminItem[],
+    scheduleSourceOptions: [] as SchedulePickerItem[],
+    scheduleCategoryOptions: [] as SchedulePickerItem[],
     sourceTypeOptions,
     contentTypeOptions,
     accessTypeOptions,
@@ -188,16 +243,30 @@ Page({
     editorRefundWindowHours: '24',
     editorUnlockDays: '',
     ingestionCategoryIndex: 0,
+    scheduleSourceIndex: -1,
+    scheduleCategoryIndex: -1,
+    scheduleTimeOfDay: '08:30',
+    scheduleTimeZone: 'Asia/Shanghai',
+    scheduleStatus: 'ACTIVE' as KnowledgeScheduleStatus,
+    pendingScheduleSave: null as PendingScheduleSave | null,
+    scheduleRetryPending: false,
     processing: false,
     message: '',
   },
 
   onShow() {
+    if (this.data.pendingScheduleSave) {
+      return
+    }
     void this.load()
   },
 
   async onPullDownRefresh() {
     try {
+      if (this.data.pendingScheduleSave) {
+        this.setData({ message: '请先重试确认当前采集计划，再刷新列表。' })
+        return
+      }
       await this.load()
     }
     finally {
@@ -211,20 +280,43 @@ Page({
       this.setData({ state: 'loading', message: '' })
     }
     try {
+      const currentPageRequest = this.data.section === 'SCHEDULES'
+        ? mipKnowledgeAdminModule.listSchedules()
+        : mipKnowledgeAdminModule.list(this.data.section as KnowledgeAdminListSection)
       const [sourcePage, categoryPage, currentPage] = await Promise.all([
         mipKnowledgeAdminModule.list('SOURCES'),
         mipKnowledgeAdminModule.list('CATEGORIES'),
-        mipKnowledgeAdminModule.list(this.data.section),
+        currentPageRequest,
       ])
       const sources = presentItems('SOURCES', sourcePage.items)
+      const categories = presentItems('CATEGORIES', categoryPage.items)
       this.setData({
         state: 'ready',
         sources,
         sourcePickerOptions: [{ id: '', name: '不关联信息源' }].concat(
           sources.map(source => ({ id: source.id, name: source.name || source.sourceKey || '信息源' })),
         ),
-        categories: presentItems('CATEGORIES', categoryPage.items),
-        items: presentItems(this.data.section, currentPage.items),
+        categories,
+        scheduleSourceOptions: sources
+          .filter(source => source.status === 'ACTIVE' && ['JSON_FEED', 'RSS'].includes(source.sourceType || ''))
+          .map(source => ({
+            id: source.id,
+            name: source.name || source.sourceKey || '信息源',
+            sourceType: source.sourceType,
+            status: source.status || '',
+          })),
+        scheduleCategoryOptions: categories
+          .filter(category => category.status === 'ACTIVE')
+          .map(category => ({ id: category.id, name: category.name || '分类', status: category.status || '' })),
+        items: this.data.section === 'SCHEDULES'
+          ? []
+          : presentItems(
+              this.data.section as KnowledgeAdminListSection,
+              currentPage.items as Array<Record<string, unknown>>,
+            ),
+        schedules: this.data.section === 'SCHEDULES'
+          ? presentSchedules(currentPage.items as KnowledgeSchedule[])
+          : [],
         message: '',
       })
     }
@@ -235,18 +327,33 @@ Page({
 
   chooseSection(event: WechatMiniprogram.TouchEvent) {
     const section = String(event.currentTarget.dataset.section || '') as KnowledgeAdminSection
-    if (!sectionOptions.some(option => option.value === section) || section === this.data.section) {
+    if (this.data.processing
+      || !sectionOptions.some(option => option.value === section)
+      || section === this.data.section) {
       return
     }
-    this.setData({ section, editorKind: '', items: [], state: 'loading', message: '' })
+    if (this.data.pendingScheduleSave) {
+      this.setData({ message: '请先重试确认当前采集计划，再进行其他操作。' })
+      return
+    }
+    this.setData({ section, editorKind: '', items: [], schedules: [], state: 'loading', message: '' })
     void this.load()
   },
 
   openCreate() {
+    if (this.data.processing) {
+      return
+    }
     const editorKind = this.data.section === 'SOURCES'
       ? 'SOURCE'
-      : this.data.section === 'CATEGORIES' ? 'CATEGORY' : 'CONTENT'
-    if (!['SOURCE', 'CATEGORY', 'CONTENT'].includes(editorKind)) {
+      : this.data.section === 'CATEGORIES'
+        ? 'CATEGORY'
+        : this.data.section === 'SCHEDULES' ? 'SCHEDULE' : 'CONTENT'
+    if (!['SOURCE', 'CATEGORY', 'CONTENT', 'SCHEDULE'].includes(editorKind)) {
+      return
+    }
+    if (this.data.pendingScheduleSave) {
+      this.setData({ message: '请先重试确认当前采集计划，再新增计划。' })
       return
     }
     this.resetEditor(editorKind as EditorKind)
@@ -283,16 +390,55 @@ Page({
       editorRefundable: true,
       editorRefundWindowHours: '24',
       editorUnlockDays: '',
+      scheduleSourceIndex: this.data.scheduleSourceOptions.length ? 0 : -1,
+      scheduleCategoryIndex: this.data.scheduleCategoryOptions.length ? 0 : -1,
+      scheduleTimeOfDay: '08:30',
+      scheduleTimeZone: 'Asia/Shanghai',
+      scheduleStatus: 'ACTIVE',
+      pendingScheduleSave: null,
+      scheduleRetryPending: false,
       message: '',
     })
   },
 
   closeEditor() {
+    if (this.data.processing) {
+      return
+    }
+    if (this.data.pendingScheduleSave) {
+      this.setData({ message: '请先重试确认当前采集计划。' })
+      return
+    }
     this.setData({ editorKind: '' })
   },
 
   async editItem(event: WechatMiniprogram.TouchEvent) {
-    const item = this.data.items.find(row => row.id === String(event.currentTarget.dataset.id || ''))
+    if (this.data.processing) {
+      return
+    }
+    if (this.data.pendingScheduleSave) {
+      this.setData({ message: '请先重试确认当前采集计划，再编辑其他计划。' })
+      return
+    }
+    const itemId = String(event.currentTarget.dataset.id || '')
+    if (this.data.section === 'SCHEDULES') {
+      const schedule = this.data.schedules.find(row => row.id === itemId)
+      if (!schedule) {
+        return
+      }
+      this.resetEditor('SCHEDULE')
+      this.setData({
+        editorId: schedule.id,
+        editorVersion: schedule.version,
+        scheduleSourceIndex: this.data.scheduleSourceOptions.findIndex(row => row.id === schedule.source.id),
+        scheduleCategoryIndex: this.data.scheduleCategoryOptions.findIndex(row => row.id === schedule.category.id),
+        scheduleTimeOfDay: schedule.dailyTime,
+        scheduleTimeZone: schedule.timeZone || 'Asia/Shanghai',
+        scheduleStatus: schedule.status,
+      })
+      return
+    }
+    const item = this.data.items.find(row => row.id === itemId)
     if (!item) {
       return
     }
@@ -405,6 +551,24 @@ Page({
     this.setData({ ingestionCategoryIndex: Number(event.detail.value) })
   },
 
+  chooseScheduleSource(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    if (!this.data.processing && !this.data.pendingScheduleSave) {
+      this.setData({ scheduleSourceIndex: Number(event.detail.value) })
+    }
+  },
+
+  chooseScheduleCategory(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    if (!this.data.processing && !this.data.pendingScheduleSave) {
+      this.setData({ scheduleCategoryIndex: Number(event.detail.value) })
+    }
+  },
+
+  chooseScheduleTime(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    if (!this.data.processing && !this.data.pendingScheduleSave) {
+      this.setData({ scheduleTimeOfDay: event.detail.value })
+    }
+  },
+
   toggleEditorActive(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
     this.setData({ editorStatus: event.detail.value ? 'ACTIVE' : 'INACTIVE' })
   },
@@ -425,11 +589,42 @@ Page({
     this.setData({ editorRefundable: event.detail.value })
   },
 
+  toggleScheduleActive(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
+    if (!this.data.processing && !this.data.pendingScheduleSave) {
+      this.setData({ scheduleStatus: event.detail.value ? 'ACTIVE' : 'PAUSED' })
+    }
+  },
+
+  createScheduleSaveInput(): KnowledgeScheduleSaveInput {
+    const source = this.data.scheduleSourceOptions[this.data.scheduleSourceIndex]
+    const category = this.data.scheduleCategoryOptions[this.data.scheduleCategoryIndex]
+    if (!source) {
+      throw new Error('请选择启用的 JSON Feed 或 RSS 信息源')
+    }
+    if (!category) {
+      throw new Error('请选择启用的内容分类')
+    }
+    if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(this.data.scheduleTimeOfDay)) {
+      throw new Error('请选择有效的每日执行时间')
+    }
+    return {
+      ...(this.data.editorId ? { scheduleId: this.data.editorId } : {}),
+      expectedVersion: this.data.editorId ? this.data.editorVersion : 0,
+      sourceId: source.id,
+      categoryId: category.id,
+      timeOfDay: this.data.scheduleTimeOfDay,
+      timeZone: this.data.scheduleTimeZone || 'Asia/Shanghai',
+      status: this.data.scheduleStatus,
+      idempotencyKey: scheduleRequestId(),
+    }
+  },
+
   async saveEditor() {
     if (this.data.processing) {
       return
     }
     this.setData({ processing: true, message: '' })
+    let scheduleAttempt: PendingScheduleSave | null = null
     try {
       if (this.data.editorKind === 'SOURCE') {
         const sourceType = sourceTypeOptions[this.data.sourceTypeIndex]?.value || 'MANUAL'
@@ -492,15 +687,28 @@ Page({
           })
         }
       }
+      else if (this.data.editorKind === 'SCHEDULE') {
+        scheduleAttempt = this.data.pendingScheduleSave || { input: this.createScheduleSaveInput() }
+        await mipKnowledgeAdminModule.saveSchedule(scheduleAttempt.input)
+      }
       else {
         return
       }
-      this.setData({ editorKind: '' })
+      this.setData({ editorKind: '', pendingScheduleSave: null, scheduleRetryPending: false })
       wx.showToast({ title: '已保存', icon: 'success' })
       await this.load()
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '保存失败' })
+      const preserveScheduleAttempt = Boolean(
+        scheduleAttempt
+        && (this.data.pendingScheduleSave || errorCode(error) === 'KNOWLEDGE_SCHEDULE_AUTOMATION_UNVERIFIED'),
+      )
+      this.setData({
+        message: error instanceof Error ? error.message : '保存失败',
+        ...(preserveScheduleAttempt
+          ? { pendingScheduleSave: scheduleAttempt, scheduleRetryPending: true }
+          : {}),
+      })
     }
     finally {
       this.setData({ processing: false })
