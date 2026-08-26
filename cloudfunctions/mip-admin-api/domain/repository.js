@@ -1303,13 +1303,14 @@ function createAdminRepository(database, options = {}) {
     const cursor = input.cursor ? { ...input.cursor, id: input.cursor.sourceId } : null
     const cursorWhere = cursorPredicateFor('projection.occurred_at', cursor, 'createdAt', 'projection.source_id')
     const rows = await database.query(
-      `SELECT projection.source_id, projection.source_kind, projection.nickname,
+      `WITH projection AS (${projection})
+       SELECT projection.source_id, projection.source_kind, projection.nickname,
           projection.player_number, projection.benefit_name, projection.status,
           projection.starts_at, projection.ends_at, projection.occurred_at,
           projection.source_type, projection.metric, projection.delta_value,
           projection.order_status, projection.order_type, projection.amount_cents,
           projection.paid_at
-       FROM (${projection}) projection
+       FROM projection
        WHERE ${clauses.join(' AND ')}${cursorWhere.sql}
        ORDER BY projection.occurred_at DESC, projection.source_id DESC LIMIT ?`,
       [...params, ...cursorWhere.params, input.pageSize + 1],

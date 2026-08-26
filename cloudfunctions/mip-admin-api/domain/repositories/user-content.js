@@ -282,12 +282,7 @@ function createAdminUserContentRepository(database, options = {}) {
       if (!sameScope(currentScope, input.authorizedScope)) throw codeError('CONFLICT')
       if (row.status === 'ARCHIVED') throw codeError('INVALID_STATE')
       if (Number(row.version) !== input.expectedVersion) throw codeError('CONFLICT')
-      const table = input.kind === 'COOPERATION_CARD' ? 'mip_cooperation_cards' : 'mip_super_cases'
-      const result = await tx.query(
-        `UPDATE ${table} SET status = 'ARCHIVED', archived_at = UTC_TIMESTAMP(3), version = version + 1
-         WHERE app_id = ? AND id = ? AND status <> 'ARCHIVED' AND version = ?`,
-        [input.appId, input.contentId, input.expectedVersion],
-      )
+      const result = await archiveContent(tx, input)
       if (Number(result.affectedRows) !== 1) throw codeError('CONFLICT')
       await writeAudit(tx, input.audit(input.expectedVersion + 1))
       return { id: input.contentId, kind: input.kind, status: 'ARCHIVED', version: input.expectedVersion + 1 }
@@ -428,6 +423,17 @@ async function updatePublishedContent(tx, input) {
     : `UPDATE mip_super_cases
        SET status = 'UNPUBLISHED', version = version + 1
        WHERE app_id = ? AND id = ? AND status = 'PUBLISHED' AND version = ?`
+  return tx.query(sql, [input.appId, input.contentId, input.expectedVersion])
+}
+
+async function archiveContent(tx, input) {
+  const sql = input.kind === 'COOPERATION_CARD'
+    ? `UPDATE mip_cooperation_cards
+       SET status = 'ARCHIVED', archived_at = UTC_TIMESTAMP(3), version = version + 1
+       WHERE app_id = ? AND id = ? AND status <> 'ARCHIVED' AND version = ?`
+    : `UPDATE mip_super_cases
+       SET status = 'ARCHIVED', archived_at = UTC_TIMESTAMP(3), version = version + 1
+       WHERE app_id = ? AND id = ? AND status <> 'ARCHIVED' AND version = ?`
   return tx.query(sql, [input.appId, input.contentId, input.expectedVersion])
 }
 
