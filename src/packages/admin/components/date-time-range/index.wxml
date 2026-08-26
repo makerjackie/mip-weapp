@@ -1,0 +1,16 @@
+<view class="mip-admin-date-time-range w-full max-w-full box-border">
+  <view wx:if="{{title}}" class="text-[length:26rpx] font-semibold">{{title}}</view>
+  <view class="mt-3 grid grid-cols-2 gap-2">
+    <picker mode="date" value="{{startDate}}" disabled="{{disabled}}" data-field="startDate" bindchange="change"><view class="box-border min-h-[80rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:23rpx]"><view class="text-muted">开始日期</view><view class="mt-1">{{startDate || '选择日期'}}</view></view></picker>
+    <picker mode="time" value="{{startTime}}" disabled="{{disabled}}" data-field="startTime" bindchange="change"><view class="box-border min-h-[80rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:23rpx]"><view class="text-muted">开始时间</view><view class="mt-1">{{startTime || '选择时间'}}</view></view></picker>
+    <block wx:if="{{optionalEnd}}">
+      <view class="col-span-2 flex min-h-[72rpx] items-center justify-between"><text class="text-[length:24rpx]">设置结束时间</text><t-switch value="{{endEnabled}}" disabled="{{disabled}}" bind:change="toggleEnd" /></view>
+    </block>
+    <block wx:if="{{endEnabled}}">
+      <picker mode="date" value="{{endDate}}" disabled="{{disabled}}" data-field="endDate" bindchange="change"><view class="box-border min-h-[80rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:23rpx]"><view class="text-muted">结束日期</view><view class="mt-1">{{endDate || '选择日期'}}</view></view></picker>
+      <picker mode="time" value="{{endTime}}" disabled="{{disabled}}" data-field="endTime" bindchange="change"><view class="box-border min-h-[80rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:23rpx]"><view class="text-muted">结束时间</view><view class="mt-1">{{endTime || '选择时间'}}</view></view></picker>
+    </block>
+  </view>
+  <view wx:if="{{validationMessage}}" class="mt-2 text-[length:22rpx] text-danger">{{validationMessage}}</view>
+  <view wx:if="{{clearable && (startDate || startTime || endDate || endTime)}}" class="mt-2 flex min-h-[72rpx] items-center justify-end text-[length:22rpx] text-muted" aria-role="button" bind:tap="clear">{{optionalEnd || clearMode === 'end' ? '清除结束时间' : '清空时间'}}</view>
+</view>

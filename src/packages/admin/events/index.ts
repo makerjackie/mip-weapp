@@ -6,37 +6,13 @@ import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { mipBranchesModule } from '../../../modules/mip-identity/client'
 import { mipMediaModule } from '../../../modules/mip-media/client'
 import { chooseSingleImage } from '../../../modules/platform/image-upload'
+import { dateTimeParts, localDateTimeIso, validateDateTimeRange } from '../components/date-time-range/model'
 import { adminLoadFailure, isAdminVersionConflict } from '../shared/page-state'
-
-interface DateTimeParts {
-  date: string
-  time: string
-}
 
 interface AdminContentMediaDraft {
   assetId: string
   imageUrl: string
   caption: string
-}
-
-function pad(value: number) {
-  return String(value).padStart(2, '0')
-}
-
-function dateTimeParts(value: string | Date): DateTimeParts {
-  const date = value instanceof Date ? value : new Date(value)
-  if (!Number.isFinite(date.getTime())) {
-    return { date: '', time: '' }
-  }
-  return {
-    date: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
-    time: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
-  }
-}
-
-function localDateTimeIso(date: string, time: string) {
-  const value = new Date(`${date}T${time}:00`)
-  return Number.isFinite(value.getTime()) ? value.toISOString() : ''
 }
 
 function sameIds(left: readonly string[], right: readonly string[]) {
@@ -474,7 +450,15 @@ Page({
     }
   },
   changeDateTimePart(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    const field = String(event.currentTarget.dataset.field || '')
+    const detail = event.detail as { field?: string, value?: string }
+    const aliases: Record<string, string> = {
+      startDate: 'startsDate',
+      startTime: 'startsTime',
+      endDate: 'endsDate',
+      endTime: 'endsTime',
+    }
+    const rawField = String(detail.field || event.currentTarget.dataset.field || '')
+    const field = aliases[rawField] || rawField
     const allowed = new Set([
       'startsDate',
       'startsTime',
@@ -486,8 +470,15 @@ Page({
       'cancellationDeadlineTime',
     ])
     if (allowed.has(field)) {
-      this.setData({ [field]: event.detail.value })
+      this.setData({ [field]: detail.value || event.detail.value })
     }
+  },
+  clearDateTimeRange(event: WechatMiniprogram.CustomEvent<{ scope?: 'range' | 'end' }>) {
+    if (event.detail.scope === 'end') {
+      this.setData({ endsDate: '', endsTime: '' })
+      return
+    }
+    this.setData({ startsDate: '', startsTime: '', endsDate: '', endsTime: '' })
   },
   toggleDeadline(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
     const field = String(event.currentTarget.dataset.field || '')
@@ -595,8 +586,14 @@ Page({
     }
     this.setData({ saving: true, message: '' })
     try {
-      const startsAt = localDateTimeIso(this.data.startsDate, this.data.startsTime)
-      const endsAt = localDateTimeIso(this.data.endsDate, this.data.endsTime)
+      const range = validateDateTimeRange({
+        startDate: this.data.startsDate,
+        startTime: this.data.startsTime,
+        endDate: this.data.endsDate,
+        endTime: this.data.endsTime,
+      })
+      const startsAt = range.startAt
+      const endsAt = range.endAt
       const registrationDeadline = this.data.registrationDeadlineEnabled
         ? localDateTimeIso(this.data.registrationDeadlineDate, this.data.registrationDeadlineTime)
         : ''

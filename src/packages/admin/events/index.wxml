@@ -125,13 +125,7 @@
     </view>
 
     <view class="rounded-[16rpx] bg-panel p-4">
-      <view class="mb-3 text-[length:27rpx] font-semibold">活动时间</view>
-      <view class="grid grid-cols-2 gap-3">
-        <picker mode="date" value="{{startsDate}}" bindchange="changeDateTimePart" data-field="startsDate"><view class="box-border min-h-[80rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:23rpx]"><view class="text-muted">开始日期</view><view class="mt-1">{{startsDate}}</view></view></picker>
-        <picker mode="time" value="{{startsTime}}" bindchange="changeDateTimePart" data-field="startsTime"><view class="box-border min-h-[80rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:23rpx]"><view class="text-muted">开始时间</view><view class="mt-1">{{startsTime}}</view></view></picker>
-        <picker mode="date" value="{{endsDate}}" bindchange="changeDateTimePart" data-field="endsDate"><view class="box-border min-h-[80rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:23rpx]"><view class="text-muted">结束日期</view><view class="mt-1">{{endsDate}}</view></view></picker>
-        <picker mode="time" value="{{endsTime}}" bindchange="changeDateTimePart" data-field="endsTime"><view class="box-border min-h-[80rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:23rpx]"><view class="text-muted">结束时间</view><view class="mt-1">{{endsTime}}</view></view></picker>
-      </view>
+      <mip-admin-date-time-range title="活动时间" start-date="{{startsDate}}" start-time="{{startsTime}}" end-date="{{endsDate}}" end-time="{{endsTime}}" bind:change="changeDateTimePart" bind:clear="clearDateTimeRange" />
       <view class="mt-4 flex min-h-[72rpx] items-center justify-between"><view class="text-[length:23rpx]">设置报名截止时间</view><t-switch value="{{registrationDeadlineEnabled}}" data-field="registrationDeadlineEnabled" bind:change="toggleDeadline" /></view>
       <view wx:if="{{registrationDeadlineEnabled}}" class="grid grid-cols-2 gap-3">
         <picker mode="date" value="{{registrationDeadlineDate}}" bindchange="changeDateTimePart" data-field="registrationDeadlineDate"><view class="box-border min-h-[72rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]">{{registrationDeadlineDate}}</view></picker>

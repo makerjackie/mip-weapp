@@ -7,12 +7,8 @@ import type {
 import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { leaveSecondaryPage } from '../../../modules/platform/case-navigation'
+import { dateTimeParts, validateDateTimeRange } from '../components/date-time-range/model'
 import { adminLoadFailure, isAdminVersionConflict } from '../shared/page-state'
-
-interface DateTimeParts {
-  date: string
-  time: string
-}
 
 interface TargetOption {
   id: string
@@ -26,26 +22,6 @@ const safetyLabels: Record<AdminAnnouncementSafetyStatus, string> = {
   PASSED: '已通过',
   REJECTED: '未通过',
   ERROR: '检查失败',
-}
-
-function pad(value: number) {
-  return String(value).padStart(2, '0')
-}
-
-function dateTimeParts(value: string | Date): DateTimeParts {
-  const date = value instanceof Date ? value : new Date(value)
-  if (!Number.isFinite(date.getTime())) {
-    return { date: '', time: '' }
-  }
-  return {
-    date: `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
-    time: `${pad(date.getHours())}:${pad(date.getMinutes())}`,
-  }
-}
-
-function localDateTimeIso(date: string, time: string) {
-  const value = new Date(`${date}T${time}:00`)
-  return Number.isFinite(value.getTime()) ? value.toISOString() : ''
 }
 
 function initialDraft(): AdminAnnouncementDraft {
@@ -304,15 +280,30 @@ Page({
     if (!this.data.editable) {
       return
     }
-    const field = String(event.currentTarget.dataset.field || '')
+    const detail = event.detail as { field?: string, value?: string }
+    const aliases: Record<string, string> = {
+      startDate: 'visibleFromDate',
+      startTime: 'visibleFromTime',
+      endDate: 'visibleUntilDate',
+      endTime: 'visibleUntilTime',
+    }
+    const rawField = String(detail.field || event.currentTarget.dataset.field || '')
+    const field = aliases[rawField] || rawField
     if (['visibleFromDate', 'visibleFromTime', 'visibleUntilDate', 'visibleUntilTime'].includes(field)) {
-      this.setData({ [field]: event.detail.value })
+      this.setData({ [field]: detail.value || event.detail.value })
     }
   },
 
   toggleVisibleUntil(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
     if (this.data.editable) {
-      this.setData({ visibleUntilEnabled: event.detail.value === true })
+      const detail = event.detail as { enabled?: boolean, value?: boolean }
+      this.setData({ visibleUntilEnabled: detail.enabled === true || detail.value === true })
+    }
+  },
+
+  clearDateTimeRange(event: WechatMiniprogram.CustomEvent<{ scope?: 'range' | 'end' }>) {
+    if (event.detail.scope === 'end') {
+      this.setData({ visibleUntilEnabled: false, visibleUntilDate: '', visibleUntilTime: '' })
     }
   },
 
@@ -320,14 +311,18 @@ Page({
     if (!this.data.editable || this.data.saving) {
       return
     }
-    const visibleFrom = localDateTimeIso(this.data.visibleFromDate, this.data.visibleFromTime)
-    const visibleUntil = this.data.visibleUntilEnabled
-      ? localDateTimeIso(this.data.visibleUntilDate, this.data.visibleUntilTime)
-      : null
-    if (!visibleFrom || (this.data.visibleUntilEnabled && !visibleUntil)) {
-      this.setData({ message: '请检查展示日期和时间。' })
+    const range = validateDateTimeRange({
+      startDate: this.data.visibleFromDate,
+      startTime: this.data.visibleFromTime,
+      endDate: this.data.visibleUntilDate,
+      endTime: this.data.visibleUntilTime,
+    }, this.data.visibleUntilEnabled)
+    if (!range.valid) {
+      this.setData({ message: range.message })
       return
     }
+    const visibleFrom = range.startAt
+    const visibleUntil = this.data.visibleUntilEnabled ? range.endAt : null
     if (this.data.draft.targetType && !this.data.draft.targetId) {
       this.setData({ message: '请选择关联内容。' })
       return
