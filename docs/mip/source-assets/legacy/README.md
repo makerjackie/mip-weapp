@@ -1,0 +1,19 @@
+# 历史素材候选索引
+
+本目录只存放已明确纳入当前文档的候选资产，不是生产视觉资源目录。Figma 页面映射和 `DESIGN.md` 仍是正式视觉依据；使用任何候选图前需要按目标页面重新核对尺寸、版权、文案和品牌色。
+
+## 当前资产
+
+| 文件 | 用途 | 状态 |
+| --- | --- | --- |
+| [mip-mini-program-qrcode.jpg](mip-mini-program-qrcode.jpg) | MIP 小程序二维码资料/分享验收参考 | 已从 `/Users/jackiexiao/Downloads/mip-qrcode.jpg` 复制；不修改原文件，不代表正式小程序码或活动签到码 |
+
+## 研究包候选（未复制）
+
+研究包中的角色卡图和身份勋章图有一定候选价值，但当前不复制整套副本：
+
+- 角色卡图：`docs/research/legacy-mip-app/assets/cooperation/`，只可作为六种合作角色的视觉参考；角色 key 和正式页面仍以当前配置、Figma 和 `DESIGN.md` 为准。
+- 身份勋章图：`docs/research/legacy-mip-app/assets/badges/` 与 `badges-3d/`，只可作为勋章目录候选；勋章不授予权限，正式目录和版权仍待确认。
+- 其他笨笨、Banner、等级装饰和旧 UI 图未复制，避免把历史概念或重复素材带入当前生产资产。
+
+研究包本身不作为运行时依赖，也不因本索引而整体加入 Git。
