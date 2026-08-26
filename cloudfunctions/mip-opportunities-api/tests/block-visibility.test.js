@@ -8,7 +8,11 @@ const {
   setProfileInterest,
   setReferral,
 } = require('../domain/opportunities')
-const { getCooperationCard, listCooperationCards } = require('../domain/cooperation')
+const {
+  getCooperationCard,
+  listCooperationCards,
+  listCooperationTalents,
+} = require('../domain/cooperation')
 const { getSuperCase, listSuperCases } = require('../domain/cases')
 const { createProfileRef } = require('../lib/profile-ref')
 
@@ -45,15 +49,18 @@ describe('public opportunity visibility', () => {
 
     await listOpportunities(database, caller, {})
     await listCooperationCards(database, caller, {})
+    await listCooperationTalents(database, caller, {})
     await listSuperCases(database, caller, {})
 
     const opportunity = calls.find(call => call.sql.includes('FROM mip_opportunities o'))
-    const cooperation = calls.find(call => call.sql.includes('FROM mip_cooperation_cards c'))
+    const cooperationCalls = calls.filter(call => call.sql.includes('FROM mip_cooperation_cards c'))
+    const [cooperation, talents] = cooperationCalls
     const superCase = calls.find(call => call.sql.includes('FROM mip_super_cases c'))
     assertMutualBlock(opportunity.sql, 'o.owner_user_id', 'o.app_id')
     assertMutualBlock(cooperation.sql, 'c.owner_user_id', 'c.app_id')
+    assertMutualBlock(talents.sql, 'c.owner_user_id', 'c.app_id')
     assertMutualBlock(superCase.sql, 'c.owner_user_id', 'c.app_id')
-    for (const call of [opportunity, cooperation, superCase]) {
+    for (const call of [opportunity, cooperation, talents, superCase]) {
       assert.deepEqual(call.params.slice(-2), [viewerUserId, viewerUserId])
     }
   })
@@ -91,6 +98,7 @@ describe('public opportunity visibility', () => {
 
     await listOpportunities(database, anonymous, {})
     await listCooperationCards(database, anonymous, {})
+    await listCooperationTalents(database, anonymous, {})
     await listSuperCases(database, anonymous, {})
 
     assert.equal(calls.some(call => call.sql.includes('mip_user_blocks')), false)

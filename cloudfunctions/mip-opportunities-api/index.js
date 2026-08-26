@@ -35,6 +35,7 @@ const {
   archiveCooperationCard,
   getCooperationCard,
   listCooperationCards,
+  listCooperationTalents,
   listMyCooperationCards,
   saveCooperationCard,
   unpublishCooperationCard,
@@ -96,6 +97,7 @@ const publicActions = new Set([
   'listOpportunities',
   'getOpportunity',
   'listCooperationCards',
+  'listCooperationTalents',
   'getCooperationCard',
   'listSuperCases',
   'getSuperCase',
@@ -175,6 +177,7 @@ async function dispatch(database, caller, event) {
     case 'listMatchingResults': return listMatchingResults(database, caller, event)
     case 'saveMatchingFeedback': return saveMatchingFeedback(database, caller, event)
     case 'listCooperationCards': return listCooperationCards(database, caller, event.filter)
+    case 'listCooperationTalents': return listCooperationTalents(database, caller, event.filter)
     case 'listMyCooperationCards': return listMyCooperationCards(database, caller, event)
     case 'getCooperationCard': return getCooperationCard(database, caller, event.id)
     case 'saveCooperationCard': return saveCooperationCard(database, contentSafety, caller, event)

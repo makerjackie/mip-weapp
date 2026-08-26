@@ -69,21 +69,42 @@
     <view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   </view>
   <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载合作卡" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
-  <view wx:elif="{{!items.length}}" class="mt-5">
-    <app-empty-state wx:if="{{mine}}" title="暂时没有合作卡" description="创建后的草稿和已发布合作卡会显示在这里。" action-text="创建合作卡" bind:action="create" />
-    <app-empty-state wx:else title="没有找到合作卡" description="{{hasAppliedFilters ? '调整筛选条件后重试。' : '已发布的合作卡会显示在这里。'}}" action-text="{{hasAppliedFilters ? '清除筛选' : ''}}" bind:action="clearAppliedFilters" />
+  <view wx:elif="{{mine && !cards.length}}" class="mt-5">
+    <app-empty-state title="暂时没有合作卡" description="创建后的草稿和已发布合作卡会显示在这里。" action-text="创建合作卡" bind:action="create" />
+  </view>
+  <view wx:elif="{{!mine && !talents.length}}" class="mt-5">
+    <app-empty-state title="没有找到人才" description="{{hasAppliedFilters ? '调整筛选条件后重试。' : '已发布合作卡的人才会显示在这里。'}}" action-text="{{hasAppliedFilters ? '清除筛选' : ''}}" bind:action="clearAppliedFilters" />
   </view>
 
-  <view wx:else class="mt-5 flex flex-col gap-4">
-    <view wx:for="{{items}}" wx:key="id" class="overflow-hidden rounded-[32rpx] bg-panel active:opacity-90" data-id="{{item.id}}" bind:tap="open">
+  <view wx:elif="{{mine}}" class="mt-5 flex flex-col gap-4">
+    <view wx:for="{{cards}}" wx:key="id" class="overflow-hidden rounded-[32rpx] bg-panel active:opacity-90" data-id="{{item.id}}" bind:tap="openCard">
       <cooperation-role-card role-key="{{item.roleKey}}" positioning="{{item.positioning}}" target-summary="{{item.targetSummary}}" />
       <view class="px-4 py-4">
         <view class="flex min-h-[72rpx] items-center justify-between gap-3 border-b border-line pb-3">
           <view class="min-w-0 flex-1"><view class="text-[length:20rpx] text-muted">成员</view><view class="mt-1 truncate text-[length:25rpx] font-semibold">{{item.author.nickname}}</view></view>
-          <view class="max-w-[240rpx] truncate text-[length:21rpx] text-muted">{{mine ? item.status : (item.author.cityName || '城市未公开')}}</view>
+          <view class="max-w-[240rpx] truncate text-[length:21rpx] text-muted">{{item.status}}</view>
         </view>
         <view wx:if="{{item.author.headline || item.author.primaryIndustry}}" class="flex min-h-[72rpx] items-start gap-3 pt-3"><view class="w-[128rpx] shrink-0 text-[length:21rpx] text-muted">专业方向</view><view class="min-w-0 flex-1 text-[length:22rpx] leading-6">{{item.author.headline || item.author.primaryIndustry.label}}</view></view>
-        <view wx:if="{{mine}}" class="mt-2 flex min-h-[64rpx] items-center justify-end border-t border-line pt-2"><view class="flex min-h-[64rpx] items-center px-3 text-[length:21rpx] text-danger" data-id="{{item.id}}" catch:tap="deleteCard">{{archivingId === item.id ? '正在删除' : '删除'}}</view></view>
+        <view class="mt-2 flex min-h-[64rpx] items-center justify-end border-t border-line pt-2"><view class="flex min-h-[64rpx] items-center px-3 text-[length:21rpx] text-danger" data-id="{{item.id}}" catch:tap="deleteCard">{{archivingId === item.id ? '正在删除' : '删除'}}</view></view>
+      </view>
+    </view>
+  </view>
+  <view wx:else class="mt-5 flex flex-col gap-3">
+    <view wx:for="{{talents}}" wx:key="talentKey" class="min-h-[260rpx] overflow-hidden rounded-[16rpx] bg-panel active:bg-panel-raised" aria-role="button" data-profile-ref="{{item.profileRef}}" bind:tap="openTalent">
+      <view class="flex min-h-[172rpx] items-center px-3 py-2">
+        <image wx:if="{{item.author.avatarUrl}}" class="h-[112rpx] w-[112rpx] shrink-0 rounded-full bg-panel-raised" src="{{item.author.avatarUrl}}" mode="aspectFill" />
+        <view wx:else class="flex h-[112rpx] w-[112rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft text-[length:24rpx] font-semibold text-brand">MIP</view>
+        <view class="ml-3 min-w-0 flex-1">
+          <view class="truncate text-[length:32rpx] font-medium">{{item.author.nickname}}</view>
+          <view class="mt-1 truncate text-[length:24rpx] text-muted">{{item.author.cityName || '城市未公开'}}{{item.author.primaryIndustry ? '｜' + item.author.primaryIndustry.label : ''}}{{item.author.headline ? '｜' + item.author.headline : ''}}</view>
+          <view class="mt-1 truncate text-[length:20rpx] text-muted">{{item.primaryPositioning}}</view>
+        </view>
+      </view>
+      <view class="flex min-h-[88rpx] items-center justify-between gap-2 border-t border-line px-3 py-1">
+        <view class="flex min-w-0 flex-1 flex-wrap gap-1">
+          <view wx:for="{{item.cards}}" wx:for-item="role" wx:key="id" class="rounded-[8rpx] bg-brand px-2 py-1 text-[length:20rpx] font-medium text-on-brand">{{role.roleName}}</view>
+        </view>
+        <view class="max-w-[300rpx] shrink-0 truncate text-right text-[length:20rpx] text-brand">{{item.primaryTargetSummary}}</view>
       </view>
     </view>
   </view>

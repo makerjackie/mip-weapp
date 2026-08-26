@@ -43,10 +43,12 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(discovery).toContain('state === \'loading\'')
     expect(discovery).toContain('state === \'error\'')
     expect(discovery).toContain('没有找到相关机会')
-    expect(discovery).toContain('没有找到合作卡')
+    expect(discovery).toContain('没有找到人才')
     expect(discovery).toContain('loadingMore')
     expect(discovery).toContain('wx:for="{{opportunities}}"')
-    expect(discovery).toContain('wx:for="{{cooperationCards}}"')
+    expect(discovery).toContain('wx:for="{{cooperationTalents}}"')
+    expect(discovery).toContain('wx:for="{{item.cards}}"')
+    expect(discovery).toContain('data-profile-ref="{{item.profileRef}}"')
   })
 
   it('keeps one Figma-aligned primary referral action and a separate interest state', () => {

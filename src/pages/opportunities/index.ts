@@ -1,6 +1,6 @@
 import type { CatalogSelectorGroup } from '../../components/catalog-selector/model'
 import type { BranchId, CooperationRoleKey, OpportunityId } from '../../modules/mip'
-import type { CooperationCardSummary } from '../../modules/mip-cooperation'
+import type { CooperationTalentSummary } from '../../modules/mip-cooperation'
 import type { ProtectedActionKey } from '../../modules/mip-identity'
 import type {
   OpportunityCatalog,
@@ -9,6 +9,7 @@ import type {
 } from '../../modules/mip-opportunities'
 import { cooperationRoles } from '../../config/mip-catalogs'
 import { cooperationModule } from '../../modules/mip-cooperation'
+import { mergeCooperationTalents } from '../../modules/mip-cooperation/validation'
 import { mipAccessPageUrl } from '../../modules/mip-identity'
 import { mipIdentityModule } from '../../modules/mip-identity/client'
 import { groupedCityBranches, opportunityModule } from '../../modules/mip-opportunities'
@@ -16,7 +17,11 @@ import { caseNavigateTo, syncCaseNavigation } from '../../modules/platform/case-
 import { getCustomNavigationStatusBarHeight } from '../../platform/navigation/status-bar'
 
 type PageMode = 'opportunities' | 'cooperation'
-interface CooperationCardView extends CooperationCardSummary { roleName: string }
+interface CooperationTalentView extends Omit<CooperationTalentSummary, 'cards'> {
+  cards: Array<CooperationTalentSummary['cards'][number] & { roleName: string }>
+  primaryPositioning: string
+  primaryTargetSummary: string
+}
 interface TagView { id: string, label: string, selected: boolean, popular?: boolean }
 interface IndustryGroupView { id: string, label: string, options: TagView[] }
 interface CityOption { id: string, label: string, popular?: boolean }
@@ -71,7 +76,7 @@ Page({
     abilityOptions: [] as TagView[],
     hasAppliedFilters: false,
     opportunities: [] as OpportunitySummary[],
-    cooperationCards: [] as CooperationCardView[],
+    cooperationTalents: [] as CooperationTalentView[],
     nextCursor: '',
     loadingMore: false,
     message: '',
@@ -161,7 +166,7 @@ Page({
         })
       }
       else {
-        const page = await cooperationModule.list(
+        const page = await cooperationModule.listTalents(
           {
             keyword: this.data.keyword,
             branchId: this.data.selectedCooperationBranchId || undefined,
@@ -174,13 +179,23 @@ Page({
         if (sequence !== this.requestSequence || this.data.mode !== 'cooperation') {
           return
         }
-        const cards = page.items.map(item => ({
-          ...item,
-          roleName: cooperationRoles.find(role => role.key === item.roleKey)?.name || item.roleKey,
-        }))
+        const talents = page.items.map((item): CooperationTalentView => {
+          const cards = item.cards.map(card => ({
+            ...card,
+            roleName: cooperationRoles.find(role => role.key === card.roleKey)?.name || card.roleKey,
+          }))
+          return {
+            ...item,
+            cards,
+            primaryPositioning: cards[0]?.positioning || '',
+            primaryTargetSummary: cards[0]?.targetSummary || '',
+          }
+        })
         this.setData({
           state: 'ready',
-          cooperationCards: reset ? cards : [...this.data.cooperationCards, ...cards],
+          cooperationTalents: reset
+            ? talents
+            : mergeCooperationTalents(this.data.cooperationTalents, talents),
           nextCursor: page.nextCursor || '',
         })
       }
@@ -191,7 +206,7 @@ Page({
       }
       const hasContent = this.data.mode === 'opportunities'
         ? this.data.opportunities.length > 0
-        : this.data.cooperationCards.length > 0
+        : this.data.cooperationTalents.length > 0
       this.setData(hasContent
         ? { message: '内容更新失败，已保留当前结果。' }
         : {
@@ -494,10 +509,10 @@ Page({
     }
   },
 
-  openCooperationCard(event: WechatMiniprogram.TouchEvent) {
-    const id = String(event.currentTarget.dataset.id || '')
-    if (id) {
-      caseNavigateTo({ url: `/packages/member/mip-cooperation/detail/index?id=${encodeURIComponent(id)}` })
+  openTalent(event: WechatMiniprogram.TouchEvent) {
+    const profileRef = String(event.currentTarget.dataset.profileRef || '')
+    if (profileRef) {
+      caseNavigateTo({ url: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(profileRef)}` })
     }
   },
 

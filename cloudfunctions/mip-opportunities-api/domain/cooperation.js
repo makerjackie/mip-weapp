@@ -3,6 +3,11 @@
 const { randomUUID } = require('node:crypto')
 const { lockActiveContributor } = require('../lib/auth')
 const { createProfileRef } = require('../lib/profile-ref')
+const {
+  createTalentCursor,
+  createTalentKey,
+  readTalentCursor,
+} = require('../lib/talent-cursor')
 const { confirmAiDraft, normalizeAiConfirmation } = require('./ai-confirmation')
 const { assertSelectableTags } = require('./opportunities')
 const {
@@ -55,6 +60,31 @@ function normalizeFilter(value = {}) {
   }
 }
 
+function normalizeTalentFilter(value = {}) {
+  const filter = normalizeFilter({ ...value, cursor: undefined })
+  const cursor = stringValue(value.cursor, 768, 'VALIDATION_FAILED', false)
+  return {
+    ...filter,
+    industryTagIds: [...filter.industryTagIds].sort(),
+    cursor: cursor || null,
+  }
+}
+
+function talentFilterContext(appId, viewerId, filter) {
+  return {
+    appId,
+    viewerId: viewerId || '',
+    keyword: filter.keyword || '',
+    branchId: filter.branchId || '',
+    roleKey: filter.roleKey || '',
+    industryTagIds: filter.industryTagIds,
+  }
+}
+
+function mysqlTimestamp(value) {
+  return String(value).replace('T', ' ').replace(/Z$/, '')
+}
+
 function normalizeRoleFields(roleKey, value) {
   const source = jsonObject(value)
   const result = {}
@@ -103,13 +133,15 @@ function normalizeDraft(value = {}) {
   }
 }
 
-const cardSelect = `
-  SELECT c.id, c.owner_user_id, c.role_key, c.positioning, c.target_summary,
-         c.role_fields_json, c.ability_scores_json, c.status, c.version,
-         c.published_at, c.updated_at, p.nickname, p.headline, p.visibility_json,
-         avatar.cloud_file_id AS avatar_file_id, branch.city_name,
-         industry.id AS industry_tag_id, industry.tag_key AS industry_key,
-         industry.label AS industry_label
+const cardFields = `
+  c.id, c.owner_user_id, c.role_key, c.positioning, c.target_summary,
+  c.role_fields_json, c.ability_scores_json, c.status, c.version,
+  c.published_at, c.updated_at, p.nickname, p.headline, p.visibility_json,
+  avatar.cloud_file_id AS avatar_file_id, branch.city_name,
+  industry.id AS industry_tag_id, industry.tag_key AS industry_key,
+  industry.label AS industry_label`
+
+const cardFrom = `
   FROM mip_cooperation_cards c
   INNER JOIN mip_profiles p ON p.app_id = c.app_id AND p.user_id = c.owner_user_id
   INNER JOIN mip_users u ON u.app_id = c.app_id AND u.id = c.owner_user_id
@@ -139,8 +171,25 @@ const cardSelect = `
       AND industry.kind = 'INDUSTRY'
       AND industry.enabled = 1`
 
-function summary(row, caller) {
+const cardSelect = `SELECT ${cardFields} ${cardFrom}`
+
+function author(row, caller, { includeProfileRef = true } = {}) {
   const profileVisibility = jsonObject(row.visibility_json)
+  return {
+    ...(includeProfileRef
+      ? { profileRef: createProfileRef({ appId: caller.appId, userId: row.owner_user_id }, caller.profileRefSecret) }
+      : {}),
+    nickname: profileVisibility.nickname === false ? 'MIP 用户' : (row.nickname || 'MIP 用户'),
+    avatarUrl: profileVisibility.avatar === false ? undefined : (row.avatar_file_id || undefined),
+    headline: profileVisibility.headline === false ? undefined : (row.headline || undefined),
+    cityName: profileVisibility.primaryBranch === false ? undefined : (row.city_name || undefined),
+    primaryIndustry: profileVisibility.industry === false || !row.industry_tag_id
+      ? undefined
+      : { id: row.industry_tag_id, key: row.industry_key, label: row.industry_label },
+  }
+}
+
+function summary(row, caller) {
   const mine = Boolean(caller.userId && caller.userId === row.owner_user_id)
   return {
     id: row.id,
@@ -150,19 +199,46 @@ function summary(row, caller) {
     abilityScores: jsonObject(row.ability_scores_json),
     status: row.status,
     publishedAt: iso(row.published_at),
-    author: {
-      profileRef: createProfileRef({ appId: caller.appId, userId: row.owner_user_id }, caller.profileRefSecret),
-      nickname: profileVisibility.nickname === false ? 'MIP 用户' : (row.nickname || 'MIP 用户'),
-      avatarUrl: profileVisibility.avatar === false ? undefined : (row.avatar_file_id || undefined),
-      headline: profileVisibility.headline === false ? undefined : (row.headline || undefined),
-      cityName: profileVisibility.primaryBranch === false ? undefined : (row.city_name || undefined),
-      primaryIndustry: profileVisibility.industry === false || !row.industry_tag_id
-        ? undefined
-        : { id: row.industry_tag_id, key: row.industry_key, label: row.industry_label },
-    },
+    author: author(row, caller),
     mine,
     ...(mine ? { version: Number(row.version) } : {}),
   }
+}
+
+function talentSummaries(rows, caller) {
+  const talents = new Map()
+  for (const row of rows) {
+    let talent = talents.get(row.owner_user_id)
+    if (!talent) {
+      talent = {
+        ownerUserId: row.owner_user_id,
+        joinedAt: iso(row.user_created_at),
+        item: {
+          talentKey: createTalentKey(
+            { appId: caller.appId, userId: row.owner_user_id },
+            caller.profileRefSecret,
+          ),
+          profileRef: createProfileRef(
+            { appId: caller.appId, userId: row.owner_user_id },
+            caller.profileRefSecret,
+          ),
+          author: author(row, caller, { includeProfileRef: false }),
+          joinedAt: iso(row.user_created_at),
+          cards: [],
+        },
+      }
+      talents.set(row.owner_user_id, talent)
+    }
+    talent.item.cards.push({
+      id: row.id,
+      roleKey: row.role_key,
+      positioning: row.positioning,
+      targetSummary: row.target_summary,
+      abilityScores: jsonObject(row.ability_scores_json),
+      publishedAt: iso(row.published_at),
+    })
+  }
+  return [...talents.values()]
 }
 
 async function listCooperationCards(database, caller, rawFilter = {}) {
@@ -245,6 +321,142 @@ async function listCooperationCards(database, caller, rawFilter = {}) {
     items: pageRows.map(row => summary(row, caller)),
     nextCursor: rows.length > filter.limit && pageRows.length
       ? encodeCursor(pageRows.at(-1).published_at, pageRows.at(-1).id)
+      : undefined,
+  }
+}
+
+async function listCooperationTalents(database, caller, rawFilter = {}) {
+  const filter = normalizeTalentFilter(rawFilter)
+  await assertSelectableTags(
+    database,
+    caller.appId,
+    filter.industryTagIds.map(id => [id, 'INDUSTRY']),
+  )
+  if (filter.branchId) {
+    const branch = await database.one(
+      `SELECT id FROM mip_city_branches
+       WHERE app_id = ? AND id = ? AND status = 'ACTIVE'`,
+      [caller.appId, filter.branchId],
+    )
+    if (!branch) throw new Error('VALIDATION_FAILED')
+  }
+  const context = talentFilterContext(caller.appId, caller.userId, filter)
+  const cursor = filter.cursor
+    ? readTalentCursor(filter.cursor, context, caller.profileRefSecret)
+    : null
+  const where = [
+    'c.app_id = ?',
+    "c.status = 'PUBLISHED'",
+    "u.status = 'ACTIVE'",
+    'u.created_at <= snapshot.snapshot_at',
+    'c.published_at <= snapshot.snapshot_at',
+  ]
+  const params = [caller.appId]
+  const blockFilter = mutualBlockFilter(caller.userId, 'c.owner_user_id', 'c.app_id')
+  if (blockFilter.sql) {
+    where.push(blockFilter.sql)
+    params.push(...blockFilter.params)
+  }
+  const visibleWhere = [
+    'c.app_id = ?',
+    "c.status = 'PUBLISHED'",
+    "u.status = 'ACTIVE'",
+    'u.created_at <= talent_page.snapshot_at',
+    'c.published_at <= talent_page.snapshot_at',
+  ]
+  const visibleParams = [caller.appId]
+  if (blockFilter.sql) {
+    visibleWhere.push(blockFilter.sql)
+    visibleParams.push(...blockFilter.params)
+  }
+  if (filter.keyword) {
+    const pattern = likePattern(filter.keyword)
+    where.push(`(
+      c.positioning LIKE ? ESCAPE '=' OR c.target_summary LIKE ? ESCAPE '='
+      OR CAST(c.role_fields_json AS CHAR) LIKE ? ESCAPE '='
+      OR (
+        COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.nickname')), 'true') <> 'false'
+        AND p.nickname LIKE ? ESCAPE '='
+      )
+      OR (
+        COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.headline')), 'true') <> 'false'
+        AND p.headline LIKE ? ESCAPE '='
+      )
+    )`)
+    params.push(pattern, pattern, pattern, pattern, pattern)
+  }
+  if (filter.branchId) {
+    where.push(`u.primary_branch_id = ?
+      AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.primaryBranch')), 'true') <> 'false'`)
+    params.push(filter.branchId)
+  }
+  if (filter.roleKey) {
+    where.push('c.role_key = ?')
+    params.push(filter.roleKey)
+  }
+  if (filter.industryTagIds.length) {
+    where.push(`COALESCE(JSON_UNQUOTE(JSON_EXTRACT(p.visibility_json, '$.industry')), 'true') <> 'false'
+      AND EXISTS (
+        SELECT 1
+        FROM mip_profile_tags industry_filter
+        INNER JOIN mip_tags industry_tag
+          ON industry_tag.app_id = industry_filter.app_id
+            AND industry_tag.id = industry_filter.tag_id
+            AND industry_tag.kind = 'INDUSTRY'
+            AND industry_tag.enabled = 1
+        WHERE industry_filter.app_id = c.app_id
+          AND industry_filter.user_id = c.owner_user_id
+          AND industry_filter.relation = 'PRIMARY_INDUSTRY'
+          AND industry_filter.tag_id IN (${filter.industryTagIds.map(() => '?').join(', ')})
+      )`)
+    params.push(...filter.industryTagIds)
+  }
+  const rows = await database.query(
+    `WITH snapshot AS (
+       SELECT ${cursor ? 'CAST(? AS DATETIME(3))' : 'UTC_TIMESTAMP(3)'} AS snapshot_at
+     ), matching_cards AS (
+       SELECT c.owner_user_id, u.created_at AS user_created_at, snapshot.snapshot_at
+       ${cardFrom}
+       CROSS JOIN snapshot
+       WHERE ${where.join(' AND ')}
+     ), talent_page AS (
+       SELECT owner_user_id, user_created_at, snapshot_at
+       FROM matching_cards
+       GROUP BY owner_user_id, user_created_at, snapshot_at
+       ${cursor
+         ? `HAVING user_created_at < ?
+           OR (user_created_at = ? AND owner_user_id < ?)`
+         : ''}
+       ORDER BY user_created_at DESC, owner_user_id DESC
+       LIMIT ${filter.limit + 1}
+     )
+     SELECT ${cardFields}, talent_page.user_created_at, talent_page.snapshot_at
+     ${cardFrom}
+     INNER JOIN talent_page ON talent_page.owner_user_id = c.owner_user_id
+     WHERE ${visibleWhere.join(' AND ')}
+     ORDER BY talent_page.user_created_at DESC, talent_page.owner_user_id DESC,
+              c.published_at DESC, c.id DESC`,
+    cursor
+      ? [
+          mysqlTimestamp(cursor.snapshotAt),
+          ...params,
+          mysqlTimestamp(cursor.createdAt),
+          mysqlTimestamp(cursor.createdAt),
+          cursor.userId,
+          ...visibleParams,
+        ]
+      : [...params, ...visibleParams],
+  )
+  const talents = talentSummaries(rows, caller)
+  const pageTalents = talents.slice(0, filter.limit)
+  return {
+    items: pageTalents.map(talent => talent.item),
+    nextCursor: talents.length > filter.limit && pageTalents.length
+      ? createTalentCursor(context, {
+          snapshotAt: rows[0].snapshot_at,
+          createdAt: pageTalents.at(-1).joinedAt,
+          userId: pageTalents.at(-1).ownerUserId,
+        }, caller.profileRefSecret)
       : undefined,
   }
 }
@@ -497,9 +709,12 @@ module.exports = {
   archiveCooperationCard,
   getCooperationCard,
   listCooperationCards,
+  listCooperationTalents,
   listMyCooperationCards,
   normalizeDraft,
   normalizeFilter,
+  normalizeTalentFilter,
   saveCooperationCard,
+  talentSummaries,
   unpublishCooperationCard,
 }

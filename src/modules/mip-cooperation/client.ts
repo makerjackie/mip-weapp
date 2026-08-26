@@ -5,10 +5,15 @@ import type {
   CooperationCardFilter,
   CooperationCardPage,
   CooperationCatalog,
+  CooperationTalentPage,
 } from './types'
 import { callOpportunityApi } from '../mip-opportunities/transport'
 import { createMutationKey } from '../mip-opportunities/validation'
-import { normalizeCooperationCardDraft, normalizeCooperationCardFilter } from './validation'
+import {
+  normalizeCooperationCardDraft,
+  normalizeCooperationCardFilter,
+  parseCooperationTalentPage,
+} from './validation'
 
 export const cooperationModule = {
   getCatalogs() {
@@ -19,6 +24,13 @@ export const cooperationModule = {
     return callOpportunityApi<CooperationCardPage>('listCooperationCards', {
       filter: normalizeCooperationCardFilter(filter),
     })
+  },
+
+  async listTalents(filter: CooperationCardFilter = {}) {
+    const page = await callOpportunityApi<CooperationTalentPage>('listCooperationTalents', {
+      filter: normalizeCooperationCardFilter(filter),
+    })
+    return parseCooperationTalentPage(page)
   },
 
   listMine(cursor?: string) {

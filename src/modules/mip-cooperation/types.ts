@@ -59,6 +59,28 @@ export interface CooperationCardPage {
   nextCursor?: string
 }
 
+export interface CooperationTalentCard {
+  id: CooperationCardId
+  roleKey: CooperationRoleKey
+  positioning: string
+  targetSummary: string
+  abilityScores: Record<string, number>
+  publishedAt: string
+}
+
+export interface CooperationTalentSummary {
+  talentKey: string
+  profileRef: string
+  author: Omit<CooperationAuthor, 'profileRef'>
+  joinedAt: string
+  cards: CooperationTalentCard[]
+}
+
+export interface CooperationTalentPage {
+  items: CooperationTalentSummary[]
+  nextCursor?: string
+}
+
 export interface CooperationCardFilter {
   keyword?: string
   branchId?: BranchId

@@ -21,6 +21,7 @@ const readActions = new Set([
   'getOpportunityCommentSettings',
   'listOpportunityComments',
   'listCooperationCards',
+  'listCooperationTalents',
   'getCooperationCard',
   'listMyCooperationCards',
   'listSuperCases',

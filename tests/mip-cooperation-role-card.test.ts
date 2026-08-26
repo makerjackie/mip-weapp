@@ -152,7 +152,7 @@ describe('MIP cooperation role visual component', () => {
       {
         config: 'src/packages/member/mip-cooperation/list/index.json',
         template: 'src/packages/member/mip-cooperation/list/index.wxml',
-        click: 'data-id="{{item.id}}" bind:tap="open"',
+        click: 'data-id="{{item.id}}" bind:tap="openCard"',
       },
       {
         config: 'src/pages/profile/index.json',
@@ -180,7 +180,7 @@ describe('MIP cooperation role visual component', () => {
     const list = source('src/packages/member/mip-cooperation/list/index.wxml')
     const profile = source('src/pages/profile/index.wxml')
     expect(list).not.toContain('item.roleKey ===')
-    expect(list).not.toContain('item.author.avatarUrl')
+    expect(list).toContain('item.author.avatarUrl')
     expect(profile).not.toContain('/assets/figma/profile/role-strategist.png')
   })
 })

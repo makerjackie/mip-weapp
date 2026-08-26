@@ -2,12 +2,19 @@ import type { BranchId, CooperationRoleKey } from '../../../../modules/mip'
 import type {
   CooperationCardSummary,
   CooperationCatalog,
+  CooperationTalentSummary,
 } from '../../../../modules/mip-cooperation'
 import { cooperationRoles } from '../../../../config/mip-catalogs'
 import { cooperationModule } from '../../../../modules/mip-cooperation'
+import { mergeCooperationTalents } from '../../../../modules/mip-cooperation/validation'
 import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
 
 interface CardView extends CooperationCardSummary { roleName: string }
+interface TalentView extends Omit<CooperationTalentSummary, 'cards'> {
+  cards: Array<CooperationTalentSummary['cards'][number] & { roleName: string }>
+  primaryPositioning: string
+  primaryTargetSummary: string
+}
 interface TagView { id: string, label: string, selected: boolean }
 interface IndustryGroupView { id: string, label: string, options: TagView[] }
 
@@ -21,7 +28,8 @@ Page({
   data: {
     mine: false,
     state: 'loading' as 'loading' | 'ready' | 'error',
-    items: [] as CardView[],
+    cards: [] as CardView[],
+    talents: [] as TalentView[],
     filterOpen: false,
     filterMessage: '',
     keywordInput: '',
@@ -113,35 +121,59 @@ Page({
       this.setData({ loadingMore: true, message: '' })
     }
     try {
-      const page = this.data.mine
-        ? await cooperationModule.listMine(reset ? undefined : this.data.nextCursor || undefined)
-        : await cooperationModule.list({
-            keyword: this.data.appliedKeyword,
-            branchId: this.data.selectedBranchId || undefined,
-            roleKey: this.data.selectedRoleKey || undefined,
-            industryTagIds: this.data.selectedIndustryTagIds,
-            cursor: reset ? undefined : this.data.nextCursor || undefined,
-            limit: 16,
-          })
-      if (sequence !== this.requestSequence) {
-        return
+      if (this.data.mine) {
+        const page = await cooperationModule.listMine(reset ? undefined : this.data.nextCursor || undefined)
+        if (sequence !== this.requestSequence) {
+          return
+        }
+        const cards = page.items.map(item => ({
+          ...item,
+          roleName: cooperationRoles.find(role => role.key === item.roleKey)?.name || item.roleKey,
+        }))
+        this.setData({
+          state: 'ready',
+          cards: reset ? cards : [...this.data.cards, ...cards],
+          nextCursor: page.nextCursor || '',
+        })
       }
-      const items = page.items.map(item => ({
-        ...item,
-        roleName: cooperationRoles.find(role => role.key === item.roleKey)?.name || item.roleKey,
-      }))
-      this.setData({
-        state: 'ready',
-        items: reset ? items : [...this.data.items, ...items],
-        nextCursor: page.nextCursor || '',
-      })
+      else {
+        const page = await cooperationModule.listTalents({
+          keyword: this.data.appliedKeyword,
+          branchId: this.data.selectedBranchId || undefined,
+          roleKey: this.data.selectedRoleKey || undefined,
+          industryTagIds: this.data.selectedIndustryTagIds,
+          cursor: reset ? undefined : this.data.nextCursor || undefined,
+          limit: 16,
+        })
+        if (sequence !== this.requestSequence) {
+          return
+        }
+        const talents = page.items.map((item): TalentView => {
+          const cards = item.cards.map(card => ({
+            ...card,
+            roleName: cooperationRoles.find(role => role.key === card.roleKey)?.name || card.roleKey,
+          }))
+          return {
+            ...item,
+            cards,
+            primaryPositioning: cards[0]?.positioning || '',
+            primaryTargetSummary: cards[0]?.targetSummary || '',
+          }
+        })
+        this.setData({
+          state: 'ready',
+          talents: reset ? talents : mergeCooperationTalents(this.data.talents, talents),
+          nextCursor: page.nextCursor || '',
+        })
+      }
     }
     catch (error) {
       if (sequence !== this.requestSequence) {
         return
       }
       const message = error instanceof Error ? error.message : '合作卡加载失败'
-      this.setData(this.data.items.length
+      const hasItems = this.data.mine ? this.data.cards.length > 0 : this.data.talents.length > 0
+      this.setData(hasItems
         ? { state: 'ready', message: `合作卡更新失败，已保留当前结果。${message}` }
         : { state: 'error', message })
     }
@@ -301,7 +333,7 @@ Page({
 
   async deleteCard(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || '')
-    const item = this.data.items.find(card => card.id === id)
+    const item = this.data.cards.find(card => card.id === id)
     const expectedVersion = Number(item?.version)
     if (!item?.mine || !Number.isInteger(expectedVersion) || this.data.archivingId) {
       return
@@ -331,10 +363,17 @@ Page({
     }
   },
 
-  open(event: WechatMiniprogram.TouchEvent) {
+  openCard(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || '')
     if (id) {
       caseNavigateTo({ url: `/packages/member/mip-cooperation/detail/index?id=${encodeURIComponent(id)}` })
+    }
+  },
+
+  openTalent(event: WechatMiniprogram.TouchEvent) {
+    const profileRef = String(event.currentTarget.dataset.profileRef || '')
+    if (profileRef) {
+      caseNavigateTo({ url: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(profileRef)}` })
     }
   },
 })
