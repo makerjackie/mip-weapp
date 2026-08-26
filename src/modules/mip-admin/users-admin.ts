@@ -18,6 +18,7 @@ export interface MipUsersAdmin {
     force?: boolean,
   ) => ReturnType<MipAdminGateway['getUser']>
   update: MipAdminGateway['updateUser']
+  changePrimaryBranch: MipAdminGateway['changeUserPrimaryBranch']
   setControl: MipAdminGateway['setUserControl']
 }
 
@@ -53,6 +54,7 @@ export function createMipUsersAdmin(
           { force },
         ),
     update: input => mutate(() => gateway.updateUser(input)),
+    changePrimaryBranch: input => mutate(() => gateway.changeUserPrimaryBranch(input)),
     setControl: input => mutate(() => gateway.setUserControl(input)),
   }
 }

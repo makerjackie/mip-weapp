@@ -187,7 +187,27 @@ export interface AdminUser {
   updatedAt: string | null
 }
 
+export interface AdminUserPrimaryBranchChangeInput {
+  userId: string
+  targetBranchId: string
+  expectedVersion: number
+  reason: string
+}
+
+export interface AdminUserPrimaryBranchChangeResult {
+  userId: string
+  primaryBranchId: string
+  version: number
+}
+
+export interface AdminUserPrimaryBranchOption {
+  id: string
+  name: string
+  cityName: string
+}
+
 export interface AdminUserDetail extends AdminUser {
+  primaryBranchOptions: AdminUserPrimaryBranchOption[]
   companies: Array<{ name: string, role?: string }>
   organizations: Array<{ name: string, role?: string }>
   membership: null | {
@@ -909,6 +929,7 @@ export interface MipAdminGateway {
   listUsers: (input?: Record<string, unknown>) => Promise<AdminPage<AdminUser>>
   getUser: (userId: string, includePhone?: boolean) => Promise<AdminUserDetail>
   updateUser: (input: Record<string, unknown>) => Promise<{ userId: string, version: number }>
+  changeUserPrimaryBranch: (input: AdminUserPrimaryBranchChangeInput) => Promise<AdminUserPrimaryBranchChangeResult>
   setUserControl: (input: Record<string, unknown>) => Promise<{ userId: string, controlType: string, active: boolean }>
   createExport: (input: Record<string, unknown>) => Promise<AdminExportTicket>
   prepareExport: (ticketId: string, token: string) => Promise<AdminExportStatus>

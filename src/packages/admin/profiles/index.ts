@@ -1,6 +1,12 @@
-import type { AdminBranch, AdminGrowthLevel, AdminUser, AdminUserDetail } from '../../../modules/mip-admin'
+import type {
+  AdminBranch,
+  AdminGrowthLevel,
+  AdminUser,
+  AdminUserDetail,
+  AdminUserPrimaryBranchOption,
+} from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
-import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
+import { hasCapability, MipAdminError, mipAdminModule } from '../../../modules/mip-admin'
 import { formatLocalDateTime } from '../../../utils/date'
 import { adminLoadFailure } from '../shared/page-state'
 import {
@@ -29,6 +35,11 @@ type AdminUserDetailView = Omit<AdminUserDetail, 'phoneNumber' | 'relatedRecords
   relatedRecords: AdminUserDetail['relatedRecords'] & {
     orders: Array<AdminUserDetail['relatedRecords']['orders'][number] & { amountText: string }>
   }
+}
+
+interface PrimaryBranchOption {
+  id: string
+  label: string
 }
 
 const userStatusLabels: Record<AdminUser['status'], string> = {
@@ -85,6 +96,14 @@ function userDetailView(detail: AdminUserDetail): AdminUserDetailView {
   }
 }
 
+function primaryBranchEditorOptions(options: AdminUserPrimaryBranchOption[]): PrimaryBranchOption[] {
+  return options.map(branch => ({ id: branch.id, label: `${branch.name} · ${branch.cityName}` }))
+}
+
+function selectedPrimaryBranchIndex(options: PrimaryBranchOption[], branchId: string | null) {
+  return branchId ? options.findIndex(option => option.id === branchId) : -1
+}
+
 function dateBoundary(value: string, endOfDay: boolean) {
   const parts = value.split('-').map(Number)
   if (parts.length !== 3 || parts.some(part => !Number.isInteger(part))) {
@@ -129,6 +148,13 @@ Page({
     canControl: false,
     canExport: false,
     canFilterBranches: false,
+    canChangePrimaryBranch: false,
+    primaryBranchOptions: [] as PrimaryBranchOption[],
+    primaryBranchLabels: [] as string[],
+    primaryBranchIndex: -1,
+    primaryBranchReason: '',
+    primaryBranchSaving: false,
+    primaryBranchMessage: '',
     processingId: '',
     exportPending: false,
     message: '',
@@ -226,6 +252,10 @@ Page({
         return
       }
       const canPhone = hasCapability(session.capabilities, 'users.phone.read')
+      const canFilterBranches = hasCapability(session.capabilities, 'branches.manage')
+      const canChangePrimaryBranch = session.capabilities.some(grant => (
+        grant.capability === 'users.fields.edit' && grant.scopeType === 'PLATFORM'
+      ))
       if (canPhone && includePhone) {
         replacePrivatePhones(this, response.items)
       }
@@ -236,12 +266,13 @@ Page({
         canEdit: hasCapability(session.capabilities, 'users.fields.edit'),
         canControl: hasCapability(session.capabilities, 'users.access.manage'),
         canExport: hasCapability(session.capabilities, 'exports.create'),
-        canFilterBranches: hasCapability(session.capabilities, 'branches.manage'),
+        canFilterBranches,
+        canChangePrimaryBranch,
         nextCursor: response.nextCursor || null,
         loadingMore: false,
         message: '',
       })
-      if (hasCapability(session.capabilities, 'branches.manage') && !this.data.branches.length) {
+      if (canFilterBranches && !this.data.branches.length) {
         void this.loadBranches()
       }
       if (hasCapability(session.capabilities, 'growth.read') && !this.data.levels.length) {
@@ -357,10 +388,22 @@ Page({
     if (!userId) {
       return
     }
+    this.setData({ detailOpen: true })
+    await this.loadUserDetail(userId, true)
+  },
+  async loadUserDetail(userId: string, resetPrimaryBranchEditor: boolean) {
     const seq = this.detailRequestSeq + 1
     this.detailRequestSeq = seq
     const includePhone = this.data.includePhone
-    this.setData({ detailOpen: true, detailState: 'loading', detail: null, detailMessage: '' })
+    if (resetPrimaryBranchEditor) {
+      this.setData({
+        detailState: 'loading',
+        detail: null,
+        detailMessage: '',
+        primaryBranchReason: '',
+        primaryBranchMessage: '',
+      })
+    }
     try {
       const detail = await mipAdminModule.users.get(userId, includePhone, true)
       if (!this.data.detailOpen || seq !== this.detailRequestSeq) {
@@ -369,7 +412,17 @@ Page({
       if (this.data.canPhone && includePhone) {
         appendPrivatePhones(this, [detail])
       }
-      this.setData({ detailState: 'ready', detail: userDetailView(detail) })
+      const primaryBranchOptions = primaryBranchEditorOptions(detail.primaryBranchOptions || [])
+      this.setData({
+        detailState: 'ready',
+        detail: userDetailView(detail),
+        primaryBranchOptions,
+        primaryBranchLabels: primaryBranchOptions.map(option => option.label),
+        primaryBranchIndex: selectedPrimaryBranchIndex(primaryBranchOptions, detail.primaryBranchId),
+        primaryBranchMessage: this.data.canChangePrimaryBranch && !primaryBranchOptions.length
+          ? '当前没有可选择的有效分会。'
+          : '',
+      })
     }
     catch (error) {
       if (!this.data.detailOpen || seq !== this.detailRequestSeq) {
@@ -383,8 +436,80 @@ Page({
   },
   closeDetail() {
     this.detailRequestSeq += 1
-    this.setData({ detailOpen: false, detail: null, detailMessage: '' })
+    this.setData({
+      detailOpen: false,
+      detail: null,
+      detailMessage: '',
+      primaryBranchReason: '',
+      primaryBranchMessage: '',
+      primaryBranchSaving: false,
+    })
     mipAdminModule.clearSensitive()
+  },
+  changePrimaryBranchSelection(event: WechatMiniprogram.CustomEvent<{ value: string | number }>) {
+    const primaryBranchIndex = Number(event.detail.value)
+    if (this.data.primaryBranchOptions[primaryBranchIndex]) {
+      this.setData({ primaryBranchIndex, primaryBranchMessage: '' })
+    }
+  },
+  updatePrimaryBranchReason(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.setData({ primaryBranchReason: event.detail.value })
+  },
+  async changePrimaryBranch() {
+    const detail = this.data.detail
+    const option = this.data.primaryBranchOptions[this.data.primaryBranchIndex]
+    const reason = this.data.primaryBranchReason.trim()
+    if (!this.data.canChangePrimaryBranch || !detail || this.data.primaryBranchSaving) {
+      return
+    }
+    if (!option) {
+      this.setData({ primaryBranchMessage: '请选择目标分会。' })
+      return
+    }
+    if (option.id === detail.primaryBranchId) {
+      this.setData({ primaryBranchMessage: '请选择其他分会。' })
+      return
+    }
+    if (!reason) {
+      this.setData({ primaryBranchMessage: '请填写变更原因。' })
+      return
+    }
+
+    const userId = detail.id
+    this.setData({ primaryBranchSaving: true, primaryBranchMessage: '' })
+    try {
+      await mipAdminModule.users.changePrimaryBranch({
+        userId,
+        targetBranchId: option.id,
+        expectedVersion: detail.userVersion,
+        reason,
+      })
+      await this.loadUsers(true)
+      if (this.data.detailOpen) {
+        await this.loadUserDetail(userId, true)
+      }
+      wx.showToast({ title: '主分会已更新', icon: 'success' })
+    }
+    catch (error) {
+      if (error instanceof MipAdminError && error.code === 'CONFLICT') {
+        await this.loadUsers(true)
+        if (this.data.detailOpen) {
+          await this.loadUserDetail(userId, true)
+          this.setData({
+            primaryBranchReason: reason,
+            primaryBranchMessage: '用户信息已更新，请确认当前分会后重试。',
+          })
+        }
+      }
+      else {
+        this.setData({
+          primaryBranchMessage: error instanceof Error ? error.message : '主分会更新失败',
+        })
+      }
+    }
+    finally {
+      this.setData({ primaryBranchSaving: false })
+    }
   },
   openRelatedOpportunity(event: WechatMiniprogram.TouchEvent) {
     void wx.navigateTo({ url: `/packages/admin/opportunity-detail/index?id=${String(event.currentTarget.dataset.id || '')}` })

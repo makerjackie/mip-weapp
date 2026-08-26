@@ -59,7 +59,9 @@ function repository(bindings = [{
     getUserRelatedRecords: async () => ({
       superCases: [], opportunities: [], registrations: [], orders: [],
     }),
+    listPrimaryBranchOptions: async () => [],
     recordAudit: async audit => audits.push(audit),
+    changeUserPrimaryBranch: async input => input,
     updateUserFields: async input => input,
     setUserControl: async input => input,
   }
@@ -84,6 +86,7 @@ describe('admin users module', () => {
     const users = usersFor(repo)
 
     assert.deepEqual(Object.keys(users).sort(), [
+      'changePrimaryBranch',
       'getUser',
       'listUsers',
       'normalizeExportFilters',
@@ -189,9 +192,30 @@ describe('admin users module', () => {
     assert.deepEqual(result.relatedRecords, {
       superCases: [], opportunities: [], registrations: [], orders: [],
     })
+    assert.deepEqual(result.primaryBranchOptions, [])
     assert.equal(repo.audits[0].scopeType, 'BRANCH')
     assert.equal(repo.audits[0].scopeId, 'branch-a')
     assert.equal(repo.audits[0].resourceType, 'USER')
+  })
+
+  it('returns active branch choices only to a platform users-edit binding', async () => {
+    const repo = repository([{
+      roleKey: 'PLATFORM_OPERATIONS',
+      scopeType: 'PLATFORM',
+      scopeId: null,
+      capabilities: [CAPABILITIES.USERS_READ, CAPABILITIES.USERS_EDIT],
+    }])
+    let appId
+    repo.listPrimaryBranchOptions = async (value) => {
+      appId = value
+      return [{ id: 'branch-b', name: '深圳分会', cityName: '深圳' }]
+    }
+
+    const result = await usersFor(repo).getUser(caller, { userId: 'target-user' })
+    assert.equal(appId, caller.appId)
+    assert.deepEqual(result.primaryBranchOptions, [
+      { id: 'branch-b', name: '深圳分会', cityName: '深圳' },
+    ])
   })
 
   it('passes scoped mutation evidence and preserves repository version conflicts', async () => {
@@ -232,6 +256,87 @@ describe('admin users module', () => {
     assert.equal(control.audit.action, 'admin.users.access.activate')
     assert.equal(control.audit.metadata.reasonLength, 6)
     assert.equal(control.authorization.capability, CAPABILITIES.USERS_CONTROL)
+  })
+
+  it('requires a platform users-edit binding for primary branch changes and builds a private-safe audit', async () => {
+    const branchRepo = repository([{
+      roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', scopeId: 'branch-a',
+    }])
+    let branchWrites = 0
+    branchRepo.changeUserPrimaryBranch = async () => {
+      branchWrites += 1
+    }
+    await assert.rejects(() => usersFor(branchRepo).changePrimaryBranch(caller, {
+      userId: 'target-user',
+      targetBranchId: 'branch-b',
+      expectedVersion: 2,
+      reason: '业务归属调整',
+    }), error => error?.code === 'FORBIDDEN')
+    assert.equal(branchWrites, 0)
+
+    const platformRepo = repository([{
+      roleKey: 'PLATFORM_OPERATIONS',
+      scopeType: 'PLATFORM',
+      scopeId: null,
+      capabilities: [CAPABILITIES.USERS_READ, CAPABILITIES.USERS_EDIT],
+    }])
+    let captured
+    platformRepo.changeUserPrimaryBranch = async input => {
+      captured = input
+      return { userId: input.userId, primaryBranchId: input.targetBranchId, version: 3 }
+    }
+    const result = await usersFor(platformRepo).changePrimaryBranch(caller, {
+      userId: ' target-user ',
+      targetBranchId: ' branch-b ',
+      expectedVersion: 2,
+      reason: '  业务归属调整  ',
+    })
+
+    assert.deepEqual(result, {
+      userId: 'target-user', primaryBranchId: 'branch-b', version: 3,
+    })
+    assert.equal(captured.reason, '业务归属调整')
+    assert.equal(captured.authorization.capability, CAPABILITIES.USERS_EDIT)
+    assert.deepEqual(captured.authorization.effectiveGrant, {
+      roleKey: 'PLATFORM_OPERATIONS',
+      scopeType: 'PLATFORM',
+      scopeId: null,
+    })
+    assert.deepEqual(captured.audit('branch-a'), {
+      appId: caller.appId,
+      actorUserId: 'admin-user',
+      scopeType: 'PLATFORM',
+      scopeId: null,
+      action: 'admin.users.primaryBranch.change',
+      resourceType: 'USER',
+      resourceId: 'target-user',
+      effectiveRole: 'PLATFORM_OPERATIONS',
+      metadata: { from: 'branch-a', to: 'branch-b', reason: '业务归属调整' },
+    })
+    assert.doesNotMatch(JSON.stringify(captured.audit('branch-a')), /phone|openid/i)
+  })
+
+  it('validates the primary branch mutation version and required reason before persistence', async () => {
+    const repo = repository([{
+      roleKey: 'PLATFORM_OWNER', scopeType: 'PLATFORM', scopeId: null,
+    }])
+    let writes = 0
+    repo.changeUserPrimaryBranch = async () => { writes += 1 }
+    const users = usersFor(repo)
+
+    for (const input of [
+      { userId: 'target-user', targetBranchId: 'branch-b', expectedVersion: 0, reason: '调整' },
+      { userId: 'target-user', targetBranchId: 'branch-b', expectedVersion: '2', reason: '调整' },
+      { userId: 'target-user', targetBranchId: 'branch-b', expectedVersion: 2, reason: '' },
+      { userId: 'target-user', targetBranchId: 'branch-b', expectedVersion: 2, reason: 'a'.repeat(301) },
+      { userId: 'target-user', targetBranchId: 'branch-b', expectedVersion: 2, reason: '调整', appId: 'other-app' },
+    ]) {
+      await assert.rejects(
+        () => users.changePrimaryBranch(caller, input),
+        error => error?.code === 'VALIDATION_FAILED',
+      )
+    }
+    assert.equal(writes, 0)
   })
 
   it('keeps list and export user filter validation identical', () => {

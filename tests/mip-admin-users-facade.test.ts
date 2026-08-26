@@ -42,6 +42,10 @@ const userDetail: AdminUserDetail = {
   tags: [],
   roles: [],
   relatedRecords: { superCases: [], opportunities: [], registrations: [], orders: [] },
+  primaryBranchOptions: [
+    { id: 'branch-a', name: '深圳分会', cityName: '深圳' },
+    { id: 'branch-b', name: '广州分会', cityName: '广州' },
+  ],
 }
 
 function createHarness() {
@@ -60,6 +64,11 @@ function createHarness() {
       phoneNumber: includePhone === true ? '18800000000' : null,
     })),
     updateUser: vi.fn<MipAdminGateway['updateUser']>(async () => ({ userId: userDetail.id, version: 2 })),
+    changeUserPrimaryBranch: vi.fn<MipAdminGateway['changeUserPrimaryBranch']>(async input => ({
+      userId: input.userId,
+      primaryBranchId: input.targetBranchId,
+      version: input.expectedVersion + 1,
+    })),
     setUserControl: vi.fn<MipAdminGateway['setUserControl']>(async input => ({
       userId: userDetail.id,
       controlType: String(input.controlType),
@@ -102,16 +111,27 @@ const controlInput = {
   active: true,
   reason: '运营审核通过',
 }
+const primaryBranchInput = {
+  userId: userDetail.id,
+  targetBranchId: 'branch-b',
+  expectedVersion: 1,
+  reason: '工作城市调整',
+}
 
 interface MutationCase {
   name: string
   execute: (users: MipUsersAdmin) => Promise<unknown>
-  spy: 'updateUser' | 'setUserControl'
+  spy: 'updateUser' | 'changeUserPrimaryBranch' | 'setUserControl'
 }
 
 function mutationCases(): MutationCase[] {
   return [
     { name: 'update', execute: users => users.update(updateInput), spy: 'updateUser' },
+    {
+      name: 'changePrimaryBranch',
+      execute: users => users.changePrimaryBranch(primaryBranchInput),
+      spy: 'changeUserPrimaryBranch',
+    },
     { name: 'setControl', execute: users => users.setControl(controlInput), spy: 'setUserControl' },
   ]
 }
@@ -188,9 +208,11 @@ describe('MIP admin users facade', () => {
     const { module, spies } = createHarness()
 
     await module.users.update(updateInput)
+    await module.users.changePrimaryBranch(primaryBranchInput)
     await module.users.setControl(controlInput)
 
     expect(spies.updateUser.mock.calls[0]?.[0]).toBe(updateInput)
+    expect(spies.changeUserPrimaryBranch.mock.calls[0]?.[0]).toBe(primaryBranchInput)
     expect(spies.setUserControl.mock.calls[0]?.[0]).toBe(controlInput)
   })
 
@@ -215,6 +237,7 @@ describe('MIP admin users facade', () => {
 
   it.each([
     ['updateUser', new MipAdminError('CONFLICT', '用户资料已被其他管理员更新')],
+    ['changeUserPrimaryBranch', new MipAdminError('CONFLICT', '用户归属已被其他管理员更新')],
     ['setUserControl', new MipAdminError('FORBIDDEN', '当前账号不能设置名单')],
   ] as const)('keeps cached reads and the original %s failure', async (name, failure) => {
     const { module, spies } = createHarness()
@@ -223,7 +246,9 @@ describe('MIP admin users facade', () => {
 
     const work = name === 'updateUser'
       ? module.users.update(updateInput)
-      : module.users.setControl(controlInput)
+      : name === 'changeUserPrimaryBranch'
+        ? module.users.changePrimaryBranch(primaryBranchInput)
+        : module.users.setControl(controlInput)
     await expect(work).rejects.toBe(failure)
     await warmNonSensitiveReads(module.users)
 
@@ -238,11 +263,13 @@ describe('MIP admin users facade', () => {
     expect(source).toContain('mipAdminModule.users.list(')
     expect(source).toContain('mipAdminModule.users.get(')
     expect(source).toContain('mipAdminModule.users.update(')
+    expect(source).toContain('mipAdminModule.users.changePrimaryBranch(')
     expect(source).toContain('mipAdminModule.users.setControl(')
     expect(source).toContain('mipAdminModule.exportAndOpen(')
     expect(source).not.toContain('mipAdminModule.gateway')
     expect(source).not.toContain('mipAdminModule.mutate')
     expect(source.match(/mipAdminModule\.users\.update\(/g)).toHaveLength(1)
+    expect(source.match(/mipAdminModule\.users\.changePrimaryBranch\(/g)).toHaveLength(1)
     expect(source.match(/mipAdminModule\.users\.setControl\(/g)).toHaveLength(1)
   })
 })

@@ -3,6 +3,7 @@
 const { cursorPredicateFor, pageRows } = require('../pagination')
 
 function createAdminUserRepository(database, options) {
+  const assertMutationScope = options.assertMutationScope
   const assertUserMutationScope = options.assertUserMutationScope
   const createId = options.createId
   const lockMutation = options.lockMutationAuthorization
@@ -270,6 +271,16 @@ function createAdminUserRepository(database, options) {
     return row ? { scopeType: row.primary_branch_id ? 'BRANCH' : 'PLATFORM', scopeId: row.primary_branch_id || null } : null
   }
 
+  async function listPrimaryBranchOptions(appId) {
+    const rows = await database.query(
+      `SELECT id, name, city_name FROM mip_city_branches
+       WHERE app_id = ? AND status = 'ACTIVE'
+       ORDER BY city_name, name, id`,
+      [appId],
+    )
+    return rows.map(row => ({ id: row.id, name: row.name, cityName: row.city_name }))
+  }
+
   async function updateUserFields(input) {
     return database.transaction(async (tx) => {
       const authorization = await lockMutation(tx, input)
@@ -319,6 +330,76 @@ function createAdminUserRepository(database, options) {
       }
       await writeAudit(tx, input.audit)
       return { userId: input.userId, version: input.expectedVersion + 1 }
+    })
+  }
+
+  async function changeUserPrimaryBranch(input) {
+    return database.transaction(async (tx) => {
+      const authorization = await lockMutation(tx, input)
+      assertMutationScope(authorization, { scopeType: 'PLATFORM', scopeId: null })
+
+      const user = await tx.one(
+        `SELECT id, status, primary_branch_id, version
+         FROM mip_users WHERE app_id = ? AND id = ? FOR UPDATE`,
+        [input.appId, input.userId],
+      )
+      if (!user) throw codeError('NOT_FOUND')
+      if (user.status === 'CLOSED') throw codeError('INVALID_STATE')
+      if (Number(user.version) !== input.expectedVersion) throw codeError('CONFLICT')
+      if (user.primary_branch_id === input.targetBranchId) throw codeError('INVALID_STATE')
+
+      const targetBranch = await tx.one(
+        `SELECT id, status FROM mip_city_branches
+         WHERE app_id = ? AND id = ? FOR UPDATE`,
+        [input.appId, input.targetBranchId],
+      )
+      if (!targetBranch) throw codeError('NOT_FOUND')
+      if (targetBranch.status !== 'ACTIVE') throw codeError('INVALID_STATE')
+
+      const membershipBranchIds = [user.primary_branch_id, input.targetBranchId]
+        .filter(Boolean)
+        .sort()
+      await tx.query(
+        `SELECT branch_id, status, ended_at FROM mip_branch_memberships
+         WHERE app_id = ? AND user_id = ?
+           AND branch_id IN (${membershipBranchIds.map(() => '?').join(', ')})
+         ORDER BY branch_id FOR UPDATE`,
+        [input.appId, input.userId, ...membershipBranchIds],
+      )
+
+      if (user.primary_branch_id) {
+        const ended = await tx.query(
+          `UPDATE mip_branch_memberships
+           SET status = 'INACTIVE', ended_at = UTC_TIMESTAMP(3)
+           WHERE app_id = ? AND branch_id = ? AND user_id = ?`,
+          [input.appId, user.primary_branch_id, input.userId],
+        )
+        if (Number(ended.affectedRows) !== 1) throw codeError('CONFLICT')
+      }
+
+      await tx.query(
+        `INSERT INTO mip_branch_memberships (
+          app_id, branch_id, user_id, status, joined_at, ended_at
+        ) VALUES (?, ?, ?, 'ACTIVE', UTC_TIMESTAMP(3), NULL)
+        ON DUPLICATE KEY UPDATE
+          joined_at = IF(status = 'INACTIVE', UTC_TIMESTAMP(3), joined_at),
+          status = 'ACTIVE', ended_at = NULL`,
+        [input.appId, input.targetBranchId, input.userId],
+      )
+
+      const updated = await tx.query(
+        `UPDATE mip_users SET primary_branch_id = ?, version = version + 1
+         WHERE app_id = ? AND id = ? AND version = ?`,
+        [input.targetBranchId, input.appId, input.userId, input.expectedVersion],
+      )
+      if (Number(updated.affectedRows) !== 1) throw codeError('CONFLICT')
+
+      await writeAudit(tx, input.audit(user.primary_branch_id || null))
+      return {
+        userId: input.userId,
+        primaryBranchId: input.targetBranchId,
+        version: input.expectedVersion + 1,
+      }
     })
   }
 
@@ -385,7 +466,15 @@ function createAdminUserRepository(database, options) {
     })
   }
 
-  return { getUserDetail, getUserScope, listUsers, setUserControl, updateUserFields }
+  return {
+    changeUserPrimaryBranch,
+    getUserDetail,
+    getUserScope,
+    listPrimaryBranchOptions,
+    listUsers,
+    setUserControl,
+    updateUserFields,
+  }
 }
 
 module.exports = { createAdminUserRepository }

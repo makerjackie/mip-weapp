@@ -36,6 +36,7 @@ describe('phase9 gateway retry policy (read-only)', () => {
 
     const adminMutations = [
       'mip.admin.users.update',
+      'mip.admin.users.changePrimaryBranch',
       'mip.admin.users.setControl',
       'mip.admin.events.save',
       'mip.admin.events.clone',

@@ -55,6 +55,7 @@ function createAdminService({
     listCommunityReports,
   } = createAdminCommunityGovernance({ access, repository })
   const {
+    changePrimaryBranch,
     getUser,
     listUsers,
     normalizeExportFilters: normalizeUserFilters,
@@ -305,6 +306,7 @@ function createAdminService({
     changeEventStatus,
     checkIn,
     claimEventCommentReport,
+    changePrimaryBranch,
     claimCommunityReport,
     claimMessageDeliveryReview,
     cloneEvent,

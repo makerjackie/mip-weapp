@@ -31,7 +31,7 @@ function userListRow(id, updatedAt) {
   }
 }
 
-function createFixture({ one, query, assertUserMutationScope } = {}) {
+function createFixture({ one, query, assertMutationScope, assertUserMutationScope } = {}) {
   const calls = []
   const database = {
     async one(sql, params) {
@@ -48,6 +48,12 @@ function createFixture({ one, query, assertUserMutationScope } = {}) {
     },
   }
   const repository = createAdminUserRepository(database, {
+    assertMutationScope(authorization, scope) {
+      calls.push({ type: 'platform-scope', authorization, scope })
+      if (assertMutationScope) {
+        assertMutationScope(authorization, scope)
+      }
+    },
     assertUserMutationScope(authorization, row, authorizedScope) {
       calls.push({ type: 'scope', authorization, row, authorizedScope })
       if (assertUserMutationScope) {
@@ -100,15 +106,142 @@ function createFixture({ one, query, assertUserMutationScope } = {}) {
 }
 
 describe('admin user repository module', () => {
-  it('keeps the extracted seam limited to the existing five repository methods', () => {
+  it('keeps the extracted seam limited to the user repository methods', () => {
     const { repository } = createFixture()
     assert.deepEqual(Object.keys(repository).sort(), [
+      'changeUserPrimaryBranch',
       'getUserDetail',
       'getUserScope',
+      'listPrimaryBranchOptions',
       'listUsers',
       'setUserControl',
       'updateUserFields',
     ])
+  })
+
+  it('lists only app-scoped active primary branch choices in stable display order', async () => {
+    const { calls, repository } = createFixture({
+      query: async () => [{ id: 'branch-b', name: '深圳分会', city_name: '深圳' }],
+    })
+    await assert.doesNotReject(async () => {
+      assert.deepEqual(await repository.listPrimaryBranchOptions('wx-app'), [
+        { id: 'branch-b', name: '深圳分会', cityName: '深圳' },
+      ])
+    })
+    const read = calls.find(call => call.type === 'query')
+    assert.match(read.sql, /WHERE app_id = \? AND status = 'ACTIVE'/)
+    assert.match(read.sql, /ORDER BY city_name, name, id/)
+    assert.deepEqual(read.params, ['wx-app'])
+  })
+
+  it('changes the primary branch under a platform lock and audits after all membership and user writes', async () => {
+    const audit = { action: 'admin.users.primaryBranch.change' }
+    const { calls, repository } = createFixture({
+      one: async (sql) => sql.includes('FROM mip_users')
+        ? { id: 'user-a', status: 'ACTIVE', primary_branch_id: 'branch-a', version: 4 }
+        : { id: 'branch-b', status: 'ACTIVE' },
+      query: async sql => sql.includes('SELECT branch_id')
+        ? [{ branch_id: 'branch-a', status: 'ACTIVE' }]
+        : { affectedRows: 1 },
+      assertMutationScope(authorization, scope) {
+        assert.deepEqual(authorization, { locked: true })
+        assert.deepEqual(scope, { scopeType: 'PLATFORM', scopeId: null })
+      },
+    })
+    const result = await repository.changeUserPrimaryBranch({
+      appId: 'wx-app',
+      actorUserId: 'admin-user',
+      userId: 'user-a',
+      targetBranchId: 'branch-b',
+      expectedVersion: 4,
+      reason: '工作城市调整',
+      audit(fromBranchId) {
+        assert.equal(fromBranchId, 'branch-a')
+        return audit
+      },
+    })
+
+    assert.deepEqual(result, {
+      userId: 'user-a', primaryBranchId: 'branch-b', version: 5,
+    })
+    assert.deepEqual(calls.map(call => call.type), [
+      'transaction',
+      'lock',
+      'platform-scope',
+      'one',
+      'one',
+      'query',
+      'query',
+      'query',
+      'query',
+      'audit',
+    ])
+    const writes = calls.filter(call => call.type === 'query')
+    assert.match(writes[0].sql, /FROM mip_branch_memberships[\s\S]*FOR UPDATE/)
+    assert.deepEqual(writes[0].params, ['wx-app', 'user-a', 'branch-a', 'branch-b'])
+    assert.match(writes[1].sql, /SET status = 'INACTIVE', ended_at = UTC_TIMESTAMP/)
+    assert.match(writes[2].sql, /ON DUPLICATE KEY UPDATE[\s\S]*status = 'ACTIVE', ended_at = NULL/)
+    assert.match(writes[3].sql, /UPDATE mip_users SET primary_branch_id = \?, version = version \+ 1/)
+    assert.deepEqual(writes[3].params, ['branch-b', 'wx-app', 'user-a', 4])
+    assert.equal(calls.at(-1).audit, audit)
+  })
+
+  it('fails closed when the locked mutation grant is not platform-scoped', async () => {
+    const forbidden = Object.assign(new Error('FORBIDDEN'), { code: 'FORBIDDEN' })
+    const { calls, repository } = createFixture({
+      assertMutationScope() { throw forbidden },
+      one: async () => { throw new Error('user must not be read') },
+    })
+
+    await assert.rejects(() => repository.changeUserPrimaryBranch({
+      appId: 'wx-app', actorUserId: 'admin-user', userId: 'user-a',
+      targetBranchId: 'branch-b', expectedVersion: 4,
+    }), error => error === forbidden)
+    assert.deepEqual(calls.map(call => call.type), ['transaction', 'lock', 'platform-scope'])
+  })
+
+  it('rejects no-op, closed user, inactive branch, and stale version before writes or audit', async () => {
+    const scenarios = [
+      {
+        name: 'same branch',
+        user: { id: 'user-a', status: 'ACTIVE', primary_branch_id: 'branch-b', version: 4 },
+        branch: { id: 'branch-b', status: 'ACTIVE' },
+        code: 'INVALID_STATE',
+      },
+      {
+        name: 'closed user',
+        user: { id: 'user-a', status: 'CLOSED', primary_branch_id: 'branch-a', version: 4 },
+        branch: { id: 'branch-b', status: 'ACTIVE' },
+        code: 'INVALID_STATE',
+      },
+      {
+        name: 'inactive branch',
+        user: { id: 'user-a', status: 'ACTIVE', primary_branch_id: 'branch-a', version: 4 },
+        branch: { id: 'branch-b', status: 'INACTIVE' },
+        code: 'INVALID_STATE',
+      },
+      {
+        name: 'stale version',
+        user: { id: 'user-a', status: 'ACTIVE', primary_branch_id: 'branch-a', version: 5 },
+        branch: { id: 'branch-b', status: 'ACTIVE' },
+        code: 'CONFLICT',
+      },
+    ]
+
+    for (const scenario of scenarios) {
+      let reads = 0
+      const { calls, repository } = createFixture({
+        one: async () => reads++ === 0 ? scenario.user : scenario.branch,
+        query: async () => ({ affectedRows: 1 }),
+      })
+      await assert.rejects(() => repository.changeUserPrimaryBranch({
+        appId: 'wx-app', actorUserId: 'admin-user', userId: 'user-a',
+        targetBranchId: 'branch-b', expectedVersion: 4,
+        audit: () => ({ action: 'unexpected' }),
+      }), error => error?.code === scenario.code, scenario.name)
+      assert.equal(calls.some(call => call.type === 'audit'), false, scenario.name)
+      assert.equal(calls.filter(call => call.type === 'query').length, 0, scenario.name)
+    }
   })
 
   it('preserves visibility, filters, SQL projection and cursor pagination', async () => {

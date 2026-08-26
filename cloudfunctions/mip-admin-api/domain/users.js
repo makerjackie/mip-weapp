@@ -7,7 +7,7 @@ const {
   visibilityForCapability,
 } = require('./capabilities')
 const { decodeCursor } = require('./pagination')
-const { AdminError, limit, requiredId, text } = require('./validation')
+const { AdminError, expectedVersion, limit, requiredId, text } = require('./validation')
 const { decryptPhone } = require('../lib/phone')
 
 function createAdminUsers({ repository, access, phoneEncryptionKey }) {
@@ -71,10 +71,26 @@ function createAdminUsers({ repository, access, phoneEncryptionKey }) {
         metadata: { detail: true },
       }))
     }
-    const relatedRecords = typeof repository.getUserRelatedRecords === 'function'
-      ? await repository.getUserRelatedRecords(context.caller.appId, userId)
-      : { superCases: [], opportunities: [], registrations: [], orders: [] }
-    return { ...safe, relatedRecords }
+    let canChangePrimaryBranch = false
+    try {
+      authorize(context.bindings, CAPABILITIES.USERS_EDIT, {
+        scopeType: 'PLATFORM',
+        scopeId: null,
+      })
+      canChangePrimaryBranch = true
+    }
+    catch (error) {
+      if (error?.code !== 'FORBIDDEN') throw error
+    }
+    const [relatedRecords, primaryBranchOptions] = await Promise.all([
+      typeof repository.getUserRelatedRecords === 'function'
+        ? repository.getUserRelatedRecords(context.caller.appId, userId)
+        : Promise.resolve({ superCases: [], opportunities: [], registrations: [], orders: [] }),
+      canChangePrimaryBranch
+        ? repository.listPrimaryBranchOptions(context.caller.appId)
+        : Promise.resolve([]),
+    ])
+    return { ...safe, primaryBranchOptions, relatedRecords }
   }
 
   async function updateUser(caller, input) {
@@ -98,6 +114,36 @@ function createAdminUsers({ repository, access, phoneEncryptionKey }) {
         resourceType: 'USER',
         resourceId: userId,
         metadata: { fields: Object.keys(fields), expectedVersion: version },
+      }),
+    })
+  }
+
+  async function changePrimaryBranch(caller, input = {}) {
+    const context = await access.session(caller)
+    const request = primaryBranchChangeInput(input)
+    const grant = authorize(context.bindings, CAPABILITIES.USERS_EDIT, {
+      scopeType: 'PLATFORM',
+      scopeId: null,
+    })
+    const userId = requiredId(request.userId, '用户')
+    const targetBranchId = requiredId(request.targetBranchId, '目标分会')
+    const version = expectedVersion(request.expectedVersion)
+    const reason = text(request.reason, 300, { required: true, label: '变更原因' })
+    return repository.changeUserPrimaryBranch({
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      userId,
+      targetBranchId,
+      expectedVersion: version,
+      reason,
+      authorization: access.mutationAuthorization(grant, CAPABILITIES.USERS_EDIT),
+      audit: fromBranchId => access.audit(context, grant, {
+        scopeType: 'PLATFORM',
+        scopeId: null,
+        action: 'admin.users.primaryBranch.change',
+        resourceType: 'USER',
+        resourceId: userId,
+        metadata: { from: fromBranchId, to: targetBranchId, reason },
       }),
     })
   }
@@ -132,6 +178,7 @@ function createAdminUsers({ repository, access, phoneEncryptionKey }) {
   }
 
   return {
+    changePrimaryBranch,
     getUser,
     listUsers,
     normalizeExportFilters: normalizeUserFilters,
@@ -207,6 +254,21 @@ function normalizeEditableFields(value) {
     fields.visibility = value.visibility
   }
   return fields
+}
+
+function primaryBranchChangeInput(value) {
+  const keys = ['userId', 'targetBranchId', 'expectedVersion', 'reason']
+  const expectedKeys = new Set(keys)
+  const actualKeys = value && typeof value === 'object' && !Array.isArray(value)
+    ? Reflect.ownKeys(value)
+    : []
+  if (actualKeys.length !== keys.length
+    || actualKeys.some(key => typeof key !== 'string' || !expectedKeys.has(key))
+    || typeof value.expectedVersion !== 'number'
+    || !Number.isInteger(value.expectedVersion)) {
+    throw new AdminError('VALIDATION_FAILED', '主分会变更请求无效')
+  }
+  return value
 }
 
 function normalizeFilters(value) {

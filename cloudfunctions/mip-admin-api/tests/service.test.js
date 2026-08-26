@@ -52,6 +52,7 @@ function repository(roleKey = 'PLATFORM_OWNER', scopeType = 'PLATFORM', scopeId 
     }),
     recordAudit: async audit => audits.push(audit),
     getUserScope: async () => ({ scopeType: 'BRANCH', scopeId: 'branch-a' }),
+    listPrimaryBranchOptions: async () => [{ id: 'branch-a', name: '广州分会', cityName: '广州' }],
     updateUserFields: async input => input,
     setUserControl: async input => input,
     createExportTicket: async input => ({ ticketId: 'ticket-a', token: 'one-time-token', status: 'PENDING', expiresAt: input.now.toISOString() }),

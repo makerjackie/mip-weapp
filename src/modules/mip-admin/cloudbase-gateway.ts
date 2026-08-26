@@ -15,6 +15,8 @@ import type {
   AdminRoleCandidate,
   AdminRoleCapabilityPolicy,
   AdminRoleItem,
+  AdminUserDetail,
+  AdminUserPrimaryBranchChangeResult,
   MipAdminGateway,
 } from './types'
 import { resolveCloudFileUrls } from '../platform/cloud-media'
@@ -133,6 +135,49 @@ function invalidEventCommentResponse(): never {
 
 function invalidEventListResponse(): never {
   throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的活动列表')
+}
+
+function invalidUserPrimaryBranchResponse(): never {
+  throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的用户分会变更结果')
+}
+
+function parseUserPrimaryBranchChange(value: unknown): AdminUserPrimaryBranchChangeResult {
+  if (!record(value)
+    || !hasOnlyKeys(value, ['userId', 'primaryBranchId', 'version'])
+    || typeof value.userId !== 'string'
+    || !/^[\w-]{1,36}$/.test(value.userId)
+    || typeof value.primaryBranchId !== 'string'
+    || !/^[\w-]{1,36}$/.test(value.primaryBranchId)
+    || !Number.isInteger(value.version)
+    || Number(value.version) < 2) {
+    invalidUserPrimaryBranchResponse()
+  }
+  return value as unknown as AdminUserPrimaryBranchChangeResult
+}
+
+function parseAdminUserDetail(value: unknown): AdminUserDetail {
+  if (!record(value)) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的用户详情')
+  }
+  const options = value.primaryBranchOptions
+  if (options === undefined) {
+    return { ...value, primaryBranchOptions: [] } as unknown as AdminUserDetail
+  }
+  if (!Array.isArray(options) || options.some(option => (
+    !record(option)
+    || !hasOnlyKeys(option, ['id', 'name', 'cityName'])
+    || typeof option.id !== 'string'
+    || !/^[\w-]{1,36}$/.test(option.id)
+    || typeof option.name !== 'string'
+    || option.name.length < 1
+    || option.name.length > 80
+    || typeof option.cityName !== 'string'
+    || option.cityName.length < 1
+    || option.cityName.length > 80
+  ))) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的用户分会选项')
+  }
+  return value as unknown as AdminUserDetail
 }
 
 function parseAdminEvent(value: unknown): AdminEvent {
@@ -700,8 +745,21 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
       await call('mip.admin.communityReports.close', { ...input }),
     ),
     listUsers: input => call('mip.admin.users.list', input || {}),
-    getUser: (userId, includePhone = false) => call('mip.admin.users.get', { userId, includePhone }),
+    getUser: async (userId, includePhone = false) => parseAdminUserDetail(
+      await call('mip.admin.users.get', { userId, includePhone }),
+    ),
     updateUser: input => call('mip.admin.users.update', input),
+    changeUserPrimaryBranch: async (input) => {
+      const result = parseUserPrimaryBranchChange(
+        await call('mip.admin.users.changePrimaryBranch', { ...input }),
+      )
+      if (result.userId !== input.userId
+        || result.primaryBranchId !== input.targetBranchId
+        || result.version !== input.expectedVersion + 1) {
+        invalidUserPrimaryBranchResponse()
+      }
+      return result
+    },
     setUserControl: input => call('mip.admin.users.setControl', input),
     createExport: async input => parseExportTicket(await call('mip.admin.exports.create', input)),
     prepareExport: async (ticketId, token) => parseExportStatus(await call('mip.admin.exports.prepare', { ticketId, token })),

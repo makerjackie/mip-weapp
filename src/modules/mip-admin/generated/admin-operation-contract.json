@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "operationCount": 118,
+  "operationCount": 119,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -116,6 +116,14 @@
     },
     {
       "action": "mip.admin.users.update",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.users.changePrimaryBranch",
       "kind": "MUTATION",
       "authentication": "REQUIRED",
       "session": "REQUIRED",

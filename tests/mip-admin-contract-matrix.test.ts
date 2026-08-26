@@ -32,8 +32,8 @@ const { publicOperationContract } = require('../cloudfunctions/mip-admin-api/dom
 describe('MIP admin client/server operation contract', () => {
   it('consumes the exact generated platform-neutral contract', () => {
     expect(adminOperationContract).toEqual(publicOperationContract)
-    expect(adminOperationContract.operationCount).toBe(118)
-    expect(adminOperationContract.operations).toHaveLength(118)
+    expect(adminOperationContract.operationCount).toBe(119)
+    expect(adminOperationContract.operations).toHaveLength(119)
   })
 
   it('retries all and only contract-declared safe operations', () => {

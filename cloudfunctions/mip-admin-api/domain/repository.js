@@ -331,12 +331,15 @@ function createAdminRepository(database, options = {}) {
     writeAudit,
   })
   const {
+    changeUserPrimaryBranch,
     getUserDetail,
     getUserScope,
+    listPrimaryBranchOptions,
     listUsers,
     setUserControl,
     updateUserFields,
   } = createAdminUserRepository(database, {
+    assertMutationScope: assertScope,
     assertUserMutationScope(authorization, row, authorizedScope) {
       assertScope(authorization, userScopeFromRow(row))
       assertAuthorizedUserScope(row, authorizedScope)
@@ -1277,6 +1280,7 @@ function createAdminRepository(database, options = {}) {
     claimExportBuild,
     consumeExportDownload,
     closeCommunityReport,
+    changeUserPrimaryBranch,
     createBranch,
     createExportTicket,
     dashboard,
@@ -1297,6 +1301,7 @@ function createAdminRepository(database, options = {}) {
     listOpportunities,
     listOrders,
     listOperationalExceptions,
+    listPrimaryBranchOptions,
     listRoleBindings,
     listRoles,
     searchRoleCandidates,

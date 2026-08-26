@@ -18,11 +18,11 @@ const operationKeys = [
 ]
 
 describe('public admin operation contract', () => {
-  it('projects all 118 business operations without exposing execution details', () => {
+  it('projects all 119 business operations without exposing execution details', () => {
     assert.equal(PUBLIC_OPERATION_CONTRACT_VERSION, 1)
     assert.equal(publicOperationContract.version, 1)
-    assert.equal(publicOperationContract.operationCount, 118)
-    assert.equal(publicOperationContract.operations.length, 118)
+    assert.equal(publicOperationContract.operationCount, 119)
+    assert.equal(publicOperationContract.operations.length, 119)
     assert.equal(Object.isFrozen(publicOperationContract), true)
     assert.equal(Object.isFrozen(publicOperationContract.operations), true)
 
