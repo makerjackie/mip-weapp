@@ -15,7 +15,6 @@ import type {
   AdminRoleCandidate,
   AdminRoleCapabilityPolicy,
   AdminRoleItem,
-  AdminUserDetail,
   AdminUserPrimaryBranchChangeResult,
   MipAdminGateway,
 } from './types'
@@ -90,6 +89,11 @@ import {
   createAdminUserInfluenceRequest,
   parseAdminUserInfluencePage,
 } from './user-influence'
+import {
+  createAdminUserListRequest,
+  parseAdminUserDetail,
+  parseAdminUserPage,
+} from './user-records'
 
 const exportStatuses = new Set(['PENDING', 'READY', 'RESERVED', 'CONSUMED', 'EXPIRED', 'REVOKED', 'FAILED'])
 const xlsxType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -187,31 +191,6 @@ function parseUserPrimaryBranchChange(value: unknown): AdminUserPrimaryBranchCha
     invalidUserPrimaryBranchResponse()
   }
   return value as unknown as AdminUserPrimaryBranchChangeResult
-}
-
-function parseAdminUserDetail(value: unknown): AdminUserDetail {
-  if (!record(value)) {
-    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的用户详情')
-  }
-  const options = value.primaryBranchOptions
-  if (options === undefined) {
-    return { ...value, primaryBranchOptions: [] } as unknown as AdminUserDetail
-  }
-  if (!Array.isArray(options) || options.some(option => (
-    !record(option)
-    || !hasOnlyKeys(option, ['id', 'name', 'cityName'])
-    || typeof option.id !== 'string'
-    || !/^[\w-]{1,36}$/.test(option.id)
-    || typeof option.name !== 'string'
-    || option.name.length < 1
-    || option.name.length > 80
-    || typeof option.cityName !== 'string'
-    || option.cityName.length < 1
-    || option.cityName.length > 80
-  ))) {
-    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的用户分会选项')
-  }
-  return value as unknown as AdminUserDetail
 }
 
 function parseAdminEvent(value: unknown): AdminEvent {
@@ -778,9 +757,16 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
     closeCommunityReport: async input => parseCommunityReport(
       await call('mip.admin.communityReports.close', { ...input }),
     ),
-    listUsers: input => call('mip.admin.users.list', input || {}),
+    listUsers: async (input) => {
+      const request = createAdminUserListRequest(input)
+      return parseAdminUserPage(
+        await call('mip.admin.users.list', request),
+        request.includePhone === true,
+      )
+    },
     getUser: async (userId, includePhone = false) => parseAdminUserDetail(
       await call('mip.admin.users.get', { userId, includePhone }),
+      includePhone,
     ),
     getMembership: async (userId) => {
       const request = createAdminMembershipGetRequest(userId)

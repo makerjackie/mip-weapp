@@ -55,6 +55,16 @@
         </view>
         <view class="mt-3 grid grid-cols-3 gap-2"><view class="rounded-[12rpx] bg-panel-raised px-2 py-3 text-center"><view class="text-[length:27rpx] font-bold">{{detail.counts.registrations}}</view><view class="mt-1 text-[length:19rpx] text-muted">报名</view></view><view class="rounded-[12rpx] bg-panel-raised px-2 py-3 text-center"><view class="text-[length:27rpx] font-bold">{{detail.counts.attended}}</view><view class="mt-1 text-[length:19rpx] text-muted">到场</view></view><view class="rounded-[12rpx] bg-panel-raised px-2 py-3 text-center"><view class="text-[length:27rpx] font-bold">{{detail.counts.orders}}</view><view class="mt-1 text-[length:19rpx] text-muted">订单</view></view><view class="rounded-[12rpx] bg-panel-raised px-2 py-3 text-center"><view class="text-[length:27rpx] font-bold">{{detail.counts.opportunities}}</view><view class="mt-1 text-[length:19rpx] text-muted">机会</view></view><view class="rounded-[12rpx] bg-panel-raised px-2 py-3 text-center"><view class="text-[length:27rpx] font-bold">{{detail.counts.cooperationCards}}</view><view class="mt-1 text-[length:19rpx] text-muted">合作卡</view></view><view class="rounded-[12rpx] bg-panel-raised px-2 py-3 text-center"><view class="text-[length:27rpx] font-bold">{{detail.counts.superCases}}</view><view class="mt-1 text-[length:19rpx] text-muted">案例</view></view></view>
         <view class="mt-3 rounded-[16rpx] bg-panel-raised px-4 py-4">
+          <view class="text-[length:25rpx] font-semibold">影响力概览</view>
+          <view class="mt-1 text-[length:20rpx] text-muted">按当前有效且可展示的邀请和互动关系统计。</view>
+          <view class="mt-3 grid grid-cols-2 gap-2 text-center">
+            <view class="rounded-[12rpx] bg-panel px-2 py-3"><view class="text-[length:27rpx] font-bold">{{detail.influence.guestCount}}</view><view class="mt-1 text-[length:19rpx] text-muted">邀请嘉宾</view></view>
+            <view class="rounded-[12rpx] bg-panel px-2 py-3"><view class="text-[length:27rpx] font-bold">{{detail.influence.interactionCount}}</view><view class="mt-1 text-[length:19rpx] text-muted">收到心动</view></view>
+            <view class="rounded-[12rpx] bg-panel px-2 py-3"><view class="text-[length:27rpx] font-bold">{{detail.influence.interestCount}}</view><view class="mt-1 text-[length:19rpx] text-muted">感兴趣</view></view>
+            <view class="rounded-[12rpx] bg-panel px-2 py-3"><view class="text-[length:27rpx] font-bold">{{detail.influence.visitorCount}}</view><view class="mt-1 text-[length:19rpx] text-muted">访客</view></view>
+          </view>
+        </view>
+        <view class="mt-3 rounded-[16rpx] bg-panel-raised px-4 py-4">
           <view class="text-[length:25rpx] font-semibold">影响力明细</view>
           <view class="mt-1 text-[length:20rpx] text-muted">仅展示当前权限范围内可证明的邀请、心动和档案访问事实。</view>
           <view class="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label="影响力类型">

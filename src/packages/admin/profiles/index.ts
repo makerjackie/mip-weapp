@@ -69,10 +69,10 @@ const userStatusThemes: Record<AdminUser['status'], AdminUserView['statusTheme']
 
 const membershipStatusLabels: Record<string, string> = {
   PENDING: '待生效',
-  ACTIVE: '有效',
+  ACTIVE: '已结束',
   EXPIRED: '已过期',
-  CANCELLED: '已取消',
   REVOKED: '已撤销',
+  REFUNDED: '已退款',
 }
 
 const influenceKindLabels: Record<AdminUserInfluenceKind, string> = {
@@ -124,7 +124,11 @@ function userDetailView(detail: AdminUserDetail): AdminUserDetailView {
     phoneNumberMasked: maskedPhone(phoneNumber),
     statusText: userStatusLabels[detail.status],
     membershipText: detail.membership
-      ? membershipStatusLabels[detail.membership.status] || '状态待确认'
+      ? detail.membership.isCurrent
+        ? '有效'
+        : detail.membership.isScheduled
+          ? '待生效'
+          : membershipStatusLabels[detail.membership.status] || '状态待确认'
       : '非会员',
     membershipEndsText: detail.membership?.endsAt ? formatLocalDateTime(detail.membership.endsAt) : '未设置',
     relatedRecords: {

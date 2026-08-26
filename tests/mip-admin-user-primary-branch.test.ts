@@ -1,4 +1,5 @@
 import type { AdminTransport } from '../src/modules/mip-admin/transport'
+import type { AdminUserDetail } from '../src/modules/mip-admin/types'
 import fs from 'node:fs'
 import path from 'node:path'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -68,6 +69,48 @@ const showToast = vi.fn()
 
 function record(value: unknown): value is PageData {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function userDetailResponse(): AdminUserDetail {
+  return {
+    id: 'user-a',
+    status: 'ACTIVE',
+    kind: 'GUEST',
+    nickname: '用户',
+    headline: '',
+    introduction: '',
+    primaryBranchId: 'branch-a',
+    branchName: '广州分会',
+    cityName: '广州',
+    phoneBound: false,
+    phoneNumber: null,
+    controls: [],
+    levelId: null,
+    levelName: '',
+    experience: 0,
+    visibility: {},
+    userVersion: 1,
+    profileVersion: 1,
+    createdAt: '2026-08-01T00:00:00.000Z',
+    updatedAt: '2026-08-25T00:00:00.000Z',
+    primaryBranchOptions: [{ id: 'branch-b', name: '深圳分会', cityName: '深圳' }],
+    companies: [],
+    organizations: [],
+    membership: null,
+    growth: { levelName: '', experience: 0, contribution: 0, coin: 0 },
+    counts: {
+      registrations: 0,
+      attended: 0,
+      orders: 0,
+      opportunities: 0,
+      cooperationCards: 0,
+      superCases: 0,
+    },
+    influence: { guestCount: 0, interactionCount: 0, interestCount: 0, visitorCount: 0 },
+    tags: [],
+    roles: [],
+    relatedRecords: { superCases: [], opportunities: [], registrations: [], orders: [] },
+  }
 }
 
 function setPath(target: PageData, key: string, value: unknown) {
@@ -178,16 +221,13 @@ describe('MIP admin user primary branch contract', () => {
   })
 
   it('accepts only public active-branch option fields on the user detail DTO', async () => {
-    const valid = {
-      id: 'user-a',
-      primaryBranchOptions: [{ id: 'branch-b', name: '深圳分会', cityName: '深圳' }],
-    }
+    const valid = userDetailResponse()
     const validGateway = createMipAdminGateway({ request: vi.fn(async () => valid) })
     await expect(validGateway.getUser('user-a')).resolves.toMatchObject(valid)
 
     const invalidGateway = createMipAdminGateway({
       request: vi.fn(async () => ({
-        id: 'user-a',
+        ...valid,
         primaryBranchOptions: [{
           id: 'branch-b',
           name: '深圳分会',

@@ -120,7 +120,7 @@ describe('admin repository persistence contracts', () => {
             visibility_json: '{}', profile_version: 1, phone_verified_at: null, branch_name: '广州分会', city_name: '广州',
           }
         }
-        if (sql.includes('FROM mip_growth_accounts')) {
+        if (sql.includes('LEFT JOIN mip_growth_accounts account')) {
           return {
             experience_balance: 10,
             contribution_balance: 2,
@@ -142,8 +142,9 @@ describe('admin repository persistence contracts', () => {
       registrations: 0, attended: 0, orders: 0, opportunities: 0, cooperationCards: 0, superCases: 0,
     })
     assert.deepEqual(detail.growth, { levelName: '一级', experience: 10, contribution: 2, coin: 99 })
-    const growthSql = calls.find(call => call.sql.includes('FROM mip_growth_accounts'))?.sql || ''
+    const growthSql = calls.find(call => call.sql.includes('LEFT JOIN mip_growth_accounts account'))?.sql || ''
     assert.match(growthSql, /coin_balance/)
+    assert.match(growthSql, /COALESCE\(account\.experience_balance, 0\)/)
     assert.ok(calls.every(call => call.params[0] === 'wx-app'))
     assert.doesNotMatch(calls.map(call => call.sql).join('\n'), /\b(?:member|dating|sewing)_\w+/i)
   })

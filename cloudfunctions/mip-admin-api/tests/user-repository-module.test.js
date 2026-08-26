@@ -289,6 +289,7 @@ describe('admin user repository module', () => {
       starts_at: new Date('2026-01-01T00:00:00.000Z'),
       ends_at: new Date('2027-01-01T00:00:00.000Z'),
       is_current_player: 1,
+      is_scheduled: 0,
     }
     const { calls, repository } = createFixture({
       one: async (sql) => {
@@ -301,6 +302,15 @@ describe('admin user repository module', () => {
           }
         }
         if (sql.includes('FROM mip_membership_entitlements')) return currentEntitlement
+        if (sql.includes('LEFT JOIN mip_growth_accounts account')) {
+          return {
+            level_id: 'level-a',
+            level_name: '一级',
+            experience_balance: 120,
+            contribution_balance: 30,
+            coin_balance: 8,
+          }
+        }
         return null
       },
       query: async () => [],
@@ -309,16 +319,30 @@ describe('admin user repository module', () => {
     const detail = await repository.getUserDetail('wx-app', 'user-a')
 
     assert.equal(detail.kind, 'PLAYER')
+    assert.equal(detail.levelId, 'level-a')
+    assert.equal(detail.levelName, '一级')
+    assert.equal(detail.experience, 120)
+    assert.deepEqual(detail.growth, {
+      levelName: '一级', experience: 120, contribution: 30, coin: 8,
+    })
     assert.deepEqual(detail.membership, {
       status: 'ACTIVE',
       startsAt: '2026-01-01T00:00:00.000Z',
       endsAt: '2027-01-01T00:00:00.000Z',
+      isCurrent: true,
+      isScheduled: false,
     })
     const entitlementRead = calls.find(call => call.type === 'one' && call.sql.includes('FROM mip_membership_entitlements'))
     assert.match(entitlementRead.sql, /status = 'ACTIVE'[\s\S]*starts_at <= UTC_TIMESTAMP\(3\)[\s\S]*ends_at > UTC_TIMESTAMP\(3\)/)
     assert.match(entitlementRead.sql, /AS is_current_player/)
-    assert.match(entitlementRead.sql, /ORDER BY is_current_player DESC, ends_at DESC, id DESC/)
+    assert.match(entitlementRead.sql, /AS is_scheduled/)
+    assert.match(entitlementRead.sql, /ORDER BY is_current_player DESC, is_scheduled DESC, ends_at DESC, id DESC/)
     assert.deepEqual(entitlementRead.params, ['wx-app', 'user-a'])
+    const growthRead = calls.find(call => call.type === 'one' && call.sql.includes('LEFT JOIN mip_growth_accounts account'))
+    assert.match(growthRead.sql, /FROM mip_users growth_user/)
+    assert.match(growthRead.sql, /COALESCE\(account\.experience_balance, 0\)/)
+    assert.match(growthRead.sql, /current_level\.minimum_experience <= COALESCE\(account\.experience_balance, 0\)/)
+    assert.deepEqual(growthRead.params, ['wx-app', 'user-a'])
   })
 
   it('keeps future and revoked entitlement projections as guests', async () => {
@@ -328,12 +352,14 @@ describe('admin user repository module', () => {
         starts_at: new Date('2030-01-01T00:00:00.000Z'),
         ends_at: new Date('2031-01-01T00:00:00.000Z'),
         is_current_player: 0,
+        is_scheduled: 1,
       },
       {
         status: 'REVOKED',
         starts_at: new Date('2026-01-01T00:00:00.000Z'),
         ends_at: new Date('2032-01-01T00:00:00.000Z'),
         is_current_player: 0,
+        is_scheduled: 0,
       },
     ]) {
       const { repository } = createFixture({
@@ -355,6 +381,8 @@ describe('admin user repository module', () => {
       const detail = await repository.getUserDetail('wx-app', 'user-a')
       assert.equal(detail.kind, 'GUEST')
       assert.equal(detail.membership.status, entitlement.status)
+      assert.equal(detail.membership.isCurrent, false)
+      assert.equal(detail.membership.isScheduled, entitlement.status === 'ACTIVE')
     }
   })
 

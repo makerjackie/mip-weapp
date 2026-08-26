@@ -194,6 +194,20 @@ export interface AdminMatchingState {
   requests: AdminMatchingRequest[]
 }
 
+export interface AdminProfileVisibility {
+  nickname?: boolean
+  avatar?: boolean
+  identityStatus?: boolean
+  headline?: boolean
+  introduction?: boolean
+  companies?: boolean
+  organizations?: boolean
+  industry?: boolean
+  abilities?: boolean
+  primaryBranch?: boolean
+  influence?: boolean
+}
+
 export interface AdminUser {
   id: string
   status: 'ACTIVE' | 'BLOCKED' | 'CLOSED'
@@ -210,7 +224,7 @@ export interface AdminUser {
   levelId: string | null
   levelName: string
   experience: number
-  visibility: Record<string, unknown>
+  visibility: AdminProfileVisibility
   userVersion: number
   profileVersion: number
   createdAt: string | null
@@ -241,9 +255,11 @@ export interface AdminUserDetail extends AdminUser {
   companies: Array<{ name: string, role?: string }>
   organizations: Array<{ name: string, role?: string }>
   membership: null | {
-    status: string
-    startsAt: string | null
-    endsAt: string | null
+    status: 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'REFUNDED'
+    startsAt: string
+    endsAt: string
+    isCurrent: boolean
+    isScheduled: boolean
   }
   growth: {
     levelName: string
@@ -258,6 +274,12 @@ export interface AdminUserDetail extends AdminUser {
     opportunities: number
     cooperationCards: number
     superCases: number
+  }
+  influence: {
+    guestCount: number
+    interactionCount: number
+    interestCount: number
+    visitorCount: number
   }
   tags: Array<{
     id: string

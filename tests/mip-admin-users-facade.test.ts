@@ -39,6 +39,12 @@ const userDetail: AdminUserDetail = {
     cooperationCards: 0,
     superCases: 0,
   },
+  influence: {
+    guestCount: 2,
+    interactionCount: 3,
+    interestCount: 4,
+    visitorCount: 5,
+  },
   tags: [],
   roles: [],
   relatedRecords: { superCases: [], opportunities: [], registrations: [], orders: [] },

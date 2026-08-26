@@ -5,9 +5,13 @@ const { describe, it } = require('node:test')
 
 const { createUserInfluenceRepository } = require('../domain/repositories/user-influence')
 
-function createFixture(rows) {
+function createFixture(rows, one = async () => null) {
   const calls = []
   const repository = createUserInfluenceRepository({
+    async one(sql, params) {
+      calls.push({ sql, params })
+      return one(sql, params)
+    },
     async query(sql, params) {
       calls.push({ sql, params })
       return rows
@@ -58,6 +62,38 @@ function counterpart(overrides = {}) {
 }
 
 describe('admin user influence repository', () => {
+  it('summarizes the four current influence facts without bypassing privacy or blocks', async () => {
+    const counts = [3, 5, 7, 11]
+    let index = 0
+    const { calls, repository } = createFixture([], async () => ({ count: counts[index++] }))
+
+    assert.deepEqual(await repository.getUserInfluenceSummary('wx-app', 'user-a'), {
+      guestCount: 3,
+      interactionCount: 5,
+      interestCount: 7,
+      visitorCount: 11,
+    })
+    assert.equal(calls.length, 4)
+    assert.match(calls[0].sql, /COUNT\(DISTINCT attribution\.guest_user_id\)/)
+    assert.match(calls[0].sql, /attribution\.source_type = 'USER'/)
+    assert.match(calls[0].sql, /registration\.share_profile = 1/)
+    assert.match(calls[0].sql, /NOT EXISTS \([\s\S]*mip_membership_entitlements/)
+    assert.match(calls[1].sql, /FROM mip_event_hearts heart/)
+    assert.match(calls[1].sql, /heart\.status = 'ACTIVE'/)
+    assert.match(calls[2].sql, /FROM mip_profile_interests interest/)
+    assert.match(calls[2].sql, /interest\.status = 'ACTIVE'/)
+    assert.match(calls[3].sql, /COUNT\(DISTINCT visit\.visitor_user_id\)/)
+    for (const call of calls) {
+      assert.match(call.sql, /FROM mip_user_blocks user_block/)
+      assert.match(call.sql, /user_block\.status = 'ACTIVE'/)
+      assert.match(call.sql, /user_block\.blocker_user_id/)
+      assert.match(call.sql, /user_block\.blocked_user_id/)
+      assert.doesNotMatch(call.sql, /user_block\.(actor|target)_user_id/)
+      assert.deepEqual(call.params, ['wx-app', 'user-a', 'user-a', 'user-a'])
+      assert.doesNotMatch(call.sql, /openid|phone/i)
+    }
+  })
+
   it('pages raw invitation attribution facts with event and privacy-safe counterpart state', async () => {
     const { calls, repository } = createFixture([
       {

@@ -11,7 +11,7 @@ function createAdminUserRepository(database, options) {
   const { codeError, escapeLike, iso, json } = options.repositorySupport
   const visibleBranchesWhere = options.visibleBranchesWhere
   const writeAudit = options.writeAudit
-  const { listUserInfluence } = createUserInfluenceRepository(database, {
+  const { getUserInfluenceSummary, listUserInfluence } = createUserInfluenceRepository(database, {
     iso,
     json,
   })
@@ -161,30 +161,36 @@ function createAdminUserRepository(database, options) {
       return null
     }
 
-    const [entitlement, growth, counts, tags, roles] = await Promise.all([
+    const [entitlement, growth, counts, tags, roles, influence] = await Promise.all([
       database.one(
         `SELECT status, starts_at, ends_at,
                 (status = 'ACTIVE'
                   AND starts_at <= UTC_TIMESTAMP(3)
-                  AND ends_at > UTC_TIMESTAMP(3)) AS is_current_player
+                  AND ends_at > UTC_TIMESTAMP(3)) AS is_current_player,
+                (status = 'ACTIVE'
+                  AND starts_at > UTC_TIMESTAMP(3)) AS is_scheduled
          FROM mip_membership_entitlements
          WHERE app_id = ? AND user_id = ?
-         ORDER BY is_current_player DESC, ends_at DESC, id DESC LIMIT 1`,
+         ORDER BY is_current_player DESC, is_scheduled DESC, ends_at DESC, id DESC LIMIT 1`,
         [appId, userId],
       ),
       database.one(
-        `SELECT account.experience_balance, account.contribution_balance, account.coin_balance,
-                level.name AS level_name
-         FROM mip_growth_accounts account
+        `SELECT COALESCE(account.experience_balance, 0) AS experience_balance,
+                COALESCE(account.contribution_balance, 0) AS contribution_balance,
+                COALESCE(account.coin_balance, 0) AS coin_balance,
+                level.id AS level_id, level.name AS level_name
+         FROM mip_users growth_user
+         LEFT JOIN mip_growth_accounts account
+           ON account.app_id = growth_user.app_id AND account.user_id = growth_user.id
          LEFT JOIN mip_growth_levels level
-           ON level.app_id = account.app_id AND level.status = 'ACTIVE'
+           ON level.app_id = growth_user.app_id AND level.status = 'ACTIVE'
           AND level.minimum_experience = (
             SELECT MAX(current_level.minimum_experience)
             FROM mip_growth_levels current_level
-            WHERE current_level.app_id = account.app_id AND current_level.status = 'ACTIVE'
-              AND current_level.minimum_experience <= account.experience_balance
+            WHERE current_level.app_id = growth_user.app_id AND current_level.status = 'ACTIVE'
+              AND current_level.minimum_experience <= COALESCE(account.experience_balance, 0)
           )
-         WHERE account.app_id = ? AND account.user_id = ?`,
+         WHERE growth_user.app_id = ? AND growth_user.id = ?`,
         [appId, userId],
       ),
       database.one(
@@ -219,6 +225,7 @@ function createAdminUserRepository(database, options) {
          ORDER BY scope_type, scope_id, role_key`,
         [appId, userId],
       ),
+      getUserInfluenceSummary(appId, userId),
     ])
 
     const activePlayer = Number(entitlement?.is_current_player) === 1
@@ -240,8 +247,17 @@ function createAdminUserRepository(database, options) {
       controls: user.controls ? String(user.controls).split(',') : [],
       userVersion: Number(user.user_version || 1),
       profileVersion: Number(user.profile_version || 0),
+      levelId: growth?.level_id || null,
+      levelName: growth?.level_name || '',
+      experience: Number(growth?.experience_balance || 0),
       membership: entitlement
-        ? { status: entitlement.status, startsAt: iso(entitlement.starts_at), endsAt: iso(entitlement.ends_at) }
+        ? {
+            status: entitlement.status,
+            startsAt: iso(entitlement.starts_at),
+            endsAt: iso(entitlement.ends_at),
+            isCurrent: activePlayer,
+            isScheduled: Number(entitlement.is_scheduled) === 1,
+          }
         : null,
       growth: {
         levelName: growth?.level_name || '',
@@ -257,6 +273,7 @@ function createAdminUserRepository(database, options) {
         cooperationCards: Number(counts?.cooperation_card_count || 0),
         superCases: Number(counts?.super_case_count || 0),
       },
+      influence,
       tags: tags.map(tag => ({ id: tag.id, kind: tag.kind, relation: tag.relation, label: tag.label })),
       roles: roles.map(role => ({
         roleKey: role.role_key,
