@@ -1,4 +1,5 @@
 import type {
+  AdminCapabilityGrant,
   AdminDashboardActivity,
   AdminDashboardAvailability,
   AdminDashboardCountMetric,
@@ -7,6 +8,25 @@ import type {
   AdminDashboardOverviewPreset,
   AdminDashboardRateMetric,
 } from '../../../modules/mip-admin'
+import type { AdminDashboardTrendView } from './trends'
+import { withDashboardMetricTargets } from './metric-targets'
+import { buildDashboardTrends } from './trends'
+
+export type { AdminDashboardScopeOption } from './filters'
+export {
+  buildDashboardScopeOptions,
+  canLoadDashboardBranchCatalog,
+  customDashboardPeriod,
+  dashboardShanghaiToday,
+  initialDashboardScopeOptions,
+  validateDashboardCustomPeriod,
+} from './filters'
+export type {
+  AdminDashboardTrendBarView,
+  AdminDashboardTrendPointView,
+  AdminDashboardTrendView,
+} from './trends'
+export { normalizedDashboardTrendWidth } from './trends'
 
 export interface AdminDashboardMetricView {
   key: string
@@ -14,6 +34,7 @@ export interface AdminDashboardMetricView {
   value: string
   detail: string
   available: boolean
+  path: string
 }
 
 export interface AdminDashboardActivityView {
@@ -34,11 +55,12 @@ export interface AdminDashboardViewModel {
   eventMetrics: AdminDashboardMetricView[]
   opportunityMetrics: AdminDashboardMetricView[]
   taskMetrics: AdminDashboardMetricView[]
+  trends: AdminDashboardTrendView[]
   activities: AdminDashboardActivityView[]
   activityAvailable: boolean
 }
 
-export type AdminDashboardPeriodOption = Exclude<AdminDashboardOverviewPreset, 'CUSTOM'>
+export type AdminDashboardPeriodOption = AdminDashboardOverviewPreset
 
 export const dashboardPeriodOptions: Array<{
   key: AdminDashboardPeriodOption
@@ -48,6 +70,7 @@ export const dashboardPeriodOptions: Array<{
   { key: 'THIS_WEEK', label: '本周' },
   { key: 'THIS_MONTH', label: '本月' },
   { key: 'LAST_30_DAYS', label: '近 30 天' },
+  { key: 'CUSTOM', label: '自定义' },
 ]
 
 const activityLabels: Record<string, string> = {
@@ -87,6 +110,7 @@ export const emptyDashboardViewModel: AdminDashboardViewModel = {
   eventMetrics: [],
   opportunityMetrics: [],
   taskMetrics: [],
+  trends: [],
   activities: [],
   activityAvailable: false,
 }
@@ -114,6 +138,7 @@ function unavailableMetric(key: string, label: string, availability: AdminDashbo
     value: '—',
     detail: availabilityText(availability),
     available: false,
+    path: '',
   }
 }
 
@@ -130,6 +155,7 @@ function countMetric(key: string, label: string, metric: AdminDashboardCountMetr
     value: `${metric.count}${suffix}`,
     detail: comparison,
     available: true,
+    path: '',
   }
 }
 
@@ -153,6 +179,7 @@ function rateMetric(key: string, label: string, metric: AdminDashboardRateMetric
       ? '当前没有可计算样本'
       : `${metric.numerator} / ${metric.denominator}`,
     available: metric.basisPoints !== null,
+    path: '',
   }
 }
 
@@ -166,13 +193,14 @@ function moneyMetric(key: string, label: string, metric: AdminDashboardMoneyMetr
     value: `¥${(metric.amountCents / 100).toFixed(2)}`,
     detail: comparison,
     available: true,
+    path: '',
   }
 }
 
 function ratingMetric(key: string, label: string, value: number | null) {
   return value === null
     ? unavailableMetric(key, label, 'NOT_PROVIDED')
-    : { key, label, value: value.toFixed(1), detail: '满分 5 分', available: true }
+    : { key, label, value: value.toFixed(1), detail: '满分 5 分', available: true, path: '' }
 }
 
 function fallbackCount(key: string, label: string, availability: AdminDashboardAvailability) {
@@ -199,7 +227,9 @@ function shanghaiDate(value: string, adjustmentMs = 0) {
 }
 
 function periodLabel(overview: AdminDashboardOverview) {
-  const option = dashboardPeriodOptions.find(item => item.key === overview.period.preset)
+  const option = overview.period.preset === 'CUSTOM'
+    ? null
+    : dashboardPeriodOptions.find(item => item.key === overview.period.preset)
   if (option) {
     return option.label
   }
@@ -230,7 +260,10 @@ function activityView(item: AdminDashboardActivity): AdminDashboardActivityView 
   }
 }
 
-export function buildDashboardViewModel(overview: AdminDashboardOverview): AdminDashboardViewModel {
+export function buildDashboardViewModel(
+  overview: AdminDashboardOverview,
+  grants: AdminCapabilityGrant[] = [],
+): AdminDashboardViewModel {
   const people = overview.people.availability === 'AVAILABLE' ? overview.people : null
   const events = overview.events.availability === 'AVAILABLE' ? overview.events : null
   const opportunities = overview.opportunities.availability === 'AVAILABLE'
@@ -317,11 +350,12 @@ export function buildDashboardViewModel(overview: AdminDashboardOverview): Admin
     scopeLabel: scopeLabel(overview),
     periodLabel: periodLabel(overview),
     asOfLabel: shanghaiTime(overview.asOf),
-    summaryMetrics,
-    membershipMetrics,
-    eventMetrics,
-    opportunityMetrics,
-    taskMetrics,
+    summaryMetrics: withDashboardMetricTargets(summaryMetrics, grants),
+    membershipMetrics: withDashboardMetricTargets(membershipMetrics, grants),
+    eventMetrics: withDashboardMetricTargets(eventMetrics, grants),
+    opportunityMetrics: withDashboardMetricTargets(opportunityMetrics, grants),
+    taskMetrics: withDashboardMetricTargets(taskMetrics, grants),
+    trends: buildDashboardTrends(overview),
     activities: overview.operations.availability === 'AVAILABLE'
       ? overview.operations.activity.map(activityView)
       : [],

@@ -7,20 +7,42 @@
     <view wx:if="{{view.asOfLabel}}" class="mt-1 text-[length:21rpx] text-muted">数据截至 {{view.asOfLabel}}</view>
   </view>
   <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel px-5 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载数据概览" description="{{message}}" action-text="重新加载" bind:action="loadDashboard" /></view>
-  <view id="admin-dashboard-forbidden-state" wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有运营权限" description="当前账号未获得管理权限。" action-text="重新验证" bind:action="loadDashboard" /></view>
+  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载数据概览" description="{{message}}" action-text="重新加载" bind:action="retryDashboard" /></view>
+  <view id="admin-dashboard-forbidden-state" wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有运营权限" description="当前账号未获得管理权限。" action-text="重新验证" bind:action="retryDashboard" /></view>
   <view wx:else>
     <view class="mt-5 flex flex-wrap gap-2" role="radiogroup" aria-label="数据时间范围">
       <block wx:for="{{periodOptions}}" wx:key="key">
-        <view wx:if="{{item.key === selectedPreset}}" class="flex min-h-[72rpx] items-center rounded-full bg-brand px-4 text-[length:22rpx] font-semibold text-on-brand" role="radio" aria-checked="true" data-preset="{{item.key}}" bind:tap="changePeriod">{{item.label}}</view>
-        <view wx:else class="flex min-h-[72rpx] items-center rounded-full border border-line bg-panel px-4 text-[length:22rpx] text-muted" role="radio" aria-checked="false" data-preset="{{item.key}}" bind:tap="changePeriod">{{item.label}}</view>
+        <view wx:if="{{item.key === selectedPreset}}" class="flex min-h-[88rpx] items-center rounded-full bg-brand px-4 text-[length:22rpx] font-semibold text-on-brand" role="radio" aria-checked="true" data-preset="{{item.key}}" bind:tap="changePeriod">{{item.label}}</view>
+        <view wx:else class="flex min-h-[88rpx] items-center rounded-full border border-line bg-panel px-4 text-[length:22rpx] text-muted" role="radio" aria-checked="false" data-preset="{{item.key}}" bind:tap="changePeriod">{{item.label}}</view>
       </block>
+    </view>
+    <view class="mip-admin-filter-grid mt-4 grid gap-3 rounded-[16rpx] bg-panel px-4 py-4">
+      <picker class="mip-admin-filter-wide box-border min-h-[88rpx] max-w-full rounded-[12rpx] bg-panel-raised px-3 py-3" range="{{scopeOptions}}" range-key="label" value="{{scopeIndex}}" disabled="{{scopeOptions.length <= 1}}" bindchange="changeScope">
+        <view class="text-[length:22rpx] text-muted">数据范围</view>
+        <view class="mt-1 flex items-center justify-between text-[length:25rpx]"><text>{{scopeOptions[scopeIndex].label}}</text><t-icon wx:if="{{scopeOptions.length > 1}}" name="chevron-down" size="28rpx" color="var(--color-muted)" /></view>
+      </picker>
+      <view wx:if="{{scopeMessage}}" class="mip-admin-filter-wide rounded-[12rpx] border border-line px-3 py-3 text-[length:22rpx] text-muted">
+        <view>{{scopeMessage}}</view>
+        <view wx:if="{{canRefreshBranches}}" class="mt-2 flex min-h-[88rpx] items-center justify-end text-brand" role="button" bind:tap="retryScopeCatalog">重新加载分会</view>
+      </view>
+      <view wx:if="{{customEditorOpen}}" class="mip-admin-filter-wide">
+        <view class="grid grid-cols-2 gap-2">
+          <picker class="box-border min-h-[88rpx] max-w-full rounded-[12rpx] bg-panel-raised px-3 py-3" mode="date" value="{{customStartDate}}" end="{{customMaxDate}}" data-field="customStartDate" bindchange="changeCustomDate"><view class="text-[length:22rpx] text-muted">开始日期</view><view class="mt-1 text-[length:24rpx]">{{customStartDate || '请选择'}}</view></picker>
+          <picker class="box-border min-h-[88rpx] max-w-full rounded-[12rpx] bg-panel-raised px-3 py-3" mode="date" value="{{customEndDate}}" end="{{customMaxDate}}" data-field="customEndDate" bindchange="changeCustomDate"><view class="text-[length:22rpx] text-muted">结束日期</view><view class="mt-1 text-[length:24rpx]">{{customEndDate || '请选择'}}</view></picker>
+        </view>
+        <view wx:if="{{customError}}" class="mt-2 text-[length:22rpx] text-danger">{{customError}}</view>
+        <view class="mt-3 grid grid-cols-2 gap-2">
+          <view class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] border border-line text-[length:24rpx] text-muted" role="button" bind:tap="clearCustomPeriod">清除</view>
+          <view class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] bg-brand text-[length:24rpx] font-semibold text-on-brand" role="button" bind:tap="applyCustomPeriod">应用</view>
+        </view>
+      </view>
     </view>
     <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:22rpx] text-danger">{{message}}</view>
     <view class="mip-admin-metric-grid mt-5 grid grid-cols-2 gap-3">
-      <view wx:for="{{view.summaryMetrics}}" wx:key="key" class="rounded-[16rpx] border border-line bg-panel px-4 py-4">
-        <view wx:if="{{item.available}}" class="text-[length:36rpx] font-bold text-ink">{{item.value}}</view>
+      <view wx:for="{{view.summaryMetrics}}" wx:key="key" class="min-h-[176rpx] rounded-[16rpx] border border-line bg-panel px-4 py-4" role="{{item.path ? 'button' : 'group'}}" data-path="{{item.path}}" bind:tap="openPage">
+        <view class="flex items-start justify-between gap-2"><view wx:if="{{item.available}}" class="text-[length:36rpx] font-bold text-ink">{{item.value}}</view>
         <view wx:else class="text-[length:36rpx] font-bold text-muted">{{item.value}}</view>
+        <t-icon wx:if="{{item.path}}" name="chevron-right" size="28rpx" color="var(--color-muted)" /></view>
         <view class="mt-1 text-[length:22rpx] text-muted">{{item.label}}</view>
         <view class="mt-2 text-[length:20rpx] text-muted">{{item.detail}}</view>
       </view>
@@ -28,27 +50,45 @@
     <view class="mip-admin-section-grid mt-6 grid gap-3">
       <view class="rounded-[16rpx] bg-panel px-4 py-4">
         <view class="text-[length:28rpx] font-semibold">会员</view>
-        <view wx:for="{{view.membershipMetrics}}" wx:key="key" class="mt-3 flex min-h-[72rpx] items-center justify-between gap-3 border-b border-line pb-3">
-          <view class="min-w-0 flex-1"><view class="text-[length:23rpx]">{{item.label}}</view><view class="mt-1 text-[length:19rpx] text-muted">{{item.detail}}</view></view><view class="text-[length:27rpx] font-semibold">{{item.value}}</view>
+        <view wx:for="{{view.membershipMetrics}}" wx:key="key" class="mt-3 flex min-h-[88rpx] items-center justify-between gap-3 border-b border-line pb-3" role="{{item.path ? 'button' : 'group'}}" data-path="{{item.path}}" bind:tap="openPage">
+          <view class="min-w-0 flex-1"><view class="text-[length:23rpx]">{{item.label}}</view><view class="mt-1 text-[length:19rpx] text-muted">{{item.detail}}</view></view><view class="flex items-center gap-1"><view class="text-[length:27rpx] font-semibold">{{item.value}}</view><t-icon wx:if="{{item.path}}" name="chevron-right" size="26rpx" color="var(--color-muted)" /></view>
         </view>
       </view>
       <view class="rounded-[16rpx] bg-panel px-4 py-4">
         <view class="text-[length:28rpx] font-semibold">活动</view>
-        <view wx:for="{{view.eventMetrics}}" wx:key="key" class="mt-3 flex min-h-[72rpx] items-center justify-between gap-3 border-b border-line pb-3">
-          <view class="min-w-0 flex-1"><view class="text-[length:23rpx]">{{item.label}}</view><view class="mt-1 text-[length:19rpx] text-muted">{{item.detail}}</view></view><view class="text-[length:27rpx] font-semibold">{{item.value}}</view>
+        <view wx:for="{{view.eventMetrics}}" wx:key="key" class="mt-3 flex min-h-[88rpx] items-center justify-between gap-3 border-b border-line pb-3" role="{{item.path ? 'button' : 'group'}}" data-path="{{item.path}}" bind:tap="openPage">
+          <view class="min-w-0 flex-1"><view class="text-[length:23rpx]">{{item.label}}</view><view class="mt-1 text-[length:19rpx] text-muted">{{item.detail}}</view></view><view class="flex items-center gap-1"><view class="text-[length:27rpx] font-semibold">{{item.value}}</view><t-icon wx:if="{{item.path}}" name="chevron-right" size="26rpx" color="var(--color-muted)" /></view>
         </view>
       </view>
       <view class="rounded-[16rpx] bg-panel px-4 py-4">
         <view class="text-[length:28rpx] font-semibold">机会</view>
-        <view wx:for="{{view.opportunityMetrics}}" wx:key="key" class="mt-3 flex min-h-[72rpx] items-center justify-between gap-3 border-b border-line pb-3">
-          <view class="min-w-0 flex-1"><view class="text-[length:23rpx]">{{item.label}}</view><view class="mt-1 text-[length:19rpx] text-muted">{{item.detail}}</view></view><view class="text-[length:27rpx] font-semibold">{{item.value}}</view>
+        <view wx:for="{{view.opportunityMetrics}}" wx:key="key" class="mt-3 flex min-h-[88rpx] items-center justify-between gap-3 border-b border-line pb-3" role="{{item.path ? 'button' : 'group'}}" data-path="{{item.path}}" bind:tap="openPage">
+          <view class="min-w-0 flex-1"><view class="text-[length:23rpx]">{{item.label}}</view><view class="mt-1 text-[length:19rpx] text-muted">{{item.detail}}</view></view><view class="flex items-center gap-1"><view class="text-[length:27rpx] font-semibold">{{item.value}}</view><t-icon wx:if="{{item.path}}" name="chevron-right" size="26rpx" color="var(--color-muted)" /></view>
         </view>
       </view>
       <view class="rounded-[16rpx] bg-panel px-4 py-4">
         <view class="text-[length:28rpx] font-semibold">任务</view>
-        <view wx:for="{{view.taskMetrics}}" wx:key="key" class="mt-3 flex min-h-[72rpx] items-center justify-between gap-3 border-b border-line pb-3">
-          <view class="min-w-0 flex-1"><view class="text-[length:23rpx]">{{item.label}}</view><view class="mt-1 text-[length:19rpx] text-muted">{{item.detail}}</view></view><view class="text-[length:27rpx] font-semibold">{{item.value}}</view>
+        <view wx:for="{{view.taskMetrics}}" wx:key="key" class="mt-3 flex min-h-[88rpx] items-center justify-between gap-3 border-b border-line pb-3" role="{{item.path ? 'button' : 'group'}}" data-path="{{item.path}}" bind:tap="openPage">
+          <view class="min-w-0 flex-1"><view class="text-[length:23rpx]">{{item.label}}</view><view class="mt-1 text-[length:19rpx] text-muted">{{item.detail}}</view></view><view class="flex items-center gap-1"><view class="text-[length:27rpx] font-semibold">{{item.value}}</view><t-icon wx:if="{{item.path}}" name="chevron-right" size="26rpx" color="var(--color-muted)" /></view>
         </view>
+      </view>
+    </view>
+    <view class="mt-7 text-[length:30rpx] font-semibold">趋势</view>
+    <view class="mip-admin-section-grid mt-4 grid gap-3">
+      <view wx:for="{{view.trends}}" wx:key="key" wx:for-item="trend" class="min-w-0 rounded-[16rpx] bg-panel px-4 py-4">
+        <view class="text-[length:27rpx] font-semibold">{{trend.title}}</view>
+        <scroll-view wx:if="{{trend.state === 'ready'}}" class="mt-3 max-h-[560rpx]" scroll-y enhanced show-scrollbar="{{false}}">
+          <view wx:for="{{trend.points}}" wx:key="key" wx:for-item="point" class="border-b border-line py-3">
+            <view class="text-[length:21rpx] text-muted">{{point.label}}</view>
+            <view wx:for="{{point.bars}}" wx:key="key" wx:for-item="bar" class="mt-2 grid grid-cols-[72rpx_minmax(0,1fr)_64rpx] items-center gap-2">
+              <view class="text-[length:20rpx] text-muted">{{bar.label}}</view>
+              <view class="h-[14rpx] overflow-hidden rounded-full bg-panel-raised"><view wx:if="{{bar.widthPercent > 0}}" class="h-full rounded-full bg-brand" style="width: {{bar.widthPercent}}%;"></view></view>
+              <view class="text-right text-[length:21rpx] font-semibold">{{bar.value}}</view>
+            </view>
+            <view wx:if="{{point.detail}}" class="mt-2 text-[length:19rpx] text-muted">{{point.detail}}</view>
+          </view>
+        </scroll-view>
+        <view wx:else class="mt-3 rounded-[12rpx] bg-panel-raised px-3 py-4 text-[length:22rpx] text-muted">{{trend.message}}</view>
       </view>
     </view>
     <view class="mt-7">
