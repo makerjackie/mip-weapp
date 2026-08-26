@@ -28,7 +28,7 @@ function createBlindBoxRepository(database, options = {}) {
          ON card.app_id = catalog.app_id AND card.catalog_id = catalog.id
         AND card.status = 'PUBLISHED'
        WHERE catalog.app_id = ? AND catalog.status = 'PUBLISHED'
-       GROUP BY catalog.id
+       GROUP BY catalog.app_id, catalog.id
        ORDER BY catalog.updated_at DESC, catalog.id`,
       [caller.appId],
     )
@@ -50,7 +50,7 @@ function createBlindBoxRepository(database, options = {}) {
          ON card.app_id = catalog.app_id AND card.catalog_id = catalog.id
         AND card.status = 'PUBLISHED'
        WHERE catalog.app_id = ? AND catalog.id = ? AND catalog.status = 'PUBLISHED'
-       GROUP BY catalog.id`,
+       GROUP BY catalog.app_id, catalog.id`,
       [caller.appId, catalogId],
     )
     if (!catalog) throw new Error('NOT_FOUND')
@@ -290,7 +290,7 @@ function createBlindBoxRepository(database, options = {}) {
        LEFT JOIN mip_blind_box_cards card
          ON card.app_id = catalog.app_id AND card.catalog_id = catalog.id
        WHERE catalog.app_id = ?
-       GROUP BY catalog.id ORDER BY catalog.updated_at DESC, catalog.id`,
+       GROUP BY catalog.app_id, catalog.id ORDER BY catalog.updated_at DESC, catalog.id`,
       [caller.appId],
     )
     return { items: rows.map(adminCatalogDto) }
@@ -352,7 +352,7 @@ function createBlindBoxRepository(database, options = {}) {
          LEFT JOIN mip_blind_box_cards card
            ON card.app_id = catalog.app_id AND card.catalog_id = catalog.id
          WHERE catalog.app_id = ? AND catalog.id = ?
-         GROUP BY catalog.id`,
+         GROUP BY catalog.app_id, catalog.id`,
         [caller.appId, catalogId],
       ))
     })

@@ -68,6 +68,69 @@ describe('blind box rules', () => {
       { rarity: 'RARE', label: '稀有', weight: 30, probabilityBasisPoints: 3000, availableCardCount: 1 },
     ])
   })
+
+  it('groups every catalog aggregate by its complete composite primary key', async () => {
+    const aggregates = []
+    const catalog = {
+      id: catalogId,
+      app_id: appId,
+      catalog_key: 'benben-default',
+      name: '笨笨盲盒',
+      summary: '',
+      rules_text: '服务端按库存和权重抽取。',
+      redemption_rules_text: '兑换规则以后台配置为准。',
+      draw_cost_coin: 5,
+      daily_draw_limit: 20,
+      pity_threshold: 10,
+      pity_min_rarity: 'RARE',
+      status: 'PUBLISHED',
+      version: 1,
+      card_count: 0,
+      stock_total: 0,
+      stock_remaining: 0,
+    }
+    function assertAggregate(sql) {
+      if (!sql.includes('COUNT(card.id)')) return
+      aggregates.push(sql)
+      assert.match(sql, /GROUP BY catalog\.app_id, catalog\.id/)
+      assert.doesNotMatch(sql, /GROUP BY catalog\.id(?:\s|$)/)
+    }
+    const database = {
+      async one(sql) {
+        assertAggregate(sql)
+        if (sql.includes('FROM mip_growth_accounts')) return { coin_balance: 0 }
+        return catalog
+      },
+      async query(sql) {
+        assertAggregate(sql)
+        if (sql.includes('SELECT id, name, summary')) return []
+        return sql.includes('COUNT(card.id)') ? [catalog] : { affectedRows: 1 }
+      },
+      async transaction(work) {
+        return work(this)
+      },
+    }
+    const repository = createBlindBoxRepository(database, {
+      createId: () => catalogId,
+      assertAdmin: async () => 'PLATFORM_OWNER',
+    })
+
+    await repository.listBlindBoxes(caller)
+    await repository.getBlindBox(caller, { catalogId })
+    await repository.adminListBlindBoxCatalogs(caller)
+    await repository.adminSaveBlindBoxCatalog(caller, {
+      catalog: {
+        catalogKey: 'benben-default',
+        name: '笨笨盲盒',
+        summary: '',
+        rulesText: '服务端按库存和权重抽取。',
+        redemptionRulesText: '兑换规则以后台配置为准。',
+        drawCostCoin: 5,
+      },
+    })
+
+    assert.equal(aggregates.length, 4)
+  })
 })
 
 describe('blind box draw transaction', () => {
