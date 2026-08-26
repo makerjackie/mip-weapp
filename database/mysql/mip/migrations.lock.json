@@ -607,6 +607,20 @@
         "mip_knowledge_ingestion_schedules"
       ],
       "altersTables": []
+    },
+    {
+      "version": "20260826440000",
+      "name": "mip_user_influence_indexes",
+      "sql": "database/mysql/mip/044_user_influence_indexes.sql",
+      "sqlSha256": "9567fa075648d7a4bb183c58a2695795a4207ae5f313583ad797994909dff8a4",
+      "rollback": "database/mysql/mip/rollback/044_user_influence_indexes.sql",
+      "rollbackSha256": "011ec62dc5227a2fee6c40284bbbcbe982c302c6e38ad05cb259033a38ff8160",
+      "createsTables": [],
+      "altersTables": [
+        "mip_event_invitation_attributions",
+        "mip_event_hearts",
+        "mip_profile_visits"
+      ]
     }
   ]
 }
