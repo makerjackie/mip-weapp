@@ -164,6 +164,13 @@ async function assertInteractionTargetInViewport(page, miniProgram, journey, ste
   return evidence
 }
 
+export async function queryFreshRenderedActionElement(page, selector) {
+  // Dynamic wx:if branches can reuse an elementId after replacing the node, while
+  // miniprogram-automator keeps the old handle in Page.elementMap.
+  page?.elementMap?.clear?.()
+  return await page.$(selector, { fallback: false })
+}
+
 async function waitForInteractionData(page, step, timeoutMs = 1500) {
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
@@ -935,12 +942,13 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
           await retry(`scroll interaction ${journey.id}/${step.id}`, () => miniProgram.pageScrollTo(journey.scrollTop))
           await new Promise(resolve => setTimeout(resolve, 180))
         }
-        const viewportEvidence = journey.requireVisibleTarget === true
-          ? await retry(
-              `prove interaction target ${journey.id}/${step.id}`,
-              () => assertInteractionTargetInViewport(page, miniProgram, journey, step),
-            )
-          : undefined
+        let viewportEvidence
+        if (journey.requireVisibleTarget === true && step.type === 'input') {
+          viewportEvidence = await retry(
+            `prove interaction target ${journey.id}/${step.id}`,
+            () => assertInteractionTargetInViewport(page, miniProgram, journey, step),
+          )
+        }
         let visibleBeforePath = ''
         if (step.visibleAssertion) {
           visibleBeforePath = path.join(outputDir, `interaction-${outputName(journey.id)}-${outputName(step.id)}-before.png`)
@@ -970,19 +978,30 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
         }
         else {
           await retry(`tap interaction ${journey.id}/${step.id}`, async () => {
-            const element = await page.$(step.selector)
+            if (journey.requireVisibleTarget === true) {
+              viewportEvidence = await assertInteractionTargetInViewport(page, miniProgram, journey, step)
+            }
+            const element = await queryFreshRenderedActionElement(page, step.selector)
             let actionError
+            let actionAttempted = false
             try {
               assert(element, `Interaction ${journey.id}/${step.id} selector was not rendered: ${step.selector}`)
+              const dataBeforeAction = await page.data(undefined, { routeOnly: true })
+              assert(
+                !interactionDataMatches(dataBeforeAction, step),
+                `Interaction ${journey.id}/${step.id} was already satisfied before the rendered tap`,
+              )
+              actionAttempted = true
               await element.tap()
             }
             catch (error) {
               actionError = error
             }
-            if (actionError && journey.requireRenderedAction === true) {
-              throw actionError
-            }
-            if (!await waitForInteractionData(page, step)) {
+            const actionReachedExpectedState = await waitForInteractionData(page, step)
+            if (!actionReachedExpectedState || !actionAttempted) {
+              if (actionError && journey.requireRenderedAction === true) {
+                throw actionError
+              }
               if (journey.requireRenderedAction === true || !await invokeInteractionHandler(page, step)) {
                 throw actionError || new Error(`Interaction ${journey.id}/${step.id} rendered tap did not update page data`)
               }

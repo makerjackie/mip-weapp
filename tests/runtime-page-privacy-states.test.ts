@@ -5,6 +5,7 @@ import {
   assertNoSensitivePageData,
   evaluateRouteState,
   interactionTargetViewportEvidence,
+  queryFreshRenderedActionElement,
 } from '../scripts/verify-runtime.mjs'
 import {
   clearPrivatePhones,
@@ -104,8 +105,34 @@ describe('runtime page privacy and normal unavailable states', () => {
     ], 720)).toBeNull()
     expect(verifier).toContain('miniProgram.pageScrollTo(journey.scrollTop)')
     expect(verifier).toContain('assertInteractionTargetInViewport')
+    expect(verifier).toContain('queryFreshRenderedActionElement(page, step.selector)')
+    expect(verifier).toContain('was already satisfied before the rendered tap')
     expect(verifier).toContain('journey.requireRenderedAction === true')
     expect(verifier).toContain('journey.requireScreenshotDiff === true')
+  })
+
+  it('drops cached automator handles before every strict rendered action query', async () => {
+    const stale = { id: 'stale' }
+    const fresh = [{ id: 'fresh-1' }, { id: 'fresh-2' }] as const
+    const elementMap = new Map([['profile-tab-cases', stale]])
+    let queryCount = 0
+    const page = {
+      elementMap,
+      $: async (selector: string, options: { fallback: boolean }) => {
+        expect(selector).toBe('#profile-tab-cases')
+        expect(options).toEqual({ fallback: false })
+        expect(elementMap.size).toBe(0)
+        const element = queryCount === 0 ? fresh[0] : fresh[1]
+        queryCount += 1
+        elementMap.set('profile-tab-cases', element)
+        return element
+      },
+    }
+
+    await expect(queryFreshRenderedActionElement(page, '#profile-tab-cases')).resolves.toBe(fresh[0])
+    await expect(queryFreshRenderedActionElement(page, '#profile-tab-cases')).resolves.toBe(fresh[1])
+    expect(elementMap.get('profile-tab-cases')).toBe(fresh[1])
+    expect(queryCount).toBe(2)
   })
 
   it('guards sensitive roster pagination against stale page requests', () => {
