@@ -1,4 +1,5 @@
 import { mipCommerceModule } from '../mip-commerce/client'
+import { registerMipLocalUserCache } from '../mip-identity/local-session'
 import { createCheckInResumeStore } from './check-in-resume'
 import { cloudbaseMipEventsGateway } from './cloudbase-gateway'
 import { createMipEventsModule } from './module'
@@ -15,3 +16,6 @@ export const mipCheckInResumeStore = createCheckInResumeStore({
   set: (callback, delayMs) => setTimeout(callback, delayMs),
   clear: handle => clearTimeout(handle as ReturnType<typeof setTimeout>),
 })
+
+registerMipLocalUserCache(() => mipEventsModule.invalidate())
+registerMipLocalUserCache(() => mipCheckInResumeStore.clear())

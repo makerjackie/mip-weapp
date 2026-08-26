@@ -3,6 +3,7 @@ import type { MipGrowthGateway } from './types'
 export function createMipGrowthModule(gateway: MipGrowthGateway) {
   let snapshot: Awaited<ReturnType<MipGrowthGateway['getSnapshot']>> | undefined
   let pendingSnapshot: Promise<Awaited<ReturnType<MipGrowthGateway['getSnapshot']>>> | undefined
+  let generation = 0
 
   return {
     peekSnapshot() {
@@ -16,8 +17,11 @@ export function createMipGrowthModule(gateway: MipGrowthGateway) {
       if (!options.force && pendingSnapshot) {
         return pendingSnapshot
       }
+      const loadGeneration = generation
       const request = gateway.getSnapshot().then((result) => {
-        snapshot = result
+        if (loadGeneration === generation) {
+          snapshot = result
+        }
         return result
       }).finally(() => {
         if (pendingSnapshot === request) {
@@ -41,7 +45,9 @@ export function createMipGrowthModule(gateway: MipGrowthGateway) {
     },
 
     invalidate() {
+      generation += 1
       snapshot = undefined
+      pendingSnapshot = undefined
     },
   }
 }

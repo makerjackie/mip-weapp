@@ -20,10 +20,19 @@ export function createMipAdminModule(
   options: { pendingExportStore?: PendingAdminExportStore } = {},
 ) {
   const cache = createQueryCache(15_000)
+  let generation = 0
   const community = createMipCommunityAdmin(gateway, cache)
   const growth = createMipGrowthAdmin(gateway, cache)
   const events = createMipEventsAdmin(gateway, cache)
-  const exports = createMipExportsAdmin(gateway, cache, options.pendingExportStore)
+  const exports = createMipExportsAdmin(
+    gateway,
+    cache,
+    options.pendingExportStore,
+    () => {
+      const workflowGeneration = generation
+      return { isCurrent: () => workflowGeneration === generation }
+    },
+  )
   const governance = createMipGovernanceAdmin(gateway, cache)
   const messaging = createMipMessagingAdmin(gateway, cache)
   const opportunities = createMipOpportunityAdmin(gateway, cache)
@@ -93,6 +102,11 @@ export function createMipAdminModule(
     clearSensitive() {
       cache.invalidate('mip-admin:users')
       cache.invalidate('mip-admin:roster')
+    },
+    invalidate() {
+      generation += 1
+      cache.invalidate()
+      options.pendingExportStore?.clear()
     },
   }
 }

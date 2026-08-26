@@ -1,6 +1,7 @@
 import type { AnnouncementListQuery } from './types'
 import { createQueryCache } from '@weapp/shared/cache'
 import { callCommunityApi } from '../mip-community/transport'
+import { registerMipLocalUserCache } from '../mip-identity/local-session'
 import { createAnnouncementGateway } from './gateway'
 
 const gateway = createAnnouncementGateway({ invoke: callCommunityApi })
@@ -24,6 +25,8 @@ export const mipAnnouncementsModule = {
     return cache.peek<Awaited<ReturnType<typeof gateway.get>>>(`announcement:${announcementId}`)
   },
   invalidate() {
-    cache.invalidate('announcement')
+    cache.invalidate()
   },
 }
+
+registerMipLocalUserCache(() => mipAnnouncementsModule.invalidate())

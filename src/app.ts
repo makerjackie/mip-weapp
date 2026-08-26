@@ -2,6 +2,7 @@ import { prepareApp } from './bootstrap'
 import { runtimeConfig } from './config/runtime'
 import { mipCheckInResumeStore } from './modules/mip-events/client'
 import { mipIdentityModule } from './modules/mip-identity/client'
+import { registerMipLocalUserCache } from './modules/mip-identity/local-session'
 import { mipGlobalAccessGuard } from './modules/mip-identity/runtime'
 import { mipPopupMessagePresenter } from './modules/mip-messaging/client'
 import { createPopupForegroundCoordinator } from './modules/mip-messaging/popup'
@@ -10,6 +11,7 @@ const popupForeground = createPopupForegroundCoordinator(
   mipIdentityModule,
   mipPopupMessagePresenter,
 )
+registerMipLocalUserCache(() => popupForeground.invalidate())
 
 const freeEventRuntimeAcceptanceStorageKey = 'mip:internal:free-event-runtime-acceptance:v1'
 const runtimeAcceptance = Object.freeze({

@@ -30,6 +30,7 @@ interface PersistedAccessState {
   version: typeof MIP_IDENTITY_ACCESS_STORAGE_VERSION
   intents: Array<StoredIntent & { token: string }>
   pendingResume?: StoredPendingResume
+  signedOut?: true
 }
 
 export interface MipIdentityAccessStorage {
@@ -68,6 +69,37 @@ function sanitizeIntent(intent: ProtectedActionIntent): ProtectedActionIntent {
     ...intent,
     source: sanitizeReturnContext(intent.source),
     requirements: intent.requirements ? [...intent.requirements] : undefined,
+  }
+}
+
+function signedOutSnapshot(): IdentityAccessSnapshot {
+  return {
+    authenticated: false,
+    userVersion: 0,
+    phoneBound: false,
+    agreements: [],
+    profile: {
+      exists: false,
+      version: 0,
+      nickname: '',
+      avatarBound: false,
+      identityStatus: '',
+      headline: '',
+      introduction: '',
+      companies: [],
+      organizations: [],
+      visibility: {
+        headline: false,
+        introduction: false,
+        companies: false,
+        organizations: false,
+      },
+      abilityTagIds: [],
+      complete: false,
+      missingFields: ['NICKNAME', 'PRIMARY_BRANCH'],
+    },
+    membership: { kind: 'GUEST', source: 'NONE' },
+    grants: [],
   }
 }
 
@@ -126,13 +158,31 @@ export function createMipIdentityModule(
   const intents = new Map<string, StoredIntent>()
   let latestSnapshot: IdentityAccessSnapshot | undefined
   let pendingResume: StoredPendingResume | undefined
+  let signedOut = false
+  let localSessionGeneration = 0
+
+  function currentLocalSnapshot(): IdentityAccessSnapshot {
+    return latestSnapshot || signedOutSnapshot()
+  }
+
+  async function loadAndStoreSnapshot(
+    loader: () => Promise<IdentityAccessSnapshot>,
+  ): Promise<IdentityAccessSnapshot> {
+    const requestGeneration = localSessionGeneration
+    const snapshot = await loader()
+    if (requestGeneration !== localSessionGeneration || signedOut) {
+      return currentLocalSnapshot()
+    }
+    latestSnapshot = snapshot
+    return snapshot
+  }
 
   function persistAccessState() {
     if (!storage) {
       return
     }
     try {
-      if (!intents.size && !pendingResume) {
+      if (!intents.size && !pendingResume && !signedOut) {
         storage.clear()
         return
       }
@@ -146,6 +196,7 @@ export function createMipIdentityModule(
         pendingResume: pendingResume
           ? { ...pendingResume, source: sanitizeReturnContext(pendingResume.source) }
           : undefined,
+        signedOut: signedOut ? true : undefined,
       })
     }
     catch {
@@ -176,6 +227,7 @@ export function createMipIdentityModule(
       catch {}
       return
     }
+    signedOut = raw.signedOut === true
     const currentTime = now()
     for (const item of raw.intents.slice(-MAX_PERSISTED_INTENTS)) {
       if (!isRecord(item)
@@ -246,13 +298,46 @@ export function createMipIdentityModule(
     if (!intent) {
       throw new Error('ACCESS_INTENT_EXPIRED')
     }
-    latestSnapshot = next || await gateway.getAccessSnapshot()
+    let snapshot: IdentityAccessSnapshot
+    if (next) {
+      snapshot = next
+      latestSnapshot = snapshot
+    }
+    else if (signedOut) {
+      snapshot = signedOutSnapshot()
+      latestSnapshot = snapshot
+    }
+    else {
+      snapshot = await loadAndStoreSnapshot(() => gateway.getAccessSnapshot())
+    }
     return {
       token,
       intent,
-      snapshot: latestSnapshot,
-      decision: evaluateAccess(latestSnapshot, intent),
+      snapshot,
+      decision: evaluateAccess(snapshot, intent),
     }
+  }
+
+  async function mutateAccessSession(
+    token: string,
+    mutation: () => Promise<IdentityAccessSnapshot>,
+  ): Promise<AccessSession> {
+    const intent = getIntent(token)
+    if (!intent) {
+      throw new Error('ACCESS_INTENT_EXPIRED')
+    }
+    const requestGeneration = localSessionGeneration
+    const next = await mutation()
+    if (requestGeneration !== localSessionGeneration || signedOut) {
+      const snapshot = currentLocalSnapshot()
+      return {
+        token,
+        intent,
+        snapshot,
+        decision: evaluateAccess(snapshot, intent),
+      }
+    }
+    return session(token, next)
   }
 
   restoreAccessState()
@@ -274,13 +359,53 @@ export function createMipIdentityModule(
       return session(token)
     },
 
+    async signIn(token: string) {
+      const intent = getIntent(token)
+      if (!intent) {
+        throw new Error('ACCESS_INTENT_EXPIRED')
+      }
+      localSessionGeneration += 1
+      const signInGeneration = localSessionGeneration
+      const snapshot = await gateway.getAccessSnapshot()
+      if (signInGeneration === localSessionGeneration) {
+        signedOut = false
+        latestSnapshot = snapshot
+        persistAccessState()
+      }
+      const current = signInGeneration === localSessionGeneration
+        ? snapshot
+        : currentLocalSnapshot()
+      return {
+        token,
+        intent,
+        snapshot: current,
+        decision: evaluateAccess(current, intent),
+      }
+    },
+
+    isSignedOut() {
+      return signedOut
+    },
+
+    signOutLocally() {
+      localSessionGeneration += 1
+      latestSnapshot = undefined
+      intents.clear()
+      pendingResume = undefined
+      signedOut = true
+      persistAccessState()
+    },
+
     peekSnapshot() {
       return latestSnapshot
     },
 
     async loadSnapshot() {
-      latestSnapshot = await gateway.getAccessSnapshot()
-      return latestSnapshot
+      if (signedOut) {
+        latestSnapshot = signedOutSnapshot()
+        return latestSnapshot
+      }
+      return loadAndStoreSnapshot(() => gateway.getAccessSnapshot())
     },
 
     peekIntent(token: string) {
@@ -288,40 +413,44 @@ export function createMipIdentityModule(
     },
 
     async acceptAgreements(token: string, input: AgreementAcceptanceInput) {
-      return session(token, await gateway.acceptAgreements(input))
+      return mutateAccessSession(token, () => gateway.acceptAgreements(input))
     },
 
     async bindWechatPhone(token: string, code: string) {
       if (!code.trim()) {
         throw new Error('PHONE_CODE_REQUIRED')
       }
-      return session(token, await gateway.bindWechatPhone(code))
+      return mutateAccessSession(token, () => gateway.bindWechatPhone(code))
     },
 
     async rebindWechatPhone(code: string) {
       if (!code.trim()) {
         throw new Error('PHONE_CODE_REQUIRED')
       }
-      latestSnapshot = await gateway.bindWechatPhone(code)
-      return latestSnapshot
+      return loadAndStoreSnapshot(() => gateway.bindWechatPhone(code))
     },
 
     async closeAccount(input: AccountClosureInput) {
+      const requestGeneration = localSessionGeneration
       const result = await gateway.closeAccount(input)
+      if (requestGeneration !== localSessionGeneration) {
+        return result
+      }
+      localSessionGeneration += 1
       latestSnapshot = undefined
       intents.clear()
       pendingResume = undefined
+      signedOut = false
       persistAccessState()
       return result
     },
 
     async updateProfile(token: string, input: ProfileUpdateInput) {
-      return session(token, await gateway.updateProfile(input))
+      return mutateAccessSession(token, () => gateway.updateProfile(input))
     },
 
     async saveProfile(input: ProfileUpdateInput) {
-      latestSnapshot = await gateway.updateProfile(input)
-      return latestSnapshot
+      return loadAndStoreSnapshot(() => gateway.updateProfile(input))
     },
 
     async complete(token: string): Promise<AccessReturnContext> {

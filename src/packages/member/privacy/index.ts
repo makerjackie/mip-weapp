@@ -4,6 +4,7 @@ import {
   MipIdentityGatewayError,
 } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
+import { mipLocalSession } from '../../../modules/mip-identity/local-session-client'
 import { mipGlobalAccessGuard } from '../../../modules/mip-identity/runtime'
 import { mipMessagingModule } from '../../../modules/mip-messaging/client'
 import { caseNavigateTo } from '../../../modules/platform/case-navigation'
@@ -12,6 +13,7 @@ Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'processing' | 'success' | 'blocked' | 'conflict' | 'error',
     closureState: 'idle' as 'idle' | 'confirming' | 'processing' | 'failed',
+    localLogoutState: 'idle' as 'idle' | 'processing',
     confirmationPhrase: '',
     requiredConfirmationPhrase: accountClosureConfirmationPhrase,
     userVersion: 0,
@@ -44,6 +46,10 @@ Page({
     this.setData({ state: 'loading', message: '' })
     try {
       const snapshot = await mipIdentityModule.loadSnapshot()
+      if (!snapshot.authenticated) {
+        mipGlobalAccessGuard.enterTarget({ path: 'pages/index/index' })
+        return
+      }
       if (snapshot.userStatus === 'CLOSED') {
         this.accountClosureRequest().reset()
         this.setData({ state: 'success', closureState: 'idle', userVersion: snapshot.userVersion })
@@ -74,6 +80,26 @@ Page({
 
   recordCustomerServiceInteraction() {
     void mipMessagingModule.recordCustomerServiceInteraction().catch(() => undefined)
+  },
+
+  async signOutLocally() {
+    if (this.data.localLogoutState === 'processing'
+      || this.data.closureState === 'processing') {
+      return
+    }
+    const confirmed = await wx.showModal({
+      title: '退出登录',
+      content: '退出后将清除本机登录状态和用户缓存。账号、订单、会员权益和活动记录不会删除。',
+      confirmText: '退出',
+      confirmColor: '#C43D3D',
+    }).catch(() => null)
+    if (!confirmed?.confirm) {
+      return
+    }
+
+    this.setData({ localLogoutState: 'processing', message: '' })
+    mipLocalSession.signOut()
+    mipGlobalAccessGuard.enterTarget({ path: 'pages/index/index' })
   },
 
   startAccountClosure() {

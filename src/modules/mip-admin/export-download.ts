@@ -26,6 +26,17 @@ interface ExportRuntime {
     success: () => void
     fail: () => void
   }) => unknown
+  getFileSystemManager?: () => {
+    unlink: (options: {
+      filePath: string
+      success: () => void
+      fail: () => void
+    }) => unknown
+  }
+}
+
+export interface ExportSessionFence {
+  isCurrent: () => boolean
 }
 
 interface ExportWorkflowOptions {
@@ -34,6 +45,7 @@ interface ExportWorkflowOptions {
   onProgress?: (progress: ExportProgress) => void
   wait?: (milliseconds: number) => Promise<void>
   preparePendingImmediately?: boolean
+  sessionFence?: ExportSessionFence
 }
 
 const terminalStatuses = new Set<AdminExportStatusValue>([
@@ -66,6 +78,52 @@ const transientPendingStore: PendingAdminExportStore = {
 
 function wait(milliseconds: number) {
   return new Promise<void>(resolve => setTimeout(resolve, milliseconds))
+}
+
+function sessionEndedError() {
+  return new MipAdminError('AUTH_REQUIRED', '当前会话已结束')
+}
+
+function isSessionCurrent(options: ExportWorkflowOptions) {
+  return options.sessionFence?.isCurrent() !== false
+}
+
+function assertSessionCurrent(options: ExportWorkflowOptions) {
+  if (!isSessionCurrent(options)) {
+    throw sessionEndedError()
+  }
+}
+
+async function waitInCurrentSession<T>(promise: Promise<T>, options: ExportWorkflowOptions) {
+  try {
+    const result = await promise
+    assertSessionCurrent(options)
+    return result
+  }
+  catch (error) {
+    assertSessionCurrent(options)
+    throw error
+  }
+}
+
+function removeTemporaryFile(runtime: ExportRuntime, filePath: string) {
+  return new Promise<void>((resolve) => {
+    try {
+      const fileSystem = runtime.getFileSystemManager?.()
+      if (!fileSystem) {
+        resolve()
+        return
+      }
+      fileSystem.unlink({
+        filePath,
+        success: () => resolve(),
+        fail: () => resolve(),
+      })
+    }
+    catch {
+      resolve()
+    }
+  })
 }
 
 function download(runtime: ExportRuntime, url: string) {
@@ -107,11 +165,17 @@ async function waitUntilReady(
   token: string,
   initial: AdminExportStatus,
   waitFor: (milliseconds: number) => Promise<void>,
+  options: ExportWorkflowOptions,
 ) {
   let status = initial
   for (let attempt = 0; attempt < 20 && status.status === 'PENDING'; attempt += 1) {
-    await waitFor(Math.max(300, Math.min(status.retryAfterMs || 500, 2_000)))
-    status = await gateway.prepareExport(ticketId, token)
+    assertSessionCurrent(options)
+    await waitInCurrentSession(
+      waitFor(Math.max(300, Math.min(status.retryAfterMs || 500, 2_000))),
+      options,
+    )
+    assertSessionCurrent(options)
+    status = await waitInCurrentSession(gateway.prepareExport(ticketId, token), options)
   }
   if (status.status === 'READY') {
     return status
@@ -150,16 +214,23 @@ function shouldDiscardPending(error: unknown) {
 async function observePendingExport(
   gateway: MipAdminGateway,
   pendingStore: PendingAdminExportStore,
-  onProgress?: (progress: ExportProgress) => void,
+  options: ExportWorkflowOptions,
 ) {
+  assertSessionCurrent(options)
   const pending = pendingStore.peek()
   if (!pending) {
     return null
   }
-  onProgress?.('checking')
+  assertSessionCurrent(options)
+  options.onProgress?.('checking')
   try {
-    const status = await gateway.getExportStatus(pending.ticketId, pending.token)
+    assertSessionCurrent(options)
+    const status = await waitInCurrentSession(
+      gateway.getExportStatus(pending.ticketId, pending.token),
+      options,
+    )
     if (terminalStatuses.has(status.status)) {
+      assertSessionCurrent(options)
       pendingStore.clear(pending.ticketId)
     }
     return { pending, status }
@@ -184,7 +255,10 @@ async function openPreparedExport(
   const runtime = options.runtime || wx
   const pendingStore = options.pendingStore || transientPendingStore
   const waitFor = options.wait || wait
+  let downloadedFilePath = ''
+  assertSessionCurrent(options)
   if (terminalStatuses.has(status.status)) {
+    assertSessionCurrent(options)
     pendingStore.clear(pending.ticketId)
     throw terminalStatusError(status)
   }
@@ -192,9 +266,13 @@ async function openPreparedExport(
   let ready = status
   try {
     if (ready.status === 'PENDING') {
+      assertSessionCurrent(options)
       options.onProgress?.('preparing')
       const initial = options.preparePendingImmediately
-        ? await gateway.prepareExport(pending.ticketId, pending.token)
+        ? await waitInCurrentSession(
+            gateway.prepareExport(pending.ticketId, pending.token),
+            options,
+          )
         : ready
       ready = await waitUntilReady(
         gateway,
@@ -202,22 +280,38 @@ async function openPreparedExport(
         pending.token,
         initial,
         waitFor,
+        options,
       )
+      assertSessionCurrent(options)
     }
+    assertSessionCurrent(options)
     options.onProgress?.('downloading')
-    const reservation = await gateway.reserveExport(pending.ticketId, pending.token)
-    const filePath = await download(runtime, reservation.tempUrl)
+    assertSessionCurrent(options)
+    const reservation = await waitInCurrentSession(
+      gateway.reserveExport(pending.ticketId, pending.token),
+      options,
+    )
+    assertSessionCurrent(options)
+    downloadedFilePath = await download(runtime, reservation.tempUrl)
+    assertSessionCurrent(options)
     try {
-      await gateway.completeExport(pending.ticketId, pending.token)
+      assertSessionCurrent(options)
+      await waitInCurrentSession(
+        gateway.completeExport(pending.ticketId, pending.token),
+        options,
+      )
     }
     catch (error) {
       if (!(error instanceof MipAdminError) || error.code !== 'EXPORT_CONSUMED') {
         throw error
       }
     }
+    assertSessionCurrent(options)
     pendingStore.clear(pending.ticketId)
+    assertSessionCurrent(options)
     options.onProgress?.('opening')
-    await openDocument(runtime, filePath)
+    assertSessionCurrent(options)
+    await waitInCurrentSession(openDocument(runtime, downloadedFilePath), options)
     return {
       ticketId: pending.ticketId,
       fileName: reservation.fileName,
@@ -225,6 +319,12 @@ async function openPreparedExport(
     }
   }
   catch (error) {
+    if (!isSessionCurrent(options)) {
+      if (downloadedFilePath) {
+        await removeTemporaryFile(runtime, downloadedFilePath)
+      }
+      throw sessionEndedError()
+    }
     if (shouldDiscardPending(error)) {
       pendingStore.clear(pending.ticketId)
     }
@@ -234,13 +334,14 @@ async function openPreparedExport(
 
 export async function getPendingAdminExportStatus(
   gateway: MipAdminGateway,
-  options: Pick<ExportWorkflowOptions, 'pendingStore' | 'onProgress'> = {},
+  options: Pick<ExportWorkflowOptions, 'pendingStore' | 'onProgress' | 'sessionFence'> = {},
 ): Promise<PendingAdminExportStatus | null> {
   const observed = await observePendingExport(
     gateway,
     options.pendingStore || transientPendingStore,
-    options.onProgress,
+    options,
   )
+  assertSessionCurrent(options)
   return observed
     ? { ticketId: observed.pending.ticketId, ...observed.status }
     : null
@@ -251,7 +352,8 @@ export async function resumeAndOpenPendingAdminExport(
   options: ExportWorkflowOptions = {},
 ): Promise<AdminExportDownloadResult | null> {
   const pendingStore = options.pendingStore || transientPendingStore
-  const observed = await observePendingExport(gateway, pendingStore, options.onProgress)
+  const observed = await observePendingExport(gateway, pendingStore, options)
+  assertSessionCurrent(options)
   if (!observed) {
     return null
   }
@@ -268,21 +370,31 @@ export async function createAndOpenExport(
   options: ExportWorkflowOptions = {},
 ): Promise<AdminExportDownloadResult> {
   const pendingStore = options.pendingStore || transientPendingStore
+  assertSessionCurrent(options)
   options.onProgress?.('creating')
-  const ticket = await gateway.createExport(input)
+  assertSessionCurrent(options)
+  const ticket = await waitInCurrentSession(gateway.createExport(input), options)
+  assertSessionCurrent(options)
   const pending = pendingStore.save(ticket) || {
     version: 1 as const,
     ticketId: ticket.ticketId,
     token: ticket.token,
     expiresAt: ticket.expiresAt,
   }
+  assertSessionCurrent(options)
   options.onProgress?.('preparing')
   try {
-    const initial = await gateway.prepareExport(ticket.ticketId, ticket.token)
-    return await openPreparedExport(gateway, pending, initial, {
+    assertSessionCurrent(options)
+    const initial = await waitInCurrentSession(
+      gateway.prepareExport(ticket.ticketId, ticket.token),
+      options,
+    )
+    const result = await openPreparedExport(gateway, pending, initial, {
       ...options,
       pendingStore,
     })
+    assertSessionCurrent(options)
+    return result
   }
   catch (error) {
     if (shouldDiscardPending(error)) {

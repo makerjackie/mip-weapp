@@ -256,6 +256,9 @@ export function createMipGameModule(gateway: MipGameGateway) {
   return {
     mutation,
     query,
+    invalidate() {
+      cache.invalidate()
+    },
     rankingLabels: {
       TEAM_HALF_YEAR: '团队半年榜',
       TEAM_YEAR: '团队年度榜',

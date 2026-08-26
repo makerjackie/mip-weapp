@@ -439,5 +439,9 @@ export function createMembershipModule(
       cache.invalidate('event')
       cache.invalidate('registrations')
     },
+
+    invalidate() {
+      cache.invalidate()
+    },
   }
 }

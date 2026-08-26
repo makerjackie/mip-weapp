@@ -89,6 +89,9 @@ export function createMipBannerModule(
     mutation,
     query,
     uploadBannerImageFromPath,
+    invalidate() {
+      cache.invalidate()
+    },
     // Public consumer pages remain on this compatibility alias until their own page slice is migrated.
     listActive: query.listActive,
   }

@@ -11,6 +11,7 @@ export interface QueryOptions {
 
 export function createQueryCache(defaultMaxAgeMs = 30_000, now = () => Date.now()) {
   const entries = new Map<string, CacheEntry<unknown>>()
+  let generation = 0
 
   function peek<T>(key: string): T | undefined {
     return entries.get(key)?.value as T | undefined
@@ -30,8 +31,14 @@ export function createQueryCache(defaultMaxAgeMs = 30_000, now = () => Date.now(
     if (entry?.pending) {
       return entry.pending
     }
+    const queryGeneration = generation
     const pending = loader()
-      .then(value => prime(key, value))
+      .then((value) => {
+        if (queryGeneration === generation) {
+          prime(key, value)
+        }
+        return value
+      })
       .finally(() => {
         const current = entries.get(key)
         if (current?.pending === pending) {
@@ -43,6 +50,7 @@ export function createQueryCache(defaultMaxAgeMs = 30_000, now = () => Date.now(
   }
 
   function invalidate(prefix?: string) {
+    generation += 1
     if (!prefix) {
       entries.clear()
       return

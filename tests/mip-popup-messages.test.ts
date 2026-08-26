@@ -10,6 +10,18 @@ function inbox(items: InboxMessagePage['items']): InboxMessagePage {
   return { items, unreadCount: items.filter(item => !item.readAt).length }
 }
 
+function popupMessage() {
+  return {
+    id: 'message-1',
+    recipientUserId: 'user-1',
+    messageType: 'GROWTH_LEVEL_UP' as const,
+    title: '等级已提升',
+    body: '当前等级为二级。',
+    target: { type: 'GROWTH', id: 'growth', route: '/packages/member/mip-growth/index' },
+    createdAt: new Date().toISOString(),
+  }
+}
+
 describe('MIP popup messages', () => {
   it('waits for the cold-start snapshot and checks only the current foreground cycle', async () => {
     let resolveFirst: ((value: {
@@ -42,7 +54,104 @@ describe('MIP popup messages', () => {
     const app = readFileSync(new URL('../src/app.ts', import.meta.url), 'utf8')
     expect(app).toContain('void popupForeground.onShow()')
     expect(app).toContain('popupForeground.onHide()')
+    expect(app).toContain('registerMipLocalUserCache(() => popupForeground.invalidate())')
     expect(app).not.toContain('setTimeout')
+  })
+
+  it('does not open a private popup when logout invalidates an in-flight inbox request', async () => {
+    let resolveInbox!: (page: InboxMessagePage) => void
+    const showModal = vi.fn()
+    const presenter = createPopupMessagePresenter({
+      listInbox: vi.fn(() => new Promise<InboxMessagePage>((resolve) => {
+        resolveInbox = resolve
+      })),
+    } as never, { read: () => [], write: vi.fn() }, {
+      showModal: showModal as never,
+      navigateTo: vi.fn(),
+    })
+
+    const pending = presenter.showNext()
+    presenter.invalidate()
+    resolveInbox(inbox([popupMessage()]))
+
+    await expect(pending).resolves.toBe(false)
+    expect(showModal).not.toHaveBeenCalled()
+  })
+
+  it('does not persist, mark or navigate when logout occurs while the modal is open', async () => {
+    let resolveModal!: (result: { confirm: boolean, cancel: boolean }) => void
+    const storageWrite = vi.fn()
+    const markRead = vi.fn()
+    const navigateTo = vi.fn()
+    const showModal = vi.fn(() => new Promise((resolve) => {
+      resolveModal = resolve
+    }))
+    const presenter = createPopupMessagePresenter({
+      listInbox: vi.fn(async () => inbox([popupMessage()])),
+      markRead,
+    } as never, { read: () => [], write: storageWrite }, {
+      showModal: showModal as never,
+      navigateTo,
+    })
+
+    const pending = presenter.showNext()
+    await vi.waitFor(() => expect(showModal).toHaveBeenCalledOnce())
+    presenter.invalidate()
+    resolveModal({ confirm: true, cancel: false })
+
+    await expect(pending).resolves.toBe(false)
+    expect(storageWrite).not.toHaveBeenCalled()
+    expect(markRead).not.toHaveBeenCalled()
+    expect(navigateTo).not.toHaveBeenCalled()
+  })
+
+  it('does not navigate or restore presentation state when logout occurs during mark-read', async () => {
+    let resolveMarkRead!: (value: { messageId: string, readAt: string }) => void
+    let stored: string[] = []
+    const navigateTo = vi.fn()
+    const markRead = vi.fn(() => new Promise((resolve) => {
+      resolveMarkRead = resolve
+    }))
+    const presenter = createPopupMessagePresenter({
+      listInbox: vi.fn(async () => inbox([popupMessage()])),
+      markRead,
+    } as never, {
+      read: () => stored,
+      write: (value) => { stored = value },
+    }, {
+      showModal: vi.fn(async () => ({ confirm: true, cancel: false })) as never,
+      navigateTo,
+    })
+
+    const pending = presenter.showNext()
+    await vi.waitFor(() => expect(markRead).toHaveBeenCalledOnce())
+    presenter.invalidate()
+    stored = []
+    resolveMarkRead({ messageId: 'message-1', readAt: new Date().toISOString() })
+
+    await expect(pending).resolves.toBe(false)
+    expect(stored).toEqual([])
+    expect(navigateTo).not.toHaveBeenCalled()
+  })
+
+  it('does not start a presenter after logout invalidates an in-flight identity snapshot', async () => {
+    let resolveSnapshot!: (value: {
+      authenticated: boolean
+      agreements: Array<{ accepted: boolean }>
+    }) => void
+    const showNext = vi.fn()
+    const coordinator = createPopupForegroundCoordinator({
+      loadSnapshot: vi.fn(() => new Promise((resolve) => {
+        resolveSnapshot = resolve
+      })),
+    }, { showNext })
+
+    const pending = coordinator.onShow()
+    coordinator.invalidate()
+    resolveSnapshot({ authenticated: true, agreements: [{ accepted: true }] })
+
+    await expect(pending).resolves.toBeUndefined()
+    expect(showNext).not.toHaveBeenCalled()
   })
 
   it('presents one unread level-up message once and opens only its trusted target', async () => {
@@ -51,13 +160,7 @@ describe('MIP popup messages', () => {
     const navigateTo = vi.fn()
     const presenter = createPopupMessagePresenter({
       listInbox: vi.fn(async () => inbox([{
-        id: 'message-1',
-        recipientUserId: 'user-1',
-        messageType: 'GROWTH_LEVEL_UP',
-        title: '等级已提升',
-        body: '当前等级为二级。',
-        target: { type: 'GROWTH', id: 'growth', route: '/packages/member/mip-growth/index' },
-        createdAt: new Date().toISOString(),
+        ...popupMessage(),
       }])) as never,
       markRead,
     } as never, {

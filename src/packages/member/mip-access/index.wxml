@@ -32,7 +32,7 @@
     </view>
 
     <view wx:elif="{{nextRequirement === 'AUTHENTICATED'}}" class="mt-7">
-      <t-button block size="large" theme="primary" bind:tap="loadAccess">重新获取身份</t-button>
+      <t-button block size="large" theme="primary" loading="{{submitting}}" bind:tap="signIn">微信登录</t-button>
     </view>
 
     <view wx:elif="{{ready}}" class="mt-7">

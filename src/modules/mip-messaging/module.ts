@@ -10,6 +10,7 @@ export function createMipMessagingModule(
 ) {
   let firstPage: Awaited<ReturnType<MipMessagingGateway['listInbox']>> | undefined
   let firstPageLoadedAt = 0
+  let generation = 0
 
   return {
     peekInbox() {
@@ -20,8 +21,9 @@ export function createMipMessagingModule(
       if (!cursor && !options.force && firstPage) {
         return firstPage
       }
+      const loadGeneration = generation
       const result = await gateway.listInbox(cursor, Math.min(30, Math.max(1, options.limit || 20)))
-      if (!cursor) {
+      if (!cursor && loadGeneration === generation) {
         firstPage = result
         firstPageLoadedAt = Date.now()
       }
@@ -67,6 +69,7 @@ export function createMipMessagingModule(
     },
 
     invalidate() {
+      generation += 1
       firstPage = undefined
       firstPageLoadedAt = 0
     },

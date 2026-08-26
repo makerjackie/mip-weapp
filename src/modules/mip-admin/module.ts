@@ -1,3 +1,4 @@
+import { registerMipLocalUserCache } from '../mip-identity/local-session'
 import { createMipAdminModule } from './client'
 import { cloudbaseMipAdminGateway } from './cloudbase-gateway'
 import { createPendingAdminExportStore } from './pending-export'
@@ -12,3 +13,5 @@ const pendingExportStore = createPendingAdminExportStore({
 })
 
 export const mipAdminModule = createMipAdminModule(cloudbaseMipAdminGateway, { pendingExportStore })
+
+registerMipLocalUserCache(() => mipAdminModule.invalidate())

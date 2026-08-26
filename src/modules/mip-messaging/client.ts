@@ -1,4 +1,5 @@
 import { runtimeConfig } from '../../config/runtime'
+import { registerMipLocalUserCache } from '../mip-identity/local-session'
 import { cloudbaseMipMessagingGateway } from './cloudbase-gateway'
 import { createMipMessagingModule } from './module'
 import { createPopupMessagePresenter } from './popup'
@@ -20,3 +21,8 @@ export const mipPopupMessagePresenter = createPopupMessagePresenter(
     navigateTo: url => wx.navigateTo({ url }),
   },
 )
+
+registerMipLocalUserCache(() => {
+  mipMessagingModule.invalidate()
+  mipPopupMessagePresenter.invalidate()
+})

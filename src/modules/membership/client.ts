@@ -1,5 +1,6 @@
 import type { PaymentAdapter, WechatPaymentParameters } from './types'
 import { runtimeConfig } from '../../config/runtime'
+import { registerMipLocalUserCache } from '../mip-identity/local-session'
 import { cloudbaseMembershipGateway } from './cloudbase-gateway'
 import { createMembershipModule } from './module'
 
@@ -22,3 +23,5 @@ const wechatPaymentAdapter: PaymentAdapter = {
 export const membershipModule = createMembershipModule(cloudbaseMembershipGateway, wechatPaymentAdapter, {
   paymentMode: runtimeConfig.paymentMode,
 })
+
+registerMipLocalUserCache(() => membershipModule.invalidate())

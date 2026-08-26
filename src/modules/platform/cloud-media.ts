@@ -1,5 +1,6 @@
 import type { CaseCloudClient } from './cloudbase'
 import { replaceCloudFileUrls } from '@weapp/platform/media-urls'
+import { registerMipLocalUserCache } from '../mip-identity/local-session'
 import { requireCloudClient } from './cloudbase'
 
 interface CachedMediaUrl {
@@ -8,6 +9,7 @@ interface CachedMediaUrl {
 }
 
 const cache = new Map<string, CachedMediaUrl>()
+let cacheGeneration = 0
 const maximumBatchSize = 50
 const maximumCachedFiles = 120
 const maximumConcurrentDownloads = 3
@@ -159,6 +161,7 @@ async function downloadCloudFiles(cloud: CaseCloudClient, fileIds: string[]) {
 
 /** Resolves CloudBase file IDs to process-local files before native images render. */
 export async function resolveCloudFileUrls<T>(value: T, providedCloud?: CaseCloudClient): Promise<T> {
+  const resolveGeneration = cacheGeneration
   const now = Date.now()
   const fileIds = [...collectCloudFileIds(value)]
   if (!fileIds.length) {
@@ -184,7 +187,9 @@ export async function resolveCloudFileUrls<T>(value: T, providedCloud?: CaseClou
     const cloud = providedCloud || await requireCloudClient()
     const localPaths = await downloadCloudFiles(cloud, missing)
     for (const [fileId, localPath] of localPaths) {
-      cacheMediaFile(fileId, localPath)
+      if (resolveGeneration === cacheGeneration) {
+        cacheMediaFile(fileId, localPath)
+      }
       urls.set(fileId, localPath)
     }
 
@@ -215,3 +220,10 @@ export async function resolveCloudFileUrls<T>(value: T, providedCloud?: CaseClou
 
   return replaceCloudFileUrls(value, urls)
 }
+
+export function clearCloudMediaCache() {
+  cacheGeneration += 1
+  cache.clear()
+}
+
+registerMipLocalUserCache(clearCloudMediaCache)

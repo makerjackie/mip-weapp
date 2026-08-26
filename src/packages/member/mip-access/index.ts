@@ -8,8 +8,8 @@ import {
 
 const requirementCopy = {
   AUTHENTICATED: {
-    title: '需要微信身份',
-    description: '当前微信身份不可用，请返回后重试。',
+    title: '登录账号',
+    description: '登录后可以继续使用当前微信账号对应的会员与活动服务。',
   },
   AGREEMENTS: {
     title: '确认协议',
@@ -75,6 +75,27 @@ Page({
       this.setData(message === 'ACCESS_INTENT_EXPIRED'
         ? { state: 'expired' }
         : { state: 'error', message: '身份服务暂时不可用，请稍后重试。' })
+    }
+  },
+
+  async signIn() {
+    if (this.data.submitting) {
+      return
+    }
+    this.setData({ submitting: true, message: '' })
+    try {
+      const session = await mipIdentityModule.signIn(this.data.token)
+      this.applySession(session)
+      await this.continueGlobalAccess(session)
+    }
+    catch (error) {
+      const message = error instanceof Error ? error.message : ''
+      this.setData(message === 'ACCESS_INTENT_EXPIRED'
+        ? { state: 'expired', message: '' }
+        : { message: '登录失败，请稍后重试。' })
+    }
+    finally {
+      this.setData({ submitting: false })
     }
   },
 

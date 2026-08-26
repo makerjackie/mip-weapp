@@ -3,15 +3,20 @@ import type { BranchSelectionSnapshot, MipBranchesGateway } from './contracts'
 
 export function createMipBranchesModule(gateway: MipBranchesGateway) {
   let latest: BranchSelectionSnapshot | undefined
+  let generation = 0
 
   return {
     async load(primaryBranchId?: BranchId, userVersion = 0): Promise<BranchSelectionSnapshot> {
-      latest = {
+      const loadGeneration = generation
+      const result = {
         branches: await gateway.listBranches(),
         primaryBranchId,
         userVersion,
       }
-      return latest
+      if (loadGeneration === generation) {
+        latest = result
+      }
+      return result
     },
 
     peek() {
@@ -23,8 +28,17 @@ export function createMipBranchesModule(gateway: MipBranchesGateway) {
       if (selected && selected.status !== 'ACTIVE') {
         throw new Error('BRANCH_INACTIVE')
       }
-      latest = await gateway.setPrimaryBranch({ branchId, expectedVersion })
-      return latest
+      const loadGeneration = generation
+      const result = await gateway.setPrimaryBranch({ branchId, expectedVersion })
+      if (loadGeneration === generation) {
+        latest = result
+      }
+      return result
+    },
+
+    invalidate() {
+      generation += 1
+      latest = undefined
     },
   }
 }

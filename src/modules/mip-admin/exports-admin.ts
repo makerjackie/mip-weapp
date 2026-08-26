@@ -1,4 +1,4 @@
-import type { ExportProgress } from './export-download'
+import type { ExportProgress, ExportSessionFence } from './export-download'
 import type { PendingAdminExportStore } from './pending-export'
 import type { MipAdminGateway } from './types'
 import {
@@ -29,6 +29,7 @@ export function createMipExportsAdmin(
   gateway: MipAdminGateway,
   cache: ExportsAdminCache,
   pendingStore?: PendingAdminExportStore,
+  beginSession?: () => ExportSessionFence,
 ): MipExportsAdmin {
   const mutate = async <T>(work: () => Promise<T>) => {
     const result = await work()
@@ -36,20 +37,25 @@ export function createMipExportsAdmin(
     return result
   }
 
+  const workflowOptions = (onProgress?: (progress: ExportProgress) => void) => ({
+    onProgress,
+    pendingStore,
+    sessionFence: beginSession?.(),
+  })
+
   return {
-    createAndOpen: (input, onProgress) => mutate(() => createAndOpenExport(gateway, input, {
-      onProgress,
-      pendingStore,
-    })),
-    getPendingStatus: onProgress => getPendingAdminExportStatus(gateway, {
-      onProgress,
-      pendingStore,
-    }),
+    createAndOpen: (input, onProgress) => mutate(
+      () => createAndOpenExport(gateway, input, workflowOptions(onProgress)),
+    ),
+    getPendingStatus: onProgress => getPendingAdminExportStatus(
+      gateway,
+      workflowOptions(onProgress),
+    ),
     resumeAndOpen: async (onProgress) => {
-      const result = await resumeAndOpenPendingAdminExport(gateway, {
-        onProgress,
-        pendingStore,
-      })
+      const result = await resumeAndOpenPendingAdminExport(
+        gateway,
+        workflowOptions(onProgress),
+      )
       if (result) {
         cache.invalidate('mip-admin:audit')
       }

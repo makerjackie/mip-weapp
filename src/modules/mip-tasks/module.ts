@@ -5,6 +5,7 @@ import type {
   TaskExportResult,
 } from './types'
 import { createQueryCache } from '@weapp/shared/cache'
+import { MipTasksError } from './types'
 
 export interface MipTasksQueryFacade {
   listTasks: (
@@ -63,6 +64,21 @@ function writeFile(filePath: string, base64: string) {
   })
 }
 
+function removeFile(filePath: string) {
+  return new Promise<void>((resolve) => {
+    try {
+      wx.getFileSystemManager().unlink({
+        filePath,
+        success: () => resolve(),
+        fail: () => resolve(),
+      })
+    }
+    catch {
+      resolve()
+    }
+  })
+}
+
 function openWorkbook(filePath: string) {
   return new Promise<void>((resolve, reject) => {
     wx.openDocument({
@@ -93,6 +109,21 @@ function saveImage(filePath: string) {
 
 export function createMipTasksModule(gateway: MipTasksGateway) {
   const cache = createQueryCache(15_000)
+  let generation = 0
+
+  function sessionEndedError() {
+    return new MipTasksError('AUTH_REQUIRED', '当前会话已结束')
+  }
+
+  function isCurrent(workflowGeneration: number) {
+    return workflowGeneration === generation
+  }
+
+  function assertCurrent(workflowGeneration: number) {
+    if (!isCurrent(workflowGeneration)) {
+      throw sessionEndedError()
+    }
+  }
 
   function cacheKey(name: string, input: unknown = {}) {
     return `mip-tasks:${name}:${JSON.stringify(input)}`
@@ -176,24 +207,67 @@ export function createMipTasksModule(gateway: MipTasksGateway) {
   }
 
   async function exportAndOpen(filters?: AdminCompletionFilters): Promise<Omit<TaskExportResult, 'contentBase64'>> {
-    const result = await query.exportCompletions(filters)
-    const safeName = result.fileName.replace(/[^\w.-]/g, '-').slice(0, 100)
-    const filePath = `${wx.env.USER_DATA_PATH}/${safeName || 'mip-task-completions.xlsx'}`
-    await writeFile(filePath, result.contentBase64)
-    await openWorkbook(filePath)
-    return { fileName: result.fileName, rowCount: result.rowCount }
+    const workflowGeneration = generation
+    let filePath = ''
+    let fileMayExist = false
+    try {
+      assertCurrent(workflowGeneration)
+      const result = await query.exportCompletions(filters)
+      assertCurrent(workflowGeneration)
+      const safeName = result.fileName.replace(/[^\w.-]/g, '-').slice(0, 100)
+      filePath = `${wx.env.USER_DATA_PATH}/${safeName || 'mip-task-completions.xlsx'}`
+      assertCurrent(workflowGeneration)
+      fileMayExist = true
+      await writeFile(filePath, result.contentBase64)
+      assertCurrent(workflowGeneration)
+      await openWorkbook(filePath)
+      assertCurrent(workflowGeneration)
+      return { fileName: result.fileName, rowCount: result.rowCount }
+    }
+    catch (error) {
+      if (!isCurrent(workflowGeneration)) {
+        if (fileMayExist && filePath) {
+          await removeFile(filePath)
+        }
+        throw sessionEndedError()
+      }
+      throw error
+    }
   }
 
   return {
     mutation,
     query,
+    invalidate() {
+      generation += 1
+      cache.invalidate()
+    },
     exportAndOpen,
     async saveTemplateImage(url: string) {
+      const workflowGeneration = generation
+      let downloadedFilePath = ''
       if (!url || /^cloud:\/\//.test(url) || /^http:\/\//.test(url)) {
         throw new Error('模板下载地址无效')
       }
-      const filePath = /^https:\/\//.test(url) ? await downloadImage(url) : url
-      await saveImage(filePath)
+      try {
+        assertCurrent(workflowGeneration)
+        const filePath = /^https:\/\//.test(url) ? await downloadImage(url) : url
+        if (filePath !== url) {
+          downloadedFilePath = filePath
+        }
+        assertCurrent(workflowGeneration)
+        await saveImage(filePath)
+        assertCurrent(workflowGeneration)
+      }
+      catch (error) {
+        if (!isCurrent(workflowGeneration)) {
+          if (downloadedFilePath) {
+            await removeFile(downloadedFilePath)
+          }
+          throw sessionEndedError()
+        }
+        throw error
+      }
     },
   }
 }

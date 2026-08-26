@@ -10,6 +10,7 @@ import type {
   RegistrationIntent,
   RegistrationUpdateIntent,
 } from './types'
+import { MipEventsError } from './types'
 
 function requestKey(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
@@ -52,6 +53,24 @@ export function createMipEventsModule(
 ) {
   const eventCache = new Map<string, Awaited<ReturnType<MipEventsGateway['getEvent']>>>()
   const feedCache = new Map<string, Awaited<ReturnType<MipEventsGateway['listEvents']>>>()
+  let generation = 0
+
+  async function runInCurrentSession<T>(work: () => Promise<T>): Promise<T> {
+    const workflowGeneration = generation
+    try {
+      const result = await work()
+      if (workflowGeneration !== generation) {
+        throw new MipEventsError('SESSION_ENDED', '当前会话已结束')
+      }
+      return result
+    }
+    catch (error) {
+      if (workflowGeneration !== generation) {
+        throw new MipEventsError('SESSION_ENDED', '当前会话已结束')
+      }
+      throw error
+    }
+  }
 
   function feedKey(query: EventFeedQuery) {
     return JSON.stringify(normalizedQuery(query))
@@ -68,8 +87,11 @@ export function createMipEventsModule(
       if (!options.force && feedCache.has(key)) {
         return feedCache.get(key)!
       }
+      const loadGeneration = generation
       const result = await gateway.listEvents(normalized)
-      feedCache.set(key, result)
+      if (loadGeneration === generation) {
+        feedCache.set(key, result)
+      }
       return result
     },
 
@@ -82,12 +104,15 @@ export function createMipEventsModule(
       if (options.force) {
         eventCache.delete(key)
       }
+      const loadGeneration = generation
       const result = await gateway.getEvent(eventId)
-      eventCache.set(key, {
-        ...result,
-        onlineAccessAvailable: false,
-        onlineUrl: undefined,
-      })
+      if (loadGeneration === generation) {
+        eventCache.set(key, {
+          ...result,
+          onlineAccessAvailable: false,
+          onlineUrl: undefined,
+        })
+      }
       return result
     },
 
@@ -186,7 +211,9 @@ export function createMipEventsModule(
       if (!/^[\w-]{20,2048}\.[\w-]{43}$/.test(normalized)) {
         throw new Error('签到恢复凭证无效')
       }
-      return gateway.checkIn(normalized, requestKey('event-checkin'))
+      return runInCurrentSession(
+        () => gateway.checkIn(normalized, requestKey('event-checkin')),
+      )
     },
 
     resolveCheckInScene(scene: string) {
@@ -194,7 +221,7 @@ export function createMipEventsModule(
       if (!/^s1\.[\w-]{11}\.[\w-]{11}$/.test(normalized)) {
         throw new Error('活动码无效')
       }
-      return gateway.resolveCheckInScene(normalized)
+      return runInCurrentSession(() => gateway.resolveCheckInScene(normalized))
     },
 
     resolveInvitationScene(scene: string) {
@@ -260,6 +287,12 @@ export function createMipEventsModule(
 
     createInvitation(eventId: EventId) {
       return gateway.createInvitation(eventId)
+    },
+
+    invalidate() {
+      generation += 1
+      eventCache.clear()
+      feedCache.clear()
     },
   }
 }
