@@ -47,7 +47,7 @@
     <view wx:if="{{!items.length}}" class="mt-4"><app-empty-state title="暂无记录" description="当前筛选条件下没有活动目录记录。" action-text="新增记录" bind:action="openCreate" /></view>
     <view wx:else class="mip-admin-card-list mt-4 flex flex-col gap-3">
       <view wx:for="{{items}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
-        <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1"><view class="break-all text-[length:28rpx] font-semibold">{{item.name}}</view><view class="mt-1 break-all text-[length:21rpx] text-muted">{{item.key}}</view></view><t-tag variant="outline" theme="{{item.statusTheme}}">{{item.statusText}}</t-tag></view>
+        <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1"><view class="break-all text-[length:28rpx] font-semibold">{{item.name}}</view><view class="mip-admin-catalog-key mt-1 text-[length:21rpx] text-muted">{{item.key}}</view></view><t-tag variant="outline" theme="{{item.statusTheme}}">{{item.statusText}}</t-tag></view>
         <view class="mt-3 line-clamp-3 text-[length:23rpx] leading-6 text-muted">{{item.description || '暂无说明'}}</view>
         <view class="mt-3 grid grid-cols-2 gap-2 rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:21rpx] text-muted"><view>使用 {{item.usageCount}} 次</view><view>顺序 {{item.sortOrder}}</view><view class="col-span-2">更新于 {{item.updatedText}}</view></view>
         <view wx:if="{{item.status !== 'ARCHIVED'}}" class="mt-4 grid grid-cols-3 gap-2">

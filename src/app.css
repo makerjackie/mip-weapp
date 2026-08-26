@@ -94,10 +94,27 @@ input {
 }
 
 .mip-admin-page {
+  --mip-admin-placeholder-color: #a3a3a3;
+  --td-text-color-placeholder: var(--mip-admin-placeholder-color);
+  --td-input-placeholder-text-color: var(--mip-admin-placeholder-color);
+  --td-textarea-placeholder-color: var(--mip-admin-placeholder-color);
+  --td-textarea-indicator-text-color: var(--mip-admin-placeholder-color);
+
   box-sizing: border-box;
   width: 100%;
   margin-right: auto;
   margin-left: auto;
+}
+
+.mip-admin-catalog-key {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: normal;
+  overflow-wrap: normal;
+  white-space: nowrap;
 }
 
 .mip-admin-card-list,
@@ -338,15 +355,134 @@ input {
   }
 
   .mip-admin-page {
+    --spacing: 4px;
+    --mip-admin-font-caption: 12px;
+    --mip-admin-font-label: 13px;
+    --mip-admin-font-body: 14px;
+    --mip-admin-font-body-strong: 15px;
+    --mip-admin-font-section: 16px;
+    --mip-admin-font-heading: 18px;
+    --mip-admin-font-subtitle: 20px;
+    --mip-admin-font-metric: 24px;
+    --mip-admin-font-display-small: 26px;
+    --mip-admin-font-display: 28px;
+    --td-button-extra-small-height: 28px;
+    --td-button-small-height: 32px;
+    --td-button-medium-height: 40px;
+    --td-button-large-height: 44px;
+    --td-button-extra-small-padding-horizontal: 8px;
+    --td-button-small-padding-horizontal: 12px;
+    --td-button-medium-padding-horizontal: 14px;
+    --td-button-large-padding-horizontal: 16px;
+    --td-button-border-radius: 8px;
+    --td-font-body-small: 12px / 18px var(--td-font-family, 'PingFang SC', 'Microsoft YaHei', sans-serif);
+    --td-font-body-medium: 14px / 20px var(--td-font-family, 'PingFang SC', 'Microsoft YaHei', sans-serif);
+    --td-font-body-large: 15px / 22px var(--td-font-family, 'PingFang SC', 'Microsoft YaHei', sans-serif);
+    --td-font-mark-medium: 600 13px / 20px var(--td-font-family, 'PingFang SC', 'Microsoft YaHei', sans-serif);
+    --td-font-mark-large: 600 14px / 22px var(--td-font-family, 'PingFang SC', 'Microsoft YaHei', sans-serif);
+    --td-input-vertical-padding: 11px 14px;
+    --td-input-label-text-font: var(--td-font-body-medium);
+    --td-input-placeholder-text-font: var(--td-font-body-large);
+    --td-textarea-padding: 12px 14px;
+    --td-textarea-border-radius: 8px;
+
     max-width: 1280px;
-    padding-right: 40px;
-    padding-left: 40px;
+    padding: 24px 32px 32px;
   }
 
   .mip-admin-workspace-page {
     min-width: 0;
     padding-left: 296px;
   }
+
+  /* stylelint-disable selector-class-pattern -- Desktop caps intentionally override generated Tailwind arbitrary-value utilities inside the admin shell. */
+  .mip-admin-page .text-\[length\:18rpx\],
+  .mip-admin-page .text-\[length\:19rpx\],
+  .mip-admin-page .text-\[length\:20rpx\] {
+    font-size: var(--mip-admin-font-caption);
+  }
+
+  .mip-admin-page .text-\[length\:21rpx\],
+  .mip-admin-page .text-\[length\:22rpx\] {
+    font-size: var(--mip-admin-font-label);
+  }
+
+  .mip-admin-page .text-\[length\:23rpx\],
+  .mip-admin-page .text-\[length\:24rpx\] {
+    font-size: var(--mip-admin-font-body);
+  }
+
+  .mip-admin-page .text-\[length\:25rpx\],
+  .mip-admin-page .text-\[length\:26rpx\] {
+    font-size: var(--mip-admin-font-body-strong);
+  }
+
+  .mip-admin-page .text-\[length\:27rpx\],
+  .mip-admin-page .text-\[length\:28rpx\] {
+    font-size: var(--mip-admin-font-section);
+  }
+
+  .mip-admin-page .text-\[length\:29rpx\],
+  .mip-admin-page .text-\[length\:30rpx\] {
+    font-size: var(--mip-admin-font-heading);
+  }
+
+  .mip-admin-page .text-\[length\:32rpx\] {
+    font-size: var(--mip-admin-font-subtitle);
+  }
+
+  .mip-admin-page .text-\[length\:36rpx\] {
+    font-size: var(--mip-admin-font-metric);
+  }
+
+  .mip-admin-page .text-\[length\:38rpx\] {
+    font-size: var(--mip-admin-font-display-small);
+  }
+
+  .mip-admin-page .text-\[length\:40rpx\] {
+    font-size: var(--mip-admin-font-display);
+  }
+
+  .mip-admin-page .min-h-\[72rpx\] {
+    min-height: 36px;
+  }
+
+  .mip-admin-page .min-h-\[80rpx\] {
+    min-height: 40px;
+  }
+
+  .mip-admin-page .min-h-\[88rpx\] {
+    min-height: 44px;
+  }
+
+  .mip-admin-page .min-h-\[92rpx\] {
+    min-height: 46px;
+  }
+
+  .mip-admin-page .min-h-\[96rpx\] {
+    min-height: 48px;
+  }
+
+  .mip-admin-page .min-h-\[104rpx\] {
+    min-height: 52px;
+  }
+
+  .mip-admin-page .min-h-\[112rpx\] {
+    min-height: 56px;
+  }
+
+  .mip-admin-page .rounded-\[10rpx\] {
+    border-radius: 6px;
+  }
+
+  .mip-admin-page .rounded-\[12rpx\] {
+    border-radius: 8px;
+  }
+
+  .mip-admin-page .rounded-\[16rpx\] {
+    border-radius: 12px;
+  }
+  /* stylelint-enable selector-class-pattern */
 
   .mip-admin-card-list,
   .mip-admin-form-grid {
@@ -418,9 +554,9 @@ input {
       --mip-admin-record-columns,
       minmax(0, 2fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.5fr)
     );
-    column-gap: 24rpx;
-    padding: 0 32rpx 16rpx;
-    font-size: 22rpx;
+    column-gap: 16px;
+    padding: 0 20px 10px;
+    font-size: var(--mip-admin-font-label);
     line-height: 1.4;
     color: var(--color-muted);
   }
@@ -430,8 +566,10 @@ input {
       --mip-admin-record-columns,
       minmax(0, 2fr) minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1.5fr)
     );
-    column-gap: 24rpx;
-    margin-bottom: 16rpx;
+    column-gap: 16px;
+    padding: 18px 20px;
+    margin-bottom: 10px;
+    border-radius: 12px;
   }
 
   .mip-admin-record-row:last-child {
@@ -457,7 +595,7 @@ input {
   .mip-admin-operations-workspace .mip-admin-record-list {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 24rpx;
+    gap: 16px;
   }
 
   .mip-admin-operations-workspace .mip-admin-record-header {
