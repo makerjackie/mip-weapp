@@ -45,11 +45,11 @@ const kindOptions: Array<{ label: string, value: KindFilter }> = [
   { label: '超级案例', value: 'SUPER_CASE' },
 ]
 const statusOptions: Array<{ label: string, value: StatusFilter }> = [
+  { label: '全部状态', value: 'ALL' },
   { label: '草稿', value: 'DRAFT' },
   { label: '已发布', value: 'PUBLISHED' },
   { label: '已下架', value: 'UNPUBLISHED' },
   { label: '已归档', value: 'ARCHIVED' },
-  { label: '全部状态', value: 'ALL' },
 ]
 const statusLabels: Record<AdminUserContentStatus, string> = {
   DRAFT: '草稿',

@@ -58,6 +58,7 @@ describe('admin user content CRUD contract', () => {
     const editor = read('src/packages/admin/user-content-editor/index.ts')
     expect(editor).toContain('ownerUserId')
     expect(editor).toContain('version: item?.version || 0')
+    expect(read('src/packages/admin/user-content/index.ts')).toMatch(/statusOptions[\s\S]*全部状态[\s\S]*草稿/)
     expect(read('src/packages/admin/user-content/index.wxml')).toContain('不执行物理删除')
   })
 })
