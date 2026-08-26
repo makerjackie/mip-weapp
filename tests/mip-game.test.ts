@@ -214,6 +214,39 @@ describe('MIP game client contract', () => {
     expect({ blindBoxReads, seasonReads }).toEqual({ blindBoxReads: 2, seasonReads: 2 })
   })
 
+  it('invalidates the cached admin ranking read after snapshot generation', async () => {
+    let rankingReads = 0
+    const gateway = {
+      async listAdminRankings(_seasonId: string, rankingType: string, branchId?: string) {
+        rankingReads += 1
+        return {
+          rankingType,
+          generatedAt: `2026-08-25T0${rankingReads}:00:00.000Z`,
+          branches: [{ id: 'branch-1', name: '深圳分会', cityName: '深圳' }],
+          items: branchId ? [{ rank: 1, displayName: '测试队伍', score: rankingReads }] : [],
+        }
+      },
+      async generateRankingSnapshot() {
+        return {
+          snapshotId: 'snapshot-1',
+          rankingType: 'TEAM_HALF_YEAR',
+          entryCount: 1,
+          generatedAt: '2026-08-25T02:00:00.000Z',
+        }
+      },
+    } as unknown as MipGameGateway
+    const module = createMipGameModule(gateway)
+
+    const first = await module.query.listAdminRankings(seasonId, 'TEAM_HALF_YEAR', 'branch-1')
+    const cached = await module.query.listAdminRankings(seasonId, 'TEAM_HALF_YEAR', 'branch-1')
+    expect({ first, cached, rankingReads }).toMatchObject({ rankingReads: 1 })
+
+    await module.mutation.generateRankingSnapshot(seasonId, 'TEAM_HALF_YEAR')
+    const refreshed = await module.query.listAdminRankings(seasonId, 'TEAM_HALF_YEAR', 'branch-1')
+    expect(rankingReads).toBe(2)
+    expect(refreshed.generatedAt).not.toBe(first.generatedAt)
+  })
+
   it.each(['CONFLICT', 'FORBIDDEN'] as const)(
     'preserves %s mutation errors without clearing cached reads',
     async (code) => {
@@ -290,6 +323,7 @@ describe('MIP game client contract', () => {
     const member = fs.readFileSync(path.join(root, 'src/packages/member/mip-game/index.wxml'), 'utf8')
     const team = fs.readFileSync(path.join(root, 'src/packages/member/mip-game/team/index.wxml'), 'utf8')
     const admin = fs.readFileSync(path.join(root, 'src/packages/admin/game/index.wxml'), 'utf8')
+    const adminPage = fs.readFileSync(path.join(root, 'src/packages/admin/game/index.ts'), 'utf8')
     const app = fs.readFileSync(path.join(root, 'src/app.json'), 'utf8')
     const discover = fs.readFileSync(path.join(root, 'src/pages/index/index.wxml'), 'utf8')
     const blindBoxDetail = fs.readFileSync(path.join(root, 'src/packages/member/mip-blind-box/detail/index.wxml'), 'utf8')
@@ -318,6 +352,17 @@ describe('MIP game client contract', () => {
     expect(admin).toContain('新增赛季')
     expect(admin).toContain('生成排行榜')
     expect(admin).toContain('分数')
+    expect(admin).toContain('排行榜快照')
+    expect(admin).toContain('生成时间：{{rankingGeneratedText}}')
+    expect(admin).toContain('全部分会')
+    expect(admin).toContain('mip-admin-record-list')
+    expect(admin).toMatch(/rankingState === 'conflict'/)
+    expect(adminPage).toMatch(/key: 'TEAM_HALF_YEAR', label: '团队半年榜'/)
+    expect(adminPage).toMatch(/key: 'TEAM_YEAR', label: '团队年度榜'/)
+    expect(adminPage).toMatch(/key: 'INDIVIDUAL_SEASON', label: '个人赛季榜'/)
+    expect(adminPage).toMatch(/key: 'INDIVIDUAL_ALL_TIME', label: '个人累计榜'/)
+    expect(adminPage).toContain('mipGameModule.query.listAdminRankings')
+    expect(adminPage).toMatch(/generateRankingSnapshot[\s\S]+await this\.loadRanking\(true\)/)
     expect(app).toContain('mip-blind-box/detail/index')
     expect(app).toContain('blind-box/index')
     expect(discover).toContain('bind:tap="openBlindBoxes"')

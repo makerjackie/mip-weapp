@@ -4,13 +4,35 @@ import type {
   GameMatch,
   GameMemberAssignment,
   GamePeriodKind,
+  GameRankingEntry,
   GameRankingType,
   GameSeason,
   GameTeam,
 } from '../../../modules/mip-game'
-import { mipGameModule } from '../../../modules/mip-game'
+import { MipGameError, mipGameModule } from '../../../modules/mip-game'
+import { formatLocalDate, formatLocalDateTime } from '../../../utils/date'
 
 interface MemberView extends AssignableGameMember { selected: boolean, selectedRole: 'CAPTAIN' | 'MEMBER' }
+
+type RankingState = 'loading' | 'ready' | 'empty' | 'error' | 'conflict'
+
+const rankingOptions: Array<{ key: GameRankingType, label: string }> = [
+  { key: 'TEAM_HALF_YEAR', label: '团队半年榜' },
+  { key: 'TEAM_YEAR', label: '团队年度榜' },
+  { key: 'INDIVIDUAL_SEASON', label: '个人赛季榜' },
+  { key: 'INDIVIDUAL_ALL_TIME', label: '个人累计榜' },
+]
+
+function defaultRankingType(season?: GameSeason): GameRankingType {
+  return season?.periodKind === 'YEAR' ? 'TEAM_YEAR' : 'TEAM_HALF_YEAR'
+}
+
+function rankingFailure(error: unknown, fallback: string): { state: 'error' | 'conflict', message: string } {
+  if (error instanceof MipGameError && error.code === 'CONFLICT') {
+    return { state: 'conflict', message: '排行榜状态已变化，请重新加载后再操作。' }
+  }
+  return { state: 'error', message: error instanceof Error ? error.message : fallback }
+}
 
 function dateText(value: string) {
   return value ? new Date(value).toISOString().slice(0, 10) : ''
@@ -21,12 +43,22 @@ function isoDay(value: string, end = false) {
 
 Page({
   data: {
-    state: 'loading' as 'loading' | 'ready' | 'error' | 'forbidden',
+    state: 'loading' as 'loading' | 'ready' | 'error' | 'forbidden' | 'conflict',
     seasons: [] as GameSeason[],
     selectedSeasonId: '',
     teams: [] as GameTeam[],
     branches: [] as GameBranchFilter[],
     matches: [] as GameMatch[],
+    rankingOptions,
+    rankingType: 'TEAM_HALF_YEAR' as GameRankingType,
+    rankingBranchId: '',
+    rankings: [] as GameRankingEntry[],
+    rankingState: 'loading' as RankingState,
+    rankingGeneratedText: '',
+    rankingPeriodText: '',
+    rankingLoading: false,
+    rankingRequestKey: 0,
+    rankingMessage: '',
     editorOpen: false,
     editingSeasonId: '',
     expectedSeasonVersion: 0,
@@ -50,6 +82,7 @@ Page({
     memberTeamVersion: 0,
     members: [] as MemberView[],
     processing: false,
+    generatingRankingType: '' as GameRankingType | '',
     message: '',
   },
 
@@ -71,18 +104,36 @@ Page({
       const selectedSeasonId = this.data.selectedSeasonId && result.items.some(item => item.id === this.data.selectedSeasonId)
         ? this.data.selectedSeasonId
         : (result.items[0]?.id || '')
-      this.setData({ seasons: result.items, selectedSeasonId, state: 'ready' })
+      const seasonChanged = selectedSeasonId !== this.data.selectedSeasonId
+      const selectedSeason = result.items.find(item => item.id === selectedSeasonId)
+      this.setData({
+        seasons: result.items,
+        selectedSeasonId,
+        state: 'ready',
+        ...(seasonChanged
+          ? { rankingType: defaultRankingType(selectedSeason), rankingBranchId: '' }
+          : {}),
+      })
       if (selectedSeasonId) {
         await this.loadSeasonData(force)
       }
       else {
-        this.setData({ teams: [], matches: [], branches: [] })
+        this.setData({
+          teams: [],
+          matches: [],
+          branches: [],
+          rankings: [],
+          rankingState: 'empty',
+          rankingGeneratedText: '',
+          rankingPeriodText: '',
+          rankingMessage: '',
+        })
       }
     }
     catch (error) {
       const code = (error as { code?: string })?.code
       this.setData({
-        state: code === 'FORBIDDEN' ? 'forbidden' : 'error',
+        state: code === 'FORBIDDEN' ? 'forbidden' : code === 'CONFLICT' ? 'conflict' : 'error',
         message: error instanceof Error ? error.message : '赛季管理加载失败',
       })
     }
@@ -93,19 +144,27 @@ Page({
     if (!seasonId) {
       return
     }
-    const season = this.data.seasons.find(item => item.id === seasonId)
-    const rankingType: GameRankingType = season?.periodKind === 'YEAR' ? 'TEAM_YEAR' : 'TEAM_HALF_YEAR'
-    const [teams, matches, ranking] = await Promise.all([
+    const [teams, matches] = await Promise.all([
       mipGameModule.query.listTeams(seasonId, force),
       mipGameModule.query.listAdminMatches(seasonId, force),
-      mipGameModule.query.listAdminRankings(seasonId, rankingType, undefined, force),
     ])
-    this.setData({ teams: teams.items, matches: matches.items, branches: ranking.branches })
+    if (seasonId !== this.data.selectedSeasonId) {
+      return
+    }
+    this.setData({ teams: teams.items, matches: matches.items })
+    await this.loadRanking(force)
   },
 
   async chooseSeason(event: WechatMiniprogram.TouchEvent) {
     const selectedSeasonId = String(event.currentTarget.dataset.id || '')
-    this.setData({ selectedSeasonId, memberPanelOpen: false, message: '' })
+    const season = this.data.seasons.find(item => item.id === selectedSeasonId)
+    this.setData({
+      selectedSeasonId,
+      memberPanelOpen: false,
+      message: '',
+      rankingType: defaultRankingType(season),
+      rankingBranchId: '',
+    })
     try {
       await this.loadSeasonData(true)
     }
@@ -376,20 +435,124 @@ Page({
 
   async generateRanking(event: WechatMiniprogram.TouchEvent) {
     const type = String(event.currentTarget.dataset.type || '') as GameRankingType
-    if (!this.data.selectedSeasonId || this.data.processing) {
+    await this.generateRankingType(type)
+  },
+
+  async generateCurrentRanking() {
+    await this.generateRankingType(this.data.rankingType)
+  },
+
+  async generateRankingType(type: GameRankingType) {
+    if (!this.data.selectedSeasonId || this.data.processing || this.data.rankingLoading
+      || !rankingOptions.some(item => item.key === type)) {
       return
     }
-    this.setData({ processing: true, message: '' })
+    this.setData({ processing: true, generatingRankingType: type, message: '', rankingMessage: '' })
     try {
       const result = await mipGameModule.mutation.generateRankingSnapshot(this.data.selectedSeasonId, type)
       wx.showToast({ title: `已生成 ${result.entryCount} 条`, icon: 'none' })
-      await this.loadSeasonData()
+      this.setData({ rankingType: type, rankingBranchId: '' })
+      await this.loadRanking(true)
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '排行榜生成失败' })
+      const failure = rankingFailure(error, '排行榜生成失败')
+      this.setData({ rankingState: failure.state, rankingMessage: failure.message })
     }
     finally {
-      this.setData({ processing: false })
+      this.setData({ processing: false, generatingRankingType: '' })
     }
+  },
+
+  async changeRanking(event: WechatMiniprogram.TouchEvent) {
+    const rankingType = String(event.currentTarget.dataset.type || '') as GameRankingType
+    if (!rankingOptions.some(item => item.key === rankingType) || rankingType === this.data.rankingType) {
+      return
+    }
+    this.setData({ rankingType, rankingBranchId: '', rankingMessage: '' })
+    await this.loadRanking(true)
+  },
+
+  async changeRankingBranch(event: WechatMiniprogram.TouchEvent) {
+    const rankingBranchId = String(event.currentTarget.dataset.id || '')
+    if (rankingBranchId === this.data.rankingBranchId) {
+      return
+    }
+    this.setData({ rankingBranchId, rankingMessage: '' })
+    await this.loadRanking(true)
+  },
+
+  async retryRanking() {
+    await this.loadRanking(true)
+  },
+
+  async loadRanking(force = false) {
+    const seasonId = this.data.selectedSeasonId
+    if (!seasonId) {
+      return
+    }
+    const rankingType = this.data.rankingType
+    const rankingBranchId = this.data.rankingBranchId
+    const requestKey = this.data.rankingRequestKey + 1
+    this.setData({
+      rankingLoading: true,
+      rankingRequestKey: requestKey,
+      rankingState: 'loading',
+      rankings: [],
+      rankingGeneratedText: '',
+      rankingPeriodText: '',
+      rankingMessage: '',
+    })
+    try {
+      const ranking = await mipGameModule.query.listAdminRankings(
+        seasonId,
+        rankingType,
+        rankingBranchId || undefined,
+        force,
+      )
+      if (requestKey !== this.data.rankingRequestKey) {
+        return
+      }
+      const branchStillActive = !rankingBranchId || ranking.branches.some(item => item.id === rankingBranchId)
+      if (!branchStillActive) {
+        this.setData({ rankingBranchId: '' })
+        const unfiltered = await mipGameModule.query.listAdminRankings(seasonId, rankingType, undefined, true)
+        if (requestKey !== this.data.rankingRequestKey) {
+          return
+        }
+        this.applyRanking(unfiltered)
+        return
+      }
+      this.applyRanking(ranking)
+    }
+    catch (error) {
+      if (requestKey !== this.data.rankingRequestKey) {
+        return
+      }
+      if (error instanceof MipGameError && error.code === 'FORBIDDEN') {
+        this.setData({ state: 'forbidden', rankings: [], branches: [], rankingMessage: '' })
+        return
+      }
+      const failure = rankingFailure(error, '排行榜加载失败')
+      this.setData({ rankingState: failure.state, rankingMessage: failure.message })
+    }
+    finally {
+      if (requestKey === this.data.rankingRequestKey) {
+        this.setData({ rankingLoading: false })
+      }
+    }
+  },
+
+  applyRanking(ranking: Awaited<ReturnType<typeof mipGameModule.query.listAdminRankings>>) {
+    const hasSnapshot = Boolean(ranking.generatedAt)
+    const periodStart = ranking.periodStart ? formatLocalDate(ranking.periodStart) : ''
+    const periodEnd = ranking.periodEnd ? formatLocalDate(ranking.periodEnd) : ''
+    this.setData({
+      rankings: ranking.items,
+      branches: ranking.branches,
+      rankingState: hasSnapshot ? 'ready' : 'empty',
+      rankingGeneratedText: hasSnapshot ? formatLocalDateTime(ranking.generatedAt) : '',
+      rankingPeriodText: periodStart && periodEnd ? `${periodStart} 至 ${periodEnd}` : '',
+      rankingMessage: '',
+    })
   },
 })
