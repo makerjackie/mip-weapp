@@ -113,16 +113,6 @@ export function resolveQueryFixtureValues(route, data) {
   return { status: 'resolved', values }
 }
 
-function assertRepresentativeData(data, scenario) {
-  for (const assertion of scenario.dataAssertions) {
-    const value = pathValue(data, assertion.path)
-    assert(
-      Object.is(value, assertion.equals),
-      `Representative ${scenario.id} expected ${assertion.path}=${JSON.stringify(assertion.equals)}, received ${JSON.stringify(value)}`,
-    )
-  }
-}
-
 function representativeDataMatches(data, scenario) {
   return (scenario.dataAssertions || []).every(assertion => (
     Object.is(pathValue(data, assertion.path), assertion.equals)
@@ -793,28 +783,66 @@ function representativeStateScenarios(runtimePages) {
   return scenarios
 }
 
+function representativeRenderedNodesMatch(nodes, scenario) {
+  if (!Array.isArray(nodes) || nodes.length === 0) {
+    return false
+  }
+  const expectedText = scenario.visibleAssertion?.text
+  return !expectedText || JSON.stringify(nodes).includes(expectedText)
+}
+
+export async function observeRepresentativeState(page, scenario) {
+  const dataBefore = await page.data(undefined, { routeOnly: true })
+  if (!representativeDataMatches(dataBefore, scenario)) {
+    return null
+  }
+  const nodes = await page.renderedNodes(scenario.visibleAssertion.selector, { routeOnly: true })
+  const dataAfter = await page.data(undefined, { routeOnly: true })
+  if (!representativeDataMatches(dataAfter, scenario)
+    || !representativeRenderedNodesMatch(nodes, scenario)) {
+    return null
+  }
+  return {
+    data: dataAfter,
+    renderedNodeCount: nodes.length,
+  }
+}
+
+async function waitForRepresentativeEvidence(page, scenario, timeoutMs = 1200) {
+  const deadline = Date.now() + timeoutMs
+  let lastError
+  while (Date.now() < deadline) {
+    try {
+      const evidence = await observeRepresentativeState(page, scenario)
+      if (evidence) {
+        return evidence
+      }
+    }
+    catch (error) {
+      lastError = error
+    }
+    await new Promise(resolve => setTimeout(resolve, 75))
+  }
+  const detail = lastError instanceof Error ? `: ${lastError.message}` : ''
+  throw new Error(`Representative ${scenario.id} route-only data and rendered WXML did not align${detail}`)
+}
+
 async function forceRepresentativeState(page, scenario) {
+  let lastError
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     await retry(
       `set representative ${scenario.id}`,
-      () => page.callMethodWithOptions('setData', { routeOnly: true }, scenario.patch),
+      () => page.setData(scenario.patch),
     )
-    await new Promise(resolve => setTimeout(resolve, 120))
     try {
-      const data = await retry(`read representative ${scenario.id}`, () => page.data(undefined, { routeOnly: true }))
-      assertRepresentativeData(data, scenario)
-      const confirmedData = await retry(
-        `confirm representative ${scenario.id}`,
-        () => page.data(undefined, { routeOnly: true }),
-      )
-      assertRepresentativeData(confirmedData, scenario)
-      return confirmedData
+      return await waitForRepresentativeEvidence(page, scenario)
     }
-    catch {
-      // Lifecycle callbacks may briefly overwrite an injected state; retry before failing the evidence check.
+    catch (error) {
+      lastError = error
+      // A late lifecycle response can overwrite the patch; reinject only after the failed evidence window.
     }
   }
-  throw new Error(`Representative ${scenario.id} state did not remain active long enough to verify`)
+  throw lastError || new Error(`Representative ${scenario.id} evidence was unavailable`)
 }
 
 async function waitForRepresentativeLifecycle(page, timeoutMs = 8000) {
@@ -829,16 +857,7 @@ async function waitForRepresentativeLifecycle(page, timeoutMs = 8000) {
 }
 
 async function assertRepresentativeVisible(page, scenario) {
-  try {
-    await page.waitForRendered({ selector: scenario.visibleAssertion.selector, timeout: 1500 })
-    return 'render-query'
-  }
-  catch (error) {
-    if (!String(error instanceof Error ? error.message : error).includes('Timed out waiting page rendered')) {
-      throw error
-    }
-    return 'source-data-screenshot'
-  }
+  return await waitForRepresentativeEvidence(page, scenario)
 }
 
 async function verifyRepresentativeStates(miniProgram, runtimePages, report, sensitivePatterns) {
@@ -857,25 +876,24 @@ async function verifyRepresentativeStates(miniProgram, runtimePages, report, sen
     const wasAlreadyTargetState = representativeDataMatches(beforeData, scenario)
     const beforePath = path.join(outputDir, `state-${scenario.id}-before.png`)
     await captureScreenshot(`state-${scenario.id}-before`, miniProgram, beforePath)
-    const data = await forceRepresentativeState(page, scenario)
+    const forcedEvidence = await forceRepresentativeState(page, scenario)
+    const data = forcedEvidence.data
     assertNoSensitivePageData(data, scenario.route, sensitivePatterns)
-    let visibleAssertionMode = await assertRepresentativeVisible(page, scenario)
+    const visibleBeforeCapture = await assertRepresentativeVisible(page, scenario)
     const screenshotPath = path.join(outputDir, `state-${scenario.id}.png`)
     await captureScreenshot(`state-${scenario.id}`, miniProgram, screenshotPath)
+    const visibleAfterCapture = await assertRepresentativeVisible(page, scenario)
     const sizeBytes = fs.statSync(screenshotPath).size
     assert(sizeBytes >= 4 * 1024, `Representative ${scenario.id} screenshot is suspiciously small`)
-    let injectedDiffRatio = 0
-    if (visibleAssertionMode === 'source-data-screenshot') {
-      injectedDiffRatio = comparePngBuffers(
-        fs.readFileSync(beforePath),
-        fs.readFileSync(screenshotPath),
-      ).diffRatio
-      if (wasAlreadyTargetState) {
-        visibleAssertionMode = 'natural-source-data-screenshot'
-      }
-      else {
-        assert(injectedDiffRatio >= 0.001, `Representative ${scenario.id} did not produce a visible screenshot change`)
-      }
+    const injectedDiffRatio = comparePngBuffers(
+      fs.readFileSync(beforePath),
+      fs.readFileSync(screenshotPath),
+    ).diffRatio
+    const visibleAssertionMode = wasAlreadyTargetState
+      ? 'natural-route-data-render-query'
+      : 'route-data-render-query'
+    if (!wasAlreadyTargetState) {
+      assert(injectedDiffRatio >= 0.001, `Representative ${scenario.id} did not produce a visible screenshot change`)
     }
     report.representativeStates.push({
       id: scenario.id,
@@ -886,6 +904,11 @@ async function verifyRepresentativeStates(miniProgram, runtimePages, report, sen
       visibleAssertionMode,
       injectedDiffRatio,
       wasAlreadyTargetState,
+      renderedNodeCount: Math.min(
+        forcedEvidence.renderedNodeCount,
+        visibleBeforeCapture.renderedNodeCount,
+        visibleAfterCapture.renderedNodeCount,
+      ),
     })
     console.log(`PASS  state:${scenario.id}  ${scenario.route}`)
   }

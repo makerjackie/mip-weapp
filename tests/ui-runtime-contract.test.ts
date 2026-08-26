@@ -266,10 +266,13 @@ describe('mip-weapp UI runtime contract', () => {
       }
     }
     expect(verifyRuntime).toContain('assertRepresentativeVisible')
+    expect(verifyRuntime).toContain('observeRepresentativeState')
+    expect(verifyRuntime).toContain('page.setData(scenario.patch)')
+    expect(verifyRuntime).not.toContain('callMethodWithOptions(\'setData\'')
     expect(verifyRuntime).toContain('visibleAssertion')
     expect(verifyRuntime).toContain('waitForRepresentativeLifecycle(page)')
-    expect(verifyRuntime).toContain('visibleAssertionMode === \'source-data-screenshot\'')
-    expect(verifyRuntime).toContain('visibleAssertionMode = \'natural-source-data-screenshot\'')
+    expect(verifyRuntime).toContain('\'natural-route-data-render-query\'')
+    expect(verifyRuntime).toContain('\'route-data-render-query\'')
     expect(verifyRuntime).toContain('injectedDiffRatio >= 0.001')
   })
 
