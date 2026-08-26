@@ -123,6 +123,7 @@ Page({
     clearPrivatePhones(this)
     this.setData({
       includePhone: false,
+      loadingMore: false,
       items: this.data.items.map(item => ({ ...item, phoneNumberMasked: '' })),
     })
   },
@@ -202,6 +203,7 @@ Page({
     if (!this.data.nextCursor || this.data.loadingMore || this.data.state !== 'ready') {
       return
     }
+    const seq = this.requestSeq
     this.setData({ loadingMore: true, message: '' })
     try {
       const page = await mipAdminModule.events.listRoster({
@@ -210,16 +212,24 @@ Page({
         cursor: this.data.nextCursor,
         filters: rosterFilters(this.data),
       })
+      if (seq !== this.requestSeq) {
+        return
+      }
       if (this.data.canPhone && this.data.includePhone) {
         appendPrivatePhones(this, page.items)
       }
       this.setData({ items: this.data.items.concat(page.items.map(rosterView)), nextCursor: page.nextCursor || null })
     }
     catch (error) {
+      if (seq !== this.requestSeq) {
+        return
+      }
       this.setData({ message: error instanceof Error ? error.message : '更多参与者加载失败' })
     }
     finally {
-      this.setData({ loadingMore: false })
+      if (seq === this.requestSeq) {
+        this.setData({ loadingMore: false })
+      }
     }
   },
   onReachBottom() { void this.loadMoreRoster() },

@@ -303,6 +303,9 @@
       "route": "pages/profile/index",
       "nonMutating": true,
       "scrollTop": 700,
+      "requireVisibleTarget": true,
+      "requireRenderedAction": true,
+      "requireScreenshotDiff": true,
       "steps": [
         {
           "id": "show-cases",
@@ -1013,9 +1016,9 @@
       "selector": "#mip-access-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "error"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'",
+      "states": ["loading", "ready", "error", "expired"],
+      "externalWaitStates": ["expired"],
+      "readyAssertion": "state === 'ready'",
       "deviceRequired": ["phone-auth"]
     },
     {

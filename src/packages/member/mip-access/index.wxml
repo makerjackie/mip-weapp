@@ -2,7 +2,7 @@
   <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-8">
     <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
-  <app-empty-state wx:elif="{{state === 'empty'}}" title="访问请求已失效" description="请重新确认身份后继续。" action-text="重新确认" bind:action="restartAccess" />
+  <app-empty-state wx:elif="{{state === 'expired'}}" title="访问请求已失效" description="请重新确认身份后继续。" action-text="重新确认" bind:action="restartAccess" />
   <app-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载" description="身份服务暂时没有响应。" action-text="重新加载" bind:action="loadAccess" />
   <block wx:else>
     <view class="mt-[80rpx] text-[length:38rpx] font-bold">{{title}}</view>

@@ -145,6 +145,35 @@ function interactionDataMatches(data, step) {
   ))
 }
 
+export function interactionTargetViewportEvidence(nodes, windowHeight) {
+  const viewportHeight = Number(windowHeight)
+  if (!Number.isFinite(viewportHeight) || viewportHeight <= 0 || !Array.isArray(nodes)) {
+    return null
+  }
+  for (const node of nodes) {
+    const top = Number(node?.top)
+    const height = Number(node?.height)
+    const width = Number(node?.width)
+    const reportedBottom = Number(node?.bottom)
+    const bottom = Number.isFinite(reportedBottom) ? reportedBottom : top + height
+    if (Number.isFinite(top) && Number.isFinite(bottom) && width > 0 && height > 0
+      && bottom > 0 && top < viewportHeight) {
+      return { top, bottom, width, height, windowHeight: viewportHeight }
+    }
+  }
+  return null
+}
+
+async function assertInteractionTargetInViewport(page, miniProgram, journey, step) {
+  const [nodes, systemInfo] = await Promise.all([
+    page.renderedNodes(step.selector, { routeOnly: true }),
+    miniProgram.systemInfo(),
+  ])
+  const evidence = interactionTargetViewportEvidence(nodes, systemInfo?.windowHeight)
+  assert(evidence, `Interaction ${journey.id}/${step.id} target is outside the measured viewport`)
+  return evidence
+}
+
 async function waitForInteractionData(page, step, timeoutMs = 1500) {
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
@@ -240,10 +269,16 @@ function validateRuntimeContract(runtimePages) {
     }
     const accepted = acceptedStates(route)
     const pending = pendingStatesFor(route)
+    assert(route.externalWaitStates === undefined || Array.isArray(route.externalWaitStates), `${route.path} externalWaitStates must be an array`)
+    const externalWait = new Set(route.externalWaitStates || [])
     assert(accepted.length > 0, `${route.path} does not declare an accepted runtime state`)
     assert(
       accepted.every(state => !failedStates.has(state) && !pending.has(state)),
       `${route.path} accepts a failure or pending state as runtime success`,
+    )
+    assert(
+      [...externalWait].every(state => states.includes(state) && !accepted.includes(state) && !pending.has(state)),
+      `${route.path} externalWaitStates must be declared non-success terminal states`,
     )
     for (const key of route.query || []) {
       assert(/^[a-z][a-z0-9]*$/i.test(key), `${route.path} has an unsafe query key`)
@@ -354,6 +389,14 @@ function validateRuntimeContract(runtimePages) {
     if (journey.scrollTop !== undefined) {
       assert(Number.isInteger(journey.scrollTop) && journey.scrollTop >= 0 && journey.scrollTop <= 10_000, `Interaction ${journey.id} scrollTop must be an integer from 0 to 10000`)
     }
+    for (const key of ['requireVisibleTarget', 'requireRenderedAction', 'requireScreenshotDiff']) {
+      if (journey[key] !== undefined) {
+        assert(typeof journey[key] === 'boolean', `Interaction ${journey.id} ${key} must be boolean`)
+      }
+    }
+    if (journey.requireVisibleTarget === true) {
+      assert(journey.scrollTop !== undefined, `Interaction ${journey.id} requires scrollTop to prove target visibility`)
+    }
     assert(Array.isArray(journey.steps) && journey.steps.length > 0, `Interaction ${journey.id} steps[] is required`)
     for (const step of journey.steps) {
       assert(step?.id && ['input', 'tap'].includes(step.type), `Interaction ${journey.id} has an invalid step`)
@@ -388,6 +431,9 @@ function validateRuntimeContract(runtimePages) {
         if (step.visibleAssertion.text) {
           assert(pageSource.includes(step.visibleAssertion.text), `Interaction ${journey.id}/${step.id} text is missing from ${journey.route}`)
         }
+      }
+      if (journey.requireScreenshotDiff === true) {
+        assert(step.visibleAssertion, `Interaction ${journey.id}/${step.id} requires visibleAssertion for screenshot evidence`)
       }
     }
   }
@@ -482,6 +528,13 @@ export function evaluateRouteState(route, data) {
         state,
         error: error instanceof Error ? error.message : String(error),
       }
+    }
+  }
+  if ((route.externalWaitStates || []).includes(state)) {
+    return {
+      status: 'external-wait',
+      state,
+      error: `${route.path} requires a real runtime entry fixture for ${state}`,
     }
   }
   if (failedStates.has(state)) {
@@ -859,6 +912,12 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
           await retry(`scroll interaction ${journey.id}/${step.id}`, () => miniProgram.pageScrollTo(journey.scrollTop))
           await new Promise(resolve => setTimeout(resolve, 180))
         }
+        const viewportEvidence = journey.requireVisibleTarget === true
+          ? await retry(
+              `prove interaction target ${journey.id}/${step.id}`,
+              () => assertInteractionTargetInViewport(page, miniProgram, journey, step),
+            )
+          : undefined
         let visibleBeforePath = ''
         if (step.visibleAssertion) {
           visibleBeforePath = path.join(outputDir, `interaction-${outputName(journey.id)}-${outputName(step.id)}-before.png`)
@@ -876,8 +935,13 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
             catch (error) {
               actionError = error
             }
-            if (!await waitForInteractionData(page, step) && !await invokeInteractionHandler(page, step)) {
-              throw actionError || new Error(`Interaction ${journey.id}/${step.id} did not update page data`)
+            if (actionError && journey.requireRenderedAction === true) {
+              throw actionError
+            }
+            if (!await waitForInteractionData(page, step)) {
+              if (journey.requireRenderedAction === true || !await invokeInteractionHandler(page, step)) {
+                throw actionError || new Error(`Interaction ${journey.id}/${step.id} rendered input did not update page data`)
+              }
             }
           })
         }
@@ -892,8 +956,13 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
             catch (error) {
               actionError = error
             }
-            if (!await waitForInteractionData(page, step) && !await invokeInteractionHandler(page, step)) {
-              throw actionError || new Error(`Interaction ${journey.id}/${step.id} did not update page data`)
+            if (actionError && journey.requireRenderedAction === true) {
+              throw actionError
+            }
+            if (!await waitForInteractionData(page, step)) {
+              if (journey.requireRenderedAction === true || !await invokeInteractionHandler(page, step)) {
+                throw actionError || new Error(`Interaction ${journey.id}/${step.id} rendered tap did not update page data`)
+              }
             }
           })
         }
@@ -908,7 +977,7 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
         let visibleDiffRatio = 0
         if (step.visibleAssertion) {
           visibleAssertionMode = await assertInteractionVisible(page, step)
-          if (visibleAssertionMode === 'source-data-screenshot') {
+          if (journey.requireScreenshotDiff === true || visibleAssertionMode === 'source-data-screenshot') {
             const visibleAfterPath = path.join(outputDir, `interaction-${outputName(journey.id)}-${outputName(step.id)}.png`)
             await captureScreenshot(`interaction-${journey.id}/${step.id}`, miniProgram, visibleAfterPath)
             visibleDiffRatio = comparePngBuffers(
@@ -924,6 +993,7 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
           status: 'passed',
           visibleAssertionMode,
           visibleDiffRatio,
+          viewportEvidence,
         })
       }
       const screenshotPath = path.join(outputDir, `interaction-${outputName(journey.id)}.png`)
@@ -1015,7 +1085,11 @@ async function verifyContractedPages(miniProgram, runtimePages, report, options)
       const screenshotData = await retry(`confirm data ${route.path}`, () => page.data())
       assertNoSensitivePageData(screenshotData, route.path, sensitivePatterns)
       const confirmed = evaluateRouteState(route, screenshotData)
-      const status = settled.status === 'passed' && confirmed.status === 'passed' ? 'passed' : 'failed'
+      const status = settled.status === 'passed' && confirmed.status === 'passed'
+        ? 'passed'
+        : settled.status === 'external-wait' && confirmed.status === 'external-wait'
+          ? 'external-wait'
+          : 'failed'
       const error = settled.error || confirmed.error
 
       await captureScreenshot(route.path, miniProgram, current)
@@ -1040,7 +1114,7 @@ async function verifyContractedPages(miniProgram, runtimePages, report, options)
       if (status === 'passed') {
         fixtureCache.set(route.path, screenshotData)
       }
-      console.log(`${status === 'passed' ? 'PASS' : 'FAIL'}  ${route.path}  ${Math.round(sizeBytes / 1024)} KB`)
+      console.log(`${status === 'passed' ? 'PASS' : status === 'external-wait' ? 'WAIT' : 'FAIL'}  ${route.path}  ${Math.round(sizeBytes / 1024)} KB`)
     }
     catch (error) {
       if (isRecoverableRuntimeConnectionError(error) || isScreenshotCaptureError(error)) {

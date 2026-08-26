@@ -6,20 +6,20 @@ interface PhoneBearingRecord {
 const privatePhonesByPage = new WeakMap<object, Map<string, string>>()
 
 function normalizedPhone(value: string | null) {
-  const input = String(value || '').trim()
-  if (!/^\+?[\d\s()-]+$/.test(input)) {
-    return ''
-  }
-  const digits = input.replace(/\D/g, '')
-  const mainlandPhone = digits.startsWith('86') && digits.length === 13
-    ? digits.slice(2)
-    : digits
-  return /^1[3-9]\d{9}$/.test(mainlandPhone) ? mainlandPhone : ''
+  const match = /^\+(\d{1,4}) (\d{6,20})$/.exec(String(value || '').trim())
+  return match
+    ? { countryCode: match[1], number: match[2], full: `+${match[1]} ${match[2]}` }
+    : null
 }
 
 export function maskedPhone(value: string | null) {
   const phone = normalizedPhone(value)
-  return phone ? `${phone.slice(0, 3)} **** ${phone.slice(-4)}` : ''
+  if (!phone) {
+    return ''
+  }
+  const prefixLength = Math.min(3, phone.number.length - 4)
+  const suffixLength = Math.min(4, phone.number.length - prefixLength - 2)
+  return `+${phone.countryCode} ${phone.number.slice(0, prefixLength)}****${phone.number.slice(-suffixLength)}`
 }
 
 export function replacePrivatePhones(owner: object, items: PhoneBearingRecord[]) {
@@ -27,7 +27,7 @@ export function replacePrivatePhones(owner: object, items: PhoneBearingRecord[])
   for (const item of items) {
     const phone = normalizedPhone(item.phoneNumber)
     if (phone) {
-      phones.set(item.id, phone)
+      phones.set(item.id, phone.full)
     }
   }
   privatePhonesByPage.set(owner, phones)
@@ -38,7 +38,7 @@ export function appendPrivatePhones(owner: object, items: PhoneBearingRecord[]) 
   for (const item of items) {
     const phone = normalizedPhone(item.phoneNumber)
     if (phone) {
-      phones.set(item.id, phone)
+      phones.set(item.id, phone.full)
     }
   }
   privatePhonesByPage.set(owner, phones)

@@ -24,6 +24,7 @@ interface RuntimeRoute {
   states: string[]
   acceptStates?: string[]
   pendingStates?: string[]
+  externalWaitStates?: string[]
   readyAssertion?: string
   query?: string[]
   queryFixture?: {
@@ -60,6 +61,9 @@ interface RuntimePagesContract {
     route: string
     nonMutating: boolean
     scrollTop?: number
+    requireVisibleTarget?: boolean
+    requireRenderedAction?: boolean
+    requireScreenshotDiff?: boolean
     steps: Array<{
       id: string
       type: 'input' | 'tap'
@@ -180,6 +184,7 @@ describe('mip-weapp UI runtime contract', () => {
         expect(route.states).toContain('ready')
         expect(route.readyAssertion).toContain('ready')
         expect(route.acceptStates ?? ['ready']).not.toEqual(expect.arrayContaining(rejectedStates))
+        expect(route.externalWaitStates ?? []).not.toEqual(expect.arrayContaining(route.acceptStates ?? ['ready']))
       }
     }
   })
@@ -296,6 +301,9 @@ describe('mip-weapp UI runtime contract', () => {
         expect(journey.scrollTop).toBeGreaterThanOrEqual(0)
         expect(journey.scrollTop).toBeLessThanOrEqual(10_000)
       }
+      if (journey.requireVisibleTarget) {
+        expect(journey.scrollTop).toBeDefined()
+      }
       expect(journey.steps.length).toBeGreaterThan(0)
       for (const step of journey.steps) {
         expect(step.selector).toMatch(/^#\w[\w-]*$/)
@@ -304,6 +312,7 @@ describe('mip-weapp UI runtime contract', () => {
       }
     }
     expect(verifyRuntime).toContain('miniProgram.pageScrollTo(journey.scrollTop)')
+    expect(verifyRuntime).toContain('assertInteractionTargetInViewport')
   })
 
   it('keeps real-device capabilities explicit and unresolved by DevTools', () => {

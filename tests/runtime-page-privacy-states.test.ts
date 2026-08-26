@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import {
   assertNoSensitivePageData,
   evaluateRouteState,
+  interactionTargetViewportEvidence,
 } from '../scripts/verify-runtime.mjs'
 import {
   clearPrivatePhones,
@@ -19,12 +20,16 @@ const contract = JSON.parse(read('config/runtime-pages.json'))
 describe('runtime page privacy and normal unavailable states', () => {
   it('keeps authorized roster phones usable without exposing originals in page data', () => {
     const owner = {}
-    replacePrivatePhones(owner, [{ id: 'registration-1', phoneNumber: '+86 188-1925-3403' }])
+    replacePrivatePhones(owner, [{ id: 'registration-1', phoneNumber: '+86 18819253403' }])
 
-    expect(maskedPhone('18819253403')).toBe('188 **** 3403')
-    expect(privatePhone(owner, 'registration-1')).toBe('18819253403')
+    expect(maskedPhone('+86 18819253403')).toBe('+86 188****3403')
+    expect(maskedPhone('+1234 123456')).toBe('+1234 12****56')
+    expect(maskedPhone('+1 12345678901234567890')).toBe('+1 123****7890')
+    expect(maskedPhone('+12345 123456')).toBe('')
+    expect(maskedPhone('+86 12345')).toBe('')
+    expect(privatePhone(owner, 'registration-1')).toBe('+86 18819253403')
     expect(() => assertNoSensitivePageData({
-      items: [{ id: 'registration-1', phoneNumberMasked: '188 **** 3403' }],
+      items: [{ id: 'registration-1', phoneNumberMasked: '+86 188****3403' }],
     }, 'packages/admin/event-registrations/index', contract.sensitivePatterns)).not.toThrow()
     expect(() => assertNoSensitivePageData({
       canViewSensitiveRoster: true,
@@ -50,20 +55,45 @@ describe('runtime page privacy and normal unavailable states', () => {
     expect(eventDetail).toMatch(/callSupport\(\)[\s\S]*const supportPhone = mipOperationsConfig\.supportPhone/)
   })
 
-  it('accepts direct access recovery and optional avatar availability as settled states', () => {
+  it('classifies direct access recovery as external wait and optional avatar availability as settled', () => {
     const access = contract.routes.find((route: { path: string }) => route.path === 'packages/member/mip-access/index')
     const avatar = contract.routes.find((route: { path: string }) => route.path === 'packages/member/mip-avatar/index')
 
-    expect(evaluateRouteState(access, { state: 'empty' })).toMatchObject({ status: 'passed', state: 'empty' })
+    expect(evaluateRouteState(access, { state: 'expired' })).toMatchObject({ status: 'external-wait', state: 'expired' })
+    expect(evaluateRouteState(access, { state: 'ready' })).toMatchObject({ status: 'passed', state: 'ready' })
     expect(evaluateRouteState(avatar, { state: 'unconfigured' })).toMatchObject({ status: 'passed', state: 'unconfigured' })
     expect(avatar.pendingStates).toBeUndefined()
-    expect(read('src/packages/member/mip-access/index.wxml')).toContain('state === \'empty\'')
+    expect(read('src/packages/member/mip-access/index.wxml')).toContain('state === \'expired\'')
   })
 
-  it('scrolls the profile portfolio controls into the evidence viewport before each interaction', () => {
+  it('requires measured target visibility, rendered actions, and screenshot changes for profile tabs', () => {
     const journey = contract.interactionJourneys.find((item: { id: string }) => item.id === 'profile-content-tabs')
+    const verifier = read('scripts/verify-runtime.mjs')
 
     expect(journey.scrollTop).toBeGreaterThan(0)
-    expect(read('scripts/verify-runtime.mjs')).toContain('miniProgram.pageScrollTo(journey.scrollTop)')
+    expect(journey).toMatchObject({
+      requireVisibleTarget: true,
+      requireRenderedAction: true,
+      requireScreenshotDiff: true,
+    })
+    expect(interactionTargetViewportEvidence([
+      { top: 100, bottom: 180, width: 120, height: 80 },
+    ], 720)).toMatchObject({ top: 100, bottom: 180, windowHeight: 720 })
+    expect(interactionTargetViewportEvidence([
+      { top: 800, bottom: 880, width: 120, height: 80 },
+    ], 720)).toBeNull()
+    expect(verifier).toContain('miniProgram.pageScrollTo(journey.scrollTop)')
+    expect(verifier).toContain('assertInteractionTargetInViewport')
+    expect(verifier).toContain('journey.requireRenderedAction === true')
+    expect(verifier).toContain('journey.requireScreenshotDiff === true')
+  })
+
+  it('guards sensitive roster pagination against stale page requests', () => {
+    const page = read('src/packages/admin/event-registrations/index.ts')
+    const pagination = page.slice(page.indexOf('async loadMoreRoster()'), page.indexOf('onReachBottom()'))
+
+    expect(pagination).toContain('const seq = this.requestSeq')
+    expect(pagination).toContain('if (seq !== this.requestSeq)')
+    expect(pagination.indexOf('if (seq !== this.requestSeq)')).toBeLessThan(pagination.indexOf('appendPrivatePhones(this, page.items)'))
   })
 })
