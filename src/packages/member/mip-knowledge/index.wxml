@@ -10,6 +10,9 @@
     <scroll-view class="mt-2 whitespace-nowrap" scroll-x enhanced show-scrollbar="false">
       <view class="inline-flex gap-2 pr-4"><view wx:for="{{typeOptions}}" wx:key="value" class="flex min-h-[72rpx] items-center rounded-full px-4 text-[length:22rpx] {{contentType === item.value ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-type="{{item.value}}" bind:tap="chooseType">{{item.label}}</view></view>
     </scroll-view>
+    <scroll-view class="mt-2 whitespace-nowrap" scroll-x enhanced show-scrollbar="false" aria-label="访问范围筛选">
+      <view class="inline-flex gap-2 pr-4"><view wx:for="{{accessOptions}}" wx:key="value" class="flex min-h-[72rpx] items-center rounded-full px-4 text-[length:22rpx] {{accessType === item.value ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-access-type="{{item.value}}" bind:tap="chooseAccess">{{item.label}}</view></view>
+    </scroll-view>
   </view>
 
   <view wx:if="{{state === 'loading'}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
