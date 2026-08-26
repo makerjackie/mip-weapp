@@ -692,6 +692,39 @@ test('handler dispatches the nested v1 input and keeps legacy flat requests comp
   assert.equal(Object.keys(actions).length, 17)
 })
 
+test('handler accepts trusted CloudBase metadata outside the neutral task envelope', async () => {
+  const calls = []
+  let resolved = false
+  const handler = createHandler({
+    resolveCaller: async () => { resolved = true; return { appId, userId } },
+    service: {
+      async listTasks(_caller, input) {
+        calls.push(input)
+        return { items: [] }
+      },
+    },
+  })
+
+  assert.deepEqual(await handler({
+    contractVersion: 1,
+    action: 'listTasks',
+    input: { limit: 20 },
+    userInfo: { appId, openId: 'trusted-openid' },
+    tcbContext: { requestId: 'cloudbase-request' },
+  }), { ok: true, data: { items: [] } })
+  assert.deepEqual(calls, [{ limit: 20 }])
+
+  resolved = false
+  const malformed = await handler({
+    contractVersion: 1,
+    action: 'listTasks',
+    input: {},
+    tcbContext: [],
+  })
+  assert.equal(malformed.error.code, 'VALIDATION_FAILED')
+  assert.equal(resolved, false)
+})
+
 test('handler rejects flat v1 fields and nested action injection cannot replace the route', async () => {
   const calls = []
   const handler = createHandler({

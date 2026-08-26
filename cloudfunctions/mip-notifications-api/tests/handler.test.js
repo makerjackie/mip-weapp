@@ -73,6 +73,42 @@ test('serves user actions from trusted caller context', async () => {
   })
 })
 
+test('accepts trusted CloudBase metadata outside the neutral messaging envelope', async () => {
+  const calls = []
+  let resolved = false
+  const handler = createHandler({
+    async resolveCaller() {
+      resolved = true
+      return { appId: 'wx-app', userId: 'user-id', openId: 'open-id' }
+    },
+    service: {
+      async listInbox(_caller, input) {
+        calls.push(input)
+        return { items: [], unreadCount: 0 }
+      },
+    },
+  })
+
+  assert.deepEqual(await handler({
+    contractVersion: 1,
+    action: 'listInbox',
+    input: { limit: 20 },
+    userInfo: { appId: 'wx-app', openId: 'open-id' },
+    tcbContext: { requestId: 'cloudbase-request' },
+  }), { ok: true, data: { items: [], unreadCount: 0 } })
+  assert.deepEqual(calls, [{ limit: 20 }])
+
+  resolved = false
+  const malformed = await handler({
+    contractVersion: 1,
+    action: 'listInbox',
+    input: {},
+    userInfo: null,
+  })
+  assert.equal(malformed.error.code, 'VALIDATION_FAILED')
+  assert.equal(resolved, false)
+})
+
 test('keeps legacy flat requests compatible', () => {
   assert.deepEqual(normalizeRequest({ action: 'listInbox', cursor: 'cursor-1', limit: 12 }), {
     action: 'listInbox',

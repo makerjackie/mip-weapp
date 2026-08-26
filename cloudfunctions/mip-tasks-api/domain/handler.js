@@ -49,6 +49,16 @@ function isRecord(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }
 
+function withoutCloudbaseMetadata(value) {
+  const request = { ...value }
+  for (const key of ['userInfo', 'tcbContext']) {
+    if (!Object.hasOwn(request, key)) continue
+    if (!isRecord(request[key])) throw new Error('VALIDATION_FAILED')
+    delete request[key]
+  }
+  return request
+}
+
 function businessInput(value) {
   const {
     action: _action,
@@ -59,8 +69,9 @@ function businessInput(value) {
   return input
 }
 
-function normalizeRequest(event) {
-  if (!isRecord(event)) throw new Error('VALIDATION_FAILED')
+function normalizeRequest(rawEvent) {
+  if (!isRecord(rawEvent)) throw new Error('VALIDATION_FAILED')
+  const event = withoutCloudbaseMetadata(rawEvent)
   const action = typeof event.action === 'string' ? event.action : ''
   if (event.contractVersion === undefined) {
     return { action, input: businessInput(event), legacy: true }

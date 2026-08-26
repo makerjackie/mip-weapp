@@ -94,6 +94,42 @@ test('dispatches nested v1 input, keeps legacy flat requests and preserves healt
   assert.equal(Object.keys(actions).length, 29)
 })
 
+test('accepts trusted CloudBase metadata outside the neutral game envelope', async () => {
+  const calls = []
+  let resolved = false
+  const handler = createHandler({
+    health: async () => ({}),
+    resolveCaller: async () => { resolved = true; return { appId: 'app', userId: 'user' } },
+    assertPlayerReady: async () => {},
+    assertAdminReady: async () => {},
+    service: {
+      getOverview: async (_caller, input) => {
+        calls.push(input)
+        return { season: null }
+      },
+    },
+  })
+
+  assert.deepEqual(await handler({
+    contractVersion: 1,
+    action: 'getOverview',
+    input: { seasonId },
+    userInfo: { appId: 'cloudbase-app', openId: 'cloudbase-openid' },
+    tcbContext: { requestId: 'cloudbase-request' },
+  }), { ok: true, data: { season: null } })
+  assert.deepEqual(calls, [{ seasonId }])
+
+  resolved = false
+  const malformed = await handler({
+    contractVersion: 1,
+    action: 'getOverview',
+    input: {},
+    userInfo: 'forged-metadata',
+  })
+  assert.equal(malformed.error.code, 'VALIDATION_FAILED')
+  assert.equal(resolved, false)
+})
+
 test('rejects extra v1 fields and strips nested routing metadata before score validation', async () => {
   const calls = []
   let resolved = false
