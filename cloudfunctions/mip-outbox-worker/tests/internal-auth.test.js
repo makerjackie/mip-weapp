@@ -32,6 +32,37 @@ describe('outbox internal authentication', () => {
     }), /FORBIDDEN/)
   })
 
+  it('ignores only well-formed CloudBase transport metadata', () => {
+    const signature = signInternalEvent(event, secret)
+    const verified = verifyInternalEvent({
+      ...event,
+      signature,
+      frameworkContext: { requestId: 'framework-injected' },
+      tcbContext: {},
+      userInfo: { appId: 'framework-injected', openId: 'framework-injected' },
+    }, {
+      secret,
+      allowedAppIds: new Set(['wx-app']),
+      now: event.timestamp,
+    })
+    assert.equal(verified.limit, 5)
+    assert.equal('frameworkContext' in verified, false)
+    assert.equal('tcbContext' in verified, false)
+    assert.equal('userInfo' in verified, false)
+
+    for (const metadata of [
+      { userInfo: 'untrusted' },
+      { tcbContext: [] },
+      { frameworkContext: null },
+    ]) {
+      assert.throws(() => verifyInternalEvent({ ...event, signature, ...metadata }, {
+        secret,
+        allowedAppIds: new Set(['wx-app']),
+        now: event.timestamp,
+      }), /FORBIDDEN/)
+    }
+  })
+
   it('fails closed for an unlisted AppID or stale timestamp', () => {
     const signature = signInternalEvent(event, secret)
     assert.throws(() => verifyInternalEvent({ ...event, signature }, {

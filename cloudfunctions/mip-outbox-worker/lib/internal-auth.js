@@ -2,6 +2,8 @@
 
 const { createHash, createHmac, timingSafeEqual } = require('node:crypto')
 
+const transportMetadataKeys = new Set(['frameworkContext', 'tcbContext', 'userInfo'])
+
 function stableJson(value) {
   if (value === null || typeof value !== 'object') {
     return JSON.stringify(value)
@@ -13,15 +15,27 @@ function stableJson(value) {
 }
 
 function businessPayload(event) {
-  const body = Object.fromEntries(
-    Object.entries(event).filter(([key]) => !['signature', 'timestamp'].includes(key)),
-  )
+  const body = businessBody(event)
   return [
     Number(event.timestamp),
     text(event.action),
     text(event.appId),
     createHash('sha256').update(stableJson(body)).digest('hex'),
   ].join('\n')
+}
+
+function businessBody(event) {
+  if (!isPlainObject(event)) throw new Error('FORBIDDEN')
+  const body = {}
+  for (const [key, value] of Object.entries(event)) {
+    if (key === 'signature' || key === 'timestamp') continue
+    if (transportMetadataKeys.has(key)) {
+      if (!isPlainObject(value)) throw new Error('FORBIDDEN')
+      continue
+    }
+    body[key] = value
+  }
+  return body
 }
 
 function signInternalEvent(event, secret) {
@@ -49,11 +63,17 @@ function verifyInternalEvent(event, options = {}) {
   if (left.length !== right.length || !timingSafeEqual(left, right)) {
     throw new Error('FORBIDDEN')
   }
-  return { ...event, appId, signature: undefined }
+  return { ...businessBody(event), appId, timestamp }
+}
+
+function isPlainObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
 }
 
 function text(value) {
   return typeof value === 'string' ? value.trim() : ''
 }
 
-module.exports = { businessPayload, signInternalEvent, stableJson, verifyInternalEvent }
+module.exports = { businessBody, businessPayload, signInternalEvent, stableJson, verifyInternalEvent }

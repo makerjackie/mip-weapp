@@ -100,6 +100,7 @@ assertOutboxEnvironment(
   coreDetails.get('growth'),
   coreDetails.get('notification'),
 )
+assertOutboxWakeupEnvironment(coreDetails.get('admin'), coreDetails.get('outbox'))
 assertOutboxDependencies(coreDetails.get('outbox'))
 assertNotificationEnvironment(coreDetails.get('notifications'), coreDetails.get('notification'))
 assertRefundDispatchEnvironment(coreDetails.get('admin'))
@@ -168,6 +169,7 @@ fs.writeFileSync(path.join(root, '.tmp', 'verify-cloud-result.json'), `${JSON.st
   disabledPaymentFunctionsProtected,
   functionTimersVerifiedAbsent: true,
   workerTimersVerifiedAbsent: true,
+  outboxWakeupAuthenticated: true,
   ownerTestMembershipRestricted: true,
   verifiedAt: new Date().toISOString(),
 }, null, 2)}\n`)
@@ -370,6 +372,16 @@ function assertOutboxDependencies(detail) {
     || result?.data?.notificationAuthenticated !== true
     || result?.data?.growthAuthenticated !== true) {
     throw new Error('Outbox worker internal function authentication probe failed')
+  }
+}
+
+function assertOutboxWakeupEnvironment(sourceDetail, targetDetail) {
+  const source = environmentVariables(sourceDetail)
+  const target = environmentVariables(targetDetail)
+  if (source.MIP_OUTBOX_FUNCTION_NAME !== functionNames.outbox
+    || String(source.MIP_OUTBOX_HMAC_SECRET || '').length < 32
+    || source.MIP_OUTBOX_HMAC_SECRET !== target.MIP_OUTBOX_HMAC_SECRET) {
+    throw new Error('Admin outbox wakeup target or HMAC configuration does not match the worker')
   }
 }
 

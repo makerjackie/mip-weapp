@@ -854,6 +854,8 @@ describe('shared CloudBase safety', () => {
     expect(cloudVerify).toContain('variables.MIP_GROWTH_HMAC_SECRET !== growthVariables.MIP_GROWTH_HMAC_SECRET')
     expect(cloudVerify).toContain('assertOutboxDependencies(coreDetails.get(\'outbox\'))')
     expect(cloudVerify).toContain('action: \'probeDependencies\'')
+    expect(cloudVerify).toContain('assertOutboxWakeupEnvironment(coreDetails.get(\'admin\'), coreDetails.get(\'outbox\'))')
+    expect(cloudVerify).toContain('source.MIP_OUTBOX_HMAC_SECRET !== target.MIP_OUTBOX_HMAC_SECRET')
     expect(cloudVerify).toContain('notificationAuthenticated !== true')
     expect(cloudVerify).toContain('growthAuthenticated !== true')
     expect(isolation).toContain('findUnsafeMipSqlRelations')
