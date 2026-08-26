@@ -79,10 +79,23 @@ describe('MIP admin transports', () => {
     const mutationTransport = createCloudBaseAdminTransport({
       cloudClient: { callFunction: mutationCall },
     })
-    await expect(mutationTransport.request(createAdminRequest('mip.admin.users.update', { userId: 'user-a' })))
+    const mutationRequest = createAdminRequest('mip.admin.users.update', {
+      userId: 'user-a',
+      idempotencyKey: 'user-update-request-a',
+    })
+    await expect(mutationTransport.request(mutationRequest))
       .rejects
       .toMatchObject({ code: 'SERVICE_UNAVAILABLE', retryable: true })
     expect(mutationCall).toHaveBeenCalledTimes(1)
+    expect(mutationCall).toHaveBeenCalledWith({
+      name: 'mip-admin-api',
+      data: {
+        contractVersion: 1,
+        action: 'mip.admin.users.update',
+        input: { userId: 'user-a' },
+        idempotencyKey: 'user-update-request-a',
+      },
+    })
 
     const inMemoryHandler = vi.fn(() => {
       throw new Error('local failure')
@@ -158,6 +171,11 @@ describe('MIP admin transports', () => {
     }
 
     await expect(cloudbase.request(request)).rejects.toMatchObject(expectedError)
+    expect(callFunction).toHaveBeenCalledTimes(1)
+    expect(callFunction).toHaveBeenCalledWith({
+      name: 'mip-admin-api',
+      data: request,
+    })
     await expect(inMemory.request(request)).rejects.toMatchObject(expectedError)
     await expect(inMemory.request(createAdminRequest('toString'))).rejects.toMatchObject(expectedError)
   })
