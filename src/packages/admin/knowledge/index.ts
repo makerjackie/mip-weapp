@@ -199,6 +199,8 @@ function optionIndex(options: Array<{ value: string }>, value: unknown) {
 }
 
 Page({
+  requestSeq: 0,
+
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error' | 'forbidden' | 'conflict',
     sectionOptions,
@@ -275,19 +277,31 @@ Page({
   },
 
   async load() {
+    const requestSeq = ++this.requestSeq
+    const section = this.data.section
     const hasContent = this.data.state === 'ready'
     if (!hasContent) {
       this.setData({ state: 'loading', message: '' })
     }
     try {
-      const currentPageRequest = this.data.section === 'SCHEDULES'
-        ? mipKnowledgeAdminModule.listSchedules()
-        : mipKnowledgeAdminModule.list(this.data.section as KnowledgeAdminListSection)
-      const [sourcePage, categoryPage, currentPage] = await Promise.all([
-        mipKnowledgeAdminModule.list('SOURCES'),
-        mipKnowledgeAdminModule.list('CATEGORIES'),
-        currentPageRequest,
-      ])
+      const sourcePage = await mipKnowledgeAdminModule.list('SOURCES')
+      if (requestSeq !== this.requestSeq) {
+        return
+      }
+      const categoryPage = await mipKnowledgeAdminModule.list('CATEGORIES')
+      if (requestSeq !== this.requestSeq) {
+        return
+      }
+      const currentPage = section === 'SCHEDULES'
+        ? await mipKnowledgeAdminModule.listSchedules()
+        : section === 'SOURCES'
+          ? sourcePage
+          : section === 'CATEGORIES'
+            ? categoryPage
+            : await mipKnowledgeAdminModule.list(section as KnowledgeAdminListSection)
+      if (requestSeq !== this.requestSeq) {
+        return
+      }
       const sources = presentItems('SOURCES', sourcePage.items)
       const categories = presentItems('CATEGORIES', categoryPage.items)
       this.setData({
@@ -308,13 +322,13 @@ Page({
         scheduleCategoryOptions: categories
           .filter(category => category.status === 'ACTIVE')
           .map(category => ({ id: category.id, name: category.name || '分类', status: category.status || '' })),
-        items: this.data.section === 'SCHEDULES'
+        items: section === 'SCHEDULES'
           ? []
           : presentItems(
-              this.data.section as KnowledgeAdminListSection,
+              section as KnowledgeAdminListSection,
               currentPage.items as Array<Record<string, unknown>>,
             ),
-        schedules: this.data.section === 'SCHEDULES'
+        schedules: section === 'SCHEDULES'
           ? presentSchedules(currentPage.items as KnowledgeSchedule[])
           : [],
         message: '',
