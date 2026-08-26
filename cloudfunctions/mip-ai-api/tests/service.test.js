@@ -27,18 +27,64 @@ test('does not create a draft when the real provider is unavailable', async () =
   assert.equal(created, false)
 })
 
-test('disables voice drafts when the private audio store is not configured', () => {
+test('disables voice drafts when the private audio store is not configured', async () => {
   const service = createAiService({
     repository: {},
     provider: { capability: () => ({ textDrafts: true, voiceDrafts: true }) },
     audioStore: { configured: false },
   })
-  assert.deepEqual(service.getCapability(), {
+  assert.deepEqual(await service.getCapability(), {
     textDrafts: true,
     voiceDrafts: false,
     refinementDrafts: false,
     digitalAvatars: false,
     reason: 'STORAGE_NOT_CONFIGURED',
+  })
+})
+
+test('does not advertise draft actions until the configured Provider is ready', async () => {
+  const service = createAiService({
+    repository: {},
+    provider: {
+      capability: () => ({
+        textDrafts: true,
+        voiceDrafts: true,
+        refinementDrafts: true,
+        digitalAvatars: false,
+      }),
+      readiness: async () => false,
+    },
+    audioStore: { configured: true },
+  })
+  assert.deepEqual(await service.getCapability(), {
+    textDrafts: false,
+    voiceDrafts: false,
+    refinementDrafts: false,
+    digitalAvatars: false,
+    reason: 'PROVIDER_NOT_CONFIGURED',
+  })
+})
+
+test('degrades a readiness exception to unavailable capability without exposing it', async () => {
+  const service = createAiService({
+    repository: {},
+    provider: {
+      capability: () => ({
+        textDrafts: true,
+        voiceDrafts: true,
+        refinementDrafts: true,
+        digitalAvatars: false,
+      }),
+      async readiness() { throw new Error('private readiness failure') },
+    },
+    audioStore: { configured: true },
+  })
+  assert.deepEqual(await service.getCapability(), {
+    textDrafts: false,
+    voiceDrafts: false,
+    refinementDrafts: false,
+    digitalAvatars: false,
+    reason: 'PROVIDER_NOT_CONFIGURED',
   })
 })
 
@@ -268,8 +314,14 @@ test('recovers a committed voice upload instead of deleting it after an uncertai
   let removeCalls = 0
   const created = {
     draft,
-    asset: { cloud_file_id: uploadedAsset().cloudFileId, content_type: 'audio/mpeg', content_bytes: 4 },
+    asset: {
+      cloud_file_id: uploadedAsset().cloudFileId,
+      content_sha256: uploadedAsset().contentSha256,
+      content_type: 'audio/mpeg',
+      content_bytes: 4,
+    },
   }
+  let providerInput
   const service = createAiService({
     repository: {
       async createVoiceDraftFromUpload() { throw new Error('COMMIT_RESULT_UNKNOWN') },
@@ -279,7 +331,8 @@ test('recovers a committed voice upload instead of deleting it after an uncertai
     },
     provider: {
       capability: () => ({ textDrafts: true, voiceDrafts: true }),
-      async transcribeAndStructure() {
+      async transcribeAndStructure(input) {
+        providerInput = input
         return { transcriptText: '资料', structuredDraft: { headline: '产品负责人' } }
       },
     },
@@ -292,6 +345,10 @@ test('recovers a committed voice upload instead of deleting it after an uncertai
   const result = await service.createVoiceDraftUpload(caller, voiceUploadEvent())
   assert.equal(result.status, 'DRAFT_READY')
   assert.equal(removeCalls, 0)
+  assert.equal(providerInput.expectedVersion, draft.version)
+  assert.equal(providerInput.audioContentSha256, uploadedAsset().contentSha256)
+  assert.equal(providerInput.audioContentBytes, 4)
+  assert.equal(providerInput.audioContentType, 'audio/mpeg')
 })
 
 test('keeps a PENDING voice cleanup fact when closure wins and deletion fails', async () => {

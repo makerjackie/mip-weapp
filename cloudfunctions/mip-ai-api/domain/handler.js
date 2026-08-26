@@ -45,7 +45,7 @@ function createHandler(options) {
     }
     try {
       if (event.action === 'getCapability') {
-        return success(options.service.getCapability())
+        return success(await options.service.getCapability())
       }
       if (event.action === 'cleanupExpiredAudio') {
         const request = options.verifyMaintenance(event)

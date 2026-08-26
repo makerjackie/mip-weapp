@@ -102,12 +102,17 @@ function createAiRepository(database, options = {}) {
     return database.transaction(async (tx) => {
       await requireActiveUser(tx, appId, userId)
       const asset = await tx.one(
-        `SELECT id, cloud_file_id, content_type, content_bytes, status
+        `SELECT id, cloud_file_id, content_sha256, content_type, content_bytes, status
          FROM mip_media_assets
          WHERE app_id = ? AND id = ? AND owner_user_id = ? FOR UPDATE`,
         [appId, input.audioAssetId, userId],
       )
-      if (!asset || asset.status !== 'READY' || !String(asset.content_type || '').startsWith('audio/')) {
+      if (!asset || asset.status !== 'READY'
+        || asset.content_type !== 'audio/mpeg'
+        || !/^[a-f0-9]{64}$/i.test(String(asset.content_sha256 || ''))
+        || !Number.isInteger(Number(asset.content_bytes))
+        || Number(asset.content_bytes) < 1
+        || Number(asset.content_bytes) > 2 * 1024 * 1024) {
         throw new Error('AI_AUDIO_NOT_AVAILABLE')
       }
       await tx.query(
@@ -162,6 +167,7 @@ function createAiRepository(database, options = {}) {
         draft: await readDraft(tx, appId, userId, draftId),
         asset: {
           cloud_file_id: asset.cloudFileId,
+          content_sha256: asset.contentSha256,
           content_type: asset.contentType,
           content_bytes: asset.contentBytes,
         },
@@ -172,7 +178,7 @@ function createAiRepository(database, options = {}) {
   async function recoverVoiceDraftFromUpload(appId, userId, assetId) {
     const row = await database.one(
       `SELECT asset.owner_user_id, asset.status AS asset_status,
-              asset.cloud_file_id, asset.content_type, asset.content_bytes,
+              asset.cloud_file_id, asset.content_sha256, asset.content_type, asset.content_bytes,
               draft.id, draft.user_id, draft.purpose, draft.transcript_text,
               draft.structured_draft_json, draft.status, draft.expires_at,
               draft.version, draft.created_at, draft.updated_at
@@ -195,6 +201,7 @@ function createAiRepository(database, options = {}) {
           draft: draftDto(row),
           asset: {
             cloud_file_id: row.cloud_file_id,
+            content_sha256: row.content_sha256,
             content_type: row.content_type,
             content_bytes: row.content_bytes,
           },

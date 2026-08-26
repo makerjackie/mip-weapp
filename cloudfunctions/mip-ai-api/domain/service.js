@@ -52,7 +52,7 @@ function createAiService(options) {
   }
 
   return {
-    getCapability() {
+    async getCapability() {
       const capability = provider.capability()
       let normalized = {
         textDrafts: capability.textDrafts === true,
@@ -73,6 +73,25 @@ function createAiService(options) {
           ...normalized,
           digitalAvatars: false,
           reason: 'STORAGE_NOT_CONFIGURED',
+        }
+      }
+      let providerReady = true
+      if ((normalized.textDrafts || normalized.voiceDrafts || normalized.refinementDrafts)
+        && typeof provider.readiness === 'function') {
+        try {
+          providerReady = await provider.readiness()
+        }
+        catch {
+          providerReady = false
+        }
+      }
+      if (!providerReady) {
+        normalized = {
+          ...normalized,
+          textDrafts: false,
+          voiceDrafts: false,
+          refinementDrafts: false,
+          reason: 'PROVIDER_NOT_CONFIGURED',
         }
       }
       return normalized
@@ -227,6 +246,7 @@ function createAiService(options) {
           appId: caller.appId,
           draftId: draft.id,
           purpose: input.purpose,
+          expectedVersion: draft.version,
           transcriptText: input.transcriptText,
         })
       }
@@ -250,9 +270,11 @@ function createAiService(options) {
           appId: caller.appId,
           draftId: created.draft.id,
           purpose: input.purpose,
+          expectedVersion: created.draft.version,
           audioFileId: created.asset.cloud_file_id,
-          contentType: created.asset.content_type,
-          contentBytes: Number(created.asset.content_bytes),
+          audioContentSha256: created.asset.content_sha256,
+          audioContentType: created.asset.content_type,
+          audioContentBytes: Number(created.asset.content_bytes),
         })
       }
       catch (error) {
@@ -338,9 +360,11 @@ function createAiService(options) {
           appId: caller.appId,
           draftId: created.draft.id,
           purpose: input.purpose,
+          expectedVersion: created.draft.version,
           audioFileId: created.asset.cloud_file_id,
-          contentType: created.asset.content_type,
-          contentBytes: Number(created.asset.content_bytes),
+          audioContentSha256: created.asset.content_sha256,
+          audioContentType: created.asset.content_type,
+          audioContentBytes: Number(created.asset.content_bytes),
         })
       }
       catch (error) {

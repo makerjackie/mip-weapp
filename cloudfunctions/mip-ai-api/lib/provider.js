@@ -1,6 +1,10 @@
 'use strict'
 
 const { createHash, createHmac } = require('node:crypto')
+const {
+  createDraftProviderRequest,
+  verifyDraftProviderResponse,
+} = require('./draft-provider-contract')
 
 function createCloudAiProvider(cloud, functionName, secret, options = {}) {
   const configured = typeof functionName === 'string'
@@ -9,30 +13,51 @@ function createCloudAiProvider(cloud, functionName, secret, options = {}) {
     && typeof secret === 'string'
     && secret.length >= 32
   const avatarFunctionName = options.avatarFunctionName
+  const avatarSecret = typeof options.avatarSecret === 'string' ? options.avatarSecret : secret
   const avatarConfigured = typeof avatarFunctionName === 'string'
     && /^mip-[a-z0-9-]{2,58}$/.test(avatarFunctionName)
     && avatarFunctionName !== 'mip-ai-api'
-    && typeof secret === 'string'
-    && secret.length >= 32
+    && avatarSecret.length >= 32
+  const timeoutMs = normalizeTimeout(options.timeoutMs)
+  let readinessCache
 
   async function call(action, input, options = {}) {
     const digitalAvatar = options.digitalAvatar === true
     if (digitalAvatar ? !avatarConfigured : !configured) throw new Error('AI_PROVIDER_UNAVAILABLE')
-    const timestamp = Date.now()
-    const request = { action, timestamp, ...input }
-    const signature = createHmac('sha256', secret).update(providerPayload(request)).digest('hex')
-    const result = await cloud.callFunction({
-      name: digitalAvatar ? avatarFunctionName : functionName,
-      data: { ...request, signature },
+    const request = digitalAvatar
+      ? legacyAvatarRequest(action, input, avatarSecret)
+      : createDraftProviderRequest(action, input, secret)
+    const result = await callProviderFunction({
+      attempts: digitalAvatar ? 1 : 2,
+      cloud,
+      functionName: digitalAvatar ? avatarFunctionName : functionName,
+      request,
+      timeoutMs,
     })
     const envelope = result?.result
-    if (!envelope || envelope.ok !== true || !envelope.data) {
+    if (!envelope || envelope.ok !== true) {
       throw new Error('AI_PROVIDER_UNAVAILABLE')
     }
-    return normalizeProviderResult(envelope.data, options)
+    const data = digitalAvatar
+      ? envelope.data
+      : verifyDraftProviderResponse(envelope, request, secret)
+    return normalizeProviderResult(data, options)
   }
 
   return {
+    async readiness() {
+      if (!configured) return false
+      const now = Date.now()
+      if (readinessCache?.expiresAt > now) return readinessCache.promise
+      const promise = Promise.resolve().then(() => withTimeout(cloud.callFunction({
+        name: functionName,
+        data: { action: 'readiness' },
+      }), timeoutMs)).then((result) => (
+        result?.result?.ok === true && result?.result?.data?.ready === true
+      )).catch(() => false)
+      readinessCache = { expiresAt: now + 60_000, promise }
+      return promise
+    },
     capability() {
       return {
         voiceDrafts: configured,
@@ -60,6 +85,7 @@ function createCloudAiProvider(cloud, functionName, secret, options = {}) {
 function createUnavailableAiProvider() {
   const unavailable = async () => { throw new Error('AI_PROVIDER_UNAVAILABLE') }
   return {
+    readiness: async () => false,
     capability() {
       return {
         voiceDrafts: false,
@@ -81,7 +107,60 @@ function createAiProviderAdapter(options = {}) {
   if (adapter !== 'cloud_function') return createUnavailableAiProvider()
   return createCloudAiProvider(options.cloud, options.functionName, options.secret, {
     avatarFunctionName: options.avatarFunctionName,
+    avatarSecret: options.avatarSecret,
+    timeoutMs: options.timeoutMs,
   })
+}
+
+function legacyAvatarRequest(action, input, secret) {
+  const request = { action, timestamp: Date.now(), ...input }
+  return {
+    ...request,
+    signature: createHmac('sha256', secret).update(providerPayload(request)).digest('hex'),
+  }
+}
+
+function normalizeTimeout(value) {
+  const timeout = Number(value ?? 8000)
+  return Number.isInteger(timeout) && timeout >= 500 && timeout <= 15_000 ? timeout : 8000
+}
+
+async function withTimeout(promise, timeoutMs) {
+  let timer
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error('AI_PROVIDER_UNAVAILABLE')), timeoutMs)
+      }),
+    ])
+  }
+  finally {
+    clearTimeout(timer)
+  }
+}
+
+async function callProviderFunction(options) {
+  let lastError
+  for (let attempt = 0; attempt < options.attempts; attempt += 1) {
+    try {
+      const result = await withTimeout(Promise.resolve().then(() => options.cloud.callFunction({
+        name: options.functionName,
+        data: options.request,
+      })), options.timeoutMs)
+      if (result?.result?.ok === false
+        && result?.result?.error?.retryable === true
+        && attempt + 1 < options.attempts) {
+        continue
+      }
+      return result
+    }
+    catch (error) {
+      lastError = error
+      if (attempt + 1 >= options.attempts) throw error
+    }
+  }
+  throw lastError || new Error('AI_PROVIDER_UNAVAILABLE')
 }
 
 function providerPayload(value) {
@@ -119,18 +198,33 @@ function normalizeProviderResult(value, options = {}) {
   if (options.digitalAvatar === true) {
     return normalizeDigitalAvatarProviderResult(value)
   }
-  const transcriptText = typeof value.transcriptText === 'string' ? value.transcriptText.trim() : ''
-  const structuredDraft = value.structuredDraft
-  const providerJobKey = typeof value.providerJobKey === 'string' ? value.providerJobKey.trim() : ''
-  if ((options.requireTranscript !== false && !transcriptText) || transcriptText.length > 20_000
+  const expectedKeys = options.requireTranscript === false
+    ? new Set(['structuredDraft', 'providerJobKey'])
+    : new Set(['transcriptText', 'structuredDraft', 'providerJobKey'])
+  const keys = value && typeof value === 'object' && !Array.isArray(value)
+    ? Object.keys(value)
+    : []
+  const transcriptText = typeof value?.transcriptText === 'string' ? value.transcriptText.trim() : ''
+  const structuredDraft = value?.structuredDraft
+  const providerJobKey = typeof value?.providerJobKey === 'string' ? value.providerJobKey.trim() : ''
+  let serializedDraft = ''
+  try {
+    serializedDraft = JSON.stringify(structuredDraft)
+  }
+  catch {}
+  if (keys.length !== expectedKeys.size
+    || !keys.every(key => expectedKeys.has(key))
+    || (options.requireTranscript !== false && !transcriptText)
+    || transcriptText.length > 20_000
     || !structuredDraft || typeof structuredDraft !== 'object' || Array.isArray(structuredDraft)
-    || JSON.stringify(structuredDraft).length > 30_000) {
+    || !serializedDraft || serializedDraft.length > 30_000
+    || !providerJobKey || providerJobKey.length > 256 || !/^[\x21-\x7e]+$/.test(providerJobKey)) {
     throw new Error('AI_PROVIDER_RESPONSE_INVALID')
   }
   return {
     ...(transcriptText ? { transcriptText } : {}),
     structuredDraft,
-    providerJobKey: providerJobKey || undefined,
+    providerJobKey,
   }
 }
 
@@ -167,10 +261,13 @@ function stableJson(value) {
 
 module.exports = {
   createAiProviderAdapter,
+  callProviderFunction,
   createCloudAiProvider,
   createUnavailableAiProvider,
   normalizeDigitalAvatarProviderResult,
   normalizeProviderResult,
+  normalizeTimeout,
   providerPayload,
   stableJson,
+  withTimeout,
 }

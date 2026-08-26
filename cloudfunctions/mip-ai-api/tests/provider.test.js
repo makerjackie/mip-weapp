@@ -9,6 +9,11 @@ const {
   normalizeProviderResult,
   providerPayload,
 } = require('../lib/provider')
+const {
+  CONTRACT_VERSION,
+  digest,
+  sign,
+} = require('../lib/draft-provider-contract')
 
 test('reports unavailable instead of creating a fake draft', async () => {
   const provider = createCloudAiProvider({}, '')
@@ -25,7 +30,61 @@ test('reports unavailable instead of creating a fake draft', async () => {
 test('uses an explicit unavailable adapter instead of a runtime mock', async () => {
   const provider = createAiProviderAdapter({ adapter: 'mock' })
   assert.equal(provider.capability().refinementDrafts, false)
+  assert.equal(await provider.readiness(), false)
   await assert.rejects(() => provider.refineDraft({}), /AI_PROVIDER_UNAVAILABLE/)
+})
+
+test('reports configured draft capability only after the Provider readiness contract passes', async () => {
+  let calls = 0
+  const provider = createCloudAiProvider({
+    async callFunction(input) {
+      calls += 1
+      assert.equal(input.data.action, 'readiness')
+      return { result: { ok: true, data: { ready: true } } }
+    },
+  }, 'mip-ai-draft-provider', 's'.repeat(48))
+  assert.equal(await provider.readiness(), true)
+  assert.equal(await provider.readiness(), true)
+  assert.equal(calls, 1)
+})
+
+test('retries a draft transport once with the exact same stable request identity', async () => {
+  const secret = 's'.repeat(48)
+  const requests = []
+  const provider = createCloudAiProvider({
+    async callFunction(input) {
+      requests.push(input.data)
+      if (requests.length === 1) throw new Error('transport')
+      const data = {
+        transcriptText: '资料内容',
+        structuredDraft: { headline: '产品负责人' },
+        providerJobKey: 'job-retried',
+      }
+      const result = {
+        version: CONTRACT_VERSION,
+        timestamp: Date.now(),
+        requestId: input.data.requestId,
+        operationKey: input.data.operationKey,
+        ok: true,
+        data,
+        dataDigest: digest(data),
+      }
+      return { result: { ...result, signature: sign(result, secret) } }
+    },
+  }, 'mip-ai-draft-provider', secret)
+  const result = await provider.structureText({
+    appId: 'wx1234567890abcdef',
+    draftId: '20000000-0000-4000-8000-000000000001',
+    purpose: 'PROFILE',
+    expectedVersion: 1,
+    transcriptText: '资料内容',
+  })
+  assert.equal(result.providerJobKey, 'job-retried')
+  assert.equal(requests.length, 2)
+  assert.equal(requests[0].requestId, requests[1].requestId)
+  assert.equal(requests[0].operationKey, requests[1].operationKey)
+  assert.equal(requests[0].payloadDigest, requests[1].payloadDigest)
+  assert.equal(requests[0].signature, requests[1].signature)
 })
 
 test('binds all refinement context while allowing a structured-only response', async () => {
@@ -34,14 +93,21 @@ test('binds all refinement context while allowing a structured-only response', a
   const provider = createCloudAiProvider({
     async callFunction(input) {
       request = input
+      const data = {
+        structuredDraft: { headline: '更新后的标题' },
+        providerJobKey: 'refine-job-private',
+      }
+      const result = {
+        version: CONTRACT_VERSION,
+        timestamp: Date.now(),
+        requestId: input.data.requestId,
+        operationKey: input.data.operationKey,
+        ok: true,
+        data,
+        dataDigest: digest(data),
+      }
       return {
-        result: {
-          ok: true,
-          data: {
-            structuredDraft: { headline: '更新后的标题' },
-            providerJobKey: 'refine-job-private',
-          },
-        },
+        result: { ...result, signature: sign(result, secret) },
       }
     },
   }, 'mip-ai-provider', secret)
@@ -59,11 +125,11 @@ test('binds all refinement context while allowing a structured-only response', a
   assert.equal(Object.hasOwn(result, 'transcriptText'), false)
   assert.equal(
     request.data.signature,
-    createHmac('sha256', secret).update(providerPayload(request.data)).digest('hex'),
+    sign(request.data, secret),
   )
   assert.notEqual(
-    providerPayload({ ...request.data, supplementalText: '另一段内容' }),
-    providerPayload(request.data),
+    request.data.payloadDigest,
+    digest({ ...request.data.payload, supplementalText: '另一段内容' }),
   )
 })
 
@@ -73,15 +139,22 @@ test('validates the configured provider response', async () => {
   const provider = createCloudAiProvider({
     async callFunction(input) {
       request = input
+      const data = {
+        transcriptText: '产品与交付经验',
+        structuredDraft: { headline: '产品负责人' },
+        providerJobKey: 'provider-job-private',
+      }
+      const result = {
+        version: CONTRACT_VERSION,
+        timestamp: Date.now(),
+        requestId: input.data.requestId,
+        operationKey: input.data.operationKey,
+        ok: true,
+        data,
+        dataDigest: digest(data),
+      }
       return {
-        result: {
-          ok: true,
-          data: {
-            transcriptText: '产品与交付经验',
-            structuredDraft: { headline: '产品负责人' },
-            providerJobKey: 'provider-job-private',
-          },
-        },
+        result: { ...result, signature: sign(result, secret) },
       }
     },
   }, 'mip-ai-provider', secret)
@@ -89,6 +162,7 @@ test('validates the configured provider response', async () => {
     appId: 'wx-app',
     draftId: '20000000-0000-4000-8000-000000000001',
     purpose: 'PROFILE',
+    expectedVersion: 1,
     transcriptText: '产品与交付经验',
   })
   assert.equal(result.transcriptText, '产品与交付经验')
@@ -96,9 +170,9 @@ test('validates the configured provider response', async () => {
   assert.equal(request.name, 'mip-ai-provider')
   assert.equal(
     request.data.signature,
-    createHmac('sha256', secret).update(providerPayload(request.data)).digest('hex'),
+    sign(request.data, secret),
   )
-  assert.equal(Object.hasOwn(request.data, 'transcriptText'), true)
+  assert.equal(Object.hasOwn(request.data.payload, 'transcriptText'), true)
   assert.throws(() => normalizeProviderResult({ transcriptText: '', structuredDraft: {} }), /AI_PROVIDER_RESPONSE_INVALID/)
 })
 

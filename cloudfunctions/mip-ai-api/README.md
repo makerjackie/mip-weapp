@@ -6,7 +6,7 @@ MIP AI 草稿服务。服务只生成、保存和更新可过期草稿，不直�
 
 维护 action 只接受 `MIP_ALLOWED_APP_IDS` 内的 AppID，并使用已部署的 `MIP_AI_HMAC_SECRET` 校验五分钟内时间戳和完整未签名 body。单次最多处理 20 条；响应只包含状态及过期、扫描、删除、失败数量，不包含用户、草稿或文件标识。该命令由运营人员显式执行，不安装定时器。
 
-未配置 `MIP_AI_PROVIDER_FUNCTION_NAME` 时，语音和文本整理明确返回不可用，不生成伪造结果。
+未配置 `MIP_AI_PROVIDER_FUNCTION_NAME`，或目标函数的 `readiness` 未通过上游鉴权与协议回读时，语音和文本整理能力明确返回不可用，不生成伪造结果。readiness 在函数暖实例内缓存 60 秒；业务请求仍独立执行完整 Provider 校验。
 
 数字分身使用独立的 `MIP_AI_AVATAR_PROVIDER_FUNCTION_NAME`。未配置时只关闭数字分身能力，不影响已有文本和语音草稿。生成前服务端锁定当前用户，确认素材是本人档案当前绑定的 `READY` `AVATAR`；Provider 只能返回 `imageBase64`、`contentType` 和 `providerJobKey`，不能用 URL 或素材 ID直接声明结果。返回图片会在 AI API 内完整解码、重新编码、执行微信图片内容安全检查并写入 `mip/.../digital-avatars/`，然后在同一数据库事务中把 ownerless `PENDING` 素材与生成记录推进到 `READY`。客户端只读取生成记录，不决定生成状态或输出素材。
 
@@ -14,6 +14,6 @@ MIP AI 草稿服务。服务只生成、保存和更新可过期草稿，不直�
 
 Provider 通过 `MIP_AI_PROVIDER_ADAPTER` 选择。当前正式适配器值为 `cloud_function`，空值也按该适配器处理；其他值会明确降级为不可用。测试可注入内存 Provider，但运行时没有 mock 成功路径。草稿 Cloud Function Provider 必须使用 `mip-` 前缀的独立函数，并实现 `structureText`、`transcribeAndStructure` 与 `refineDraft` 三个 action。`refineDraft` 接收当前转写、当前结构化草稿和本轮补充，至少返回 `structuredDraft`；其他两个 action 还必须返回 `transcriptText`。数字分身 Provider 同样使用 `mip-` 前缀函数并实现 `generateDigitalAvatar`；请求绑定源文件摘要、尺寸和稳定风格 key，响应严格返回 `imageBase64`、`contentType` 和 `providerJobKey`。所有 job key 只做 SHA-256 摘要留存。
 
-Provider 必须校验请求中由 `MIP_AI_HMAC_SECRET` 生成的 HMAC 签名及五分钟内时间戳；签名绑定动作、AppID、草稿、用途、处理版本和全部输入的稳定摘要。Provider 原始错误和用户输入不得写入普通业务日志或返回客户端。
+草稿 Provider 契约固定为 `mip.ai.draft-provider.v1`。请求和响应都使用专用 `MIP_AI_DRAFT_PROVIDER_HMAC_SECRET` 对完整版本化 envelope 签名，并校验五分钟内时间戳、AppID/action allowlist、稳定 request ID、operation key、payload/data digest 和精确字段集合。语音请求额外绑定 CloudBase file ID、SHA-256、字节数和类型；Provider 原始错误和用户输入不得写入普通业务日志或返回客户端。该密钥不得复用于 AI 清理、数字分身或上游 HTTP 鉴权。
 
-环境变量：`MIP_ALLOWED_APP_IDS`、`MIP_IDENTITY_PEPPER`、`MIP_AI_PROVIDER_ADAPTER`、`MIP_AI_PROVIDER_FUNCTION_NAME`、`MIP_AI_AVATAR_PROVIDER_FUNCTION_NAME`、`MIP_AI_HMAC_SECRET`、`MIP_AI_STORAGE_KEY`、`MIP_AI_DRAFT_TTL_HOURS`、`MIP_DEPLOYMENT_STAGE`、`MIP_DB_CONNECTION_URI`。
+环境变量：`MIP_ALLOWED_APP_IDS`、`MIP_IDENTITY_PEPPER`、`MIP_AI_PROVIDER_ADAPTER`、`MIP_AI_PROVIDER_FUNCTION_NAME`、`MIP_AI_PROVIDER_TIMEOUT_MS`、`MIP_AI_DRAFT_PROVIDER_HMAC_SECRET`、`MIP_AI_AVATAR_PROVIDER_FUNCTION_NAME`、`MIP_AI_HMAC_SECRET`、`MIP_AI_STORAGE_KEY`、`MIP_AI_DRAFT_TTL_HOURS`、`MIP_DEPLOYMENT_STAGE`、`MIP_DB_CONNECTION_URI`。
