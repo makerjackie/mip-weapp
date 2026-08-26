@@ -3,7 +3,7 @@
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载成长记录" description="请检查网络后重试。" action-text="重新加载" bind:action="loadGrowth" /><app-page-exit /></view>
   <block wx:else>
     <view class="relative min-h-[520rpx] overflow-hidden rounded-[20rpx] bg-brand px-5 py-6 text-on-brand">
-      <image class="pointer-events-none absolute -bottom-[12rpx] -right-[260rpx] h-[240rpx] w-[1052rpx]" mode="aspectFit" src="/assets/figma/profile/level-art.png" />
+      <image class="growth-level-art pointer-events-none absolute -bottom-[12rpx] -right-[260rpx] h-[240rpx] w-[1052rpx]" mode="aspectFit" src="/assets/figma/profile/level-art.png" />
       <view class="relative z-10 text-[length:22rpx] font-semibold">MIP 成长等级</view>
       <view class="relative z-10 mt-8 flex items-end justify-between gap-4"><view class="text-[length:104rpx] font-bold leading-none">Lv.{{currentLevelNumber}}</view><view class="pb-2 text-right"><view class="text-[length:28rpx] font-semibold">{{snapshot.currentLevel.name}}</view><view class="mt-1 text-[length:21rpx] opacity-70">{{snapshot.account.experienceBalance}} 经验值</view></view></view>
       <view wx:if="{{snapshot.nextLevel}}" class="relative z-10 mt-5">
