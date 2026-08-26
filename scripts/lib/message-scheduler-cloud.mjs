@@ -20,14 +20,69 @@ export const SCHEDULER_DEPLOYABLE_SOURCE_FILES = Object.freeze([
   'package.json',
 ])
 
-export function schedulerCloudConfig(env, functionNames) {
+export const MESSAGE_SCHEDULER_OPERATIONS_SPEC = Object.freeze({
+  adminContractError: 'Admin runtime is not ready for message scheduling automation',
+  defaultFunctionName: 'mip-message-scheduler',
+  defaultRoleName: 'MIPMessageSchedulerRole',
+  defaultTriggerName: 'mip-message-campaign-next',
+  functionDescription: 'MIP single rolling message campaign timer',
+  functionEnvKey: 'MIP_MESSAGE_SCHEDULER_FUNCTION_NAME',
+  functionRole: 'scheduler',
+  kind: 'message',
+  markerEnvKey: 'MIP_MESSAGE_SCHEDULER_CODE_MARKER',
+  policyDescription: 'Minimum runtime access for the MIP rolling message timer',
+  requiresOutbox: true,
+  roleDescription: 'MIP rolling message timer runtime role',
+  roleEnvKey: 'MIP_MESSAGE_SCHEDULER_ROLE_NAME',
+  secretEnvKey: 'MIP_MESSAGE_DISPATCH_HMAC_SECRET',
+  sourceDirectory: 'mip-message-scheduler',
+  triggerEnvKey: 'MIP_MESSAGE_SCHEDULER_TRIGGER_NAME',
+})
+
+export const KNOWLEDGE_SCHEDULER_OPERATIONS_SPEC = Object.freeze({
+  adminContractError: 'Admin runtime is not ready for knowledge scheduling automation',
+  defaultFunctionName: 'mip-knowledge-scheduler',
+  defaultRoleName: 'MIPKnowledgeSchedulerRole',
+  defaultTriggerName: 'mip-knowledge-ingestion-next',
+  functionDescription: 'MIP single rolling knowledge ingestion timer',
+  functionEnvKey: 'MIP_KNOWLEDGE_SCHEDULER_FUNCTION_NAME',
+  functionRole: 'knowledgeScheduler',
+  kind: 'knowledge',
+  markerEnvKey: 'MIP_KNOWLEDGE_SCHEDULER_CODE_MARKER',
+  policyDescription: 'Minimum runtime access for the MIP rolling knowledge ingestion timer',
+  requiresOutbox: false,
+  roleDescription: 'MIP rolling knowledge ingestion timer runtime role',
+  roleEnvKey: 'MIP_KNOWLEDGE_SCHEDULER_ROLE_NAME',
+  secretEnvKey: 'MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET',
+  sourceDirectory: 'mip-knowledge-scheduler',
+  triggerEnvKey: 'MIP_KNOWLEDGE_SCHEDULER_TRIGGER_NAME',
+})
+
+const schedulerOperationsSpecs = Object.freeze({
+  knowledge: KNOWLEDGE_SCHEDULER_OPERATIONS_SPEC,
+  message: MESSAGE_SCHEDULER_OPERATIONS_SPEC,
+})
+
+export function resolveSchedulerOperationsSpec(args = []) {
+  const values = args
+    .filter(value => value.startsWith('--scheduler-kind='))
+    .map(value => value.slice('--scheduler-kind='.length))
+  if (values.length > 1 || (values.length === 1 && !schedulerOperationsSpecs[values[0]])) {
+    throw new Error('--scheduler-kind must be message or knowledge and may only be provided once')
+  }
+  return schedulerOperationsSpecs[values[0] || 'message']
+}
+
+export function rollingSchedulerCloudConfig(env, functionNames, spec) {
   const envId = text(env.CLOUDBASE_ENV_ID)
   const region = text(env.MIP_SCF_REGION)
-  const triggerName = text(env.MIP_MESSAGE_SCHEDULER_TRIGGER_NAME || 'mip-message-campaign-next')
-  const roleName = text(env.MIP_MESSAGE_SCHEDULER_ROLE_NAME || 'MIPMessageSchedulerRole')
+  const triggerName = text(env[spec.triggerEnvKey] || spec.defaultTriggerName)
+  const roleName = text(env[spec.roleEnvKey] || spec.defaultRoleName)
   const resourceUin = text(env.CLOUDBASE_RESOURCE_UIN)
   const cronUtcOffsetSource = text(env.MIP_SCF_TIMER_UTC_OFFSET_MINUTES)
   const cronUtcOffsetMinutes = Number(cronUtcOffsetSource)
+  const adminFunctionName = text(functionNames.admin)
+  const functionName = text(functionNames[spec.functionRole] || spec.defaultFunctionName)
   if (!/^[\w-]{1,64}$/.test(envId)) {
     throw new Error('CLOUDBASE_ENV_ID is invalid')
   }
@@ -35,10 +90,21 @@ export function schedulerCloudConfig(env, functionNames) {
     throw new Error('MIP_SCF_REGION is invalid')
   }
   if (!/^mip-[a-z0-9][a-z0-9-]{0,95}$/.test(triggerName)) {
-    throw new Error('MIP_MESSAGE_SCHEDULER_TRIGGER_NAME is invalid')
+    throw new Error(`${spec.triggerEnvKey} is invalid`)
   }
   if (!/^[A-Z]\w{1,63}$/i.test(roleName) || roleName.toLowerCase() === 'tcb_qcsrole') {
     throw new Error('A dedicated non-TCB scheduler role is required')
+  }
+  if (spec.kind === 'knowledge'
+    && roleName.toLowerCase() === text(
+      env.MIP_MESSAGE_SCHEDULER_ROLE_NAME || MESSAGE_SCHEDULER_OPERATIONS_SPEC.defaultRoleName,
+    ).toLowerCase()) {
+    throw new Error('Knowledge scheduling requires a role separate from the message scheduler')
+  }
+  if (!/^mip-[a-z0-9][a-z0-9-]{0,55}$/.test(functionName)
+    || !/^mip-[a-z0-9][a-z0-9-]{0,55}$/.test(adminFunctionName)
+    || functionName === adminFunctionName) {
+    throw new Error('Scheduler and admin function names are invalid')
   }
   if (!/^\d{5,20}$/.test(resourceUin)) {
     throw new Error('CLOUDBASE_RESOURCE_UIN is invalid')
@@ -50,16 +116,20 @@ export function schedulerCloudConfig(env, functionNames) {
     throw new Error('MIP_SCF_TIMER_UTC_OFFSET_MINUTES must be an integer from -840 to 840')
   }
   return Object.freeze({
-    adminFunctionName: functionNames.admin,
+    adminFunctionName,
     cronUtcOffsetMinutes,
     envId,
-    functionName: functionNames.scheduler,
+    functionName,
     policyName: `${roleName}Policy`,
     region,
     resourceUin,
     roleName,
     triggerName,
   })
+}
+
+export function schedulerCloudConfig(env, functionNames) {
+  return rollingSchedulerCloudConfig(env, functionNames, MESSAGE_SCHEDULER_OPERATIONS_SPEC)
 }
 
 export function schedulerRuntimePolicy(config) {
@@ -103,14 +173,14 @@ export function schedulerScfCloudApiRequest(config, action, params) {
   }
 }
 
-export function schedulerAdminRuntimeContract(environment, expected = {}) {
+export function rollingSchedulerAdminRuntimeContract(environment, expected = {}, spec) {
   const allowedAppIds = text(environment?.MIP_ALLOWED_APP_IDS)
     .split(',')
     .map(value => value.trim())
     .filter(Boolean)
   const requiredAppId = text(expected.requiredAppId)
-  const dispatchSecret = typeof environment?.MIP_MESSAGE_DISPATCH_HMAC_SECRET === 'string'
-    ? environment.MIP_MESSAGE_DISPATCH_HMAC_SECRET
+  const secret = typeof environment?.[spec.secretEnvKey] === 'string'
+    ? environment[spec.secretEnvKey]
     : ''
   const outboxSecret = typeof environment?.MIP_OUTBOX_HMAC_SECRET === 'string'
     ? environment.MIP_OUTBOX_HMAC_SECRET
@@ -118,22 +188,37 @@ export function schedulerAdminRuntimeContract(environment, expected = {}) {
   if (!allowedAppIds.length
     || allowedAppIds.some(value => !/^wx[0-9a-f]{16}$/i.test(value))
     || (requiredAppId && !allowedAppIds.includes(requiredAppId))
-    || dispatchSecret.length < 32
-    || dispatchSecret !== dispatchSecret.trim()
-    || text(environment?.MIP_MESSAGE_SCHEDULER_FUNCTION_NAME) !== text(expected.schedulerFunctionName)
-    || text(environment?.MIP_OUTBOX_FUNCTION_NAME) !== text(expected.outboxFunctionName)
-    || outboxSecret.length < 32
-    || outboxSecret !== outboxSecret.trim()) {
-    throw new Error('Admin runtime is not ready for message scheduling automation')
+    || secret.length < 32
+    || secret !== secret.trim()
+    || text(environment?.[spec.functionEnvKey]) !== text(expected.schedulerFunctionName)
+    || (spec.requiresOutbox && (
+      text(environment?.MIP_OUTBOX_FUNCTION_NAME) !== text(expected.outboxFunctionName)
+      || outboxSecret.length < 32
+      || outboxSecret !== outboxSecret.trim()
+    ))) {
+    throw new Error(spec.adminContractError)
   }
-  return Object.freeze({ allowedAppIds: Object.freeze(allowedAppIds), dispatchSecret })
+  return Object.freeze({ allowedAppIds: Object.freeze(allowedAppIds), secret })
 }
 
-export function schedulerCreateFunctionRequest(config, environment, zipFile) {
+export function schedulerAdminRuntimeContract(environment, expected = {}) {
+  const contract = rollingSchedulerAdminRuntimeContract(
+    environment,
+    expected,
+    MESSAGE_SCHEDULER_OPERATIONS_SPEC,
+  )
+  return Object.freeze({
+    allowedAppIds: contract.allowedAppIds,
+    dispatchSecret: contract.secret,
+  })
+}
+
+export function rollingSchedulerCreateFunctionRequest(config, environment, zipFile, spec) {
+  assertRollingSchedulerEnvironmentContract(environment, config, spec)
   if (!config || !/^mip-[a-z0-9][a-z0-9-]{0,55}$/.test(text(config.functionName))
     || !/^[A-Z]\w{1,63}$/i.test(text(config.roleName))
     || text(config.roleName).toLowerCase() === 'tcb_qcsrole'
-    || !/^[a-f0-9]{64}$/.test(text(environment?.MIP_MESSAGE_SCHEDULER_CODE_MARKER))
+    || !/^[a-f0-9]{64}$/.test(text(environment?.[spec.markerEnvKey]))
     || typeof zipFile !== 'string'
     || !/^[a-z0-9+/]+={0,2}$/i.test(zipFile)) {
     throw new Error('Scheduler raw SCF create request is invalid')
@@ -143,7 +228,7 @@ export function schedulerCreateFunctionRequest(config, environment, zipFile) {
     Namespace: config.envId,
     Code: { ZipFile: zipFile },
     CodeSource: 'ZipFile',
-    Description: 'MIP single rolling message campaign timer',
+    Description: spec.functionDescription,
     Environment: {
       Variables: Object.entries(environment).map(([Key, Value]) => ({ Key, Value })),
     },
@@ -155,6 +240,55 @@ export function schedulerCreateFunctionRequest(config, environment, zipFile) {
     Timeout: SCHEDULER_TIMEOUT_SECONDS,
     Type: 'Event',
   }
+}
+
+export function assertRollingSchedulerEnvironmentContract(environment, config, spec) {
+  const expectedKeys = [
+    'MIP_ADMIN_FUNCTION_NAME',
+    'MIP_ALLOWED_APP_IDS',
+    'MIP_DEPLOYMENT_STAGE',
+    spec.secretEnvKey,
+    spec.markerEnvKey,
+    spec.functionEnvKey,
+    spec.triggerEnvKey,
+    'MIP_SCF_NAMESPACE',
+    'MIP_SCF_REGION',
+    'MIP_SCF_TIMER_UTC_OFFSET_MINUTES',
+  ].sort()
+  const actualKeys = Object.keys(environment || {}).sort()
+  const allowedAppIds = text(environment?.MIP_ALLOWED_APP_IDS).split(',').map(text).filter(Boolean)
+  if (!environment
+    || typeof environment !== 'object'
+    || Array.isArray(environment)
+    || JSON.stringify(actualKeys) !== JSON.stringify(expectedKeys)
+    || Object.values(environment).some(value => typeof value !== 'string')
+    || actualKeys.some(key => /(?:^|_)(?:DB|MYSQL|DATABASE)(?:_|$)/i.test(key))
+    || !allowedAppIds.length
+    || allowedAppIds.some(value => !/^wx[0-9a-f]{16}$/i.test(value))
+    || text(environment.MIP_ADMIN_FUNCTION_NAME) !== text(config?.adminFunctionName)
+    || text(environment[spec.functionEnvKey]) !== text(config?.functionName)
+    || text(environment[spec.triggerEnvKey]) !== text(config?.triggerName)
+    || !/^[a-f0-9]{64}$/.test(text(environment[spec.markerEnvKey]))
+    || text(environment[spec.secretEnvKey]).length < 32
+    || environment[spec.secretEnvKey] !== text(environment[spec.secretEnvKey])
+    || text(environment.MIP_SCF_NAMESPACE) !== text(config?.envId)
+    || text(environment.MIP_SCF_REGION) !== text(config?.region)
+    || Number(environment.MIP_SCF_TIMER_UTC_OFFSET_MINUTES) !== config?.cronUtcOffsetMinutes
+    || !['development', 'test', 'staging', 'production'].includes(
+      text(environment.MIP_DEPLOYMENT_STAGE),
+    )) {
+    throw new Error('Scheduler function environment prewrite contract failed')
+  }
+  return environment
+}
+
+export function schedulerCreateFunctionRequest(config, environment, zipFile) {
+  return rollingSchedulerCreateFunctionRequest(
+    config,
+    environment,
+    zipFile,
+    MESSAGE_SCHEDULER_OPERATIONS_SPEC,
+  )
 }
 
 export function schedulerSourceFingerprint(sourceRoot) {
@@ -190,7 +324,13 @@ export function assertExistingSchedulerFunctionIdentity(existingFunction, config
   return detail
 }
 
-export function assertSchedulerFunctionReadback(existingFunction, config, expectedEnvironment) {
+export function assertRollingSchedulerFunctionReadback(
+  existingFunction,
+  config,
+  expectedEnvironment,
+  spec,
+) {
+  assertRollingSchedulerEnvironmentContract(expectedEnvironment, config, spec)
   const detail = assertExistingSchedulerFunctionIdentity(existingFunction, config)
   if (!detail
     || detail.FunctionName !== config.functionName
@@ -208,11 +348,20 @@ export function assertSchedulerFunctionReadback(existingFunction, config, expect
   const actualEntries = Object.entries(actual).sort()
   const expectedEntries = Object.entries(expectedEnvironment).sort()
   if (JSON.stringify(actualEntries) !== JSON.stringify(expectedEntries)
-    || !/^[a-f0-9]{64}$/.test(text(actual.MIP_MESSAGE_SCHEDULER_CODE_MARKER))
-    || actual.MIP_DB_CONNECTION_URI) {
+    || !/^[a-f0-9]{64}$/.test(text(actual[spec.markerEnvKey]))
+    || Object.keys(actual).some(key => /(?:^|_)(?:DB|MYSQL|DATABASE)(?:_|$)/i.test(key))) {
     throw new Error('Scheduler function environment readback failed')
   }
   return detail
+}
+
+export function assertSchedulerFunctionReadback(existingFunction, config, expectedEnvironment) {
+  return assertRollingSchedulerFunctionReadback(
+    existingFunction,
+    config,
+    expectedEnvironment,
+    MESSAGE_SCHEDULER_OPERATIONS_SPEC,
+  )
 }
 
 export function schedulerTrustPolicy() {

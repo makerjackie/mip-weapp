@@ -9,7 +9,8 @@ import {
   canonicalJson,
   exactPolicyFingerprint,
   parsePolicyDocument,
-  schedulerCloudConfig,
+  resolveSchedulerOperationsSpec,
+  rollingSchedulerCloudConfig,
   schedulerRuntimePolicy,
   schedulerTrustPolicy,
 } from './lib/message-scheduler-cloud.mjs'
@@ -19,7 +20,8 @@ import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
 const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
 const functionNames = resolveMipFunctionNames(env)
-const config = schedulerCloudConfig(env, functionNames)
+const spec = resolveSchedulerOperationsSpec(process.argv.slice(2))
+const config = rollingSchedulerCloudConfig(env, functionNames, spec)
 const apply = process.argv.includes('--apply')
 resolveMipDeploymentStage(env.MIP_DEPLOYMENT_STAGE, process.argv.slice(2))
 
@@ -45,7 +47,7 @@ if (!role) {
   callCam('CreateRole', {
     RoleName: config.roleName,
     PolicyDocument: JSON.stringify(expectedTrust),
-    Description: 'MIP rolling message timer runtime role',
+    Description: spec.roleDescription,
   })
   role = getRole(config.roleName)
 }
@@ -60,7 +62,7 @@ if (!policy) {
   callCam('CreatePolicy', {
     PolicyName: config.policyName,
     PolicyDocument: JSON.stringify(expectedPolicy),
-    Description: 'Minimum runtime access for the MIP rolling message timer',
+    Description: spec.policyDescription,
   })
   policy = findLocalPolicy(config.policyName)
 }

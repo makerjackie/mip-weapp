@@ -20,7 +20,8 @@ import {
 } from './lib/example-cloudbase.mjs'
 import {
   assertExistingSchedulerFunctionIdentity,
-  assertSchedulerFunctionReadback,
+  assertRollingSchedulerEnvironmentContract,
+  assertRollingSchedulerFunctionReadback,
   assertSingleSchedulerTrigger,
   asyncEventRetryConfig,
   camPolicyDocument,
@@ -32,15 +33,16 @@ import {
   parsePolicyDocument,
   preflightSchedulerTriggerInventory,
   reservedConcurrency,
+  resolveSchedulerOperationsSpec,
+  rollingSchedulerAdminRuntimeContract,
+  rollingSchedulerCloudConfig,
+  rollingSchedulerCreateFunctionRequest,
   SCHEDULER_ASYNC_MSG_TTL_SECONDS,
   SCHEDULER_ASYNC_RETRY_NUM,
   SCHEDULER_DEPLOYABLE_SOURCE_FILES,
   SCHEDULER_MEMORY_MB,
   SCHEDULER_RESERVED_CONCURRENCY_MB,
   SCHEDULER_TIMEOUT_SECONDS,
-  schedulerAdminRuntimeContract,
-  schedulerCloudConfig,
-  schedulerCreateFunctionRequest,
   schedulerRuntimePolicy,
   schedulerScfCloudApiRequest,
   schedulerSourceFingerprint,
@@ -51,17 +53,18 @@ import { resolveMipDeploymentStage } from './lib/mip-deployment-stage.mjs'
 import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
 
 const require = createRequire(import.meta.url)
+const root = path.resolve(import.meta.dirname, '..')
+const env = loadCaseEnv(root)
+const functionNames = resolveMipFunctionNames(env)
+const spec = resolveSchedulerOperationsSpec(process.argv.slice(2))
+const config = rollingSchedulerCloudConfig(env, functionNames, spec)
+const schedulerSourceDirectory = path.join(root, 'cloudfunctions', spec.sourceDirectory)
 const {
   createSchedulerActivation,
   createTimerMessage,
   verifyTimerMessage,
-} = require('../cloudfunctions/mip-message-scheduler/lib/auth')
-const { oneShotCron } = require('../cloudfunctions/mip-message-scheduler/lib/trigger-controller')
-
-const root = path.resolve(import.meta.dirname, '..')
-const env = loadCaseEnv(root)
-const functionNames = resolveMipFunctionNames(env)
-const config = schedulerCloudConfig(env, functionNames)
+} = require(path.join(schedulerSourceDirectory, 'lib', 'auth.js'))
+const { oneShotCron } = require(path.join(schedulerSourceDirectory, 'lib', 'trigger-controller.js'))
 const appId = String(env.MINI_PROGRAM_APP_ID || '').trim()
 const stage = resolveMipDeploymentStage(env.MIP_DEPLOYMENT_STAGE, process.argv.slice(2))
 const startCanary = process.argv.includes('--start-canary')
@@ -88,31 +91,30 @@ assertDedicatedRoleReady()
 
 const adminDetail = getFunction(config.adminFunctionName)
 if (!adminDetail) {
-  throw new Error('Deploy mip-admin-api before the message scheduler')
+  throw new Error(`Deploy mip-admin-api before the ${spec.kind} scheduler`)
 }
 const adminEnvironment = environmentVariables(adminDetail)
-const adminContract = schedulerAdminRuntimeContract(adminEnvironment, {
+const adminContract = rollingSchedulerAdminRuntimeContract(adminEnvironment, {
   requiredAppId: appId,
   schedulerFunctionName: config.functionName,
   outboxFunctionName: functionNames.outbox,
-})
+}, spec)
 const allowedAppIds = adminContract.allowedAppIds
-const secret = adminContract.dispatchSecret
+const secret = adminContract.secret
 
 const expectedEnvironment = {
   MIP_ALLOWED_APP_IDS: allowedAppIds.join(','),
   MIP_ADMIN_FUNCTION_NAME: config.adminFunctionName,
-  MIP_MESSAGE_DISPATCH_HMAC_SECRET: secret,
-  MIP_MESSAGE_SCHEDULER_FUNCTION_NAME: config.functionName,
-  MIP_MESSAGE_SCHEDULER_CODE_MARKER: schedulerSourceFingerprint(
-    path.join(root, 'cloudfunctions', 'mip-message-scheduler'),
-  ),
-  MIP_MESSAGE_SCHEDULER_TRIGGER_NAME: config.triggerName,
+  [spec.secretEnvKey]: secret,
+  [spec.functionEnvKey]: config.functionName,
+  [spec.markerEnvKey]: schedulerSourceFingerprint(schedulerSourceDirectory),
+  [spec.triggerEnvKey]: config.triggerName,
   MIP_SCF_NAMESPACE: config.envId,
   MIP_SCF_REGION: config.region,
   MIP_SCF_TIMER_UTC_OFFSET_MINUTES: String(config.cronUtcOffsetMinutes),
   MIP_DEPLOYMENT_STAGE: stage,
 }
+assertRollingSchedulerEnvironmentContract(expectedEnvironment, config, spec)
 
 const existingSchedulerDetail = getFunction(config.functionName)
 assertExistingSchedulerFunctionIdentity(existingSchedulerDetail, config)
@@ -123,28 +125,28 @@ const schedulerPreflight = preflightSchedulerTriggerInventory(
   { allowMissingExisting: resumeMissingTrigger === config.functionName },
 )
 if (schedulerPreflight.resumingMissingTrigger) {
-  assertSchedulerFunctionReadback(existingSchedulerDetail, config, expectedEnvironment)
+  assertRollingSchedulerFunctionReadback(existingSchedulerDetail, config, expectedEnvironment, spec)
 }
 
-const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'mip-message-scheduler-'))
+const stagingRoot = fs.mkdtempSync(path.join(os.tmpdir(), `${config.functionName}-`))
 try {
   const sourceDirectory = path.join(stagingRoot, config.functionName)
-  stageFunctionSources(
-    path.join(root, 'cloudfunctions', 'mip-message-scheduler'),
-    sourceDirectory,
-  )
+  stageFunctionSources(schedulerSourceDirectory, sourceDirectory)
   const zipFile = createFunctionArchive(sourceDirectory, stagingRoot)
   if (!schedulerPreflight.exists) {
     // Raw SCF creation is required: CloudBase MCP 2.32.0 otherwise injects TCB_QcsRole.
-    callScf('CreateFunction', schedulerCreateFunctionRequest(config, expectedEnvironment, zipFile))
+    callScf(
+      'CreateFunction',
+      rollingSchedulerCreateFunctionRequest(config, expectedEnvironment, zipFile, spec),
+    )
     const detail = await waitForActive()
-    assertSchedulerFunctionReadback(detail, config, expectedEnvironment)
+    assertRollingSchedulerFunctionReadback(detail, config, expectedEnvironment, spec)
   }
   else {
     callScf('UpdateFunctionConfiguration', {
       FunctionName: config.functionName,
       Namespace: config.envId,
-      Description: 'MIP single rolling message campaign timer',
+      Description: spec.functionDescription,
       MemorySize: SCHEDULER_MEMORY_MB,
       Timeout: SCHEDULER_TIMEOUT_SECONDS,
       Role: config.roleName,
@@ -162,7 +164,7 @@ try {
       CodeSource: 'ZipFile',
     })
     const detail = await waitForActive()
-    assertSchedulerFunctionReadback(detail, config, expectedEnvironment)
+    assertRollingSchedulerFunctionReadback(detail, config, expectedEnvironment, spec)
   }
 }
 finally {
@@ -319,7 +321,7 @@ function assertDedicatedRoleReady() {
 }
 
 function createFunctionArchive(sourceDirectory, stagingDirectory) {
-  const archivePath = path.join(stagingDirectory, 'mip-message-scheduler.zip')
+  const archivePath = path.join(stagingDirectory, `${config.functionName}.zip`)
   const result = spawnSync('/usr/bin/zip', [
     '-q',
     '-r',

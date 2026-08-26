@@ -93,7 +93,7 @@ describe('MIP rolling message scheduler operations', () => {
     expect(deploy).toContain('--activate-after-canary=')
     expect(deploy).toContain('--confirm-resume-missing-trigger=')
     expect(deploy).toContain('createSchedulerActivation')
-    expect(deploy).toContain('callScf(\'CreateFunction\', schedulerCreateFunctionRequest(')
+    expect(deploy).toContain('rollingSchedulerCreateFunctionRequest(config, expectedEnvironment, zipFile, spec)')
     expect(deploy).toContain('callScf(\'UpdateFunctionCode\'')
     expect(deploy).toContain('Role: config.roleName')
     expect(deploy).not.toContain('config.roleArn')
@@ -101,12 +101,12 @@ describe('MIP rolling message scheduler operations', () => {
     expect(deploy).not.toContain('action: \'updateFunctionCode\'')
     expect(deploy).toContain('schedulerScfCloudApiRequest(config, action, params)')
     expect(verify).toContain('schedulerScfCloudApiRequest(config, action, params)')
-    expect(deploy).toContain('schedulerAdminRuntimeContract(adminEnvironment')
-    expect(verify).toContain('schedulerAdminRuntimeContract(adminVariables')
+    expect(deploy).toContain('rollingSchedulerAdminRuntimeContract(adminEnvironment')
+    expect(verify).toContain('rollingSchedulerAdminRuntimeContract(adminVariables')
     expect(deploy.indexOf('assertExistingSchedulerFunctionIdentity(existingSchedulerDetail'))
-      .toBeLessThan(deploy.indexOf('callScf(\'CreateFunction\''))
+      .toBeLessThan(deploy.indexOf('\'CreateFunction\''))
     expect(deploy.indexOf('const schedulerPreflight = preflightSchedulerTriggerInventory('))
-      .toBeLessThan(deploy.indexOf('callScf(\'CreateFunction\''))
+      .toBeLessThan(deploy.indexOf('\'CreateFunction\''))
     expect(verify).toContain('assertSingleSchedulerTrigger')
     expect(verify).toContain('value?.Role !== config.roleName')
     expect(deploy).not.toMatch(/every-5m|\*\/5|2099/)
@@ -155,13 +155,25 @@ describe('MIP rolling message scheduler operations', () => {
 
   it('creates through raw SCF with the dedicated role on the first write path', () => {
     const config = {
+      adminFunctionName: 'mip-admin-api',
+      cronUtcOffsetMinutes: 480,
       envId: 'mip-test-env',
       functionName: 'mip-message-scheduler',
+      region: 'ap-shanghai',
       roleName: 'MIPMessageSchedulerRole',
+      triggerName: 'mip-message-campaign-next',
     }
     const request = schedulerCreateFunctionRequest(config, {
       MIP_ADMIN_FUNCTION_NAME: 'mip-admin-api',
+      MIP_ALLOWED_APP_IDS: 'wx0123456789abcdef',
+      MIP_DEPLOYMENT_STAGE: 'test',
+      MIP_MESSAGE_DISPATCH_HMAC_SECRET: 'message-dispatch-secret-at-least-32-bytes',
       MIP_MESSAGE_SCHEDULER_CODE_MARKER: 'a'.repeat(64),
+      MIP_MESSAGE_SCHEDULER_FUNCTION_NAME: 'mip-message-scheduler',
+      MIP_MESSAGE_SCHEDULER_TRIGGER_NAME: 'mip-message-campaign-next',
+      MIP_SCF_NAMESPACE: 'mip-test-env',
+      MIP_SCF_REGION: 'ap-shanghai',
+      MIP_SCF_TIMER_UTC_OFFSET_MINUTES: '480',
     }, Buffer.from('zip-content').toString('base64'))
     expect(request).toMatchObject({
       FunctionName: 'mip-message-scheduler',
@@ -176,7 +188,7 @@ describe('MIP rolling message scheduler operations', () => {
     expect(request.Code.ZipFile).toBe(Buffer.from('zip-content').toString('base64'))
     expect(request).not.toHaveProperty('VpcConfig')
     const deploy = read('scripts/deploy-message-scheduler.mjs')
-    const createIndex = deploy.indexOf('callScf(\'CreateFunction\'')
+    const createIndex = deploy.indexOf('\'CreateFunction\'')
     expect(createIndex).toBeGreaterThan(0)
     expect(createIndex).toBeLessThan(deploy.indexOf('callScf(\'UpdateFunctionConfiguration\''))
     expect(createIndex).toBeLessThan(deploy.indexOf('callScf(\'UpdateFunctionCode\''))
@@ -221,8 +233,10 @@ describe('MIP rolling message scheduler operations', () => {
       schedulerFunctionName: 'mip-message-scheduler',
       outboxFunctionName: 'mip-outbox-worker',
     }
-    expect(schedulerAdminRuntimeContract(environment, expected).allowedAppIds)
-      .toEqual(['wx0123456789abcdef'])
+    expect(schedulerAdminRuntimeContract(environment, expected)).toEqual({
+      allowedAppIds: ['wx0123456789abcdef'],
+      dispatchSecret: 'message-dispatch-secret-at-least-32-bytes',
+    })
     expect(() => schedulerAdminRuntimeContract({
       ...environment,
       MIP_OUTBOX_FUNCTION_NAME: '',
@@ -253,8 +267,11 @@ describe('MIP rolling message scheduler operations', () => {
       'mip-message-scheduler',
     ))
     const config = {
+      adminFunctionName: 'mip-admin-api',
+      cronUtcOffsetMinutes: 480,
       envId: 'mip-test-env',
       functionName: 'mip-message-scheduler',
+      region: 'ap-shanghai',
       roleName: 'MIPMessageSchedulerRole',
       triggerName: 'mip-message-campaign-next',
     }

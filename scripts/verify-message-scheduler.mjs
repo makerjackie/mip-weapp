@@ -10,6 +10,7 @@ import {
   loadCaseEnv,
 } from './lib/example-cloudbase.mjs'
 import {
+  assertRollingSchedulerEnvironmentContract,
   assertSingleSchedulerTrigger,
   asyncEventRetryConfig,
   camPolicyDocument,
@@ -20,14 +21,15 @@ import {
   normalizeTriggerEnable,
   parsePolicyDocument,
   reservedConcurrency,
+  resolveSchedulerOperationsSpec,
+  rollingSchedulerAdminRuntimeContract,
+  rollingSchedulerCloudConfig,
   SCHEDULER_ASYNC_MSG_TTL_SECONDS,
   SCHEDULER_ASYNC_RETRY_NUM,
   SCHEDULER_MEMORY_MB,
   SCHEDULER_RESERVED_CONCURRENCY_MB,
   SCHEDULER_RUNTIME,
   SCHEDULER_TIMEOUT_SECONDS,
-  schedulerAdminRuntimeContract,
-  schedulerCloudConfig,
   schedulerRuntimePolicy,
   schedulerScfCloudApiRequest,
   schedulerSourceFingerprint,
@@ -37,17 +39,16 @@ import {
 import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
 
 const require = createRequire(import.meta.url)
-const { verifyTimerMessage } = require('../cloudfunctions/mip-message-scheduler/lib/auth')
-const { oneShotCron } = require('../cloudfunctions/mip-message-scheduler/lib/trigger-controller')
-
 const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
 const functionNames = resolveMipFunctionNames(env)
-const config = schedulerCloudConfig(env, functionNames)
+const spec = resolveSchedulerOperationsSpec(process.argv.slice(2))
+const config = rollingSchedulerCloudConfig(env, functionNames, spec)
+const schedulerSourceDirectory = path.join(root, 'cloudfunctions', spec.sourceDirectory)
+const { verifyTimerMessage } = require(path.join(schedulerSourceDirectory, 'lib', 'auth.js'))
+const { oneShotCron } = require(path.join(schedulerSourceDirectory, 'lib', 'trigger-controller.js'))
 const expectedCanary = argumentValue('--expect-canary=')
-const expectedCodeMarker = schedulerSourceFingerprint(
-  path.join(root, 'cloudfunctions', 'mip-message-scheduler'),
-)
+const expectedCodeMarker = schedulerSourceFingerprint(schedulerSourceDirectory)
 
 assertConfirmations()
 if (expectedCanary && !/^[a-f0-9]{32}$/i.test(expectedCanary)) {
@@ -66,14 +67,15 @@ const expectedKeys = [
   'MIP_ADMIN_FUNCTION_NAME',
   'MIP_ALLOWED_APP_IDS',
   'MIP_DEPLOYMENT_STAGE',
-  'MIP_MESSAGE_DISPATCH_HMAC_SECRET',
-  'MIP_MESSAGE_SCHEDULER_CODE_MARKER',
-  'MIP_MESSAGE_SCHEDULER_FUNCTION_NAME',
-  'MIP_MESSAGE_SCHEDULER_TRIGGER_NAME',
+  spec.secretEnvKey,
+  spec.markerEnvKey,
+  spec.functionEnvKey,
+  spec.triggerEnvKey,
   'MIP_SCF_NAMESPACE',
   'MIP_SCF_REGION',
   'MIP_SCF_TIMER_UTC_OFFSET_MINUTES',
 ]
+assertRollingSchedulerEnvironmentContract(variables, config, spec)
 if (value?.Status !== 'Active'
   || value?.AvailableStatus !== 'Available'
   || value?.Runtime !== SCHEDULER_RUNTIME
@@ -85,14 +87,14 @@ if (value?.Status !== 'Active'
   || String(value?.Role || '').toLowerCase() === 'tcb_qcsrole'
   || Object.keys(variables).sort().join(',') !== expectedKeys.sort().join(',')
   || variables.MIP_ADMIN_FUNCTION_NAME !== config.adminFunctionName
-  || variables.MIP_MESSAGE_SCHEDULER_FUNCTION_NAME !== config.functionName
-  || variables.MIP_MESSAGE_SCHEDULER_CODE_MARKER !== expectedCodeMarker
-  || variables.MIP_MESSAGE_SCHEDULER_TRIGGER_NAME !== config.triggerName
+  || variables[spec.functionEnvKey] !== config.functionName
+  || variables[spec.markerEnvKey] !== expectedCodeMarker
+  || variables[spec.triggerEnvKey] !== config.triggerName
   || variables.MIP_SCF_NAMESPACE !== config.envId
   || variables.MIP_SCF_REGION !== config.region
   || Number(variables.MIP_SCF_TIMER_UTC_OFFSET_MINUTES) !== config.cronUtcOffsetMinutes
-  || String(variables.MIP_MESSAGE_DISPATCH_HMAC_SECRET || '').length < 32
-  || variables.MIP_DB_CONNECTION_URI) {
+  || String(variables[spec.secretEnvKey] || '').length < 32
+  || Object.keys(variables).some(key => /(?:^|_)(?:DB|MYSQL|DATABASE)(?:_|$)/i.test(key))) {
   throw new Error('Scheduler function configuration verification failed')
 }
 const vpc = value?.VpcConfig
@@ -105,12 +107,12 @@ const adminVariables = environmentVariables(callScf('GetFunction', {
   Namespace: config.envId,
   ShowCode: 'FALSE',
 }))
-schedulerAdminRuntimeContract(adminVariables, {
+rollingSchedulerAdminRuntimeContract(adminVariables, {
   schedulerFunctionName: config.functionName,
   outboxFunctionName: functionNames.outbox,
-})
-if (adminVariables.MIP_MESSAGE_SCHEDULER_FUNCTION_NAME !== config.functionName
-  || adminVariables.MIP_MESSAGE_DISPATCH_HMAC_SECRET !== variables.MIP_MESSAGE_DISPATCH_HMAC_SECRET
+}, spec)
+if (adminVariables[spec.functionEnvKey] !== config.functionName
+  || adminVariables[spec.secretEnvKey] !== variables[spec.secretEnvKey]
   || adminVariables.MIP_ALLOWED_APP_IDS !== variables.MIP_ALLOWED_APP_IDS) {
   throw new Error('Admin and scheduler internal contract verification failed')
 }
@@ -249,7 +251,7 @@ function verifiedTriggerMessage(value) {
     namespace: config.envId,
     functionName: config.functionName,
     triggerName: config.triggerName,
-    secret: variables.MIP_MESSAGE_DISPATCH_HMAC_SECRET,
+    secret: variables[spec.secretEnvKey],
   })
 }
 

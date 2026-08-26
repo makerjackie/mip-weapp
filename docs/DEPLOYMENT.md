@@ -19,7 +19,7 @@
 5. 运行 `pnpm project:init` 生成环境专属 runtime 用户，再执行 `pnpm database:grants -- --confirm-env=<EnvID> --confirm-runtime-user=<.env.local 中的 MIP_DB_RUNTIME_USER>` 收敛并回读验证精确表级权限。发现 schema/global 权限、缺表授权或账号归属不一致时停止部署。
 6. 仅在 development/test 环境需要占位目录时执行 `pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo`；生产环境不得运行 demo seed。
 7. API Key 的临时 STS 无法执行所需 SCF action 时，经维护者明确授权运行 `pnpm cloud:auth:device -- --allow-device-auth`，再使用 `CLOUDBASE_AUTH_MODE=local pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<.env.local 中的 MIP_DB_RUNTIME_USER>` 部署 16 个核心 `mip-*` 函数。不要在控制台手工补配置。部署脚本会从真实 MySQL 连接详情解析目标 VPC/子网，严格比较运行时、handler、超时、VPC 和完整环境变量；配置完全一致时只更新代码，配置漂移时才请求配置更新。production 仍需 `--confirm-production`。函数安全规则读取或解析失败时部署会停止，且更新前后的全部非目标条目必须保持不变。脚本会复核所有核心函数都没有 timer，只自动删除三个明确的历史 timer 名称；遇到其他 timer 保留现场并停止。支付模式为 `disabled` 时，已存在的支付函数不会被删除，但其客户端调用会被禁止。
-8. 消息自动定时使用独立函数和专用角色，不加入数据库核心清单。先在 `.env.local` 配置 `MIP_SCF_REGION`、待 canary 验证的 `MIP_SCF_TIMER_UTC_OFFSET_MINUTES`、`MIP_MESSAGE_SCHEDULER_ROLE_NAME` 和资源所有者 UIN。先运行 role 命令的 dry-run，核对仅有 `UpdateTrigger`、`ListTriggers`、`InvokeFunction` 后再追加 `--apply`。CAM 的 `InvokeFunction` 当前是操作级权限，resource 必须为 `*`；不得误写成函数 ARN，也不得把权限加到共享 `TCB_QcsRole`。新建 scheduler 禁止使用 CloudBase `manageFunctions/createFunction`，部署脚本必须先完成专用角色、既有函数身份和 trigger inventory 预检，再以 raw SCF `CreateFunction` 的首个云端写入直接传精确角色名；Update 与 GetFunction 同样使用和回读精确角色名，不接受 ARN、子串或共享角色。
+8. 消息和知识采集自动定时分别使用独立函数、trigger、HMAC 和专用角色，不加入数据库核心清单。先在 `.env.local` 配置 `MIP_SCF_REGION`、待 canary 验证的 `MIP_SCF_TIMER_UTC_OFFSET_MINUTES`、两个 scheduler 的函数名/trigger/角色名和资源所有者 UIN，再运行 `secrets:init` 与核心部署，把两个同域 HMAC 和函数名注入 `mip-admin-api`。两个角色不得相同。先运行各 role 命令的 dry-run，核对仅有 `UpdateTrigger`、`ListTriggers`、`InvokeFunction` 后再追加 `--apply`。CAM 的 `InvokeFunction` 当前是操作级权限，resource 必须为 `*`；不得误写成函数 ARN，也不得把权限加到共享 `TCB_QcsRole`。新建 scheduler 禁止使用 CloudBase `manageFunctions/createFunction`，部署脚本必须先完成专用角色、环境变量、既有函数身份和 trigger inventory 预检，再以 raw SCF `CreateFunction` 的首个云端写入直接传精确角色名；Update 与 GetFunction 同样使用和回读精确角色名，不接受 ARN、子串或共享角色。
 
 ```bash
 pnpm cloud:message-scheduler:role -- \
@@ -35,11 +35,25 @@ pnpm cloud:message-scheduler:deploy -- \
   --confirm-role=<dedicated-role> \
   --confirm-timer-offset-minutes=<candidate-offset> \
   --start-canary
+
+pnpm cloud:knowledge-scheduler:role -- \
+  --confirm-env=<EnvID> \
+  --confirm-function=mip-knowledge-scheduler \
+  --confirm-role=<dedicated-knowledge-role> \
+  --confirm-resource-uin=<resource-owner-uin>
+
+pnpm cloud:knowledge-scheduler:deploy -- \
+  --confirm-env=<EnvID> \
+  --confirm-function=mip-knowledge-scheduler \
+  --confirm-trigger=mip-knowledge-ingestion-next \
+  --confirm-role=<dedicated-knowledge-role> \
+  --confirm-timer-offset-minutes=<candidate-offset> \
+  --start-canary
 ```
 
-canary 到时后使用 `cloud:message-scheduler:verify` 和输出的 generation 证明固定 trigger 已被函数关闭，再以同一组确认参数和 `--activate-after-canary=<generation>` 发起独立 HMAC 激活；scheduler 会再次核对 matching CLOSED canary，先把固定 trigger 切换为 ACTIVE，再允许真实计划 reconcile。转换后的 DISPATCH 签名参数保留该 canary generation；如果转换成功但后续 admin/SCF reconcile 失败，原命令可直接用同一 generation 重跑并续完 reconcile。canary 与激活前还会回读 admin 的 `MIP_OUTBOX_FUNCTION_NAME` 和 `MIP_OUTBOX_HMAC_SECRET`，任一缺失或目标不匹配都会停止，避免首个真实排期提交后因 outbox 未唤醒而耗尽 timer 重试。canary 打开或关闭但尚未激活时，schedule/cancel 都不能覆盖它。偏移不正确时调整候选偏移并重新 canary，不得直接跳过。production 命令同样追加 `--confirm-production`。调度函数必须回读为无 VPC/无 MySQL URI、客户端不可调用、128 MB 内存、128 MB 预留并发、timer 用户错误重试 2 次和消息保留 3600 秒；`ListTriggers` 的 `TotalCount` 必须与数组一致且唯一项是固定 `$DEFAULT` timer。没有计划时关闭固定 trigger，不使用永久占位或高频 timer。
+canary 到时后使用对应的 `cloud:*scheduler:verify` 命令和 `--expect-canary=<generation>` 证明固定 trigger 已被函数关闭，再以同一组确认参数和 `--activate-after-canary=<generation>` 发起独立 HMAC 激活；scheduler 会再次核对 matching CLOSED canary，先把固定 trigger 切换为 ACTIVE，再允许真实计划 reconcile。转换后的 DISPATCH 签名参数保留该 canary generation；如果转换成功但后续 admin/SCF reconcile 失败，原命令可直接用同一 generation 重跑并续完 reconcile。消息 canary 与激活前还会回读 admin 的 outbox 连接；知识 canary 只要求自己的同域函数名、AppID allowlist 和专用 HMAC，不依赖 outbox。canary 打开或关闭但尚未激活时，普通 reconcile 都不能覆盖它。偏移不正确时调整候选偏移并重新 canary，不得直接跳过。production 命令同样追加 `--confirm-production`。两个调度函数都必须回读为无 VPC/无 MySQL 环境变量、客户端不可调用、128 MB 内存、128 MB 预留并发、timer 用户错误重试 2 次和消息保留 3600 秒；`ListTriggers` 的 `TotalCount` 必须与数组一致且唯一项是对应固定 `$DEFAULT` timer。没有计划时关闭固定 trigger，不使用永久占位或高频 timer。
 
-raw `CreateFunction` 成功后、固定 trigger 创建前仍存在进程中断窗口。下次部署看到“函数存在但 0 trigger”时默认拒绝；只有函数为 Active/Available、精确绑定专用角色、无 VPC、runtime/handler/内存/超时/全部环境变量都匹配，并且 `MIP_MESSAGE_SCHEDULER_CODE_MARKER` 与当前待部署源码指纹一致时，才允许在原 `--start-canary` 命令追加 `--confirm-resume-missing-trigger=mip-message-scheduler` 继续。源码变化、marker 缺失、陌生函数、部分 `ListTriggers` 响应或任何非零异常库存都不能走该恢复路径。
+raw `CreateFunction` 成功后、固定 trigger 创建前仍存在进程中断窗口。下次部署看到“函数存在但 0 trigger”时默认拒绝；只有函数为 Active/Available、精确绑定专用角色、无 VPC、runtime/handler/内存/超时/全部环境变量都匹配，并且对应的 `MIP_MESSAGE_SCHEDULER_CODE_MARKER` 或 `MIP_KNOWLEDGE_SCHEDULER_CODE_MARKER` 与当前待部署源码指纹一致时，才允许在原 `--start-canary` 命令追加精确的 `--confirm-resume-missing-trigger=<scheduler-function>` 继续。源码变化、marker 缺失、陌生函数、部分 `ListTriggers` 响应或任何非零异常库存都不能走该恢复路径。
 9. 配置支付后，执行 `pnpm cloud:deploy-payment -- --confirm-env=<EnvID> --confirm-function=mip-cloudpay --confirm-callback=mip-cloudpay-callback --confirm-refund=mip-refund-worker` 部署三个支付函数；`MIP_PAYMENT_MODE=live` 时必须追加 `--confirm-live`，测试/生产目录和商户配置必须隔离。
 10. 在本机 `.env.local` 写入空仓库示例对应的 `MIP_OWNER_PHONE`，确认该号码已通过当前 AppID 的微信真机流程绑定，并完成昵称、主分会和当前全部协议；再执行 `pnpm admin:bootstrap -- --confirm-env=<EnvID> --confirm-owner` 配置首个 owner。脚本只以身份服务的 AppID 范围哈希定位唯一 ACTIVE 非 demo 用户，不输出号码、哈希或用户 ID；可追加 `--user-id=<用户 UUID>` 做严格一致性确认。
 11. 部署后或发现 outbox 积压时，运行 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10` 做一次受控处理；退款停留在活动状态时，运行 `pnpm refunds:run -- --confirm-env=<EnvID> --confirm-refund=mip-refund-worker --limit=10`。两个命令都读取已部署函数配置完成 HMAC 调用，不打印密钥。

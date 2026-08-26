@@ -32,6 +32,7 @@ for (const key of ['pay', 'callback', 'refund']) {
   }
 }
 names.add(functionNames.scheduler)
+names.add(functionNames.knowledgeScheduler)
 
 const deployedEnvironments = []
 for (const functionName of names) {

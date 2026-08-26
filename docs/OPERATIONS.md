@@ -85,6 +85,8 @@ pnpm message-campaigns:run-due -- \
 
 需要排空时追加 `--drain --max-batches=100`；单批 `--limit` 只允许 1–10。命令读取已部署 `mip-admin-api` 的 `MIP_MESSAGE_DISPATCH_HMAC_SECRET`、AppID allowlist、scheduler 函数名和 outbox 连接配置；先签名执行到期活动，再对 `mip-message-scheduler` 发起独立分域 reconcile HMAC，并仅在返回 `verified` 后成功退出。这样未来排期的 post-commit 崩溃窗口和 timer 重试耗尽都能重新布置最近唤醒时间。每次运行也会受控唤醒 outbox；人工复核、终止失败、提交结果待对账、outbox 唤醒失败或 scheduler reconcile 未确认都会返回非零退出码。命令只输出数量与布置状态，不打印密钥；稳定 HMAC 不应手工轮换、打印或提交。
 
+知识采集日计划使用独立的 `mip-knowledge-scheduler`、`mip-knowledge-ingestion-next` timer、`MIPKnowledgeSchedulerRole` 和 `MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET`，不得与消息 scheduler 共用角色或密钥。该函数不连接 MySQL，计划领取、失败计数、去重、内容保存和审核状态仍由 `mip-admin-api` 提交；没有有效计划时关闭固定 timer。启用自动采集前必须先完成管理函数的函数名/HMAC 注入，再依次运行 `cloud:knowledge-scheduler:role`、canary deploy、带精确 generation 的 verify/activate 和最终 verify。任一阶段若回读到额外 trigger、VPC、数据库环境变量、共享角色、可由客户端调用或 generation 不一致，应停止并保留现状，不通过控制台手工补写。
+
 单场活动提醒使用独立的 `communications.publish` capability。管理端只提交活动、事件版本、幂等请求标识和是否尝试微信提醒；`mip-admin-api` 仅从当前 `REGISTERED` / `ATTENDED` 报名事实选择收件人，并从已发布活动生成标题、正文和模板字段。单次最多 500 位收件人，超限时整笔拒绝；每位收件人的运营消息、outbox、幂等结果和一条汇总审计在同一事务提交。站内提醒始终进入 outbox；微信提醒仅在模板已配置且参与者有可用授权时投递，缺少模板不会使站内提醒失败。
 
 活动相册使用独立 `events.album.manage` capability，并按平台、分会或活动范围重新鉴权。运营端只提交活动、照片、审核结论、原因和 `expectedVersion`；批准时服务端重新校验照片仍引用 `READY` 的 `EVENT_ALBUM` 素材。只有待审照片可以批准或拒绝，成功事务追加审计；拒绝和参与者撤回都保留照片事实，不物理删除。

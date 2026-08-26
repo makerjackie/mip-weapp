@@ -374,6 +374,10 @@ function assertRefundDispatchEnvironment(detail) {
 
 function assertKnowledgeEnvironment(detail) {
   const variables = environmentVariables(detail)
+  if (variables.MIP_KNOWLEDGE_SCHEDULER_FUNCTION_NAME !== functionNames.knowledgeScheduler
+    || String(variables.MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET || '').length < 32) {
+    throw new Error('Admin knowledge scheduler link or internal HMAC configuration is incomplete')
+  }
   for (const key of ['MIP_KNOWLEDGE_SOURCE_ALLOWED_HOSTS', 'MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS']) {
     const expected = normalizedHostnames(env[key])
     const actual = normalizedHostnames(variables[key])

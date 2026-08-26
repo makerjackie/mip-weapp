@@ -42,7 +42,7 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 
 仓库只包含直接的 `mip-*` 函数源码。部署脚本和云端验收只接受当前 MIP 清单中的函数名，不修改共享环境中的其他项目函数。
 
-消息定时另有一个不计入 16 个数据库核心函数的 `mip-message-scheduler`。它不配置 MySQL URI 或 VPC，只用一个固定滚动单次 timer 调用 `mip-admin-api` 的内部 HMAC 契约。函数使用专用 CAM 角色、128 MB 内存和 128 MB 预留并发，使同一时刻最多一个调度实例运行；运行时仅有 `UpdateTrigger`、`ListTriggers` 和 `InvokeFunction`。腾讯云 [CAM 权限粒度表](https://intl.cloud.tencent.com/document/product/598/57149) 当前把 `InvokeFunction` 定义为不支持资源级授权的操作，因此该 action 的 policy resource 必须是 `*`，不能在 CAM 层收窄到管理函数；运行时代码固定目标为 `mip-admin-api`，再由独立 HMAC、AppID allowlist 和专用角色限制用途。角色信任载体固定为腾讯云 SCF 官方文档定义的 [`scf.qcloud.com`](https://intl.cloud.tencent.com/zh/document/product/583/38176)，部署和验收均回读完整 trust policy。新建函数不使用会默认注入共享 `TCB_QcsRole` 的 CloudBase create 路径，而是用 raw SCF `CreateFunction` 在首个写入中绑定专用角色；创建 trigger、角色、异步失败重试和预留并发只在独立部署脚本中执行。
+消息定时和知识采集分别使用不计入 16 个数据库核心函数的 `mip-message-scheduler` 与 `mip-knowledge-scheduler`。两个函数都不配置 MySQL URI 或 VPC，各自只维护一个固定滚动单次 timer，并通过独立 HMAC 调用 `mip-admin-api`。每个函数使用互不复用的专用 CAM 角色、128 MB 内存和 128 MB 预留并发，使同一时刻最多一个调度实例运行；运行时仅有 `UpdateTrigger`、`ListTriggers` 和 `InvokeFunction`。腾讯云 [CAM 权限粒度表](https://intl.cloud.tencent.com/document/product/598/57149) 当前把 `InvokeFunction` 定义为不支持资源级授权的操作，因此该 action 的 policy resource 必须是 `*`，不能在 CAM 层收窄到管理函数；运行时代码固定目标为 `mip-admin-api`，再由独立 HMAC、AppID allowlist 和专用角色限制用途。角色信任载体固定为腾讯云 SCF 官方文档定义的 [`scf.qcloud.com`](https://intl.cloud.tencent.com/zh/document/product/583/38176)，部署和验收均回读完整 trust policy。新建函数不使用会默认注入共享 `TCB_QcsRole` 的 CloudBase create 路径，而是用 raw SCF `CreateFunction` 在首个写入中绑定专用角色；创建 trigger、角色、异步失败重试和预留并发只在各自的专用命令中执行。普通 `cloud:deploy` 的核心清单明确排除两个 scheduler。
 
 ## 数据和存储
 
@@ -66,7 +66,7 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 
 函数安全规则属于共享环境配置。部署只允许修改当前 `mip-*` 函数的命名条目；规则读取、JSON 解析或通配规则缺失时立即停止，更新后必须证明 `*` 和其他项目的全部条目没有变化。部署和验收会检查所有核心 MIP 函数的完整 trigger 列表并拒绝任何 timer；脚本只会自动删除 `mip-notification-every-5m`、`mip-outbox-every-5m` 和 `mip-refund-every-5m` 三个已知历史名称，其他 timer 一律保留现场并停止。`MIP_PAYMENT_MODE=disabled` 时不删除可能承载晚到回调的支付函数，但会把已存在的支付适配器、回调和退款 worker 的客户端调用全部收敛为禁止，并复核它们没有 timer。
 
-调度函数例外由独立验收管理：`ListTriggers` 必须完整回读且只能存在 `mip-message-campaign-next` 一个 `$DEFAULT` timer，签名参数必须包含 namespace、函数、trigger、UTC fireAt、generation、activation generation 和用途；无计划时该 timer 为关闭状态，不创建 2099 占位。SCF cron 时区必须先用同一 trigger 的 canary 实测并回读；从 canary 打开到匹配 timer 关闭并由带 generation 的激活请求完成状态切换之前，普通排期 reconcile 都不能覆盖它。激活后的滚动 DISPATCH 参数持续保留本轮 canary generation，同一激活命令可以在转换后 reconcile 失败时幂等续跑。异步 timer 用户代码失败配置为重试 2 次、消息保留 3600 秒，并由部署后 API readback 验证。手动 runner 始终保留作为恢复通道。
+调度函数例外由独立验收管理：`mip-message-scheduler` 只能存在 `mip-message-campaign-next`，`mip-knowledge-scheduler` 只能存在 `mip-knowledge-ingestion-next`；`ListTriggers` 必须完整回读且唯一项为 `$DEFAULT` timer。签名参数必须包含 namespace、函数、trigger、UTC fireAt、generation、activation generation 和用途；无计划时 timer 关闭，不创建 2099 占位。SCF cron 时区必须先用同一 trigger 的 canary 实测并回读；从 canary 打开到匹配 timer 关闭并由带 generation 的激活请求完成状态切换之前，普通 reconcile 都不能覆盖它。激活后的滚动 DISPATCH 参数持续保留本轮 canary generation，同一激活命令可以在转换后 reconcile 失败时幂等续跑。异步 timer 用户代码失败配置为重试 2 次、消息保留 3600 秒，并由部署后 API readback 验证。消息手动 runner 始终保留作为恢复通道；知识调度由同一专用控制面重新执行 canary/激活和 verify，不通过核心部署补 timer。
 
 ```bash
 pnpm outbox:run -- --confirm-env=<EnvID> --limit=10
@@ -77,7 +77,7 @@ AI 语音 TTL 不使用定时触发器。无人访问的过期或终态草稿通
 
 机会撮合不安装 timer。`MIP_MATCHING_INTERNAL_HMAC_SECRET` 只用于 `mip-admin-api` 调用 `mip-opportunities-api` 的后台重算，部署脚本在本地生成并向两端注入同一密钥。`MIP_MATCHING_REFERENCE_SECRET` 只用于签名请求范围内的候选引用，必须保持稳定且不得写入数据库、客户端日志或外部 provider 请求。`MIP_MATCHING_PROVIDER_FUNCTION_NAME` 可选；为空时使用本地确定性 provider。启用外部函数时，超时由 `MIP_MATCHING_PROVIDER_TIMEOUT_MS` 控制，允许范围 500–10000 毫秒，默认 3000 毫秒。外部 provider 仅收到候选引用、类型、本地分数和匿名信号键/权重；人才用户 ID、分会/城市/标签内部主键不离开服务端。
 
-热点采集同样不安装 timer。`mip-admin-api` 仅通过 `knowledge.manage` capability 提供显式运行接口，并在写事务内重锁当前用户、角色和 policy。`MIP_KNOWLEDGE_SOURCE_ALLOWED_HOSTS` 配置精确来源域名；采集拒绝 IP literal、私网/保留 DNS 结果、DNS rebinding、凭证和重定向，采用 10 秒超时、解压后流式 2 MB 上限和 50 条条目上限。`MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS` 配置服务端发布与小程序 web-view 共用的精确业务域名，必须与微信公众平台一致。两项白名单缺失时部署停止。采集内容进入审核而不自动发布，全文分块内容安全检查全部通过后才能发布。`MIP_CATALOG_STAGE=TEST|LIVE` 控制读取的知识商品目录；`MIP_KNOWLEDGE_TEST_PRICE_CENTS` 只提供 TEST 商品的可替换默认价格，正式价格仍由 LIVE 商品配置决定。
+热点采集的 MySQL 事实只由 `mip-admin-api` 管理：用户显式运行接口受 `knowledge.manage` capability 约束，并在写事务内重锁当前用户、角色和 policy；自动日计划由无数据库连接的 `mip-knowledge-scheduler` 通过同域 HMAC 领取。scheduler 只维护滚动单次 timer，不使用固定频率轮询；没有有效计划时关闭 timer。`MIP_KNOWLEDGE_SOURCE_ALLOWED_HOSTS` 配置精确来源域名；采集拒绝 IP literal、私网/保留 DNS 结果、DNS rebinding、凭证和重定向，采用 10 秒超时、解压后流式 2 MB 上限和 50 条条目上限。`MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS` 配置服务端发布与小程序 web-view 共用的精确业务域名，必须与微信公众平台一致。两项白名单缺失时部署停止。采集内容进入审核而不自动发布，全文分块内容安全检查全部通过后才能发布。`MIP_CATALOG_STAGE=TEST|LIVE` 控制读取的知识商品目录；`MIP_KNOWLEDGE_TEST_PRICE_CENTS` 只提供 TEST 商品的可替换默认价格，正式价格仍由 LIVE 商品配置决定。
 
 ## 环境与授权
 

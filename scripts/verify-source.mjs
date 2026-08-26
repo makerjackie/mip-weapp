@@ -157,6 +157,7 @@ assert(cooperationCatalog.includes('replaceBeforeProduction: true'), 'Placeholde
 
 const functionNames = resolveMipFunctionNames({})
 const coreManifest = createMipCoreFunctionManifest(functionNames)
+assert(!coreManifest.some(item => [functionNames.scheduler, functionNames.knowledgeScheduler].includes(item.name)), 'Raw rolling schedulers must stay outside the ordinary CloudBase core manifest')
 const lockingReadDynamicRelationAllowlist = Object.freeze({
   'cloudfunctions/mip-opportunities-api/domain/opportunities.js': {
     tableName: ['mip_opportunities', 'mip_cooperation_cards', 'mip_super_cases'],
@@ -329,6 +330,10 @@ const paymentDeploy = read('scripts/deploy-payment-function.mjs')
 const refundRecovery = read('scripts/run-refunds.mjs')
 const messageDispatchRecovery = read('scripts/run-message-campaigns.mjs')
 const messageSchedulerRecovery = read('scripts/lib/message-scheduler-recovery.mjs')
+const schedulerRoleSetup = read('scripts/configure-message-scheduler-role.mjs')
+const schedulerDeploy = read('scripts/deploy-message-scheduler.mjs')
+const schedulerVerify = read('scripts/verify-message-scheduler.mjs')
+const schedulerCloudContract = read('scripts/lib/message-scheduler-cloud.mjs')
 const cloudVerify = read('scripts/verify-cloud.mjs')
 const demoSeed = read('scripts/seed-demo.mjs')
 const ownerBootstrap = read('scripts/bootstrap-owner.mjs')
@@ -403,6 +408,14 @@ assert(messageDispatchRecovery.includes('--confirm-env=')
   && messageSchedulerRecovery.includes('result?.data?.verified !== true')
   && messageDispatchRecovery.includes('MIP_OUTBOX_HMAC_SECRET')
   && messageDispatchRecovery.includes('output.outboxWakeup === \'FAILED\''), 'Message scheduling recovery must require exact confirmation and controlled outbox wakeup')
+assert([schedulerRoleSetup, schedulerDeploy, schedulerVerify]
+  .every(source => source.includes('resolveSchedulerOperationsSpec(process.argv.slice(2))'))
+  && schedulerDeploy.includes('assertRollingSchedulerEnvironmentContract(expectedEnvironment')
+  && schedulerDeploy.includes('disableClientInvocation()')
+  && schedulerDeploy.includes('invoke: false')
+  && schedulerVerify.includes('rules?.[config.functionName]?.invoke !== false')
+  && schedulerCloudContract.includes('KNOWLEDGE_SCHEDULER_OPERATIONS_SPEC')
+  && schedulerCloudContract.includes('Knowledge scheduling requires a role separate from the message scheduler'), 'Knowledge scheduler operations must reuse the fail-closed raw SCF rolling timer control plane')
 assert(cloudVerify.includes('assertRuntimePrivilegesExact')
   && !cloudVerify.includes('tableCounts'), 'Cloud verification must prove isolation without persisting business rows')
 assert(demoSeed.includes('MIP_CATALOG_STAGE=TEST')
@@ -420,6 +433,9 @@ for (const [script, expected] of [
   ['cloud:deploy', 'node scripts/deploy-functions.mjs'],
   ['cloud:deploy-payment', 'node scripts/deploy-payment-function.mjs'],
   ['cloud:verify', 'node scripts/verify-cloud.mjs'],
+  ['cloud:knowledge-scheduler:role', 'node scripts/configure-message-scheduler-role.mjs --scheduler-kind=knowledge'],
+  ['cloud:knowledge-scheduler:deploy', 'node scripts/deploy-message-scheduler.mjs --scheduler-kind=knowledge'],
+  ['cloud:knowledge-scheduler:verify', 'node scripts/verify-message-scheduler.mjs --scheduler-kind=knowledge'],
   ['outbox:run', 'node scripts/run-outbox.mjs'],
   ['message-campaigns:run-due', 'node scripts/run-message-campaigns.mjs'],
   ['refunds:run', 'node scripts/run-refunds.mjs'],
