@@ -75,7 +75,7 @@ describe('phase9 final gap contracts', () => {
   })
 
   it('publishes only from the locked persisted event status and starts_at', () => {
-    const repository = read('cloudfunctions/mip-admin-api/domain/repository.js')
+    const repository = read('cloudfunctions/mip-admin-api/domain/repositories/events.js')
     const statusFlow = repository.slice(
       repository.indexOf('async function changeEventStatus'),
       repository.indexOf('async function cancelEventRegistrations'),
@@ -104,7 +104,7 @@ describe('phase9 final gap contracts', () => {
   it('default MIP roster exposes only phoneBound until an audited phone request', () => {
     const types = read('src/modules/mip-admin/types.ts')
     const service = read('cloudfunctions/mip-admin-api/domain/events.js')
-    const repository = read('cloudfunctions/mip-admin-api/domain/repository.js')
+    const repository = read('cloudfunctions/mip-admin-api/domain/repositories/events.js')
     const wxml = read('src/packages/admin/event-registrations/index.wxml')
     const rosterType = types.slice(
       types.indexOf('export interface AdminRosterItem'),
@@ -130,7 +130,7 @@ describe('phase9 final gap contracts', () => {
   })
 
   it('keeps roster reads app/event scoped with deterministic ordering', () => {
-    const repository = read('cloudfunctions/mip-admin-api/domain/repository.js')
+    const repository = read('cloudfunctions/mip-admin-api/domain/repositories/events.js')
     const roster = repository.slice(
       repository.indexOf('async function listRoster'),
       repository.indexOf('async function checkIn'),

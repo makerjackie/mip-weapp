@@ -22,7 +22,7 @@ describe('MIP check-in growth compensation contract', () => {
 
   it('routes scan, admin override and worker projection through the transition id', () => {
     const eventService = read('cloudfunctions/mip-events-api/domain/event-service.js')
-    const adminRepository = read('cloudfunctions/mip-admin-api/domain/repository.js')
+    const adminRepository = read('cloudfunctions/mip-admin-api/domain/repositories/events.js')
     const projector = read('cloudfunctions/mip-outbox-worker/domain/projector.js')
     const growth = read('cloudfunctions/mip-growth-api/domain/checkin-compensation.js')
     for (const source of [eventService, adminRepository]) {

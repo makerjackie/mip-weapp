@@ -17,7 +17,7 @@ describe('admin event clone contract', () => {
       read('cloudfunctions/mip-admin-api/domain/service.js'),
       readOptional('cloudfunctions/mip-admin-api/domain/events.js'),
     ].join('\n')
-    const repository = read('cloudfunctions/mip-admin-api/domain/repository.js')
+    const repository = read('cloudfunctions/mip-admin-api/domain/repositories/events.js')
     const gateway = read('src/modules/mip-admin/cloudbase-gateway.ts')
 
     expect(operations).toContain('\'mip.admin.events.clone\'')

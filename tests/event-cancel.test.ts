@@ -11,7 +11,7 @@ function read(relativePath: string) {
 
 describe('MIP event cancellation convergence contract', () => {
   it('cancels registrations and queues eligible refunds as durable facts', () => {
-    const repository = read('cloudfunctions/mip-admin-api/domain/repository.js')
+    const repository = read('cloudfunctions/mip-admin-api/domain/repositories/events.js')
     const cancellationFlow = repository.slice(
       repository.indexOf('async function changeEventStatus'),
       repository.indexOf('async function checkIn'),

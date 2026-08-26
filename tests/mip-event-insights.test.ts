@@ -204,7 +204,7 @@ describe('MIP event insights operator presentation', () => {
   it('labels managed list counts with the effective registration scope', () => {
     const root = path.resolve(import.meta.dirname, '..')
     const repository = fs.readFileSync(
-      path.join(root, 'cloudfunctions/mip-admin-api/domain/repository.js'),
+      path.join(root, 'cloudfunctions/mip-admin-api/domain/repositories/events.js'),
       'utf8',
     )
     const view = fs.readFileSync(path.join(root, 'src/packages/admin/managed-events/index.wxml'), 'utf8')

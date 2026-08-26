@@ -405,6 +405,7 @@ describe('admin handler and isolation contract', () => {
       path.join(root, 'domain/repository.js'),
       path.join(root, 'domain/event-comment-governance.js'),
       path.join(root, 'domain/repositories/access.js'),
+      path.join(root, 'domain/repositories/events.js'),
       path.join(root, 'domain/repositories/users.js'),
     ]
     const files = [
