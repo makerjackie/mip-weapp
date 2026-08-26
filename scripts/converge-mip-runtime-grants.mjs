@@ -6,7 +6,6 @@ import {
   bindAndRequireMysqlEnvironment,
   callCloudbase,
   loadCaseEnv,
-  sqlLiteral,
 } from './lib/example-cloudbase.mjs'
 import {
   assertRuntimeAccountClaimable,
@@ -14,10 +13,10 @@ import {
   buildRuntimeGrantStatements,
   buildRuntimeRevokeStatements,
   parseGrantee,
-  parsePrivilegeRows,
   RUNTIME_TABLE_PRIVILEGES,
   runtimeUserForEnvironment,
 } from './lib/mysql-privilege-assert.mjs'
+import { loadRuntimeAccountSnapshot } from './lib/mysql-runtime-account-snapshot.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
@@ -52,7 +51,7 @@ if (parsedConnection.protocol !== 'mysql:'
 
 bindAndRequireMysqlEnvironment(root, envId)
 const grantee = parseGrantee(runtimeUser, '%')
-const snapshot = loadRuntimeAccountSnapshot(grantee)
+const snapshot = loadRuntimeAccountSnapshot(root, grantee)
 const claim = assertRuntimeAccountClaimable({
   ...snapshot,
   schema,
@@ -85,7 +84,7 @@ for (const sql of [
 }
 
 assertRuntimePrivilegesExact({
-  ...loadRuntimeAccountSnapshot(grantee),
+  ...loadRuntimeAccountSnapshot(root, grantee),
   requiredMap: RUNTIME_TABLE_PRIVILEGES,
   grantee,
 })
@@ -93,39 +92,4 @@ console.log(`[mip-db-grants] exact table grants converged (${Object.keys(RUNTIME
 
 function argumentValue(prefix) {
   return process.argv.find(value => value.startsWith(prefix))?.slice(prefix.length) || ''
-}
-
-function loadRuntimeAccountSnapshot(account) {
-  const tableRows = loadTablePrivilegeRows(account)
-  const schemaRows = parsePrivilegeRows(callCloudbase(root, 'queryMysqlDatabase', {
-    action: 'runQuery',
-    sql: `SELECT table_schema AS tableSchema, privilege_type AS privilegeType, grantee
-      FROM information_schema.schema_privileges
-      WHERE grantee = ${sqlLiteral(account)}`,
-  }))
-  const userRows = parsePrivilegeRows(callCloudbase(root, 'queryMysqlDatabase', {
-    action: 'runQuery',
-    sql: `SELECT privilege_type AS privilegeType, grantee
-      FROM information_schema.user_privileges
-      WHERE grantee = ${sqlLiteral(account)}`,
-  }))
-  return { tableRows, schemaRows, userRows }
-}
-
-function loadTablePrivilegeRows(account) {
-  const pageSize = 100
-  const rows = []
-  for (let offset = 0; ; offset += pageSize) {
-    const page = parsePrivilegeRows(callCloudbase(root, 'queryMysqlDatabase', {
-      action: 'runQuery',
-      sql: `SELECT table_schema AS tableSchema, table_name AS tableName,
-        privilege_type AS privilegeType, grantee
-        FROM information_schema.table_privileges
-        WHERE grantee = ${sqlLiteral(account)}
-        ORDER BY table_schema, table_name, privilege_type
-        LIMIT ${pageSize} OFFSET ${offset}`,
-    }))
-    rows.push(...page)
-    if (page.length < pageSize) return rows
-  }
 }

@@ -40,10 +40,10 @@ import {
   buildRuntimeGrantStatements,
   buildRuntimeRevokeStatements,
   parseGrantee,
-  parsePrivilegeRows,
   RUNTIME_TABLE_PRIVILEGES,
   runtimeUserForEnvironment,
 } from './lib/mysql-privilege-assert.mjs'
+import { loadRuntimeAccountSnapshot } from './lib/mysql-runtime-account-snapshot.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
@@ -207,7 +207,7 @@ if (configuredSchema !== targetSchema) {
   throw new Error('MIP runtime connection must use the confirmed CloudBase MySQL schema')
 }
 const runtimeAccount = parseGrantee(databaseRuntimeUser, '%')
-const accountSnapshot = loadRuntimeAccountSnapshot(runtimeAccount)
+const accountSnapshot = loadRuntimeAccountSnapshot(root, runtimeAccount)
 const accountClaim = assertRuntimeAccountClaimable({
   ...accountSnapshot,
   schema: configuredSchema,
@@ -260,7 +260,7 @@ if (!existingRuntimeGrantsExact) {
     ...buildRuntimeRevokeStatements(runtimeSchema, runtimeAccount, accountClaim.tableRows),
     ...buildRuntimeGrantStatements(runtimeSchema, runtimeAccount),
   ])
-  assertExactRuntimePrivileges(runtimeSchema, runtimeAccount)
+  assertExactRuntimePrivileges(runtimeAccount)
 }
 console.log(`[mip-cloud-deploy] exact mip_* runtime grants verified (${existingRuntimeGrantsExact ? 'reused' : 'converged'})`)
 
@@ -674,54 +674,9 @@ function assertRequiredTablesExist(tableNames) {
   }
 }
 
-function loadRuntimeAccountSnapshot(account) {
-  const grantee = account.replaceAll('\'', '\'\'')
-  const tableRows = parsePrivilegeRows(callCloudbase(root, 'queryMysqlDatabase', {
-    action: 'runQuery',
-    sql: `SELECT table_schema AS tableSchema, table_name AS tableName,
-      privilege_type AS privilegeType, grantee
-      FROM information_schema.table_privileges
-      WHERE grantee = '${grantee}'`,
-  }))
-  const schemaRows = parsePrivilegeRows(callCloudbase(root, 'queryMysqlDatabase', {
-    action: 'runQuery',
-    sql: `SELECT table_schema AS tableSchema, privilege_type AS privilegeType, grantee
-      FROM information_schema.schema_privileges
-      WHERE grantee = '${grantee}'`,
-  }))
-  const userRows = parsePrivilegeRows(callCloudbase(root, 'queryMysqlDatabase', {
-    action: 'runQuery',
-    sql: `SELECT privilege_type AS privilegeType, grantee
-      FROM information_schema.user_privileges
-      WHERE grantee = '${grantee}'`,
-  }))
-  return { tableRows, schemaRows, userRows }
-}
-
-function assertExactRuntimePrivileges(schema, account) {
-  const schemaLiteral = schema.replaceAll('\'', '\'\'')
-  const granteeLiteral = account.replaceAll('\'', '\'\'')
-  const tableProbe = callCloudbase(root, 'queryMysqlDatabase', {
-    action: 'runQuery',
-    sql: `SELECT table_name AS tableName, privilege_type AS privilegeType, grantee
-      FROM information_schema.table_privileges
-      WHERE table_schema = '${schemaLiteral}' AND grantee = '${granteeLiteral}'`,
-  })
-  const schemaProbe = callCloudbase(root, 'queryMysqlDatabase', {
-    action: 'runQuery',
-    sql: `SELECT table_schema AS tableSchema, privilege_type AS privilegeType, grantee
-      FROM information_schema.schema_privileges
-      WHERE table_schema = '${schemaLiteral}' AND grantee = '${granteeLiteral}'`,
-  })
-  const userProbe = callCloudbase(root, 'queryMysqlDatabase', {
-    action: 'runQuery',
-    sql: `SELECT privilege_type AS privilegeType, grantee
-      FROM information_schema.user_privileges WHERE grantee = '${granteeLiteral}'`,
-  })
+function assertExactRuntimePrivileges(account) {
   assertRuntimePrivilegesExact({
-    tableRows: parsePrivilegeRows(tableProbe),
-    schemaRows: parsePrivilegeRows(schemaProbe),
-    userRows: parsePrivilegeRows(userProbe),
+    ...loadRuntimeAccountSnapshot(root, account),
     requiredMap: RUNTIME_TABLE_PRIVILEGES,
     grantee: account,
   })

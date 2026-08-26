@@ -83,7 +83,7 @@ describe('MIP deployment safety guards', () => {
     expect(source).toContain('assertRuntimePrivilegesExact')
     expect(source).toContain('buildRuntimeRevokeStatements')
     expect(source).toContain('buildRuntimeGrantStatements')
-    expect(source).toContain('LIMIT ${pageSize} OFFSET ${offset}')
+    expect(read('scripts/lib/mysql-runtime-account-snapshot.mjs')).toContain('LIMIT ${pageSize} OFFSET ${offset}')
     expect(source).not.toContain('ALL PRIVILEGES')
   })
 })

@@ -23,10 +23,10 @@ import {
   assertRuntimeAccountClaimable,
   assertRuntimePrivilegesExact,
   parseGrantee,
-  parsePrivilegeRows,
   RUNTIME_TABLE_PRIVILEGES,
   runtimeUserForEnvironment,
 } from './lib/mysql-privilege-assert.mjs'
+import { loadRuntimeAccountSnapshot } from './lib/mysql-runtime-account-snapshot.mjs'
 import { assertSupportedMySqlVersion } from './lib/mysql-version.mjs'
 
 const require = createRequire(import.meta.url)
@@ -283,27 +283,7 @@ function assertRuntimeAccount(referenceDetail) {
     throw new Error('Deployed MIP functions do not use the dedicated runtime MySQL account')
   }
   const grantee = parseGrantee(user, '%')
-  const tableProbe = callCloudbase(root, 'queryMysqlDatabase', {
-    action: 'runQuery',
-    sql: `SELECT table_schema AS tableSchema, table_name AS tableName,
-      privilege_type AS privilegeType, grantee
-      FROM information_schema.table_privileges
-      WHERE grantee = ${sqlLiteral(grantee)}`,
-  })
-  const schemaProbe = callCloudbase(root, 'queryMysqlDatabase', {
-    action: 'runQuery',
-    sql: `SELECT table_schema AS tableSchema, privilege_type AS privilegeType, grantee
-      FROM information_schema.schema_privileges
-      WHERE grantee = ${sqlLiteral(grantee)}`,
-  })
-  const userProbe = callCloudbase(root, 'queryMysqlDatabase', {
-    action: 'runQuery',
-    sql: `SELECT privilege_type AS privilegeType, grantee
-      FROM information_schema.user_privileges WHERE grantee = ${sqlLiteral(grantee)}`,
-  })
-  const tableRows = parsePrivilegeRows(tableProbe)
-  const schemaRows = parsePrivilegeRows(schemaProbe)
-  const userRows = parsePrivilegeRows(userProbe)
+  const { tableRows, schemaRows, userRows } = loadRuntimeAccountSnapshot(root, grantee)
   assertRuntimeAccountClaimable({
     tableRows,
     schemaRows,
