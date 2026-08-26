@@ -102,7 +102,7 @@
     border-radius: 12px;
   }
 
-  .mip-admin-workspace-link[data-active='true'] {
+  .mip-admin-workspace-link--active {
     font-weight: 700;
     color: #040000;
     background: #fcdf03;
@@ -112,7 +112,7 @@
     background: #2a2a2a;
   }
 
-  .mip-admin-workspace-link[data-active='true'].mip-admin-workspace-link--pressed {
+  .mip-admin-workspace-link--active.mip-admin-workspace-link--pressed {
     background: #e3c900;
   }
 }

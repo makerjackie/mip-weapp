@@ -14,7 +14,7 @@
         wx:for="{{item.items}}"
         wx:for-item="navItem"
         wx:key="key"
-        class="mip-admin-workspace-link"
+        class="mip-admin-workspace-link {{navItem.active ? 'mip-admin-workspace-link--active' : ''}}"
         data-active="{{navItem.active ? 'true' : 'false'}}"
         data-route="{{navItem.route}}"
         aria-label="{{navItem.label}}"
