@@ -1,5 +1,5 @@
 {
-  "version": "2026-08-26-demo.8",
+  "version": "2026-08-26-demo.10",
   "replaceBeforeProduction": true,
   "branches": [
     {
@@ -234,6 +234,7 @@
       "eventTypeKey": "community",
       "eventMode": "OFFLINE",
       "accessType": "FREE",
+      "status": "PUBLISHED",
       "albumEnabled": true,
       "albumSubmissionPolicy": "REVIEW",
       "startsAt": "2030-10-19 10:00:00.000",
@@ -244,7 +245,9 @@
       "venueName": "MIP 深圳分会活动空间",
       "address": "深圳市南山区演示地址 1 号",
       "cityName": "深圳",
-      "capacity": 120
+      "capacity": 120,
+      "publishedAt": "2026-08-25 12:00:00.000",
+      "endedAt": null
     },
     {
       "id": "60000000-0000-4000-8000-000000000002",
@@ -258,6 +261,7 @@
       "eventTypeKey": "workshop",
       "eventMode": "OFFLINE",
       "accessType": "MEMBER_INCLUDED",
+      "status": "PUBLISHED",
       "albumEnabled": false,
       "albumSubmissionPolicy": "AUTO",
       "startsAt": "2030-11-16 09:30:00.000",
@@ -268,16 +272,73 @@
       "venueName": "MIP 上海分会活动空间",
       "address": "上海市浦东新区演示地址 2 号",
       "cityName": "上海",
-      "capacity": 60
+      "capacity": 60,
+      "publishedAt": "2026-08-25 12:00:00.000",
+      "endedAt": null
+    },
+    {
+      "id": "60000000-0000-4000-8000-000000000003",
+      "key": "demo_event_2026_interaction",
+      "branchId": "10000000-0000-4000-8000-000000000001",
+      "organizerUserId": "50000000-0000-4000-8000-000000000001",
+      "title": "MIP 城市互动交流会（演示）",
+      "summary": "用于验证签到、心动和历史活动流程的演示活动。",
+      "description": "三位演示玩家已完成报名和签到，可用于验证活动后的互动记录。",
+      "notices": "本活动为虚构演示数据。",
+      "eventTypeKey": "community",
+      "eventMode": "OFFLINE",
+      "accessType": "FREE",
+      "status": "ENDED",
+      "albumEnabled": false,
+      "albumSubmissionPolicy": "AUTO",
+      "startsAt": "2026-08-20 14:00:00.000",
+      "endsAt": "2026-08-20 17:30:00.000",
+      "registrationOpensAt": "2026-08-01 09:00:00.000",
+      "registrationDeadline": "2026-08-19 18:00:00.000",
+      "cancellationDeadline": "2026-08-19 18:00:00.000",
+      "venueName": "MIP 深圳分会活动空间",
+      "address": "深圳市南山区演示地址 1 号",
+      "cityName": "深圳",
+      "capacity": 30,
+      "publishedAt": "2026-08-01 09:00:00.000",
+      "endedAt": "2026-08-20 17:35:00.000"
     }
   ],
   "eventRegistrations": [
-    { "id": "61000000-0000-4000-8000-000000000001", "key": "demo_registration_1", "eventId": "60000000-0000-4000-8000-000000000001", "userId": "50000000-0000-4000-8000-000000000001" },
+    { "id": "61000000-0000-4000-8000-000000000001", "key": "demo_registration_1", "eventId": "60000000-0000-4000-8000-000000000001", "userId": "50000000-0000-4000-8000-000000000001", "registeredAt": "2026-08-26 09:30:00.000" },
     { "id": "61000000-0000-4000-8000-000000000002", "key": "demo_registration_2", "eventId": "60000000-0000-4000-8000-000000000001", "userId": "50000000-0000-4000-8000-000000000002" },
-    { "id": "61000000-0000-4000-8000-000000000003", "key": "demo_registration_3", "eventId": "60000000-0000-4000-8000-000000000001", "userId": "50000000-0000-4000-8000-000000000004" },
+    { "id": "61000000-0000-4000-8000-000000000003", "key": "demo_registration_3", "eventId": "60000000-0000-4000-8000-000000000001", "userId": "50000000-0000-4000-8000-000000000004", "registeredAt": "2026-08-26 10:00:00.000" },
     { "id": "61000000-0000-4000-8000-000000000004", "key": "demo_registration_4", "eventId": "60000000-0000-4000-8000-000000000002", "userId": "50000000-0000-4000-8000-000000000001" },
-    { "id": "61000000-0000-4000-8000-000000000005", "key": "demo_registration_5", "eventId": "60000000-0000-4000-8000-000000000002", "userId": "50000000-0000-4000-8000-000000000003" }
+    { "id": "61000000-0000-4000-8000-000000000005", "key": "demo_registration_5", "eventId": "60000000-0000-4000-8000-000000000002", "userId": "50000000-0000-4000-8000-000000000003" },
+    { "id": "61000000-0000-4000-8000-000000000006", "key": "demo_registration_history_1", "eventId": "60000000-0000-4000-8000-000000000003", "userId": "50000000-0000-4000-8000-000000000001", "status": "ATTENDED", "registeredAt": "2026-08-10 10:00:00.000", "version": 2 },
+    { "id": "61000000-0000-4000-8000-000000000007", "key": "demo_registration_history_2", "eventId": "60000000-0000-4000-8000-000000000003", "userId": "50000000-0000-4000-8000-000000000002", "status": "ATTENDED", "registeredAt": "2026-08-10 10:05:00.000", "version": 2 },
+    { "id": "61000000-0000-4000-8000-000000000008", "key": "demo_registration_history_3", "eventId": "60000000-0000-4000-8000-000000000003", "userId": "50000000-0000-4000-8000-000000000003", "status": "ATTENDED", "registeredAt": "2026-08-10 10:10:00.000", "version": 2 }
   ],
+  "eventCheckins": [
+    { "id": "61300000-0000-4000-8000-000000000001", "key": "demo_event_checkin_1", "eventId": "60000000-0000-4000-8000-000000000003", "registrationId": "61000000-0000-4000-8000-000000000006", "userId": "50000000-0000-4000-8000-000000000001", "source": "ADMIN", "status": "ACTIVE", "checkedInAt": "2026-08-20 13:45:00.000", "version": 1 },
+    { "id": "61300000-0000-4000-8000-000000000002", "key": "demo_event_checkin_2", "eventId": "60000000-0000-4000-8000-000000000003", "registrationId": "61000000-0000-4000-8000-000000000007", "userId": "50000000-0000-4000-8000-000000000002", "source": "ADMIN", "status": "ACTIVE", "checkedInAt": "2026-08-20 13:47:00.000", "version": 1 },
+    { "id": "61300000-0000-4000-8000-000000000003", "key": "demo_event_checkin_3", "eventId": "60000000-0000-4000-8000-000000000003", "registrationId": "61000000-0000-4000-8000-000000000008", "userId": "50000000-0000-4000-8000-000000000003", "source": "ADMIN", "status": "ACTIVE", "checkedInAt": "2026-08-20 13:49:00.000", "version": 1 }
+  ],
+  "eventCheckinTransitions": [
+    { "id": "61400000-0000-4000-8000-000000000001", "key": "demo_event_checkin_transition_1", "checkinId": "61300000-0000-4000-8000-000000000001", "registrationId": "61000000-0000-4000-8000-000000000006", "eventId": "60000000-0000-4000-8000-000000000003", "userId": "50000000-0000-4000-8000-000000000001", "transitionType": "CHECKED_IN", "checkinVersion": 1, "registrationVersion": 2, "actorUserId": "50000000-0000-4000-8000-000000000001", "source": "ADMIN", "occurredAt": "2026-08-20 13:45:00.000" },
+    { "id": "61400000-0000-4000-8000-000000000002", "key": "demo_event_checkin_transition_2", "checkinId": "61300000-0000-4000-8000-000000000002", "registrationId": "61000000-0000-4000-8000-000000000007", "eventId": "60000000-0000-4000-8000-000000000003", "userId": "50000000-0000-4000-8000-000000000002", "transitionType": "CHECKED_IN", "checkinVersion": 1, "registrationVersion": 2, "actorUserId": "50000000-0000-4000-8000-000000000001", "source": "ADMIN", "occurredAt": "2026-08-20 13:47:00.000" },
+    { "id": "61400000-0000-4000-8000-000000000003", "key": "demo_event_checkin_transition_3", "checkinId": "61300000-0000-4000-8000-000000000003", "registrationId": "61000000-0000-4000-8000-000000000008", "eventId": "60000000-0000-4000-8000-000000000003", "userId": "50000000-0000-4000-8000-000000000003", "transitionType": "CHECKED_IN", "checkinVersion": 1, "registrationVersion": 2, "actorUserId": "50000000-0000-4000-8000-000000000001", "source": "ADMIN", "occurredAt": "2026-08-20 13:49:00.000" }
+  ],
+  "userInfluence": {
+    "eventInvitationAttributions": [
+      { "registrationId": "61000000-0000-4000-8000-000000000001", "eventId": "60000000-0000-4000-8000-000000000001", "guestUserId": "50000000-0000-4000-8000-000000000001", "sourceType": "USER", "inviterUserId": "50000000-0000-4000-8000-000000000002", "capturedAt": "2026-08-26 09:30:00.000" },
+      { "registrationId": "61000000-0000-4000-8000-000000000003", "eventId": "60000000-0000-4000-8000-000000000001", "guestUserId": "50000000-0000-4000-8000-000000000004", "sourceType": "USER", "inviterUserId": "50000000-0000-4000-8000-000000000001", "capturedAt": "2026-08-26 10:00:00.000" }
+    ],
+    "eventHearts": [
+      { "id": "61100000-0000-4000-8000-000000000001", "key": "demo_event_heart_1", "eventId": "60000000-0000-4000-8000-000000000003", "voterUserId": "50000000-0000-4000-8000-000000000001", "targetUserId": "50000000-0000-4000-8000-000000000002", "status": "ACTIVE", "occurredAt": "2026-08-20 17:40:00.000" },
+      { "id": "61100000-0000-4000-8000-000000000002", "key": "demo_event_heart_2", "eventId": "60000000-0000-4000-8000-000000000003", "voterUserId": "50000000-0000-4000-8000-000000000003", "targetUserId": "50000000-0000-4000-8000-000000000001", "status": "ACTIVE", "occurredAt": "2026-08-20 17:45:00.000" }
+    ],
+    "profileVisits": [
+      { "id": "61200000-0000-4000-8000-000000000001", "key": "demo_profile_visit_1", "visitorUserId": "50000000-0000-4000-8000-000000000002", "profileUserId": "50000000-0000-4000-8000-000000000001", "visitKey": "demo-profile-visit-001", "visitedAt": "2026-08-26 12:00:00.000", "readAt": null },
+      { "id": "61200000-0000-4000-8000-000000000002", "key": "demo_profile_visit_2", "visitorUserId": "50000000-0000-4000-8000-000000000003", "profileUserId": "50000000-0000-4000-8000-000000000001", "visitKey": "demo-profile-visit-002", "visitedAt": "2026-08-26 12:30:00.000", "readAt": "2026-08-26 13:00:00.000" },
+      { "id": "61200000-0000-4000-8000-000000000003", "key": "demo_profile_visit_3", "visitorUserId": "50000000-0000-4000-8000-000000000001", "profileUserId": "50000000-0000-4000-8000-000000000004", "visitKey": "demo-profile-visit-003", "visitedAt": "2026-08-26 13:30:00.000", "readAt": "2026-08-26 14:00:00.000" }
+    ]
+  },
   "opportunities": [
     {
       "id": "62000000-0000-4000-8000-000000000001",

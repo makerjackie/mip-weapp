@@ -19,6 +19,9 @@ describe('MIP demo seed ownership safety', () => {
     for (const table of Object.values(SEED_TABLES)) {
       expect(query).toContain(`SELECT id FROM ${table}`)
     }
+    expect(query).toContain('SELECT registration_id AS id FROM mip_event_invitation_attributions')
+    expect(query).toContain('SELECT id FROM mip_event_hearts')
+    expect(query).toContain('SELECT id FROM mip_profile_visits')
     expect(query).toContain('app_id <> \'wx1111111111111111\'')
     expect(query).toContain('COUNT(*) AS conflicts')
   })
@@ -32,6 +35,11 @@ describe('MIP demo seed ownership safety', () => {
     expect(query).toContain('merchant_order_no =')
     expect(query).toContain('event_id =')
     expect(query).toContain('owner_user_id =')
+    expect(query).toContain('FROM mip_event_invitation_attributions event_invitation')
+    expect(query).toContain('FROM mip_event_hearts event_heart')
+    expect(query).toContain('FROM mip_profile_visits profile_visit')
+    expect(query).toContain('voter_user_id =')
+    expect(query).toContain('visit_key =')
     expect(query).toContain('seed_same_app_collisions')
   })
 
@@ -72,9 +80,9 @@ describe('MIP demo seed ownership safety', () => {
   it('makes every fixed-ID upsert fail when a duplicate belongs to another AppID', () => {
     const source = fs.readFileSync(path.join(root, 'scripts/seed-demo.mjs'), 'utf8')
     expect(source.match(/app_id = IF\(app_id = VALUES\(app_id\), app_id, NULL\)/g))
-      .toHaveLength(Object.keys(SEED_TABLES).length)
+      .toHaveLength(Object.keys(SEED_TABLES).length + 2)
     expect(source.match(/id = IF\(id = VALUES\(id\), id, NULL\)/g))
-      .toHaveLength(Object.keys(SEED_TABLES).length)
+      .toHaveLength(Object.keys(SEED_TABLES).length + 2)
   })
 
   it('keeps every top-level fixed-ID fixture group under the ownership preflight', () => {
@@ -126,8 +134,8 @@ describe('MIP demo seed ownership safety', () => {
     })
     expect(result.statementCount).toBeGreaterThan(Object.keys(SEED_TABLES).length)
     expect(result.tableCount).toBeGreaterThan(Object.keys(SEED_TABLES).length)
-    expect(result.fixtureGroups).toBe(40)
-    expect(result.tableCount).toBe(55)
+    expect(result.fixtureGroups).toBe(42)
+    expect(result.tableCount).toBe(60)
     expect(result.maxStatementBytes).toBeLessThan(30 * 1024)
   })
 
@@ -220,6 +228,9 @@ describe('MIP demo seed ownership safety', () => {
     }
     expect(source).toContain('mip_message_template_revisions:')
     expect(source).toContain('mip_game_ranking_entries:')
+    expect(source).toContain('mip_event_invitation_attributions:')
+    expect(source).toContain('mip_event_hearts:')
+    expect(source).toContain('mip_profile_visits:')
   })
 
   it('keeps demo users out of the platform-owner bootstrap path', () => {

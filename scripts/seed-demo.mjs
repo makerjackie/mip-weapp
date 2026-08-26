@@ -90,6 +90,11 @@ assertTablesExist([
   'mip_membership_entitlements',
   'mip_events',
   'mip_event_registrations',
+  'mip_event_invitation_attributions',
+  'mip_event_checkins',
+  'mip_event_checkin_transitions',
+  'mip_event_hearts',
+  'mip_profile_visits',
   'mip_opportunities',
   'mip_opportunity_roles',
   'mip_opportunity_tags',
@@ -208,6 +213,14 @@ const verification = callCloudbase(root, 'queryMysqlDatabase', {
         AND id IN (${seed.events.map(item => sqlLiteral(item.id)).join(', ')})) AS events,
     (SELECT COUNT(*) FROM mip_events
       WHERE app_id = ${sqlLiteral(appId)}
+        AND (${seed.events.map(item => `(
+          id = ${sqlLiteral(item.id)} AND status = ${sqlLiteral(item.status)}
+          AND starts_at = ${sqlLiteral(item.startsAt)} AND ends_at = ${sqlLiteral(item.endsAt)}
+          AND published_at = ${sqlLiteral(item.publishedAt)}
+          AND ${item.endedAt ? `ended_at = ${sqlLiteral(item.endedAt)}` : 'ended_at IS NULL'}
+        )`).join(' OR ')})) AS eventTimelineSettings,
+    (SELECT COUNT(*) FROM mip_events
+      WHERE app_id = ${sqlLiteral(appId)}
         AND (${seed.events.map(item => `(id = ${sqlLiteral(item.id)} AND album_enabled = ${item.albumEnabled ? 1 : 0} AND album_submission_policy = ${sqlLiteral(item.albumSubmissionPolicy)})`).join(' OR ')})) AS eventAlbumSettings,
     (SELECT COUNT(*) FROM mip_events
       WHERE app_id = ${sqlLiteral(appId)}
@@ -218,6 +231,78 @@ const verification = callCloudbase(root, 'queryMysqlDatabase', {
     (SELECT COUNT(*) FROM mip_event_registrations
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.eventRegistrations.map(item => sqlLiteral(item.id)).join(', ')})) AS eventRegistrations,
+    (SELECT COUNT(*) FROM mip_event_registrations
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND (${seed.eventRegistrations.map(item => `(
+          id = ${sqlLiteral(item.id)}
+          AND event_id = ${sqlLiteral(item.eventId)} AND user_id = ${sqlLiteral(item.userId)}
+          AND status = ${sqlLiteral(demoRegistrationStatus(item))}
+          AND registered_at = ${sqlLiteral(demoRegistrationTime(item))}
+          AND version = ${demoRegistrationVersion(item)}
+        )`).join(' OR ')})) AS eventRegistrationStates,
+    (SELECT COUNT(*) FROM mip_event_checkins
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND (${seed.eventCheckins.map(item => `(
+          id = ${sqlLiteral(item.id)}
+          AND event_id = ${sqlLiteral(item.eventId)}
+          AND registration_id = ${sqlLiteral(item.registrationId)}
+          AND user_id = ${sqlLiteral(item.userId)}
+          AND credential_id IS NULL
+          AND source = ${sqlLiteral(item.source)}
+          AND status = ${sqlLiteral(item.status)}
+          AND checked_in_at = ${sqlLiteral(item.checkedInAt)}
+          AND revoked_at IS NULL AND revoked_by_user_id IS NULL AND revoke_reason IS NULL
+          AND version = ${Number(item.version)}
+        )`).join(' OR ')})) AS eventCheckins,
+    (SELECT COUNT(*) FROM mip_event_checkin_transitions
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND (${seed.eventCheckinTransitions.map(item => `(
+          id = ${sqlLiteral(item.id)}
+          AND checkin_id = ${sqlLiteral(item.checkinId)}
+          AND registration_id = ${sqlLiteral(item.registrationId)}
+          AND event_id = ${sqlLiteral(item.eventId)}
+          AND user_id = ${sqlLiteral(item.userId)}
+          AND transition_type = ${sqlLiteral(item.transitionType)}
+          AND checkin_version = ${Number(item.checkinVersion)}
+          AND registration_version = ${Number(item.registrationVersion)}
+          AND reversal_of_transition_id IS NULL
+          AND actor_user_id = ${sqlLiteral(item.actorUserId)}
+          AND source = ${sqlLiteral(item.source)} AND revoke_reason IS NULL
+          AND occurred_at = ${sqlLiteral(item.occurredAt)}
+        )`).join(' OR ')})) AS eventCheckinTransitions,
+    (SELECT COUNT(*) FROM mip_event_invitation_attributions
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND (${seed.userInfluence.eventInvitationAttributions.map(item => `(
+          registration_id = ${sqlLiteral(item.registrationId)}
+          AND event_id = ${sqlLiteral(item.eventId)}
+          AND guest_user_id = ${sqlLiteral(item.guestUserId)}
+          AND source_type = ${sqlLiteral(item.sourceType)}
+          AND inviter_user_id = ${sqlLiteral(item.inviterUserId)}
+          AND captured_at = ${sqlLiteral(item.capturedAt)}
+        )`).join(' OR ')})) AS eventInvitationAttributions,
+    (SELECT COUNT(*) FROM mip_event_hearts
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND (${seed.userInfluence.eventHearts.map(item => `(
+          id = ${sqlLiteral(item.id)}
+          AND event_id = ${sqlLiteral(item.eventId)}
+          AND voter_user_id = ${sqlLiteral(item.voterUserId)}
+          AND target_user_id = ${sqlLiteral(item.targetUserId)}
+          AND status = ${sqlLiteral(item.status)}
+          AND version = 1
+          AND cancelled_at IS NULL
+          AND created_at = ${sqlLiteral(item.occurredAt)}
+          AND updated_at = ${sqlLiteral(item.occurredAt)}
+        )`).join(' OR ')})) AS eventHearts,
+    (SELECT COUNT(*) FROM mip_profile_visits
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND (${seed.userInfluence.profileVisits.map(item => `(
+          id = ${sqlLiteral(item.id)}
+          AND visitor_user_id = ${sqlLiteral(item.visitorUserId)}
+          AND profile_user_id = ${sqlLiteral(item.profileUserId)}
+          AND visit_key = ${sqlLiteral(item.visitKey)}
+          AND visited_at = ${sqlLiteral(item.visitedAt)}
+          AND ${item.readAt ? `read_at = ${sqlLiteral(item.readAt)}` : 'read_at IS NULL'}
+        )`).join(' OR ')})) AS profileVisits,
     (SELECT COUNT(*) FROM mip_opportunities
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.opportunities.map(item => sqlLiteral(item.id)).join(', ')})) AS opportunities,
@@ -357,9 +442,16 @@ const expected = {
   membershipOrders: seed.membershipOrders.length,
   entitlements: seed.entitlements.length,
   events: seed.events.length,
+  eventTimelineSettings: seed.events.length,
   eventAlbumSettings: seed.events.length,
   eventAlbumRuntimeFixtures: seed.events.filter(item => item.albumEnabled).length,
   eventRegistrations: seed.eventRegistrations.length,
+  eventRegistrationStates: seed.eventRegistrations.length,
+  eventCheckins: seed.eventCheckins.length,
+  eventCheckinTransitions: seed.eventCheckinTransitions.length,
+  eventInvitationAttributions: seed.userInfluence.eventInvitationAttributions.length,
+  eventHearts: seed.userInfluence.eventHearts.length,
+  profileVisits: seed.userInfluence.profileVisits.length,
   opportunities: seed.opportunities.length,
   opportunityTeamMembers: seed.opportunityTeamMembers.length,
   referralIntents: seed.referralIntents.length,
@@ -438,6 +530,11 @@ function buildSeedStatements() {
     entitlementStatement(seed.entitlements, seed.membershipPlans),
     eventStatement(seed.events),
     eventRegistrationStatement(seed.eventRegistrations),
+    eventInvitationAttributionStatement(seed.userInfluence.eventInvitationAttributions),
+    eventCheckinStatement(seed.eventCheckins),
+    eventCheckinTransitionStatement(seed.eventCheckinTransitions),
+    eventHeartStatement(seed.userInfluence.eventHearts),
+    profileVisitStatement(seed.userInfluence.profileVisits),
     opportunityStatement(seed.opportunities, seed.referralIntents),
     opportunityRoleResetStatement(seed.opportunities),
     opportunityRoleStatement(seed.opportunities),
@@ -793,11 +890,12 @@ function eventStatement(items) {
     ${sqlLiteral(item.description)}, ${sqlLiteral(item.notices)}, NULL,
     ${sqlLiteral(item.eventTypeKey)}, ${sqlLiteral(item.eventMode)}, ${sqlLiteral(item.accessType)},
     'AUTO', ${item.albumEnabled ? 1 : 0}, ${sqlLiteral(item.albumSubmissionPolicy)},
-    'PUBLISHED', 'PASSED', ${sqlLiteral(item.startsAt)}, ${sqlLiteral(item.endsAt)},
+    ${sqlLiteral(item.status)}, 'PASSED', ${sqlLiteral(item.startsAt)}, ${sqlLiteral(item.endsAt)},
     ${sqlLiteral(item.registrationOpensAt)}, ${sqlLiteral(item.registrationDeadline)},
     ${sqlLiteral(item.cancellationDeadline)}, ${sqlLiteral(item.venueName)}, ${sqlLiteral(item.address)},
     ${sqlLiteral(item.cityName)}, NULL, NULL, NULL, ${Number(item.capacity)}, 0, 0, 'CNY',
-    ${sqlJson([])}, 1, 1, '2026-08-25 12:00:00.000', NULL, NULL, NULL
+    ${sqlJson([])}, 1, 1, ${sqlLiteral(item.publishedAt)}, NULL, NULL,
+    ${item.endedAt ? sqlLiteral(item.endedAt) : 'NULL'}
   )`).join(',\n')
   return `INSERT INTO mip_events (
     id, app_id, scope_type, branch_id, organizer_user_id, title, summary, description,
@@ -816,7 +914,7 @@ function eventStatement(items) {
     notices = VALUES(notices), cover_asset_id = NULL, event_type_key = VALUES(event_type_key),
     event_mode = VALUES(event_mode), access_type = VALUES(access_type), registration_policy = 'AUTO',
     album_enabled = VALUES(album_enabled), album_submission_policy = VALUES(album_submission_policy),
-    status = 'PUBLISHED', content_safety_status = 'PASSED', starts_at = VALUES(starts_at),
+    status = VALUES(status), content_safety_status = 'PASSED', starts_at = VALUES(starts_at),
     ends_at = VALUES(ends_at), registration_opens_at = VALUES(registration_opens_at),
     registration_deadline = VALUES(registration_deadline),
     cancellation_deadline = VALUES(cancellation_deadline), venue_name = VALUES(venue_name),
@@ -824,15 +922,17 @@ function eventStatement(items) {
     online_url = NULL, capacity = VALUES(capacity), waitlist_enabled = 0, price_cents = 0,
     currency = 'CNY', registration_schema_json = VALUES(registration_schema_json),
     form_version = 1, version = version + 1, published_at = VALUES(published_at),
-    unpublished_at = NULL, cancelled_at = NULL, ended_at = NULL,
+    unpublished_at = NULL, cancelled_at = NULL, ended_at = VALUES(ended_at),
     archived_at = NULL, archived_by_user_id = NULL, archive_reason = NULL`
 }
 
 function eventRegistrationStatement(items) {
   const values = items.map(item => `(
     ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.eventId)},
-    ${sqlLiteral(item.userId)}, NULL, 'REGISTERED', ${sqlJson({})}, 1, 1, NULL,
-    NULL, '2026-08-25 13:00:00.000', NULL, NULL, NULL, 1
+    ${sqlLiteral(item.userId)}, NULL, ${sqlLiteral(demoRegistrationStatus(item))},
+    ${sqlJson({})}, 1, 1, NULL, NULL,
+    ${sqlLiteral(demoRegistrationTime(item))},
+    NULL, NULL, NULL, ${demoRegistrationVersion(item)}
   )`).join(',\n')
   return `INSERT INTO mip_event_registrations (
     id, app_id, event_id, user_id, order_id, status, answers_json, form_version,
@@ -843,10 +943,123 @@ function eventRegistrationStatement(items) {
     app_id = IF(app_id = VALUES(app_id), app_id, NULL),
     id = IF(id = VALUES(id), id, NULL),
     event_id = VALUES(event_id), user_id = VALUES(user_id), order_id = NULL,
-    status = 'REGISTERED', answers_json = VALUES(answers_json), form_version = 1,
+    status = VALUES(status), answers_json = VALUES(answers_json), form_version = 1,
     share_profile = 1, ticket_hash = NULL, waitlisted_at = NULL,
     registered_at = VALUES(registered_at), cancelled_at = NULL,
-    cancellation_reason = NULL, cancelled_by_type = NULL, version = version + 1`
+    cancellation_reason = NULL, cancelled_by_type = NULL, version = VALUES(version)`
+}
+
+function demoRegistrationStatus(item) {
+  return item?.status || 'REGISTERED'
+}
+
+function demoRegistrationTime(item) {
+  return item?.registeredAt || '2026-08-25 13:00:00.000'
+}
+
+function demoRegistrationVersion(item) {
+  return Number(item?.version || 1)
+}
+
+function eventInvitationAttributionStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.registrationId)}, ${sqlLiteral(item.eventId)},
+    ${sqlLiteral(item.guestUserId)}, ${sqlLiteral(item.sourceType)},
+    ${sqlLiteral(item.inviterUserId)}, ${sqlLiteral(item.capturedAt)}
+  )`).join(',\n')
+  return `INSERT INTO mip_event_invitation_attributions (
+    app_id, registration_id, event_id, guest_user_id, source_type,
+    inviter_user_id, captured_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    event_id = VALUES(event_id), guest_user_id = VALUES(guest_user_id),
+    source_type = VALUES(source_type), inviter_user_id = VALUES(inviter_user_id),
+    captured_at = VALUES(captured_at)`
+}
+
+function eventCheckinStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.eventId)},
+    ${sqlLiteral(item.registrationId)}, ${sqlLiteral(item.userId)}, NULL,
+    ${sqlLiteral(item.source)}, ${sqlLiteral(item.status)}, ${sqlLiteral(item.checkedInAt)},
+    NULL, NULL, NULL, ${Number(item.version)},
+    ${sqlLiteral(item.checkedInAt)}, ${sqlLiteral(item.checkedInAt)}
+  )`).join(',\n')
+  return `INSERT INTO mip_event_checkins (
+    id, app_id, event_id, registration_id, user_id, credential_id, source,
+    status, checked_in_at, revoked_at, revoked_by_user_id, revoke_reason, version,
+    created_at, updated_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    event_id = VALUES(event_id), registration_id = VALUES(registration_id),
+    user_id = VALUES(user_id), credential_id = NULL, source = VALUES(source),
+    status = 'ACTIVE', checked_in_at = VALUES(checked_in_at), revoked_at = NULL,
+    revoked_by_user_id = NULL, revoke_reason = NULL, version = VALUES(version),
+    created_at = VALUES(created_at), updated_at = VALUES(updated_at)`
+}
+
+function eventCheckinTransitionStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.checkinId)},
+    ${sqlLiteral(item.registrationId)}, ${sqlLiteral(item.eventId)}, ${sqlLiteral(item.userId)},
+    ${sqlLiteral(item.transitionType)}, ${Number(item.checkinVersion)},
+    ${Number(item.registrationVersion)}, NULL, ${sqlLiteral(item.actorUserId)},
+    ${sqlLiteral(item.source)}, NULL, ${sqlLiteral(item.occurredAt)},
+    ${sqlLiteral(item.occurredAt)}
+  )`).join(',\n')
+  return `INSERT INTO mip_event_checkin_transitions (
+    id, app_id, checkin_id, registration_id, event_id, user_id,
+    transition_type, checkin_version, registration_version,
+    reversal_of_transition_id, actor_user_id, source, revoke_reason,
+    occurred_at, created_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    checkin_id = VALUES(checkin_id), registration_id = VALUES(registration_id),
+    event_id = VALUES(event_id), user_id = VALUES(user_id),
+    transition_type = 'CHECKED_IN', checkin_version = VALUES(checkin_version),
+    registration_version = VALUES(registration_version), reversal_of_transition_id = NULL,
+    actor_user_id = VALUES(actor_user_id), source = 'ADMIN', revoke_reason = NULL,
+    occurred_at = VALUES(occurred_at), created_at = VALUES(created_at)`
+}
+
+function eventHeartStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.eventId)},
+    ${sqlLiteral(item.voterUserId)}, ${sqlLiteral(item.targetUserId)},
+    ${sqlLiteral(item.status)}, 1, NULL,
+    ${sqlLiteral(item.occurredAt)}, ${sqlLiteral(item.occurredAt)}
+  )`).join(',\n')
+  return `INSERT INTO mip_event_hearts (
+    id, app_id, event_id, voter_user_id, target_user_id, status, version,
+    cancelled_at, created_at, updated_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    event_id = VALUES(event_id), voter_user_id = VALUES(voter_user_id),
+    target_user_id = VALUES(target_user_id), status = 'ACTIVE',
+    version = VALUES(version), cancelled_at = NULL,
+    created_at = VALUES(created_at), updated_at = VALUES(updated_at)`
+}
+
+function profileVisitStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.visitorUserId)},
+    ${sqlLiteral(item.profileUserId)}, ${sqlLiteral(item.visitKey)},
+    ${sqlLiteral(item.visitedAt)}, ${item.readAt ? sqlLiteral(item.readAt) : 'NULL'}
+  )`).join(',\n')
+  return `INSERT INTO mip_profile_visits (
+    id, app_id, visitor_user_id, profile_user_id, visit_key, visited_at, read_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    visitor_user_id = VALUES(visitor_user_id), profile_user_id = VALUES(profile_user_id),
+    visit_key = VALUES(visit_key), visited_at = VALUES(visited_at), read_at = VALUES(read_at)`
 }
 
 function opportunityStatement(items, referrals) {
@@ -1763,6 +1976,10 @@ function buildDemoManifest(value, state) {
         snapshotId: item.id,
         rankNo: entry.rankNo,
       }))),
+      influenceInvitationRegistrationIds: value.userInfluence.eventInvitationAttributions
+        .map(item => item.registrationId),
+      influenceEventHeartIds: value.userInfluence.eventHearts.map(item => item.id),
+      influenceProfileVisitIds: value.userInfluence.profileVisits.map(item => item.id),
     },
     recordsByTable: {
       mip_city_branches: value.branches.map(item => ({ id: item.id })),
@@ -1784,6 +2001,12 @@ function buildDemoManifest(value, state) {
       mip_membership_entitlements: value.entitlements.map(item => ({ id: item.id })),
       mip_events: value.events.map(item => ({ id: item.id })),
       mip_event_registrations: value.eventRegistrations.map(item => ({ id: item.id })),
+      mip_event_checkins: value.eventCheckins.map(item => ({ id: item.id })),
+      mip_event_checkin_transitions: value.eventCheckinTransitions.map(item => ({ id: item.id })),
+      mip_event_invitation_attributions: value.userInfluence.eventInvitationAttributions
+        .map(item => ({ registrationId: item.registrationId })),
+      mip_event_hearts: value.userInfluence.eventHearts.map(item => ({ id: item.id })),
+      mip_profile_visits: value.userInfluence.profileVisits.map(item => ({ id: item.id })),
       mip_opportunities: value.opportunities.map(item => ({ id: item.id })),
       mip_opportunity_roles: value.opportunities.flatMap(item => item.roleKeys
         .map(roleKey => ({ opportunityId: item.id, roleKey }))),
@@ -1870,6 +2093,8 @@ function assertSeed(value) {
     'entitlements',
     'events',
     'eventRegistrations',
+    'eventCheckins',
+    'eventCheckinTransitions',
     'opportunities',
     'opportunityTeamMembers',
     'referralIntents',
@@ -1916,6 +2141,32 @@ function assertSeed(value) {
       allIds.add(item.id)
     }
   }
+  const influence = value.userInfluence
+  if (!influence || typeof influence !== 'object' || Array.isArray(influence)
+    || Object.keys(influence).sort().join(',') !== [
+      'eventHearts',
+      'eventInvitationAttributions',
+      'profileVisits',
+    ].join(',')) {
+    throw new Error('MIP demo seed user influence fixtures are invalid')
+  }
+  for (const key of ['eventHearts', 'profileVisits']) {
+    if (!Array.isArray(influence[key]) || influence[key].length === 0) {
+      throw new Error(`MIP demo seed user influence ${key} is empty`)
+    }
+    for (const item of influence[key]) {
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(item.id)
+        || !/^[a-z][a-z0-9_]{1,79}$/.test(item.key)
+        || allIds.has(item.id)) {
+        throw new Error(`MIP demo seed contains an invalid user influence ${key} identity`)
+      }
+      allIds.add(item.id)
+    }
+  }
+  if (!Array.isArray(influence.eventInvitationAttributions)
+    || influence.eventInvitationAttributions.length === 0) {
+    throw new Error('MIP demo seed user influence invitations are empty')
+  }
   if (value.growthRules.some(item => !['ACTIVE', 'DRAFT'].includes(item.status))) {
     throw new Error('Demo growth rule status must be ACTIVE or DRAFT')
   }
@@ -1930,6 +2181,7 @@ function assertDemoRelations(value) {
   const planById = new Map(value.membershipPlans.map(item => [item.id, item]))
   const orderById = new Map(value.membershipOrders.map(item => [item.id, item]))
   const eventIds = new Set(value.events.map(item => item.id))
+  const eventById = new Map(value.events.map(item => [item.id, item]))
   const opportunityIds = new Set(value.opportunities.map(item => item.id))
   const opportunityById = new Map(value.opportunities.map(item => [item.id, item]))
   const playerIds = new Set(value.entitlements.map(item => item.userId))
@@ -1976,19 +2228,162 @@ function assertDemoRelations(value) {
       || !userIds.has(event.organizerUserId)
       || typeof event.albumEnabled !== 'boolean'
       || !['AUTO', 'REVIEW'].includes(event.albumSubmissionPolicy)
-      || !String(event.startsAt).startsWith('2030-')
-      || !String(event.endsAt).startsWith('2030-')
-      || event.endsAt <= event.startsAt) {
-      throw new Error('Demo events must be valid 2030 fixtures')
+      || !['PUBLISHED', 'ENDED'].includes(event.status)
+      || !isSqlTimestamp(event.startsAt) || !isSqlTimestamp(event.endsAt)
+      || !isSqlTimestamp(event.registrationOpensAt)
+      || !isSqlTimestamp(event.registrationDeadline)
+      || !isSqlTimestamp(event.cancellationDeadline)
+      || !isSqlTimestamp(event.publishedAt)
+      || event.endsAt <= event.startsAt
+      || event.registrationOpensAt >= event.startsAt
+      || event.registrationDeadline > event.startsAt
+      || event.cancellationDeadline > event.startsAt
+      || event.publishedAt > event.startsAt
+      || (event.status === 'PUBLISHED' && event.endedAt !== null)
+      || (event.status === 'ENDED'
+        && (!isSqlTimestamp(event.endedAt) || event.endedAt < event.endsAt))) {
+      throw new Error('Demo event timeline is invalid')
     }
   }
-  if (!value.events.some(event => event.albumEnabled)) {
-    throw new Error('Demo events require a published 2030 album fixture')
+  if (!value.events.some(event => event.status === 'PUBLISHED'
+    && event.startsAt.startsWith('2030-') && event.albumEnabled)
+  || !value.events.some(event => event.status === 'ENDED'
+    && event.endsAt < '2026-08-26 00:00:00.000')) {
+    throw new Error('Demo events require both long-lived and historical interaction fixtures')
   }
+  const registrationById = new Map()
+  const registrationByEventUser = new Map()
   for (const registration of value.eventRegistrations) {
-    if (!eventIds.has(registration.eventId) || !userIds.has(registration.userId)) {
+    const event = eventById.get(registration.eventId)
+    const status = demoRegistrationStatus(registration)
+    const registeredAt = demoRegistrationTime(registration)
+    const version = demoRegistrationVersion(registration)
+    if (!event || !userIds.has(registration.userId)
+      || !['REGISTERED', 'ATTENDED'].includes(status)
+      || !isSqlTimestamp(registeredAt)
+      || registeredAt < event.registrationOpensAt
+      || registeredAt > event.registrationDeadline
+      || !Number.isInteger(version) || version < 1
+      || (status === 'ATTENDED' && version < 2)) {
       throw new Error('Demo event registration references are invalid')
     }
+    registrationById.set(registration.id, registration)
+    registrationByEventUser.set(`${registration.eventId}:${registration.userId}`, registration)
+  }
+  const checkinById = new Map()
+  const checkinByRegistrationId = new Map()
+  for (const item of value.eventCheckins) {
+    const registration = registrationById.get(item.registrationId)
+    const event = eventById.get(item.eventId)
+    if (!registration || !event
+      || registration.eventId !== item.eventId || registration.userId !== item.userId
+      || demoRegistrationStatus(registration) !== 'ATTENDED'
+      || item.source !== 'ADMIN' || item.status !== 'ACTIVE'
+      || item.version !== 1 || !isSqlTimestamp(item.checkedInAt)
+      || item.checkedInAt < demoRegistrationTime(registration)
+      || item.checkedInAt > event.endsAt
+      || checkinByRegistrationId.has(item.registrationId)) {
+      throw new Error('Demo event check-in references are invalid')
+    }
+    checkinById.set(item.id, item)
+    checkinByRegistrationId.set(item.registrationId, item)
+  }
+  const transitionedCheckins = new Set()
+  for (const item of value.eventCheckinTransitions) {
+    const checkin = checkinById.get(item.checkinId)
+    const registration = registrationById.get(item.registrationId)
+    if (!checkin || !registration
+      || checkin.registrationId !== item.registrationId
+      || checkin.eventId !== item.eventId || checkin.userId !== item.userId
+      || item.transitionType !== 'CHECKED_IN'
+      || item.checkinVersion !== checkin.version
+      || item.registrationVersion !== demoRegistrationVersion(registration)
+      || !userIds.has(item.actorUserId)
+      || item.source !== checkin.source || item.occurredAt !== checkin.checkedInAt
+      || transitionedCheckins.has(item.checkinId)) {
+      throw new Error('Demo event check-in transition references are invalid')
+    }
+    transitionedCheckins.add(item.checkinId)
+  }
+  const attendedRegistrations = value.eventRegistrations
+    .filter(item => demoRegistrationStatus(item) === 'ATTENDED')
+  if (attendedRegistrations.length !== 3
+    || value.eventCheckins.length !== attendedRegistrations.length
+    || value.eventCheckinTransitions.length !== value.eventCheckins.length
+    || attendedRegistrations.some(item => !checkinByRegistrationId.has(item.id))
+    || value.eventCheckins.some(item => !transitionedCheckins.has(item.id))) {
+    throw new Error('Demo attended registrations require one active check-in transition each')
+  }
+  const influence = value.userInfluence
+  const invitationRegistrations = new Set()
+  const incomingInvitations = new Set()
+  const outgoingInvitations = new Set()
+  for (const item of influence.eventInvitationAttributions) {
+    const registration = registrationById.get(item.registrationId)
+    const event = eventById.get(item.eventId)
+    if (!registration || registration.eventId !== item.eventId
+      || registration.userId !== item.guestUserId
+      || !event || item.capturedAt !== demoRegistrationTime(registration)
+      || item.capturedAt < event.registrationOpensAt
+      || item.capturedAt > event.registrationDeadline
+      || item.sourceType !== 'USER'
+      || !userIds.has(item.inviterUserId)
+      || item.inviterUserId === item.guestUserId
+      || !isSqlTimestamp(item.capturedAt)
+      || invitationRegistrations.has(item.registrationId)) {
+      throw new Error('Demo event invitation attribution references are invalid')
+    }
+    invitationRegistrations.add(item.registrationId)
+    incomingInvitations.add(item.guestUserId)
+    outgoingInvitations.add(item.inviterUserId)
+  }
+  if (![...incomingInvitations].some(userId => outgoingInvitations.has(userId))) {
+    throw new Error('Demo event invitation fixtures must exercise incoming and outgoing directions')
+  }
+  const eventHeartVoters = new Set()
+  for (const item of influence.eventHearts) {
+    const event = eventById.get(item.eventId)
+    const voterRegistration = registrationByEventUser.get(`${item.eventId}:${item.voterUserId}`)
+    const targetRegistration = registrationByEventUser.get(`${item.eventId}:${item.targetUserId}`)
+    const voterCheckin = voterRegistration
+      ? checkinByRegistrationId.get(voterRegistration.id)
+      : null
+    const targetCheckin = targetRegistration
+      ? checkinByRegistrationId.get(targetRegistration.id)
+      : null
+    const voterKey = `${item.eventId}:${item.voterUserId}`
+    if (item.status !== 'ACTIVE' || event?.status !== 'ENDED'
+      || !userIds.has(item.voterUserId) || !userIds.has(item.targetUserId)
+      || item.voterUserId === item.targetUserId
+      || demoRegistrationStatus(voterRegistration) !== 'ATTENDED'
+      || demoRegistrationStatus(targetRegistration) !== 'ATTENDED'
+      || !voterCheckin || !targetCheckin
+      || !isSqlTimestamp(item.occurredAt)
+      || item.occurredAt <= voterCheckin.checkedInAt
+      || item.occurredAt <= targetCheckin.checkedInAt
+      || item.occurredAt < event.endedAt
+      || eventHeartVoters.has(voterKey)) {
+      throw new Error('Demo event heart references are invalid')
+    }
+    eventHeartVoters.add(voterKey)
+  }
+  const visitKeys = new Set()
+  for (const item of influence.profileVisits) {
+    const scopedKey = `${item.visitorUserId}:${item.profileUserId}:${item.visitKey}`
+    if (!userIds.has(item.visitorUserId) || !userIds.has(item.profileUserId)
+      || item.visitorUserId === item.profileUserId
+      || typeof item.visitKey !== 'string' || item.visitKey.length < 12
+      || item.visitKey.length > 128 || !isSqlTimestamp(item.visitedAt)
+      || (item.readAt !== null
+        && (!isSqlTimestamp(item.readAt) || item.readAt < item.visitedAt))
+      || visitKeys.has(scopedKey)) {
+      throw new Error('Demo profile visit references are invalid')
+    }
+    visitKeys.add(scopedKey)
+  }
+  if (!influence.profileVisits.some(item => item.readAt === null)
+    || !influence.profileVisits.some(item => item.readAt !== null)) {
+    throw new Error('Demo profile visits must exercise read and unread states')
   }
   for (const opportunity of value.opportunities) {
     if (!userIds.has(opportunity.ownerUserId)
@@ -2449,6 +2844,12 @@ function assertTagCatalog(tags) {
       throw new Error('City and ability tags must be selectable roots')
     }
   }
+}
+
+function isSqlTimestamp(value) {
+  return typeof value === 'string'
+    && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}$/.test(value)
+    && Number.isFinite(new Date(`${value.replace(' ', 'T')}Z`).getTime())
 }
 
 function assertTablesExist(tableNames) {

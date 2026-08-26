@@ -10,6 +10,8 @@ const SEED_TABLES = Object.freeze({
   entitlements: 'mip_membership_entitlements',
   events: 'mip_events',
   eventRegistrations: 'mip_event_registrations',
+  eventCheckins: 'mip_event_checkins',
+  eventCheckinTransitions: 'mip_event_checkin_transitions',
   opportunities: 'mip_opportunities',
   opportunityTeamMembers: 'mip_opportunity_team_members',
   referralIntents: 'mip_referral_intents',
@@ -54,6 +56,16 @@ export function buildSeedOwnershipQuery(appId, seed) {
     selects.push(`SELECT id FROM ${table}
       WHERE id IN (${ids.map(id => `'${id}'`).join(', ')}) AND app_id <> '${appId}'`)
   }
+  const influence = userInfluenceFixtures(seed)
+  selects.push(`SELECT registration_id AS id FROM mip_event_invitation_attributions
+    WHERE registration_id IN (${influence.eventInvitationAttributions.map(item => literal(item.registrationId)).join(', ')})
+      AND app_id <> ${literal(appId)}`)
+  selects.push(`SELECT id FROM mip_event_hearts
+    WHERE id IN (${influence.eventHearts.map(item => literal(item.id)).join(', ')})
+      AND app_id <> ${literal(appId)}`)
+  selects.push(`SELECT id FROM mip_profile_visits
+    WHERE id IN (${influence.profileVisits.map(item => literal(item.id)).join(', ')})
+      AND app_id <> ${literal(appId)}`)
   return `SELECT COUNT(*) AS conflicts FROM (\n${selects.join('\nUNION ALL\n')}\n) seed_ownership_conflicts`
 }
 
@@ -89,6 +101,13 @@ export function buildSeedCollisionQuery(appId, seed) {
         AND idempotency_key = ${literal(item.key)}))`))
   selects.push(alternateKeySelect(appId, 'mip_membership_entitlements', seed.entitlements, item => `order_id = ${literal(item.orderId)}`))
   selects.push(alternateKeySelect(appId, 'mip_event_registrations', seed.eventRegistrations, item => `event_id = ${literal(item.eventId)} AND user_id = ${literal(item.userId)}`))
+  selects.push(alternateKeySelect(appId, 'mip_event_checkins', seed.eventCheckins, item => `registration_id = ${literal(item.registrationId)}`))
+  selects.push(alternateKeySelect(
+    appId,
+    'mip_event_checkin_transitions',
+    seed.eventCheckinTransitions,
+    item => `checkin_id = ${literal(item.checkinId)} AND checkin_version = ${Number(item.checkinVersion)}`,
+  ))
   selects.push(alternateKeySelect(appId, 'mip_opportunity_team_members', seed.opportunityTeamMembers, item => `opportunity_id = ${literal(item.opportunityId)}
       AND user_id = ${literal(item.userId)}`))
   selects.push(alternateKeySelect(appId, 'mip_referral_intents', seed.referralIntents, item => `opportunity_id = ${literal(item.opportunityId)}
@@ -132,6 +151,44 @@ export function buildSeedCollisionQuery(appId, seed) {
   selects.push(alternateKeySelect(appId, 'mip_blind_box_cards', seed.blindBoxCards, item => `catalog_id = ${literal(item.catalogId)}
       AND card_key = ${literal(item.cardKey)}`))
   const interactions = seed.opportunityInteractions
+  const influence = userInfluenceFixtures(seed)
+  selects.push(compositeManifestCollisionSelect({
+    appId,
+    table: 'mip_event_invitation_attributions',
+    alias: 'event_invitation',
+    items: influence.eventInvitationAttributions,
+    condition: item => `registration_id = ${literal(item.registrationId)}`,
+    recordFields: { registrationId: 'registration_id' },
+  }))
+  selects.push(compositeManifestCollisionSelect({
+    appId,
+    table: 'mip_event_hearts',
+    alias: 'event_heart',
+    items: influence.eventHearts,
+    condition: item => `id = ${literal(item.id)}`,
+    recordFields: { id: 'id' },
+  }))
+  selects.push(alternateKeySelect(
+    appId,
+    'mip_event_hearts',
+    influence.eventHearts,
+    item => `event_id = ${literal(item.eventId)} AND voter_user_id = ${literal(item.voterUserId)}`,
+  ))
+  selects.push(compositeManifestCollisionSelect({
+    appId,
+    table: 'mip_profile_visits',
+    alias: 'profile_visit',
+    items: influence.profileVisits,
+    condition: item => `id = ${literal(item.id)}`,
+    recordFields: { id: 'id' },
+  }))
+  selects.push(alternateKeySelect(
+    appId,
+    'mip_profile_visits',
+    influence.profileVisits,
+    item => `visitor_user_id = ${literal(item.visitorUserId)}
+      AND profile_user_id = ${literal(item.profileUserId)} AND visit_key = ${literal(item.visitKey)}`,
+  ))
   selects.push(compositeManifestCollisionSelect({
     appId,
     table: 'mip_opportunity_comment_settings',
@@ -225,6 +282,29 @@ function seedIds(seed, group) {
     throw new Error(`MIP demo seed ${group} identities are invalid`)
   }
   return ids
+}
+
+function userInfluenceFixtures(seed) {
+  const influence = seed?.userInfluence
+  if (!influence || typeof influence !== 'object' || Array.isArray(influence)) {
+    throw new Error('MIP demo seed user influence fixtures are invalid')
+  }
+  for (const group of ['eventInvitationAttributions', 'eventHearts', 'profileVisits']) {
+    if (!Array.isArray(influence[group]) || influence[group].length === 0) {
+      throw new Error(`MIP demo seed user influence ${group} fixtures are invalid`)
+    }
+  }
+  if (influence.eventInvitationAttributions.some(item => !isUuid(item?.registrationId))
+    || influence.eventHearts.some(item => !isUuid(item?.id))
+    || influence.profileVisits.some(item => !isUuid(item?.id))) {
+    throw new Error('MIP demo seed user influence identities are invalid')
+  }
+  return influence
+}
+
+function isUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+    .test(String(value || ''))
 }
 
 function alternateKeySelect(appId, table, items, condition) {
