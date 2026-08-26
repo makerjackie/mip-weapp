@@ -5,6 +5,7 @@ const { createCipheriv, createHash, createHmac } = require('node:crypto')
 const { describe, it } = require('node:test')
 const { createAdminAccess } = require('../domain/access')
 const { createAdminEvents } = require('../domain/events')
+const { encodeCursor } = require('../domain/pagination')
 const { AdminError } = require('../domain/validation')
 
 const APP_ID = 'wx-app'
@@ -142,6 +143,87 @@ describe('admin events deep module', () => {
 
     assert.equal(repo.resolveReads, 3)
     assert.equal(repo.eventReads, 1)
+  })
+
+  it('whitelists event list filters and binds each cursor to its start-time sort direction', async () => {
+    const calls = []
+    const repo = repository({
+      async listEvents(...args) {
+        calls.push(args)
+        return { items: [], nextCursor: null }
+      },
+    })
+    const service = events(repo)
+    const cursor = encodeCursor({
+      startsAt: '2030-08-15T10:00:00.000Z',
+      id: EVENT_ID,
+      sortField: 'startsAt',
+      sortDirection: 'ASC',
+    })
+
+    await service.listEvents(caller, {
+      filters: {
+        query: ' 城市交流 ',
+        status: 'published',
+        startsFrom: '2030-08-01T00:00:00.000Z',
+        startsTo: '2030-08-31T23:59:59.999Z',
+        cityOrBranch: ' 广州分会 ',
+        branchId: BRANCH_ID,
+        eventTypeKey: 'workshop',
+        accessType: 'paid',
+        priceMinCents: 1000,
+        priceMaxCents: 3000,
+        ignored: 'never reaches repository',
+      },
+      sort: { field: 'startsAt', direction: 'ASC' },
+      cursor,
+      limit: 17,
+      ignored: true,
+    })
+
+    assert.deepEqual(calls[0][2], {
+      query: '城市交流',
+      status: 'PUBLISHED',
+      startsFrom: '2030-08-01 00:00:00.000',
+      startsTo: '2030-08-31 23:59:59.999',
+      cityOrBranch: '广州分会',
+      branchId: BRANCH_ID,
+      eventTypeKey: 'workshop',
+      accessType: 'PAID',
+      priceMinCents: 1000,
+      priceMaxCents: 3000,
+    })
+    assert.deepEqual(calls[0][3], { field: 'startsAt', direction: 'ASC' })
+    assert.equal(calls[0][4], 17)
+    assert.deepEqual(calls[0][5], {
+      v: 1,
+      startsAt: '2030-08-15T10:00:00.000Z',
+      id: EVENT_ID,
+      sortField: 'startsAt',
+      sortDirection: 'ASC',
+    })
+
+    await assert.rejects(() => service.listEvents(caller, {
+      sort: { field: 'startsAt', direction: 'DESC' },
+      cursor,
+    }), error => error?.code === 'VALIDATION_FAILED')
+    await assert.rejects(() => service.listEvents(caller, {
+      filters: { startsFrom: '2030-09-01', startsTo: '2030-08-01' },
+    }), error => error?.code === 'VALIDATION_FAILED')
+    await assert.rejects(() => service.listEvents(caller, {
+      filters: { priceMinCents: 3001, priceMaxCents: 3000 },
+    }), error => error?.code === 'VALIDATION_FAILED')
+    await assert.rejects(() => service.listEvents(caller, {
+      sort: { field: 'title', direction: 'ASC' },
+    }), error => error?.code === 'VALIDATION_FAILED')
+    assert.equal(calls.length, 1)
+
+    await service.listEvents(caller)
+    assert.deepEqual(calls[1][3], { field: 'startsAt', direction: 'ASC' })
+    assert.equal(calls[1][5], null)
+
+    await service.listEvents(caller, { sort: { field: 'startsAt', direction: 'DESC' } })
+    assert.deepEqual(calls[2][3], { field: 'startsAt', direction: 'DESC' })
   })
 
   it('keeps event scope, content safety, expectedVersion and repository authorization intact', async () => {

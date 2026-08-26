@@ -21,6 +21,9 @@ const ROSTER_STATUSES = [
   'PENDING_REVIEW', 'WAITLISTED', 'PAYMENT_PENDING', 'REGISTERED',
   'CANCELLATION_PENDING', 'CANCELLED', 'REJECTED', 'ATTENDED',
 ]
+const EVENT_STATUSES = ['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'CANCELLED', 'ENDED', 'ARCHIVED']
+const EVENT_ACCESS_TYPES = ['FREE', 'MEMBER_INCLUDED', 'PAID']
+const EVENT_SORT_FIELD = 'startsAt'
 
 function createAdminEvents({
   repository,
@@ -59,12 +62,14 @@ function createAdminEvents({
   async function listEvents(caller, input = {}) {
     const context = await access.session(caller)
     firstGrant(context.bindings, CAPABILITIES.EVENTS_READ)
+    const query = normalizeEventListInput(input)
     return pageResult(await repository.listEvents(
       context.caller.appId,
       visibilityForCapability(context.bindings, CAPABILITIES.EVENTS_READ),
-      normalizeFilters(input.filters),
-      limit(input.limit),
-      decodeCursor(input.cursor, ['startsAt', 'id']),
+      query.filters,
+      query.sort,
+      query.pageLimit,
+      query.cursor,
     ))
   }
 
@@ -540,6 +545,63 @@ function pageResult(value) {
 
 function normalizeFilters(value) {
   return value && typeof value === 'object' && !Array.isArray(value) ? { ...value } : {}
+}
+
+function normalizeEventListInput(input) {
+  const source = normalizeFilters(input)
+  const filters = normalizeFilters(source.filters)
+  const startsFrom = dateTimeFilter(filters.startsFrom, '活动开始时间起')
+  const startsTo = dateTimeFilter(filters.startsTo, '活动开始时间止')
+  if (startsFrom && startsTo && startsFrom > startsTo) {
+    throw new AdminError('VALIDATION_FAILED', '活动开始时间起不能晚于结束时间')
+  }
+  const priceMinCents = moneyFilter(filters.priceMinCents, '最低价格')
+  const priceMaxCents = moneyFilter(filters.priceMaxCents, '最高价格')
+  if (priceMinCents !== null && priceMaxCents !== null && priceMinCents > priceMaxCents) {
+    throw new AdminError('VALIDATION_FAILED', '最低价格不能高于最高价格')
+  }
+  const sort = normalizeEventSort(source.sort)
+  const cursor = decodeCursor(source.cursor, ['startsAt', 'id', 'sortField', 'sortDirection'])
+  if (cursor && (cursor.sortField !== sort.field || cursor.sortDirection !== sort.direction)) {
+    throw new AdminError('VALIDATION_FAILED', '分页游标与活动排序不一致')
+  }
+  return {
+    filters: {
+      query: text(filters.query, 80),
+      status: enumFilter(filters.status, EVENT_STATUSES, '活动状态'),
+      startsFrom,
+      startsTo,
+      cityOrBranch: text(filters.cityOrBranch, 80),
+      branchId: filters.branchId ? requiredId(filters.branchId, '城市分会') : '',
+      eventTypeKey: filters.eventTypeKey ? stableKey(filters.eventTypeKey, '活动类型', 64) : '',
+      accessType: enumFilter(filters.accessType, EVENT_ACCESS_TYPES, '收费类型'),
+      priceMinCents,
+      priceMaxCents,
+    },
+    sort,
+    pageLimit: limit(source.limit),
+    cursor,
+  }
+}
+
+function normalizeEventSort(value) {
+  if (value === null || value === undefined) {
+    return { field: EVENT_SORT_FIELD, direction: 'ASC' }
+  }
+  const source = normalizeFilters(value)
+  if (source.field !== EVENT_SORT_FIELD || !['ASC', 'DESC'].includes(source.direction)) {
+    throw new AdminError('VALIDATION_FAILED', '活动排序无效')
+  }
+  return { field: EVENT_SORT_FIELD, direction: source.direction }
+}
+
+function moneyFilter(value, label) {
+  if (value === null || value === undefined || value === '') return null
+  const amount = Number(value)
+  if (!Number.isSafeInteger(amount) || amount < 0 || amount > 4_294_967_295) {
+    throw new AdminError('VALIDATION_FAILED', `${label}无效`)
+  }
+  return amount
 }
 
 function normalizeRosterFilters(value) {

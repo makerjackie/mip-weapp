@@ -1,7 +1,19 @@
 <view id="admin-managed-events-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
   <mip-admin-workspace-nav />
   <view class="flex items-center justify-between"><view><view class="text-[length:40rpx] font-bold">活动管理</view><view class="mt-1 text-[length:24rpx] text-muted">查看和处理全部授权活动</view></view><t-button wx:if="{{canCreate}}" size="small" theme="primary" bind:tap="createEvent">新建活动</t-button></view><view class="mt-3"><t-button block variant="outline" bind:tap="openParticipants">活动参与者</t-button></view>
-  <view class="mip-admin-filter-grid mt-5 grid gap-3 rounded-[16rpx] bg-panel p-3"><view class="mip-admin-filter-wide"><t-input value="{{query}}" placeholder="搜索活动名称" bind:change="updateQuery" bind:enter="search" /></view><view class="mip-admin-filter-wide flex flex-wrap gap-1" role="radiogroup"><view class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{status === ''}}"><t-tag variant="outline" theme="{{status === '' ? 'primary' : 'default'}}" data-value="" bind:tap="changeStatus">全部</t-tag></view><view class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{status === 'PUBLISHED'}}"><t-tag variant="outline" theme="{{status === 'PUBLISHED' ? 'primary' : 'default'}}" data-value="PUBLISHED" bind:tap="changeStatus">已发布</t-tag></view><view class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{status === 'DRAFT'}}"><t-tag variant="outline" theme="{{status === 'DRAFT' ? 'primary' : 'default'}}" data-value="DRAFT" bind:tap="changeStatus">草稿</t-tag></view><view class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{status === 'UNPUBLISHED'}}"><t-tag variant="outline" theme="{{status === 'UNPUBLISHED' ? 'primary' : 'default'}}" data-value="UNPUBLISHED" bind:tap="changeStatus">已下架</t-tag></view><view class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{status === 'ARCHIVED'}}"><t-tag variant="outline" theme="{{status === 'ARCHIVED' ? 'primary' : 'default'}}" data-value="ARCHIVED" bind:tap="changeStatus">已归档</t-tag></view></view></view>
+  <view class="mip-admin-filter-grid mt-5 grid gap-3 rounded-[16rpx] bg-panel p-3">
+    <view class="mip-admin-filter-wide"><t-input class="box-border max-w-full" value="{{query}}" placeholder="搜索活动名称" bind:change="updateQuery" bind:enter="search" /></view>
+    <t-input class="box-border max-w-full" value="{{cityOrBranch}}" placeholder="城市或分会" data-field="cityOrBranch" bind:change="updateTextFilter" />
+    <picker range="{{eventTypeOptions}}" range-key="label" value="{{eventTypeIndex}}" bindchange="changeEventType"><view class="box-border min-h-[88rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]"><view class="text-muted">活动类型</view><view class="mt-1">{{eventTypeOptions[eventTypeIndex].label}}</view></view></picker>
+    <picker mode="date" value="{{startsFromDate}}" data-field="startsFromDate" bindchange="changeStartsDate"><view class="box-border min-h-[88rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]"><view class="text-muted">开始日期起</view><view class="mt-1">{{startsFromDate || '不限'}}</view></view></picker>
+    <picker mode="date" value="{{startsToDate}}" data-field="startsToDate" bindchange="changeStartsDate"><view class="box-border min-h-[88rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]"><view class="text-muted">开始日期止</view><view class="mt-1">{{startsToDate || '不限'}}</view></view></picker>
+    <picker range="{{accessTypeOptions}}" range-key="label" value="{{accessTypeIndex}}" bindchange="changeAccessType"><view class="box-border min-h-[88rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]"><view class="text-muted">收费类型</view><view class="mt-1">{{accessTypeOptions[accessTypeIndex].label}}</view></view></picker>
+    <picker range="{{sortOptions}}" range-key="label" value="{{sortIndex}}" bindchange="changeSort"><view class="box-border min-h-[88rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]"><view class="text-muted">排序</view><view class="mt-1">{{sortOptions[sortIndex].label}}</view></view></picker>
+    <t-input class="box-border max-w-full" type="digit" value="{{priceMinYuan}}" placeholder="最低价格（元）" data-field="priceMinYuan" bind:change="updateTextFilter" />
+    <t-input class="box-border max-w-full" type="digit" value="{{priceMaxYuan}}" placeholder="最高价格（元）" data-field="priceMaxYuan" bind:change="updateTextFilter" />
+    <view class="mip-admin-span-wide flex flex-wrap gap-1" role="radiogroup" aria-label="活动状态"><view wx:for="{{statuses}}" wx:key="value" class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{status === item.value}}"><t-tag variant="outline" theme="{{status === item.value ? 'primary' : 'default'}}" data-value="{{item.value}}" bind:tap="changeStatus">{{item.label}}</t-tag></view></view>
+    <view class="mip-admin-filter-actions mip-admin-span-wide"><view class="min-w-0"><t-button block variant="outline" bind:tap="clearFilters">清除筛选</t-button></view><view class="min-w-0"><t-button block theme="primary" bind:tap="search">查询</t-button></view></view>
+  </view>
   <view wx:if="{{state === 'ready' && canManagePolicy}}" class="mt-4 rounded-[16rpx] bg-panel px-4 py-4">
     <view class="text-[length:27rpx] font-semibold">默认取消报名时间</view>
     <view class="mt-1 text-[length:22rpx] text-muted">活动未单独设置时，参与者可在开始前指定小时数之前取消。0 表示开始前均可取消。</view>
@@ -20,11 +32,14 @@
       <view class="mip-admin-record-cell">
         <view class="mip-admin-record-label">活动</view>
         <view class="text-[length:29rpx] font-semibold">{{item.title}}</view>
+        <view class="mt-2 text-[length:22rpx] text-muted">类型：{{item.eventTypeText}}</view>
+        <view class="mt-1 text-[length:22rpx] text-muted">{{item.accessTypeText}} · {{item.priceText}}</view>
       </view>
       <view class="mip-admin-record-cell">
         <view class="mip-admin-record-label">时间与城市</view>
         <view class="text-[length:23rpx] text-muted">{{item.startsText}}</view>
         <view class="mt-1 text-[length:23rpx] text-muted">{{item.cityName || '未设置城市'}}</view>
+        <view class="mt-1 text-[length:23rpx] text-muted">{{item.branchName || '平台活动'}}</view>
       </view>
       <view class="mip-admin-record-cell">
         <view class="mip-admin-record-label">报名与签到</view>

@@ -65,6 +65,52 @@ describe('MIP admin event contract', () => {
     expect(view).toContain('cancellationHoursBeforeStart')
   })
 
+  it('keeps event list filters, price DTO, and sort-bound cursor behavior end to end', () => {
+    const types = read('src/modules/mip-admin/types.ts')
+    const service = read('cloudfunctions/mip-admin-api/domain/events.js')
+    const repository = read('cloudfunctions/mip-admin-api/domain/repositories/events.js')
+    const source = read('src/packages/admin/managed-events/index.ts')
+    const view = read('src/packages/admin/managed-events/index.wxml')
+
+    for (const field of [
+      'startsFrom',
+      'startsTo',
+      'cityOrBranch',
+      'eventTypeKey',
+      'accessType',
+      'priceMinCents',
+      'priceMaxCents',
+    ]) {
+      expect(types).toContain(`${field}?:`)
+    }
+    expect(types).toContain('field: \'startsAt\'')
+    expect(types).toContain('direction: AdminEventSortDirection')
+    expect(types).toContain('eventTypeKey: string')
+    expect(types).toContain('priceCents: number')
+    expect(service).toContain('decodeCursor(source.cursor, [\'startsAt\', \'id\', \'sortField\', \'sortDirection\'])')
+    expect(service).toContain('cursor.sortDirection !== sort.direction')
+    expect(repository).toMatch(/ORDER BY e\.starts_at \$\{direction\}, e\.id \$\{direction\}/)
+    expect(repository).toContain('e.event_type_key = ?')
+    expect(repository).toContain('e.price_cents >= ?')
+    expect(source).toContain('sortDirection: \'ASC\' as AdminEventSortDirection')
+    expect(source).toContain('sort: { field: \'startsAt\', direction: this.data.sortDirection }')
+    expect(source).toContain('clearFilters()')
+    for (const label of [
+      '城市或分会',
+      '活动类型',
+      '开始日期起',
+      '开始日期止',
+      '收费类型',
+      '最低价格（元）',
+      '最高价格（元）',
+      '清除筛选',
+    ]) {
+      expect(view).toContain(label)
+    }
+    expect(view).toContain('{{item.eventTypeText}}')
+    expect(view).toContain('{{item.priceText}}')
+  })
+
   it('supports ordered event description image upload and preview', () => {
     const source = read('src/packages/admin/events/index.ts')
     const view = read('src/packages/admin/events/index.wxml')

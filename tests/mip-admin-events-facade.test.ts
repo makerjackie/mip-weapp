@@ -2,6 +2,7 @@ import type { MipEventsAdmin } from '../src/modules/mip-admin/events-admin'
 import type {
   AdminEventAlbumPhoto,
   AdminEventDetail,
+  AdminEventListInput,
   AdminRosterAllItem,
   AdminRosterItem,
   MipAdminGateway,
@@ -183,8 +184,20 @@ function createHarness() {
   return { module: createMipAdminModule(gateway), spies }
 }
 
-const eventListInput = {
-  filters: { query: '交流', status: 'PUBLISHED', branchId: 'branch-a' },
+const eventListInput: AdminEventListInput = {
+  filters: {
+    query: '交流',
+    status: 'PUBLISHED',
+    startsFrom: '2030-08-01T00:00:00.000Z',
+    startsTo: '2030-08-31T23:59:59.999Z',
+    cityOrBranch: '深圳分会',
+    branchId: 'branch-a',
+    eventTypeKey: 'networking',
+    accessType: 'FREE',
+    priceMinCents: 0,
+    priceMaxCents: 5000,
+  },
+  sort: { field: 'startsAt', direction: 'ASC' },
   cursor: 'event-cursor-a',
   limit: 25,
 }

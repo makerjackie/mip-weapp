@@ -230,6 +230,33 @@ export interface AdminUserDetail extends AdminUser {
   }
 }
 
+export type AdminEventStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'CANCELLED' | 'ENDED' | 'ARCHIVED'
+export type AdminEventAccessType = 'FREE' | 'MEMBER_INCLUDED' | 'PAID'
+export type AdminEventSortDirection = 'ASC' | 'DESC'
+
+export interface AdminEventListFilters {
+  query?: string
+  status?: AdminEventStatus | ''
+  startsFrom?: string
+  startsTo?: string
+  cityOrBranch?: string
+  branchId?: string
+  eventTypeKey?: string
+  accessType?: AdminEventAccessType | ''
+  priceMinCents?: number
+  priceMaxCents?: number
+}
+
+export interface AdminEventListInput {
+  filters?: AdminEventListFilters
+  sort?: {
+    field: 'startsAt'
+    direction: AdminEventSortDirection
+  }
+  cursor?: string
+  limit?: number
+}
+
 export interface AdminEvent {
   id: string
   title: string
@@ -237,12 +264,14 @@ export interface AdminEvent {
   scopeType: AdminScopeType
   branchId: string | null
   branchName: string
-  status: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'CANCELLED' | 'ENDED' | 'ARCHIVED'
+  status: AdminEventStatus
   contentSafetyStatus: 'PENDING' | 'PASSED' | 'REJECTED' | 'ERROR'
   startsAt: string
   endsAt: string
   cityName: string
-  accessType: 'FREE' | 'MEMBER_INCLUDED' | 'PAID'
+  eventTypeKey: string
+  accessType: AdminEventAccessType
+  priceCents: number
   registrationPolicy: 'AUTO' | 'APPROVAL'
   albumEnabled: boolean
   albumSubmissionPolicy: 'AUTO' | 'REVIEW'
@@ -886,7 +915,7 @@ export interface MipAdminGateway {
   getExportStatus: (ticketId: string, token: string) => Promise<AdminExportStatus>
   reserveExport: (ticketId: string, token: string) => Promise<AdminExportReservation>
   completeExport: (ticketId: string, token: string) => Promise<{ status: 'CONSUMED', consumedAt: string }>
-  listEvents: (input?: Record<string, unknown>) => Promise<AdminPage<AdminEvent>>
+  listEvents: (input?: AdminEventListInput) => Promise<AdminPage<AdminEvent>>
   getEventPolicy: () => Promise<AdminEventPolicy>
   saveEventPolicy: (input: AdminEventPolicy) => Promise<AdminEventPolicy>
   getEvent: (eventId: string) => Promise<AdminEventDetail>

@@ -161,7 +161,9 @@ describe('admin event repository module', () => {
           starts_at: startsAt,
           ends_at: new Date('2030-08-26T12:00:00.000Z'),
           city_name: '广州',
-          access_type: 'FREE',
+          event_type_key: 'workshop',
+          access_type: 'PAID',
+          price_cents: 2500,
           registration_policy: 'AUTO',
           album_enabled: 1,
           album_submission_policy: 'REVIEW',
@@ -181,14 +183,56 @@ describe('admin event repository module', () => {
     const page = await adapter.listEvents(
       APP_ID,
       { platform: false, branchIds: ['branch-a'], eventIds: [] },
-      { status: 'PUBLISHED', query: '交流_%' },
+      {
+        status: 'PUBLISHED',
+        query: '交流_%',
+        startsFrom: '2030-08-01 00:00:00.000',
+        startsTo: '2030-08-31 23:59:59.999',
+        branchId: 'branch-a',
+        cityOrBranch: '广州_%',
+        eventTypeKey: 'workshop',
+        accessType: 'PAID',
+        priceMinCents: 1000,
+        priceMaxCents: 3000,
+      },
+      { field: 'startsAt', direction: 'ASC' },
       20,
+      {
+        startsAt: '2030-08-25T10:00:00.000Z',
+        id: 'event-before',
+        sortField: 'startsAt',
+        sortDirection: 'ASC',
+      },
     )
 
     assert.match(captured.sql, /e\.branch_id IN \(\?\)/)
     assert.match(captured.sql, /SUM\(CASE WHEN r\.status IN \('REGISTERED', 'CANCELLATION_PENDING', 'ATTENDED'\)/)
-    assert.match(captured.sql, /ORDER BY e\.starts_at DESC, e\.id DESC LIMIT \?/)
-    assert.deepEqual(captured.params, [APP_ID, 'branch-a', 'PUBLISHED', '%交流\\_\\%%', 21])
+    assert.match(captured.sql, /e\.starts_at >= \?/)
+    assert.match(captured.sql, /\(e\.city_name LIKE \? ESCAPE '\\\\' OR b\.name LIKE \? ESCAPE '\\\\'\)/)
+    assert.match(captured.sql, /e\.event_type_key = \?/)
+    assert.match(captured.sql, /e\.price_cents >= \?/)
+    assert.match(captured.sql, /\(e\.starts_at > \? OR \(e\.starts_at = \? AND e\.id > \?\)\)/)
+    assert.match(captured.sql, /GROUP BY[\s\S]*e\.event_type_key,[\s\S]*e\.price_cents/)
+    assert.match(captured.sql, /ORDER BY e\.starts_at ASC, e\.id ASC LIMIT \?/)
+    assert.deepEqual(captured.params, [
+      APP_ID,
+      'branch-a',
+      'PUBLISHED',
+      '%交流\\_\\%%',
+      '2030-08-01 00:00:00.000',
+      '2030-08-31 23:59:59.999',
+      'branch-a',
+      '%广州\\_\\%%',
+      '%广州\\_\\%%',
+      'workshop',
+      'PAID',
+      1000,
+      3000,
+      '2030-08-25T10:00:00.000Z',
+      '2030-08-25T10:00:00.000Z',
+      'event-before',
+      21,
+    ])
     assert.deepEqual(page, {
       items: [{
         id: EVENT_ID,
@@ -202,7 +246,9 @@ describe('admin event repository module', () => {
         startsAt: startsAt.toISOString(),
         endsAt: '2030-08-26T12:00:00.000Z',
         cityName: '广州',
-        accessType: 'FREE',
+        eventTypeKey: 'workshop',
+        accessType: 'PAID',
+        priceCents: 2500,
         registrationPolicy: 'AUTO',
         albumEnabled: true,
         albumSubmissionPolicy: 'REVIEW',
@@ -213,6 +259,30 @@ describe('admin event repository module', () => {
       }],
       nextCursor: null,
     })
+
+    await adapter.listEvents(
+      APP_ID,
+      { platform: false, branchIds: ['branch-a'], eventIds: [] },
+      { priceMinCents: null, priceMaxCents: null },
+      { field: 'startsAt', direction: 'DESC' },
+      20,
+      {
+        startsAt: '2030-09-01T10:00:00.000Z',
+        id: 'event-after',
+        sortField: 'startsAt',
+        sortDirection: 'DESC',
+      },
+    )
+    assert.match(captured.sql, /\(e\.starts_at < \? OR \(e\.starts_at = \? AND e\.id < \?\)\)/)
+    assert.match(captured.sql, /ORDER BY e\.starts_at DESC, e\.id DESC LIMIT \?/)
+    assert.deepEqual(captured.params, [
+      APP_ID,
+      'branch-a',
+      '2030-09-01T10:00:00.000Z',
+      '2030-09-01T10:00:00.000Z',
+      'event-after',
+      21,
+    ])
   })
 
   it('checks a newly selected cover against the operator inside the save transaction', async () => {

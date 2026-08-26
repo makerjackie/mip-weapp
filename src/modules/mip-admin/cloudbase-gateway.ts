@@ -3,6 +3,7 @@ import type {
   AdminBranch,
   AdminCapability,
   AdminCommunityReport,
+  AdminEvent,
   AdminEventAlbumPhoto,
   AdminEventAlbumPhotoStatus,
   AdminEventCloneResult,
@@ -64,6 +65,9 @@ const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}
 const communityReportCategories = new Set(['SPAM', 'HARASSMENT', 'FRAUD', 'INAPPROPRIATE_CONTENT', 'IMPERSONATION', 'OTHER'])
 const communityReportStatuses = new Set(['PENDING', 'REVIEWING', 'RESOLVED', 'DISMISSED'])
 const eventAlbumPhotoStatuses = new Set(['PENDING', 'PUBLISHED', 'REJECTED'])
+const eventStatuses = new Set(['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'CANCELLED', 'ENDED', 'ARCHIVED'])
+const eventAccessTypes = new Set(['FREE', 'MEMBER_INCLUDED', 'PAID'])
+const eventContentSafetyStatuses = new Set(['PENDING', 'PASSED', 'REJECTED', 'ERROR'])
 const adminRoleKeys = new Set([
   'PLATFORM_OWNER',
   'PLATFORM_OPERATIONS',
@@ -118,8 +122,105 @@ function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
 
+function hasOnlyKeys(value: Record<string, unknown>, keys: string[]) {
+  const allowed = new Set(keys)
+  return Object.keys(value).every(key => allowed.has(key))
+}
+
 function invalidEventCommentResponse(): never {
   throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的活动评论数据')
+}
+
+function invalidEventListResponse(): never {
+  throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的活动列表')
+}
+
+function parseAdminEvent(value: unknown): AdminEvent {
+  const keys = [
+    'id',
+    'title',
+    'summary',
+    'scopeType',
+    'branchId',
+    'branchName',
+    'status',
+    'contentSafetyStatus',
+    'startsAt',
+    'endsAt',
+    'cityName',
+    'eventTypeKey',
+    'accessType',
+    'priceCents',
+    'registrationPolicy',
+    'albumEnabled',
+    'albumSubmissionPolicy',
+    'capacity',
+    'registrationCount',
+    'attendedCount',
+    'version',
+  ]
+  if (!record(value)
+    || !hasOnlyKeys(value, keys)
+    || typeof value.id !== 'string'
+    || !/^[\w-]{1,36}$/.test(value.id)
+    || typeof value.title !== 'string'
+    || value.title.length < 1
+    || value.title.length > 120
+    || typeof value.summary !== 'string'
+    || value.summary.length > 300
+    || !['PLATFORM', 'BRANCH'].includes(String(value.scopeType))
+    || !(value.branchId === null
+      || (typeof value.branchId === 'string' && /^[\w-]{1,36}$/.test(value.branchId)))
+    || typeof value.branchName !== 'string'
+    || value.branchName.length > 80
+    || !eventStatuses.has(String(value.status))
+    || !eventContentSafetyStatuses.has(String(value.contentSafetyStatus))
+    || typeof value.startsAt !== 'string'
+    || !Number.isFinite(Date.parse(value.startsAt))
+    || typeof value.endsAt !== 'string'
+    || !Number.isFinite(Date.parse(value.endsAt))
+    || typeof value.cityName !== 'string'
+    || value.cityName.length > 80
+    || typeof value.eventTypeKey !== 'string'
+    || !/^[\w.:-]{1,64}$/.test(value.eventTypeKey)
+    || !eventAccessTypes.has(String(value.accessType))
+    || !Number.isSafeInteger(value.priceCents)
+    || Number(value.priceCents) < 0
+    || !['AUTO', 'APPROVAL'].includes(String(value.registrationPolicy))
+    || typeof value.albumEnabled !== 'boolean'
+    || !['AUTO', 'REVIEW'].includes(String(value.albumSubmissionPolicy))
+    || !(value.capacity === null || (Number.isInteger(value.capacity) && Number(value.capacity) > 0))
+    || !Number.isInteger(value.registrationCount)
+    || Number(value.registrationCount) < 0
+    || !Number.isInteger(value.attendedCount)
+    || Number(value.attendedCount) < 0
+    || !Number.isInteger(value.version)
+    || Number(value.version) < 1) {
+    invalidEventListResponse()
+  }
+  if ((value.scopeType === 'PLATFORM' && value.branchId !== null)
+    || (value.scopeType === 'BRANCH' && value.branchId === null)
+    || Date.parse(value.endsAt as string) <= Date.parse(value.startsAt as string)
+    || Number(value.attendedCount) > Number(value.registrationCount)
+    || (value.accessType === 'PAID' && Number(value.priceCents) < 1)
+    || (value.accessType !== 'PAID' && Number(value.priceCents) !== 0)) {
+    invalidEventListResponse()
+  }
+  return value as unknown as AdminEvent
+}
+
+function parseAdminEventPage(value: unknown) {
+  if (!record(value)
+    || !hasOnlyKeys(value, ['items', 'nextCursor'])
+    || !Array.isArray(value.items)
+    || !(value.nextCursor === null
+      || (typeof value.nextCursor === 'string' && value.nextCursor.length <= 512))) {
+    invalidEventListResponse()
+  }
+  return {
+    items: value.items.map(parseAdminEvent),
+    nextCursor: value.nextCursor as string | null,
+  }
 }
 
 function parseEventPolicy(value: unknown): AdminEventPolicy {
@@ -136,11 +237,6 @@ function parseEventPolicy(value: unknown): AdminEventPolicy {
     throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的活动规则')
   }
   return { cancellationHoursBeforeStart, version }
-}
-
-function hasOnlyKeys(value: Record<string, unknown>, keys: string[]) {
-  const allowed = new Set(keys)
-  return Object.keys(value).every(key => allowed.has(key))
 }
 
 function parseExportTicket(value: unknown): AdminExportTicket {
@@ -618,7 +714,9 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
       }
       return { status: 'CONSUMED' as const, consumedAt: value.consumedAt }
     },
-    listEvents: input => call('mip.admin.events.list', input || {}),
+    listEvents: async input => parseAdminEventPage(
+      await call('mip.admin.events.list', { ...(input || {}) }),
+    ),
     getEventPolicy: async () => parseEventPolicy(await call('mip.admin.events.policy.get')),
     saveEventPolicy: async input => parseEventPolicy(await call('mip.admin.events.policy.save', {
       cancellationHoursBeforeStart: input.cancellationHoursBeforeStart,

@@ -102,6 +102,15 @@ function createAdminEventRepository(database, dependencies) {
     return `MIPR${compact}`
   }
 
+  function eventCursorPredicate(cursor, direction) {
+    if (!cursor) return { sql: '', params: [] }
+    const operator = direction === 'DESC' ? '<' : '>'
+    return {
+      sql: ` AND (e.starts_at ${operator} ? OR (e.starts_at = ? AND e.id ${operator} ?))`,
+      params: [cursor.startsAt, cursor.startsAt, cursor.id],
+    }
+  }
+
   function shiftedCloneDates(source, currentTime) {
     const weekMs = 7 * 24 * 60 * 60 * 1000
     const sourceStart = new Date(source.starts_at)
@@ -225,7 +234,7 @@ function createAdminEventRepository(database, dependencies) {
     } : null
   }
 
-  async function listEvents(appId, visibility, filters, pageLimit, cursor = null) {
+  async function listEvents(appId, visibility, filters, sort, pageLimit, cursor = null) {
     const visible = visibleEventsWhere(visibility)
     const clauses = ['e.app_id = ?', visible.sql]
     const params = [appId, ...visible.params]
@@ -237,12 +246,46 @@ function createAdminEventRepository(database, dependencies) {
       clauses.push('e.title LIKE ? ESCAPE \'\\\\\'')
       params.push(`%${escapeLike(filters.query)}%`)
     }
-    const cursorWhere = cursorPredicateFor('e.starts_at', cursor, 'startsAt', 'e.id')
+    if (filters.startsFrom) {
+      clauses.push('e.starts_at >= ?')
+      params.push(filters.startsFrom)
+    }
+    if (filters.startsTo) {
+      clauses.push('e.starts_at <= ?')
+      params.push(filters.startsTo)
+    }
+    if (filters.branchId) {
+      clauses.push('e.branch_id = ?')
+      params.push(filters.branchId)
+    }
+    if (filters.cityOrBranch) {
+      const location = `%${escapeLike(filters.cityOrBranch)}%`
+      clauses.push('(e.city_name LIKE ? ESCAPE \'\\\\\' OR b.name LIKE ? ESCAPE \'\\\\\')')
+      params.push(location, location)
+    }
+    if (filters.eventTypeKey) {
+      clauses.push('e.event_type_key = ?')
+      params.push(filters.eventTypeKey)
+    }
+    if (filters.accessType) {
+      clauses.push('e.access_type = ?')
+      params.push(filters.accessType)
+    }
+    if (filters.priceMinCents !== null) {
+      clauses.push('e.price_cents >= ?')
+      params.push(filters.priceMinCents)
+    }
+    if (filters.priceMaxCents !== null) {
+      clauses.push('e.price_cents <= ?')
+      params.push(filters.priceMaxCents)
+    }
+    const direction = sort.direction === 'DESC' ? 'DESC' : 'ASC'
+    const cursorWhere = eventCursorPredicate(cursor, direction)
     const rows = await database.query(
       `SELECT e.id, e.title, e.summary, e.scope_type, e.branch_id, b.name AS branch_name,
         e.status, e.content_safety_status, e.starts_at, e.ends_at, e.city_name,
-        e.access_type, e.registration_policy, e.album_enabled, e.album_submission_policy,
-        e.capacity, e.version,
+        e.event_type_key, e.access_type, e.price_cents, e.registration_policy,
+        e.album_enabled, e.album_submission_policy, e.capacity, e.version,
         SUM(CASE WHEN r.status IN ('REGISTERED', 'CANCELLATION_PENDING', 'ATTENDED')
           THEN 1 ELSE 0 END) AS registration_count,
         SUM(CASE WHEN r.status = 'ATTENDED' THEN 1 ELSE 0 END) AS attended_count
@@ -251,9 +294,10 @@ function createAdminEventRepository(database, dependencies) {
        LEFT JOIN mip_event_registrations r ON r.app_id = e.app_id AND r.event_id = e.id
        WHERE ${clauses.join(' AND ')}${cursorWhere.sql}
        GROUP BY e.id, e.title, e.summary, e.scope_type, e.branch_id, b.name, e.status,
-        e.content_safety_status, e.starts_at, e.ends_at, e.city_name, e.access_type,
-        e.registration_policy, e.album_enabled, e.album_submission_policy, e.capacity, e.version
-       ORDER BY e.starts_at DESC, e.id DESC LIMIT ?`,
+        e.content_safety_status, e.starts_at, e.ends_at, e.city_name, e.event_type_key,
+        e.access_type, e.price_cents, e.registration_policy, e.album_enabled,
+        e.album_submission_policy, e.capacity, e.version
+       ORDER BY e.starts_at ${direction}, e.id ${direction} LIMIT ?`,
       [...params, ...cursorWhere.params, pageLimit + 1],
     )
     const items = rows.map(row => ({
@@ -268,7 +312,9 @@ function createAdminEventRepository(database, dependencies) {
       startsAt: iso(row.starts_at),
       endsAt: iso(row.ends_at),
       cityName: row.city_name || '',
+      eventTypeKey: row.event_type_key,
       accessType: row.access_type,
+      priceCents: Number(row.price_cents || 0),
       registrationPolicy: row.registration_policy,
       albumEnabled: Number(row.album_enabled) === 1,
       albumSubmissionPolicy: row.album_submission_policy,
@@ -277,7 +323,12 @@ function createAdminEventRepository(database, dependencies) {
       attendedCount: Number(row.attended_count || 0),
       version: Number(row.version),
     }))
-    return pageRows(items, pageLimit, row => ({ startsAt: row.startsAt, id: row.id }))
+    return pageRows(items, pageLimit, row => ({
+      startsAt: row.startsAt,
+      id: row.id,
+      sortField: 'startsAt',
+      sortDirection: direction,
+    }))
   }
 
   async function getEvent(appId, eventId) {
