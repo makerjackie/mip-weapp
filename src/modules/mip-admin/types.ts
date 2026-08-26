@@ -45,6 +45,10 @@ import type {
   AdminOpportunityCommentSettings,
   AdminOpportunityCommentState,
 } from './opportunity-comments'
+import type {
+  AdminUserInfluenceListInput,
+  AdminUserInfluencePage,
+} from './user-influence'
 
 export type AdminScopeType = 'PLATFORM' | 'BRANCH' | 'EVENT'
 export type AdminRoleKey
@@ -928,6 +932,7 @@ export interface MipAdminGateway {
   closeCommunityReport: (input: AdminCommunityReportCloseInput) => Promise<AdminCommunityReport>
   listUsers: (input?: Record<string, unknown>) => Promise<AdminPage<AdminUser>>
   getUser: (userId: string, includePhone?: boolean) => Promise<AdminUserDetail>
+  listUserInfluence: (input: AdminUserInfluenceListInput) => Promise<AdminUserInfluencePage>
   updateUser: (input: Record<string, unknown>) => Promise<{ userId: string, version: number }>
   changeUserPrimaryBranch: (input: AdminUserPrimaryBranchChangeInput) => Promise<AdminUserPrimaryBranchChangeResult>
   setUserControl: (input: Record<string, unknown>) => Promise<{ userId: string, controlType: string, active: boolean }>

@@ -113,6 +113,7 @@ describe('admin user repository module', () => {
       'getUserDetail',
       'getUserScope',
       'listPrimaryBranchOptions',
+      'listUserInfluence',
       'listUsers',
       'setUserControl',
       'updateUserFields',

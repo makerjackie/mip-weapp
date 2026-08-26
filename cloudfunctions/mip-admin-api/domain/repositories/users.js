@@ -1,6 +1,7 @@
 'use strict'
 
 const { cursorPredicateFor, pageRows } = require('../pagination')
+const { createUserInfluenceRepository } = require('./user-influence')
 
 function createAdminUserRepository(database, options) {
   const assertMutationScope = options.assertMutationScope
@@ -10,6 +11,10 @@ function createAdminUserRepository(database, options) {
   const { codeError, escapeLike, iso, json } = options.repositorySupport
   const visibleBranchesWhere = options.visibleBranchesWhere
   const writeAudit = options.writeAudit
+  const { listUserInfluence } = createUserInfluenceRepository(database, {
+    iso,
+    json,
+  })
 
   async function listUsers(appId, visibility, filters, pageLimit, cursor = null) {
     const access = visibleBranchesWhere(visibility)
@@ -471,6 +476,7 @@ function createAdminUserRepository(database, options) {
     getUserDetail,
     getUserScope,
     listPrimaryBranchOptions,
+    listUserInfluence,
     listUsers,
     setUserControl,
     updateUserFields,

@@ -20,6 +20,7 @@ const adminMocks = vi.hoisted(() => {
     getSession: vi.fn(),
     listUsers: vi.fn(),
     getUser: vi.fn(),
+    listInfluence: vi.fn(),
     changePrimaryBranch: vi.fn(),
     listBranches: vi.fn(),
     clearSensitive: vi.fn(),
@@ -40,6 +41,7 @@ vi.mock('../src/modules/mip-admin', () => ({
     users: {
       list: adminMocks.listUsers,
       get: adminMocks.getUser,
+      listInfluence: adminMocks.listInfluence,
       update: vi.fn(),
       changePrimaryBranch: adminMocks.changePrimaryBranch,
       setControl: vi.fn(),
@@ -125,6 +127,11 @@ beforeEach(() => {
   }
   showToast.mockClear()
   adminMocks.listUsers.mockResolvedValue({ items: [], nextCursor: null })
+  adminMocks.listInfluence.mockResolvedValue({
+    items: [],
+    nextCursor: null,
+    unavailableFacts: [],
+  })
 })
 
 describe('MIP admin user primary branch contract', () => {
@@ -273,6 +280,127 @@ describe('MIP admin user primary branch contract', () => {
     expect(editor).toBeLessThan(panelEnd)
     expect(template).toContain('maxlength="300"')
     expect(template).toContain('bind:tap="changePrimaryBranch"')
+    expect(panelStyle).toContain('@media (min-width: 960px)')
+    expect(panelStyle).toContain('width: 100vw')
+  })
+
+  it('loads exact influence facts with filters and appends the next cursor page', async () => {
+    const page = createPage({
+      detailOpen: true,
+      detail: { id: 'user-a' },
+      influenceKind: 'HEART',
+      influenceDirection: 'INCOMING',
+      influenceFromDate: '2026-08-01',
+      influenceToDate: '2026-08-31',
+    })
+    adminMocks.listInfluence.mockResolvedValueOnce({
+      items: [{
+        reference: `if1.${'a'.repeat(22)}`,
+        kind: 'HEART',
+        direction: 'INCOMING',
+        status: 'ACTIVE',
+        occurredAt: '2026-08-25T08:30:00.000Z',
+        eventTitle: '城市聚会',
+        counterpartNickname: '林然',
+        counterpartKind: 'PLAYER',
+        counterpartState: 'AVAILABLE',
+        sourceType: null,
+      }],
+      nextCursor: 'cursor-b',
+      unavailableFacts: ['CANCELLED_INCOMING_HEART'],
+    })
+
+    await callPage(page, 'loadUserInfluence', 'user-a', true)
+
+    expect(adminMocks.listInfluence).toHaveBeenNthCalledWith(1, {
+      userId: 'user-a',
+      kind: 'HEART',
+      direction: 'INCOMING',
+      occurredFrom: new Date(2026, 7, 1, 0, 0, 0, 0).toISOString(),
+      occurredTo: new Date(2026, 7, 31, 23, 59, 59, 999).toISOString(),
+      limit: 10,
+    }, true)
+    expect(page.data.influenceState).toBe('ready')
+    expect(page.data.influenceNextCursor).toBe('cursor-b')
+    expect(page.data.influenceUnavailableMessage).toContain('已取消的入向心动')
+    expect(page.data.influenceItems).toEqual([
+      expect.objectContaining({
+        reference: `if1.${'a'.repeat(22)}`,
+        kindText: '心动关系',
+        directionText: '对该用户发起',
+        statusText: '有效',
+        counterpartText: '林然',
+        counterpartMetaText: '玩家',
+      }),
+    ])
+
+    adminMocks.listInfluence.mockResolvedValueOnce({
+      items: [{
+        reference: `if1.${'b'.repeat(22)}`,
+        kind: 'HEART',
+        direction: 'INCOMING',
+        status: 'ACTIVE',
+        occurredAt: '2026-08-24T08:30:00.000Z',
+        eventTitle: '行业交流',
+        counterpartNickname: 'MIP 用户',
+        counterpartKind: 'GUEST',
+        counterpartState: 'REDACTED',
+        sourceType: null,
+      }],
+      nextCursor: null,
+      unavailableFacts: ['CANCELLED_INCOMING_HEART'],
+    })
+
+    await callPage(page, 'loadUserInfluence', 'user-a', false)
+
+    expect(adminMocks.listInfluence).toHaveBeenNthCalledWith(2, {
+      userId: 'user-a',
+      kind: 'HEART',
+      direction: 'INCOMING',
+      occurredFrom: new Date(2026, 7, 1, 0, 0, 0, 0).toISOString(),
+      occurredTo: new Date(2026, 7, 31, 23, 59, 59, 999).toISOString(),
+      cursor: 'cursor-b',
+      limit: 10,
+    }, false)
+    expect(page.data.influenceItems).toHaveLength(2)
+    expect(page.data.influenceNextCursor).toBeNull()
+  })
+
+  it('shows a local error for an invalid influence date range without issuing a read', async () => {
+    const page = createPage({
+      detailOpen: true,
+      detail: { id: 'user-a' },
+      influenceFromDate: '2026-09-01',
+      influenceToDate: '2026-08-01',
+    })
+
+    await callPage(page, 'loadUserInfluence', 'user-a', true)
+
+    expect(adminMocks.listInfluence).not.toHaveBeenCalled()
+    expect(page.data.influenceState).toBe('error')
+    expect(page.data.influenceMessage).toBe('开始日期不能晚于结束日期。')
+  })
+
+  it('keeps influence filters, explicit empty state, and pagination inside the 375/960 shell', () => {
+    const root = path.resolve(import.meta.dirname, '..')
+    const template = fs.readFileSync(path.join(root, 'src/packages/admin/profiles/index.wxml'), 'utf8')
+    const panelStyle = fs.readFileSync(
+      path.join(root, 'src/packages/admin/components/responsive-panel/index.wxss'),
+      'utf8',
+    )
+    const panelStart = template.indexOf('<mip-admin-responsive-panel')
+    const influence = template.indexOf('影响力明细')
+    const panelEnd = template.indexOf('</mip-admin-responsive-panel>')
+
+    expect(influence).toBeGreaterThan(panelStart)
+    expect(influence).toBeLessThan(panelEnd)
+    expect(template).toContain('aria-label="影响力类型"')
+    expect(template).toContain('aria-label="影响力方向"')
+    expect(template).toMatch(/<view class="flex min-h-\[88rpx\] items-center"[^>]*data-field="influenceKind"[^>]*bind:tap="chooseInfluenceFilter"><t-tag/)
+    expect(template).not.toMatch(/<t-tag[^>]*bind:tap="chooseInfluenceFilter"/)
+    expect(template).toContain('bindchange="changeInfluenceDate"')
+    expect(template).toContain('title="{{influenceEmptyTitle}}"')
+    expect(template).toContain('bind:tap="loadMoreInfluence"')
     expect(panelStyle).toContain('@media (min-width: 960px)')
     expect(panelStyle).toContain('width: 100vw')
   })

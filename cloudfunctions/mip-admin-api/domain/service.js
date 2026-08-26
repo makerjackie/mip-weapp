@@ -57,6 +57,7 @@ function createAdminService({
   const {
     changePrimaryBranch,
     getUser,
+    listUserInfluence,
     listUsers,
     normalizeExportFilters: normalizeUserFilters,
     setUserControl,
@@ -361,6 +362,7 @@ function createAdminService({
     retryRefund,
     prepareExport,
     reserveExportDownload,
+    listUserInfluence,
     listUsers,
     publishEventReminder,
     publishMessageCampaign,

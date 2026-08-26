@@ -17,6 +17,10 @@ export interface MipUsersAdmin {
     includePhone?: Parameters<MipAdminGateway['getUser']>[1],
     force?: boolean,
   ) => ReturnType<MipAdminGateway['getUser']>
+  listInfluence: (
+    input: Parameters<MipAdminGateway['listUserInfluence']>[0],
+    force?: boolean,
+  ) => ReturnType<MipAdminGateway['listUserInfluence']>
   update: MipAdminGateway['updateUser']
   changePrimaryBranch: MipAdminGateway['changeUserPrimaryBranch']
   setControl: MipAdminGateway['setUserControl']
@@ -25,6 +29,7 @@ export interface MipUsersAdmin {
 const cacheKeys = {
   lists: 'mip-admin:users',
   detail: 'mip-admin:user',
+  influence: 'mip-admin:user-influence',
 } as const
 
 export function createMipUsersAdmin(
@@ -35,6 +40,7 @@ export function createMipUsersAdmin(
     const result = await work()
     cache.invalidate(cacheKeys.lists)
     cache.invalidate(cacheKeys.detail)
+    cache.invalidate(cacheKeys.influence)
     return result
   }
 
@@ -53,6 +59,11 @@ export function createMipUsersAdmin(
           () => gateway.getUser(userId, false),
           { force },
         ),
+    listInfluence: (input, force = false) => cache.query(
+      `${cacheKeys.influence}:${JSON.stringify(input)}`,
+      () => gateway.listUserInfluence(input),
+      { force },
+    ),
     update: input => mutate(() => gateway.updateUser(input)),
     changePrimaryBranch: input => mutate(() => gateway.changeUserPrimaryBranch(input)),
     setControl: input => mutate(() => gateway.setUserControl(input)),

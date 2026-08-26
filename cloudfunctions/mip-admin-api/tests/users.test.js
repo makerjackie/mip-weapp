@@ -88,6 +88,7 @@ describe('admin users module', () => {
     assert.deepEqual(Object.keys(users).sort(), [
       'changePrimaryBranch',
       'getUser',
+      'listUserInfluence',
       'listUsers',
       'normalizeExportFilters',
       'setUserControl',

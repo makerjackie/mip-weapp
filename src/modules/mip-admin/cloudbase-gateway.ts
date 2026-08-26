@@ -60,6 +60,10 @@ import {
 import { parseAdminOrderPage, parseAdminRosterPage } from './order-roster'
 import { createAdminRequest } from './request-contract'
 import { MipAdminError } from './types'
+import {
+  createAdminUserInfluenceRequest,
+  parseAdminUserInfluencePage,
+} from './user-influence'
 
 const exportStatuses = new Set(['PENDING', 'READY', 'RESERVED', 'CONSUMED', 'EXPIRED', 'REVOKED', 'FAILED'])
 const xlsxType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
@@ -748,6 +752,13 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
     getUser: async (userId, includePhone = false) => parseAdminUserDetail(
       await call('mip.admin.users.get', { userId, includePhone }),
     ),
+    listUserInfluence: async (input) => {
+      const request = createAdminUserInfluenceRequest(input)
+      return parseAdminUserInfluencePage(
+        await call('mip.admin.users.influence.list', { ...request }),
+        request,
+      )
+    },
     updateUser: input => call('mip.admin.users.update', input),
     changeUserPrimaryBranch: async (input) => {
       const result = parseUserPrimaryBranchChange(

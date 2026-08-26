@@ -101,6 +101,7 @@ export function createMipAdminModule(
     exports,
     clearSensitive() {
       cache.invalidate('mip-admin:users')
+      cache.invalidate('mip-admin:user-influence')
       cache.invalidate('mip-admin:roster')
     },
     invalidate() {

@@ -63,6 +63,11 @@ function createHarness() {
       ...userDetail,
       phoneNumber: includePhone === true ? '18800000000' : null,
     })),
+    listUserInfluence: vi.fn<MipAdminGateway['listUserInfluence']>(async () => ({
+      items: [],
+      nextCursor: null,
+      unavailableFacts: [],
+    })),
     updateUser: vi.fn<MipAdminGateway['updateUser']>(async () => ({ userId: userDetail.id, version: 2 })),
     changeUserPrimaryBranch: vi.fn<MipAdminGateway['changeUserPrimaryBranch']>(async input => ({
       userId: input.userId,
@@ -117,6 +122,13 @@ const primaryBranchInput = {
   expectedVersion: 1,
   reason: '工作城市调整',
 }
+const influenceInput = {
+  userId: userDetail.id,
+  kind: 'VISIT' as const,
+  direction: 'INCOMING' as const,
+  occurredFrom: '2026-08-01T00:00:00.000Z',
+  limit: 10,
+}
 
 interface MutationCase {
   name: string
@@ -139,6 +151,7 @@ function mutationCases(): MutationCase[] {
 async function warmNonSensitiveReads(users: MipUsersAdmin) {
   await users.list(listInput)
   await users.get(userDetail.id)
+  await users.listInfluence(influenceInput)
 }
 
 describe('MIP admin users facade', () => {
@@ -204,6 +217,18 @@ describe('MIP admin users facade', () => {
     expect(spies.getUser).toHaveBeenCalledTimes(1)
   })
 
+  it('caches influence pages by their complete neutral filter and cursor', async () => {
+    const { module, spies } = createHarness()
+
+    await module.users.listInfluence(influenceInput)
+    await module.users.listInfluence(influenceInput)
+    await module.users.listInfluence({ ...influenceInput, cursor: 'cursor-b' })
+    await module.users.listInfluence({ ...influenceInput, kind: 'HEART' })
+
+    expect(spies.listUserInfluence).toHaveBeenCalledTimes(3)
+    expect(spies.listUserInfluence.mock.calls[0]?.[0]).toBe(influenceInput)
+  })
+
   it('passes mutation inputs to the neutral gateway unchanged', async () => {
     const { module, spies } = createHarness()
 
@@ -217,7 +242,7 @@ describe('MIP admin users facade', () => {
   })
 
   for (const mutation of mutationCases()) {
-    it(`invalidates only user lists and details after ${mutation.name} succeeds`, async () => {
+    it(`invalidates user lists, details, and influence after ${mutation.name} succeeds`, async () => {
       const { module, spies } = createHarness()
       await warmNonSensitiveReads(module.users)
       await warmNonSensitiveReads(module.users)
@@ -230,6 +255,7 @@ describe('MIP admin users facade', () => {
 
       expect(spies.listUsers).toHaveBeenCalledTimes(2)
       expect(spies.getUser).toHaveBeenCalledTimes(2)
+      expect(spies.listUserInfluence).toHaveBeenCalledTimes(2)
       expect(spies[mutation.spy]).toHaveBeenCalledTimes(1)
       expect(spies.getSession).toHaveBeenCalledTimes(1)
     })
@@ -254,6 +280,18 @@ describe('MIP admin users facade', () => {
 
     expect(spies.listUsers).toHaveBeenCalledTimes(1)
     expect(spies.getUser).toHaveBeenCalledTimes(1)
+    expect(spies.listUserInfluence).toHaveBeenCalledTimes(1)
+  })
+
+  it('clears the influence cache with the other user-sensitive admin state', async () => {
+    const { module, spies } = createHarness()
+    await module.users.listInfluence(influenceInput)
+    await module.users.listInfluence(influenceInput)
+
+    module.clearSensitive()
+    await module.users.listInfluence(influenceInput)
+
+    expect(spies.listUserInfluence).toHaveBeenCalledTimes(2)
   })
 
   it('keeps the profiles page behind the typed facade and export workflow', () => {
@@ -265,6 +303,7 @@ describe('MIP admin users facade', () => {
     expect(source).toContain('mipAdminModule.users.update(')
     expect(source).toContain('mipAdminModule.users.changePrimaryBranch(')
     expect(source).toContain('mipAdminModule.users.setControl(')
+    expect(source).toContain('mipAdminModule.users.listInfluence(')
     expect(source).toContain('mipAdminModule.exportAndOpen(')
     expect(source).not.toContain('mipAdminModule.gateway')
     expect(source).not.toContain('mipAdminModule.mutate')

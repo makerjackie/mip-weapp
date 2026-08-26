@@ -3,6 +3,9 @@ import type {
   AdminGrowthLevel,
   AdminUser,
   AdminUserDetail,
+  AdminUserInfluenceDirection,
+  AdminUserInfluenceFact,
+  AdminUserInfluenceKind,
   AdminUserPrimaryBranchOption,
 } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
@@ -37,6 +40,16 @@ type AdminUserDetailView = Omit<AdminUserDetail, 'phoneNumber' | 'relatedRecords
   }
 }
 
+type AdminUserInfluenceFactView = AdminUserInfluenceFact & {
+  kindText: string
+  directionText: string
+  statusText: string
+  statusTheme: 'default' | 'success' | 'warning'
+  occurredText: string
+  counterpartText: string
+  counterpartMetaText: string
+}
+
 interface PrimaryBranchOption {
   id: string
   label: string
@@ -60,6 +73,34 @@ const membershipStatusLabels: Record<string, string> = {
   EXPIRED: '已过期',
   CANCELLED: '已取消',
   REVOKED: '已撤销',
+}
+
+const influenceKindLabels: Record<AdminUserInfluenceKind, string> = {
+  INVITATION: '邀请嘉宾',
+  HEART: '心动关系',
+  VISIT: '档案访问',
+}
+
+const influenceStatusLabels: Record<string, string> = {
+  PENDING_REVIEW: '待审核',
+  WAITLISTED: '候补中',
+  PAYMENT_PENDING: '待支付',
+  REGISTERED: '已报名',
+  CANCELLATION_PENDING: '取消处理中',
+  CANCELLED: '已取消',
+  REJECTED: '已拒绝',
+  ATTENDED: '已到场',
+  ACTIVE: '有效',
+  READ: '已读',
+  UNREAD: '未读',
+}
+
+const influenceCounterpartFallback: Record<AdminUserInfluenceFact['counterpartState'], string> = {
+  AVAILABLE: '未填写昵称',
+  REDACTED: 'MIP 用户',
+  UNAVAILABLE: '用户已不可用',
+  NOT_RETAINED: '对方记录未保留',
+  NOT_APPLICABLE: '平台邀请',
 }
 
 function userView(item: AdminUser): AdminUserView {
@@ -98,6 +139,30 @@ function userDetailView(detail: AdminUserDetail): AdminUserDetailView {
 
 function primaryBranchEditorOptions(options: AdminUserPrimaryBranchOption[]): PrimaryBranchOption[] {
   return options.map(branch => ({ id: branch.id, label: `${branch.name} · ${branch.cityName}` }))
+}
+
+function userInfluenceView(item: AdminUserInfluenceFact): AdminUserInfluenceFactView {
+  const statusTheme = item.status === 'ACTIVE'
+    || item.status === 'REGISTERED'
+    || item.status === 'ATTENDED'
+    || item.status === 'READ'
+    ? 'success'
+    : item.status === 'UNREAD' || item.status.includes('PENDING') || item.status === 'WAITLISTED'
+      ? 'warning'
+      : 'default'
+  return {
+    ...item,
+    kindText: influenceKindLabels[item.kind],
+    directionText: item.direction === 'INCOMING' ? '对该用户发起' : '由该用户发起',
+    statusText: influenceStatusLabels[item.status] || item.status,
+    statusTheme,
+    occurredText: formatLocalDateTime(item.occurredAt),
+    counterpartText: item.counterpartNickname
+      || influenceCounterpartFallback[item.counterpartState],
+    counterpartMetaText: item.counterpartKind
+      ? (item.counterpartKind === 'PLAYER' ? '玩家' : '嘉宾')
+      : '',
+  }
 }
 
 function selectedPrimaryBranchIndex(options: PrimaryBranchOption[], branchId: string | null) {
@@ -164,26 +229,44 @@ Page({
     detailState: 'loading' as AdminPageState,
     detail: null as AdminUserDetailView | null,
     detailMessage: '',
+    influenceState: 'loading' as AdminPageState,
+    influenceKind: 'INVITATION' as AdminUserInfluenceKind,
+    influenceDirection: 'ALL' as AdminUserInfluenceDirection,
+    influenceFromDate: '',
+    influenceToDate: '',
+    influenceItems: [] as AdminUserInfluenceFactView[],
+    influenceNextCursor: null as string | null,
+    influenceLoadingMore: false,
+    influenceMessage: '',
+    influenceUnavailableMessage: '',
+    influenceEmptyTitle: '没有邀请记录',
   },
   requestSeq: 0,
   detailRequestSeq: 0,
+  influenceRequestSeq: 0,
   confirmationBusy: false,
   onShow() { void this.loadUsers() },
   onHide() {
     this.requestSeq += 1
     this.detailRequestSeq += 1
+    this.influenceRequestSeq += 1
     mipAdminModule.clearSensitive()
     clearPrivatePhones(this)
     this.setData({
       includePhone: false,
       detailOpen: false,
       detail: null,
+      influenceItems: [],
+      influenceNextCursor: null,
+      influenceMessage: '',
+      influenceUnavailableMessage: '',
       users: this.data.users.map(item => ({ ...item, phoneNumberMasked: '' })),
     })
   },
   onUnload() {
     this.requestSeq += 1
     this.detailRequestSeq += 1
+    this.influenceRequestSeq += 1
     mipAdminModule.clearSensitive()
     clearPrivatePhones(this)
   },
@@ -388,7 +471,21 @@ Page({
     if (!userId) {
       return
     }
-    this.setData({ detailOpen: true })
+    this.influenceRequestSeq += 1
+    this.setData({
+      detailOpen: true,
+      influenceState: 'loading',
+      influenceKind: 'INVITATION',
+      influenceDirection: 'ALL',
+      influenceFromDate: '',
+      influenceToDate: '',
+      influenceItems: [],
+      influenceNextCursor: null,
+      influenceLoadingMore: false,
+      influenceMessage: '',
+      influenceUnavailableMessage: '',
+      influenceEmptyTitle: '没有邀请记录',
+    })
     await this.loadUserDetail(userId, true)
   },
   async loadUserDetail(userId: string, resetPrimaryBranchEditor: boolean) {
@@ -423,6 +520,7 @@ Page({
           ? '当前没有可选择的有效分会。'
           : '',
       })
+      void this.loadUserInfluence(userId, true)
     }
     catch (error) {
       if (!this.data.detailOpen || seq !== this.detailRequestSeq) {
@@ -434,8 +532,136 @@ Page({
       })
     }
   },
+  chooseInfluenceFilter(event: WechatMiniprogram.TouchEvent) {
+    const field = String(event.currentTarget.dataset.field || '')
+    const value = String(event.currentTarget.dataset.value || '')
+    if (field === 'influenceKind' && ['INVITATION', 'HEART', 'VISIT'].includes(value)) {
+      this.setData({
+        influenceKind: value as AdminUserInfluenceKind,
+        influenceEmptyTitle: value === 'INVITATION'
+          ? '没有邀请记录'
+          : value === 'HEART'
+            ? '没有心动记录'
+            : '没有访问记录',
+      })
+    }
+    else if (field === 'influenceDirection' && ['ALL', 'INCOMING', 'OUTGOING'].includes(value)) {
+      this.setData({ influenceDirection: value as AdminUserInfluenceDirection })
+    }
+    else {
+      return
+    }
+    const userId = this.data.detail?.id
+    if (userId) {
+      void this.loadUserInfluence(userId, true)
+    }
+  },
+  changeInfluenceDate(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const field = String(event.currentTarget.dataset.field || '')
+    if (!['influenceFromDate', 'influenceToDate'].includes(field)) {
+      return
+    }
+    this.setData({ [field]: event.detail.value })
+    const userId = this.data.detail?.id
+    if (userId) {
+      void this.loadUserInfluence(userId, true)
+    }
+  },
+  clearInfluenceDates() {
+    this.setData({ influenceFromDate: '', influenceToDate: '' })
+    const userId = this.data.detail?.id
+    if (userId) {
+      void this.loadUserInfluence(userId, true)
+    }
+  },
+  retryInfluence() {
+    const userId = this.data.detail?.id
+    if (userId) {
+      void this.loadUserInfluence(userId, true)
+    }
+  },
+  loadMoreInfluence() {
+    const userId = this.data.detail?.id
+    if (userId && this.data.influenceNextCursor && !this.data.influenceLoadingMore) {
+      void this.loadUserInfluence(userId, false)
+    }
+  },
+  async loadUserInfluence(userId: string, reset: boolean) {
+    if (this.data.influenceFromDate
+      && this.data.influenceToDate
+      && this.data.influenceFromDate > this.data.influenceToDate) {
+      this.influenceRequestSeq += 1
+      this.setData({
+        influenceState: 'error',
+        influenceItems: [],
+        influenceNextCursor: null,
+        influenceMessage: '开始日期不能晚于结束日期。',
+      })
+      return
+    }
+    const cursor = reset ? null : this.data.influenceNextCursor
+    if (!reset && !cursor) {
+      return
+    }
+    const seq = this.influenceRequestSeq + 1
+    this.influenceRequestSeq = seq
+    this.setData(reset
+      ? {
+          influenceState: 'loading',
+          influenceItems: [],
+          influenceNextCursor: null,
+          influenceLoadingMore: false,
+          influenceMessage: '',
+          influenceUnavailableMessage: '',
+        }
+      : { influenceLoadingMore: true, influenceMessage: '' })
+    try {
+      const response = await mipAdminModule.users.listInfluence({
+        userId,
+        kind: this.data.influenceKind,
+        direction: this.data.influenceDirection,
+        ...(this.data.influenceFromDate
+          ? { occurredFrom: dateBoundary(this.data.influenceFromDate, false) }
+          : {}),
+        ...(this.data.influenceToDate
+          ? { occurredTo: dateBoundary(this.data.influenceToDate, true) }
+          : {}),
+        ...(cursor ? { cursor } : {}),
+        limit: 10,
+      }, reset)
+      if (!this.data.detailOpen
+        || this.data.detail?.id !== userId
+        || seq !== this.influenceRequestSeq) {
+        return
+      }
+      const items = response.items.map(userInfluenceView)
+      this.setData({
+        influenceState: 'ready',
+        influenceItems: reset ? items : this.data.influenceItems.concat(items),
+        influenceNextCursor: response.nextCursor,
+        influenceLoadingMore: false,
+        influenceMessage: '',
+        influenceUnavailableMessage: response.unavailableFacts.includes('CANCELLED_INCOMING_HEART')
+          ? '已取消的入向心动未保留关系对方，当前不可查询。'
+          : '',
+      })
+    }
+    catch (error) {
+      if (!this.data.detailOpen
+        || this.data.detail?.id !== userId
+        || seq !== this.influenceRequestSeq) {
+        return
+      }
+      this.setData({
+        influenceState: this.data.influenceItems.length ? 'ready' : 'error',
+        influenceLoadingMore: false,
+        influenceMessage: error instanceof Error ? error.message : '用户影响力加载失败',
+      })
+    }
+  },
   closeDetail() {
     this.detailRequestSeq += 1
+    this.influenceRequestSeq += 1
     this.setData({
       detailOpen: false,
       detail: null,
@@ -443,6 +669,11 @@ Page({
       primaryBranchReason: '',
       primaryBranchMessage: '',
       primaryBranchSaving: false,
+      influenceItems: [],
+      influenceNextCursor: null,
+      influenceLoadingMore: false,
+      influenceMessage: '',
+      influenceUnavailableMessage: '',
     })
     mipAdminModule.clearSensitive()
   },

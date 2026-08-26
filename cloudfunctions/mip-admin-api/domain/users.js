@@ -9,8 +9,10 @@ const {
 const { decodeCursor } = require('./pagination')
 const { AdminError, expectedVersion, limit, requiredId, text } = require('./validation')
 const { decryptPhone } = require('../lib/phone')
+const { createUserInfluenceService } = require('./user-influence')
 
 function createAdminUsers({ repository, access, phoneEncryptionKey }) {
+  const { listUserInfluence } = createUserInfluenceService({ access, repository })
   async function listUsers(caller, input = {}) {
     const context = await access.session(caller)
     firstGrant(context.bindings, CAPABILITIES.USERS_READ)
@@ -180,6 +182,7 @@ function createAdminUsers({ repository, access, phoneEncryptionKey }) {
   return {
     changePrimaryBranch,
     getUser,
+    listUserInfluence,
     listUsers,
     normalizeExportFilters: normalizeUserFilters,
     setUserControl,

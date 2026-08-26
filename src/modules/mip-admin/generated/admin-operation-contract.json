@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "operationCount": 119,
+  "operationCount": 120,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -100,6 +100,14 @@
     },
     {
       "action": "mip.admin.users.get",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.users.influence.list",
       "kind": "QUERY",
       "authentication": "REQUIRED",
       "session": "REQUIRED",
