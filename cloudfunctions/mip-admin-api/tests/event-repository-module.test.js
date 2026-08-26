@@ -285,6 +285,133 @@ describe('admin event repository module', () => {
     ])
   })
 
+  it('creates a missing mechanical type catalog before inserting a new event', async () => {
+    const calls = []
+    const tx = {
+      async one(sql, params) {
+        calls.push({ method: 'one', sql, params })
+        return null
+      },
+      async query(sql, params) {
+        calls.push({ method: 'query', sql, params })
+        return { affectedRows: sql.includes('INSERT INTO mip_event_types') ? 0 : 1 }
+      },
+    }
+    const database = { async transaction(work) { return work(tx) } }
+    const input = {
+      ...saveInput(eventDraft({ eventTypeKey: 'roundtable' })),
+      eventId: null,
+      expectedVersion: null,
+    }
+
+    await repository(database).saveEvent(input)
+
+    const typeIndex = calls.findIndex(call => call.sql?.includes('INSERT INTO mip_event_types'))
+    const eventIndex = calls.findIndex(call => call.sql?.includes('INSERT INTO mip_events'))
+    assert.ok(typeIndex >= 0 && eventIndex > typeIndex)
+    const typeWrite = calls[typeIndex]
+    assert.match(typeWrite.sql, /SELECT \?, \?, \?, \?, '', 0, 'ACTIVE', 1, \?, \?/)
+    assert.match(typeWrite.sql, /WHERE NOT EXISTS[\s\S]*existing\.app_id = \?[\s\S]*existing\.type_key = \?/)
+    assert.doesNotMatch(typeWrite.sql, /INSERT IGNORE|ON DUPLICATE KEY UPDATE|UPDATE mip_event_types/i)
+    assert.deepEqual(typeWrite.params.slice(1), [
+      APP_ID, 'roundtable', 'roundtable', USER_ID, USER_ID, APP_ID, 'roundtable',
+    ])
+  })
+
+  it('ensures the selected type without changing an existing catalog before updating an event', async () => {
+    const calls = []
+    const tx = {
+      async one(sql, params) {
+        calls.push({ method: 'one', sql, params })
+        if (sql.includes('FROM mip_events')) {
+          return {
+            id: EVENT_ID, scope_type: 'BRANCH', branch_id: 'branch-a',
+            status: 'DRAFT', version: 2, cover_asset_id: null,
+          }
+        }
+        return null
+      },
+      async query(sql, params) {
+        calls.push({ method: 'query', sql, params })
+        return { affectedRows: sql.includes('INSERT INTO mip_event_types') ? 0 : 1 }
+      },
+    }
+    const database = { async transaction(work) { return work(tx) } }
+
+    await repository(database).saveEvent(saveInput(eventDraft({ eventTypeKey: 'workshop' })))
+
+    const typeIndex = calls.findIndex(call => call.sql?.includes('INSERT INTO mip_event_types'))
+    const eventIndex = calls.findIndex(call => call.sql?.includes('UPDATE mip_events SET'))
+    assert.ok(typeIndex >= 0 && eventIndex > typeIndex)
+    const typeWrite = calls[typeIndex]
+    assert.match(typeWrite.sql, /WHERE NOT EXISTS/)
+    assert.doesNotMatch(typeWrite.sql, /INSERT IGNORE|ON DUPLICATE KEY UPDATE|UPDATE mip_event_types/i)
+    assert.deepEqual(typeWrite.params.slice(1), [
+      APP_ID, 'workshop', 'workshop', USER_ID, USER_ID, APP_ID, 'workshop',
+    ])
+  })
+
+  it('accepts only a verified target-key duplicate from a concurrent catalog creator', async () => {
+    const calls = []
+    const tx = {
+      async one(sql, params) {
+        calls.push({ method: 'one', sql, params })
+        if (sql.includes('FROM mip_events')) {
+          return {
+            id: EVENT_ID, scope_type: 'BRANCH', branch_id: 'branch-a',
+            status: 'DRAFT', version: 2, cover_asset_id: null,
+          }
+        }
+        if (sql.includes('FROM mip_event_types')) return { id: 'catalog-created-concurrently' }
+        return null
+      },
+      async query(sql, params) {
+        calls.push({ method: 'query', sql, params })
+        if (sql.includes('INSERT INTO mip_event_types')) {
+          throw Object.assign(new Error('duplicate type key'), { code: 'ER_DUP_ENTRY' })
+        }
+        return { affectedRows: 1 }
+      },
+    }
+    const database = { async transaction(work) { return work(tx) } }
+
+    await repository(database).saveEvent(saveInput(eventDraft({ eventTypeKey: 'workshop' })))
+
+    const verification = calls.find(call => call.method === 'one'
+      && call.sql?.includes('FROM mip_event_types'))
+    assert.match(verification.sql, /WHERE app_id = \? AND type_key = \? FOR UPDATE/)
+    assert.deepEqual(verification.params, [APP_ID, 'workshop'])
+    assert.equal(calls.some(call => call.sql?.includes('UPDATE mip_events SET')), true)
+  })
+
+  it('propagates non-duplicate catalog errors before writing the event', async () => {
+    const storageError = Object.assign(new Error('deadlock'), { code: 'ER_LOCK_DEADLOCK' })
+    let eventWritten = false
+    const tx = {
+      async one(sql) {
+        if (sql.includes('FROM mip_events')) {
+          return {
+            id: EVENT_ID, scope_type: 'BRANCH', branch_id: 'branch-a',
+            status: 'DRAFT', version: 2, cover_asset_id: null,
+          }
+        }
+        return null
+      },
+      async query(sql) {
+        if (sql.includes('INSERT INTO mip_event_types')) throw storageError
+        if (sql.includes('UPDATE mip_events SET')) eventWritten = true
+        return { affectedRows: 1 }
+      },
+    }
+    const database = { async transaction(work) { return work(tx) } }
+
+    await assert.rejects(
+      () => repository(database).saveEvent(saveInput(eventDraft())),
+      error => error === storageError,
+    )
+    assert.equal(eventWritten, false)
+  })
+
   it('checks a newly selected cover against the operator inside the save transaction', async () => {
     const calls = []
     const tx = {

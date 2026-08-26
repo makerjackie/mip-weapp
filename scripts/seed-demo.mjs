@@ -88,6 +88,7 @@ assertTablesExist([
   'mip_growth_accounts',
   'mip_orders',
   'mip_membership_entitlements',
+  'mip_event_types',
   'mip_events',
   'mip_event_registrations',
   'mip_event_invitation_attributions',
@@ -208,6 +209,9 @@ const verification = callCloudbase(root, 'queryMysqlDatabase', {
     (SELECT COUNT(*) FROM mip_membership_entitlements
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.entitlements.map(item => sqlLiteral(item.id)).join(', ')})) AS entitlements,
+    (SELECT COUNT(*) FROM mip_event_types
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND type_key IN (${demoEventTypes(seed.events).map(item => sqlLiteral(item.key)).join(', ')})) AS eventTypes,
     (SELECT COUNT(*) FROM mip_events
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.events.map(item => sqlLiteral(item.id)).join(', ')})) AS events,
@@ -441,6 +445,7 @@ const expected = {
   users: seed.users.length,
   membershipOrders: seed.membershipOrders.length,
   entitlements: seed.entitlements.length,
+  eventTypes: demoEventTypes(seed.events).length,
   events: seed.events.length,
   eventTimelineSettings: seed.events.length,
   eventAlbumSettings: seed.events.length,
@@ -528,6 +533,7 @@ function buildSeedStatements() {
     growthEntryStatement(seed.growthEntries),
     membershipOrderStatement(seed.membershipOrders, seed.membershipPlans),
     entitlementStatement(seed.entitlements, seed.membershipPlans),
+    eventTypeStatement(seed.events),
     eventStatement(seed.events),
     eventRegistrationStatement(seed.eventRegistrations),
     eventInvitationAttributionStatement(seed.userInfluence.eventInvitationAttributions),
@@ -881,6 +887,34 @@ function entitlementStatement(items, plans) {
     user_id = VALUES(user_id), order_id = VALUES(order_id), plan_id = VALUES(plan_id),
     status = 'ACTIVE', starts_at = VALUES(starts_at), ends_at = VALUES(ends_at),
     revoked_at = NULL, revocation_reason = NULL, version = version + 1`
+}
+
+function demoEventTypes(items) {
+  const byKey = new Map()
+  for (const item of items) {
+    if (!byKey.has(item.eventTypeKey)) {
+      byKey.set(item.eventTypeKey, {
+        key: item.eventTypeKey,
+        organizerUserId: item.organizerUserId,
+      })
+    }
+  }
+  return [...byKey.values()]
+}
+
+function eventTypeStatement(items) {
+  const selects = demoEventTypes(items).map(item => `SELECT
+    UUID(), ${sqlLiteral(appId)}, ${sqlLiteral(item.key)}, ${sqlLiteral(item.key)},
+    '', 0, 'ACTIVE', 1, ${sqlLiteral(item.organizerUserId)}, ${sqlLiteral(item.organizerUserId)}
+  WHERE NOT EXISTS (
+    SELECT 1 FROM mip_event_types existing
+    WHERE existing.app_id = ${sqlLiteral(appId)} AND existing.type_key = ${sqlLiteral(item.key)}
+  )`)
+  return `INSERT INTO mip_event_types (
+    id, app_id, type_key, name, description, sort_order, status, version,
+    created_by_user_id, updated_by_user_id
+  )
+  ${selects.join('\n  UNION ALL\n  ')}`
 }
 
 function eventStatement(items) {

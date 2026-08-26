@@ -151,6 +151,33 @@ function createAdminEventRepository(database, dependencies) {
     if (!asset) throw codeError('VALIDATION_FAILED')
   }
 
+  async function ensureEventTypeCatalog(tx, input) {
+    try {
+      await tx.query(
+        `INSERT INTO mip_event_types (
+          id, app_id, type_key, name, description, sort_order, status, version,
+          created_by_user_id, updated_by_user_id
+        )
+        SELECT ?, ?, ?, ?, '', 0, 'ACTIVE', 1, ?, ?
+        WHERE NOT EXISTS (
+          SELECT 1 FROM mip_event_types existing
+          WHERE existing.app_id = ? AND existing.type_key = ?
+        )`,
+        [createId(), input.appId, input.eventTypeKey, input.eventTypeKey,
+          input.actorUserId, input.actorUserId, input.appId, input.eventTypeKey],
+      )
+    }
+    catch (error) {
+      if (error?.code !== 'ER_DUP_ENTRY') throw error
+      const existing = await tx.one(
+        `SELECT id FROM mip_event_types
+         WHERE app_id = ? AND type_key = ? FOR UPDATE`,
+        [input.appId, input.eventTypeKey],
+      )
+      if (!existing) throw error
+    }
+  }
+
   async function assertEventContentMedia(tx, input, eventId) {
     const media = input.draft.contentMedia || []
     if (!media.length) return
@@ -568,6 +595,11 @@ function createAdminEventRepository(database, dependencies) {
         await assertEventContentMedia(tx, input, eventId)
         status = current.status
         nextVersion = Number(current.version) + 1
+        await ensureEventTypeCatalog(tx, {
+          appId: input.appId,
+          actorUserId: input.actorUserId,
+          eventTypeKey: input.draft.eventTypeKey,
+        })
         const result = await tx.query(
           `UPDATE mip_events SET scope_type = ?, branch_id = ?,
             title = ?, summary = ?, description = ?, notices = ?,
@@ -600,6 +632,11 @@ function createAdminEventRepository(database, dependencies) {
         assertScope(authorization, draftResourceScope(input.draft))
         await assertEventCover(tx, input, null)
         await assertEventContentMedia(tx, input, null)
+        await ensureEventTypeCatalog(tx, {
+          appId: input.appId,
+          actorUserId: input.actorUserId,
+          eventTypeKey: input.draft.eventTypeKey,
+        })
         await tx.query(
           `INSERT INTO mip_events (
             id, app_id, scope_type, branch_id, organizer_user_id, title, summary,
@@ -715,6 +752,11 @@ function createAdminEventRepository(database, dependencies) {
 
       const dates = shiftedCloneDates(source, now())
       const eventId = createId()
+      await ensureEventTypeCatalog(tx, {
+        appId: input.appId,
+        actorUserId: input.actorUserId,
+        eventTypeKey: source.event_type_key,
+      })
       await tx.query(
         `INSERT INTO mip_events (
           id, app_id, scope_type, branch_id, organizer_user_id, title, summary,

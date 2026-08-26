@@ -2882,6 +2882,19 @@ function normalizedEventDraft(input) {
   if (capacity !== null && (!Number.isInteger(capacity) || capacity < 1)) {
     throw new DomainError('VALIDATION_FAILED', '活动人数上限无效')
   }
+  let eventTypeKey = 'community'
+  if (input.eventTypeKey !== undefined && input.eventTypeKey !== null) {
+    if (typeof input.eventTypeKey !== 'string') {
+      throw new DomainError('VALIDATION_FAILED', '活动类型标识无效')
+    }
+    const explicitEventTypeKey = input.eventTypeKey.trim()
+    if (explicitEventTypeKey) {
+      if (explicitEventTypeKey.length > 64 || !/^[A-Za-z0-9_.:-]+$/.test(explicitEventTypeKey)) {
+        throw new DomainError('VALIDATION_FAILED', '活动类型标识无效')
+      }
+      eventTypeKey = explicitEventTypeKey
+    }
+  }
   return {
     scopeType,
     branchId: input.branchId || null,
@@ -2890,9 +2903,7 @@ function normalizedEventDraft(input) {
     description,
     notices: typeof input.notices === 'string' ? input.notices.trim() || null : null,
     coverAssetId: input.coverAssetId || null,
-    eventTypeKey: typeof input.eventTypeKey === 'string' && input.eventTypeKey.trim()
-      ? input.eventTypeKey.trim().slice(0, 64)
-      : 'community',
+    eventTypeKey,
     mode,
     accessType,
     registrationPolicy,
@@ -2911,6 +2922,39 @@ function normalizedEventDraft(input) {
     waitlistEnabled: input.waitlistEnabled === true ? 1 : 0,
     priceCents,
     registrationSchema: normalizeRegistrationSchema(input.registrationSchema || []),
+  }
+}
+
+async function ensureEventTypeCatalog(tx, {
+  appId,
+  actorUserId,
+  eventTypeKey,
+}) {
+  try {
+    await tx.query(
+      `INSERT INTO mip_event_types (
+        id, app_id, type_key, name, description, sort_order, status, version,
+        created_by_user_id, updated_by_user_id
+      )
+      SELECT ?, ?, ?, ?, '', 0, 'ACTIVE', 1, ?, ?
+      WHERE NOT EXISTS (
+        SELECT 1 FROM mip_event_types existing
+        WHERE existing.app_id = ? AND existing.type_key = ?
+      )`,
+      [
+        randomUUID(), appId, eventTypeKey, eventTypeKey,
+        actorUserId, actorUserId, appId, eventTypeKey,
+      ],
+    )
+  }
+  catch (error) {
+    if (error?.code !== 'ER_DUP_ENTRY') throw error
+    const existing = await tx.one(
+      `SELECT id FROM mip_event_types
+       WHERE app_id = ? AND type_key = ? FOR UPDATE`,
+      [appId, eventTypeKey],
+    )
+    if (!existing) throw error
   }
 }
 
@@ -2946,6 +2990,11 @@ async function adminSaveEvent(db, {
     const nextStatus = existing?.status === 'PUBLISHED' && contentSafetyStatus !== 'PASSED'
       ? 'UNPUBLISHED'
       : existing?.status || 'DRAFT'
+    await ensureEventTypeCatalog(tx, {
+      appId,
+      actorUserId: userId,
+      eventTypeKey: normalized.eventTypeKey,
+    })
     if (existing) {
       await tx.query(
         `UPDATE mip_events SET

@@ -51,6 +51,21 @@ describe('MIP migrations', () => {
       .toThrow('cannot drop columns')
   })
 
+  it('validates CREATE and DROP TEMPORARY TABLE targets explicitly', () => {
+    expect(() => assertMipMigrationSql(`
+      CREATE TEMPORARY TABLE mip_rollback_guard (id INT PRIMARY KEY);
+      DROP TEMPORARY TABLE IF EXISTS mip_rollback_guard;
+    `, { rollback: true })).not.toThrow()
+    expect(() => assertMipMigrationSql(
+      'CREATE TEMPORARY TABLE shared_rollback_guard (id INT);',
+      { rollback: true },
+    )).toThrow('non-MIP table')
+    expect(() => assertMipMigrationSql(
+      'DROP TEMPORARY TABLE shared_rollback_guard;',
+      { rollback: true },
+    )).toThrow('non-MIP table')
+  })
+
   it('splits statements without breaking quoted semicolons or comments', () => {
     const statements = splitMipSqlStatements(`
       -- first table

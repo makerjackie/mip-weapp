@@ -135,7 +135,7 @@ describe('MIP demo seed ownership safety', () => {
     expect(result.statementCount).toBeGreaterThan(Object.keys(SEED_TABLES).length)
     expect(result.tableCount).toBeGreaterThan(Object.keys(SEED_TABLES).length)
     expect(result.fixtureGroups).toBe(42)
-    expect(result.tableCount).toBe(60)
+    expect(result.tableCount).toBe(61)
     expect(result.maxStatementBytes).toBeLessThan(30 * 1024)
   })
 

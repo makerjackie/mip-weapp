@@ -621,6 +621,23 @@
         "mip_event_hearts",
         "mip_profile_visits"
       ]
+    },
+    {
+      "version": "20260826450000",
+      "name": "mip_event_catalogs_and_video_recaps",
+      "sql": "database/mysql/mip/045_event_catalogs_and_video_recaps.sql",
+      "sqlSha256": "e2ab2beb84a90d9f8d1938ada9a598cb6ec0141d5a0abe28e0474255f91b8d7b",
+      "rollback": "database/mysql/mip/rollback/045_event_catalogs_and_video_recaps.sql",
+      "rollbackSha256": "0dd3b7dc7c63eff69a2e31a2b5bc24c0c222a16fbc958ac85fa3b74c7faa85be",
+      "createsTables": [
+        "mip_event_types",
+        "mip_event_tags",
+        "mip_event_tag_assignments",
+        "mip_event_video_recaps"
+      ],
+      "altersTables": [
+        "mip_events"
+      ]
     }
   ]
 }

@@ -88,7 +88,7 @@ function tableReferences(statement) {
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .trim()
   const patterns = [
-    /\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`?(\w+)`?/gi,
+    /\bCREATE\s+(?:TEMPORARY\s+)?TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`?(\w+)`?/gi,
     /\bALTER\s+TABLE\s+`?(\w+)`?/gi,
     /^INSERT\s+INTO\s+`?(\w+)`?/gi,
     /^UPDATE\s+`?(\w+)`?/gi,
@@ -96,7 +96,7 @@ function tableReferences(statement) {
     /\bFROM\s+`?(\w+)`?/gi,
     /\bJOIN\s+`?(\w+)`?/gi,
     /\bREFERENCES\s+`?(\w+)`?/gi,
-    /\bDROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?`?(\w+)`?/gi,
+    /\bDROP\s+(?:TEMPORARY\s+)?TABLE\s+(?:IF\s+EXISTS\s+)?`?(\w+)`?/gi,
     /\bCREATE\s+(?:UNIQUE\s+)?INDEX\s+`?\w+`?\s+ON\s+`?(\w+)`?/gi,
   ]
   for (const pattern of patterns) {

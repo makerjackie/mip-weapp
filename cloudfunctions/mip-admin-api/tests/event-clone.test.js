@@ -89,6 +89,15 @@ describe('admin event clone persistence', () => {
     assert.equal(result.version, 1)
     assert.equal(result.idempotent, false)
     assert.equal(result.startsAt, '2026-09-05T06:00:00.000Z')
+    const typeIndex = calls.findIndex(call => call.sql.includes('INSERT INTO mip_event_types'))
+    const eventIndex = calls.findIndex(call => call.sql.includes('INSERT INTO mip_events'))
+    assert.ok(typeIndex >= 0 && eventIndex > typeIndex)
+    const typeWrite = calls[typeIndex]
+    assert.match(typeWrite.sql, /WHERE NOT EXISTS/)
+    assert.doesNotMatch(typeWrite.sql, /INSERT IGNORE|ON DUPLICATE KEY UPDATE|UPDATE mip_event_types/i)
+    assert.deepEqual(typeWrite.params.slice(1), [
+      'wx-app', 'general', 'general', 'admin-user', 'admin-user', 'wx-app', 'general',
+    ])
     const insert = calls.find(call => call.sql.includes('INSERT INTO mip_events'))
     assert.ok(insert)
     assert.equal(insert.params[4], 'admin-user')
