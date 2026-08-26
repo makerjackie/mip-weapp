@@ -46,7 +46,7 @@ function recapRow(overrides = {}) {
     summary: '活动内容摘要',
     destination_provider: 'WECHAT_CHANNELS',
     destination_kind: 'ACTIVITY',
-    finder_user_name: 'sph-finder',
+    finder_user_name: 'sph6Rngt56a0grn',
     feed_id: 'feed-token',
     sort_order: 10,
     status: 'INACTIVE',
@@ -150,7 +150,7 @@ describe('event catalog repository', () => {
       summary: '活动内容摘要',
       destination: {
         provider: 'WECHAT_CHANNELS', type: 'ACTIVITY',
-        finderUserName: 'sph-finder', feedId: 'feed-token',
+        finderUserName: 'sph6Rngt56a0grn', feedId: 'feed-token',
       },
       sortOrder: 10,
       authorization: authorization(),

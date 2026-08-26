@@ -122,6 +122,7 @@ export interface AdminEventVideoRecapArchiveInput {
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const stableKeyPattern = /^[\w.:-]+$/
 const destinationTokenPattern = /^[\w=:+/.-]+$/
+const finderUserNamePattern = /^sph[A-Za-z0-9]+$/
 const catalogKinds = new Set(['TYPE', 'TAG'])
 const statuses = new Set(['ACTIVE', 'INACTIVE', 'ARCHIVED'])
 
@@ -167,8 +168,8 @@ function destination(value: unknown): value is AdminEventVideoRecapDestination {
     || !hasExactKeys(value, ['provider', 'type', 'finderUserName', 'feedId'])
     || value.provider !== 'WECHAT_CHANNELS'
     || !['PROFILE', 'ACTIVITY'].includes(String(value.type))
-    || typeof value.finderUserName !== 'string' || !value.finderUserName
-    || value.finderUserName.length > 128 || !destinationTokenPattern.test(value.finderUserName)
+    || typeof value.finderUserName !== 'string'
+    || value.finderUserName.length > 128 || !finderUserNamePattern.test(value.finderUserName)
     || !(value.feedId === null || (typeof value.feedId === 'string'
       && value.feedId.length > 0 && value.feedId.length <= 256
       && destinationTokenPattern.test(value.feedId)))) {
@@ -236,6 +237,9 @@ export function createAdminEventVideoRecapListRequest(input: AdminEventVideoReca
 }
 
 export function createAdminEventVideoRecapSaveRequest(input: AdminEventVideoRecapSaveInput) {
+  if (!destination(input.destination)) {
+    throw new MipAdminError('VALIDATION_FAILED', '视频回顾目标无效')
+  }
   const common = {
     eventId: input.eventId,
     title: input.title,

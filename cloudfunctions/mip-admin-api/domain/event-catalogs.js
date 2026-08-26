@@ -327,12 +327,20 @@ function normalizeDestination(value) {
   exactObject(value, DESTINATION_KEYS, [...DESTINATION_KEYS], '视频回顾目标无效')
   const provider = enumValue(value.provider, RECAP_PROVIDERS, '视频回顾平台无效')
   const type = enumValue(value.type, RECAP_DESTINATION_KINDS, '视频回顾目标类型无效')
-  const finderUserName = stableToken(value.finderUserName, 128, '视频号账号')
+  const finderUserName = channelsFinderUserName(value.finderUserName)
   const feedId = value.feedId === null ? null : stableToken(value.feedId, 256, '视频号内容')
   if ((type === 'PROFILE' && feedId !== null) || (type === 'ACTIVITY' && feedId === null)) {
     throw new AdminError('VALIDATION_FAILED', '视频回顾目标组合无效')
   }
   return { provider, type, finderUserName, feedId }
+}
+
+function channelsFinderUserName(value) {
+  const normalized = typeof value === 'string' ? value.trim() : ''
+  if (normalized.length > 128 || !/^sph[A-Za-z0-9]+$/.test(normalized)) {
+    throw new AdminError('VALIDATION_FAILED', '视频号账号无效')
+  }
+  return normalized
 }
 
 function catalogCursor(value, context) {

@@ -158,7 +158,7 @@ describe('admin event catalogs and video recaps', () => {
       destination: {
         provider: 'WECHAT_CHANNELS',
         type: 'ACTIVITY',
-        finderUserName: 'sph-private-finder',
+        finderUserName: 'sph6Rngt56a0grn',
         feedId: 'feed-private-token',
       },
       sortOrder: 10,
@@ -175,7 +175,7 @@ describe('admin event catalogs and video recaps', () => {
       destinationProvider: 'WECHAT_CHANNELS',
       destinationType: 'ACTIVITY',
     })
-    assert.doesNotMatch(JSON.stringify(audit.metadata), /sph-private-finder|feed-private-token/)
+    assert.doesNotMatch(JSON.stringify(audit.metadata), /sph6Rngt56a0grn|feed-private-token/)
   })
 
   it('rejects unknown DTO keys, terminal status writes, and invalid destination pairs', () => {
@@ -194,7 +194,7 @@ describe('admin event catalogs and video recaps', () => {
         destination: {
           provider: 'WECHAT_CHANNELS',
           type: 'PROFILE',
-          finderUserName: 'sph-finder',
+          finderUserName: 'sph6Rngt56a0grn',
           feedId: 'profile-cannot-have-feed',
         },
         sortOrder: 0,
@@ -209,12 +209,53 @@ describe('admin event catalogs and video recaps', () => {
         destination: {
           provider: 'WECHAT_CHANNELS',
           type: 'ACTIVITY',
-          finderUserName: 'sph-finder',
+          finderUserName: 'sph6Rngt56a0grn',
           feedId: null,
         },
         sortOrder: 0,
       }),
       error => error?.code === 'VALIDATION_FAILED',
     )
+  })
+
+  it('accepts only a non-empty sph-prefixed video account id', () => {
+    const destination = {
+      provider: 'WECHAT_CHANNELS',
+      type: 'PROFILE',
+      finderUserName: 'sph6Rngt56a0grn',
+      feedId: null,
+    }
+    assert.doesNotThrow(() => normalizeRecapSave({
+      eventId: EVENT_ID,
+      title: '活动视频回顾',
+      summary: '',
+      destination,
+      sortOrder: 0,
+    }))
+    assert.doesNotThrow(() => normalizeRecapSave({
+      eventId: EVENT_ID,
+      title: '活动视频回顾',
+      summary: '',
+      destination: { ...destination, finderUserName: `sph${'a'.repeat(125)}` },
+      sortOrder: 0,
+    }))
+
+    for (const finderUserName of [
+      'sph',
+      'finder6Rngt56a0grn',
+      'https://channels.weixin.qq.com/sph6Rngt56a0grn',
+      `sph${'a'.repeat(126)}`,
+    ]) {
+      assert.throws(
+        () => normalizeRecapSave({
+          eventId: EVENT_ID,
+          title: '活动视频回顾',
+          summary: '',
+          destination: { ...destination, finderUserName },
+          sortOrder: 0,
+        }),
+        error => error?.code === 'VALIDATION_FAILED',
+      )
+    }
   })
 })

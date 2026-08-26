@@ -43,7 +43,7 @@ const recap: AdminEventVideoRecap = {
   destination: {
     provider: 'WECHAT_CHANNELS',
     type: 'ACTIVITY',
-    finderUserName: 'sph-finder',
+    finderUserName: 'sph6Rngt56a0grn',
     feedId: 'feed-token',
   },
   sortOrder: 10,
@@ -61,6 +61,10 @@ describe('MIP event catalog admin contract', () => {
     expect(parseAdminEventCatalogPage({ items: [catalog], nextCursor: null }).items).toEqual([catalog])
     expect(parseAdminEventVideoRecap(recap)).toEqual(recap)
     expect(parseAdminEventVideoRecapPage({ items: [recap], nextCursor: null }).items).toEqual([recap])
+    expect(parseAdminEventVideoRecap({
+      ...recap,
+      destination: { ...recap.destination, finderUserName: `sph${'a'.repeat(125)}` },
+    }).destination.finderUserName).toHaveLength(128)
 
     expect(() => parseAdminEventCatalogItem({ ...catalog, createdByUserId: 'private-user' })).toThrow()
     expect(() => parseAdminEventCatalogItem({ ...catalog, key: '<script>' })).toThrow()
@@ -77,6 +81,17 @@ describe('MIP event catalog admin contract', () => {
       ...recap,
       destination: { ...recap.destination, finderUserName: 'finder with spaces' },
     })).toThrow()
+    for (const finderUserName of [
+      'sph',
+      'finder6Rngt56a0grn',
+      'https://channels.weixin.qq.com/sph6Rngt56a0grn',
+      `sph${'a'.repeat(126)}`,
+    ]) {
+      expect(() => parseAdminEventVideoRecap({
+        ...recap,
+        destination: { ...recap.destination, finderUserName },
+      })).toThrow()
+    }
     expect(() => parseAdminEventVideoRecap({ ...recap, updatedByUserId: 'private-user' })).toThrow()
   })
 
@@ -172,11 +187,34 @@ describe('MIP event catalog admin contract', () => {
       destination: recap.destination,
       sortOrder: recap.sortOrder,
     })
+    expect((requests[6]?.input as { destination: { finderUserName: string } })
+      .destination.finderUserName).toBe('sph6Rngt56a0grn')
     expect(requests[8]?.input).toEqual({
       recapId: recap.id,
       expectedVersion: 4,
       reason: '停止展示',
     })
+  })
+
+  it('rejects non-sph video account ids before sending a recap save request', async () => {
+    const request = vi.fn<AdminTransport['request']>()
+    const gateway = createMipAdminGateway({ request })
+
+    for (const finderUserName of [
+      'sph',
+      'finder6Rngt56a0grn',
+      'https://channels.weixin.qq.com/sph6Rngt56a0grn',
+      `sph${'a'.repeat(126)}`,
+    ]) {
+      await expect(gateway.saveEventVideoRecap({
+        eventId: recap.eventId,
+        title: recap.title,
+        summary: recap.summary,
+        destination: { ...recap.destination, finderUserName },
+        sortOrder: recap.sortOrder,
+      })).rejects.toMatchObject({ code: 'VALIDATION_FAILED' })
+    }
+    expect(request).not.toHaveBeenCalled()
   })
 
   it('retries only reads declared by the generated contract', () => {
