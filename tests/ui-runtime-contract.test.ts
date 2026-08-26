@@ -71,6 +71,11 @@ interface RuntimePagesContract {
       handler: string
       handlerDataset?: Record<string, string>
       value?: string
+      scrollTop?: number
+      scrollIntoView?: boolean
+      requireVisibleTarget?: boolean
+      requireRenderedAction?: boolean
+      requireScreenshotDiff?: boolean
       dataAssertions: Array<{ path: string, equals: unknown }>
       visibleAssertion?: { selector?: string, text?: string }
     }>
@@ -312,10 +317,53 @@ describe('mip-weapp UI runtime contract', () => {
         expect(step.selector).toMatch(/^#\w[\w-]*$/)
         expect(step.handler).toMatch(/^[a-z]\w*$/i)
         expect(step.dataAssertions.length).toBeGreaterThan(0)
+        if (step.scrollTop !== undefined) {
+          expect(step.scrollTop).toBeGreaterThanOrEqual(0)
+          expect(step.scrollTop).toBeLessThanOrEqual(10_000)
+        }
+        if (step.scrollIntoView !== undefined) {
+          expect(typeof step.scrollIntoView).toBe('boolean')
+          expect(step.scrollTop).toBeUndefined()
+        }
+        const effectiveScroll = step.scrollIntoView ? step.selector : step.scrollTop ?? journey.scrollTop
+        const effectiveRequireVisibleTarget = step.requireVisibleTarget ?? journey.requireVisibleTarget
+        const effectiveRequireScreenshotDiff = step.requireScreenshotDiff ?? journey.requireScreenshotDiff
+        if (effectiveRequireVisibleTarget) {
+          expect(effectiveScroll).toBeDefined()
+        }
+        if (effectiveRequireScreenshotDiff) {
+          expect(step.visibleAssertion).toBeDefined()
+        }
       }
     }
-    expect(verifyRuntime).toContain('miniProgram.pageScrollTo(journey.scrollTop)')
+    expect(verifyRuntime).toContain('miniProgram.pageScrollTo(stepScrollTop)')
+    expect(verifyRuntime).toContain('miniProgram.callWxMethod(\'pageScrollTo\', { selector: step.selector, duration: 0 })')
     expect(verifyRuntime).toContain('assertInteractionTargetInViewport')
+  })
+
+  it('proves the task assignment mode through a visible native control', () => {
+    const journey = contract.interactionJourneys.find(item => item.id === 'task-assignment-mode')
+    const openStep = journey?.steps.find(item => item.id === 'open-task-editor')
+    const step = journey?.steps.find(item => item.id === 'select-assignment-mode')
+    const tasksMarkup = read('src/packages/admin/tasks/index.wxml')
+    const controlStart = tasksMarkup.indexOf('<view id="task-assignment-mode-selected"')
+    const controlEnd = tasksMarkup.indexOf('</view>', controlStart)
+    const selectedControl = tasksMarkup.slice(controlStart, controlEnd)
+
+    expect(step).toMatchObject({
+      scrollIntoView: true,
+      requireVisibleTarget: true,
+      requireRenderedAction: true,
+      requireScreenshotDiff: true,
+    })
+    expect(openStep?.dataAssertions).toContainEqual({ path: 'eligibleLevelsState', equals: 'ready' })
+    expect(controlStart).toBeGreaterThanOrEqual(0)
+    expect(selectedControl).toContain('class="flex min-h-[88rpx] items-center"')
+    expect(selectedControl).toContain('aria-role="radio"')
+    expect(selectedControl).toContain('aria-checked="{{assignmentMode === \'SELECTED\'}}"')
+    expect(selectedControl).toContain('data-mode="SELECTED" bind:tap="chooseAssignmentMode"')
+    expect(selectedControl).toContain('variant="{{assignmentMode === \'SELECTED\' ? \'light\' : \'outline\'}}"')
+    expect(tasksMarkup).not.toContain('<t-tag id="task-assignment-mode-selected"')
   })
 
   it('keeps real-device capabilities explicit and unresolved by DevTools', () => {

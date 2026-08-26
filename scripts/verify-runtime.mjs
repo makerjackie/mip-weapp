@@ -399,6 +399,24 @@ function validateRuntimeContract(runtimePages) {
       assert(step?.id && ['input', 'tap'].includes(step.type), `Interaction ${journey.id} has an invalid step`)
       assert(typeof step.selector === 'string' && step.selector.startsWith('#'), `Interaction ${journey.id}/${step.id} needs an id selector`)
       assert(/^[a-z]\w*$/i.test(step.handler || ''), `Interaction ${journey.id}/${step.id} needs a page handler`)
+      if (step.scrollTop !== undefined) {
+        assert(Number.isInteger(step.scrollTop) && step.scrollTop >= 0 && step.scrollTop <= 10_000, `Interaction ${journey.id}/${step.id} scrollTop must be an integer from 0 to 10000`)
+      }
+      if (step.scrollIntoView !== undefined) {
+        assert(typeof step.scrollIntoView === 'boolean', `Interaction ${journey.id}/${step.id} scrollIntoView must be boolean`)
+        assert(step.scrollTop === undefined, `Interaction ${journey.id}/${step.id} cannot combine scrollIntoView and scrollTop`)
+      }
+      for (const key of ['requireVisibleTarget', 'requireRenderedAction', 'requireScreenshotDiff']) {
+        if (step[key] !== undefined) {
+          assert(typeof step[key] === 'boolean', `Interaction ${journey.id}/${step.id} ${key} must be boolean`)
+        }
+      }
+      const effectiveScroll = step.scrollIntoView === true ? 'selector' : step.scrollTop ?? journey.scrollTop
+      const effectiveRequireVisibleTarget = (step.requireVisibleTarget ?? journey.requireVisibleTarget) === true
+      const effectiveRequireScreenshotDiff = (step.requireScreenshotDiff ?? journey.requireScreenshotDiff) === true
+      if (effectiveRequireVisibleTarget) {
+        assert(effectiveScroll !== undefined, `Interaction ${journey.id}/${step.id} requires selector or numeric scrolling to prove target visibility`)
+      }
       if (step.handlerDataset !== undefined) {
         assert(step.handlerDataset && typeof step.handlerDataset === 'object' && !Array.isArray(step.handlerDataset), `Interaction ${journey.id}/${step.id} handlerDataset must be an object`)
       }
@@ -429,7 +447,7 @@ function validateRuntimeContract(runtimePages) {
           assert(pageSource.includes(step.visibleAssertion.text), `Interaction ${journey.id}/${step.id} text is missing from ${journey.route}`)
         }
       }
-      if (journey.requireScreenshotDiff === true) {
+      if (effectiveRequireScreenshotDiff) {
         assert(step.visibleAssertion, `Interaction ${journey.id}/${step.id} requires visibleAssertion for screenshot evidence`)
       }
     }
@@ -938,12 +956,23 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
       assert(settled.status === 'passed', `Interaction ${journey.id} route did not reach an accepted state`)
 
       for (const step of journey.steps) {
-        if (journey.scrollTop !== undefined) {
-          await retry(`scroll interaction ${journey.id}/${step.id}`, () => miniProgram.pageScrollTo(journey.scrollTop))
+        const stepScrollTop = step.scrollTop ?? journey.scrollTop
+        const requireVisibleTarget = (step.requireVisibleTarget ?? journey.requireVisibleTarget) === true
+        const requireRenderedAction = (step.requireRenderedAction ?? journey.requireRenderedAction) === true
+        const requireScreenshotDiff = (step.requireScreenshotDiff ?? journey.requireScreenshotDiff) === true
+        if (step.scrollIntoView === true) {
+          await retry(
+            `scroll interaction ${journey.id}/${step.id}`,
+            () => miniProgram.callWxMethod('pageScrollTo', { selector: step.selector, duration: 0 }),
+          )
+          await new Promise(resolve => setTimeout(resolve, 180))
+        }
+        else if (stepScrollTop !== undefined) {
+          await retry(`scroll interaction ${journey.id}/${step.id}`, () => miniProgram.pageScrollTo(stepScrollTop))
           await new Promise(resolve => setTimeout(resolve, 180))
         }
         let viewportEvidence
-        if (journey.requireVisibleTarget === true && step.type === 'input') {
+        if (requireVisibleTarget && step.type === 'input') {
           viewportEvidence = await retry(
             `prove interaction target ${journey.id}/${step.id}`,
             () => assertInteractionTargetInViewport(page, miniProgram, journey, step),
@@ -966,11 +995,11 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
             catch (error) {
               actionError = error
             }
-            if (actionError && journey.requireRenderedAction === true) {
+            if (actionError && requireRenderedAction) {
               throw actionError
             }
             if (!await waitForInteractionData(page, step)) {
-              if (journey.requireRenderedAction === true || !await invokeInteractionHandler(page, step)) {
+              if (requireRenderedAction || !await invokeInteractionHandler(page, step)) {
                 throw actionError || new Error(`Interaction ${journey.id}/${step.id} rendered input did not update page data`)
               }
             }
@@ -978,7 +1007,7 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
         }
         else {
           await retry(`tap interaction ${journey.id}/${step.id}`, async () => {
-            if (journey.requireVisibleTarget === true) {
+            if (requireVisibleTarget) {
               viewportEvidence = await assertInteractionTargetInViewport(page, miniProgram, journey, step)
             }
             const element = await queryFreshRenderedActionElement(page, step.selector)
@@ -999,10 +1028,10 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
             }
             const actionReachedExpectedState = await waitForInteractionData(page, step)
             if (!actionReachedExpectedState || !actionAttempted) {
-              if (actionError && journey.requireRenderedAction === true) {
+              if (actionError && requireRenderedAction) {
                 throw actionError
               }
-              if (journey.requireRenderedAction === true || !await invokeInteractionHandler(page, step)) {
+              if (requireRenderedAction || !await invokeInteractionHandler(page, step)) {
                 throw actionError || new Error(`Interaction ${journey.id}/${step.id} rendered tap did not update page data`)
               }
             }
@@ -1019,7 +1048,7 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
         let visibleDiffRatio = 0
         if (step.visibleAssertion) {
           visibleAssertionMode = await assertInteractionVisible(page, step)
-          if (journey.requireScreenshotDiff === true || visibleAssertionMode === 'source-data-screenshot') {
+          if (requireScreenshotDiff || visibleAssertionMode === 'source-data-screenshot') {
             const visibleAfterPath = path.join(outputDir, `interaction-${outputName(journey.id)}-${outputName(step.id)}.png`)
             await captureScreenshot(`interaction-${journey.id}/${step.id}`, miniProgram, visibleAfterPath)
             visibleDiffRatio = comparePngBuffers(

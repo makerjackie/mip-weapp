@@ -103,12 +103,12 @@ describe('runtime page privacy and normal unavailable states', () => {
     expect(interactionTargetViewportEvidence([
       { top: 800, bottom: 880, width: 120, height: 80 },
     ], 720)).toBeNull()
-    expect(verifier).toContain('miniProgram.pageScrollTo(journey.scrollTop)')
+    expect(verifier).toContain('miniProgram.pageScrollTo(stepScrollTop)')
     expect(verifier).toContain('assertInteractionTargetInViewport')
     expect(verifier).toContain('queryFreshRenderedActionElement(page, step.selector)')
     expect(verifier).toContain('was already satisfied before the rendered tap')
-    expect(verifier).toContain('journey.requireRenderedAction === true')
-    expect(verifier).toContain('journey.requireScreenshotDiff === true')
+    expect(verifier).toContain('const requireRenderedAction = (step.requireRenderedAction ?? journey.requireRenderedAction) === true')
+    expect(verifier).toContain('const requireScreenshotDiff = (step.requireScreenshotDiff ?? journey.requireScreenshotDiff) === true')
   })
 
   it('drops cached automator handles before every strict rendered action query', async () => {

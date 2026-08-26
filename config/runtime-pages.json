@@ -337,7 +337,10 @@
           "type": "tap",
           "selector": "#admin-task-create",
           "handler": "openCreate",
-          "dataAssertions": [{ "path": "editorOpen", "equals": true }],
+          "dataAssertions": [
+            { "path": "editorOpen", "equals": true },
+            { "path": "eligibleLevelsState", "equals": "ready" }
+          ],
           "visibleAssertion": { "text": "任务范围" }
         },
         {
@@ -346,6 +349,10 @@
           "selector": "#task-assignment-mode-selected",
           "handler": "chooseAssignmentMode",
           "handlerDataset": { "mode": "SELECTED" },
+          "scrollIntoView": true,
+          "requireVisibleTarget": true,
+          "requireRenderedAction": true,
+          "requireScreenshotDiff": true,
           "dataAssertions": [{ "path": "assignmentMode", "equals": "SELECTED" }],
           "visibleAssertion": { "selector": "#task-assignment-mode-selected", "text": "指定成员" }
         }
