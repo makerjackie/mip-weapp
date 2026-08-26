@@ -56,6 +56,7 @@ const warningAllowlistPath = path.join(root, 'config', 'runtime-warning-allowlis
 const sessionId = 'mip-weapp-free-event-mutation'
 const runtimeAcceptanceStorageKey = 'mip:internal:free-event-runtime-acceptance:v1'
 const automatedTimeoutMs = 20_000
+const authoritativePageOpenAttempts = 2
 const externalWaitStates = new Set(['access', 'blocked', 'disabled', 'forbidden'])
 const failedStates = new Set(['conflict', 'error', 'failed'])
 const authoritativePageContexts = new WeakMap()
@@ -389,10 +390,39 @@ async function bindAuthoritativePage(miniProgram, page, expectedRoute, selector,
   return currentPage
 }
 
+export async function openAuthoritativePage(miniProgram, {
+  expectedRoute,
+  label,
+  selector,
+  url,
+}) {
+  let lastError
+  for (let attempt = 1; attempt <= authoritativePageOpenAttempts; attempt += 1) {
+    const openedPage = await miniProgram.reLaunch(url)
+    try {
+      return await bindAuthoritativePage(miniProgram, openedPage, expectedRoute, selector, label)
+    }
+    catch (error) {
+      if (error instanceof ExternalWaitError || error instanceof RuntimeStateError) {
+        throw error
+      }
+      lastError = error
+      if (attempt < authoritativePageOpenAttempts) {
+        await delay(200)
+      }
+    }
+  }
+  throw lastError
+}
+
 async function openEventPage(miniProgram, step, eventId) {
   const separator = step.route.includes('?') ? '&' : '?'
-  const page = await miniProgram.reLaunch(`/${step.route}${separator}eventId=${encodeURIComponent(eventId)}`)
-  return await bindAuthoritativePage(miniProgram, page, step.route, step.selector, step.id)
+  return await openAuthoritativePage(miniProgram, {
+    expectedRoute: step.route,
+    label: step.id,
+    selector: step.selector,
+    url: `/${step.route}${separator}eventId=${encodeURIComponent(eventId)}`,
+  })
 }
 
 async function callBoundHandler(page, handler, { dataset = {}, detail = {} } = {}) {
@@ -583,8 +613,12 @@ async function executeWorkflow({ contract, diagnostics, markers, miniProgram, op
   })
 
   await runStep('member-registration-fact', async (step, spec) => {
-    const openedPage = await miniProgram.reLaunch(`/${spec.route}`)
-    const page = await bindAuthoritativePage(miniProgram, openedPage, spec.route, spec.selector, step.id)
+    const page = await openAuthoritativePage(miniProgram, {
+      expectedRoute: spec.route,
+      label: step.id,
+      selector: spec.selector,
+      url: `/${spec.route}`,
+    })
     await ensureRegistrationCategory(page, 'UPCOMING')
     const found = await findMyRegistration(page, options.eventId)
     if (!found.match) {
@@ -885,8 +919,12 @@ async function executeWorkflow({ contract, diagnostics, markers, miniProgram, op
   })
 
   await runStep('external-cancel-registration', async (step, spec) => {
-    const openedPage = await miniProgram.reLaunch(`/${spec.route}`)
-    const page = await bindAuthoritativePage(miniProgram, openedPage, spec.route, spec.selector, step.id)
+    const page = await openAuthoritativePage(miniProgram, {
+      expectedRoute: spec.route,
+      label: step.id,
+      selector: spec.selector,
+      url: `/${spec.route}`,
+    })
     await ensureRegistrationCategory(page, 'UPCOMING')
     const before = await findMyRegistration(page, options.eventId)
     invariant(before.match?.registrationId === registrationId, 'Exact registration is absent after undo check-in')

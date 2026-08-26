@@ -1,6 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   createOpenedAutomatorOptions,
   isReusableFreeEventRegistrationStatus,
@@ -21,6 +21,7 @@ import {
   validateFreeEventMutationContract,
   validateRuntimeAttestation,
 } from '../scripts/lib/free-event-runtime-contract.mjs'
+import { openAuthoritativePage } from '../scripts/verify-free-event-runtime.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const contract = JSON.parse(fs.readFileSync(path.join(root, 'config/runtime-free-event-mutation.json'), 'utf8'))
@@ -227,6 +228,61 @@ describe('free offline event mutation runtime contract', () => {
       'pages/index/index',
       'packages/member/mip-events/registration/index',
     )).toBe('failed')
+  })
+
+  it('reopens the exact route when DevTools reports it before rendered nodes are queryable', async () => {
+    const route = 'packages/member/mip-events/mine/index'
+    const selector = '#mip-events-mine-page'
+    const firstPage = {
+      path: `/${route}`,
+      waitForRendered: vi.fn().mockRejectedValue(new Error(
+        `Timed out waiting page rendered: selector=${selector} dataset={}; reason=condition not met; latest=[]`,
+      )),
+    }
+    const secondPage = {
+      path: `/${route}`,
+      waitForRendered: vi.fn().mockResolvedValue('{"selector":"#mip-events-mine-page"}'),
+    }
+    const miniProgram = {
+      currentPage: vi.fn()
+        .mockResolvedValueOnce(firstPage)
+        .mockResolvedValueOnce(firstPage)
+        .mockResolvedValueOnce(secondPage),
+      reLaunch: vi.fn()
+        .mockResolvedValueOnce(firstPage)
+        .mockResolvedValueOnce(secondPage),
+    }
+
+    await expect(openAuthoritativePage(miniProgram, {
+      expectedRoute: route,
+      label: 'external-cancel-registration',
+      selector,
+      url: `/${route}`,
+    })).resolves.toBe(secondPage)
+    expect(miniProgram.reLaunch).toHaveBeenCalledTimes(2)
+    expect(firstPage.waitForRendered).toHaveBeenCalledWith({ selector, timeout: 15_000 })
+    expect(secondPage.waitForRendered).toHaveBeenCalledWith({ selector, timeout: 15_000 })
+  })
+
+  it('does not retry an authoritative route that redirects somewhere unexpected', async () => {
+    const expectedRoute = 'packages/member/mip-events/mine/index'
+    const wrongPage = {
+      path: '/pages/index/index',
+      waitForRendered: vi.fn(),
+    }
+    const miniProgram = {
+      currentPage: vi.fn().mockResolvedValue(wrongPage),
+      reLaunch: vi.fn().mockResolvedValue(wrongPage),
+    }
+
+    await expect(openAuthoritativePage(miniProgram, {
+      expectedRoute,
+      label: 'external-cancel-registration',
+      selector: '#mip-events-mine-page',
+      url: `/${expectedRoute}`,
+    })).rejects.toThrow('opened unexpected route pages/index/index')
+    expect(miniProgram.reLaunch).toHaveBeenCalledOnce()
+    expect(wrongPage.waitForRendered).not.toHaveBeenCalled()
   })
 
   it('allows a fresh registration after completed cancellation without weakening fixture gates', () => {
