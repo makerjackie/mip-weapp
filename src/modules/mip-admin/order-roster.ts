@@ -154,6 +154,9 @@ function parseOrderItem(value: unknown): AdminOrder {
       'paidAt',
       'createdAt',
       'version',
+      'entitlementStartsAt',
+      'entitlementEndsAt',
+      'entitlementStatus',
     ])
     || typeof value.id !== 'string'
     || !uuidPattern.test(value.id)
@@ -192,7 +195,11 @@ function parseOrderItem(value: unknown): AdminOrder {
     || !validDate(value.paidAt, true)
     || !validDate(value.createdAt)
     || !Number.isInteger(value.version)
-    || Number(value.version) < 1) {
+    || Number(value.version) < 1
+    || !(value.entitlementStartsAt === undefined || validDate(value.entitlementStartsAt, true))
+    || !(value.entitlementEndsAt === undefined || validDate(value.entitlementEndsAt, true))
+    || !(value.entitlementStatus === undefined || value.entitlementStatus === null
+      || ['PENDING', 'ACTIVE', 'EXPIRED', 'REVOKED', 'REFUNDED'].includes(String(value.entitlementStatus)))) {
     throw invalidResponse('订单列表')
   }
   return value as unknown as AdminOrder

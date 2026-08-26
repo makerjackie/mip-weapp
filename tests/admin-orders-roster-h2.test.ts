@@ -76,7 +76,17 @@ function summary(overrides: Record<string, unknown> = {}) {
 
 describe('H2 admin order and roster response boundary', () => {
   it('accepts complete safe DTOs and rejects raw payment or roster identity fields', () => {
-    expect(parseAdminOrderPage({ items: [order()], nextCursor: null, summary: summary() }).items[0].resourceTitle).toBe('年度会员')
+    const parsedOrder = parseAdminOrderPage({
+      items: [order({
+        entitlementStartsAt: '2026-08-20T02:00:00.000Z',
+        entitlementEndsAt: '2027-08-20T02:00:00.000Z',
+        entitlementStatus: 'ACTIVE',
+      })],
+      nextCursor: null,
+      summary: summary(),
+    }).items[0]
+    expect(parsedOrder.resourceTitle).toBe('年度会员')
+    expect(parsedOrder.entitlementStatus).toBe('ACTIVE')
     expect(() => parseAdminOrderPage({
       items: [order({ merchantOrderNo: 'MIP-RAW-ORDER' })],
       nextCursor: null,

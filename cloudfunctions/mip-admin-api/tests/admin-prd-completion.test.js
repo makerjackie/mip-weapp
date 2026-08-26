@@ -51,7 +51,9 @@ describe('admin PRD query completion', () => {
 
     assert.match(captured.sql, /LEFT JOIN mip_growth_accounts ga/)
     assert.match(captured.sql, /LEFT JOIN mip_growth_levels gl/)
-    assert.match(captured.sql, /ga\.current_level_id = \?/)
+    assert.match(captured.sql, /gl\.id = \?/)
+    assert.match(captured.sql, /MAX\(current_level\.minimum_experience\)/)
+    assert.doesNotMatch(captured.sql, /ga\.current_level_id/)
     assert.match(captured.sql, /COALESCE\(ga\.experience_balance, 0\) >= \?/)
     assert.match(captured.sql, /u\.created_at >= \?/)
     assert.ok(captured.params.includes(LEVEL_ID))

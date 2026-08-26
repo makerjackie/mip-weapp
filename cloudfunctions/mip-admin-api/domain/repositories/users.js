@@ -23,7 +23,7 @@ function createAdminUserRepository(database, options) {
       params.push(filters.branchId)
     }
     if (filters.levelId) {
-      clauses.push('ga.current_level_id = ?')
+      clauses.push('gl.id = ?')
       params.push(filters.levelId)
     }
     if (filters.experienceMin !== null && filters.experienceMin !== undefined) {
@@ -83,7 +83,7 @@ function createAdminUserRepository(database, options) {
       `SELECT u.id, u.status, u.primary_branch_id, u.version AS user_version,
         p.nickname, p.headline, p.introduction, p.visibility_json, p.version AS profile_version,
         pp.phone_ciphertext, pp.phone_verified_at, b.name AS branch_name, b.city_name,
-        ga.current_level_id, ga.experience_balance, gl.name AS level_name,
+        gl.id AS current_level_id, ga.experience_balance, gl.name AS level_name,
         EXISTS (SELECT 1 FROM mip_membership_entitlements me
           WHERE me.app_id = u.app_id AND me.user_id = u.id AND me.status = 'ACTIVE'
             AND me.starts_at <= UTC_TIMESTAMP(3) AND me.ends_at > UTC_TIMESTAMP(3)) AS is_player,
@@ -96,7 +96,14 @@ function createAdminUserRepository(database, options) {
        LEFT JOIN mip_private_profiles pp ON pp.app_id = u.app_id AND pp.user_id = u.id
        LEFT JOIN mip_city_branches b ON b.app_id = u.app_id AND b.id = u.primary_branch_id
        LEFT JOIN mip_growth_accounts ga ON ga.app_id = u.app_id AND ga.user_id = u.id
-       LEFT JOIN mip_growth_levels gl ON gl.app_id = ga.app_id AND gl.id = ga.current_level_id
+       LEFT JOIN mip_growth_levels gl
+         ON gl.app_id = u.app_id AND gl.status = 'ACTIVE'
+        AND gl.minimum_experience = (
+          SELECT MAX(current_level.minimum_experience)
+          FROM mip_growth_levels current_level
+          WHERE current_level.app_id = u.app_id AND current_level.status = 'ACTIVE'
+            AND current_level.minimum_experience <= COALESCE(ga.experience_balance, 0)
+        )
        WHERE ${clauses.join(' AND ')}${cursorWhere.sql}
        ORDER BY u.updated_at DESC, u.id DESC LIMIT ?`,
       [...params, ...cursorWhere.params, pageLimit + 1],
@@ -161,7 +168,13 @@ function createAdminUserRepository(database, options) {
                 level.name AS level_name
          FROM mip_growth_accounts account
          LEFT JOIN mip_growth_levels level
-           ON level.app_id = account.app_id AND level.id = account.current_level_id
+           ON level.app_id = account.app_id AND level.status = 'ACTIVE'
+          AND level.minimum_experience = (
+            SELECT MAX(current_level.minimum_experience)
+            FROM mip_growth_levels current_level
+            WHERE current_level.app_id = account.app_id AND current_level.status = 'ACTIVE'
+              AND current_level.minimum_experience <= account.experience_balance
+          )
          WHERE account.app_id = ? AND account.user_id = ?`,
         [appId, userId],
       ),
