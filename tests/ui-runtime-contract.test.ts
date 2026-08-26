@@ -127,6 +127,15 @@ const sensitiveWxmlPatterns: Array<{ id: string, pattern: RegExp }> = [
   { id: 'jdbc-uri', pattern: /jdbc:/i },
 ]
 
+function sensitiveWxmlSource(wxml: string, patternId: string) {
+  if (patternId !== 'openid-value') return wxml
+  // WXML structural identifiers can share OpenID's length and character set.
+  return wxml.replace(
+    /\s(?:id|class|style|role|slot|aria-[\w-]+|wx:key)\s*=\s*(?:"[^"]*"|'[^']*')/gi,
+    '',
+  )
+}
+
 describe('mip-weapp UI runtime contract', () => {
   const contract = readJson<RuntimePagesContract>('config/runtime-pages.json')
   const appJson = readJson<AppJson>('src/app.json')
@@ -230,9 +239,25 @@ describe('mip-weapp UI runtime contract', () => {
     for (const route of contract.routes) {
       const wxml = fs.readFileSync(wxmlPathForRoute(route.path), 'utf8')
       for (const item of sensitiveWxmlPatterns) {
-        expect(item.pattern.test(wxml), `${route.path} leaked ${item.id}`).toBe(false)
+        expect(
+          item.pattern.test(sensitiveWxmlSource(wxml, item.id)),
+          `${route.path} leaked ${item.id}`,
+        ).toBe(false)
       }
     }
+  })
+
+  it('distinguishes WXML structural identifiers from hard-coded OpenID values', () => {
+    const openIdPattern = sensitiveWxmlPatterns.find(item => item.id === 'openid-value')?.pattern
+    expect(openIdPattern).toBeDefined()
+    expect(openIdPattern?.test(sensitiveWxmlSource(
+      '<view id="opportunities-filter-actions" class="opportunities-filter-actions" />',
+      'openid-value',
+    ))).toBe(false)
+    expect(openIdPattern?.test(sensitiveWxmlSource(
+      '<view data-openid="o123456789012345678901234567" />',
+      'openid-value',
+    ))).toBe(true)
   })
 
   it('drives runtime verification from route-specific real-data query fixtures', () => {
