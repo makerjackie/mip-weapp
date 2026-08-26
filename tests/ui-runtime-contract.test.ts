@@ -28,6 +28,7 @@ interface RuntimeRoute {
   query?: string[]
   queryFixture?: {
     sourceRoute: string
+    sourceQuery?: Record<string, string>
     dataPath: string
     where?: Record<string, unknown>
     values: Record<string, string>
@@ -383,6 +384,32 @@ describe('mip-weapp UI runtime contract', () => {
       expect(byPath.has(route.queryFixture!.sourceRoute)).toBe(true)
       expect(byPath.get(route.queryFixture!.sourceRoute)?.query ?? []).toEqual([])
     }
+  })
+
+  it('maps normal-state fixtures without patching source page data', () => {
+    const byId = new Map(contract.routes.map(route => [route.id, route]))
+    expect(byId.get('M09')?.queryFixture).toMatchObject({
+      sourceRoute: 'packages/member/mip-events/mine/index',
+      sourceQuery: { category: 'ATTENDED' },
+      dataPath: 'registrations',
+      where: { status: 'ATTENDED' },
+      values: { eventId: 'event.id' },
+    })
+    expect(byId.get('M35')?.queryFixture).toMatchObject({
+      sourceRoute: 'packages/member/mip-game/index',
+      dataPath: 'rankings',
+      where: { subjectType: 'TEAM' },
+      values: { teamId: 'teamId' },
+    })
+    expect(byId.get('M46')).toMatchObject({
+      states: ['loading', 'ready', 'empty', 'error'],
+      acceptStates: ['ready', 'empty'],
+      readyAssertion: 'state === \'ready\' || state === \'empty\'',
+      deviceRequired: ['knowledge-webview'],
+    })
+    expect(byId.get('M26')?.queryFixture).toMatchObject({
+      where: { albumEnabled: true },
+    })
   })
 
   it('keeps payment checking pending and accepts only server-settled outcomes', () => {

@@ -1,5 +1,6 @@
 import type { GameBranchFilter, GameMatch, GameOverview, GameRankingEntry, GameRankingType } from '../../../modules/mip-game'
-import { mipGameModule } from '../../../modules/mip-game'
+import { mipGameModule, rankingTeamRoute } from '../../../modules/mip-game'
+import { caseNavigateTo } from '../../../modules/platform/case-navigation'
 
 interface MatchView extends GameMatch { periodText: string, resultText: string }
 
@@ -113,9 +114,19 @@ Page({
   },
 
   openTeam() {
-    const teamId = this.data.overview?.team?.id
-    if (teamId) {
-      void wx.navigateTo({ url: `/packages/member/mip-game/team/index?teamId=${teamId}` })
+    const url = rankingTeamRoute('TEAM', this.data.overview?.team?.id)
+    if (url) {
+      caseNavigateTo({ url })
+    }
+  },
+
+  openRankingTeam(event: WechatMiniprogram.TouchEvent) {
+    const url = rankingTeamRoute(
+      event.currentTarget.dataset.subjectType,
+      event.currentTarget.dataset.teamId,
+    )
+    if (url) {
+      caseNavigateTo({ url })
     }
   },
 

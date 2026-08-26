@@ -1,5 +1,5 @@
 {
-  "version": "2026-08-26-demo.7",
+  "version": "2026-08-26-demo.8",
   "replaceBeforeProduction": true,
   "branches": [
     {
@@ -234,6 +234,8 @@
       "eventTypeKey": "community",
       "eventMode": "OFFLINE",
       "accessType": "FREE",
+      "albumEnabled": true,
+      "albumSubmissionPolicy": "REVIEW",
       "startsAt": "2030-10-19 10:00:00.000",
       "endsAt": "2030-10-19 17:00:00.000",
       "registrationOpensAt": "2026-08-25 00:00:00.000",
@@ -256,6 +258,8 @@
       "eventTypeKey": "workshop",
       "eventMode": "OFFLINE",
       "accessType": "MEMBER_INCLUDED",
+      "albumEnabled": false,
+      "albumSubmissionPolicy": "AUTO",
       "startsAt": "2030-11-16 09:30:00.000",
       "endsAt": "2030-11-16 18:00:00.000",
       "registrationOpensAt": "2026-08-25 00:00:00.000",

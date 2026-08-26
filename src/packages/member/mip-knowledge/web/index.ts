@@ -1,29 +1,40 @@
 import { runtimeConfig } from '../../../../config/runtime'
-import { mipKnowledgeModule } from '../../../../modules/mip-knowledge'
+import { mipKnowledgeModule, resolveKnowledgeWebviewUrl } from '../../../../modules/mip-knowledge'
 
 Page({
-  data: { state: 'loading' as 'loading' | 'ready' | 'error', url: '' },
+  data: {
+    state: 'loading' as 'loading' | 'ready' | 'empty' | 'error',
+    contentId: '',
+    url: '',
+    message: '',
+  },
   onLoad(query: Record<string, string | undefined>) {
-    void this.loadContent(String(query.contentId || ''))
+    const contentId = String(query.contentId || '')
+    this.setData({ contentId })
+    void this.loadContent(contentId)
   },
   async loadContent(contentId: string) {
+    if (!contentId) {
+      this.setData({ state: 'error', url: '', message: '内容参数无效。' })
+      return
+    }
+    this.setData({ state: 'loading', url: '', message: '' })
     try {
       const detail = await mipKnowledgeModule.getContent(contentId)
-      if (!detail.access.unlocked || !detail.externalUrl) {
-        throw new Error('CONTENT_UNAVAILABLE')
+      const url = detail.access.unlocked
+        ? resolveKnowledgeWebviewUrl(detail.externalUrl, runtimeConfig.knowledgeWebviewAllowedHosts)
+        : ''
+      if (!url) {
+        this.setData({ state: 'empty', url: '', message: '当前内容没有可打开的网页。' })
+        return
       }
-      const parsed = new URL(detail.externalUrl)
-      const allowedHosts = new Set(runtimeConfig.knowledgeWebviewAllowedHosts)
-      if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.port || parsed.hash
-        || !allowedHosts.has(parsed.hostname.toLowerCase()) || parsed.search.length > 512
-        || Array.from(parsed.searchParams).length > 20
-        || Array.from(parsed.searchParams).some(([key, value]) => key.length > 64 || value.length > 256)) {
-        throw new Error('INVALID_URL')
-      }
-      this.setData({ state: 'ready', url: parsed.toString() })
+      this.setData({ state: 'ready', url, message: '' })
     }
     catch {
-      this.setData({ state: 'error', url: '' })
+      this.setData({ state: 'error', url: '', message: '暂时无法加载内容，请稍后重试。' })
     }
+  },
+  reload() {
+    void this.loadContent(this.data.contentId)
   },
 })

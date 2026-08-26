@@ -91,4 +91,24 @@ describe('runtime ready assertions', () => {
       .toBe('profileRef=p1.real.iv.tag')
     expect(resolveQueryFixtureValues(route, { people: [] })).toMatchObject({ status: 'external-wait' })
   })
+
+  it('selects the first matching fixture that also has every required query value', () => {
+    const route = {
+      path: 'packages/member/mip-game/team/index',
+      query: ['teamId'],
+      queryFixture: {
+        sourceRoute: 'packages/member/mip-game/index',
+        dataPath: 'rankings',
+        where: { subjectType: 'TEAM' },
+        values: { teamId: 'teamId' },
+      },
+    }
+    expect(resolveQueryFixtureValues(route, {
+      rankings: [
+        { subjectType: 'USER', teamId: 'user-row' },
+        { subjectType: 'TEAM', teamId: '' },
+        { subjectType: 'TEAM', teamId: 'team-real' },
+      ],
+    })).toEqual({ status: 'resolved', values: { teamId: 'team-real' } })
+  })
 })

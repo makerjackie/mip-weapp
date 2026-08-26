@@ -81,8 +81,14 @@ export function resolveQueryFixtureValues(route, data) {
     : candidateValue && typeof candidateValue === 'object'
       ? [candidateValue]
       : []
-  const candidate = candidates.find(item => Object.entries(fixture.where || {}).every(
-    ([keyPath, expected]) => Object.is(pathValue(item, keyPath), expected),
+  const candidate = candidates.find(item => (
+    Object.entries(fixture.where || {}).every(
+      ([keyPath, expected]) => Object.is(pathValue(item, keyPath), expected),
+    )
+    && Object.values(fixture.values).every((keyPath) => {
+      const value = pathValue(item, keyPath)
+      return value !== undefined && value !== null && String(value).trim() !== ''
+    })
   ))
   if (!candidate) {
     return {
@@ -259,6 +265,14 @@ function validateRuntimeContract(runtimePages) {
       }
       for (const keyPath of Object.keys(fixture.where || {})) {
         assert(/^[a-z]\w*(?:\.[a-z]\w*)*$/i.test(keyPath), `${route.path} queryFixture where path is invalid`)
+      }
+      if (fixture.sourceQuery !== undefined) {
+        assert(fixture.sourceQuery && typeof fixture.sourceQuery === 'object'
+          && !Array.isArray(fixture.sourceQuery), `${route.path} queryFixture sourceQuery is invalid`)
+        for (const [key, value] of Object.entries(fixture.sourceQuery)) {
+          assert(/^[a-z][a-z0-9]*$/i.test(key), `${route.path} queryFixture sourceQuery key is unsafe`)
+          assert(typeof value === 'string' && value.trim() && value.length <= 128, `${route.path} queryFixture sourceQuery value is invalid`)
+        }
       }
     }
   }
@@ -932,12 +946,17 @@ async function resolveRouteQuery(miniProgram, runtimePages, route, sensitivePatt
     return { status: 'resolved', query: '', queryMode: 'none' }
   }
   const fixture = route.queryFixture
-  let sourceData = fixtureCache.get(fixture.sourceRoute)
+  const sourceQuery = queryForRoute({
+    path: fixture.sourceRoute,
+    query: Object.keys(fixture.sourceQuery || {}),
+  }, fixture.sourceQuery || {})
+  const sourceCacheKey = `${fixture.sourceRoute}?${sourceQuery}`
+  let sourceData = fixtureCache.get(sourceCacheKey)
   if (!sourceData) {
     const sourceRoute = runtimePages.routes.find(candidate => candidate.path === fixture.sourceRoute)
     const sourcePage = await retry(
       `query fixture ${route.path}`,
-      () => miniProgram.reLaunch(`/${sourceRoute.path}`),
+      () => miniProgram.reLaunch(`/${sourceRoute.path}${sourceQuery ? `?${sourceQuery}` : ''}`),
     )
     await retry(
       `wait query fixture ${sourceRoute.path}`,
@@ -952,7 +971,7 @@ async function resolveRouteQuery(miniProgram, runtimePages, route, sensitivePatt
       }
     }
     sourceData = settled.data
-    fixtureCache.set(fixture.sourceRoute, sourceData)
+    fixtureCache.set(sourceCacheKey, sourceData)
   }
   const resolved = resolveQueryFixtureValues(route, sourceData)
   return resolved.status === 'resolved'

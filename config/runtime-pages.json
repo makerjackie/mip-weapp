@@ -1125,6 +1125,7 @@
       "query": ["eventId"],
       "queryFixture": {
         "sourceRoute": "packages/member/mip-events/mine/index",
+        "sourceQuery": { "category": "ATTENDED" },
         "dataPath": "registrations",
         "where": { "status": "ATTENDED" },
         "values": { "eventId": "event.id" }
@@ -1346,8 +1347,9 @@
       "query": ["teamId"],
       "queryFixture": {
         "sourceRoute": "packages/member/mip-game/index",
-        "dataPath": "overview.team",
-        "values": { "teamId": "id" }
+        "dataPath": "rankings",
+        "where": { "subjectType": "TEAM" },
+        "values": { "teamId": "teamId" }
       }
     },
     {
@@ -1561,8 +1563,9 @@
       "selector": "#mip-knowledge-web-page",
       "group": "public",
       "kind": "static-data",
-      "states": ["loading", "ready", "error"],
-      "readyAssertion": "state === 'ready'",
+      "states": ["loading", "ready", "empty", "error"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'",
       "query": ["contentId"],
       "queryFixture": {
         "sourceRoute": "packages/member/mip-knowledge/index",

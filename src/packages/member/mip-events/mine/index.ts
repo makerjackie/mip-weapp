@@ -6,6 +6,7 @@ import type {
 } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
+import { resolveMyRegistrationCategory } from './category'
 
 interface RegistrationView extends RegistrationSummary {
   statusText: string
@@ -59,6 +60,10 @@ Page({
     message: '',
   },
   requestSeq: 0,
+
+  onLoad(query: Record<string, string | undefined>) {
+    this.setData({ activeCategory: resolveMyRegistrationCategory(query.category) })
+  },
 
   onShow() {
     void this.loadRegistrations()

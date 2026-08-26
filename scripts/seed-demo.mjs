@@ -206,6 +206,15 @@ const verification = callCloudbase(root, 'queryMysqlDatabase', {
     (SELECT COUNT(*) FROM mip_events
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.events.map(item => sqlLiteral(item.id)).join(', ')})) AS events,
+    (SELECT COUNT(*) FROM mip_events
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND (${seed.events.map(item => `(id = ${sqlLiteral(item.id)} AND album_enabled = ${item.albumEnabled ? 1 : 0} AND album_submission_policy = ${sqlLiteral(item.albumSubmissionPolicy)})`).join(' OR ')})) AS eventAlbumSettings,
+    (SELECT COUNT(*) FROM mip_events
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.events.filter(item => item.albumEnabled).map(item => sqlLiteral(item.id)).join(', ')})
+        AND status = 'PUBLISHED' AND album_enabled = 1
+        AND starts_at >= '2030-01-01 00:00:00.000'
+        AND starts_at < '2031-01-01 00:00:00.000') AS eventAlbumRuntimeFixtures,
     (SELECT COUNT(*) FROM mip_event_registrations
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.eventRegistrations.map(item => sqlLiteral(item.id)).join(', ')})) AS eventRegistrations,
@@ -348,6 +357,8 @@ const expected = {
   membershipOrders: seed.membershipOrders.length,
   entitlements: seed.entitlements.length,
   events: seed.events.length,
+  eventAlbumSettings: seed.events.length,
+  eventAlbumRuntimeFixtures: seed.events.filter(item => item.albumEnabled).length,
   eventRegistrations: seed.eventRegistrations.length,
   opportunities: seed.opportunities.length,
   opportunityTeamMembers: seed.opportunityTeamMembers.length,
@@ -781,7 +792,8 @@ function eventStatement(items) {
     ${sqlLiteral(item.organizerUserId)}, ${sqlLiteral(item.title)}, ${sqlLiteral(item.summary)},
     ${sqlLiteral(item.description)}, ${sqlLiteral(item.notices)}, NULL,
     ${sqlLiteral(item.eventTypeKey)}, ${sqlLiteral(item.eventMode)}, ${sqlLiteral(item.accessType)},
-    'AUTO', 'PUBLISHED', 'PASSED', ${sqlLiteral(item.startsAt)}, ${sqlLiteral(item.endsAt)},
+    'AUTO', ${item.albumEnabled ? 1 : 0}, ${sqlLiteral(item.albumSubmissionPolicy)},
+    'PUBLISHED', 'PASSED', ${sqlLiteral(item.startsAt)}, ${sqlLiteral(item.endsAt)},
     ${sqlLiteral(item.registrationOpensAt)}, ${sqlLiteral(item.registrationDeadline)},
     ${sqlLiteral(item.cancellationDeadline)}, ${sqlLiteral(item.venueName)}, ${sqlLiteral(item.address)},
     ${sqlLiteral(item.cityName)}, NULL, NULL, NULL, ${Number(item.capacity)}, 0, 0, 'CNY',
@@ -790,7 +802,7 @@ function eventStatement(items) {
   return `INSERT INTO mip_events (
     id, app_id, scope_type, branch_id, organizer_user_id, title, summary, description,
     notices, cover_asset_id, event_type_key, event_mode, access_type, registration_policy,
-    status, content_safety_status, starts_at, ends_at, registration_opens_at,
+    album_enabled, album_submission_policy, status, content_safety_status, starts_at, ends_at, registration_opens_at,
     registration_deadline, cancellation_deadline, venue_name, address, city_name,
     latitude, longitude, online_url, capacity, waitlist_enabled, price_cents, currency,
     registration_schema_json, form_version, version, published_at, unpublished_at,
@@ -803,6 +815,7 @@ function eventStatement(items) {
     title = VALUES(title), summary = VALUES(summary), description = VALUES(description),
     notices = VALUES(notices), cover_asset_id = NULL, event_type_key = VALUES(event_type_key),
     event_mode = VALUES(event_mode), access_type = VALUES(access_type), registration_policy = 'AUTO',
+    album_enabled = VALUES(album_enabled), album_submission_policy = VALUES(album_submission_policy),
     status = 'PUBLISHED', content_safety_status = 'PASSED', starts_at = VALUES(starts_at),
     ends_at = VALUES(ends_at), registration_opens_at = VALUES(registration_opens_at),
     registration_deadline = VALUES(registration_deadline),
@@ -1961,11 +1974,16 @@ function assertDemoRelations(value) {
   for (const event of value.events) {
     if (!branchIds.has(event.branchId)
       || !userIds.has(event.organizerUserId)
+      || typeof event.albumEnabled !== 'boolean'
+      || !['AUTO', 'REVIEW'].includes(event.albumSubmissionPolicy)
       || !String(event.startsAt).startsWith('2030-')
       || !String(event.endsAt).startsWith('2030-')
       || event.endsAt <= event.startsAt) {
       throw new Error('Demo events must be valid 2030 fixtures')
     }
+  }
+  if (!value.events.some(event => event.albumEnabled)) {
+    throw new Error('Demo events require a published 2030 album fixture')
   }
   for (const registration of value.eventRegistrations) {
     if (!eventIds.has(registration.eventId) || !userIds.has(registration.userId)) {

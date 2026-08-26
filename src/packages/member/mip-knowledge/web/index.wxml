@@ -1,1 +1,13 @@
-<view id="mip-knowledge-web-page" class="mip-member-page min-h-screen bg-canvas text-ink"><web-view wx:if="{{state === 'ready'}}" src="{{url}}" /><view wx:else class="px-4 pt-6"><app-empty-state title="无法打开内容" description="链接无效或当前业务域名尚未配置。" /></view><app-page-exit /></view>
+<view id="mip-knowledge-web-page" class="mip-member-page min-h-screen bg-canvas text-ink">
+  <web-view wx:if="{{state === 'ready'}}" src="{{url}}" />
+  <view wx:elif="{{state === 'loading'}}" class="px-4 pt-6">
+    <view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  </view>
+  <view wx:elif="{{state === 'empty'}}" class="px-4 pt-6">
+    <app-empty-state title="内容暂不可用" description="{{message}}" />
+  </view>
+  <view wx:else class="px-4 pt-6">
+    <app-empty-state title="暂时无法加载内容" description="{{message}}" action-text="重新加载" bind:action="reload" />
+  </view>
+  <app-page-exit />
+</view>
