@@ -467,6 +467,14 @@
       "idempotencyKeyRequired": null
     },
     {
+      "action": "mip.admin.paymentAttempts.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
       "action": "mip.admin.refunds.submit",
       "kind": "MUTATION",
       "authentication": "REQUIRED",

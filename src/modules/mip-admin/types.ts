@@ -81,6 +81,7 @@ import type {
   AdminOpportunityCommentSettings,
   AdminOpportunityCommentState,
 } from './opportunity-comments'
+import type { AdminPaymentAttemptListInput, AdminPaymentAttemptPage } from './payment-attempts'
 import type {
   AdminUserContentArchiveInput,
   AdminUserContentDetail,
@@ -1282,6 +1283,7 @@ export interface MipAdminGateway {
   grantBadge: (input: { userId: string, badgeId: string, reason: string }) => Promise<Record<string, unknown>>
   revokeBadge: (input: { awardId: string, expectedVersion: number, reason: string }) => Promise<Record<string, unknown>>
   listOrders: (input?: AdminOrderListInput) => Promise<AdminOrderPage>
+  listPaymentAttempts: (input?: AdminPaymentAttemptListInput) => Promise<AdminPaymentAttemptPage>
   getOrder: (orderId: string) => Promise<AdminOrderDetail>
   submitRefund: (input: Record<string, unknown>) => Promise<Record<string, unknown>>
   retryRefund: (refundId: string) => Promise<Record<string, unknown>>

@@ -78,6 +78,7 @@ const expectedOperations = Object.freeze({
 
   'mip.admin.orders.list': ['ORDERS', 'QUERY', 'listOrders'],
   'mip.admin.orders.get': ['ORDERS', 'QUERY', 'getOrder'],
+  'mip.admin.paymentAttempts.list': ['ORDERS', 'QUERY', 'listPaymentAttempts'],
   'mip.admin.refunds.submit': ['ORDERS', 'MUTATION', 'submitRefund'],
   'mip.admin.refunds.retry': ['ORDERS', 'MUTATION', 'retryRefund'],
 

@@ -99,6 +99,12 @@ export const adminWorkspaceGroups: readonly AdminWorkspaceNavGroup[] = [
         capabilities: ['orders.read'],
       },
       {
+        key: 'payment-attempts',
+        label: '支付尝试记录',
+        route: 'packages/admin/payment-attempts/index',
+        capabilities: ['orders.read'],
+      },
+      {
         key: 'membership-ledger',
         label: '会员权益台账',
         route: 'packages/admin/membership-ledger/index',
@@ -258,6 +264,7 @@ const activeItemByRoute: Readonly<Record<string, string>> = {
   'packages/admin/exports/index': 'managed-events',
   'packages/admin/event-participants/index': 'event-participants',
   'packages/admin/orders/index': 'orders',
+  'packages/admin/payment-attempts/index': 'payment-attempts',
   'packages/admin/membership-ledger/index': 'membership-ledger',
   'packages/admin/announcements/index': 'announcements',
   'packages/admin/announcement-editor/index': 'announcements',

@@ -89,6 +89,7 @@ import {
   parseOpportunityCommentState,
 } from './opportunity-comments'
 import { parseAdminOrderDetail, parseAdminOrderPage, parseAdminRosterPage } from './order-roster'
+import { parseAdminPaymentAttemptPage } from './payment-attempts'
 import { createAdminRequest } from './request-contract'
 import { MipAdminError } from './types'
 import {
@@ -1042,6 +1043,9 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
     grantBadge: input => call('mip.admin.badges.grant', input),
     revokeBadge: input => call('mip.admin.badges.revoke', input),
     listOrders: async input => parseAdminOrderPage(await call('mip.admin.orders.list', { ...(input || {}) })),
+    listPaymentAttempts: async input => parseAdminPaymentAttemptPage(
+      await call('mip.admin.paymentAttempts.list', { ...(input || {}) }),
+    ),
     getOrder: async orderId => parseAdminOrderDetail(await call('mip.admin.orders.get', { orderId })),
     submitRefund: input => call('mip.admin.refunds.submit', input),
     retryRefund: refundId => call('mip.admin.refunds.retry', { refundId }),

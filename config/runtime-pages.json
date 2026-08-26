@@ -859,6 +859,17 @@
       "readyAssertion": "state === 'ready'"
     },
     {
+      "id": "A48",
+      "name": "支付尝试记录",
+      "path": "packages/admin/payment-attempts/index",
+      "selector": "#admin-payment-attempts-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
       "id": "A12",
       "name": "机会管理",
       "path": "packages/admin/opportunities/index",

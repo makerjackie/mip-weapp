@@ -93,6 +93,7 @@
         "event-registrations/index",
         "event-participants/index",
         "orders/index",
+        "payment-attempts/index",
         "opportunities/index",
         "opportunity-editor/index",
         "opportunity-detail/index",

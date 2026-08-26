@@ -321,6 +321,10 @@
       "pathName": "packages/admin/orders/index"
     },
     {
+      "name": "支付尝试记录",
+      "pathName": "packages/admin/payment-attempts/index"
+    },
+    {
       "name": "机会管理",
       "pathName": "packages/admin/opportunities/index"
     },

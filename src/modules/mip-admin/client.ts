@@ -16,6 +16,7 @@ import { createMipMembershipsAdmin } from './memberships-admin'
 import { createMipMessagingAdmin } from './messaging-admin'
 import { createMipOpportunityAdmin } from './opportunity-admin'
 import { createMipOrdersAdmin } from './orders-admin'
+import { createMipPaymentAttemptsAdmin } from './payment-attempts'
 import { createMipUserContentAdmin } from './user-content-admin'
 import { createMipUsersAdmin } from './users-admin'
 
@@ -44,6 +45,7 @@ export function createMipAdminModule(
   const memberships = createMipMembershipsAdmin(gateway, cache)
   const opportunities = createMipOpportunityAdmin(gateway, cache)
   const orders = createMipOrdersAdmin(gateway, cache)
+  const paymentAttempts = createMipPaymentAttemptsAdmin(gateway, cache)
   const users = createMipUsersAdmin(gateway, cache)
   const userContent = createMipUserContentAdmin(gateway, cache)
   return {
@@ -116,6 +118,8 @@ export function createMipAdminModule(
     listOrders: orders.list,
     getOrder: orders.get,
     orders,
+    paymentAttempts,
+    listPaymentAttempts: paymentAttempts.list,
     listOperationalExceptions: governance.listOperationalExceptions,
     listOperationsQueue: governance.listOperationsQueue,
     listAudit: governance.listAudit,

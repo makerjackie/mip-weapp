@@ -21,6 +21,7 @@ const { createAdminMessageDeliveryReviews } = require('./message-delivery-review
 const { createAdminOperationsQueue } = require('./operations-queue')
 const { createAdminOpportunities } = require('./opportunities')
 const { createAdminOrders } = require('./orders')
+const { createAdminPaymentAttempts } = require('./payment-attempts')
 const { createAdminUsers } = require('./users')
 const { createAdminUserContentGovernance } = require('./user-content-governance')
 const { AdminError } = require('./validation')
@@ -136,6 +137,7 @@ function createAdminService({
     dispatchProviderRefund: dispatchRefund,
     repository,
   })
+  const { listPaymentAttempts } = createAdminPaymentAttempts({ access, repository })
   const {
     activateMessageTemplate,
     archiveMessageTemplate,
@@ -400,6 +402,7 @@ function createAdminService({
     listUnifiedBenefitLedger,
     listOpportunities,
     listOrders,
+    listPaymentAttempts,
     listOperationalExceptions,
     listOperationsQueue,
     listMessageCampaignScopes,

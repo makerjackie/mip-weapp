@@ -22,6 +22,7 @@ const { createEventCatalogRepository } = require('./repositories/event-catalogs'
 const { createAdminEventRepository } = require('./repositories/events')
 const { createMembershipRepository } = require('./repositories/memberships')
 const { createAdminOrderRepository } = require('./repositories/orders')
+const { createAdminPaymentAttemptRepository } = require('./repositories/payment-attempts')
 const { createAdminUserRepository } = require('./repositories/users')
 const { createAdminUserContentRepository } = require('./repositories/user-content')
 const { createRoleCapabilityPolicyRepository } = require('./role-capability-policies')
@@ -399,6 +400,10 @@ function createAdminRepository(database, options = {}) {
     lockMutationAuthorization: lockMutation,
     now,
     randomBytes: bytes,
+  })
+  const { listPaymentAttempts } = createAdminPaymentAttemptRepository(database, {
+    escapeLike,
+    iso,
   })
 
   async function health() {
@@ -1534,6 +1539,7 @@ function createAdminRepository(database, options = {}) {
     listGrowthRules,
     listOpportunities,
     listOrders,
+    listPaymentAttempts,
     listOperationalExceptions,
     listPrimaryBranchOptions,
     listRoleBindings,
