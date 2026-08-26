@@ -936,7 +936,7 @@
       "readyAssertion": "state === 'ready'"
     },
     {
-      "id": "A43",
+      "id": "A45",
       "name": "等级变更记录",
       "path": "packages/admin/growth-transitions/index",
       "selector": "#admin-growth-transitions-page",

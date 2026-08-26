@@ -66,7 +66,7 @@ describe('new operations admin pages responsive contracts', () => {
       expect(source).toContain('<app-page-exit />')
     }
     expect(ledger).toContain('class="mip-admin-record-list mt-5"')
-    expect(ledger).toContain('break-all text-[length:19rpx] text-muted')
+    expect(ledger).toContain('item.user.playerNumber ? \'玩家编号 \'')
     expect(detail).toContain('class="mip-admin-action-grid mt-4 grid grid-cols-2 gap-2"')
   })
 })

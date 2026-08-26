@@ -246,6 +246,7 @@ const activeItemByRoute: Readonly<Record<string, string>> = {
   'packages/admin/exports/index': 'managed-events',
   'packages/admin/event-participants/index': 'event-participants',
   'packages/admin/orders/index': 'orders',
+  'packages/admin/membership-ledger/index': 'membership-ledger',
   'packages/admin/announcements/index': 'announcements',
   'packages/admin/announcement-editor/index': 'announcements',
   'packages/admin/message-campaigns/index': 'message-campaigns',
@@ -272,6 +273,7 @@ const activeItemByRoute: Readonly<Record<string, string>> = {
   'packages/admin/branches/index': 'branches',
   'packages/admin/roles/index': 'roles',
   'packages/admin/exceptions/index': 'exceptions',
+  'packages/admin/message-delivery-review/index': 'exceptions',
   'packages/admin/audit/index': 'audit',
 }
 

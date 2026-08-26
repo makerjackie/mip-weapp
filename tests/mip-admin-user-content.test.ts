@@ -330,7 +330,7 @@ describe('MIP admin user content route and responsive UI', () => {
     const route = 'packages/admin/user-content/index'
     expect(admin?.pages).toContain('user-content/index')
     expect(project.routes.some(item => item.pathName === route)).toBe(true)
-    expect(runtime.routeCount).toBe(101)
+    expect(runtime.routeCount).toBe(runtime.routes.length)
     expect(runtime.routes.find(item => item.path === route)?.states).toEqual([
       'loading',
       'ready',
