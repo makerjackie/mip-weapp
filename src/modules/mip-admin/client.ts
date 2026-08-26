@@ -5,6 +5,7 @@ import type {
   MipAdminGateway,
 } from './types'
 import { createQueryCache } from '@weapp/shared/cache'
+import { createMipBenefitLedgerAdmin } from './benefit-ledger'
 import { createMipCommunityAdmin } from './community-admin'
 import { createMipEventCatalogAdmin } from './event-catalogs-admin'
 import { createMipEventsAdmin } from './events-admin'
@@ -26,6 +27,7 @@ export function createMipAdminModule(
   let generation = 0
   const community = createMipCommunityAdmin(gateway, cache)
   const growth = createMipGrowthAdmin(gateway, cache)
+  const benefitLedger = createMipBenefitLedgerAdmin(gateway, cache)
   const events = createMipEventsAdmin(gateway, cache)
   const eventCatalogs = createMipEventCatalogAdmin(gateway, cache)
   const exports = createMipExportsAdmin(
@@ -108,6 +110,8 @@ export function createMipAdminModule(
     listBadges: growth.listBadges,
     listBadgeAwards: growth.listBadgeAwards,
     growth,
+    benefitLedger,
+    listUnifiedBenefitLedger: benefitLedger.list,
     listOrders: orders.list,
     getOrder: orders.get,
     orders,

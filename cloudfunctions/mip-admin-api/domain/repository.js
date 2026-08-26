@@ -1202,6 +1202,137 @@ function createAdminRepository(database, options = {}) {
     return pageRows(items, pageLimit, row => ({ createdAt: row.createdAt, id: row.id }))
   }
 
+  async function listUnifiedBenefitLedger(input) {
+    const membershipUsers = visibleBranchesWhere(input.membershipVisibility, 'membership_user')
+    const growthUsers = visibleBranchesWhere(input.growthVisibility, 'growth_user')
+    const benefitUsers = visibleBranchesWhere(input.growthVisibility, 'benefit_user')
+    const projection = `
+      SELECT entitlement.id AS source_id, 'MEMBERSHIP' AS source_kind,
+        entitlement.app_id, entitlement.user_id, membership_profile.nickname,
+        lifecycle.player_number, COALESCE(plan.name, '会员权益') AS benefit_name,
+        entitlement.status, entitlement.starts_at, entitlement.ends_at,
+        entitlement.created_at AS occurred_at, entitlement.source_type,
+        NULL AS metric, NULL AS delta_value,
+        order_row.status AS order_status, order_row.order_type,
+        order_row.amount_cents, order_row.paid_at
+      FROM mip_membership_entitlements entitlement
+      INNER JOIN mip_users membership_user
+        ON membership_user.app_id = entitlement.app_id AND membership_user.id = entitlement.user_id
+      LEFT JOIN mip_profiles membership_profile
+        ON membership_profile.app_id = entitlement.app_id AND membership_profile.user_id = entitlement.user_id
+      LEFT JOIN mip_player_lifecycles lifecycle
+        ON lifecycle.app_id = entitlement.app_id AND lifecycle.user_id = entitlement.user_id
+      LEFT JOIN mip_membership_plans plan
+        ON plan.app_id = entitlement.app_id AND plan.id = entitlement.plan_id
+      LEFT JOIN mip_orders order_row
+        ON order_row.app_id = entitlement.app_id AND order_row.id = entitlement.order_id
+      WHERE entitlement.app_id = ? AND ${membershipUsers.sql}
+      UNION ALL
+      SELECT entry.id AS source_id, 'GROWTH' AS source_kind,
+        entry.app_id, entry.user_id, growth_profile.nickname,
+        growth_lifecycle.player_number, COALESCE(rule.name, entry.metric) AS benefit_name,
+        'RECORDED' AS status, NULL AS starts_at, NULL AS ends_at,
+        entry.created_at AS occurred_at, 'GROWTH_ENTRY' AS source_type,
+        entry.metric, entry.delta_value,
+        NULL AS order_status, NULL AS order_type, NULL AS amount_cents, NULL AS paid_at
+      FROM mip_growth_entries entry
+      INNER JOIN mip_users growth_user
+        ON growth_user.app_id = entry.app_id AND growth_user.id = entry.user_id
+      LEFT JOIN mip_profiles growth_profile
+        ON growth_profile.app_id = entry.app_id AND growth_profile.user_id = entry.user_id
+      LEFT JOIN mip_player_lifecycles growth_lifecycle
+        ON growth_lifecycle.app_id = entry.app_id AND growth_lifecycle.user_id = entry.user_id
+      LEFT JOIN mip_growth_rules rule
+        ON rule.app_id = entry.app_id AND rule.id = entry.rule_id
+      WHERE entry.app_id = ? AND ${growthUsers.sql}
+      UNION ALL
+      SELECT CONCAT('benefit:', benefit_user.id, ':', growth_benefit.id) AS source_id,
+        'GROWTH' AS source_kind, growth_benefit.app_id, benefit_user.id,
+        benefit_profile.nickname, benefit_lifecycle.player_number,
+        growth_benefit.name AS benefit_name, 'ACTIVE' AS status,
+        NULL AS starts_at, NULL AS ends_at, growth_benefit.updated_at AS occurred_at,
+        'GROWTH_BENEFIT' AS source_type, NULL AS metric, NULL AS delta_value,
+        NULL AS order_status, NULL AS order_type, NULL AS amount_cents, NULL AS paid_at
+      FROM mip_users benefit_user
+      INNER JOIN mip_growth_accounts account
+        ON account.app_id = benefit_user.app_id AND account.user_id = benefit_user.id
+      INNER JOIN mip_growth_levels current_level
+        ON current_level.app_id = benefit_user.app_id AND current_level.status = 'ACTIVE'
+       AND current_level.minimum_experience = (
+         SELECT MAX(level.minimum_experience)
+         FROM mip_growth_levels level
+         WHERE level.app_id = benefit_user.app_id AND level.status = 'ACTIVE'
+           AND level.minimum_experience <= account.experience_balance
+       )
+      INNER JOIN mip_growth_level_benefits level_benefit
+        ON level_benefit.app_id = current_level.app_id AND level_benefit.level_id = current_level.id
+      INNER JOIN mip_growth_benefits growth_benefit
+        ON growth_benefit.app_id = level_benefit.app_id AND growth_benefit.id = level_benefit.benefit_id
+       AND growth_benefit.status = 'ACTIVE'
+      LEFT JOIN mip_profiles benefit_profile
+        ON benefit_profile.app_id = benefit_user.app_id AND benefit_profile.user_id = benefit_user.id
+      LEFT JOIN mip_player_lifecycles benefit_lifecycle
+        ON benefit_lifecycle.app_id = benefit_user.app_id AND benefit_lifecycle.user_id = benefit_user.id
+      WHERE benefit_user.app_id = ? AND ${benefitUsers.sql}`
+    const clauses = ['projection.app_id = ?']
+    const params = [input.appId, ...membershipUsers.params, input.appId, ...growthUsers.params, input.appId, ...benefitUsers.params, input.appId]
+    if (input.filters.benefitType) {
+      clauses.push('projection.source_kind = ?')
+      params.push(input.filters.benefitType)
+    }
+    if (input.filters.createdFrom) {
+      clauses.push('projection.occurred_at >= ?')
+      params.push(input.filters.createdFrom)
+    }
+    if (input.filters.createdTo) {
+      clauses.push('projection.occurred_at <= ?')
+      params.push(input.filters.createdTo)
+    }
+    if (input.filters.query) {
+      clauses.push('(projection.nickname LIKE ? ESCAPE \'\\\\\' OR CAST(projection.player_number AS CHAR) LIKE ? ESCAPE \'\\\\\')')
+      const query = `%${escapeLike(input.filters.query)}%`
+      params.push(query, query)
+    }
+    const cursor = input.cursor ? { ...input.cursor, id: input.cursor.sourceId } : null
+    const cursorWhere = cursorPredicateFor('projection.occurred_at', cursor, 'createdAt', 'projection.source_id')
+    const rows = await database.query(
+      `SELECT projection.source_id, projection.source_kind, projection.nickname,
+          projection.player_number, projection.benefit_name, projection.status,
+          projection.starts_at, projection.ends_at, projection.occurred_at,
+          projection.source_type, projection.metric, projection.delta_value,
+          projection.order_status, projection.order_type, projection.amount_cents,
+          projection.paid_at
+       FROM (${projection}) projection
+       WHERE ${clauses.join(' AND ')}${cursorWhere.sql}
+       ORDER BY projection.occurred_at DESC, projection.source_id DESC LIMIT ?`,
+      [...params, ...cursorWhere.params, input.pageSize + 1],
+    )
+    const page = pageRows(rows.map(row => ({
+      sourceId: String(row.source_id),
+      benefitType: row.source_kind,
+      nickname: row.nickname || '未填写昵称',
+      playerNumber: row.player_number === null || row.player_number === undefined ? null : Number(row.player_number),
+      benefitName: row.benefit_name || '未提供权益名称',
+      status: row.status,
+      startsAt: iso(row.starts_at),
+      endsAt: iso(row.ends_at),
+      occurredAt: iso(row.occurred_at),
+      sourceType: row.source_type,
+      metric: row.metric || null,
+      deltaValue: row.delta_value === null || row.delta_value === undefined ? null : Number(row.delta_value),
+      order: row.order_status ? {
+        status: row.order_status,
+        orderType: row.order_type,
+        amountCents: Number(row.amount_cents),
+        paidAt: iso(row.paid_at),
+      } : null,
+    })), input.pageSize, row => ({ createdAt: row.occurredAt, sourceId: row.sourceId }))
+    return {
+      ...page,
+      items: page.items.map(({ sourceId, ...item }) => item),
+    }
+  }
+
   async function listGrowthLevelTransitions(appId, visibility, filters, pageLimit, cursor = null) {
     const users = visibleBranchesWhere(visibility, 'u')
     const clauses = ['transition.app_id = ?', users.sql]
@@ -1394,6 +1525,7 @@ function createAdminRepository(database, options = {}) {
     listCommunityReports,
     listExportRows,
     listGrowthEntries,
+    listUnifiedBenefitLedger,
     listGrowthLevelTransitions,
     listGrowthLevels,
     listGrowthRules,

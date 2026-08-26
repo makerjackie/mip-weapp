@@ -5,6 +5,10 @@ import type {
   AdminAnnouncementScope,
 } from './announcements'
 import type {
+  AdminUnifiedBenefitLedgerInput,
+  AdminUnifiedBenefitLedgerPage,
+} from './benefit-ledger'
+import type {
   AdminDashboardOverview,
   AdminDashboardOverviewInput,
 } from './dashboard-overview'
@@ -1263,6 +1267,7 @@ export interface MipAdminGateway {
   saveGrowthRule: (input: Record<string, unknown>) => Promise<{ id: string, version: number }>
   listGrowthEntries: (input?: Record<string, unknown>) => Promise<AdminPage<AdminGrowthEntry>>
   listGrowthLevelTransitions: (input?: Record<string, unknown>) => Promise<AdminPage<AdminGrowthLevelTransition>>
+  listUnifiedBenefitLedger: (input?: AdminUnifiedBenefitLedgerInput) => Promise<AdminUnifiedBenefitLedgerPage>
   adjustGrowth: (input: Record<string, unknown>) => Promise<Record<string, unknown>>
   listBadges: () => Promise<AdminPage<AdminBadge>>
   saveBadge: (input: Record<string, unknown>) => Promise<{ id: string, version: number }>

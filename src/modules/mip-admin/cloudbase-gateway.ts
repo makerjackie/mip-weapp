@@ -24,6 +24,7 @@ import {
   parseAdminAnnouncementPage,
   parseAdminAnnouncementScopes,
 } from './announcements'
+import { parseAdminUnifiedBenefitLedgerPage } from './benefit-ledger'
 import { cloudbaseAdminTransport } from './cloudbase-transport'
 import {
   parseDashboardOverview,
@@ -1022,6 +1023,9 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
     saveGrowthRule: input => call('mip.admin.growth.saveRule', input),
     listGrowthEntries: input => call('mip.admin.growth.entries', input || {}),
     listGrowthLevelTransitions: input => call('mip.admin.growth.levelTransitions', input || {}),
+    listUnifiedBenefitLedger: async input => parseAdminUnifiedBenefitLedgerPage(
+      await call('mip.admin.benefits.ledger', { ...(input || {}) }),
+    ),
     adjustGrowth: input => call('mip.admin.growth.adjust', input),
     listBadges: () => call('mip.admin.badges.list'),
     saveBadge: input => call('mip.admin.badges.save', input),

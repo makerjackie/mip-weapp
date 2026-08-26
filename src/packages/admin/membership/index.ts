@@ -107,6 +107,9 @@ Page({
       url: `/packages/admin/membership-ledger/index?userId=${encodeURIComponent(this.data.userId)}`,
     })
   },
+  openBenefitLedger() {
+    void wx.navigateTo({ url: '/packages/admin/benefit-ledger/index' })
+  },
   chooseDuration(event: WechatMiniprogram.TouchEvent) {
     if (this.data.submitting || this.data.detail?.user.status === 'CLOSED') {
       return

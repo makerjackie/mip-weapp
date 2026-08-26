@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "operationCount": 142,
+  "operationCount": 143,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -980,6 +980,14 @@
     },
     {
       "action": "mip.admin.growth.entries",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.benefits.ledger",
       "kind": "QUERY",
       "authentication": "REQUIRED",
       "session": "REQUIRED",

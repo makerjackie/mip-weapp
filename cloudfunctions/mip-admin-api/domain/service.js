@@ -14,6 +14,7 @@ const { createAdminEvents } = require('./events')
 const { createAdminExports } = require('./exports')
 const { createAdminGovernance, PLATFORM_SCOPE_ID } = require('./governance')
 const { createAdminGrowth } = require('./growth')
+const { createAdminBenefitLedger } = require('./benefit-ledger')
 const { createAdminMessaging } = require('./messaging')
 const { createAdminMemberships } = require('./memberships')
 const { createAdminMessageDeliveryReviews } = require('./message-delivery-review-service')
@@ -218,6 +219,7 @@ function createAdminService({
     saveGrowthLevel,
     saveGrowthRule,
   } = createAdminGrowth({ access, repository })
+  const { listUnifiedBenefitLedger } = createAdminBenefitLedger({ access, repository })
   const {
     getMembership,
     grantMembership,
@@ -394,6 +396,7 @@ function createAdminService({
     listGrowthBenefits,
     listGrowthLevels,
     listGrowthRules,
+    listUnifiedBenefitLedger,
     listOpportunities,
     listOrders,
     listOperationalExceptions,

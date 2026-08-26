@@ -166,6 +166,12 @@ export const adminWorkspaceGroups: readonly AdminWorkspaceNavGroup[] = [
         capabilities: ['growth.read'],
       },
       {
+        key: 'benefit-ledger',
+        label: '统一权益流水',
+        route: 'packages/admin/benefit-ledger/index',
+        capabilities: ['memberships.read', 'growth.read'],
+      },
+      {
         key: 'growth-transitions',
         label: '等级变更记录',
         route: 'packages/admin/growth-transitions/index',
@@ -261,6 +267,7 @@ const activeItemByRoute: Readonly<Record<string, string>> = {
   'packages/admin/user-content-editor/index': 'user-content',
   'packages/admin/community-reports/index': 'community-reports',
   'packages/admin/growth-entries/index': 'growth-entries',
+  'packages/admin/benefit-ledger/index': 'benefit-ledger',
   'packages/admin/growth-transitions/index': 'growth-transitions',
   'packages/admin/growth-levels/index': 'growth-levels',
   'packages/admin/growth-benefits/index': 'growth-levels',

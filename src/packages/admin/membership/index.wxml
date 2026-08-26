@@ -2,6 +2,7 @@
   <mip-admin-workspace-nav />
   <view class="text-[length:40rpx] font-bold">会员管理</view>
   <view class="mt-2 text-[length:23rpx] text-muted">查看会员有效期与人工开通记录</view>
+  <view class="mt-4"><t-button size="small" variant="outline" bind:tap="openBenefitLedger">统一权益流水</t-button></view>
 
   <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5">
     <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
