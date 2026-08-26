@@ -42,6 +42,27 @@ describe('knowledge scheduler authentication', () => {
       ...config,
       now: () => request.timestamp,
     }), request)
+    assert.deepEqual(verifySchedulerReconcile({
+      ...signed,
+      frameworkContext: { requestId: 'framework-injected' },
+      tcbContext: {},
+      userInfo: { appId: 'framework-injected', openId: 'framework-injected' },
+    }, {
+      ...config,
+      now: () => request.timestamp,
+    }), request)
+    for (const metadata of [
+      { frameworkContext: null },
+      { tcbContext: [] },
+      { userInfo: 'untrusted' },
+    ]) {
+      assert.throws(
+        () => verifySchedulerReconcile({ ...signed, ...metadata }, {
+          ...config, now: () => request.timestamp,
+        }),
+        /FORBIDDEN/,
+      )
+    }
     assert.throws(
       () => verifySchedulerReconcile({ ...signed, extra: true }, {
         ...config, now: () => request.timestamp,

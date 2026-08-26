@@ -22,10 +22,22 @@ const NOW = Date.parse('2030-08-25T10:00:00.000Z')
 describe('admin message scheduler handoff', () => {
   it('synchronously verifies the post-commit reconcile with a separated HMAC domain', async () => {
     const calls = []
+    const verifiedRequests = []
     const client = createMessageSchedulerClient({
       cloud: {
         async callFunction(input) {
           calls.push(input)
+          verifiedRequests.push(verifySchedulerReconcile({
+            ...input.data,
+            frameworkContext: { requestId: 'framework-injected' },
+            tcbContext: {},
+            userInfo: { appId: 'framework-injected', openId: 'framework-injected' },
+          }, {
+            allowedAppIds: new Set([APP_ID]),
+            sourceFunction: 'mip-admin-api',
+            secret: SECRET,
+            now: () => NOW,
+          }))
           return { result: { ok: true, data: { verified: true } } }
         },
       },
@@ -41,12 +53,12 @@ describe('admin message scheduler handoff', () => {
     })
     assert.deepEqual(result, { status: 'VERIFIED' })
     assert.equal(calls.length, 1)
-    assert.equal(verifySchedulerReconcile(calls[0].data, {
-      allowedAppIds: new Set([APP_ID]),
-      sourceFunction: 'mip-admin-api',
-      secret: SECRET,
-      now: () => NOW,
-    }).appId, APP_ID)
+    const unsignedCall = { ...calls[0].data }
+    delete unsignedCall.signature
+    assert.deepEqual(verifiedRequests, [unsignedCall])
+    assert.equal('frameworkContext' in verifiedRequests[0], false)
+    assert.equal('tcbContext' in verifiedRequests[0], false)
+    assert.equal('userInfo' in verifiedRequests[0], false)
   })
 
   it('returns an unverified state for missing config, timeout, or negative readback', async () => {

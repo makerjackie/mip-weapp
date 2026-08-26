@@ -2,35 +2,76 @@
 
 const { createHash, createHmac, timingSafeEqual } = require('node:crypto')
 
+const transportMetadataKeys = new Set(['frameworkContext', 'tcbContext', 'userInfo'])
+const matchingEventKeys = new Set([
+  'action',
+  'appId',
+  'actorUserId',
+  'requesterUserId',
+  'opportunityId',
+  'sourceVersion',
+  'idempotencyKey',
+  'nonce',
+  'timestamp',
+  'signature',
+])
+
 function verifyInternalMatching(event, options = {}) {
+  const verifiedEvent = eventForVerification(event)
+  if (!hasExactKeys(verifiedEvent, matchingEventKeys)) throw new Error('AUTH_REQUIRED')
   const secret = String(options.secret || '')
-  const timestamp = Number(event?.timestamp)
+  const timestamp = Number(verifiedEvent.timestamp)
   const now = Number((options.now || Date.now)())
   if (secret.length < 32 || !Number.isFinite(timestamp) || Math.abs(now - timestamp) > 300_000
-    || event?.action !== 'recalculateMatchingInternal'
-    || !isUuid(event?.actorUserId) || !isUuid(event?.requesterUserId)
-    || !isUuid(event?.opportunityId)
-    || !Number.isInteger(Number(event?.sourceVersion)) || Number(event.sourceVersion) < 1
-    || typeof event?.idempotencyKey !== 'string' || event.idempotencyKey.length < 12
-    || event.idempotencyKey.length > 128
-    || typeof event?.nonce !== 'string' || !/^[a-f0-9]{24}$/.test(event.nonce)
-    || typeof event?.appId !== 'string' || !event.appId.trim()) {
+    || verifiedEvent.action !== 'recalculateMatchingInternal'
+    || !isUuid(verifiedEvent.actorUserId) || !isUuid(verifiedEvent.requesterUserId)
+    || !isUuid(verifiedEvent.opportunityId)
+    || !Number.isInteger(Number(verifiedEvent.sourceVersion)) || Number(verifiedEvent.sourceVersion) < 1
+    || typeof verifiedEvent.idempotencyKey !== 'string' || verifiedEvent.idempotencyKey.length < 12
+    || verifiedEvent.idempotencyKey.length > 128
+    || typeof verifiedEvent.nonce !== 'string' || !/^[a-f0-9]{24}$/.test(verifiedEvent.nonce)
+    || typeof verifiedEvent.appId !== 'string' || !verifiedEvent.appId.trim()) {
     throw new Error('AUTH_REQUIRED')
   }
-  const expected = createHmac('sha256', secret).update(canonical(event)).digest('hex')
-  const actual = String(event.signature || '')
+  const expected = createHmac('sha256', secret).update(canonical(verifiedEvent)).digest('hex')
+  const actual = String(verifiedEvent.signature || '')
   if (!/^[a-f0-9]{64}$/.test(actual)
     || !timingSafeEqual(Buffer.from(actual, 'hex'), Buffer.from(expected, 'hex'))) {
     throw new Error('AUTH_REQUIRED')
   }
   return {
-    appId: event.appId.trim(),
-    actorUserId: event.actorUserId,
-    requesterUserId: event.requesterUserId,
-    opportunityId: event.opportunityId,
-    sourceVersion: Number(event.sourceVersion),
-    idempotencyKey: event.idempotencyKey,
+    appId: verifiedEvent.appId.trim(),
+    actorUserId: verifiedEvent.actorUserId,
+    requesterUserId: verifiedEvent.requesterUserId,
+    opportunityId: verifiedEvent.opportunityId,
+    sourceVersion: Number(verifiedEvent.sourceVersion),
+    idempotencyKey: verifiedEvent.idempotencyKey,
   }
+}
+
+function eventForVerification(event) {
+  if (!isPlainObject(event)) throw new Error('AUTH_REQUIRED')
+  const verifiedEvent = Object.create(null)
+  for (const key of Reflect.ownKeys(event)) {
+    if (typeof key === 'string' && transportMetadataKeys.has(key)) {
+      if (!isPlainObject(event[key])) throw new Error('AUTH_REQUIRED')
+      continue
+    }
+    verifiedEvent[key] = event[key]
+  }
+  return verifiedEvent
+}
+
+function hasExactKeys(value, expectedKeys) {
+  const keys = Reflect.ownKeys(value)
+  return keys.length === expectedKeys.size
+    && keys.every(key => typeof key === 'string' && expectedKeys.has(key))
+}
+
+function isPlainObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
 }
 
 async function authorizeInternalMatching(database, request, source, options = {}) {

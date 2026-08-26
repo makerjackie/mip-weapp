@@ -39,6 +39,31 @@ describe('internal matching authorization', () => {
     })
   })
 
+  it('strips only well-formed CloudBase transport metadata before verification', () => {
+    const signed = signedRequest()
+    const options = { secret: SECRET, now: () => NOW }
+    const verified = verifyInternalMatching({
+      ...signed,
+      frameworkContext: { requestId: 'framework-injected' },
+      tcbContext: {},
+      userInfo: { appId: 'framework-injected', openId: 'framework-injected' },
+    }, options)
+    assert.equal(verified.opportunityId, signed.opportunityId)
+    assert.equal('frameworkContext' in verified, false)
+    assert.equal('tcbContext' in verified, false)
+    assert.equal('userInfo' in verified, false)
+
+    for (const metadata of [
+      { frameworkContext: null },
+      { tcbContext: [] },
+      { userInfo: 'untrusted' },
+    ]) {
+      assert.throws(() => verifyInternalMatching({ ...signed, ...metadata }, options), /AUTH_REQUIRED/)
+    }
+    assert.throws(() => verifyInternalMatching({ ...signed, extra: true }, options), /AUTH_REQUIRED/)
+    assert.throws(() => verifyInternalMatching(signedRequest({ extra: true }), options), /AUTH_REQUIRED/)
+  })
+
   it('rejects stale and tampered requests', () => {
     assert.throws(() => verifyInternalMatching(signedRequest({ timestamp: NOW - 300_001 }), {
       secret: SECRET,

@@ -49,6 +49,35 @@ test('accepts the caller contract and returns a caller-verifiable signed respons
   assert.deepEqual(verifyAvatarProviderResponse(response, signed, secret, now), data)
 })
 
+test('strips only well-formed CloudBase transport metadata before verification', () => {
+  const signed = request()
+  const verify = value => verifyProviderRequest(value, {
+    allowedAppIds: new Set([appId]),
+    secret,
+    now: () => now,
+  })
+  const verified = verify({
+    ...signed,
+    frameworkContext: { requestId: 'framework-injected' },
+    tcbContext: {},
+    userInfo: { appId: 'transport-app', openId: 'transport-openid' },
+  })
+
+  assert.deepEqual(verified, signed)
+  assert.equal(Object.hasOwn(verified, 'frameworkContext'), false)
+  assert.equal(Object.hasOwn(verified, 'tcbContext'), false)
+  assert.equal(Object.hasOwn(verified, 'userInfo'), false)
+  for (const metadata of [
+    { frameworkContext: null },
+    { tcbContext: [] },
+    { userInfo: 'untrusted' },
+    { userInfo: new Date(now) },
+  ]) {
+    assert.throws(() => verify({ ...signed, ...metadata }), /FORBIDDEN/)
+  }
+  assert.throws(() => verify({ ...signed, frameworkContext: {}, extra: true }), /FORBIDDEN/)
+})
+
 test('rejects app, timestamp, action, signature, digest, identity, and unknown-field changes', () => {
   const signed = request()
   const verify = value => verifyProviderRequest(value, {

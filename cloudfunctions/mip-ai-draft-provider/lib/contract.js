@@ -5,6 +5,7 @@ const { createHash, createHmac, timingSafeEqual } = require('node:crypto')
 const CONTRACT_VERSION = 'mip.ai.draft-provider.v1'
 const ACTIONS = new Set(['structureText', 'transcribeAndStructure', 'refineDraft'])
 const maximumRequestBytes = 64 * 1024
+const transportMetadataKeys = new Set(['frameworkContext', 'tcbContext', 'userInfo'])
 const requestKeys = new Set([
   'version',
   'action',
@@ -36,25 +37,36 @@ const payloadKeys = Object.freeze({
 
 function verifyProviderRequest(event, options = {}) {
   const now = typeof options.now === 'function' ? options.now() : Date.now()
+  if (!plainObject(event)) throw new Error('FORBIDDEN')
   const serialized = safeStableJson(event)
-  if (!plainObject(event)
-    || Buffer.byteLength(serialized) > maximumRequestBytes
-    || !exactKeys(event, requestKeys)
-    || event.version !== CONTRACT_VERSION
-    || !ACTIONS.has(event.action)
-    || !Number.isSafeInteger(event.timestamp)
-    || Math.abs(now - event.timestamp) > 5 * 60 * 1000
+  const request = withoutTransportMetadata(event)
+  if (Buffer.byteLength(serialized) > maximumRequestBytes
+    || !exactKeys(request, requestKeys)
+    || request.version !== CONTRACT_VERSION
+    || !ACTIONS.has(request.action)
+    || !Number.isSafeInteger(request.timestamp)
+    || Math.abs(now - request.timestamp) > 5 * 60 * 1000
     || !(options.allowedAppIds instanceof Set)
-    || !options.allowedAppIds.has(event.appId)
-    || !/^[a-f0-9]{64}$/.test(String(event.requestId || ''))
-    || !/^[a-f0-9]{64}$/.test(String(event.operationKey || ''))
-    || !/^[a-f0-9]{64}$/.test(String(event.payloadDigest || ''))
-    || digest(event.payload) !== event.payloadDigest
-    || !validSignature(event, options.secret)) {
+    || !options.allowedAppIds.has(request.appId)
+    || !/^[a-f0-9]{64}$/.test(String(request.requestId || ''))
+    || !/^[a-f0-9]{64}$/.test(String(request.operationKey || ''))
+    || !/^[a-f0-9]{64}$/.test(String(request.payloadDigest || ''))
+    || digest(request.payload) !== request.payloadDigest
+    || !validSignature(request, options.secret)) {
     throw new Error('FORBIDDEN')
   }
-  validatePayload(event.action, event.payload, event.appId)
-  return event
+  validatePayload(request.action, request.payload, request.appId)
+  return request
+}
+
+function withoutTransportMetadata(event) {
+  const request = { ...event }
+  for (const key of transportMetadataKeys) {
+    if (!Object.hasOwn(request, key)) continue
+    if (!plainTransportObject(request[key])) throw new Error('FORBIDDEN')
+    delete request[key]
+  }
+  return request
 }
 
 function validatePayload(action, value, appId) {
@@ -180,6 +192,12 @@ function optionalExactText(value, maximumLength) {
 
 function plainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function plainTransportObject(value) {
+  if (!plainObject(value)) return false
+  const prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
 }
 
 function uuid(value) {

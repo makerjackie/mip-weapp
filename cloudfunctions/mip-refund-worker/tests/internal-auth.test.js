@@ -25,6 +25,72 @@ describe('refund worker internal authentication', () => {
     assert.equal(verified.refundId, request.refundId)
   })
 
+  it('accepts each action only with its exact signed fields', () => {
+    const appId = 'wx1234567890abcdef'
+    const requests = [
+      {
+        action: 'dispatchRefunds',
+        appId,
+        refundIds: ['20000000-0000-4000-8000-000000000001'],
+        nonce: 'nonce-2',
+        timestamp: now,
+      },
+      {
+        action: 'runBatch',
+        appId,
+        limit: 5,
+        timestamp: now,
+      },
+    ]
+    for (const request of requests) {
+      request.signature = signInternalEvent(request, secret)
+      const verified = verifyInternalEvent(request, {
+        allowedAppIds: new Set([appId]),
+        secret,
+        now,
+      })
+      assert.equal(verified.action, request.action)
+    }
+  })
+
+  it('strips only well-formed CloudBase transport metadata before verification', () => {
+    const request = {
+      action: 'dispatchRefund',
+      appId: 'wx1234567890abcdef',
+      refundId: '20000000-0000-4000-8000-000000000001',
+      nonce: 'nonce-1',
+      timestamp: now,
+    }
+    request.signature = signInternalEvent(request, secret)
+    const options = {
+      allowedAppIds: new Set([request.appId]),
+      secret,
+      now,
+    }
+    const verified = verifyInternalEvent({
+      ...request,
+      frameworkContext: { requestId: 'framework-injected' },
+      tcbContext: {},
+      userInfo: { appId: 'framework-injected', openId: 'framework-injected' },
+    }, options)
+    assert.equal(verified.refundId, request.refundId)
+    assert.equal('frameworkContext' in verified, false)
+    assert.equal('tcbContext' in verified, false)
+    assert.equal('userInfo' in verified, false)
+
+    for (const metadata of [
+      { frameworkContext: null },
+      { tcbContext: [] },
+      { userInfo: 'untrusted' },
+    ]) {
+      assert.throws(() => verifyInternalEvent({ ...request, ...metadata }, options), /FORBIDDEN/)
+    }
+    assert.throws(() => verifyInternalEvent({ ...request, extra: true }, options), /FORBIDDEN/)
+    const signedExtra = { ...request, extra: true }
+    signedExtra.signature = signInternalEvent(signedExtra, secret)
+    assert.throws(() => verifyInternalEvent(signedExtra, options), /FORBIDDEN/)
+  })
+
   it('rejects a changed refund id and an unapproved app', () => {
     const request = {
       action: 'dispatchRefund',

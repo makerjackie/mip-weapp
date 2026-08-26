@@ -63,10 +63,22 @@ describe('knowledge scheduler internal contract', () => {
 
   it('uses a separate post-commit reconcile request for plan mutations', async () => {
     const calls = []
+    const verifiedRequests = []
     const client = createKnowledgeSchedulerClient({
       cloud: {
         async callFunction(input) {
           calls.push(input)
+          verifiedRequests.push(verifySchedulerReconcile({
+            ...input.data,
+            frameworkContext: { requestId: 'framework-injected' },
+            tcbContext: {},
+            userInfo: { appId: 'framework-injected', openId: 'framework-injected' },
+          }, {
+            allowedAppIds: new Set([APP_ID]),
+            now: () => NOW,
+            secret: SECRET,
+            sourceFunction: 'mip-admin-api',
+          }))
           return { result: { ok: true, data: { verified: true } } }
         },
       },
@@ -80,11 +92,11 @@ describe('knowledge scheduler internal contract', () => {
       appId: APP_ID,
       mutationActions: new Set(['mip.admin.knowledge.schedules.save']),
     }), { status: 'VERIFIED' })
-    assert.equal(verifySchedulerReconcile(calls[0].data, {
-      allowedAppIds: new Set([APP_ID]),
-      now: () => NOW,
-      secret: SECRET,
-      sourceFunction: 'mip-admin-api',
-    }).appId, APP_ID)
+    const unsignedCall = { ...calls[0].data }
+    delete unsignedCall.signature
+    assert.deepEqual(verifiedRequests, [unsignedCall])
+    assert.equal('frameworkContext' in verifiedRequests[0], false)
+    assert.equal('tcbContext' in verifiedRequests[0], false)
+    assert.equal('userInfo' in verifiedRequests[0], false)
   })
 })

@@ -11,6 +11,7 @@ const ACTIVATE_DOMAIN = 'mip-message-scheduler:activate:v1'
 const TIMER_PROTOCOL = 'mip-message-scheduler/timer/v1'
 const TIMER_DOMAIN = 'mip-message-scheduler:timer:v1'
 const TIMER_PURPOSES = new Set(['DISPATCH', 'CANARY'])
+const transportMetadataKeys = new Set(['frameworkContext', 'tcbContext', 'userInfo'])
 const reconcileKeys = new Set([
   'action', 'protocol', 'appId', 'sourceFunction', 'nonce', 'timestamp', 'signature',
 ])
@@ -84,19 +85,20 @@ function createTimerMessage(input, secret) {
 }
 
 function verifySchedulerReconcile(value, options = {}) {
-  if (!plainObjectWithKeys(value, reconcileKeys)) throw forbidden()
+  const request = withoutCloudbaseTransportMetadata(value)
+  if (!plainObjectWithKeys(request, reconcileKeys)) throw forbidden()
   const now = Number(typeof options.now === 'function' ? options.now() : Date.now())
-  if (value.action !== RECONCILE_ACTION
-    || value.protocol !== RECONCILE_PROTOCOL
-    || value.sourceFunction !== options.sourceFunction
-    || !options.allowedAppIds?.has(text(value.appId))
-    || !/^[a-f0-9]{24}$/i.test(text(value.nonce))
-    || !Number.isSafeInteger(value.timestamp)
-    || Math.abs(now - value.timestamp) > 5 * 60 * 1000) {
+  if (request.action !== RECONCILE_ACTION
+    || request.protocol !== RECONCILE_PROTOCOL
+    || request.sourceFunction !== options.sourceFunction
+    || !options.allowedAppIds?.has(text(request.appId))
+    || !/^[a-f0-9]{24}$/i.test(text(request.nonce))
+    || !Number.isSafeInteger(request.timestamp)
+    || Math.abs(now - request.timestamp) > 5 * 60 * 1000) {
     throw forbidden()
   }
-  verifySignature(value, signSchedulerReconcile(value, options.secret))
-  return { ...unsigned(value), appId: text(value.appId) }
+  verifySignature(request, signSchedulerReconcile(request, options.secret))
+  return { ...unsigned(request), appId: text(request.appId) }
 }
 
 function verifySchedulerActivation(value, options = {}) {
@@ -182,6 +184,25 @@ function strictUtcInstant(value) {
     throw forbidden()
   }
   return source
+}
+
+function withoutCloudbaseTransportMetadata(value) {
+  if (!isPlainObject(value)) throw forbidden()
+  const request = Object.create(null)
+  for (const key of Reflect.ownKeys(value)) {
+    if (typeof key === 'string' && transportMetadataKeys.has(key)) {
+      if (!isPlainObject(value[key])) throw forbidden()
+      continue
+    }
+    request[key] = value[key]
+  }
+  return request
+}
+
+function isPlainObject(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
 }
 
 function plainObjectWithKeys(value, keys) {

@@ -5,6 +5,7 @@ const { createHash, createHmac, timingSafeEqual } = require('node:crypto')
 const CONTRACT_VERSION = 'mip.ai.avatar-provider.v1'
 const ACTION = 'generateDigitalAvatar'
 const maximumRequestBytes = 16 * 1024
+const transportMetadataKeys = new Set(['frameworkContext', 'tcbContext', 'userInfo'])
 const requestKeys = new Set([
   'version',
   'action',
@@ -31,29 +32,40 @@ const styleKeys = new Set(['PROFESSIONAL', 'ILLUSTRATED', 'MONOCHROME'])
 
 function verifyProviderRequest(event, options = {}) {
   const now = typeof options.now === 'function' ? options.now() : Date.now()
+  if (!plainObject(event)) throw new Error('FORBIDDEN')
   const serialized = safeStableJson(event)
-  if (!plainObject(event)
-    || Buffer.byteLength(serialized) > maximumRequestBytes
-    || !exactKeys(event, requestKeys)
-    || event.version !== CONTRACT_VERSION
-    || event.action !== ACTION
-    || !Number.isSafeInteger(event.timestamp)
-    || Math.abs(now - event.timestamp) > 5 * 60 * 1000
+  const request = withoutTransportMetadata(event)
+  if (Buffer.byteLength(serialized) > maximumRequestBytes
+    || !exactKeys(request, requestKeys)
+    || request.version !== CONTRACT_VERSION
+    || request.action !== ACTION
+    || !Number.isSafeInteger(request.timestamp)
+    || Math.abs(now - request.timestamp) > 5 * 60 * 1000
     || !(options.allowedAppIds instanceof Set)
-    || !options.allowedAppIds.has(event.appId)
-    || !/^[a-f0-9]{64}$/.test(String(event.requestId || ''))
-    || !/^[a-f0-9]{64}$/.test(String(event.operationKey || ''))
-    || !/^[a-f0-9]{64}$/.test(String(event.payloadDigest || ''))
-    || digest(event.payload) !== event.payloadDigest
-    || !validSignature(event, options.secret)) {
+    || !options.allowedAppIds.has(request.appId)
+    || !/^[a-f0-9]{64}$/.test(String(request.requestId || ''))
+    || !/^[a-f0-9]{64}$/.test(String(request.operationKey || ''))
+    || !/^[a-f0-9]{64}$/.test(String(request.payloadDigest || ''))
+    || digest(request.payload) !== request.payloadDigest
+    || !validSignature(request, options.secret)) {
     throw new Error('FORBIDDEN')
   }
-  validatePayload(event.payload, event.appId)
-  if (avatarOperationKey(event.payload) !== event.operationKey
-    || avatarRequestId(event.operationKey, event.payloadDigest) !== event.requestId) {
+  validatePayload(request.payload, request.appId)
+  if (avatarOperationKey(request.payload) !== request.operationKey
+    || avatarRequestId(request.operationKey, request.payloadDigest) !== request.requestId) {
     throw new Error('DIGITAL_AVATAR_PROVIDER_REQUEST_INVALID')
   }
-  return event
+  return request
+}
+
+function withoutTransportMetadata(event) {
+  const request = { ...event }
+  for (const key of transportMetadataKeys) {
+    if (!Object.hasOwn(request, key)) continue
+    if (!plainTransportObject(request[key])) throw new Error('FORBIDDEN')
+    delete request[key]
+  }
+  return request
 }
 
 function validatePayload(value, appId) {
@@ -170,6 +182,12 @@ function exactKeys(value, expected) {
 
 function plainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}
+
+function plainTransportObject(value) {
+  if (!plainObject(value)) return false
+  const prototype = Object.getPrototypeOf(value)
+  return prototype === Object.prototype || prototype === null
 }
 
 function uuid(value) {

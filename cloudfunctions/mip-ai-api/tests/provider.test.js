@@ -17,6 +17,14 @@ const {
   digest: avatarDigest,
   sign: avatarSign,
 } = require('../lib/avatar-provider-contract')
+const {
+  createProviderResponse: createDraftProviderResponse,
+  verifyProviderRequest: verifyDraftProviderRequest,
+} = require('../../mip-ai-draft-provider/lib/contract')
+const {
+  createProviderResponse: createAvatarProviderResponse,
+  verifyProviderRequest: verifyAvatarProviderRequest,
+} = require('../../mip-ai-avatar-provider/lib/contract')
 
 test('reports unavailable instead of creating a fake draft', async () => {
   const provider = createCloudAiProvider({}, '')
@@ -43,6 +51,101 @@ test('does not reuse the draft or maintenance trust domain for digital avatars',
   })
   assert.equal(provider.capability().digitalAvatars, false)
   await assert.rejects(() => provider.generateDigitalAvatar({}), /AI_PROVIDER_UNAVAILABLE/)
+})
+
+test('keeps a caller-signed draft request valid after CloudBase injects transport metadata', async () => {
+  const appId = 'wx1234567890abcdef'
+  const secret = 'draft-provider-secret-that-is-longer-than-thirty-two'
+  const provider = createCloudAiProvider({
+    async callFunction(call) {
+      const verified = verifyDraftProviderRequest({
+        ...call.data,
+        frameworkContext: { requestId: 'framework-injected' },
+        tcbContext: {},
+        userInfo: { appId: 'transport-app', openId: 'transport-openid' },
+      }, {
+        allowedAppIds: new Set([appId]),
+        secret,
+        now: () => call.data.timestamp,
+      })
+      assert.deepEqual(verified, call.data)
+      const data = {
+        transcriptText: '资料内容',
+        structuredDraft: { headline: '产品负责人' },
+        providerJobKey: 'draft-job-private',
+      }
+      return { result: createDraftProviderResponse(verified, data, secret, verified.timestamp) }
+    },
+  }, 'mip-ai-draft-provider', secret)
+
+  const result = await provider.structureText({
+    appId,
+    draftId: '20000000-0000-4000-8000-000000000001',
+    purpose: 'PROFILE',
+    expectedVersion: 1,
+    transcriptText: '资料内容',
+  })
+  assert.deepEqual(result, {
+    transcriptText: '资料内容',
+    structuredDraft: { headline: '产品负责人' },
+    providerJobKey: 'draft-job-private',
+  })
+  assert.equal(Object.hasOwn(result, 'frameworkContext'), false)
+  assert.equal(Object.hasOwn(result, 'tcbContext'), false)
+  assert.equal(Object.hasOwn(result, 'userInfo'), false)
+})
+
+test('keeps a caller-signed avatar request valid after CloudBase injects transport metadata', async () => {
+  const appId = 'wx1234567890abcdef'
+  const secret = 'avatar-provider-secret-that-is-longer-than-thirty-two'
+  const imageBase64 = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    Buffer.alloc(24),
+  ]).toString('base64')
+  const provider = createCloudAiProvider({
+    async callFunction(call) {
+      const verified = verifyAvatarProviderRequest({
+        ...call.data,
+        frameworkContext: { requestId: 'framework-injected' },
+        tcbContext: {},
+        userInfo: { appId: 'transport-app', openId: 'transport-openid' },
+      }, {
+        allowedAppIds: new Set([appId]),
+        secret,
+        now: () => call.data.timestamp,
+      })
+      assert.deepEqual(verified, call.data)
+      const data = {
+        contentType: 'image/png',
+        imageBase64,
+        providerJobKey: 'avatar-job-private',
+      }
+      return { result: createAvatarProviderResponse(verified, data, secret, verified.timestamp) }
+    },
+  }, '', '', {
+    avatarFunctionName: 'mip-ai-avatar-provider',
+    avatarSecret: secret,
+  })
+
+  const result = await provider.generateDigitalAvatar({
+    appId,
+    generationId: '20000000-0000-4000-8000-000000000001',
+    styleKey: 'PROFESSIONAL',
+    sourceImageFileId: 'cloud://env/mip/development/0123456789abcdef01234567/avatars/89abcdef0123456789abcdef/30000000-0000-4000-8000-000000000001.png',
+    sourceContentSha256: 'a'.repeat(64),
+    sourceContentType: 'image/png',
+    sourceContentBytes: 1024,
+    sourceWidth: 512,
+    sourceHeight: 512,
+  })
+  assert.deepEqual(result, {
+    contentType: 'image/png',
+    imageBase64,
+    providerJobKey: 'avatar-job-private',
+  })
+  assert.equal(Object.hasOwn(result, 'frameworkContext'), false)
+  assert.equal(Object.hasOwn(result, 'tcbContext'), false)
+  assert.equal(Object.hasOwn(result, 'userInfo'), false)
 })
 
 test('reports configured draft capability only after the Provider readiness contract passes', async () => {
