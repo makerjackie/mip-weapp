@@ -18,7 +18,7 @@ function presentParticipant(participant: PublicEventParticipant): ParticipantVie
     : ''
   return {
     ...participant,
-    displayName: participant.nickname || 'MIP 用户',
+    displayName: participant.nickname || '未公开姓名',
     kindLabel: participant.userKind === 'PLAYER' ? '玩家' : participant.userKind === 'GUEST' ? '嘉宾' : '',
     metaText: [branchText, participant.primaryIndustry?.label, participant.identityStatus].filter(Boolean).join(' · '),
     introductionText: participant.introduction || participant.headline || '',
