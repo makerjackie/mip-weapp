@@ -96,13 +96,7 @@ function argumentValue(prefix) {
 }
 
 function loadRuntimeAccountSnapshot(account) {
-  const tableRows = parsePrivilegeRows(callCloudbase(root, 'queryMysqlDatabase', {
-    action: 'runQuery',
-    sql: `SELECT table_schema AS tableSchema, table_name AS tableName,
-      privilege_type AS privilegeType, grantee
-      FROM information_schema.table_privileges
-      WHERE grantee = ${sqlLiteral(account)}`,
-  }))
+  const tableRows = loadTablePrivilegeRows(account)
   const schemaRows = parsePrivilegeRows(callCloudbase(root, 'queryMysqlDatabase', {
     action: 'runQuery',
     sql: `SELECT table_schema AS tableSchema, privilege_type AS privilegeType, grantee
@@ -116,4 +110,22 @@ function loadRuntimeAccountSnapshot(account) {
       WHERE grantee = ${sqlLiteral(account)}`,
   }))
   return { tableRows, schemaRows, userRows }
+}
+
+function loadTablePrivilegeRows(account) {
+  const pageSize = 100
+  const rows = []
+  for (let offset = 0; ; offset += pageSize) {
+    const page = parsePrivilegeRows(callCloudbase(root, 'queryMysqlDatabase', {
+      action: 'runQuery',
+      sql: `SELECT table_schema AS tableSchema, table_name AS tableName,
+        privilege_type AS privilegeType, grantee
+        FROM information_schema.table_privileges
+        WHERE grantee = ${sqlLiteral(account)}
+        ORDER BY table_schema, table_name, privilege_type
+        LIMIT ${pageSize} OFFSET ${offset}`,
+    }))
+    rows.push(...page)
+    if (page.length < pageSize) return rows
+  }
 }
