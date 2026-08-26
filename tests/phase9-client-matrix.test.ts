@@ -253,7 +253,7 @@ describe('phase9 page double-click / stale / error recovery behavior', () => {
     expect(registration).toMatch(/busy: true[\s\S]*?mipEventsModule\.register[\s\S]*?finally[\s\S]*?busy: false/)
     expect(ticket).toMatch(/if \(!this\.data\.canCancel \|\| this\.data\.busy\)/)
     expect(ticket).toMatch(/this\.setData\(\{ busy: true[\s\S]*?showModal/)
-    expect(adminEvents).toMatch(/if \(this\.data\.saving\)/)
+    expect(adminEvents).toMatch(/if \(this\.data\.saving \|\| this\.data\.tagSaving \|\| this\.data\.cancelBusy\)/)
     expect(adminEvents).toMatch(/if \(this\.data\.conflict\)/)
     expect(adminEvents).toMatch(/cancelConflict/)
     expect(adminEvents).toMatch(/cancelBusy: true[\s\S]*?showModal/)

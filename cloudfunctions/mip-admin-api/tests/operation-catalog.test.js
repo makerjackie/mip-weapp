@@ -40,6 +40,7 @@ const expectedOperations = Object.freeze({
 
   'mip.admin.events.list': ['EVENTS', 'QUERY', 'listEvents'],
   'mip.admin.events.catalog.list': ['EVENTS', 'QUERY', 'listEventCatalogs', 'SESSION_FIRST'],
+  'mip.admin.events.tags.get': ['EVENTS', 'QUERY', 'getEventTagAssignments', 'SESSION_FIRST'],
   'mip.admin.events.recaps.list': ['EVENTS', 'QUERY', 'listEventVideoRecaps', 'SESSION_FIRST'],
   'mip.admin.events.recaps.get': ['EVENTS', 'QUERY', 'getEventVideoRecap', 'SESSION_FIRST'],
   'mip.admin.events.policy.get': ['EVENTS', 'QUERY', 'getEventPolicy'],
@@ -53,6 +54,7 @@ const expectedOperations = Object.freeze({
   'mip.admin.events.catalog.save': ['EVENTS', 'MUTATION', 'saveEventCatalog', 'SESSION_FIRST'],
   'mip.admin.events.catalog.changeStatus': ['EVENTS', 'MUTATION', 'changeEventCatalogStatus', 'SESSION_FIRST'],
   'mip.admin.events.catalog.archive': ['EVENTS', 'MUTATION', 'archiveEventCatalog', 'SESSION_FIRST'],
+  'mip.admin.events.tags.replace': ['EVENTS', 'MUTATION', 'replaceEventTagAssignments', 'SESSION_FIRST'],
   'mip.admin.events.recaps.save': ['EVENTS', 'MUTATION', 'saveEventVideoRecap', 'SESSION_FIRST'],
   'mip.admin.events.recaps.changeStatus': ['EVENTS', 'MUTATION', 'changeEventVideoRecapStatus', 'SESSION_FIRST'],
   'mip.admin.events.recaps.archive': ['EVENTS', 'MUTATION', 'archiveEventVideoRecap', 'SESSION_FIRST'],
@@ -192,12 +194,12 @@ function manifest(owner, operations) {
 }
 
 describe('admin operation catalog', () => {
-  it('freezes the exact 129 business actions, owners, and kinds while keeping health separate', () => {
+  it('freezes the exact 131 business actions, owners, and kinds while keeping health separate', () => {
     const handlerActions = Object.keys(actions).filter(action => action !== 'health')
     const expectedActions = Object.keys(expectedOperations)
 
-    assert.equal(expectedActions.length, 129)
-    assert.equal(operationCatalog.length, 129)
+    assert.equal(expectedActions.length, 131)
+    assert.equal(operationCatalog.length, 131)
     assert.deepEqual(sorted(handlerActions), sorted(expectedActions))
     assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(expectedActions))
     assert.equal(operationByAction.health, undefined)

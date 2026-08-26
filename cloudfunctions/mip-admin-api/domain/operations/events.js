@@ -5,6 +5,7 @@ const { defineManifest, serviceOperation } = require('./manifest')
 module.exports = defineManifest('EVENTS', [
   serviceOperation('mip.admin.events.list', 'QUERY', 'listEvents'),
   serviceOperation('mip.admin.events.catalog.list', 'QUERY', 'listEventCatalogs', { sessionFirst: true }),
+  serviceOperation('mip.admin.events.tags.get', 'QUERY', 'getEventTagAssignments', { sessionFirst: true }),
   serviceOperation('mip.admin.events.recaps.list', 'QUERY', 'listEventVideoRecaps', { sessionFirst: true }),
   serviceOperation('mip.admin.events.recaps.get', 'QUERY', 'getEventVideoRecap', { sessionFirst: true }),
   serviceOperation('mip.admin.events.policy.get', 'QUERY', 'getEventPolicy'),
@@ -18,6 +19,7 @@ module.exports = defineManifest('EVENTS', [
   serviceOperation('mip.admin.events.catalog.save', 'MUTATION', 'saveEventCatalog', { sessionFirst: true }),
   serviceOperation('mip.admin.events.catalog.changeStatus', 'MUTATION', 'changeEventCatalogStatus', { sessionFirst: true }),
   serviceOperation('mip.admin.events.catalog.archive', 'MUTATION', 'archiveEventCatalog', { sessionFirst: true }),
+  serviceOperation('mip.admin.events.tags.replace', 'MUTATION', 'replaceEventTagAssignments', { sessionFirst: true }),
   serviceOperation('mip.admin.events.recaps.save', 'MUTATION', 'saveEventVideoRecap', { sessionFirst: true }),
   serviceOperation('mip.admin.events.recaps.changeStatus', 'MUTATION', 'changeEventVideoRecapStatus', { sessionFirst: true }),
   serviceOperation('mip.admin.events.recaps.archive', 'MUTATION', 'archiveEventVideoRecap', { sessionFirst: true }),

@@ -16,6 +16,11 @@ export interface MipEventCatalogAdmin {
   saveCatalog: MipAdminGateway['saveEventCatalog']
   changeCatalogStatus: MipAdminGateway['changeEventCatalogStatus']
   archiveCatalog: MipAdminGateway['archiveEventCatalog']
+  getTagAssignments: (
+    eventId: Parameters<MipAdminGateway['getEventTagAssignments']>[0],
+    force?: boolean,
+  ) => ReturnType<MipAdminGateway['getEventTagAssignments']>
+  replaceTagAssignments: MipAdminGateway['replaceEventTagAssignments']
   listRecaps: (
     input?: RecapListInput,
     force?: boolean,
@@ -32,6 +37,7 @@ export interface MipEventCatalogAdmin {
 const catalogKey = 'mip-admin:event-catalogs'
 const recapListKey = 'mip-admin:event-video-recaps'
 const recapKey = 'mip-admin:event-video-recap'
+const tagAssignmentsKey = 'mip-admin:event-tag-assignments'
 
 export function createMipEventCatalogAdmin(
   gateway: MipAdminGateway,
@@ -61,6 +67,15 @@ export function createMipEventCatalogAdmin(
     archiveCatalog: input => mutate(
       invalidateCatalogs,
       () => gateway.archiveEventCatalog(input),
+    ),
+    getTagAssignments: (eventId, force = false) => cache.query(
+      `${tagAssignmentsKey}:${eventId}`,
+      () => gateway.getEventTagAssignments(eventId),
+      { force },
+    ),
+    replaceTagAssignments: input => mutate(
+      [tagAssignmentsKey, catalogKey, 'mip-admin:event', 'mip-admin:events'],
+      () => gateway.replaceEventTagAssignments(input),
     ),
     listRecaps: (input: RecapListInput = {}, force = false) => cache.query(
       `${recapListKey}:${JSON.stringify(input)}`,

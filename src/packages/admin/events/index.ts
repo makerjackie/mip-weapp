@@ -1,5 +1,5 @@
 import type { EventPhonePreviewModel } from '../../../components/event-phone-preview/model'
-import type { AdminEventDetail } from '../../../modules/mip-admin'
+import type { AdminEventDetail, AdminEventTagAssignments, AdminEventTagOption } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
 import { buildEventPhonePreview } from '../../../components/event-phone-preview/model'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
@@ -37,6 +37,10 @@ function dateTimeParts(value: string | Date): DateTimeParts {
 function localDateTimeIso(date: string, time: string) {
   const value = new Date(`${date}T${time}:00`)
   return Number.isFinite(value.getTime()) ? value.toISOString() : ''
+}
+
+function sameIds(left: readonly string[], right: readonly string[]) {
+  return left.length === right.length && left.every(id => right.includes(id))
 }
 
 function initialDraft() {
@@ -99,6 +103,16 @@ Page({
     branchIndex: -1,
     canChangeScope: false,
     canSelectBranch: false,
+    canManageTags: false,
+    tagState: 'hidden' as 'hidden' | 'waiting' | 'loading' | 'ready' | 'error',
+    tagOptions: [] as AdminEventTagOption[],
+    selectedTagIds: [] as string[],
+    savedTagIds: [] as string[],
+    tagSnapshotVersion: 0,
+    tagsDirty: false,
+    tagSaving: false,
+    hasUnavailableSelectedTags: false,
+    tagMessage: '',
     saving: false,
     conflict: false,
     cancelDialogVisible: false,
@@ -128,6 +142,10 @@ Page({
       ])
       const canChangeScope = session.capabilities.some(item =>
         item.capability === 'events.write' && item.scopeType === 'PLATFORM')
+      const canManageTags = session.capabilities.some(item =>
+        item.capability === 'events.catalog.manage'
+        && item.scopeType === 'PLATFORM'
+        && item.scopeId === null)
       const allowedBranchIds = new Set(session.capabilities
         .filter(item => item.capability === 'events.write' && item.scopeType === 'BRANCH' && item.scopeId)
         .map(item => item.scopeId))
@@ -144,10 +162,15 @@ Page({
         branchIndex,
         canChangeScope,
         canSelectBranch: canChangeScope || (!this.data.eventId && branches.length > 1),
+        canManageTags,
+        tagState: canManageTags ? (this.data.eventId ? 'loading' : 'waiting') : 'hidden',
         ...(!this.data.eventId && !canChangeScope && branchId
           ? { 'draft.scopeType': 'BRANCH', 'draft.branchId': branchId }
           : {}),
       })
+      if (canManageTags && this.data.eventId) {
+        void this.loadEventTags()
+      }
       if (!this.data.eventId) {
         if (!hasCapability(session.capabilities, 'events.write') || (!canChangeScope && branches.length === 0)) {
           this.setData({ state: 'forbidden', message: '当前账号不能新建活动。' })
@@ -162,6 +185,58 @@ Page({
         this.setData(adminLoadFailure(error, { hasContent: false, fallbackMessage: '活动权限加载失败' }))
       }
     }
+  },
+  async loadEventTags(force = false) {
+    if (!this.data.canManageTags || !this.data.eventId) {
+      return
+    }
+    this.setData({ tagState: 'loading', tagMessage: '' })
+    try {
+      const assignments = await mipAdminModule.eventCatalogs.getTagAssignments(
+        this.data.eventId,
+        force,
+      )
+      this.applyEventTags(assignments, force)
+    }
+    catch (error) {
+      const failure = adminLoadFailure(error, {
+        hasContent: false,
+        fallbackMessage: '活动标签加载失败',
+      })
+      this.setData({
+        tagState: 'error',
+        tagMessage: failure.message || '活动标签加载失败',
+      })
+    }
+  },
+  applyEventTags(assignments: AdminEventTagAssignments, refreshed = false) {
+    const selectedTagIds = assignments.tags
+      .filter(tag => tag.selectable && tag.selected)
+      .map(tag => tag.id)
+    const savedTagIds = assignments.tags
+      .filter(tag => tag.selected)
+      .map(tag => tag.id)
+    const versionConflict = this.data.version > 0
+      && assignments.eventVersion !== this.data.version
+    this.setData({
+      tagState: 'ready',
+      tagOptions: assignments.tags,
+      selectedTagIds,
+      savedTagIds,
+      tagSnapshotVersion: assignments.eventVersion,
+      tagsDirty: !sameIds(selectedTagIds, savedTagIds),
+      hasUnavailableSelectedTags: assignments.tags.some(tag => tag.selected && !tag.selectable),
+      tagMessage: '',
+      ...(versionConflict
+        ? {
+            conflict: true,
+            message: '活动信息已被其他管理员更新。本地输入已保留，请载入最新版本后重新编辑。',
+          }
+        : refreshed ? { conflict: false, message: '' } : {}),
+    })
+  },
+  reloadEventTags() {
+    void this.loadEventTags(true)
   },
   async loadEvent(force = false) {
     this.setData({ state: 'loading', message: '' })
@@ -183,6 +258,9 @@ Page({
       ? dateTimeParts(event.cancellationDeadline)
       : starts
     const branchIndex = this.data.branches.findIndex(item => item.id === event.branchId)
+    const tagVersionConflict = this.data.tagState === 'ready'
+      && this.data.tagSnapshotVersion > 0
+      && this.data.tagSnapshotVersion !== event.version
     this.setData({
       state: 'ready',
       eventStatus: event.status,
@@ -200,9 +278,11 @@ Page({
       cancellationDeadlineTime: cancellationDeadline.time,
       branchIndex,
       coverUrl: event.coverUrl,
-      conflict: false,
+      conflict: tagVersionConflict,
       cancelConflict: false,
-      message: '',
+      message: tagVersionConflict
+        ? '活动信息已被其他管理员更新。本地输入已保留，请载入最新版本后重新编辑。'
+        : '',
     })
   },
   toDraft(event: AdminEventDetail) {
@@ -424,6 +504,62 @@ Page({
   toggleAlbum(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
     this.setData({ 'draft.albumEnabled': event.detail.value === true })
   },
+  toggleEventTag(event: WechatMiniprogram.TouchEvent) {
+    if (this.data.tagState !== 'ready' || this.data.tagSaving || this.data.saving
+      || this.data.cancelBusy || this.data.conflict
+      || ['CANCELLED', 'ENDED'].includes(this.data.eventStatus)) {
+      return
+    }
+    const tagId = String(event.currentTarget.dataset.tagId || '')
+    const option = this.data.tagOptions.find(tag => tag.id === tagId)
+    if (!option?.selectable) {
+      return
+    }
+    const selectedTagIds = this.data.selectedTagIds.includes(tagId)
+      ? this.data.selectedTagIds.filter(id => id !== tagId)
+      : [...this.data.selectedTagIds, tagId]
+    const selected = new Set(selectedTagIds)
+    this.setData({
+      selectedTagIds,
+      tagOptions: this.data.tagOptions.map(tag => tag.selectable
+        ? { ...tag, selected: selected.has(tag.id), assignmentVersion: selected.has(tag.id) ? tag.assignmentVersion : null }
+        : tag),
+      tagsDirty: !sameIds(selectedTagIds, this.data.savedTagIds),
+      tagMessage: '',
+    })
+  },
+  async saveEventTags() {
+    if (!this.data.eventId || this.data.tagState !== 'ready' || !this.data.tagsDirty
+      || this.data.tagSaving || this.data.saving || this.data.cancelBusy || this.data.conflict
+      || ['CANCELLED', 'ENDED'].includes(this.data.eventStatus)) {
+      return
+    }
+    this.setData({ tagSaving: true, tagMessage: '' })
+    try {
+      const result = await mipAdminModule.eventCatalogs.replaceTagAssignments({
+        eventId: this.data.eventId,
+        expectedVersion: this.data.version,
+        tagIds: this.data.selectedTagIds,
+      })
+      this.setData({ version: result.eventVersion })
+      this.applyEventTags(result)
+      wx.showToast({ title: '标签已保存', icon: 'success' })
+    }
+    catch (error) {
+      if (isAdminVersionConflict(error)) {
+        this.setData({
+          conflict: true,
+          message: '活动信息已被其他管理员更新。本地标签选择已保留，请载入最新版本后重新编辑。',
+        })
+        return
+      }
+      const failure = adminLoadFailure(error, { hasContent: true, fallbackMessage: '标签保存失败' })
+      this.setData({ tagMessage: failure.message || '标签保存失败' })
+    }
+    finally {
+      this.setData({ tagSaving: false })
+    }
+  },
   openPhonePreview() {
     const branchName = this.data.draft.scopeType === 'BRANCH'
       ? this.data.branches.find(item => item.id === this.data.draft.branchId)?.name || ''
@@ -443,7 +579,7 @@ Page({
     this.setData({ phonePreviewVisible: false })
   },
   async save() {
-    if (this.data.saving) {
+    if (this.data.saving || this.data.tagSaving || this.data.cancelBusy) {
       return
     }
     if (this.data.coverUploading || this.data.contentUploading) {
@@ -511,7 +647,17 @@ Page({
         expectedVersion: this.data.version || undefined,
         draft,
       })
-      this.setData({ eventId: result.id, eventStatus: result.status, version: result.version, state: 'ready' })
+      const wasNew = !this.data.eventId
+      this.setData({
+        eventId: result.id,
+        eventStatus: result.status,
+        version: result.version,
+        state: 'ready',
+        ...(this.data.tagState === 'ready' ? { tagSnapshotVersion: result.version } : {}),
+      })
+      if (wasNew && this.data.canManageTags) {
+        await this.loadEventTags(true)
+      }
       wx.showToast({ title: '草稿已保存', icon: 'success' })
     }
     catch (error) {
@@ -531,13 +677,18 @@ Page({
     }
   },
   async refreshAfterConflict() {
-    if (!this.data.eventId || this.data.saving || this.data.cancelBusy) {
+    if (!this.data.eventId || this.data.saving || this.data.tagSaving || this.data.cancelBusy) {
       return
     }
+    this.setData({ conflict: false })
     await this.loadEvent(true)
+    if (this.data.canManageTags) {
+      await this.loadEventTags(true)
+    }
   },
   openCancelDialog() {
-    if (!this.data.eventId || this.data.eventStatus === 'CANCELLED' || this.data.cancelBusy || this.data.conflict) {
+    if (!this.data.eventId || ['CANCELLED', 'ENDED'].includes(this.data.eventStatus)
+      || this.data.saving || this.data.tagSaving || this.data.cancelBusy || this.data.conflict) {
       return
     }
     this.setData({ cancelDialogVisible: true, cancelConflict: false, cancelReason: '', message: '' })
@@ -552,7 +703,9 @@ Page({
   },
   async confirmCancelEvent() {
     const reason = this.data.cancelReason.trim()
-    if (!this.data.eventId || this.data.cancelBusy || this.data.cancelConflict || this.data.conflict) {
+    if (!this.data.eventId || this.data.saving || this.data.tagSaving || this.data.cancelBusy
+      || this.data.cancelConflict || this.data.conflict
+      || ['CANCELLED', 'ENDED'].includes(this.data.eventStatus)) {
       return
     }
     if (!reason) {
@@ -577,6 +730,7 @@ Page({
       this.setData({
         eventStatus: result.status,
         version: result.version,
+        ...(this.data.tagState === 'ready' ? { tagSnapshotVersion: result.version } : {}),
         cancelDialogVisible: false,
         cancelReason: '',
         conflict: false,
@@ -601,10 +755,13 @@ Page({
     }
   },
   async refreshAfterCancelConflict() {
-    if (!this.data.eventId || this.data.cancelBusy) {
+    if (!this.data.eventId || this.data.saving || this.data.tagSaving || this.data.cancelBusy) {
       return
     }
     this.setData({ cancelReason: '' })
     await this.loadEvent(true)
+    if (this.data.canManageTags) {
+      await this.loadEventTags(true)
+    }
   },
 })

@@ -59,6 +59,48 @@
       <t-textarea class="box-border max-w-full" value="{{draft.notices}}" maxlength="5000" autosize data-field="notices" bind:change="updateField" />
     </view>
 
+    <view wx:if="{{canManageTags}}" id="admin-event-tags-editor" class="mip-admin-span-wide rounded-[16rpx] bg-panel p-4">
+      <view class="text-[length:27rpx] font-semibold">活动标签</view>
+      <view class="mt-2 text-[length:23rpx] text-muted">标签用于活动筛选和内容归类。</view>
+      <view wx:if="{{tagState === 'waiting'}}" class="mt-4 rounded-[12rpx] bg-panel-raised px-4 py-3 text-[length:23rpx] text-muted">请先保存活动，再设置标签。</view>
+      <view wx:elif="{{tagState === 'loading'}}" class="mt-4">
+        <t-skeleton row-col="{{[1,1]}}" theme="paragraph" animation="gradient" loading />
+      </view>
+      <view wx:elif="{{tagState === 'error'}}" class="mt-4">
+        <app-empty-state title="活动标签加载失败" description="{{tagMessage}}" action-text="重新加载" bind:action="reloadEventTags" />
+      </view>
+      <block wx:elif="{{tagState === 'ready'}}">
+        <view wx:if="{{tagOptions.length}}" class="mt-4 flex flex-wrap gap-2">
+          <view
+            wx:for="{{tagOptions}}"
+            wx:key="id"
+            class="flex min-h-[88rpx] items-center"
+            aria-role="checkbox"
+            aria-checked="{{item.selected}}"
+            aria-disabled="{{!item.selectable || tagSaving || saving || cancelBusy || conflict || eventStatus === 'CANCELLED' || eventStatus === 'ENDED'}}"
+            data-tag-id="{{item.id}}"
+            bind:tap="toggleEventTag"
+          >
+            <t-tag theme="{{item.selected ? 'primary' : 'default'}}" variant="outline">
+              {{item.name}}{{item.selectable ? '' : '（已停用）'}}
+            </t-tag>
+          </view>
+        </view>
+        <app-empty-state wx:else title="暂无可用活动标签" description="请先在活动标签目录中启用标签。" />
+        <view wx:if="{{hasUnavailableSelectedTags}}" class="mt-3 text-[length:22rpx] text-muted">已停用标签不能继续选择；保存修改时将移除。</view>
+        <view class="mt-4">
+          <t-button
+            block
+            variant="outline"
+            loading="{{tagSaving}}"
+            disabled="{{!tagsDirty || tagSaving || saving || cancelBusy || conflict || eventStatus === 'CANCELLED' || eventStatus === 'ENDED'}}"
+            bind:tap="saveEventTags"
+          >保存标签</t-button>
+        </view>
+        <view wx:if="{{tagMessage}}" class="mt-3 text-[length:23rpx] text-danger">{{tagMessage}}</view>
+      </block>
+    </view>
+
     <view class="rounded-[16rpx] bg-panel p-4">
       <view class="mb-3 text-[length:27rpx] font-semibold">活动封面</view>
       <image wx:if="{{coverUrl}}" class="mip-admin-banner-image rounded-[12rpx] bg-panel-raised" mode="aspectFill" src="{{coverUrl}}" />
@@ -141,8 +183,8 @@
       </view>
     </view>
 
-    <t-button block theme="primary" loading="{{saving}}" disabled="{{coverUploading || conflict || eventStatus === 'CANCELLED' || eventStatus === 'ENDED'}}" bind:tap="save">保存活动</t-button>
-    <t-button wx:if="{{eventId && eventStatus !== 'CANCELLED' && eventStatus !== 'ENDED'}}" block variant="outline" theme="danger" disabled="{{saving || cancelBusy || conflict}}" bind:tap="openCancelDialog">取消活动</t-button>
+    <t-button block theme="primary" loading="{{saving}}" disabled="{{coverUploading || tagSaving || cancelBusy || conflict || eventStatus === 'CANCELLED' || eventStatus === 'ENDED'}}" bind:tap="save">保存活动</t-button>
+    <t-button wx:if="{{eventId && eventStatus !== 'CANCELLED' && eventStatus !== 'ENDED'}}" block variant="outline" theme="danger" disabled="{{saving || tagSaving || cancelBusy || conflict}}" bind:tap="openCancelDialog">取消活动</t-button>
     <view wx:if="{{cancelDialogVisible && !cancelConflict}}" class="mip-admin-span-wide rounded-[16rpx] bg-panel p-4">
       <view class="text-[length:27rpx] font-semibold">取消活动</view>
       <view class="mb-2 mt-4 text-[length:23rpx] text-muted">取消原因（必填）</view>

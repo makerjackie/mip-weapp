@@ -34,6 +34,8 @@ const SAVE_RECAP_UPDATE_KEYS = new Set([
 const STATUS_RECAP_KEYS = new Set(['recapId', 'expectedVersion', 'status'])
 const ARCHIVE_RECAP_KEYS = new Set(['recapId', 'expectedVersion', 'reason'])
 const DESTINATION_KEYS = new Set(['provider', 'type', 'finderUserName', 'feedId'])
+const GET_TAG_ASSIGNMENTS_KEYS = new Set(['eventId'])
+const REPLACE_TAG_ASSIGNMENTS_KEYS = new Set(['eventId', 'expectedVersion', 'tagIds'])
 const CATALOG_CURSOR_FIELDS = ['kind', 'status', 'query', 'updatedAt', 'id']
 const RECAP_CURSOR_FIELDS = ['event', 'status', 'query', 'updatedAt', 'id']
 const PLATFORM_SCOPE = Object.freeze({ scopeType: 'PLATFORM', scopeId: null })
@@ -182,6 +184,40 @@ function createEventCatalogAdmin({ access, repository }) {
     })
   }
 
+  async function getEventTagAssignments(caller, rawInput = {}) {
+    const { context } = await platformContext(caller, CAPABILITIES.EVENTS_CATALOG_MANAGE)
+    const input = normalizeTagAssignmentsGet(rawInput)
+    const assignments = await repository.getEventTagAssignments(
+      context.caller.appId,
+      input.eventId,
+    )
+    if (!assignments) throw new AdminError('NOT_FOUND', '活动不存在')
+    return assignments
+  }
+
+  async function replaceEventTagAssignments(caller, rawInput = {}) {
+    const { context, grant } = await platformContext(caller, CAPABILITIES.EVENTS_CATALOG_MANAGE)
+    const input = normalizeTagAssignmentsReplace(rawInput)
+    return repository.replaceEventTagAssignments({
+      ...input,
+      appId: context.caller.appId,
+      actorUserId: context.caller.userId,
+      authorization: access.mutationAuthorization(grant, CAPABILITIES.EVENTS_CATALOG_MANAGE),
+      audit: (eventId, change) => access.audit(context, grant, {
+        ...PLATFORM_SCOPE,
+        action: 'admin.events.tags.replace',
+        resourceType: 'EVENT_TAG_ASSIGNMENTS',
+        resourceId: eventId,
+        metadata: {
+          addedCount: change.addedTagKeys.length,
+          removedCount: change.removedTagKeys.length,
+          addedTagKeys: change.addedTagKeys,
+          removedTagKeys: change.removedTagKeys,
+        },
+      }),
+    })
+  }
+
   async function platformContext(caller, capability) {
     const context = await access.session(caller)
     const grant = firstGrant(context.bindings, capability)
@@ -196,11 +232,39 @@ function createEventCatalogAdmin({ access, repository }) {
     archiveEventVideoRecap,
     changeEventCatalogStatus,
     changeEventVideoRecapStatus,
+    getEventTagAssignments,
     getEventVideoRecap,
     listEventCatalogs,
     listEventVideoRecaps,
     saveEventCatalog,
     saveEventVideoRecap,
+    replaceEventTagAssignments,
+  }
+}
+
+function normalizeTagAssignmentsGet(value) {
+  exactObject(value, GET_TAG_ASSIGNMENTS_KEYS, [...GET_TAG_ASSIGNMENTS_KEYS], '活动标签查询无效')
+  return { eventId: requiredId(value.eventId, '活动') }
+}
+
+function normalizeTagAssignmentsReplace(value) {
+  exactObject(
+    value,
+    REPLACE_TAG_ASSIGNMENTS_KEYS,
+    [...REPLACE_TAG_ASSIGNMENTS_KEYS],
+    '活动标签设置无效',
+  )
+  if (!Array.isArray(value.tagIds) || value.tagIds.length > 100) {
+    throw new AdminError('VALIDATION_FAILED', '活动标签数量无效')
+  }
+  const tagIds = value.tagIds.map(tagId => requiredId(tagId, '活动标签')).sort()
+  if (new Set(tagIds).size !== tagIds.length) {
+    throw new AdminError('VALIDATION_FAILED', '活动标签不能重复')
+  }
+  return {
+    eventId: requiredId(value.eventId, '活动'),
+    expectedVersion: expectedVersion(value.expectedVersion),
+    tagIds,
   }
 }
 
@@ -429,4 +493,6 @@ module.exports = {
   normalizeRecapList,
   normalizeRecapSave,
   normalizeRecapStatus,
+  normalizeTagAssignmentsGet,
+  normalizeTagAssignmentsReplace,
 }

@@ -68,6 +68,8 @@ export function createMipAdminModule(
     users,
     listEvents: events.list,
     listEventCatalogs: eventCatalogs.listCatalogs,
+    getEventTagAssignments: eventCatalogs.getTagAssignments,
+    replaceEventTagAssignments: eventCatalogs.replaceTagAssignments,
     listEventVideoRecaps: eventCatalogs.listRecaps,
     getEventVideoRecap: eventCatalogs.getRecap,
     getEventPolicy: events.getPolicy,

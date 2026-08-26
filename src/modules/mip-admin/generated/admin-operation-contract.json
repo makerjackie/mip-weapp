@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "operationCount": 129,
+  "operationCount": 131,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -179,6 +179,14 @@
       "idempotencyKeyRequired": null
     },
     {
+      "action": "mip.admin.events.tags.get",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
       "action": "mip.admin.events.recaps.list",
       "kind": "QUERY",
       "authentication": "REQUIRED",
@@ -276,6 +284,14 @@
     },
     {
       "action": "mip.admin.events.catalog.archive",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.events.tags.replace",
       "kind": "MUTATION",
       "authentication": "REQUIRED",
       "session": "REQUIRED",

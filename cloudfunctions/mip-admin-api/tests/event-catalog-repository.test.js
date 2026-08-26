@@ -9,6 +9,8 @@ const USER_ID = '11111111-1111-4111-8111-111111111111'
 const CATALOG_ID = '22222222-2222-4222-8222-222222222222'
 const EVENT_ID = '33333333-3333-4333-8333-333333333333'
 const RECAP_ID = '44444444-4444-4444-8444-444444444444'
+const TAG_A_ID = '55555555-5555-4555-8555-555555555555'
+const TAG_B_ID = '66666666-6666-4666-8666-666666666666'
 const NOW = new Date('2030-08-26T08:00:00.000Z')
 
 function codeError(code) {
@@ -66,6 +68,13 @@ function authorization() {
   }
 }
 
+function tagAuthorization() {
+  return {
+    capability: 'events.catalog.manage',
+    effectiveGrant: { roleKey: 'PLATFORM_OPERATIONS', scopeType: 'PLATFORM', scopeId: null },
+  }
+}
+
 describe('event catalog repository', () => {
   it('lists only AppID-scoped catalogs and strips internal cursor data', async () => {
     let query
@@ -116,6 +125,342 @@ describe('event catalog repository', () => {
       nextCursor: null,
     })
     assert.equal(JSON.stringify(result).includes('cursorUpdatedAt'), false)
+  })
+
+  it('reads AppID-scoped tag options without exposing assignment actors', async () => {
+    const calls = []
+    const database = {
+      async one(sql, params) {
+        calls.push({ type: 'event', sql, params })
+        return { id: EVENT_ID, version: 4 }
+      },
+      async query(sql, params) {
+        calls.push({ type: 'tags', sql, params })
+        return [{
+          id: TAG_A_ID,
+          tag_key: 'networking',
+          name: '商务交流',
+          description: '交流类活动',
+          sort_order: 10,
+          catalog_status: 'ACTIVE',
+          assignment_selected: 1,
+          assignment_version: 3,
+          assigned_by_user_id: USER_ID,
+        }]
+      },
+    }
+    const repository = createEventCatalogRepository(database, dependencies())
+    const result = await repository.getEventTagAssignments(APP_ID, EVENT_ID)
+
+    assert.deepEqual(calls[0].params, [APP_ID, EVENT_ID])
+    assert.match(calls[1].sql, /assignment\.event_id = \?/)
+    assert.match(calls[1].sql, /tag\.app_id = \?/)
+    assert.deepEqual(calls[1].params, [EVENT_ID, APP_ID])
+    assert.deepEqual(result, {
+      eventId: EVENT_ID,
+      eventVersion: 4,
+      tags: [{
+        id: TAG_A_ID,
+        key: 'networking',
+        name: '商务交流',
+        description: '交流类活动',
+        sortOrder: 10,
+        catalogStatus: 'ACTIVE',
+        selectable: true,
+        selected: true,
+        assignmentVersion: 3,
+      }],
+    })
+    assert.doesNotMatch(JSON.stringify(result), /assignedBy|removedBy|userId/i)
+  })
+
+  it('replaces tag assignments with event CAS, soft history, and stable-key audit', async () => {
+    const calls = []
+    const tx = {
+      async one(sql, params) {
+        calls.push({ type: sql.includes('FOR UPDATE') ? 'event-lock' : 'event-read', sql, params })
+        return sql.includes('FOR UPDATE')
+          ? { id: EVENT_ID, status: 'DRAFT', version: 4 }
+          : { id: EVENT_ID, version: 5 }
+      },
+      async query(sql, params) {
+        if (sql.includes('FROM mip_event_tag_assignments assignment')) {
+          calls.push({ type: 'current-tags', sql, params })
+          return [{ tag_id: TAG_A_ID, tag_key: 'legacy' }]
+        }
+        if (sql.includes('FROM mip_event_tags') && sql.includes('FOR UPDATE')) {
+          calls.push({ type: 'selected-tags', sql, params })
+          return [{ id: TAG_B_ID, tag_key: 'roundtable', status: 'ACTIVE' }]
+        }
+        if (sql.includes('FROM mip_event_tags tag')) {
+          calls.push({ type: 'result-tags', sql, params })
+          return [{
+            id: TAG_B_ID,
+            tag_key: 'roundtable',
+            name: '圆桌交流',
+            description: '',
+            sort_order: 20,
+            catalog_status: 'ACTIVE',
+            assignment_selected: 1,
+            assignment_version: 1,
+          }]
+        }
+        const type = sql.includes('UPDATE mip_events')
+          ? 'event-cas'
+          : sql.includes('UPDATE mip_event_tag_assignments')
+            ? 'soft-remove'
+            : sql.includes('INSERT INTO mip_event_tag_assignments')
+              ? 'upsert'
+              : sql.includes('INSERT INTO mip_event_changes')
+                ? 'event-change'
+                : 'write'
+        calls.push({ type, sql, params })
+        return { affectedRows: 1 }
+      },
+    }
+    const database = { async transaction(work) { return work(tx) } }
+    const repository = createEventCatalogRepository(database, dependencies(calls))
+    const result = await repository.replaceEventTagAssignments({
+      appId: APP_ID,
+      actorUserId: USER_ID,
+      eventId: EVENT_ID,
+      expectedVersion: 4,
+      tagIds: [TAG_B_ID],
+      authorization: tagAuthorization(),
+      audit: (eventId, change) => ({ resourceId: eventId, metadata: change }),
+    })
+
+    assert.deepEqual(calls.map(call => call.type), [
+      'reauthorize', 'scope', 'event-lock', 'current-tags', 'selected-tags',
+      'event-cas', 'soft-remove', 'upsert', 'event-change', 'audit',
+      'event-read', 'result-tags',
+    ])
+    assert.match(calls.find(call => call.type === 'soft-remove').sql, /status = 'INACTIVE'/)
+    assert.doesNotMatch(calls.find(call => call.type === 'soft-remove').sql, /DELETE/i)
+    const upsert = calls.find(call => call.type === 'upsert')
+    assert.match(upsert.sql, /ON DUPLICATE KEY UPDATE/)
+    assert.match(calls.find(call => call.type === 'event-cas').sql, /status IN \(\?, \?, \?\)/)
+    assert.deepEqual(calls.find(call => call.type === 'event-cas').params, [
+      APP_ID, EVENT_ID, 4, 'DRAFT', 'PUBLISHED', 'UNPUBLISHED',
+    ])
+    const eventChange = calls.find(call => call.type === 'event-change')
+    assert.match(eventChange.sql, /mip_event_changes/)
+    assert.deepEqual(eventChange.params, [
+      RECAP_ID,
+      APP_ID,
+      EVENT_ID,
+      5,
+      '活动标签已更新',
+      JSON.stringify(['tags']),
+      USER_ID,
+    ])
+    assert.deepEqual(calls.find(call => call.type === 'audit').audit.metadata, {
+      addedTagKeys: ['roundtable'],
+      removedTagKeys: ['legacy'],
+    })
+    assert.equal(result.eventVersion, 5)
+    assert.equal(result.idempotent, false)
+    assert.equal(result.tags[0].selected, true)
+  })
+
+  it('reactivates a soft-removed assignment with a new actor and cleared removal state', async () => {
+    const calls = []
+    const tx = {
+      async one(sql, params) {
+        calls.push({ type: sql.includes('FOR UPDATE') ? 'event-lock' : 'event-read', sql, params })
+        return sql.includes('FOR UPDATE')
+          ? { id: EVENT_ID, status: 'PUBLISHED', version: 4 }
+          : { id: EVENT_ID, version: 5 }
+      },
+      async query(sql, params) {
+        if (sql.includes('FROM mip_event_tag_assignments assignment')) {
+          calls.push({ type: 'current-tags', sql, params })
+          return []
+        }
+        if (sql.includes('FROM mip_event_tags') && sql.includes('FOR UPDATE')) {
+          calls.push({ type: 'selected-tags', sql, params })
+          return [{ id: TAG_B_ID, tag_key: 'roundtable', status: 'ACTIVE' }]
+        }
+        if (sql.includes('FROM mip_event_tags tag')) {
+          calls.push({ type: 'result-tags', sql, params })
+          return [{
+            id: TAG_B_ID,
+            tag_key: 'roundtable',
+            name: '圆桌交流',
+            description: '',
+            sort_order: 20,
+            catalog_status: 'ACTIVE',
+            assignment_selected: 1,
+            assignment_version: 4,
+          }]
+        }
+        const type = sql.includes('UPDATE mip_events')
+          ? 'event-cas'
+          : sql.includes('INSERT INTO mip_event_tag_assignments')
+            ? 'upsert'
+            : sql.includes('INSERT INTO mip_event_changes')
+              ? 'event-change'
+              : 'unexpected-write'
+        calls.push({ type, sql, params })
+        return { affectedRows: 1 }
+      },
+    }
+    const database = { async transaction(work) { return work(tx) } }
+    const repository = createEventCatalogRepository(database, dependencies(calls))
+
+    const result = await repository.replaceEventTagAssignments({
+      appId: APP_ID,
+      actorUserId: USER_ID,
+      eventId: EVENT_ID,
+      expectedVersion: 4,
+      tagIds: [TAG_B_ID],
+      authorization: tagAuthorization(),
+      audit: (eventId, change) => ({ resourceId: eventId, metadata: change }),
+    })
+
+    const upsert = calls.find(call => call.type === 'upsert')
+    assert.match(upsert.sql, /status = 'ACTIVE', version = version \+ 1/)
+    assert.match(upsert.sql, /assigned_by_user_id = VALUES\(assigned_by_user_id\)/)
+    assert.match(upsert.sql, /removed_by_user_id = NULL/)
+    assert.match(upsert.sql, /assigned_at = UTC_TIMESTAMP\(3\), removed_at = NULL/)
+    assert.deepEqual(upsert.params, [APP_ID, EVENT_ID, TAG_B_ID, USER_ID])
+    assert.deepEqual(calls.find(call => call.type === 'audit').audit.metadata, {
+      addedTagKeys: ['roundtable'],
+      removedTagKeys: [],
+    })
+    assert.equal(calls.some(call => call.type === 'unexpected-write'), false)
+    assert.equal(result.eventVersion, 5)
+    assert.equal(result.idempotent, false)
+  })
+
+  it('keeps the event version and audit log unchanged for an identical selection', async () => {
+    const calls = []
+    const tx = {
+      async one(sql, params) {
+        calls.push({ type: sql.includes('FOR UPDATE') ? 'event-lock' : 'event-read', sql, params })
+        return { id: EVENT_ID, status: 'DRAFT', version: 4 }
+      },
+      async query(sql, params) {
+        if (sql.includes('FROM mip_event_tag_assignments assignment')) {
+          calls.push({ type: 'current-tags', sql, params })
+          return [{ tag_id: TAG_A_ID, tag_key: 'networking' }]
+        }
+        if (sql.includes('FROM mip_event_tags') && sql.includes('FOR UPDATE')) {
+          calls.push({ type: 'selected-tags', sql, params })
+          return [{ id: TAG_A_ID, tag_key: 'networking', status: 'ACTIVE' }]
+        }
+        if (sql.includes('FROM mip_event_tags tag')) {
+          calls.push({ type: 'result-tags', sql, params })
+          return [{
+            id: TAG_A_ID,
+            tag_key: 'networking',
+            name: '商务交流',
+            description: '',
+            sort_order: 10,
+            catalog_status: 'ACTIVE',
+            assignment_selected: 1,
+            assignment_version: 3,
+          }]
+        }
+        calls.push({ type: 'write', sql, params })
+        return { affectedRows: 1 }
+      },
+    }
+    const database = { async transaction(work) { return work(tx) } }
+    const repository = createEventCatalogRepository(database, dependencies(calls))
+    const result = await repository.replaceEventTagAssignments({
+      appId: APP_ID,
+      actorUserId: USER_ID,
+      eventId: EVENT_ID,
+      expectedVersion: 4,
+      tagIds: [TAG_A_ID],
+      authorization: tagAuthorization(),
+      audit: () => ({ resourceId: EVENT_ID }),
+    })
+
+    assert.deepEqual(calls.map(call => call.type), [
+      'reauthorize', 'scope', 'event-lock', 'current-tags', 'selected-tags',
+      'event-read', 'result-tags',
+    ])
+    assert.equal(result.eventVersion, 4)
+    assert.equal(result.idempotent, true)
+  })
+
+  it('rejects stale events and non-active selected tags before writes', async () => {
+    for (const scenario of [
+      { event: { id: EVENT_ID, status: 'DRAFT', version: 5 }, selected: [], code: 'CONFLICT' },
+      {
+        event: { id: EVENT_ID, status: 'DRAFT', version: 4 },
+        selected: [{ id: TAG_B_ID, tag_key: 'retired', status: 'INACTIVE' }],
+        code: 'CONFLICT',
+      },
+    ]) {
+      const calls = []
+      const tx = {
+        async one() {
+          calls.push('event-lock')
+          return scenario.event
+        },
+        async query(sql) {
+          if (sql.includes('FROM mip_event_tag_assignments assignment')) {
+            calls.push('current-tags')
+            return []
+          }
+          if (sql.includes('FROM mip_event_tags') && sql.includes('FOR UPDATE')) {
+            calls.push('selected-tags')
+            return scenario.selected
+          }
+          calls.push('write')
+          return { affectedRows: 1 }
+        },
+      }
+      const database = { async transaction(work) { return work(tx) } }
+      const repository = createEventCatalogRepository(database, dependencies())
+
+      await assert.rejects(() => repository.replaceEventTagAssignments({
+        appId: APP_ID,
+        actorUserId: USER_ID,
+        eventId: EVENT_ID,
+        expectedVersion: 4,
+        tagIds: [TAG_B_ID],
+        authorization: tagAuthorization(),
+        audit: () => ({}),
+      }), error => error?.code === scenario.code)
+      assert.equal(calls.includes('write'), false)
+    }
+  })
+
+  it('rejects cancelled and ended events before any assignment, version, change, or audit write', async () => {
+    for (const status of ['CANCELLED', 'ENDED']) {
+      const calls = []
+      const tx = {
+        async one(sql, params) {
+          calls.push({ type: 'event-lock', sql, params })
+          return { id: EVENT_ID, status, version: 4 }
+        },
+        async query(sql, params) {
+          calls.push({ type: 'unexpected-query', sql, params })
+          return { affectedRows: 1 }
+        },
+      }
+      const database = { async transaction(work) { return work(tx) } }
+      const repository = createEventCatalogRepository(database, dependencies(calls))
+
+      await assert.rejects(() => repository.replaceEventTagAssignments({
+        appId: APP_ID,
+        actorUserId: USER_ID,
+        eventId: EVENT_ID,
+        expectedVersion: 4,
+        tagIds: [TAG_B_ID],
+        authorization: tagAuthorization(),
+        audit: () => ({ resourceId: EVENT_ID }),
+      }), error => error?.code === 'INVALID_STATE')
+
+      assert.deepEqual(calls.map(call => call.type), [
+        'reauthorize', 'scope', 'event-lock',
+      ])
+      assert.deepEqual(calls[2].params, [APP_ID, EVENT_ID])
+    }
   })
 
   it('reauthorizes inside the transaction before locking, CAS updating, and auditing', async () => {

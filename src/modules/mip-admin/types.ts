@@ -27,6 +27,11 @@ import type {
   AdminEventCommentState,
 } from './event-comments'
 import type {
+  AdminEventTagAssignmentReplaceInput,
+  AdminEventTagAssignmentReplaceResult,
+  AdminEventTagAssignments,
+} from './event-tag-assignments'
+import type {
   AdminMessageCampaign,
   AdminMessageCampaignCancelScheduleInput,
   AdminMessageCampaignDraft,
@@ -960,6 +965,10 @@ export interface MipAdminGateway {
   saveEventCatalog: (input: AdminEventCatalogSaveInput) => Promise<AdminEventCatalogItem>
   changeEventCatalogStatus: (input: AdminEventCatalogStatusInput) => Promise<AdminEventCatalogItem>
   archiveEventCatalog: (input: AdminEventCatalogArchiveInput) => Promise<AdminEventCatalogItem>
+  getEventTagAssignments: (eventId: string) => Promise<AdminEventTagAssignments>
+  replaceEventTagAssignments: (
+    input: AdminEventTagAssignmentReplaceInput,
+  ) => Promise<AdminEventTagAssignmentReplaceResult>
   listEventVideoRecaps: (input?: AdminEventVideoRecapListInput) => Promise<AdminPage<AdminEventVideoRecap>>
   getEventVideoRecap: (recapId: string) => Promise<AdminEventVideoRecap>
   saveEventVideoRecap: (input: AdminEventVideoRecapSaveInput) => Promise<AdminEventVideoRecap>

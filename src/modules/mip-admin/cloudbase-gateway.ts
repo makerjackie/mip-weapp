@@ -52,6 +52,12 @@ import {
 } from './event-comments'
 import { parseAdminEventInsights } from './event-insights'
 import {
+  createAdminEventTagAssignmentsGetRequest,
+  createAdminEventTagAssignmentsReplaceRequest,
+  parseAdminEventTagAssignmentReplaceResult,
+  parseAdminEventTagAssignments,
+} from './event-tag-assignments'
+import {
   parseMessageCampaign,
   parseMessageCampaignPage,
   parseMessageCampaignPublication,
@@ -813,6 +819,18 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
     ),
     archiveEventCatalog: async input => parseAdminEventCatalogItem(
       await call('mip.admin.events.catalog.archive', createAdminEventCatalogArchiveRequest(input)),
+    ),
+    getEventTagAssignments: async eventId => parseAdminEventTagAssignments(
+      await call(
+        'mip.admin.events.tags.get',
+        createAdminEventTagAssignmentsGetRequest(eventId),
+      ),
+    ),
+    replaceEventTagAssignments: async input => parseAdminEventTagAssignmentReplaceResult(
+      await call(
+        'mip.admin.events.tags.replace',
+        createAdminEventTagAssignmentsReplaceRequest(input),
+      ),
     ),
     listEventVideoRecaps: async input => parseAdminEventVideoRecapPage(
       await call('mip.admin.events.recaps.list', { ...createAdminEventVideoRecapListRequest(input) }),
