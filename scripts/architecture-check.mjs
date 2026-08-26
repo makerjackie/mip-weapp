@@ -3,6 +3,9 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const root = path.resolve(import.meta.dirname, '..')
+const localResearchInputs = new Set([
+  'docs/research/legacy-mip-app',
+])
 const patterns = [
   { id: 'workspace-protocol', source: ['workspace', '*'].join(':') },
   { id: 'workspace-packages', source: ['packages:', '\n  -'].join('') },
@@ -22,6 +25,9 @@ function walk(dir) {
       return []
     }
     const child = path.join(dir, entry.name)
+    if (entry.isDirectory() && localResearchInputs.has(path.relative(root, child))) {
+      return []
+    }
     return entry.isDirectory() ? walk(child) : [child]
   })
 }
