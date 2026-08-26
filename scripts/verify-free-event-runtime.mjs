@@ -15,6 +15,7 @@ import { isLocalPortListening } from './lib/devtools-automator-session.mjs'
 import { callCloudbase } from './lib/example-cloudbase.mjs'
 import {
   createOpenedAutomatorOptions,
+  hasExactHeartCandidateState,
   isReusableFreeEventRegistrationStatus,
   markerSha256,
   planRegistrationFieldActions,
@@ -707,26 +708,36 @@ async function executeWorkflow({ contract, diagnostics, markers, miniProgram, op
       })
       return { reason, status: 'external-wait' }
     }
-    const target = candidates.find(candidate => !candidate.selected) || candidates[0]
-    const originalTarget = String(data.heart?.targetRef || '')
-    if (originalTarget && target.participantRef === originalTarget) {
+    const selectedCandidate = candidates.find(candidate => candidate.selected === true)
+    if (selectedCandidate) {
+      const previousVersion = Number(data.heart?.version || 0)
       const toggleOff = mutationAttempt(report, persist, 'member-heart-toggle-off')
-      await callBoundHandler(page, 'chooseHeart', { dataset: { targetRef: target.participantRef } })
+      await callBoundHandler(page, 'chooseHeart', { dataset: { targetRef: selectedCandidate.participantRef } })
       data = await waitForData(
         page,
-        value => value?.state === 'ready' && !value?.heart?.targetRef,
+        value => hasExactHeartCandidateState(value, {
+          participantRef: selectedCandidate.participantRef,
+          previousVersion,
+          selected: false,
+        }),
         { label: `${step.id} toggle off` },
       )
       confirmMutation(report, persist, toggleOff, { version: data.heart.version })
+    }
+    const target = (data.candidates || []).find(candidate => !candidate.selected)
+    if (!target) {
+      throw new RuntimeStateError('No unselected heart candidate is available after current-state reconciliation')
     }
     const previousVersion = Number(data.heart?.version || 0)
     const mutation = mutationAttempt(report, persist, 'member-heart-select')
     await callBoundHandler(page, 'chooseHeart', { dataset: { targetRef: target.participantRef } })
     const selected = await waitForData(
       page,
-      value => value?.state === 'ready'
-        && value?.heart?.targetRef === target.participantRef
-        && Number(value.heart.version) > previousVersion,
+      value => hasExactHeartCandidateState(value, {
+        participantRef: target.participantRef,
+        previousVersion,
+        selected: true,
+      }),
       { label: step.id },
     )
     confirmMutation(report, persist, mutation, { version: selected.heart.version })

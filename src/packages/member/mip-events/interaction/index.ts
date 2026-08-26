@@ -117,17 +117,23 @@ Page({
     if (this.data.savingHeart) {
       return
     }
-    const currentTarget = this.data.heart?.targetRef || ''
+    const selectedCandidate = this.data.candidates
+      .find(candidate => candidate.participantRef === targetRef)
+    const submittedTargetRef = selectedCandidate?.selected
+      ? null
+      : targetRef
     this.setData({ savingHeart: true, message: '' })
     try {
       const heart = await mipEventsModule.setHeart(
         this.data.eventId,
-        targetRef === currentTarget ? null : targetRef,
+        submittedTargetRef,
         this.data.heart?.version,
       )
       const candidates = this.data.candidates.map(candidate => ({
         ...candidate,
-        selected: candidate.participantRef === heart.targetRef,
+        selected: Boolean(heart.targetRef)
+          && submittedTargetRef !== null
+          && candidate.participantRef === submittedTargetRef,
       }))
       this.setData({
         heart,
@@ -268,14 +274,10 @@ Page({
         mipEventsModule.listHeartCandidates(this.data.eventId),
         mipEventsModule.getHeart(this.data.eventId),
       ])
-      const current = candidates.map(candidate => ({
-        ...candidate,
-        selected: candidate.participantRef === heart.targetRef,
-      }))
       this.setData({
         heart,
-        candidates: current,
-        visibleCandidates: filteredCandidates(current, this.data.searchInput),
+        candidates,
+        visibleCandidates: filteredCandidates(candidates, this.data.searchInput),
         received: heart.received,
         visibleReceived: filteredCandidates(heart.received, this.data.searchInput),
         message: '心动状态已更新，请重新选择。',

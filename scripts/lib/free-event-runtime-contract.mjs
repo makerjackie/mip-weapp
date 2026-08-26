@@ -607,6 +607,35 @@ export function summarizeRoster(data, registrationId) {
   }
 }
 
+export function hasExactHeartCandidateState(data, {
+  participantRef,
+  previousVersion,
+  selected,
+}) {
+  const candidates = Array.isArray(data?.candidates) ? data.candidates : []
+  const heart = data?.heart
+  const version = Number(heart?.version)
+  const baseline = Number(previousVersion)
+  if (data?.state !== 'ready'
+    || typeof participantRef !== 'string'
+    || !participantRef
+    || !Number.isFinite(version)
+    || !Number.isFinite(baseline)
+    || version <= baseline) {
+    return false
+  }
+  const candidate = candidates.find(item => item?.participantRef === participantRef)
+  const selectedCandidates = candidates.filter(item => item?.selected === true)
+  if (selected === true) {
+    return candidate?.selected === true
+      && selectedCandidates.length === 1
+      && Boolean(heart?.targetRef)
+  }
+  return candidate?.selected === false
+    && selectedCandidates.length === 0
+    && !heart?.targetRef
+}
+
 export function summarizeInteraction(data, feedbackMarker) {
   const feedback = data?.feedback
   return {

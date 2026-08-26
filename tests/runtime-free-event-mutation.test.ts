@@ -3,6 +3,7 @@ import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import {
   createOpenedAutomatorOptions,
+  hasExactHeartCandidateState,
   isReusableFreeEventRegistrationStatus,
   planRegistrationFieldActions,
   resolveFreeEventMutationOptions,
@@ -391,6 +392,51 @@ describe('free offline event mutation runtime contract', () => {
 })
 
 describe('free event runtime evidence summaries', () => {
+  it('matches heart mutations by the exact candidate fact without comparing signed tokens', () => {
+    const candidateRef = 'candidate-token-with-one-expiry'
+    const selected = {
+      state: 'ready',
+      candidates: [
+        { participantRef: candidateRef, selected: true },
+        { participantRef: 'other-candidate-token', selected: false },
+      ],
+      heart: { targetRef: 'heart-token-with-another-expiry', version: 4 },
+    }
+    expect(hasExactHeartCandidateState(selected, {
+      participantRef: candidateRef,
+      previousVersion: 3,
+      selected: true,
+    })).toBe(true)
+    expect(hasExactHeartCandidateState(selected, {
+      participantRef: 'other-candidate-token',
+      previousVersion: 3,
+      selected: true,
+    })).toBe(false)
+    expect(hasExactHeartCandidateState(selected, {
+      participantRef: candidateRef,
+      previousVersion: 4,
+      selected: true,
+    })).toBe(false)
+
+    expect(hasExactHeartCandidateState({
+      state: 'ready',
+      candidates: [
+        { participantRef: candidateRef, selected: false },
+        { participantRef: 'other-candidate-token', selected: false },
+      ],
+      heart: { version: 5 },
+    }, {
+      participantRef: candidateRef,
+      previousVersion: 4,
+      selected: false,
+    })).toBe(true)
+
+    const runnerSource = fs.readFileSync(path.join(root, 'scripts/verify-free-event-runtime.mjs'), 'utf8')
+    expect(runnerSource).toContain('hasExactHeartCandidateState(value, {')
+    expect(runnerSource).not.toContain('value?.heart?.targetRef === target.participantRef')
+    expect(runnerSource).not.toContain('target.participantRef === originalTarget')
+  })
+
   it('waits for the operator only when Automator compile is exactly unimplemented', () => {
     expect(runtimeCompileDisposition(new Error('unimplemented'))).toBe('operator-wait')
     expect(runtimeCompileDisposition({ message: 'unimplemented' })).toBe('operator-wait')
