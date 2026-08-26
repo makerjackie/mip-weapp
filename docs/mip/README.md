@@ -2,7 +2,7 @@
 
 本目录把固定的产品范围、Figma 页面映射、2026-08-24 飞书 AME 导出、网页后台原型和当前仓库证据整理为开发与验收基线。状态以本仓库当前代码为准；源表中的 `未开始`、`待评审` 不是实现结论，代码链路存在也不等于已通过微信开发者工具、网页浏览器、真机或生产验收。
 
-当前工程声明 95 条小程序路由、16 个核心 `mip-*` 云函数和 38 个锁定迁移。共享云环境已验证 38 个迁移、105 张 MIP 业务表的精确 runtime 权限及最终工作区代码对应的 16/16 核心函数。开发者工具已遍历 95/95 路由并通过六类状态和三个用户端交互旅程；当前身份的协议、档案、玩家/管理员资格、真实详情夹具、真机能力和正式外部配置仍保留为明确验收边界。
+当前工程声明 108 条小程序路由、145 个渠道中立管理 operation、16 个核心 `mip-*` 云函数和 52 个锁定迁移。2026-08-27 共享云环境已验证 52 个迁移、121 张 MIP runtime 表的精确权限，以及最新 `mip-admin-api` 和 16/16 核心函数的配置、健康与保护规则。开发者工具报告仍只覆盖历史 95 条路由，当前 108 条路由的代表性手机/宽屏复验、真机能力和正式外部配置继续作为明确验收边界。
 
 ## 来源
 
@@ -15,7 +15,7 @@
 | [GitHub 固定 PRD](sources/github/PRD-v1.1.0.md) | v1.1.0 总范围和后台排除项 | 固定到外部 commit `a38bc48e4d85ceabf9adb1013fbd5e0842a8c4eb`，可离线复核 |
 | [GitHub CSV 需求清单](sources/github/README.md) | 发现待评审条目和外部来源线索 | 已固定三份原始清单；缺少规则/UI 的行不能单独形成实现或验收依据 |
 | [后台 PRD V0.1](https://github.com/douglas-ou/mip-minip-dev/blob/a38bc48e4d85ceabf9adb1013fbd5e0842a8c4eb/docs/MIP%E5%90%8E%E5%8F%B0PRD_V0.1_%E5%90%AB%E8%A1%A8%E6%A0%BC.md) | 原后台报价范围 | 仅保留来源记录；当前完整实现范围高于该报价范围 |
-| [WorkBuddy 网页后台 PRD V0.4](https://bfd568111f4249be9902eba8e876cece.app.workbuddy.link/#messages) | 管理功能、字段和信息架构输入 | 2026-08-25 已检查 15 个模块、108 个一级需求点并固定三张代表截图；当前交付为小程序手机/电脑双端管理，独立网页 UI 暂缓 |
+| [WorkBuddy 网页后台 PRD V0.4](https://bfd568111f4249be9902eba8e876cece.app.workbuddy.link/#messages) | 管理功能、字段和信息架构输入 | 2026-08-26 当前页面为 16 个模块、110 条需求，已固定 [逐项矩阵](WORKBUDDY_110_MATRIX.md)；2026-08-25 的 15/108 只保留为历史自述与三张截图，不能补造缺失原文；当前交付为小程序手机/电脑双端管理，独立网页 UI 暂缓 |
 
 ## 决策优先级
 
@@ -41,6 +41,7 @@ Figma 决定视觉与交互；服务端资格、金额、权限和状态机以�
 - [PROJECT_STATUS.md](PROJECT_STATUS.md)：当前进度、真实缺口和定向重构范围
 - [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)：完整目标、架构 seam、并行顺序、提交与验收门槛
 - [ADMIN_WEB.md](ADMIN_WEB.md)：WorkBuddy 管理功能基线与渠道中立架构
+- [WORKBUDDY_110_MATRIX.md](WORKBUDDY_110_MATRIX.md)：当前在线 110 条需求逐项映射、冲突和缺口
 - [DESKTOP_ADMIN_RESEARCH.md](DESKTOP_ADMIN_RESEARCH.md)：微信电脑端能力、限制与双端适配建议
 - [DELIVERY_SLICES.md](DELIVERY_SLICES.md)：先验证底座、再并行扩展的小版本路线
 - [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)：会改变产品模型或验收范围的待确认问题

@@ -1,6 +1,6 @@
 # MIP 架构
 
-MIP 是一个原生微信小程序、16 个核心 CloudBase 函数和三个可选支付函数组成的会员与协作平台。当前工程声明 95 条小程序路由；数据库追加迁移以 `migrations.lock.json` 为准。短期复用共享 CloudBase，业务数据、函数名和对象 key 使用 MIP 专属边界；正式 AppID 上线时迁移到空的独立 CloudBase/MySQL 环境。当前 schema 不支持在同一数据库中以相同主键并存两个 AppID 副本。
+MIP 是一个由原生微信小程序、16 个核心 CloudBase 函数及按需启用的 provider、scheduler 和支付函数组成的会员与协作平台。当前工程声明 108 条小程序路由；数据库追加迁移以 `migrations.lock.json` 为准。短期复用共享 CloudBase，业务数据、函数名和对象 key 使用 MIP 专属边界；正式 AppID 上线时迁移到空的独立 CloudBase/MySQL 环境。当前 schema 不支持在同一数据库中以相同主键并存两个 AppID 副本。
 
 ## 调用方向
 

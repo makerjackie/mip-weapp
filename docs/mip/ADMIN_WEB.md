@@ -6,9 +6,10 @@
 
 - 来源：[WorkBuddy 后台 PRD V0.4](https://bfd568111f4249be9902eba8e876cece.app.workbuddy.link/#messages)
 - 原型日期：2026-08-22
-- 本地审计日期：2026-08-25
-- 范围：15 个后台模块、108 个一级需求点
-- 证据：[网页后台原型审计](evidence/admin-web-2026-08-25/README.md)
+- 当前逐项审计日期：2026-08-27
+- 当前范围：16 个后台模块、110 个一级需求点
+- 逐项矩阵：[WorkBuddy 当前 110 条管理需求矩阵](WORKBUDDY_110_MATRIX.md)
+- 历史证据：[2026-08-25 网页后台原型审计](evidence/admin-web-2026-08-25/README.md)；当时文档自述为 15 个模块、108 项，但仓库没有保存可复原的逐行原文
 
 在线原型仍处于“需求细化中”。视觉、字段和交互是输入，不自动推翻 [CONTEXT.md](../../CONTEXT.md)、[REQUIREMENTS.md](REQUIREMENTS.md)、服务端资格、支付 ledger、审计和权限规则。
 
@@ -37,14 +38,15 @@ WorkBuddy 原型只作为管理功能、字段和信息架构输入，不作为�
 | 等级管理 | 4 | 等级、权益、规则和流水为 `service-present` | `web-missing`；正式等级和权益数值待配置 |
 | 经验值管理 | 4 | 权威余额、流水、规则、调整和审计为 `service-present` | `web-missing`；冲正展示与正式规则需验收 |
 | 贡献值管理 | 4 | 权威余额、流水、规则和调整为 `service-present` | `web-missing`；正式贡献行为和上限需确认 |
+| 权益管理 | 4 | 统一权益投影已聚合订单、会籍权益、成长权益和流水 | 受控手工会籍仍缺；固定一年和无订单直接改权益与现有 ledger 冲突 |
 | 任务管理 | 7 | 任务、成员派发、等级限制、模板、完成和奖励为 `service-present` | `web-missing`；上传、审批和失败恢复需运行时验收 |
 | 机会管理 | 5 | 机会、团队、评论、评价、引荐、撮合和审计为 `service-present` | `web-missing`；“合作成功”和转化口径需确认 |
-| 订单管理 | 7 | 统一订单、支付 ledger、退款和脱敏导出为 `service-present` | `web-missing`；真实支付、回调和退款为 `external-wait` |
+| 订单管理 | 7 | 统一订单、支付尝试、支付 ledger、退款和脱敏导出为 `service-present` | `web-missing`；真实支付、回调和退款为 `external-wait` |
 | 战队管理 | 5 | 赛季、队伍、成员历史、周赛和排行为 `service-present` | `web-missing`；正式赛事规则和视觉为 `external-wait` |
 | 角色与权限 | 4 | 七类角色、capability、平台/分会/活动 scope 为 `service-present` | `web-missing`；原型的自由角色配置不能突破 capability 安全上限 |
 | 后台账号管理 | 8 | 现有小程序管理员身份和登录审计可复用 | 网页账号、会话、验证码/密码登录、登录记录和凭证重置均为 `web-missing` |
 | 服务器管理 | 4 | 城市分会、成员归属和范围权限为 `service-present` | “服务器”与城市分会的关系为 `decision-needed`；不新增通用租户模型 |
-| 后台消息 | 6 | 站内信、运营消息活动、收件人快照、outbox 和 worker 为 `service-present` | `web-missing`；定时发送、模板管理和失败重试为 `service-partial` |
+| 后台消息 | 6 | 站内信、运营消息活动、收件人快照、投递记录、失败复核、outbox 和 worker 为 `service-present` | `web-missing`；正式模板与外部投递为 `external-wait` |
 
 ## 术语归一
 
@@ -96,7 +98,7 @@ WorkBuddy 原型只作为管理功能、字段和信息架构输入，不作为�
 
 当前 `mip-admin-api` 保持一个部署单元，但内部按用户、活动、订单、权限、消息和知识形成深模块，机会与成长作为后续独立模块。每个 module 用较小 interface 隐藏鉴权、scope、版本冲突、审计和事务细节；当前 CloudBase transport 和未来 HTTP transport 只做渠道适配，不复制业务规则。
 
-当前 handler 有 98 个 action，其中 1 个是 health。重构第一步固定其余 97 个业务 action 的 manifest，不在拆模块时同时改名或重做页面合同。外部稳定缝隙建议为：
+当前渠道中立合同固定 145 个业务 operation；`health` 不进入该业务 manifest。后续拆模块不得同时改名或重做页面合同。外部稳定缝隙为：
 
 ```ts
 interface AdminTransport {

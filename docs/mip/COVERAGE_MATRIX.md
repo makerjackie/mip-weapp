@@ -1,10 +1,10 @@
 # MIP 需求与设计覆盖矩阵
 
-本矩阵是完整实现的逐项验收入口。状态只使用：`implemented-local` 表示当前代码、迁移和聚焦测试形成了本地证据；`partial-local` 表示仍缺行为、字段、状态或入口；`external-wait` 表示源码链路存在，但能力本身仍依赖已部署 CloudBase、真机或正式配置；`unimplemented` 表示当前没有可触发实现。`implemented-local` 不代表真机或生产验收通过。固定 81 项之外，2026-08-24 飞书 AME 导出的增补条目也属于完整范围。
+本矩阵是完整实现的逐项验收入口。状态只使用：`implemented-local` 表示当前代码、迁移和聚焦测试形成了本地证据；`partial-local` 表示仍缺行为、字段、状态或入口；`external-wait` 表示源码链路存在，但能力本身仍依赖已部署 CloudBase、真机或正式配置；`unimplemented` 表示当前没有可触发实现；`deferred` 只用于已明确不属于当前小程序交付目标的未来网页端。`implemented-local` 不代表真机或生产验收通过。固定 81 项之外，2026-08-24 飞书 AME 导出的增补条目也属于完整范围。
 
 固定 PRD 的 1–81 项逐行状态见 [PRD_81_MATRIX.md](PRD_81_MATRIX.md)。本文件继续按业务闭环和 Figma 代表 frame 汇总，二者必须同时满足才能进入最终验收。
 
-当前工程声明 95 条小程序路由、16 个核心 `mip-*` 云函数和 38 个锁定迁移。共享云环境已验证 38 个迁移、105 张 MIP 业务表的精确 runtime 权限及最终工作区代码对应的 16/16 核心函数。开发者工具已完成 95/95 路由遍历、六类状态和三个用户端交互旅程；严格报告仍因当前身份未完成协议/档案/权限和缺少真实详情夹具而失败，不能视为全路由通过。
+当前工程声明 108 条小程序路由、16 个核心 `mip-*` 云函数和 52 个锁定迁移。共享云环境已验证 52 个迁移、121 张 MIP runtime 表的精确权限、最新 `mip-admin-api` 以及 16/16 核心函数。当前身份已完成协议、档案、手机号绑定和唯一 `PLATFORM_OWNER` 初始化；旧 `.tmp/runtime/report.json` 只覆盖 95 条历史路由，当前 108 条路由和 6 个交互旅程尚未重跑，不能继续把旧报告当作当前结论。
 
 ## 来源
 
@@ -113,11 +113,13 @@
 
 | 范围 | 状态 | 当前证据与缺口 |
 | --- | --- | --- |
-| 15 个管理模块和 108 个一级需求点 | `partial-local` | 在线原型已读取并形成内部模块地图；部分服务端和小程序管理页已存在，但尚未完成双端响应式实现与逐项验收 |
-| 管理业务服务复用 | `partial-local` | 用户、活动、订单、权限、消息等现有 `mip-admin-api` 能力可复用；渠道无关 DTO/action schema 尚未提取，部分新增字段和行为仍缺失 |
-| 网页管理员认证与会话 | `unimplemented` | 没有 Web challenge/session、Cookie、CSRF、注销或浏览器登录记录 |
-| 网页端平台/分会/活动 RBAC | `partial-local` | 服务端 scope 和 capability 已存在；Web principal adapter 和浏览器端越权矩阵尚未实现 |
-| 网页端视觉与可访问性 | `unimplemented` | 原型只有演示页面；没有本地实现、同尺寸对照、键盘访问或错误状态证据 |
+| 当前 16 个管理模块和 110 个一级需求点 | `partial-local` | [逐项矩阵](WORKBUDDY_110_MATRIX.md) 已固定当前在线稿；49 条管理路由、共享响应式壳层和高密度页面修复已存在，仍有明确本地功能缺口及 375px/960px+ 验收缺口 |
+| 管理业务服务复用 | `implemented-local` | 中立 `AdminTransport`、CloudBase/InMemory adapter、v1 嵌套请求、trusted principal、`AdminApplication.execute` 和 145-action operation registry 已形成稳定合同 |
+| 活动复制与手机预览 | `implemented-local` | 复制活动和未保存草稿预览已形成管理 action、页面入口和聚焦测试；真实媒体仍按真机边界验收 |
+| 消息模板、定时与失败复核 | `implemented-local` | 模板、活动、收件人快照、定时发送、失败复核和 outbox 已本地实现；正式微信模板及 scheduler 云端 canary 为 `external-wait` |
+| 网页管理员认证与会话 | `deferred` | 当前不建设 Web challenge/session、Cookie、CSRF 或浏览器登录；未来复用现有 trusted-principal 与业务合同 |
+| 网页端平台/分会/活动 RBAC | `deferred` | 当前小程序端 scope/capability 已实现；未来网页只新增 Web principal adapter 和浏览器安全矩阵 |
+| 网页端视觉与可访问性 | `deferred` | WorkBuddy 只作为功能输入；当前验收对象是小程序管理分包的手机和微信桌面宽屏 |
 
 ## Figma 代表 frame
 
