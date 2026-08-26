@@ -1,9 +1,23 @@
-import { getCustomNavigationContentTop } from '@weapp/platform/navigation'
+import {
+  getCustomNavigationContentTop,
+  getCustomNavigationStatusBarHeight,
+} from '@weapp/platform/navigation'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 describe('custom navigation content inset', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+  })
+
+  it('returns the real status-bar height without depending on capsule geometry', () => {
+    const getMenuButtonBoundingClientRect = vi.fn()
+    vi.stubGlobal('wx', {
+      getWindowInfo: () => ({ statusBarHeight: 24.2 }),
+      getMenuButtonBoundingClientRect,
+    })
+
+    expect(getCustomNavigationStatusBarHeight()).toBe(25)
+    expect(getMenuButtonBoundingClientRect).not.toHaveBeenCalled()
   })
 
   it('places content below the real WeChat capsule', () => {

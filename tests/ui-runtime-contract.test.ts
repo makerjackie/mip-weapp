@@ -293,12 +293,19 @@ describe('mip-weapp UI runtime contract', () => {
     expect(verifyRuntime).toContain('injectedDiffRatio >= 0.001')
   })
 
-  it('uses the native navigation safe area for opportunities', () => {
-    const opportunitiesConfig = readJson<{ navigationStyle?: string }>('src/pages/opportunities/index.json')
+  it('keeps the city-led main tabs below one real status-bar inset', () => {
+    for (const route of ['events', 'opportunities']) {
+      const pageConfig = readJson<{ navigationStyle?: string }>(`src/pages/${route}/index.json`)
+      const pageScript = read(`src/pages/${route}/index.ts`)
+      const pageSource = read(`src/pages/${route}/index.wxml`)
 
-    expect(opportunitiesConfig.navigationStyle).toBeUndefined()
-    expect(read('src/pages/opportunities/index.ts')).not.toContain('getCustomNavigationStatusBarHeight')
-    expect(read('src/pages/opportunities/index.wxml')).not.toContain('statusBarHeight')
+      expect(pageConfig.navigationStyle).toBe('custom')
+      expect(pageScript).toContain('platform/navigation/status-bar')
+      expect(pageScript).toContain('statusBarHeight: getCustomNavigationStatusBarHeight()')
+      expect(pageScript).not.toContain('wx.getWindowInfo')
+      expect(pageSource.match(/\{\{statusBarHeight\}\}/g)).toHaveLength(1)
+      expect(pageSource).not.toContain('safe-area-inset-top')
+    }
   })
 
   it('executes non-mutating UI interactions through rendered controls', () => {

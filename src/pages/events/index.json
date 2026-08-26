@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "活动",
+  "navigationStyle": "custom",
   "enablePullDownRefresh": true,
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",

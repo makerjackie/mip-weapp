@@ -118,19 +118,37 @@ describe('MIP member responsive foundation', () => {
     })
   })
 
-  it('uses the native opportunity navigation without a second status-bar spacer', () => {
-    const pageConfig = JSON.parse(read('src/pages/opportunities/index.json')) as {
-      navigationBarTitleText?: string
-      navigationStyle?: string
-    }
-    const pageSource = read('src/pages/opportunities/index.wxml')
-    const pageScript = read('src/pages/opportunities/index.ts')
+  it('uses one platform-backed custom-navigation inset on the city-led main tabs', () => {
+    for (const page of [
+      { route: 'events', prefix: 'events' },
+      { route: 'opportunities', prefix: 'opportunities' },
+    ]) {
+      const pageConfig = JSON.parse(read(`src/pages/${page.route}/index.json`)) as {
+        navigationBarTitleText?: string
+        navigationStyle?: string
+      }
+      const pageSource = read(`src/pages/${page.route}/index.wxml`)
+      const pageScript = read(`src/pages/${page.route}/index.ts`)
+      const navigationStart = pageSource.indexOf(`id="${page.prefix}-custom-navigation"`)
+      const navigationEnd = pageSource.indexOf('\n\n', navigationStart)
+      const navigationMarkup = pageSource.slice(navigationStart, navigationEnd)
 
-    expect(pageConfig.navigationBarTitleText).toBe('机会')
-    expect(pageConfig.navigationStyle).toBeUndefined()
-    expect(pageSource).not.toContain('opportunities-safe-area')
-    expect(pageSource).not.toContain('statusBarHeight')
-    expect(pageScript).not.toContain('getCustomNavigationStatusBarHeight')
+      expect(pageConfig.navigationStyle).toBe('custom')
+      expect(pageConfig.navigationBarTitleText).toBeUndefined()
+      expect(pageSource.match(/\{\{statusBarHeight\}\}/g)).toHaveLength(1)
+      expect(pageSource).toContain(`id="${page.prefix}-status-bar"`)
+      expect(pageSource).toContain('style="height: {{statusBarHeight}}px;"')
+      expect(pageSource).not.toContain('safe-area-inset-top')
+      expect(navigationMarkup).toContain('h-[88rpx]')
+      expect(navigationMarkup).toContain('pr-[200rpx]')
+      expect(navigationMarkup).toContain('max-w-[360rpx]')
+      expect(navigationMarkup).toContain('truncate')
+      expect(navigationMarkup).not.toContain('justify-center')
+      expect(pageScript).toContain('getCustomNavigationStatusBarHeight')
+      expect(pageScript).toContain('statusBarHeight: getCustomNavigationStatusBarHeight()')
+      expect(pageScript).not.toContain('wx.getWindowInfo')
+      expect(pageSource).not.toMatch(/<app-page-exit\b|aria-label="返回|bind:tap="(?:goBack|navigateBack|leavePage)"/)
+    }
   })
 
   it('keeps the opaque custom TabBar above content while constraining its desktop row', () => {

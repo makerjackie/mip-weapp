@@ -12,6 +12,7 @@ import { resolvePrimaryBranchCity } from '../../modules/mip-events'
 import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { caseNavigateTo, syncCaseNavigation } from '../../modules/platform/case-navigation'
+import { getCustomNavigationStatusBarHeight } from '../../platform/navigation/status-bar'
 
 interface EventCardView extends MipEventListItem {
   startsText: string
@@ -106,6 +107,7 @@ function presentEvent(event: MipEventListItem): EventCardView {
 
 Page({
   data: {
+    statusBarHeight: getCustomNavigationStatusBarHeight(),
     state: 'loading' as 'loading' | 'ready' | 'error',
     view: 'UPCOMING' as EventListView,
     dateFilter: 'RECENT' as EventDateFilter,
