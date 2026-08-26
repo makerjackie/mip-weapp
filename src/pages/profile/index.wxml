@@ -83,9 +83,7 @@
       <view wx:elif="{{cooperationState === 'error'}}" class="profile-state"><app-empty-state title="合作卡暂时无法加载" description="稍后可以重新加载。" action-text="重新加载" bind:action="loadCooperation" /></view>
       <view wx:else class="profile-portfolio-list">
         <view wx:for="{{cooperationCards}}" wx:key="id" class="profile-cooperation-card" data-id="{{item.id}}" bind:tap="openCooperation">
-          <view class="profile-cooperation-hero"><view class="profile-cooperation-brand">MIP</view><image wx:if="{{item.roleKey === 'strategist'}}" class="profile-cooperation-art" mode="aspectFit" src="/assets/figma/profile/role-strategist.png" /><view class="profile-cooperation-role">{{item.roleName}}</view></view>
-          <view class="profile-cooperation-row"><view class="profile-cooperation-key"><image src="/assets/figma/profile/target.svg" mode="aspectFit" />我的目标</view><view class="profile-cooperation-value">{{item.targetSummary}}</view></view>
-          <view class="profile-cooperation-row"><view class="profile-cooperation-key"><image src="/assets/figma/profile/referral.svg" mode="aspectFit" />角色定位</view><view class="profile-cooperation-value">{{item.positioning}}</view></view>
+          <cooperation-role-card role-key="{{item.roleKey}}" positioning="{{item.positioning}}" target-summary="{{item.targetSummary}}" />
         </view>
         <view class="profile-add-card" bind:tap="openCooperationList"><view class="profile-add-content"><image src="/assets/figma/profile/add.svg" mode="aspectFit" />{{cooperationCards.length ? '管理合作卡' : '添加合作卡'}}</view></view>
       </view>

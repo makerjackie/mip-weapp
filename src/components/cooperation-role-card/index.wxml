@@ -1,0 +1,21 @@
+<view class="cooperation-role-card {{densityClass}}" aria-label="{{view.roleName}}合作卡">
+  <view class="cooperation-role-card__hero" style="{{view.heroStyle}}">
+    <view class="cooperation-role-card__soft" style="{{view.softStyle}}" />
+    <view class="cooperation-role-card__brand">{{view.brandMark}}</view>
+    <view class="cooperation-role-card__copy">
+      <view class="cooperation-role-card__role">{{view.roleName}}</view>
+      <view class="cooperation-role-card__positioning">{{view.positioning}}</view>
+    </view>
+    <image wx:if="{{view.artPath}}" class="cooperation-role-card__art" mode="aspectFill" fade-show="{{false}}" src="{{view.artPath}}" />
+  </view>
+  <view wx:if="{{showDetails && !compact}}" class="cooperation-role-card__details">
+    <view class="cooperation-role-card__detail-row">
+      <view class="cooperation-role-card__detail-key"><image class="cooperation-role-card__detail-icon" mode="aspectFit" src="/assets/figma/profile/target.svg" /><text>我的目标</text></view>
+      <view class="cooperation-role-card__detail-value">{{view.targetSummary}}</view>
+    </view>
+    <view class="cooperation-role-card__detail-row">
+      <view class="cooperation-role-card__detail-key"><image class="cooperation-role-card__detail-icon" mode="aspectFit" src="/assets/figma/profile/referral.svg" /><text>需要引荐</text></view>
+      <view class="cooperation-role-card__detail-value">{{view.positioning}}</view>
+    </view>
+  </view>
+</view>

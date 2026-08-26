@@ -48,15 +48,8 @@
 
     <view wx:if="{{activeSection === 'cooperation'}}" class="pt-3">
       <view wx:if="{{cooperationCards.length}}" class="flex flex-col gap-3">
-        <view wx:for="{{cooperationCards}}" wx:key="id" class="h-[400rpx] overflow-hidden rounded-[24rpx] bg-panel active:bg-panel-raised" aria-role="button" data-id="{{item.id}}" bind:tap="openCooperationCard">
-          <view class="relative h-[240rpx] overflow-hidden bg-brand-soft px-3 pt-3">
-            <view class="text-[length:38rpx] font-bold text-brand">MIP</view>
-            <view class="absolute bottom-3 left-3 rounded-[8rpx] bg-brand px-2 py-1 text-[length:24rpx] font-semibold text-on-brand">{{item.roleName}}</view>
-          </view>
-          <view class="h-[160rpx] bg-panel px-3 py-3">
-            <view class="flex items-start gap-2"><view class="flex h-[36rpx] w-[36rpx] shrink-0 items-center justify-center rounded-full bg-brand text-[length:20rpx] text-on-brand">目</view><view class="line-clamp-1 min-w-0 flex-1 text-[length:22rpx]">{{item.positioning}}</view></view>
-            <view class="mt-3 flex items-start gap-2"><view class="flex h-[36rpx] w-[36rpx] shrink-0 items-center justify-center rounded-full bg-brand text-[length:20rpx] text-on-brand">合</view><view class="line-clamp-1 min-w-0 flex-1 text-[length:22rpx]">{{item.targetSummary}}</view></view>
-          </view>
+        <view wx:for="{{cooperationCards}}" wx:key="id" class="overflow-hidden rounded-[32rpx] bg-panel active:bg-panel-raised" aria-role="button" data-id="{{item.id}}" bind:tap="openCooperationCard">
+          <cooperation-role-card role-key="{{item.roleKey}}" positioning="{{item.positioning}}" target-summary="{{item.targetSummary}}" />
         </view>
       </view>
       <view wx:else class="py-12 text-center text-[length:22rpx] text-muted">暂无已发布合作卡。</view>

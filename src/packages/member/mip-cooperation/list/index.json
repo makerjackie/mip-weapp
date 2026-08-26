@@ -5,6 +5,7 @@
   "backgroundColor": "#040404",
   "enablePullDownRefresh": true,
   "usingComponents": {
+    "cooperation-role-card": "/components/cooperation-role-card/index",
     "app-empty-state": "/components/empty-state/index",
     "app-page-exit": "/components/page-exit/index",
     "t-button": "tdesign-miniprogram/button/button",
