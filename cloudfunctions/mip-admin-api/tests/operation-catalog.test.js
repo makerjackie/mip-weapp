@@ -210,12 +210,12 @@ function manifest(owner, operations) {
 }
 
 describe('admin operation catalog', () => {
-  it('freezes the exact 144 business actions, owners, and kinds while keeping health separate', () => {
+  it('freezes the exact 145 business actions, owners, and kinds while keeping health separate', () => {
     const handlerActions = Object.keys(actions).filter(action => action !== 'health')
     const expectedActions = Object.keys(expectedOperations)
 
-    assert.equal(expectedActions.length, 144)
-    assert.equal(operationCatalog.length, 144)
+    assert.equal(expectedActions.length, 145)
+    assert.equal(operationCatalog.length, 145)
     assert.deepEqual(sorted(handlerActions), sorted(expectedActions))
     assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(expectedActions))
     assert.equal(operationByAction.health, undefined)

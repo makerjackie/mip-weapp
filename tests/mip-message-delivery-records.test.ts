@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
+  localDayBoundary,
   parseMessageDeliveryRecordPage,
 } from '../src/modules/mip-admin/message-delivery-records'
 
@@ -33,6 +34,12 @@ describe('MIP message delivery records', () => {
     expect(page.items[0].playerNumber).toBe(18)
     expect(JSON.stringify(page)).not.toMatch(/openid|payload|ciphertext|provider|10000000-/iu)
     expect(() => parseMessageDeliveryRecordPage({ items: [{ recordKey: 'not-safe' }], nextCursor: null })).toThrow('消息投递记录')
+    expect(() => parseMessageDeliveryRecordPage({ items: [], nextCursor: null, debug: true })).toThrow('消息投递记录')
+    expect(() => parseMessageDeliveryRecordPage({ items: [], nextCursor: 'x'.repeat(513) })).toThrow('消息投递记录')
+  })
+
+  it('uses an exclusive next-day boundary for the end-date filter', () => {
+    expect(Date.parse(localDayBoundary('2030-08-01') || '')).toBeLessThan(Date.parse(localDayBoundary('2030-08-01', 1) || ''))
   })
 
   it('registers the responsive records page and navigation destination', () => {

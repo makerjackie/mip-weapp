@@ -43,9 +43,19 @@ const channels = new Set<string>(['WECHAT_SUBSCRIPTION', 'WECHAT_CUSTOMER_SERVIC
 const statuses = new Set<string>(['PENDING', 'PROCESSING', 'DELIVERED', 'FAILED', 'CANCELLED'])
 const hexKey = /^[0-9a-f]{20}$/i
 
+export function localDayBoundary(dateText: string, dayOffset = 0) {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateText)
+  if (!parts) return undefined
+  const date = new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]) + dayOffset)
+  return Number.isFinite(date.getTime()) ? date.toISOString() : undefined
+}
+
 export function parseMessageDeliveryRecordPage(value: unknown): AdminMessageDeliveryRecordPage {
-  if (!record(value) || !Array.isArray(value.items)
-    || !(value.nextCursor === null || typeof value.nextCursor === 'string')) {
+  if (!record(value)
+    || !exactKeys(value, ['items', 'nextCursor'])
+    || !Array.isArray(value.items)
+    || value.items.length > 100
+    || !(value.nextCursor === null || (typeof value.nextCursor === 'string' && value.nextCursor.length <= 512))) {
     invalid()
   }
   return {
@@ -106,6 +116,11 @@ function validDate(value: string) {
 
 function record(value: unknown): value is Record<string, any> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function exactKeys(value: Record<string, unknown>, expected: string[]) {
+  const keys = Object.keys(value)
+  return keys.length === expected.length && expected.every(key => Object.hasOwn(value, key))
 }
 
 function invalid(): never {

@@ -3,6 +3,7 @@ import type {
   AdminMessageDeliveryRecordChannel,
   AdminMessageDeliveryRecordStatus,
 } from '../../../modules/mip-admin/message-delivery-records'
+import { localDayBoundary } from '../../../modules/mip-admin/message-delivery-records'
 import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { formatLocalDateTime } from '../../../utils/date'
@@ -135,8 +136,8 @@ Page({
         query: this.data.query.trim() || undefined,
         channel: this.data.channel || undefined,
         status: this.data.status || undefined,
-        from: this.data.from ? `${this.data.from}T00:00:00` : undefined,
-        to: this.data.to ? `${this.data.to}T23:59:59.999` : undefined,
+        from: this.data.from ? localDayBoundary(this.data.from) : undefined,
+        to: this.data.to ? localDayBoundary(this.data.to, 1) : undefined,
         limit: this.data.pageSize,
       }, force)
       this.setData({
@@ -162,8 +163,8 @@ Page({
         query: this.data.query.trim() || undefined,
         channel: this.data.channel || undefined,
         status: this.data.status || undefined,
-        from: this.data.from ? `${this.data.from}T00:00:00` : undefined,
-        to: this.data.to ? `${this.data.to}T23:59:59.999` : undefined,
+        from: this.data.from ? localDayBoundary(this.data.from) : undefined,
+        to: this.data.to ? localDayBoundary(this.data.to, 1) : undefined,
         limit: this.data.pageSize,
         cursor: this.data.nextCursor || undefined,
       }, true)
