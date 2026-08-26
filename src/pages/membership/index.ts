@@ -155,17 +155,18 @@ Page({
         mipCommerceModule.getMembershipBenefits().catch(() => null),
       ])
       const membership = membershipPresentation(snapshot.membership.kind, snapshot.membership.entitlement)
+      const isPlayer = snapshot.membership.kind === 'PLAYER'
       const attribution = benefits?.kind === 'PLAYER' ? benefits.invitationAttribution : undefined
       this.setData({
         identityState: 'ready',
         membershipLabel: membership.label,
         membershipDescription: membership.description,
         membershipEndsText: membership.endsAt ? formatLocalDate(membership.endsAt) : '',
-        isPlayer: membership.label === '玩家',
+        isPlayer,
         invitationSourceName: attribution?.displayName || '',
         invitationSourceAvatar: attribution?.avatarUrl || '',
       })
-      if (membership.label === '玩家') {
+      if (isPlayer) {
         void this.prepareInvitation()
       }
       else {

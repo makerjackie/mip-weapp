@@ -63,6 +63,16 @@ describe('MIP shell presentation', () => {
     }).label).toBe('嘉宾')
   })
 
+  it('uses the server typed membership kind for page behavior instead of display copy', () => {
+    const profileSource = readFileSync(new URL('../src/pages/profile/index.ts', import.meta.url), 'utf8')
+    const membershipSource = readFileSync(new URL('../src/pages/membership/index.ts', import.meta.url), 'utf8')
+
+    expect(profileSource).toContain('const isPlayer = snapshot.membership.kind === \'PLAYER\'')
+    expect(membershipSource).toContain('const isPlayer = snapshot.membership.kind === \'PLAYER\'')
+    expect(profileSource).not.toMatch(/membership\.label\s*===\s*['"]玩家['"]/)
+    expect(membershipSource).not.toMatch(/membership\.label\s*===\s*['"]玩家['"]/)
+  })
+
   it('uses server capability grants for management entry', () => {
     const grants: CallerCapabilities[] = [{
       scopeType: 'EVENT',

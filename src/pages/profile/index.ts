@@ -141,6 +141,7 @@ Page({
 
   applyIdentity(snapshot: IdentityAccessSnapshot) {
     const membership = membershipPresentation(snapshot.membership.kind, snapshot.membership.entitlement)
+    const isPlayer = snapshot.membership.kind === 'PLAYER'
     this.setData({
       state: 'ready',
       authenticated: snapshot.authenticated,
@@ -153,10 +154,10 @@ Page({
       membershipLabel: membership.label,
       membershipDescription: membership.description,
       membershipEndsText: membership.endsAt ? formatLocalDate(membership.endsAt) : '',
-      isPlayer: membership.label === '玩家',
+      isPlayer,
       adminVisible: hasCapability(snapshot.grants, 'admin:enter'),
       eventManagementVisible: canManageEvents(snapshot.grants),
-      growthState: membership.label === '玩家' ? this.data.growthState : 'hidden',
+      growthState: isPlayer ? this.data.growthState : 'hidden',
       message: '',
     })
   },

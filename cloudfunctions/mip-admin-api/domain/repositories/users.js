@@ -163,10 +163,13 @@ function createAdminUserRepository(database, options) {
 
     const [entitlement, growth, counts, tags, roles] = await Promise.all([
       database.one(
-        `SELECT status, starts_at, ends_at
+        `SELECT status, starts_at, ends_at,
+                (status = 'ACTIVE'
+                  AND starts_at <= UTC_TIMESTAMP(3)
+                  AND ends_at > UTC_TIMESTAMP(3)) AS is_current_player
          FROM mip_membership_entitlements
          WHERE app_id = ? AND user_id = ?
-         ORDER BY ends_at DESC, id DESC LIMIT 1`,
+         ORDER BY is_current_player DESC, ends_at DESC, id DESC LIMIT 1`,
         [appId, userId],
       ),
       database.one(
@@ -218,9 +221,7 @@ function createAdminUserRepository(database, options) {
       ),
     ])
 
-    const activePlayer = entitlement?.status === 'ACTIVE'
-      && new Date(entitlement.starts_at).getTime() <= Date.now()
-      && new Date(entitlement.ends_at).getTime() > Date.now()
+    const activePlayer = Number(entitlement?.is_current_player) === 1
     return {
       id: user.id,
       status: user.status,

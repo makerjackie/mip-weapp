@@ -283,6 +283,81 @@ describe('admin user repository module', () => {
     assert.equal(typeof page.nextCursor, 'string')
   })
 
+  it('prioritizes the database-current entitlement when projecting player detail', async () => {
+    const currentEntitlement = {
+      status: 'ACTIVE',
+      starts_at: new Date('2026-01-01T00:00:00.000Z'),
+      ends_at: new Date('2027-01-01T00:00:00.000Z'),
+      is_current_player: 1,
+    }
+    const { calls, repository } = createFixture({
+      one: async (sql) => {
+        if (sql.includes('FROM mip_users u')) {
+          return {
+            id: 'user-a', status: 'ACTIVE', primary_branch_id: null, user_version: 1,
+            created_at: new Date('2026-01-01T00:00:00.000Z'), updated_at: new Date('2026-08-24T00:00:00.000Z'),
+            nickname: '用户', headline: '', introduction: '', companies_json: '[]', organizations_json: '[]',
+            visibility_json: '{}', profile_version: 1, phone_verified_at: null,
+          }
+        }
+        if (sql.includes('FROM mip_membership_entitlements')) return currentEntitlement
+        return null
+      },
+      query: async () => [],
+    })
+
+    const detail = await repository.getUserDetail('wx-app', 'user-a')
+
+    assert.equal(detail.kind, 'PLAYER')
+    assert.deepEqual(detail.membership, {
+      status: 'ACTIVE',
+      startsAt: '2026-01-01T00:00:00.000Z',
+      endsAt: '2027-01-01T00:00:00.000Z',
+    })
+    const entitlementRead = calls.find(call => call.type === 'one' && call.sql.includes('FROM mip_membership_entitlements'))
+    assert.match(entitlementRead.sql, /status = 'ACTIVE'[\s\S]*starts_at <= UTC_TIMESTAMP\(3\)[\s\S]*ends_at > UTC_TIMESTAMP\(3\)/)
+    assert.match(entitlementRead.sql, /AS is_current_player/)
+    assert.match(entitlementRead.sql, /ORDER BY is_current_player DESC, ends_at DESC, id DESC/)
+    assert.deepEqual(entitlementRead.params, ['wx-app', 'user-a'])
+  })
+
+  it('keeps future and revoked entitlement projections as guests', async () => {
+    for (const entitlement of [
+      {
+        status: 'ACTIVE',
+        starts_at: new Date('2030-01-01T00:00:00.000Z'),
+        ends_at: new Date('2031-01-01T00:00:00.000Z'),
+        is_current_player: 0,
+      },
+      {
+        status: 'REVOKED',
+        starts_at: new Date('2026-01-01T00:00:00.000Z'),
+        ends_at: new Date('2032-01-01T00:00:00.000Z'),
+        is_current_player: 0,
+      },
+    ]) {
+      const { repository } = createFixture({
+        one: async (sql) => {
+          if (sql.includes('FROM mip_users u')) {
+            return {
+              id: 'user-a', status: 'ACTIVE', primary_branch_id: null, user_version: 1,
+              created_at: new Date('2026-01-01T00:00:00.000Z'), updated_at: new Date('2026-08-24T00:00:00.000Z'),
+              nickname: '用户', headline: '', introduction: '', companies_json: '[]', organizations_json: '[]',
+              visibility_json: '{}', profile_version: 1, phone_verified_at: null,
+            }
+          }
+          if (sql.includes('FROM mip_membership_entitlements')) return entitlement
+          return null
+        },
+        query: async () => [],
+      })
+
+      const detail = await repository.getUserDetail('wx-app', 'user-a')
+      assert.equal(detail.kind, 'GUEST')
+      assert.equal(detail.membership.status, entitlement.status)
+    }
+  })
+
   it('runs locked scope authorization before profile writes and preserves audit ordering', async () => {
     const current = {
       id: 'user-a',
