@@ -1,5 +1,6 @@
 import type {
   AdminOrder,
+  AdminOrderDetail,
   AdminOrderFilters,
   AdminOrderStatus,
   AdminOrderSummary,
@@ -96,6 +97,39 @@ const resourceTypeLabels: Record<AdminOrder['resourceType'], string> = {
   KNOWLEDGE_CONTENT: '内容商品',
   MEMBERSHIP_PLAN: '会员方案',
 }
+const buyerKindLabels = { PLAYER: '玩家', GUEST: '嘉宾' } as const
+const accountStatusLabels = { ACTIVE: '正常', BLOCKED: '已限制', CLOSED: '已关闭' } as const
+const paymentProviderLabels = { WECHAT_PAY: '微信支付', TEST: '测试支付' } as const
+const paymentAttemptStatusLabels: Record<string, string> = {
+  CREATED: '已创建',
+  PARAMETERS_ISSUED: '支付参数已生成',
+  PENDING: '处理中',
+  SUCCEEDED: '已成功',
+  FAILED: '已失败',
+  CLOSED: '已关闭',
+}
+const callbackStatusLabels: Record<string, string> = {
+  RECEIVED: '已接收',
+  PROCESSED: '已处理',
+  FAILED: '处理失败',
+  IGNORED: '已忽略',
+}
+const requestedByLabels = { BUYER: '买家', OPERATOR: '运营人员', SYSTEM: '系统' } as const
+const entitlementKindLabels = { MEMBERSHIP: '会员权益', CONTENT: '内容权益' } as const
+const entitlementStatusLabels: Record<string, string> = {
+  PENDING: '待生效',
+  ACTIVE: '已生效',
+  EXPIRED: '已到期',
+  REVOKED: '已撤销',
+  REFUNDED: '已退款',
+}
+const timelineEvidenceLabels: Record<string, string> = {
+  ORDER_CREATED: '订单创建',
+  PAYMENT_CONFIRMED: '支付确认',
+  ORDER_CLOSED: '订单关闭',
+  REFUND_CREATED: '退款申请创建',
+  REFUND_COMPLETED: '退款完成',
+}
 
 function dateBoundary(value: string, endOfDay: boolean) {
   const parts = value.split('-').map(Number)
@@ -156,6 +190,136 @@ function orderView(item: AdminOrder): OrderView {
   }
 }
 
+function moneyText(currency: string, amountCents: number) {
+  return `${currency} ${(amountCents / 100).toFixed(2)}`
+}
+
+function localDateText(value: string | null) {
+  return value ? formatLocalDateTime(value) : '—'
+}
+
+function timelineView(item: AdminOrderDetail['statusTimeline'][number], index: number) {
+  return {
+    ...item,
+    key: `${item.evidence}:${item.occurredAt}:${index}`,
+    statusText: statusLabels[item.status] || refundStatusLabels[item.status] || item.status,
+    occurredText: formatLocalDateTime(item.occurredAt),
+    evidenceText: timelineEvidenceLabels[item.evidence] || item.evidence,
+  }
+}
+
+function orderDetailView(detail: AdminOrderDetail) {
+  const snapshot = detail.product.snapshot
+  const productFacts: Array<{ label: string, value: string }> = []
+  if (snapshot.catalogStage) {
+    productFacts.push({
+      label: '商品类型',
+      value: snapshot.catalogStage === 'LIVE' ? '正式商品' : '测试商品',
+    })
+  }
+  if (snapshot.version !== null) {
+    productFacts.push({ label: '商品版本', value: `v${snapshot.version}` })
+  }
+  if (snapshot.durationDays !== null) {
+    productFacts.push({ label: '会员时长', value: `${snapshot.durationDays} 天` })
+  }
+  if (snapshot.unlockDays !== null) {
+    productFacts.push({ label: '解锁时长', value: `${snapshot.unlockDays} 天` })
+  }
+  if (snapshot.refundPolicy) {
+    productFacts.push({
+      label: '退款规则',
+      value: snapshot.refundPolicy === 'BEFORE_ACCESS' ? '首次访问前可退' : '不可退款',
+    })
+  }
+  if (snapshot.refundWindowHours !== null) {
+    productFacts.push({ label: '退款时窗', value: `${snapshot.refundWindowHours} 小时` })
+  }
+  if (snapshot.eventStartsAt) {
+    productFacts.push({ label: '活动开始', value: formatLocalDateTime(snapshot.eventStartsAt) })
+  }
+  if (snapshot.eventEndsAt) {
+    productFacts.push({ label: '活动结束', value: formatLocalDateTime(snapshot.eventEndsAt) })
+  }
+  if (snapshot.cityName) {
+    productFacts.push({ label: '城市', value: snapshot.cityName })
+  }
+  if (snapshot.venueName) {
+    productFacts.push({ label: '场地', value: snapshot.venueName })
+  }
+
+  return {
+    order: {
+      ...detail.order,
+      orderTypeText: orderTypeLabels[detail.order.orderType] || detail.order.orderType,
+      statusText: statusLabels[detail.order.status] || detail.order.status,
+      amountText: moneyText(detail.order.currency, detail.order.amountCents),
+      refundedText: moneyText(detail.order.currency, detail.order.refundedAmountCents),
+      createdText: formatLocalDateTime(detail.order.createdAt),
+      updatedText: formatLocalDateTime(detail.order.updatedAt),
+      paidText: localDateText(detail.order.paidAt),
+      closedText: localDateText(detail.order.closedAt),
+    },
+    buyer: {
+      ...detail.buyer,
+      kindText: buyerKindLabels[detail.buyer.kind],
+      accountStatusText: accountStatusLabels[detail.buyer.accountStatus],
+      locationText: [detail.buyer.branchName, detail.buyer.cityName].filter(Boolean).join(' · ') || '未设置分会',
+    },
+    product: {
+      ...detail.product,
+      resourceTypeText: resourceTypeLabels[detail.product.resourceType],
+      facts: productFacts,
+      benefits: [...snapshot.benefits],
+    },
+    payment: {
+      attempts: detail.payment.attempts.map((item, index) => ({
+        ...item,
+        key: `${item.provider}:${item.createdAt}:${index}`,
+        providerText: paymentProviderLabels[item.provider],
+        statusText: paymentAttemptStatusLabels[item.status] || item.status,
+        createdText: formatLocalDateTime(item.createdAt),
+        updatedText: formatLocalDateTime(item.updatedAt),
+      })),
+      callbacks: detail.payment.callbacks.map((item, index) => ({
+        ...item,
+        key: `${item.callbackType}:${item.createdAt}:${index}`,
+        statusText: callbackStatusLabels[item.processingStatus] || item.processingStatus,
+        createdText: formatLocalDateTime(item.createdAt),
+        processedText: localDateText(item.processedAt),
+      })),
+    },
+    refunds: detail.refunds.map(item => ({
+      ...item,
+      requestedByText: requestedByLabels[item.requestedBy],
+      statusText: refundStatusLabels[item.status] || item.status,
+      amountText: moneyText(item.currency, item.amountCents),
+      createdText: formatLocalDateTime(item.createdAt),
+      updatedText: formatLocalDateTime(item.updatedAt),
+      refundedText: localDateText(item.refundedAt),
+      callback: item.callback
+        ? {
+            ...item.callback,
+            statusText: callbackStatusLabels[item.callback.processingStatus] || item.callback.processingStatus,
+            processedText: localDateText(item.callback.processedAt),
+          }
+        : null,
+      statusTimeline: item.statusTimeline.map(timelineView),
+    })),
+    entitlementTimeline: detail.entitlementTimeline.map((item, index) => ({
+      ...item,
+      key: `${item.kind}:${item.startsAt}:${index}`,
+      kindText: entitlementKindLabels[item.kind],
+      statusText: entitlementStatusLabels[item.status] || item.status,
+      startsText: formatLocalDateTime(item.startsAt),
+      endsText: localDateText(item.endsAt),
+      firstAccessedText: localDateText(item.firstAccessedAt),
+      revokedText: localDateText(item.revokedAt),
+    })),
+    statusTimeline: detail.statusTimeline.map(timelineView),
+  }
+}
+
 Page({
   data: {
     state: 'loading' as AdminPageState,
@@ -177,8 +341,14 @@ Page({
     message: '',
     nextCursor: null as string | null,
     loadingMore: false,
+    detailOpen: false,
+    detailState: 'loading' as AdminPageState,
+    detail: null as ReturnType<typeof orderDetailView> | null,
+    detailMessage: '',
+    selectedOrderId: '',
   },
   requestSeq: 0,
+  detailRequestSeq: 0,
   onLoad(query: Record<string, string>) { this.setData({ eventId: query.eventId || '' }) },
   onShow() { void this.loadOrders() },
   updateQuery(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
@@ -274,6 +444,57 @@ Page({
     }
   },
   onReachBottom() { void this.loadMoreOrders() },
+  async openOrderDetail(event: WechatMiniprogram.TouchEvent) {
+    const orderId = String(event.currentTarget.dataset.id || '')
+    if (!orderId) {
+      return
+    }
+    this.setData({ detailOpen: true, selectedOrderId: orderId })
+    await this.loadOrderDetail(orderId, true)
+  },
+  async loadOrderDetail(orderId: string, reset: boolean) {
+    const seq = this.detailRequestSeq + 1
+    this.detailRequestSeq = seq
+    if (reset) {
+      this.setData({ detailState: 'loading', detail: null, detailMessage: '' })
+    }
+    try {
+      const detail = await mipAdminModule.orders.get(orderId, true)
+      if (!this.data.detailOpen || seq !== this.detailRequestSeq) {
+        return
+      }
+      this.setData({ detailState: 'ready', detail: orderDetailView(detail), detailMessage: '' })
+    }
+    catch (error) {
+      if (!this.data.detailOpen || seq !== this.detailRequestSeq) {
+        return
+      }
+      this.setData({
+        detailState: 'error',
+        detailMessage: error instanceof Error ? error.message : '订单详情加载失败',
+      })
+    }
+  },
+  retryOrderDetail() {
+    if (this.data.selectedOrderId) {
+      void this.loadOrderDetail(this.data.selectedOrderId, true)
+    }
+  },
+  closeOrderDetail() {
+    this.detailRequestSeq += 1
+    this.setData({
+      detailOpen: false,
+      detailState: 'loading',
+      detail: null,
+      detailMessage: '',
+      selectedOrderId: '',
+    })
+  },
+  handleDetailVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {
+    if (event.detail.visible !== true) {
+      this.closeOrderDetail()
+    }
+  },
   async submitRefund(event: WechatMiniprogram.TouchEvent) {
     const orderId = String(event.currentTarget.dataset.id || '')
     const order = this.data.orders.find(item => item.id === orderId)
@@ -301,6 +522,9 @@ Page({
             : '退款已提交'
       wx.showToast({ title, icon: dispatchStatus === 'FAILED' ? 'none' : 'success' })
       await this.loadOrders(true)
+      if (this.data.detailOpen && this.data.selectedOrderId === orderId) {
+        await this.loadOrderDetail(orderId, false)
+      }
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '退款请求提交失败' })
@@ -331,6 +555,9 @@ Page({
         icon: 'none',
       })
       await this.loadOrders(true)
+      if (this.data.detailOpen && this.data.selectedOrderId === orderId) {
+        await this.loadOrderDetail(orderId, false)
+      }
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '退款重试失败' })

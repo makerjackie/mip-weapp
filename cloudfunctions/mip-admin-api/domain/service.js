@@ -116,6 +116,7 @@ function createAdminService({
     saveEventCommentSettings,
   } = createAdminEventComments({ access, repository })
   const {
+    getOrder,
     listOrders,
     normalizeExportFilters: normalizeOrderFilters,
     retryRefund,
@@ -351,6 +352,7 @@ function createAdminService({
     getMatchingAdminState,
     getOpportunityCommentAdminState,
     getOpportunityEditorOptions,
+    getOrder,
     getMessageCampaign,
     getMessageDeliveryReview,
     getMessageTemplate,

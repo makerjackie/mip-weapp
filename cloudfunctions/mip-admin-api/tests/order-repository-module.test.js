@@ -82,6 +82,7 @@ describe('admin order persistence adapter', () => {
     const adapter = repository(databaseHarness())
     assert.deepEqual(Object.keys(adapter).sort(), [
       'authorizeRefundRetry',
+      'getOrderDetail',
       'getOrderScope',
       'getRefundScope',
       'listOrderSummary',
@@ -89,6 +90,101 @@ describe('admin order persistence adapter', () => {
       'submitRefund',
       'summarizeOrders',
     ])
+  })
+
+  it('maps an app- and scope-controlled order detail without leaking raw payment or buyer identifiers', async () => {
+    const at = value => new Date(value)
+    const database = databaseHarness({
+      one(sql) {
+        if (!sql.includes('INNER JOIN mip_users buyer')) assert.fail(`unexpected one query: ${sql}`)
+        return {
+          id: 'order-a', nickname: '用户', order_type: 'EVENT', resource_id: EVENT_ID,
+          membership_plan_id: null, event_title: '城市活动', branch_id: BRANCH_ID,
+          event_branch_name: '深圳分会', knowledge_title: null,
+          merchant_order_no: 'MIP-ORDER-0001', provider_transaction_id: 'WX-TRANSACTION-0001',
+          amount_cents: 20_000, currency: 'CNY', status: 'PARTIALLY_REFUNDED',
+          paid_at: at('2030-08-20T00:00:00.000Z'), closed_at: null,
+          product_snapshot_json: JSON.stringify({
+            title: '下单时城市活动', eventVersion: 7,
+            catalogStage: 'LIVE', cityName: '深圳', venueName: '会场',
+            startsAt: '2030-08-28T10:00:00.000Z', endsAt: '2030-08-28T12:00:00.000Z',
+            benefits: ['活动席位'], merchantSecret: 'do-not-return',
+          }),
+          version: 3, created_at: at('2030-08-19T00:00:00.000Z'),
+          updated_at: at('2030-08-22T00:00:00.000Z'), buyer_status: 'ACTIVE',
+          buyer_branch_name: '深圳分会', buyer_city_name: '深圳', buyer_is_player: 1,
+          membership_entitlement_id: null, knowledge_entitlement_id: null,
+          refunded_amount: 5_000, refund_status: 'SUCCEEDED', refund_id: 'refund-a',
+        }
+      },
+      query(sql) {
+        if (sql.includes('FROM mip_payment_attempts')) {
+          return [{
+            provider: 'WECHAT_PAY', provider_payment_id: 'WX1', status: 'SUCCEEDED',
+            last_error_code: null, created_at: at('2030-08-19T00:01:00.000Z'),
+            updated_at: at('2030-08-20T00:00:00.000Z'), prepay_id: 'private-prepay-id',
+          }]
+        }
+        if (sql.includes("callback.callback_type = 'PAYMENT'")) {
+          return [{
+            callback_type: 'PAYMENT', verification_status: 'VERIFIED',
+            processing_status: 'PROCESSED', processed_at: at('2030-08-20T00:00:01.000Z'),
+            last_error_code: null, created_at: at('2030-08-20T00:00:00.000Z'),
+            updated_at: at('2030-08-20T00:00:01.000Z'), callback_key: 'private-key',
+          }]
+        }
+        if (sql.includes('FROM mip_refunds refund')) {
+          return [{
+            id: 'refund-a', requested_by_user_id: 'operator-a', buyer_user_id: 'buyer-a',
+            merchant_refund_no: 'MIP-REFUND-0001', provider_refund_id: 'WX-REFUND-0001',
+            amount_cents: 5_000, currency: 'CNY', reason: '用户申请', status: 'SUCCEEDED',
+            refunded_at: at('2030-08-22T00:00:00.000Z'), last_error_code: null,
+            created_at: at('2030-08-21T00:00:00.000Z'), updated_at: at('2030-08-22T00:00:00.000Z'),
+            callback_type: 'REFUND', verification_status: 'VERIFIED',
+            processing_status: 'PROCESSED', processed_at: at('2030-08-22T00:00:01.000Z'),
+            callback_last_error_code: null, callback_created_at: at('2030-08-22T00:00:00.000Z'),
+            callback_updated_at: at('2030-08-22T00:00:01.000Z'),
+          }]
+        }
+        assert.fail(`unexpected query: ${sql}`)
+      },
+    })
+    const adapter = repository(database)
+    const visibility = { platform: false, branchIds: [BRANCH_ID], eventIds: [] }
+
+    const detail = await adapter.getOrderDetail(APP_ID, visibility, 'order-a')
+
+    assert.deepEqual(detail.scope, {
+      scopeType: 'EVENT', scopeId: EVENT_ID, branchId: BRANCH_ID,
+    })
+    assert.deepEqual(detail.buyer, {
+      nickname: '用户', kind: 'PLAYER', accountStatus: 'ACTIVE',
+      branchName: '深圳分会', cityName: '深圳',
+    })
+    assert.equal(detail.order.amountCents, 20_000)
+    assert.equal(detail.order.refundedAmountCents, 5_000)
+    assert.equal(detail.productSnapshot.cityName, '深圳')
+    assert.equal(detail.productSnapshot.title, '下单时城市活动')
+    assert.equal(detail.productSnapshot.version, 7)
+    assert.deepEqual(detail.entitlementTimeline, [])
+    assert.deepEqual(detail.statusTimeline.map(item => item.status), [
+      'CREATED', 'PAID',
+    ])
+    assert.equal(detail.paymentAttempts[0].providerPaymentIdMasked, '…')
+    assert.equal(detail.paymentCallbacks[0].processingStatus, 'PROCESSED')
+    assert.equal(detail.refunds[0].requestedBy, 'OPERATOR')
+    assert.deepEqual(detail.refunds[0].statusTimeline.map(item => item.status), ['PENDING', 'SUCCEEDED'])
+    assert.doesNotMatch(JSON.stringify(detail), /do-not-return|private-prepay-id|private-key|operator-a|buyer-a|WX1/)
+
+    assert.deepEqual(database.calls[0].params, [APP_ID, 'order-a', BRANCH_ID])
+    assert.equal(database.calls.every(call => call.params[0] === APP_ID), true)
+    const detailSql = database.calls[0].sql
+    assert.match(detailSql, /o\.app_id = \? AND o\.id = \? AND/)
+    assert.match(detailSql, /e\.branch_id IN \(\?\)/)
+    const paymentCallbackSql = database.calls.find(
+      call => call.sql.includes("callback.callback_type = 'PAYMENT'"),
+    ).sql
+    assert.match(paymentCallbackSql, /callback\.callback_key = order_row\.provider_transaction_id/)
   })
 
   it('derives order and refund scopes only from app-scoped server facts', async () => {

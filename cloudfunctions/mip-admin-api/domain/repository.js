@@ -371,6 +371,7 @@ function createAdminRepository(database, options = {}) {
   })
   const {
     authorizeRefundRetry,
+    getOrderDetail,
     getOrderScope,
     getRefundScope,
     listOrders,
@@ -1307,6 +1308,7 @@ function createAdminRepository(database, options = {}) {
     dashboard,
     getExportTicket,
     getOpportunityScope,
+    getOrderDetail,
     getOrderScope,
     getRefundScope,
     getUserScope,

@@ -17,6 +17,7 @@ function repository(overrides = {}) {
     roleBindings: [{ roleKey: 'PLATFORM_FINANCE', scopeType: 'PLATFORM', scopeId: null }],
     resolveReads: 0,
     listReads: 0,
+    detailReads: 0,
     summaryReads: 0,
     refundWrites: 0,
     retryWrites: 0,
@@ -52,6 +53,10 @@ function repository(overrides = {}) {
     async listOrders() {
       repo.listReads += 1
       return []
+    },
+    async getOrderDetail() {
+      repo.detailReads += 1
+      return orderDetailRow()
     },
     async summarizeOrders() {
       repo.summaryReads += 1
@@ -106,15 +111,144 @@ function orderRow(overrides = {}) {
   }
 }
 
+function orderDetailRow(overrides = {}) {
+  return {
+    scope: { scopeType: 'PLATFORM', scopeId: null, branchId: null },
+    order: {
+      ...orderRow(),
+      updatedAt: '2030-08-21T00:00:00.000Z',
+      closedAt: null,
+      userId: 'private-user-id',
+    },
+    buyer: {
+      nickname: '用户', kind: 'PLAYER', accountStatus: 'ACTIVE',
+      branchName: '广州分会', cityName: '广州', phoneNumber: '18819253403',
+      userId: 'private-user-id',
+    },
+    productSnapshot: {
+      title: '下单时年度会员', catalogStage: 'LIVE', version: 2, durationDays: 365, unlockDays: null,
+      benefits: ['玩家身份'], refundPolicy: null, refundWindowHours: null,
+      eventStartsAt: null, eventEndsAt: null, cityName: '', venueName: '',
+      rawSnapshot: { merchantSecret: 'secret' },
+    },
+    paymentAttempts: [{
+      provider: 'WECHAT_PAY', status: 'SUCCEEDED', providerPaymentIdMasked: 'WX1…0001',
+      requiresAttention: false, createdAt: '2030-08-19T00:00:00.000Z',
+      updatedAt: '2030-08-20T00:00:00.000Z', prepayId: 'private-prepay-id',
+    }],
+    paymentCallbacks: [{
+      callbackType: 'PAYMENT', verificationStatus: 'VERIFIED', processingStatus: 'PROCESSED',
+      requiresAttention: false, processedAt: '2030-08-20T00:00:01.000Z',
+      createdAt: '2030-08-20T00:00:00.000Z', updatedAt: '2030-08-20T00:00:01.000Z',
+      callbackKey: 'private-callback-key',
+    }],
+    refunds: [{
+      id: 'refund-a', requestedBy: 'OPERATOR', merchantRefundNoMasked: 'MIPR…0001',
+      providerRefundIdMasked: null, amountCents: 12000, currency: 'CNY',
+      reason: '运营退款', status: 'PENDING', requiresAttention: false, refundedAt: null,
+      createdAt: '2030-08-21T00:00:00.000Z', updatedAt: '2030-08-21T00:00:00.000Z',
+      callback: null,
+      statusTimeline: [{
+        status: 'PENDING', occurredAt: '2030-08-21T00:00:00.000Z', evidence: 'REFUND_CREATED',
+      }],
+      requestedByUserId: 'private-operator-id',
+    }],
+    entitlementTimeline: [{
+      kind: 'MEMBERSHIP', status: 'ACTIVE', startsAt: '2030-08-20T00:00:00.000Z',
+      endsAt: '2031-08-20T00:00:00.000Z', firstAccessedAt: null, revokedAt: null,
+      createdAt: '2030-08-20T00:00:00.000Z', updatedAt: '2030-08-20T00:00:00.000Z',
+      entitlementId: 'private-entitlement-id',
+    }],
+    statusTimeline: [
+      { status: 'CREATED', occurredAt: '2030-08-19T00:00:00.000Z', evidence: 'ORDER_CREATED' },
+      { status: 'PAID', occurredAt: '2030-08-20T00:00:00.000Z', evidence: 'PAYMENT_CONFIRMED' },
+    ],
+    ...overrides,
+  }
+}
+
 describe('admin orders deep module', () => {
   it('exposes only order administration and its export filter seam', () => {
     const api = createAdminOrders({ repository: {}, access: {} })
     assert.deepEqual(Object.keys(api).sort(), [
+      'getOrder',
       'listOrders',
       'normalizeExportFilters',
       'retryRefund',
       'submitRefund',
     ])
+  })
+
+  it('reads one order through server visibility and projects no private identifiers', async () => {
+    let captured
+    const repo = repository({
+      async getOrderDetail(...args) {
+        repo.detailReads += 1
+        captured = args
+        return orderDetailRow()
+      },
+    })
+    const service = orders(repo)
+
+    const detail = await service.getOrder(caller, { orderId: 'order-a', userId: 'forged-user' })
+
+    assert.deepEqual(captured, [
+      APP_ID,
+      { platform: true, branchIds: [], eventIds: [] },
+      'order-a',
+    ])
+    assert.equal(detail.order.amountCents, 79900)
+    assert.equal(detail.product.title, '下单时年度会员')
+    assert.equal(detail.buyer.kind, 'PLAYER')
+    assert.equal(detail.payment.attempts[0].status, 'SUCCEEDED')
+    assert.equal(detail.refunds[0].amountCents, 12000)
+    assert.equal(detail.entitlementTimeline[0].status, 'ACTIVE')
+    assert.equal(repo.audits.at(-1).action, 'admin.orders.detail.view')
+    assert.equal(repo.audits.at(-1).resourceId, 'order-a')
+    assert.doesNotMatch(
+      JSON.stringify(detail),
+      /private-user-id|18819253403|private-prepay-id|private-callback-key|merchantSecret|private-operator-id|private-entitlement-id/,
+    )
+
+    repo.roleBindings = [{ roleKey: 'EVENT_STAFF', scopeType: 'EVENT', scopeId: EVENT_ID }]
+    const reads = repo.detailReads
+    await assert.rejects(
+      () => service.getOrder(caller, { orderId: 'order-a' }),
+      error => error?.code === 'FORBIDDEN',
+    )
+    assert.equal(repo.detailReads, reads)
+  })
+
+  it('uses scoped detail visibility and returns not found without widening inaccessible orders', async () => {
+    let capturedVisibility
+    const repo = repository({
+      async getOrderDetail(_appId, visibility, orderId) {
+        repo.detailReads += 1
+        capturedVisibility = visibility
+        if (orderId === 'order-hidden') return null
+        return orderDetailRow({
+          scope: { scopeType: 'EVENT', scopeId: EVENT_ID, branchId: BRANCH_ID },
+          order: orderRow({
+            orderType: 'EVENT', resourceId: EVENT_ID, resourceType: 'EVENT',
+            resourceTitle: '城市活动', branchId: BRANCH_ID,
+            updatedAt: '2030-08-21T00:00:00.000Z', closedAt: null,
+          }),
+        })
+      },
+    })
+    repo.roleBindings = [{ roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', scopeId: BRANCH_ID }]
+    const service = orders(repo)
+
+    const detail = await service.getOrder(caller, { orderId: 'order-a' })
+    assert.equal(detail.order.orderType, 'EVENT')
+    assert.deepEqual(capturedVisibility, {
+      platform: false, branchIds: [BRANCH_ID], eventIds: [],
+    })
+
+    await assert.rejects(
+      () => service.getOrder(caller, { orderId: 'order-hidden' }),
+      error => error?.code === 'NOT_FOUND',
+    )
   })
 
   it('reloads current roles and never reads order data without orders.read', async () => {
@@ -204,6 +338,7 @@ describe('admin orders deep module', () => {
     ])
     for (const item of financePage.items) {
       assert.equal(Object.hasOwn(item, 'branchId'), false)
+      assert.equal(Object.hasOwn(item, 'userId'), false)
       assert.equal(Object.hasOwn(item, 'demoOrder'), false)
       assert.equal(Object.hasOwn(item, 'contentRefundEligible'), false)
       assert.equal(item.providerTransactionIdMasked, 'WX1…0001')

@@ -104,6 +104,7 @@ export function createMipAdminModule(
     listBadgeAwards: growth.listBadgeAwards,
     growth,
     listOrders: orders.list,
+    getOrder: orders.get,
     orders,
     listOperationalExceptions: governance.listOperationalExceptions,
     listAudit: governance.listAudit,

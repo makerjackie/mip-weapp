@@ -21,6 +21,65 @@ const emptyOrderPage = {
   },
 }
 
+const orderDetail = {
+  order: {
+    id: '10000000-0000-4000-8000-000000000001',
+    nickname: '用户',
+    orderType: 'MEMBERSHIP' as const,
+    resourceId: '10000000-0000-4000-8000-000000000002',
+    resourceType: 'MEMBERSHIP_PLAN' as const,
+    resourceTitle: '年度会员',
+    resourceBranchName: '',
+    merchantOrderNoMasked: 'MIP1…0001',
+    providerTransactionIdMasked: null,
+    amountCents: 79900,
+    refundedAmountCents: 0,
+    currency: 'CNY',
+    status: 'PAID' as const,
+    refundStatus: null,
+    refundId: null,
+    availableRefundActions: [],
+    paidAt: '2030-08-20T00:00:00.000Z',
+    createdAt: '2030-08-19T00:00:00.000Z',
+    updatedAt: '2030-08-20T00:00:00.000Z',
+    closedAt: null,
+    version: 2,
+  },
+  buyer: {
+    nickname: '用户',
+    kind: 'PLAYER' as const,
+    accountStatus: 'ACTIVE' as const,
+    branchName: '广州分会',
+    cityName: '广州',
+  },
+  product: {
+    resourceType: 'MEMBERSHIP_PLAN' as const,
+    title: '年度会员',
+    branchName: '',
+    snapshot: {
+      catalogStage: 'LIVE' as const,
+      version: 2,
+      durationDays: 365,
+      unlockDays: null,
+      benefits: ['玩家身份'],
+      refundPolicy: null,
+      refundWindowHours: null,
+      eventStartsAt: null,
+      eventEndsAt: null,
+      cityName: '',
+      venueName: '',
+    },
+  },
+  payment: { attempts: [], callbacks: [] },
+  refunds: [],
+  entitlementTimeline: [],
+  statusTimeline: [{
+    status: 'PAID' as const,
+    occurredAt: '2030-08-20T00:00:00.000Z',
+    evidence: 'PAYMENT_CONFIRMED' as const,
+  }],
+}
+
 function createHarness() {
   const spies = {
     getSession: vi.fn<MipAdminGateway['getSession']>(async () => ({
@@ -29,6 +88,7 @@ function createHarness() {
       roles: [],
     })),
     listOrders: vi.fn<MipAdminGateway['listOrders']>(async () => emptyOrderPage),
+    getOrder: vi.fn<MipAdminGateway['getOrder']>(async () => orderDetail),
     submitRefund: vi.fn<MipAdminGateway['submitRefund']>(async () => ({
       providerDispatch: { status: 'PROVIDER_CREATED' },
     })),
@@ -114,6 +174,21 @@ describe('MIP admin orders facade', () => {
     expect(spies.listOrders.mock.calls[0]?.[0]).toBe(listInput)
   })
 
+  it('caches order detail by order id and exposes the legacy neutral alias', async () => {
+    const { module, spies } = createHarness()
+
+    await module.orders.get('order-a')
+    await module.getOrder('order-a')
+    await module.orders.get('order-b')
+    await module.orders.get('order-a', true)
+
+    expect(spies.getOrder.mock.calls).toEqual([
+      ['order-a'],
+      ['order-b'],
+      ['order-a'],
+    ])
+  })
+
   it('passes refund inputs to the neutral gateway unchanged', async () => {
     const { module, spies } = createHarness()
 
@@ -129,14 +204,18 @@ describe('MIP admin orders facade', () => {
       const { module, spies } = createHarness()
       await module.orders.list(listInput)
       await module.orders.list(listInput)
+      await module.orders.get('order-a')
+      await module.orders.get('order-a')
       await module.getSession()
       await module.getSession()
 
       await mutation.execute(module.orders)
       await module.orders.list(listInput)
+      await module.orders.get('order-a')
       await module.getSession()
 
       expect(spies.listOrders).toHaveBeenCalledTimes(2)
+      expect(spies.getOrder).toHaveBeenCalledTimes(2)
       expect(spies[mutation.spy]).toHaveBeenCalledTimes(1)
       expect(spies.getSession).toHaveBeenCalledTimes(1)
     })
@@ -165,6 +244,7 @@ describe('MIP admin orders facade', () => {
     const source = fs.readFileSync(path.join(root, 'src/packages/admin/orders/index.ts'), 'utf8')
 
     expect(source).toContain('mipAdminModule.orders.list(')
+    expect(source).toContain('mipAdminModule.orders.get(')
     expect(source).toContain('mipAdminModule.orders.submitRefund(')
     expect(source).toContain('mipAdminModule.orders.retryRefund(')
     expect(source).toContain('mipAdminModule.exportAndOpen(')

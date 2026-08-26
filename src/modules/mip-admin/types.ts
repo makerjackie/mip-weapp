@@ -834,7 +834,6 @@ export interface AdminOrderListInput {
 
 export interface AdminOrder {
   id: string
-  userId: string
   nickname: string
   orderType: 'MEMBERSHIP' | 'EVENT' | 'CONTENT'
   resourceId: string | null
@@ -856,6 +855,104 @@ export interface AdminOrder {
   entitlementStartsAt?: string | null
   entitlementEndsAt?: string | null
   entitlementStatus?: 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'REFUNDED' | null
+}
+
+export interface AdminOrderDetailOrder extends AdminOrder {
+  updatedAt: string
+  closedAt: string | null
+}
+
+export interface AdminOrderBuyer {
+  nickname: string
+  kind: 'PLAYER' | 'GUEST'
+  accountStatus: 'ACTIVE' | 'BLOCKED' | 'CLOSED'
+  branchName: string
+  cityName: string
+}
+
+export interface AdminOrderProductSnapshot {
+  catalogStage: 'TEST' | 'LIVE' | null
+  version: number | null
+  durationDays: number | null
+  unlockDays: number | null
+  benefits: string[]
+  refundPolicy: 'BEFORE_ACCESS' | 'NON_REFUNDABLE' | null
+  refundWindowHours: number | null
+  eventStartsAt: string | null
+  eventEndsAt: string | null
+  cityName: string
+  venueName: string
+}
+
+export interface AdminOrderPaymentAttempt {
+  provider: 'WECHAT_PAY' | 'TEST'
+  status: 'CREATED' | 'PARAMETERS_ISSUED' | 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'CLOSED'
+  providerPaymentIdMasked: string | null
+  requiresAttention: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AdminOrderPaymentCallback {
+  callbackType: 'PAYMENT' | 'REFUND'
+  verificationStatus: 'VERIFIED' | 'REJECTED'
+  processingStatus: 'RECEIVED' | 'PROCESSED' | 'FAILED' | 'IGNORED'
+  requiresAttention: boolean
+  processedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AdminOrderStatusTimelineItem {
+  status: AdminOrderStatus | AdminRefundStatus
+  occurredAt: string
+  evidence: 'ORDER_CREATED' | 'PAYMENT_CONFIRMED' | 'ORDER_CLOSED' | 'REFUND_CREATED' | 'REFUND_COMPLETED'
+}
+
+export interface AdminOrderRefund {
+  id: string
+  requestedBy: 'BUYER' | 'OPERATOR' | 'SYSTEM'
+  merchantRefundNoMasked: string
+  providerRefundIdMasked: string | null
+  amountCents: number
+  currency: string
+  reason: string
+  status: AdminRefundStatus
+  requiresAttention: boolean
+  refundedAt: string | null
+  createdAt: string
+  updatedAt: string
+  callback: AdminOrderPaymentCallback | null
+  statusTimeline: AdminOrderStatusTimelineItem[]
+}
+
+export interface AdminOrderEntitlementTimelineItem {
+  kind: 'MEMBERSHIP' | 'CONTENT'
+  status: 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'REVOKED' | 'REFUNDED'
+  startsAt: string
+  endsAt: string | null
+  firstAccessedAt: string | null
+  revokedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AdminOrderDetail {
+  order: AdminOrderDetailOrder
+  buyer: AdminOrderBuyer
+  product: {
+    resourceType: AdminOrder['resourceType']
+    title: string
+    branchName: string
+    snapshot: AdminOrderProductSnapshot
+  }
+  payment: {
+    attempts: AdminOrderPaymentAttempt[]
+    callbacks: AdminOrderPaymentCallback[]
+  }
+  refunds: AdminOrderRefund[]
+  entitlementTimeline: AdminOrderEntitlementTimelineItem[]
+  statusTimeline: AdminOrderStatusTimelineItem[]
 }
 
 export interface AdminAuditItem {
@@ -1089,6 +1186,7 @@ export interface MipAdminGateway {
   grantBadge: (input: { userId: string, badgeId: string, reason: string }) => Promise<Record<string, unknown>>
   revokeBadge: (input: { awardId: string, expectedVersion: number, reason: string }) => Promise<Record<string, unknown>>
   listOrders: (input?: AdminOrderListInput) => Promise<AdminOrderPage>
+  getOrder: (orderId: string) => Promise<AdminOrderDetail>
   submitRefund: (input: Record<string, unknown>) => Promise<Record<string, unknown>>
   retryRefund: (refundId: string) => Promise<Record<string, unknown>>
   listOperationalExceptions: (input?: AdminOperationalExceptionFilters) => Promise<AdminOperationalExceptionPage>

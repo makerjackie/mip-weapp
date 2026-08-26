@@ -196,7 +196,7 @@ describe('admin repository persistence contracts', () => {
     assert.match(captured.sql, /o\.created_at <= \?/)
     assert.ok(captured.params.includes('%用户%'))
     assert.deepEqual(page.items[0], {
-      id: 'order-a', userId: 'user-a', nickname: '用户', orderType: 'EVENT',
+      id: 'order-a', nickname: '用户', orderType: 'EVENT',
       resourceId: 'event-a', resourceType: 'EVENT', resourceTitle: '城市交流会',
       resourceBranchName: '广州分会', merchantOrderNoMasked: 'MIP-…0001',
       amountCents: 19900, refundedAmountCents: 9900, currency: 'CNY',
@@ -205,6 +205,7 @@ describe('admin repository persistence contracts', () => {
       version: 3, providerTransactionIdMasked: 'WX-T…0001', branchId: 'branch-a', demoOrder: false,
     })
     assert.equal(Object.hasOwn(page.items[0], 'merchantOrderNo'), false)
+    assert.equal(Object.hasOwn(page.items[0], 'userId'), false)
   })
 
   it('maps roster answer labels and pages by non-null submission time', async () => {

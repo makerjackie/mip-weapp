@@ -8,6 +8,10 @@ interface OrdersAdminCache {
 type OrderListInput = NonNullable<Parameters<MipAdminGateway['listOrders']>[0]>
 
 export interface MipOrdersAdmin {
+  get: (
+    orderId: string,
+    force?: boolean,
+  ) => ReturnType<MipAdminGateway['getOrder']>
   list: (
     input?: OrderListInput,
     force?: boolean,
@@ -29,6 +33,11 @@ export function createMipOrdersAdmin(
   }
 
   return {
+    get: (orderId, force = false) => cache.query(
+      `${ordersCacheKey}:detail:${orderId}`,
+      () => gateway.getOrder(orderId),
+      { force },
+    ),
     list: (input: OrderListInput = {}, force = false) => cache.query(
       `${ordersCacheKey}:${JSON.stringify(input)}`,
       () => gateway.listOrders(input),

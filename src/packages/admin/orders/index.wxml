@@ -98,6 +98,9 @@
         <view class="mip-admin-record-label">状态与操作</view>
         <t-tag variant="outline" theme="{{item.statusTheme}}">{{item.statusText}}</t-tag>
         <view class="mt-2 text-[length:22rpx] text-muted">退款状态：{{item.refundStatusText}}</view>
+        <view class="mip-admin-record-actions mt-3">
+          <t-button block variant="outline" data-id="{{item.id}}" bind:tap="openOrderDetail">查看详情</t-button>
+        </view>
         <view wx:if="{{item.canSubmitRefund && (item.status === 'PAID' || item.status === 'PARTIALLY_REFUNDED')}}" class="mip-admin-record-actions mt-3">
           <t-button block variant="outline" theme="danger" loading="{{processingId === item.id}}" data-id="{{item.id}}" bind:tap="submitRefund">提交退款</t-button>
         </view>
@@ -112,4 +115,70 @@
     <t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMoreOrders">加载更多</t-button>
   </view>
   <app-page-exit />
+  <mip-admin-responsive-panel visible="{{detailOpen}}" title="订单详情" bind:close="closeOrderDetail" bind:visible-change="handleDetailVisibility">
+    <view wx:if="{{detailState === 'loading'}}" class="mt-4">
+      <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
+    </view>
+    <view wx:elif="{{detailState === 'error'}}" class="mt-4">
+      <app-empty-state title="订单详情加载失败" description="{{detailMessage}}" action-text="重新加载" bind:action="retryOrderDetail" />
+    </view>
+    <view wx:else class="mt-3 flex flex-col gap-3">
+      <view class="rounded-[16rpx] bg-panel-raised px-4 py-4">
+        <view class="flex items-start justify-between gap-3">
+          <view class="min-w-0 flex-1"><view class="break-all text-[length:28rpx] font-semibold">{{detail.product.title}}</view><view class="mt-1 text-[length:21rpx] text-muted">{{detail.order.orderTypeText}} · {{detail.product.resourceTypeText}}</view></view>
+          <t-tag variant="outline">{{detail.order.statusText}}</t-tag>
+        </view>
+        <view class="mt-4 grid grid-cols-2 gap-2 text-[length:22rpx]">
+          <view class="rounded-[12rpx] bg-panel px-3 py-3"><view class="text-muted">订单金额</view><view class="mt-1 font-semibold">{{detail.order.amountText}}</view></view>
+          <view class="rounded-[12rpx] bg-panel px-3 py-3"><view class="text-muted">已退金额</view><view class="mt-1 font-semibold">{{detail.order.refundedText}}</view></view>
+        </view>
+        <view class="mt-3 break-all text-[length:21rpx] text-muted">订单号：{{detail.order.merchantOrderNoMasked}}</view>
+        <view wx:if="{{detail.order.providerTransactionIdMasked}}" class="mt-1 break-all text-[length:21rpx] text-muted">支付单号：{{detail.order.providerTransactionIdMasked}}</view>
+        <view class="mt-3 grid grid-cols-2 gap-2 text-[length:20rpx] text-muted"><view>创建：{{detail.order.createdText}}</view><view>更新：{{detail.order.updatedText}}</view><view>支付：{{detail.order.paidText}}</view><view>关闭：{{detail.order.closedText}}</view></view>
+      </view>
+
+      <view class="rounded-[16rpx] bg-panel-raised px-4 py-4">
+        <view class="text-[length:25rpx] font-semibold">买家</view>
+        <view class="mt-3 flex items-start justify-between gap-3"><view><view class="text-[length:25rpx]">{{detail.buyer.nickname}}</view><view class="mt-1 text-[length:21rpx] text-muted">{{detail.buyer.kindText}} · {{detail.buyer.accountStatusText}}</view></view><view class="text-right text-[length:21rpx] text-muted">{{detail.buyer.locationText}}</view></view>
+      </view>
+
+      <view class="rounded-[16rpx] bg-panel-raised px-4 py-4">
+        <view class="text-[length:25rpx] font-semibold">商品快照</view>
+        <view wx:if="{{detail.product.branchName}}" class="mt-1 text-[length:21rpx] text-muted">{{detail.product.branchName}}</view>
+        <view wx:if="{{detail.product.facts.length}}" class="mt-3 grid grid-cols-2 gap-2">
+          <view wx:for="{{detail.product.facts}}" wx:key="label" class="rounded-[12rpx] bg-panel px-3 py-3"><view class="text-[length:20rpx] text-muted">{{item.label}}</view><view class="mt-1 text-[length:22rpx]">{{item.value}}</view></view>
+        </view>
+        <view wx:if="{{detail.product.benefits.length}}" class="mt-3"><view class="text-[length:21rpx] text-muted">权益快照</view><view class="mt-2 flex flex-wrap gap-2"><view wx:for="{{detail.product.benefits}}" wx:key="*this" class="rounded-full bg-panel px-3 py-2 text-[length:20rpx]">{{item}}</view></view></view>
+        <view wx:if="{{!detail.product.facts.length && !detail.product.benefits.length}}" class="mt-3 text-[length:21rpx] text-muted">当前订单没有可展示的商品快照字段。</view>
+      </view>
+
+      <view class="rounded-[16rpx] bg-panel-raised px-4 py-4">
+        <view class="text-[length:25rpx] font-semibold">订单状态时间线</view>
+        <view class="mt-1 text-[length:19rpx] text-muted">仅展示有明确记录时间的状态节点。</view>
+        <view wx:for="{{detail.statusTimeline}}" wx:key="key" class="mt-3 border-0 border-t border-solid border-line pt-3"><view class="flex items-center justify-between gap-3"><view class="text-[length:22rpx]">{{item.statusText}}</view><view class="text-[length:20rpx] text-muted">{{item.occurredText}}</view></view><view class="mt-1 text-[length:19rpx] text-muted">{{item.evidenceText}}</view></view>
+        <view wx:if="{{!detail.statusTimeline.length}}" class="mt-3 text-[length:21rpx] text-muted">暂无可核验的状态变更记录。</view>
+      </view>
+
+      <view class="rounded-[16rpx] bg-panel-raised px-4 py-4">
+        <view class="text-[length:25rpx] font-semibold">支付处理</view>
+        <view wx:if="{{detail.payment.attempts.length}}" class="mt-3 flex flex-col gap-2"><view wx:for="{{detail.payment.attempts}}" wx:key="key" class="rounded-[12rpx] bg-panel px-3 py-3"><view class="flex items-center justify-between gap-3"><view class="text-[length:22rpx]">{{item.providerText}}</view><view class="text-[length:21rpx] {{item.requiresAttention ? 'text-danger' : 'text-muted'}}">{{item.statusText}}</view></view><view wx:if="{{item.providerPaymentIdMasked}}" class="mt-2 break-all text-[length:20rpx] text-muted">支付引用：{{item.providerPaymentIdMasked}}</view><view class="mt-2 text-[length:19rpx] text-muted">创建 {{item.createdText}} · 更新 {{item.updatedText}}</view><view wx:if="{{item.requiresAttention}}" class="mt-2 text-[length:20rpx] text-danger">当前记录需要核对。</view></view></view>
+        <view wx:else class="mt-3 text-[length:21rpx] text-muted">暂无支付尝试记录。</view>
+        <view class="mt-4 text-[length:22rpx] font-semibold">支付回调</view>
+        <view wx:if="{{detail.payment.callbacks.length}}" class="mt-2 flex flex-col gap-2"><view wx:for="{{detail.payment.callbacks}}" wx:key="key" class="rounded-[12rpx] bg-panel px-3 py-3"><view class="flex items-center justify-between gap-3"><view class="text-[length:21rpx]">{{item.statusText}}</view><view class="text-[length:20rpx] {{item.requiresAttention ? 'text-danger' : 'text-muted'}}">{{item.verificationStatus === 'VERIFIED' ? '已验证' : '未通过验证'}}</view></view><view class="mt-2 text-[length:19rpx] text-muted">接收 {{item.createdText}} · 处理 {{item.processedText}}</view></view></view>
+        <view wx:else class="mt-2 text-[length:21rpx] text-muted">暂无可关联的支付回调记录。</view>
+      </view>
+
+      <view class="rounded-[16rpx] bg-panel-raised px-4 py-4">
+        <view class="text-[length:25rpx] font-semibold">退款记录</view>
+        <view wx:if="{{detail.refunds.length}}" class="mt-3 flex flex-col gap-3"><view wx:for="{{detail.refunds}}" wx:key="id" class="rounded-[12rpx] bg-panel px-3 py-3"><view class="flex items-center justify-between gap-3"><view class="text-[length:23rpx] font-semibold">{{item.amountText}}</view><view class="text-[length:21rpx] {{item.requiresAttention ? 'text-danger' : 'text-muted'}}">{{item.statusText}}</view></view><view class="mt-2 text-[length:20rpx] text-muted">发起方：{{item.requestedByText}} · {{item.createdText}}</view><view wx:if="{{item.reason}}" class="mt-2 text-[length:21rpx]">原因：{{item.reason}}</view><view class="mt-2 break-all text-[length:19rpx] text-muted">退款单号：{{item.merchantRefundNoMasked}}</view><view wx:if="{{item.providerRefundIdMasked}}" class="mt-1 break-all text-[length:19rpx] text-muted">支付平台退款号：{{item.providerRefundIdMasked}}</view><view wx:if="{{item.callback}}" class="mt-2 text-[length:20rpx] text-muted">回调：{{item.callback.statusText}} · {{item.callback.processedText}}</view><view wx:if="{{item.requiresAttention}}" class="mt-2 text-[length:20rpx] text-danger">当前退款记录需要核对。</view><view wx:if="{{item.statusTimeline.length}}" class="mt-3 border-0 border-t border-solid border-line pt-2"><view wx:for="{{item.statusTimeline}}" wx:for-item="step" wx:key="key" class="mt-2 flex items-center justify-between gap-3 text-[length:19rpx]"><view>{{step.statusText}} · {{step.evidenceText}}</view><view class="text-muted">{{step.occurredText}}</view></view></view><view wx:else class="mt-3 text-[length:19rpx] text-muted">暂无可核验的退款状态变更记录。</view></view></view>
+        <view wx:else class="mt-3 text-[length:21rpx] text-muted">暂无退款记录。</view>
+      </view>
+
+      <view class="rounded-[16rpx] bg-panel-raised px-4 py-4">
+        <view class="text-[length:25rpx] font-semibold">关联权益时间线</view>
+        <view wx:if="{{detail.entitlementTimeline.length}}" class="mt-3 flex flex-col gap-2"><view wx:for="{{detail.entitlementTimeline}}" wx:key="key" class="rounded-[12rpx] bg-panel px-3 py-3"><view class="flex items-center justify-between gap-3"><view class="text-[length:22rpx]">{{item.kindText}}</view><view class="text-[length:21rpx] text-muted">{{item.statusText}}</view></view><view class="mt-2 text-[length:20rpx] text-muted">生效：{{item.startsText}}</view><view class="mt-1 text-[length:20rpx] text-muted">到期：{{item.endsText}}</view><view wx:if="{{item.kind === 'CONTENT'}}" class="mt-1 text-[length:20rpx] text-muted">首次访问：{{item.firstAccessedText}}</view><view wx:if="{{item.revokedAt}}" class="mt-1 text-[length:20rpx] text-muted">撤销：{{item.revokedText}}</view></view></view>
+        <view wx:else class="mt-3 text-[length:21rpx] text-muted">暂无关联权益记录。</view>
+      </view>
+    </view>
+  </mip-admin-responsive-panel>
 </view>
