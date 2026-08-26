@@ -150,7 +150,7 @@ describe('MIP admin event comment contract', () => {
     })).rejects.toMatchObject({ code: 'INVALID_RESPONSE' } satisfies Partial<MipAdminError>)
   })
 
-  it('registers the 38th admin route and enters it only from the scoped event console', () => {
+  it('keeps the event comment route scoped to the event console', () => {
     const app = JSON.parse(read('src/app.json')) as {
       pages: string[]
       subPackages: Array<{ root: string, pages: string[] }>
@@ -165,8 +165,8 @@ describe('MIP admin event comment contract', () => {
     const runtime = read('config/runtime-pages.json')
 
     expect(admin?.pages).toContain('event-comments/index')
-    expect(admin?.pages).toHaveLength(38)
-    expect(totalRoutes).toBe(97)
+    expect(admin?.pages).toHaveLength(40)
+    expect(totalRoutes).toBe(99)
     expect(consoleSource).toContain('hasScopedCapability(session.capabilities, \'events.comments.manage\', scope)')
     expect(consoleSource).toContain('\'event-comments\'')
     expect(consoleView).toContain('data-page="event-comments"')

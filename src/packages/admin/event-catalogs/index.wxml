@@ -1,0 +1,65 @@
+<view id="admin-event-catalogs-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-5 text-ink">
+  <mip-admin-workspace-nav />
+  <view class="flex items-start justify-between gap-3">
+    <view class="min-w-0 flex-1">
+      <view class="text-[length:40rpx] font-bold">活动分类与标签</view>
+      <view class="mt-2 text-[length:23rpx] text-muted">维护活动分类、标签、显示顺序和使用状态。</view>
+    </view>
+    <t-button wx:if="{{canManage && state === 'ready'}}" class="min-h-[88rpx]" size="large" theme="primary" disabled="{{saving || processingId || editorOpen}}" bind:tap="openCreate">新增</t-button>
+  </view>
+
+  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel px-5 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有活动目录管理权限" description="当前账号不能维护活动分类和标签。" /></view>
+  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载活动目录" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
+  <block wx:else>
+    <view class="mt-5 grid grid-cols-2 gap-2" role="tablist" aria-label="活动目录类型">
+      <view class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] text-[length:25rpx] font-semibold {{saving || editorOpen ? 'opacity-50' : ''}} {{kind === 'TYPE' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" role="tab" aria-selected="{{kind === 'TYPE'}}" aria-disabled="{{saving || editorOpen}}" data-kind="TYPE" bind:tap="chooseKind">活动分类</view>
+      <view class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] text-[length:25rpx] font-semibold {{saving || editorOpen ? 'opacity-50' : ''}} {{kind === 'TAG' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" role="tab" aria-selected="{{kind === 'TAG'}}" aria-disabled="{{saving || editorOpen}}" data-kind="TAG" bind:tap="chooseKind">活动标签</view>
+    </view>
+
+    <view class="mip-admin-filter-grid mt-4 grid gap-3 rounded-[16rpx] bg-panel px-4 py-4">
+      <view class="mip-admin-filter-wide flex min-w-0 items-center gap-2"><view class="min-w-0 flex-1"><t-input value="{{queryInput}}" maxlength="80" placeholder="搜索名称、标识或说明" disabled="{{saving}}" bind:change="updateQuery" bind:enter="searchCatalogs" /></view><t-button class="min-h-[88rpx]" size="large" variant="outline" disabled="{{saving}}" bind:tap="searchCatalogs">搜索</t-button></view>
+      <view class="mip-admin-filter-wide grid grid-cols-2 gap-2" role="radiogroup" aria-label="目录状态">
+        <view class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] text-[length:22rpx] {{saving ? 'opacity-50' : ''}} {{!statusFilter ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" role="radio" aria-checked="{{!statusFilter}}" aria-disabled="{{saving}}" data-status="" bind:tap="chooseStatus">全部</view>
+        <view class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] text-[length:22rpx] {{saving ? 'opacity-50' : ''}} {{statusFilter === 'ACTIVE' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" role="radio" aria-checked="{{statusFilter === 'ACTIVE'}}" aria-disabled="{{saving}}" data-status="ACTIVE" bind:tap="chooseStatus">已启用</view>
+        <view class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] text-[length:22rpx] {{saving ? 'opacity-50' : ''}} {{statusFilter === 'INACTIVE' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" role="radio" aria-checked="{{statusFilter === 'INACTIVE'}}" aria-disabled="{{saving}}" data-status="INACTIVE" bind:tap="chooseStatus">已停用</view>
+        <view class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] text-[length:22rpx] {{saving ? 'opacity-50' : ''}} {{statusFilter === 'ARCHIVED' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" role="radio" aria-checked="{{statusFilter === 'ARCHIVED'}}" aria-disabled="{{saving}}" data-status="ARCHIVED" bind:tap="chooseStatus">已归档</view>
+      </view>
+    </view>
+
+    <view wx:if="{{editorOpen}}" class="mt-5 rounded-[16rpx] border border-line bg-panel px-4 py-5">
+      <view class="flex items-center justify-between gap-3"><view class="text-[length:30rpx] font-semibold">{{editorId ? '编辑' : '新增'}}{{kind === 'TYPE' ? '活动分类' : '活动标签'}}</view><t-tag variant="outline">新增后默认停用</t-tag></view>
+      <view class="mip-admin-section-grid mt-4 grid gap-4">
+        <view>
+          <view class="mb-2 text-[length:23rpx] text-muted">稳定标识</view>
+          <view wx:if="{{editorId}}" class="box-border flex min-h-[88rpx] items-center break-all rounded-[12rpx] bg-panel-raised px-3 text-[length:25rpx] text-muted">{{editorKey}}</view>
+          <t-input wx:else value="{{editorKey}}" maxlength="64" placeholder="例如 workshop" disabled="{{saving}}" data-field="editorKey" bind:change="updateEditorField" />
+        </view>
+        <view><view class="mb-2 text-[length:23rpx] text-muted">名称</view><t-input value="{{editorName}}" maxlength="80" placeholder="填写名称" disabled="{{saving}}" data-field="editorName" bind:change="updateEditorField" /></view>
+        <view class="mip-admin-span-wide"><view class="mb-2 text-[length:23rpx] text-muted">说明</view><t-textarea value="{{editorDescription}}" maxlength="300" placeholder="填写说明，可不填" disabled="{{saving}}" data-field="editorDescription" bind:change="updateEditorField" /></view>
+        <view><view class="mb-2 text-[length:23rpx] text-muted">显示顺序</view><t-input type="number" value="{{editorSortOrder}}" placeholder="0" disabled="{{saving}}" data-field="editorSortOrder" bind:change="updateEditorField" /></view>
+        <view wx:if="{{editorError}}" class="mip-admin-span-wide rounded-[12rpx] bg-panel-raised px-4 py-3 text-[length:23rpx] text-danger">{{editorError}}</view>
+        <view class="mip-admin-span-wide grid grid-cols-2 gap-2"><t-button class="min-h-[88rpx]" block size="large" variant="outline" disabled="{{saving}}" bind:tap="closeEditor">取消</t-button><t-button class="min-h-[88rpx]" block size="large" theme="primary" loading="{{saving}}" disabled="{{processingId}}" bind:tap="saveCatalog">保存</t-button></view>
+      </view>
+    </view>
+
+    <view class="mt-6 flex items-end justify-between gap-3"><view><view class="text-[length:30rpx] font-semibold">{{kind === 'TYPE' ? '活动分类' : '活动标签'}}</view><view class="mt-1 text-[length:22rpx] text-muted">按最近更新时间排序</view></view><view class="text-[length:22rpx] text-muted">本页 {{items.length}} 条</view></view>
+    <view wx:if="{{!items.length}}" class="mt-4"><app-empty-state title="暂无记录" description="当前筛选条件下没有活动目录记录。" action-text="新增记录" bind:action="openCreate" /></view>
+    <view wx:else class="mip-admin-card-list mt-4 flex flex-col gap-3">
+      <view wx:for="{{items}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
+        <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1"><view class="break-all text-[length:28rpx] font-semibold">{{item.name}}</view><view class="mt-1 break-all text-[length:21rpx] text-muted">{{item.key}}</view></view><t-tag variant="outline" theme="{{item.statusTheme}}">{{item.statusText}}</t-tag></view>
+        <view class="mt-3 line-clamp-3 text-[length:23rpx] leading-6 text-muted">{{item.description || '暂无说明'}}</view>
+        <view class="mt-3 grid grid-cols-2 gap-2 rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:21rpx] text-muted"><view>使用 {{item.usageCount}} 次</view><view>顺序 {{item.sortOrder}}</view><view class="col-span-2">更新于 {{item.updatedText}}</view></view>
+        <view wx:if="{{item.status !== 'ARCHIVED'}}" class="mt-4 grid grid-cols-3 gap-2">
+          <t-button class="min-h-[88rpx]" block size="large" variant="outline" disabled="{{saving || processingId || editorOpen}}" data-id="{{item.id}}" bind:tap="editCatalog">编辑</t-button>
+          <t-button class="min-h-[88rpx]" block size="large" variant="outline" loading="{{processingId === item.id}}" disabled="{{saving || editorOpen || (processingId && processingId !== item.id)}}" data-id="{{item.id}}" bind:tap="changeStatus">{{item.status === 'ACTIVE' ? '停用' : '启用'}}</t-button>
+          <t-button class="min-h-[88rpx]" block size="large" variant="outline" theme="danger" disabled="{{saving || processingId || editorOpen}}" data-id="{{item.id}}" bind:tap="archiveCatalog">归档</t-button>
+        </view>
+        <view wx:else class="mt-3 text-[length:22rpx] text-muted">归档记录仅用于历史查询。</view>
+      </view>
+    </view>
+    <view wx:if="{{nextCursor}}" class="mt-4"><t-button class="min-h-[88rpx]" block size="large" variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
+  </block>
+  <app-page-exit />
+</view>

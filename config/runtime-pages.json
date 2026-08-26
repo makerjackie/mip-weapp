@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 97,
+  "routeCount": 99,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 97 paths.",
+    "config/project.json routes must list the same 99 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -638,6 +638,26 @@
       "group": "admin",
       "kind": "data",
       "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A39",
+      "name": "活动分类与标签",
+      "path": "packages/admin/event-catalogs/index",
+      "selector": "#admin-event-catalogs-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "error", "forbidden", "conflict"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A40",
+      "name": "视频回顾",
+      "path": "packages/admin/event-recaps/index",
+      "selector": "#admin-event-recaps-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "error", "forbidden", "conflict"],
       "readyAssertion": "state === 'ready'"
     },
     {

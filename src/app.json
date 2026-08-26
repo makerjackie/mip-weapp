@@ -76,6 +76,8 @@
         "message-campaigns/index",
         "branches/index",
         "managed-events/index",
+        "event-catalogs/index",
+        "event-recaps/index",
         "event-console/index",
         "profiles/index",
         "events/index",

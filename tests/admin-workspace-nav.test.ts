@@ -100,13 +100,31 @@ describe('MIP admin desktop workspace navigation', () => {
     expect(items.find(item => item.key === 'growth-levels')?.active).toBe(true)
   })
 
+  it('exposes event catalogs and recaps only to their platform capabilities', () => {
+    const groups = buildAdminWorkspaceNavigation([
+      grant('events.catalog.manage'),
+      grant('events.recaps.manage'),
+    ], '/packages/admin/event-recaps/index')
+    const items = groups.flatMap(group => group.items)
+
+    expect(items.map(item => item.key)).toEqual(['event-catalogs', 'event-recaps'])
+    expect(items.find(item => item.key === 'event-recaps')?.active).toBe(true)
+
+    const branchOnly = buildAdminWorkspaceNavigation([{
+      capability: 'events.catalog.manage',
+      scopeType: 'BRANCH',
+      scopeId: 'branch-1',
+    }], '/packages/admin/event-catalogs/index')
+    expect(branchOnly.flatMap(group => group.items)).toEqual([])
+  })
+
   it('maps every registered admin route to one top-level destination', () => {
     const app = JSON.parse(read('src/app.json')) as {
       subPackages: Array<{ root: string, pages: string[] }>
     }
     const adminPackage = app.subPackages.find(item => item.root === 'packages/admin')
 
-    expect(adminPackage?.pages).toHaveLength(38)
+    expect(adminPackage?.pages).toHaveLength(40)
     for (const page of adminPackage?.pages || []) {
       expect(activeAdminWorkspaceItemKey(`/${adminPackage?.root}/${page}?from=test`), page).not.toBeNull()
     }
@@ -138,7 +156,7 @@ describe('MIP admin desktop workspace navigation', () => {
     expect(redirectTo).toHaveBeenCalledTimes(1)
   })
 
-  it('registers and renders the shared workspace in all 38 admin pages', () => {
+  it('registers and renders the shared workspace in all 40 admin pages', () => {
     const app = JSON.parse(read('src/app.json')) as {
       subPackages: Array<{ root: string, pages: string[] }>
     }

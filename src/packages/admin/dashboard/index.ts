@@ -1,5 +1,7 @@
 import type {
   AdminBranch,
+  AdminCapability,
+  AdminCapabilityGrant,
   AdminDashboardOverviewPeriodInput,
 } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
@@ -21,6 +23,14 @@ import {
   initialDashboardScopeOptions,
   validateDashboardCustomPeriod,
 } from './model'
+
+function hasPlatformCapability(grants: AdminCapabilityGrant[], capability: AdminCapability) {
+  return grants.some(grant => (
+    grant.capability === capability
+    && grant.scopeType === 'PLATFORM'
+    && grant.scopeId === null
+  ))
+}
 
 Page({
   data: {
@@ -48,6 +58,8 @@ Page({
     canAnnouncements: false,
     canMessages: false,
     canEvents: false,
+    canEventCatalogs: false,
+    canEventRecaps: false,
     canOrders: false,
     canOpportunities: false,
     canGrowth: false,
@@ -155,6 +167,8 @@ Page({
         canAnnouncements: hasCapability(grants, 'announcements.manage'),
         canMessages: hasCapability(grants, 'messages.manage'),
         canEvents: hasCapability(grants, 'events.read'),
+        canEventCatalogs: hasPlatformCapability(grants, 'events.catalog.manage'),
+        canEventRecaps: hasPlatformCapability(grants, 'events.recaps.manage'),
         canOrders: hasCapability(grants, 'orders.read'),
         canOpportunities: hasCapability(grants, 'opportunities.moderate'),
         canGrowth: hasCapability(grants, 'growth.read'),

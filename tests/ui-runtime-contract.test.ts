@@ -128,7 +128,9 @@ const sensitiveWxmlPatterns: Array<{ id: string, pattern: RegExp }> = [
 ]
 
 function sensitiveWxmlSource(wxml: string, patternId: string) {
-  if (patternId !== 'openid-value') return wxml
+  if (patternId !== 'openid-value') {
+    return wxml
+  }
   // WXML structural identifiers can share OpenID's length and character set.
   return wxml.replace(
     /\s(?:id|class|style|role|slot|aria-[\w-]+|wx:key)\s*=\s*(?:"[^"]*"|'[^']*')/gi,

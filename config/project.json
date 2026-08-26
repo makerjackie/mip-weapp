@@ -253,6 +253,14 @@
       "pathName": "packages/admin/managed-events/index"
     },
     {
+      "name": "活动分类与标签",
+      "pathName": "packages/admin/event-catalogs/index"
+    },
+    {
+      "name": "视频回顾",
+      "pathName": "packages/admin/event-recaps/index"
+    },
+    {
       "name": "单场活动管理",
       "pathName": "packages/admin/event-console/index"
     },

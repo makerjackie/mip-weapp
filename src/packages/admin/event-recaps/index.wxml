@@ -1,0 +1,87 @@
+<view id="admin-event-recaps-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-5 text-ink">
+  <mip-admin-workspace-nav />
+  <view class="flex items-start justify-between gap-3">
+    <view class="min-w-0 flex-1"><view class="text-[length:40rpx] font-bold">视频回顾</view><view class="mt-2 text-[length:23rpx] text-muted">维护活动对应的视频号主页或视频号活动入口。</view></view>
+    <t-button wx:if="{{canManage && state === 'ready'}}" class="min-h-[88rpx]" size="large" theme="primary" disabled="{{saving || processingId || editorOpen}}" bind:tap="openCreate">新增</t-button>
+  </view>
+
+  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel px-5 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有视频回顾管理权限" description="当前账号不能维护视频回顾。" /></view>
+  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载视频回顾" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
+  <block wx:else>
+    <view class="mip-admin-filter-grid mt-5 grid gap-3 rounded-[16rpx] bg-panel px-4 py-4">
+      <view class="mip-admin-filter-wide">
+        <view class="mb-2 text-[length:22rpx] text-muted">活动</view>
+        <view wx:if="{{eventCatalogState === 'unavailable'}}"><view class="grid grid-cols-[minmax(0,1fr)_auto] gap-2"><t-input value="{{eventIdInput}}" maxlength="36" placeholder="填写活动 ID，留空表示全部" disabled="{{saving}}" data-field="eventIdInput" bind:change="updateFilterField" /><t-button class="min-h-[88rpx]" size="large" variant="outline" disabled="{{saving}}" bind:tap="retryEventOptions">重试列表</t-button></view><view class="mt-2 text-[length:20rpx] text-muted">{{eventCatalogMessage}}</view></view>
+        <view wx:else class="grid grid-cols-[minmax(0,1fr)_auto] gap-2"><view class="box-border flex min-h-[88rpx] min-w-0 flex-col justify-center rounded-[12rpx] bg-panel-raised px-3"><view class="truncate text-[length:24rpx]">{{filterEventTitle || (eventIdInput ? '已指定活动' : '全部活动')}}</view><view wx:if="{{eventIdInput}}" class="mt-1 truncate text-[length:19rpx] text-muted">{{eventIdInput}}</view></view><t-button class="min-h-[88rpx]" size="large" variant="outline" disabled="{{saving}}" data-target="FILTER" bind:tap="openEventPicker">选择活动</t-button></view>
+      </view>
+      <view class="mip-admin-filter-wide"><view class="mb-2 text-[length:22rpx] text-muted">关键词</view><t-input value="{{queryInput}}" maxlength="80" placeholder="搜索标题、说明或活动名称" disabled="{{saving}}" data-field="queryInput" bind:change="updateFilterField" bind:enter="applyFilters" /></view>
+      <view class="mip-admin-filter-wide grid grid-cols-2 gap-2" role="radiogroup" aria-label="视频回顾状态">
+        <view class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] text-[length:22rpx] {{saving ? 'opacity-50' : ''}} {{!statusFilter ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" role="radio" aria-checked="{{!statusFilter}}" aria-disabled="{{saving}}" data-status="" bind:tap="chooseStatus">全部</view>
+        <view class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] text-[length:22rpx] {{saving ? 'opacity-50' : ''}} {{statusFilter === 'ACTIVE' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" role="radio" aria-checked="{{statusFilter === 'ACTIVE'}}" aria-disabled="{{saving}}" data-status="ACTIVE" bind:tap="chooseStatus">已启用</view>
+        <view class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] text-[length:22rpx] {{saving ? 'opacity-50' : ''}} {{statusFilter === 'INACTIVE' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" role="radio" aria-checked="{{statusFilter === 'INACTIVE'}}" aria-disabled="{{saving}}" data-status="INACTIVE" bind:tap="chooseStatus">已停用</view>
+        <view class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] text-[length:22rpx] {{saving ? 'opacity-50' : ''}} {{statusFilter === 'ARCHIVED' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" role="radio" aria-checked="{{statusFilter === 'ARCHIVED'}}" aria-disabled="{{saving}}" data-status="ARCHIVED" bind:tap="chooseStatus">已归档</view>
+      </view>
+      <view class="mip-admin-filter-wide grid grid-cols-2 gap-2"><t-button class="min-h-[88rpx]" block size="large" variant="outline" disabled="{{saving}}" bind:tap="clearFilters">清除</t-button><t-button class="min-h-[88rpx]" block size="large" theme="primary" disabled="{{saving}}" bind:tap="applyFilters">查询</t-button></view>
+      <view wx:if="{{filterError}}" class="mip-admin-span-wide rounded-[12rpx] bg-panel-raised px-4 py-3 text-[length:23rpx] text-danger">{{filterError}}</view>
+    </view>
+
+    <view wx:if="{{eventPickerOpen}}" class="mt-4 rounded-[16rpx] border border-line bg-panel px-4 py-5">
+      <view class="flex items-center justify-between gap-3"><view><view class="text-[length:28rpx] font-semibold">选择活动</view><view class="mt-1 text-[length:21rpx] text-muted">{{eventPickerTarget === 'EDITOR' ? '选择后写入视频回顾表单' : '选择后写入活动筛选条件'}}</view></view><t-button class="min-h-[88rpx]" size="large" variant="text" disabled="{{saving}}" bind:tap="closeEventPicker">关闭</t-button></view>
+      <view class="mt-3 flex min-w-0 items-center gap-2"><view class="min-w-0 flex-1"><t-input value="{{eventSearchInput}}" maxlength="80" placeholder="搜索活动标题" disabled="{{saving}}" bind:change="updateEventSearch" bind:enter="searchEventOptions" /></view><t-button class="min-h-[88rpx]" size="large" variant="outline" disabled="{{saving}}" bind:tap="searchEventOptions">搜索</t-button></view>
+      <view wx:if="{{eventCatalogState === 'loading'}}" class="mt-3 rounded-[12rpx] bg-panel-raised px-4 py-4"><t-skeleton row-col="{{[1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+      <view wx:elif="{{eventCatalogState === 'unavailable'}}" class="mt-3 rounded-[12rpx] bg-panel-raised px-4 py-4"><view class="text-[length:22rpx] text-muted">{{eventCatalogMessage}}</view><view class="mt-3"><t-button class="min-h-[88rpx]" block size="large" variant="outline" disabled="{{saving}}" bind:tap="retryEventOptions">重新加载活动</t-button></view></view>
+      <view wx:elif="{{eventOptions.length === 0}}" class="mt-3 rounded-[12rpx] bg-panel-raised px-4 py-5 text-center text-[length:22rpx] text-muted">没有匹配的活动，请调整搜索条件。</view>
+      <view wx:else class="mt-3 flex max-h-[560rpx] flex-col gap-2 overflow-y-auto">
+        <view wx:for="{{eventOptions}}" wx:key="id" class="flex min-h-[88rpx] items-center gap-3 rounded-[12rpx] bg-panel-raised px-3 py-3"><view class="min-w-0 flex-1"><view class="truncate text-[length:25rpx] font-semibold">{{item.title}}</view><view class="mt-1 text-[length:20rpx] text-muted">{{item.startsText}} · {{item.statusText}}</view></view><t-button class="min-h-[88rpx]" size="large" variant="outline" disabled="{{saving}}" data-id="{{item.id}}" bind:tap="chooseEventOption">选择</t-button></view>
+      </view>
+      <view wx:if="{{eventCatalogState === 'ready' && eventCatalogMessage}}" class="mt-3 rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:21rpx] text-danger">{{eventCatalogMessage}}</view>
+      <view wx:if="{{eventCatalogState === 'ready' && eventOptionsNextCursor}}" class="mt-3"><t-button class="min-h-[88rpx]" block size="large" variant="outline" loading="{{eventOptionsLoadingMore}}" disabled="{{saving}}" bind:tap="loadMoreEventOptions">加载更多活动</t-button></view>
+    </view>
+
+    <view wx:if="{{editorOpen}}" class="mt-5 rounded-[16rpx] border border-line bg-panel px-4 py-5">
+      <view class="flex items-center justify-between gap-3"><view class="text-[length:30rpx] font-semibold">{{editorId ? '编辑视频回顾' : '新增视频回顾'}}</view><t-tag variant="outline">新增后默认停用</t-tag></view>
+      <view class="mip-admin-section-grid mt-4 grid gap-4">
+        <view class="mip-admin-span-wide">
+          <view class="mb-2 text-[length:23rpx] text-muted">活动</view>
+          <view wx:if="{{eventCatalogState === 'unavailable'}}"><view class="grid grid-cols-[minmax(0,1fr)_auto] gap-2"><t-input value="{{editorEventId}}" maxlength="36" placeholder="填写关联活动 ID" disabled="{{saving}}" data-field="editorEventId" bind:change="updateEditorField" /><t-button class="min-h-[88rpx]" size="large" variant="outline" disabled="{{saving}}" bind:tap="retryEventOptions">重试列表</t-button></view><view class="mt-2 text-[length:20rpx] text-muted">{{eventCatalogMessage}}</view></view>
+          <view wx:else class="grid grid-cols-[minmax(0,1fr)_auto] gap-2"><view class="box-border flex min-h-[88rpx] min-w-0 flex-col justify-center rounded-[12rpx] bg-panel-raised px-3"><view class="truncate text-[length:24rpx]">{{editorEventTitle || '请选择活动'}}</view><view wx:if="{{editorEventId}}" class="mt-1 truncate text-[length:19rpx] text-muted">{{editorEventId}}</view></view><t-button class="min-h-[88rpx]" size="large" variant="outline" disabled="{{saving}}" data-target="EDITOR" bind:tap="openEventPicker">选择活动</t-button></view>
+        </view>
+        <view><view class="mb-2 text-[length:23rpx] text-muted">标题</view><t-input value="{{editorTitle}}" maxlength="120" placeholder="填写视频回顾标题" disabled="{{saving}}" data-field="editorTitle" bind:change="updateEditorField" /></view>
+        <view><view class="mb-2 text-[length:23rpx] text-muted">显示顺序</view><t-input type="number" value="{{editorSortOrder}}" placeholder="0" disabled="{{saving}}" data-field="editorSortOrder" bind:change="updateEditorField" /></view>
+        <view class="mip-admin-span-wide"><view class="mb-2 text-[length:23rpx] text-muted">说明</view><t-textarea value="{{editorSummary}}" maxlength="300" placeholder="填写说明，可不填" disabled="{{saving}}" data-field="editorSummary" bind:change="updateEditorField" /></view>
+        <view class="mip-admin-span-wide">
+          <view class="text-[length:23rpx] text-muted">目标类型</view>
+          <view class="mt-2 grid grid-cols-2 gap-2" role="radiogroup">
+            <view class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] text-[length:23rpx] {{saving ? 'opacity-50' : ''}} {{destinationType === 'PROFILE' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" role="radio" aria-checked="{{destinationType === 'PROFILE'}}" aria-disabled="{{saving}}" data-type="PROFILE" bind:tap="chooseDestination">视频号主页</view>
+            <view class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] text-[length:23rpx] {{saving ? 'opacity-50' : ''}} {{destinationType === 'ACTIVITY' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" role="radio" aria-checked="{{destinationType === 'ACTIVITY'}}" aria-disabled="{{saving}}" data-type="ACTIVITY" bind:tap="chooseDestination">视频号活动</view>
+          </view>
+        </view>
+        <view><view class="mb-2 text-[length:23rpx] text-muted">视频号账号</view><t-input value="{{finderUserName}}" maxlength="128" placeholder="填写视频号账号标识" disabled="{{saving}}" data-field="finderUserName" bind:change="updateEditorField" /></view>
+        <view wx:if="{{destinationType === 'ACTIVITY'}}"><view class="mb-2 text-[length:23rpx] text-muted">视频号内容标识</view><t-input value="{{feedId}}" maxlength="256" placeholder="填写活动内容标识" disabled="{{saving}}" data-field="feedId" bind:change="updateEditorField" /></view>
+        <view wx:else class="flex min-h-[88rpx] items-center rounded-[12rpx] bg-panel-raised px-3 text-[length:22rpx] text-muted">主页目标不需要内容标识。</view>
+        <view wx:if="{{editorError}}" class="mip-admin-span-wide rounded-[12rpx] bg-panel-raised px-4 py-3 text-[length:23rpx] text-danger">{{editorError}}</view>
+        <view class="mip-admin-span-wide grid grid-cols-2 gap-2"><t-button class="min-h-[88rpx]" block size="large" variant="outline" disabled="{{saving}}" bind:tap="closeEditor">取消</t-button><t-button class="min-h-[88rpx]" block size="large" theme="primary" loading="{{saving}}" disabled="{{processingId}}" bind:tap="saveRecap">保存</t-button></view>
+      </view>
+    </view>
+
+    <view class="mt-6 flex items-end justify-between gap-3"><view><view class="text-[length:30rpx] font-semibold">视频回顾列表</view><view class="mt-1 text-[length:22rpx] text-muted">按最近更新时间排序</view></view><view class="text-[length:22rpx] text-muted">本页 {{items.length}} 条</view></view>
+    <view wx:if="{{!items.length}}" class="mt-4"><app-empty-state title="暂无视频回顾" description="当前筛选条件下没有视频回顾。" action-text="新增视频回顾" bind:action="openCreate" /></view>
+    <view wx:else class="mip-admin-card-list mt-4 flex flex-col gap-3">
+      <view wx:for="{{items}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
+        <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1"><view class="break-all text-[length:28rpx] font-semibold">{{item.title}}</view><view class="mt-1 break-all text-[length:22rpx] text-muted">{{item.eventTitle}}</view></view><t-tag variant="outline" theme="{{item.statusTheme}}">{{item.statusText}}</t-tag></view>
+        <view class="mt-3 line-clamp-3 text-[length:23rpx] leading-6 text-muted">{{item.summary || '暂无说明'}}</view>
+        <view class="mt-3 rounded-[12rpx] bg-panel-raised px-3 py-3"><view class="break-all text-[length:22rpx] text-ink">{{item.destinationText}}</view><view class="mt-2 break-all text-[length:20rpx] text-muted">活动 ID：{{item.eventId}}</view><view class="mt-1 text-[length:20rpx] text-muted">顺序 {{item.sortOrder}} · 更新于 {{item.updatedText}}</view></view>
+        <view wx:if="{{item.status !== 'ARCHIVED'}}" class="mt-4 grid grid-cols-3 gap-2">
+          <t-button class="min-h-[88rpx]" block size="large" variant="outline" disabled="{{saving || processingId || editorOpen}}" data-id="{{item.id}}" bind:tap="editRecap">编辑</t-button>
+          <t-button class="min-h-[88rpx]" block size="large" variant="outline" loading="{{processingId === item.id}}" disabled="{{saving || editorOpen || (processingId && processingId !== item.id)}}" data-id="{{item.id}}" bind:tap="changeStatus">{{item.status === 'ACTIVE' ? '停用' : '启用'}}</t-button>
+          <t-button class="min-h-[88rpx]" block size="large" variant="outline" theme="danger" disabled="{{saving || processingId || editorOpen}}" data-id="{{item.id}}" bind:tap="archiveRecap">归档</t-button>
+        </view>
+        <view wx:else class="mt-3 text-[length:22rpx] text-muted">归档记录仅用于历史查询。</view>
+      </view>
+    </view>
+    <view wx:if="{{nextCursor}}" class="mt-4"><t-button class="min-h-[88rpx]" block size="large" variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
+  </block>
+  <app-page-exit />
+</view>

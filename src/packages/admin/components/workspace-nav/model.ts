@@ -6,6 +6,7 @@ export interface AdminWorkspaceNavItem {
   route: string
   capabilities: readonly AdminCapability[]
   requiresAll?: boolean
+  platformOnly?: boolean
 }
 
 export interface AdminWorkspaceNavGroup {
@@ -63,6 +64,20 @@ export const adminWorkspaceGroups: readonly AdminWorkspaceNavGroup[] = [
         route: 'packages/admin/managed-events/index',
         capabilities: ['events.read', 'events.write'],
         requiresAll: true,
+      },
+      {
+        key: 'event-catalogs',
+        label: '活动分类与标签',
+        route: 'packages/admin/event-catalogs/index',
+        capabilities: ['events.catalog.manage'],
+        platformOnly: true,
+      },
+      {
+        key: 'event-recaps',
+        label: '视频回顾',
+        route: 'packages/admin/event-recaps/index',
+        capabilities: ['events.recaps.manage'],
+        platformOnly: true,
       },
       {
         key: 'event-participants',
@@ -199,6 +214,8 @@ const activeItemByRoute: Readonly<Record<string, string>> = {
   'packages/admin/dashboard/index': 'dashboard',
   'packages/admin/profiles/index': 'profiles',
   'packages/admin/managed-events/index': 'managed-events',
+  'packages/admin/event-catalogs/index': 'event-catalogs',
+  'packages/admin/event-recaps/index': 'event-recaps',
   'packages/admin/events/index': 'managed-events',
   'packages/admin/event-console/index': 'managed-events',
   'packages/admin/event-managers/index': 'managed-events',
@@ -248,17 +265,20 @@ export function activeAdminWorkspaceItemKey(route: string) {
   return activeItemByRoute[normalizeAdminWorkspaceRoute(route)] || null
 }
 
-function canOpenItem(item: AdminWorkspaceNavItem, granted: Set<AdminCapability>) {
+function canOpenItem(item: AdminWorkspaceNavItem, grants: AdminCapabilityGrant[]) {
+  const hasGrant = (capability: AdminCapability) => grants.some(grant => (
+    grant.capability === capability
+    && (!item.platformOnly || (grant.scopeType === 'PLATFORM' && grant.scopeId === null))
+  ))
   return item.requiresAll
-    ? item.capabilities.every(capability => granted.has(capability))
-    : item.capabilities.some(capability => granted.has(capability))
+    ? item.capabilities.every(hasGrant)
+    : item.capabilities.some(hasGrant)
 }
 
 export function buildAdminWorkspaceNavigation(
   grants: AdminCapabilityGrant[],
   currentRoute: string,
 ): AdminWorkspaceNavGroupView[] {
-  const granted = new Set(grants.map(grant => grant.capability))
   const activeKey = activeAdminWorkspaceItemKey(currentRoute)
 
   return adminWorkspaceGroups
@@ -266,7 +286,7 @@ export function buildAdminWorkspaceNavigation(
       key: group.key,
       label: group.label,
       items: group.items
-        .filter(item => canOpenItem(item, granted))
+        .filter(item => canOpenItem(item, grants))
         .map(item => ({ ...item, active: item.key === activeKey })),
     }))
     .filter(group => group.items.length > 0)
