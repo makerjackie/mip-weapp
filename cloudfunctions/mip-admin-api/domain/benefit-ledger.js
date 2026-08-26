@@ -8,22 +8,22 @@ const pageSizes = new Set([10, 20, 50, 100])
 
 function createAdminBenefitLedger({ repository, access }) {
   async function listUnifiedBenefitLedger(caller, input = {}) {
+    assertExactObject(input, ['filters', 'limit', 'cursor'], '权益流水请求无效')
     const context = await access.session(caller)
     const hasMembershipRead = context.capabilities.some(item => item.capability === CAPABILITIES.MEMBERSHIPS_READ)
     const hasGrowthRead = context.capabilities.some(item => item.capability === CAPABILITIES.GROWTH_READ)
     if (!hasMembershipRead && !hasGrowthRead) {
       throw new AdminError('FORBIDDEN', '当前账号没有查看权益流水的权限')
     }
-    const request = input && typeof input === 'object' && !Array.isArray(input) ? input : {}
-    const filters = normalizeFilters(request.filters)
-    const pageSize = normalizePageSize(request.limit)
+    const filters = normalizeFilters(input.filters)
+    const pageSize = normalizePageSize(input.limit)
     return pageResult(await repository.listUnifiedBenefitLedger({
       appId: context.caller.appId,
       membershipVisibility: visibilityForCapability(context.bindings, CAPABILITIES.MEMBERSHIPS_READ),
       growthVisibility: visibilityForCapability(context.bindings, CAPABILITIES.GROWTH_READ),
       filters,
       pageSize,
-      cursor: decodeCursor(request.cursor, ['createdAt', 'sourceId']),
+      cursor: decodeCursor(input.cursor, ['createdAt', 'sourceId']),
     }))
   }
 
@@ -31,7 +31,8 @@ function createAdminBenefitLedger({ repository, access }) {
 }
 
 function normalizeFilters(value) {
-  const filters = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
+  const filters = value === undefined ? {} : value
+  assertExactObject(filters, ['benefitType', 'query', 'createdFrom', 'createdTo'], '权益流水筛选条件无效')
   const benefitType = filters.benefitType === undefined || filters.benefitType === ''
     ? ''
     : typeof filters.benefitType === 'string' ? filters.benefitType.trim().toUpperCase() : ''
@@ -48,6 +49,13 @@ function normalizeFilters(value) {
     query: text(filters.query, 80),
     createdFrom,
     createdTo,
+  }
+}
+
+function assertExactObject(value, allowedKeys, message) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)
+    || Reflect.ownKeys(value).some(key => typeof key !== 'string' || !allowedKeys.includes(key))) {
+    throw new AdminError('VALIDATION_FAILED', message)
   }
 }
 

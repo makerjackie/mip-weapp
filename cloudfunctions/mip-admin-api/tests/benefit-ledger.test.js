@@ -2,6 +2,8 @@
 
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
+const { CAPABILITIES } = require('../domain/capabilities')
+const { createAdminBenefitLedger } = require('../domain/benefit-ledger')
 const { createAdminRepository } = require('../domain/repository')
 const { withTestAuthorization } = require('./test-authorization')
 
@@ -25,6 +27,37 @@ function repositoryWithRows(rows) {
 }
 
 describe('admin unified benefit ledger projection', () => {
+  it('rejects undeclared request and filter fields before repository access', async () => {
+    let calls = 0
+    const service = createAdminBenefitLedger({
+      access: {
+        async session() {
+          return {
+            caller: { appId: 'wx-app-a', userId: 'admin-a' },
+            capabilities: [{ capability: CAPABILITIES.MEMBERSHIPS_READ }],
+            bindings: [{ roleKey: 'PLATFORM_OWNER', scopeType: 'PLATFORM', scopeId: null }],
+          }
+        },
+      },
+      repository: {
+        async listUnifiedBenefitLedger() {
+          calls += 1
+          return { items: [], nextCursor: null }
+        },
+      },
+    })
+
+    await assert.rejects(
+      service.listUnifiedBenefitLedger({}, { filters: {}, extra: true }),
+      error => error.code === 'VALIDATION_FAILED',
+    )
+    await assert.rejects(
+      service.listUnifiedBenefitLedger({}, { filters: { extra: true } }),
+      error => error.code === 'VALIDATION_FAILED',
+    )
+    assert.equal(calls, 0)
+  })
+
   it('aggregates membership, growth entries and current growth benefits without exposing UUIDs', async () => {
     const { repository, sql } = repositoryWithRows([
       {

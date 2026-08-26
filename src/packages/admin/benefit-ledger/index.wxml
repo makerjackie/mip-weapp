@@ -16,7 +16,7 @@
   </view>
   <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="无权访问统一权益流水" description="{{message}}" /></view>
-  <view wx:elif="{{state === 'error'}}" class="mt-6"><app-empty-state title="暂时无法加载权益流水" description="{{message}}" action-text="重新加载" bind:action="load" /></view>
+  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载权益流水" description="{{message}}" action-text="重新加载" bind:action="load" /></view>
   <view wx:elif="{{state === 'empty'}}" class="mt-6"><app-empty-state title="暂无权益流水" description="符合筛选条件的记录会显示在这里。" /></view>
   <view wx:else class="mip-admin-record-list mt-5" style="--mip-admin-record-columns: minmax(0, 0.7fr) minmax(0, 1.1fr) minmax(0, 1.6fr) minmax(0, 1.6fr) minmax(0, 1.3fr);">
     <view class="mip-admin-record-header"><view>类型</view><view>成员</view><view>权益</view><view>状态与时间</view><view>关联事实</view></view>

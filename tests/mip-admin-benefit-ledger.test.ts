@@ -35,6 +35,8 @@ describe('admin unified benefit ledger operator contract', () => {
       items: [{ ...item(), sourceId: 'internal-uuid' }],
       nextCursor: null,
     })).toThrow('统一权益流水')
+    expect(() => parseAdminUnifiedBenefitLedgerPage({ items: [], nextCursor: null, extra: true }))
+      .toThrow('统一权益流水')
   })
 
   it('exposes the operator filters and state variants without UUID copy', () => {

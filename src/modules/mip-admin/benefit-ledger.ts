@@ -100,8 +100,13 @@ function parseItem(value: unknown): AdminUnifiedBenefitLedgerItem {
 }
 
 export function parseAdminUnifiedBenefitLedgerPage(value: unknown): AdminUnifiedBenefitLedgerPage {
-  if (!record(value) || !Array.isArray(value.items)
-    || !(value.nextCursor === null || typeof value.nextCursor === 'string')) {
+  if (!record(value)
+    || !hasOnlyKeys(value, ['items', 'nextCursor'])
+    || !Object.hasOwn(value, 'items')
+    || !Object.hasOwn(value, 'nextCursor')
+    || !Array.isArray(value.items)
+    || value.items.length > 100
+    || !(value.nextCursor === null || (typeof value.nextCursor === 'string' && value.nextCursor.length <= 512))) {
     invalid()
   }
   return { items: value.items.map(parseItem), nextCursor: value.nextCursor }
