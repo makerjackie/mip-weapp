@@ -1,4 +1,4 @@
-function extractJavaScriptStrings(source) {
+function extractJavaScriptStringEntries(source) {
   const strings = []
   let cursor = 0
 
@@ -7,12 +7,12 @@ function extractJavaScriptStrings(source) {
     const next = source[cursor + 1]
     if (char === '\'' || char === '"') {
       const value = readJavaScriptQuotedValue(source, cursor, char)
-      strings.push(value.value)
+      strings.push({ end: value.end, start: cursor, value: value.value })
       cursor = value.end
     }
     else if (char === '`') {
       const value = readJavaScriptTemplateValue(source, cursor)
-      strings.push(value.value)
+      strings.push({ end: value.end, start: cursor, value: value.value })
       cursor = value.end
     }
     else if (char === '/' && next === '/') {
@@ -26,6 +26,10 @@ function extractJavaScriptStrings(source) {
     }
   }
   return strings
+}
+
+function extractJavaScriptStrings(source) {
+  return extractJavaScriptStringEntries(source).map(entry => entry.value)
 }
 
 function readJavaScriptQuotedValue(source, start, quote) {
@@ -132,6 +136,32 @@ function skipJavaScriptBlockComment(source, start) {
 const SQL_START = /^\s*(?:SELECT|WITH|INSERT|INTO|REPLACE|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE|RENAME|GRANT|REVOKE|LOCK|SHOW|DESCRIBE|FROM|JOIN|STRAIGHT_JOIN|(?:INNER|LEFT|RIGHT|CROSS)\s+JOIN)\b/i
 const SQL_SIGNAL = /\b(?:SELECT|WITH|INSERT|REPLACE|UPDATE|DELETE|CREATE|ALTER|DROP|TRUNCATE|RENAME|GRANT|REVOKE)\b/
 const RELATION_SIGNAL = /\b(?:FROM|JOIN|REFERENCES|INTO|TABLE)\b/i
+const ISOLATED_SQL_START_KEYWORDS = new Set([
+  'ALTER',
+  'CREATE',
+  'CROSS JOIN',
+  'DELETE',
+  'DESCRIBE',
+  'DROP',
+  'FROM',
+  'GRANT',
+  'INNER JOIN',
+  'INSERT',
+  'INTO',
+  'JOIN',
+  'LEFT JOIN',
+  'LOCK',
+  'RENAME',
+  'REPLACE',
+  'REVOKE',
+  'RIGHT JOIN',
+  'SELECT',
+  'SHOW',
+  'STRAIGHT_JOIN',
+  'TRUNCATE',
+  'UPDATE',
+  'WITH',
+])
 const FOR_UPDATE_PRIVILEGES = new Set(['UPDATE', 'DELETE'])
 const FROM_CLAUSE_END = new Set([
   'FOR',
@@ -169,6 +199,132 @@ const RELATION_ALIAS_STOP = new Set([
   'READ',
   'WRITE',
 ])
+
+function extractJavaScriptSqlCandidates(source) {
+  const entries = extractJavaScriptStringEntries(source)
+  const joinedSqlArrayRanges = collectDirectJoinedSqlArrayRanges(source, entries)
+  return entries
+    .filter(entry => isJavaScriptSqlCandidate(entry, source, joinedSqlArrayRanges))
+    .map(entry => entry.value)
+}
+
+function isJavaScriptSqlCandidate(entry, source, joinedSqlArrayRanges) {
+  if (!looksLikeSqlCandidate(entry.value)) {
+    return false
+  }
+  if (!isIsolatedSqlStartKeyword(entry.value)) {
+    return true
+  }
+  return isDirectJavaScriptConcatenationOperand(source, entry)
+    || joinedSqlArrayRanges.some(range => entry.start > range.start && entry.end <= range.end)
+}
+
+function looksLikeSqlCandidate(value) {
+  return SQL_START.test(value) || (SQL_SIGNAL.test(value) && RELATION_SIGNAL.test(value))
+}
+
+function isIsolatedSqlStartKeyword(value) {
+  return ISOLATED_SQL_START_KEYWORDS.has(value.trim().replace(/\s+/g, ' ').toUpperCase())
+}
+
+function isDirectJavaScriptConcatenationOperand(source, entry) {
+  return previousJavaScriptSignificantCharacter(source, entry.start) === '+'
+    || source[nextJavaScriptSignificantIndex(source, entry.end)] === '+'
+}
+
+function collectDirectJoinedSqlArrayRanges(source, entries) {
+  const entryEndByStart = new Map(entries.map(entry => [entry.start, entry.end]))
+  const arrayStarts = []
+  const ranges = []
+  let cursor = 0
+
+  while (cursor < source.length) {
+    const stringEnd = entryEndByStart.get(cursor)
+    if (stringEnd !== undefined) {
+      cursor = stringEnd
+      continue
+    }
+    const char = source[cursor]
+    const next = source[cursor + 1]
+    if (char === '/' && next === '/') {
+      cursor = skipJavaScriptLineComment(source, cursor)
+      continue
+    }
+    if (char === '/' && next === '*') {
+      cursor = skipJavaScriptBlockComment(source, cursor)
+      continue
+    }
+    if (char === '[') {
+      arrayStarts.push(cursor)
+    }
+    else if (char === ']' && arrayStarts.length > 0) {
+      const start = arrayStarts.pop()
+      const suffixStart = nextJavaScriptSignificantIndex(source, cursor + 1)
+      if (/^\.join\s*\(/.test(source.slice(suffixStart))
+        && entries.some(entry => (
+          entry.start > start
+          && entry.end <= cursor
+          && looksLikeSqlCandidate(entry.value)
+          && !isIsolatedSqlStartKeyword(entry.value)
+        ))) {
+        ranges.push({ end: cursor + 1, start })
+      }
+    }
+    cursor += 1
+  }
+  return ranges
+}
+
+function nextJavaScriptSignificantIndex(source, start) {
+  let cursor = start
+  while (cursor < source.length) {
+    if (/\s/.test(source[cursor])) {
+      cursor += 1
+    }
+    else if (source[cursor] === '/' && source[cursor + 1] === '/') {
+      cursor = skipJavaScriptLineComment(source, cursor)
+    }
+    else if (source[cursor] === '/' && source[cursor + 1] === '*') {
+      cursor = skipJavaScriptBlockComment(source, cursor)
+    }
+    else {
+      return cursor
+    }
+  }
+  return source.length
+}
+
+function previousJavaScriptSignificantCharacter(source, start) {
+  let cursor = start - 1
+  while (cursor >= 0) {
+    let crossedLineBreak = false
+    while (cursor >= 0 && /\s/.test(source[cursor])) {
+      crossedLineBreak ||= source[cursor] === '\n' || source[cursor] === '\r'
+      cursor -= 1
+    }
+    if (cursor < 0) {
+      return ''
+    }
+    if (source[cursor] === '/' && source[cursor - 1] === '*') {
+      const commentStart = source.lastIndexOf('/*', cursor - 1)
+      if (commentStart === -1) {
+        return source[cursor]
+      }
+      cursor = commentStart - 1
+      continue
+    }
+    if (crossedLineBreak) {
+      const lineStart = source.lastIndexOf('\n', cursor) + 1
+      const commentStart = source.lastIndexOf('//', cursor)
+      if (commentStart >= lineStart) {
+        cursor = commentStart - 1
+        continue
+      }
+    }
+    return source[cursor]
+  }
+  return ''
+}
 
 function stripSqlComments(source) {
   let cleaned = ''
@@ -826,9 +982,7 @@ export function findUnsafeMipSqlRelations(source, options = {}) {
   const unsafe = []
   const candidates = options.sqlDocument === true
     ? [String(source || '')]
-    : extractJavaScriptStrings(String(source || '')).filter(value => (
-        SQL_START.test(value) || (SQL_SIGNAL.test(value) && RELATION_SIGNAL.test(value))
-      ))
+    : extractJavaScriptSqlCandidates(String(source || ''))
 
   for (const candidate of candidates) {
     const cleaned = stripSqlComments(candidate)

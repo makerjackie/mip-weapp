@@ -129,6 +129,17 @@ describe('shared CloudBase safety', () => {
     })).toEqual([])
   })
 
+  it('does not treat standalone field labels as JavaScript SQL candidates', () => {
+    const cursorFields = `const CURSOR_FIELDS = [
+      'subject',
+      'kind',
+      'direction',
+      'from',
+      'to',
+    ]`
+    expect(findUnsafeMipSqlRelations(cursorFields)).toEqual([])
+  })
+
   it.each([
     {
       allowedDynamicRelations: { schema: ['mip_users'] },
@@ -290,9 +301,11 @@ describe('shared CloudBase safety', () => {
       'SELECT * FROM ',
       'const sql = \'SELECT * FROM\' + \' oimvp_users\'',
       'const tableName = \'oimvp_users\'; const sql = \'SELECT * FROM \' + tableName',
+      'const sql = \'FROM\' + tableName',
       'const sql = \'UPDATE \' + table + \' SET id = 1\'',
       'const sql = \'INSERT INTO \' + table + \' VALUES (?)\'',
       'const sql = \'DELETE FROM \' + table',
+      'const sql = [\'SELECT * \', \'FROM\', table].join(\'\')',
     ]) {
       const options = source.startsWith('SELECT') ? { sqlDocument: true } : undefined
       expect(findUnsafeMipSqlRelations(source, options)).toEqual(missingRelation)
