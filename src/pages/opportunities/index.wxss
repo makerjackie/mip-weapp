@@ -9,3 +9,7 @@
   min-height: 88rpx;
   margin: -16rpx 0;
 }
+
+.opportunities-filter-actions {
+  box-sizing: border-box;
+}

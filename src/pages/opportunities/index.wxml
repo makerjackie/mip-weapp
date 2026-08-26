@@ -1,4 +1,4 @@
-<view id="mip-opportunities-page" class="mip-member-page mip-member-tab-page min-h-screen bg-[#080808] pb-[calc(env(safe-area-inset-bottom)+220rpx)] text-ink">
+<view id="mip-opportunities-page" class="mip-member-page mip-member-tab-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+220rpx)] text-ink">
   <view id="opportunities-status-bar" class="shrink-0" style="height: {{statusBarHeight}}px;" aria-hidden="true" />
   <view id="opportunities-custom-navigation" class="box-border flex h-[88rpx] items-center pl-3 pr-[200rpx]">
     <view id="opportunities-filter-toggle" class="flex h-[88rpx] max-w-[360rpx] min-w-0 items-center gap-1 text-[length:32rpx] font-medium" aria-role="button" aria-expanded="{{filterOpen}}" bind:tap="toggleFilters">
@@ -9,19 +9,19 @@
 
   <view class="flex h-[80rpx] border-b border-line">
     <view wx:if="{{mode === 'opportunities'}}" class="opportunities-tab-hit relative flex flex-1 items-center justify-center text-[length:32rpx] font-medium text-brand" data-mode="opportunities" aria-role="tab" aria-selected="true" bind:tap="changeMode">机会搜索<view class="absolute inset-x-0 bottom-[-2rpx] h-[4rpx] bg-brand" /></view>
-    <view wx:else class="opportunities-tab-hit relative flex flex-1 items-center justify-center text-[length:32rpx] text-[#b3b3b3]" data-mode="opportunities" aria-role="tab" aria-selected="false" bind:tap="changeMode">机会搜索</view>
+    <view wx:else class="opportunities-tab-hit relative flex flex-1 items-center justify-center text-[length:32rpx] text-muted" data-mode="opportunities" aria-role="tab" aria-selected="false" bind:tap="changeMode">机会搜索</view>
     <view wx:if="{{mode === 'cooperation'}}" class="opportunities-tab-hit relative flex flex-1 items-center justify-center text-[length:32rpx] font-medium text-brand" data-mode="cooperation" aria-role="tab" aria-selected="true" bind:tap="changeMode">人才合作<view class="absolute inset-x-0 bottom-[-2rpx] h-[4rpx] bg-brand" /></view>
-    <view wx:else class="opportunities-tab-hit relative flex flex-1 items-center justify-center text-[length:32rpx] text-[#b3b3b3]" data-mode="cooperation" aria-role="tab" aria-selected="false" bind:tap="changeMode">人才合作</view>
+    <view wx:else class="opportunities-tab-hit relative flex flex-1 items-center justify-center text-[length:32rpx] text-muted" data-mode="cooperation" aria-role="tab" aria-selected="false" bind:tap="changeMode">人才合作</view>
   </view>
 
   <view wx:if="{{mode === 'opportunities'}}" class="mx-3 mt-3 flex h-[56rpx] items-center gap-3">
       <view class="opportunities-chip-hit" aria-role="radio" aria-checked="{{status === 'RECRUITING'}}" data-status="RECRUITING" bind:tap="changeStatus">
         <view wx:if="{{status === 'RECRUITING'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand px-2 text-[length:28rpx] font-medium text-on-brand">招募中</view>
-        <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-2 text-[length:28rpx] font-medium text-[#b3b3b3]">招募中</view>
+        <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-2 text-[length:28rpx] font-medium text-muted">招募中</view>
       </view>
       <view class="opportunities-chip-hit" aria-role="radio" aria-checked="{{status === 'COMPLETED'}}" data-status="COMPLETED" bind:tap="changeStatus">
         <view wx:if="{{status === 'COMPLETED'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand px-2 text-[length:28rpx] font-medium text-on-brand">已完成</view>
-        <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-2 text-[length:28rpx] font-medium text-[#b3b3b3]">已完成</view>
+        <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-2 text-[length:28rpx] font-medium text-muted">已完成</view>
       </view>
     <view class="flex-1" />
     <view class="opportunities-chip-hit" aria-role="button" bind:tap="publish">
@@ -37,10 +37,10 @@
       <input id="opportunities-search-input" class="box-border min-w-0 flex-1 max-w-full text-[length:28rpx]" value="{{keywordInput}}" maxlength="80" confirm-type="search" placeholder="搜索人才或合作方向" bindinput="onKeywordInput" bindconfirm="onSearchConfirm" />
       <view wx:if="{{keywordInput}}" class="flex min-h-[80rpx] items-center px-2 text-[length:21rpx] text-muted" bind:tap="clearSearch">清除</view>
     </view>
-    <view class="flex h-[80rpx] w-[160rpx] shrink-0 items-center justify-center gap-1 rounded-[16rpx] bg-panel text-[length:32rpx] text-[#b3b3b3] active:bg-panel-raised" aria-role="button" aria-expanded="{{filterOpen}}" bind:tap="toggleFilters"><t-icon name="filter" size="32rpx" color="var(--color-muted)" /><text>筛选</text></view>
+    <view class="flex h-[80rpx] w-[160rpx] shrink-0 items-center justify-center gap-1 rounded-[16rpx] bg-panel text-[length:32rpx] text-muted active:bg-panel-raised" aria-role="button" aria-expanded="{{filterOpen}}" bind:tap="toggleFilters"><t-icon name="filter" size="32rpx" color="var(--color-muted)" /><text>筛选</text></view>
   </view>
 
-  <view hidden="{{!filterOpen}}" class="mx-3 mt-3 rounded-[16rpx] border border-line bg-panel px-4 py-4">
+  <view hidden="{{!filterOpen}}" class="mx-3 mt-3 rounded-[16rpx] border border-line bg-panel px-4 pb-[152rpx] pt-4">
     <view class="flex items-center justify-between"><view class="text-[length:25rpx] font-semibold">筛选条件</view><view class="text-[length:21rpx] text-brand" bind:tap="resetFilters">重置</view></view>
     <view wx:if="{{mode === 'opportunities'}}" class="mt-4 flex min-h-[88rpx] min-w-0 items-center gap-2 rounded-[12rpx] bg-panel-raised px-3">
       <t-icon name="search" size="32rpx" color="var(--color-muted)" />
@@ -61,16 +61,20 @@
     <view class="mt-4"><mip-catalog-selector title="城市" groups="{{cityGroups}}" selected-ids="{{citySelectionIds}}" multiple="{{false}}" clear-label="全国" bind:change="changeCity" /></view>
     <view class="mt-4 text-[length:25rpx] font-semibold">合作角色</view>
     <view class="mt-3 flex flex-wrap gap-2">
-      <block wx:for="{{roleOptions}}" wx:key="key"><view wx:if="{{draftRoleKey === item.key}}" class="rounded-full bg-brand px-3 py-2 text-[length:21rpx] text-on-brand" data-key="{{item.key}}" bind:tap="chooseRole">{{item.name}}</view><view wx:else class="rounded-full bg-panel-raised px-3 py-2 text-[length:21rpx] text-muted" data-key="{{item.key}}" bind:tap="chooseRole">{{item.name}}</view></block>
+      <block wx:for="{{roleOptions}}" wx:key="key"><view wx:if="{{draftRoleKey === item.key}}" class="flex min-h-[88rpx] items-center rounded-full bg-brand px-3 text-[length:21rpx] text-on-brand" data-key="{{item.key}}" bind:tap="chooseRole">{{item.name}}</view><view wx:else class="flex min-h-[88rpx] items-center rounded-full bg-panel-raised px-3 text-[length:21rpx] text-muted" data-key="{{item.key}}" bind:tap="chooseRole">{{item.name}}</view></block>
     </view>
     <view wx:if="{{industryGroups.length}}" class="mt-4"><mip-catalog-selector title="行业" groups="{{industryGroups}}" selected-ids="{{draftIndustryTagIds}}" multiple="{{true}}" max-selections="{{8}}" clear-label="不限" bind:change="changeIndustry" /></view>
     <block wx:if="{{mode === 'opportunities'}}">
       <view wx:if="{{abilityOptions.length}}" class="mt-4 text-[length:25rpx] font-semibold">能力</view>
       <view class="mt-2 flex flex-wrap gap-2">
-        <block wx:for="{{abilityOptions}}" wx:key="id"><view wx:if="{{item.selected}}" class="rounded-full bg-brand px-3 py-2 text-[length:21rpx] text-on-brand" data-type="ability" data-id="{{item.id}}" bind:tap="toggleTag">{{item.label}}</view><view wx:else class="rounded-full bg-panel-raised px-3 py-2 text-[length:21rpx] text-muted" data-type="ability" data-id="{{item.id}}" bind:tap="toggleTag">{{item.label}}</view></block>
+        <block wx:for="{{abilityOptions}}" wx:key="id"><view wx:if="{{item.selected}}" class="flex min-h-[88rpx] items-center rounded-full bg-brand px-3 text-[length:21rpx] text-on-brand" data-type="ability" data-id="{{item.id}}" bind:tap="toggleTag">{{item.label}}</view><view wx:else class="flex min-h-[88rpx] items-center rounded-full bg-panel-raised px-3 text-[length:21rpx] text-muted" data-type="ability" data-id="{{item.id}}" bind:tap="toggleTag">{{item.label}}</view></block>
       </view>
     </block>
-    <view class="mt-5 flex gap-2"><t-button class="min-w-0 flex-1" block variant="outline" bind:tap="resetFilters">重置</t-button><t-button class="min-w-0 flex-1" block theme="primary" bind:tap="applyFilters">确认筛选</t-button></view>
+  </view>
+
+  <view wx:if="{{filterOpen}}" id="opportunities-filter-actions" class="mip-member-fixed-inset opportunities-filter-actions fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+112rpx)] z-20 grid min-h-[112rpx] grid-cols-2 items-center gap-2 rounded-full border border-brand bg-brand-soft p-2">
+    <view class="min-w-0"><t-button block size="large" variant="outline" theme="primary" bind:tap="resetFilters">重置</t-button></view>
+    <view class="min-w-0"><t-button block size="large" theme="primary" bind:tap="applyFilters">确认筛选</t-button></view>
   </view>
 
   <view wx:if="{{filterOpen && mode === 'cooperation'}}" class="mx-3 mt-3 flex items-center justify-between rounded-[12rpx] border border-line px-3 py-3 text-[length:22rpx]">

@@ -228,9 +228,10 @@ Page({
       })
     }
     catch (error) {
+      const commentsMessage = error instanceof Error ? error.message : '评论加载失败'
       this.setData({
-        commentsState: 'error',
-        commentsMessage: error instanceof Error ? error.message : '评论加载失败',
+        commentsState: reset || !this.data.comments.length ? 'error' : 'ready',
+        commentsMessage,
       })
     }
     finally {
@@ -466,6 +467,10 @@ Page({
 
   loadMoreComments() {
     void this.loadComments(false)
+  },
+
+  retryComments() {
+    void this.loadComments(true)
   },
 
   openReferralPicker() {
