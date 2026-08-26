@@ -595,6 +595,18 @@
       "altersTables": [
         "mip_profiles"
       ]
+    },
+    {
+      "version": "20260826430000",
+      "name": "mip_knowledge_daily_ingestion",
+      "sql": "database/mysql/mip/043_knowledge_daily_ingestion.sql",
+      "sqlSha256": "cb4b5e2140acb0825b90a3be0d32888bec833b9ace4284079060ca853835cfb6",
+      "rollback": "database/mysql/mip/rollback/043_knowledge_daily_ingestion.sql",
+      "rollbackSha256": "3d109e1b48ca891208fa64bd4b6c35af2254a9faf3b705d3da1dff09d5e966f2",
+      "createsTables": [
+        "mip_knowledge_ingestion_schedules"
+      ],
+      "altersTables": []
     }
   ]
 }

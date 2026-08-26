@@ -18,6 +18,12 @@ const {
 } = require('./lib/message-dispatch-auth')
 const { createMessageDispatchRoute, normalizeDispatchRun } = require('./lib/message-dispatch-route')
 const { createMessageSchedulerClient } = require('./lib/message-scheduler-client')
+const {
+  KNOWLEDGE_SCHEDULER_ACTIONS,
+  verifyKnowledgeSchedulerRequest,
+} = require('./lib/knowledge-scheduler-auth')
+const { createKnowledgeSchedulerClient } = require('./lib/knowledge-scheduler-client')
+const { createKnowledgeSchedulerRoute } = require('./lib/knowledge-scheduler-route')
 const { createNotificationReconcileClient } = require('./lib/notification-reconcile-client')
 const {
   messageScheduleMutationActions,
@@ -25,6 +31,10 @@ const {
   postCommitAutomationFor,
 } = require('./lib/post-commit-automation')
 const { createKnowledgeAdminService, configuredHosts, safeExternalUrl } = require('./domain/knowledge')
+const {
+  createKnowledgeSchedulingRepository,
+} = require('./domain/knowledge-scheduling-repository')
+const { createKnowledgeSchedulingService } = require('./domain/knowledge-scheduling-service')
 const { checkCompleteContentSafety } = require('./lib/content-safety')
 const { fetchPinnedHttpsText } = require('./lib/safe-http')
 
@@ -49,6 +59,13 @@ const messageSchedulerClient = createMessageSchedulerClient({
   cloud,
   functionName: process.env.MIP_MESSAGE_SCHEDULER_FUNCTION_NAME || 'mip-message-scheduler',
   secret: process.env.MIP_MESSAGE_DISPATCH_HMAC_SECRET,
+  sourceFunction: 'mip-admin-api',
+  logger: console,
+})
+const knowledgeSchedulerClient = createKnowledgeSchedulerClient({
+  cloud,
+  functionName: process.env.MIP_KNOWLEDGE_SCHEDULER_FUNCTION_NAME || 'mip-knowledge-scheduler',
+  secret: process.env.MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET,
   sourceFunction: 'mip-admin-api',
   logger: console,
 })
@@ -109,6 +126,12 @@ Object.assign(service, createKnowledgeAdminService(mysqlDatabase(), {
   sourceAllowedHosts: knowledgeSourceAllowedHosts,
   webviewAllowedHosts: knowledgeWebviewAllowedHosts,
 }))
+const knowledgeSchedulingRepository = createKnowledgeSchedulingRepository(mysqlDatabase())
+const knowledgeSchedulingService = createKnowledgeSchedulingService({
+  fetchSource: fetchKnowledgeSource,
+  repository: knowledgeSchedulingRepository,
+  webviewAllowedHosts: knowledgeWebviewAllowedHosts,
+})
 
 async function fetchKnowledgeSource(source) {
   if (!['JSON_FEED', 'RSS'].includes(source.source_type)) {
@@ -216,15 +239,45 @@ const runDueMessageCampaigns = createMessageDispatchRoute({
   repository,
   secret: process.env.MIP_MESSAGE_DISPATCH_HMAC_SECRET,
 })
+const runDueKnowledgeIngestion = createKnowledgeSchedulerRoute({
+  allowedAppIds,
+  logger: console,
+  secret: process.env.MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET,
+  service: knowledgeSchedulingService,
+})
+const knowledgeScheduleMutationActions = new Set([
+  'mip.admin.knowledge.schedules.save',
+])
 
 exports.main = async (event = {}) => {
   if (MESSAGE_DISPATCH_ACTIONS.has(event?.action)) {
     return runDueMessageCampaigns(event)
   }
+  if (KNOWLEDGE_SCHEDULER_ACTIONS.has(event?.action)) {
+    return runDueKnowledgeIngestion(event)
+  }
   const result = await handler(event)
   if (result?.ok === true) {
     const routeAction = normalizeAdminRequest(event).action
     const routeAutomation = postCommitAutomationFor(routeAction, result.data)
+    if (knowledgeScheduleMutationActions.has(routeAction)) {
+      const appId = trustedContextAppId(cloud.getWXContext(), allowedAppIds)
+      const schedulerAutomation = await knowledgeSchedulerClient.reconcile({
+        appId,
+        action: routeAction,
+        mutationActions: knowledgeScheduleMutationActions,
+      })
+      if (schedulerAutomation.status !== 'VERIFIED') {
+        return {
+          ok: false,
+          error: {
+            code: 'KNOWLEDGE_SCHEDULE_AUTOMATION_UNVERIFIED',
+            message: '热点采集计划已保存，但自动执行状态尚未确认，请使用同一请求重试',
+            retryable: true,
+          },
+        }
+      }
+    }
     if (routeAutomation.requiresTrustedAppId) {
       const appId = trustedContextAppId(cloud.getWXContext(), allowedAppIds)
       if (routeAutomation.messageSchedule) {
@@ -267,5 +320,8 @@ exports._test = {
   resolveTrustedIdentity,
   rssItems,
   runDueMessageCampaigns,
+  runDueKnowledgeIngestion,
+  knowledgeScheduleMutationActions,
+  verifyKnowledgeSchedulerRequest,
   verifyMessageDispatchRequest,
 }

@@ -109,6 +109,7 @@ export const RUNTIME_TABLE_PRIVILEGES = Object.freeze({
   mip_content_comment_reports: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_knowledge_ingestion_runs: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_knowledge_ingestion_items: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_knowledge_ingestion_schedules: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_user_notification_preferences: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_user_opportunity_preferences: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_matching_settings: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),

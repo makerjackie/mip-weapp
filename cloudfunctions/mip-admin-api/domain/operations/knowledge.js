@@ -16,4 +16,6 @@ module.exports = defineManifest('KNOWLEDGE', [
   serviceOperation('mip.admin.knowledge.comments.moderate', 'MUTATION', 'moderateKnowledgeComment', { sessionFirst: true }),
   serviceOperation('mip.admin.knowledge.reports.close', 'MUTATION', 'closeKnowledgeCommentReport', { sessionFirst: true }),
   serviceOperation('mip.admin.knowledge.ingestion.run', 'MUTATION', 'runKnowledgeIngestion', { sessionFirst: true }),
+  serviceOperation('mip.admin.knowledge.schedules.list', 'QUERY', 'listKnowledgeSchedules', { sessionFirst: true }),
+  serviceOperation('mip.admin.knowledge.schedules.save', 'MUTATION', 'saveKnowledgeSchedule', { sessionFirst: true }),
 ])

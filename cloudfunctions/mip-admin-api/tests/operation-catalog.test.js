@@ -104,6 +104,8 @@ const expectedOperations = Object.freeze({
   'mip.admin.knowledge.comments.moderate': ['KNOWLEDGE', 'MUTATION', 'moderateKnowledgeComment', 'SESSION_FIRST'],
   'mip.admin.knowledge.reports.close': ['KNOWLEDGE', 'MUTATION', 'closeKnowledgeCommentReport', 'SESSION_FIRST'],
   'mip.admin.knowledge.ingestion.run': ['KNOWLEDGE', 'MUTATION', 'runKnowledgeIngestion', 'SESSION_FIRST'],
+  'mip.admin.knowledge.schedules.list': ['KNOWLEDGE', 'QUERY', 'listKnowledgeSchedules', 'SESSION_FIRST'],
+  'mip.admin.knowledge.schedules.save': ['KNOWLEDGE', 'MUTATION', 'saveKnowledgeSchedule', 'SESSION_FIRST'],
 
   'mip.admin.opportunities.list': ['OPPORTUNITIES', 'QUERY', 'listOpportunities'],
   'mip.admin.opportunities.get': ['OPPORTUNITIES', 'QUERY', 'getOpportunity'],
@@ -188,12 +190,12 @@ function manifest(owner, operations) {
 }
 
 describe('admin operation catalog', () => {
-  it('freezes the exact 116 business actions, owners, and kinds while keeping health separate', () => {
+  it('freezes the exact 118 business actions, owners, and kinds while keeping health separate', () => {
     const handlerActions = Object.keys(actions).filter(action => action !== 'health')
     const expectedActions = Object.keys(expectedOperations)
 
-    assert.equal(expectedActions.length, 116)
-    assert.equal(operationCatalog.length, 116)
+    assert.equal(expectedActions.length, 118)
+    assert.equal(operationCatalog.length, 118)
     assert.deepEqual(sorted(handlerActions), sorted(expectedActions))
     assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(expectedActions))
     assert.equal(operationByAction.health, undefined)

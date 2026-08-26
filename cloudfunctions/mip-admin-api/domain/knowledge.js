@@ -4,6 +4,11 @@ const { createHash, randomUUID } = require('node:crypto')
 const net = require('node:net')
 const { capabilitiesForBinding } = require('./capabilities')
 const { assertFullAccessUser, createFullAccessPolicy } = require('./full-access')
+const {
+  dailyTimeValue,
+  nextDailyRunAt,
+  timeZoneValue,
+} = require('./knowledge-scheduling-time')
 
 const PLATFORM_SCOPE_ID = '00000000-0000-0000-0000-000000000000'
 const CONTENT_TYPES = new Set(['HOT_NEWS', 'ARTICLE', 'WEB', 'VIDEO', 'PRIVATE_CHANNEL', 'EXPERT_SHARE'])
@@ -21,6 +26,7 @@ function createKnowledgeAdminService(database, options = {}) {
   const defaultTestPriceCents = boundedInteger(options.defaultTestPriceCents, 990, 1, 10_000_000)
   const contentSafety = options.contentSafety || (async () => 'ERROR')
   const fetchSource = options.fetchSource
+  const now = options.now || (() => new Date())
   const sourceAllowedHosts = configuredHosts(options.sourceAllowedHosts)
   const webviewAllowedHosts = configuredHosts(options.webviewAllowedHosts)
 
@@ -461,6 +467,140 @@ function createKnowledgeAdminService(database, options = {}) {
     })
   }
 
+  async function listKnowledgeSchedules(caller, input = {}) {
+    const context = await admin(caller)
+    const status = optionalScheduleEnum(input.status, ['ACTIVE', 'PAUSED'])
+    const rows = await database.query(
+      `SELECT schedule.id, schedule.source_id, schedule.category_id,
+              schedule.daily_time, schedule.timezone, schedule.status,
+              schedule.next_run_at, schedule.attempt_count,
+              schedule.last_run_id, schedule.last_started_at,
+              schedule.last_completed_at, schedule.last_error_code,
+              schedule.version, source.name AS source_name,
+              source.source_type, source.status AS source_status,
+              category.name AS category_name, category.status AS category_status
+       FROM mip_knowledge_ingestion_schedules schedule
+       INNER JOIN mip_knowledge_sources source
+         ON source.app_id = schedule.app_id AND source.id = schedule.source_id
+       INNER JOIN mip_knowledge_categories category
+         ON category.app_id = schedule.app_id AND category.id = schedule.category_id
+       WHERE schedule.app_id = ? AND (? IS NULL OR schedule.status = ?)
+       ORDER BY schedule.next_run_at, schedule.id LIMIT ?`,
+      [context.appId, status, status, schedulePageLimit(input.limit)],
+    )
+    return { items: rows.map(scheduleDto), nextCursor: null }
+  }
+
+  async function saveKnowledgeSchedule(caller, input = {}) {
+    const authorization = await admin(caller)
+    const draft = normalizeSchedule(input)
+    const operation = 'admin.knowledge.schedule.save'
+    const requestHash = createHash('sha256').update(JSON.stringify(draft)).digest('hex')
+    return database.transaction(async (tx) => {
+      const context = await lockAdmin(tx, caller, authorization.userId)
+      const request = await claimIdempotency(tx, {
+        appId: context.appId,
+        actorUserId: context.userId,
+        createId,
+        idempotencyKey: draft.idempotencyKey,
+        operation,
+        requestHash,
+      })
+      if (request.replay) return { ...request.replay, idempotent: true }
+
+      const source = await tx.one(
+        `SELECT id, source_type, status FROM mip_knowledge_sources
+         WHERE app_id = ? AND id = ? FOR UPDATE`,
+        [context.appId, draft.sourceId],
+      )
+      const category = await tx.one(
+        `SELECT id, status FROM mip_knowledge_categories
+         WHERE app_id = ? AND id = ? FOR UPDATE`,
+        [context.appId, draft.categoryId],
+      )
+      if (!source || source.status !== 'ACTIVE' || !['JSON_FEED', 'RSS'].includes(source.source_type)
+        || !category || category.status !== 'ACTIVE') {
+        throw codeError('VALIDATION_FAILED')
+      }
+
+      const currentTime = now()
+      const nextRunAt = nextDailyRunAt({
+        after: currentTime,
+        dailyTime: draft.dailyTime,
+        timeZone: draft.timeZone,
+      })
+      const scheduleId = draft.scheduleId || createId()
+      if (draft.scheduleId) {
+        const current = await tx.one(
+          `SELECT id, version FROM mip_knowledge_ingestion_schedules
+           WHERE app_id = ? AND id = ? FOR UPDATE`,
+          [context.appId, scheduleId],
+        )
+        if (!current || Number(current.version) !== draft.expectedVersion) throw codeError('CONFLICT')
+        let updated
+        try {
+          updated = await tx.query(
+            `UPDATE mip_knowledge_ingestion_schedules
+             SET source_id = ?, category_id = ?, daily_time = ?, timezone = ?, status = ?,
+               next_run_at = ?, attempt_count = 0, lease_token = NULL, lease_due_at = NULL,
+               leased_until = NULL, last_error_code = NULL, configured_by_user_id = ?,
+               version = version + 1
+             WHERE app_id = ? AND id = ? AND version = ?`,
+            [draft.sourceId, draft.categoryId, draft.dailyTime, draft.timeZone, draft.status,
+              nextRunAt, context.userId, context.appId, scheduleId, draft.expectedVersion],
+          )
+        }
+        catch (error) {
+          if (duplicateError(error)) throw codeError('CONFLICT')
+          throw error
+        }
+        if (Number(updated.affectedRows) !== 1) throw codeError('CONFLICT')
+      }
+      else {
+        try {
+          await tx.query(
+            `INSERT INTO mip_knowledge_ingestion_schedules (
+              id, app_id, source_id, category_id, daily_time, timezone,
+              status, next_run_at, configured_by_user_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [scheduleId, context.appId, draft.sourceId, draft.categoryId,
+              draft.dailyTime, draft.timeZone, draft.status, nextRunAt, context.userId],
+          )
+        }
+        catch (error) {
+          if (duplicateError(error)) throw codeError('CONFLICT')
+          throw error
+        }
+      }
+      await audit(tx, context, 'admin.knowledge.schedule.save',
+        'KNOWLEDGE_INGESTION_SCHEDULE', scheduleId, {
+          categoryId: draft.categoryId,
+          dailyTime: draft.dailyTime,
+          sourceId: draft.sourceId,
+          status: draft.status,
+          timeZone: draft.timeZone,
+        })
+      const response = {
+        dailyTime: draft.dailyTime,
+        id: scheduleId,
+        idempotent: false,
+        nextRunAt: nextRunAt.toISOString(),
+        status: draft.status,
+        timeZone: draft.timeZone,
+        version: draft.scheduleId ? draft.expectedVersion + 1 : 1,
+      }
+      await completeIdempotency(tx, {
+        appId: context.appId,
+        actorUserId: context.userId,
+        idempotencyKey: draft.idempotencyKey,
+        operation,
+        requestHash,
+        response,
+      })
+      return response
+    })
+  }
+
   async function runKnowledgeIngestion(caller, input = {}) {
     const authorization = await admin(caller)
     const sourceId = requiredUuid(input.sourceId)
@@ -586,12 +726,14 @@ function createKnowledgeAdminService(database, options = {}) {
     closeKnowledgeCommentReport,
     getKnowledgeAdminContent,
     listKnowledgeAdmin,
+    listKnowledgeSchedules,
     moderateKnowledgeComment,
     reviewKnowledgeContent,
     runKnowledgeIngestion,
     saveKnowledgeCategory,
     saveKnowledgeContent,
     saveKnowledgeProduct,
+    saveKnowledgeSchedule,
     saveKnowledgeSource,
   }
 }
@@ -628,6 +770,65 @@ async function recordFailedIngestion(database, authorization, input) {
     })
     return runId
   })
+}
+
+async function claimIdempotency(tx, input) {
+  try {
+    await tx.query(
+      `INSERT INTO mip_idempotency_keys (
+        id, app_id, actor_user_id, operation, idempotency_key,
+        request_hash, status, expires_at
+      ) VALUES (?, ?, ?, ?, ?, ?, 'RUNNING', DATE_ADD(UTC_TIMESTAMP(3), INTERVAL 24 HOUR))`,
+      [input.createId(), input.appId, input.actorUserId, input.operation,
+        input.idempotencyKey, input.requestHash],
+    )
+    return { replay: null }
+  }
+  catch (error) {
+    if (!duplicateError(error)) throw error
+  }
+  const stored = await tx.one(
+    `SELECT request_hash, status, response_json
+     FROM mip_idempotency_keys
+     WHERE app_id = ? AND actor_user_id = ? AND operation = ? AND idempotency_key = ?
+     FOR UPDATE`,
+    [input.appId, input.actorUserId, input.operation, input.idempotencyKey],
+  )
+  if (!stored || stored.request_hash !== input.requestHash || stored.status !== 'COMPLETED') {
+    throw codeError('CONFLICT')
+  }
+  const replay = json(stored.response_json)
+  if (!replay?.id || !Number.isInteger(Number(replay.version))) throw codeError('CONFLICT')
+  return { replay }
+}
+
+async function completeIdempotency(tx, input) {
+  const updated = await tx.query(
+    `UPDATE mip_idempotency_keys SET status = 'COMPLETED', response_json = ?
+     WHERE app_id = ? AND actor_user_id = ? AND operation = ?
+       AND idempotency_key = ? AND request_hash = ? AND status = 'RUNNING'`,
+    [JSON.stringify(input.response), input.appId, input.actorUserId, input.operation,
+      input.idempotencyKey, input.requestHash],
+  )
+  if (Number(updated.affectedRows) !== 1) throw codeError('CONFLICT')
+}
+
+function normalizeSchedule(input) {
+  const scheduleId = input.scheduleId ? requiredUuid(input.scheduleId) : null
+  const expectedVersion = nonNegativeInteger(input.expectedVersion)
+  if ((scheduleId && expectedVersion < 1) || (!scheduleId && expectedVersion !== 0)) {
+    throw codeError('VALIDATION_FAILED')
+  }
+  return {
+    categoryId: requiredUuid(input.categoryId),
+    dailyTime: dailyTimeValue(input.dailyTime),
+    expectedVersion,
+    idempotencyKey: requiredKey(input.idempotencyKey),
+    scheduleId,
+    sourceId: requiredUuid(input.sourceId),
+    status: optionalScheduleEnum(input.status, ['ACTIVE', 'PAUSED']) || 'ACTIVE',
+    timeZone: timeZoneValue(input.timeZone),
+  }
 }
 
 function normalizeSource(input, allowedHosts) {
@@ -909,6 +1110,29 @@ function runDto(row) {
     startedAt: iso(row.started_at), completedAt: iso(row.completed_at) }
 }
 
+function scheduleDto(row) {
+  return {
+    attemptCount: Number(row.attempt_count || 0),
+    category: { id: row.category_id, name: row.category_name, status: row.category_status },
+    dailyTime: row.daily_time,
+    id: row.id,
+    lastCompletedAt: iso(row.last_completed_at),
+    lastErrorCode: row.last_error_code || '',
+    lastRunId: row.last_run_id || '',
+    lastStartedAt: iso(row.last_started_at),
+    nextRunAt: iso(row.next_run_at),
+    source: {
+      id: row.source_id,
+      name: row.source_name,
+      sourceType: row.source_type,
+      status: row.source_status,
+    },
+    status: row.status,
+    timeZone: row.timezone,
+    version: Number(row.version),
+  }
+}
+
 function normalizeFetchConfig(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {}
   const result = {}
@@ -1006,6 +1230,12 @@ function positiveInteger(value) {
   return number
 }
 
+function nonNegativeInteger(value) {
+  const number = Number(value)
+  if (!Number.isInteger(number) || number < 0) throw codeError('VALIDATION_FAILED')
+  return number
+}
+
 function nullableInteger(value, minimum, maximum) {
   if (value === undefined || value === null || value === '') return null
   return boundedInteger(value, NaN, minimum, maximum)
@@ -1020,6 +1250,22 @@ function optionalEnum(value, choices) {
   if (value === undefined || value === null || value === '') return null
   const text = String(value).toUpperCase()
   return choices.includes(text) ? text : null
+}
+
+function optionalScheduleEnum(value, choices) {
+  if (value === undefined || value === null || value === '') return null
+  const text = String(value).toUpperCase()
+  if (!choices.includes(text)) throw codeError('VALIDATION_FAILED')
+  return text
+}
+
+function schedulePageLimit(value) {
+  if (value === undefined || value === null || value === '') return 50
+  const result = Number(value)
+  if (!Number.isInteger(result) || result < 1 || result > 100) {
+    throw codeError('VALIDATION_FAILED')
+  }
+  return result
 }
 
 function pageLimit(value) {
@@ -1049,6 +1295,10 @@ function codeError(code) {
   const error = new Error(code)
   error.code = code
   return error
+}
+
+function duplicateError(error) {
+  return error?.code === 'ER_DUP_ENTRY' || error?.errno === 1062
 }
 
 module.exports = {
