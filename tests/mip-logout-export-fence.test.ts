@@ -194,9 +194,38 @@ describe('logout fences task completion exports', () => {
 
     await expect(outcome).resolves.toMatchObject({ code: 'AUTH_REQUIRED' })
     expect(unlink).toHaveBeenCalledWith(expect.objectContaining({
-      filePath: '/user-data/mip-task-completions.xlsx',
+      filePath: expect.stringMatching(
+        /^\/user-data\/mip-task-export-0-\d+-1-mip-task-completions\.xlsx$/,
+      ),
     }))
     expect(openDocument).not.toHaveBeenCalled()
+  })
+
+  it('removes a successfully opened workbook from this session on logout', async () => {
+    const gateway = {
+      exportCompletions: vi.fn(async () => exportResult),
+    } as unknown as MipTasksGateway
+    const writeFile = vi.fn((options: { success: () => void }) => options.success())
+    const unlink = vi.fn((options: { success: () => void }) => options.success())
+    const openDocument = vi.fn((options: { success: () => void }) => options.success())
+    vi.stubGlobal('wx', {
+      env: { USER_DATA_PATH: '/user-data' },
+      getFileSystemManager: () => ({ writeFile, unlink }),
+      openDocument,
+    })
+    const module = createMipTasksModule(gateway)
+
+    await expect(module.exportAndOpen()).resolves.toEqual({
+      fileName: exportResult.fileName,
+      rowCount: exportResult.rowCount,
+    })
+    const writtenPath = writeFile.mock.calls[0]?.[0]?.filePath
+
+    module.invalidate()
+
+    await vi.waitFor(() => expect(unlink).toHaveBeenCalledWith(expect.objectContaining({
+      filePath: writtenPath,
+    })))
   })
 
   it('does not save a downloaded task template after logout', async () => {

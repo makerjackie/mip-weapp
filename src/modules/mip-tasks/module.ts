@@ -109,7 +109,9 @@ function saveImage(filePath: string) {
 
 export function createMipTasksModule(gateway: MipTasksGateway) {
   const cache = createQueryCache(15_000)
+  const generatedExportFiles = new Set<string>()
   let generation = 0
+  let exportFileSequence = 0
 
   function sessionEndedError() {
     return new MipTasksError('AUTH_REQUIRED', '当前会话已结束')
@@ -215,9 +217,12 @@ export function createMipTasksModule(gateway: MipTasksGateway) {
       const result = await query.exportCompletions(filters)
       assertCurrent(workflowGeneration)
       const safeName = result.fileName.replace(/[^\w.-]/g, '-').slice(0, 100)
-      filePath = `${wx.env.USER_DATA_PATH}/${safeName || 'mip-task-completions.xlsx'}`
+      const baseName = (safeName || 'task-completions.xlsx').replace(/\.xlsx$/i, '')
+      exportFileSequence += 1
+      filePath = `${wx.env.USER_DATA_PATH}/mip-task-export-${workflowGeneration}-${Date.now()}-${exportFileSequence}-${baseName}.xlsx`
       assertCurrent(workflowGeneration)
       fileMayExist = true
+      generatedExportFiles.add(filePath)
       await writeFile(filePath, result.contentBase64)
       assertCurrent(workflowGeneration)
       await openWorkbook(filePath)
@@ -228,6 +233,7 @@ export function createMipTasksModule(gateway: MipTasksGateway) {
       if (!isCurrent(workflowGeneration)) {
         if (fileMayExist && filePath) {
           await removeFile(filePath)
+          generatedExportFiles.delete(filePath)
         }
         throw sessionEndedError()
       }
@@ -241,6 +247,10 @@ export function createMipTasksModule(gateway: MipTasksGateway) {
     invalidate() {
       generation += 1
       cache.invalidate()
+      for (const filePath of generatedExportFiles) {
+        void removeFile(filePath)
+      }
+      generatedExportFiles.clear()
     },
     exportAndOpen,
     async saveTemplateImage(url: string) {
