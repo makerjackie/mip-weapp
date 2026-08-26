@@ -46,11 +46,17 @@ function fakeDatabase(order, relation, affectedRows = () => 1) {
   let callbackHash
   return {
     calls,
+    async one(sql, params) {
+      const normalized = String(sql).replace(/\s+/g, ' ').trim()
+      calls.push({ kind: 'one', sql: normalized, params })
+      return paymentRouteRow(order)
+    },
     async transaction(work) {
       return work({
         async one(sql, params) {
           const normalized = String(sql).replace(/\s+/g, ' ').trim()
           calls.push({ kind: 'one', sql: normalized, params })
+          if (normalized.includes('FROM mip_user_identities')) return paymentIdentity(order)
           if (normalized.includes('FROM mip_payment_callbacks')) {
             return {
               resource_hash: callbackHash,
@@ -71,6 +77,31 @@ function fakeDatabase(order, relation, affectedRows = () => 1) {
   }
 }
 
+function refundDatabase(order, refund, tx, calls) {
+  return {
+    async one(sql, params) {
+      const normalized = String(sql).replace(/\s+/g, ' ').trim()
+      calls.push({ kind: 'one', sql: normalized, params })
+      return {
+        ...refund,
+        refund_id: refund.id,
+        app_id: order.app_id,
+        user_id: order.user_id,
+        order_type: order.order_type,
+        merchant_order_no: order.merchant_order_no,
+        merchant_refund_no: refund.merchant_refund_no,
+        provider_refund_id: refund.provider_refund_id,
+        refund_amount_cents: refund.amount_cents,
+        refund_status: refund.status,
+        order_amount_cents: order.amount_cents,
+        currency: order.currency,
+        order_status: order.status,
+      }
+    },
+    transaction: work => work(tx),
+  }
+}
+
 function paymentInput(order) {
   return {
     appId: order.app_id,
@@ -80,6 +111,29 @@ function paymentInput(order) {
     providerTransactionId: 'provider-transaction-1',
     amountCents: order.amount_cents,
     currency: order.currency,
+  }
+}
+
+function paymentRouteRow(order) {
+  const identity = paymentIdentity(order)
+  return {
+    ...order,
+    order_id: order.id,
+    identity_id: identity.id,
+    identity_key: identity.identity_key,
+    closed_identity_key: identity.closed_identity_key,
+  }
+}
+
+function paymentIdentity(order, overrides = {}) {
+  return {
+    id: '70000000-0000-4000-8000-000000000001',
+    app_id: order.app_id,
+    user_id: order.user_id,
+    provider: 'WECHAT_MINIPROGRAM',
+    identity_key: 'identity-1',
+    closed_identity_key: null,
+    ...overrides,
   }
 }
 
@@ -116,6 +170,10 @@ describe('canonical MIP event payment ledger', () => {
     assert.ok(db.calls.some(call => call.sql.includes("mip_event_seat_holds SET status = 'CONSUMED'")))
     assert.ok(db.calls.some(call => call.sql.includes("mip_event_registrations SET status = 'REGISTERED'")))
     assert.equal(db.calls.some(call => call.sql.includes('mip_event_orders')), false)
+    const identityLock = db.calls.findIndex(call => call.sql.includes('FROM mip_user_identities'))
+    const orderLock = db.calls.findIndex(call => call.sql.startsWith('SELECT * FROM mip_orders'))
+    assert.ok(identityLock >= 0 && orderLock > identityLock)
+    assert.equal(db.calls.some(call => call.sql.includes('FROM mip_users')), false)
   })
 
   it('fails closed for dirty event registration, hold, or relation facts', async () => {
@@ -217,6 +275,7 @@ describe('canonical MIP event payment ledger', () => {
     const order = eventOrder({ status: 'REFUND_PENDING', provider_transaction_id: 'provider-transaction-1' })
     const refund = {
       id: '70000000-0000-4000-8000-000000000001',
+      app_id: order.app_id,
       order_id: order.id,
       merchant_refund_no: 'MIPR70000000000040008000000000000001',
       provider_refund_id: null,
@@ -259,7 +318,7 @@ describe('canonical MIP event payment ledger', () => {
         return { affectedRows: 1 }
       },
     }
-    const result = await applyRefundCallback({ transaction: work => work(tx) }, {
+    const result = await applyRefundCallback(refundDatabase(order, refund, tx, calls), {
       appId: order.app_id,
       merchantOrderNo: order.merchant_order_no,
       merchantRefundNo: refund.merchant_refund_no,
@@ -276,6 +335,7 @@ describe('canonical MIP event payment ledger', () => {
     const order = eventOrder({ status: 'PAID', provider_transaction_id: 'provider-transaction-1', version: 7 })
     const refund = {
       id: '70000000-0000-4000-8000-000000000001',
+      app_id: order.app_id,
       order_id: order.id,
       merchant_refund_no: 'MIPR70000000000040008000000000000001',
       provider_refund_id: 'provider-refund-legacy',
@@ -319,7 +379,7 @@ describe('canonical MIP event payment ledger', () => {
         return { affectedRows: 1 }
       },
     }
-    const result = await applyRefundCallback({ transaction: work => work(tx) }, {
+    const result = await applyRefundCallback(refundDatabase(order, refund, tx, calls), {
       appId: order.app_id,
       merchantOrderNo: order.merchant_order_no,
       merchantRefundNo: refund.merchant_refund_no,
@@ -334,6 +394,7 @@ describe('canonical MIP event payment ledger', () => {
     const order = eventOrder({ status: 'REFUND_PENDING', provider_transaction_id: 'provider-transaction-1' })
     const refund = {
       id: '70000000-0000-4000-8000-000000000001',
+      app_id: order.app_id,
       order_id: order.id,
       merchant_refund_no: 'MIPR70000000000040008000000000000001',
       provider_refund_id: null,
@@ -374,7 +435,7 @@ describe('canonical MIP event payment ledger', () => {
       },
     }
     await assert.rejects(
-      applyRefundCallback({ transaction: work => work(tx) }, {
+      applyRefundCallback(refundDatabase(order, refund, tx, calls), {
         appId: order.app_id,
         merchantOrderNo: order.merchant_order_no,
         merchantRefundNo: refund.merchant_refund_no,

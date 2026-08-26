@@ -13,6 +13,7 @@ const {
   rebuildMembershipEntitlements,
   membershipAttribution,
 } = require('../domain/ledger')
+const { lockMembershipChain } = require('../domain/membership-locks')
 
 const paidAt = new Date('2026-08-24T00:00:00.000Z')
 const order = {
@@ -32,14 +33,24 @@ const order = {
 }
 
 describe('mip payment ledger', () => {
-  it('fails on merchant number, amount, or currency mismatch', () => {
+  it('fails on merchant number, amount, currency, or provider mismatch', () => {
     const input = {
       merchantOrderNo: order.merchant_order_no,
+      providerTransactionId: 'provider-transaction-1',
       amountCents: order.amount_cents,
       currency: order.currency,
     }
     assert.doesNotThrow(() => assertPaymentMatches(order, input))
+    assert.throws(
+      () => assertPaymentMatches(order, { ...input, merchantOrderNo: 'MIP101' }),
+      /MERCHANT_ORDER_NO_MISMATCH/,
+    )
     assert.throws(() => assertPaymentMatches(order, { ...input, amountCents: 1 }), /AMOUNT_MISMATCH/)
+    assert.throws(() => assertPaymentMatches(order, { ...input, currency: 'USD' }), /CURRENCY_MISMATCH/)
+    assert.throws(() => assertPaymentMatches({
+      ...order,
+      provider_transaction_id: 'another-provider-transaction',
+    }, input), /PROVIDER_TRANSACTION_MISMATCH/)
   })
 
   it('serves a payable order only from the matching catalog stage', async () => {
@@ -156,6 +167,10 @@ describe('mip payment ledger', () => {
     let callbackHash
     const tx = {
       async one(sql) {
+        if (sql.includes('FROM mip_user_identities')) return paymentIdentity(order)
+        if (sql.includes('FROM mip_membership_chains')) {
+          return { app_id: order.app_id, user_id: order.user_id, version: 1 }
+        }
         if (sql.includes('FROM mip_payment_callbacks')) {
           return {
             resource_hash: callbackHash,
@@ -173,7 +188,8 @@ describe('mip payment ledger', () => {
         if (sql.includes('INSERT INTO mip_payment_callbacks')) {
           callbackHash = params[3]
         }
-        if (sql.includes("FROM mip_orders\n     WHERE") && sql.includes("status = 'PAID'")) {
+        if (sql.includes('FROM mip_orders order_row')
+          && sql.includes("order_row.status IN ('PAID', 'REFUND_PENDING')")) {
           return [{
             id: order.id,
             membership_plan_id: order.membership_plan_id,
@@ -187,7 +203,10 @@ describe('mip payment ledger', () => {
         return { affectedRows: 1 }
       },
     }
-    const db = { transaction: work => work(tx) }
+    const db = {
+      one: async () => paymentRouteRow(order),
+      transaction: work => work(tx),
+    }
     const ids = idFactory()
     const result = await applyPaymentCallback(db, {
       appId: 'app-1',
@@ -217,6 +236,10 @@ describe('mip payment ledger', () => {
     }
     const tx = {
       async one(sql) {
+        if (sql.includes('FROM mip_user_identities')) return paymentIdentity(paidOrder)
+        if (sql.includes('FROM mip_membership_chains')) {
+          return { app_id: paidOrder.app_id, user_id: paidOrder.user_id, version: 1 }
+        }
         if (sql.includes('FROM mip_payment_callbacks')) {
           return {
             resource_hash: '0'.repeat(64),
@@ -230,7 +253,10 @@ describe('mip payment ledger', () => {
         return { affectedRows: 1 }
       },
     }
-    await assert.rejects(() => applyPaymentCallback({ transaction: work => work(tx) }, {
+    await assert.rejects(() => applyPaymentCallback({
+      one: async () => paymentRouteRow(paidOrder),
+      transaction: work => work(tx),
+    }, {
       appId: 'app-1',
       orderId: paidOrder.id,
       identityKey: 'identity-1',
@@ -244,8 +270,14 @@ describe('mip payment ledger', () => {
   it('rebuilds remaining membership windows after refund without overlap', async () => {
     const writes = []
     const tx = {
+      async one(sql) {
+        if (sql.includes('FROM mip_membership_chains')) {
+          return { app_id: 'app-1', user_id: order.user_id, version: 1 }
+        }
+        throw new Error(`Unexpected one query: ${sql}`)
+      },
       async query(sql, params) {
-        if (sql.includes("FROM mip_orders\n     WHERE")) {
+        if (sql.includes('FROM mip_orders order_row')) {
           return [
             {
               id: 'order-1',
@@ -270,7 +302,11 @@ describe('mip payment ledger', () => {
         return { affectedRows: 1 }
       },
     }
+    const chain = await lockMembershipChain(tx, {
+      appId: 'app-1', userId: order.user_id, orderType: 'MEMBERSHIP',
+    })
     await rebuildMembershipEntitlements(tx, 'app-1', order.user_id, {
+      chain,
       createId: idFactory(),
       now: () => paidAt,
     })
@@ -305,4 +341,27 @@ describe('mip payment ledger', () => {
 function idFactory() {
   let sequence = 0
   return () => `40000000-0000-4000-8000-${String(++sequence).padStart(12, '0')}`
+}
+
+function paymentRouteRow(value) {
+  const identity = paymentIdentity(value)
+  return {
+    ...value,
+    order_id: value.id,
+    identity_id: identity.id,
+    identity_key: identity.identity_key,
+    closed_identity_key: identity.closed_identity_key,
+  }
+}
+
+function paymentIdentity(value, overrides = {}) {
+  return {
+    id: '70000000-0000-4000-8000-000000000001',
+    app_id: value.app_id,
+    user_id: value.user_id,
+    provider: 'WECHAT_MINIPROGRAM',
+    identity_key: 'identity-1',
+    closed_identity_key: null,
+    ...overrides,
+  }
 }

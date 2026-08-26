@@ -2,6 +2,7 @@
 
 const { createHash, randomUUID } = require('node:crypto')
 const { rebuildMembershipEntitlements } = require('./ledger')
+const { lockMembershipChain } = require('./membership-locks')
 
 const ownerTestMembershipSource = 'OWNER_TEST_MEMBERSHIP'
 const platformScopeId = '00000000-0000-0000-0000-000000000000'
@@ -11,27 +12,30 @@ async function grantOwnerTestMembership(db, input, options = {}) {
   const createId = options.createId || randomUUID
   const now = options.now || (() => new Date())
   return db.transaction(async (tx) => {
+    const operationAt = now()
+    if (!Number.isFinite(operationAt.getTime())) throw new Error('TEST_MEMBERSHIP_TIME_INVALID')
     const { owner, plan } = await storageStep(
       'TEST_MEMBERSHIP_CONTEXT_STORAGE_ERROR',
       () => ownerTestMembershipContext(tx, input, { requireActivePlan: true }),
     )
-    const managed = await storageStep(
-      'TEST_MEMBERSHIP_MANAGED_READ_STORAGE_ERROR',
-      () => activeOwnerTestMembershipOrders(tx, input.appId, owner.id),
+    const membershipChain = await storageStep(
+      'TEST_MEMBERSHIP_CHAIN_STORAGE_ERROR',
+      () => lockMembershipChain(tx, membershipRoute(input.appId, owner.id)),
     )
+    const state = await storageStep(
+      'TEST_MEMBERSHIP_MANAGED_READ_STORAGE_ERROR',
+      () => lockOwnerTestMembershipState(tx, input.appId, owner.id),
+    )
+    const managed = managedOwnerTestMembershipOrders(state)
+    const membershipActive = activeMembership(state, operationAt)
     if (managed.length > 1) throw new Error('TEST_MEMBERSHIP_STATE_CONFLICT')
     if (managed.length === 1) {
       assertManagedTestMembershipOrder(managed[0], plan)
-      return result('GRANT', true, true, true)
+      return result('GRANT', membershipActive, true, true)
     }
-    const existingMembership = await storageStep(
-      'TEST_MEMBERSHIP_ACTIVE_READ_STORAGE_ERROR',
-      () => activeMembership(tx, input.appId, owner.id),
-    )
-    if (existingMembership) return result('GRANT', true, false, true)
+    if (membershipActive) return result('GRANT', true, false, true)
 
-    const paidAt = now()
-    if (!Number.isFinite(paidAt.getTime())) throw new Error('TEST_MEMBERSHIP_TIME_INVALID')
+    const paidAt = operationAt
     const orderId = createId()
     const attemptId = createId()
     const providerTransactionId = testProviderNumber('TESTPAY', orderId)
@@ -81,7 +85,11 @@ async function grantOwnerTestMembership(db, input, options = {}) {
     )), 'PAYMENT_ATTEMPT_STATUS_CONFLICT')
     await storageStep(
       'TEST_MEMBERSHIP_ENTITLEMENT_WRITE_STORAGE_ERROR',
-      () => rebuildMembershipEntitlements(tx, input.appId, owner.id, { createId, now }),
+      () => rebuildMembershipEntitlements(tx, input.appId, owner.id, {
+        chain: membershipChain,
+        createId,
+        now: () => operationAt,
+      }),
     )
     await storageStep('TEST_MEMBERSHIP_OUTBOX_WRITE_STORAGE_ERROR', () => writeOutbox(tx, {
       id: createId(),
@@ -108,26 +116,32 @@ async function revokeOwnerTestMembership(db, input, options = {}) {
   const createId = options.createId || randomUUID
   const now = options.now || (() => new Date())
   return db.transaction(async (tx) => {
+    const operationAt = now()
+    if (!Number.isFinite(operationAt.getTime())) throw new Error('TEST_MEMBERSHIP_TIME_INVALID')
     const { owner, plan } = await storageStep(
       'TEST_MEMBERSHIP_CONTEXT_STORAGE_ERROR',
       () => ownerTestMembershipContext(tx, input, { requireActivePlan: false }),
     )
-    const managed = await storageStep(
-      'TEST_MEMBERSHIP_MANAGED_READ_STORAGE_ERROR',
-      () => activeOwnerTestMembershipOrders(tx, input.appId, owner.id),
+    const membershipChain = await storageStep(
+      'TEST_MEMBERSHIP_CHAIN_STORAGE_ERROR',
+      () => lockMembershipChain(tx, membershipRoute(input.appId, owner.id)),
     )
+    const state = await storageStep(
+      'TEST_MEMBERSHIP_MANAGED_READ_STORAGE_ERROR',
+      () => lockOwnerTestMembershipState(tx, input.appId, owner.id),
+    )
+    const managed = managedOwnerTestMembershipOrders(state)
+    const membershipActive = activeMembership(state, operationAt)
     if (managed.length > 1) throw new Error('TEST_MEMBERSHIP_STATE_CONFLICT')
     if (managed.length === 0) {
-      const existingMembership = await storageStep(
-        'TEST_MEMBERSHIP_ACTIVE_READ_STORAGE_ERROR',
-        () => activeMembership(tx, input.appId, owner.id),
-      )
-      return result('REVOKE', Boolean(existingMembership), false, true)
+      return result('REVOKE', membershipActive, false, true)
     }
     const order = managed[0]
     assertManagedTestMembershipOrder(order, plan)
-    const revokedAt = now()
-    if (!Number.isFinite(revokedAt.getTime())) throw new Error('TEST_MEMBERSHIP_TIME_INVALID')
+    if (order.status === 'REFUND_PENDING') {
+      return result('REVOKE', membershipActive, true, true)
+    }
+    const revokedAt = operationAt
     const refundId = createId()
     const providerRefundId = testProviderNumber('TESTREFUND', refundId)
     await storageStep('TEST_MEMBERSHIP_REFUND_WRITE_STORAGE_ERROR', () => tx.query(
@@ -162,9 +176,13 @@ async function revokeOwnerTestMembership(db, input, options = {}) {
        WHERE app_id = ? AND id = ? AND status = 'REFUND_PENDING' AND version = ?`,
       [input.appId, order.id, Number(order.version) + 1],
     )), 'ORDER_STATUS_CONFLICT')
-    await storageStep(
+    const rebuilt = await storageStep(
       'TEST_MEMBERSHIP_ENTITLEMENT_WRITE_STORAGE_ERROR',
-      () => rebuildMembershipEntitlements(tx, input.appId, owner.id, { createId, now }),
+      () => rebuildMembershipEntitlements(tx, input.appId, owner.id, {
+        chain: membershipChain,
+        createId,
+        now: () => operationAt,
+      }),
     )
     await storageStep('TEST_MEMBERSHIP_OUTBOX_WRITE_STORAGE_ERROR', () => writeOutbox(tx, {
       id: createId(),
@@ -182,11 +200,7 @@ async function revokeOwnerTestMembership(db, input, options = {}) {
       resourceId: refundId,
       metadata: { catalogStage: 'TEST', orderId: order.id, planKey: plan.plan_key, source: ownerTestMembershipSource },
     }))
-    const remainingMembership = await storageStep(
-      'TEST_MEMBERSHIP_ACTIVE_READ_STORAGE_ERROR',
-      () => activeMembership(tx, input.appId, owner.id),
-    )
-    return result('REVOKE', Boolean(remainingMembership), true, false)
+    return result('REVOKE', rebuilt.membershipActive, true, false)
   })
 }
 
@@ -253,29 +267,51 @@ async function ownerTestMembershipContext(tx, input, options = {}) {
   return { owner: owners[0], plan }
 }
 
-async function activeOwnerTestMembershipOrders(tx, appId, userId) {
-  return tx.query(
+async function lockOwnerTestMembershipState(tx, appId, userId) {
+  const orders = await tx.query(
     `SELECT order_row.id, order_row.membership_plan_id, order_row.amount_cents,
-            order_row.status, order_row.version,
-            JSON_UNQUOTE(JSON_EXTRACT(order_row.product_snapshot_json, '$.catalogStage'))
-              AS snapshot_catalog_stage
+            order_row.status, order_row.version, order_row.product_snapshot_json,
+            order_row.paid_at, order_row.created_at
      FROM mip_orders order_row
-     INNER JOIN mip_membership_entitlements entitlement
-       ON entitlement.app_id = order_row.app_id AND entitlement.order_id = order_row.id
-        AND entitlement.user_id = order_row.user_id
      WHERE order_row.app_id = ? AND order_row.user_id = ?
-       AND order_row.order_type = 'MEMBERSHIP' AND order_row.status = 'PAID'
-       AND JSON_UNQUOTE(JSON_EXTRACT(order_row.product_snapshot_json, '$.operationSource')) = ?
-       AND entitlement.status = 'ACTIVE'
-       AND entitlement.starts_at <= UTC_TIMESTAMP(3) AND entitlement.ends_at > UTC_TIMESTAMP(3)
-     ORDER BY entitlement.ends_at DESC, order_row.id LIMIT 2 FOR UPDATE`,
-    [appId, userId, ownerTestMembershipSource],
+       AND order_row.order_type = 'MEMBERSHIP'
+     ORDER BY order_row.created_at ASC, order_row.id ASC FOR UPDATE`,
+    [appId, userId],
   )
+  const refunds = await tx.query(
+    `SELECT refund.id, refund.order_id, refund.status, refund.created_at
+     FROM mip_refunds refund
+     INNER JOIN mip_orders order_row
+       ON order_row.app_id = refund.app_id AND order_row.id = refund.order_id
+     WHERE order_row.app_id = ? AND order_row.user_id = ?
+       AND order_row.order_type = 'MEMBERSHIP'
+     ORDER BY refund.order_id ASC, refund.created_at ASC, refund.id ASC FOR UPDATE`,
+    [appId, userId],
+  )
+  const entitlements = await tx.query(
+    `SELECT id, order_id, plan_id, source_type, source_adjustment_id,
+            status, starts_at, ends_at, revoked_at, revocation_reason, version
+     FROM mip_membership_entitlements
+     WHERE app_id = ? AND user_id = ?
+     ORDER BY starts_at ASC, id ASC FOR UPDATE`,
+    [appId, userId],
+  )
+  return { orders, refunds, entitlements }
+}
+
+function managedOwnerTestMembershipOrders(state) {
+  return state.orders.flatMap((order) => {
+    if (!['PAID', 'REFUND_PENDING'].includes(order.status)) return []
+    const snapshot = parseJson(order.product_snapshot_json)
+    if (snapshot.operationSource !== ownerTestMembershipSource) return []
+    if (succeededRefundExists(state, order.id)) return []
+    return [{ ...order, snapshot_catalog_stage: snapshot.catalogStage }]
+  })
 }
 
 function assertManagedTestMembershipOrder(order, plan) {
   if (!order
-    || order.status !== 'PAID'
+    || !['PAID', 'REFUND_PENDING'].includes(order.status)
     || order.snapshot_catalog_stage !== 'TEST'
     || order.membership_plan_id !== plan.id
     || plan.catalog_stage !== 'TEST') {
@@ -283,19 +319,38 @@ function assertManagedTestMembershipOrder(order, plan) {
   }
 }
 
-async function activeMembership(tx, appId, userId) {
-  return tx.one(
-    `SELECT entitlement.id
-     FROM mip_membership_entitlements entitlement
-     INNER JOIN mip_orders order_row
-       ON order_row.app_id = entitlement.app_id AND order_row.id = entitlement.order_id
-     WHERE entitlement.app_id = ? AND entitlement.user_id = ?
-       AND entitlement.status = 'ACTIVE'
-       AND entitlement.starts_at <= UTC_TIMESTAMP(3) AND entitlement.ends_at > UTC_TIMESTAMP(3)
-       AND order_row.status = 'PAID'
-     ORDER BY entitlement.ends_at DESC, entitlement.id LIMIT 1 FOR UPDATE`,
-    [appId, userId],
-  )
+function activeMembership(state, now) {
+  return state.entitlements.some((entitlement) => {
+    if (!activeEntitlement(entitlement, now)) return false
+    if (entitlement.source_type === 'ADMIN_ADJUSTMENT') {
+      return entitlement.order_id === null
+        && entitlement.plan_id === null
+        && Boolean(entitlement.source_adjustment_id)
+    }
+    if (entitlement.source_type !== 'ORDER' || !entitlement.order_id) return false
+    const order = state.orders.find(item => item.id === entitlement.order_id)
+    return Boolean(order
+      && ['PAID', 'REFUND_PENDING'].includes(order.status)
+      && !succeededRefundExists(state, order.id))
+  })
+}
+
+function activeEntitlement(entitlement, now) {
+  const startsAt = new Date(entitlement.starts_at)
+  const endsAt = new Date(entitlement.ends_at)
+  return entitlement.status === 'ACTIVE'
+    && Number.isFinite(startsAt.getTime())
+    && Number.isFinite(endsAt.getTime())
+    && startsAt.getTime() <= now.getTime()
+    && endsAt.getTime() > now.getTime()
+}
+
+function succeededRefundExists(state, orderId) {
+  return state.refunds.some(refund => refund.order_id === orderId && refund.status === 'SUCCEEDED')
+}
+
+function membershipRoute(appId, userId) {
+  return { appId, userId, orderType: 'MEMBERSHIP' }
 }
 
 function ownerTestMembershipSnapshot(plan) {

@@ -72,45 +72,25 @@ describe('Owner TEST membership ledger operations', () => {
     ]])
   })
 
-  it('writes a TEST order, payment attempt, entitlement, outbox, and audit in one transaction', async () => {
-    const calls = []
+  it('grants through user, chain, order/refund, and entitlement locks with an ORDER source', async () => {
     const ids = idFactory([
       '30000000-0000-4000-8000-000000000001',
       '30000000-0000-4000-8000-000000000002',
       '30000000-0000-4000-8000-000000000003',
       '30000000-0000-4000-8000-000000000004',
     ])
-    const tx = {
-      async one(sql, params) {
-        calls.push({ kind: 'one', sql, params })
-        if (sql.includes('FROM mip_membership_plans')) return plan
-        if (sql.includes('FROM mip_membership_entitlements entitlement')) return null
-        throw new Error(`Unexpected one query: ${sql}`)
-      },
-      async query(sql, params) {
-        calls.push({ kind: 'query', sql, params })
-        if (sql.includes('FROM mip_users user_row')) return [{ id: ownerId }]
-        if (sql.includes('INNER JOIN mip_membership_entitlements entitlement')) return []
-        if (sql.includes("FROM mip_orders\n     WHERE") && sql.includes("status = 'PAID'")) {
-          return [{
-            id: ids.values[0],
-            membership_plan_id: plan.id,
-            paid_at: now,
-            product_snapshot_json: JSON.stringify({
-              durationDays: plan.duration_days,
-              attribution: { sourceType: 'PLATFORM' },
-            }),
-          }]
-        }
-        if (sql.includes('SELECT id, order_id FROM mip_membership_entitlements')) return []
-        if (sql.trimStart().startsWith('UPDATE mip_orders')
-          || sql.trimStart().startsWith('UPDATE mip_payment_attempts')) {
-          return { affectedRows: 1 }
-        }
-        return { affectedRows: 1 }
-      },
-    }
-    const result = await grantOwnerTestMembership({ transaction: work => work(tx) }, environment, {
+    const db = ownerDatabase({
+      rebuildOrders: [{
+        id: ids.values[0],
+        membership_plan_id: plan.id,
+        paid_at: now,
+        product_snapshot_json: JSON.stringify({
+          durationDays: plan.duration_days,
+          attribution: { sourceType: 'PLATFORM' },
+        }),
+      }],
+    })
+    const result = await grantOwnerTestMembership(db, environment, {
       createId: ids,
       now: () => now,
     })
@@ -121,67 +101,71 @@ describe('Owner TEST membership ledger operations', () => {
       managed: true,
       idempotent: false,
     })
-    const statements = calls.map(call => call.sql)
-    assert.ok(statements.some(sql => sql.includes('INSERT INTO mip_orders')))
-    assert.ok(statements.some(sql => sql.includes("INSERT INTO mip_payment_attempts") && sql.includes("'TEST'")))
-    assert.ok(statements.some(sql => sql.includes("SET status = 'PAID'")))
-    assert.ok(statements.some(sql => sql.includes('INSERT INTO mip_membership_entitlements')))
-    assert.ok(statements.some(sql => sql.includes('INSERT INTO mip_outbox_events')))
-    assert.ok(statements.some(sql => sql.includes('INSERT INTO mip_audit_logs')))
-    const orderInsert = calls.find(call => call.sql.includes('INSERT INTO mip_orders'))
+    assertLockOrder(db.calls)
+    const entitlementInsert = db.calls.find(call => call.sql.includes('INSERT INTO mip_membership_entitlements'))
+    assert.match(entitlementInsert.sql, /source_type,[\s\S]*source_adjustment_id/)
+    assert.match(entitlementInsert.sql, /'ORDER', NULL/)
+    assert.ok(db.calls.some(call => call.sql.includes('UPDATE mip_membership_chains')))
+    const orderInsert = db.calls.find(call => call.sql.includes('INSERT INTO mip_orders'))
     const snapshot = JSON.parse(orderInsert.params.at(-1))
     assert.equal(snapshot.catalogStage, 'TEST')
     assert.equal(snapshot.operationSource, 'OWNER_TEST_MEMBERSHIP')
-    assert.deepEqual(snapshot.attribution, { sourceType: 'PLATFORM' })
   })
 
-  it('returns idempotently when its current TEST entitlement is already active', async () => {
-    let writes = 0
-    const tx = {
-      async one(sql) {
-        if (sql.includes('FROM mip_membership_plans')) return plan
-        throw new Error(`Unexpected one query: ${sql}`)
-      },
-      async query(sql) {
-        if (sql.includes('FROM mip_users user_row')) return [{ id: ownerId }]
-        if (sql.includes('INNER JOIN mip_membership_entitlements entitlement')) {
-          return [{
-            id: '30000000-0000-4000-8000-000000000001',
-            membership_plan_id: plan.id,
-            amount_cents: plan.price_cents,
-            status: 'PAID',
-            version: 2,
-            snapshot_catalog_stage: 'TEST',
-          }]
-        }
-        writes += 1
-        return { affectedRows: 1 }
-      },
-    }
-    const result = await grantOwnerTestMembership({ transaction: work => work(tx) }, environment)
+  it('returns idempotently for an active operation-owned TEST entitlement without bumping the chain', async () => {
+    const managedOrder = ownerTestOrder()
+    const db = ownerDatabase({
+      orders: [managedOrder],
+      entitlements: [activeOrderEntitlement(managedOrder.id)],
+    })
+    const result = await grantOwnerTestMembership(db, environment, { now: () => now })
     assert.equal(result.idempotent, true)
     assert.equal(result.managed, true)
-    assert.equal(writes, 0)
+    assert.equal(db.calls.some(call => mutation(call.sql)), false)
   })
 
-  it('does not replace an unrelated active membership with an operation-owned TEST order', async () => {
-    let writes = 0
-    const tx = {
-      async one(sql) {
-        if (sql.includes('FROM mip_membership_plans')) return plan
-        if (sql.includes('FROM mip_membership_entitlements entitlement')) {
-          return { id: '50000000-0000-4000-8000-000000000001' }
-        }
-        throw new Error(`Unexpected one query: ${sql}`)
-      },
-      async query(sql) {
-        if (sql.includes('FROM mip_users user_row')) return [{ id: ownerId }]
-        if (sql.includes('INNER JOIN mip_membership_entitlements entitlement')) return []
-        writes += 1
-        return { affectedRows: 1 }
-      },
-    }
-    const result = await grantOwnerTestMembership({ transaction: work => work(tx) }, environment)
+  it('does not duplicate a managed TEST order whose entitlement starts in the future', async () => {
+    const managedOrder = ownerTestOrder()
+    const futureEntitlement = activeOrderEntitlement(managedOrder.id, {
+      starts_at: new Date('2027-01-01T00:00:00.000Z'),
+      ends_at: new Date('2032-01-01T00:00:00.000Z'),
+    })
+    const db = ownerDatabase({
+      orders: [managedOrder],
+      entitlements: [futureEntitlement],
+    })
+    const result = await grantOwnerTestMembership(db, environment, { now: () => now })
+    assert.deepEqual(result, {
+      operation: 'GRANT',
+      status: 'INACTIVE',
+      membershipActive: false,
+      managed: true,
+      idempotent: true,
+    })
+    assert.equal(db.calls.some(call => mutation(call.sql)), false)
+  })
+
+  it('does not duplicate an operation-owned TEST order while its refund is pending', async () => {
+    const managedOrder = ownerTestOrder({ status: 'REFUND_PENDING' })
+    const db = ownerDatabase({
+      orders: [managedOrder],
+      refunds: [processingRefund(managedOrder.id)],
+      entitlements: [activeOrderEntitlement(managedOrder.id)],
+    })
+    const result = await grantOwnerTestMembership(db, environment, { now: () => now })
+    assert.deepEqual(result, {
+      operation: 'GRANT',
+      status: 'ACTIVE',
+      membershipActive: true,
+      managed: true,
+      idempotent: true,
+    })
+    assert.equal(db.calls.some(call => mutation(call.sql)), false)
+  })
+
+  it('does not replace an active ADMIN_ADJUSTMENT entitlement', async () => {
+    const db = ownerDatabase({ entitlements: [activeManualEntitlement()] })
+    const result = await grantOwnerTestMembership(db, environment, { now: () => now })
     assert.deepEqual(result, {
       operation: 'GRANT',
       status: 'ACTIVE',
@@ -189,25 +173,12 @@ describe('Owner TEST membership ledger operations', () => {
       managed: false,
       idempotent: true,
     })
-    assert.equal(writes, 0)
+    assert.equal(db.calls.some(call => mutation(call.sql)), false)
   })
 
-  it('revokes idempotently without writing when no operation-owned TEST membership is active', async () => {
-    let writes = 0
-    const tx = {
-      async one(sql) {
-        if (sql.includes('FROM mip_membership_plans')) return plan
-        if (sql.includes('FROM mip_membership_entitlements entitlement')) return null
-        throw new Error(`Unexpected one query: ${sql}`)
-      },
-      async query(sql) {
-        if (sql.includes('FROM mip_users user_row')) return [{ id: ownerId }]
-        if (sql.includes('INNER JOIN mip_membership_entitlements entitlement')) return []
-        writes += 1
-        return { affectedRows: 1 }
-      },
-    }
-    const result = await revokeOwnerTestMembership({ transaction: work => work(tx) }, environment)
+  it('revokes idempotently when no operation-owned TEST membership is active', async () => {
+    const db = ownerDatabase()
+    const result = await revokeOwnerTestMembership(db, environment, { now: () => now })
     assert.deepEqual(result, {
       operation: 'REVOKE',
       status: 'INACTIVE',
@@ -215,79 +186,42 @@ describe('Owner TEST membership ledger operations', () => {
       managed: false,
       idempotent: true,
     })
-    assert.equal(writes, 0)
+    assert.equal(db.calls.some(call => mutation(call.sql)), false)
   })
 
   it('refuses to revoke a managed marker attached to another plan or LIVE catalog fact', async () => {
-    let writes = 0
     for (const conflict of [
       { membership_plan_id: '20000000-0000-4000-8000-000000000002' },
-      { snapshot_catalog_stage: 'LIVE' },
+      { product_snapshot_json: JSON.stringify({
+        catalogStage: 'LIVE', operationSource: 'OWNER_TEST_MEMBERSHIP',
+      }) },
     ]) {
-      const tx = {
-        async one(sql) {
-          if (sql.includes('FROM mip_membership_plans')) return plan
-          throw new Error(`Unexpected one query: ${sql}`)
-        },
-        async query(sql) {
-          if (sql.includes('FROM mip_users user_row')) return [{ id: ownerId }]
-          if (sql.includes('INNER JOIN mip_membership_entitlements entitlement')) {
-            return [{
-              id: '30000000-0000-4000-8000-000000000001',
-              membership_plan_id: plan.id,
-              amount_cents: plan.price_cents,
-              status: 'PAID',
-              version: 2,
-              snapshot_catalog_stage: 'TEST',
-              ...conflict,
-            }]
-          }
-          writes += 1
-          return { affectedRows: 1 }
-        },
-      }
+      const managedOrder = ownerTestOrder(conflict)
+      const db = ownerDatabase({
+        orders: [managedOrder],
+        entitlements: [activeOrderEntitlement(managedOrder.id)],
+      })
       await assert.rejects(
-        () => revokeOwnerTestMembership({ transaction: work => work(tx) }, environment),
+        () => revokeOwnerTestMembership(db, environment, { now: () => now }),
         /TEST_MEMBERSHIP_STATE_CONFLICT/,
       )
+      assert.equal(db.calls.some(call => mutation(call.sql)), false)
     }
-    assert.equal(writes, 0)
   })
 
-  it('revokes only the active operation-owned TEST order through refund and entitlement facts', async () => {
-    const calls = []
-    const order = {
-      id: '30000000-0000-4000-8000-000000000001',
-      membership_plan_id: plan.id,
-      amount_cents: plan.price_cents,
-      status: 'PAID',
-      version: 2,
-      snapshot_catalog_stage: 'TEST',
-    }
+  it('revokes with order before refund before entitlement and only rebuilds ORDER sources', async () => {
+    const managedOrder = ownerTestOrder()
+    const entitlement = activeOrderEntitlement(managedOrder.id)
     const ids = idFactory([
       '40000000-0000-4000-8000-000000000001',
       '40000000-0000-4000-8000-000000000002',
     ])
-    const tx = {
-      async one(sql, params) {
-        calls.push({ kind: 'one', sql, params })
-        if (sql.includes('FROM mip_membership_plans')) return plan
-        if (sql.includes('FROM mip_membership_entitlements entitlement')) return null
-        throw new Error(`Unexpected one query: ${sql}`)
-      },
-      async query(sql, params) {
-        calls.push({ kind: 'query', sql, params })
-        if (sql.includes('FROM mip_users user_row')) return [{ id: ownerId }]
-        if (sql.includes('INNER JOIN mip_membership_entitlements entitlement')) return [order]
-        if (sql.includes("FROM mip_orders\n     WHERE") && sql.includes("status = 'PAID'")) return []
-        if (sql.includes('SELECT id, order_id FROM mip_membership_entitlements')) {
-          return [{ id: '50000000-0000-4000-8000-000000000001', order_id: order.id }]
-        }
-        if (sql.trimStart().startsWith('UPDATE mip_')) return { affectedRows: 1 }
-        return { affectedRows: 1 }
-      },
-    }
-    const result = await revokeOwnerTestMembership({ transaction: work => work(tx) }, environment, {
+    const db = ownerDatabase({
+      orders: [managedOrder],
+      entitlements: [entitlement],
+      rebuildEntitlements: [entitlement],
+    })
+    const result = await revokeOwnerTestMembership(db, environment, {
       createId: ids,
       now: () => now,
     })
@@ -298,16 +232,180 @@ describe('Owner TEST membership ledger operations', () => {
       managed: true,
       idempotent: false,
     })
-    const statements = calls.map(call => call.sql)
-    assert.ok(statements.some(sql => sql.includes('INSERT INTO mip_refunds')))
-    assert.ok(statements.some(sql => sql.includes("SET status = 'REFUND_PENDING'")))
-    assert.ok(statements.some(sql => sql.includes("SET status = 'SUCCEEDED'")))
-    assert.ok(statements.some(sql => sql.includes("SET status = 'REFUNDED'")))
-    assert.ok(statements.some(sql => sql.includes("revocation_reason = 'ORDER_REFUNDED'")))
-    assert.ok(statements.some(sql => sql.includes('INSERT INTO mip_outbox_events')))
-    assert.ok(statements.some(sql => sql.includes('INSERT INTO mip_audit_logs')))
+    assertLockOrder(db.calls)
+    assert.ok(db.calls.some(call => call.sql.includes('INSERT INTO mip_refunds')))
+    const entitlementUpdate = db.calls.find(call => call.sql.includes("revocation_reason = 'ORDER_REFUNDED'"))
+    assert.match(entitlementUpdate.sql, /source_type = 'ORDER'/)
+    assert.ok(db.calls.some(call => call.sql.includes('UPDATE mip_membership_chains')))
+  })
+
+  it('revokes an operation-owned paid TEST order whose entitlement starts in the future', async () => {
+    const managedOrder = ownerTestOrder()
+    const futureEntitlement = activeOrderEntitlement(managedOrder.id, {
+      starts_at: new Date('2027-01-01T00:00:00.000Z'),
+      ends_at: new Date('2032-01-01T00:00:00.000Z'),
+    })
+    const db = ownerDatabase({
+      orders: [managedOrder],
+      entitlements: [futureEntitlement],
+      rebuildEntitlements: [futureEntitlement],
+    })
+    const result = await revokeOwnerTestMembership(db, environment, {
+      createId: idFactory([
+        '40000000-0000-4000-8000-000000000011',
+        '40000000-0000-4000-8000-000000000012',
+      ]),
+      now: () => now,
+    })
+    assert.deepEqual(result, {
+      operation: 'REVOKE',
+      status: 'INACTIVE',
+      membershipActive: false,
+      managed: true,
+      idempotent: false,
+    })
+    assert.ok(db.calls.some(call => call.sql.includes('INSERT INTO mip_refunds')))
+    assert.ok(db.calls.some(call => call.sql.includes("revocation_reason = 'ORDER_REFUNDED'")))
+  })
+
+  it('does not create a second refund for an operation-owned REFUND_PENDING order', async () => {
+    const managedOrder = ownerTestOrder({ status: 'REFUND_PENDING' })
+    const db = ownerDatabase({
+      orders: [managedOrder],
+      refunds: [processingRefund(managedOrder.id)],
+      entitlements: [activeOrderEntitlement(managedOrder.id)],
+    })
+    const result = await revokeOwnerTestMembership(db, environment, { now: () => now })
+    assert.deepEqual(result, {
+      operation: 'REVOKE',
+      status: 'ACTIVE',
+      membershipActive: true,
+      managed: true,
+      idempotent: true,
+    })
+    assert.equal(db.calls.some(call => mutation(call.sql)), false)
   })
 })
+
+function ownerDatabase(options = {}) {
+  const calls = []
+  const config = {
+    orders: [],
+    refunds: [],
+    entitlements: [],
+    rebuildOrders: [],
+    rebuildEntitlements: options.entitlements || [],
+    ...options,
+  }
+  const tx = {
+    async one(sql, params) {
+      const normalized = normalize(sql)
+      calls.push({ kind: 'one', sql: normalized, params })
+      if (normalized.includes('FROM mip_membership_plans')) return plan
+      if (normalized.includes('FROM mip_membership_chains')) {
+        return { app_id: appId, user_id: ownerId, version: 1 }
+      }
+      throw new Error(`Unexpected one query: ${normalized}`)
+    },
+    async query(sql, params) {
+      const normalized = normalize(sql)
+      calls.push({ kind: 'query', sql: normalized, params })
+      if (normalized.includes('FROM mip_users user_row')) return [{ id: ownerId }]
+      if (normalized.includes('FROM mip_orders order_row')
+        && normalized.includes("status IN ('PAID', 'REFUND_PENDING')")) {
+        return config.rebuildOrders
+      }
+      if (normalized.includes('FROM mip_orders order_row')) return config.orders
+      if (normalized.includes('FROM mip_refunds refund')
+        && normalized.includes('INNER JOIN mip_orders order_row')) return config.refunds
+      if (normalized.includes('FROM mip_membership_entitlements')
+        && normalized.includes('ORDER BY starts_at')) return config.entitlements
+      if (normalized.includes('FROM mip_membership_entitlements')) return config.rebuildEntitlements
+      return { affectedRows: 1 }
+    },
+  }
+  return { calls, transaction: work => work(tx) }
+}
+
+function ownerTestOrder(overrides = {}) {
+  return {
+    id: '30000000-0000-4000-8000-000000000001',
+    membership_plan_id: plan.id,
+    amount_cents: plan.price_cents,
+    status: 'PAID',
+    version: 2,
+    paid_at: new Date('2026-08-20T00:00:00.000Z'),
+    created_at: new Date('2026-08-20T00:00:00.000Z'),
+    product_snapshot_json: JSON.stringify({
+      catalogStage: 'TEST',
+      operationSource: 'OWNER_TEST_MEMBERSHIP',
+    }),
+    ...overrides,
+  }
+}
+
+function activeOrderEntitlement(orderId, overrides = {}) {
+  return {
+    id: '50000000-0000-4000-8000-000000000001',
+    order_id: orderId,
+    plan_id: plan.id,
+    source_type: 'ORDER',
+    source_adjustment_id: null,
+    status: 'ACTIVE',
+    starts_at: new Date('2026-08-20T00:00:00.000Z'),
+    ends_at: new Date('2031-08-20T00:00:00.000Z'),
+    revoked_at: null,
+    revocation_reason: null,
+    version: 1,
+    ...overrides,
+  }
+}
+
+function processingRefund(orderId) {
+  return {
+    id: '60000000-0000-4000-8000-000000000099',
+    order_id: orderId,
+    status: 'PROCESSING',
+    created_at: new Date('2026-08-25T00:00:00.000Z'),
+  }
+}
+
+function activeManualEntitlement() {
+  return {
+    id: '50000000-0000-4000-8000-000000000002',
+    order_id: null,
+    plan_id: null,
+    source_type: 'ADMIN_ADJUSTMENT',
+    source_adjustment_id: '60000000-0000-4000-8000-000000000001',
+    status: 'ACTIVE',
+    starts_at: new Date('2026-08-01T00:00:00.000Z'),
+    ends_at: new Date('2026-09-01T00:00:00.000Z'),
+    revoked_at: null,
+    revocation_reason: null,
+    version: 1,
+  }
+}
+
+function assertLockOrder(calls) {
+  const statements = calls.map(call => call.sql)
+  const user = statements.findIndex(sql => sql.includes('FROM mip_users user_row'))
+  const chain = statements.findIndex(sql => sql.includes('FROM mip_membership_chains'))
+  const orders = statements.findIndex(sql => sql.includes('FROM mip_orders order_row')
+    && !sql.includes("status IN ('PAID', 'REFUND_PENDING')"))
+  const refunds = statements.findIndex(sql => sql.includes('FROM mip_refunds refund')
+    && sql.includes('INNER JOIN mip_orders order_row'))
+  const entitlements = statements.findIndex(sql => sql.includes('FROM mip_membership_entitlements')
+    && sql.includes('ORDER BY starts_at'))
+  assert.ok(user >= 0 && chain > user && orders > chain && refunds > orders && entitlements > refunds)
+}
+
+function mutation(sql) {
+  return /^(INSERT|UPDATE|DELETE) /.test(sql)
+}
+
+function normalize(sql) {
+  return String(sql).replace(/\s+/g, ' ').trim()
+}
 
 function idFactory(values) {
   let index = 0

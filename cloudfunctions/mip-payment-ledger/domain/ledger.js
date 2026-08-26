@@ -1,6 +1,16 @@
 'use strict'
 
 const { createHash, randomBytes, randomUUID } = require('node:crypto')
+const {
+  assertLockedMembershipChain,
+  assertPaymentRoute,
+  assertRefundRoute,
+  incrementMembershipChain,
+  lockMembershipChain,
+  lockPaymentIdentity,
+  readPaymentRoute,
+  readRefundRoute,
+} = require('./membership-locks')
 
 const manualReviewChangeCode = 'MANUAL_REVIEW_CHANGE'
 
@@ -16,6 +26,10 @@ function assertPaymentMatches(order, value) {
   }
   if (order.currency !== (value.currency || 'CNY')) {
     throw new Error('CURRENCY_MISMATCH')
+  }
+  if (order.provider_transaction_id
+    && order.provider_transaction_id !== value.providerTransactionId) {
+    throw new Error('PROVIDER_TRANSACTION_MISMATCH')
   }
 }
 
@@ -133,15 +147,17 @@ async function markPaymentCreated(db, input) {
 async function applyPaymentCallback(db, input, options = {}) {
   const createId = options.createId || randomUUID
   const now = options.now || (() => new Date())
+  const route = await readPaymentRoute(db, input)
   return db.transaction(async (tx) => {
+    await lockPaymentIdentity(tx, route)
+    const membershipChain = route.orderType === 'MEMBERSHIP'
+      ? await lockMembershipChain(tx, route)
+      : null
     const order = await tx.one(
-      `SELECT o.* FROM mip_orders o
-       JOIN mip_user_identities i
-         ON i.app_id = o.app_id AND i.user_id = o.user_id
-        AND i.provider = 'WECHAT_MINIPROGRAM' AND i.identity_key = ?
-       WHERE o.app_id = ? AND o.id = ? FOR UPDATE`,
-      [input.identityKey, input.appId, input.orderId],
+      'SELECT * FROM mip_orders WHERE app_id = ? AND id = ? FOR UPDATE',
+      [route.appId, route.orderId],
     )
+    assertPaymentRoute(route, order)
     assertPaymentMatches(order, input)
     const callback = await claimCallbackReceipt(tx, {
       appId: input.appId,
@@ -188,7 +204,11 @@ async function applyPaymentCallback(db, input, options = {}) {
       [input.providerTransactionId, input.appId, order.id],
     )
     if (order.order_type === 'MEMBERSHIP') {
-      await rebuildMembershipEntitlements(tx, input.appId, order.user_id, { createId, now })
+      await rebuildMembershipEntitlements(tx, input.appId, order.user_id, {
+        chain: membershipChain,
+        createId,
+        now,
+      })
     }
     else if (order.order_type === 'CONTENT') {
       await issueKnowledgeEntitlement(tx, input.appId, order, paidAt, { createId })
@@ -541,17 +561,34 @@ async function markRefundCreated(db, input) {
   })
 }
 
-async function markRefundFailed(db, input) {
+async function markRefundFailed(db, input, options = {}) {
   if (input.reasonCode !== 'REFUNDCLOSE') {
     throw new Error('REFUND_FAILURE_REASON_INVALID')
   }
+  const route = await readRefundRoute(db, input)
   return db.transaction(async (tx) => {
+    const membershipChain = route.orderType === 'MEMBERSHIP'
+      ? await lockMembershipChain(tx, route)
+      : null
+    const order = await tx.one(
+      'SELECT * FROM mip_orders WHERE app_id = ? AND id = ? FOR UPDATE',
+      [route.appId, route.orderId],
+    )
     const refund = await tx.one(
       'SELECT * FROM mip_refunds WHERE app_id = ? AND merchant_refund_no = ? FOR UPDATE',
       [input.appId, input.merchantRefundNo],
     )
+    assertRefundRoute(route, order, refund)
     assertRefundIdentity(refund, input)
     if (refund.status === 'FAILED') {
+      await restoreOrderAfterClosedRefund(tx, order, refund)
+      if (order.order_type === 'MEMBERSHIP') {
+        await rebuildMembershipEntitlements(tx, input.appId, order.user_id, {
+          chain: membershipChain,
+          createId: options.createId,
+          now: options.now,
+        })
+      }
       return { status: 'FAILED', idempotent: true }
     }
     if (!['PENDING', 'PROVIDER_CREATED', 'PROCESSING'].includes(refund.status)) {
@@ -564,21 +601,29 @@ async function markRefundFailed(db, input) {
       [String(input.reasonCode || 'UNKNOWN').slice(0, 64), input.appId, refund.id, refund.version],
     )
     assertAffected(updated, 'REFUND_STATUS_CONFLICT')
-    const order = await tx.one(
-      'SELECT * FROM mip_orders WHERE app_id = ? AND id = ? FOR UPDATE',
-      [input.appId, refund.order_id],
-    )
-    if (!order) throw new Error('ORDER_NOT_FOUND')
-    const remaining = await reservedRefundTotal(tx, input.appId, refund.order_id)
-    const nextStatus = remaining > 0 ? 'PARTIALLY_REFUNDED' : 'PAID'
-    const orderUpdated = await tx.query(
-      `UPDATE mip_orders SET status = ?, version = version + 1
-       WHERE app_id = ? AND id = ? AND status = 'REFUND_PENDING' AND version = ?`,
-      [nextStatus, input.appId, order.id, order.version],
-    )
-    assertAffected(orderUpdated, 'ORDER_STATUS_CONFLICT')
+    await restoreOrderAfterClosedRefund(tx, order, refund)
+    if (order.order_type === 'MEMBERSHIP') {
+      await rebuildMembershipEntitlements(tx, input.appId, order.user_id, {
+        chain: membershipChain,
+        createId: options.createId,
+        now: options.now,
+      })
+    }
     return { status: 'FAILED', idempotent: false }
   })
+}
+
+async function restoreOrderAfterClosedRefund(tx, order, refund) {
+  const remaining = await reservedRefundTotal(tx, order.app_id, refund.order_id)
+  const nextStatus = remaining > 0 ? 'PARTIALLY_REFUNDED' : 'PAID'
+  if (order.status === nextStatus) return
+  if (order.status !== 'REFUND_PENDING') throw new Error('ORDER_STATUS_CONFLICT')
+  const orderUpdated = await tx.query(
+    `UPDATE mip_orders SET status = ?, version = version + 1
+     WHERE app_id = ? AND id = ? AND status = 'REFUND_PENDING' AND version = ?`,
+    [nextStatus, order.app_id, order.id, order.version],
+  )
+  assertAffected(orderUpdated, 'ORDER_STATUS_CONFLICT')
 }
 
 async function markRefundManualReview(db, input) {
@@ -611,158 +656,162 @@ async function markRefundManualReview(db, input) {
 async function applyRefundCallback(db, input, options = {}) {
   const createId = options.createId || randomUUID
   const now = options.now || (() => new Date())
+  const route = await readRefundRoute(db, input)
   let callbackClaimed = false
   try {
     return await db.transaction(async (tx) => {
-    const refund = await tx.one(
-      'SELECT * FROM mip_refunds WHERE app_id = ? AND merchant_refund_no = ? FOR UPDATE',
-      [input.appId, input.merchantRefundNo],
-    )
-    assertRefundIdentity(refund, input)
-    if (Number(refund.amount_cents) !== Number(input.amountCents)) {
-      throw new Error('REFUND_AMOUNT_MISMATCH')
-    }
-    const callback = await claimCallbackReceipt(tx, {
-      appId: input.appId,
-      callbackType: 'REFUND',
-      callbackKey: input.providerRefundId,
-      resourceHash: callbackResourceHash('REFUND', input),
-    })
-    callbackClaimed = true
-    if (refund.status === 'SUCCEEDED') {
-      if (refund.provider_refund_id !== input.providerRefundId) {
-        throw new Error('PROVIDER_REFUND_MISMATCH')
+      const membershipChain = route.orderType === 'MEMBERSHIP'
+        ? await lockMembershipChain(tx, route)
+        : null
+      const order = await tx.one(
+        'SELECT * FROM mip_orders WHERE app_id = ? AND id = ? FOR UPDATE',
+        [route.appId, route.orderId],
+      )
+      const refund = await tx.one(
+        'SELECT * FROM mip_refunds WHERE app_id = ? AND merchant_refund_no = ? FOR UPDATE',
+        [input.appId, input.merchantRefundNo],
+      )
+      assertRefundRoute(route, order, refund)
+      assertRefundIdentity(refund, input)
+      assertRefundCallbackMatches(order, refund, input)
+      const callback = await claimCallbackReceipt(tx, {
+        appId: input.appId,
+        callbackType: 'REFUND',
+        callbackKey: input.providerRefundId,
+        resourceHash: callbackResourceHash('REFUND', input),
+      })
+      callbackClaimed = true
+      if (refund.status === 'SUCCEEDED') {
+        if (refund.provider_refund_id !== input.providerRefundId) {
+          throw new Error('PROVIDER_REFUND_MISMATCH')
+        }
+        if (callback.processingStatus !== 'PROCESSED') {
+          await markCallbackProcessed(tx, callback, now())
+        }
+        return { status: 'SUCCEEDED', idempotent: true }
       }
-      if (callback.processingStatus !== 'PROCESSED') {
-        await markCallbackProcessed(tx, callback, now())
+      const legacyChange = refund.status === 'FAILED' && refund.last_error_code === 'CHANGE'
+      if (!legacyChange && !['PENDING', 'PROVIDER_CREATED', 'PROCESSING'].includes(refund.status)) {
+        throw new Error('REFUND_INVALID_STATE')
       }
-      return { status: 'SUCCEEDED', idempotent: true }
-    }
-    const legacyChange = refund.status === 'FAILED' && refund.last_error_code === 'CHANGE'
-    if (!legacyChange && !['PENDING', 'PROVIDER_CREATED', 'PROCESSING'].includes(refund.status)) {
-      throw new Error('REFUND_INVALID_STATE')
-    }
-    const order = await tx.one(
-      'SELECT * FROM mip_orders WHERE app_id = ? AND id = ? FOR UPDATE',
-      [input.appId, refund.order_id],
-    )
-    if (!order || order.merchant_order_no !== input.merchantOrderNo) {
-      throw new Error('ORDER_NOT_FOUND')
-    }
-    if (legacyChange) {
-      const competing = await tx.query(
-        `SELECT id, status, amount_cents FROM mip_refunds
-         WHERE app_id = ? AND order_id = ? AND id <> ?
-           AND status IN ('PENDING', 'PROVIDER_CREATED', 'PROCESSING', 'SUCCEEDED')
-         FOR UPDATE`,
-        [input.appId, order.id, refund.id],
-      )
-      if (competing.some(item => ['PENDING', 'PROVIDER_CREATED', 'PROCESSING'].includes(item.status))) {
-        throw new Error('REFUND_RECONCILIATION_REQUIRED')
+      if (legacyChange) {
+        const competing = await tx.query(
+          `SELECT id, status, amount_cents FROM mip_refunds
+           WHERE app_id = ? AND order_id = ? AND id <> ?
+             AND status IN ('PENDING', 'PROVIDER_CREATED', 'PROCESSING', 'SUCCEEDED')
+           FOR UPDATE`,
+          [input.appId, order.id, refund.id],
+        )
+        if (competing.some(item => ['PENDING', 'PROVIDER_CREATED', 'PROCESSING'].includes(item.status))) {
+          throw new Error('REFUND_RECONCILIATION_REQUIRED')
+        }
+        const settledCents = competing.reduce(
+          (total, item) => total + (item.status === 'SUCCEEDED' ? Number(item.amount_cents) : 0),
+          Number(refund.amount_cents),
+        )
+        if (!Number.isSafeInteger(settledCents) || settledCents > Number(order.amount_cents)) {
+          throw new Error('REFUND_RECONCILIATION_REQUIRED')
+        }
       }
-      const settledCents = competing.reduce(
-        (total, item) => total + (item.status === 'SUCCEEDED' ? Number(item.amount_cents) : 0),
-        Number(refund.amount_cents),
-      )
-      if (!Number.isSafeInteger(settledCents) || settledCents > Number(order.amount_cents)) {
-        throw new Error('REFUND_RECONCILIATION_REQUIRED')
+      let eventRegistration = null
+      if (order.order_type === 'EVENT') {
+        eventRegistration = await tx.one(
+          `SELECT id, event_id, user_id, status, version
+           FROM mip_event_registrations
+           WHERE app_id = ? AND order_id = ? AND event_id = ? AND user_id = ? FOR UPDATE`,
+          [input.appId, order.id, order.resource_id, order.user_id],
+        )
+        if (!eventRegistration || eventRegistration.status !== 'CANCELLATION_PENDING') {
+          throw new Error('EVENT_REFUND_RECONCILIATION_REQUIRED')
+        }
+        const activeCheckin = await tx.one(
+          `SELECT id FROM mip_event_checkins
+           WHERE app_id = ? AND event_id = ? AND registration_id = ? AND user_id = ?
+             AND status = 'ACTIVE' FOR UPDATE`,
+          [input.appId, order.resource_id, eventRegistration.id, order.user_id],
+        )
+        if (activeCheckin) throw new Error('EVENT_REFUND_CHECKIN_ACTIVE')
       }
-    }
-    let eventRegistration = null
-    if (order.order_type === 'EVENT') {
-      eventRegistration = await tx.one(
-        `SELECT id, event_id, user_id, status, version
-         FROM mip_event_registrations
-         WHERE app_id = ? AND order_id = ? AND event_id = ? AND user_id = ? FOR UPDATE`,
-        [input.appId, order.id, order.resource_id, order.user_id],
+      const updated = await tx.query(
+        `UPDATE mip_refunds
+         SET status = 'SUCCEEDED', provider_refund_id = ?, refunded_at = ?,
+             last_error_code = NULL, version = version + 1
+         WHERE app_id = ? AND id = ? AND version = ?`,
+        [input.providerRefundId, now(), input.appId, refund.id, refund.version],
       )
-      if (!eventRegistration || eventRegistration.status !== 'CANCELLATION_PENDING') {
-        throw new Error('EVENT_REFUND_RECONCILIATION_REQUIRED')
+      assertAffected(updated, 'REFUND_STATUS_CONFLICT')
+      const refunded = await succeededRefundTotal(tx, input.appId, order.id)
+      const nextStatus = refunded >= Number(order.amount_cents) ? 'REFUNDED' : 'PARTIALLY_REFUNDED'
+      const orderUpdated = await tx.query(
+        `UPDATE mip_orders SET status = ?, version = version + 1
+         WHERE app_id = ? AND id = ?
+           AND ${legacyChange ? "status IN ('REFUND_PENDING', 'PAID', 'PARTIALLY_REFUNDED')" : "status = 'REFUND_PENDING'"}
+           AND version = ?`,
+        [nextStatus, input.appId, order.id, order.version],
+      )
+      assertAffected(orderUpdated, 'ORDER_STATUS_CONFLICT')
+      if (order.order_type === 'MEMBERSHIP') {
+        await rebuildMembershipEntitlements(tx, input.appId, order.user_id, {
+          chain: membershipChain,
+          createId,
+          now,
+        })
       }
-      const activeCheckin = await tx.one(
-        `SELECT id FROM mip_event_checkins
-         WHERE app_id = ? AND event_id = ? AND registration_id = ? AND user_id = ?
-           AND status = 'ACTIVE' FOR UPDATE`,
-        [input.appId, order.resource_id, eventRegistration.id, order.user_id],
-      )
-      if (activeCheckin) throw new Error('EVENT_REFUND_CHECKIN_ACTIVE')
-    }
-    const updated = await tx.query(
-      `UPDATE mip_refunds
-       SET status = 'SUCCEEDED', provider_refund_id = ?, refunded_at = ?,
-           last_error_code = NULL, version = version + 1
-       WHERE app_id = ? AND id = ? AND version = ?`,
-      [input.providerRefundId, now(), input.appId, refund.id, refund.version],
-    )
-    assertAffected(updated, 'REFUND_STATUS_CONFLICT')
-    const refunded = await succeededRefundTotal(tx, input.appId, order.id)
-    const nextStatus = refunded >= Number(order.amount_cents) ? 'REFUNDED' : 'PARTIALLY_REFUNDED'
-    const orderUpdated = await tx.query(
-      `UPDATE mip_orders SET status = ?, version = version + 1
-       WHERE app_id = ? AND id = ?
-         AND ${legacyChange ? "status IN ('REFUND_PENDING', 'PAID', 'PARTIALLY_REFUNDED')" : "status = 'REFUND_PENDING'"}
-         AND version = ?`,
-      [nextStatus, input.appId, order.id, order.version],
-    )
-    assertAffected(orderUpdated, 'ORDER_STATUS_CONFLICT')
-    if (order.order_type === 'MEMBERSHIP') {
-      await rebuildMembershipEntitlements(tx, input.appId, order.user_id, { createId, now })
-    }
-    else if (order.order_type === 'CONTENT' && nextStatus === 'REFUNDED') {
-      await tx.query(
-        `UPDATE mip_knowledge_entitlements
-         SET status = 'REFUNDED', revoked_at = ?, revocation_reason = 'ORDER_REFUNDED',
-             version = version + 1
-         WHERE app_id = ? AND order_id = ? AND status = 'ACTIVE'`,
-        [now(), input.appId, order.id],
-      )
-    }
-    else if (order.order_type === 'EVENT' && nextStatus === 'REFUNDED') {
-      const registrationUpdated = await tx.query(
-        `UPDATE mip_event_registrations
-         SET status = 'CANCELLED', cancelled_at = COALESCE(cancelled_at, ?), version = version + 1
-         WHERE app_id = ? AND id = ? AND version = ? AND status = 'CANCELLATION_PENDING'`,
-        [now(), input.appId, eventRegistration.id, eventRegistration.version],
-      )
-      assertAffected(registrationUpdated, 'EVENT_REGISTRATION_STATUS_CONFLICT')
+      else if (order.order_type === 'CONTENT' && nextStatus === 'REFUNDED') {
+        await tx.query(
+          `UPDATE mip_knowledge_entitlements
+           SET status = 'REFUNDED', revoked_at = ?, revocation_reason = 'ORDER_REFUNDED',
+               version = version + 1
+           WHERE app_id = ? AND order_id = ? AND status = 'ACTIVE'`,
+          [now(), input.appId, order.id],
+        )
+      }
+      else if (order.order_type === 'EVENT' && nextStatus === 'REFUNDED') {
+        const registrationUpdated = await tx.query(
+          `UPDATE mip_event_registrations
+           SET status = 'CANCELLED', cancelled_at = COALESCE(cancelled_at, ?), version = version + 1
+           WHERE app_id = ? AND id = ? AND version = ? AND status = 'CANCELLATION_PENDING'`,
+          [now(), input.appId, eventRegistration.id, eventRegistration.version],
+        )
+        assertAffected(registrationUpdated, 'EVENT_REGISTRATION_STATUS_CONFLICT')
+        await writeOutbox(tx, {
+          id: createId(),
+          appId: input.appId,
+          aggregateType: 'EVENT_REGISTRATION',
+          aggregateId: eventRegistration.id,
+          eventType: 'event.registration_cancelled',
+          sourceVersion: Number(eventRegistration.version) + 1,
+          payload: {
+            eventId: eventRegistration.event_id,
+            userId: order.user_id,
+            orderId: order.id,
+            refundId: refund.id,
+            status: 'CANCELLED',
+          },
+        })
+      }
       await writeOutbox(tx, {
         id: createId(),
         appId: input.appId,
-        aggregateType: 'EVENT_REGISTRATION',
-        aggregateId: eventRegistration.id,
-        eventType: 'event.registration_cancelled',
-        sourceVersion: Number(eventRegistration.version) + 1,
-        payload: {
-          eventId: eventRegistration.event_id,
-          userId: order.user_id,
-          orderId: order.id,
-          refundId: refund.id,
-          status: 'CANCELLED',
-        },
+        aggregateType: 'REFUND',
+        aggregateId: refund.id,
+        eventType: order.order_type === 'EVENT'
+          ? 'event.refund_confirmed'
+          : order.order_type === 'CONTENT'
+            ? 'knowledge.refund_confirmed'
+            : 'membership.refund_confirmed',
+        sourceVersion: Number(refund.version) + 1,
+        payload: { refundId: refund.id, orderId: order.id, userId: order.user_id, orderStatus: nextStatus },
       })
-    }
-    await writeOutbox(tx, {
-      id: createId(),
-      appId: input.appId,
-      aggregateType: 'REFUND',
-      aggregateId: refund.id,
-      eventType: order.order_type === 'EVENT'
-        ? 'event.refund_confirmed'
-        : order.order_type === 'CONTENT'
-          ? 'knowledge.refund_confirmed'
-          : 'membership.refund_confirmed',
-      sourceVersion: Number(refund.version) + 1,
-      payload: { refundId: refund.id, orderId: order.id, userId: order.user_id, orderStatus: nextStatus },
-    })
-    await writeAudit(tx, {
-      appId: input.appId,
-      action: 'REFUND_CONFIRMED',
-      resourceType: 'REFUND',
-      resourceId: refund.id,
-      metadata: { orderId: order.id, orderStatus: nextStatus },
-    })
-    await markCallbackProcessed(tx, callback, now())
-    return { status: 'SUCCEEDED', orderStatus: nextStatus, idempotent: false }
+      await writeAudit(tx, {
+        appId: input.appId,
+        action: 'REFUND_CONFIRMED',
+        resourceType: 'REFUND',
+        resourceId: refund.id,
+        metadata: { orderId: order.id, orderStatus: nextStatus },
+      })
+      await markCallbackProcessed(tx, callback, now())
+      return { status: 'SUCCEEDED', orderStatus: nextStatus, idempotent: false }
     })
   }
   catch (error) {
@@ -856,51 +905,126 @@ function callbackResourceHash(callbackType, input) {
 async function rebuildMembershipEntitlements(tx, appId, userId, options = {}) {
   const createId = options.createId || randomUUID
   const now = options.now || (() => new Date())
+  const chain = options.chain
+  assertLockedMembershipChain(chain, appId, userId)
+  const calculatedAt = now()
+  if (!Number.isFinite(calculatedAt.getTime())) {
+    throw new Error('ENTITLEMENT_TIME_INVALID')
+  }
   const orders = await tx.query(
-    `SELECT id, membership_plan_id, paid_at, product_snapshot_json
-     FROM mip_orders
-     WHERE app_id = ? AND user_id = ? AND order_type = 'MEMBERSHIP' AND status = 'PAID'
-     ORDER BY paid_at ASC, created_at ASC, id ASC
+    `SELECT order_row.id, order_row.membership_plan_id, order_row.paid_at,
+            order_row.product_snapshot_json
+     FROM mip_orders order_row
+     WHERE order_row.app_id = ? AND order_row.user_id = ?
+       AND order_row.order_type = 'MEMBERSHIP'
+       AND order_row.status IN ('PAID', 'REFUND_PENDING')
+       AND NOT EXISTS (
+         SELECT 1 FROM mip_refunds succeeded_refund
+         WHERE succeeded_refund.app_id = order_row.app_id
+           AND succeeded_refund.order_id = order_row.id
+           AND succeeded_refund.status = 'SUCCEEDED'
+       )
+     ORDER BY order_row.paid_at ASC, order_row.created_at ASC, order_row.id ASC
      FOR UPDATE`,
     [appId, userId],
   )
   const existing = await tx.query(
-    `SELECT id, order_id FROM mip_membership_entitlements
+    `SELECT id, order_id, plan_id, source_type, source_adjustment_id,
+            status, starts_at, ends_at, revoked_at, revocation_reason, version
+     FROM mip_membership_entitlements
      WHERE app_id = ? AND user_id = ? FOR UPDATE`,
     [appId, userId],
   )
-  const existingByOrder = new Map(existing.map(row => [row.order_id, row.id]))
+  const existingByOrder = new Map()
+  const manualWindows = []
+  let membershipActive = false
+  for (const entitlement of existing) {
+    if (entitlement.source_type === 'ORDER') {
+      if (!entitlement.order_id || entitlement.source_adjustment_id !== null) {
+        throw new Error('ENTITLEMENT_SOURCE_INVALID')
+      }
+      existingByOrder.set(entitlement.order_id, entitlement)
+      continue
+    }
+    if (entitlement.source_type !== 'ADMIN_ADJUSTMENT'
+      || entitlement.order_id !== null
+      || entitlement.plan_id !== null
+      || !entitlement.source_adjustment_id) {
+      throw new Error('ENTITLEMENT_SOURCE_INVALID')
+    }
+    const startsAt = entitlementDate(entitlement.starts_at)
+    const endsAt = entitlementDate(entitlement.ends_at)
+    if (endsAt.getTime() <= startsAt.getTime()) {
+      throw new Error('ENTITLEMENT_SOURCE_INVALID')
+    }
+    manualWindows.push({ startsAt, endsAt })
+    if (entitlement.status === 'ACTIVE'
+      && startsAt.getTime() <= calculatedAt.getTime()
+      && endsAt.getTime() > calculatedAt.getTime()) {
+      membershipActive = true
+    }
+  }
+  manualWindows.sort((left, right) => left.startsAt.getTime() - right.startsAt.getTime())
   const paidOrderIds = new Set(orders.map(row => row.id))
+  let changed = false
   let chainEnd
   for (const order of orders) {
-    const paidAt = new Date(order.paid_at)
+    const paidAt = entitlementDate(order.paid_at)
     const snapshot = parseJson(order.product_snapshot_json)
     const durationDays = Number(snapshot.durationDays)
     if (!Number.isInteger(durationDays) || durationDays < 1 || !Number.isFinite(paidAt.getTime())) {
       throw new Error('ENTITLEMENT_SOURCE_INVALID')
     }
-    const startsAt = chainEnd && chainEnd.getTime() > paidAt.getTime() ? chainEnd : paidAt
-    chainEnd = new Date(startsAt.getTime() + durationDays * 86_400_000)
-    const status = chainEnd.getTime() > now().getTime() ? 'ACTIVE' : 'EXPIRED'
-    const entitlementId = existingByOrder.get(order.id) || createId()
-    await tx.query(
-      `INSERT INTO mip_membership_entitlements (
-        id, app_id, user_id, order_id, plan_id, status, starts_at, ends_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE
-        status = VALUES(status), starts_at = VALUES(starts_at), ends_at = VALUES(ends_at),
-        revoked_at = NULL, revocation_reason = NULL, version = version + 1`,
-      [
-        entitlementId,
-        appId,
-        userId,
-        order.id,
-        order.membership_plan_id,
-        status,
-        startsAt,
-        chainEnd,
-      ],
-    )
+    const candidateStart = chainEnd && chainEnd.getTime() > paidAt.getTime() ? chainEnd : paidAt
+    const window = placeOrderWindow(candidateStart, durationDays, manualWindows)
+    const startsAt = window.startsAt
+    chainEnd = window.endsAt
+    const status = chainEnd.getTime() > calculatedAt.getTime() ? 'ACTIVE' : 'EXPIRED'
+    if (status === 'ACTIVE'
+      && startsAt.getTime() <= calculatedAt.getTime()
+      && chainEnd.getTime() > calculatedAt.getTime()) {
+      membershipActive = true
+    }
+    const current = existingByOrder.get(order.id)
+    const entitlementId = current?.id || createId()
+    if (!current) {
+      await tx.query(
+        `INSERT INTO mip_membership_entitlements (
+          id, app_id, user_id, order_id, plan_id, source_type,
+          source_adjustment_id, status, starts_at, ends_at
+        ) VALUES (?, ?, ?, ?, ?, 'ORDER', NULL, ?, ?, ?)`,
+        [
+          entitlementId,
+          appId,
+          userId,
+          order.id,
+          order.membership_plan_id,
+          status,
+          startsAt,
+          chainEnd,
+        ],
+      )
+      changed = true
+    }
+    else if (!orderProjectionMatches(current, order, status, startsAt, chainEnd)) {
+      const updated = await tx.query(
+        `UPDATE mip_membership_entitlements
+         SET plan_id = ?, status = ?, starts_at = ?, ends_at = ?,
+             revoked_at = NULL, revocation_reason = NULL, version = version + 1
+         WHERE app_id = ? AND id = ? AND source_type = 'ORDER' AND version = ?`,
+        [
+          order.membership_plan_id,
+          status,
+          startsAt,
+          chainEnd,
+          appId,
+          current.id,
+          current.version,
+        ],
+      )
+      assertAffected(updated, 'ENTITLEMENT_VERSION_CONFLICT')
+      changed = true
+    }
     const attribution = membershipAttribution(snapshot, userId)
     await tx.query(
       `INSERT IGNORE INTO mip_membership_attributions (
@@ -912,21 +1036,67 @@ async function rebuildMembershipEntitlements(tx, appId, userId, options = {}) {
         attribution.invitedByUserId,
         attribution.sourceType,
         attribution.sourceTokenHash,
-        now(),
+        calculatedAt,
       ],
     )
   }
   for (const entitlement of existing) {
-    if (!paidOrderIds.has(entitlement.order_id)) {
-      await tx.query(
+    if (entitlement.source_type === 'ORDER'
+      && !paidOrderIds.has(entitlement.order_id)
+      && (entitlement.status !== 'REFUNDED'
+        || !entitlement.revoked_at
+        || entitlement.revocation_reason !== 'ORDER_REFUNDED')) {
+      const updated = await tx.query(
         `UPDATE mip_membership_entitlements
          SET status = 'REFUNDED', revoked_at = ?, revocation_reason = 'ORDER_REFUNDED',
              version = version + 1
-         WHERE app_id = ? AND id = ? AND status <> 'REFUNDED'`,
-        [now(), appId, entitlement.id],
+         WHERE app_id = ? AND id = ? AND source_type = 'ORDER' AND version = ?`,
+        [calculatedAt, appId, entitlement.id, entitlement.version],
       )
+      assertAffected(updated, 'ENTITLEMENT_VERSION_CONFLICT')
+      changed = true
     }
   }
+  if (changed) {
+    await incrementMembershipChain(tx, chain)
+  }
+  return { changed, chainVersion: chain.version, membershipActive }
+}
+
+function placeOrderWindow(candidateStart, durationDays, manualWindows) {
+  const durationMs = durationDays * 86_400_000
+  if (!Number.isSafeInteger(durationMs)) throw new Error('ENTITLEMENT_SOURCE_INVALID')
+  let startsAt = new Date(candidateStart)
+  let endsAt = new Date(startsAt.getTime() + durationMs)
+  if (!Number.isFinite(startsAt.getTime()) || !Number.isFinite(endsAt.getTime())) {
+    throw new Error('ENTITLEMENT_SOURCE_INVALID')
+  }
+  for (const blocker of manualWindows) {
+    if (blocker.endsAt.getTime() <= startsAt.getTime()) continue
+    if (blocker.startsAt.getTime() >= endsAt.getTime()) break
+    startsAt = new Date(blocker.endsAt)
+    endsAt = new Date(startsAt.getTime() + durationMs)
+    if (!Number.isFinite(endsAt.getTime())) throw new Error('ENTITLEMENT_SOURCE_INVALID')
+  }
+  return { startsAt, endsAt }
+}
+
+function orderProjectionMatches(entitlement, order, status, startsAt, endsAt) {
+  return entitlement.source_type === 'ORDER'
+    && entitlement.source_adjustment_id === null
+    && entitlement.order_id === order.id
+    && entitlement.plan_id === order.membership_plan_id
+    && entitlement.status === status
+    && entitlement.revoked_at === null
+    && entitlement.revocation_reason === null
+    && entitlementDate(entitlement.starts_at).getTime() === startsAt.getTime()
+    && entitlementDate(entitlement.ends_at).getTime() === endsAt.getTime()
+}
+
+function entitlementDate(value) {
+  const date = new Date(value)
+  if (!Number.isFinite(date.getTime())) throw new Error('ENTITLEMENT_SOURCE_INVALID')
+  return date
 }
 
 async function issueKnowledgeEntitlement(tx, appId, order, paidAt, options = {}) {
@@ -1008,6 +1178,26 @@ function assertRefundIdentity(refund, input) {
     && input.providerRefundId
     && refund.provider_refund_id !== input.providerRefundId) {
     throw new Error('PROVIDER_REFUND_MISMATCH')
+  }
+}
+
+function assertRefundCallbackMatches(order, refund, input) {
+  if (order.merchant_order_no !== input.merchantOrderNo) {
+    throw new Error('MERCHANT_ORDER_NO_MISMATCH')
+  }
+  if (Number(refund.amount_cents) !== Number(input.amountCents)) {
+    throw new Error('REFUND_AMOUNT_MISMATCH')
+  }
+  const orderAmount = Number(order.amount_cents)
+  const refundAmount = Number(refund.amount_cents)
+  if (!Number.isSafeInteger(orderAmount)
+    || !Number.isSafeInteger(refundAmount)
+    || refundAmount < 1
+    || refundAmount > orderAmount) {
+    throw new Error('REFUND_AMOUNT_MISMATCH')
+  }
+  if (order.currency !== 'CNY') {
+    throw new Error('CURRENCY_MISMATCH')
   }
 }
 
