@@ -55,6 +55,26 @@ describe('runtime page privacy and normal unavailable states', () => {
     expect(eventDetail).toMatch(/callSupport\(\)[\s\S]*const supportPhone = mipOperationsConfig\.supportPhone/)
   })
 
+  it('keeps authorized profile phones outside list and detail page data', () => {
+    const profilePage = read('src/packages/admin/profiles/index.ts')
+    const profileView = read('src/packages/admin/profiles/index.wxml')
+
+    expect(profilePage).toContain('Omit<AdminUser, \'phoneNumber\'>')
+    expect(profilePage).toContain('Omit<AdminUserDetail, \'phoneNumber\' | \'relatedRecords\'>')
+    expect(profilePage).toContain('replacePrivatePhones(this, response.items)')
+    expect(profilePage).toContain('appendPrivatePhones(this, [detail])')
+    expect(profilePage).toContain('clearPrivatePhones(this)')
+    expect(profilePage).toContain('privatePhone(this, String(event.currentTarget.dataset.id || \'\'))')
+    expect(profileView).toContain('item.phoneNumberMasked')
+    expect(profileView).toContain('detail.phoneNumberMasked')
+    expect(profileView).toContain('bind:tap="revealPhone">查看完整号码')
+    expect(profileView).not.toMatch(/\{\{(?:item|detail)\.phoneNumber[\s|}]/)
+    expect(() => assertNoSensitivePageData({
+      users: [{ id: 'user-1', phoneNumberMasked: '+86 188****3403' }],
+      detail: { id: 'user-1', phoneNumberMasked: '+86 188****3403' },
+    }, 'packages/admin/profiles/index', contract.sensitivePatterns)).not.toThrow()
+  })
+
   it('classifies direct access recovery as external wait and optional avatar availability as settled', () => {
     const access = contract.routes.find((route: { path: string }) => route.path === 'packages/member/mip-access/index')
     const avatar = contract.routes.find((route: { path: string }) => route.path === 'packages/member/mip-avatar/index')

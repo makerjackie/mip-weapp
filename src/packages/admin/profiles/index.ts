@@ -3,8 +3,16 @@ import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { formatLocalDateTime } from '../../../utils/date'
 import { adminLoadFailure } from '../shared/page-state'
+import {
+  appendPrivatePhones,
+  clearPrivatePhones,
+  maskedPhone,
+  privatePhone,
+  replacePrivatePhones,
+} from '../shared/private-phone'
 
-type AdminUserView = AdminUser & {
+type AdminUserView = Omit<AdminUser, 'phoneNumber'> & {
+  phoneNumberMasked: string
   controlText: string
   hasAllowlist: boolean
   hasBlocklist: boolean
@@ -13,7 +21,8 @@ type AdminUserView = AdminUser & {
   statusTheme: 'default' | 'success' | 'danger'
 }
 
-type AdminUserDetailView = AdminUserDetail & {
+type AdminUserDetailView = Omit<AdminUserDetail, 'phoneNumber' | 'relatedRecords'> & {
+  phoneNumberMasked: string
   statusText: string
   membershipText: string
   membershipEndsText: string
@@ -43,8 +52,10 @@ const membershipStatusLabels: Record<string, string> = {
 }
 
 function userView(item: AdminUser): AdminUserView {
+  const { phoneNumber, ...publicItem } = item
   return {
-    ...item,
+    ...publicItem,
+    phoneNumberMasked: maskedPhone(phoneNumber),
     controlText: item.controls.join('、'),
     hasAllowlist: item.controls.includes('ALLOWLIST'),
     hasBlocklist: item.controls.includes('BLOCKLIST'),
@@ -55,16 +66,18 @@ function userView(item: AdminUser): AdminUserView {
 }
 
 function userDetailView(detail: AdminUserDetail): AdminUserDetailView {
+  const { phoneNumber, relatedRecords, ...publicDetail } = detail
   return {
-    ...detail,
+    ...publicDetail,
+    phoneNumberMasked: maskedPhone(phoneNumber),
     statusText: userStatusLabels[detail.status],
     membershipText: detail.membership
       ? membershipStatusLabels[detail.membership.status] || '状态待确认'
       : '非会员',
     membershipEndsText: detail.membership?.endsAt ? formatLocalDateTime(detail.membership.endsAt) : '未设置',
     relatedRecords: {
-      ...detail.relatedRecords,
-      orders: detail.relatedRecords.orders.map(order => ({
+      ...relatedRecords,
+      orders: relatedRecords.orders.map(order => ({
         ...order,
         amountText: `${(order.amountCents / 100).toFixed(2)} 元`,
       })),
@@ -127,21 +140,26 @@ Page({
     detailMessage: '',
   },
   requestSeq: 0,
+  detailRequestSeq: 0,
   confirmationBusy: false,
   onShow() { void this.loadUsers() },
   onHide() {
     this.requestSeq += 1
+    this.detailRequestSeq += 1
     mipAdminModule.clearSensitive()
+    clearPrivatePhones(this)
     this.setData({
       includePhone: false,
       detailOpen: false,
       detail: null,
-      users: this.data.users.map(item => ({ ...item, phoneNumber: null })),
+      users: this.data.users.map(item => ({ ...item, phoneNumberMasked: '' })),
     })
   },
   onUnload() {
     this.requestSeq += 1
+    this.detailRequestSeq += 1
     mipAdminModule.clearSensitive()
+    clearPrivatePhones(this)
   },
   updateQuery(event: WechatMiniprogram.CustomEvent<{ value: string }>) { this.setData({ query: event.detail.value }) },
   updateRangeFilter(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
@@ -180,11 +198,13 @@ Page({
     }
     const seq = this.requestSeq + 1
     this.requestSeq = seq
+    const includePhone = this.data.includePhone
+    clearPrivatePhones(this)
     try {
       const [session, response] = await Promise.all([
         mipAdminModule.getSession(force),
         mipAdminModule.users.list({
-          includePhone: this.data.includePhone,
+          includePhone,
           filters: {
             query: this.data.query.trim(),
             kind: this.data.kind,
@@ -205,10 +225,14 @@ Page({
       if (seq !== this.requestSeq) {
         return
       }
+      const canPhone = hasCapability(session.capabilities, 'users.phone.read')
+      if (canPhone && includePhone) {
+        replacePrivatePhones(this, response.items)
+      }
       this.setData({
         state: 'ready',
         users: response.items.map(userView),
-        canPhone: hasCapability(session.capabilities, 'users.phone.read'),
+        canPhone,
         canEdit: hasCapability(session.capabilities, 'users.fields.edit'),
         canControl: hasCapability(session.capabilities, 'users.access.manage'),
         canExport: hasCapability(session.capabilities, 'exports.create'),
@@ -235,10 +259,12 @@ Page({
     if (!this.data.nextCursor || this.data.loadingMore || this.data.state !== 'ready') {
       return
     }
+    const seq = this.requestSeq
+    const includePhone = this.data.includePhone
     this.setData({ loadingMore: true, message: '' })
     try {
       const response = await mipAdminModule.users.list({
-        includePhone: this.data.includePhone,
+        includePhone,
         cursor: this.data.nextCursor,
         filters: {
           query: this.data.query.trim(),
@@ -256,14 +282,25 @@ Page({
           createdTo: this.data.createdToDate ? dateBoundary(this.data.createdToDate, true) : '',
         },
       })
+      if (seq !== this.requestSeq) {
+        return
+      }
+      if (this.data.canPhone && includePhone) {
+        appendPrivatePhones(this, response.items)
+      }
       const users = response.items.map(userView)
       this.setData({ users: this.data.users.concat(users), nextCursor: response.nextCursor || null })
     }
     catch (error) {
+      if (seq !== this.requestSeq) {
+        return
+      }
       this.setData({ message: error instanceof Error ? error.message : '更多用户加载失败' })
     }
     finally {
-      this.setData({ loadingMore: false })
+      if (seq === this.requestSeq) {
+        this.setData({ loadingMore: false })
+      }
     }
   },
   async loadBranches() {
@@ -320,16 +357,22 @@ Page({
     if (!userId) {
       return
     }
+    const seq = this.detailRequestSeq + 1
+    this.detailRequestSeq = seq
+    const includePhone = this.data.includePhone
     this.setData({ detailOpen: true, detailState: 'loading', detail: null, detailMessage: '' })
     try {
-      const detail = await mipAdminModule.users.get(userId, this.data.includePhone, true)
-      if (!this.data.detailOpen) {
+      const detail = await mipAdminModule.users.get(userId, includePhone, true)
+      if (!this.data.detailOpen || seq !== this.detailRequestSeq) {
         return
+      }
+      if (this.data.canPhone && includePhone) {
+        appendPrivatePhones(this, [detail])
       }
       this.setData({ detailState: 'ready', detail: userDetailView(detail) })
     }
     catch (error) {
-      if (!this.data.detailOpen) {
+      if (!this.data.detailOpen || seq !== this.detailRequestSeq) {
         return
       }
       this.setData({
@@ -339,6 +382,7 @@ Page({
     }
   },
   closeDetail() {
+    this.detailRequestSeq += 1
     this.setData({ detailOpen: false, detail: null, detailMessage: '' })
     mipAdminModule.clearSensitive()
   },
@@ -373,7 +417,14 @@ Page({
       this.setData({ includePhone: true })
       await this.loadUsers(true)
       if (this.data.detailOpen && this.data.detail?.id) {
-        this.setData({ detail: userDetailView(await mipAdminModule.users.get(this.data.detail.id, true, true)) })
+        const detailId = this.data.detail.id
+        const seq = this.detailRequestSeq + 1
+        this.detailRequestSeq = seq
+        const detail = await mipAdminModule.users.get(detailId, true, true)
+        if (this.data.detailOpen && this.data.detail?.id === detailId && seq === this.detailRequestSeq) {
+          appendPrivatePhones(this, [detail])
+          this.setData({ detail: userDetailView(detail) })
+        }
       }
     }
     catch (error) {
@@ -381,6 +432,25 @@ Page({
     }
     finally {
       this.confirmationBusy = false
+    }
+  },
+  async revealPhone(event: WechatMiniprogram.TouchEvent) {
+    if (!this.data.canPhone || !this.data.includePhone) {
+      return
+    }
+    const phone = privatePhone(this, String(event.currentTarget.dataset.id || ''))
+    if (!phone) {
+      wx.showToast({ title: '手机号暂不可用', icon: 'none' })
+      return
+    }
+    const modal = await wx.showModal({
+      title: '手机号',
+      content: phone,
+      confirmText: '复制号码',
+      cancelText: '关闭',
+    })
+    if (modal.confirm) {
+      await wx.setClipboardData({ data: phone })
     }
   },
   async editField(event: WechatMiniprogram.TouchEvent) {
