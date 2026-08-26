@@ -43,20 +43,6 @@ function synchronizeDirectory(source, destination) {
   }
 }
 
-function copyPassthroughAssets(source, destination, extensions) {
-  for (const entry of fs.readdirSync(source, { withFileTypes: true })) {
-    const sourcePath = path.join(source, entry.name)
-    const destinationPath = path.join(destination, entry.name)
-    if (entry.isDirectory()) {
-      copyPassthroughAssets(sourcePath, destinationPath, extensions)
-    }
-    else if (extensions.has(path.extname(entry.name).toLowerCase())) {
-      fs.mkdirSync(path.dirname(destinationPath), { recursive: true })
-      fs.copyFileSync(sourcePath, destinationPath)
-    }
-  }
-}
-
 const result = spawnSync('pnpm', [
   'exec',
   'wv',
@@ -78,7 +64,6 @@ if (result.status !== 0) {
   process.exit(result.status ?? 1)
 }
 
-copyPassthroughAssets(path.join(example.root, 'src'), stagingDir, new Set(['.webp']))
 fs.rmSync(stagingProjectConfigPath, { force: true })
 const stagedNpm = path.join(stagingDir, 'miniprogram_npm')
 const currentNpm = path.join(outputDir, 'miniprogram_npm')

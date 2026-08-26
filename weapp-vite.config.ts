@@ -81,6 +81,9 @@ export default defineConfig({
   },
   weapp: {
     srcRoot: 'src',
+    copy: {
+      include: ['**/*.webp'],
+    },
     npm: {
       strategy: 'explicit',
       mainPackage: {

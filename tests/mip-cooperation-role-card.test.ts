@@ -1,20 +1,7 @@
-import type { Buffer } from 'node:buffer'
 import { existsSync, readFileSync } from 'node:fs'
-import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
 import { cooperationRoleCardView, cooperationRoleVisuals } from '../src/components/cooperation-role-card/model'
 import { cooperationRoles } from '../src/config/mip-catalogs'
-
-interface DecodedPng {
-  width: number
-  height: number
-  data: Uint8Array
-}
-
-const requireModule = createRequire(import.meta.url)
-const { PNG } = requireModule('pngjs') as {
-  PNG: { sync: { read: (input: Buffer) => DecodedPng } }
-}
 
 const figmaRawSourceNodes = {
   connector: '2004:3165',
@@ -29,23 +16,18 @@ function source(path: string) {
   return readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 }
 
-function pngMetadata(path: string) {
+function losslessWebpMetadata(path: string) {
   const url = new URL(`../${path}`, import.meta.url)
   const bytes = readFileSync(url)
-  const header = bytes.subarray(0, 24)
-  expect(header.subarray(1, 4).toString('ascii')).toBe('PNG')
-  const image = PNG.sync.read(bytes)
-  let alphaMin = 255
-  let alphaMax = 0
-  for (let offset = 3; offset < image.data.length; offset += 4) {
-    alphaMin = Math.min(alphaMin, image.data[offset])
-    alphaMax = Math.max(alphaMax, image.data[offset])
-  }
+  expect(bytes.subarray(0, 4).toString('ascii')).toBe('RIFF')
+  expect(bytes.subarray(8, 12).toString('ascii')).toBe('WEBP')
+  expect(bytes.subarray(12, 16).toString('ascii')).toBe('VP8L')
+  expect(bytes[20]).toBe(0x2F)
+  const dimensions = bytes.readUInt32LE(21)
   return {
-    width: image.width,
-    height: image.height,
-    alphaMin,
-    alphaMax,
+    width: (dimensions & 0x3FFF) + 1,
+    height: ((dimensions >>> 14) & 0x3FFF) + 1,
+    hasAlpha: Boolean((dimensions >>> 28) & 1),
   }
 }
 
@@ -57,37 +39,37 @@ describe('MIP cooperation role visual component', () => {
         backgroundColor: '#DF07A9',
         softColor: '#FFE5F9',
         foregroundColor: '#FFFFFF',
-        artPath: '/assets/figma/cooperation/connector.png',
+        artPath: '/assets/figma/cooperation/connector.webp',
       },
       business_builder: {
         backgroundColor: '#FF5500',
         softColor: '#FFE5F9',
         foregroundColor: '#FFFFFF',
-        artPath: '/assets/figma/cooperation/business-builder.png',
+        artPath: '/assets/figma/cooperation/business-builder.webp',
       },
       capital_operator: {
         backgroundColor: '#7A2900',
         softColor: '#FADAB3',
         foregroundColor: '#FFFFFF',
-        artPath: '/assets/figma/cooperation/capital-operator.png',
+        artPath: '/assets/figma/cooperation/capital-operator.webp',
       },
       strategist: {
         backgroundColor: '#7B00FF',
         softColor: '#DAB8FF',
         foregroundColor: '#FFFFFF',
-        artPath: '/assets/figma/cooperation/strategist.png',
+        artPath: '/assets/figma/cooperation/strategist.webp',
       },
       visual_designer: {
         backgroundColor: '#04A44F',
         softColor: '#AFFDD4',
         foregroundColor: '#FFFFFF',
-        artPath: '/assets/figma/cooperation/visual-designer.png',
+        artPath: '/assets/figma/cooperation/visual-designer.webp',
       },
       delivery_lead: {
         backgroundColor: '#1A71FF',
         softColor: '#E5EFFF',
         foregroundColor: '#FFFFFF',
-        artPath: '/assets/figma/cooperation/delivery-lead.png',
+        artPath: '/assets/figma/cooperation/delivery-lead.webp',
       },
     })
 
@@ -106,12 +88,31 @@ describe('MIP cooperation role visual component', () => {
 
       const assetPath = `src${cooperationRoleVisuals[role.key].artPath}`
       expect(existsSync(new URL(`../${assetPath}`, import.meta.url))).toBe(true)
-      expect(pngMetadata(assetPath)).toEqual({
+      expect(assetPath.endsWith('.webp')).toBe(true)
+      expect(existsSync(new URL(`../${assetPath.replace(/\.webp$/, '.png')}`, import.meta.url))).toBe(false)
+      expect(losslessWebpMetadata(assetPath)).toEqual({
         width: 339,
         height: 360,
-        alphaMin: 0,
-        alphaMax: 255,
+        hasAlpha: true,
       })
+    }
+  })
+
+  it('keeps retired Figma source images outside the production source tree', () => {
+    const archivedAssets = [
+      {
+        productionPath: 'src/assets/figma/profile/role-strategist.png',
+        archivePath: 'docs/mip/source-assets/figma/profile/role-strategist.png',
+      },
+      {
+        productionPath: 'src/assets/figma/opportunities/opportunity-cover-2.png',
+        archivePath: 'docs/mip/source-assets/figma/opportunities/opportunity-cover-2.png',
+      },
+    ]
+
+    for (const asset of archivedAssets) {
+      expect(existsSync(new URL(`../${asset.productionPath}`, import.meta.url))).toBe(false)
+      expect(existsSync(new URL(`../${asset.archivePath}`, import.meta.url))).toBe(true)
     }
   })
 

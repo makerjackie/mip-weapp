@@ -14,37 +14,37 @@ export const cooperationRoleVisuals: Record<CooperationRoleKey, CooperationRoleV
     backgroundColor: '#DF07A9',
     softColor: '#FFE5F9',
     foregroundColor: '#FFFFFF',
-    artPath: '/assets/figma/cooperation/connector.png',
+    artPath: '/assets/figma/cooperation/connector.webp',
   },
   business_builder: {
     backgroundColor: '#FF5500',
     softColor: '#FFE5F9',
     foregroundColor: '#FFFFFF',
-    artPath: '/assets/figma/cooperation/business-builder.png',
+    artPath: '/assets/figma/cooperation/business-builder.webp',
   },
   capital_operator: {
     backgroundColor: '#7A2900',
     softColor: '#FADAB3',
     foregroundColor: '#FFFFFF',
-    artPath: '/assets/figma/cooperation/capital-operator.png',
+    artPath: '/assets/figma/cooperation/capital-operator.webp',
   },
   strategist: {
     backgroundColor: '#7B00FF',
     softColor: '#DAB8FF',
     foregroundColor: '#FFFFFF',
-    artPath: '/assets/figma/cooperation/strategist.png',
+    artPath: '/assets/figma/cooperation/strategist.webp',
   },
   visual_designer: {
     backgroundColor: '#04A44F',
     softColor: '#AFFDD4',
     foregroundColor: '#FFFFFF',
-    artPath: '/assets/figma/cooperation/visual-designer.png',
+    artPath: '/assets/figma/cooperation/visual-designer.webp',
   },
   delivery_lead: {
     backgroundColor: '#1A71FF',
     softColor: '#E5EFFF',
     foregroundColor: '#FFFFFF',
-    artPath: '/assets/figma/cooperation/delivery-lead.png',
+    artPath: '/assets/figma/cooperation/delivery-lead.webp',
   },
 }
 
