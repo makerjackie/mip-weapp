@@ -115,6 +115,17 @@
       <view class="profile-more-item" bind:tap="openDigitalAvatar"><view><view class="profile-more-label">数字分身</view><view class="profile-more-description">生成并保存头像图片</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
       <view class="profile-more-item" bind:tap="openAiDrafts"><view><view class="profile-more-label">AI 草稿</view><view class="profile-more-description">整理档案、合作卡和案例草稿</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
       <view class="profile-more-item" bind:tap="openMatching"><view><view class="profile-more-label">机会撮合</view><view class="profile-more-description">查看人才和项目推荐</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
+      <view class="profile-more-item" aria-role="button" bind:tap="openNotifications">
+        <view>
+          <view class="profile-more-label">站内消息</view>
+          <view wx:if="{{notificationUnreadCount > 0}}" class="profile-more-description">{{notificationUnreadCount}} 条未读</view>
+          <view wx:else class="profile-more-description">暂无未读消息</view>
+        </view>
+        <view class="profile-more-trailing">
+          <view wx:if="{{notificationUnreadCount > 0}}" class="profile-unread-badge">{{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}}</view>
+          <t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" />
+        </view>
+      </view>
       <view class="profile-more-item" bind:tap="openOpportunitySettings"><view><view class="profile-more-label">消息与机会权限</view><view class="profile-more-description">管理评论、撮合和热点通知</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
       <view class="profile-more-item" bind:tap="openBenefits"><view><view class="profile-more-label">会员权益</view><view wx:if="{{membershipEndsText}}" class="profile-more-description">有效期至 {{membershipEndsText}}</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
       <view class="profile-more-item" bind:tap="openHelp"><view class="profile-more-label">帮助与客服</view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>

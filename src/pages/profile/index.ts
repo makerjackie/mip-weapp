@@ -9,6 +9,7 @@ import { cooperationModule } from '../../modules/mip-cooperation'
 import { mipGrowthModule } from '../../modules/mip-growth/client'
 import { mipAccessPageUrl } from '../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
+import { mipMessagingModule } from '../../modules/mip-messaging/client'
 import { opportunityModule } from '../../modules/mip-opportunities'
 import { canManageEvents, hasCapability, membershipPresentation } from '../../modules/mip-shell'
 import { caseNavigateTo, syncCaseNavigation } from '../../modules/platform/case-navigation'
@@ -53,6 +54,7 @@ Page({
     interestCount: null as number | null,
     visitorUnreadCount: 0,
     visitorCount: null as number | null,
+    notificationUnreadCount: 0,
     portfolioTab: 'cooperation' as PortfolioTab,
     cooperationState: 'loading' as SectionState,
     cooperationCards: [] as CooperationCardView[],
@@ -97,6 +99,7 @@ Page({
         this.loadCases(),
         this.loadOpportunities(),
         this.loadInfluenceSummary(snapshot),
+        this.loadNotificationUnread(snapshot, options),
       ])
     }
     catch {
@@ -136,6 +139,31 @@ Page({
     }
     if (Object.keys(updates).length) {
       this.setData(updates)
+    }
+  },
+
+  async loadNotificationUnread(
+    snapshot: IdentityAccessSnapshot,
+    options: { force?: boolean },
+  ) {
+    if (!snapshot.authenticated) {
+      this.setData({ notificationUnreadCount: 0 })
+      return
+    }
+    const cached = mipMessagingModule.peekUnreadCount()
+    if (cached !== undefined) {
+      this.setData({ notificationUnreadCount: cached })
+    }
+    try {
+      const notificationUnreadCount = await mipMessagingModule.refreshUnreadCount({
+        force: options.force,
+      })
+      this.setData({ notificationUnreadCount })
+    }
+    catch {
+      if (cached === undefined) {
+        this.setData({ notificationUnreadCount: 0 })
+      }
     }
   },
 

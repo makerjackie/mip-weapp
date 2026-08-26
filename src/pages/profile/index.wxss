@@ -339,7 +339,7 @@
 
 .profile-tab {
   box-sizing: border-box;
-  min-height: 80rpx;
+  min-height: 88rpx;
   padding: 20rpx 8rpx;
   font-size: 28rpx;
   line-height: 40rpx;
@@ -475,6 +475,28 @@
   font-size: 20rpx;
   line-height: 28rpx;
   color: #b3b3b3;
+}
+
+.profile-more-trailing {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 12rpx;
+  align-items: center;
+  margin-left: 16rpx;
+}
+
+.profile-unread-badge {
+  box-sizing: border-box;
+  min-width: 36rpx;
+  height: 36rpx;
+  padding: 0 8rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+  line-height: 36rpx;
+  color: #040000;
+  text-align: center;
+  background: #fcdf03;
+  border-radius: 999rpx;
 }
 
 .profile-admin-entry {
