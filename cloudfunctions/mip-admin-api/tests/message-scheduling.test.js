@@ -539,7 +539,11 @@ describe('message campaign scheduling safety', () => {
     assert.match(source, /FOR UPDATE SKIP LOCKED/)
     assert.match(source, /active_dispatch_id = NULL/)
     assert.match(source, /last_outcome = 'SUCCEEDED', retry_disposition = 'TERMINAL'/)
-    const snapshotSelection = functionBody(source, 'async function selectSnapshotRecipients')
+    const audienceSource = fs.readFileSync(
+      path.join(root, 'cloudfunctions/mip-admin-api/domain/message-campaign-audience.js'),
+      'utf8',
+    )
+    const snapshotSelection = functionBody(audienceSource, 'async function selectSnapshotRecipients')
     const explicitSelection = snapshotSelection.slice(0, snapshotSelection.indexOf("if (campaign.scopeType === 'BRANCH')"))
     assert.equal((explicitSelection.match(/WHERE user\.app_id = \?/g) || []).length, 1)
     assert.match(mysql, /async function transaction\(work, attempts = 3\)/)

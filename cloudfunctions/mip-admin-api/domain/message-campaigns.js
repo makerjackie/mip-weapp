@@ -2,8 +2,15 @@
 
 const { createHash, randomUUID } = require('node:crypto')
 const { CAPABILITIES, capabilitiesForBinding, coversScope } = require('./capabilities')
+const {
+  MAX_EXPLICIT_RECIPIENTS,
+  createMessageCampaignAudience,
+} = require('./message-campaign-audience')
+const {
+  campaignDto,
+  createMessageCampaignReadRepository,
+} = require('./repositories/message-campaigns')
 
-const MAX_EXPLICIT_RECIPIENTS = 100
 const MAX_SNAPSHOT_RECIPIENTS = 1000
 const MAX_DISPATCH_ATTEMPTS = 5
 const MIN_SCHEDULE_DELAY_MS = 5 * 60 * 1000
@@ -26,167 +33,21 @@ function createMessageCampaignRepository(database, options = {}) {
   if (typeof lockMutation !== 'function' || typeof assertScope !== 'function') {
     throw new TypeError('Message campaign mutation authorization is invalid')
   }
-
-  async function listScopes(appId, visibility) {
-    const rows = visibility.platform
-      ? await database.query(
-          `SELECT id, name FROM mip_city_branches
-           WHERE app_id = ? AND status = 'ACTIVE' ORDER BY city_name, name, id`,
-          [appId],
-        )
-      : visibility.branchIds.length
-        ? await database.query(
-            `SELECT id, name FROM mip_city_branches
-             WHERE app_id = ? AND status = 'ACTIVE'
-               AND id IN (${placeholders(visibility.branchIds)})
-             ORDER BY city_name, name, id`,
-            [appId, ...visibility.branchIds],
-          )
-        : []
-    return {
-      platform: visibility.platform,
-      branches: rows.map(row => ({ id: String(row.id), name: String(row.name) })),
-    }
-  }
-
-  async function listCampaigns(appId, visibility, filters, pageLimit) {
-    const visible = visibleWhere(visibility)
-    const clauses = ['campaign.app_id = ?', visible.sql]
-    const params = [appId, ...visible.params]
-    if (filters.status) {
-      clauses.push('campaign.status = ?')
-      params.push(filters.status)
-    }
-    if (filters.query) {
-      const pattern = `%${escapeLike(filters.query)}%`
-      clauses.push('(campaign.name LIKE ? OR campaign.title LIKE ?)')
-      params.push(pattern, pattern)
-    }
-    const rows = await database.query(
-      `${campaignSelect(false)}
-       WHERE ${clauses.join(' AND ')}
-       ORDER BY campaign.updated_at DESC, campaign.id DESC LIMIT ?`,
-      [...params, pageLimit],
-    )
-    return rows.map(campaignDto)
-  }
-
-  async function getCampaign(appId, campaignId, adapter = database, lock = false) {
-    const sql = lock
-      ? `SELECT campaign.id, campaign.scope_type, campaign.branch_id,
-       branch.name AS branch_name, campaign.audience_type,
-       campaign.audience_user_ids_json, campaign.name, campaign.title, campaign.body,
-       campaign.status, campaign.content_safety_status, campaign.recipient_count,
-       (SELECT COUNT(*) FROM mip_operations_messages submitted
-         WHERE submitted.app_id = campaign.app_id AND submitted.publication_id = campaign.id
-       ) AS submitted_count,
-       (SELECT COUNT(*) FROM mip_operations_messages ready_message
-         INNER JOIN mip_outbox_events ready_outbox
-           ON ready_outbox.app_id = ready_message.app_id
-          AND ready_outbox.aggregate_type = 'OPERATIONS_MESSAGE'
-          AND ready_outbox.aggregate_id = ready_message.id
-          AND ready_outbox.event_type = 'operations.notification_published'
-         INNER JOIN mip_inbox_messages ready_inbox
-           ON ready_inbox.app_id = ready_message.app_id
-          AND ready_inbox.recipient_user_id = ready_message.recipient_user_id
-          AND ready_inbox.dedupe_key = CONCAT('outbox:', ready_outbox.id, ':operations')
-         WHERE ready_message.app_id = campaign.app_id AND ready_message.publication_id = campaign.id
-       ) AS inbox_ready_count,
-       (SELECT COUNT(*) FROM mip_operations_messages failed_message
-         INNER JOIN mip_outbox_events failed_outbox
-           ON failed_outbox.app_id = failed_message.app_id
-          AND failed_outbox.aggregate_type = 'OPERATIONS_MESSAGE'
-          AND failed_outbox.aggregate_id = failed_message.id
-          AND failed_outbox.event_type = 'operations.notification_published'
-          AND failed_outbox.status IN ('FAILED', 'CANCELLED')
-         WHERE failed_message.app_id = campaign.app_id AND failed_message.publication_id = campaign.id
-       ) AS failed_count,
-       ${campaignOutboxCount("= 'PENDING'")} AS outbox_pending_count,
-       ${campaignOutboxCount("= 'PROCESSING'")} AS outbox_processing_count,
-       ${campaignOutboxCount("= 'FAILED'")} AS outbox_retrying_count,
-       ${campaignOutboxCount("= 'DELIVERED'")} AS outbox_delivered_count,
-       ${campaignOutboxCount("= 'CANCELLED'")} AS outbox_terminal_count,
-       ${campaignExternalTaskCount("= 'PENDING'")} AS external_task_pending_count,
-       ${campaignExternalTaskCount("= 'PROCESSING'")} AS external_task_processing_count,
-       ${campaignExternalTaskCount("= 'FAILED'")} AS external_task_retrying_count,
-       ${campaignExternalTaskCount("= 'DELIVERED'")} AS external_task_delivered_count,
-       ${campaignExternalTaskCount("= 'CANCELLED'")} AS external_task_terminal_count,
-       campaign.snapshot_at, campaign.published_at, campaign.withdrawn_at,
-       campaign.withdrawal_reason, campaign.publish_idempotency_key, campaign.publish_request_hash,
-       campaign.active_dispatch_id,
-       active_dispatch.status AS active_dispatch_status,
-       active_dispatch.scheduled_for AS active_dispatch_scheduled_for,
-       active_dispatch.attempts AS active_dispatch_attempts,
-       active_dispatch.last_outcome AS active_dispatch_last_outcome,
-       active_dispatch.retry_disposition AS active_dispatch_retry_disposition,
-       active_dispatch.last_error_code AS active_dispatch_last_error_code,
-       active_dispatch.version AS active_dispatch_version,
-       active_dispatch.updated_at AS active_dispatch_updated_at,
-       campaign.version, campaign.updated_at
-       FROM mip_message_campaigns campaign
-       LEFT JOIN mip_city_branches branch
-         ON branch.app_id = campaign.app_id AND branch.id = campaign.branch_id
-       LEFT JOIN mip_message_campaign_dispatches active_dispatch
-         ON active_dispatch.app_id = campaign.app_id
-        AND active_dispatch.campaign_id = campaign.id
-        AND active_dispatch.id = campaign.active_dispatch_id
-       WHERE campaign.app_id = ? AND campaign.id = ? FOR UPDATE OF campaign`
-      : `${campaignSelect(true)}
-       WHERE campaign.app_id = ? AND campaign.id = ?`
-    const row = await adapter.one(
-      sql,
-      [appId, campaignId],
-    )
-    return row ? campaignDto(row) : null
-  }
-
-  async function getCampaignScope(appId, campaignId) {
-    const row = await database.one(
-      `SELECT scope_type, branch_id, status
-       FROM mip_message_campaigns WHERE app_id = ? AND id = ?`,
-      [appId, campaignId],
-    )
-    return row
-      ? { scopeType: row.scope_type, scopeId: row.scope_type === 'BRANCH' ? row.branch_id : null, status: row.status }
-      : null
-  }
-
-  async function searchRecipients(appId, scope, query, pageLimit) {
-    const params = []
-    const clauses = ["user.app_id = ?", "user.status = 'ACTIVE'", "NULLIF(TRIM(profile.nickname), '') IS NOT NULL"]
-    let branchJoin = ''
-    if (scope.scopeType === 'BRANCH') {
-      branchJoin = `INNER JOIN mip_branch_memberships membership
-        ON membership.app_id = user.app_id AND membership.user_id = user.id
-       AND membership.branch_id = ? AND membership.status = 'ACTIVE'`
-      params.push(scope.scopeId)
-    }
-    params.push(appId)
-    if (query) {
-      const pattern = `%${escapeLike(query)}%`
-      clauses.push('(profile.nickname LIKE ? OR profile.headline LIKE ?)')
-      params.push(pattern, pattern)
-    }
-    return database.query(
-      `SELECT user.id, profile.nickname, COALESCE(profile.headline, '') AS headline,
-        branch.name AS branch_name
-       FROM mip_users user
-       INNER JOIN mip_profiles profile ON profile.app_id = user.app_id AND profile.user_id = user.id
-       ${branchJoin}
-       LEFT JOIN mip_city_branches branch
-         ON branch.app_id = user.app_id AND branch.id = user.primary_branch_id
-       WHERE ${clauses.join(' AND ')}
-       ORDER BY profile.nickname, user.id LIMIT ?`,
-      [...params, pageLimit],
-    )
-  }
+  const audience = createMessageCampaignAudience(maximumRecipients)
+  const {
+    getCampaign,
+    getCampaignScope,
+    listCampaigns,
+    listScopes,
+    searchRecipients,
+  } = createMessageCampaignReadRepository(database)
 
   async function saveCampaign(input) {
     return database.transaction(async (tx) => {
       const authorization = await lockMutation(tx, input)
       const requestedScope = campaignScope(input.draft)
       assertScope(authorization, requestedScope)
-      await assertDraftRecipients(tx, input.appId, input.draft)
+      await audience.assertDraftRecipients(tx, input.appId, input.draft)
 
       if (!input.campaignId) {
         const campaignId = createId()
@@ -249,9 +110,7 @@ function createMessageCampaignRepository(database, options = {}) {
       if (current.status !== 'DRAFT') throw codeError('MESSAGE_CAMPAIGN_IMMUTABLE')
       if (current.contentSafetyStatus !== 'PASSED') throw codeError('CONTENT_SAFETY_REQUIRED')
 
-      const recipients = await selectSnapshotRecipients(tx, input.appId, current, maximumRecipients + 1)
-      if (recipients.length > maximumRecipients) throw codeError('MESSAGE_RECIPIENT_LIMIT_EXCEEDED')
-      if (!recipients.length) throw codeError('MESSAGE_RECIPIENTS_EMPTY')
+      const recipients = await audience.snapshotRecipients(tx, input.appId, current)
       const snapshotAt = now()
       const values = recipients.map(() => '(?, ?, ?, ?, ?, ?)').join(', ')
       const params = recipients.flatMap(recipient => [
@@ -746,86 +605,6 @@ function createMessageCampaignRepository(database, options = {}) {
   }
 }
 
-async function assertDraftRecipients(tx, appId, draft) {
-  if (draft.scopeType === 'BRANCH') {
-    const branch = await tx.one(
-      `SELECT id FROM mip_city_branches
-       WHERE app_id = ? AND id = ? AND status = 'ACTIVE' FOR UPDATE`,
-      [appId, draft.branchId],
-    )
-    if (!branch) throw codeError('VALIDATION_FAILED')
-  }
-  if (draft.audienceType !== 'EXPLICIT') return
-  if (!draft.audienceUserIds.length || draft.audienceUserIds.length > MAX_EXPLICIT_RECIPIENTS) {
-    throw codeError('MESSAGE_RECIPIENT_INVALID')
-  }
-  const branchJoin = draft.scopeType === 'BRANCH'
-    ? `INNER JOIN mip_branch_memberships membership
-        ON membership.app_id = user.app_id AND membership.user_id = user.id
-       AND membership.branch_id = ? AND membership.status = 'ACTIVE'`
-    : ''
-  const params = draft.scopeType === 'BRANCH'
-    ? [draft.branchId, appId, ...draft.audienceUserIds]
-    : [appId, ...draft.audienceUserIds]
-  const rows = await tx.query(
-    `SELECT user.id FROM mip_users user ${branchJoin}
-     WHERE user.app_id = ? AND user.status = 'ACTIVE'
-       AND user.id IN (${placeholders(draft.audienceUserIds)}) FOR UPDATE`,
-    params,
-  )
-  if (new Set(rows.map(row => row.id)).size !== draft.audienceUserIds.length) {
-    throw codeError('MESSAGE_RECIPIENT_INVALID')
-  }
-}
-
-async function selectSnapshotRecipients(tx, appId, campaign, pageLimit) {
-  const entitlement = `EXISTS (
-    SELECT 1 FROM mip_membership_entitlements entitlement
-    WHERE entitlement.app_id = user.app_id AND entitlement.user_id = user.id
-      AND entitlement.status = 'ACTIVE' AND entitlement.starts_at <= UTC_TIMESTAMP(3)
-      AND entitlement.ends_at > UTC_TIMESTAMP(3)
-  )`
-  if (campaign.audienceType === 'EXPLICIT') {
-    const branchJoin = campaign.scopeType === 'BRANCH'
-      ? `INNER JOIN mip_branch_memberships membership
-          ON membership.app_id = user.app_id AND membership.user_id = user.id
-         AND membership.branch_id = ? AND membership.status = 'ACTIVE'`
-      : ''
-    const params = campaign.scopeType === 'BRANCH'
-      ? [campaign.branchId, appId, ...campaign.audienceUserIds, pageLimit]
-      : [appId, ...campaign.audienceUserIds, pageLimit]
-    return tx.query(
-      `SELECT user.id, user.primary_branch_id,
-        CASE WHEN ${entitlement} THEN 'PLAYER' ELSE 'GUEST' END AS kind
-       FROM mip_users user ${branchJoin}
-       WHERE user.app_id = ? AND user.status = 'ACTIVE'
-         AND user.id IN (${placeholders(campaign.audienceUserIds)})
-       ORDER BY user.id LIMIT ? FOR UPDATE`,
-      params,
-    )
-  }
-  if (campaign.scopeType === 'BRANCH') {
-    return tx.query(
-      `SELECT user.id, user.primary_branch_id,
-        CASE WHEN ${entitlement} THEN 'PLAYER' ELSE 'GUEST' END AS kind
-       FROM mip_branch_memberships membership
-       INNER JOIN mip_users user
-         ON user.app_id = membership.app_id AND user.id = membership.user_id AND user.status = 'ACTIVE'
-       WHERE membership.app_id = ? AND membership.branch_id = ? AND membership.status = 'ACTIVE'
-       ORDER BY user.id LIMIT ? FOR UPDATE`,
-      [appId, campaign.branchId, pageLimit],
-    )
-  }
-  return tx.query(
-    `SELECT user.id, user.primary_branch_id,
-      CASE WHEN ${entitlement} THEN 'PLAYER' ELSE 'GUEST' END AS kind
-     FROM mip_users user
-     WHERE user.app_id = ? AND user.status = 'ACTIVE'
-     ORDER BY user.id LIMIT ? FOR UPDATE`,
-    [appId, pageLimit],
-  )
-}
-
 async function materializeCampaignPublication(tx, input) {
   const recipients = await tx.query(
     `SELECT recipient_user_id
@@ -1198,175 +977,10 @@ async function insertPublicationFacts(tx, input) {
   )
 }
 
-function campaignSelect(includeAudience) {
-  return `SELECT campaign.id, campaign.scope_type, campaign.branch_id,
-    branch.name AS branch_name, campaign.audience_type,
-    ${includeAudience ? 'campaign.audience_user_ids_json,' : ''}
-    campaign.name, campaign.title, ${includeAudience ? 'campaign.body,' : ''}
-    campaign.status, campaign.content_safety_status, campaign.recipient_count,
-    (SELECT COUNT(*) FROM mip_operations_messages submitted
-      WHERE submitted.app_id = campaign.app_id AND submitted.publication_id = campaign.id
-    ) AS submitted_count,
-    (SELECT COUNT(*) FROM mip_operations_messages ready_message
-      INNER JOIN mip_outbox_events ready_outbox
-        ON ready_outbox.app_id = ready_message.app_id
-       AND ready_outbox.aggregate_type = 'OPERATIONS_MESSAGE'
-       AND ready_outbox.aggregate_id = ready_message.id
-       AND ready_outbox.event_type = 'operations.notification_published'
-      INNER JOIN mip_inbox_messages ready_inbox
-        ON ready_inbox.app_id = ready_message.app_id
-       AND ready_inbox.recipient_user_id = ready_message.recipient_user_id
-       AND ready_inbox.dedupe_key = CONCAT('outbox:', ready_outbox.id, ':operations')
-      WHERE ready_message.app_id = campaign.app_id AND ready_message.publication_id = campaign.id
-    ) AS inbox_ready_count,
-    (SELECT COUNT(*) FROM mip_operations_messages failed_message
-      INNER JOIN mip_outbox_events failed_outbox
-        ON failed_outbox.app_id = failed_message.app_id
-       AND failed_outbox.aggregate_type = 'OPERATIONS_MESSAGE'
-       AND failed_outbox.aggregate_id = failed_message.id
-       AND failed_outbox.event_type = 'operations.notification_published'
-       AND failed_outbox.status IN ('FAILED', 'CANCELLED')
-      WHERE failed_message.app_id = campaign.app_id AND failed_message.publication_id = campaign.id
-    ) AS failed_count,
-    ${campaignOutboxCount("= 'PENDING'")} AS outbox_pending_count,
-    ${campaignOutboxCount("= 'PROCESSING'")} AS outbox_processing_count,
-    ${campaignOutboxCount("= 'FAILED'")} AS outbox_retrying_count,
-    ${campaignOutboxCount("= 'DELIVERED'")} AS outbox_delivered_count,
-    ${campaignOutboxCount("= 'CANCELLED'")} AS outbox_terminal_count,
-    ${campaignExternalTaskCount("= 'PENDING'")} AS external_task_pending_count,
-    ${campaignExternalTaskCount("= 'PROCESSING'")} AS external_task_processing_count,
-    ${campaignExternalTaskCount("= 'FAILED'")} AS external_task_retrying_count,
-    ${campaignExternalTaskCount("= 'DELIVERED'")} AS external_task_delivered_count,
-    ${campaignExternalTaskCount("= 'CANCELLED'")} AS external_task_terminal_count,
-    campaign.snapshot_at, campaign.published_at, campaign.withdrawn_at,
-    ${includeAudience ? 'campaign.withdrawal_reason, campaign.publish_idempotency_key, campaign.publish_request_hash,' : ''}
-    campaign.active_dispatch_id,
-    active_dispatch.status AS active_dispatch_status,
-    active_dispatch.scheduled_for AS active_dispatch_scheduled_for,
-    active_dispatch.attempts AS active_dispatch_attempts,
-    active_dispatch.last_outcome AS active_dispatch_last_outcome,
-    active_dispatch.retry_disposition AS active_dispatch_retry_disposition,
-    active_dispatch.last_error_code AS active_dispatch_last_error_code,
-    active_dispatch.version AS active_dispatch_version,
-    active_dispatch.updated_at AS active_dispatch_updated_at,
-    campaign.version, campaign.updated_at
-    FROM mip_message_campaigns campaign
-    LEFT JOIN mip_city_branches branch
-      ON branch.app_id = campaign.app_id AND branch.id = campaign.branch_id
-    LEFT JOIN mip_message_campaign_dispatches active_dispatch
-      ON active_dispatch.app_id = campaign.app_id
-     AND active_dispatch.campaign_id = campaign.id
-     AND active_dispatch.id = campaign.active_dispatch_id`
-}
-
-function campaignDto(row) {
-  return {
-    id: String(row.id),
-    scopeType: row.scope_type,
-    branchId: row.branch_id || null,
-    branchName: row.branch_name || '',
-    audienceType: row.audience_type,
-    ...(Object.hasOwn(row, 'audience_user_ids_json')
-      ? { audienceUserIds: jsonArray(row.audience_user_ids_json) }
-      : {}),
-    name: row.name,
-    title: row.title,
-    ...(Object.hasOwn(row, 'body') ? { body: row.body } : {}),
-    status: row.status,
-    contentSafetyStatus: row.content_safety_status,
-    recipientCount: Number(row.recipient_count || 0),
-    deliveryStats: {
-      submittedCount: Number(row.submitted_count || 0),
-      inboxReadyCount: Number(row.inbox_ready_count || 0),
-      failedCount: Number(row.failed_count || 0),
-      outboxStats: {
-        pendingCount: Number(row.outbox_pending_count || 0),
-        processingCount: Number(row.outbox_processing_count || 0),
-        retryingCount: Number(row.outbox_retrying_count || 0),
-        deliveredCount: Number(row.outbox_delivered_count || 0),
-        terminalCount: Number(row.outbox_terminal_count || 0),
-      },
-      externalTaskStats: {
-        pendingCount: Number(row.external_task_pending_count || 0),
-        processingCount: Number(row.external_task_processing_count || 0),
-        retryingCount: Number(row.external_task_retrying_count || 0),
-        deliveredCount: Number(row.external_task_delivered_count || 0),
-        terminalCount: Number(row.external_task_terminal_count || 0),
-      },
-    },
-    snapshotAt: iso(row.snapshot_at),
-    publishedAt: iso(row.published_at),
-    withdrawnAt: iso(row.withdrawn_at),
-    ...(Object.hasOwn(row, 'withdrawal_reason') ? { withdrawalReason: row.withdrawal_reason || '' } : {}),
-    ...(Object.hasOwn(row, 'publish_idempotency_key')
-      ? {
-          publishIdempotencyKey: row.publish_idempotency_key || null,
-          publishRequestHash: row.publish_request_hash || null,
-        }
-      : {}),
-    activeDispatchId: row.active_dispatch_id || null,
-    activeDispatch: row.active_dispatch_id
-      ? {
-          status: row.active_dispatch_status,
-          scheduledFor: iso(row.active_dispatch_scheduled_for),
-          attempts: Number(row.active_dispatch_attempts || 0),
-          lastOutcome: row.active_dispatch_last_outcome,
-          retryDisposition: row.active_dispatch_retry_disposition,
-          lastErrorCode: row.active_dispatch_last_error_code || null,
-          version: Number(row.active_dispatch_version),
-          updatedAt: iso(row.active_dispatch_updated_at),
-        }
-      : null,
-    version: Number(row.version),
-    updatedAt: iso(row.updated_at),
-  }
-}
-
-function campaignOutboxCount(statusCondition) {
-  return `(SELECT COUNT(*) FROM mip_operations_messages counted_message
-    INNER JOIN mip_outbox_events counted_outbox
-      ON counted_outbox.app_id = counted_message.app_id
-     AND counted_outbox.aggregate_type = 'OPERATIONS_MESSAGE'
-     AND counted_outbox.aggregate_id = counted_message.id
-     AND counted_outbox.event_type = 'operations.notification_published'
-     AND counted_outbox.status ${statusCondition}
-    WHERE counted_message.app_id = campaign.app_id
-      AND counted_message.publication_id = campaign.id)`
-}
-
-function campaignExternalTaskCount(statusCondition) {
-  return `(SELECT COUNT(*) FROM mip_operations_messages external_message
-    INNER JOIN mip_outbox_events external_outbox
-      ON external_outbox.app_id = external_message.app_id
-     AND external_outbox.aggregate_type = 'OPERATIONS_MESSAGE'
-     AND external_outbox.aggregate_id = external_message.id
-     AND external_outbox.event_type = 'operations.notification_published'
-    INNER JOIN mip_inbox_messages external_inbox
-      ON external_inbox.app_id = external_message.app_id
-     AND external_inbox.recipient_user_id = external_message.recipient_user_id
-     AND external_inbox.dedupe_key = CONCAT('outbox:', external_outbox.id, ':operations')
-    INNER JOIN mip_delivery_tasks external_task
-      ON external_task.app_id = external_inbox.app_id
-     AND external_task.inbox_message_id = external_inbox.id
-     AND external_task.status ${statusCondition}
-    WHERE external_message.app_id = campaign.app_id
-      AND external_message.publication_id = campaign.id)`
-}
-
 function campaignScope(value) {
   return {
     scopeType: value.scopeType,
     scopeId: value.scopeType === 'BRANCH' ? value.branchId : null,
-  }
-}
-
-function visibleWhere(visibility) {
-  if (visibility.platform) return { sql: '1 = 1', params: [] }
-  if (!visibility.branchIds.length) return { sql: '0 = 1', params: [] }
-  return {
-    sql: `(campaign.scope_type = 'BRANCH'
-      AND campaign.branch_id IN (${placeholders(visibility.branchIds)}))`,
-    params: [...visibility.branchIds],
   }
 }
 
@@ -1432,17 +1046,6 @@ async function writeAudit(tx, audit) {
   )
 }
 
-function jsonArray(value) {
-  if (Array.isArray(value)) return value.map(String)
-  try {
-    const parsed = JSON.parse(value || '[]')
-    return Array.isArray(parsed) ? parsed.map(String) : []
-  }
-  catch {
-    return []
-  }
-}
-
 function parseOperationResponse(value) {
   if (value && typeof value === 'object' && !Array.isArray(value)) return value
   if (typeof value !== 'string') return null
@@ -1455,23 +1058,9 @@ function parseOperationResponse(value) {
   }
 }
 
-function placeholders(values) {
-  return values.map(() => '?').join(', ')
-}
-
-function escapeLike(value) {
-  return value.replace(/[\\%_]/g, '\\$&')
-}
-
 function sameScope(left, right) {
   return left?.scopeType === right?.scopeType
     && (left?.scopeId || null) === (right?.scopeId || null)
-}
-
-function iso(value) {
-  if (!value) return null
-  const date = value instanceof Date ? value : new Date(value)
-  return Number.isFinite(date.getTime()) ? date.toISOString() : null
 }
 
 function boundedMaximum(value) {
