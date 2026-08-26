@@ -81,6 +81,15 @@ function createTalentCursor(context, payload, pepper) {
   ].join('.')
 }
 
+function decodeCanonicalBase64Url(value) {
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new Error('INVALID_CURSOR')
+  const decoded = Buffer.from(value, 'base64url')
+  if (!decoded.length || decoded.toString('base64url') !== value) {
+    throw new Error('INVALID_CURSOR')
+  }
+  return decoded
+}
+
 function readTalentCursor(cursor, context, pepper) {
   if (typeof cursor !== 'string' || cursor.length > 768) throw new Error('VALIDATION_FAILED')
   const [version, ivValue, encryptedValue, tagValue, extra] = cursor.split('.')
@@ -88,9 +97,9 @@ function readTalentCursor(cursor, context, pepper) {
     throw new Error('VALIDATION_FAILED')
   }
   try {
-    const iv = Buffer.from(ivValue, 'base64url')
-    const encrypted = Buffer.from(encryptedValue, 'base64url')
-    const tag = Buffer.from(tagValue, 'base64url')
+    const iv = decodeCanonicalBase64Url(ivValue)
+    const encrypted = decodeCanonicalBase64Url(encryptedValue)
+    const tag = decodeCanonicalBase64Url(tagValue)
     if (iv.length !== 12 || tag.length !== 16 || encrypted.length < 1) {
       throw new Error('INVALID_CURSOR')
     }
