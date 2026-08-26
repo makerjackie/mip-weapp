@@ -59,6 +59,7 @@ interface RuntimePagesContract {
     id: string
     route: string
     nonMutating: boolean
+    scrollTop?: number
     steps: Array<{
       id: string
       type: 'input' | 'tap'
@@ -291,6 +292,10 @@ describe('mip-weapp UI runtime contract', () => {
     for (const journey of contract.interactionJourneys) {
       expect(journey.nonMutating).toBe(true)
       expect(routeByPath.has(journey.route)).toBe(true)
+      if (journey.scrollTop !== undefined) {
+        expect(journey.scrollTop).toBeGreaterThanOrEqual(0)
+        expect(journey.scrollTop).toBeLessThanOrEqual(10_000)
+      }
       expect(journey.steps.length).toBeGreaterThan(0)
       for (const step of journey.steps) {
         expect(step.selector).toMatch(/^#\w[\w-]*$/)
@@ -298,6 +303,7 @@ describe('mip-weapp UI runtime contract', () => {
         expect(step.dataAssertions.length).toBeGreaterThan(0)
       }
     }
+    expect(verifyRuntime).toContain('miniProgram.pageScrollTo(journey.scrollTop)')
   })
 
   it('keeps real-device capabilities explicit and unresolved by DevTools', () => {

@@ -351,6 +351,9 @@ function validateRuntimeContract(runtimePages) {
     const route = runtimePages.routes.find(candidate => candidate.path === journey.route)
     assert(route, `Interaction ${journey.id} route is missing: ${journey.route}`)
     assert(journey.nonMutating === true, `Interaction ${journey.id} must explicitly be nonMutating`)
+    if (journey.scrollTop !== undefined) {
+      assert(Number.isInteger(journey.scrollTop) && journey.scrollTop >= 0 && journey.scrollTop <= 10_000, `Interaction ${journey.id} scrollTop must be an integer from 0 to 10000`)
+    }
     assert(Array.isArray(journey.steps) && journey.steps.length > 0, `Interaction ${journey.id} steps[] is required`)
     for (const step of journey.steps) {
       assert(step?.id && ['input', 'tap'].includes(step.type), `Interaction ${journey.id} has an invalid step`)
@@ -430,7 +433,7 @@ function matchesSensitiveKey(key, sensitivePatterns) {
   })
 }
 
-function assertNoSensitivePageData(data, route, sensitivePatterns) {
+export function assertNoSensitivePageData(data, route, sensitivePatterns) {
   const hits = []
   const walk = (value, keyPath) => {
     if (typeof value === 'string') {
@@ -458,16 +461,9 @@ function assertNoSensitivePageData(data, route, sensitivePatterns) {
   }
   walk(data, '')
 
-  const unauthorizedHits = hits.filter((hit) => {
-    const authorizedRosterPhone = route === 'packages/admin/event-registrations/index'
-      && data?.canViewSensitiveRoster === true
-      && /^items\[\d+\]\.phoneNumber$/.test(hit.path)
-      && ['key:phonenumber', 'key:phone_number', 'raw-phone-like'].includes(hit.pattern)
-    return !authorizedRosterPhone
-  })
   assert(
-    unauthorizedHits.length === 0,
-    `${route} page data contains sensitive values: ${JSON.stringify(unauthorizedHits.slice(0, 8))}`,
+    hits.length === 0,
+    `${route} page data contains sensitive values: ${JSON.stringify(hits.slice(0, 8))}`,
   )
 }
 
@@ -859,6 +855,10 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
       assert(settled.status === 'passed', `Interaction ${journey.id} route did not reach an accepted state`)
 
       for (const step of journey.steps) {
+        if (journey.scrollTop !== undefined) {
+          await retry(`scroll interaction ${journey.id}/${step.id}`, () => miniProgram.pageScrollTo(journey.scrollTop))
+          await new Promise(resolve => setTimeout(resolve, 180))
+        }
         let visibleBeforePath = ''
         if (step.visibleAssertion) {
           visibleBeforePath = path.join(outputDir, `interaction-${outputName(journey.id)}-${outputName(step.id)}-before.png`)

@@ -302,6 +302,7 @@
       "id": "profile-content-tabs",
       "route": "pages/profile/index",
       "nonMutating": true,
+      "scrollTop": 700,
       "steps": [
         {
           "id": "show-cases",
@@ -1012,8 +1013,9 @@
       "selector": "#mip-access-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error", "expired"],
-      "readyAssertion": "state === 'ready'",
+      "states": ["loading", "ready", "empty", "error"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'",
       "deviceRequired": ["phone-auth"]
     },
     {
@@ -1319,9 +1321,8 @@
       "group": "member",
       "kind": "data",
       "states": ["loading", "ready", "unconfigured", "error"],
-      "acceptStates": ["ready"],
-      "pendingStates": ["unconfigured"],
-      "readyAssertion": "state === 'ready'",
+      "acceptStates": ["ready", "unconfigured"],
+      "readyAssertion": "state === 'ready' || state === 'unconfigured'",
       "deviceRequired": ["photo-save"]
     },
     {

@@ -27,7 +27,7 @@ const requirementCopy = {
 
 Page({
   data: {
-    state: 'loading' as 'loading' | 'ready' | 'error' | 'expired',
+    state: 'loading' as 'loading' | 'ready' | 'empty' | 'error',
     token: '',
     title: '',
     description: '',
@@ -46,7 +46,7 @@ Page({
     const token = String(query.token || '')
     const intent = token ? mipIdentityModule.peekIntent(token) : null
     if (!intent) {
-      this.setData({ state: 'expired' })
+      this.setData({ state: 'empty' })
       return
     }
     const globalGate = intent.action === 'ENTER_APP'
@@ -73,7 +73,7 @@ Page({
     catch (error) {
       const message = error instanceof Error ? error.message : ''
       this.setData(message === 'ACCESS_INTENT_EXPIRED'
-        ? { state: 'expired' }
+        ? { state: 'empty' }
         : { state: 'error', message: '身份服务暂时不可用，请稍后重试。' })
     }
   },
@@ -91,7 +91,7 @@ Page({
     catch (error) {
       const message = error instanceof Error ? error.message : ''
       this.setData(message === 'ACCESS_INTENT_EXPIRED'
-        ? { state: 'expired', message: '' }
+        ? { state: 'empty', message: '' }
         : { message: '登录失败，请稍后重试。' })
     }
     finally {
