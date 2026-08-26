@@ -653,6 +653,18 @@
       "altersTables": [
         "mip_membership_entitlements"
       ]
+    },
+    {
+      "version": "20260826470000",
+      "name": "mip_game_team_lifecycle",
+      "sql": "database/mysql/mip/047_game_team_lifecycle.sql",
+      "sqlSha256": "8fe024f3ff0d338cbd41bfb4e21024b2c6e2a684527d898458af8efa6942bdb4",
+      "rollback": "database/mysql/mip/rollback/047_game_team_lifecycle.sql",
+      "rollbackSha256": "01dbd63caff334da0a6a56732843ca7d447241718747208f82930e1f7e9a4ef1",
+      "createsTables": [],
+      "altersTables": [
+        "mip_game_teams"
+      ]
     }
   ]
 }

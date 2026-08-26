@@ -337,37 +337,132 @@ function createGameRepository(database, options = {}) {
       if (!event.teamId) {
         await tx.query(
           `INSERT INTO mip_game_teams (
-             id, app_id, season_id, branch_id, name, summary, created_by_user_id, updated_by_user_id
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-          [teamId, caller.appId, draft.seasonId, draft.branchId, draft.name, draft.summary, caller.userId, caller.userId],
+             id, app_id, season_id, branch_id, name, summary, member_limit,
+             created_by_user_id, updated_by_user_id
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [teamId, caller.appId, draft.seasonId, draft.branchId, draft.name, draft.summary,
+            draft.memberLimit ?? MAX_TEAM_MEMBERS, caller.userId, caller.userId],
         )
         await writeAudit(tx, caller, roleKey, 'game.team.created', 'GAME_TEAM', teamId)
       }
       else {
         const current = await tx.one(
-          `SELECT season_id, version FROM mip_game_teams WHERE app_id = ? AND id = ? FOR UPDATE`,
+          `SELECT season_id, status, version, member_limit
+           FROM mip_game_teams WHERE app_id = ? AND id = ? FOR UPDATE`,
           [caller.appId, teamId],
         )
         if (!current) throw new Error('NOT_FOUND')
         if (current.season_id !== draft.seasonId || Number(current.version) !== version) throw new Error('CONFLICT')
+        const memberLimit = draft.memberLimit ?? Number(current.member_limit || MAX_TEAM_MEMBERS)
+        if (memberLimit < Number(current.member_limit || MAX_TEAM_MEMBERS)) {
+          const activeMembers = await tx.query(
+            `SELECT id FROM mip_game_team_memberships
+             WHERE app_id = ? AND season_id = ? AND team_id = ? AND status = 'ACTIVE'
+             ORDER BY user_id FOR UPDATE`,
+            [caller.appId, draft.seasonId, teamId],
+          )
+          if (activeMembers.length > memberLimit) throw new Error('MEMBER_LIMIT_EXCEEDED')
+        }
         const result = await tx.query(
-          `UPDATE mip_game_teams SET branch_id = ?, name = ?, summary = ?, updated_by_user_id = ?,
+          `UPDATE mip_game_teams SET branch_id = ?, name = ?, summary = ?, member_limit = ?, updated_by_user_id = ?,
              version = version + 1 WHERE app_id = ? AND id = ? AND version = ?`,
-          [draft.branchId, draft.name, draft.summary, caller.userId, caller.appId, teamId, version],
+          [draft.branchId, draft.name, draft.summary, memberLimit, caller.userId, caller.appId, teamId, version],
         )
         if (Number(result.affectedRows) !== 1) throw new Error('CONFLICT')
         await writeAudit(tx, caller, roleKey, 'game.team.updated', 'GAME_TEAM', teamId)
       }
-      return teamDto(await tx.one('SELECT * FROM mip_game_teams WHERE app_id = ? AND id = ?', [caller.appId, teamId]))
+      return teamDto(await tx.one(
+        `SELECT team.*, branch.name AS branch_name,
+                (SELECT COUNT(*) FROM mip_game_team_memberships member
+                 WHERE member.app_id = team.app_id AND member.season_id = team.season_id
+                   AND member.team_id = team.id AND member.status = 'ACTIVE') AS member_count
+         FROM mip_game_teams team
+         LEFT JOIN mip_city_branches branch ON branch.app_id = team.app_id AND branch.id = team.branch_id
+         WHERE team.app_id = ? AND team.id = ?`,
+        [caller.appId, teamId],
+      ))
+    })
+  }
+
+  async function changeTeamStatus(caller, event = {}) {
+    const seasonId = requiredId(event.seasonId)
+    const teamId = requiredId(event.teamId)
+    const version = expectedVersion(event.expectedVersion)
+    const target = boundedText(event.status, 16, true).toUpperCase()
+    if (!['ACTIVE', 'INACTIVE'].includes(target)) throw new Error('VALIDATION_FAILED')
+    return database.transaction(async (tx) => {
+      const roleKey = await assertGameAdmin(tx, caller, true)
+      const season = await tx.one(
+        `SELECT status FROM mip_game_seasons WHERE app_id = ? AND id = ? FOR UPDATE`,
+        [caller.appId, seasonId],
+      )
+      if (!season) throw new Error('NOT_FOUND')
+      if (season.status === 'CLOSED') throw new Error('INVALID_STATE')
+      const current = await tx.one(
+        `SELECT * FROM mip_game_teams
+         WHERE app_id = ? AND season_id = ? AND id = ? FOR UPDATE`,
+        [caller.appId, seasonId, teamId],
+      )
+      if (!current) throw new Error('NOT_FOUND')
+      if (Number(current.version) !== version) throw new Error('CONFLICT')
+      if (current.status === target) throw new Error('INVALID_STATE')
+      if (target === 'INACTIVE') {
+        const activeMembers = await tx.query(
+          `SELECT id FROM mip_game_team_memberships
+           WHERE app_id = ? AND season_id = ? AND team_id = ? AND status = 'ACTIVE'
+           ORDER BY user_id FOR UPDATE`,
+          [caller.appId, seasonId, teamId],
+        )
+        if (activeMembers.length > 0) throw new Error('TEAM_HAS_ACTIVE_MEMBERS')
+      }
+      const result = await tx.query(
+        `UPDATE mip_game_teams SET status = ?, updated_by_user_id = ?, version = version + 1
+         WHERE app_id = ? AND season_id = ? AND id = ? AND version = ?`,
+        [target, caller.userId, caller.appId, seasonId, teamId, version],
+      )
+      if (Number(result.affectedRows) !== 1) throw new Error('CONFLICT')
+      await writeAudit(
+        tx,
+        caller,
+        roleKey,
+        target === 'ACTIVE' ? 'game.team.activated' : 'game.team.deactivated',
+        'GAME_TEAM',
+        teamId,
+      )
+      return teamDto(await tx.one(
+        `SELECT team.*, branch.name AS branch_name,
+                (SELECT COUNT(*) FROM mip_game_team_memberships member
+                 WHERE member.app_id = team.app_id AND member.season_id = team.season_id
+                   AND member.team_id = team.id AND member.status = 'ACTIVE') AS member_count
+         FROM mip_game_teams team
+         LEFT JOIN mip_city_branches branch ON branch.app_id = team.app_id AND branch.id = team.branch_id
+         WHERE team.app_id = ? AND team.season_id = ? AND team.id = ?`,
+        [caller.appId, seasonId, teamId],
+      ))
     })
   }
 
   async function listAssignableMembers(caller, event = {}) {
     await assertGameAdmin(database, caller)
     const seasonId = requiredId(event.seasonId)
+    const teamId = event.teamId ? requiredId(event.teamId) : null
     const query = boundedText(event.query, 80)
     const limit = memberPageLimit(event.limit)
-    const cursorContext = { appId: caller.appId, seasonId, query }
+    let memberLimit = MAX_TEAM_MEMBERS
+    if (teamId) {
+      const team = await database.one(
+        `SELECT status, member_limit FROM mip_game_teams
+         WHERE app_id = ? AND season_id = ? AND id = ?`,
+        [caller.appId, seasonId, teamId],
+      )
+      if (!team) throw new Error('NOT_FOUND')
+      if (team.status !== 'ACTIVE') throw new Error('INVALID_STATE')
+      memberLimit = Number(team.member_limit)
+      if (!Number.isSafeInteger(memberLimit) || memberLimit < 1 || memberLimit > MAX_TEAM_MEMBERS) {
+        throw new Error('INVALID_STATE')
+      }
+    }
+    const cursorContext = { appId: caller.appId, seasonId, teamId, query }
     const afterUserId = event.cursor
       ? readMemberCursor(event.cursor, cursorContext, caller.profileRefSecret)
       : null
@@ -404,7 +499,7 @@ function createGameRepository(database, options = {}) {
     const items = rows.slice(0, limit).map(row => ({
       memberRef: createProfileRef({ appId: caller.appId, userId: row.id }, caller.profileRefSecret),
       candidateKey: createCandidateKey(
-        { appId: caller.appId, seasonId, query, userId: row.id },
+        { appId: caller.appId, seasonId, teamId, query, userId: row.id },
         caller.profileRefSecret,
       ),
       nickname: row.nickname,
@@ -423,7 +518,7 @@ function createGameRepository(database, options = {}) {
           )
         : '',
       limit,
-      maxTeamMembers: MAX_TEAM_MEMBERS,
+      maxTeamMembers: memberLimit,
     }
   }
 
@@ -450,12 +545,14 @@ function createGameRepository(database, options = {}) {
       if (!season) throw new Error('NOT_FOUND')
       if (season.status === 'CLOSED') throw new Error('INVALID_STATE')
       const team = await tx.one(
-        `SELECT version FROM mip_game_teams
+        `SELECT status, version, member_limit FROM mip_game_teams
          WHERE app_id = ? AND season_id = ? AND id = ? FOR UPDATE`,
         [caller.appId, seasonId, teamId],
       )
       if (!team) throw new Error('NOT_FOUND')
       if (Number(team.version) !== version) throw new Error('CONFLICT')
+      if (team.status !== 'ACTIVE') throw new Error('INVALID_STATE')
+      if (memberIds.length > Number(team.member_limit)) throw new Error('MEMBER_LIMIT_EXCEEDED')
       const orderedMembers = [...memberIds].sort((left, right) => left.userId.localeCompare(right.userId))
       for (const member of orderedMembers) {
         await lockCurrentPlayer(tx, caller.appId, member.userId)
@@ -483,11 +580,12 @@ function createGameRepository(database, options = {}) {
       const sourceTeamVersions = new Map()
       for (const sourceTeamId of sourceTeamIds) {
         const sourceTeam = await tx.one(
-          `SELECT version FROM mip_game_teams
+          `SELECT status, version FROM mip_game_teams
            WHERE app_id = ? AND season_id = ? AND id = ? FOR UPDATE`,
           [caller.appId, seasonId, sourceTeamId],
         )
         if (!sourceTeam) throw new Error('CONFLICT')
+        if (sourceTeam.status !== 'ACTIVE') throw new Error('INVALID_STATE')
         sourceTeamVersions.set(sourceTeamId, Number(sourceTeam.version))
       }
       for (const current of currentMembers) {
@@ -687,6 +785,7 @@ function createGameRepository(database, options = {}) {
   return {
     ...blindBox,
     changeSeasonStatus,
+    changeTeamStatus,
     finalizeWeeklyMatch,
     generateRankingSnapshot,
     getAdminSession,
@@ -809,7 +908,7 @@ async function teamRankingRows(database, appId, season, period) {
           AND entitlement.starts_at <= UTC_TIMESTAMP(3)
           AND entitlement.ends_at > UTC_TIMESTAMP(3)
       )
-     WHERE team.app_id = ? AND team.season_id = ? AND team.status = 'ACTIVE'
+     WHERE team.app_id = ? AND team.season_id = ?
      GROUP BY team.id, team.branch_id, team.name
      ORDER BY score DESC, team.name, team.id`,
     [period.start, period.end, appId, season.id],
@@ -915,6 +1014,7 @@ function teamDto(row, season = null) {
     status: row.status,
     version: Number(row.version),
     memberCount: Number(row.member_count || 0),
+    memberLimit: Number(row.member_limit || MAX_TEAM_MEMBERS),
     headquartersLevel: headquartersLevel(score, parseRules(season?.rules_json)),
   }
 }

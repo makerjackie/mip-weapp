@@ -157,6 +157,7 @@ export interface GameTeam {
   status: 'ACTIVE' | 'INACTIVE'
   version: number
   memberCount: number
+  memberLimit: number
   headquartersLevel: HeadquartersLevel
 }
 
@@ -234,7 +235,13 @@ export interface GameSeasonDraft {
   endsAt: string
 }
 
-export interface GameTeamDraft { seasonId: string, branchId?: string, name: string, summary: string }
+export interface GameTeamDraft {
+  seasonId: string
+  branchId?: string
+  name: string
+  summary: string
+  memberLimit?: number
+}
 export interface GameMemberAssignment { memberRef: string, role: 'CAPTAIN' | 'MEMBER' }
 export interface AssignableGameMember {
   memberRef: string
@@ -281,6 +288,13 @@ export interface GameTeamMembersInput {
   members: GameMemberAssignment[]
 }
 
+export interface GameTeamStatusInput {
+  seasonId: string
+  teamId: string
+  expectedVersion: number
+  status: 'ACTIVE' | 'INACTIVE'
+}
+
 export interface BlindBoxCatalogSaveInput {
   catalogId?: string
   expectedVersion?: number
@@ -325,7 +339,8 @@ export interface MipGameActionInputMap {
   'admin.changeSeasonStatus': GameSeasonStatusInput
   'admin.listTeams': { seasonId: string }
   'admin.saveTeam': GameTeamSaveInput
-  'admin.listAssignableMembers': { seasonId: string, query?: string, cursor?: string, limit: number }
+  'admin.changeTeamStatus': GameTeamStatusInput
+  'admin.listAssignableMembers': { seasonId: string, teamId: string, query?: string, cursor?: string, limit: number }
   'admin.replaceTeamMembers': GameTeamMembersInput
   'admin.listMatches': { seasonId: string }
   'admin.saveWeeklyMatch': { match: { seasonId: string, weekStart: string, weekEnd: string, teamAId: string, teamBId: string } }
@@ -357,6 +372,7 @@ export interface MipGameActionResultMap {
   'admin.changeSeasonStatus': GameSeason
   'admin.listTeams': { items: GameTeam[] }
   'admin.saveTeam': GameTeam
+  'admin.changeTeamStatus': GameTeam
   'admin.listAssignableMembers': AssignableGameMemberPage
   'admin.replaceTeamMembers': { teamId: string, memberCount: number, version: number }
   'admin.listMatches': { items: GameMatch[] }
@@ -397,8 +413,15 @@ export interface MipGameGateway {
   changeSeasonStatus: (seasonId: string, expectedVersion: number, status: 'ACTIVE' | 'CLOSED') => Promise<GameSeason>
   listTeams: (seasonId: string) => Promise<{ items: GameTeam[] }>
   saveTeam: (input: GameTeamSaveInput) => Promise<GameTeam>
+  changeTeamStatus: (
+    seasonId: string,
+    teamId: string,
+    expectedVersion: number,
+    status: 'ACTIVE' | 'INACTIVE',
+  ) => Promise<GameTeam>
   listAssignableMembers: (
     seasonId: string,
+    teamId: string,
     query?: string,
     cursor?: string,
     limit?: number,

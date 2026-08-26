@@ -8,8 +8,10 @@ const {
   randomBytes,
 } = require('node:crypto')
 
-const CURSOR_VERSION = 'gm1'
-const CANDIDATE_KEY_VERSION = 'gmk1'
+const LEGACY_CURSOR_VERSION = 'gm1'
+const TEAM_CURSOR_VERSION = 'gm2'
+const LEGACY_CANDIDATE_KEY_VERSION = 'gmk1'
+const TEAM_CANDIDATE_KEY_VERSION = 'gmk2'
 const USER_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 function keyFromPepper(pepper) {
@@ -19,19 +21,27 @@ function keyFromPepper(pepper) {
 
 function createMemberCursor(context, pepper) {
   const normalized = normalizeContext(context)
+  const version = normalized.teamId ? TEAM_CURSOR_VERSION : LEGACY_CURSOR_VERSION
   const iv = randomBytes(12)
   const cipher = createCipheriv('aes-256-gcm', keyFromPepper(pepper), iv)
   cipher.setAAD(Buffer.from(normalized.appId, 'utf8'))
   const encrypted = Buffer.concat([
-    cipher.update(JSON.stringify({
-      seasonId: normalized.seasonId,
-      query: normalized.query,
-      userId: normalized.userId,
-    }), 'utf8'),
+    cipher.update(JSON.stringify(normalized.teamId
+      ? {
+          seasonId: normalized.seasonId,
+          teamId: normalized.teamId,
+          query: normalized.query,
+          userId: normalized.userId,
+        }
+      : {
+          seasonId: normalized.seasonId,
+          query: normalized.query,
+          userId: normalized.userId,
+        }), 'utf8'),
     cipher.final(),
   ])
   return [
-    CURSOR_VERSION,
+    version,
     iv.toString('base64url'),
     encrypted.toString('base64url'),
     cipher.getAuthTag().toString('base64url'),
@@ -42,7 +52,8 @@ function readMemberCursor(cursor, context, pepper) {
   const normalized = normalizeReadContext(context)
   if (typeof cursor !== 'string' || cursor.length > 600) throw new Error('VALIDATION_FAILED')
   const [version, ivValue, encryptedValue, tagValue, extra] = cursor.split('.')
-  if (version !== CURSOR_VERSION || extra !== undefined
+  const expectedCursorVersion = normalized.teamId ? TEAM_CURSOR_VERSION : LEGACY_CURSOR_VERSION
+  if (version !== expectedCursorVersion || extra !== undefined
     || !ivValue || !encryptedValue || !tagValue) throw new Error('VALIDATION_FAILED')
   try {
     const iv = Buffer.from(ivValue, 'base64url')
@@ -58,8 +69,10 @@ function readMemberCursor(cursor, context, pepper) {
       decipher.update(encrypted),
       decipher.final(),
     ]).toString('utf8'))
-    if (!payload || Object.keys(payload).sort().join(',') !== 'query,seasonId,userId'
+    const expectedKeys = normalized.teamId ? 'query,seasonId,teamId,userId' : 'query,seasonId,userId'
+    if (!payload || Object.keys(payload).sort().join(',') !== expectedKeys
       || payload.seasonId !== normalized.seasonId
+      || (normalized.teamId && payload.teamId !== normalized.teamId)
       || payload.query !== normalized.query
       || !USER_ID_PATTERN.test(payload.userId)) {
       throw new Error('INVALID_CURSOR')
@@ -74,34 +87,37 @@ function readMemberCursor(cursor, context, pepper) {
 
 function createCandidateKey(context, pepper) {
   const normalized = normalizeContext(context)
-  const value = createHmac('sha256', keyFromPepper(pepper))
+  const hmac = createHmac('sha256', keyFromPepper(pepper))
     .update('candidate\0')
     .update(normalized.appId)
     .update('\0')
     .update(normalized.seasonId)
     .update('\0')
-    .update(normalized.userId)
+  if (normalized.teamId) hmac.update(normalized.teamId).update('\0')
+  const value = hmac.update(normalized.userId)
     .digest('base64url')
-  return `${CANDIDATE_KEY_VERSION}.${value}`
+  return `${normalized.teamId ? TEAM_CANDIDATE_KEY_VERSION : LEGACY_CANDIDATE_KEY_VERSION}.${value}`
 }
 
 function normalizeContext(value) {
-  const { appId, seasonId, query } = normalizeReadContext(value)
+  const { appId, seasonId, teamId, query } = normalizeReadContext(value)
   const userId = typeof value?.userId === 'string' ? value.userId : ''
   if (!USER_ID_PATTERN.test(userId)) {
     throw new Error('VALIDATION_FAILED')
   }
-  return { appId, seasonId, query, userId }
+  return { appId, seasonId, teamId, query, userId }
 }
 
 function normalizeReadContext(value) {
   const appId = typeof value?.appId === 'string' ? value.appId : ''
   const seasonId = typeof value?.seasonId === 'string' ? value.seasonId : ''
+  const teamId = typeof value?.teamId === 'string' ? value.teamId : ''
   const query = typeof value?.query === 'string' ? value.query : ''
-  if (!appId || !USER_ID_PATTERN.test(seasonId) || query.length > 80) {
+  if (!appId || !USER_ID_PATTERN.test(seasonId)
+    || (teamId !== '' && !USER_ID_PATTERN.test(teamId)) || query.length > 80) {
     throw new Error('VALIDATION_FAILED')
   }
-  return { appId, seasonId, query }
+  return { appId, seasonId, teamId, query }
 }
 
 module.exports = { createCandidateKey, createMemberCursor, readMemberCursor }

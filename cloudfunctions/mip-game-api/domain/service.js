@@ -19,6 +19,7 @@ function createGameService(repository) {
     changeSeasonStatus: (caller, event) => repository.changeSeasonStatus(caller, event),
     listTeams: (caller, event) => repository.listTeams(caller, event),
     saveTeam: (caller, event) => repository.saveTeam(caller, event),
+    changeTeamStatus: (caller, event) => repository.changeTeamStatus(caller, event),
     listAssignableMembers: (caller, event) => repository.listAssignableMembers(caller, event),
     replaceTeamMembers: (caller, event) => repository.replaceTeamMembers(caller, event),
     listAdminMatches: (caller, event) => repository.listAdminMatches(caller, event),

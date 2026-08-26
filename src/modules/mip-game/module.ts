@@ -34,6 +34,7 @@ export interface MipGameQueryFacade {
   listTeams: (seasonId: string, force?: boolean) => ReturnType<MipGameGateway['listTeams']>
   listAssignableMembers: (
     seasonId: string,
+    teamId: string,
     query?: string,
     cursor?: string,
     limit?: number,
@@ -41,6 +42,7 @@ export interface MipGameQueryFacade {
   ) => ReturnType<MipGameGateway['listAssignableMembers']>
   listAllAssignableMembers: (
     seasonId: string,
+    teamId: string,
     query?: string,
     force?: boolean,
   ) => Promise<{ items: AssignableGameMember[], maxTeamMembers: number }>
@@ -62,6 +64,7 @@ export interface MipGameMutationFacade {
   saveSeason: MipGameGateway['saveSeason']
   changeSeasonStatus: MipGameGateway['changeSeasonStatus']
   saveTeam: MipGameGateway['saveTeam']
+  changeTeamStatus: MipGameGateway['changeTeamStatus']
   replaceTeamMembers: MipGameGateway['replaceTeamMembers']
   saveWeeklyMatch: MipGameGateway['saveWeeklyMatch']
   finalizeWeeklyMatch: MipGameGateway['finalizeWeeklyMatch']
@@ -78,8 +81,8 @@ const ASSIGNABLE_MEMBER_PAGE_SIZE = 100
 const MAX_ASSIGNABLE_MEMBER_PAGES = 50
 const MAX_ASSIGNABLE_MEMBERS = ASSIGNABLE_MEMBER_PAGE_SIZE * MAX_ASSIGNABLE_MEMBER_PAGES
 const PROFILE_REF_PATTERN = /^p1\.[\w-]{16}\.[\w-]{48}\.[\w-]{22}$/
-const CANDIDATE_KEY_PATTERN = /^gmk1\.[\w-]{43}$/
-const MEMBER_CURSOR_PATTERN = /^gm1\.[\w-]{16}\.[\w-]{1,500}\.[\w-]{22}$/
+const CANDIDATE_KEY_PATTERN = /^gmk2\.[\w-]{43}$/
+const MEMBER_CURSOR_PATTERN = /^gm2\.[\w-]{16}\.[\w-]{1,500}\.[\w-]{22}$/
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 function memberProtocolError(message = '成员分页协议暂时不可用，请稍后重试') {
@@ -153,6 +156,7 @@ export function createMipGameModule(gateway: MipGameGateway) {
 
   function listAssignableMemberPage(
     seasonId: string,
+    teamId: string,
     memberQuery: string | undefined,
     cursor: string | undefined,
     limit: number | undefined,
@@ -161,14 +165,15 @@ export function createMipGameModule(gateway: MipGameGateway) {
     return queryCached(
       'season',
       'assignable-members',
-      { seasonId, query: memberQuery, cursor, limit },
-      () => gateway.listAssignableMembers(seasonId, memberQuery, cursor, limit),
+      { seasonId, teamId, query: memberQuery, cursor, limit },
+      () => gateway.listAssignableMembers(seasonId, teamId, memberQuery, cursor, limit),
       force,
     )
   }
 
   async function listAllAssignableMembers(
     seasonId: string,
+    teamId: string,
     memberQuery: string | undefined,
     force: boolean,
   ) {
@@ -182,6 +187,7 @@ export function createMipGameModule(gateway: MipGameGateway) {
       pageCount += 1
       const page = await listAssignableMemberPage(
         seasonId,
+        teamId,
         memberQuery,
         cursor,
         ASSIGNABLE_MEMBER_PAGE_SIZE,
@@ -326,10 +332,10 @@ export function createMipGameModule(gateway: MipGameGateway) {
       () => gateway.listTeams(seasonId),
       force,
     ),
-    listAssignableMembers: (seasonId, memberQuery, cursor, limit, force = false) =>
-      listAssignableMemberPage(seasonId, memberQuery, cursor, limit, force),
-    listAllAssignableMembers: (seasonId, memberQuery, force = false) =>
-      listAllAssignableMembers(seasonId, memberQuery, force),
+    listAssignableMembers: (seasonId, teamId, memberQuery, cursor, limit, force = false) =>
+      listAssignableMemberPage(seasonId, teamId, memberQuery, cursor, limit, force),
+    listAllAssignableMembers: (seasonId, teamId, memberQuery, force = false) =>
+      listAllAssignableMembers(seasonId, teamId, memberQuery, force),
     listAdminMatches: (seasonId, force = false) => queryCached(
       'season',
       'admin-matches',
@@ -364,6 +370,10 @@ export function createMipGameModule(gateway: MipGameGateway) {
       () => gateway.changeSeasonStatus(seasonId, expectedVersion, status),
     ),
     saveTeam: input => mutate('season', () => gateway.saveTeam(input)),
+    changeTeamStatus: (seasonId, teamId, expectedVersion, status) => mutate(
+      'season',
+      () => gateway.changeTeamStatus(seasonId, teamId, expectedVersion, status),
+    ),
     replaceTeamMembers: (seasonId, teamId, expectedVersion, members) => mutate(
       'season',
       () => gateway.replaceTeamMembers(seasonId, teamId, expectedVersion, members),

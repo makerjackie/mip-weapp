@@ -87,11 +87,17 @@ function normalizeRules(value) {
 
 function normalizeTeam(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('VALIDATION_FAILED')
+  const memberLimit = value.memberLimit === undefined ? undefined : Number(value.memberLimit)
+  if (memberLimit !== undefined
+    && (!Number.isSafeInteger(memberLimit) || memberLimit < 1 || memberLimit > MAX_TEAM_MEMBERS)) {
+    throw new Error('VALIDATION_FAILED')
+  }
   return {
     seasonId: requiredId(value.seasonId),
     branchId: optionalId(value.branchId),
     name: boundedText(value.name, 100, true),
     summary: boundedText(value.summary, 500),
+    memberLimit,
   }
 }
 

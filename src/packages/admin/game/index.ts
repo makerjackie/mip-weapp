@@ -41,12 +41,52 @@ function isoDay(value: string, end = false) {
   return new Date(`${value}T${end ? '23:59:59' : '00:00:00'}+08:00`).toISOString()
 }
 
+function emptyTeamEditor() {
+  return {
+    editingTeamId: '',
+    expectedTeamVersion: 0,
+    teamName: '',
+    teamSummary: '',
+    teamMemberLimit: '100',
+    teamBranchIndex: -1,
+  }
+}
+
+function emptySeasonView() {
+  return {
+    teams: [] as GameTeam[],
+    activeTeams: [] as GameTeam[],
+    selectedSeasonClosed: false,
+    branches: [] as GameBranchFilter[],
+    matches: [] as GameMatch[],
+    rankings: [] as GameRankingEntry[],
+    rankingState: 'loading' as RankingState,
+    rankingGeneratedText: '',
+    rankingPeriodText: '',
+    rankingLoading: false,
+    rankingMessage: '',
+    matchTeamAIndex: 0,
+    matchTeamBIndex: 0,
+    matchWeekStart: '',
+    matchWeekEnd: '',
+    memberPanelOpen: false,
+    memberTeamId: '',
+    memberTeamName: '',
+    memberTeamVersion: 0,
+    members: [] as MemberView[],
+    maxTeamMembers: 0,
+    selectedMemberCount: 0,
+  }
+}
+
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error' | 'forbidden' | 'conflict',
     seasons: [] as GameSeason[],
     selectedSeasonId: '',
     teams: [] as GameTeam[],
+    activeTeams: [] as GameTeam[],
+    selectedSeasonClosed: false,
     branches: [] as GameBranchFilter[],
     matches: [] as GameMatch[],
     rankingOptions,
@@ -71,7 +111,10 @@ Page({
     endsDate: '',
     teamName: '',
     teamSummary: '',
+    teamMemberLimit: '100',
     teamBranchIndex: -1,
+    editingTeamId: '',
+    expectedTeamVersion: 0,
     matchTeamAIndex: 0,
     matchTeamBIndex: 1,
     matchWeekStart: '',
@@ -114,7 +157,15 @@ Page({
         selectedSeasonId,
         state: 'ready',
         ...(seasonChanged
-          ? { rankingType: defaultRankingType(selectedSeason), rankingBranchId: '' }
+          ? {
+              ...emptySeasonView(),
+              ...emptyTeamEditor(),
+              rankingType: defaultRankingType(selectedSeason),
+              rankingBranchId: '',
+              selectedSeasonClosed: selectedSeason?.status === 'CLOSED',
+              rankingRequestKey: this.data.rankingRequestKey + 1,
+              memberRequestKey: this.data.memberRequestKey + 1,
+            }
           : {}),
       })
       if (selectedSeasonId) {
@@ -122,14 +173,8 @@ Page({
       }
       else {
         this.setData({
-          teams: [],
-          matches: [],
-          branches: [],
-          rankings: [],
+          ...emptySeasonView(),
           rankingState: 'empty',
-          rankingGeneratedText: '',
-          rankingPeriodText: '',
-          rankingMessage: '',
         })
       }
     }
@@ -154,7 +199,16 @@ Page({
     if (seasonId !== this.data.selectedSeasonId) {
       return
     }
-    this.setData({ teams: teams.items, matches: matches.items })
+    const activeTeams = teams.items.filter(item => item.status === 'ACTIVE')
+    const selectedSeason = this.data.seasons.find(item => item.id === seasonId)
+    this.setData({
+      teams: teams.items,
+      activeTeams,
+      matches: matches.items,
+      selectedSeasonClosed: selectedSeason?.status === 'CLOSED',
+      matchTeamAIndex: 0,
+      matchTeamBIndex: activeTeams.length > 1 ? 1 : 0,
+    })
     await this.loadRanking(force)
   },
 
@@ -163,12 +217,15 @@ Page({
     const season = this.data.seasons.find(item => item.id === selectedSeasonId)
     this.setData({
       selectedSeasonId,
-      memberPanelOpen: false,
+      ...emptySeasonView(),
+      ...emptyTeamEditor(),
       memberRequestKey: this.data.memberRequestKey + 1,
+      rankingRequestKey: this.data.rankingRequestKey + 1,
       processing: false,
       message: '',
       rankingType: defaultRankingType(season),
       rankingBranchId: '',
+      selectedSeasonClosed: season?.status === 'CLOSED',
     })
     try {
       await this.loadSeasonData(true)
@@ -219,7 +276,7 @@ Page({
   },
   updateField(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const field = String(event.currentTarget.dataset.field || '')
-    if (['seasonKey', 'seasonName', 'seasonSummary', 'rulesText', 'teamName', 'teamSummary'].includes(field)) {
+    if (['seasonKey', 'seasonName', 'seasonSummary', 'rulesText', 'teamName', 'teamSummary', 'teamMemberLimit'].includes(field)) {
       this.setData({ [field]: event.detail.value })
     }
   },
@@ -291,19 +348,49 @@ Page({
   updateBranch(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ teamBranchIndex: Number(event.detail.value) })
   },
-  async createTeam() {
-    if (!this.data.selectedSeasonId || !this.data.teamName.trim() || this.data.processing) {
+  editTeam(event: WechatMiniprogram.TouchEvent) {
+    const team = this.data.teams.find(item => item.id === String(event.currentTarget.dataset.id || ''))
+    if (!team || this.data.selectedSeasonClosed) {
+      return
+    }
+    const branchIndex = this.data.branches.findIndex(branch => branch.id === team.branchId)
+    this.setData({
+      editingTeamId: team.id,
+      expectedTeamVersion: team.version,
+      teamName: team.name,
+      teamSummary: team.summary,
+      teamMemberLimit: String(team.memberLimit),
+      teamBranchIndex: branchIndex,
+      message: '',
+    })
+  },
+  resetTeamEditor() {
+    this.setData(emptyTeamEditor())
+  },
+  async saveTeam() {
+    const memberLimit = Number(this.data.teamMemberLimit)
+    if (!this.data.selectedSeasonId || !this.data.teamName.trim() || this.data.processing
+      || this.data.selectedSeasonClosed || !Number.isSafeInteger(memberLimit)
+      || memberLimit < 1 || memberLimit > 100) {
+      if (!Number.isSafeInteger(memberLimit) || memberLimit < 1 || memberLimit > 100) {
+        this.setData({ message: '成员上限需为 1 到 100 的整数' })
+      }
       return
     }
     this.setData({ processing: true, message: '' })
     try {
-      await mipGameModule.mutation.saveTeam({ team: {
-        seasonId: this.data.selectedSeasonId,
-        branchId: this.data.branches[this.data.teamBranchIndex]?.id,
-        name: this.data.teamName,
-        summary: this.data.teamSummary,
-      } })
-      this.setData({ teamName: '', teamSummary: '', teamBranchIndex: -1 })
+      await mipGameModule.mutation.saveTeam({
+        teamId: this.data.editingTeamId || undefined,
+        expectedVersion: this.data.editingTeamId ? this.data.expectedTeamVersion : undefined,
+        team: {
+          seasonId: this.data.selectedSeasonId,
+          branchId: this.data.branches[this.data.teamBranchIndex]?.id,
+          name: this.data.teamName,
+          summary: this.data.teamSummary,
+          memberLimit,
+        },
+      })
+      this.resetTeamEditor()
       await this.loadSeasonData()
     }
     catch (error) {
@@ -314,9 +401,49 @@ Page({
     }
   },
 
+  async changeTeamStatus(event: WechatMiniprogram.TouchEvent) {
+    const team = this.data.teams.find(item => item.id === String(event.currentTarget.dataset.id || ''))
+    const status = String(event.currentTarget.dataset.status || '') as 'ACTIVE' | 'INACTIVE'
+    if (!team || !['ACTIVE', 'INACTIVE'].includes(status) || this.data.processing
+      || this.data.selectedSeasonClosed) {
+      return
+    }
+    const modal = await wx.showModal({
+      title: status === 'ACTIVE' ? '启用队伍' : '停用队伍',
+      content: status === 'ACTIVE'
+        ? '启用后可以继续管理成员并创建新对阵。'
+        : '停用后不能调整成员或加入新对阵，历史记录继续保留。',
+    })
+    if (!modal.confirm) {
+      return
+    }
+    this.setData({ processing: true, message: '' })
+    try {
+      await mipGameModule.mutation.changeTeamStatus(
+        this.data.selectedSeasonId,
+        team.id,
+        team.version,
+        status,
+      )
+      if (this.data.memberTeamId === team.id) {
+        this.setData({ memberPanelOpen: false, memberRequestKey: this.data.memberRequestKey + 1 })
+      }
+      if (this.data.editingTeamId === team.id) {
+        this.resetTeamEditor()
+      }
+      await this.loadSeasonData()
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '队伍状态更新失败' })
+    }
+    finally {
+      this.setData({ processing: false })
+    }
+  },
+
   async openMembers(event: WechatMiniprogram.TouchEvent) {
     const team = this.data.teams.find(item => item.id === String(event.currentTarget.dataset.id || ''))
-    if (!team) {
+    if (!team || team.status !== 'ACTIVE' || this.data.selectedSeasonClosed) {
       return
     }
     const seasonId = this.data.selectedSeasonId
@@ -336,6 +463,7 @@ Page({
     try {
       const result = await mipGameModule.query.listAllAssignableMembers(
         seasonId,
+        team.id,
         undefined,
         true,
       )
@@ -449,10 +577,11 @@ Page({
     this.setData({ matchWeekEnd: event.detail.value })
   },
   async createMatch() {
-    const teamA = this.data.teams[this.data.matchTeamAIndex]
-    const teamB = this.data.teams[this.data.matchTeamBIndex]
+    const teamA = this.data.activeTeams[this.data.matchTeamAIndex]
+    const teamB = this.data.activeTeams[this.data.matchTeamBIndex]
     if (!teamA || !teamB || teamA.id === teamB.id
-      || !this.data.matchWeekStart || !this.data.matchWeekEnd || this.data.processing) {
+      || !this.data.matchWeekStart || !this.data.matchWeekEnd || this.data.processing
+      || this.data.selectedSeasonClosed) {
       return
     }
     this.setData({ processing: true, message: '' })
@@ -476,7 +605,7 @@ Page({
 
   async finalizeMatch(event: WechatMiniprogram.TouchEvent) {
     const match = this.data.matches.find(item => item.id === String(event.currentTarget.dataset.id || ''))
-    if (!match || match.status !== 'SCHEDULED' || this.data.processing) {
+    if (!match || match.status !== 'SCHEDULED' || this.data.processing || this.data.selectedSeasonClosed) {
       return
     }
     this.setData({ processing: true, message: '' })

@@ -1,16 +1,59 @@
 import type {
+  GameOverview,
+  GameTeamDetail,
   MipGameAction,
   MipGameActionInputMap,
   MipGameActionResultMap,
   MipGameGateway,
   MipGameRequest,
 } from './types'
+import {
+  parseAssignableGameMemberPage,
+  parseGameTeam,
+  parseGameTeamPage,
+  parseTeamMemberReplacement,
+} from './team-dto'
 import { MIP_GAME_CONTRACT_VERSION, MipGameError } from './types'
 
 interface GameEnvelope<T> {
   ok: boolean
   data?: T
   error?: { code?: string, message?: string, retryable?: boolean }
+}
+
+function invalidContext(): never {
+  throw new MipGameError('SERVICE_UNAVAILABLE', '赛季服务返回了无效响应', true)
+}
+
+function bindOverviewContext(value: unknown, expectedSeasonId?: string): GameOverview {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    invalidContext()
+  }
+  const overview = value as Record<string, unknown>
+  const season = overview.season
+  const team = overview.team
+  if (season !== null && (!season || typeof season !== 'object' || Array.isArray(season))) {
+    invalidContext()
+  }
+  if (team !== null && (!team || typeof team !== 'object' || Array.isArray(team))) {
+    invalidContext()
+  }
+  const actualSeasonId = season === null ? '' : String((season as Record<string, unknown>).id || '')
+  const teamSeasonId = team === null ? '' : String((team as Record<string, unknown>).seasonId || '')
+  if ((expectedSeasonId && actualSeasonId !== expectedSeasonId)
+    || (teamSeasonId && teamSeasonId !== (expectedSeasonId || actualSeasonId))
+    || (!actualSeasonId && teamSeasonId)) {
+    invalidContext()
+  }
+  return value as GameOverview
+}
+
+function bindTeamContext(value: unknown, expectedTeamId: string): GameTeamDetail {
+  if (!value || typeof value !== 'object' || Array.isArray(value)
+    || (value as Record<string, unknown>).id !== expectedTeamId) {
+    invalidContext()
+  }
+  return value as GameTeamDetail
 }
 
 export interface MipGameTransport {
@@ -43,15 +86,30 @@ export function createMipGameGateway(transport: MipGameTransport): MipGameGatewa
       input,
     }))
   }
+  async function callParsed<A extends MipGameAction>(
+    action: A,
+    input: MipGameActionInputMap[A],
+    parse: (value: unknown) => MipGameActionResultMap[A],
+  ): Promise<MipGameActionResultMap[A]> {
+    return parse(unwrap<unknown>(await transport.invoke({
+      contractVersion: MIP_GAME_CONTRACT_VERSION,
+      action,
+      input,
+    })))
+  }
   return {
     listBlindBoxes: () => call('listBlindBoxes', {}),
     getBlindBox: catalogId => call('getBlindBox', { catalogId }),
     drawBlindBox: (catalogId, requestId) => call('drawBlindBox', { catalogId, requestId }),
     getBlindBoxInventory: catalogId => call('getBlindBoxInventory', { catalogId }),
     listBlindBoxCoinEntries: limit => call('listBlindBoxCoinEntries', { limit }),
-    getOverview: seasonId => call('getOverview', { seasonId }),
+    getOverview: seasonId => callParsed(
+      'getOverview',
+      { seasonId },
+      value => bindOverviewContext(value, seasonId),
+    ),
     getRules: seasonId => call('getRules', { seasonId }),
-    getTeam: teamId => call('getTeam', { teamId }),
+    getTeam: teamId => callParsed('getTeam', { teamId }, value => bindTeamContext(value, teamId)),
     listHistory: seasonId => call('listHistory', { seasonId }),
     listRankings: (seasonId, rankingType, branchId) => call('listRankings', { seasonId, rankingType, branchId }),
     getAdminSession: () => call('admin.getSession', {}),
@@ -59,15 +117,33 @@ export function createMipGameGateway(transport: MipGameTransport): MipGameGatewa
     listSeasons: () => call('admin.listSeasons', {}),
     saveSeason: input => call('admin.saveSeason', input),
     changeSeasonStatus: (seasonId, expectedVersion, status) => call('admin.changeSeasonStatus', { seasonId, expectedVersion, status }),
-    listTeams: seasonId => call('admin.listTeams', { seasonId }),
-    saveTeam: input => call('admin.saveTeam', input),
-    listAssignableMembers: (seasonId, query, cursor, limit = 100) => call('admin.listAssignableMembers', {
+    listTeams: seasonId => callParsed(
+      'admin.listTeams',
+      { seasonId },
+      value => parseGameTeamPage(value, seasonId),
+    ),
+    saveTeam: input => callParsed(
+      'admin.saveTeam',
+      input,
+      value => parseGameTeam(value, { seasonId: input.team.seasonId, teamId: input.teamId }),
+    ),
+    changeTeamStatus: (seasonId, teamId, expectedVersion, status) => callParsed(
+      'admin.changeTeamStatus',
+      { seasonId, teamId, expectedVersion, status },
+      value => parseGameTeam(value, { seasonId, teamId }),
+    ),
+    listAssignableMembers: (seasonId, teamId, query, cursor, limit = 100) => callParsed('admin.listAssignableMembers', {
       seasonId,
+      teamId,
       query,
       cursor,
       limit,
-    }),
-    replaceTeamMembers: (seasonId, teamId, expectedVersion, members) => call('admin.replaceTeamMembers', { seasonId, teamId, expectedVersion, members }),
+    }, parseAssignableGameMemberPage),
+    replaceTeamMembers: (seasonId, teamId, expectedVersion, members) => callParsed(
+      'admin.replaceTeamMembers',
+      { seasonId, teamId, expectedVersion, members },
+      value => parseTeamMemberReplacement(value, teamId),
+    ),
     listAdminMatches: seasonId => call('admin.listMatches', { seasonId }),
     saveWeeklyMatch: match => call('admin.saveWeeklyMatch', { match }),
     finalizeWeeklyMatch: (matchId, expectedVersion) => call('admin.finalizeWeeklyMatch', { matchId, expectedVersion }),

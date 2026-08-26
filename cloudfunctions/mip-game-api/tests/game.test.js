@@ -21,9 +21,11 @@ const {
   normalizeMatch,
   normalizeMembers,
   normalizeSeason,
+  normalizeTeam,
 } = require('../domain/validation')
 
 const seasonId = '10000000-0000-4000-8000-000000000001'
+const teamId = '20000000-0000-4000-8000-000000000001'
 
 test('game management respects a configured platform operations policy', async () => {
   const repository = createGameRepository({
@@ -106,7 +108,7 @@ test('dispatches nested v1 input, keeps legacy flat requests and preserves healt
     ok: true,
     data: { service: 'mip-game-api' },
   })
-  assert.equal(Object.keys(actions).length, 29)
+  assert.equal(Object.keys(actions).length, 30)
 })
 
 test('accepts trusted CloudBase metadata outside the neutral game envelope', async () => {
@@ -332,6 +334,79 @@ test('rejects membership changes after the season is closed before writing', asy
   assert.deepEqual(writes, [])
 })
 
+test('requires both teams to be active before creating a new weekly match', async () => {
+  const writes = []
+  const repository = createGameRepository({
+    transaction: work => work({
+      async one(sql) {
+        if (sql.includes('mip_admin_role_bindings')) return { role_key: 'PLATFORM_OWNER' }
+        if (sql.includes('mip_game_seasons')) {
+          return { status: 'ACTIVE', starts_at: '2026-01-01', ends_at: '2026-12-31' }
+        }
+        throw new Error(`unexpected one: ${sql}`)
+      },
+      async query(sql) {
+        if (sql.includes('SELECT id FROM mip_game_teams')) {
+          assert.match(sql, /status = 'ACTIVE' FOR UPDATE/)
+          return [{ id: teamId }]
+        }
+        writes.push(sql)
+        return { affectedRows: 1 }
+      },
+    }),
+  })
+  await assert.rejects(repository.saveWeeklyMatch(
+    { appId: 'app', userId: 'admin' },
+    {
+      match: {
+        seasonId,
+        teamAId: teamId,
+        teamBId: '20000000-0000-4000-8000-000000000002',
+        weekStart: '2026-08-24',
+        weekEnd: '2026-08-30',
+      },
+    },
+  ), /NOT_FOUND/)
+  assert.deepEqual(writes, [])
+})
+
+test('keeps an inactive team and its historical membership facts readable', async () => {
+  const reads = []
+  const repository = createGameRepository({
+    async one(sql) {
+      reads.push(sql)
+      if (sql.includes('SELECT team.*, season.name')) {
+        return {
+          id: teamId,
+          season_id: seasonId,
+          season_name: '赛季',
+          rules_json: null,
+          status: 'INACTIVE',
+          version: 4,
+          member_limit: 8,
+          name: '历史队伍',
+          starts_at: '2026-01-01',
+          ends_at: '2026-12-31',
+        }
+      }
+      if (sql.includes('COALESCE(SUM(entry.delta_value)')) return { score: 0 }
+      throw new Error(`unexpected one: ${sql}`)
+    },
+    async query(sql) {
+      reads.push(sql)
+      return []
+    },
+  })
+  const result = await repository.getTeam(
+    { appId: 'app', userId: 'player', profileRefSecret: 's'.repeat(32) },
+    { teamId },
+  )
+  assert.equal(result.status, 'INACTIVE')
+  assert.deepEqual(result.members, [])
+  assert.deepEqual(result.formerMembers, [])
+  assert.doesNotMatch(reads[0], /team\.status = 'ACTIVE'/)
+})
+
 test('pages every assignable current player with an opaque keyset cursor and an explicit team limit', async () => {
   const userIds = [
     '30000000-0000-4000-8000-000000000001',
@@ -340,7 +415,11 @@ test('pages every assignable current player with an opaque keyset cursor and an 
   ]
   const queries = []
   const database = {
-    async one() { return { role_key: 'PLATFORM_OWNER' } },
+    async one(sql) {
+      if (sql.includes('mip_admin_role_bindings')) return { role_key: 'PLATFORM_OWNER' }
+      if (sql.includes('mip_game_teams')) return { status: 'ACTIVE', member_limit: 12 }
+      throw new Error(`unexpected one: ${sql}`)
+    },
     async query(sql, params) {
       queries.push({ sql, params })
       const rows = userIds.map((id, index) => ({
@@ -356,20 +435,21 @@ test('pages every assignable current player with an opaque keyset cursor and an 
   }
   const caller = { appId: 'app', userId: userIds[0], profileRefSecret: 's'.repeat(32) }
   const repository = createGameRepository(database)
-  const first = await repository.listAssignableMembers(caller, { seasonId, limit: 2 })
+  const first = await repository.listAssignableMembers(caller, { seasonId, teamId, limit: 2 })
   assert.equal(first.items.length, 2)
   assert.equal(first.hasMore, true)
   assert.equal(first.limit, 2)
-  assert.equal(first.maxTeamMembers, 100)
-  assert.match(first.nextCursor, /^gm1\./)
+  assert.equal(first.maxTeamMembers, 12)
+  assert.match(first.nextCursor, /^gm2\./)
   assert.match(first.items[0].memberRef, /^p1\./)
-  assert.match(first.items[0].candidateKey, /^gmk1\.[A-Za-z0-9_-]{43}$/)
+  assert.match(first.items[0].candidateKey, /^gmk2\.[A-Za-z0-9_-]{43}$/)
   assert.match(queries[0].sql, /ORDER BY user\.id LIMIT \?/)
   assert.match(queries[0].sql, /entitlement\.status = 'ACTIVE'/)
   assert.deepEqual(queries[0].params, [seasonId, 'app', 3])
 
   const second = await repository.listAssignableMembers(caller, {
     seasonId,
+    teamId,
     cursor: first.nextCursor,
     limit: 2,
   })
@@ -385,15 +465,27 @@ test('binds assignable-member cursors to their season and normalized query', () 
   const context = {
     appId: 'app',
     seasonId,
+    teamId,
     query: '玩家',
     userId: '30000000-0000-4000-8000-000000000001',
   }
   const cursor = createMemberCursor(context, pepper)
+  assert.match(cursor, /^gm2\./)
   assert.equal(readMemberCursor(cursor, context, pepper), context.userId)
   assert.throws(
     () => readMemberCursor(cursor, { ...context, query: '其他' }, pepper),
     /VALIDATION_FAILED/,
   )
+  assert.throws(
+    () => readMemberCursor(cursor, {
+      ...context,
+      teamId: '20000000-0000-4000-8000-000000000002',
+    }, pepper),
+    /VALIDATION_FAILED/,
+  )
+  const parts = cursor.split('.')
+  parts[2] = `${parts[2].slice(0, -1)}${parts[2].endsWith('A') ? 'B' : 'A'}`
+  assert.throws(() => readMemberCursor(parts.join('.'), context, pepper), /VALIDATION_FAILED/)
   assert.throws(
     () => readMemberCursor(cursor, {
       ...context,
@@ -406,9 +498,66 @@ test('binds assignable-member cursors to their season and normalized query', () 
     createCandidateKey(context, pepper),
     createCandidateKey({ ...context, userId: '30000000-0000-4000-8000-000000000002' }, pepper),
   )
+  const legacyContext = { appId: context.appId, seasonId, query: context.query, userId: context.userId }
+  const legacyCursor = createMemberCursor(legacyContext, pepper)
+  assert.match(legacyCursor, /^gm1\./)
+  assert.equal(readMemberCursor(legacyCursor, legacyContext, pepper), context.userId)
+  assert.throws(() => readMemberCursor(legacyCursor, context, pepper), /VALIDATION_FAILED/)
+  assert.throws(() => readMemberCursor(cursor, legacyContext, pepper), /VALIDATION_FAILED/)
+  assert.match(createCandidateKey(legacyContext, pepper), /^gmk1\./)
+})
+
+test('keeps legacy v1 assignable-member pagination on gm1 and the default limit', async () => {
+  const userIds = [
+    '30000000-0000-4000-8000-000000000001',
+    '30000000-0000-4000-8000-000000000002',
+  ]
+  const calls = []
+  const repository = createGameRepository({
+    async one(sql) {
+      calls.push(sql)
+      if (sql.includes('mip_admin_role_bindings')) return { role_key: 'PLATFORM_OWNER' }
+      throw new Error(`legacy request must not read a team: ${sql}`)
+    },
+    async query(sql) {
+      calls.push(sql)
+      return userIds.map((id, index) => ({
+        id,
+        nickname: `玩家${index + 1}`,
+        branch_name: null,
+        team_id: null,
+        team_name: null,
+        role: null,
+      }))
+    },
+  })
+  const caller = { appId: 'app', userId: userIds[0], profileRefSecret: 's'.repeat(32) }
+  const first = await repository.listAssignableMembers(caller, { seasonId, limit: 1 })
+  assert.equal(first.maxTeamMembers, 100)
+  assert.match(first.nextCursor, /^gm1\./)
+  assert.match(first.items[0].candidateKey, /^gmk1\.[A-Za-z0-9_-]{43}$/)
+  const second = await repository.listAssignableMembers(caller, {
+    seasonId,
+    cursor: first.nextCursor,
+    limit: 1,
+  })
+  assert.equal(second.items[0].memberRef.length > 0, true)
+  assert.equal(calls.some(sql => sql.includes('SELECT status, member_limit FROM mip_game_teams')), false)
 })
 
 test('publishes the team member limit instead of silently truncating replacement input', () => {
+  assert.deepEqual(normalizeTeam({ seasonId, name: '动态队伍', summary: '', memberLimit: 8 }), {
+    seasonId,
+    branchId: null,
+    name: '动态队伍',
+    summary: '',
+    memberLimit: 8,
+  })
+  assert.equal(normalizeTeam({ seasonId, name: '兼容旧客户端', summary: '' }).memberLimit, undefined)
+  assert.throws(
+    () => normalizeTeam({ seasonId, name: '无效队伍', summary: '', memberLimit: 101 }),
+    /VALIDATION_FAILED/,
+  )
   assert.throws(() => memberPageLimit(undefined), /PAGINATION_REQUIRED/)
   assert.equal(memberPageLimit(100), 100)
   assert.throws(() => memberPageLimit(101), /VALIDATION_FAILED/)
@@ -416,6 +565,146 @@ test('publishes the team member limit instead of silently truncating replacement
     () => normalizeMembers(Array.from({ length: 101 }, () => ({}))),
     /MEMBER_LIMIT_EXCEEDED/,
   )
+})
+
+test('versions and audits team activation changes while preserving the configured limit', async () => {
+  const calls = []
+  const repository = createGameRepository({
+    transaction: work => work({
+      async one(sql, params) {
+        calls.push({ kind: 'one', sql, params })
+        if (sql.includes('mip_admin_role_bindings')) return { role_key: 'PLATFORM_OWNER' }
+        if (sql.includes('FROM mip_game_seasons')) return { status: 'ACTIVE' }
+        if (sql.includes('SELECT * FROM mip_game_teams')) {
+          return { id: teamId, season_id: seasonId, status: 'ACTIVE', version: 3, member_limit: 8, name: '一队' }
+        }
+        if (sql.includes('SELECT team.*')) {
+          return { id: teamId, season_id: seasonId, status: 'INACTIVE', version: 4, member_limit: 8, member_count: 2, name: '一队' }
+        }
+        throw new Error(`unexpected one: ${sql}`)
+      },
+      async query(sql, params) {
+        calls.push({ kind: 'query', sql, params })
+        if (sql.includes('SELECT id FROM mip_game_team_memberships')) return []
+        return { affectedRows: 1 }
+      },
+    }),
+  })
+  const result = await repository.changeTeamStatus(
+    { appId: 'app', userId: 'admin' },
+    { seasonId, teamId, expectedVersion: 3, status: 'INACTIVE' },
+  )
+  assert.equal(result.status, 'INACTIVE')
+  assert.equal(result.version, 4)
+  assert.equal(result.memberLimit, 8)
+  const update = calls.find(call => call.kind === 'query' && call.sql.includes('UPDATE mip_game_teams SET status'))
+  assert.deepEqual(update.params, ['INACTIVE', 'admin', 'app', seasonId, teamId, 3])
+  const lockedTeam = calls.find(call => call.kind === 'one' && call.sql.includes('SELECT * FROM mip_game_teams'))
+  assert.deepEqual(lockedTeam.params, ['app', seasonId, teamId])
+  const audit = calls.find(call => call.kind === 'query' && call.sql.includes('INSERT INTO mip_audit_logs'))
+  assert.equal(audit.params[3], 'game.team.deactivated')
+  const statements = calls.map(call => call.sql.replace(/\s+/g, ' ').trim())
+  assert.ok(statements.findIndex(sql => sql.includes('FROM mip_game_seasons') && sql.includes('FOR UPDATE'))
+    < statements.findIndex(sql => sql.includes('SELECT * FROM mip_game_teams') && sql.includes('FOR UPDATE')))
+})
+
+test('does not deactivate a team while active members would become stranded', async () => {
+  const writes = []
+  const repository = createGameRepository({
+    transaction: work => work({
+      async one(sql) {
+        if (sql.includes('mip_admin_role_bindings')) return { role_key: 'PLATFORM_OWNER' }
+        if (sql.includes('mip_game_seasons')) return { status: 'ACTIVE' }
+        if (sql.includes('SELECT * FROM mip_game_teams')) {
+          return { id: teamId, season_id: seasonId, status: 'ACTIVE', version: 3, member_limit: 8 }
+        }
+        throw new Error(`unexpected one: ${sql}`)
+      },
+      async query(sql) {
+        if (sql.includes('SELECT id FROM mip_game_team_memberships')) {
+          assert.match(sql, /ORDER BY user_id FOR UPDATE/)
+          return [{ id: 'membership' }]
+        }
+        writes.push(sql)
+        return { affectedRows: 1 }
+      },
+    }),
+  })
+  await assert.rejects(repository.changeTeamStatus(
+    { appId: 'app', userId: 'admin' },
+    { seasonId, teamId, expectedVersion: 3, status: 'INACTIVE' },
+  ), /TEAM_HAS_ACTIVE_MEMBERS/)
+  assert.deepEqual(writes, [])
+})
+
+test('rejects an inactive team before listing or replacing members', async () => {
+  const database = {
+    async one(sql) {
+      if (sql.includes('mip_admin_role_bindings')) return { role_key: 'PLATFORM_OWNER' }
+      if (sql.includes('mip_game_teams')) return { status: 'INACTIVE', member_limit: 8 }
+      throw new Error(`unexpected one: ${sql}`)
+    },
+    async query() { throw new Error('must not list candidates') },
+  }
+  const caller = { appId: 'app', userId: 'admin', profileRefSecret: 's'.repeat(32) }
+  const repository = createGameRepository(database)
+  await assert.rejects(
+    repository.listAssignableMembers(caller, { seasonId, teamId, limit: 25 }),
+    /INVALID_STATE/,
+  )
+
+  const writes = []
+  const replacement = createGameRepository({
+    transaction: work => work({
+      async one(sql) {
+        if (sql.includes('mip_admin_role_bindings')) return { role_key: 'PLATFORM_OWNER' }
+        if (sql.includes('mip_game_seasons')) return { status: 'ACTIVE' }
+        if (sql.includes('mip_game_teams')) return { status: 'INACTIVE', member_limit: 8, version: 2 }
+        throw new Error(`unexpected one: ${sql}`)
+      },
+      async query(sql) { writes.push(sql); return { affectedRows: 1 } },
+    }),
+  })
+  await assert.rejects(replacement.replaceTeamMembers(caller, {
+    seasonId,
+    teamId,
+    expectedVersion: 2,
+    members: [],
+  }), /INVALID_STATE/)
+  assert.deepEqual(writes, [])
+})
+
+test('locks the current roster and refuses to lower capacity below its size', async () => {
+  const writes = []
+  const repository = createGameRepository({
+    transaction: work => work({
+      async one(sql) {
+        if (sql.includes('mip_admin_role_bindings')) return { role_key: 'PLATFORM_OWNER' }
+        if (sql.includes('mip_game_seasons')) return { status: 'ACTIVE' }
+        if (sql.includes('mip_game_teams')) {
+          return { season_id: seasonId, status: 'ACTIVE', version: 5, member_limit: 5 }
+        }
+        throw new Error(`unexpected one: ${sql}`)
+      },
+      async query(sql) {
+        if (sql.includes('SELECT id FROM mip_game_team_memberships')) {
+          assert.match(sql, /ORDER BY user_id FOR UPDATE/)
+          return [{ id: '1' }, { id: '2' }, { id: '3' }]
+        }
+        writes.push(sql)
+        return { affectedRows: 1 }
+      },
+    }),
+  })
+  await assert.rejects(repository.saveTeam(
+    { appId: 'app', userId: 'admin' },
+    {
+      teamId,
+      expectedVersion: 5,
+      team: { seasonId, name: '一队', summary: '', memberLimit: 2 },
+    },
+  ), /MEMBER_LIMIT_EXCEEDED/)
+  assert.deepEqual(writes, [])
 })
 
 test('serializes current-player checks and versions every team affected by a roster transfer', async () => {
@@ -439,7 +728,11 @@ test('serializes current-player checks and versions every team affected by a ros
           : null
       }
       if (sql.includes('FROM mip_game_teams')) {
-        return { version: params[2] === targetTeamId ? 4 : 7 }
+        return {
+          status: 'ACTIVE',
+          member_limit: 12,
+          version: params[2] === targetTeamId ? 4 : 7,
+        }
       }
       throw new Error(`unexpected one: ${sql}`)
     },
@@ -501,7 +794,7 @@ test('does not write a roster after the membership-chain check finds no current 
       async one(sql) {
         if (sql.includes('FROM mip_admin_role_bindings')) return { role_key: 'PLATFORM_OWNER' }
         if (sql.includes('FROM mip_game_seasons')) return { status: 'ACTIVE' }
-        if (sql.includes('FROM mip_game_teams')) return { version: 4 }
+        if (sql.includes('FROM mip_game_teams')) return { status: 'ACTIVE', member_limit: 12, version: 4 }
         if (sql.includes('FROM mip_users')) return { status: 'ACTIVE' }
         if (sql.includes('FROM mip_membership_chains')) return { version: 5 }
         if (sql.includes('FROM mip_membership_entitlements')) return null
@@ -571,6 +864,7 @@ test('rechecks active player facts when calculating team scores and ranking writ
   }, 'app', { id: seasonId }, { start: '2026-08-01', end: '2026-08-31' })
   assert.match(rankingRead.sql, /LEFT JOIN mip_users user/)
   assert.match(rankingRead.sql, /entitlement\.status = 'ACTIVE'/)
+  assert.doesNotMatch(rankingRead.sql, /team\.status = 'ACTIVE'/)
   assert.deepEqual(rankingRead.params, ['2026-08-01', '2026-08-31', 'app', seasonId])
 })
 

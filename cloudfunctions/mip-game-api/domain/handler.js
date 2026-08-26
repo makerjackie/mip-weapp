@@ -20,6 +20,7 @@ const actions = Object.freeze({
   'admin.changeSeasonStatus': (service, caller, event) => service.changeSeasonStatus(caller, event),
   'admin.listTeams': (service, caller, event) => service.listTeams(caller, event),
   'admin.saveTeam': (service, caller, event) => service.saveTeam(caller, event),
+  'admin.changeTeamStatus': (service, caller, event) => service.changeTeamStatus(caller, event),
   'admin.listAssignableMembers': (service, caller, event) => service.listAssignableMembers(caller, event),
   'admin.replaceTeamMembers': (service, caller, event) => service.replaceTeamMembers(caller, event),
   'admin.listMatches': (service, caller, event) => service.listAdminMatches(caller, event),
@@ -55,6 +56,7 @@ const messages = Object.freeze({
   PHONE_REQUIRED: '请先绑定手机号',
   PROFILE_REQUIRED: '请先完善个人资料',
   SCORE_NOT_ACCEPTED: '积分由服务端成长流水生成，不能手动提交',
+  TEAM_HAS_ACTIVE_MEMBERS: '请先迁移或移除队伍中的成员，再停用队伍',
   VALIDATION_FAILED: '提交内容格式不正确，请检查后重试',
 })
 

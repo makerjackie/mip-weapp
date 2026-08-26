@@ -26,11 +26,11 @@ function profileRef(index: number) {
 }
 
 function candidateKey(index: number) {
-  return `gmk1.${opaquePart(index, 43)}`
+  return `gmk2.${opaquePart(index, 43)}`
 }
 
 function memberCursor(index: number) {
-  return `gm1.${opaquePart(index, 16)}.${opaquePart(index, 48)}.${opaquePart(index, 22)}`
+  return `gm2.${opaquePart(index, 16)}.${opaquePart(index, 48)}.${opaquePart(index, 22)}`
 }
 
 function assignableMember(index: number, nickname = `玩家${String(index).padStart(4, '0')}`) {
@@ -42,6 +42,28 @@ function assignableMember(index: number, nickname = `玩家${String(index).padSt
     teamId: '',
     teamName: '',
     role: '' as const,
+  }
+}
+
+function gameTeam(overrides: Record<string, unknown> = {}) {
+  return {
+    id: teamAId,
+    seasonId,
+    branchId: '',
+    branchName: '',
+    name: '动态队伍',
+    summary: '',
+    status: 'ACTIVE',
+    version: 3,
+    memberCount: 2,
+    memberLimit: 8,
+    headquartersLevel: {
+      number: 1,
+      label: '一级大本营',
+      minimumExperience: 0,
+      styleKey: 'BASE_1',
+    },
+    ...overrides,
   }
 }
 
@@ -114,12 +136,130 @@ describe('MIP game client contract', () => {
         }
       },
     })
-    await gateway.listAssignableMembers(seasonId, '玩家', 'opaque-cursor', 75)
+    await gateway.listAssignableMembers(seasonId, teamAId, '玩家', 'opaque-cursor', 75)
     expect(calls).toEqual([{
       contractVersion: 1,
       action: 'admin.listAssignableMembers',
-      input: { seasonId, query: '玩家', cursor: 'opaque-cursor', limit: 75 },
+      input: { seasonId, teamId: teamAId, query: '玩家', cursor: 'opaque-cursor', limit: 75 },
     }])
+  })
+
+  it('uses a versioned neutral action for team lifecycle changes', async () => {
+    const calls: MipGameRequest[] = []
+    const gateway = createMipGameGateway({
+      async invoke(request) {
+        calls.push(request)
+        return { ok: true, data: gameTeam({ status: 'INACTIVE', version: 4, memberCount: 0 }) }
+      },
+    })
+    const result = await gateway.changeTeamStatus(seasonId, teamAId, 3, 'INACTIVE')
+    expect(result).toMatchObject({ status: 'INACTIVE', version: 4, memberLimit: 8 })
+    expect(calls).toEqual([{
+      contractVersion: 1,
+      action: 'admin.changeTeamStatus',
+      input: { seasonId, teamId: teamAId, expectedVersion: 3, status: 'INACTIVE' },
+    }])
+  })
+
+  it('fails closed when overview or team reads return another requested context', async () => {
+    const gateway = createMipGameGateway({
+      async invoke(request) {
+        if (request.action === 'getOverview') {
+          return {
+            ok: true,
+            data: {
+              season: { id: '10000000-0000-4000-8000-000000000002' },
+              team: null,
+              matches: [],
+              standings: [],
+            },
+          }
+        }
+        return { ok: true, data: { id: teamBId } }
+      },
+    })
+    await expect(gateway.getOverview(seasonId)).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
+    await expect(gateway.getTeam(teamAId)).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
+  })
+
+  it('fails closed on malformed team lifecycle DTOs and member pages', async () => {
+    const invalidTeam = createMipGameGateway({
+      async invoke() {
+        return { ok: true, data: { items: [gameTeam({ memberLimit: 0 })] } }
+      },
+    })
+    await expect(invalidTeam.listTeams(seasonId)).rejects.toMatchObject({
+      code: 'SERVICE_UNAVAILABLE',
+    })
+
+    const duplicateMembers = createMipGameGateway({
+      async invoke() {
+        return {
+          ok: true,
+          data: {
+            items: [assignableMember(1), { ...assignableMember(2), memberRef: profileRef(1) }],
+            hasMore: false,
+            nextCursor: '',
+            limit: 100,
+            maxTeamMembers: 8,
+          },
+        }
+      },
+    })
+    await expect(
+      duplicateMembers.listAssignableMembers(seasonId, teamAId, undefined, undefined, 100),
+    ).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
+  })
+
+  it('fails closed on valid UUID responses from another admin team context', async () => {
+    const otherSeasonId = '10000000-0000-4000-8000-000000000002'
+    const gateway = createMipGameGateway({
+      async invoke(request) {
+        if (request.action === 'admin.listTeams') {
+          return { ok: true, data: { items: [gameTeam({ seasonId: otherSeasonId })] } }
+        }
+        if (request.action === 'admin.replaceTeamMembers') {
+          return { ok: true, data: { teamId: teamBId, memberCount: 0, version: 4 } }
+        }
+        if (request.action === 'admin.changeTeamStatus') {
+          return {
+            ok: true,
+            data: gameTeam({ seasonId: otherSeasonId, status: 'INACTIVE', memberCount: 0 }),
+          }
+        }
+        return { ok: true, data: gameTeam({ id: teamBId }) }
+      },
+    })
+    await expect(gateway.listTeams(seasonId)).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
+    await expect(gateway.saveTeam({
+      teamId: teamAId,
+      expectedVersion: 3,
+      team: { seasonId, name: '动态队伍', summary: '', memberLimit: 8 },
+    })).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
+    await expect(
+      gateway.changeTeamStatus(seasonId, teamAId, 3, 'INACTIVE'),
+    ).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
+    await expect(
+      gateway.replaceTeamMembers(seasonId, teamAId, 3, []),
+    ).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
+
+    const wrongStatusTeam = createMipGameGateway({
+      async invoke() {
+        return { ok: true, data: gameTeam({ id: teamBId, status: 'INACTIVE', memberCount: 0 }) }
+      },
+    })
+    await expect(
+      wrongStatusTeam.changeTeamStatus(seasonId, teamAId, 3, 'INACTIVE'),
+    ).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
+
+    const wrongSaveSeason = createMipGameGateway({
+      async invoke() {
+        return { ok: true, data: gameTeam({ seasonId: otherSeasonId }) }
+      },
+    })
+    await expect(wrongSaveSeason.saveTeam({
+      team: { seasonId, name: '动态队伍', summary: '', memberLimit: 8 },
+    })).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
   })
 
   it('submits only a catalog and idempotency intent for a blind-box draw', async () => {
@@ -200,6 +340,7 @@ describe('MIP game client contract', () => {
       'admin.saveSeason',
       'admin.changeSeasonStatus',
       'admin.saveTeam',
+      'admin.changeTeamStatus',
       'admin.replaceTeamMembers',
       'admin.saveWeeklyMatch',
       'admin.finalizeWeeklyMatch',
@@ -299,6 +440,7 @@ describe('MIP game client contract', () => {
     const gateway = {
       async listAssignableMembers(
         _seasonId: string,
+        _teamId: string,
         _query?: string,
         cursor?: string,
         limit?: number,
@@ -316,7 +458,7 @@ describe('MIP game client contract', () => {
       },
     } as unknown as MipGameGateway
     const module = createMipGameModule(gateway)
-    const result = await module.query.listAllAssignableMembers(seasonId, undefined, true)
+    const result = await module.query.listAllAssignableMembers(seasonId, teamAId, undefined, true)
     expect(result.items).toHaveLength(101)
     expect(result.items[0]?.memberRef).toBe(profileRef(1))
     expect(result.items[100]?.memberRef).toBe(profileRef(101))
@@ -332,7 +474,7 @@ describe('MIP game client contract', () => {
       async listAssignableMembers() { return { items: [] } },
     } as unknown as MipGameGateway
     const module = createMipGameModule(gateway)
-    await expect(module.query.listAllAssignableMembers(seasonId, undefined, true)).rejects.toMatchObject({
+    await expect(module.query.listAllAssignableMembers(seasonId, teamAId, undefined, true)).rejects.toMatchObject({
       code: 'SERVICE_UNAVAILABLE',
     })
   })
@@ -350,7 +492,7 @@ describe('MIP game client contract', () => {
       },
     } as unknown as MipGameGateway)
     await expect(
-      malformed.query.listAllAssignableMembers(seasonId, undefined, true),
+      malformed.query.listAllAssignableMembers(seasonId, teamAId, undefined, true),
     ).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
 
     let page = 0
@@ -371,7 +513,7 @@ describe('MIP game client contract', () => {
       },
     } as unknown as MipGameGateway)
     await expect(
-      duplicated.query.listAllAssignableMembers(seasonId, undefined, true),
+      duplicated.query.listAllAssignableMembers(seasonId, teamAId, undefined, true),
     ).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
   })
 
@@ -393,7 +535,7 @@ describe('MIP game client contract', () => {
       },
     } as unknown as MipGameGateway)
     await expect(
-      endless.query.listAllAssignableMembers(seasonId, undefined, true),
+      endless.query.listAllAssignableMembers(seasonId, teamAId, undefined, true),
     ).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
     expect(page).toBe(50)
 
@@ -408,7 +550,7 @@ describe('MIP game client contract', () => {
         }
       },
     } as unknown as MipGameGateway)
-    const result = await sorted.query.listAllAssignableMembers(seasonId, undefined, true)
+    const result = await sorted.query.listAllAssignableMembers(seasonId, teamAId, undefined, true)
     expect(result.items.map(item => item.memberRef)).toEqual([profileRef(2), profileRef(3), profileRef(1)])
   })
 
@@ -528,6 +670,13 @@ describe('MIP game client contract', () => {
     expect(adminPage).toMatch(/key: 'INDIVIDUAL_ALL_TIME', label: '个人累计榜'/)
     expect(adminPage).toContain('mipGameModule.query.listAdminRankings')
     expect(adminPage).toContain('mipGameModule.query.listAllAssignableMembers')
+    expect(adminPage).toMatch(/function emptySeasonView\(\)[\s\S]+teams:[\s\S]+activeTeams:[\s\S]+matches:[\s\S]+rankings:/)
+    expect(adminPage).toMatch(/seasonChanged[\s\S]+\.\.\.emptySeasonView\(\)[\s\S]+\.\.\.emptyTeamEditor\(\)/)
+    expect(adminPage).toMatch(/selectedSeasonId,[\s\S]+\.\.\.emptySeasonView\(\)[\s\S]+\.\.\.emptyTeamEditor\(\)/)
+    expect(adminPage).toMatch(/seasonChanged[\s\S]+rankingRequestKey: this\.data\.rankingRequestKey \+ 1[\s\S]+memberRequestKey: this\.data\.memberRequestKey \+ 1/)
+    expect(adminPage).toMatch(/async chooseSeason[\s\S]+memberRequestKey: this\.data\.memberRequestKey \+ 1[\s\S]+rankingRequestKey: this\.data\.rankingRequestKey \+ 1/)
+    expect(adminPage).toMatch(/match\.status !== 'SCHEDULED'[\s\S]+this\.data\.selectedSeasonClosed/)
+    expect(admin).toContain('item.status === \'SCHEDULED\' && !selectedSeasonClosed')
     expect(adminPage).toMatch(/requestKey !== this\.data\.memberRequestKey[\s\S]+currentTeam\?\.version !== team\.version/)
     expect(adminPage).toMatch(/generateRankingSnapshot[\s\S]+await this\.loadRanking\(true\)/)
     expect(app).toContain('mip-blind-box/detail/index')
