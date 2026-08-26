@@ -43,6 +43,8 @@ const EVENT_COMMENT_ROLE_CAPABILITIES = Object.freeze({
     'events.album.manage',
     'events.feedback.read',
     EVENT_COMMENT_CAPABILITY,
+    'events.catalog.manage',
+    'events.recaps.manage',
     'announcements.manage',
     'messages.manage',
     'messages.delivery.review',

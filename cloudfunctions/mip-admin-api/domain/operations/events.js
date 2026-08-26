@@ -4,6 +4,9 @@ const { defineManifest, serviceOperation } = require('./manifest')
 
 module.exports = defineManifest('EVENTS', [
   serviceOperation('mip.admin.events.list', 'QUERY', 'listEvents'),
+  serviceOperation('mip.admin.events.catalog.list', 'QUERY', 'listEventCatalogs', { sessionFirst: true }),
+  serviceOperation('mip.admin.events.recaps.list', 'QUERY', 'listEventVideoRecaps', { sessionFirst: true }),
+  serviceOperation('mip.admin.events.recaps.get', 'QUERY', 'getEventVideoRecap', { sessionFirst: true }),
   serviceOperation('mip.admin.events.policy.get', 'QUERY', 'getEventPolicy'),
   serviceOperation('mip.admin.events.get', 'QUERY', 'getEvent'),
   serviceOperation('mip.admin.events.insights.get', 'QUERY', 'getEventInsights'),
@@ -12,6 +15,12 @@ module.exports = defineManifest('EVENTS', [
   serviceOperation('mip.admin.events.roster', 'QUERY', 'listRoster'),
   serviceOperation('mip.admin.events.rosterAll', 'QUERY', 'listRosterAll'),
   serviceOperation('mip.admin.events.policy.save', 'MUTATION', 'saveEventPolicy'),
+  serviceOperation('mip.admin.events.catalog.save', 'MUTATION', 'saveEventCatalog', { sessionFirst: true }),
+  serviceOperation('mip.admin.events.catalog.changeStatus', 'MUTATION', 'changeEventCatalogStatus', { sessionFirst: true }),
+  serviceOperation('mip.admin.events.catalog.archive', 'MUTATION', 'archiveEventCatalog', { sessionFirst: true }),
+  serviceOperation('mip.admin.events.recaps.save', 'MUTATION', 'saveEventVideoRecap', { sessionFirst: true }),
+  serviceOperation('mip.admin.events.recaps.changeStatus', 'MUTATION', 'changeEventVideoRecapStatus', { sessionFirst: true }),
+  serviceOperation('mip.admin.events.recaps.archive', 'MUTATION', 'archiveEventVideoRecap', { sessionFirst: true }),
   serviceOperation('mip.admin.events.save', 'MUTATION', 'saveEvent', { wakesOutbox: true }),
   serviceOperation('mip.admin.events.clone', 'MUTATION', 'cloneEvent', { wakesOutbox: true }),
   serviceOperation('mip.admin.events.changeStatus', 'MUTATION', 'changeEventStatus', { wakesOutbox: true }),

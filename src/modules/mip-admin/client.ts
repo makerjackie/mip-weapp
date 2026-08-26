@@ -6,6 +6,7 @@ import type {
 } from './types'
 import { createQueryCache } from '@weapp/shared/cache'
 import { createMipCommunityAdmin } from './community-admin'
+import { createMipEventCatalogAdmin } from './event-catalogs-admin'
 import { createMipEventsAdmin } from './events-admin'
 import { createMipExportsAdmin } from './exports-admin'
 import { createMipGovernanceAdmin } from './governance-admin'
@@ -24,6 +25,7 @@ export function createMipAdminModule(
   const community = createMipCommunityAdmin(gateway, cache)
   const growth = createMipGrowthAdmin(gateway, cache)
   const events = createMipEventsAdmin(gateway, cache)
+  const eventCatalogs = createMipEventCatalogAdmin(gateway, cache)
   const exports = createMipExportsAdmin(
     gateway,
     cache,
@@ -65,6 +67,9 @@ export function createMipAdminModule(
     getUser: users.get,
     users,
     listEvents: events.list,
+    listEventCatalogs: eventCatalogs.listCatalogs,
+    listEventVideoRecaps: eventCatalogs.listRecaps,
+    getEventVideoRecap: eventCatalogs.getRecap,
     getEventPolicy: events.getPolicy,
     getEvent: events.get,
     getEventInsights: events.getInsights,
@@ -73,6 +78,7 @@ export function createMipAdminModule(
     listRoster: events.listRoster,
     listRosterAll: events.listRosterAll,
     events,
+    eventCatalogs,
     listRoles: governance.listRoles,
     listRoleCapabilityPolicies: governance.listRoleCapabilityPolicies,
     searchRoleCandidates: governance.searchRoleCandidates,

@@ -9,6 +9,18 @@ import type {
   AdminDashboardOverviewInput,
 } from './dashboard-overview'
 import type {
+  AdminEventCatalogArchiveInput,
+  AdminEventCatalogItem,
+  AdminEventCatalogListInput,
+  AdminEventCatalogSaveInput,
+  AdminEventCatalogStatusInput,
+  AdminEventVideoRecap,
+  AdminEventVideoRecapArchiveInput,
+  AdminEventVideoRecapListInput,
+  AdminEventVideoRecapSaveInput,
+  AdminEventVideoRecapStatusInput,
+} from './event-catalogs'
+import type {
   AdminEventCommentMutationResult,
   AdminEventCommentReportMutationResult,
   AdminEventCommentSettings,
@@ -77,6 +89,8 @@ export type AdminCapability
     | 'events.album.manage'
     | 'events.feedback.read'
     | 'events.comments.manage'
+    | 'events.catalog.manage'
+    | 'events.recaps.manage'
     | 'announcements.manage'
     | 'messages.manage'
     | 'messages.delivery.review'
@@ -942,6 +956,15 @@ export interface MipAdminGateway {
   reserveExport: (ticketId: string, token: string) => Promise<AdminExportReservation>
   completeExport: (ticketId: string, token: string) => Promise<{ status: 'CONSUMED', consumedAt: string }>
   listEvents: (input?: AdminEventListInput) => Promise<AdminPage<AdminEvent>>
+  listEventCatalogs: (input: AdminEventCatalogListInput) => Promise<AdminPage<AdminEventCatalogItem>>
+  saveEventCatalog: (input: AdminEventCatalogSaveInput) => Promise<AdminEventCatalogItem>
+  changeEventCatalogStatus: (input: AdminEventCatalogStatusInput) => Promise<AdminEventCatalogItem>
+  archiveEventCatalog: (input: AdminEventCatalogArchiveInput) => Promise<AdminEventCatalogItem>
+  listEventVideoRecaps: (input?: AdminEventVideoRecapListInput) => Promise<AdminPage<AdminEventVideoRecap>>
+  getEventVideoRecap: (recapId: string) => Promise<AdminEventVideoRecap>
+  saveEventVideoRecap: (input: AdminEventVideoRecapSaveInput) => Promise<AdminEventVideoRecap>
+  changeEventVideoRecapStatus: (input: AdminEventVideoRecapStatusInput) => Promise<AdminEventVideoRecap>
+  archiveEventVideoRecap: (input: AdminEventVideoRecapArchiveInput) => Promise<AdminEventVideoRecap>
   getEventPolicy: () => Promise<AdminEventPolicy>
   saveEventPolicy: (input: AdminEventPolicy) => Promise<AdminEventPolicy>
   getEvent: (eventId: string) => Promise<AdminEventDetail>

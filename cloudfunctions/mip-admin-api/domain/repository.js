@@ -16,6 +16,7 @@ const { createOpportunityArchiveRepository } = require('./opportunity-archive')
 const { createOpportunityCommentAdminRepository } = require('./opportunity-comments')
 const { createAdminAccessRepository } = require('./repositories/access')
 const { createDashboardOverviewRepository } = require('./repositories/dashboard-overview')
+const { createEventCatalogRepository } = require('./repositories/event-catalogs')
 const { createAdminEventRepository } = require('./repositories/events')
 const { createAdminOrderRepository } = require('./repositories/orders')
 const { createAdminUserRepository } = require('./repositories/users')
@@ -281,6 +282,13 @@ function createAdminRepository(database, options = {}) {
     visibleEventsWhere,
     writeAudit,
     writeOutbox,
+  })
+  const eventCatalogRepository = createEventCatalogRepository(database, {
+    assertMutationScope: assertScope,
+    createId: id,
+    lockMutationAuthorization: lockMutation,
+    repositorySupport: { codeError, escapeLike, iso },
+    writeAudit,
   })
   const messageCampaignRepository = createMessageCampaignRepository(database, {
     assertMutationScope: assertScope,
@@ -1264,6 +1272,7 @@ function createAdminRepository(database, options = {}) {
     ...adminPrdExtensions,
     ...badgeAdminRepository,
     ...eventCommentAdminRepository,
+    ...eventCatalogRepository,
     ...eventInsightsRepository,
     ...eventRepository,
     ...dashboardOverviewRepository,

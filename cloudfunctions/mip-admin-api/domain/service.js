@@ -8,6 +8,7 @@ const {
 const { createAdminAccess } = require('./access')
 const { createAdminCommunityGovernance } = require('./community-governance')
 const { createDashboardOverview } = require('./dashboard-overview')
+const { createEventCatalogAdmin } = require('./event-catalogs')
 const { createAdminEventComments } = require('./event-comments')
 const { createAdminEvents } = require('./events')
 const { createAdminExports } = require('./exports')
@@ -93,6 +94,17 @@ function createAdminService({
     phoneEncryptionKey,
     repository,
   })
+  const {
+    archiveEventCatalog,
+    archiveEventVideoRecap,
+    changeEventCatalogStatus,
+    changeEventVideoRecapStatus,
+    getEventVideoRecap,
+    listEventCatalogs,
+    listEventVideoRecaps,
+    saveEventCatalog,
+    saveEventVideoRecap,
+  } = createEventCatalogAdmin({ access, repository })
   const {
     claimEventCommentReport,
     closeEventCommentReport,
@@ -300,11 +312,15 @@ function createAdminService({
     getAnnouncement,
     adjustGrowth,
     archiveEvent,
+    archiveEventCatalog,
+    archiveEventVideoRecap,
     archiveOpportunity,
     archiveMessageTemplate,
     closeOpportunityCommentReport,
     changeBranchStatus,
     changeEventStatus,
+    changeEventCatalogStatus,
+    changeEventVideoRecapStatus,
     checkIn,
     claimEventCommentReport,
     changePrimaryBranch,
@@ -319,6 +335,7 @@ function createAdminService({
     getDashboard,
     getDashboardOverview,
     getEvent,
+    getEventVideoRecap,
     getEventCommentAdminState,
     getEventInsights,
     getEventPolicy,
@@ -342,7 +359,9 @@ function createAdminService({
     listBranches,
     listCommunityReports,
     listEventAlbumPhotos,
+    listEventCatalogs,
     listEvents,
+    listEventVideoRecaps,
     listGrowthEntries,
     listGrowthBenefits,
     listGrowthLevels,
@@ -374,8 +393,10 @@ function createAdminService({
     publishAnnouncement,
     grantBadge,
     saveEvent,
+    saveEventCatalog,
     saveEventCommentSettings,
     saveEventPolicy,
+    saveEventVideoRecap,
     saveAnnouncement,
     saveMessageCampaign,
     saveMessageTemplate,

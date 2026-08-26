@@ -30,6 +30,20 @@ import {
   parseDashboardOverview,
 } from './dashboard-overview'
 import {
+  createAdminEventCatalogArchiveRequest,
+  createAdminEventCatalogListRequest,
+  createAdminEventCatalogSaveRequest,
+  createAdminEventCatalogStatusRequest,
+  createAdminEventVideoRecapArchiveRequest,
+  createAdminEventVideoRecapListRequest,
+  createAdminEventVideoRecapSaveRequest,
+  createAdminEventVideoRecapStatusRequest,
+  parseAdminEventCatalogItem,
+  parseAdminEventCatalogPage,
+  parseAdminEventVideoRecap,
+  parseAdminEventVideoRecapPage,
+} from './event-catalogs'
+import {
   parseEventCommentMutationResult,
   parseEventCommentReportClaimResult,
   parseEventCommentReportCloseResult,
@@ -102,6 +116,8 @@ const adminCapabilities = new Set<AdminCapability>([
   'events.album.manage',
   'events.feedback.read',
   'events.comments.manage',
+  'events.catalog.manage',
+  'events.recaps.manage',
   'announcements.manage',
   'messages.manage',
   'messages.delivery.review',
@@ -785,6 +801,33 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
     },
     listEvents: async input => parseAdminEventPage(
       await call('mip.admin.events.list', { ...(input || {}) }),
+    ),
+    listEventCatalogs: async input => parseAdminEventCatalogPage(
+      await call('mip.admin.events.catalog.list', { ...createAdminEventCatalogListRequest(input) }),
+    ),
+    saveEventCatalog: async input => parseAdminEventCatalogItem(
+      await call('mip.admin.events.catalog.save', createAdminEventCatalogSaveRequest(input)),
+    ),
+    changeEventCatalogStatus: async input => parseAdminEventCatalogItem(
+      await call('mip.admin.events.catalog.changeStatus', createAdminEventCatalogStatusRequest(input)),
+    ),
+    archiveEventCatalog: async input => parseAdminEventCatalogItem(
+      await call('mip.admin.events.catalog.archive', createAdminEventCatalogArchiveRequest(input)),
+    ),
+    listEventVideoRecaps: async input => parseAdminEventVideoRecapPage(
+      await call('mip.admin.events.recaps.list', { ...createAdminEventVideoRecapListRequest(input) }),
+    ),
+    getEventVideoRecap: async recapId => parseAdminEventVideoRecap(
+      await call('mip.admin.events.recaps.get', { recapId }),
+    ),
+    saveEventVideoRecap: async input => parseAdminEventVideoRecap(
+      await call('mip.admin.events.recaps.save', createAdminEventVideoRecapSaveRequest(input)),
+    ),
+    changeEventVideoRecapStatus: async input => parseAdminEventVideoRecap(
+      await call('mip.admin.events.recaps.changeStatus', createAdminEventVideoRecapStatusRequest(input)),
+    ),
+    archiveEventVideoRecap: async input => parseAdminEventVideoRecap(
+      await call('mip.admin.events.recaps.archive', createAdminEventVideoRecapArchiveRequest(input)),
     ),
     getEventPolicy: async () => parseEventPolicy(await call('mip.admin.events.policy.get')),
     saveEventPolicy: async input => parseEventPolicy(await call('mip.admin.events.policy.save', {

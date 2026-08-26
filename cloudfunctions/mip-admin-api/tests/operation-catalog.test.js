@@ -39,6 +39,9 @@ const expectedOperations = Object.freeze({
   'mip.admin.communityReports.close': ['USERS', 'MUTATION', 'closeCommunityReport'],
 
   'mip.admin.events.list': ['EVENTS', 'QUERY', 'listEvents'],
+  'mip.admin.events.catalog.list': ['EVENTS', 'QUERY', 'listEventCatalogs', 'SESSION_FIRST'],
+  'mip.admin.events.recaps.list': ['EVENTS', 'QUERY', 'listEventVideoRecaps', 'SESSION_FIRST'],
+  'mip.admin.events.recaps.get': ['EVENTS', 'QUERY', 'getEventVideoRecap', 'SESSION_FIRST'],
   'mip.admin.events.policy.get': ['EVENTS', 'QUERY', 'getEventPolicy'],
   'mip.admin.events.get': ['EVENTS', 'QUERY', 'getEvent'],
   'mip.admin.events.insights.get': ['EVENTS', 'QUERY', 'getEventInsights'],
@@ -47,6 +50,12 @@ const expectedOperations = Object.freeze({
   'mip.admin.events.roster': ['EVENTS', 'QUERY', 'listRoster'],
   'mip.admin.events.rosterAll': ['EVENTS', 'QUERY', 'listRosterAll'],
   'mip.admin.events.policy.save': ['EVENTS', 'MUTATION', 'saveEventPolicy'],
+  'mip.admin.events.catalog.save': ['EVENTS', 'MUTATION', 'saveEventCatalog', 'SESSION_FIRST'],
+  'mip.admin.events.catalog.changeStatus': ['EVENTS', 'MUTATION', 'changeEventCatalogStatus', 'SESSION_FIRST'],
+  'mip.admin.events.catalog.archive': ['EVENTS', 'MUTATION', 'archiveEventCatalog', 'SESSION_FIRST'],
+  'mip.admin.events.recaps.save': ['EVENTS', 'MUTATION', 'saveEventVideoRecap', 'SESSION_FIRST'],
+  'mip.admin.events.recaps.changeStatus': ['EVENTS', 'MUTATION', 'changeEventVideoRecapStatus', 'SESSION_FIRST'],
+  'mip.admin.events.recaps.archive': ['EVENTS', 'MUTATION', 'archiveEventVideoRecap', 'SESSION_FIRST'],
   'mip.admin.events.save': ['EVENTS', 'MUTATION', 'saveEvent'],
   'mip.admin.events.clone': ['EVENTS', 'MUTATION', 'cloneEvent'],
   'mip.admin.events.changeStatus': ['EVENTS', 'MUTATION', 'changeEventStatus'],
@@ -183,12 +192,12 @@ function manifest(owner, operations) {
 }
 
 describe('admin operation catalog', () => {
-  it('freezes the exact 120 business actions, owners, and kinds while keeping health separate', () => {
+  it('freezes the exact 129 business actions, owners, and kinds while keeping health separate', () => {
     const handlerActions = Object.keys(actions).filter(action => action !== 'health')
     const expectedActions = Object.keys(expectedOperations)
 
-    assert.equal(expectedActions.length, 120)
-    assert.equal(operationCatalog.length, 120)
+    assert.equal(expectedActions.length, 129)
+    assert.equal(operationCatalog.length, 129)
     assert.deepEqual(sorted(handlerActions), sorted(expectedActions))
     assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(expectedActions))
     assert.equal(operationByAction.health, undefined)

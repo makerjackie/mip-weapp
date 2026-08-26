@@ -60,11 +60,15 @@ describe('admin capabilities', () => {
       assert.equal(roleCapabilities[role].includes(CAPABILITIES.OPPORTUNITIES_ARCHIVE), true)
       assert.equal(roleCapabilities[role].includes(CAPABILITIES.BANNERS_MANAGE), true)
       assert.equal(roleCapabilities[role].includes(CAPABILITIES.GAME_MANAGE), true)
+      assert.equal(roleCapabilities[role].includes(CAPABILITIES.EVENTS_CATALOG_MANAGE), true)
+      assert.equal(roleCapabilities[role].includes(CAPABILITIES.EVENTS_RECAPS_MANAGE), true)
     }
     for (const role of ['PLATFORM_FINANCE', 'BRANCH_ADMIN', 'EVENT_OWNER', 'EVENT_MANAGER', 'EVENT_STAFF']) {
       assert.equal(roleCapabilities[role].includes(CAPABILITIES.OPPORTUNITIES_ARCHIVE), false)
       assert.equal(roleCapabilities[role].includes(CAPABILITIES.BANNERS_MANAGE), false)
       assert.equal(roleCapabilities[role].includes(CAPABILITIES.GAME_MANAGE), false)
+      assert.equal(roleCapabilities[role].includes(CAPABILITIES.EVENTS_CATALOG_MANAGE), false)
+      assert.equal(roleCapabilities[role].includes(CAPABILITIES.EVENTS_RECAPS_MANAGE), false)
     }
   })
 
