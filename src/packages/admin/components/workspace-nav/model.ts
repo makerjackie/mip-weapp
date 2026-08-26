@@ -213,6 +213,7 @@ export const adminWorkspaceGroups: readonly AdminWorkspaceNavGroup[] = [
 const activeItemByRoute: Readonly<Record<string, string>> = {
   'packages/admin/dashboard/index': 'dashboard',
   'packages/admin/profiles/index': 'profiles',
+  'packages/admin/membership/index': 'profiles',
   'packages/admin/managed-events/index': 'managed-events',
   'packages/admin/event-catalogs/index': 'event-catalogs',
   'packages/admin/event-recaps/index': 'event-recaps',

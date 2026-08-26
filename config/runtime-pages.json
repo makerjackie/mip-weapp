@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 99,
+  "routeCount": 100,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 99 paths.",
+    "config/project.json routes must list the same 100 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -798,6 +798,23 @@
       "states": ["loading", "ready", "empty", "error", "forbidden"],
       "acceptStates": ["ready", "empty"],
       "readyAssertion": "state === 'ready' || state === 'empty'"
+    },
+    {
+      "id": "A41",
+      "name": "会员管理",
+      "path": "packages/admin/membership/index",
+      "selector": "#admin-membership-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "error", "forbidden", "conflict"],
+      "acceptStates": ["ready"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["userId"],
+      "queryFixture": {
+        "sourceRoute": "packages/admin/profiles/index",
+        "dataPath": "users",
+        "values": { "userId": "id" }
+      }
     },
     {
       "id": "A09",

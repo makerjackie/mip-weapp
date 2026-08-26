@@ -301,6 +301,10 @@
       "pathName": "packages/admin/profiles/index"
     },
     {
+      "name": "会员管理",
+      "pathName": "packages/admin/membership/index"
+    },
+    {
       "name": "订单运营",
       "pathName": "packages/admin/orders/index"
     },

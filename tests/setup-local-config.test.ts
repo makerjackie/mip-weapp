@@ -9,7 +9,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 describe('local DevTools condition generation', () => {
   const project = JSON.parse(fs.readFileSync(path.join(root, 'config/project.json'), 'utf8'))
 
-  it('generates all 99 tracked routes including the activity operations pages', () => {
+  it('generates all 100 tracked routes including the activity operations pages', () => {
     const config = buildDevtoolsPrivateConfig({
       appid: 'local-test-appid',
       existing: {
@@ -21,8 +21,8 @@ describe('local DevTools condition generation', () => {
     })
     const routes = config.condition.miniprogram.list.map((route: { pathName: string }) => route.pathName)
 
-    expect(routes).toHaveLength(99)
-    expect(new Set(routes).size).toBe(99)
+    expect(routes).toHaveLength(100)
+    expect(new Set(routes).size).toBe(100)
     expect(routes).toContain('packages/member/mip-events/comments/index')
     expect(routes).toContain('packages/admin/event-comments/index')
     expect(config.condition.plugin.list).toEqual([{ name: 'preserved' }])

@@ -3,6 +3,7 @@
 module.exports = Object.freeze([
   require('./access'),
   require('./users'),
+  require('./memberships'),
   require('./events'),
   require('./orders'),
   require('./messaging'),

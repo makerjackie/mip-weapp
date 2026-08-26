@@ -116,6 +116,12 @@ describe('event comment outbox projection', () => {
     for (const [roleKey, capabilities] of Object.entries(EVENT_COMMENT_ROLE_CAPABILITIES)) {
       assert.deepEqual(capabilities, roleCapabilities[roleKey])
     }
+    assert.equal(EVENT_COMMENT_ROLE_CAPABILITIES.PLATFORM_OPERATIONS.includes('memberships.read'), true)
+    assert.equal(EVENT_COMMENT_ROLE_CAPABILITIES.PLATFORM_OPERATIONS.includes('memberships.adjust'), true)
+    for (const roleKey of ['BRANCH_ADMIN', 'EVENT_OWNER', 'EVENT_MANAGER']) {
+      assert.equal(EVENT_COMMENT_ROLE_CAPABILITIES[roleKey].includes('memberships.read'), false)
+      assert.equal(EVENT_COMMENT_ROLE_CAPABILITIES[roleKey].includes('memberships.adjust'), false)
+    }
     assert.equal(hasEffectiveEventCommentCapability({
       responsibility_kind: 'MANAGEMENT',
       role_key: 'EVENT_MANAGER',

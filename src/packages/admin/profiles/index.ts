@@ -214,6 +214,7 @@ Page({
     canExport: false,
     canFilterBranches: false,
     canChangePrimaryBranch: false,
+    canReadMembership: false,
     primaryBranchOptions: [] as PrimaryBranchOption[],
     primaryBranchLabels: [] as string[],
     primaryBranchIndex: -1,
@@ -351,6 +352,7 @@ Page({
         canExport: hasCapability(session.capabilities, 'exports.create'),
         canFilterBranches,
         canChangePrimaryBranch,
+        canReadMembership: hasCapability(session.capabilities, 'memberships.read'),
         nextCursor: response.nextCursor || null,
         loadingMore: false,
         message: '',
@@ -752,6 +754,14 @@ Page({
     void wx.navigateTo({ url: `/packages/admin/event-registrations/index?eventId=${String(event.currentTarget.dataset.id || '')}` })
   },
   openOrders() { void wx.navigateTo({ url: '/packages/admin/orders/index' }) },
+  openMembership() {
+    const userId = this.data.detail?.id
+    if (this.data.canReadMembership && userId) {
+      void wx.navigateTo({
+        url: `/packages/admin/membership/index?userId=${encodeURIComponent(userId)}`,
+      })
+    }
+  },
   handleDetailVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {
     if (!event.detail.visible) {
       this.closeDetail()

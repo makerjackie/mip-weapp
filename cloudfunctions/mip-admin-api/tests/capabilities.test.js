@@ -19,8 +19,14 @@ describe('admin capabilities', () => {
     assert.equal(roleCapabilities.PLATFORM_OPERATIONS.includes(CAPABILITIES.EVENTS_FEEDBACK_READ), true)
     assert.equal(roleCapabilities.PLATFORM_OPERATIONS.includes(CAPABILITIES.ROLES_CHANGE), false)
     assert.equal(roleCapabilities.PLATFORM_OPERATIONS.includes(CAPABILITIES.GROWTH_ADJUST), false)
+    assert.equal(roleCapabilities.PLATFORM_OPERATIONS.includes(CAPABILITIES.MEMBERSHIPS_READ), true)
+    assert.equal(roleCapabilities.PLATFORM_OPERATIONS.includes(CAPABILITIES.MEMBERSHIPS_ADJUST), true)
     assert.equal(roleCapabilities.PLATFORM_FINANCE.includes(CAPABILITIES.REFUNDS_SUBMIT), true)
     assert.equal(roleCapabilities.PLATFORM_FINANCE.includes(CAPABILITIES.USERS_PHONE_READ), false)
+    for (const role of ['PLATFORM_FINANCE', 'BRANCH_ADMIN', 'EVENT_OWNER', 'EVENT_MANAGER', 'EVENT_STAFF']) {
+      assert.equal(roleCapabilities[role].includes(CAPABILITIES.MEMBERSHIPS_READ), false)
+      assert.equal(roleCapabilities[role].includes(CAPABILITIES.MEMBERSHIPS_ADJUST), false)
+    }
     assert.equal(roleCapabilities.BRANCH_ADMIN.includes(CAPABILITIES.ROLES_CHANGE), true)
     assert.equal(roleCapabilities.EVENT_STAFF.includes(CAPABILITIES.USERS_PHONE_READ), false)
     assert.equal(roleCapabilities.EVENT_STAFF.includes(CAPABILITIES.EXPORT_CREATE), false)

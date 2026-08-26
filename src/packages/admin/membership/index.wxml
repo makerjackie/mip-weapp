@@ -1,0 +1,95 @@
+<view id="admin-membership-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+  <mip-admin-workspace-nav />
+  <view class="text-[length:40rpx] font-bold">会员管理</view>
+  <view class="mt-2 text-[length:23rpx] text-muted">查看会员有效期与人工开通记录</view>
+
+  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5">
+    <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
+  </view>
+  <view wx:elif="{{state === 'forbidden'}}" class="mt-6">
+    <app-empty-state title="无权访问会员管理" description="{{message}}" />
+  </view>
+  <view wx:elif="{{state === 'error'}}" class="mt-6">
+    <app-empty-state title="会员记录加载失败" description="{{message}}" action-text="重新加载" bind:action="retry" />
+  </view>
+  <block wx:elif="{{detail}}">
+    <view wx:if="{{state === 'conflict'}}" class="mt-5 rounded-[16rpx] border border-brand bg-panel px-4 py-4 text-[length:22rpx]">
+      <view class="font-semibold">记录已更新</view>
+      <view class="mt-1 text-muted">{{message}}</view>
+    </view>
+    <view wx:elif="{{message}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-4 text-[length:22rpx] text-danger">{{message}}</view>
+
+    <view class="mip-admin-section-grid mt-5 grid gap-4">
+      <view class="{{canGrant ? '' : 'mip-admin-span-wide'}} rounded-[16rpx] bg-panel px-4 py-4">
+        <view class="flex items-start justify-between gap-3">
+          <view class="min-w-0 flex-1">
+            <view class="text-[length:29rpx] font-semibold">{{detail.user.nickname}}</view>
+            <view class="mt-1 text-[length:21rpx] text-muted">账号状态：{{detail.user.statusText}}</view>
+          </view>
+          <t-tag variant="outline" theme="{{detail.membership.status === 'ACTIVE' ? 'success' : (detail.membership.status === 'SCHEDULED' ? 'warning' : 'default')}}">{{detail.membership.statusText}}</t-tag>
+        </view>
+        <view class="mip-admin-summary-grid mt-4 grid grid-cols-2 gap-3">
+          <view class="rounded-[12rpx] bg-panel-raised px-3 py-3">
+            <view class="text-[length:20rpx] text-muted">当前有效期至</view>
+            <view class="mt-1 text-[length:23rpx]">{{detail.membership.currentEndsText}}</view>
+          </view>
+          <view class="rounded-[12rpx] bg-panel-raised px-3 py-3">
+            <view class="text-[length:20rpx] text-muted">下次生效时间</view>
+            <view class="mt-1 text-[length:23rpx]">{{detail.membership.nextStartsText}}</view>
+          </view>
+          <view class="rounded-[12rpx] bg-panel-raised px-3 py-3">
+            <view class="text-[length:20rpx] text-muted">会员链版本</view>
+            <view class="mt-1 text-[length:23rpx]">{{detail.chainVersion}}</view>
+          </view>
+          <view class="rounded-[12rpx] bg-panel-raised px-3 py-3">
+            <view class="text-[length:20rpx] text-muted">权益记录</view>
+            <view class="mt-1 text-[length:23rpx]">{{detail.entitlements.length}} 条</view>
+          </view>
+        </view>
+      </view>
+
+      <view wx:if="{{canGrant}}" class="rounded-[16rpx] bg-panel px-4 py-4">
+        <view class="text-[length:27rpx] font-semibold">人工开通</view>
+        <view class="mt-1 text-[length:21rpx] text-muted">新增权益将接续当前会员有效期。</view>
+        <view class="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label="开通时长">
+          <view wx:for="{{durationOptions}}" wx:key="value" class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{durationMonths === item.value}}" aria-disabled="{{detail.user.status === 'CLOSED' || submitting}}" data-value="{{item.value}}" bind:tap="chooseDuration">
+            <t-tag variant="outline" theme="{{durationMonths === item.value ? 'primary' : 'default'}}">{{item.label}}</t-tag>
+          </view>
+        </view>
+        <textarea class="mt-3 box-border min-h-[176rpx] w-full rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]" value="{{reason}}" maxlength="300" disabled="{{detail.user.status === 'CLOSED' || submitting}}" aria-label="开通原因" aria-required="true" placeholder="填写开通原因" bindinput="updateReason" />
+        <view wx:if="{{detail.user.status === 'CLOSED'}}" class="mt-2 text-[length:21rpx] text-muted">已关闭用户不能人工开通会员。</view>
+        <view class="mt-3"><t-button block theme="primary" loading="{{submitting}}" disabled="{{detail.user.status === 'CLOSED' || submitting}}" bind:tap="grantMembership">确认开通</t-button></view>
+      </view>
+    </view>
+
+    <view class="mt-6 flex items-end justify-between gap-3">
+      <view>
+        <view class="text-[length:29rpx] font-semibold">权益记录</view>
+        <view class="mt-1 text-[length:21rpx] text-muted">按服务端返回顺序展示购买与人工开通记录。</view>
+      </view>
+    </view>
+    <view wx:if="{{detail.entitlements.length === 0}}" class="mt-4">
+      <app-empty-state title="暂无权益记录" description="该用户当前没有会员权益记录。" />
+    </view>
+    <view wx:else class="mip-admin-record-list mt-4" style="--mip-admin-record-columns: minmax(0, 0.8fr) minmax(0, 1fr) minmax(0, 1.8fr) minmax(0, 2fr);">
+      <view class="mip-admin-record-header">
+        <view>来源</view><view>状态</view><view>有效期</view><view>记录说明</view>
+      </view>
+      <view wx:for="{{detail.entitlements}}" wx:key="id" class="mip-admin-record-row">
+        <view class="mip-admin-record-cell"><view class="mip-admin-record-label text-[length:20rpx] text-muted">来源</view><view class="text-[length:23rpx] font-semibold">{{item.sourceText}}</view></view>
+        <view class="mip-admin-record-cell"><view class="mip-admin-record-label text-[length:20rpx] text-muted">状态</view><view class="text-[length:22rpx]">{{item.statusText}}<text wx:if="{{item.currentlyActive}}" class="text-brand"> · 当前生效</text></view></view>
+        <view class="mip-admin-record-cell"><view class="mip-admin-record-label text-[length:20rpx] text-muted">有效期</view><view class="text-[length:22rpx]">{{item.startsText}}</view><view class="mt-1 text-[length:20rpx] text-muted">至 {{item.endsText}}</view></view>
+        <view class="mip-admin-record-cell">
+          <view class="mip-admin-record-label text-[length:20rpx] text-muted">记录说明</view>
+          <view wx:if="{{item.adjustment}}" class="text-[length:22rpx]">
+            <view>{{item.adjustment.reason}}</view>
+            <view class="mt-1 text-[length:20rpx] text-muted">{{item.adjustment.actorNickname}} · {{item.adjustment.createdText}}</view>
+            <view class="mt-1 text-[length:20rpx] text-muted">版本 {{item.adjustment.expectedChainVersion}} → {{item.adjustment.resultChainVersion}}</view>
+          </view>
+          <view wx:else class="text-[length:22rpx] text-muted">订单 {{item.orderId}}</view>
+        </view>
+      </view>
+    </view>
+  </block>
+  <app-page-exit />
+</view>

@@ -58,6 +58,8 @@ async function projectEvent(database, event) {
   switch (event.event_type) {
     case 'identity.profile_completed':
       return projectProfileCompleted(database, event)
+    case 'membership.adjustment_granted':
+      return projectMembershipAdjustment(database, event)
     case 'membership.payment_confirmed':
       return projectMembershipPayment(database, event)
     case 'membership.refund_confirmed':
@@ -453,6 +455,49 @@ async function projectSuperCasePublished(database, event) {
   )
   if (!row) return projection([], [], 'FACT_NO_LONGER_CURRENT')
   return projection([], [growth(event, row.owner_user_id)], 'PROJECTED')
+}
+
+async function projectMembershipAdjustment(database, event) {
+  assertAggregate(event, 'MEMBERSHIP_ADJUSTMENT')
+  const row = await database.one(
+    `SELECT adjustment.id AS adjustment_id, adjustment.user_id,
+            entitlement.starts_at, entitlement.ends_at,
+            adjustment.result_chain_version
+     FROM mip_membership_adjustments adjustment
+     INNER JOIN mip_membership_entitlements entitlement
+       ON entitlement.app_id = adjustment.app_id
+        AND entitlement.user_id = adjustment.user_id
+        AND entitlement.source_type = 'ADMIN_ADJUSTMENT'
+        AND entitlement.source_adjustment_id = adjustment.id
+        AND entitlement.status = 'ACTIVE'
+     INNER JOIN mip_users recipient
+       ON recipient.app_id = adjustment.app_id
+        AND recipient.id = adjustment.user_id
+        AND recipient.status = 'ACTIVE'
+     WHERE adjustment.app_id = ? AND adjustment.id = ?
+       AND adjustment.result_chain_version = ?`,
+    [event.app_id, event.aggregate_id, event.source_version],
+  )
+  if (!row
+    || row.adjustment_id !== event.aggregate_id
+    || Number(row.result_chain_version) !== Number(event.source_version)) {
+    return projection([], [], 'FACT_NO_LONGER_CURRENT')
+  }
+  const startsAt = new Date(row.starts_at).getTime()
+  const endsAt = new Date(row.ends_at).getTime()
+  if (!UUID_PATTERN.test(String(row.user_id || ''))
+    || !Number.isFinite(startsAt)
+    || !Number.isFinite(endsAt)
+    || endsAt <= startsAt) {
+    throw new Error('OUTBOX_EVENT_INVALID')
+  }
+  return projection([
+    message(event, row.user_id, 'membership-adjustment-granted', {
+      messageType: 'MEMBERSHIP',
+      title: '会员权益已更新',
+      body: '会员有效期已更新，请在会员页面查看。',
+    }),
+  ], [], 'PROJECTED')
 }
 
 async function projectMembershipPayment(database, event) {

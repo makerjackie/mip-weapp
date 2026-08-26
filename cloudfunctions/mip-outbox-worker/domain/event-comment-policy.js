@@ -32,6 +32,8 @@ const EVENT_COMMENT_ROLE_CAPABILITIES = Object.freeze({
     'users.phone.read',
     'users.fields.edit',
     'users.access.manage',
+    'memberships.read',
+    'memberships.adjust',
     'exports.create',
     'events.read',
     'events.write',

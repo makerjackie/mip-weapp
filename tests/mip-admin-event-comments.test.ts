@@ -165,8 +165,8 @@ describe('MIP admin event comment contract', () => {
     const runtime = read('config/runtime-pages.json')
 
     expect(admin?.pages).toContain('event-comments/index')
-    expect(admin?.pages).toHaveLength(40)
-    expect(totalRoutes).toBe(99)
+    expect(admin?.pages).toHaveLength(41)
+    expect(totalRoutes).toBe(100)
     expect(consoleSource).toContain('hasScopedCapability(session.capabilities, \'events.comments.manage\', scope)')
     expect(consoleSource).toContain('\'event-comments\'')
     expect(consoleView).toContain('data-page="event-comments"')

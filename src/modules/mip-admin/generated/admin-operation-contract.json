@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "operationCount": 131,
+  "operationCount": 133,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -156,6 +156,22 @@
     },
     {
       "action": "mip.admin.communityReports.close",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.memberships.get",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.memberships.grant",
       "kind": "MUTATION",
       "authentication": "REQUIRED",
       "session": "REQUIRED",

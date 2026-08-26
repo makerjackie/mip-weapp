@@ -11,6 +11,7 @@ import { createMipEventsAdmin } from './events-admin'
 import { createMipExportsAdmin } from './exports-admin'
 import { createMipGovernanceAdmin } from './governance-admin'
 import { createMipGrowthAdmin } from './growth-admin'
+import { createMipMembershipsAdmin } from './memberships-admin'
 import { createMipMessagingAdmin } from './messaging-admin'
 import { createMipOpportunityAdmin } from './opportunity-admin'
 import { createMipOrdersAdmin } from './orders-admin'
@@ -37,6 +38,7 @@ export function createMipAdminModule(
   )
   const governance = createMipGovernanceAdmin(gateway, cache)
   const messaging = createMipMessagingAdmin(gateway, cache)
+  const memberships = createMipMembershipsAdmin(gateway, cache)
   const opportunities = createMipOpportunityAdmin(gateway, cache)
   const orders = createMipOrdersAdmin(gateway, cache)
   const users = createMipUsersAdmin(gateway, cache)
@@ -66,6 +68,9 @@ export function createMipAdminModule(
     listUsers: users.list,
     getUser: users.get,
     users,
+    getMembership: memberships.get,
+    grantMembership: memberships.grant,
+    memberships,
     listEvents: events.list,
     listEventCatalogs: eventCatalogs.listCatalogs,
     getEventTagAssignments: eventCatalogs.getTagAssignments,
@@ -110,6 +115,7 @@ export function createMipAdminModule(
     clearSensitive() {
       cache.invalidate('mip-admin:users')
       cache.invalidate('mip-admin:user-influence')
+      cache.invalidate('mip-admin:membership')
       cache.invalidate('mip-admin:roster')
     },
     invalidate() {

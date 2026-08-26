@@ -32,6 +32,11 @@ import type {
   AdminEventTagAssignments,
 } from './event-tag-assignments'
 import type {
+  AdminMembershipDetail,
+  AdminMembershipGrantInput,
+  AdminMembershipGrantResult,
+} from './memberships'
+import type {
   AdminMessageCampaign,
   AdminMessageCampaignCancelScheduleInput,
   AdminMessageCampaignDraft,
@@ -83,6 +88,8 @@ export type AdminCapability
     | 'users.phone.read'
     | 'users.fields.edit'
     | 'users.access.manage'
+    | 'memberships.read'
+    | 'memberships.adjust'
     | 'exports.create'
     | 'events.read'
     | 'events.write'
@@ -951,6 +958,8 @@ export interface MipAdminGateway {
   closeCommunityReport: (input: AdminCommunityReportCloseInput) => Promise<AdminCommunityReport>
   listUsers: (input?: Record<string, unknown>) => Promise<AdminPage<AdminUser>>
   getUser: (userId: string, includePhone?: boolean) => Promise<AdminUserDetail>
+  getMembership: (userId: string) => Promise<AdminMembershipDetail>
+  grantMembership: (input: AdminMembershipGrantInput) => Promise<AdminMembershipGrantResult>
   listUserInfluence: (input: AdminUserInfluenceListInput) => Promise<AdminUserInfluencePage>
   updateUser: (input: Record<string, unknown>) => Promise<{ userId: string, version: number }>
   changeUserPrimaryBranch: (input: AdminUserPrimaryBranchChangeInput) => Promise<AdminUserPrimaryBranchChangeResult>

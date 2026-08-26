@@ -65,6 +65,8 @@ const capabilityLabels: Record<AdminCapability, string> = {
   'users.phone.read': '用户手机号查看',
   'users.fields.edit': '用户资料编辑',
   'users.access.manage': '用户访问控制',
+  'memberships.read': '会员记录查看',
+  'memberships.adjust': '会员人工开通',
   'exports.create': '数据导出',
   'events.read': '活动查看',
   'events.write': '活动编辑',

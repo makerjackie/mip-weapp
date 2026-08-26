@@ -18,6 +18,7 @@ const { createAdminAccessRepository } = require('./repositories/access')
 const { createDashboardOverviewRepository } = require('./repositories/dashboard-overview')
 const { createEventCatalogRepository } = require('./repositories/event-catalogs')
 const { createAdminEventRepository } = require('./repositories/events')
+const { createMembershipRepository } = require('./repositories/memberships')
 const { createAdminOrderRepository } = require('./repositories/orders')
 const { createAdminUserRepository } = require('./repositories/users')
 const { createRoleCapabilityPolicyRepository } = require('./role-capability-policies')
@@ -307,6 +308,15 @@ function createAdminRepository(database, options = {}) {
     assertMutationScope: assertScope,
     createId: id,
     lockMutationAuthorization: lockMutation,
+  })
+  const membershipRepository = createMembershipRepository(database, {
+    assertMutationScope: assertScope,
+    createId: id,
+    lockMutationAuthorization: lockMutation,
+    now,
+    repositorySupport: { codeError, duplicateConstraint, iso },
+    writeAudit,
+    writeOutbox,
   })
   const {
     changeBranchStatus,
@@ -1279,6 +1289,7 @@ function createAdminRepository(database, options = {}) {
     ...messageCampaignRepository,
     ...messageDeliveryReviewRepository,
     ...messageTemplateRepository,
+    ...membershipRepository,
     ...opportunityArchiveRepository,
     ...opportunityCommentAdminRepository,
     ...matchingAdminRepository,

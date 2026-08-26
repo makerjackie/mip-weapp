@@ -58,6 +58,12 @@ import {
   parseAdminEventTagAssignments,
 } from './event-tag-assignments'
 import {
+  createAdminMembershipGetRequest,
+  createAdminMembershipGrantRequest,
+  parseAdminMembershipDetail,
+  parseAdminMembershipGrantResult,
+} from './memberships'
+import {
   parseMessageCampaign,
   parseMessageCampaignPage,
   parseMessageCampaignPublication,
@@ -111,6 +117,8 @@ const adminCapabilities = new Set<AdminCapability>([
   'users.phone.read',
   'users.fields.edit',
   'users.access.manage',
+  'memberships.read',
+  'memberships.adjust',
   'exports.create',
   'events.read',
   'events.write',
@@ -774,6 +782,19 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
     getUser: async (userId, includePhone = false) => parseAdminUserDetail(
       await call('mip.admin.users.get', { userId, includePhone }),
     ),
+    getMembership: async (userId) => {
+      const request = createAdminMembershipGetRequest(userId)
+      return parseAdminMembershipDetail(
+        await call('mip.admin.memberships.get', request),
+      )
+    },
+    grantMembership: async (input) => {
+      const request = createAdminMembershipGrantRequest(input)
+      return parseAdminMembershipGrantResult(
+        await call('mip.admin.memberships.grant', { ...request }),
+        request,
+      )
+    },
     listUserInfluence: async (input) => {
       const request = createAdminUserInfluenceRequest(input)
       return parseAdminUserInfluencePage(

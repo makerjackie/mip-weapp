@@ -124,6 +124,7 @@ function errorResponse(error) {
     CONTRACT_VERSION_UNSUPPORTED: '管理请求协议版本不受支持',
     VALIDATION_FAILED: '提交内容无效',
     CONFLICT: '记录状态已变化，请刷新后重试',
+    VERSION_CONFLICT: '会员状态已变化，请刷新后重试',
     INVALID_STATE: '当前状态不支持此操作',
     MATCHING_DISPATCH_CONFIG_REQUIRED: '机会撮合重算服务尚未配置',
     MATCHING_DISPATCH_UNAVAILABLE: '机会撮合重算服务暂时不可用',
@@ -191,7 +192,7 @@ function errorResponse(error) {
     const responseError = {
       code: known[code] ? code : error.code,
       message: error instanceof AdminError ? error.message : known[code],
-      retryable: error?.retryable === true || code === 'CONFLICT',
+      retryable: error?.retryable === true || ['CONFLICT', 'VERSION_CONFLICT'].includes(code),
     }
     const blockerDetails = branchBlockerDetails(code, error?.details)
       || opportunityArchiveBlockerDetails(code, error?.details)
