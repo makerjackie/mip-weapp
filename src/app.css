@@ -244,6 +244,15 @@ input {
   max-width: 100%;
 }
 
+.mip-admin-action-grid {
+  min-width: 0;
+}
+
+.mip-admin-action-grid > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
 @media (max-width: 599px) {
   .mip-member-page {
     --mip-member-shell-max-width: 100%;
@@ -269,6 +278,10 @@ input {
   .mip-admin-section-grid,
   .mip-admin-banner-grid {
     display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .mip-admin-action-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 

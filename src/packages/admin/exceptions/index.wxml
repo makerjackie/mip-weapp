@@ -8,9 +8,9 @@
   <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有查看权限" description="当前账号不能查看异常中心。" /></view>
   <block wx:else>
     <view class="mt-6">
-      <view class="flex items-end justify-between gap-3">
-        <view><view class="text-[length:30rpx] font-semibold">统一待办</view><view class="mt-1 text-[length:22rpx] text-muted">项目来自现有订单、事件、内容、消息和后台异常事实</view></view>
-        <view class="flex flex-wrap gap-2">
+      <view class="flex flex-wrap items-end justify-between gap-3">
+        <view class="min-w-0 flex-1"><view class="text-[length:30rpx] font-semibold">统一待办</view><view class="mt-1 text-[length:22rpx] text-muted">项目来自现有订单、事件、内容、消息和后台异常事实</view></view>
+        <view class="flex max-w-full flex-wrap gap-2">
           <t-tag theme="{{queueState === '' ? 'primary' : 'default'}}" variant="outline" data-value="" bind:tap="chooseQueueState">全部</t-tag>
           <t-tag theme="{{queueState === 'PENDING' ? 'primary' : 'default'}}" variant="outline" data-value="PENDING" bind:tap="chooseQueueState">待处理</t-tag>
           <t-tag theme="{{queueState === 'PROCESSING' ? 'primary' : 'default'}}" variant="outline" data-value="PROCESSING" bind:tap="chooseQueueState">处理中</t-tag>
@@ -27,9 +27,9 @@
     </view>
 
     <view wx:if="{{canDeliveryReview}}" class="mt-6">
-      <view class="flex items-end justify-between gap-3">
-        <view><view class="text-[length:30rpx] font-semibold">消息投递复核</view><view class="mt-1 text-[length:22rpx] text-muted">处理投递超时、结果未知和终止状态</view></view>
-        <view class="flex gap-2"><t-tag theme="{{reviewWorkflowStatus === 'ACTIVE' ? 'primary' : 'default'}}" variant="outline" data-value="ACTIVE" bind:tap="chooseReviewWorkflow">待处理</t-tag><t-tag theme="{{reviewWorkflowStatus === 'RESOLVED' ? 'primary' : 'default'}}" variant="outline" data-value="RESOLVED" bind:tap="chooseReviewWorkflow">已闭环</t-tag></view>
+      <view class="flex flex-wrap items-end justify-between gap-3">
+        <view class="min-w-0 flex-1"><view class="text-[length:30rpx] font-semibold">消息投递复核</view><view class="mt-1 text-[length:22rpx] text-muted">处理投递超时、结果未知和终止状态</view></view>
+        <view class="flex max-w-full flex-wrap gap-2"><t-tag theme="{{reviewWorkflowStatus === 'ACTIVE' ? 'primary' : 'default'}}" variant="outline" data-value="ACTIVE" bind:tap="chooseReviewWorkflow">待处理</t-tag><t-tag theme="{{reviewWorkflowStatus === 'RESOLVED' ? 'primary' : 'default'}}" variant="outline" data-value="RESOLVED" bind:tap="chooseReviewWorkflow">已闭环</t-tag></view>
       </view>
       <view wx:if="{{reviewState === 'loading'}}" class="mt-4 rounded-[16rpx] bg-panel p-5"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
       <view wx:elif="{{reviewState === 'error' || reviewState === 'conflict'}}" class="mt-4"><app-empty-state title="投递复核加载失败" description="{{reviewMessage}}" action-text="重新加载" bind:action="retryLoad" /></view>
