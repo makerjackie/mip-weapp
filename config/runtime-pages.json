@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 100,
+  "routeCount": 101,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 100 paths.",
+    "config/project.json routes must list the same 101 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -796,6 +796,17 @@
       "group": "admin",
       "kind": "data",
       "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'"
+    },
+    {
+      "id": "A42",
+      "name": "用户内容",
+      "path": "packages/admin/user-content/index",
+      "selector": "#admin-user-content-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
       "acceptStates": ["ready", "empty"],
       "readyAssertion": "state === 'ready' || state === 'empty'"
     },

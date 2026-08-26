@@ -124,7 +124,7 @@ describe('MIP admin desktop workspace navigation', () => {
     }
     const adminPackage = app.subPackages.find(item => item.root === 'packages/admin')
 
-    expect(adminPackage?.pages).toHaveLength(41)
+    expect(adminPackage?.pages).toHaveLength(42)
     for (const page of adminPackage?.pages || []) {
       expect(activeAdminWorkspaceItemKey(`/${adminPackage?.root}/${page}?from=test`), page).not.toBeNull()
     }
@@ -156,7 +156,7 @@ describe('MIP admin desktop workspace navigation', () => {
     expect(redirectTo).toHaveBeenCalledTimes(1)
   })
 
-  it('registers and renders the shared workspace in all 41 admin pages', () => {
+  it('registers and renders the shared workspace in all 42 admin pages', () => {
     const app = JSON.parse(read('src/app.json')) as {
       subPackages: Array<{ root: string, pages: string[] }>
     }

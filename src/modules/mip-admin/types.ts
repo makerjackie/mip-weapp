@@ -68,6 +68,14 @@ import type {
   AdminOpportunityCommentState,
 } from './opportunity-comments'
 import type {
+  AdminUserContentDetail,
+  AdminUserContentKind,
+  AdminUserContentListInput,
+  AdminUserContentMutationResult,
+  AdminUserContentPage,
+  AdminUserContentUnpublishInput,
+} from './user-content'
+import type {
   AdminUserInfluenceListInput,
   AdminUserInfluencePage,
 } from './user-influence'
@@ -109,6 +117,7 @@ export type AdminCapability
     | 'communications.publish'
     | 'branches.manage'
     | 'community.reports.manage'
+    | 'userContent.moderate'
     | 'opportunities.moderate'
     | 'opportunities.archive'
     | 'growth.read'
@@ -1080,6 +1089,9 @@ export interface MipAdminGateway {
   getMembership: (userId: string) => Promise<AdminMembershipDetail>
   grantMembership: (input: AdminMembershipGrantInput) => Promise<AdminMembershipGrantResult>
   listUserInfluence: (input: AdminUserInfluenceListInput) => Promise<AdminUserInfluencePage>
+  listUserContent: (input?: AdminUserContentListInput) => Promise<AdminUserContentPage>
+  getUserContent: (kind: AdminUserContentKind, contentId: string) => Promise<AdminUserContentDetail>
+  unpublishUserContent: (input: AdminUserContentUnpublishInput) => Promise<AdminUserContentMutationResult>
   updateUser: (input: Record<string, unknown>) => Promise<{ userId: string, version: number }>
   changeUserPrimaryBranch: (input: AdminUserPrimaryBranchChangeInput) => Promise<AdminUserPrimaryBranchChangeResult>
   setUserControl: (input: Record<string, unknown>) => Promise<{ userId: string, controlType: string, active: boolean }>

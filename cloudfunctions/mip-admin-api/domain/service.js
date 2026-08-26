@@ -20,6 +20,7 @@ const { createAdminMessageDeliveryReviews } = require('./message-delivery-review
 const { createAdminOpportunities } = require('./opportunities')
 const { createAdminOrders } = require('./orders')
 const { createAdminUsers } = require('./users')
+const { createAdminUserContentGovernance } = require('./user-content-governance')
 const { AdminError } = require('./validation')
 
 function createAdminService({
@@ -69,6 +70,11 @@ function createAdminService({
     phoneEncryptionKey,
     repository,
   })
+  const {
+    getUserContent,
+    listUserContent,
+    unpublishUserContent,
+  } = createAdminUserContentGovernance({ access, repository })
   const {
     archiveEvent,
     changeEventStatus,
@@ -362,6 +368,7 @@ function createAdminService({
     health,
     getSession,
     getUser,
+    getUserContent,
     listAnnouncements,
     listAnnouncementScopes,
     listAudit,
@@ -394,6 +401,7 @@ function createAdminService({
     reserveExportDownload,
     listUserInfluence,
     listUsers,
+    listUserContent,
     publishEventReminder,
     publishMessageCampaign,
     publishOpportunity,
@@ -435,6 +443,7 @@ function createAdminService({
     undoCheckIn,
     updateBranch,
     updateUser,
+    unpublishUserContent,
     saveOpportunity,
     saveOpportunityCommentSettings,
     saveMatchingSettings,

@@ -592,7 +592,7 @@ describe('MIP admin event catalog and recap pages', () => {
       'packages/admin/event-recaps/index',
     ]
 
-    expect(runtime.routeCount).toBe(100)
+    expect(runtime.routeCount).toBe(101)
     expect(admin?.pages).toEqual(expect.arrayContaining(['event-catalogs/index', 'event-recaps/index']))
     expect(project.routes.map(route => route.pathName)).toEqual(expect.arrayContaining(paths))
     expect(runtime.routes).toEqual(expect.arrayContaining([

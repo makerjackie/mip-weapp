@@ -122,6 +122,8 @@ const expectedOperations = Object.freeze({
   'mip.admin.knowledge.schedules.save': ['KNOWLEDGE', 'MUTATION', 'saveKnowledgeSchedule', 'SESSION_FIRST'],
 
   'mip.admin.opportunities.list': ['OPPORTUNITIES', 'QUERY', 'listOpportunities'],
+  'mip.admin.userContent.list': ['OPPORTUNITIES', 'QUERY', 'listUserContent'],
+  'mip.admin.userContent.get': ['OPPORTUNITIES', 'QUERY', 'getUserContent'],
   'mip.admin.opportunities.get': ['OPPORTUNITIES', 'QUERY', 'getOpportunity'],
   'mip.admin.opportunities.options': ['OPPORTUNITIES', 'QUERY', 'getOpportunityEditorOptions'],
   'mip.admin.matching.get': ['OPPORTUNITIES', 'QUERY', 'getMatchingAdminState'],
@@ -131,6 +133,7 @@ const expectedOperations = Object.freeze({
   'mip.admin.opportunities.end': ['OPPORTUNITIES', 'MUTATION', 'endOpportunity'],
   'mip.admin.opportunities.unpublish': ['OPPORTUNITIES', 'MUTATION', 'unpublishOpportunity'],
   'mip.admin.opportunities.archive': ['OPPORTUNITIES', 'MUTATION', 'archiveOpportunity'],
+  'mip.admin.userContent.unpublish': ['OPPORTUNITIES', 'MUTATION', 'unpublishUserContent'],
   'mip.admin.matching.settings.save': ['OPPORTUNITIES', 'MUTATION', 'saveMatchingSettings'],
   'mip.admin.matching.recalculate': ['OPPORTUNITIES', 'MUTATION', 'recalculateOpportunityMatching'],
   'mip.admin.opportunityComments.settings.save': ['OPPORTUNITIES', 'MUTATION', 'saveOpportunityCommentSettings'],
@@ -199,12 +202,12 @@ function manifest(owner, operations) {
 }
 
 describe('admin operation catalog', () => {
-  it('freezes the exact 134 business actions, owners, and kinds while keeping health separate', () => {
+  it('freezes the exact 137 business actions, owners, and kinds while keeping health separate', () => {
     const handlerActions = Object.keys(actions).filter(action => action !== 'health')
     const expectedActions = Object.keys(expectedOperations)
 
-    assert.equal(expectedActions.length, 134)
-    assert.equal(operationCatalog.length, 134)
+    assert.equal(expectedActions.length, 137)
+    assert.equal(operationCatalog.length, 137)
     assert.deepEqual(sorted(handlerActions), sorted(expectedActions))
     assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(expectedActions))
     assert.equal(operationByAction.health, undefined)

@@ -219,6 +219,7 @@ Page({
     canFilterBranches: false,
     canChangePrimaryBranch: false,
     canReadMembership: false,
+    canManageUserContent: false,
     primaryBranchOptions: [] as PrimaryBranchOption[],
     primaryBranchLabels: [] as string[],
     primaryBranchIndex: -1,
@@ -357,6 +358,7 @@ Page({
         canFilterBranches,
         canChangePrimaryBranch,
         canReadMembership: hasCapability(session.capabilities, 'memberships.read'),
+        canManageUserContent: hasCapability(session.capabilities, 'userContent.moderate'),
         nextCursor: response.nextCursor || null,
         loadingMore: false,
         message: '',
@@ -752,7 +754,28 @@ Page({
     void wx.navigateTo({ url: `/packages/admin/opportunity-detail/index?id=${String(event.currentTarget.dataset.id || '')}` })
   },
   openRelatedCase(event: WechatMiniprogram.TouchEvent) {
-    void wx.navigateTo({ url: `/packages/member/mip-cases/detail/index?id=${String(event.currentTarget.dataset.id || '')}` })
+    const userId = this.data.detail?.id || ''
+    const contentId = String(event.currentTarget.dataset.id || '')
+    if (this.data.canManageUserContent && userId && contentId) {
+      void wx.navigateTo({
+        url: `/packages/admin/user-content/index?ownerUserId=${encodeURIComponent(userId)}&kind=SUPER_CASE&contentId=${encodeURIComponent(contentId)}`,
+      })
+      return
+    }
+    if (contentId) {
+      void wx.navigateTo({ url: `/packages/member/mip-cases/detail/index?id=${encodeURIComponent(contentId)}` })
+    }
+  },
+  openUserContent(event: WechatMiniprogram.TouchEvent) {
+    const userId = this.data.detail?.id || ''
+    const kind = String(event.currentTarget.dataset.kind || '')
+    if (this.data.canManageUserContent
+      && userId
+      && ['COOPERATION_CARD', 'SUPER_CASE'].includes(kind)) {
+      void wx.navigateTo({
+        url: `/packages/admin/user-content/index?ownerUserId=${encodeURIComponent(userId)}&kind=${kind}`,
+      })
+    }
   },
   openRelatedRegistration(event: WechatMiniprogram.TouchEvent) {
     void wx.navigateTo({ url: `/packages/admin/event-registrations/index?eventId=${String(event.currentTarget.dataset.id || '')}` })

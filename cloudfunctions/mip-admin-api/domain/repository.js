@@ -21,6 +21,7 @@ const { createAdminEventRepository } = require('./repositories/events')
 const { createMembershipRepository } = require('./repositories/memberships')
 const { createAdminOrderRepository } = require('./repositories/orders')
 const { createAdminUserRepository } = require('./repositories/users')
+const { createAdminUserContentRepository } = require('./repositories/user-content')
 const { createRoleCapabilityPolicyRepository } = require('./role-capability-policies')
 const { listOperationalExceptions: readOperationalExceptions } = require('./operational-exceptions')
 const { cursorPredicateFor, pageRows } = require('./pagination')
@@ -255,6 +256,11 @@ function createAdminRepository(database, options = {}) {
   const roleCapabilityPolicyRepository = createRoleCapabilityPolicyRepository(database, {
     id,
     lockMutation,
+  })
+  const userContentRepository = createAdminUserContentRepository(database, {
+    assertMutationScope: assertScope,
+    lockMutationAuthorization: lockMutation,
+    writeAudit,
   })
   const adminPrdExtensions = createAdminPrdExtensions(database, {
     assertMutationScope: assertScope,
@@ -1295,6 +1301,7 @@ function createAdminRepository(database, options = {}) {
     ...opportunityCommentAdminRepository,
     ...matchingAdminRepository,
     ...roleCapabilityPolicyRepository,
+    ...userContentRepository,
     adjustGrowth,
     authorizeRefundRetry,
     changeBranchStatus,

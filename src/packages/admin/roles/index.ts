@@ -85,6 +85,7 @@ const capabilityLabels: Record<AdminCapability, string> = {
   'messages.delivery.review': '消息投递复核',
   'communications.publish': '活动提醒发布',
   'community.reports.manage': '举报审核',
+  'userContent.moderate': '用户内容治理',
   'opportunities.moderate': '机会管理',
   'opportunities.archive': '机会归档',
   'growth.read': '成长数据查看',

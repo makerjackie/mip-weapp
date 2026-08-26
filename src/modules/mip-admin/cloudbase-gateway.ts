@@ -86,6 +86,11 @@ import { parseAdminOrderDetail, parseAdminOrderPage, parseAdminRosterPage } from
 import { createAdminRequest } from './request-contract'
 import { MipAdminError } from './types'
 import {
+  parseAdminUserContentDetail,
+  parseAdminUserContentMutation,
+  parseAdminUserContentPage,
+} from './user-content'
+import {
   createAdminUserInfluenceRequest,
   parseAdminUserInfluencePage,
 } from './user-influence'
@@ -141,6 +146,7 @@ const adminCapabilities = new Set<AdminCapability>([
   'messages.delivery.review',
   'communications.publish',
   'community.reports.manage',
+  'userContent.moderate',
   'opportunities.moderate',
   'opportunities.archive',
   'growth.read',
@@ -788,6 +794,18 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
         request,
       )
     },
+    listUserContent: async input => parseAdminUserContentPage(
+      await call('mip.admin.userContent.list', { ...(input || {}) }),
+    ),
+    getUserContent: async (kind, contentId) => resolveCloudFileUrls(
+      parseAdminUserContentDetail(
+        await call('mip.admin.userContent.get', { kind, contentId }),
+      ),
+    ),
+    unpublishUserContent: async input => parseAdminUserContentMutation(
+      await call('mip.admin.userContent.unpublish', { ...input }),
+      input,
+    ),
     updateUser: input => call('mip.admin.users.update', input),
     changeUserPrimaryBranch: async (input) => {
       const result = parseUserPrimaryBranchChange(

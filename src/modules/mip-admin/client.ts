@@ -15,6 +15,7 @@ import { createMipMembershipsAdmin } from './memberships-admin'
 import { createMipMessagingAdmin } from './messaging-admin'
 import { createMipOpportunityAdmin } from './opportunity-admin'
 import { createMipOrdersAdmin } from './orders-admin'
+import { createMipUserContentAdmin } from './user-content-admin'
 import { createMipUsersAdmin } from './users-admin'
 
 export function createMipAdminModule(
@@ -42,6 +43,7 @@ export function createMipAdminModule(
   const opportunities = createMipOpportunityAdmin(gateway, cache)
   const orders = createMipOrdersAdmin(gateway, cache)
   const users = createMipUsersAdmin(gateway, cache)
+  const userContent = createMipUserContentAdmin(gateway, cache)
   return {
     getSession: governance.getSession,
     getDashboard: (force = false) => cache.query('mip-admin:dashboard', gateway.getDashboard, { force }),
@@ -68,6 +70,7 @@ export function createMipAdminModule(
     listUsers: users.list,
     getUser: users.get,
     users,
+    userContent,
     getMembership: memberships.get,
     grantMembership: memberships.grant,
     memberships,
