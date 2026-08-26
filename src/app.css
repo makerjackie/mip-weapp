@@ -48,6 +48,10 @@ page {
   --td-bg-color-component-disabled: #363636;
   --td-component-stroke: #363636;
   --td-component-border: #363636;
+  --td-loading-full-bg-color: rgb(4 4 4 / 92%);
+  --td-loading-color: #fcdf03;
+  --td-loading-text-color: #fff;
+  --td-overlay-bg-color: rgb(4 4 4 / 78%);
   --td-skeleton-bg-color: #2a2a2a;
   --td-skeleton-animation-gradient: rgb(255 255 255 / 8%);
   --td-button-default-color: #fff;
