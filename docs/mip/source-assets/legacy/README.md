@@ -6,7 +6,7 @@
 
 | 文件 | 用途 | 状态 |
 | --- | --- | --- |
-| [mip-mini-program-qrcode.jpg](mip-mini-program-qrcode.jpg) | MIP 小程序二维码资料/分享验收参考 | 已从 `/Users/jackiexiao/Downloads/mip-qrcode.jpg` 复制；不修改原文件，不代表正式小程序码或活动签到码 |
+| [mip-mini-program-qrcode.jpg](mip-mini-program-qrcode.jpg) | MIP 小程序二维码资料/分享验收参考 | 已从维护者提供的原始二维码复制；不修改原文件，不代表正式小程序码或活动签到码 |
 
 ## 研究包候选（未复制）
 
