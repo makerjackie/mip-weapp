@@ -35,21 +35,71 @@
       <view class="flex min-h-[88rpx] items-center" aria-role="radio" aria-checked="{{dateFilter === 'TODAY'}}" data-filter="TODAY" bind:tap="changeDateFilter"><view wx:if="{{dateFilter === 'TODAY' || dateFilter === 'CUSTOM'}}" class="flex items-center gap-1 rounded-[16rpx] bg-panel px-3 py-2 text-[length:24rpx] text-brand"><text>{{dateFilter === 'CUSTOM' ? (customDateLabel || '自定义日期') : '今天'}}</text><view class="flex min-h-[56rpx] items-center" catch:tap="showCalendar"><t-icon name="calendar" size="28rpx" color="var(--color-brand)" /></view></view><view wx:else class="flex items-center gap-1 rounded-[16rpx] bg-panel px-3 py-2 text-[length:24rpx] text-ink"><text>今天</text><view class="flex min-h-[56rpx] items-center" catch:tap="showCalendar"><t-icon name="calendar" size="28rpx" color="var(--color-ink)" /></view></view></view>
   </view>
 
-  <view wx:if="{{rangePanelVisible}}" class="mt-2 rounded-[16rpx] bg-panel px-4 py-3">
-    <view class="flex min-h-[48rpx] items-center justify-between">
-      <text class="text-[length:24rpx] font-semibold">日期范围</text>
-      <view wx:if="{{dateFrom || dateTo}}" class="min-h-[64rpx] px-2 py-2 text-[length:22rpx] text-muted" bind:tap="clearDateRange">清除</view>
+  <view wx:if="{{rangePanelVisible}}" class="mt-2 flex flex-col gap-3 rounded-[16rpx] bg-panel px-4 py-3">
+    <view class="flex min-h-[64rpx] items-center justify-between">
+      <text class="text-[length:26rpx] font-semibold">活动筛选</text>
+      <view class="flex min-h-[64rpx] items-center px-2 text-[length:22rpx] text-muted" aria-role="button" bind:tap="clearDiscoveryFilters">清空</view>
     </view>
-    <view class="mt-2 flex gap-2">
-      <view class="box-border flex min-h-[88rpx] min-w-0 flex-1 items-center rounded-[12rpx] bg-panel-raised px-3 text-[length:23rpx]" aria-role="button" data-target="FROM" bind:tap="showRangeCalendar">
-        <text class="text-muted">开始日期</text>
-        <text wx:if="{{dateFromLabel}}" class="ml-2 text-ink">{{dateFromLabel}}</text>
-      </view>
-      <view class="box-border flex min-h-[88rpx] min-w-0 flex-1 items-center rounded-[12rpx] bg-panel-raised px-3 text-[length:23rpx]" aria-role="button" data-target="TO" bind:tap="showRangeCalendar">
-        <text class="text-muted">结束日期</text>
-        <text wx:if="{{dateToLabel}}" class="ml-2 text-ink">{{dateToLabel}}</text>
+
+    <view>
+      <text class="text-[length:22rpx] text-muted">日期范围</text>
+      <view class="mt-2 flex gap-2">
+        <view class="box-border flex min-h-[88rpx] min-w-0 flex-1 items-center rounded-[12rpx] bg-panel-raised px-3 text-[length:23rpx]" aria-role="button" data-target="FROM" bind:tap="showRangeCalendar">
+          <text class="text-muted">开始日期</text>
+          <text wx:if="{{dateFromLabel}}" class="ml-2 text-ink">{{dateFromLabel}}</text>
+        </view>
+        <view class="box-border flex min-h-[88rpx] min-w-0 flex-1 items-center rounded-[12rpx] bg-panel-raised px-3 text-[length:23rpx]" aria-role="button" data-target="TO" bind:tap="showRangeCalendar">
+          <text class="text-muted">结束日期</text>
+          <text wx:if="{{dateToLabel}}" class="ml-2 text-ink">{{dateToLabel}}</text>
+        </view>
       </view>
     </view>
+
+    <view wx:if="{{eventTypeOptions.length}}">
+      <text class="text-[length:22rpx] text-muted">活动类型</text>
+      <view class="mt-2 flex flex-wrap gap-2">
+        <block wx:for="{{eventTypeOptions}}" wx:key="key">
+          <view wx:if="{{item.selected}}" class="flex min-h-[72rpx] items-center rounded-full bg-brand px-3 text-[length:23rpx] font-semibold text-on-brand" aria-role="checkbox" aria-checked="true" data-key="{{item.key}}" bind:tap="selectEventType">{{item.name}}</view>
+          <view wx:else class="flex min-h-[72rpx] items-center rounded-full bg-panel-raised px-3 text-[length:23rpx] text-ink" aria-role="checkbox" aria-checked="false" data-key="{{item.key}}" bind:tap="selectEventType">{{item.name}}</view>
+        </block>
+      </view>
+    </view>
+
+    <view>
+      <text class="text-[length:22rpx] text-muted">参与方式</text>
+      <view class="mt-2 grid grid-cols-2 gap-2">
+        <view wx:if="{{draftAccessType === ''}}" class="flex min-h-[72rpx] items-center justify-center rounded-[12rpx] bg-brand text-[length:23rpx] font-semibold text-on-brand" data-value="" bind:tap="selectAccessType">全部</view>
+        <view wx:else class="flex min-h-[72rpx] items-center justify-center rounded-[12rpx] bg-panel-raised text-[length:23rpx] text-ink" data-value="" bind:tap="selectAccessType">全部</view>
+        <view wx:if="{{draftAccessType === 'FREE'}}" class="flex min-h-[72rpx] items-center justify-center rounded-[12rpx] bg-brand text-[length:23rpx] font-semibold text-on-brand" data-value="FREE" bind:tap="selectAccessType">免费活动</view>
+        <view wx:else class="flex min-h-[72rpx] items-center justify-center rounded-[12rpx] bg-panel-raised text-[length:23rpx] text-ink" data-value="FREE" bind:tap="selectAccessType">免费活动</view>
+        <view wx:if="{{draftAccessType === 'MEMBER_INCLUDED'}}" class="flex min-h-[72rpx] items-center justify-center rounded-[12rpx] bg-brand text-[length:23rpx] font-semibold text-on-brand" data-value="MEMBER_INCLUDED" bind:tap="selectAccessType">玩家活动</view>
+        <view wx:else class="flex min-h-[72rpx] items-center justify-center rounded-[12rpx] bg-panel-raised text-[length:23rpx] text-ink" data-value="MEMBER_INCLUDED" bind:tap="selectAccessType">玩家活动</view>
+        <view wx:if="{{draftAccessType === 'PAID'}}" class="flex min-h-[72rpx] items-center justify-center rounded-[12rpx] bg-brand text-[length:23rpx] font-semibold text-on-brand" data-value="PAID" bind:tap="selectAccessType">付费活动</view>
+        <view wx:else class="flex min-h-[72rpx] items-center justify-center rounded-[12rpx] bg-panel-raised text-[length:23rpx] text-ink" data-value="PAID" bind:tap="selectAccessType">付费活动</view>
+      </view>
+    </view>
+
+    <view wx:if="{{tagOptions.length}}">
+      <text class="text-[length:22rpx] text-muted">活动标签</text>
+      <view class="mt-2 flex flex-wrap gap-2">
+        <block wx:for="{{tagOptions}}" wx:key="key">
+          <view wx:if="{{item.selected}}" class="flex min-h-[72rpx] items-center rounded-full bg-brand px-3 text-[length:23rpx] font-semibold text-on-brand" aria-role="checkbox" aria-checked="true" data-key="{{item.key}}" bind:tap="toggleEventTag">{{item.name}}</view>
+          <view wx:else class="flex min-h-[72rpx] items-center rounded-full bg-panel-raised px-3 text-[length:23rpx] text-ink" aria-role="checkbox" aria-checked="false" data-key="{{item.key}}" bind:tap="toggleEventTag">{{item.name}}</view>
+        </block>
+      </view>
+    </view>
+
+    <view>
+      <text class="text-[length:22rpx] text-muted">开始时间排序</text>
+      <view class="mt-2 grid grid-cols-2 gap-2">
+        <view wx:if="{{draftSortDirection === 'ASC'}}" class="flex min-h-[72rpx] items-center justify-center rounded-[12rpx] bg-brand text-[length:23rpx] font-semibold text-on-brand" data-value="ASC" bind:tap="selectSortDirection">从早到晚</view>
+        <view wx:else class="flex min-h-[72rpx] items-center justify-center rounded-[12rpx] bg-panel-raised text-[length:23rpx] text-ink" data-value="ASC" bind:tap="selectSortDirection">从早到晚</view>
+        <view wx:if="{{draftSortDirection === 'DESC'}}" class="flex min-h-[72rpx] items-center justify-center rounded-[12rpx] bg-brand text-[length:23rpx] font-semibold text-on-brand" data-value="DESC" bind:tap="selectSortDirection">从晚到早</view>
+        <view wx:else class="flex min-h-[72rpx] items-center justify-center rounded-[12rpx] bg-panel-raised text-[length:23rpx] text-ink" data-value="DESC" bind:tap="selectSortDirection">从晚到早</view>
+      </view>
+    </view>
+
+    <view class="box-border flex min-h-[88rpx] max-w-full items-center justify-center rounded-[16rpx] bg-brand text-[length:26rpx] font-semibold text-on-brand" aria-role="button" bind:tap="confirmDiscoveryFilters">确定</view>
   </view>
 
   <view class="mt-1 flex items-center gap-2">
@@ -58,7 +108,7 @@
       <input class="box-border h-[80rpx] min-w-0 flex-1 max-w-full text-[length:24rpx]" value="{{searchInput}}" bindinput="onSearchInput" bindconfirm="onSearchConfirm" confirm-type="search" maxlength="50" placeholder="搜索活动名称" />
       <view wx:if="{{searchInput}}" class="px-2 py-2 text-[length:22rpx] text-muted" bind:tap="clearSearch">清除</view>
     </view>
-    <view class="flex h-[88rpx] w-[88rpx] items-center justify-center rounded-[16rpx] bg-panel" aria-role="button" aria-expanded="{{rangePanelVisible}}" bind:tap="toggleRangePanel"><t-icon name="filter" size="32rpx" color="{{rangePanelVisible || dateFrom || dateTo ? 'var(--color-brand)' : 'var(--color-muted)'}}" /></view>
+    <view class="relative flex h-[88rpx] w-[88rpx] items-center justify-center rounded-[16rpx] bg-panel" aria-role="button" aria-expanded="{{rangePanelVisible}}" bind:tap="toggleRangePanel"><t-icon name="filter" size="32rpx" color="{{rangePanelVisible || dateFrom || dateTo || activeFilterCount ? 'var(--color-brand)' : 'var(--color-muted)'}}" /><text wx:if="{{activeFilterCount}}" class="absolute right-1 top-1 flex h-[30rpx] min-w-[30rpx] items-center justify-center rounded-full bg-brand px-1 text-[length:18rpx] font-semibold text-on-brand">{{activeFilterCount}}</text></view>
   </view>
 
   <view wx:if="{{state === 'loading'}}" class="mt-4 flex flex-col gap-3">
@@ -86,6 +136,9 @@
         <view class="line-clamp-1 pr-[72rpx] text-[length:30rpx] font-semibold leading-[1.4]">{{item.title}}</view>
         <view class="mt-2 flex items-center gap-2 text-[length:22rpx] text-ink"><t-icon name="calendar" size="27rpx" color="var(--color-brand)" /><text>{{item.startsText}}</text></view>
         <view class="mt-1 flex items-center gap-2 pr-[72rpx] text-[length:22rpx] text-ink"><t-icon name="location" size="27rpx" color="var(--color-brand)" /><text class="line-clamp-1">{{item.locationText}}</text></view>
+        <view wx:if="{{item.displayTags.length}}" class="mt-2 flex flex-wrap gap-1 pr-[72rpx]">
+          <text wx:for="{{item.displayTags}}" wx:key="*this" class="rounded-full bg-brand-soft px-2 py-1 text-[length:20rpx] text-brand">{{item}}</text>
+        </view>
         <button open-type="share" class="absolute bottom-0 right-0 m-0 flex h-[88rpx] w-[88rpx] items-center justify-center border-0 bg-transparent p-0 leading-none after:border-0" aria-label="分享活动" data-event-id="{{item.id}}" catch:tap="stopPropagation"><view class="flex h-[56rpx] w-[56rpx] items-center justify-center rounded-full bg-brand"><t-icon name="share" size="30rpx" color="var(--color-on-brand)" /></view></button>
       </view>
     </view>

@@ -29,12 +29,46 @@ function normalizeDate(value: string | undefined) {
     : undefined
 }
 
+const stableKeyPattern = /^[\w.:-]{1,64}$/
+
+function normalizeStableKey(value: string | undefined, label: string) {
+  const normalized = value?.trim() || ''
+  if (!normalized) {
+    return undefined
+  }
+  if (!stableKeyPattern.test(normalized)) {
+    throw new Error(`${label}筛选参数无效`)
+  }
+  return normalized
+}
+
+function normalizeTagKeys(value: string[] | undefined) {
+  if (value === undefined) {
+    return undefined
+  }
+  if (!Array.isArray(value) || value.length > 12) {
+    throw new Error('活动标签筛选参数无效')
+  }
+  const normalized = value.map(item => normalizeStableKey(item, '活动标签'))
+  if (normalized.includes(undefined)) {
+    throw new Error('活动标签筛选参数无效')
+  }
+  return [...new Set(normalized as string[])].sort()
+}
+
 function normalizedQuery(query: EventFeedQuery): EventFeedQuery {
   const date = normalizeDate(query.date)
   const dateFrom = normalizeDate(query.dateFrom)
   const dateTo = normalizeDate(query.dateTo)
   if (dateFrom && dateTo && dateFrom > dateTo) {
     throw new Error('开始日期不能晚于结束日期')
+  }
+  if (query.accessType !== undefined
+    && !['FREE', 'MEMBER_INCLUDED', 'PAID'].includes(query.accessType)) {
+    throw new Error('参与方式筛选参数无效')
+  }
+  if (query.sortDirection !== undefined && !['ASC', 'DESC'].includes(query.sortDirection)) {
+    throw new Error('活动排序参数无效')
   }
   return {
     ...query,
@@ -43,6 +77,10 @@ function normalizedQuery(query: EventFeedQuery): EventFeedQuery {
     dateTo,
     query: query.query?.trim().slice(0, 50) || undefined,
     cityName: query.cityName?.trim().slice(0, 80) || undefined,
+    eventTypeKey: normalizeStableKey(query.eventTypeKey, '活动类型'),
+    tagKeys: normalizeTagKeys(query.tagKeys),
+    accessType: query.accessType,
+    sortDirection: query.sortDirection,
     limit: Math.min(30, Math.max(1, query.limit || 20)),
   }
 }
@@ -53,6 +91,7 @@ export function createMipEventsModule(
 ) {
   const eventCache = new Map<string, Awaited<ReturnType<MipEventsGateway['getEvent']>>>()
   const feedCache = new Map<string, Awaited<ReturnType<MipEventsGateway['listEvents']>>>()
+  let discoveryFiltersCache: Awaited<ReturnType<NonNullable<MipEventsGateway['getDiscoveryFilters']>>> | null = null
   let generation = 0
 
   async function runInCurrentSession<T>(work: () => Promise<T>): Promise<T> {
@@ -91,6 +130,25 @@ export function createMipEventsModule(
       const result = await gateway.listEvents(normalized)
       if (loadGeneration === generation) {
         feedCache.set(key, result)
+      }
+      return result
+    },
+
+    peekDiscoveryFilters() {
+      return discoveryFiltersCache
+    },
+
+    async getDiscoveryFilters(options: { force?: boolean } = {}) {
+      if (!gateway.getDiscoveryFilters) {
+        return { eventTypes: [], tags: [] }
+      }
+      if (!options.force && discoveryFiltersCache) {
+        return discoveryFiltersCache
+      }
+      const loadGeneration = generation
+      const result = await gateway.getDiscoveryFilters()
+      if (loadGeneration === generation) {
+        discoveryFiltersCache = result
       }
       return result
     },
@@ -293,6 +351,7 @@ export function createMipEventsModule(
       generation += 1
       eventCache.clear()
       feedCache.clear()
+      discoveryFiltersCache = null
     },
   }
 }

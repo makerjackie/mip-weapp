@@ -1,9 +1,12 @@
 import type { EventId } from '../../modules/mip'
 import type { MipPublicBanner } from '../../modules/mip-banners'
 import type {
+  EventAccessType,
   EventDateFilter,
+  EventDiscoveryOption,
   EventFeedQuery,
   EventListView,
+  EventSortDirection,
   MipEventListItem,
 } from '../../modules/mip-events'
 import { mipOperationsConfig } from '../../config/mip-operations'
@@ -19,6 +22,11 @@ interface EventCardView extends MipEventListItem {
   accessLabel: string
   statusLabel: string
   locationText: string
+  displayTags: string[]
+}
+
+interface EventFilterOptionView extends EventDiscoveryOption {
+  selected: boolean
 }
 
 type EventBannerView = MipPublicBanner
@@ -102,7 +110,21 @@ function presentEvent(event: MipEventListItem): EventCardView {
     accessLabel: accessLabel(event),
     statusLabel: statusLabel(event),
     locationText: [event.cityName, event.venueName].filter(Boolean).join(' · ') || '地点待公布',
+    displayTags: event.tags.filter(tag => tag !== event.eventTypeLabel).slice(0, 3),
   }
+}
+
+function rollingCalendarBoundary(yearOffset: number) {
+  const today = new Date()
+  return new Date(today.getFullYear() + yearOffset, yearOffset < 0 ? 0 : 11, yearOffset < 0 ? 1 : 31).getTime()
+}
+
+function selectedOptions(
+  options: EventDiscoveryOption[],
+  selected: string | string[],
+): EventFilterOptionView[] {
+  const keys = new Set(Array.isArray(selected) ? selected : selected ? [selected] : [])
+  return options.map(option => ({ ...option, selected: keys.has(option.key) }))
 }
 
 Page({
@@ -116,6 +138,17 @@ Page({
     videoChannelConfigured: Boolean(mipOperationsConfig.videoChannelFinderUserName),
     cities: [] as string[],
     selectedCity: '',
+    eventTypeOptions: [] as EventFilterOptionView[],
+    tagOptions: [] as EventFilterOptionView[],
+    selectedEventTypeKey: '',
+    selectedTagKeys: [] as string[],
+    selectedAccessType: '' as '' | EventAccessType,
+    selectedSortDirection: '' as '' | EventSortDirection,
+    draftEventTypeKey: '',
+    draftTagKeys: [] as string[],
+    draftAccessType: '' as '' | EventAccessType,
+    draftSortDirection: '' as '' | EventSortDirection,
+    activeFilterCount: 0,
     searchInput: '',
     activeQuery: '',
     selectedDate: '',
@@ -129,8 +162,8 @@ Page({
     calendarVisible: false,
     calendarTarget: 'SINGLE' as 'SINGLE' | 'FROM' | 'TO',
     calendarValue: Date.now(),
-    calendarMinDate: new Date(new Date().getFullYear() - 1, 0, 1).getTime(),
-    calendarMaxDate: new Date(new Date().getFullYear() + 2, 11, 31).getTime(),
+    calendarMinDate: rollingCalendarBoundary(-5),
+    calendarMaxDate: rollingCalendarBoundary(10),
     nextCursor: '',
     loadingMore: false,
     shareTokens: {} as Record<string, string>,
@@ -161,6 +194,10 @@ Page({
       date: this.data.dateFilter === 'CUSTOM' ? this.data.selectedDate : undefined,
       dateFrom: this.data.dateFrom || undefined,
       dateTo: this.data.dateTo || undefined,
+      eventTypeKey: this.data.selectedEventTypeKey || undefined,
+      tagKeys: this.data.selectedTagKeys.length ? [...this.data.selectedTagKeys] : undefined,
+      accessType: this.data.selectedAccessType || undefined,
+      sortDirection: this.data.selectedSortDirection || undefined,
       query: this.data.activeQuery || undefined,
       cursor: cursor || undefined,
     }
@@ -168,10 +205,60 @@ Page({
 
   async loadPage(options: { force?: boolean } = {}) {
     await this.initializeDefaultCity()
+    await this.loadDiscoveryFilters(options.force === true)
     await Promise.all([
       this.loadEvents(options),
       this.loadBanners(options.force === true),
     ])
+  },
+
+  async loadDiscoveryFilters(force = false) {
+    const cached = mipEventsModule.peekDiscoveryFilters()
+    if (cached) {
+      this.applyDiscoveryFilters(cached)
+    }
+    try {
+      const filters = await mipEventsModule.getDiscoveryFilters({ force: force || Boolean(cached) })
+      this.applyDiscoveryFilters(filters)
+    }
+    catch {
+      // Activity discovery remains usable when the optional catalog request is unavailable.
+    }
+  },
+
+  applyDiscoveryFilters(filters: Awaited<ReturnType<typeof mipEventsModule.getDiscoveryFilters>>) {
+    const eventTypeKeys = new Set(filters.eventTypes.map(option => option.key))
+    const tagKeys = new Set(filters.tags.map(option => option.key))
+    const selectedEventTypeKey = eventTypeKeys.has(this.data.selectedEventTypeKey)
+      ? this.data.selectedEventTypeKey
+      : ''
+    const selectedTagKeys = this.data.selectedTagKeys.filter(key => tagKeys.has(key))
+    const draftEventTypeKey = eventTypeKeys.has(this.data.draftEventTypeKey)
+      ? this.data.draftEventTypeKey
+      : selectedEventTypeKey
+    const draftTagKeys = this.data.draftTagKeys.filter(key => tagKeys.has(key))
+    this.setData({
+      selectedEventTypeKey,
+      selectedTagKeys,
+      draftEventTypeKey,
+      draftTagKeys: draftTagKeys.length ? draftTagKeys : [...selectedTagKeys],
+      eventTypeOptions: selectedOptions(filters.eventTypes, draftEventTypeKey),
+      tagOptions: selectedOptions(filters.tags, draftTagKeys.length ? draftTagKeys : selectedTagKeys),
+      activeFilterCount: this.countActiveFilters({ selectedEventTypeKey, selectedTagKeys }),
+    })
+  },
+
+  countActiveFilters(overrides: {
+    selectedEventTypeKey?: string
+    selectedTagKeys?: string[]
+    selectedAccessType?: '' | EventAccessType
+    selectedSortDirection?: '' | EventSortDirection
+  } = {}) {
+    const typeKey = overrides.selectedEventTypeKey ?? this.data.selectedEventTypeKey
+    const tagKeys = overrides.selectedTagKeys ?? this.data.selectedTagKeys
+    const accessType = overrides.selectedAccessType ?? this.data.selectedAccessType
+    const sortDirection = overrides.selectedSortDirection ?? this.data.selectedSortDirection
+    return Number(Boolean(typeKey)) + tagKeys.length + Number(Boolean(accessType)) + Number(Boolean(sortDirection))
   },
 
   async loadBanners(force = false) {
@@ -406,7 +493,125 @@ Page({
   },
 
   toggleRangePanel() {
-    this.setData({ rangePanelVisible: !this.data.rangePanelVisible })
+    if (this.data.rangePanelVisible) {
+      this.setData({ rangePanelVisible: false })
+      return
+    }
+    const draftEventTypeKey = this.data.selectedEventTypeKey
+    const draftTagKeys = [...this.data.selectedTagKeys]
+    this.setData({
+      rangePanelVisible: true,
+      draftEventTypeKey,
+      draftTagKeys,
+      draftAccessType: this.data.selectedAccessType,
+      draftSortDirection: this.data.selectedSortDirection
+        || (this.data.view === 'PAST' ? 'DESC' : 'ASC'),
+      eventTypeOptions: selectedOptions(this.data.eventTypeOptions, draftEventTypeKey),
+      tagOptions: selectedOptions(this.data.tagOptions, draftTagKeys),
+    })
+  },
+
+  selectEventType(event: WechatMiniprogram.TouchEvent) {
+    const key = String(event.currentTarget.dataset.key || '')
+    if (!this.data.eventTypeOptions.some(option => option.key === key)) {
+      return
+    }
+    const draftEventTypeKey = this.data.draftEventTypeKey === key ? '' : key
+    this.setData({
+      draftEventTypeKey,
+      eventTypeOptions: selectedOptions(this.data.eventTypeOptions, draftEventTypeKey),
+    })
+  },
+
+  toggleEventTag(event: WechatMiniprogram.TouchEvent) {
+    const key = String(event.currentTarget.dataset.key || '')
+    if (!this.data.tagOptions.some(option => option.key === key)) {
+      return
+    }
+    const selected = new Set(this.data.draftTagKeys)
+    if (selected.has(key)) {
+      selected.delete(key)
+    }
+    else if (selected.size < 12) {
+      selected.add(key)
+    }
+    else {
+      wx.showToast({ title: '最多选择 12 个活动标签', icon: 'none' })
+      return
+    }
+    const draftTagKeys = [...selected].sort()
+    this.setData({
+      draftTagKeys,
+      tagOptions: selectedOptions(this.data.tagOptions, draftTagKeys),
+    })
+  },
+
+  selectAccessType(event: WechatMiniprogram.TouchEvent) {
+    const value = String(event.currentTarget.dataset.value || '') as '' | EventAccessType
+    if (!['', 'FREE', 'MEMBER_INCLUDED', 'PAID'].includes(value)) {
+      return
+    }
+    this.setData({ draftAccessType: value })
+  },
+
+  selectSortDirection(event: WechatMiniprogram.TouchEvent) {
+    const value = String(event.currentTarget.dataset.value || '') as '' | EventSortDirection
+    if (!['', 'ASC', 'DESC'].includes(value)) {
+      return
+    }
+    this.setData({ draftSortDirection: value })
+  },
+
+  confirmDiscoveryFilters() {
+    const selectedEventTypeKey = this.data.draftEventTypeKey
+    const selectedTagKeys = [...this.data.draftTagKeys]
+    const selectedAccessType = this.data.draftAccessType
+    const selectedSortDirection = this.data.draftSortDirection
+    this.setData({
+      selectedEventTypeKey,
+      selectedTagKeys,
+      selectedAccessType,
+      selectedSortDirection,
+      activeFilterCount: this.countActiveFilters({
+        selectedEventTypeKey,
+        selectedTagKeys,
+        selectedAccessType,
+        selectedSortDirection,
+      }),
+      rangePanelVisible: false,
+      nextCursor: '',
+      message: '',
+    })
+    void this.loadEvents()
+  },
+
+  clearDiscoveryFilters() {
+    const dateFilter: EventDateFilter = this.data.view === 'PAST' ? 'ENDED' : 'RECENT'
+    this.setData({
+      dateFilter,
+      selectedDate: '',
+      selectedDateLabel: '',
+      customDateLabel: '',
+      dateFrom: '',
+      dateFromLabel: '',
+      dateTo: '',
+      dateToLabel: '',
+      selectedEventTypeKey: '',
+      selectedTagKeys: [],
+      selectedAccessType: '',
+      selectedSortDirection: '',
+      draftEventTypeKey: '',
+      draftTagKeys: [],
+      draftAccessType: '',
+      draftSortDirection: '',
+      activeFilterCount: 0,
+      eventTypeOptions: selectedOptions(this.data.eventTypeOptions, ''),
+      tagOptions: selectedOptions(this.data.tagOptions, []),
+      rangePanelVisible: false,
+      nextCursor: '',
+      message: '',
+    })
+    void this.loadEvents()
   },
 
   closeCalendar() {

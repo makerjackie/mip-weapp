@@ -1,4 +1,6 @@
 import type {
+  EventDiscoveryFilters,
+  EventDiscoveryOption,
   EventFeedResult,
   EventVideoRecap,
   MipEventDetail,
@@ -10,6 +12,7 @@ import { MipEventsError } from './types'
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const finderUserNamePattern = /^sph[A-Za-z0-9]+$/
 const feedIdPattern = /^[\w=:+/.-]+$/
+const stableKeyPattern = /^[\w.:-]{1,64}$/
 const eventListKeys = [
   'id',
   'scopeType',
@@ -113,6 +116,38 @@ function stringList(value: unknown, maxItems: number, maxLength: number) {
     && value.length <= maxItems
     && value.every(item => boundedString(item, maxLength))
     && new Set(value).size === value.length
+}
+
+function parseDiscoveryOptions(value: unknown, maxItems: number): EventDiscoveryOption[] {
+  if (!Array.isArray(value) || value.length > maxItems) {
+    invalid('活动筛选目录')
+  }
+  const keys = new Set<string>()
+  return value.map((item) => {
+    if (!record(item)
+      || !onlyKeys(item, ['key', 'name'])
+      || !hasKeys(item, ['key', 'name'])
+      || !boundedString(item.key, 64)
+      || !stableKeyPattern.test(item.key)
+      || !boundedString(item.name, 80)
+      || keys.has(item.key)) {
+      invalid('活动筛选目录')
+    }
+    keys.add(item.key)
+    return item as unknown as EventDiscoveryOption
+  })
+}
+
+export function parseEventDiscoveryFilters(value: unknown): EventDiscoveryFilters {
+  if (!record(value)
+    || !onlyKeys(value, ['eventTypes', 'tags'])
+    || !hasKeys(value, ['eventTypes', 'tags'])) {
+    invalid('活动筛选目录')
+  }
+  return {
+    eventTypes: parseDiscoveryOptions(value.eventTypes, 100),
+    tags: parseDiscoveryOptions(value.tags, 200),
+  }
 }
 
 function parseVideoRecap(value: unknown): EventVideoRecap {

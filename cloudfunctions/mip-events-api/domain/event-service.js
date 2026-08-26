@@ -208,14 +208,98 @@ function parsePresentedCheckInToken(value, {
   }
 }
 
+const publicCatalogKeyPattern = /^[\w.:-]{1,64}$/
+
+function publicCatalogKey(value, label) {
+  const normalized = typeof value === 'string' ? value.trim() : ''
+  if (!normalized) return ''
+  if (!publicCatalogKeyPattern.test(normalized)) {
+    throw new DomainError('VALIDATION_FAILED', `${label}筛选参数无效`)
+  }
+  return normalized
+}
+
+function publicEventTagKeys(value) {
+  if (value === undefined) return []
+  if (!Array.isArray(value) || value.length > 12) {
+    throw new DomainError('VALIDATION_FAILED', '活动标签筛选参数无效')
+  }
+  const normalized = value.map(item => publicCatalogKey(item, '活动标签')).sort()
+  if (normalized.some(item => !item) || new Set(normalized).size !== normalized.length) {
+    throw new DomainError('VALIDATION_FAILED', '活动标签筛选参数无效')
+  }
+  return normalized
+}
+
+function eventFeedCursorContext({
+  appId,
+  userId,
+  view,
+  dateFilter,
+  query,
+  eventTypeKey,
+  tagKeys,
+  accessType,
+  sortDirection,
+}) {
+  return sha256(JSON.stringify({
+    appId,
+    userId: userId || '',
+    view,
+    dateFilter,
+    date: typeof query.date === 'string' ? query.date : '',
+    dateFrom: typeof query.dateFrom === 'string' ? query.dateFrom : '',
+    dateTo: typeof query.dateTo === 'string' ? query.dateTo : '',
+    branchId: query.branchId ? String(query.branchId) : '',
+    cityName: typeof query.cityName === 'string' ? query.cityName.trim().slice(0, 80) : '',
+    query: typeof query.query === 'string' ? query.query.trim().slice(0, 50) : '',
+    eventTypeKey,
+    tagKeys,
+    accessType,
+    sortDirection,
+  }))
+}
+
+function encodeEventFeedCursor(row, { appId, context, tokenSecret }) {
+  if (!tokenSecret) {
+    throw new DomainError('SERVICE_UNAVAILABLE', '活动列表服务暂时不可用', true)
+  }
+  return createSignedToken({
+    type: 'event-feed-cursor',
+    appId,
+    context,
+    startsAt: iso(row.starts_at),
+    id: row.id,
+  }, tokenSecret)
+}
+
+function decodeEventFeedCursor(value, { appId, context, tokenSecret }) {
+  if (!value) return null
+  if (typeof value !== 'string' || value.length > 2048) {
+    throw new DomainError('VALIDATION_FAILED', '分页参数无效')
+  }
+  try {
+    const parsed = readSignedToken(value, tokenSecret, 'event-feed-cursor')
+    if (parsed.appId === appId
+      && parsed.context === context
+      && typeof parsed.startsAt === 'string'
+      && Number.isFinite(Date.parse(parsed.startsAt))
+      && typeof parsed.id === 'string'
+      && parsed.id.length > 0
+      && parsed.id.length <= 64) {
+      return parsed
+    }
+  }
+  catch {}
+  throw new DomainError('VALIDATION_FAILED', '分页参数无效')
+}
+
 function encodeCursor(row) {
   return Buffer.from(JSON.stringify({ startsAt: iso(row.starts_at), id: row.id })).toString('base64url')
 }
 
 function decodeCursor(value) {
-  if (!value) {
-    return null
-  }
+  if (!value) return null
   try {
     const parsed = JSON.parse(Buffer.from(value, 'base64url').toString('utf8'))
     if (typeof parsed.startsAt === 'string' && typeof parsed.id === 'string') {
@@ -484,6 +568,102 @@ function publicEventRow(row, previews = [], metadata = { tags: [], videoRecaps: 
     participantPreview: previews,
     registrationStatus: row.registration_status || undefined,
     albumEnabled: Number(row.album_enabled) === 1,
+  }
+}
+
+async function getEventDiscoveryFilters(db, { appId }) {
+  const eventTypes = await db.query(
+    `SELECT event_type.type_key AS \`key\`, event_type.name
+     FROM mip_event_types event_type
+     WHERE event_type.app_id = ? AND event_type.status = 'ACTIVE'
+       AND EXISTS (
+         SELECT 1 FROM mip_events event
+         WHERE event.app_id = event_type.app_id
+           AND event.event_type_key = event_type.type_key
+           AND event.published_at IS NOT NULL
+           AND event.status IN ('PUBLISHED', 'CANCELLED', 'ENDED')
+       )
+     ORDER BY event_type.sort_order, event_type.name, event_type.id
+     LIMIT 100`,
+    [appId],
+  )
+  const tags = await db.query(
+    `SELECT event_tag.tag_key AS \`key\`, event_tag.name
+     FROM mip_event_tags event_tag
+     WHERE event_tag.app_id = ? AND event_tag.status = 'ACTIVE'
+       AND EXISTS (
+         SELECT 1
+         FROM mip_event_tag_assignments assignment
+         INNER JOIN mip_events event
+           ON event.app_id = assignment.app_id AND event.id = assignment.event_id
+         WHERE assignment.app_id = event_tag.app_id
+           AND assignment.tag_id = event_tag.id
+           AND assignment.status = 'ACTIVE'
+           AND event.published_at IS NOT NULL
+           AND event.status IN ('PUBLISHED', 'CANCELLED', 'ENDED')
+       )
+     ORDER BY event_tag.sort_order, event_tag.name, event_tag.id
+     LIMIT 200`,
+    [appId],
+  )
+  const project = (rows, max) => rows
+    .filter(row => typeof row.key === 'string'
+      && publicCatalogKeyPattern.test(row.key)
+      && typeof row.name === 'string'
+      && row.name.length > 0
+      && row.name.length <= 80)
+    .slice(0, max)
+    .map(row => ({ key: row.key, name: row.name }))
+  return {
+    eventTypes: project(eventTypes, 100),
+    tags: project(tags, 200),
+  }
+}
+
+async function requireAvailableEventFilters(db, { appId, eventTypeKey, tagKeys }) {
+  if (eventTypeKey) {
+    const rows = await db.query(
+      `SELECT event_type.type_key
+       FROM mip_event_types event_type
+       WHERE event_type.app_id = ? AND event_type.type_key = ? AND event_type.status = 'ACTIVE'
+         AND EXISTS (
+           SELECT 1 FROM mip_events event
+           WHERE event.app_id = event_type.app_id
+             AND event.event_type_key = event_type.type_key
+             AND event.published_at IS NOT NULL
+             AND event.status IN ('PUBLISHED', 'CANCELLED', 'ENDED')
+         )
+       LIMIT 1`,
+      [appId, eventTypeKey],
+    )
+    if (!rows.length) {
+      throw new DomainError('VALIDATION_FAILED', '活动类型当前不可用')
+    }
+  }
+  if (tagKeys.length) {
+    const placeholders = tagKeys.map(() => '?').join(', ')
+    const rows = await db.query(
+      `SELECT event_tag.tag_key
+       FROM mip_event_tags event_tag
+       WHERE event_tag.app_id = ? AND event_tag.status = 'ACTIVE'
+         AND event_tag.tag_key IN (${placeholders})
+         AND EXISTS (
+           SELECT 1
+           FROM mip_event_tag_assignments assignment
+           INNER JOIN mip_events event
+             ON event.app_id = assignment.app_id AND event.id = assignment.event_id
+           WHERE assignment.app_id = event_tag.app_id
+             AND assignment.tag_id = event_tag.id
+             AND assignment.status = 'ACTIVE'
+             AND event.published_at IS NOT NULL
+             AND event.status IN ('PUBLISHED', 'CANCELLED', 'ENDED')
+         )`,
+      [appId, ...tagKeys],
+    )
+    const available = new Set(rows.map(row => row.tag_key))
+    if (tagKeys.some(tagKey => !available.has(tagKey))) {
+      throw new DomainError('VALIDATION_FAILED', '活动标签当前不可用')
+    }
   }
 }
 
@@ -770,7 +950,40 @@ async function listEvents(db, {
     throw new DomainError('AUTH_REQUIRED', '请登录后查看我的活动')
   }
   const limit = limitOf(query.limit)
-  const cursor = decodeCursor(query.cursor)
+  const eventTypeKey = publicCatalogKey(query.eventTypeKey, '活动类型')
+  const tagKeys = publicEventTagKeys(query.tagKeys)
+  const accessType = query.accessType === undefined || query.accessType === ''
+    ? ''
+    : String(query.accessType)
+  if (accessType && !['FREE', 'MEMBER_INCLUDED', 'PAID'].includes(accessType)) {
+    throw new DomainError('VALIDATION_FAILED', '参与方式筛选参数无效')
+  }
+  const defaultSortDirection = view === 'PAST' || view === 'MINE' || dateFilter === 'ENDED'
+    ? 'DESC'
+    : 'ASC'
+  const sortDirection = query.sortDirection === undefined || query.sortDirection === ''
+    ? defaultSortDirection
+    : String(query.sortDirection)
+  if (!['ASC', 'DESC'].includes(sortDirection)) {
+    throw new DomainError('VALIDATION_FAILED', '活动排序参数无效')
+  }
+  await requireAvailableEventFilters(db, { appId, eventTypeKey, tagKeys })
+  const cursorContext = eventFeedCursorContext({
+    appId,
+    userId,
+    view,
+    dateFilter,
+    query,
+    eventTypeKey,
+    tagKeys,
+    accessType,
+    sortDirection,
+  })
+  const cursor = decodeEventFeedCursor(query.cursor, {
+    appId,
+    context: cursorContext,
+    tokenSecret,
+  })
   const clauses = ['e.app_id = ?']
   const params = [appId]
   if (view === 'MINE') {
@@ -828,11 +1041,36 @@ async function listEvents(db, {
     clauses.push('e.city_name = ?')
     params.push(query.cityName.trim().slice(0, 80))
   }
+  if (eventTypeKey) {
+    clauses.push('e.event_type_key = ?')
+    clauses.push('public_event_type.type_key IS NOT NULL')
+    params.push(eventTypeKey)
+  }
+  if (accessType) {
+    clauses.push('e.access_type = ?')
+    params.push(accessType)
+  }
+  if (tagKeys.length) {
+    const placeholders = tagKeys.map(() => '?').join(', ')
+    clauses.push(`EXISTS (
+      SELECT 1
+      FROM mip_event_tag_assignments filter_assignment
+      INNER JOIN mip_event_tags filter_tag
+        ON filter_tag.app_id = filter_assignment.app_id
+        AND filter_tag.id = filter_assignment.tag_id
+        AND filter_tag.status = 'ACTIVE'
+      WHERE filter_assignment.app_id = e.app_id
+        AND filter_assignment.event_id = e.id
+        AND filter_assignment.status = 'ACTIVE'
+        AND filter_tag.tag_key IN (${placeholders})
+    )`)
+    params.push(...tagKeys)
+  }
   if (typeof query.query === 'string' && query.query.trim()) {
     clauses.push('e.title LIKE ? ESCAPE \'\\\\\'')
     params.push(`%${query.query.trim().slice(0, 50).replace(/[\\%_]/g, '\\$&')}%`)
   }
-  const descending = view === 'PAST' || view === 'MINE' || dateFilter === 'ENDED'
+  const descending = sortDirection === 'DESC'
   if (cursor) {
     clauses.push(descending
       ? '(e.starts_at < ? OR (e.starts_at = ? AND e.id < ?))'
@@ -884,7 +1122,13 @@ async function listEvents(db, {
       metadata.get(row.id),
     )),
     cities: cities.map(row => row.city_name),
-    nextCursor: hasMore ? encodeCursor(pageRows[pageRows.length - 1]) : undefined,
+    nextCursor: hasMore
+      ? encodeEventFeedCursor(pageRows[pageRows.length - 1], {
+          appId,
+          context: cursorContext,
+          tokenSecret,
+        })
+      : undefined,
   }
 }
 
@@ -3535,6 +3779,7 @@ module.exports = {
   checkIn,
   createInvitation,
   createRegistration,
+  getEventDiscoveryFilters,
   getEvent,
   effectiveCancellationDeadline,
   eventCancellationHours,

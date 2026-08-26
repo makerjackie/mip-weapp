@@ -8,6 +8,7 @@ import type {
   CheckInScene,
   EventAlbumPage,
   EventAlbumSubmission,
+  EventDiscoveryFilters,
   EventFeedback,
   EventFeedbackDraft,
   EventFeedQuery,
@@ -34,7 +35,7 @@ import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
 import { runtimeConfig } from '../../config/runtime'
 import { resolveCloudFileUrls } from '../platform/cloud-media'
 import { requireCloudClient } from '../platform/cloudbase'
-import { parseEventFeedResult, parseMipEventDetail } from './dto'
+import { parseEventDiscoveryFilters, parseEventFeedResult, parseMipEventDetail } from './dto'
 import { MipEventsError } from './types'
 
 interface Envelope<T> {
@@ -45,6 +46,7 @@ interface Envelope<T> {
 
 const readActions = new Set([
   'mip.events.list',
+  'mip.events.discoveryFilters',
   'mip.events.detail',
   'mip.events.publicParticipants',
   'mip.events.album.list',
@@ -101,6 +103,12 @@ async function callEvents<T>(action: string, data: Record<string, unknown> = {})
 export const cloudbaseMipEventsGateway: MipEventsGateway = {
   async listEvents(query: EventFeedQuery) {
     return parseEventFeedResult(await callEvents<EventFeedResult>('mip.events.list', { query }))
+  },
+
+  async getDiscoveryFilters() {
+    return parseEventDiscoveryFilters(
+      await callEvents<EventDiscoveryFilters>('mip.events.discoveryFilters'),
+    )
   },
 
   async getEvent(eventId: EventId) {

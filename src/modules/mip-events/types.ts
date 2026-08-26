@@ -20,6 +20,7 @@ export type RegistrationStatus
 
 export type EventListView = 'UPCOMING' | 'PAST' | 'MINE'
 export type EventDateFilter = 'RECENT' | 'ENDED' | 'TODAY' | 'CUSTOM'
+export type EventSortDirection = 'ASC' | 'DESC'
 export type MyRegistrationCategory = 'UPCOMING' | 'ATTENDED'
 
 export interface EventFeedQuery {
@@ -30,9 +31,23 @@ export interface EventFeedQuery {
   date?: string
   dateFrom?: string
   dateTo?: string
+  eventTypeKey?: string
+  tagKeys?: string[]
+  accessType?: EventAccessType
+  sortDirection?: EventSortDirection
   query?: string
   cursor?: string
   limit?: number
+}
+
+export interface EventDiscoveryOption {
+  key: string
+  name: string
+}
+
+export interface EventDiscoveryFilters {
+  eventTypes: EventDiscoveryOption[]
+  tags: EventDiscoveryOption[]
 }
 
 export interface EventParticipantPreview {
@@ -404,6 +419,7 @@ export interface AdminEventFeedbackPage {
 
 export interface MipEventsGateway {
   listEvents: (query: EventFeedQuery) => Promise<EventFeedResult>
+  getDiscoveryFilters?: () => Promise<EventDiscoveryFilters>
   getEvent: (eventId: EventId) => Promise<MipEventDetail>
   listPublicParticipants: (eventId: EventId, query?: PublicEventParticipantQuery) => Promise<PublicEventParticipantPage>
   listEventAlbum: (eventId: EventId, cursor?: string, limit?: number) => Promise<EventAlbumPage>
