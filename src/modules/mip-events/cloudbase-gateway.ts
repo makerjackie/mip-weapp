@@ -34,6 +34,7 @@ import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
 import { runtimeConfig } from '../../config/runtime'
 import { resolveCloudFileUrls } from '../platform/cloud-media'
 import { requireCloudClient } from '../platform/cloudbase'
+import { parseEventFeedResult, parseMipEventDetail } from './dto'
 import { MipEventsError } from './types'
 
 interface Envelope<T> {
@@ -98,12 +99,12 @@ async function callEvents<T>(action: string, data: Record<string, unknown> = {})
 }
 
 export const cloudbaseMipEventsGateway: MipEventsGateway = {
-  listEvents(query: EventFeedQuery) {
-    return callEvents<EventFeedResult>('mip.events.list', { query })
+  async listEvents(query: EventFeedQuery) {
+    return parseEventFeedResult(await callEvents<EventFeedResult>('mip.events.list', { query }))
   },
 
-  getEvent(eventId: EventId) {
-    return callEvents<MipEventDetail>('mip.events.detail', { eventId })
+  async getEvent(eventId: EventId) {
+    return parseMipEventDetail(await callEvents<MipEventDetail>('mip.events.detail', { eventId }))
   },
 
   listPublicParticipants(eventId: EventId, query = {}) {

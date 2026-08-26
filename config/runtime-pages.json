@@ -79,9 +79,10 @@
       "routes": [
         "pages/events/index",
         "packages/member/help/index",
+        "packages/member/mip-events/detail/index",
         "packages/member/mip-knowledge/detail/index"
       ],
-      "reason": "wx.openChannelsUserProfile 依赖已绑定的视频号和微信真机环境"
+      "reason": "wx.openChannelsUserProfile 和 wx.openChannelsActivity 依赖已绑定的视频号和微信真机环境"
     },
     {
       "id": "knowledge-webview",
@@ -1103,7 +1104,7 @@
         "dataPath": "events",
         "values": { "eventId": "id" }
       },
-      "deviceRequired": ["calendar-location", "online-event-webview", "phone-call", "photo-save", "share", "wechat-pay"]
+      "deviceRequired": ["calendar-location", "online-event-webview", "phone-call", "photo-save", "share", "video-channel", "wechat-pay"]
     },
     {
       "id": "M26",

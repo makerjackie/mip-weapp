@@ -490,6 +490,9 @@ describe('mip-weapp UI runtime contract', () => {
   it('maps current activity device capabilities to MIP pages', () => {
     const byId = new Map(contract.deviceRequiredCapabilities.map(item => [item.id, item]))
     expect(byId.get('calendar-location')?.routes).toEqual(['packages/member/mip-events/detail/index'])
+    expect(byId.get('video-channel')?.routes).toContain('packages/member/mip-events/detail/index')
+    expect(contract.routes.find(route => route.path === 'packages/member/mip-events/detail/index')?.deviceRequired)
+      .toContain('video-channel')
     expect(byId.get('event-album-photo')?.routes).toEqual(['packages/member/event-album/index'])
     expect(byId.get('photo-save')?.routes).toEqual(expect.arrayContaining([
       'pages/membership/index',

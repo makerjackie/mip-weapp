@@ -370,7 +370,97 @@ function mutualBlockFilter(viewerUserId, subjectSql, appSql) {
   }
 }
 
-function publicEventRow(row, previews = []) {
+function publicVideoRecapRow(row) {
+  const finderUserName = typeof row.finder_user_name === 'string' ? row.finder_user_name : ''
+  const feedId = typeof row.feed_id === 'string' && row.feed_id ? row.feed_id : null
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(row.id)
+    || typeof row.title !== 'string' || !row.title || row.title.length > 120
+    || typeof row.summary !== 'string' || row.summary.length > 300
+    || row.destination_provider !== 'WECHAT_CHANNELS'
+    || !['PROFILE', 'ACTIVITY'].includes(row.destination_kind)
+    || !/^sph[A-Za-z0-9]+$/.test(finderUserName)
+    || finderUserName.length > 128
+    || (row.destination_kind === 'PROFILE' && feedId !== null)
+    || (row.destination_kind === 'ACTIVITY'
+      && (!feedId || feedId.length > 256 || !/^[\w=:+/.-]+$/.test(feedId)))) {
+    return null
+  }
+  return {
+    id: row.id,
+    title: row.title,
+    summary: row.summary || '',
+    destination: {
+      provider: 'WECHAT_CHANNELS',
+      type: row.destination_kind,
+      finderUserName,
+      feedId,
+    },
+  }
+}
+
+async function loadPublicEventMetadata(db, { appId, eventIds }) {
+  const grouped = new Map(eventIds.map(eventId => [eventId, { tags: [], videoRecaps: [] }]))
+  if (!eventIds.length) {
+    return grouped
+  }
+  const placeholders = eventIds.map(() => '?').join(', ')
+  const tagRows = await db.query(
+    `SELECT public_tag.event_id, public_tag.name
+     FROM (
+       SELECT assignment.event_id, tag.name,
+              ROW_NUMBER() OVER (
+                PARTITION BY assignment.event_id
+                ORDER BY tag.sort_order, tag.name, tag.id
+              ) AS public_rank
+       FROM mip_event_tag_assignments assignment
+       INNER JOIN mip_event_tags tag
+         ON tag.app_id = assignment.app_id AND tag.id = assignment.tag_id AND tag.status = 'ACTIVE'
+       WHERE assignment.app_id = ? AND assignment.event_id IN (${placeholders})
+         AND assignment.status = 'ACTIVE'
+     ) public_tag
+     WHERE public_tag.public_rank <= 100
+     ORDER BY public_tag.event_id, public_tag.public_rank`,
+    [appId, ...eventIds],
+  )
+  for (const row of tagRows) {
+    const metadata = grouped.get(row.event_id)
+    if (metadata
+      && metadata.tags.length < 100
+      && typeof row.name === 'string'
+      && row.name
+      && !metadata.tags.includes(row.name)) {
+      metadata.tags.push(row.name)
+    }
+  }
+  const recapRows = await db.query(
+    `SELECT public_recap.event_id, public_recap.id, public_recap.title, public_recap.summary,
+            public_recap.destination_provider, public_recap.destination_kind,
+            public_recap.finder_user_name, public_recap.feed_id
+     FROM (
+       SELECT event_id, id, title, summary, destination_provider, destination_kind,
+              finder_user_name, feed_id,
+              ROW_NUMBER() OVER (
+                PARTITION BY event_id
+                ORDER BY sort_order, id
+              ) AS public_rank
+       FROM mip_event_video_recaps
+       WHERE app_id = ? AND event_id IN (${placeholders}) AND status = 'ACTIVE'
+     ) public_recap
+     WHERE public_recap.public_rank <= 100
+     ORDER BY public_recap.event_id, public_recap.public_rank`,
+    [appId, ...eventIds],
+  )
+  for (const row of recapRows) {
+    const metadata = grouped.get(row.event_id)
+    const recap = publicVideoRecapRow(row)
+    if (metadata && recap && metadata.videoRecaps.length < 100) {
+      metadata.videoRecaps.push(recap)
+    }
+  }
+  return grouped
+}
+
+function publicEventRow(row, previews = [], metadata = { tags: [], videoRecaps: [] }) {
   return {
     id: row.id,
     scopeType: row.scope_type,
@@ -379,7 +469,9 @@ function publicEventRow(row, previews = []) {
     title: row.title,
     summary: row.summary,
     coverUrl: row.cover_file_id || undefined,
-    eventTypeLabel: row.event_type_label || row.event_type_key,
+    eventTypeLabel: row.event_type_label || '活动',
+    tags: metadata.tags,
+    videoRecaps: metadata.videoRecaps,
     mode: row.event_mode,
     accessType: row.access_type,
     startsAt: iso(row.starts_at),
@@ -749,6 +841,7 @@ async function listEvents(db, {
   }
   const rows = await db.query(
     `SELECT e.*, b.name AS branch_name, a.cloud_file_id AS cover_file_id,
+       public_event_type.name AS event_type_label,
        r.status AS registration_status,
        CASE WHEN e.status = 'PUBLISHED' AND e.ends_at < ? THEN 'ENDED' ELSE e.status END AS public_status,
        (SELECT COUNT(*) FROM mip_event_registrations rc
@@ -757,6 +850,10 @@ async function listEvents(db, {
      FROM mip_events e
      LEFT JOIN mip_city_branches b ON b.app_id = e.app_id AND b.id = e.branch_id
      LEFT JOIN mip_media_assets a ON a.app_id = e.app_id AND a.id = e.cover_asset_id AND a.status = 'READY'
+     LEFT JOIN mip_event_types public_event_type
+       ON public_event_type.app_id = e.app_id
+       AND public_event_type.type_key = e.event_type_key
+       AND public_event_type.status = 'ACTIVE'
      LEFT JOIN mip_event_registrations r ON r.app_id = e.app_id AND r.event_id = e.id AND r.user_id = ?
      WHERE ${clauses.join(' AND ')}
      ORDER BY e.starts_at ${descending ? 'DESC' : 'ASC'}, e.id ${descending ? 'DESC' : 'ASC'}
@@ -771,13 +868,21 @@ async function listEvents(db, {
     tokenSecret,
     viewerUserId: userId,
   })
+  const metadata = await loadPublicEventMetadata(db, {
+    appId,
+    eventIds: pageRows.map(row => row.id),
+  })
   const cities = await db.query(
     `SELECT DISTINCT city_name FROM mip_city_branches
      WHERE app_id = ? AND status = 'ACTIVE' ORDER BY city_name ASC`,
     [appId],
   )
   return {
-    items: pageRows.map(row => publicEventRow(row, previews.get(row.id) || [])),
+    items: pageRows.map(row => publicEventRow(
+      row,
+      previews.get(row.id) || [],
+      metadata.get(row.id),
+    )),
     cities: cities.map(row => row.city_name),
     nextCursor: hasMore ? encodeCursor(pageRows[pageRows.length - 1]) : undefined,
   }
@@ -795,6 +900,7 @@ async function getEvent(db, {
   const inviterBlock = mutualBlockFilter(userId, 'ia.inviter_user_id', 'ia.app_id')
   const row = await db.one(
     `SELECT e.*, b.name AS branch_name, a.cloud_file_id AS cover_file_id,
+       public_event_type.name AS event_type_label,
        organizer_profile.nickname AS organizer_nickname,
        organizer_profile.headline AS organizer_headline,
        organizer_profile.visibility_json AS organizer_visibility_json,
@@ -815,6 +921,10 @@ async function getEvent(db, {
      FROM mip_events e
      LEFT JOIN mip_city_branches b ON b.app_id = e.app_id AND b.id = e.branch_id
      LEFT JOIN mip_media_assets a ON a.app_id = e.app_id AND a.id = e.cover_asset_id AND a.status = 'READY'
+     LEFT JOIN mip_event_types public_event_type
+       ON public_event_type.app_id = e.app_id
+       AND public_event_type.type_key = e.event_type_key
+       AND public_event_type.status = 'ACTIVE'
      LEFT JOIN mip_profiles organizer_profile
        ON organizer_profile.app_id = e.app_id AND organizer_profile.user_id = e.organizer_user_id
        ${organizerBlock.sql ? `AND ${organizerBlock.sql}` : ''}
@@ -870,6 +980,7 @@ async function getEvent(db, {
      ORDER BY media.sort_order, media.media_asset_id`,
     [appId, eventId],
   )
+  const metadata = await loadPublicEventMetadata(db, { appId, eventIds: [eventId] })
   const timestamp = now.getTime()
   const cancellationDeadline = await effectiveCancellationDeadline(db, appId, row)
   const opensAt = row.registration_opens_at ? new Date(row.registration_opens_at).getTime() : Number.NEGATIVE_INFINITY
@@ -877,7 +988,7 @@ async function getEvent(db, {
   const activeStatus = activeRegistrationStatuses.has(row.registration_status)
   const onlineUrl = registeredOnlineUrl(row)
   return {
-    ...publicEventRow(row, previews.get(eventId) || []),
+    ...publicEventRow(row, previews.get(eventId) || [], metadata.get(eventId)),
     description: row.description,
     contentMedia: contentMedia.map(item => ({
       imageUrl: item.cloud_file_id,
@@ -1842,6 +1953,7 @@ async function listMyRegistrations(db, {
   params.push(pageLimit + 1)
   const rows = await db.query(
     `SELECT e.*, b.name AS branch_name, a.cloud_file_id AS cover_file_id,
+       public_event_type.name AS event_type_label,
        r.id AS registration_id, r.status AS registration_status, r.order_id,
        r.version AS registration_version, r.updated_at AS registration_updated_at, c.checked_in_at,
        registration_order.status AS order_status,
@@ -1855,6 +1967,10 @@ async function listMyRegistrations(db, {
      JOIN mip_events e ON e.app_id = r.app_id AND e.id = r.event_id
      LEFT JOIN mip_city_branches b ON b.app_id = e.app_id AND b.id = e.branch_id
      LEFT JOIN mip_media_assets a ON a.app_id = e.app_id AND a.id = e.cover_asset_id AND a.status = 'READY'
+     LEFT JOIN mip_event_types public_event_type
+       ON public_event_type.app_id = e.app_id
+       AND public_event_type.type_key = e.event_type_key
+       AND public_event_type.status = 'ACTIVE'
      LEFT JOIN mip_event_checkins c ON c.app_id = r.app_id AND c.registration_id = r.id AND c.status = 'ACTIVE'
      LEFT JOIN mip_orders registration_order
        ON registration_order.app_id = r.app_id AND registration_order.id = r.order_id
@@ -1873,12 +1989,16 @@ async function listMyRegistrations(db, {
   )
   const hasMore = rows.length > pageLimit
   const pageRows = rows.slice(0, pageLimit)
-  const [previews, counts, policy] = await Promise.all([
+  const [previews, metadata, counts, policy] = await Promise.all([
     loadParticipantPreviews(db, {
       appId,
       eventIds: pageRows.map(row => row.id),
       tokenSecret,
       viewerUserId: userId,
+    }),
+    loadPublicEventMetadata(db, {
+      appId,
+      eventIds: pageRows.map(row => row.id),
     }),
     db.one(
       `SELECT
@@ -1902,7 +2022,11 @@ async function listMyRegistrations(db, {
     items: pageRows.map(row => ({
       registrationId: row.registration_id,
       version: Number(row.registration_version),
-      event: publicEventRow(row, previews.get(row.id) || []),
+      event: publicEventRow(
+        row,
+        previews.get(row.id) || [],
+        metadata.get(row.id),
+      ),
       status: row.registration_status,
       orderId: row.order_id || undefined,
       checkedInAt: row.checked_in_at ? iso(row.checked_in_at) : undefined,

@@ -46,10 +46,31 @@ describe('my event registrations', () => {
   it('filters each tab on the server and returns authoritative counts and cancellation facts', async () => {
     let listSql = ''
     let countQuery
+    const metadataCalls = []
     const db = {
-      async query(sql) {
-        listSql = sql
-        return [eventRow()]
+      async query(sql, params) {
+        if (sql.includes('FROM mip_event_registrations r')) {
+          listSql = sql
+          return [eventRow()]
+        }
+        if (sql.includes('mip_event_tag_assignments')) {
+          metadataCalls.push({ sql, params })
+          return [{ event_id: eventRow().id, name: '线下' }]
+        }
+        if (sql.includes('mip_event_video_recaps')) {
+          metadataCalls.push({ sql, params })
+          return [{
+            event_id: eventRow().id,
+            id: '40000000-0000-4000-8000-000000000001',
+            title: '活动回顾',
+            summary: '',
+            destination_provider: 'WECHAT_CHANNELS',
+            destination_kind: 'PROFILE',
+            finder_user_name: 'sphMIP2026',
+            feed_id: null,
+          }]
+        }
+        throw new Error(`unexpected query: ${sql}`)
       },
       async one(sql, params) {
         if (sql.includes('AS upcoming_count')) {
@@ -69,6 +90,8 @@ describe('my event registrations', () => {
 
     assert.match(listSql, /r\.status IN \('PENDING_REVIEW','WAITLISTED','PAYMENT_PENDING','REGISTERED','CANCELLATION_PENDING'\)/)
     assert.match(listSql, /e\.ends_at > \?/)
+    assert.match(listSql, /public_event_type\.app_id = e\.app_id/)
+    assert.match(listSql, /public_event_type\.status = 'ACTIVE'/)
     assert.match(countQuery.sql, /event_row\.ends_at > \?/)
     assert.deepEqual(countQuery.params, [new Date('2026-08-25T00:00:00.000Z'), 'wx-app', 'user-1'])
     assert.deepEqual(page.counts, { upcoming: 2, attended: 5 })
@@ -84,6 +107,18 @@ describe('my event registrations', () => {
         summary: '活动摘要',
         coverUrl: 'cloud://env.test/event.jpg',
         eventTypeLabel: '交流活动',
+        tags: ['线下'],
+        videoRecaps: [{
+          id: '40000000-0000-4000-8000-000000000001',
+          title: '活动回顾',
+          summary: '',
+          destination: {
+            provider: 'WECHAT_CHANNELS',
+            type: 'PROFILE',
+            finderUserName: 'sphMIP2026',
+            feedId: null,
+          },
+        }],
         mode: 'OFFLINE',
         accessType: 'PAID',
         startsAt: '2026-09-10T10:00:00.000Z',
@@ -106,6 +141,10 @@ describe('my event registrations', () => {
       canCancel: true,
       canRetryRefund: false,
     })
+    assert.deepEqual(metadataCalls.map(call => call.params), [
+      ['wx-app', eventRow().id],
+      ['wx-app', eventRow().id],
+    ])
   })
 
   it('projects retry only for an active non-manual cancellation refund', () => {

@@ -1,4 +1,5 @@
 export * from './check-in-resume'
+export * from './dto'
 export * from './experience'
 export * from './module'
 export * from './rich-content'

@@ -49,6 +49,8 @@ function eventDatabase(row, contentMedia = []) {
     },
     async query(sql) {
       if (sql.includes('mip_event_content_media')) return contentMedia
+      if (sql.includes('mip_event_tag_assignments')) return []
+      if (sql.includes('mip_event_video_recaps')) return []
       assert.match(sql, /mip_event_changes/)
       return []
     },
@@ -209,7 +211,7 @@ describe('MIP public event detail', () => {
     assert.equal('onlineUrl' in unsafe, false)
   })
 
-  it('keeps an event visible while hiding a blocked organizer projection', async () => {
+  it('keeps PLATFORM-managed event-content recaps while hiding organizer data for either block direction', async () => {
     const calls = []
     const database = {
       async one(sql, params) {
@@ -222,6 +224,19 @@ describe('MIP public event detail', () => {
       },
       async query(sql) {
         if (sql.includes('mip_event_content_media')) return []
+        if (sql.includes('mip_event_tag_assignments')) return []
+        if (sql.includes('mip_event_video_recaps')) {
+          return [{
+            event_id: 'event-1',
+            id: '20000000-0000-4000-8000-000000000001',
+            title: '平台活动回顾',
+            summary: '',
+            destination_provider: 'WECHAT_CHANNELS',
+            destination_kind: 'PROFILE',
+            finder_user_name: 'sphMIPPlatform',
+            feed_id: null,
+          }]
+        }
         assert.match(sql, /mip_event_changes/)
         return []
       },
@@ -238,9 +253,21 @@ describe('MIP public event detail', () => {
 
     assert.equal(result.id, 'event-1')
     assert.equal(result.organizer, undefined)
+    assert.deepEqual(result.videoRecaps, [{
+      id: '20000000-0000-4000-8000-000000000001',
+      title: '平台活动回顾',
+      summary: '',
+      destination: {
+        provider: 'WECHAT_CHANNELS',
+        type: 'PROFILE',
+        finderUserName: 'sphMIPPlatform',
+        feedId: null,
+      },
+    }])
     assert.match(calls[0].sql, /LEFT JOIN mip_profiles organizer_profile/)
     assert.match(calls[0].sql, /visibility_block\.app_id = e\.app_id/)
-    assert.match(calls[0].sql, /blocked_user_id = e\.organizer_user_id/)
+    assert.match(calls[0].sql, /blocker_user_id = \? AND visibility_block\.blocked_user_id = e\.organizer_user_id/)
+    assert.match(calls[0].sql, /blocker_user_id = e\.organizer_user_id AND visibility_block\.blocked_user_id = \?/)
     assert.deepEqual(calls[0].params.slice(1), [
       'viewer-user',
       'viewer-user',

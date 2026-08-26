@@ -28,6 +28,8 @@ test('event participant previews exclude either block direction for an identifie
       calls.push({ sql, params })
       if (sql.includes('FROM mip_events e')) return [eventRow()]
       if (sql.includes('FROM mip_event_registrations r')) return []
+      if (sql.includes('mip_event_tag_assignments')) return []
+      if (sql.includes('mip_event_video_recaps')) return []
       if (sql.includes('SELECT DISTINCT city_name')) return []
       throw new Error(`unexpected query: ${sql}`)
     },
@@ -59,6 +61,8 @@ test('anonymous event participant previews keep the existing public range', asyn
         previewSql = sql
         return []
       }
+      if (sql.includes('mip_event_tag_assignments')) return []
+      if (sql.includes('mip_event_video_recaps')) return []
       if (sql.includes('SELECT DISTINCT city_name')) return []
       throw new Error(`unexpected query: ${sql}`)
     },

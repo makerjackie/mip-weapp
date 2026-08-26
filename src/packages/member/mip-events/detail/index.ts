@@ -5,6 +5,7 @@ import { eventInvitationPath, eventRichTextNodes, MipEventsError, safeHttpsEvent
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
 import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
+import { openWechatChannelsDestination } from '../../../../platform/wechat/channels'
 
 const POSTER_WIDTH = 375
 const POSTER_HEIGHT = 560
@@ -123,6 +124,7 @@ Page({
     onlineMode: false,
     onlineUrl: '',
     hasCoordinates: false,
+    videoRecapBusyId: '',
     contentSection: 'INTRO' as 'INTRO' | 'ORGANIZER' | 'NOTICE',
   },
   requestSeq: 0,
@@ -252,6 +254,8 @@ Page({
     const normalizedEvent = {
       ...event,
       contentMedia: event.contentMedia || [],
+      tags: event.tags || [],
+      videoRecaps: event.videoRecaps || [],
       participantPreview: event.participantPreview || [],
       changes: event.changes || [],
     }
@@ -551,6 +555,36 @@ Page({
       return
     }
     caseNavigateTo({ url: `/packages/member/event-album/index?eventId=${encodeURIComponent(this.data.eventId)}` })
+  },
+
+  async openVideoRecap(tapEvent: WechatMiniprogram.TouchEvent) {
+    if (this.data.videoRecapBusyId) {
+      return
+    }
+    const recapId = String(tapEvent.currentTarget.dataset.id || '')
+    const recap = this.data.event?.videoRecaps.find(item => item.id === recapId)
+    if (!recap) {
+      this.setData({ message: '视频回顾暂时无法打开，请稍后重试。' })
+      return
+    }
+    this.setData({ videoRecapBusyId: recapId, message: '' })
+    try {
+      const result = await openWechatChannelsDestination(recap.destination)
+      if (result.status === 'unsupported') {
+        this.setData({ message: '当前微信版本不支持打开视频号，请升级微信后重试。' })
+      }
+      else if (result.status === 'cancelled') {
+        this.setData({ message: '已取消打开视频回顾。' })
+      }
+      else if (result.status === 'failed') {
+        this.setData({ message: '视频回顾暂时无法打开，请稍后重试。' })
+      }
+    }
+    finally {
+      if (this.data.videoRecapBusyId === recapId) {
+        this.setData({ videoRecapBusyId: '' })
+      }
+    }
   },
 
   async addToCalendar() {

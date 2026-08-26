@@ -67,6 +67,20 @@ export interface EventOrganizer {
   headline?: string
 }
 
+export interface EventVideoRecapDestination {
+  provider: 'WECHAT_CHANNELS'
+  type: 'PROFILE' | 'ACTIVITY'
+  finderUserName: string
+  feedId: string | null
+}
+
+export interface EventVideoRecap {
+  id: string
+  title: string
+  summary: string
+  destination: EventVideoRecapDestination
+}
+
 export interface EventInvitationAttribution {
   sourceType: 'PLATFORM' | 'USER'
   displayName: string
@@ -87,13 +101,15 @@ export interface MipEventListItem {
   summary: string
   coverUrl?: string
   eventTypeLabel: string
+  tags: string[]
+  videoRecaps: EventVideoRecap[]
   mode: EventMode
   accessType: EventAccessType
   startsAt: string
   endsAt: string
   cityName?: string
   venueName?: string
-  status: 'PUBLISHED' | 'CANCELLED' | 'ENDED'
+  status: EventStatus
   capacity?: number
   registrationCount: number
   participantPreview: EventParticipantPreview[]
