@@ -638,6 +638,21 @@
       "altersTables": [
         "mip_events"
       ]
+    },
+    {
+      "version": "20260826460000",
+      "name": "mip_membership_adjustments",
+      "sql": "database/mysql/mip/046_membership_adjustments.sql",
+      "sqlSha256": "21c1bba2666b9415b17e59b7a7053384ad2042d60dcfb828454ab9c434b9f800",
+      "rollback": "database/mysql/mip/rollback/046_membership_adjustments.sql",
+      "rollbackSha256": "920ecb1171d3edc344a98156cf56773216979b6574f1ff86a81cc52c687b8e9e",
+      "createsTables": [
+        "mip_membership_chains",
+        "mip_membership_adjustments"
+      ],
+      "altersTables": [
+        "mip_membership_entitlements"
+      ]
     }
   ]
 }

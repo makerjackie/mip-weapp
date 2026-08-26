@@ -356,6 +356,7 @@ const cloudVerify = read('scripts/verify-cloud.mjs')
 const demoSeed = read('scripts/seed-demo.mjs')
 const ownerBootstrap = read('scripts/bootstrap-owner.mjs')
 const ownerTestMembership = read('scripts/manage-owner-test-membership.mjs')
+const membershipChainReconcile = read('scripts/reconcile-membership-chains.mjs')
 const ownerTestMembershipContract = `${ownerTestMembership}\n${read('scripts/lib/mip-owner-test-membership.mjs')}`
 const removedLegacyArtifacts = [
   'assets/demo',
@@ -386,6 +387,7 @@ for (const [label, source] of [
   ['demo seed', demoSeed],
   ['owner bootstrap', ownerBootstrap],
   ['owner test membership', ownerTestMembership],
+  ['membership-chain reconcile', membershipChainReconcile],
 ]) {
   assert(!legacySqlReference(source), `${label} references a legacy shared SQL table`)
   assert(!/(?:^|[^A-Z0-9_])MEMBERSHIP_[A-Z0-9_]+/.test(source), `${label} reads legacy MEMBERSHIP_* configuration`)
@@ -449,6 +451,13 @@ assert([schedulerRoleSetup, schedulerDeploy, schedulerVerify]
   && cloudVerify.includes('assertMipSchedulerHmacSecretsIsolated(variables)'), 'Knowledge scheduler operations must reuse the fail-closed raw SCF control plane with an isolated HMAC domain')
 assert(cloudVerify.includes('assertRuntimePrivilegesExact')
   && !cloudVerify.includes('tableCounts'), 'Cloud verification must prove isolation without persisting business rows')
+assert(cloudVerify.includes('assertMembershipChainInvariant')
+  && cloudVerify.includes('MIP_MEMBERSHIP_CHAIN_INVARIANT_SQL')
+  && !cloudVerify.includes('manageMysqlDatabase'), 'Cloud verification must read and prove membership-chain invariants without writing')
+assert(membershipChainReconcile.includes('--confirm-env=')
+  && membershipChainReconcile.includes('--confirm-prefix=')
+  && membershipChainReconcile.includes('MIP_MEMBERSHIP_CHAIN_RECONCILE_SQL')
+  && membershipChainReconcile.includes('assertMembershipChainInvariant'), 'Membership-chain reconcile must be explicit, idempotent, and fail closed')
 assert(demoSeed.includes('MIP_CATALOG_STAGE=TEST')
   && read('database/mysql/mip/seed.demo.json').includes('"replaceBeforeProduction": true'), 'Demo data must stay replaceable and TEST-only')
 assert(ownerBootstrap.includes('\'PLATFORM_OWNER\'')
@@ -473,6 +482,7 @@ for (const [script, expected] of [
   ['message-campaigns:run-due', 'node scripts/run-message-campaigns.mjs'],
   ['refunds:run', 'node scripts/run-refunds.mjs'],
   ['membership:test', 'node scripts/manage-owner-test-membership.mjs'],
+  ['membership:chains:reconcile', 'node scripts/reconcile-membership-chains.mjs'],
 ]) {
   assert(packageJson.scripts[script] === expected, `${script} does not use the isolated MIP workflow`)
 }

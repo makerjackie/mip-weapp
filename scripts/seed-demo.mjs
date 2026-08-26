@@ -82,6 +82,7 @@ assertTablesExist([
   'mip_growth_rules',
   'mip_badges',
   'mip_users',
+  'mip_membership_chains',
   'mip_branch_memberships',
   'mip_profiles',
   'mip_profile_tags',
@@ -203,6 +204,9 @@ const verification = callCloudbase(root, 'queryMysqlDatabase', {
     (SELECT COUNT(*) FROM mip_users
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.users.map(item => sqlLiteral(item.id)).join(', ')})) AS users,
+    (SELECT COUNT(*) FROM mip_membership_chains
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND user_id IN (${seed.users.map(item => sqlLiteral(item.id)).join(', ')})) AS membershipChains,
     (SELECT COUNT(*) FROM mip_orders
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.membershipOrders.map(item => sqlLiteral(item.id)).join(', ')})) AS membershipOrders,
@@ -443,6 +447,7 @@ const expected = {
   rules: seed.growthRules.length,
   badges: seed.badges.length,
   users: seed.users.length,
+  membershipChains: seed.users.length,
   membershipOrders: seed.membershipOrders.length,
   entitlements: seed.entitlements.length,
   eventTypes: demoEventTypes(seed.events).length,
@@ -523,6 +528,7 @@ function buildSeedStatements() {
     growthRuleStatement(seed.growthRules),
     badgeStatement(seed.badges),
     userStatement(seed.users),
+    membershipChainStatement(seed.users),
     branchMembershipResetStatement(seed.users),
     branchMembershipStatement(seed.users),
     userPrimaryBranchStatement(seed.users),
@@ -720,6 +726,18 @@ function userStatement(items) {
     status = 'ACTIVE', closed_at = NULL, primary_branch_id = NULL, version = version + 1`
 }
 
+function membershipChainStatement(items) {
+  return `INSERT INTO mip_membership_chains (
+    app_id, user_id, version, created_at, updated_at
+  )
+  SELECT membership_user.app_id, membership_user.id, 1,
+    UTC_TIMESTAMP(3), UTC_TIMESTAMP(3)
+  FROM mip_users membership_user
+  WHERE membership_user.app_id = ${sqlLiteral(appId)}
+    AND membership_user.id IN (${items.map(item => sqlLiteral(item.id)).join(', ')})
+  ON DUPLICATE KEY UPDATE user_id = mip_membership_chains.user_id`
+}
+
 function branchMembershipResetStatement(items) {
   return `DELETE FROM mip_branch_memberships
     WHERE app_id = ${sqlLiteral(appId)}
@@ -874,17 +892,19 @@ function entitlementStatement(items, plans) {
   const planIds = new Set(plans.map(item => item.id))
   const values = items.map(item => `(
     ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.userId)},
-    ${sqlLiteral(item.orderId)}, ${sqlLiteral(planIds.has(item.planId) ? item.planId : null)}, 'ACTIVE',
+    ${sqlLiteral(item.orderId)}, ${sqlLiteral(planIds.has(item.planId) ? item.planId : null)},
+    'ORDER', NULL, 'ACTIVE',
     '2026-08-25 12:00:00.000', '2031-08-24 12:00:00.000', NULL, NULL, 1
   )`).join(',\n')
   return `INSERT INTO mip_membership_entitlements (
-    id, app_id, user_id, order_id, plan_id, status, starts_at, ends_at,
-    revoked_at, revocation_reason, version
+    id, app_id, user_id, order_id, plan_id, source_type, source_adjustment_id,
+    status, starts_at, ends_at, revoked_at, revocation_reason, version
   ) VALUES ${values}
   ON DUPLICATE KEY UPDATE
     app_id = IF(app_id = VALUES(app_id), app_id, NULL),
     id = IF(id = VALUES(id), id, NULL),
     user_id = VALUES(user_id), order_id = VALUES(order_id), plan_id = VALUES(plan_id),
+    source_type = 'ORDER', source_adjustment_id = NULL,
     status = 'ACTIVE', starts_at = VALUES(starts_at), ends_at = VALUES(ends_at),
     revoked_at = NULL, revocation_reason = NULL, version = version + 1`
 }
@@ -1980,6 +2000,7 @@ function buildDemoManifest(value, state) {
       .map(([key, items]) => [key, items.map(item => item.id)])),
     dependentRows: {
       branchMembershipUserIds: value.users.map(item => item.id),
+      membershipChainUserIds: value.users.map(item => item.id),
       profileUserIds: value.users.map(item => item.id),
       opportunityIds: value.opportunities.map(item => item.id),
       commentSettingOpportunityIds: value.opportunityInteractions.commentSettings
@@ -2023,6 +2044,7 @@ function buildDemoManifest(value, state) {
       mip_growth_rules: value.growthRules.map(item => ({ id: item.id })),
       mip_badges: value.badges.map(item => ({ id: item.id })),
       mip_users: value.users.map(item => ({ id: item.id })),
+      mip_membership_chains: value.users.map(item => ({ userId: item.id })),
       mip_branch_memberships: value.users.map(item => ({ branchId: item.branchId, userId: item.id })),
       mip_profiles: value.users.map(item => ({ userId: item.id })),
       mip_profile_tags: value.users.flatMap(item => [

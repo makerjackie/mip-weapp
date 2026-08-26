@@ -66,6 +66,7 @@
     "message-campaigns:run-due": "node scripts/run-message-campaigns.mjs",
     "refunds:run": "node scripts/run-refunds.mjs",
     "membership:test": "node scripts/manage-owner-test-membership.mjs",
+    "membership:chains:reconcile": "node scripts/reconcile-membership-chains.mjs",
     "media:cleanup": "node scripts/run-media-cleanup.mjs",
     "ai:cleanup": "node scripts/run-ai-cleanup.mjs",
     "seed:demo": "node scripts/seed-demo.mjs --confirm-demo",

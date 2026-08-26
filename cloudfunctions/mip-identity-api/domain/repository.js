@@ -9,6 +9,20 @@ function createIdentityRepository(database, options = {}) {
   const allowUnionRebind = options.allowUnionRebind === true
   const accountClosure = createAccountClosureRepository(database, options)
 
+  async function ensureMembershipChain(tx, appId, userId) {
+    await tx.query(
+      `INSERT INTO mip_membership_chains (
+         app_id, user_id, version, created_at, updated_at
+       )
+       SELECT membership_user.app_id, membership_user.id, 1,
+              UTC_TIMESTAMP(3), UTC_TIMESTAMP(3)
+       FROM mip_users membership_user
+       WHERE membership_user.app_id = ? AND membership_user.id = ?
+       ON DUPLICATE KEY UPDATE user_id = mip_membership_chains.user_id`,
+      [appId, userId],
+    )
+  }
+
   async function findUserByIdentity(caller, adapter = database) {
     return adapter.one(
       `SELECT u.id, u.status, u.primary_branch_id, u.version,
@@ -48,6 +62,7 @@ function createIdentityRepository(database, options = {}) {
         && identity.union_identity_key !== caller.unionIdentityKey) {
         throw new Error('IDENTITY_UNION_CONFLICT')
       }
+      await ensureMembershipChain(tx, caller.appId, user.id)
       const update = await tx.query(
         `UPDATE mip_user_identities
          SET union_identity_key = COALESCE(union_identity_key, ?),
@@ -80,6 +95,7 @@ function createIdentityRepository(database, options = {}) {
       )
       if (!existing) return null
       if (existing.status === 'CLOSED') return existing
+      await ensureMembershipChain(tx, caller.appId, existing.id)
       const update = await tx.query(
         `UPDATE mip_user_identities
          SET identity_key = ?, last_authenticated_at = UTC_TIMESTAMP(3)
@@ -111,6 +127,12 @@ function createIdentityRepository(database, options = {}) {
           `INSERT INTO mip_users (id, app_id, status)
            VALUES (?, ?, 'ACTIVE')`,
           [userId, caller.appId],
+        )
+        await tx.query(
+          `INSERT INTO mip_membership_chains (
+             app_id, user_id, version, created_at, updated_at
+           ) VALUES (?, ?, 1, UTC_TIMESTAMP(3), UTC_TIMESTAMP(3))`,
+          [caller.appId, userId],
         )
         await tx.query(
           `INSERT INTO mip_user_identities (

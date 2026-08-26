@@ -43,9 +43,12 @@ describe('portable WeChat identity', () => {
       unionIdentityKey: 'b'.repeat(64),
     })
     assert.equal(user.id, 'user-1')
-    assert.equal(updates.length, 1)
-    assert.match(updates[0].sql, /union_identity_key = COALESCE/)
-    assert.deepEqual(updates[0].params, [
+    assert.equal(updates.length, 2)
+    assert.match(updates[0].sql, /INSERT INTO mip_membership_chains/)
+    assert.match(updates[0].sql, /INSERT[\s\S]+SELECT[\s\S]+ON DUPLICATE KEY UPDATE/)
+    assert.deepEqual(updates[0].params, ['wx0000000000000001', 'user-1'])
+    assert.match(updates[1].sql, /union_identity_key = COALESCE/)
+    assert.deepEqual(updates[1].params, [
       'b'.repeat(64), 'wx0000000000000001', 'identity-1', 'user-1', 'a'.repeat(64),
     ])
   })
@@ -85,8 +88,10 @@ describe('portable WeChat identity', () => {
     })
     assert.equal(user.id, 'user-1')
     assert.match(calls[0].sql, /i\.union_identity_key = \? FOR UPDATE/)
-    assert.match(calls[1].sql, /SET identity_key = \?/)
-    assert.deepEqual(calls[1].params, [
+    assert.match(calls[1].sql, /INSERT INTO mip_membership_chains/)
+    assert.match(calls[1].sql, /ON DUPLICATE KEY UPDATE/)
+    assert.match(calls[2].sql, /SET identity_key = \?/)
+    assert.deepEqual(calls[2].params, [
       'c'.repeat(64),
       'wx0000000000000002',
       'identity-1',
@@ -130,6 +135,101 @@ describe('portable WeChat identity', () => {
       }),
       /IDENTITY_UNION_CONFLICT/,
     )
+  })
+
+  it('creates the membership chain immediately after the user in the registration transaction', async () => {
+    const transactions = []
+    let identityLookup = 0
+    const repository = createIdentityRepository({
+      async one() {
+        identityLookup += 1
+        if (identityLookup === 1) return null
+        return {
+          id: 'user-1',
+          status: 'ACTIVE',
+          primary_branch_id: null,
+          version: 1,
+          identity_id: 'identity-1',
+          union_identity_key: null,
+        }
+      },
+      async transaction(work) {
+        const queries = []
+        transactions.push(queries)
+        return work({
+          async one(sql) {
+            if (sql.includes('FROM mip_user_identities')) {
+              return {
+                id: 'identity-1',
+                user_id: 'user-1',
+                identity_key: 'a'.repeat(64),
+                closed_identity_key: null,
+                union_identity_key: null,
+              }
+            }
+            return { id: 'user-1', status: 'ACTIVE', primary_branch_id: null, version: 1 }
+          },
+          async query(sql, params) {
+            queries.push({ sql, params })
+            return { affectedRows: 1 }
+          },
+        })
+      },
+    }, {
+      id: (() => {
+        const ids = ['user-1', 'identity-1', 'outbox-1']
+        return () => ids.shift()
+      })(),
+    })
+
+    await repository.ensureUser({
+      appId: 'wx0000000000000001',
+      identityKey: 'a'.repeat(64),
+      unionIdentityKey: null,
+    })
+
+    assert.equal(transactions.length, 2)
+    assert.match(transactions[0][0].sql, /INSERT INTO mip_users/)
+    assert.match(transactions[0][1].sql, /INSERT INTO mip_membership_chains/)
+    assert.deepEqual(transactions[0][1].params, ['wx0000000000000001', 'user-1'])
+    assert.match(transactions[0][2].sql, /INSERT INTO mip_user_identities/)
+  })
+
+  it('fails the registration transaction before identity creation when the chain cannot be inserted', async () => {
+    const queries = []
+    const committed = []
+    const repository = createIdentityRepository({
+      async one() { return null },
+      async transaction(work) {
+        const pending = []
+        const result = await work({
+          async query(sql) {
+            queries.push(sql)
+            if (sql.includes('INSERT INTO mip_membership_chains')) {
+              throw new Error('CHAIN_INSERT_FAILED')
+            }
+            pending.push(sql)
+            return { affectedRows: 1 }
+          },
+        })
+        committed.push(...pending)
+        return result
+      },
+    }, { id: () => 'user-1' })
+
+    await assert.rejects(
+      () => repository.ensureUser({
+        appId: 'wx0000000000000001',
+        identityKey: 'a'.repeat(64),
+        unionIdentityKey: null,
+      }),
+      /CHAIN_INSERT_FAILED/,
+    )
+    assert.equal(queries.length, 2)
+    assert.match(queries[0], /INSERT INTO mip_users/)
+    assert.match(queries[1], /INSERT INTO mip_membership_chains/)
+    assert.equal(queries.some(sql => sql.includes('INSERT INTO mip_user_identities')), false)
+    assert.deepEqual(committed, [])
   })
 })
 

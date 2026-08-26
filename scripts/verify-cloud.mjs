@@ -12,6 +12,10 @@ import {
   loadCaseEnv,
   sqlLiteral,
 } from './lib/example-cloudbase.mjs'
+import {
+  assertMembershipChainInvariant,
+  MIP_MEMBERSHIP_CHAIN_INVARIANT_SQL,
+} from './lib/membership-chain-reconcile.mjs'
 import { createMipCoreFunctionManifest } from './lib/mip-function-manifest.mjs'
 import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
 import { assertMipSchedulerHmacSecretsIsolated } from './lib/mip-local-secrets.mjs'
@@ -65,6 +69,10 @@ const missingTables = requiredTables.filter(table => !foundTables.has(table))
 if (missingTables.length) {
   throw new Error(`MIP schema verification failed; missing table ${missingTables[0]}`)
 }
+const membershipChainInvariant = assertMembershipChainInvariant(callCloudbase(root, 'queryMysqlDatabase', {
+  action: 'runQuery',
+  sql: MIP_MEMBERSHIP_CHAIN_INVARIANT_SQL,
+}))
 
 const coreDetails = new Map()
 const verifiedFunctions = []
@@ -153,6 +161,8 @@ fs.writeFileSync(path.join(root, '.tmp', 'verify-cloud-result.json'), `${JSON.st
   paymentMode,
   functionsVerified: verifiedFunctions,
   tablesVerified: requiredTables.length,
+  membershipChainsVerified: membershipChainInvariant.chainCount,
+  membershipChainInvariant: 'users-1:1-no-orphans',
   runtimeAccountLeastPrivilege: true,
   protectedFunctionsVerified: protectedFunctions,
   disabledPaymentFunctionsProtected,

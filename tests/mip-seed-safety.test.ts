@@ -22,6 +22,7 @@ describe('MIP demo seed ownership safety', () => {
     expect(query).toContain('SELECT registration_id AS id FROM mip_event_invitation_attributions')
     expect(query).toContain('SELECT id FROM mip_event_hearts')
     expect(query).toContain('SELECT id FROM mip_profile_visits')
+    expect(query).toContain('SELECT user_id AS id FROM mip_membership_chains')
     expect(query).toContain('app_id <> \'wx1111111111111111\'')
     expect(query).toContain('COUNT(*) AS conflicts')
   })
@@ -30,6 +31,7 @@ describe('MIP demo seed ownership safety', () => {
     const query = buildSeedCollisionQuery('wx1111111111111111', seed)
     expect(query).toContain('setting_key LIKE \'demo_seed_manifest%\'')
     expect(query).toContain('\'$.recordIds.users\'')
+    expect(query).toContain('FROM mip_membership_chains membership_chain')
     expect(query).toContain('branch_key =')
     expect(query).toContain('minimum_experience =')
     expect(query).toContain('merchant_order_no =')
@@ -135,7 +137,7 @@ describe('MIP demo seed ownership safety', () => {
     expect(result.statementCount).toBeGreaterThan(Object.keys(SEED_TABLES).length)
     expect(result.tableCount).toBeGreaterThan(Object.keys(SEED_TABLES).length)
     expect(result.fixtureGroups).toBe(42)
-    expect(result.tableCount).toBe(61)
+    expect(result.tableCount).toBe(62)
     expect(result.maxStatementBytes).toBeLessThan(30 * 1024)
   })
 
@@ -231,6 +233,7 @@ describe('MIP demo seed ownership safety', () => {
     expect(source).toContain('mip_event_invitation_attributions:')
     expect(source).toContain('mip_event_hearts:')
     expect(source).toContain('mip_profile_visits:')
+    expect(source).toContain('mip_membership_chains:')
   })
 
   it('keeps demo users out of the platform-owner bootstrap path', () => {

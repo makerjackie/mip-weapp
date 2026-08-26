@@ -56,6 +56,8 @@ export const RUNTIME_TABLE_PRIVILEGES = Object.freeze({
   mip_orders: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_payment_attempts: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_refunds: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_membership_chains: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_membership_adjustments: Object.freeze(['SELECT', 'INSERT']),
   mip_membership_entitlements: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_membership_attributions: Object.freeze(['INSERT']),
   mip_payment_callbacks: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),

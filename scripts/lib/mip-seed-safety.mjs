@@ -56,6 +56,9 @@ export function buildSeedOwnershipQuery(appId, seed) {
     selects.push(`SELECT id FROM ${table}
       WHERE id IN (${ids.map(id => `'${id}'`).join(', ')}) AND app_id <> '${appId}'`)
   }
+  selects.push(`SELECT user_id AS id FROM mip_membership_chains
+    WHERE user_id IN (${seedIds(seed, 'users').map(literal).join(', ')})
+      AND app_id <> ${literal(appId)}`)
   const influence = userInfluenceFixtures(seed)
   selects.push(`SELECT registration_id AS id FROM mip_event_invitation_attributions
     WHERE registration_id IN (${influence.eventInvitationAttributions.map(item => literal(item.registrationId)).join(', ')})
@@ -90,6 +93,20 @@ export function buildSeedCollisionQuery(appId, seed) {
             ) IS NOT NULL
         )`)
   }
+  selects.push(`SELECT membership_chain.user_id AS id
+    FROM mip_membership_chains membership_chain
+    WHERE membership_chain.app_id = ${literal(appId)}
+      AND membership_chain.user_id IN (${seedIds(seed, 'users').map(literal).join(', ')})
+      AND NOT EXISTS (
+        SELECT 1 FROM mip_app_settings demo_manifest
+        WHERE demo_manifest.app_id = membership_chain.app_id
+          AND demo_manifest.setting_key LIKE 'demo_seed_manifest%'
+          AND JSON_UNQUOTE(JSON_EXTRACT(demo_manifest.value_json, '$.is_demo')) = '1'
+          AND JSON_SEARCH(
+            JSON_EXTRACT(demo_manifest.value_json, '$.recordIds.users'),
+            'one', membership_chain.user_id
+          ) IS NOT NULL
+      )`)
   selects.push(alternateKeySelect(appId, 'mip_city_branches', seed.branches, item => `branch_key = ${literal(item.key)}`))
   selects.push(alternateKeySelect(appId, 'mip_tags', seed.tags, item => `kind = ${literal(item.kind)} AND tag_key = ${literal(item.key)}`))
   selects.push(alternateKeySelect(appId, 'mip_membership_plans', seed.membershipPlans, item => `catalog_stage = 'TEST' AND plan_key = ${literal(item.key)}`))
