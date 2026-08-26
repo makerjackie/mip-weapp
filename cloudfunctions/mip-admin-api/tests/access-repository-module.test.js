@@ -181,6 +181,8 @@ describe('admin access repository module', () => {
       summary: '',
       status: 'ACTIVE',
       version: 1,
+      currentPlayerCount: 0,
+      branchAdminNames: [],
       blockers: {
         activeMemberships: 0,
         activeBranchAdmins: 0,
