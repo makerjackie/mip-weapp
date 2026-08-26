@@ -115,6 +115,7 @@
         "community-reports/index",
         "exceptions/index",
         "message-delivery-review/index",
+        "message-delivery-records/index",
         "audit/index",
         "roles/index"
       ]

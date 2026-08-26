@@ -14,6 +14,7 @@ module.exports = defineManifest('MESSAGING', [
   serviceOperation('mip.admin.messageTemplates.get', 'QUERY', 'getMessageTemplate'),
   serviceOperation('mip.admin.messageDeliveryReviews.list', 'QUERY', 'listMessageDeliveryReviews'),
   serviceOperation('mip.admin.messageDeliveryReviews.get', 'QUERY', 'getMessageDeliveryReview'),
+  serviceOperation('mip.admin.messageDeliveryRecords.list', 'QUERY', 'listMessageDeliveryRecords'),
   serviceOperation('mip.admin.announcements.save', 'MUTATION', 'saveAnnouncement'),
   serviceOperation('mip.admin.announcements.publish', 'MUTATION', 'publishAnnouncement', { wakesOutbox: true }),
   serviceOperation('mip.admin.announcements.withdraw', 'MUTATION', 'withdrawAnnouncement', { wakesOutbox: true }),

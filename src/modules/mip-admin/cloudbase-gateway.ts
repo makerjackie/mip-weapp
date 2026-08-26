@@ -72,6 +72,7 @@ import {
   parseMessageCampaignScopes,
   parseMessageRecipientPage,
 } from './message-campaigns'
+import { parseMessageDeliveryRecordPage } from './message-delivery-records'
 import {
   parseDeliveryReview,
   parseDeliveryReviewPage,
@@ -738,6 +739,9 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
     ),
     listMessageDeliveryReviews: async input => parseDeliveryReviewPage(
       await call('mip.admin.messageDeliveryReviews.list', { ...(input || {}) }),
+    ),
+    listMessageDeliveryRecords: async input => parseMessageDeliveryRecordPage(
+      await call('mip.admin.messageDeliveryRecords.list', { ...(input || {}) }),
     ),
     getMessageDeliveryReview: async resourceRef => parseDeliveryReview(
       await call('mip.admin.messageDeliveryReviews.get', { resourceRef }),

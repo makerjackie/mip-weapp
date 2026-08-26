@@ -11,6 +11,7 @@ const { appendLevelTransition } = require('./level-transitions')
 const { assertFixedGrowthRuleUpdate } = require('./growth-rule-catalog')
 const { createMessageCampaignRepository } = require('./message-campaigns')
 const { createMessageDeliveryReviewRepository } = require('./message-delivery-reviews')
+const { createMessageDeliveryRecordRepository } = require('./message-delivery-records')
 const { createMessageTemplateRepository } = require('./message-templates')
 const { createMatchingAdminRepository } = require('./matching-admin')
 const { createOpportunityArchiveRepository } = require('./opportunity-archive')
@@ -317,6 +318,7 @@ function createAdminRepository(database, options = {}) {
     lockMutationAuthorization: lockMutation,
     now,
   })
+  const messageDeliveryRecordRepository = createMessageDeliveryRecordRepository(database)
   const messageTemplateRepository = createMessageTemplateRepository(database, {
     assertMutationScope: assertScope,
     createId: id,
@@ -1494,6 +1496,7 @@ function createAdminRepository(database, options = {}) {
     ...dashboardOverviewRepository,
     ...messageCampaignRepository,
     ...messageDeliveryReviewRepository,
+    ...messageDeliveryRecordRepository,
     ...messageTemplateRepository,
     ...membershipRepository,
     ...opportunityArchiveRepository,

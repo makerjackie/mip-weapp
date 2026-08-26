@@ -89,6 +89,7 @@ const expectedOperations = Object.freeze({
   'mip.admin.messageCampaigns.get': ['MESSAGING', 'QUERY', 'getMessageCampaign'],
   'mip.admin.messageDeliveryReviews.list': ['MESSAGING', 'QUERY', 'listMessageDeliveryReviews'],
   'mip.admin.messageDeliveryReviews.get': ['MESSAGING', 'QUERY', 'getMessageDeliveryReview'],
+  'mip.admin.messageDeliveryRecords.list': ['MESSAGING', 'QUERY', 'listMessageDeliveryRecords'],
   'mip.admin.messageCampaigns.recipients': ['MESSAGING', 'QUERY', 'searchMessageRecipients'],
   'mip.admin.messageTemplates.list': ['MESSAGING', 'QUERY', 'listMessageTemplates'],
   'mip.admin.messageTemplates.get': ['MESSAGING', 'QUERY', 'getMessageTemplate'],
@@ -208,12 +209,12 @@ function manifest(owner, operations) {
 }
 
 describe('admin operation catalog', () => {
-  it('freezes the exact 143 business actions, owners, and kinds while keeping health separate', () => {
+  it('freezes the exact 144 business actions, owners, and kinds while keeping health separate', () => {
     const handlerActions = Object.keys(actions).filter(action => action !== 'health')
     const expectedActions = Object.keys(expectedOperations)
 
-    assert.equal(expectedActions.length, 143)
-    assert.equal(operationCatalog.length, 143)
+    assert.equal(expectedActions.length, 144)
+    assert.equal(operationCatalog.length, 144)
     assert.deepEqual(sorted(handlerActions), sorted(expectedActions))
     assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(expectedActions))
     assert.equal(operationByAction.health, undefined)

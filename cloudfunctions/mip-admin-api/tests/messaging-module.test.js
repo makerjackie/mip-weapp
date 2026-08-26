@@ -339,6 +339,7 @@ describe('admin messaging deep module', () => {
       'listAnnouncements',
       'listMessageCampaignScopes',
       'listMessageCampaigns',
+      'listMessageDeliveryRecords',
       'listMessageTemplates',
       'publishAnnouncement',
       'publishMessageCampaign',

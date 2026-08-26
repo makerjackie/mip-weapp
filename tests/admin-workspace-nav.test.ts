@@ -83,6 +83,7 @@ describe('MIP admin desktop workspace navigation', () => {
       'managed-events',
       'event-participants',
       'message-campaigns',
+      'message-delivery-records',
       'branches',
     ])
     expect(items.find(item => item.key === 'managed-events')?.active).toBe(true)

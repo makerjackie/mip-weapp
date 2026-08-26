@@ -124,6 +124,12 @@ export const adminWorkspaceGroups: readonly AdminWorkspaceNavGroup[] = [
         capabilities: ['messages.manage'],
       },
       {
+        key: 'message-delivery-records',
+        label: '消息投递记录',
+        route: 'packages/admin/message-delivery-records/index',
+        capabilities: ['messages.manage'],
+      },
+      {
         key: 'banners',
         label: 'Banner 管理',
         route: 'packages/admin/banners/index',
@@ -256,6 +262,7 @@ const activeItemByRoute: Readonly<Record<string, string>> = {
   'packages/admin/announcements/index': 'announcements',
   'packages/admin/announcement-editor/index': 'announcements',
   'packages/admin/message-campaigns/index': 'message-campaigns',
+  'packages/admin/message-delivery-records/index': 'message-delivery-records',
   'packages/admin/banners/index': 'banners',
   'packages/admin/banner-editor/index': 'banners',
   'packages/admin/knowledge/index': 'knowledge',

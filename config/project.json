@@ -405,6 +405,10 @@
       "pathName": "packages/admin/message-delivery-review/index"
     },
     {
+      "name": "消息投递记录",
+      "pathName": "packages/admin/message-delivery-records/index"
+    },
+    {
       "name": "运营审计",
       "pathName": "packages/admin/audit/index"
     },

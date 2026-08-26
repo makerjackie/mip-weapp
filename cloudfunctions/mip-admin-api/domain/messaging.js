@@ -23,6 +23,7 @@ const {
   normalizeMessageTemplateDraft,
   normalizeMessageTemplateFilters,
 } = require('./message-template-validation')
+const { normalizeMessageDeliveryRecordList } = require('./message-delivery-records')
 const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
 const {
   AdminError,
@@ -243,6 +244,17 @@ function createAdminMessaging({
       limit(input.limit, 50),
     )
     return { items: items.map(item => publicCampaign(item, context.caller.appId)), nextCursor: null }
+  }
+
+  async function listMessageDeliveryRecords(caller, input = {}) {
+    const context = await access.session(caller)
+    firstGrant(context.bindings, CAPABILITIES.MESSAGES_MANAGE)
+    const request = normalizeMessageDeliveryRecordList(input)
+    return repository.listMessageDeliveryRecords({
+      appId: context.caller.appId,
+      visibility: visibilityForCapability(context.bindings, CAPABILITIES.MESSAGES_MANAGE),
+      ...request,
+    })
   }
 
   async function getMessageCampaign(caller, input = {}) {
@@ -563,6 +575,7 @@ function createAdminMessaging({
     listAnnouncementScopes,
     listMessageCampaignScopes,
     listMessageCampaigns,
+    listMessageDeliveryRecords,
     listMessageTemplates,
     publishAnnouncement,
     publishMessageCampaign,

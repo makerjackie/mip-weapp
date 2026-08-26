@@ -2,7 +2,7 @@
 
 const operationManifests = require('./operations')
 
-const EXPECTED_OPERATION_COUNT = 143
+const EXPECTED_OPERATION_COUNT = 144
 const OPERATION_KINDS = Object.freeze(['QUERY', 'MUTATION'])
 const OPERATION_OWNERS = Object.freeze([
   'ACCESS',

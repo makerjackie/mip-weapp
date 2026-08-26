@@ -10,6 +10,7 @@ type CampaignListInput = NonNullable<Parameters<MipAdminGateway['listMessageCamp
 type RecipientSearchInput = NonNullable<Parameters<MipAdminGateway['searchMessageRecipients']>[0]>
 type TemplateListInput = NonNullable<Parameters<MipAdminGateway['listMessageTemplates']>[0]>
 type DeliveryReviewListInput = NonNullable<Parameters<MipAdminGateway['listMessageDeliveryReviews']>[0]>
+type DeliveryRecordListInput = NonNullable<Parameters<MipAdminGateway['listMessageDeliveryRecords']>[0]>
 
 export interface MipMessagingAdmin {
   getAnnouncementScopes: (force?: boolean) => ReturnType<MipAdminGateway['getAnnouncementScopes']>
@@ -59,6 +60,10 @@ export interface MipMessagingAdmin {
     input?: DeliveryReviewListInput,
     force?: boolean,
   ) => ReturnType<MipAdminGateway['listMessageDeliveryReviews']>
+  listDeliveryRecords: (
+    input?: DeliveryRecordListInput,
+    force?: boolean,
+  ) => ReturnType<MipAdminGateway['listMessageDeliveryRecords']>
   getDeliveryReview: (
     resourceRef: Parameters<MipAdminGateway['getMessageDeliveryReview']>[0],
     force?: boolean,
@@ -101,6 +106,7 @@ export function createMipMessagingAdmin(
   const invalidateCampaigns = [cacheKeys.campaigns, cacheKeys.campaign]
   const invalidateTemplates = [cacheKeys.templates, cacheKeys.template]
   const invalidateDeliveryReviews = [cacheKeys.deliveryReviews, cacheKeys.deliveryReview]
+  const deliveryRecordsCacheKey = 'mip-admin:message-delivery-records'
 
   return {
     getAnnouncementScopes: (force = false) => cache.query(
@@ -197,6 +203,11 @@ export function createMipMessagingAdmin(
     listDeliveryReviews: (input: DeliveryReviewListInput = {}, force = false) => cache.query(
       inputCacheKey(cacheKeys.deliveryReviews, input),
       () => gateway.listMessageDeliveryReviews(input),
+      { force },
+    ),
+    listDeliveryRecords: (input: DeliveryRecordListInput = {}, force = false) => cache.query(
+      inputCacheKey(deliveryRecordsCacheKey, input),
+      () => gateway.listMessageDeliveryRecords(input),
       { force },
     ),
     getDeliveryReview: (resourceRef, force = false) => cache.query(

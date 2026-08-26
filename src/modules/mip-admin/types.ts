@@ -53,6 +53,10 @@ import type {
   AdminMessageRecipientCandidate,
 } from './message-campaigns'
 import type {
+  AdminMessageDeliveryRecordListInput,
+  AdminMessageDeliveryRecordPage,
+} from './message-delivery-records'
+import type {
   AdminDeliveryReviewItem,
   AdminDeliveryReviewListInput,
   AdminDeliveryReviewMutationInput,
@@ -1120,6 +1124,7 @@ export interface MipAdminGateway {
   cancelMessageCampaignSchedule: (input: AdminMessageCampaignCancelScheduleInput) => Promise<AdminMessageCampaign>
   withdrawMessageCampaign: (campaignId: string, expectedVersion: number, reason: string) => Promise<AdminMessageCampaign>
   listMessageDeliveryReviews: (input?: AdminDeliveryReviewListInput) => Promise<AdminDeliveryReviewPage>
+  listMessageDeliveryRecords: (input?: AdminMessageDeliveryRecordListInput) => Promise<AdminMessageDeliveryRecordPage>
   getMessageDeliveryReview: (resourceRef: AdminDeliveryReviewResourceRef) => Promise<AdminDeliveryReviewItem>
   claimMessageDeliveryReview: (input: AdminDeliveryReviewMutationInput) => Promise<AdminDeliveryReviewItem>
   reconcileMessageDeliveryReview: (input: AdminDeliveryReviewMutationInput) => Promise<AdminDeliveryReviewItem>

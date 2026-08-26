@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "operationCount": 143,
+  "operationCount": 144,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -564,6 +564,14 @@
     },
     {
       "action": "mip.admin.messageDeliveryReviews.get",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.messageDeliveryRecords.list",
       "kind": "QUERY",
       "authentication": "REQUIRED",
       "session": "REQUIRED",
