@@ -17,7 +17,7 @@ const OPERATION_OWNERS = Object.freeze([
 ])
 const healthOperation = Object.freeze({ action: 'health', owner: 'SYSTEM', kind: 'QUERY' })
 const manifestKeys = new Set(['owner', 'operations'])
-const operationKeys = new Set(['action', 'kind', 'dispatch', 'wakesOutbox'])
+const operationKeys = new Set(['action', 'kind', 'dispatch', 'sessionFirst', 'wakesOutbox'])
 
 function createOperationRegistry(manifests, options = {}) {
   const expectedCount = options.expectedCount ?? EXPECTED_OPERATION_COUNT
@@ -67,6 +67,9 @@ function createOperationRegistry(manifests, options = {}) {
       if (typeof definition.dispatch !== 'function') {
         throw new TypeError('OPERATION_DISPATCH_INVALID')
       }
+      if (typeof definition.sessionFirst !== 'boolean') {
+        throw new Error('OPERATION_SESSION_INVALID')
+      }
       if (typeof definition.wakesOutbox !== 'boolean'
         || (definition.wakesOutbox && definition.kind !== 'MUTATION')) {
         throw new Error('OPERATION_OUTBOX_INVALID')
@@ -78,6 +81,7 @@ function createOperationRegistry(manifests, options = {}) {
         owner: manifest.owner,
         kind: definition.kind,
         dispatch: definition.dispatch,
+        sessionFirst: definition.sessionFirst,
         wakesOutbox: definition.wakesOutbox,
       }))
     }

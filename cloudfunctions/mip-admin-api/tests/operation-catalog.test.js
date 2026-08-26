@@ -1,8 +1,6 @@
 'use strict'
 
 const assert = require('node:assert/strict')
-const fs = require('node:fs')
-const path = require('node:path')
 const { describe, it } = require('node:test')
 const { actions } = require('../domain/handler')
 const {
@@ -17,7 +15,6 @@ const {
   outboxMutationActions,
 } = require('../domain/operation-registry')
 
-const root = path.resolve(__dirname, '../../..')
 const expectedOperations = Object.freeze({
   'mip.admin.session': ['ACCESS', 'QUERY', 'getSession'],
   'mip.admin.branches.list': ['ACCESS', 'QUERY', 'listBranches'],
@@ -164,13 +161,6 @@ const expectedOutboxActions = Object.freeze([
   'mip.admin.opportunityComments.moderate',
 ])
 
-function setLiteralStrings(filePath, constantName) {
-  const source = fs.readFileSync(filePath, 'utf8')
-  const match = source.match(new RegExp(`const ${constantName} = new Set\\(\\[([\\s\\S]*?)\\]\\)`))
-  assert.ok(match, `${constantName} set literal must exist in ${filePath}`)
-  return [...match[1].matchAll(/'([^']+)'/g)].map(item => item[1])
-}
-
 function sorted(values) {
   return [...values].sort()
 }
@@ -180,6 +170,7 @@ function definition(action, kind = 'QUERY', options = {}) {
     action,
     kind,
     dispatch: options.dispatch || (() => undefined),
+    sessionFirst: options.sessionFirst === true,
     wakesOutbox: options.wakesOutbox === true,
     ...options.extra,
   }
@@ -205,9 +196,10 @@ describe('admin operation catalog', () => {
     assert.deepEqual(healthOperation, { action: 'health', owner: 'SYSTEM', kind: 'QUERY' })
 
     for (const operation of operationCatalog) {
-      const [owner, kind] = expectedOperations[operation.action]
+      const [owner, kind, , mode] = expectedOperations[operation.action]
       assert.equal(operation.owner, owner, operation.action)
       assert.equal(operation.kind, kind, operation.action)
+      assert.equal(operation.sessionFirst, mode === 'SESSION_FIRST', operation.action)
       assert.equal(operationByAction[operation.action], operation)
       assert.equal(Object.isFrozen(operation), true)
     }
@@ -251,19 +243,8 @@ describe('admin operation catalog', () => {
       assert.equal(OPERATION_OWNERS.includes(operation.owner), true)
       assert.equal(OPERATION_KINDS.includes(operation.kind), true)
       assert.equal(typeof operation.dispatch, 'function')
+      assert.equal(typeof operation.sessionFirst, 'boolean')
       assert.equal(typeof operation.wakesOutbox, 'boolean')
-    }
-  })
-
-  it('classifies every client read retry action as a query', () => {
-    const readActions = setLiteralStrings(
-      path.join(root, 'src/modules/mip-admin/cloudbase-transport.ts'),
-      'readActions',
-    )
-
-    assert.equal(new Set(readActions).size, readActions.length)
-    for (const action of readActions) {
-      assert.equal(operationByAction[action]?.kind, 'QUERY', `${action} must be a catalog query`)
     }
   })
 
@@ -296,6 +277,10 @@ describe('admin operation catalog', () => {
       {
         manifests: [manifest('ACCESS', [{ ...valid, dispatch: null }])],
         error: 'OPERATION_DISPATCH_INVALID',
+      },
+      {
+        manifests: [manifest('ACCESS', [{ ...valid, sessionFirst: null }])],
+        error: 'OPERATION_SESSION_INVALID',
       },
       {
         manifests: [manifest('ACCESS', [definition('mip.admin.test', 'QUERY', { wakesOutbox: true })])],

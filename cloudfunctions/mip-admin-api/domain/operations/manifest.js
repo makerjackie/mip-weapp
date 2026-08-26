@@ -8,9 +8,10 @@ function defineManifest(owner, operations) {
 }
 
 function serviceOperation(action, kind, method, options = {}) {
+  const sessionFirst = options.sessionFirst === true
   const wakesOutbox = options.wakesOutbox === true
   let dispatch
-  if (options.sessionFirst === true) {
+  if (sessionFirst) {
     dispatch = async (service, caller, input) => {
       await service.getSession(caller)
       return service[method](caller, input)
@@ -23,7 +24,7 @@ function serviceOperation(action, kind, method, options = {}) {
     dispatch = (service, caller, input) => service[method](caller, input)
   }
 
-  return Object.freeze({ action, kind, dispatch, wakesOutbox })
+  return Object.freeze({ action, kind, dispatch, sessionFirst, wakesOutbox })
 }
 
 module.exports = { defineManifest, serviceOperation }

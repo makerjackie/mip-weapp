@@ -2,6 +2,7 @@
 
 import fs from 'node:fs'
 import path from 'node:path'
+import { assertAdminOperationContractArtifact } from './lib/admin-operation-contract.mjs'
 import { createMipCoreFunctionManifest } from './lib/mip-function-manifest.mjs'
 import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
 import {
@@ -18,6 +19,8 @@ import {
 } from './lib/ui-contracts.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
+
+assertAdminOperationContractArtifact(root)
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8')

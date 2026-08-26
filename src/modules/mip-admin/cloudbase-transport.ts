@@ -4,6 +4,7 @@ import type { AdminTransport } from './transport'
 import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
 import { runtimeConfig } from '../../config/runtime'
 import { requireCloudClient } from '../platform/cloudbase'
+import { retryableAdminOperationActions } from './operation-contract'
 import { MipAdminError } from './types'
 
 interface Envelope<T> {
@@ -12,54 +13,7 @@ interface Envelope<T> {
   error?: { code?: string, message?: string, retryable?: boolean, details?: unknown }
 }
 
-export const readActions = new Set([
-  'mip.admin.session',
-  'mip.admin.dashboard',
-  'mip.admin.dashboard.overview.get',
-  'mip.admin.branches.list',
-  'mip.admin.announcements.scopes',
-  'mip.admin.announcements.list',
-  'mip.admin.announcements.get',
-  'mip.admin.messageCampaigns.scopes',
-  'mip.admin.messageCampaigns.list',
-  'mip.admin.messageCampaigns.get',
-  'mip.admin.messageDeliveryReviews.list',
-  'mip.admin.messageDeliveryReviews.get',
-  'mip.admin.messageCampaigns.recipients',
-  'mip.admin.messageTemplates.list',
-  'mip.admin.messageTemplates.get',
-  'mip.admin.communityReports.list',
-  'mip.admin.users.list',
-  'mip.admin.users.get',
-  'mip.admin.events.list',
-  'mip.admin.events.policy.get',
-  'mip.admin.events.get',
-  'mip.admin.events.insights.get',
-  'mip.admin.events.album.list',
-  'mip.admin.events.comments.get',
-  'mip.admin.events.roster',
-  'mip.admin.events.rosterAll',
-  'mip.admin.roles.list',
-  'mip.admin.roles.candidates',
-  'mip.admin.rolePolicies.list',
-  'mip.admin.opportunities.list',
-  'mip.admin.opportunities.get',
-  'mip.admin.opportunities.options',
-  'mip.admin.opportunityComments.get',
-  'mip.admin.matching.get',
-  'mip.admin.growth.levels',
-  'mip.admin.growth.benefits',
-  'mip.admin.growth.rules',
-  'mip.admin.growth.entries',
-  'mip.admin.badges.list',
-  'mip.admin.badges.awards',
-  'mip.admin.orders.list',
-  'mip.admin.knowledge.list',
-  'mip.admin.knowledge.get',
-  'mip.admin.exceptions.list',
-  'mip.admin.audit.list',
-  'mip.admin.exports.status',
-])
+export const readActions = retryableAdminOperationActions
 
 type AdminCloudClient = Pick<CaseCloudClient, 'callFunction'>
 

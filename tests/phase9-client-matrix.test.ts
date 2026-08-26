@@ -4,6 +4,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
 import { describe, expect, it, vi } from 'vitest'
+import { adminOperationContract } from '../src/modules/mip-admin/operation-contract'
 import { createMipCommerceGateway } from '../src/modules/mip-commerce/gateway'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -25,7 +26,9 @@ describe('phase9 gateway retry policy (read-only)', () => {
     const adminTransport = read('src/modules/mip-admin/cloudbase-transport.ts')
     const eventGateway = read('src/modules/mip-events/cloudbase-gateway.ts')
 
-    const adminReads = extractRetryableActions(adminTransport)
+    const adminReads = adminOperationContract.operations
+      .filter(operation => operation.safeToRetry)
+      .map(operation => operation.action)
     const eventReads = extractRetryableActions(eventGateway)
 
     expect(adminReads.length).toBeGreaterThan(0)
@@ -59,6 +62,8 @@ describe('phase9 gateway retry policy (read-only)', () => {
     }
     expect(eventReads).toContain('mip.events.myRegistration')
 
+    expect(adminTransport).toContain('import { retryableAdminOperationActions } from \'./operation-contract\'')
+    expect(adminTransport).not.toMatch(/new Set\(\[/)
     expect(adminTransport).toContain('readActions.has(request.action) ? COLD_START_READ_RETRY : { attempts: 1 }')
     expect(eventGateway).toContain('readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 }')
     expect(COLD_START_READ_RETRY.attempts).toBeGreaterThan(1)
