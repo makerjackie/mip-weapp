@@ -37,7 +37,9 @@ function stateForException(item: AdminOperationalException): AdminOperationsQueu
 }
 
 function stateForReview(item: AdminDeliveryReviewItem): AdminOperationsQueueState | null {
-  if (item.workflow.status === 'RESOLVED') return null
+  if (item.workflow.status === 'RESOLVED') {
+    return null
+  }
   if (item.classification === 'PROCESSING_ACTIVE' || item.classification === 'PROCESSING_STALLED') {
     return 'PROCESSING'
   }
@@ -49,7 +51,9 @@ function stateForReview(item: AdminDeliveryReviewItem): AdminOperationsQueueStat
 
 function targetForReview(item: AdminDeliveryReviewItem): AdminOperationalExceptionTarget | null {
   const target = item.evidence.targetRef
-  if (!target || !uuidPattern.test(target.id)) return null
+  if (!target || !uuidPattern.test(target.id)) {
+    return null
+  }
   const routes: Record<string, string> = {
     EVENT: `/packages/admin/event-console/index?eventId=${target.id}`,
     ORDER: '/packages/admin/orders/index',
@@ -79,7 +83,9 @@ export function deriveOperationsQueue(
   }))
   for (const item of reviews) {
     const state = stateForReview(item)
-    if (!state) continue
+    if (!state) {
+      continue
+    }
     items.push({
       id: `DELIVERY_REVIEW:${item.resourceRef.type}:${item.resourceRef.id}`,
       state,
@@ -97,13 +103,15 @@ export function deriveOperationsQueue(
   }
   items.sort((left, right) => (
     Date.parse(right.occurredAt) - Date.parse(left.occurredAt)
-      || right.id.localeCompare(left.id)
+    || right.id.localeCompare(left.id)
   ))
   return { items, nextCursor: null }
 }
 
 export function parseOperationsQueuePage(value: unknown): AdminOperationsQueuePage {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw invalidResponse()
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw invalidResponse()
+  }
   const record = value as Record<string, unknown>
   if (!Array.isArray(record.items) || !(record.nextCursor === null || typeof record.nextCursor === 'string')
     || Object.keys(record).some(key => !['items', 'nextCursor'].includes(key))) {
@@ -113,31 +121,44 @@ export function parseOperationsQueuePage(value: unknown): AdminOperationsQueuePa
 }
 
 function parseItem(value: unknown): AdminOperationsQueueItem {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw invalidResponse()
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw invalidResponse()
+  }
   const record = value as Record<string, unknown>
   if (Object.keys(record).some(key => ![
-    'id', 'state', 'source', 'sourceType', 'title', 'summary', 'occurredAt', 'reasonCode', 'target', 'reviewRef',
+    'id',
+    'state',
+    'source',
+    'sourceType',
+    'title',
+    'summary',
+    'occurredAt',
+    'reasonCode',
+    'target',
+    'reviewRef',
   ].includes(key))
-    || typeof record.id !== 'string'
-    || !stateSet.has(String(record.state))
-    || !['EXCEPTION', 'DELIVERY_REVIEW'].includes(String(record.source))
-    || typeof record.sourceType !== 'string'
-    || typeof record.title !== 'string' || record.title.length < 1 || record.title.length > 80
-    || typeof record.summary !== 'string' || record.summary.length < 1 || record.summary.length > 240
-    || typeof record.occurredAt !== 'string' || !Number.isFinite(Date.parse(record.occurredAt))
-    || !(record.reasonCode === null || typeof record.reasonCode === 'string')
-    || !validQueueId(record.id)
-    || (record.source === 'EXCEPTION' && (!['OUTBOX', 'REFUND', 'PAYMENT', 'MEDIA', 'DELIVERY', 'AI'].includes(record.sourceType as string) || record.reviewRef !== null))
-    || (record.source === 'DELIVERY_REVIEW' && (!['CAMPAIGN_DISPATCH', 'DELIVERY_TASK'].includes(record.sourceType as string) || record.reviewRef === null))
-    || !parseTarget(record.target)
-    || !parseReviewRef(record.reviewRef)) {
+  || typeof record.id !== 'string'
+  || !stateSet.has(String(record.state))
+  || !['EXCEPTION', 'DELIVERY_REVIEW'].includes(String(record.source))
+  || typeof record.sourceType !== 'string'
+  || typeof record.title !== 'string' || record.title.length < 1 || record.title.length > 80
+  || typeof record.summary !== 'string' || record.summary.length < 1 || record.summary.length > 240
+  || typeof record.occurredAt !== 'string' || !Number.isFinite(Date.parse(record.occurredAt))
+  || !(record.reasonCode === null || typeof record.reasonCode === 'string')
+  || !validQueueId(record.id)
+  || (record.source === 'EXCEPTION' && (!['OUTBOX', 'REFUND', 'PAYMENT', 'MEDIA', 'DELIVERY', 'AI'].includes(record.sourceType as string) || record.reviewRef !== null))
+  || (record.source === 'DELIVERY_REVIEW' && (!['CAMPAIGN_DISPATCH', 'DELIVERY_TASK'].includes(record.sourceType as string) || record.reviewRef === null))
+  || !parseTarget(record.target)
+  || !parseReviewRef(record.reviewRef)) {
     throw invalidResponse()
   }
   return record as unknown as AdminOperationsQueueItem
 }
 
 function validQueueId(value: unknown) {
-  if (typeof value !== 'string') return false
+  if (typeof value !== 'string') {
+    return false
+  }
   const parts = value.split(':')
   return parts.length === 2
     ? ['OUTBOX', 'REFUND', 'PAYMENT', 'MEDIA', 'DELIVERY', 'AI'].includes(parts[0]) && uuidPattern.test(parts[1])
@@ -147,12 +168,18 @@ function validQueueId(value: unknown) {
 }
 
 function parseTarget(value: unknown): value is AdminOperationalExceptionTarget | null {
-  if (value === null) return true
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  if (value === null) {
+    return true
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false
+  }
   const target = value as Record<string, unknown>
   if (Object.keys(target).length !== 3 || Object.keys(target).some(key => !['type', 'id', 'route'].includes(key))
     || typeof target.type !== 'string' || typeof target.id !== 'string' || !uuidPattern.test(target.id)
-    || typeof target.route !== 'string') return false
+    || typeof target.route !== 'string') {
+    return false
+  }
   const routes: Record<string, string> = {
     EVENT: `/packages/admin/event-console/index?eventId=${target.id}`,
     ORDER: '/packages/admin/orders/index',
@@ -166,8 +193,12 @@ function parseTarget(value: unknown): value is AdminOperationalExceptionTarget |
 }
 
 function parseReviewRef(value: unknown): value is AdminDeliveryReviewResourceRef | null {
-  if (value === null) return true
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  if (value === null) {
+    return true
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return false
+  }
   const ref = value as Record<string, unknown>
   return Object.keys(ref).length === 2 && Object.keys(ref).every(key => ['type', 'id'].includes(key))
     && (ref.type === 'CAMPAIGN_DISPATCH' || ref.type === 'DELIVERY_TASK')

@@ -98,7 +98,9 @@ function filters(data: {
 
 function amountRange(minimum: string, maximum: string) {
   const toCents = (value: string) => {
-    if (!value.trim()) return undefined
+    if (!value.trim()) {
+      return undefined
+    }
     const yuan = Number(value)
     const cents = Math.round(yuan * 100)
     if (!Number.isFinite(yuan) || yuan < 0 || !Number.isSafeInteger(cents)) {
@@ -182,10 +184,14 @@ Page({
   },
   toggleLocationType(event: WechatMiniprogram.TouchEvent) {
     const type = String(event.currentTarget.dataset.type || '')
-    if (!['NATIONAL', 'REMOTE', 'CITY'].includes(type)) return
+    if (!['NATIONAL', 'REMOTE', 'CITY'].includes(type)) {
+      return
+    }
     const selected = new Set(this.data.locationTypes)
-    if (selected.has(type)) selected.delete(type)
-    else selected.add(type)
+    if (selected.has(type)) {
+      selected.delete(type)
+    }
+    else { selected.add(type) }
     this.setData({ locationTypes: [...selected], opportunities: [], nextCursor: null })
     void this.loadOpportunities(true)
   },

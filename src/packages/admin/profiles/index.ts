@@ -151,7 +151,9 @@ function userDetailView(detail: AdminUserDetail): AdminUserDetailView {
 
 function formatMembershipDuration(seconds: number) {
   const totalDays = Math.floor(seconds / 86_400)
-  if (totalDays < 365) return `${totalDays} 天`
+  if (totalDays < 365) {
+    return `${totalDays} 天`
+  }
   const years = Math.floor(totalDays / 365)
   const days = totalDays % 365
   return days ? `${years} 年 ${days} 天` : `${years} 年`

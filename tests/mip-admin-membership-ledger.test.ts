@@ -47,7 +47,7 @@ describe('admin membership ledger operator contract', () => {
       .toMatchObject({ items: [{ user: { playerNumber: 42 } }, { user: { playerNumber: null } }] })
     const page = fs.readFileSync(path.join(root, 'src/packages/admin/membership-ledger/index.wxml'), 'utf8')
     expect(page).toContain('搜索昵称或玩家编号')
-    expect(page).toContain("item.user.playerNumber ? '玩家编号 '")
+    expect(page).toContain('item.user.playerNumber ? \'玩家编号 \'')
     expect(page).not.toContain('item.user.id')
     expect(page).not.toContain('UUID')
   })

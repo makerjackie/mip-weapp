@@ -1,5 +1,5 @@
-import type { MipAdminGateway } from './types'
 import type { AdminOperationsQueueState } from './operations-queue'
+import type { MipAdminGateway } from './types'
 
 interface GovernanceAdminCache {
   query: <T>(key: string, loader: () => Promise<T>, options?: { force?: boolean }) => Promise<T>

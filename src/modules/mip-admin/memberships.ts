@@ -328,7 +328,7 @@ export function createAdminMembershipTimelineRequest(input: {
     throw new TypeError('Invalid admin membership timeline user ID')
   }
   if (normalizedFilters.userQuery
-    && (normalizedFilters.userQuery.length > 64 || /[\u0000-\u001f\u007f]/.test(normalizedFilters.userQuery))) {
+    && (normalizedFilters.userQuery.length > 64 || hasControlCharacter(normalizedFilters.userQuery))) {
     throw new TypeError('Invalid admin membership timeline user query')
   }
   if (normalizedFilters.status && !entitlementStatuses.has(normalizedFilters.status)) {
@@ -342,6 +342,13 @@ export function createAdminMembershipTimelineRequest(input: {
     ...(input.limit === undefined ? {} : { limit: input.limit }),
     ...(input.cursor ? { cursor: input.cursor } : {}),
   }
+}
+
+function hasControlCharacter(value: string) {
+  return [...value].some((character) => {
+    const code = character.codePointAt(0) || 0
+    return code < 32 || code === 127
+  })
 }
 
 export function parseAdminMembershipDetail(value: unknown): AdminMembershipDetail {

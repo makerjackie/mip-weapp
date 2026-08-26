@@ -32,7 +32,9 @@ const nationwideOption: CityOption = { id: '', label: '全国' }
 
 function amountRange(minimum: string, maximum: string) {
   const toCents = (value: string) => {
-    if (!value.trim()) return undefined
+    if (!value.trim()) {
+      return undefined
+    }
     const yuan = Number(value)
     const cents = Math.round(yuan * 100)
     if (!Number.isFinite(yuan) || yuan < 0 || !Number.isSafeInteger(cents)) {
@@ -462,10 +464,14 @@ Page({
 
   toggleLocationType(event: WechatMiniprogram.TouchEvent) {
     const type = String(event.currentTarget.dataset.type || '') as OpportunityLocationType
-    if (!['CITY', 'NATIONAL', 'REMOTE'].includes(type)) return
+    if (!['CITY', 'NATIONAL', 'REMOTE'].includes(type)) {
+      return
+    }
     const selected = new Set(this.data.draftLocationTypes)
-    if (selected.has(type)) selected.delete(type)
-    else selected.add(type)
+    if (selected.has(type)) {
+      selected.delete(type)
+    }
+    else { selected.add(type) }
     this.setData({ draftLocationTypes: [...selected] })
   },
 

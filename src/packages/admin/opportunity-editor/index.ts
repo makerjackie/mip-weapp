@@ -94,22 +94,32 @@ Page({
   },
   updateAmount(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const field = String(event.currentTarget.dataset.field || '')
-    if (field === 'minAmountYuan' || field === 'maxAmountYuan') this.setData({ [field]: event.detail.value })
+    if (field === 'minAmountYuan' || field === 'maxAmountYuan') {
+      this.setData({ [field]: event.detail.value })
+    }
   },
   toggleLocationType(event: WechatMiniprogram.TouchEvent) {
     const type = String(event.currentTarget.dataset.type || '') as 'NATIONAL' | 'REMOTE'
-    if (!['NATIONAL', 'REMOTE'].includes(type)) return
+    if (!['NATIONAL', 'REMOTE'].includes(type)) {
+      return
+    }
     const selected = new Set(this.data.locationTypes)
-    if (selected.has(type)) selected.delete(type)
-    else selected.add(type)
+    if (selected.has(type)) {
+      selected.delete(type)
+    }
+    else { selected.add(type) }
     this.setData({ locationTypes: [...selected] })
   },
   toggleLocationCity(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || '')
-    if (!id) return
+    if (!id) {
+      return
+    }
     const selected = new Set(this.data.locationCityTagIds)
-    if (selected.has(id)) selected.delete(id)
-    else selected.add(id)
+    if (selected.has(id)) {
+      selected.delete(id)
+    }
+    else { selected.add(id) }
     this.setData({ locationCityTagIds: [...selected] })
   },
   chooseDeadline(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
@@ -150,7 +160,10 @@ Page({
           branchId: this.data.scopeType === 'BRANCH' ? branch?.id : null,
           cityTagId: city?.id || null,
           commercialTerms: {
-            currency: 'CNY', amountUnit: 'CNY_CENTS', minAmountCents, maxAmountCents,
+            currency: 'CNY',
+            amountUnit: 'CNY_CENTS',
+            minAmountCents,
+            maxAmountCents,
             locations: [
               ...this.data.locationCityTagIds.map(cityTagId => ({ type: 'CITY', cityTagId })),
               ...this.data.locationTypes.map(type => ({ type })),

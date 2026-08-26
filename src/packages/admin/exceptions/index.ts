@@ -9,9 +9,9 @@ import type {
   AdminOperationalExceptionStatus,
   AdminOperationalExceptionType,
 } from '../../../modules/mip-admin/operational-exceptions'
+import type { AdminOperationsQueueItem, AdminOperationsQueueState } from '../../../modules/mip-admin/operations-queue'
 import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
-import type { AdminOperationsQueueItem, AdminOperationsQueueState } from '../../../modules/mip-admin/operations-queue'
 import { deliveryReviewMutationSignature } from '../../../modules/mip-admin/message-delivery-reviews'
 import { formatLocalDateTime } from '../../../utils/date'
 import { adminLoadFailure, isAdminForbiddenError } from '../shared/page-state'
@@ -380,14 +380,18 @@ Page({
 
   chooseQueueState(event: WechatMiniprogram.TouchEvent) {
     const value = String(event.currentTarget.dataset.value || '') as AdminOperationsQueueState | ''
-    if (value !== '' && !Object.hasOwn(queueStateLabels, value)) return
+    if (value !== '' && !Object.hasOwn(queueStateLabels, value)) {
+      return
+    }
     this.setData({ queueState: value })
     this.refreshQueue()
   },
 
   openQueueItem(event: WechatMiniprogram.TouchEvent) {
     const item = this.data.queueItems.find(candidate => candidate.id === String(event.currentTarget.dataset.id || ''))
-    if (!item) return
+    if (!item) {
+      return
+    }
     if (item.reviewRef) {
       const reviewId = `${item.reviewRef.type}:${item.reviewRef.id}`
       this.toggleReview({ currentTarget: { dataset: { id: reviewId } } } as unknown as WechatMiniprogram.TouchEvent)

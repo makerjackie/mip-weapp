@@ -165,7 +165,9 @@ Page({
     this.setData({ userQuery: event.detail.value })
   },
   search() {
-    if (this.data.userQuery.trim()) this.setData({ userId: '' })
+    if (this.data.userQuery.trim()) {
+      this.setData({ userId: '' })
+    }
     void this.loadTimeline(true)
   },
   changeStatus(event: WechatMiniprogram.CustomEvent) {

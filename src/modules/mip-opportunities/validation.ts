@@ -1,11 +1,11 @@
 import type { BranchId, CooperationRoleKey } from '../mip'
 import type {
-  OpportunityDraft,
   OpportunityCommercialTerms,
   OpportunityDetail,
+  OpportunityDraft,
+  OpportunityFilter,
   OpportunityLocationType,
   OpportunityPage,
-  OpportunityFilter,
   OpportunityTag,
   PeopleFilter,
   PeoplePage,
@@ -51,34 +51,56 @@ function profileRefs(value: unknown) {
 const locationTypes = new Set<OpportunityLocationType>(['CITY', 'NATIONAL', 'REMOTE'])
 
 function cents(value: unknown, field: string) {
-  if (value === undefined || value === null || value === '') return undefined
+  if (value === undefined || value === null || value === '') {
+    return undefined
+  }
   const result = typeof value === 'number' ? value : Number(value)
-  if (!Number.isSafeInteger(result) || result < 0) throw new Error(`${field}格式不正确`)
+  if (!Number.isSafeInteger(result) || result < 0) {
+    throw new Error(`${field}格式不正确`)
+  }
   return result
 }
 
 export function normalizeOpportunityCommercialTerms(value: unknown): OpportunityCommercialTerms | null | undefined {
-  if (value === undefined) return undefined
-  if (value === null) return null
-  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('商业条件格式不正确')
+  if (value === undefined) {
+    return undefined
+  }
+  if (value === null) {
+    return null
+  }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('商业条件格式不正确')
+  }
   const source = value as Record<string, unknown>
-  if (source.currency !== undefined && source.currency !== 'CNY') throw new Error('金额币种格式不正确')
-  if (source.amountUnit !== undefined && source.amountUnit !== 'CNY_CENTS') throw new Error('金额单位格式不正确')
+  if (source.currency !== undefined && source.currency !== 'CNY') {
+    throw new Error('金额币种格式不正确')
+  }
+  if (source.amountUnit !== undefined && source.amountUnit !== 'CNY_CENTS') {
+    throw new Error('金额单位格式不正确')
+  }
   const minAmountCents = cents(source.minAmountCents, '最低金额')
   const maxAmountCents = cents(source.maxAmountCents, '最高金额')
   if (minAmountCents !== undefined && maxAmountCents !== undefined && minAmountCents > maxAmountCents) {
     throw new Error('金额区间格式不正确')
   }
-  if (!Array.isArray(source.locations) || source.locations.length > 16) throw new Error('合作范围格式不正确')
+  if (!Array.isArray(source.locations) || source.locations.length > 16) {
+    throw new Error('合作范围格式不正确')
+  }
   const seen = new Set<string>()
   const locations = source.locations.map((item) => {
-    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error('合作范围格式不正确')
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new Error('合作范围格式不正确')
+    }
     const location = item as Record<string, unknown>
     const type = location.type as OpportunityLocationType
-    if (!locationTypes.has(type)) throw new Error('合作范围格式不正确')
+    if (!locationTypes.has(type)) {
+      throw new Error('合作范围格式不正确')
+    }
     const cityTagId = type === 'CITY' ? text(location.cityTagId, 64, '城市') : ''
     const key = type === 'CITY' ? `CITY:${cityTagId}` : type
-    if (seen.has(key)) throw new Error('合作范围格式不正确')
+    if (seen.has(key)) {
+      throw new Error('合作范围格式不正确')
+    }
     seen.add(key)
     return type === 'CITY' ? { type, cityTagId } : { type }
   })
@@ -136,10 +158,12 @@ export function normalizeOpportunityFilter(value: OpportunityFilter): Opportunit
     minAmountCents,
     maxAmountCents,
     locationTypes: Array.isArray(value.locationTypes)
-      ? [...new Set(value.locationTypes)].map(item => {
-        if (!locationTypes.has(item as OpportunityLocationType)) throw new Error('合作范围格式不正确')
-        return item as OpportunityLocationType
-      })
+      ? [...new Set(value.locationTypes)].map((item) => {
+          if (!locationTypes.has(item as OpportunityLocationType)) {
+            throw new Error('合作范围格式不正确')
+          }
+          return item as OpportunityLocationType
+        })
       : [],
     locationCityTagIds: uniqueStrings(value.locationCityTagIds, 8, '合作城市'),
     branchId: value.branchId,
@@ -166,18 +190,24 @@ function parseOpportunityCommercialTerms(value: unknown): OpportunityCommercialT
   const locations = terms.locations.map((item) => {
     const location = record(item)
     const type = location.type as OpportunityLocationType
-    if (!locationTypes.has(type)) throw new Error('机会服务返回了无效响应')
+    if (!locationTypes.has(type)) {
+      throw new Error('机会服务返回了无效响应')
+    }
     if (type === 'CITY') {
       const city = record(location.city)
       if (typeof city.id !== 'string' || !city.id || typeof city.key !== 'string' || typeof city.label !== 'string') {
         throw new Error('机会服务返回了无效响应')
       }
       const key = `CITY:${city.id}`
-      if (seen.has(key)) throw new Error('机会服务返回了无效响应')
+      if (seen.has(key)) {
+        throw new Error('机会服务返回了无效响应')
+      }
       seen.add(key)
       return { type, city: { id: city.id, key: city.key, label: city.label } }
     }
-    if (seen.has(type)) throw new Error('机会服务返回了无效响应')
+    if (seen.has(type)) {
+      throw new Error('机会服务返回了无效响应')
+    }
     seen.add(type)
     return { type }
   })

@@ -29,9 +29,9 @@ import {
   normalizeOpportunityDraft,
   normalizeOpportunityFilter,
   normalizePeopleFilter,
-  parsePeoplePage,
   parseOpportunityDetail,
   parseOpportunityPage,
+  parsePeoplePage,
   parseProfileInfluence,
   parsePublicProfileAggregate,
 } from './validation'
