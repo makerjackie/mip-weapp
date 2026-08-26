@@ -164,6 +164,8 @@ describe('admin order persistence adapter', () => {
     const sql = database.calls.map(call => call.sql).join('\n')
     assert.match(sql, /e\.branch_id IN \(\?\)/)
     assert.match(sql, /ORDER BY rf\.created_at DESC, rf\.id DESC LIMIT 1\) = \?/)
+    const listSql = database.calls.find(call => call.sql.includes('SELECT o.id, o.user_id')).sql
+    assert.match(listSql, /entitlement\.order_id = o\.id\s+AND entitlement\.source_type = 'ORDER'/)
     assert.equal(database.calls.every(call => call.params[0] === APP_ID), true)
   })
 

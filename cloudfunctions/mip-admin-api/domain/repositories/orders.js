@@ -114,6 +114,7 @@ function createAdminOrderRepository(database, options = {}) {
        LEFT JOIN mip_city_branches eb ON eb.app_id = e.app_id AND eb.id = e.branch_id
        LEFT JOIN mip_membership_entitlements entitlement
          ON entitlement.app_id = o.app_id AND entitlement.order_id = o.id
+        AND entitlement.source_type = 'ORDER'
        LEFT JOIN mip_knowledge_entitlements knowledge_entitlement
          ON knowledge_entitlement.app_id = o.app_id AND knowledge_entitlement.order_id = o.id
        WHERE ${clauses.join(' AND ')}${cursorWhere.sql} ORDER BY o.created_at DESC, o.id DESC LIMIT ?`,

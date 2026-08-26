@@ -119,28 +119,79 @@ export interface MembershipBenefitItem {
   status: 'ACTIVE'
 }
 
-export type MembershipBenefitsSnapshot
-  = | {
-    kind: 'GUEST'
-    status: 'NONE'
-    benefits: []
-  }
-  | {
-    kind: 'PLAYER'
-    status: 'ACTIVE'
-    entitlementId: EntitlementId
+export type MembershipEntitlementSourceType = 'ORDER' | 'ADMIN_ADJUSTMENT'
+export type MembershipEntitlementHistoryStatus
+  = | 'PENDING'
+    | 'ACTIVE'
+    | 'SCHEDULED'
+    | 'EXPIRED'
+    | 'REVOKED'
+    | 'REFUNDED'
+
+interface MembershipEntitlementHistoryBase {
+  entitlementId: EntitlementId
+  sourceType: MembershipEntitlementSourceType
+  sourceLabel: string
+  status: MembershipEntitlementHistoryStatus
+  startsAt: string
+  endsAt: string
+}
+
+export type MembershipEntitlementHistoryItem
+  = | (MembershipEntitlementHistoryBase & {
+    sourceType: 'ORDER'
+    orderId: OrderId
     plan: {
       id: MembershipPlanId
       name: string
       description?: string
     }
-    startsAt: string
-    endsAt: string
-    membershipEndsAt: string
-    benefits: MembershipBenefitItem[]
+    price: { amountCents: number, currency: 'CNY' }
     invitationAttribution: MembershipInvitationAttribution
-    version: number
+  })
+  | (MembershipEntitlementHistoryBase & {
+    sourceType: 'ADMIN_ADJUSTMENT'
+    orderId?: never
+    plan?: never
+    price?: never
+    invitationAttribution?: never
+  })
+
+interface ActiveMembershipBenefitsBase {
+  kind: 'PLAYER'
+  status: 'ACTIVE'
+  entitlementId: EntitlementId
+  sourceType: MembershipEntitlementSourceType
+  sourceLabel: string
+  startsAt: string
+  endsAt: string
+  membershipEndsAt: string
+  benefits: MembershipBenefitItem[]
+  history: MembershipEntitlementHistoryItem[]
+  version: number
+}
+
+export type MembershipBenefitsSnapshot
+  = | {
+    kind: 'GUEST'
+    status: 'NONE'
+    benefits: []
+    history: MembershipEntitlementHistoryItem[]
   }
+  | (ActiveMembershipBenefitsBase & {
+    sourceType: 'ORDER'
+    plan: {
+      id: MembershipPlanId
+      name: string
+      description?: string
+    }
+    invitationAttribution: MembershipInvitationAttribution
+  })
+  | (ActiveMembershipBenefitsBase & {
+    sourceType: 'ADMIN_ADJUSTMENT'
+    plan?: never
+    invitationAttribution?: never
+  })
 
 export interface RefundIntent {
   orderId: OrderId

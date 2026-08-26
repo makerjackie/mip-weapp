@@ -1,11 +1,11 @@
 import type {
-  MembershipBenefitItem,
   MembershipBenefitsSnapshot,
   MembershipPlan,
 } from '../../../modules/mip-commerce'
+import type { MembershipBenefitPresentation, MembershipHistoryPresentation } from './presentation'
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
 import { caseNavigateTo } from '../../../modules/platform/case-navigation'
-import { formatLocalDate } from '../../../utils/date'
+import { presentMembershipBenefits } from './presentation'
 
 Page({
   data: {
@@ -15,8 +15,9 @@ Page({
     membershipDescription: '正在读取会员权益',
     membershipEndsText: '',
     planEndsText: '',
-    currentPlanName: '',
-    activeBenefits: [] as MembershipBenefitItem[],
+    currentSourceText: '',
+    activeBenefits: [] as MembershipBenefitPresentation[],
+    membershipHistory: [] as MembershipHistoryPresentation[],
     isPlayer: false,
     membershipKnown: false,
     message: '',
@@ -61,27 +62,8 @@ Page({
   },
 
   presentMembership(snapshot: MembershipBenefitsSnapshot) {
-    if (snapshot.kind === 'GUEST') {
-      this.setData({
-        membershipLabel: '嘉宾',
-        membershipDescription: '当前没有有效会员权益',
-        membershipEndsText: '',
-        planEndsText: '',
-        currentPlanName: '',
-        activeBenefits: [],
-        isPlayer: false,
-        membershipKnown: true,
-      })
-      return
-    }
     this.setData({
-      membershipLabel: '玩家',
-      membershipDescription: snapshot.plan.description || snapshot.plan.name,
-      membershipEndsText: formatLocalDate(snapshot.membershipEndsAt),
-      planEndsText: formatLocalDate(snapshot.endsAt),
-      currentPlanName: snapshot.plan.name,
-      activeBenefits: snapshot.benefits,
-      isPlayer: true,
+      ...presentMembershipBenefits(snapshot),
       membershipKnown: true,
     })
   },

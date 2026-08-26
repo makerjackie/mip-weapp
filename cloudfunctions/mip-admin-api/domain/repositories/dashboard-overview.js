@@ -497,6 +497,7 @@ async function readMembershipPurchases(tx, input, scopeType, orderVisibility) {
        FROM mip_orders order_fact
        INNER JOIN mip_membership_entitlements entitlement
          ON entitlement.app_id = order_fact.app_id AND entitlement.order_id = order_fact.id
+        AND entitlement.source_type = 'ORDER'
        WHERE order_fact.app_id = ? AND order_fact.order_type = 'MEMBERSHIP'
          AND order_fact.paid_at IS NOT NULL
          AND entitlement.status IN (${VALID_ENTITLEMENT_SQL})
@@ -551,6 +552,7 @@ async function membershipPurchaseComparison(tx, input) {
        FROM mip_orders order_fact
        INNER JOIN mip_membership_entitlements entitlement
          ON entitlement.app_id = order_fact.app_id AND entitlement.order_id = order_fact.id
+        AND entitlement.source_type = 'ORDER'
        WHERE order_fact.app_id = ? AND order_fact.order_type = 'MEMBERSHIP'
          AND order_fact.paid_at IS NOT NULL
          AND entitlement.status IN (${VALID_ENTITLEMENT_SQL})

@@ -68,33 +68,41 @@ describe('membership checkout attribution', () => {
 })
 
 describe('membership benefit projection', () => {
-  it('reads the current entitlement and immutable order benefit snapshot for the caller', async () => {
+  it('reads an ORDER entitlement and its immutable benefit snapshot for the caller', async () => {
     const calls = []
     const repository = createCommerceRepository({
-      async one(sql, params) {
+      async query(sql, params) {
         calls.push({ sql, params })
-        return {
+        return [{
           id: '30000000-0000-4000-8000-000000000001',
           status: 'ACTIVE',
+          window_status: 'ACTIVE',
+          source_type: 'ORDER',
           starts_at: '2026-08-01T00:00:00.000Z',
           ends_at: '2026-09-01T00:00:00.000Z',
           membership_ends_at: '2026-10-01T00:00:00.000Z',
           version: 2,
+          order_id: '50000000-0000-4000-8000-000000000001',
+          source_order_id: '50000000-0000-4000-8000-000000000001',
           plan_id: '40000000-0000-4000-8000-000000000001',
+          source_plan_id: '40000000-0000-4000-8000-000000000001',
           plan_name: '年度会员',
           plan_description: '会员说明',
+          amount_cents: 79900,
+          currency: 'CNY',
           benefits_json: '["已修改的权益"]',
           product_snapshot_json: JSON.stringify({ benefits: ['玩家身份', '会员活动权益'] }),
           invitation_source_type: 'USER',
           inviter_nickname: '邀请会员',
           inviter_visibility_json: JSON.stringify({ nickname: true, avatar: true }),
           inviter_avatar_file_id: 'cloud://env.test/avatar.png',
-        }
+        }]
       },
     })
     const result = await repository.getMembershipBenefits({ appId: 'app-1', identityKey: 'identity-1' })
     assert.equal(result.kind, 'PLAYER')
     assert.equal(result.status, 'ACTIVE')
+    assert.equal(result.sourceType, 'ORDER')
     assert.equal(result.membershipEndsAt, '2026-10-01T00:00:00.000Z')
     assert.deepEqual(result.benefits, [
       { key: 'benefit-1', label: '玩家身份', status: 'ACTIVE' },
@@ -105,18 +113,231 @@ describe('membership benefit projection', () => {
       displayName: '邀请会员',
       avatarUrl: 'cloud://env.test/avatar.png',
     })
+    assert.deepEqual(result.history, [{
+      entitlementId: '30000000-0000-4000-8000-000000000001',
+      sourceType: 'ORDER',
+      sourceLabel: '会员购买',
+      status: 'ACTIVE',
+      startsAt: '2026-08-01T00:00:00.000Z',
+      endsAt: '2026-09-01T00:00:00.000Z',
+      orderId: '50000000-0000-4000-8000-000000000001',
+      plan: {
+        id: '40000000-0000-4000-8000-000000000001',
+        name: '年度会员',
+        description: '会员说明',
+      },
+      price: { amountCents: 79900, currency: 'CNY' },
+      invitationAttribution: {
+        sourceType: 'USER',
+        displayName: '邀请会员',
+        avatarUrl: 'cloud://env.test/avatar.png',
+      },
+    }])
     assert.match(calls[0].sql, /mip_membership_entitlements/)
-    assert.match(calls[0].sql, /mip_orders/)
+    assert.match(calls[0].sql, /LEFT JOIN mip_orders o/)
+    assert.match(calls[0].sql, /e\.source_type = 'ORDER' AND o\.order_type = 'MEMBERSHIP'/)
     assert.match(calls[0].sql, /mip_membership_attributions/)
-    assert.match(calls[0].sql, /e\.starts_at <= UTC_TIMESTAMP\(3\)/)
+    assert.match(calls[0].sql, /e\.status IN \('PENDING', 'ACTIVE', 'EXPIRED', 'REVOKED', 'REFUNDED'\)/)
+    assert.match(calls[0].sql, /THEN 'SCHEDULED'/)
     assert.deepEqual(calls[0].params, ['app-1', 'identity-1'])
   })
 
-  it('returns a guest fact when no effective entitlement exists', async () => {
-    const repository = createCommerceRepository({ one: async () => null })
+  it('projects a manual-only player without an invented order, plan, price, or attribution', async () => {
+    let query
+    const repository = createCommerceRepository({
+      async query(sql, params) {
+        query = { sql, params }
+        return [{
+          id: '30000000-0000-4000-8000-000000000002',
+          status: 'ACTIVE',
+          window_status: 'ACTIVE',
+          source_type: 'ADMIN_ADJUSTMENT',
+          starts_at: '2026-08-01T00:00:00.000Z',
+          ends_at: '2027-08-01T00:00:00.000Z',
+          membership_ends_at: '2027-08-01T00:00:00.000Z',
+          version: 1,
+          order_id: null,
+          plan_id: null,
+          amount_cents: null,
+          currency: null,
+          reason: '不得返回给普通用户',
+          actor_user_id: 'admin-secret',
+        }]
+      },
+    })
+    const result = await repository.getMembershipBenefits({ appId: 'app-1', identityKey: 'identity-1' })
+    assert.deepEqual(result, {
+      kind: 'PLAYER',
+      status: 'ACTIVE',
+      entitlementId: '30000000-0000-4000-8000-000000000002',
+      sourceType: 'ADMIN_ADJUSTMENT',
+      sourceLabel: '运营开通',
+      startsAt: '2026-08-01T00:00:00.000Z',
+      endsAt: '2027-08-01T00:00:00.000Z',
+      membershipEndsAt: '2027-08-01T00:00:00.000Z',
+      benefits: [],
+      version: 1,
+      history: [{
+        entitlementId: '30000000-0000-4000-8000-000000000002',
+        sourceType: 'ADMIN_ADJUSTMENT',
+        sourceLabel: '运营开通',
+        status: 'ACTIVE',
+        startsAt: '2026-08-01T00:00:00.000Z',
+        endsAt: '2027-08-01T00:00:00.000Z',
+      }],
+    })
+    assert.equal(Object.hasOwn(result, 'plan'), false)
+    assert.equal(Object.hasOwn(result, 'orderId'), false)
+    assert.equal(Object.hasOwn(result, 'price'), false)
+    assert.equal(Object.hasOwn(result, 'invitationAttribution'), false)
+    assert.doesNotMatch(query.sql, /adjustment\.reason|actor_user_id/)
+    assert.match(query.sql, /LEFT JOIN mip_membership_plans p/)
+  })
+
+  it('keeps both sources in mixed current and scheduled history', async () => {
+    const repository = createCommerceRepository({
+      async query() {
+        return [{
+          id: '30000000-0000-4000-8000-000000000002',
+          status: 'ACTIVE',
+          window_status: 'ACTIVE',
+          source_type: 'ADMIN_ADJUSTMENT',
+          starts_at: '2026-08-01T00:00:00.000Z',
+          ends_at: '2026-09-01T00:00:00.000Z',
+          membership_ends_at: '2027-09-01T00:00:00.000Z',
+          version: 1,
+        }, {
+          id: '30000000-0000-4000-8000-000000000003',
+          status: 'ACTIVE',
+          window_status: 'SCHEDULED',
+          source_type: 'ORDER',
+          starts_at: '2026-09-01T00:00:00.000Z',
+          ends_at: '2027-09-01T00:00:00.000Z',
+          membership_ends_at: '2027-09-01T00:00:00.000Z',
+          version: 1,
+          order_id: '50000000-0000-4000-8000-000000000003',
+          source_order_id: '50000000-0000-4000-8000-000000000003',
+          plan_id: '40000000-0000-4000-8000-000000000003',
+          source_plan_id: '40000000-0000-4000-8000-000000000003',
+          plan_name: '年度会员',
+          amount_cents: 79900,
+          currency: 'CNY',
+          invitation_source_type: 'PLATFORM',
+        }]
+      },
+    })
+    const result = await repository.getMembershipBenefits({ appId: 'app-1', identityKey: 'identity-1' })
+    assert.equal(result.kind, 'PLAYER')
+    assert.equal(result.sourceType, 'ADMIN_ADJUSTMENT')
+    assert.equal(result.membershipEndsAt, '2027-09-01T00:00:00.000Z')
+    assert.deepEqual(result.history.map(item => [item.sourceType, item.status]), [
+      ['ADMIN_ADJUSTMENT', 'ACTIVE'],
+      ['ORDER', 'SCHEDULED'],
+    ])
+    assert.equal(Object.hasOwn(result.history[0], 'plan'), false)
+    assert.equal(result.history[1].plan.name, '年度会员')
+  })
+
+  it('returns a guest fact with scheduled history when no entitlement is effective yet', async () => {
+    const repository = createCommerceRepository({
+      async query() {
+        return [{
+          id: '30000000-0000-4000-8000-000000000004',
+          status: 'ACTIVE',
+          window_status: 'SCHEDULED',
+          source_type: 'ADMIN_ADJUSTMENT',
+          starts_at: '2027-08-01T00:00:00.000Z',
+          ends_at: '2028-08-01T00:00:00.000Z',
+          membership_ends_at: '2028-08-01T00:00:00.000Z',
+          version: 1,
+        }]
+      },
+    })
     assert.deepEqual(
       await repository.getMembershipBenefits({ appId: 'app-1', identityKey: 'identity-1' }),
-      { kind: 'GUEST', status: 'NONE', benefits: [] },
+      {
+        kind: 'GUEST',
+        status: 'NONE',
+        benefits: [],
+        history: [{
+          entitlementId: '30000000-0000-4000-8000-000000000004',
+          sourceType: 'ADMIN_ADJUSTMENT',
+          sourceLabel: '运营开通',
+          status: 'SCHEDULED',
+          startsAt: '2027-08-01T00:00:00.000Z',
+          endsAt: '2028-08-01T00:00:00.000Z',
+        }],
+      },
+    )
+  })
+
+  it('returns a guest fact with empty history when no valid entitlement exists', async () => {
+    const repository = createCommerceRepository({ query: async () => [] })
+    assert.deepEqual(
+      await repository.getMembershipBenefits({ appId: 'app-1', identityKey: 'identity-1' }),
+      { kind: 'GUEST', status: 'NONE', benefits: [], history: [] },
+    )
+  })
+
+  it('keeps revoked and refunded records in neutral user history', async () => {
+    const repository = createCommerceRepository({
+      async query() {
+        return [{
+          id: '30000000-0000-4000-8000-000000000005',
+          status: 'REVOKED',
+          window_status: 'REVOKED',
+          source_type: 'ADMIN_ADJUSTMENT',
+          starts_at: '2026-01-01T00:00:00.000Z',
+          ends_at: '2026-02-01T00:00:00.000Z',
+          version: 2,
+        }, {
+          id: '30000000-0000-4000-8000-000000000006',
+          status: 'REFUNDED',
+          window_status: 'REFUNDED',
+          source_type: 'ORDER',
+          starts_at: '2025-01-01T00:00:00.000Z',
+          ends_at: '2026-01-01T00:00:00.000Z',
+          version: 3,
+          order_id: '50000000-0000-4000-8000-000000000006',
+          source_order_id: '50000000-0000-4000-8000-000000000006',
+          plan_id: '40000000-0000-4000-8000-000000000006',
+          source_plan_id: '40000000-0000-4000-8000-000000000006',
+          plan_name: '年度会员',
+          amount_cents: 79900,
+          currency: 'CNY',
+          invitation_source_type: 'PLATFORM',
+        }]
+      },
+    })
+    const result = await repository.getMembershipBenefits({ appId: 'app-1', identityKey: 'identity-1' })
+    assert.equal(result.kind, 'GUEST')
+    assert.deepEqual(result.history.map(item => item.status), ['REVOKED', 'REFUNDED'])
+  })
+
+  it('fails closed when an ORDER entitlement cannot resolve its exact order and plan', async () => {
+    const repository = createCommerceRepository({
+      async query() {
+        return [{
+          id: '30000000-0000-4000-8000-000000000007',
+          status: 'ACTIVE',
+          window_status: 'ACTIVE',
+          source_type: 'ORDER',
+          starts_at: '2026-08-01T00:00:00.000Z',
+          ends_at: '2027-08-01T00:00:00.000Z',
+          version: 1,
+          order_id: '50000000-0000-4000-8000-000000000007',
+          source_order_id: null,
+          plan_id: '40000000-0000-4000-8000-000000000007',
+          source_plan_id: '40000000-0000-4000-8000-000000000007',
+          plan_name: '年度会员',
+          amount_cents: 79900,
+          currency: 'CNY',
+        }]
+      },
+    })
+    await assert.rejects(
+      () => repository.getMembershipBenefits({ appId: 'app-1', identityKey: 'identity-1' }),
+      /MEMBERSHIP_ENTITLEMENT_SOURCE_INVALID/,
     )
   })
 })
@@ -232,6 +453,7 @@ describe('event order projection', () => {
     assert.match(query.sql, /LEFT JOIN mip_media_assets event_cover/)
     assert.match(query.sql, /event_registration\.app_id = o\.app_id AND event_registration\.order_id = o\.id/)
     assert.match(query.sql, /membership_entitlement\.app_id = o\.app_id AND membership_entitlement\.order_id = o\.id/)
+    assert.match(query.sql, /membership_entitlement\.source_type = 'ORDER'/)
     assert.match(query.sql, /knowledge_entitlement\.app_id = o\.app_id AND knowledge_entitlement\.order_id = o\.id/)
     assert.match(query.sql, /o\.status IN \('PARTIALLY_REFUNDED', 'REFUNDED'\) THEN 'REFUNDED'/)
     assert.match(query.sql, /o\.status <> 'PAID' THEN 'UNAVAILABLE'/)

@@ -46,6 +46,7 @@ const ORDER_SERVICE_FACT_JOINS_SQL = `LEFT JOIN mip_event_registrations event_re
         AND o.order_type = 'EVENT'
        LEFT JOIN mip_membership_entitlements membership_entitlement
          ON membership_entitlement.app_id = o.app_id AND membership_entitlement.order_id = o.id
+        AND membership_entitlement.source_type = 'ORDER'
         AND o.order_type = 'MEMBERSHIP'
        LEFT JOIN mip_knowledge_entitlements knowledge_entitlement
          ON knowledge_entitlement.app_id = o.app_id AND knowledge_entitlement.order_id = o.id
@@ -82,33 +83,46 @@ function createCommerceRepository(database, options = {}) {
   }
 
   async function getMembershipBenefits(caller) {
-    const row = await database.one(
+    const rows = await database.query(
       `SELECT e.id, e.status, e.starts_at, e.ends_at, e.version,
-              e.plan_id, p.name AS plan_name, p.description AS plan_description,
-              p.benefits_json, o.product_snapshot_json,
+              e.source_type, e.order_id, e.plan_id,
+              o.id AS source_order_id, p.id AS source_plan_id,
+              p.name AS plan_name, p.description AS plan_description,
+              p.benefits_json, o.amount_cents, o.currency, o.product_snapshot_json,
               attribution.source_type AS invitation_source_type,
               inviter_profile.nickname AS inviter_nickname,
               inviter_profile.visibility_json AS inviter_visibility_json,
               inviter_avatar.cloud_file_id AS inviter_avatar_file_id,
-              (
-                SELECT MAX(chain.ends_at)
-                FROM mip_membership_entitlements chain
-                WHERE chain.app_id = e.app_id AND chain.user_id = e.user_id
-                  AND chain.status = 'ACTIVE' AND chain.ends_at > UTC_TIMESTAMP(3)
-              ) AS membership_ends_at
+              CASE
+                WHEN e.status = 'PENDING' THEN 'PENDING'
+                WHEN e.status = 'REFUNDED' THEN 'REFUNDED'
+                WHEN e.status = 'REVOKED' THEN 'REVOKED'
+                WHEN e.status = 'ACTIVE'
+                  AND e.starts_at <= UTC_TIMESTAMP(3) AND e.ends_at > UTC_TIMESTAMP(3)
+                  THEN 'ACTIVE'
+                WHEN e.status = 'ACTIVE' AND e.starts_at > UTC_TIMESTAMP(3)
+                  THEN 'SCHEDULED'
+                ELSE 'EXPIRED'
+              END AS window_status,
+              MAX(CASE
+                WHEN e.status = 'ACTIVE' AND e.ends_at > UTC_TIMESTAMP(3) THEN e.ends_at
+                ELSE NULL
+              END) OVER (PARTITION BY e.app_id, e.user_id) AS membership_ends_at
        FROM mip_user_identities i
        INNER JOIN mip_users u
          ON u.app_id = i.app_id AND u.id = i.user_id AND u.status = 'ACTIVE'
        INNER JOIN mip_membership_entitlements e
          ON e.app_id = u.app_id AND e.user_id = u.id
-        AND e.status = 'ACTIVE'
-        AND e.starts_at <= UTC_TIMESTAMP(3) AND e.ends_at > UTC_TIMESTAMP(3)
-       INNER JOIN mip_membership_plans p
+        AND e.status IN ('PENDING', 'ACTIVE', 'EXPIRED', 'REVOKED', 'REFUNDED')
+       LEFT JOIN mip_membership_plans p
          ON p.app_id = e.app_id AND p.id = e.plan_id
-       INNER JOIN mip_orders o
+        AND e.source_type = 'ORDER'
+       LEFT JOIN mip_orders o
          ON o.app_id = e.app_id AND o.id = e.order_id
+        AND e.source_type = 'ORDER' AND o.order_type = 'MEMBERSHIP'
        LEFT JOIN mip_membership_attributions attribution
          ON attribution.app_id = e.app_id AND attribution.entitlement_id = e.id
+        AND e.source_type = 'ORDER'
        LEFT JOIN mip_users inviter
          ON inviter.app_id = attribution.app_id AND inviter.id = attribution.invited_by_user_id
         AND inviter.status = 'ACTIVE'
@@ -118,11 +132,19 @@ function createCommerceRepository(database, options = {}) {
          ON inviter_avatar.app_id = inviter_profile.app_id
         AND inviter_avatar.id = inviter_profile.avatar_asset_id AND inviter_avatar.status = 'READY'
        WHERE i.app_id = ? AND i.provider = 'WECHAT_MINIPROGRAM' AND i.identity_key = ?
-       ORDER BY e.starts_at DESC, e.id DESC
-       LIMIT 1`,
+       ORDER BY
+         CASE
+           WHEN e.status = 'ACTIVE'
+             AND e.starts_at <= UTC_TIMESTAMP(3) AND e.ends_at > UTC_TIMESTAMP(3)
+             THEN 0
+           WHEN e.status = 'ACTIVE' AND e.starts_at > UTC_TIMESTAMP(3) THEN 1
+           WHEN e.status = 'PENDING' THEN 2
+           ELSE 3
+         END,
+         e.starts_at DESC, e.id DESC`,
       [caller.appId, caller.identityKey],
     )
-    return membershipBenefitsDto(row)
+    return membershipBenefitsDto(rows)
   }
 
   async function resolveMembershipInviter(caller) {
@@ -539,34 +561,81 @@ async function contentRefundableAmount(tx, appId, order, reservedCents) {
   return available
 }
 
-function membershipBenefitsDto(row) {
-  if (!row) {
-    return {
-      kind: 'GUEST',
-      status: 'NONE',
-      benefits: [],
-    }
+function membershipBenefitsDto(rows) {
+  const sourceRows = Array.isArray(rows) ? rows : rows ? [rows] : []
+  const history = sourceRows.map(membershipHistoryItem)
+  const row = sourceRows.find(item => item.window_status === 'ACTIVE')
+  if (!row) return { kind: 'GUEST', status: 'NONE', benefits: [], history }
+
+  const base = {
+    kind: 'PLAYER',
+    status: 'ACTIVE',
+    entitlementId: row.id,
+    sourceType: row.source_type,
+    sourceLabel: membershipSourceLabel(row.source_type),
+    startsAt: dateValue(row.starts_at),
+    endsAt: dateValue(row.ends_at),
+    membershipEndsAt: dateValue(row.membership_ends_at || row.ends_at),
+    benefits: [],
+    version: Number(row.version),
+    history,
   }
+  if (row.source_type === 'ADMIN_ADJUSTMENT') return base
+
   const snapshot = parseJson(row.product_snapshot_json)
   const benefits = benefitList(
     Array.isArray(snapshot.benefits) ? snapshot.benefits : parseJsonArray(row.benefits_json),
   )
   return {
-    kind: 'PLAYER',
-    status: row.status,
-    entitlementId: row.id,
+    ...base,
     plan: {
       id: row.plan_id,
       name: row.plan_name,
       description: row.plan_description || undefined,
     },
-    startsAt: dateValue(row.starts_at),
-    endsAt: dateValue(row.ends_at),
-    membershipEndsAt: dateValue(row.membership_ends_at || row.ends_at),
     benefits,
     invitationAttribution: membershipInvitationAttribution(row),
-    version: Number(row.version),
   }
+}
+
+function membershipHistoryItem(row) {
+  const sourceType = row.source_type
+  if (!['ORDER', 'ADMIN_ADJUSTMENT'].includes(sourceType)
+    || !['ACTIVE', 'SCHEDULED', 'PENDING', 'EXPIRED', 'REVOKED', 'REFUNDED'].includes(row.window_status)) {
+    throw new Error('MEMBERSHIP_ENTITLEMENT_SOURCE_INVALID')
+  }
+  const item = {
+    entitlementId: row.id,
+    sourceType,
+    sourceLabel: membershipSourceLabel(sourceType),
+    status: row.window_status,
+    startsAt: dateValue(row.starts_at),
+    endsAt: dateValue(row.ends_at),
+  }
+  if (sourceType === 'ADMIN_ADJUSTMENT') return item
+  if (!row.order_id || !row.plan_id || !row.plan_name
+    || row.source_order_id !== row.order_id || row.source_plan_id !== row.plan_id) {
+    throw new Error('MEMBERSHIP_ENTITLEMENT_SOURCE_INVALID')
+  }
+  const amountCents = Number(row.amount_cents)
+  if (!Number.isSafeInteger(amountCents) || amountCents < 0 || row.currency !== 'CNY') {
+    throw new Error('MEMBERSHIP_ENTITLEMENT_SOURCE_INVALID')
+  }
+  return {
+    ...item,
+    orderId: row.order_id,
+    plan: {
+      id: row.plan_id,
+      name: row.plan_name,
+      description: row.plan_description || undefined,
+    },
+    price: { amountCents, currency: 'CNY' },
+    invitationAttribution: membershipInvitationAttribution(row),
+  }
+}
+
+function membershipSourceLabel(sourceType) {
+  return sourceType === 'ADMIN_ADJUSTMENT' ? '运营开通' : '会员购买'
 }
 
 function membershipInvitationAttribution(row) {

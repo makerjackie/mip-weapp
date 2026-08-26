@@ -436,6 +436,35 @@ describe('dashboard overview repository', () => {
     assert.match(sql, /event\.branch_id IN \(\?\)/)
   })
 
+  it('counts every active entitlement source while keeping purchase and revenue facts ORDER-only', async () => {
+    const harness = databaseHarness()
+    const repository = createDashboardOverviewRepository(harness.database)
+
+    const result = await repository.readOverviewSnapshot(overviewInput())
+
+    assert.equal(result.people.activePlayers.count, 4)
+    assert.equal(result.membership.currentPlayers.count, 4)
+    const peopleSql = harness.calls.find(call => call.sql?.includes('AS active_players')).sql
+    const expirySql = harness.calls.find(call => call.sql?.includes('AS expiring_players')).sql
+    assert.doesNotMatch(peopleSql, /entitlement\.source_type\s*=/)
+    assert.doesNotMatch(expirySql, /entitlement\.source_type\s*=/)
+
+    const purchaseCalls = harness.calls.filter(call => call.sql?.includes('WITH mip_membership_purchases'))
+    assert.equal(purchaseCalls.length, 2)
+    for (const call of purchaseCalls) {
+      assert.match(
+        call.sql,
+        /entitlement\.order_id = order_fact\.id\s+AND entitlement\.source_type = 'ORDER'/,
+      )
+    }
+    const financialCalls = harness.calls.filter(call => call.sql?.includes('AS paid_order_count'))
+    assert.equal(financialCalls.length, 2)
+    for (const call of financialCalls) {
+      assert.match(call.sql, /event_order\.order_type = 'EVENT'/)
+      assert.doesNotMatch(call.sql, /mip_membership_entitlements/)
+    }
+  })
+
   it('keeps event-owner overview strictly on the selected app-owned event', async () => {
     const harness = databaseHarness({
       bindings: [{

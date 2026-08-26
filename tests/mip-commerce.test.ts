@@ -98,6 +98,7 @@ describe('MIP membership commerce', () => {
         kind: 'GUEST' as const,
         status: 'NONE' as const,
         benefits: [] as [],
+        history: [],
       })),
       createMembershipInvitation: vi.fn(async () => ({ token: 'm1.opaque', expiresAt: '2026-09-23T00:00:00.000Z' })),
       createMembershipInvitationCode: vi.fn(async () => ({ codeUrl: 'cloud://env.test/code.png', expiresAt: '2026-09-23T00:00:00.000Z' })),
@@ -162,7 +163,7 @@ describe('MIP membership commerce', () => {
         return { ok: true, data: { id: 'refund-1', status: 'PENDING' } }
       }
       if (action === 'getMembershipBenefits') {
-        return { ok: true, data: { kind: 'GUEST', status: 'NONE', benefits: [] } }
+        return { ok: true, data: { kind: 'GUEST', status: 'NONE', benefits: [], history: [] } }
       }
       if (action === 'submitRefund') {
         return { ok: true, data: { status: 'PROVIDER_CREATED' } }
@@ -178,6 +179,7 @@ describe('MIP membership commerce', () => {
       kind: 'GUEST',
       status: 'NONE',
       benefits: [],
+      history: [],
     })
     await expect(gateway.reconcileOrder(order('PAID').id)).resolves.toMatchObject({ status: 'PAID' })
     await expect(gateway.requestRefund({
