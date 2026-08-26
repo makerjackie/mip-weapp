@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict')
 const test = require('node:test')
-const { accountDto, levelSnapshot, projectAward } = require('../domain/rules')
+const { accountDto, levelSnapshot, projectAward, selectApplicableRules } = require('../domain/rules')
 
 test('server rule caps a positive award at the daily limit', () => {
   const projection = projectAward({ experience_balance: 90 }, {
@@ -61,6 +61,28 @@ test('server projects game coin awards and protects the balance', () => {
     coinBalance: 3,
     version: 4,
   })
+})
+
+test('selects the branch rule before the platform fallback inside its effective window', () => {
+  const rows = [
+    { id: 'platform', metric: 'EXPERIENCE', scope_type: 'PLATFORM', scope_id: null, effective_from: null, effective_to: null },
+    { id: 'branch', metric: 'EXPERIENCE', scope_type: 'BRANCH', scope_id: 'branch-a', effective_from: '2026-08-01 00:00:00.000', effective_to: '2026-09-01 00:00:00.000' },
+  ]
+  assert.deepEqual(
+    selectApplicableRules(rows, 'branch-a', '2026-08-20 00:00:00.000').map(row => row.id),
+    ['branch'],
+  )
+  assert.deepEqual(
+    selectApplicableRules(rows, 'branch-a', '2026-09-01 00:00:00.000').map(row => row.id),
+    ['platform'],
+  )
+})
+
+test('rejects two equally specific active rules for one event and metric', () => {
+  assert.throws(() => selectApplicableRules([
+    { id: 'branch-a', metric: 'EXPERIENCE', scope_type: 'BRANCH', scope_id: 'branch-a' },
+    { id: 'branch-b', metric: 'EXPERIENCE', scope_type: 'BRANCH', scope_id: 'branch-a' },
+  ], 'branch-a', '2026-08-20 00:00:00.000'), /GROWTH_RULE_CONFLICT/)
 })
 
 test('snapshot derives the active level from server thresholds', () => {

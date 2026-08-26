@@ -703,6 +703,18 @@
         "mip_growth_level_transitions"
       ],
       "altersTables": []
+    },
+    {
+      "version": "20260827510000",
+      "name": "mip_growth_rule_scope_window",
+      "sql": "database/mysql/mip/051_growth_rule_scope_window.sql",
+      "sqlSha256": "6b1d12faca0a2761c39aab1af39f3aec5dfecb16f3a93ccf1b2281f94d470f4b",
+      "rollback": "database/mysql/mip/rollback/051_growth_rule_scope_window.sql",
+      "rollbackSha256": "34bc856a6a4fa7eccdafbdc067c0df83b7502b5f3bebc6f591cd39581b4827b8",
+      "createsTables": [],
+      "altersTables": [
+        "mip_growth_rules"
+      ]
     }
   ]
 }

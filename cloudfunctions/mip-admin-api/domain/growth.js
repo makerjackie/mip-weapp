@@ -101,7 +101,15 @@ function createAdminGrowth({ repository, access }) {
         action: 'admin.growth.rule.update',
         resourceType: 'GROWTH_RULE',
         resourceId,
-        metadata: { metric: draft.metric, deltaValue: draft.deltaValue, status: draft.status },
+        metadata: {
+          metric: draft.metric,
+          deltaValue: draft.deltaValue,
+          status: draft.status,
+          scopeType: draft.scopeType,
+          scopeId: draft.scopeId,
+          effectiveFrom: draft.effectiveFrom,
+          effectiveTo: draft.effectiveTo,
+        },
       }),
     })
   }
@@ -417,6 +425,22 @@ function normalizeRule(value) {
     && (!Number.isInteger(dailyLimitValue) || dailyLimitValue < 0)) {
     throw new AdminError('VALIDATION_FAILED', '每日上限无效')
   }
+  const scopeType = value.scopeType === undefined || value.scopeType === ''
+    ? 'PLATFORM'
+    : String(value.scopeType).trim().toUpperCase()
+  if (!['PLATFORM', 'BRANCH'].includes(scopeType)) {
+    throw new AdminError('VALIDATION_FAILED', '适用范围无效')
+  }
+  const scopeId = scopeType === 'BRANCH' ? requiredId(value.scopeId, '分会') : null
+  if (scopeType === 'PLATFORM' && value.scopeId !== undefined
+    && value.scopeId !== null && value.scopeId !== '') {
+    throw new AdminError('VALIDATION_FAILED', '平台范围不能填写分会')
+  }
+  const effectiveFrom = dateTimeFilter(value.effectiveFrom, '生效开始时间') || null
+  const effectiveTo = dateTimeFilter(value.effectiveTo, '生效结束时间') || null
+  if (effectiveFrom && effectiveTo && effectiveTo <= effectiveFrom) {
+    throw new AdminError('VALIDATION_FAILED', '生效结束时间必须晚于开始时间')
+  }
   return {
     ruleKey: stableKey(value.ruleKey, '规则', 80),
     name: text(value.name, 100, { required: true, label: '规则名称' }),
@@ -424,6 +448,10 @@ function normalizeRule(value) {
     deltaValue,
     dailyLimitValue,
     sourceEventType: stableKey(value.sourceEventType, '来源事件', 80),
+    scopeType,
+    scopeId,
+    effectiveFrom,
+    effectiveTo,
     status: ['DRAFT', 'ACTIVE', 'INACTIVE'].includes(value.status) ? value.status : 'DRAFT',
   }
 }

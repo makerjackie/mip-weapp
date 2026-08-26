@@ -9,6 +9,7 @@ interface GrowthRuleView extends AdminGrowthRule {
   statusLabel: string
   statusTheme: 'default' | 'success' | 'warning'
   sourceLabel: string
+  scopeLabel: string
 }
 
 const metricLabels: Record<AdminGrowthRule['metric'], string> = {
@@ -42,6 +43,7 @@ function toView(rule: AdminGrowthRule): GrowthRuleView {
     statusLabel: statusLabels[rule.status],
     statusTheme: statusThemes[rule.status],
     sourceLabel: sourceLabels[rule.sourceEventType] || '其他业务行为',
+    scopeLabel: rule.scopeType === 'BRANCH' ? `分会 ${rule.scopeId}` : '平台',
   }
 }
 
@@ -59,6 +61,10 @@ Page({
     dailyLimitValue: '',
     sourceEventType: '',
     sourceLabel: '',
+    scopeType: 'PLATFORM',
+    scopeId: '',
+    effectiveFrom: '',
+    effectiveTo: '',
     status: 'DRAFT',
     saving: false,
     message: '',
@@ -84,12 +90,14 @@ Page({
   },
   updateField(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const field = String(event.currentTarget.dataset.field || '')
-    if (['deltaValue', 'dailyLimitValue'].includes(field)) {
+    if (['deltaValue', 'dailyLimitValue', 'scopeId', 'effectiveFrom', 'effectiveTo'].includes(field)) {
       this.setData({ [field]: event.detail.value })
     }
   },
   choose(event: WechatMiniprogram.TouchEvent) {
-    this.setData({ status: String(event.currentTarget.dataset.value || 'DRAFT') })
+    const field = String(event.currentTarget.dataset.field || 'status')
+    const value = String(event.currentTarget.dataset.value || '')
+    this.setData({ [field]: value || (field === 'scopeType' ? 'PLATFORM' : 'DRAFT') })
   },
   edit(event: WechatMiniprogram.TouchEvent) {
     if (!this.data.canConfigure) {
@@ -99,7 +107,7 @@ Page({
     if (!rule) {
       return
     }
-    this.setData({ editorId: rule.id, editorVersion: rule.version, ruleKey: rule.ruleKey, name: rule.name, metric: rule.metric, deltaValue: String(rule.deltaValue), dailyLimitValue: rule.dailyLimitValue === null ? '' : String(rule.dailyLimitValue), sourceEventType: rule.sourceEventType, sourceLabel: rule.sourceLabel, status: rule.status })
+    this.setData({ editorId: rule.id, editorVersion: rule.version, ruleKey: rule.ruleKey, name: rule.name, metric: rule.metric, deltaValue: String(rule.deltaValue), dailyLimitValue: rule.dailyLimitValue === null ? '' : String(rule.dailyLimitValue), sourceEventType: rule.sourceEventType, sourceLabel: rule.sourceLabel, scopeType: rule.scopeType, scopeId: rule.scopeId || '', effectiveFrom: rule.effectiveFrom || '', effectiveTo: rule.effectiveTo || '', status: rule.status })
   },
   resetEditor() {
     this.setData({
@@ -112,6 +120,10 @@ Page({
       dailyLimitValue: '',
       sourceEventType: '',
       sourceLabel: '',
+      scopeType: 'PLATFORM',
+      scopeId: '',
+      effectiveFrom: '',
+      effectiveTo: '',
       status: 'DRAFT',
       message: '',
     })
@@ -132,7 +144,7 @@ Page({
       await mipAdminModule.growth.saveRule({
         ruleId: this.data.editorId || undefined,
         expectedVersion: this.data.editorVersion || undefined,
-        draft: { ruleKey: this.data.ruleKey.trim(), name: this.data.name.trim(), metric: this.data.metric, deltaValue, dailyLimitValue, sourceEventType: this.data.sourceEventType.trim(), status: this.data.status },
+        draft: { ruleKey: this.data.ruleKey.trim(), name: this.data.name.trim(), metric: this.data.metric, deltaValue, dailyLimitValue, sourceEventType: this.data.sourceEventType.trim(), scopeType: this.data.scopeType, scopeId: this.data.scopeType === 'BRANCH' ? this.data.scopeId.trim() : null, effectiveFrom: this.data.effectiveFrom.trim() || null, effectiveTo: this.data.effectiveTo.trim() || null, status: this.data.status },
       })
       wx.showToast({ title: '规则已保存', icon: 'success' })
       this.resetEditor()

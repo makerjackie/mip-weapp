@@ -125,12 +125,16 @@ function growthRuleProjection(rows, ruleId, draft) {
         id: ruleId,
         metric: draft.metric,
         sourceEventType: draft.sourceEventType,
+        scopeType: draft.scopeType,
+        scopeId: draft.scopeId,
         status: draft.status,
       }
     : {
         id: row.id,
         metric: row.metric,
         sourceEventType: row.source_event_type,
+        scopeType: row.scope_type || 'PLATFORM',
+        scopeId: row.scope_id || null,
         status: row.status,
       })
   if (!rows.some(row => row.id === ruleId)) {
@@ -138,6 +142,8 @@ function growthRuleProjection(rows, ruleId, draft) {
       id: ruleId,
       metric: draft.metric,
       sourceEventType: draft.sourceEventType,
+      scopeType: draft.scopeType,
+      scopeId: draft.scopeId,
       status: draft.status,
     })
   }
@@ -148,7 +154,7 @@ function assertGrowthRules(rules) {
   const activeKeys = new Set()
   for (const rule of rules) {
     if (rule.status !== 'ACTIVE') continue
-    const key = `${rule.sourceEventType}\0${rule.metric}`
+    const key = `${rule.sourceEventType}\0${rule.metric}\0${rule.scopeType || 'PLATFORM'}\0${rule.scopeId || ''}`
     if (activeKeys.has(key)) throw codeError('GROWTH_RULE_ACTIVE_CONFLICT')
     activeKeys.add(key)
   }
@@ -1097,7 +1103,8 @@ function createAdminRepository(database, options = {}) {
   async function listGrowthRules(appId) {
     const rows = await database.query(
       `SELECT id, rule_key, name, metric, delta_value, daily_limit_value,
-        source_event_type, status, version FROM mip_growth_rules
+        source_event_type, scope_type, scope_id, effective_from, effective_to,
+        status, version FROM mip_growth_rules
        WHERE app_id = ? AND metric IN ('EXPERIENCE', 'CONTRIBUTION')
        ORDER BY status, name, id`,
       [appId],
@@ -1112,6 +1119,10 @@ function createAdminRepository(database, options = {}) {
         deltaValue: Number(row.delta_value),
         dailyLimitValue: row.daily_limit_value === null ? null : Number(row.daily_limit_value),
         sourceEventType: row.source_event_type,
+        scopeType: row.scope_type || 'PLATFORM',
+        scopeId: row.scope_id || null,
+        effectiveFrom: iso(row.effective_from),
+        effectiveTo: iso(row.effective_to),
         status: row.status,
         version: Number(row.version),
       }))
@@ -1123,7 +1134,8 @@ function createAdminRepository(database, options = {}) {
       if (!input.ruleId) throw codeError('GROWTH_RULE_NOT_CONFIGURABLE')
       const ruleId = input.ruleId
       const rows = await tx.query(
-        `SELECT id, rule_key, name, metric, source_event_type, status, version FROM mip_growth_rules
+        `SELECT id, rule_key, name, metric, source_event_type, scope_type, scope_id,
+                effective_from, effective_to, status, version FROM mip_growth_rules
          WHERE app_id = ? AND metric IN ('EXPERIENCE', 'CONTRIBUTION')
          ORDER BY source_event_type, metric, id FOR UPDATE`,
         [input.appId],
@@ -1140,10 +1152,12 @@ function createAdminRepository(database, options = {}) {
       assertGrowthRules(growthRuleProjection(rows, ruleId, input.draft))
       const result = await tx.query(
         `UPDATE mip_growth_rules SET delta_value = ?, daily_limit_value = ?,
+          scope_type = ?, scope_id = ?, effective_from = ?, effective_to = ?,
           status = ?, version = version + 1
          WHERE app_id = ? AND id = ? AND version = ?`,
-        [input.draft.deltaValue, input.draft.dailyLimitValue, input.draft.status,
-          input.appId, ruleId, input.expectedVersion],
+        [input.draft.deltaValue, input.draft.dailyLimitValue, input.draft.scopeType,
+          input.draft.scopeId, input.draft.effectiveFrom,
+          input.draft.effectiveTo, input.draft.status, input.appId, ruleId, input.expectedVersion],
       )
       if (Number(result.affectedRows) !== 1) throw codeError('CONFLICT')
       await writeAudit(tx, input.audit(ruleId))

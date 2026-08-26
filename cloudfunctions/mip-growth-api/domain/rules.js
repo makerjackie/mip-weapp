@@ -23,6 +23,36 @@ function projectAward(account, rule, awardedToday) {
   return { field, requested, applied, balanceAfter, capped: applied !== requested }
 }
 
+function selectApplicableRules(rows, branchId, occurredAt) {
+  const timestamp = new Date(occurredAt || Date.now())
+  if (!Number.isFinite(timestamp.getTime())) throw new Error('GROWTH_EVENT_TIME_INVALID')
+  const applicable = rows.filter((rule) => {
+    const scopeType = rule.scope_type || 'PLATFORM'
+    const scopeMatches = scopeType === 'PLATFORM'
+      ? !rule.scope_id
+      : scopeType === 'BRANCH' && Boolean(branchId) && rule.scope_id === branchId
+    if (!scopeMatches) return false
+    const from = rule.effective_from ? new Date(rule.effective_from) : null
+    const to = rule.effective_to ? new Date(rule.effective_to) : null
+    return (!from || timestamp >= from) && (!to || timestamp < to)
+  })
+  const selected = new Map()
+  for (const rule of applicable.sort((left, right) => (
+    (left.scope_type === 'BRANCH' ? 0 : 1) - (right.scope_type === 'BRANCH' ? 0 : 1)
+      || String(left.id).localeCompare(String(right.id))
+  ))) {
+    const prior = selected.get(rule.metric)
+    if (!prior) {
+      selected.set(rule.metric, rule)
+      continue
+    }
+    const priorSpecific = prior.scope_type === 'BRANCH' ? 0 : 1
+    const currentSpecific = rule.scope_type === 'BRANCH' ? 0 : 1
+    if (priorSpecific === currentSpecific) throw new Error('GROWTH_RULE_CONFLICT')
+  }
+  return [...selected.values()]
+}
+
 function balanceField(metric) {
   if (metric === 'EXPERIENCE') return 'experience_balance'
   if (metric === 'CONTRIBUTION') return 'contribution_balance'
@@ -113,4 +143,13 @@ function jsonArray(value) {
   }
 }
 
-module.exports = { accountDto, balanceField, levelDto, levelSnapshot, projectAward, ruleDto, supportedMetric }
+module.exports = {
+  accountDto,
+  balanceField,
+  levelDto,
+  levelSnapshot,
+  projectAward,
+  ruleDto,
+  selectApplicableRules,
+  supportedMetric,
+}

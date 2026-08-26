@@ -3,7 +3,7 @@
 const { createHash, randomUUID } = require('node:crypto')
 const { createCheckInGrowthRepository } = require('./checkin-compensation')
 const { createGameCoinRepository } = require('./game-coins')
-const { levelSnapshot, projectAward } = require('./rules')
+const { levelSnapshot, projectAward, selectApplicableRules } = require('./rules')
 const { appendLevelTransition } = require('./level-transitions')
 
 function createGrowthRepository(database, options = {}) {
@@ -37,7 +37,7 @@ function createGrowthRepository(database, options = {}) {
       ),
       database.query(
         `SELECT id, rule_key, name, metric, delta_value, daily_limit_value,
-                source_event_type, status
+                source_event_type, scope_type, scope_id, effective_from, effective_to, status
          FROM mip_growth_rules
          WHERE app_id = ? AND status = 'ACTIVE'
            AND metric IN ('EXPERIENCE', 'CONTRIBUTION', 'COIN')
@@ -116,7 +116,7 @@ function createGrowthRepository(database, options = {}) {
       }
 
       const user = await tx.one(
-        `SELECT id, status FROM mip_users
+        `SELECT id, status, primary_branch_id FROM mip_users
          WHERE app_id = ? AND id = ? FOR UPDATE`,
         [input.appId, input.userId],
       )
@@ -140,15 +140,21 @@ function createGrowthRepository(database, options = {}) {
          FROM mip_growth_accounts WHERE app_id = ? AND user_id = ? FOR UPDATE`,
         [input.appId, input.userId],
       )
-      const rules = await tx.query(
-        `SELECT id, rule_key, name, metric, delta_value, daily_limit_value,
-                source_event_type, status
-         FROM mip_growth_rules
-         WHERE app_id = ? AND source_event_type = ? AND status = 'ACTIVE'
-           AND metric IN ('EXPERIENCE', 'CONTRIBUTION', 'COIN')
-         ORDER BY id FOR UPDATE`,
-        [input.appId, input.sourceEventType],
+      const ruleRows = await tx.query(
+        `SELECT rule.id, rule.rule_key, rule.name, rule.metric, rule.delta_value, rule.daily_limit_value,
+                rule.source_event_type, rule.scope_type, rule.scope_id,
+                rule.effective_from, rule.effective_to, rule.status,
+                source_event.created_at AS source_event_created_at
+         FROM mip_growth_rules rule
+         LEFT JOIN mip_outbox_events source_event
+           ON source_event.app_id = ? AND source_event.id = ?
+         WHERE rule.app_id = ? AND rule.source_event_type = ? AND rule.status = 'ACTIVE'
+           AND rule.metric IN ('EXPERIENCE', 'CONTRIBUTION', 'COIN')
+         ORDER BY rule.id FOR UPDATE`,
+        [input.appId, input.sourceEventId, input.appId, input.sourceEventType],
       )
+      const occurredAt = ruleRows[0]?.source_event_created_at || new Date()
+      const rules = selectApplicableRules(ruleRows, user.primary_branch_id, occurredAt)
       if (new Set(rules.map(rule => rule.metric)).size !== rules.length) {
         throw new Error('GROWTH_RULE_CONFLICT')
       }

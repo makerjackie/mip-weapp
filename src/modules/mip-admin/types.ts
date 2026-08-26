@@ -796,6 +796,10 @@ export interface AdminGrowthRule {
   deltaValue: number
   dailyLimitValue: number | null
   sourceEventType: string
+  scopeType: 'PLATFORM' | 'BRANCH'
+  scopeId: string | null
+  effectiveFrom: string | null
+  effectiveTo: string | null
   status: 'DRAFT' | 'ACTIVE' | 'INACTIVE'
   version: number
 }

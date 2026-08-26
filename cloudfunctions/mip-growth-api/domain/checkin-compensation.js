@@ -1,7 +1,7 @@
 'use strict'
 
 const { randomUUID } = require('node:crypto')
-const { balanceField, projectAward } = require('./rules')
+const { balanceField, projectAward, selectApplicableRules } = require('./rules')
 const { appendLevelTransition } = require('./level-transitions')
 
 const CHECKED_IN_EVENT = 'event.checked_in'
@@ -58,7 +58,8 @@ function createCheckInGrowthRepository(database, options = {}) {
         throw new Error('VALIDATION_FAILED')
       }
       const relation = await tx.one(
-        `SELECT checkin.id
+        `SELECT checkin.id, event.starts_at AS event_starts_at,
+                user.primary_branch_id
          FROM mip_event_checkins checkin
          INNER JOIN mip_event_registrations registration
            ON registration.app_id = checkin.app_id
@@ -75,6 +76,8 @@ function createCheckInGrowthRepository(database, options = {}) {
           recorded.event_id, recorded.user_id],
       )
       if (!relation) throw new Error('VALIDATION_FAILED')
+      recorded.occurred_at = relation.event_starts_at || new Date()
+      recorded.primary_branch_id = relation.primary_branch_id || null
       const reversal = await tx.one(
         `SELECT id, app_id, checkin_id, registration_id, event_id, user_id,
                 checkin_version, registration_version, reversal_of_transition_id,
@@ -106,18 +109,16 @@ function createCheckInGrowthRepository(database, options = {}) {
 }
 
 async function awardCheckIn(tx, recorded, account, createId) {
-  const rules = await tx.query(
+  const ruleRows = await tx.query(
     `SELECT id, rule_key, name, metric, delta_value, daily_limit_value,
-            source_event_type, status
+            source_event_type, scope_type, scope_id, effective_from, effective_to, status
      FROM mip_growth_rules
      WHERE app_id = ? AND source_event_type = 'event.checked_in' AND status = 'ACTIVE'
        AND metric IN ('EXPERIENCE', 'CONTRIBUTION')
      ORDER BY id FOR UPDATE`,
     [recorded.app_id],
   )
-  if (new Set(rules.map(rule => rule.metric)).size !== rules.length) {
-    throw new Error('GROWTH_RULE_CONFLICT')
-  }
+  const rules = selectApplicableRules(ruleRows, recorded.primary_branch_id, recorded.occurred_at)
   const awards = []
   for (const rule of rules) {
     const existing = await tx.one(

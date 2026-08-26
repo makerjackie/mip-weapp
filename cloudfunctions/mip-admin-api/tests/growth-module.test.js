@@ -498,7 +498,15 @@ describe('admin growth deep module', () => {
         action: 'admin.growth.rule.update',
         resourceType: 'GROWTH_RULE',
         resourceId: RULE_ID,
-        metadata: { metric: 'EXPERIENCE', deltaValue: 100, status: 'ACTIVE' },
+        metadata: {
+          metric: 'EXPERIENCE',
+          deltaValue: 100,
+          status: 'ACTIVE',
+          scopeType: 'PLATFORM',
+          scopeId: null,
+          effectiveFrom: null,
+          effectiveTo: null,
+        },
       },
       {
         action: 'admin.badge.update',
