@@ -32,7 +32,7 @@ function createMessageDeliveryReviewRepository(database, options = {}) {
     const currentTime = input.now || now()
     const visible = []
     let cursor = input.cursor
-    while (input.unbounded === true || visible.length <= input.limit) {
+    while (visible.length <= input.limit) {
       const candidateRows = await listCandidates(database, {
         ...input,
         cursor,
@@ -44,15 +44,13 @@ function createMessageDeliveryReviewRepository(database, options = {}) {
         .map(source => ({ source, item: reviewDto(source, input.actorUserId, currentTime) }))
         .filter(({ source, item }) => (
           matchesWorkflowFilter(item.workflow.status, input.workflowStatus)
+          && matchesQueueState(item.classification, input.queueState)
           && (source.review || CLAIMABLE_CLASSIFICATIONS.has(item.classification))
         ))
         .map(({ item }) => item))
       if (candidateRows.length < LIST_SCAN_BATCH_SIZE) break
       const last = candidateRows[candidateRows.length - 1]
       cursor = { occurredAt: last.occurred_at, id: last.incident_id }
-    }
-    if (input.unbounded === true) {
-      return { items: visible, nextCursor: null }
     }
     return pageRows(visible, input.limit, item => ({
       occurredAt: item.sourceState.occurredAt,
@@ -374,6 +372,18 @@ async function listCandidates(database, input) {
   const campaignEnabled = !input.sourceType || input.sourceType === 'CAMPAIGN_DISPATCH'
   const deliveryEnabled = !input.sourceType || input.sourceType === 'DELIVERY_TASK'
   const incidentEnabled = input.workflowStatus !== 'RESOLVED'
+  const campaignIncidentId = input.queueCursor
+    ? "CONCAT('DELIVERY_REVIEW:CAMPAIGN_DISPATCH:', dispatch.id)"
+    : "CONCAT('CAMPAIGN_DISPATCH:', dispatch.id)"
+  const campaignReviewIncidentId = input.queueCursor
+    ? "CONCAT('DELIVERY_REVIEW:', review.source_type, ':', review.source_id)"
+    : "CONCAT(review.source_type, ':', review.source_id)"
+  const deliveryIncidentId = input.queueCursor
+    ? "CONCAT('DELIVERY_REVIEW:DELIVERY_TASK:', task.id)"
+    : "CONCAT('DELIVERY_TASK:', task.id)"
+  const deliveryReviewIncidentId = input.queueCursor
+    ? "CONCAT('DELIVERY_REVIEW:', review.source_type, ':', review.source_id)"
+    : "CONCAT(review.source_type, ':', review.source_id)"
   const params = [
     input.appId,
     input.now,
@@ -397,7 +407,7 @@ async function listCandidates(database, input) {
      FROM (
        SELECT 'CAMPAIGN_DISPATCH' AS source_type, dispatch.id AS source_id,
         dispatch.updated_at AS occurred_at,
-        CONCAT('CAMPAIGN_DISPATCH:', dispatch.id) AS incident_id
+        ${campaignIncidentId} AS incident_id
        FROM mip_message_campaign_dispatches dispatch
        INNER JOIN mip_message_campaigns campaign
          ON campaign.app_id = dispatch.app_id AND campaign.id = dispatch.campaign_id
@@ -436,7 +446,7 @@ async function listCandidates(database, input) {
          AND ? = 1
        UNION
        SELECT review.source_type, review.source_id, dispatch.updated_at AS occurred_at,
-        CONCAT(review.source_type, ':', review.source_id) AS incident_id
+        ${campaignReviewIncidentId} AS incident_id
        FROM mip_message_delivery_reviews review
        INNER JOIN mip_message_campaign_dispatches dispatch
          ON dispatch.app_id = review.app_id AND dispatch.id = review.source_id
@@ -450,7 +460,7 @@ async function listCandidates(database, input) {
        UNION
        SELECT 'DELIVERY_TASK' AS source_type, task.id AS source_id,
         task.outcome_updated_at AS occurred_at,
-        CONCAT('DELIVERY_TASK:', task.id) AS incident_id
+        ${deliveryIncidentId} AS incident_id
        FROM mip_delivery_tasks task
        LEFT JOIN mip_message_delivery_reviews review
          ON review.app_id = task.app_id
@@ -470,7 +480,7 @@ async function listCandidates(database, input) {
          AND ? = 1
        UNION
        SELECT review.source_type, review.source_id, task.outcome_updated_at AS occurred_at,
-        CONCAT(review.source_type, ':', review.source_id) AS incident_id
+        ${deliveryReviewIncidentId} AS incident_id
        FROM mip_message_delivery_reviews review
        INNER JOIN mip_delivery_tasks task
          ON task.app_id = review.app_id AND task.id = review.source_id
@@ -511,6 +521,13 @@ async function hydrateCandidates(database, appId, candidateRows) {
 function matchesWorkflowFilter(status, filter) {
   if (filter === 'ALL') return true
   return filter === 'RESOLVED' ? status === 'RESOLVED' : status !== 'RESOLVED'
+}
+
+function matchesQueueState(classification, state) {
+  if (!state) return true
+  if (state === 'PENDING') return ['PENDING', 'RETRYABLE_FAILURE'].includes(classification)
+  if (state === 'PROCESSING') return ['PROCESSING_ACTIVE', 'PROCESSING_STALLED'].includes(classification)
+  return ['MANUAL_REVIEW', 'TERMINAL_FAILURE'].includes(classification)
 }
 
 async function readCampaignRows(database, appId, ids) {

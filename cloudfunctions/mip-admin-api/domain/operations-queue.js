@@ -21,12 +21,15 @@ function createAdminOperationsQueue({ access, repository, now = () => new Date()
     }
     const request = normalizeQueueInput(input)
     const currentTime = now()
+    const sourceLimit = request.limit + 1
     const [exceptions, reviews] = await Promise.all([
-      canReadExceptions
+      canReadExceptions && request.state !== 'PENDING'
         ? repository.listOperationalExceptions(context.caller.appId, {
             types: exceptionTypes,
-            statuses: ['FAILED', 'STALLED', 'REJECTED', 'EXPIRED', 'CLEANUP_PENDING'],
-            unbounded: true,
+            statuses: statusesForState(request.state),
+            cursor: request.cursor,
+            internal: true,
+            limit: sourceLimit,
           })
         : [],
       canReadDeliveryReviews
@@ -34,9 +37,10 @@ function createAdminOperationsQueue({ access, repository, now = () => new Date()
             appId: context.caller.appId,
             actorUserId: context.caller.userId,
             workflowStatus: 'ACTIVE',
-            cursor: null,
-            limit: request.limit,
-            unbounded: true,
+            cursor: request.cursor,
+            queueCursor: true,
+            queueState: request.state,
+            limit: sourceLimit,
             now: currentTime,
           })
         : { items: [] },
@@ -80,6 +84,12 @@ function normalizeQueueInput(input = {}) {
     cursor: decodeCursor(input.cursor, ['occurredAt', 'id']),
     limit: limit(input.limit || 50, 100),
   }
+}
+
+function statusesForState(state) {
+  if (state === 'PROCESSING') return ['STALLED']
+  if (state === 'MANUAL_REVIEW') return ['FAILED', 'REJECTED', 'EXPIRED', 'CLEANUP_PENDING']
+  return ['FAILED', 'STALLED', 'REJECTED', 'EXPIRED', 'CLEANUP_PENDING']
 }
 
 function deriveQueueItems(exceptions, reviews) {

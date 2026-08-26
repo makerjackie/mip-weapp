@@ -204,6 +204,43 @@ describe('message delivery review contract', () => {
     }
   })
 
+  it('uses queue-prefixed incident ids for a shared cursor without widening each scan batch', async () => {
+    let candidateCall
+    const repository = createMessageDeliveryReviewRepository({
+      async query(sql, params) {
+        candidateCall = { sql, params }
+        return []
+      },
+    }, {
+      lockMutationAuthorization() {},
+      assertMutationScope() {},
+      now: () => CURRENT_TIME,
+    })
+
+    const cursor = {
+      occurredAt: CURRENT_TIME,
+      id: `DELIVERY_REVIEW:CAMPAIGN_DISPATCH:${idFor(20)}`,
+    }
+    await repository.listMessageDeliveryReviews({
+      appId: APP_ID,
+      actorUserId: ACTOR_ID,
+      workflowStatus: 'ACTIVE',
+      cursor,
+      queueCursor: true,
+      limit: 20,
+      now: CURRENT_TIME,
+    })
+
+    assert.match(candidateCall.sql, /CONCAT\('DELIVERY_REVIEW:CAMPAIGN_DISPATCH:', dispatch\.id\) AS incident_id/)
+    assert.match(candidateCall.sql, /WHERE \(occurred_at < \? OR \(occurred_at = \? AND incident_id < \?\)\)/)
+    assert.deepEqual(candidateCall.params.slice(-4), [
+      cursor.occurredAt,
+      cursor.occurredAt,
+      cursor.id,
+      LIST_SCAN_BATCH_SIZE,
+    ])
+  })
+
   it('uses bulk evidence reads, excludes unchanged resolved history, and reopens changed evidence', async () => {
     const candidates = Array.from({ length: 52 }, (_, index) => ({
       source_type: 'DELIVERY_TASK',

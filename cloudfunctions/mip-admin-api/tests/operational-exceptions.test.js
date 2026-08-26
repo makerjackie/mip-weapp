@@ -138,18 +138,29 @@ describe('operational exception reader', () => {
     assert.deepEqual(items.map(item => [item.source, item.status]), [['PAYMENT', 'FAILED']])
   })
 
-  it('supports the queue internal full scan without a per-source row cap', async () => {
+  it('applies the shared queue cursor to the source id rather than the database id alone', async () => {
     const database = fixtureDatabase()
-    const items = await listOperationalExceptions(database, {
+    const cursor = {
+      occurredAt: NOW,
+      id: `PAYMENT:${IDS.payment}`,
+    }
+    await listOperationalExceptions(database, {
       appId: APP_ID,
       now: NOW,
-      types: EXCEPTION_TYPES,
-      statuses: EXCEPTION_STATUSES,
-      unbounded: true,
+      types: ['PAYMENT'],
+      statuses: ['FAILED'],
+      limit: 10,
+      internal: true,
+      cursor,
     })
 
-    assert.equal(items.length, 6)
-    assert.equal(database.calls.every(call => !/\bLIMIT\b/i.test(call.sql)), true)
+    assert.match(database.calls[0].sql, /CONCAT\('PAYMENT:', id\) < \?/)
+    assert.deepEqual(database.calls[0].params.slice(-4), [
+      cursor.occurredAt,
+      cursor.occurredAt,
+      cursor.id,
+      10,
+    ])
   })
 
   it('keeps the terminal unknown delivery outcome as a read-only fact', async () => {

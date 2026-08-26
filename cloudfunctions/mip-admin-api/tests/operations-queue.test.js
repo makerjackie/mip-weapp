@@ -82,10 +82,29 @@ describe('operations queue server contract', () => {
       { limit: 1 },
     )
 
-    assert.equal(calls.find(call => call.type === 'exceptions').input.unbounded, true)
-    assert.equal(calls.find(call => call.type === 'exceptions').input.limit, undefined)
-    assert.equal(calls.find(call => call.type === 'reviews').input.unbounded, true)
+    assert.equal(calls.find(call => call.type === 'exceptions').input.internal, true)
+    assert.equal(calls.find(call => call.type === 'exceptions').input.limit, 2)
+    assert.equal(calls.find(call => call.type === 'exceptions').input.cursor, null)
+    assert.equal(calls.find(call => call.type === 'reviews').input.queueCursor, true)
+    assert.equal(calls.find(call => call.type === 'reviews').input.queueState, null)
+    assert.equal(calls.find(call => call.type === 'reviews').input.limit, 2)
     assert.equal(page.items.length, 1)
     assert.equal(typeof page.nextCursor, 'string')
+
+    await queue.listOperationsQueue(
+      { appId: 'app-id', userId: 'user-id' },
+      { state: 'PROCESSING', limit: 10 },
+    )
+    const processingExceptions = calls.filter(call => call.type === 'exceptions').at(-1)
+    const processingReviews = calls.filter(call => call.type === 'reviews').at(-1)
+    assert.deepEqual(processingExceptions.input.statuses, ['STALLED'])
+    assert.equal(processingReviews.input.queueState, 'PROCESSING')
+    assert.equal(processingReviews.input.limit, 11)
+
+    await queue.listOperationsQueue(
+      { appId: 'app-id', userId: 'user-id' },
+      { state: 'PENDING', limit: 10 },
+    )
+    assert.equal(calls.filter(call => call.type === 'exceptions').length, 2)
   })
 })

@@ -51,9 +51,8 @@ async function listOperationalExceptions(database, input) {
     throw new Error('OPERATIONAL_EXCEPTION_APP_INVALID')
   }
   const now = input.now instanceof Date ? input.now : new Date(input.now || Date.now())
-  const pageLimit = input.unbounded === true
-    ? null
-    : Math.min(100, Math.max(1, Number(input.limit) || 50))
+  const pageLimit = Math.min(input.internal === true ? 101 : 100, Math.max(1, Number(input.limit) || 50))
+  const cursor = input.cursor || null
   const selectedTypes = normalizedSelection(input.types, EXCEPTION_TYPES)
   const selectedStatuses = normalizedSelection(input.statuses, EXCEPTION_STATUSES)
   const readers = {
@@ -70,9 +69,11 @@ async function listOperationalExceptions(database, input) {
     now,
     selectedStatuses,
     pageLimit,
+    cursor,
   )))
-  const items = pages.flat().sort((left, right) => compareExceptions(left, right))
-  return pageLimit === null ? items : items.slice(0, pageLimit)
+  return pages.flat()
+    .sort((left, right) => compareExceptions(left, right))
+    .slice(0, pageLimit)
 }
 
 function normalizedSelection(value, allowed) {
@@ -81,7 +82,7 @@ function normalizedSelection(value, allowed) {
   return selected.length ? [...new Set(selected)] : [...allowed]
 }
 
-async function readOutbox(database, appId, now, statuses, limit) {
+async function readOutbox(database, appId, now, statuses, limit, cursor) {
   const conditions = []
   const params = [appId]
   if (statuses.includes('FAILED')) {
@@ -95,12 +96,14 @@ async function readOutbox(database, appId, now, statuses, limit) {
     params.push(now, now)
   }
   if (!conditions.length) return []
+  const cursorWhere = cursorPredicate('updated_at', "CONCAT('OUTBOX:', id)", cursor)
   const rows = await limitedQuery(database,
     `SELECT id, aggregate_type, aggregate_id, status, attempts, updated_at
      FROM mip_outbox_events
      WHERE app_id = ? AND (${conditions.join(' OR ')})
+     ${cursorWhere.sql}
      ORDER BY updated_at DESC, id DESC`,
-    params,
+    [...params, ...cursorWhere.params],
     limit,
   )
   return rows.map(row => exceptionDto({
@@ -112,7 +115,7 @@ async function readOutbox(database, appId, now, statuses, limit) {
   }))
 }
 
-async function readRefunds(database, appId, now, statuses, limit) {
+async function readRefunds(database, appId, now, statuses, limit, cursor) {
   const conditions = []
   const params = [appId]
   if (statuses.includes('FAILED')) conditions.push("status = 'FAILED'")
@@ -121,12 +124,14 @@ async function readRefunds(database, appId, now, statuses, limit) {
     params.push(now)
   }
   if (!conditions.length) return []
+  const cursorWhere = cursorPredicate('updated_at', "CONCAT('REFUND:', id)", cursor)
   const rows = await limitedQuery(database,
     `SELECT id, order_id, status, updated_at
      FROM mip_refunds
      WHERE app_id = ? AND (${conditions.join(' OR ')})
+     ${cursorWhere.sql}
      ORDER BY updated_at DESC, id DESC`,
-    params,
+    [...params, ...cursorWhere.params],
     limit,
   )
   return rows.map(row => exceptionDto({
@@ -138,7 +143,7 @@ async function readRefunds(database, appId, now, statuses, limit) {
   }))
 }
 
-async function readPayments(database, appId, now, statuses, limit) {
+async function readPayments(database, appId, now, statuses, limit, cursor) {
   const conditions = []
   const params = [appId]
   if (statuses.includes('FAILED')) conditions.push("status = 'FAILED'")
@@ -147,12 +152,14 @@ async function readPayments(database, appId, now, statuses, limit) {
     params.push(now)
   }
   if (!conditions.length) return []
+  const cursorWhere = cursorPredicate('updated_at', "CONCAT('PAYMENT:', id)", cursor)
   const rows = await limitedQuery(database,
     `SELECT id, order_id, status, updated_at
      FROM mip_payment_attempts
      WHERE app_id = ? AND (${conditions.join(' OR ')})
+     ${cursorWhere.sql}
      ORDER BY updated_at DESC, id DESC`,
-    params,
+    [...params, ...cursorWhere.params],
     limit,
   )
   return rows.map(row => exceptionDto({
@@ -164,7 +171,7 @@ async function readPayments(database, appId, now, statuses, limit) {
   }))
 }
 
-async function readMedia(database, appId, now, statuses, limit) {
+async function readMedia(database, appId, now, statuses, limit, cursor) {
   const conditions = []
   const params = [appId]
   if (statuses.includes('REJECTED')) conditions.push("status = 'REJECTED'")
@@ -173,12 +180,14 @@ async function readMedia(database, appId, now, statuses, limit) {
     params.push(now)
   }
   if (!conditions.length) return []
+  const cursorWhere = cursorPredicate('updated_at', "CONCAT('MEDIA:', id)", cursor)
   const rows = await limitedQuery(database,
     `SELECT id, status, updated_at
      FROM mip_media_assets
      WHERE app_id = ? AND (${conditions.join(' OR ')})
+     ${cursorWhere.sql}
      ORDER BY updated_at DESC, id DESC`,
-    params,
+    [...params, ...cursorWhere.params],
     limit,
   )
   return rows.map(row => exceptionDto({
@@ -190,7 +199,7 @@ async function readMedia(database, appId, now, statuses, limit) {
   }))
 }
 
-async function readDeliveries(database, appId, now, statuses, limit) {
+async function readDeliveries(database, appId, now, statuses, limit, cursor) {
   const conditions = []
   const params = [appId]
   if (statuses.includes('FAILED')) {
@@ -204,6 +213,7 @@ async function readDeliveries(database, appId, now, statuses, limit) {
     params.push(now, now)
   }
   if (!conditions.length) return []
+  const cursorWhere = cursorPredicate('task.updated_at', "CONCAT('DELIVERY:', task.id)", cursor)
   const rows = await limitedQuery(database,
     `SELECT task.id, task.status, task.last_error_code, task.updated_at,
             message.target_type, message.target_id
@@ -211,8 +221,9 @@ async function readDeliveries(database, appId, now, statuses, limit) {
      INNER JOIN mip_inbox_messages message
        ON message.app_id = task.app_id AND message.id = task.inbox_message_id
      WHERE task.app_id = ? AND (${conditions.join(' OR ')})
+     ${cursorWhere.sql}
      ORDER BY task.updated_at DESC, task.id DESC`,
-    params,
+    [...params, ...cursorWhere.params],
     limit,
   )
   return rows.map(row => exceptionDto({
@@ -225,7 +236,7 @@ async function readDeliveries(database, appId, now, statuses, limit) {
   }))
 }
 
-async function readAi(database, appId, now, statuses, limit) {
+async function readAi(database, appId, now, statuses, limit, cursor) {
   const conditions = []
   const params = [appId]
   if (statuses.includes('FAILED')) conditions.push("draft.status = 'FAILED'")
@@ -239,15 +250,26 @@ async function readAi(database, appId, now, statuses, limit) {
       AND asset.owner_user_id = draft.user_id)`)
   }
   if (!conditions.length) return []
+  const occurredAt = `CASE
+              WHEN draft.status IN ('CONFIRMED', 'EXPIRED', 'DELETED')
+                AND asset.status = 'READY' AND asset.purpose = 'AI_AUDIO'
+                AND asset.owner_user_id = draft.user_id
+                THEN draft.updated_at
+              WHEN draft.status IN ('UPLOADED', 'TRANSCRIBING', 'STRUCTURING', 'DRAFT_READY', 'EXPIRED')
+                THEN draft.expires_at
+              ELSE draft.updated_at
+            END`
+  const cursorWhere = cursorPredicate(occurredAt, "CONCAT('AI:', draft.id)", cursor)
   const rows = await limitedQuery(database,
     `SELECT draft.id, draft.status, draft.expires_at, draft.updated_at,
-            asset.status AS audio_status
+            asset.status AS audio_status, ${occurredAt} AS occurred_at
      FROM mip_ai_drafts draft
      LEFT JOIN mip_media_assets asset
        ON asset.app_id = draft.app_id AND asset.id = draft.audio_asset_id
      WHERE draft.app_id = ? AND (${conditions.join(' OR ')})
-     ORDER BY draft.updated_at DESC, draft.id DESC`,
-    params,
+     ${cursorWhere.sql}
+     ORDER BY occurred_at DESC, draft.id DESC`,
+    [...params, ...cursorWhere.params],
     limit,
   )
   return rows.map((row) => {
@@ -261,17 +283,22 @@ async function readAi(database, appId, now, statuses, limit) {
       id: row.id,
       source: 'AI',
       status,
-      occurredAt: status === 'EXPIRED' ? row.expires_at : row.updated_at,
+      occurredAt: row.occurred_at || (status === 'EXPIRED' ? row.expires_at : row.updated_at),
       target: null,
     })
   })
 }
 
+function cursorPredicate(column, idColumn, cursor) {
+  if (!cursor) return { sql: '', params: [] }
+  return {
+    sql: `AND (${column} < ? OR (${column} = ? AND ${idColumn} < ?))`,
+    params: [cursor.occurredAt, cursor.occurredAt, cursor.id],
+  }
+}
+
 function limitedQuery(database, sql, params, rowLimit) {
-  return database.query(
-    rowLimit === null ? sql : `${sql} LIMIT ?`,
-    rowLimit === null ? params : [...params, rowLimit],
-  )
+  return database.query(`${sql} LIMIT ?`, [...params, rowLimit])
 }
 
 function exceptionDto(input) {
