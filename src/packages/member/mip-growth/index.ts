@@ -1,7 +1,10 @@
 import type { GrowthEntry, GrowthLevel, GrowthRule, GrowthSnapshot } from '../../../modules/mip-growth'
+import type { UserTaskCard } from '../../../modules/mip-tasks'
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
 import { mipGrowthModule } from '../../../modules/mip-growth/client'
+import { mipTasksModule } from '../../../modules/mip-tasks/client'
 import { caseNavigateTo } from '../../../modules/platform/case-navigation'
+import { formatLocalDate } from '../../../utils/date'
 
 const metricLabels = {
   EXPERIENCE: '经验值',
@@ -16,14 +19,20 @@ interface GrowthEntryView extends GrowthEntry {
 }
 
 interface GrowthLevelView extends GrowthLevel {
+  levelNumber: number
   thresholdText: string
   current: boolean
+  reached: boolean
 }
 
 interface GrowthRuleView extends GrowthRule {
   metricLabel: string
   deltaText: string
   dailyLimitText: string
+}
+
+interface GrowthTaskView extends UserTaskCard {
+  actionText: string
 }
 
 function dateText(value: string) {
@@ -43,11 +52,13 @@ function entryView(entry: GrowthEntry): GrowthEntryView {
   }
 }
 
-function levelView(level: GrowthLevel, currentLevelId: string): GrowthLevelView {
+function levelView(level: GrowthLevel, currentLevelId: string, levelNumber: number, currentLevelNumber: number): GrowthLevelView {
   return {
     ...level,
+    levelNumber,
     thresholdText: level.minimumExperience === 0 ? '基础等级' : `${level.minimumExperience} 经验值`,
     current: level.id === currentLevelId,
+    reached: levelNumber <= currentLevelNumber,
   }
 }
 
@@ -63,17 +74,49 @@ function ruleView(rule: GrowthRule): GrowthRuleView {
   }
 }
 
+function taskView(task: UserTaskCard): GrowthTaskView {
+  const completed = task.status === 'COMPLETED'
+  const ended = task.status === 'ENDED'
+  return {
+    ...task,
+    actionText: completed ? '已完成' : ended ? '已截止' : '去完成',
+  }
+}
+
+function growthPresentation(snapshot: GrowthSnapshot) {
+  const currentIndex = snapshot.levels.findIndex(level => level.id === snapshot.currentLevel.id)
+  const currentLevelNumber = Math.max(1, currentIndex + 1)
+  return {
+    currentLevelNumber,
+    nextLevelNumber: snapshot.nextLevel ? currentLevelNumber + 1 : 0,
+    nextLevelThreshold: snapshot.nextLevel?.minimumExperience || 0,
+    levels: snapshot.levels.map((level, index) => levelView(
+      level,
+      snapshot.currentLevel.id,
+      index + 1,
+      currentLevelNumber,
+    )),
+  }
+}
+
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
     snapshot: null as GrowthSnapshot | null,
     currentLevelNumber: 1,
+    nextLevelNumber: 0,
+    nextLevelThreshold: 0,
     levels: [] as GrowthLevelView[],
     earningRules: [] as GrowthRuleView[],
     entries: [] as GrowthEntryView[],
     nextCursor: '',
     loadingMore: false,
+    tasksState: 'loading' as 'loading' | 'ready' | 'empty' | 'error',
+    tasks: [] as GrowthTaskView[],
+    tasksMessage: '',
     isPlayer: false,
+    membershipState: 'loading' as 'loading' | 'player' | 'guest' | 'error',
+    membershipEndsText: '',
     invitationReady: false,
     invitationMessage: '',
     message: '',
@@ -90,30 +133,65 @@ Page({
 
   onShow() {
     void this.loadMembershipActions()
+    void this.loadTasks()
   },
 
   async loadMembershipActions() {
+    let membership
     try {
-      const membership = await mipCommerceModule.getMembershipBenefits()
-      if (membership.kind !== 'PLAYER') {
-        this.shareInvitationToken = ''
-        this.setData({ isPlayer: false, invitationReady: false, invitationMessage: '' })
-        return
-      }
-      this.setData({ isPlayer: true, invitationReady: false, invitationMessage: '' })
+      membership = await mipCommerceModule.getMembershipBenefits()
+    }
+    catch {
+      this.shareInvitationToken = ''
+      this.setData({
+        isPlayer: false,
+        membershipState: 'error',
+        membershipEndsText: '',
+        invitationReady: false,
+        invitationMessage: '',
+      })
+      return
+    }
+    if (membership.kind !== 'PLAYER') {
+      this.shareInvitationToken = ''
+      this.setData({
+        isPlayer: false,
+        membershipState: 'guest',
+        membershipEndsText: '',
+        invitationReady: false,
+        invitationMessage: '',
+      })
+      return
+    }
+    this.setData({
+      isPlayer: true,
+      membershipState: 'player',
+      membershipEndsText: formatLocalDate(membership.membershipEndsAt),
+      invitationReady: false,
+      invitationMessage: '',
+    })
+    try {
       const invitation = await mipCommerceModule.createMembershipInvitation()
       this.shareInvitationToken = invitation.token
       this.setData({ invitationReady: true })
     }
     catch {
       this.shareInvitationToken = ''
-      this.setData({ invitationReady: false, invitationMessage: '会员操作暂时不可用，请稍后重试。' })
+      this.setData({ invitationReady: false, invitationMessage: '邀请暂时不可用，请稍后重试。' })
     }
   },
 
   async onPullDownRefresh() {
-    await this.loadGrowth(true)
-    wx.stopPullDownRefresh()
+    try {
+      await Promise.all([
+        this.loadGrowth(true),
+        this.loadMembershipActions(),
+        this.loadTasks(true),
+      ])
+    }
+    finally {
+      wx.stopPullDownRefresh()
+    }
   },
 
   async loadGrowth(force = false) {
@@ -125,11 +203,11 @@ Page({
         mipGrowthModule.getSnapshot({ force }),
         mipGrowthModule.listEntries(undefined, 20),
       ])
+      const presentation = growthPresentation(snapshot)
       this.setData({
         state: 'ready',
         snapshot,
-        currentLevelNumber: Math.max(1, snapshot.levels.findIndex(level => level.id === snapshot.currentLevel.id) + 1),
-        levels: snapshot.levels.map(level => levelView(level, snapshot.currentLevel.id)),
+        ...presentation,
         earningRules: snapshot.earningRules.map(ruleView),
         entries: page.items.map(entryView),
         nextCursor: page.nextCursor || '',
@@ -147,10 +225,30 @@ Page({
     this.setData({
       state: 'ready',
       snapshot,
-      currentLevelNumber: Math.max(1, snapshot.levels.findIndex(level => level.id === snapshot.currentLevel.id) + 1),
-      levels: snapshot.levels.map(level => levelView(level, snapshot.currentLevel.id)),
+      ...growthPresentation(snapshot),
       earningRules: snapshot.earningRules.map(ruleView),
     })
+  },
+
+  async loadTasks(force = false) {
+    if (!this.data.tasks.length) {
+      this.setData({ tasksState: 'loading', tasksMessage: '' })
+    }
+    try {
+      const page = await mipTasksModule.query.listTasks(undefined, 4, force)
+      const tasks = page.items.map(taskView)
+      this.setData({
+        tasksState: tasks.length ? 'ready' : 'empty',
+        tasks,
+        tasksMessage: '',
+      })
+    }
+    catch {
+      this.setData({
+        tasksState: this.data.tasks.length ? 'ready' : 'error',
+        tasksMessage: '请稍后重试。',
+      })
+    }
   },
 
   async loadMore() {
@@ -175,6 +273,13 @@ Page({
 
   openTasks() {
     void wx.navigateTo({ url: '/packages/member/mip-tasks/index' })
+  },
+
+  openTask(event: WechatMiniprogram.TouchEvent) {
+    const taskId = String(event.currentTarget.dataset.id || '')
+    if (taskId) {
+      void wx.navigateTo({ url: `/packages/member/mip-tasks/detail/index?taskId=${taskId}` })
+    }
   },
 
   openBenefits() {

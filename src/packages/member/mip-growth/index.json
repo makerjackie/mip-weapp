@@ -1,7 +1,10 @@
 {
-  "navigationBarTitleText": "成长记录",
+  "navigationBarTitleText": "玩家等级",
+  "navigationBarBackgroundColor": "#FCDF03",
+  "navigationBarTextStyle": "black",
   "enablePullDownRefresh": true,
-  "backgroundColor": "#040404",
+  "backgroundColor": "#FCDF03",
+  "backgroundTextStyle": "dark",
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",
     "app-page-exit": "/components/page-exit/index",
