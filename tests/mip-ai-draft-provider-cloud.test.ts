@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
@@ -113,7 +114,7 @@ describe('AI draft Provider cloud contract', () => {
   })
 
   it('stages only the fixed runtime allowlist and excludes tests and documentation', () => {
-    const destination = fs.mkdtempSync(path.join(root, '.tmp', 'ai-provider-stage-'))
+    const destination = fs.mkdtempSync(path.join(os.tmpdir(), 'mip-ai-provider-stage-'))
     try {
       stageProviderSources(sourceRoot, destination)
       const staged = fs.readdirSync(destination, { recursive: true, encoding: 'utf8' })

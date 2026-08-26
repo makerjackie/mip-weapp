@@ -104,7 +104,7 @@ describe('H2 admin order and roster response boundary', () => {
     const orderWxml = read('src/packages/admin/orders/index.wxml')
     const rosterWxml = read('src/packages/admin/event-registrations/index.wxml')
     const service = read('cloudfunctions/mip-admin-api/domain/orders.js')
-    const repository = read('cloudfunctions/mip-admin-api/domain/repository.js')
+    const repository = read('cloudfunctions/mip-admin-api/domain/repositories/orders.js')
     const gateway = read('src/modules/mip-admin/cloudbase-gateway.ts')
 
     for (const filter of ['query', 'orderType', 'status', 'refundStatus', 'createdFrom', 'createdTo']) {
