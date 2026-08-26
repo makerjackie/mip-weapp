@@ -31,6 +31,13 @@ function createGameCoinRepository(database, options = {}) {
       )
       if (!user || user.status !== 'ACTIVE') throw new Error('FORBIDDEN')
 
+      const membershipChain = await tx.one(
+        `SELECT version FROM mip_membership_chains
+         WHERE app_id = ? AND user_id = ? FOR UPDATE`,
+        [input.appId, input.userId],
+      )
+      if (!membershipChain) throw new Error('MEMBERSHIP_REQUIRED')
+
       const existing = await tx.one(
         `SELECT id, delta_value, balance_after, created_at
          FROM mip_growth_entries
@@ -44,6 +51,15 @@ function createGameCoinRepository(database, options = {}) {
         }
         return resultDto(existing, input.sourceEventType, true)
       }
+
+      const entitlement = await tx.one(
+        `SELECT id FROM mip_membership_entitlements
+         WHERE app_id = ? AND user_id = ? AND status = 'ACTIVE'
+           AND starts_at <= UTC_TIMESTAMP(3) AND ends_at > UTC_TIMESTAMP(3)
+         ORDER BY ends_at DESC, id DESC LIMIT 1 FOR UPDATE`,
+        [input.appId, input.userId],
+      )
+      if (!entitlement) throw new Error('MEMBERSHIP_REQUIRED')
 
       await tx.query(
         `INSERT INTO mip_growth_accounts (app_id, user_id)

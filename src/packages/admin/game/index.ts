@@ -80,7 +80,10 @@ Page({
     memberTeamId: '',
     memberTeamName: '',
     memberTeamVersion: 0,
+    memberRequestKey: 0,
     members: [] as MemberView[],
+    maxTeamMembers: 0,
+    selectedMemberCount: 0,
     processing: false,
     generatingRankingType: '' as GameRankingType | '',
     message: '',
@@ -161,6 +164,8 @@ Page({
     this.setData({
       selectedSeasonId,
       memberPanelOpen: false,
+      memberRequestKey: this.data.memberRequestKey + 1,
+      processing: false,
       message: '',
       rankingType: defaultRankingType(season),
       rankingBranchId: '',
@@ -314,42 +319,96 @@ Page({
     if (!team) {
       return
     }
-    this.setData({ processing: true, message: '' })
+    const seasonId = this.data.selectedSeasonId
+    const requestKey = this.data.memberRequestKey + 1
+    this.setData({
+      processing: true,
+      memberRequestKey: requestKey,
+      message: '',
+      memberPanelOpen: false,
+      memberTeamId: '',
+      memberTeamName: '',
+      memberTeamVersion: 0,
+      members: [],
+      maxTeamMembers: 0,
+      selectedMemberCount: 0,
+    })
     try {
-      const result = await mipGameModule.query.listAssignableMembers(this.data.selectedSeasonId, undefined, true)
+      const result = await mipGameModule.query.listAllAssignableMembers(
+        seasonId,
+        undefined,
+        true,
+      )
+      const currentTeam = this.data.teams.find(item => item.id === team.id)
+      if (requestKey !== this.data.memberRequestKey
+        || seasonId !== this.data.selectedSeasonId
+        || currentTeam?.version !== team.version) {
+        return
+      }
+      const members = result.items.map(item => ({
+        ...item,
+        selected: item.teamId === team.id,
+        selectedRole: item.teamId === team.id && item.role === 'CAPTAIN' ? 'CAPTAIN' as const : 'MEMBER' as const,
+      }))
       this.setData({
         memberPanelOpen: true,
         memberTeamId: team.id,
         memberTeamName: team.name,
         memberTeamVersion: team.version,
-        members: result.items.map(item => ({
-          ...item,
-          selected: item.teamId === team.id,
-          selectedRole: item.teamId === team.id && item.role === 'CAPTAIN' ? 'CAPTAIN' : 'MEMBER',
-        })),
+        members,
+        maxTeamMembers: result.maxTeamMembers,
+        selectedMemberCount: members.filter(item => item.selected).length,
       })
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '成员列表加载失败' })
+      if (requestKey === this.data.memberRequestKey) {
+        this.setData({ message: error instanceof Error ? error.message : '成员列表加载失败' })
+      }
     }
     finally {
-      this.setData({ processing: false })
+      if (requestKey === this.data.memberRequestKey) {
+        this.setData({ processing: false })
+      }
     }
   },
 
   toggleMember(event: WechatMiniprogram.TouchEvent) {
     const index = Number(event.currentTarget.dataset.index)
+    const member = this.data.members[index]
+    if (!member) {
+      return
+    }
+    if (!member.selected && this.data.selectedMemberCount >= this.data.maxTeamMembers) {
+      this.setData({ message: `每个队伍最多可选择 ${this.data.maxTeamMembers} 名成员` })
+      return
+    }
     const key = `members[${index}].selected`
-    this.setData({ [key]: !this.data.members[index].selected })
+    this.setData({
+      [key]: !member.selected,
+      selectedMemberCount: this.data.selectedMemberCount + (member.selected ? -1 : 1),
+      message: '',
+    })
   },
   setCaptain(event: WechatMiniprogram.TouchEvent) {
     const index = Number(event.currentTarget.dataset.index)
+    const member = this.data.members[index]
+    if (!member) {
+      return
+    }
+    if (!member.selected && this.data.selectedMemberCount >= this.data.maxTeamMembers) {
+      this.setData({ message: `每个队伍最多可选择 ${this.data.maxTeamMembers} 名成员` })
+      return
+    }
     const members = this.data.members.map((item, itemIndex) => ({
       ...item,
       selected: itemIndex === index ? true : item.selected,
       selectedRole: itemIndex === index ? 'CAPTAIN' as const : 'MEMBER' as const,
     }))
-    this.setData({ members })
+    this.setData({
+      members,
+      selectedMemberCount: members.filter(item => item.selected).length,
+      message: '',
+    })
   },
   async saveMembers() {
     if (!this.data.memberTeamId || this.data.processing) {

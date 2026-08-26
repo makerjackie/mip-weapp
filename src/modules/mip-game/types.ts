@@ -238,11 +238,20 @@ export interface GameTeamDraft { seasonId: string, branchId?: string, name: stri
 export interface GameMemberAssignment { memberRef: string, role: 'CAPTAIN' | 'MEMBER' }
 export interface AssignableGameMember {
   memberRef: string
+  candidateKey: string
   nickname: string
   branchName: string
   teamId: string
   teamName: string
   role: '' | 'CAPTAIN' | 'MEMBER'
+}
+
+export interface AssignableGameMemberPage {
+  items: AssignableGameMember[]
+  hasMore: boolean
+  nextCursor: string
+  limit: number
+  maxTeamMembers: number
 }
 
 export interface GameAdminSession { capability: 'game.manage', roleKey: 'PLATFORM_OWNER' | 'PLATFORM_OPERATIONS' }
@@ -316,7 +325,7 @@ export interface MipGameActionInputMap {
   'admin.changeSeasonStatus': GameSeasonStatusInput
   'admin.listTeams': { seasonId: string }
   'admin.saveTeam': GameTeamSaveInput
-  'admin.listAssignableMembers': { seasonId: string, query?: string }
+  'admin.listAssignableMembers': { seasonId: string, query?: string, cursor?: string, limit: number }
   'admin.replaceTeamMembers': GameTeamMembersInput
   'admin.listMatches': { seasonId: string }
   'admin.saveWeeklyMatch': { match: { seasonId: string, weekStart: string, weekEnd: string, teamAId: string, teamBId: string } }
@@ -348,7 +357,7 @@ export interface MipGameActionResultMap {
   'admin.changeSeasonStatus': GameSeason
   'admin.listTeams': { items: GameTeam[] }
   'admin.saveTeam': GameTeam
-  'admin.listAssignableMembers': { items: AssignableGameMember[] }
+  'admin.listAssignableMembers': AssignableGameMemberPage
   'admin.replaceTeamMembers': { teamId: string, memberCount: number, version: number }
   'admin.listMatches': { items: GameMatch[] }
   'admin.saveWeeklyMatch': GameMatch
@@ -388,7 +397,12 @@ export interface MipGameGateway {
   changeSeasonStatus: (seasonId: string, expectedVersion: number, status: 'ACTIVE' | 'CLOSED') => Promise<GameSeason>
   listTeams: (seasonId: string) => Promise<{ items: GameTeam[] }>
   saveTeam: (input: GameTeamSaveInput) => Promise<GameTeam>
-  listAssignableMembers: (seasonId: string, query?: string) => Promise<{ items: AssignableGameMember[] }>
+  listAssignableMembers: (
+    seasonId: string,
+    query?: string,
+    cursor?: string,
+    limit?: number,
+  ) => Promise<AssignableGameMemberPage>
   replaceTeamMembers: (seasonId: string, teamId: string, expectedVersion: number, members: GameMemberAssignment[]) => Promise<{ teamId: string, memberCount: number, version: number }>
   listAdminMatches: (seasonId: string) => Promise<{ items: GameMatch[] }>
   saveWeeklyMatch: (match: { seasonId: string, weekStart: string, weekEnd: string, teamAId: string, teamBId: string }) => Promise<GameMatch>

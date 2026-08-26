@@ -2,6 +2,8 @@
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const RANKING_TYPES = new Set(['TEAM_HALF_YEAR', 'TEAM_YEAR', 'INDIVIDUAL_SEASON', 'INDIVIDUAL_ALL_TIME'])
+const MAX_ASSIGNABLE_MEMBER_PAGE_SIZE = 100
+const MAX_TEAM_MEMBERS = 100
 
 function requiredId(value) {
   const result = typeof value === 'string' ? value.trim() : ''
@@ -94,7 +96,8 @@ function normalizeTeam(value) {
 }
 
 function normalizeMembers(value) {
-  if (!Array.isArray(value) || value.length > 100) throw new Error('VALIDATION_FAILED')
+  if (!Array.isArray(value)) throw new Error('VALIDATION_FAILED')
+  if (value.length > MAX_TEAM_MEMBERS) throw new Error('MEMBER_LIMIT_EXCEEDED')
   const seen = new Set()
   return value.map((item) => {
     const memberRef = boundedText(item?.memberRef, 200, true)
@@ -103,6 +106,15 @@ function normalizeMembers(value) {
     seen.add(memberRef)
     return { memberRef, role }
   })
+}
+
+function memberPageLimit(value) {
+  if (value === undefined || value === null) throw new Error('PAGINATION_REQUIRED')
+  const result = Number(value)
+  if (!Number.isSafeInteger(result) || result < 1 || result > MAX_ASSIGNABLE_MEMBER_PAGE_SIZE) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  return result
 }
 
 function normalizeMatch(value) {
@@ -133,10 +145,13 @@ function assertNoClientScore(value, depth = 0) {
 }
 
 module.exports = {
+  MAX_ASSIGNABLE_MEMBER_PAGE_SIZE,
+  MAX_TEAM_MEMBERS,
   assertNoClientScore,
   boundedText,
   dateTime,
   expectedVersion,
+  memberPageLimit,
   normalizeMatch,
   normalizeMembers,
   normalizeSeason,

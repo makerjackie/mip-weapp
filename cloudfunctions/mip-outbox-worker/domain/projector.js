@@ -991,6 +991,13 @@ async function projectGameMatchFinalized(database, event) {
      WHERE member.app_id = ? AND member.team_id = ?
        AND member.joined_at <= CONCAT(?, ' 23:59:59.999')
        AND (member.left_at IS NULL OR member.left_at > CONCAT(?, ' 23:59:59.999'))
+       AND EXISTS (
+         SELECT 1 FROM mip_membership_entitlements entitlement
+         WHERE entitlement.app_id = member.app_id AND entitlement.user_id = member.user_id
+           AND entitlement.status = 'ACTIVE'
+           AND entitlement.starts_at <= UTC_TIMESTAMP(3)
+           AND entitlement.ends_at > UTC_TIMESTAMP(3)
+       )
      ORDER BY member.user_id`,
     [event.app_id, winningTeamId, dateOnly(match.week_end), dateOnly(match.week_end)],
   )

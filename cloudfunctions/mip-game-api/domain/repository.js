@@ -1,11 +1,14 @@
 'use strict'
 
 const { randomUUID } = require('node:crypto')
+const { createCandidateKey, createMemberCursor, readMemberCursor } = require('../lib/member-cursor')
 const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
 const { createBlindBoxRepository } = require('./blind-box')
 const {
+  MAX_TEAM_MEMBERS,
   boundedText,
   expectedVersion,
+  memberPageLimit,
   normalizeMatch,
   normalizeMembers,
   normalizeSeason,
@@ -363,12 +366,20 @@ function createGameRepository(database, options = {}) {
     await assertGameAdmin(database, caller)
     const seasonId = requiredId(event.seasonId)
     const query = boundedText(event.query, 80)
+    const limit = memberPageLimit(event.limit)
+    const cursorContext = { appId: caller.appId, seasonId, query }
+    const afterUserId = event.cursor
+      ? readMemberCursor(event.cursor, cursorContext, caller.profileRefSecret)
+      : null
     const params = [seasonId, caller.appId]
+    const cursorSql = afterUserId ? 'AND user.id > ?' : ''
+    if (afterUserId) params.push(afterUserId)
     let querySql = ''
     if (query) {
       querySql = 'AND profile.nickname LIKE ?'
       params.push(`%${query}%`)
     }
+    params.push(limit + 1)
     const rows = await database.query(
       `SELECT user.id, profile.nickname, branch.name AS branch_name,
               membership.team_id, membership.role, team.name AS team_name
@@ -385,18 +396,35 @@ function createGameRepository(database, options = {}) {
            WHERE entitlement.app_id = user.app_id AND entitlement.user_id = user.id
              AND entitlement.status = 'ACTIVE' AND entitlement.starts_at <= UTC_TIMESTAMP(3)
              AND entitlement.ends_at > UTC_TIMESTAMP(3)
-         ) ${querySql}
-       ORDER BY profile.nickname, user.id LIMIT 100`,
+         ) ${cursorSql} ${querySql}
+       ORDER BY user.id LIMIT ?`,
       params,
     )
-    return { items: rows.map(row => ({
+    const hasMore = rows.length > limit
+    const items = rows.slice(0, limit).map(row => ({
       memberRef: createProfileRef({ appId: caller.appId, userId: row.id }, caller.profileRefSecret),
+      candidateKey: createCandidateKey(
+        { appId: caller.appId, seasonId, query, userId: row.id },
+        caller.profileRefSecret,
+      ),
       nickname: row.nickname,
       branchName: row.branch_name || '',
       teamId: row.team_id || '',
       teamName: row.team_name || '',
       role: row.role || '',
-    })) }
+    }))
+    return {
+      items,
+      hasMore,
+      nextCursor: hasMore
+        ? createMemberCursor(
+            { ...cursorContext, userId: rows[limit - 1]?.id },
+            caller.profileRefSecret,
+          )
+        : '',
+      limit,
+      maxTeamMembers: MAX_TEAM_MEMBERS,
+    }
   }
 
   async function replaceTeamMembers(caller, event = {}) {
@@ -408,33 +436,29 @@ function createGameRepository(database, options = {}) {
       userId: readProfileRef(item.memberRef, caller.appId, caller.profileRefSecret),
       role: item.role,
     }))
+    if (new Set(memberIds.map(item => item.userId)).size !== memberIds.length) {
+      throw new Error('VALIDATION_FAILED')
+    }
     if (memberIds.filter(item => item.role === 'CAPTAIN').length > 1) throw new Error('VALIDATION_FAILED')
     return database.transaction(async (tx) => {
       const roleKey = await assertGameAdmin(tx, caller, true)
+      const season = await tx.one(
+        `SELECT status FROM mip_game_seasons
+         WHERE app_id = ? AND id = ? FOR UPDATE`,
+        [caller.appId, seasonId],
+      )
+      if (!season) throw new Error('NOT_FOUND')
+      if (season.status === 'CLOSED') throw new Error('INVALID_STATE')
       const team = await tx.one(
-        `SELECT team.version, season.status AS season_status
-         FROM mip_game_teams team
-         INNER JOIN mip_game_seasons season
-           ON season.app_id = team.app_id AND season.id = team.season_id
-         WHERE team.app_id = ? AND team.season_id = ? AND team.id = ? FOR UPDATE`,
+        `SELECT version FROM mip_game_teams
+         WHERE app_id = ? AND season_id = ? AND id = ? FOR UPDATE`,
         [caller.appId, seasonId, teamId],
       )
       if (!team) throw new Error('NOT_FOUND')
-      if (team.season_status === 'CLOSED') throw new Error('INVALID_STATE')
       if (Number(team.version) !== version) throw new Error('CONFLICT')
-      for (const member of memberIds) {
-        const user = await tx.one(
-          `SELECT user.status,
-                  EXISTS (
-                    SELECT 1 FROM mip_membership_entitlements entitlement
-                    WHERE entitlement.app_id = user.app_id AND entitlement.user_id = user.id
-                      AND entitlement.status = 'ACTIVE' AND entitlement.starts_at <= UTC_TIMESTAMP(3)
-                      AND entitlement.ends_at > UTC_TIMESTAMP(3)
-                  ) AS is_player
-           FROM mip_users user WHERE user.app_id = ? AND user.id = ? FOR UPDATE`,
-          [caller.appId, member.userId],
-        )
-        if (!user || user.status !== 'ACTIVE' || !Number(user.is_player)) throw new Error('MEMBER_NOT_FOUND')
+      const orderedMembers = [...memberIds].sort((left, right) => left.userId.localeCompare(right.userId))
+      for (const member of orderedMembers) {
+        await lockCurrentPlayer(tx, caller.appId, member.userId)
       }
       const selectedIds = new Set(memberIds.map(member => member.userId))
       const currentMembers = await tx.query(
@@ -442,6 +466,30 @@ function createGameRepository(database, options = {}) {
          WHERE app_id = ? AND season_id = ? AND team_id = ? AND status = 'ACTIVE' FOR UPDATE`,
         [caller.appId, seasonId, teamId],
       )
+      const existingByUser = new Map()
+      for (const member of orderedMembers) {
+        const existing = await tx.one(
+          `SELECT id, team_id, role FROM mip_game_team_memberships
+           WHERE app_id = ? AND season_id = ? AND user_id = ? AND status = 'ACTIVE' FOR UPDATE`,
+          [caller.appId, seasonId, member.userId],
+        )
+        existingByUser.set(member.userId, existing || null)
+      }
+      const sourceTeamIds = [...new Set(
+        [...existingByUser.values()]
+          .filter(existing => existing && existing.team_id !== teamId)
+          .map(existing => existing.team_id),
+      )].sort()
+      const sourceTeamVersions = new Map()
+      for (const sourceTeamId of sourceTeamIds) {
+        const sourceTeam = await tx.one(
+          `SELECT version FROM mip_game_teams
+           WHERE app_id = ? AND season_id = ? AND id = ? FOR UPDATE`,
+          [caller.appId, seasonId, sourceTeamId],
+        )
+        if (!sourceTeam) throw new Error('CONFLICT')
+        sourceTeamVersions.set(sourceTeamId, Number(sourceTeam.version))
+      }
       for (const current of currentMembers) {
         if (!selectedIds.has(current.user_id)) {
           await tx.query(
@@ -452,11 +500,7 @@ function createGameRepository(database, options = {}) {
         }
       }
       for (const member of memberIds) {
-        const existing = await tx.one(
-          `SELECT id, team_id, role FROM mip_game_team_memberships
-           WHERE app_id = ? AND season_id = ? AND user_id = ? AND status = 'ACTIVE' FOR UPDATE`,
-          [caller.appId, seasonId, member.userId],
-        )
+        const existing = existingByUser.get(member.userId)
         if (existing?.team_id === teamId) {
           if (existing.role !== member.role) {
             await tx.query(
@@ -481,11 +525,22 @@ function createGameRepository(database, options = {}) {
           [createId(), caller.appId, seasonId, teamId, member.userId, member.role],
         )
       }
-      await tx.query(
+      for (const sourceTeamId of sourceTeamIds) {
+        const sourceVersion = sourceTeamVersions.get(sourceTeamId)
+        const sourceUpdate = await tx.query(
+          `UPDATE mip_game_teams SET version = version + 1, updated_by_user_id = ?
+           WHERE app_id = ? AND id = ? AND version = ?`,
+          [caller.userId, caller.appId, sourceTeamId, sourceVersion],
+        )
+        if (Number(sourceUpdate.affectedRows) !== 1) throw new Error('CONFLICT')
+        await writeAudit(tx, caller, roleKey, 'game.team.members_transferred', 'GAME_TEAM', sourceTeamId)
+      }
+      const targetUpdate = await tx.query(
         `UPDATE mip_game_teams SET version = version + 1, updated_by_user_id = ?
          WHERE app_id = ? AND id = ? AND version = ?`,
         [caller.userId, caller.appId, teamId, version],
       )
+      if (Number(targetUpdate.affectedRows) !== 1) throw new Error('CONFLICT')
       await writeAudit(tx, caller, roleKey, 'game.team.members_replaced', 'GAME_TEAM', teamId)
       return { teamId, memberCount: memberIds.length, version: version + 1 }
     })
@@ -542,7 +597,8 @@ function createGameRepository(database, options = {}) {
     return database.transaction(async (tx) => {
       const roleKey = await assertGameAdmin(tx, caller, true)
       const current = await tx.one(
-        `SELECT * FROM mip_game_weekly_matches WHERE app_id = ? AND id = ? FOR UPDATE`,
+        `SELECT game.*, UTC_TIMESTAMP(3) AS eligibility_at
+         FROM mip_game_weekly_matches game WHERE game.app_id = ? AND game.id = ? FOR UPDATE`,
         [caller.appId, matchId],
       )
       if (!current) throw new Error('NOT_FOUND')
@@ -553,9 +609,11 @@ function createGameRepository(database, options = {}) {
       const rangeEnd = `${dateValue(current.week_end)} 23:59:59.999`
       const teamAScore = await teamExperience(
         tx, caller.appId, current.season_id, current.team_a_id, rangeStart, rangeEnd,
+        current.eligibility_at,
       )
       const teamBScore = await teamExperience(
         tx, caller.appId, current.season_id, current.team_b_id, rangeStart, rangeEnd,
+        current.eligibility_at,
       )
       const result = await tx.query(
         `UPDATE mip_game_weekly_matches SET team_a_score = ?, team_b_score = ?, status = 'FINALIZED',
@@ -667,6 +725,29 @@ async function assertGameAdmin(database, caller, lock = false) {
   return row.role_key
 }
 
+async function lockCurrentPlayer(database, appId, userId) {
+  const user = await database.one(
+    `SELECT status FROM mip_users
+     WHERE app_id = ? AND id = ? FOR UPDATE`,
+    [appId, userId],
+  )
+  if (!user || user.status !== 'ACTIVE') throw new Error('MEMBER_NOT_FOUND')
+  const chain = await database.one(
+    `SELECT version FROM mip_membership_chains
+     WHERE app_id = ? AND user_id = ? FOR UPDATE`,
+    [appId, userId],
+  )
+  if (!chain) throw new Error('MEMBER_NOT_FOUND')
+  const entitlement = await database.one(
+    `SELECT id FROM mip_membership_entitlements
+     WHERE app_id = ? AND user_id = ? AND status = 'ACTIVE'
+       AND starts_at <= UTC_TIMESTAMP(3) AND ends_at > UTC_TIMESTAMP(3)
+     ORDER BY ends_at DESC, id DESC LIMIT 1 FOR UPDATE`,
+    [appId, userId],
+  )
+  if (!entitlement) throw new Error('MEMBER_NOT_FOUND')
+}
+
 function configuredCapabilityAllows(row, capability) {
   if (row.role_key === 'PLATFORM_OWNER') return true
   const value = row.policy_capabilities_json
@@ -683,17 +764,26 @@ function configuredCapabilityAllows(row, capability) {
   }
 }
 
-async function teamExperience(database, appId, seasonId, teamId, startsAt, endsAt) {
+async function teamExperience(database, appId, seasonId, teamId, startsAt, endsAt, eligibilityAt = null) {
   const row = await database.one(
     `SELECT COALESCE(SUM(entry.delta_value), 0) AS score
      FROM mip_game_team_memberships member
+     INNER JOIN mip_users user
+       ON user.app_id = member.app_id AND user.id = member.user_id AND user.status = 'ACTIVE'
      INNER JOIN mip_growth_entries entry
        ON entry.app_id = member.app_id AND entry.user_id = member.user_id
       AND entry.metric = 'EXPERIENCE' AND entry.created_at >= ? AND entry.created_at <= ?
       AND entry.created_at >= member.joined_at
       AND (member.left_at IS NULL OR entry.created_at < member.left_at)
-     WHERE member.app_id = ? AND member.season_id = ? AND member.team_id = ?`,
-    [startsAt, endsAt, appId, seasonId, teamId],
+     WHERE member.app_id = ? AND member.season_id = ? AND member.team_id = ?
+       AND EXISTS (
+         SELECT 1 FROM mip_membership_entitlements entitlement
+         WHERE entitlement.app_id = member.app_id AND entitlement.user_id = member.user_id
+           AND entitlement.status = 'ACTIVE'
+           AND entitlement.starts_at <= COALESCE(?, UTC_TIMESTAMP(3))
+           AND entitlement.ends_at > COALESCE(?, UTC_TIMESTAMP(3))
+       )`,
+    [startsAt, endsAt, appId, seasonId, teamId, eligibilityAt, eligibilityAt],
   )
   return Number(row?.score || 0)
 }
@@ -705,11 +795,20 @@ async function teamRankingRows(database, appId, season, period) {
      FROM mip_game_teams team
      LEFT JOIN mip_game_team_memberships member
        ON member.app_id = team.app_id AND member.season_id = team.season_id AND member.team_id = team.id
+     LEFT JOIN mip_users user
+       ON user.app_id = member.app_id AND user.id = member.user_id AND user.status = 'ACTIVE'
      LEFT JOIN mip_growth_entries entry
-       ON entry.app_id = member.app_id AND entry.user_id = member.user_id
+       ON entry.app_id = member.app_id AND entry.user_id = member.user_id AND user.id IS NOT NULL
       AND entry.metric = 'EXPERIENCE' AND entry.created_at >= ? AND entry.created_at <= ?
       AND entry.created_at >= member.joined_at
       AND (member.left_at IS NULL OR entry.created_at < member.left_at)
+      AND EXISTS (
+        SELECT 1 FROM mip_membership_entitlements entitlement
+        WHERE entitlement.app_id = member.app_id AND entitlement.user_id = member.user_id
+          AND entitlement.status = 'ACTIVE'
+          AND entitlement.starts_at <= UTC_TIMESTAMP(3)
+          AND entitlement.ends_at > UTC_TIMESTAMP(3)
+      )
      WHERE team.app_id = ? AND team.season_id = ? AND team.status = 'ACTIVE'
      GROUP BY team.id, team.branch_id, team.name
      ORDER BY score DESC, team.name, team.id`,
@@ -717,34 +816,7 @@ async function teamRankingRows(database, appId, season, period) {
   )
 }
 
-async function individualRankingRows(database, appId, season, period, type) {
-  if (type === 'INDIVIDUAL_ALL_TIME') {
-    return database.query(
-      `SELECT user.id AS user_id, user.primary_branch_id AS branch_id,
-              COALESCE(profile.nickname, '未设置昵称') AS display_name,
-              COALESCE(SUM(entry.delta_value), 0) AS score
-       FROM mip_users user
-       LEFT JOIN mip_profiles profile ON profile.app_id = user.app_id AND profile.user_id = user.id
-       LEFT JOIN mip_growth_entries entry
-         ON entry.app_id = user.app_id AND entry.user_id = user.id AND entry.metric = 'EXPERIENCE'
-        AND entry.created_at >= ? AND entry.created_at <= ?
-       WHERE user.app_id = ? AND user.status = 'ACTIVE'
-         AND EXISTS (
-           SELECT 1 FROM mip_membership_entitlements entitlement
-           WHERE entitlement.app_id = user.app_id AND entitlement.user_id = user.id
-             AND (
-               entitlement.status IN ('ACTIVE', 'EXPIRED')
-               OR (entitlement.status IN ('REVOKED', 'REFUNDED')
-                 AND entitlement.revoked_at > LEAST(?, UTC_TIMESTAMP(3)))
-             )
-             AND entitlement.starts_at <= LEAST(?, UTC_TIMESTAMP(3))
-             AND entitlement.ends_at > LEAST(?, UTC_TIMESTAMP(3))
-         )
-       GROUP BY user.id, user.primary_branch_id, profile.nickname
-       ORDER BY score DESC, display_name, user.id`,
-      [period.start, period.end, appId, period.end, period.end, period.end],
-    )
-  }
+async function individualRankingRows(database, appId, _season, period, _type) {
   return database.query(
     `SELECT user.id AS user_id, user.primary_branch_id AS branch_id,
             COALESCE(profile.nickname, '未设置昵称') AS display_name,
@@ -758,17 +830,13 @@ async function individualRankingRows(database, appId, season, period, type) {
        AND EXISTS (
          SELECT 1 FROM mip_membership_entitlements entitlement
          WHERE entitlement.app_id = user.app_id AND entitlement.user_id = user.id
-           AND (
-             entitlement.status IN ('ACTIVE', 'EXPIRED')
-             OR (entitlement.status IN ('REVOKED', 'REFUNDED')
-               AND entitlement.revoked_at > LEAST(?, UTC_TIMESTAMP(3)))
-           )
-           AND entitlement.starts_at <= LEAST(?, UTC_TIMESTAMP(3))
-           AND entitlement.ends_at > LEAST(?, UTC_TIMESTAMP(3))
+           AND entitlement.status = 'ACTIVE'
+           AND entitlement.starts_at <= UTC_TIMESTAMP(3)
+           AND entitlement.ends_at > UTC_TIMESTAMP(3)
        )
      GROUP BY user.id, user.primary_branch_id, profile.nickname
      ORDER BY score DESC, display_name, user.id`,
-    [period.start, period.end, appId, period.end, period.end, period.end],
+    [period.start, period.end, appId],
   )
 }
 
@@ -929,5 +997,6 @@ module.exports = {
   headquartersLevel,
   individualRankingRows,
   rankingPeriod,
+  teamRankingRows,
   teamExperience,
 }

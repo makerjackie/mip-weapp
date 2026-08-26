@@ -21,7 +21,9 @@ test('grants a fixed server amount and appends a GAME notification outbox fact',
   const tx = {
     async one(sql) {
       if (sql.includes('FROM mip_users')) return { id: base.userId, status: 'ACTIVE' }
+      if (sql.includes('FROM mip_membership_chains')) return { version: 2 }
       if (sql.includes('FROM mip_growth_entries')) return null
+      if (sql.includes('FROM mip_membership_entitlements')) return { id: 'entitlement' }
       if (sql.includes('FROM mip_growth_accounts')) return { coin_balance: 15, version: 3 }
       throw new Error(`unexpected query: ${sql}`)
     },
@@ -54,6 +56,7 @@ test('returns the immutable ledger result on retry', async () => {
       async one(sql) {
         reads.push(sql)
         if (sql.includes('FROM mip_users')) return { id: base.userId, status: 'ACTIVE' }
+        if (sql.includes('FROM mip_membership_chains')) return { version: 2 }
         return {
           id: '30000000-0000-4000-8000-000000000001',
           delta_value: 10,
@@ -67,8 +70,9 @@ test('returns the immutable ledger result on retry', async () => {
   assert.equal((await repository.recordGameCoinEvent(base)).idempotent, true)
   assert.equal(writes, 0)
   assert.match(reads[0], /FROM mip_users[\s\S]+FOR UPDATE/)
-  assert.match(reads[1], /FROM mip_growth_entries/)
-  assert.doesNotMatch(reads[1], /FOR UPDATE/)
+  assert.match(reads[1], /FROM mip_membership_chains[\s\S]+FOR UPDATE/)
+  assert.match(reads[2], /FROM mip_growth_entries/)
+  assert.doesNotMatch(reads[2], /FOR UPDATE/)
 })
 
 test('rejects a spend that would create a negative balance', async () => {
@@ -76,7 +80,9 @@ test('rejects a spend that would create a negative balance', async () => {
     transaction: work => work({
       async one(sql) {
         if (sql.includes('FROM mip_users')) return { id: base.userId, status: 'ACTIVE' }
+        if (sql.includes('FROM mip_membership_chains')) return { version: 2 }
         if (sql.includes('FROM mip_growth_entries')) return null
+        if (sql.includes('FROM mip_membership_entitlements')) return { id: 'entitlement' }
         return { coin_balance: 3, version: 1 }
       },
       async query() { return { affectedRows: 1 } },
@@ -87,6 +93,34 @@ test('rejects a spend that would create a negative balance', async () => {
     action: 'spendGameCoins',
     sourceEventType: 'game.reward_redeemed',
   }), /INSUFFICIENT_GAME_COIN_BALANCE/)
+})
+
+test('locks the membership chain and rejects a first write without a current entitlement', async () => {
+  const reads = []
+  let writes = 0
+  const repository = createGameCoinRepository({
+    transaction: work => work({
+      async one(sql) {
+        reads.push(sql)
+        if (sql.includes('FROM mip_users')) return { id: base.userId, status: 'ACTIVE' }
+        if (sql.includes('FROM mip_membership_chains')) return { version: 2 }
+        if (sql.includes('FROM mip_growth_entries')) return null
+        if (sql.includes('FROM mip_membership_entitlements')) return null
+        throw new Error(`unexpected query: ${sql}`)
+      },
+      async query() { writes += 1; return { affectedRows: 1 } },
+    }),
+  })
+  await assert.rejects(repository.recordGameCoinEvent(base), /MEMBERSHIP_REQUIRED/)
+  assert.equal(writes, 0)
+  assert.deepEqual(reads.map(sql => (
+    sql.includes('mip_users') ? 'user'
+      : sql.includes('mip_membership_chains') ? 'chain'
+        : sql.includes('mip_growth_entries') ? 'existing'
+          : 'entitlement'
+  )), ['user', 'chain', 'existing', 'entitlement'])
+  assert.match(reads[1], /FOR UPDATE/)
+  assert.match(reads[3], /FOR UPDATE/)
 })
 
 test('rejects client-like arbitrary event types instead of accepting an amount', async () => {

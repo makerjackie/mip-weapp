@@ -657,6 +657,10 @@ describe('outbox event projector', () => {
       },
       async query(sql, params) {
         assert.match(sql, /mip_game_team_memberships/)
+        assert.match(sql, /mip_membership_entitlements/)
+        assert.match(sql, /entitlement\.status = 'ACTIVE'/)
+        assert.match(sql, /entitlement\.starts_at <= UTC_TIMESTAMP\(3\)/)
+        assert.match(sql, /entitlement\.ends_at > UTC_TIMESTAMP\(3\)/)
         assert.match(sql, /member\.joined_at <=/)
         assert.match(sql, /member\.left_at IS NULL/)
         assert.deepEqual(params, ['wx-app', '61000000-0000-4000-8000-000000000001', '2026-08-23', '2026-08-23'])

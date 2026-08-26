@@ -61,7 +61,12 @@ export function createMipGameGateway(transport: MipGameTransport): MipGameGatewa
     changeSeasonStatus: (seasonId, expectedVersion, status) => call('admin.changeSeasonStatus', { seasonId, expectedVersion, status }),
     listTeams: seasonId => call('admin.listTeams', { seasonId }),
     saveTeam: input => call('admin.saveTeam', input),
-    listAssignableMembers: (seasonId, query) => call('admin.listAssignableMembers', { seasonId, query }),
+    listAssignableMembers: (seasonId, query, cursor, limit = 100) => call('admin.listAssignableMembers', {
+      seasonId,
+      query,
+      cursor,
+      limit,
+    }),
     replaceTeamMembers: (seasonId, teamId, expectedVersion, members) => call('admin.replaceTeamMembers', { seasonId, teamId, expectedVersion, members }),
     listAdminMatches: seasonId => call('admin.listMatches', { seasonId }),
     saveWeeklyMatch: match => call('admin.saveWeeklyMatch', { match }),

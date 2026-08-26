@@ -17,6 +17,34 @@ const teamBId = '20000000-0000-4000-8000-000000000002'
 const catalogId = '30000000-0000-4000-8000-000000000001'
 const drawRequestId = '40000000-0000-4000-8000-000000000001'
 
+function opaquePart(index: number, length: number) {
+  return index.toString(36).padStart(length, 'A')
+}
+
+function profileRef(index: number) {
+  return `p1.${opaquePart(index, 16)}.${opaquePart(index, 48)}.${opaquePart(index, 22)}`
+}
+
+function candidateKey(index: number) {
+  return `gmk1.${opaquePart(index, 43)}`
+}
+
+function memberCursor(index: number) {
+  return `gm1.${opaquePart(index, 16)}.${opaquePart(index, 48)}.${opaquePart(index, 22)}`
+}
+
+function assignableMember(index: number, nickname = `玩家${String(index).padStart(4, '0')}`) {
+  return {
+    memberRef: profileRef(index),
+    candidateKey: candidateKey(index),
+    nickname,
+    branchName: '',
+    teamId: '',
+    teamName: '',
+    role: '' as const,
+  }
+}
+
 describe('MIP game client contract', () => {
   it('submits matchup intent without any client score', async () => {
     const calls: MipGameRequest[] = []
@@ -73,6 +101,25 @@ describe('MIP game client contract', () => {
       action: 'admin.listRankings',
       input: { seasonId, rankingType: 'TEAM_YEAR', branchId: undefined },
     })
+  })
+
+  it('keeps assignable-member pagination explicit in the neutral transport contract', async () => {
+    const calls: MipGameRequest[] = []
+    const gateway = createMipGameGateway({
+      async invoke(request) {
+        calls.push(request)
+        return {
+          ok: true,
+          data: { items: [], hasMore: false, nextCursor: '', limit: 75, maxTeamMembers: 100 },
+        }
+      },
+    })
+    await gateway.listAssignableMembers(seasonId, '玩家', 'opaque-cursor', 75)
+    expect(calls).toEqual([{
+      contractVersion: 1,
+      action: 'admin.listAssignableMembers',
+      input: { seasonId, query: '玩家', cursor: 'opaque-cursor', limit: 75 },
+    }])
   })
 
   it('submits only a catalog and idempotency intent for a blind-box draw', async () => {
@@ -247,6 +294,124 @@ describe('MIP game client contract', () => {
     expect(refreshed.generatedAt).not.toBe(first.generatedAt)
   })
 
+  it('loads every assignable-member cursor page before a roster can be replaced', async () => {
+    const pageCalls: Array<{ cursor?: string, limit?: number }> = []
+    const gateway = {
+      async listAssignableMembers(
+        _seasonId: string,
+        _query?: string,
+        cursor?: string,
+        limit?: number,
+      ) {
+        pageCalls.push({ cursor, limit })
+        return cursor
+          ? { items: [assignableMember(101)], hasMore: false, nextCursor: '', limit: 100, maxTeamMembers: 100 }
+          : {
+              items: Array.from({ length: 100 }, (_, index) => assignableMember(index + 1)),
+              hasMore: true,
+              nextCursor: memberCursor(2),
+              limit: 100,
+              maxTeamMembers: 100,
+            }
+      },
+    } as unknown as MipGameGateway
+    const module = createMipGameModule(gateway)
+    const result = await module.query.listAllAssignableMembers(seasonId, undefined, true)
+    expect(result.items).toHaveLength(101)
+    expect(result.items[0]?.memberRef).toBe(profileRef(1))
+    expect(result.items[100]?.memberRef).toBe(profileRef(101))
+    expect(result.maxTeamMembers).toBe(100)
+    expect(pageCalls).toEqual([
+      { cursor: undefined, limit: 100 },
+      { cursor: memberCursor(2), limit: 100 },
+    ])
+  })
+
+  it('fails visibly when an older roster endpoint omits the pagination contract', async () => {
+    const gateway = {
+      async listAssignableMembers() { return { items: [] } },
+    } as unknown as MipGameGateway
+    const module = createMipGameModule(gateway)
+    await expect(module.query.listAllAssignableMembers(seasonId, undefined, true)).rejects.toMatchObject({
+      code: 'SERVICE_UNAVAILABLE',
+    })
+  })
+
+  it('rejects malformed and logically duplicated assignable-member pages', async () => {
+    const malformed = createMipGameModule({
+      async listAssignableMembers() {
+        return {
+          items: [{ ...assignableMember(1), memberRef: 'public-user-id' }],
+          hasMore: false,
+          nextCursor: '',
+          limit: 100,
+          maxTeamMembers: 100,
+        }
+      },
+    } as unknown as MipGameGateway)
+    await expect(
+      malformed.query.listAllAssignableMembers(seasonId, undefined, true),
+    ).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
+
+    let page = 0
+    const duplicated = createMipGameModule({
+      async listAssignableMembers() {
+        page += 1
+        const items = Array.from({ length: 100 }, (_, index) => assignableMember(index + 1))
+        if (page === 2) {
+          items[0] = { ...assignableMember(101), candidateKey: candidateKey(1) }
+        }
+        return {
+          items,
+          hasMore: page === 1,
+          nextCursor: page === 1 ? memberCursor(2) : '',
+          limit: 100,
+          maxTeamMembers: 100,
+        }
+      },
+    } as unknown as MipGameGateway)
+    await expect(
+      duplicated.query.listAllAssignableMembers(seasonId, undefined, true),
+    ).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
+  })
+
+  it('bounds endless unique member pages and sorts a completed list by nickname', async () => {
+    let page = 0
+    const endless = createMipGameModule({
+      async listAssignableMembers() {
+        page += 1
+        return {
+          items: Array.from(
+            { length: 100 },
+            (_, index) => assignableMember((page - 1) * 100 + index + 1),
+          ),
+          hasMore: true,
+          nextCursor: memberCursor(page + 1),
+          limit: 100,
+          maxTeamMembers: 100,
+        }
+      },
+    } as unknown as MipGameGateway)
+    await expect(
+      endless.query.listAllAssignableMembers(seasonId, undefined, true),
+    ).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
+    expect(page).toBe(50)
+
+    const sorted = createMipGameModule({
+      async listAssignableMembers() {
+        return {
+          items: [assignableMember(1, '周明'), assignableMember(2, '安然'), assignableMember(3, '安然')],
+          hasMore: false,
+          nextCursor: '',
+          limit: 100,
+          maxTeamMembers: 100,
+        }
+      },
+    } as unknown as MipGameGateway)
+    const result = await sorted.query.listAllAssignableMembers(seasonId, undefined, true)
+    expect(result.items.map(item => item.memberRef)).toEqual([profileRef(2), profileRef(3), profileRef(1)])
+  })
+
   it.each(['CONFLICT', 'FORBIDDEN'] as const)(
     'preserves %s mutation errors without clearing cached reads',
     async (code) => {
@@ -362,6 +527,8 @@ describe('MIP game client contract', () => {
     expect(adminPage).toMatch(/key: 'INDIVIDUAL_SEASON', label: '个人赛季榜'/)
     expect(adminPage).toMatch(/key: 'INDIVIDUAL_ALL_TIME', label: '个人累计榜'/)
     expect(adminPage).toContain('mipGameModule.query.listAdminRankings')
+    expect(adminPage).toContain('mipGameModule.query.listAllAssignableMembers')
+    expect(adminPage).toMatch(/requestKey !== this\.data\.memberRequestKey[\s\S]+currentTeam\?\.version !== team\.version/)
     expect(adminPage).toMatch(/generateRankingSnapshot[\s\S]+await this\.loadRanking\(true\)/)
     expect(app).toContain('mip-blind-box/detail/index')
     expect(app).toContain('blind-box/index')
