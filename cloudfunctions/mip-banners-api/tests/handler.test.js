@@ -137,6 +137,38 @@ test('v1 rejects extra top-level business fields before resolving public or admi
   assert.equal(resolved, false)
 })
 
+test('v1 ignores valid CloudBase metadata while rejecting malformed metadata', async () => {
+  const handler = createHandler({
+    health: async () => ({}),
+    resolveAppId: () => 'wx-app',
+    resolveCaller: async () => ({ appId: 'wx-app', userId: 'user' }),
+    assertAdminReady: async () => {},
+    service: {
+      listActive: async appId => [{ appId }],
+    },
+  })
+  assert.deepEqual(await handler({
+    contractVersion: 1,
+    action: 'mip.banners.listActive',
+    input: {},
+    userInfo: { openId: 'openid' },
+    tcbContext: { requestId: 'request' },
+  }), {
+    ok: true,
+    data: [{ appId: 'wx-app' }],
+  })
+  for (const metadata of [{ userInfo: 'invalid' }, { tcbContext: [] }]) {
+    const result = await handler({
+      contractVersion: 1,
+      action: 'mip.banners.listActive',
+      input: {},
+      ...metadata,
+    })
+    assert.equal(result.ok, false)
+    assert.equal(result.error.code, 'VALIDATION_FAILED')
+  }
+})
+
 test('prototype action names are not treated as public or admin operations', async () => {
   let resolved = false
   const handler = createHandler({
