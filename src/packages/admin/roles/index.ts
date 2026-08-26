@@ -19,6 +19,13 @@ import {
   scopeTypeForAdminRole,
 } from '../../../modules/mip-admin'
 import { adminLoadFailure } from '../shared/page-state'
+import {
+  clearPolicyCapabilitySelection,
+  hasSelectedPolicyCapability,
+  replacePolicyCapabilitySelection,
+  selectedPolicyCapabilities,
+  togglePolicyCapabilitySelection,
+} from './private-policy-selection'
 
 const roleLabels: Record<AdminRoleKey, string> = {
   PLATFORM_OWNER: '平台超级管理员',
@@ -171,9 +178,12 @@ Page({
   eventCatalog: [] as EventOption[],
   availableRoleKeys: [] as AdminRoleKey[],
   policyCatalog: [] as AdminRoleCapabilityPolicy[],
-  pendingPolicyCapabilities: new Set<AdminCapability>(),
 
   onShow() { void this.loadRoles() },
+
+  onUnload() {
+    clearPolicyCapabilitySelection(this)
+  },
 
   async loadEventCatalog(force: boolean) {
     const items: AdminEvent[] = []
@@ -255,14 +265,14 @@ Page({
     if (!policy) {
       return
     }
-    this.pendingPolicyCapabilities = new Set(policy.capabilities)
+    replacePolicyCapabilitySelection(this, policy.capabilities)
     this.setData({
       selectedPolicyRole: roleKey,
       selectedPolicyRoleLabel: roleLabels[roleKey],
       policyCapabilities: policy.allowedCapabilities.map(capability => ({
         key: capability,
         label: capabilityLabels[capability],
-        enabled: this.pendingPolicyCapabilities.has(capability),
+        enabled: hasSelectedPolicyCapability(this, capability),
       })),
       policyVersion: policy.version,
       policyIsCustom: policy.source === 'CUSTOM',
@@ -339,6 +349,9 @@ Page({
           this.applyPolicySelection(selectedPolicyRole)
         }
       }
+      else {
+        clearPolicyCapabilitySelection(this)
+      }
     }
     catch (error) {
       this.setData(adminLoadFailure(error, { hasContent, fallbackMessage: '角色列表加载失败' }))
@@ -372,17 +385,12 @@ Page({
     if (!policy?.allowedCapabilities.includes(capability)) {
       return
     }
-    if (this.pendingPolicyCapabilities.has(capability)) {
-      this.pendingPolicyCapabilities.delete(capability)
-    }
-    else {
-      this.pendingPolicyCapabilities.add(capability)
-    }
+    togglePolicyCapabilitySelection(this, capability)
     this.setData({
       policyCapabilities: policy.allowedCapabilities.map(item => ({
         key: item,
         label: capabilityLabels[item],
-        enabled: this.pendingPolicyCapabilities.has(item),
+        enabled: hasSelectedPolicyCapability(this, item),
       })),
       policyMessage: '',
     })
@@ -432,7 +440,7 @@ Page({
     try {
       await mipAdminModule.governance.updateRoleCapabilityPolicy({
         roleKey: policy.roleKey,
-        capabilities: policy.allowedCapabilities.filter(item => this.pendingPolicyCapabilities.has(item)),
+        capabilities: selectedPolicyCapabilities(this, policy.allowedCapabilities),
         expectedVersion: policy.version,
       })
       wx.showToast({ title: '权限已保存', icon: 'success' })

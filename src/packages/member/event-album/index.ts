@@ -1,9 +1,11 @@
 import type { EventId } from '../../../modules/mip'
 import type { EventAlbumPhoto } from '../../../modules/mip-events'
+import type { AlbumPageCursor } from './cursor-state'
 import { MipEventsError } from '../../../modules/mip-events'
 import { mipEventsModule } from '../../../modules/mip-events/client'
 import { mipMediaModule } from '../../../modules/mip-media/client'
 import { chooseSingleImage } from '../../../modules/platform/image-upload'
+import { albumPageCursor, albumRequestCursor } from './cursor-state'
 
 type AlbumState = 'loading' | 'ready' | 'empty' | 'disabled' | 'error'
 
@@ -42,7 +44,7 @@ Page({
     items: [] as EventAlbumPhoto[],
     publicItems: [] as EventAlbumPhoto[],
     myItems: [] as EventAlbumPhoto[],
-    cursor: undefined as string | undefined,
+    cursor: null as AlbumPageCursor,
     canSubmit: false,
     loadingMore: false,
     uploading: false,
@@ -84,7 +86,7 @@ Page({
     try {
       const publicPage = await mipEventsModule.listEventAlbum(
         this.data.eventId as EventId,
-        reset ? undefined : this.data.cursor,
+        albumRequestCursor(reset, this.data.cursor),
       )
       const publicItems = reset
         ? publicPage.items
@@ -112,7 +114,7 @@ Page({
         publicItems,
         myItems,
         items,
-        cursor: publicPage.nextCursor,
+        cursor: albumPageCursor(publicPage.nextCursor),
         canSubmit: publicPage.albumEnabled && canSubmit,
         message: privateMessage,
       })
