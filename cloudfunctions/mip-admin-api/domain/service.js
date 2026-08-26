@@ -74,8 +74,10 @@ function createAdminService({
   const {
     getUserContent,
     listUserContent,
+    saveUserContent,
+    archiveUserContent,
     unpublishUserContent,
-  } = createAdminUserContentGovernance({ access, repository })
+  } = createAdminUserContentGovernance({ access, contentSafety, repository })
   const {
     archiveEvent,
     changeEventStatus,
@@ -374,6 +376,8 @@ function createAdminService({
     getSession,
     getUser,
     getUserContent,
+    saveUserContent,
+    archiveUserContent,
     listAnnouncements,
     listAnnouncementScopes,
     listAudit,

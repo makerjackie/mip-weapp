@@ -74,11 +74,13 @@ import type {
   AdminOpportunityCommentState,
 } from './opportunity-comments'
 import type {
+  AdminUserContentArchiveInput,
   AdminUserContentDetail,
   AdminUserContentKind,
   AdminUserContentListInput,
   AdminUserContentMutationResult,
   AdminUserContentPage,
+  AdminUserContentSaveInput,
   AdminUserContentUnpublishInput,
 } from './user-content'
 import type {
@@ -1137,6 +1139,8 @@ export interface MipAdminGateway {
   listUserContent: (input?: AdminUserContentListInput) => Promise<AdminUserContentPage>
   getUserContent: (kind: AdminUserContentKind, contentId: string) => Promise<AdminUserContentDetail>
   unpublishUserContent: (input: AdminUserContentUnpublishInput) => Promise<AdminUserContentMutationResult>
+  saveUserContent: (input: AdminUserContentSaveInput) => Promise<AdminUserContentMutationResult>
+  archiveUserContent: (input: AdminUserContentArchiveInput) => Promise<AdminUserContentMutationResult>
   updateUser: (input: Record<string, unknown>) => Promise<{ userId: string, version: number }>
   changeUserPrimaryBranch: (input: AdminUserPrimaryBranchChangeInput) => Promise<AdminUserPrimaryBranchChangeResult>
   setUserControl: (input: Record<string, unknown>) => Promise<{ userId: string, controlType: string, active: boolean }>

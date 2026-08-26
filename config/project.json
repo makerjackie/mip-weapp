@@ -305,6 +305,10 @@
       "pathName": "packages/admin/user-content/index"
     },
     {
+      "name": "编辑用户内容",
+      "pathName": "packages/admin/user-content-editor/index"
+    },
+    {
       "name": "会员管理",
       "pathName": "packages/admin/membership/index"
     },

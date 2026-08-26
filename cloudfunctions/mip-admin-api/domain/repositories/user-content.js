@@ -16,7 +16,7 @@ function createAdminUserContentRepository(database, options = {}) {
     const cursor = decodeCursor(filters.cursor, ['updatedAt', 'id'])
     const params = [appId, appId]
 
-    const clauses = ['content.published_at IS NOT NULL']
+    const clauses = ["(content.published_at IS NOT NULL OR content.status IN ('DRAFT', 'ARCHIVED'))"]
     if (filters.kind !== 'ALL') {
       clauses.push('content.kind = ?')
       params.push(filters.kind)
@@ -110,12 +110,14 @@ function createAdminUserContentRepository(database, options = {}) {
     const row = kind === 'COOPERATION_CARD'
       ? await database.one(
           `${cardDetailSelect()}
-           WHERE c.app_id = ? AND c.id = ? AND c.published_at IS NOT NULL AND ${access.sql}`,
+           WHERE c.app_id = ? AND c.id = ?
+             AND (c.published_at IS NOT NULL OR c.status IN ('DRAFT', 'ARCHIVED')) AND ${access.sql}`,
           [appId, contentId, ...access.params],
         )
       : await database.one(
           `${caseDetailSelect()}
-           WHERE c.app_id = ? AND c.id = ? AND c.published_at IS NOT NULL AND ${access.sql}`,
+           WHERE c.app_id = ? AND c.id = ?
+             AND (c.published_at IS NOT NULL OR c.status IN ('DRAFT', 'ARCHIVED')) AND ${access.sql}`,
           [appId, contentId, ...access.params],
         )
     if (!row) return null
@@ -135,7 +137,8 @@ function createAdminUserContentRepository(database, options = {}) {
            FROM mip_cooperation_cards content
            INNER JOIN mip_users u
              ON u.app_id = content.app_id AND u.id = content.owner_user_id
-           WHERE content.app_id = ? AND content.id = ? AND content.published_at IS NOT NULL
+           WHERE content.app_id = ? AND content.id = ?
+             AND (content.published_at IS NOT NULL OR content.status IN ('DRAFT', 'ARCHIVED'))
              AND ${access.sql}`,
           [appId, contentId, ...access.params],
         )
@@ -144,7 +147,8 @@ function createAdminUserContentRepository(database, options = {}) {
            FROM mip_super_cases content
            INNER JOIN mip_users u
              ON u.app_id = content.app_id AND u.id = content.owner_user_id
-           WHERE content.app_id = ? AND content.id = ? AND content.published_at IS NOT NULL
+           WHERE content.app_id = ? AND content.id = ?
+             AND (content.published_at IS NOT NULL OR content.status IN ('DRAFT', 'ARCHIVED'))
              AND ${access.sql}`,
           [appId, contentId, ...access.params],
         )
@@ -154,11 +158,180 @@ function createAdminUserContentRepository(database, options = {}) {
     } : null
   }
 
+  async function getUserContentOwnerScope(appId, visibility, ownerUserId) {
+    const access = visibleOwnerWhere(visibility, 'u.primary_branch_id')
+    const row = await database.one(
+      `SELECT u.id AS owner_user_id, u.primary_branch_id
+       FROM mip_users u
+       WHERE u.app_id = ? AND u.id = ? AND u.status = 'ACTIVE' AND ${access.sql}`,
+      [appId, ownerUserId, ...access.params],
+    )
+    return row ? {
+      ownerUserId: String(row.owner_user_id),
+      scope: ownerScope(row.primary_branch_id),
+    } : null
+  }
+
+  async function saveUserContent(input) {
+    return database.transaction(async tx => {
+      const authorization = await lockMutation(tx, input)
+      const ownerRow = await tx.one(
+        `SELECT id, status, primary_branch_id
+         FROM mip_users WHERE app_id = ? AND id = ? FOR UPDATE`,
+        [input.appId, input.ownerUserId],
+      )
+      if (!ownerRow || ownerRow.status !== 'ACTIVE') throw codeError('NOT_FOUND')
+      const currentScope = ownerScope(ownerRow.primary_branch_id)
+      assertScope(authorization, currentScope)
+      if (!sameScope(currentScope, input.authorizedScope)) throw codeError('CONFLICT')
+
+      let existing = null
+      if (input.contentId) {
+        existing = await lockContent(tx, input)
+        if (!existing) throw codeError('NOT_FOUND')
+        if (existing.owner_user_id !== input.ownerUserId) throw codeError('CONFLICT')
+        if (existing.status === 'ARCHIVED') throw codeError('INVALID_STATE')
+        if (Number(existing.version) !== input.expectedVersion) throw codeError('CONFLICT')
+        if (input.kind === 'COOPERATION_CARD' && existing.role_key !== input.draft.roleKey) {
+          throw codeError('CONFLICT')
+        }
+      }
+      await assertDraftReferences(tx, input)
+      const status = input.draft.status || (existing?.status || 'DRAFT')
+      if (status === 'PUBLISHED' && input.contentSafetyStatus !== 'APPROVED') {
+        throw codeError('CONTENT_SAFETY_REQUIRED')
+      }
+      const id = input.contentId || require('node:crypto').randomUUID()
+      if (input.kind === 'COOPERATION_CARD') {
+        const d = input.draft
+        if (existing) {
+          await tx.query(
+            `UPDATE mip_cooperation_cards
+             SET positioning = ?, target_summary = ?, role_fields_json = ?, ability_scores_json = ?,
+                 status = ?, content_safety_status = ?,
+                 published_at = CASE WHEN ? = 'DRAFT' THEN NULL ELSE COALESCE(published_at, UTC_TIMESTAMP(3)) END,
+                 archived_at = NULL, version = version + 1
+             WHERE app_id = ? AND id = ? AND version = ?`,
+            [d.positioning, d.targetSummary, JSON.stringify(d.roleFields), JSON.stringify(d.abilityScores),
+              status, input.contentSafetyStatus, status, input.appId, id, input.expectedVersion],
+          )
+        }
+        else {
+          await tx.query(
+            `INSERT INTO mip_cooperation_cards
+             (id, app_id, owner_user_id, role_key, positioning, target_summary, role_fields_json,
+              ability_scores_json, status, content_safety_status, published_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 'DRAFT' THEN NULL ELSE UTC_TIMESTAMP(3) END)`,
+            [id, input.appId, input.ownerUserId, d.roleKey, d.positioning, d.targetSummary,
+              JSON.stringify(d.roleFields), JSON.stringify(d.abilityScores), status,
+              input.contentSafetyStatus, status],
+          )
+        }
+      }
+      else {
+        const d = input.draft
+        if (existing) {
+          await tx.query(
+            `UPDATE mip_super_cases
+             SET project_name = ?, summary = ?, started_on = ?, ended_on = ?, responsibility = ?,
+                 city_tag_id = ?, industry_tag_id = ?, case_type = ?, description = ?, cover_asset_id = ?,
+                 status = ?, content_safety_status = ?,
+                 published_at = CASE WHEN ? = 'DRAFT' THEN NULL ELSE COALESCE(published_at, UTC_TIMESTAMP(3)) END,
+                 archived_at = NULL, version = version + 1
+             WHERE app_id = ? AND id = ? AND version = ?`,
+            [d.projectName, d.summary, d.startedOn, d.endedOn, d.responsibility, d.cityTagId,
+              d.industryTagId, d.caseType, d.description, d.coverAssetId, status,
+              input.contentSafetyStatus, status, input.appId, id, input.expectedVersion],
+          )
+        }
+        else {
+          await tx.query(
+            `INSERT INTO mip_super_cases
+             (id, app_id, owner_user_id, project_name, summary, started_on, ended_on, responsibility,
+              city_tag_id, industry_tag_id, case_type, description, cover_asset_id, status,
+              content_safety_status, published_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                     CASE WHEN ? = 'DRAFT' THEN NULL ELSE UTC_TIMESTAMP(3) END)`,
+            [id, input.appId, input.ownerUserId, d.projectName, d.summary, d.startedOn, d.endedOn,
+              d.responsibility, d.cityTagId, d.industryTagId, d.caseType, d.description,
+              d.coverAssetId, status, input.contentSafetyStatus, status],
+          )
+        }
+        await tx.query('DELETE FROM mip_super_case_media WHERE app_id = ? AND super_case_id = ?', [input.appId, id])
+        for (const [sortOrder, mediaAssetId] of d.mediaAssetIds.entries()) {
+          await tx.query(
+            `INSERT INTO mip_super_case_media (app_id, super_case_id, media_asset_id, sort_order)
+             VALUES (?, ?, ?, ?)`,
+            [input.appId, id, mediaAssetId, sortOrder],
+          )
+        }
+      }
+      const version = existing ? Number(existing.version) + 1 : 1
+      await writeAudit(tx, input.audit(id, version, status))
+      return { id, kind: input.kind, status, version }
+    })
+  }
+
+  async function archiveUserContent(input) {
+    return database.transaction(async tx => {
+      const authorization = await lockMutation(tx, input)
+      const row = await lockContent(tx, input)
+      if (!row) throw codeError('NOT_FOUND')
+      const currentScope = ownerScope(row.primary_branch_id)
+      assertScope(authorization, currentScope)
+      if (!sameScope(currentScope, input.authorizedScope)) throw codeError('CONFLICT')
+      if (row.status === 'ARCHIVED') throw codeError('INVALID_STATE')
+      if (Number(row.version) !== input.expectedVersion) throw codeError('CONFLICT')
+      const table = input.kind === 'COOPERATION_CARD' ? 'mip_cooperation_cards' : 'mip_super_cases'
+      const result = await tx.query(
+        `UPDATE ${table} SET status = 'ARCHIVED', archived_at = UTC_TIMESTAMP(3), version = version + 1
+         WHERE app_id = ? AND id = ? AND status <> 'ARCHIVED' AND version = ?`,
+        [input.appId, input.contentId, input.expectedVersion],
+      )
+      if (Number(result.affectedRows) !== 1) throw codeError('CONFLICT')
+      await writeAudit(tx, input.audit(input.expectedVersion + 1))
+      return { id: input.contentId, kind: input.kind, status: 'ARCHIVED', version: input.expectedVersion + 1 }
+    })
+  }
+
+  async function assertDraftReferences(tx, input) {
+    if (input.kind !== 'SUPER_CASE') return
+    const draft = input.draft
+    const tagPairs = [
+      ...(draft.cityTagId ? [[draft.cityTagId, 'CITY']] : []),
+      ...(draft.industryTagId ? [[draft.industryTagId, 'INDUSTRY']] : []),
+    ]
+    if (tagPairs.length) {
+      const rows = await tx.query(
+        `SELECT id, kind FROM mip_tags
+         WHERE app_id = ? AND id IN (${tagPairs.map(() => '?').join(', ')})
+           AND enabled = 1 AND selectable = 1`,
+        [input.appId, ...tagPairs.map(([id]) => id)],
+      )
+      const byId = new Map(rows.map(row => [row.id, row.kind]))
+      if (tagPairs.some(([id, kind]) => byId.get(id) !== kind)) throw codeError('VALIDATION_FAILED')
+    }
+    const assets = [...new Set([draft.coverAssetId, ...draft.mediaAssetIds].filter(Boolean))]
+    if (!assets.length) return
+    const rows = await tx.query(
+      `SELECT id, purpose FROM mip_media_assets
+       WHERE app_id = ? AND owner_user_id = ? AND status = 'READY'
+         AND id IN (${assets.map(() => '?').join(', ')})`,
+      [input.appId, input.ownerUserId, ...assets],
+    )
+    const byId = new Map(rows.map(row => [row.id, row.purpose]))
+    if (rows.length !== assets.length
+      || (draft.coverAssetId && byId.get(draft.coverAssetId) !== 'SUPER_CASE_COVER')
+      || draft.mediaAssetIds.some(assetId => byId.get(assetId) !== 'SUPER_CASE_MEDIA')) {
+      throw codeError('VALIDATION_FAILED')
+    }
+  }
+
   async function unpublishUserContent(input) {
     return database.transaction(async (tx) => {
       const authorization = await lockMutation(tx, input)
       const row = await lockContent(tx, input)
-      if (!row || !row.published_at) throw codeError('NOT_FOUND')
+      if (!row) throw codeError('NOT_FOUND')
       const currentScope = ownerScope(row.primary_branch_id)
       assertScope(authorization, currentScope)
       if (!sameScope(currentScope, input.authorizedScope)) throw codeError('CONFLICT')
@@ -203,7 +376,7 @@ function createAdminUserContentRepository(database, options = {}) {
        LEFT JOIN mip_profiles profile
          ON profile.app_id = audit.app_id AND profile.user_id = audit.actor_user_id
        WHERE audit.app_id = ? AND audit.resource_type = ? AND audit.resource_id = ?
-         AND audit.action = 'admin.user_content.unpublish'
+         AND audit.action IN ('admin.user_content.unpublish', 'admin.user_content.archive')
        ORDER BY audit.created_at DESC, audit.id DESC
        LIMIT 50`,
       [appId, kind, contentId],
@@ -211,7 +384,7 @@ function createAdminUserContentRepository(database, options = {}) {
     return rows.map(row => {
       const metadata = json(row.metadata_json, {})
       return {
-        action: 'UNPUBLISH',
+        action: row.action.endsWith('.archive') ? 'ARCHIVE' : 'UNPUBLISH',
         actorNickname: row.actor_nickname || '运营成员',
         reason: typeof metadata.reason === 'string' ? metadata.reason : '',
         createdAt: iso(row.created_at),
@@ -220,16 +393,19 @@ function createAdminUserContentRepository(database, options = {}) {
   }
 
   return {
+    archiveUserContent,
     getUserContent,
+    getUserContentOwnerScope,
     getUserContentScope,
     listUserContent,
+    saveUserContent,
     unpublishUserContent,
   }
 }
 
 async function lockContent(tx, input) {
   const sql = input.kind === 'COOPERATION_CARD'
-    ? `SELECT content.owner_user_id, content.status, content.version,
+    ? `SELECT content.owner_user_id, content.role_key, content.status, content.version,
               content.published_at, u.primary_branch_id
        FROM mip_cooperation_cards content
        INNER JOIN mip_users u
@@ -271,6 +447,7 @@ function cardDetailSelect() {
 function caseDetailSelect() {
   return `SELECT c.id, c.owner_user_id, c.project_name, c.summary, c.started_on, c.ended_on,
       c.responsibility, c.case_type, c.description, c.status, c.content_safety_status,
+      c.city_tag_id, c.industry_tag_id, c.cover_asset_id,
       c.version, c.published_at, c.archived_at, c.updated_at,
       u.primary_branch_id, COALESCE(p.nickname, '未填写昵称') AS owner_nickname,
       COALESCE(branch.name, '') AS branch_name, COALESCE(branch.city_name, '') AS city_name,
@@ -339,6 +516,10 @@ function detailItem(kind, row, media, history) {
     industryLabel: row.industry_label || '',
     caseType: row.case_type || '',
     description: row.description,
+    cityTagId: row.city_tag_id || null,
+    industryTagId: row.industry_tag_id || null,
+    coverAssetId: row.cover_asset_id || null,
+    mediaAssetIds: media.map(item => item.assetId),
     coverUrl: row.cover_url || '',
     media,
   }

@@ -81,6 +81,7 @@
         "event-console/index",
         "profiles/index",
         "user-content/index",
+        "user-content-editor/index",
         "membership/index",
         "membership-ledger/index",
         "events/index",

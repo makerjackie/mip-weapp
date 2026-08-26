@@ -1,6 +1,6 @@
 <view id="admin-user-content-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
   <mip-admin-workspace-nav />
-  <view class="text-[length:40rpx] font-bold">用户内容</view>
+  <view class="flex items-center justify-between gap-3"><view class="text-[length:40rpx] font-bold">用户内容</view><view wx:if="{{canManage}}" class="flex gap-2"><t-button size="small" variant="outline" data-kind="COOPERATION_CARD" bind:tap="openCreate">新增合作卡</t-button><t-button size="small" variant="outline" data-kind="SUPER_CASE" bind:tap="openCreate">新增超级案例</t-button></view></view>
   <view class="mt-2 text-[length:23rpx] text-muted">查看合作卡与超级案例，并处理需要下架的已发布内容</view>
 
   <view wx:if="{{canManage}}" class="admin-user-content-filter-grid mt-5 rounded-[16rpx] bg-panel p-3">
@@ -36,6 +36,7 @@
     <view wx:elif="{{detailState === 'forbidden'}}"><app-empty-state title="没有查看权限" description="{{detailMessage || '当前账号不能查看该用户内容。'}}" /></view>
     <view wx:elif="{{detail}}" class="pb-4">
       <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1"><view class="text-[length:30rpx] font-semibold">{{detail.kind === 'COOPERATION_CARD' ? detail.positioning : detail.projectName}}</view><view class="mt-1 text-[length:21rpx] text-muted">{{detail.kindText}}{{detail.roleText ? ' · ' + detail.roleText : ''}}</view></view><t-tag variant="outline">{{detail.statusText}}</t-tag></view>
+      <view wx:if="{{detail.status !== 'ARCHIVED'}}" class="mt-3"><t-button size="small" variant="outline" bind:tap="editDetail">编辑内容</t-button></view>
       <view class="mt-4 rounded-[16rpx] bg-panel-raised px-4 py-4"><view class="text-[length:21rpx] text-muted">发布用户</view><view class="mt-1 text-[length:25rpx] font-semibold">{{detail.owner.nickname}}</view><view class="mt-1 text-[length:21rpx] text-muted">{{detail.owner.branchName || '未设置主分会'}}{{detail.owner.cityName ? ' · ' + detail.owner.cityName : ''}}</view></view>
 
       <block wx:if="{{detail.kind === 'COOPERATION_CARD'}}">
@@ -52,9 +53,10 @@
       </block>
 
       <view class="mt-4 rounded-[16rpx] bg-panel-raised px-4 py-4"><view class="text-[length:21rpx] text-muted">内容状态</view><view class="mt-2 text-[length:23rpx]">安全检查：{{detail.safetyText}}</view><view class="mt-1 text-[length:21rpx] text-muted">发布：{{detail.publishedText}} · 更新：{{detail.updatedText}}</view></view>
-      <view wx:if="{{detail.historyViews.length}}" class="mt-4 rounded-[16rpx] bg-panel-raised px-4 py-4"><view class="text-[length:25rpx] font-semibold">下架记录</view><view wx:for="{{detail.historyViews}}" wx:key="createdAt" class="mt-3 border-b border-line pb-3"><view class="text-[length:22rpx]">{{item.actorNickname}} · {{item.createdText}}</view><view class="mt-1 whitespace-pre-wrap text-[length:21rpx] text-muted">{{item.reason}}</view></view></view>
+      <view wx:if="{{detail.historyViews.length}}" class="mt-4 rounded-[16rpx] bg-panel-raised px-4 py-4"><view class="text-[length:25rpx] font-semibold">治理记录</view><view wx:for="{{detail.historyViews}}" wx:key="createdAt" class="mt-3 border-b border-line pb-3"><view class="text-[length:22rpx]">{{item.action === 'ARCHIVE' ? '归档' : '下架'}} · {{item.actorNickname}} · {{item.createdText}}</view><view class="mt-1 whitespace-pre-wrap text-[length:21rpx] text-muted">{{item.reason}}</view></view></view>
 
       <view wx:if="{{detail.status === 'PUBLISHED'}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-4"><view class="text-[length:25rpx] font-semibold">下架内容</view><view class="mt-1 text-[length:21rpx] text-muted">下架原因会保存在审计记录中。</view><t-textarea class="mt-3 box-border max-w-full" value="{{reason}}" maxlength="300" autosize placeholder="填写下架原因" disabled="{{processing}}" bind:change="updateReason" /><view wx:if="{{detailMessage}}" class="mt-2 text-[length:21rpx] text-danger">{{detailMessage}}</view><view class="mt-4"><t-button block theme="danger" loading="{{processing}}" bind:tap="unpublish">确认下架</t-button></view></view>
+      <view wx:if="{{detail.status !== 'ARCHIVED'}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-4"><view class="text-[length:25rpx] font-semibold">归档内容</view><view class="mt-1 text-[length:21rpx] text-muted">归档会保留内容和审计记录，不执行物理删除。</view><t-textarea class="mt-3 box-border max-w-full" value="{{archiveReason}}" maxlength="300" autosize placeholder="填写归档原因" disabled="{{processing}}" bind:change="updateArchiveReason" /><view class="mt-4"><t-button block theme="danger" loading="{{processing}}" bind:tap="archive">确认归档</t-button></view></view>
       <view wx:elif="{{detailMessage}}" class="mt-4 text-[length:21rpx] text-danger">{{detailMessage}}</view>
     </view>
   </mip-admin-responsive-panel>

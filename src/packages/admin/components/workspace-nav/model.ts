@@ -258,6 +258,7 @@ const activeItemByRoute: Readonly<Record<string, string>> = {
   'packages/admin/opportunity-editor/index': 'opportunities',
   'packages/admin/opportunity-matching/index': 'opportunities',
   'packages/admin/user-content/index': 'user-content',
+  'packages/admin/user-content-editor/index': 'user-content',
   'packages/admin/community-reports/index': 'community-reports',
   'packages/admin/growth-entries/index': 'growth-entries',
   'packages/admin/growth-transitions/index': 'growth-transitions',

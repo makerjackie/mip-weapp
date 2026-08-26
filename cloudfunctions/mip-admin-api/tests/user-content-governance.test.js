@@ -136,6 +136,36 @@ describe('admin user content governance service', () => {
       error => error.code === 'FORBIDDEN',
     )
   })
+
+  it('requires an explicit visible owner and audits admin-created content', async () => {
+    let captured
+    const service = createAdminUserContentGovernance({
+      access: accessFixture({ roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', scopeId: BRANCH_A }),
+      contentSafety: async () => 'APPROVED',
+      repository: {
+        async getUserContentOwnerScope() {
+          return { ownerUserId: USER_ID, scope: { scopeType: 'BRANCH', scopeId: BRANCH_A } }
+        },
+        async saveUserContent(input) { captured = input; return { id: CONTENT_ID, kind: input.kind, status: 'PUBLISHED', version: 1 } },
+      },
+    })
+    const result = await service.saveUserContent({ appId: APP_ID }, {
+      kind: 'COOPERATION_CARD', ownerUserId: USER_ID,
+      draft: {
+        kind: 'COOPERATION_CARD', roleKey: 'connector', positioning: '渠道合作', targetSummary: '完成引荐',
+        roleFields: { circles: ['企业服务'], resources: '客户资源', target: '完成引荐' },
+        abilityScores: {
+          business_development: 3, resource_integration: 3, capital_operation: 3,
+          strategy_planning: 3, visual_design: 3, delivery_management: 3,
+        }, status: 'PUBLISHED',
+      },
+    })
+    assert.deepEqual(result, { id: CONTENT_ID, kind: 'COOPERATION_CARD', status: 'PUBLISHED', version: 1 })
+    assert.equal(captured.ownerUserId, USER_ID)
+    assert.deepEqual(captured.audit('id', 1, 'PUBLISHED').metadata, {
+      ownerUserId: USER_ID, expectedVersion: 0, nextVersion: 1, status: 'PUBLISHED',
+    })
+  })
 })
 
 describe('admin user content governance repository', () => {

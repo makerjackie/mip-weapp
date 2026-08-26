@@ -36,7 +36,7 @@ type DetailView = AdminUserContentDetail & {
   roleText: string
   roleFieldViews: Array<{ key: string, label: string, value: string }>
   abilityViews: Array<{ key: string, label: string, score: number }>
-  historyViews: Array<{ action: 'UNPUBLISH', actorNickname: string, reason: string, createdAt: string, createdText: string }>
+  historyViews: Array<{ action: 'UNPUBLISH' | 'ARCHIVE', actorNickname: string, reason: string, createdAt: string, createdText: string }>
 }
 
 const kindOptions: Array<{ label: string, value: KindFilter }> = [
@@ -45,12 +45,14 @@ const kindOptions: Array<{ label: string, value: KindFilter }> = [
   { label: '超级案例', value: 'SUPER_CASE' },
 ]
 const statusOptions: Array<{ label: string, value: StatusFilter }> = [
+  { label: '草稿', value: 'DRAFT' },
   { label: '已发布', value: 'PUBLISHED' },
   { label: '已下架', value: 'UNPUBLISHED' },
   { label: '已归档', value: 'ARCHIVED' },
   { label: '全部状态', value: 'ALL' },
 ]
 const statusLabels: Record<AdminUserContentStatus, string> = {
+  DRAFT: '草稿',
   PUBLISHED: '已发布',
   UNPUBLISHED: '已下架',
   ARCHIVED: '已归档',
@@ -76,7 +78,7 @@ function listView(item: AdminUserContentListItem): ContentView {
     roleText: roleName(item.roleKey),
     statusText: statusLabels[item.status],
     safetyText: safetyLabels[item.contentSafetyStatus],
-    publishedText: formatLocalDateTime(item.publishedAt),
+    publishedText: formatLocalDateTime(item.publishedAt || ''),
     updatedText: formatLocalDateTime(item.updatedAt),
   }
 }
@@ -96,7 +98,7 @@ function detailView(item: AdminUserContentDetail): DetailView {
     kindText: item.kind === 'COOPERATION_CARD' ? '合作卡' : '超级案例',
     statusText: statusLabels[item.status],
     safetyText: safetyLabels[item.contentSafetyStatus],
-    publishedText: formatLocalDateTime(item.publishedAt),
+    publishedText: formatLocalDateTime(item.publishedAt || ''),
     updatedText: formatLocalDateTime(item.updatedAt),
     roleText: card ? roleName(card.roleKey) : '',
     roleFieldViews: card
@@ -139,6 +141,7 @@ Page({
     selectedContentKind: '' as AdminUserContentKind | '',
     detailMessage: '',
     reason: '',
+    archiveReason: '',
     processing: false,
     message: '',
   },
@@ -291,6 +294,22 @@ Page({
     void this.loadDetail(kind, id, false)
   },
 
+  openCreate(event: WechatMiniprogram.TouchEvent) {
+    const kind = String(event.currentTarget.dataset.kind || '')
+    if (kind !== 'COOPERATION_CARD' && kind !== 'SUPER_CASE') {
+      return
+    }
+    void wx.navigateTo({ url: `/packages/admin/user-content-editor/index?kind=${kind}` })
+  },
+
+  editDetail() {
+    const detail = this.data.detail
+    if (!detail || detail.status === 'ARCHIVED' || this.data.processing) {
+      return
+    }
+    void wx.navigateTo({ url: `/packages/admin/user-content-editor/index?kind=${detail.kind}&contentId=${encodeURIComponent(detail.id)}` })
+  },
+
   async loadDetail(kind: AdminUserContentKind, contentId: string, force: boolean) {
     const seq = this.detailRequestSeq + 1
     this.detailRequestSeq = seq
@@ -302,6 +321,7 @@ Page({
       selectedContentKind: kind,
       detailMessage: '',
       reason: '',
+      archiveReason: '',
     })
     try {
       const detail = await mipAdminModule.userContent.get(kind, contentId, force)
@@ -352,6 +372,46 @@ Page({
 
   updateReason(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ reason: event.detail.value, detailMessage: '' })
+  },
+
+  updateArchiveReason(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.setData({ archiveReason: event.detail.value, detailMessage: '' })
+  },
+
+  async archive() {
+    const detail = this.data.detail
+    const reason = this.data.archiveReason.normalize('NFKC').trim().replace(/\s+/g, ' ')
+    if (!detail || detail.status === 'ARCHIVED' || this.data.processing) {
+      return
+    }
+    if (!reason || reason.length > 300) {
+      this.setData({ detailMessage: '请填写不超过 300 字的归档原因。' })
+      return
+    }
+    const confirmation = await wx.showModal({
+      title: '归档用户内容',
+      content: '归档后内容保留在历史记录中，不再作为有效内容展示。',
+      confirmText: '确认归档',
+    }).catch(() => null)
+    if (!confirmation?.confirm) {
+      return
+    }
+    this.setData({ processing: true, detailMessage: '' })
+    try {
+      await mipAdminModule.userContent.archive({ kind: detail.kind, contentId: detail.id, expectedVersion: detail.version, reason })
+      wx.showToast({ title: '内容已归档', icon: 'success' })
+      await Promise.all([this.loadContent(true), this.loadDetail(detail.kind, detail.id, true)])
+    }
+    catch (error) {
+      if (isAdminVersionConflict(error)) {
+        await this.loadDetail(detail.kind, detail.id, true)
+        this.setData({ detailMessage: '内容状态已更新，请确认后重试。' })
+      }
+      else {
+        this.setData({ detailMessage: error instanceof Error ? error.message : '内容归档失败' })
+      }
+    }
+    finally { this.setData({ processing: false }) }
   },
 
   async unpublish() {

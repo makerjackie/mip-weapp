@@ -1,7 +1,7 @@
 import { MipAdminError } from './types'
 
 export type AdminUserContentKind = 'COOPERATION_CARD' | 'SUPER_CASE'
-export type AdminUserContentStatus = 'PUBLISHED' | 'UNPUBLISHED' | 'ARCHIVED'
+export type AdminUserContentStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'ARCHIVED'
 export type AdminUserContentSafetyStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'ERROR'
 
 export interface AdminUserContentOwner {
@@ -22,13 +22,13 @@ export interface AdminUserContentListItem {
   contentSafetyStatus: AdminUserContentSafetyStatus
   version: number
   owner: AdminUserContentOwner
-  publishedAt: string
+  publishedAt: string | null
   archivedAt: string | null
   updatedAt: string
 }
 
 export interface AdminUserContentModerationHistory {
-  action: 'UNPUBLISH'
+  action: 'UNPUBLISH' | 'ARCHIVE'
   actorNickname: string
   reason: string
   createdAt: string
@@ -41,7 +41,7 @@ interface AdminUserContentDetailBase {
   contentSafetyStatus: AdminUserContentSafetyStatus
   version: number
   owner: AdminUserContentOwner
-  publishedAt: string
+  publishedAt: string | null
   archivedAt: string | null
   updatedAt: string
   moderationHistory: AdminUserContentModerationHistory[]
@@ -67,6 +67,10 @@ export interface AdminSuperCaseDetail extends AdminUserContentDetailBase {
   industryLabel: string
   caseType: string
   description: string
+  cityTagId: string | null
+  industryTagId: string | null
+  coverAssetId: string | null
+  mediaAssetIds: string[]
   coverUrl: string
   media: Array<{ assetId: string, url: string, caption: string }>
 }
@@ -97,16 +101,57 @@ export interface AdminUserContentUnpublishInput {
   reason: string
 }
 
+export type AdminUserContentDraft
+  = | {
+    kind: 'COOPERATION_CARD'
+    roleKey: string
+    positioning: string
+    targetSummary: string
+    roleFields: Record<string, string | string[]>
+    abilityScores: Record<string, number>
+    status?: Extract<AdminUserContentStatus, 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED'>
+  }
+  | {
+    kind: 'SUPER_CASE'
+    projectName: string
+    summary: string
+    startedOn: string | null
+    endedOn: string | null
+    responsibility: string
+    cityTagId: string | null
+    industryTagId: string | null
+    caseType: string | null
+    description: string
+    coverAssetId: string | null
+    mediaAssetIds: string[]
+    status?: Extract<AdminUserContentStatus, 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED'>
+  }
+
+export interface AdminUserContentSaveInput {
+  kind: AdminUserContentKind
+  contentId?: string
+  expectedVersion?: number
+  ownerUserId: string
+  draft: AdminUserContentDraft
+}
+
+export interface AdminUserContentArchiveInput {
+  kind: AdminUserContentKind
+  contentId: string
+  expectedVersion: number
+  reason: string
+}
+
 export interface AdminUserContentMutationResult {
   id: string
   kind: AdminUserContentKind
-  status: 'UNPUBLISHED'
+  status: AdminUserContentStatus
   version: number
 }
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const kinds = new Set(['COOPERATION_CARD', 'SUPER_CASE'])
-const statuses = new Set(['PUBLISHED', 'UNPUBLISHED', 'ARCHIVED'])
+const statuses = new Set(['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'ARCHIVED'])
 const safetyStatuses = new Set(['PENDING', 'APPROVED', 'REJECTED', 'ERROR'])
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -161,7 +206,7 @@ function owner(value: unknown) {
 function history(value: unknown) {
   return record(value)
     && exactKeys(value, ['action', 'actorNickname', 'reason', 'createdAt'])
-    && value.action === 'UNPUBLISH'
+    && (value.action === 'UNPUBLISH' || value.action === 'ARCHIVE')
     && shortText(value.actorNickname, 64, true)
     && shortText(value.reason, 300, true)
     && dateTime(value.createdAt)
@@ -203,7 +248,7 @@ function assertDetailBase(value: Record<string, unknown>) {
     || !safetyStatuses.has(String(value.contentSafetyStatus))
     || !version(value.version)
     || !owner(value.owner)
-    || !dateTime(value.publishedAt)
+    || !nullableDateTime(value.publishedAt)
     || !nullableDateTime(value.archivedAt)
     || !dateTime(value.updatedAt)
     || !Array.isArray(value.moderationHistory)
@@ -238,7 +283,7 @@ function parseListItem(value: unknown): AdminUserContentListItem {
     || !safetyStatuses.has(String(value.contentSafetyStatus))
     || !version(value.version)
     || !owner(value.owner)
-    || !dateTime(value.publishedAt)
+    || !nullableDateTime(value.publishedAt)
     || !nullableDateTime(value.archivedAt)
     || !dateTime(value.updatedAt)) {
     invalid()
@@ -304,6 +349,23 @@ export function parseAdminUserContentDetail(value: unknown): AdminUserContentDet
     'description',
     'coverUrl',
     'media',
+  ]) && !exactKeys(value, [
+    ...baseKeys,
+    'projectName',
+    'summary',
+    'startedOn',
+    'endedOn',
+    'responsibility',
+    'cityLabel',
+    'industryLabel',
+    'caseType',
+    'description',
+    'cityTagId',
+    'industryTagId',
+    'coverAssetId',
+    'mediaAssetIds',
+    'coverUrl',
+    'media',
   ])) {
     invalid()
   }
@@ -328,6 +390,12 @@ export function parseAdminUserContentDetail(value: unknown): AdminUserContentDet
     || !shortText(value.industryLabel, 80)
     || !shortText(value.caseType, 80)
     || !shortText(value.description, 20_000, true)
+    || (Object.hasOwn(value, 'cityTagId') && !(value.cityTagId === null || uuid(value.cityTagId)))
+    || (Object.hasOwn(value, 'industryTagId') && !(value.industryTagId === null || uuid(value.industryTagId)))
+    || (Object.hasOwn(value, 'coverAssetId') && !(value.coverAssetId === null || uuid(value.coverAssetId)))
+    || (Object.hasOwn(value, 'mediaAssetIds') && (!Array.isArray(value.mediaAssetIds)
+      || value.mediaAssetIds.length > 20
+      || value.mediaAssetIds.some(item => !uuid(item))))
     || !shortText(value.coverUrl, 1024)
     || !Array.isArray(value.media)
     || value.media.length > 20
@@ -346,6 +414,38 @@ export function parseAdminUserContentMutation(
     || value.id !== input.contentId
     || value.kind !== input.kind
     || value.status !== 'UNPUBLISHED'
+    || value.version !== input.expectedVersion + 1) {
+    invalid()
+  }
+  return value as unknown as AdminUserContentMutationResult
+}
+
+export function parseAdminUserContentSaveMutation(
+  value: unknown,
+  input: AdminUserContentSaveInput,
+): AdminUserContentMutationResult {
+  if (!record(value)
+    || !exactKeys(value, ['id', 'kind', 'status', 'version'])
+    || typeof value.id !== 'string'
+    || (Boolean(input.contentId) && value.id !== input.contentId)
+    || value.kind !== input.kind
+    || !statuses.has(String(value.status))
+    || !version(value.version)
+    || (input.expectedVersion !== undefined && value.version !== input.expectedVersion + 1)) {
+    invalid()
+  }
+  return value as unknown as AdminUserContentMutationResult
+}
+
+export function parseAdminUserContentArchiveMutation(
+  value: unknown,
+  input: AdminUserContentArchiveInput,
+): AdminUserContentMutationResult {
+  if (!record(value)
+    || !exactKeys(value, ['id', 'kind', 'status', 'version'])
+    || value.id !== input.contentId
+    || value.kind !== input.kind
+    || value.status !== 'ARCHIVED'
     || value.version !== input.expectedVersion + 1) {
     invalid()
   }

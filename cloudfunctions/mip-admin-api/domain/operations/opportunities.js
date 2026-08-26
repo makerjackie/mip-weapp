@@ -16,6 +16,8 @@ module.exports = defineManifest('OPPORTUNITIES', [
   serviceOperation('mip.admin.opportunities.unpublish', 'MUTATION', 'unpublishOpportunity'),
   serviceOperation('mip.admin.opportunities.archive', 'MUTATION', 'archiveOpportunity'),
   serviceOperation('mip.admin.userContent.unpublish', 'MUTATION', 'unpublishUserContent'),
+  serviceOperation('mip.admin.userContent.save', 'MUTATION', 'saveUserContent'),
+  serviceOperation('mip.admin.userContent.archive', 'MUTATION', 'archiveUserContent'),
   serviceOperation('mip.admin.matching.settings.save', 'MUTATION', 'saveMatchingSettings'),
   serviceOperation('mip.admin.matching.recalculate', 'MUTATION', 'recalculateOpportunityMatching'),
   serviceOperation('mip.admin.opportunityComments.settings.save', 'MUTATION', 'saveOpportunityCommentSettings'),

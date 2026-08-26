@@ -1,7 +1,9 @@
 import type { MipAdminGateway } from './types'
 import type {
+  AdminUserContentArchiveInput,
   AdminUserContentKind,
   AdminUserContentListInput,
+  AdminUserContentSaveInput,
   AdminUserContentUnpublishInput,
 } from './user-content'
 
@@ -29,6 +31,16 @@ export function createMipUserContentAdmin(gateway: MipAdminGateway, cache: UserC
     ),
     unpublish: async (input: AdminUserContentUnpublishInput) => {
       const result = await gateway.unpublishUserContent(input)
+      invalidate()
+      return result
+    },
+    save: async (input: AdminUserContentSaveInput) => {
+      const result = await gateway.saveUserContent(input)
+      invalidate()
+      return result
+    },
+    archive: async (input: AdminUserContentArchiveInput) => {
+      const result = await gateway.archiveUserContent(input)
       invalidate()
       return result
     },

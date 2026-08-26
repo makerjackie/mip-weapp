@@ -2,7 +2,7 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 104,
+  "routeCount": 105,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
@@ -809,6 +809,16 @@
       "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
       "acceptStates": ["ready", "empty"],
       "readyAssertion": "state === 'ready' || state === 'empty'"
+    },
+    {
+      "id": "A46",
+      "name": "编辑用户内容",
+      "path": "packages/admin/user-content-editor/index",
+      "selector": "#admin-user-content-editor-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "error", "forbidden", "conflict"],
+      "readyAssertion": "state === 'ready'"
     },
     {
       "id": "A41",

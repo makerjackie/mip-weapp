@@ -90,9 +90,11 @@ import { parseAdminOrderDetail, parseAdminOrderPage, parseAdminRosterPage } from
 import { createAdminRequest } from './request-contract'
 import { MipAdminError } from './types'
 import {
+  parseAdminUserContentArchiveMutation,
   parseAdminUserContentDetail,
   parseAdminUserContentMutation,
   parseAdminUserContentPage,
+  parseAdminUserContentSaveMutation,
 } from './user-content'
 import {
   createAdminUserInfluenceRequest,
@@ -814,6 +816,14 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
     ),
     unpublishUserContent: async input => parseAdminUserContentMutation(
       await call('mip.admin.userContent.unpublish', { ...input }),
+      input,
+    ),
+    saveUserContent: async input => parseAdminUserContentSaveMutation(
+      await call('mip.admin.userContent.save', { ...input }),
+      input,
+    ),
+    archiveUserContent: async input => parseAdminUserContentArchiveMutation(
+      await call('mip.admin.userContent.archive', { ...input }),
       input,
     ),
     updateUser: input => call('mip.admin.users.update', input),

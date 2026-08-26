@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "operationCount": 140,
+  "operationCount": 142,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -892,6 +892,22 @@
     },
     {
       "action": "mip.admin.userContent.unpublish",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.userContent.save",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.userContent.archive",
       "kind": "MUTATION",
       "authentication": "REQUIRED",
       "session": "REQUIRED",
