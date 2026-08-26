@@ -13,6 +13,7 @@ const idPattern = /^[\w-]{1,36}$/
 const cursorPattern = /^[\w-]{1,512}$/
 const userStatuses = new Set(['ACTIVE', 'BLOCKED', 'CLOSED'])
 const userKinds = new Set(['PLAYER', 'GUEST'])
+const playerLifecycles = new Set(['CURRENT', 'FORMER', 'NEVER'])
 const controls = new Set(['ALLOWLIST', 'BLOCKLIST'])
 const phoneBoundFilters = new Set(['BOUND', 'UNBOUND'])
 const profileCompleteFilters = new Set(['COMPLETE', 'INCOMPLETE'])
@@ -69,6 +70,7 @@ const filterKeys = new Set([
   'query',
   'status',
   'kind',
+  'playerLifecycle',
   'branchId',
   'levelId',
   'controlType',
@@ -101,6 +103,10 @@ const userKeys = [
   'profileVersion',
   'createdAt',
   'updatedAt',
+  'playerNumber',
+  'firstPlayerAt',
+  'latestEntitlementEndsAt',
+  'totalValidMembershipSeconds',
 ] as const
 const detailKeys = [
   ...userKeys,
@@ -236,6 +242,7 @@ export function createAdminUserListRequest(
   }
   if (!optionalEnum(filters.status, userStatuses)
     || !optionalEnum(filters.kind, userKinds)
+    || !optionalEnum(filters.playerLifecycle, playerLifecycles)
     || !optionalEnum(filters.controlType, controls)
     || !optionalEnum(filters.phoneBound, phoneBoundFilters)
     || !optionalEnum(filters.profileComplete, profileCompleteFilters)
@@ -271,8 +278,12 @@ export function createAdminUserListRequest(
 }
 
 function validUser(value: unknown, includePhone: boolean): value is AdminUser {
+  const lifecycleKeys = ['playerNumber', 'firstPlayerAt', 'latestEntitlementEndsAt', 'totalValidMembershipSeconds']
+  const keys = record(value) && lifecycleKeys.every(key => Object.hasOwn(value, key))
+    ? [...userKeys]
+    : userKeys.filter(key => !lifecycleKeys.includes(key))
   if (!record(value)
-    || !exactKeys(value, userKeys)
+    || !exactKeys(value, keys)
     || !validId(value.id)
     || !userStatuses.has(String(value.status))
     || !userKinds.has(String(value.kind))
@@ -297,6 +308,19 @@ function validUser(value: unknown, includePhone: boolean): value is AdminUser {
     || !validNullableDate(value.createdAt)
     || !validNullableDate(value.updatedAt)) {
     return false
+  }
+  if (lifecycleKeys.every(key => Object.hasOwn(value, key))) {
+    if (!(value.playerNumber === null || validSafeInteger(value.playerNumber, 1))
+      || !validNullableDate(value.firstPlayerAt)
+      || !validNullableDate(value.latestEntitlementEndsAt)
+      || !validSafeInteger(value.totalValidMembershipSeconds, 0)
+      || (value.playerNumber === null && (
+        value.firstPlayerAt !== null
+        || value.latestEntitlementEndsAt !== null
+        || value.totalValidMembershipSeconds !== 0
+      ))) {
+      return false
+    }
   }
   if (!value.phoneBound && value.phoneNumber !== null) {
     return false
@@ -458,9 +482,18 @@ function validRelatedRecords(value: unknown) {
 }
 
 export function parseAdminUserDetail(value: unknown, includePhone = false): AdminUserDetail {
+  const lifecycleKeys = ['playerNumber', 'firstPlayerAt', 'latestEntitlementEndsAt', 'totalValidMembershipSeconds']
+  const hasLifecycle = record(value) && lifecycleKeys.every(key => Object.hasOwn(value, key))
+  const expectedDetailKeys = hasLifecycle
+    ? detailKeys
+    : detailKeys.filter(key => !lifecycleKeys.includes(key))
+  const base = record(value)
+    ? Object.fromEntries((hasLifecycle ? userKeys : userKeys.filter(key => !lifecycleKeys.includes(key)))
+        .map(key => [key, value[key]]))
+    : null
   if (!record(value)
-    || !exactKeys(value, detailKeys)
-    || !validUser(Object.fromEntries(userKeys.map(key => [key, value[key]])), includePhone)
+    || !exactKeys(value, expectedDetailKeys)
+    || !validUser(base, includePhone)
     || !validBranchOptions(value.primaryBranchOptions)
     || !validOrganizationList(value.companies)
     || !validOrganizationList(value.organizations)

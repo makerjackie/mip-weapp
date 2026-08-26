@@ -192,8 +192,23 @@ describe('MIP admin user record contract', () => {
   })
 
   it('keeps membership, growth, branch, and influence facts mutually consistent', () => {
-    const value = detail()
+    const value = detail({
+      playerNumber: 12,
+      firstPlayerAt: '2026-01-01T00:00:00.000Z',
+      latestEntitlementEndsAt: '2027-01-01T00:00:00.000Z',
+      totalValidMembershipSeconds: 31_536_000,
+    })
     expect(parseAdminUserDetail(value)).toEqual(value)
+
+    const neverPlayer = detail({
+      kind: 'GUEST',
+      membership: null,
+      playerNumber: null,
+      firstPlayerAt: null,
+      latestEntitlementEndsAt: null,
+      totalValidMembershipSeconds: 0,
+    })
+    expect(parseAdminUserDetail(neverPlayer)).toEqual(neverPlayer)
 
     const scheduled = detail({
       kind: 'GUEST',

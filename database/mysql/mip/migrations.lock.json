@@ -665,6 +665,19 @@
       "altersTables": [
         "mip_game_teams"
       ]
+    },
+    {
+      "version": "20260827480000",
+      "name": "mip_player_lifecycle",
+      "sql": "database/mysql/mip/048_player_lifecycle.sql",
+      "sqlSha256": "4cc764f7df474305bc554f07e486327689c6b4692023fffe06c06966ee79aea3",
+      "rollback": "database/mysql/mip/rollback/048_player_lifecycle.sql",
+      "rollbackSha256": "cb58be209e1e951bbb938270a0e143727e5e403a057e2d0def4d2f45d19fcbd3",
+      "createsTables": [
+        "mip_player_number_sequences",
+        "mip_player_lifecycles"
+      ],
+      "altersTables": []
     }
   ]
 }

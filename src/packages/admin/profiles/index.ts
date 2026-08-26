@@ -35,6 +35,9 @@ type AdminUserDetailView = Omit<AdminUserDetail, 'phoneNumber' | 'relatedRecords
   statusText: string
   membershipText: string
   membershipEndsText: string
+  firstPlayerText: string
+  latestEntitlementEndsText: string
+  totalValidMembershipText: string
   relatedRecords: AdminUserDetail['relatedRecords'] & {
     orders: Array<AdminUserDetail['relatedRecords']['orders'][number] & { amountText: string }>
   }
@@ -131,6 +134,11 @@ function userDetailView(detail: AdminUserDetail): AdminUserDetailView {
           : membershipStatusLabels[detail.membership.status] || '状态待确认'
       : '非会员',
     membershipEndsText: detail.membership?.endsAt ? formatLocalDateTime(detail.membership.endsAt) : '未设置',
+    firstPlayerText: detail.firstPlayerAt ? formatLocalDateTime(detail.firstPlayerAt) : '',
+    latestEntitlementEndsText: detail.latestEntitlementEndsAt
+      ? formatLocalDateTime(detail.latestEntitlementEndsAt)
+      : '',
+    totalValidMembershipText: formatMembershipDuration(detail.totalValidMembershipSeconds || 0),
     relatedRecords: {
       ...relatedRecords,
       orders: relatedRecords.orders.map(order => ({
@@ -139,6 +147,14 @@ function userDetailView(detail: AdminUserDetail): AdminUserDetailView {
       })),
     },
   }
+}
+
+function formatMembershipDuration(seconds: number) {
+  const totalDays = Math.floor(seconds / 86_400)
+  if (totalDays < 365) return `${totalDays} 天`
+  const years = Math.floor(totalDays / 365)
+  const days = totalDays % 365
+  return days ? `${years} 年 ${days} 天` : `${years} 年`
 }
 
 function primaryBranchEditorOptions(options: AdminUserPrimaryBranchOption[]): PrimaryBranchOption[] {
@@ -196,6 +212,7 @@ Page({
     users: [] as AdminUserView[],
     query: '',
     kind: '',
+    playerLifecycle: '',
     status: '',
     controlType: '',
     phoneBound: '',
@@ -297,7 +314,7 @@ Page({
   },
   chooseFilter(event: WechatMiniprogram.TouchEvent) {
     const field = String(event.currentTarget.dataset.field || '')
-    if (!['kind', 'status', 'controlType', 'phoneBound', 'profileComplete', 'joinedWithinDays'].includes(field)) {
+    if (!['kind', 'playerLifecycle', 'status', 'controlType', 'phoneBound', 'profileComplete', 'joinedWithinDays'].includes(field)) {
       return
     }
     this.setData({ [field]: field === 'joinedWithinDays'
@@ -323,6 +340,7 @@ Page({
           filters: {
             query: this.data.query.trim(),
             kind: this.data.kind,
+            playerLifecycle: this.data.playerLifecycle,
             status: this.data.status,
             controlType: this.data.controlType,
             phoneBound: this.data.phoneBound,
@@ -391,6 +409,7 @@ Page({
         filters: {
           query: this.data.query.trim(),
           kind: this.data.kind,
+          playerLifecycle: this.data.playerLifecycle,
           status: this.data.status,
           controlType: this.data.controlType,
           phoneBound: this.data.phoneBound,
@@ -927,6 +946,7 @@ Page({
         filters: {
           query: this.data.query,
           kind: this.data.kind,
+          playerLifecycle: this.data.playerLifecycle,
           status: this.data.status,
           controlType: this.data.controlType,
           phoneBound: this.data.phoneBound,

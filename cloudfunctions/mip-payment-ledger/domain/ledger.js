@@ -1058,9 +1058,45 @@ async function rebuildMembershipEntitlements(tx, appId, userId, options = {}) {
     }
   }
   if (changed) {
+    await ensurePlayerLifecycle(tx, appId, userId, calculatedAt)
     await incrementMembershipChain(tx, chain)
   }
   return { changed, chainVersion: chain.version, membershipActive }
+}
+
+async function ensurePlayerLifecycle(tx, appId, userId, evaluatedAt) {
+  await tx.query(
+    `INSERT INTO mip_player_number_sequences (app_id, next_player_number)
+     VALUES (?, 1)
+     ON DUPLICATE KEY UPDATE app_id = mip_player_number_sequences.app_id`,
+    [appId],
+  )
+  const allocated = await tx.query(
+    `UPDATE mip_player_number_sequences sequence_row
+     SET next_player_number = LAST_INSERT_ID(sequence_row.next_player_number + 1)
+     WHERE sequence_row.app_id = ?
+       AND EXISTS (
+         SELECT 1 FROM mip_membership_entitlements entitlement
+         WHERE entitlement.app_id = ? AND entitlement.user_id = ?
+           AND entitlement.status IN ('ACTIVE', 'EXPIRED')
+           AND entitlement.starts_at <= ?
+       )
+       AND NOT EXISTS (
+         SELECT 1 FROM mip_player_lifecycles lifecycle
+         WHERE lifecycle.app_id = ? AND lifecycle.user_id = ?
+       )`,
+    [appId, appId, userId, evaluatedAt, appId, userId],
+  )
+  if (Number(allocated?.affectedRows) !== 1) return
+  await tx.query(
+    `INSERT INTO mip_player_lifecycles (app_id, user_id, player_number, first_player_at)
+     SELECT ?, ?, LAST_INSERT_ID() - 1, MIN(entitlement.starts_at)
+     FROM mip_membership_entitlements entitlement
+     WHERE entitlement.app_id = ? AND entitlement.user_id = ?
+       AND entitlement.status IN ('ACTIVE', 'EXPIRED')
+       AND entitlement.starts_at <= ?`,
+    [appId, userId, appId, userId, evaluatedAt],
+  )
 }
 
 function placeOrderWindow(candidateStart, durationDays, manualWindows) {

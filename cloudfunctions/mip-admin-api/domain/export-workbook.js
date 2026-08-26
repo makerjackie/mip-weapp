@@ -8,9 +8,11 @@ const definitions = Object.freeze({
     filePrefix: 'mip-users',
     sheetName: '用户',
     columns: [
-      ['id', '用户编号'], ['nickname', '昵称'], ['kind', '身份'], ['status', '状态'],
+      ['id', '用户记录编号'], ['playerNumber', '玩家编号'], ['nickname', '昵称'], ['kind', '身份'], ['status', '状态'],
       ['branchName', '分会'], ['cityName', '城市'], ['levelName', '当前等级'],
-      ['experience', '累计经验值'], ['controls', '名单状态'], ['createdAt', '注册时间'], ['updatedAt', '更新时间'],
+      ['experience', '累计经验值'], ['firstPlayerAt', '首次成为玩家时间'],
+      ['latestEntitlementEndsAt', '最近权益到期时间'], ['totalValidMembershipSeconds', '累计有效会员时长（秒）'],
+      ['controls', '名单状态'], ['createdAt', '注册时间'], ['updatedAt', '更新时间'],
     ],
   },
   EVENT_ROSTER: {

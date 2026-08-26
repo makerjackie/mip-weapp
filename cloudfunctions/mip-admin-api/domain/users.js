@@ -218,7 +218,7 @@ function normalizeUserFilters(value) {
   if (experienceMin !== null && experienceMax !== null && experienceMin > experienceMax) {
     throw new AdminError('VALIDATION_FAILED', '最低经验值不能大于最高经验值')
   }
-  return {
+  const normalized = {
     query: text(filters.query, 80),
     status: ['ACTIVE', 'BLOCKED', 'CLOSED'].includes(filters.status) ? filters.status : '',
     kind: ['PLAYER', 'GUEST'].includes(filters.kind) ? filters.kind : '',
@@ -235,6 +235,11 @@ function normalizeUserFilters(value) {
     createdFrom,
     createdTo,
   }
+  const playerLifecycle = ['CURRENT', 'FORMER', 'NEVER'].includes(filters.playerLifecycle)
+    ? filters.playerLifecycle
+    : ''
+  if (playerLifecycle) normalized.playerLifecycle = playerLifecycle
+  return normalized
 }
 
 function normalizeEditableFields(value) {

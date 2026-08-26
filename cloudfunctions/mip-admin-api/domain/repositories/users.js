@@ -50,6 +50,16 @@ function createAdminUserRepository(database, options) {
         WHERE me.app_id = u.app_id AND me.user_id = u.id AND me.status = 'ACTIVE'
           AND me.starts_at <= UTC_TIMESTAMP(3) AND me.ends_at > UTC_TIMESTAMP(3))`)
     }
+    if (filters.playerLifecycle === 'CURRENT') {
+      clauses.push('COALESCE(player_entitlements.is_current_player, 0) = 1')
+    }
+    if (filters.playerLifecycle === 'FORMER') {
+      clauses.push('(player_lifecycle.user_id IS NOT NULL OR player_entitlements.user_id IS NOT NULL)')
+      clauses.push('COALESCE(player_entitlements.is_current_player, 0) = 0')
+    }
+    if (filters.playerLifecycle === 'NEVER') {
+      clauses.push('player_lifecycle.user_id IS NULL AND player_entitlements.user_id IS NULL')
+    }
     if (filters.controlType) {
       clauses.push(`EXISTS (SELECT 1 FROM mip_user_access_controls c
         WHERE c.app_id = u.app_id AND c.user_id = u.id AND c.control_type = ? AND c.status = 'ACTIVE')`)
@@ -86,13 +96,18 @@ function createAdminUserRepository(database, options) {
     }
     const cursorWhere = cursorPredicateFor('u.updated_at', cursor, 'updatedAt', 'u.id')
     const rows = await database.query(
-      `SELECT u.id, u.status, u.primary_branch_id, u.version AS user_version,
+      `${playerEntitlementSummaryCte()}
+       SELECT u.id, u.status, u.primary_branch_id, u.version AS user_version,
         p.nickname, p.headline, p.introduction, p.visibility_json, p.version AS profile_version,
         pp.phone_ciphertext, pp.phone_verified_at, b.name AS branch_name, b.city_name,
         gl.id AS current_level_id, ga.experience_balance, gl.name AS level_name,
         EXISTS (SELECT 1 FROM mip_membership_entitlements me
           WHERE me.app_id = u.app_id AND me.user_id = u.id AND me.status = 'ACTIVE'
             AND me.starts_at <= UTC_TIMESTAMP(3) AND me.ends_at > UTC_TIMESTAMP(3)) AS is_player,
+        player_lifecycle.player_number,
+        COALESCE(player_lifecycle.first_player_at, player_entitlements.first_player_at) AS first_player_at,
+        player_entitlements.latest_entitlement_ends_at,
+        COALESCE(player_entitlements.total_valid_membership_seconds, 0) AS total_valid_membership_seconds,
         (SELECT GROUP_CONCAT(c.control_type ORDER BY c.control_type SEPARATOR ',')
           FROM mip_user_access_controls c
           WHERE c.app_id = u.app_id AND c.user_id = u.id AND c.status = 'ACTIVE') AS controls,
@@ -110,6 +125,10 @@ function createAdminUserRepository(database, options) {
           WHERE current_level.app_id = u.app_id AND current_level.status = 'ACTIVE'
             AND current_level.minimum_experience <= COALESCE(ga.experience_balance, 0)
         )
+       LEFT JOIN mip_player_lifecycles player_lifecycle
+         ON player_lifecycle.app_id = u.app_id AND player_lifecycle.user_id = u.id
+       LEFT JOIN mip_player_entitlement_summary player_entitlements
+         ON player_entitlements.app_id = u.app_id AND player_entitlements.user_id = u.id
        WHERE ${clauses.join(' AND ')}${cursorWhere.sql}
        ORDER BY u.updated_at DESC, u.id DESC LIMIT ?`,
       [...params, ...cursorWhere.params, pageLimit + 1],
@@ -135,6 +154,12 @@ function createAdminUserRepository(database, options) {
       profileVersion: Number(row.profile_version || 0),
       createdAt: iso(row.created_at),
       updatedAt: iso(row.updated_at),
+      playerNumber: row.player_number === null || row.player_number === undefined
+        ? null
+        : Number(row.player_number),
+      firstPlayerAt: iso(row.first_player_at),
+      latestEntitlementEndsAt: iso(row.latest_entitlement_ends_at),
+      totalValidMembershipSeconds: Number(row.total_valid_membership_seconds || 0),
     }))
     return pageRows(items, pageLimit, row => ({ updatedAt: row.updatedAt, id: row.id }))
   }
@@ -161,7 +186,7 @@ function createAdminUserRepository(database, options) {
       return null
     }
 
-    const [entitlement, growth, counts, tags, roles, influence] = await Promise.all([
+    const [entitlement, growth, counts, tags, roles, influence, lifecycle] = await Promise.all([
       database.one(
         `SELECT status, starts_at, ends_at,
                 (status = 'ACTIVE'
@@ -226,6 +251,20 @@ function createAdminUserRepository(database, options) {
         [appId, userId],
       ),
       getUserInfluenceSummary(appId, userId),
+      database.one(
+        `${playerEntitlementSummaryCte()}
+         SELECT lifecycle.player_number, lifecycle.first_player_at,
+           summary.first_player_at AS first_entitlement_at,
+           summary.latest_entitlement_ends_at,
+           COALESCE(summary.total_valid_membership_seconds, 0) AS total_valid_membership_seconds
+         FROM mip_users user_row
+         LEFT JOIN mip_player_lifecycles lifecycle
+           ON lifecycle.app_id = user_row.app_id AND lifecycle.user_id = user_row.id
+         LEFT JOIN mip_player_entitlement_summary summary
+           ON summary.app_id = user_row.app_id AND summary.user_id = user_row.id
+         WHERE user_row.app_id = ? AND user_row.id = ?`,
+        [appId, userId],
+      ),
     ])
 
     const activePlayer = Number(entitlement?.is_current_player) === 1
@@ -283,6 +322,12 @@ function createAdminUserRepository(database, options) {
       })),
       createdAt: iso(user.created_at),
       updatedAt: iso(user.updated_at),
+      playerNumber: lifecycle?.player_number === null || lifecycle?.player_number === undefined
+        ? null
+        : Number(lifecycle.player_number),
+      firstPlayerAt: iso(lifecycle?.first_player_at || lifecycle?.first_entitlement_at),
+      latestEntitlementEndsAt: iso(lifecycle?.latest_entitlement_ends_at),
+      totalValidMembershipSeconds: Number(lifecycle?.total_valid_membership_seconds || 0),
     }
   }
 
@@ -499,6 +544,45 @@ function createAdminUserRepository(database, options) {
     setUserControl,
     updateUserFields,
   }
+}
+
+function playerEntitlementSummaryCte() {
+  return `WITH mip_entitlement_ordered AS (
+    SELECT e.app_id, e.user_id, e.status, e.starts_at, e.ends_at, e.id,
+      MAX(e.ends_at) OVER (
+        PARTITION BY e.app_id, e.user_id
+        ORDER BY e.starts_at, e.ends_at, e.id
+        ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+      ) AS prior_max_ends_at
+    FROM mip_membership_entitlements e
+    WHERE e.status IN ('ACTIVE', 'EXPIRED')
+      AND e.starts_at <= UTC_TIMESTAMP(3)
+  ), mip_entitlement_marked AS (
+    SELECT ordered.*,
+      CASE WHEN ordered.prior_max_ends_at IS NULL
+        OR ordered.starts_at > ordered.prior_max_ends_at THEN 1 ELSE 0 END AS starts_group
+    FROM mip_entitlement_ordered ordered
+  ), mip_entitlement_grouped AS (
+    SELECT marked.*,
+      SUM(marked.starts_group) OVER (
+        PARTITION BY marked.app_id, marked.user_id
+        ORDER BY marked.starts_at, marked.ends_at, marked.id
+      ) AS entitlement_group
+    FROM mip_entitlement_marked marked
+  ), mip_merged_entitlements AS (
+    SELECT app_id, user_id, entitlement_group,
+      MIN(starts_at) AS starts_at, MAX(ends_at) AS ends_at,
+      MAX(CASE WHEN status = 'ACTIVE' AND ends_at > UTC_TIMESTAMP(3) THEN 1 ELSE 0 END) AS is_current
+    FROM mip_entitlement_grouped
+    GROUP BY app_id, user_id, entitlement_group
+  ), mip_player_entitlement_summary AS (
+    SELECT app_id, user_id, MIN(starts_at) AS first_player_at,
+      MAX(ends_at) AS latest_entitlement_ends_at,
+      SUM(TIMESTAMPDIFF(SECOND, starts_at, ends_at)) AS total_valid_membership_seconds,
+      MAX(is_current) AS is_current_player
+    FROM mip_merged_entitlements
+    GROUP BY app_id, user_id
+  )`
 }
 
 module.exports = { createAdminUserRepository }

@@ -238,6 +238,10 @@ export interface AdminUser {
   profileVersion: number
   createdAt: string | null
   updatedAt: string | null
+  playerNumber?: number | null
+  firstPlayerAt?: string | null
+  latestEntitlementEndsAt?: string | null
+  totalValidMembershipSeconds?: number
 }
 
 export interface AdminUserPrimaryBranchChangeInput {
