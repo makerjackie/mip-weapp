@@ -321,9 +321,6 @@ describe('mip-weapp UI runtime contract', () => {
         expect(journey.scrollTop).toBeGreaterThanOrEqual(0)
         expect(journey.scrollTop).toBeLessThanOrEqual(10_000)
       }
-      if (journey.requireVisibleTarget) {
-        expect(journey.scrollTop).toBeDefined()
-      }
       expect(journey.steps.length).toBeGreaterThan(0)
       for (const step of journey.steps) {
         expect(step.selector).toMatch(/^#\w[\w-]*$/)
@@ -351,6 +348,18 @@ describe('mip-weapp UI runtime contract', () => {
     expect(verifyRuntime).toContain('miniProgram.pageScrollTo(stepScrollTop)')
     expect(verifyRuntime).toContain('miniProgram.callWxMethod(\'pageScrollTo\', { selector: step.selector, duration: 0 })')
     expect(verifyRuntime).toContain('assertInteractionTargetInViewport')
+  })
+
+  it('scrolls each profile content tab into view before strict rendered taps', () => {
+    const journey = contract.interactionJourneys.find(item => item.id === 'profile-content-tabs')
+
+    expect(journey?.scrollTop).toBeUndefined()
+    expect(journey?.steps).toHaveLength(2)
+    for (const step of journey?.steps || []) {
+      expect(step.scrollIntoView).toBe(true)
+      expect(step.scrollTop).toBeUndefined()
+      expect(step.selector).toMatch(/^#profile-tab-(cases|opportunities)$/)
+    }
   })
 
   it('proves the task assignment mode through a visible native control', () => {

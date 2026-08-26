@@ -455,9 +455,6 @@ function validateRuntimeContract(runtimePages) {
         assert(typeof journey[key] === 'boolean', `Interaction ${journey.id} ${key} must be boolean`)
       }
     }
-    if (journey.requireVisibleTarget === true) {
-      assert(journey.scrollTop !== undefined, `Interaction ${journey.id} requires scrollTop to prove target visibility`)
-    }
     assert(Array.isArray(journey.steps) && journey.steps.length > 0, `Interaction ${journey.id} steps[] is required`)
     for (const step of journey.steps) {
       assert(step?.id && ['input', 'tap'].includes(step.type), `Interaction ${journey.id} has an invalid step`)

@@ -91,22 +91,36 @@ describe('runtime page privacy and normal unavailable states', () => {
     const journey = contract.interactionJourneys.find((item: { id: string }) => item.id === 'profile-content-tabs')
     const verifier = read('scripts/verify-runtime.mjs')
 
-    expect(journey.scrollTop).toBeGreaterThan(0)
+    expect(journey.scrollTop).toBeUndefined()
     expect(journey).toMatchObject({
       requireVisibleTarget: true,
       requireRenderedAction: true,
       requireScreenshotDiff: true,
     })
-    expect(interactionTargetViewportEvidence([
-      { top: 100, bottom: 180, left: 20, right: 140, width: 120, height: 80 },
-    ], { windowHeight: 720, windowWidth: 390 })).toMatchObject({
-      top: 100,
-      bottom: 180,
-      left: 20,
-      right: 140,
-      windowHeight: 720,
-      windowWidth: 390,
-    })
+    expect(journey.steps).toHaveLength(2)
+    for (const step of journey.steps) {
+      expect(step).toMatchObject({
+        scrollIntoView: true,
+      })
+      expect(step.scrollTop).toBeUndefined()
+    }
+    for (const viewport of [
+      { windowHeight: 724, windowWidth: 375 },
+      { windowHeight: 768, windowWidth: 1024 },
+    ]) {
+      expect(interactionTargetViewportEvidence([
+        { top: 100, bottom: 180, left: 20, right: 140, width: 120, height: 80 },
+      ], viewport)).toMatchObject({
+        top: 100,
+        bottom: 180,
+        left: 20,
+        right: 140,
+        ...viewport,
+      })
+      expect(interactionTargetViewportEvidence([
+        { top: 100, bottom: 180, left: viewport.windowWidth - 119, right: viewport.windowWidth + 1, width: 120, height: 80 },
+      ], viewport)).toBeNull()
+    }
     expect(interactionTargetViewportEvidence([
       { top: 800, bottom: 880, left: 20, right: 140, width: 120, height: 80 },
     ], { windowHeight: 720, windowWidth: 390 })).toBeNull()
@@ -128,7 +142,7 @@ describe('runtime page privacy and normal unavailable states', () => {
     expect(interactionTargetViewportEvidence([
       { top: 100, bottom: 180, left: 310, right: 430, width: 120, height: 80 },
     ], { windowHeight: 720, windowWidth: 390 })).toBeNull()
-    expect(verifier).toContain('miniProgram.pageScrollTo(stepScrollTop)')
+    expect(verifier).toContain('miniProgram.callWxMethod(\'pageScrollTo\', { selector: step.selector, duration: 0 })')
     expect(verifier).toContain('assertInteractionTargetInViewport')
     expect(verifier).toContain('queryFreshRenderedActionElement(page, step.selector)')
     expect(verifier).toContain('was already satisfied before the rendered tap')

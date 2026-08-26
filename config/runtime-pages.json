@@ -302,7 +302,6 @@
       "id": "profile-content-tabs",
       "route": "pages/profile/index",
       "nonMutating": true,
-      "scrollTop": 700,
       "requireVisibleTarget": true,
       "requireRenderedAction": true,
       "requireScreenshotDiff": true,
@@ -313,6 +312,7 @@
           "selector": "#profile-tab-cases",
           "handler": "changePortfolioTab",
           "handlerDataset": { "tab": "cases" },
+          "scrollIntoView": true,
           "dataAssertions": [{ "path": "portfolioTab", "equals": "cases" }],
           "visibleAssertion": { "selector": "#profile-tab-cases", "text": "超级案例" }
         },
@@ -322,6 +322,7 @@
           "selector": "#profile-tab-opportunities",
           "handler": "changePortfolioTab",
           "handlerDataset": { "tab": "opportunities" },
+          "scrollIntoView": true,
           "dataAssertions": [{ "path": "portfolioTab", "equals": "opportunities" }],
           "visibleAssertion": { "selector": "#profile-tab-opportunities", "text": "相关机会" }
         }
