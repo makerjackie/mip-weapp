@@ -352,7 +352,7 @@ async function listOpportunities(database, caller, rawFilter) {
   if (filter.minAmountCents !== undefined) {
     where.push(`EXISTS (
       SELECT 1 FROM mip_opportunity_commercial_terms terms
-      WHERE terms.app_id = o.app_id AND terms.opportunity_id = o.id
+      WHERE terms.app_id = o.app_id AND terms.opportunity_id = o.id AND terms.status = 'ACTIVE'
         AND COALESCE(terms.max_amount_cents, 18446744073709551615) >= ?
     )`)
     params.push(filter.minAmountCents)
@@ -360,7 +360,7 @@ async function listOpportunities(database, caller, rawFilter) {
   if (filter.maxAmountCents !== undefined) {
     where.push(`EXISTS (
       SELECT 1 FROM mip_opportunity_commercial_terms terms
-      WHERE terms.app_id = o.app_id AND terms.opportunity_id = o.id
+      WHERE terms.app_id = o.app_id AND terms.opportunity_id = o.id AND terms.status = 'ACTIVE'
         AND COALESCE(terms.min_amount_cents, 0) <= ?
     )`)
     params.push(filter.maxAmountCents)

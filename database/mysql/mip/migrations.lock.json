@@ -715,6 +715,18 @@
       "altersTables": [
         "mip_growth_rules"
       ]
+    },
+    {
+      "version": "20260827520000",
+      "name": "mip_opportunity_commercial_terms_soft_state",
+      "sql": "database/mysql/mip/052_opportunity_commercial_terms_soft_state.sql",
+      "sqlSha256": "393a85d7a2155677bb2f0925a85b505817b88c501742772170f1cc7181e8b8de",
+      "rollback": "database/mysql/mip/rollback/052_opportunity_commercial_terms_soft_state.sql",
+      "rollbackSha256": "5eb6824aa2eaea5576f508926f70abba028098c90087ce6d5d38be06fde71a6a",
+      "createsTables": [],
+      "altersTables": [
+        "mip_opportunity_commercial_terms"
+      ]
     }
   ]
 }

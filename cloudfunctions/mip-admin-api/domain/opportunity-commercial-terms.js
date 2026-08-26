@@ -66,7 +66,8 @@ async function load(database, appId, opportunityId) {
   const [term, locations] = await Promise.all([
     database.one(
       `SELECT currency, amount_unit, min_amount_cents, max_amount_cents
-       FROM mip_opportunity_commercial_terms WHERE app_id = ? AND opportunity_id = ?`,
+       FROM mip_opportunity_commercial_terms
+       WHERE app_id = ? AND opportunity_id = ? AND status = 'ACTIVE'`,
       [appId, opportunityId],
     ),
     database.query(
@@ -84,12 +85,24 @@ async function load(database, appId, opportunityId) {
 async function sync(tx, appId, opportunityId, terms, version) {
   if (terms === undefined) return
   await tx.query('DELETE FROM mip_opportunity_locations WHERE app_id = ? AND opportunity_id = ?', [appId, opportunityId])
-  await tx.query('DELETE FROM mip_opportunity_commercial_terms WHERE app_id = ? AND opportunity_id = ?', [appId, opportunityId])
-  if (terms === null) return
+  if (terms === null) {
+    await tx.query(
+      `UPDATE mip_opportunity_commercial_terms
+       SET min_amount_cents = NULL, max_amount_cents = NULL, status = 'INACTIVE', version = ?
+       WHERE app_id = ? AND opportunity_id = ?`,
+      [version, appId, opportunityId],
+    )
+    return
+  }
   await tx.query(
     `INSERT INTO mip_opportunity_commercial_terms
-       (app_id, opportunity_id, currency, amount_unit, min_amount_cents, max_amount_cents, version)
-     VALUES (?, ?, 'CNY', 'CNY_CENTS', ?, ?, ?)`,
+       (app_id, opportunity_id, currency, amount_unit, min_amount_cents, max_amount_cents, status, version)
+     VALUES (?, ?, 'CNY', 'CNY_CENTS', ?, ?, 'ACTIVE', ?)
+     ON DUPLICATE KEY UPDATE
+       min_amount_cents = VALUES(min_amount_cents),
+       max_amount_cents = VALUES(max_amount_cents),
+       status = 'ACTIVE',
+       version = VALUES(version)`,
     [appId, opportunityId, terms.minAmountCents, terms.maxAmountCents, version],
   )
   for (const [sortOrder, location] of terms.locations.entries()) {

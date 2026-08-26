@@ -188,11 +188,11 @@ function createAdminPrdExtensions(database, options = {}) {
       params.push(...filters.locationCityTagIds)
     }
     if (filters.minAmountCents !== undefined) {
-      clauses.push('EXISTS (SELECT 1 FROM mip_opportunity_commercial_terms terms WHERE terms.app_id = o.app_id AND terms.opportunity_id = o.id AND COALESCE(terms.max_amount_cents, 18446744073709551615) >= ?)')
+      clauses.push("EXISTS (SELECT 1 FROM mip_opportunity_commercial_terms terms WHERE terms.app_id = o.app_id AND terms.opportunity_id = o.id AND terms.status = 'ACTIVE' AND COALESCE(terms.max_amount_cents, 18446744073709551615) >= ?)")
       params.push(filters.minAmountCents)
     }
     if (filters.maxAmountCents !== undefined) {
-      clauses.push('EXISTS (SELECT 1 FROM mip_opportunity_commercial_terms terms WHERE terms.app_id = o.app_id AND terms.opportunity_id = o.id AND COALESCE(terms.min_amount_cents, 0) <= ?)')
+      clauses.push("EXISTS (SELECT 1 FROM mip_opportunity_commercial_terms terms WHERE terms.app_id = o.app_id AND terms.opportunity_id = o.id AND terms.status = 'ACTIVE' AND COALESCE(terms.min_amount_cents, 0) <= ?)")
       params.push(filters.maxAmountCents)
     }
     if (filters.deadlineFrom) { clauses.push('o.deadline_at >= ?'); params.push(filters.deadlineFrom) }

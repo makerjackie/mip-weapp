@@ -2,7 +2,12 @@
 
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
-const { locationMatches, normalizeCommercialTerms, termsDto } = require('../domain/commercial-terms')
+const {
+  locationMatches,
+  normalizeCommercialTerms,
+  syncCommercialTerms,
+  termsDto,
+} = require('../domain/commercial-terms')
 
 const CITY_A = '10000000-0000-4000-8000-000000000001'
 
@@ -28,5 +33,19 @@ describe('opportunity commercial terms', () => {
     assert.equal(dto.amountDisplay, '¥6,600.00 - ¥18,800.00')
     assert.equal(dto.locationDisplay, '武汉、全国')
     assert.equal(locationMatches([{ location_type: 'NATIONAL' }], [{ location_type: 'CITY', city_tag_id: CITY_A }]), true)
+  })
+
+  it('soft-disables cleared terms without deleting durable commercial facts', async () => {
+    const writes = []
+    const tx = {
+      async query(sql, params) {
+        writes.push({ sql, params })
+        return []
+      },
+    }
+    await syncCommercialTerms(tx, 'app-a', 'opportunity-a', null, 4)
+    assert.equal(writes.some(call => call.sql.includes('DELETE FROM mip_opportunity_commercial_terms')), false)
+    assert.equal(writes.some(call => call.sql.includes("status = 'INACTIVE'")), true)
+    assert.deepEqual(writes.at(-1).params, [4, 'app-a', 'opportunity-a'])
   })
 })
