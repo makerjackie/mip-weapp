@@ -18,6 +18,7 @@ export const MIP_STABLE_SECRET_KEYS = Object.freeze([
   'MIP_NOTIFICATION_ENCRYPTION_KEY',
   'MIP_AI_HMAC_SECRET',
   'MIP_AI_DRAFT_PROVIDER_HMAC_SECRET',
+  'MIP_AI_AVATAR_PROVIDER_HMAC_SECRET',
   'MIP_AI_STORAGE_KEY',
   'MIP_MATCHING_INTERNAL_HMAC_SECRET',
   'MIP_MATCHING_REFERENCE_SECRET',
@@ -31,6 +32,21 @@ export function assertMipSchedulerHmacSecretsIsolated(values = {}) {
   }
   if (messageSecret === knowledgeSecret) {
     throw new Error('MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET must differ from MIP_MESSAGE_DISPATCH_HMAC_SECRET')
+  }
+  return true
+}
+
+export function assertMipAiProviderHmacSecretsIsolated(values = {}) {
+  const secrets = [
+    normalized(values.MIP_AI_HMAC_SECRET),
+    normalized(values.MIP_AI_DRAFT_PROVIDER_HMAC_SECRET),
+    normalized(values.MIP_AI_AVATAR_PROVIDER_HMAC_SECRET),
+  ]
+  if (secrets.some(value => value.length < 32)) {
+    throw new Error('AI maintenance, draft Provider, and avatar Provider HMAC secrets must be configured')
+  }
+  if (new Set(secrets).size !== secrets.length) {
+    throw new Error('AI maintenance and Provider HMAC secrets must use separate trust domains')
   }
   return true
 }
@@ -65,6 +81,7 @@ export function resolveMipStableSecrets({ localEnv = {}, deployedEnvironments = 
     sources[key] = localValue ? 'local' : deployedValue ? 'deployed' : 'generated'
   }
   assertMipSchedulerHmacSecretsIsolated(values)
+  assertMipAiProviderHmacSecretsIsolated(values)
   return { values, sources }
 }
 

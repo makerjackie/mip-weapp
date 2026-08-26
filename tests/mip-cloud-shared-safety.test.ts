@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import {
   assertFunctionSecurityRulesConverged,
   assertNoTimerTriggers,
+  assertNoTriggers,
   collectTimerTriggers,
   parseFunctionSecurityRules,
   updateMipFunctionInvocationRule,
@@ -92,6 +93,18 @@ describe('shared CloudBase safety', () => {
     expect(() => assertNoTimerTriggers('mip-events-api', {
       Response: { TotalCount: 2, Triggers: [{ Type: 'cmq', TriggerName: 'queue-job' }] },
     })).toThrow('inventory is incomplete')
+  })
+
+  it('can require an isolated Provider to have no trigger of any type', () => {
+    expect(() => assertNoTriggers('mip-ai-avatar-provider', {
+      Response: { TotalCount: 0, Triggers: [] },
+    })).not.toThrow()
+    expect(() => assertNoTriggers('mip-ai-avatar-provider', {
+      Response: {
+        TotalCount: 1,
+        Triggers: [{ Type: 'apigw', TriggerName: 'public-provider' }],
+      },
+    })).toThrow('must not have triggers')
   })
 
   it('allows only MIP and information_schema SQL relations by default', () => {

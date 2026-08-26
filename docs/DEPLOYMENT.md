@@ -54,10 +54,22 @@ pnpm cloud:knowledge-scheduler:deploy -- \
 canary 到时后使用对应的 `cloud:*scheduler:verify` 命令和 `--expect-canary=<generation>` 证明固定 trigger 已被函数关闭，再以同一组确认参数和 `--activate-after-canary=<generation>` 发起独立 HMAC 激活；scheduler 会再次核对 matching CLOSED canary，先把固定 trigger 切换为 ACTIVE，再允许真实计划 reconcile。转换后的 DISPATCH 签名参数保留该 canary generation；如果转换成功但后续 admin/SCF reconcile 失败，原命令可直接用同一 generation 重跑并续完 reconcile。消息 canary 与激活前还会回读 admin 的 outbox 连接；知识 canary 只要求自己的同域函数名、AppID allowlist 和专用 HMAC，不依赖 outbox。canary 打开或关闭但尚未激活时，普通 reconcile 都不能覆盖它。偏移不正确时调整候选偏移并重新 canary，不得直接跳过。production 命令同样追加 `--confirm-production`。两个调度函数都必须回读为无 VPC/无 MySQL 环境变量、客户端不可调用、128 MB 内存、128 MB 预留并发、timer 用户错误重试 2 次和消息保留 3600 秒；`ListTriggers` 的 `TotalCount` 必须与数组一致且唯一项是对应固定 `$DEFAULT` timer。没有计划时关闭固定 trigger，不使用永久占位或高频 timer。
 
 raw `CreateFunction` 成功后、固定 trigger 创建前仍存在进程中断窗口。下次部署看到“函数存在但 0 trigger”时默认拒绝；只有函数为 Active/Available、精确绑定专用角色、无 VPC、runtime/handler/内存/超时/全部环境变量都匹配，并且对应的 `MIP_MESSAGE_SCHEDULER_CODE_MARKER` 或 `MIP_KNOWLEDGE_SCHEDULER_CODE_MARKER` 与当前待部署源码指纹一致时，才允许在原 `--start-canary` 命令追加精确的 `--confirm-resume-missing-trigger=<scheduler-function>` 继续。源码变化、marker 缺失、陌生函数、部分 `ListTriggers` 响应或任何非零异常库存都不能走该恢复路径。
-9. 配置支付后，执行 `pnpm cloud:deploy-payment -- --confirm-env=<EnvID> --confirm-function=mip-cloudpay --confirm-callback=mip-cloudpay-callback --confirm-refund=mip-refund-worker` 部署三个支付函数；`MIP_PAYMENT_MODE=live` 时必须追加 `--confirm-live`，测试/生产目录和商户配置必须隔离。
-10. 在本机 `.env.local` 写入空仓库示例对应的 `MIP_OWNER_PHONE`，确认该号码已通过当前 AppID 的微信真机流程绑定，并完成昵称、主分会和当前全部协议；再执行 `pnpm admin:bootstrap -- --confirm-env=<EnvID> --confirm-owner` 配置首个 owner。脚本只以身份服务的 AppID 范围哈希定位唯一 ACTIVE 非 demo 用户，不输出号码、哈希或用户 ID；可追加 `--user-id=<用户 UUID>` 做严格一致性确认。
-11. 部署后或发现 outbox 积压时，运行 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10` 做一次受控处理；退款停留在活动状态时，运行 `pnpm refunds:run -- --confirm-env=<EnvID> --confirm-refund=mip-refund-worker --limit=10`。两个命令都读取已部署函数配置完成 HMAC 调用，不打印密钥。
-12. 微信后台配置服务器域名、与 `MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS` 完全一致的业务域名、用户隐私协议，完成上传与提审。
+9. AI Provider 不加入核心部署。数字分身只有在真实 HTTPS 上游、精确 host allowlist、独立上游鉴权和总超时都已配置时才启用。先把 `MIP_AI_AVATAR_PROVIDER_FUNCTION_NAME=mip-ai-avatar-provider` 写入本机并运行核心部署，使 `mip-ai-api` 获得独立 `MIP_AI_AVATAR_PROVIDER_HMAC_SECRET` 与调用超时；再部署 Provider。部署命令在任何 Provider 写入前回读 AI API 链接并证明 AI 清理、草稿 Provider、数字分身 Provider 与上游鉴权的密钥互不复用，上游配置缺失时停止。新函数只先写入无密钥、未配置的 bootstrap 环境，关闭客户端调用、证明零 trigger、更新源码后才注入真实配置。Provider 必须回读为无 VPC、无 MySQL、零 trigger、客户端不可调用，并通过真实 upstream readiness；没有真实上游时保持未部署和 capability disabled。
+
+```bash
+pnpm cloud:ai-avatar-provider:deploy -- \
+  --confirm-env=<EnvID> \
+  --confirm-function=mip-ai-avatar-provider
+
+pnpm cloud:ai-avatar-provider:verify -- \
+  --confirm-env=<EnvID> \
+  --confirm-function=mip-ai-avatar-provider
+```
+
+10. 配置支付后，执行 `pnpm cloud:deploy-payment -- --confirm-env=<EnvID> --confirm-function=mip-cloudpay --confirm-callback=mip-cloudpay-callback --confirm-refund=mip-refund-worker` 部署三个支付函数；`MIP_PAYMENT_MODE=live` 时必须追加 `--confirm-live`，测试/生产目录和商户配置必须隔离。
+11. 在本机 `.env.local` 写入空仓库示例对应的 `MIP_OWNER_PHONE`，确认该号码已通过当前 AppID 的微信真机流程绑定，并完成昵称、主分会和当前全部协议；再执行 `pnpm admin:bootstrap -- --confirm-env=<EnvID> --confirm-owner` 配置首个 owner。脚本只以身份服务的 AppID 范围哈希定位唯一 ACTIVE 非 demo 用户，不输出号码、哈希或用户 ID；可追加 `--user-id=<用户 UUID>` 做严格一致性确认。
+12. 部署后或发现 outbox 积压时，运行 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10` 做一次受控处理；退款停留在活动状态时，运行 `pnpm refunds:run -- --confirm-env=<EnvID> --confirm-refund=mip-refund-worker --limit=10`。两个命令都读取已部署函数配置完成 HMAC 调用，不打印密钥。
+13. 微信后台配置服务器域名、与 `MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS` 完全一致的业务域名、用户隐私协议，完成上传与提审。
 
 核心函数部署后必须使用同一授权模式单独执行 `CLOUDBASE_AUTH_MODE=local pnpm cloud:verify -- --confirm-env=<EnvID>`。空函数壳、控制台可见、单个函数创建成功或 API Key 状态为 `READY` 都不能代替该验收；只有所有核心函数配置回读、MySQL 健康、最小权限调用规则和禁止 timer 检查通过，云端运行时才算完成。
 

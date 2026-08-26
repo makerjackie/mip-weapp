@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  assertMipAiProviderHmacSecretsIsolated,
   assertMipSchedulerHmacSecretsIsolated,
   MIP_STABLE_SECRET_KEYS,
   resolveMipStableSecrets,
@@ -61,6 +62,20 @@ describe('MIP stable local secrets', () => {
     expect(assertMipSchedulerHmacSecretsIsolated({
       MIP_MESSAGE_DISPATCH_HMAC_SECRET: secret('m'),
       MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET: secret('k'),
+    })).toBe(true)
+  })
+
+  it('requires independent AI maintenance, draft Provider, and avatar Provider HMAC domains', () => {
+    const shared = secret('s')
+    expect(() => assertMipAiProviderHmacSecretsIsolated({
+      MIP_AI_HMAC_SECRET: shared,
+      MIP_AI_DRAFT_PROVIDER_HMAC_SECRET: shared,
+      MIP_AI_AVATAR_PROVIDER_HMAC_SECRET: secret('a'),
+    })).toThrow(/separate trust domains/)
+    expect(assertMipAiProviderHmacSecretsIsolated({
+      MIP_AI_HMAC_SECRET: secret('m'),
+      MIP_AI_DRAFT_PROVIDER_HMAC_SECRET: secret('d'),
+      MIP_AI_AVATAR_PROVIDER_HMAC_SECRET: secret('a'),
     })).toBe(true)
   })
 

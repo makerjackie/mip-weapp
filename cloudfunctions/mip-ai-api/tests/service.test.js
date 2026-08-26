@@ -88,6 +88,29 @@ test('degrades a readiness exception to unavailable capability without exposing 
   })
 })
 
+test('does not advertise digital avatars until the isolated Provider readiness contract passes', async () => {
+  const service = createAiService({
+    repository: {},
+    provider: {
+      capability: () => ({
+        textDrafts: false,
+        voiceDrafts: false,
+        refinementDrafts: false,
+        digitalAvatars: true,
+      }),
+      avatarReadiness: async () => false,
+    },
+    avatarStore: { configured: true },
+  })
+  assert.deepEqual(await service.getCapability(), {
+    textDrafts: false,
+    voiceDrafts: false,
+    refinementDrafts: false,
+    digitalAvatars: false,
+    reason: 'PROVIDER_NOT_CONFIGURED',
+  })
+})
+
 test('validates the current owned profile avatar before provider generation and persists the output fact', async () => {
   const calls = []
   const generation = {

@@ -114,6 +114,22 @@ export function assertNoTimerTriggers(functionName, response) {
   }
 }
 
+export function assertNoTriggers(functionName, response) {
+  const inventory = findTriggerInventory(response)
+  if (!inventory) {
+    throw new Error(`${functionName} trigger inventory is unavailable; refusing to assume triggers are absent`)
+  }
+  if (!Number.isSafeInteger(inventory.total) || inventory.total < 0) {
+    throw new Error(`${functionName} trigger inventory count is invalid`)
+  }
+  if (inventory.total !== inventory.triggers.length) {
+    throw new Error(`${functionName} trigger inventory is incomplete; refusing to assume triggers are absent`)
+  }
+  if (inventory.total !== 0) {
+    throw new Error(`${functionName} must not have triggers`)
+  }
+}
+
 function findTriggerInventory(value) {
   if (!plainObject(value)) {
     return null

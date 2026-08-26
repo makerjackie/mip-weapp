@@ -1,10 +1,13 @@
 'use strict'
 
-const { createHash, createHmac } = require('node:crypto')
 const {
   createDraftProviderRequest,
   verifyDraftProviderResponse,
 } = require('./draft-provider-contract')
+const {
+  createAvatarProviderRequest,
+  verifyAvatarProviderResponse,
+} = require('./avatar-provider-contract')
 
 function createCloudAiProvider(cloud, functionName, secret, options = {}) {
   const configured = typeof functionName === 'string'
@@ -13,33 +16,33 @@ function createCloudAiProvider(cloud, functionName, secret, options = {}) {
     && typeof secret === 'string'
     && secret.length >= 32
   const avatarFunctionName = options.avatarFunctionName
-  const avatarSecret = typeof options.avatarSecret === 'string' ? options.avatarSecret : secret
-  const avatarConfigured = typeof avatarFunctionName === 'string'
-    && /^mip-[a-z0-9-]{2,58}$/.test(avatarFunctionName)
-    && avatarFunctionName !== 'mip-ai-api'
+  const avatarSecret = typeof options.avatarSecret === 'string' ? options.avatarSecret : ''
+  const avatarConfigured = avatarFunctionName === 'mip-ai-avatar-provider'
     && avatarSecret.length >= 32
   const timeoutMs = normalizeTimeout(options.timeoutMs)
+  const avatarTimeoutMs = normalizeAvatarTimeout(options.avatarTimeoutMs)
   let readinessCache
+  let avatarReadinessCache
 
   async function call(action, input, options = {}) {
     const digitalAvatar = options.digitalAvatar === true
     if (digitalAvatar ? !avatarConfigured : !configured) throw new Error('AI_PROVIDER_UNAVAILABLE')
     const request = digitalAvatar
-      ? legacyAvatarRequest(action, input, avatarSecret)
+      ? createAvatarProviderRequest(input, avatarSecret)
       : createDraftProviderRequest(action, input, secret)
     const result = await callProviderFunction({
       attempts: digitalAvatar ? 1 : 2,
       cloud,
       functionName: digitalAvatar ? avatarFunctionName : functionName,
       request,
-      timeoutMs,
+      timeoutMs: digitalAvatar ? avatarTimeoutMs : timeoutMs,
     })
     const envelope = result?.result
     if (!envelope || envelope.ok !== true) {
       throw new Error('AI_PROVIDER_UNAVAILABLE')
     }
     const data = digitalAvatar
-      ? envelope.data
+      ? verifyAvatarProviderResponse(envelope, request, avatarSecret)
       : verifyDraftProviderResponse(envelope, request, secret)
     return normalizeProviderResult(data, options)
   }
@@ -56,6 +59,19 @@ function createCloudAiProvider(cloud, functionName, secret, options = {}) {
         result?.result?.ok === true && result?.result?.data?.ready === true
       )).catch(() => false)
       readinessCache = { expiresAt: now + 60_000, promise }
+      return promise
+    },
+    async avatarReadiness() {
+      if (!avatarConfigured) return false
+      const now = Date.now()
+      if (avatarReadinessCache?.expiresAt > now) return avatarReadinessCache.promise
+      const promise = Promise.resolve().then(() => withTimeout(cloud.callFunction({
+        name: avatarFunctionName,
+        data: { action: 'readiness' },
+      }), avatarTimeoutMs)).then((result) => (
+        result?.result?.ok === true && result?.result?.data?.ready === true
+      )).catch(() => false)
+      avatarReadinessCache = { expiresAt: now + 60_000, promise }
       return promise
     },
     capability() {
@@ -86,6 +102,7 @@ function createUnavailableAiProvider() {
   const unavailable = async () => { throw new Error('AI_PROVIDER_UNAVAILABLE') }
   return {
     readiness: async () => false,
+    avatarReadiness: async () => false,
     capability() {
       return {
         voiceDrafts: false,
@@ -108,21 +125,19 @@ function createAiProviderAdapter(options = {}) {
   return createCloudAiProvider(options.cloud, options.functionName, options.secret, {
     avatarFunctionName: options.avatarFunctionName,
     avatarSecret: options.avatarSecret,
+    avatarTimeoutMs: options.avatarTimeoutMs,
     timeoutMs: options.timeoutMs,
   })
-}
-
-function legacyAvatarRequest(action, input, secret) {
-  const request = { action, timestamp: Date.now(), ...input }
-  return {
-    ...request,
-    signature: createHmac('sha256', secret).update(providerPayload(request)).digest('hex'),
-  }
 }
 
 function normalizeTimeout(value) {
   const timeout = Number(value ?? 8000)
   return Number.isInteger(timeout) && timeout >= 500 && timeout <= 15_000 ? timeout : 8000
+}
+
+function normalizeAvatarTimeout(value) {
+  const timeout = Number(value ?? 45_000)
+  return Number.isInteger(timeout) && timeout >= 1000 && timeout <= 50_000 ? timeout : 45_000
 }
 
 async function withTimeout(promise, timeoutMs) {
@@ -161,37 +176,6 @@ async function callProviderFunction(options) {
     }
   }
   throw lastError || new Error('AI_PROVIDER_UNAVAILABLE')
-}
-
-function providerPayload(value) {
-  const content = {
-    audioFileId: String(value.audioFileId || ''),
-    currentStructuredDraft: value.currentStructuredDraft || {},
-    currentTranscript: String(value.currentTranscript || ''),
-    supplementalText: String(value.supplementalText || ''),
-    transcriptText: String(value.transcriptText || ''),
-  }
-  if (value.action === 'generateDigitalAvatar') {
-    Object.assign(content, {
-      sourceContentBytes: Number(value.sourceContentBytes || 0),
-      sourceContentSha256: String(value.sourceContentSha256 || ''),
-      sourceContentType: String(value.sourceContentType || ''),
-      sourceHeight: Number(value.sourceHeight || 0),
-      sourceImageFileId: String(value.sourceImageFileId || ''),
-      sourceWidth: Number(value.sourceWidth || 0),
-      styleKey: String(value.styleKey || ''),
-    })
-  }
-  const contentDigest = createHash('sha256').update(stableJson(content)).digest('hex')
-  return [
-    Number(value.timestamp),
-    String(value.action || ''),
-    String(value.appId || ''),
-    String(value.draftId || value.generationId || ''),
-    String(value.purpose || ''),
-    Number(value.expectedVersion || 0),
-    contentDigest,
-  ].join('\n')
 }
 
 function normalizeProviderResult(value, options = {}) {
@@ -245,12 +229,28 @@ function normalizeDigitalAvatarProviderResult(value) {
     || imageBase64.length % 4 !== 0
     || imageBase64.length > Math.ceil((2 * 1024 * 1024) / 3) * 4 + 4
     || !/^[A-Za-z0-9+/]+={0,2}$/.test(imageBase64)
+    || !canonicalImageBase64(imageBase64, contentType)
     || !providerJobKey
     || providerJobKey.length > 256
     || !/^[\x21-\x7e]+$/.test(providerJobKey)) {
     throw new Error('DIGITAL_AVATAR_PROVIDER_RESPONSE_INVALID')
   }
   return { contentType, imageBase64, providerJobKey }
+}
+
+function canonicalImageBase64(value, contentType) {
+  try {
+    const buffer = Buffer.from(value, 'base64')
+    if (!buffer.length || buffer.length > 2 * 1024 * 1024 || buffer.toString('base64') !== value) {
+      return false
+    }
+    return contentType === 'image/png'
+      ? buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+      : buffer.length >= 2 && buffer[0] === 0xff && buffer[1] === 0xd8
+  }
+  catch {
+    return false
+  }
 }
 
 function stableJson(value) {
@@ -266,8 +266,8 @@ module.exports = {
   createUnavailableAiProvider,
   normalizeDigitalAvatarProviderResult,
   normalizeProviderResult,
+  normalizeAvatarTimeout,
   normalizeTimeout,
-  providerPayload,
   stableJson,
   withTimeout,
 }

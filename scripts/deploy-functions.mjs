@@ -282,6 +282,7 @@ const secrets = Object.freeze({
   notificationEncryption: stableSecretValues.MIP_NOTIFICATION_ENCRYPTION_KEY,
   aiHmac: stableSecretValues.MIP_AI_HMAC_SECRET,
   aiDraftProviderHmac: stableSecretValues.MIP_AI_DRAFT_PROVIDER_HMAC_SECRET,
+  aiAvatarProviderHmac: stableSecretValues.MIP_AI_AVATAR_PROVIDER_HMAC_SECRET,
   aiStorage: stableSecretValues.MIP_AI_STORAGE_KEY,
   matchingInternalHmac: stableSecretValues.MIP_MATCHING_INTERNAL_HMAC_SECRET,
   matchingReference: stableSecretValues.MIP_MATCHING_REFERENCE_SECRET,
@@ -325,8 +326,14 @@ if (!Number.isInteger(aiProviderTimeoutMs)
   throw new Error('MIP_AI_PROVIDER_TIMEOUT_MS must be an integer from 500 to 15000')
 }
 const aiAvatarProviderFunction = String(env.MIP_AI_AVATAR_PROVIDER_FUNCTION_NAME || '').trim()
-if (aiAvatarProviderFunction && !/^[a-z][a-z0-9-]{0,59}$/.test(aiAvatarProviderFunction)) {
-  throw new Error('MIP_AI_AVATAR_PROVIDER_FUNCTION_NAME is invalid')
+if (aiAvatarProviderFunction && aiAvatarProviderFunction !== 'mip-ai-avatar-provider') {
+  throw new Error('MIP_AI_AVATAR_PROVIDER_FUNCTION_NAME must be mip-ai-avatar-provider when enabled')
+}
+const aiAvatarProviderTimeoutMs = Number(env.MIP_AI_AVATAR_PROVIDER_TIMEOUT_MS || 45_000)
+if (!Number.isInteger(aiAvatarProviderTimeoutMs)
+  || aiAvatarProviderTimeoutMs < 1000
+  || aiAvatarProviderTimeoutMs > 50_000) {
+  throw new Error('MIP_AI_AVATAR_PROVIDER_TIMEOUT_MS must be an integer from 1000 to 50000')
 }
 const aiDraftTtlHours = Number(env.MIP_AI_DRAFT_TTL_HOURS || 72)
 if (!Number.isInteger(aiDraftTtlHours) || aiDraftTtlHours < 1 || aiDraftTtlHours > 168) {
@@ -357,6 +364,7 @@ try {
     const envVariables = environmentForRole(spec.role, {
       agreementsJson,
       aiAvatarProviderFunction,
+      aiAvatarProviderTimeoutMs,
       aiDraftTtlHours,
       aiProviderFunction,
       aiProviderTimeoutMs,
@@ -935,7 +943,11 @@ function environmentForRole(role, options) {
           }
         : {}),
       ...(options.aiAvatarProviderFunction
-        ? { MIP_AI_AVATAR_PROVIDER_FUNCTION_NAME: options.aiAvatarProviderFunction }
+        ? {
+            MIP_AI_AVATAR_PROVIDER_FUNCTION_NAME: options.aiAvatarProviderFunction,
+            MIP_AI_AVATAR_PROVIDER_HMAC_SECRET: options.secrets.aiAvatarProviderHmac,
+            MIP_AI_AVATAR_PROVIDER_TIMEOUT_MS: String(options.aiAvatarProviderTimeoutMs),
+          }
         : {}),
     },
     notifications: {

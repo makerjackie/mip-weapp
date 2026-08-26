@@ -221,6 +221,7 @@ const notificationsSource = sourceTree('cloudfunctions/mip-notifications-api', /
 const notificationSource = sourceTree('cloudfunctions/mip-notification-worker', /\.js$/)
 const outboxSource = sourceTree('cloudfunctions/mip-outbox-worker', /\.js$/)
 const aiSource = sourceTree('cloudfunctions/mip-ai-api', /\.js$/)
+const aiAvatarProviderSource = sourceTree('cloudfunctions/mip-ai-avatar-provider', /\.js$/)
 
 assert(eventsSource.includes('mip_event_registrations')
   && eventsSource.includes('mip_event_checkins')
@@ -297,8 +298,22 @@ assert(outboxSource.includes('mip_outbox_events')
   && outboxSource.includes('OUTBOX_EVENT_UNSUPPORTED'), 'Durable outbox consumption or internal projection is incomplete')
 assert(aiSource.includes('mip_ai_drafts')
   && aiSource.includes('MIP_AI_HMAC_SECRET')
+  && aiSource.includes('MIP_AI_AVATAR_PROVIDER_HMAC_SECRET')
+  && aiSource.includes('mip.ai.avatar-provider.v1')
   && aiSource.includes('mip/')
   && !aiSource.includes('markConfirmed'), 'AI draft workflow, isolated storage, or confirmation boundary is incomplete')
+assert(aiAvatarProviderSource.includes('mip.ai.avatar-provider.v1')
+  && aiAvatarProviderSource.includes('mip.ai.avatar-upstream.v1')
+  && aiAvatarProviderSource.includes('MIP_AI_AVATAR_PROVIDER_HMAC_SECRET')
+  && aiAvatarProviderSource.includes('MIP_AI_AVATAR_UPSTREAM_AUTH_SECRET')
+  && aiAvatarProviderSource.includes('endpoint.protocol !== \'https:\'')
+  && aiAvatarProviderSource.includes('timingSafeEqual')
+  && !aiAvatarProviderSource.includes('MIP_DB_CONNECTION_URI')
+  && !aiAvatarProviderSource.includes('setInterval')
+  && !aiAvatarProviderSource.includes('outputUrl')
+  && !/\bmock\b/i.test(aiAvatarProviderSource)
+  && !aiAvatarProviderSource.includes('copyOriginal')
+  && !aiAvatarProviderSource.includes('sourceImageBase64'), 'AI avatar Provider must stay isolated, authenticated, HTTPS-only, and free of mock success')
 assert(identitySource.includes('status = \'CONFIRMED\'')
   && identitySource.includes('confirmed_resource_type = \'PROFILE\'')
   && opportunitiesSource.includes('status = \'CONFIRMED\'')
@@ -327,6 +342,7 @@ assert(!legacySqlReference(migrationSource), 'MIP migration chain references a l
 
 const cloudDeploy = read('scripts/deploy-functions.mjs')
 const paymentDeploy = read('scripts/deploy-payment-function.mjs')
+const avatarProviderDeploy = read('scripts/deploy-ai-avatar-provider.mjs')
 const refundRecovery = read('scripts/run-refunds.mjs')
 const messageDispatchRecovery = read('scripts/run-message-campaigns.mjs')
 const messageSchedulerRecovery = read('scripts/lib/message-scheduler-recovery.mjs')
@@ -362,6 +378,7 @@ const removedLegacyArtifacts = [
 for (const [label, source] of [
   ['core deploy', cloudDeploy],
   ['payment deploy', paymentDeploy],
+  ['avatar Provider deploy', avatarProviderDeploy],
   ['refund recovery', refundRecovery],
   ['message dispatch recovery', messageDispatchRecovery],
   ['message scheduler recovery', messageSchedulerRecovery],
@@ -396,6 +413,13 @@ assert(paymentDeploy.includes('--confirm-function=')
   && paymentDeploy.includes('MIP_REFUND_WORKER_HMAC_SECRET')
   && paymentDeploy.includes('mip-refund-every-5m')
   && paymentDeploy.includes('disableClientInvocation'), 'Payment deploy confirmation or protected invocation contract is incomplete')
+assert(avatarProviderDeploy.includes('--confirm-function=')
+  && avatarProviderDeploy.includes('assertAiApiProviderLink(aiEnvironment, functionName)')
+  && avatarProviderDeploy.includes('assertProviderFunctionReadback(detail, expectedEnvironment)')
+  && avatarProviderDeploy.includes('disableClientInvocation(functionName)')
+  && avatarProviderDeploy.includes('assertNoFunctionTriggers(functionName)')
+  && avatarProviderDeploy.includes('providerBootstrapEnvironment(sourceMarker)')
+  && avatarProviderDeploy.includes('updateProviderConfiguration(functionName, expectedEnvironment)'), 'Avatar Provider deployment must prove fail-closed bootstrap, linkage, exact runtime, protected invocation, and zero triggers')
 assert(refundRecovery.includes('--confirm-env=')
   && refundRecovery.includes('--confirm-refund=')
   && refundRecovery.includes('MIP_REFUND_WORKER_HMAC_SECRET')
@@ -439,6 +463,8 @@ for (const [script, expected] of [
   ['database:setup', 'node scripts/apply-mip-schema.mjs'],
   ['cloud:deploy', 'node scripts/deploy-functions.mjs'],
   ['cloud:deploy-payment', 'node scripts/deploy-payment-function.mjs'],
+  ['cloud:ai-avatar-provider:deploy', 'node scripts/deploy-ai-avatar-provider.mjs'],
+  ['cloud:ai-avatar-provider:verify', 'node scripts/verify-ai-avatar-provider.mjs'],
   ['cloud:verify', 'node scripts/verify-cloud.mjs'],
   ['cloud:knowledge-scheduler:role', 'node scripts/configure-message-scheduler-role.mjs --scheduler-kind=knowledge'],
   ['cloud:knowledge-scheduler:deploy', 'node scripts/deploy-message-scheduler.mjs --scheduler-kind=knowledge'],

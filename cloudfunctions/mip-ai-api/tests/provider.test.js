@@ -1,19 +1,22 @@
 'use strict'
 
 const assert = require('node:assert/strict')
-const { createHmac } = require('node:crypto')
 const test = require('node:test')
 const {
   createAiProviderAdapter,
   createCloudAiProvider,
   normalizeProviderResult,
-  providerPayload,
 } = require('../lib/provider')
 const {
   CONTRACT_VERSION,
   digest,
   sign,
 } = require('../lib/draft-provider-contract')
+const {
+  CONTRACT_VERSION: AVATAR_CONTRACT_VERSION,
+  digest: avatarDigest,
+  sign: avatarSign,
+} = require('../lib/avatar-provider-contract')
 
 test('reports unavailable instead of creating a fake draft', async () => {
   const provider = createCloudAiProvider({}, '')
@@ -32,6 +35,14 @@ test('uses an explicit unavailable adapter instead of a runtime mock', async () 
   assert.equal(provider.capability().refinementDrafts, false)
   assert.equal(await provider.readiness(), false)
   await assert.rejects(() => provider.refineDraft({}), /AI_PROVIDER_UNAVAILABLE/)
+})
+
+test('does not reuse the draft or maintenance trust domain for digital avatars', async () => {
+  const provider = createCloudAiProvider({}, 'mip-ai-draft-provider', 'd'.repeat(48), {
+    avatarFunctionName: 'mip-ai-avatar-provider',
+  })
+  assert.equal(provider.capability().digitalAvatars, false)
+  await assert.rejects(() => provider.generateDigitalAvatar({}), /AI_PROVIDER_UNAVAILABLE/)
 })
 
 test('reports configured draft capability only after the Provider readiness contract passes', async () => {
@@ -179,60 +190,80 @@ test('validates the configured provider response', async () => {
 test('binds digital-avatar source and style while accepting only the strict image result', async () => {
   const secret = 'ai-provider-secret-that-is-longer-than-thirty-two'
   let request
-  const imageBase64 = Buffer.alloc(32, 7).toString('base64')
-  const provider = createCloudAiProvider({
-    async callFunction(input) {
-      request = input
-      return {
-        result: {
-          ok: true,
-          data: {
-            contentType: 'image/png',
-            imageBase64,
-            providerJobKey: 'avatar-job-private',
-          },
-        },
-      }
-    },
-  }, 'mip-ai-provider', secret, { avatarFunctionName: 'mip-avatar-provider' })
-  const result = await provider.generateDigitalAvatar({
-    appId: 'wx-app',
+  const imageBase64 = Buffer.concat([
+    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+    Buffer.alloc(24),
+  ]).toString('base64')
+  const input = {
+    appId: 'wx1234567890abcdef',
     generationId: '20000000-0000-4000-8000-000000000001',
     styleKey: 'PROFESSIONAL',
-    sourceImageFileId: 'cloud://env/mip/development/app/avatars/user/source.png',
+    sourceImageFileId: 'cloud://env/mip/development/0123456789abcdef01234567/avatars/89abcdef0123456789abcdef/30000000-0000-4000-8000-000000000001.png',
     sourceContentSha256: 'a'.repeat(64),
     sourceContentType: 'image/png',
     sourceContentBytes: 1024,
     sourceWidth: 512,
     sourceHeight: 512,
-  })
-  assert.equal(result.imageBase64, imageBase64)
-  assert.equal(request.data.action, 'generateDigitalAvatar')
-  assert.equal(
-    request.data.signature,
-    createHmac('sha256', secret).update(providerPayload(request.data)).digest('hex'),
-  )
-  assert.notEqual(
-    providerPayload({ ...request.data, styleKey: 'MONOCHROME' }),
-    providerPayload(request.data),
-  )
-  const invalidProvider = createCloudAiProvider({
-    async callFunction() {
+  }
+  const provider = createCloudAiProvider({
+    async callFunction(input) {
+      request = input
+      const data = {
+        contentType: 'image/png',
+        imageBase64,
+        providerJobKey: 'avatar-job-private',
+      }
+      const result = {
+        version: AVATAR_CONTRACT_VERSION,
+        timestamp: Date.now(),
+        requestId: input.data.requestId,
+        operationKey: input.data.operationKey,
+        ok: true,
+        data,
+        dataDigest: avatarDigest(data),
+      }
       return {
-        result: {
-          ok: true,
-          data: {
-            contentType: 'image/png',
-            imageBase64,
-            providerJobKey: 'avatar-job-private',
-            outputUrl: 'https://untrusted.example/avatar.png',
-          },
-        },
+        result: { ...result, signature: avatarSign(result, secret) },
       }
     },
-  }, 'mip-ai-provider', secret, { avatarFunctionName: 'mip-avatar-provider' })
+  }, 'mip-ai-provider', secret, {
+    avatarFunctionName: 'mip-ai-avatar-provider',
+    avatarSecret: secret,
+  })
+  const result = await provider.generateDigitalAvatar(input)
+  assert.equal(result.imageBase64, imageBase64)
+  assert.equal(request.data.action, 'generateDigitalAvatar')
+  assert.equal(request.data.version, AVATAR_CONTRACT_VERSION)
+  assert.equal(request.data.signature, avatarSign(request.data, secret))
+  assert.notEqual(
+    request.data.payloadDigest,
+    avatarDigest({ ...request.data.payload, styleKey: 'MONOCHROME' }),
+  )
+  const invalidProvider = createCloudAiProvider({
+    async callFunction(call) {
+      const data = {
+        contentType: 'image/png',
+        imageBase64,
+        providerJobKey: 'avatar-job-private',
+        outputUrl: 'https://untrusted.example/avatar.png',
+      }
+      const response = {
+        version: AVATAR_CONTRACT_VERSION,
+        timestamp: Date.now(),
+        requestId: call.data.requestId,
+        operationKey: call.data.operationKey,
+        ok: true,
+        data,
+        dataDigest: avatarDigest(data),
+      }
+      return { result: { ...response, signature: avatarSign(response, secret) } }
+    },
+  }, 'mip-ai-provider', secret, {
+    avatarFunctionName: 'mip-ai-avatar-provider',
+    avatarSecret: secret,
+  })
   await assert.rejects(
-    () => invalidProvider.generateDigitalAvatar(request.data),
+    () => invalidProvider.generateDigitalAvatar(input),
     /DIGITAL_AVATAR_PROVIDER_RESPONSE_INVALID/,
   )
 })

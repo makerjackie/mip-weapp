@@ -94,6 +94,22 @@ function createAiService(options) {
           reason: 'PROVIDER_NOT_CONFIGURED',
         }
       }
+      let avatarProviderReady = true
+      if (normalized.digitalAvatars && typeof provider.avatarReadiness === 'function') {
+        try {
+          avatarProviderReady = await provider.avatarReadiness()
+        }
+        catch {
+          avatarProviderReady = false
+        }
+      }
+      if (!avatarProviderReady) {
+        normalized = {
+          ...normalized,
+          digitalAvatars: false,
+          reason: 'PROVIDER_NOT_CONFIGURED',
+        }
+      }
       return normalized
     },
 

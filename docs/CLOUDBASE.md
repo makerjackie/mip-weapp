@@ -44,6 +44,8 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 
 消息定时和知识采集分别使用不计入 16 个数据库核心函数的 `mip-message-scheduler` 与 `mip-knowledge-scheduler`。两个函数都不配置 MySQL URI 或 VPC，各自只维护一个固定滚动单次 timer，并通过独立 HMAC 调用 `mip-admin-api`。每个函数使用互不复用的专用 CAM 角色、128 MB 内存和 128 MB 预留并发，使同一时刻最多一个调度实例运行；运行时仅有 `UpdateTrigger`、`ListTriggers` 和 `InvokeFunction`。腾讯云 [CAM 权限粒度表](https://intl.cloud.tencent.com/document/product/598/57149) 当前把 `InvokeFunction` 定义为不支持资源级授权的操作，因此该 action 的 policy resource 必须是 `*`，不能在 CAM 层收窄到管理函数；运行时代码固定目标为 `mip-admin-api`，再由独立 HMAC、AppID allowlist 和专用角色限制用途。角色信任载体固定为腾讯云 SCF 官方文档定义的 [`scf.qcloud.com`](https://intl.cloud.tencent.com/zh/document/product/583/38176)，部署和验收均回读完整 trust policy。新建函数不使用会默认注入共享 `TCB_QcsRole` 的 CloudBase create 路径，而是用 raw SCF `CreateFunction` 在首个写入中绑定专用角色；创建 trigger、角色、异步失败重试和预留并发只在各自的专用命令中执行。普通 `cloud:deploy` 的核心清单明确排除两个 scheduler。
 
+AI 草稿和数字分身分别使用不计入 16 个数据库核心函数的 `mip-ai-draft-provider` 与 `mip-ai-avatar-provider`。两个 Provider 都不配置 MySQL URI 或 VPC，客户端调用保持关闭，只从已部署 `mip-ai-api` 继承 AppID allowlist 和各自专用 HMAC；数字分身 Provider 额外要求零 trigger。数字分身 Provider 使用 `mip.ai.avatar-provider.v1` 版本化完整签名，并通过独立 HTTPS adapter 调用精确白名单上游；Endpoint、allowlist、覆盖 DNS/请求/响应的总超时和上游鉴权均为函数环境配置，所有 AI 内部 HMAC 与上游凭证必须互不复用。缺少任一配置或 readiness 未通过时 fail closed，不复制源图，也不存在 mock 成功路径。仓库代码与部署验收入口已具备，但在真实上游未配置前不得部署，也不能把本地源码当成云端可用证据。
+
 ## 数据和存储
 
 - 新业务只使用 `mip_*` 表，迁移记录写入 `mip_schema_migrations`；`database/mysql/mip/migrations.lock.json` 是迁移顺序、校验和和表清单的权威来源。
