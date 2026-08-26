@@ -52,6 +52,27 @@ function declarations(rule: Rule) {
 }
 
 describe('MIP admin desktop density', () => {
+  it('keeps shared TDesign states on the dark surface', () => {
+    const stylesheet = postcss.parse(read('src/app.css'))
+    const page = declarations(findRule(stylesheet, 'page', true))
+
+    expect(page).toMatchObject({
+      '--td-text-color-anti': '#040000',
+      '--td-bg-color-secondarycontainer': '#2a2a2a',
+      '--td-bg-color-component': '#2a2a2a',
+      '--td-skeleton-bg-color': '#2a2a2a',
+      '--td-tag-outline-bg-color': '#2a2a2a',
+      '--td-tag-primary-light-color': '#3b3505',
+    })
+
+    const phone = findMedia(stylesheet, '(max-width: 599px)')
+    expect(declarations(findRule(phone, '.mip-admin-page .flex.items-start.justify-between')))
+      .toMatchObject({
+        'flex-wrap': 'wrap',
+        'min-width': '0',
+      })
+  })
+
   it('keeps placeholder contrast scoped to the admin shell and TDesign variables', () => {
     const stylesheet = postcss.parse(read('src/app.css'))
     const admin = declarations(findRule(stylesheet, '.mip-admin-page', true))

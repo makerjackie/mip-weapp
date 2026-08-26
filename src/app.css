@@ -36,8 +36,36 @@ page {
   --td-brand-color-disabled: #72680f;
   --td-text-color-primary: #fff;
   --td-text-color-secondary: #a3a3a3;
+  --td-text-color-disabled: #777;
+  --td-text-color-anti: #040000;
   --td-bg-color-page: #040404;
   --td-bg-color-container: #202020;
+  --td-bg-color-container-active: #2a2a2a;
+  --td-bg-color-secondarycontainer: #2a2a2a;
+  --td-bg-color-secondarycontainer-active: #363636;
+  --td-bg-color-component: #2a2a2a;
+  --td-bg-color-component-active: #363636;
+  --td-bg-color-component-disabled: #363636;
+  --td-component-stroke: #363636;
+  --td-component-border: #363636;
+  --td-skeleton-bg-color: #2a2a2a;
+  --td-skeleton-animation-gradient: rgb(255 255 255 / 8%);
+  --td-button-default-color: #fff;
+  --td-button-default-bg-color: #2a2a2a;
+  --td-button-default-border-color: #363636;
+  --td-button-default-active-bg-color: #363636;
+  --td-button-primary-color: #040000;
+  --td-button-primary-disabled-color: #f3f3f3;
+  --td-tag-outline-bg-color: #2a2a2a;
+  --td-tag-default-color: #a3a3a3;
+  --td-tag-default-font-color: #fff;
+  --td-tag-default-light-color: #2a2a2a;
+  --td-tag-primary-light-color: #3b3505;
+  --td-tag-warning-color: #f2bd4b;
+  --td-tag-warning-light-color: #3b3505;
+  --td-tag-danger-color: #ff8c87;
+  --td-tag-danger-light-color: #451f21;
+  --td-tag-success-light-color: #153326;
   --td-button-border-radius: 16rpx;
   --td-button-large-height: 92rpx;
   --td-tab-bar-active-color: #fcdf03;
@@ -223,6 +251,18 @@ input {
 
   .mip-admin-page {
     max-width: 100%;
+  }
+
+  .mip-admin-page .flex.items-start.justify-between,
+  .mip-admin-page .flex.items-center.justify-between {
+    flex-wrap: wrap;
+    row-gap: 16rpx;
+    min-width: 0;
+  }
+
+  .mip-admin-page .flex.items-start.justify-between > *,
+  .mip-admin-page .flex.items-center.justify-between > * {
+    min-width: 0;
   }
 
   .mip-admin-filter-grid,
