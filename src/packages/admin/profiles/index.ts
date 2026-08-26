@@ -268,6 +268,11 @@ Page({
   detailRequestSeq: 0,
   influenceRequestSeq: 0,
   confirmationBusy: false,
+  onLoad(options: { levelId?: string }) {
+    if (options?.levelId) {
+      this.setData({ levelId: String(options.levelId) })
+    }
+  },
   onShow() { void this.loadUsers() },
   onHide() {
     this.requestSeq += 1
@@ -493,6 +498,12 @@ Page({
     }
   },
   onReachBottom() { void this.loadMoreUsers() },
+  openGrowthTransitions() {
+    const userId = this.data.detail?.id
+    if (userId) {
+      void wx.navigateTo({ url: `/packages/admin/growth-transitions/index?userId=${userId}` })
+    }
+  },
   async openDetail(event: WechatMiniprogram.TouchEvent) {
     const userId = String(event.currentTarget.dataset.id || '')
     if (!userId) {

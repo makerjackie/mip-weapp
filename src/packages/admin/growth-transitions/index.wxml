@@ -1,0 +1,21 @@
+<view id="admin-growth-transitions-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+  <mip-admin-workspace-nav />
+  <view class="text-[length:40rpx] font-bold">等级变更记录</view>
+  <view class="mt-2 text-[length:23rpx] text-muted">记录经验事实导致的等级变化，包含来源事实和发生时间。</view>
+  <view class="mt-5 rounded-[16rpx] bg-panel p-3">
+    <view class="flex gap-2"><view class="min-w-0 flex-1"><t-input value="{{query}}" placeholder="搜索用户昵称" bind:change="updateQuery" bind:enter="searchUsers" /></view><t-button size="small" variant="outline" bind:tap="searchUsers">搜索</t-button></view>
+    <view wx:if="{{candidates.length}}" class="mt-2 flex flex-col gap-2"><view wx:for="{{candidates}}" wx:key="id" class="flex min-h-[88rpx] items-center rounded-[10rpx] bg-panel-raised px-3" data-id="{{item.id}}" data-name="{{item.nickname}}" bind:tap="chooseUser">{{item.nickname}} · {{item.branchName || '未设置分会'}}</view></view>
+    <view wx:if="{{selectedUserName}}" class="mt-2 text-[length:22rpx] text-brand">已选择：{{selectedUserName}}</view>
+    <view class="mt-3 grid grid-cols-2 gap-2"><picker mode="selector" range="{{levelChoices}}" range-key="name" value="{{fromLevelIndex}}" data-field="from" bindchange="chooseLevel"><view class="flex min-h-[88rpx] items-center rounded-[12rpx] bg-panel-raised px-3 text-[length:22rpx]">原等级：{{levelChoices[fromLevelIndex].name || '不限'}}</view></picker><picker mode="selector" range="{{levelChoices}}" range-key="name" value="{{toLevelIndex}}" data-field="to" bindchange="chooseLevel"><view class="flex min-h-[88rpx] items-center rounded-[12rpx] bg-panel-raised px-3 text-[length:22rpx]">新等级：{{levelChoices[toLevelIndex].name || '不限'}}</view></picker></view>
+    <view class="mt-2 grid grid-cols-2 gap-2"><picker mode="date" value="{{createdFromDate}}" data-field="createdFromDate" bindchange="changeDate"><view class="flex min-h-[88rpx] flex-col justify-center rounded-[12rpx] bg-panel-raised px-3 text-[length:21rpx]"><text class="text-muted">时间起</text><text>{{createdFromDate || '不限'}}</text></view></picker><picker mode="date" value="{{createdToDate}}" data-field="createdToDate" bindchange="changeDate"><view class="flex min-h-[88rpx] flex-col justify-center rounded-[12rpx] bg-panel-raised px-3 text-[length:21rpx]"><text class="text-muted">时间止</text><text>{{createdToDate || '不限'}}</text></view></picker></view>
+    <view class="mt-3"><t-button block size="small" variant="outline" bind:tap="applyFilters">查询</t-button></view>
+  </view>
+  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="等级变更记录加载失败" description="{{message}}" action-text="重新加载" bind:action="load" /></view>
+  <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有成长查看权限" description="当前账号不能查看等级变更记录。" /></view>
+  <view wx:elif="{{items.length === 0}}" class="mt-6"><app-empty-state title="暂无等级变更记录" description="当前筛选条件下没有服务端记录。" /></view>
+  <view wx:else class="mt-5 flex flex-col gap-3"><view wx:for="{{items}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4"><view class="flex items-start justify-between gap-3"><view><view class="text-[length:27rpx] font-semibold">{{item.nickname}}</view><view class="mt-1 text-[length:23rpx]">{{item.directionText}}</view></view><view class="shrink-0 text-[length:20rpx] text-muted">{{item.createdText}}</view></view><view class="mt-2 text-[length:21rpx] text-muted">经验值 {{item.experienceBefore}} → {{item.experienceAfter}}</view><view class="mt-1 text-[length:20rpx] text-muted">来源：{{item.sourceEventType}} · {{item.sourceEventId}}</view></view></view>
+  <view wx:if="{{message && state === 'ready'}}" class="mt-4 text-[length:22rpx] text-danger">{{message}}</view>
+  <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
+  <app-page-exit />
+</view>

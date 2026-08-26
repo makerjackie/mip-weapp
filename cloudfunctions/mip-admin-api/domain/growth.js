@@ -118,6 +118,18 @@ function createAdminGrowth({ repository, access }) {
     ))
   }
 
+  async function listGrowthLevelTransitions(caller, input = {}) {
+    const context = await access.session(caller)
+    firstGrant(context.bindings, CAPABILITIES.GROWTH_READ)
+    return pageResult(await repository.listGrowthLevelTransitions(
+      context.caller.appId,
+      visibilityForCapability(context.bindings, CAPABILITIES.GROWTH_READ),
+      normalizeGrowthLevelTransitionFilters(input.filters),
+      limit(input.limit),
+      decodeCursor(input.cursor, ['createdAt', 'id']),
+    ))
+  }
+
   async function adjustGrowth(caller, input) {
     const context = await access.session(caller)
     const userId = requiredId(input.userId, '用户')
@@ -241,7 +253,7 @@ function createAdminGrowth({ repository, access }) {
     })
   }
 
-  return {
+  const api = {
     adjustGrowth,
     grantBadge,
     listBadgeAwards,
@@ -257,6 +269,11 @@ function createAdminGrowth({ repository, access }) {
     saveGrowthLevel,
     saveGrowthRule,
   }
+  Object.defineProperty(api, 'listGrowthLevelTransitions', {
+    value: listGrowthLevelTransitions,
+    enumerable: false,
+  })
+  return api
 }
 
 function platformGrant(context, capability) {
@@ -302,6 +319,22 @@ function normalizeGrowthEntryFilters(value) {
     sourceEventType: filters.sourceEventType
       ? stableKey(filters.sourceEventType, '来源事件', 80)
       : '',
+    createdFrom,
+    createdTo,
+  }
+}
+
+function normalizeGrowthLevelTransitionFilters(value) {
+  const filters = normalizeFilters(value)
+  const createdFrom = dateTimeFilter(filters.createdFrom, '开始时间')
+  const createdTo = dateTimeFilter(filters.createdTo, '结束时间')
+  if (createdFrom && createdTo && createdFrom > createdTo) {
+    throw new AdminError('VALIDATION_FAILED', '等级变更开始时间不能晚于结束时间')
+  }
+  return {
+    userId: filters.userId ? requiredId(filters.userId, '用户') : '',
+    fromLevelId: filters.fromLevelId ? requiredId(filters.fromLevelId, '原等级') : '',
+    toLevelId: filters.toLevelId ? requiredId(filters.toLevelId, '新等级') : '',
     createdFrom,
     createdTo,
   }

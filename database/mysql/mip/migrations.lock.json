@@ -691,6 +691,18 @@
         "mip_opportunity_locations"
       ],
       "altersTables": []
+    },
+    {
+      "version": "20260827500000",
+      "name": "mip_growth_level_transitions",
+      "sql": "database/mysql/mip/050_growth_level_transitions.sql",
+      "sqlSha256": "c925caf5c5ff20d1c2ce67e6202b9b564b927fb226e82f5f0b1d9062559e07d5",
+      "rollback": "database/mysql/mip/rollback/050_growth_level_transitions.sql",
+      "rollbackSha256": "af241509dc633df2dd836753982edfb5a1b5ce968f29ffc6b7c2bc8488d684e8",
+      "createsTables": [
+        "mip_growth_level_transitions"
+      ],
+      "altersTables": []
     }
   ]
 }

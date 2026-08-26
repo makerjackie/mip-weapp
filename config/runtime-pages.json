@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 101,
+  "routeCount": 102,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 101 paths.",
+    "config/project.json routes must list the same 102 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -923,6 +923,17 @@
       "kind": "data",
       "states": ["loading", "ready", "empty", "error", "forbidden"],
       "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A43",
+      "name": "等级变更记录",
+      "path": "packages/admin/growth-transitions/index",
+      "selector": "#admin-growth-transitions-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error", "forbidden"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
       "id": "A32",

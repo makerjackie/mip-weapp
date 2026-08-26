@@ -472,9 +472,23 @@ function createAdminPrdExtensions(database, options = {}) {
   async function listGrowthLevelsV2(appId) {
     const [levels, relations] = await Promise.all([
       database.query(
-        `SELECT id, level_key, name, display_badge, minimum_experience, sort_order,
-          benefits_json, status, version FROM mip_growth_levels
-         WHERE app_id = ? ORDER BY sort_order, minimum_experience, id`,
+        `SELECT level.id, level.level_key, level.name, level.display_badge,
+          level.minimum_experience, level.sort_order, level.benefits_json,
+          level.status, level.version,
+          (SELECT COUNT(*) FROM mip_users user
+           LEFT JOIN mip_growth_accounts account
+             ON account.app_id = user.app_id AND account.user_id = user.id
+           WHERE user.app_id = level.app_id AND user.status = 'ACTIVE'
+             AND level.id = (
+               SELECT current_level.id FROM mip_growth_levels current_level
+               WHERE current_level.app_id = user.app_id AND current_level.status = 'ACTIVE'
+                 AND current_level.minimum_experience <= COALESCE(account.experience_balance, 0)
+               ORDER BY current_level.minimum_experience DESC, current_level.id DESC LIMIT 1
+             )) AS current_user_count,
+          (SELECT COUNT(*) FROM mip_users active_user
+           WHERE active_user.app_id = level.app_id AND active_user.status = 'ACTIVE') AS active_user_count
+         FROM mip_growth_levels level
+         WHERE level.app_id = ? ORDER BY level.sort_order, level.minimum_experience, level.id`,
         [appId],
       ),
       database.query(
@@ -507,6 +521,10 @@ function createAdminPrdExtensions(database, options = {}) {
       legacyBenefits: json(row.benefits_json, []),
       status: row.status,
       version: Number(row.version),
+      currentUserCount: Number(row.current_user_count || 0),
+      currentUserPercentage: Number(row.active_user_count || 0)
+        ? Math.round(Number(row.current_user_count || 0) * 10000 / Number(row.active_user_count)) / 100
+        : 0,
     }))
   }
 

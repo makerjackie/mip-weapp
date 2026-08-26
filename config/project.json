@@ -345,6 +345,10 @@
       "pathName": "packages/admin/growth-entries/index"
     },
     {
+      "name": "等级变更记录",
+      "pathName": "packages/admin/growth-transitions/index"
+    },
+    {
       "name": "勋章管理",
       "pathName": "packages/admin/badges/index"
     },

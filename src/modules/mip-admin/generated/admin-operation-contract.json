@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "operationCount": 137,
+  "operationCount": 138,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -956,6 +956,14 @@
     },
     {
       "action": "mip.admin.growth.entries",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.growth.levelTransitions",
       "kind": "QUERY",
       "authentication": "REQUIRED",
       "session": "REQUIRED",

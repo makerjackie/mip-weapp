@@ -7,6 +7,7 @@ const { createBadgeAdminRepository } = require('./badges')
 const { createEventCommentAdminRepository } = require('./event-comment-governance')
 const { createEventInsightsRepository } = require('./event-insights')
 const { createFullAccessPolicy } = require('./full-access')
+const { appendLevelTransition } = require('./level-transitions')
 const { assertFixedGrowthRuleUpdate } = require('./growth-rule-catalog')
 const { createMessageCampaignRepository } = require('./message-campaigns')
 const { createMessageDeliveryReviewRepository } = require('./message-delivery-reviews')
@@ -1187,6 +1188,48 @@ function createAdminRepository(database, options = {}) {
     return pageRows(items, pageLimit, row => ({ createdAt: row.createdAt, id: row.id }))
   }
 
+  async function listGrowthLevelTransitions(appId, visibility, filters, pageLimit, cursor = null) {
+    const users = visibleBranchesWhere(visibility, 'u')
+    const clauses = ['transition.app_id = ?', users.sql]
+    const params = [appId, ...users.params]
+    if (filters.userId) { clauses.push('transition.user_id = ?'); params.push(filters.userId) }
+    if (filters.fromLevelId) { clauses.push('transition.from_level_id = ?'); params.push(filters.fromLevelId) }
+    if (filters.toLevelId) { clauses.push('transition.to_level_id = ?'); params.push(filters.toLevelId) }
+    if (filters.createdFrom) { clauses.push('transition.created_at >= ?'); params.push(filters.createdFrom) }
+    if (filters.createdTo) { clauses.push('transition.created_at <= ?'); params.push(filters.createdTo) }
+    const cursorWhere = cursorPredicateFor('transition.created_at', cursor, 'createdAt', 'transition.id')
+    const rows = await database.query(
+      `SELECT transition.id, transition.user_id, profile.nickname,
+         transition.from_level_id, transition.from_level_key, transition.from_level_name,
+         transition.to_level_id, transition.to_level_key, transition.to_level_name,
+         transition.source_event_id, transition.source_event_type,
+         transition.experience_before, transition.experience_after, transition.created_at
+       FROM mip_growth_level_transitions transition
+       INNER JOIN mip_users u ON u.app_id = transition.app_id AND u.id = transition.user_id
+       LEFT JOIN mip_profiles profile ON profile.app_id = transition.app_id AND profile.user_id = transition.user_id
+       WHERE ${clauses.join(' AND ')}${cursorWhere.sql}
+       ORDER BY transition.created_at DESC, transition.id DESC LIMIT ?`,
+      [...params, ...cursorWhere.params, pageLimit + 1],
+    )
+    const items = rows.map(row => ({
+      id: row.id,
+      userId: row.user_id,
+      nickname: row.nickname || '未填写昵称',
+      fromLevel: row.from_level_id ? {
+        id: row.from_level_id, levelKey: row.from_level_key || '', name: row.from_level_name || '',
+      } : null,
+      toLevel: row.to_level_id ? {
+        id: row.to_level_id, levelKey: row.to_level_key || '', name: row.to_level_name || '',
+      } : null,
+      sourceEventId: row.source_event_id,
+      sourceEventType: row.source_event_type,
+      experienceBefore: Number(row.experience_before),
+      experienceAfter: Number(row.experience_after),
+      createdAt: iso(row.created_at),
+    }))
+    return pageRows(items, pageLimit, row => ({ createdAt: row.createdAt, id: row.id }))
+  }
+
   async function adjustGrowth(input) {
     return database.transaction(async (tx) => {
       const authorization = await lockMutation(tx, input)
@@ -1260,6 +1303,17 @@ function createAdminRepository(database, options = {}) {
         throw error
       }
       await writeAudit(tx, input.audit(entryId))
+      if (input.metric === 'EXPERIENCE') {
+        await appendLevelTransition(tx, {
+          createId: id,
+          appId: input.appId,
+          userId: input.userId,
+          sourceEventId,
+          sourceEventType: 'ADMIN_ADJUSTMENT',
+          experienceBefore: current,
+          experienceAfter: next,
+        })
+      }
       await writeOutbox(tx, {
         id: id(),
         appId: input.appId,
@@ -1326,6 +1380,7 @@ function createAdminRepository(database, options = {}) {
     listCommunityReports,
     listExportRows,
     listGrowthEntries,
+    listGrowthLevelTransitions,
     listGrowthLevels,
     listGrowthRules,
     listOpportunities,

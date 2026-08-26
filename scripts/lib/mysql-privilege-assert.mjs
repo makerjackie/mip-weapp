@@ -71,6 +71,7 @@ export const RUNTIME_TABLE_PRIVILEGES = Object.freeze({
   mip_growth_rules: Object.freeze(['SELECT', 'UPDATE']),
   mip_growth_accounts: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_growth_entries: Object.freeze(['SELECT', 'INSERT']),
+  mip_growth_level_transitions: Object.freeze(['SELECT', 'INSERT']),
   mip_badges: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_user_badges: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_user_badge_profiles: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),

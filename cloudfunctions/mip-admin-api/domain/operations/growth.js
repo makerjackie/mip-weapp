@@ -7,6 +7,7 @@ module.exports = defineManifest('GROWTH', [
   serviceOperation('mip.admin.growth.benefits', 'QUERY', 'listGrowthBenefits'),
   serviceOperation('mip.admin.growth.rules', 'QUERY', 'listGrowthRules'),
   serviceOperation('mip.admin.growth.entries', 'QUERY', 'listGrowthEntries'),
+  serviceOperation('mip.admin.growth.levelTransitions', 'QUERY', 'listGrowthLevelTransitions'),
   serviceOperation('mip.admin.badges.list', 'QUERY', 'listBadges'),
   serviceOperation('mip.admin.badges.awards', 'QUERY', 'listBadgeAwards'),
   serviceOperation('mip.admin.growth.saveBenefit', 'MUTATION', 'saveGrowthBenefit'),

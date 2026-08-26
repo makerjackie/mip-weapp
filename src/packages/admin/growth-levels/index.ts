@@ -132,4 +132,11 @@ Page({
   openBenefits() { void wx.navigateTo({ url: '/packages/admin/growth-benefits/index' }) },
   openRules() { void wx.navigateTo({ url: '/packages/admin/growth-rules/index' }) },
   openEntries() { void wx.navigateTo({ url: '/packages/admin/growth-entries/index' }) },
+  openTransitions() { void wx.navigateTo({ url: '/packages/admin/growth-transitions/index' }) },
+  openLevelUsers(event: WechatMiniprogram.TouchEvent) {
+    const levelId = String(event.currentTarget.dataset.id || '')
+    if (levelId) {
+      void wx.navigateTo({ url: `/packages/admin/profiles/index?levelId=${levelId}` })
+    }
+  },
 })

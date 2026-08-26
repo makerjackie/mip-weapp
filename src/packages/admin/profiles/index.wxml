@@ -112,5 +112,6 @@
           <view class="mt-1">累计有效会员时长：{{detail.totalValidMembershipText}}</view>
         </view>
       </view>
+        <view class="mt-3 flex justify-end"><view class="flex min-h-[88rpx] items-center text-[length:22rpx] text-brand" role="button" bind:tap="openGrowthTransitions">查看等级变更记录</view></view>
   </mip-admin-responsive-panel>
 </view>

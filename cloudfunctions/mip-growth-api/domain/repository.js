@@ -4,6 +4,7 @@ const { createHash, randomUUID } = require('node:crypto')
 const { createCheckInGrowthRepository } = require('./checkin-compensation')
 const { createGameCoinRepository } = require('./game-coins')
 const { levelSnapshot, projectAward } = require('./rules')
+const { appendLevelTransition } = require('./level-transitions')
 
 function createGrowthRepository(database, options = {}) {
   const createId = options.createId || randomUUID
@@ -225,6 +226,17 @@ function createGrowthRepository(database, options = {}) {
            ) VALUES (?, ?, 'GROWTH_ENTRY', ?, 'growth.changed', ?, JSON_OBJECT(), 'PENDING')`,
           [createId(), input.appId, entryId, account.version],
         )
+        if (rule.metric === 'EXPERIENCE') {
+          await appendLevelTransition(tx, {
+            createId,
+            appId: input.appId,
+            userId: input.userId,
+            sourceEventId: input.sourceEventId,
+            sourceEventType: input.sourceEventType,
+            experienceBefore: Number(account.experience_balance) - Number(projection.applied),
+            experienceAfter: Number(account.experience_balance),
+          })
+        }
         awards.push({
           id: entryId,
           ruleKey: rule.rule_key,

@@ -6,6 +6,7 @@ interface GrowthAdminCache {
 }
 
 type GrowthEntryListInput = NonNullable<Parameters<MipAdminGateway['listGrowthEntries']>[0]>
+type GrowthTransitionListInput = NonNullable<Parameters<MipAdminGateway['listGrowthLevelTransitions']>[0]>
 type BadgeAwardListInput = NonNullable<Parameters<MipAdminGateway['listBadgeAwards']>[0]>
 
 export interface MipGrowthAdmin {
@@ -16,6 +17,10 @@ export interface MipGrowthAdmin {
     input?: GrowthEntryListInput,
     force?: boolean,
   ) => ReturnType<MipAdminGateway['listGrowthEntries']>
+  listLevelTransitions: (
+    input?: GrowthTransitionListInput,
+    force?: boolean,
+  ) => ReturnType<MipAdminGateway['listGrowthLevelTransitions']>
   listBadges: (force?: boolean) => ReturnType<MipAdminGateway['listBadges']>
   listBadgeAwards: (
     input?: BadgeAwardListInput,
@@ -35,6 +40,7 @@ const cacheKeys = {
   benefits: 'mip-admin:growth-benefits',
   rules: 'mip-admin:growth-rules',
   entries: 'mip-admin:growth-entries',
+  transitions: 'mip-admin:growth-level-transitions',
   badges: 'mip-admin:badges',
   badgeAwards: 'mip-admin:badge-awards',
 } as const
@@ -58,6 +64,11 @@ export function createMipGrowthAdmin(
     listEntries: (input: GrowthEntryListInput = {}, force = false) => cache.query(
       `${cacheKeys.entries}:${JSON.stringify(input)}`,
       () => gateway.listGrowthEntries(input),
+      { force },
+    ),
+    listLevelTransitions: (input: GrowthTransitionListInput = {}, force = false) => cache.query(
+      `${cacheKeys.transitions}:${JSON.stringify(input)}`,
+      () => gateway.listGrowthLevelTransitions(input),
       { force },
     ),
     listBadges: (force = false) => cache.query(cacheKeys.badges, gateway.listBadges, { force }),

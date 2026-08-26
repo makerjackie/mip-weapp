@@ -1002,6 +1002,7 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
     listGrowthRules: () => call('mip.admin.growth.rules'),
     saveGrowthRule: input => call('mip.admin.growth.saveRule', input),
     listGrowthEntries: input => call('mip.admin.growth.entries', input || {}),
+    listGrowthLevelTransitions: input => call('mip.admin.growth.levelTransitions', input || {}),
     adjustGrowth: input => call('mip.admin.growth.adjust', input),
     listBadges: () => call('mip.admin.badges.list'),
     saveBadge: input => call('mip.admin.badges.save', input),

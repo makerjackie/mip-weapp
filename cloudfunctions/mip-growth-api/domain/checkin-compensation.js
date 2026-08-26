@@ -2,6 +2,7 @@
 
 const { randomUUID } = require('node:crypto')
 const { balanceField, projectAward } = require('./rules')
+const { appendLevelTransition } = require('./level-transitions')
 
 const CHECKED_IN_EVENT = 'event.checked_in'
 const CHECKIN_REVOKED_EVENT = 'event.checkin_revoked'
@@ -267,6 +268,9 @@ async function lockAccount(tx, appId, userId) {
 
 async function appendEntry(tx, input) {
   const field = balanceField(input.metric)
+  const experienceBefore = input.metric === 'EXPERIENCE'
+    ? Number(input.account.experience_balance)
+    : null
   await tx.query(
     `UPDATE mip_growth_accounts SET ${field} = ?, version = version + 1
      WHERE app_id = ? AND user_id = ?`,
@@ -291,6 +295,17 @@ async function appendEntry(tx, input) {
      ) VALUES (?, ?, 'GROWTH_ENTRY', ?, 'growth.changed', ?, JSON_OBJECT(), 'PENDING')`,
     [input.createId(), input.appId, entryId, input.account.version],
   )
+  if (input.metric === 'EXPERIENCE') {
+    await appendLevelTransition(tx, {
+      createId: input.createId,
+      appId: input.appId,
+      userId: input.userId,
+      sourceEventId: input.sourceEventId,
+      sourceEventType: input.sourceEventType,
+      experienceBefore,
+      experienceAfter: Number(input.balanceAfter),
+    })
+  }
   return entryId
 }
 

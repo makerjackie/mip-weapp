@@ -16,6 +16,7 @@ const {
 const { buildTaskWorkbook } = require('./workbook')
 const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
 const { createUserTaskCursor, readUserTaskCursor } = require('../lib/user-task-cursor')
+const { appendLevelTransition } = require('./level-transitions')
 
 const PLATFORM_SCOPE_ID = '00000000-0000-0000-0000-000000000000'
 const TASKS_CAPABILITY = 'tasks.manage'
@@ -177,7 +178,8 @@ function createTaskRepository(database, options = {}) {
             [caller.appId, caller.userId],
           )
         }
-        balanceAfter = Number(rewardAccount.experience_balance) + rewardExperience
+        const balanceBefore = Number(rewardAccount.experience_balance)
+        balanceAfter = balanceBefore + rewardExperience
         await tx.query(
           `UPDATE mip_growth_accounts SET experience_balance = ?, version = version + 1
            WHERE app_id = ? AND user_id = ?`,
@@ -198,6 +200,15 @@ function createTaskRepository(database, options = {}) {
            ) VALUES (?, ?, 'GROWTH_ENTRY', ?, 'growth.changed', ?, JSON_OBJECT(), 'PENDING')`,
           [createId(), caller.appId, growthEntryId, Number(rewardAccount.version) + 1],
         )
+        await appendLevelTransition(tx, {
+          createId,
+          appId: caller.appId,
+          userId: caller.userId,
+          sourceEventId: completionId,
+          sourceEventType: 'task.completed',
+          experienceBefore: balanceBefore,
+          experienceAfter: balanceAfter,
+        })
       }
       await tx.query(
         `INSERT INTO mip_task_completions (

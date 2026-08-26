@@ -103,6 +103,7 @@ export function createMipAdminModule(
     listGrowthBenefits: growth.listBenefits,
     listGrowthRules: growth.listRules,
     listGrowthEntries: growth.listEntries,
+    listGrowthLevelTransitions: growth.listLevelTransitions,
     listBadges: growth.listBadges,
     listBadgeAwards: growth.listBadgeAwards,
     growth,

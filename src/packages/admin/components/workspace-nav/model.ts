@@ -159,6 +159,12 @@ export const adminWorkspaceGroups: readonly AdminWorkspaceNavGroup[] = [
         capabilities: ['growth.read'],
       },
       {
+        key: 'growth-transitions',
+        label: '等级变更记录',
+        route: 'packages/admin/growth-transitions/index',
+        capabilities: ['growth.read'],
+      },
+      {
         key: 'growth-levels',
         label: '成长设置',
         route: 'packages/admin/growth-levels/index',
@@ -246,6 +252,7 @@ const activeItemByRoute: Readonly<Record<string, string>> = {
   'packages/admin/user-content/index': 'user-content',
   'packages/admin/community-reports/index': 'community-reports',
   'packages/admin/growth-entries/index': 'growth-entries',
+  'packages/admin/growth-transitions/index': 'growth-transitions',
   'packages/admin/growth-levels/index': 'growth-levels',
   'packages/admin/growth-benefits/index': 'growth-levels',
   'packages/admin/growth-rules/index': 'growth-levels',

@@ -775,6 +775,8 @@ export interface AdminGrowthLevel {
   legacyBenefits: string[]
   status: 'DRAFT' | 'ACTIVE' | 'INACTIVE'
   version: number
+  currentUserCount: number
+  currentUserPercentage: number
 }
 
 export interface AdminGrowthBenefit {
@@ -809,6 +811,19 @@ export interface AdminGrowthEntry {
   balanceBefore: number
   balanceAfter: number
   adjustmentReason: string
+  createdAt: string | null
+}
+
+export interface AdminGrowthLevelTransition {
+  id: string
+  userId: string
+  nickname: string
+  fromLevel: { id: string, levelKey: string, name: string } | null
+  toLevel: { id: string, levelKey: string, name: string } | null
+  sourceEventId: string
+  sourceEventType: string
+  experienceBefore: number
+  experienceAfter: number
   createdAt: string | null
 }
 
@@ -1228,6 +1243,7 @@ export interface MipAdminGateway {
   listGrowthRules: () => Promise<AdminPage<AdminGrowthRule>>
   saveGrowthRule: (input: Record<string, unknown>) => Promise<{ id: string, version: number }>
   listGrowthEntries: (input?: Record<string, unknown>) => Promise<AdminPage<AdminGrowthEntry>>
+  listGrowthLevelTransitions: (input?: Record<string, unknown>) => Promise<AdminPage<AdminGrowthLevelTransition>>
   adjustGrowth: (input: Record<string, unknown>) => Promise<Record<string, unknown>>
   listBadges: () => Promise<AdminPage<AdminBadge>>
   saveBadge: (input: Record<string, unknown>) => Promise<{ id: string, version: number }>
