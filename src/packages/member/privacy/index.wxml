@@ -23,7 +23,9 @@
     <view class="mt-5 rounded-[24rpx] border border-line bg-panel px-5 py-5">
       <view class="text-[length:27rpx] font-semibold">退出登录</view>
       <view class="mt-2 text-[length:22rpx] leading-6 text-muted">清除这台设备上的登录状态和用户缓存，不会删除账号或业务记录。</view>
-      <view class="mt-5"><t-button block variant="outline" theme="danger" loading="{{localLogoutState === 'processing'}}" disabled="{{closureState === 'processing'}}" bind:tap="signOutLocally">退出登录</t-button></view>
+      <view id="privacy-sign-out" class="mt-5 flex min-h-[88rpx] items-center" bind:tap="signOutLocally">
+        <t-button block variant="outline" theme="danger" loading="{{localLogoutState === 'processing'}}" disabled="{{closureState === 'processing'}}">退出登录</t-button>
+      </view>
     </view>
     <view class="mt-5 rounded-[24rpx] border border-line bg-panel px-5 py-5">
       <view class="text-[length:27rpx] font-semibold">账号注销</view>

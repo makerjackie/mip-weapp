@@ -98,11 +98,36 @@ describe('runtime page privacy and normal unavailable states', () => {
       requireScreenshotDiff: true,
     })
     expect(interactionTargetViewportEvidence([
-      { top: 100, bottom: 180, width: 120, height: 80 },
-    ], 720)).toMatchObject({ top: 100, bottom: 180, windowHeight: 720 })
+      { top: 100, bottom: 180, left: 20, right: 140, width: 120, height: 80 },
+    ], { windowHeight: 720, windowWidth: 390 })).toMatchObject({
+      top: 100,
+      bottom: 180,
+      left: 20,
+      right: 140,
+      windowHeight: 720,
+      windowWidth: 390,
+    })
     expect(interactionTargetViewportEvidence([
-      { top: 800, bottom: 880, width: 120, height: 80 },
-    ], 720)).toBeNull()
+      { top: 800, bottom: 880, left: 20, right: 140, width: 120, height: 80 },
+    ], { windowHeight: 720, windowWidth: 390 })).toBeNull()
+    expect(interactionTargetViewportEvidence([
+      { top: 100, bottom: 180, left: 410, right: 530, width: 120, height: 80 },
+    ], { windowHeight: 720, windowWidth: 390 })).toBeNull()
+    expect(interactionTargetViewportEvidence([
+      { top: 100, bottom: 180, left: -140, right: -20, width: 120, height: 80 },
+    ], { windowHeight: 720, windowWidth: 390 })).toBeNull()
+    expect(interactionTargetViewportEvidence([
+      { top: -20, bottom: 60, left: 20, right: 140, width: 120, height: 80 },
+    ], { windowHeight: 720, windowWidth: 390 })).toBeNull()
+    expect(interactionTargetViewportEvidence([
+      { top: 680, bottom: 760, left: 20, right: 140, width: 120, height: 80 },
+    ], { windowHeight: 720, windowWidth: 390 })).toBeNull()
+    expect(interactionTargetViewportEvidence([
+      { top: 100, bottom: 180, left: -20, right: 100, width: 120, height: 80 },
+    ], { windowHeight: 720, windowWidth: 390 })).toBeNull()
+    expect(interactionTargetViewportEvidence([
+      { top: 100, bottom: 180, left: 310, right: 430, width: 120, height: 80 },
+    ], { windowHeight: 720, windowWidth: 390 })).toBeNull()
     expect(verifier).toContain('miniProgram.pageScrollTo(stepScrollTop)')
     expect(verifier).toContain('assertInteractionTargetInViewport')
     expect(verifier).toContain('queryFreshRenderedActionElement(page, step.selector)')

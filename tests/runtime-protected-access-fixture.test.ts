@@ -1,0 +1,220 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { describe, expect, it, vi } from 'vitest'
+import { resolveProtectedAccessRuntimeFixture } from '../scripts/verify-runtime.mjs'
+
+const root = path.resolve(import.meta.dirname, '..')
+const contract = JSON.parse(fs.readFileSync(path.join(root, 'config/runtime-pages.json'), 'utf8'))
+const accessRoute = contract.routes.find((route: { path: string }) => (
+  route.path === 'packages/member/mip-access/index'
+))
+const privacyRoute = contract.routes.find((route: { path: string }) => (
+  route.path === 'packages/member/privacy/index'
+))
+const homeRoute = contract.routes.find((route: { path: string }) => (
+  route.path === 'pages/index/index'
+))
+
+function createFixtureRuntime(token = 'mip-1720000000000-runtime') {
+  let currentPage: Record<string, unknown>
+  const homePage = {
+    path: homeRoute.path,
+    data: vi.fn(async () => ({ state: 'ready' })),
+    renderedNodes: vi.fn(async (selector: string, options: { routeOnly: boolean }) => {
+      expect(selector).toBe(homeRoute.selector)
+      expect(options).toEqual({ routeOnly: true })
+      return [{ top: 0, bottom: 812, left: 0, right: 375, width: 375, height: 812 }]
+    }),
+    waitForRendered: vi.fn(async () => undefined),
+  }
+  const actionPage = (
+    pagePath: string,
+    routeSelector: string,
+    selector: string,
+    data: () => Record<string, unknown>,
+    onTap: () => void,
+  ) => {
+    const elementMap = { clear: vi.fn() }
+    const element = { tap: vi.fn(async () => onTap()) }
+    return {
+      path: pagePath,
+      data: vi.fn(async () => data()),
+      waitForRendered: vi.fn(async () => undefined),
+      elementMap,
+      renderedNodes: vi.fn(async (actualSelector: string, options: { routeOnly: boolean }) => {
+        expect([routeSelector, selector]).toContain(actualSelector)
+        expect(options).toEqual({ routeOnly: true })
+        return [{
+          top: 100,
+          bottom: 188,
+          left: 20,
+          right: 320,
+          width: 300,
+          height: 88,
+        }]
+      }),
+      $: vi.fn(async (actualSelector: string, options: { fallback: boolean }) => {
+        expect(actualSelector).toBe(selector)
+        expect(options).toEqual({ fallback: false })
+        expect(elementMap.clear).toHaveBeenCalled()
+        return element
+      }),
+      element,
+    }
+  }
+  const accessPage = {
+    ...actionPage(accessRoute.path, accessRoute.selector, '#mip-access-sign-in', () => ({
+      globalGate: true,
+      nextRequirement: 'AUTHENTICATED',
+      state: 'ready',
+      token,
+    }), () => {
+      currentPage = homePage
+    }),
+  }
+  const privacyPage = {
+    ...actionPage(privacyRoute.path, privacyRoute.selector, '#privacy-sign-out', () => ({ state: 'ready' }), () => {
+      currentPage = accessPage
+    }),
+  }
+  currentPage = privacyPage
+  const miniProgram = {
+    reLaunch: vi.fn(async (url: string) => {
+      if (url === `/${privacyRoute.path}`) {
+        currentPage = privacyPage
+        return privacyPage
+      }
+      expect(url).toBe(`/${homeRoute.path}`)
+      currentPage = homePage
+      return homePage
+    }),
+    currentPage: vi.fn(async () => currentPage),
+    callWxMethod: vi.fn(async (method: string, options: { selector: string, duration: number }) => {
+      expect(method).toBe('pageScrollTo')
+      expect(options.duration).toBe(0)
+      expect(['#privacy-sign-out', '#mip-access-sign-in']).toContain(options.selector)
+    }),
+    mockWxMethod: vi.fn(async () => undefined),
+    restoreWxMethod: vi.fn(async () => undefined),
+    systemInfo: vi.fn(async () => ({ windowHeight: 812, windowWidth: 375 })),
+  }
+  return { accessPage, homePage, miniProgram, privacyPage }
+}
+
+describe('runtime protected access fixture', () => {
+  it('uses the UI-bound local logout to create a real global-guard intent and restores identity', async () => {
+    expect(accessRoute).toMatchObject({
+      externalWaitStates: ['expired'],
+      query: ['token'],
+      protectedAccessFixture: {
+        kind: 'local-sign-out-global-guard',
+        sourceRoute: privacyRoute.path,
+        sourceSelector: '#privacy-sign-out',
+        sourceHandler: 'signOutLocally',
+        confirmationMethod: 'showModal',
+        expectedIntentAction: 'ENTER_APP',
+        expectedNextRequirement: 'AUTHENTICATED',
+        restoreSelector: '#mip-access-sign-in',
+        restoreHandler: 'signIn',
+        restoreRoute: homeRoute.path,
+      },
+    })
+    expect(accessRoute.queryFixture).toBeUndefined()
+
+    const runtime = createFixtureRuntime()
+    const resolved = await resolveProtectedAccessRuntimeFixture(
+      runtime.miniProgram,
+      contract,
+      accessRoute,
+      contract.sensitivePatterns,
+    )
+
+    expect(resolved).toMatchObject({
+      status: 'resolved',
+      query: 'token=mip-1720000000000-runtime',
+      queryMode: 'protected-action-intent',
+    })
+    expect(runtime.miniProgram.mockWxMethod).toHaveBeenCalledWith('showModal', {
+      cancel: false,
+      confirm: true,
+      errMsg: 'showModal:ok',
+    })
+    expect(runtime.privacyPage.elementMap.clear).toHaveBeenCalledOnce()
+    expect(runtime.privacyPage.$).toHaveBeenCalledWith('#privacy-sign-out', { fallback: false })
+    expect(runtime.privacyPage.element.tap).toHaveBeenCalledOnce()
+    expect(runtime.miniProgram.restoreWxMethod).toHaveBeenCalledWith('showModal')
+
+    await resolved.restore()
+    expect(runtime.accessPage.elementMap.clear).toHaveBeenCalledOnce()
+    expect(runtime.accessPage.$).toHaveBeenCalledWith('#mip-access-sign-in', { fallback: false })
+    expect(runtime.accessPage.element.tap).toHaveBeenCalledOnce()
+    expect(runtime.miniProgram.callWxMethod).toHaveBeenNthCalledWith(1, 'pageScrollTo', {
+      selector: '#privacy-sign-out',
+      duration: 0,
+    })
+    expect(runtime.miniProgram.callWxMethod).toHaveBeenNthCalledWith(2, 'pageScrollTo', {
+      selector: '#mip-access-sign-in',
+      duration: 0,
+    })
+    expect(runtime.miniProgram.reLaunch).toHaveBeenNthCalledWith(2, `/${homeRoute.path}`)
+    const restoreTapOrder = runtime.accessPage.element.tap.mock.invocationCallOrder[0]
+    const freshReloadOrder = runtime.miniProgram.reLaunch.mock.invocationCallOrder[1]
+    expect(runtime.miniProgram.currentPage.mock.invocationCallOrder.some(
+      callOrder => callOrder > restoreTapOrder && callOrder < freshReloadOrder,
+    )).toBe(true)
+    expect(runtime.homePage.data).toHaveBeenCalled()
+  })
+
+  it('restores the signed-in server identity when intent validation fails after local logout', async () => {
+    const runtime = createFixtureRuntime('contains spaces')
+
+    await expect(resolveProtectedAccessRuntimeFixture(
+      runtime.miniProgram,
+      contract,
+      accessRoute,
+      contract.sensitivePatterns,
+    )).rejects.toThrow('bounded opaque intent token')
+
+    expect(runtime.privacyPage.element.tap).toHaveBeenCalledOnce()
+    expect(runtime.accessPage.element.tap).toHaveBeenCalledOnce()
+    expect(runtime.homePage.data).toHaveBeenCalled()
+    expect(runtime.miniProgram.restoreWxMethod).toHaveBeenCalledWith('showModal')
+  })
+
+  it('locks source and restore actions to visible native wrappers without handler fallback', () => {
+    const privacyMarkup = fs.readFileSync(
+      path.join(root, 'src/packages/member/privacy/index.wxml'),
+      'utf8',
+    )
+    const accessMarkup = fs.readFileSync(
+      path.join(root, 'src/packages/member/mip-access/index.wxml'),
+      'utf8',
+    )
+    const verifier = fs.readFileSync(path.join(root, 'scripts/verify-runtime.mjs'), 'utf8')
+    const actionHelper = verifier.slice(
+      verifier.indexOf('async function tapVisibleRuntimeFixtureAction'),
+      verifier.indexOf('async function restoreProtectedAccessRuntimeFixture'),
+    )
+    const resolver = verifier.slice(
+      verifier.indexOf('export async function resolveProtectedAccessRuntimeFixture'),
+      verifier.indexOf('async function resolveRouteQuery'),
+    )
+    const privacyWrapper = privacyMarkup.match(/<view[^>]*id="privacy-sign-out"[^>]*>[\s\S]*?<\/view>/)?.[0]
+    const accessWrapper = accessMarkup.match(/<view[^>]*id="mip-access-sign-in"[^>]*>[\s\S]*?<\/view>/)?.[0]
+
+    expect(privacyWrapper).toContain('class="mt-5 flex min-h-[88rpx] items-center"')
+    expect(privacyWrapper).toContain('bind:tap="signOutLocally"')
+    expect(privacyWrapper).not.toMatch(/<t-button[^>]*bind:tap=/)
+    expect(accessWrapper).toContain('class="mt-7 flex min-h-[88rpx] items-center"')
+    expect(accessWrapper).toContain('bind:tap="signIn"')
+    expect(accessWrapper).not.toMatch(/<t-button[^>]*bind:tap=/)
+    expect(actionHelper).toContain('miniProgram.callWxMethod(\'pageScrollTo\', { selector, duration: 0 })')
+    expect(actionHelper).toContain('page.renderedNodes(selector, { routeOnly: true })')
+    expect(actionHelper).toContain('queryFreshRenderedActionElement(page, selector)')
+    expect(actionHelper).toContain('await element.tap()')
+    expect(verifier).toContain('page?.elementMap?.clear?.()')
+    expect(verifier).toContain('page.$(selector, { fallback: false })')
+    expect(verifier).toContain('(route.query || []).length > 0 && !route.protectedAccessFixture')
+    expect(resolver).not.toContain('.callMethod(')
+  })
+})

@@ -385,6 +385,10 @@
           "selector": "#game-ranking-INDIVIDUAL_SEASON",
           "handler": "changeRanking",
           "handlerDataset": { "type": "INDIVIDUAL_SEASON" },
+          "scrollIntoView": true,
+          "requireVisibleTarget": true,
+          "requireRenderedAction": true,
+          "requireScreenshotDiff": true,
           "dataAssertions": [{ "path": "rankingType", "equals": "INDIVIDUAL_SEASON" }],
           "visibleAssertion": {
             "selector": "#game-ranking-INDIVIDUAL_SEASON",
@@ -1026,6 +1030,19 @@
       "states": ["loading", "ready", "error", "expired"],
       "externalWaitStates": ["expired"],
       "readyAssertion": "state === 'ready'",
+      "query": ["token"],
+      "protectedAccessFixture": {
+        "kind": "local-sign-out-global-guard",
+        "sourceRoute": "packages/member/privacy/index",
+        "sourceSelector": "#privacy-sign-out",
+        "sourceHandler": "signOutLocally",
+        "confirmationMethod": "showModal",
+        "expectedIntentAction": "ENTER_APP",
+        "expectedNextRequirement": "AUTHENTICATED",
+        "restoreSelector": "#mip-access-sign-in",
+        "restoreHandler": "signIn",
+        "restoreRoute": "pages/index/index"
+      },
       "deviceRequired": ["phone-auth"]
     },
     {

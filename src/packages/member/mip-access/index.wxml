@@ -31,8 +31,8 @@
       <t-button block size="large" theme="primary" bind:tap="openProfile">完善资料</t-button>
     </view>
 
-    <view wx:elif="{{nextRequirement === 'AUTHENTICATED'}}" class="mt-7">
-      <t-button block size="large" theme="primary" loading="{{submitting}}" bind:tap="signIn">微信登录</t-button>
+    <view wx:elif="{{nextRequirement === 'AUTHENTICATED'}}" id="mip-access-sign-in" class="mt-7 flex min-h-[88rpx] items-center" bind:tap="signIn">
+      <t-button block size="large" theme="primary" loading="{{submitting}}">微信登录</t-button>
     </view>
 
     <view wx:elif="{{ready}}" class="mt-7">

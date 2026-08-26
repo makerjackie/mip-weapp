@@ -135,20 +135,49 @@ function interactionDataMatches(data, step) {
   ))
 }
 
-export function interactionTargetViewportEvidence(nodes, windowHeight) {
-  const viewportHeight = Number(windowHeight)
-  if (!Number.isFinite(viewportHeight) || viewportHeight <= 0 || !Array.isArray(nodes)) {
+export function interactionTargetViewportEvidence(nodes, systemInfo) {
+  const viewportHeight = Number(systemInfo?.windowHeight)
+  const viewportWidth = Number(systemInfo?.windowWidth)
+  if (
+    !Number.isFinite(viewportHeight)
+    || viewportHeight <= 0
+    || !Number.isFinite(viewportWidth)
+    || viewportWidth <= 0
+    || !Array.isArray(nodes)
+  ) {
     return null
   }
   for (const node of nodes) {
     const top = Number(node?.top)
+    const left = Number(node?.left)
     const height = Number(node?.height)
     const width = Number(node?.width)
     const reportedBottom = Number(node?.bottom)
+    const reportedRight = Number(node?.right)
     const bottom = Number.isFinite(reportedBottom) ? reportedBottom : top + height
-    if (Number.isFinite(top) && Number.isFinite(bottom) && width > 0 && height > 0
-      && bottom > 0 && top < viewportHeight) {
-      return { top, bottom, width, height, windowHeight: viewportHeight }
+    const right = Number.isFinite(reportedRight) ? reportedRight : left + width
+    if (
+      Number.isFinite(top)
+      && Number.isFinite(bottom)
+      && Number.isFinite(left)
+      && Number.isFinite(right)
+      && width > 0
+      && height > 0
+      && top >= 0
+      && bottom <= viewportHeight
+      && left >= 0
+      && right <= viewportWidth
+    ) {
+      return {
+        top,
+        bottom,
+        left,
+        right,
+        width,
+        height,
+        windowHeight: viewportHeight,
+        windowWidth: viewportWidth,
+      }
     }
   }
   return null
@@ -159,7 +188,7 @@ async function assertInteractionTargetInViewport(page, miniProgram, journey, ste
     page.renderedNodes(step.selector, { routeOnly: true }),
     miniProgram.systemInfo(),
   ])
-  const evidence = interactionTargetViewportEvidence(nodes, systemInfo?.windowHeight)
+  const evidence = interactionTargetViewportEvidence(nodes, systemInfo)
   assert(evidence, `Interaction ${journey.id}/${step.id} target is outside the measured viewport`)
   return evidence
 }
@@ -240,6 +269,7 @@ function validateRuntimeContract(runtimePages) {
   const seenIds = new Set()
   const declaredStates = new Set()
   let hasDisabledControl = false
+  let protectedAccessFixtureCount = 0
   const routesByPath = new Map(runtimePages.routes.map(route => [route.path, route]))
   for (const route of runtimePages.routes) {
     assert(route?.id && route.path && route.selector, `Incomplete runtime route: ${JSON.stringify(route)}`)
@@ -280,7 +310,40 @@ function validateRuntimeContract(runtimePages) {
     for (const key of route.query || []) {
       assert(/^[a-z][a-z0-9]*$/i.test(key), `${route.path} has an unsafe query key`)
     }
-    if ((route.query || []).length) {
+    const protectedAccessFixture = route.protectedAccessFixture
+    if (protectedAccessFixture !== undefined) {
+      protectedAccessFixtureCount += 1
+      assert(route.path === 'packages/member/mip-access/index', 'Protected access fixture may only target the access page')
+      assert(
+        JSON.stringify(route.query || []) === JSON.stringify(['token']),
+        'Protected access fixture must resolve exactly one opaque token query',
+      )
+      assert(route.queryFixture === undefined, 'Protected access fixture cannot also declare queryFixture')
+      assert(protectedAccessFixture?.kind === 'local-sign-out-global-guard', 'Protected access fixture kind is invalid')
+      assert(protectedAccessFixture.sourceRoute === 'packages/member/privacy/index', 'Protected access fixture source route is invalid')
+      assert(protectedAccessFixture.sourceSelector === '#privacy-sign-out', 'Protected access fixture source selector is invalid')
+      assert(protectedAccessFixture.sourceHandler === 'signOutLocally', 'Protected access fixture source handler is invalid')
+      assert(protectedAccessFixture.confirmationMethod === 'showModal', 'Protected access fixture confirmation method is invalid')
+      assert(protectedAccessFixture.expectedIntentAction === 'ENTER_APP', 'Protected access fixture must use the global ENTER_APP guard')
+      assert(protectedAccessFixture.expectedNextRequirement === 'AUTHENTICATED', 'Protected access fixture must prove the signed-out access state')
+      assert(protectedAccessFixture.restoreSelector === '#mip-access-sign-in', 'Protected access fixture restore selector is invalid')
+      assert(protectedAccessFixture.restoreHandler === 'signIn', 'Protected access fixture restore handler is invalid')
+      assert(protectedAccessFixture.restoreRoute === 'pages/index/index', 'Protected access fixture restore route is invalid')
+      const sourceRoute = routesByPath.get(protectedAccessFixture.sourceRoute)
+      const restoreRoute = routesByPath.get(protectedAccessFixture.restoreRoute)
+      assert(sourceRoute && !(sourceRoute.query || []).length, 'Protected access fixture source route must be query-free')
+      assert(restoreRoute && !(restoreRoute.query || []).length, 'Protected access fixture restore route must be query-free')
+      const sourceWxml = fs.readFileSync(path.join(root, 'src', `${sourceRoute.path}.wxml`), 'utf8')
+      const sourceTs = fs.readFileSync(path.join(root, 'src', `${sourceRoute.path}.ts`), 'utf8')
+      const accessTs = fs.readFileSync(path.join(root, 'src', `${route.path}.ts`), 'utf8')
+      assert(sourceWxml.includes(`id="${selectorId(protectedAccessFixture.sourceSelector)}"`), 'Protected access fixture source selector is not a native node')
+      assert(sourceWxml.includes(`bind:tap="${protectedAccessFixture.sourceHandler}"`), 'Protected access fixture source handler is not UI-bound')
+      assert(sourceTs.includes('mipGlobalAccessGuard.enterTarget('), 'Protected access fixture source no longer enters the global guard')
+      assert(wxml.includes(`id="${selectorId(protectedAccessFixture.restoreSelector)}"`), 'Protected access fixture restore selector is not a native node')
+      assert(wxml.includes(`bind:tap="${protectedAccessFixture.restoreHandler}"`), 'Protected access fixture restore handler is not UI-bound')
+      assert(accessTs.includes('mipIdentityModule.signIn('), 'Protected access fixture restore no longer reloads the server identity')
+    }
+    if ((route.query || []).length && !protectedAccessFixture) {
       const fixture = route.queryFixture
       assert(fixture && typeof fixture === 'object', `${route.path} queryFixture is required`)
       const sourceRoute = routesByPath.get(fixture.sourceRoute)
@@ -308,6 +371,7 @@ function validateRuntimeContract(runtimePages) {
       }
     }
   }
+  assert(protectedAccessFixtureCount === 1, 'Runtime contract must declare exactly one protected access fixture')
 
   const capabilities = runtimePages.deviceRequiredCapabilities || []
   const capabilityIds = new Set()
@@ -1082,7 +1146,199 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
   }
 }
 
+function normalizedRuntimePagePath(page) {
+  return String(page?.path || '').replace(/^\/+/, '').split('?')[0]
+}
+
+async function waitForCurrentRuntimePath(miniProgram, route, timeoutMs = 15_000) {
+  const deadline = Date.now() + timeoutMs
+  let lastPath = ''
+  while (Date.now() < deadline) {
+    const page = await retry(`current page ${route.path}`, () => miniProgram.currentPage())
+    lastPath = normalizedRuntimePagePath(page)
+    if (lastPath === route.path) {
+      return page
+    }
+    await new Promise(resolve => setTimeout(resolve, 250))
+  }
+  throw new Error(`Runtime fixture expected ${route.path}, received ${lastPath || 'no current page'}`)
+}
+
+async function waitForCurrentRuntimeRoute(miniProgram, route, timeoutMs = 15_000) {
+  const deadline = Date.now() + timeoutMs
+  let lastPath = ''
+  let lastRenderError = ''
+  while (Date.now() < deadline) {
+    const page = await retry(`current rendered page ${route.path}`, () => miniProgram.currentPage())
+    lastPath = normalizedRuntimePagePath(page)
+    if (lastPath === route.path) {
+      try {
+        const nodes = await page.renderedNodes(route.selector, { routeOnly: true })
+        if (nodes.length > 0) {
+          return page
+        }
+      }
+      catch (error) {
+        lastRenderError = error instanceof Error ? error.message : String(error)
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, 250))
+  }
+  throw new Error(
+    `Runtime fixture expected rendered ${route.path}:${route.selector}, received ${lastPath || 'no current page'}${lastRenderError ? ` (${lastRenderError})` : ''}`,
+  )
+}
+
+async function tapVisibleRuntimeFixtureAction(page, miniProgram, selector, label) {
+  await retry(
+    `scroll runtime fixture ${label}`,
+    () => miniProgram.callWxMethod('pageScrollTo', { selector, duration: 0 }),
+  )
+  await new Promise(resolve => setTimeout(resolve, 180))
+  const [nodes, systemInfo] = await Promise.all([
+    page.renderedNodes(selector, { routeOnly: true }),
+    miniProgram.systemInfo(),
+  ])
+  assert(
+    interactionTargetViewportEvidence(nodes, systemInfo),
+    `Runtime fixture ${label} target is outside the measured viewport`,
+  )
+  const element = await queryFreshRenderedActionElement(page, selector)
+  assert(element, `Runtime fixture ${label} selector was not rendered: ${selector}`)
+  await element.tap()
+}
+
+async function restoreProtectedAccessRuntimeFixture(
+  miniProgram,
+  runtimePages,
+  route,
+  sensitivePatterns,
+) {
+  const fixture = route.protectedAccessFixture
+  const accessPage = await waitForCurrentRuntimeRoute(miniProgram, route)
+  const before = await retry(`read restore state ${route.path}`, () => accessPage.data())
+  assertNoSensitivePageData(before, route.path, sensitivePatterns)
+  assert(before?.state === 'ready', 'Protected access fixture cannot restore from a non-ready access page')
+  assert(before?.globalGate === true, 'Protected access fixture lost its global guard intent')
+  assert(
+    before?.nextRequirement === fixture.expectedNextRequirement,
+    'Protected access fixture no longer represents the signed-out authentication requirement',
+  )
+
+  await tapVisibleRuntimeFixtureAction(
+    accessPage,
+    miniProgram,
+    fixture.restoreSelector,
+    'restore-identity',
+  )
+  const restoreRoute = runtimePages.routes.find(candidate => candidate.path === fixture.restoreRoute)
+  await waitForCurrentRuntimePath(miniProgram, restoreRoute, 20_000)
+  await retry(
+    `reload restored route ${restoreRoute.path}`,
+    () => miniProgram.reLaunch(`/${restoreRoute.path}`),
+  )
+  const restoredPage = await waitForCurrentRuntimeRoute(miniProgram, restoreRoute, 20_000)
+  const restored = await waitForPageData(restoredPage, restoreRoute, sensitivePatterns, 20_000)
+  assert(
+    restored.status === 'passed',
+    `Protected access fixture did not restore the server-backed identity (${restored.error || restored.state || 'unknown'})`,
+  )
+}
+
+export async function resolveProtectedAccessRuntimeFixture(
+  miniProgram,
+  runtimePages,
+  route,
+  sensitivePatterns,
+) {
+  const fixture = route.protectedAccessFixture
+  const sourceRoute = runtimePages.routes.find(candidate => candidate.path === fixture.sourceRoute)
+  let signOutCompleted = false
+  try {
+    const sourcePage = await retry(
+      `protected access source ${sourceRoute.path}`,
+      () => miniProgram.reLaunch(`/${sourceRoute.path}`),
+    )
+    await retry(
+      `wait ${sourceRoute.selector}`,
+      () => sourcePage.waitForRendered({ selector: sourceRoute.selector, timeout: 15_000 }),
+    )
+    const sourceState = await waitForPageData(sourcePage, sourceRoute, sensitivePatterns, 12_000)
+    assert(
+      sourceState.status === 'passed' && sourceState.state === 'ready',
+      `Protected access fixture source did not reach ready (${sourceState.error || sourceState.state || 'unknown'})`,
+    )
+
+    await miniProgram.mockWxMethod(fixture.confirmationMethod, {
+      cancel: false,
+      confirm: true,
+      errMsg: `${fixture.confirmationMethod}:ok`,
+    })
+    try {
+      await tapVisibleRuntimeFixtureAction(
+        sourcePage,
+        miniProgram,
+        fixture.sourceSelector,
+        'local-sign-out',
+      )
+      signOutCompleted = true
+    }
+    finally {
+      await miniProgram.restoreWxMethod(fixture.confirmationMethod)
+    }
+
+    const accessPage = await waitForCurrentRuntimeRoute(miniProgram, route)
+    const accessState = await waitForPageData(accessPage, route, sensitivePatterns, 12_000)
+    assert(
+      accessState.status === 'passed',
+      `Protected access fixture did not reach ready (${accessState.error || accessState.state || 'unknown'})`,
+    )
+    assert(accessState.data?.globalGate === true, 'Protected access fixture did not originate from the global guard')
+    assert(
+      accessState.data?.nextRequirement === fixture.expectedNextRequirement,
+      'Protected access fixture did not produce the authentication requirement',
+    )
+    const token = String(accessState.data?.token || '')
+    assert(/^[\w.:-]{1,200}$/.test(token), 'Protected access fixture did not produce a bounded opaque intent token')
+
+    return {
+      status: 'resolved',
+      query: queryForRoute(route, { token }),
+      queryMode: 'protected-action-intent',
+      restore: () => restoreProtectedAccessRuntimeFixture(
+        miniProgram,
+        runtimePages,
+        route,
+        sensitivePatterns,
+      ),
+    }
+  }
+  catch (error) {
+    if (!signOutCompleted) {
+      throw error
+    }
+    try {
+      await restoreProtectedAccessRuntimeFixture(miniProgram, runtimePages, route, sensitivePatterns)
+    }
+    catch (restoreError) {
+      throw new Error(
+        `Protected access fixture failed and identity restoration also failed: ${restoreError instanceof Error ? restoreError.message : String(restoreError)}`,
+        { cause: error },
+      )
+    }
+    throw error
+  }
+}
+
 async function resolveRouteQuery(miniProgram, runtimePages, route, sensitivePatterns, fixtureCache) {
+  if (route.protectedAccessFixture) {
+    return resolveProtectedAccessRuntimeFixture(
+      miniProgram,
+      runtimePages,
+      route,
+      sensitivePatterns,
+    )
+  }
   if (!(route.query || []).length) {
     return { status: 'resolved', query: '', queryMode: 'none' }
   }
@@ -1128,6 +1384,8 @@ async function verifyContractedPages(miniProgram, runtimePages, report, options)
     const baseline = path.join(baselineDir, `${name}.png`)
     const current = path.join(outputDir, `${name}.png`)
     const diff = path.join(outputDir, `${name}.diff.png`)
+    let queryMode = (route.query || []).length ? 'runtime-fixture' : 'none'
+    let restoreRuntimeFixture
     try {
       const queryResolution = await resolveRouteQuery(
         miniProgram,
@@ -1136,11 +1394,13 @@ async function verifyContractedPages(miniProgram, runtimePages, report, options)
         sensitivePatterns,
         fixtureCache,
       )
+      queryMode = queryResolution.queryMode
+      restoreRuntimeFixture = queryResolution.restore
       if (queryResolution.status === 'external-wait') {
         report.pages.push({
           route: route.path,
           selector: route.selector,
-          queryMode: queryResolution.queryMode,
+          queryMode,
           status: 'external-wait',
           error: sanitizeRuntimeValue(queryResolution.reason),
         })
@@ -1169,7 +1429,7 @@ async function verifyContractedPages(miniProgram, runtimePages, report, options)
       const result = {
         route: route.path,
         selector: route.selector,
-        queryMode: queryResolution.queryMode,
+        queryMode,
         status,
         sizeBytes,
         mode: updateBaseline ? 'baseline-candidate' : fs.existsSync(baseline) ? 'compare' : 'capture',
@@ -1181,6 +1441,11 @@ async function verifyContractedPages(miniProgram, runtimePages, report, options)
       if (status === 'passed' && !updateBaseline && fs.existsSync(baseline)) {
         Object.assign(result, compare(baseline, current, diff))
       }
+      if (restoreRuntimeFixture) {
+        await restoreRuntimeFixture()
+        restoreRuntimeFixture = undefined
+        result.fixtureRestored = true
+      }
       report.pages.push(result)
       if (status === 'passed') {
         fixtureCache.set(route.path, screenshotData)
@@ -1188,13 +1453,25 @@ async function verifyContractedPages(miniProgram, runtimePages, report, options)
       console.log(`${status === 'passed' ? 'PASS' : status === 'external-wait' ? 'WAIT' : 'FAIL'}  ${route.path}  ${Math.round(sizeBytes / 1024)} KB`)
     }
     catch (error) {
+      if (restoreRuntimeFixture) {
+        try {
+          await restoreRuntimeFixture()
+          restoreRuntimeFixture = undefined
+        }
+        catch (restoreError) {
+          throw new Error(
+            `Runtime fixture cleanup failed for ${route.path}: ${restoreError instanceof Error ? restoreError.message : String(restoreError)}`,
+            { cause: error },
+          )
+        }
+      }
       if (isRecoverableRuntimeConnectionError(error) || isScreenshotCaptureError(error)) {
         throw error
       }
       report.pages.push({
         route: route.path,
         selector: route.selector,
-        queryMode: (route.query || []).length ? 'runtime-fixture' : 'none',
+        queryMode,
         status: 'failed',
         error: sanitizeRuntimeValue(error instanceof Error ? error.message : error),
       })
@@ -1229,7 +1506,9 @@ async function verifyNavigation(miniProgram, runtimePages, report, sensitivePatt
     to: String(returned.path || ''),
   }
 
-  const queryRoutes = runtimePages.routes.filter(route => (route.query || []).length > 0)
+  const queryRoutes = runtimePages.routes.filter(route => (
+    (route.query || []).length > 0 && !route.protectedAccessFixture
+  ))
   const orderedDeepRoutes = [
     ...queryRoutes.filter(route => route.group === 'public'),
     ...queryRoutes.filter(route => route.group !== 'public'),
