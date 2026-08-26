@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+import { assertMipSchedulerHmacSecretsIsolated } from './mip-local-secrets.mjs'
 
 export const SCHEDULER_MEMORY_MB = 128
 export const SCHEDULER_RESERVED_CONCURRENCY_MB = 128
@@ -197,6 +198,9 @@ export function rollingSchedulerAdminRuntimeContract(environment, expected = {},
       || outboxSecret !== outboxSecret.trim()
     ))) {
     throw new Error(spec.adminContractError)
+  }
+  if (spec.kind === 'knowledge') {
+    assertMipSchedulerHmacSecretsIsolated(environment)
   }
   return Object.freeze({ allowedAppIds: Object.freeze(allowedAppIds), secret })
 }

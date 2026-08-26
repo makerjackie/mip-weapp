@@ -8,6 +8,7 @@ import { callCloudbase, loadCaseEnv, parseEnv } from './lib/example-cloudbase.mj
 import { createMipCoreFunctionManifest } from './lib/mip-function-manifest.mjs'
 import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
 import {
+  assertMipSchedulerHmacSecretsIsolated,
   resolveMipStableSecrets,
   secretInventory,
   updateEnvDocument,
@@ -47,6 +48,7 @@ const resolved = resolveMipStableSecrets({
   deployedEnvironments,
   generate: () => randomBytes(48).toString('base64url'),
 })
+assertMipSchedulerHmacSecretsIsolated(resolved.values)
 const nextDocument = updateEnvDocument(
   fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '',
   resolved.values,

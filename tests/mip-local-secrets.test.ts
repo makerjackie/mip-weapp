@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  assertMipSchedulerHmacSecretsIsolated,
   MIP_STABLE_SECRET_KEYS,
   resolveMipStableSecrets,
   secretInventory,
@@ -18,7 +19,7 @@ describe('MIP stable local secrets', () => {
     const result = resolveMipStableSecrets({
       localEnv,
       deployedEnvironments,
-      generate: key => secret(key.at(-1)?.toLowerCase() || 'g'),
+      generate: key => `${key}:${secret('g')}`,
     })
 
     expect(result.values.MIP_IDENTITY_PEPPER).toBe(secret('l'))
@@ -42,6 +43,25 @@ describe('MIP stable local secrets', () => {
       generate: () => secret('g'),
     })).toThrow(/differs/)
     expect(() => resolveMipStableSecrets({ generate: () => 'short' })).toThrow(/at least 32/)
+  })
+
+  it('requires separate message and knowledge scheduler HMAC domains', () => {
+    const shared = secret('s')
+    expect(() => assertMipSchedulerHmacSecretsIsolated({
+      MIP_MESSAGE_DISPATCH_HMAC_SECRET: shared,
+      MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET: shared,
+    })).toThrow(/must differ/)
+    expect(() => resolveMipStableSecrets({
+      localEnv: {
+        MIP_MESSAGE_DISPATCH_HMAC_SECRET: shared,
+        MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET: shared,
+      },
+      generate: key => `${key}:${secret('g')}`,
+    })).toThrow(/must differ/)
+    expect(assertMipSchedulerHmacSecretsIsolated({
+      MIP_MESSAGE_DISPATCH_HMAC_SECRET: secret('m'),
+      MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET: secret('k'),
+    })).toBe(true)
   })
 
   it('updates existing keys once, appends missing keys, and keeps values out of inventory', () => {

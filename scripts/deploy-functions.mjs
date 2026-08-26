@@ -30,7 +30,10 @@ import {
 import { resolveMipDeploymentStage } from './lib/mip-deployment-stage.mjs'
 import { createMipCoreFunctionManifest } from './lib/mip-function-manifest.mjs'
 import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
-import { resolveMipStableSecrets } from './lib/mip-local-secrets.mjs'
+import {
+  assertMipSchedulerHmacSecretsIsolated,
+  resolveMipStableSecrets,
+} from './lib/mip-local-secrets.mjs'
 import {
   assertRuntimeAccountClaimable,
   assertRuntimePrivilegesExact,
@@ -133,6 +136,12 @@ verifyLocalOpenApiDeclarations()
 const target = bindAndRequireMysqlEnvironment(root, envId)
 const scfRegion = String(env.MIP_SCF_REGION || findString(target.environment, ['region']) || '').trim()
 const existingDetails = new Map(manifest.map(spec => [spec.role, existingFunctionDetail(spec.name)]))
+const stableSecretValues = resolveMipStableSecrets({
+  localEnv: env,
+  deployedEnvironments: [...existingDetails.values()].filter(Boolean).map(environmentVariables),
+  generate: () => randomBytes(48).toString('base64url'),
+}).values
+assertMipSchedulerHmacSecretsIsolated(stableSecretValues)
 
 let vpcId = String(env.MIP_DB_VPC_ID || findString(target.mysql, ['vpcid', 'vpc_id']) || '').trim()
 let subnetId = String(env.MIP_DB_SUBNET_ID || findString(target.mysql, ['subnetid', 'subnet_id']) || '').trim()
@@ -255,11 +264,6 @@ if (!existingRuntimeGrantsExact) {
 }
 console.log(`[mip-cloud-deploy] exact mip_* runtime grants verified (${existingRuntimeGrantsExact ? 'reused' : 'converged'})`)
 
-const stableSecretValues = resolveMipStableSecrets({
-  localEnv: env,
-  deployedEnvironments: [...existingDetails.values()].filter(Boolean).map(environmentVariables),
-  generate: () => randomBytes(48).toString('base64url'),
-}).values
 const secrets = Object.freeze({
   identityPepper: stableSecretValues.MIP_IDENTITY_PEPPER,
   unionIdentityPepper: stableSecretValues.MIP_UNION_IDENTITY_PEPPER,

@@ -23,6 +23,18 @@ export const MIP_STABLE_SECRET_KEYS = Object.freeze([
   'MIP_MATCHING_REFERENCE_SECRET',
 ])
 
+export function assertMipSchedulerHmacSecretsIsolated(values = {}) {
+  const messageSecret = normalized(values.MIP_MESSAGE_DISPATCH_HMAC_SECRET)
+  const knowledgeSecret = normalized(values.MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET)
+  if (messageSecret.length < 32 || knowledgeSecret.length < 32) {
+    throw new Error('Message and knowledge scheduler HMAC secrets must both be configured')
+  }
+  if (messageSecret === knowledgeSecret) {
+    throw new Error('MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET must differ from MIP_MESSAGE_DISPATCH_HMAC_SECRET')
+  }
+  return true
+}
+
 function normalized(value) {
   return typeof value === 'string' ? value.trim() : ''
 }
@@ -52,6 +64,7 @@ export function resolveMipStableSecrets({ localEnv = {}, deployedEnvironments = 
     values[key] = value
     sources[key] = localValue ? 'local' : deployedValue ? 'deployed' : 'generated'
   }
+  assertMipSchedulerHmacSecretsIsolated(values)
   return { values, sources }
 }
 

@@ -20,6 +20,7 @@ import { MIP_STABLE_SECRET_KEYS } from '../scripts/lib/mip-local-secrets.mjs'
 const root = path.resolve(import.meta.dirname, '..')
 const read = (relative: string) => fs.readFileSync(path.join(root, relative), 'utf8')
 const secret = 'knowledge-scheduler-secret-at-least-32-bytes'
+const messageSecret = 'message-dispatch-secret-at-least-32-bytes'
 
 const baseEnv = {
   CLOUDBASE_ENV_ID: 'mip-test-env',
@@ -95,6 +96,7 @@ describe('MIP knowledge scheduler operations', () => {
       MIP_ALLOWED_APP_IDS: 'wx0123456789abcdef',
       MIP_KNOWLEDGE_SCHEDULER_FUNCTION_NAME: 'mip-knowledge-scheduler',
       MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET: secret,
+      MIP_MESSAGE_DISPATCH_HMAC_SECRET: messageSecret,
     }
     expect(rollingSchedulerAdminRuntimeContract(admin, {
       requiredAppId: 'wx0123456789abcdef',
@@ -109,6 +111,12 @@ describe('MIP knowledge scheduler operations', () => {
     }, {
       schedulerFunctionName: 'mip-knowledge-scheduler',
     }, KNOWLEDGE_SCHEDULER_OPERATIONS_SPEC)).toThrow('knowledge scheduling automation')
+    expect(() => rollingSchedulerAdminRuntimeContract({
+      ...admin,
+      MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET: messageSecret,
+    }, {
+      schedulerFunctionName: 'mip-knowledge-scheduler',
+    }, KNOWLEDGE_SCHEDULER_OPERATIONS_SPEC)).toThrow('must differ')
   })
 
   it('fails prewrite on any environment drift and creates raw SCF without a VPC', () => {
@@ -226,6 +234,12 @@ describe('MIP knowledge scheduler operations', () => {
     const deployCore = read('scripts/deploy-functions.mjs')
     expect(deployCore).toContain('MIP_KNOWLEDGE_SCHEDULER_FUNCTION_NAME: options.functionNames.knowledgeScheduler')
     expect(deployCore).toContain('MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET: options.secrets.knowledgeSchedulerHmac')
+    expect(deployCore.indexOf('assertMipSchedulerHmacSecretsIsolated(stableSecretValues)'))
+      .toBeLessThan(deployCore.indexOf('removeOwnedLegacyTimer(spec.name'))
+    expect(read('scripts/init-mip-secrets.mjs'))
+      .toContain('assertMipSchedulerHmacSecretsIsolated(resolved.values)')
+    expect(read('scripts/verify-cloud.mjs'))
+      .toContain('assertMipSchedulerHmacSecretsIsolated(variables)')
     const example = read('.env.example')
     expect(example).toContain('MIP_KNOWLEDGE_SCHEDULER_ROLE_NAME=MIPKnowledgeSchedulerRole')
     expect(example).toContain('MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET=')

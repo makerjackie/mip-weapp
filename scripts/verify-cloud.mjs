@@ -14,6 +14,7 @@ import {
 } from './lib/example-cloudbase.mjs'
 import { createMipCoreFunctionManifest } from './lib/mip-function-manifest.mjs'
 import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
+import { assertMipSchedulerHmacSecretsIsolated } from './lib/mip-local-secrets.mjs'
 import {
   assertRuntimeAccountClaimable,
   assertRuntimePrivilegesExact,
@@ -374,6 +375,7 @@ function assertRefundDispatchEnvironment(detail) {
 
 function assertKnowledgeEnvironment(detail) {
   const variables = environmentVariables(detail)
+  assertMipSchedulerHmacSecretsIsolated(variables)
   if (variables.MIP_KNOWLEDGE_SCHEDULER_FUNCTION_NAME !== functionNames.knowledgeScheduler
     || String(variables.MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET || '').length < 32) {
     throw new Error('Admin knowledge scheduler link or internal HMAC configuration is incomplete')
