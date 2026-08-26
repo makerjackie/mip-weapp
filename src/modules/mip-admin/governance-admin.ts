@@ -1,4 +1,5 @@
 import type { MipAdminGateway } from './types'
+import type { AdminOperationsQueueState } from './operations-queue'
 
 interface GovernanceAdminCache {
   query: <T>(key: string, loader: () => Promise<T>, options?: { force?: boolean }) => Promise<T>
@@ -32,6 +33,10 @@ export interface MipGovernanceAdmin {
     input?: OperationalExceptionListInput,
     force?: boolean,
   ) => ReturnType<MipAdminGateway['listOperationalExceptions']>
+  listOperationsQueue: (
+    input?: { state?: AdminOperationsQueueState | '', cursor?: string, limit?: number },
+    force?: boolean,
+  ) => ReturnType<MipAdminGateway['listOperationsQueue']>
 }
 
 const cacheKeys = {
@@ -42,6 +47,7 @@ const cacheKeys = {
   rolePolicies: 'mip-admin:role-capability-policies',
   audit: 'mip-admin:audit',
   exceptions: 'mip-admin:exceptions',
+  operationsQueue: 'mip-admin:operations-queue',
 } as const
 
 export function createMipGovernanceAdmin(
@@ -99,6 +105,11 @@ export function createMipGovernanceAdmin(
     ) => cache.query(
       `${cacheKeys.exceptions}:${JSON.stringify(input)}`,
       () => gateway.listOperationalExceptions(input),
+      { force },
+    ),
+    listOperationsQueue: (input = {}, force = false) => cache.query(
+      `${cacheKeys.operationsQueue}:${JSON.stringify(input)}`,
+      () => gateway.listOperationsQueue(input),
       { force },
     ),
   }

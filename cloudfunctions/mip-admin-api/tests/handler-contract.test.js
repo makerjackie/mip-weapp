@@ -266,7 +266,7 @@ describe('admin handler and isolation contract', () => {
     })
     const businessActions = Object.keys(actions).filter(action => action !== 'health')
 
-    assert.equal(businessActions.length, 137)
+    assert.equal(businessActions.length, 139)
     for (const action of businessActions) {
       const before = calls.length
       const response = await handler({ contractVersion: 1, action, input: { marker: action } })

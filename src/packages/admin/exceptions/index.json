@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "异常中心",
+  "navigationBarTitleText": "运营待办与异常",
   "enablePullDownRefresh": true,
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",

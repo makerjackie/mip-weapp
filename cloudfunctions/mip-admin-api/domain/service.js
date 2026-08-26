@@ -17,6 +17,7 @@ const { createAdminGrowth } = require('./growth')
 const { createAdminMessaging } = require('./messaging')
 const { createAdminMemberships } = require('./memberships')
 const { createAdminMessageDeliveryReviews } = require('./message-delivery-review-service')
+const { createAdminOperationsQueue } = require('./operations-queue')
 const { createAdminOpportunities } = require('./opportunities')
 const { createAdminOrders } = require('./orders')
 const { createAdminUsers } = require('./users')
@@ -173,6 +174,7 @@ function createAdminService({
     reconcileNotificationDelivery,
     repository,
   })
+  const { listOperationsQueue } = createAdminOperationsQueue({ access, now, repository })
   const {
     archiveOpportunity,
     closeOpportunityCommentReport,
@@ -389,6 +391,7 @@ function createAdminService({
     listOpportunities,
     listOrders,
     listOperationalExceptions,
+    listOperationsQueue,
     listMessageCampaignScopes,
     listMessageCampaigns,
     listMessageDeliveryReviews,

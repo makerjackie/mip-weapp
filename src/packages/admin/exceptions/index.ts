@@ -11,6 +11,7 @@ import type {
 } from '../../../modules/mip-admin/operational-exceptions'
 import type { AdminPageState } from '../shared/page-state'
 import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
+import type { AdminOperationsQueueItem, AdminOperationsQueueState } from '../../../modules/mip-admin/operations-queue'
 import { deliveryReviewMutationSignature } from '../../../modules/mip-admin/message-delivery-reviews'
 import { formatLocalDateTime } from '../../../utils/date'
 import { adminLoadFailure, isAdminForbiddenError } from '../shared/page-state'
@@ -39,6 +40,12 @@ interface DeliveryReviewView extends AdminDeliveryReviewItem {
   resolutionText: string
   selected: boolean
   requiresNote: boolean
+}
+
+interface QueueView extends AdminOperationsQueueItem {
+  stateText: string
+  occurredText: string
+  sourceText: string
 }
 
 const sourceLabels: Record<AdminOperationalExceptionType, string> = {
@@ -86,6 +93,12 @@ const workflowLabels: Record<AdminDeliveryReviewItem['workflow']['status'], stri
   OPEN: '待认领',
   CLAIMED: '复核中',
   RESOLVED: '已闭环',
+}
+
+const queueStateLabels: Record<AdminOperationsQueueState, string> = {
+  PENDING: '待处理',
+  PROCESSING: '处理中',
+  MANUAL_REVIEW: '需人工复核',
 }
 
 const reviewStateLabels: Record<string, string> = {
@@ -160,6 +173,15 @@ function reviewView(item: AdminDeliveryReviewItem, selectedId: string): Delivery
   }
 }
 
+function queueView(item: AdminOperationsQueueItem): QueueView {
+  return {
+    ...item,
+    stateText: queueStateLabels[item.state],
+    occurredText: formatLocalDateTime(item.occurredAt),
+    sourceText: item.source === 'DELIVERY_REVIEW' ? '消息投递' : sourceLabels[item.sourceType as AdminOperationalExceptionType],
+  }
+}
+
 function mutationKey(signature: string, action: string) {
   const existing = pendingRequestKeys.get(signature)
   if (existing) {
@@ -194,6 +216,10 @@ Page({
     message: '',
     exceptionsMessage: '',
     reviewMessage: '',
+    queueItems: [] as QueueView[],
+    queueAllItems: [] as QueueView[],
+    queueState: '' as AdminOperationsQueueState | '',
+    queueMessage: '',
   },
 
   onShow() {
@@ -230,6 +256,7 @@ Page({
         canOperationalExceptions ? this.loadExceptions(force) : Promise.resolve(),
         canDeliveryReview ? this.loadDeliveryReviews(force) : Promise.resolve(),
       ])
+      await this.loadQueue(force)
     }
     catch (error) {
       if (isAdminForbiddenError(error)) {
@@ -317,6 +344,57 @@ Page({
     }
     finally {
       this.setData({ reviewLoadingMore: false })
+    }
+  },
+
+  async loadQueue(force = false) {
+    try {
+      const response = await mipAdminModule.governance.listOperationsQueue({ limit: 50 }, force)
+      const queueAllItems = response.items.map(queueView)
+      this.setData({
+        queueAllItems,
+        queueItems: this.data.queueState
+          ? queueAllItems.filter(item => item.state === this.data.queueState)
+          : queueAllItems,
+        queueMessage: '',
+      })
+    }
+    catch (error) {
+      const failure = adminLoadFailure(error, {
+        hasContent: this.data.queueItems.length > 0,
+        fallbackMessage: '运营待办加载失败',
+      })
+      this.setData({ queueMessage: failure.message })
+    }
+  },
+
+  refreshQueue() {
+    const filtered = this.data.queueState
+      ? this.data.queueAllItems.filter(item => item.state === this.data.queueState)
+      : this.data.queueAllItems
+    this.setData({
+      queueItems: filtered,
+      queueMessage: '',
+    })
+  },
+
+  chooseQueueState(event: WechatMiniprogram.TouchEvent) {
+    const value = String(event.currentTarget.dataset.value || '') as AdminOperationsQueueState | ''
+    if (value !== '' && !Object.hasOwn(queueStateLabels, value)) return
+    this.setData({ queueState: value })
+    this.refreshQueue()
+  },
+
+  openQueueItem(event: WechatMiniprogram.TouchEvent) {
+    const item = this.data.queueItems.find(candidate => candidate.id === String(event.currentTarget.dataset.id || ''))
+    if (!item) return
+    if (item.reviewRef) {
+      const reviewId = `${item.reviewRef.type}:${item.reviewRef.id}`
+      this.toggleReview({ currentTarget: { dataset: { id: reviewId } } } as unknown as WechatMiniprogram.TouchEvent)
+      return
+    }
+    if (item.target?.route.startsWith('/packages/admin/')) {
+      void wx.navigateTo({ url: item.target.route })
     }
   },
 

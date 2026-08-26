@@ -111,6 +111,7 @@ export function createMipAdminModule(
     getOrder: orders.get,
     orders,
     listOperationalExceptions: governance.listOperationalExceptions,
+    listOperationsQueue: governance.listOperationsQueue,
     listAudit: governance.listAudit,
     exportAndOpen: exports.createAndOpen,
     getPendingExportStatus: exports.getPendingStatus,

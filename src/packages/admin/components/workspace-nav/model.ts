@@ -208,7 +208,7 @@ export const adminWorkspaceGroups: readonly AdminWorkspaceNavGroup[] = [
       },
       {
         key: 'exceptions',
-        label: '异常中心',
+        label: '运营待办与异常',
         route: 'packages/admin/exceptions/index',
         capabilities: ['operations.exceptions.read', 'messages.delivery.review'],
       },

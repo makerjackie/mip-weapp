@@ -78,6 +78,7 @@ import {
   parseMessageTemplatePage,
 } from './message-templates'
 import { parseOperationalExceptionPage } from './operational-exceptions'
+import { parseOperationsQueuePage } from './operations-queue'
 import { parseAdminOpportunityDetail, parseAdminOpportunityPage } from './opportunities'
 import {
   parseOpportunityCommentSettings,
@@ -1015,6 +1016,9 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
     retryRefund: refundId => call('mip.admin.refunds.retry', { refundId }),
     listOperationalExceptions: async input => parseOperationalExceptionPage(
       await call('mip.admin.exceptions.list', { ...(input || {}) }),
+    ),
+    listOperationsQueue: async input => parseOperationsQueuePage(
+      await call('mip.admin.operations.queue.list', { ...(input || {}) }),
     ),
     listAudit: input => call('mip.admin.audit.list', input || {}),
   }

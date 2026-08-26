@@ -64,6 +64,10 @@ import type {
   AdminOperationalExceptionPage,
 } from './operational-exceptions'
 import type {
+  AdminOperationsQueuePage,
+  AdminOperationsQueueState,
+} from './operations-queue'
+import type {
   AdminOpportunityCommentSettings,
   AdminOpportunityCommentState,
 } from './opportunity-comments'
@@ -1259,6 +1263,11 @@ export interface MipAdminGateway {
   submitRefund: (input: Record<string, unknown>) => Promise<Record<string, unknown>>
   retryRefund: (refundId: string) => Promise<Record<string, unknown>>
   listOperationalExceptions: (input?: AdminOperationalExceptionFilters) => Promise<AdminOperationalExceptionPage>
+  listOperationsQueue: (input?: {
+    state?: AdminOperationsQueueState | ''
+    cursor?: string
+    limit?: number
+  }) => Promise<AdminOperationsQueuePage>
   listAudit: (input?: Record<string, unknown>) => Promise<AdminPage<AdminAuditItem>>
 }
 

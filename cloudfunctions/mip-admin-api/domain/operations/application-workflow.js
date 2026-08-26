@@ -7,6 +7,7 @@ module.exports = defineManifest('APPLICATION_WORKFLOW', [
   serviceOperation('mip.admin.dashboard.overview.get', 'QUERY', 'getDashboardOverview'),
   serviceOperation('mip.admin.exports.status', 'QUERY', 'getExportStatus'),
   serviceOperation('mip.admin.exceptions.list', 'QUERY', 'listOperationalExceptions'),
+  serviceOperation('mip.admin.operations.queue.list', 'QUERY', 'listOperationsQueue'),
   serviceOperation('mip.admin.exports.create', 'MUTATION', 'createExport'),
   serviceOperation('mip.admin.exports.prepare', 'MUTATION', 'prepareExport'),
   serviceOperation('mip.admin.exports.reserve', 'MUTATION', 'reserveExportDownload'),
