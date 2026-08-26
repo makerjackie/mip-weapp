@@ -1,7 +1,10 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { resolveProtectedAccessRuntimeFixture } from '../scripts/verify-runtime.mjs'
+import {
+  navigateFreshRuntimeRoute,
+  resolveProtectedAccessRuntimeFixture,
+} from '../scripts/verify-runtime.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const contract = JSON.parse(fs.readFileSync(path.join(root, 'config/runtime-pages.json'), 'utf8'))
@@ -15,8 +18,12 @@ const homeRoute = contract.routes.find((route: { path: string }) => (
   route.path === 'pages/index/index'
 ))
 
-function createFixtureRuntime(token = 'mip-1720000000000-runtime') {
+function createFixtureRuntime(
+  token = 'mip-1720000000000-runtime',
+  options: { signOutTapAttempt?: number } = {},
+) {
   let currentPage: Record<string, unknown>
+  let signOutTapCount = 0
   const homePage = {
     path: homeRoute.path,
     data: vi.fn(async () => ({ state: 'ready' })),
@@ -74,7 +81,10 @@ function createFixtureRuntime(token = 'mip-1720000000000-runtime') {
   }
   const privacyPage = {
     ...actionPage(privacyRoute.path, privacyRoute.selector, '#privacy-sign-out', () => ({ state: 'ready' }), () => {
-      currentPage = accessPage
+      signOutTapCount += 1
+      if (signOutTapCount >= (options.signOutTapAttempt || 1)) {
+        currentPage = accessPage
+      }
     }),
   }
   currentPage = privacyPage
@@ -82,11 +92,11 @@ function createFixtureRuntime(token = 'mip-1720000000000-runtime') {
     reLaunch: vi.fn(async (url: string) => {
       if (url === `/${privacyRoute.path}`) {
         currentPage = privacyPage
-        return privacyPage
+        return { path: 'transitioning' }
       }
       expect(url).toBe(`/${homeRoute.path}`)
       currentPage = homePage
-      return homePage
+      return { path: 'transitioning' }
     }),
     currentPage: vi.fn(async () => currentPage),
     callWxMethod: vi.fn(async (method: string, options: { selector: string, duration: number }) => {
@@ -102,6 +112,41 @@ function createFixtureRuntime(token = 'mip-1720000000000-runtime') {
 }
 
 describe('runtime protected access fixture', () => {
+  it('repeats a safe navigation when logic changes route before the rendered tree catches up', async () => {
+    let navigationCount = 0
+    const transitionPage = {
+      path: homeRoute.path,
+      renderedNodes: vi.fn(async () => []),
+    }
+    const renderedPage = {
+      path: homeRoute.path,
+      renderedNodes: vi.fn(async () => [{ width: 375, height: 812 }]),
+    }
+    const miniProgram = {
+      currentPage: vi.fn(async () => (
+        navigationCount < 2 ? transitionPage : renderedPage
+      )),
+    }
+    const navigate = vi.fn(async () => {
+      navigationCount += 1
+      return transitionPage
+    })
+
+    await expect(navigateFreshRuntimeRoute(
+      miniProgram,
+      homeRoute,
+      'home probe',
+      navigate,
+      50,
+    )).resolves.toBe(renderedPage)
+    expect(navigate).toHaveBeenCalledTimes(2)
+    expect(transitionPage.renderedNodes).toHaveBeenCalled()
+    expect(renderedPage.renderedNodes).toHaveBeenCalledWith(
+      homeRoute.selector,
+      { routeOnly: true },
+    )
+  })
+
   it('uses the UI-bound local logout to create a real global-guard intent and restores identity', async () => {
     expect(accessRoute).toMatchObject({
       externalWaitStates: ['expired'],
@@ -181,6 +226,27 @@ describe('runtime protected access fixture', () => {
     expect(runtime.miniProgram.restoreWxMethod).toHaveBeenCalledWith('showModal')
   })
 
+  it('retries the visible local sign-out control when its first native tap does not dispatch', async () => {
+    const runtime = createFixtureRuntime('mip-1720000000000-retry', { signOutTapAttempt: 2 })
+
+    const resolved = await resolveProtectedAccessRuntimeFixture(
+      runtime.miniProgram,
+      contract,
+      accessRoute,
+      contract.sensitivePatterns,
+    )
+
+    expect(resolved).toMatchObject({
+      status: 'resolved',
+      query: 'token=mip-1720000000000-retry',
+      queryMode: 'protected-action-intent',
+    })
+    expect(runtime.privacyPage.element.tap).toHaveBeenCalledTimes(2)
+    expect(runtime.miniProgram.restoreWxMethod).toHaveBeenCalledWith('showModal')
+    await resolved.restore()
+    expect(runtime.homePage.data).toHaveBeenCalled()
+  })
+
   it('locks source and restore actions to visible native wrappers without handler fallback', () => {
     const privacyMarkup = fs.readFileSync(
       path.join(root, 'src/packages/member/privacy/index.wxml'),
@@ -215,6 +281,9 @@ describe('runtime protected access fixture', () => {
     expect(verifier).toContain('page?.elementMap?.clear?.()')
     expect(verifier).toContain('page.$(selector, { fallback: false })')
     expect(verifier).toContain('(route.query || []).length > 0 && !route.protectedAccessFixture')
+    expect(verifier).toContain('export async function navigateFreshRuntimeRoute(')
+    expect(verifier).toContain('render recovery')
+    expect(verifier).toContain('const returned = await waitForCurrentRuntimeRoute(miniProgram, homeRoute)')
     expect(resolver).not.toContain('.callMethod(')
   })
 })

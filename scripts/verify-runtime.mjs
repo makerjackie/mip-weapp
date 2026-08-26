@@ -952,10 +952,11 @@ async function assertRepresentativeVisible(page, scenario) {
 async function verifyRepresentativeStates(miniProgram, runtimePages, report, sensitivePatterns) {
   report.representativeStates = []
   for (const scenario of representativeStateScenarios(runtimePages)) {
-    const page = await retry(`representative ${scenario.id}`, () => miniProgram.reLaunch(`/${scenario.route}`))
-    await retry(
-      `wait representative ${scenario.id}`,
-      () => page.waitForRendered({ selector: scenario.contract.selector, timeout: 15000 }),
+    const page = await navigateFreshRuntimeRoute(
+      miniProgram,
+      scenario.contract,
+      `representative ${scenario.id}`,
+      () => miniProgram.reLaunch(`/${scenario.route}`),
     )
     await waitForRepresentativeLifecycle(page)
     const beforeData = await retry(
@@ -1011,10 +1012,11 @@ async function verifyInteractionJourneys(miniProgram, runtimePages, report, sens
     const result = { id: journey.id, route: journey.route, status: 'running', steps: [] }
     report.interactions.push(result)
     try {
-      const page = await retry(`interaction ${journey.id}`, () => miniProgram.reLaunch(`/${journey.route}`))
-      await retry(
-        `wait interaction ${journey.id}`,
-        () => page.waitForRendered({ selector: route.selector, timeout: 15000 }),
+      const page = await navigateFreshRuntimeRoute(
+        miniProgram,
+        route,
+        `interaction ${journey.id}`,
+        () => miniProgram.reLaunch(`/${journey.route}`),
       )
       const settled = await waitForPageData(page, route, sensitivePatterns, 12000)
       assert(settled.status === 'passed', `Interaction ${journey.id} route did not reach an accepted state`)
@@ -1189,6 +1191,39 @@ async function waitForCurrentRuntimeRoute(miniProgram, route, timeoutMs = 15_000
   )
 }
 
+export async function navigateFreshRuntimeRoute(
+  miniProgram,
+  route,
+  label,
+  navigate,
+  timeoutMs = 15_000,
+) {
+  let firstError
+  for (let attempt = 1; attempt <= 2; attempt += 1) {
+    await retry(
+      attempt === 1 ? label : `${label} render recovery`,
+      navigate,
+    )
+    try {
+      return await waitForCurrentRuntimeRoute(
+        miniProgram,
+        route,
+        attempt === 1 ? Math.min(timeoutMs, 3_000) : timeoutMs,
+      )
+    }
+    catch (error) {
+      if (attempt === 2) {
+        throw new Error(
+          `Runtime navigation ${label} did not render after one safe repeat: ${error instanceof Error ? error.message : String(error)}`,
+          { cause: firstError || error },
+        )
+      }
+      firstError = error
+    }
+  }
+  throw firstError || new Error(`Runtime navigation ${label} failed`)
+}
+
 async function tapVisibleRuntimeFixtureAction(page, miniProgram, selector, label) {
   await retry(
     `scroll runtime fixture ${label}`,
@@ -1233,11 +1268,13 @@ async function restoreProtectedAccessRuntimeFixture(
   )
   const restoreRoute = runtimePages.routes.find(candidate => candidate.path === fixture.restoreRoute)
   await waitForCurrentRuntimePath(miniProgram, restoreRoute, 20_000)
-  await retry(
+  const restoredPage = await navigateFreshRuntimeRoute(
+    miniProgram,
+    restoreRoute,
     `reload restored route ${restoreRoute.path}`,
     () => miniProgram.reLaunch(`/${restoreRoute.path}`),
+    20_000,
   )
-  const restoredPage = await waitForCurrentRuntimeRoute(miniProgram, restoreRoute, 20_000)
   const restored = await waitForPageData(restoredPage, restoreRoute, sensitivePatterns, 20_000)
   assert(
     restored.status === 'passed',
@@ -1255,13 +1292,11 @@ export async function resolveProtectedAccessRuntimeFixture(
   const sourceRoute = runtimePages.routes.find(candidate => candidate.path === fixture.sourceRoute)
   let signOutCompleted = false
   try {
-    const sourcePage = await retry(
+    let sourcePage = await navigateFreshRuntimeRoute(
+      miniProgram,
+      sourceRoute,
       `protected access source ${sourceRoute.path}`,
       () => miniProgram.reLaunch(`/${sourceRoute.path}`),
-    )
-    await retry(
-      `wait ${sourceRoute.selector}`,
-      () => sourcePage.waitForRendered({ selector: sourceRoute.selector, timeout: 15_000 }),
     )
     const sourceState = await waitForPageData(sourcePage, sourceRoute, sensitivePatterns, 12_000)
     assert(
@@ -1274,20 +1309,52 @@ export async function resolveProtectedAccessRuntimeFixture(
       confirm: true,
       errMsg: `${fixture.confirmationMethod}:ok`,
     })
+    let accessPage
     try {
-      await tapVisibleRuntimeFixtureAction(
-        sourcePage,
-        miniProgram,
-        fixture.sourceSelector,
-        'local-sign-out',
-      )
-      signOutCompleted = true
+      for (let attempt = 1; attempt <= 2 && !accessPage; attempt += 1) {
+        if (attempt > 1) {
+          sourcePage = await navigateFreshRuntimeRoute(
+            miniProgram,
+            sourceRoute,
+            'retry local sign-out source',
+            () => miniProgram.reLaunch(`/${sourceRoute.path}`),
+          )
+        }
+        await tapVisibleRuntimeFixtureAction(
+          sourcePage,
+          miniProgram,
+          fixture.sourceSelector,
+          'local-sign-out',
+        )
+        await new Promise(resolve => setTimeout(resolve, 250))
+        const [currentPage, sourceData] = await Promise.all([
+          retry('read local sign-out route', () => miniProgram.currentPage()),
+          sourcePage.data(undefined, { routeOnly: true }).catch(() => undefined),
+        ])
+        signOutCompleted = signOutCompleted
+          || normalizedRuntimePagePath(currentPage) === route.path
+          || sourceData?.localLogoutState === 'processing'
+        if (!signOutCompleted) {
+          continue
+        }
+        try {
+          accessPage = await waitForCurrentRuntimeRoute(miniProgram, route, 3_000)
+        }
+        catch {
+          accessPage = await navigateFreshRuntimeRoute(
+            miniProgram,
+            route,
+            'resume global access guard after local sign-out',
+            () => miniProgram.reLaunch(`/${fixture.restoreRoute}`),
+            12_000,
+          )
+        }
+      }
     }
     finally {
       await miniProgram.restoreWxMethod(fixture.confirmationMethod)
     }
-
-    const accessPage = await waitForCurrentRuntimeRoute(miniProgram, route)
+    assert(accessPage, 'Protected access fixture local sign-out control did not enter the access flow')
     const accessState = await waitForPageData(accessPage, route, sensitivePatterns, 12_000)
     assert(
       accessState.status === 'passed',
@@ -1351,13 +1418,11 @@ async function resolveRouteQuery(miniProgram, runtimePages, route, sensitivePatt
   let sourceData = fixtureCache.get(sourceCacheKey)
   if (!sourceData) {
     const sourceRoute = runtimePages.routes.find(candidate => candidate.path === fixture.sourceRoute)
-    const sourcePage = await retry(
+    const sourcePage = await navigateFreshRuntimeRoute(
+      miniProgram,
+      sourceRoute,
       `query fixture ${route.path}`,
       () => miniProgram.reLaunch(`/${sourceRoute.path}${sourceQuery ? `?${sourceQuery}` : ''}`),
-    )
-    await retry(
-      `wait query fixture ${sourceRoute.path}`,
-      () => sourcePage.waitForRendered({ selector: sourceRoute.selector, timeout: 15000 }),
     )
     const settled = await waitForPageData(sourcePage, sourceRoute, sensitivePatterns, 12000)
     if (settled.status !== 'passed') {
@@ -1408,8 +1473,12 @@ async function verifyContractedPages(miniProgram, runtimePages, report, options)
         continue
       }
       const launchRoute = `/${route.path}${queryResolution.query ? `?${queryResolution.query}` : ''}`
-      const page = await retry(`reLaunch ${route.path}`, () => miniProgram.reLaunch(launchRoute))
-      await retry(`wait ${route.selector}`, () => page.waitForRendered({ selector: route.selector, timeout: 15000 }))
+      const page = await navigateFreshRuntimeRoute(
+        miniProgram,
+        route,
+        `reLaunch ${route.path}`,
+        () => miniProgram.reLaunch(launchRoute),
+      )
       assert(String(page.path || '').replace(/^\//, '') === route.path, `Unexpected runtime route: ${page.path}`)
       const settled = await waitForPageData(page, route, sensitivePatterns)
       await new Promise(resolve => setTimeout(resolve, 600))
@@ -1484,8 +1553,12 @@ async function verifyNavigation(miniProgram, runtimePages, report, sensitivePatt
   const tabs = runtimePages.routes.filter(route => route.tab)
   report.navigation = { tabs: [], back: null, deepLink: null }
   for (const route of tabs) {
-    const page = await retry(`switch tab ${route.path}`, () => miniProgram.switchTab(`/${route.path}`))
-    await retry(`wait tab ${route.path}`, () => page.waitForRendered({ selector: route.selector, timeout: 15000 }))
+    const page = await navigateFreshRuntimeRoute(
+      miniProgram,
+      route,
+      `switch tab ${route.path}`,
+      () => miniProgram.switchTab(`/${route.path}`),
+    )
     assert(String(page.path || '').replace(/^\//, '') === route.path, `Tab opened unexpected route: ${page.path}`)
     const settled = await waitForPageData(page, route, sensitivePatterns, 12000)
     report.navigation.tabs.push({ route: route.path, status: settled.status, state: settled.state })
@@ -1494,12 +1567,16 @@ async function verifyNavigation(miniProgram, runtimePages, report, sensitivePatt
   const homeRoute = runtimePages.routes.find(route => route.path === 'pages/index/index')
   const returnRoute = runtimePages.routes.find(route => route.path === 'packages/member/help/index')
   assert(homeRoute && returnRoute, 'Runtime navigation contract is missing home/help')
-  const home = await retry('return flow home', () => miniProgram.reLaunch('/pages/index/index'))
-  await retry('wait return flow home', () => home.waitForRendered({ selector: homeRoute.selector, timeout: 15000 }))
-  const secondary = await retry('open secondary page', () => miniProgram.navigateTo('/packages/member/help/index'))
-  await retry('wait secondary page', () => secondary.waitForRendered({ selector: returnRoute.selector, timeout: 15000 }))
-  const returned = await retry('navigate back', () => miniProgram.navigateBack())
-  await retry('wait returned home', () => returned.waitForRendered({ selector: homeRoute.selector, timeout: 15000 }))
+  await navigateFreshRuntimeRoute(
+    miniProgram,
+    homeRoute,
+    'return flow home',
+    () => miniProgram.reLaunch('/pages/index/index'),
+  )
+  await retry('open secondary page', () => miniProgram.navigateTo('/packages/member/help/index'))
+  await waitForCurrentRuntimeRoute(miniProgram, returnRoute)
+  await retry('navigate back', () => miniProgram.navigateBack())
+  const returned = await waitForCurrentRuntimeRoute(miniProgram, homeRoute)
   report.navigation.back = {
     status: returned.path === 'pages/index/index' ? 'passed' : 'failed',
     from: returnRoute.path,
@@ -1541,8 +1618,12 @@ async function verifyNavigation(miniProgram, runtimePages, report, sensitivePatt
     }
     return
   }
-  const deepPage = await retry('open fixture deep link', () => miniProgram.reLaunch(`/${deepRoute.path}?${deepResolution.query}`))
-  await retry('wait safe deep link root', () => deepPage.waitForRendered({ selector: deepRoute.selector, timeout: 15000 }))
+  const deepPage = await navigateFreshRuntimeRoute(
+    miniProgram,
+    deepRoute,
+    'open fixture deep link',
+    () => miniProgram.reLaunch(`/${deepRoute.path}?${deepResolution.query}`),
+  )
   const deepResult = await waitForPageData(deepPage, deepRoute, sensitivePatterns, 12000)
   report.navigation.deepLink = {
     route: deepRoute.path,
