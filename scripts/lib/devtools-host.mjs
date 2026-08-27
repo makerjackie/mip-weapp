@@ -65,6 +65,17 @@ export function resolveLocalDevtoolsHostRoot(
   )
 }
 
+export function selectRuntimeDevtoolsRoot({
+  sourceRoot,
+  hostRoot = resolveLocalDevtoolsHostRoot(sourceRoot),
+  openedSourceAutomatorAvailable = false,
+} = {}) {
+  if (!sourceRoot) {
+    throw new Error('Runtime DevTools selection requires sourceRoot')
+  }
+  return openedSourceAutomatorAvailable ? path.resolve(sourceRoot) : path.resolve(hostRoot)
+}
+
 /**
  * Build an ignored DevTools project whose public config contains the local
  * AppID. WeChat DevTools CLI reads project.config.json before it consistently
