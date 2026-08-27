@@ -50,6 +50,13 @@ function profileRefs(value: unknown) {
 
 const locationTypes = new Set<OpportunityLocationType>(['CITY', 'NATIONAL', 'REMOTE'])
 
+function record(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('人才服务返回了无效响应')
+  }
+  return value as Record<string, unknown>
+}
+
 function cents(value: unknown, field: string) {
   if (value === undefined || value === null || value === '') {
     return undefined
@@ -257,13 +264,6 @@ export function normalizePeopleFilter(value: PeopleFilter): PeopleFilter {
     cursor: text(value.cursor, 768, '分页位置', false) || undefined,
     limit: Math.min(30, Math.max(1, Math.trunc(value.limit || 20))),
   }
-}
-
-function record(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('人才服务返回了无效响应')
-  }
-  return value as Record<string, unknown>
 }
 
 function responseText(value: unknown, maximum: number, required = false) {

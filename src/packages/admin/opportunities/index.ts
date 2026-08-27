@@ -67,6 +67,26 @@ function dateBoundary(value: string, endOfDay: boolean) {
   return Number.isFinite(date.getTime()) ? date.toISOString() : ''
 }
 
+function amountRange(minimum: string, maximum: string) {
+  const toCents = (value: string) => {
+    if (!value.trim()) {
+      return undefined
+    }
+    const yuan = Number(value)
+    const cents = Math.round(yuan * 100)
+    if (!Number.isFinite(yuan) || yuan < 0 || !Number.isSafeInteger(cents)) {
+      throw new Error('请填写有效的金额区间。')
+    }
+    return cents
+  }
+  const minAmountCents = toCents(minimum)
+  const maxAmountCents = toCents(maximum)
+  if (minAmountCents !== undefined && maxAmountCents !== undefined && minAmountCents > maxAmountCents) {
+    throw new Error('最低金额不能大于最高金额。')
+  }
+  return { minAmountCents, maxAmountCents }
+}
+
 function filters(data: {
   query: string
   ownerQuery: string
@@ -94,26 +114,6 @@ function filters(data: {
     ...(minAmountCents === undefined ? {} : { minAmountCents }),
     ...(maxAmountCents === undefined ? {} : { maxAmountCents }),
   }
-}
-
-function amountRange(minimum: string, maximum: string) {
-  const toCents = (value: string) => {
-    if (!value.trim()) {
-      return undefined
-    }
-    const yuan = Number(value)
-    const cents = Math.round(yuan * 100)
-    if (!Number.isFinite(yuan) || yuan < 0 || !Number.isSafeInteger(cents)) {
-      throw new Error('请填写有效的金额区间。')
-    }
-    return cents
-  }
-  const minAmountCents = toCents(minimum)
-  const maxAmountCents = toCents(maximum)
-  if (minAmountCents !== undefined && maxAmountCents !== undefined && minAmountCents > maxAmountCents) {
-    throw new Error('最低金额不能大于最高金额。')
-  }
-  return { minAmountCents, maxAmountCents }
 }
 
 function opportunityView(item: AdminOpportunity): AdminOpportunityView {

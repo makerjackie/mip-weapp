@@ -108,53 +108,6 @@ export function deriveOperationsQueue(
   return { items, nextCursor: null }
 }
 
-export function parseOperationsQueuePage(value: unknown): AdminOperationsQueuePage {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw invalidResponse()
-  }
-  const record = value as Record<string, unknown>
-  if (!Array.isArray(record.items) || !(record.nextCursor === null || typeof record.nextCursor === 'string')
-    || Object.keys(record).some(key => !['items', 'nextCursor'].includes(key))) {
-    throw invalidResponse()
-  }
-  return { items: record.items.map(parseItem), nextCursor: record.nextCursor as string | null }
-}
-
-function parseItem(value: unknown): AdminOperationsQueueItem {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw invalidResponse()
-  }
-  const record = value as Record<string, unknown>
-  if (Object.keys(record).some(key => ![
-    'id',
-    'state',
-    'source',
-    'sourceType',
-    'title',
-    'summary',
-    'occurredAt',
-    'reasonCode',
-    'target',
-    'reviewRef',
-  ].includes(key))
-  || typeof record.id !== 'string'
-  || !stateSet.has(String(record.state))
-  || !['EXCEPTION', 'DELIVERY_REVIEW'].includes(String(record.source))
-  || typeof record.sourceType !== 'string'
-  || typeof record.title !== 'string' || record.title.length < 1 || record.title.length > 80
-  || typeof record.summary !== 'string' || record.summary.length < 1 || record.summary.length > 240
-  || typeof record.occurredAt !== 'string' || !Number.isFinite(Date.parse(record.occurredAt))
-  || !(record.reasonCode === null || typeof record.reasonCode === 'string')
-  || !validQueueId(record.id)
-  || (record.source === 'EXCEPTION' && (!['OUTBOX', 'REFUND', 'PAYMENT', 'MEDIA', 'DELIVERY', 'AI'].includes(record.sourceType as string) || record.reviewRef !== null))
-  || (record.source === 'DELIVERY_REVIEW' && (!['CAMPAIGN_DISPATCH', 'DELIVERY_TASK'].includes(record.sourceType as string) || record.reviewRef === null))
-  || !parseTarget(record.target)
-  || !parseReviewRef(record.reviewRef)) {
-    throw invalidResponse()
-  }
-  return record as unknown as AdminOperationsQueueItem
-}
-
 function validQueueId(value: unknown) {
   if (typeof value !== 'string') {
     return false
@@ -207,4 +160,51 @@ function parseReviewRef(value: unknown): value is AdminDeliveryReviewResourceRef
 
 function invalidResponse(): MipAdminError {
   return new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的待办队列')
+}
+
+function parseItem(value: unknown): AdminOperationsQueueItem {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw invalidResponse()
+  }
+  const record = value as Record<string, unknown>
+  if (Object.keys(record).some(key => ![
+    'id',
+    'state',
+    'source',
+    'sourceType',
+    'title',
+    'summary',
+    'occurredAt',
+    'reasonCode',
+    'target',
+    'reviewRef',
+  ].includes(key))
+  || typeof record.id !== 'string'
+  || !stateSet.has(String(record.state))
+  || !['EXCEPTION', 'DELIVERY_REVIEW'].includes(String(record.source))
+  || typeof record.sourceType !== 'string'
+  || typeof record.title !== 'string' || record.title.length < 1 || record.title.length > 80
+  || typeof record.summary !== 'string' || record.summary.length < 1 || record.summary.length > 240
+  || typeof record.occurredAt !== 'string' || !Number.isFinite(Date.parse(record.occurredAt))
+  || !(record.reasonCode === null || typeof record.reasonCode === 'string')
+  || !validQueueId(record.id)
+  || (record.source === 'EXCEPTION' && (!['OUTBOX', 'REFUND', 'PAYMENT', 'MEDIA', 'DELIVERY', 'AI'].includes(record.sourceType as string) || record.reviewRef !== null))
+  || (record.source === 'DELIVERY_REVIEW' && (!['CAMPAIGN_DISPATCH', 'DELIVERY_TASK'].includes(record.sourceType as string) || record.reviewRef === null))
+  || !parseTarget(record.target)
+  || !parseReviewRef(record.reviewRef)) {
+    throw invalidResponse()
+  }
+  return record as unknown as AdminOperationsQueueItem
+}
+
+export function parseOperationsQueuePage(value: unknown): AdminOperationsQueuePage {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw invalidResponse()
+  }
+  const record = value as Record<string, unknown>
+  if (!Array.isArray(record.items) || !(record.nextCursor === null || typeof record.nextCursor === 'string')
+    || Object.keys(record).some(key => !['items', 'nextCursor'].includes(key))) {
+    throw invalidResponse()
+  }
+  return { items: record.items.map(parseItem), nextCursor: record.nextCursor as string | null }
 }
