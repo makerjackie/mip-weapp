@@ -21,6 +21,7 @@ const EXPECTED_FOURTH_QUERY_ACTIONS = Object.freeze([
   'mip.admin.events.comments.get',
   'mip.admin.messageCampaigns.scopes',
   'mip.admin.exports.status',
+  'mip.admin.dashboard',
 ])
 
 describe('Web BFF fourth query allowlist', () => {
@@ -59,12 +60,12 @@ describe('Web BFF fourth query allowlist', () => {
     }
   })
 
-  it('leaves only the audit-writing legacy dashboard query outside the Web surface', () => {
+  it('covers every generated query without opening a mutation', () => {
     const remaining = publicOperationContract.operations
       .filter(operation => operation.kind === 'QUERY' && !WEB_BFF_QUERY_ACTIONS.has(operation.action))
       .map(operation => operation.action)
 
-    assert.deepEqual(remaining, ['mip.admin.dashboard'])
+    assert.deepEqual(remaining, [])
   })
 
   it('contains no generated contract mutation', () => {

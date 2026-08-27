@@ -57,5 +57,10 @@ describe('public admin operation contract', () => {
       retryable.some(operation => operation.action === 'mip.admin.knowledge.schedules.list'),
       true,
     )
+    for (const action of ['mip.admin.dashboard', 'mip.admin.operations.queue.list']) {
+      const operation = publicOperationContract.operations.find(item => item.action === action)
+      assert.equal(operation?.kind, 'QUERY')
+      assert.equal(operation?.safeToRetry, true)
+    }
   })
 })

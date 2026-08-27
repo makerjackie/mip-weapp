@@ -74,6 +74,7 @@ const WEB_BFF_FOURTH_QUERY_ACTIONS = Object.freeze([
   'mip.admin.events.comments.get',
   'mip.admin.messageCampaigns.scopes',
   'mip.admin.exports.status',
+  'mip.admin.dashboard',
 ])
 const WEB_BFF_REVIEWED_MUTATION_MANIFEST = Object.freeze([
   Object.freeze({

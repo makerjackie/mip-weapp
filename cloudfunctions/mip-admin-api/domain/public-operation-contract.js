@@ -22,6 +22,8 @@ function createPublicOperationContract(operations = operationCatalog) {
       kind: operation.kind,
       authentication: 'REQUIRED',
       session: 'REQUIRED',
+      // Read retries may append access-audit telemetry, but must not duplicate
+      // business facts. Business writes remain MUTATION operations.
       safeToRetry: operation.kind === 'QUERY',
       idempotencyKeyRequired: null,
     })
