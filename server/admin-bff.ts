@@ -69,6 +69,15 @@ const ALLOWED_QUERY_ACTIONS = new Set([
   'mip.admin.session',
   'mip.admin.dashboard.overview.get',
   'mip.admin.users.list',
+  'mip.admin.events.list',
+  'mip.admin.orders.list',
+  'mip.admin.branches.list',
+  'mip.admin.roles.list',
+  'mip.admin.rolePolicies.list',
+  'mip.admin.audit.list',
+  'mip.admin.messageCampaigns.list',
+  'mip.admin.messageTemplates.list',
+  'mip.admin.knowledge.list',
 ])
 const encoder = new TextEncoder()
 

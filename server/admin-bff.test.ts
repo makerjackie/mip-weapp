@@ -11,6 +11,20 @@ const NOW = Date.UTC(2030, 0, 1)
 const ORIGIN = 'https://mipmini.01mvp.com'
 const SESSION_SECRET = 'session-encryption-secret-that-is-long-enough-for-tests'
 const LOGIN_SECRET = 'login-confirm-secret-that-is-long-enough-for-tests'
+const REVIEWED_QUERY_ACTIONS = [
+  'mip.admin.session',
+  'mip.admin.dashboard.overview.get',
+  'mip.admin.users.list',
+  'mip.admin.events.list',
+  'mip.admin.orders.list',
+  'mip.admin.branches.list',
+  'mip.admin.roles.list',
+  'mip.admin.rolePolicies.list',
+  'mip.admin.audit.list',
+  'mip.admin.messageCampaigns.list',
+  'mip.admin.messageTemplates.list',
+  'mip.admin.knowledge.list',
+] as const
 
 interface Row {
   id: string
@@ -223,16 +237,45 @@ describe('Admin Web BFF', () => {
     assert.equal(fetchMock.calls.length, 0)
   })
 
-  it('allows only the explicitly reviewed query actions', async () => {
+  it('forwards every explicitly reviewed query action', async () => {
+    const fetchMock = fetchQueue(...REVIEWED_QUERY_ACTIONS.map(action => new Response(JSON.stringify({
+      ok: true,
+      data: { action },
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    })))
+    const { bff, sessionCookie } = await confirmedLogin(fetchMock)
+
+    for (const action of REVIEWED_QUERY_ACTIONS) {
+      const response = await bff.handle(new Request(`${ORIGIN}/api/admin`, {
+        method: 'POST',
+        headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
+        body: JSON.stringify({ contractVersion: 1, action, input: {} }),
+      }))
+      assert.equal(response.status, 200, action)
+      assert.deepEqual(await response.json(), { ok: true, data: { action } }, action)
+    }
+
+    assert.equal(fetchMock.calls.length, REVIEWED_QUERY_ACTIONS.length)
+    assert.deepEqual(fetchMock.calls.map(([, init]) => {
+      const envelope = JSON.parse(String(init?.body))
+      return { action: envelope.request.action, input: envelope.request.input }
+    }), REVIEWED_QUERY_ACTIONS.map(action => ({ action, input: {} })))
+  })
+
+  it('rejects mutations and query actions outside the reviewed batch', async () => {
     const fetchMock = fetchQueue()
     const { bff, sessionCookie } = await confirmedLogin(fetchMock)
-    const response = await bff.handle(new Request(`${ORIGIN}/api/admin`, {
-      method: 'POST',
-      headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
-      body: JSON.stringify({ contractVersion: 1, action: 'mip.admin.users.update', input: {} }),
-    }))
 
-    assert.equal(response.status, 403)
+    for (const action of ['mip.admin.users.update', 'mip.admin.orders.get']) {
+      const response = await bff.handle(new Request(`${ORIGIN}/api/admin`, {
+        method: 'POST',
+        headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
+        body: JSON.stringify({ contractVersion: 1, action, input: {} }),
+      }))
+      assert.equal(response.status, 403, action)
+    }
     assert.equal(fetchMock.calls.length, 0)
   })
 
