@@ -1,6 +1,6 @@
 'use strict'
 
-const { createHmac, timingSafeEqual } = require('node:crypto')
+const { createHash, createHmac, timingSafeEqual } = require('node:crypto')
 const { errorResponse, normalizeAdminRequest } = require('../domain/handler')
 const { publicOperationContract } = require('../domain/public-operation-contract')
 
@@ -74,9 +74,10 @@ function createQueryActionAllowlist(actions, contract) {
   return allowlist
 }
 
-function createWebBffRoute({ application, issuePrincipal, secret, now = Date.now } = {}) {
+function createWebBffRoute({ application, issuePrincipal, replayGuard, secret, now = Date.now } = {}) {
   if (!application || typeof application.execute !== 'function'
     || typeof issuePrincipal !== 'function'
+    || !replayGuard || typeof replayGuard.consume !== 'function'
     || typeof now !== 'function') {
     throw new Error('WEB_BFF_ROUTE_CONFIG_INVALID')
   }
@@ -89,6 +90,13 @@ function createWebBffRoute({ application, issuePrincipal, secret, now = Date.now
         OPENID: verified.principal.openId,
       })
       const { action, input } = normalizeAdminRequest(verified.request)
+      await replayGuard.consume({
+        appId: verified.principal.appId,
+        nonce: verified.nonce,
+        principalIdentityKey: principal.identityKey,
+        action,
+        requestHash: createHash('sha256').update(canonicalJson(verified)).digest('hex'),
+      })
       const data = await application.execute(principal, action, input)
       return { ok: true, data }
     }
@@ -98,6 +106,15 @@ function createWebBffRoute({ application, issuePrincipal, secret, now = Date.now
           ok: false,
           error: { code: 'SERVICE_UNAVAILABLE', message: '运营服务暂时不可用', retryable: true },
         }
+      }
+      if (error?.message === 'WEB_BFF_REPLAY_GUARD_UNAVAILABLE') {
+        return {
+          ok: false,
+          error: { code: 'SERVICE_UNAVAILABLE', message: '运营服务暂时不可用', retryable: true },
+        }
+      }
+      if (error?.message === 'WEB_BFF_REPLAYED') {
+        return errorResponse(new Error('AUTH_REQUIRED'))
       }
       return errorResponse(error)
     }

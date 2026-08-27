@@ -8,6 +8,7 @@ const { createAdminRepository } = require('./domain/repository')
 const { createAdminService } = require('./domain/service')
 const { createTrustedPrincipalIssuer, resolveTrustedIdentity } = require('./lib/identity')
 const { createWebBffRoute, isWebBffEvent } = require('./lib/web-bff-auth')
+const { createWebBffReplayGuard } = require('./lib/web-bff-replay-guard')
 const {
   isWebBffHttpEvent,
   parseWebBffHttpBody,
@@ -248,6 +249,7 @@ const handler = createHandler({
 const webBffRoute = createWebBffRoute({
   application,
   issuePrincipal: principalIssuer.issue,
+  replayGuard: createWebBffReplayGuard({ database: mysqlDatabase() }),
   secret: process.env.MIP_ADMIN_WEB_BFF_HMAC_SECRET,
 })
 const runDueMessageCampaigns = createMessageDispatchRoute({

@@ -764,6 +764,18 @@
       "altersTables": [
         "mip_profiles"
       ]
+    },
+    {
+      "version": "20260828560000",
+      "name": "mip_web_bff_replay_guard",
+      "sql": "database/mysql/mip/056_web_bff_replay_guard.sql",
+      "sqlSha256": "c0501de2181d96a862865e63a17db7a2b688866c3474e022eb4ec92aa55a3e64",
+      "rollback": "database/mysql/mip/rollback/056_web_bff_replay_guard.sql",
+      "rollbackSha256": "7c4a72453b50a101fc6a302aded7e55de3f6f4f66b856677978d3b61fb7912ce",
+      "createsTables": [
+        "mip_web_bff_requests"
+      ],
+      "altersTables": []
     }
   ]
 }

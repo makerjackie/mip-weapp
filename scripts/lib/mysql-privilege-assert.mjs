@@ -21,6 +21,7 @@ export const RUNTIME_TABLE_PRIVILEGES = Object.freeze({
   mip_admin_role_bindings: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_app_settings: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_idempotency_keys: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
+  mip_web_bff_requests: Object.freeze(['INSERT', 'DELETE']),
   mip_outbox_events: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
   mip_audit_logs: Object.freeze(['SELECT', 'INSERT']),
   mip_events: Object.freeze(['SELECT', 'INSERT', 'UPDATE']),
@@ -132,6 +133,7 @@ export const RUNTIME_TABLE_PRIVILEGES = Object.freeze({
 })
 
 const RUNTIME_DELETE_TABLES = new Set([
+  'mip_web_bff_requests',
   'mip_profile_tags',
   'mip_opportunity_roles',
   'mip_opportunity_tags',

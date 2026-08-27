@@ -28,6 +28,7 @@ function envelope(action = 'mip.admin.dashboard.overview.get') {
 function fixture() {
   const calls = []
   const issuedContexts = []
+  const replayed = []
   const route = createWebBffRoute({
     application: {
       async execute(principal, action, input) {
@@ -37,12 +38,18 @@ function fixture() {
     },
     issuePrincipal(context) {
       issuedContexts.push(context)
-      return Object.freeze({ trusted: true, appId: context.APPID, openId: context.OPENID })
+      return Object.freeze({
+        trusted: true,
+        appId: context.APPID,
+        openId: context.OPENID,
+        identityKey: 'a'.repeat(64),
+      })
     },
+    replayGuard: { consume: async input => replayed.push(input) },
     secret: SECRET,
     now: () => NOW,
   })
-  return { calls, issuedContexts, route }
+  return { calls, issuedContexts, replayed, route }
 }
 
 describe('Web BFF trusted query adapter', () => {
@@ -95,7 +102,7 @@ describe('Web BFF trusted query adapter', () => {
   })
 
   it('issues a fresh trusted principal for every allowed signed query', async () => {
-    const { calls, issuedContexts, route } = fixture()
+    const { calls, issuedContexts, replayed, route } = fixture()
     for (const action of WEB_BFF_QUERY_ACTIONS) {
       const result = await route(envelope(action))
       assert.equal(result.ok, true, action)
@@ -103,6 +110,7 @@ describe('Web BFF trusted query adapter', () => {
 
     assert.equal(calls.length, WEB_BFF_QUERY_ACTIONS.size)
     assert.equal(issuedContexts.length, WEB_BFF_QUERY_ACTIONS.size)
+    assert.equal(replayed.length, WEB_BFF_QUERY_ACTIONS.size)
     assert.deepEqual(
       calls.map(call => call.action),
       [...WEB_BFF_QUERY_ACTIONS],
@@ -112,6 +120,7 @@ describe('Web BFF trusted query adapter', () => {
         trusted: true,
         appId: 'wx-mip-app',
         openId: 'openid-admin',
+        identityKey: 'a'.repeat(64),
       })
       assert.deepEqual(call.input, {})
     }
@@ -148,11 +157,43 @@ describe('Web BFF trusted query adapter', () => {
     assert.equal(calls.length, 0)
   })
 
+  it('consumes the signed nonce before dispatch and fails closed on replay storage errors', async () => {
+    const calls = []
+    const base = {
+      application: { execute: async () => calls.push('executed') },
+      issuePrincipal: () => ({ identityKey: 'a'.repeat(64) }),
+      secret: SECRET,
+      now: () => NOW,
+    }
+    const replayed = createWebBffRoute({
+      ...base,
+      replayGuard: { consume: async () => { throw new Error('WEB_BFF_REPLAYED') } },
+    })
+    const unavailable = createWebBffRoute({
+      ...base,
+      replayGuard: { consume: async () => { throw new Error('WEB_BFF_REPLAY_GUARD_UNAVAILABLE') } },
+    })
+
+    const replayedResult = await replayed(envelope())
+    const unavailableResult = await unavailable(envelope())
+
+    assert.equal(replayedResult.ok, false)
+    assert.equal(replayedResult.error.code, 'AUTH_REQUIRED')
+    assert.equal(unavailableResult.ok, false)
+    assert.deepEqual(unavailableResult.error, {
+      code: 'SERVICE_UNAVAILABLE',
+      message: '运营服务暂时不可用',
+      retryable: true,
+    })
+    assert.deepEqual(calls, [])
+  })
+
   it('fails closed when the shared BFF secret is not configured', async () => {
     const calls = []
     const route = createWebBffRoute({
       application: { execute: async () => calls.push('executed') },
-      issuePrincipal: () => calls.push('issued'),
+      issuePrincipal: () => ({ identityKey: 'a'.repeat(64) }),
+      replayGuard: { consume: async () => calls.push('consumed') },
       secret: '',
       now: () => NOW,
     })
