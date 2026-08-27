@@ -253,7 +253,7 @@ Page({
       description: this.data.editorDescription,
       sortOrder: this.data.editorSortOrder,
     }
-    const validationError = eventCatalogDraftError(draft, updating)
+    const validationError = eventCatalogDraftError(draft, updating, this.data.kind)
     if (validationError) {
       this.setData({ editorError: validationError })
       return

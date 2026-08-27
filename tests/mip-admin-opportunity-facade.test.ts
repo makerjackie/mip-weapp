@@ -290,5 +290,12 @@ describe('MIP admin opportunity facade', () => {
       'unpublish',
       'unpublish',
     ].sort())
+    const listTemplate = fs.readFileSync(
+      path.join(root, 'src/packages/admin/opportunities/index.wxml'),
+      'utf8',
+    )
+    expect(listTemplate).toContain('item.status === \'DRAFT\' || item.status === \'PUBLISHED\'')
+    expect(listTemplate).toContain('item.status === \'PUBLISHED\'')
+    expect(listTemplate).not.toContain('item.status === \'PUBLISHED\' || item.status === \'ENDED\'')
   })
 })

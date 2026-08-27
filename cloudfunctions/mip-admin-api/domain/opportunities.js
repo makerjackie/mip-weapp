@@ -90,6 +90,9 @@ function createAdminOpportunities({
     const existingAuthorization = opportunityId
       ? await opportunityAuthorization(context, opportunityId, CAPABILITIES.OPPORTUNITIES_MODERATE)
       : null
+    if (existingAuthorization && !['DRAFT', 'PUBLISHED'].includes(existingAuthorization.scope.status)) {
+      throw new AdminError('INVALID_STATE', '当前机会状态不能编辑')
+    }
     const draft = normalizeOpportunityDraft(input.draft)
     const requestedScope = { scopeType: draft.scopeType, scopeId: draft.branchId }
     const requestedGrant = authorize(
@@ -176,6 +179,9 @@ function createAdminOpportunities({
       opportunityId,
       CAPABILITIES.OPPORTUNITIES_MODERATE,
     )
+    if (scope.status !== 'PUBLISHED') {
+      throw new AdminError('INVALID_STATE', '只有招募中的机会可以下架')
+    }
     const reason = text(input.reason, 240, { required: true, label: '下架原因' })
     const version = expectedVersion(input.expectedVersion)
     return repository.unpublishOpportunity({

@@ -296,12 +296,13 @@ function normalizeCatalogSave(value) {
     [...(updating ? SAVE_CATALOG_UPDATE_KEYS : SAVE_CATALOG_CREATE_KEYS)],
     '活动目录内容无效',
   )
+  const kind = enumValue(value.kind, CATALOG_KINDS, '活动目录类型无效')
   return {
-    kind: enumValue(value.kind, CATALOG_KINDS, '活动目录类型无效'),
+    kind,
     catalogId: updating ? requiredId(value.catalogId, '活动目录') : null,
     expectedVersion: updating ? expectedVersion(value.expectedVersion) : null,
     key: updating ? null : stableKey(value.key, '活动目录', 64),
-    name: text(value.name, 80, { required: true, label: '目录名称' }),
+    name: text(value.name, kind === 'TAG' ? 5 : 80, { required: true, label: '目录名称' }),
     description: text(value.description, 300, { label: '目录说明' }),
     sortOrder: nonNegativeInteger(value.sortOrder, '目录排序'),
   }

@@ -35,7 +35,7 @@
           <view wx:if="{{editorId}}" class="box-border flex min-h-[88rpx] items-center break-all rounded-[12rpx] bg-panel-raised px-3 text-[length:25rpx] text-muted">{{editorKey}}</view>
           <t-input wx:else value="{{editorKey}}" maxlength="64" placeholder="例如 workshop" disabled="{{saving}}" data-field="editorKey" bind:change="updateEditorField" />
         </view>
-        <view><view class="mb-2 text-[length:23rpx] text-muted">名称</view><t-input value="{{editorName}}" maxlength="80" placeholder="填写名称" disabled="{{saving}}" data-field="editorName" bind:change="updateEditorField" /></view>
+        <view><view class="mb-2 text-[length:23rpx] text-muted">名称</view><t-input value="{{editorName}}" maxlength="{{kind === 'TAG' ? 5 : 80}}" placeholder="{{kind === 'TAG' ? '最多 5 个字符' : '填写名称'}}" disabled="{{saving}}" data-field="editorName" bind:change="updateEditorField" /></view>
         <view class="mip-admin-span-wide"><view class="mb-2 text-[length:23rpx] text-muted">说明</view><t-textarea value="{{editorDescription}}" maxlength="300" placeholder="填写说明，可不填" disabled="{{saving}}" data-field="editorDescription" bind:change="updateEditorField" /></view>
         <view><view class="mb-2 text-[length:23rpx] text-muted">显示顺序</view><t-input type="number" value="{{editorSortOrder}}" placeholder="0" disabled="{{saving}}" data-field="editorSortOrder" bind:change="updateEditorField" /></view>
         <view wx:if="{{editorError}}" class="mip-admin-span-wide rounded-[12rpx] bg-panel-raised px-4 py-3 text-[length:23rpx] text-danger">{{editorError}}</view>

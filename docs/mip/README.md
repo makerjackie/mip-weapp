@@ -16,6 +16,7 @@
 | [GitHub CSV 需求清单](sources/github/README.md) | 发现待评审条目和外部来源线索 | 已固定三份原始清单；缺少规则/UI 的行不能单独形成实现或验收依据 |
 | [后台 PRD V0.1](https://github.com/douglas-ou/mip-minip-dev/blob/a38bc48e4d85ceabf9adb1013fbd5e0842a8c4eb/docs/MIP%E5%90%8E%E5%8F%B0PRD_V0.1_%E5%90%AB%E8%A1%A8%E6%A0%BC.md) | 原后台报价范围 | 仅保留来源记录；当前完整实现范围高于该报价范围 |
 | [WorkBuddy 网页后台 PRD V0.4](https://bfd568111f4249be9902eba8e876cece.app.workbuddy.link/#messages) | 管理功能、字段和信息架构输入 | 2026-08-26 当前页面为 16 个模块、110 条需求，已固定 [逐项矩阵](WORKBUDDY_110_MATRIX.md)；2026-08-25 的 15/108 只保留为历史自述与三张截图，不能补造缺失原文；当前交付为小程序手机/电脑双端管理，独立网页 UI 暂缓 |
+| [GitHub 后台 PRD V0.5 提交](https://github.com/douglas-ou/mip-minip-dev/commit/0bfaf8e0de518c72a811ff9bc9d93a676d40ac5e) | 公开主体信息、权限、权益、活动和机会管理评审结论 | 2026-08-27 已完成 [V0.5 对齐记录](ADMIN_PRD_V05_RECONCILIATION.md)；冲突项不覆盖当前领域模型、交付形态和 MIP 视觉 |
 
 ## 决策优先级
 
@@ -42,6 +43,7 @@ Figma 决定视觉与交互；服务端资格、金额、权限和状态机以�
 - [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md)：完整目标、架构 seam、并行顺序、提交与验收门槛
 - [ADMIN_WEB.md](ADMIN_WEB.md)：WorkBuddy 管理功能基线与渠道中立架构
 - [WORKBUDDY_110_MATRIX.md](WORKBUDDY_110_MATRIX.md)：当前在线 110 条需求逐项映射、冲突和缺口
+- [ADMIN_PRD_V05_RECONCILIATION.md](ADMIN_PRD_V05_RECONCILIATION.md)：外部后台 V0.5 新信息、采纳结论与冲突处理
 - [DESKTOP_ADMIN_RESEARCH.md](DESKTOP_ADMIN_RESEARCH.md)：微信电脑端能力、限制与双端适配建议
 - [DELIVERY_SLICES.md](DELIVERY_SLICES.md)：先验证底座、再并行扩展的小版本路线
 - [OPEN_QUESTIONS.md](OPEN_QUESTIONS.md)：会改变产品模型或验收范围的待确认问题

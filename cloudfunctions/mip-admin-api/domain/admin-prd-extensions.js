@@ -320,7 +320,7 @@ function createAdminPrdExtensions(database, options = {}) {
         if (!sameScope(currentScope, input.authorizedScope)) throw codeError('CONFLICT')
         if (authorization.effectiveGrant.scopeType !== 'PLATFORM' && !sameScope(currentScope, draftScope)) throw codeError('FORBIDDEN')
         if (Number(current.version) !== input.expectedVersion) throw codeError('CONFLICT')
-        if (current.status === 'ARCHIVED') throw codeError('INVALID_STATE')
+        if (!['DRAFT', 'PUBLISHED'].includes(current.status)) throw codeError('INVALID_STATE')
         if (current.status === 'PUBLISHED' && input.contentSafetyStatus !== 'APPROVED') {
           throw codeError('CONTENT_SAFETY_REQUIRED')
         }
@@ -371,7 +371,7 @@ function createAdminPrdExtensions(database, options = {}) {
           `UPDATE mip_opportunities SET owner_user_id = ?, scope_type = ?, branch_id = ?,
             title = ?, value_summary = ?, target_summary = ?, description = ?, city_tag_id = ?,
             deadline_at = ?, content_safety_status = ?, version = version + 1
-           WHERE app_id = ? AND id = ? AND version = ? AND status <> 'ARCHIVED'`,
+           WHERE app_id = ? AND id = ? AND version = ? AND status IN ('DRAFT', 'PUBLISHED')`,
           [input.draft.ownerUserId, input.draft.scopeType, input.draft.branchId,
             input.draft.title, input.draft.valueSummary, input.draft.targetSummary,
             input.draft.description, legacyCityTagId, input.draft.deadlineAt,

@@ -29,8 +29,8 @@
       <view class="mt-2 text-[length:23rpx]">{{item.valueSummary}}</view>
       <view wx:if="{{item.commercialTerms.amountDisplay}}" class="mt-2 text-[length:21rpx] text-muted">结构化金额：{{item.commercialTerms.amountDisplay}} · 范围：{{item.commercialTerms.locationDisplay || '未设置'}}</view>
       <view class="mt-2 text-[length:21rpx] text-muted">截止时间：{{item.deadlineText || '未设置'}} · 更新时间：{{item.updatedText || '未记录'}}</view>
-      <view class="mt-3 grid grid-cols-2 gap-2"><t-button block variant="outline" data-id="{{item.id}}" bind:tap="openDetail">查看</t-button><t-button wx:if="{{item.status !== 'ARCHIVED'}}" block variant="outline" data-id="{{item.id}}" bind:tap="editOpportunity">编辑</t-button></view>
-      <view wx:if="{{item.status === 'PUBLISHED' || item.status === 'ENDED'}}" class="mt-4"><t-button block variant="outline" theme="danger" loading="{{processingId === item.id}}" data-id="{{item.id}}" data-version="{{item.version}}" bind:tap="unpublish">下架机会</t-button></view>
+      <view class="mt-3 grid grid-cols-2 gap-2"><t-button block variant="outline" data-id="{{item.id}}" bind:tap="openDetail">查看</t-button><t-button wx:if="{{item.status === 'DRAFT' || item.status === 'PUBLISHED'}}" block variant="outline" data-id="{{item.id}}" bind:tap="editOpportunity">编辑</t-button></view>
+      <view wx:if="{{item.status === 'PUBLISHED'}}" class="mt-4"><t-button block variant="outline" theme="danger" loading="{{processingId === item.id}}" data-id="{{item.id}}" data-version="{{item.version}}" bind:tap="unpublish">下架机会</t-button></view>
       <view wx:if="{{item.status === 'DRAFT' && canArchive}}" class="mt-4"><t-button block variant="outline" theme="danger" loading="{{processingId === item.id}}" data-id="{{item.id}}" data-status="{{item.status}}" data-version="{{item.version}}" bind:tap="archive">归档草稿</t-button></view>
     </view>
   </view>

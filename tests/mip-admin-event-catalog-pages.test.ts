@@ -228,6 +228,8 @@ describe('MIP admin event catalog and recap pages', () => {
     expect(page.data.items).toHaveLength(2)
     expect(eventCatalogDraftError({ key: 'bad key', name: '名称', description: '', sortOrder: '0' }, false)).toContain('稳定标识')
     expect(eventCatalogDraftError({ key: 'workshop', name: '名称', description: '', sortOrder: '10' }, false)).toBe('')
+    expect(eventCatalogDraftError({ key: 'morning', name: 'MIP早会', description: '', sortOrder: '10' }, false, 'TAG')).toBe('')
+    expect(eventCatalogDraftError({ key: 'morning', name: '超过五个字标签', description: '', sortOrder: '10' }, false, 'TAG')).toContain('1–5')
   })
 
   it('submits exact catalog intent and refreshes facts after a version conflict', async () => {

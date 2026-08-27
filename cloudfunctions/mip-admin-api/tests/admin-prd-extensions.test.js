@@ -187,6 +187,35 @@ describe('admin PRD extension persistence', () => {
     assert.equal(writes.length, 0)
   })
 
+  it('keeps ended and unpublished opportunities read-only', async () => {
+    for (const status of ['ENDED', 'UNPUBLISHED']) {
+      const writes = []
+      const repository = extensions(database({
+        async one(sql) {
+          if (sql.includes('FROM mip_opportunities')) {
+            return { id: 'opportunity-a', branch_id: null, status, version: 4 }
+          }
+          return null
+        },
+        async query(sql, params) {
+          writes.push({ sql, params })
+          return { affectedRows: 1 }
+        },
+      }))
+
+      await assert.rejects(() => repository.saveOpportunity({
+        appId: 'wx-app', actorUserId: 'admin-user', opportunityId: 'opportunity-a', expectedVersion: 4,
+        authorizedScope: { scopeType: 'PLATFORM', scopeId: null }, authorization: {}, contentSafetyStatus: 'APPROVED',
+        draft: {
+          ownerUserId: 'owner-a', scopeType: 'PLATFORM', branchId: null, title: '机会', valueSummary: '价值',
+          targetSummary: '', description: '', cityTagId: null, deadlineAt: null, roleKeys: [], tagIds: [],
+        },
+        audit,
+      }), error => error?.code === 'INVALID_STATE')
+      assert.equal(writes.length, 0)
+    }
+  })
+
   it('reads independent benefits and preserves legacy benefit copy for migration compatibility', async () => {
     const repository = extensions(database({
       async query(sql) {

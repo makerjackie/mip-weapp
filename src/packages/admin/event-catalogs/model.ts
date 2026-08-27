@@ -1,6 +1,7 @@
 import type {
   AdminCapabilityGrant,
   AdminEventCatalogItem,
+  AdminEventCatalogKind,
 } from '../../../modules/mip-admin'
 import { formatLocalDateTime } from '../../../utils/date'
 
@@ -28,7 +29,11 @@ export function hasPlatformCatalogCapability(grants: AdminCapabilityGrant[]) {
   ))
 }
 
-export function eventCatalogDraftError(draft: EventCatalogDraft, updating: boolean) {
+export function eventCatalogDraftError(
+  draft: EventCatalogDraft,
+  updating: boolean,
+  kind: AdminEventCatalogKind = 'TYPE',
+) {
   const key = draft.key.trim()
   const name = draft.name.trim()
   const description = draft.description.trim()
@@ -36,8 +41,9 @@ export function eventCatalogDraftError(draft: EventCatalogDraft, updating: boole
   if (!updating && (!key || key.length > 64 || !stableKeyPattern.test(key))) {
     return '稳定标识需为 1–64 位字母、数字、下划线、点、冒号或连字符'
   }
-  if (!name || name.length > 80) {
-    return '名称需为 1–80 个字符'
+  const maximumNameLength = kind === 'TAG' ? 5 : 80
+  if (!name || name.length > maximumNameLength) {
+    return kind === 'TAG' ? '活动标签需为 1–5 个字符' : '名称需为 1–80 个字符'
   }
   if (description.length > 300) {
     return '说明不能超过 300 个字符'

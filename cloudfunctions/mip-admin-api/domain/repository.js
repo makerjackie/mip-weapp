@@ -1027,11 +1027,11 @@ function createAdminRepository(database, options = {}) {
         throw codeError('CONFLICT')
       }
       if (Number(opportunity.version) !== input.expectedVersion) throw codeError('CONFLICT')
-      if (!['PUBLISHED', 'ENDED'].includes(opportunity.status)) throw codeError('INVALID_STATE')
+      if (opportunity.status !== 'PUBLISHED') throw codeError('INVALID_STATE')
       const result = await tx.query(
         `UPDATE mip_opportunities SET status = 'UNPUBLISHED', moderated_at = UTC_TIMESTAMP(3),
           moderated_by_user_id = ?, moderation_reason = ?, version = version + 1
-         WHERE app_id = ? AND id = ? AND version = ? AND status IN ('PUBLISHED', 'ENDED')`,
+         WHERE app_id = ? AND id = ? AND version = ? AND status = 'PUBLISHED'`,
         [input.actorUserId, input.reason, input.appId, input.opportunityId, input.expectedVersion],
       )
       if (Number(result.affectedRows) !== 1) throw codeError('CONFLICT')

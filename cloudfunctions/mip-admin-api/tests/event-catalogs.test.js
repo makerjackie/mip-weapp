@@ -231,6 +231,15 @@ describe('admin event catalogs and video recaps', () => {
       }),
       error => error?.code === 'VALIDATION_FAILED',
     )
+    assert.doesNotThrow(() => normalizeCatalogSave({
+      kind: 'TAG', key: 'morning', name: 'MIP早会', description: '', sortOrder: 1,
+    }))
+    assert.throws(
+      () => normalizeCatalogSave({
+        kind: 'TAG', key: 'too_long', name: '超过五个字标签', description: '', sortOrder: 1,
+      }),
+      error => error?.code === 'VALIDATION_FAILED',
+    )
     assert.throws(
       () => normalizeRecapSave({
         eventId: EVENT_ID,

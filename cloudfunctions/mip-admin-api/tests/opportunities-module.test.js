@@ -386,6 +386,18 @@ describe('admin opportunities deep module', () => {
     assert.equal(safetyReads, 0)
     assert.equal(repo.calls.filter(call => call.type === 'save').length, 0)
 
+    repo.opportunityScope.status = 'ENDED'
+    await assert.rejects(
+      () => service.saveOpportunity(caller, {
+        opportunityId: OPPORTUNITY_ID,
+        expectedVersion: 4,
+        draft: opportunityDraft(),
+      }),
+      error => error?.code === 'INVALID_STATE',
+    )
+    assert.equal(safetyReads, 0)
+    repo.opportunityScope.status = 'DRAFT'
+
     const saved = await service.saveOpportunity(caller, {
       opportunityId: OPPORTUNITY_ID,
       expectedVersion: 4,
@@ -441,6 +453,7 @@ describe('admin opportunities deep module', () => {
       assert.deepEqual(input.audit.metadata, { expectedVersion: 4 })
     }
 
+    repo.opportunityScope.status = 'PUBLISHED'
     await service.unpublishOpportunity(caller, {
       opportunityId: OPPORTUNITY_ID,
       expectedVersion: 4,
@@ -449,6 +462,17 @@ describe('admin opportunities deep module', () => {
     const unpublish = repo.calls.find(call => call.type === 'unpublish').input
     assert.equal(unpublish.reason, '内容需要调整')
     assert.deepEqual(unpublish.audit.metadata, { reasonLength: 6, expectedVersion: 4 })
+
+    repo.opportunityScope.status = 'ENDED'
+    await assert.rejects(
+      () => service.unpublishOpportunity(caller, {
+        opportunityId: OPPORTUNITY_ID,
+        expectedVersion: 4,
+        reason: '内容需要调整',
+      }),
+      error => error?.code === 'INVALID_STATE',
+    )
+    repo.opportunityScope.status = 'DRAFT'
 
     const archived = await service.archiveOpportunity(caller, {
       opportunityId: OPPORTUNITY_ID,
