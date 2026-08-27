@@ -1388,8 +1388,8 @@
       "query": ["id"],
       "queryFixture": {
         "sourceRoute": "packages/member/mip-cooperation/list/index",
-        "dataPath": "items",
-        "values": { "id": "id" }
+        "dataPath": "talents",
+        "values": { "id": "cards.0.id" }
       }
     },
     {
