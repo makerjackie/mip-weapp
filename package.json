@@ -8,6 +8,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
+    "verify:responsive": "pnpm build && node scripts/verify-responsive.mjs",
     "deploy:pages": "pnpm build && wrangler pages deploy dist --project-name=mip-admin-web"
   },
   "devDependencies": {

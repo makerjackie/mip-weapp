@@ -199,6 +199,14 @@ async function render() {
   shell(`<div class="loading-bar hidden"></div>${pages[route]()}`)
   const noticeElement = document.querySelector('#notice')
   if (noticeElement) { noticeElement.textContent = notice; noticeElement.classList.toggle('hidden', !notice) }
+  requestAnimationFrame(assertResponsiveViewport)
+}
+
+function assertResponsiveViewport() {
+  if (window.innerWidth > 680) return
+  const overflow = document.documentElement.scrollWidth > window.innerWidth + 1
+  document.documentElement.dataset.mipResponsive = overflow ? 'fail' : 'pass'
+  if (overflow) console.error(`MIP responsive overflow: document=${document.documentElement.scrollWidth}px viewport=${window.innerWidth}px`)
 }
 
 void render()
