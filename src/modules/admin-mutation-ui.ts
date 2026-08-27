@@ -22,6 +22,7 @@ export function createMutationDefinition(
   action: AdminMutationAction,
   targetId: string,
   readDetailField: DetailFieldReader,
+  targetStatus?: 'PUBLISHED' | 'UNPUBLISHED',
 ): MutationDefinition {
   const version = readDetailField('活动信息', '版本') || '1'
   const membershipChainVersion = readDetailField('会员权益', '会员链版本') || '1'
@@ -32,6 +33,25 @@ export function createMutationDefinition(
   if (action === 'mip.admin.events.clone') return {
     action, targetId, title: '克隆活动', description: '根据当前活动创建一份新的草稿活动。提交后由服务端重新校验权限和活动版本。',
     values: { expectedVersion: version },
+  }
+  if (action === 'mip.admin.events.changeStatus') {
+    const status = targetStatus || 'PUBLISHED'
+    return {
+      action,
+      targetId,
+      title: status === 'PUBLISHED' ? '发布活动' : '下架活动',
+      description: status === 'PUBLISHED'
+        ? '发布前由服务端校验内容安全、活动时间和当前版本。'
+        : '下架后活动不再接受新的公开报名，历史报名和订单事实会保留。',
+      values: { expectedVersion: version, status },
+    }
+  }
+  if (action === 'mip.admin.events.archive') return {
+    action,
+    targetId,
+    title: '归档活动',
+    description: '仅可归档没有报名、订单、签到或相册记录的草稿活动。提交后活动历史仍会保留。',
+    values: { expectedVersion: version, reason: '' },
   }
   if (action === 'mip.admin.communications.publishEventReminder') return {
     action, targetId, title: '发布活动提醒', description: '为当前活动生成提醒投递任务。只有已发布活动可以执行此操作。',
@@ -53,6 +73,12 @@ export function renderMutationDialog(state: MutationState, escapeHtml: HtmlEscap
   }
   else if (state.action === 'mip.admin.communications.publishEventReminder') {
     fields = `<label class="mutation-checkbox"><input name="sendWechatReminder" type="checkbox" ${values.sendWechatReminder ? 'checked' : ''} ${disabled ? 'disabled' : ''} />同时生成微信提醒任务</label>`
+  }
+  else if (state.action === 'mip.admin.events.archive') {
+    fields = `<label class="mutation-wide">归档原因<textarea name="reason" rows="3" maxlength="300" required ${disabled ? 'disabled' : ''}>${field('reason')}</textarea></label>`
+  }
+  else if (state.action === 'mip.admin.events.changeStatus') {
+    fields = '<p class="mutation-note">服务端将按当前活动版本执行状态变更。</p>'
   }
   else if (state.action === 'mip.admin.refunds.submit') {
     fields = '<label class="mutation-wide">退款原因<textarea name="reason" rows="3" maxlength="300" required ' + `${disabled ? 'disabled' : ''}` + `>${field('reason')}</textarea></label>`
@@ -90,6 +116,16 @@ export function mutationInput(state: MutationState, values: MutationValues): Adm
     if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1) return null
     return { sourceEventId: state.targetId, expectedVersion }
   }
+  if (state.action === 'mip.admin.events.changeStatus') {
+    const expectedVersion = Number(values.expectedVersion)
+    if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1 || !['PUBLISHED', 'UNPUBLISHED'].includes(String(values.status))) return null
+    return { eventId: state.targetId, expectedVersion, status: String(values.status) }
+  }
+  if (state.action === 'mip.admin.events.archive') {
+    const expectedVersion = Number(values.expectedVersion)
+    if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1 || !values.reason) return null
+    return { eventId: state.targetId, expectedVersion, reason: String(values.reason) }
+  }
   if (state.action === 'mip.admin.communications.publishEventReminder') {
     const expectedVersion = Number(values.expectedVersion)
     if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1) return null
@@ -102,6 +138,8 @@ export function mutationInput(state: MutationState, values: MutationValues): Adm
 export function mutationSummary(action: AdminMutationAction, values: MutationValues) {
   if (action === 'mip.admin.memberships.grant') return `${values.durationMonths} 个月会员权益，原因：${values.reason}`
   if (action === 'mip.admin.events.clone') return '根据当前活动创建草稿'
+  if (action === 'mip.admin.events.changeStatus') return values.status === 'PUBLISHED' ? '发布活动' : '下架活动'
+  if (action === 'mip.admin.events.archive') return `归档活动，原因：${values.reason}`
   if (action === 'mip.admin.communications.publishEventReminder') return values.sendWechatReminder === true ? '同时生成微信提醒任务' : '仅生成站内提醒任务'
   return `退款原因：${values.reason}`
 }

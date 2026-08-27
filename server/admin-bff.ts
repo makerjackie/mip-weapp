@@ -132,8 +132,18 @@ const ALLOWED_QUERY_ACTIONS = new Set([
 const ALLOWED_MUTATION_ACTIONS = new Set([
   'mip.admin.memberships.grant',
   'mip.admin.events.clone',
+  'mip.admin.events.changeStatus',
+  'mip.admin.events.archive',
   'mip.admin.communications.publishEventReminder',
   'mip.admin.refunds.submit',
+])
+const MUTATION_INPUT_KEYS = new Map<string, ReadonlySet<string>>([
+  ['mip.admin.memberships.grant', new Set(['durationMonths', 'expectedChainVersion', 'reason', 'userId'])],
+  ['mip.admin.events.clone', new Set(['expectedVersion', 'sourceEventId'])],
+  ['mip.admin.events.changeStatus', new Set(['eventId', 'expectedVersion', 'status'])],
+  ['mip.admin.events.archive', new Set(['eventId', 'expectedVersion', 'reason'])],
+  ['mip.admin.communications.publishEventReminder', new Set(['eventId', 'expectedVersion', 'sendWechatReminder'])],
+  ['mip.admin.refunds.submit', new Set(['orderId', 'reason'])],
 ])
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_.:-]{12,128}$/
 const encoder = new TextEncoder()
@@ -316,6 +326,9 @@ export function createAdminBff(
     if (isMutation && !validIdempotencyKey(adminRequest.idempotencyKey)) {
       return adminError('IDEMPOTENCY_KEY_REQUIRED', '写操作必须提供有效的业务幂等键', 400)
     }
+    if (isMutation && !validMutationInput(adminRequest.action, adminRequest.input)) {
+      return adminError('VALIDATION_FAILED', '运营请求包含未开放字段', 400)
+    }
 
     const unsigned = {
       transport: WEB_BFF_TRANSPORT,
@@ -446,6 +459,11 @@ function identifier(value: unknown, maximum: number): value is string {
 
 function validIdempotencyKey(value: unknown): value is string {
   return typeof value === 'string' && IDEMPOTENCY_KEY_PATTERN.test(value)
+}
+
+function validMutationInput(action: string, input: AdminRequest['input']) {
+  const allowed = MUTATION_INPUT_KEYS.get(action)
+  return Boolean(allowed && Object.keys(input).every(key => allowed.has(key)))
 }
 
 function validSecret(value: string | undefined) {

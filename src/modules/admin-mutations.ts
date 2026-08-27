@@ -3,6 +3,8 @@ import type { AdminRequestInput } from '../domain/contracts'
 export const ADMIN_MUTATION_ACTIONS = [
   'mip.admin.memberships.grant',
   'mip.admin.events.clone',
+  'mip.admin.events.changeStatus',
+  'mip.admin.events.archive',
   'mip.admin.communications.publishEventReminder',
   'mip.admin.refunds.submit',
 ] as const

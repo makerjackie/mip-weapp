@@ -78,6 +78,8 @@ const REVIEWED_QUERY_ACTIONS = [
 const REVIEWED_MUTATION_ACTIONS = [
   'mip.admin.memberships.grant',
   'mip.admin.events.clone',
+  'mip.admin.events.changeStatus',
+  'mip.admin.events.archive',
   'mip.admin.communications.publishEventReminder',
   'mip.admin.refunds.submit',
 ] as const
@@ -363,7 +365,7 @@ describe('Admin Web BFF', () => {
     const envelopes = fetchMock.calls.map(([, init]) => JSON.parse(String(init?.body)))
     assert.deepEqual(envelopes.map((envelope) => envelope.request.action), REVIEWED_MUTATION_ACTIONS)
     assert.deepEqual(envelopes.map((envelope) => envelope.request.idempotencyKey), [
-      'web-mutation-00', 'web-mutation-01', 'web-mutation-02', 'web-mutation-03',
+      'web-mutation-00', 'web-mutation-01', 'web-mutation-02', 'web-mutation-03', 'web-mutation-04', 'web-mutation-05',
     ])
     assert.ok(envelopes.every((envelope) => /^[A-Za-z0-9_-]{32}$/.test(envelope.nonce)))
     assert.equal(new Set(envelopes.map((envelope) => envelope.nonce)).size, envelopes.length)
@@ -401,6 +403,38 @@ describe('Admin Web BFF', () => {
       error: { code: 'SERVICE_UNAVAILABLE', message: '运营服务暂时不可用', retryable: false },
     })
     assert.equal(upstreamAttempts, 1)
+  })
+
+  it('rejects browser-controlled fields before signing reviewed mutations', async () => {
+    const fetchMock = fetchQueue()
+    const { bff, sessionCookie } = await confirmedLogin(fetchMock)
+    const cases = [
+      ['mip.admin.memberships.grant', { userId: 'user-a', forged: true }],
+      ['mip.admin.events.clone', { sourceEventId: 'event-a', forged: true }],
+      ['mip.admin.events.changeStatus', { eventId: 'event-a', status: 'PUBLISHED', forged: true }],
+      ['mip.admin.events.archive', { eventId: 'event-a', reason: '归档', forged: true }],
+      ['mip.admin.communications.publishEventReminder', { eventId: 'event-a', recipientUserIds: ['user-a'] }],
+      ['mip.admin.refunds.submit', { orderId: 'order-a', amountCents: 1 }],
+    ] as const
+
+    for (const [index, [action, input]] of cases.entries()) {
+      const response = await bff.handle(new Request(`${ORIGIN}/api/admin`, {
+        method: 'POST',
+        headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          contractVersion: 1,
+          action,
+          idempotencyKey: `web-input-review-${index.toString().padStart(2, '0')}`,
+          input,
+        }),
+      }))
+      assert.equal(response.status, 400, action)
+      assert.deepEqual(await response.json(), {
+        ok: false,
+        error: { code: 'VALIDATION_FAILED', message: '运营请求包含未开放字段', retryable: false },
+      })
+    }
+    assert.equal(fetchMock.calls.length, 0)
   })
 
   it('uses the same canonical signing representation as the CloudBase adapter', () => {

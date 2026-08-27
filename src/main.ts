@@ -150,7 +150,11 @@ function shell(content: string) {
     if (event.target === event.currentTarget) closeDetail()
   })
   document.querySelectorAll<HTMLButtonElement>('[data-mutation-open]').forEach(button => button.addEventListener('click', () => {
-    openMutation(button.dataset.mutationOpen as AdminMutationAction, button.dataset.mutationId || '')
+    openMutation(
+      button.dataset.mutationOpen as AdminMutationAction,
+      button.dataset.mutationId || '',
+      button.dataset.mutationStatus as 'PUBLISHED' | 'UNPUBLISHED' | undefined,
+    )
   }))
   document.querySelector('#mutation-close-button')?.addEventListener('click', closeMutation)
   document.querySelector('#mutation-cancel-button')?.addEventListener('click', closeMutation)
@@ -190,9 +194,21 @@ function detailActions(route: AdminDetailRoute | null) {
   const id = escapeHtml(detailIdForRoute(route))
   if (route === 'users' && hasCapability('memberships.adjust')) return `<button class="outline-button detail-action-button" data-mutation-open="mip.admin.memberships.grant" data-mutation-id="${id}">补录会员</button>`
   if (route === 'events') {
+    const status = detailView.status
+    const targetStatus = status === '已发布'
+      ? 'UNPUBLISHED'
+      : ['草稿', '已下架'].includes(status)
+        ? 'PUBLISHED'
+        : ''
+    const statusAction = hasCapability('events.write') && targetStatus
+      ? `<button class="outline-button detail-action-button" data-mutation-open="mip.admin.events.changeStatus" data-mutation-status="${targetStatus}" data-mutation-id="${id}">${targetStatus === 'PUBLISHED' ? '发布活动' : '下架活动'}</button>`
+      : ''
+    const archive = hasCapability('events.write') && status === '草稿'
+      ? `<button class="outline-button detail-action-button" data-mutation-open="mip.admin.events.archive" data-mutation-id="${id}">归档活动</button>`
+      : ''
     const clone = hasCapability('events.write') ? `<button class="outline-button detail-action-button" data-mutation-open="mip.admin.events.clone" data-mutation-id="${id}">克隆活动</button>` : ''
     const reminder = hasCapability('communications.publish') ? `<button class="outline-button detail-action-button" data-mutation-open="mip.admin.communications.publishEventReminder" data-mutation-id="${id}">发布提醒</button>` : ''
-    return clone || reminder ? `<div class="detail-action-group">${clone}${reminder}</div>` : ''
+    return statusAction || archive || clone || reminder ? `<div class="detail-action-group">${statusAction}${archive}${clone}${reminder}</div>` : ''
   }
   if (route === 'orders' && hasCapability('refunds.submit')) return `<button class="outline-button detail-action-button" data-mutation-open="mip.admin.refunds.submit" data-mutation-id="${id}">提交退款</button>`
   return ''
@@ -210,9 +226,9 @@ function mutationDialog() {
   return mutationState ? renderMutationDialog(mutationState, escapeHtml) : ''
 }
 
-function openMutation(action: AdminMutationAction, targetId: string) {
+function openMutation(action: AdminMutationAction, targetId: string, targetStatus?: 'PUBLISHED' | 'UNPUBLISHED') {
   if (!targetId || !detailView || !client.configured) return
-  const definition = createMutationDefinition(action, targetId, detailFieldValue)
+  const definition = createMutationDefinition(action, targetId, detailFieldValue, targetStatus)
   mutationState = {
     ...definition,
     intent: createMutationIntent(action, definition.values),
