@@ -217,6 +217,7 @@ async function loadMessages(query: AdminListQuery, request: AdminRequest): Promi
   return {
     sections: [{
       rows: pageValue(campaignPayload).items.map(item => ({
+        detailId: valueOf(item, 'id', 'campaignId'),
         title: valueOf(item, 'title', 'name'),
         audience: item.audienceType === 'ALL' ? '全部用户' : `${numberLabel(item.recipientCount)} 人`,
         scope: item.branchName || label(valueOf(item, 'scopeType')),
@@ -239,6 +240,7 @@ async function loadKnowledge(query: AdminListQuery, request: AdminRequest): Prom
     const category = record(item.category)
     return {
       title: valueOf(item, 'title', 'name'),
+      detailId: valueOf(item, 'id', 'contentId'),
       type: label(valueOf(item, 'contentType', 'type')),
       category: valueOf(category, 'name'),
       author: valueOf(item, 'authorName'),

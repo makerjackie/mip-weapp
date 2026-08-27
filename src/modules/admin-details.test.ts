@@ -92,4 +92,72 @@ describe('admin detail views', () => {
     assert.equal(detail.sections.find(section => section.title === '订单信息')?.fields?.find(item => item.label === '金额')?.value, '¥6,000.00')
     assert.equal(detail.sections.find(section => section.title === '支付尝试')?.rows?.[0].state, '成功')
   })
+
+  it('loads a message campaign and projects only read-only delivery facts', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const detail = await loadAdminDetail('messages', 'campaign-1', requestWith({
+      'mip.admin.messageCampaigns.get': {
+        id: 'campaign-1', name: '早会提醒', title: '报名提醒', body: '请确认报名信息',
+        scopeType: 'BRANCH', branchName: '福田分会', audienceType: 'ALL', recipientCount: 24,
+        status: 'PUBLISHED', contentSafetyStatus: 'PASSED', version: 2,
+        updatedAt: '2030-03-01T00:00:00.000Z', publishedAt: '2030-03-01T00:00:00.000Z',
+        deliveryStats: {
+          submittedCount: 24, inboxReadyCount: 23, failedCount: 1,
+          outboxStats: { pendingCount: 0, processingCount: 0, retryingCount: 1, deliveredCount: 23, terminalCount: 0 },
+          externalTaskStats: { pendingCount: 1, processingCount: 0, retryingCount: 0, deliveredCount: 22, terminalCount: 1 },
+        },
+        activeDispatch: null,
+      },
+      'mip.admin.messageDeliveryReviews.list': {
+        items: [{
+          resourceRef: { type: 'CAMPAIGN_DISPATCH', id: 'dispatch-1' },
+          evidence: { campaignRef: { type: 'MESSAGE_CAMPAIGN', id: 'campaign-1' } },
+        }], nextCursor: null,
+      },
+      'mip.admin.messageDeliveryRecords.list': {
+        items: [{ title: '报名提醒', nickname: '周宁', channel: 'WECHAT_SUBSCRIPTION', status: 'DELIVERED', attempts: 1, occurredAt: '2030-03-01T00:00:00.000Z', lastErrorCode: null }],
+        nextCursor: null,
+      },
+      'mip.admin.messageDeliveryReviews.get': {
+        resourceRef: { type: 'CAMPAIGN_DISPATCH', id: 'dispatch-1' },
+        classification: 'SUCCEEDED', sourceState: { status: 'DELIVERED', attempts: 1, occurredAt: '2030-03-01T00:00:00.000Z', lastErrorCode: null },
+        workflow: { status: 'RESOLVED' },
+      },
+    }, calls))
+
+    assert.deepEqual(calls.map(call => call.action), [
+      'mip.admin.messageCampaigns.get', 'mip.admin.messageDeliveryReviews.list',
+      'mip.admin.messageDeliveryRecords.list', 'mip.admin.messageDeliveryReviews.get',
+    ])
+    assert.equal(detail.title, '报名提醒')
+    assert.equal(detail.sections.find(section => section.title === '投递统计')?.metrics?.find(item => item.label === '已提交')?.value, '24')
+    assert.equal(detail.sections.find(section => section.title.startsWith('投递记录'))?.rows?.[0].recipient, '周宁')
+    assert.equal(detail.sections.find(section => section.title.startsWith('投递复核'))?.rows?.[0].classification, '成功')
+  })
+
+  it('loads knowledge content and keeps schedule data explicitly read-only', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const detail = await loadAdminDetail('knowledge', 'content-1', requestWith({
+      'mip.admin.knowledge.get': {
+        id: 'content-1', title: '城市分会运营手册', summary: '运营参考', contentType: 'ARTICLE',
+        authorName: 'MIP', category: { name: '运营' }, source: { name: '内部资料' }, accessType: 'MEMBER',
+        status: 'PUBLISHED', contentSafetyStatus: 'PASSED', bodyText: '正文', externalUrl: '',
+        commentsEnabled: true, moderationMode: 'AUTO', settingsVersion: 1,
+        updatedAt: '2030-02-01T00:00:00.000Z', publishedAt: '2030-02-01T00:00:00.000Z', reviewedAt: null,
+        product: { name: '运营手册', priceCents: 60000, currency: 'CNY', catalogStage: 'TEST', status: 'ACTIVE', unlockDays: 30, refundPolicy: 'BEFORE_ACCESS', refundWindowHours: 24 },
+      },
+      'mip.admin.knowledge.schedules.list': {
+        items: [{ id: 'schedule-1', source: { name: '行业资讯', sourceType: 'RSS' }, category: { name: '运营' }, dailyTime: '08:00', timeZone: 'Asia/Shanghai', status: 'ACTIVE', nextRunAt: '2030-02-02T00:00:00.000Z', lastErrorCode: '' }],
+        nextCursor: null,
+      },
+    }, calls))
+
+    assert.deepEqual(calls, [
+      { action: 'mip.admin.knowledge.get', input: { contentId: 'content-1' } },
+      { action: 'mip.admin.knowledge.schedules.list', input: { limit: 20 } },
+    ])
+    assert.equal(detail.title, '城市分会运营手册')
+    assert.equal(detail.sections.find(section => section.title === '内容信息')?.fields?.find(item => item.label === '正文')?.value, '正文')
+    assert.equal(detail.sections.find(section => section.title.startsWith('知识库同步'))?.rows?.[0].source, '行业资讯')
+  })
 })

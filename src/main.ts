@@ -149,7 +149,7 @@ function detailPanel() {
       : detailView
         ? detailView.sections.map(section => `<section class="detail-section"><h3>${escapeHtml(section.title)}</h3>${section.fields ? `<div class="detail-fields">${section.fields.map(item => `<div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`).join('')}</div>` : ''}${section.metrics ? `<div class="detail-metrics">${section.metrics.map(item => `<div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`).join('')}</div>` : ''}${section.rows && section.columns ? rowsToTable(section.rows, section.columns) : ''}</section>`).join('')
         : ''
-  const title = detailView?.title || ({ users: '用户详情', events: '活动详情', orders: '订单详情' })[detailRoute]
+  const title = detailView?.title || ({ users: '用户详情', events: '活动详情', orders: '订单详情', messages: '消息活动详情', knowledge: '知识内容详情' })[detailRoute]
   const subtitle = detailView?.subtitle ? `<p>${escapeHtml(detailView.subtitle)}</p>` : ''
   const status = detailView?.status ? `<span class="${statusClass(detailView.status)}">${escapeHtml(detailView.status)}</span>` : ''
   return `<div class="detail-backdrop" id="detail-backdrop"><aside class="detail-drawer" role="dialog" aria-modal="true" aria-labelledby="detail-title"><header class="detail-header"><div><span class="detail-kicker">只读详情</span><h2 id="detail-title">${escapeHtml(title)}</h2>${subtitle}</div><div class="detail-header-actions">${status}<button id="detail-close-button" class="login-close" aria-label="关闭">×</button></div></header><div class="detail-body">${body}</div></aside></div>`
@@ -173,7 +173,7 @@ function pageOverview() {
 
 function pageList(route: AdminListRoute, title: string, description: string) {
   const page = liveReadPage || (client.demoMode ? demoReadPage(route) : null)
-  const detailTarget = ['users', 'events', 'orders'].includes(route) ? route as AdminDetailRoute : undefined
+  const detailTarget = ['users', 'events', 'orders', 'messages', 'knowledge'].includes(route) ? route as AdminDetailRoute : undefined
   const content = page
     ? `${summaryCards(page)}${page.sections.map(section => `<section class="panel list-panel">${section.title ? `<div class="panel-heading"><h2>${escapeHtml(section.title)}</h2></div>` : ''}${rowsToTable(section.rows, section.columns, detailTarget)}</section>`).join('')}${pagination(route, page)}`
     : `<section class="panel"><div class="empty">${loading ? '正在加载' : '暂无可显示的真实数据'}</div></section>`

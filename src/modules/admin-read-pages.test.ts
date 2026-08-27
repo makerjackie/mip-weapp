@@ -87,7 +87,7 @@ describe('admin read pages', () => {
     const calls: Array<{ action: string; input: unknown }> = []
     const page = await loadAdminReadPage('messages', query, requestWith({
       'mip.admin.messageCampaigns.list': {
-        items: [{ title: '报名提醒', audienceType: 'EXPLICIT', recipientCount: 24, scopeType: 'BRANCH', branchName: '福田分会', updatedAt: '2030-03-01T00:00:00.000Z', status: 'READY' }],
+        items: [{ id: 'campaign-1', title: '报名提醒', audienceType: 'EXPLICIT', recipientCount: 24, scopeType: 'BRANCH', branchName: '福田分会', updatedAt: '2030-03-01T00:00:00.000Z', status: 'READY' }],
         nextCursor: null,
       },
     }, calls))
@@ -98,6 +98,7 @@ describe('admin read pages', () => {
     }])
     assert.equal(page.sections[0].rows[0].audience, '24 人')
     assert.equal(page.sections[0].rows[0].scope, '福田分会')
+    assert.equal(page.sections[0].rows[0].detailId, 'campaign-1')
   })
 
   it('requests the knowledge content section and maps nested category data', async () => {
@@ -105,7 +106,7 @@ describe('admin read pages', () => {
     const page = await loadAdminReadPage('knowledge', { ...query, query: '运营' }, requestWith({
       'mip.admin.knowledge.list': {
         section: 'CONTENTS',
-        items: [{ title: '城市分会运营手册', contentType: 'ARTICLE', category: { name: '运营' }, authorName: 'MIP', accessType: 'MEMBER', updatedAt: '2030-02-01T00:00:00.000Z', status: 'PUBLISHED' }],
+        items: [{ id: 'content-1', title: '城市分会运营手册', contentType: 'ARTICLE', category: { name: '运营' }, authorName: 'MIP', accessType: 'MEMBER', updatedAt: '2030-02-01T00:00:00.000Z', status: 'PUBLISHED' }],
         nextCursor: null,
       },
     }, calls))
@@ -116,5 +117,6 @@ describe('admin read pages', () => {
     }])
     assert.equal(page.sections[0].rows[0].category, '运营')
     assert.equal(page.sections[0].rows[0].access, '会员可见')
+    assert.equal(page.sections[0].rows[0].detailId, 'content-1')
   })
 })

@@ -1,6 +1,6 @@
 import type { AdminRequestInput } from '../domain/contracts'
 
-export type AdminDetailRoute = 'users' | 'events' | 'orders'
+export type AdminDetailRoute = 'users' | 'events' | 'orders' | 'messages' | 'knowledge'
 export type AdminDetailRow = Record<string, unknown>
 
 export interface AdminDetailField {
@@ -33,7 +33,9 @@ export async function loadAdminDetail(
 ): Promise<AdminDetailView> {
   if (route === 'users') return loadUserDetail(id, request)
   if (route === 'events') return loadEventDetail(id, request)
-  return loadOrderDetail(id, request)
+  if (route === 'orders') return loadOrderDetail(id, request)
+  if (route === 'messages') return loadMessageDetail(id, request)
+  return loadKnowledgeDetail(id, request)
 }
 
 async function loadUserDetail(userId: string, request: AdminDetailRequest): Promise<AdminDetailView> {
@@ -314,6 +316,203 @@ async function loadOrderDetail(orderId: string, request: AdminDetailRequest): Pr
     title: text(order.resourceTitle, '订单详情'),
     subtitle: text(order.merchantOrderNoMasked, text(order.id)),
     status: codeLabel(order.status),
+    sections,
+  }
+}
+
+async function loadMessageDetail(campaignId: string, request: AdminDetailRequest): Promise<AdminDetailView> {
+  const campaign = record(await request('mip.admin.messageCampaigns.get', { campaignId }))
+  const title = text(campaign.title, text(campaign.name, '消息活动'))
+  const [reviewPage, deliveryPage] = await Promise.all([
+    request('mip.admin.messageDeliveryReviews.list', {
+      sourceType: 'CAMPAIGN_DISPATCH',
+      workflowStatus: 'ALL',
+      limit: 20,
+    }),
+    request('mip.admin.messageDeliveryRecords.list', {
+      query: title,
+      limit: 20,
+    }),
+  ])
+  const reviews = pageRecords(reviewPage)
+    .filter(item => record(item.evidence).campaignRef && record(record(item.evidence).campaignRef).id === campaignId)
+  const reviewDetails = await Promise.all(reviews.slice(0, 5).map(item => (
+    request('mip.admin.messageDeliveryReviews.get', { resourceRef: item.resourceRef })
+  )))
+  const stats = record(campaign.deliveryStats)
+  const outbox = record(stats.outboxStats)
+  const external = record(stats.externalTaskStats)
+  const dispatch = record(campaign.activeDispatch)
+  const sections: AdminDetailSection[] = [
+    {
+      title: '消息活动信息',
+      fields: fields([
+        ['活动名称', text(campaign.name)],
+        ['消息标题', title],
+        ['消息正文', text(campaign.body)],
+        ['作用范围', campaign.scopeType === 'BRANCH' ? text(campaign.branchName) : '平台'],
+        ['发送范围', campaign.audienceType === 'ALL' ? '全部用户' : `${numberText(campaign.recipientCount)} 人`],
+        ['状态', codeLabel(campaign.status)],
+        ['内容安全', codeLabel(campaign.contentSafetyStatus)],
+        ['版本', numberText(campaign.version)],
+        ['更新时间', dateTime(campaign.updatedAt)],
+        ['发布时间', dateTime(campaign.publishedAt)],
+      ]),
+    },
+    {
+      title: '投递统计',
+      metrics: fields([
+        ['目标人数', numberText(campaign.recipientCount)],
+        ['已提交', numberText(stats.submittedCount)],
+        ['收件箱就绪', numberText(stats.inboxReadyCount)],
+        ['失败', numberText(stats.failedCount)],
+        ['队列待处理', numberText(outbox.pendingCount)],
+        ['队列已送达', numberText(outbox.deliveredCount)],
+        ['外部任务待处理', numberText(external.pendingCount)],
+        ['外部任务已送达', numberText(external.deliveredCount)],
+      ]),
+    },
+  ]
+  if (Object.keys(dispatch).length) {
+    sections.push({
+      title: '当前投递计划',
+      fields: fields([
+        ['计划状态', codeLabel(dispatch.status)],
+        ['计划时间', dateTime(dispatch.scheduledFor)],
+        ['尝试次数', numberText(dispatch.attempts)],
+        ['最近结果', codeLabel(dispatch.lastOutcome)],
+        ['重试策略', codeLabel(dispatch.retryDisposition)],
+        ['最近错误', text(dispatch.lastErrorCode)],
+        ['计划版本', numberText(dispatch.version)],
+        ['更新时间', dateTime(dispatch.updatedAt)],
+      ]),
+    })
+  }
+  sections.push({
+    title: '投递记录（当前可见）',
+    rows: pageRecords(deliveryPage).map(item => ({
+      title: text(item.title),
+      recipient: text(item.nickname),
+      channel: codeLabel(item.channel),
+      state: codeLabel(item.status),
+      attempts: numberText(item.attempts),
+      occurredAt: dateTime(item.occurredAt),
+      error: text(item.lastErrorCode),
+    })),
+    columns: columns([
+      ['title', '消息'], ['recipient', '收件人'], ['channel', '渠道'], ['state', '状态'],
+      ['attempts', '尝试次数'], ['occurredAt', '发生时间'], ['error', '错误'],
+    ]),
+  })
+  sections.push({
+    title: '投递复核（当前可见）',
+    rows: reviewDetails.map(value => {
+      const item = record(value)
+      const source = record(item.sourceState)
+      const workflow = record(item.workflow)
+      return {
+        source: codeLabel(record(item.resourceRef).type),
+        classification: codeLabel(item.classification),
+        state: codeLabel(workflow.status),
+        sourceState: codeLabel(source.status),
+        attempts: numberText(source.attempts),
+        occurredAt: dateTime(source.occurredAt),
+        error: text(source.lastErrorCode),
+      }
+    }),
+    columns: columns([
+      ['source', '来源'], ['classification', '分类'], ['state', '复核状态'], ['sourceState', '投递状态'],
+      ['attempts', '尝试次数'], ['occurredAt', '发生时间'], ['error', '错误'],
+    ]),
+  })
+  return {
+    route: 'messages',
+    title,
+    subtitle: [campaign.branchName, codeLabel(campaign.status)].filter(Boolean).join(' · '),
+    status: codeLabel(campaign.status),
+    sections,
+  }
+}
+
+async function loadKnowledgeDetail(contentId: string, request: AdminDetailRequest): Promise<AdminDetailView> {
+  const [contentValue, schedulesValue] = await Promise.all([
+    request('mip.admin.knowledge.get', { contentId }),
+    request('mip.admin.knowledge.schedules.list', { limit: 20 }),
+  ])
+  const content = record(contentValue)
+  const category = record(content.category)
+  const source = record(content.source)
+  const product = record(content.product)
+  const sections: AdminDetailSection[] = [{
+    title: '内容信息',
+    fields: fields([
+      ['标题', text(content.title, '知识内容')],
+      ['内容类型', codeLabel(content.contentType)],
+      ['摘要', text(content.summary)],
+      ['作者', text(content.authorName)],
+      ['分类', text(category.name)],
+      ['来源', text(source.name)],
+      ['访问范围', codeLabel(content.accessType)],
+      ['状态', codeLabel(content.status)],
+      ['内容安全', codeLabel(content.contentSafetyStatus)],
+      ['更新时间', dateTime(content.updatedAt)],
+      ['发布时间', dateTime(content.publishedAt)],
+      ['审核时间', dateTime(content.reviewedAt)],
+      ['审核说明', text(content.reviewReason)],
+      ['外部链接', text(content.externalUrl)],
+      ['正文', text(content.bodyText)],
+    ]),
+  }]
+  if (Object.keys(product).length) {
+    sections.push({
+      title: '付费内容配置',
+      fields: fields([
+        ['商品名称', text(product.name)],
+        ['价格', money(product.priceCents, product.currency)],
+        ['目录阶段', codeLabel(product.catalogStage)],
+        ['商品状态', codeLabel(product.status)],
+        ['解锁天数', numberText(product.unlockDays)],
+        ['退款规则', codeLabel(product.refundPolicy)],
+        ['退款窗口', product.refundWindowHours === undefined ? '—' : `${numberText(product.refundWindowHours)} 小时`],
+      ]),
+    })
+  }
+  sections.push({
+    title: '内容设置',
+    fields: fields([
+      ['评论功能', content.commentsEnabled === true ? '已开启' : '未开启'],
+      ['审核模式', codeLabel(content.moderationMode)],
+      ['设置版本', numberText(content.settingsVersion)],
+      ['视频号用户', text(content.channelFinderUserName)],
+      ['视频号 Feed', text(content.channelFeedId)],
+      ['封面素材', text(content.coverAssetId)],
+    ]),
+  })
+  sections.push({
+    title: '知识库同步计划（当前可见）',
+    rows: pageRecords(schedulesValue).map(item => {
+      const scheduleSource = record(item.source)
+      const scheduleCategory = record(item.category)
+      return {
+        source: text(scheduleSource.name),
+        type: codeLabel(scheduleSource.sourceType),
+        category: text(scheduleCategory.name),
+        time: `${text(item.dailyTime)} ${text(item.timeZone)}`,
+        nextRunAt: dateTime(item.nextRunAt),
+        state: codeLabel(item.status),
+        lastError: text(item.lastErrorCode),
+      }
+    }),
+    columns: columns([
+      ['source', '来源'], ['type', '来源类型'], ['category', '分类'], ['time', '执行时间'],
+      ['nextRunAt', '下次执行'], ['state', '状态'], ['lastError', '最近错误'],
+    ]),
+  })
+  return {
+    route: 'knowledge',
+    title: text(content.title, '知识内容详情'),
+    subtitle: [text(category.name, ''), codeLabel(content.status)].filter(Boolean).join(' · '),
+    status: codeLabel(content.status),
     sections,
   }
 }
