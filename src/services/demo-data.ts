@@ -22,6 +22,14 @@ export const demo = {
     { id: 'ORD-20300019', user: '陈默', type: 'MIP 早会门票', amount: '¥199.00', status: '待确认', createdAt: '2030-02-18 09:12' },
     { id: 'ORD-20300020', user: '周宁', type: '活动门票', amount: '¥299.00', status: '已关闭', createdAt: '2030-02-18 08:48' },
   ],
+  tasks: [
+    { name: 'MIP 早会复盘', reward: '30', assignment: '指定成员', assigned: '24', completed: '18', endsAt: '2030-03-31 18:00', updatedAt: '2030-03-22 11:20', state: '已发布' },
+    { name: '会员合作机会跟进', reward: '50', assignment: '全部成员', assigned: '436', completed: '67', endsAt: '2030-04-30 18:00', updatedAt: '2030-03-21 16:45', state: '草稿' },
+  ],
+  taskCompletions: [
+    { task: 'MIP 早会复盘', member: '林晓', reward: '30', completedAt: '2030-03-22 10:36', state: '成功' },
+    { task: 'MIP 早会复盘', member: '陈默', reward: '30', completedAt: '2030-03-21 17:08', state: '成功' },
+  ],
   roles: [
     { name: '平台管理员', members: 2, scope: '平台', capabilities: '全部运营权限' },
     { name: '城市运营成员', members: 8, scope: '分会', capabilities: '活动、用户、消息' },

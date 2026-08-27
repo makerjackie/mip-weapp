@@ -6,6 +6,7 @@ import {
   type AdminBffEnv,
   type D1DatabaseBinding,
 } from './admin-bff.ts'
+import { REVIEWED_ADMIN_MUTATIONS } from './admin-mutation-contract.ts'
 
 const NOW = Date.UTC(2030, 0, 1)
 const ORIGIN = 'https://mipmini.01mvp.com'
@@ -26,6 +27,12 @@ const REVIEWED_QUERY_ACTIONS = [
   'mip.admin.orders.list',
   'mip.admin.orders.get',
   'mip.admin.paymentAttempts.list',
+  'mip.admin.tasks.list',
+  'mip.admin.tasks.get',
+  'mip.admin.tasks.assignableMembers.list',
+  'mip.admin.tasks.completions.list',
+  'mip.admin.tasks.completions.get',
+  'mip.admin.tasks.completions.export',
   'mip.admin.memberships.get',
   'mip.admin.memberships.timeline',
   'mip.admin.benefits.ledger',
@@ -75,14 +82,30 @@ const REVIEWED_QUERY_ACTIONS = [
   'mip.admin.exports.status',
   'mip.admin.dashboard',
 ] as const
-const REVIEWED_MUTATION_ACTIONS = [
-  'mip.admin.memberships.grant',
-  'mip.admin.events.clone',
-  'mip.admin.events.changeStatus',
-  'mip.admin.events.archive',
-  'mip.admin.communications.publishEventReminder',
-  'mip.admin.refunds.submit',
-] as const
+const REVIEWED_MUTATION_ACTIONS = REVIEWED_ADMIN_MUTATIONS.map(item => item.action)
+const CORE_MUTATION_INPUTS: Record<string, Record<string, unknown>> = {
+  'mip.admin.memberships.grant': { userId: 'user-a', durationMonths: 12, expectedChainVersion: 1, reason: '测试补录' },
+  'mip.admin.events.clone': { sourceEventId: 'event-a', expectedVersion: 1 },
+  'mip.admin.events.changeStatus': { eventId: 'event-a', expectedVersion: 1, status: 'PUBLISHED' },
+  'mip.admin.events.archive': { eventId: 'event-a', expectedVersion: 1, reason: '测试归档' },
+  'mip.admin.communications.publishEventReminder': { eventId: 'event-a', expectedVersion: 1, sendWechatReminder: false },
+  'mip.admin.refunds.submit': { orderId: 'order-a', reason: '测试退款' },
+}
+
+function reviewedMutationInput(action: string) {
+  if (CORE_MUTATION_INPUTS[action]) return CORE_MUTATION_INPUTS[action]
+  const schema = REVIEWED_ADMIN_MUTATIONS.find(item => item.action === action)!
+  return Object.fromEntries(schema.required.map(key => [key, fixtureValue(key)]))
+}
+
+function fixtureValue(key: string): unknown {
+  if (key === 'active' || key === 'pinned' || key === 'commentsEnabled') return true
+  if (key === 'recipientRefs' || key === 'tagIds' || key === 'capabilities') return []
+  if (key === 'draft' || key === 'fields') return {}
+  if (key.toLowerCase().includes('version')) return 1
+  if (key === 'deltaValue' || key === 'sortOrder' || key === 'cancellationHoursBeforeStart') return 1
+  return `${key}-fixture`
+}
 
 interface Row {
   id: string
@@ -326,7 +349,7 @@ describe('Admin Web BFF', () => {
     const fetchMock = fetchQueue()
     const { bff, sessionCookie } = await confirmedLogin(fetchMock)
 
-    for (const action of ['mip.admin.users.update', 'mip.admin.communityReports.archive']) {
+    for (const action of ['mip.admin.webLogin.confirm', 'mip.admin.communityReports.archive']) {
       const response = await bff.handle(new Request(`${ORIGIN}/api/admin`, {
         method: 'POST',
         headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
@@ -355,7 +378,7 @@ describe('Admin Web BFF', () => {
           contractVersion: 1,
           action,
           idempotencyKey: `web-mutation-${index.toString().padStart(2, '0')}`,
-          input: {},
+          input: reviewedMutationInput(action),
         }),
       }))
       assert.equal(response.status, 200, action)
@@ -364,9 +387,8 @@ describe('Admin Web BFF', () => {
 
     const envelopes = fetchMock.calls.map(([, init]) => JSON.parse(String(init?.body)))
     assert.deepEqual(envelopes.map((envelope) => envelope.request.action), REVIEWED_MUTATION_ACTIONS)
-    assert.deepEqual(envelopes.map((envelope) => envelope.request.idempotencyKey), [
-      'web-mutation-00', 'web-mutation-01', 'web-mutation-02', 'web-mutation-03', 'web-mutation-04', 'web-mutation-05',
-    ])
+    assert.deepEqual(envelopes.map((envelope) => envelope.request.idempotencyKey),
+      REVIEWED_MUTATION_ACTIONS.map((_, index) => `web-mutation-${index.toString().padStart(2, '0')}`))
     assert.ok(envelopes.every((envelope) => /^[A-Za-z0-9_-]{32}$/.test(envelope.nonce)))
     assert.equal(new Set(envelopes.map((envelope) => envelope.nonce)).size, envelopes.length)
   })
@@ -396,7 +418,16 @@ describe('Admin Web BFF', () => {
       throw new Error('NETWORK_DOWN')
     }) as typeof fetch, { calls: [] })
     const networkBff = createAdminBff(env(), { fetch: throwingFetch, now: () => NOW })
-    const response = await networkBff.handle(request('mip.admin.refunds.submit', 'web-refund-request-01'))
+    const response = await networkBff.handle(new Request(`${ORIGIN}/api/admin`, {
+      method: 'POST',
+      headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        contractVersion: 1,
+        action: 'mip.admin.refunds.submit',
+        input: reviewedMutationInput('mip.admin.refunds.submit'),
+        idempotencyKey: 'web-refund-request-01',
+      }),
+    }))
     assert.equal(response.status, 503)
     assert.deepEqual(await response.json(), {
       ok: false,

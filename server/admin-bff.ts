@@ -1,4 +1,8 @@
 import type { AdminApiResponse, AdminRequest } from '../src/domain/contracts'
+import {
+  REVIEWED_ADMIN_MUTATION_ACTIONS,
+  REVIEWED_ADMIN_MUTATION_SCHEMAS,
+} from './admin-mutation-contract.ts'
 
 interface D1RunResult {
   success: boolean
@@ -80,6 +84,12 @@ const ALLOWED_QUERY_ACTIONS = new Set([
   'mip.admin.orders.list',
   'mip.admin.orders.get',
   'mip.admin.paymentAttempts.list',
+  'mip.admin.tasks.list',
+  'mip.admin.tasks.get',
+  'mip.admin.tasks.assignableMembers.list',
+  'mip.admin.tasks.completions.list',
+  'mip.admin.tasks.completions.get',
+  'mip.admin.tasks.completions.export',
   'mip.admin.memberships.get',
   'mip.admin.memberships.timeline',
   'mip.admin.benefits.ledger',
@@ -128,22 +138,6 @@ const ALLOWED_QUERY_ACTIONS = new Set([
   'mip.admin.messageCampaigns.scopes',
   'mip.admin.exports.status',
   'mip.admin.dashboard',
-])
-const ALLOWED_MUTATION_ACTIONS = new Set([
-  'mip.admin.memberships.grant',
-  'mip.admin.events.clone',
-  'mip.admin.events.changeStatus',
-  'mip.admin.events.archive',
-  'mip.admin.communications.publishEventReminder',
-  'mip.admin.refunds.submit',
-])
-const MUTATION_INPUT_KEYS = new Map<string, ReadonlySet<string>>([
-  ['mip.admin.memberships.grant', new Set(['durationMonths', 'expectedChainVersion', 'reason', 'userId'])],
-  ['mip.admin.events.clone', new Set(['expectedVersion', 'sourceEventId'])],
-  ['mip.admin.events.changeStatus', new Set(['eventId', 'expectedVersion', 'status'])],
-  ['mip.admin.events.archive', new Set(['eventId', 'expectedVersion', 'reason'])],
-  ['mip.admin.communications.publishEventReminder', new Set(['eventId', 'expectedVersion', 'sendWechatReminder'])],
-  ['mip.admin.refunds.submit', new Set(['orderId', 'reason'])],
 ])
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_.:-]{12,128}$/
 const encoder = new TextEncoder()
@@ -319,7 +313,7 @@ export function createAdminBff(
     const adminRequest = await readAdminRequest(request)
     if (!adminRequest) return adminError('VALIDATION_FAILED', '运营请求格式无效', 400)
     const isQuery = ALLOWED_QUERY_ACTIONS.has(adminRequest.action)
-    const isMutation = ALLOWED_MUTATION_ACTIONS.has(adminRequest.action)
+    const isMutation = REVIEWED_ADMIN_MUTATION_ACTIONS.has(adminRequest.action)
     if (!isQuery && !isMutation) {
       return adminError('FORBIDDEN', 'Web 管理端当前未开放该操作', 403)
     }
@@ -462,8 +456,12 @@ function validIdempotencyKey(value: unknown): value is string {
 }
 
 function validMutationInput(action: string, input: AdminRequest['input']) {
-  const allowed = MUTATION_INPUT_KEYS.get(action)
-  return Boolean(allowed && Object.keys(input).every(key => allowed.has(key)))
+  const schema = REVIEWED_ADMIN_MUTATION_SCHEMAS.get(action)
+  if (!schema) return false
+  const allowed = new Set([...schema.required, ...schema.optional])
+  const keys = Object.keys(input)
+  return keys.every(key => allowed.has(key))
+    && [...schema.required].every(key => Object.hasOwn(input, key))
 }
 
 function validSecret(value: string | undefined) {

@@ -1,6 +1,7 @@
 import type { AdminRequestInput } from '../domain/contracts'
+import { loadTaskCompletionDetail, loadTaskDetail } from './admin-task-management.ts'
 
-export type AdminDetailRoute = 'users' | 'events' | 'orders' | 'messages' | 'knowledge' | 'opportunities'
+export type AdminDetailRoute = 'users' | 'events' | 'orders' | 'tasks' | 'taskCompletions' | 'messages' | 'knowledge' | 'opportunities'
 export type AdminDetailRow = Record<string, unknown>
 
 export interface AdminDetailField {
@@ -14,6 +15,7 @@ export interface AdminDetailSection {
   metrics?: AdminDetailField[]
   rows?: AdminDetailRow[]
   columns?: Array<{ key: string; label: string }>
+  detailTarget?: AdminDetailRoute
 }
 
 export interface AdminDetailView {
@@ -22,6 +24,7 @@ export interface AdminDetailView {
   subtitle: string
   status: string
   sections: AdminDetailSection[]
+  source?: Record<string, unknown>
 }
 
 export type AdminDetailRequest = <T>(action: string, input?: AdminRequestInput) => Promise<T>
@@ -34,6 +37,8 @@ export async function loadAdminDetail(
   if (route === 'users') return loadUserDetail(id, request)
   if (route === 'events') return loadEventDetail(id, request)
   if (route === 'orders') return loadOrderDetail(id, request)
+  if (route === 'tasks') return loadTaskDetail(id, request)
+  if (route === 'taskCompletions') return loadTaskCompletionDetail(id, request)
   if (route === 'messages') return loadMessageDetail(id, request)
   if (route === 'opportunities') return loadOpportunityDetail(id, request)
   return loadKnowledgeDetail(id, request)
@@ -58,6 +63,8 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest): Prom
       ['手机状态', user.phoneBound === true ? '已绑定' : '未绑定'],
       ['所属分会', text(user.branchName)],
       ['城市', text(user.cityName)],
+      ['资料版本', numberText(user.profileVersion)],
+      ['用户版本', numberText(user.version)],
       ['简介', text(user.headline)],
       ['个人介绍', text(user.introduction)],
       ['注册时间', dateTime(user.createdAt)],
@@ -116,6 +123,7 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest): Prom
     subtitle: [text(user.branchName, ''), text(user.cityName, '')].filter(Boolean).join(' · '),
     status: codeLabel(user.kind),
     sections,
+    source: { user, membership: membershipDetail },
   }
 }
 
@@ -211,6 +219,8 @@ async function loadEventDetail(eventId: string, request: AdminDetailRequest): Pr
   sections.push({
     title: '报名名单（前 20 条）',
     rows: roster.map(item => ({
+      registrationId: text(item.id, text(item.registrationId)),
+      version: numberText(item.version),
       name: text(item.nickname),
       city: text(item.cityName),
       phone: item.phoneBound === true ? '已绑定' : '未绑定',
@@ -226,6 +236,7 @@ async function loadEventDetail(eventId: string, request: AdminDetailRequest): Pr
     subtitle: [text(event.cityName, ''), text(event.venueName, '')].filter(Boolean).join(' · '),
     status: codeLabel(event.status),
     sections,
+    source: { event, roster },
   }
 }
 
@@ -439,6 +450,7 @@ async function loadMessageDetail(campaignId: string, request: AdminDetailRequest
     subtitle: [campaign.branchName, codeLabel(campaign.status)].filter(Boolean).join(' · '),
     status: codeLabel(campaign.status),
     sections,
+    source: { campaign, dispatch },
   }
 }
 
@@ -470,6 +482,7 @@ async function loadOpportunityDetail(opportunityId: string, request: AdminDetail
       ['内容安全', codeLabel(opportunity.contentSafetyStatus)],
       ['发布时间', dateTime(opportunity.publishedAt)],
       ['更新时间', dateTime(opportunity.updatedAt)],
+      ['版本', numberText(opportunity.version)],
     ]),
   }]
   const team = records(opportunity.teamMembers)
@@ -521,6 +534,7 @@ async function loadOpportunityDetail(opportunityId: string, request: AdminDetail
     subtitle: [text(opportunity.ownerNickname, ''), text(opportunity.cityName, '')].filter(Boolean).join(' · '),
     status: codeLabel(opportunity.status),
     sections,
+    source: { opportunity, commentState: commentState || {} },
   }
 }
 
@@ -549,6 +563,7 @@ async function loadKnowledgeDetail(contentId: string, request: AdminDetailReques
       ['发布时间', dateTime(content.publishedAt)],
       ['审核时间', dateTime(content.reviewedAt)],
       ['审核说明', text(content.reviewReason)],
+      ['版本', numberText(content.version)],
       ['外部链接', text(content.externalUrl)],
       ['正文', text(content.bodyText)],
     ]),
@@ -604,6 +619,7 @@ async function loadKnowledgeDetail(contentId: string, request: AdminDetailReques
     subtitle: [text(category.name, ''), codeLabel(content.status)].filter(Boolean).join(' · '),
     status: codeLabel(content.status),
     sections,
+    source: { content, schedules: pageRecords(schedulesValue) },
   }
 }
 

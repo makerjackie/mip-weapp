@@ -3,7 +3,7 @@ import {
   AdminApiClientError,
   type AdminLoginChallenge,
 } from './services/admin-api'
-import type { AdminSession } from './domain/contracts'
+import type { AdminRequestInput, AdminSession } from './domain/contracts'
 import {
   loadAdminDetail,
   type AdminDetailRoute,
@@ -30,6 +30,41 @@ import {
   renderMutationDialog,
   type MutationState,
 } from './modules/admin-mutation-ui'
+import {
+  ADMIN_PEOPLE_MUTATION_ACTIONS,
+  ADMIN_PEOPLE_MUTATION_CONFIGS,
+  buildAdminPeopleMutationInput,
+  createAdminPeopleMutationDefinition,
+  type AdminPeopleMutationAction,
+} from './modules/admin-people-mutation-forms'
+import {
+  ADMIN_EVENT_MUTATION_ACTIONS,
+  buildAdminEventMutationInput,
+  createAdminEventMutationDefinition,
+  eventMutationConfig,
+  type AdminEventMutationAction,
+} from './modules/admin-event-mutation-forms'
+import {
+  ADMIN_CONTENT_MUTATION_ACTIONS,
+  getContentMutationForm,
+  validateContentMutation,
+  type ContentMutationAction,
+} from './modules/content-mutation-forms'
+import {
+  readOperationValues,
+  renderOperationDialog,
+  type OperationDialogState,
+  type OperationField,
+  type OperationValues,
+} from './modules/admin-operation-ui'
+import {
+  ADMIN_TASK_MUTATION_ACTIONS,
+  buildTaskMutationInput,
+  createTaskMutationDefinition,
+  downloadTaskCompletionExport,
+  exportTaskCompletions,
+  type AdminTaskMutationAction,
+} from './modules/admin-task-management'
 import { demo } from './services/demo-data'
 import './styles.css'
 
@@ -56,6 +91,19 @@ let detailError = ''
 let detailFlow = 0
 let currentDetailId = ''
 let mutationState: MutationState | null = null
+type ReviewedOperationAction = AdminPeopleMutationAction | AdminEventMutationAction | ContentMutationAction | AdminTaskMutationAction
+type AdvancedOperationState = OperationDialogState & {
+  action: ReviewedOperationAction
+  capability: string
+  idempotencyKey: string
+  buildInput: (values: OperationValues) => AdminRequestInput | null
+}
+let operationState: AdvancedOperationState | null = null
+
+const peopleOperationSet = new Set<string>(ADMIN_PEOPLE_MUTATION_ACTIONS)
+const eventOperationSet = new Set<string>(ADMIN_EVENT_MUTATION_ACTIONS)
+const contentOperationSet = new Set<string>(ADMIN_CONTENT_MUTATION_ACTIONS)
+const taskOperationSet = new Set<string>(ADMIN_TASK_MUTATION_ACTIONS)
 
 type ListState = AdminListQuery & { history: Array<string | null> }
 const listState = (): ListState => ({ query: '', status: '', cursor: null, limit: 20, history: [] })
@@ -63,6 +111,7 @@ const listStates: Record<AdminListRoute, ListState> = {
   users: listState(),
   events: listState(),
   orders: listState(),
+  tasks: listState(),
   permissions: listState(),
   messages: listState(),
   knowledge: listState(),
@@ -71,18 +120,25 @@ const listStates: Record<AdminListRoute, ListState> = {
   operations: listState(),
 }
 
-const nav: Array<{ route: Route; label: string; icon: string; group: string }> = [
-  { route: 'overview', label: '网站概览', icon: '▦', group: '工作台' },
-  { route: 'users', label: '用户管理', icon: '◎', group: '业务管理' },
-  { route: 'events', label: '活动管理', icon: '◇', group: '业务管理' },
-  { route: 'orders', label: '订单管理', icon: '▤', group: '业务管理' },
-  { route: 'opportunities', label: '机会与内容', icon: '◇', group: '业务管理' },
-  { route: 'growth', label: '成长与勋章', icon: '✦', group: '会员运营' },
-  { route: 'permissions', label: '权限管理', icon: '⌘', group: '平台设置' },
-  { route: 'messages', label: '消息管理', icon: '▱', group: '平台设置' },
-  { route: 'knowledge', label: '知识库', icon: '□', group: '平台设置' },
-  { route: 'operations', label: '运营记录', icon: '≡', group: '平台设置' },
+const nav: Array<{ route: Route; label: string; icon: string; group: string; capabilities: string[] }> = [
+  { route: 'overview', label: '网站概览', icon: '▦', group: '工作台', capabilities: ['admin.dashboard'] },
+  { route: 'users', label: '用户管理', icon: '◎', group: '业务管理', capabilities: ['users.read'] },
+  { route: 'events', label: '活动管理', icon: '◇', group: '业务管理', capabilities: ['events.read'] },
+  { route: 'orders', label: '订单管理', icon: '▤', group: '业务管理', capabilities: ['orders.read'] },
+  { route: 'tasks', label: '任务管理', icon: '✓', group: '业务管理', capabilities: ['tasks.manage'] },
+  { route: 'opportunities', label: '机会与内容', icon: '◇', group: '业务管理', capabilities: ['opportunities.moderate', 'userContent.moderate'] },
+  { route: 'growth', label: '成长与勋章', icon: '✦', group: '会员运营', capabilities: ['growth.read', 'badges.manage'] },
+  { route: 'permissions', label: '权限管理', icon: '⌘', group: '平台设置', capabilities: ['roles.change', 'branches.manage', 'audit.read'] },
+  { route: 'messages', label: '消息管理', icon: '▱', group: '平台设置', capabilities: ['messages.manage'] },
+  { route: 'knowledge', label: '知识库', icon: '□', group: '平台设置', capabilities: ['knowledge.manage'] },
+  { route: 'operations', label: '运营记录', icon: '≡', group: '平台设置', capabilities: ['announcements.manage', 'community.reports.manage', 'operations.exceptions.read'] },
 ]
+
+function visibleNav() {
+  if (client.demoMode || !session?.enabled) return nav
+  const visible = nav.filter(item => item.capabilities.every(hasCapability))
+  return visible.length ? visible : [nav[0]]
+}
 
 function escapeHtml(value: unknown) {
   return String(value).replace(/[&<>'"]/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' })[character]!)
@@ -112,13 +168,14 @@ function detailAction(row: AdminTableRow, target?: AdminDetailRoute) {
 }
 
 function sidebar() {
-  const groups = [...new Set(nav.map(item => item.group))]
+  const items = visibleNav()
+  const groups = [...new Set(items.map(item => item.group))]
   const sessionText = client.demoMode ? '本地演示模式' : session?.enabled ? '已验证运营会话' : '尚未登录'
-  return `<aside class="sidebar"><div class="brand"><span class="brand-mark">MIP</span><div><strong>MIP</strong><small>运营管理</small></div></div><nav>${groups.map(group => `<div class="nav-group"><span class="nav-label">${group}</span>${nav.filter(item => item.group === group).map(item => `<button class="nav-item ${item.route === route ? 'active' : ''}" data-route="${item.route}"><span class="nav-icon">${item.icon}</span>${item.label}</button>`).join('')}</div>`).join('')}</nav><div class="sidebar-footer"><span class="avatar">M</span><div><strong>运营账号</strong><small>${sessionText}</small></div>${session?.enabled ? '<button class="icon-button" id="logout-button" title="退出登录">↪</button>' : ''}</div></aside>`
+  return `<aside class="sidebar"><div class="brand"><span class="brand-mark">MIP</span><div><strong>MIP</strong><small>运营管理</small></div></div><nav>${groups.map(group => `<div class="nav-group"><span class="nav-label">${group}</span>${items.filter(item => item.group === group).map(item => `<button class="nav-item ${item.route === route ? 'active' : ''}" data-route="${item.route}"><span class="nav-icon">${item.icon}</span>${item.label}</button>`).join('')}</div>`).join('')}</nav><div class="sidebar-footer"><span class="avatar">M</span><div><strong>运营账号</strong><small>${sessionText}</small></div>${session?.enabled ? '<button class="icon-button" id="logout-button" title="退出登录">↪</button>' : ''}</div></aside>`
 }
 
 function header() {
-  const current = nav.find(item => item.route === route)!
+  const current = nav.find(item => item.route === route) || nav[0]
   const connection = client.demoMode ? '本地演示数据' : session?.enabled ? '真实数据已连接' : '需要运营登录'
   const sessionAction = !client.demoMode && !session?.enabled ? '<button class="outline-button" id="login-button">运营登录</button>' : ''
   return `<header class="topbar"><div class="mobile-brand"><span class="brand-mark">MIP</span></div><div class="breadcrumb"><span>运营管理</span><i>/</i><strong>${current.label}</strong></div><div class="top-actions"><span class="connection"><i class="dot ${session?.enabled ? 'online' : ''}"></i>${connection}</span>${sessionAction}<button class="outline-button" id="refresh-button">刷新数据</button></div></header>`
@@ -126,7 +183,7 @@ function header() {
 
 function shell(content: string) {
   const loginAction = apiErrorCode === 'AUTH_REQUIRED' ? '<button class="notice-action" id="notice-login-button">运营登录</button>' : ''
-  app.innerHTML = `${sidebar()}<main class="main"><div class="content"><div id="notice" class="notice ${notice ? '' : 'hidden'}"><span>${escapeHtml(notice)}</span>${loginAction}</div>${header()}${content}</div></main>${detailPanel()}${mutationDialog()}${loginDialog()}`
+  app.innerHTML = `${sidebar()}<main class="main"><div class="content"><div id="notice" class="notice ${notice ? '' : 'hidden'}"><span>${escapeHtml(notice)}</span>${loginAction}</div>${header()}${content}</div></main>${detailPanel()}${mutationDialog()}${advancedOperationDialog()}${loginDialog()}`
   document.querySelectorAll<HTMLButtonElement>('[data-route]').forEach(button => button.addEventListener('click', () => {
     route = button.dataset.route as Route
     notice = ''
@@ -162,6 +219,18 @@ function shell(content: string) {
     if (event.target === event.currentTarget) closeMutation()
   })
   document.querySelector<HTMLFormElement>('#mutation-form')?.addEventListener('submit', event => void submitMutation(event))
+  document.querySelectorAll<HTMLButtonElement>('[data-operation-open]').forEach(button => button.addEventListener('click', () => {
+    openAdvancedOperation(button.dataset.operationOpen || '', button.dataset.operationId || '')
+  }))
+  document.querySelector('#operation-close-button')?.addEventListener('click', closeAdvancedOperation)
+  document.querySelector('#operation-cancel-button')?.addEventListener('click', closeAdvancedOperation)
+  document.querySelector('#operation-backdrop')?.addEventListener('click', event => {
+    if (event.target === event.currentTarget) closeAdvancedOperation()
+  })
+  document.querySelector<HTMLFormElement>('#operation-form')?.addEventListener('submit', event => void submitAdvancedOperation(event))
+  document.querySelectorAll<HTMLButtonElement>('[data-task-export]').forEach(button => button.addEventListener('click', () => {
+    void handleTaskCompletionExport(button.dataset.taskExport || '', button)
+  }))
 }
 
 function loginDialog() {
@@ -180,9 +249,9 @@ function detailPanel() {
     : detailError
       ? `<div class="detail-state detail-error">${escapeHtml(detailError)}</div>`
       : detailView
-        ? detailView.sections.map(section => `<section class="detail-section"><h3>${escapeHtml(section.title)}</h3>${section.fields ? `<div class="detail-fields">${section.fields.map(item => `<div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`).join('')}</div>` : ''}${section.metrics ? `<div class="detail-metrics">${section.metrics.map(item => `<div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`).join('')}</div>` : ''}${section.rows && section.columns ? rowsToTable(section.rows, section.columns) : ''}</section>`).join('')
+        ? detailView.sections.map(section => `<section class="detail-section"><h3>${escapeHtml(section.title)}</h3>${section.fields ? `<div class="detail-fields">${section.fields.map(item => `<div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`).join('')}</div>` : ''}${section.metrics ? `<div class="detail-metrics">${section.metrics.map(item => `<div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`).join('')}</div>` : ''}${section.rows && section.columns ? rowsToTable(section.rows, section.columns, section.detailTarget) : ''}</section>`).join('')
         : ''
-  const title = detailView?.title || ({ users: '用户详情', events: '活动详情', orders: '订单详情', messages: '消息活动详情', knowledge: '知识内容详情', opportunities: '机会详情' })[detailRoute]
+  const title = detailView?.title || ({ users: '用户详情', events: '活动详情', orders: '订单详情', tasks: '任务详情', taskCompletions: '任务完成记录', messages: '消息活动详情', knowledge: '知识内容详情', opportunities: '机会详情' })[detailRoute]
   const subtitle = detailView?.subtitle ? `<p>${escapeHtml(detailView.subtitle)}</p>` : ''
   const status = detailView?.status ? `<span class="${statusClass(detailView.status)}">${escapeHtml(detailView.status)}</span>` : ''
   const actions = detailActions(detailRoute)
@@ -192,7 +261,18 @@ function detailPanel() {
 function detailActions(route: AdminDetailRoute | null) {
   if (!route || !detailView) return ''
   const id = escapeHtml(detailIdForRoute(route))
-  if (route === 'users' && hasCapability('memberships.adjust')) return `<button class="outline-button detail-action-button" data-mutation-open="mip.admin.memberships.grant" data-mutation-id="${id}">补录会员</button>`
+  if (route === 'users') {
+    const actions = [
+      hasCapability('memberships.adjust') ? `<button class="outline-button detail-action-button" data-mutation-open="mip.admin.memberships.grant" data-mutation-id="${id}">补录会员</button>` : '',
+      operationButton('mip.admin.users.update', '编辑资料', id),
+      operationButton('mip.admin.users.changePrimaryBranch', '变更分会', id),
+      operationButton('mip.admin.users.setControl', '访问控制', id),
+      operationButton('mip.admin.roles.set', '设置角色', id),
+      operationButton('mip.admin.badges.grant', '授予勋章', id),
+      operationButton('mip.admin.growth.adjust', '调整成长值', id),
+    ].join('')
+    return actions ? `<div class="detail-action-group">${actions}</div>` : ''
+  }
   if (route === 'events') {
     const status = detailView.status
     const targetStatus = status === '已发布'
@@ -208,10 +288,41 @@ function detailActions(route: AdminDetailRoute | null) {
       : ''
     const clone = hasCapability('events.write') ? `<button class="outline-button detail-action-button" data-mutation-open="mip.admin.events.clone" data-mutation-id="${id}">克隆活动</button>` : ''
     const reminder = hasCapability('communications.publish') ? `<button class="outline-button detail-action-button" data-mutation-open="mip.admin.communications.publishEventReminder" data-mutation-id="${id}">发布提醒</button>` : ''
-    return statusAction || archive || clone || reminder ? `<div class="detail-action-group">${statusAction}${archive}${clone}${reminder}</div>` : ''
+    const edit = operationButton('mip.admin.events.save', '编辑活动', id)
+    const tags = operationButton('mip.admin.events.tags.replace', '活动标签', id)
+    return statusAction || archive || clone || reminder || edit || tags ? `<div class="detail-action-group">${edit}${statusAction}${archive}${clone}${tags}${reminder}</div>` : ''
   }
   if (route === 'orders' && hasCapability('refunds.submit')) return `<button class="outline-button detail-action-button" data-mutation-open="mip.admin.refunds.submit" data-mutation-id="${id}">提交退款</button>`
+  if (route === 'tasks') {
+    const task = record(detailView.source?.task)
+    const status = String(task.status || '')
+    const assignmentMode = String(task.assignmentMode || 'ALL')
+    const actions = [
+      operationButton('mip.admin.tasks.save', '编辑任务', id),
+      status === 'DRAFT' || status === 'UNPUBLISHED' ? operationButton('mip.admin.tasks.publish', '发布任务', id) : '',
+      status === 'PUBLISHED' ? operationButton('mip.admin.tasks.unpublish', '下架任务', id) : '',
+      assignmentMode === 'SELECTED' ? operationButton('mip.admin.tasks.assignMembers', '分配成员', id) : '',
+      assignmentMode === 'SELECTED' ? operationButton('mip.admin.tasks.revokeMembers', '撤销成员', id) : '',
+      operationButton('mip.admin.tasks.delete', '删除任务', id),
+      hasCapability('tasks.manage') ? `<button class="outline-button detail-action-button" data-task-export="${id}">导出完成记录</button>` : '',
+    ].join('')
+    return `<div class="detail-action-group">${actions}</div>`
+  }
+  if (route === 'messages') {
+    return `<div class="detail-action-group">${operationButton('mip.admin.messageCampaigns.save', '编辑消息', id)}${operationButton('mip.admin.messageCampaigns.snapshot', '生成收件人快照', id)}${operationButton('mip.admin.messageCampaigns.schedule', '设置发送时间', id)}${operationButton('mip.admin.messageCampaigns.publish', '发布消息', id)}${operationButton('mip.admin.messageCampaigns.withdraw', '撤回消息', id)}</div>`
+  }
+  if (route === 'knowledge') {
+    return `<div class="detail-action-group">${operationButton('mip.admin.knowledge.contents.save', '编辑内容', id)}${operationButton('mip.admin.knowledge.contents.review', '审核内容', id)}</div>`
+  }
+  if (route === 'opportunities') {
+    return `<div class="detail-action-group">${operationButton('mip.admin.opportunities.save', '编辑机会', id)}${operationButton('mip.admin.opportunities.publish', '发布机会', id)}${operationButton('mip.admin.opportunities.end', '结束机会', id)}${operationButton('mip.admin.opportunities.unpublish', '下架机会', id)}${operationButton('mip.admin.opportunities.archive', '归档机会', id)}</div>`
+  }
   return ''
+}
+
+function operationButton(action: ReviewedOperationAction, label: string, targetId = '') {
+  if (!hasCapability(operationCapability(action))) return ''
+  return `<button class="outline-button detail-action-button" data-operation-open="${action}" data-operation-id="${escapeHtml(targetId)}">${escapeHtml(label)}</button>`
 }
 
 function hasCapability(capability: string) {
@@ -277,6 +388,286 @@ function closeMutation() {
   paint()
 }
 
+function advancedOperationDialog() {
+  return operationState ? renderOperationDialog(operationState, escapeHtml) : ''
+}
+
+function openAdvancedOperation(actionValue: string, targetId: string) {
+  if (!client.configured || !isReviewedOperationAction(actionValue)) return
+  if (!hasCapability(operationCapability(actionValue))) return
+  const idempotencyKey = createAdvancedOperationKey(actionValue)
+  if (peopleOperationSet.has(actionValue)) {
+    const action = actionValue as AdminPeopleMutationAction
+    const definition = createAdminPeopleMutationDefinition(action, targetId, detailFieldValue)
+    const values = prefillPeopleValues(action, definition.values)
+    const fields = peopleFields(action, definition.fields)
+    operationState = {
+      action,
+      capability: definition.capability,
+      title: definition.title,
+      description: definition.description,
+      fields,
+      values,
+      idempotencyKey,
+      buildInput: next => buildAdminPeopleMutationInput(definition, next),
+      busy: false,
+      error: '',
+    }
+  }
+  else if (eventOperationSet.has(actionValue)) {
+    const action = actionValue as AdminEventMutationAction
+    const definition = createAdminEventMutationDefinition(action, targetId, detailFieldValue)
+    const values = prefillEventValues(action, definition.values)
+    operationState = {
+      action,
+      capability: definition.capability,
+      title: definition.title,
+      description: definition.description,
+      fields: definition.fields as readonly OperationField[],
+      values,
+      idempotencyKey,
+      buildInput: next => buildAdminEventMutationInput(definition, next),
+      busy: false,
+      error: '',
+    }
+  }
+  else if (taskOperationSet.has(actionValue)) {
+    const action = actionValue as AdminTaskMutationAction
+    const definition = createTaskMutationDefinition(action, targetId, detailView?.source || {})
+    operationState = {
+      action,
+      capability: definition.capability,
+      title: definition.title,
+      description: definition.description,
+      fields: definition.fields,
+      values: definition.values,
+      idempotencyKey,
+      buildInput: next => buildTaskMutationInput(definition, next),
+      busy: false,
+      error: '',
+    }
+  }
+  else {
+    const action = actionValue as ContentMutationAction
+    const definition = getContentMutationForm(action)
+    const fields = normalizeContentFields(definition.fields as readonly OperationField[])
+    const values = prefillContentValues(action, defaultOperationValues(fields), targetId)
+    operationState = {
+      action,
+      capability: definition.capability,
+      title: contentOperationTitle(action, definition.resource),
+      description: `${definition.resource}操作提交后由服务端校验权限、作用范围和当前状态。`,
+      fields,
+      values,
+      idempotencyKey,
+      buildInput: (next) => {
+        const normalized = contentOperationValues(action, next, idempotencyKey)
+        const result = validateContentMutation(action, normalized)
+        return result.ok ? result.input : null
+      },
+      busy: false,
+      error: '',
+    }
+  }
+  paint()
+}
+
+async function submitAdvancedOperation(event: SubmitEvent) {
+  event.preventDefault()
+  const state = operationState
+  if (!state || state.busy) return
+  const values = readOperationValues(state.fields, new FormData(event.currentTarget as HTMLFormElement), state.values)
+  const input = state.buildInput(values)
+  if (!input) {
+    state.values = values
+    state.error = '请检查必填项、标识、版本和字段格式'
+    paint()
+    return
+  }
+  if (!window.confirm(`${state.title}\n\n确认提交？`)) return
+  state.values = values
+  state.busy = true
+  state.error = ''
+  paint()
+  try {
+    await client.request(state.action, { ...input, idempotencyKey: state.idempotencyKey })
+    notice = `${state.title}已提交`
+    operationState = null
+    if (detailRoute && currentDetailId) await openDetail(detailRoute, currentDetailId)
+    else await render()
+  }
+  catch (error) {
+    state.busy = false
+    state.error = error instanceof AdminApiClientError ? error.message : '请求结果暂时无法确认'
+    paint()
+  }
+}
+
+function closeAdvancedOperation() {
+  if (operationState?.busy) return
+  operationState = null
+  paint()
+}
+
+function isReviewedOperationAction(action: string): action is ReviewedOperationAction {
+  return peopleOperationSet.has(action) || eventOperationSet.has(action) || contentOperationSet.has(action) || taskOperationSet.has(action)
+}
+
+function operationCapability(action: ReviewedOperationAction) {
+  if (peopleOperationSet.has(action)) return ADMIN_PEOPLE_MUTATION_CONFIGS[action as AdminPeopleMutationAction].capability
+  if (eventOperationSet.has(action)) return eventMutationConfig(action as AdminEventMutationAction).capability
+  if (taskOperationSet.has(action)) return 'tasks.manage'
+  return getContentMutationForm(action as ContentMutationAction).capability
+}
+
+async function handleTaskCompletionExport(taskId: string, button: HTMLButtonElement) {
+  if (!taskId || button.disabled || !hasCapability('tasks.manage')) return
+  button.disabled = true
+  const label = button.textContent
+  button.textContent = '正在导出'
+  try {
+    const result = await exportTaskCompletions(taskId, (action, input) => client.request(action, input))
+    downloadTaskCompletionExport(result)
+    notice = `已导出 ${result.rowCount.toLocaleString('zh-CN')} 条完成记录`
+    paint()
+  }
+  catch (error) {
+    notice = error instanceof AdminApiClientError ? error.message : '任务完成记录暂时无法导出'
+    paint()
+  }
+  finally {
+    button.disabled = false
+    button.textContent = label
+  }
+}
+
+function createAdvancedOperationKey(action: string) {
+  const suffix = globalThis.crypto?.randomUUID?.().replaceAll('-', '')
+    || `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`
+  return `web-${action.split('.').at(-1) || 'operation'}-${suffix}`.slice(0, 128)
+}
+
+function peopleFields(action: AdminPeopleMutationAction, fields: readonly OperationField[]) {
+  if (action !== 'mip.admin.users.changePrimaryBranch') return fields
+  const options = recordsValue(record(record(detailView?.source).user).primaryBranchOptions).map(item => ({
+    value: String(item.id || ''),
+    label: String(item.label || item.name || item.id || ''),
+  })).filter(item => item.value && item.label)
+  return fields.map(field => (field.name === 'targetBranchId' && options.length ? { ...field, options } : field))
+}
+
+function prefillPeopleValues(action: AdminPeopleMutationAction, values: OperationValues) {
+  const next = { ...values }
+  const user = record(record(detailView?.source).user)
+  if (action === 'mip.admin.users.update') {
+    for (const key of ['nickname', 'headline', 'introduction']) if (user[key] !== undefined) next[key] = user[key]
+  }
+  return next
+}
+
+function prefillEventValues(action: AdminEventMutationAction, values: OperationValues) {
+  const next = { ...values }
+  if (action !== 'mip.admin.events.save') return next
+  const event = record(record(detailView?.source).event)
+  for (const field of eventMutationConfig(action).fields) {
+    if (!field.hidden && event[field.key] !== undefined) next[field.key] = event[field.key]
+  }
+  return next
+}
+
+function prefillContentValues(action: ContentMutationAction, values: OperationValues, targetId: string) {
+  const next = { ...values }
+  const source = record(detailView?.source)
+  const resource = action.startsWith('mip.admin.messageCampaigns.') ? record(source.campaign)
+    : action.startsWith('mip.admin.opportunities.') ? record(source.opportunity)
+      : action.startsWith('mip.admin.knowledge.contents.') ? record(source.content)
+        : {}
+  const idKey = action.startsWith('mip.admin.messageCampaigns.') ? 'campaignId'
+    : action.startsWith('mip.admin.opportunities.') ? 'opportunityId'
+      : action.startsWith('mip.admin.knowledge.contents.') ? 'contentId'
+        : action.startsWith('mip.admin.badges.') || action === 'mip.admin.growth.adjust' ? 'userId'
+          : ''
+  if (idKey && targetId) next[idKey] = targetId
+  if (resource.version !== undefined) next.expectedVersion = resource.version
+  if (action.endsWith('.save')) {
+    for (const key of Object.keys(next)) if (resource[key] !== undefined) next[key] = resource[key]
+  }
+  return next
+}
+
+function defaultOperationValues(fields: readonly OperationField[]): OperationValues {
+  const values: OperationValues = {}
+  for (const field of fields) {
+    const key = String(field.key || field.name || '')
+    if (!key) continue
+    if (field.kind === 'group') values[key] = defaultOperationValues(field.fields || [])
+    else if (field.kind === 'checkbox' || field.kind === 'boolean') values[key] = false
+    else if (['id-list', 'profile-ref-list', 'asset-list', 'tags', 'multi-select'].includes(field.kind)) values[key] = []
+    else if (field.kind === 'select') {
+      const first = field.options?.[0]
+      values[key] = field.required && first ? (typeof first === 'string' ? first : first.value) : ''
+    }
+    else values[key] = ''
+  }
+  return values
+}
+
+function contentOperationValues(action: ContentMutationAction, values: OperationValues, idempotencyKey: string) {
+  const next = pruneEmptyGroups({ ...values })
+  const form = getContentMutationForm(action)
+  if (form.idempotencyRequired) next.idempotencyKey = idempotencyKey
+  if (action === 'mip.admin.opportunities.save') {
+    const draft = record(next.draft)
+    const terms = record(draft.commercialTerms)
+    if (!terms.minAmountCents && !terms.maxAmountCents && !Array.isArray(terms.locations)) delete draft.commercialTerms
+    next.draft = draft
+  }
+  if (action === 'mip.admin.messageCampaigns.schedule' && typeof next.scheduledFor === 'string' && next.scheduledFor) {
+    const date = new Date(next.scheduledFor)
+    if (Number.isFinite(date.getTime())) next.scheduledFor = date.toISOString()
+  }
+  return next
+}
+
+function normalizeContentFields(fields: readonly OperationField[]): readonly OperationField[] {
+  return fields.map((field) => {
+    const key = String(field.key || field.name || '')
+    const nested = field.fields ? normalizeContentFields(field.fields) : undefined
+    if (key === 'roleKeys') return { ...field, kind: 'multi-select', fields: nested }
+    return nested ? { ...field, fields: nested } : field
+  })
+}
+
+function pruneEmptyGroups(value: OperationValues): OperationValues {
+  const output: OperationValues = {}
+  for (const [key, item] of Object.entries(value)) {
+    if (item && typeof item === 'object' && !Array.isArray(item)) {
+      const nested = pruneEmptyGroups(item as OperationValues)
+      if (Object.keys(nested).length) output[key] = nested
+    }
+    else output[key] = item
+  }
+  return output
+}
+
+function contentOperationTitle(action: ContentMutationAction, resource: string) {
+  const verb = action.endsWith('.save') ? '保存'
+    : action.endsWith('.publish') ? '发布'
+      : action.endsWith('.withdraw') || action.endsWith('.unpublish') ? '下架'
+        : action.endsWith('.archive') ? '归档'
+          : action.endsWith('.claim') ? '领取处理'
+            : action.endsWith('.close') ? '完成处理'
+              : action.endsWith('.grant') ? '授予'
+                : action.endsWith('.revoke') ? '撤销'
+                  : action.endsWith('.adjust') ? '调整'
+                    : '更新'
+  return `${verb}${resource}`
+}
+
+function recordsValue(value: unknown) {
+  return Array.isArray(value) ? value.map(record) : []
+}
+
 function sectionTitle(title: string, description: string, action = '') {
   return `<div class="section-title"><div><h1>${title}</h1><p>${description}</p></div>${action}</div>`
 }
@@ -293,21 +684,44 @@ function pageOverview() {
   return `${sectionTitle('网站概览', '查看会员、活动和订单的运营状态', `<span class="date-range">${escapeHtml(data.period)}</span>`)}<div class="metric-grid">${data.metrics.map(metric => `<div class="metric"><span>${escapeHtml(metric.label)}</span><strong>${escapeHtml(metric.value)}</strong><small>${escapeHtml(metric.detail)}</small></div>`).join('')}</div><div class="overview-grid"><section class="panel"><div class="panel-heading"><h2>近期运营记录</h2></div>${rowsToTable(data.activity, [{ key: 'title', label: '记录' }, { key: 'meta', label: '时间与范围' }, { key: 'state', label: '类型' }])}</section><section class="panel permission-note"><h2>数据说明</h2><p>概览和用户列表均由服务端按当前运营账号的 capability 与作用范围返回。页面不计算会员、活动或订单事实。</p><div class="boundary-row"><span>数据来源</span><strong>${client.demoMode ? '演示数据' : 'MIP 管理服务'}</strong></div><div class="boundary-row"><span>请求协议</span><strong>AdminRequest v1</strong></div></section></div>`
 }
 
-function pageList(route: AdminListRoute, title: string, description: string) {
+function pageList(route: AdminListRoute, title: string, description: string, actions: readonly ReviewedOperationAction[] = []) {
   const page = liveReadPage || (client.demoMode ? demoReadPage(route) : null)
-  const detailTarget = ['users', 'events', 'orders', 'messages', 'knowledge', 'opportunities'].includes(route) ? route as AdminDetailRoute : undefined
+  const detailTarget = ['users', 'events', 'orders', 'tasks', 'messages', 'knowledge', 'opportunities'].includes(route) ? route as AdminDetailRoute : undefined
   const content = page
-    ? `${summaryCards(page)}${page.sections.map(section => `<section class="panel list-panel">${section.title ? `<div class="panel-heading"><h2>${escapeHtml(section.title)}</h2></div>` : ''}${rowsToTable(section.rows, section.columns, detailTarget)}</section>`).join('')}${pagination(route, page)}`
+    ? `${summaryCards(page)}${page.sections.map(section => `<section class="panel list-panel">${section.title ? `<div class="panel-heading"><h2>${escapeHtml(section.title)}</h2></div>` : ''}${rowsToTable(section.rows, section.columns, section.detailTarget === null ? undefined : section.detailTarget || detailTarget)}</section>`).join('')}${pagination(route, page)}`
     : `<section class="panel"><div class="empty">${loading ? '正在加载' : '暂无可显示的真实数据'}</div></section>`
-  return `${sectionTitle(title, description)}${toolbar(route)}${content}`
+  return `${sectionTitle(title, description, operationMenu(actions))}${toolbar(route)}${content}`
 }
 
 function pageUsers() { return pageList('users', '用户管理', '查看会员、嘉宾及用户资料') }
-function pageEvents() { return pageList('events', '活动管理', '查看活动信息、报名和签到状态') }
+function pageEvents() { return pageList('events', '活动管理', '查看活动信息、报名和签到状态', [
+  'mip.admin.events.save', 'mip.admin.events.policy.save', 'mip.admin.events.catalog.save',
+  'mip.admin.events.catalog.changeStatus', 'mip.admin.events.catalog.archive',
+]) }
 function pageOrders() { return pageList('orders', '订单管理', '查看会员和活动订单及支付状态') }
-function pagePermissions() { return pageList('permissions', '权限管理', '查看运营成员和城市分会范围') }
-function pageMessages() { return pageList('messages', '消息管理', '查看消息活动和公告状态') }
-function pageKnowledge() { return pageList('knowledge', '知识库', '查看会员内容及发布状态') }
+function pageTasks() { return pageList('tasks', '任务管理', '管理任务内容、成员分配和完成记录', ['mip.admin.tasks.save']) }
+function pagePermissions() { return pageList('permissions', '权限管理', '查看运营成员和城市分会范围', ['mip.admin.branches.create']) }
+function pageMessages() { return pageList('messages', '消息管理', '查看消息活动和公告状态', [
+  'mip.admin.messageCampaigns.save', 'mip.admin.messageTemplates.save', 'mip.admin.messageTemplates.activate',
+  'mip.admin.messageTemplates.archive',
+]) }
+function pageKnowledge() { return pageList('knowledge', '知识库', '查看会员内容及发布状态', [
+  'mip.admin.knowledge.contents.save', 'mip.admin.knowledge.contents.review', 'mip.admin.knowledge.schedules.save',
+]) }
+
+function operationMenu(actions: readonly ReviewedOperationAction[]) {
+  const available = actions.filter(action => hasCapability(operationCapability(action)))
+  if (!available.length) return ''
+  return `<details class="operation-menu"><summary class="primary-button">运营操作</summary><div>${available.map(action => `<button type="button" class="outline-button" data-operation-open="${action}">${escapeHtml(contentOperationLabel(action))}</button>`).join('')}</div></details>`
+}
+
+function contentOperationLabel(action: ReviewedOperationAction) {
+  if (peopleOperationSet.has(action)) return ADMIN_PEOPLE_MUTATION_CONFIGS[action as AdminPeopleMutationAction].title
+  if (eventOperationSet.has(action)) return eventMutationConfig(action as AdminEventMutationAction).title
+  if (taskOperationSet.has(action)) return createTaskMutationDefinition(action as AdminTaskMutationAction).title
+  const form = getContentMutationForm(action as ContentMutationAction)
+  return contentOperationTitle(action as ContentMutationAction, form.resource)
+}
 
 function summaryCards(page: AdminReadPage) {
   if (!page.summary?.length) return ''
@@ -325,6 +739,23 @@ function demoReadPage(route: AdminListRoute): AdminReadPage {
   if (route === 'users') return { sections: [{ rows: demo.users.map(item => ({ name: item.name, headline: item.company, identity: item.status, phone: item.phone, branch: item.branch, level: item.role, state: item.status })), columns: [{ key: 'name', label: '姓名' }, { key: 'headline', label: '简介' }, { key: 'identity', label: '身份' }, { key: 'phone', label: '手机状态' }, { key: 'branch', label: '所属分会' }, { key: 'level', label: '等级' }, { key: 'state', label: '账号状态' }] }], nextCursor: null }
   if (route === 'events') return { sections: [{ rows: demo.events.map(item => ({ ...item, access: '会员权益', attended: '—', state: item.status })), columns: [{ key: 'title', label: '活动名称' }, { key: 'time', label: '开始时间' }, { key: 'location', label: '城市与分会' }, { key: 'access', label: '活动类型' }, { key: 'registrations', label: '报名人数' }, { key: 'attended', label: '签到人数' }, { key: 'state', label: '状态' }] }], nextCursor: null }
   if (route === 'orders') return { sections: [{ rows: demo.orders.map(item => ({ ...item, resource: item.type, state: item.status })), columns: [{ key: 'id', label: '订单号' }, { key: 'user', label: '用户' }, { key: 'type', label: '订单类型' }, { key: 'resource', label: '订单内容' }, { key: 'amount', label: '金额' }, { key: 'createdAt', label: '创建时间' }, { key: 'state', label: '状态' }] }], nextCursor: null }
+  if (route === 'tasks') return {
+    sections: [
+      {
+        title: '任务',
+        rows: demo.tasks.map(item => ({ ...item })),
+        columns: [{ key: 'name', label: '任务名称' }, { key: 'reward', label: '经验奖励' }, { key: 'assignment', label: '分配范围' }, { key: 'assigned', label: '已分配' }, { key: 'completed', label: '已完成' }, { key: 'endsAt', label: '截止时间' }, { key: 'updatedAt', label: '更新时间' }, { key: 'state', label: '状态' }],
+        detailTarget: null,
+      },
+      {
+        title: '近期完成记录',
+        rows: demo.taskCompletions.map(item => ({ ...item })),
+        columns: [{ key: 'task', label: '任务' }, { key: 'member', label: '成员' }, { key: 'reward', label: '经验奖励' }, { key: 'completedAt', label: '完成时间' }, { key: 'state', label: '结果' }],
+        detailTarget: null,
+      },
+    ],
+    nextCursor: null,
+  }
   if (route === 'permissions') return { sections: [{ title: '运营成员', rows: demo.roles.map(item => ({ name: item.name, role: item.capabilities, scope: item.scope, grantedAt: '—', state: '启用' })), columns: [{ key: 'name', label: '姓名' }, { key: 'role', label: '角色' }, { key: 'scope', label: '作用范围' }, { key: 'grantedAt', label: '授权时间' }, { key: 'state', label: '状态' }] }], nextCursor: null }
   if (route === 'messages') return { sections: [{ title: '消息活动', rows: demo.messages.map(item => ({ ...item, scope: item.audience, state: item.status })), columns: [{ key: 'title', label: '消息标题' }, { key: 'audience', label: '发送范围' }, { key: 'scope', label: '作用范围' }, { key: 'updatedAt', label: '更新时间' }, { key: 'state', label: '状态' }] }], nextCursor: null }
   if (route === 'knowledge') return { sections: [{ rows: demo.knowledge.map(item => ({ ...item, category: '—', author: '—', access: '会员可见', state: item.status })), columns: [{ key: 'title', label: '文档标题' }, { key: 'type', label: '内容类型' }, { key: 'category', label: '分类' }, { key: 'author', label: '作者' }, { key: 'access', label: '访问范围' }, { key: 'updatedAt', label: '更新时间' }, { key: 'state', label: '状态' }] }], nextCursor: null }
@@ -368,12 +799,20 @@ function paint() {
     users: pageUsers,
     events: pageEvents,
     orders: pageOrders,
+    tasks: pageTasks,
     permissions: pagePermissions,
     messages: pageMessages,
     knowledge: pageKnowledge,
-    opportunities: () => pageList('opportunities', '机会与内容', '查看机会、用户内容、撮合和评论事实'),
-    growth: () => pageList('growth', '成长与勋章', '查看等级、权益、成长流水和徽章事实'),
-    operations: () => pageList('operations', '运营记录', '查看公告、社区举报、运营异常和待办'),
+    opportunities: () => pageList('opportunities', '机会与内容', '查看机会、用户内容、撮合和评论事实', [
+      'mip.admin.opportunities.save', 'mip.admin.userContent.save', 'mip.admin.userContent.unpublish', 'mip.admin.userContent.archive',
+    ]),
+    growth: () => pageList('growth', '成长与勋章', '查看等级、权益、成长流水和徽章事实', [
+      'mip.admin.growth.adjust', 'mip.admin.badges.grant', 'mip.admin.badges.revoke',
+    ]),
+    operations: () => pageList('operations', '运营记录', '查看公告、社区举报、运营异常和待办', [
+      'mip.admin.announcements.save', 'mip.admin.announcements.publish', 'mip.admin.announcements.withdraw',
+      'mip.admin.announcements.pin', 'mip.admin.communityReports.claim', 'mip.admin.communityReports.close',
+    ]),
   }
   shell(`<div class="loading-bar ${loading ? '' : 'hidden'}"></div>${pages[route]()}`)
   requestAnimationFrame(assertResponsiveViewport)
@@ -414,6 +853,7 @@ function closeDetail(repaint = true) {
   detailError = ''
   detailLoading = false
   mutationState = null
+  operationState = null
   if (repaint) paint()
 }
 
@@ -503,6 +943,7 @@ async function render() {
   else {
     try {
       session = await client.getSession()
+      if (!visibleNav().some(item => item.route === route)) route = visibleNav()[0].route
       await loadRouteData()
     }
     catch (error) {

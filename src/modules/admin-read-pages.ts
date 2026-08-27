@@ -14,6 +14,7 @@ import {
   loadOperations,
   loadOpportunities,
 } from './admin-read-special-pages.ts'
+import { loadTaskManagementPage } from './admin-task-management.ts'
 
 export type {
   AdminListQuery,
@@ -42,6 +43,11 @@ const routeDefinitions: Record<AdminListRoute, AdminReadRouteDefinition> = {
   orders: {
     searchPlaceholder: '搜索订单号、姓名或活动',
     statusOptions: [...commonStatus, ...options(['CREATED', 'PAYMENT_CREATED', 'PAID', 'FAILED', 'CLOSED', 'REFUND_PENDING', 'PARTIALLY_REFUNDED', 'REFUNDED'])],
+    paginated: true,
+  },
+  tasks: {
+    searchPlaceholder: '搜索任务或完成人',
+    statusOptions: [...commonStatus, ...options(['DRAFT', 'PUBLISHED', 'UNPUBLISHED'])],
     paginated: true,
   },
   permissions: {
@@ -89,6 +95,7 @@ export async function loadAdminReadPage(
     case 'users': return loadUsers(query, request)
     case 'events': return loadEvents(query, request)
     case 'orders': return loadOrders(query, request)
+    case 'tasks': return loadTaskManagementPage(query, request)
     case 'permissions': return loadPermissions(query, request)
     case 'messages': return loadMessages(query, request)
     case 'knowledge': return loadKnowledge(query, request)
