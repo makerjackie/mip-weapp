@@ -78,7 +78,7 @@ describe('MIP demo user influence fixtures', () => {
     expect(historicalEvent).toMatchObject({ status: 'ENDED' })
     expect(historicalEvent.endedAt >= historicalEvent.endsAt).toBe(true)
     expect(seed.events.filter((item: { startsAt: string }) => item.startsAt.startsWith('2030-')))
-      .toHaveLength(2)
+      .toHaveLength(3)
 
     const registrations = seed.eventRegistrations.filter((item: {
       eventId: string

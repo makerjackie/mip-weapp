@@ -15,7 +15,12 @@ interface DemoEventTag {
 
 interface DemoEvent {
   id: string
+  title: string
   startsAt: string
+  endsAt: string
+  cityName: string
+  address: string
+  eventTypeKey: string
   tagIds: string[]
 }
 
@@ -35,16 +40,30 @@ function sourceFunction(name: string, nextName: string) {
 
 describe('MIP demo event tag seed', () => {
   it('provides neutral tags and single-tag plus multi-tag 2030 fixtures', () => {
-    expect(seed.version).toBe('2026-08-26-demo.11')
+    expect(seed.version).toBe('2026-08-27-demo.12')
     expect(seed.eventTags).toHaveLength(3)
     expect(new Set(seed.eventTags.map(item => item.key)).size).toBe(seed.eventTags.length)
     expect(seed.eventTags.every(item => item.name.length > 0)).toBe(true)
 
     const catalogIds = new Set(seed.eventTags.map(item => item.id))
     const longLived = seed.events.filter(item => item.startsAt.startsWith('2030-'))
-    expect(longLived).toHaveLength(2)
+    expect(longLived).toHaveLength(3)
     expect(longLived.some(item => item.tagIds.length === 1)).toBe(true)
     expect(longLived.some(item => item.tagIds.length > 1)).toBe(true)
+    for (const event of longLived) {
+      const startsAt = new Date(`${event.startsAt.replace(' ', 'T')}Z`)
+      const endsAt = new Date(`${event.endsAt.replace(' ', 'T')}Z`)
+      expect(event.title).toContain('MIP 早会')
+      expect(event.eventTypeKey).toBe('mip_morning_meeting')
+      expect(event.cityName).toBe('深圳')
+      expect(event.address).toContain('福田区')
+      expect(startsAt.toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai', weekday: 'long' }))
+        .toContain('星期四')
+      expect(startsAt.toLocaleTimeString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }))
+        .toBe('10:00:00')
+      expect(endsAt.toLocaleTimeString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }))
+        .toBe('12:00:00')
+    }
     expect(seed.events.every(item => item.tagIds.every(tagId => catalogIds.has(tagId)))).toBe(true)
     expect(seed.eventTags.every(tag => seed.events.some(event => event.tagIds.includes(tag.id)))).toBe(true)
   })
