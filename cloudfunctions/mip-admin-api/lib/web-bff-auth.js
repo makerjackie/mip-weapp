@@ -43,6 +43,28 @@ const WEB_BFF_SECOND_QUERY_ACTIONS = Object.freeze([
   'mip.admin.knowledge.get',
   'mip.admin.knowledge.schedules.list',
 ])
+const WEB_BFF_THIRD_QUERY_ACTIONS = Object.freeze([
+  'mip.admin.communityReports.list',
+  'mip.admin.announcements.scopes',
+  'mip.admin.announcements.list',
+  'mip.admin.announcements.get',
+  'mip.admin.opportunities.list',
+  'mip.admin.opportunities.get',
+  'mip.admin.opportunities.options',
+  'mip.admin.userContent.list',
+  'mip.admin.userContent.get',
+  'mip.admin.matching.get',
+  'mip.admin.opportunityComments.get',
+  'mip.admin.growth.levels',
+  'mip.admin.growth.benefits',
+  'mip.admin.growth.rules',
+  'mip.admin.growth.entries',
+  'mip.admin.growth.levelTransitions',
+  'mip.admin.badges.list',
+  'mip.admin.badges.awards',
+  'mip.admin.exceptions.list',
+  'mip.admin.operations.queue.list',
+])
 const WEB_BFF_REVIEWED_MUTATION_MANIFEST = Object.freeze([
   Object.freeze({
     action: 'mip.admin.memberships.grant',
@@ -82,7 +104,7 @@ const WEB_BFF_REVIEWED_MUTATION_MANIFEST = Object.freeze([
   }),
 ])
 const WEB_BFF_QUERY_ACTIONS = createQueryActionAllowlist(
-  [...WEB_BFF_FIRST_QUERY_ACTIONS, ...WEB_BFF_SECOND_QUERY_ACTIONS],
+  [...WEB_BFF_FIRST_QUERY_ACTIONS, ...WEB_BFF_SECOND_QUERY_ACTIONS, ...WEB_BFF_THIRD_QUERY_ACTIONS],
   publicOperationContract,
 )
 const WEB_BFF_MUTATION_ACTIONS = createReviewedMutationActionAllowlist(
@@ -345,6 +367,7 @@ module.exports = {
   WEB_BFF_REVIEWED_MUTATION_MANIFEST,
   WEB_BFF_QUERY_ACTIONS,
   WEB_BFF_SECOND_QUERY_ACTIONS,
+  WEB_BFF_THIRD_QUERY_ACTIONS,
   WEB_BFF_TRANSPORT,
   canonicalJson,
   createQueryActionAllowlist,
