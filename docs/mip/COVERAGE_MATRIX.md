@@ -1,10 +1,10 @@
 # MIP 需求与设计覆盖矩阵
 
-本矩阵是完整实现的逐项验收入口。状态只使用：`implemented-local` 表示当前代码、迁移和聚焦测试形成了本地证据；`partial-local` 表示仍缺行为、字段、状态或入口；`external-wait` 表示源码链路存在，但能力本身仍依赖已部署 CloudBase、真机或正式配置；`unimplemented` 表示当前没有可触发实现；`deferred` 只用于已明确不属于当前小程序交付目标的未来网页端。`implemented-local` 不代表真机或生产验收通过。固定 81 项之外，2026-08-24 飞书 AME 导出的增补条目也属于完整范围。
+本矩阵是完整实现的逐项验收入口。状态只使用：`implemented-local` 表示当前代码、迁移和聚焦测试形成了本地证据；`partial-local` 表示仍缺行为、字段、状态或入口；`external-wait` 表示源码链路存在，但能力本身仍依赖已部署 CloudBase、真机或正式配置；`unimplemented` 表示当前没有可触发实现。`implemented-local` 不代表真机或生产验收通过。固定 81 项之外，2026-08-24 飞书 AME 导出的增补条目也属于完整范围。
 
 固定 PRD 的 1–81 项逐行状态见 [PRD_81_MATRIX.md](PRD_81_MATRIX.md)。本文件继续按业务闭环和 Figma 代表 frame 汇总，二者必须同时满足才能进入最终验收。
 
-当前工程声明 108 条小程序路由、16 个核心 `mip-*` 云函数和 52 个锁定迁移。共享云环境已有 52 个迁移、121 张 MIP runtime 表精确权限、16/16 核心函数和当前 Owner 初始化的历史验证证据。历史完整移动端基线 `.tmp/runtime-evidence/2026-08-27-figma-alignment-r4/report.json` 在 375px 实测窗口下通过 108/108 路由、6/6 代表状态和 6/6 交互旅程，运行时与 IDE 诊断均为 0 failure；最近一次全量尝试 `.tmp/runtime-evidence/2026-08-28-figma-alignment-r7/report.json` 因 `DEVTOOLS_PROTOCOL_TIMEOUT` 在视口测量阶段中断，没有替代该历史基线。当前 Owner 的 6000 元会员、399 元活动订单、3 场未来活动、3 个 NPC 任务、3 枚带图片的已佩戴勋章和个人名片非空态由 `.tmp/runtime-evidence/2026-08-27-member-showcase-r2/report.json`、`.tmp/runtime-evidence/2026-08-28-order-media-r1/report.json` 与 `.tmp/runtime-evidence/2026-08-28-task-badge-r1/report.json` 补充；它们不把定向证据冒充新的 108 路由全量结论。1024px 管理端代表页证据见 [响应式密度验收](evidence/admin-density-2026-08-26/README.md)。
+当前工程声明 110 条小程序路由、16 个核心 `mip-*` 云函数和 55 个锁定迁移。历史完整移动端基线 `.tmp/runtime-evidence/2026-08-27-figma-alignment-r4/report.json` 只覆盖当时的 108 条路由；新增名片设置和徽章详情后，必须重新生成当前 110 条全量证据。当前 Owner 的 6000 元会员、399 元活动订单、3 场未来活动、3 个 NPC 任务、3 枚带图片的已佩戴徽章和个人名片非空态继续作为定向补充，不得与新的全量结论混写。1024px 管理端代表页证据见 [响应式密度验收](evidence/admin-density-2026-08-26/README.md)。
 
 ## 来源
 
@@ -109,17 +109,17 @@
 
 ## WorkBuddy 管理端功能 PRD V0.4
 
-来源和内部映射见 [ADMIN_WEB.md](ADMIN_WEB.md)，代表截图见 [evidence/admin-web-2026-08-25](evidence/admin-web-2026-08-25/README.md)。WorkBuddy 只作为功能输入；当前目标是小程序管理分包的手机/电脑双端适配，独立网页 UI 暂缓。
+来源和内部映射见 [ADMIN_WEB.md](ADMIN_WEB.md)，代表截图见 [evidence/admin-web-2026-08-25](evidence/admin-web-2026-08-25/README.md)。WorkBuddy 仍只作为功能输入；独立 Web 已建立响应式工程并部署演示版，可信 BFF 代码基础已形成，但真实登录确认和 HTTPS 路由尚未完成。
 
 | 范围 | 状态 | 当前证据与缺口 |
 | --- | --- | --- |
-| 当前 16 个管理模块和 110 个一级需求点 | `partial-local` | [逐项矩阵](WORKBUDDY_110_MATRIX.md) 已固定当前在线稿；49 条管理路由已全部进入 108 路由运行时通过集合，共享响应式壳层和 1024px 代表页证据已存在；与确认领域模型冲突的 Web 账号、固定团队、自由角色等不纳入实现，其他增补仍按矩阵保留范围事实 |
+| 当前 16 个管理模块和 110 个一级需求点 | `partial-local` | [逐项矩阵](WORKBUDDY_110_MATRIX.md) 已固定当前在线稿；49 条管理路由属于历史 108 路由运行时通过集合，共享响应式壳层和 1024px 代表页证据已存在；新增两条会员路由后仍需形成当前 110 路由证据，与确认领域模型冲突的 Web 账号、固定团队、自由角色等不纳入实现 |
 | 管理业务服务复用 | `implemented-local` | 中立 `AdminTransport`、CloudBase/InMemory adapter、v1 嵌套请求、trusted principal、`AdminApplication.execute` 和 145-action operation registry 已形成稳定合同 |
 | 活动复制与手机预览 | `implemented-local` | 复制活动和未保存草稿预览已形成管理 action、页面入口和聚焦测试；真实媒体仍按真机边界验收 |
 | 消息模板、定时与失败复核 | `implemented-local` | 模板、活动、收件人快照、定时发送、失败复核和 outbox 已本地实现；正式微信模板及 scheduler 云端 canary 为 `external-wait` |
-| 网页管理员认证与会话 | `deferred` | 当前不建设 Web challenge/session、Cookie、CSRF 或浏览器登录；未来复用现有 trusted-principal 与业务合同 |
-| 网页端平台/分会/活动 RBAC | `deferred` | 当前小程序端 scope/capability 已实现；未来网页只新增 Web principal adapter 和浏览器安全矩阵 |
-| 网页端视觉与可访问性 | `deferred` | WorkBuddy 只作为功能输入；当前验收对象是小程序管理分包的手机和微信桌面宽屏 |
+| 网页管理员认证与会话 | `partial-local` | Pages Function 已具备同源校验、AES-GCM `HttpOnly` 会话和服务端 code exchange 基础；CloudBase 具备 HMAC 可信 Web principal adapter；短期码持久化与小程序管理员确认尚未接通 |
+| 网页端平台/分会/活动 RBAC | `partial-local` | 只读会话、概览、用户列表复用相同 action、trusted principal 与每次重读 scope/capability 的服务端链路；CloudBase HTTP 路由和浏览器实测尚未完成，mutation 默认关闭 |
+| 网页端视觉与可访问性 | `implemented-local` | 独立 Web 工程完成 390px/1280px 响应式布局并部署到 `mipmini.01mvp.com`；当前在线数据明确标记为演示状态 |
 
 ## Figma 代表 frame
 
