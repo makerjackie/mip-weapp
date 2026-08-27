@@ -2,17 +2,54 @@
 
 const { createHmac, timingSafeEqual } = require('node:crypto')
 const { errorResponse, normalizeAdminRequest } = require('../domain/handler')
+const { publicOperationContract } = require('../domain/public-operation-contract')
 
 const WEB_BFF_TRANSPORT = 'MIP_WEB_BFF_V1'
 const WEB_BFF_MAX_CLOCK_SKEW_MS = 60_000
-const WEB_BFF_QUERY_ACTIONS = new Set([
+const WEB_BFF_FIRST_QUERY_ACTIONS = Object.freeze([
   'mip.admin.session',
   'mip.admin.dashboard.overview.get',
   'mip.admin.users.list',
+  'mip.admin.events.list',
+  'mip.admin.orders.list',
+  'mip.admin.branches.list',
+  'mip.admin.roles.list',
+  'mip.admin.rolePolicies.list',
+  'mip.admin.audit.list',
+  'mip.admin.messageCampaigns.list',
+  'mip.admin.messageTemplates.list',
+  'mip.admin.knowledge.list',
 ])
+const WEB_BFF_QUERY_ACTIONS = createQueryActionAllowlist(
+  WEB_BFF_FIRST_QUERY_ACTIONS,
+  publicOperationContract,
+)
 const envelopeKeys = new Set(['nonce', 'principal', 'request', 'signature', 'timestamp', 'transport'])
 const principalKeys = new Set(['appId', 'openId'])
 const requestKeys = new Set(['action', 'contractVersion', 'idempotencyKey', 'input'])
+
+function createQueryActionAllowlist(actions, contract) {
+  if (!Array.isArray(actions)
+    || new Set(actions).size !== actions.length
+    || !contract
+    || !Array.isArray(contract.operations)) {
+    throw new Error('WEB_BFF_QUERY_CONTRACT_INVALID')
+  }
+  const operationByAction = new Map(contract.operations.map(operation => [operation.action, operation]))
+  const allowlist = new Set()
+  for (const action of actions) {
+    const operation = operationByAction.get(action)
+    if (!operation
+      || operation.kind !== 'QUERY'
+      || operation.safeToRetry !== true
+      || operation.authentication !== 'REQUIRED'
+      || operation.session !== 'REQUIRED') {
+      throw new Error('WEB_BFF_QUERY_CONTRACT_INVALID')
+    }
+    allowlist.add(action)
+  }
+  return allowlist
+}
 
 function createWebBffRoute({ application, issuePrincipal, secret, now = Date.now } = {}) {
   if (!application || typeof application.execute !== 'function'
@@ -144,9 +181,11 @@ function trustedIdentifier(value, maximum) {
 
 module.exports = {
   WEB_BFF_MAX_CLOCK_SKEW_MS,
+  WEB_BFF_FIRST_QUERY_ACTIONS,
   WEB_BFF_QUERY_ACTIONS,
   WEB_BFF_TRANSPORT,
   canonicalJson,
+  createQueryActionAllowlist,
   createWebBffRoute,
   isWebBffEvent,
   signWebBffEnvelope,

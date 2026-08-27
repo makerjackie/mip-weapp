@@ -3,10 +3,14 @@
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const {
+  WEB_BFF_FIRST_QUERY_ACTIONS,
+  WEB_BFF_QUERY_ACTIONS,
   WEB_BFF_TRANSPORT,
+  createQueryActionAllowlist,
   createWebBffRoute,
   signWebBffEnvelope,
 } = require('../lib/web-bff-auth')
+const { publicOperationContract } = require('../domain/public-operation-contract')
 
 const SECRET = 'web-bff-test-secret-that-is-at-least-thirty-two-bytes'
 const NOW = Date.UTC(2030, 0, 1)
@@ -23,6 +27,7 @@ function envelope(action = 'mip.admin.dashboard.overview.get') {
 
 function fixture() {
   const calls = []
+  const issuedContexts = []
   const route = createWebBffRoute({
     application: {
       async execute(principal, action, input) {
@@ -31,25 +36,81 @@ function fixture() {
       },
     },
     issuePrincipal(context) {
+      issuedContexts.push(context)
       return Object.freeze({ trusted: true, appId: context.APPID, openId: context.OPENID })
     },
     secret: SECRET,
     now: () => NOW,
   })
-  return { calls, route }
+  return { calls, issuedContexts, route }
 }
 
 describe('Web BFF trusted query adapter', () => {
-  it('issues the principal only after verifying the server signature', async () => {
-    const { calls, route } = fixture()
-    const result = await route(envelope())
+  it('derives the exact first query allowlist from the generated operation contract', () => {
+    const expected = [
+      'mip.admin.session',
+      'mip.admin.dashboard.overview.get',
+      'mip.admin.users.list',
+      'mip.admin.events.list',
+      'mip.admin.orders.list',
+      'mip.admin.branches.list',
+      'mip.admin.roles.list',
+      'mip.admin.rolePolicies.list',
+      'mip.admin.audit.list',
+      'mip.admin.messageCampaigns.list',
+      'mip.admin.messageTemplates.list',
+      'mip.admin.knowledge.list',
+    ]
+    const operationByAction = new Map(
+      publicOperationContract.operations.map(operation => [operation.action, operation]),
+    )
 
-    assert.equal(result.ok, true)
-    assert.deepEqual(calls, [{
-      principal: { trusted: true, appId: 'wx-mip-app', openId: 'openid-admin' },
-      action: 'mip.admin.dashboard.overview.get',
-      input: {},
-    }])
+    assert.deepEqual(WEB_BFF_FIRST_QUERY_ACTIONS, expected)
+    assert.deepEqual([...WEB_BFF_QUERY_ACTIONS], expected)
+    for (const action of WEB_BFF_QUERY_ACTIONS) {
+      assert.deepEqual(operationByAction.get(action), {
+        action,
+        kind: 'QUERY',
+        authentication: 'REQUIRED',
+        session: 'REQUIRED',
+        safeToRetry: true,
+        idempotencyKeyRequired: null,
+      })
+    }
+  })
+
+  it('fails closed when an allowlisted action is absent or becomes a mutation', () => {
+    assert.throws(
+      () => createQueryActionAllowlist(['mip.admin.missing'], publicOperationContract),
+      /WEB_BFF_QUERY_CONTRACT_INVALID/,
+    )
+    assert.throws(
+      () => createQueryActionAllowlist(['mip.admin.users.update'], publicOperationContract),
+      /WEB_BFF_QUERY_CONTRACT_INVALID/,
+    )
+  })
+
+  it('issues a fresh trusted principal for every allowed signed query', async () => {
+    const { calls, issuedContexts, route } = fixture()
+    for (const action of WEB_BFF_QUERY_ACTIONS) {
+      const result = await route(envelope(action))
+      assert.equal(result.ok, true, action)
+    }
+
+    assert.equal(calls.length, WEB_BFF_QUERY_ACTIONS.size)
+    assert.equal(issuedContexts.length, WEB_BFF_QUERY_ACTIONS.size)
+    assert.deepEqual(
+      calls.map(call => call.action),
+      [...WEB_BFF_QUERY_ACTIONS],
+    )
+    for (const call of calls) {
+      assert.deepEqual(call.principal, {
+        trusted: true,
+        appId: 'wx-mip-app',
+        openId: 'openid-admin',
+      })
+      assert.deepEqual(call.input, {})
+    }
   })
 
   it('rejects a browser-forged principal before issuing it', async () => {
@@ -64,17 +125,22 @@ describe('Web BFF trusted query adapter', () => {
     assert.equal(calls.length, 0)
   })
 
-  it('rejects expired envelopes and all mutation actions', async () => {
+  it('rejects expired envelopes, unknown actions, and every contract mutation', async () => {
     const { calls, route } = fixture()
     const expired = signWebBffEnvelope({ ...envelope(), timestamp: NOW - 60_001 }, SECRET)
 
     const expiredResult = await route(expired)
-    const mutationResult = await route(envelope('mip.admin.users.update'))
+    const unknownResult = await route(envelope('mip.admin.missing'))
 
     assert.equal(expiredResult.ok, false)
     assert.equal(expiredResult.error.code, 'AUTH_REQUIRED')
-    assert.equal(mutationResult.ok, false)
-    assert.equal(mutationResult.error.code, 'FORBIDDEN')
+    assert.equal(unknownResult.ok, false)
+    assert.equal(unknownResult.error.code, 'FORBIDDEN')
+    for (const operation of publicOperationContract.operations.filter(item => item.kind === 'MUTATION')) {
+      const mutationResult = await route(envelope(operation.action))
+      assert.equal(mutationResult.ok, false, operation.action)
+      assert.equal(mutationResult.error.code, 'FORBIDDEN', operation.action)
+    }
     assert.equal(calls.length, 0)
   })
 
