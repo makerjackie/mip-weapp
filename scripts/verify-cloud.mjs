@@ -104,6 +104,7 @@ assertOutboxWakeupEnvironment(coreDetails.get('admin'), coreDetails.get('outbox'
 assertOutboxDependencies(coreDetails.get('outbox'))
 assertNotificationEnvironment(coreDetails.get('notifications'), coreDetails.get('notification'))
 assertRefundDispatchEnvironment(coreDetails.get('admin'))
+assertAdminWebPublicNetwork(coreDetails.get('admin'))
 assertKnowledgeEnvironment(coreDetails.get('admin'))
 assertOwnerTestMembershipEnvironment(coreDetails.get('ledger'))
 for (const spec of coreManifest) {
@@ -378,6 +379,12 @@ function assertRefundDispatchEnvironment(detail) {
       String(variables.MIP_ADMIN_WEB_LOGIN_CONFIRM_URL || ''),
     )) {
     throw new Error('Admin worker links or internal HMAC configuration are incomplete')
+  }
+}
+
+function assertAdminWebPublicNetwork(detail) {
+  if (functionDetail(detail)?.PublicNetConfig?.PublicNetStatus !== 'ENABLE') {
+    throw new Error('mip-admin-api public network is required for the signed Web login callback')
   }
 }
 

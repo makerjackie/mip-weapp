@@ -171,7 +171,7 @@ describe('AI avatar Provider cloud contract', () => {
     expect(coreDeploy).toContain('aiAvatarProviderHmac: stableSecretValues.MIP_AI_AVATAR_PROVIDER_HMAC_SECRET')
     expect(coreDeploy).toContain('MIP_AI_AVATAR_PROVIDER_HMAC_SECRET: options.secrets.aiAvatarProviderHmac')
     expect(coreDeploy).toContain('MIP_AI_AVATAR_PROVIDER_TIMEOUT_MS: String(options.aiAvatarProviderTimeoutMs)')
-    expect(mcporter.mcpServers.cloudbase.args).toContain('@cloudbase/cloudbase-mcp@2.32.0')
+    expect(mcporter.mcpServers.cloudbase.args).toContain('@cloudbase/cloudbase-mcp@2.32.3')
     expect(packageJson.scripts['cloud:ai-avatar-provider:deploy'])
       .toBe('node scripts/deploy-ai-avatar-provider.mjs')
     expect(packageJson.scripts['cloud:ai-avatar-provider:verify'])

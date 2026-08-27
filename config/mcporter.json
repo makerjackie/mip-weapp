@@ -4,7 +4,7 @@
       "command": "npx",
       "args": [
         "-y",
-        "@cloudbase/cloudbase-mcp@2.32.0"
+        "@cloudbase/cloudbase-mcp@2.32.3"
       ],
       "description": "Canonical project CloudBase MCP for core, scheduler, payment, and isolated AI provider operations",
       "lifecycle": "keep-alive"

@@ -365,6 +365,10 @@ try {
       recursive: true,
       filter: source => path.basename(source) !== 'node_modules',
     })
+    fs.writeFileSync(
+      path.join(stagingRoot, spec.name, 'mip-deployment-marker.json'),
+      `${JSON.stringify({ deploymentId: randomBytes(24).toString('base64url') })}\n`,
+    )
   }
 
   for (const spec of deploymentManifest) {
@@ -468,6 +472,9 @@ try {
         console.log(`[mip-cloud-deploy] configuration already current ${spec.name}`)
       }
     }
+    if (spec.role === 'admin') {
+      await ensureAdminWebPublicNetwork(spec.name)
+    }
     const codeUpdate = {
       action: 'updateFunctionCode',
       functionName: spec.name,
@@ -475,16 +482,28 @@ try {
       force: true,
       ...(existingUpdatePlan?.handlerChanged ? { handler: expectedConfiguration.handler } : {}),
     }
-    callCloudbase(root, 'manageFunctions', codeUpdate, 300000)
+    const codeBaselineDetail = existingUpdatePlan ? existingFunctionDetail(spec.name) : null
+    const codeBaselineConfiguration = codeBaselineDetail
+      ? functionConfigurationSnapshot(codeBaselineDetail)
+      : null
+    const codeBaselineSha256 = codeBaselineDetail
+      ? existingFunctionCodeSha256(spec.name)
+      : ''
+    const codeUpdateResponse = callCloudbase(root, 'manageFunctions', codeUpdate, 300000)
+    const codeUpdateSummary = managementResponseSummary(codeUpdateResponse)
+    if (managementRequestRejected(codeUpdateResponse)) {
+      throw new Error(`${spec.name} code update request was rejected: ${codeUpdateSummary}`)
+    }
     if (existingUpdatePlan) {
       const detail = await waitForExistingFunctionCode({
-        before: existingUpdatePlan.before,
+        baselineSha256: codeBaselineSha256,
+        before: codeBaselineConfiguration,
         expected: expectedExistingConfiguration,
         functionName: spec.name,
       })
       assertExistingFunctionAfterCode({
         actual: functionConfigurationSnapshot(detail),
-        before: existingUpdatePlan.before,
+        before: codeBaselineConfiguration,
         expected: expectedExistingConfiguration,
         functionName: spec.name,
       })
@@ -643,6 +662,12 @@ function managementResponseSummary(value) {
   return JSON.stringify(summary)
 }
 
+function managementRequestRejected(value) {
+  return value?.success === false
+    || value?.data?.success === false
+    || value?.structuredContent?.success === false
+}
+
 function sanitizedManagementMessage(value) {
   let result = String(value || '').slice(0, 1000)
   result = result.replace(/mysql:\/\/[^\s"']+/gi, 'mysql://[redacted]')
@@ -707,6 +732,25 @@ function existingFunctionDetail(functionName) {
 
 function functionDetail(value) {
   return value?.data?.functionDetail || value?.Response || value?.data || value
+}
+
+function existingFunctionCodeSha256(functionName) {
+  const response = callCloudbase(root, 'callCloudApi', {
+    service: 'scf',
+    action: 'GetFunctionAddress',
+    region: scfRegion,
+    params: { FunctionName: functionName, Namespace: envId },
+  })
+  const sha256 = String(
+    response?.CodeSha256
+    || response?.Response?.CodeSha256
+    || response?.data?.CodeSha256
+    || '',
+  ).trim().toLowerCase()
+  if (!/^[a-f0-9]{64}$/.test(sha256)) {
+    throw new Error(`${functionName} code SHA-256 readback is unavailable`)
+  }
+  return sha256
 }
 
 function environmentVariables(detail) {
@@ -1017,8 +1061,9 @@ async function waitForExistingFunctionConfiguration({ before, expected, function
   })
 }
 
-async function waitForExistingFunctionCode({ before, expected, functionName }) {
+async function waitForExistingFunctionCode({ baselineSha256, before, expected, functionName }) {
   return waitForExistingFunctionConvergence({
+    baselineSha256,
     before,
     expected,
     functionName,
@@ -1027,7 +1072,7 @@ async function waitForExistingFunctionCode({ before, expected, functionName }) {
   })
 }
 
-async function waitForExistingFunctionConvergence({ before, expected, functionName, phase, converged }) {
+async function waitForExistingFunctionConvergence({ baselineSha256 = '', before, expected, functionName, phase, converged }) {
   for (let attempt = 0; attempt < 30; attempt += 1) {
     const detail = existingFunctionDetail(functionName)
     const value = functionDetail(detail)
@@ -1037,14 +1082,72 @@ async function waitForExistingFunctionConvergence({ before, expected, functionNa
       expected,
       functionName,
     })
-    if (value?.Status === 'Active'
-      && value?.AvailableStatus === 'Available'
+    const active = value?.Status === 'Active' && value?.AvailableStatus === 'Available'
+    let deploymentAdvanced = phase !== 'code'
+    if (active && phase === 'code') {
+      try {
+        deploymentAdvanced = existingFunctionCodeSha256(functionName) !== baselineSha256
+      }
+      catch {
+        // SCF can briefly reject GetFunctionAddress while the updated function becomes readable.
+      }
+    }
+    if (active
+      && deploymentAdvanced
       && readbackConverged) {
       return detail
     }
     await delay(1000)
   }
   throw new Error(`${functionName} ${phase} readback did not converge`)
+}
+
+async function ensureAdminWebPublicNetwork(functionName) {
+  const beforeDetail = existingFunctionDetail(functionName)
+  const before = functionConfigurationSnapshot(beforeDetail)
+  if (functionDetail(beforeDetail)?.PublicNetConfig?.PublicNetStatus === 'ENABLE') {
+    return
+  }
+  let updateResponse
+  try {
+    updateResponse = callCloudbase(root, 'callCloudApi', {
+      service: 'scf',
+      action: 'UpdateFunctionConfiguration',
+      region: scfRegion,
+      params: {
+        FunctionName: functionName,
+        Namespace: envId,
+        PublicNetConfig: {
+          PublicNetStatus: 'ENABLE',
+          EipConfig: { EipStatus: 'DISABLE' },
+        },
+      },
+    }, 300000)
+  }
+  catch (error) {
+    throw new Error(`${functionName} public network update failed: ${sanitizedManagementMessage(error instanceof Error ? error.message : error)}`)
+  }
+  if (managementRequestRejected(updateResponse)) {
+    throw new Error(`${functionName} public network update was rejected: ${managementResponseSummary(updateResponse)}`)
+  }
+  for (let attempt = 0; attempt < 30; attempt += 1) {
+    const detail = existingFunctionDetail(functionName)
+    const value = functionDetail(detail)
+    if (value?.Status === 'Active'
+      && value?.AvailableStatus === 'Available'
+      && value?.PublicNetConfig?.PublicNetStatus === 'ENABLE') {
+      assertExistingFunctionAfterConfiguration({
+        actual: functionConfigurationSnapshot(detail),
+        before,
+        expected: before,
+        functionName,
+      })
+      console.log(`[mip-cloud-deploy] public network verified ${functionName}`)
+      return
+    }
+    await delay(1000)
+  }
+  throw new Error(`${functionName} public network readback did not converge`)
 }
 
 async function ensureCompatibleRuntime(functionName, expected) {
