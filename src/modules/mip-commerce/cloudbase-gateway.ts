@@ -1,17 +1,19 @@
 import type { MipCommerceTransport } from './gateway'
 import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
 import { runtimeConfig } from '../../config/runtime'
+import { resolveCloudFileUrls } from '../platform/cloud-media'
 import { requireCloudClient } from '../platform/cloudbase'
 import { createMipCommerceGateway, MipCommerceError } from './gateway'
 
 export const cloudbaseMipCommerceTransport: MipCommerceTransport = {
   async invoke(functionName, action, data = {}, retryable = false) {
     try {
-      const response = await retryTransport(async () => {
+      const invocation = await retryTransport(async () => {
         const cloud = await requireCloudClient()
-        return cloud.callFunction({ name: functionName, data: { action, ...data } })
+        const response = await cloud.callFunction({ name: functionName, data: { action, ...data } })
+        return { cloud, response }
       }, retryable ? COLD_START_READ_RETRY : { attempts: 1 })
-      return response.result
+      return resolveCloudFileUrls(invocation.response.result, invocation.cloud)
     }
     catch (error) {
       if (error instanceof MipCommerceError) {

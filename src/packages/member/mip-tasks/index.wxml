@@ -1,14 +1,26 @@
 <view id="mip-tasks-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
-  <view class="text-[length:38rpx] font-bold">任务</view>
-  <view class="mt-2 text-[length:23rpx] text-muted">完成已发布任务并查看奖励状态</view>
+  <view class="text-[length:38rpx] font-bold">NPC任务</view>
+  <view class="mt-2 text-[length:23rpx] text-muted">查看任务要求、奖励和完成状态</view>
+  <view class="-mx-4 mt-5 flex border-b border-line bg-canvas px-4">
+    <view class="flex min-h-[88rpx] flex-1 items-center justify-center border-b-[4rpx] border-brand text-[length:27rpx] text-brand">我的任务</view>
+    <view wx:if="{{canDispatch}}" class="flex min-h-[88rpx] flex-1 items-center justify-center border-b-[4rpx] border-transparent text-[length:27rpx] text-muted" aria-role="button" bind:tap="openDispatch">派发任务</view>
+  </view>
+  <view class="mt-4 flex gap-2">
+    <view class="rounded-[8rpx] px-3 py-2 text-[length:23rpx] {{filter === 'pending' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-filter="pending" bind:tap="chooseFilter">待完成</view>
+    <view class="rounded-[8rpx] px-3 py-2 text-[length:23rpx] {{filter === 'ended' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-filter="ended" bind:tap="chooseFilter">已结束</view>
+  </view>
   <view wx:if="{{state === 'loading'}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载任务" description="{{message}}" action-text="重新加载" bind:action="loadTasks" /></view>
-  <view wx:elif="{{state === 'empty'}}" class="mt-5"><app-empty-state title="暂无任务" description="已发布的任务会显示在这里。" /></view>
+  <view wx:elif="{{state === 'empty' || (state === 'ready' && visibleTasks.length === 0)}}" class="mt-5"><app-empty-state title="{{filter === 'ended' ? '暂无已结束任务' : '暂无待完成任务'}}" description="{{filter === 'ended' ? '已结束的任务会显示在这里。' : '当前没有需要完成的任务。'}}" /></view>
   <view wx:else class="mt-5 flex flex-col gap-3">
-    <view wx:for="{{tasks}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4" data-id="{{item.id}}" bind:tap="openTask">
-      <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1 text-[length:28rpx] font-semibold">{{item.name}}</view><view class="shrink-0 rounded-full bg-brand-soft px-3 py-1 text-[length:20rpx] text-brand">{{item.statusText}}</view></view>
-      <view class="mt-2 line-clamp-2 text-[length:23rpx] leading-[1.65] text-muted">{{item.content}}</view>
-      <view class="mt-3 flex flex-wrap gap-3 text-[length:21rpx] text-muted"><text>{{item.deadlineText}}</text><text>{{item.hasTemplate ? '提供任务模板' : '无任务模板'}}</text></view><view class="mt-3 flex items-center justify-between border-t border-line pt-3"><view class="text-[length:22rpx] text-brand">+{{item.rewardExperience}} 经验值</view><view class="flex items-center text-[length:21rpx] text-muted"><text>{{item.attachmentRequired ? '需要图片附件' : '无需附件'}}</text><t-icon name="chevron-right" size="28rpx" color="var(--color-muted)" /></view></view>
+    <view wx:for="{{visibleTasks}}" wx:key="id" class="overflow-hidden rounded-[16rpx] bg-panel" data-id="{{item.id}}" bind:tap="openTask">
+      <view class="px-4 py-4">
+        <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1 text-[length:28rpx] font-semibold">{{item.name}}</view><view class="shrink-0 rounded-full bg-brand-soft px-3 py-1 text-[length:20rpx] text-brand">{{item.statusText}}</view></view>
+        <view class="mt-3 flex items-center justify-between gap-3"><view class="text-[length:22rpx] text-brand">+{{item.rewardExperience}} 经验值</view><view class="text-[length:21rpx] text-muted">{{item.deadlineText}}</view></view>
+        <view class="mt-3 line-clamp-2 text-[length:23rpx] leading-[1.65] text-ink">{{item.content}}</view>
+        <view class="mt-3 flex flex-wrap gap-2 text-[length:20rpx] text-muted"><view class="rounded-full bg-panel-raised px-3 py-1">{{item.attachmentText}}</view><view class="rounded-full bg-panel-raised px-3 py-1">{{item.templateText}}</view></view>
+      </view>
+      <view class="flex min-h-[80rpx] items-center justify-between border-t border-line px-4 text-[length:22rpx]"><text class="text-muted">查看任务详情</text><t-icon name="chevron-right" size="30rpx" color="var(--color-muted)" /></view>
     </view>
   </view>
   <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>

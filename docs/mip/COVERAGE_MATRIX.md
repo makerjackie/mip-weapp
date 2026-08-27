@@ -4,7 +4,7 @@
 
 固定 PRD 的 1–81 项逐行状态见 [PRD_81_MATRIX.md](PRD_81_MATRIX.md)。本文件继续按业务闭环和 Figma 代表 frame 汇总，二者必须同时满足才能进入最终验收。
 
-当前工程声明 108 条小程序路由、16 个核心 `mip-*` 云函数和 52 个锁定迁移。共享云环境已验证 52 个迁移、121 张 MIP runtime 表的精确权限、最新 `mip-admin-api` 以及 16/16 核心函数。当前身份已完成协议、档案、手机号绑定、有效 TEST 玩家权益和唯一 `PLATFORM_OWNER` 初始化；2026-08-27 的 `.tmp/runtime/report.json` 已在 375px 实测窗口通过 108/108 路由、6/6 代表状态和 6/6 交互旅程，且没有运行时 warning/error。1024px 管理端代表页证据见 [响应式密度验收](evidence/admin-density-2026-08-26/README.md)。
+当前工程声明 108 条小程序路由、16 个核心 `mip-*` 云函数和 52 个锁定迁移。共享云环境已有 52 个迁移、121 张 MIP runtime 表精确权限、16/16 核心函数和当前 Owner 初始化的历史验证证据。完整移动端基线 `.tmp/runtime-evidence/2026-08-27-figma-alignment-r4/report.json` 在 375px 实测窗口下通过 108/108 路由、6/6 代表状态和 6/6 交互旅程，运行时与 IDE 诊断均为 0 failure。当前 Owner 的 6000 元会员、399 元活动订单、3 场未来活动、3 个 NPC 任务、3 枚带图片的已佩戴勋章和个人名片非空态由 `.tmp/runtime-evidence/2026-08-27-member-showcase-r2/report.json`、`.tmp/runtime-evidence/2026-08-28-order-media-r1/report.json` 与 `.tmp/runtime-evidence/2026-08-28-task-badge-r1/report.json` 补充；它们不把定向证据冒充新的 108 路由全量结论。1024px 管理端代表页证据见 [响应式密度验收](evidence/admin-density-2026-08-26/README.md)。
 
 ## 来源
 
@@ -128,7 +128,10 @@
 | `1770:38871` | 我的 | implemented-local | 真机 ready-state 截图和同尺寸视觉对照待验收 |
 | `1723:16217` | 我的活动 | implemented-local | 真机取消、退款和票码状态待验收 |
 | `1723:16988` | 我的订单 | external-wait | 四类标签和服务端使用状态已本地实现；正式支付/退款订单及真机状态待验收 |
-| `1732:20291` | 编辑档案 | external-wait | 多公司/组织、字段状态已实现；微信资料和手机号待真机验收 |
+| `1723:16459` | 活动订单详情 | external-wait | 活动封面、时间地点、订单号、费用明细、使用状态和购买须知已本地实现；正式活动支付/退款待真机验收 |
+| `1774:41143` | 编辑档案 | external-wait | 多公司/组织、行业、能力、公开范围和固定保存操作已实现；微信资料和手机号待真机验收 |
+| `1732:20291`、`1732:20401` | 个人名片 | external-wait | 横版四主题、公开字段、服务端短 scene 小程序码、分享和相册保存已实现；wxacode、扫码和相册待部署/真机验收 |
+| `1725:18357`、`1725:18515` | NPC 任务 | external-wait | 待完成/已结束、详情、模板、附件和服务端奖励已实现；模板保存和附件提交待真机验收 |
 | `2004:2227`、`2571:34139` | 合作卡 | implemented-local | 预览前自动保存、保护动作和表单状态已实现；运行时视觉对照待验收 |
 | `1987:30162`、`2173:42605` | 超级案例 | external-wait | 素材与表单已实现；真机媒体和 AI provider 待验收 |
 | `2172:42168` | AI 语音填写 | external-wait | 草稿、多轮补充和确认已实现；真机录音、转写和 provider 待验收 |

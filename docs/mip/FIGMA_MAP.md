@@ -18,8 +18,9 @@
 | 区域 | 页面节点 | 代表 frame | 代码目标 |
 | --- | --- | --- | --- |
 | 我的 | `69:4972` | `1770:38871` 我的 | `src/pages/profile` |
-| 我的活动/订单 | `69:4972` | `1723:16217`、`1723:16988` | `src/packages/member/mip-events/mine`、`src/packages/member/orders` |
-| 编辑档案 | `69:4972` | `1732:20291` | `src/packages/member/mip-profile` |
+| 我的活动/订单 | `69:4972` | `1723:16217`、`1723:16459`、`1723:16988` | `src/packages/member/mip-events/mine`、`src/packages/member/orders`、`src/packages/member/order-detail` |
+| NPC 任务/徽章 | `69:4972` | `1725:18357`、`1725:18515`、`1740:3454`、`1746:3784` | `src/packages/member/mip-tasks`、`src/packages/member/mip-badges` |
+| 编辑档案/个人名片 | `69:4972` | `1774:41143`、`1732:20291`、`1732:20401` | `src/packages/member/mip-profile`、`src/packages/member/mip-card` |
 | 合作卡 | `69:4972` | `2004:2227`、`2571:34139` | `src/packages/member/mip-cooperation` |
 | 超级案例 | `69:4972` | `1987:30162`、`2173:42605` | `src/packages/member/mip-cases` |
 | AI 语音填写 | `69:4972` | `2172:42168` | `src/packages/member/mip-ai` |
@@ -63,7 +64,10 @@
 
 | 节点 | 设计内容 | 本地实现 |
 | --- | --- | --- |
-| `1732:20291` | 黄色名片预览、个人/联系/组织信息和保存操作 | `src/packages/member/mip-profile` 使用正在编辑的真实资料实时预览；未提供的二维码和联系方式不伪造 |
+| `1774:41143` | 分组档案字段、行业/身份状态与固定保存操作 | `src/packages/member/mip-profile` 保留真实头像、昵称、分会、行业、能力、公司/组织、手机号私密绑定和公开范围；未进入当前领域的性别字段不照搬 |
+| `1732:20291`、`1732:20401` | 横版名片、四种背景、头像、名片码与固定分享/下载操作 | `src/packages/member/mip-card` 使用 Figma 背景素材和公开档案字段；服务端生成 AppID 绑定的短 scene 小程序码，扫码后解析为新的 opaque profile reference，不公开手机号或内部用户 ID |
+| `1725:18357`、`1725:18515` | NPC 任务列表、详情、奖励、截止与模板 | `src/packages/member/mip-tasks` 使用服务端任务状态、附件、模板和经验奖励；派发入口只对服务端确认有管理权限的用户显示 |
+| `1740:3454`、`1746:3784` | 勋章收藏、详情和佩戴 | `src/packages/member/mip-badges` 使用服务端授予事实和最多三枚佩戴版本，不以客户端选择伪造获得状态 |
 | `2004:2227`、`2571:34139` | 六类角色合作卡、角色信息、特征打分和底部操作 | `src/packages/member/mip-cooperation/list`、`editor` 保留真实摘要、能力评分和草稿/预览/发布生命周期；原型人物插画不作为用户内容 |
 | `1987:30162`、`2173:42605`、`2037:12261` | 超级案例封面、事实表、编辑表单和素材 | `src/packages/member/mip-cases` 使用服务端案例字段和用户上传素材；无封面时只显示品牌占位，不复制演示案例 |
 | `1958:11897` | 玩家档案的超级案例时间线 | `src/packages/member/mip-public-profile` 使用公开案例的真实发布时间和摘要；不复制原型案例 |
@@ -99,7 +103,8 @@
 
 ## 当前本地实现证据
 
-- 2026-08-27 已完成一轮 375px 微信开发者工具代表页面对照复查。活动、机会、人才、公开档案、AI 草稿和订单页面未发现 P0 阻断；活动卡密度和 AI 录音首屏高度已在第二轮复查中收口。
+- 完整 375px 运行基线为 `.tmp/runtime-evidence/2026-08-27-figma-alignment-r4/report.json`：108/108 路由、6/6 代表状态和 6/6 交互旅程通过，运行时与 IDE 诊断均为 0 failure。当前 Owner 的非空态补充证据为 `.tmp/runtime-evidence/2026-08-27-member-showcase-r2/report.json`：我的活动、任务详情、带小程序码的个人名片、档案编辑和个人中心均进入 `ready`；媒体解析后的订单列表、399 元活动订单详情和 6000 元会员订单详情见 `.tmp/runtime-evidence/2026-08-28-order-media-r1/report.json`；2 个待完成任务、1 个已结束任务和 3 枚带图片的已佩戴勋章见 `.tmp/runtime-evidence/2026-08-28-task-badge-r1/report.json`。
+- 左侧 Figma、右侧当前实现的逐帧报告生成于 `.tmp/figma-implementation-comparison/index.html`。它复用 r4 全路由截图，并用上述当前 Owner 非空态覆盖对应页面；同设计族映射只用于检查整体规范，不标记为一一像素对应。
 - 活动列表统一使用 `event-card` 与 `event-participant-preview`，机会与人才列表分别统一使用 `opportunity-card`、`talent-card`，案例、成长和公开档案的底部操作统一使用 `sticky-actions`。页面只组合真实数据和共享组件，不复制原型演示事实。
 - 活动详情继续使用微信原生导航栏。自动截图不包含原生导航区域，因此不额外叠加自定义返回栏，避免真机出现重复导航。
 - 新 Figma 副本已确认可读取；“我的”个人信息、数据卡、四入口和合作卡，以及活动/机会筛选与列表卡片均已取得精确子节点 context。实现必须继续使用真实数据和现有模块，不能把整页截图当页面。
@@ -113,7 +118,7 @@
 - 合作卡“预览”会先保存当前字段；保存失败不会进入预览。该合同由 `tests/mip-cooperation-preview.test.ts` 固定。
 - 公开档案访问使用一次性页面 visit key 记录；本人访客页按最新访问展示累计次数和未读状态。迁移与服务合同由 `database/mysql/mip/023_profile_visits.sql` 和 `cloudfunctions/mip-opportunities-api/tests/profile-visits.test.js` 固定。
 
-以上只说明本地行为已映射，不代替 Figma 同尺寸截图对照、微信开发者工具 ready-state 或真机验收。
+以上证据覆盖当前实现映射、Figma 同尺寸对照和开发者工具 ready-state；手机号、扫码、支付、分享、相册、地图、日历和录音仍必须保留真机或正式配置验收。
 
 ## 画板批注转成的业务合同
 

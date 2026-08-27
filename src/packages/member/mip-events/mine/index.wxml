@@ -1,6 +1,5 @@
 <view id="mip-events-mine-page" class="mip-member-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+40rpx)] text-ink">
-  <view class="px-4 pt-4 text-center text-[length:34rpx] font-bold">我的活动</view>
-  <view class="mt-3 grid grid-cols-2 border-b border-line text-center text-[length:25rpx]">
+  <view class="grid grid-cols-2 border-b border-line text-center text-[length:25rpx]">
     <view wx:if="{{activeCategory === 'UPCOMING'}}" class="min-h-[76rpx] border-b-[4rpx] border-brand py-3 font-medium text-brand" data-category="UPCOMING" bind:tap="changeCategory">待参加({{counts.upcoming}})</view>
     <view wx:else class="min-h-[76rpx] border-b-[4rpx] border-transparent py-3 text-muted" data-category="UPCOMING" bind:tap="changeCategory">待参加({{counts.upcoming}})</view>
     <view wx:if="{{activeCategory === 'ATTENDED'}}" class="min-h-[76rpx] border-b-[4rpx] border-brand py-3 font-medium text-brand" data-category="ATTENDED" bind:tap="changeCategory">已参加({{counts.attended}})</view>
@@ -9,17 +8,15 @@
 
   <view wx:if="{{state === 'loading'}}" class="mx-3 mt-4 rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}" class="mx-3 mt-5"><app-empty-state title="暂时无法加载活动" description="{{message || '请稍后重试。'}}" action-text="重新加载" bind:action="loadRegistrations" /></view>
-  <view wx:elif="{{registrations.length === 0}}" class="mx-3 mt-5"><app-empty-state title="{{activeCategory === 'UPCOMING' ? '暂无待参加活动' : '暂无已参加活动'}}" description="{{activeCategory === 'UPCOMING' ? '报名确认后的活动会显示在这里。' : '完成签到的活动会显示在这里。'}}" /></view>
+  <view wx:elif="{{registrations.length === 0}}" class="mx-3 mt-5"><app-empty-state title="{{activeCategory === 'UPCOMING' ? '暂无待参加活动' : '暂无已参加活动'}}" description="{{activeCategory === 'UPCOMING' ? '报名确认后的活动会显示在这里。' : '完成签到的活动会显示在这里。'}}" action-text="浏览活动" bind:action="browseEvents" /></view>
   <view wx:else class="mx-3 mt-4 flex flex-col gap-3">
     <view wx:for="{{registrations}}" wx:key="registrationId" class="overflow-hidden rounded-[16rpx] bg-panel" data-event-id="{{item.event.id}}" data-status="{{item.status}}">
-      <event-card event="{{item.card}}" variant="feed" data-participants="{{item.event.participantPreview}}" data-location="{{item.locationText}}" bind:select="openRegistration" />
+      <event-card event="{{item.card}}" variant="feed" show-cancel="{{item.canCancel || item.canRetryRefund}}" cancel-loading="{{cancelingId === item.registrationId}}" cancel-retry="{{item.canRetryRefund}}" registration-id="{{item.registrationId}}" version="{{item.version}}" bind:select="openRegistration" bind:cancel="cancelRegistration" />
       <view wx:if="{{item.status === 'PAYMENT_PENDING'}}" class="border-t border-line px-3 py-2 text-[length:21rpx] text-muted">支付确认前不会生成报名资格。</view>
-      <view wx:if="{{item.orderId || item.canEdit || item.canCancel || item.canRetryRefund}}" class="border-t border-line px-3 py-3">
+      <view wx:if="{{item.orderId || item.canEdit}}" class="border-t border-line px-3 py-3">
         <view class="flex flex-wrap gap-2">
           <t-button wx:if="{{item.orderId}}" size="small" variant="outline" data-order-id="{{item.orderId}}" catch:tap="openOrder">查看订单详情</t-button>
           <t-button wx:if="{{item.canEdit}}" size="small" variant="outline" data-event-id="{{item.event.id}}" catch:tap="editRegistration">修改报名</t-button>
-          <t-button wx:if="{{item.canRetryRefund}}" size="small" variant="outline" loading="{{cancelingId === item.registrationId}}" data-event-id="{{item.event.id}}" data-registration-id="{{item.registrationId}}" data-version="{{item.version}}" data-refund-retry="{{true}}" catch:tap="cancelRegistration">继续处理退款</t-button>
-          <t-button wx:elif="{{item.canCancel}}" size="small" variant="outline" theme="danger" loading="{{cancelingId === item.registrationId}}" data-event-id="{{item.event.id}}" data-registration-id="{{item.registrationId}}" data-version="{{item.version}}" catch:tap="cancelRegistration">取消报名</t-button>
         </view>
       </view>
     </view>

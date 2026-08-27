@@ -1,23 +1,24 @@
-<view id="mip-task-detail-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="mip-task-detail-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+180rpx)] pt-4 text-ink">
   <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载任务" description="{{message}}" action-text="重新加载" bind:action="loadTask" /><app-page-exit /></view>
   <block wx:else>
     <view class="rounded-[16rpx] bg-panel px-4 py-5">
-      <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1 text-[length:36rpx] font-bold">{{task.name}}</view><view class="shrink-0 rounded-full bg-brand-soft px-3 py-1 text-[length:21rpx] text-brand">{{task.status === 'COMPLETED' ? '已完成' : task.status === 'ENDED' ? '已截止' : '待完成'}}</view></view>
-      <view class="mt-4 whitespace-pre-wrap text-[length:26rpx] leading-[1.75] text-ink">{{task.content}}</view>
-      <view class="mt-5 border-t border-line pt-4"><view class="text-[length:24rpx] text-muted">完成奖励</view><view class="mt-1 text-[length:30rpx] font-semibold text-brand">+{{task.rewardExperience}} 经验值</view><view class="mt-2 text-[length:22rpx] text-muted">截止时间：{{deadlineText}}</view></view>
+      <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1 text-[length:36rpx] font-bold">{{task.name}}</view><view class="shrink-0 rounded-full bg-brand-soft px-3 py-1 text-[length:22rpx] text-brand">{{task.status === 'COMPLETED' ? '已完成' : task.status === 'ENDED' ? '已截止' : '待完成'}}</view></view>
+      <view class="mt-5 flex items-center justify-between border-t border-line pt-4"><view><view class="text-[length:22rpx] text-muted">完成奖励</view><view class="mt-1 text-[length:30rpx] font-semibold text-brand">+{{task.rewardExperience}} 经验值</view></view><view class="text-right"><view class="text-[length:22rpx] text-muted">任务截止</view><view class="mt-1 text-[length:22rpx] text-ink">{{deadlineText}}</view></view></view>
     </view>
-    <view wx:if="{{task.template}}" class="mt-4 rounded-[16rpx] bg-panel px-4 py-5"><view class="text-[length:27rpx] font-semibold">任务模板</view><image wx:if="{{task.template.url}}" class="mt-3 h-[360rpx] w-full rounded-[12rpx] bg-panel-raised" mode="aspectFit" src="{{task.template.url}}" /><view wx:else class="mt-3 rounded-[12rpx] bg-panel-raised px-3 py-4 text-[length:22rpx] text-muted">模板暂时无法下载</view><view class="mt-3"><t-button block variant="outline" disabled="{{!task.template.url}}" loading="{{savingTemplate}}" bind:tap="saveTemplate">保存模板图片</t-button></view></view>
+    <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5"><view class="text-[length:28rpx] font-semibold">任务说明</view><view class="mt-3 whitespace-pre-wrap text-[length:25rpx] leading-[1.75] text-ink">{{task.content}}</view></view>
+    <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5"><view class="text-[length:28rpx] font-semibold">完成条件</view><view class="mt-3 flex items-start gap-3"><t-icon name="file" size="34rpx" color="var(--color-brand)" /><view class="min-w-0 flex-1 text-[length:24rpx] leading-[1.65] text-ink">{{task.attachmentRequired ? '提交一张图片附件后完成任务' : '按任务说明完成内容并提交记录'}}</view></view></view>
+    <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5"><view class="text-[length:28rpx] font-semibold">任务模板</view><block wx:if="{{task.template}}"><image wx:if="{{task.template.url}}" class="mt-3 h-[360rpx] w-full rounded-[12rpx] bg-panel-raised" mode="aspectFit" src="{{task.template.url}}" /><view wx:else class="mt-3 rounded-[12rpx] bg-panel-raised px-3 py-4 text-[length:22rpx] text-muted">模板暂时无法下载</view><view wx:if="{{task.status !== 'AVAILABLE'}}" class="mt-3"><t-button block variant="outline" disabled="{{!task.template.url}}" loading="{{savingTemplate}}" bind:tap="saveTemplate">保存模板图片</t-button></view></block><view wx:else class="mt-3 text-[length:23rpx] text-muted">当前任务未配置模板。</view></view>
     <view wx:if="{{task.status === 'AVAILABLE'}}" class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
       <view class="text-[length:27rpx] font-semibold">任务附件{{task.attachmentRequired ? '（必填）' : '（选填）'}}</view>
       <view class="mt-2 text-[length:22rpx] text-muted">支持一张 JPG 或 PNG 图片，原图不超过 10MB。</view>
       <image wx:if="{{attachmentUrl}}" class="mt-4 h-[360rpx] w-full rounded-[12rpx] bg-panel-raised" mode="aspectFill" src="{{attachmentUrl}}" />
       <view class="mt-4"><t-button block variant="outline" loading="{{uploading}}" bind:tap="chooseAttachment">{{attachmentAssetId ? '更换附件' : '上传附件'}}</t-button></view>
-      <view class="mt-3"><t-button block theme="primary" loading="{{submitting}}" bind:tap="submitTask">提交完成</t-button></view>
     </view>
     <view wx:elif="{{task.status === 'COMPLETED'}}" class="mt-4 rounded-[16rpx] bg-panel px-4 py-5"><view class="flex items-center gap-2 text-[length:28rpx] font-semibold text-success"><t-icon name="check-circle" size="34rpx" color="var(--color-success)" /><text>任务已完成</text></view><view class="mt-2 text-[length:22rpx] text-muted">奖励经验值已按任务配置写入成长流水。</view></view>
     <view wx:else class="mt-4 rounded-[16rpx] bg-panel px-4 py-5"><view class="text-[length:28rpx] font-semibold">任务已截止</view><view class="mt-2 text-[length:22rpx] text-muted">截止后不能再提交完成记录。</view></view>
     <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
+    <mip-sticky-actions wx:if="{{task.status === 'AVAILABLE'}}"><view slot="actions" class="grid w-full grid-cols-2 gap-3"><t-button block variant="outline" disabled="{{!task.template || !task.template.url}}" loading="{{savingTemplate}}" bind:tap="saveTemplate">保存模板</t-button><t-button block theme="primary" loading="{{submitting}}" disabled="{{uploading || (task.attachmentRequired && !attachmentAssetId)}}" bind:tap="submitTask">提交完成</t-button></view></mip-sticky-actions>
     <app-page-exit />
   </block>
 </view>

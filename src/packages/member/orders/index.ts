@@ -16,6 +16,8 @@ interface DisplayOrder extends CommerceOrder {
   statusBrand: boolean
   statusSuccess: boolean
   statusDanger: boolean
+  amountLabel: string
+  amountHighlight: boolean
 }
 
 function presentOrder(order: CommerceOrder, plans: readonly MembershipPlan[]): DisplayOrder {
@@ -23,11 +25,12 @@ function presentOrder(order: CommerceOrder, plans: readonly MembershipPlan[]): D
   const orderServiceStatus = order.serviceStatus || 'UNAVAILABLE'
   const serviceStatus = presentOrderServiceStatus(orderServiceStatus)
   const status = orderServiceStatus === 'UNAVAILABLE' ? paymentStatus : serviceStatus
+  const isRefundedEvent = order.orderType === 'EVENT' && orderServiceStatus === 'REFUNDED'
   return {
     ...order,
     title: planTitle(order, plans),
     statusText: status.label,
-    amountText: formatCny(order.amountCents),
+    amountText: formatCny(isRefundedEvent ? order.refundedAmountCents : order.amountCents),
     createdText: order.createdAt ? formatLocalDateTime(order.createdAt) : '',
     eventStartsText: order.event?.startsAt ? formatLocalDateTime(order.event.startsAt) : '',
     eventLocationText: [...new Set([
@@ -38,6 +41,8 @@ function presentOrder(order: CommerceOrder, plans: readonly MembershipPlan[]): D
     statusBrand: status.tone === 'brand',
     statusSuccess: status.tone === 'success',
     statusDanger: status.tone === 'danger',
+    amountLabel: isRefundedEvent ? '已退款' : order.orderType === 'EVENT' ? '实付款' : '订单金额',
+    amountHighlight: order.orderType === 'EVENT',
   }
 }
 

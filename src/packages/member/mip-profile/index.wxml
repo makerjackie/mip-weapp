@@ -1,4 +1,4 @@
-<view id="mip-profile-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="mip-profile-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+180rpx)] pt-4 text-ink">
   <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-8">
     <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
@@ -14,13 +14,13 @@
           <view class="truncate text-[length:38rpx] font-bold">{{nickname || '未填写昵称'}}</view>
           <view wx:if="{{identityStatus}}" class="mt-2 truncate text-[length:23rpx]">{{identityStatus}}</view>
           <view wx:if="{{headline}}" class="mt-3 line-clamp-2 text-[length:22rpx] leading-6 opacity-75">{{headline}}</view>
-          <view class="mt-4 flex flex-wrap gap-2 text-[length:20rpx]">
+          <view class="mt-4 flex flex-wrap gap-2 text-[length:22rpx]">
             <view wx:if="{{branchOptions[branchIndex].id}}" class="rounded-full bg-black/10 px-3 py-1">{{branchOptions[branchIndex].label}}</view>
             <view wx:if="{{industryOptions[industryIndex].id}}" class="rounded-full bg-black/10 px-3 py-1">{{industryOptions[industryIndex].label}}</view>
           </view>
         </view>
       </view>
-      <view class="border-t border-black/10 px-5 py-3 text-[length:20rpx] opacity-70">名片内容随下方资料实时更新</view>
+      <view class="border-t border-black/10 px-5 py-3 text-[length:22rpx] opacity-70">名片内容随下方资料实时更新</view>
     </view>
     <view class="mt-4 text-[length:23rpx] leading-6 text-muted">昵称和主城市分会为必填项，其他信息可稍后补充。</view>
     <view wx:if="{{aiDraftLoaded}}" class="mt-4 rounded-[14rpx] bg-brand-soft px-4 py-3 text-[length:23rpx] text-brand">已载入 AI 草稿，可继续修改后保存。</view>
@@ -39,14 +39,15 @@
       <view class="mt-5 text-[length:23rpx] font-semibold text-muted">昵称</view>
       <input class="mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:26rpx]" type="nickname" maxlength="64" value="{{nickname}}" data-field="nickname" bindinput="updateText" placeholder="输入昵称" placeholder-style="color:#A3A3A3" />
 
-      <view class="mt-5 rounded-[14rpx] bg-panel-raised px-4 py-4"><mip-catalog-selector title="主城市分会" groups="{{branchGroups}}" selected-ids="{{selectedBranchIds}}" multiple="{{false}}" clear-label="未选择" bind:change="changeBranch" /></view>
-      <view class="mt-2 text-[length:21rpx] leading-5 text-muted">主分会用于默认展示和归属，不限制参加其他城市活动。</view>
+      <view wx:if="{{branchGroups.length}}" class="mt-5 rounded-[14rpx] bg-panel-raised px-4 py-4"><mip-catalog-selector title="主城市分会" groups="{{branchGroups}}" selected-ids="{{selectedBranchIds}}" multiple="{{false}}" clear-label="未选择" bind:change="changeBranch" /></view>
+      <view wx:else class="mt-5 rounded-[14rpx] bg-panel-raised px-4 py-4 text-[length:23rpx] text-muted">城市分会暂未配置，请稍后再试。</view>
+      <view class="mt-2 text-[length:22rpx] leading-5 text-muted">主分会用于默认展示和归属，不限制参加其他城市活动。</view>
 
       <view class="mt-5 text-[length:23rpx] font-semibold text-muted">身份状态</view>
       <input class="mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:26rpx]" maxlength="32" value="{{identityStatus}}" data-field="identityStatus" bindinput="updateText" placeholder="例如：创业者" placeholder-style="color:#A3A3A3" />
 
       <view class="mt-5 rounded-[14rpx] bg-panel-raised px-4 py-4"><mip-catalog-selector title="主行业" groups="{{industryGroups}}" selected-ids="{{selectedIndustryIds}}" multiple="{{false}}" clear-label="未选择" bind:change="changeIndustry" /></view>
-      <view class="mt-2 text-[length:21rpx] leading-5 text-muted">一级行业用于分组，主行业从二级行业中选择。</view>
+      <view class="mt-2 text-[length:22rpx] leading-5 text-muted">一级行业用于分组，主行业从二级行业中选择。</view>
 
       <view wx:if="{{abilityOptions.length}}" class="mt-5 text-[length:23rpx] font-semibold text-muted">能力</view>
       <view wx:if="{{abilityOptions.length}}" class="mt-3 flex flex-wrap gap-2">
@@ -68,7 +69,7 @@
 
       <view class="mt-4 flex items-center justify-between">
         <view class="text-[length:23rpx] font-semibold text-muted">公司</view>
-        <view class="text-[length:21rpx] text-muted">{{companies.length}}/{{maxOrganizations}}</view>
+        <view class="text-[length:22rpx] text-muted">{{companies.length}}/{{maxOrganizations}}</view>
       </view>
       <view wx:if="{{!companies.length}}" class="mt-3 rounded-[14rpx] border border-line px-4 py-4 text-[length:23rpx] text-muted">暂未添加公司经历。</view>
       <view wx:for="{{companies}}" wx:key="id" class="mt-3 rounded-[14rpx] border border-line bg-panel-raised px-3 py-4">
@@ -87,7 +88,7 @@
 
       <view class="mt-6 flex items-center justify-between">
         <view class="text-[length:23rpx] font-semibold text-muted">组织</view>
-        <view class="text-[length:21rpx] text-muted">{{organizations.length}}/{{maxOrganizations}}</view>
+        <view class="text-[length:22rpx] text-muted">{{organizations.length}}/{{maxOrganizations}}</view>
       </view>
       <view wx:if="{{!organizations.length}}" class="mt-3 rounded-[14rpx] border border-line px-4 py-4 text-[length:23rpx] text-muted">暂未添加组织经历。</view>
       <view wx:for="{{organizations}}" wx:key="id" class="mt-3 rounded-[14rpx] border border-line bg-panel-raised px-3 py-4">
@@ -129,7 +130,7 @@
     </view>
 
     <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:23rpx] leading-6">{{message}}</view>
-    <view class="mt-6 rounded-[24rpx] border border-line bg-panel p-2"><t-button block size="large" theme="primary" loading="{{saving}}" disabled="{{avatarUploading}}" bind:tap="saveProfile">保存名片</t-button></view>
+    <mip-sticky-actions><view slot="actions" class="w-full"><t-button block size="large" theme="primary" loading="{{saving}}" disabled="{{avatarUploading}}" bind:tap="saveProfile">保存资料</t-button></view></mip-sticky-actions>
   </block>
   <app-page-exit />
 </view>

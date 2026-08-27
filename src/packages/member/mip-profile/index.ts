@@ -128,7 +128,7 @@ Page({
       const branchGroups = groupedCityBranches(branches.branches, opportunityCatalog?.cityTags || [])
       const branchOptions = [
         { id: '', label: '未选择' },
-        ...branchGroups[0].options,
+        ...branchGroups.flatMap(group => group.options),
       ]
       const primaryIndustryId = snapshot.profile.primaryIndustryTagId || ''
       const primaryBranchId = snapshot.primaryBranchId || ''

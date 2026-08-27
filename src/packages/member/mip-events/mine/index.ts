@@ -5,7 +5,7 @@ import type {
   RegistrationSummary,
 } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
-import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
+import { caseNavigateTo, caseSwitchPrimary } from '../../../../modules/platform/case-navigation'
 import { resolveMyRegistrationCategory } from './category'
 
 interface RegistrationView extends RegistrationSummary {
@@ -145,6 +145,10 @@ Page({
     void this.loadRegistrations()
   },
 
+  browseEvents() {
+    void caseSwitchPrimary('/pages/events/index')
+  },
+
   async loadMore() {
     if (!this.data.nextCursor || this.data.loadingMore) {
       return
@@ -191,10 +195,15 @@ Page({
   },
 
   async cancelRegistration(event: WechatMiniprogram.TouchEvent) {
-    const eventId = String(event.currentTarget.dataset.eventId || '') as EventId
-    const registrationId = String(event.currentTarget.dataset.registrationId || '')
-    const version = Number(event.currentTarget.dataset.version)
-    const retryRefund = event.currentTarget.dataset.refundRetry === true
+    const detail = (event as unknown as {
+      detail?: { eventId?: string, registrationId?: string, version?: number, refundRetry?: boolean | string }
+    }).detail
+    const eventId = String(detail?.eventId || event.currentTarget.dataset.eventId || '') as EventId
+    const registrationId = String(detail?.registrationId || event.currentTarget.dataset.registrationId || '')
+    const version = Number(detail?.version ?? event.currentTarget.dataset.version)
+    const retryRefund = detail?.refundRetry === true
+      || detail?.refundRetry === 'true'
+      || event.currentTarget.dataset.refundRetry === true
       || event.currentTarget.dataset.refundRetry === 'true'
     if (!eventId || !registrationId || this.data.cancelingId) {
       return

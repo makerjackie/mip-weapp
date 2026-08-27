@@ -43,7 +43,7 @@
 
   <view wx:if="{{!filterOpen && state === 'ready'}}" class="mt-3 flex flex-col gap-3">
     <view wx:for="{{people}}" wx:key="profileRef" class="active:bg-panel-raised" aria-role="button" data-profile-ref="{{item.profileRef}}" bind:tap="openProfile">
-      <mip-talent-card display-name="{{item.displayName}}" kind-label="{{item.kindLabel}}" avatar-url="{{item.avatarUrl}}" meta-text="{{item.branchText || '城市未公开'}}{{item.primaryIndustry ? '｜' + item.primaryIndustry.label : ''}}" supporting-text="{{item.headline || item.identityStatus || '未填写个人简介'}}" role-names="{{item.roleNames}}" target-text="{{item.abilityText}}" />
+      <mip-talent-card display-name="{{item.displayName}}" kind-label="{{item.kindLabel}}" avatar-url="{{item.avatarUrl || ''}}" meta-text="{{item.branchText || '城市未公开'}}{{item.primaryIndustry ? '｜' + item.primaryIndustry.label : ''}}" supporting-text="{{item.headline || item.identityStatus || '未填写个人简介'}}" role-names="{{item.roleNames}}" target-text="{{item.abilityText}}" />
     </view>
   </view>
   <view wx:if="{{!filterOpen && loadingMore}}" class="py-5 text-center text-[length:21rpx] text-muted">正在加载</view>

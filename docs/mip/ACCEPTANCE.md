@@ -31,7 +31,7 @@
 | 机会兴趣/引荐唯一关系 | `tests/mip-related-opportunities.test.ts`、`cloudfunctions/mip-opportunities-api/tests/block-visibility.test.js` | `implemented-local`；端到端运行时和微信补充通知为 `external-wait` |
 | N1 会员期邀请归因与载体 | `tests/mip-membership-invitation-ui.test.ts`、`cloudfunctions/mip-commerce-api/tests/membership-invitation-code.test.js`、`cloudfunctions/mip-commerce-api/tests/repository.test.js` | `implemented-local`；正式 wxacode、扫码和相册为 `external-wait` |
 | 谁看过我 | `database/mysql/mip/023_profile_visits.sql`、`cloudfunctions/mip-opportunities-api/tests/profile-visits.test.js`、`src/packages/member/mip-received/index.ts`、`tests/mip-received-interactions.test.ts` | 访客列表及“我的”未读入口为 `implemented-local`；云端运行时为 `external-wait` |
-| 管理端 `cloud://` 图片解析 | `tests/cloud-media.test.ts`、`src/modules/mip-admin/cloudbase-gateway.ts` | `implemented-local`；真实临时 URL 和下载失败恢复为 `external-wait` |
+| 小程序端 `cloud://` 图片解析 | `tests/cloud-media.test.ts`、`tests/mip-commerce-cloud-media.test.ts`、`src/modules/platform/cloud-media.ts` | 管理端和会员订单均在传输层解析临时 URL；当前活动订单封面已在开发者工具验证，下载失败恢复仍需专项验收 |
 | H1 用户详情与导出 | `cloudfunctions/mip-admin-api/tests/service.test.js`、`cloudfunctions/mip-admin-api/tests/export.test.js` | `implemented-local`；CloudBase 私有文件运行时为 `external-wait` |
 | H2 订单与参与名单 | `tests/admin-orders-roster-h2.test.ts`、`tests/admin-roster.test.ts` | `implemented-local`；正式支付退款为 `external-wait` |
 | H3 多范围角色和管理登录审计 | `tests/admin-rbac-scope-h3.test.ts`、`cloudfunctions/mip-admin-api/tests/capabilities.test.js` | `implemented-local` |
@@ -39,8 +39,8 @@
 | H5 NPC 任务派发、等级、模板与截止 | `database/mysql/mip/027_task_assignments_templates.sql`、`database/mysql/mip/038_task_level_rules.sql`、`cloudfunctions/mip-tasks-api/tests/task-contract.test.js`、`tests/mip-tasks.test.ts` | 指定成员与成长等级双重资格、服务端当前经验重验、版本保护和审计已完成；真机模板上传/保存为 `external-wait` |
 | 固定 PRD #55 玩家 VIP 页 | `src/packages/member/mip-growth/index.ts`、`tests/mip-growth-vip.test.ts`、`tests/mip-membership-invitation-ui.test.ts`、`config/runtime-pages.json` | 成长页邀请复用服务端会员 token，续费进入统一会员方案，分享已纳入真机契约；真实分享与支付为 `external-wait` |
 | 固定 PRD #56 订单使用状态 | `cloudfunctions/mip-commerce-api/tests/repository.test.js`、`tests/mip-order-service-status.test.ts`、`src/packages/member/orders/index.ts` | 活动、会员和内容订单由服务端投影 `serviceStatus`，客户端只按权威值显示和筛选；正式支付/退款与真机状态为 `external-wait` |
-| 勋章收藏、佩戴与运营管理 | `database/mysql/mip/028_badge_collection.sql`、`cloudfunctions/mip-growth-api/tests/badges.test.js`、`cloudfunctions/mip-admin-api/tests/badges.test.js`、`tests/mip-badges.test.ts` | 本人收藏、最多 3 枚佩戴、公开档案投影、运营目录/授予和迁移已完成；Figma 已可读取且代表入口资产已下载，正式勋章目录图片仍为可替换配置并保留 `external-wait` |
-| 数字分身与我的名片 | `database/mysql/mip/030_digital_avatar_generations.sql`、`cloudfunctions/mip-ai-api/tests/avatar-store.test.js`、`tests/mip-digital-avatar.test.ts`、`tests/mip-member-card.test.ts` | 生成任务、服务端资产归属、原图/数字分身切换和名片接线已完成；真实生成 provider、Figma 对照和真机相册为 `external-wait` |
+| 勋章收藏、佩戴与运营管理 | `database/mysql/mip/028_badge_collection.sql`、`cloudfunctions/mip-growth-api/tests/badges.test.js`、`cloudfunctions/mip-admin-api/tests/badges.test.js`、`tests/mip-badges.test.ts` | 本人收藏、最多 3 枚佩戴、公开档案投影、运营目录/授予和迁移已完成；当前 3 枚演示勋章使用研究包内可替换的 MIP 立体素材，正式勋章目录与图片仍为 `external-wait` |
+| 数字分身与我的名片 | `database/mysql/mip/030_digital_avatar_generations.sql`、`cloudfunctions/mip-ai-api/tests/avatar-store.test.js`、`cloudfunctions/mip-identity-api/tests/profile-card-code.test.js`、`tests/mip-digital-avatar.test.ts`、`tests/mip-member-card.test.ts` | 生成任务、服务端资产归属、原图/数字分身切换、Figma 名片背景和 AppID 绑定的 opaque scene 小程序码已完成；当前账号已生成可显示码，真实生成 provider、扫码、分享和相册保存为 `external-wait` |
 | 运营消息活动 | `database/mysql/mip/031_message_campaigns.sql`、`cloudfunctions/mip-admin-api/tests/message-campaigns.test.js`、`tests/mip-message-campaigns.test.ts` | 平台/分会范围、收件人快照、幂等发布、撤回和审计已完成；外部微信投递为 `external-wait` |
 | 游戏币、等级与弹窗消息 | `database/mysql/mip/032_game_coin_safety.sql`、`cloudfunctions/mip-growth-api/tests/game-coins.test.js`、`tests/mip-popup-messages.test.ts`、`tests/mip-outbox.test.ts` | 权威余额、追加流水、防负、周赛固定奖励、真实跨级识别、站内消息和弹窗去重已完成；微信模板和云端运行时为 `external-wait` |
 | Owner 可配置角色权限 | `database/mysql/mip/033_configurable_rbac.sql`、`cloudfunctions/mip-admin-api/tests/role-capability-policies.test.js`、`tests/mip-configurable-rbac.test.ts` | 六类非 Owner 角色的白名单策略、版本冲突、恢复默认、安全上限、事务内二次授权和审计已完成；Owner 权限固定 |
@@ -50,7 +50,7 @@
 
 ## 静态门禁
 
-2026-08-27 当前 `main` 在 Node 22 下通过完整门禁：客户端 214 个测试文件、1235 项测试；服务端 220 个测试文件、1389 项测试；源码合同为 133 个页面视图、16 个核心函数、52 个锁定迁移。架构、共享数据库隔离、安全、类型、样式、构建、包体和文档链接同时通过；ESLint 仅保留 16 条既有顺序 warning，没有 error。
+2026-08-28 当前工作区通过完整门禁：客户端 218 个测试文件、1249 项测试；服务端 221 个测试文件、1396 项测试；源码合同为 137 个页面视图、16 个核心函数、52 个锁定迁移。架构、共享数据库隔离、安全、类型、样式、构建、包体和文档链接同时通过；ESLint 仅保留 16 条既有顺序 warning，没有 error。本机执行使用 Node 24.15.0，因此有不影响结果的 engine warning；仓库目标版本仍为 Node 22。
 
 - `pnpm verify`
 - `git diff --check`
@@ -64,11 +64,11 @@
 
 ## 微信开发者工具
 
-`.tmp/runtime/report.json` 已于 2026-08-27 使用当前代码重新生成：375px 实测窗口下 108/108 路由、6/6 代表状态和 6/6 交互旅程通过，四个主 Tab、返回与深链通过，运行时诊断和 IDE 编译诊断均为 0 failure。验证器校验实际 `page.path`、唯一根节点、业务 `readyAssertion` 和动态真实查询夹具，不把错误、无权限或占位参数记为通过。
+默认输出 `.tmp/runtime/report.json` 会被每次重跑覆盖，不作为固定证据。完整 UI 基线仍采用 `.tmp/runtime-evidence/2026-08-27-figma-alignment-r4/report.json`：375px 实测窗口下 108/108 路由、6/6 代表状态和 6/6 交互旅程通过，运行时诊断与 IDE 编译诊断均为 0 failure。当前真实账号的补充证据为 `.tmp/runtime-evidence/2026-08-27-member-showcase-r2/report.json`，我的活动、活动/会员订单、任务详情、个人名片、档案编辑和个人中心均进入 `ready`；订单媒体解析后的最新三张截图与金额断言见 `.tmp/runtime-evidence/2026-08-28-order-media-r1/report.json`，3 个任务状态和 3 枚带图片的已佩戴勋章见 `.tmp/runtime-evidence/2026-08-28-task-badge-r1/report.json`。本轮另两次全量重跑分别在旧订单媒体数据门禁和开发者工具 viewport 协议超时处结束，没有替代 r4 的全量结论；对应控制台均无 error、exception 或 rejection。
 
-当前微信身份已经完成协议、档案和手机号绑定，并由精确档案初始化为唯一 `PLATFORM_OWNER`；手机号原值不写入仓库。`.tmp/bootstrap-owner-result.json` 记录 `ownerCount=1`、`role=PLATFORM_OWNER`、`scope=PLATFORM`。当前开发账号还具有有效 TEST 玩家权益与一条固定历史活动 `ATTENDED` 报名，会员页和活动互动页均进入本次通过集合。管理端 1024px 代表页证据见 [响应式密度验收](evidence/admin-density-2026-08-26/README.md)；该证据不代替 Mac/Windows 微信客户端验收。
+当前微信身份已经完成协议、档案和手机号绑定，并由精确档案初始化为唯一 `PLATFORM_OWNER`；手机号原值不写入仓库。`.tmp/bootstrap-owner-result.json` 记录 `ownerCount=1`、`role=PLATFORM_OWNER`、`scope=PLATFORM`。当前开发账号具有有效 TEST 玩家权益、3 场未来活动报名、1 笔 399 元 TEST 活动订单、1 笔 6000 元年度会员订单、2 个定向任务和 3 枚已佩戴勋章；这些页面均进入当前补充证据。管理端 1024px 代表页证据见 [响应式密度验收](evidence/admin-density-2026-08-26/README.md)；该证据不代替 Mac/Windows 微信客户端验收。
 
-开发用目录以及 6 个带虚拟头像的演示用户、3 个测试会员订单与权益、3 场使用不同封面的 2030 活动、11 条演示报名（其中 3 场 2030 活动 8 条、历史互动活动 3 条）、3 条机会、6 张合作卡和 3 条超级案例已通过 `pnpm seed:demo` 写入当前 AppID 的 MIP 表；当前 Owner 另有一条由独立受限脚本创建的历史活动报名。公告、知识、消息、任务、成长、赛季、队伍、排行和盲盒夹具也已完成固定计数复核；全部使用固定 ID 和版本化清单，没有修改非 MIP 表。Banner 正常态仍需要通过媒体安全检查的真实云素材，异常中心只使用可证明的失败投递事实。
+共享开发环境已经写入并复核 `2026-08-28-demo.17`：一年 6000 元、365 天的 TEST 会员方案，3 场 2030 年周四 MIP 早会、1 场 399 元 TEST 付费活动、3 个 NPC 任务和带可替换图片的徽章目录。`pnpm owner:showcase` 已为当前 Owner 补齐 3 场未来活动报名、活动订单、2 个定向任务和 3 枚已佩戴勋章，重复执行结果为 `wrote: 0`。全部夹具使用固定 ID、版本化清单、当前 AppID 范围和 TEST 商品快照，不修改非 MIP 表，也不伪造生产支付；Banner 正常态仍需要通过媒体安全检查的真实云素材。
 
 - `pnpm runtime:preflight`
 - `pnpm test:runtime`
@@ -86,7 +86,7 @@
 - 机会详情展示发布时间、团队成员和默认封面；进入公开档案只使用 opaque profile reference。
 - 进入他人公开档案只记录一次页面访问意图；访客列表按最新访问排序并显示累计次数、未读和本人读取状态。
 - 我的档案四项影响力必须分别来自服务端嘉宾、活动心动、当前兴趣和去重访客事实；点击进入对应列表。公开档案关闭“影响力数据”后不得返回或展示聚合值，也不能从他人档案进入身份列表。
-- 管理端列表中的 `cloud://` 图片先解析为临时可显示 URL，解析失败时保留页面错误恢复，不把文件 ID 当作图片地址展示。
+- 管理端列表和会员订单中的 `cloud://` 图片先解析为临时可显示 URL，解析失败时保留页面错误恢复，不把文件 ID 留在页面数据中。
 - 指定成员任务只能从当前 AppID 有效成员中搜索和批量派发；成长等级限制为空时全部等级可完成，非空时列表、详情和完成提交均按服务端当前经验重新判级；撤销不删除历史，截止后显示“已截止”且不能完成，模板上传和保存需真机验收。
 - 我的勋章只展示本人有效获授记录，最多可保存 3 枚佩戴；公开档案只显示佩戴中且目录仍启用的勋章。运营端停用仍被佩戴的勋章或撤销仍在佩戴的获授记录时显示明确规则。
 - 团队 PK、赛季、排行榜和队伍大本营只向当前有效会员开放；客户端携带 score/points 时请求被拒绝，管理端结算和排行只读取服务端成长事实。
