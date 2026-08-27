@@ -4,7 +4,7 @@
 
 固定 PRD 的 1–81 项逐行状态见 [PRD_81_MATRIX.md](PRD_81_MATRIX.md)。本文件继续按业务闭环和 Figma 代表 frame 汇总，二者必须同时满足才能进入最终验收。
 
-当前工程声明 108 条小程序路由、16 个核心 `mip-*` 云函数和 52 个锁定迁移。共享云环境已验证 52 个迁移、121 张 MIP runtime 表的精确权限、最新 `mip-admin-api` 以及 16/16 核心函数。当前身份已完成协议、档案、手机号绑定和唯一 `PLATFORM_OWNER` 初始化；旧 `.tmp/runtime/report.json` 只覆盖 95 条历史路由，当前 108 条路由和 6 个交互旅程尚未重跑，不能继续把旧报告当作当前结论。
+当前工程声明 108 条小程序路由、16 个核心 `mip-*` 云函数和 52 个锁定迁移。共享云环境已验证 52 个迁移、121 张 MIP runtime 表的精确权限、最新 `mip-admin-api` 以及 16/16 核心函数。当前身份已完成协议、档案、手机号绑定、有效 TEST 玩家权益和唯一 `PLATFORM_OWNER` 初始化；2026-08-27 的 `.tmp/runtime/report.json` 已在 375px 实测窗口通过 108/108 路由、6/6 代表状态和 6/6 交互旅程，且没有运行时 warning/error。1024px 管理端代表页证据见 [响应式密度验收](evidence/admin-density-2026-08-26/README.md)。
 
 ## 来源
 
@@ -113,7 +113,7 @@
 
 | 范围 | 状态 | 当前证据与缺口 |
 | --- | --- | --- |
-| 当前 16 个管理模块和 110 个一级需求点 | `partial-local` | [逐项矩阵](WORKBUDDY_110_MATRIX.md) 已固定当前在线稿；49 条管理路由、共享响应式壳层和高密度页面修复已存在，仍有明确本地功能缺口及 375px/960px+ 验收缺口 |
+| 当前 16 个管理模块和 110 个一级需求点 | `partial-local` | [逐项矩阵](WORKBUDDY_110_MATRIX.md) 已固定当前在线稿；49 条管理路由已全部进入 108 路由运行时通过集合，共享响应式壳层和 1024px 代表页证据已存在；与确认领域模型冲突的 Web 账号、固定团队、自由角色等不纳入实现，其他增补仍按矩阵保留范围事实 |
 | 管理业务服务复用 | `implemented-local` | 中立 `AdminTransport`、CloudBase/InMemory adapter、v1 嵌套请求、trusted principal、`AdminApplication.execute` 和 145-action operation registry 已形成稳定合同 |
 | 活动复制与手机预览 | `implemented-local` | 复制活动和未保存草稿预览已形成管理 action、页面入口和聚焦测试；真实媒体仍按真机边界验收 |
 | 消息模板、定时与失败复核 | `implemented-local` | 模板、活动、收件人快照、定时发送、失败复核和 outbox 已本地实现；正式微信模板及 scheduler 云端 canary 为 `external-wait` |
