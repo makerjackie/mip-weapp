@@ -1,0 +1,130 @@
+.mip-talent-card {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 260rpx;
+  overflow: hidden;
+  color: var(--color-ink);
+  background: var(--color-panel);
+  border-radius: 16rpx;
+}
+
+.mip-talent-card__body {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  min-height: 172rpx;
+  padding: 16rpx 24rpx;
+}
+
+.mip-talent-card__avatar {
+  flex: 0 0 112rpx;
+  width: 112rpx;
+  height: 112rpx;
+  overflow: hidden;
+  background: var(--color-panel-raised);
+  border-radius: 50%;
+}
+
+.mip-talent-card__avatar-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+}
+
+.mip-talent-card__main {
+  min-width: 0;
+  margin-left: 24rpx;
+}
+
+.mip-talent-card__name-row {
+  display: flex;
+  gap: 16rpx;
+  align-items: center;
+  min-width: 0;
+}
+
+.mip-talent-card__name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 32rpx;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.mip-talent-card__kind {
+  flex: 0 0 auto;
+  padding: 4rpx 12rpx;
+  font-size: 18rpx;
+  font-weight: 500;
+  color: var(--color-on-brand);
+  background: var(--color-brand);
+  border-radius: 8rpx;
+}
+
+.mip-talent-card__meta,
+.mip-talent-card__supporting {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mip-talent-card__meta {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  line-height: 34rpx;
+  color: var(--color-muted);
+}
+
+.mip-talent-card__supporting {
+  margin-top: 8rpx;
+  font-size: 20rpx;
+  line-height: 30rpx;
+  color: var(--color-muted);
+}
+
+.mip-talent-card__footer {
+  box-sizing: border-box;
+  display: flex;
+  gap: 16rpx;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 88rpx;
+  padding: 8rpx 24rpx;
+  border-top: 1rpx solid var(--color-line);
+}
+
+.mip-talent-card__roles {
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  min-width: 0;
+}
+
+.mip-talent-card__role {
+  padding: 4rpx 16rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 20rpx;
+  font-weight: 500;
+  color: var(--color-on-brand);
+  white-space: nowrap;
+  background: var(--color-brand);
+  border-radius: 8rpx;
+}
+
+.mip-talent-card__target {
+  flex: 0 1 300rpx;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 20rpx;
+  color: var(--color-brand);
+  text-align: right;
+  white-space: nowrap;
+}

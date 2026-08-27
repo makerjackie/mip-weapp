@@ -11,21 +11,8 @@
   <view wx:elif="{{state === 'error'}}" class="mx-3 mt-5"><app-empty-state title="暂时无法加载活动" description="{{message || '请稍后重试。'}}" action-text="重新加载" bind:action="loadRegistrations" /></view>
   <view wx:elif="{{registrations.length === 0}}" class="mx-3 mt-5"><app-empty-state title="{{activeCategory === 'UPCOMING' ? '暂无待参加活动' : '暂无已参加活动'}}" description="{{activeCategory === 'UPCOMING' ? '报名确认后的活动会显示在这里。' : '完成签到的活动会显示在这里。'}}" /></view>
   <view wx:else class="mx-3 mt-4 flex flex-col gap-3">
-    <view wx:for="{{registrations}}" wx:key="registrationId" class="overflow-hidden rounded-[16rpx] bg-panel" data-event-id="{{item.event.id}}" data-status="{{item.status}}" bind:tap="openRegistration">
-      <image wx:if="{{item.event.coverUrl}}" class="h-[282rpx] w-full bg-brand-soft" mode="aspectFill" src="{{item.event.coverUrl}}" />
-      <view wx:else class="flex h-[282rpx] w-full items-center justify-center bg-brand-soft"><t-icon name="calendar" size="64rpx" color="var(--color-brand)" /></view>
-      <view class="relative px-3 pb-3 pt-3">
-        <view class="flex items-start justify-between gap-3"><view class="line-clamp-2 min-w-0 flex-1 text-[length:28rpx] font-bold">{{item.event.title}}</view><view class="shrink-0 rounded-full bg-brand px-3 py-1 text-[length:20rpx] text-on-brand">{{item.statusText}}</view></view>
-        <view wx:if="{{item.startsText}}" class="mt-3 flex items-center text-[length:22rpx] text-muted"><t-icon class="mr-2" name="calendar" size="28rpx" color="var(--color-brand)" />{{item.startsText}}</view>
-        <view wx:if="{{item.locationText}}" class="mt-2 flex items-start text-[length:22rpx] leading-5 text-muted"><t-icon class="mr-2 shrink-0" name="location" size="28rpx" color="var(--color-brand)" /><text>{{item.locationText}}</text></view>
-        <view class="mt-3 flex items-center justify-between gap-3">
-          <view class="flex min-w-0 items-center">
-            <view wx:if="{{item.event.participantPreview.length}}" class="mr-2 flex shrink-0"><block wx:for="{{item.event.participantPreview}}" wx:for-item="person" wx:key="participantRef"><image wx:if="{{person.avatarUrl}}" class="-mr-2 h-[44rpx] w-[44rpx] rounded-full border-2 border-panel bg-panel-raised" src="{{person.avatarUrl}}" mode="aspectFill" /><view wx:else class="-mr-2 flex h-[44rpx] w-[44rpx] items-center justify-center rounded-full border-2 border-panel bg-brand-soft text-[length:16rpx] text-brand">MIP</view></block></view>
-            <text wx:if="{{item.participantCountText}}" class="truncate text-[length:20rpx] text-muted">{{item.participantCountText}}</text>
-          </view>
-          <view class="flex shrink-0 gap-2"><text class="rounded-[8rpx] bg-brand-soft px-2 py-1 text-[length:18rpx] text-brand">{{item.accessText}}</text><text wx:if="{{item.event.branchName}}" class="rounded-[8rpx] bg-panel-raised px-2 py-1 text-[length:18rpx] text-muted">{{item.event.branchName}}</text></view>
-        </view>
-      </view>
+    <view wx:for="{{registrations}}" wx:key="registrationId" class="overflow-hidden rounded-[16rpx] bg-panel" data-event-id="{{item.event.id}}" data-status="{{item.status}}">
+      <event-card event="{{item.card}}" variant="feed" data-participants="{{item.event.participantPreview}}" data-location="{{item.locationText}}" bind:select="openRegistration" />
       <view wx:if="{{item.status === 'PAYMENT_PENDING'}}" class="border-t border-line px-3 py-2 text-[length:21rpx] text-muted">支付确认前不会生成报名资格。</view>
       <view wx:if="{{item.orderId || item.canEdit || item.canCancel || item.canRetryRefund}}" class="border-t border-line px-3 py-3">
         <view class="flex flex-wrap gap-2">

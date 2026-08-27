@@ -1,0 +1,4 @@
+.order-card--event .order-card__cover {
+  display: block;
+  border-radius: 16rpx 16rpx 0 0;
+}

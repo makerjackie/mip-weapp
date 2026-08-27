@@ -1,0 +1,23 @@
+.mip-sticky-actions-spacer {
+  height: calc(128rpx + env(safe-area-inset-bottom));
+}
+
+.mip-sticky-actions-shell {
+  position: fixed;
+  right: auto;
+  bottom: calc(env(safe-area-inset-bottom) + 16rpx);
+  left: 50%;
+  z-index: 20;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  width: calc(100% - 48rpx);
+  max-width: calc(var(--mip-member-shell-max-width, 100%) - 48rpx);
+  min-height: 112rpx;
+  padding: 8rpx;
+  transform: translateX(-50%);
+}
+
+.mip-sticky-actions-shell > slot {
+  display: contents;
+}

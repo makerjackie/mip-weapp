@@ -23,7 +23,6 @@ interface EventCardView extends MipEventListItem {
   accessLabel: string
   statusLabel: string
   locationText: string
-  displayTags: string[]
 }
 
 interface EventFilterOptionView extends EventDiscoveryOption {
@@ -113,7 +112,6 @@ function presentEvent(event: MipEventListItem): EventCardView {
     statusLabel: statusLabel(event),
     locationText: [event.cityName, event.venueName].filter(Boolean).join(' · ') || '地点待公布',
     eventTypeLabel,
-    displayTags: event.tags.filter(tag => tag !== event.eventTypeLabel && tag !== eventTypeLabel).slice(0, 3),
   }
 }
 
@@ -745,7 +743,8 @@ Page({
   stopPropagation() {},
 
   openEvent(event: WechatMiniprogram.TouchEvent) {
-    const eventId = String(event.currentTarget.dataset.eventId || '') as EventId
+    const detail = (event as unknown as { detail?: { id?: string } }).detail
+    const eventId = String(detail?.id || event.currentTarget?.dataset?.eventId || '') as EventId
     if (eventId) {
       caseNavigateTo({ url: `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(eventId)}` })
     }

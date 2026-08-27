@@ -1,4 +1,4 @@
-<view id="mip-opportunity-detail-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+176rpx)] pt-3 text-ink">
+<view id="mip-opportunity-detail-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+220rpx)] pt-3 text-ink">
   <view wx:if="{{state === 'loading'}}" id="opportunity-detail-loading" class="flex flex-col gap-3">
     <view class="flex h-[352rpx] overflow-hidden rounded-[16rpx] bg-panel p-2">
       <view class="h-[320rpx] w-[240rpx] shrink-0 rounded-[8rpx] bg-panel-raised" />
@@ -9,21 +9,7 @@
   </view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法查看机会" description="{{message}}" action-text="重新加载" bind:action="load" /><app-page-exit /></view>
   <block wx:elif="{{item}}">
-    <view class="flex h-[352rpx] overflow-hidden rounded-[16rpx] bg-panel p-2">
-      <view class="flex h-[320rpx] w-[240rpx] shrink-0 items-center justify-center overflow-hidden rounded-[8rpx] bg-panel-raised">
-        <image wx:if="{{item.coverUrl}}" class="h-[320rpx] w-[240rpx]" src="{{item.coverUrl}}" mode="aspectFill" />
-        <t-icon wx:else name="undertake-delivery" size="92rpx" color="var(--color-brand)" />
-      </view>
-      <view class="flex min-w-0 flex-1 flex-col py-1 pl-2">
-        <view class="truncate text-[length:32rpx] font-medium leading-[44rpx]">{{item.title}}</view>
-        <view class="mt-2 flex flex-col gap-[12rpx]">
-          <view class="flex min-w-0 items-center gap-1 text-[length:24rpx] leading-[34rpx]"><image class="h-[32rpx] w-[32rpx] shrink-0" src="/assets/figma/opportunities/money-cny-circle.svg" mode="aspectFit" /><text class="truncate">价值：{{item.commercialTerms.amountDisplay || item.valueSummary}}</text></view>
-          <view class="flex min-w-0 items-center gap-1 text-[length:24rpx] leading-[34rpx]"><image class="h-[32rpx] w-[32rpx] shrink-0" src="/assets/figma/opportunities/location.svg" mode="aspectFit" /><text class="truncate">地区：{{item.commercialTerms.locationDisplay || item.city.label || item.branchName || '全国'}}</text></view>
-          <view class="flex min-w-0 items-center gap-1 text-[length:24rpx] leading-[34rpx]"><image class="h-[32rpx] w-[32rpx] shrink-0" src="/assets/figma/opportunities/service-target.svg" mode="aspectFit" /><text class="truncate">寻找：{{item.targetSummary}}</text></view>
-        </view>
-        <view wx:if="{{publishedText}}" class="mt-auto truncate text-right text-[length:20rpx] text-muted">发布于 {{publishedText}}</view>
-      </view>
-    </view>
+    <mip-opportunity-card title="{{item.title}}" cover-url="{{item.coverUrl}}" value-text="{{item.commercialTerms.amountDisplay || item.valueSummary}}" location-text="{{item.commercialTerms.locationDisplay || item.city.label || item.branchName || '全国'}}" target-text="{{item.targetSummary}}" referral-count="{{item.referralCount}}" published-text="{{publishedText}}" />
     <view class="mt-3 rounded-[16rpx] bg-panel px-3 py-3">
       <view class="flex items-center gap-1 text-[length:32rpx] font-medium"><image class="h-[32rpx] w-[32rpx] shrink-0" src="/assets/figma/opportunities/project-introduction.svg" mode="aspectFit" /><text>项目介绍</text></view>
       <view wx:if="{{item.description}}" class="mt-3 whitespace-pre-wrap text-[length:24rpx] leading-[40rpx] text-muted">{{item.description}}</view>

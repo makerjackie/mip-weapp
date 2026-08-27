@@ -1,0 +1,9 @@
+<view class="event-participant-preview flex min-h-[56rpx] items-center rounded-full bg-panel px-1 pr-3" aria-label="{{countText || (count + '人参加')}}">
+  <view class="flex items-center">
+    <block wx:for="{{participants}}" wx:key="participantRef">
+      <image wx:if="{{item.avatarUrl}}" class="-mr-2 h-[48rpx] w-[48rpx] rounded-full border-[3rpx] border-panel bg-brand-soft" mode="aspectFill" src="{{item.avatarUrl}}" />
+      <view wx:else class="-mr-2 flex h-[48rpx] w-[48rpx] items-center justify-center rounded-full border-[3rpx] border-panel bg-brand-soft"><t-icon name="user-avatar" size="28rpx" color="var(--color-brand)" /></view>
+    </block>
+  </view>
+  <text class="ml-3 text-[length:22rpx] font-semibold text-ink">{{countText || (count + '人参加')}}</text>
+</view>

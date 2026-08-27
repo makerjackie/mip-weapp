@@ -55,14 +55,12 @@ describe('MIP cooperation discovery experience', () => {
   })
 
   it('renders one talent per row with aggregated role cards and explicit states', () => {
-    for (const template of [
-      read('src/packages/member/mip-cooperation/list/index.wxml'),
-      read('src/pages/opportunities/index.wxml'),
-    ]) {
+    const legacyTemplate = read('src/packages/member/mip-cooperation/list/index.wxml')
+    const componentTemplate = read('src/pages/opportunities/index.wxml')
+    for (const template of [legacyTemplate, componentTemplate]) {
       expect(template).toContain('item.author.nickname')
       expect(template).toContain('item.primaryPositioning')
       expect(template).toContain('item.primaryTargetSummary')
-      expect(template).toContain('wx:for="{{item.cards}}"')
       expect(template).toContain('wx:key="talentKey"')
       expect(template).toContain('data-profile-ref="{{item.profileRef}}"')
       expect(template).toContain('state === \'loading\'')
@@ -70,6 +68,9 @@ describe('MIP cooperation discovery experience', () => {
       expect(template).toContain('没有找到人才')
       expect(template).toContain('确认筛选')
     }
+    expect(legacyTemplate).toContain('wx:for="{{item.cards}}"')
+    expect(componentTemplate).toContain('<mip-talent-card')
+    expect(componentTemplate).toContain('role-names="{{item.roleNames}}"')
   })
 
   it('sends all applied cooperation filters and a stable cursor through the module', () => {

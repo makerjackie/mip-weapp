@@ -17,6 +17,7 @@ interface PersonView extends PublicPerson {
   abilityText: string
   abilities: NonNullable<PublicPerson['abilities']>
   badges: NonNullable<PublicPerson['badges']>
+  roleNames: string[]
 }
 
 interface FilterOption { id: string, label: string }
@@ -34,10 +35,11 @@ function dateText(value: string) {
 }
 
 function presentPerson(person: PublicPerson): PersonView {
+  const kindLabel = person.userKind === 'PLAYER' ? '玩家' : '嘉宾'
   return {
     ...person,
     displayName: person.nickname || 'MIP 用户',
-    kindLabel: person.userKind === 'PLAYER' ? '玩家' : '嘉宾',
+    kindLabel,
     branchText: person.primaryBranch
       ? [person.primaryBranch.cityName, person.primaryBranch.name].filter(Boolean).join(' · ')
       : '',
@@ -45,6 +47,7 @@ function presentPerson(person: PublicPerson): PersonView {
     abilityText: (person.abilities || [])[0]?.label || dateText(person.joinedAt),
     abilities: person.abilities || [],
     badges: person.badges || [],
+    roleNames: [],
   }
 }
 

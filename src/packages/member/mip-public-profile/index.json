@@ -7,6 +7,7 @@
     "cooperation-role-card": "/components/cooperation-role-card/index",
     "app-empty-state": "/components/empty-state/index",
     "app-page-exit": "/components/page-exit/index",
+    "mip-sticky-actions": "/components/sticky-actions/index",
     "t-button": "tdesign-miniprogram/button/button",
     "t-icon": "tdesign-miniprogram/icon/icon",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"

@@ -1,4 +1,22 @@
-<view wx:if="{{compact}}" class="flex h-[210rpx] overflow-hidden rounded-[22rpx] border border-line bg-panel active:bg-panel-muted" bind:tap="handleSelect">
+<view wx:if="{{variant === 'feed'}}" class="event-card event-card--feed overflow-hidden rounded-[16rpx] bg-panel">
+  <view class="relative h-[298rpx] w-full active:opacity-80" bind:tap="handleSelect">
+    <image wx:if="{{event.coverUrl}}" class="h-full w-full bg-brand-soft" mode="aspectFill" src="{{event.coverUrl}}" />
+    <view wx:else class="flex h-full w-full items-center justify-center bg-brand-soft"><t-icon name="calendar" size="70rpx" color="var(--color-brand)" /></view>
+    <event-participant-preview class="absolute bottom-2 left-2" participants="{{event.participantPreview}}" count="{{event.registrationCount}}" count-text="{{event.registrationCount + '人参加'}}" />
+    <view class="absolute bottom-2 right-2 flex max-w-[60%] flex-wrap justify-end gap-1">
+      <text wx:if="{{event.accessLabel}}" class="rounded-[12rpx] bg-brand px-2 py-1 text-[length:22rpx] font-semibold text-on-brand">{{event.accessLabel}}</text>
+      <text wx:if="{{event.eventTypeLabel}}" class="rounded-[12rpx] bg-panel-raised px-2 py-1 text-[length:22rpx] text-ink">{{event.eventTypeLabel}}</text>
+      <text wx:if="{{event.statusLabel}}" class="rounded-[12rpx] bg-brand-soft px-2 py-1 text-[length:22rpx] text-brand">{{event.statusLabel}}</text>
+    </view>
+  </view>
+  <view class="relative px-3 pb-3 pt-2">
+    <view class="line-clamp-1 pr-[72rpx] text-[length:30rpx] font-semibold leading-[1.4]">{{event.title}}</view>
+    <view class="mt-2 flex items-center gap-2 text-[length:22rpx] text-ink"><t-icon name="calendar" size="27rpx" color="var(--color-brand)" /><text>{{event.startsText}}</text></view>
+    <view class="mt-1 flex items-center gap-2 pr-[72rpx] text-[length:22rpx] text-ink"><t-icon name="location" size="27rpx" color="var(--color-brand)" /><text class="line-clamp-1">{{event.locationText}}</text></view>
+    <button wx:if="{{showShare}}" open-type="share" class="absolute bottom-0 right-0 m-0 flex h-[88rpx] w-[88rpx] items-center justify-center border-0 bg-transparent p-0 leading-none after:border-0" aria-label="分享活动" data-event-id="{{event.id}}" catch:tap="handleShare"><view class="flex h-[56rpx] w-[56rpx] items-center justify-center rounded-full bg-brand"><t-icon name="share" size="30rpx" color="var(--color-on-brand)" /></view></button>
+  </view>
+</view>
+<view wx:elif="{{compact}}" class="flex h-[210rpx] overflow-hidden rounded-[22rpx] border border-line bg-panel active:bg-panel-muted" bind:tap="handleSelect">
   <image wx:if="{{event.coverUrl}}" class="h-[210rpx] w-[210rpx] shrink-0 bg-brand-soft" mode="aspectFill" src="{{event.coverUrl}}" />
   <view wx:else class="flex h-[210rpx] w-[210rpx] shrink-0 items-center justify-center bg-brand-soft"><t-icon name="calendar-event" size="54rpx" color="var(--color-brand)" /></view>
   <view class="flex min-w-0 flex-1 flex-col px-4 py-3">

@@ -1,4 +1,4 @@
-<view id="mip-case-editor-page" class="mip-member-page case-editor-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+200rpx)] text-ink">
+<view id="mip-case-editor-page" class="mip-member-page case-editor-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] text-ink">
   <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法编辑案例" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit /></view>
   <block wx:else>
@@ -122,9 +122,11 @@
     <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] border border-danger px-4 py-3 text-[length:22rpx] leading-6 text-danger" aria-live="polite">{{message}}</view>
     <app-page-exit label="取消" />
 
-    <view id="case-editor-fixed-actions" class="mip-member-fixed-inset case-editor-actions fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 grid min-h-[112rpx] grid-cols-2 items-center gap-2 rounded-full border border-brand bg-brand-soft p-2">
-      <view class="case-editor-action min-w-0"><t-button block size="large" variant="outline" theme="primary" loading="{{savingIntent === 'draft'}}" disabled="{{saving || coverUploading || mediaUploading}}" bind:tap="saveDraft">保存草稿</t-button></view>
-      <view class="case-editor-action min-w-0"><t-button block size="large" theme="primary" loading="{{savingIntent === 'publish'}}" disabled="{{saving || coverUploading || mediaUploading}}" bind:tap="publish">{{publicationStatus === 'PUBLISHED' ? '保存修改' : '发布案例'}}</t-button></view>
-    </view>
+    <mip-sticky-actions>
+      <view id="case-editor-fixed-actions" slot="actions" class="case-editor-actions grid min-h-[112rpx] w-full grid-cols-2 items-center gap-2 rounded-full border border-brand bg-brand-soft p-2">
+        <view class="case-editor-action min-w-0"><t-button block size="large" variant="outline" theme="primary" loading="{{savingIntent === 'draft'}}" disabled="{{saving || coverUploading || mediaUploading}}" bind:tap="saveDraft">保存草稿</t-button></view>
+        <view class="case-editor-action min-w-0"><t-button block size="large" theme="primary" loading="{{savingIntent === 'publish'}}" disabled="{{saving || coverUploading || mediaUploading}}" bind:tap="publish">{{publicationStatus === 'PUBLISHED' ? '保存修改' : '发布案例'}}</t-button></view>
+      </view>
+    </mip-sticky-actions>
   </block>
 </view>

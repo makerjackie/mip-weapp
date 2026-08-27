@@ -171,7 +171,8 @@ describe('MIP super case editor visual contract', () => {
 
   it('separates draft and publish progress in one constrained fixed action bar', () => {
     expect(template).toContain('id="case-editor-fixed-actions"')
-    expect(template).toContain('mip-member-fixed-inset')
+    expect(template).toContain('<mip-sticky-actions>')
+    expect(template).toContain('slot="actions"')
     expect(template).toContain('grid-cols-2')
     expect(template).toContain('savingIntent === \'draft\'')
     expect(template).toContain('savingIntent === \'publish\'')

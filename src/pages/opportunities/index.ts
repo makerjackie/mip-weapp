@@ -20,6 +20,7 @@ import { getCustomNavigationStatusBarHeight } from '../../platform/navigation/st
 type PageMode = 'opportunities' | 'cooperation'
 interface CooperationTalentView extends Omit<CooperationTalentSummary, 'cards'> {
   cards: Array<CooperationTalentSummary['cards'][number] & { roleName: string }>
+  roleNames: string[]
   primaryPositioning: string
   primaryTargetSummary: string
 }
@@ -217,6 +218,7 @@ Page({
           return {
             ...item,
             cards,
+            roleNames: cards.map(card => card.roleName),
             primaryPositioning: cards[0]?.positioning || '',
             primaryTargetSummary: cards[0]?.targetSummary || '',
           }

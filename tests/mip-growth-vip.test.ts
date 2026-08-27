@@ -26,7 +26,8 @@ describe('MIP growth player actions', () => {
     expect(template).toContain('会员有效期至 {{membershipEndsText}}')
     expect(template).toContain('wx:for="{{tasks}}"')
     expect(template).toContain('id="growth-member-actions"')
-    expect(template).toContain('bottom-[calc(env(safe-area-inset-bottom)+16rpx)]')
+    expect(template).toContain('<mip-sticky-actions')
+    expect(template).toContain('slot="actions"')
   })
 
   it('maps the frozen player-level visual hierarchy to server facts', () => {

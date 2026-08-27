@@ -1,0 +1,16 @@
+<view class="mip-opportunity-card" aria-label="{{title}}">
+  <view class="mip-opportunity-card__cover">
+    <image wx:if="{{coverUrl}}" class="mip-opportunity-card__cover-image" src="{{coverUrl}}" mode="aspectFill" />
+    <view wx:else class="mip-opportunity-card__cover-placeholder">MIP</view>
+  </view>
+  <view class="mip-opportunity-card__content">
+    <view class="mip-opportunity-card__title">{{title}}</view>
+    <view class="mip-opportunity-card__facts">
+      <view class="mip-opportunity-card__fact"><image class="mip-opportunity-card__icon" src="/assets/figma/opportunities/money-cny-circle.svg" mode="aspectFit" /><text class="mip-opportunity-card__fact-text">价值：{{valueText}}</text></view>
+      <view class="mip-opportunity-card__fact"><image class="mip-opportunity-card__icon" src="/assets/figma/opportunities/location.svg" mode="aspectFit" /><text class="mip-opportunity-card__fact-text">地区：{{locationText}}</text></view>
+      <view class="mip-opportunity-card__fact"><image class="mip-opportunity-card__icon" src="/assets/figma/opportunities/service-target.svg" mode="aspectFit" /><text class="mip-opportunity-card__fact-text">寻找：{{targetText}}</text></view>
+    </view>
+    <view wx:if="{{publishedText}}" class="mip-opportunity-card__published">发布于 {{publishedText}}</view>
+    <view class="mip-opportunity-card__footer"><view class="mip-opportunity-card__referral">+{{referralCount}}引荐</view></view>
+  </view>
+</view>

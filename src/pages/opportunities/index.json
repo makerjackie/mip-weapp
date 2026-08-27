@@ -6,6 +6,8 @@
   "enablePullDownRefresh": true,
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",
+    "mip-opportunity-card": "/components/opportunity-card/index",
+    "mip-talent-card": "/components/talent-card/index",
     "mip-catalog-selector": "/components/catalog-selector/index",
     "t-button": "tdesign-miniprogram/button/button",
     "t-icon": "tdesign-miniprogram/icon/icon",

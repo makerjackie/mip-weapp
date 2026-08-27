@@ -1,4 +1,4 @@
-<view id="mip-growth-page" class="mip-member-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+196rpx)] text-ink">
+<view id="mip-growth-page" class="mip-member-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+48rpx)] text-ink">
   <view wx:if="{{state === 'loading'}}" class="px-3 pt-3"><view class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
   <view wx:elif="{{state === 'error'}}" class="px-3 pt-3"><app-empty-state title="暂时无法加载成长记录" description="请检查网络后重试。" action-text="重新加载" bind:action="loadGrowth" /><app-page-exit /></view>
   <block wx:else>
@@ -86,9 +86,11 @@
     <view class="mx-3"><app-page-exit /></view>
   </block>
 
-  <view wx:if="{{isPlayer}}" id="growth-member-actions" class="mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-2 rounded-full border border-[#5c5320] bg-[rgba(34,31,7,0.96)] p-2">
-    <button open-type="share" disabled="{{!invitationReady}}" class="m-0 flex h-[88rpx] min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-line bg-panel p-0 text-[length:24rpx] font-semibold leading-[88rpx] text-brand disabled:opacity-50" aria-label="邀请加入 MIP"><t-icon name="share" size="30rpx" color="var(--color-brand)" /><text>邀请加入</text></button>
-    <button class="m-0 flex h-[88rpx] min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-0 bg-brand p-0 text-[length:24rpx] font-semibold leading-[88rpx] text-on-brand active:bg-brand-active" aria-label="进入会员方案续费" bind:tap="renewMembership"><t-icon name="card" size="30rpx" color="var(--color-on-brand)" /><text>立即续费</text></button>
-  </view>
+  <mip-sticky-actions wx:if="{{isPlayer}}">
+    <view id="growth-member-actions" slot="actions" class="flex h-[112rpx] w-full items-center gap-2 rounded-full border border-brand bg-brand-soft p-2">
+      <button open-type="share" disabled="{{!invitationReady}}" class="m-0 flex h-[88rpx] min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-line bg-panel p-0 text-[length:24rpx] font-semibold leading-[88rpx] text-brand disabled:opacity-50" aria-label="邀请加入 MIP"><t-icon name="share" size="30rpx" color="var(--color-brand)" /><text>邀请加入</text></button>
+      <button class="m-0 flex h-[88rpx] min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-0 bg-brand p-0 text-[length:24rpx] font-semibold leading-[88rpx] text-on-brand active:bg-brand-active" aria-label="进入会员方案续费" bind:tap="renewMembership"><t-icon name="card" size="30rpx" color="var(--color-on-brand)" /><text>立即续费</text></button>
+    </view>
+  </mip-sticky-actions>
   <view wx:if="{{invitationMessage && isPlayer}}" class="mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+132rpx)] z-20 rounded-[12rpx] border border-danger bg-panel px-4 py-3 text-center text-[length:21rpx] text-danger">{{invitationMessage}}</view>
 </view>

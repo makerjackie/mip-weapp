@@ -105,7 +105,9 @@ describe('MIP opportunity contracts', () => {
   it('shows the opportunity publication time in the detail view', () => {
     const page = readFileSync(new URL('../src/packages/member/mip-opportunities/detail/index.ts', import.meta.url), 'utf8')
     const view = readFileSync(new URL('../src/packages/member/mip-opportunities/detail/index.wxml', import.meta.url), 'utf8')
+    const card = readFileSync(new URL('../src/components/opportunity-card/index.wxml', import.meta.url), 'utf8')
     expect(page).toContain('formatLocalDateTime(item.publishedAt)')
-    expect(view).toContain('发布于 {{publishedText}}')
+    expect(view).toContain('published-text="{{publishedText}}"')
+    expect(card).toContain('发布于 {{publishedText}}')
   })
 })

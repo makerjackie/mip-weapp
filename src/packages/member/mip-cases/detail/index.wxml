@@ -1,4 +1,4 @@
-<view id="mip-case-detail-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+176rpx)] pt-3 text-ink">
+<view id="mip-case-detail-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-3 text-ink">
   <view wx:if="{{state === 'loading'}}" class="flex flex-col gap-3">
     <view class="h-[300rpx] rounded-[16rpx] bg-brand-soft" />
     <view class="rounded-[16rpx] bg-panel px-4 py-5"><t-skeleton row-col="{{[1,1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
@@ -29,13 +29,17 @@
     </view>
     <view wx:if="{{message}}" class="mt-3 rounded-[12rpx] border border-danger bg-panel px-4 py-3 text-[length:22rpx] text-danger">{{message}}</view>
     <app-page-exit label="返回案例" />
-    <view wx:if="{{item.canEdit}}" class="mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-2 rounded-full border border-brand bg-brand-soft p-2">
+    <mip-sticky-actions wx:if="{{item.canEdit}}">
+      <view slot="actions" class="flex h-[112rpx] w-full items-center gap-2 rounded-full border border-brand bg-brand-soft p-2">
       <button wx:if="{{item.status === 'PUBLISHED'}}" open-type="share" class="m-0 flex h-[80rpx] w-[176rpx] shrink-0 items-center justify-center gap-2 rounded-full border-0 bg-panel p-0 text-[length:25rpx] leading-[80rpx] text-brand active:bg-panel-raised" aria-label="分享案例"><t-icon name="share" size="32rpx" color="var(--color-brand)" /><text>分享</text></button>
       <view class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:30rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" aria-disabled="{{acting}}" bind:tap="edit">{{acting ? '处理中' : '编辑案例'}}</view>
-    </view>
-    <view wx:elif="{{!item.mine && item.status === 'PUBLISHED'}}" class="mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-2 rounded-full border border-brand bg-brand-soft p-2">
+      </view>
+    </mip-sticky-actions>
+    <mip-sticky-actions wx:elif="{{!item.mine && item.status === 'PUBLISHED'}}">
+      <view slot="actions" class="flex h-[112rpx] w-full items-center gap-2 rounded-full border border-brand bg-brand-soft p-2">
       <button open-type="share" class="m-0 flex h-[80rpx] w-[176rpx] shrink-0 items-center justify-center gap-2 rounded-full border-0 bg-panel p-0 text-[length:25rpx] leading-[80rpx] text-brand active:bg-panel-raised" aria-label="分享案例"><t-icon name="share" size="32rpx" color="var(--color-brand)" /><text>分享</text></button>
       <view class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:30rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" aria-disabled="{{acting}}" bind:tap="toggleInterest">{{acting ? '处理中' : (item.interestActive ? '取消感兴趣' : '我感兴趣')}}</view>
-    </view>
+      </view>
+    </mip-sticky-actions>
   </block>
 </view>

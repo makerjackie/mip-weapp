@@ -3,8 +3,8 @@
   width: 100%;
   max-width: 100%;
   overflow: hidden;
-  color: #fff;
-  background: #202020;
+  color: var(--color-ink);
+  background: var(--color-panel);
   border-radius: 32rpx;
 }
 
@@ -77,7 +77,7 @@
 
 .cooperation-role-card__details {
   padding: 0 24rpx;
-  background: #202020;
+  background: var(--color-panel);
 }
 
 .cooperation-role-card__detail-row {
@@ -91,7 +91,7 @@
 }
 
 .cooperation-role-card__detail-row + .cooperation-role-card__detail-row {
-  border-top: 1rpx solid #363636;
+  border-top: 1rpx solid var(--color-line);
 }
 
 .cooperation-role-card__detail-key {
@@ -99,7 +99,7 @@
   gap: 8rpx;
   align-items: center;
   font-size: 20rpx;
-  color: #fff;
+  color: var(--color-ink);
   white-space: nowrap;
 }
 

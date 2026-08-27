@@ -72,6 +72,7 @@ Page({
     pastePreviewVisible: false,
     pasteDraft: {} as OpportunityTextDraft,
     pastePreview: [] as PastePreviewRow[],
+    advancedOpen: false,
     roleOptions: cooperationRoles.map(item => ({ key: item.key, name: item.name, selected: false })) as RoleOption[],
     industryGroups: [] as IndustryGroupOption[],
     abilityOptions: [] as SelectOption[],
@@ -271,6 +272,10 @@ Page({
 
   closePastePreview() {
     this.setData({ pastePreviewVisible: false })
+  },
+
+  toggleAdvancedSettings() {
+    this.setData({ advancedOpen: !this.data.advancedOpen })
   },
 
   handlePastePreviewVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {

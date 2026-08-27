@@ -14,6 +14,21 @@ interface RegistrationView extends RegistrationSummary {
   locationText: string
   accessText: string
   participantCountText: string
+  card: RegistrationCardView
+}
+
+interface RegistrationCardView {
+  id: EventId
+  status: RegistrationStatus
+  title: string
+  coverUrl?: string
+  startsText: string
+  locationText: string
+  participantPreview: RegistrationSummary['event']['participantPreview']
+  registrationCount: number
+  accessLabel: string
+  eventTypeLabel: string
+  statusLabel: string
 }
 
 const statusLabels: Record<RegistrationStatus, string> = {
@@ -45,6 +60,21 @@ function present(item: RegistrationSummary): RegistrationView {
     locationText: uniqueText([item.event.cityName, item.event.venueName, item.venueAddress]),
     accessText,
     participantCountText: item.event.registrationCount > 0 ? `${item.event.registrationCount} 人参加` : '',
+    card: {
+      id: item.event.id,
+      status: item.status,
+      title: item.event.title,
+      coverUrl: item.event.coverUrl,
+      startsText: Number.isFinite(startsAt.getTime())
+        ? `${startsAt.getMonth() + 1}月${startsAt.getDate()}日 ${String(startsAt.getHours()).padStart(2, '0')}:${String(startsAt.getMinutes()).padStart(2, '0')}`
+        : '',
+      locationText: uniqueText([item.event.cityName, item.event.venueName, item.venueAddress]),
+      participantPreview: item.event.participantPreview,
+      registrationCount: item.event.registrationCount,
+      accessLabel: accessText,
+      eventTypeLabel: item.event.eventTypeLabel,
+      statusLabel: statusLabels[item.status],
+    },
   }
 }
 
@@ -141,8 +171,9 @@ Page({
   },
 
   openRegistration(event: WechatMiniprogram.TouchEvent) {
-    const eventId = String(event.currentTarget.dataset.eventId || '') as EventId
-    const status = String(event.currentTarget.dataset.status || '') as RegistrationStatus
+    const detail = (event as unknown as { detail?: { id?: string, status?: string } }).detail
+    const eventId = String(detail?.id || event.currentTarget?.dataset?.eventId || '') as EventId
+    const status = String(detail?.status || event.currentTarget?.dataset?.status || '') as RegistrationStatus
     const path = status === 'ATTENDED'
       ? `/packages/member/mip-events/interaction/index?eventId=${encodeURIComponent(eventId)}`
       : `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(eventId)}`

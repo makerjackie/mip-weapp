@@ -12,7 +12,7 @@ describe('MIP level artwork presentation', () => {
 
     expect(markup).toContain('class="profile-level-art"')
     expect(markup).toContain('src="/assets/figma/profile/level-art.png"')
-    expect(styles).toContain('background: #fcdf03;')
+    expect(styles).toContain('background: var(--color-brand);')
     expect(styles).toContain('mix-blend-mode: screen;')
     expect(styles).toContain('.profile-level-header,\n.profile-level-experience,\n.profile-level-progress,\n.profile-level-loading')
     expect(styles).toContain('z-index: 1;')

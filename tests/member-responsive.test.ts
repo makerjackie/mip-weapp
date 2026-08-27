@@ -185,7 +185,8 @@ describe('MIP member responsive foundation', () => {
       'src/packages/member/mip-people/index.wxml',
       'src/packages/member/mip-public-profile/index.wxml',
     ]) {
-      const hasConstrainedFixedAction = [...read(file).matchAll(/\bclass="([^"]+)"/g)]
+      const pageSource = read(file)
+      const hasConstrainedFixedAction = pageSource.includes('<mip-sticky-actions') || [...pageSource.matchAll(/\bclass="([^"]+)"/g)]
         .some((match) => {
           const tokens = match[1].split(/\s+/)
           return tokens.includes('fixed')

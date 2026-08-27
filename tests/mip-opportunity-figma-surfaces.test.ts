@@ -10,6 +10,8 @@ describe('MIP opportunity Figma surfaces', () => {
   const detail = source('src/packages/member/mip-opportunities/detail/index.wxml')
   const detailScript = source('src/packages/member/mip-opportunities/detail/index.ts')
   const editor = source('src/packages/member/mip-opportunities/editor/index.wxml')
+  const opportunityCard = source('src/components/opportunity-card/index.wxml')
+  const opportunityCardStyles = source('src/components/opportunity-card/index.wxss')
 
   it('keeps the discovery hierarchy and all committed filters above the custom TabBar', () => {
     expect(discovery).toContain('id="opportunities-status-bar"')
@@ -33,9 +35,11 @@ describe('MIP opportunity Figma surfaces', () => {
   })
 
   it('matches the 351 by 176 opportunity-card silhouette without inventing referral avatars', () => {
-    expect(discovery).toContain('class="flex h-[352rpx] overflow-hidden rounded-[16rpx] bg-panel p-2 active:bg-panel-raised"')
-    expect(discovery).toContain('class="h-[320rpx] w-[240rpx]"')
-    expect(discovery).toContain('+{{item.referralCount}}引荐')
+    expect(discovery).toContain('<mip-opportunity-card')
+    expect(opportunityCardStyles).toContain('height: 352rpx;')
+    expect(opportunityCardStyles).toContain('width: 240rpx;')
+    expect(opportunityCardStyles).toContain('height: 320rpx;')
+    expect(opportunityCard).toContain('+{{referralCount}}引荐')
     expect(discovery).not.toContain('item.referralAvatars')
   })
 
@@ -47,7 +51,8 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(discovery).toContain('loadingMore')
     expect(discovery).toContain('wx:for="{{opportunities}}"')
     expect(discovery).toContain('wx:for="{{cooperationTalents}}"')
-    expect(discovery).toContain('wx:for="{{item.cards}}"')
+    expect(discovery).toContain('<mip-talent-card')
+    expect(discovery).toContain('role-names="{{item.roleNames}}"')
     expect(discovery).toContain('data-profile-ref="{{item.profileRef}}"')
   })
 
@@ -75,7 +80,8 @@ describe('MIP opportunity Figma surfaces', () => {
   it('keeps the editor sequence, draft lifecycle and bottom action aligned with the frozen frame', () => {
     expect(editor).toContain('准确的描述可以更容易帮你找到合作机会')
     expect(editor.indexOf('未选择时为全国')).toBeLessThan(editor.indexOf('cityGridOptions'))
-    expect(editor.indexOf('发布范围')).toBeLessThan(editor.indexOf('机会封面'))
+    expect(editor.indexOf('机会封面')).toBeLessThan(editor.indexOf('更多设置'))
+    expect(editor).toContain('wx:if="{{advancedOpen}}"')
     expect(editor).toContain('id="opportunity-editor-fixed-actions"')
     expect(editor).toContain('bottom-[calc(env(safe-area-inset-bottom)+16rpx)]')
     expect(editor).toContain('bind:tap="saveDraft"')
