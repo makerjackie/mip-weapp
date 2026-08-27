@@ -831,6 +831,7 @@ function environmentForRole(role, options) {
   const extra = {
     identity: {
       MIP_PHONE_ENCRYPTION_KEY: options.secrets.phoneEncryption,
+      MIP_MEDIA_SCOPE_SECRET: options.secrets.mediaScope,
       ...agreementEnvironment,
       MIP_UNION_IDENTITY_PEPPER: options.secrets.unionIdentityPepper,
       MIP_UNION_ID_REBIND_ENABLED: options.unionIdRebindEnabled ? 'true' : 'false',
@@ -946,7 +947,7 @@ function environmentForRole(role, options) {
 
 function verifyLocalOpenApiDeclarations() {
   const expected = {
-    identity: ['phonenumber.getPhoneNumber'],
+    identity: ['phonenumber.getPhoneNumber', 'wxacode.getUnlimited'],
     media: ['security.imgSecCheck'],
     events: ['security.msgSecCheck', 'wxacode.getUnlimited'],
     opportunities: ['security.msgSecCheck'],

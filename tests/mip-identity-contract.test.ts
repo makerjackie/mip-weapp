@@ -101,8 +101,14 @@ function responseFor(action: MipIdentityAction) {
   if (action === 'getProfile') {
     return profile
   }
+  if (action === 'getMyProfileCardCode') {
+    return { codeUrl: 'cloud://env.test/mip/test/profile-card.png' }
+  }
   if (action === 'getPublicProfile') {
     return { profileRef, isSelf: false }
+  }
+  if (action === 'resolveProfileCardScene') {
+    return { profileRef }
   }
   if (action === 'listBranches' || action === 'listProfileTags') {
     return []
@@ -166,6 +172,18 @@ afterEach(() => {
 })
 
 describe('MIP identity v1 client contract', () => {
+  it('declares the OpenAPI permissions required by identity actions', () => {
+    const config = JSON.parse(readFileSync(
+      new URL('../cloudfunctions/mip-identity-api/config.json', import.meta.url),
+      'utf8',
+    )) as { permissions?: { openapi?: string[] } }
+
+    expect(config.permissions?.openapi).toEqual(expect.arrayContaining([
+      'phonenumber.getPhoneNumber',
+      'wxacode.getUnlimited',
+    ]))
+  })
+
   it('accepts the canonical gateway envelope after CloudBase adds caller metadata', async () => {
     const { acceptedCatalogs, handler } = createAgreementServerHarness()
     const gateway = createMipIdentityGateway({
@@ -239,7 +257,7 @@ describe('MIP identity v1 client contract', () => {
     expect(acceptedCatalogs).toEqual([])
   })
 
-  it('sends all ten actions as direct business input in the neutral envelope', async () => {
+  it('sends all identity actions as direct business input in the neutral envelope', async () => {
     const calls: MipIdentityRequest[] = []
     const gateway = createMipIdentityGateway({
       async invoke(request) {
@@ -257,7 +275,9 @@ describe('MIP identity v1 client contract', () => {
       idempotencyKey: 'identity-close-request-1',
     })
     await gateway.getProfile()
+    await gateway.getMyProfileCardCode()
     await gateway.getPublicProfile(profileRef)
+    await gateway.resolveProfileCardScene(`pc1_${'a'.repeat(22)}`)
     await gateway.updateProfile(profileInput)
     await gateway.listProfileTags()
     await gateway.listBranches()
@@ -272,7 +292,9 @@ describe('MIP identity v1 client contract', () => {
       'bindWechatPhone',
       'closeAccount',
       'getProfile',
+      'getMyProfileCardCode',
       'getPublicProfile',
+      'resolveProfileCardScene',
       'updateProfile',
       'listProfileTags',
       'listBranches',
@@ -289,8 +311,8 @@ describe('MIP identity v1 client contract', () => {
       action: 'bindWechatPhone',
       input: { code: 'wx-phone-code' },
     })
-    expect(calls[6]?.input).toEqual(profileInput)
-    expect(calls[9]).toEqual({
+    expect(calls[8]?.input).toEqual(profileInput)
+    expect(calls[11]).toEqual({
       contractVersion: 1,
       action: 'setPrimaryBranch',
       input: {
@@ -301,13 +323,15 @@ describe('MIP identity v1 client contract', () => {
     expect(calls.some(call => Object.hasOwn(call.input, 'input'))).toBe(false)
   })
 
-  it('limits cold-start retries to the five identity reads', () => {
+  it('limits cold-start retries to identity reads', () => {
     const reads = [
       'getAccessSnapshot',
+      'getMyProfileCardCode',
       'getProfile',
       'getPublicProfile',
       'listBranches',
       'listProfileTags',
+      'resolveProfileCardScene',
     ] satisfies MipIdentityAction[]
     const writes = [
       'acceptAgreements',

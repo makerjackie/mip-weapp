@@ -15,6 +15,11 @@ const errorMessages = {
   IDENTITY_CONFIG_REQUIRED: '身份服务尚未配置',
   IDENTITY_REBIND_FAILED: '账号迁移暂时未完成，请重试',
   IDENTITY_UNION_CONFLICT: '账号身份需要人工核验',
+  PROFILE_CARD_CODE_UNAVAILABLE: '个人名片码暂时不可用',
+  PROFILE_CARD_OPENAPI_INVALID_RESPONSE: '个人名片码暂时不可用',
+  PROFILE_CARD_OPENAPI_UNAVAILABLE: '个人名片码暂时不可用',
+  PROFILE_CARD_STORAGE_INVALID_RESPONSE: '个人名片码暂时不可用',
+  PROFILE_CARD_STORAGE_UNAVAILABLE: '个人名片码暂时不可用',
   PHONE_BIND_FAILED: '手机号绑定失败，请重试',
   PHONE_ALREADY_BOUND: '该手机号已绑定其他账号',
   PHONE_CODE_REQUIRED: '未获得手机号授权码',
@@ -35,6 +40,10 @@ const retryableCodes = new Set([
   'IDENTITY_REBIND_FAILED',
   'PHONE_BIND_FAILED',
   'PHONE_SERVICE_UNAVAILABLE',
+  'PROFILE_CARD_OPENAPI_INVALID_RESPONSE',
+  'PROFILE_CARD_OPENAPI_UNAVAILABLE',
+  'PROFILE_CARD_STORAGE_INVALID_RESPONSE',
+  'PROFILE_CARD_STORAGE_UNAVAILABLE',
 ])
 
 const CONTRACT_VERSION = 1
@@ -45,8 +54,12 @@ const actions = Object.freeze({
   closeAccount: (service, caller, input) => service.closeAccount(caller, { input }),
   getAccessSnapshot: (service, caller) => service.getAccessSnapshot(caller),
   getProfile: (service, caller) => service.getProfile(caller),
+  getMyProfileCardCode: (service, caller) => service.getMyProfileCardCode(caller),
   getPublicProfile: (service, caller, input) => service.getPublicProfile(caller, {
     profileRef: input.profileRef,
+  }),
+  resolveProfileCardScene: (service, caller, input) => service.resolveProfileCardScene(caller, {
+    scene: input.scene,
   }),
   listBranches: (service, caller) => service.listBranches(caller),
   listProfileTags: (service, caller) => service.listProfileTags(caller),

@@ -8,6 +8,10 @@ const { resolveTrustedIdentity } = require('./lib/identity')
 const { mysqlDatabase } = require('./lib/mysql')
 const { createOutboxWakeup, trustedContextAppId } = require('./lib/outbox-wakeup')
 const { protectPhone } = require('./lib/private-data')
+const {
+  createProfileCardCode,
+  readProfileCardScene,
+} = require('./lib/profile-card-code')
 const { createProfileRef, readProfileRef } = require('./lib/profile-ref')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
@@ -83,6 +87,16 @@ const service = createIdentityService({
   },
   profileRefWriter(input) {
     return createProfileRef(input, process.env.MIP_IDENTITY_PEPPER)
+  },
+  profileCardCodeWriter(input) {
+    return createProfileCardCode({
+      ...input,
+      cloud,
+      pepper: process.env.MIP_IDENTITY_PEPPER,
+    })
+  },
+  profileCardSceneReader(scene, appId) {
+    return readProfileCardScene(scene, appId, process.env.MIP_IDENTITY_PEPPER)
   },
 })
 

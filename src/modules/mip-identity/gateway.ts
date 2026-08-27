@@ -152,6 +152,22 @@ function publicProfile(value: unknown): PublicMipProfile {
   }
 }
 
+function profileCardCode(value: unknown) {
+  if (!isRecord(value) || typeof value.codeUrl !== 'string' || !value.codeUrl) {
+    throw new MipIdentityGatewayError('INVALID_RESPONSE', '身份服务返回了无效名片码')
+  }
+  return { codeUrl: value.codeUrl }
+}
+
+function profileCardSceneResolution(value: unknown) {
+  if (!isRecord(value)
+    || typeof value.profileRef !== 'string'
+    || !/^p1\.[\w-]{16}\.[\w-]{48}\.[\w-]{22}$/.test(value.profileRef)) {
+    throw new MipIdentityGatewayError('INVALID_RESPONSE', '身份服务返回了无效名片档案')
+  }
+  return { profileRef: value.profileRef }
+}
+
 function accountClosure(value: unknown): AccountClosureResult {
   if (!isRecord(value)
     || value.status !== 'CLOSED'
@@ -204,8 +220,16 @@ export function createMipIdentityGateway(transport: MipIdentityTransport): MipId
       return profile(await call(transport, 'getProfile', {}))
     },
 
+    async getMyProfileCardCode() {
+      return profileCardCode(await call(transport, 'getMyProfileCardCode', {}))
+    },
+
     async getPublicProfile(profileRef: string) {
       return publicProfile(await call(transport, 'getPublicProfile', { profileRef }))
+    },
+
+    async resolveProfileCardScene(scene: string) {
+      return profileCardSceneResolution(await call(transport, 'resolveProfileCardScene', { scene }))
     },
 
     async updateProfile(input: ProfileUpdateInput) {

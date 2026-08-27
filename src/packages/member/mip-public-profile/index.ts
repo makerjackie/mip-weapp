@@ -84,8 +84,25 @@ Page({
   onLoad(query: Record<string, string | undefined>) {
     this.reportIntent = null
     this.visitKey = createMutationKey('profile-visit')
-    this.setData({ profileRef: String(query.profileRef || '') })
-    void this.loadProfile()
+    const profileRef = String(query.profileRef || '')
+    const scene = String(query.scene || '')
+    this.setData({ profileRef })
+    if (profileRef) {
+      void this.loadProfile()
+      return
+    }
+    void this.resolveScene(scene)
+  },
+
+  async resolveScene(scene: string) {
+    try {
+      const resolved = await mipIdentityModule.resolveProfileCardScene(scene)
+      this.setData({ profileRef: resolved.profileRef })
+      await this.loadProfile()
+    }
+    catch {
+      this.setData({ state: 'error', message: '名片信息无效或已不可见。' })
+    }
   },
 
   onShow() {

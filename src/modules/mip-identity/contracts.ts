@@ -200,6 +200,14 @@ export interface ProfileTagOption {
   popular?: boolean
 }
 
+export interface ProfileCardCode {
+  codeUrl: string
+}
+
+export interface ProfileCardSceneResolution {
+  profileRef: string
+}
+
 export const MIP_IDENTITY_CONTRACT_VERSION = 1 as const
 
 export interface MipIdentityActionInputMap {
@@ -208,7 +216,9 @@ export interface MipIdentityActionInputMap {
   bindWechatPhone: { code: string }
   closeAccount: AccountClosureInput
   getProfile: Record<string, never>
+  getMyProfileCardCode: Record<string, never>
   getPublicProfile: { profileRef: string }
+  resolveProfileCardScene: { scene: string }
   updateProfile: ProfileUpdateInput
   listProfileTags: Record<string, never>
   listBranches: Record<string, never>
@@ -221,7 +231,9 @@ export interface MipIdentityActionResultMap {
   bindWechatPhone: IdentityAccessSnapshot
   closeAccount: AccountClosureResult
   getProfile: MipProfileSnapshot
+  getMyProfileCardCode: ProfileCardCode
   getPublicProfile: PublicMipProfile
+  resolveProfileCardScene: ProfileCardSceneResolution
   updateProfile: IdentityAccessSnapshot
   listProfileTags: ProfileTagOption[]
   listBranches: CityBranchSummary[]
@@ -242,7 +254,9 @@ export interface MipIdentityGateway {
   bindWechatPhone: (code: string) => Promise<IdentityAccessSnapshot>
   closeAccount: (input: AccountClosureInput) => Promise<AccountClosureResult>
   getProfile: () => Promise<MipProfileSnapshot>
+  getMyProfileCardCode: () => Promise<ProfileCardCode>
   getPublicProfile: (profileRef: string) => Promise<PublicMipProfile>
+  resolveProfileCardScene: (scene: string) => Promise<ProfileCardSceneResolution>
   updateProfile: (input: ProfileUpdateInput) => Promise<IdentityAccessSnapshot>
   listProfileTags: () => Promise<ProfileTagOption[]>
   listBranches: () => Promise<CityBranchSummary[]>

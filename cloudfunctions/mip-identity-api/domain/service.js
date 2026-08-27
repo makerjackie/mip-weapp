@@ -27,6 +27,8 @@ function createIdentityService(options) {
   const protectPhone = options.protectPhone
   const profileRefReader = options.profileRefReader
   const profileRefWriter = options.profileRefWriter
+  const profileCardCodeWriter = options.profileCardCodeWriter
+  const profileCardSceneReader = options.profileCardSceneReader
   const entitlementReader = options.entitlementReader || {
     load: (appId, userId) => repository.loadEntitlement(appId, userId),
   }
@@ -79,6 +81,15 @@ function createIdentityService(options) {
     return profileDto(facts)
   }
 
+  async function getMyProfileCardCode(caller) {
+    if (typeof profileCardCodeWriter !== 'function') {
+      throw new Error('PROFILE_CARD_CODE_UNAVAILABLE')
+    }
+    const user = await repository.ensureUser(caller)
+    assertActiveUser(user)
+    return profileCardCodeWriter({ appId: caller.appId, userId: user.id })
+  }
+
   async function getPublicProfile(caller, value) {
     const profileRef = typeof value?.profileRef === 'string' ? value.profileRef.trim() : ''
     if (!profileRef || typeof profileRefReader !== 'function') {
@@ -91,6 +102,20 @@ function createIdentityService(options) {
       throw new Error('PUBLIC_PROFILE_NOT_FOUND')
     }
     return publicProfileDto(profileRef, facts, viewer?.id === userId)
+  }
+
+  async function resolveProfileCardScene(caller, value) {
+    const scene = typeof value?.scene === 'string' ? value.scene.trim() : ''
+    if (!scene || typeof profileCardSceneReader !== 'function' || typeof profileRefWriter !== 'function') {
+      throw new Error('PUBLIC_PROFILE_NOT_FOUND')
+    }
+    const userId = profileCardSceneReader(scene, caller.appId)
+    const viewer = await repository.findUserByIdentity(caller)
+    const facts = await repository.loadPublicProfile(caller.appId, userId, viewer?.id || null)
+    if (!facts) {
+      throw new Error('PUBLIC_PROFILE_NOT_FOUND')
+    }
+    return { profileRef: profileRefWriter({ appId: caller.appId, userId }) }
   }
 
   async function updateProfile(caller, value) {
@@ -144,10 +169,12 @@ function createIdentityService(options) {
     bindWechatPhone,
     closeAccount,
     getAccessSnapshot,
+    getMyProfileCardCode,
     getProfile,
     getPublicProfile,
     listBranches,
     listProfileTags,
+    resolveProfileCardScene,
     setPrimaryBranch,
     updateProfile,
   }

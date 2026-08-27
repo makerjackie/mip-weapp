@@ -502,12 +502,24 @@ export function createMipIdentityModule(
       return gateway.getProfile()
     },
 
+    getMyProfileCardCode() {
+      return gateway.getMyProfileCardCode()
+    },
+
     getPublicProfile(profileRef: string) {
       const normalized = profileRef.trim()
       if (!normalized.startsWith('p1.') || normalized.length > 200) {
         throw new Error('PUBLIC_PROFILE_NOT_FOUND')
       }
       return gateway.getPublicProfile(normalized)
+    },
+
+    resolveProfileCardScene(scene: string) {
+      const normalized = scene.trim()
+      if (!/^pc1_[\w-]{22}$/.test(normalized)) {
+        throw new Error('PUBLIC_PROFILE_NOT_FOUND')
+      }
+      return gateway.resolveProfileCardScene(normalized)
     },
 
     listProfileTags() {

@@ -3,7 +3,7 @@ import { mipAiModule } from '../../../modules/mip-ai/client'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { caseNavigateTo } from '../../../modules/platform/case-navigation'
 
-type CardStyleKey = 'BLACK' | 'YELLOW' | 'LIGHT'
+type CardStyleKey = 'PINK' | 'BLUE' | 'WHITE' | 'YELLOW'
 
 interface Canvas2dNode {
   width: number
@@ -13,46 +13,54 @@ interface Canvas2dNode {
   requestAnimationFrame?: (callback: () => void) => number
 }
 
-interface CardPalette {
+interface CardTheme {
   key: CardStyleKey
   label: string
+  asset: string
   background: string
   foreground: string
   muted: string
-  accent: string
-  chip: string
+  codeBackground: string
 }
 
-const CARD_WIDTH = 375
-const CARD_HEIGHT = 600
-
-const palettes: Record<CardStyleKey, CardPalette> = {
-  BLACK: {
-    key: 'BLACK',
-    label: '黑色',
-    background: '#090909',
+const CARD_WIDTH = 702
+const CARD_HEIGHT = 492
+const themes: Record<CardStyleKey, CardTheme> = {
+  PINK: {
+    key: 'PINK',
+    label: '暖色',
+    asset: '/packages/member/assets/figma/profile/card-bg-a.jpg',
+    background: '#FF5F6D',
+    foreground: '#090909',
+    muted: '#4A2326',
+    codeBackground: '#FFFFFF',
+  },
+  BLUE: {
+    key: 'BLUE',
+    label: '蓝色',
+    asset: '/packages/member/assets/figma/profile/card-bg-b.jpg',
+    background: '#403BDA',
     foreground: '#FFFFFF',
-    muted: '#B8B8B8',
-    accent: '#FCDF03',
-    chip: '#242424',
+    muted: '#E4E3FF',
+    codeBackground: '#FFFFFF',
+  },
+  WHITE: {
+    key: 'WHITE',
+    label: '浅色',
+    asset: '/packages/member/assets/figma/profile/card-bg-c-optimized.jpg',
+    background: '#F5F4F0',
+    foreground: '#090909',
+    muted: '#575757',
+    codeBackground: '#FFFFFF',
   },
   YELLOW: {
     key: 'YELLOW',
-    label: '黄色',
+    label: '品牌色',
+    asset: '',
     background: '#FCDF03',
     foreground: '#090909',
     muted: '#514A10',
-    accent: '#090909',
-    chip: '#F3D700',
-  },
-  LIGHT: {
-    key: 'LIGHT',
-    label: '浅色',
-    background: '#F7F7F2',
-    foreground: '#111111',
-    muted: '#686868',
-    accent: '#D3B900',
-    chip: '#EAEAE4',
+    codeBackground: '#FFFFFF',
   },
 }
 
@@ -94,8 +102,9 @@ function compactText(value: string | undefined, fallback = '') {
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
-    styleKey: 'BLACK' as CardStyleKey,
-    palette: palettes.BLACK,
+    styleKey: 'PINK' as CardStyleKey,
+    theme: themes.PINK,
+    themeOptions: Object.values(themes),
     nickname: '',
     initial: 'M',
     avatarUrl: '',
@@ -104,10 +113,12 @@ Page({
     avatarSource: 'ORIGINAL' as 'ORIGINAL' | 'DIGITAL',
     memberType: 'MIP 成员',
     identityStatus: '',
-    headline: '',
     branchName: '',
     industryName: '',
-    abilities: [] as string[],
+    companyLine: '',
+    organizationLine: '',
+    codeUrl: '',
+    codeMessage: '',
     posterPath: '',
     generating: false,
     message: '',
@@ -131,27 +142,28 @@ Page({
       if (!snapshot.profileRef) {
         throw new Error('公开档案引用暂时不可用')
       }
-      const [profile, avatarHistory] = await Promise.all([
+      const codePromise = this.data.codeUrl
+        ? Promise.resolve({ codeUrl: this.data.codeUrl })
+        : mipIdentityModule.getMyProfileCardCode().catch(() => ({ codeUrl: '' }))
+      const [profile, avatarHistory, cardCode] = await Promise.all([
         mipIdentityModule.getPublicProfile(snapshot.profileRef),
         mipAiModule.listDigitalAvatars().catch(() => ({ items: [] })),
+        codePromise,
       ])
-      const digitalAvatar = avatarHistory.items
-        .find(item => item.status === 'READY' && item.outputUrl)
-      const digitalAvatarUrl = digitalAvatar?.outputUrl || ''
-      this.applyCard(snapshot, profile, digitalAvatarUrl)
+      const digitalAvatar = avatarHistory.items.find(item => item.status === 'READY' && item.outputUrl)
+      this.applyCard(snapshot, profile, digitalAvatar?.outputUrl || '', cardCode.codeUrl)
     }
     catch (error) {
-      this.setData({
-        state: 'error',
-        message: error instanceof Error ? error.message : '名片加载失败',
-      })
+      this.setData({ state: 'error', message: error instanceof Error ? error.message : '名片加载失败' })
     }
   },
 
-  applyCard(snapshot: IdentityAccessSnapshot, profile: PublicMipProfile, digitalAvatarUrl = '') {
+  applyCard(snapshot: IdentityAccessSnapshot, profile: PublicMipProfile, digitalAvatarUrl = '', codeUrl = '') {
     const nickname = compactText(profile.nickname, 'MIP 成员')
     const avatarUrl = profile.avatarUrl || ''
     const avatarSource = this.data.avatarSource === 'DIGITAL' && digitalAvatarUrl ? 'DIGITAL' : 'ORIGINAL'
+    const company = profile.companies?.[0]
+    const organization = profile.organizations?.[0]
     this.profileRef = snapshot.profileRef || ''
     this.setData({
       state: 'ready',
@@ -163,10 +175,12 @@ Page({
       cardAvatarUrl: avatarSource === 'DIGITAL' ? digitalAvatarUrl : avatarUrl,
       memberType: profile.userKind === 'PLAYER' ? '玩家' : profile.userKind === 'GUEST' ? '嘉宾' : 'MIP 成员',
       identityStatus: compactText(profile.identityStatus),
-      headline: compactText(profile.headline),
       branchName: compactText(profile.primaryBranch?.name),
       industryName: compactText(profile.primaryIndustry?.label),
-      abilities: (profile.abilities || []).map(item => compactText(item.label)).filter(Boolean).slice(0, 3),
+      companyLine: company ? [compactText(company.name), compactText(company.role)].filter(Boolean).join(' · ') : '',
+      organizationLine: organization ? [compactText(organization.name), compactText(organization.role)].filter(Boolean).join(' · ') : '',
+      codeUrl,
+      codeMessage: codeUrl ? '' : '名片码暂时不可用，可稍后重试。',
       posterPath: '',
       message: '',
     })
@@ -189,17 +203,38 @@ Page({
     caseNavigateTo({ url: '/packages/member/mip-avatar/index' })
   },
 
+  openProfileEdit() {
+    caseNavigateTo({ url: '/packages/member/mip-profile/index' })
+  },
+
   chooseStyle(event: WechatMiniprogram.TouchEvent) {
     const key = String(event.currentTarget.dataset.key || '') as CardStyleKey
-    if (!palettes[key] || key === this.data.styleKey || this.data.generating) {
+    if (!themes[key] || key === this.data.styleKey || this.data.generating) {
       return
     }
-    this.setData({ styleKey: key, palette: palettes[key], posterPath: '', message: '' })
+    this.setData({ styleKey: key, theme: themes[key], posterPath: '', message: '' })
+  },
+
+  async retryCode() {
+    if (this.data.generating) {
+      return
+    }
+    this.setData({ generating: true, codeMessage: '' })
+    try {
+      const result = await mipIdentityModule.getMyProfileCardCode()
+      this.setData({ codeUrl: result.codeUrl, posterPath: '' })
+    }
+    catch {
+      this.setData({ codeMessage: '名片码暂时不可用，可稍后重试。' })
+    }
+    finally {
+      this.setData({ generating: false })
+    }
   },
 
   async createPoster() {
     if (this.data.generating || this.data.state !== 'ready') {
-      return
+      return ''
     }
     this.setData({ generating: true, message: '' })
     try {
@@ -218,75 +253,50 @@ Page({
 
   async drawCard() {
     const node = await new Promise<Canvas2dNode>((resolve, reject) => {
-      this.createSelectorQuery()
-        .select('#mip-member-card-canvas')
-        .fields({ node: true, size: true })
-        .exec((results) => {
-          const result = results?.[0] as { node?: Canvas2dNode } | undefined
-          result?.node ? resolve(result.node) : reject(new Error('名片画布不可用'))
-        })
+      this.createSelectorQuery().select('#mip-member-card-canvas').fields({ node: true, size: true }).exec((results) => {
+        const result = results?.[0] as { node?: Canvas2dNode } | undefined
+        result?.node ? resolve(result.node) : reject(new Error('名片画布不可用'))
+      })
     })
     const ratio = wx.getWindowInfo().pixelRatio || 1
     node.width = CARD_WIDTH * ratio
     node.height = CARD_HEIGHT * ratio
     const context = node.getContext('2d')
     context.scale(ratio, ratio)
-    const palette = this.data.palette
-    context.fillStyle = palette.background
+    const theme = this.data.theme
+    context.fillStyle = theme.background
     context.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT)
+    await this.drawBackground(node, context, theme.asset)
 
-    context.fillStyle = palette.accent
-    context.fillRect(0, 0, CARD_WIDTH, 12)
-    context.fillStyle = palette.foreground
-    context.font = '700 34px sans-serif'
-    context.fillText('MIP', 28, 64)
-    context.font = '500 12px sans-serif'
-    context.fillStyle = palette.muted
-    context.fillText('会员名片', 28, 88)
+    context.fillStyle = theme.foreground
+    context.font = '700 58px sans-serif'
+    context.fillText(this.data.nickname.slice(0, 10), 38, 78)
+    context.font = '600 26px sans-serif'
+    context.fillText([this.data.memberType, this.data.identityStatus].filter(Boolean).join(' · ').slice(0, 24), 40, 122)
 
-    await this.drawAvatar(node, context, 28, 126, 104, palette)
-    context.fillStyle = palette.foreground
-    context.font = '700 29px sans-serif'
-    context.fillText(this.data.nickname.slice(0, 12), 28, 270)
-    context.font = '500 14px sans-serif'
-    context.fillStyle = palette.muted
-    context.fillText([this.data.memberType, this.data.identityStatus].filter(Boolean).join(' · ').slice(0, 28), 28, 300)
-
-    const headline = this.data.headline || '暂未填写个人介绍'
-    context.fillStyle = palette.foreground
-    context.font = '600 18px sans-serif'
-    this.drawWrappedText(context, headline, 28, 346, 319, 29, 2)
-
+    context.font = '500 22px sans-serif'
+    context.fillStyle = theme.muted
     const details = [
-      this.data.branchName ? `城市分会  ${this.data.branchName}` : '',
-      this.data.industryName ? `主要行业  ${this.data.industryName}` : '',
+      this.data.companyLine,
+      this.data.organizationLine,
+      [this.data.branchName, this.data.industryName].filter(Boolean).join(' · '),
     ].filter(Boolean)
-    context.font = '500 13px sans-serif'
-    context.fillStyle = palette.muted
-    details.forEach((item, index) => context.fillText(item.slice(0, 32), 28, 426 + index * 28))
+    details.slice(0, 3).forEach((item, index) => context.fillText(item.slice(0, 24), 40, 214 + index * 42))
 
-    let chipX = 28
-    const chipY = details.length > 1 ? 488 : 462
-    context.font = '500 12px sans-serif'
-    for (const ability of this.data.abilities) {
-      const label = ability.slice(0, 8)
-      const width = Math.min(104, context.measureText(label).width + 24)
-      if (chipX + width > CARD_WIDTH - 28) {
-        break
+    await this.drawAvatar(node, context, 518, 42, 142, theme)
+    if (this.data.codeUrl) {
+      try {
+        const code = await loadCanvasImage(node, this.data.codeUrl)
+        roundedRect(context, 540, 320, 112, 112, 12)
+        context.fillStyle = theme.codeBackground
+        context.fill()
+        context.drawImage(code, 548, 328, 96, 96)
       }
-      roundedRect(context, chipX, chipY, width, 30, 15)
-      context.fillStyle = palette.chip
-      context.fill()
-      context.fillStyle = palette.foreground
-      context.fillText(label, chipX + 12, chipY + 20)
-      chipX += width + 8
+      catch {}
     }
-
-    context.fillStyle = palette.muted
-    context.font = '400 11px sans-serif'
-    context.fillText('通过微信分享可查看公开档案', 28, 558)
-    context.fillStyle = palette.accent
-    context.fillRect(28, 574, 64, 4)
+    context.fillStyle = theme.muted
+    context.font = '500 18px sans-serif'
+    context.fillText('扫码查看公开档案', 40, 438)
 
     if (node.requestAnimationFrame) {
       await new Promise<void>(resolve => node.requestAnimationFrame?.(resolve))
@@ -303,17 +313,27 @@ Page({
     })
   },
 
+  async drawBackground(node: Canvas2dNode, context: WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext2D, source: string) {
+    if (!source) {
+      return
+    }
+    try {
+      const image = await loadCanvasImage(node, source)
+      context.drawImage(image, 0, 0, CARD_WIDTH, CARD_HEIGHT)
+    }
+    catch {}
+  },
+
   async drawAvatar(
     node: Canvas2dNode,
     context: WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext2D,
     x: number,
     y: number,
     size: number,
-    palette: CardPalette,
+    theme: CardTheme,
   ) {
     context.save()
-    context.beginPath()
-    context.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2)
+    roundedRect(context, x, y, size, size, 26)
     context.clip()
     if (this.data.cardAvatarUrl) {
       try {
@@ -324,41 +344,14 @@ Page({
       }
       catch {}
     }
-    context.fillStyle = palette.accent
+    context.fillStyle = theme.codeBackground
     context.fillRect(x, y, size, size)
-    context.fillStyle = palette.background
-    context.font = '700 42px sans-serif'
+    context.fillStyle = '#111111'
+    context.font = '700 58px sans-serif'
     context.textAlign = 'center'
-    context.fillText(this.data.initial, x + size / 2, y + 66)
+    context.fillText(this.data.initial, x + size / 2, y + 92)
     context.textAlign = 'start'
     context.restore()
-  },
-
-  drawWrappedText(
-    context: WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext2D,
-    text: string,
-    x: number,
-    y: number,
-    maxWidth: number,
-    lineHeight: number,
-    maxLines: number,
-  ) {
-    const characters = [...text]
-    let line = ''
-    let lineIndex = 0
-    for (let index = 0; index < characters.length && lineIndex < maxLines; index += 1) {
-      const candidate = `${line}${characters[index]}`
-      if (context.measureText(candidate).width <= maxWidth) {
-        line = candidate
-        continue
-      }
-      context.fillText(line, x, y + lineIndex * lineHeight)
-      lineIndex += 1
-      line = characters[index]
-    }
-    if (lineIndex < maxLines && line) {
-      context.fillText(line, x, y + lineIndex * lineHeight)
-    }
   },
 
   previewPoster() {
