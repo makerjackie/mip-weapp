@@ -15,15 +15,36 @@ const REVIEWED_QUERY_ACTIONS = [
   'mip.admin.session',
   'mip.admin.dashboard.overview.get',
   'mip.admin.users.list',
+  'mip.admin.users.get',
+  'mip.admin.users.influence.list',
   'mip.admin.events.list',
+  'mip.admin.events.get',
+  'mip.admin.events.insights.get',
+  'mip.admin.events.roster',
+  'mip.admin.events.rosterAll',
+  'mip.admin.events.policy.get',
   'mip.admin.orders.list',
+  'mip.admin.orders.get',
+  'mip.admin.paymentAttempts.list',
+  'mip.admin.memberships.get',
+  'mip.admin.memberships.timeline',
+  'mip.admin.benefits.ledger',
   'mip.admin.branches.list',
   'mip.admin.roles.list',
+  'mip.admin.roles.candidates',
   'mip.admin.rolePolicies.list',
   'mip.admin.audit.list',
   'mip.admin.messageCampaigns.list',
+  'mip.admin.messageCampaigns.get',
+  'mip.admin.messageCampaigns.recipients',
   'mip.admin.messageTemplates.list',
+  'mip.admin.messageTemplates.get',
+  'mip.admin.messageDeliveryReviews.list',
+  'mip.admin.messageDeliveryReviews.get',
+  'mip.admin.messageDeliveryRecords.list',
   'mip.admin.knowledge.list',
+  'mip.admin.knowledge.get',
+  'mip.admin.knowledge.schedules.list',
 ] as const
 
 interface Row {
@@ -268,7 +289,7 @@ describe('Admin Web BFF', () => {
     const fetchMock = fetchQueue()
     const { bff, sessionCookie } = await confirmedLogin(fetchMock)
 
-    for (const action of ['mip.admin.users.update', 'mip.admin.orders.get']) {
+    for (const action of ['mip.admin.users.update', 'mip.admin.communityReports.list']) {
       const response = await bff.handle(new Request(`${ORIGIN}/api/admin`, {
         method: 'POST',
         headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
