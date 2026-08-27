@@ -65,6 +65,14 @@ const REVIEWED_QUERY_ACTIONS = [
   'mip.admin.badges.awards',
   'mip.admin.exceptions.list',
   'mip.admin.operations.queue.list',
+  'mip.admin.events.catalog.list',
+  'mip.admin.events.tags.get',
+  'mip.admin.events.recaps.list',
+  'mip.admin.events.recaps.get',
+  'mip.admin.events.album.list',
+  'mip.admin.events.comments.get',
+  'mip.admin.messageCampaigns.scopes',
+  'mip.admin.exports.status',
 ] as const
 const REVIEWED_MUTATION_ACTIONS = [
   'mip.admin.memberships.grant',
