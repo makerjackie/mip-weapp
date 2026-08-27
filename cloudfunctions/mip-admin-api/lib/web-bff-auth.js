@@ -65,6 +65,16 @@ const WEB_BFF_THIRD_QUERY_ACTIONS = Object.freeze([
   'mip.admin.exceptions.list',
   'mip.admin.operations.queue.list',
 ])
+const WEB_BFF_FOURTH_QUERY_ACTIONS = Object.freeze([
+  'mip.admin.events.catalog.list',
+  'mip.admin.events.tags.get',
+  'mip.admin.events.recaps.list',
+  'mip.admin.events.recaps.get',
+  'mip.admin.events.album.list',
+  'mip.admin.events.comments.get',
+  'mip.admin.messageCampaigns.scopes',
+  'mip.admin.exports.status',
+])
 const WEB_BFF_REVIEWED_MUTATION_MANIFEST = Object.freeze([
   Object.freeze({
     action: 'mip.admin.memberships.grant',
@@ -104,7 +114,12 @@ const WEB_BFF_REVIEWED_MUTATION_MANIFEST = Object.freeze([
   }),
 ])
 const WEB_BFF_QUERY_ACTIONS = createQueryActionAllowlist(
-  [...WEB_BFF_FIRST_QUERY_ACTIONS, ...WEB_BFF_SECOND_QUERY_ACTIONS, ...WEB_BFF_THIRD_QUERY_ACTIONS],
+  [
+    ...WEB_BFF_FIRST_QUERY_ACTIONS,
+    ...WEB_BFF_SECOND_QUERY_ACTIONS,
+    ...WEB_BFF_THIRD_QUERY_ACTIONS,
+    ...WEB_BFF_FOURTH_QUERY_ACTIONS,
+  ],
   publicOperationContract,
 )
 const WEB_BFF_MUTATION_ACTIONS = createReviewedMutationActionAllowlist(
@@ -363,6 +378,7 @@ function hasExactInputKeys(value, expectedKeys) {
 module.exports = {
   WEB_BFF_MAX_CLOCK_SKEW_MS,
   WEB_BFF_FIRST_QUERY_ACTIONS,
+  WEB_BFF_FOURTH_QUERY_ACTIONS,
   WEB_BFF_MUTATION_ACTIONS,
   WEB_BFF_REVIEWED_MUTATION_MANIFEST,
   WEB_BFF_QUERY_ACTIONS,

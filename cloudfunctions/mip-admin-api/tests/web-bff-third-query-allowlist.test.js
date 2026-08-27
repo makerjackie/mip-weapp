@@ -7,6 +7,7 @@ const {
   WEB_BFF_QUERY_ACTIONS,
   WEB_BFF_SECOND_QUERY_ACTIONS,
   WEB_BFF_THIRD_QUERY_ACTIONS,
+  WEB_BFF_FOURTH_QUERY_ACTIONS,
   createQueryActionAllowlist,
 } = require('../lib/web-bff-auth')
 const { publicOperationContract } = require('../domain/public-operation-contract')
@@ -40,6 +41,7 @@ describe('Web BFF third query allowlist', () => {
       ...WEB_BFF_FIRST_QUERY_ACTIONS,
       ...WEB_BFF_SECOND_QUERY_ACTIONS,
       ...WEB_BFF_THIRD_QUERY_ACTIONS,
+      ...WEB_BFF_FOURTH_QUERY_ACTIONS,
     ]
 
     assert.deepEqual(WEB_BFF_THIRD_QUERY_ACTIONS, EXPECTED_THIRD_QUERY_ACTIONS)
