@@ -371,7 +371,12 @@ function assertRefundDispatchEnvironment(detail) {
     || variables.MIP_MESSAGE_SCHEDULER_FUNCTION_NAME !== functionNames.scheduler
     || String(variables.MIP_REFUND_WORKER_HMAC_SECRET || '').length < 32
     || String(variables.MIP_MESSAGE_DISPATCH_HMAC_SECRET || '').length < 32
-    || String(variables.MIP_ADMIN_WEB_BFF_HMAC_SECRET || '').length < 32) {
+    || String(variables.MIP_ADMIN_WEB_BFF_HMAC_SECRET || '').length < 32
+    || String(variables.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET || '').length < 32
+    || variables.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET === variables.MIP_ADMIN_WEB_BFF_HMAC_SECRET
+    || !/^https:\/\/\S+\/api\/internal\/auth\/challenge\/confirm$/.test(
+      String(variables.MIP_ADMIN_WEB_LOGIN_CONFIRM_URL || ''),
+    )) {
     throw new Error('Admin worker links or internal HMAC configuration are incomplete')
   }
 }

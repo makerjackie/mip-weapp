@@ -4,6 +4,7 @@ const { defineManifest, serviceOperation } = require('./manifest')
 
 module.exports = defineManifest('ACCESS', [
   serviceOperation('mip.admin.session', 'QUERY', 'getSession'),
+  serviceOperation('mip.admin.webLogin.confirm', 'MUTATION', 'confirmWebLogin'),
   serviceOperation('mip.admin.branches.list', 'QUERY', 'listBranches'),
   serviceOperation('mip.admin.roles.list', 'QUERY', 'listRoles'),
   serviceOperation('mip.admin.roles.candidates', 'QUERY', 'searchRoleCandidates'),

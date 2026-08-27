@@ -8,6 +8,13 @@ const { createAdminRepository } = require('./domain/repository')
 const { createAdminService } = require('./domain/service')
 const { createTrustedPrincipalIssuer, resolveTrustedIdentity } = require('./lib/identity')
 const { createWebBffRoute, isWebBffEvent } = require('./lib/web-bff-auth')
+const {
+  isWebBffHttpEvent,
+  parseWebBffHttpBody,
+  webBffHttpError,
+  webBffHttpResponse,
+} = require('./lib/web-bff-http')
+const { createWebLoginConfirmationClient } = require('./lib/web-login-client')
 const { mysqlDatabase } = require('./lib/mysql')
 const { createRefundWorkerClient } = require('./lib/refund-worker-client')
 const { createCloudExportStorage } = require('./lib/export-storage')
@@ -75,6 +82,10 @@ const notificationReconcileClient = createNotificationReconcileClient({
   functionName: process.env.MIP_NOTIFICATION_FUNCTION_NAME || 'mip-notification-worker',
   secret: process.env.MIP_NOTIFICATION_HMAC_SECRET,
 })
+const webLoginConfirmationClient = createWebLoginConfirmationClient({
+  endpoint: process.env.MIP_ADMIN_WEB_LOGIN_CONFIRM_URL,
+  secret: process.env.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET,
+})
 async function contentSafety(draft, caller) {
   const checker = cloud.openapi?.security?.msgSecCheck
   return checkCompleteContentSafety(draft, caller, checker)
@@ -109,6 +120,7 @@ const service = createAdminService({
   repository,
   phoneEncryptionKey: process.env.MIP_PHONE_ENCRYPTION_KEY,
   contentSafety,
+  confirmWebLogin: input => webLoginConfirmationClient.confirm(input),
   dispatchRefund,
   dispatchRefunds,
   exportStorage,
@@ -256,6 +268,16 @@ const knowledgeScheduleMutationActions = new Set([
 ])
 
 exports.main = async (event = {}) => {
+  if (isWebBffHttpEvent(event)) {
+    try {
+      const request = parseWebBffHttpBody(event)
+      if (!isWebBffEvent(request)) throw new Error('HTTP_REQUEST_INVALID')
+      return webBffHttpResponse(await webBffRoute(request))
+    }
+    catch (error) {
+      return webBffHttpError(error)
+    }
+  }
   if (isWebBffEvent(event)) {
     return webBffRoute(event)
   }

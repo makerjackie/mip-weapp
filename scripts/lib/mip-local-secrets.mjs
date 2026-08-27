@@ -14,6 +14,7 @@ export const MIP_STABLE_SECRET_KEYS = Object.freeze([
   'MIP_OUTBOX_HMAC_SECRET',
   'MIP_MESSAGE_DISPATCH_HMAC_SECRET',
   'MIP_ADMIN_WEB_BFF_HMAC_SECRET',
+  'MIP_ADMIN_WEB_LOGIN_HMAC_SECRET',
   'MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET',
   'MIP_REFUND_WORKER_HMAC_SECRET',
   'MIP_NOTIFICATION_ENCRYPTION_KEY',
@@ -52,6 +53,18 @@ export function assertMipAiProviderHmacSecretsIsolated(values = {}) {
   return true
 }
 
+export function assertMipWebAdminHmacSecretsIsolated(values = {}) {
+  const querySecret = normalized(values.MIP_ADMIN_WEB_BFF_HMAC_SECRET)
+  const loginSecret = normalized(values.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET)
+  if (querySecret.length < 32 || loginSecret.length < 32) {
+    throw new Error('Web admin query and login HMAC secrets must both be configured')
+  }
+  if (querySecret === loginSecret) {
+    throw new Error('MIP_ADMIN_WEB_LOGIN_HMAC_SECRET must differ from MIP_ADMIN_WEB_BFF_HMAC_SECRET')
+  }
+  return true
+}
+
 function normalized(value) {
   return typeof value === 'string' ? value.trim() : ''
 }
@@ -83,6 +96,7 @@ export function resolveMipStableSecrets({ localEnv = {}, deployedEnvironments = 
   }
   assertMipSchedulerHmacSecretsIsolated(values)
   assertMipAiProviderHmacSecretsIsolated(values)
+  assertMipWebAdminHmacSecretsIsolated(values)
   return { values, sources }
 }
 

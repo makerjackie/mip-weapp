@@ -66,6 +66,11 @@ const knowledgeWebviewAllowedHosts = exactHostnameList(env.MIP_KNOWLEDGE_WEBVIEW
 const unionIdRebindEnabled = String(env.MIP_UNION_ID_REBIND_ENABLED || 'false').trim().toLowerCase() === 'true'
 const exportMaxRows = Number(env.MIP_EXPORT_MAX_ROWS || 5_000)
 const exportMaxBytes = Number(env.MIP_EXPORT_MAX_BYTES || 8 * 1024 * 1024)
+const adminWebLoginConfirmUrl = exactHttpsEndpoint(
+  env.MIP_ADMIN_WEB_LOGIN_CONFIRM_URL
+  || 'https://mipmini.01mvp.com/api/internal/auth/challenge/confirm',
+  'MIP_ADMIN_WEB_LOGIN_CONFIRM_URL',
+)
 const databaseRuntimeUser = String(env.MIP_DB_RUNTIME_USER || runtimeUserForEnvironment(envId)).trim()
 const confirmedRuntimeUser = argumentValue('--confirm-runtime-user=')
 const allowedAppIds = String(env.MIP_ALLOWED_APP_IDS || appId)
@@ -278,6 +283,7 @@ const secrets = Object.freeze({
   outboxHmac: stableSecretValues.MIP_OUTBOX_HMAC_SECRET,
   messageDispatchHmac: stableSecretValues.MIP_MESSAGE_DISPATCH_HMAC_SECRET,
   adminWebBffHmac: stableSecretValues.MIP_ADMIN_WEB_BFF_HMAC_SECRET,
+  adminWebLoginHmac: stableSecretValues.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET,
   knowledgeSchedulerHmac: stableSecretValues.MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET,
   refundWorkerHmac: stableSecretValues.MIP_REFUND_WORKER_HMAC_SECRET,
   notificationEncryption: stableSecretValues.MIP_NOTIFICATION_ENCRYPTION_KEY,
@@ -739,6 +745,19 @@ function validMysqlUri(value) {
   }
 }
 
+function exactHttpsEndpoint(value, key) {
+  try {
+    const endpoint = new URL(String(value || '').trim())
+    if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password || endpoint.hash) {
+      throw new Error('invalid')
+    }
+    return endpoint.toString()
+  }
+  catch {
+    throw new Error(`${key} must be an absolute HTTPS URL without credentials or fragment`)
+  }
+}
+
 function normalizedJsonObject(value, key) {
   if (!String(value || '').trim()) {
     return '{}'
@@ -876,6 +895,8 @@ function environmentForRole(role, options) {
       MIP_MATCHING_INTERNAL_HMAC_SECRET: options.secrets.matchingInternalHmac,
       MIP_MESSAGE_DISPATCH_HMAC_SECRET: options.secrets.messageDispatchHmac,
       MIP_ADMIN_WEB_BFF_HMAC_SECRET: options.secrets.adminWebBffHmac,
+      MIP_ADMIN_WEB_LOGIN_HMAC_SECRET: options.secrets.adminWebLoginHmac,
+      MIP_ADMIN_WEB_LOGIN_CONFIRM_URL: adminWebLoginConfirmUrl,
       MIP_MESSAGE_SCHEDULER_FUNCTION_NAME: options.functionNames.scheduler,
       MIP_KNOWLEDGE_SCHEDULER_FUNCTION_NAME: options.functionNames.knowledgeScheduler,
       MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET: options.secrets.knowledgeSchedulerHmac,

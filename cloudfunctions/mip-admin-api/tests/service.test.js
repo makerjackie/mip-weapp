@@ -96,6 +96,56 @@ function repository(roleKey = 'PLATFORM_OWNER', scopeType = 'PLATFORM', scopeId 
 }
 
 describe('admin service', () => {
+  it('confirms a web login only after resolving the current operator session', async () => {
+    const repo = repository('BRANCH_ADMIN', 'BRANCH', 'branch-a')
+    const confirmations = []
+    const service = createAdminService({
+      repository: repo,
+      phoneEncryptionKey: secret,
+      confirmWebLogin: async input => confirmations.push(input),
+    })
+    const result = await service.confirmWebLogin(
+      { ...caller, openId: 'openid-admin' },
+      { challengeCode: 'abcd2345' },
+    )
+
+    assert.deepEqual(result, { confirmed: true })
+    assert.deepEqual(confirmations, [{
+      appId: 'wx-trusted', openId: 'openid-admin', challengeCode: 'ABCD2345',
+    }])
+    assert.deepEqual(repo.audits.at(-1), {
+      appId: caller.appId,
+      actorUserId: 'admin-user',
+      scopeType: 'BRANCH',
+      scopeId: 'branch-a',
+      action: 'admin.web_login.confirm',
+      resourceType: 'ADMIN_SESSION',
+      resourceId: null,
+      effectiveRole: 'BRANCH_ADMIN',
+      metadata: {},
+    })
+  })
+
+  it('does not dispatch a web login confirmation for an account without an operator role', async () => {
+    const repo = repository()
+    repo.listRoleBindings = async () => []
+    let dispatched = false
+    const service = createAdminService({
+      repository: repo,
+      phoneEncryptionKey: secret,
+      confirmWebLogin: async () => { dispatched = true },
+    })
+
+    await assert.rejects(
+      () => service.confirmWebLogin(
+        { ...caller, openId: 'openid-admin' },
+        { challengeCode: 'ABCD2345' },
+      ),
+      error => error.code === 'FORBIDDEN',
+    )
+    assert.equal(dispatched, false)
+  })
+
   it('authorizes opportunity ending with the server-owned scope and expected version', async () => {
     const repo = repository()
     let captured

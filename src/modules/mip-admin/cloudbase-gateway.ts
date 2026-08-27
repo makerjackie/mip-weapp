@@ -16,6 +16,7 @@ import type {
   AdminRoleCapabilityPolicy,
   AdminRoleItem,
   AdminUserPrimaryBranchChangeResult,
+  AdminWebLoginConfirmation,
   MipAdminGateway,
 } from './types'
 import { resolveCloudFileUrls } from '../platform/cloud-media'
@@ -192,6 +193,15 @@ function invalidEventListResponse(): never {
 
 function invalidUserPrimaryBranchResponse(): never {
   throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的用户分会变更结果')
+}
+
+function parseWebLoginConfirmation(value: unknown): AdminWebLoginConfirmation {
+  if (!record(value)
+    || !hasOnlyKeys(value, ['confirmed'])
+    || value.confirmed !== true) {
+    throw new MipAdminError('INVALID_RESPONSE', '运营服务返回了无效的网页登录确认结果')
+  }
+  return { confirmed: true }
 }
 
 function parseUserPrimaryBranchChange(value: unknown): AdminUserPrimaryBranchChangeResult {
@@ -679,6 +689,9 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
   )
   return {
     getSession: () => call('mip.admin.session'),
+    confirmWebLogin: async challengeCode => parseWebLoginConfirmation(
+      await call('mip.admin.webLogin.confirm', { challengeCode }),
+    ),
     getDashboard: () => call('mip.admin.dashboard'),
     getDashboardOverview: async input => parseDashboardOverview(
       await call('mip.admin.dashboard.overview.get', { ...(input || {}) }),

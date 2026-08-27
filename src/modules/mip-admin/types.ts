@@ -1099,8 +1099,13 @@ export interface AdminPage<T> {
   nextCursor?: string | null
 }
 
+export interface AdminWebLoginConfirmation {
+  confirmed: true
+}
+
 export interface MipAdminGateway {
   getSession: () => Promise<MipAdminSession>
+  confirmWebLogin: (challengeCode: string) => Promise<AdminWebLoginConfirmation>
   getDashboard: () => Promise<AdminDashboard>
   getDashboardOverview: (input?: AdminDashboardOverviewInput) => Promise<AdminDashboardOverview>
   listBranches: () => Promise<AdminPage<AdminBranch>>

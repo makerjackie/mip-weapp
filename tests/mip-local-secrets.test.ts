@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   assertMipAiProviderHmacSecretsIsolated,
   assertMipSchedulerHmacSecretsIsolated,
+  assertMipWebAdminHmacSecretsIsolated,
   MIP_STABLE_SECRET_KEYS,
   resolveMipStableSecrets,
   secretInventory,
@@ -76,6 +77,18 @@ describe('MIP stable local secrets', () => {
       MIP_AI_HMAC_SECRET: secret('m'),
       MIP_AI_DRAFT_PROVIDER_HMAC_SECRET: secret('d'),
       MIP_AI_AVATAR_PROVIDER_HMAC_SECRET: secret('a'),
+    })).toBe(true)
+  })
+
+  it('requires separate Web admin query and login confirmation HMAC domains', () => {
+    const shared = secret('s')
+    expect(() => assertMipWebAdminHmacSecretsIsolated({
+      MIP_ADMIN_WEB_BFF_HMAC_SECRET: shared,
+      MIP_ADMIN_WEB_LOGIN_HMAC_SECRET: shared,
+    })).toThrow(/must differ/)
+    expect(assertMipWebAdminHmacSecretsIsolated({
+      MIP_ADMIN_WEB_BFF_HMAC_SECRET: secret('q'),
+      MIP_ADMIN_WEB_LOGIN_HMAC_SECRET: secret('l'),
     })).toBe(true)
   })
 

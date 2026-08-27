@@ -28,6 +28,7 @@ const adminMocks = vi.hoisted(() => {
     getSession: vi.fn(),
     getDashboardOverview: vi.fn(),
     listBranches: vi.fn(),
+    confirmWebLogin: vi.fn(),
   }
 })
 
@@ -40,6 +41,7 @@ vi.mock('../src/modules/mip-admin', () => ({
     getSession: adminMocks.getSession,
     getDashboardOverview: adminMocks.getDashboardOverview,
     listBranches: adminMocks.listBranches,
+    confirmWebLogin: adminMocks.confirmWebLogin,
   },
 }))
 
@@ -243,9 +245,26 @@ beforeEach(() => {
   })
   adminMocks.getDashboardOverview.mockReset().mockResolvedValue(overview())
   adminMocks.listBranches.mockReset().mockResolvedValue({ items: [], nextCursor: null })
+  adminMocks.confirmWebLogin.mockReset().mockResolvedValue({ confirmed: true })
 })
 
 describe('MIP admin dashboard controls and trends', () => {
+  it('normalizes and confirms the web login code through the admin module', async () => {
+    const page = createPage()
+    callPage(page, 'openWebLogin')
+    callPage(page, 'changeWebLoginCode', { detail: { value: 'abci-2345' } })
+    expect(page.data.webLoginCode).toBe('ABC2345')
+
+    await callPage(page, 'confirmWebLogin')
+    expect(adminMocks.confirmWebLogin).not.toHaveBeenCalled()
+    expect(page.data.webLoginError).toBe('请输入网页显示的 8 位登录码。')
+
+    callPage(page, 'changeWebLoginCode', { detail: { value: 'abcd2345' } })
+    await callPage(page, 'confirmWebLogin')
+    expect(adminMocks.confirmWebLogin).toHaveBeenCalledWith('ABCD2345')
+    expect(page.data).toMatchObject({ webLoginBusy: false, webLoginConfirmed: true })
+  })
+
   it('builds task-first actions and menu groups only from granted capabilities', () => {
     expect(buildDashboardMenuGroups([
       { capability: 'events.read', scopeType: 'PLATFORM', scopeId: null },

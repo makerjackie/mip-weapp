@@ -50,6 +50,7 @@ export function createMipAdminModule(
   const userContent = createMipUserContentAdmin(gateway, cache)
   return {
     getSession: governance.getSession,
+    confirmWebLogin: gateway.confirmWebLogin,
     getDashboard: (force = false) => cache.query('mip-admin:dashboard', gateway.getDashboard, { force }),
     getDashboardOverview: (input: Parameters<MipAdminGateway['getDashboardOverview']>[0] = {}, force = false) => cache.query(
       `mip-admin:dashboard-overview:${JSON.stringify(input)}`,

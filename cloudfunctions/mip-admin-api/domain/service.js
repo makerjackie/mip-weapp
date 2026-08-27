@@ -31,6 +31,9 @@ function createAdminService({
   phoneEncryptionKey,
   now = () => new Date(),
   contentSafety = async () => 'ERROR',
+  confirmWebLogin: dispatchWebLoginConfirmation = async () => {
+    throw new Error('WEB_LOGIN_CONFIG_REQUIRED')
+  },
   dispatchRefund = async () => ({ status: 'PENDING_RETRY' }),
   dispatchRefunds = async input => ({
     scanned: input.refundIds.length,
@@ -300,6 +303,41 @@ function createAdminService({
     }
   }
 
+  async function confirmWebLogin(caller, input = {}) {
+    const context = await session(caller)
+    const challengeCode = typeof input.challengeCode === 'string'
+      ? input.challengeCode.trim().toUpperCase()
+      : ''
+    if (!/^[A-HJ-NP-Z2-9]{8}$/.test(challengeCode)) {
+      throw new AdminError('VALIDATION_FAILED', '网页登录码格式无效')
+    }
+    try {
+      await dispatchWebLoginConfirmation({
+        appId: caller.appId,
+        openId: caller.openId,
+        challengeCode,
+      })
+    }
+    catch (error) {
+      if (error?.code === 'WEB_LOGIN_CHALLENGE_NOT_FOUND') {
+        throw new AdminError('VALIDATION_FAILED', '网页登录码无效或已过期')
+      }
+      if (error?.code === 'WEB_LOGIN_REQUEST_INVALID') {
+        throw new AdminError('VALIDATION_FAILED', '网页登录码格式无效')
+      }
+      throw new AdminError('SERVICE_UNAVAILABLE', '网页登录确认服务暂时不可用', true)
+    }
+    const grant = context.bindings[0]
+    await repository.recordAudit(audit(context, grant, {
+      scopeType: grant.scopeType,
+      scopeId: grant.scopeId,
+      action: 'admin.web_login.confirm',
+      resourceType: 'ADMIN_SESSION',
+      metadata: {},
+    }))
+    return { confirmed: true }
+  }
+
   async function getDashboard(caller) {
     const context = await session(caller)
     const grant = firstGrant(context.bindings, CAPABILITIES.DASHBOARD)
@@ -355,6 +393,7 @@ function createAdminService({
     closeCommunityReport,
     closeEventCommentReport,
     completeExportDownload,
+    confirmWebLogin,
     createBranch,
     createExport,
     getDashboard,

@@ -27,6 +27,7 @@ const expectedOperations = Object.freeze({
   'mip.admin.branches.changeStatus': ['ACCESS', 'MUTATION', 'changeBranchStatus'],
   'mip.admin.roles.set': ['ACCESS', 'MUTATION', 'setRole'],
   'mip.admin.rolePolicies.update': ['ACCESS', 'MUTATION', 'updateRoleCapabilityPolicy'],
+  'mip.admin.webLogin.confirm': ['ACCESS', 'MUTATION', 'confirmWebLogin'],
 
   'mip.admin.users.list': ['USERS', 'QUERY', 'listUsers'],
   'mip.admin.users.get': ['USERS', 'QUERY', 'getUser'],
@@ -210,12 +211,12 @@ function manifest(owner, operations) {
 }
 
 describe('admin operation catalog', () => {
-  it('freezes the exact 145 business actions, owners, and kinds while keeping health separate', () => {
+  it('freezes the exact 146 business actions, owners, and kinds while keeping health separate', () => {
     const handlerActions = Object.keys(actions).filter(action => action !== 'health')
     const expectedActions = Object.keys(expectedOperations)
 
-    assert.equal(expectedActions.length, 145)
-    assert.equal(operationCatalog.length, 145)
+    assert.equal(expectedActions.length, 146)
+    assert.equal(operationCatalog.length, 146)
     assert.deepEqual(sorted(handlerActions), sorted(expectedActions))
     assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(expectedActions))
     assert.equal(operationByAction.health, undefined)

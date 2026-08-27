@@ -42,6 +42,11 @@ Page({
     canRefreshBranches: false,
     activityDetailOpen: false,
     selectedActivity: null as AdminDashboardActivityView | null,
+    webLoginOpen: false,
+    webLoginCode: '',
+    webLoginBusy: false,
+    webLoginError: '',
+    webLoginConfirmed: false,
     message: '',
   },
   requestSeq: 0,
@@ -269,6 +274,58 @@ Page({
 
   closeActivity() {
     this.setData({ activityDetailOpen: false, selectedActivity: null })
+  },
+
+  openWebLogin() {
+    this.setData({
+      webLoginOpen: true,
+      webLoginCode: '',
+      webLoginBusy: false,
+      webLoginError: '',
+      webLoginConfirmed: false,
+    })
+  },
+
+  closeWebLogin() {
+    if (this.data.webLoginBusy) {
+      return
+    }
+    this.setData({ webLoginOpen: false })
+  },
+
+  handleWebLoginVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {
+    if (!event.detail.visible) {
+      this.closeWebLogin()
+    }
+  },
+
+  changeWebLoginCode(event: WechatMiniprogram.Input) {
+    const webLoginCode = String(event.detail.value || '')
+      .toUpperCase()
+      .replace(/[^A-HJ-NP-Z2-9]/g, '')
+      .slice(0, 8)
+    this.setData({ webLoginCode, webLoginError: '', webLoginConfirmed: false })
+  },
+
+  async confirmWebLogin() {
+    if (this.data.webLoginBusy) {
+      return
+    }
+    if (!/^[A-HJ-NP-Z2-9]{8}$/.test(this.data.webLoginCode)) {
+      this.setData({ webLoginError: '请输入网页显示的 8 位登录码。' })
+      return
+    }
+    this.setData({ webLoginBusy: true, webLoginError: '', webLoginConfirmed: false })
+    try {
+      await mipAdminModule.confirmWebLogin(this.data.webLoginCode)
+      this.setData({ webLoginBusy: false, webLoginConfirmed: true })
+    }
+    catch (error) {
+      this.setData({
+        webLoginBusy: false,
+        webLoginError: error instanceof Error ? error.message : '网页登录确认失败，请重试。',
+      })
+    }
   },
 
   handleActivityVisibility(event: WechatMiniprogram.CustomEvent<{ visible?: boolean }>) {

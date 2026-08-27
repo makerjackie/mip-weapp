@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "operationCount": 145,
+  "operationCount": 146,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -8,6 +8,14 @@
       "authentication": "REQUIRED",
       "session": "REQUIRED",
       "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.webLogin.confirm",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
       "idempotencyKeyRequired": null
     },
     {
