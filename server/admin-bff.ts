@@ -127,6 +127,7 @@ const ALLOWED_QUERY_ACTIONS = new Set([
   'mip.admin.events.comments.get',
   'mip.admin.messageCampaigns.scopes',
   'mip.admin.exports.status',
+  'mip.admin.dashboard',
 ])
 const ALLOWED_MUTATION_ACTIONS = new Set([
   'mip.admin.memberships.grant',

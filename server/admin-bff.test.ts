@@ -73,6 +73,7 @@ const REVIEWED_QUERY_ACTIONS = [
   'mip.admin.events.comments.get',
   'mip.admin.messageCampaigns.scopes',
   'mip.admin.exports.status',
+  'mip.admin.dashboard',
 ] as const
 const REVIEWED_MUTATION_ACTIONS = [
   'mip.admin.memberships.grant',
