@@ -69,6 +69,9 @@
       <view class="profile-action" bind:tap="openSettings"><image class="profile-action-icon" mode="aspectFit" src="/assets/figma/profile/action-settings.svg" /><text>设置</text></view>
     </view>
 
+    <view wx:if="{{eventManagementVisible}}" class="profile-admin-entry" bind:tap="openManagedEvents"><view><view class="profile-more-label">活动管理</view><view class="profile-more-description">查看已授权的活动</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-brand)" /></view>
+    <view wx:if="{{adminVisible}}" class="profile-admin-entry profile-admin-entry--primary" bind:tap="openAdmin"><view><view class="profile-more-label">运营管理</view><view class="profile-more-description">按当前授权范围进入</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-brand)" /></view>
+
     <view class="profile-tabs" aria-role="tablist">
       <view wx:if="{{portfolioTab === 'cooperation'}}" id="profile-tab-cooperation" class="profile-tab profile-tab--active" aria-role="tab" aria-selected="true" data-tab="cooperation" bind:tap="changePortfolioTab">合作卡</view>
       <view wx:else id="profile-tab-cooperation" class="profile-tab" aria-role="tab" aria-selected="false" data-tab="cooperation" bind:tap="changePortfolioTab">合作卡</view>
@@ -132,8 +135,6 @@
       <view class="profile-more-item profile-more-item--last" bind:tap="openAbout"><view class="profile-more-label">关于 MIP</view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
     </view>
 
-    <view wx:if="{{eventManagementVisible}}" class="profile-admin-entry" bind:tap="openManagedEvents"><view><view class="profile-more-label">活动管理</view><view class="profile-more-description">查看已授权的活动</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-brand)" /></view>
-    <view wx:if="{{adminVisible}}" class="profile-admin-entry profile-admin-entry--primary" bind:tap="openAdmin"><view><view class="profile-more-label">运营管理</view><view class="profile-more-description">按当前授权范围进入</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-brand)" /></view>
     <view wx:if="{{message}}" class="profile-message">{{message}}</view>
   </block>
 </view>

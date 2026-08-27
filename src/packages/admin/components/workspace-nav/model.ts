@@ -62,8 +62,7 @@ export const adminWorkspaceGroups: readonly AdminWorkspaceNavGroup[] = [
         key: 'managed-events',
         label: '活动管理',
         route: 'packages/admin/managed-events/index',
-        capabilities: ['events.read', 'events.write'],
-        requiresAll: true,
+        capabilities: ['events.read'],
       },
       {
         key: 'event-catalogs',

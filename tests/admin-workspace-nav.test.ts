@@ -70,7 +70,6 @@ describe('MIP admin desktop workspace navigation', () => {
     const groups = buildAdminWorkspaceNavigation([
       grant('admin.dashboard'),
       grant('events.read'),
-      grant('events.write'),
       grant('events.roster.read'),
       grant('branches.manage'),
       grant('messages.manage'),

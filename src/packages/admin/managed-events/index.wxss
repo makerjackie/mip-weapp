@@ -1,0 +1,46 @@
+.mip-managed-events-header-action {
+  min-width: 0;
+}
+
+.mip-managed-events-header-button {
+  max-width: 100%;
+}
+
+@media (max-width: 599px) {
+  .mip-managed-events-header-actions {
+    width: 100%;
+  }
+
+  .mip-managed-events-header-action {
+    flex: 1 1 240rpx;
+  }
+
+  .mip-managed-events-header-button {
+    width: 100%;
+  }
+}
+
+@media (min-width: 960px) {
+  .mip-managed-events-header {
+    align-items: center;
+  }
+
+  .mip-managed-events-header-actions {
+    gap: 12px;
+  }
+
+  .mip-managed-events-filter {
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .mip-managed-events-filter .mip-admin-filter-actions {
+    gap: 12px;
+    justify-content: flex-end;
+  }
+
+  .mip-managed-events-filter .mip-admin-filter-actions > * {
+    flex: 0 1 220px;
+    max-width: 220px;
+  }
+}

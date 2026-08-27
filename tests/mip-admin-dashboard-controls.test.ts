@@ -6,6 +6,7 @@ import type {
 import { readFileSync } from 'node:fs'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  buildDashboardMenuGroups,
   buildDashboardScopeOptions,
   buildDashboardViewModel,
   canLoadDashboardBranchCatalog,
@@ -245,6 +246,69 @@ beforeEach(() => {
 })
 
 describe('MIP admin dashboard controls and trends', () => {
+  it('builds task-first actions and menu groups only from granted capabilities', () => {
+    expect(buildDashboardMenuGroups([
+      { capability: 'events.read', scopeType: 'PLATFORM', scopeId: null },
+      { capability: 'users.read', scopeType: 'PLATFORM', scopeId: null },
+      { capability: 'audit.read', scopeType: 'PLATFORM', scopeId: null },
+    ])).toEqual([
+      {
+        key: 'users',
+        label: '用户',
+        items: [{
+          key: 'profiles',
+          label: '用户管理',
+          description: '筛选用户并查看资料与会员状态',
+          path: '/packages/admin/profiles/index',
+        }],
+      },
+      {
+        key: 'events',
+        label: '活动',
+        items: [{
+          key: 'managed-events',
+          label: '活动管理',
+          description: '管理活动、报名、签到和队伍',
+          path: '/packages/admin/managed-events/index',
+        }],
+      },
+      {
+        key: 'governance',
+        label: '治理',
+        items: [{
+          key: 'audit',
+          label: '审计记录',
+          description: '查看敏感读取与管理变更',
+          path: '/packages/admin/audit/index',
+        }],
+      },
+    ])
+
+    const scopedGroups = buildDashboardMenuGroups([
+      { capability: 'messages.delivery.review', scopeType: 'BRANCH', scopeId: 'branch-1' },
+      { capability: 'events.catalog.manage', scopeType: 'BRANCH', scopeId: 'branch-1' },
+      { capability: 'banners.manage', scopeType: 'PLATFORM', scopeId: null },
+    ])
+    const scopedItems = scopedGroups.flatMap(group => group.items)
+
+    expect(scopedItems.map(item => item.key)).toEqual(['banners', 'exceptions'])
+  })
+
+  it('collapses zero-value attention metrics into the shared empty state', () => {
+    const value = overview()
+    value.membership.expiringPlayers30d = countMetric(0)
+    if (value.events.availability === 'AVAILABLE') {
+      value.events.pendingReviewRegistrations = countMetric(0)
+    }
+
+    const view = buildDashboardViewModel(value, [
+      { capability: 'events.read', scopeType: 'PLATFORM', scopeId: null },
+      { capability: 'memberships.read', scopeType: 'PLATFORM', scopeId: null },
+    ])
+
+    expect(view.attentionItems).toEqual([])
+  })
+
   it('validates inclusive custom dates locally before using the neutral period input', async () => {
     expect(validateDashboardCustomPeriod('', '', '2030-08-26')).toBe('请选择有效的开始日期和结束日期')
     expect(validateDashboardCustomPeriod('2030-08-27', '2030-08-26', '2030-08-26'))
@@ -476,7 +540,7 @@ describe('MIP admin dashboard controls and trends', () => {
       .find((item: { root: string }) => item.root === 'packages/admin')
       .pages as string[]
 
-    expect(template).toContain('mip-admin-filter-grid')
+    expect(template).toContain('mip-admin-dashboard-filter')
     expect(template).toContain('mip-admin-section-grid')
     expect(template).toContain('min-h-[88rpx]')
     expect(template).toContain('mode="date"')

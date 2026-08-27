@@ -9,6 +9,7 @@ import type {
   AdminDashboardRateMetric,
 } from '../../../modules/mip-admin'
 import type { AdminDashboardTrendView } from './trends'
+import { buildAdminWorkspaceNavigation } from '../components/workspace-nav/model'
 import { withDashboardMetricTargets } from './metric-targets'
 import { buildDashboardTrends } from './trends'
 
@@ -46,6 +47,29 @@ export interface AdminDashboardActivityView {
   occurredAt: string
 }
 
+export interface AdminDashboardAttentionView {
+  key: string
+  label: string
+  value: string
+  detail: string
+  path: string
+}
+
+export interface AdminDashboardActionView {
+  key: string
+  label: string
+  description: string
+  path: string
+}
+
+export type AdminDashboardMenuItemView = AdminDashboardActionView
+
+export interface AdminDashboardMenuGroupView {
+  key: string
+  label: string
+  items: AdminDashboardMenuItemView[]
+}
+
 export interface AdminDashboardViewModel {
   scopeLabel: string
   periodLabel: string
@@ -55,6 +79,9 @@ export interface AdminDashboardViewModel {
   eventMetrics: AdminDashboardMetricView[]
   opportunityMetrics: AdminDashboardMetricView[]
   taskMetrics: AdminDashboardMetricView[]
+  attentionItems: AdminDashboardAttentionView[]
+  quickActions: AdminDashboardActionView[]
+  menuGroups: AdminDashboardMenuGroupView[]
   trends: AdminDashboardTrendView[]
   activities: AdminDashboardActivityView[]
   activityAvailable: boolean
@@ -110,9 +137,61 @@ export const emptyDashboardViewModel: AdminDashboardViewModel = {
   eventMetrics: [],
   opportunityMetrics: [],
   taskMetrics: [],
+  attentionItems: [],
+  quickActions: [],
+  menuGroups: [],
   trends: [],
   activities: [],
   activityAvailable: false,
+}
+
+const dashboardMenuDescriptions: Readonly<Record<string, string>> = {
+  'profiles': '筛选用户并查看资料与会员状态',
+  'managed-events': '管理活动、报名、签到和队伍',
+  'event-catalogs': '维护活动分类、标签和显示顺序',
+  'event-recaps': '维护活动视频回顾入口',
+  'event-participants': '查看活动参与者和联系方式',
+  'orders': '查看订单并处理退款申请',
+  'payment-attempts': '核对支付请求和处理状态',
+  'membership-ledger': '查看会员权益变更记录',
+  'announcements': '维护平台和城市分会公告',
+  'message-campaigns': '创建并发布站内消息',
+  'message-delivery-records': '查看消息投递结果',
+  'banners': '维护首页 Banner 内容',
+  'knowledge': '维护知识内容和评论审核',
+  'opportunities': '审核和管理合作机会',
+  'user-content': '审核用户发布的内容',
+  'community-reports': '领取并处理举报记录',
+  'growth-entries': '查看成长值变更流水',
+  'benefit-ledger': '查看统一权益变更流水',
+  'growth-transitions': '查看会员等级变更记录',
+  'growth-levels': '维护成长等级和规则',
+  'tasks': '配置任务并查看完成情况',
+  'badges': '维护勋章并管理授予状态',
+  'game': '管理赛季、队伍和排行榜',
+  'branches': '新增、编辑和启停城市分会',
+  'roles': '管理平台、分会和活动角色',
+  'exceptions': '处理运营异常和消息投递问题',
+  'audit': '查看敏感读取与管理变更',
+}
+
+const dashboardQuickActionKeys = ['managed-events', 'profiles', 'orders', 'message-campaigns']
+
+export function buildDashboardMenuGroups(grants: AdminCapabilityGrant[]): AdminDashboardMenuGroupView[] {
+  return buildAdminWorkspaceNavigation(grants, '')
+    .map(group => ({
+      key: group.key,
+      label: group.label,
+      items: group.items
+        .filter(item => item.key !== 'dashboard')
+        .map(item => ({
+          key: item.key,
+          label: item.label,
+          description: dashboardMenuDescriptions[item.key] || `打开${item.label}`,
+          path: `/${item.route}`,
+        })),
+    }))
+    .filter(group => group.items.length > 0)
 }
 
 function availabilityText(availability: AdminDashboardAvailability) {
@@ -201,6 +280,23 @@ function ratingMetric(key: string, label: string, value: number | null) {
   return value === null
     ? unavailableMetric(key, label, 'NOT_PROVIDED')
     : { key, label, value: value.toFixed(1), detail: '满分 5 分', available: true, path: '' }
+}
+
+function metricAttention(
+  metric: AdminDashboardMetricView | undefined,
+  key: string,
+  label: string,
+): AdminDashboardAttentionView | null {
+  if (!metric || !metric.available || !metric.path || metric.value === '0') {
+    return null
+  }
+  return {
+    key,
+    label,
+    value: metric.value,
+    detail: metric.detail,
+    path: metric.path,
+  }
 }
 
 function fallbackCount(key: string, label: string, availability: AdminDashboardAvailability) {
@@ -346,15 +442,35 @@ export function buildDashboardViewModel(
       ]
     : [unavailableMetric('tasks', '任务数据', overview.tasks.availability)]
 
+  const targetedMembershipMetrics = withDashboardMetricTargets(membershipMetrics, grants)
+  const targetedEventMetrics = withDashboardMetricTargets(eventMetrics, grants)
+  const targetedTaskMetrics = withDashboardMetricTargets(taskMetrics, grants)
+  const attentionItems = [
+    metricAttention(targetedEventMetrics.find(item => item.key === 'events-pending-review'), 'event-reviews', '待审核报名'),
+    metricAttention(targetedTaskMetrics.find(item => item.key === 'tasks-pending-review'), 'task-reviews', '待审核任务'),
+    metricAttention(targetedMembershipMetrics.find(item => item.key === 'membership-expiring'), 'membership-expiring', '即将到期会员'),
+  ].filter((item): item is AdminDashboardAttentionView => item !== null)
+
+  const menuGroups = buildDashboardMenuGroups(grants)
+  const actionsByKey = new Map(
+    menuGroups.flatMap(group => group.items).map(item => [item.key, item]),
+  )
+  const quickActions = dashboardQuickActionKeys
+    .map(key => actionsByKey.get(key))
+    .filter((item): item is AdminDashboardActionView => item !== undefined)
+
   return {
     scopeLabel: scopeLabel(overview),
     periodLabel: periodLabel(overview),
     asOfLabel: shanghaiTime(overview.asOf),
     summaryMetrics: withDashboardMetricTargets(summaryMetrics, grants),
-    membershipMetrics: withDashboardMetricTargets(membershipMetrics, grants),
-    eventMetrics: withDashboardMetricTargets(eventMetrics, grants),
+    membershipMetrics: targetedMembershipMetrics,
+    eventMetrics: targetedEventMetrics,
     opportunityMetrics: withDashboardMetricTargets(opportunityMetrics, grants),
-    taskMetrics: withDashboardMetricTargets(taskMetrics, grants),
+    taskMetrics: targetedTaskMetrics,
+    attentionItems,
+    quickActions,
+    menuGroups,
     trends: buildDashboardTrends(overview),
     activities: overview.operations.availability === 'AVAILABLE'
       ? overview.operations.activity.map(activityView)

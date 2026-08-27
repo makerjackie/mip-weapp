@@ -257,6 +257,45 @@ input {
   max-width: 100%;
 }
 
+.mip-admin-period-scroll {
+  width: 100%;
+  white-space: nowrap;
+}
+
+.mip-admin-period-list {
+  display: inline-flex;
+  gap: 12rpx;
+}
+
+.mip-admin-period-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 88rpx;
+  padding: 0 22rpx;
+  font-size: 24rpx;
+  color: var(--color-muted);
+  background: var(--color-panel-raised);
+  border: 1rpx solid var(--color-line);
+  border-radius: 999rpx;
+}
+
+.mip-admin-period-chip--active {
+  font-weight: 600;
+  color: var(--color-on-brand);
+  background: var(--color-brand);
+  border-color: var(--color-brand);
+}
+
+.mip-admin-quick-action {
+  box-sizing: border-box;
+  border: 1rpx solid var(--color-line);
+}
+
+.mip-admin-dashboard-menu-group + .mip-admin-dashboard-menu-group {
+  margin-top: 32rpx;
+}
+
 @media (max-width: 599px) {
   .mip-member-page {
     --mip-member-shell-max-width: 100%;
@@ -450,6 +489,17 @@ input {
   .mip-admin-workspace-page {
     min-width: 0;
     padding-left: 296px;
+  }
+
+  .mip-admin-period-list {
+    gap: 8px;
+  }
+
+  .mip-admin-period-chip {
+    min-height: 40px;
+    padding: 0 14px;
+    font-size: var(--mip-admin-font-label);
+    border-width: 1px;
   }
 
   /* stylelint-disable selector-class-pattern -- Desktop caps intentionally override generated Tailwind arbitrary-value utilities inside the admin shell. */

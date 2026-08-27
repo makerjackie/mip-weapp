@@ -333,7 +333,7 @@ describe('MIP tasks client contract', () => {
 
   it('keeps task configuration, completion detail, filtering, export and user upload reachable', () => {
     const app = fs.readFileSync(path.join(process.cwd(), 'src/app.json'), 'utf8')
-    const dashboard = fs.readFileSync(path.join(process.cwd(), 'src/packages/admin/dashboard/index.wxml'), 'utf8')
+    const adminNavigation = fs.readFileSync(path.join(process.cwd(), 'src/packages/admin/components/workspace-nav/model.ts'), 'utf8')
     const growth = fs.readFileSync(path.join(process.cwd(), 'src/packages/member/mip-growth/index.wxml'), 'utf8')
     const admin = fs.readFileSync(path.join(process.cwd(), 'src/packages/admin/tasks/index.wxml'), 'utf8')
     const completions = fs.readFileSync(path.join(process.cwd(), 'src/packages/admin/task-completions/index.wxml'), 'utf8')
@@ -356,7 +356,7 @@ describe('MIP tasks client contract', () => {
     ]) {
       expect(app).toContain(route)
     }
-    expect(dashboard).toContain('/packages/admin/tasks/index')
+    expect(adminNavigation).toContain('route: \'packages/admin/tasks/index\'')
     expect(growth).toContain('bind:tap="openTasks"')
     expect(admin).toContain('新增任务')
     expect(admin).toContain('需要上传附件')

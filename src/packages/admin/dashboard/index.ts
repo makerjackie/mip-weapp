@@ -1,7 +1,5 @@
 import type {
   AdminBranch,
-  AdminCapability,
-  AdminCapabilityGrant,
   AdminDashboardOverviewPeriodInput,
 } from '../../../modules/mip-admin'
 import type { AdminPageState } from '../shared/page-state'
@@ -10,7 +8,7 @@ import type {
   AdminDashboardPeriodOption,
   AdminDashboardScopeOption,
 } from './model'
-import { hasCapability, mipAdminModule } from '../../../modules/mip-admin'
+import { mipAdminModule } from '../../../modules/mip-admin'
 import { adminLoadFailure, isAdminForbiddenError } from '../shared/page-state'
 import {
   buildDashboardScopeOptions,
@@ -23,14 +21,6 @@ import {
   initialDashboardScopeOptions,
   validateDashboardCustomPeriod,
 } from './model'
-
-function hasPlatformCapability(grants: AdminCapabilityGrant[], capability: AdminCapability) {
-  return grants.some(grant => (
-    grant.capability === capability
-    && grant.scopeType === 'PLATFORM'
-    && grant.scopeId === null
-  ))
-}
 
 Page({
   data: {
@@ -52,25 +42,6 @@ Page({
     canRefreshBranches: false,
     activityDetailOpen: false,
     selectedActivity: null as AdminDashboardActivityView | null,
-    canUsers: false,
-    canBranches: false,
-    canCommunityReports: false,
-    canAnnouncements: false,
-    canMessages: false,
-    canEvents: false,
-    canEventCatalogs: false,
-    canEventRecaps: false,
-    canOrders: false,
-    canOpportunities: false,
-    canGrowth: false,
-    canTasks: false,
-    canBanners: false,
-    canBadges: false,
-    canGame: false,
-    canKnowledge: false,
-    canExceptions: false,
-    canRoles: false,
-    canAudit: false,
     message: '',
   },
   requestSeq: 0,
@@ -161,26 +132,6 @@ Page({
         successfulScopeKey: selectedScope.key,
         scopeMessage,
         canRefreshBranches,
-        canUsers: hasCapability(grants, 'users.read'),
-        canBranches: hasCapability(grants, 'branches.manage'),
-        canCommunityReports: hasCapability(grants, 'community.reports.manage'),
-        canAnnouncements: hasCapability(grants, 'announcements.manage'),
-        canMessages: hasCapability(grants, 'messages.manage'),
-        canEvents: hasCapability(grants, 'events.read'),
-        canEventCatalogs: hasPlatformCapability(grants, 'events.catalog.manage'),
-        canEventRecaps: hasPlatformCapability(grants, 'events.recaps.manage'),
-        canOrders: hasCapability(grants, 'orders.read'),
-        canOpportunities: hasCapability(grants, 'opportunities.moderate'),
-        canGrowth: hasCapability(grants, 'growth.read'),
-        canTasks: hasCapability(grants, 'tasks.manage'),
-        canBanners: hasCapability(grants, 'banners.manage'),
-        canBadges: hasCapability(grants, 'badges.manage'),
-        canGame: hasCapability(grants, 'game.manage'),
-        canKnowledge: hasCapability(grants, 'knowledge.manage'),
-        canExceptions: hasCapability(grants, 'operations.exceptions.read')
-          || hasCapability(grants, 'messages.delivery.review'),
-        canRoles: hasCapability(grants, 'roles.change'),
-        canAudit: hasCapability(grants, 'audit.read'),
         message: '',
       })
     }

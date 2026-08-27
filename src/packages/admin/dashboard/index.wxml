@@ -1,143 +1,388 @@
-<view id="admin-dashboard-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+<view
+  id="admin-dashboard-page"
+  class="mip-admin-page mip-admin-workspace-page mip-admin-dashboard min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink"
+>
   <mip-admin-workspace-nav />
-  <view class="border-b border-line pb-5">
+
+  <view class="mip-admin-dashboard-header border-b border-line pb-5">
     <view class="text-[length:22rpx] font-semibold text-brand">MIP 管理</view>
-    <view class="mt-2 text-[length:40rpx] font-bold">数据概览</view>
-    <view class="mt-2 text-[length:24rpx] text-muted">{{view.scopeLabel}} · {{view.periodLabel}}</view>
-    <view wx:if="{{view.asOfLabel}}" class="mt-1 text-[length:21rpx] text-muted">数据截至 {{view.asOfLabel}}</view>
+    <view class="mt-2 text-[length:40rpx] font-bold">运营工作台</view>
+    <view class="mt-2 text-[length:24rpx] text-muted">
+      {{view.scopeLabel}} · {{view.periodLabel}}
+    </view>
+    <view wx:if="{{view.asOfLabel}}" class="mt-1 text-[length:22rpx] text-muted">
+      数据截至 {{view.asOfLabel}}
+    </view>
   </view>
-  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel px-5 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载数据概览" description="{{message}}" action-text="重新加载" bind:action="retryDashboard" /></view>
-  <view id="admin-dashboard-forbidden-state" wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有运营权限" description="当前账号未获得管理权限。" action-text="重新验证" bind:action="retryDashboard" /></view>
+
+  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel px-5 py-6">
+    <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
+  </view>
+  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6">
+    <app-empty-state
+      title="暂时无法加载运营工作台"
+      description="{{message}}"
+      action-text="重新加载"
+      bind:action="retryDashboard"
+    />
+  </view>
+  <view id="admin-dashboard-forbidden-state" wx:elif="{{state === 'forbidden'}}" class="mt-6">
+    <app-empty-state
+      title="没有运营权限"
+      description="当前账号未获得管理权限。"
+      action-text="重新验证"
+      bind:action="retryDashboard"
+    />
+  </view>
+
   <view wx:else>
-    <view class="mt-5 flex flex-wrap gap-2" role="radiogroup" aria-label="数据时间范围">
-      <block wx:for="{{periodOptions}}" wx:key="key">
-        <view wx:if="{{item.key === selectedPreset}}" class="flex min-h-[88rpx] items-center rounded-full bg-brand px-4 text-[length:22rpx] font-semibold text-on-brand" role="radio" aria-checked="true" data-preset="{{item.key}}" bind:tap="changePeriod">{{item.label}}</view>
-        <view wx:else class="flex min-h-[88rpx] items-center rounded-full border border-line bg-panel px-4 text-[length:22rpx] text-muted" role="radio" aria-checked="false" data-preset="{{item.key}}" bind:tap="changePeriod">{{item.label}}</view>
-      </block>
-    </view>
-    <view class="mip-admin-filter-grid mt-4 grid gap-3 rounded-[16rpx] bg-panel px-4 py-4">
-      <picker class="mip-admin-filter-wide box-border min-h-[88rpx] max-w-full rounded-[12rpx] bg-panel-raised px-3 py-3" range="{{scopeOptions}}" range-key="label" value="{{scopeIndex}}" disabled="{{scopeOptions.length <= 1}}" bindchange="changeScope">
-        <view class="text-[length:22rpx] text-muted">数据范围</view>
-        <view class="mt-1 flex items-center justify-between text-[length:25rpx]"><text>{{scopeOptions[scopeIndex].label}}</text><t-icon wx:if="{{scopeOptions.length > 1}}" name="chevron-down" size="28rpx" color="var(--color-muted)" /></view>
-      </picker>
-      <view wx:if="{{scopeMessage}}" class="mip-admin-filter-wide rounded-[12rpx] border border-line px-3 py-3 text-[length:22rpx] text-muted">
-        <view>{{scopeMessage}}</view>
-        <view wx:if="{{canRefreshBranches}}" class="mt-2 flex min-h-[88rpx] items-center justify-end text-brand" role="button" bind:tap="retryScopeCatalog">重新加载分会</view>
-      </view>
-      <view wx:if="{{customEditorOpen}}" class="mip-admin-filter-wide">
-        <view class="grid grid-cols-2 gap-2">
-          <picker class="box-border min-h-[88rpx] max-w-full rounded-[12rpx] bg-panel-raised px-3 py-3" mode="date" value="{{customStartDate}}" end="{{customMaxDate}}" data-field="customStartDate" bindchange="changeCustomDate"><view class="text-[length:22rpx] text-muted">开始日期</view><view class="mt-1 text-[length:24rpx]">{{customStartDate || '请选择'}}</view></picker>
-          <picker class="box-border min-h-[88rpx] max-w-full rounded-[12rpx] bg-panel-raised px-3 py-3" mode="date" value="{{customEndDate}}" end="{{customMaxDate}}" data-field="customEndDate" bindchange="changeCustomDate"><view class="text-[length:22rpx] text-muted">结束日期</view><view class="mt-1 text-[length:24rpx]">{{customEndDate || '请选择'}}</view></picker>
+    <view class="mt-6 text-[length:30rpx] font-semibold">待处理</view>
+    <view
+      wx:if="{{view.attentionItems.length}}"
+      class="mip-admin-attention-grid mt-3 grid grid-cols-2 gap-3"
+    >
+      <view
+        wx:for="{{view.attentionItems}}"
+        wx:key="key"
+        class="mip-admin-attention-card rounded-[16rpx] border border-line bg-panel px-4 py-4"
+        data-path="{{item.path}}"
+        bind:tap="openPage"
+        role="button"
+      >
+        <view class="flex items-start justify-between gap-2">
+          <view class="text-[length:34rpx] font-bold">{{item.value}}</view>
+          <t-icon name="chevron-right" size="28rpx" color="var(--color-muted)" />
         </view>
-        <view wx:if="{{customError}}" class="mt-2 text-[length:22rpx] text-danger">{{customError}}</view>
-        <view class="mt-3 grid grid-cols-2 gap-2">
-          <view class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] border border-line text-[length:24rpx] text-muted" role="button" bind:tap="clearCustomPeriod">清除</view>
-          <view class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] bg-brand text-[length:24rpx] font-semibold text-on-brand" role="button" bind:tap="applyCustomPeriod">应用</view>
-        </view>
+        <view class="mt-1 text-[length:24rpx] font-semibold">{{item.label}}</view>
+        <view class="mt-2 text-[length:22rpx] text-muted">{{item.detail}}</view>
       </view>
     </view>
-    <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:22rpx] text-danger">{{message}}</view>
-    <view class="mip-admin-metric-grid mt-5 grid grid-cols-2 gap-3">
-      <view wx:for="{{view.summaryMetrics}}" wx:key="key" class="min-h-[176rpx] rounded-[16rpx] border border-line bg-panel px-4 py-4" role="{{item.path ? 'button' : 'group'}}" data-path="{{item.path}}" bind:tap="openPage">
-        <view class="flex items-start justify-between gap-2"><view wx:if="{{item.available}}" class="text-[length:36rpx] font-bold text-ink">{{item.value}}</view>
-        <view wx:else class="text-[length:36rpx] font-bold text-muted">{{item.value}}</view>
-        <t-icon wx:if="{{item.path}}" name="chevron-right" size="28rpx" color="var(--color-muted)" /></view>
-        <view class="mt-1 text-[length:22rpx] text-muted">{{item.label}}</view>
-        <view class="mt-2 text-[length:20rpx] text-muted">{{item.detail}}</view>
+    <view wx:else class="mt-3 rounded-[16rpx] bg-panel px-4 py-4 text-[length:24rpx] text-muted">
+      当前权限范围内没有可见的待处理事项。
+    </view>
+
+    <view class="mt-6 flex items-center justify-between">
+      <view class="text-[length:30rpx] font-semibold">常用操作</view>
+      <view class="text-[length:22rpx] text-muted">按当前权限显示</view>
+    </view>
+    <view
+      wx:if="{{view.quickActions.length}}"
+      class="mip-admin-quick-action-grid mt-3 grid grid-cols-2 gap-3"
+    >
+      <view
+        wx:for="{{view.quickActions}}"
+        wx:key="key"
+        class="mip-admin-quick-action flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4 text-ink"
+        data-path="{{item.path}}"
+        bind:tap="openPage"
+        role="button"
+      >
+        <view class="min-w-0 flex-1">
+          <view class="text-[length:27rpx] font-semibold">{{item.label}}</view>
+          <view class="mt-1 text-[length:22rpx] text-muted">{{item.description}}</view>
+        </view>
+        <t-icon name="chevron-right" size="30rpx" color="var(--color-brand)" />
       </view>
     </view>
-    <view class="mip-admin-section-grid mt-6 grid gap-3">
-      <view class="rounded-[16rpx] bg-panel px-4 py-4">
-        <view class="text-[length:28rpx] font-semibold">会员</view>
-        <view wx:for="{{view.membershipMetrics}}" wx:key="key" class="mt-3 flex min-h-[88rpx] items-center justify-between gap-3 border-b border-line pb-3" role="{{item.path ? 'button' : 'group'}}" data-path="{{item.path}}" bind:tap="openPage">
-          <view class="min-w-0 flex-1"><view class="text-[length:23rpx]">{{item.label}}</view><view class="mt-1 text-[length:19rpx] text-muted">{{item.detail}}</view></view><view class="flex items-center gap-1"><view class="text-[length:27rpx] font-semibold">{{item.value}}</view><t-icon wx:if="{{item.path}}" name="chevron-right" size="26rpx" color="var(--color-muted)" /></view>
-        </view>
-      </view>
-      <view class="rounded-[16rpx] bg-panel px-4 py-4">
-        <view class="text-[length:28rpx] font-semibold">活动</view>
-        <view wx:for="{{view.eventMetrics}}" wx:key="key" class="mt-3 flex min-h-[88rpx] items-center justify-between gap-3 border-b border-line pb-3" role="{{item.path ? 'button' : 'group'}}" data-path="{{item.path}}" bind:tap="openPage">
-          <view class="min-w-0 flex-1"><view class="text-[length:23rpx]">{{item.label}}</view><view class="mt-1 text-[length:19rpx] text-muted">{{item.detail}}</view></view><view class="flex items-center gap-1"><view class="text-[length:27rpx] font-semibold">{{item.value}}</view><t-icon wx:if="{{item.path}}" name="chevron-right" size="26rpx" color="var(--color-muted)" /></view>
-        </view>
-      </view>
-      <view class="rounded-[16rpx] bg-panel px-4 py-4">
-        <view class="text-[length:28rpx] font-semibold">机会</view>
-        <view wx:for="{{view.opportunityMetrics}}" wx:key="key" class="mt-3 flex min-h-[88rpx] items-center justify-between gap-3 border-b border-line pb-3" role="{{item.path ? 'button' : 'group'}}" data-path="{{item.path}}" bind:tap="openPage">
-          <view class="min-w-0 flex-1"><view class="text-[length:23rpx]">{{item.label}}</view><view class="mt-1 text-[length:19rpx] text-muted">{{item.detail}}</view></view><view class="flex items-center gap-1"><view class="text-[length:27rpx] font-semibold">{{item.value}}</view><t-icon wx:if="{{item.path}}" name="chevron-right" size="26rpx" color="var(--color-muted)" /></view>
-        </view>
-      </view>
-      <view class="rounded-[16rpx] bg-panel px-4 py-4">
-        <view class="text-[length:28rpx] font-semibold">任务</view>
-        <view wx:for="{{view.taskMetrics}}" wx:key="key" class="mt-3 flex min-h-[88rpx] items-center justify-between gap-3 border-b border-line pb-3" role="{{item.path ? 'button' : 'group'}}" data-path="{{item.path}}" bind:tap="openPage">
-          <view class="min-w-0 flex-1"><view class="text-[length:23rpx]">{{item.label}}</view><view class="mt-1 text-[length:19rpx] text-muted">{{item.detail}}</view></view><view class="flex items-center gap-1"><view class="text-[length:27rpx] font-semibold">{{item.value}}</view><t-icon wx:if="{{item.path}}" name="chevron-right" size="26rpx" color="var(--color-muted)" /></view>
-        </view>
-      </view>
+    <view wx:else class="mt-3 rounded-[16rpx] bg-panel px-4 py-4 text-[length:24rpx] text-muted">
+      当前账号没有可用的快捷操作。
     </view>
-    <view class="mt-7 text-[length:30rpx] font-semibold">趋势</view>
-    <view class="mip-admin-section-grid mt-4 grid gap-3">
-      <view wx:for="{{view.trends}}" wx:key="key" wx:for-item="trend" class="min-w-0 rounded-[16rpx] bg-panel px-4 py-4">
-        <view class="text-[length:27rpx] font-semibold">{{trend.title}}</view>
-        <scroll-view wx:if="{{trend.state === 'ready'}}" class="mt-3 max-h-[560rpx]" scroll-y enhanced show-scrollbar="{{false}}">
-          <view wx:for="{{trend.points}}" wx:key="key" wx:for-item="point" class="border-b border-line py-3">
-            <view class="text-[length:21rpx] text-muted">{{point.label}}</view>
-            <view wx:for="{{point.bars}}" wx:key="key" wx:for-item="bar" class="mt-2 grid grid-cols-[72rpx_minmax(0,1fr)_64rpx] items-center gap-2">
-              <view class="text-[length:20rpx] text-muted">{{bar.label}}</view>
-              <view class="h-[14rpx] overflow-hidden rounded-full bg-panel-raised"><view wx:if="{{bar.widthPercent > 0}}" class="h-full rounded-full bg-brand" style="width: {{bar.widthPercent}}%;"></view></view>
-              <view class="text-right text-[length:21rpx] font-semibold">{{bar.value}}</view>
+
+    <view class="mip-admin-dashboard-filter mt-7 rounded-[16rpx] bg-panel px-4 py-4">
+      <view class="flex items-center justify-between">
+        <view class="text-[length:26rpx] font-semibold">数据范围</view>
+        <view wx:if="{{customEditorOpen}}" class="text-[length:22rpx] text-brand">自定义时间</view>
+      </view>
+      <scroll-view
+        class="mip-admin-period-scroll mt-3"
+        scroll-x
+        enhanced
+        show-scrollbar="{{false}}"
+        role="radiogroup"
+        aria-label="数据时间范围"
+      >
+        <view class="mip-admin-period-list">
+          <block wx:for="{{periodOptions}}" wx:key="key">
+            <view
+              wx:if="{{item.key === selectedPreset}}"
+              class="mip-admin-period-chip mip-admin-period-chip--active"
+              role="radio"
+              aria-checked="true"
+              data-preset="{{item.key}}"
+              bind:tap="changePeriod"
+            >
+              {{item.label}}
             </view>
-            <view wx:if="{{point.detail}}" class="mt-2 text-[length:19rpx] text-muted">{{point.detail}}</view>
+            <view
+              wx:else
+              class="mip-admin-period-chip"
+              role="radio"
+              aria-checked="false"
+              data-preset="{{item.key}}"
+              bind:tap="changePeriod"
+            >
+              {{item.label}}
+            </view>
+          </block>
+        </view>
+      </scroll-view>
+
+      <picker
+        class="mip-admin-scope-picker mt-3 box-border min-h-[88rpx] max-w-full rounded-[12rpx] bg-panel-raised px-3 py-2"
+        range="{{scopeOptions}}"
+        range-key="label"
+        value="{{scopeIndex}}"
+        disabled="{{scopeOptions.length <= 1}}"
+        bindchange="changeScope"
+      >
+        <view class="text-[length:22rpx] text-muted">管理范围</view>
+        <view class="mt-1 flex items-center justify-between text-[length:25rpx]">
+          <text>{{scopeOptions[scopeIndex].label}}</text>
+          <t-icon
+            wx:if="{{scopeOptions.length > 1}}"
+            name="chevron-down"
+            size="28rpx"
+            color="var(--color-muted)"
+          />
+        </view>
+      </picker>
+
+      <view
+        wx:if="{{scopeMessage}}"
+        class="mt-3 rounded-[12rpx] border border-line px-3 py-3 text-[length:22rpx] text-muted"
+      >
+        {{scopeMessage}}
+        <view
+          wx:if="{{canRefreshBranches}}"
+          class="mt-2 flex min-h-[88rpx] items-center justify-end text-brand"
+          role="button"
+          bind:tap="retryScopeCatalog"
+        >
+          重新加载分会
+        </view>
+      </view>
+
+      <view wx:if="{{customEditorOpen}}" class="mt-3">
+        <view class="grid grid-cols-2 gap-2">
+          <picker
+            class="box-border min-h-[88rpx] max-w-full rounded-[12rpx] bg-panel-raised px-3 py-2"
+            mode="date"
+            value="{{customStartDate}}"
+            end="{{customMaxDate}}"
+            data-field="customStartDate"
+            bindchange="changeCustomDate"
+          >
+            <view class="text-[length:22rpx] text-muted">开始日期</view>
+            <view class="mt-1 text-[length:24rpx]">{{customStartDate || '请选择'}}</view>
+          </picker>
+          <picker
+            class="box-border min-h-[88rpx] max-w-full rounded-[12rpx] bg-panel-raised px-3 py-2"
+            mode="date"
+            value="{{customEndDate}}"
+            end="{{customMaxDate}}"
+            data-field="customEndDate"
+            bindchange="changeCustomDate"
+          >
+            <view class="text-[length:22rpx] text-muted">结束日期</view>
+            <view class="mt-1 text-[length:24rpx]">{{customEndDate || '请选择'}}</view>
+          </picker>
+        </view>
+        <view wx:if="{{customError}}" class="mt-2 text-[length:22rpx] text-danger">
+          {{customError}}
+        </view>
+        <view class="mt-3 grid grid-cols-2 gap-2">
+          <view
+            class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] border border-line text-[length:24rpx] text-muted"
+            role="button"
+            bind:tap="clearCustomPeriod"
+          >
+            清除
+          </view>
+          <view
+            class="flex min-h-[88rpx] items-center justify-center rounded-[12rpx] bg-brand text-[length:24rpx] font-semibold text-on-brand"
+            role="button"
+            bind:tap="applyCustomPeriod"
+          >
+            应用
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:22rpx] text-danger">
+      {{message}}
+    </view>
+
+    <view class="mt-7 text-[length:30rpx] font-semibold">关键状态</view>
+    <view class="mip-admin-metric-grid mt-3 grid grid-cols-2 gap-3">
+      <view
+        wx:for="{{view.summaryMetrics}}"
+        wx:key="key"
+        class="min-h-[152rpx] rounded-[16rpx] border border-line bg-panel px-4 py-4"
+        role="{{item.path ? 'button' : 'group'}}"
+        data-path="{{item.path}}"
+        bind:tap="openPage"
+      >
+        <view class="flex items-start justify-between gap-2">
+          <view wx:if="{{item.available}}" class="text-[length:34rpx] font-bold text-ink">
+            {{item.value}}
+          </view>
+          <view wx:else class="text-[length:34rpx] font-bold text-muted">
+            {{item.value}}
+          </view>
+          <t-icon wx:if="{{item.path}}" name="chevron-right" size="28rpx" color="var(--color-muted)" />
+        </view>
+        <view class="mt-1 text-[length:24rpx] text-muted">{{item.label}}</view>
+        <view class="mt-2 text-[length:22rpx] text-muted">{{item.detail}}</view>
+      </view>
+    </view>
+
+    <view class="mt-7 text-[length:30rpx] font-semibold">数据趋势</view>
+    <view class="mip-admin-section-grid mt-3 grid gap-3">
+      <view
+        wx:for="{{view.trends}}"
+        wx:key="key"
+        wx:for-item="trend"
+        class="min-w-0 rounded-[16rpx] bg-panel px-4 py-4"
+      >
+        <view class="text-[length:27rpx] font-semibold">{{trend.title}}</view>
+        <scroll-view
+          wx:if="{{trend.state === 'ready'}}"
+          class="mt-3 max-h-[560rpx]"
+          scroll-y
+          enhanced
+          show-scrollbar="{{false}}"
+        >
+          <view
+            wx:for="{{trend.points}}"
+            wx:key="key"
+            wx:for-item="point"
+            class="border-b border-line py-3"
+          >
+            <view class="text-[length:22rpx] text-muted">{{point.label}}</view>
+            <view
+              wx:for="{{point.bars}}"
+              wx:key="key"
+              wx:for-item="bar"
+              class="mt-2 grid grid-cols-[88rpx_minmax(0,1fr)_72rpx] items-center gap-2"
+            >
+              <view class="text-[length:22rpx] text-muted">{{bar.label}}</view>
+              <view class="h-[14rpx] overflow-hidden rounded-full bg-panel-raised">
+                <view
+                  wx:if="{{bar.widthPercent > 0}}"
+                  class="h-full rounded-full bg-brand"
+                  style="width: {{bar.widthPercent}}%;"
+                ></view>
+              </view>
+              <view class="text-right text-[length:22rpx] font-semibold">{{bar.value}}</view>
+            </view>
+            <view wx:if="{{point.detail}}" class="mt-2 text-[length:22rpx] text-muted">
+              {{point.detail}}
+            </view>
           </view>
         </scroll-view>
-        <view wx:else class="mt-3 rounded-[12rpx] bg-panel-raised px-3 py-4 text-[length:22rpx] text-muted">{{trend.message}}</view>
-      </view>
-    </view>
-    <view class="mt-7">
-      <view class="text-[length:30rpx] font-semibold">运营动态</view>
-      <view wx:if="{{view.activities.length}}" class="mip-admin-record-list mt-4" style="--mip-admin-record-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr);">
-        <view class="mip-admin-record-header"><view>动态</view><view>操作人</view><view>对象</view><view>时间</view></view>
-        <view wx:for="{{view.activities}}" wx:key="id" class="mip-admin-record-row" role="button" data-id="{{item.id}}" bind:tap="openActivity">
-          <view class="mip-admin-record-cell"><view class="mip-admin-record-label">动态</view><view class="font-semibold">{{item.title}}</view><view class="mt-1 text-[length:20rpx] text-muted">{{item.scope}}</view></view>
-          <view class="mip-admin-record-cell"><view class="mip-admin-record-label">操作人</view><view>{{item.actor}}</view></view>
-          <view class="mip-admin-record-cell"><view class="mip-admin-record-label">对象</view><view>{{item.resource}}</view></view>
-          <view class="mip-admin-record-cell"><view class="mip-admin-record-label">时间</view><view>{{item.occurredAt}}</view></view>
+        <view wx:else class="mt-3 rounded-[12rpx] bg-panel-raised px-3 py-4 text-[length:22rpx] text-muted">
+          {{trend.message}}
         </view>
       </view>
-      <view wx:elif="{{view.activityAvailable}}" class="mt-4"><app-empty-state title="本期没有运营动态" description="当前时间范围内没有记录。" /></view>
-      <view wx:else class="mt-4"><app-empty-state title="没有可见的运营动态" description="当前权限范围内没有可展示的记录。" /></view>
     </view>
-    <view class="mt-7 text-[length:30rpx] font-semibold">功能入口</view>
-    <view class="mip-admin-menu-grid mt-6 flex flex-col gap-3">
-      <view wx:if="{{canBranches}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/branches/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">城市分会</view><view class="mt-1 text-[length:22rpx] text-muted">新增、编辑和启停城市分会</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canCommunityReports}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/community-reports/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">举报审核</view><view class="mt-1 text-[length:22rpx] text-muted">领取举报并记录审核结果</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canAnnouncements}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/announcements/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">公告管理</view><view class="mt-1 text-[length:22rpx] text-muted">维护平台和城市分会公告</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canMessages}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/message-campaigns/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">消息管理</view><view class="mt-1 text-[length:22rpx] text-muted">配置收件人范围并发布站内消息</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canUsers}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/profiles/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">用户管理</view><view class="mt-1 text-[length:22rpx] text-muted">筛选、资料、名单与导出</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canEvents}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/managed-events/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">活动管理</view><view class="mt-1 text-[length:22rpx] text-muted">活动、参与者、签到和团队</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canEventCatalogs}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/event-catalogs/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">活动分类与标签</view><view class="mt-1 text-[length:22rpx] text-muted">维护分类、标签、顺序和状态</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canEventRecaps}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/event-recaps/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">视频回顾</view><view class="mt-1 text-[length:22rpx] text-muted">维护活动的视频号主页和视频入口</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canOrders}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/orders/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">订单与退款</view><view class="mt-1 text-[length:22rpx] text-muted">查看订单并提交退款请求</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canOpportunities}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/opportunities/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">机会管理</view><view class="mt-1 text-[length:22rpx] text-muted">查看状态、下架和审计</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canOpportunities}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/opportunity-matching/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">机会撮合设置</view><view class="mt-1 text-[length:22rpx] text-muted">管理阈值并重新计算推荐</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canGrowth}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/growth-levels/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">成长管理</view><view class="mt-1 text-[length:22rpx] text-muted">等级、规则、流水和人工调整</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canBadges}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/badges/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">勋章管理</view><view class="mt-1 text-[length:22rpx] text-muted">目录、授予、撤销和佩戴状态</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canGame}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/game/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">赛季与队伍</view><view class="mt-1 text-[length:22rpx] text-muted">配置赛季、队伍、对阵和排行榜</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canGame}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/blind-box/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">盲盒管理</view><view class="mt-1 text-[length:22rpx] text-muted">配置目录、规则、卡牌概率和库存</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canKnowledge}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/knowledge/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">知识内容管理</view><view class="mt-1 text-[length:22rpx] text-muted">维护信息源、分类、内容和评论审核</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canTasks}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/tasks/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">任务管理</view><view class="mt-1 text-[length:22rpx] text-muted">任务配置、发布和完成流水</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canBanners}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/banners/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">Banner 管理</view><view class="mt-1 text-[length:22rpx] text-muted">维护公开页面图片、跳转和排序</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canExceptions}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/exceptions/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">运营待办与异常</view><view class="mt-1 text-[length:22rpx] text-muted">查看待处理、处理中和需人工复核项目</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canRoles}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/roles/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">角色与权限</view><view class="mt-1 text-[length:22rpx] text-muted">平台、分会和活动角色</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canAudit}}" class="flex min-h-[96rpx] items-center rounded-[16rpx] bg-panel px-4" data-path="/packages/admin/audit/index" bind:tap="openPage"><view class="flex-1"><view class="text-[length:28rpx] font-semibold">审计记录</view><view class="mt-1 text-[length:22rpx] text-muted">查看敏感读取与管理变更</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+
+    <view class="mt-7">
+      <view class="text-[length:30rpx] font-semibold">运营动态</view>
+      <view
+        wx:if="{{view.activities.length}}"
+        class="mip-admin-record-list mt-3"
+        style="--mip-admin-record-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr);"
+      >
+        <view class="mip-admin-record-header">
+          <view>动态</view>
+          <view>操作人</view>
+          <view>对象</view>
+          <view>时间</view>
+        </view>
+        <view
+          wx:for="{{view.activities}}"
+          wx:key="id"
+          class="mip-admin-record-row"
+          role="button"
+          data-id="{{item.id}}"
+          bind:tap="openActivity"
+        >
+          <view class="mip-admin-record-cell">
+            <view class="mip-admin-record-label">动态</view>
+            <view class="font-semibold">{{item.title}}</view>
+            <view class="mt-1 text-[length:22rpx] text-muted">{{item.scope}}</view>
+          </view>
+          <view class="mip-admin-record-cell">
+            <view class="mip-admin-record-label">操作人</view>
+            <view>{{item.actor}}</view>
+          </view>
+          <view class="mip-admin-record-cell">
+            <view class="mip-admin-record-label">对象</view>
+            <view>{{item.resource}}</view>
+          </view>
+          <view class="mip-admin-record-cell">
+            <view class="mip-admin-record-label">时间</view>
+            <view>{{item.occurredAt}}</view>
+          </view>
+        </view>
+      </view>
+      <view wx:elif="{{view.activityAvailable}}" class="mt-3">
+        <app-empty-state title="本期没有运营动态" description="当前时间范围内没有记录。" />
+      </view>
+      <view wx:else class="mt-3">
+        <app-empty-state title="没有可见的运营动态" description="当前权限范围内没有可展示的记录。" />
+      </view>
+    </view>
+
+    <view class="mt-7 text-[length:30rpx] font-semibold">全部功能</view>
+    <view
+      wx:for="{{view.menuGroups}}"
+      wx:key="key"
+      class="mip-admin-dashboard-menu-group mt-5"
+    >
+      <view class="text-[length:24rpx] font-semibold text-muted">{{item.label}}</view>
+      <view class="mip-admin-menu-grid mt-2 grid grid-cols-2 gap-3">
+        <view
+          wx:for="{{item.items}}"
+          wx:for-item="menuItem"
+          wx:key="key"
+          class="flex min-h-[92rpx] items-center rounded-[16rpx] bg-panel px-4"
+          data-path="{{menuItem.path}}"
+          bind:tap="openPage"
+          role="button"
+        >
+          <view class="min-w-0 flex-1">
+            <view class="text-[length:26rpx] font-semibold">{{menuItem.label}}</view>
+            <view class="mt-1 text-[length:22rpx] text-muted">{{menuItem.description}}</view>
+          </view>
+          <t-icon name="chevron-right" size="28rpx" color="var(--color-muted)" />
+        </view>
+      </view>
     </view>
   </view>
+
   <app-page-exit />
-  <mip-admin-responsive-panel visible="{{activityDetailOpen}}" title="运营动态" bind:close="closeActivity" bind:visible-change="handleActivityVisibility">
+  <mip-admin-responsive-panel
+    visible="{{activityDetailOpen}}"
+    title="运营动态"
+    bind:close="closeActivity"
+    bind:visible-change="handleActivityVisibility"
+  >
     <view wx:if="{{selectedActivity}}" class="mt-3 rounded-[16rpx] bg-panel-raised px-4 py-4">
       <view class="text-[length:29rpx] font-semibold">{{selectedActivity.title}}</view>
-      <view class="mt-4 border-t border-line pt-3 text-[length:23rpx]"><text class="text-muted">操作人：</text>{{selectedActivity.actor}}</view>
-      <view class="mt-3 text-[length:23rpx]"><text class="text-muted">对象：</text>{{selectedActivity.resource}}</view>
-      <view class="mt-3 text-[length:23rpx]"><text class="text-muted">范围：</text>{{selectedActivity.scope}}</view>
-      <view class="mt-3 text-[length:23rpx]"><text class="text-muted">时间：</text>{{selectedActivity.occurredAt}}</view>
+      <view class="mt-4 border-t border-line pt-3 text-[length:23rpx]">
+        <text class="text-muted">操作人：</text>{{selectedActivity.actor}}
+      </view>
+      <view class="mt-3 text-[length:23rpx]">
+        <text class="text-muted">对象：</text>{{selectedActivity.resource}}
+      </view>
+      <view class="mt-3 text-[length:23rpx]">
+        <text class="text-muted">范围：</text>{{selectedActivity.scope}}
+      </view>
+      <view class="mt-3 text-[length:23rpx]">
+        <text class="text-muted">时间：</text>{{selectedActivity.occurredAt}}
+      </view>
     </view>
   </mip-admin-responsive-panel>
 </view>

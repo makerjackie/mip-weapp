@@ -1,0 +1,104 @@
+.mip-admin-page .mip-admin-profiles-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.mip-admin-profiles-filter-group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8rpx;
+  min-width: 0;
+}
+
+.mip-admin-profiles-filter-label {
+  font-size: 24rpx;
+  font-weight: 600;
+  line-height: 36rpx;
+  color: var(--color-ink);
+}
+
+.mip-admin-profiles-filter-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx 12rpx;
+  min-width: 0;
+}
+
+.mip-admin-profiles-filter-option {
+  display: flex;
+  align-items: center;
+  min-height: 88rpx;
+}
+
+.mip-admin-profiles-filter-actions {
+  align-items: center;
+}
+
+@media (min-width: 960px) {
+  .mip-admin-page .mip-admin-profiles-filter {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 16px;
+    align-items: start;
+    padding: 16px;
+  }
+
+  .mip-admin-profiles-filter > .mip-admin-filter-wide,
+  .mip-admin-profiles-filter > .mip-admin-profiles-filter-group,
+  .mip-admin-profiles-filter > .mip-admin-profiles-clear-dates,
+  .mip-admin-profiles-filter > .mip-admin-profiles-filter-actions {
+    grid-column: 1 / -1;
+  }
+
+  .mip-admin-profiles-filter > .mip-admin-profiles-filter-selects,
+  .mip-admin-profiles-filter > .mip-admin-profiles-filter-range,
+  .mip-admin-profiles-filter > .mip-admin-profiles-filter-dates {
+    min-width: 0;
+  }
+
+  .mip-admin-profiles-filter-group {
+    grid-template-columns: 132px minmax(0, 1fr);
+    gap: 16px;
+    align-items: center;
+    min-height: 44px;
+  }
+
+  .mip-admin-profiles-filter-label {
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--color-muted);
+  }
+
+  .mip-admin-profiles-filter-options {
+    gap: 4px 12px;
+  }
+
+  .mip-admin-profiles-filter-option {
+    min-height: 44px;
+  }
+
+  .mip-admin-profiles-filter-selects,
+  .mip-admin-profiles-filter-range,
+  .mip-admin-profiles-filter-dates {
+    min-height: 40px;
+  }
+
+  .mip-admin-profiles-filter-selects {
+    align-items: center;
+  }
+
+  .mip-admin-profiles-filter-range,
+  .mip-admin-profiles-filter-dates {
+    align-items: center;
+  }
+
+  .mip-admin-profiles-clear-dates {
+    min-height: 24px;
+  }
+
+  .mip-admin-profiles-filter-actions {
+    justify-content: flex-end;
+    min-height: 40px;
+  }
+}

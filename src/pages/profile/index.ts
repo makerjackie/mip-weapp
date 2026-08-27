@@ -184,7 +184,9 @@ Page({
       membershipEndsText: membership.endsAt ? formatLocalDate(membership.endsAt) : '',
       isPlayer,
       adminVisible: hasCapability(snapshot.grants, 'admin:enter'),
-      eventManagementVisible: canManageEvents(snapshot.grants),
+      // The workspace already surfaces every granted activity tool, so keep one clear entry point.
+      eventManagementVisible: !hasCapability(snapshot.grants, 'admin:enter')
+        && canManageEvents(snapshot.grants),
       growthState: isPlayer ? this.data.growthState : 'hidden',
       message: '',
     })

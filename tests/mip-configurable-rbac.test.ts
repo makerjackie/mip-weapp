@@ -19,8 +19,8 @@ describe('MIP configurable RBAC', () => {
   })
 
   it('uses roles.change for the dashboard entry and exposes owner policy controls through the module', () => {
-    const dashboard = fs.readFileSync(
-      path.resolve(import.meta.dirname, '../src/packages/admin/dashboard/index.ts'),
+    const adminNavigation = fs.readFileSync(
+      path.resolve(import.meta.dirname, '../src/packages/admin/components/workspace-nav/model.ts'),
       'utf8',
     )
     const page = fs.readFileSync(
@@ -31,7 +31,7 @@ describe('MIP configurable RBAC', () => {
       path.resolve(import.meta.dirname, '../src/packages/admin/roles/index.wxml'),
       'utf8',
     )
-    expect(dashboard).toContain('canRoles: hasCapability(grants, \'roles.change\')')
+    expect(adminNavigation).toContain('capabilities: [\'roles.change\']')
     expect(page).toContain('mipAdminModule.governance.listRoleCapabilityPolicies')
     expect(page).toContain('mipAdminModule.governance.updateRoleCapabilityPolicy')
     expect(page).toContain('mipAdminModule.governance.resetRoleCapabilityPolicy')

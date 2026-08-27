@@ -1,7 +1,13 @@
 <view id="admin-managed-events-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
   <mip-admin-workspace-nav />
-  <view class="flex items-center justify-between"><view><view class="text-[length:40rpx] font-bold">活动管理</view><view class="mt-1 text-[length:24rpx] text-muted">查看和处理全部授权活动</view></view><t-button wx:if="{{canCreate}}" size="small" theme="primary" bind:tap="createEvent">新建活动</t-button></view><view class="mt-3"><t-button block variant="outline" bind:tap="openParticipants">活动参与者</t-button></view>
-  <view class="mip-admin-filter-grid mt-5 grid gap-3 rounded-[16rpx] bg-panel p-3">
+  <view class="mip-managed-events-header flex items-start justify-between gap-4">
+    <view class="min-w-0"><view class="text-[length:40rpx] font-bold">活动管理</view><view class="mt-1 text-[length:24rpx] text-muted">查看和处理全部授权活动</view></view>
+    <view class="mip-managed-events-header-actions flex shrink-0 flex-wrap justify-end gap-2">
+      <view class="mip-managed-events-header-action"><t-button class="mip-managed-events-header-button" size="small" variant="outline" bind:tap="openParticipants">活动参与者</t-button></view>
+      <view wx:if="{{canCreate}}" class="mip-managed-events-header-action"><t-button class="mip-managed-events-header-button" size="small" theme="primary" bind:tap="createEvent">新建活动</t-button></view>
+    </view>
+  </view>
+  <view class="mip-managed-events-filter mip-admin-filter-grid mt-5 grid gap-3 rounded-[16rpx] bg-panel p-3">
     <view class="mip-admin-filter-wide"><t-input class="box-border max-w-full" value="{{query}}" placeholder="搜索活动名称" bind:change="updateQuery" bind:enter="search" /></view>
     <t-input class="box-border max-w-full" value="{{cityOrBranch}}" placeholder="城市或分会" data-field="cityOrBranch" bind:change="updateTextFilter" />
     <picker range="{{eventTypeOptions}}" range-key="label" value="{{eventTypeIndex}}" bindchange="changeEventType"><view class="box-border min-h-[88rpx] rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx]"><view class="text-muted">活动类型</view><view class="mt-1">{{eventTypeOptions[eventTypeIndex].label}}</view></view></picker>

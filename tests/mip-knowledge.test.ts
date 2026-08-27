@@ -38,7 +38,8 @@ describe('MIP knowledge content contract', () => {
       'mip-knowledge/web/index',
     ]))
     expect(admin?.pages).toContain('knowledge/index')
-    expect(read('src/packages/admin/dashboard/index.ts')).toContain('hasCapability(grants, \'knowledge.manage\')')
+    expect(read('src/packages/admin/components/workspace-nav/model.ts'))
+      .toContain('capabilities: [\'knowledge.manage\']')
   })
 
   it('keeps payment and private video capabilities behind module and device boundaries', () => {

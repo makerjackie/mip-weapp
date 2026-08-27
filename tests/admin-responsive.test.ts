@@ -231,6 +231,24 @@ describe('MIP admin responsive foundation', () => {
     expectDeclarations(desktop, '.mip-admin-record-label', { display: 'none' })
   })
 
+  it('keeps the user filter controls aligned as a form on desktop', () => {
+    const stylesheet = postcss.parse(read('src/packages/admin/profiles/index.wxss'))
+    const desktop = findMedia(stylesheet, '(min-width: 960px)')
+
+    expectDeclarations(stylesheet, '.mip-admin-page .mip-admin-profiles-filter', {
+      'display': 'flex',
+      'flex-direction': 'column',
+    }, true)
+    expectDeclarations(desktop, '.mip-admin-page .mip-admin-profiles-filter', {
+      'display': 'grid',
+      'grid-template-columns': 'repeat(2, minmax(0, 1fr))',
+    })
+    expectDeclarations(desktop, '.mip-admin-profiles-filter-group', {
+      'grid-template-columns': '132px minmax(0, 1fr)',
+      'align-items': 'center',
+    })
+  })
+
   it('uses the shared record contract for managed events without changing page actions', () => {
     const source = read('src/packages/admin/managed-events/index.wxml')
 
@@ -255,7 +273,7 @@ describe('MIP admin responsive foundation', () => {
   it('keeps dashboard metrics in two phone columns and gives desktop cards usable width', () => {
     const source = read('src/packages/admin/dashboard/index.wxml')
 
-    expect(source).toContain('class="mip-admin-metric-grid mt-5 grid grid-cols-2 gap-3"')
+    expect(source).toContain('class="mip-admin-metric-grid mt-3 grid grid-cols-2 gap-3"')
     expect(source.match(/wx:for="\{\{view\.summaryMetrics\}\}"/g)).toHaveLength(1)
     expect(source).not.toMatch(/\b(?:break-all|whitespace-nowrap)\b/)
   })

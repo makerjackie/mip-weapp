@@ -589,11 +589,13 @@ describe('mip-weapp UI runtime contract', () => {
 
   it('uses one event-management entry and a consistent eventId query', () => {
     const dashboardView = read('src/packages/admin/dashboard/index.wxml')
+    const adminNavigation = read('src/packages/admin/components/workspace-nav/model.ts')
     const managedEvents = read('src/packages/admin/managed-events/index.ts')
     const eventConsole = read('src/packages/admin/event-console/index.ts')
     const eventConsoleView = read('src/packages/admin/event-console/index.wxml')
 
-    expect(dashboardView).toContain('data-path="/packages/admin/managed-events/index"')
+    expect(dashboardView).toContain('view.quickActions')
+    expect(adminNavigation).toContain('route: \'packages/admin/managed-events/index\'')
     expect(managedEvents).toContain('/packages/admin/event-console/index?eventId=')
     expect(eventConsole).toContain('query.eventId')
     expect(eventConsole).toContain('event-registrations')
@@ -629,9 +631,11 @@ describe('mip-weapp UI runtime contract', () => {
     }
 
     const dashboardView = read('src/packages/admin/dashboard/index.wxml')
+    const adminNavigation = read('src/packages/admin/components/workspace-nav/model.ts')
     const growthLevels = read('src/packages/admin/growth-levels/index.ts')
-    expect(dashboardView).toContain('/packages/admin/opportunities/index')
-    expect(dashboardView).toContain('/packages/admin/growth-levels/index')
+    expect(dashboardView).toContain('view.menuGroups')
+    expect(adminNavigation).toContain('route: \'packages/admin/opportunities/index\'')
+    expect(adminNavigation).toContain('route: \'packages/admin/growth-levels/index\'')
     expect(growthLevels).toContain('/packages/admin/growth-rules/index')
     expect(growthLevels).toContain('/packages/admin/growth-entries/index')
   })

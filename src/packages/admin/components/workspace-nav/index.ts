@@ -15,6 +15,7 @@ Component({
     brandMark: brand.markText,
     productName: brand.productName,
     groups: [] as ReturnType<typeof buildAdminWorkspaceNavigation>,
+    activeItemTarget: '',
   },
 
   lifetimes: {
@@ -33,14 +34,19 @@ Component({
     async refreshNavigation() {
       try {
         const session = await mipAdminModule.getSession()
+        const groups = session.enabled
+          ? buildAdminWorkspaceNavigation(session.capabilities, currentAdminRoute())
+          : []
+        const activeItem = groups
+          .flatMap(group => group.items)
+          .find(item => item.active)
         this.setData({
-          groups: session.enabled
-            ? buildAdminWorkspaceNavigation(session.capabilities, currentAdminRoute())
-            : [],
+          groups,
+          activeItemTarget: activeItem ? `admin-nav-${activeItem.key}` : '',
         })
       }
       catch {
-        this.setData({ groups: [] })
+        this.setData({ groups: [], activeItemTarget: '' })
       }
     },
 
