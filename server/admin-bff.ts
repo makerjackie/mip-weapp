@@ -262,7 +262,8 @@ export function createAdminBff(
         signal: AbortSignal.timeout(10_000),
       })
     }
-    catch {
+    catch (error) {
+      console.error('[mip-admin-bff] upstream fetch failed', error instanceof Error ? error.message : 'unknown error')
       return adminError('SERVICE_UNAVAILABLE', '运营服务暂时不可用', 503, true)
     }
     const payload = await safeJson(upstream)
