@@ -172,9 +172,31 @@ describe('MIP admin user record contract', () => {
     const value = { items: [user()], nextCursor: null }
     expect(parseAdminUserPage(value)).toEqual(value)
 
+    const historicalPlayer = user({
+      playerNumber: null,
+      firstPlayerAt: '2026-01-01T00:00:00.000Z',
+      latestEntitlementEndsAt: '2027-01-01T00:00:00.000Z',
+      totalValidMembershipSeconds: 31_536_000,
+    })
+    expect(parseAdminUserPage({ items: [historicalPlayer], nextCursor: null }))
+      .toEqual({ items: [historicalPlayer], nextCursor: null })
+
+    const contactVisibility = user({
+      visibility: {
+        realName: true,
+        gender: false,
+        careerIdentity: true,
+        influence: true,
+        cardContacts: { phone: true, wechat: false, email: true, address: false },
+      },
+    })
+    expect(parseAdminUserPage({ items: [contactVisibility], nextCursor: null }))
+      .toEqual({ items: [contactVisibility], nextCursor: null })
+
     for (const item of [
       { ...user(), openId: 'private-openid' },
       user({ visibility: { influence: true, privateFact: true } as never }),
+      user({ visibility: { cardContacts: { phone: true } } as never }),
       user({ phoneNumber: '18800000000' }),
       user({ phoneBound: false, phoneNumber: '18800000000' }),
       user({ levelId: null, levelName: '一级' }),

@@ -40,6 +40,7 @@ const service = createCommerceService({
 
 const handler = createHandler({
   getContext: () => cloud.getWXContext(),
+  logger: console,
   resolveCaller: context => resolveTrustedIdentity(context, {
     allowedAppIds,
     pepper: process.env.MIP_IDENTITY_PEPPER,

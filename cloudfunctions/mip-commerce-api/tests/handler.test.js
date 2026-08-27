@@ -47,3 +47,30 @@ test('dispatches only an own commerce service action with trusted caller context
 
   assert.deepEqual(await handler(event), { ok: true, data: [] })
 })
+
+test('logs only the action and internal error metadata for unknown service failures', async () => {
+  const entries = []
+  const handler = createHandler({
+    getContext: () => ({}),
+    logger: { error: (...args) => entries.push(args) },
+    resolveCaller: () => ({ appId: 'wx-commerce', identityKey: 'trusted-identity' }),
+    service: {
+      async getMembershipBenefits() {
+        throw new TypeError('unexpected row shape')
+      },
+    },
+  })
+
+  assert.deepEqual(await handler({ action: 'getMembershipBenefits', forged: 'private-input' }), {
+    ok: false,
+    error: { code: 'SERVICE_UNAVAILABLE', message: '服务暂时不可用' },
+  })
+  assert.deepEqual(entries, [[
+    '[mip-commerce] request failed',
+    {
+      action: 'getMembershipBenefits',
+      errorName: 'TypeError',
+      errorMessage: 'unexpected row shape',
+    },
+  ]])
+})

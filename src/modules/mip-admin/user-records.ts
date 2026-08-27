@@ -22,6 +22,9 @@ const membershipStatuses = new Set(['PENDING', 'ACTIVE', 'EXPIRED', 'REVOKED', '
 const visibilityKeys = new Set([
   'nickname',
   'avatar',
+  'realName',
+  'gender',
+  'careerIdentity',
   'identityStatus',
   'headline',
   'introduction',
@@ -31,7 +34,9 @@ const visibilityKeys = new Set([
   'abilities',
   'primaryBranch',
   'influence',
+  'cardContacts',
 ])
+const cardContactVisibilityKeys = new Set(['phone', 'wechat', 'email', 'address'])
 const roleKeys = new Set<AdminRoleKey>([
   'PLATFORM_OWNER',
   'PLATFORM_OPERATIONS',
@@ -204,9 +209,20 @@ function integerInput(value: unknown) {
 
 function validVisibility(value: unknown) {
   return record(value)
-    && Reflect.ownKeys(value).every(key => typeof key === 'string'
-      && visibilityKeys.has(key)
-      && typeof value[key] === 'boolean')
+    && Reflect.ownKeys(value).every((key) => {
+      if (typeof key !== 'string' || !visibilityKeys.has(key)) {
+        return false
+      }
+      if (key !== 'cardContacts') {
+        return typeof value[key] === 'boolean'
+      }
+      const contacts = value[key]
+      return record(contacts)
+        && Reflect.ownKeys(contacts).length === cardContactVisibilityKeys.size
+        && Reflect.ownKeys(contacts).every(contactKey => typeof contactKey === 'string'
+          && cardContactVisibilityKeys.has(contactKey)
+          && typeof contacts[contactKey] === 'boolean')
+    })
 }
 
 export function createAdminUserListRequest(
@@ -313,12 +329,7 @@ function validUser(value: unknown, includePhone: boolean): value is AdminUser {
     if (!(value.playerNumber === null || validSafeInteger(value.playerNumber, 1))
       || !validNullableDate(value.firstPlayerAt)
       || !validNullableDate(value.latestEntitlementEndsAt)
-      || !validSafeInteger(value.totalValidMembershipSeconds, 0)
-      || (value.playerNumber === null && (
-        value.firstPlayerAt !== null
-        || value.latestEntitlementEndsAt !== null
-        || value.totalValidMembershipSeconds !== 0
-      ))) {
+      || !validSafeInteger(value.totalValidMembershipSeconds, 0)) {
       return false
     }
   }

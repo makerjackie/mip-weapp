@@ -25,8 +25,8 @@ const knownErrors = new Set([
 
 function createHandler(options) {
   return async function main(event = {}) {
+    const action = String(event.action || '')
     try {
-      const action = String(event.action || '')
       if (!Object.hasOwn(options.service, action)) {
         throw new Error('NOT_FOUND')
       }
@@ -39,6 +39,13 @@ function createHandler(options) {
     }
     catch (error) {
       const code = knownErrors.has(error?.message) ? error.message : 'SERVICE_UNAVAILABLE'
+      if (code === 'SERVICE_UNAVAILABLE') {
+        options.logger?.error?.('[mip-commerce] request failed', {
+          action,
+          errorName: error instanceof Error ? error.name : 'UnknownError',
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        })
+      }
       return { ok: false, error: { code, message: messageFor(code) } }
     }
   }

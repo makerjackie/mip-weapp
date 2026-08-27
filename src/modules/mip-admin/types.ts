@@ -223,6 +223,9 @@ export interface AdminMatchingState {
 export interface AdminProfileVisibility {
   nickname?: boolean
   avatar?: boolean
+  realName?: boolean
+  gender?: boolean
+  careerIdentity?: boolean
   identityStatus?: boolean
   headline?: boolean
   introduction?: boolean
@@ -232,6 +235,12 @@ export interface AdminProfileVisibility {
   abilities?: boolean
   primaryBranch?: boolean
   influence?: boolean
+  cardContacts?: {
+    phone: boolean
+    wechat: boolean
+    email: boolean
+    address: boolean
+  }
 }
 
 export interface AdminUser {

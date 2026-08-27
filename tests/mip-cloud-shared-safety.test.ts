@@ -537,6 +537,8 @@ describe('shared CloudBase safety', () => {
       { sqlDocument: true },
     )).toEqual([])
     expect(Object.values(RUNTIME_TABLE_PRIVILEGES).flat()).not.toContain('LOCK TABLES')
+    expect(RUNTIME_TABLE_PRIVILEGES.mip_membership_attributions)
+      .toEqual(['SELECT', 'INSERT'])
 
     const nestedDynamicTemplate = [
       'const sql = `SELECT id FROM mip_task_completions WHERE $',
