@@ -2,6 +2,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import {
+  isRecoverableRuntimeRenderError,
   navigateFreshRuntimeRoute,
   resolveProtectedAccessRuntimeFixture,
 } from '../scripts/verify-runtime.mjs'
@@ -112,6 +113,16 @@ function createFixtureRuntime(
 }
 
 describe('runtime protected access fixture', () => {
+  it('restarts only when the requested route exists but its rendered root is unavailable', () => {
+    expect(isRecoverableRuntimeRenderError(new Error(
+      'Runtime navigation representative loading did not render: Runtime fixture expected rendered pages/membership/index:#mip-membership-page, received pages/membership/index',
+    ))).toBe(true)
+    expect(isRecoverableRuntimeRenderError(new Error(
+      'Runtime fixture expected rendered pages/membership/index:#mip-membership-page, received pages/index/index',
+    ))).toBe(false)
+    expect(isRecoverableRuntimeRenderError(new Error('connection failed'))).toBe(false)
+  })
+
   it('repeats a safe navigation when logic changes route before the rendered tree catches up', async () => {
     let navigationCount = 0
     const transitionPage = {

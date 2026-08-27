@@ -1221,6 +1221,12 @@ export async function navigateFreshRuntimeRoute(
   throw firstError || new Error(`Runtime navigation ${label} failed`)
 }
 
+export function isRecoverableRuntimeRenderError(error) {
+  const message = sanitizeRuntimeValue(error instanceof Error ? error.message : error).toLowerCase()
+  const match = message.match(/expected rendered ([^:]+):[^,]+, received ([^ (]+)/)
+  return match !== null && match[1] === match[2]
+}
+
 async function tapVisibleRuntimeFixtureAction(page, miniProgram, selector, label) {
   await retry(
     `scroll runtime fixture ${label}`,
@@ -1780,13 +1786,19 @@ export async function main(runArgs = process.argv.slice(2)) {
           status: 'failed',
           error: sanitizeRuntimeValue(error instanceof Error ? error.message : error),
         })
-        if (attempt !== 1 || (!isRecoverableRuntimeConnectionError(error) && !isScreenshotCaptureError(error))) {
+        if (attempt !== 1 || (!isRecoverableRuntimeConnectionError(error)
+          && !isScreenshotCaptureError(error)
+          && !isRecoverableRuntimeRenderError(error))) {
           throw error
         }
         report.recoveries.push({
           attempt,
           action: 'reconnect-target-project',
-          reason: isScreenshotCaptureError(error) ? 'screenshot-capture-failed' : 'connection-failed',
+          reason: isScreenshotCaptureError(error)
+            ? 'screenshot-capture-failed'
+            : isRecoverableRuntimeRenderError(error)
+              ? 'renderer-not-ready'
+              : 'connection-failed',
         })
         await closeSharedMiniProgram(devtoolsRoot, sessionId).catch(() => undefined)
         miniProgram = undefined
