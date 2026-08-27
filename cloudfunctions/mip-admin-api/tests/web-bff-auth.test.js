@@ -4,9 +4,12 @@ const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const {
   WEB_BFF_FIRST_QUERY_ACTIONS,
+  WEB_BFF_MUTATION_ACTIONS,
   WEB_BFF_QUERY_ACTIONS,
+  WEB_BFF_REVIEWED_MUTATION_MANIFEST,
   WEB_BFF_TRANSPORT,
   createQueryActionAllowlist,
+  createReviewedMutationActionAllowlist,
   createWebBffRoute,
   signWebBffEnvelope,
 } = require('../lib/web-bff-auth')
@@ -15,13 +18,13 @@ const { publicOperationContract } = require('../domain/public-operation-contract
 const SECRET = 'web-bff-test-secret-that-is-at-least-thirty-two-bytes'
 const NOW = Date.UTC(2030, 0, 1)
 
-function envelope(action = 'mip.admin.dashboard.overview.get') {
+function envelope(action = 'mip.admin.dashboard.overview.get', request = {}) {
   return signWebBffEnvelope({
     transport: WEB_BFF_TRANSPORT,
     timestamp: NOW,
     nonce: '0123456789abcdefghijklmn',
     principal: { appId: 'wx-mip-app', openId: 'openid-admin' },
-    request: { contractVersion: 1, action, input: {} },
+    request: { contractVersion: 1, action, input: {}, ...request },
   }, SECRET)
 }
 
@@ -46,6 +49,7 @@ function fixture() {
       })
     },
     replayGuard: { consume: async input => replayed.push(input) },
+    afterSuccessfulMutation: async () => null,
     secret: SECRET,
     now: () => NOW,
   })
@@ -101,6 +105,36 @@ describe('Web BFF trusted query adapter', () => {
     )
   })
 
+  it('derives an exact reviewed mutation manifest and rejects metadata drift', () => {
+    assert.deepEqual(
+      [...WEB_BFF_MUTATION_ACTIONS],
+      WEB_BFF_REVIEWED_MUTATION_MANIFEST.map(item => item.action),
+    )
+    for (const key of ['kind', 'authentication', 'session', 'safeToRetry', 'idempotencyKeyRequired']) {
+      const drifted = WEB_BFF_REVIEWED_MUTATION_MANIFEST.map(item => ({ ...item }))
+      drifted[0][key] = key === 'kind'
+        ? 'QUERY'
+        : key === 'safeToRetry' || key === 'idempotencyKeyRequired'
+          ? !drifted[0][key]
+          : 'OPTIONAL'
+      assert.throws(
+        () => createReviewedMutationActionAllowlist(drifted, publicOperationContract),
+        /WEB_BFF_MUTATION_CONTRACT_INVALID/,
+        key,
+      )
+    }
+    const contractDrift = {
+      ...publicOperationContract,
+      operations: publicOperationContract.operations.map(operation => operation.action === 'mip.admin.events.clone'
+        ? { ...operation, safeToRetry: true }
+        : operation),
+    }
+    assert.throws(
+      () => createReviewedMutationActionAllowlist(WEB_BFF_REVIEWED_MUTATION_MANIFEST, contractDrift),
+      /WEB_BFF_MUTATION_CONTRACT_INVALID/,
+    )
+  })
+
   it('issues a fresh trusted principal for every allowed signed query', async () => {
     const { calls, issuedContexts, replayed, route } = fixture()
     for (const action of WEB_BFF_QUERY_ACTIONS) {
@@ -138,7 +172,7 @@ describe('Web BFF trusted query adapter', () => {
     assert.equal(calls.length, 0)
   })
 
-  it('rejects expired envelopes, unknown actions, and every contract mutation', async () => {
+  it('rejects expired envelopes, unknown actions, unreviewed mutations, and missing mutation keys', async () => {
     const { calls, route } = fixture()
     const expired = signWebBffEnvelope({ ...envelope(), timestamp: NOW - 60_001 }, SECRET)
 
@@ -152,9 +186,66 @@ describe('Web BFF trusted query adapter', () => {
     for (const operation of publicOperationContract.operations.filter(item => item.kind === 'MUTATION')) {
       const mutationResult = await route(envelope(operation.action))
       assert.equal(mutationResult.ok, false, operation.action)
-      assert.equal(mutationResult.error.code, 'FORBIDDEN', operation.action)
+      assert.equal(
+        mutationResult.error.code,
+        WEB_BFF_MUTATION_ACTIONS.has(operation.action) ? 'VALIDATION_FAILED' : 'FORBIDDEN',
+        operation.action,
+      )
     }
     assert.equal(calls.length, 0)
+  })
+
+  it('requires a non-empty business idempotency key for each reviewed mutation', async () => {
+    const { calls, route } = fixture()
+    for (const action of WEB_BFF_MUTATION_ACTIONS) {
+      for (const idempotencyKey of ['', '  ', 'bad key', 'x'.repeat(129), 42]) {
+        const result = await route(envelope(action, { idempotencyKey }))
+        assert.equal(result.ok, false, `${action}:${String(idempotencyKey)}`)
+        assert.equal(result.error.code, 'VALIDATION_FAILED', `${action}:${String(idempotencyKey)}`)
+      }
+    }
+    assert.equal(calls.length, 0)
+  })
+
+  it('consumes the replay guard and runs post-commit automation for reviewed mutations', async () => {
+    const calls = []
+    const replayed = []
+    const route = createWebBffRoute({
+      application: {
+        async execute(principal, action, input) {
+          calls.push({ principal, action, input })
+          return { action, idempotent: false }
+        },
+      },
+      issuePrincipal: context => ({
+        appId: context.APPID,
+        openId: context.OPENID,
+        identityKey: 'a'.repeat(64),
+      }),
+      replayGuard: { consume: async input => replayed.push(input) },
+      afterSuccessfulMutation: async input => {
+        calls.push({ postCommit: input.action, appId: input.principal.appId })
+        return null
+      },
+      secret: SECRET,
+      now: () => NOW,
+    })
+    const result = await route(envelope('mip.admin.events.clone', {
+      idempotencyKey: 'web-clone-0001',
+      input: { sourceEventId: 'event-a', expectedVersion: 1 },
+    }))
+
+    assert.equal(result.ok, true)
+    assert.equal(replayed.length, 1)
+    assert.deepEqual(calls[0].input, {
+      sourceEventId: 'event-a',
+      expectedVersion: 1,
+      idempotencyKey: 'web-clone-0001',
+    })
+    assert.deepEqual(calls[1], {
+      postCommit: 'mip.admin.events.clone',
+      appId: 'wx-mip-app',
+    })
   })
 
   it('consumes the signed nonce before dispatch and fails closed on replay storage errors', async () => {
@@ -162,6 +253,7 @@ describe('Web BFF trusted query adapter', () => {
     const base = {
       application: { execute: async () => calls.push('executed') },
       issuePrincipal: () => ({ identityKey: 'a'.repeat(64) }),
+      afterSuccessfulMutation: async () => null,
       secret: SECRET,
       now: () => NOW,
     }
@@ -194,6 +286,7 @@ describe('Web BFF trusted query adapter', () => {
       application: { execute: async () => calls.push('executed') },
       issuePrincipal: () => ({ identityKey: 'a'.repeat(64) }),
       replayGuard: { consume: async () => calls.push('consumed') },
+      afterSuccessfulMutation: async () => null,
       secret: '',
       now: () => NOW,
     })

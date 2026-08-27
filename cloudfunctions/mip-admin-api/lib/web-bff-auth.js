@@ -43,8 +43,46 @@ const WEB_BFF_SECOND_QUERY_ACTIONS = Object.freeze([
   'mip.admin.knowledge.get',
   'mip.admin.knowledge.schedules.list',
 ])
+const WEB_BFF_REVIEWED_MUTATION_MANIFEST = Object.freeze([
+  Object.freeze({
+    action: 'mip.admin.memberships.grant',
+    kind: 'MUTATION',
+    authentication: 'REQUIRED',
+    session: 'REQUIRED',
+    safeToRetry: false,
+    idempotencyKeyRequired: true,
+  }),
+  Object.freeze({
+    action: 'mip.admin.events.clone',
+    kind: 'MUTATION',
+    authentication: 'REQUIRED',
+    session: 'REQUIRED',
+    safeToRetry: false,
+    idempotencyKeyRequired: true,
+  }),
+  Object.freeze({
+    action: 'mip.admin.communications.publishEventReminder',
+    kind: 'MUTATION',
+    authentication: 'REQUIRED',
+    session: 'REQUIRED',
+    safeToRetry: false,
+    idempotencyKeyRequired: true,
+  }),
+  Object.freeze({
+    action: 'mip.admin.refunds.submit',
+    kind: 'MUTATION',
+    authentication: 'REQUIRED',
+    session: 'REQUIRED',
+    safeToRetry: false,
+    idempotencyKeyRequired: true,
+  }),
+])
 const WEB_BFF_QUERY_ACTIONS = createQueryActionAllowlist(
   [...WEB_BFF_FIRST_QUERY_ACTIONS, ...WEB_BFF_SECOND_QUERY_ACTIONS],
+  publicOperationContract,
+)
+const WEB_BFF_MUTATION_ACTIONS = createReviewedMutationActionAllowlist(
+  WEB_BFF_REVIEWED_MUTATION_MANIFEST,
   publicOperationContract,
 )
 const envelopeKeys = new Set(['nonce', 'principal', 'request', 'signature', 'timestamp', 'transport'])
@@ -74,10 +112,53 @@ function createQueryActionAllowlist(actions, contract) {
   return allowlist
 }
 
-function createWebBffRoute({ application, issuePrincipal, replayGuard, secret, now = Date.now } = {}) {
+function createReviewedMutationActionAllowlist(manifest, contract) {
+  if (!Array.isArray(manifest)
+    || new Set(manifest.map(item => item?.action)).size !== manifest.length
+    || !contract
+    || !Array.isArray(contract.operations)) {
+    throw new Error('WEB_BFF_MUTATION_CONTRACT_INVALID')
+  }
+  const operationByAction = new Map(contract.operations.map(operation => [operation.action, operation]))
+  const allowlist = new Set()
+  for (const expected of manifest) {
+    if (!expected || typeof expected.action !== 'string'
+      || expected.kind !== 'MUTATION'
+      || expected.authentication !== 'REQUIRED'
+      || expected.session !== 'REQUIRED'
+      || expected.safeToRetry !== false
+      || expected.idempotencyKeyRequired !== true) {
+      throw new Error('WEB_BFF_MUTATION_CONTRACT_INVALID')
+    }
+    const operation = operationByAction.get(expected.action)
+    if (!operation
+      || operation.action !== expected.action
+      || operation.kind !== expected.kind
+      || operation.authentication !== expected.authentication
+      || operation.session !== expected.session
+      || operation.safeToRetry !== expected.safeToRetry
+      // The generated public contract keeps this field nullable for backward
+      // compatibility; the reviewed manifest supplies the Web write policy.
+      || operation.idempotencyKeyRequired !== null) {
+      throw new Error('WEB_BFF_MUTATION_CONTRACT_INVALID')
+    }
+    allowlist.add(expected.action)
+  }
+  return allowlist
+}
+
+function createWebBffRoute({
+  application,
+  issuePrincipal,
+  replayGuard,
+  afterSuccessfulMutation,
+  secret,
+  now = Date.now,
+} = {}) {
   if (!application || typeof application.execute !== 'function'
     || typeof issuePrincipal !== 'function'
     || !replayGuard || typeof replayGuard.consume !== 'function'
+    || typeof afterSuccessfulMutation !== 'function'
     || typeof now !== 'function') {
     throw new Error('WEB_BFF_ROUTE_CONFIG_INVALID')
   }
@@ -98,6 +179,14 @@ function createWebBffRoute({ application, issuePrincipal, replayGuard, secret, n
         requestHash: createHash('sha256').update(canonicalJson(verified)).digest('hex'),
       })
       const data = await application.execute(principal, action, input)
+      if (WEB_BFF_MUTATION_ACTIONS.has(action)) {
+        const postCommit = await afterSuccessfulMutation({
+          action,
+          principal,
+          resultData: data,
+        })
+        if (postCommit && postCommit.ok === false) return postCommit
+      }
       return { ok: true, data }
     }
     catch (error) {
@@ -151,9 +240,14 @@ function verifyWebBffEnvelope(value, { secret, now = Date.now() } = {}) {
     || !hasAllowedKeys(value.request, requestKeys)
     || value.request.contractVersion !== 1
     || typeof value.request.action !== 'string'
-    || !WEB_BFF_QUERY_ACTIONS.has(value.request.action)
+    || (!WEB_BFF_QUERY_ACTIONS.has(value.request.action)
+      && !WEB_BFF_MUTATION_ACTIONS.has(value.request.action))
     || !isPlainRecord(value.request.input)) {
     throw new Error('FORBIDDEN')
+  }
+  if (WEB_BFF_MUTATION_ACTIONS.has(value.request.action)
+    && !validMutationIdempotencyKey(value.request.idempotencyKey)) {
+    throw new Error('VALIDATION_FAILED')
   }
 
   const unsigned = unsignedEnvelope(value)
@@ -219,14 +313,22 @@ function trustedIdentifier(value, maximum) {
     && /^[A-Za-z0-9_-]+$/.test(value)
 }
 
+function validMutationIdempotencyKey(value) {
+  return typeof value === 'string'
+    && /^[A-Za-z0-9_.:-]{1,128}$/.test(value.trim())
+}
+
 module.exports = {
   WEB_BFF_MAX_CLOCK_SKEW_MS,
   WEB_BFF_FIRST_QUERY_ACTIONS,
+  WEB_BFF_MUTATION_ACTIONS,
+  WEB_BFF_REVIEWED_MUTATION_MANIFEST,
   WEB_BFF_QUERY_ACTIONS,
   WEB_BFF_SECOND_QUERY_ACTIONS,
   WEB_BFF_TRANSPORT,
   canonicalJson,
   createQueryActionAllowlist,
+  createReviewedMutationActionAllowlist,
   createWebBffRoute,
   isWebBffEvent,
   signWebBffEnvelope,

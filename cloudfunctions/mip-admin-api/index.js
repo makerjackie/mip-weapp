@@ -250,6 +250,11 @@ const webBffRoute = createWebBffRoute({
   application,
   issuePrincipal: principalIssuer.issue,
   replayGuard: createWebBffReplayGuard({ database: mysqlDatabase() }),
+  afterSuccessfulMutation: ({ action, principal, resultData }) => postCommitAdminMutation({
+    appId: principal.appId,
+    action,
+    resultData,
+  }),
   secret: process.env.MIP_ADMIN_WEB_BFF_HMAC_SECRET,
 })
 const runDueMessageCampaigns = createMessageDispatchRoute({
@@ -293,53 +298,64 @@ exports.main = async (event = {}) => {
   if (result?.ok === true) {
     const routeAction = normalizeAdminRequest(event).action
     const routeAutomation = postCommitAutomationFor(routeAction, result.data)
-    if (knowledgeScheduleMutationActions.has(routeAction)) {
-      const appId = trustedContextAppId(cloud.getWXContext(), allowedAppIds)
-      const schedulerAutomation = await knowledgeSchedulerClient.reconcile({
-        appId,
+    if (routeAutomation.requiresTrustedAppId || knowledgeScheduleMutationActions.has(routeAction)) {
+      const postCommit = await postCommitAdminMutation({
+        appId: trustedContextAppId(cloud.getWXContext(), allowedAppIds),
         action: routeAction,
-        mutationActions: knowledgeScheduleMutationActions,
+        resultData: result.data,
+      })
+      if (postCommit) return postCommit
+    }
+  }
+  return result
+}
+
+async function postCommitAdminMutation({ appId, action, resultData }) {
+  const routeAutomation = postCommitAutomationFor(action, resultData)
+  if (knowledgeScheduleMutationActions.has(action)) {
+    const schedulerAutomation = await knowledgeSchedulerClient.reconcile({
+      appId,
+      action,
+      mutationActions: knowledgeScheduleMutationActions,
+    })
+    if (schedulerAutomation.status !== 'VERIFIED') {
+      return {
+        ok: false,
+        error: {
+          code: 'KNOWLEDGE_SCHEDULE_AUTOMATION_UNVERIFIED',
+          message: '热点采集计划已保存，但自动执行状态尚未确认，请使用同一请求重试',
+          retryable: true,
+        },
+      }
+    }
+  }
+  if (routeAutomation.requiresTrustedAppId) {
+    if (routeAutomation.messageSchedule) {
+      const schedulerAutomation = await messageSchedulerClient.afterSuccessfulMutation({
+        appId,
+        action,
+        mutationActions: messageScheduleMutationActions,
       })
       if (schedulerAutomation.status !== 'VERIFIED') {
         return {
           ok: false,
           error: {
-            code: 'KNOWLEDGE_SCHEDULE_AUTOMATION_UNVERIFIED',
-            message: '热点采集计划已保存，但自动执行状态尚未确认，请使用同一请求重试',
+            code: 'MESSAGE_SCHEDULE_AUTOMATION_UNVERIFIED',
+            message: '定时计划已保存，但自动执行状态尚未确认，请使用同一请求重试',
             retryable: true,
           },
         }
       }
     }
-    if (routeAutomation.requiresTrustedAppId) {
-      const appId = trustedContextAppId(cloud.getWXContext(), allowedAppIds)
-      if (routeAutomation.messageSchedule) {
-        const schedulerAutomation = await messageSchedulerClient.afterSuccessfulMutation({
-          appId,
-          action: routeAction,
-          mutationActions: messageScheduleMutationActions,
-        })
-        if (schedulerAutomation.status !== 'VERIFIED') {
-          return {
-            ok: false,
-            error: {
-              code: 'MESSAGE_SCHEDULE_AUTOMATION_UNVERIFIED',
-              message: '定时计划已保存，但自动执行状态尚未确认，请使用同一请求重试',
-              retryable: true,
-            },
-          }
-        }
-      }
-      if (routeAutomation.outbox) {
-        await outboxWakeup.afterSuccessfulMutation({
-          appId,
-          action: routeAction,
-          mutationActions: outboxMutationActions,
-        })
-      }
+    if (routeAutomation.outbox) {
+      await outboxWakeup.afterSuccessfulMutation({
+        appId,
+        action,
+        mutationActions: outboxMutationActions,
+      })
     }
   }
-  return result
+  return null
 }
 
 exports._test = {
