@@ -7,7 +7,9 @@ const root = path.resolve(import.meta.dirname, '..')
 function wxmlFiles(directory: string): string[] {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
     const absolute = path.join(directory, entry.name)
-    if (entry.isDirectory()) return wxmlFiles(absolute)
+    if (entry.isDirectory()) {
+      return wxmlFiles(absolute)
+    }
     return entry.isFile() && entry.name.endsWith('.wxml') ? [absolute] : []
   })
 }
