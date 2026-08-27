@@ -70,17 +70,25 @@ describe('admin read pages', () => {
     assert.deepEqual(page.summary?.map(item => item.value), ['3', '2', '¥376.00', '¥0.00'])
   })
 
-  it('joins role and branch queries without adding a browser-side permission rule', async () => {
+  it('loads roles, policy summaries, branches, and recent audit records without adding a browser-side permission rule', async () => {
     const calls: Array<{ action: string; input: unknown }> = []
-    const page = await loadAdminReadPage('permissions', { ...query, query: '福田', status: 'ACTIVE' }, requestWith({
-      'mip.admin.roles.list': { items: [{ nickname: '周宁', roleKey: 'BRANCH_ADMIN', scopeName: '福田分会', status: 'ACTIVE', grantedAt: '2030-01-01T00:00:00.000Z' }], nextCursor: null },
-      'mip.admin.branches.list': { items: [{ name: '福田分会', cityName: '深圳', currentPlayerCount: 86, branchAdminNames: ['周宁'], status: 'ACTIVE' }], nextCursor: null },
+    const page = await loadAdminReadPage('permissions', { ...query, query: '周宁', status: 'ACTIVE' }, requestWith({
+      'mip.admin.roles.list': { items: [{ id: 'role-1', nickname: '周宁', roleKey: 'BRANCH_ADMIN', scopeName: '福田分会', status: 'ACTIVE', grantedAt: '2030-01-01T00:00:00.000Z' }], nextCursor: null },
+      'mip.admin.branches.list': { items: [{ id: 'branch-1', name: '福田分会', branchKey: 'shenzhen-futian', cityName: '深圳', summary: '深圳福田城市分会', currentPlayerCount: 86, branchAdminNames: ['周宁'], blockers: { activeMemberships: 86, activeBranchAdmins: 1, publishedEvents: 3, publishedOpportunities: 2 }, status: 'ACTIVE' }], nextCursor: null },
+      'mip.admin.rolePolicies.list': { items: [{ roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', capabilities: ['events.read', 'events.write'], allowedCapabilities: ['events.read', 'events.write', 'branches.manage'], source: 'DEFAULT', version: 1, updatedAt: '2030-01-01T00:00:00.000Z' }], nextCursor: null },
+      'mip.admin.audit.list': { items: [{ actorNickname: '周宁', action: 'admin.roles.grant', resourceType: 'ROLE', resourceId: 'role-1', effectiveRole: 'BRANCH_ADMIN', scopeType: 'BRANCH', scopeId: 'branch-1', createdAt: '2030-01-02T00:00:00.000Z' }], nextCursor: null },
     }, calls))
 
-    assert.deepEqual(calls.map(call => call.action), ['mip.admin.roles.list', 'mip.admin.branches.list'])
-    assert.equal(page.sections.length, 2)
+    assert.deepEqual(calls.map(call => call.action), ['mip.admin.roles.list', 'mip.admin.branches.list', 'mip.admin.rolePolicies.list', 'mip.admin.audit.list'])
+    assert.deepEqual(calls.find(call => call.action === 'mip.admin.audit.list')?.input, { limit: 20 })
+    assert.equal(page.sections.length, 4)
     assert.equal(page.sections[0].rows[0].role, '分会管理员')
-    assert.equal(page.sections[1].rows[0].players, '86')
+    assert.equal(page.sections[1].title, '角色策略摘要')
+    assert.equal(page.sections[1].rows[0].effective, '查看活动、管理活动')
+    assert.equal(page.sections[2].rows[0].blockers, '会员 86 · 管理员 1 · 活动 3 · 机会 2')
+    assert.equal(page.sections[3].title, '最近审计记录')
+    assert.equal(page.sections[3].rows[0].action, '角色 · 授权')
+    assert.equal(page.sections[3].rows[0].resource, '角色')
   })
 
   it('uses only the reviewed message campaign query for the message page', async () => {

@@ -48,6 +48,26 @@ const labels: Record<string, string> = {
   VIDEO: '视频', PRIVATE_CHANNEL: '私域内容', EXPERT_SHARE: '专家分享',
   PLATFORM_OWNER: '平台负责人', PLATFORM_OPERATIONS: '平台运营', PLATFORM_FINANCE: '平台财务',
   BRANCH_ADMIN: '分会管理员', EVENT_OWNER: '活动负责人', EVENT_MANAGER: '活动管理员', EVENT_STAFF: '活动工作人员',
+  RESOURCE: '资源', ROLE: '角色', USER: '用户', ORDER: '订单', REFUND: '退款', MESSAGE: '消息', KNOWLEDGE: '知识内容',
+  DEFAULT: '默认策略', CUSTOM: '自定义策略',
+}
+
+const capabilityLabels: Record<string, string> = {
+  'admin.dashboard': '查看概览',
+  'users.read': '查看用户', 'users.phone.read': '查看手机号', 'users.fields.edit': '编辑用户资料',
+  'users.access.manage': '管理用户访问', 'memberships.read': '查看会员权益', 'memberships.adjust': '调整会员权益',
+  'exports.create': '创建导出', 'events.read': '查看活动', 'events.write': '管理活动',
+  'events.roster.read': '查看报名名单', 'events.registrations.manage': '管理报名', 'events.checkin.manage': '管理签到',
+  'events.checkin.undo': '撤销签到', 'events.team.manage': '管理活动团队', 'events.album.manage': '管理活动相册',
+  'events.feedback.read': '查看活动反馈', 'events.comments.manage': '管理活动评论', 'events.catalog.manage': '管理活动目录',
+  'events.recaps.manage': '管理活动回顾', 'announcements.manage': '管理公告', 'messages.manage': '管理消息',
+  'messages.delivery.review': '审核消息投递', 'communications.publish': '发布通知', 'branches.manage': '管理城市分会',
+  'community.reports.manage': '管理社区举报', 'userContent.moderate': '审核用户内容',
+  'opportunities.moderate': '审核机会', 'opportunities.archive': '归档机会', 'growth.read': '查看成长数据',
+  'growth.configure': '配置成长规则', 'growth.adjust': '调整成长数据', 'tasks.manage': '管理任务',
+  'banners.manage': '管理横幅', 'badges.manage': '管理徽章', 'game.manage': '管理互动玩法',
+  'knowledge.manage': '管理知识库', 'orders.read': '查看订单', 'refunds.submit': '提交退款',
+  'operations.exceptions.read': '查看运营异常', 'roles.change': '调整运营角色', 'audit.read': '查看审计记录',
 }
 
 const commonStatus = [{ value: '', label: '全部状态' }]
@@ -184,28 +204,54 @@ async function loadOrders(query: AdminListQuery, request: AdminRequest): Promise
 }
 
 async function loadPermissions(query: AdminListQuery, request: AdminRequest): Promise<AdminReadPage> {
-  const [rolePayload, branchPayload] = await Promise.all([
+  const [rolePayload, branchPayload, policyPayload, auditPayload] = await Promise.all([
     request('mip.admin.roles.list'),
     request('mip.admin.branches.list'),
+    request('mip.admin.rolePolicies.list'),
+    request('mip.admin.audit.list', { limit: query.limit }),
   ])
   const roles = filterRows(pageValue(rolePayload).items.map(item => ({
+    detailId: valueOf(item, 'id', 'roleId'),
     name: valueOf(item, 'nickname', 'name'),
-    role: label(valueOf(item, 'roleKey')),
-    scope: valueOf(item, 'scopeName', 'scopeType'),
+    role: roleLabel(valueOf(item, 'roleKey')),
+    scope: valueOf(item, 'scopeName') !== '—' ? valueOf(item, 'scopeName') : scopeLabel(item.scopeType),
     grantedAt: formatDateTime(item.grantedAt),
     state: label(valueOf(item, 'status')),
   })), query)
   const branches = filterRows(pageValue(branchPayload).items.map(item => ({
+    detailId: valueOf(item, 'id', 'branchId'),
+    branchKey: valueOf(item, 'branchKey'),
     name: valueOf(item, 'name'),
     city: valueOf(item, 'cityName'),
+    summary: valueOf(item, 'summary'),
     players: numberLabel(item.currentPlayerCount),
     admins: arrayLabel(item.branchAdminNames),
+    blockers: blockersLabel(item.blockers),
     state: label(valueOf(item, 'status')),
   })), query)
+  const policies = pageValue(policyPayload).items.map(item => ({
+    role: roleLabel(valueOf(item, 'roleKey')),
+    scope: scopeLabel(item.scopeType),
+    effective: capabilityListLabel(item.capabilities),
+    allowed: capabilityListLabel(item.allowedCapabilities),
+    source: label(valueOf(item, 'source')),
+    version: numberLabel(item.version),
+    updatedAt: formatDateTime(item.updatedAt),
+  }))
+  const audits = filterRows(pageValue(auditPayload).items.map(item => ({
+    actor: valueOf(item, 'actorNickname') !== '—' ? valueOf(item, 'actorNickname') : '未知运营成员',
+    action: auditActionLabel(valueOf(item, 'action')),
+    resource: label(valueOf(item, 'resourceType')),
+    role: roleLabel(valueOf(item, 'effectiveRole')),
+    scope: scopeLabel(item.scopeType),
+    createdAt: formatDateTime(item.createdAt),
+  })), { ...query, status: '' })
   return {
     sections: [
       { title: '运营成员', rows: roles, columns: columns([['name', '姓名'], ['role', '角色'], ['scope', '作用范围'], ['grantedAt', '授权时间'], ['state', '状态']]) },
-      { title: '城市分会', rows: branches, columns: columns([['name', '分会'], ['city', '城市'], ['players', '有效会员'], ['admins', '管理员'], ['state', '状态']]) },
+      { title: '角色策略摘要', rows: policies, columns: columns([['role', '角色'], ['scope', '作用范围'], ['effective', '当前能力'], ['allowed', '可用能力边界'], ['source', '策略来源'], ['version', '版本'], ['updatedAt', '更新时间']]) },
+      { title: '城市分会', rows: branches, columns: columns([['name', '分会'], ['city', '城市'], ['summary', '说明'], ['players', '有效会员'], ['admins', '管理员'], ['blockers', '关联数据'], ['state', '状态']]) },
+      { title: '最近审计记录', rows: audits, columns: columns([['actor', '操作人'], ['action', '操作'], ['resource', '资源'], ['role', '生效角色'], ['scope', '作用范围'], ['createdAt', '时间']]) },
     ],
     nextCursor: null,
   }
@@ -332,6 +378,46 @@ function numberLabel(value: unknown) {
 
 function arrayLabel(value: unknown) {
   return Array.isArray(value) && value.length ? value.join('、') : '—'
+}
+
+function capabilityListLabel(value: unknown) {
+  if (!Array.isArray(value)) return '—'
+  return value.length ? value.map(item => capabilityLabels[String(item)] || String(item)).join('、') : '无'
+}
+
+function roleLabel(value: unknown) {
+  const key = String(value || '')
+  return labels[key] || key || '—'
+}
+
+function scopeLabel(value: unknown) {
+  return label(value)
+}
+
+function auditActionLabel(value: unknown) {
+  const key = String(value || '')
+  const parts = key.replace(/^admin\./, '').split('.').filter(Boolean)
+  const tokens: Record<string, string> = {
+    roles: '角色', rolePolicies: '权限策略', users: '用户', memberships: '会员', branches: '城市分会',
+    events: '活动', orders: '订单', refunds: '退款', messages: '消息', knowledge: '知识库', audit: '审计',
+    grant: '授权', revoke: '撤销', create: '创建', update: '更新', save: '保存', publish: '发布',
+    withdraw: '撤回', archive: '归档', submit: '提交', changeStatus: '更改状态', view: '查看', enter: '进入',
+  }
+  return parts.length ? parts.map(part => tokens[part] || part).join(' · ') : '—'
+}
+
+function blockersLabel(value: unknown) {
+  const blockers = record(value)
+  const entries = [
+    ['activeMemberships', '会员'],
+    ['activeBranchAdmins', '管理员'],
+    ['publishedEvents', '活动'],
+    ['publishedOpportunities', '机会'],
+  ] as const
+  const values = entries
+    .filter(([key]) => blockers[key] !== undefined && blockers[key] !== null)
+    .map(([key, name]) => `${name} ${numberLabel(blockers[key])}`)
+  return values.length ? values.join(' · ') : '—'
 }
 
 function accessLabel(accessType: unknown, priceCents: unknown) {
