@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Buffer } from 'node:buffer'
-import { createHash } from 'node:crypto'
+import { createHash, createHmac } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
@@ -54,6 +54,13 @@ assertSeed(seed)
 const opportunityInteractions = seed.opportunityInteractions
 
 if (validateOnly) {
+  seed.mediaAssets = resolveDemoMediaAssets(seed.mediaAssets, {
+    appId,
+    bucket: 'demo-bucket',
+    envId: 'demo-env',
+    scopeSecret: 'demo-media-scope-secret-000000000000',
+    stage: 'test',
+  })
   const statements = buildSeedStatements()
   const statementBytes = statements.map(statement => Buffer.byteLength(statement, 'utf8'))
   const scope = assertSeedSqlScope([
@@ -73,7 +80,14 @@ if (validateOnly) {
   process.exit(0)
 }
 
-bindAndRequireMysqlEnvironment(root, envId, { development: true, stage })
+const { environment } = bindAndRequireMysqlEnvironment(root, envId, { development: true, stage })
+seed.mediaAssets = resolveDemoMediaAssets(seed.mediaAssets, {
+  appId,
+  bucket: findStorageBucket(environment),
+  envId,
+  scopeSecret: String(env.MIP_MEDIA_SCOPE_SECRET || ''),
+  stage,
+})
 assertTablesExist([
   'mip_city_branches',
   'mip_tags',
@@ -82,6 +96,7 @@ assertTablesExist([
   'mip_growth_rules',
   'mip_badges',
   'mip_users',
+  'mip_media_assets',
   'mip_membership_chains',
   'mip_branch_memberships',
   'mip_profiles',
@@ -164,6 +179,7 @@ if (sameAppCollisions > 0) {
   throw new Error('MIP demo seed conflicts with records outside the demo manifest; no seed writes were attempted')
 }
 
+const mediaUploadSummary = uploadDemoMediaAssets(seed.mediaAssets)
 const statements = buildSeedStatements()
 assertSeedSqlScope(statements)
 
@@ -206,6 +222,23 @@ const verification = callCloudbase(root, 'queryMysqlDatabase', {
     (SELECT COUNT(*) FROM mip_users
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.users.map(item => sqlLiteral(item.id)).join(', ')})) AS users,
+    (SELECT COUNT(*) FROM mip_media_assets
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND (${seed.mediaAssets.map(item => `(
+          id = ${sqlLiteral(item.id)} AND owner_user_id = ${sqlLiteral(item.ownerUserId)}
+          AND purpose = ${sqlLiteral(item.purpose)} AND object_key = ${sqlLiteral(item.objectKey)}
+          AND cloud_file_id = ${sqlLiteral(item.cloudFileId)}
+          AND content_sha256 = ${sqlLiteral(item.contentSha256)}
+          AND content_type = ${sqlLiteral(item.contentType)}
+          AND content_bytes = ${Number(item.contentBytes)}
+          AND width_px = ${Number(item.width)} AND height_px = ${Number(item.height)}
+          AND status = 'READY'
+        )`).join(' OR ')})) AS mediaAssets,
+    (SELECT COUNT(*) FROM mip_profiles
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND (${seed.users.map(item => `(
+          user_id = ${sqlLiteral(item.id)} AND avatar_asset_id = ${sqlLiteral(item.avatarAssetId)}
+        )`).join(' OR ')})) AS profilesWithAvatars,
     (SELECT COUNT(*) FROM mip_membership_chains
       WHERE app_id = ${sqlLiteral(appId)}
         AND user_id IN (${seed.users.map(item => sqlLiteral(item.id)).join(', ')})) AS membershipChains,
@@ -237,6 +270,11 @@ const verification = callCloudbase(root, 'queryMysqlDatabase', {
     (SELECT COUNT(*) FROM mip_events
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.events.map(item => sqlLiteral(item.id)).join(', ')})) AS events,
+    (SELECT COUNT(*) FROM mip_events
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND (${seed.events.filter(item => item.coverAssetId).map(item => `(
+          id = ${sqlLiteral(item.id)} AND cover_asset_id = ${sqlLiteral(item.coverAssetId)}
+        )`).join(' OR ')})) AS eventsWithCovers,
     (SELECT COUNT(*) FROM mip_events
       WHERE app_id = ${sqlLiteral(appId)}
         AND (${seed.events.map(item => `(
@@ -465,6 +503,8 @@ const expected = {
   rules: seed.growthRules.length,
   badges: seed.badges.length,
   users: seed.users.length,
+  mediaAssets: seed.mediaAssets.length,
+  profilesWithAvatars: seed.users.length,
   membershipChains: seed.users.length,
   membershipOrders: seed.membershipOrders.length,
   entitlements: seed.entitlements.length,
@@ -472,6 +512,7 @@ const expected = {
   eventTags: seed.eventTags.length,
   eventTagAssignments: demoEventTagAssignments(seed.events).length,
   events: seed.events.length,
+  eventsWithCovers: seed.events.filter(item => item.coverAssetId).length,
   eventTimelineSettings: seed.events.length,
   eventAlbumSettings: seed.events.length,
   eventAlbumRuntimeFixtures: seed.events.filter(item => item.albumEnabled).length,
@@ -534,9 +575,167 @@ fs.writeFileSync(path.join(root, '.tmp', 'seed-demo-result.json'), `${JSON.strin
   seedVersion: seed.version,
   replaceBeforeProduction: true,
   recordsVerified: expected,
+  mediaObjects: mediaUploadSummary,
   seededAt: new Date().toISOString(),
 }, null, 2)}\n`)
 console.log('[mip-seed] placeholder catalogs and fixed-ID demo fixtures verified; no environment or AppID was persisted')
+
+function resolveDemoMediaAssets(items, runtime) {
+  const { appId: runtimeAppId, bucket, envId: runtimeEnvId, scopeSecret, stage: runtimeStage } = runtime
+  if (!/^wx[0-9a-f]{16}$/i.test(runtimeAppId)
+    || !/^[\w-]{3,80}$/.test(runtimeEnvId)
+    || !/^[a-z0-9.-]{3,128}$/i.test(bucket)
+    || !['development', 'test'].includes(runtimeStage)
+    || typeof scopeSecret !== 'string' || scopeSecret.length < 32) {
+    throw new Error('Demo media runtime configuration is invalid')
+  }
+  const assetRoot = path.join(root, 'database', 'mysql', 'mip', 'demo-assets')
+  const appScope = mediaObjectScope(scopeSecret, runtimeAppId)
+  return items.map((item) => {
+    const localPath = path.resolve(root, item.sourcePath)
+    if (!localPath.startsWith(`${assetRoot}${path.sep}`) || item.extension !== 'jpg') {
+      throw new Error('Demo media source path is invalid')
+    }
+    const stat = fs.statSync(localPath)
+    if (!stat.isFile() || stat.size <= 0 || stat.size > 1024 * 1024) {
+      throw new Error('Demo media source file is invalid')
+    }
+    const content = fs.readFileSync(localPath)
+    const dimensions = inspectDemoJpeg(content)
+    if (dimensions.width !== item.width || dimensions.height !== item.height) {
+      throw new Error('Demo media source dimensions do not match the fixture')
+    }
+    const directory = item.purpose === 'AVATAR' ? 'avatars' : 'event-covers'
+    const userScope = mediaObjectScope(scopeSecret, `${runtimeAppId}\0${item.ownerUserId}`)
+    const objectKey = `mip/${runtimeStage}/${appScope}/${directory}/${userScope}/${item.id}.jpg`
+    const cloudFileId = `cloud://${runtimeEnvId}.${bucket}/${objectKey}`
+    return {
+      ...item,
+      localPath,
+      objectKey,
+      cloudFileId,
+      contentBytes: stat.size,
+      contentSha256: createHash('sha256').update(content).digest('hex'),
+      contentMd5: createHash('md5').update(content).digest('hex'),
+      contentType: 'image/jpeg',
+    }
+  })
+}
+
+function mediaObjectScope(secret, value) {
+  return createHmac('sha256', secret).update(value).digest('hex').slice(0, 24)
+}
+
+function inspectDemoJpeg(buffer) {
+  if (buffer.length < 4 || buffer[0] !== 0xFF || buffer[1] !== 0xD8) {
+    throw new Error('Demo media source must be a JPEG image')
+  }
+  const sofMarkers = new Set([0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF])
+  let offset = 2
+  while (offset + 3 < buffer.length) {
+    if (buffer[offset] !== 0xFF) {
+      offset += 1
+      continue
+    }
+    while (buffer[offset] === 0xFF) {
+      offset += 1
+    }
+    const marker = buffer[offset]
+    offset += 1
+    if (marker === 0xD9 || marker === 0xDA) {
+      break
+    }
+    if (marker === 0x00 || marker === 0x01 || (marker >= 0xD0 && marker <= 0xD7)) {
+      continue
+    }
+    if (offset + 2 > buffer.length) {
+      break
+    }
+    const length = buffer.readUInt16BE(offset)
+    if (length < 2 || offset + length > buffer.length) {
+      break
+    }
+    if (sofMarkers.has(marker) && length >= 7) {
+      return {
+        height: buffer.readUInt16BE(offset + 3),
+        width: buffer.readUInt16BE(offset + 5),
+      }
+    }
+    offset += length
+  }
+  throw new Error('Demo media JPEG dimensions could not be read')
+}
+
+function findStorageBucket(value) {
+  if (!value || typeof value !== 'object') {
+    return ''
+  }
+  if (Array.isArray(value.Storages) && typeof value.Storages[0]?.Bucket === 'string') {
+    return value.Storages[0].Bucket.trim()
+  }
+  for (const child of Object.values(value)) {
+    const bucket = findStorageBucket(child)
+    if (bucket) {
+      return bucket
+    }
+  }
+  return ''
+}
+
+function uploadDemoMediaAssets(items) {
+  let uploaded = 0
+  let reused = 0
+  for (const item of items) {
+    if (demoStorageObjectMatches(item)) {
+      reused += 1
+      continue
+    }
+    const result = callCloudbase(root, 'manageStorage', {
+      action: 'upload',
+      localPath: item.localPath,
+      cloudPath: item.objectKey,
+    }, 300000)
+    if (result?.success !== true || !demoStorageObjectMatches(item)) {
+      throw new Error(`Demo media upload did not converge for ${item.key}`)
+    }
+    uploaded += 1
+  }
+  return { uploaded, reused, total: items.length }
+}
+
+function demoStorageObjectMatches(item) {
+  const response = callCloudbase(root, 'queryStorage', {
+    action: 'info',
+    cloudPath: item.objectKey,
+  })
+  const fileInfo = findStorageFileInfo(response)
+  if (!fileInfo) {
+    return false
+  }
+  const etag = String(fileInfo.ETag || fileInfo.etag || '').replaceAll('"', '').toLowerCase()
+  const remoteSize = Number(fileInfo.Size ?? fileInfo.size)
+  const sizeMatches = remoteSize === item.contentBytes
+    || remoteSize === Number((item.contentBytes / 1024).toFixed(2))
+  return sizeMatches && etag === item.contentMd5
+}
+
+function findStorageFileInfo(value) {
+  if (!value || typeof value !== 'object') {
+    return null
+  }
+  if (!Array.isArray(value)
+    && ('Size' in value || 'size' in value)
+    && ('ETag' in value || 'etag' in value)) {
+    return value
+  }
+  for (const child of Object.values(value)) {
+    const found = findStorageFileInfo(child)
+    if (found) {
+      return found
+    }
+  }
+  return null
+}
 
 function buildSeedStatements() {
   return [
@@ -549,6 +748,7 @@ function buildSeedStatements() {
     badgeStatement(seed.badges),
     userStatement(seed.users),
     membershipChainStatement(seed.users),
+    mediaAssetStatement(seed.mediaAssets),
     branchMembershipResetStatement(seed.users),
     branchMembershipStatement(seed.users),
     userPrimaryBranchStatement(seed.users),
@@ -748,6 +948,27 @@ function userStatement(items) {
     status = 'ACTIVE', closed_at = NULL, primary_branch_id = NULL, version = version + 1`
 }
 
+function mediaAssetStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.ownerUserId)},
+    ${sqlLiteral(item.purpose)}, ${sqlLiteral(item.objectKey)}, ${sqlLiteral(item.cloudFileId)},
+    ${sqlLiteral(item.contentSha256)}, ${sqlLiteral(item.contentType)}, ${Number(item.contentBytes)},
+    ${Number(item.width)}, ${Number(item.height)}, 'READY'
+  )`).join(',\n')
+  return `INSERT INTO mip_media_assets (
+    id, app_id, owner_user_id, purpose, object_key, cloud_file_id,
+    content_sha256, content_type, content_bytes, width_px, height_px, status
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    owner_user_id = VALUES(owner_user_id), purpose = VALUES(purpose),
+    object_key = VALUES(object_key), cloud_file_id = VALUES(cloud_file_id),
+    content_sha256 = VALUES(content_sha256), content_type = VALUES(content_type),
+    content_bytes = VALUES(content_bytes), width_px = VALUES(width_px),
+    height_px = VALUES(height_px), status = 'READY'`
+}
+
 function membershipChainStatement(items) {
   return `INSERT INTO mip_membership_chains (
     app_id, user_id, version, created_at, updated_at
@@ -806,7 +1027,7 @@ function profileStatement(items) {
     influence: true,
   }
   const values = items.map(item => `(
-    ${sqlLiteral(appId)}, ${sqlLiteral(item.id)}, ${sqlLiteral(item.nickname)}, NULL,
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.id)}, ${sqlLiteral(item.nickname)}, ${sqlLiteral(item.avatarAssetId)},
     ${sqlLiteral(item.identityStatus)}, ${sqlLiteral(item.headline)}, ${sqlLiteral(item.introduction)},
     ${sqlJson(item.companies)}, ${sqlJson(item.organizations)}, ${sqlJson(visibility)}, 1
   )`).join(',\n')
@@ -815,7 +1036,7 @@ function profileStatement(items) {
     companies_json, organizations_json, visibility_json, version
   ) VALUES ${values}
   ON DUPLICATE KEY UPDATE
-    nickname = VALUES(nickname), avatar_asset_id = NULL,
+    nickname = VALUES(nickname), avatar_asset_id = VALUES(avatar_asset_id),
     identity_status = VALUES(identity_status), headline = VALUES(headline),
     introduction = VALUES(introduction), companies_json = VALUES(companies_json),
     organizations_json = VALUES(organizations_json), visibility_json = VALUES(visibility_json),
@@ -1015,7 +1236,7 @@ function eventStatement(items) {
   const values = items.map(item => `(
     ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, 'BRANCH', ${sqlLiteral(item.branchId)},
     ${sqlLiteral(item.organizerUserId)}, ${sqlLiteral(item.title)}, ${sqlLiteral(item.summary)},
-    ${sqlLiteral(item.description)}, ${sqlLiteral(item.notices)}, NULL,
+    ${sqlLiteral(item.description)}, ${sqlLiteral(item.notices)}, ${sqlLiteral(item.coverAssetId)},
     ${sqlLiteral(item.eventTypeKey)}, ${sqlLiteral(item.eventMode)}, ${sqlLiteral(item.accessType)},
     'AUTO', ${item.albumEnabled ? 1 : 0}, ${sqlLiteral(item.albumSubmissionPolicy)},
     ${sqlLiteral(item.status)}, 'PASSED', ${sqlLiteral(item.startsAt)}, ${sqlLiteral(item.endsAt)},
@@ -1039,7 +1260,7 @@ function eventStatement(items) {
     id = IF(id = VALUES(id), id, NULL),
     scope_type = 'BRANCH', branch_id = VALUES(branch_id), organizer_user_id = VALUES(organizer_user_id),
     title = VALUES(title), summary = VALUES(summary), description = VALUES(description),
-    notices = VALUES(notices), cover_asset_id = NULL, event_type_key = VALUES(event_type_key),
+    notices = VALUES(notices), cover_asset_id = VALUES(cover_asset_id), event_type_key = VALUES(event_type_key),
     event_mode = VALUES(event_mode), access_type = VALUES(access_type), registration_policy = 'AUTO',
     album_enabled = VALUES(album_enabled), album_submission_policy = VALUES(album_submission_policy),
     status = VALUES(status), content_safety_status = 'PASSED', starts_at = VALUES(starts_at),
@@ -2077,6 +2298,7 @@ function buildDemoManifest(value, state) {
       mip_growth_rules: value.growthRules.map(item => ({ id: item.id })),
       mip_badges: value.badges.map(item => ({ id: item.id })),
       mip_users: value.users.map(item => ({ id: item.id })),
+      mip_media_assets: value.mediaAssets.map(item => ({ id: item.id })),
       mip_membership_chains: value.users.map(item => ({ userId: item.id })),
       mip_branch_memberships: value.users.map(item => ({ branchId: item.branchId, userId: item.id })),
       mip_profiles: value.users.map(item => ({ userId: item.id })),
@@ -2182,6 +2404,7 @@ function assertSeed(value) {
     'growthLevels',
     'growthRules',
     'badges',
+    'mediaAssets',
     'users',
     'membershipOrders',
     'entitlements',
@@ -2273,6 +2496,7 @@ function assertDemoRelations(value) {
   const branchIds = new Set(value.branches.map(item => item.id))
   const tagById = new Map(value.tags.map(item => [item.id, item]))
   const userIds = new Set(value.users.map(item => item.id))
+  const mediaById = new Map(value.mediaAssets.map(item => [item.id, item]))
   const planById = new Map(value.membershipPlans.map(item => [item.id, item]))
   const orderById = new Map(value.membershipOrders.map(item => [item.id, item]))
   const eventIds = new Set(value.events.map(item => item.id))
@@ -2289,6 +2513,19 @@ function assertDemoRelations(value) {
     'visual_designer',
     'delivery_lead',
   ])
+  const avatarAssets = value.mediaAssets.filter(item => item.purpose === 'AVATAR')
+  const eventCoverAssets = value.mediaAssets.filter(item => item.purpose === 'EVENT_COVER')
+  if (mediaById.size !== value.mediaAssets.length
+    || avatarAssets.length !== value.users.length
+    || eventCoverAssets.length !== 3
+    || value.mediaAssets.some(item => !userIds.has(item.ownerUserId)
+      || !['AVATAR', 'EVENT_COVER'].includes(item.purpose)
+      || item.extension !== 'jpg'
+      || !/^database\/mysql\/mip\/demo-assets\/(?:avatars|events)\/[a-z0-9-]+\.jpg$/.test(item.sourcePath)
+      || !Number.isInteger(item.width) || !Number.isInteger(item.height)
+      || item.width < 64 || item.height < 64)) {
+    throw new Error('Demo media asset references are invalid')
+  }
   if (value.eventTags.length < 3 || eventTagById.size !== value.eventTags.length) {
     throw new Error('Demo event tags require at least three unique fixtures')
   }
@@ -2305,6 +2542,8 @@ function assertDemoRelations(value) {
   }
   for (const user of value.users) {
     if (!branchIds.has(user.branchId)
+      || mediaById.get(user.avatarAssetId)?.purpose !== 'AVATAR'
+      || mediaById.get(user.avatarAssetId)?.ownerUserId !== user.id
       || tagById.get(user.industryTagId)?.kind !== 'INDUSTRY'
       || !Array.isArray(user.abilityTagIds)
       || user.abilityTagIds.some(tagId => tagById.get(tagId)?.kind !== 'ABILITY')
@@ -2334,8 +2573,12 @@ function assertDemoRelations(value) {
     throw new Error('Demo players require one order and one entitlement each')
   }
   for (const event of value.events) {
+    const cover = event.coverAssetId ? mediaById.get(event.coverAssetId) : null
     if (!branchIds.has(event.branchId)
       || !userIds.has(event.organizerUserId)
+      || (event.startsAt.startsWith('2030-')
+        ? cover?.purpose !== 'EVENT_COVER' || cover.ownerUserId !== event.organizerUserId
+        : event.coverAssetId !== null)
       || !Array.isArray(event.tagIds) || event.tagIds.length === 0 || event.tagIds.length > 12
       || new Set(event.tagIds).size !== event.tagIds.length
       || event.tagIds.some(tagId => !eventTagById.has(tagId))
@@ -2366,6 +2609,7 @@ function assertDemoRelations(value) {
   }
   const longLivedEvents = value.events.filter(event => event.startsAt.startsWith('2030-'))
   if (!longLivedEvents.length
+    || new Set(longLivedEvents.map(event => event.coverAssetId)).size !== longLivedEvents.length
     || !longLivedEvents.some(event => event.tagIds.length === 1)
     || !longLivedEvents.some(event => event.tagIds.length > 1)
     || value.eventTags.some(tag => !value.events.some(event => event.tagIds.includes(tag.id)))) {

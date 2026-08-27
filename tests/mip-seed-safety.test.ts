@@ -138,8 +138,8 @@ describe('MIP demo seed ownership safety', () => {
     })
     expect(result.statementCount).toBeGreaterThan(Object.keys(SEED_TABLES).length)
     expect(result.tableCount).toBeGreaterThan(Object.keys(SEED_TABLES).length)
-    expect(result.fixtureGroups).toBe(43)
-    expect(result.tableCount).toBe(64)
+    expect(result.fixtureGroups).toBe(44)
+    expect(result.tableCount).toBe(65)
     expect(result.maxStatementBytes).toBeLessThan(30 * 1024)
   })
 
@@ -235,6 +235,22 @@ describe('MIP demo seed ownership safety', () => {
     expect(source).toContain('mip_event_hearts:')
     expect(source).toContain('mip_profile_visits:')
     expect(source).toContain('mip_membership_chains:')
+    expect(source).toContain('mip_media_assets:')
+  })
+
+  it('uploads and binds nine READY demo media objects without storing temporary URLs', () => {
+    const source = fs.readFileSync(path.join(root, 'scripts/seed-demo.mjs'), 'utf8')
+    expect(seed.mediaAssets).toHaveLength(9)
+    expect(new Set(seed.users.map((item: { avatarAssetId: string }) => item.avatarAssetId)).size).toBe(6)
+    expect(new Set(seed.events
+      .filter((item: { startsAt: string }) => item.startsAt.startsWith('2030-'))
+      .map((item: { coverAssetId: string }) => item.coverAssetId)).size).toBe(3)
+    expect(source).toContain('callCloudbase(root, \'manageStorage\'')
+    expect(source).toContain('callCloudbase(root, \'queryStorage\'')
+    expect(source).toContain('status = \'READY\'')
+    expect(source).not.toMatch(/temporaryUrl\s*[:=]/)
+    expect(source).toContain('avatar_asset_id = VALUES(avatar_asset_id)')
+    expect(source).toContain('cover_asset_id = VALUES(cover_asset_id)')
   })
 
   it('keeps demo users out of the platform-owner bootstrap path', () => {

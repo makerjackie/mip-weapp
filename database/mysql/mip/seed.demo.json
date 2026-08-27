@@ -1,5 +1,5 @@
 {
-  "version": "2026-08-27-demo.12",
+  "version": "2026-08-27-demo.13",
   "replaceBeforeProduction": true,
   "branches": [
     {
@@ -113,14 +113,26 @@
     { "id": "41000000-0000-4000-8000-000000000003", "key": "referral_confirmed", "name": "确认有效引荐", "metric": "CONTRIBUTION", "deltaValue": 20, "dailyLimitValue": 100, "sourceEventType": "referral.confirmed", "status": "DRAFT" },
     { "id": "41000000-0000-4000-8000-000000000004", "key": "case_published", "name": "发布超级案例", "metric": "EXPERIENCE", "deltaValue": 80, "dailyLimitValue": 160, "sourceEventType": "super_case.published", "status": "DRAFT" }
   ],
+  "mediaAssets": [
+    { "id": "58000000-0000-4000-8000-000000000001", "key": "demo_avatar_lin_xia", "purpose": "AVATAR", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/avatars/lin-xia.jpg", "extension": "jpg", "width": 512, "height": 512 },
+    { "id": "58000000-0000-4000-8000-000000000002", "key": "demo_avatar_zhou_heng", "purpose": "AVATAR", "ownerUserId": "50000000-0000-4000-8000-000000000002", "sourcePath": "database/mysql/mip/demo-assets/avatars/zhou-heng.jpg", "extension": "jpg", "width": 512, "height": 512 },
+    { "id": "58000000-0000-4000-8000-000000000003", "key": "demo_avatar_chen_yuan", "purpose": "AVATAR", "ownerUserId": "50000000-0000-4000-8000-000000000003", "sourcePath": "database/mysql/mip/demo-assets/avatars/chen-yuan.jpg", "extension": "jpg", "width": 512, "height": 512 },
+    { "id": "58000000-0000-4000-8000-000000000004", "key": "demo_avatar_tang_qiao", "purpose": "AVATAR", "ownerUserId": "50000000-0000-4000-8000-000000000004", "sourcePath": "database/mysql/mip/demo-assets/avatars/tang-qiao.jpg", "extension": "jpg", "width": 512, "height": 512 },
+    { "id": "58000000-0000-4000-8000-000000000005", "key": "demo_avatar_su_he", "purpose": "AVATAR", "ownerUserId": "50000000-0000-4000-8000-000000000005", "sourcePath": "database/mysql/mip/demo-assets/avatars/su-he.jpg", "extension": "jpg", "width": 512, "height": 512 },
+    { "id": "58000000-0000-4000-8000-000000000006", "key": "demo_avatar_gu_ning", "purpose": "AVATAR", "ownerUserId": "50000000-0000-4000-8000-000000000006", "sourcePath": "database/mysql/mip/demo-assets/avatars/gu-ning.jpg", "extension": "jpg", "width": 512, "height": 512 },
+    { "id": "58000000-0000-4000-8000-000000000011", "key": "demo_event_cover_ai_collaboration", "purpose": "EVENT_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-morning-ai-collaboration.jpg", "extension": "jpg", "width": 1200, "height": 675 },
+    { "id": "58000000-0000-4000-8000-000000000012", "key": "demo_event_cover_resource_matching", "purpose": "EVENT_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-morning-resource-matching.jpg", "extension": "jpg", "width": 1200, "height": 675 },
+    { "id": "58000000-0000-4000-8000-000000000013", "key": "demo_event_cover_project_collaboration", "purpose": "EVENT_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-morning-project-collaboration.jpg", "extension": "jpg", "width": 1200, "height": 675 }
+  ],
   "users": [
     {
       "id": "50000000-0000-4000-8000-000000000001",
       "key": "demo_lin_xia",
+      "avatarAssetId": "58000000-0000-4000-8000-000000000001",
       "nickname": "林夏（演示）",
       "identityStatus": "Founder",
       "headline": "企业服务渠道合作",
-      "introduction": "用于 MIP 开发联调的虚构玩家资料。",
+      "introduction": "专注企业服务渠道合作，擅长识别合作机会、连接客户与服务团队，近期希望帮助更多成长型企业完成资源对接。",
       "branchId": "10000000-0000-4000-8000-000000000001",
       "industryTagId": "21000000-0000-4000-8000-000000000001",
       "abilityTagIds": ["22000000-0000-4000-8000-000000000001", "22000000-0000-4000-8000-000000000002"],
@@ -133,10 +145,11 @@
     {
       "id": "50000000-0000-4000-8000-000000000002",
       "key": "demo_zhou_heng",
+      "avatarAssetId": "58000000-0000-4000-8000-000000000002",
       "nickname": "周衡（演示）",
       "identityStatus": "Operator",
       "headline": "商业模式与增长设计",
-      "introduction": "用于 MIP 开发联调的虚构玩家资料。",
+      "introduction": "长期参与商业模式和增长项目，擅长梳理盈利结构、测算关键指标并推动跨团队落地。",
       "branchId": "10000000-0000-4000-8000-000000000002",
       "industryTagId": "21000000-0000-4000-8000-000000000006",
       "abilityTagIds": ["22000000-0000-4000-8000-000000000004", "22000000-0000-4000-8000-000000000006"],
@@ -149,10 +162,11 @@
     {
       "id": "50000000-0000-4000-8000-000000000003",
       "key": "demo_chen_yuan",
+      "avatarAssetId": "58000000-0000-4000-8000-000000000003",
       "nickname": "陈远（演示）",
       "identityStatus": "Investor",
       "headline": "消费与科技项目投资",
-      "introduction": "用于 MIP 开发联调的虚构玩家资料。",
+      "introduction": "关注消费与科技领域的早期项目，擅长投资分析、融资方案设计和产业资源协同。",
       "branchId": "10000000-0000-4000-8000-000000000003",
       "industryTagId": "21000000-0000-4000-8000-000000000008",
       "abilityTagIds": ["22000000-0000-4000-8000-000000000003", "22000000-0000-4000-8000-000000000002"],
@@ -165,10 +179,11 @@
     {
       "id": "50000000-0000-4000-8000-000000000004",
       "key": "demo_tang_qiao",
+      "avatarAssetId": "58000000-0000-4000-8000-000000000004",
       "nickname": "唐乔（演示）",
       "identityStatus": "Product Planner",
       "headline": "产品与品牌项目策划",
-      "introduction": "用于 MIP 开发联调的虚构嘉宾资料。",
+      "introduction": "负责产品与品牌项目策划，擅长把业务目标整理为可执行的产品方案和内容计划。",
       "branchId": "10000000-0000-4000-8000-000000000004",
       "industryTagId": "21000000-0000-4000-8000-000000000004",
       "abilityTagIds": ["22000000-0000-4000-8000-000000000004"],
@@ -181,10 +196,11 @@
     {
       "id": "50000000-0000-4000-8000-000000000005",
       "key": "demo_su_he",
+      "avatarAssetId": "58000000-0000-4000-8000-000000000005",
       "nickname": "苏禾（演示）",
       "identityStatus": "Designer",
       "headline": "品牌视觉与包装设计",
-      "introduction": "用于 MIP 开发联调的虚构嘉宾资料。",
+      "introduction": "从事品牌视觉与包装设计，关注清晰的视觉表达、品牌一致性和实际交付质量。",
       "branchId": "10000000-0000-4000-8000-000000000001",
       "industryTagId": "21000000-0000-4000-8000-000000000005",
       "abilityTagIds": ["22000000-0000-4000-8000-000000000005"],
@@ -197,10 +213,11 @@
     {
       "id": "50000000-0000-4000-8000-000000000006",
       "key": "demo_gu_ning",
+      "avatarAssetId": "58000000-0000-4000-8000-000000000006",
       "nickname": "顾宁（演示）",
       "identityStatus": "Project Manager",
       "headline": "复杂项目交付与团队协同",
-      "introduction": "用于 MIP 开发联调的虚构嘉宾资料。",
+      "introduction": "负责复杂项目交付与团队协同，擅长拆解目标、管理进度并协调多方资源解决阻塞。",
       "branchId": "10000000-0000-4000-8000-000000000002",
       "industryTagId": "21000000-0000-4000-8000-000000000003",
       "abilityTagIds": ["22000000-0000-4000-8000-000000000006", "22000000-0000-4000-8000-000000000002"],
@@ -230,6 +247,7 @@
     {
       "id": "60000000-0000-4000-8000-000000000001",
       "key": "demo_event_2030_shenzhen_morning_1",
+      "coverAssetId": "58000000-0000-4000-8000-000000000011",
       "branchId": "10000000-0000-4000-8000-000000000001",
       "organizerUserId": "50000000-0000-4000-8000-000000000001",
       "title": "MIP 早会（2030 年 9 月）",
@@ -258,6 +276,7 @@
     {
       "id": "60000000-0000-4000-8000-000000000002",
       "key": "demo_event_2030_shenzhen_morning_2",
+      "coverAssetId": "58000000-0000-4000-8000-000000000012",
       "branchId": "10000000-0000-4000-8000-000000000001",
       "organizerUserId": "50000000-0000-4000-8000-000000000001",
       "title": "MIP 早会（2030 年 10 月）",
@@ -286,6 +305,7 @@
     {
       "id": "60000000-0000-4000-8000-000000000004",
       "key": "demo_event_2030_shenzhen_morning_3",
+      "coverAssetId": "58000000-0000-4000-8000-000000000013",
       "branchId": "10000000-0000-4000-8000-000000000001",
       "organizerUserId": "50000000-0000-4000-8000-000000000001",
       "title": "MIP 早会（2030 年 11 月）",
@@ -317,6 +337,7 @@
     {
       "id": "60000000-0000-4000-8000-000000000003",
       "key": "demo_event_2026_interaction",
+      "coverAssetId": null,
       "branchId": "10000000-0000-4000-8000-000000000001",
       "organizerUserId": "50000000-0000-4000-8000-000000000001",
       "title": "MIP 城市互动交流会（演示）",

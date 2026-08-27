@@ -6,6 +6,7 @@ const SEED_TABLES = Object.freeze({
   growthRules: 'mip_growth_rules',
   badges: 'mip_badges',
   users: 'mip_users',
+  mediaAssets: 'mip_media_assets',
   membershipOrders: 'mip_orders',
   entitlements: 'mip_membership_entitlements',
   eventTags: 'mip_event_tags',
@@ -114,6 +115,12 @@ export function buildSeedCollisionQuery(appId, seed) {
   selects.push(alternateKeySelect(appId, 'mip_growth_levels', seed.growthLevels, item => `(level_key = ${literal(item.key)} OR minimum_experience = ${Number(item.minimumExperience)})`))
   selects.push(alternateKeySelect(appId, 'mip_growth_rules', seed.growthRules, item => `rule_key = ${literal(item.key)}`))
   selects.push(alternateKeySelect(appId, 'mip_badges', seed.badges, item => `badge_key = ${literal(item.key)}`))
+  selects.push(alternateKeySelect(
+    appId,
+    'mip_media_assets',
+    seed.mediaAssets,
+    item => `object_key LIKE ${literal(`%/${item.id}.${item.extension}`)}`,
+  ))
   selects.push(alternateKeySelect(appId, 'mip_orders', seed.membershipOrders, (item, index) => `(merchant_order_no = ${literal(`MIP-DEMO-MEMBER-${index + 1}`)}
       OR (user_id = ${literal(item.userId)} AND order_type = 'MEMBERSHIP'
         AND idempotency_key = ${literal(item.key)}))`))
