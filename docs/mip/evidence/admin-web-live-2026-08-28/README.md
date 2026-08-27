@@ -1,4 +1,4 @@
-# 独立 Web 管理端线上只读验收
+# 独立 Web 管理端线上验收
 
 验收日期：2026-08-28。目标：`https://mipmini.01mvp.com/`。
 
@@ -25,10 +25,12 @@
 | 消息活动 | `mip.admin.messageCampaigns.list` | 200 | 1 |
 | 知识内容 | `mip.admin.knowledge.list` | 200 | 3 |
 
-条目数只记录本次开发环境快照，不是固定业务口径。BFF 另开放并测试 `rolePolicies.list`、`audit.list` 和 `messageTemplates.list`，合计 12 条只读 action；当前一级页面未单独展示这三张表。
+条目数只记录本次开发环境快照，不是固定业务口径。BFF 当前合计开放 33 条受审只读 action；除一级页面外，本次还真实读取了用户详情、活动详情/洞察/报名名单、订单详情/支付尝试、消息活动详情和知识内容详情/采集计划。未展示的受审 action 仍由 fail-closed 合同测试覆盖。
+
+签名请求在进入 `AdminApplication` 前会把一次性 nonce 写入 `mip_web_bff_requests`；重复 nonce 或存储不可用时拒绝请求。4 条已有领域持久业务幂等保护的 mutation 已通过服务端精确白名单开放：补录会员、克隆活动、发布活动提醒和提交退款。网页端尚未提供这些写操作表单，因此本次线上验收没有制造业务写入。
 
 ## 边界
 
-- 本证据证明线上身份闭环和第一批真实只读查询可用。
-- 本证据不证明详情、编辑、上传、导出、支付、手机号或任何 mutation/CRUD 已完成。
+- 本证据证明线上身份闭环、7 个一级页面和 5 类真实详情查询可用。
+- 本证据不证明网页写操作表单、其余 CRUD、上传、导出、正式支付或手机号真机能力已完成。
 - Web BFF 和 CloudBase adapter 都从生成的 operation contract 校验已开放 action 必须保持 `QUERY`、`safeToRetry=true`、认证和会话必需；合同漂移时失败关闭。

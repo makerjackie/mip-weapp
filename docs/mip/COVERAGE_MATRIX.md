@@ -4,7 +4,7 @@
 
 固定 PRD 的 1–81 项逐行状态见 [PRD_81_MATRIX.md](PRD_81_MATRIX.md)。本文件继续按业务闭环和 Figma 代表 frame 汇总，二者必须同时满足才能进入最终验收。
 
-当前工程声明 110 条小程序路由、16 个核心 `mip-*` 云函数和 55 个锁定迁移。历史完整移动端基线 `.tmp/runtime-evidence/2026-08-27-figma-alignment-r4/report.json` 只覆盖当时的 108 条路由；新增名片设置和徽章详情后，必须重新生成当前 110 条全量证据。当前 Owner 的 6000 元会员、399 元活动订单、3 场未来活动、3 个 NPC 任务、3 枚带图片的已佩戴徽章和个人名片非空态继续作为定向补充，不得与新的全量结论混写。1024px 管理端代表页证据见 [响应式密度验收](evidence/admin-density-2026-08-26/README.md)。
+当前工程声明 110 条小程序路由、16 个核心 `mip-*` 云函数和 56 个锁定迁移。历史完整移动端基线 `.tmp/runtime-evidence/2026-08-27-figma-alignment-r4/report.json` 只覆盖当时的 108 条路由；新增名片设置和徽章详情后，必须重新生成当前 110 条全量证据。当前 Owner 的 6000 元会员、399 元活动订单、3 场未来活动、3 个 NPC 任务、3 枚带图片的已佩戴徽章和个人名片非空态继续作为定向补充，不得与新的全量结论混写。1024px 管理端代表页证据见 [响应式密度验收](evidence/admin-density-2026-08-26/README.md)。
 
 ## 来源
 
@@ -109,7 +109,7 @@
 
 ## WorkBuddy 管理端功能 PRD V0.4
 
-来源和内部映射见 [ADMIN_WEB.md](ADMIN_WEB.md)，代表截图见 [evidence/admin-web-2026-08-25](evidence/admin-web-2026-08-25/README.md)，线上读回见 [evidence/admin-web-live-2026-08-28](evidence/admin-web-live-2026-08-28/README.md)。WorkBuddy 仍只作为功能输入；独立 Web 已部署，真实管理员确认与 12 条只读 action 已通过。详情和全部 CRUD 未完成。
+来源和内部映射见 [ADMIN_WEB.md](ADMIN_WEB.md)，代表截图见 [evidence/admin-web-2026-08-25](evidence/admin-web-2026-08-25/README.md)，线上读回见 [evidence/admin-web-live-2026-08-28](evidence/admin-web-live-2026-08-28/README.md)。WorkBuddy 仍只作为功能输入；独立 Web 已部署，真实管理员确认、33 条只读 action、7 个一级页面与 5 类详情已通过。4 条持久幂等 mutation 已形成服务端链路，完整网页 CRUD 未完成。
 
 | 范围 | 状态 | 当前证据与缺口 |
 | --- | --- | --- |
@@ -118,8 +118,8 @@
 | 活动复制与手机预览 | `implemented-local` | 复制活动和未保存草稿预览已形成管理 action、页面入口和聚焦测试；真实媒体仍按真机边界验收 |
 | 消息模板、定时与失败复核 | `implemented-local` | 模板、活动、收件人快照、定时发送、失败复核和 outbox 已本地实现；正式微信模板及 scheduler 云端 canary 为 `external-wait` |
 | 网页管理员认证与会话 | `implemented-local` | 真实管理员已在微信开发者工具确认登录，浏览器进入 `AUTHENTICATED` 并成功读取真实概览；该结论只覆盖当前确认登录与会话闭环 |
-| 网页端平台/分会/活动 RBAC | `partial-local` | 12 条只读 API 复用 trusted principal 并在请求时重读 scope/capability；7 个一级页面已接入真实列表，详情和全部 mutation/CRUD 尚未完成 |
-| 网页端视觉与可访问性 | `implemented-local` | 独立 Web 工程完成 390px/1280px 响应式布局并部署到 `https://mipmini.01mvp.com/`；7 个一级页面均有真实只读数据，不再用页面壳层冒充完成 |
+| 网页端平台/分会/活动 RBAC | `partial-local` | 33 条只读 API 与 4 条精确白名单 mutation 复用 trusted principal 并在请求时重读 scope/capability；用户、活动、订单、消息、知识库详情已接入，网页表单和其余 CRUD 尚未完成 |
+| 网页端视觉与可访问性 | `implemented-local` | 独立 Web 工程完成 390px/1280px 响应式布局、列表和详情抽屉并部署到 `https://mipmini.01mvp.com/`；7 个一级页面均有真实数据，不再用页面壳层冒充完成 |
 
 ## Figma 代表 frame
 
