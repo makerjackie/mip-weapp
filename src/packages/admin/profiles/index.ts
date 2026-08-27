@@ -72,7 +72,7 @@ const userStatusThemes: Record<AdminUser['status'], AdminUserView['statusTheme']
 
 const membershipStatusLabels: Record<string, string> = {
   PENDING: '待生效',
-  ACTIVE: '已结束',
+  ACTIVE: '生效中',
   EXPIRED: '已过期',
   REVOKED: '已撤销',
   REFUNDED: '已退款',
