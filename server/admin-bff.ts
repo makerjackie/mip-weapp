@@ -100,6 +100,13 @@ const ALLOWED_QUERY_ACTIONS = new Set([
   'mip.admin.knowledge.get',
   'mip.admin.knowledge.schedules.list',
 ])
+const ALLOWED_MUTATION_ACTIONS = new Set([
+  'mip.admin.memberships.grant',
+  'mip.admin.events.clone',
+  'mip.admin.communications.publishEventReminder',
+  'mip.admin.refunds.submit',
+])
+const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_.:-]{12,128}$/
 const encoder = new TextEncoder()
 
 export function createAdminBff(
@@ -272,8 +279,13 @@ export function createAdminBff(
     if (!session) return adminError('AUTH_REQUIRED', '请登录后继续', 401)
     const adminRequest = await readAdminRequest(request)
     if (!adminRequest) return adminError('VALIDATION_FAILED', '运营请求格式无效', 400)
-    if (!ALLOWED_QUERY_ACTIONS.has(adminRequest.action)) {
-      return adminError('FORBIDDEN', 'Web 管理端当前仅开放只读操作', 403)
+    const isQuery = ALLOWED_QUERY_ACTIONS.has(adminRequest.action)
+    const isMutation = ALLOWED_MUTATION_ACTIONS.has(adminRequest.action)
+    if (!isQuery && !isMutation) {
+      return adminError('FORBIDDEN', 'Web 管理端当前未开放该操作', 403)
+    }
+    if (isMutation && !validIdempotencyKey(adminRequest.idempotencyKey)) {
+      return adminError('IDEMPOTENCY_KEY_REQUIRED', '写操作必须提供有效的业务幂等键', 400)
     }
 
     const unsigned = {
@@ -295,11 +307,11 @@ export function createAdminBff(
     }
     catch (error) {
       console.error('[mip-admin-bff] upstream fetch failed', error instanceof Error ? error.message : 'unknown error')
-      return adminError('SERVICE_UNAVAILABLE', '运营服务暂时不可用', 503, true)
+      return adminError('SERVICE_UNAVAILABLE', '运营服务暂时不可用', 503, isQuery)
     }
     const payload = await safeJson(upstream)
     if (!isAdminResponse(payload)) {
-      return adminError('SERVICE_UNAVAILABLE', '运营服务返回格式无效', 502, true)
+      return adminError('SERVICE_UNAVAILABLE', '运营服务返回格式无效', 502, isQuery)
     }
     return json(payload, upstream.ok ? 200 : upstream.status, { 'cache-control': 'no-store' })
   }
@@ -401,6 +413,10 @@ function allowedAppIds(value: string | undefined) {
 
 function identifier(value: unknown, maximum: number): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= maximum && /^[A-Za-z0-9_-]+$/.test(value)
+}
+
+function validIdempotencyKey(value: unknown): value is string {
+  return typeof value === 'string' && IDEMPOTENCY_KEY_PATTERN.test(value)
 }
 
 function validSecret(value: string | undefined) {

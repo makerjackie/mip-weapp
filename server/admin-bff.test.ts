@@ -46,6 +46,12 @@ const REVIEWED_QUERY_ACTIONS = [
   'mip.admin.knowledge.get',
   'mip.admin.knowledge.schedules.list',
 ] as const
+const REVIEWED_MUTATION_ACTIONS = [
+  'mip.admin.memberships.grant',
+  'mip.admin.events.clone',
+  'mip.admin.communications.publishEventReminder',
+  'mip.admin.refunds.submit',
+] as const
 
 interface Row {
   id: string
@@ -298,6 +304,74 @@ describe('Admin Web BFF', () => {
       assert.equal(response.status, 403, action)
     }
     assert.equal(fetchMock.calls.length, 0)
+  })
+
+  it('forwards only the reviewed mutations with a business idempotency key and fresh nonce', async () => {
+    const fetchMock = fetchQueue(...REVIEWED_MUTATION_ACTIONS.map(action => new Response(JSON.stringify({
+      ok: true,
+      data: { action },
+    }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    })))
+    const { bff, sessionCookie } = await confirmedLogin(fetchMock)
+
+    for (const [index, action] of REVIEWED_MUTATION_ACTIONS.entries()) {
+      const response = await bff.handle(new Request(`${ORIGIN}/api/admin`, {
+        method: 'POST',
+        headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          contractVersion: 1,
+          action,
+          idempotencyKey: `web-mutation-${index.toString().padStart(2, '0')}`,
+          input: {},
+        }),
+      }))
+      assert.equal(response.status, 200, action)
+      assert.deepEqual(await response.json(), { ok: true, data: { action } }, action)
+    }
+
+    const envelopes = fetchMock.calls.map(([, init]) => JSON.parse(String(init?.body)))
+    assert.deepEqual(envelopes.map((envelope) => envelope.request.action), REVIEWED_MUTATION_ACTIONS)
+    assert.deepEqual(envelopes.map((envelope) => envelope.request.idempotencyKey), [
+      'web-mutation-00', 'web-mutation-01', 'web-mutation-02', 'web-mutation-03',
+    ])
+    assert.ok(envelopes.every((envelope) => /^[A-Za-z0-9_-]{32}$/.test(envelope.nonce)))
+    assert.equal(new Set(envelopes.map((envelope) => envelope.nonce)).size, envelopes.length)
+  })
+
+  it('rejects mutation requests without a valid idempotency key and never retries upstream', async () => {
+    const fetchMock = fetchQueue()
+    const { bff, sessionCookie } = await confirmedLogin(fetchMock)
+    const request = (action: string, idempotencyKey?: unknown) => new Request(`${ORIGIN}/api/admin`, {
+      method: 'POST',
+      headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
+      body: JSON.stringify({ contractVersion: 1, action, input: {}, ...(idempotencyKey === undefined ? {} : { idempotencyKey }) }),
+    })
+
+    for (const key of [undefined, '', 'too-short', 'web mutation key with spaces']) {
+      const response = await bff.handle(request('mip.admin.events.clone', key))
+      assert.equal(response.status, 400)
+      assert.deepEqual(await response.json(), {
+        ok: false,
+        error: { code: 'IDEMPOTENCY_KEY_REQUIRED', message: '写操作必须提供有效的业务幂等键', retryable: false },
+      })
+    }
+    assert.equal(fetchMock.calls.length, 0)
+
+    let upstreamAttempts = 0
+    const throwingFetch = Object.assign((async () => {
+      upstreamAttempts += 1
+      throw new Error('NETWORK_DOWN')
+    }) as typeof fetch, { calls: [] })
+    const networkBff = createAdminBff(env(), { fetch: throwingFetch, now: () => NOW })
+    const response = await networkBff.handle(request('mip.admin.refunds.submit', 'web-refund-request-01'))
+    assert.equal(response.status, 503)
+    assert.deepEqual(await response.json(), {
+      ok: false,
+      error: { code: 'SERVICE_UNAVAILABLE', message: '运营服务暂时不可用', retryable: false },
+    })
+    assert.equal(upstreamAttempts, 1)
   })
 
   it('uses the same canonical signing representation as the CloudBase adapter', () => {
