@@ -4,10 +4,35 @@ interface RecordedVoice {
   durationMs: number
 }
 
+interface RecorderSession {
+  resolve: (value: RecordedVoice) => void
+  reject: (reason?: unknown) => void
+  state: 'idle' | 'recording' | 'resolving' | 'settled'
+}
+
 export interface MipVoiceRecorder {
   start: () => void
   stop: () => void
   result: Promise<RecordedVoice>
+}
+
+let recorderManager: WechatMiniprogram.RecorderManager | undefined
+let activeSession: RecorderSession | undefined
+
+function settleSession(session: RecorderSession, result?: RecordedVoice, error?: unknown) {
+  if (session.state === 'settled') {
+    return
+  }
+  session.state = 'settled'
+  if (activeSession === session) {
+    activeSession = undefined
+  }
+  if (error !== undefined) {
+    session.reject(error)
+  }
+  else if (result) {
+    session.resolve(result)
+  }
 }
 
 function readBase64(filePath: string) {
@@ -27,35 +52,68 @@ function readBase64(filePath: string) {
   })
 }
 
+function getRecorderManager() {
+  if (!recorderManager) {
+    recorderManager = wx.getRecorderManager()
+    recorderManager.onStop((event) => {
+      const session = activeSession
+      if (!session || session.state !== 'recording') {
+        return
+      }
+      session.state = 'resolving'
+      void readBase64(event.tempFilePath).then(audioBase64 => settleSession(session, {
+        audioBase64,
+        contentType: 'audio/mpeg',
+        durationMs: Number(event.duration || 0),
+      }), error => settleSession(session, undefined, error))
+    })
+    recorderManager.onError((error) => {
+      const session = activeSession
+      if (session && (session.state === 'recording' || session.state === 'resolving')) {
+        settleSession(session, undefined, new Error(error.errMsg || '录音失败'))
+      }
+    })
+  }
+  return recorderManager
+}
+
 export function createMipVoiceRecorder(): MipVoiceRecorder {
-  const recorder = wx.getRecorderManager()
-  let settleResolve: (value: RecordedVoice) => void
-  let settleReject: (reason?: unknown) => void
+  const recorder = getRecorderManager()
+  let session: RecorderSession | undefined
   const result = new Promise<RecordedVoice>((resolve, reject) => {
-    settleResolve = resolve
-    settleReject = reject
+    session = { resolve, reject, state: 'idle' }
   })
-  recorder.onStop((event) => {
-    void readBase64(event.tempFilePath).then(audioBase64 => settleResolve({
-      audioBase64,
-      contentType: 'audio/mpeg',
-      durationMs: Number(event.duration || 0),
-    }), settleReject)
-  })
-  recorder.onError(error => settleReject(new Error(error.errMsg || '录音失败')))
   return {
     result,
     start() {
-      recorder.start({
-        duration: 60_000,
-        sampleRate: 16_000,
-        numberOfChannels: 1,
-        encodeBitRate: 48_000,
-        format: 'mp3',
-      })
+      if (!session || session.state !== 'idle') {
+        throw new Error('录音已开始')
+      }
+      if (activeSession) {
+        const error = new Error('录音正在进行')
+        settleSession(session, undefined, error)
+        throw error
+      }
+      activeSession = session
+      session.state = 'recording'
+      try {
+        recorder.start({
+          duration: 60_000,
+          sampleRate: 16_000,
+          numberOfChannels: 1,
+          encodeBitRate: 48_000,
+          format: 'mp3',
+        })
+      }
+      catch (error) {
+        settleSession(session, undefined, error)
+        throw error
+      }
     },
     stop() {
-      recorder.stop()
+      if (session?.state === 'recording' && activeSession === session) {
+        recorder.stop()
+      }
     },
   }
 }

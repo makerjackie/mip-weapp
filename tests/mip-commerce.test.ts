@@ -141,6 +141,14 @@ describe('MIP membership commerce', () => {
       catalogStage: 'TEST',
     }).payOrder(order('CREATED').id)).resolves.toMatchObject({ kind: 'CONFIRMED' })
 
+    gateway.reconcileOrder.mockClear()
+    payment.request.mockResolvedValueOnce('CANCELLED')
+    await expect(createMipCommerceModule(gateway, payment, {
+      paymentMode: 'test',
+      catalogStage: 'TEST',
+    }).payOrder(order('CREATED').id)).resolves.toMatchObject({ kind: 'CANCELLED' })
+    expect(gateway.reconcileOrder).not.toHaveBeenCalled()
+
     gateway.reconcileOrder.mockRejectedValueOnce(new Error('PAYMENT_QUERY_UNAVAILABLE'))
     await expect(createMipCommerceModule(gateway, payment, {
       paymentMode: 'test',

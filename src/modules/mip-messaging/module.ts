@@ -12,23 +12,25 @@ export function createMipMessagingModule(
   let firstPageLoadedAt = 0
   let generation = 0
 
+  async function listInbox(cursor?: string, options: { force?: boolean, limit?: number } = {}) {
+    if (!cursor && !options.force && firstPage) {
+      return firstPage
+    }
+    const loadGeneration = generation
+    const result = await gateway.listInbox(cursor, Math.min(30, Math.max(1, options.limit || 20)))
+    if (!cursor && loadGeneration === generation) {
+      firstPage = result
+      firstPageLoadedAt = Date.now()
+    }
+    return result
+  }
+
   return {
     peekInbox() {
       return firstPage
     },
 
-    async listInbox(cursor?: string, options: { force?: boolean, limit?: number } = {}) {
-      if (!cursor && !options.force && firstPage) {
-        return firstPage
-      }
-      const loadGeneration = generation
-      const result = await gateway.listInbox(cursor, Math.min(30, Math.max(1, options.limit || 20)))
-      if (!cursor && loadGeneration === generation) {
-        firstPage = result
-        firstPageLoadedAt = Date.now()
-      }
-      return result
-    },
+    listInbox,
 
     peekUnreadCount() {
       return firstPage?.unreadCount
@@ -39,7 +41,7 @@ export function createMipMessagingModule(
       if (!options.force && firstPage && Date.now() - firstPageLoadedAt < maxAgeMs) {
         return firstPage.unreadCount
       }
-      const page = await this.listInbox(undefined, { force: true, limit: 1 })
+      const page = await listInbox(undefined, { force: true, limit: 1 })
       return page.unreadCount
     },
 

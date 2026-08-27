@@ -92,10 +92,13 @@ describe('MIP messaging', () => {
     await expect(module.refreshUnreadCount()).resolves.toBe(1)
     await expect(module.refreshUnreadCount()).resolves.toBe(1)
     expect(listInbox).toHaveBeenCalledTimes(1)
+    const { refreshUnreadCount } = module
+    await expect(refreshUnreadCount({ force: true })).resolves.toBe(1)
+    expect(listInbox).toHaveBeenCalledTimes(2)
     await module.markRead(messageId)
     expect(module.peekUnreadCount()).toBe(0)
     await expect(module.refreshUnreadCount({ force: true })).resolves.toBe(1)
-    expect(listInbox).toHaveBeenCalledTimes(2)
+    expect(listInbox).toHaveBeenCalledTimes(3)
   })
 })
 

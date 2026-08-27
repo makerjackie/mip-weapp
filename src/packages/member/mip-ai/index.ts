@@ -134,12 +134,15 @@ Page({
   voiceRecorder: null as MipVoiceRecorder | null,
   recordingStartedAt: 0,
   recordingTimer: null as ReturnType<typeof setInterval> | null,
+  pageActive: true,
 
   onLoad() {
+    this.pageActive = true
     void this.loadDrafts()
   },
 
   onUnload() {
+    this.pageActive = false
     this.clearRecordingTimer()
     if (this.data.recording) {
       this.voiceRecorder?.stop()
@@ -162,6 +165,9 @@ Page({
         mipAiModule.getCapability(),
         mipAiModule.listDrafts(),
       ])
+      if (!this.pageActive) {
+        return
+      }
       this.setData({
         state: 'ready',
         capability,
@@ -174,6 +180,9 @@ Page({
       })
     }
     catch (error) {
+      if (!this.pageActive) {
+        return
+      }
       this.setData(this.data.drafts.length
         ? { message: '草稿更新失败，已保留上次结果。' }
         : { state: 'error', message: error instanceof Error ? error.message : '草稿加载失败' })
@@ -187,16 +196,24 @@ Page({
     this.setData({ loadingMore: true, message: '' })
     try {
       const page = await mipAiModule.listDrafts(this.data.nextCursor)
+      if (!this.pageActive) {
+        return
+      }
       this.setData({
         drafts: [...this.data.drafts, ...page.items.map(draftView)],
         nextCursor: page.nextCursor || '',
       })
     }
     catch {
+      if (!this.pageActive) {
+        return
+      }
       this.setData({ message: '更多草稿加载失败。' })
     }
     finally {
-      this.setData({ loadingMore: false })
+      if (this.pageActive) {
+        this.setData({ loadingMore: false })
+      }
     }
   },
 
@@ -221,15 +238,23 @@ Page({
     this.setData({ generating: true, message: '' })
     try {
       const draft = await mipAiModule.createTextDraft({ purpose, transcriptText })
+      if (!this.pageActive) {
+        return
+      }
       const view = draftView(draft)
       this.setData({ sourceText: '', drafts: [view, ...this.data.drafts], activeDraft: view, supplementalText: '' })
       wx.showToast({ title: '草稿已生成', icon: 'success' })
     }
     catch (error) {
+      if (!this.pageActive) {
+        return
+      }
       this.setData({ message: error instanceof Error ? error.message : '草稿生成失败' })
     }
     finally {
-      this.setData({ generating: false })
+      if (this.pageActive) {
+        this.setData({ generating: false })
+      }
     }
   },
 
@@ -247,12 +272,17 @@ Page({
     this.clearRecordingTimer()
     this.setData({ recording: true, recordingElapsedText: '00:00:00', message: '' })
     this.recordingTimer = setInterval(() => {
+      if (!this.pageActive) {
+        return
+      }
       const elapsedSeconds = Math.max(0, Math.floor((Date.now() - this.recordingStartedAt) / 1000))
       this.setData({ recordingElapsedText: recordingDurationText(elapsedSeconds) })
     }, 1000)
-    recorder.start()
     void recorder.result.then(async (voice) => {
       this.clearRecordingTimer()
+      if (!this.pageActive) {
+        return
+      }
       this.setData({ recording: false, generating: true })
       if (voice.durationMs < 1000) {
         throw new Error('录音时间太短，请重新录制')
@@ -262,17 +292,30 @@ Page({
         audioBase64: voice.audioBase64,
         contentType: voice.contentType,
       })
+      if (!this.pageActive) {
+        return
+      }
       const view = draftView(draft)
       this.setData({ drafts: [view, ...this.data.drafts], activeDraft: view, supplementalText: '' })
       wx.showToast({ title: '语音草稿已生成', icon: 'success' })
     }).catch((error) => {
       this.clearRecordingTimer()
-      this.setData({ recording: false, message: error instanceof Error ? error.message : '录音整理失败' })
+      if (this.pageActive) {
+        this.setData({ recording: false, message: error instanceof Error ? error.message : '录音整理失败' })
+      }
     }).finally(() => {
       this.clearRecordingTimer()
       this.voiceRecorder = null
-      this.setData({ generating: false })
+      if (this.pageActive) {
+        this.setData({ generating: false })
+      }
     })
+    try {
+      recorder.start()
+    }
+    catch {
+      // The recorder result owns the user-visible error path and resets page state.
+    }
   },
 
   stopRecording() {
@@ -327,6 +370,9 @@ Page({
         expectedVersion: draft.version,
         supplementalText,
       }))
+      if (!this.pageActive) {
+        return
+      }
       this.setData({
         drafts: this.data.drafts.map(item => item.id === updated.id ? updated : item),
         activeDraft: updated,
@@ -336,11 +382,17 @@ Page({
     }
     catch (error) {
       const message = error instanceof Error ? error.message : '草稿更新失败'
-      await this.loadDrafts()
-      this.setData({ message })
+      if (this.pageActive) {
+        await this.loadDrafts()
+        if (this.pageActive) {
+          this.setData({ message })
+        }
+      }
     }
     finally {
-      this.setData({ refining: false })
+      if (this.pageActive) {
+        this.setData({ refining: false })
+      }
     }
   },
 
@@ -360,11 +412,14 @@ Page({
       return
     }
     const modal = await wx.showModal({ title: '删除草稿', content: '确认删除这份草稿？', confirmText: '删除', confirmColor: '#E65C5C' })
-    if (!modal.confirm) {
+    if (!modal.confirm || !this.pageActive) {
       return
     }
     try {
       await mipAiModule.deleteDraft(id, draft.version)
+      if (!this.pageActive) {
+        return
+      }
       this.setData({
         drafts: this.data.drafts.filter(item => item.id !== id),
         activeDraft: this.data.activeDraft?.id === id ? null : this.data.activeDraft,
@@ -372,7 +427,9 @@ Page({
       })
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '草稿删除失败' })
+      if (this.pageActive) {
+        this.setData({ message: error instanceof Error ? error.message : '草稿删除失败' })
+      }
     }
   },
 })

@@ -14,6 +14,21 @@ export function createMipCommerceModule(
   payment: PaymentAdapter,
   options: { paymentMode: 'disabled' | 'test' | 'live', catalogStage: CatalogStage },
 ) {
+  async function requestPayment(order: Awaited<ReturnType<CommerceGateway['createCheckout']>>) {
+    const parameters = await gateway.createPayment(order.id)
+    const requestResult = await payment.request(parameters)
+    if (requestResult === 'CANCELLED') {
+      return interpretClientPayment(requestResult, order)
+    }
+    try {
+      const reconciled = await gateway.reconcileOrder(order.id)
+      return interpretClientPayment(requestResult, reconciled)
+    }
+    catch {
+      return interpretClientPayment(requestResult, order)
+    }
+  }
+
   return {
     async listPlans() {
       const plans = await gateway.listPlans()
@@ -45,18 +60,7 @@ export function createMipCommerceModule(
         throw new Error('PAYMENT_UNAVAILABLE')
       }
       const order = await gateway.createCheckout(intent)
-      const parameters = await gateway.createPayment(order.id)
-      const requestResult = await payment.request(parameters)
-      if (requestResult === 'CANCELLED') {
-        return interpretClientPayment(requestResult, order)
-      }
-      try {
-        const reconciled = await gateway.reconcileOrder(order.id)
-        return interpretClientPayment(requestResult, reconciled)
-      }
-      catch {
-        return interpretClientPayment(requestResult, order)
-      }
+      return requestPayment(order)
     },
 
     async payOrder(orderId: OrderId) {
@@ -64,18 +68,7 @@ export function createMipCommerceModule(
         throw new Error('PAYMENT_UNAVAILABLE')
       }
       const order = await gateway.getOrder(orderId)
-      const parameters = await gateway.createPayment(order.id)
-      const requestResult = await payment.request(parameters)
-      if (requestResult === 'CANCELLED') {
-        return interpretClientPayment(requestResult, order)
-      }
-      try {
-        const reconciled = await gateway.reconcileOrder(order.id)
-        return interpretClientPayment(requestResult, reconciled)
-      }
-      catch {
-        return interpretClientPayment(requestResult, order)
-      }
+      return requestPayment(order)
     },
 
     async reconcile(orderId: OrderId) {
