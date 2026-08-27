@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import { sqlJson, sqlLiteral } from './example-cloudbase.mjs'
 
 const APP_ID_PATTERN = /^wx[0-9a-f]{16}$/i
@@ -53,6 +54,17 @@ export const OWNER_SHOWCASE_TASK_ASSIGNMENTS = Object.freeze([
     assignmentId: '68300000-0000-4000-8000-000000000002',
   }),
 ])
+
+export const OWNER_SHOWCASE_PROFILE = Object.freeze({
+  realName: 'Jackie Xiao',
+  gender: 'MALE',
+  careerIdentityKey: 'COMPANY_OWNER',
+  companies: Object.freeze([{ name: '01MVP', role: '产品负责人' }]),
+  organizations: Object.freeze([{ name: 'MIP 深圳分会', role: '玩家' }]),
+  wechat: 'mip_demo_2030',
+  email: 'demo@mip.example',
+  address: '深圳市福田区香蜜湖街道',
+})
 
 const REGISTERED_AT = '2026-08-27 00:00:00.000'
 const AWARDED_AT = '2026-08-27 00:00:00.000'
@@ -126,7 +138,13 @@ export function buildOwnerShowcasePreflightQuery({ appId, ownerUserId }) {
     (SELECT COUNT(*) FROM mip_task_assignments WHERE app_id = ${sqlLiteral(appId)} AND id IN (${assignmentIds})) AS fixedTaskAssignmentRows,
     (SELECT COUNT(*) FROM mip_task_assignments WHERE id IN (${assignmentIds}) AND app_id <> ${sqlLiteral(appId)}) AS taskAssignmentCrossApp,
     (SELECT COUNT(*) FROM mip_task_assignments WHERE app_id = ${sqlLiteral(appId)} AND user_id = ${sqlLiteral(ownerUserId)} AND task_id IN (${taskIds})) AS ownerTaskAssignmentRows,
-    (SELECT COUNT(*) FROM mip_task_assignments WHERE app_id = ${sqlLiteral(appId)} AND id IN (${assignmentIds}) AND user_id = ${sqlLiteral(ownerUserId)} AND status = 'ACTIVE') AS activeTaskAssignmentRows`
+    (SELECT COUNT(*) FROM mip_task_assignments WHERE app_id = ${sqlLiteral(appId)} AND id IN (${assignmentIds}) AND user_id = ${sqlLiteral(ownerUserId)} AND status = 'ACTIVE') AS activeTaskAssignmentRows,
+    (SELECT COUNT(*) FROM mip_profiles WHERE app_id = ${sqlLiteral(appId)} AND user_id = ${sqlLiteral(ownerUserId)}
+      AND NULLIF(TRIM(real_name), '') IS NOT NULL AND gender IN ('MALE', 'FEMALE')
+      AND NULLIF(TRIM(career_identity_key), '') IS NOT NULL
+      AND JSON_LENGTH(companies_json) > 0 AND JSON_LENGTH(organizations_json) > 0) AS profileReadyRows,
+    (SELECT COUNT(*) FROM mip_private_profiles WHERE app_id = ${sqlLiteral(appId)} AND user_id = ${sqlLiteral(ownerUserId)}
+      AND wechat_ciphertext IS NOT NULL AND email_ciphertext IS NOT NULL AND address_ciphertext IS NOT NULL) AS privateContactReadyRows`
 }
 
 export function buildOwnerShowcaseStateQuery({ appId, ownerUserId }) {
@@ -152,7 +170,42 @@ export function buildOwnerShowcaseStateQuery({ appId, ownerUserId }) {
         AND badge_id IN (${badgeIds})) AS equippedBadges,
     (SELECT COUNT(*) FROM mip_task_assignments
       WHERE app_id = ${sqlLiteral(appId)} AND user_id = ${sqlLiteral(ownerUserId)}
-        AND task_id IN (${taskIds}) AND status = 'ACTIVE') AS assignedTasks`
+        AND task_id IN (${taskIds}) AND status = 'ACTIVE') AS assignedTasks,
+    (SELECT COUNT(*) FROM mip_profiles WHERE app_id = ${sqlLiteral(appId)} AND user_id = ${sqlLiteral(ownerUserId)}
+      AND NULLIF(TRIM(real_name), '') IS NOT NULL AND gender IN ('MALE', 'FEMALE')
+      AND NULLIF(TRIM(career_identity_key), '') IS NOT NULL
+      AND JSON_LENGTH(companies_json) > 0 AND JSON_LENGTH(organizations_json) > 0) AS profileReady,
+    (SELECT COUNT(*) FROM mip_private_profiles WHERE app_id = ${sqlLiteral(appId)} AND user_id = ${sqlLiteral(ownerUserId)}
+      AND wechat_ciphertext IS NOT NULL AND email_ciphertext IS NOT NULL AND address_ciphertext IS NOT NULL) AS privateContactsReady`
+}
+
+export function buildOwnerShowcaseProfileUpdate({ appId, ownerUserId }) {
+  assertOwnerInput({ appId, ownerUserId })
+  return `UPDATE mip_profiles SET
+    real_name = COALESCE(NULLIF(TRIM(real_name), ''), ${sqlLiteral(OWNER_SHOWCASE_PROFILE.realName)}),
+    gender = CASE WHEN gender IS NULL OR gender = 'UNKNOWN' THEN ${sqlLiteral(OWNER_SHOWCASE_PROFILE.gender)} ELSE gender END,
+    career_identity_key = COALESCE(NULLIF(TRIM(career_identity_key), ''), ${sqlLiteral(OWNER_SHOWCASE_PROFILE.careerIdentityKey)}),
+    companies_json = CASE WHEN JSON_LENGTH(companies_json) = 0 THEN ${sqlJson(OWNER_SHOWCASE_PROFILE.companies)} ELSE companies_json END,
+    organizations_json = CASE WHEN JSON_LENGTH(organizations_json) = 0 THEN ${sqlJson(OWNER_SHOWCASE_PROFILE.organizations)} ELSE organizations_json END,
+    visibility_json = JSON_SET(COALESCE(visibility_json, JSON_OBJECT()),
+      '$.realName', true, '$.gender', true, '$.careerIdentity', true,
+      '$.companies', true, '$.organizations', true,
+      '$.cardContacts', JSON_OBJECT('phone', true, 'wechat', true, 'email', true, 'address', true)),
+    version = version + 1
+    WHERE app_id = ${sqlLiteral(appId)} AND user_id = ${sqlLiteral(ownerUserId)}`
+}
+
+export function buildOwnerShowcasePrivateContactUpsert({ appId, ownerUserId, ciphertext }) {
+  assertOwnerInput({ appId, ownerUserId })
+  const wechat = binaryLiteral(ciphertext?.wechat)
+  const email = binaryLiteral(ciphertext?.email)
+  const address = binaryLiteral(ciphertext?.address)
+  return `INSERT INTO mip_private_profiles (app_id, user_id, wechat_ciphertext, email_ciphertext, address_ciphertext)
+    VALUES (${sqlLiteral(appId)}, ${sqlLiteral(ownerUserId)}, ${wechat}, ${email}, ${address})
+    ON DUPLICATE KEY UPDATE
+      wechat_ciphertext = COALESCE(mip_private_profiles.wechat_ciphertext, VALUES(wechat_ciphertext)),
+      email_ciphertext = COALESCE(mip_private_profiles.email_ciphertext, VALUES(email_ciphertext)),
+      address_ciphertext = COALESCE(mip_private_profiles.address_ciphertext, VALUES(address_ciphertext))`
 }
 
 export function buildOwnerShowcaseRegistrationInsert({ appId, ownerUserId, eventId, registrationId }) {
@@ -246,12 +299,14 @@ export function buildOwnerShowcaseTaskAssignmentInsert({ appId, ownerUserId, ass
   )`
 }
 
-export function ownerShowcaseFixtureSummary({ registeredEvents, paidEventOrders, activeBadges, equippedBadges, assignedTasks, wrote }) {
+export function ownerShowcaseFixtureSummary({ registeredEvents, paidEventOrders, activeBadges, equippedBadges, assignedTasks, profileReady, privateContactsReady, wrote }) {
   if (Number(registeredEvents) !== ALL_SHOWCASE_EVENTS.length
     || Number(paidEventOrders) !== 1
     || Number(activeBadges) !== OWNER_SHOWCASE_BADGES.length
     || Number(equippedBadges) !== OWNER_SHOWCASE_BADGES.length
-    || Number(assignedTasks) !== OWNER_SHOWCASE_TASK_ASSIGNMENTS.length) {
+    || Number(assignedTasks) !== OWNER_SHOWCASE_TASK_ASSIGNMENTS.length
+    || Number(profileReady) !== 1
+    || Number(privateContactsReady) !== 1) {
     throw new Error('Owner showcase fixture verification failed')
   }
   return {
@@ -262,8 +317,17 @@ export function ownerShowcaseFixtureSummary({ registeredEvents, paidEventOrders,
     activeBadges: Number(activeBadges),
     equippedBadges: Number(equippedBadges),
     assignedTasks: Number(assignedTasks),
+    profileReady: true,
+    privateContactsReady: true,
     wrote: Number(wrote || 0),
   }
+}
+
+function binaryLiteral(value) {
+  if (!Buffer.isBuffer(value) || value.length < 29) {
+    throw new Error('Owner showcase encrypted contact is invalid')
+  }
+  return `X'${value.toString('hex')}'`
 }
 
 function assertOwnerInput({ appId, ownerUserId }) {

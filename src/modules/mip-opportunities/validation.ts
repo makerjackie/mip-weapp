@@ -364,6 +364,11 @@ export function parsePublicPerson(value: unknown): PublicPerson {
   }
   const branchSource = source.primaryBranch === undefined ? null : record(source.primaryBranch)
   const nickname = responseText(source.nickname, 64)
+  const realName = responseText(source.realName, 64)
+  const gender = ['MALE', 'FEMALE'].includes(String(source.gender))
+    ? source.gender as 'MALE' | 'FEMALE'
+    : undefined
+  const careerIdentityKey = responseText(source.careerIdentityKey, 32)
   const avatarUrl = responseText(source.avatarUrl, 1024)
   const identityStatus = responseText(source.identityStatus, 32)
   const headline = responseText(source.headline, 160)
@@ -374,6 +379,9 @@ export function parsePublicPerson(value: unknown): PublicPerson {
     userKind: source.userKind as PublicPerson['userKind'],
     joinedAt: responseDate(source.joinedAt),
     ...(nickname ? { nickname } : {}),
+    ...(realName ? { realName } : {}),
+    ...(gender ? { gender } : {}),
+    ...(careerIdentityKey ? { careerIdentityKey } : {}),
     ...(avatarUrl ? { avatarUrl } : {}),
     ...(identityStatus ? { identityStatus } : {}),
     ...(headline ? { headline } : {}),

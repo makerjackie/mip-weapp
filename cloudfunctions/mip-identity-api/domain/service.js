@@ -431,7 +431,7 @@ function normalizeProfileInput(value) {
   if (avatarAssetId !== undefined && !isUuid(avatarAssetId)) {
     throw new Error('VALIDATION_FAILED')
   }
-  if (careerIdentityKey && !/^[a-z0-9_]{1,32}$/.test(careerIdentityKey)) {
+  if (careerIdentityKey && !/^[A-Z][A-Z0-9_]{0,31}$/.test(careerIdentityKey)) {
     throw new Error('VALIDATION_FAILED')
   }
   const companies = organizations(value.companies)

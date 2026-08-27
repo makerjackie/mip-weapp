@@ -19,6 +19,9 @@ function person() {
     userKind: 'PLAYER',
     joinedAt: '2026-08-24T08:00:00.000Z',
     nickname: '林野',
+    realName: '林野真名',
+    gender: 'MALE',
+    careerIdentityKey: 'BRAND_PRINCIPAL',
     headline: '品牌与产品负责人',
     primaryIndustry: {
       id: '10000000-0000-4000-8000-000000000001',
@@ -75,6 +78,9 @@ describe('MIP people discovery client contract', () => {
       profileRef,
       userKind: 'PLAYER',
       nickname: '林野',
+      realName: '林野真名',
+      gender: 'MALE',
+      careerIdentityKey: 'BRAND_PRINCIPAL',
       joinedAt: '2026-08-24T08:00:00.000Z',
     })
     expect(page.items[0]).not.toHaveProperty('userId')
@@ -154,6 +160,8 @@ describe('MIP people discovery client contract', () => {
     for (const heading of ['合作卡', '超级案例', '招募中的机会', '感兴趣']) {
       expect(profileView).toContain(heading)
     }
+    expect(profileView).toContain('profile.identityDetailText')
+    expect(profileView).toContain('profile.primaryCompanyLine')
   })
 
   it('locks the PROFILE interest source and discovery index in migration 017', () => {

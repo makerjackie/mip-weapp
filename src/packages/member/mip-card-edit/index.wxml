@@ -14,7 +14,7 @@
     <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
       <view class="text-[length:30rpx] font-semibold">联系方式</view>
       <view class="mt-4 text-[length:23rpx] font-semibold text-muted">手机号</view>
-      <view class="mt-2 flex items-center justify-between gap-3 rounded-[14rpx] bg-panel-raised px-4 py-3 text-[length:24rpx]"><text>{{phoneBound ? (phoneMasked || '已绑定') : '未绑定'}}</text><button open-type="getPhoneNumber" plain class="m-0 text-[length:22rpx] text-brand" bind:getphonenumber="bindPhone">{{phoneBound ? '更换' : '绑定'}}</button></view>
+      <view class="mt-2 flex items-center justify-between gap-3 rounded-[14rpx] bg-panel-raised px-4 py-3 text-[length:24rpx]"><text>{{phoneBound ? (phoneMasked || '已绑定') : '未绑定'}}</text><button open-type="getPhoneNumber" plain disabled="{{phoneBinding || saving}}" class="m-0 text-[length:22rpx] text-brand disabled:opacity-50" bind:getphonenumber="bindPhone">{{phoneBinding ? '更新中' : (phoneBound ? '更换' : '绑定')}}</button></view>
       <view class="mt-4 text-[length:23rpx] font-semibold text-muted">微信号</view>
       <input class="mt-2 h-[84rpx] w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:25rpx]" maxlength="120" value="{{wechat}}" data-field="wechat" bindinput="updateText" placeholder="输入微信号" />
       <view class="mt-4 text-[length:23rpx] font-semibold text-muted">邮箱</view>

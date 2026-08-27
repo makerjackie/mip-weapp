@@ -26,7 +26,8 @@ const activeEntitlementSql = `EXISTS (
 
 const profileSelect = `
   SELECT u.id AS profile_user_id, u.created_at AS joined_at,
-         p.nickname, p.identity_status, p.headline, p.introduction,
+         p.nickname, p.real_name, p.gender, p.career_identity_key,
+         p.identity_status, p.headline, p.introduction,
          p.companies_json, p.organizations_json, p.visibility_json,
          avatar.cloud_file_id AS avatar_file_id,
          branch.id AS branch_id, branch.name AS branch_name, branch.city_name AS branch_city_name,
@@ -119,6 +120,9 @@ function visibleFields(value) {
   const source = jsonObject(value)
   return {
     nickname: source.nickname !== false,
+    realName: source.realName === true,
+    gender: source.gender === true,
+    careerIdentity: source.careerIdentity === true,
     avatar: source.avatar !== false,
     identityStatus: source.identityStatus !== false,
     headline: source.headline !== false,
@@ -164,6 +168,11 @@ function publicProfileDto(row, tags, caller, profileRef, badges = []) {
     userKind: Number(row.is_player) === 1 ? 'PLAYER' : 'GUEST',
     joinedAt: iso(row.joined_at),
     ...(allowed.nickname && row.nickname ? { nickname: String(row.nickname).trim() } : {}),
+    ...(allowed.realName && row.real_name ? { realName: String(row.real_name).trim() } : {}),
+    ...(allowed.gender && ['MALE', 'FEMALE'].includes(String(row.gender)) ? { gender: row.gender } : {}),
+    ...(allowed.careerIdentity && row.career_identity_key
+      ? { careerIdentityKey: String(row.career_identity_key).trim() }
+      : {}),
     ...(allowed.avatar && row.avatar_file_id ? { avatarUrl: row.avatar_file_id } : {}),
     ...(allowed.identityStatus && row.identity_status ? { identityStatus: row.identity_status } : {}),
     ...(allowed.headline && row.headline ? { headline: row.headline } : {}),

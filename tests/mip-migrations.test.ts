@@ -133,6 +133,18 @@ describe('MIP migrations', () => {
     expect(rollback).toContain('CHARACTER SET ascii COLLATE ascii_bin')
   })
 
+  it('keeps profile career identity keys aligned with the client catalog', () => {
+    const migration = fs.readFileSync(
+      path.join(root, 'database/mysql/mip/055_profile_career_identity_keys.sql'),
+      'utf8',
+    )
+    const lock = loadMipMigrationLock(root)
+    const entry = lock.migrations.find(item => item.name === 'mip_profile_career_identity_keys')
+
+    expect(migration).toContain('REGEXP \'^[A-Z][A-Z0-9_]{0,31}$\'')
+    expect(entry?.altersTables).toEqual(['mip_profiles'])
+  })
+
   it('fails closed on unknown or incomplete durable step journals', () => {
     const source = fs.readFileSync(path.join(root, 'scripts/apply-mip-schema.mjs'), 'utf8')
     expect(source).toContain('unknownStepVersions')

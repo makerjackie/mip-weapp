@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
@@ -7,6 +8,8 @@ import {
   buildOwnerShowcaseBadgeProfileInsert,
   buildOwnerShowcaseEventOrderInsert,
   buildOwnerShowcasePreflightQuery,
+  buildOwnerShowcasePrivateContactUpsert,
+  buildOwnerShowcaseProfileUpdate,
   buildOwnerShowcaseRegistrationInsert,
   buildOwnerShowcaseStateQuery,
   buildOwnerShowcaseTaskAssignmentInsert,
@@ -51,6 +54,16 @@ describe('owner showcase fixture safety', () => {
     expect(buildOwnerShowcaseBadgeProfileInsert({ appId, ownerUserId })).toContain('mip_user_badge_profiles')
     expect(buildOwnerShowcaseBadgeEquipmentInsert({ appId, ownerUserId, badge: OWNER_SHOWCASE_BADGES[0] })).toContain('slot_no')
     expect(buildOwnerShowcaseTaskAssignmentInsert({ appId, ownerUserId, assignment: OWNER_SHOWCASE_TASK_ASSIGNMENTS[0] })).toContain('mip_task_assignments')
+    expect(buildOwnerShowcaseProfileUpdate({ appId, ownerUserId })).toContain('career_identity_key')
+    expect(buildOwnerShowcasePrivateContactUpsert({
+      appId,
+      ownerUserId,
+      ciphertext: {
+        wechat: Buffer.alloc(29, 1),
+        email: Buffer.alloc(29, 2),
+        address: Buffer.alloc(29, 3),
+      },
+    })).toContain('mip_private_profiles')
     expect(() => buildOwnerShowcaseRegistrationInsert({
       appId,
       ownerUserId,
@@ -70,8 +83,8 @@ describe('owner showcase fixture safety', () => {
   })
 
   it('requires all showcase facts to verify', () => {
-    expect(ownerShowcaseFixtureSummary({ registeredEvents: 3, paidEventOrders: 1, activeBadges: 3, equippedBadges: 3, assignedTasks: 2, wrote: 10 })).toMatchObject({ ready: true, wrote: 10 })
-    expect(() => ownerShowcaseFixtureSummary({ registeredEvents: 1, paidEventOrders: 1, activeBadges: 3, equippedBadges: 3, assignedTasks: 2 })).toThrow(/verification failed/)
+    expect(ownerShowcaseFixtureSummary({ registeredEvents: 3, paidEventOrders: 1, activeBadges: 3, equippedBadges: 3, assignedTasks: 2, profileReady: 1, privateContactsReady: 1, wrote: 10 })).toMatchObject({ ready: true, wrote: 10 })
+    expect(() => ownerShowcaseFixtureSummary({ registeredEvents: 1, paidEventOrders: 1, activeBadges: 3, equippedBadges: 3, assignedTasks: 2, profileReady: 1, privateContactsReady: 1 })).toThrow(/verification failed/)
   })
 
   it('keeps the runner separate from the demo seed', () => {

@@ -15,8 +15,11 @@ describe('MIP member card', () => {
     const profile = source('src/pages/profile/index.wxml')
     const page = source('src/packages/member/mip-card/index.ts')
     const view = source('src/packages/member/mip-card/index.wxml')
+    const editor = source('src/packages/member/mip-card-edit/index.ts')
+    const editorView = source('src/packages/member/mip-card-edit/index.wxml')
 
     expect(memberPackage.pages).toContain('mip-card/index')
+    expect(memberPackage.pages).toContain('mip-card-edit/index')
     expect(memberPackage.pages).toContain('mip-avatar/index')
     expect(profile).toContain('bind:tap="openMemberCard"')
     expect(profile).toContain('bind:tap="openDigitalAvatar"')
@@ -38,6 +41,12 @@ describe('MIP member card', () => {
     expect(view).toContain('{{address}}')
     expect(view).toContain('下载名片')
     expect(page).toContain('/packages/member/mip-public-profile/index?profileRef=')
+    for (const field of ['realName', 'company', 'role', 'wechat', 'email', 'address']) {
+      expect(editorView).toContain(`data-field="${field}"`)
+    }
+    expect(editorView).toContain('open-type="getPhoneNumber"')
+    expect(editor).toContain('phoneBinding')
+    expect(editor).toContain('mipIdentityModule.updateCard')
   })
 
   it('uses a server-created opaque self profile reference instead of exposing a raw user id', () => {

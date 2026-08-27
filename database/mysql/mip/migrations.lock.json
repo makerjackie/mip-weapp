@@ -752,6 +752,18 @@
       "altersTables": [
         "mip_badges"
       ]
+    },
+    {
+      "version": "20260828550000",
+      "name": "mip_profile_career_identity_keys",
+      "sql": "database/mysql/mip/055_profile_career_identity_keys.sql",
+      "sqlSha256": "f8002459348c1ba1952aa66b9979ad9885c566ca76c68561081f0b20d764cf30",
+      "rollback": "database/mysql/mip/rollback/055_profile_career_identity_keys.sql",
+      "rollbackSha256": "405d5b2b9bd5f30aca929e8a137d9c5881d4b64c661dbabb04f11365c4ed0fba",
+      "createsTables": [],
+      "altersTables": [
+        "mip_profiles"
+      ]
     }
   ]
 }

@@ -18,6 +18,8 @@
         <view wx:else class="flex h-[160rpx] w-[160rpx] shrink-0 items-center justify-center rounded-full border-[4rpx] border-line bg-brand-soft"><t-icon name="user" size="64rpx" color="var(--color-brand)" /></view>
         <view class="min-w-0 flex-1">
           <view class="flex items-center gap-2"><view class="truncate text-[length:32rpx] font-medium">{{profile.displayName}}</view><text class="shrink-0 rounded-[8rpx] bg-brand px-2 py-1 text-[length:18rpx] font-medium text-on-brand">{{profile.kindLabel}}</text></view>
+          <view wx:if="{{profile.identityDetailText}}" class="mt-2 truncate text-[length:20rpx] text-muted">{{profile.identityDetailText}}</view>
+          <view wx:if="{{profile.primaryCompanyLine}}" class="mt-2 truncate text-[length:20rpx] text-ink">{{profile.primaryCompanyLine}}</view>
           <view wx:if="{{profile.branchText || profile.primaryIndustry || profile.identityStatus}}" class="mt-2 truncate text-[length:20rpx] text-ink"><text wx:if="{{profile.branchText}}">{{profile.branchText}}</text><text wx:if="{{profile.branchText && (profile.primaryIndustry || profile.identityStatus)}}">｜</text><text wx:if="{{profile.primaryIndustry}}">{{profile.primaryIndustry.label}}</text><text wx:if="{{profile.primaryIndustry && profile.identityStatus}}">｜</text><text wx:if="{{profile.identityStatus}}">{{profile.identityStatus}}</text></view>
           <view wx:if="{{profile.headline}}" class="mt-2 line-clamp-2 text-[length:20rpx] leading-5 text-muted">{{profile.headline}}</view>
         </view>

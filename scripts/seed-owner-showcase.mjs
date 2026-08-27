@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
+import { Buffer } from 'node:buffer'
 import fs from 'node:fs'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 import process from 'node:process'
 import {
@@ -20,12 +22,15 @@ import {
   buildOwnerShowcaseBadgeProfileInsert,
   buildOwnerShowcaseEventOrderInsert,
   buildOwnerShowcasePreflightQuery,
+  buildOwnerShowcasePrivateContactUpsert,
+  buildOwnerShowcaseProfileUpdate,
   buildOwnerShowcaseRegistrationInsert,
   buildOwnerShowcaseStateQuery,
   buildOwnerShowcaseTaskAssignmentInsert,
   OWNER_SHOWCASE_BADGES,
   OWNER_SHOWCASE_EVENTS,
   OWNER_SHOWCASE_PAID_EVENT,
+  OWNER_SHOWCASE_PROFILE,
   OWNER_SHOWCASE_TASK_ASSIGNMENTS,
   ownerShowcaseFixtureSummary,
   resolveOwnerShowcaseCommand,
@@ -33,6 +38,9 @@ import {
 import { assertSeedSqlScope } from './lib/mip-seed-safety.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
+const require = createRequire(import.meta.url)
+const { protectContact } = require('../cloudfunctions/mip-identity-api/lib/private-data')
+
 const env = loadCaseEnv(root)
 const validateOnly = process.argv.includes('--validate-only')
 const command = resolveOwnerShowcaseCommand({ args: process.argv.slice(2), env })
@@ -56,6 +64,16 @@ if (validateOnly) {
       badge,
     })),
     buildOwnerShowcaseBadgeProfileInsert({ appId: command.appId, ownerUserId: fakeOwnerUserId }),
+    buildOwnerShowcaseProfileUpdate({ appId: command.appId, ownerUserId: fakeOwnerUserId }),
+    buildOwnerShowcasePrivateContactUpsert({
+      appId: command.appId,
+      ownerUserId: fakeOwnerUserId,
+      ciphertext: {
+        wechat: Buffer.alloc(29, 1),
+        email: Buffer.alloc(29, 2),
+        address: Buffer.alloc(29, 3),
+      },
+    }),
     ...OWNER_SHOWCASE_BADGES.map(badge => buildOwnerShowcaseBadgeEquipmentInsert({
       appId: command.appId,
       ownerUserId: fakeOwnerUserId,
@@ -193,6 +211,22 @@ if (counts.fixedTaskAssignmentRows === 0) {
     ownerUserId,
     assignment,
   })))
+}
+if (counts.profileReadyRows === 0) {
+  statements.push(buildOwnerShowcaseProfileUpdate({ appId: command.appId, ownerUserId }))
+}
+if (counts.privateContactReadyRows === 0) {
+  const secret = String(env.MIP_PHONE_ENCRYPTION_KEY || '')
+  const context = { appId: command.appId, userId: ownerUserId }
+  statements.push(buildOwnerShowcasePrivateContactUpsert({
+    appId: command.appId,
+    ownerUserId,
+    ciphertext: {
+      wechat: protectContact(OWNER_SHOWCASE_PROFILE.wechat, secret, context),
+      email: protectContact(OWNER_SHOWCASE_PROFILE.email, secret, context),
+      address: protectContact(OWNER_SHOWCASE_PROFILE.address, secret, context),
+    },
+  }))
 }
 if (statements.length > 0) {
   assertSeedSqlScope(statements)

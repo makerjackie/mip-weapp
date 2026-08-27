@@ -15,6 +15,7 @@ import {
 } from '../../../modules/mip-community'
 import { mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
+import { careerIdentityOptions } from '../../../modules/mip-identity/profile-options'
 import { opportunityModule } from '../../../modules/mip-opportunities'
 import { createMutationKey } from '../../../modules/mip-opportunities/validation'
 import { caseNavigateTo } from '../../../modules/platform/case-navigation'
@@ -26,6 +27,8 @@ type ProfileSection = 'cooperation' | 'cases' | 'opportunities'
 interface PublicProfileView extends PublicPerson {
   displayName: string
   kindLabel: string
+  identityDetailText: string
+  primaryCompanyLine: string
   companies: NonNullable<PublicPerson['companies']>
   organizations: NonNullable<PublicPerson['organizations']>
   abilities: NonNullable<PublicPerson['abilities']>
@@ -45,10 +48,15 @@ function monthText(value: string) {
 }
 
 function presentProfile(profile: PublicPerson): PublicProfileView {
+  const careerIdentity = careerIdentityOptions.find(option => option.value === profile.careerIdentityKey)?.label || ''
+  const gender = profile.gender === 'MALE' ? '男' : profile.gender === 'FEMALE' ? '女' : ''
+  const company = profile.companies?.[0]
   return {
     ...profile,
-    displayName: profile.nickname || 'MIP 用户',
+    displayName: profile.realName || profile.nickname || 'MIP 用户',
     kindLabel: profile.userKind === 'PLAYER' ? '玩家' : '嘉宾',
+    identityDetailText: [gender, careerIdentity].filter(Boolean).join(' · '),
+    primaryCompanyLine: company ? [company.name, company.role].filter(Boolean).join(' · ') : '',
     companies: profile.companies || [],
     organizations: profile.organizations || [],
     abilities: profile.abilities || [],

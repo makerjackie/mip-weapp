@@ -8,6 +8,7 @@ const {
   getPublicProfileAggregate,
   listPeople,
   normalizePeopleFilter,
+  publicProfileDto,
 } = require('../domain/discovery')
 const { setProfileInterest } = require('../domain/opportunities')
 const { createProfileRef } = require('../lib/profile-ref')
@@ -27,6 +28,9 @@ function profileRow(overrides = {}) {
     profile_user_id: targetUserId,
     joined_at: '2026-08-24T08:00:00.000Z',
     nickname: '林野',
+    real_name: '林野真名',
+    gender: 'MALE',
+    career_identity_key: 'BRAND_PRINCIPAL',
     identity_status: '创业者',
     headline: '品牌与产品负责人',
     introduction: '关注消费品牌和城市合作。',
@@ -48,6 +52,21 @@ function profileRow(overrides = {}) {
 }
 
 describe('people discovery', () => {
+  it('returns identity fields only when each public visibility switch is enabled', () => {
+    const hidden = publicProfileDto(profileRow(), [], caller)
+    assert.equal(hidden.realName, undefined)
+    assert.equal(hidden.gender, undefined)
+    assert.equal(hidden.careerIdentityKey, undefined)
+
+    const visible = publicProfileDto(profileRow({
+      visibility_json: JSON.stringify({ realName: true, gender: true, careerIdentity: true }),
+    }), [], caller)
+    assert.equal(visible.realName, '林野真名')
+    assert.equal(visible.gender, 'MALE')
+    assert.equal(visible.careerIdentityKey, 'BRAND_PRINCIPAL')
+    assert.equal(JSON.stringify(visible).includes('private'), false)
+  })
+
   it('uses an encrypted profile reference inside its cursor instead of a raw user id', () => {
     const cursor = encodePeopleCursor('2026-08-24T08:00:00.000Z', targetUserId, caller)
     const decodedText = Buffer.from(cursor, 'base64url').toString('utf8')

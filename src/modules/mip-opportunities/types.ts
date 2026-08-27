@@ -200,6 +200,9 @@ export interface PublicPerson {
   userKind: 'PLAYER' | 'GUEST'
   joinedAt: string
   nickname?: string
+  realName?: string
+  gender?: 'MALE' | 'FEMALE'
+  careerIdentityKey?: string
   avatarUrl?: string
   identityStatus?: string
   headline?: string

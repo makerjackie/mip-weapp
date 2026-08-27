@@ -13,6 +13,7 @@ Page({
     organizationRole: '',
     remainingOrganizations: [] as ProfileOrganization[],
     phoneBound: false,
+    phoneBinding: false,
     phoneMasked: '',
     wechat: '',
     email: '',
@@ -74,17 +75,35 @@ Page({
     }
   },
 
-  bindPhone(event: WechatMiniprogram.CustomEvent<{ code?: string }>) {
-    const code = String(event.detail.code || '')
-    if (!code) {
-      this.setData({ message: '手机号授权必须在微信真机完成。' })
+  async bindPhone(event: WechatMiniprogram.CustomEvent<{ code?: string, errMsg?: string }>) {
+    if (this.data.phoneBinding || this.data.saving) {
       return
     }
-    void mipIdentityModule.rebindWechatPhone(code).then(() => this.load())
+    const code = String(event.detail.code || '')
+    if (!code) {
+      this.setData({
+        message: /cancel|deny/i.test(String(event.detail.errMsg || ''))
+          ? '你已取消手机号授权，绑定状态未变更。'
+          : '手机号授权必须在微信真机完成。',
+      })
+      return
+    }
+    this.setData({ phoneBinding: true, message: '' })
+    try {
+      await mipIdentityModule.rebindWechatPhone(code)
+      await this.load()
+      wx.showToast({ title: '手机号已更新', icon: 'success' })
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '手机号更新失败，请重试。' })
+    }
+    finally {
+      this.setData({ phoneBinding: false })
+    }
   },
 
   async save() {
-    if (this.data.saving) {
+    if (this.data.saving || this.data.phoneBinding) {
       return
     }
     this.setData({ saving: true, message: '' })

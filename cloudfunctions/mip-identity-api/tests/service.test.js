@@ -280,6 +280,37 @@ describe('MIP profile input', () => {
     )
   })
 
+  it('accepts the configured uppercase career identity keys', () => {
+    const normalized = normalizeProfileInput({
+      expectedVersion: 0,
+      nickname: '测试用户',
+      careerIdentityKey: 'BRAND_PRINCIPAL',
+      identityStatus: '',
+      headline: '',
+      introduction: '',
+      companies: [],
+      organizations: [],
+      visibility: {},
+      abilityTagIds: [],
+    })
+    assert.equal(normalized.careerIdentityKey, 'BRAND_PRINCIPAL')
+    assert.throws(
+      () => normalizeProfileInput({
+        expectedVersion: 0,
+        nickname: '测试用户',
+        careerIdentityKey: 'brand-principal',
+        identityStatus: '',
+        headline: '',
+        introduction: '',
+        companies: [],
+        organizations: [],
+        visibility: {},
+        abilityTagIds: [],
+      }),
+      /VALIDATION_FAILED/,
+    )
+  })
+
   it('requires branch and user version to be supplied as one optimistic-lock pair', () => {
     const base = {
       expectedVersion: 0,
