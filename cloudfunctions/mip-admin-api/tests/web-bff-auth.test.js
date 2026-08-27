@@ -207,6 +207,24 @@ describe('Web BFF trusted query adapter', () => {
     assert.equal(calls.length, 0)
   })
 
+  it('rejects browser-controlled fields outside each reviewed business input', async () => {
+    const { calls, route } = fixture()
+    const cases = [
+      ['mip.admin.memberships.grant', { userId: 'user-a', forgedDurationMonths: 120 }],
+      ['mip.admin.events.clone', { sourceEventId: 'event-a', expectedVersion: 1, title: '客户端标题' }],
+      ['mip.admin.communications.publishEventReminder', {
+        eventId: 'event-a', expectedVersion: 1, sendWechatReminder: false, recipientUserIds: ['forged-user'],
+      }],
+      ['mip.admin.refunds.submit', { orderId: 'order-a', reason: '运营退款', amountCents: 1 }],
+    ]
+    for (const [action, input] of cases) {
+      const result = await route(envelope(action, { idempotencyKey: 'web-input-check-0001', input }))
+      assert.equal(result.ok, false, action)
+      assert.equal(result.error.code, 'VALIDATION_FAILED', action)
+    }
+    assert.equal(calls.length, 0)
+  })
+
   it('consumes the replay guard and runs post-commit automation for reviewed mutations', async () => {
     const calls = []
     const replayed = []

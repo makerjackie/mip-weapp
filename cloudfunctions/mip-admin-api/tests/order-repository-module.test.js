@@ -321,6 +321,38 @@ describe('admin order persistence adapter', () => {
     assert.equal(database.calls.filter(call => call.sql.includes('INSERT INTO mip_outbox_events')).length, 2)
   })
 
+  it('rejects a reused refund key when the business reason changes', async () => {
+    const database = databaseHarness({
+      one(sql) {
+        if (sql.includes('SELECT order_type, resource_id FROM mip_orders')) {
+          return { order_type: 'MEMBERSHIP', resource_id: 'plan-a' }
+        }
+        if (sql.includes('SELECT id, user_id, order_type')) {
+          return {
+            id: 'order-a', user_id: 'user-a', order_type: 'MEMBERSHIP', resource_id: 'plan-a',
+            amount_cents: 6_000, status: 'PAID', version: 1, product_snapshot_json: '{}',
+          }
+        }
+        if (sql.includes('FROM mip_refunds') && sql.includes('idempotency_key')) {
+          return { id: 'refund-a', amount_cents: 6_000, status: 'PENDING', version: 1, reason: '原退款原因' }
+        }
+        assert.fail(`unexpected one query: ${sql}`)
+      },
+    })
+    const adapter = repository(database)
+
+    await assert.rejects(() => adapter.submitRefund({
+      appId: APP_ID,
+      actorUserId: 'admin-a',
+      orderId: 'order-a',
+      reason: '新的退款原因',
+      idempotencyKey: 'refund-request-reused',
+      authorizedScope: { scopeType: 'PLATFORM', scopeId: null, branchId: null },
+      audit: () => audit('refund-a', 6_000),
+    }), /IDEMPOTENCY_CONFLICT/)
+    assert.equal(database.calls.filter(call => call.method === 'query').length, 0)
+  })
+
   it('locks retry scope and writes its audit before returning authorization', async () => {
     const database = databaseHarness({
       one(sql) {

@@ -359,11 +359,12 @@ function createAdminOrderRepository(database, options = {}) {
         throw codeError('CONFLICT')
       }
       const existing = await tx.one(
-        `SELECT id, amount_cents, status, version FROM mip_refunds
+        `SELECT id, amount_cents, status, version, reason FROM mip_refunds
          WHERE app_id = ? AND order_id = ? AND idempotency_key = ? FOR UPDATE`,
         [input.appId, input.orderId, input.idempotencyKey],
       )
       if (existing) {
+        if (existing.reason !== input.reason) throw codeError('IDEMPOTENCY_CONFLICT')
         if (order.order_type === 'EVENT') {
           if (existing.status === 'FAILED') {
             if (eventRegistration.status !== 'CANCELLATION_PENDING'

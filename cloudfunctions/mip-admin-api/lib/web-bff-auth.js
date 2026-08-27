@@ -51,6 +51,7 @@ const WEB_BFF_REVIEWED_MUTATION_MANIFEST = Object.freeze([
     session: 'REQUIRED',
     safeToRetry: false,
     idempotencyKeyRequired: true,
+    inputKeys: Object.freeze(['durationMonths', 'expectedChainVersion', 'reason', 'userId']),
   }),
   Object.freeze({
     action: 'mip.admin.events.clone',
@@ -59,6 +60,7 @@ const WEB_BFF_REVIEWED_MUTATION_MANIFEST = Object.freeze([
     session: 'REQUIRED',
     safeToRetry: false,
     idempotencyKeyRequired: true,
+    inputKeys: Object.freeze(['expectedVersion', 'sourceEventId']),
   }),
   Object.freeze({
     action: 'mip.admin.communications.publishEventReminder',
@@ -67,6 +69,7 @@ const WEB_BFF_REVIEWED_MUTATION_MANIFEST = Object.freeze([
     session: 'REQUIRED',
     safeToRetry: false,
     idempotencyKeyRequired: true,
+    inputKeys: Object.freeze(['eventId', 'expectedVersion', 'sendWechatReminder']),
   }),
   Object.freeze({
     action: 'mip.admin.refunds.submit',
@@ -75,6 +78,7 @@ const WEB_BFF_REVIEWED_MUTATION_MANIFEST = Object.freeze([
     session: 'REQUIRED',
     safeToRetry: false,
     idempotencyKeyRequired: true,
+    inputKeys: Object.freeze(['orderId', 'reason']),
   }),
 ])
 const WEB_BFF_QUERY_ACTIONS = createQueryActionAllowlist(
@@ -127,7 +131,10 @@ function createReviewedMutationActionAllowlist(manifest, contract) {
       || expected.authentication !== 'REQUIRED'
       || expected.session !== 'REQUIRED'
       || expected.safeToRetry !== false
-      || expected.idempotencyKeyRequired !== true) {
+      || expected.idempotencyKeyRequired !== true
+      || !Array.isArray(expected.inputKeys)
+      || new Set(expected.inputKeys).size !== expected.inputKeys.length
+      || expected.inputKeys.some(key => typeof key !== 'string' || !key)) {
       throw new Error('WEB_BFF_MUTATION_CONTRACT_INVALID')
     }
     const operation = operationByAction.get(expected.action)
@@ -249,6 +256,10 @@ function verifyWebBffEnvelope(value, { secret, now = Date.now() } = {}) {
     && !validMutationIdempotencyKey(value.request.idempotencyKey)) {
     throw new Error('VALIDATION_FAILED')
   }
+  const inputKeys = reviewedMutationInputKeys(value.request.action)
+  if (inputKeys && !hasExactInputKeys(value.request.input, inputKeys)) {
+    throw new Error('VALIDATION_FAILED')
+  }
 
   const unsigned = unsignedEnvelope(value)
   const expected = createHmac('sha256', secret).update(canonicalJson(unsigned)).digest()
@@ -316,6 +327,15 @@ function trustedIdentifier(value, maximum) {
 function validMutationIdempotencyKey(value) {
   return typeof value === 'string'
     && /^[A-Za-z0-9_.:-]{1,128}$/.test(value.trim())
+}
+
+function reviewedMutationInputKeys(action) {
+  return WEB_BFF_REVIEWED_MUTATION_MANIFEST.find(item => item.action === action)?.inputKeys || null
+}
+
+function hasExactInputKeys(value, expectedKeys) {
+  return isPlainRecord(value)
+    && hasExactKeys(value, new Set(expectedKeys))
 }
 
 module.exports = {
