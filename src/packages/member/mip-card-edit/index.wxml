@@ -1,0 +1,37 @@
+<view id="mip-card-edit-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+180rpx)] pt-4 text-ink">
+  <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-8"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <app-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载名片设置" description="身份服务暂时没有响应。" action-text="重新加载" bind:action="load" />
+  <block wx:else>
+    <view class="rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="text-[length:30rpx] font-semibold">名片信息</view>
+      <view class="mt-2 text-[length:23rpx] leading-6 text-muted">姓名、公司和职位来自个人资料，联系方式可单独设置公开范围。</view>
+      <input class="mt-3 h-[84rpx] w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:25rpx]" maxlength="64" value="{{realName}}" data-field="realName" bindinput="updateText" placeholder="姓名" />
+      <input class="mt-3 h-[84rpx] w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:25rpx]" maxlength="120" value="{{company}}" data-field="company" bindinput="updateText" placeholder="公司" />
+      <input class="mt-3 h-[84rpx] w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:25rpx]" maxlength="80" value="{{role}}" data-field="role" bindinput="updateText" placeholder="职位" />
+      <input class="mt-3 h-[84rpx] w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:25rpx]" maxlength="120" value="{{organization}}" data-field="organization" bindinput="updateText" placeholder="组织" />
+      <input class="mt-3 h-[84rpx] w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:25rpx]" maxlength="80" value="{{organizationRole}}" data-field="organizationRole" bindinput="updateText" placeholder="组织职位" />
+    </view>
+    <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="text-[length:30rpx] font-semibold">联系方式</view>
+      <view class="mt-4 text-[length:23rpx] font-semibold text-muted">手机号</view>
+      <view class="mt-2 flex items-center justify-between gap-3 rounded-[14rpx] bg-panel-raised px-4 py-3 text-[length:24rpx]"><text>{{phoneBound ? (phoneMasked || '已绑定') : '未绑定'}}</text><button open-type="getPhoneNumber" plain class="m-0 text-[length:22rpx] text-brand" bind:getphonenumber="bindPhone">{{phoneBound ? '更换' : '绑定'}}</button></view>
+      <view class="mt-4 text-[length:23rpx] font-semibold text-muted">微信号</view>
+      <input class="mt-2 h-[84rpx] w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:25rpx]" maxlength="120" value="{{wechat}}" data-field="wechat" bindinput="updateText" placeholder="输入微信号" />
+      <view class="mt-4 text-[length:23rpx] font-semibold text-muted">邮箱</view>
+      <input class="mt-2 h-[84rpx] w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:25rpx]" maxlength="160" value="{{email}}" data-field="email" bindinput="updateText" placeholder="输入邮箱" />
+      <view class="mt-4 text-[length:23rpx] font-semibold text-muted">地址</view>
+      <input class="mt-2 h-[84rpx] w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:25rpx]" maxlength="240" value="{{address}}" data-field="address" bindinput="updateText" placeholder="输入联系地址" />
+    </view>
+    <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
+      <view class="text-[length:30rpx] font-semibold">联系方式公开范围</view>
+      <view class="mt-3 flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">手机号</text><switch checked="{{visibilityPhone}}" color="#FCDF03" data-field="visibilityPhone" bindchange="updateVisibility" /></view>
+      <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">微信号</text><switch checked="{{visibilityWechat}}" color="#FCDF03" data-field="visibilityWechat" bindchange="updateVisibility" /></view>
+      <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">邮箱</text><switch checked="{{visibilityEmail}}" color="#FCDF03" data-field="visibilityEmail" bindchange="updateVisibility" /></view>
+      <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">地址</text><switch checked="{{visibilityAddress}}" color="#FCDF03" data-field="visibilityAddress" bindchange="updateVisibility" /></view>
+      <view class="mt-2 text-[length:22rpx] leading-5 text-muted">联系方式只会在明确允许的名片场景使用，公开档案接口不会返回手机号。</view>
+    </view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:23rpx] leading-6">{{message}}</view>
+    <mip-sticky-actions><view slot="actions" class="w-full"><t-button block size="large" theme="primary" loading="{{saving}}" bind:tap="save">保存名片设置</t-button></view></mip-sticky-actions>
+  </block>
+  <app-page-exit />
+</view>

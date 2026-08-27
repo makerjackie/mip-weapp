@@ -1,6 +1,6 @@
 # Database
 
-MIP 权威结构在 `database/mysql/mip/` 和该目录的 `migrations.lock.json`。当前 lock 固定 52 个追加迁移；新表前缀固定为 `mip_*`，完整迁移记录写入 `mip_schema_migrations`，每条语句的执行状态写入 `mip_schema_migration_steps`，引擎使用 InnoDB。`mip_orders` 统一承载会员、付费活动和付费内容订单。当前 52 个迁移已全部应用；121 张 runtime 表权限已收敛并通过幂等读回。变更前稳定备份已完成并保存在 `~/Backups/mip-weapp/2026-08-24T112700-446Z/`，本轮不再重复创建备份。
+MIP 权威结构在 `database/mysql/mip/` 和该目录的 `migrations.lock.json`。当前 lock 固定 54 个追加迁移；新表前缀固定为 `mip_*`，完整迁移记录写入 `mip_schema_migrations`，每条语句的执行状态写入 `mip_schema_migration_steps`，引擎使用 InnoDB。`mip_orders` 统一承载会员、付费活动和付费内容订单。当前 54 个迁移已全部应用；121 张 runtime 表权限已收敛并通过幂等读回。变更前稳定备份已完成并保存在 `~/Backups/mip-weapp/2026-08-24T112700-446Z/`，本轮不再重复创建备份。
 
 活动相册由 `012_event_album.sql` 追加 `mip_event_album_photos` 与活动相册配置；照片只做状态迁移和版本更新，不执行物理业务删除。`015_checkin_growth_compensation.sql` 追加签到 transition，并将经验余额改为可表达精确冲销的有符号值。`016_notification_delivery_reservations.sql` 为订阅授权追加任务级 reservation，使微信调用可以移出数据库事务且不被其他任务并发复用。`021_referral_targets.sql` 将历史引荐安全回填给对应机会发布人，再把被引荐人收敛为非空外键；发起人和机会的原唯一约束保持不变。后续迁移继续按 lock 中的版本和 checksum 顺序应用。
 
@@ -66,3 +66,10 @@ pnpm database:grants -- \
 该命令只接受 `.env.local` 中与当前 EnvID 派生结果一致的 runtime 用户，拒绝 schema/global 权限，并按当前 MIP 表清单回读验证授权。共享数据库的其他 schema、旧项目表和其他账号不在其授权范围内。
 
 生产禁止 seed。演示实体使用仓库固定 ID，并统一登记在 `mip_app_settings.demo_seed_manifest` 及版本化清单；清单必须包含 `is_demo=1`、seed 版本、SHA-256、`PENDING | READY` 状态和各表完整主键，正式上线前按清单替换或清理。MIP 函数部署前必须由 `pnpm database:grants` 验证环境专属 runtime 账号的精确表级权限，不允许 schema-level ALL 或全局权限。
+### 053：个人资料与名片联系方式
+
+`053_profile_identity_card_contacts.sql` 为 `mip_profiles` 增加可选的姓名、性别和职业身份字段，为 `mip_private_profiles` 增加微信号、邮箱和地址的密文列。联系方式不进入公开资料查询，名片公开范围只记录在 `visibility_json.cardContacts`；身份云函数从现有 `MIP_PHONE_ENCRYPTION_KEY` 按不同用途派生名片联系方式加密子密钥，不引入客户端或独立的可漂移密钥。
+
+### 054：徽章分类
+
+`054_badge_categories.sql` 为徽章目录增加 `IDENTITY | HONOR` 分类及查询索引。获授和佩戴仍由 `mip_user_badges`、`mip_user_badge_profiles` 与 `mip_user_badge_equipment` 决定；分类只控制目录呈现，不授予徽章。

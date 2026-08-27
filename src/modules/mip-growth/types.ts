@@ -66,9 +66,11 @@ export interface BadgeCollectionItem {
   iconName?: string
   imageUrl?: string
   placeholderShape: 'CIRCLE' | 'DIAMOND' | 'HEXAGON'
+  category: 'IDENTITY' | 'HONOR'
   status: 'DRAFT' | 'ACTIVE' | 'INACTIVE'
+  earned: boolean
   equippedSlot?: number
-  awardedAt: string
+  awardedAt?: string
 }
 
 export interface BadgeCollection {

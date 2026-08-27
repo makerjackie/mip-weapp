@@ -62,6 +62,9 @@ export interface ProfileOrganization {
 }
 
 export interface ProfileVisibility {
+  realName?: boolean
+  gender?: boolean
+  careerIdentity?: boolean
   nickname?: boolean
   avatar?: boolean
   identityStatus?: boolean
@@ -73,6 +76,23 @@ export interface ProfileVisibility {
   abilities?: boolean
   primaryBranch?: boolean
   influence?: boolean
+  cardContacts?: {
+    phone?: boolean
+    wechat?: boolean
+    email?: boolean
+    address?: boolean
+  }
+}
+
+export type ProfileGender = 'UNKNOWN' | 'MALE' | 'FEMALE'
+
+export interface ProfilePrivateContact {
+  phone?: string
+  phoneMasked?: string
+  phoneBound: boolean
+  wechat?: string
+  email?: string
+  address?: string
 }
 
 export interface PublicProfileTag {
@@ -83,6 +103,9 @@ export interface PublicMipProfile {
   profileRef: string
   isSelf: boolean
   nickname?: string
+  realName?: string
+  gender?: ProfileGender
+  careerIdentityKey?: string
   avatarUrl?: string
   userKind?: UserKind
   identityStatus?: string
@@ -101,6 +124,9 @@ export interface MipProfileSnapshot {
   exists: boolean
   version: number
   nickname: string
+  realName: string
+  gender: ProfileGender
+  careerIdentityKey: string
   avatarBound: boolean
   avatarAssetId?: string
   avatarUrl?: string
@@ -112,6 +138,7 @@ export interface MipProfileSnapshot {
   visibility: ProfileVisibility
   primaryIndustryTagId?: string
   abilityTagIds: string[]
+  privateContact?: ProfilePrivateContact
   complete: boolean
   missingFields: ProfileMissingField[]
 }
@@ -179,6 +206,9 @@ export interface ProfileUpdateInput {
   expectedUserVersion?: number
   primaryBranchId?: BranchId
   nickname: string
+  realName?: string
+  gender?: ProfileGender
+  careerIdentityKey?: string
   identityStatus: string
   headline: string
   introduction: string
@@ -188,6 +218,17 @@ export interface ProfileUpdateInput {
   primaryIndustryTagId?: string
   abilityTagIds: string[]
   aiConfirmation?: AiDraftSourceConfirmation
+}
+
+export interface ProfileCardUpdateInput {
+  expectedVersion: number
+  realName: string
+  companies: ProfileOrganization[]
+  organizations: ProfileOrganization[]
+  wechat: string
+  email: string
+  address: string
+  visibility: Partial<ProfileVisibility>
 }
 
 export interface ProfileTagOption {
@@ -220,6 +261,7 @@ export interface MipIdentityActionInputMap {
   getPublicProfile: { profileRef: string }
   resolveProfileCardScene: { scene: string }
   updateProfile: ProfileUpdateInput
+  updateCard: ProfileCardUpdateInput
   listProfileTags: Record<string, never>
   listBranches: Record<string, never>
   setPrimaryBranch: SetPrimaryBranchInput
@@ -235,6 +277,7 @@ export interface MipIdentityActionResultMap {
   getPublicProfile: PublicMipProfile
   resolveProfileCardScene: ProfileCardSceneResolution
   updateProfile: IdentityAccessSnapshot
+  updateCard: IdentityAccessSnapshot
   listProfileTags: ProfileTagOption[]
   listBranches: CityBranchSummary[]
   setPrimaryBranch: BranchSelectionSnapshot
@@ -258,6 +301,7 @@ export interface MipIdentityGateway {
   getPublicProfile: (profileRef: string) => Promise<PublicMipProfile>
   resolveProfileCardScene: (scene: string) => Promise<ProfileCardSceneResolution>
   updateProfile: (input: ProfileUpdateInput) => Promise<IdentityAccessSnapshot>
+  updateCard: (input: ProfileCardUpdateInput) => Promise<IdentityAccessSnapshot>
   listProfileTags: () => Promise<ProfileTagOption[]>
   listBranches: () => Promise<CityBranchSummary[]>
   setPrimaryBranch: (input: SetPrimaryBranchInput) => Promise<BranchSelectionSnapshot>

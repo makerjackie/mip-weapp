@@ -6,6 +6,7 @@ import type {
   PublicProfileOpportunity,
   PublicProfileSuperCase,
 } from '../../../modules/mip-opportunities'
+import { badgeArtFallback } from '../../../config/mip-badge-art'
 import { cooperationRoles } from '../../../config/mip-catalogs'
 import {
   createCommunityReportIntent,
@@ -29,6 +30,7 @@ interface PublicProfileView extends PublicPerson {
   organizations: NonNullable<PublicPerson['organizations']>
   abilities: NonNullable<PublicPerson['abilities']>
   badges: NonNullable<PublicPerson['badges']>
+  badgeArtFallbackUrls: Record<string, string>
   branchText: string
 }
 
@@ -51,6 +53,10 @@ function presentProfile(profile: PublicPerson): PublicProfileView {
     organizations: profile.organizations || [],
     abilities: profile.abilities || [],
     badges: profile.badges || [],
+    badgeArtFallbackUrls: Object.fromEntries((profile.badges || []).map(badge => [
+      badge.id,
+      badgeArtFallback(badge.key, badge.name),
+    ])),
     branchText: profile.primaryBranch
       ? [profile.primaryBranch.cityName, profile.primaryBranch.name].filter(Boolean).join(' · ')
       : '',

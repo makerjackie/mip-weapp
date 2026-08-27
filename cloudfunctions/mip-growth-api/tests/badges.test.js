@@ -7,8 +7,9 @@ const { createGrowthRepository } = require('../domain/repository')
 const appId = 'wx-badges-app'
 const userId = '10000000-0000-4000-8000-000000000001'
 const badgeId = '20000000-0000-4000-8000-000000000001'
+const lockedBadgeId = '20000000-0000-4000-8000-000000000002'
 
-test('lists only the current user collection with explicit equipment slots', async () => {
+test('lists the complete catalog with explicit award and equipment state', async () => {
   const database = {
     async one(sql) {
       if (sql.includes('mip_user_badge_profiles')) return { version: 4 }
@@ -16,7 +17,7 @@ test('lists only the current user collection with explicit equipment slots', asy
     },
     async query(sql) {
       if (sql.includes('INSERT INTO mip_user_badge_profiles')) return { affectedRows: 1 }
-      if (sql.includes('FROM mip_user_badges award')) {
+      if (sql.includes('FROM mip_badges badge')) {
         return [{
           id: badgeId,
           badge_key: 'event_participant',
@@ -25,10 +26,26 @@ test('lists only the current user collection with explicit equipment slots', asy
           icon_name: 'calendar-check',
           image_url: '',
           placeholder_shape: 'CIRCLE',
+          category: 'IDENTITY',
           sort_order: 10,
+          award_id: 'award-1',
           status: 'ACTIVE',
           awarded_at: '2026-08-24T00:00:00.000Z',
           slot_no: 1,
+        }, {
+          id: lockedBadgeId,
+          badge_key: 'delivery_leader',
+          name: '交付统筹',
+          description: '带领团队按计划完成项目目标',
+          icon_name: 'task-done-filled',
+          image_url: '/packages/member/assets/generated/badges/badge-delivery-leader.png',
+          placeholder_shape: 'HEXAGON',
+          category: 'HONOR',
+          sort_order: 20,
+          award_id: null,
+          status: 'ACTIVE',
+          awarded_at: null,
+          slot_no: null,
         }]
       }
       throw new Error(`unexpected query: ${sql}`)
@@ -37,7 +54,11 @@ test('lists only the current user collection with explicit equipment slots', asy
   const result = await createGrowthRepository(database).listBadgeCollection(appId, userId)
   assert.equal(result.version, 4)
   assert.equal(result.maximumEquipped, 3)
-  assert.deepEqual(result.items.map(item => [item.id, item.equippedSlot]), [[badgeId, 1]])
+  assert.deepEqual(result.items.map(item => [item.id, item.equippedSlot]), [[badgeId, 1], [lockedBadgeId, undefined]])
+  assert.equal(result.items[0].earned, true)
+  assert.equal(result.items[0].category, 'IDENTITY')
+  assert.equal(result.items[1].earned, false)
+  assert.equal(result.items[1].awardedAt, undefined)
   assert.equal(JSON.stringify(result).includes(userId), false)
 })
 
@@ -62,7 +83,7 @@ test('replaces at most three equipped badges behind one optimistic version', asy
     },
     async query(sql) {
       if (sql.includes('INSERT INTO mip_user_badge_profiles')) return { affectedRows: 1 }
-      if (sql.includes('FROM mip_user_badges award')) return []
+      if (sql.includes('FROM mip_badges badge')) return []
       throw new Error(`unexpected query: ${sql}`)
     },
   }

@@ -6,6 +6,7 @@ import type { EditableProfileOrganization } from './organization-editor'
 import { aiOrganizations, aiText } from '../../../modules/mip-ai/editor'
 import { loadAiEditorDraft } from '../../../modules/mip-ai/editor-loader'
 import { mipBranchesModule, mipIdentityModule } from '../../../modules/mip-identity/client'
+import { careerIdentityOptions, profileGenderOptions } from '../../../modules/mip-identity/profile-options'
 import {
   flattenProfileIndustries,
   groupProfileIndustries,
@@ -52,6 +53,11 @@ Page({
     phoneBound: false,
     phoneBinding: false,
     nickname: '',
+    realName: '',
+    gender: 'UNKNOWN' as 'UNKNOWN' | 'MALE' | 'FEMALE',
+    careerIdentityKey: '',
+    genderOptions: profileGenderOptions,
+    careerIdentityOptions,
     avatarAssetId: '',
     avatarUrl: '',
     avatarUploading: false,
@@ -62,6 +68,9 @@ Page({
     organizations: [] as EditableProfileOrganization[],
     maxOrganizations: MAX_PROFILE_ORGANIZATIONS,
     visibilityNickname: true,
+    visibilityRealName: false,
+    visibilityGender: false,
+    visibilityCareerIdentity: false,
     visibilityAvatar: true,
     visibilityIdentityStatus: true,
     visibilityHeadline: true,
@@ -143,11 +152,14 @@ Page({
         userVersion: snapshot.userVersion,
         phoneBound: snapshot.phoneBound,
         nickname: aiText(aiFields, 'nickname', 64) || snapshot.profile.nickname,
+        realName: snapshot.profile.realName || '',
+        gender: snapshot.profile.gender || 'UNKNOWN',
+        careerIdentityKey: snapshot.profile.careerIdentityKey || '',
         avatarAssetId: snapshot.profile.avatarAssetId || '',
         avatarUrl: snapshot.profile.avatarUrl || '',
         identityStatus: aiText(aiFields, 'identityStatus', 32) || snapshot.profile.identityStatus,
         headline: aiText(aiFields, 'headline', 160) || snapshot.profile.headline,
-        introduction: aiText(aiFields, 'introduction', 600) || snapshot.profile.introduction,
+        introduction: aiText(aiFields, 'introduction', 300) || snapshot.profile.introduction,
         companies: createEditableOrganizations(
           companies.length ? companies : snapshot.profile.companies,
           () => nextExperienceId('companies'),
@@ -157,6 +169,9 @@ Page({
           () => nextExperienceId('organizations'),
         ),
         visibilityNickname: snapshot.profile.visibility.nickname !== false,
+        visibilityRealName: snapshot.profile.visibility.realName === true,
+        visibilityGender: snapshot.profile.visibility.gender === true,
+        visibilityCareerIdentity: snapshot.profile.visibility.careerIdentity === true,
         visibilityAvatar: snapshot.profile.visibility.avatar !== false,
         visibilityIdentityStatus: snapshot.profile.visibility.identityStatus !== false,
         visibilityHeadline: snapshot.profile.visibility.headline,
@@ -193,12 +208,24 @@ Page({
     const field = String(event.currentTarget.dataset.field || '')
     if ([
       'nickname',
+      'realName',
       'identityStatus',
       'headline',
       'introduction',
     ].includes(field)) {
       this.setData({ [field]: event.detail.value })
     }
+  },
+
+  changeGender(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const gender = ['UNKNOWN', 'MALE', 'FEMALE'].includes(event.detail.value)
+      ? event.detail.value as 'UNKNOWN' | 'MALE' | 'FEMALE'
+      : 'UNKNOWN'
+    this.setData({ gender })
+  },
+
+  chooseCareerIdentity(event: WechatMiniprogram.TouchEvent) {
+    this.setData({ careerIdentityKey: String(event.currentTarget.dataset.value || '') })
   },
 
   addExperience(event: WechatMiniprogram.TouchEvent) {
@@ -304,6 +331,9 @@ Page({
     const field = String(event.currentTarget.dataset.field || '')
     if ([
       'visibilityNickname',
+      'visibilityRealName',
+      'visibilityGender',
+      'visibilityCareerIdentity',
       'visibilityAvatar',
       'visibilityIdentityStatus',
       'visibilityHeadline',
@@ -376,6 +406,9 @@ Page({
         expectedUserVersion: this.data.userVersion,
         primaryBranchId: selectedBranch.id as BranchId,
         nickname,
+        realName: this.data.realName,
+        gender: this.data.gender,
+        careerIdentityKey: this.data.careerIdentityKey,
         identityStatus: this.data.identityStatus,
         headline: this.data.headline,
         introduction: this.data.introduction,
@@ -383,6 +416,9 @@ Page({
         organizations: normalizeEditableOrganizations(this.data.organizations),
         visibility: {
           nickname: this.data.visibilityNickname,
+          realName: this.data.visibilityRealName,
+          gender: this.data.visibilityGender,
+          careerIdentity: this.data.visibilityCareerIdentity,
           avatar: this.data.visibilityAvatar,
           identityStatus: this.data.visibilityIdentityStatus,
           headline: this.data.visibilityHeadline,

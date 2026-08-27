@@ -1,29 +1,42 @@
-<view id="mip-badges-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+180rpx)] pt-5 text-ink">
-  <view class="text-[length:40rpx] font-bold">我的勋章</view>
-  <view class="mt-2 text-[length:23rpx] text-muted">查看已获得勋章和佩戴状态，最多佩戴 3 个。</view>
-
-  <view wx:if="{{state === 'loading'}}" class="mt-5 rounded-[16rpx] bg-panel px-5 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'empty'}}" class="mt-5"><app-empty-state title="暂无勋章" description="勋章由运营人员根据实际记录授予。" /></view>
-  <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法处理勋章" description="{{message}}" action-text="重新加载" bind:action="loadBadges" /></view>
-  <view wx:else class="mt-5 flex flex-col gap-3">
-    <view class="flex items-center justify-between rounded-[16rpx] bg-panel px-4 py-4"><view><view class="text-[length:22rpx] text-muted">勋章收藏</view><view class="mt-1 text-[length:32rpx] font-bold">{{items.length}} <text class="text-[length:22rpx] font-normal text-muted">枚</text></view></view><view class="text-right"><view class="text-[length:22rpx] text-muted">当前佩戴</view><view class="mt-1 text-[length:32rpx] font-bold text-brand">{{selectedIds.length}}<text class="text-[length:22rpx] font-normal text-muted"> / 3</text></view></view></view>
-    <view class="flex gap-2"><view class="rounded-[8rpx] px-3 py-2 text-[length:22rpx] {{filter === 'all' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-filter="all" bind:tap="chooseFilter">全部</view><view class="rounded-[8rpx] px-3 py-2 text-[length:22rpx] {{filter === 'equipped' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-filter="equipped" bind:tap="chooseFilter">已佩戴</view><view class="rounded-[8rpx] px-3 py-2 text-[length:22rpx] {{filter === 'available' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-filter="available" bind:tap="chooseFilter">可佩戴</view></view>
-    <view wx:if="{{visibleItems.length === 0}}" class="rounded-[16rpx] bg-panel px-4 py-6 text-center text-[length:23rpx] text-muted">当前筛选下暂无勋章。</view>
-    <view id="badge-option-{{index}}" wx:for="{{visibleItems}}" wx:key="id" class="flex min-h-[136rpx] items-center gap-4 rounded-[16rpx] border border-line bg-panel px-4 py-4" style="{{item.selected ? 'border-color: var(--color-brand); background: var(--color-brand-soft);' : ''}}" data-id="{{item.id}}" bind:tap="showBadge" aria-role="button">
-      <image wx:if="{{item.imageUrl}}" class="h-[96rpx] w-[96rpx] shrink-0 rounded-full bg-panel-raised" mode="aspectFit" src="{{item.imageUrl}}" />
-      <view wx:else class="flex h-[96rpx] w-[96rpx] shrink-0 items-center justify-center rounded-full bg-panel-raised"><t-icon name="{{item.iconName || 'certificate'}}" size="48rpx" color="var(--color-brand)" /></view>
-      <view class="min-w-0 flex-1"><view class="flex items-center gap-2"><view class="truncate text-[length:28rpx] font-semibold">{{item.name}}</view><text wx:if="{{item.slotText}}" class="shrink-0 rounded-full bg-brand px-2 py-1 text-[length:22rpx] text-on-brand">{{item.slotText}}</text></view><view class="mt-2 line-clamp-2 text-[length:22rpx] leading-6 text-muted">{{item.description || '暂无说明'}}</view><view wx:if="{{item.unavailable}}" class="mt-2 text-[length:22rpx] text-muted">当前已停用，不能新增佩戴</view></view><view class="flex h-[88rpx] w-[60rpx] shrink-0 items-center justify-center" data-id="{{item.id}}" catch:tap="toggleBadge"><t-icon name="{{item.selected ? 'check-circle-filled' : 'circle'}}" size="42rpx" color="{{item.selected ? 'var(--color-brand)' : 'var(--color-muted)'}}" /></view>
-    </view>
-    <view wx:if="{{message}}" class="rounded-[12rpx] border border-line bg-panel-raised px-4 py-3 text-[length:22rpx] text-muted">{{message}}</view>
-    <mip-sticky-actions><view slot="actions" class="w-full"><t-button block theme="primary" loading="{{saving}}" disabled="{{saving}}" bind:tap="save">保存佩戴状态（{{selectedIds.length}}/3）</t-button></view></mip-sticky-actions>
-
-    <t-popup visible="{{detailVisible}}" placement="bottom" prevent-scroll-through bind:visible-change="handleDetailVisibility">
-      <view wx:if="{{activeBadge}}" class="box-border rounded-t-[24rpx] bg-panel px-5 pb-[calc(env(safe-area-inset-bottom)+32rpx)] pt-5 text-ink">
-        <view class="flex items-start justify-between gap-3"><view class="flex min-w-0 items-center gap-3"><image wx:if="{{activeBadge.imageUrl}}" class="h-[96rpx] w-[96rpx] shrink-0 rounded-full bg-panel-raised" mode="aspectFit" src="{{activeBadge.imageUrl}}" /><view wx:else class="flex h-[96rpx] w-[96rpx] shrink-0 items-center justify-center rounded-full bg-panel-raised"><t-icon name="{{activeBadge.iconName || 'certificate'}}" size="48rpx" color="var(--color-brand)" /></view><view class="min-w-0"><view class="text-[length:30rpx] font-semibold">{{activeBadge.name}}</view><view class="mt-1 text-[length:22rpx] text-muted">{{activeBadge.selected ? activeBadge.slotText : '未佩戴'}}</view></view></view><view class="min-h-[64rpx] shrink-0 px-2 py-2 text-[length:22rpx] text-brand" bind:tap="closeBadgeDetail">关闭</view></view>
-        <view class="mt-5 text-[length:23rpx] leading-[1.7]">{{activeBadge.description || '暂无勋章说明。'}}</view>
-        <view wx:if="{{activeBadge.awardedText}}" class="mt-4 text-[length:22rpx] text-muted">获得时间：{{activeBadge.awardedText}}</view>
+<view id="mip-badges-page" class="mip-member-page badge-page min-h-screen bg-canvas text-ink">
+  <view class="badge-hero pt-[calc(env(safe-area-inset-top)+16rpx)]">
+    <view class="px-6 pb-8">
+      <view class="text-[length:30rpx] font-semibold">我的徽章</view>
+      <view class="mt-10 flex items-center">
+        <image wx:if="{{avatarUrl}}" class="h-[80rpx] w-[80rpx] rounded-full bg-panel-raised" mode="aspectFill" src="{{avatarUrl}}" />
+        <view wx:else class="flex h-[80rpx] w-[80rpx] items-center justify-center rounded-full bg-panel-raised"><t-icon name="user-avatar" size="40rpx" color="var(--color-muted)" /></view>
+        <view class="ml-4">
+          <view class="text-[length:30rpx] font-semibold">{{memberName}}</view>
+          <view class="mt-1 text-[length:22rpx] text-[#B3B3B3]">当前佩戴（最多三枚）</view>
+        </view>
+        <view class="ml-auto text-right">
+          <view class="text-[length:48rpx] font-semibold text-brand">{{items.length}}</view>
+          <view class="mt-1 text-[length:20rpx] text-[#B3B3B3]">徽章数量</view>
+        </view>
       </view>
-    </t-popup>
+    </view>
+    <view class="badge-tabs flex border-t border-[#3A3A3A]">
+      <view class="badge-tab {{activeCategory === 'IDENTITY' ? 'badge-tab--active' : ''}}" data-category="IDENTITY" bind:tap="chooseCategory">身份成就</view>
+      <view class="badge-tab {{activeCategory === 'HONOR' ? 'badge-tab--active' : ''}}" data-category="HONOR" bind:tap="chooseCategory">荣誉成就</view>
+    </view>
   </view>
-  <view wx:if="{{state !== 'ready'}}" class="mt-4"><app-page-exit /></view>
+  <view wx:if="{{state === 'loading'}}" class="px-6 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error'}}" class="px-6 py-8"><app-empty-state title="暂时无法加载徽章" description="{{message}}" action-text="重新加载" bind:action="loadBadges" /></view>
+  <view wx:elif="{{state === 'empty'}}" class="px-6 py-8"><app-empty-state title="暂无徽章" description="徽章由运营人员根据实际记录授予。" /></view>
+  <view wx:else class="px-6 py-6">
+    <view wx:if="{{visibleItems.length === 0}}" class="py-10 text-center text-[length:24rpx] text-muted">当前分类暂无徽章。</view>
+    <view wx:else class="badge-grid">
+      <view wx:for="{{visibleItems}}" wx:key="id" class="badge-item {{item.selected ? 'badge-item--selected' : ''}}" data-id="{{item.id}}" bind:tap="openDetail" aria-role="button">
+        <view class="badge-art-wrap" style="{{item.locked ? 'filter: grayscale(1); opacity: .5;' : ''}}">
+          <image wx:if="{{item.imageUrl || item.artFallbackUrl}}" class="badge-art" mode="aspectFit" src="{{item.imageUrl || item.artFallbackUrl}}" />
+          <view wx:else class="badge-placeholder badge-placeholder--hexagon"><t-icon name="certificate" size="48rpx" color="var(--color-brand)" /></view>
+        </view>
+        <view class="mt-2 w-full truncate text-center text-[length:24rpx]">{{item.name}}</view>
+        <view class="mt-1 w-full truncate text-center text-[length:20rpx] {{item.locked ? 'text-muted' : 'text-[#B3B3B3]'}}">{{item.locked ? '未获得' : item.awardedText}}</view>
+      </view>
+    </view>
+    <view class="mt-5 text-center text-[length:20rpx] text-muted">已获得 {{earnedCount}} 枚 · 当前佩戴 {{selectedIds.length}} / 3</view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] border border-line bg-panel px-4 py-3 text-[length:22rpx] text-muted">{{message}}</view>
+  </view>
+  <view wx:if="{{state !== 'ready'}}" class="px-6 pb-6"><app-page-exit /></view>
 </view>

@@ -951,17 +951,18 @@ function badgeStatement(items) {
   const values = items.map(item => `(
     ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.key)}, ${sqlLiteral(item.name)},
     ${sqlLiteral(item.description)}, ${sqlLiteral(item.iconName)}, ${sqlLiteral(item.imageUrl)},
-    ${sqlLiteral(item.placeholderShape)}, ${Number(item.sortOrder)}, 'ACTIVE', 1, NULL
+    ${sqlLiteral(item.placeholderShape)}, ${sqlLiteral(item.category || 'IDENTITY')}, ${Number(item.sortOrder)}, 'ACTIVE', 1, NULL
   )`).join(',\n')
   return `INSERT INTO mip_badges (
     id, app_id, badge_key, name, description, icon_name, image_url,
-    placeholder_shape, sort_order, status, version, created_by_user_id
+    placeholder_shape, category, sort_order, status, version, created_by_user_id
   ) VALUES ${values}
   ON DUPLICATE KEY UPDATE
     app_id = IF(app_id = VALUES(app_id), app_id, NULL),
     id = IF(id = VALUES(id), id, NULL),
     name = VALUES(name), description = VALUES(description), icon_name = VALUES(icon_name),
     image_url = VALUES(image_url), placeholder_shape = VALUES(placeholder_shape),
+    category = VALUES(category),
     sort_order = VALUES(sort_order), status = 'ACTIVE', version = version + 1`
 }
 

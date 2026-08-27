@@ -279,17 +279,19 @@ function createGrowthRepository(database, options = {}) {
       ),
       database.query(
         `SELECT badge.id, badge.badge_key, badge.name, badge.description, badge.icon_name,
-                badge.image_url, badge.placeholder_shape, badge.sort_order, badge.status,
-                award.awarded_at, equipment.slot_no
-         FROM mip_user_badges award
-         INNER JOIN mip_badges badge
-           ON badge.app_id = award.app_id AND badge.id = award.badge_id
+                badge.image_url, badge.placeholder_shape, badge.category, badge.sort_order, badge.status,
+                award.id AS award_id, award.awarded_at, equipment.slot_no
+         FROM mip_badges badge
+         LEFT JOIN mip_user_badges award
+           ON award.app_id = badge.app_id AND award.badge_id = badge.id
+             AND award.user_id = ? AND award.status = 'ACTIVE'
          LEFT JOIN mip_user_badge_equipment equipment
-           ON equipment.app_id = award.app_id AND equipment.user_id = award.user_id
-             AND equipment.badge_id = award.badge_id
-         WHERE award.app_id = ? AND award.user_id = ? AND award.status = 'ACTIVE'
-         ORDER BY equipment.slot_no IS NULL, equipment.slot_no, badge.sort_order, award.awarded_at, badge.id`,
-        [appId, userId],
+           ON equipment.app_id = badge.app_id AND equipment.user_id = ?
+             AND equipment.badge_id = badge.id
+         WHERE badge.app_id = ? AND badge.status = 'ACTIVE'
+         ORDER BY badge.category, equipment.slot_no IS NULL, equipment.slot_no,
+           badge.sort_order, award.awarded_at, badge.id`,
+        [userId, userId, appId],
       ),
     ])
     return badgeCollectionDto(profile, rows)
@@ -374,9 +376,11 @@ function badgeCollectionDto(profile, rows) {
       iconName: row.icon_name || undefined,
       imageUrl: row.image_url || undefined,
       placeholderShape: row.placeholder_shape,
+      category: row.category === 'HONOR' ? 'HONOR' : 'IDENTITY',
       status: row.status,
+      earned: Boolean(row.award_id),
       equippedSlot: row.slot_no === null || row.slot_no === undefined ? undefined : Number(row.slot_no),
-      awardedAt: iso(row.awarded_at),
+      awardedAt: row.awarded_at ? iso(row.awarded_at) : undefined,
     })),
   }
 }

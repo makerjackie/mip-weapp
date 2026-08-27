@@ -3,25 +3,27 @@
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载名片" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
   <block wx:else>
     <view class="flex items-center justify-between">
-      <view><view class="text-[length:34rpx] font-semibold">名片预览</view><view class="mt-1 text-[length:22rpx] text-muted">仅展示已设为公开的资料。</view></view>
-      <view class="min-h-[64rpx] px-2 py-2 text-[length:23rpx] text-brand" bind:tap="openProfileEdit">编辑资料</view>
+      <view><view class="text-[length:34rpx] font-semibold">我的名片</view><view class="mt-1 text-[length:22rpx] text-muted">展示已允许用于名片的资料。</view></view>
+      <view class="min-h-[64rpx] px-2 py-2 text-[length:23rpx] text-brand" bind:tap="openProfileEdit">编辑名片</view>
     </view>
 
     <view class="relative mt-4 h-[492rpx] w-full overflow-hidden rounded-[18rpx]" style="background: {{theme.background}}; color: {{theme.foreground}};">
       <image wx:if="{{theme.asset}}" class="absolute inset-0 h-full w-full" mode="aspectFill" src="{{theme.asset}}" />
       <view class="absolute inset-0 px-5 py-5">
-        <view class="max-w-[430rpx] truncate text-[length:48rpx] font-bold">{{nickname}}</view>
-        <view class="mt-2 max-w-[430rpx] truncate text-[length:23rpx] font-semibold">{{memberType}}{{identityStatus ? ' · ' + identityStatus : ''}}</view>
-        <view class="mt-10 flex max-w-[420rpx] flex-col gap-2 text-[length:22rpx]" style="color: {{theme.muted}};">
-          <view wx:if="{{companyLine}}" class="truncate">{{companyLine}}</view>
-          <view wx:if="{{organizationLine}}" class="truncate">{{organizationLine}}</view>
-          <view wx:if="{{branchName || industryName}}" class="truncate">{{branchName}}{{branchName && industryName ? ' · ' : ''}}{{industryName}}</view>
+        <view class="max-w-[420rpx] truncate text-[length:42rpx] font-bold">{{nickname}}</view>
+        <view wx:if="{{companyName || roleTitle}}" class="mt-2 max-w-[420rpx] truncate text-[length:22rpx] font-semibold">{{companyName}}{{companyName && roleTitle ? ' · ' : ''}}{{roleTitle}}</view>
+        <view wx:if="{{organizationLine}}" class="mt-1 max-w-[420rpx] truncate text-[length:21rpx]" style="color: {{theme.muted}};">{{organizationLine}}</view>
+        <view class="absolute bottom-5 left-5 flex max-w-[480rpx] flex-col gap-1 text-[length:19rpx] leading-[1.45]" style="color: {{theme.muted}};">
+          <view wx:if="{{phone}}" class="truncate">电话　{{phone}}</view>
+          <view wx:if="{{wechat}}" class="truncate">微信　{{wechat}}</view>
+          <view wx:if="{{email}}" class="truncate">邮箱　{{email}}</view>
+          <view wx:if="{{address}}" class="truncate">地址　{{address}}</view>
+          <view wx:if="{{!phone && !wechat && !email && !address}}" class="truncate">{{memberType}}{{identityStatus ? ' · ' + identityStatus : ''}}{{branchName ? ' · ' + branchName : ''}}</view>
         </view>
-        <view class="absolute bottom-5 left-5 text-[length:22rpx]" style="color: {{theme.muted}};">扫码查看公开档案</view>
       </view>
-      <image wx:if="{{cardAvatarUrl}}" class="absolute right-5 top-5 h-[142rpx] w-[142rpx] rounded-[24rpx]" mode="aspectFill" src="{{cardAvatarUrl}}" />
-      <view wx:else class="absolute right-5 top-5 flex h-[142rpx] w-[142rpx] items-center justify-center rounded-[24rpx] bg-white text-[length:52rpx] font-bold text-black">{{initial}}</view>
-      <view class="absolute bottom-5 right-5 flex h-[112rpx] w-[112rpx] items-center justify-center rounded-[12rpx] bg-white p-2">
+      <image wx:if="{{cardAvatarUrl}}" class="absolute right-5 top-5 h-[192rpx] w-[192rpx] rounded-full" mode="aspectFill" src="{{cardAvatarUrl}}" />
+      <view wx:else class="absolute right-5 top-5 flex h-[192rpx] w-[192rpx] items-center justify-center rounded-full bg-white text-[length:52rpx] font-bold text-black">{{initial}}</view>
+      <view class="absolute bottom-5 right-5 flex h-[104rpx] w-[104rpx] items-center justify-center rounded-[12rpx] bg-white p-2">
         <image wx:if="{{codeUrl}}" class="h-full w-full" mode="aspectFit" src="{{codeUrl}}" />
         <text wx:else class="text-[length:22rpx] text-muted">—</text>
       </view>
@@ -51,7 +53,7 @@
     <mip-sticky-actions>
       <view slot="actions" class="grid w-full grid-cols-2 gap-3">
         <t-button block open-type="share" variant="outline">分享名片</t-button>
-        <t-button block theme="primary" loading="{{generating}}" disabled="{{!codeUrl}}" bind:tap="savePoster">{{codeUrl ? '保存图片' : '名片码不可用'}}</t-button>
+        <t-button block theme="primary" loading="{{generating}}" bind:tap="savePoster">下载名片</t-button>
       </view>
     </mip-sticky-actions>
   </block>

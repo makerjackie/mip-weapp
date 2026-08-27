@@ -727,6 +727,31 @@
       "altersTables": [
         "mip_opportunity_commercial_terms"
       ]
+    },
+    {
+      "version": "20260828530000",
+      "name": "mip_profile_identity_card_contacts",
+      "sql": "database/mysql/mip/053_profile_identity_card_contacts.sql",
+      "sqlSha256": "d06e2ba6ba0f0ef9951620f33dc5fb3e1dad069fc6d560a0467fe3410be57c1b",
+      "rollback": "database/mysql/mip/rollback/053_profile_identity_card_contacts.sql",
+      "rollbackSha256": "2587e588cebb3f31a363f53a3c5be7b9fbb8d9797489c6c85ec666abc9d10410",
+      "createsTables": [],
+      "altersTables": [
+        "mip_profiles",
+        "mip_private_profiles"
+      ]
+    },
+    {
+      "version": "20260828540000",
+      "name": "mip_badge_categories",
+      "sql": "database/mysql/mip/054_badge_categories.sql",
+      "sqlSha256": "57e8bcf384d5b4dde7db15a300d4bd38857757c2758c56ec3a2f4c6f7f91af9a",
+      "rollback": "database/mysql/mip/rollback/054_badge_categories.sql",
+      "rollbackSha256": "0ab07b0073eb144752a518e3466e958db5d2613a07db9e0ef31c22024499a1b7",
+      "createsTables": [],
+      "altersTables": [
+        "mip_badges"
+      ]
     }
   ]
 }

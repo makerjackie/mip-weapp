@@ -184,7 +184,8 @@ function createIdentityRepository(database, options = {}) {
         [appId, userId],
       ),
       database.one(
-        `SELECT phone_verified_at
+        `SELECT phone_verified_at, phone_ciphertext, wechat_ciphertext,
+                email_ciphertext, address_ciphertext
          FROM mip_private_profiles WHERE app_id = ? AND user_id = ?`,
         [appId, userId],
       ),
@@ -231,7 +232,7 @@ function createIdentityRepository(database, options = {}) {
          )`
       : ''
     const profile = await database.one(
-      `SELECT p.nickname, p.identity_status, p.headline, p.introduction,
+      `SELECT p.nickname, p.real_name, p.gender, p.career_identity_key, p.identity_status, p.headline, p.introduction,
               p.companies_json, p.organizations_json, p.visibility_json,
               avatar.cloud_file_id AS avatar_file_id,
               branch.name AS branch_name, branch.city_name AS branch_city_name,
@@ -352,7 +353,7 @@ function createIdentityRepository(database, options = {}) {
         effectivePrimaryBranchId = input.primaryBranchId
       }
       const current = await tx.one(
-        `SELECT version, avatar_asset_id FROM mip_profiles
+        `SELECT version, avatar_asset_id, visibility_json FROM mip_profiles
          WHERE app_id = ? AND user_id = ? FOR UPDATE`,
         [appId, userId],
       )
@@ -381,20 +382,29 @@ function createIdentityRepository(database, options = {}) {
       await assertTagSelections(tx, appId, input.primaryIndustryTagId, input.abilityTagIds, selections)
 
       if (current) {
+        const currentVisibility = current.visibility_json && typeof current.visibility_json === 'string'
+          ? JSON.parse(current.visibility_json)
+          : (current.visibility_json || {})
+        const mergedVisibility = input.visibility.cardContacts
+          ? { ...input.visibility }
+          : { ...input.visibility, ...(currentVisibility.cardContacts ? { cardContacts: currentVisibility.cardContacts } : {}) }
         const updateProfile = await tx.query(
           `UPDATE mip_profiles SET
-             nickname = ?, avatar_asset_id = ?, identity_status = ?, headline = ?, introduction = ?,
+             nickname = ?, real_name = ?, gender = ?, career_identity_key = ?, avatar_asset_id = ?, identity_status = ?, headline = ?, introduction = ?,
              companies_json = ?, organizations_json = ?, visibility_json = ?, version = version + 1
            WHERE app_id = ? AND user_id = ? AND version = ?`,
           [
             input.nickname,
+            input.realName || null,
+            input.gender || 'UNKNOWN',
+            input.careerIdentityKey || null,
             avatarAssetId,
             input.identityStatus || null,
             input.headline || null,
             input.introduction || null,
             JSON.stringify(input.companies),
             JSON.stringify(input.organizations),
-            JSON.stringify(input.visibility),
+            JSON.stringify(mergedVisibility),
             appId,
             userId,
             input.expectedVersion,
@@ -407,13 +417,16 @@ function createIdentityRepository(database, options = {}) {
       else {
         await tx.query(
           `INSERT INTO mip_profiles (
-             app_id, user_id, nickname, avatar_asset_id, identity_status, headline, introduction,
+             app_id, user_id, nickname, real_name, gender, career_identity_key, avatar_asset_id, identity_status, headline, introduction,
              companies_json, organizations_json, visibility_json, version
-           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
           [
             appId,
             userId,
             input.nickname,
+            input.realName || null,
+            input.gender || 'UNKNOWN',
+            input.careerIdentityKey || null,
             avatarAssetId,
             input.identityStatus || null,
             input.headline || null,
@@ -451,6 +464,49 @@ function createIdentityRepository(database, options = {}) {
         confirmation: input.aiConfirmation,
         profile: input,
       })
+    })
+  }
+
+  async function updateCard(appId, userId, input, protectContact) {
+    await database.transaction(async (tx) => {
+      await requireActiveUserForUpdate(tx, appId, userId)
+      const current = await tx.one(
+        `SELECT version, visibility_json FROM mip_profiles
+         WHERE app_id = ? AND user_id = ? FOR UPDATE`,
+        [appId, userId],
+      )
+      if (!current || Number(current.version) !== input.expectedVersion) throw new Error('CONFLICT')
+      const currentVisibility = current.visibility_json && typeof current.visibility_json === 'string'
+        ? JSON.parse(current.visibility_json)
+        : (current.visibility_json || {})
+      const mergedVisibility = { ...currentVisibility, cardContacts: input.visibility.cardContacts }
+      await tx.query(
+        `UPDATE mip_profiles SET real_name = ?, companies_json = ?, organizations_json = ?,
+           visibility_json = ?, version = version + 1
+         WHERE app_id = ? AND user_id = ? AND version = ?`,
+        [
+          input.realName || null,
+          JSON.stringify(input.companies),
+          JSON.stringify(input.organizations),
+          JSON.stringify(mergedVisibility),
+          appId,
+          userId,
+          input.expectedVersion,
+        ],
+      )
+      await tx.query(
+        `INSERT INTO mip_private_profiles (app_id, user_id, wechat_ciphertext, email_ciphertext, address_ciphertext)
+         VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE wechat_ciphertext = VALUES(wechat_ciphertext),
+           email_ciphertext = VALUES(email_ciphertext), address_ciphertext = VALUES(address_ciphertext)`,
+        [
+          appId,
+          userId,
+          input.wechat ? protectContact(input.wechat) : null,
+          input.email ? protectContact(input.email) : null,
+          input.address ? protectContact(input.address) : null,
+        ],
+      )
     })
   }
 
@@ -580,6 +636,7 @@ function createIdentityRepository(database, options = {}) {
     loadPublicProfile,
     setPrimaryBranch,
     updateProfile,
+    updateCard,
   }
 }
 

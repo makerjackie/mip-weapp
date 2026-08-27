@@ -1,4 +1,4 @@
-import type { IdentityAccessSnapshot, PublicMipProfile } from '../../../modules/mip-identity'
+import type { IdentityAccessSnapshot, MipProfileSnapshot, PublicMipProfile } from '../../../modules/mip-identity'
 import { mipAiModule } from '../../../modules/mip-ai/client'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { caseNavigateTo } from '../../../modules/platform/case-navigation'
@@ -25,6 +25,7 @@ interface CardTheme {
 
 const CARD_WIDTH = 702
 const CARD_HEIGHT = 492
+const GENERIC_MINI_PROGRAM_CODE = '/assets/brand/mip-mini-program-qrcode.jpg'
 const themes: Record<CardStyleKey, CardTheme> = {
   PINK: {
     key: 'PINK',
@@ -115,8 +116,13 @@ Page({
     identityStatus: '',
     branchName: '',
     industryName: '',
-    companyLine: '',
+    companyName: '',
+    roleTitle: '',
     organizationLine: '',
+    phone: '',
+    wechat: '',
+    email: '',
+    address: '',
     codeUrl: '',
     codeMessage: '',
     posterPath: '',
@@ -142,28 +148,32 @@ Page({
       if (!snapshot.profileRef) {
         throw new Error('公开档案引用暂时不可用')
       }
-      const codePromise = this.data.codeUrl
+      const codePromise = this.data.codeUrl && !this.data.codeMessage
         ? Promise.resolve({ codeUrl: this.data.codeUrl })
         : mipIdentityModule.getMyProfileCardCode().catch(() => ({ codeUrl: '' }))
-      const [profile, avatarHistory, cardCode] = await Promise.all([
+      const [profile, privateProfile, avatarHistory, cardCode] = await Promise.all([
         mipIdentityModule.getPublicProfile(snapshot.profileRef),
+        mipIdentityModule.getProfile(),
         mipAiModule.listDigitalAvatars().catch(() => ({ items: [] })),
         codePromise,
       ])
       const digitalAvatar = avatarHistory.items.find(item => item.status === 'READY' && item.outputUrl)
-      this.applyCard(snapshot, profile, digitalAvatar?.outputUrl || '', cardCode.codeUrl)
+      this.applyCard(snapshot, profile, privateProfile, digitalAvatar?.outputUrl || '', cardCode.codeUrl)
     }
     catch (error) {
       this.setData({ state: 'error', message: error instanceof Error ? error.message : '名片加载失败' })
     }
   },
 
-  applyCard(snapshot: IdentityAccessSnapshot, profile: PublicMipProfile, digitalAvatarUrl = '', codeUrl = '') {
-    const nickname = compactText(profile.nickname, 'MIP 成员')
+  applyCard(snapshot: IdentityAccessSnapshot, profile: PublicMipProfile, privateProfile: MipProfileSnapshot, digitalAvatarUrl = '', codeUrl = '') {
+    const nickname = compactText(privateProfile.realName || profile.realName || profile.nickname, 'MIP 成员')
     const avatarUrl = profile.avatarUrl || ''
     const avatarSource = this.data.avatarSource === 'DIGITAL' && digitalAvatarUrl ? 'DIGITAL' : 'ORIGINAL'
     const company = profile.companies?.[0]
     const organization = profile.organizations?.[0]
+    const contact = privateProfile.privateContact
+    const contactVisibility = privateProfile.visibility.cardContacts
+    const effectiveCodeUrl = codeUrl || GENERIC_MINI_PROGRAM_CODE
     this.profileRef = snapshot.profileRef || ''
     this.setData({
       state: 'ready',
@@ -177,10 +187,15 @@ Page({
       identityStatus: compactText(profile.identityStatus),
       branchName: compactText(profile.primaryBranch?.name),
       industryName: compactText(profile.primaryIndustry?.label),
-      companyLine: company ? [compactText(company.name), compactText(company.role)].filter(Boolean).join(' · ') : '',
+      companyName: compactText(company?.name),
+      roleTitle: compactText(company?.role),
       organizationLine: organization ? [compactText(organization.name), compactText(organization.role)].filter(Boolean).join(' · ') : '',
-      codeUrl,
-      codeMessage: codeUrl ? '' : '名片码暂时不可用，可稍后重试。',
+      phone: contactVisibility?.phone ? compactText(contact?.phone || contact?.phoneMasked) : '',
+      wechat: contactVisibility?.wechat ? compactText(contact?.wechat) : '',
+      email: contactVisibility?.email ? compactText(contact?.email) : '',
+      address: contactVisibility?.address ? compactText(contact?.address) : '',
+      codeUrl: effectiveCodeUrl,
+      codeMessage: codeUrl ? '' : '当前显示通用小程序二维码，可稍后重试专属名片码。',
       posterPath: '',
       message: '',
     })
@@ -204,7 +219,7 @@ Page({
   },
 
   openProfileEdit() {
-    caseNavigateTo({ url: '/packages/member/mip-profile/index' })
+    caseNavigateTo({ url: '/packages/member/mip-card-edit/index' })
   },
 
   chooseStyle(event: WechatMiniprogram.TouchEvent) {
@@ -269,35 +284,36 @@ Page({
     await this.drawBackground(node, context, theme.asset)
 
     context.fillStyle = theme.foreground
-    context.font = '700 58px sans-serif'
+    context.font = '700 44px sans-serif'
     context.fillText(this.data.nickname.slice(0, 10), 38, 78)
-    context.font = '600 26px sans-serif'
-    context.fillText([this.data.memberType, this.data.identityStatus].filter(Boolean).join(' · ').slice(0, 24), 40, 122)
+    context.font = '600 22px sans-serif'
+    context.fillText([this.data.companyName, this.data.roleTitle].filter(Boolean).join(' · ').slice(0, 30), 40, 118)
+    context.fillText(this.data.organizationLine.slice(0, 30), 40, 150)
 
-    context.font = '500 22px sans-serif'
+    context.font = '500 20px sans-serif'
     context.fillStyle = theme.muted
-    const details = [
-      this.data.companyLine,
-      this.data.organizationLine,
-      [this.data.branchName, this.data.industryName].filter(Boolean).join(' · '),
+    const contacts = [
+      this.data.phone ? `电话  ${this.data.phone}` : '',
+      this.data.wechat ? `微信  ${this.data.wechat}` : '',
+      this.data.email ? `邮箱  ${this.data.email}` : '',
+      this.data.address ? `地址  ${this.data.address}` : '',
     ].filter(Boolean)
-    details.slice(0, 3).forEach((item, index) => context.fillText(item.slice(0, 24), 40, 214 + index * 42))
+    const details = contacts.length
+      ? contacts
+      : [[this.data.memberType, this.data.identityStatus].filter(Boolean).join(' · '), [this.data.branchName, this.data.industryName].filter(Boolean).join(' · ')]
+    details.slice(0, 4).forEach((item, index) => context.fillText(item.slice(0, 36), 40, 255 + index * 36))
 
-    await this.drawAvatar(node, context, 518, 42, 142, theme)
+    await this.drawAvatar(node, context, 472, 36, 192, theme)
     if (this.data.codeUrl) {
       try {
         const code = await loadCanvasImage(node, this.data.codeUrl)
-        roundedRect(context, 540, 320, 112, 112, 12)
+        roundedRect(context, 548, 348, 104, 104, 12)
         context.fillStyle = theme.codeBackground
         context.fill()
-        context.drawImage(code, 548, 328, 96, 96)
+        context.drawImage(code, 554, 354, 92, 92)
       }
       catch {}
     }
-    context.fillStyle = theme.muted
-    context.font = '500 18px sans-serif'
-    context.fillText('扫码查看公开档案', 40, 438)
-
     if (node.requestAnimationFrame) {
       await new Promise<void>(resolve => node.requestAnimationFrame?.(resolve))
     }
@@ -333,7 +349,7 @@ Page({
     theme: CardTheme,
   ) {
     context.save()
-    roundedRect(context, x, y, size, size, 26)
+    roundedRect(context, x, y, size, size, size / 2)
     context.clip()
     if (this.data.cardAvatarUrl) {
       try {

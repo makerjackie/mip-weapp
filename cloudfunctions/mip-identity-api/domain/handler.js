@@ -27,6 +27,7 @@ const errorMessages = {
   PHONE_SERVICE_UNAVAILABLE: '手机号服务暂时不可用',
   PROFILE_TAG_INVALID: '资料标签不存在或当前不可用',
   PROFILE_AVATAR_INVALID: '头像素材不存在或当前不可用',
+  CONTACT_SERVICE_UNAVAILABLE: '联系方式服务暂时不可用',
   PUBLIC_PROFILE_NOT_FOUND: '公开档案不存在或当前不可见',
   UNSUPPORTED_ACTION: '不支持该操作',
   UNION_IDENTITY_CONFIG_REQUIRED: '身份迁移配置无效',
@@ -65,6 +66,7 @@ const actions = Object.freeze({
   listProfileTags: (service, caller) => service.listProfileTags(caller),
   setPrimaryBranch: (service, caller, input) => service.setPrimaryBranch(caller, { input }),
   updateProfile: (service, caller, input) => service.updateProfile(caller, { input }),
+  updateCard: (service, caller, input) => service.updateCard(caller, { input }),
 })
 
 function isRecord(value) {

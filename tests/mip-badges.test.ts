@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { badgeArtFallback } from '../src/config/mip-badge-art'
 import { parsePublicPerson } from '../src/modules/mip-opportunities/validation'
 
 function source(path: string) {
@@ -7,6 +8,18 @@ function source(path: string) {
 }
 
 describe('MIP badge collection', () => {
+  it('uses local generated art only when the server has no badge image', () => {
+    expect(badgeArtFallback('event_participant', '活动参与')).toBe(
+      '/packages/member/assets/generated/badges/badge-attendance.png',
+    )
+    expect(badgeArtFallback('growth_level', '成长等级')).toBe(
+      '/packages/member/assets/generated/badges/badge-growth.png',
+    )
+    expect(badgeArtFallback('community_connector', '社区连接')).toBe(
+      '/packages/member/assets/generated/badges/badge-collaboration.png',
+    )
+  })
+
   it('accepts at most three public equipped badges without identity internals', () => {
     const value = parsePublicPerson({
       profileRef: `p1.${'a'.repeat(16)}.${'b'.repeat(48)}.${'c'.repeat(22)}`,
@@ -42,9 +55,12 @@ describe('MIP badge collection', () => {
     ))
     const runtime = JSON.parse(source('config/runtime-pages.json'))
     expect(routes).toContain('packages/member/mip-badges/index')
+    expect(routes).toContain('packages/member/mip-badge-detail/index')
     expect(routes).toContain('packages/admin/badges/index')
     expect(runtime.routeCount).toBe(runtime.routes.length)
-    expect(source('src/packages/member/mip-badges/index.ts')).toContain('mipGrowthModule.equipBadges')
+    expect(source('src/packages/member/mip-badge-detail/index.ts')).toContain('mipGrowthModule.equipBadges')
+    expect(source('src/packages/member/mip-badge-detail/index.ts')).toContain('toggleEquipment')
+    expect(source('src/packages/member/mip-badge-detail/index.wxml')).toContain('立即佩戴')
     expect(source('src/packages/admin/badges/index.ts')).toContain('mipAdminModule.growth.grantBadge')
     expect(`${source('src/packages/member/mip-badges/index.ts')}\n${source('src/packages/admin/badges/index.ts')}`)
       .not

@@ -25,7 +25,7 @@
       <view wx:if="{{profile.abilities.length}}" class="mt-4 flex flex-wrap gap-2"><text wx:for="{{profile.abilities}}" wx:key="id" class="rounded-[8rpx] bg-panel-raised px-2 py-1 text-[length:20rpx] text-muted">{{item.label}}</text></view>
       <view wx:if="{{profile.badges.length}}" class="mt-3 flex flex-wrap gap-2">
         <view wx:for="{{profile.badges}}" wx:key="id" class="flex h-[48rpx] items-center gap-1 rounded-[8rpx] border border-line px-2">
-          <image wx:if="{{item.imageUrl}}" class="h-[28rpx] w-[28rpx] rounded-full" mode="aspectFill" src="{{item.imageUrl}}" />
+          <image wx:if="{{item.imageUrl || profile.badgeArtFallbackUrls[item.id]}}" class="h-[28rpx] w-[28rpx] rounded-full" mode="aspectFit" src="{{item.imageUrl || profile.badgeArtFallbackUrls[item.id]}}" />
           <t-icon wx:elif="{{item.iconName}}" name="{{item.iconName}}" size="26rpx" color="var(--color-brand)" />
           <view wx:else class="h-[20rpx] w-[20rpx] rounded-full bg-brand" />
           <text class="text-[length:18rpx] text-muted">{{item.name}}</text>

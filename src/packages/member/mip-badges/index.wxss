@@ -1,11 +1,79 @@
+.badge-page {
+  min-height: 100vh;
+  background: #080808;
+}
+
+.badge-hero {
+  background: #202020;
+}
+
+.badge-tabs {
+  height: 80rpx;
+}
+
+.badge-tab {
+  position: relative;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  color: #b3b3b3;
+}
+
+.badge-tab--active {
+  color: #fff;
+}
+
+.badge-tab--active::after {
+  position: absolute;
+  right: 54rpx;
+  bottom: 0;
+  left: 54rpx;
+  height: 6rpx;
+  content: '';
+  background: #fcdf03;
+}
+
+.badge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 40rpx 18rpx;
+}
+
+.badge-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+  padding: 8rpx 0;
+  border-radius: 12rpx;
+}
+
+.badge-item--selected {
+  background: rgb(252 223 3 / 8%);
+}
+
+.badge-art-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 168rpx;
+  height: 168rpx;
+}
+
+.badge-art {
+  width: 100%;
+  height: 100%;
+}
+
 .badge-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 88rpx;
-  height: 88rpx;
+  width: 132rpx;
+  height: 132rpx;
   background: var(--color-brand-soft);
-  border: 4rpx solid var(--color-brand);
 }
 
 .badge-placeholder--hexagon {

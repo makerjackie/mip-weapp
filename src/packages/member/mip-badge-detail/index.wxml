@@ -1,0 +1,19 @@
+<view id="mip-badge-detail-page" class="mip-member-page badge-detail-page min-h-screen bg-canvas text-ink">
+  <view wx:if="{{state === 'loading'}}" class="px-6 py-8"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error' || state === 'empty'}}" class="px-6 py-8"><app-empty-state title="{{state === 'empty' ? '未找到徽章' : '暂时无法加载徽章'}}" description="{{message}}" action-text="重新加载" bind:action="loadBadge" /></view>
+  <view wx:else class="badge-detail-content">
+    <view class="badge-detail-art-wrap" style="{{badge.locked ? 'filter: grayscale(1); opacity: .52;' : ''}}">
+      <image wx:if="{{badge.imageUrl || badge.artFallbackUrl}}" class="badge-detail-art" mode="aspectFit" src="{{badge.imageUrl || badge.artFallbackUrl}}" />
+      <view wx:else class="badge-placeholder badge-placeholder--hexagon"><t-icon name="certificate" size="72rpx" color="var(--color-brand)" /></view>
+    </view>
+    <view class="mt-8 text-center text-[length:34rpx] font-semibold">{{badge.name}}</view>
+    <view class="mt-3 text-center text-[length:22rpx] text-muted">{{badge.earned ? '已获得' : '尚未获得'}}</view>
+    <view class="mt-5 px-8 text-center text-[length:24rpx] leading-[1.8] text-[#B3B3B3]">{{badge.description || '暂无徽章说明。'}}</view>
+    <view wx:if="{{badge.awardedText}}" class="mt-4 text-center text-[length:22rpx] text-muted">获得时间：{{badge.awardedText}}</view>
+    <view class="mt-10 flex justify-center">
+      <t-button theme="primary" loading="{{saving}}" disabled="{{badge.locked || saving}}" bind:tap="toggleEquipment">{{badge.locked ? '未获得' : (badge.selected ? '取消佩戴' : '立即佩戴')}}</t-button>
+    </view>
+    <view wx:if="{{message}}" class="mx-6 mt-5 rounded-[12rpx] border border-line bg-panel px-4 py-3 text-center text-[length:22rpx] text-muted">{{message}}</view>
+  </view>
+  <view class="px-6 pb-6"><app-page-exit /></view>
+</view>

@@ -45,6 +45,10 @@
       "pathName": "packages/member/mip-card/index"
     },
     {
+      "name": "名片设置",
+      "pathName": "packages/member/mip-card-edit/index"
+    },
+    {
       "name": "数字分身",
       "pathName": "packages/member/mip-avatar/index"
     },
@@ -147,6 +151,10 @@
     {
       "name": "我的勋章",
       "pathName": "packages/member/mip-badges/index"
+    },
+    {
+      "name": "徽章详情",
+      "pathName": "packages/member/mip-badge-detail/index"
     },
     {
       "name": "团队 PK",

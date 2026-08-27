@@ -7,6 +7,7 @@ import type {
   IdentityAccessSnapshot,
   MipIdentityGateway,
   PendingAccessResume,
+  ProfileCardUpdateInput,
   ProfileUpdateInput,
   ProtectedActionIntent,
 } from './contracts'
@@ -82,6 +83,9 @@ function signedOutSnapshot(): IdentityAccessSnapshot {
       exists: false,
       version: 0,
       nickname: '',
+      realName: '',
+      gender: 'UNKNOWN',
+      careerIdentityKey: '',
       avatarBound: false,
       identityStatus: '',
       headline: '',
@@ -451,6 +455,10 @@ export function createMipIdentityModule(
 
     async saveProfile(input: ProfileUpdateInput) {
       return loadAndStoreSnapshot(() => gateway.updateProfile(input))
+    },
+
+    async updateCard(input: ProfileCardUpdateInput) {
+      return loadAndStoreSnapshot(() => gateway.updateCard(input))
     },
 
     async complete(token: string): Promise<AccessReturnContext> {

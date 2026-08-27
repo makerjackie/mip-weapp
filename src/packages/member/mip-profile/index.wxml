@@ -39,6 +39,21 @@
       <view class="mt-5 text-[length:23rpx] font-semibold text-muted">昵称</view>
       <input class="mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:26rpx]" type="nickname" maxlength="64" value="{{nickname}}" data-field="nickname" bindinput="updateText" placeholder="输入昵称" placeholder-style="color:#A3A3A3" />
 
+      <view class="mt-5 text-[length:23rpx] font-semibold text-muted">姓名</view>
+      <input class="mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:26rpx]" maxlength="64" value="{{realName}}" data-field="realName" bindinput="updateText" placeholder="输入真实姓名" placeholder-style="color:#A3A3A3" />
+
+      <view class="mt-5 text-[length:23rpx] font-semibold text-muted">性别</view>
+      <radio-group class="mt-2 flex gap-5" bindchange="changeGender">
+        <label wx:for="{{genderOptions}}" wx:key="value" class="flex items-center gap-2 text-[length:24rpx]"><radio value="{{item.value}}" checked="{{gender === item.value}}" color="#FCDF03" />{{item.label}}</label>
+      </radio-group>
+
+      <view class="mt-5 text-[length:23rpx] font-semibold text-muted">职业身份</view>
+      <view class="mt-3 flex flex-wrap gap-2">
+        <block wx:for="{{careerIdentityOptions}}" wx:key="value">
+          <view data-value="{{item.value}}" class="rounded-full border px-3 py-2 text-[length:22rpx] {{careerIdentityKey === item.value ? 'border-brand bg-brand-soft text-brand' : 'border-line text-muted'}}" bind:tap="chooseCareerIdentity">{{item.label}}</view>
+        </block>
+      </view>
+
       <view wx:if="{{branchGroups.length}}" class="mt-5 rounded-[14rpx] bg-panel-raised px-4 py-4"><mip-catalog-selector title="主城市分会" groups="{{branchGroups}}" selected-ids="{{selectedBranchIds}}" multiple="{{false}}" clear-label="未选择" bind:change="changeBranch" /></view>
       <view wx:else class="mt-5 rounded-[14rpx] bg-panel-raised px-4 py-4 text-[length:23rpx] text-muted">城市分会暂未配置，请稍后再试。</view>
       <view class="mt-2 text-[length:22rpx] leading-5 text-muted">主分会用于默认展示和归属，不限制参加其他城市活动。</view>
@@ -61,7 +76,7 @@
       <input class="mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 text-[length:26rpx]" maxlength="160" value="{{headline}}" data-field="headline" bindinput="updateText" placeholder="说明你目前在做的事" placeholder-style="color:#A3A3A3" />
 
       <view class="mt-5 text-[length:23rpx] font-semibold text-muted">个人简介</view>
-      <textarea class="mt-2 block h-[220rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 py-3 text-[length:26rpx] leading-6" maxlength="600" value="{{introduction}}" data-field="introduction" bindinput="updateText" placeholder="介绍经历、能力和合作方向" placeholder-style="color:#A3A3A3" />
+      <textarea class="mt-2 block h-[220rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 py-3 text-[length:26rpx] leading-6" maxlength="300" value="{{introduction}}" data-field="introduction" bindinput="updateText" placeholder="介绍经历、能力和合作方向" placeholder-style="color:#A3A3A3" />
     </view>
 
     <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
@@ -117,6 +132,9 @@
     <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-4">
       <view class="text-[length:30rpx] font-semibold">公开范围</view>
       <view class="mt-3 flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">昵称</text><switch checked="{{visibilityNickname}}" color="#FCDF03" data-field="visibilityNickname" bindchange="updateVisibility" /></view>
+      <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">姓名</text><switch checked="{{visibilityRealName}}" color="#FCDF03" data-field="visibilityRealName" bindchange="updateVisibility" /></view>
+      <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">性别</text><switch checked="{{visibilityGender}}" color="#FCDF03" data-field="visibilityGender" bindchange="updateVisibility" /></view>
+      <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">职业身份</text><switch checked="{{visibilityCareerIdentity}}" color="#FCDF03" data-field="visibilityCareerIdentity" bindchange="updateVisibility" /></view>
       <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">头像</text><switch checked="{{visibilityAvatar}}" color="#FCDF03" data-field="visibilityAvatar" bindchange="updateVisibility" /></view>
       <view class="flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">身份状态</text><switch checked="{{visibilityIdentityStatus}}" color="#FCDF03" data-field="visibilityIdentityStatus" bindchange="updateVisibility" /></view>
       <view class="mt-3 flex min-h-[88rpx] items-center justify-between"><text class="text-[length:25rpx]">一句话介绍</text><switch checked="{{visibilityHeadline}}" color="#FCDF03" data-field="visibilityHeadline" bindchange="updateVisibility" /></view>

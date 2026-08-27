@@ -25,6 +25,9 @@ function createIdentityService(options) {
   const agreements = options.agreements || defaultAgreements
   const phoneResolver = options.phoneResolver
   const protectPhone = options.protectPhone
+  const revealPhone = options.revealPhone
+  const protectContact = options.protectContact
+  const revealContact = options.revealContact
   const profileRefReader = options.profileRefReader
   const profileRefWriter = options.profileRefWriter
   const profileCardCodeWriter = options.profileCardCodeWriter
@@ -78,7 +81,13 @@ function createIdentityService(options) {
   async function getProfile(caller) {
     const user = await repository.ensureUser(caller)
     const facts = await repository.loadFacts(caller.appId, user.id)
-    return profileDto(facts)
+    return profileDto(facts, {
+      includePrivateContact: true,
+      appId: caller.appId,
+      userId: user.id,
+      revealPhone,
+      revealContact,
+    })
   }
 
   async function getMyProfileCardCode(caller) {
@@ -126,6 +135,18 @@ function createIdentityService(options) {
     const user = await repository.ensureUser(caller)
     assertActiveUser(user)
     await repository.updateProfile(caller.appId, user.id, input)
+    return getAccessSnapshot(caller)
+  }
+
+  async function updateCard(caller, value) {
+    const input = normalizeCardInput(value?.input)
+    const user = await repository.ensureUser(caller)
+    assertActiveUser(user)
+    if (typeof protectContact !== 'function') throw new Error('CONTACT_SERVICE_UNAVAILABLE')
+    await repository.updateCard(caller.appId, user.id, input, value => protectContact(value, {
+      appId: caller.appId,
+      userId: user.id,
+    }))
     return getAccessSnapshot(caller)
   }
 
@@ -177,6 +198,7 @@ function createIdentityService(options) {
     resolveProfileCardScene,
     setPrimaryBranch,
     updateProfile,
+    updateCard,
   }
 }
 
@@ -263,7 +285,7 @@ function snapshotDto(facts, agreements, membership, profileRef) {
   }
 }
 
-function profileDto(facts) {
+function profileDto(facts, options = {}) {
   const profile = facts.profile
   const nickname = typeof profile?.nickname === 'string' ? profile.nickname.trim() : ''
   const missingFields = []
@@ -278,6 +300,9 @@ function profileDto(facts) {
     exists: Boolean(profile),
     version: Number(profile?.version || 0),
     nickname,
+    realName: profile?.real_name || '',
+    gender: profile?.gender || 'UNKNOWN',
+    careerIdentityKey: profile?.career_identity_key || '',
     avatarBound: profile?.avatar_status === 'READY',
     avatarAssetId: profile?.avatar_asset_id || undefined,
     avatarUrl: profile?.avatar_status === 'READY' ? (profile.avatar_file_id || undefined) : undefined,
@@ -293,6 +318,36 @@ function profileDto(facts) {
       .map(tag => tag.tag_id),
     complete: missingFields.length === 0,
     missingFields,
+    ...(options.includePrivateContact ? {
+      privateContact: privateContactDto(facts, options),
+    } : {}),
+  }
+}
+
+function privateContactDto(facts, options) {
+  const privateProfile = facts.privateProfile || {}
+  const context = { appId: options.appId, userId: options.userId }
+  let phoneMasked
+  let phoneNumber
+  if (typeof options.revealPhone === 'function' && privateProfile.phone_ciphertext) {
+    try {
+      const phone = options.revealPhone(privateProfile.phone_ciphertext, context)
+      const digits = String(phone).split(':').pop() || ''
+      phoneNumber = digits || undefined
+      phoneMasked = digits.length > 7 ? `${digits.slice(0, 3)}****${digits.slice(-4)}` : '已绑定手机号'
+    } catch {}
+  }
+  const reveal = (cipher) => {
+    if (!cipher || typeof options.revealContact !== 'function') return undefined
+    try { return options.revealContact(cipher, context) || undefined } catch { return undefined }
+  }
+  return {
+    phoneBound: Boolean(privateProfile.phone_verified_at),
+    ...(phoneNumber ? { phone: phoneNumber } : {}),
+    ...(phoneMasked ? { phoneMasked } : {}),
+    ...(reveal(privateProfile.wechat_ciphertext) ? { wechat: reveal(privateProfile.wechat_ciphertext) } : {}),
+    ...(reveal(privateProfile.email_ciphertext) ? { email: reveal(privateProfile.email_ciphertext) } : {}),
+    ...(reveal(privateProfile.address_ciphertext) ? { address: reveal(privateProfile.address_ciphertext) } : {}),
   }
 }
 
@@ -306,6 +361,9 @@ function publicProfileDto(profileRef, facts, isSelf = false) {
     profileRef,
     isSelf,
     ...(allowed.nickname && profile.nickname ? { nickname: String(profile.nickname).trim() } : {}),
+    ...(allowed.realName && profile.real_name ? { realName: String(profile.real_name).trim() } : {}),
+    ...(allowed.gender && profile.gender ? { gender: String(profile.gender) } : {}),
+    ...(allowed.careerIdentity && profile.career_identity_key ? { careerIdentityKey: String(profile.career_identity_key) } : {}),
     ...(allowed.avatar && profile.avatar_file_id ? { avatarUrl: profile.avatar_file_id } : {}),
     ...(allowed.identityStatus
       ? {
@@ -363,11 +421,17 @@ function normalizeProfileInput(value) {
   const nickname = boundedText(value.nickname, 1, 64)
   const identityStatus = boundedText(value.identityStatus, 0, 32)
   const headline = boundedText(value.headline, 0, 160)
-  const introduction = boundedText(value.introduction, 0, 600)
+  const introduction = boundedText(value.introduction, 0, 300)
+  const realName = boundedText(value.realName, 0, 64)
+  const gender = ['UNKNOWN', 'MALE', 'FEMALE'].includes(value.gender) ? value.gender : 'UNKNOWN'
+  const careerIdentityKey = boundedText(value.careerIdentityKey, 0, 32)
   if (!Number.isInteger(expectedVersion) || expectedVersion < 0) {
     throw new Error('VALIDATION_FAILED')
   }
   if (avatarAssetId !== undefined && !isUuid(avatarAssetId)) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  if (careerIdentityKey && !/^[a-z0-9_]{1,32}$/.test(careerIdentityKey)) {
     throw new Error('VALIDATION_FAILED')
   }
   const companies = organizations(value.companies)
@@ -394,6 +458,9 @@ function normalizeProfileInput(value) {
     expectedUserVersion,
     primaryBranchId,
     nickname,
+    realName,
+    gender,
+    careerIdentityKey,
     identityStatus,
     headline,
     introduction,
@@ -441,8 +508,11 @@ function boundedText(value, minimum, maximum) {
 
 function visibility(value) {
   const input = parseJson(value)
-  return {
+  const result = {
     nickname: input.nickname !== false,
+    realName: input.realName === true,
+    gender: input.gender === true,
+    careerIdentity: input.careerIdentity === true,
     avatar: input.avatar !== false,
     identityStatus: input.identityStatus !== false,
     headline: input.headline !== false,
@@ -453,6 +523,38 @@ function visibility(value) {
     abilities: input.abilities !== false,
     primaryBranch: input.primaryBranch !== false,
     influence: input.influence === true,
+  }
+  if (input.cardContacts && typeof input.cardContacts === 'object') {
+    result.cardContacts = {
+      phone: input.cardContacts.phone === true,
+      wechat: input.cardContacts.wechat === true,
+      email: input.cardContacts.email === true,
+      address: input.cardContacts.address === true,
+    }
+  }
+  return result
+}
+
+function normalizeCardInput(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('VALIDATION_FAILED')
+  const expectedVersion = Number(value.expectedVersion)
+  if (!Number.isInteger(expectedVersion) || expectedVersion < 1) throw new Error('VALIDATION_FAILED')
+  return {
+    expectedVersion,
+    realName: boundedText(value.realName, 0, 64),
+    companies: organizations(value.companies),
+    organizations: organizations(value.organizations),
+    wechat: boundedText(value.wechat, 0, 120),
+    email: boundedText(value.email, 0, 160),
+    address: boundedText(value.address, 0, 240),
+    visibility: {
+      cardContacts: {
+        phone: value.visibility?.cardContacts?.phone === true,
+        wechat: value.visibility?.cardContacts?.wechat === true,
+        email: value.visibility?.cardContacts?.email === true,
+        address: value.visibility?.cardContacts?.address === true,
+      },
+    },
   }
 }
 

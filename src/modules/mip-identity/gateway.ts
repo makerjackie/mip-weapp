@@ -10,6 +10,7 @@ import type {
   MipIdentityGateway,
   MipIdentityRequest,
   MipProfileSnapshot,
+  ProfileCardUpdateInput,
   ProfileOrganization,
   ProfileTagOption,
   ProfileUpdateInput,
@@ -139,6 +140,9 @@ function publicProfile(value: unknown): PublicMipProfile {
     profileRef: value.profileRef,
     isSelf: value.isSelf,
     ...(optionalText(value.nickname) ? { nickname: optionalText(value.nickname) } : {}),
+    ...(optionalText(value.realName) ? { realName: optionalText(value.realName) } : {}),
+    ...(['UNKNOWN', 'MALE', 'FEMALE'].includes(String(value.gender)) ? { gender: value.gender as PublicMipProfile['gender'] } : {}),
+    ...(optionalText(value.careerIdentityKey) ? { careerIdentityKey: optionalText(value.careerIdentityKey) } : {}),
     ...(optionalText(value.avatarUrl) ? { avatarUrl: optionalText(value.avatarUrl) } : {}),
     ...(userKind ? { userKind } : {}),
     ...(optionalText(value.identityStatus) ? { identityStatus: optionalText(value.identityStatus) } : {}),
@@ -234,6 +238,10 @@ export function createMipIdentityGateway(transport: MipIdentityTransport): MipId
 
     async updateProfile(input: ProfileUpdateInput) {
       return snapshot(await call(transport, 'updateProfile', input))
+    },
+
+    async updateCard(input: ProfileCardUpdateInput) {
+      return snapshot(await call(transport, 'updateCard', input))
     },
 
     async listProfileTags() {

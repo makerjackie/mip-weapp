@@ -7,7 +7,7 @@ const { createIdentityService } = require('./domain/service')
 const { resolveTrustedIdentity } = require('./lib/identity')
 const { mysqlDatabase } = require('./lib/mysql')
 const { createOutboxWakeup, trustedContextAppId } = require('./lib/outbox-wakeup')
-const { protectPhone } = require('./lib/private-data')
+const { protectPhone, protectContact, revealPhone, revealContact } = require('./lib/private-data')
 const {
   createProfileCardCode,
   readProfileCardScene,
@@ -28,6 +28,7 @@ const outboxMutationActions = new Set([
   'closeAccount',
   'setPrimaryBranch',
   'updateProfile',
+  'updateCard',
 ])
 const outboxWakeup = createOutboxWakeup({
   cloud,
@@ -81,6 +82,15 @@ const service = createIdentityService({
   },
   protectPhone(phoneInfo, context) {
     return protectPhone(phoneInfo, process.env.MIP_PHONE_ENCRYPTION_KEY, context)
+  },
+  protectContact(value, context) {
+    return protectContact(value, process.env.MIP_PHONE_ENCRYPTION_KEY, context)
+  },
+  revealPhone(ciphertext, context) {
+    return revealPhone(ciphertext, process.env.MIP_PHONE_ENCRYPTION_KEY, context)
+  },
+  revealContact(ciphertext, context) {
+    return revealContact(ciphertext, process.env.MIP_PHONE_ENCRYPTION_KEY, context)
   },
   profileRefReader(profileRef, appId) {
     return readProfileRef(profileRef, appId, process.env.MIP_IDENTITY_PEPPER)

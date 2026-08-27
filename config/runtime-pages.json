@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 108,
+  "routeCount": 110,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 108 paths.",
+    "config/project.json routes must list the same 110 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -15,6 +15,7 @@
       "label": "微信手机号授权",
       "routes": [
         "packages/member/mip-access/index",
+        "packages/member/mip-card-edit/index",
         "packages/member/mip-events/registration/index",
         "packages/member/mip-profile/index",
         "pages/membership/index"
@@ -1462,6 +1463,23 @@
       "readyAssertion": "state === 'ready' || state === 'empty'"
     },
     {
+      "id": "M33D",
+      "name": "徽章详情",
+      "path": "packages/member/mip-badge-detail/index",
+      "selector": "#mip-badge-detail-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "empty", "error"],
+      "acceptStates": ["ready", "empty"],
+      "readyAssertion": "state === 'ready' || state === 'empty'",
+      "query": ["badgeId"],
+      "queryFixture": {
+        "sourceRoute": "packages/member/mip-badges/index",
+        "dataPath": "items",
+        "values": { "badgeId": "id" }
+      }
+    },
+    {
       "id": "M36",
       "name": "我的名片",
       "path": "packages/member/mip-card/index",
@@ -1471,6 +1489,17 @@
       "states": ["loading", "ready", "error"],
       "readyAssertion": "state === 'ready'",
       "deviceRequired": ["photo-save", "share"]
+    },
+    {
+      "id": "M37C",
+      "name": "名片设置",
+      "path": "packages/member/mip-card-edit/index",
+      "selector": "#mip-card-edit-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'",
+      "deviceRequired": ["phone-auth"]
     },
     {
       "id": "M37",

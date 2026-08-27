@@ -1,0 +1,37 @@
+.badge-detail-page {
+  min-height: 100vh;
+  background: #080808;
+}
+
+.badge-detail-content {
+  box-sizing: border-box;
+  min-height: calc(100vh - env(safe-area-inset-bottom));
+  padding-top: calc(env(safe-area-inset-top) + 48rpx);
+}
+
+.badge-detail-art-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 400rpx;
+  height: 400rpx;
+  margin: 0 auto;
+}
+
+.badge-detail-art {
+  width: 100%;
+  height: 100%;
+}
+
+.badge-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 280rpx;
+  height: 280rpx;
+  background: var(--color-brand-soft);
+}
+
+.badge-placeholder--hexagon {
+  clip-path: polygon(25% 7%, 75% 7%, 100% 50%, 75% 93%, 25% 93%, 0 50%);
+}

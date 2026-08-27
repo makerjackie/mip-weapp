@@ -42,7 +42,7 @@ describe('profile avatar binding', () => {
       },
       async query(sql, params) {
         if (sql.includes('UPDATE mip_profiles')) {
-          assert.equal(params[1], AVATAR_ID)
+          assert.equal(params[4], AVATAR_ID)
           return { affectedRows: 1 }
         }
         return { affectedRows: 1 }
