@@ -79,7 +79,8 @@ select { padding: 10px 12px; color: #aaa; background: #151515; border: 1px solid
 .permission-note p { margin: 16px 0 28px; color: #999; font-size: 13px; line-height: 1.7; }
 .boundary-row { justify-content: space-between; padding: 13px 0; color: #858585; border-top: 1px solid #292929; font-size: 12px; }
 .boundary-row strong { color: #d0d0d0; font-weight: 400; }
-.notice { margin-top: 16px; padding: 12px 15px; color: #f5d65a; background: #2a2607; border: 1px solid #655e1c; border-radius: 8px; font-size: 12px; }
+.notice { display: flex; gap: 14px; align-items: center; justify-content: space-between; margin-top: 16px; padding: 12px 15px; color: #f5d65a; background: #2a2607; border: 1px solid #655e1c; border-radius: 8px; font-size: 12px; }
+.notice-action { flex: 0 0 auto; padding: 6px 10px; color: #040404; background: #fcdf03; border: 0; border-radius: 6px; font-size: 12px; font-weight: 600; }
 .hidden { display: none !important; }
 .loading-bar { position: fixed; z-index: 4; inset: 0 auto auto 0; width: 100%; height: 2px; background: #fcdf03; animation: loading 1.1s infinite ease-in-out; }
 .empty { padding: 42px; color: #777; text-align: center; font-size: 13px; }

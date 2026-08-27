@@ -14,5 +14,6 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "server", "functions", "vite.config.ts"],
+  "exclude": ["server/**/*.test.ts"]
 }

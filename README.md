@@ -10,23 +10,35 @@ pnpm install
 pnpm dev
 ```
 
-没有配置 `VITE_MIP_ADMIN_API_URL` 时仅展示本地演示数据；配置 API 地址后，页面会使用 `fetch POST` 提交真实请求。访问令牌只保存在当前浏览器 sessionStorage，关闭当前会话即清除，不能提交到仓库。
+本地演示必须显式设置 `VITE_MIP_ADMIN_DEMO_MODE=true`。未启用演示时，浏览器只访问同源 `/api/admin`，页面不会在接口失败后回退成演示数据，也不会接触 CloudBase API Key、MySQL URI、身份提供方密钥或 BFF HMAC。
 
 ## 当前模块
 
-概览、用户、活动、订单、权限、消息、知识库已建立统一布局和导航。真实数据接入由 API 响应决定；服务端返回 `AUTH_REQUIRED` 或 `FORBIDDEN` 时，Web 端不自行推断权限，也不会把演示状态当作真实状态。
+概览、用户、活动、订单、权限、消息、知识库已建立统一布局和导航。当前真实只读链路仅开放 `mip.admin.session`、`mip.admin.dashboard.overview.get` 和 `mip.admin.users.list`；其余页面明确显示尚未接入，不会把演示状态当作真实状态。
+
+## 服务器端 BFF
+
+Cloudflare Pages Function 位于 `functions/api/[[path]].ts`，核心 module 位于 `server/admin-bff.ts`。它完成：
+
+- 一次性登录 state、服务端 code exchange 和 AppID allowlist；
+- AES-GCM 密封的 `HttpOnly`、`Secure`、`SameSite=Lax` 8 小时会话；
+- 严格同源检查、32 KB 请求上限和只读 action allowlist；
+- 向 `mip-admin-api` 发送带 60 秒有效期和随机 nonce 的 HMAC envelope；
+- 真实 `AUTH_REQUIRED`、`FORBIDDEN`、配置错误和上游错误状态。
+
+身份提供方必须从自己的受信来源验证登录码，并明确返回 `{ verified: true, appId, openId, displayName? }`。BFF 不接受浏览器直接提交 `appId` 或 `openId`。CloudBase 侧对应 adapter 只在 HMAC 验证完成后签发 trusted principal，并再次执行原有 capability、scope 和审计逻辑。
 
 ## 部署前最小清单
 
-1. 提供可从浏览器访问的 HTTPS API 网关，转发到 `mip-admin-api`，并保留请求体原样。
-2. 提供 `/auth/session` 一次性登录码交换端点；前端已支持 `?code=...` 回调交换短时会话，不要把 CloudBase API Key、MySQL URI 或函数密钥放入前端。
-3. 配置 `VITE_MIP_ADMIN_API_URL`，在预发布环境验证 CORS、`AUTH_REQUIRED`、`FORBIDDEN`、`CONFLICT` 和 API 超时。
-4. 将静态构建产物部署到 `mipmini.01mvp.com`，完成 DNS、HTTPS、CSP 和生产环境回滚方案后再切换域名。
+1. 配置受信身份提供方的 authorize/exchange URL、client ID/secret 和允许的 MIP AppID；exchange 必须返回与小程序运营身份可映射的真实 OpenID。
+2. 为 `mip-admin-api` 配置 `MIP_ADMIN_WEB_BFF_HMAC_SECRET`，并提供指向该函数的 HTTPS 上游 URL；同一 HMAC 只以 Cloudflare secret 配置在 BFF。
+3. 配置 `MIP_WEB_SESSION_SECRET`、`MIP_WEB_ALLOWED_ORIGIN=https://mipmini.01mvp.com`，关闭生产构建的 `VITE_MIP_ADMIN_DEMO_MODE`。
+4. 在预发布环境验证登录回调、过期/篡改 Cookie、`AUTH_REQUIRED`、`FORBIDDEN`、上游超时和 AppID 不在 allowlist 的负向用例。
 
 Cloudflare Pages 的项目配置在 `wrangler.toml`；部署命令为 `pnpm deploy:pages`。自定义域名需要在 Cloudflare Pages 项目中绑定，首次绑定和 DNS 状态以 Cloudflare 控制台为准。
 
-当前没有把 Web 端令牌直接当作登录实现。正式接入应由 HTTPS 网关提供 `/auth/session` 的一次性登录码交换，并通过 `HttpOnly`、`Secure`、`SameSite=Lax` Cookie 或短时访问令牌建立会话；前端不得接触 CloudBase API Key、MySQL URI 或函数密钥。现有令牌输入仅用于本地联调。
+当前实现不提供浏览器令牌输入。登录码只由 Pages Function 与身份提供方交换；浏览器得到的是密封会话 Cookie。写操作尚未开放，因为 mutation 还需要持久化 nonce/idempotency 防重放存储，不能沿用当前只读 envelope 直接放行。
 
 ## 边界
 
-当前目录未改动 `mip-weapp`、数据库、云函数或远端仓库。代表模块使用可替换的演示数据，完整 CRUD 页面应在 API 网关、Web 鉴权和正式视觉素材确认后继续接入。
+Web 工程不复制会员、活动、订单或权限规则。真实请求沿用 `AdminRequest v1`，CloudBase adapter 回到同一个 `AdminApplication.execute` seam；BFF 只处理浏览器会话、来源验证和 server-to-server transport。
