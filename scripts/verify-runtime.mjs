@@ -1263,12 +1263,19 @@ async function restoreProtectedAccessRuntimeFixture(
     'Protected access fixture no longer represents the signed-out authentication requirement',
   )
 
-  await tapVisibleRuntimeFixtureAction(
-    accessPage,
-    miniProgram,
-    fixture.restoreSelector,
-    'restore-identity',
-  )
+  try {
+    await tapVisibleRuntimeFixtureAction(
+      accessPage,
+      miniProgram,
+      fixture.restoreSelector,
+      'restore-identity',
+    )
+  }
+  catch (error) {
+    if (!/element destroyed/i.test(error instanceof Error ? error.message : String(error))) {
+      throw error
+    }
+  }
   const restoreRoute = runtimePages.routes.find(candidate => candidate.path === fixture.restoreRoute)
   await waitForCurrentRuntimePath(miniProgram, restoreRoute, 20_000)
   const restoredPage = await navigateFreshRuntimeRoute(

@@ -21,7 +21,7 @@ const homeRoute = contract.routes.find((route: { path: string }) => (
 
 function createFixtureRuntime(
   token = 'mip-1720000000000-runtime',
-  options: { signOutTapAttempt?: number } = {},
+  options: { restoreTapError?: Error, signOutTapAttempt?: number } = {},
 ) {
   let currentPage: Record<string, unknown>
   let signOutTapCount = 0
@@ -78,6 +78,9 @@ function createFixtureRuntime(
       token,
     }), () => {
       currentPage = homePage
+      if (options.restoreTapError) {
+        throw options.restoreTapError
+      }
     }),
   }
   const privacyPage = {
@@ -255,6 +258,23 @@ describe('runtime protected access fixture', () => {
     expect(runtime.privacyPage.element.tap).toHaveBeenCalledTimes(2)
     expect(runtime.miniProgram.restoreWxMethod).toHaveBeenCalledWith('showModal')
     await resolved.restore()
+    expect(runtime.homePage.data).toHaveBeenCalled()
+  })
+
+  it('accepts element destruction when the rendered sign-in tap already changed route', async () => {
+    const runtime = createFixtureRuntime('mip-1720000000000-destroyed', {
+      restoreTapError: new Error('element destroyed'),
+    })
+
+    const resolved = await resolveProtectedAccessRuntimeFixture(
+      runtime.miniProgram,
+      contract,
+      accessRoute,
+      contract.sensitivePatterns,
+    )
+
+    await expect(resolved.restore()).resolves.toBeUndefined()
+    expect(runtime.accessPage.element.tap).toHaveBeenCalledOnce()
     expect(runtime.homePage.data).toHaveBeenCalled()
   })
 
