@@ -66,6 +66,9 @@ const listStates: Record<AdminListRoute, ListState> = {
   permissions: listState(),
   messages: listState(),
   knowledge: listState(),
+  opportunities: listState(),
+  growth: listState(),
+  operations: listState(),
 }
 
 const nav: Array<{ route: Route; label: string; icon: string; group: string }> = [
@@ -73,9 +76,12 @@ const nav: Array<{ route: Route; label: string; icon: string; group: string }> =
   { route: 'users', label: '用户管理', icon: '◎', group: '业务管理' },
   { route: 'events', label: '活动管理', icon: '◇', group: '业务管理' },
   { route: 'orders', label: '订单管理', icon: '▤', group: '业务管理' },
+  { route: 'opportunities', label: '机会与内容', icon: '◇', group: '业务管理' },
+  { route: 'growth', label: '成长与勋章', icon: '✦', group: '会员运营' },
   { route: 'permissions', label: '权限管理', icon: '⌘', group: '平台设置' },
   { route: 'messages', label: '消息管理', icon: '▱', group: '平台设置' },
   { route: 'knowledge', label: '知识库', icon: '□', group: '平台设置' },
+  { route: 'operations', label: '运营记录', icon: '≡', group: '平台设置' },
 ]
 
 function escapeHtml(value: unknown) {
@@ -172,7 +178,7 @@ function detailPanel() {
       : detailView
         ? detailView.sections.map(section => `<section class="detail-section"><h3>${escapeHtml(section.title)}</h3>${section.fields ? `<div class="detail-fields">${section.fields.map(item => `<div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`).join('')}</div>` : ''}${section.metrics ? `<div class="detail-metrics">${section.metrics.map(item => `<div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`).join('')}</div>` : ''}${section.rows && section.columns ? rowsToTable(section.rows, section.columns) : ''}</section>`).join('')
         : ''
-  const title = detailView?.title || ({ users: '用户详情', events: '活动详情', orders: '订单详情', messages: '消息活动详情', knowledge: '知识内容详情' })[detailRoute]
+  const title = detailView?.title || ({ users: '用户详情', events: '活动详情', orders: '订单详情', messages: '消息活动详情', knowledge: '知识内容详情', opportunities: '机会详情' })[detailRoute]
   const subtitle = detailView?.subtitle ? `<p>${escapeHtml(detailView.subtitle)}</p>` : ''
   const status = detailView?.status ? `<span class="${statusClass(detailView.status)}">${escapeHtml(detailView.status)}</span>` : ''
   const actions = detailActions(detailRoute)
@@ -273,7 +279,7 @@ function pageOverview() {
 
 function pageList(route: AdminListRoute, title: string, description: string) {
   const page = liveReadPage || (client.demoMode ? demoReadPage(route) : null)
-  const detailTarget = ['users', 'events', 'orders', 'messages', 'knowledge'].includes(route) ? route as AdminDetailRoute : undefined
+  const detailTarget = ['users', 'events', 'orders', 'messages', 'knowledge', 'opportunities'].includes(route) ? route as AdminDetailRoute : undefined
   const content = page
     ? `${summaryCards(page)}${page.sections.map(section => `<section class="panel list-panel">${section.title ? `<div class="panel-heading"><h2>${escapeHtml(section.title)}</h2></div>` : ''}${rowsToTable(section.rows, section.columns, detailTarget)}</section>`).join('')}${pagination(route, page)}`
     : `<section class="panel"><div class="empty">${loading ? '正在加载' : '暂无可显示的真实数据'}</div></section>`
@@ -305,7 +311,10 @@ function demoReadPage(route: AdminListRoute): AdminReadPage {
   if (route === 'orders') return { sections: [{ rows: demo.orders.map(item => ({ ...item, resource: item.type, state: item.status })), columns: [{ key: 'id', label: '订单号' }, { key: 'user', label: '用户' }, { key: 'type', label: '订单类型' }, { key: 'resource', label: '订单内容' }, { key: 'amount', label: '金额' }, { key: 'createdAt', label: '创建时间' }, { key: 'state', label: '状态' }] }], nextCursor: null }
   if (route === 'permissions') return { sections: [{ title: '运营成员', rows: demo.roles.map(item => ({ name: item.name, role: item.capabilities, scope: item.scope, grantedAt: '—', state: '启用' })), columns: [{ key: 'name', label: '姓名' }, { key: 'role', label: '角色' }, { key: 'scope', label: '作用范围' }, { key: 'grantedAt', label: '授权时间' }, { key: 'state', label: '状态' }] }], nextCursor: null }
   if (route === 'messages') return { sections: [{ title: '消息活动', rows: demo.messages.map(item => ({ ...item, scope: item.audience, state: item.status })), columns: [{ key: 'title', label: '消息标题' }, { key: 'audience', label: '发送范围' }, { key: 'scope', label: '作用范围' }, { key: 'updatedAt', label: '更新时间' }, { key: 'state', label: '状态' }] }], nextCursor: null }
-  return { sections: [{ rows: demo.knowledge.map(item => ({ ...item, category: '—', author: '—', access: '会员可见', state: item.status })), columns: [{ key: 'title', label: '文档标题' }, { key: 'type', label: '内容类型' }, { key: 'category', label: '分类' }, { key: 'author', label: '作者' }, { key: 'access', label: '访问范围' }, { key: 'updatedAt', label: '更新时间' }, { key: 'state', label: '状态' }] }], nextCursor: null }
+  if (route === 'knowledge') return { sections: [{ rows: demo.knowledge.map(item => ({ ...item, category: '—', author: '—', access: '会员可见', state: item.status })), columns: [{ key: 'title', label: '文档标题' }, { key: 'type', label: '内容类型' }, { key: 'category', label: '分类' }, { key: 'author', label: '作者' }, { key: 'access', label: '访问范围' }, { key: 'updatedAt', label: '更新时间' }, { key: 'state', label: '状态' }] }], nextCursor: null }
+  if (route === 'opportunities') return { sections: [{ title: '机会', rows: [], columns: [{ key: 'title', label: '标题' }] }, { title: '用户内容', rows: [], columns: [{ key: 'title', label: '标题' }] }], nextCursor: null }
+  if (route === 'growth') return { sections: [{ title: '等级', rows: [], columns: [{ key: 'name', label: '等级' }] }, { title: '徽章', rows: [], columns: [{ key: 'name', label: '徽章' }] }], nextCursor: null }
+  return { sections: [{ title: '运营记录', rows: [], columns: [{ key: 'title', label: '记录' }] }], nextCursor: null }
 }
 
 function applyFilters(event: SubmitEvent) {
@@ -346,6 +355,9 @@ function paint() {
     permissions: pagePermissions,
     messages: pageMessages,
     knowledge: pageKnowledge,
+    opportunities: () => pageList('opportunities', '机会与内容', '查看机会、用户内容、撮合和评论事实'),
+    growth: () => pageList('growth', '成长与勋章', '查看等级、权益、成长流水和徽章事实'),
+    operations: () => pageList('operations', '运营记录', '查看公告、社区举报、运营异常和待办'),
   }
   shell(`<div class="loading-bar ${loading ? '' : 'hidden'}"></div>${pages[route]()}`)
   requestAnimationFrame(assertResponsiveViewport)

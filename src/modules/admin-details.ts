@@ -1,6 +1,6 @@
 import type { AdminRequestInput } from '../domain/contracts'
 
-export type AdminDetailRoute = 'users' | 'events' | 'orders' | 'messages' | 'knowledge'
+export type AdminDetailRoute = 'users' | 'events' | 'orders' | 'messages' | 'knowledge' | 'opportunities'
 export type AdminDetailRow = Record<string, unknown>
 
 export interface AdminDetailField {
@@ -35,6 +35,7 @@ export async function loadAdminDetail(
   if (route === 'events') return loadEventDetail(id, request)
   if (route === 'orders') return loadOrderDetail(id, request)
   if (route === 'messages') return loadMessageDetail(id, request)
+  if (route === 'opportunities') return loadOpportunityDetail(id, request)
   return loadKnowledgeDetail(id, request)
 }
 
@@ -441,6 +442,88 @@ async function loadMessageDetail(campaignId: string, request: AdminDetailRequest
   }
 }
 
+async function loadOpportunityDetail(opportunityId: string, request: AdminDetailRequest): Promise<AdminDetailView> {
+  const opportunity = record(await request('mip.admin.opportunities.get', { opportunityId }))
+  let commentState: AdminDetailRow | null = null
+  try {
+    commentState = record(await request('mip.admin.opportunityComments.get', { opportunityId }))
+  }
+  catch {
+    commentState = null
+  }
+  const terms = record(opportunity.commercialTerms)
+  const settings = record(commentState?.settings)
+  const sections: AdminDetailSection[] = [{
+    title: '机会信息',
+    fields: fields([
+      ['发布人', text(opportunity.ownerNickname)],
+      ['作用范围', opportunity.scopeType === 'BRANCH' ? text(opportunity.branchName) : '平台'],
+      ['城市', text(opportunity.cityName)],
+      ['价值说明', text(opportunity.valueSummary)],
+      ['合作目标', text(opportunity.targetSummary)],
+      ['详细说明', text(opportunity.description)],
+      ['合作角色', codeArray(opportunity.roleKeys)],
+      ['标签', arrayText(opportunity.tags)],
+      ['金额说明', text(terms.amountDisplay)],
+      ['引荐数', numberText(opportunity.referralCount)],
+      ['截止时间', dateTime(opportunity.deadlineAt)],
+      ['内容安全', codeLabel(opportunity.contentSafetyStatus)],
+      ['发布时间', dateTime(opportunity.publishedAt)],
+      ['更新时间', dateTime(opportunity.updatedAt)],
+    ]),
+  }]
+  const team = records(opportunity.teamMembers)
+  sections.push({
+    title: '组队玩家',
+    rows: team.map(item => ({ name: text(item.nickname), branch: text(item.branchName) })),
+    columns: columns([['name', '姓名'], ['branch', '所属分会']]),
+  })
+  if (commentState) {
+    sections.push({
+      title: '评论设置',
+      fields: fields([
+        ['评论', booleanText(settings.commentsEnabled)],
+        ['项目评价', booleanText(settings.reviewsEnabled)],
+        ['打 call', booleanText(settings.callsEnabled)],
+        ['审核方式', settings.moderationMode === 'REVIEW' ? '发布前审核' : '自动发布'],
+      ]),
+    })
+    sections.push({
+      title: '评论与评价',
+      rows: records(commentState.comments).map(item => ({
+        author: text(item.authorNickname),
+        type: codeLabel(item.type),
+        body: text(item.body),
+        rating: item.rating === null || item.rating === undefined ? '—' : `${numberText(item.rating)} / 5`,
+        calls: numberText(item.callCount),
+        createdAt: dateTime(item.createdAt),
+        state: codeLabel(item.status),
+      })),
+      columns: columns([['author', '提交人'], ['type', '类型'], ['body', '内容'], ['rating', '评分'], ['calls', '打 call'], ['createdAt', '时间'], ['state', '状态']]),
+    })
+    sections.push({
+      title: '评论举报',
+      rows: records(commentState.reports).map(item => ({ reporter: text(item.reporterNickname), category: codeLabel(item.category), description: text(item.description), createdAt: dateTime(item.createdAt), state: codeLabel(item.status) })),
+      columns: columns([['reporter', '举报人'], ['category', '分类'], ['description', '说明'], ['createdAt', '时间'], ['state', '状态']]),
+    })
+  }
+  else {
+    sections.push({ title: '评论数据', fields: fields([['数据权限', '当前账号不可查看']]) })
+  }
+  sections.push({
+    title: '操作记录',
+    rows: records(opportunity.history).map(item => ({ action: codeLabel(item.action), actor: text(item.actorNickname), createdAt: dateTime(item.createdAt) })),
+    columns: columns([['action', '操作'], ['actor', '操作人'], ['createdAt', '时间']]),
+  })
+  return {
+    route: 'opportunities',
+    title: text(opportunity.title, '机会详情'),
+    subtitle: [text(opportunity.ownerNickname, ''), text(opportunity.cityName, '')].filter(Boolean).join(' · '),
+    status: codeLabel(opportunity.status),
+    sections,
+  }
+}
+
 async function loadKnowledgeDetail(contentId: string, request: AdminDetailRequest): Promise<AdminDetailView> {
   const [contentValue, schedulesValue] = await Promise.all([
     request('mip.admin.knowledge.get', { contentId }),
@@ -607,6 +690,14 @@ function arrayText(value: unknown) {
   return Array.isArray(value) && value.length ? value.map(item => String(item)).join('、') : '—'
 }
 
+function codeArray(value: unknown) {
+  return Array.isArray(value) && value.length ? value.map(codeLabel).join('、') : '—'
+}
+
+function booleanText(value: unknown) {
+  return value === true ? '已开启' : value === false ? '未开启' : '—'
+}
+
 const codeLabels: Record<string, string> = {
   ACTIVE: '启用', INACTIVE: '未生效', SCHEDULED: '待生效', PENDING: '待处理', EXPIRED: '已过期',
   REVOKED: '已撤销', REFUNDED: '已退款', BLOCKED: '已限制', CLOSED: '已关闭',
@@ -621,6 +712,11 @@ const codeLabels: Record<string, string> = {
   BRANCH_ADMIN: '分会管理员', EVENT_OWNER: '活动负责人', EVENT_MANAGER: '活动管理员', EVENT_STAFF: '活动工作人员',
   PENDING_REVIEW: '待审核', WAITLISTED: '候补', PAYMENT_PENDING: '待支付', REGISTERED: '已报名', CANCELLATION_PENDING: '取消处理中', REJECTED: '已拒绝', ATTENDED: '已签到',
   ORDER_CREATED: '订单创建', PAYMENT_CONFIRMED: '支付确认', ORDER_CLOSED: '订单关闭', REFUND_CREATED: '退款创建', REFUND_COMPLETED: '退款完成',
+  connector: '皮条客', business_builder: '生意佬', capital_operator: '暴发户', strategist: '狗策划', visual_designer: '死美工', delivery_lead: '老保姆',
+  COMMENT: '评论', REVIEW: '项目评价', HIDDEN: '已隐藏', APPROVED: '已通过',
+  SPAM: '垃圾信息', HARASSMENT: '骚扰行为', FRAUD: '欺诈风险', INAPPROPRIATE_CONTENT: '不当内容', IMPERSONATION: '冒充他人', OTHER: '其他问题',
+  'admin.opportunities.create': '创建机会', 'admin.opportunities.update': '更新机会', 'admin.opportunities.publish': '发布机会',
+  'admin.opportunities.end': '结束机会', 'admin.opportunities.unpublish': '下架机会', 'admin.opportunities.archive': '归档机会',
 }
 
 function codeLabel(value: unknown) {

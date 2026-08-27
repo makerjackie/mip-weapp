@@ -140,6 +140,35 @@ describe('admin detail views', () => {
     assert.equal(detail.sections.find(section => section.title.startsWith('投递复核'))?.rows?.[0].classification, '成功')
   })
 
+  it('loads an opportunity with its own comments instead of a list-selected record', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const detail = await loadAdminDetail('opportunities', 'opportunity-1', requestWith({
+      'mip.admin.opportunities.get': {
+        id: 'opportunity-1', title: '寻找品牌合作伙伴', ownerNickname: '林晓', scopeType: 'BRANCH',
+        branchName: '福田分会', cityName: '深圳', valueSummary: '联合建设品牌', targetSummary: '完成首期合作',
+        description: '面向消费品牌', roleKeys: ['strategist'], tags: ['品牌'], referralCount: 4,
+        commercialTerms: { amountDisplay: '面议' }, deadlineAt: '2030-03-31T00:00:00.000Z', contentSafetyStatus: 'APPROVED',
+        publishedAt: '2030-03-01T00:00:00.000Z', updatedAt: '2030-03-02T00:00:00.000Z', status: 'PUBLISHED',
+        teamMembers: [{ nickname: '周宁', branchName: '福田分会' }],
+        history: [{ action: 'admin.opportunities.publish', actorNickname: '运营账号', createdAt: '2030-03-01T00:00:00.000Z' }],
+      },
+      'mip.admin.opportunityComments.get': {
+        settings: { commentsEnabled: true, reviewsEnabled: true, callsEnabled: false, moderationMode: 'REVIEW' },
+        comments: [{ authorNickname: '周宁', type: 'COMMENT', body: '愿意沟通', rating: null, callCount: 2, createdAt: '2030-03-02T00:00:00.000Z', status: 'PUBLISHED' }],
+        reports: [],
+      },
+    }, calls))
+
+    assert.deepEqual(calls, [
+      { action: 'mip.admin.opportunities.get', input: { opportunityId: 'opportunity-1' } },
+      { action: 'mip.admin.opportunityComments.get', input: { opportunityId: 'opportunity-1' } },
+    ])
+    assert.equal(detail.title, '寻找品牌合作伙伴')
+    assert.equal(detail.sections.find(section => section.title === '机会信息')?.fields?.find(item => item.label === '合作角色')?.value, '狗策划')
+    assert.equal(detail.sections.find(section => section.title === '评论与评价')?.rows?.[0].body, '愿意沟通')
+    assert.equal(detail.sections.find(section => section.title === '操作记录')?.rows?.[0].action, '发布机会')
+  })
+
   it('loads knowledge content and keeps schedule data explicitly read-only', async () => {
     const calls: Array<{ action: string; input: unknown }> = []
     const detail = await loadAdminDetail('knowledge', 'content-1', requestWith({
