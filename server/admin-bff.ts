@@ -76,8 +76,9 @@ export function createAdminBff(
   env: AdminBffEnv,
   dependencies: Partial<AdminBffDependencies> = {},
 ) {
+  const fetchImpl = dependencies.fetch
   const deps: AdminBffDependencies = {
-    fetch: dependencies.fetch || globalThis.fetch,
+    fetch: (input, init) => fetchImpl ? fetchImpl(input, init) : globalThis.fetch(input, init),
     crypto: dependencies.crypto || globalThis.crypto,
     now: dependencies.now || Date.now,
   }
