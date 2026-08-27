@@ -16,6 +16,7 @@ import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { caseNavigateTo, syncCaseNavigation } from '../../modules/platform/case-navigation'
 import { getCustomNavigationStatusBarHeight } from '../../platform/navigation/status-bar'
+import { publicEventTypeLabel } from './presentation'
 
 interface EventCardView extends MipEventListItem {
   startsText: string
@@ -103,6 +104,7 @@ function statusLabel(event: MipEventListItem) {
 }
 
 function presentEvent(event: MipEventListItem): EventCardView {
+  const eventTypeLabel = publicEventTypeLabel(event.eventTypeLabel)
   return {
     ...event,
     coverUrl: event.coverUrl || mipOperationsConfig.defaultCoverPaths.event,
@@ -110,7 +112,8 @@ function presentEvent(event: MipEventListItem): EventCardView {
     accessLabel: accessLabel(event),
     statusLabel: statusLabel(event),
     locationText: [event.cityName, event.venueName].filter(Boolean).join(' · ') || '地点待公布',
-    displayTags: event.tags.filter(tag => tag !== event.eventTypeLabel).slice(0, 3),
+    eventTypeLabel,
+    displayTags: event.tags.filter(tag => tag !== event.eventTypeLabel && tag !== eventTypeLabel).slice(0, 3),
   }
 }
 
@@ -122,9 +125,14 @@ function rollingCalendarBoundary(yearOffset: number) {
 function selectedOptions(
   options: EventDiscoveryOption[],
   selected: string | string[],
+  presentNames = false,
 ): EventFilterOptionView[] {
   const keys = new Set(Array.isArray(selected) ? selected : selected ? [selected] : [])
-  return options.map(option => ({ ...option, selected: keys.has(option.key) }))
+  return options.map(option => ({
+    ...option,
+    name: presentNames ? publicEventTypeLabel(option.name, option.key) : option.name,
+    selected: keys.has(option.key),
+  }))
 }
 
 Page({
@@ -242,7 +250,7 @@ Page({
       selectedTagKeys,
       draftEventTypeKey,
       draftTagKeys: draftTagKeys.length ? draftTagKeys : [...selectedTagKeys],
-      eventTypeOptions: selectedOptions(filters.eventTypes, draftEventTypeKey),
+      eventTypeOptions: selectedOptions(filters.eventTypes, draftEventTypeKey, true),
       tagOptions: selectedOptions(filters.tags, draftTagKeys.length ? draftTagKeys : selectedTagKeys),
       activeFilterCount: this.countActiveFilters({ selectedEventTypeKey, selectedTagKeys }),
     })
@@ -506,7 +514,7 @@ Page({
       draftAccessType: this.data.selectedAccessType,
       draftSortDirection: this.data.selectedSortDirection
         || (this.data.view === 'PAST' ? 'DESC' : 'ASC'),
-      eventTypeOptions: selectedOptions(this.data.eventTypeOptions, draftEventTypeKey),
+      eventTypeOptions: selectedOptions(this.data.eventTypeOptions, draftEventTypeKey, true),
       tagOptions: selectedOptions(this.data.tagOptions, draftTagKeys),
     })
   },
@@ -519,7 +527,7 @@ Page({
     const draftEventTypeKey = this.data.draftEventTypeKey === key ? '' : key
     this.setData({
       draftEventTypeKey,
-      eventTypeOptions: selectedOptions(this.data.eventTypeOptions, draftEventTypeKey),
+      eventTypeOptions: selectedOptions(this.data.eventTypeOptions, draftEventTypeKey, true),
     })
   },
 
@@ -605,7 +613,7 @@ Page({
       draftAccessType: '',
       draftSortDirection: '',
       activeFilterCount: 0,
-      eventTypeOptions: selectedOptions(this.data.eventTypeOptions, ''),
+      eventTypeOptions: selectedOptions(this.data.eventTypeOptions, '', true),
       tagOptions: selectedOptions(this.data.tagOptions, []),
       rangePanelVisible: false,
       nextCursor: '',

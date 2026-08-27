@@ -13,3 +13,8 @@
 .opportunities-filter-actions {
   box-sizing: border-box;
 }
+
+.mip-opportunities-loading {
+  --td-skeleton-bg-color: var(--color-panel-raised);
+  --td-skeleton-animation-gradient: rgb(255 255 255 / 8%);
+}

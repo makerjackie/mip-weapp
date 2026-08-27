@@ -111,7 +111,7 @@
     <view class="relative flex h-[88rpx] w-[88rpx] items-center justify-center rounded-[16rpx] bg-panel" aria-role="button" aria-expanded="{{rangePanelVisible}}" bind:tap="toggleRangePanel"><t-icon name="filter" size="32rpx" color="{{rangePanelVisible || dateFrom || dateTo || activeFilterCount ? 'var(--color-brand)' : 'var(--color-muted)'}}" /><text wx:if="{{activeFilterCount}}" class="absolute right-1 top-1 flex h-[30rpx] min-w-[30rpx] items-center justify-center rounded-full bg-brand px-1 text-[length:18rpx] font-semibold text-on-brand">{{activeFilterCount}}</text></view>
   </view>
 
-  <view wx:if="{{state === 'loading'}}" class="mt-4 flex flex-col gap-3">
+  <view wx:if="{{state === 'loading'}}" class="mip-events-loading mt-4 flex flex-col gap-3">
     <view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   </view>
@@ -124,12 +124,12 @@
         <view wx:else class="flex h-full w-full items-center justify-center bg-brand-soft"><t-icon name="calendar" size="70rpx" color="var(--color-brand)" /></view>
         <view class="absolute bottom-2 left-2 flex min-h-[56rpx] items-center rounded-full bg-panel px-1 pr-3">
           <view class="flex items-center"><image wx:for="{{item.participantPreview}}" wx:key="participantRef" class="-mr-2 h-[48rpx] w-[48rpx] rounded-full border-[3rpx] border-panel bg-brand-soft" mode="aspectFill" src="{{item.avatarUrl}}" /></view>
-          <text class="ml-3 text-[length:21rpx] font-semibold text-ink">+{{item.registrationCount}}参加</text>
+          <text class="ml-3 text-[length:22rpx] font-semibold text-ink">+{{item.registrationCount}}参加</text>
         </view>
         <view class="absolute bottom-2 right-2 flex flex-wrap justify-end gap-1">
-          <text class="rounded-[12rpx] bg-brand px-2 py-1 text-[length:20rpx] font-semibold text-on-brand">{{item.accessLabel}}</text>
-          <text class="rounded-[12rpx] bg-panel-raised px-2 py-1 text-[length:20rpx] text-ink">{{item.eventTypeLabel}}</text>
-          <text wx:if="{{item.statusLabel}}" class="rounded-[12rpx] bg-brand-soft px-2 py-1 text-[length:20rpx] text-brand">{{item.statusLabel}}</text>
+          <text class="rounded-[12rpx] bg-brand px-2 py-1 text-[length:22rpx] font-semibold text-on-brand">{{item.accessLabel}}</text>
+          <text wx:if="{{item.eventTypeLabel}}" class="rounded-[12rpx] bg-panel-raised px-2 py-1 text-[length:22rpx] text-ink">{{item.eventTypeLabel}}</text>
+          <text wx:if="{{item.statusLabel}}" class="rounded-[12rpx] bg-brand-soft px-2 py-1 text-[length:22rpx] text-brand">{{item.statusLabel}}</text>
         </view>
       </view>
       <view class="relative px-3 pb-3 pt-2">
@@ -137,13 +137,13 @@
         <view class="mt-2 flex items-center gap-2 text-[length:22rpx] text-ink"><t-icon name="calendar" size="27rpx" color="var(--color-brand)" /><text>{{item.startsText}}</text></view>
         <view class="mt-1 flex items-center gap-2 pr-[72rpx] text-[length:22rpx] text-ink"><t-icon name="location" size="27rpx" color="var(--color-brand)" /><text class="line-clamp-1">{{item.locationText}}</text></view>
         <view wx:if="{{item.displayTags.length}}" class="mt-2 flex flex-wrap gap-1 pr-[72rpx]">
-          <text wx:for="{{item.displayTags}}" wx:key="*this" class="rounded-full bg-brand-soft px-2 py-1 text-[length:20rpx] text-brand">{{item}}</text>
+          <text wx:for="{{item.displayTags}}" wx:key="*this" class="rounded-full bg-brand-soft px-2 py-1 text-[length:22rpx] text-brand">{{item}}</text>
         </view>
         <button open-type="share" class="absolute bottom-0 right-0 m-0 flex h-[88rpx] w-[88rpx] items-center justify-center border-0 bg-transparent p-0 leading-none after:border-0" aria-label="分享活动" data-event-id="{{item.id}}" catch:tap="stopPropagation"><view class="flex h-[56rpx] w-[56rpx] items-center justify-center rounded-full bg-brand"><t-icon name="share" size="30rpx" color="var(--color-on-brand)" /></view></button>
       </view>
     </view>
     <view wx:if="{{nextCursor}}" class="flex min-h-[88rpx] items-center justify-center rounded-[16rpx] bg-panel text-[length:24rpx] text-brand" bind:tap="loadMore">{{loadingMore ? '加载中' : '加载更多'}}</view>
-    <view wx:else class="py-2 text-center text-[length:22rpx] text-muted">已显示全部活动</view>
+    <view wx:else class="py-2 text-center text-[length:24rpx] text-muted">已显示全部活动</view>
   </view>
   <view wx:if="{{message && state !== 'error'}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
   <t-calendar visible="{{calendarVisible}}" value="{{calendarValue}}" min-date="{{calendarMinDate}}" max-date="{{calendarMaxDate}}" title="选择活动日期" type="single" switch-mode="year-month" confirm-btn="确定" bind:confirm="confirmCalendar" bind:close="closeCalendar" />
