@@ -25,6 +25,21 @@ pnpm admin:bootstrap -- --confirm-env=<EnvID> --confirm-owner
 pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo
 ```
 
+为在微信开发者工具中验证当前非演示 Owner 的活动互动页，可在 development/test 环境单独创建一条固定的 `ATTENDED` 历史报名：
+
+```bash
+pnpm event:interaction:seed -- \
+  --confirm-env=<EnvID> \
+  --confirm-app-id=<当前 AppID> \
+  --confirm-owner-event-interaction
+```
+
+只检查参数和写入 SQL，不连接 CloudBase：在上述命令后追加 `--validate-only`。
+
+该命令从 `.env.local` 的 `MIP_OWNER_PHONE` 通过与 Owner bootstrap 相同的 AppID 范围哈希定位当前 Owner，并排除 `seed.demo.json` 中的演示用户。它只允许 `development`/`test`、TEST catalog 和非 live payment，固定活动为已有演示历史活动，执行前检查活动和报名 ID 是否属于其他 AppID、当前 Owner 是否已有该活动报名以及固定报名是否被其他事实占用；发现冲突立即停止，不覆盖现有报名。写入后会重新查询 `ATTENDED` 与版本状态，只输出不含 AppID、环境、用户 ID 或手机号的结果。
+
+该报名是本地运行时验证夹具，不修改 `seed.demo.json`，不创建签到、心动或反馈事实，不用于 production/live，也不代表生产业务数据。未来若要移除，需由数据库负责人按固定报名 ID 在确认的 development/test 环境中单独处理；不要通过通用 seed 或非 MIP 表清理。
+
 核心函数需要最小化更新时，使用 `pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<exact-runtime-user> --only=<exact mip-* function name>`；目标必须精确命中核心部署清单中的单个函数。
 
 首个 Owner 通过本机 `.env.local` 的 `MIP_OWNER_PHONE` 定位。该手机号必须已由同一 AppID 的微信真机流程绑定；脚本只使用与身份服务相同的 AppID 范围哈希查询，不解密或输出号码。候选还必须是 ACTIVE、非 demo、已有昵称和主分会，并已接受当前 `MIP_AGREEMENTS_JSON` 的全部协议版本。需要额外消除操作歧义时可传 `--user-id=<用户 UUID>`，但该 ID 必须与手机号唯一命中的用户严格一致。
