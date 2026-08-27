@@ -109,17 +109,17 @@
 
 ## WorkBuddy 管理端功能 PRD V0.4
 
-来源和内部映射见 [ADMIN_WEB.md](ADMIN_WEB.md)，代表截图见 [evidence/admin-web-2026-08-25](evidence/admin-web-2026-08-25/README.md)，线上读回见 [evidence/admin-web-live-2026-08-28](evidence/admin-web-live-2026-08-28/README.md)。WorkBuddy 仍只作为功能输入；独立 Web 已部署，既有线上证据覆盖真实管理员确认、33 条只读 action、7 个一级页面与 5 类详情。当前源码已扩展为 62 条只读 action、10 个一级页面与 6 类详情，新增范围已通过本地契约和响应式验证。4 个持久幂等写操作表单已部署，完整网页 CRUD 未完成。
+来源和内部映射见 [ADMIN_WEB.md](ADMIN_WEB.md)，代表截图见 [evidence/admin-web-2026-08-25](evidence/admin-web-2026-08-25/README.md)，线上读回见 [evidence/admin-web-live-2026-08-28](evidence/admin-web-live-2026-08-28/README.md)。WorkBuddy 仍只作为功能输入；独立 Web 已部署，既有线上证据覆盖真实管理员确认、33 条只读 action、7 个一级页面与 5 类详情。当前源码已扩展为 68 条只读 action、59 条受审写 action、11 个一级页面与 8 类详情，新增范围已通过本地契约和响应式验证；17 条写操作保存领域幂等结果，其余写操作不自动重试。通用媒体上传和部分敏感导出仍未完成。
 
 | 范围 | 状态 | 当前证据与缺口 |
 | --- | --- | --- |
 | 当前 16 个管理模块和 110 个一级需求点 | `partial-local` | [逐项矩阵](WORKBUDDY_110_MATRIX.md) 已固定当前在线稿；49 条管理路由属于历史 108 路由运行时通过集合，共享响应式壳层和 1024px 代表页证据已存在；新增两条会员路由后仍需形成当前 110 路由证据，与确认领域模型冲突的 Web 账号、固定团队、自由角色等不纳入实现 |
-| 管理业务服务复用 | `implemented-local` | 中立 `AdminTransport`、CloudBase/InMemory adapter、v1 嵌套请求、trusted principal、`AdminApplication.execute` 和 146-action operation registry 已形成稳定合同 |
+| 管理业务服务复用 | `implemented-local` | 中立 `AdminTransport`、CloudBase/InMemory adapter、v1 嵌套请求、trusted principal、`AdminApplication.execute` 和 158-action operation registry 已形成稳定合同 |
 | 活动复制与手机预览 | `implemented-local` | 复制活动和未保存草稿预览已形成管理 action、页面入口和聚焦测试；真实媒体仍按真机边界验收 |
 | 消息模板、定时与失败复核 | `implemented-local` | 模板、活动、收件人快照、定时发送、失败复核和 outbox 已本地实现；正式微信模板及 scheduler 云端 canary 为 `external-wait` |
 | 网页管理员认证与会话 | `implemented-local` | 真实管理员已在微信开发者工具确认登录，浏览器进入 `AUTHENTICATED` 并成功读取真实概览；该结论只覆盖当前确认登录与会话闭环 |
-| 网页端平台/分会/活动 RBAC | `partial-local` | 62 条只读 API 与 4 条精确白名单 mutation 复用 trusted principal 并在请求时重读 scope/capability；用户、活动、订单、消息、知识库、机会详情及首批 4 个写操作表单已接入，其余 CRUD 尚未完成 |
-| 网页端视觉与可访问性 | `implemented-local` | 独立 Web 工程完成 390px/1280px 响应式布局、列表和详情抽屉并部署到 `https://mipmini.01mvp.com/`；当前 10 个一级页面均接入真实查询并通过本地响应式验证，新增范围尚待补录登录后线上证据 |
+| 网页端平台/分会/活动 RBAC | `partial-local` | 68 条只读 API 与 59 条精确白名单 mutation 复用 trusted principal 并在请求时重读 scope/capability；用户、活动、订单、任务、权限、消息、知识库、机会与成长主要管理动作已接入，通用媒体上传和部分敏感导出尚未完成 |
+| 网页端视觉与可访问性 | `implemented-local` | 独立 Web 工程完成 390px/1280px 响应式布局、列表和详情抽屉并部署到 `https://mipmini.01mvp.com/`；当前 11 个一级页面均接入真实查询并通过本地响应式验证，新增范围尚待补录登录后线上证据 |
 
 ## Figma 代表 frame
 

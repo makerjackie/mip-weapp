@@ -261,7 +261,7 @@ Operation：
 
 ## 可证实覆盖边界
 
-当前仓库有 49 个已注册管理路由；`src/modules/mip-admin/generated/admin-operation-contract.json` 声明 146 个 `mip-admin-api` operation，任务、赛季/战队、Banner 另有独立管理 action。数量不能直接证明 110 项需求已完成：同一 operation 会服务多行需求，部分底层事实也没有对应管理入口。
+当前仓库有 49 个已注册管理路由；`src/modules/mip-admin/generated/admin-operation-contract.json` 声明 158 个 `mip-admin-api` operation，其中 12 个任务管理 action 通过窄 adapter 调用独立 `mip-tasks-api`；赛季/战队、Banner 仍有独立管理 action。数量不能直接证明 110 项需求已完成：同一 operation 会服务多行需求，部分底层事实也没有对应管理入口。
 
 按上表非互斥标签统计：62 行含 `覆盖`、40 行含 `部分`、7 行含 `缺失`、21 行含 `冲突`、12 行含 `外部待验`。标签可重叠，例如源码链路可覆盖主要行为但正式支付仍待验。
 

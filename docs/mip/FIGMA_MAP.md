@@ -105,7 +105,7 @@
 ## 当前本地实现证据
 
 - 完整 375px 历史运行基线为 `.tmp/runtime-evidence/2026-08-27-figma-alignment-r4/report.json`：108/108 路由、6/6 代表状态和 6/6 交互旅程通过，运行时与 IDE 诊断均为 0 failure；该报告不代表最新一次全量运行。当前 Owner 的非空态补充证据为 `.tmp/runtime-evidence/2026-08-27-member-showcase-r2/report.json`：我的活动、任务详情、带小程序码的个人名片、档案编辑和个人中心均进入 `ready`；媒体解析后的订单列表、399 元活动订单详情和 6000 元会员订单详情见 `.tmp/runtime-evidence/2026-08-28-order-media-r1/report.json`；2 个待完成任务、1 个已结束任务和 3 枚带图片的已佩戴勋章见 `.tmp/runtime-evidence/2026-08-28-task-badge-r1/report.json`。最近一次全量尝试 `.tmp/runtime-evidence/2026-08-28-figma-alignment-r7/report.json` 因 `DEVTOOLS_PROTOCOL_TIMEOUT` 在视口测量阶段中断，不能替代历史基线或生成新的 108/108 全量结论。
-- 左侧 Figma、右侧当前实现的逐帧报告生成于 `.tmp/figma-implementation-comparison/index.html`。它复用 r4 全路由截图，并用上述当前 Owner 非空态覆盖对应页面；同设计族映射只用于检查整体规范，不标记为一一像素对应。
+- 左侧 Figma、右侧当前实现的逐帧报告生成于 `.tmp/figma-implementation-comparison/index.html`。它复用 r4 全路由截图，并用上述当前 Owner 非空态覆盖对应页面；个人资料、名片和徽章的重点对照另见同目录 `focused-profile-badge-review.html`，右侧使用 `.tmp/runtime-evidence/2026-08-28-profile-card-segments-r1` 的连续视口，直接展示性别、公司/职位、联系方式、名片码、分享/下载和新徽章图。同设计族映射只用于检查整体规范，不标记为一一像素对应。
 - 活动列表统一使用 `event-card` 与 `event-participant-preview`，机会与人才列表分别统一使用 `opportunity-card`、`talent-card`，案例、成长和公开档案的底部操作统一使用 `sticky-actions`。页面只组合真实数据和共享组件，不复制原型演示事实。
 - 活动详情继续使用微信原生导航栏。自动截图不包含原生导航区域，因此不额外叠加自定义返回栏，避免真机出现重复导航。
 - 新 Figma 副本已确认可读取；“我的”个人信息、数据卡、四入口和合作卡，以及活动/机会筛选与列表卡片均已取得精确子节点 context。实现必须继续使用真实数据和现有模块，不能把整页截图当页面。

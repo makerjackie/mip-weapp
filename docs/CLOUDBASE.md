@@ -6,11 +6,11 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 
 | 范围 | 当前事实 | 结论 |
 | --- | --- | --- |
-| 数据库 | 55 个锁定的 `mip_*` 迁移已在当前共享数据库成功应用，变更前稳定备份保存在本地仓库外目录 | 云端已验证；本轮复用已有稳定备份，未重复备份 |
-| runtime 数据库权限 | 环境专属账号已收敛为 121 张 MIP 业务表的精确表级权限，幂等复跑为 `already current` | 云端已验证；没有 schema/global 权限或跨项目表权限 |
+| 数据库 | 56 个锁定的 `mip_*` 迁移已在当前共享数据库成功应用，变更前稳定备份保存在本地仓库外目录 | 云端已验证；本轮复用已有稳定备份，未重复备份 |
+| runtime 数据库权限 | 环境专属账号已收敛为 122 张 MIP 业务表的精确表级权限，幂等复跑为 `already current` | 云端已验证；没有 schema/global 权限或跨项目表权限 |
 | 数据隔离 | 迁移后隔离检查通过，MIP 变更只落在 `mip_*` 对象和 `mip_schema_migrations` | 云端已验证；没有把旧项目表当作 MIP 事实 |
 | 管理授权 | 环境 API Key 可完成环境和 MySQL 操作；主账号 Device Flow 可完成 SCF 管控面部署 | 两种凭证边界已分别验证；当前固定 MCP `2.32.3`，设备登录解决了环境 API Key 临时 STS 被拒绝的问题 |
-| 核心函数 | 最终工作区代码已部署到 16 个核心 `mip-*` 函数，配置为 Nodejs20.19、目标 VPC/子网和完整运行时环境变量 | 云端已验证；全部函数为 Active/Available，并通过真实 MySQL 健康检查 |
+| 核心函数 | 最近一次已验证快照已部署到 16 个核心 `mip-*` 函数，配置为 Nodejs20.19、目标 VPC/子网和完整运行时环境变量 | 云端已验证；全部函数为 Active/Available，并通过真实 MySQL 健康检查；工作区后续变更必须重新部署才能成为云端事实 |
 | 调用边界与 worker | 客户端 API 已开放给已登录用户；payment ledger、notification worker 与 outbox worker 保持受保护 | 云端已验证；禁止的 5 分钟 timer 不存在 |
 
 2026-08-24 的首次 API Key 部署在原始 SCF `CreateFunction` 被拒绝；升级 MCP 并使用资源主账号 Device Flow 后完成函数创建。2026-08-25 的代码更新先严格回读现有 VPC、运行时和环境变量，配置完全一致的函数只执行 `updateFunctionCode`，随后 16/16 函数部署和独立 `cloud:verify` 均通过。`managePermissions` 仍只负责 CloudBase 资源安全规则，不能修改 CAM 或 STS policy。
