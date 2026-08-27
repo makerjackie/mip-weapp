@@ -9,9 +9,14 @@ const {
   text,
 } = require('./validation')
 
+const LIST_INPUT_KEYS = new Set(['status', 'limit'])
+const CLAIM_INPUT_KEYS = new Set(['reportId', 'expectedVersion', 'reason'])
+const CLOSE_INPUT_KEYS = new Set(['reportId', 'expectedVersion', 'outcome', 'reason'])
+
 function createAdminCommunityGovernance({ repository, access }) {
   async function listCommunityReports(caller, input = {}) {
     const context = await access.session(caller)
+    allowedInput(input, LIST_INPUT_KEYS, '举报列表请求格式无效')
     platformGrant(context)
     const status = normalizeCommunityReportStatus(input.status, { optional: true })
     return {
@@ -26,6 +31,7 @@ function createAdminCommunityGovernance({ repository, access }) {
 
   async function claimCommunityReport(caller, input = {}) {
     const context = await access.session(caller)
+    allowedInput(input, CLAIM_INPUT_KEYS, '举报认领请求格式无效')
     const grant = platformGrant(context)
     const reportId = requiredId(input.reportId, '社区举报')
     const version = expectedVersion(input.expectedVersion)
@@ -52,6 +58,7 @@ function createAdminCommunityGovernance({ repository, access }) {
 
   async function closeCommunityReport(caller, input = {}) {
     const context = await access.session(caller)
+    allowedInput(input, CLOSE_INPUT_KEYS, '举报处理请求格式无效')
     const grant = platformGrant(context)
     const reportId = requiredId(input.reportId, '社区举报')
     const version = expectedVersion(input.expectedVersion)
@@ -88,6 +95,16 @@ function createAdminCommunityGovernance({ repository, access }) {
     claimCommunityReport,
     closeCommunityReport,
     listCommunityReports,
+  }
+}
+
+function allowedInput(value, allowedKeys, message) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new AdminError('VALIDATION_FAILED', message)
+  }
+  const keys = Reflect.ownKeys(value)
+  if (keys.some(key => typeof key !== 'string' || !allowedKeys.has(key))) {
+    throw new AdminError('VALIDATION_FAILED', message)
   }
 }
 

@@ -188,7 +188,38 @@ describe('admin community governance deep module', () => {
       () => module.listCommunityReports(caller, { limit: -1 }),
       error => error?.code === 'VALIDATION_FAILED' && error.message === '分页数量无效',
     )
+    await assert.rejects(
+      () => module.listCommunityReports(caller, { status: 'PENDING', forgedScope: 'other-app' }),
+      error => error?.code === 'VALIDATION_FAILED' && error.message === '举报列表请求格式无效',
+    )
     assert.equal(repo.listReads, reads)
+  })
+
+  it('rejects unknown fields in report requests without reaching repositories', async () => {
+    const repo = repository()
+    const module = communityGovernance(repo)
+
+    await assert.rejects(
+      () => module.claimCommunityReport(caller, {
+        reportId: REPORT_ID,
+        expectedVersion: 1,
+        reason: '开始核实',
+        forgedActorUserId: 'other-user',
+      }),
+      error => error?.code === 'VALIDATION_FAILED' && error.message === '举报认领请求格式无效',
+    )
+    await assert.rejects(
+      () => module.closeCommunityReport(caller, {
+        reportId: REPORT_ID,
+        expectedVersion: 1,
+        outcome: 'RESOLVED',
+        reason: '已处理',
+        forgedAppId: 'other-app',
+      }),
+      error => error?.code === 'VALIDATION_FAILED' && error.message === '举报处理请求格式无效',
+    )
+    assert.equal(repo.resolveReads, 2)
+    assert.equal(repo.listReads, 0)
   })
 
   it('claims with server-owned platform authorization and keeps the reason audit-only', async () => {
