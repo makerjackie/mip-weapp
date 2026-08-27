@@ -4,13 +4,21 @@ import {
   type AdminLoginChallenge,
 } from './services/admin-api'
 import type { AdminSession } from './domain/contracts'
+import {
+  getAdminReadRouteDefinition,
+  loadAdminReadPage,
+  type AdminListQuery,
+  type AdminListRoute,
+  type AdminReadPage,
+  type AdminTableColumn,
+  type AdminTableRow,
+} from './modules/admin-read-pages'
 import { demo } from './services/demo-data'
 import './styles.css'
 
-type Route = 'overview' | 'users' | 'events' | 'orders' | 'permissions' | 'messages' | 'knowledge'
-type Row = Record<string, unknown>
+type Route = 'overview' | AdminListRoute
 type OverviewMetric = { label: string; value: string; detail: string }
-type OverviewModel = { metrics: OverviewMetric[]; activity: Row[]; period: string }
+type OverviewModel = { metrics: OverviewMetric[]; activity: AdminTableRow[]; period: string }
 
 const client = new AdminApiClient()
 const app = document.querySelector<HTMLDivElement>('#app')!
@@ -18,12 +26,23 @@ let route: Route = 'overview'
 let loading = false
 let notice = ''
 let apiErrorCode = ''
-let liveRows: Row[] | null = null
+let liveReadPage: AdminReadPage | null = null
 let liveOverview: OverviewModel | null = null
 let session: AdminSession | null = null
 let loginChallenge: AdminLoginChallenge | null = null
 let loginError = ''
 let loginFlow = 0
+
+type ListState = AdminListQuery & { history: Array<string | null> }
+const listState = (): ListState => ({ query: '', status: '', cursor: null, limit: 20, history: [] })
+const listStates: Record<AdminListRoute, ListState> = {
+  users: listState(),
+  events: listState(),
+  orders: listState(),
+  permissions: listState(),
+  messages: listState(),
+  knowledge: listState(),
+}
 
 const nav: Array<{ route: Route; label: string; icon: string; group: string }> = [
   { route: 'overview', label: '网站概览', icon: '▦', group: '工作台' },
@@ -40,51 +59,19 @@ function escapeHtml(value: unknown) {
 }
 
 function statusClass(value: string) {
-  if (['已发布', '已支付', '有效会员'].includes(value)) return 'status status-success'
-  if (['报名中', '待确认', '定时中'].includes(value)) return 'status status-warning'
-  if (['草稿', '嘉宾'].includes(value)) return 'status status-muted'
+  if (['已发布', '已支付', '启用', '玩家'].includes(value)) return 'status status-success'
+  if (['报名中', '待确认', '定时中', '待支付', '支付处理中', '退款处理中', '待发布', '待审核'].includes(value)) return 'status status-warning'
+  if (['草稿', '嘉宾', '停用', '已撤销', '已关闭', '已归档'].includes(value)) return 'status status-muted'
   return 'status'
 }
 
-function rowsToTable(rows: Row[], columns: Array<{ key: string; label: string }>) {
+function rowsToTable(rows: AdminTableRow[], columns: AdminTableColumn[]) {
   if (!rows.length) return '<div class="empty">暂无数据</div>'
   return `<div class="table-scroll"><table><thead><tr>${columns.map(column => `<th>${column.label}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(column => {
     const value = escapeHtml(row[column.key] ?? '—')
     const rendered = ['status', 'state'].includes(column.key) ? `<span class="${statusClass(String(row[column.key] || ''))}">${value}</span>` : value
     return `<td>${rendered}</td>`
   }).join('')}</tr>`).join('')}</tbody></table></div>`
-}
-
-function extractRows(value: unknown): Row[] {
-  if (Array.isArray(value)) return value.filter(item => item && typeof item === 'object') as Row[]
-  if (value && typeof value === 'object') {
-    const record = value as Record<string, unknown>
-    for (const key of ['items', 'rows', 'records', 'data']) {
-      if (Array.isArray(record[key])) return extractRows(record[key])
-    }
-  }
-  return []
-}
-
-function valueOf(row: Row, ...keys: string[]) {
-  for (const key of keys) if (row[key] !== undefined && row[key] !== null) return row[key]
-  return '—'
-}
-
-function mapRows(value: unknown, mapping: Record<string, string[]>) {
-  return extractRows(value).map(row => Object.fromEntries(Object.entries(mapping).map(([key, keys]) => [key, valueOf(row, ...keys)])))
-}
-
-function mapUserRows(value: unknown): Row[] {
-  return extractRows(value).map(row => ({
-    id: valueOf(row, 'id', 'userId'),
-    name: valueOf(row, 'name', 'displayName', 'nickname'),
-    company: valueOf(row, 'company', 'companyName', 'headline'),
-    role: valueOf(row, 'role', 'cooperationRole', 'levelName'),
-    phone: valueOf(row, 'phone', 'phoneNumber', 'phoneMasked'),
-    branch: valueOf(row, 'branch', 'branchName', 'cityName'),
-    state: row.isPlayer === true || row.is_player === 1 ? '有效会员' : valueOf(row, 'membershipStatus', 'status'),
-  }))
 }
 
 function sidebar() {
@@ -114,6 +101,9 @@ function shell(content: string) {
   document.querySelector('#logout-button')?.addEventListener('click', () => void logout())
   document.querySelector('#login-close-button')?.addEventListener('click', closeLogin)
   document.querySelector('#login-retry-button')?.addEventListener('click', () => void startLogin())
+  document.querySelector<HTMLFormElement>('#filter-form')?.addEventListener('submit', applyFilters)
+  document.querySelector('#previous-page')?.addEventListener('click', () => void changePage('previous'))
+  document.querySelector('#next-page')?.addEventListener('click', () => void changePage('next'))
 }
 
 function loginDialog() {
@@ -129,8 +119,10 @@ function sectionTitle(title: string, description: string, action = '') {
   return `<div class="section-title"><div><h1>${title}</h1><p>${description}</p></div>${action}</div>`
 }
 
-function toolbar(placeholder: string, action = '新建') {
-  return `<div class="toolbar"><label class="search"><span>⌕</span><input placeholder="${placeholder}" /></label><select><option>全部状态</option><option>已发布</option><option>草稿</option></select><button class="primary-button">${action}</button></div>`
+function toolbar(route: AdminListRoute) {
+  const definition = getAdminReadRouteDefinition(route)
+  const state = listStates[route]
+  return `<form class="toolbar" id="filter-form"><label class="search"><span>⌕</span><input name="query" value="${escapeHtml(state.query)}" placeholder="${escapeHtml(definition.searchPlaceholder)}" /></label><select name="status" aria-label="状态筛选">${definition.statusOptions.map(option => `<option value="${option.value}" ${option.value === state.status ? 'selected' : ''}>${option.label}</option>`).join('')}</select><button class="primary-button" type="submit">查询</button></form>`
 }
 
 function pageOverview() {
@@ -139,34 +131,69 @@ function pageOverview() {
   return `${sectionTitle('网站概览', '查看会员、活动和订单的运营状态', `<span class="date-range">${escapeHtml(data.period)}</span>`)}<div class="metric-grid">${data.metrics.map(metric => `<div class="metric"><span>${escapeHtml(metric.label)}</span><strong>${escapeHtml(metric.value)}</strong><small>${escapeHtml(metric.detail)}</small></div>`).join('')}</div><div class="overview-grid"><section class="panel"><div class="panel-heading"><h2>近期运营记录</h2></div>${rowsToTable(data.activity, [{ key: 'title', label: '记录' }, { key: 'meta', label: '时间与范围' }, { key: 'state', label: '类型' }])}</section><section class="panel permission-note"><h2>数据说明</h2><p>概览和用户列表均由服务端按当前运营账号的 capability 与作用范围返回。页面不计算会员、活动或订单事实。</p><div class="boundary-row"><span>数据来源</span><strong>${client.demoMode ? '演示数据' : 'MIP 管理服务'}</strong></div><div class="boundary-row"><span>请求协议</span><strong>AdminRequest v1</strong></div></section></div>`
 }
 
-function pageUsers() {
-  const rows = liveRows ?? (client.demoMode ? demo.users.map(user => ({ ...user, state: user.status })) : [])
-  return `${sectionTitle('用户管理', '查看和维护会员、嘉宾及用户资料', '<button class="outline-button">导出用户</button>')}${toolbar('搜索姓名、手机号或公司')}<section class="panel">${rowsToTable(rows, [{ key: 'name', label: '姓名' }, { key: 'company', label: '公司' }, { key: 'role', label: '合作角色' }, { key: 'phone', label: '手机号' }, { key: 'branch', label: '所属分会' }, { key: 'state', label: '状态' }])}</section>`
+function pageList(route: AdminListRoute, title: string, description: string) {
+  const page = liveReadPage || (client.demoMode ? demoReadPage(route) : null)
+  const content = page
+    ? `${summaryCards(page)}${page.sections.map(section => `<section class="panel list-panel">${section.title ? `<div class="panel-heading"><h2>${escapeHtml(section.title)}</h2></div>` : ''}${rowsToTable(section.rows, section.columns)}</section>`).join('')}${pagination(route, page)}`
+    : `<section class="panel"><div class="empty">${loading ? '正在加载' : '暂无可显示的真实数据'}</div></section>`
+  return `${sectionTitle(title, description)}${toolbar(route)}${content}`
 }
 
-function pageEvents() {
-  const rows = liveRows ?? (client.demoMode ? demo.events.map(event => ({ ...event, state: event.status })) : [])
-  return `${sectionTitle('活动管理', '维护活动信息、报名名单和活动状态', '<button class="primary-button">创建活动</button>')}${toolbar('搜索活动名称或活动编号', '批量操作')}<section class="panel">${rowsToTable(rows, [{ key: 'title', label: '活动名称' }, { key: 'time', label: '活动时间' }, { key: 'location', label: '活动地点' }, { key: 'registrations', label: '报名人数' }, { key: 'state', label: '状态' }])}</section>`
+function pageUsers() { return pageList('users', '用户管理', '查看会员、嘉宾及用户资料') }
+function pageEvents() { return pageList('events', '活动管理', '查看活动信息、报名和签到状态') }
+function pageOrders() { return pageList('orders', '订单管理', '查看会员和活动订单及支付状态') }
+function pagePermissions() { return pageList('permissions', '权限管理', '查看运营成员和城市分会范围') }
+function pageMessages() { return pageList('messages', '消息管理', '查看消息活动和公告状态') }
+function pageKnowledge() { return pageList('knowledge', '知识库', '查看会员内容及发布状态') }
+
+function summaryCards(page: AdminReadPage) {
+  if (!page.summary?.length) return ''
+  return `<div class="summary-strip">${page.summary.map(item => `<div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`).join('')}</div>`
 }
 
-function pageOrders() {
-  const rows = liveRows ?? (client.demoMode ? demo.orders.map(order => ({ ...order, state: order.status })) : [])
-  return `${sectionTitle('订单管理', '查看会员和活动门票订单及支付状态', '<button class="outline-button">导出订单</button>')}${toolbar('搜索订单号、姓名或手机号')}<section class="panel">${rowsToTable(rows, [{ key: 'id', label: '订单号' }, { key: 'user', label: '用户' }, { key: 'type', label: '订单类型' }, { key: 'amount', label: '金额' }, { key: 'createdAt', label: '创建时间' }, { key: 'state', label: '状态' }])}</section>`
+function pagination(route: AdminListRoute, page: AdminReadPage) {
+  const definition = getAdminReadRouteDefinition(route)
+  const state = listStates[route]
+  if (!definition.paginated || (!state.history.length && !page.nextCursor)) return ''
+  return `<nav class="pagination" aria-label="分页"><button class="outline-button" id="previous-page" ${state.history.length ? '' : 'disabled'}>上一页</button><span>第 ${state.history.length + 1} 页</span><button class="outline-button" id="next-page" ${page.nextCursor ? '' : 'disabled'}>下一页</button></nav>`
 }
 
-function pagePermissions() {
-  const rows = liveRows ?? (client.demoMode ? demo.roles.map(role => ({ ...role })) : [])
-  return `${sectionTitle('权限管理', '按平台、分会和活动范围管理运营权限', '<button class="primary-button">添加运营成员</button>')}<div class="permission-layout"><section class="panel"><div class="panel-heading"><h2>角色与权限</h2><button class="text-button">角色策略</button></div>${rowsToTable(rows, [{ key: 'name', label: '角色' }, { key: 'members', label: '成员数' }, { key: 'scope', label: '作用范围' }, { key: 'capabilities', label: '权限' }])}</section><section class="panel permission-note"><h2>权限边界</h2><p>所有管理操作由服务端校验当前账号的 capability 和作用范围。Web 端仅提交业务意图，不在浏览器计算会员、订单或活动资格。</p><div class="boundary-row"><span>当前访问模式</span><strong>${client.demoMode ? '本地演示' : session?.enabled ? '已验证运营会话' : '尚未登录'}</strong></div><div class="boundary-row"><span>请求协议</span><strong>AdminRequest v1</strong></div></section></div>`
+function demoReadPage(route: AdminListRoute): AdminReadPage {
+  if (route === 'users') return { sections: [{ rows: demo.users.map(item => ({ name: item.name, headline: item.company, identity: item.status, phone: item.phone, branch: item.branch, level: item.role, state: item.status })), columns: [{ key: 'name', label: '姓名' }, { key: 'headline', label: '简介' }, { key: 'identity', label: '身份' }, { key: 'phone', label: '手机状态' }, { key: 'branch', label: '所属分会' }, { key: 'level', label: '等级' }, { key: 'state', label: '账号状态' }] }], nextCursor: null }
+  if (route === 'events') return { sections: [{ rows: demo.events.map(item => ({ ...item, access: '会员权益', attended: '—', state: item.status })), columns: [{ key: 'title', label: '活动名称' }, { key: 'time', label: '开始时间' }, { key: 'location', label: '城市与分会' }, { key: 'access', label: '活动类型' }, { key: 'registrations', label: '报名人数' }, { key: 'attended', label: '签到人数' }, { key: 'state', label: '状态' }] }], nextCursor: null }
+  if (route === 'orders') return { sections: [{ rows: demo.orders.map(item => ({ ...item, resource: item.type, state: item.status })), columns: [{ key: 'id', label: '订单号' }, { key: 'user', label: '用户' }, { key: 'type', label: '订单类型' }, { key: 'resource', label: '订单内容' }, { key: 'amount', label: '金额' }, { key: 'createdAt', label: '创建时间' }, { key: 'state', label: '状态' }] }], nextCursor: null }
+  if (route === 'permissions') return { sections: [{ title: '运营成员', rows: demo.roles.map(item => ({ name: item.name, role: item.capabilities, scope: item.scope, grantedAt: '—', state: '启用' })), columns: [{ key: 'name', label: '姓名' }, { key: 'role', label: '角色' }, { key: 'scope', label: '作用范围' }, { key: 'grantedAt', label: '授权时间' }, { key: 'state', label: '状态' }] }], nextCursor: null }
+  if (route === 'messages') return { sections: [{ title: '消息活动', rows: demo.messages.map(item => ({ ...item, scope: item.audience, state: item.status })), columns: [{ key: 'title', label: '消息标题' }, { key: 'audience', label: '发送范围' }, { key: 'scope', label: '作用范围' }, { key: 'updatedAt', label: '更新时间' }, { key: 'state', label: '状态' }] }], nextCursor: null }
+  return { sections: [{ rows: demo.knowledge.map(item => ({ ...item, category: '—', author: '—', access: '会员可见', state: item.status })), columns: [{ key: 'title', label: '文档标题' }, { key: 'type', label: '内容类型' }, { key: 'category', label: '分类' }, { key: 'author', label: '作者' }, { key: 'access', label: '访问范围' }, { key: 'updatedAt', label: '更新时间' }, { key: 'state', label: '状态' }] }], nextCursor: null }
 }
 
-function pageMessages() {
-  const rows = liveRows ?? (client.demoMode ? demo.messages.map(message => ({ ...message, state: message.status })) : [])
-  return `${sectionTitle('消息管理', '维护模板、发送范围和投递记录', '<button class="primary-button">新建消息</button>')}${toolbar('搜索消息标题或模板')}<section class="panel">${rowsToTable(rows, [{ key: 'title', label: '消息标题' }, { key: 'audience', label: '发送范围' }, { key: 'updatedAt', label: '更新时间' }, { key: 'state', label: '状态' }])}</section>`
+function applyFilters(event: SubmitEvent) {
+  event.preventDefault()
+  if (route === 'overview') return
+  const form = new FormData(event.currentTarget as HTMLFormElement)
+  const state = listStates[route]
+  state.query = String(form.get('query') || '').trim()
+  state.status = String(form.get('status') || '')
+  state.cursor = null
+  state.history = []
+  void render()
 }
 
-function pageKnowledge() {
-  const rows = liveRows ?? (client.demoMode ? demo.knowledge.map(item => ({ ...item, state: item.status })) : [])
-  return `${sectionTitle('知识库', '管理可供会员阅读的内容和信息源', '<button class="primary-button">新建文档</button>')}${toolbar('搜索文档标题或类型')}<section class="panel">${rowsToTable(rows, [{ key: 'title', label: '文档标题' }, { key: 'type', label: '内容类型' }, { key: 'updatedAt', label: '更新时间' }, { key: 'state', label: '状态' }])}</section>`
+async function changePage(direction: 'previous' | 'next') {
+  if (route === 'overview') return
+  const state = listStates[route]
+  if (direction === 'next') {
+    const nextCursor = liveReadPage?.nextCursor
+    if (!nextCursor) return
+    state.history.push(state.cursor)
+    state.cursor = nextCursor
+  }
+  else {
+    const previousCursor = state.history.pop()
+    if (previousCursor === undefined) return
+    state.cursor = previousCursor
+  }
+  await render()
 }
 
 async function startLogin() {
@@ -230,33 +257,16 @@ async function loadRouteData() {
     liveOverview = mapOverview(payload)
     return
   }
-  const actions: Partial<Record<Route, string>> = {
-    users: 'mip.admin.users.list',
-  }
-  const action = actions[route]
-  if (!action) {
-    notice = '当前 Web 版本仅接入概览和用户列表；其他管理功能继续在小程序管理端使用。'
-    return
-  }
-  const payload = await client.request<unknown>(action, { limit: 50 })
-  if (route === 'users') {
-    liveRows = mapUserRows(payload)
-    return
-  }
-  const mappings: Partial<Record<Route, Record<string, string[]>>> = {
-    users: { id: ['id', 'userId'], name: ['name', 'displayName'], company: ['company', 'companyName'], role: ['role', 'cooperationRole'], phone: ['phone', 'phoneMasked'], branch: ['branch', 'branchName'], state: ['status', 'membershipStatus'] },
-    events: { id: ['id', 'eventId'], title: ['title', 'name'], time: ['time', 'startsAt', 'startAt'], location: ['location', 'venue'], registrations: ['registrations', 'registrationCount'], state: ['status'] },
-    orders: { id: ['id', 'orderId'], user: ['user', 'userName'], type: ['type', 'orderType'], amount: ['amount', 'totalAmount'], createdAt: ['createdAt', 'created_at'], state: ['status'] },
-    permissions: { name: ['name', 'roleName'], members: ['members', 'memberCount'], scope: ['scope', 'scopeType'], capabilities: ['capabilities', 'capabilitySummary'] },
-    messages: { title: ['title', 'name'], audience: ['audience', 'recipientScope'], updatedAt: ['updatedAt', 'updated_at'], state: ['status'] },
-    knowledge: { title: ['title', 'name'], type: ['type', 'contentType'], updatedAt: ['updatedAt', 'updated_at'], state: ['status'] },
-  }
-  liveRows = mapRows(payload, mappings[route] || {})
+  liveReadPage = await loadAdminReadPage(
+    route,
+    listStates[route],
+    (action, input) => client.request(action, input),
+  )
 }
 
 async function render() {
   loading = true
-  liveRows = null
+  liveReadPage = null
   liveOverview = null
   notice = ''
   apiErrorCode = ''
@@ -284,8 +294,6 @@ async function render() {
   }
   loading = false
   shell(`<div class="loading-bar hidden"></div>${pages[route]()}`)
-  const noticeElement = document.querySelector('#notice')
-  if (noticeElement) { noticeElement.textContent = notice; noticeElement.classList.toggle('hidden', !notice) }
   requestAnimationFrame(assertResponsiveViewport)
 }
 
