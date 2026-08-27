@@ -3,6 +3,7 @@
 const { createHash, randomBytes, randomUUID } = require('node:crypto')
 const { createOperationsPublisher } = require('../operations-publication')
 const { cursorPredicateFor, pageRows } = require('../pagination')
+const { claimOptional, complete } = require('../idempotency')
 
 function createAdminEventRepository(database, dependencies) {
   const createId = dependencies.createId || randomUUID
@@ -843,6 +844,14 @@ function createAdminEventRepository(database, dependencies) {
       const currentScope = eventScopeFromRow(event, input.eventId)
       assertScope(authorization, currentScope)
       assertAuthorizedScope(currentScope, input.authorizedScope)
+      const operation = 'admin.events.changeStatus'
+      const idempotency = await claimOptional(tx, input, operation, {
+        eventId: input.eventId,
+        expectedVersion: input.expectedVersion,
+        status: input.status,
+        reason: input.reason || '',
+      }, createId)
+      if (idempotency.replay) return idempotency.replay
       if (Number(event.version) !== input.expectedVersion) throw codeError('CONFLICT')
       const allowedTransitions = {
         DRAFT: ['PUBLISHED', 'CANCELLED'],
@@ -892,13 +901,15 @@ function createAdminEventRepository(database, dependencies) {
         sourceVersion: nextVersion,
         payload: { eventId: input.eventId, from: event.status, to: input.status },
       })
-      return {
+      const response = {
         id: input.eventId,
         status: input.status,
         version: nextVersion,
         affectedCount: cancellation.affectedCount,
         refundIds: cancellation.refundIds,
       }
+      await complete(tx, input, operation, idempotency.requestHash, response)
+      return response
     })
   }
 

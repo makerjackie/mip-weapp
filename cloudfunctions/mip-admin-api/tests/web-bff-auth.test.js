@@ -212,6 +212,8 @@ describe('Web BFF trusted query adapter', () => {
     const cases = [
       ['mip.admin.memberships.grant', { userId: 'user-a', forgedDurationMonths: 120 }],
       ['mip.admin.events.clone', { sourceEventId: 'event-a', expectedVersion: 1, title: '客户端标题' }],
+      ['mip.admin.events.changeStatus', { eventId: 'event-a', expectedVersion: 1, status: 'PUBLISHED', forged: true }],
+      ['mip.admin.events.archive', { eventId: 'event-a', expectedVersion: 1, reason: '归档', forged: true }],
       ['mip.admin.communications.publishEventReminder', {
         eventId: 'event-a', expectedVersion: 1, sendWechatReminder: false, recipientUserIds: ['forged-user'],
       }],

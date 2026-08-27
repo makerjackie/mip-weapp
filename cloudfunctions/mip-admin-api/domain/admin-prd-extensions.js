@@ -7,6 +7,7 @@ const {
   lockMutationAuthorization,
 } = require('./mutation-authorization')
 const { load: loadCommercialTerms, sync: syncCommercialTerms } = require('./opportunity-commercial-terms')
+const { claimOptional, complete } = require('./idempotency')
 
 function codeError(code, details = null) {
   const error = new Error(code)
@@ -653,6 +654,13 @@ function createAdminPrdExtensions(database, options = {}) {
       const scope = eventScope(row)
       assertScope(authorization, scope)
       if (!sameScope(scope, input.authorizedScope)) throw codeError('CONFLICT')
+      const operation = 'admin.events.archive'
+      const idempotency = await claimOptional(tx, input, operation, {
+        eventId: input.eventId,
+        expectedVersion: input.expectedVersion,
+        reason: input.reason,
+      }, id)
+      if (idempotency.replay) return idempotency.replay
       if (Number(row.version) !== input.expectedVersion) throw codeError('CONFLICT')
       if (row.status !== 'DRAFT') throw codeError('INVALID_STATE')
       const blockers = await tx.one(
@@ -679,7 +687,9 @@ function createAdminPrdExtensions(database, options = {}) {
       )
       if (Number(result.affectedRows) !== 1) throw codeError('CONFLICT')
       await writeAudit(tx, input.audit)
-      return { id: input.eventId, status: 'ARCHIVED', version: input.expectedVersion + 1 }
+      const response = { id: input.eventId, status: 'ARCHIVED', version: input.expectedVersion + 1 }
+      await complete(tx, input, operation, idempotency.requestHash, response)
+      return response
     })
   }
 

@@ -62,7 +62,7 @@ describe('MIP event cancellation convergence contract', () => {
     const pageTs = read('src/packages/admin/orders/index.ts')
     const pageWxml = read('src/packages/admin/orders/index.wxml')
 
-    expect(events).toMatch(/await repository\.changeEventStatus\([\s\S]*?const refundIds = Array\.isArray\(result\.refundIds\)/)
+    expect(events).toMatch(/const result = await repository\.changeEventStatus\([\s\S]*?const refundIds = result\.idempotent \? \[\] : \(Array\.isArray\(result\.refundIds\)/)
     expect(events).toContain('dispatchCancellationRefunds(context.caller.appId, refundIds)')
     expect(service).toContain('dispatchCancellationRefunds: dispatchRefundBatchSafely')
     expect(gateway).toContain('call(\'mip.admin.refunds.retry\', { refundId })')

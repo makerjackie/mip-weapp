@@ -43,12 +43,14 @@ function createAdminEvents({
     const { scope, grant } = await access.eventAuthorization(context, eventId, CAPABILITIES.EVENTS_WRITE)
     const version = expectedVersion(input.expectedVersion)
     const reason = text(input.reason, 300, { required: true, label: '归档原因' })
+    const idempotencyKey = normalizeOptionalIdempotencyKey(input.idempotencyKey)
     return repository.archiveEvent({
       appId: context.caller.appId,
       actorUserId: context.caller.userId,
       eventId,
       expectedVersion: version,
       reason,
+      idempotencyKey,
       authorizedScope: scope,
       authorization: access.mutationAuthorization(grant, CAPABILITIES.EVENTS_WRITE),
       audit: access.audit(context, grant, {
@@ -294,6 +296,7 @@ function createAdminEvents({
       ? text(input.reason, 300, { required: true, label: '取消原因' })
       : ''
     const version = expectedVersion(input.expectedVersion)
+    const idempotencyKey = normalizeOptionalIdempotencyKey(input.idempotencyKey)
     const result = await repository.changeEventStatus({
       appId: context.caller.appId,
       actorUserId: context.caller.userId,
@@ -301,6 +304,7 @@ function createAdminEvents({
       expectedVersion: version,
       status: input.status,
       reason,
+      idempotencyKey,
       authorization: access.mutationAuthorization(grant, CAPABILITIES.EVENTS_WRITE),
       authorizedScope: scope,
       audit: access.audit(context, grant, {
@@ -317,7 +321,7 @@ function createAdminEvents({
         },
       }),
     })
-    const refundIds = Array.isArray(result.refundIds) ? result.refundIds : []
+    const refundIds = result.idempotent ? [] : (Array.isArray(result.refundIds) ? result.refundIds : [])
     const refundDispatch = await dispatchCancellationRefunds(context.caller.appId, refundIds)
     return {
       id: result.id,
@@ -766,6 +770,11 @@ function normalizeIdempotencyKey(value) {
   const key = stableKey(value, '请求', 128)
   if (key.length < 12) throw new AdminError('VALIDATION_FAILED', '请求标识无效')
   return key
+}
+
+function normalizeOptionalIdempotencyKey(value) {
+  if (value === undefined || value === null || value === '') return null
+  return normalizeIdempotencyKey(value)
 }
 
 function nonNegativeVersion(value) {

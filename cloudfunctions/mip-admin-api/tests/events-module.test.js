@@ -397,6 +397,36 @@ describe('admin events deep module', () => {
     })
   })
 
+  it('keeps event status and archive keys optional for mini-program callers while validating Web keys', async () => {
+    const calls = []
+    const repo = repository({
+      async changeEventStatus(input) {
+        calls.push(['status', input])
+        return { id: EVENT_ID, status: 'ENDED', version: 4, affectedCount: 0, refundIds: [] }
+      },
+      async archiveEvent(input) {
+        calls.push(['archive', input])
+        return { id: EVENT_ID, status: 'ARCHIVED', version: 4 }
+      },
+    })
+    const service = events(repo)
+    await service.changeEventStatus(caller, { eventId: EVENT_ID, expectedVersion: 3, status: 'ENDED' })
+    await service.archiveEvent(caller, { eventId: EVENT_ID, expectedVersion: 3, reason: '整理草稿' })
+    assert.equal(calls[0][1].idempotencyKey, null)
+    assert.equal(calls[1][1].idempotencyKey, null)
+
+    await service.changeEventStatus(caller, {
+      eventId: EVENT_ID, expectedVersion: 3, status: 'ENDED', idempotencyKey: 'web-status-request-0001',
+    })
+    assert.equal(calls[2][1].idempotencyKey, 'web-status-request-0001')
+    await assert.rejects(
+      () => service.archiveEvent(caller, {
+        eventId: EVENT_ID, expectedVersion: 3, reason: '整理草稿', idempotencyKey: 'too-short',
+      }),
+      error => error?.code === 'VALIDATION_FAILED',
+    )
+  })
+
   it('keeps roster filters, phone scope, redaction and export normalization inside the module', async () => {
     const rosterCalls = []
     const userId = 'target-user'
