@@ -7,6 +7,7 @@ const { configuredAgreements, createFullAccessPolicy } = require('./domain/full-
 const { createAdminRepository } = require('./domain/repository')
 const { createAdminService } = require('./domain/service')
 const { createTrustedPrincipalIssuer, resolveTrustedIdentity } = require('./lib/identity')
+const { createWebBffRoute, isWebBffEvent } = require('./lib/web-bff-auth')
 const { mysqlDatabase } = require('./lib/mysql')
 const { createRefundWorkerClient } = require('./lib/refund-worker-client')
 const { createCloudExportStorage } = require('./lib/export-storage')
@@ -232,6 +233,11 @@ const handler = createHandler({
   getContext: () => cloud.getWXContext(),
   issuePrincipal: principalIssuer.issue,
 })
+const webBffRoute = createWebBffRoute({
+  application,
+  issuePrincipal: principalIssuer.issue,
+  secret: process.env.MIP_ADMIN_WEB_BFF_HMAC_SECRET,
+})
 const runDueMessageCampaigns = createMessageDispatchRoute({
   allowedAppIds,
   logger: console,
@@ -250,6 +256,9 @@ const knowledgeScheduleMutationActions = new Set([
 ])
 
 exports.main = async (event = {}) => {
+  if (isWebBffEvent(event)) {
+    return webBffRoute(event)
+  }
   if (MESSAGE_DISPATCH_ACTIONS.has(event?.action)) {
     return runDueMessageCampaigns(event)
   }

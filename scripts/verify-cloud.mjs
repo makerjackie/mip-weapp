@@ -370,7 +370,8 @@ function assertRefundDispatchEnvironment(detail) {
   if (variables.MIP_REFUND_FUNCTION_NAME !== functionNames.refund
     || variables.MIP_MESSAGE_SCHEDULER_FUNCTION_NAME !== functionNames.scheduler
     || String(variables.MIP_REFUND_WORKER_HMAC_SECRET || '').length < 32
-    || String(variables.MIP_MESSAGE_DISPATCH_HMAC_SECRET || '').length < 32) {
+    || String(variables.MIP_MESSAGE_DISPATCH_HMAC_SECRET || '').length < 32
+    || String(variables.MIP_ADMIN_WEB_BFF_HMAC_SECRET || '').length < 32) {
     throw new Error('Admin worker links or internal HMAC configuration are incomplete')
   }
 }
