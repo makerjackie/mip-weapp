@@ -40,14 +40,14 @@ function sourceFunction(name: string, nextName: string) {
 
 describe('MIP demo event tag seed', () => {
   it('provides neutral tags and single-tag plus multi-tag 2030 fixtures', () => {
-    expect(seed.version).toBe('2026-08-27-demo.14')
+    expect(seed.version).toBe('2026-08-28-demo.17')
     expect(seed.eventTags).toHaveLength(3)
     expect(new Set(seed.eventTags.map(item => item.key)).size).toBe(seed.eventTags.length)
     expect(seed.eventTags.every(item => item.name.length > 0)).toBe(true)
 
     const catalogIds = new Set(seed.eventTags.map(item => item.id))
     const longLived = seed.events.filter(item => item.startsAt.startsWith('2030-'))
-    expect(longLived).toHaveLength(3)
+    expect(longLived).toHaveLength(4)
     expect(longLived.some(item => item.tagIds.length === 1)).toBe(true)
     expect(longLived.some(item => item.tagIds.length > 1)).toBe(true)
     for (const event of longLived) {

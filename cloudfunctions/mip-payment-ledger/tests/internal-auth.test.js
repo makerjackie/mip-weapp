@@ -126,7 +126,7 @@ describe('mip payment ledger internal authentication', () => {
       appId: 'app-1',
       signedAt: now,
       nonce: 'nonce-1',
-      planKey: 'five_year_test',
+      planKey: 'annual_test',
     }
     event.signature = sign(event)
     event.planKey = 'another_test_plan'

@@ -21,7 +21,7 @@ const baseEnv = {
 }
 const args = [
   '--operation=grant',
-  '--plan-key=five_year_test',
+  '--plan-key=annual_test',
   '--confirm-owner',
   '--confirm-env=test-environment',
   `--confirm-app-id=${appId}`,
@@ -38,7 +38,7 @@ describe('Owner TEST membership operation command', () => {
       functionName: 'mip-payment-ledger',
     })
     expect(command.action).toBe('grantOwnerTestMembership')
-    expect(command.planKey).toBe('five_year_test')
+    expect(command.planKey).toBe('annual_test')
     for (const required of args.slice(2)) {
       expect(() => resolveOwnerTestMembershipCommand({
         args: args.filter(value => value !== required),

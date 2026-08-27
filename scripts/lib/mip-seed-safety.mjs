@@ -8,6 +8,7 @@ const SEED_TABLES = Object.freeze({
   users: 'mip_users',
   mediaAssets: 'mip_media_assets',
   membershipOrders: 'mip_orders',
+  eventOrders: 'mip_orders',
   entitlements: 'mip_membership_entitlements',
   eventTags: 'mip_event_tags',
   events: 'mip_events',
@@ -35,6 +36,8 @@ const SEED_TABLES = Object.freeze({
   messageCampaigns: 'mip_message_campaigns',
   tasks: 'mip_task_cards',
   taskAssignments: 'mip_task_assignments',
+  taskCompletions: 'mip_task_completions',
+  badgeAwards: 'mip_user_badges',
   growthEntries: 'mip_growth_entries',
   gameSeasons: 'mip_game_seasons',
   gameTeams: 'mip_game_teams',
@@ -124,6 +127,9 @@ export function buildSeedCollisionQuery(appId, seed) {
   selects.push(alternateKeySelect(appId, 'mip_orders', seed.membershipOrders, (item, index) => `(merchant_order_no = ${literal(`MIP-DEMO-MEMBER-${index + 1}`)}
       OR (user_id = ${literal(item.userId)} AND order_type = 'MEMBERSHIP'
         AND idempotency_key = ${literal(item.key)}))`))
+  selects.push(alternateKeySelect(appId, 'mip_orders', seed.eventOrders, item => `(resource_id = ${literal(item.eventId)}
+      AND user_id = ${literal(item.userId)} AND order_type = 'EVENT'
+      AND idempotency_key = ${literal(item.key)})`))
   selects.push(alternateKeySelect(appId, 'mip_membership_entitlements', seed.entitlements, item => `order_id = ${literal(item.orderId)}`))
   selects.push(alternateKeySelect(appId, 'mip_event_tags', seed.eventTags, item => `tag_key = ${literal(item.key)}`))
   selects.push(alternateKeySelect(appId, 'mip_event_registrations', seed.eventRegistrations, item => `event_id = ${literal(item.eventId)} AND user_id = ${literal(item.userId)}`))
@@ -162,6 +168,26 @@ export function buildSeedCollisionQuery(appId, seed) {
       AND channel = ${literal(item.channel)}`))
   selects.push(alternateKeySelect(appId, 'mip_task_assignments', seed.taskAssignments, item => `task_id = ${literal(item.taskId)}
       AND user_id = ${literal(item.userId)}`))
+  selects.push(alternateKeySelect(appId, 'mip_task_completions', seed.taskCompletions, item => `task_id = ${literal(item.taskId)}
+      AND user_id = ${literal(item.userId)}`))
+  selects.push(alternateKeySelect(appId, 'mip_user_badges', seed.badgeAwards, item => `user_id = ${literal(item.userId)}
+      AND badge_id = ${literal(item.badgeId)}`))
+  selects.push(compositeManifestCollisionSelect({
+    appId,
+    table: 'mip_user_badge_profiles',
+    alias: 'badge_profile',
+    items: seed.badgeProfiles,
+    condition: item => `user_id = ${literal(item.userId)}`,
+    recordFields: { userId: 'user_id' },
+  }))
+  selects.push(compositeManifestCollisionSelect({
+    appId,
+    table: 'mip_user_badge_equipment',
+    alias: 'badge_equipment',
+    items: seed.badgeEquipment,
+    condition: item => `user_id = ${literal(item.userId)} AND slot_no = ${Number(item.slotNo)}`,
+    recordFields: { userId: 'user_id', slotNo: 'slot_no' },
+  }))
   selects.push(alternateKeySelect(appId, 'mip_growth_entries', seed.growthEntries, item => `user_id = ${literal(item.userId)}
       AND source_event_type = ${literal(item.sourceEventType)}
       AND source_event_id = ${literal(item.sourceEventId)} AND metric = ${literal(item.metric)}`))

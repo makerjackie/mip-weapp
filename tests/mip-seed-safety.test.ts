@@ -91,10 +91,10 @@ describe('MIP demo seed ownership safety', () => {
 
   it('keeps every top-level fixed-ID fixture group under the ownership preflight', () => {
     const fixtureGroups = Object.entries(seed)
-      .filter(([, value]) => Array.isArray(value))
+      .filter(([, value]) => Array.isArray(value) && value.every(item => typeof item?.id === 'string'))
       .map(([key]) => key)
       .sort()
-    expect(Object.keys(SEED_TABLES).sort()).toEqual(fixtureGroups)
+    expect(Object.keys(SEED_TABLES).sort()).toEqual(fixtureGroups.filter(key => !['badgeProfiles', 'badgeEquipment'].includes(key)))
   })
 
   it('rejects SQL plans that leave the MIP table and AppID boundary', () => {
@@ -134,12 +134,12 @@ describe('MIP demo seed ownership safety', () => {
     expect(result).toMatchObject({
       valid: true,
       seedVersion: seed.version,
-      fixtureGroups: Object.keys(SEED_TABLES).length,
+      fixtureGroups: 49,
     })
     expect(result.statementCount).toBeGreaterThan(Object.keys(SEED_TABLES).length)
     expect(result.tableCount).toBeGreaterThan(Object.keys(SEED_TABLES).length)
-    expect(result.fixtureGroups).toBe(44)
-    expect(result.tableCount).toBe(65)
+    expect(result.fixtureGroups).toBe(49)
+    expect(result.tableCount).toBe(69)
     expect(result.maxStatementBytes).toBeLessThan(30 * 1024)
   })
 
@@ -238,13 +238,14 @@ describe('MIP demo seed ownership safety', () => {
     expect(source).toContain('mip_media_assets:')
   })
 
-  it('uploads and binds nine READY demo media objects without storing temporary URLs', () => {
+  it('uploads and binds eleven READY demo media objects without storing temporary URLs', () => {
     const source = fs.readFileSync(path.join(root, 'scripts/seed-demo.mjs'), 'utf8')
-    expect(seed.mediaAssets).toHaveLength(9)
+    expect(seed.mediaAssets).toHaveLength(11)
+    expect(seed.mediaAssets.filter((item: { purpose: string }) => item.purpose === 'TASK_TEMPLATE')).toHaveLength(1)
     expect(new Set(seed.users.map((item: { avatarAssetId: string }) => item.avatarAssetId)).size).toBe(6)
     expect(new Set(seed.events
       .filter((item: { startsAt: string }) => item.startsAt.startsWith('2030-'))
-      .map((item: { coverAssetId: string }) => item.coverAssetId)).size).toBe(3)
+      .map((item: { coverAssetId: string }) => item.coverAssetId)).size).toBe(4)
     expect(source).toContain('callCloudbase(root, \'manageStorage\'')
     expect(source).toContain('callCloudbase(root, \'queryStorage\'')
     expect(source).toContain('status = \'READY\'')

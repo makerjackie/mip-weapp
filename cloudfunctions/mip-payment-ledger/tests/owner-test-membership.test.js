@@ -12,11 +12,11 @@ const appId = 'wx0000000000000001'
 const ownerId = '10000000-0000-4000-8000-000000000001'
 const plan = {
   id: '20000000-0000-4000-8000-000000000001',
-  plan_key: 'five_year_test',
+  plan_key: 'annual_test',
   catalog_stage: 'TEST',
-  name: '五年会员（测试）',
-  duration_days: 1825,
-  price_cents: 19900,
+  name: '一年会员（测试）',
+  duration_days: 365,
+  price_cents: 600000,
   currency: 'CNY',
   benefits_json: JSON.stringify(['玩家身份']),
   status: 'ACTIVE',

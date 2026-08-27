@@ -67,6 +67,7 @@
     "refunds:run": "node scripts/run-refunds.mjs",
     "membership:test": "node scripts/manage-owner-test-membership.mjs",
     "event:interaction:seed": "node scripts/seed-owner-event-interaction.mjs",
+    "owner:showcase": "node scripts/seed-owner-showcase.mjs",
     "membership:chains:reconcile": "node scripts/reconcile-membership-chains.mjs",
     "media:cleanup": "node scripts/run-media-cleanup.mjs",
     "ai:cleanup": "node scripts/run-ai-cleanup.mjs",

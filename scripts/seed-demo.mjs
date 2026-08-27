@@ -103,6 +103,7 @@ assertTablesExist([
   'mip_profile_tags',
   'mip_growth_accounts',
   'mip_orders',
+  'mip_event_seat_holds',
   'mip_membership_entitlements',
   'mip_event_types',
   'mip_event_tags',
@@ -144,6 +145,10 @@ assertTablesExist([
   'mip_message_campaigns',
   'mip_task_cards',
   'mip_task_assignments',
+  'mip_task_completions',
+  'mip_user_badges',
+  'mip_user_badge_profiles',
+  'mip_user_badge_equipment',
   'mip_growth_entries',
   'mip_game_seasons',
   'mip_game_teams',
@@ -245,6 +250,9 @@ const verification = callCloudbase(root, 'queryMysqlDatabase', {
     (SELECT COUNT(*) FROM mip_orders
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.membershipOrders.map(item => sqlLiteral(item.id)).join(', ')})) AS membershipOrders,
+    (SELECT COUNT(*) FROM mip_orders
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.eventOrders.map(item => sqlLiteral(item.id)).join(', ')})) AS eventOrders,
     (SELECT COUNT(*) FROM mip_membership_entitlements
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.entitlements.map(item => sqlLiteral(item.id)).join(', ')})) AS entitlements,
@@ -304,6 +312,18 @@ const verification = callCloudbase(root, 'queryMysqlDatabase', {
           AND registered_at = ${sqlLiteral(demoRegistrationTime(item))}
           AND version = ${demoRegistrationVersion(item)}
         )`).join(' OR ')})) AS eventRegistrationStates,
+    (SELECT COUNT(*) FROM mip_task_completions
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.taskCompletions.map(item => sqlLiteral(item.id)).join(', ')})) AS taskCompletions,
+    (SELECT COUNT(*) FROM mip_user_badges
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.badgeAwards.map(item => sqlLiteral(item.id)).join(', ')})) AS badgeAwards,
+    (SELECT COUNT(*) FROM mip_user_badge_profiles
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND user_id IN (${seed.badgeProfiles.map(item => sqlLiteral(item.userId)).join(', ')})) AS badgeProfiles,
+    (SELECT COUNT(*) FROM mip_user_badge_equipment
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND user_id IN (${seed.badgeEquipment.map(item => sqlLiteral(item.userId)).join(', ')})) AS badgeEquipment,
     (SELECT COUNT(*) FROM mip_event_checkins
       WHERE app_id = ${sqlLiteral(appId)}
         AND (${seed.eventCheckins.map(item => `(
@@ -507,6 +527,7 @@ const expected = {
   profilesWithAvatars: seed.users.length,
   membershipChains: seed.users.length,
   membershipOrders: seed.membershipOrders.length,
+  eventOrders: seed.eventOrders.length,
   entitlements: seed.entitlements.length,
   eventTypes: demoEventTypes(seed.events).length,
   eventTags: seed.eventTags.length,
@@ -518,6 +539,10 @@ const expected = {
   eventAlbumRuntimeFixtures: seed.events.filter(item => item.albumEnabled).length,
   eventRegistrations: seed.eventRegistrations.length,
   eventRegistrationStates: seed.eventRegistrations.length,
+  taskCompletions: seed.taskCompletions.length,
+  badgeAwards: seed.badgeAwards.length,
+  badgeProfiles: seed.badgeProfiles.length,
+  badgeEquipment: seed.badgeEquipment.length,
   eventCheckins: seed.eventCheckins.length,
   eventCheckinTransitions: seed.eventCheckinTransitions.length,
   eventInvitationAttributions: seed.userInfluence.eventInvitationAttributions.length,
@@ -758,6 +783,7 @@ function buildSeedStatements() {
     growthAccountStatement(seed.users),
     growthEntryStatement(seed.growthEntries),
     membershipOrderStatement(seed.membershipOrders, seed.membershipPlans),
+    eventOrderStatement(seed.eventOrders, seed.events),
     entitlementStatement(seed.entitlements, seed.membershipPlans),
     eventTypeStatement(seed.events),
     eventStatement(seed.events),
@@ -803,6 +829,10 @@ function buildSeedStatements() {
     messageCampaignStatement(seed.messageCampaigns),
     taskStatement(seed.tasks),
     taskAssignmentStatement(seed.taskAssignments),
+    taskCompletionStatement(seed.taskCompletions, seed.tasks),
+    badgeAwardStatement(seed.badgeAwards),
+    badgeProfileStatement(seed.badgeProfiles),
+    badgeEquipmentStatement(seed.badgeEquipment),
     gameSeasonStatement(seed.gameSeasons),
     gameTeamStatement(seed.gameTeams),
     gameTeamMembershipStatement(seed.gameTeamMemberships),
@@ -1131,13 +1161,49 @@ function membershipOrderStatement(items, plans) {
     closed_at = NULL, version = version + 1`
 }
 
+function eventOrderStatement(items, events) {
+  const eventById = new Map(events.map(item => [item.id, item]))
+  const values = items.map((item) => {
+    const event = eventById.get(item.eventId)
+    const snapshot = {
+      eventId: item.eventId,
+      eventTitle: event?.title,
+      priceCents: item.amountCents,
+      currency: 'CNY',
+      catalogStage: 'TEST',
+      seedVersion: seed.version,
+      demo: true,
+    }
+    return `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.userId)},
+    'EVENT', ${sqlLiteral(item.eventId)}, NULL, ${sqlLiteral(`MIP-DEMO-EVENT-${item.id.slice(-4)}`)},
+    NULL, ${sqlLiteral(item.key)}, ${Number(item.amountCents)}, 'CNY', ${sqlLiteral(item.status)},
+    ${sqlJson(snapshot)}, '2026-08-26 10:30:00.000', NULL, 1
+  )`
+  }).join(',\n')
+  return `INSERT INTO mip_orders (
+    id, app_id, user_id, order_type, resource_id, membership_plan_id,
+    merchant_order_no, provider_transaction_id, idempotency_key, amount_cents,
+    currency, status, product_snapshot_json, paid_at, closed_at, version
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    user_id = VALUES(user_id), order_type = 'EVENT', resource_id = VALUES(resource_id),
+    membership_plan_id = NULL, merchant_order_no = VALUES(merchant_order_no),
+    provider_transaction_id = NULL, idempotency_key = VALUES(idempotency_key),
+    amount_cents = VALUES(amount_cents), currency = 'CNY', status = VALUES(status),
+    product_snapshot_json = VALUES(product_snapshot_json), paid_at = VALUES(paid_at),
+    closed_at = NULL, version = version + 1`
+}
+
 function entitlementStatement(items, plans) {
-  const planIds = new Set(plans.map(item => item.id))
+  const planById = new Map(plans.map(item => [item.id, item]))
   const values = items.map(item => `(
     ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.userId)},
-    ${sqlLiteral(item.orderId)}, ${sqlLiteral(planIds.has(item.planId) ? item.planId : null)},
+    ${sqlLiteral(item.orderId)}, ${sqlLiteral(planById.has(item.planId) ? item.planId : null)},
     'ORDER', NULL, 'ACTIVE',
-    '2026-08-25 12:00:00.000', '2031-08-24 12:00:00.000', NULL, NULL, 1
+    '2026-08-25 12:00:00.000', DATE_ADD('2026-08-25 12:00:00.000', INTERVAL ${Number(planById.get(item.planId)?.durationDays || 0)} DAY), NULL, NULL, 1
   )`).join(',\n')
   return `INSERT INTO mip_membership_entitlements (
     id, app_id, user_id, order_id, plan_id, source_type, source_adjustment_id,
@@ -1242,7 +1308,7 @@ function eventStatement(items) {
     ${sqlLiteral(item.status)}, 'PASSED', ${sqlLiteral(item.startsAt)}, ${sqlLiteral(item.endsAt)},
     ${sqlLiteral(item.registrationOpensAt)}, ${sqlLiteral(item.registrationDeadline)},
     ${sqlLiteral(item.cancellationDeadline)}, ${sqlLiteral(item.venueName)}, ${sqlLiteral(item.address)},
-    ${sqlLiteral(item.cityName)}, NULL, NULL, NULL, ${Number(item.capacity)}, 0, 0, 'CNY',
+    ${sqlLiteral(item.cityName)}, NULL, NULL, NULL, ${Number(item.capacity)}, 0, ${Number(item.priceCents || 0)}, 'CNY',
     ${sqlJson([])}, 1, 1, ${sqlLiteral(item.publishedAt)}, NULL, NULL,
     ${item.endedAt ? sqlLiteral(item.endedAt) : 'NULL'}
   )`).join(',\n')
@@ -1268,7 +1334,7 @@ function eventStatement(items) {
     registration_deadline = VALUES(registration_deadline),
     cancellation_deadline = VALUES(cancellation_deadline), venue_name = VALUES(venue_name),
     address = VALUES(address), city_name = VALUES(city_name), latitude = NULL, longitude = NULL,
-    online_url = NULL, capacity = VALUES(capacity), waitlist_enabled = 0, price_cents = 0,
+    online_url = NULL, capacity = VALUES(capacity), waitlist_enabled = 0, price_cents = VALUES(price_cents),
     currency = 'CNY', registration_schema_json = VALUES(registration_schema_json),
     form_version = 1, version = version + 1, published_at = VALUES(published_at),
     unpublished_at = NULL, cancelled_at = NULL, ended_at = VALUES(ended_at),
@@ -1278,7 +1344,7 @@ function eventStatement(items) {
 function eventRegistrationStatement(items) {
   const values = items.map(item => `(
     ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.eventId)},
-    ${sqlLiteral(item.userId)}, NULL, ${sqlLiteral(demoRegistrationStatus(item))},
+    ${sqlLiteral(item.userId)}, ${sqlLiteral(item.orderId || null)}, ${sqlLiteral(demoRegistrationStatus(item))},
     ${sqlJson({})}, 1, 1, NULL, NULL,
     ${sqlLiteral(demoRegistrationTime(item))},
     NULL, NULL, NULL, ${demoRegistrationVersion(item)}
@@ -1291,7 +1357,7 @@ function eventRegistrationStatement(items) {
   ON DUPLICATE KEY UPDATE
     app_id = IF(app_id = VALUES(app_id), app_id, NULL),
     id = IF(id = VALUES(id), id, NULL),
-    event_id = VALUES(event_id), user_id = VALUES(user_id), order_id = NULL,
+    event_id = VALUES(event_id), user_id = VALUES(user_id), order_id = VALUES(order_id),
     status = VALUES(status), answers_json = VALUES(answers_json), form_version = 1,
     share_profile = 1, ticket_hash = NULL, waitlisted_at = NULL,
     registered_at = VALUES(registered_at), cancelled_at = NULL,
@@ -2072,7 +2138,7 @@ function taskStatement(items) {
     ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.name)},
     ${sqlLiteral(item.content)}, ${Number(item.rewardExperience)},
     ${item.attachmentRequired ? 1 : 0}, ${sqlLiteral(item.assignmentMode)},
-    ${sqlLiteral(item.endsAt)}, NULL, 'PUBLISHED', 1, ${sqlLiteral(item.actorUserId)},
+    ${sqlLiteral(item.endsAt)}, ${sqlLiteral(item.templateAssetId || null)}, 'PUBLISHED', 1, ${sqlLiteral(item.actorUserId)},
     '2026-08-25 12:00:00.000', NULL
   )`).join(',\n')
   return `INSERT INTO mip_task_cards (
@@ -2085,7 +2151,7 @@ function taskStatement(items) {
     id = IF(id = VALUES(id), id, NULL),
     name = VALUES(name), content = VALUES(content), reward_experience = VALUES(reward_experience),
     attachment_required = VALUES(attachment_required), assignment_mode = VALUES(assignment_mode),
-    ends_at = VALUES(ends_at), template_asset_id = NULL, status = 'PUBLISHED',
+    ends_at = VALUES(ends_at), template_asset_id = VALUES(template_asset_id), status = 'PUBLISHED',
     published_at = VALUES(published_at), deleted_at = NULL, version = version + 1`
 }
 
@@ -2105,6 +2171,68 @@ function taskAssignmentStatement(items) {
     task_id = VALUES(task_id), user_id = VALUES(user_id), status = 'ACTIVE',
     assigned_by_user_id = VALUES(assigned_by_user_id), assigned_at = VALUES(assigned_at),
     revoked_by_user_id = NULL, revoked_at = NULL, version = version + 1`
+}
+
+function taskCompletionStatement(items, tasks) {
+  const taskById = new Map(tasks.map(item => [item.id, item]))
+  const values = items.map((item) => {
+    const task = taskById.get(item.taskId)
+    return `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.taskId)}, ${sqlLiteral(item.userId)},
+    1, ${sqlLiteral(task?.name || '')}, ${sqlLiteral(task?.content || '')}, NULL,
+    ${Number(task?.rewardExperience || 0)}, ${sqlLiteral(item.growthEntryId || null)}, 'SUCCESS', NULL,
+    ${sqlLiteral(item.completedAt)}, ${sqlLiteral(item.completedAt)}
+  )`
+  }).join(',\n')
+  return `INSERT INTO mip_task_completions (
+    id, app_id, task_id, user_id, task_version, task_name_snapshot,
+    task_content_snapshot, attachment_asset_id, reward_experience, growth_entry_id,
+    result_status, result_message, completed_at, created_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL), task_id = VALUES(task_id), user_id = VALUES(user_id),
+    task_version = VALUES(task_version), task_name_snapshot = VALUES(task_name_snapshot),
+    task_content_snapshot = VALUES(task_content_snapshot), attachment_asset_id = NULL,
+    reward_experience = VALUES(reward_experience), growth_entry_id = VALUES(growth_entry_id),
+    result_status = 'SUCCESS', result_message = NULL, completed_at = VALUES(completed_at)`
+}
+
+function badgeAwardStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.userId)}, ${sqlLiteral(item.badgeId)},
+    'ACTIVE', ${sqlLiteral(item.reason)}, ${sqlLiteral(item.userId)}, ${sqlLiteral(item.awardedAt)},
+    NULL, NULL, NULL, 1
+  )`).join(',\n')
+  return `INSERT INTO mip_user_badges (
+    id, app_id, user_id, badge_id, status, award_reason, awarded_by_user_id, awarded_at,
+    revoked_by_user_id, revoke_reason, revoked_at, version
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL), id = IF(id = VALUES(id), id, NULL),
+    user_id = VALUES(user_id), badge_id = VALUES(badge_id), status = 'ACTIVE',
+    award_reason = VALUES(award_reason), awarded_by_user_id = VALUES(awarded_by_user_id),
+    awarded_at = VALUES(awarded_at), revoked_by_user_id = NULL, revoke_reason = NULL,
+    revoked_at = NULL, version = version + 1`
+}
+
+function badgeProfileStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.userId)}, ${Number(item.version)}, '2026-08-25 12:00:00.000'
+  )`).join(',\n')
+  return `INSERT INTO mip_user_badge_profiles (app_id, user_id, version, updated_at)
+  VALUES ${values}
+  ON DUPLICATE KEY UPDATE version = VALUES(version), updated_at = VALUES(updated_at)`
+}
+
+function badgeEquipmentStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.userId)}, ${Number(item.slotNo)},
+    ${sqlLiteral(item.badgeId)}, '2026-08-25 12:00:00.000'
+  )`).join(',\n')
+  return `INSERT INTO mip_user_badge_equipment (app_id, user_id, slot_no, badge_id, equipped_at)
+  VALUES ${values}
+  ON DUPLICATE KEY UPDATE badge_id = VALUES(badge_id), equipped_at = VALUES(equipped_at)`
 }
 
 function gameSeasonStatement(items) {
@@ -2308,7 +2436,7 @@ function buildDemoManifest(value, state) {
       ]),
       mip_growth_accounts: value.users.map(item => ({ userId: item.id })),
       mip_growth_entries: value.growthEntries.map(item => ({ id: item.id })),
-      mip_orders: value.membershipOrders.map(item => ({ id: item.id })),
+      mip_orders: [...value.membershipOrders, ...value.eventOrders].map(item => ({ id: item.id })),
       mip_membership_entitlements: value.entitlements.map(item => ({ id: item.id })),
       mip_event_tags: value.eventTags.map(item => ({ id: item.id })),
       mip_events: value.events.map(item => ({ id: item.id })),
@@ -2377,6 +2505,10 @@ function buildDemoManifest(value, state) {
       mip_message_campaigns: value.messageCampaigns.map(item => ({ id: item.id })),
       mip_task_cards: value.tasks.map(item => ({ id: item.id })),
       mip_task_assignments: value.taskAssignments.map(item => ({ id: item.id })),
+      mip_task_completions: value.taskCompletions.map(item => ({ id: item.id })),
+      mip_user_badges: value.badgeAwards.map(item => ({ id: item.id })),
+      mip_user_badge_profiles: value.badgeProfiles.map(item => ({ userId: item.userId })),
+      mip_user_badge_equipment: value.badgeEquipment.map(item => ({ userId: item.userId, slotNo: item.slotNo })),
       mip_game_seasons: value.gameSeasons.map(item => ({ id: item.id })),
       mip_game_teams: value.gameTeams.map(item => ({ id: item.id })),
       mip_game_team_memberships: value.gameTeamMemberships.map(item => ({ id: item.id })),
@@ -2407,6 +2539,7 @@ function assertSeed(value) {
     'mediaAssets',
     'users',
     'membershipOrders',
+    'eventOrders',
     'entitlements',
     'eventTags',
     'events',
@@ -2434,6 +2567,10 @@ function assertSeed(value) {
     'messageCampaigns',
     'tasks',
     'taskAssignments',
+    'taskCompletions',
+    'badgeAwards',
+    'badgeProfiles',
+    'badgeEquipment',
     'growthEntries',
     'gameSeasons',
     'gameTeams',
@@ -2499,6 +2636,7 @@ function assertDemoRelations(value) {
   const mediaById = new Map(value.mediaAssets.map(item => [item.id, item]))
   const planById = new Map(value.membershipPlans.map(item => [item.id, item]))
   const orderById = new Map(value.membershipOrders.map(item => [item.id, item]))
+  const eventOrderById = new Map(value.eventOrders.map(item => [item.id, item]))
   const eventIds = new Set(value.events.map(item => item.id))
   const eventById = new Map(value.events.map(item => [item.id, item]))
   const eventTagById = new Map(value.eventTags.map(item => [item.id, item]))
@@ -2515,13 +2653,15 @@ function assertDemoRelations(value) {
   ])
   const avatarAssets = value.mediaAssets.filter(item => item.purpose === 'AVATAR')
   const eventCoverAssets = value.mediaAssets.filter(item => item.purpose === 'EVENT_COVER')
+  const taskTemplateAssets = value.mediaAssets.filter(item => item.purpose === 'TASK_TEMPLATE')
   if (mediaById.size !== value.mediaAssets.length
     || avatarAssets.length !== value.users.length
-    || eventCoverAssets.length !== 3
+    || eventCoverAssets.length !== 4
+    || taskTemplateAssets.length !== 1
     || value.mediaAssets.some(item => !userIds.has(item.ownerUserId)
-      || !['AVATAR', 'EVENT_COVER'].includes(item.purpose)
+      || !['AVATAR', 'EVENT_COVER', 'TASK_TEMPLATE'].includes(item.purpose)
       || item.extension !== 'jpg'
-      || !/^database\/mysql\/mip\/demo-assets\/(?:avatars|events)\/[a-z0-9-]+\.jpg$/.test(item.sourcePath)
+      || !/^database\/mysql\/mip\/demo-assets\/(?:avatars|events|tasks)\/[a-z0-9-]+\.jpg$/.test(item.sourcePath)
       || !Number.isInteger(item.width) || !Number.isInteger(item.height)
       || item.width < 64 || item.height < 64)) {
     throw new Error('Demo media asset references are invalid')
@@ -2572,6 +2712,14 @@ function assertDemoRelations(value) {
   if (value.membershipOrders.length !== value.entitlements.length) {
     throw new Error('Demo players require one order and one entitlement each')
   }
+  for (const order of value.eventOrders) {
+    const event = eventById.get(order.eventId)
+    if (!userIds.has(order.userId) || !event || event.accessType !== 'PAID'
+      || order.status !== 'PAID' || order.amountCents !== event.priceCents
+      || !Number.isInteger(order.amountCents) || order.amountCents <= 0) {
+      throw new Error('Demo event order references are invalid')
+    }
+  }
   for (const event of value.events) {
     const cover = event.coverAssetId ? mediaById.get(event.coverAssetId) : null
     if (!branchIds.has(event.branchId)
@@ -2595,6 +2743,8 @@ function assertDemoRelations(value) {
       || event.registrationDeadline > event.startsAt
       || event.cancellationDeadline > event.startsAt
       || event.publishedAt > event.startsAt
+      || (event.accessType === 'PAID' && (!Number.isInteger(event.priceCents) || event.priceCents <= 0))
+      || (event.accessType !== 'PAID' && Number(event.priceCents || 0) !== 0)
       || (event.status === 'PUBLISHED' && event.endedAt !== null)
       || (event.status === 'ENDED'
         && (!isSqlTimestamp(event.endedAt) || event.endedAt < event.endsAt))) {
@@ -2630,6 +2780,13 @@ function assertDemoRelations(value) {
       || !Number.isInteger(version) || version < 1
       || (status === 'ATTENDED' && version < 2)) {
       throw new Error('Demo event registration references are invalid')
+    }
+    if (registration.orderId) {
+      const order = eventOrderById.get(registration.orderId)
+      if (!order || order.eventId !== registration.eventId || order.userId !== registration.userId
+        || order.status !== 'PAID') {
+        throw new Error('Demo paid event registration order is invalid')
+      }
     }
     registrationById.set(registration.id, registration)
     registrationByEventUser.set(`${registration.eventId}:${registration.userId}`, registration)
@@ -3083,12 +3240,55 @@ function assertDemoRelations(value) {
   const taskById = new Map(value.tasks.map(item => [item.id, item]))
   if (value.tasks.some(item => !userIds.has(item.actorUserId)
     || !['ALL', 'SELECTED'].includes(item.assignmentMode)
-    || item.endsAt <= '2026-08-25 00:00:00.000')) {
+    || !isSqlTimestamp(item.endsAt)
+    || (item.templateAssetId && mediaById.get(item.templateAssetId)?.purpose !== 'TASK_TEMPLATE'))) {
     throw new Error('Demo task references are invalid')
   }
   if (value.taskAssignments.some(item => taskById.get(item.taskId)?.assignmentMode !== 'SELECTED'
     || !userIds.has(item.userId) || !userIds.has(item.actorUserId))) {
     throw new Error('Demo task assignment references are invalid')
+  }
+  const taskCompletionIds = new Set()
+  for (const item of value.taskCompletions) {
+    const task = taskById.get(item.taskId)
+    const assignment = value.taskAssignments.find(candidate => candidate.taskId === item.taskId
+      && candidate.userId === item.userId)
+    if (!task || (task.assignmentMode === 'SELECTED' && !assignment) || !userIds.has(item.userId)
+      || !isSqlTimestamp(item.completedAt)
+      || item.growthEntryId === null
+      || !value.growthEntries.some(entry => entry.id === item.growthEntryId
+        && entry.userId === item.userId && entry.metric === 'EXPERIENCE'
+        && entry.deltaValue === task.rewardExperience)
+      || taskCompletionIds.has(`${item.taskId}:${item.userId}`)) {
+      throw new Error('Demo task completion references are invalid')
+    }
+    taskCompletionIds.add(`${item.taskId}:${item.userId}`)
+  }
+  const badgeIds = new Set(value.badges.map(item => item.id))
+  const badgeAwardKeys = new Set()
+  for (const item of value.badgeAwards) {
+    const pair = `${item.userId}:${item.badgeId}`
+    if (!userIds.has(item.userId) || !badgeIds.has(item.badgeId)
+      || !String(item.reason || '').trim() || !isSqlTimestamp(item.awardedAt)
+      || badgeAwardKeys.has(pair)) {
+      throw new Error('Demo badge award references are invalid')
+    }
+    badgeAwardKeys.add(pair)
+  }
+  for (const item of value.badgeProfiles) {
+    if (!userIds.has(item.userId) || !Number.isInteger(item.version) || item.version < 1) {
+      throw new Error('Demo badge profile references are invalid')
+    }
+  }
+  const equipmentKeys = new Set()
+  for (const item of value.badgeEquipment) {
+    const key = `${item.userId}:${item.slotNo}`
+    if (!userIds.has(item.userId) || !badgeIds.has(item.badgeId)
+      || !Number.isInteger(item.slotNo) || item.slotNo < 1 || item.slotNo > 3
+      || !badgeAwardKeys.has(`${item.userId}:${item.badgeId}`) || equipmentKeys.has(key)) {
+      throw new Error('Demo badge equipment references are invalid')
+    }
+    equipmentKeys.add(key)
   }
 
   const metricField = {
@@ -3098,13 +3298,14 @@ function assertDemoRelations(value) {
   }
   const growthTotals = new Map()
   for (const item of value.growthEntries) {
+    const key = `${item.userId}:${item.metric}`
+    const balanceAfter = (growthTotals.get(key) || 0) + item.deltaValue
     if (!userIds.has(item.userId) || !metricField[item.metric]
       || !Number.isInteger(item.deltaValue) || item.deltaValue <= 0
-      || item.balanceAfter !== item.deltaValue) {
+      || item.balanceAfter !== balanceAfter) {
       throw new Error('Demo growth entry references are invalid')
     }
-    const key = `${item.userId}:${item.metric}`
-    growthTotals.set(key, (growthTotals.get(key) || 0) + item.deltaValue)
+    growthTotals.set(key, balanceAfter)
   }
   for (const user of value.users) {
     for (const [metric, field] of Object.entries(metricField)) {

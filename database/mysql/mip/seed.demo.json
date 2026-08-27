@@ -1,5 +1,5 @@
 {
-  "version": "2026-08-27-demo.14",
+  "version": "2026-08-28-demo.17",
   "replaceBeforeProduction": true,
   "branches": [
     {
@@ -89,11 +89,11 @@
   "membershipPlans": [
     {
       "id": "30000000-0000-4000-8000-000000000001",
-      "key": "five_year_test",
-      "name": "五年会员（测试）",
-      "description": "用于 2030 年活动和长期联调的测试会员方案",
-      "durationDays": 1825,
-      "priceCents": 19900,
+      "key": "annual_test",
+      "name": "一年会员（测试）",
+      "description": "用于会员权益和活动联调的一年测试会员方案",
+      "durationDays": 365,
+      "priceCents": 600000,
       "benefits": ["玩家身份", "会员活动权益", "会员资料展示"]
     }
   ],
@@ -103,9 +103,9 @@
     { "id": "40000000-0000-4000-8000-000000000003", "key": "contributor", "name": "贡献者", "displayBadge": "L3", "sortOrder": 30, "minimumExperience": 1500, "benefits": [] }
   ],
   "badges": [
-    { "id": "42000000-0000-4000-8000-000000000001", "key": "profile_complete", "name": "资料完善", "description": "已完成基础资料", "iconName": "user-check", "imageUrl": "", "placeholderShape": "CIRCLE", "sortOrder": 10 },
-    { "id": "42000000-0000-4000-8000-000000000002", "key": "event_participant", "name": "活动参与", "description": "已完成活动参与记录", "iconName": "calendar-check", "imageUrl": "", "placeholderShape": "DIAMOND", "sortOrder": 20 },
-    { "id": "42000000-0000-4000-8000-000000000003", "key": "community_contributor", "name": "社区贡献", "description": "已完成社区贡献记录", "iconName": "heart-filled", "imageUrl": "", "placeholderShape": "HEXAGON", "sortOrder": 30 }
+    { "id": "42000000-0000-4000-8000-000000000001", "key": "profile_complete", "name": "资料完善", "description": "已完成基础资料", "iconName": "user-checked-filled", "imageUrl": "/assets/badges/profile-complete.png", "placeholderShape": "CIRCLE", "sortOrder": 10 },
+    { "id": "42000000-0000-4000-8000-000000000002", "key": "event_participant", "name": "活动参与", "description": "已完成活动参与记录", "iconName": "calendar-event-filled", "imageUrl": "/assets/badges/event-participant.png", "placeholderShape": "DIAMOND", "sortOrder": 20 },
+    { "id": "42000000-0000-4000-8000-000000000003", "key": "community_contributor", "name": "社区贡献", "description": "已完成社区贡献记录", "iconName": "heart-filled", "imageUrl": "/assets/badges/community-contributor.png", "placeholderShape": "HEXAGON", "sortOrder": 30 }
   ],
   "growthRules": [
     { "id": "41000000-0000-4000-8000-000000000001", "key": "profile_completed", "name": "完善资料", "metric": "EXPERIENCE", "deltaValue": 50, "dailyLimitValue": null, "sourceEventType": "identity.profile_completed", "status": "ACTIVE" },
@@ -122,7 +122,9 @@
     { "id": "58000000-0000-4000-8000-000000000006", "key": "demo_avatar_gu_ning", "purpose": "AVATAR", "ownerUserId": "50000000-0000-4000-8000-000000000006", "sourcePath": "database/mysql/mip/demo-assets/avatars/gu-ning.jpg", "extension": "jpg", "width": 512, "height": 512 },
     { "id": "58000000-0000-4000-8000-000000000011", "key": "demo_event_cover_ai_collaboration", "purpose": "EVENT_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-morning-ai-collaboration.jpg", "extension": "jpg", "width": 1200, "height": 675 },
     { "id": "58000000-0000-4000-8000-000000000012", "key": "demo_event_cover_resource_matching", "purpose": "EVENT_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-morning-resource-matching.jpg", "extension": "jpg", "width": 1200, "height": 675 },
-    { "id": "58000000-0000-4000-8000-000000000013", "key": "demo_event_cover_project_collaboration", "purpose": "EVENT_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-morning-project-collaboration.jpg", "extension": "jpg", "width": 1200, "height": 675 }
+    { "id": "58000000-0000-4000-8000-000000000013", "key": "demo_event_cover_project_collaboration", "purpose": "EVENT_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-morning-project-collaboration.jpg", "extension": "jpg", "width": 1200, "height": 675 },
+    { "id": "58000000-0000-4000-8000-000000000014", "key": "demo_event_cover_paid_workshop", "purpose": "EVENT_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-morning-ai-collaboration.jpg", "extension": "jpg", "width": 1200, "height": 675 },
+    { "id": "58000000-0000-4000-8000-000000000021", "key": "demo_task_template_activity_review", "purpose": "TASK_TEMPLATE", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/tasks/mip-activity-review-template.jpg", "extension": "jpg", "width": 1024, "height": 1536 }
   ],
   "users": [
     {
@@ -138,7 +140,7 @@
       "abilityTagIds": ["22000000-0000-4000-8000-000000000001", "22000000-0000-4000-8000-000000000002"],
       "companies": [{ "name": "新桥咨询", "role": "合伙人" }],
       "organizations": [{ "name": "MIP 深圳分会", "role": "成员" }],
-      "experienceBalance": 650,
+      "experienceBalance": 700,
       "contributionBalance": 80,
       "coinBalance": 120
     },
@@ -232,6 +234,16 @@
     { "id": "51000000-0000-4000-8000-000000000001", "key": "demo_player_order_1", "userId": "50000000-0000-4000-8000-000000000001", "planId": "30000000-0000-4000-8000-000000000001" },
     { "id": "51000000-0000-4000-8000-000000000002", "key": "demo_player_order_2", "userId": "50000000-0000-4000-8000-000000000002", "planId": "30000000-0000-4000-8000-000000000001" },
     { "id": "51000000-0000-4000-8000-000000000003", "key": "demo_player_order_3", "userId": "50000000-0000-4000-8000-000000000003", "planId": "30000000-0000-4000-8000-000000000001" }
+  ],
+  "eventOrders": [
+    {
+      "id": "51000000-0000-4000-8000-000000000004",
+      "key": "demo_event_order_paid_1",
+      "userId": "50000000-0000-4000-8000-000000000002",
+      "eventId": "60000000-0000-4000-8000-000000000005",
+      "amountCents": 39900,
+      "status": "PAID"
+    }
   ],
   "entitlements": [
     { "id": "52000000-0000-4000-8000-000000000001", "key": "demo_player_entitlement_1", "userId": "50000000-0000-4000-8000-000000000001", "orderId": "51000000-0000-4000-8000-000000000001", "planId": "30000000-0000-4000-8000-000000000001" },
@@ -335,6 +347,36 @@
       "endedAt": null
     },
     {
+      "id": "60000000-0000-4000-8000-000000000005",
+      "key": "demo_event_2030_shenzhen_paid_morning",
+      "coverAssetId": "58000000-0000-4000-8000-000000000014",
+      "branchId": "10000000-0000-4000-8000-000000000001",
+      "organizerUserId": "50000000-0000-4000-8000-000000000001",
+      "title": "MIP 早会（2030 年 12 月·主题场）",
+      "summary": "用于验证付费活动订单、票务和报名关联的演示活动。",
+      "description": "围绕城市合作项目进行主题交流。本活动为虚构演示数据，活动票价为 399 元。",
+      "notices": "活动时间为周四 10:00–12:00，报名成功后凭活动订单入场。",
+      "eventTypeKey": "mip_morning_meeting",
+      "tagIds": ["60400000-0000-4000-8000-000000000001", "60400000-0000-4000-8000-000000000002"],
+      "eventMode": "OFFLINE",
+      "accessType": "PAID",
+      "priceCents": 39900,
+      "status": "PUBLISHED",
+      "albumEnabled": true,
+      "albumSubmissionPolicy": "REVIEW",
+      "startsAt": "2030-12-12 02:00:00.000",
+      "endsAt": "2030-12-12 04:00:00.000",
+      "registrationOpensAt": "2026-08-25 00:00:00.000",
+      "registrationDeadline": "2030-12-11 10:00:00.000",
+      "cancellationDeadline": "2030-12-11 10:00:00.000",
+      "venueName": "MIP 福田早会会场",
+      "address": "深圳市福田区深南大道 8008 号 MIP 活动空间（演示地址）",
+      "cityName": "深圳",
+      "capacity": 40,
+      "publishedAt": "2026-08-25 12:00:00.000",
+      "endedAt": null
+    },
+    {
       "id": "60000000-0000-4000-8000-000000000003",
       "key": "demo_event_2026_interaction",
       "coverAssetId": null,
@@ -370,6 +412,7 @@
     { "id": "61000000-0000-4000-8000-000000000003", "key": "demo_registration_3", "eventId": "60000000-0000-4000-8000-000000000001", "userId": "50000000-0000-4000-8000-000000000004", "registeredAt": "2026-08-26 10:00:00.000" },
     { "id": "61000000-0000-4000-8000-000000000004", "key": "demo_registration_4", "eventId": "60000000-0000-4000-8000-000000000002", "userId": "50000000-0000-4000-8000-000000000001" },
     { "id": "61000000-0000-4000-8000-000000000005", "key": "demo_registration_5", "eventId": "60000000-0000-4000-8000-000000000002", "userId": "50000000-0000-4000-8000-000000000003" },
+    { "id": "61000000-0000-4000-8000-000000000013", "key": "demo_registration_paid_event_1", "eventId": "60000000-0000-4000-8000-000000000005", "userId": "50000000-0000-4000-8000-000000000002", "orderId": "51000000-0000-4000-8000-000000000004", "registeredAt": "2026-08-26 10:30:00.000" },
     { "id": "61000000-0000-4000-8000-000000000010", "key": "demo_registration_morning_3_player_1", "eventId": "60000000-0000-4000-8000-000000000004", "userId": "50000000-0000-4000-8000-000000000001" },
     { "id": "61000000-0000-4000-8000-000000000011", "key": "demo_registration_morning_3_player_2", "eventId": "60000000-0000-4000-8000-000000000004", "userId": "50000000-0000-4000-8000-000000000002" },
     { "id": "61000000-0000-4000-8000-000000000012", "key": "demo_registration_morning_3_guest", "eventId": "60000000-0000-4000-8000-000000000004", "userId": "50000000-0000-4000-8000-000000000004" },
@@ -734,12 +777,30 @@
     { "id": "67300000-0000-4000-8000-000000000001", "key": "mip_demo_campaign_draft", "scopeType": "PLATFORM", "branchId": null, "audienceType": "ALL", "audienceUserIds": [], "name": "九月活动提示（演示草稿）", "title": "九月活动提示", "body": "请查看近期活动安排。", "actorUserId": "50000000-0000-4000-8000-000000000001" }
   ],
   "tasks": [
-    { "id": "68000000-0000-4000-8000-000000000001", "key": "mip_demo_task_profile", "name": "完善合作资料", "content": "检查个人介绍、行业和合作能力信息，并补充缺失内容。", "rewardExperience": 50, "attachmentRequired": false, "assignmentMode": "ALL", "endsAt": "2030-12-31 23:59:59.000", "actorUserId": "50000000-0000-4000-8000-000000000001" },
-    { "id": "68000000-0000-4000-8000-000000000002", "key": "mip_demo_task_event_review", "name": "提交活动复盘", "content": "记录活动收获、合作线索和下一步负责人。", "rewardExperience": 100, "attachmentRequired": false, "assignmentMode": "SELECTED", "endsAt": "2030-12-31 23:59:59.000", "actorUserId": "50000000-0000-4000-8000-000000000001" }
+    { "id": "68000000-0000-4000-8000-000000000001", "key": "mip_demo_task_profile", "name": "完善合作资料", "content": "检查个人介绍、行业和合作能力信息，并补充缺失内容。", "rewardExperience": 50, "attachmentRequired": false, "assignmentMode": "ALL", "endsAt": "2030-12-31 23:59:59.000", "templateAssetId": "58000000-0000-4000-8000-000000000021", "actorUserId": "50000000-0000-4000-8000-000000000001" },
+    { "id": "68000000-0000-4000-8000-000000000002", "key": "mip_demo_task_event_review", "name": "提交活动复盘", "content": "记录活动收获、合作线索和下一步负责人。", "rewardExperience": 100, "attachmentRequired": false, "assignmentMode": "SELECTED", "endsAt": "2030-12-31 23:59:59.000", "templateAssetId": "58000000-0000-4000-8000-000000000021", "actorUserId": "50000000-0000-4000-8000-000000000001" },
+    { "id": "68000000-0000-4000-8000-000000000003", "key": "mip_demo_task_history", "name": "补充历史活动记录", "content": "整理一次历史活动的参与记录和后续行动。", "rewardExperience": 80, "attachmentRequired": true, "assignmentMode": "SELECTED", "endsAt": "2026-08-24 23:59:59.000", "templateAssetId": "58000000-0000-4000-8000-000000000021", "actorUserId": "50000000-0000-4000-8000-000000000001" }
   ],
   "taskAssignments": [
     { "id": "68100000-0000-4000-8000-000000000001", "key": "mip_demo_assignment_review_1", "taskId": "68000000-0000-4000-8000-000000000002", "userId": "50000000-0000-4000-8000-000000000001", "actorUserId": "50000000-0000-4000-8000-000000000001" },
-    { "id": "68100000-0000-4000-8000-000000000002", "key": "mip_demo_assignment_review_2", "taskId": "68000000-0000-4000-8000-000000000002", "userId": "50000000-0000-4000-8000-000000000003", "actorUserId": "50000000-0000-4000-8000-000000000001" }
+    { "id": "68100000-0000-4000-8000-000000000002", "key": "mip_demo_assignment_review_2", "taskId": "68000000-0000-4000-8000-000000000002", "userId": "50000000-0000-4000-8000-000000000003", "actorUserId": "50000000-0000-4000-8000-000000000001" },
+    { "id": "68100000-0000-4000-8000-000000000003", "key": "mip_demo_assignment_history_1", "taskId": "68000000-0000-4000-8000-000000000003", "userId": "50000000-0000-4000-8000-000000000001", "actorUserId": "50000000-0000-4000-8000-000000000001" }
+  ],
+  "taskCompletions": [
+    { "id": "68200000-0000-4000-8000-000000000001", "key": "mip_demo_completion_profile_1", "taskId": "68000000-0000-4000-8000-000000000001", "userId": "50000000-0000-4000-8000-000000000001", "growthEntryId": "69000000-0000-4000-8000-000000000007", "completedAt": "2026-08-26 11:00:00.000" }
+  ],
+  "badgeAwards": [
+    { "id": "43000000-0000-4000-8000-000000000001", "key": "mip_demo_badge_award_profile", "userId": "50000000-0000-4000-8000-000000000001", "badgeId": "42000000-0000-4000-8000-000000000001", "reason": "演示账号已完成基础资料", "awardedAt": "2026-08-25 12:00:00.000" },
+    { "id": "43000000-0000-4000-8000-000000000002", "key": "mip_demo_badge_award_event", "userId": "50000000-0000-4000-8000-000000000001", "badgeId": "42000000-0000-4000-8000-000000000002", "reason": "演示账号已完成活动参与", "awardedAt": "2026-08-25 12:00:00.000" },
+    { "id": "43000000-0000-4000-8000-000000000003", "key": "mip_demo_badge_award_contributor", "userId": "50000000-0000-4000-8000-000000000001", "badgeId": "42000000-0000-4000-8000-000000000003", "reason": "演示账号已完成社区贡献", "awardedAt": "2026-08-25 12:00:00.000" }
+  ],
+  "badgeProfiles": [
+    { "id": "43100000-0000-4000-8000-000000000001", "key": "mip_demo_badge_profile_1", "userId": "50000000-0000-4000-8000-000000000001", "version": 2 }
+  ],
+  "badgeEquipment": [
+    { "id": "43200000-0000-4000-8000-000000000001", "key": "mip_demo_badge_equipment_1", "userId": "50000000-0000-4000-8000-000000000001", "slotNo": 1, "badgeId": "42000000-0000-4000-8000-000000000001" },
+    { "id": "43200000-0000-4000-8000-000000000002", "key": "mip_demo_badge_equipment_2", "userId": "50000000-0000-4000-8000-000000000001", "slotNo": 2, "badgeId": "42000000-0000-4000-8000-000000000002" },
+    { "id": "43200000-0000-4000-8000-000000000003", "key": "mip_demo_badge_equipment_3", "userId": "50000000-0000-4000-8000-000000000001", "slotNo": 3, "badgeId": "42000000-0000-4000-8000-000000000003" }
   ],
   "growthEntries": [
     { "id": "69000000-0000-4000-8000-000000000001", "key": "mip_demo_growth_user1_experience", "userId": "50000000-0000-4000-8000-000000000001", "sourceEventId": "69100000-0000-4000-8000-000000000001", "sourceEventType": "demo.experience_initialized", "metric": "EXPERIENCE", "deltaValue": 650, "balanceAfter": 650, "adjustmentReason": "演示成长数据初始化" },
@@ -747,7 +808,8 @@
     { "id": "69000000-0000-4000-8000-000000000003", "key": "mip_demo_growth_user1_coin", "userId": "50000000-0000-4000-8000-000000000001", "sourceEventId": "69100000-0000-4000-8000-000000000003", "sourceEventType": "demo.coin_initialized", "metric": "COIN", "deltaValue": 120, "balanceAfter": 120, "adjustmentReason": "演示游戏币初始化" },
     { "id": "69000000-0000-4000-8000-000000000004", "key": "mip_demo_growth_user2_experience", "userId": "50000000-0000-4000-8000-000000000002", "sourceEventId": "69100000-0000-4000-8000-000000000004", "sourceEventType": "demo.experience_initialized", "metric": "EXPERIENCE", "deltaValue": 320, "balanceAfter": 320, "adjustmentReason": "演示成长数据初始化" },
     { "id": "69000000-0000-4000-8000-000000000005", "key": "mip_demo_growth_user3_experience", "userId": "50000000-0000-4000-8000-000000000003", "sourceEventId": "69100000-0000-4000-8000-000000000005", "sourceEventType": "demo.experience_initialized", "metric": "EXPERIENCE", "deltaValue": 1600, "balanceAfter": 1600, "adjustmentReason": "演示成长数据初始化" },
-    { "id": "69000000-0000-4000-8000-000000000006", "key": "mip_demo_growth_user3_coin", "userId": "50000000-0000-4000-8000-000000000003", "sourceEventId": "69100000-0000-4000-8000-000000000006", "sourceEventType": "demo.coin_initialized", "metric": "COIN", "deltaValue": 200, "balanceAfter": 200, "adjustmentReason": "演示游戏币初始化" }
+    { "id": "69000000-0000-4000-8000-000000000006", "key": "mip_demo_growth_user3_coin", "userId": "50000000-0000-4000-8000-000000000003", "sourceEventId": "69100000-0000-4000-8000-000000000006", "sourceEventType": "demo.coin_initialized", "metric": "COIN", "deltaValue": 200, "balanceAfter": 200, "adjustmentReason": "演示游戏币初始化" },
+    { "id": "69000000-0000-4000-8000-000000000007", "key": "mip_demo_growth_user1_task_profile", "userId": "50000000-0000-4000-8000-000000000001", "sourceEventId": "68200000-0000-4000-8000-000000000001", "sourceEventType": "task.completed", "metric": "EXPERIENCE", "deltaValue": 50, "balanceAfter": 700, "adjustmentReason": "完成演示任务奖励" }
   ],
   "gameSeasons": [
     { "id": "70000000-0000-4000-8000-000000000001", "key": "mip_demo_season_2030", "name": "MIP 2030 城市协作赛季", "summary": "用于游戏化、团队和排行页面联调。", "rulesText": "团队按成员成长和贡献记录生成排行，演示规则可在后台替换。", "rules": { "scoring": "growth_and_contribution", "demo": true }, "periodKind": "CUSTOM", "startsAt": "2026-01-01 00:00:00.000", "endsAt": "2031-01-01 00:00:00.000", "actorUserId": "50000000-0000-4000-8000-000000000001" }
