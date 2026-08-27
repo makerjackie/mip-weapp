@@ -4,7 +4,7 @@
   <block wx:else>
     <view class="relative">
       <image wx:if="{{event.coverUrl}}" class="h-[320rpx] w-full bg-brand-soft" mode="aspectFill" src="{{event.coverUrl}}" />
-      <view wx:else class="flex h-[260rpx] w-full items-end bg-brand px-5 pb-6 text-[length:32rpx] font-bold text-white">MIP 活动</view>
+      <view wx:else class="flex h-[260rpx] w-full items-end bg-brand px-5 pb-6 text-[length:32rpx] font-bold text-on-brand">MIP 活动</view>
     </view>
 
     <view class="px-4 pt-3">

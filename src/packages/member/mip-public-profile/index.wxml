@@ -105,7 +105,7 @@
       <view wx:if="{{interestState === 'access'}}" class="flex min-h-[88rpx] w-[336rpx] shrink-0 items-center justify-center rounded-full bg-brand px-3 text-center text-[length:24rpx] font-medium text-on-brand" aria-role="button" bind:tap="openAccess">完成身份信息后继续</view>
       <view wx:else class="flex min-h-[88rpx] w-[336rpx] shrink-0 items-center justify-center rounded-full bg-brand px-3 text-[length:28rpx] font-medium text-on-brand active:bg-brand-active {{interestState === 'loading' || interestState === 'processing' ? 'opacity-50' : ''}}" aria-role="button" aria-disabled="{{interestState === 'loading' || interestState === 'processing'}}" bind:tap="toggleInterest">{{interestState === 'processing' ? '处理中' : (interestActive ? '取消感兴趣' : '我感兴趣')}}</view>
     </view>
-    <view wx:if="{{interestMessage}}" class="fixed inset-x-6 bottom-[calc(env(safe-area-inset-bottom)+132rpx)] z-20 rounded-[8rpx] bg-danger px-3 py-2 text-center text-[length:20rpx] text-white">{{interestMessage}}</view>
+    <view wx:if="{{interestMessage}}" class="fixed inset-x-6 bottom-[calc(env(safe-area-inset-bottom)+132rpx)] z-20 rounded-[8rpx] border border-danger bg-panel px-3 py-2 text-center text-[length:20rpx] text-danger">{{interestMessage}}</view>
     <app-page-exit />
   </block>
 </view>

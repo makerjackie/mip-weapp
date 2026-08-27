@@ -6,7 +6,7 @@
     <view class="mt-5 text-center text-[length:38rpx] font-bold">{{phoneBound ? '手机号已绑定' : title}}</view>
     <view class="mx-auto mt-3 max-w-[620rpx] text-center text-[length:23rpx] leading-6 text-muted">{{phoneBound ? '现在可以继续使用报名、支付与售后服务' : description}}</view>
     <view wx:if="{{message}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:23rpx] text-[#9F4727]">{{message}}</view>
-    <button id="access-primary-action" wx:if="{{!phoneBound}}" open-type="getPhoneNumber" disabled="{{bindingPhone}}" class="mt-8 flex h-[96rpx] w-full items-center justify-center gap-2 rounded-[18rpx] border-0 bg-brand text-[length:28rpx] font-semibold text-white active:bg-brand-active disabled:opacity-60" bind:getphonenumber="bindPhone">
+    <button id="access-primary-action" wx:if="{{!phoneBound}}" open-type="getPhoneNumber" disabled="{{bindingPhone}}" class="mt-8 flex h-[96rpx] w-full items-center justify-center gap-2 rounded-[18rpx] border-0 bg-brand text-[length:28rpx] font-semibold text-on-brand active:bg-brand-active disabled:opacity-60" bind:getphonenumber="bindPhone">
       <text>{{bindingPhone ? '正在登录…' : '微信手机号快捷登录'}}</text>
     </button>
     <view id="access-primary-action" wx:else class="mx-auto mt-8 w-[320rpx]"><t-button block theme="primary" bind:tap="browseFirst">返回继续</t-button></view>

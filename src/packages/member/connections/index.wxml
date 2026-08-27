@@ -30,7 +30,7 @@
       bind:tap="openMember"
     >
       <image wx:if="{{item.avatarUrl}}" class="h-[92rpx] w-[92rpx] rounded-full bg-brand-soft" src="{{item.avatarUrl}}" mode="aspectFill" fade-show="{{false}}" />
-      <view wx:else class="flex h-[92rpx] w-[92rpx] items-center justify-center rounded-full bg-brand text-[length:30rpx] font-bold text-white">{{item.initial}}</view>
+      <view wx:else class="flex h-[92rpx] w-[92rpx] items-center justify-center rounded-full bg-brand text-[length:30rpx] font-bold text-on-brand">{{item.initial}}</view>
       <view class="min-w-0 flex-1">
         <view class="truncate text-[length:27rpx] font-semibold">{{item.nickname}}</view>
         <view class="mt-1 truncate text-[length:21rpx] text-muted">{{item.identityText}}</view>

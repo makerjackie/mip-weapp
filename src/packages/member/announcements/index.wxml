@@ -5,7 +5,7 @@
   <view wx:elif="{{!items.length}}" class="mt-5"><app-empty-state title="暂时没有公告" description="有新安排时会在这里发布。" /></view>
   <view wx:else class="mt-5 flex flex-col gap-3">
     <view wx:for="{{items}}" wx:key="id" class="rounded-[24rpx] bg-panel px-5 py-5 active:bg-panel-muted" data-id="{{item.id}}" bind:tap="openItem">
-      <view class="flex items-center gap-2"><view wx:if="{{item.isPinned}}" class="rounded-full bg-accent px-2 py-1 text-[length:18rpx] font-semibold text-white">置顶</view><view class="min-w-0 flex-1 truncate text-[length:28rpx] font-bold">{{item.title}}</view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+      <view class="flex items-center gap-2"><view wx:if="{{item.isPinned}}" class="rounded-full bg-accent px-2 py-1 text-[length:18rpx] font-semibold text-on-brand">置顶</view><view class="min-w-0 flex-1 truncate text-[length:28rpx] font-bold">{{item.title}}</view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
       <view class="mt-2 line-clamp-2 text-[length:23rpx] leading-6 text-muted">{{item.summary}}</view>
       <view wx:if="{{item.publishedText}}" class="mt-3 text-[length:19rpx] text-muted">{{item.publishedText}}</view>
     </view>

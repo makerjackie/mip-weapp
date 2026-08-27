@@ -4,7 +4,7 @@
   <view wx:elif="{{!registration}}"><app-empty-state title="没有找到报名记录" description="该活动可能尚未报名，或记录暂时不可用。" /></view>
   <block wx:else>
     <view class="overflow-hidden rounded-[34rpx] bg-panel shadow-[0_18rpx_40rpx_rgba(40,94,70,0.12)]">
-      <view class="flex items-center justify-between bg-brand px-5 py-3 text-white">
+      <view class="flex items-center justify-between bg-brand px-5 py-3 text-on-brand">
         <view class="flex items-center gap-2 text-[length:23rpx] font-semibold"><t-icon name="check-circle" size="30rpx" color="var(--color-on-brand)" />{{headline}}</view>
         <view class="rounded-full bg-white/15 px-3 py-1 text-[length:19rpx]">报名凭证</view>
       </view>
