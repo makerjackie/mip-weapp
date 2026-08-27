@@ -26,7 +26,7 @@ describe('admin read pages', () => {
     const page = await loadAdminReadPage('events', query, requestWith({
       'mip.admin.events.list': {
         items: [{
-          title: 'MIP 早会', startsAt: '2030-03-14T02:00:00.000Z', cityName: '深圳',
+          id: 'event-1', title: 'MIP 早会', startsAt: '2030-03-14T02:00:00.000Z', cityName: '深圳',
           branchName: '福田分会', accessType: 'PAID', priceCents: 18800,
           registrationCount: 36, capacity: 50, attendedCount: 12, status: 'PUBLISHED',
         }],
@@ -44,6 +44,7 @@ describe('admin read pages', () => {
       },
     }])
     assert.equal(page.nextCursor, 'third-page')
+    assert.equal(page.sections[0].rows[0].detailId, 'event-1')
     assert.equal(page.sections[0].rows[0].title, 'MIP 早会')
     assert.equal(page.sections[0].rows[0].registrations, '36 / 50')
     assert.equal(page.sections[0].rows[0].state, '已发布')

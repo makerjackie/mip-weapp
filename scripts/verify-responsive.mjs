@@ -17,14 +17,18 @@ preview.stderr?.on('data', chunk => { output += chunk })
 try {
   const started = await waitForPreview()
   if (!started) throw new Error(`preview did not start\n${output}`)
-  const result = await execFileAsync(chrome, [
-    '--headless=new', '--disable-gpu', '--no-sandbox', '--disable-background-networking', '--virtual-time-budget=1000',
-    `--user-data-dir=${profile}`, '--window-size=390,844', '--dump-dom', 'http://127.0.0.1:4175/',
-  ], { cwd: root, timeout: 15_000, maxBuffer: 1_000_000 })
-  if (!result.stdout.includes('data-mip-responsive="pass"')) {
-    throw new Error(`mobile viewport overflow assertion failed\n${result.stdout.match(/<html[^>]*>/)?.[0] || 'html marker missing'}`)
+  const viewports = [{ width: 390, height: 844 }, { width: 1280, height: 900 }]
+  const results = await Promise.all(viewports.map(viewport => execFileAsync(chrome, [
+      '--headless=new', '--disable-gpu', '--no-sandbox', '--disable-background-networking', '--virtual-time-budget=1000',
+      `--user-data-dir=${profile}-${viewport.width}`, `--window-size=${viewport.width},${viewport.height}`, '--dump-dom', 'http://127.0.0.1:4175/',
+    ], { cwd: root, timeout: 15_000, maxBuffer: 1_000_000 })))
+  for (const [index, result] of results.entries()) {
+    const viewport = viewports[index]
+    if (!result.stdout.includes('data-mip-responsive="pass"')) {
+      throw new Error(`${viewport.width}px viewport overflow assertion failed\n${result.stdout.match(/<html[^>]*>/)?.[0] || 'html marker missing'}`)
+    }
+    console.log(`responsive viewport: ${viewport.width}px assertion passed`)
   }
-  console.log('responsive viewport: 390px assertion passed')
 } finally {
   preview.kill('SIGTERM')
   await once(preview, 'close').catch(() => undefined)

@@ -5,6 +5,11 @@ import {
 } from './services/admin-api'
 import type { AdminSession } from './domain/contracts'
 import {
+  loadAdminDetail,
+  type AdminDetailRoute,
+  type AdminDetailView,
+} from './modules/admin-details'
+import {
   getAdminReadRouteDefinition,
   loadAdminReadPage,
   type AdminListQuery,
@@ -32,6 +37,11 @@ let session: AdminSession | null = null
 let loginChallenge: AdminLoginChallenge | null = null
 let loginError = ''
 let loginFlow = 0
+let detailRoute: AdminDetailRoute | null = null
+let detailView: AdminDetailView | null = null
+let detailLoading = false
+let detailError = ''
+let detailFlow = 0
 
 type ListState = AdminListQuery & { history: Array<string | null> }
 const listState = (): ListState => ({ query: '', status: '', cursor: null, limit: 20, history: [] })
@@ -65,13 +75,20 @@ function statusClass(value: string) {
   return 'status'
 }
 
-function rowsToTable(rows: AdminTableRow[], columns: AdminTableColumn[]) {
+function rowsToTable(rows: AdminTableRow[], columns: AdminTableColumn[], detailTarget?: AdminDetailRoute) {
   if (!rows.length) return '<div class="empty">暂无数据</div>'
-  return `<div class="table-scroll"><table><thead><tr>${columns.map(column => `<th>${column.label}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(column => {
+  const actionHeading = detailTarget ? '<th>操作</th>' : ''
+  return `<div class="table-scroll"><table><thead><tr>${columns.map(column => `<th>${column.label}</th>`).join('')}${actionHeading}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(column => {
     const value = escapeHtml(row[column.key] ?? '—')
     const rendered = ['status', 'state'].includes(column.key) ? `<span class="${statusClass(String(row[column.key] || ''))}">${value}</span>` : value
     return `<td>${rendered}</td>`
-  }).join('')}</tr>`).join('')}</tbody></table></div>`
+  }).join('')}${detailAction(row, detailTarget)}</tr>`).join('')}</tbody></table></div>`
+}
+
+function detailAction(row: AdminTableRow, target?: AdminDetailRoute) {
+  const id = String(row.detailId || '')
+  if (!target || !id || id === '—') return target ? '<td>—</td>' : ''
+  return `<td><button class="table-action detail-button" data-detail-route="${target}" data-detail-id="${escapeHtml(id)}">查看</button></td>`
 }
 
 function sidebar() {
@@ -89,10 +106,11 @@ function header() {
 
 function shell(content: string) {
   const loginAction = apiErrorCode === 'AUTH_REQUIRED' ? '<button class="notice-action" id="notice-login-button">运营登录</button>' : ''
-  app.innerHTML = `${sidebar()}<main class="main"><div class="content"><div id="notice" class="notice ${notice ? '' : 'hidden'}"><span>${escapeHtml(notice)}</span>${loginAction}</div>${header()}${content}</div></main>${loginDialog()}`
+  app.innerHTML = `${sidebar()}<main class="main"><div class="content"><div id="notice" class="notice ${notice ? '' : 'hidden'}"><span>${escapeHtml(notice)}</span>${loginAction}</div>${header()}${content}</div></main>${detailPanel()}${loginDialog()}`
   document.querySelectorAll<HTMLButtonElement>('[data-route]').forEach(button => button.addEventListener('click', () => {
     route = button.dataset.route as Route
     notice = ''
+    closeDetail(false)
     void render()
   }))
   document.querySelector('#refresh-button')?.addEventListener('click', () => void render())
@@ -104,6 +122,13 @@ function shell(content: string) {
   document.querySelector<HTMLFormElement>('#filter-form')?.addEventListener('submit', applyFilters)
   document.querySelector('#previous-page')?.addEventListener('click', () => void changePage('previous'))
   document.querySelector('#next-page')?.addEventListener('click', () => void changePage('next'))
+  document.querySelectorAll<HTMLButtonElement>('.detail-button').forEach(button => button.addEventListener('click', () => {
+    void openDetail(button.dataset.detailRoute as AdminDetailRoute, button.dataset.detailId || '')
+  }))
+  document.querySelector('#detail-close-button')?.addEventListener('click', () => closeDetail())
+  document.querySelector('#detail-backdrop')?.addEventListener('click', event => {
+    if (event.target === event.currentTarget) closeDetail()
+  })
 }
 
 function loginDialog() {
@@ -113,6 +138,21 @@ function loginDialog() {
     ? new Date(loginChallenge.expiresAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
     : ''
   return `<div class="login-backdrop" role="dialog" aria-modal="true" aria-labelledby="login-title"><section class="login-dialog"><button id="login-close-button" class="login-close" aria-label="关闭">×</button><span class="login-kicker">小程序确认</span><h2 id="login-title">运营登录</h2>${loginError ? `<p class="login-error">${escapeHtml(loginError)}</p><button id="login-retry-button" class="primary-button login-retry">重新生成登录码</button>` : `<p>在 MIP 小程序的运营工作台输入以下登录码。只有已获得运营权限的账号可以确认。</p><div class="login-code" aria-label="网页登录码">${escapeHtml(code)}</div><div class="login-status"><i class="dot online"></i>等待小程序确认${expiry ? ` · ${escapeHtml(expiry)} 前有效` : ''}</div>`}</section></div>`
+}
+
+function detailPanel() {
+  if (!detailRoute) return ''
+  const body = detailLoading
+    ? '<div class="detail-state">正在加载详情</div>'
+    : detailError
+      ? `<div class="detail-state detail-error">${escapeHtml(detailError)}</div>`
+      : detailView
+        ? detailView.sections.map(section => `<section class="detail-section"><h3>${escapeHtml(section.title)}</h3>${section.fields ? `<div class="detail-fields">${section.fields.map(item => `<div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`).join('')}</div>` : ''}${section.metrics ? `<div class="detail-metrics">${section.metrics.map(item => `<div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`).join('')}</div>` : ''}${section.rows && section.columns ? rowsToTable(section.rows, section.columns) : ''}</section>`).join('')
+        : ''
+  const title = detailView?.title || ({ users: '用户详情', events: '活动详情', orders: '订单详情' })[detailRoute]
+  const subtitle = detailView?.subtitle ? `<p>${escapeHtml(detailView.subtitle)}</p>` : ''
+  const status = detailView?.status ? `<span class="${statusClass(detailView.status)}">${escapeHtml(detailView.status)}</span>` : ''
+  return `<div class="detail-backdrop" id="detail-backdrop"><aside class="detail-drawer" role="dialog" aria-modal="true" aria-labelledby="detail-title"><header class="detail-header"><div><span class="detail-kicker">只读详情</span><h2 id="detail-title">${escapeHtml(title)}</h2>${subtitle}</div><div class="detail-header-actions">${status}<button id="detail-close-button" class="login-close" aria-label="关闭">×</button></div></header><div class="detail-body">${body}</div></aside></div>`
 }
 
 function sectionTitle(title: string, description: string, action = '') {
@@ -133,8 +173,9 @@ function pageOverview() {
 
 function pageList(route: AdminListRoute, title: string, description: string) {
   const page = liveReadPage || (client.demoMode ? demoReadPage(route) : null)
+  const detailTarget = ['users', 'events', 'orders'].includes(route) ? route as AdminDetailRoute : undefined
   const content = page
-    ? `${summaryCards(page)}${page.sections.map(section => `<section class="panel list-panel">${section.title ? `<div class="panel-heading"><h2>${escapeHtml(section.title)}</h2></div>` : ''}${rowsToTable(section.rows, section.columns)}</section>`).join('')}${pagination(route, page)}`
+    ? `${summaryCards(page)}${page.sections.map(section => `<section class="panel list-panel">${section.title ? `<div class="panel-heading"><h2>${escapeHtml(section.title)}</h2></div>` : ''}${rowsToTable(section.rows, section.columns, detailTarget)}</section>`).join('')}${pagination(route, page)}`
     : `<section class="panel"><div class="empty">${loading ? '正在加载' : '暂无可显示的真实数据'}</div></section>`
   return `${sectionTitle(title, description)}${toolbar(route)}${content}`
 }
@@ -194,6 +235,55 @@ async function changePage(direction: 'previous' | 'next') {
     state.cursor = previousCursor
   }
   await render()
+}
+
+function paint() {
+  const pages: Record<Route, () => string> = {
+    overview: pageOverview,
+    users: pageUsers,
+    events: pageEvents,
+    orders: pageOrders,
+    permissions: pagePermissions,
+    messages: pageMessages,
+    knowledge: pageKnowledge,
+  }
+  shell(`<div class="loading-bar ${loading ? '' : 'hidden'}"></div>${pages[route]()}`)
+  requestAnimationFrame(assertResponsiveViewport)
+}
+
+async function openDetail(target: AdminDetailRoute, id: string) {
+  if (!id) return
+  const flow = detailFlow + 1
+  detailFlow = flow
+  detailRoute = target
+  detailView = null
+  detailError = ''
+  detailLoading = true
+  paint()
+  try {
+    const value = await loadAdminDetail(target, id, (action, input) => client.request(action, input))
+    if (flow !== detailFlow) return
+    detailView = value
+  }
+  catch (error) {
+    if (flow !== detailFlow) return
+    detailError = error instanceof AdminApiClientError ? error.message : '详情暂时无法加载'
+  }
+  finally {
+    if (flow === detailFlow) {
+      detailLoading = false
+      paint()
+    }
+  }
+}
+
+function closeDetail(repaint = true) {
+  detailFlow += 1
+  detailRoute = null
+  detailView = null
+  detailError = ''
+  detailLoading = false
+  if (repaint) paint()
 }
 
 async function startLogin() {
@@ -270,15 +360,13 @@ async function render() {
   liveOverview = null
   notice = ''
   apiErrorCode = ''
-  const pages: Record<Route, () => string> = { overview: pageOverview, users: pageUsers, events: pageEvents, orders: pageOrders, permissions: pagePermissions, messages: pageMessages, knowledge: pageKnowledge }
-  shell(`<div class="loading-bar ${loading ? '' : 'hidden'}"></div>${pages[route]()}`)
+  paint()
   if (client.demoMode) {
     notice = '当前为显式本地演示模式，页面数据不代表生产事实。'
   }
   else if (loginChallenge || loginError) {
     loading = false
-    shell(`<div class="loading-bar hidden"></div>${pages[route]()}`)
-    requestAnimationFrame(assertResponsiveViewport)
+    paint()
     return
   }
   else {
@@ -293,8 +381,7 @@ async function render() {
     }
   }
   loading = false
-  shell(`<div class="loading-bar hidden"></div>${pages[route]()}`)
-  requestAnimationFrame(assertResponsiveViewport)
+  paint()
 }
 
 function demoOverview(): OverviewModel {
@@ -361,7 +448,6 @@ function dateRange(start: unknown, end: unknown) {
 }
 
 function assertResponsiveViewport() {
-  if (window.innerWidth > 680) return
   const overflow = document.documentElement.scrollWidth > window.innerWidth + 1
   document.documentElement.dataset.mipResponsive = overflow ? 'fail' : 'pass'
   if (overflow) console.error(`MIP responsive overflow: document=${document.documentElement.scrollWidth}px viewport=${window.innerWidth}px`)

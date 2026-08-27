@@ -109,6 +109,7 @@ async function loadUsers(query: AdminListQuery, request: AdminRequest): Promise<
   return {
     sections: [{
       rows: page.items.map(item => ({
+        detailId: valueOf(item, 'id', 'userId'),
         name: valueOf(item, 'nickname', 'name', 'displayName'),
         headline: valueOf(item, 'headline', 'companyName'),
         identity: label(valueOf(item, 'kind')),
@@ -133,6 +134,7 @@ async function loadEvents(query: AdminListQuery, request: AdminRequest): Promise
   return {
     sections: [{
       rows: page.items.map(item => ({
+        detailId: valueOf(item, 'id', 'eventId'),
         title: valueOf(item, 'title', 'name'),
         time: formatDateTime(item.startsAt),
         location: [item.cityName, item.branchName].filter(Boolean).join(' · ') || '—',
@@ -157,6 +159,7 @@ async function loadOrders(query: AdminListQuery, request: AdminRequest): Promise
   return {
     sections: [{
       rows: page.items.map(item => ({
+        detailId: valueOf(item, 'id', 'orderId'),
         id: valueOf(item, 'merchantOrderNoMasked', 'id', 'orderId'),
         user: valueOf(item, 'nickname', 'userName'),
         type: label(valueOf(item, 'orderType', 'type')),
