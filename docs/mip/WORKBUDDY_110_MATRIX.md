@@ -150,7 +150,7 @@ Operation：
 | WB-LIVE-052 | 等级列表字段 | `A:growth.levels` | `growth-levels` | GR | `覆盖`：序号、名称、标识、门槛、权益关系、状态和版本可读。 |
 | WB-LIVE-053 | 等级配置 | `A:growth.saveLevel` | `growth-levels` | GR | `覆盖`：新增/编辑、门槛递增、启停、排序、版本冲突与审计有服务端约束。 |
 | WB-LIVE-054 | 等级权益 | `A:growth.benefits/saveBenefit/saveLevel` | `growth-benefits`、`growth-levels` | GR | `覆盖`：独立权益目录及等级绑定可配置；具体业务是否强制校验仍由各业务领域决定。 |
-| WB-LIVE-055 | 等级统计与记录 | `A:growth.levels`、`A:growth.entries`、`A:growth.levelTransitions`、`A:users.list` | `growth-levels`、`growth-entries`、`growth-transitions`、`profiles` | GR、U | `部分`：可按当前经验推导等级，并查询成长流水、用户与不可变“原等级→新等级”记录；各等级人数/占比尚未形成独立统计视图。 |
+| WB-LIVE-055 | 等级统计与记录 | `A:growth.levels`、`A:growth.entries`、`A:growth.levelTransitions`、`A:users.list` | `growth-levels`、`growth-entries`、`growth-transitions`、`profiles` | GR、U | `部分`：可按当前经验推导等级，并查询成长流水、用户与不可变“原等级→新等级”记录；等级列表已显示当前人数/占比并可下钻用户，但尚未形成独立统计视图。 |
 
 ### 经验值管理（4）
 
@@ -158,14 +158,14 @@ Operation：
 | --- | --- | --- | --- | --- | --- |
 | WB-LIVE-056 | 经验值门槛 | `A:growth.levels/saveLevel` | `growth-levels` | GR | `覆盖`：门槛由服务端校验并按当前余额推导等级。 |
 | WB-LIVE-057 | 经验值流水字段 | `A:growth.entries` | `growth-entries` | GR | `覆盖`：用户、来源事件、增减值、前后余额、原因和时间均来自不可变流水。 |
-| WB-LIVE-058 | 经验值规则配置 | `A:growth.rules/saveRule` | `growth-rules` | GR | `部分`：事件类型、metric、delta、启停和版本可配置；在线所列审批方式、周期上限、角色/分会范围和失败任务重试未完整建模。 |
+| WB-LIVE-058 | 经验值规则配置 | `A:growth.rules/saveRule` | `growth-rules` | GR | `部分`：事件类型、metric、delta、启停、版本、角色/分会范围、生效窗口和每日上限可配置；在线所列审批方式、周期上限和失败任务重试仍未完整建模。 |
 | WB-LIVE-059 | 撤销与冲正 | `A:growth.adjust` | `growth-entries` | GR | `部分`：允许有原因、有权限的正负调整并追加新流水；不覆写原流水，也没有对任意历史流水的一键撤销 operation。 |
 
 ### 贡献值管理（4）
 
 | ID | 需求点 | Operation | Page | Test | 判定与缺口 |
 | --- | --- | --- | --- | --- | --- |
-| WB-LIVE-060 | 贡献规则列表字段 | `A:growth.rules` | `growth-rules` | GR | `部分`：CONTRIBUTION 规则共用成长规则目录；原型要求的服务器范围、生效窗口和每日上限字段不全。 |
+| WB-LIVE-060 | 贡献规则列表字段 | `A:growth.rules` | `growth-rules` | GR | `覆盖`：CONTRIBUTION 规则共用成长规则目录；服务器范围、生效窗口和每日上限已在管理列表与编辑器中可读写，正式行为枚举、奖励数值和上限仍需业务配置。 |
 | WB-LIVE-061 | 贡献规则操作 | `A:growth.saveRule` | `growth-rules` | GR | `覆盖`：新增/编辑/启停使用同一版本化规则合同，不物理删除历史。 |
 | WB-LIVE-062 | 贡献值流水 | `A:growth.entries` | `growth-entries` | GR | `覆盖`：按 `metric=CONTRIBUTION` 查询不可变增减流水和余额。 |
 | WB-LIVE-063 | 贡献行为范围 | `A:growth.rules/saveRule` | `growth-rules` | GR | `部分`：可用服务端事件类型定义行为；正式行为枚举、奖励数值和上限仍需业务配置。 |
@@ -192,9 +192,9 @@ Operation：
 
 | ID | 需求点 | Operation | Page | Test | 判定与缺口 |
 | --- | --- | --- | --- | --- | --- |
-| WB-LIVE-072 | 任务列表字段 | `T:listTasks/getTask` | `tasks` | TK | `部分`：名称、窗口、经验奖励、附件、模板、派发方式、等级和状态可见；缺星级、笨笨老大、贡献值/奖金奖励。 |
+| WB-LIVE-072 | 任务列表字段 | `T:listTasks/getTask` | `tasks` | TK | `覆盖 + 冲突`：名称、窗口、经验奖励、附件、模板、派发方式、等级和状态按当前任务卡合同可见；星级、笨笨老大、贡献值/奖金不是当前确认模型，不应直接加入。 |
 | WB-LIVE-073 | 任务配置字段 | `T:saveTask/publishTask/unpublishTask/deleteTask` | `tasks` | TK | `部分`：核心内容、等级、窗口、派发、附件模板和软状态可配置；没有每周交付规则与审批负责人。 |
-| WB-LIVE-074 | 任务奖励配置 | `T:saveTask` | `tasks` | TK | `部分`：仅服务端权威经验值奖励；贡献值、奖金、多奖励开关和审批后发放均缺失。 |
+| WB-LIVE-074 | 任务奖励配置 | `T:saveTask` | `tasks` | TK | `覆盖 + 冲突`：任务完成只发放一次服务端权威经验值，符合当前确认合同；贡献值、奖金、多奖励开关和审批后发放不属于当前模型。 |
 | WB-LIVE-075 | 任务附件与模板 | `T:saveTask/getCompletion` | `tasks`、`task-completions` | TK | `部分`：支持附件必填、单个模板素材和完成附件事实；格式/多附件/长期下载策略不等同于原型完整要求。 |
 | WB-LIVE-076 | 每周任务指派 | `T:listAssignableMembers/assignMembers/revokeMembers` | `task-assignments` | TK | `部分`：支持指定成员批量派发/撤回和版本保护；没有按角色/标签的动态派发、笨笨老大归属和每周自动周期。 |
 | WB-LIVE-077 | 任务提交、审批与奖励 | 用户 `completeTask`；无 `admin.approve/reject` | `task-completions` 只读 | TK | `冲突 + 部分`：当前提交在同一事务立即形成完成事实并仅发经验；没有待审批、退回、奖金/贡献奖励和审批失败重试状态机。 |
@@ -215,7 +215,7 @@ Operation：
 | ID | 需求点 | Operation | Page | Test | 判定与缺口 |
 | --- | --- | --- | --- | --- | --- |
 | WB-LIVE-084 | 订单列表字段 | `A:orders.list` | `orders` | OR | `覆盖`：订单类型、用户、商品、分会、金额、支付/服务状态、时间及退款聚合来自统一订单事实。 |
-| WB-LIVE-085 | 订单详情字段 | `A:orders.list` 返回明细投影 | `orders` | OR | `部分`：核心订单、用户、商品、金额、权益和退款信息可见；没有独立详情 operation 与完整支付/状态时间线。 |
+| WB-LIVE-085 | 订单详情字段 | `A:orders.get/list` | `orders` | OR | `覆盖`：独立详情 operation 返回订单、用户、商品、金额、支付尝试/回调、退款、关联权益和可证明的状态时间线；没有事实来源的中间状态不由页面推测，正式 provider 交易仍保留外部验收边界。 |
 | WB-LIVE-086 | 订单查询与导出 | `A:orders.list`、`A:exports.create/prepare/reserve/complete/status` | `orders`、`exports` | OR | `覆盖`：组合筛选、敏感字段 capability、脱敏/含手机号导出票据和短期文件合同存在。 |
 | WB-LIVE-087 | 支付流水 | `A:paymentAttempts.list`；payment ledger/callback | `payment-attempts`、`orders`、`exceptions` | PA、OR、P | `覆盖 + 外部待验`：独立列表按昵称、玩家编号、订单号、渠道、状态和时间筛选支付尝试，显示脱敏引用、金额、状态与关注标记；正式微信交易与回调待生产验收。 |
 | WB-LIVE-088 | 活动订单联动 | event/commerce/payment ledger | `orders`、`event-registrations` | E、P、OR | `部分 + 冲突 + 外部待验`：付费报名、取消、退款和服务状态由 ledger 收敛；订单完成按服务事实/活动结束判断，不照抄“活动开始即完成”，正式支付待验。 |
@@ -238,10 +238,10 @@ Operation：
 | ID | 需求点 | Operation | Page | Test | 判定与缺口 |
 | --- | --- | --- | --- | --- | --- |
 | WB-LIVE-097 | 固定团队枚举 | — | — | — | `缺失 + 冲突`：当前团队按赛季动态创建；没有且仅有红/白/蓝/紫/绿/灰/粉/黄/黑 9 队的不可改枚举。 |
-| WB-LIVE-098 | 笨笨团队列表字段 | `G:listTeams` | `game` | GM | `部分`：名称、分会、简介、状态、版本和成员数可读；缺固定颜色、图标、负责人和成员上限。 |
-| WB-LIVE-099 | 团队详情字段 | `G:listTeams/listAssignableMembers/listMatches/listRankings` | `game`；用户端 `mip-game/team` | GM | `部分`：团队、成员、赛况、排行及用户大本营可查；没有原型全部视觉字段、负责人/上限和完整变更记录详情。 |
+| WB-LIVE-098 | 笨笨团队列表字段 | `G:listTeams` | `game` | GM | `部分`：名称、分会、简介、状态、版本、成员数和成员上限可读；缺固定颜色、图标及列表中的负责人汇总。队长可在成员管理中维护。 |
+| WB-LIVE-099 | 团队详情字段 | `G:listTeams/listAssignableMembers/listMatches/listRankings` | `game`；用户端 `mip-game/team` | GM | `部分`：团队、成员、赛况、排行、成员上限及用户大本营可查，成员管理可选择负责人；仍没有原型全部视觉字段和完整变更记录详情。 |
 | WB-LIVE-100 | 团队成员管理 | `G:listAssignableMembers/replaceTeamMembers` | `game` | GM | `覆盖`：队长/成员替换使用当前会员、赛季、分会与版本校验，并保留成员离队历史。 |
-| WB-LIVE-101 | 团队启停与大本营 | `G:saveTeam`；无 team status action | `game`；用户端 `mip-game/team` | GM | `部分`：大本营按服务端队伍经验展示；赛季可启闭，但团队本身没有启停 operation，管理页也不能配置完整大本营素材。 |
+| WB-LIVE-101 | 团队启停与大本营 | `G:saveTeam/changeTeamStatus` | `game`；用户端 `mip-game/team` | GM | `部分`：团队本身已支持启用/停用，停用时保留历史并阻止后续成员/对阵变更；大本营按服务端队伍经验展示，管理页仍不能配置完整大本营素材。 |
 
 ### 首页仪表盘（9）
 
@@ -261,15 +261,15 @@ Operation：
 
 当前仓库有 49 个已注册管理路由；`src/modules/mip-admin/generated/admin-operation-contract.json` 声明 145 个 `mip-admin-api` operation，任务、赛季/战队、Banner 另有独立管理 action。数量不能直接证明 110 项需求已完成：同一 operation 会服务多行需求，部分底层事实也没有对应管理入口。
 
-按上表非互斥标签统计：58 行含 `覆盖`、44 行含 `部分`、8 行含 `缺失`、19 行含 `冲突`、12 行含 `外部待验`。标签可重叠，例如源码链路可覆盖主要行为但正式支付仍待验。
+按上表非互斥标签统计：62 行含 `覆盖`、40 行含 `部分`、7 行含 `缺失`、21 行含 `冲突`、12 行含 `外部待验`。标签可重叠，例如源码链路可覆盖主要行为但正式支付仍待验。
 
-本次逐行检查显示，剩余优先级最高的本地缺口集中在：
+本次逐行检查显示，剩余优先级最高的工作集中在：
 
-1. 用户与内容：不实现不可信的手机号预建账号；仍缺独立名片模板/版本治理，以及少数历史口径和详情下钻。
-2. 权益与任务：受控手工会籍仍须进入独立 ledger；任务多奖励、审批/退回/重试与当前“提交即完成”合同需要先定产品规则。
-3. 订单与消息：订单仍缺独立详情时间线；部分消息触发枚举、正式微信模板和 provider 送达属于外部配置或口径补全。
-4. 战队与仪表盘：固定九队是否取代动态赛季队伍仍需产品裁决；知识、访问、分享和真实合作转化等未追踪指标不能伪造。
-5. 运行验收：49 个管理路由需要代表性 375px/960px+ 正常态证据，真机支付、扫码、媒体和订阅消息继续保留外部边界。
+1. 文档与模型边界：修正已实现的规则字段、订单详情和团队启停状态；名片模板/版本治理、等级独立统计视图等仍需明确是否进入产品模型。
+2. 任务与成长规则：当前任务合同已覆盖单次经验奖励；星级、奖金、贡献值、审批/退回/重试、周期上限等在线稿扩展需先完成产品裁决，不能直接扩展模型。
+3. 指标与消息：访问/分享、真实合作转化、知识内容和审批指标没有事实来源；部分消息触发枚举、正式微信模板与 provider 送达属于口径补全或外部配置，不能伪造。
+4. 战队与内容：当前保留动态赛季队伍模型，不实现固定九队；颜色、图标、完整负责人摘要、大本营素材治理和名片模板治理若要补齐，需先确认产品字段与迁移范围。
+5. 运行验收：49 个管理路由需要代表性 375px/960px+ 正常态证据；真机支付、扫码、媒体、手机号和订阅消息继续保留外部边界。活动本地草稿恢复属于可选体验增强，不是当前领域模型缺口。
 
 必须先产品裁决、不能按页面照抄的冲突包括：三种用户身份、固定一年会籍、手机号预建激活、自由角色/物理删除、会费永不退款、固定九队、任务审批与当前“提交即完成”合同。
 

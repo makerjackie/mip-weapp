@@ -1,12 +1,12 @@
 # Deployment
 
-## 当前共享环境进度（2026-08-25）
+## 当前共享环境进度（2026-08-27）
 
-- 38 个锁定的 `mip_*` 迁移已成功应用，迁移版本、表清单和数据库隔离检查通过；变更前稳定备份保存在 `~/Backups/mip-weapp/2026-08-24T112700-446Z/`，本轮未重复创建备份。
-- 环境专属 runtime 账号已收敛为 105 张 MIP 业务表的精确表级权限，二次运行结果为 `already current`；没有 schema/global 权限，也没有改动其他账号。
+- 52 个锁定的 `mip_*` 迁移已成功应用，迁移版本、表清单和数据库隔离检查通过；变更前稳定备份保存在 `~/Backups/mip-weapp/2026-08-24T112700-446Z/`，本轮未重复创建备份。
+- 环境专属 runtime 账号已收敛为 121 张 MIP 业务表的精确表级权限，二次运行结果为 `already current`；没有 schema/global 权限，也没有改动其他账号。
 - CloudBase MCP 已固定为 `2.32.0`；资源主账号 Device Flow 已完成 SCF 管控面部署，环境 API Key 继续用于已验证的环境和 MySQL 操作。
 - 16 个核心 `mip-*` 函数均为 Active/Available，使用 Nodejs20.19、目标 VPC/子网、完整运行时环境变量和仓库代码，并通过真实 MySQL 健康检查。
-- 最终工作区代码已重新部署；独立 `cloud:verify` 已验证 schema、105 张表的精确 runtime 权限、函数配置、客户端调用规则、内部受保护函数及禁止高频 timer。正式核心云运行时不再是 `external-wait`。
+- 最终工作区代码已重新部署；独立 `cloud:verify` 已验证 schema、121 张表的精确 runtime 权限、函数配置、客户端调用规则、内部受保护函数及禁止高频 timer。正式核心云运行时不再是 `external-wait`。
 
 首次 API Key 部署曾在 `scf:CreateFunction` 被拒绝；同一请求改用资源主账号 Device Flow 后成功，且没有出现独立 VPC、子网或 `TCB_QcsRole` 错误。不要把主账号长期密钥写入项目，也不要把真实 AppID、EnvID、VPC、子网、UIN、runtime 用户或 secret 写入文档。
 
@@ -14,7 +14,7 @@
 
 1. 在 `.env.local` 配置 AppID、CloudBase EnvID、允许的 AppID、MIP runtime 配置和明确的 `MIP_DEPLOYMENT_STAGE=development|test|staging|production`。知识采集还必须配置 `MIP_KNOWLEDGE_SOURCE_ALLOWED_HOSTS`，外部内容配置 `MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS`；二者均为逗号分隔的精确 DNS hostname，不接受通配符/IP，web-view 列表必须与微信公众平台业务域名一致。
 2. 首次部署运行 `pnpm secrets:init -- --confirm-env=<EnvID>`，并把 `.env.local` 纳入私密凭证备份。命令先校验已部署函数，不打印密钥，也不会修改云资源。
-3. 对新环境或新增迁移先做仓库外逻辑备份，预览 `mip_` 迁移范围：`pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --dry-run`。当前共享环境的 38 个锁定迁移已经完成；只有后续新增迁移才重新进入备份、dry-run 和应用流程。
+3. 对新环境或新增迁移先做仓库外逻辑备份，预览 `mip_` 迁移范围：`pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --dry-run`。当前共享环境的 52 个锁定迁移已经完成；只有后续新增迁移才重新进入备份、dry-run 和应用流程。
 4. 只在预览显示存在新迁移时应用：`pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --backup-manifest=/absolute/path/to/manifest.json`。
 5. 运行 `pnpm project:init` 生成环境专属 runtime 用户，再执行 `pnpm database:grants -- --confirm-env=<EnvID> --confirm-runtime-user=<.env.local 中的 MIP_DB_RUNTIME_USER>` 收敛并回读验证精确表级权限。发现 schema/global 权限、缺表授权或账号归属不一致时停止部署。
 6. 仅在 development/test 环境需要占位目录时执行 `pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo`；生产环境不得运行 demo seed。
