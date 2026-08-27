@@ -301,6 +301,23 @@ function validateRuntimeContract(runtimePages) {
     }
     const accepted = acceptedStates(route)
     const pending = pendingStatesFor(route)
+    assert(
+      route.allowedSensitivePaths === undefined || Array.isArray(route.allowedSensitivePaths),
+      `${route.path} allowedSensitivePaths must be an array`,
+    )
+    for (const allowedPath of route.allowedSensitivePaths || []) {
+      assert(
+        typeof allowedPath === 'string' && /^[a-z][a-z0-9]*(?:\.[a-z][a-z0-9]*)*$/i.test(allowedPath),
+        `${route.path} has an unsafe allowed sensitive path`,
+      )
+    }
+    if (route.allowedSensitivePaths !== undefined) {
+      assert(
+        route.path === 'packages/member/mip-card/index'
+        && JSON.stringify(route.allowedSensitivePaths) === JSON.stringify(['phone']),
+        `${route.path} is not allowed to retain sensitive page data`,
+      )
+    }
     assert(route.externalWaitStates === undefined || Array.isArray(route.externalWaitStates), `${route.path} externalWaitStates must be an array`)
     const externalWait = new Set(route.externalWaitStates || [])
     assert(accepted.length > 0, `${route.path} does not declare an accepted runtime state`)
@@ -560,9 +577,13 @@ function matchesSensitiveKey(key, sensitivePatterns) {
   })
 }
 
-export function assertNoSensitivePageData(data, route, sensitivePatterns) {
+export function assertNoSensitivePageData(data, route, sensitivePatterns, allowedPaths = []) {
   const hits = []
+  const allowed = new Set(allowedPaths)
   const walk = (value, keyPath) => {
+    if (allowed.has(keyPath)) {
+      return
+    }
     if (typeof value === 'string') {
       for (const pattern of matchesSensitivePattern(value, sensitivePatterns)) {
         hits.push({ path: keyPath || '(root)', pattern })
@@ -640,7 +661,7 @@ async function waitForPageData(page, route, sensitivePatterns, timeoutMs = 20000
   let lastData
   while (Date.now() < deadline) {
     lastData = await retry(`read data ${route.path}`, () => page.data())
-    assertNoSensitivePageData(lastData, route.path, sensitivePatterns)
+    assertNoSensitivePageData(lastData, route.path, sensitivePatterns, route.allowedSensitivePaths)
     const evaluation = evaluateRouteState(route, lastData)
     if (evaluation.status !== 'pending') {
       return { ...evaluation, data: lastData }
@@ -1524,7 +1545,7 @@ async function verifyContractedPages(miniProgram, runtimePages, report, options)
       const settled = await waitForPageData(page, route, sensitivePatterns)
       await new Promise(resolve => setTimeout(resolve, 600))
       const screenshotData = await retry(`confirm data ${route.path}`, () => page.data())
-      assertNoSensitivePageData(screenshotData, route.path, sensitivePatterns)
+      assertNoSensitivePageData(screenshotData, route.path, sensitivePatterns, route.allowedSensitivePaths)
       const confirmed = evaluateRouteState(route, screenshotData)
       const status = settled.status === 'passed' && confirmed.status === 'passed'
         ? 'passed'

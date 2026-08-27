@@ -76,6 +76,19 @@ describe('runtime page privacy and normal unavailable states', () => {
     }, 'packages/admin/profiles/index', contract.sensitivePatterns)).not.toThrow()
   })
 
+  it('allows only the explicitly reviewed self-card phone field', () => {
+    const card = contract.routes.find((route: { path: string }) => route.path === 'packages/member/mip-card/index')
+    expect(card.allowedSensitivePaths).toEqual(['phone'])
+    expect(() => assertNoSensitivePageData({
+      phone: '18819253403',
+      nested: { phone: '18819253403' },
+    }, card.path, contract.sensitivePatterns, card.allowedSensitivePaths)).toThrow('page data contains sensitive values')
+    expect(() => assertNoSensitivePageData({
+      phone: '18819253403',
+      phoneMasked: '188****3403',
+    }, card.path, contract.sensitivePatterns, card.allowedSensitivePaths)).not.toThrow()
+  })
+
   it('classifies direct access recovery as external wait and optional avatar availability as settled', () => {
     const access = contract.routes.find((route: { path: string }) => route.path === 'packages/member/mip-access/index')
     const avatar = contract.routes.find((route: { path: string }) => route.path === 'packages/member/mip-avatar/index')

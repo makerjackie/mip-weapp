@@ -2,6 +2,13 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { badgeArtFallback } from '../src/config/mip-badge-art'
 import { parsePublicPerson } from '../src/modules/mip-opportunities/validation'
+import {
+  canApplyBadgeLoad,
+  filterBadgeItems,
+  moveEquippedId,
+  orderedEquippedBadges,
+  presentBadges,
+} from '../src/packages/member/mip-badges/presenter'
 
 function source(path: string) {
   return readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
@@ -18,6 +25,54 @@ describe('MIP badge collection', () => {
     expect(badgeArtFallback('community_connector', '社区连接')).toBe(
       '/packages/member/assets/generated/badges/badge-collaboration.png',
     )
+  })
+
+  it('keeps local display order and separates equipped from equippable badges', () => {
+    const items = presentBadges([
+      {
+        id: 'badge-1',
+        key: 'one',
+        name: '已佩戴',
+        description: '',
+        placeholderShape: 'CIRCLE',
+        category: 'IDENTITY',
+        status: 'ACTIVE',
+        earned: true,
+        equippedSlot: 1,
+      },
+      {
+        id: 'badge-2',
+        key: 'two',
+        name: '可佩戴',
+        description: '',
+        placeholderShape: 'DIAMOND',
+        category: 'IDENTITY',
+        status: 'ACTIVE',
+        earned: true,
+      },
+      {
+        id: 'badge-3',
+        key: 'three',
+        name: '未获得',
+        description: '',
+        placeholderShape: 'HEXAGON',
+        category: 'IDENTITY',
+        status: 'ACTIVE',
+        earned: false,
+      },
+    ], ['badge-1'])
+    expect(filterBadgeItems(items, 'IDENTITY', 'EQUIPPED').map(item => item.id)).toEqual(['badge-1'])
+    expect(filterBadgeItems(items, 'IDENTITY', 'EQUIPPABLE').map(item => item.id)).toEqual(['badge-1', 'badge-2'])
+    expect(orderedEquippedBadges(items, ['badge-2', 'badge-1']).map(item => item.id)).toEqual(['badge-2', 'badge-1'])
+    expect(moveEquippedId(['badge-1', 'badge-2'], 'badge-2', 'UP')).toEqual(['badge-2', 'badge-1'])
+    expect(moveEquippedId(['badge-1', 'badge-2'], 'badge-1', 'UP')).toEqual(['badge-1', 'badge-2'])
+  })
+
+  it('does not let stale badge reads replace a newer request or an unsaved draft', () => {
+    expect(canApplyBadgeLoad(2, 2, false)).toBe(true)
+    expect(canApplyBadgeLoad(1, 2, false)).toBe(false)
+    expect(canApplyBadgeLoad(2, 2, true)).toBe(false)
+    expect(canApplyBadgeLoad(2, 2, true, true)).toBe(true)
   })
 
   it('accepts at most three public equipped badges without identity internals', () => {
@@ -65,6 +120,19 @@ describe('MIP badge collection', () => {
     expect(`${source('src/packages/member/mip-badges/index.ts')}\n${source('src/packages/admin/badges/index.ts')}`)
       .not
       .toContain('wx.cloud')
+  })
+
+  it('provides a local draft and one explicit save for equipment changes', () => {
+    const page = source('src/packages/member/mip-badges/index.ts')
+    const template = source('src/packages/member/mip-badges/index.wxml')
+    expect(page).toContain('savedSelectedIds')
+    expect(page).toContain('async saveEquipment()')
+    expect(page).toContain('mipGrowthModule.equipBadges(this.data.selectedIds, this.data.version)')
+    expect(template).toContain('bind:tap="saveEquipment"')
+    expect(template).toContain('当前佩戴')
+    expect(template).toContain('badge-art-wrap--locked')
+    expect(page).toContain('label: \'已佩戴\'')
+    expect(page).toContain('label: \'可佩戴\'')
   })
 
   it('keeps the profile primary badge visible when the server omits visual art', () => {

@@ -26,6 +26,8 @@ interface CooperationCardView extends CooperationCardSummary {
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
+    identityState: 'loading' as 'loading' | 'ready' | 'error',
+    initialSectionsState: 'loading' as 'loading' | 'ready' | 'error',
     authenticated: false,
     nickname: '微信用户',
     nicknameInitial: '微',
@@ -66,6 +68,7 @@ Page({
     message: '',
   },
   resumeDestination: '',
+  loadPromise: null as Promise<void> | null,
 
   onShow() {
     syncCaseNavigation(this, 'pages/profile/index')
@@ -77,37 +80,81 @@ Page({
       return
     }
     this.resumeDestination = ''
+    if (this.loadPromise) {
+      return
+    }
     void this.loadProfile()
   },
 
   async loadProfile(options: { force?: boolean } = {}) {
+    if (this.loadPromise) {
+      return this.loadPromise
+    }
+    const loadPromise = this.loadProfileOnce(options)
+    this.loadPromise = loadPromise
+    try {
+      await loadPromise
+    }
+    finally {
+      if (this.loadPromise === loadPromise) {
+        this.loadPromise = null
+      }
+    }
+  },
+
+  async loadProfileOnce(options: { force?: boolean } = {}) {
     const cached = mipIdentityModule.peekSnapshot()
+    const hasRenderedContent = this.data.state === 'ready'
+    if (hasRenderedContent) {
+      this.setData({ identityState: 'loading', initialSectionsState: 'loading', message: '' })
+    }
     if (cached) {
       this.applyIdentity(cached)
     }
-    else if (this.data.state !== 'ready') {
-      this.setData({ state: 'loading', message: '' })
+    else if (!hasRenderedContent) {
+      this.setData({
+        state: 'loading',
+        identityState: 'loading',
+        initialSectionsState: 'loading',
+        message: '',
+      })
     }
+    let snapshot: IdentityAccessSnapshot
     try {
-      const snapshot = await mipIdentityModule.loadSnapshot()
+      snapshot = await mipIdentityModule.loadSnapshot()
       this.applyIdentity(snapshot)
-      await Promise.allSettled([
-        this.loadBranch(snapshot, options),
-        this.loadIndustry(snapshot),
-        this.loadGrowth(snapshot, options),
-        this.loadBadges(snapshot),
-        this.loadCooperation(),
-        this.loadCases(),
-        this.loadOpportunities(),
-        this.loadInfluenceSummary(snapshot),
-        this.loadNotificationUnread(snapshot, options),
-      ])
     }
     catch {
-      this.setData(cached || this.data.state === 'ready'
-        ? { message: '资料更新失败，已保留上次结果。' }
-        : { state: 'error', message: '资料服务暂时不可用。' })
+      if (!cached) {
+        this.setData({
+          state: 'error',
+          identityState: 'error',
+          initialSectionsState: 'error',
+          message: '资料服务暂时不可用。',
+        })
+        return
+      }
+      snapshot = cached
+      this.applyIdentity(snapshot)
+      this.setData({ identityState: 'error', message: '资料更新失败，已保留上次结果。' })
     }
+    const sectionResults = await Promise.allSettled([
+      this.loadBranch(snapshot, options),
+      this.loadIndustry(snapshot),
+      this.loadGrowth(snapshot, options),
+      this.loadBadges(snapshot),
+      this.loadCooperation(),
+      this.loadCases(),
+      this.loadOpportunities(),
+      this.loadInfluenceSummary(snapshot),
+      this.loadNotificationUnread(snapshot, options),
+    ])
+    const hasUnexpectedSectionFailure = sectionResults.some(result => result.status === 'rejected')
+    this.setData({
+      state: 'ready',
+      initialSectionsState: 'ready',
+      message: hasUnexpectedSectionFailure ? '部分资料暂时无法加载，请稍后重试。' : this.data.message,
+    })
   },
 
   async loadInfluenceSummary(snapshot: IdentityAccessSnapshot) {
@@ -137,6 +184,9 @@ Page({
     }
     if (visitorResult.status === 'fulfilled') {
       updates.visitorUnreadCount = visitorResult.value.unreadCount
+    }
+    if (summaryResult.status === 'rejected' || visitorResult.status === 'rejected') {
+      updates.message = this.data.message || '部分影响力数据暂时无法加载，请稍后重试。'
     }
     if (Object.keys(updates).length) {
       this.setData(updates)
@@ -172,7 +222,7 @@ Page({
     const membership = membershipPresentation(snapshot.membership.kind, snapshot.membership.entitlement)
     const isPlayer = snapshot.membership.kind === 'PLAYER'
     this.setData({
-      state: 'ready',
+      identityState: 'ready',
       authenticated: snapshot.authenticated,
       nickname: snapshot.profile.nickname || '微信用户',
       nicknameInitial: (snapshot.profile.nickname || '微信用户').slice(0, 1),
@@ -213,7 +263,7 @@ Page({
       this.setData({ primaryIndustryName: industry?.label || '' })
     }
     catch {
-      this.setData({ primaryIndustryName: '' })
+      this.setData({ message: this.data.message || '行业资料暂时无法更新，请稍后重试。' })
     }
   },
 
@@ -232,6 +282,9 @@ Page({
     catch {
       if (!cached) {
         this.setData({ growthState: 'error' })
+      }
+      else {
+        this.setData({ message: this.data.message || '成长数据暂时无法更新，请稍后重试。' })
       }
     }
   },
@@ -272,7 +325,10 @@ Page({
       })
     }
     catch {
-      this.setData({ badgeState: 'error' })
+      this.setData({
+        badgeState: 'error',
+        message: this.data.message || '徽章数据暂时无法加载，请稍后重试。',
+      })
     }
   },
 

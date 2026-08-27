@@ -1,5 +1,6 @@
 import type { MipGrowthGateway } from './types'
 import { retryTransport } from '@weapp/shared/retry'
+import { resolveCloudFileUrls } from '../platform/cloud-media'
 import { requireCloudClient } from '../platform/cloudbase'
 import { resolveMipGrowthRetryOptions } from './retry-policy'
 import { MipGrowthError } from './types'
@@ -36,7 +37,7 @@ function createCloudBaseTransport(functionName: string): MipGrowthTransport {
     async invoke(action, data = {}) {
       const cloud = await requireCloudClient()
       const response = await cloud.callFunction({ name: functionName, data: { action, ...data } })
-      return response.result
+      return resolveCloudFileUrls(response.result, cloud)
     },
   }
 }

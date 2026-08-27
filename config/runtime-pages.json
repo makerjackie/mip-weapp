@@ -526,8 +526,8 @@
       "path": "packages/member/benefits/index",
       "selector": "#member-benefits-page",
       "group": "member",
-      "kind": "static-data",
-      "states": ["ready", "error"],
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
       "readyAssertion": "state === 'ready'"
     },
     {
@@ -1488,6 +1488,7 @@
       "kind": "data",
       "states": ["loading", "ready", "error"],
       "readyAssertion": "state === 'ready'",
+      "allowedSensitivePaths": ["phone"],
       "deviceRequired": ["photo-save", "share"]
     },
     {

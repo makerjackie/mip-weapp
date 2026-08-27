@@ -22,12 +22,29 @@ Page({
     membershipKnown: false,
     message: '',
   },
+  loadPromise: null as Promise<void> | null,
 
   onShow() {
     void this.load()
   },
 
   async load() {
+    if (this.loadPromise) {
+      return this.loadPromise
+    }
+    const loadPromise = this.loadOnce()
+    this.loadPromise = loadPromise
+    try {
+      await loadPromise
+    }
+    finally {
+      if (this.loadPromise === loadPromise) {
+        this.loadPromise = null
+      }
+    }
+  },
+
+  async loadOnce() {
     if (this.data.state !== 'ready') {
       this.setData({ state: 'loading', message: '' })
     }
@@ -47,7 +64,7 @@ Page({
     if (plansResult.status === 'fulfilled') {
       this.setData({ plans: plansResult.value })
     }
-    if (membershipResult.status === 'rejected' && plansResult.status === 'rejected') {
+    if (membershipResult.status === 'rejected' && !this.data.membershipKnown) {
       this.setData({ state: 'error', message: '会员权益暂时无法加载。' })
       return
     }

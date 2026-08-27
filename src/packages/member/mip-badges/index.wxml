@@ -15,6 +15,27 @@
         </view>
       </view>
     </view>
+    <view class="badge-equipped-panel mx-6 mb-6 rounded-[16rpx] border border-[#3A3A3A] bg-[#171717] px-4 py-4">
+      <view class="flex items-center justify-between">
+        <view>
+          <view class="text-[length:26rpx] font-semibold">当前佩戴</view>
+          <view class="mt-1 text-[length:20rpx] text-[#B3B3B3]">按显示顺序展示，最多 {{maximumEquipped}} 枚</view>
+        </view>
+        <t-button theme="primary" size="small" loading="{{saving}}" disabled="{{!dirty || saving}}" bind:tap="saveEquipment">保存</t-button>
+      </view>
+      <view wx:if="{{equippedItems.length}}" class="mt-4 flex gap-2">
+        <view wx:for="{{equippedItems}}" wx:key="id" class="badge-equipped-slot">
+          <image class="h-[76rpx] w-[76rpx]" mode="aspectFit" src="{{item.imageUrl || item.artFallbackUrl}}" />
+          <view class="mt-1 w-full truncate text-center text-[length:20rpx]">{{index + 1}}. {{item.name}}</view>
+          <view class="mt-2 flex items-center justify-center gap-1">
+            <view class="badge-order-button {{index === 0 ? 'badge-order-button--disabled' : ''}}" data-id="{{item.id}}" data-direction="UP" catch:tap="moveEquipment">上移</view>
+            <view class="badge-order-button" data-id="{{item.id}}" catch:tap="toggleEquipment">移除</view>
+            <view class="badge-order-button {{index === equippedItems.length - 1 ? 'badge-order-button--disabled' : ''}}" data-id="{{item.id}}" data-direction="DOWN" catch:tap="moveEquipment">下移</view>
+          </view>
+        </view>
+      </view>
+      <view wx:else class="mt-4 rounded-[10rpx] border border-dashed border-[#4A4A4A] px-3 py-4 text-center text-[length:22rpx] text-[#B3B3B3]">还没有佩戴徽章</view>
+    </view>
     <view class="badge-tabs flex border-t border-[#3A3A3A]">
       <view class="badge-tab {{activeCategory === 'IDENTITY' ? 'badge-tab--active' : ''}}" data-category="IDENTITY" bind:tap="chooseCategory">身份成就</view>
       <view class="badge-tab {{activeCategory === 'HONOR' ? 'badge-tab--active' : ''}}" data-category="HONOR" bind:tap="chooseCategory">荣誉成就</view>
@@ -24,18 +45,22 @@
   <view wx:elif="{{state === 'error'}}" class="px-6 py-8"><app-empty-state title="暂时无法加载徽章" description="{{message}}" action-text="重新加载" bind:action="loadBadges" /></view>
   <view wx:elif="{{state === 'empty'}}" class="px-6 py-8"><app-empty-state title="暂无徽章" description="徽章由运营人员根据实际记录授予。" /></view>
   <view wx:else class="px-6 py-6">
+    <view class="badge-filters mb-6 flex rounded-[10rpx] border border-line bg-panel p-1">
+      <view wx:for="{{filterOptions}}" wx:key="key" class="badge-filter {{activeFilter === item.key ? 'badge-filter--active' : ''}}" data-filter="{{item.key}}" bind:tap="chooseFilter">{{item.label}}</view>
+    </view>
     <view wx:if="{{visibleItems.length === 0}}" class="py-10 text-center text-[length:24rpx] text-muted">当前分类暂无徽章。</view>
     <view wx:else class="badge-grid">
       <view wx:for="{{visibleItems}}" wx:key="id" class="badge-item {{item.selected ? 'badge-item--selected' : ''}}" data-id="{{item.id}}" bind:tap="openDetail" aria-role="button">
-        <view class="badge-art-wrap" style="{{item.locked ? 'filter: grayscale(1); opacity: .5;' : ''}}">
+        <view class="badge-art-wrap {{item.locked ? 'badge-art-wrap--locked' : ''}}">
           <image wx:if="{{item.imageUrl || item.artFallbackUrl}}" class="badge-art" mode="aspectFit" src="{{item.imageUrl || item.artFallbackUrl}}" />
           <view wx:else class="badge-placeholder badge-placeholder--hexagon"><t-icon name="certificate" size="48rpx" color="var(--color-brand)" /></view>
         </view>
         <view class="mt-2 w-full truncate text-center text-[length:24rpx]">{{item.name}}</view>
-        <view class="mt-1 w-full truncate text-center text-[length:20rpx] {{item.locked ? 'text-muted' : 'text-[#B3B3B3]'}}">{{item.locked ? '未获得' : item.awardedText}}</view>
+        <view class="mt-1 w-full truncate text-center text-[length:20rpx] {{item.locked ? 'text-muted' : 'text-[#B3B3B3]'}}">{{item.earned ? (item.awardedText || '已获得') : '未获得'}}</view>
+        <view class="badge-card-action mt-2 {{item.locked ? 'badge-card-action--disabled' : ''}}" data-id="{{item.id}}" catch:tap="toggleEquipment">{{item.locked ? '不可佩戴' : (item.selected ? '取消佩戴' : '佩戴')}}</view>
       </view>
     </view>
-    <view class="mt-5 text-center text-[length:20rpx] text-muted">已获得 {{earnedCount}} 枚 · 当前佩戴 {{selectedIds.length}} / 3</view>
+    <view class="mt-5 text-center text-[length:20rpx] text-muted">已获得 {{earnedCount}} 枚 · 当前佩戴 {{selectedIds.length}} / {{maximumEquipped}}</view>
     <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] border border-line bg-panel px-4 py-3 text-[length:22rpx] text-muted">{{message}}</view>
   </view>
   <view wx:if="{{state !== 'ready'}}" class="px-6 pb-6"><app-page-exit /></view>

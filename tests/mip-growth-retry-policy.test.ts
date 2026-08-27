@@ -1,13 +1,18 @@
 import type { MipGrowthTransport } from '../src/modules/mip-growth/cloudbase-gateway'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createMipGrowthGateway } from '../src/modules/mip-growth/cloudbase-gateway'
 import { resolveMipGrowthRetryOptions } from '../src/modules/mip-growth/retry-policy'
+import { requireCloudClient } from '../src/modules/platform/cloudbase'
 
 vi.mock('../src/modules/platform/cloudbase', () => ({
   requireCloudClient: vi.fn(),
 }))
 
 describe('MIP growth gateway retry policy', () => {
+  afterEach(() => {
+    vi.mocked(requireCloudClient).mockReset()
+  })
+
   it('retries a declared read after a cold-start transport failure', async () => {
     vi.useFakeTimers()
     try {
@@ -78,5 +83,23 @@ describe('MIP growth gateway retry policy', () => {
       retryable: true,
     })
     expect(invoke).toHaveBeenCalledTimes(2)
+  })
+
+  it('resolves CloudBase badge media before returning the collection', async () => {
+    const fileId = 'cloud://mip-env/badges/player.png'
+    const cloud = {
+      callFunction: vi.fn().mockResolvedValue({
+        result: { ok: true, data: { items: [{ id: 'badge-1', imageUrl: fileId }] } },
+      }),
+      getTempFileURL: vi.fn().mockResolvedValue({ fileList: [] }),
+      downloadFile: vi.fn().mockResolvedValue({ tempFilePath: '/tmp/player-badge.png' }),
+    }
+    vi.mocked(requireCloudClient).mockResolvedValue(cloud as never)
+
+    const gateway = createMipGrowthGateway()
+    await expect(gateway.listBadgeCollection()).resolves.toEqual({
+      items: [{ id: 'badge-1', imageUrl: '/tmp/player-badge.png' }],
+    })
+    expect(cloud.downloadFile).toHaveBeenCalledWith({ fileID: fileId })
   })
 })
