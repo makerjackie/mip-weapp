@@ -9,7 +9,7 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 | 数据库 | 55 个锁定的 `mip_*` 迁移已在当前共享数据库成功应用，变更前稳定备份保存在本地仓库外目录 | 云端已验证；本轮复用已有稳定备份，未重复备份 |
 | runtime 数据库权限 | 环境专属账号已收敛为 121 张 MIP 业务表的精确表级权限，幂等复跑为 `already current` | 云端已验证；没有 schema/global 权限或跨项目表权限 |
 | 数据隔离 | 迁移后隔离检查通过，MIP 变更只落在 `mip_*` 对象和 `mip_schema_migrations` | 云端已验证；没有把旧项目表当作 MIP 事实 |
-| 管理授权 | 环境 API Key 可完成环境和 MySQL 操作；主账号 Device Flow 可完成 SCF 管控面部署 | 两种凭证边界已分别验证；MCP `2.32.0` 的设备登录解决了环境 API Key 临时 STS 被拒绝的问题 |
+| 管理授权 | 环境 API Key 可完成环境和 MySQL 操作；主账号 Device Flow 可完成 SCF 管控面部署 | 两种凭证边界已分别验证；当前固定 MCP `2.32.3`，设备登录解决了环境 API Key 临时 STS 被拒绝的问题 |
 | 核心函数 | 最终工作区代码已部署到 16 个核心 `mip-*` 函数，配置为 Nodejs20.19、目标 VPC/子网和完整运行时环境变量 | 云端已验证；全部函数为 Active/Available，并通过真实 MySQL 健康检查 |
 | 调用边界与 worker | 客户端 API 已开放给已登录用户；payment ledger、notification worker 与 outbox worker 保持受保护 | 云端已验证；禁止的 5 分钟 timer 不存在 |
 
@@ -117,7 +117,7 @@ CLOUDBASE_AUTH_MODE=local pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-r
 CLOUDBASE_AUTH_MODE=local pnpm cloud:verify -- --confirm-env=<EnvID>
 ```
 
-MCP `2.32.0` 的 `getInstanceInfo` 不再返回 VPC/子网；部署脚本只在缺少显式网络配置时调用 `getConnectionInfo`，只提取实际 MySQL 网络元数据，不打印或持久化其余连接载荷。最终代码的 `cloud:deploy` 和独立 `cloud:verify` 均已在当前环境通过。
+当前固定 MCP `2.32.3` 的 `getInstanceInfo` 不返回 VPC/子网；部署脚本只在缺少显式网络配置时调用 `getConnectionInfo`，只提取实际 MySQL 网络元数据，不打印或持久化其余连接载荷。最终代码的 `cloud:deploy` 和独立 `cloud:verify` 均已在当前环境通过。
 
 ## 未来迁移
 

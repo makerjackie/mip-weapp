@@ -15,7 +15,7 @@
 
 ## 产品定位
 
-WorkBuddy 原型只作为管理功能、字段和信息架构输入，不作为视觉基线。小程序管理分包继续负责手机微信和微信电脑端；独立 Web 工程已经建立，用于浏览器宽屏运营和后续真实 API 接入。
+WorkBuddy 原型只作为管理功能、字段和信息架构输入，不作为视觉基线。小程序管理分包继续负责手机微信和微信电脑端；独立 Web 工程已经建立，用于浏览器宽屏运营。当前 7 个一级页面已接入 12 条受审只读 action。
 
 两个管理界面共享同一套 MIP 用户、分会、订单、活动、权限、审计和消息事实，也共享同一套渠道中立管理合同。独立 Web 只复用操作语义和视觉模式，不复制 WXML；生产数据接入必须经过 Web principal 与 HTTPS adapter。
 
@@ -23,14 +23,16 @@ WorkBuddy 原型只作为管理功能、字段和信息架构输入，不作为�
 
 - 独立仓库：相邻工程 `mip-admin-web`
 - 测试域名：`https://mipmini.01mvp.com/`
-- 已完成：响应式概览、用户、活动、订单、权限、消息、知识库壳层；同源 Pages Function、AES-GCM `HttpOnly` 会话、来源和请求体限制；CloudBase 内部 HMAC 可信 principal adapter；会话、概览和用户列表三条只读 action。
-- 未完成：短期登录码及小程序管理员确认闭环、CloudBase HTTP 访问服务路由、两端密钥配置、真实数据浏览器验收和其余 CRUD。
-- 当前在线演示版必须明确标记“本地演示数据”；启用真实 BFF 的构建遇到 API 失败时必须进入错误态，不得再回退为演示数字。
+- 已完成：响应式概览、用户、活动、订单、权限、消息、知识库一级页面；同源 Pages Function、AES-GCM `HttpOnly` 会话、来源和请求体限制；可信 Web principal adapter；12 条由生成契约约束为安全查询的只读 action。
+- 已验证：真实管理员在微信开发者工具确认网页登录后，浏览器进入 `AUTHENTICATED`；会话、概览、用户、活动、订单、角色、分会、消息和知识查询全部成功。
+- 未完成：详情、编辑、上传、导出以及所有 mutation/CRUD。当前一级页面属于真实只读运营视图，不能解释为完整网页管理能力。
+- 真实 BFF 请求失败时必须进入错误态，不得回退为演示数字。
 
 ## 状态定义
 
 - `service-present`：现有服务端已经有可复用的主要业务能力。
 - `service-partial`：已有部分能力，但字段、状态或行为仍有缺口。
+- `web-readonly`：网页已通过真实身份和真实 API 读取，但写操作或完整页面能力仍未完成。
 - `web-missing`：对应模块仍没有完整网页交互或真实数据验收；不再表示完全没有 Web 工程。
 - `decision-needed`：原型与当前业务模型冲突，不能直接编码。
 - `external-wait`：需要正式配置、真机、支付或生产环境。
@@ -39,9 +41,9 @@ WorkBuddy 原型只作为管理功能、字段和信息架构输入，不作为�
 
 | 模块 | 原型一级需求点 | 现有基础 | 主要缺口 |
 | --- | ---: | --- | --- |
-| 首页仪表盘 | 9 | `mip-admin-api` 已有部分总量、增长、待办查询 | `web-missing`；活跃、续费、转化、反馈率等口径需确认 |
-| 用户管理 | 24 | 用户聚合、脱敏、档案、分会、角色、导出、审计为 `service-present` | `web-missing`；“普通用户”三分法、后台预建手机号用户和短信为 `decision-needed` |
-| 活动管理 | 13 | 活动、报名、参与人、签到、反馈、相册、订单和导出为 `service-present` | `web-missing`；历史复制、手机预览和部分统计为 `service-partial`；支付为 `external-wait` |
+| 首页仪表盘 | 9 | `mip-admin-api` 已有部分总量、增长、待办查询 | `web-readonly`；真实登录后的概览读取已验证，活跃、续费、转化、反馈率等口径仍需确认 |
+| 用户管理 | 24 | 用户聚合、脱敏、档案、分会、角色、导出、审计为 `service-present` | `web-readonly`；当前只有真实列表读取，“普通用户”三分法、后台预建手机号用户和短信为 `decision-needed`，其余 CRUD 未完成 |
+| 活动管理 | 13 | 活动、报名、参与人、签到、反馈、相册、订单和导出为 `service-present` | `web-readonly`；真实活动列表、筛选和分页已接入，详情、编辑及运营动作仍为 `web-missing`；支付为 `external-wait` |
 | 运营管理 | 2 | Banner 为 `service-present`；视频回顾已有配置入口 | `web-missing`；正式视频号和素材为 `external-wait` |
 | 等级管理 | 4 | 等级、权益、规则和流水为 `service-present` | `web-missing`；正式等级和权益数值待配置 |
 | 经验值管理 | 4 | 权威余额、流水、规则、调整和审计为 `service-present` | `web-missing`；冲正展示与正式规则需验收 |
@@ -49,12 +51,12 @@ WorkBuddy 原型只作为管理功能、字段和信息架构输入，不作为�
 | 权益管理 | 4 | 统一权益投影已聚合订单、会籍权益、成长权益和流水 | 受控手工会籍仍缺；固定一年和无订单直接改权益与现有 ledger 冲突 |
 | 任务管理 | 7 | 任务、成员派发、等级限制、模板、完成和奖励为 `service-present` | `web-missing`；上传、审批和失败恢复需运行时验收 |
 | 机会管理 | 5 | 机会、团队、评论、评价、引荐、撮合和审计为 `service-present` | `web-missing`；“合作成功”和转化口径需确认 |
-| 订单管理 | 7 | 统一订单、支付尝试、支付 ledger、退款和脱敏导出为 `service-present` | `web-missing`；真实支付、回调和退款为 `external-wait` |
+| 订单管理 | 7 | 统一订单、支付尝试、支付 ledger、退款和脱敏导出为 `service-present` | `web-readonly`；真实订单列表、汇总、筛选和分页已接入，详情、退款与导出仍未完成；真实支付、回调和退款为 `external-wait` |
 | 战队管理 | 5 | 赛季、队伍、成员历史、周赛和排行为 `service-present` | `web-missing`；正式赛事规则和视觉为 `external-wait` |
-| 角色与权限 | 4 | 七类角色、capability、平台/分会/活动 scope 为 `service-present` | `web-missing`；原型的自由角色配置不能突破 capability 安全上限 |
-| 后台账号管理 | 8 | 现有小程序管理员身份和登录审计可复用 | 网页账号、会话、验证码/密码登录、登录记录和凭证重置均为 `web-missing` |
+| 角色与权限 | 4 | 七类角色、capability、平台/分会/活动 scope 为 `service-present` | `web-readonly`；真实角色与分会列表已接入，授权、策略、详情与审计页面仍未完成；原型的自由角色配置不能突破 capability 安全上限 |
+| 后台账号管理 | 8 | 小程序管理员确认、网页会话和真实概览读取已形成闭环 | 当前确认登录为 `web-readonly`；独立密码/验证码账号、登录记录页面和凭证重置仍为 `decision-needed` 或 `web-missing` |
 | 服务器管理 | 4 | 城市分会、成员归属和范围权限为 `service-present` | “服务器”与城市分会的关系为 `decision-needed`；不新增通用租户模型 |
-| 后台消息 | 6 | 站内信、运营消息活动、收件人快照、投递记录、失败复核、outbox 和 worker 为 `service-present` | `web-missing`；正式模板与外部投递为 `external-wait` |
+| 后台消息 | 6 | 站内信、运营消息活动、收件人快照、投递记录、失败复核、outbox 和 worker 为 `service-present` | `web-readonly`；真实消息活动列表已接入，编辑、发布、定时、模板与投递复核仍未完成；正式模板与外部投递为 `external-wait` |
 
 ## 术语归一
 
@@ -97,7 +99,7 @@ WorkBuddy 原型只作为管理功能、字段和信息架构输入，不作为�
                                          ↓
                          mip_* MySQL / outbox / media / export
 
-独立网页 UI → AdminTransport(HTTPS，待接入) ───────────┘
+独立网页 UI → AdminTransport(HTTPS；12 条受审只读 action) ─┘
 ```
 
 Web 工程保持独立仓库，不把小程序改成 Monorepo，也不改变原生 WXML/TypeScript 技术栈。两个管理端都使用 MIP 黑黄设计系统；WorkBuddy 的蓝白视觉不进入产品。
@@ -106,7 +108,7 @@ Web 工程保持独立仓库，不把小程序改成 Monorepo，也不改变原�
 
 当前 `mip-admin-api` 保持一个部署单元，但内部按用户、活动、订单、权限、消息和知识形成深模块，机会与成长作为后续独立模块。每个 module 用较小 interface 隐藏鉴权、scope、版本冲突、审计和事务细节；当前 CloudBase transport 和未来 HTTP transport 只做渠道适配，不复制业务规则。
 
-当前渠道中立合同固定 145 个业务 operation；`health` 不进入该业务 manifest。后续拆模块不得同时改名或重做页面合同。外部稳定缝隙为：
+当前渠道中立合同固定 146 个业务 operation；`health` 不进入该业务 manifest。后续拆模块不得同时改名或重做页面合同。外部稳定缝隙为：
 
 ```ts
 interface AdminTransport {
@@ -128,7 +130,7 @@ interface AdminApplication {
 
 业务输入必须嵌套在 `input` 中。当前扁平 `{ action, ...data }` 会让业务字段 `action` 覆盖路由 action；迁移时先由兼容 adapter 接受旧格式，所有调用点切换后再删除。资源版本仍属于对应业务 input；服务端生成 `requestRef`、执行时间和幂等回放标记。
 
-`TrustedAdminPrincipal` 只能由 CloudBase 微信上下文或未来 Web session adapter 创建，页面提交的 `appId`、`userId`、role 和 capability 永远不可信。action manifest 统一记录输入校验、所需 capability、允许 scope、读写类型、幂等要求、outbox 唤醒和审计类型，避免这些 metadata 继续散落在 handler、service 和入口函数中。
+`TrustedAdminPrincipal` 只能由 CloudBase 微信上下文或 Web session adapter 创建，页面提交的应用、用户、角色和 capability 永远不可信。action manifest 统一记录输入校验、所需 capability、允许 scope、读写类型、幂等要求、outbox 唤醒和审计类型，避免这些 metadata 继续散落在 handler、service 和入口函数中。
 
 建议内部模块边界：
 
@@ -145,18 +147,18 @@ interface AdminApplication {
 
 模块之间不直接读取对方内部 repository；跨域只通过窄端口或明确领域事件。数据库仍可在同一事务中操作，但事务编排归 application 层，避免为了“拆文件”而牺牲现有原子性。
 
-### 未来网页身份与会话边界
+### 网页身份与会话边界
 
-生产数据接入仍按“网页展示登录码，小程序管理员确认登录”实现：
+当前已按“网页展示短期确认信息，小程序管理员确认登录”打通并验证只读生产数据闭环：
 
 1. 网页创建短期、单次、绑定浏览器 verifier 的登录 challenge。
 2. 已登录小程序且拥有管理 capability 的用户确认。
 3. 服务端创建只保存 token hash 的网页 session。
 4. Cookie 使用 `HttpOnly`、`Secure` 和合适的 `SameSite`；写操作校验 CSRF。
-5. session 只保存 `app_id + user_id`，每次请求重新读取用户状态、协议、角色和 capability。
+5. session 只保存必要的身份引用，每次请求重新读取用户状态、协议、角色和 capability。
 6. 角色撤销、账号关闭或会话过期后，下一次请求立即失败。
 
-若业务方坚持手机号验证码/密码登录，需要额外建设验证码供应商、密码哈希、找回/重置、失败限制、异常通知和安全审计，不应作为首个版本默认方案。
+上述闭环目前支持 12 条受审只读 API 和 7 个一级页面，不代表详情或管理 CRUD 已完成。若业务方坚持手机号验证码/密码登录，需要额外建设验证码供应商、密码哈希、找回/重置、失败限制、异常通知和安全审计，不应作为首个版本默认方案。
 
 ### 数据、媒体、消息与审计
 

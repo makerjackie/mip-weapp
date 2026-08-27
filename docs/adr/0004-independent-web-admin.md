@@ -8,7 +8,9 @@
 
 ## 当前边界
 
-响应式 Web 界面与静态部署已经完成。代码中已形成同源 Pages Function、AES-GCM `HttpOnly` 会话、CloudBase HMAC 可信 principal adapter，以及会话、概览和用户列表三条只读 action。短期登录码的小程序确认、CloudBase HTTP 路由、两端密钥配置和真实数据浏览器验收尚未完成，因此在线版本仍只展示明确标记的演示数据。浏览器不得持有 CloudBase API Key、MySQL URI 或本机凭证。
+响应式 Web 界面已经部署到 `https://mipmini.01mvp.com/`。真实管理员在微信开发者工具确认网页登录后，浏览器已进入 `AUTHENTICATED`。当前 12 条经过契约校验的只读 action 已覆盖会话、概览、用户、活动、订单、角色、分会、消息和知识；7 个一级页面均接入真实查询。详情、编辑、上传、导出和全部 mutation/CRUD 尚未完成。
+
+浏览器不得持有云平台管理密钥、数据库连接信息或本机凭证。未接入真实 API 的页面壳层不能作为业务完成证据，真实请求失败时也不得回退为演示数字。
 
 ## 结果
 

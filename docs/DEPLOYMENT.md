@@ -4,7 +4,7 @@
 
 - 55 个锁定的 `mip_*` 迁移已成功应用，迁移版本、表清单和数据库隔离检查通过；变更前稳定备份保存在 `~/Backups/mip-weapp/2026-08-24T112700-446Z/`，本轮未重复创建备份。
 - 环境专属 runtime 账号已收敛为 121 张 MIP 业务表的精确表级权限，二次运行结果为 `already current`；没有 schema/global 权限，也没有改动其他账号。
-- CloudBase MCP 已固定为 `2.32.0`；资源主账号 Device Flow 已完成 SCF 管控面部署，环境 API Key 继续用于已验证的环境和 MySQL 操作。
+- CloudBase MCP 已固定为 `2.32.3`；资源主账号 Device Flow 已完成 SCF 管控面部署，环境 API Key 继续用于已验证的环境和 MySQL 操作。
 - 16 个核心 `mip-*` 函数均为 Active/Available，使用 Nodejs20.19、目标 VPC/子网、完整运行时环境变量和仓库代码，并通过真实 MySQL 健康检查。
 - 最终工作区代码已重新部署；独立 `cloud:verify` 已验证 schema、121 张表的精确 runtime 权限、函数配置、客户端调用规则、内部受保护函数及禁止高频 timer。正式核心云运行时不再是 `external-wait`。
 

@@ -109,17 +109,17 @@
 
 ## WorkBuddy 管理端功能 PRD V0.4
 
-来源和内部映射见 [ADMIN_WEB.md](ADMIN_WEB.md)，代表截图见 [evidence/admin-web-2026-08-25](evidence/admin-web-2026-08-25/README.md)。WorkBuddy 仍只作为功能输入；独立 Web 已建立响应式工程并部署演示版，可信 BFF 代码基础已形成，但真实登录确认和 HTTPS 路由尚未完成。
+来源和内部映射见 [ADMIN_WEB.md](ADMIN_WEB.md)，代表截图见 [evidence/admin-web-2026-08-25](evidence/admin-web-2026-08-25/README.md)，线上读回见 [evidence/admin-web-live-2026-08-28](evidence/admin-web-live-2026-08-28/README.md)。WorkBuddy 仍只作为功能输入；独立 Web 已部署，真实管理员确认与 12 条只读 action 已通过。详情和全部 CRUD 未完成。
 
 | 范围 | 状态 | 当前证据与缺口 |
 | --- | --- | --- |
 | 当前 16 个管理模块和 110 个一级需求点 | `partial-local` | [逐项矩阵](WORKBUDDY_110_MATRIX.md) 已固定当前在线稿；49 条管理路由属于历史 108 路由运行时通过集合，共享响应式壳层和 1024px 代表页证据已存在；新增两条会员路由后仍需形成当前 110 路由证据，与确认领域模型冲突的 Web 账号、固定团队、自由角色等不纳入实现 |
-| 管理业务服务复用 | `implemented-local` | 中立 `AdminTransport`、CloudBase/InMemory adapter、v1 嵌套请求、trusted principal、`AdminApplication.execute` 和 145-action operation registry 已形成稳定合同 |
+| 管理业务服务复用 | `implemented-local` | 中立 `AdminTransport`、CloudBase/InMemory adapter、v1 嵌套请求、trusted principal、`AdminApplication.execute` 和 146-action operation registry 已形成稳定合同 |
 | 活动复制与手机预览 | `implemented-local` | 复制活动和未保存草稿预览已形成管理 action、页面入口和聚焦测试；真实媒体仍按真机边界验收 |
 | 消息模板、定时与失败复核 | `implemented-local` | 模板、活动、收件人快照、定时发送、失败复核和 outbox 已本地实现；正式微信模板及 scheduler 云端 canary 为 `external-wait` |
-| 网页管理员认证与会话 | `partial-local` | Pages Function 已具备同源校验、AES-GCM `HttpOnly` 会话和服务端 code exchange 基础；CloudBase 具备 HMAC 可信 Web principal adapter；短期码持久化与小程序管理员确认尚未接通 |
-| 网页端平台/分会/活动 RBAC | `partial-local` | 只读会话、概览、用户列表复用相同 action、trusted principal 与每次重读 scope/capability 的服务端链路；CloudBase HTTP 路由和浏览器实测尚未完成，mutation 默认关闭 |
-| 网页端视觉与可访问性 | `implemented-local` | 独立 Web 工程完成 390px/1280px 响应式布局并部署到 `mipmini.01mvp.com`；当前在线数据明确标记为演示状态 |
+| 网页管理员认证与会话 | `implemented-local` | 真实管理员已在微信开发者工具确认登录，浏览器进入 `AUTHENTICATED` 并成功读取真实概览；该结论只覆盖当前确认登录与会话闭环 |
+| 网页端平台/分会/活动 RBAC | `partial-local` | 12 条只读 API 复用 trusted principal 并在请求时重读 scope/capability；7 个一级页面已接入真实列表，详情和全部 mutation/CRUD 尚未完成 |
+| 网页端视觉与可访问性 | `implemented-local` | 独立 Web 工程完成 390px/1280px 响应式布局并部署到 `https://mipmini.01mvp.com/`；7 个一级页面均有真实只读数据，不再用页面壳层冒充完成 |
 
 ## Figma 代表 frame
 
