@@ -1221,6 +1221,32 @@ export async function navigateFreshRuntimeRoute(
   throw firstError || new Error(`Runtime navigation ${label} failed`)
 }
 
+export async function navigateFreshRuntimeTab(
+  miniProgram,
+  route,
+  label,
+  timeoutMs = 15_000,
+) {
+  await retry(label, () => miniProgram.switchTab(`/${route.path}`))
+  try {
+    return await waitForCurrentRuntimeRoute(
+      miniProgram,
+      route,
+      Math.min(timeoutMs, 3_000),
+    )
+  }
+  catch (error) {
+    if (!isRecoverableRuntimeRenderError(error)) {
+      throw error
+    }
+    await retry(
+      `${label} render recovery`,
+      () => miniProgram.reLaunch(`/${route.path}`),
+    )
+    return waitForCurrentRuntimeRoute(miniProgram, route, timeoutMs)
+  }
+}
+
 export function isRecoverableRuntimeRenderError(error) {
   const message = sanitizeRuntimeValue(error instanceof Error ? error.message : error).toLowerCase()
   const match = message.match(/expected rendered ([^:]+):[^,]+, received ([^ (]+)/)
@@ -1563,11 +1589,10 @@ async function verifyNavigation(miniProgram, runtimePages, report, sensitivePatt
   const tabs = runtimePages.routes.filter(route => route.tab)
   report.navigation = { tabs: [], back: null, deepLink: null }
   for (const route of tabs) {
-    const page = await navigateFreshRuntimeRoute(
+    const page = await navigateFreshRuntimeTab(
       miniProgram,
       route,
       `switch tab ${route.path}`,
-      () => miniProgram.switchTab(`/${route.path}`),
     )
     assert(String(page.path || '').replace(/^\//, '') === route.path, `Tab opened unexpected route: ${page.path}`)
     const settled = await waitForPageData(page, route, sensitivePatterns, 12000)

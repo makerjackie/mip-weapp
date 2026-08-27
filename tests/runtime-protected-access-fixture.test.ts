@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   isRecoverableRuntimeRenderError,
   navigateFreshRuntimeRoute,
+  navigateFreshRuntimeTab,
   resolveProtectedAccessRuntimeFixture,
 } from '../scripts/verify-runtime.mjs'
 
@@ -159,6 +160,71 @@ describe('runtime protected access fixture', () => {
       homeRoute.selector,
       { routeOnly: true },
     )
+  })
+
+  it('relaunches a tab route once when its path is ready but its root is not rendered', async () => {
+    let recovered = false
+    const transitionPage = {
+      path: `/${homeRoute.path}`,
+      renderedNodes: vi.fn(async () => []),
+    }
+    const renderedPage = {
+      path: `/${homeRoute.path}`,
+      renderedNodes: vi.fn(async () => [{ width: 375, height: 812 }]),
+    }
+    const miniProgram = {
+      switchTab: vi.fn(async (url: string) => {
+        expect(url).toBe(`/${homeRoute.path}`)
+        return transitionPage
+      }),
+      reLaunch: vi.fn(async (url: string) => {
+        expect(url).toBe(`/${homeRoute.path}`)
+        recovered = true
+        return renderedPage
+      }),
+      currentPage: vi.fn(async () => (recovered ? renderedPage : transitionPage)),
+    }
+
+    await expect(navigateFreshRuntimeTab(
+      miniProgram,
+      homeRoute,
+      'home tab probe',
+      1,
+    )).resolves.toBe(renderedPage)
+    expect(miniProgram.switchTab).toHaveBeenCalledOnce()
+    expect(miniProgram.reLaunch).toHaveBeenCalledOnce()
+    expect(transitionPage.renderedNodes).toHaveBeenCalledWith(
+      homeRoute.selector,
+      { routeOnly: true },
+    )
+    expect(renderedPage.renderedNodes).toHaveBeenCalledWith(
+      homeRoute.selector,
+      { routeOnly: true },
+    )
+  })
+
+  it('does not relaunch a tab when navigation reaches a different route', async () => {
+    const tabRoute = contract.routes.find((route: { path: string, tab?: boolean }) => (
+      route.tab && route.path !== homeRoute.path
+    ))
+    expect(tabRoute).toBeDefined()
+    const wrongPage = {
+      path: '/pages/index/index',
+      renderedNodes: vi.fn(async () => []),
+    }
+    const miniProgram = {
+      switchTab: vi.fn(async () => wrongPage),
+      reLaunch: vi.fn(),
+      currentPage: vi.fn(async () => wrongPage),
+    }
+
+    await expect(navigateFreshRuntimeTab(
+      miniProgram,
+      tabRoute,
+      'wrong tab probe',
+      1,
+    )).rejects.toThrow('received pages/index/index')
+    expect(miniProgram.reLaunch).not.toHaveBeenCalled()
   })
 
   it('uses the UI-bound local logout to create a real global-guard intent and restores identity', async () => {
