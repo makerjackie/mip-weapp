@@ -56,9 +56,9 @@ function readMemberCursor(cursor, context, pepper) {
   if (version !== expectedCursorVersion || extra !== undefined
     || !ivValue || !encryptedValue || !tagValue) throw new Error('VALIDATION_FAILED')
   try {
-    const iv = Buffer.from(ivValue, 'base64url')
-    const encrypted = Buffer.from(encryptedValue, 'base64url')
-    const tag = Buffer.from(tagValue, 'base64url')
+    const iv = decodeCanonicalBase64url(ivValue)
+    const encrypted = decodeCanonicalBase64url(encryptedValue)
+    const tag = decodeCanonicalBase64url(tagValue)
     if (iv.length !== 12 || tag.length !== 16 || encrypted.length < 1) {
       throw new Error('INVALID_CURSOR')
     }
@@ -83,6 +83,13 @@ function readMemberCursor(cursor, context, pepper) {
     if (error?.message === 'IDENTITY_CONFIG_REQUIRED') throw error
     throw new Error('VALIDATION_FAILED')
   }
+}
+
+function decodeCanonicalBase64url(value) {
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) throw new Error('INVALID_CURSOR')
+  const decoded = Buffer.from(value, 'base64url')
+  if (decoded.toString('base64url') !== value) throw new Error('INVALID_CURSOR')
+  return decoded
 }
 
 function createCandidateKey(context, pepper) {
