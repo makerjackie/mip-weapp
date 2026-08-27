@@ -239,7 +239,7 @@ Page({
     this.setData({ generating: true, codeMessage: '' })
     try {
       const result = await mipIdentityModule.getMyProfileCardCode()
-      this.setData({ codeUrl: result.codeUrl, posterPath: '' })
+      this.setData({ codeUrl: result.codeUrl, codeMessage: '', posterPath: '' })
     }
     catch {
       this.setData({ codeMessage: '名片码暂时不可用，可稍后重试。' })

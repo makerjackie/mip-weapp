@@ -35,6 +35,7 @@ describe('MIP member card', () => {
     expect(view).toContain('{{companyName}}')
     expect(view).toContain('{{roleTitle}}')
     expect(page).toContain('GENERIC_MINI_PROGRAM_CODE = \'/assets/brand/mip-mini-program-qrcode.jpg\'')
+    expect(page).toContain('this.setData({ codeUrl: result.codeUrl, codeMessage: \'\', posterPath: \'\' })')
     expect(view).toContain('{{phone}}')
     expect(view).toContain('{{wechat}}')
     expect(view).toContain('{{email}}')
