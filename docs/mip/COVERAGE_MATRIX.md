@@ -109,7 +109,7 @@
 
 ## WorkBuddy 管理端功能 PRD V0.4
 
-来源和内部映射见 [ADMIN_WEB.md](ADMIN_WEB.md)，代表截图见 [evidence/admin-web-2026-08-25](evidence/admin-web-2026-08-25/README.md)，线上读回见 [evidence/admin-web-live-2026-08-28](evidence/admin-web-live-2026-08-28/README.md)。WorkBuddy 仍只作为功能输入；独立 Web 已部署，真实管理员确认、33 条只读 action、7 个一级页面与 5 类详情已通过。4 条持久幂等 mutation 已形成服务端链路，完整网页 CRUD 未完成。
+来源和内部映射见 [ADMIN_WEB.md](ADMIN_WEB.md)，代表截图见 [evidence/admin-web-2026-08-25](evidence/admin-web-2026-08-25/README.md)，线上读回见 [evidence/admin-web-live-2026-08-28](evidence/admin-web-live-2026-08-28/README.md)。WorkBuddy 仍只作为功能输入；独立 Web 已部署，真实管理员确认、33 条只读 action、7 个一级页面与 5 类详情已通过。4 个持久幂等写操作表单已部署，完整网页 CRUD 未完成。
 
 | 范围 | 状态 | 当前证据与缺口 |
 | --- | --- | --- |
@@ -118,7 +118,7 @@
 | 活动复制与手机预览 | `implemented-local` | 复制活动和未保存草稿预览已形成管理 action、页面入口和聚焦测试；真实媒体仍按真机边界验收 |
 | 消息模板、定时与失败复核 | `implemented-local` | 模板、活动、收件人快照、定时发送、失败复核和 outbox 已本地实现；正式微信模板及 scheduler 云端 canary 为 `external-wait` |
 | 网页管理员认证与会话 | `implemented-local` | 真实管理员已在微信开发者工具确认登录，浏览器进入 `AUTHENTICATED` 并成功读取真实概览；该结论只覆盖当前确认登录与会话闭环 |
-| 网页端平台/分会/活动 RBAC | `partial-local` | 33 条只读 API 与 4 条精确白名单 mutation 复用 trusted principal 并在请求时重读 scope/capability；用户、活动、订单、消息、知识库详情已接入，网页表单和其余 CRUD 尚未完成 |
+| 网页端平台/分会/活动 RBAC | `partial-local` | 33 条只读 API 与 4 条精确白名单 mutation 复用 trusted principal 并在请求时重读 scope/capability；用户、活动、订单、消息、知识库详情及首批 4 个写操作表单已接入，其余 CRUD 尚未完成 |
 | 网页端视觉与可访问性 | `implemented-local` | 独立 Web 工程完成 390px/1280px 响应式布局、列表和详情抽屉并部署到 `https://mipmini.01mvp.com/`；7 个一级页面均有真实数据，不再用页面壳层冒充完成 |
 
 ## Figma 代表 frame
