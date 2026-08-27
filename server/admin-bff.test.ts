@@ -45,6 +45,26 @@ const REVIEWED_QUERY_ACTIONS = [
   'mip.admin.knowledge.list',
   'mip.admin.knowledge.get',
   'mip.admin.knowledge.schedules.list',
+  'mip.admin.communityReports.list',
+  'mip.admin.announcements.scopes',
+  'mip.admin.announcements.list',
+  'mip.admin.announcements.get',
+  'mip.admin.opportunities.list',
+  'mip.admin.opportunities.get',
+  'mip.admin.opportunities.options',
+  'mip.admin.userContent.list',
+  'mip.admin.userContent.get',
+  'mip.admin.matching.get',
+  'mip.admin.opportunityComments.get',
+  'mip.admin.growth.levels',
+  'mip.admin.growth.benefits',
+  'mip.admin.growth.rules',
+  'mip.admin.growth.entries',
+  'mip.admin.growth.levelTransitions',
+  'mip.admin.badges.list',
+  'mip.admin.badges.awards',
+  'mip.admin.exceptions.list',
+  'mip.admin.operations.queue.list',
 ] as const
 const REVIEWED_MUTATION_ACTIONS = [
   'mip.admin.memberships.grant',
@@ -295,7 +315,7 @@ describe('Admin Web BFF', () => {
     const fetchMock = fetchQueue()
     const { bff, sessionCookie } = await confirmedLogin(fetchMock)
 
-    for (const action of ['mip.admin.users.update', 'mip.admin.communityReports.list']) {
+    for (const action of ['mip.admin.users.update', 'mip.admin.communityReports.archive']) {
       const response = await bff.handle(new Request(`${ORIGIN}/api/admin`, {
         method: 'POST',
         headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
