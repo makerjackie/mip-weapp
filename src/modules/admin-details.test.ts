@@ -23,12 +23,17 @@ describe('admin detail views', () => {
         influence: { guestCount: 2, interactionCount: 5, interestCount: 1, visitorCount: 8 },
         companies: [{ name: '远岸咨询', role: '顾问' }], organizations: [], tags: [], roles: [],
       },
+      'mip.admin.memberships.get': { chainVersion: 3, membership: { status: 'ACTIVE' } },
     }, calls))
 
-    assert.deepEqual(calls, [{ action: 'mip.admin.users.get', input: { userId: 'user-1', includePhone: false } }])
+    assert.deepEqual(calls, [
+      { action: 'mip.admin.users.get', input: { userId: 'user-1', includePhone: false } },
+      { action: 'mip.admin.memberships.get', input: { userId: 'user-1' } },
+    ])
     assert.equal(detail.title, '林晓')
     assert.equal(detail.status, '玩家')
     assert.equal(detail.sections.find(section => section.title === '基本信息')?.fields?.find(item => item.label === '手机状态')?.value, '已绑定')
+    assert.equal(detail.sections.find(section => section.title === '会员权益')?.fields?.find(item => item.label === '会员链版本')?.value, '3')
     assert.equal(detail.sections.find(section => section.title === '业务记录')?.metrics?.find(item => item.label === '订单')?.value, '2')
   })
 

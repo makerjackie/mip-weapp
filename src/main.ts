@@ -3,7 +3,7 @@ import {
   AdminApiClientError,
   type AdminLoginChallenge,
 } from './services/admin-api'
-import type { AdminSession } from './domain/contracts'
+import type { AdminRequestInput, AdminSession } from './domain/contracts'
 import {
   loadAdminDetail,
   type AdminDetailRoute,
@@ -18,6 +18,11 @@ import {
   type AdminTableColumn,
   type AdminTableRow,
 } from './modules/admin-read-pages'
+import {
+  createMutationIntent,
+  type AdminMutationAction,
+  type AdminMutationIntent,
+} from './modules/admin-mutations'
 import { demo } from './services/demo-data'
 import './styles.css'
 
@@ -42,6 +47,19 @@ let detailView: AdminDetailView | null = null
 let detailLoading = false
 let detailError = ''
 let detailFlow = 0
+let currentDetailId = ''
+type MutationValues = Record<string, string | boolean>
+type MutationState = {
+  action: AdminMutationAction
+  targetId: string
+  title: string
+  description: string
+  intent: AdminMutationIntent
+  values: MutationValues
+  error: string
+  busy: boolean
+}
+let mutationState: MutationState | null = null
 
 type ListState = AdminListQuery & { history: Array<string | null> }
 const listState = (): ListState => ({ query: '', status: '', cursor: null, limit: 20, history: [] })
@@ -106,7 +124,7 @@ function header() {
 
 function shell(content: string) {
   const loginAction = apiErrorCode === 'AUTH_REQUIRED' ? '<button class="notice-action" id="notice-login-button">运营登录</button>' : ''
-  app.innerHTML = `${sidebar()}<main class="main"><div class="content"><div id="notice" class="notice ${notice ? '' : 'hidden'}"><span>${escapeHtml(notice)}</span>${loginAction}</div>${header()}${content}</div></main>${detailPanel()}${loginDialog()}`
+  app.innerHTML = `${sidebar()}<main class="main"><div class="content"><div id="notice" class="notice ${notice ? '' : 'hidden'}"><span>${escapeHtml(notice)}</span>${loginAction}</div>${header()}${content}</div></main>${detailPanel()}${mutationDialog()}${loginDialog()}`
   document.querySelectorAll<HTMLButtonElement>('[data-route]').forEach(button => button.addEventListener('click', () => {
     route = button.dataset.route as Route
     notice = ''
@@ -129,6 +147,15 @@ function shell(content: string) {
   document.querySelector('#detail-backdrop')?.addEventListener('click', event => {
     if (event.target === event.currentTarget) closeDetail()
   })
+  document.querySelectorAll<HTMLButtonElement>('[data-mutation-open]').forEach(button => button.addEventListener('click', () => {
+    openMutation(button.dataset.mutationOpen as AdminMutationAction, button.dataset.mutationId || '')
+  }))
+  document.querySelector('#mutation-close-button')?.addEventListener('click', closeMutation)
+  document.querySelector('#mutation-cancel-button')?.addEventListener('click', closeMutation)
+  document.querySelector('#mutation-backdrop')?.addEventListener('click', event => {
+    if (event.target === event.currentTarget) closeMutation()
+  })
+  document.querySelector<HTMLFormElement>('#mutation-form')?.addEventListener('submit', event => void submitMutation(event))
 }
 
 function loginDialog() {
@@ -152,7 +179,160 @@ function detailPanel() {
   const title = detailView?.title || ({ users: '用户详情', events: '活动详情', orders: '订单详情', messages: '消息活动详情', knowledge: '知识内容详情' })[detailRoute]
   const subtitle = detailView?.subtitle ? `<p>${escapeHtml(detailView.subtitle)}</p>` : ''
   const status = detailView?.status ? `<span class="${statusClass(detailView.status)}">${escapeHtml(detailView.status)}</span>` : ''
-  return `<div class="detail-backdrop" id="detail-backdrop"><aside class="detail-drawer" role="dialog" aria-modal="true" aria-labelledby="detail-title"><header class="detail-header"><div><span class="detail-kicker">只读详情</span><h2 id="detail-title">${escapeHtml(title)}</h2>${subtitle}</div><div class="detail-header-actions">${status}<button id="detail-close-button" class="login-close" aria-label="关闭">×</button></div></header><div class="detail-body">${body}</div></aside></div>`
+  const actions = detailActions(detailRoute)
+  return `<div class="detail-backdrop" id="detail-backdrop"><aside class="detail-drawer" role="dialog" aria-modal="true" aria-labelledby="detail-title"><header class="detail-header"><div><span class="detail-kicker">运营详情</span><h2 id="detail-title">${escapeHtml(title)}</h2>${subtitle}</div><div class="detail-header-actions">${status}${actions}<button id="detail-close-button" class="login-close" aria-label="关闭">×</button></div></header><div class="detail-body">${body}</div></aside></div>`
+}
+
+function detailActions(route: AdminDetailRoute | null) {
+  if (!route || !detailView) return ''
+  const id = escapeHtml(detailIdForRoute(route))
+  if (route === 'users' && hasCapability('memberships.adjust')) return `<button class="outline-button detail-action-button" data-mutation-open="mip.admin.memberships.grant" data-mutation-id="${id}">补录会员</button>`
+  if (route === 'events') {
+    const clone = hasCapability('events.write') ? `<button class="outline-button detail-action-button" data-mutation-open="mip.admin.events.clone" data-mutation-id="${id}">克隆活动</button>` : ''
+    const reminder = hasCapability('communications.publish') ? `<button class="outline-button detail-action-button" data-mutation-open="mip.admin.communications.publishEventReminder" data-mutation-id="${id}">发布提醒</button>` : ''
+    return clone || reminder ? `<div class="detail-action-group">${clone}${reminder}</div>` : ''
+  }
+  if (route === 'orders' && hasCapability('refunds.submit')) return `<button class="outline-button detail-action-button" data-mutation-open="mip.admin.refunds.submit" data-mutation-id="${id}">提交退款</button>`
+  return ''
+}
+
+function hasCapability(capability: string) {
+  return session?.capabilities?.some(item => item.capability === capability) === true
+}
+
+function detailIdForRoute(route: AdminDetailRoute) {
+  return detailRoute === route ? currentDetailId : ''
+}
+
+function mutationDialog() {
+  const state = mutationState
+  if (!state) return ''
+  const disabled = state.busy || Boolean(state.error)
+  const values = state.values
+  const field = (name: string) => escapeHtml(values[name] ?? '')
+  let fields = ''
+  if (state.action === 'mip.admin.memberships.grant') {
+    fields = `<label>会员时长<select name="durationMonths" ${disabled ? 'disabled' : ''}><option value="1" ${values.durationMonths === '1' ? 'selected' : ''}>1 个月</option><option value="3" ${values.durationMonths === '3' ? 'selected' : ''}>3 个月</option><option value="6" ${values.durationMonths === '6' ? 'selected' : ''}>6 个月</option><option value="12" ${values.durationMonths === '12' ? 'selected' : ''}>12 个月</option></select></label><label class="mutation-wide">调整原因<textarea name="reason" rows="3" maxlength="300" required ${disabled ? 'disabled' : ''}>${field('reason')}</textarea></label>`
+  }
+  else if (state.action === 'mip.admin.communications.publishEventReminder') {
+    fields = `<label class="mutation-checkbox"><input name="sendWechatReminder" type="checkbox" ${values.sendWechatReminder ? 'checked' : ''} ${disabled ? 'disabled' : ''} />同时生成微信提醒任务</label>`
+  }
+  else if (state.action === 'mip.admin.refunds.submit') {
+    fields = '<label class="mutation-wide">退款原因<textarea name="reason" rows="3" maxlength="300" required ' + `${disabled ? 'disabled' : ''}` + `>${field('reason')}</textarea></label>`
+  }
+  const error = state.error
+    ? `<div class="mutation-error" role="alert">${escapeHtml(state.error)}<small>请求结果不确定时，请先核对服务端记录；再次提交会按同一次操作处理。</small></div>`
+    : ''
+  const buttonLabel = state.busy ? '提交中' : state.error ? '手动重试' : '确认提交'
+  return `<div class="mutation-backdrop" id="mutation-backdrop"><section class="mutation-dialog" role="dialog" aria-modal="true" aria-labelledby="mutation-title"><button id="mutation-close-button" class="login-close" aria-label="关闭" ${state.busy ? 'disabled' : ''}>×</button><span class="login-kicker">操作确认</span><h2 id="mutation-title">${escapeHtml(state.title)}</h2><p>${escapeHtml(state.description)}</p><form id="mutation-form"><div class="mutation-fields">${fields}</div>${error}<div class="mutation-actions"><button type="button" class="outline-button" id="mutation-cancel-button" ${state.busy ? 'disabled' : ''}>取消</button><button type="submit" class="primary-button" ${state.busy ? 'disabled' : ''}>${buttonLabel}</button></div></form></section></div>`
+}
+
+function openMutation(action: AdminMutationAction, targetId: string) {
+  if (!targetId || !detailView || !client.configured) return
+  const definition = mutationDefinition(action, targetId)
+  if (!definition) return
+  mutationState = {
+    ...definition,
+    intent: createMutationIntent(action, definition.values),
+    error: '',
+    busy: false,
+  }
+  paint()
+}
+
+function mutationDefinition(action: AdminMutationAction, targetId: string): Omit<MutationState, 'intent' | 'error' | 'busy'> | null {
+  const version = detailFieldValue('活动信息', '版本') || '1'
+  const membershipChainVersion = detailFieldValue('会员权益', '会员链版本') || '1'
+  if (action === 'mip.admin.memberships.grant') return {
+    action, targetId, title: '补录会员', description: '为该用户追加有效付费权益。提交前请确认会员时长、链版本和调整原因。',
+    values: { durationMonths: '12', expectedChainVersion: membershipChainVersion, reason: '' },
+  }
+  if (action === 'mip.admin.events.clone') return {
+    action, targetId, title: '克隆活动', description: '根据当前活动创建一份新的草稿活动。提交后由服务端重新校验权限和活动版本。',
+    values: { expectedVersion: version },
+  }
+  if (action === 'mip.admin.communications.publishEventReminder') return {
+    action, targetId, title: '发布活动提醒', description: '为当前活动生成提醒投递任务。只有已发布活动可以执行此操作。',
+    values: { expectedVersion: version, sendWechatReminder: true },
+  }
+  if (action === 'mip.admin.refunds.submit') return {
+    action, targetId, title: '提交退款', description: '提交当前订单的退款申请。金额和退款状态由服务端订单与支付流水决定。',
+    values: { reason: '' },
+  }
+  return null
+}
+
+function detailFieldValue(sectionTitle: string, label: string) {
+  const section = detailView?.sections.find(item => item.title === sectionTitle)
+  return section?.fields?.find(item => item.label === label)?.value || ''
+}
+
+async function submitMutation(event: SubmitEvent) {
+  event.preventDefault()
+  const state = mutationState
+  if (!state || state.busy) return
+  const form = event.currentTarget as HTMLFormElement
+  const data = new FormData(form)
+  const values: MutationValues = {}
+  for (const [key, value] of data.entries()) values[key] = typeof value === 'string' ? value.trim() : String(value)
+  for (const [key, value] of Object.entries(state.values)) {
+    if (!(key in values)) values[key] = value
+  }
+  if (state.action === 'mip.admin.communications.publishEventReminder') values.sendWechatReminder = data.get('sendWechatReminder') === 'on'
+  const input = mutationInput(state, values)
+  if (!input) return
+  const summary = `${state.title}：${mutationSummary(state.action, values)}\n\n确认提交？`
+  if (!window.confirm(summary)) return
+  state.values = values
+  state.busy = true
+  state.error = ''
+  paint()
+  try {
+    await client.request(state.action, { ...input, idempotencyKey: state.intent.idempotencyKey })
+    notice = `${state.title}已提交`
+    mutationState = null
+    if (detailRoute && currentDetailId) await openDetail(detailRoute, currentDetailId)
+    else paint()
+  }
+  catch (error) {
+    state.busy = false
+    state.error = error instanceof AdminApiClientError ? error.message : '请求结果暂时无法确认'
+    paint()
+  }
+}
+
+function mutationInput(state: MutationState, values: MutationValues): AdminRequestInput | null {
+  if (state.action === 'mip.admin.memberships.grant') {
+    const durationMonths = Number(values.durationMonths)
+    const expectedChainVersion = Number(values.expectedChainVersion)
+    if (![1, 3, 6, 12].includes(durationMonths) || !Number.isSafeInteger(expectedChainVersion) || expectedChainVersion < 1 || !values.reason) return null
+    return { userId: state.targetId, durationMonths, expectedChainVersion, reason: String(values.reason) }
+  }
+  if (state.action === 'mip.admin.events.clone') {
+    const expectedVersion = Number(values.expectedVersion)
+    if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1) return null
+    return { sourceEventId: state.targetId, expectedVersion }
+  }
+  if (state.action === 'mip.admin.communications.publishEventReminder') {
+    const expectedVersion = Number(values.expectedVersion)
+    if (!Number.isSafeInteger(expectedVersion) || expectedVersion < 1) return null
+    return { eventId: state.targetId, expectedVersion, sendWechatReminder: values.sendWechatReminder === true }
+  }
+  if (!values.reason) return null
+  return { orderId: state.targetId, reason: String(values.reason) }
+}
+
+function mutationSummary(action: AdminMutationAction, values: MutationValues) {
+  if (action === 'mip.admin.memberships.grant') return `${values.durationMonths} 个月会员权益，原因：${values.reason}`
+  if (action === 'mip.admin.events.clone') return `使用活动版本 ${values.expectedVersion} 创建草稿`
+  if (action === 'mip.admin.communications.publishEventReminder') return `活动版本 ${values.expectedVersion}，${values.sendWechatReminder === true ? '生成微信提醒任务' : '仅生成站内提醒任务'}`
+  return `退款原因：${values.reason}`
+}
+
+function closeMutation() {
+  if (mutationState?.busy) return
+  mutationState = null
+  paint()
 }
 
 function sectionTitle(title: string, description: string, action = '') {
@@ -256,6 +436,7 @@ async function openDetail(target: AdminDetailRoute, id: string) {
   const flow = detailFlow + 1
   detailFlow = flow
   detailRoute = target
+  currentDetailId = id
   detailView = null
   detailError = ''
   detailLoading = true
@@ -280,9 +461,11 @@ async function openDetail(target: AdminDetailRoute, id: string) {
 function closeDetail(repaint = true) {
   detailFlow += 1
   detailRoute = null
+  currentDetailId = ''
   detailView = null
   detailError = ''
   detailLoading = false
+  mutationState = null
   if (repaint) paint()
 }
 

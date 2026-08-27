@@ -39,7 +39,12 @@ export async function loadAdminDetail(
 }
 
 async function loadUserDetail(userId: string, request: AdminDetailRequest): Promise<AdminDetailView> {
-  const user = record(await request('mip.admin.users.get', { userId, includePhone: false }))
+  const [userValue, membershipValue] = await Promise.all([
+    request('mip.admin.users.get', { userId, includePhone: false }),
+    request('mip.admin.memberships.get', { userId }),
+  ])
+  const user = record(userValue)
+  const membershipDetail = record(membershipValue)
   const membership = record(user.membership)
   const growth = record(user.growth)
   const counts = record(user.counts)
@@ -57,13 +62,14 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest): Prom
       ['注册时间', dateTime(user.createdAt)],
     ]),
   }]
-  if (Object.keys(membership).length) {
+  if (Object.keys(membership).length || membershipDetail.chainVersion !== undefined) {
     sections.push({
       title: '会员权益',
       fields: fields([
         ['权益状态', codeLabel(membership.status)],
         ['生效时间', dateTime(membership.startsAt)],
         ['到期时间', dateTime(membership.endsAt)],
+        ['会员链版本', numberText(membershipDetail.chainVersion)],
       ]),
     })
   }
@@ -173,6 +179,7 @@ async function loadEventDetail(eventId: string, request: AdminDetailRequest): Pr
         ['场地', text(event.venueName)],
         ['地址', text(event.address)],
         ['城市', text(event.cityName)],
+        ['版本', numberText(event.version)],
         ['活动状态', codeLabel(event.status)],
       ]),
     },
