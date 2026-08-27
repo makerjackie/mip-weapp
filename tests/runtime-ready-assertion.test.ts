@@ -111,4 +111,19 @@ describe('runtime ready assertions', () => {
       ],
     })).toEqual({ status: 'resolved', values: { teamId: 'team-real' } })
   })
+
+  it('resolves query values from nested list items', () => {
+    const route = {
+      path: 'packages/member/mip-cooperation/detail/index',
+      query: ['id'],
+      queryFixture: {
+        sourceRoute: 'packages/member/mip-cooperation/list/index',
+        dataPath: 'talents',
+        values: { id: 'cards.0.id' },
+      },
+    }
+    expect(resolveQueryFixtureValues(route, {
+      talents: [{ cards: [{ id: 'card-real' }] }],
+    })).toEqual({ status: 'resolved', values: { id: 'card-real' } })
+  })
 })

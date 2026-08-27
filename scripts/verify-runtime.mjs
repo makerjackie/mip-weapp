@@ -69,6 +69,11 @@ function pathValue(value, keyPath) {
   return keyPath.split('.').reduce((current, key) => current?.[key], value)
 }
 
+function isRuntimeDataPath(value, { allowArrayIndex = false } = {}) {
+  const segment = allowArrayIndex ? '(?:[a-z]\\w*|\\d+)' : '[a-z]\\w*'
+  return new RegExp(`^[a-z]\\w*(?:\\.${segment})*$`, 'i').test(value || '')
+}
+
 function pendingStatesFor(route) {
   return new Set([...pendingStates, ...(route.pendingStates || [])])
 }
@@ -349,17 +354,17 @@ function validateRuntimeContract(runtimePages) {
       const sourceRoute = routesByPath.get(fixture.sourceRoute)
       assert(sourceRoute, `${route.path} queryFixture source route is missing: ${fixture.sourceRoute}`)
       assert(!(sourceRoute.query || []).length, `${route.path} queryFixture source cannot require its own query`)
-      assert(/^[a-z]\w*(?:\.[a-z]\w*)*$/i.test(fixture.dataPath || ''), `${route.path} queryFixture dataPath is invalid`)
+      assert(isRuntimeDataPath(fixture.dataPath), `${route.path} queryFixture dataPath is invalid`)
       assert(fixture.values && typeof fixture.values === 'object', `${route.path} queryFixture values are required`)
       assert(
         JSON.stringify(Object.keys(fixture.values).sort()) === JSON.stringify([...route.query].sort()),
         `${route.path} queryFixture values must match query keys`,
       )
       for (const keyPath of Object.values(fixture.values)) {
-        assert(/^[a-z]\w*(?:\.[a-z]\w*)*$/i.test(keyPath || ''), `${route.path} queryFixture value path is invalid`)
+        assert(isRuntimeDataPath(keyPath, { allowArrayIndex: true }), `${route.path} queryFixture value path is invalid`)
       }
       for (const keyPath of Object.keys(fixture.where || {})) {
-        assert(/^[a-z]\w*(?:\.[a-z]\w*)*$/i.test(keyPath), `${route.path} queryFixture where path is invalid`)
+        assert(isRuntimeDataPath(keyPath), `${route.path} queryFixture where path is invalid`)
       }
       if (fixture.sourceQuery !== undefined) {
         assert(fixture.sourceQuery && typeof fixture.sourceQuery === 'object'
