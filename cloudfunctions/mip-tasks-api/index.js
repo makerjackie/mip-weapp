@@ -9,6 +9,10 @@ const { resolveCaller, trustedWechatIdentity } = require('./lib/identity')
 const { assertFullAccessReady, configuredAgreements } = require('./lib/full-access')
 const { mysqlDatabase } = require('./lib/mysql')
 const { createOutboxWakeup, trustedContextAppId } = require('./lib/outbox-wakeup')
+const {
+  TASK_ADMIN_TRANSPORT,
+  createInternalTaskHandler,
+} = require('./lib/internal-admin-transport')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
@@ -47,8 +51,28 @@ const handler = createHandler({
   },
   assertAdminReady: caller => assertFullAccessReady(database, caller, configuredAgreements()),
 })
+const internalAdminHandler = createInternalTaskHandler({
+  service,
+  secret: process.env.MIP_TASKS_ADMIN_HMAC_SECRET,
+  allowedAppIds,
+  profileRefSecret: process.env.MIP_IDENTITY_PEPPER,
+  now: Date.now,
+  async assertAdminReady(caller) {
+    await assertFullAccessReady(database, caller, configuredAgreements())
+  },
+  afterSuccessfulMutation({ request }) {
+    return outboxWakeup.afterSuccessfulMutation({
+      appId: request.appId,
+      action: request.action,
+      mutationActions: outboxMutationActions,
+    })
+  },
+})
 
 exports.main = async (event = {}) => {
+  if (event?.transport === TASK_ADMIN_TRANSPORT) {
+    return internalAdminHandler(event)
+  }
   const result = await handler(event)
   if (result?.ok === true) {
     await outboxWakeup.afterSuccessfulMutation({

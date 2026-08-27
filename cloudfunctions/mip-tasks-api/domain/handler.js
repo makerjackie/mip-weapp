@@ -32,6 +32,7 @@ const messages = Object.freeze({
   ELIGIBLE_LEVEL_NOT_FOUND: '部分成长等级当前不可用，请刷新后重试',
   FORBIDDEN: '当前没有权限执行此操作',
   IDENTITY_CONFIG_REQUIRED: '身份服务尚未配置',
+  IDEMPOTENCY_CONFLICT: '重复请求的内容不一致',
   INVALID_STATE: '当前任务状态不支持此操作',
   MEMBER_NOT_FOUND: '部分成员当前不可用，请刷新后重试',
   NOT_FOUND: '任务不存在或已经下架',

@@ -10,3 +10,7 @@
 - 附件只接受当前用户拥有的 `READY` / `TASK_ATTACHMENT` 图片素材。
 - 模板只接受平台运营经 `mip-media-api` 上传的 `READY` / `TASK_TEMPLATE` 图片素材。
 - 微信小程序和后续 Web 管理端统一使用 `{ contractVersion: 1, action, input }` 请求；服务端暂时兼容旧扁平请求，但只以顶层 `action` 路由，业务输入不能覆盖动作。
+
+## 管理端内部调用
+
+Web 管理端不直接调用本函数，也不把浏览器 principal 传入任务领域。`mip-admin-api` 从当前服务端 session 解析真实管理员 `userId`，校验平台范围 `tasks.manage` 后，通过 `MIP_TASKS_ADMIN_HMAC_SECRET` 调用 `mip-tasks-api` 的 `mip-tasks-admin/v1` transport。两端必须配置同一、且不同于 Web BFF/login 的至少 32 字符密钥；目标函数名由 `MIP_TASKS_FUNCTION_NAME` 指定（默认 `mip-tasks-api`）。缺少密钥、AppID 不在 allowlist、签名过期/不匹配、未知 action 或字段时拒绝执行。所有内部管理写操作还必须携带签名覆盖的 `idempotencyKey`；任务写入和 `mip_idempotency_keys` 的领取、结果固化在同一 MySQL 事务内完成，使相同请求可以安全重试，不同请求复用同一 key 会被拒绝。部署脚本会为 admin/tasks 两端注入并在云端回读校验该链接；密钥只放 `.env.local` 或函数环境变量。

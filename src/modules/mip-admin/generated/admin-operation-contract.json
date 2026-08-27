@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "operationCount": 146,
+  "operationCount": 158,
   "operations": [
     {
       "action": "mip.admin.session",
@@ -1096,6 +1096,102 @@
       "authentication": "REQUIRED",
       "session": "REQUIRED",
       "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.tasks.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.tasks.get",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.tasks.save",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.tasks.publish",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.tasks.unpublish",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.tasks.delete",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.tasks.assignableMembers.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.tasks.assignMembers",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.tasks.revokeMembers",
+      "kind": "MUTATION",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": false,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.tasks.completions.list",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.tasks.completions.get",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
+      "idempotencyKeyRequired": null
+    },
+    {
+      "action": "mip.admin.tasks.completions.export",
+      "kind": "QUERY",
+      "authentication": "REQUIRED",
+      "session": "REQUIRED",
+      "safeToRetry": true,
       "idempotencyKeyRequired": null
     },
     {

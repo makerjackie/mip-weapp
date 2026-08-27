@@ -20,6 +20,7 @@ const { mysqlDatabase } = require('./lib/mysql')
 const { createRefundWorkerClient } = require('./lib/refund-worker-client')
 const { createCloudExportStorage } = require('./lib/export-storage')
 const { createMatchingClient } = require('./lib/matching-client')
+const { createTaskAdminClient } = require('./lib/task-admin-client')
 const { createOutboxWakeup, trustedContextAppId } = require('./lib/outbox-wakeup')
 const {
   MESSAGE_DISPATCH_ACTIONS,
@@ -100,6 +101,11 @@ const matchingClient = createMatchingClient({
   functionName: process.env.MIP_OPPORTUNITIES_FUNCTION_NAME || 'mip-opportunities-api',
   secret: process.env.MIP_MATCHING_INTERNAL_HMAC_SECRET,
 })
+const taskAdminClient = createTaskAdminClient({
+  cloud,
+  functionName: process.env.MIP_TASKS_FUNCTION_NAME || 'mip-tasks-api',
+  secret: process.env.MIP_TASKS_ADMIN_HMAC_SECRET,
+})
 let initializedRefundWorkerClient
 function dispatchRefund(input) {
   initializedRefundWorkerClient ||= createRefundWorkerClient({
@@ -127,6 +133,7 @@ const service = createAdminService({
   exportStorage,
   reconcileNotificationDelivery: input => notificationReconcileClient.reconcile(input),
   recalculateMatching: input => matchingClient.recalculate(input),
+  tasksClient: taskAdminClient,
   profileRefSecret: process.env.MIP_IDENTITY_PEPPER,
   exportMaxRows: boundedInteger(process.env.MIP_EXPORT_MAX_ROWS, 5_000, 100, 20_000),
   exportMaxBytes: boundedInteger(process.env.MIP_EXPORT_MAX_BYTES, 8 * 1024 * 1024, 1_048_576, 10_485_760),

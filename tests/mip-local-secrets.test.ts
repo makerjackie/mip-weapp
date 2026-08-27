@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   assertMipAiProviderHmacSecretsIsolated,
   assertMipSchedulerHmacSecretsIsolated,
+  assertMipTaskAdminHmacSecretsIsolated,
   assertMipWebAdminHmacSecretsIsolated,
   MIP_STABLE_SECRET_KEYS,
   resolveMipStableSecrets,
@@ -89,6 +90,19 @@ describe('MIP stable local secrets', () => {
     expect(assertMipWebAdminHmacSecretsIsolated({
       MIP_ADMIN_WEB_BFF_HMAC_SECRET: secret('q'),
       MIP_ADMIN_WEB_LOGIN_HMAC_SECRET: secret('l'),
+    })).toBe(true)
+  })
+
+  it('requires the task admin HMAC to differ from every internal HMAC domain', () => {
+    const shared = secret('s')
+    expect(() => assertMipTaskAdminHmacSecretsIsolated({
+      MIP_TASKS_ADMIN_HMAC_SECRET: shared,
+      MIP_OUTBOX_HMAC_SECRET: shared,
+    })).toThrow(/separate trust domain/)
+    expect(assertMipTaskAdminHmacSecretsIsolated({
+      MIP_TASKS_ADMIN_HMAC_SECRET: secret('t'),
+      MIP_ADMIN_WEB_BFF_HMAC_SECRET: secret('q'),
+      MIP_OUTBOX_HMAC_SECRET: secret('o'),
     })).toBe(true)
   })
 

@@ -76,61 +76,78 @@ const WEB_BFF_FOURTH_QUERY_ACTIONS = Object.freeze([
   'mip.admin.exports.status',
   'mip.admin.dashboard',
 ])
+const WEB_BFF_FIFTH_QUERY_ACTIONS = Object.freeze([
+  'mip.admin.tasks.list',
+  'mip.admin.tasks.get',
+  'mip.admin.tasks.assignableMembers.list',
+  'mip.admin.tasks.completions.list',
+  'mip.admin.tasks.completions.get',
+  'mip.admin.tasks.completions.export',
+])
 const WEB_BFF_REVIEWED_MUTATION_MANIFEST = Object.freeze([
-  Object.freeze({
-    action: 'mip.admin.memberships.grant',
-    kind: 'MUTATION',
-    authentication: 'REQUIRED',
-    session: 'REQUIRED',
-    safeToRetry: false,
-    idempotencyKeyRequired: true,
-    inputKeys: Object.freeze(['durationMonths', 'expectedChainVersion', 'reason', 'userId']),
-  }),
-  Object.freeze({
-    action: 'mip.admin.events.clone',
-    kind: 'MUTATION',
-    authentication: 'REQUIRED',
-    session: 'REQUIRED',
-    safeToRetry: false,
-    idempotencyKeyRequired: true,
-    inputKeys: Object.freeze(['expectedVersion', 'sourceEventId']),
-  }),
-  Object.freeze({
-    action: 'mip.admin.events.changeStatus',
-    kind: 'MUTATION',
-    authentication: 'REQUIRED',
-    session: 'REQUIRED',
-    safeToRetry: false,
-    idempotencyKeyRequired: true,
-    inputKeys: Object.freeze(['eventId', 'expectedVersion', 'status']),
-  }),
-  Object.freeze({
-    action: 'mip.admin.events.archive',
-    kind: 'MUTATION',
-    authentication: 'REQUIRED',
-    session: 'REQUIRED',
-    safeToRetry: false,
-    idempotencyKeyRequired: true,
-    inputKeys: Object.freeze(['eventId', 'expectedVersion', 'reason']),
-  }),
-  Object.freeze({
-    action: 'mip.admin.communications.publishEventReminder',
-    kind: 'MUTATION',
-    authentication: 'REQUIRED',
-    session: 'REQUIRED',
-    safeToRetry: false,
-    idempotencyKeyRequired: true,
-    inputKeys: Object.freeze(['eventId', 'expectedVersion', 'sendWechatReminder']),
-  }),
-  Object.freeze({
-    action: 'mip.admin.refunds.submit',
-    kind: 'MUTATION',
-    authentication: 'REQUIRED',
-    session: 'REQUIRED',
-    safeToRetry: false,
-    idempotencyKeyRequired: true,
-    inputKeys: Object.freeze(['orderId', 'reason']),
-  }),
+  domainIdempotentMutation('mip.admin.memberships.grant', ['durationMonths', 'expectedChainVersion', 'reason', 'userId']),
+  domainIdempotentMutation('mip.admin.events.clone', ['expectedVersion', 'sourceEventId']),
+  domainIdempotentMutation('mip.admin.events.changeStatus', ['eventId', 'expectedVersion', 'status']),
+  domainIdempotentMutation('mip.admin.events.archive', ['eventId', 'expectedVersion', 'reason']),
+  domainIdempotentMutation('mip.admin.communications.publishEventReminder', ['eventId', 'expectedVersion', 'sendWechatReminder']),
+  domainIdempotentMutation('mip.admin.refunds.submit', ['orderId', 'reason']),
+
+  reviewedMutation('mip.admin.users.update', ['userId', 'expectedVersion', 'fields']),
+  reviewedMutation('mip.admin.users.changePrimaryBranch', ['userId', 'targetBranchId', 'expectedVersion', 'reason']),
+  reviewedMutation('mip.admin.users.setControl', ['userId', 'controlType', 'active', 'reason']),
+  reviewedMutation('mip.admin.roles.set', ['userId', 'roleKey', 'active'], ['scopeId', 'branchId']),
+  reviewedMutation('mip.admin.rolePolicies.update', ['roleKey', 'expectedVersion'], ['capabilities', 'reset']),
+  reviewedMutation('mip.admin.branches.create', ['branchKey', 'name', 'cityName', 'summary']),
+  reviewedMutation('mip.admin.branches.update', ['branchId', 'expectedVersion', 'name', 'cityName', 'summary']),
+  reviewedMutation('mip.admin.branches.changeStatus', ['branchId', 'expectedVersion', 'status']),
+
+  reviewedMutation('mip.admin.events.save', ['draft'], ['eventId', 'expectedVersion']),
+  reviewedMutation('mip.admin.events.registrations.review', ['eventId', 'registrationId', 'expectedVersion', 'decision']),
+  reviewedMutation('mip.admin.events.checkIn', ['eventId', 'registrationId', 'expectedVersion']),
+  reviewedMutation('mip.admin.events.undoCheckIn', ['eventId', 'registrationId', 'expectedVersion', 'reason']),
+  reviewedMutation('mip.admin.events.album.review', ['eventId', 'photoId', 'expectedVersion', 'decision', 'reason']),
+  reviewedMutation('mip.admin.events.policy.save', ['expectedVersion', 'cancellationHoursBeforeStart']),
+  reviewedMutation('mip.admin.events.tags.replace', ['eventId', 'expectedVersion', 'tagIds']),
+  reviewedMutation('mip.admin.events.catalog.save', ['kind', 'name', 'description', 'sortOrder'], ['key', 'catalogId', 'expectedVersion']),
+  reviewedMutation('mip.admin.events.catalog.changeStatus', ['kind', 'catalogId', 'expectedVersion', 'status']),
+  reviewedMutation('mip.admin.events.catalog.archive', ['kind', 'catalogId', 'expectedVersion', 'reason']),
+
+  reviewedMutation('mip.admin.announcements.save', ['scopeType', 'title', 'summary', 'body', 'visibleFrom'], ['announcementId', 'expectedVersion', 'branchId', 'targetType', 'targetId', 'visibleUntil']),
+  reviewedMutation('mip.admin.announcements.publish', ['announcementId', 'expectedVersion']),
+  reviewedMutation('mip.admin.announcements.withdraw', ['announcementId', 'expectedVersion', 'reason']),
+  reviewedMutation('mip.admin.announcements.pin', ['announcementId', 'expectedVersion', 'pinned']),
+  reviewedMutation('mip.admin.messageCampaigns.save', ['scopeType', 'audienceType', 'recipientRefs', 'name', 'title', 'body'], ['campaignId', 'expectedVersion', 'branchId']),
+  reviewedMutation('mip.admin.messageCampaigns.snapshot', ['campaignId', 'expectedVersion']),
+  domainIdempotentMutation('mip.admin.messageCampaigns.schedule', ['campaignId', 'expectedVersion', 'scheduledFor'], ['expectedDispatchVersion']),
+  domainIdempotentMutation('mip.admin.messageCampaigns.cancelSchedule', ['campaignId', 'expectedVersion', 'expectedDispatchVersion', 'reason']),
+  domainIdempotentMutation('mip.admin.messageCampaigns.publish', ['campaignId', 'expectedVersion']),
+  reviewedMutation('mip.admin.messageCampaigns.withdraw', ['campaignId', 'expectedVersion', 'reason']),
+  reviewedMutation('mip.admin.messageTemplates.save', ['scopeType', 'name', 'title', 'body'], ['templateId', 'expectedVersion', 'branchId']),
+  reviewedMutation('mip.admin.messageTemplates.activate', ['templateId', 'expectedVersion']),
+  reviewedMutation('mip.admin.messageTemplates.archive', ['templateId', 'expectedVersion']),
+  reviewedMutation('mip.admin.communityReports.claim', ['reportId', 'expectedVersion', 'reason']),
+  reviewedMutation('mip.admin.communityReports.close', ['reportId', 'expectedVersion', 'outcome', 'reason']),
+  reviewedMutation('mip.admin.opportunities.save', ['draft'], ['opportunityId', 'expectedVersion']),
+  reviewedMutation('mip.admin.opportunities.publish', ['opportunityId', 'expectedVersion']),
+  reviewedMutation('mip.admin.opportunities.end', ['opportunityId', 'expectedVersion']),
+  reviewedMutation('mip.admin.opportunities.unpublish', ['opportunityId', 'expectedVersion', 'reason']),
+  reviewedMutation('mip.admin.opportunities.archive', ['opportunityId', 'expectedVersion', 'reason']),
+  reviewedMutation('mip.admin.userContent.save', ['kind', 'ownerUserId', 'draft'], ['contentId', 'expectedVersion']),
+  reviewedMutation('mip.admin.userContent.unpublish', ['kind', 'contentId', 'expectedVersion', 'reason']),
+  reviewedMutation('mip.admin.userContent.archive', ['kind', 'contentId', 'expectedVersion', 'reason']),
+  reviewedMutation('mip.admin.knowledge.contents.save', ['categoryId', 'contentType', 'title', 'summary', 'accessType', 'commentsEnabled', 'moderationMode'], ['contentId', 'expectedVersion', 'sourceId', 'bodyText', 'externalUrl', 'channelFinderUserName', 'channelFeedId', 'coverAssetId', 'authorName']),
+  reviewedMutation('mip.admin.knowledge.contents.review', ['contentId', 'expectedVersion', 'decision'], ['reason']),
+  domainIdempotentMutation('mip.admin.knowledge.schedules.save', ['sourceId', 'categoryId', 'dailyTime', 'timeZone'], ['scheduleId', 'expectedVersion', 'status']),
+  reviewedMutation('mip.admin.badges.grant', ['userId', 'badgeId', 'reason']),
+  reviewedMutation('mip.admin.badges.revoke', ['awardId', 'expectedVersion', 'reason']),
+  domainIdempotentMutation('mip.admin.growth.adjust', ['userId', 'metric', 'deltaValue', 'reason']),
+
+  domainIdempotentMutation('mip.admin.tasks.save', ['task'], ['taskId', 'expectedVersion']),
+  domainIdempotentMutation('mip.admin.tasks.publish', ['taskId', 'expectedVersion']),
+  domainIdempotentMutation('mip.admin.tasks.unpublish', ['taskId', 'expectedVersion']),
+  domainIdempotentMutation('mip.admin.tasks.delete', ['taskId', 'expectedVersion']),
+  domainIdempotentMutation('mip.admin.tasks.assignMembers', ['taskId', 'memberRefs', 'expectedVersion']),
+  domainIdempotentMutation('mip.admin.tasks.revokeMembers', ['taskId', 'memberRefs', 'expectedVersion']),
 ])
 const WEB_BFF_QUERY_ACTIONS = createQueryActionAllowlist(
   [
@@ -138,6 +155,7 @@ const WEB_BFF_QUERY_ACTIONS = createQueryActionAllowlist(
     ...WEB_BFF_SECOND_QUERY_ACTIONS,
     ...WEB_BFF_THIRD_QUERY_ACTIONS,
     ...WEB_BFF_FOURTH_QUERY_ACTIONS,
+    ...WEB_BFF_FIFTH_QUERY_ACTIONS,
   ],
   publicOperationContract,
 )
@@ -172,6 +190,26 @@ function createQueryActionAllowlist(actions, contract) {
   return allowlist
 }
 
+function reviewedMutation(action, requiredInputKeys, optionalInputKeys = [], options = {}) {
+  return Object.freeze({
+    action,
+    kind: 'MUTATION',
+    authentication: 'REQUIRED',
+    session: 'REQUIRED',
+    safeToRetry: false,
+    idempotencyKeyRequired: true,
+    requiredInputKeys: Object.freeze([...requiredInputKeys]),
+    optionalInputKeys: Object.freeze([...optionalInputKeys]),
+    forwardIdempotencyKey: options.forwardIdempotencyKey === true,
+  })
+}
+
+function domainIdempotentMutation(action, requiredInputKeys, optionalInputKeys = []) {
+  return reviewedMutation(action, requiredInputKeys, optionalInputKeys, {
+    forwardIdempotencyKey: true,
+  })
+}
+
 function createReviewedMutationActionAllowlist(manifest, contract) {
   if (!Array.isArray(manifest)
     || new Set(manifest.map(item => item?.action)).size !== manifest.length
@@ -188,9 +226,8 @@ function createReviewedMutationActionAllowlist(manifest, contract) {
       || expected.session !== 'REQUIRED'
       || expected.safeToRetry !== false
       || expected.idempotencyKeyRequired !== true
-      || !Array.isArray(expected.inputKeys)
-      || new Set(expected.inputKeys).size !== expected.inputKeys.length
-      || expected.inputKeys.some(key => typeof key !== 'string' || !key)) {
+      || typeof expected.forwardIdempotencyKey !== 'boolean'
+      || !validReviewedInputKeys(expected.requiredInputKeys, expected.optionalInputKeys)) {
       throw new Error('WEB_BFF_MUTATION_CONTRACT_INVALID')
     }
     const operation = operationByAction.get(expected.action)
@@ -233,7 +270,9 @@ function createWebBffRoute({
         APPID: verified.principal.appId,
         OPENID: verified.principal.openId,
       })
-      const { action, input } = normalizeAdminRequest(verified.request)
+      const normalized = normalizeAdminRequest(verified.request)
+      const { action } = normalized
+      const input = applicationInput(action, normalized.input)
       await replayGuard.consume({
         appId: verified.principal.appId,
         nonce: verified.nonce,
@@ -312,8 +351,8 @@ function verifyWebBffEnvelope(value, { secret, now = Date.now() } = {}) {
     && !validMutationIdempotencyKey(value.request.idempotencyKey)) {
     throw new Error('VALIDATION_FAILED')
   }
-  const inputKeys = reviewedMutationInputKeys(value.request.action)
-  if (inputKeys && !hasExactInputKeys(value.request.input, inputKeys)) {
+  const inputSchema = reviewedMutationInputSchema(value.request.action)
+  if (inputSchema && !hasReviewedInputKeys(value.request.input, inputSchema)) {
     throw new Error('VALIDATION_FAILED')
   }
 
@@ -385,18 +424,42 @@ function validMutationIdempotencyKey(value) {
     && /^[A-Za-z0-9_.:-]{1,128}$/.test(value.trim())
 }
 
-function reviewedMutationInputKeys(action) {
-  return WEB_BFF_REVIEWED_MUTATION_MANIFEST.find(item => item.action === action)?.inputKeys || null
+function validReviewedInputKeys(required, optional) {
+  if (!Array.isArray(required) || !Array.isArray(optional)) return false
+  const all = [...required, ...optional]
+  return new Set(all).size === all.length
+    && all.every(key => typeof key === 'string' && key.length > 0)
 }
 
-function hasExactInputKeys(value, expectedKeys) {
-  return isPlainRecord(value)
-    && hasExactKeys(value, new Set(expectedKeys))
+function reviewedMutationInputSchema(action) {
+  const entry = WEB_BFF_REVIEWED_MUTATION_MANIFEST.find(item => item.action === action)
+  return entry
+    ? { required: entry.requiredInputKeys, optional: entry.optionalInputKeys }
+    : null
+}
+
+function hasReviewedInputKeys(value, schema) {
+  if (!isPlainRecord(value)) return false
+  const keys = Reflect.ownKeys(value)
+  const allowed = new Set([...schema.required, ...schema.optional])
+  return keys.every(key => typeof key === 'string' && allowed.has(key))
+    && schema.required.every(key => Object.hasOwn(value, key))
+}
+
+function applicationInput(action, input) {
+  const manifest = WEB_BFF_REVIEWED_MUTATION_MANIFEST.find(item => item.action === action)
+  if (manifest?.forwardIdempotencyKey === true || !Object.hasOwn(input, 'idempotencyKey')) {
+    return input
+  }
+  const output = { ...input }
+  delete output.idempotencyKey
+  return output
 }
 
 module.exports = {
   WEB_BFF_MAX_CLOCK_SKEW_MS,
   WEB_BFF_FIRST_QUERY_ACTIONS,
+  WEB_BFF_FIFTH_QUERY_ACTIONS,
   WEB_BFF_FOURTH_QUERY_ACTIONS,
   WEB_BFF_MUTATION_ACTIONS,
   WEB_BFF_REVIEWED_MUTATION_MANIFEST,

@@ -17,6 +17,7 @@ const { buildTaskWorkbook } = require('./workbook')
 const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
 const { createUserTaskCursor, readUserTaskCursor } = require('../lib/user-task-cursor')
 const { appendLevelTransition } = require('./level-transitions')
+const { idempotentMutation } = require('./idempotency')
 
 const PLATFORM_SCOPE_ID = '00000000-0000-0000-0000-000000000000'
 const TASKS_CAPABILITY = 'tasks.manage'
@@ -322,16 +323,24 @@ function createTaskRepository(database, options = {}) {
     return rows.map(taskEligibleLevelDto)
   }
 
-  async function saveTask(caller, value) {
+  async function saveTask(caller, value, preflight) {
     const draft = normalizeTask(value.task)
-    const taskId = value.taskId ? requiredId(value.taskId) : createId()
+    const requestedTaskId = value.taskId ? requiredId(value.taskId) : null
     const version = value.taskId ? expectedVersion(value.expectedVersion) : null
-    return database.transaction(async (tx) => {
-      const roleKey = await assertTasksAdmin(tx, caller, true)
+    return idempotentMutation(database, {
+      caller,
+      operation: 'tasks.admin.save',
+      idempotencyKey: value.idempotencyKey,
+      request: { taskId: requestedTaskId, expectedVersion: version, task: draft },
+      createId,
+      authorize: tx => assertTasksAdmin(tx, caller, true),
+      preflight,
+      work: async (tx, roleKey) => {
+      const taskId = requestedTaskId || createId()
       if (draft.templateAssetId) await assertTaskTemplate(tx, caller, draft.templateAssetId)
       let auditAction = 'task.created'
       let status = 'DRAFT'
-      if (!value.taskId) {
+      if (!requestedTaskId) {
         await tx.query(
           `INSERT INTO mip_task_cards (
              id, app_id, name, content, reward_experience, attachment_required,
@@ -364,7 +373,7 @@ function createTaskRepository(database, options = {}) {
       }
       let previousEligibleLevelIds
       let eligibleLevelIds
-      if (value.taskId && draft.eligibleLevelIds === undefined) {
+      if (requestedTaskId && draft.eligibleLevelIds === undefined) {
         previousEligibleLevelIds = await listTaskLevelRuleIds(tx, caller.appId, taskId)
         eligibleLevelIds = previousEligibleLevelIds
       }
@@ -395,10 +404,11 @@ function createTaskRepository(database, options = {}) {
       )
       const levelsByTask = await listTaskEligibleLevels(tx, caller.appId, [taskId])
       return adminTaskDto(row, false, levelsByTask.get(taskId) || [])
+      },
     })
   }
 
-  async function transitionTask(caller, value, targetStatus) {
+  async function transitionTask(caller, value, targetStatus, preflight) {
     const taskId = requiredId(value.taskId)
     const version = expectedVersion(value.expectedVersion)
     const allowed = {
@@ -406,8 +416,15 @@ function createTaskRepository(database, options = {}) {
       UNPUBLISHED: new Set(['PUBLISHED']),
       DELETED: new Set(['DRAFT', 'UNPUBLISHED', 'PUBLISHED']),
     }
-    return database.transaction(async (tx) => {
-      const roleKey = await assertTasksAdmin(tx, caller, true)
+    return idempotentMutation(database, {
+      caller,
+      operation: `tasks.admin.transition.${targetStatus.toLowerCase()}`,
+      idempotencyKey: value.idempotencyKey,
+      request: { taskId, expectedVersion: version, targetStatus },
+      createId,
+      authorize: tx => assertTasksAdmin(tx, caller, true),
+      preflight,
+      work: async (tx, roleKey) => {
       const current = await tx.one(
         `SELECT * FROM mip_task_cards WHERE app_id = ? AND id = ? FOR UPDATE`,
         [caller.appId, taskId],
@@ -451,6 +468,7 @@ function createTaskRepository(database, options = {}) {
       )
       const levelsByTask = await listTaskEligibleLevels(tx, caller.appId, [taskId])
       return adminTaskDto(row, false, levelsByTask.get(taskId) || [])
+      },
     })
   }
 
@@ -507,9 +525,22 @@ function createTaskRepository(database, options = {}) {
     const version = expectedVersion(value.expectedVersion)
     const userIds = [...new Set(input.memberRefs.map(
       ref => readProfileRef(ref, caller.appId, caller.profileRefSecret),
-    ))]
-    return database.transaction(async (tx) => {
-      const roleKey = await assertTasksAdmin(tx, caller, true)
+    ))].sort()
+    return idempotentMutation(database, {
+      caller,
+      operation: targetStatus === 'ACTIVE'
+        ? 'tasks.admin.assign-members'
+        : 'tasks.admin.revoke-members',
+      idempotencyKey: value.idempotencyKey,
+      request: {
+        taskId: input.taskId,
+        expectedVersion: version,
+        memberUserIds: userIds,
+        targetStatus,
+      },
+      createId,
+      authorize: tx => assertTasksAdmin(tx, caller, true),
+      work: async (tx, roleKey) => {
       const task = await tx.one(
         `SELECT status, assignment_mode, version FROM mip_task_cards
          WHERE app_id = ? AND id = ? FOR UPDATE`,
@@ -558,6 +589,7 @@ function createTaskRepository(database, options = {}) {
         targetStatus === 'ACTIVE' ? 'task.assignments.assigned' : 'task.assignments.revoked',
         input.taskId, { requestedCount: userIds.length, changedCount: changed })
       return { taskId: input.taskId, requestedCount: userIds.length, changedCount: changed }
+      },
     })
   }
 

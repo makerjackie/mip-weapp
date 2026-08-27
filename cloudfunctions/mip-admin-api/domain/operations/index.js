@@ -10,5 +10,6 @@ module.exports = Object.freeze([
   require('./knowledge'),
   require('./opportunities'),
   require('./growth'),
+  require('./tasks'),
   require('./application-workflow'),
 ])

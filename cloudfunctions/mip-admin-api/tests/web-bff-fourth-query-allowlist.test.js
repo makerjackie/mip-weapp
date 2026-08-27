@@ -4,6 +4,7 @@ const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const {
   WEB_BFF_FIRST_QUERY_ACTIONS,
+  WEB_BFF_FIFTH_QUERY_ACTIONS,
   WEB_BFF_FOURTH_QUERY_ACTIONS,
   WEB_BFF_QUERY_ACTIONS,
   WEB_BFF_SECOND_QUERY_ACTIONS,
@@ -31,6 +32,7 @@ describe('Web BFF fourth query allowlist', () => {
       ...WEB_BFF_SECOND_QUERY_ACTIONS,
       ...WEB_BFF_THIRD_QUERY_ACTIONS,
       ...WEB_BFF_FOURTH_QUERY_ACTIONS,
+      ...WEB_BFF_FIFTH_QUERY_ACTIONS,
     ]
 
     assert.deepEqual(WEB_BFF_FOURTH_QUERY_ACTIONS, EXPECTED_FOURTH_QUERY_ACTIONS)

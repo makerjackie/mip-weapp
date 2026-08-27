@@ -24,6 +24,7 @@ const { createAdminOrders } = require('./orders')
 const { createAdminPaymentAttempts } = require('./payment-attempts')
 const { createAdminUsers } = require('./users')
 const { createAdminUserContentGovernance } = require('./user-content-governance')
+const { createAdminTasks } = require('./tasks')
 const { AdminError } = require('./validation')
 
 function createAdminService({
@@ -51,6 +52,7 @@ function createAdminService({
     throw new AdminError('DELIVERY_RECONCILE_CONFIG_REQUIRED', '通知投递复核服务尚未配置')
   },
   recalculateMatching = async () => { throw new AdminError('MATCHING_DISPATCH_CONFIG_REQUIRED', '机会撮合重算服务尚未配置') },
+  tasksClient = null,
 }) {
   const access = createAdminAccess({ repository })
   const {
@@ -226,6 +228,12 @@ function createAdminService({
     saveGrowthRule,
   } = createAdminGrowth({ access, repository })
   const { listUnifiedBenefitLedger } = createAdminBenefitLedger({ access, repository })
+  const taskAdmin = createAdminTasks({
+    access,
+    client: tasksClient || {
+      execute: async () => { throw new AdminError('TASKS_DISPATCH_CONFIG_REQUIRED', '任务服务尚未配置', true) },
+    },
+  })
   const {
     getMembership,
     grantMembership,
@@ -439,6 +447,7 @@ function createAdminService({
     listGrowthLevels,
     listGrowthRules,
     listUnifiedBenefitLedger,
+    ...taskAdmin,
     listOpportunities,
     listOrders,
     listPaymentAttempts,

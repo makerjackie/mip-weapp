@@ -162,6 +162,19 @@ const expectedOperations = Object.freeze({
   'mip.admin.badges.grant': ['GROWTH', 'MUTATION', 'grantBadge'],
   'mip.admin.badges.revoke': ['GROWTH', 'MUTATION', 'revokeBadge'],
 
+  'mip.admin.tasks.list': ['TASKS', 'QUERY', 'listTasks'],
+  'mip.admin.tasks.get': ['TASKS', 'QUERY', 'getTask'],
+  'mip.admin.tasks.save': ['TASKS', 'MUTATION', 'saveTask'],
+  'mip.admin.tasks.publish': ['TASKS', 'MUTATION', 'publishTask'],
+  'mip.admin.tasks.unpublish': ['TASKS', 'MUTATION', 'unpublishTask'],
+  'mip.admin.tasks.delete': ['TASKS', 'MUTATION', 'deleteTask'],
+  'mip.admin.tasks.assignableMembers.list': ['TASKS', 'QUERY', 'listAssignableMembers'],
+  'mip.admin.tasks.assignMembers': ['TASKS', 'MUTATION', 'assignMembers'],
+  'mip.admin.tasks.revokeMembers': ['TASKS', 'MUTATION', 'revokeMembers'],
+  'mip.admin.tasks.completions.list': ['TASKS', 'QUERY', 'listCompletions'],
+  'mip.admin.tasks.completions.get': ['TASKS', 'QUERY', 'getCompletion'],
+  'mip.admin.tasks.completions.export': ['TASKS', 'QUERY', 'exportCompletions'],
+
   'mip.admin.dashboard': ['APPLICATION_WORKFLOW', 'QUERY', 'getDashboard'],
   'mip.admin.dashboard.overview.get': ['APPLICATION_WORKFLOW', 'QUERY', 'getDashboardOverview'],
   'mip.admin.exports.status': ['APPLICATION_WORKFLOW', 'QUERY', 'getExportStatus'],
@@ -211,12 +224,12 @@ function manifest(owner, operations) {
 }
 
 describe('admin operation catalog', () => {
-  it('freezes the exact 146 business actions, owners, and kinds while keeping health separate', () => {
+  it('freezes the exact 158 business actions, owners, and kinds while keeping health separate', () => {
     const handlerActions = Object.keys(actions).filter(action => action !== 'health')
     const expectedActions = Object.keys(expectedOperations)
 
-    assert.equal(expectedActions.length, 146)
-    assert.equal(operationCatalog.length, 146)
+    assert.equal(expectedActions.length, 158)
+    assert.equal(operationCatalog.length, 158)
     assert.deepEqual(sorted(handlerActions), sorted(expectedActions))
     assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(expectedActions))
     assert.equal(operationByAction.health, undefined)

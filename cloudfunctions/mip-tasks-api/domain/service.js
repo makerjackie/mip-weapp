@@ -16,16 +16,16 @@ function createTaskService(repository, contentSafety) {
     getCompletion: (caller, event) => repository.getCompletion(caller, event),
     exportCompletions: (caller, event) => repository.exportCompletions(caller, event),
     async saveTask(caller, event) {
-      await repository.getAdminSession(caller)
-      await contentSafety.assertSafe(caller, [event?.task?.name, event?.task?.content])
-      return repository.saveTask(caller, event)
+      return repository.saveTask(caller, event, () => (
+        contentSafety.assertSafe(caller, [event?.task?.name, event?.task?.content])
+      ))
     },
     async transitionTask(caller, event, targetStatus) {
-      if (targetStatus === 'PUBLISHED') {
+      return repository.transitionTask(caller, event, targetStatus, async () => {
+        if (targetStatus !== 'PUBLISHED') return
         const current = await repository.getAdminTask(caller, event)
         await contentSafety.assertSafe(caller, [current.name, current.content])
-      }
-      return repository.transitionTask(caller, event, targetStatus)
+      })
     },
   }
 }

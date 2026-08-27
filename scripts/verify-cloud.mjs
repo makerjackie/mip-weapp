@@ -104,6 +104,7 @@ assertOutboxWakeupEnvironment(coreDetails.get('admin'), coreDetails.get('outbox'
 assertOutboxDependencies(coreDetails.get('outbox'))
 assertNotificationEnvironment(coreDetails.get('notifications'), coreDetails.get('notification'))
 assertRefundDispatchEnvironment(coreDetails.get('admin'))
+assertTaskAdminEnvironment(coreDetails.get('admin'), coreDetails.get('tasks'))
 assertAdminWebPublicNetwork(coreDetails.get('admin'))
 assertKnowledgeEnvironment(coreDetails.get('admin'))
 assertOwnerTestMembershipEnvironment(coreDetails.get('ledger'))
@@ -379,6 +380,22 @@ function assertRefundDispatchEnvironment(detail) {
       String(variables.MIP_ADMIN_WEB_LOGIN_CONFIRM_URL || ''),
     )) {
     throw new Error('Admin worker links or internal HMAC configuration are incomplete')
+  }
+}
+
+function assertTaskAdminEnvironment(adminDetail, tasksDetail) {
+  const admin = environmentVariables(adminDetail)
+  const tasks = environmentVariables(tasksDetail)
+  const taskSecret = String(admin.MIP_TASKS_ADMIN_HMAC_SECRET || '')
+  const reused = Object.entries(admin).some(([key, value]) => key !== 'MIP_TASKS_ADMIN_HMAC_SECRET'
+    && key.endsWith('_HMAC_SECRET')
+    && String(value || '') === taskSecret)
+  if (admin.MIP_TASKS_FUNCTION_NAME !== functionNames.tasks
+    || taskSecret.length < 32
+    || String(tasks.MIP_TASKS_ADMIN_HMAC_SECRET || '').length < 32
+    || admin.MIP_TASKS_ADMIN_HMAC_SECRET !== tasks.MIP_TASKS_ADMIN_HMAC_SECRET
+    || reused) {
+    throw new Error('Task admin adapter target or internal HMAC configuration is incomplete')
   }
 }
 

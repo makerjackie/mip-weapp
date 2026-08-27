@@ -32,6 +32,7 @@ import { createMipCoreFunctionManifest } from './lib/mip-function-manifest.mjs'
 import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
 import {
   assertMipSchedulerHmacSecretsIsolated,
+  assertMipTaskAdminHmacSecretsIsolated,
   resolveMipStableSecrets,
 } from './lib/mip-local-secrets.mjs'
 import {
@@ -147,6 +148,7 @@ const stableSecretValues = resolveMipStableSecrets({
   generate: () => randomBytes(48).toString('base64url'),
 }).values
 assertMipSchedulerHmacSecretsIsolated(stableSecretValues)
+assertMipTaskAdminHmacSecretsIsolated(stableSecretValues)
 
 let vpcId = String(env.MIP_DB_VPC_ID || findString(target.mysql, ['vpcid', 'vpc_id']) || '').trim()
 let subnetId = String(env.MIP_DB_SUBNET_ID || findString(target.mysql, ['subnetid', 'subnet_id']) || '').trim()
@@ -284,6 +286,7 @@ const secrets = Object.freeze({
   messageDispatchHmac: stableSecretValues.MIP_MESSAGE_DISPATCH_HMAC_SECRET,
   adminWebBffHmac: stableSecretValues.MIP_ADMIN_WEB_BFF_HMAC_SECRET,
   adminWebLoginHmac: stableSecretValues.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET,
+  tasksAdminHmac: stableSecretValues.MIP_TASKS_ADMIN_HMAC_SECRET,
   knowledgeSchedulerHmac: stableSecretValues.MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET,
   refundWorkerHmac: stableSecretValues.MIP_REFUND_WORKER_HMAC_SECRET,
   notificationEncryption: stableSecretValues.MIP_NOTIFICATION_ENCRYPTION_KEY,
@@ -931,6 +934,7 @@ function environmentForRole(role, options) {
     },
     admin: {
       ...agreementEnvironment,
+      MIP_TASKS_FUNCTION_NAME: options.functionNames.tasks,
       MIP_PHONE_ENCRYPTION_KEY: options.secrets.phoneEncryption,
       MIP_REFUND_FUNCTION_NAME: options.functionNames.refund,
       MIP_REFUND_WORKER_HMAC_SECRET: options.secrets.refundWorkerHmac,
@@ -940,6 +944,7 @@ function environmentForRole(role, options) {
       MIP_MESSAGE_DISPATCH_HMAC_SECRET: options.secrets.messageDispatchHmac,
       MIP_ADMIN_WEB_BFF_HMAC_SECRET: options.secrets.adminWebBffHmac,
       MIP_ADMIN_WEB_LOGIN_HMAC_SECRET: options.secrets.adminWebLoginHmac,
+      MIP_TASKS_ADMIN_HMAC_SECRET: options.secrets.tasksAdminHmac,
       MIP_ADMIN_WEB_LOGIN_CONFIRM_URL: adminWebLoginConfirmUrl,
       MIP_MESSAGE_SCHEDULER_FUNCTION_NAME: options.functionNames.scheduler,
       MIP_KNOWLEDGE_SCHEDULER_FUNCTION_NAME: options.functionNames.knowledgeScheduler,
@@ -952,7 +957,10 @@ function environmentForRole(role, options) {
     },
     growth: { MIP_GROWTH_HMAC_SECRET: options.secrets.growthHmac },
     game: agreementEnvironment,
-    tasks: agreementEnvironment,
+    tasks: {
+      ...agreementEnvironment,
+      MIP_TASKS_ADMIN_HMAC_SECRET: options.secrets.tasksAdminHmac,
+    },
     banners: agreementEnvironment,
     ai: {
       MIP_AI_HMAC_SECRET: options.secrets.aiHmac,

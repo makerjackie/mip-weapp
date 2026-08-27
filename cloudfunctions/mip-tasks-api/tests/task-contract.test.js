@@ -196,7 +196,10 @@ test('publish checks current display content before changing state', async () =>
   const calls = []
   const repository = {
     getAdminTask: async () => ({ id: taskId, name: '任务一', content: '任务说明' }),
-    transitionTask: async (_caller, _event, status) => ({ status }),
+    transitionTask: async (_caller, _event, status, preflight) => {
+      await preflight()
+      return { status }
+    },
   }
   const service = createTaskService(repository, {
     async assertSafe(_caller, values) { calls.push(values) },
@@ -209,8 +212,7 @@ test('publish checks current display content before changing state', async () =>
 test('task save authorizes capability before using the content safety API', async () => {
   let safetyCalled = false
   const service = createTaskService({
-    getAdminSession: async () => { throw new Error('FORBIDDEN') },
-    saveTask: async () => { throw new Error('unexpected save') },
+    saveTask: async () => { throw new Error('FORBIDDEN') },
   }, {
     async assertSafe() { safetyCalled = true },
   })

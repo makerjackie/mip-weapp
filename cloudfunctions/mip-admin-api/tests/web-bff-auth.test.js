@@ -106,6 +106,7 @@ describe('Web BFF trusted query adapter', () => {
   })
 
   it('derives an exact reviewed mutation manifest and rejects metadata drift', () => {
+    assert.equal(WEB_BFF_REVIEWED_MUTATION_MANIFEST.length, 59)
     assert.deepEqual(
       [...WEB_BFF_MUTATION_ACTIONS],
       WEB_BFF_REVIEWED_MUTATION_MANIFEST.map(item => item.action),
@@ -131,6 +132,12 @@ describe('Web BFF trusted query adapter', () => {
     }
     assert.throws(
       () => createReviewedMutationActionAllowlist(WEB_BFF_REVIEWED_MUTATION_MANIFEST, contractDrift),
+      /WEB_BFF_MUTATION_CONTRACT_INVALID/,
+    )
+    const invalidForwardPolicy = WEB_BFF_REVIEWED_MUTATION_MANIFEST.map(item => ({ ...item }))
+    invalidForwardPolicy[0].forwardIdempotencyKey = 'yes'
+    assert.throws(
+      () => createReviewedMutationActionAllowlist(invalidForwardPolicy, publicOperationContract),
       /WEB_BFF_MUTATION_CONTRACT_INVALID/,
     )
   })
@@ -225,6 +232,94 @@ describe('Web BFF trusted query adapter', () => {
       assert.equal(result.error.code, 'VALIDATION_FAILED', action)
     }
     assert.equal(calls.length, 0)
+  })
+
+  it('accepts reviewed optional fields and rejects unknown fields for all reviewed mutations', async () => {
+    const accepted = fixture()
+    for (const mutation of WEB_BFF_REVIEWED_MUTATION_MANIFEST) {
+      const input = Object.fromEntries(
+        [...mutation.requiredInputKeys, ...mutation.optionalInputKeys].map(key => [key, `fixture-${key}`]),
+      )
+      const result = await accepted.route(envelope(mutation.action, {
+        idempotencyKey: `web-structural-${mutation.action.split('.').pop()}`,
+        input,
+      }))
+      assert.equal(result.ok, true, mutation.action)
+    }
+    assert.equal(accepted.calls.length, 59)
+
+    const rejected = fixture()
+    for (const mutation of WEB_BFF_REVIEWED_MUTATION_MANIFEST) {
+      const input = Object.fromEntries(
+        mutation.requiredInputKeys.map(key => [key, `fixture-${key}`]),
+      )
+      input.browserControlledField = true
+      const result = await rejected.route(envelope(mutation.action, {
+        idempotencyKey: `web-unknown-${mutation.action.split('.').pop()}`,
+        input,
+      }))
+      assert.equal(result.ok, false, mutation.action)
+      assert.equal(result.error.code, 'VALIDATION_FAILED', mutation.action)
+    }
+    assert.equal(rejected.calls.length, 0)
+  })
+
+  it('forwards transport idempotency only to domain-idempotent mutations', async () => {
+    const { calls, route } = fixture()
+    for (const mutation of WEB_BFF_REVIEWED_MUTATION_MANIFEST) {
+      const input = Object.fromEntries(
+        mutation.requiredInputKeys.map(key => [key, `fixture-${key}`]),
+      )
+      const result = await route(envelope(mutation.action, {
+        idempotencyKey: 'web-forward-policy-0001',
+        input,
+      }))
+      assert.equal(result.ok, true, mutation.action)
+    }
+
+    assert.equal(calls.length, 59)
+    for (let index = 0; index < WEB_BFF_REVIEWED_MUTATION_MANIFEST.length; index += 1) {
+      const mutation = WEB_BFF_REVIEWED_MUTATION_MANIFEST[index]
+      assert.equal(
+        Object.hasOwn(calls[index].input, 'idempotencyKey'),
+        mutation.forwardIdempotencyKey,
+        mutation.action,
+      )
+    }
+    assert.deepEqual(
+      WEB_BFF_REVIEWED_MUTATION_MANIFEST
+        .filter(item => item.forwardIdempotencyKey)
+        .map(item => item.action),
+      [
+        'mip.admin.memberships.grant',
+        'mip.admin.events.clone',
+        'mip.admin.events.changeStatus',
+        'mip.admin.events.archive',
+        'mip.admin.communications.publishEventReminder',
+        'mip.admin.refunds.submit',
+        'mip.admin.messageCampaigns.schedule',
+        'mip.admin.messageCampaigns.cancelSchedule',
+        'mip.admin.messageCampaigns.publish',
+        'mip.admin.knowledge.schedules.save',
+        'mip.admin.growth.adjust',
+        'mip.admin.tasks.save',
+        'mip.admin.tasks.publish',
+        'mip.admin.tasks.unpublish',
+        'mip.admin.tasks.delete',
+        'mip.admin.tasks.assignMembers',
+        'mip.admin.tasks.revokeMembers',
+      ],
+    )
+  })
+
+  it('does not leak an optional query transport key into query input', async () => {
+    const { calls, route } = fixture()
+    const result = await route(envelope('mip.admin.dashboard.overview.get', {
+      idempotencyKey: 'unused-query-key',
+    }))
+
+    assert.equal(result.ok, true)
+    assert.deepEqual(calls[0].input, {})
   })
 
   it('consumes the replay guard and runs post-commit automation for reviewed mutations', async () => {

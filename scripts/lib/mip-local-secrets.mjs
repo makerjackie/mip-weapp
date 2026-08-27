@@ -15,6 +15,7 @@ export const MIP_STABLE_SECRET_KEYS = Object.freeze([
   'MIP_MESSAGE_DISPATCH_HMAC_SECRET',
   'MIP_ADMIN_WEB_BFF_HMAC_SECRET',
   'MIP_ADMIN_WEB_LOGIN_HMAC_SECRET',
+  'MIP_TASKS_ADMIN_HMAC_SECRET',
   'MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET',
   'MIP_REFUND_WORKER_HMAC_SECRET',
   'MIP_NOTIFICATION_ENCRYPTION_KEY',
@@ -65,6 +66,20 @@ export function assertMipWebAdminHmacSecretsIsolated(values = {}) {
   return true
 }
 
+export function assertMipTaskAdminHmacSecretsIsolated(values = {}) {
+  const taskSecret = normalized(values.MIP_TASKS_ADMIN_HMAC_SECRET)
+  if (taskSecret.length < 32) {
+    throw new Error('Task admin HMAC secret must be configured')
+  }
+  const reused = Object.entries(values).some(([key, value]) => key !== 'MIP_TASKS_ADMIN_HMAC_SECRET'
+    && key.endsWith('_HMAC_SECRET')
+    && normalized(value) === taskSecret)
+  if (reused) {
+    throw new Error('MIP_TASKS_ADMIN_HMAC_SECRET must use a separate trust domain')
+  }
+  return true
+}
+
 function normalized(value) {
   return typeof value === 'string' ? value.trim() : ''
 }
@@ -97,6 +112,7 @@ export function resolveMipStableSecrets({ localEnv = {}, deployedEnvironments = 
   assertMipSchedulerHmacSecretsIsolated(values)
   assertMipAiProviderHmacSecretsIsolated(values)
   assertMipWebAdminHmacSecretsIsolated(values)
+  assertMipTaskAdminHmacSecretsIsolated(values)
   return { values, sources }
 }
 
