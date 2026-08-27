@@ -1,14 +1,27 @@
 import type { AdminApiResponse, AdminRequest } from '../src/domain/contracts'
 
+interface D1RunResult {
+  success: boolean
+  meta?: { changes?: number }
+}
+
+interface D1Statement {
+  bind: (...values: unknown[]) => D1Statement
+  first: <T>() => Promise<T | null>
+  run: () => Promise<D1RunResult>
+}
+
+export interface D1DatabaseBinding {
+  prepare: (query: string) => D1Statement
+}
+
 export interface AdminBffEnv {
+  MIP_ADMIN_AUTH_DB?: D1DatabaseBinding
   MIP_ADMIN_UPSTREAM_URL?: string
   MIP_ADMIN_UPSTREAM_HMAC_SECRET?: string
+  MIP_ADMIN_WEB_LOGIN_HMAC_SECRET?: string
   MIP_WEB_ALLOWED_APP_IDS?: string
   MIP_WEB_ALLOWED_ORIGIN?: string
-  MIP_WEB_IDENTITY_AUTHORIZE_URL?: string
-  MIP_WEB_IDENTITY_CLIENT_ID?: string
-  MIP_WEB_IDENTITY_CLIENT_SECRET?: string
-  MIP_WEB_IDENTITY_EXCHANGE_URL?: string
   MIP_WEB_SESSION_SECRET?: string
 }
 
@@ -21,18 +34,20 @@ interface SessionClaims {
   expiresAt: number
 }
 
-interface StateClaims {
+interface ChallengeCookieClaims {
   v: 1
-  state: string
-  returnTo: string
+  id: string
+  browserKey: string
   expiresAt: number
 }
 
-interface IdentityResponse {
-  verified: true
-  appId: string
-  openId: string
-  displayName?: string
+interface ChallengeRow {
+  id: string
+  status: 'PENDING' | 'CONFIRMED' | 'CONSUMED'
+  app_id: string | null
+  open_id: string | null
+  display_name: string | null
+  expires_at: number
 }
 
 interface AdminBffDependencies {
@@ -42,11 +57,14 @@ interface AdminBffDependencies {
 }
 
 const SESSION_COOKIE = 'mip_admin_session'
-const STATE_COOKIE = 'mip_admin_oauth_state'
+const CHALLENGE_COOKIE = 'mip_admin_login_challenge'
 const SESSION_TTL_MS = 8 * 60 * 60 * 1000
-const STATE_TTL_MS = 10 * 60 * 1000
+const CHALLENGE_TTL_MS = 5 * 60 * 1000
 const MAX_BODY_BYTES = 32 * 1024
 const WEB_BFF_TRANSPORT = 'MIP_WEB_BFF_V1'
+const WEB_LOGIN_CONFIRM_TRANSPORT = 'MIP_WEB_LOGIN_CONFIRM_V1'
+const WEB_LOGIN_MAX_CLOCK_SKEW_MS = 60_000
+const CHALLENGE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const ALLOWED_QUERY_ACTIONS = new Set([
   'mip.admin.session',
   'mip.admin.dashboard.overview.get',
@@ -66,11 +84,14 @@ export function createAdminBff(
 
   async function handle(request: Request): Promise<Response> {
     const url = new URL(request.url)
-    if (request.method === 'GET' && url.pathname === '/api/auth/login') {
-      return startLogin(request, url)
+    if (request.method === 'POST' && url.pathname === '/api/auth/challenge') {
+      return createLoginChallenge(request)
     }
-    if (request.method === 'GET' && url.pathname === '/api/auth/callback') {
-      return finishLogin(request, url)
+    if (request.method === 'POST' && url.pathname === '/api/auth/challenge/status') {
+      return exchangeConfirmedChallenge(request)
+    }
+    if (request.method === 'POST' && url.pathname === '/api/internal/auth/challenge/confirm') {
+      return confirmLoginChallenge(request)
     }
     if (request.method === 'GET' && url.pathname === '/api/auth/session') {
       return readBrowserSession(request)
@@ -85,80 +106,121 @@ export function createAdminBff(
     return jsonError('NOT_FOUND', '接口不存在', 404)
   }
 
-  async function startLogin(request: Request, url: URL): Promise<Response> {
-    const configError = authenticationConfigError(env)
+  async function createLoginChallenge(request: Request): Promise<Response> {
+    if (!hasTrustedOrigin(request, env)) return jsonError('FORBIDDEN', '请求来源无效', 403)
+    const configError = challengeConfigError(env)
     if (configError) return jsonError('AUTH_NOT_CONFIGURED', configError, 503)
-    const returnTo = safeReturnTo(url.searchParams.get('returnTo'))
-    const state = randomToken(deps.crypto, 24)
-    const claims: StateClaims = { v: 1, state, returnTo, expiresAt: deps.now() + STATE_TTL_MS }
-    const sealed = await seal(claims, env.MIP_WEB_SESSION_SECRET!, 'mip-admin-oauth-state-v1', deps.crypto)
-    const authorizeUrl = new URL(env.MIP_WEB_IDENTITY_AUTHORIZE_URL!)
-    authorizeUrl.searchParams.set('response_type', 'code')
-    authorizeUrl.searchParams.set('client_id', env.MIP_WEB_IDENTITY_CLIENT_ID!)
-    authorizeUrl.searchParams.set('redirect_uri', callbackUrl(request))
-    authorizeUrl.searchParams.set('state', state)
-    return new Response(null, {
-      status: 302,
-      headers: {
-        location: authorizeUrl.toString(),
-        'cache-control': 'no-store',
-        'set-cookie': cookie(STATE_COOKIE, sealed, request, Math.floor(STATE_TTL_MS / 1000)),
-      },
-    })
+
+    const createdAt = deps.now()
+    const expiresAt = createdAt + CHALLENGE_TTL_MS
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      const id = randomToken(deps.crypto, 24)
+      const browserKey = randomToken(deps.crypto, 24)
+      const code = randomChallengeCode(deps.crypto)
+      const codeHash = await hmacHex(env.MIP_WEB_SESSION_SECRET!, `code\0${code}`, deps.crypto)
+      const browserKeyHash = await hmacHex(env.MIP_WEB_SESSION_SECRET!, `browser\0${browserKey}`, deps.crypto)
+      try {
+        const result = await env.MIP_ADMIN_AUTH_DB!.prepare(
+          `INSERT INTO mip_admin_web_login_challenges
+            (id, code_hash, browser_key_hash, status, created_at, expires_at)
+           VALUES (?1, ?2, ?3, 'PENDING', ?4, ?5)`,
+        ).bind(id, codeHash, browserKeyHash, createdAt, expiresAt).run()
+        if (!result.success) continue
+      }
+      catch {
+        continue
+      }
+
+      const claims: ChallengeCookieClaims = { v: 1, id, browserKey, expiresAt }
+      const sealed = await seal(claims, env.MIP_WEB_SESSION_SECRET!, 'mip-admin-login-challenge-v1', deps.crypto)
+      return json({
+        state: 'PENDING',
+        code,
+        expiresAt: new Date(expiresAt).toISOString(),
+        pollAfterMs: 1_500,
+      }, 201, {
+        'set-cookie': cookie(CHALLENGE_COOKIE, sealed, request, Math.floor(CHALLENGE_TTL_MS / 1000)),
+      })
+    }
+    return jsonError('AUTH_UNAVAILABLE', '网页登录服务暂时不可用', 503)
   }
 
-  async function finishLogin(request: Request, url: URL): Promise<Response> {
-    const configError = authenticationConfigError(env)
+  async function exchangeConfirmedChallenge(request: Request): Promise<Response> {
+    if (!hasTrustedOrigin(request, env)) return jsonError('FORBIDDEN', '请求来源无效', 403)
+    const configError = challengeConfigError(env)
     if (configError) return jsonError('AUTH_NOT_CONFIGURED', configError, 503)
-    const code = url.searchParams.get('code') || ''
-    const state = url.searchParams.get('state') || ''
-    const sealedState = readCookie(request, STATE_COOKIE)
-    const claims = sealedState
-      ? await unseal<StateClaims>(sealedState, env.MIP_WEB_SESSION_SECRET!, 'mip-admin-oauth-state-v1', deps.crypto)
+    const value = readCookie(request, CHALLENGE_COOKIE)
+    const claims = value
+      ? await unseal<ChallengeCookieClaims>(value, env.MIP_WEB_SESSION_SECRET!, 'mip-admin-login-challenge-v1', deps.crypto)
       : null
-    if (!code || !state || !claims || claims.v !== 1 || claims.state !== state || claims.expiresAt < deps.now()) {
-      return jsonError('AUTH_FAILED', '登录状态无效或已过期', 401, {
-        'set-cookie': expireCookie(STATE_COOKIE, request),
-      })
+    if (!claims || claims.v !== 1 || claims.expiresAt < deps.now() || !identifier(claims.id, 128)) {
+      return challengeExpired(request)
+    }
+    const browserKeyHash = await hmacHex(env.MIP_WEB_SESSION_SECRET!, `browser\0${claims.browserKey}`, deps.crypto)
+    const row = await env.MIP_ADMIN_AUTH_DB!.prepare(
+      `SELECT id, status, app_id, open_id, display_name, expires_at
+         FROM mip_admin_web_login_challenges
+        WHERE id = ?1 AND browser_key_hash = ?2`,
+    ).bind(claims.id, browserKeyHash).first<ChallengeRow>()
+    if (!row || row.expires_at < deps.now()) return challengeExpired(request)
+    if (row.status === 'PENDING') {
+      return json({ state: 'PENDING', expiresAt: new Date(row.expires_at).toISOString(), pollAfterMs: 1_500 })
+    }
+    if (row.status !== 'CONFIRMED' || !identifier(row.app_id, 64) || !identifier(row.open_id, 128)) {
+      return challengeExpired(request)
     }
 
-    let response: Response
-    try {
-      response = await deps.fetch(env.MIP_WEB_IDENTITY_EXCHANGE_URL!, {
-        method: 'POST',
-        headers: {
-          authorization: `Basic ${base64Bytes(encoder.encode(`${env.MIP_WEB_IDENTITY_CLIENT_ID}:${env.MIP_WEB_IDENTITY_CLIENT_SECRET}`))}`,
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({ code, redirectUri: callbackUrl(request) }),
-        signal: AbortSignal.timeout(8_000),
-      })
-    }
-    catch {
-      return jsonError('AUTH_UNAVAILABLE', '登录服务暂时不可用', 503)
-    }
-    const identity = await safeJson(response)
-    if (!response.ok || !validIdentity(identity, env.MIP_WEB_ALLOWED_APP_IDS)) {
-      return jsonError('AUTH_FAILED', '登录身份未通过验证', 401)
-    }
+    const consumed = await env.MIP_ADMIN_AUTH_DB!.prepare(
+      `UPDATE mip_admin_web_login_challenges
+          SET status = 'CONSUMED', consumed_at = ?1
+        WHERE id = ?2 AND browser_key_hash = ?3 AND status = 'CONFIRMED' AND consumed_at IS NULL`,
+    ).bind(deps.now(), claims.id, browserKeyHash).run()
+    if (!consumed.success || Number(consumed.meta?.changes || 0) !== 1) return challengeExpired(request)
 
-    const verified = identity as IdentityResponse
     const session: SessionClaims = {
       v: 1,
-      appId: verified.appId,
-      openId: verified.openId,
-      ...(verified.displayName ? { displayName: verified.displayName.slice(0, 80) } : {}),
+      appId: row.app_id,
+      openId: row.open_id,
+      ...(row.display_name ? { displayName: row.display_name.slice(0, 80) } : {}),
       issuedAt: deps.now(),
       expiresAt: deps.now() + SESSION_TTL_MS,
     }
-    const sealedSession = await seal(session, env.MIP_WEB_SESSION_SECRET!, 'mip-admin-session-v1', deps.crypto)
-    const headers = new Headers({
-      location: new URL(claims.returnTo, request.url).toString(),
-      'cache-control': 'no-store',
-    })
-    headers.append('set-cookie', cookie(SESSION_COOKIE, sealedSession, request, Math.floor(SESSION_TTL_MS / 1000)))
-    headers.append('set-cookie', expireCookie(STATE_COOKIE, request))
-    return new Response(null, { status: 302, headers })
+    const sealed = await seal(session, env.MIP_WEB_SESSION_SECRET!, 'mip-admin-session-v1', deps.crypto)
+    const headers = new Headers({ 'cache-control': 'no-store', 'content-type': 'application/json; charset=utf-8' })
+    headers.append('set-cookie', cookie(SESSION_COOKIE, sealed, request, Math.floor(SESSION_TTL_MS / 1000)))
+    headers.append('set-cookie', expireCookie(CHALLENGE_COOKIE, request))
+    return new Response(JSON.stringify({
+      state: 'AUTHENTICATED',
+      actor: row.display_name ? { name: row.display_name } : {},
+      expiresAt: new Date(session.expiresAt).toISOString(),
+    }), { status: 200, headers })
+  }
+
+  async function confirmLoginChallenge(request: Request): Promise<Response> {
+    const configError = challengeConfigError(env)
+    if (configError) return jsonError('AUTH_NOT_CONFIGURED', configError, 503)
+    const envelope = await readJsonRecord(request)
+    if (!envelope || !await verifyLoginConfirmation(envelope, env, deps)) {
+      return jsonError('AUTH_REQUIRED', '确认请求未通过验证', 401)
+    }
+    const principal = envelope.principal as Record<string, unknown>
+    const code = String(envelope.challengeCode)
+    const codeHash = await hmacHex(env.MIP_WEB_SESSION_SECRET!, `code\0${code}`, deps.crypto)
+    const confirmed = await env.MIP_ADMIN_AUTH_DB!.prepare(
+      `UPDATE mip_admin_web_login_challenges
+          SET status = 'CONFIRMED', app_id = ?1, open_id = ?2, display_name = ?3, confirmed_at = ?4
+        WHERE code_hash = ?5 AND status = 'PENDING' AND expires_at >= ?4`,
+    ).bind(
+      principal.appId,
+      principal.openId,
+      typeof principal.displayName === 'string' ? principal.displayName.slice(0, 80) : null,
+      deps.now(),
+      codeHash,
+    ).run()
+    if (!confirmed.success || Number(confirmed.meta?.changes || 0) !== 1) {
+      return jsonError('CHALLENGE_NOT_FOUND', '登录码无效或已过期', 404)
+    }
+    return json({ confirmed: true }, 200)
   }
 
   async function readBrowserSession(request: Request): Promise<Response> {
@@ -225,14 +287,38 @@ export function createAdminBff(
   return Object.freeze({ handle })
 }
 
+async function verifyLoginConfirmation(
+  value: Record<string, unknown>,
+  env: AdminBffEnv,
+  deps: AdminBffDependencies,
+) {
+  const allowedKeys = new Set(['transport', 'timestamp', 'nonce', 'challengeCode', 'principal', 'signature'])
+  if (!hasExactKeys(value, allowedKeys)
+    || value.transport !== WEB_LOGIN_CONFIRM_TRANSPORT
+    || !Number.isSafeInteger(value.timestamp)
+    || Math.abs(deps.now() - Number(value.timestamp)) > WEB_LOGIN_MAX_CLOCK_SKEW_MS
+    || typeof value.nonce !== 'string'
+    || !/^[A-Za-z0-9_-]{24,128}$/.test(value.nonce)
+    || typeof value.challengeCode !== 'string'
+    || !/^[A-HJ-NP-Z2-9]{8}$/.test(value.challengeCode)
+    || typeof value.signature !== 'string'
+    || !/^[a-f0-9]{64}$/.test(value.signature)
+    || !plainRecord(value.principal)) return false
+  const principalKeys = Object.keys(value.principal)
+  if (principalKeys.some(key => !['appId', 'openId', 'displayName'].includes(key))
+    || !identifier(value.principal.appId, 64)
+    || !identifier(value.principal.openId, 128)
+    || (value.principal.displayName !== undefined
+      && (typeof value.principal.displayName !== 'string' || value.principal.displayName.length > 80))
+    || !allowedAppIds(env.MIP_WEB_ALLOWED_APP_IDS).has(value.principal.appId)) return false
+  const { signature, ...unsigned } = value
+  const expected = await hmacHex(env.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET!, canonicalJson(unsigned), deps.crypto)
+  return constantTimeHexEqual(signature, expected)
+}
+
 async function readAdminRequest(request: Request): Promise<AdminRequest | null> {
-  const declaredLength = Number(request.headers.get('content-length') || 0)
-  if (declaredLength > MAX_BODY_BYTES) return null
-  const body = await request.text()
-  if (encoder.encode(body).byteLength > MAX_BODY_BYTES) return null
-  let value: unknown
-  try { value = JSON.parse(body) } catch { return null }
-  if (!plainRecord(value)) return null
+  const value = await readJsonRecord(request)
+  if (!value) return null
   const keys = Object.keys(value)
   if (keys.some(key => !['action', 'contractVersion', 'idempotencyKey', 'input'].includes(key))) return null
   if (value.contractVersion !== 1 || typeof value.action !== 'string' || !plainRecord(value.input)) return null
@@ -240,20 +326,31 @@ async function readAdminRequest(request: Request): Promise<AdminRequest | null> 
   return value as unknown as AdminRequest
 }
 
+async function readJsonRecord(request: Request) {
+  const declaredLength = Number(request.headers.get('content-length') || 0)
+  if (declaredLength > MAX_BODY_BYTES) return null
+  const body = await request.text()
+  if (encoder.encode(body).byteLength > MAX_BODY_BYTES) return null
+  try {
+    const value: unknown = JSON.parse(body)
+    return plainRecord(value) ? value : null
+  }
+  catch { return null }
+}
+
 function hasTrustedOrigin(request: Request, env: AdminBffEnv) {
   const expected = env.MIP_WEB_ALLOWED_ORIGIN || new URL(request.url).origin
   return request.headers.get('origin') === expected
 }
 
-function authenticationConfigError(env: AdminBffEnv) {
-  if (!validSecret(env.MIP_WEB_SESSION_SECRET)) return 'Web 会话服务尚未配置'
-  if (!absoluteHttpsUrl(env.MIP_WEB_IDENTITY_AUTHORIZE_URL)
-    || !absoluteHttpsUrl(env.MIP_WEB_IDENTITY_EXCHANGE_URL)
-    || !env.MIP_WEB_IDENTITY_CLIENT_ID
-    || !env.MIP_WEB_IDENTITY_CLIENT_SECRET
-    || allowedAppIds(env.MIP_WEB_ALLOWED_APP_IDS).size === 0) {
-    return 'Web 登录服务尚未配置'
+function challengeConfigError(env: AdminBffEnv) {
+  if (!env.MIP_ADMIN_AUTH_DB || typeof env.MIP_ADMIN_AUTH_DB.prepare !== 'function') {
+    return '网页登录数据库尚未配置'
   }
+  if (!validSecret(env.MIP_WEB_SESSION_SECRET) || !validSecret(env.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET)) {
+    return '网页登录服务尚未配置'
+  }
+  if (allowedAppIds(env.MIP_WEB_ALLOWED_APP_IDS).size === 0) return '网页登录应用范围尚未配置'
   return ''
 }
 
@@ -264,15 +361,6 @@ function upstreamConfigError(env: AdminBffEnv) {
     return '运营数据服务尚未配置'
   }
   return ''
-}
-
-function validIdentity(value: unknown, allowlist: string | undefined): value is IdentityResponse {
-  if (!plainRecord(value)
-    || value.verified !== true
-    || !identifier(value.appId, 64)
-    || !identifier(value.openId, 128)
-    || (value.displayName !== undefined && typeof value.displayName !== 'string')) return false
-  return allowedAppIds(allowlist).has(value.appId)
 }
 
 function allowedAppIds(value: string | undefined) {
@@ -291,18 +379,15 @@ function absoluteHttpsUrl(value: string | undefined) {
   try { return Boolean(value && new URL(value).protocol === 'https:') } catch { return false }
 }
 
-function safeReturnTo(value: string | null) {
-  return value && value.startsWith('/') && !value.startsWith('//') ? value : '/'
-}
-
-function callbackUrl(request: Request) {
-  return new URL('/api/auth/callback', request.url).toString()
-}
-
 function plainRecord(value: unknown): value is Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false
   const prototype = Object.getPrototypeOf(value)
   return prototype === Object.prototype || prototype === null
+}
+
+function hasExactKeys(value: Record<string, unknown>, expected: Set<string>) {
+  const keys = Object.keys(value)
+  return keys.length === expected.size && keys.every(key => expected.has(key))
 }
 
 function isAdminResponse(value: unknown): value is AdminApiResponse<unknown> {
@@ -366,8 +451,22 @@ export function canonicalJson(value: unknown): string {
   return JSON.stringify(value)
 }
 
+function constantTimeHexEqual(left: string, right: string) {
+  if (left.length !== right.length) return false
+  let difference = 0
+  for (let index = 0; index < left.length; index += 1) {
+    difference |= left.charCodeAt(index) ^ right.charCodeAt(index)
+  }
+  return difference === 0
+}
+
 function randomToken(cryptoApi: Crypto, length: number) {
   return base64Url(cryptoApi.getRandomValues(new Uint8Array(length)))
+}
+
+function randomChallengeCode(cryptoApi: Crypto) {
+  const bytes = cryptoApi.getRandomValues(new Uint8Array(8))
+  return [...bytes].map(byte => CHALLENGE_ALPHABET[byte % CHALLENGE_ALPHABET.length]).join('')
 }
 
 function base64Url(value: Uint8Array) {
@@ -400,6 +499,12 @@ function cookie(name: string, value: string, request: Request, maxAge: number) {
 
 function expireCookie(name: string, request: Request) {
   return cookie(name, '', request, 0)
+}
+
+function challengeExpired(request: Request) {
+  return jsonError('CHALLENGE_EXPIRED', '登录码无效或已过期', 410, {
+    'set-cookie': expireCookie(CHALLENGE_COOKIE, request),
+  })
 }
 
 function json(value: unknown, status = 200, headers: HeadersInit = {}) {

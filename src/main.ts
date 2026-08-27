@@ -1,4 +1,8 @@
-import { AdminApiClient, AdminApiClientError } from './services/admin-api'
+import {
+  AdminApiClient,
+  AdminApiClientError,
+  type AdminLoginChallenge,
+} from './services/admin-api'
 import type { AdminSession } from './domain/contracts'
 import { demo } from './services/demo-data'
 import './styles.css'
@@ -17,6 +21,9 @@ let apiErrorCode = ''
 let liveRows: Row[] | null = null
 let liveOverview: OverviewModel | null = null
 let session: AdminSession | null = null
+let loginChallenge: AdminLoginChallenge | null = null
+let loginError = ''
+let loginFlow = 0
 
 const nav: Array<{ route: Route; label: string; icon: string; group: string }> = [
   { route: 'overview', label: '网站概览', icon: '▦', group: '工作台' },
@@ -95,7 +102,7 @@ function header() {
 
 function shell(content: string) {
   const loginAction = apiErrorCode === 'AUTH_REQUIRED' ? '<button class="notice-action" id="notice-login-button">运营登录</button>' : ''
-  app.innerHTML = `${sidebar()}<main class="main"><div class="content"><div id="notice" class="notice ${notice ? '' : 'hidden'}"><span>${escapeHtml(notice)}</span>${loginAction}</div>${header()}${content}</div></main>`
+  app.innerHTML = `${sidebar()}<main class="main"><div class="content"><div id="notice" class="notice ${notice ? '' : 'hidden'}"><span>${escapeHtml(notice)}</span>${loginAction}</div>${header()}${content}</div></main>${loginDialog()}`
   document.querySelectorAll<HTMLButtonElement>('[data-route]').forEach(button => button.addEventListener('click', () => {
     route = button.dataset.route as Route
     notice = ''
@@ -105,6 +112,17 @@ function shell(content: string) {
   document.querySelector('#login-button')?.addEventListener('click', startLogin)
   document.querySelector('#notice-login-button')?.addEventListener('click', startLogin)
   document.querySelector('#logout-button')?.addEventListener('click', () => void logout())
+  document.querySelector('#login-close-button')?.addEventListener('click', closeLogin)
+  document.querySelector('#login-retry-button')?.addEventListener('click', () => void startLogin())
+}
+
+function loginDialog() {
+  if (!loginChallenge && !loginError) return ''
+  const code = loginChallenge?.code || '--------'
+  const expiry = loginChallenge
+    ? new Date(loginChallenge.expiresAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    : ''
+  return `<div class="login-backdrop" role="dialog" aria-modal="true" aria-labelledby="login-title"><section class="login-dialog"><button id="login-close-button" class="login-close" aria-label="关闭">×</button><span class="login-kicker">小程序确认</span><h2 id="login-title">运营登录</h2>${loginError ? `<p class="login-error">${escapeHtml(loginError)}</p><button id="login-retry-button" class="primary-button login-retry">重新生成登录码</button>` : `<p>在 MIP 小程序的运营工作台输入以下登录码。只有已获得运营权限的账号可以确认。</p><div class="login-code" aria-label="网页登录码">${escapeHtml(code)}</div><div class="login-status"><i class="dot online"></i>等待小程序确认${expiry ? ` · ${escapeHtml(expiry)} 前有效` : ''}</div>`}</section></div>`
 }
 
 function sectionTitle(title: string, description: string, action = '') {
@@ -151,11 +169,55 @@ function pageKnowledge() {
   return `${sectionTitle('知识库', '管理可供会员阅读的内容和信息源', '<button class="primary-button">新建文档</button>')}${toolbar('搜索文档标题或类型')}<section class="panel">${rowsToTable(rows, [{ key: 'title', label: '文档标题' }, { key: 'type', label: '内容类型' }, { key: 'updatedAt', label: '更新时间' }, { key: 'state', label: '状态' }])}</section>`
 }
 
-function startLogin() {
-  client.login(window.location.pathname)
+async function startLogin() {
+  const flow = loginFlow + 1
+  loginFlow = flow
+  loginChallenge = null
+  loginError = ''
+  try {
+    loginChallenge = await client.beginLogin()
+    await render()
+    void pollLogin(flow, loginChallenge.pollAfterMs)
+  }
+  catch (error) {
+    loginError = error instanceof AdminApiClientError ? error.message : '网页登录服务暂时不可用'
+    await render()
+  }
+}
+
+async function pollLogin(flow: number, delay: number) {
+  await new Promise(resolve => window.setTimeout(resolve, Math.max(750, delay)))
+  if (flow !== loginFlow || !loginChallenge) return
+  try {
+    const status = await client.pollLogin()
+    if (flow !== loginFlow) return
+    if (status.state === 'AUTHENTICATED') {
+      loginChallenge = null
+      loginError = ''
+      await render()
+      return
+    }
+    void pollLogin(flow, status.pollAfterMs)
+  }
+  catch (error) {
+    if (flow !== loginFlow) return
+    loginChallenge = null
+    loginError = error instanceof AdminApiClientError ? error.message : '网页登录服务暂时不可用'
+    await render()
+  }
+}
+
+function closeLogin() {
+  loginFlow += 1
+  loginChallenge = null
+  loginError = ''
+  void render()
 }
 
 async function logout() {
+  loginFlow += 1
+  loginChallenge = null
+  loginError = ''
   await client.logout()
   session = null
   await render()
@@ -202,6 +264,12 @@ async function render() {
   shell(`<div class="loading-bar ${loading ? '' : 'hidden'}"></div>${pages[route]()}`)
   if (client.demoMode) {
     notice = '当前为显式本地演示模式，页面数据不代表生产事实。'
+  }
+  else if (loginChallenge || loginError) {
+    loading = false
+    shell(`<div class="loading-bar hidden"></div>${pages[route]()}`)
+    requestAnimationFrame(assertResponsiveViewport)
+    return
   }
   else {
     try {

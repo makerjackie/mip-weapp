@@ -6,6 +6,23 @@ import {
   type AdminSession,
 } from '../domain/contracts'
 
+export interface AdminLoginChallenge {
+  state: 'PENDING'
+  code: string
+  expiresAt: string
+  pollAfterMs: number
+}
+
+export type AdminLoginChallengeStatus = {
+  state: 'PENDING'
+  expiresAt: string
+  pollAfterMs: number
+} | {
+  state: 'AUTHENTICATED'
+  actor: { name?: string }
+  expiresAt: string
+}
+
 export class AdminApiClient {
   readonly baseUrl: string
   readonly demoMode: boolean
@@ -17,12 +34,57 @@ export class AdminApiClient {
 
   get configured() { return !this.demoMode && Boolean(this.baseUrl) }
 
-  login(returnTo = window.location.pathname) {
-    window.location.assign(`/api/auth/login?returnTo=${encodeURIComponent(returnTo)}`)
+  async beginLogin(): Promise<AdminLoginChallenge> {
+    const payload = await this.authRequest('/api/auth/challenge')
+    if (payload.state !== 'PENDING'
+      || typeof payload.code !== 'string'
+      || typeof payload.expiresAt !== 'string'
+      || typeof payload.pollAfterMs !== 'number') {
+      throw new AdminApiClientError('INVALID_RESPONSE', '网页登录服务返回格式无效')
+    }
+    return payload as unknown as AdminLoginChallenge
+  }
+
+  async pollLogin(): Promise<AdminLoginChallengeStatus> {
+    const payload = await this.authRequest('/api/auth/challenge/status')
+    if (payload.state === 'PENDING'
+      && typeof payload.expiresAt === 'string'
+      && typeof payload.pollAfterMs === 'number') {
+      return payload as unknown as AdminLoginChallengeStatus
+    }
+    if (payload.state === 'AUTHENTICATED'
+      && typeof payload.expiresAt === 'string'
+      && payload.actor !== null
+      && typeof payload.actor === 'object') {
+      return payload as unknown as AdminLoginChallengeStatus
+    }
+    throw new AdminApiClientError('INVALID_RESPONSE', '网页登录服务返回格式无效')
   }
 
   async logout() {
     await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
+  }
+
+  private async authRequest(path: string): Promise<Record<string, unknown>> {
+    const response = await fetch(path, { method: 'POST', credentials: 'same-origin' })
+    let payload: unknown
+    try { payload = await response.json() } catch {
+      throw new AdminApiClientError('INVALID_RESPONSE', '网页登录服务返回格式无效')
+    }
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      throw new AdminApiClientError('INVALID_RESPONSE', '网页登录服务返回格式无效')
+    }
+    const record = payload as Record<string, unknown>
+    const error = record.error
+    if (!response.ok) {
+      const detail = error && typeof error === 'object' ? error as Record<string, unknown> : {}
+      throw new AdminApiClientError(
+        typeof detail.code === 'string' ? detail.code : 'AUTH_UNAVAILABLE',
+        typeof detail.message === 'string' ? detail.message : '网页登录服务暂时不可用',
+        response.status >= 500,
+      )
+    }
+    return record
   }
 
   async request<T>(action: string, input: AdminRequestInput = {}): Promise<T> {
