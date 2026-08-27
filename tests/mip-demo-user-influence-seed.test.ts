@@ -152,8 +152,8 @@ describe('MIP demo user influence fixtures', () => {
       expect(script).toContain(`INSERT INTO ${table}`)
       expect(script).toContain(`${table}:`)
     }
-    expect(collision).toContain('\'$.recordIds.eventCheckins\'')
-    expect(collision).toContain('\'$.recordIds.eventCheckinTransitions\'')
+    expect(collision).toContain('\'$.recordsByTable.mip_event_checkins\'')
+    expect(collision).toContain('\'$.recordsByTable.mip_event_checkin_transitions\'')
     for (const table of [
       'mip_event_invitation_attributions',
       'mip_event_hearts',

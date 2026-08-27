@@ -89,7 +89,7 @@ export function buildSeedCollisionQuery(appId, seed) {
             AND demo_manifest.setting_key LIKE 'demo_seed_manifest%'
             AND JSON_UNQUOTE(JSON_EXTRACT(demo_manifest.value_json, '$.is_demo')) = '1'
             AND JSON_SEARCH(
-              JSON_EXTRACT(demo_manifest.value_json, '$.recordIds.${group}'),
+              JSON_EXTRACT(demo_manifest.value_json, '$.recordsByTable.${table}'),
               'one', candidate.id
             ) IS NOT NULL
         )`)
@@ -104,7 +104,7 @@ export function buildSeedCollisionQuery(appId, seed) {
           AND demo_manifest.setting_key LIKE 'demo_seed_manifest%'
           AND JSON_UNQUOTE(JSON_EXTRACT(demo_manifest.value_json, '$.is_demo')) = '1'
           AND JSON_SEARCH(
-            JSON_EXTRACT(demo_manifest.value_json, '$.recordIds.users'),
+            JSON_EXTRACT(demo_manifest.value_json, '$.recordsByTable.mip_membership_chains'),
             'one', membership_chain.user_id
           ) IS NOT NULL
       )`)

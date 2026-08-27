@@ -99,7 +99,7 @@ describe('MIP owner bootstrap by verified phone', () => {
     expect(query).toContain(`u.id = '${userId}'`)
     expect(query).toContain(`u.id NOT IN ('${demoUserId}')`)
     expect(query).toContain('setting_key LIKE \'demo_seed_manifest%\'')
-    expect(query).toContain('JSON_EXTRACT(demo_manifest.value_json, \'$.recordIds.users\')')
+    expect(query).toContain('JSON_EXTRACT(demo_manifest.value_json, \'$.recordsByTable.mip_users\')')
     expect(query).toContain('agreement.agreement_key = \'SERVICE_AGREEMENT\'')
     expect(query).toContain('agreement.agreement_version = \'draft-2026-08-24\'')
     expect(query).toContain('agreement.agreement_key = \'PRIVACY_POLICY\'')

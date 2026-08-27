@@ -2069,51 +2069,6 @@ function buildDemoManifest(value, state) {
     seedSha256,
     state,
     replaceBeforeProduction: true,
-    recordIds: Object.fromEntries(Object.entries(value)
-      .filter(([, items]) => Array.isArray(items))
-      .map(([key, items]) => [key, items.map(item => item.id)])),
-    dependentRows: {
-      branchMembershipUserIds: value.users.map(item => item.id),
-      membershipChainUserIds: value.users.map(item => item.id),
-      profileUserIds: value.users.map(item => item.id),
-      opportunityIds: value.opportunities.map(item => item.id),
-      commentSettingOpportunityIds: value.opportunityInteractions.commentSettings
-        .map(item => item.opportunityId),
-      commentCallKeys: value.opportunityInteractions.commentCalls.map(item => ({
-        commentId: item.commentId,
-        actorUserId: item.actorUserId,
-      })),
-      userBlockKeys: value.opportunityInteractions.userBlocks.map(item => ({
-        blockerUserId: item.blockerUserId,
-        blockedUserId: item.blockedUserId,
-      })),
-      userOpportunityPreferenceUserIds: value.opportunityInteractions.userOpportunityPreferences
-        .map(item => item.userId),
-      matchingSettingScopeKeys: value.opportunityInteractions.matchingSettings
-        .map(item => item.scopeKey),
-      matchingResultKeys: value.opportunityInteractions.matchingResults.map(item => ({
-        requestId: item.requestId,
-        resultVersion: item.resultVersion,
-        candidateType: item.candidateType,
-        candidateId: item.candidateId,
-      })),
-      templateRevisionKeys: value.messageTemplates.map(item => ({
-        templateId: item.id,
-        revisionNumber: item.revision.number,
-      })),
-      rankingEntryKeys: value.gameRankingSnapshots.flatMap(item => item.entries.map(entry => ({
-        snapshotId: item.id,
-        rankNo: entry.rankNo,
-      }))),
-      influenceInvitationRegistrationIds: value.userInfluence.eventInvitationAttributions
-        .map(item => item.registrationId),
-      influenceEventHeartIds: value.userInfluence.eventHearts.map(item => item.id),
-      influenceProfileVisitIds: value.userInfluence.profileVisits.map(item => item.id),
-      eventTagAssignmentKeys: demoEventTagAssignments(value.events).map(item => ({
-        eventId: item.eventId,
-        tagId: item.tagId,
-      })),
-    },
     recordsByTable: {
       mip_city_branches: value.branches.map(item => ({ id: item.id })),
       mip_tags: value.tags.map(item => ({ id: item.id })),

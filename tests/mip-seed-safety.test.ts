@@ -30,7 +30,8 @@ describe('MIP demo seed ownership safety', () => {
   it('rejects same-AppID fixed IDs and alternate keys unless the manifest owns them', () => {
     const query = buildSeedCollisionQuery('wx1111111111111111', seed)
     expect(query).toContain('setting_key LIKE \'demo_seed_manifest%\'')
-    expect(query).toContain('\'$.recordIds.users\'')
+    expect(query).toContain('\'$.recordsByTable.mip_users\'')
+    expect(query).toContain('\'$.recordsByTable.mip_membership_chains\'')
     expect(query).toContain('FROM mip_membership_chains membership_chain')
     expect(query).toContain('branch_key =')
     expect(query).toContain('minimum_experience =')
@@ -223,7 +224,6 @@ describe('MIP demo seed ownership safety', () => {
     expect(source).toContain('is_demo: 1')
     expect(source).toContain('...demoManifestStatements(seed, \'PENDING\')')
     expect(source).toContain('...demoManifestStatements(seed, \'READY\')')
-    expect(source).toContain('recordIds: Object.fromEntries')
     expect(source).toContain('recordsByTable: {')
     expect(source).toContain('seedSha256')
     for (const table of Object.values(SEED_TABLES)) {
@@ -242,6 +242,6 @@ describe('MIP demo seed ownership safety', () => {
     const selection = fs.readFileSync(path.join(root, 'scripts/lib/mip-owner-bootstrap.mjs'), 'utf8')
     expect(source).toContain('Demo seed users cannot become platform owners')
     expect(selection).toContain('setting_key LIKE \'demo_seed_manifest%\'')
-    expect(selection).toContain('JSON_EXTRACT(demo_manifest.value_json, \'$.recordIds.users\')')
+    expect(selection).toContain('JSON_EXTRACT(demo_manifest.value_json, \'$.recordsByTable.mip_users\')')
   })
 })

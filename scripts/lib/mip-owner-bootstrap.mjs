@@ -190,7 +190,7 @@ function buildOwnerEligibilityWhere({ agreements, appId, demoUserIds, phoneHash,
           AND demo_manifest.setting_key LIKE 'demo_seed_manifest%'
           AND JSON_UNQUOTE(JSON_EXTRACT(demo_manifest.value_json, '$.is_demo')) = '1'
           AND JSON_SEARCH(
-            JSON_EXTRACT(demo_manifest.value_json, '$.recordIds.users'),
+            JSON_EXTRACT(demo_manifest.value_json, '$.recordsByTable.mip_users'),
             'one', u.id
           ) IS NOT NULL
       )`)
