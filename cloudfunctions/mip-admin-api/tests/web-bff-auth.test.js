@@ -64,10 +64,14 @@ describe('Web BFF trusted query adapter', () => {
     const operationByAction = new Map(
       publicOperationContract.operations.map(operation => [operation.action, operation]),
     )
+    const firstQueryAllowlist = createQueryActionAllowlist(
+      WEB_BFF_FIRST_QUERY_ACTIONS,
+      publicOperationContract,
+    )
 
     assert.deepEqual(WEB_BFF_FIRST_QUERY_ACTIONS, expected)
-    assert.deepEqual([...WEB_BFF_QUERY_ACTIONS], expected)
-    for (const action of WEB_BFF_QUERY_ACTIONS) {
+    assert.deepEqual([...firstQueryAllowlist], expected)
+    for (const action of firstQueryAllowlist) {
       assert.deepEqual(operationByAction.get(action), {
         action,
         kind: 'QUERY',

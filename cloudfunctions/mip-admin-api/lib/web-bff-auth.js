@@ -20,8 +20,31 @@ const WEB_BFF_FIRST_QUERY_ACTIONS = Object.freeze([
   'mip.admin.messageTemplates.list',
   'mip.admin.knowledge.list',
 ])
+const WEB_BFF_SECOND_QUERY_ACTIONS = Object.freeze([
+  'mip.admin.users.get',
+  'mip.admin.users.influence.list',
+  'mip.admin.events.get',
+  'mip.admin.events.insights.get',
+  'mip.admin.events.roster',
+  'mip.admin.events.rosterAll',
+  'mip.admin.events.policy.get',
+  'mip.admin.orders.get',
+  'mip.admin.paymentAttempts.list',
+  'mip.admin.memberships.get',
+  'mip.admin.memberships.timeline',
+  'mip.admin.benefits.ledger',
+  'mip.admin.roles.candidates',
+  'mip.admin.messageCampaigns.get',
+  'mip.admin.messageCampaigns.recipients',
+  'mip.admin.messageTemplates.get',
+  'mip.admin.messageDeliveryReviews.list',
+  'mip.admin.messageDeliveryReviews.get',
+  'mip.admin.messageDeliveryRecords.list',
+  'mip.admin.knowledge.get',
+  'mip.admin.knowledge.schedules.list',
+])
 const WEB_BFF_QUERY_ACTIONS = createQueryActionAllowlist(
-  WEB_BFF_FIRST_QUERY_ACTIONS,
+  [...WEB_BFF_FIRST_QUERY_ACTIONS, ...WEB_BFF_SECOND_QUERY_ACTIONS],
   publicOperationContract,
 )
 const envelopeKeys = new Set(['nonce', 'principal', 'request', 'signature', 'timestamp', 'transport'])
@@ -183,6 +206,7 @@ module.exports = {
   WEB_BFF_MAX_CLOCK_SKEW_MS,
   WEB_BFF_FIRST_QUERY_ACTIONS,
   WEB_BFF_QUERY_ACTIONS,
+  WEB_BFF_SECOND_QUERY_ACTIONS,
   WEB_BFF_TRANSPORT,
   canonicalJson,
   createQueryActionAllowlist,
