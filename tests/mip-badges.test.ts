@@ -67,6 +67,12 @@ describe('MIP badge collection', () => {
       .toContain('wx.cloud')
   })
 
+  it('keeps the profile primary badge visible when the server omits visual art', () => {
+    const profilePage = source('src/pages/profile/index.ts')
+    expect(profilePage).toContain('import { badgeArtFallback } from \'../../config/mip-badge-art\'')
+    expect(profilePage).toContain('imageUrl: equippedBadges[0].imageUrl || badgeArtFallback(equippedBadges[0].key, equippedBadges[0].name)')
+  })
+
   it('locks a server-constrained three-slot award model and exact grants', () => {
     const migration = source('database/mysql/mip/028_badge_collection.sql')
     const rollback = source('database/mysql/mip/rollback/028_badge_collection.sql')

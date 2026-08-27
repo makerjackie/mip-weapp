@@ -39,6 +39,9 @@ describe('MIP member card', () => {
     expect(view).toContain('{{wechat}}')
     expect(view).toContain('{{email}}')
     expect(view).toContain('{{address}}')
+    expect(view).toContain('{{gender}}')
+    expect(page).toContain('gender: profile.gender === \'MALE\' ? \'男\' : profile.gender === \'FEMALE\' ? \'女\' : \'\'')
+    expect(page).toContain(`\`性别  \${this.data.gender}\``)
     expect(view).toContain('下载名片')
     expect(page).toContain('/packages/member/mip-public-profile/index?profileRef=')
     for (const field of ['realName', 'company', 'role', 'wechat', 'email', 'address']) {

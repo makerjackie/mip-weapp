@@ -13,6 +13,7 @@
         <view class="max-w-[420rpx] truncate text-[length:42rpx] font-bold">{{nickname}}</view>
         <view wx:if="{{companyName || roleTitle}}" class="mt-2 max-w-[420rpx] truncate text-[length:22rpx] font-semibold">{{companyName}}{{companyName && roleTitle ? ' · ' : ''}}{{roleTitle}}</view>
         <view wx:if="{{organizationLine}}" class="mt-1 max-w-[420rpx] truncate text-[length:21rpx]" style="color: {{theme.muted}};">{{organizationLine}}</view>
+        <view wx:if="{{gender}}" class="mt-1 max-w-[420rpx] truncate text-[length:20rpx]" style="color: {{theme.muted}};">性别 · {{gender}}</view>
         <view class="absolute bottom-5 left-5 flex max-w-[480rpx] flex-col gap-1 text-[length:19rpx] leading-[1.45]" style="color: {{theme.muted}};">
           <view wx:if="{{phone}}" class="truncate">电话　{{phone}}</view>
           <view wx:if="{{wechat}}" class="truncate">微信　{{wechat}}</view>

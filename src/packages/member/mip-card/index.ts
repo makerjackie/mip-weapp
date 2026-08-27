@@ -113,6 +113,7 @@ Page({
     cardAvatarUrl: '',
     avatarSource: 'ORIGINAL' as 'ORIGINAL' | 'DIGITAL',
     memberType: 'MIP 成员',
+    gender: '',
     identityStatus: '',
     branchName: '',
     industryName: '',
@@ -184,6 +185,7 @@ Page({
       avatarSource,
       cardAvatarUrl: avatarSource === 'DIGITAL' ? digitalAvatarUrl : avatarUrl,
       memberType: profile.userKind === 'PLAYER' ? '玩家' : profile.userKind === 'GUEST' ? '嘉宾' : 'MIP 成员',
+      gender: profile.gender === 'MALE' ? '男' : profile.gender === 'FEMALE' ? '女' : '',
       identityStatus: compactText(profile.identityStatus),
       branchName: compactText(profile.primaryBranch?.name),
       industryName: compactText(profile.primaryIndustry?.label),
@@ -289,6 +291,9 @@ Page({
     context.font = '600 22px sans-serif'
     context.fillText([this.data.companyName, this.data.roleTitle].filter(Boolean).join(' · ').slice(0, 30), 40, 118)
     context.fillText(this.data.organizationLine.slice(0, 30), 40, 150)
+    if (this.data.gender) {
+      context.fillText(`性别  ${this.data.gender}`, 40, 182)
+    }
 
     context.font = '500 20px sans-serif'
     context.fillStyle = theme.muted
