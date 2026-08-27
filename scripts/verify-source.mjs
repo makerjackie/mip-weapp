@@ -12,6 +12,7 @@ import {
 } from './lib/mip-migrations.mjs'
 import { findLockingReadPrivilegeViolations } from './lib/mip-sql-isolation.mjs'
 import { RUNTIME_TABLE_PRIVILEGES } from './lib/mysql-privilege-assert.mjs'
+import { assertSourceSizeBudgets } from './lib/source-size-budgets.mjs'
 import {
   assertOfficialCustomTabBar,
   assertSemanticIconColors,
@@ -21,6 +22,7 @@ import {
 const root = path.resolve(import.meta.dirname, '..')
 
 assertAdminOperationContractArtifact(root)
+assertSourceSizeBudgets(root)
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8')

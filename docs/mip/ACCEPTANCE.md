@@ -50,7 +50,7 @@
 
 ## 静态门禁
 
-2026-08-28 当前工作区通过完整门禁：客户端 218 个测试文件、1249 项测试；服务端 221 个测试文件、1396 项测试；源码合同为 137 个页面视图、16 个核心函数、52 个锁定迁移。架构、共享数据库隔离、安全、类型、样式、构建、包体和文档链接同时通过；ESLint 仅保留 16 条既有顺序 warning，没有 error。本机执行使用 Node 24.15.0，因此有不影响结果的 engine warning；仓库目标版本仍为 Node 22。
+2026-08-28 当前工作区在 Node 22.23.1 下通过完整静态门禁：客户端 220 个测试文件、1254 项测试；服务端核心函数 220 个测试文件、1391 项测试；源码合同为 137 个页面视图、16 个核心函数、52 个锁定迁移。架构、共享数据库隔离、安全、类型、lint、样式、构建、包体和文档链接同时通过，ESLint 为 0 warning、0 error。静态门禁不等于运行时、云端或真机证据。
 
 - `pnpm verify`
 - `git diff --check`
@@ -64,7 +64,7 @@
 
 ## 微信开发者工具
 
-默认输出 `.tmp/runtime/report.json` 会被每次重跑覆盖，不作为固定证据。完整 UI 基线仍采用 `.tmp/runtime-evidence/2026-08-27-figma-alignment-r4/report.json`：375px 实测窗口下 108/108 路由、6/6 代表状态和 6/6 交互旅程通过，运行时诊断与 IDE 编译诊断均为 0 failure。当前真实账号的补充证据为 `.tmp/runtime-evidence/2026-08-27-member-showcase-r2/report.json`，我的活动、活动/会员订单、任务详情、个人名片、档案编辑和个人中心均进入 `ready`；订单媒体解析后的最新三张截图与金额断言见 `.tmp/runtime-evidence/2026-08-28-order-media-r1/report.json`，3 个任务状态和 3 枚带图片的已佩戴勋章见 `.tmp/runtime-evidence/2026-08-28-task-badge-r1/report.json`。本轮另两次全量重跑分别在旧订单媒体数据门禁和开发者工具 viewport 协议超时处结束，没有替代 r4 的全量结论；对应控制台均无 error、exception 或 rejection。
+默认输出 `.tmp/runtime/report.json` 会被每次重跑覆盖，不作为固定证据。完整 UI 基线仍采用 `.tmp/runtime-evidence/2026-08-27-figma-alignment-r4/report.json`：375px 实测窗口下 108/108 路由、6/6 代表状态和 6/6 交互旅程通过，运行时诊断与 IDE 编译诊断均为 0 failure；这是历史完整基线，不是最新一次全量运行的声明。当前真实账号的补充证据为 `.tmp/runtime-evidence/2026-08-27-member-showcase-r2/report.json`，我的活动、活动/会员订单、任务详情、个人名片、档案编辑和个人中心均进入 `ready`；订单媒体解析后的最新三张截图与金额断言见 `.tmp/runtime-evidence/2026-08-28-order-media-r1/report.json`，3 个任务状态和 3 枚带图片的已佩戴勋章见 `.tmp/runtime-evidence/2026-08-28-task-badge-r1/report.json`。最近一次全量尝试 `.tmp/runtime-evidence/2026-08-28-figma-alignment-r7/report.json` 在视口测量阶段因 `DEVTOOLS_PROTOCOL_TIMEOUT` 中断，没有替代 r4 的全量结论；定点证据仍按各自报告单独解释，不能合并成新的 108/108 全量通过。对应已保存报告的控制台均无 error、exception 或 rejection。
 
 当前微信身份已经完成协议、档案和手机号绑定，并由精确档案初始化为唯一 `PLATFORM_OWNER`；手机号原值不写入仓库。`.tmp/bootstrap-owner-result.json` 记录 `ownerCount=1`、`role=PLATFORM_OWNER`、`scope=PLATFORM`。当前开发账号具有有效 TEST 玩家权益、3 场未来活动报名、1 笔 399 元 TEST 活动订单、1 笔 6000 元年度会员订单、2 个定向任务和 3 枚已佩戴勋章；这些页面均进入当前补充证据。管理端 1024px 代表页证据见 [响应式密度验收](evidence/admin-density-2026-08-26/README.md)；该证据不代替 Mac/Windows 微信客户端验收。
 

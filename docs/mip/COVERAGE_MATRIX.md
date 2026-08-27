@@ -4,7 +4,7 @@
 
 固定 PRD 的 1–81 项逐行状态见 [PRD_81_MATRIX.md](PRD_81_MATRIX.md)。本文件继续按业务闭环和 Figma 代表 frame 汇总，二者必须同时满足才能进入最终验收。
 
-当前工程声明 108 条小程序路由、16 个核心 `mip-*` 云函数和 52 个锁定迁移。共享云环境已有 52 个迁移、121 张 MIP runtime 表精确权限、16/16 核心函数和当前 Owner 初始化的历史验证证据。完整移动端基线 `.tmp/runtime-evidence/2026-08-27-figma-alignment-r4/report.json` 在 375px 实测窗口下通过 108/108 路由、6/6 代表状态和 6/6 交互旅程，运行时与 IDE 诊断均为 0 failure。当前 Owner 的 6000 元会员、399 元活动订单、3 场未来活动、3 个 NPC 任务、3 枚带图片的已佩戴勋章和个人名片非空态由 `.tmp/runtime-evidence/2026-08-27-member-showcase-r2/report.json`、`.tmp/runtime-evidence/2026-08-28-order-media-r1/report.json` 与 `.tmp/runtime-evidence/2026-08-28-task-badge-r1/report.json` 补充；它们不把定向证据冒充新的 108 路由全量结论。1024px 管理端代表页证据见 [响应式密度验收](evidence/admin-density-2026-08-26/README.md)。
+当前工程声明 108 条小程序路由、16 个核心 `mip-*` 云函数和 52 个锁定迁移。共享云环境已有 52 个迁移、121 张 MIP runtime 表精确权限、16/16 核心函数和当前 Owner 初始化的历史验证证据。历史完整移动端基线 `.tmp/runtime-evidence/2026-08-27-figma-alignment-r4/report.json` 在 375px 实测窗口下通过 108/108 路由、6/6 代表状态和 6/6 交互旅程，运行时与 IDE 诊断均为 0 failure；最近一次全量尝试 `.tmp/runtime-evidence/2026-08-28-figma-alignment-r7/report.json` 因 `DEVTOOLS_PROTOCOL_TIMEOUT` 在视口测量阶段中断，没有替代该历史基线。当前 Owner 的 6000 元会员、399 元活动订单、3 场未来活动、3 个 NPC 任务、3 枚带图片的已佩戴勋章和个人名片非空态由 `.tmp/runtime-evidence/2026-08-27-member-showcase-r2/report.json`、`.tmp/runtime-evidence/2026-08-28-order-media-r1/report.json` 与 `.tmp/runtime-evidence/2026-08-28-task-badge-r1/report.json` 补充；它们不把定向证据冒充新的 108 路由全量结论。1024px 管理端代表页证据见 [响应式密度验收](evidence/admin-density-2026-08-26/README.md)。
 
 ## 来源
 

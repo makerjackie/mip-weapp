@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process'
+import path from 'node:path'
 import process from 'node:process'
 
-const root = process.cwd()
+const root = path.resolve(import.meta.dirname, '..')
 const steps = [
   ['verify', ['pnpm', 'verify']],
   ['cloud:doctor', ['pnpm', 'cloud:doctor']],
