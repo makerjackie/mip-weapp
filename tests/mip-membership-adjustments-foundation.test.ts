@@ -107,7 +107,7 @@ describe('membership chains and manual adjustments foundation', () => {
     expect(seed).toMatch(/userStatement\(seed\.users\),\s*membershipChainStatement\(seed\.users\)/)
     expect(seed).toContain('AS membershipChains')
     expect(seed).toContain('membershipChains: seed.users.length')
-    expect(seed).toContain('membershipChainUserIds: value.users.map(item => item.id)')
+    expect(seed).not.toContain('membershipChainUserIds:')
     expect(seed).toContain('mip_membership_chains: value.users.map(item => ({ userId: item.id }))')
     expect(seed).toContain(`'ORDER', NULL, 'ACTIVE'`)
     expect(seed).not.toMatch(/INSERT\s+IGNORE/i)
