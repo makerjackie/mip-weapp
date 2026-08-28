@@ -1,4 +1,5 @@
 {
+  "navigationBarTitleText": "编辑名片",
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",
     "app-page-exit": "/components/page-exit/index",

@@ -85,11 +85,14 @@ Page({
     branchGroups: [] as CatalogSelectorGroup[],
     selectedBranchIds: [] as string[],
     branchIndex: 0,
+    branchCatalogExpanded: false,
     industryOptions: [] as Array<{ id: string, label: string }>,
     industryGroups: [] as CatalogSelectorGroup[],
     selectedIndustryIds: [] as string[],
     industryIndex: 0,
+    industryCatalogExpanded: false,
     abilityOptions: [] as SelectableTag[],
+    moreExpanded: false,
     saving: false,
     message: '',
   },
@@ -310,6 +313,7 @@ Page({
     this.setData({
       selectedBranchIds,
       branchIndex: Math.max(0, this.data.branchOptions.findIndex(item => item.id === branchId)),
+      branchCatalogExpanded: false,
     })
   },
 
@@ -319,7 +323,28 @@ Page({
     this.setData({
       selectedIndustryIds,
       industryIndex: Math.max(0, this.data.industryOptions.findIndex(item => item.id === industryId)),
+      industryCatalogExpanded: false,
     })
+  },
+
+  toggleCatalog(event: WechatMiniprogram.TouchEvent) {
+    const catalog = String(event.currentTarget.dataset.catalog || '')
+    if (catalog === 'branch') {
+      this.setData({
+        branchCatalogExpanded: !this.data.branchCatalogExpanded,
+        industryCatalogExpanded: false,
+      })
+    }
+    else if (catalog === 'industry') {
+      this.setData({
+        branchCatalogExpanded: false,
+        industryCatalogExpanded: !this.data.industryCatalogExpanded,
+      })
+    }
+  },
+
+  toggleMore() {
+    this.setData({ moreExpanded: !this.data.moreExpanded })
   },
 
   toggleAbility(event: WechatMiniprogram.TouchEvent) {

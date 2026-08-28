@@ -1,5 +1,5 @@
 {
-  "navigationBarTitleText": "个人档案",
+  "navigationBarTitleText": "填写信息",
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",
     "mip-catalog-selector": "/components/catalog-selector/index",
