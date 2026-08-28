@@ -1,5 +1,5 @@
 export const brand = {
-  productName: 'MIP',
+  productName: 'MIP奇点聚合',
   tagline: '会员、活动与合作',
   logoPath: '/assets/brand/mip-logo-yellow.png',
   markText: 'MIP',
