@@ -113,7 +113,7 @@ describe('admin game management', () => {
       ['mip.admin.game.members.assignable.list', { seasonId, teamId: teamAId, query: '运营', limit: 30, cursor: 'current_member_cursor' }],
     ])
     assert.deepEqual(detail.sections[1].pager, {
-      key: 'gameMembers', query: '运营', nextCursor: 'next_member_cursor', placeholder: '搜索成员或分会',
+      key: 'gameMembers', query: '运营', nextCursor: 'next_member_cursor', placeholder: '搜索成员或服务器',
     })
     const definition = createGameMutationDefinition('mip.admin.game.teams.members.replace', teamAId, { team, seasonId })
     assert.deepEqual(buildGameMutationInput(definition, {

@@ -325,7 +325,7 @@ const selectField = (key: string, label: string, options: readonly string[], req
 const idField = (key: string, label: string, required = true): ContentMutationField => ({ key, label, kind: 'id', required })
 const versionField = (): ContentMutationField => ({ key: 'expectedVersion', label: '记录版本', kind: 'integer', required: true })
 const commonVersionFields = (): ContentMutationField[] => [idField('announcementId', '公告', false), versionField()]
-const scopeFields = (): ContentMutationField[] => [selectField('scopeType', '作用范围', ['PLATFORM', 'BRANCH']), idField('branchId', '城市分会', false)]
+const scopeFields = (): ContentMutationField[] => [selectField('scopeType', '作用范围', ['PLATFORM', 'BRANCH']), idField('branchId', '服务器', false)]
 const reasonField = (label = '处理原因'): ContentMutationField => areaField('reason', label, 300)
 
 function groupField(key: string, label: string, fields: readonly ContentMutationField[]): ContentMutationField {
@@ -663,9 +663,9 @@ function optionalIdVersion(input: Record<string, unknown>, key: string, label: s
 
 function scope(input: Record<string, unknown>) {
   const scopeType = enumValue(input.scopeType, ['PLATFORM', 'BRANCH'], '作用范围') as ScopeType
-  const branchId = optionalId(input.branchId, '城市分会')
-  if (scopeType === 'BRANCH' && !branchId) throw invalid('城市分会不能为空')
-  if (scopeType === 'PLATFORM' && branchId) throw invalid('平台范围不能填写城市分会')
+  const branchId = optionalId(input.branchId, '服务器')
+  if (scopeType === 'BRANCH' && !branchId) throw invalid('服务器不能为空')
+  if (scopeType === 'PLATFORM' && branchId) throw invalid('平台范围不能填写服务器')
   return scopeType === 'BRANCH' ? { scopeType, branchId } : { scopeType }
 }
 

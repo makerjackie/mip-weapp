@@ -70,8 +70,8 @@ const option = (value: string, label: string): EventMutationFieldOption => ({ va
 const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'eventId', label: '活动标识', kind: 'text', hidden: true },
   { key: 'expectedVersion', label: '记录版本', kind: 'number', hidden: true },
-  { key: 'scopeType', label: '活动范围', kind: 'select', options: [option('PLATFORM', '平台'), option('BRANCH', '城市分会')] },
-  { key: 'branchId', label: '城市分会标识', kind: 'text' },
+  { key: 'scopeType', label: '活动范围', kind: 'select', options: [option('PLATFORM', '平台'), option('BRANCH', '服务器')] },
+  { key: 'branchId', label: '服务器标识', kind: 'text' },
   { key: 'title', label: '活动名称', kind: 'text', required: true, maxLength: 120 },
   { key: 'summary', label: '活动摘要', kind: 'textarea', required: true, maxLength: 300 },
   { key: 'description', label: '活动介绍', kind: 'textarea', required: true, maxLength: 20_000 },
@@ -365,7 +365,7 @@ function eventDraft(values: EventMutationValues) {
   }
   if (accessType !== 'PAID' && priceCents !== 0) throw new FormValidationError('priceCents', '免费活动金额必须为零')
   const scopeType = values.scopeType === undefined || values.scopeType === '' ? 'PLATFORM' : enumValue(values.scopeType, '活动范围', ['PLATFORM', 'BRANCH'] as const)
-  const branchId = scopeType === 'BRANCH' ? id(values.branchId, '城市分会') : null
+  const branchId = scopeType === 'BRANCH' ? id(values.branchId, '服务器') : null
   const venueName = optionalText(values.venueName, '活动地点', 160)
   const onlineUrl = optionalText(values.onlineUrl, '线上地址', 1_024)
   if ((eventMode === 'OFFLINE' || eventMode === 'HYBRID') && !venueName) throw new FormValidationError('venueName', '请填写活动地点')

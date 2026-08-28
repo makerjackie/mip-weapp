@@ -67,7 +67,7 @@ function demoUsersPage(): AdminReadPage {
         { key: 'headline', label: '简介' },
         { key: 'identity', label: '身份' },
         { key: 'phone', label: '手机状态' },
-        { key: 'branch', label: '所属分会' },
+        { key: 'branch', label: '所属服务器' },
         { key: 'level', label: '等级' },
         { key: 'state', label: '账号状态' },
       ],
@@ -89,7 +89,7 @@ function demoEventsPage(): AdminReadPage {
       columns: [
         { key: 'title', label: '活动名称' },
         { key: 'time', label: '开始时间' },
-        { key: 'location', label: '城市与分会' },
+        { key: 'location', label: '城市与服务器' },
         { key: 'access', label: '活动类型' },
         { key: 'registrations', label: '报名人数' },
         { key: 'attended', label: '签到人数' },

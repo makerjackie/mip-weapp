@@ -98,7 +98,7 @@ async function loadUserDetail(userId: string, request: AdminDetailRequest): Prom
       ['身份', codeLabel(user.kind)],
       ['账号状态', codeLabel(user.status)],
       ['手机状态', user.phoneBound === true ? '已绑定' : '未绑定'],
-      ['所属分会', text(user.branchName)],
+      ['所属服务器', text(user.branchName)],
       ['城市', text(user.cityName)],
       ['资料版本', numberText(user.profileVersion)],
       ['用户版本', numberText(user.version)],
@@ -361,7 +361,7 @@ async function loadOrderDetail(orderId: string, request: AdminDetailRequest): Pr
         ['姓名', text(buyer.nickname)],
         ['身份', codeLabel(buyer.kind)],
         ['账号状态', codeLabel(buyer.accountStatus)],
-        ['所属分会', text(buyer.branchName)],
+        ['所属服务器', text(buyer.branchName)],
         ['城市', text(buyer.cityName)],
       ]),
     },
@@ -370,7 +370,7 @@ async function loadOrderDetail(orderId: string, request: AdminDetailRequest): Pr
       fields: fields([
         ['商品名称', text(product.title)],
         ['资源类型', codeLabel(product.resourceType)],
-        ['所属分会', text(product.branchName)],
+        ['所属服务器', text(product.branchName)],
         ['权益天数', numberText(snapshot.durationDays)],
         ['解锁天数', numberText(snapshot.unlockDays)],
         ['退款规则', codeLabel(snapshot.refundPolicy)],
@@ -550,7 +550,7 @@ async function loadOpportunityDetail(opportunityId: string, request: AdminDetail
   sections.push({
     title: '组队玩家',
     rows: team.map(item => ({ name: text(item.nickname), branch: text(item.branchName) })),
-    columns: columns([['name', '姓名'], ['branch', '所属分会']]),
+    columns: columns([['name', '姓名'], ['branch', '所属服务器']]),
   })
   if (commentState) {
     sections.push({
@@ -778,7 +778,7 @@ function booleanText(value: unknown) {
 const codeLabels: Record<string, string> = {
   ACTIVE: '启用', INACTIVE: '未生效', SCHEDULED: '待生效', PENDING: '待处理', EXPIRED: '已过期',
   REVOKED: '已撤销', REFUNDED: '已退款', BLOCKED: '已限制', CLOSED: '已关闭',
-  PLAYER: '玩家', GUEST: '嘉宾', PLATFORM: '平台', BRANCH: '分会', EVENT: '活动',
+  PLAYER: '玩家', GUEST: '嘉宾', PLATFORM: '平台', BRANCH: '服务器', EVENT: '活动',
   DRAFT: '草稿', PUBLISHED: '已发布', UNPUBLISHED: '已下架', CANCELLED: '已取消', ENDED: '已结束', ARCHIVED: '已归档',
   FREE: '免费', MEMBER_INCLUDED: '会员权益', PAID: '已支付', OFFLINE: '线下', ONLINE: '线上', HYBRID: '线上与线下',
   CREATED: '待支付', PAYMENT_CREATED: '支付处理中', FAILED: '失败', REFUND_PENDING: '退款处理中', PARTIALLY_REFUNDED: '部分退款',
@@ -786,7 +786,7 @@ const codeLabels: Record<string, string> = {
   WECHAT_PAY: '微信支付', TEST: '测试支付', PARAMETERS_ISSUED: '支付参数已生成', SUCCEEDED: '成功',
   BEFORE_ACCESS: '访问前可退款', NON_REFUNDABLE: '不可退款', ADMIN_ADJUSTMENT: '人工开通', ORDER: '购买',
   PLATFORM_OWNER: '平台负责人', PLATFORM_OPERATIONS: '平台运营', PLATFORM_FINANCE: '平台财务',
-  BRANCH_ADMIN: '分会管理员', EVENT_OWNER: '活动负责人', EVENT_MANAGER: '活动管理员', EVENT_STAFF: '活动工作人员',
+  BRANCH_ADMIN: '服务器管理员', EVENT_OWNER: '活动负责人', EVENT_MANAGER: '活动管理员', EVENT_STAFF: '活动工作人员',
   PENDING_REVIEW: '待审核', WAITLISTED: '候补', PAYMENT_PENDING: '待支付', REGISTERED: '已报名', CANCELLATION_PENDING: '取消处理中', REJECTED: '已拒绝', ATTENDED: '已签到',
   ORDER_CREATED: '订单创建', PAYMENT_CONFIRMED: '支付确认', ORDER_CLOSED: '订单关闭', REFUND_CREATED: '退款创建', REFUND_COMPLETED: '退款完成',
   connector: '皮条客', business_builder: '生意佬', capital_operator: '暴发户', strategist: '狗策划', visual_designer: '死美工', delivery_lead: '老保姆',

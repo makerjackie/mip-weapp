@@ -230,12 +230,12 @@ export async function loadTaskDetail(
         assignedAt: formatDateTime(item.assignedAt),
         state: assignmentStatusLabel(item.assignmentStatus),
       })),
-      columns: columns([['name', '成员'], ['branch', '所属分会'], ['assignedAt', '分配时间'], ['state', '分配状态']]),
+      columns: columns([['name', '成员'], ['branch', '所属服务器'], ['assignedAt', '分配时间'], ['state', '分配状态']]),
       pager: {
         key: 'taskMembers',
         query: memberQuery.query,
         nextCursor: memberPage.nextCursor,
-        placeholder: '搜索成员或分会',
+        placeholder: '搜索成员或服务器',
       },
     })
   }

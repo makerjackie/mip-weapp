@@ -66,8 +66,8 @@ export async function loadOpportunities(query: AdminListQuery, request: AdminReq
   const requests = Array.isArray(matching.requests) ? matching.requests : []
   return {
     sections: [
-      { title: '机会', rows: opportunityRows, columns: columns([['title', '标题'], ['owner', '发布人'], ['location', '城市与分会'], ['target', '目标'], ['roles', '合作角色'], ['referrals', '引荐数'], ['safety', '内容安全'], ['updatedAt', '更新时间'], ['state', '状态']]) },
-      { title: '用户内容', rows: contentRows, columns: columns([['title', '标题'], ['kind', '内容类型'], ['owner', '发布人'], ['location', '城市与分会'], ['summary', '摘要'], ['safety', '内容安全'], ['updatedAt', '更新时间'], ['state', '状态']]) },
+      { title: '机会', rows: opportunityRows, columns: columns([['title', '标题'], ['owner', '发布人'], ['location', '城市与服务器'], ['target', '目标'], ['roles', '合作角色'], ['referrals', '引荐数'], ['safety', '内容安全'], ['updatedAt', '更新时间'], ['state', '状态']]) },
+      { title: '用户内容', rows: contentRows, columns: columns([['title', '标题'], ['kind', '内容类型'], ['owner', '发布人'], ['location', '城市与服务器'], ['summary', '摘要'], ['safety', '内容安全'], ['updatedAt', '更新时间'], ['state', '状态']]) },
       { title: '撮合设置', rows: settings.scopeKey ? [{
         scope: scopeLabel(settings.scopeType),
         talentScore: numberLabel(settings.talentMinScore),

@@ -29,7 +29,7 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     actions.push(
       button('mip.admin.memberships.grant', '补录会员', id, 'memberships.adjust'),
       button('mip.admin.users.update', '编辑资料', id, 'users.fields.edit'),
-      button('mip.admin.users.changePrimaryBranch', '变更分会', id, 'users.fields.edit'),
+      button('mip.admin.users.changePrimaryBranch', '变更服务器', id, 'users.fields.edit'),
       button('mip.admin.users.setControl', '访问控制', id, 'users.access.manage'),
       button('mip.admin.roles.set', '设置角色', id, 'roles.change'),
       button('mip.admin.badges.grant', '授予勋章', id, 'badges.manage'),

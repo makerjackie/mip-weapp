@@ -170,7 +170,7 @@ export async function loadGameSeasonDetail(
           rowActions: teamRowActions(item),
         })),
         columns: columns([
-          ['name', '战队'], ['branch', '所属分会'], ['members', '成员'], ['headquarters', '大本营'], ['version', '版本'], ['state', '状态'],
+          ['name', '战队'], ['branch', '所属服务器'], ['members', '成员'], ['headquarters', '大本营'], ['version', '版本'], ['state', '状态'],
         ]),
         detailTarget: 'gameTeams',
       },
@@ -191,7 +191,7 @@ export async function loadGameSeasonDetail(
           branch: valueOf(item, 'branchName'), score: numberLabel(item.score),
           level: valueOf(item, 'levelLabel'),
         })),
-        columns: columns([['rank', '排名'], ['name', '名称'], ['branch', '分会'], ['score', '经验值'], ['level', '等级']]),
+        columns: columns([['rank', '排名'], ['name', '名称'], ['branch', '服务器'], ['score', '经验值'], ['level', '等级']]),
         fields: fields([['排行类型', rankingTypeLabel(ranking.rankingType)], ['生成时间', formatDateTime(ranking.generatedAt)]]),
       },
     ],
@@ -230,7 +230,7 @@ export async function loadGameTeamDetail(
       {
         title: '战队信息',
         fields: fields([
-          ['所属分会', team.branchName], ['简介', team.summary],
+          ['所属服务器', team.branchName], ['简介', team.summary],
           ['成员上限', numberLabel(team.memberLimit)], ['当前人数', numberLabel(team.memberCount)],
           ['大本营', valueOf(record(team.headquartersLevel), 'label')], ['版本', numberLabel(team.version)],
         ]),
@@ -243,13 +243,13 @@ export async function loadGameTeamDetail(
           role: roleLabel(item.role),
         })),
         columns: columns([
-          ['name', '成员'], ['branch', '分会'], ['currentTeam', '当前战队'], ['role', '角色'], ['memberRef', '成员引用'],
+          ['name', '成员'], ['branch', '服务器'], ['currentTeam', '当前战队'], ['role', '角色'], ['memberRef', '成员引用'],
         ]),
         pager: {
           key: 'gameMembers',
           query: query.query,
           nextCursor: memberPage.hasMore === true && typeof memberPage.nextCursor === 'string' ? memberPage.nextCursor : null,
-          placeholder: '搜索成员或分会',
+          placeholder: '搜索成员或服务器',
         },
       },
     ],
@@ -381,7 +381,7 @@ function teamSaveDefinition(targetId: string, source: Record<string, unknown>, t
   const branches = records(source.branches)
   return definition('mip.admin.game.teams.save', targetId ? '编辑战队' : '新增战队', '战队成员和比赛积分由独立操作维护。', [
     { name: 'seasonId', label: '赛季 ID', kind: 'text', hidden: true },
-    { name: 'branchId', label: '所属分会', kind: branches.length ? 'select' : 'text', options: branches.map(item => ({ value: String(item.id || ''), label: String(item.name || item.id || '') })) },
+    { name: 'branchId', label: '所属服务器', kind: branches.length ? 'select' : 'text', options: branches.map(item => ({ value: String(item.id || ''), label: String(item.name || item.id || '') })) },
     { name: 'name', label: '战队名称', kind: 'text', required: true, maxLength: 100 },
     { name: 'summary', label: '简介', kind: 'textarea', maxLength: 500, wide: true },
     { name: 'memberLimit', label: '成员上限', kind: 'integer' },

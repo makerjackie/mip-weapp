@@ -93,7 +93,7 @@ describe('admin task management', () => {
     const completions = detail.sections.find(section => section.title === '完成记录')
     assert.equal(members?.rows?.[0].state, '已分配')
     assert.deepEqual(members?.pager, {
-      key: 'taskMembers', query: '周', nextCursor: 'next-member-cursor', placeholder: '搜索成员或分会',
+      key: 'taskMembers', query: '周', nextCursor: 'next-member-cursor', placeholder: '搜索成员或服务器',
     })
     assert.equal(completions?.detailTarget, 'taskCompletions')
     assert.deepEqual(completions?.pager, {

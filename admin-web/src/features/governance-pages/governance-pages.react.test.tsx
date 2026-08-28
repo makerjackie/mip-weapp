@@ -73,7 +73,7 @@ describe('governance React pages', () => {
           }],
           columns: [{ key: 'role', label: '角色' }, { key: 'version', label: '版本' }],
         },
-        { title: '城市分会', rows: [], columns: [{ key: 'name', label: '分会' }] },
+        { title: '服务器', rows: [], columns: [{ key: 'name', label: '服务器' }] },
         { title: '最近审计记录', rows: [], columns: [{ key: 'action', label: '操作' }] },
       ],
       nextCursor: null,

@@ -2,7 +2,7 @@ import type { AdminListQuery, AdminTableColumn, AdminTableRow } from './admin-re
 
 export const labels: Record<string, string> = {
   ACTIVE: '启用', BLOCKED: '已限制', CLOSED: '已关闭', INACTIVE: '停用', REVOKED: '已撤销',
-  PLAYER: '玩家', GUEST: '嘉宾', PLATFORM: '平台', BRANCH: '分会', EVENT: '活动',
+  PLAYER: '玩家', GUEST: '嘉宾', PLATFORM: '平台', BRANCH: '服务器', EVENT: '活动',
   DRAFT: '草稿', READY: '待发布', PUBLISHED: '已发布', UNPUBLISHED: '已下架',
   CANCELLED: '已取消', ENDED: '已结束', ARCHIVED: '已归档', WITHDRAWN: '已撤回',
   CREATED: '待支付', PAYMENT_CREATED: '支付处理中', PAID: '已支付', FAILED: '失败',
@@ -12,7 +12,7 @@ export const labels: Record<string, string> = {
   MEMBERSHIP: '会员订单', CONTENT: '内容订单', HOT_NEWS: '热点', ARTICLE: '文章', WEB: '网页',
   VIDEO: '视频', PRIVATE_CHANNEL: '私域内容', EXPERT_SHARE: '专家分享',
   PLATFORM_OWNER: '平台负责人', PLATFORM_OPERATIONS: '平台运营', PLATFORM_FINANCE: '平台财务',
-  BRANCH_ADMIN: '分会管理员', EVENT_OWNER: '活动负责人', EVENT_MANAGER: '活动管理员', EVENT_STAFF: '活动工作人员',
+  BRANCH_ADMIN: '服务器管理员', EVENT_OWNER: '活动负责人', EVENT_MANAGER: '活动管理员', EVENT_STAFF: '活动工作人员',
   RESOURCE: '资源', ROLE: '角色', USER: '用户', ORDER: '订单', REFUND: '退款', MESSAGE: '消息', KNOWLEDGE: '知识内容',
   DEFAULT: '默认策略', CUSTOM: '自定义策略',
   COOPERATION_CARD: '合作卡', SUPER_CASE: '超级案例',
@@ -41,7 +41,7 @@ export const capabilityLabels: Record<string, string> = {
   'events.checkin.undo': '撤销签到', 'events.team.manage': '管理活动团队', 'events.album.manage': '管理活动相册',
   'events.feedback.read': '查看活动反馈', 'events.comments.manage': '管理活动评论', 'events.catalog.manage': '管理活动目录',
   'events.recaps.manage': '管理活动回顾', 'announcements.manage': '管理公告', 'messages.manage': '管理消息',
-  'messages.delivery.review': '审核消息投递', 'communications.publish': '发布通知', 'branches.manage': '管理城市分会',
+  'messages.delivery.review': '审核消息投递', 'communications.publish': '发布通知', 'branches.manage': '管理服务器',
   'community.reports.manage': '管理社区举报', 'userContent.moderate': '审核用户内容',
   'opportunities.moderate': '审核机会', 'opportunities.archive': '归档机会', 'growth.read': '查看成长数据',
   'growth.configure': '配置成长规则', 'growth.adjust': '调整成长数据', 'tasks.manage': '管理任务',
@@ -178,7 +178,7 @@ export function auditActionLabel(value: unknown) {
   const key = String(value || '')
   const parts = key.replace(/^admin\./, '').split('.').filter(Boolean)
   const tokens: Record<string, string> = {
-    roles: '角色', rolePolicies: '权限策略', users: '用户', memberships: '会员', branches: '城市分会',
+    roles: '角色', rolePolicies: '权限策略', users: '用户', memberships: '会员', branches: '服务器',
     events: '活动', orders: '订单', refunds: '退款', messages: '消息', knowledge: '知识库', audit: '审计',
     grant: '授权', revoke: '撤销', create: '创建', update: '更新', save: '保存', publish: '发布',
     withdraw: '撤回', archive: '归档', submit: '提交', changeStatus: '更改状态', view: '查看', enter: '进入',

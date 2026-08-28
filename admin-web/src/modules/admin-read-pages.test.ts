@@ -82,7 +82,7 @@ describe('admin read pages', () => {
     assert.deepEqual(calls.map(call => call.action), ['mip.admin.roles.list', 'mip.admin.branches.list', 'mip.admin.rolePolicies.list', 'mip.admin.audit.list'])
     assert.deepEqual(calls.find(call => call.action === 'mip.admin.audit.list')?.input, { limit: 20 })
     assert.equal(page.sections.length, 4)
-    assert.equal(page.sections[0].rows[0].role, '分会管理员')
+    assert.equal(page.sections[0].rows[0].role, '服务器管理员')
     assert.equal(page.sections[1].title, '角色策略摘要')
     assert.equal(page.sections[1].rows[0].effective, '查看活动、管理活动')
     assert.equal(page.sections[2].rows[0].blockers, '会员 86 · 管理员 1 · 活动 3 · 机会 2')

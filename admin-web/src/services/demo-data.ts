@@ -32,7 +32,7 @@ export const demo = {
   ],
   roles: [
     { name: '平台管理员', members: 2, scope: '平台', capabilities: '全部运营权限' },
-    { name: '城市运营成员', members: 8, scope: '分会', capabilities: '活动、用户、消息' },
+    { name: '服务器运营成员', members: 8, scope: '服务器', capabilities: '活动、用户、消息' },
     { name: '内容运营', members: 4, scope: '平台', capabilities: '知识库、消息' },
   ],
   messages: [
@@ -40,7 +40,7 @@ export const demo = {
     { title: '会员权益到期提醒', audience: '会员用户', status: '定时中', updatedAt: '2030-02-17 16:00' },
   ],
   knowledge: [
-    { title: 'MIP 城市分会运营手册', type: '运营文档', status: '已发布', updatedAt: '2030-02-15' },
+    { title: 'MIP 服务器运营手册', type: '运营文档', status: '已发布', updatedAt: '2030-02-15' },
     { title: '活动主持人与签到规范', type: '流程文档', status: '草稿', updatedAt: '2030-02-12' },
   ],
 } as const

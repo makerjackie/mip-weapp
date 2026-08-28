@@ -27,7 +27,7 @@ describe('admin people mutation forms', () => {
     )
     assert.equal(definition.fields.find(field => field.name === 'branchKey')?.kind, 'text')
     assert.equal(definition.fields.find(field => field.name === 'summary')?.kind, 'textarea')
-    assert.equal(definition.title, '创建城市分会')
+    assert.equal(definition.title, '创建服务器')
   })
 
   it('reads profile and account versions from separate detail fields', () => {

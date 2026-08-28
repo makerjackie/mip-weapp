@@ -86,7 +86,7 @@ interface GovernancePageSpec {
   actions: readonly PageActionSpec[]
 }
 
-const createBranch = peopleAction('mip.admin.branches.create', '新建分会')
+const createBranch = peopleAction('mip.admin.branches.create', '新建服务器')
 const createMessage = contentAction('mip.admin.messageCampaigns.save', '创建消息')
 const createKnowledgeContent = contentAction('mip.admin.knowledge.contents.save', '新建内容')
 const createKnowledgeSchedule = contentAction('mip.admin.knowledge.schedules.save', '新建采集计划')
@@ -95,11 +95,11 @@ const createAnnouncement = contentAction('mip.admin.announcements.save', '新建
 const pageSpecs: Record<GovernanceRoute, GovernancePageSpec> = {
   permissions: {
     title: '权限管理',
-    description: '查看运营成员、角色策略、城市分会和审计记录。',
+    description: '查看运营成员、角色策略、服务器和审计记录。',
     sections: [
       { key: 'members', label: '运营成员' },
       { key: 'policies', label: '角色策略' },
-      { key: 'branches', label: '城市分会' },
+      { key: 'branches', label: '服务器' },
       { key: 'audit', label: '审计记录' },
     ],
     actions: [createBranch],

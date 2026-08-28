@@ -42,7 +42,7 @@ const routeDefinitions: Record<AdminListRoute, AdminReadRouteDefinition> = {
     paginated: true,
   },
   events: {
-    searchPlaceholder: '搜索活动名称、城市或分会',
+    searchPlaceholder: '搜索活动名称、城市或服务器',
     statusOptions: [...commonStatus, ...options(['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'CANCELLED', 'ENDED', 'ARCHIVED'])],
     paginated: true,
   },
@@ -67,7 +67,7 @@ const routeDefinitions: Record<AdminListRoute, AdminReadRouteDefinition> = {
     paginated: false,
   },
   permissions: {
-    searchPlaceholder: '筛选成员、角色、分会或城市',
+    searchPlaceholder: '筛选成员、角色、服务器或城市',
     statusOptions: [...commonStatus, ...options(['ACTIVE', 'REVOKED', 'INACTIVE'])],
     paginated: false,
   },
@@ -139,7 +139,7 @@ async function loadUsers(query: AdminListQuery, request: AdminRequest): Promise<
       })),
       columns: columns([
         ['name', '姓名'], ['headline', '简介'], ['identity', '身份'], ['phone', '手机状态'],
-        ['branch', '所属分会'], ['level', '等级'], ['state', '账号状态'],
+        ['branch', '所属服务器'], ['level', '等级'], ['state', '账号状态'],
       ]),
     }],
     nextCursor: page.nextCursor,
@@ -163,7 +163,7 @@ async function loadEvents(query: AdminListQuery, request: AdminRequest): Promise
         state: label(valueOf(item, 'status')),
       })),
       columns: columns([
-        ['title', '活动名称'], ['time', '开始时间'], ['location', '城市与分会'],
+        ['title', '活动名称'], ['time', '开始时间'], ['location', '城市与服务器'],
         ['access', '活动类型'], ['registrations', '报名人数'], ['attended', '签到人数'], ['state', '状态'],
       ]),
     }],
@@ -251,7 +251,7 @@ async function loadPermissions(query: AdminListQuery, request: AdminRequest): Pr
     sections: [
       { title: '运营成员', rows: roles, columns: columns([['name', '姓名'], ['role', '角色'], ['scope', '作用范围'], ['grantedAt', '授权时间'], ['state', '状态']]) },
       { title: '角色策略摘要', rows: policies, columns: columns([['role', '角色'], ['scope', '作用范围'], ['effective', '当前能力'], ['allowed', '可用能力边界'], ['source', '策略来源'], ['version', '版本'], ['updatedAt', '更新时间']]) },
-      { title: '城市分会', rows: branches, columns: columns([['name', '分会'], ['city', '城市'], ['summary', '说明'], ['players', '有效会员'], ['admins', '管理员'], ['blockers', '关联数据'], ['state', '状态']]) },
+      { title: '服务器', rows: branches, columns: columns([['name', '服务器'], ['city', '城市'], ['summary', '说明'], ['players', '有效会员'], ['admins', '管理员'], ['blockers', '关联数据'], ['state', '状态']]) },
       { title: '最近审计记录', rows: audits, columns: columns([['actor', '操作人'], ['action', '操作'], ['resource', '资源'], ['role', '生效角色'], ['scope', '作用范围'], ['createdAt', '时间']]) },
     ],
     nextCursor: null,
@@ -446,7 +446,7 @@ function auditActionLabel(value: unknown) {
   const key = String(value || '')
   const parts = key.replace(/^admin\./, '').split('.').filter(Boolean)
   const tokens: Record<string, string> = {
-    roles: '角色', rolePolicies: '权限策略', users: '用户', memberships: '会员', branches: '城市分会',
+    roles: '角色', rolePolicies: '权限策略', users: '用户', memberships: '会员', branches: '服务器',
     events: '活动', orders: '订单', refunds: '退款', messages: '消息', knowledge: '知识库', audit: '审计',
     grant: '授权', revoke: '撤销', create: '创建', update: '更新', save: '保存', publish: '发布',
     withdraw: '撤回', archive: '归档', submit: '提交', changeStatus: '更改状态', view: '查看', enter: '进入',

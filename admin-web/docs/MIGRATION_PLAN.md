@@ -5,7 +5,7 @@
 - 来源仓库：迁移前的本地独立仓库 `mip-admin-web`
 - 来源提交：`bf16657 feat(admin): align web console with Workbuddy design`
 - 导入方式：不压缩历史的 `git subtree`，迁入 `admin-web/`。
-- 原仓库保持不动。任一阶段可回退到 subtree 导入 commit，并继续使用原 Cloudflare Pages 构建。
+- 回滚依据已经完整进入当前仓库 Git 历史；生产部署验证完成后，相邻原仓库不再是必要依赖，可以安全清理。
 
 ## 旧 DOM 与 React 并存
 

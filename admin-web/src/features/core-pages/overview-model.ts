@@ -137,7 +137,7 @@ function availabilityLabel(value: unknown) {
 function scopeLabel(value: unknown) {
   const labels: Record<string, string> = {
     PLATFORM: '平台',
-    BRANCH: '城市分会',
+    BRANCH: '服务器',
     EVENT: '活动',
     RESOURCE: '业务资源',
   }
