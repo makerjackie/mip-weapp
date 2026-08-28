@@ -304,8 +304,10 @@ describe('admin exports deep module', () => {
       eventId: EVENT_ID,
       filters: { status: 'APPROVED', eventId: 'forged-event' },
       includesPhone: true,
+      idempotencyKey: 'web-export-create-0001',
     })
     let input = lastCall(repo, 'createExportTicket').input
+    assert.equal(input.idempotencyKey, 'web-export-create-0001')
     assert.deepEqual(input.scope, {
       scopeType: 'EVENT',
       scopeId: EVENT_ID,

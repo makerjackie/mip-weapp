@@ -106,7 +106,7 @@ describe('Web BFF trusted query adapter', () => {
   })
 
   it('derives an exact reviewed mutation manifest and rejects metadata drift', () => {
-    assert.equal(WEB_BFF_REVIEWED_MUTATION_MANIFEST.length, 59)
+    assert.equal(WEB_BFF_REVIEWED_MUTATION_MANIFEST.length, 80)
     assert.deepEqual(
       [...WEB_BFF_MUTATION_ACTIONS],
       WEB_BFF_REVIEWED_MUTATION_MANIFEST.map(item => item.action),
@@ -225,6 +225,9 @@ describe('Web BFF trusted query adapter', () => {
         eventId: 'event-a', expectedVersion: 1, sendWechatReminder: false, recipientUserIds: ['forged-user'],
       }],
       ['mip.admin.refunds.submit', { orderId: 'order-a', reason: '运营退款', amountCents: 1 }],
+      ['mip.admin.media.uploadImage', {
+        purpose: 'BANNER', imageBase64: 'browser-image', capability: 'events.read',
+      }],
     ]
     for (const [action, input] of cases) {
       const result = await route(envelope(action, { idempotencyKey: 'web-input-check-0001', input }))
@@ -246,7 +249,7 @@ describe('Web BFF trusted query adapter', () => {
       }))
       assert.equal(result.ok, true, mutation.action)
     }
-    assert.equal(accepted.calls.length, 59)
+    assert.equal(accepted.calls.length, 80)
 
     const rejected = fixture()
     for (const mutation of WEB_BFF_REVIEWED_MUTATION_MANIFEST) {
@@ -277,7 +280,7 @@ describe('Web BFF trusted query adapter', () => {
       assert.equal(result.ok, true, mutation.action)
     }
 
-    assert.equal(calls.length, 59)
+    assert.equal(calls.length, 80)
     for (let index = 0; index < WEB_BFF_REVIEWED_MUTATION_MANIFEST.length; index += 1) {
       const mutation = WEB_BFF_REVIEWED_MUTATION_MANIFEST[index]
       assert.equal(
@@ -308,6 +311,20 @@ describe('Web BFF trusted query adapter', () => {
         'mip.admin.tasks.delete',
         'mip.admin.tasks.assignMembers',
         'mip.admin.tasks.revokeMembers',
+        'mip.admin.banners.save',
+        'mip.admin.game.seasons.save',
+        'mip.admin.game.seasons.changeStatus',
+        'mip.admin.game.teams.save',
+        'mip.admin.game.teams.changeStatus',
+        'mip.admin.game.teams.members.replace',
+        'mip.admin.game.matches.save',
+        'mip.admin.game.matches.finalize',
+        'mip.admin.game.rankings.generate',
+        'mip.admin.game.blindBoxes.catalogs.save',
+        'mip.admin.game.blindBoxes.catalogs.changeStatus',
+        'mip.admin.game.blindBoxes.cards.save',
+        'mip.admin.game.blindBoxes.cards.changeStatus',
+        'mip.admin.exports.create',
       ],
     )
   })

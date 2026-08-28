@@ -11,5 +11,8 @@ module.exports = Object.freeze([
   require('./opportunities'),
   require('./growth'),
   require('./tasks'),
+  require('./banners'),
+  require('./game'),
+  require('./media'),
   require('./application-workflow'),
 ])

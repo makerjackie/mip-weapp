@@ -24,7 +24,7 @@ function clientWith(cloud, extra = {}) {
 }
 
 describe('task admin typed client', () => {
-  it('exposes only the twelve reviewed task operations', () => {
+  it('exposes only the thirteen reviewed task operations', () => {
     assert.deepEqual(Object.keys(OPERATION_SPECS).sort(), [
       'mip.admin.tasks.assignMembers',
       'mip.admin.tasks.assignableMembers.list',
@@ -32,6 +32,7 @@ describe('task admin typed client', () => {
       'mip.admin.tasks.completions.get',
       'mip.admin.tasks.completions.list',
       'mip.admin.tasks.delete',
+      'mip.admin.tasks.eligibleLevels.list',
       'mip.admin.tasks.get',
       'mip.admin.tasks.list',
       'mip.admin.tasks.publish',

@@ -79,10 +79,26 @@ const WEB_BFF_FOURTH_QUERY_ACTIONS = Object.freeze([
 const WEB_BFF_FIFTH_QUERY_ACTIONS = Object.freeze([
   'mip.admin.tasks.list',
   'mip.admin.tasks.get',
+  'mip.admin.tasks.eligibleLevels.list',
   'mip.admin.tasks.assignableMembers.list',
   'mip.admin.tasks.completions.list',
   'mip.admin.tasks.completions.get',
   'mip.admin.tasks.completions.export',
+])
+const WEB_BFF_SIXTH_QUERY_ACTIONS = Object.freeze([
+  'mip.admin.banners.session',
+  'mip.admin.banners.list',
+  'mip.admin.banners.get',
+])
+const WEB_BFF_SEVENTH_QUERY_ACTIONS = Object.freeze([
+  'mip.admin.game.session',
+  'mip.admin.game.rankings.list',
+  'mip.admin.game.seasons.list',
+  'mip.admin.game.teams.list',
+  'mip.admin.game.members.assignable.list',
+  'mip.admin.game.matches.list',
+  'mip.admin.game.blindBoxes.catalogs.list',
+  'mip.admin.game.blindBoxes.cards.list',
 ])
 const WEB_BFF_REVIEWED_MUTATION_MANIFEST = Object.freeze([
   domainIdempotentMutation('mip.admin.memberships.grant', ['durationMonths', 'expectedChainVersion', 'reason', 'userId']),
@@ -148,6 +164,31 @@ const WEB_BFF_REVIEWED_MUTATION_MANIFEST = Object.freeze([
   domainIdempotentMutation('mip.admin.tasks.delete', ['taskId', 'expectedVersion']),
   domainIdempotentMutation('mip.admin.tasks.assignMembers', ['taskId', 'memberRefs', 'expectedVersion']),
   domainIdempotentMutation('mip.admin.tasks.revokeMembers', ['taskId', 'memberRefs', 'expectedVersion']),
+
+  domainIdempotentMutation('mip.admin.banners.save', ['banner'], ['bannerId', 'expectedVersion']),
+  reviewedMutation('mip.admin.banners.changeStatus', ['bannerId', 'expectedVersion', 'status']),
+  reviewedMutation('mip.admin.banners.move', ['bannerId', 'expectedVersion', 'direction']),
+  reviewedMutation('mip.admin.banners.delete', ['bannerId', 'expectedVersion']),
+
+  domainIdempotentMutation('mip.admin.game.seasons.save', ['season'], ['seasonId', 'expectedVersion']),
+  domainIdempotentMutation('mip.admin.game.seasons.changeStatus', ['seasonId', 'expectedVersion', 'status']),
+  domainIdempotentMutation('mip.admin.game.teams.save', ['team'], ['teamId', 'expectedVersion']),
+  domainIdempotentMutation('mip.admin.game.teams.changeStatus', ['seasonId', 'teamId', 'expectedVersion', 'status']),
+  domainIdempotentMutation('mip.admin.game.teams.members.replace', ['seasonId', 'teamId', 'expectedVersion', 'members']),
+  domainIdempotentMutation('mip.admin.game.matches.save', ['match']),
+  domainIdempotentMutation('mip.admin.game.matches.finalize', ['matchId', 'expectedVersion']),
+  domainIdempotentMutation('mip.admin.game.rankings.generate', ['seasonId', 'rankingType']),
+  domainIdempotentMutation('mip.admin.game.blindBoxes.catalogs.save', ['catalog'], ['catalogId', 'expectedVersion']),
+  domainIdempotentMutation('mip.admin.game.blindBoxes.catalogs.changeStatus', ['catalogId', 'expectedVersion', 'status']),
+  domainIdempotentMutation('mip.admin.game.blindBoxes.cards.save', ['card'], ['cardId', 'expectedVersion']),
+  domainIdempotentMutation('mip.admin.game.blindBoxes.cards.changeStatus', ['cardId', 'expectedVersion', 'status']),
+
+  reviewedMutation('mip.admin.media.uploadImage', ['purpose', 'imageBase64']),
+
+  domainIdempotentMutation('mip.admin.exports.create', ['exportType'], ['includesPhone', 'filters', 'eventId', 'branchId']),
+  reviewedMutation('mip.admin.exports.prepare', ['ticketId', 'token']),
+  reviewedMutation('mip.admin.exports.reserve', ['ticketId', 'token']),
+  reviewedMutation('mip.admin.exports.complete', ['ticketId', 'token']),
 ])
 const WEB_BFF_QUERY_ACTIONS = createQueryActionAllowlist(
   [
@@ -156,6 +197,8 @@ const WEB_BFF_QUERY_ACTIONS = createQueryActionAllowlist(
     ...WEB_BFF_THIRD_QUERY_ACTIONS,
     ...WEB_BFF_FOURTH_QUERY_ACTIONS,
     ...WEB_BFF_FIFTH_QUERY_ACTIONS,
+    ...WEB_BFF_SIXTH_QUERY_ACTIONS,
+    ...WEB_BFF_SEVENTH_QUERY_ACTIONS,
   ],
   publicOperationContract,
 )
@@ -465,6 +508,8 @@ module.exports = {
   WEB_BFF_REVIEWED_MUTATION_MANIFEST,
   WEB_BFF_QUERY_ACTIONS,
   WEB_BFF_SECOND_QUERY_ACTIONS,
+  WEB_BFF_SEVENTH_QUERY_ACTIONS,
+  WEB_BFF_SIXTH_QUERY_ACTIONS,
   WEB_BFF_THIRD_QUERY_ACTIONS,
   WEB_BFF_TRANSPORT,
   canonicalJson,

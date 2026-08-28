@@ -45,6 +45,7 @@ function createAdminExports({
       throw new AdminError('FORBIDDEN', '当前账号不能创建该类导出')
     }
     const includesPhone = input.includesPhone === true
+    const idempotencyKey = optionalIdempotencyKey(input.idempotencyKey)
     if (includesPhone
       && !['USERS', 'EVENT_ROSTER', 'EVENT_ROSTER_ALL'].includes(exportType)) {
       throw new AdminError('VALIDATION_FAILED', '该导出不包含手机号')
@@ -61,6 +62,7 @@ function createAdminExports({
     return repository.createExportTicket({
       appId: context.caller.appId,
       actorUserId: context.caller.userId,
+      idempotencyKey,
       exportType,
       scope,
       filters,
@@ -382,6 +384,15 @@ function hashExportToken(value) {
     throw new AdminError('VALIDATION_FAILED', '导出令牌无效')
   }
   return createHash('sha256').update(token).digest('hex')
+}
+
+function optionalIdempotencyKey(value) {
+  if (value === undefined || value === null || value === '') return undefined
+  const key = typeof value === 'string' ? value.trim() : ''
+  if (!/^[A-Za-z0-9_.:-]{12,128}$/.test(key)) {
+    throw new AdminError('VALIDATION_FAILED', '请求标识无效')
+  }
+  return key
 }
 
 function exportStatus(ticket) {

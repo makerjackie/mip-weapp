@@ -8,7 +8,7 @@ const TASK_ADMIN_PROTOCOL = 'mip-tasks-admin/v1'
 const MAX_CLOCK_SKEW_MS = 60_000
 const ACTIONS = Object.freeze(new Set([
   'admin.listTasks', 'admin.getTask', 'admin.saveTask', 'admin.publishTask',
-  'admin.unpublishTask', 'admin.deleteTask', 'admin.listAssignableMembers',
+  'admin.unpublishTask', 'admin.deleteTask', 'admin.listEligibleLevels', 'admin.listAssignableMembers',
   'admin.assignMembers', 'admin.revokeMembers', 'admin.listCompletions',
   'admin.getCompletion', 'admin.exportCompletions',
 ]))
@@ -100,6 +100,7 @@ function createInternalTaskHandler({
   const dispatch = Object.freeze({
     'admin.listTasks': (caller, input) => service.listAdminTasks(caller, input),
     'admin.getTask': (caller, input) => service.getAdminTask(caller, input),
+    'admin.listEligibleLevels': caller => service.listEligibleLevels(caller),
     'admin.saveTask': (caller, input) => service.saveTask(caller, input),
     'admin.publishTask': (caller, input) => service.transitionTask(caller, input, 'PUBLISHED'),
     'admin.unpublishTask': (caller, input) => service.transitionTask(caller, input, 'UNPUBLISHED'),

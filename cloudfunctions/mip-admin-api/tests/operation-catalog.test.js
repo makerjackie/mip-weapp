@@ -164,6 +164,7 @@ const expectedOperations = Object.freeze({
 
   'mip.admin.tasks.list': ['TASKS', 'QUERY', 'listTasks'],
   'mip.admin.tasks.get': ['TASKS', 'QUERY', 'getTask'],
+  'mip.admin.tasks.eligibleLevels.list': ['TASKS', 'QUERY', 'listEligibleLevels'],
   'mip.admin.tasks.save': ['TASKS', 'MUTATION', 'saveTask'],
   'mip.admin.tasks.publish': ['TASKS', 'MUTATION', 'publishTask'],
   'mip.admin.tasks.unpublish': ['TASKS', 'MUTATION', 'unpublishTask'],
@@ -174,6 +175,37 @@ const expectedOperations = Object.freeze({
   'mip.admin.tasks.completions.list': ['TASKS', 'QUERY', 'listCompletions'],
   'mip.admin.tasks.completions.get': ['TASKS', 'QUERY', 'getCompletion'],
   'mip.admin.tasks.completions.export': ['TASKS', 'QUERY', 'exportCompletions'],
+
+  'mip.admin.banners.session': ['BANNERS', 'QUERY', 'getBannerSession'],
+  'mip.admin.banners.list': ['BANNERS', 'QUERY', 'listBanners'],
+  'mip.admin.banners.get': ['BANNERS', 'QUERY', 'getBanner'],
+  'mip.admin.banners.save': ['BANNERS', 'MUTATION', 'saveBanner'],
+  'mip.admin.banners.changeStatus': ['BANNERS', 'MUTATION', 'changeBannerStatus'],
+  'mip.admin.banners.move': ['BANNERS', 'MUTATION', 'moveBanner'],
+  'mip.admin.banners.delete': ['BANNERS', 'MUTATION', 'deleteBanner'],
+
+  'mip.admin.game.session': ['GAME', 'QUERY', 'getGameSession'],
+  'mip.admin.game.rankings.list': ['GAME', 'QUERY', 'listGameRankings'],
+  'mip.admin.game.seasons.list': ['GAME', 'QUERY', 'listGameSeasons'],
+  'mip.admin.game.seasons.save': ['GAME', 'MUTATION', 'saveGameSeason'],
+  'mip.admin.game.seasons.changeStatus': ['GAME', 'MUTATION', 'changeGameSeasonStatus'],
+  'mip.admin.game.teams.list': ['GAME', 'QUERY', 'listGameTeams'],
+  'mip.admin.game.teams.save': ['GAME', 'MUTATION', 'saveGameTeam'],
+  'mip.admin.game.teams.changeStatus': ['GAME', 'MUTATION', 'changeGameTeamStatus'],
+  'mip.admin.game.members.assignable.list': ['GAME', 'QUERY', 'listGameAssignableMembers'],
+  'mip.admin.game.teams.members.replace': ['GAME', 'MUTATION', 'replaceGameTeamMembers'],
+  'mip.admin.game.matches.list': ['GAME', 'QUERY', 'listGameMatches'],
+  'mip.admin.game.matches.save': ['GAME', 'MUTATION', 'saveGameWeeklyMatch'],
+  'mip.admin.game.matches.finalize': ['GAME', 'MUTATION', 'finalizeGameWeeklyMatch'],
+  'mip.admin.game.rankings.generate': ['GAME', 'MUTATION', 'generateGameRankingSnapshot'],
+  'mip.admin.game.blindBoxes.catalogs.list': ['GAME', 'QUERY', 'listGameBlindBoxCatalogs'],
+  'mip.admin.game.blindBoxes.catalogs.save': ['GAME', 'MUTATION', 'saveGameBlindBoxCatalog'],
+  'mip.admin.game.blindBoxes.catalogs.changeStatus': ['GAME', 'MUTATION', 'changeGameBlindBoxCatalogStatus'],
+  'mip.admin.game.blindBoxes.cards.list': ['GAME', 'QUERY', 'listGameBlindBoxCards'],
+  'mip.admin.game.blindBoxes.cards.save': ['GAME', 'MUTATION', 'saveGameBlindBoxCard'],
+  'mip.admin.game.blindBoxes.cards.changeStatus': ['GAME', 'MUTATION', 'changeGameBlindBoxCardStatus'],
+
+  'mip.admin.media.uploadImage': ['MEDIA', 'MUTATION', 'uploadMediaImage', 'SESSION_FIRST'],
 
   'mip.admin.dashboard': ['APPLICATION_WORKFLOW', 'QUERY', 'getDashboard'],
   'mip.admin.dashboard.overview.get': ['APPLICATION_WORKFLOW', 'QUERY', 'getDashboardOverview'],
@@ -224,12 +256,12 @@ function manifest(owner, operations) {
 }
 
 describe('admin operation catalog', () => {
-  it('freezes the exact 158 business actions, owners, and kinds while keeping health separate', () => {
+  it('freezes the exact 187 business actions, owners, and kinds while keeping health separate', () => {
     const handlerActions = Object.keys(actions).filter(action => action !== 'health')
     const expectedActions = Object.keys(expectedOperations)
 
-    assert.equal(expectedActions.length, 158)
-    assert.equal(operationCatalog.length, 158)
+    assert.equal(expectedActions.length, 187)
+    assert.equal(operationCatalog.length, 187)
     assert.deepEqual(sorted(handlerActions), sorted(expectedActions))
     assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(expectedActions))
     assert.equal(operationByAction.health, undefined)

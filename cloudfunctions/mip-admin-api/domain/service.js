@@ -25,6 +25,9 @@ const { createAdminPaymentAttempts } = require('./payment-attempts')
 const { createAdminUsers } = require('./users')
 const { createAdminUserContentGovernance } = require('./user-content-governance')
 const { createAdminTasks } = require('./tasks')
+const { createAdminBanners } = require('./banners')
+const { createAdminGame } = require('./game')
+const { createAdminMedia } = require('./media')
 const { AdminError } = require('./validation')
 
 function createAdminService({
@@ -53,6 +56,9 @@ function createAdminService({
   },
   recalculateMatching = async () => { throw new AdminError('MATCHING_DISPATCH_CONFIG_REQUIRED', '机会撮合重算服务尚未配置') },
   tasksClient = null,
+  bannersClient = null,
+  gameClient = null,
+  mediaClient = null,
 }) {
   const access = createAdminAccess({ repository })
   const {
@@ -232,6 +238,24 @@ function createAdminService({
     access,
     client: tasksClient || {
       execute: async () => { throw new AdminError('TASKS_DISPATCH_CONFIG_REQUIRED', '任务服务尚未配置', true) },
+    },
+  })
+  const bannerAdmin = createAdminBanners({
+    access,
+    client: bannersClient || {
+      execute: async () => { throw new AdminError('BANNERS_DISPATCH_CONFIG_REQUIRED', 'Banner 服务尚未配置', true) },
+    },
+  })
+  const gameAdmin = createAdminGame({
+    access,
+    client: gameClient || {
+      execute: async () => { throw new AdminError('GAME_DISPATCH_CONFIG_REQUIRED', '游戏服务尚未配置', true) },
+    },
+  })
+  const mediaAdmin = createAdminMedia({
+    access,
+    client: mediaClient || {
+      execute: async () => { throw new AdminError('MEDIA_DISPATCH_CONFIG_REQUIRED', '素材服务尚未配置', true) },
     },
   })
   const {
@@ -448,6 +472,9 @@ function createAdminService({
     listGrowthRules,
     listUnifiedBenefitLedger,
     ...taskAdmin,
+    ...bannerAdmin,
+    ...gameAdmin,
+    ...mediaAdmin,
     listOpportunities,
     listOrders,
     listPaymentAttempts,

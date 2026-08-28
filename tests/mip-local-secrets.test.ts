@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   assertMipAiProviderHmacSecretsIsolated,
+  assertMipDomainAdminHmacSecretsIsolated,
   assertMipSchedulerHmacSecretsIsolated,
   assertMipTaskAdminHmacSecretsIsolated,
   assertMipWebAdminHmacSecretsIsolated,
@@ -103,6 +104,23 @@ describe('MIP stable local secrets', () => {
       MIP_TASKS_ADMIN_HMAC_SECRET: secret('t'),
       MIP_ADMIN_WEB_BFF_HMAC_SECRET: secret('q'),
       MIP_OUTBOX_HMAC_SECRET: secret('o'),
+    })).toBe(true)
+  })
+
+  it('keeps task, Banner, Game, and media admin bridges in separate trust domains', () => {
+    const shared = secret('s')
+    expect(() => assertMipDomainAdminHmacSecretsIsolated({
+      MIP_TASKS_ADMIN_HMAC_SECRET: secret('t'),
+      MIP_BANNERS_ADMIN_HMAC_SECRET: shared,
+      MIP_GAME_ADMIN_HMAC_SECRET: shared,
+      MIP_MEDIA_ADMIN_HMAC_SECRET: secret('m'),
+    })).toThrow(/separate trust domains/)
+    expect(assertMipDomainAdminHmacSecretsIsolated({
+      MIP_TASKS_ADMIN_HMAC_SECRET: secret('t'),
+      MIP_BANNERS_ADMIN_HMAC_SECRET: secret('b'),
+      MIP_GAME_ADMIN_HMAC_SECRET: secret('g'),
+      MIP_MEDIA_ADMIN_HMAC_SECRET: secret('m'),
+      MIP_ADMIN_WEB_BFF_HMAC_SECRET: secret('w'),
     })).toBe(true)
   })
 

@@ -3,6 +3,10 @@
 const cloud = require('wx-server-sdk')
 const { createMediaService } = require('./domain/service')
 const { resolveActiveUser, trustedWechatIdentity } = require('./lib/identity')
+const {
+  MEDIA_ADMIN_TRANSPORT,
+  createInternalMediaHandler,
+} = require('./lib/internal-admin-transport')
 const { verifyMaintenanceRequest } = require('./lib/internal-auth')
 const { mysqlDatabase } = require('./lib/mysql')
 
@@ -45,6 +49,16 @@ exports.main = async (event = {}) => {
   const database = mysqlDatabase()
   const service = createMediaService({ database, cloud })
   try {
+    if (event.transport === MEDIA_ADMIN_TRANSPORT) {
+      return createInternalMediaHandler({
+        service,
+        database,
+        secret: process.env.MIP_MEDIA_ADMIN_HMAC_SECRET,
+        allowedAppIds: new Set(String(process.env.MIP_ALLOWED_APP_IDS || '')
+          .split(',').map(value => value.trim()).filter(Boolean)),
+        failure,
+      })(event)
+    }
     if (event.action === 'health') {
       return success(await service.health())
     }
@@ -68,4 +82,4 @@ exports.main = async (event = {}) => {
   }
 }
 
-exports._test = { failure, success, verifyMaintenanceRequest }
+exports._test = { failure, MEDIA_ADMIN_TRANSPORT, success, verifyMaintenanceRequest }

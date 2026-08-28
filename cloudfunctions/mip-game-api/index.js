@@ -9,6 +9,10 @@ const { resolveCaller, trustedWechatIdentity } = require('./lib/identity')
 const { mysqlDatabase } = require('./lib/mysql')
 const { createOutboxWakeup, trustedContextAppId } = require('./lib/outbox-wakeup')
 const { assertPlayerReady } = require('./lib/player-access')
+const {
+  GAME_ADMIN_TRANSPORT,
+  createInternalGameHandler,
+} = require('./lib/internal-admin-transport')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
@@ -26,6 +30,7 @@ const outboxWakeup = createOutboxWakeup({
   logger: console,
 })
 
+const assertAdminReady = caller => assertFullAccessReady(database, caller, configuredAgreements())
 const handler = createHandler({
   service,
   async health() {
@@ -41,10 +46,27 @@ const handler = createHandler({
     return { ...caller, profileRefSecret: process.env.MIP_IDENTITY_PEPPER }
   },
   assertPlayerReady: caller => assertPlayerReady(database, caller),
-  assertAdminReady: caller => assertFullAccessReady(database, caller, configuredAgreements()),
+  assertAdminReady,
+})
+const internalAdminHandler = createInternalGameHandler({
+  service,
+  secret: process.env.MIP_GAME_ADMIN_HMAC_SECRET,
+  allowedAppIds,
+  profileRefSecret: process.env.MIP_IDENTITY_PEPPER,
+  assertAdminReady,
+  afterSuccessfulMutation({ request }) {
+    return outboxWakeup.afterSuccessfulMutation({
+      appId: request.appId,
+      action: request.action,
+      mutationActions: outboxMutationActions,
+    })
+  },
 })
 
 exports.main = async (event = {}) => {
+  if (event?.transport === GAME_ADMIN_TRANSPORT) {
+    return internalAdminHandler(event)
+  }
   const result = await handler(event)
   if (result?.ok === true) {
     await outboxWakeup.afterSuccessfulMutation({

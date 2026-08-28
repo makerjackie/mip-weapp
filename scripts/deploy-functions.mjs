@@ -287,6 +287,9 @@ const secrets = Object.freeze({
   adminWebBffHmac: stableSecretValues.MIP_ADMIN_WEB_BFF_HMAC_SECRET,
   adminWebLoginHmac: stableSecretValues.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET,
   tasksAdminHmac: stableSecretValues.MIP_TASKS_ADMIN_HMAC_SECRET,
+  bannersAdminHmac: stableSecretValues.MIP_BANNERS_ADMIN_HMAC_SECRET,
+  gameAdminHmac: stableSecretValues.MIP_GAME_ADMIN_HMAC_SECRET,
+  mediaAdminHmac: stableSecretValues.MIP_MEDIA_ADMIN_HMAC_SECRET,
   knowledgeSchedulerHmac: stableSecretValues.MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET,
   refundWorkerHmac: stableSecretValues.MIP_REFUND_WORKER_HMAC_SECRET,
   notificationEncryption: stableSecretValues.MIP_NOTIFICATION_ENCRYPTION_KEY,
@@ -906,6 +909,7 @@ function environmentForRole(role, options) {
     media: {
       MIP_MEDIA_SCOPE_SECRET: options.secrets.mediaScope,
       MIP_MEDIA_MAINTENANCE_HMAC_SECRET: options.secrets.mediaMaintenanceHmac,
+      MIP_MEDIA_ADMIN_HMAC_SECRET: options.secrets.mediaAdminHmac,
     },
     events: {
       ...agreementEnvironment,
@@ -935,6 +939,9 @@ function environmentForRole(role, options) {
     admin: {
       ...agreementEnvironment,
       MIP_TASKS_FUNCTION_NAME: options.functionNames.tasks,
+      MIP_BANNERS_FUNCTION_NAME: options.functionNames.banners,
+      MIP_GAME_FUNCTION_NAME: options.functionNames.game,
+      MIP_MEDIA_FUNCTION_NAME: options.functionNames.media,
       MIP_PHONE_ENCRYPTION_KEY: options.secrets.phoneEncryption,
       MIP_REFUND_FUNCTION_NAME: options.functionNames.refund,
       MIP_REFUND_WORKER_HMAC_SECRET: options.secrets.refundWorkerHmac,
@@ -945,6 +952,9 @@ function environmentForRole(role, options) {
       MIP_ADMIN_WEB_BFF_HMAC_SECRET: options.secrets.adminWebBffHmac,
       MIP_ADMIN_WEB_LOGIN_HMAC_SECRET: options.secrets.adminWebLoginHmac,
       MIP_TASKS_ADMIN_HMAC_SECRET: options.secrets.tasksAdminHmac,
+      MIP_BANNERS_ADMIN_HMAC_SECRET: options.secrets.bannersAdminHmac,
+      MIP_GAME_ADMIN_HMAC_SECRET: options.secrets.gameAdminHmac,
+      MIP_MEDIA_ADMIN_HMAC_SECRET: options.secrets.mediaAdminHmac,
       MIP_ADMIN_WEB_LOGIN_CONFIRM_URL: adminWebLoginConfirmUrl,
       MIP_MESSAGE_SCHEDULER_FUNCTION_NAME: options.functionNames.scheduler,
       MIP_KNOWLEDGE_SCHEDULER_FUNCTION_NAME: options.functionNames.knowledgeScheduler,
@@ -956,12 +966,18 @@ function environmentForRole(role, options) {
       MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS: options.knowledgeWebviewAllowedHosts.join(','),
     },
     growth: { MIP_GROWTH_HMAC_SECRET: options.secrets.growthHmac },
-    game: agreementEnvironment,
+    game: {
+      ...agreementEnvironment,
+      MIP_GAME_ADMIN_HMAC_SECRET: options.secrets.gameAdminHmac,
+    },
     tasks: {
       ...agreementEnvironment,
       MIP_TASKS_ADMIN_HMAC_SECRET: options.secrets.tasksAdminHmac,
     },
-    banners: agreementEnvironment,
+    banners: {
+      ...agreementEnvironment,
+      MIP_BANNERS_ADMIN_HMAC_SECRET: options.secrets.bannersAdminHmac,
+    },
     ai: {
       MIP_AI_HMAC_SECRET: options.secrets.aiHmac,
       MIP_AI_STORAGE_KEY: options.secrets.aiStorage,

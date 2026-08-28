@@ -105,6 +105,7 @@ assertOutboxDependencies(coreDetails.get('outbox'))
 assertNotificationEnvironment(coreDetails.get('notifications'), coreDetails.get('notification'))
 assertRefundDispatchEnvironment(coreDetails.get('admin'))
 assertTaskAdminEnvironment(coreDetails.get('admin'), coreDetails.get('tasks'))
+assertDomainAdminEnvironment(coreDetails)
 assertAdminWebPublicNetwork(coreDetails.get('admin'))
 assertKnowledgeEnvironment(coreDetails.get('admin'))
 assertOwnerTestMembershipEnvironment(coreDetails.get('ledger'))
@@ -396,6 +397,31 @@ function assertTaskAdminEnvironment(adminDetail, tasksDetail) {
     || admin.MIP_TASKS_ADMIN_HMAC_SECRET !== tasks.MIP_TASKS_ADMIN_HMAC_SECRET
     || reused) {
     throw new Error('Task admin adapter target or internal HMAC configuration is incomplete')
+  }
+}
+
+function assertDomainAdminEnvironment(details) {
+  const admin = environmentVariables(details.get('admin'))
+  const links = [
+    ['banners', 'MIP_BANNERS_FUNCTION_NAME', 'MIP_BANNERS_ADMIN_HMAC_SECRET'],
+    ['game', 'MIP_GAME_FUNCTION_NAME', 'MIP_GAME_ADMIN_HMAC_SECRET'],
+    ['media', 'MIP_MEDIA_FUNCTION_NAME', 'MIP_MEDIA_ADMIN_HMAC_SECRET'],
+  ]
+  const values = []
+  for (const [role, functionKey, secretKey] of links) {
+    const target = environmentVariables(details.get(role))
+    const value = String(admin[secretKey] || '')
+    if (admin[functionKey] !== functionNames[role]
+      || value.length < 32
+      || String(target[secretKey] || '').length < 32
+      || target[secretKey] !== value) {
+      throw new Error(`${role} admin adapter target or internal HMAC configuration is incomplete`)
+    }
+    values.push(value)
+  }
+  values.push(String(admin.MIP_TASKS_ADMIN_HMAC_SECRET || ''))
+  if (values.some(value => value.length < 32) || new Set(values).size !== values.length) {
+    throw new Error('Task, Banner, Game, and media admin adapters must use separate HMAC domains')
   }
 }
 

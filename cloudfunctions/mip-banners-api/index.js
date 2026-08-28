@@ -7,6 +7,10 @@ const { createBannerRepository } = require('./domain/repository')
 const { createBannerService } = require('./domain/service')
 const { assertFullAccessReady, configuredAgreements } = require('./lib/full-access')
 const { resolveCaller, trustedWechatContext, trustedWechatIdentity } = require('./lib/identity')
+const {
+  BANNER_ADMIN_TRANSPORT,
+  createInternalBannerHandler,
+} = require('./lib/internal-admin-transport')
 const { mysqlDatabase } = require('./lib/mysql')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
@@ -21,7 +25,8 @@ function contextOptions() {
   return { allowedAppIds, pepper: process.env.MIP_IDENTITY_PEPPER }
 }
 
-exports.main = createHandler({
+const assertAdminReady = caller => assertFullAccessReady(database, caller, configuredAgreements())
+const miniProgramHandler = createHandler({
   service,
   async health() {
     await database.one('SELECT 1 AS ok')
@@ -34,5 +39,15 @@ exports.main = createHandler({
     const identity = trustedWechatIdentity(cloud.getWXContext(), contextOptions())
     return resolveCaller(database, identity)
   },
-  assertAdminReady: caller => assertFullAccessReady(database, caller, configuredAgreements()),
+  assertAdminReady,
 })
+const internalAdminHandler = createInternalBannerHandler({
+  service,
+  secret: process.env.MIP_BANNERS_ADMIN_HMAC_SECRET,
+  allowedAppIds,
+  assertAdminReady,
+})
+
+exports.main = event => event?.transport === BANNER_ADMIN_TRANSPORT
+  ? internalAdminHandler(event)
+  : miniProgramHandler(event)

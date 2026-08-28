@@ -101,6 +101,7 @@ test('creates an inactive Banner with owned media and a business audit', async (
   }
   const database = { transaction: async work => work(tx) }
   const result = await createBannerRepository(database, { createId: () => ids.banner }).save(caller, {
+    idempotencyKey: 'banner-create-request-0001',
     banner: {
       title: '活动主页头图',
       accessibilityLabel: '活动报名信息',
@@ -111,6 +112,8 @@ test('creates an inactive Banner with owned media and a business audit', async (
   })
   assert.equal(created, true)
   assert.equal(result.status, 'INACTIVE')
+  assert.ok(writes.some(item => /INSERT INTO mip_idempotency_keys/.test(item.sql)))
+  assert.ok(writes.some(item => /UPDATE mip_idempotency_keys SET status = 'COMPLETED'/.test(item.sql)))
   assert.ok(writes.some(item => /INSERT INTO mip_audit_logs/.test(item.sql)
     && item.params.includes('admin.banners.create')
     && item.params.includes('PLATFORM_OPERATIONS')))

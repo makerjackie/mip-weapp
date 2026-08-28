@@ -2,7 +2,7 @@
 
 const operationManifests = require('./operations')
 
-const EXPECTED_OPERATION_COUNT = 158
+const EXPECTED_OPERATION_COUNT = 187
 const OPERATION_KINDS = Object.freeze(['QUERY', 'MUTATION'])
 const OPERATION_OWNERS = Object.freeze([
   'ACCESS',
@@ -15,6 +15,9 @@ const OPERATION_OWNERS = Object.freeze([
   'OPPORTUNITIES',
   'GROWTH',
   'TASKS',
+  'BANNERS',
+  'GAME',
+  'MEDIA',
   'APPLICATION_WORKFLOW',
 ])
 const healthOperation = Object.freeze({ action: 'health', owner: 'SYSTEM', kind: 'QUERY' })

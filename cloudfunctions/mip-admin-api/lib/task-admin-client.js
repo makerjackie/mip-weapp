@@ -19,6 +19,7 @@ const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_.:-]{12,128}$/
 const OPERATION_SPECS = Object.freeze({
   'mip.admin.tasks.list': spec('admin.listTasks', ['filters', 'limit', 'cursor'], { filters: ['status', 'query'] }),
   'mip.admin.tasks.get': spec('admin.getTask', ['taskId']),
+  'mip.admin.tasks.eligibleLevels.list': spec('admin.listEligibleLevels', []),
   'mip.admin.tasks.save': spec('admin.saveTask', ['taskId', 'expectedVersion', 'task', 'idempotencyKey'], {
     task: ['name', 'content', 'rewardExperience', 'attachmentRequired', 'assignmentMode', 'endsAt', 'templateAssetId', 'eligibleLevelIds'],
   }),

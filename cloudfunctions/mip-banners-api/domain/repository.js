@@ -1,6 +1,7 @@
 'use strict'
 
 const { randomUUID } = require('node:crypto')
+const { claimOptional, complete } = require('./idempotency')
 const {
   assertBannerAsset,
   expectedVersion,
@@ -84,9 +85,19 @@ function createBannerRepository(database, options = {}) {
 
   async function save(caller, event) {
     const draft = normalizeBannerDraft(event.banner)
+    const idempotencyKey = normalizeIdempotencyKey(event.idempotencyKey)
     const bannerId = event.bannerId ? requiredId(event.bannerId) : createId()
     const version = event.bannerId ? expectedVersion(event.expectedVersion) : null
     return database.transaction(async (tx) => {
+      const idempotency = await claimOptional(
+        tx,
+        caller,
+        idempotencyKey,
+        'mip.admin.banners.save',
+        { bannerId: event.bannerId || null, expectedVersion: version, banner: draft },
+        createId,
+      )
+      if (idempotency.replay) return idempotency.replay
       const roleKey = await assertBannersAdmin(tx, caller, true)
       if (!event.bannerId) {
         const asset = await getMedia(tx, caller.appId, draft.imageAssetId, true)
@@ -155,7 +166,16 @@ function createBannerRepository(database, options = {}) {
           targetType: draft.targetType,
         })
       }
-      return getAdmin(caller, { bannerId }, tx)
+      const saved = await getAdmin(caller, { bannerId }, tx)
+      await complete(
+        tx,
+        caller,
+        idempotencyKey,
+        'mip.admin.banners.save',
+        idempotency.requestHash,
+        saved,
+      )
+      return saved
     })
   }
 
@@ -389,6 +409,13 @@ function iso(value) {
   if (!value) return ''
   const date = new Date(value)
   return Number.isFinite(date.getTime()) ? date.toISOString() : ''
+}
+
+function normalizeIdempotencyKey(value) {
+  if (value === undefined || value === null || value === '') return undefined
+  const key = typeof value === 'string' ? value.trim() : ''
+  if (!/^[A-Za-z0-9_.:-]{12,128}$/.test(key)) throw new Error('VALIDATION_FAILED')
+  return key
 }
 
 module.exports = {

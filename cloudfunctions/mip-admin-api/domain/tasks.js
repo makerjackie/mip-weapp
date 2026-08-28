@@ -21,6 +21,7 @@ function createAdminTasks({ access, client } = {}) {
   return Object.freeze({
     listTasks: (caller, input) => execute(caller, 'mip.admin.tasks.list', input),
     getTask: (caller, input) => execute(caller, 'mip.admin.tasks.get', input),
+    listEligibleLevels: (caller, input) => execute(caller, 'mip.admin.tasks.eligibleLevels.list', input),
     saveTask: (caller, input) => execute(caller, 'mip.admin.tasks.save', input),
     publishTask: (caller, input) => execute(caller, 'mip.admin.tasks.publish', input),
     unpublishTask: (caller, input) => execute(caller, 'mip.admin.tasks.unpublish', input),

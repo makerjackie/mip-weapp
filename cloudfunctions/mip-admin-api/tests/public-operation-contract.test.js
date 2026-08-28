@@ -18,11 +18,11 @@ const operationKeys = [
 ]
 
 describe('public admin operation contract', () => {
-  it('projects all 158 business operations without exposing execution details', () => {
+  it('projects all 187 business operations without exposing execution details', () => {
     assert.equal(PUBLIC_OPERATION_CONTRACT_VERSION, 1)
     assert.equal(publicOperationContract.version, 1)
-    assert.equal(publicOperationContract.operationCount, 158)
-    assert.equal(publicOperationContract.operations.length, 158)
+    assert.equal(publicOperationContract.operationCount, 187)
+    assert.equal(publicOperationContract.operations.length, 187)
     assert.equal(Object.isFrozen(publicOperationContract), true)
     assert.equal(Object.isFrozen(publicOperationContract.operations), true)
 
@@ -51,7 +51,7 @@ describe('public admin operation contract', () => {
   it('marks every and only query operation as safe to retry', () => {
     const retryable = publicOperationContract.operations
       .filter(operation => operation.safeToRetry)
-    assert.equal(retryable.length, 68)
+    assert.equal(retryable.length, 80)
     assert.equal(retryable.every(operation => operation.kind === 'QUERY'), true)
     assert.equal(
       retryable.some(operation => operation.action === 'mip.admin.knowledge.schedules.list'),

@@ -16,6 +16,9 @@ export const MIP_STABLE_SECRET_KEYS = Object.freeze([
   'MIP_ADMIN_WEB_BFF_HMAC_SECRET',
   'MIP_ADMIN_WEB_LOGIN_HMAC_SECRET',
   'MIP_TASKS_ADMIN_HMAC_SECRET',
+  'MIP_BANNERS_ADMIN_HMAC_SECRET',
+  'MIP_GAME_ADMIN_HMAC_SECRET',
+  'MIP_MEDIA_ADMIN_HMAC_SECRET',
   'MIP_KNOWLEDGE_SCHEDULER_HMAC_SECRET',
   'MIP_REFUND_WORKER_HMAC_SECRET',
   'MIP_NOTIFICATION_ENCRYPTION_KEY',
@@ -80,6 +83,32 @@ export function assertMipTaskAdminHmacSecretsIsolated(values = {}) {
   return true
 }
 
+export function assertMipDomainAdminHmacSecretsIsolated(values = {}) {
+  const keys = [
+    'MIP_TASKS_ADMIN_HMAC_SECRET',
+    'MIP_BANNERS_ADMIN_HMAC_SECRET',
+    'MIP_GAME_ADMIN_HMAC_SECRET',
+    'MIP_MEDIA_ADMIN_HMAC_SECRET',
+  ]
+  const secrets = keys.map(key => normalized(values[key]))
+  if (secrets.some(value => value.length < 32)) {
+    throw new Error('Task, Banner, Game, and media admin HMAC secrets must all be configured')
+  }
+  if (new Set(secrets).size !== secrets.length) {
+    throw new Error('Task, Banner, Game, and media admin HMAC secrets must use separate trust domains')
+  }
+  for (const [index, value] of secrets.entries()) {
+    const ownKey = keys[index]
+    const reused = Object.entries(values).some(([key, candidate]) => key !== ownKey
+      && key.endsWith('_HMAC_SECRET')
+      && normalized(candidate) === value)
+    if (reused) {
+      throw new Error(`${ownKey} must use a separate trust domain`)
+    }
+  }
+  return true
+}
+
 function normalized(value) {
   return typeof value === 'string' ? value.trim() : ''
 }
@@ -113,6 +142,7 @@ export function resolveMipStableSecrets({ localEnv = {}, deployedEnvironments = 
   assertMipAiProviderHmacSecretsIsolated(values)
   assertMipWebAdminHmacSecretsIsolated(values)
   assertMipTaskAdminHmacSecretsIsolated(values)
+  assertMipDomainAdminHmacSecretsIsolated(values)
   return { values, sources }
 }
 

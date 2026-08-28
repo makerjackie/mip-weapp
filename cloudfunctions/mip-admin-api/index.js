@@ -21,6 +21,9 @@ const { createRefundWorkerClient } = require('./lib/refund-worker-client')
 const { createCloudExportStorage } = require('./lib/export-storage')
 const { createMatchingClient } = require('./lib/matching-client')
 const { createTaskAdminClient } = require('./lib/task-admin-client')
+const { createBannerAdminClient } = require('./lib/banner-admin-client')
+const { createGameAdminClient } = require('./lib/game-admin-client')
+const { createMediaAdminClient } = require('./lib/media-admin-client')
 const { createOutboxWakeup, trustedContextAppId } = require('./lib/outbox-wakeup')
 const {
   MESSAGE_DISPATCH_ACTIONS,
@@ -106,6 +109,21 @@ const taskAdminClient = createTaskAdminClient({
   functionName: process.env.MIP_TASKS_FUNCTION_NAME || 'mip-tasks-api',
   secret: process.env.MIP_TASKS_ADMIN_HMAC_SECRET,
 })
+const bannerAdminClient = createBannerAdminClient({
+  cloud,
+  functionName: process.env.MIP_BANNERS_FUNCTION_NAME || 'mip-banners-api',
+  secret: process.env.MIP_BANNERS_ADMIN_HMAC_SECRET,
+})
+const gameAdminClient = createGameAdminClient({
+  cloud,
+  functionName: process.env.MIP_GAME_FUNCTION_NAME || 'mip-game-api',
+  secret: process.env.MIP_GAME_ADMIN_HMAC_SECRET,
+})
+const mediaAdminClient = createMediaAdminClient({
+  cloud,
+  functionName: process.env.MIP_MEDIA_FUNCTION_NAME || 'mip-media-api',
+  secret: process.env.MIP_MEDIA_ADMIN_HMAC_SECRET,
+})
 let initializedRefundWorkerClient
 function dispatchRefund(input) {
   initializedRefundWorkerClient ||= createRefundWorkerClient({
@@ -134,6 +152,9 @@ const service = createAdminService({
   reconcileNotificationDelivery: input => notificationReconcileClient.reconcile(input),
   recalculateMatching: input => matchingClient.recalculate(input),
   tasksClient: taskAdminClient,
+  bannersClient: bannerAdminClient,
+  gameClient: gameAdminClient,
+  mediaClient: mediaAdminClient,
   profileRefSecret: process.env.MIP_IDENTITY_PEPPER,
   exportMaxRows: boundedInteger(process.env.MIP_EXPORT_MAX_ROWS, 5_000, 100, 20_000),
   exportMaxBytes: boundedInteger(process.env.MIP_EXPORT_MAX_BYTES, 8 * 1024 * 1024, 1_048_576, 10_485_760),

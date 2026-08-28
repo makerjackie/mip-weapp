@@ -45,7 +45,7 @@ const messages = Object.freeze({
   CONFLICT: '数据已变化，请刷新后重试',
   FORBIDDEN: '当前没有权限执行此操作',
   IDENTITY_CONFIG_REQUIRED: '身份服务尚未配置',
-  IDEMPOTENCY_CONFLICT: '该请求标识已用于其他盲盒',
+  IDEMPOTENCY_CONFLICT: '该请求标识已用于其他操作',
   INVALID_STATE: '当前状态不支持此操作',
   INSUFFICIENT_GAME_COIN_BALANCE: '游戏币余额不足',
   MEMBER_NOT_FOUND: '部分成员当前不可用，请刷新后重试',

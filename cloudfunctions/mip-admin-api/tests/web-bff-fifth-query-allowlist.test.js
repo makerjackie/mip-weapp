@@ -12,6 +12,7 @@ const { publicOperationContract } = require('../domain/public-operation-contract
 const EXPECTED_TASK_QUERY_ACTIONS = Object.freeze([
   'mip.admin.tasks.list',
   'mip.admin.tasks.get',
+  'mip.admin.tasks.eligibleLevels.list',
   'mip.admin.tasks.assignableMembers.list',
   'mip.admin.tasks.completions.list',
   'mip.admin.tasks.completions.get',
@@ -19,7 +20,7 @@ const EXPECTED_TASK_QUERY_ACTIONS = Object.freeze([
 ])
 
 describe('Web BFF task query allowlist', () => {
-  it('exposes exactly the six reviewed task queries', () => {
+  it('exposes exactly the seven reviewed task queries', () => {
     assert.deepEqual(WEB_BFF_FIFTH_QUERY_ACTIONS, EXPECTED_TASK_QUERY_ACTIONS)
     assert.equal(
       [...WEB_BFF_QUERY_ACTIONS].filter(action => action.startsWith('mip.admin.tasks.')).length,

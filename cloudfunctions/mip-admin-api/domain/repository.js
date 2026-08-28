@@ -1,6 +1,7 @@
 'use strict'
 
 const { createHash, randomBytes, randomUUID } = require('node:crypto')
+const { claimOptional, complete } = require('./idempotency')
 const { createAnnouncementRepository } = require('./announcements')
 const { createAdminPrdExtensions } = require('./admin-prd-extensions')
 const { createBadgeAdminRepository } = require('./badges')
@@ -674,7 +675,20 @@ function createAdminRepository(database, options = {}) {
     const appSegment = createHash('sha256').update(input.appId).digest('hex').slice(0, 16)
     const objectKey = `mip/exports/${appSegment}/${ticketId}.xlsx`
     const expiresAt = new Date(input.now.getTime() + 15 * 60 * 1000)
-    await database.transaction(async (tx) => {
+    const response = await database.transaction(async (tx) => {
+      const idempotency = await claimOptional(
+        tx,
+        input,
+        'mip.admin.exports.create',
+        {
+          exportType: input.exportType,
+          scope: input.scope,
+          filters: input.filters,
+          includesPhone: input.includesPhone,
+        },
+        id,
+      )
+      if (idempotency.replay) return idempotency.replay
       const authorizations = await lockExportAuthorizations(tx, input)
       await assertExportScope(tx, authorizations, {
         appId: input.appId,
@@ -693,8 +707,11 @@ function createAdminRepository(database, options = {}) {
           tokenHash, objectKey, expiresAt],
       )
       await writeAudit(tx, { ...input.audit, resourceId: ticketId })
+      const created = { ticketId, token, status: 'PENDING', expiresAt: expiresAt.toISOString() }
+      await complete(tx, input, 'mip.admin.exports.create', idempotency.requestHash, created)
+      return created
     })
-    return { ticketId, token, status: 'PENDING', expiresAt: expiresAt.toISOString() }
+    return response
   }
 
   async function getExportTicket(input) {

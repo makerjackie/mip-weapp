@@ -1,6 +1,7 @@
 'use strict'
 
 const { randomInt, randomUUID } = require('node:crypto')
+const { gameAdminMutation } = require('./admin-idempotency')
 const { boundedText, expectedVersion, optionalId, requiredId } = require('./validation')
 
 const PLATFORM_SCOPE_ID = '00000000-0000-0000-0000-000000000000'
@@ -15,8 +16,21 @@ const DEFAULT_WEIGHTS = Object.freeze({ COMMON: 7000, RARE: 2200, EPIC: 700, LEG
 
 function createBlindBoxRepository(database, options = {}) {
   const createId = options.createId || randomUUID
+  const createIdempotencyId = options.createIdempotencyId || randomUUID
   const secureRandomInt = options.randomInt || randomInt
   const assertAdmin = options.assertAdmin
+
+  function runAdminMutation(caller, event, operation, request, work) {
+    return gameAdminMutation(database, {
+      caller,
+      operation,
+      idempotencyKey: event.idempotencyKey,
+      request,
+      createId: createIdempotencyId,
+      authorize: tx => requireAdmin(tx, caller, true),
+      work,
+    })
+  }
 
   async function listBlindBoxes(caller) {
     const rows = await database.query(
@@ -300,52 +314,56 @@ function createBlindBoxRepository(database, options = {}) {
     const draft = normalizeCatalogDraft(event.catalog)
     const catalogId = event.catalogId ? requiredId(event.catalogId) : createId()
     const version = event.catalogId ? expectedVersion(event.expectedVersion) : null
-    return database.transaction(async (tx) => {
-      const roleKey = await requireAdmin(tx, caller, true)
-      if (!event.catalogId) {
-        await tx.query(
-          `INSERT INTO mip_blind_box_catalogs (
+    return runAdminMutation(
+      caller,
+      event,
+      'mip.admin.game.blindBoxes.catalogs.save',
+      { catalogId: event.catalogId || null, expectedVersion: version, catalog: draft },
+      async (tx, roleKey) => {
+        if (!event.catalogId) {
+          await tx.query(
+            `INSERT INTO mip_blind_box_catalogs (
              id, app_id, catalog_key, name, summary, rules_text, redemption_rules_text,
              draw_cost_coin, daily_draw_limit, pity_threshold, pity_min_rarity,
              created_by_user_id, updated_by_user_id
            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [catalogId, caller.appId, draft.catalogKey, draft.name, draft.summary,
-            draft.rulesText, draft.redemptionRulesText, draft.drawCostCoin,
-            draft.dailyDrawLimit, draft.pityThreshold, draft.pityMinRarity,
-            caller.userId, caller.userId],
-        )
-        await writeAudit(tx, caller, roleKey, 'game.blind_box.catalog_created', 'BLIND_BOX_CATALOG', catalogId)
-      }
-      else {
-        const current = await tx.one(
-          `SELECT status, version FROM mip_blind_box_catalogs
+            [catalogId, caller.appId, draft.catalogKey, draft.name, draft.summary,
+              draft.rulesText, draft.redemptionRulesText, draft.drawCostCoin,
+              draft.dailyDrawLimit, draft.pityThreshold, draft.pityMinRarity,
+              caller.userId, caller.userId],
+          )
+          await writeAudit(tx, caller, roleKey, 'game.blind_box.catalog_created', 'BLIND_BOX_CATALOG', catalogId)
+        }
+        else {
+          const current = await tx.one(
+            `SELECT status, version FROM mip_blind_box_catalogs
            WHERE app_id = ? AND id = ? FOR UPDATE`,
-          [caller.appId, catalogId],
-        )
-        if (!current) throw new Error('NOT_FOUND')
-        if (Number(current.version) !== version) throw new Error('CONFLICT')
-        const update = await tx.query(
-          `UPDATE mip_blind_box_catalogs
+            [caller.appId, catalogId],
+          )
+          if (!current) throw new Error('NOT_FOUND')
+          if (Number(current.version) !== version) throw new Error('CONFLICT')
+          const update = await tx.query(
+            `UPDATE mip_blind_box_catalogs
            SET catalog_key = ?, name = ?, summary = ?, rules_text = ?,
                redemption_rules_text = ?, draw_cost_coin = ?, daily_draw_limit = ?,
                pity_threshold = ?, pity_min_rarity = ?, updated_by_user_id = ?,
                version = version + 1
            WHERE app_id = ? AND id = ? AND version = ?`,
-          [draft.catalogKey, draft.name, draft.summary, draft.rulesText,
-            draft.redemptionRulesText, draft.drawCostCoin, draft.dailyDrawLimit,
-            draft.pityThreshold, draft.pityMinRarity, caller.userId,
-            caller.appId, catalogId, version],
-        )
-        assertAffected(update)
-        await assertPublishedCatalogInvariant(tx, caller.appId, {
-          id: catalogId,
-          status: current.status,
-          pity_min_rarity: draft.pityMinRarity,
-        })
-        await writeAudit(tx, caller, roleKey, 'game.blind_box.catalog_updated', 'BLIND_BOX_CATALOG', catalogId)
-      }
-      return adminCatalogDto(await tx.one(
-        `SELECT catalog.*, COUNT(card.id) AS card_count,
+            [draft.catalogKey, draft.name, draft.summary, draft.rulesText,
+              draft.redemptionRulesText, draft.drawCostCoin, draft.dailyDrawLimit,
+              draft.pityThreshold, draft.pityMinRarity, caller.userId,
+              caller.appId, catalogId, version],
+          )
+          assertAffected(update)
+          await assertPublishedCatalogInvariant(tx, caller.appId, {
+            id: catalogId,
+            status: current.status,
+            pity_min_rarity: draft.pityMinRarity,
+          })
+          await writeAudit(tx, caller, roleKey, 'game.blind_box.catalog_updated', 'BLIND_BOX_CATALOG', catalogId)
+        }
+        return adminCatalogDto(await tx.one(
+          `SELECT catalog.*, COUNT(card.id) AS card_count,
                 COALESCE(SUM(card.stock_total), 0) AS stock_total,
                 COALESCE(SUM(card.stock_remaining), 0) AS stock_remaining
          FROM mip_blind_box_catalogs catalog
@@ -353,39 +371,45 @@ function createBlindBoxRepository(database, options = {}) {
            ON card.app_id = catalog.app_id AND card.catalog_id = catalog.id
          WHERE catalog.app_id = ? AND catalog.id = ?
          GROUP BY catalog.app_id, catalog.id`,
-        [caller.appId, catalogId],
-      ))
-    })
+          [caller.appId, catalogId],
+        ))
+      },
+    )
   }
 
   async function adminChangeBlindBoxCatalogStatus(caller, event = {}) {
     const catalogId = requiredId(event.catalogId)
     const version = expectedVersion(event.expectedVersion)
     const status = enumValue(event.status, ['PUBLISHED', 'UNPUBLISHED'])
-    return database.transaction(async (tx) => {
-      const roleKey = await requireAdmin(tx, caller, true)
-      const catalog = await tx.one(
-        `SELECT status, version, pity_min_rarity FROM mip_blind_box_catalogs
+    return runAdminMutation(
+      caller,
+      event,
+      'mip.admin.game.blindBoxes.catalogs.changeStatus',
+      { catalogId, expectedVersion: version, status },
+      async (tx, roleKey) => {
+        const catalog = await tx.one(
+          `SELECT status, version, pity_min_rarity FROM mip_blind_box_catalogs
          WHERE app_id = ? AND id = ? FOR UPDATE`,
-        [caller.appId, catalogId],
-      )
-      if (!catalog) throw new Error('NOT_FOUND')
-      if (Number(catalog.version) !== version) throw new Error('CONFLICT')
-      if ((catalog.status === 'PUBLISHED' && status === 'PUBLISHED')
+          [caller.appId, catalogId],
+        )
+        if (!catalog) throw new Error('NOT_FOUND')
+        if (Number(catalog.version) !== version) throw new Error('CONFLICT')
+        if ((catalog.status === 'PUBLISHED' && status === 'PUBLISHED')
         || (catalog.status !== 'PUBLISHED' && status === 'UNPUBLISHED')) {
-        throw new Error('INVALID_STATE')
-      }
-      const update = await tx.query(
-        `UPDATE mip_blind_box_catalogs
+          throw new Error('INVALID_STATE')
+        }
+        const update = await tx.query(
+          `UPDATE mip_blind_box_catalogs
          SET status = ?, updated_by_user_id = ?, version = version + 1
          WHERE app_id = ? AND id = ? AND version = ?`,
-        [status, caller.userId, caller.appId, catalogId, version],
-      )
-      assertAffected(update)
-      await assertPublishedCatalogInvariant(tx, caller.appId, { ...catalog, id: catalogId, status })
-      await writeAudit(tx, caller, roleKey, `game.blind_box.catalog_${status.toLowerCase()}`, 'BLIND_BOX_CATALOG', catalogId)
-      return { catalogId, status, version: version + 1 }
-    })
+          [status, caller.userId, caller.appId, catalogId, version],
+        )
+        assertAffected(update)
+        await assertPublishedCatalogInvariant(tx, caller.appId, { ...catalog, id: catalogId, status })
+        await writeAudit(tx, caller, roleKey, `game.blind_box.catalog_${status.toLowerCase()}`, 'BLIND_BOX_CATALOG', catalogId)
+        return { catalogId, status, version: version + 1 }
+      },
+    )
   }
 
   async function adminListBlindBoxCards(caller, event = {}) {
@@ -404,102 +428,112 @@ function createBlindBoxRepository(database, options = {}) {
     const draft = normalizeCardDraft(event.card)
     const cardId = event.cardId ? requiredId(event.cardId) : createId()
     const version = event.cardId ? expectedVersion(event.expectedVersion) : null
-    return database.transaction(async (tx) => {
-      const roleKey = await requireAdmin(tx, caller, true)
-      const catalog = await tx.one(
-        `SELECT id, status, pity_min_rarity FROM mip_blind_box_catalogs
+    return runAdminMutation(
+      caller,
+      event,
+      'mip.admin.game.blindBoxes.cards.save',
+      { cardId: event.cardId || null, expectedVersion: version, card: draft },
+      async (tx, roleKey) => {
+        const catalog = await tx.one(
+          `SELECT id, status, pity_min_rarity FROM mip_blind_box_catalogs
          WHERE app_id = ? AND id = ? FOR UPDATE`,
-        [caller.appId, draft.catalogId],
-      )
-      if (!catalog) throw new Error('NOT_FOUND')
-      if (!event.cardId) {
-        await tx.query(
-          `INSERT INTO mip_blind_box_cards (
+          [caller.appId, draft.catalogId],
+        )
+        if (!catalog) throw new Error('NOT_FOUND')
+        if (!event.cardId) {
+          await tx.query(
+            `INSERT INTO mip_blind_box_cards (
              id, app_id, catalog_id, card_key, name, summary, rarity, weight,
              stock_total, stock_remaining, display_order, created_by_user_id, updated_by_user_id
            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [cardId, caller.appId, draft.catalogId, draft.cardKey, draft.name,
-            draft.summary, draft.rarity, draft.weight, draft.stockTotal,
-            draft.stockTotal, draft.displayOrder, caller.userId, caller.userId],
-        )
-        await writeAudit(tx, caller, roleKey, 'game.blind_box.card_created', 'BLIND_BOX_CARD', cardId)
-      }
-      else {
-        const current = await tx.one(
-          `SELECT catalog_id, stock_total, stock_remaining, version
-           FROM mip_blind_box_cards WHERE app_id = ? AND id = ? FOR UPDATE`,
-          [caller.appId, cardId],
-        )
-        if (!current) throw new Error('NOT_FOUND')
-        if (current.catalog_id !== draft.catalogId || Number(current.version) !== version) {
-          throw new Error('CONFLICT')
+            [cardId, caller.appId, draft.catalogId, draft.cardKey, draft.name,
+              draft.summary, draft.rarity, draft.weight, draft.stockTotal,
+              draft.stockTotal, draft.displayOrder, caller.userId, caller.userId],
+          )
+          await writeAudit(tx, caller, roleKey, 'game.blind_box.card_created', 'BLIND_BOX_CARD', cardId)
         }
-        const acquired = Number(current.stock_total) - Number(current.stock_remaining)
-        if (draft.stockTotal < acquired) throw new Error('BLIND_BOX_STOCK_CONFLICT')
-        const stockRemaining = draft.stockTotal - acquired
-        const update = await tx.query(
-          `UPDATE mip_blind_box_cards
+        else {
+          const current = await tx.one(
+            `SELECT catalog_id, stock_total, stock_remaining, version
+           FROM mip_blind_box_cards WHERE app_id = ? AND id = ? FOR UPDATE`,
+            [caller.appId, cardId],
+          )
+          if (!current) throw new Error('NOT_FOUND')
+          if (current.catalog_id !== draft.catalogId || Number(current.version) !== version) {
+            throw new Error('CONFLICT')
+          }
+          const acquired = Number(current.stock_total) - Number(current.stock_remaining)
+          if (draft.stockTotal < acquired) throw new Error('BLIND_BOX_STOCK_CONFLICT')
+          const stockRemaining = draft.stockTotal - acquired
+          const update = await tx.query(
+            `UPDATE mip_blind_box_cards
            SET card_key = ?, name = ?, summary = ?, rarity = ?, weight = ?,
                stock_total = ?, stock_remaining = ?, display_order = ?,
                updated_by_user_id = ?, version = version + 1
            WHERE app_id = ? AND id = ? AND version = ?`,
-          [draft.cardKey, draft.name, draft.summary, draft.rarity, draft.weight,
-            draft.stockTotal, stockRemaining, draft.displayOrder, caller.userId,
-            caller.appId, cardId, version],
-        )
-        assertAffected(update)
-        await writeAudit(tx, caller, roleKey, 'game.blind_box.card_updated', 'BLIND_BOX_CARD', cardId)
-      }
-      await assertPublishedCatalogInvariant(tx, caller.appId, catalog)
-      return adminCardDto(await tx.one(
-        `SELECT * FROM mip_blind_box_cards WHERE app_id = ? AND id = ?`,
-        [caller.appId, cardId],
-      ))
-    })
+            [draft.cardKey, draft.name, draft.summary, draft.rarity, draft.weight,
+              draft.stockTotal, stockRemaining, draft.displayOrder, caller.userId,
+              caller.appId, cardId, version],
+          )
+          assertAffected(update)
+          await writeAudit(tx, caller, roleKey, 'game.blind_box.card_updated', 'BLIND_BOX_CARD', cardId)
+        }
+        await assertPublishedCatalogInvariant(tx, caller.appId, catalog)
+        return adminCardDto(await tx.one(
+          `SELECT * FROM mip_blind_box_cards WHERE app_id = ? AND id = ?`,
+          [caller.appId, cardId],
+        ))
+      },
+    )
   }
 
   async function adminChangeBlindBoxCardStatus(caller, event = {}) {
     const cardId = requiredId(event.cardId)
     const version = expectedVersion(event.expectedVersion)
     const status = enumValue(event.status, ['PUBLISHED', 'UNPUBLISHED'])
-    return database.transaction(async (tx) => {
-      const roleKey = await requireAdmin(tx, caller, true)
-      const cardReference = await tx.one(
-        `SELECT catalog_id FROM mip_blind_box_cards WHERE app_id = ? AND id = ?`,
-        [caller.appId, cardId],
-      )
-      if (!cardReference) throw new Error('NOT_FOUND')
-      const catalog = await tx.one(
-        `SELECT id, status, pity_min_rarity FROM mip_blind_box_catalogs
+    return runAdminMutation(
+      caller,
+      event,
+      'mip.admin.game.blindBoxes.cards.changeStatus',
+      { cardId, expectedVersion: version, status },
+      async (tx, roleKey) => {
+        const cardReference = await tx.one(
+          `SELECT catalog_id FROM mip_blind_box_cards WHERE app_id = ? AND id = ?`,
+          [caller.appId, cardId],
+        )
+        if (!cardReference) throw new Error('NOT_FOUND')
+        const catalog = await tx.one(
+          `SELECT id, status, pity_min_rarity FROM mip_blind_box_catalogs
          WHERE app_id = ? AND id = ? FOR UPDATE`,
-        [caller.appId, cardReference.catalog_id],
-      )
-      if (!catalog) throw new Error('NOT_FOUND')
-      const card = await tx.one(
-        `SELECT status, stock_remaining, version FROM mip_blind_box_cards
+          [caller.appId, cardReference.catalog_id],
+        )
+        if (!catalog) throw new Error('NOT_FOUND')
+        const card = await tx.one(
+          `SELECT status, stock_remaining, version FROM mip_blind_box_cards
          WHERE app_id = ? AND catalog_id = ? AND id = ? FOR UPDATE`,
-        [caller.appId, catalog.id, cardId],
-      )
-      if (!card) throw new Error('NOT_FOUND')
-      if (Number(card.version) !== version) throw new Error('CONFLICT')
-      if (status === 'PUBLISHED' && Number(card.stock_remaining) < 1) {
-        throw new Error('BLIND_BOX_STOCK_UNAVAILABLE')
-      }
-      if ((card.status === 'PUBLISHED' && status === 'PUBLISHED')
+          [caller.appId, catalog.id, cardId],
+        )
+        if (!card) throw new Error('NOT_FOUND')
+        if (Number(card.version) !== version) throw new Error('CONFLICT')
+        if (status === 'PUBLISHED' && Number(card.stock_remaining) < 1) {
+          throw new Error('BLIND_BOX_STOCK_UNAVAILABLE')
+        }
+        if ((card.status === 'PUBLISHED' && status === 'PUBLISHED')
         || (card.status !== 'PUBLISHED' && status === 'UNPUBLISHED')) {
-        throw new Error('INVALID_STATE')
-      }
-      const update = await tx.query(
-        `UPDATE mip_blind_box_cards
+          throw new Error('INVALID_STATE')
+        }
+        const update = await tx.query(
+          `UPDATE mip_blind_box_cards
          SET status = ?, updated_by_user_id = ?, version = version + 1
          WHERE app_id = ? AND id = ? AND version = ?`,
-        [status, caller.userId, caller.appId, cardId, version],
-      )
-      assertAffected(update)
-      await assertPublishedCatalogInvariant(tx, caller.appId, catalog)
-      await writeAudit(tx, caller, roleKey, `game.blind_box.card_${status.toLowerCase()}`, 'BLIND_BOX_CARD', cardId)
-      return { cardId, status, version: version + 1 }
-    })
+          [status, caller.userId, caller.appId, cardId, version],
+        )
+        assertAffected(update)
+        await assertPublishedCatalogInvariant(tx, caller.appId, catalog)
+        await writeAudit(tx, caller, roleKey, `game.blind_box.card_${status.toLowerCase()}`, 'BLIND_BOX_CARD', cardId)
+        return { cardId, status, version: version + 1 }
+      },
+    )
   }
 
   async function requireAdmin(db, caller, lock) {
