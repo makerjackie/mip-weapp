@@ -66,8 +66,7 @@ function findEnvInfo(value) {
     return null
   }
   if (
-    ('EnvId' in value || 'envId' in value)
-    && ('RuntimeMode' in value || 'RuntimeBackends' in value || 'Alias' in value)
+    'EnvId' in value || 'envId' in value
   ) {
     return value
   }

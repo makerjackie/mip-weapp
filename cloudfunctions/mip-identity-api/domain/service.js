@@ -65,7 +65,7 @@ function createIdentityService(options) {
     const user = await repository.ensureUser(caller)
     assertActiveUser(user)
     const phoneInfo = await phoneResolver(code)
-    await repository.bindPhone(caller.appId, user.id, protectPhone(phoneInfo, {
+    await repository.bindPhone(caller, user.id, protectPhone(phoneInfo, {
       appId: caller.appId,
       userId: user.id,
     }))

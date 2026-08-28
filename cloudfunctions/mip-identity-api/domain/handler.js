@@ -24,6 +24,7 @@ const errorMessages = {
   PHONE_ALREADY_BOUND: '该手机号已绑定其他账号',
   PHONE_CODE_REQUIRED: '未获得手机号授权码',
   PHONE_ENCRYPTION_NOT_CONFIGURED: '手机号服务尚未配置',
+  PHONE_MIGRATION_REBIND_FAILED: '会员账号迁移未完成，请联系客服处理',
   PHONE_SERVICE_UNAVAILABLE: '手机号服务暂时不可用',
   PROFILE_TAG_INVALID: '资料标签不存在或当前不可用',
   PROFILE_AVATAR_INVALID: '头像素材不存在或当前不可用',

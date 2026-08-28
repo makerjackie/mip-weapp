@@ -51,6 +51,12 @@ describe('MIP deployment safety guards', () => {
       .toBeLessThan(deployment.indexOf('const stagingRoot ='))
     expect(deployment).toContain('managementResponseSummary(creation)')
     expect(deployment).toContain('existingRuntimeGrantsExact')
+    expect(deployment).toContain('mysqlConnectionInfo ||= callCloudbase(root, \'queryMysqlDatabase\', { action: \'getConnectionInfo\' })')
+    expect(deployment).toContain('findString(mysqlConnectionInfo, [\'privatenetaddress\', \'private_net_address\'])')
+
+    const cloudbaseHelper = read('scripts/lib/example-cloudbase.mjs')
+    expect(cloudbaseHelper).toContain('\'EnvId\' in value || \'envId\' in value')
+    expect(cloudbaseHelper).toContain('if (resolvedId !== envId)')
 
     for (const document of ['README.md', 'docs/CLOUDBASE.md', 'docs/DEPLOYMENT.md']) {
       expect(read(document), document).toContain('MIP_DEPLOYMENT_STAGE')

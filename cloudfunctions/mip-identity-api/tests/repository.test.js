@@ -506,7 +506,7 @@ describe('phone binding isolation', () => {
         })
       },
     })
-    await repository.bindPhone('wx0000000000000001', 'user-1', {
+    await repository.bindPhone({ appId: 'wx0000000000000001', identityKey: 'a'.repeat(64) }, 'user-1', {
       phoneHash: 'a'.repeat(64),
       phoneCiphertext: Buffer.from('ciphertext'),
     })
@@ -530,7 +530,7 @@ describe('phone binding isolation', () => {
       },
     })
     await assert.rejects(
-      () => repository.bindPhone('wx0000000000000001', 'user-1', {
+      () => repository.bindPhone({ appId: 'wx0000000000000001', identityKey: 'a'.repeat(64) }, 'user-1', {
         phoneHash: 'a'.repeat(64),
         phoneCiphertext: Buffer.from('ciphertext'),
       }),
@@ -549,7 +549,7 @@ describe('phone binding isolation', () => {
       },
     })
     await assert.rejects(
-      () => repository.bindPhone('wx0000000000000001', 'user-1', {
+      () => repository.bindPhone({ appId: 'wx0000000000000001', identityKey: 'a'.repeat(64) }, 'user-1', {
         phoneHash: 'a'.repeat(64),
         phoneCiphertext: Buffer.from('ciphertext'),
       }),

@@ -68,6 +68,7 @@ function configuredAgreements() {
 
 const repository = createIdentityRepository(mysqlDatabase(), {
   allowUnionRebind: process.env.MIP_UNION_ID_REBIND_ENABLED === 'true',
+  allowPhoneMigrationRebind: process.env.MIP_PHONE_MIGRATION_REBIND_ENABLED === 'true',
 })
 const service = createIdentityService({
   repository,

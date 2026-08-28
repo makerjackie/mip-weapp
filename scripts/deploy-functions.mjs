@@ -30,6 +30,7 @@ import {
 import { resolveMipDeploymentStage } from './lib/mip-deployment-stage.mjs'
 import { createMipCoreFunctionManifest } from './lib/mip-function-manifest.mjs'
 import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
+import { resolvePhoneMigrationRebindEnabled } from './lib/mip-identity-rebind-policy.mjs'
 import {
   assertMipSchedulerHmacSecretsIsolated,
   assertMipTaskAdminHmacSecretsIsolated,
@@ -65,6 +66,10 @@ const knowledgeTestPriceCents = Number(env.MIP_KNOWLEDGE_TEST_PRICE_CENTS || 990
 const knowledgeSourceAllowedHosts = exactHostnameList(env.MIP_KNOWLEDGE_SOURCE_ALLOWED_HOSTS)
 const knowledgeWebviewAllowedHosts = exactHostnameList(env.MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS)
 const unionIdRebindEnabled = String(env.MIP_UNION_ID_REBIND_ENABLED || 'false').trim().toLowerCase() === 'true'
+const phoneMigrationRebindEnabled = resolvePhoneMigrationRebindEnabled(
+  env.MIP_PHONE_MIGRATION_REBIND_ENABLED,
+  deploymentStage,
+)
 const exportMaxRows = Number(env.MIP_EXPORT_MAX_ROWS || 5_000)
 const exportMaxBytes = Number(env.MIP_EXPORT_MAX_BYTES || 8 * 1024 * 1024)
 const adminWebLoginConfirmUrl = exactHttpsEndpoint(
@@ -152,11 +157,12 @@ assertMipTaskAdminHmacSecretsIsolated(stableSecretValues)
 
 let vpcId = String(env.MIP_DB_VPC_ID || findString(target.mysql, ['vpcid', 'vpc_id']) || '').trim()
 let subnetId = String(env.MIP_DB_SUBNET_ID || findString(target.mysql, ['subnetid', 'subnet_id']) || '').trim()
+let mysqlConnectionInfo = null
 if (!vpcId || !subnetId) {
   // Current MCP lifecycle responses omit network metadata; request the explicit TCP payload only when deployment needs it.
-  const connectionInfo = callCloudbase(root, 'queryMysqlDatabase', { action: 'getConnectionInfo' })
-  vpcId ||= String(findString(connectionInfo, ['vpcid', 'vpc_id']) || '').trim()
-  subnetId ||= String(findString(connectionInfo, ['subnetid', 'subnet_id']) || '').trim()
+  mysqlConnectionInfo = callCloudbase(root, 'queryMysqlDatabase', { action: 'getConnectionInfo' })
+  vpcId ||= String(findString(mysqlConnectionInfo, ['vpcid', 'vpc_id']) || '').trim()
+  subnetId ||= String(findString(mysqlConnectionInfo, ['subnetid', 'subnet_id']) || '').trim()
 }
 if (!vpcId || !subnetId) {
   throw new Error('CloudBase MySQL VPC/subnet is unavailable; configure MIP_DB_VPC_ID and MIP_DB_SUBNET_ID')
@@ -223,7 +229,12 @@ const accountClaim = assertRuntimeAccountClaimable({
 })
 
 if (!connectionUri) {
-  const address = String(findString(target.mysql, ['privatenetaddress', 'private_net_address']) || '').trim()
+  mysqlConnectionInfo ||= callCloudbase(root, 'queryMysqlDatabase', { action: 'getConnectionInfo' })
+  const address = String(
+    findString(target.mysql, ['privatenetaddress', 'private_net_address'])
+    || findString(mysqlConnectionInfo, ['privatenetaddress', 'private_net_address'])
+    || '',
+  ).trim()
   if (!/^[a-z0-9.-]+:\d+$/i.test(address)) {
     throw new Error('CloudBase MySQL private endpoint could not be resolved safely')
   }
@@ -400,6 +411,7 @@ try {
       matchingProviderFunction,
       matchingProviderTimeoutMs,
       paymentMode,
+      phoneMigrationRebindEnabled,
       secrets,
       serviceAccountAdapterJson,
       serviceAccountAdapterSecret,
@@ -905,6 +917,7 @@ function environmentForRole(role, options) {
       ...agreementEnvironment,
       MIP_UNION_IDENTITY_PEPPER: options.secrets.unionIdentityPepper,
       MIP_UNION_ID_REBIND_ENABLED: options.unionIdRebindEnabled ? 'true' : 'false',
+      MIP_PHONE_MIGRATION_REBIND_ENABLED: options.phoneMigrationRebindEnabled ? 'true' : 'false',
     },
     media: {
       MIP_MEDIA_SCOPE_SECRET: options.secrets.mediaScope,

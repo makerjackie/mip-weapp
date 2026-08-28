@@ -67,6 +67,40 @@ function repository(overrides = {}) {
 }
 
 describe('MIP identity service', () => {
+  it('reloads the access snapshot through the rebound caller identity', async () => {
+    const temporaryUser = { ...facts().user, id: '10000000-0000-4000-8000-000000000009' }
+    const targetUser = facts().user
+    let ensureCalls = 0
+    const binds = []
+    const service = createIdentityService({
+      repository: repository({
+        async ensureUser() {
+          ensureCalls += 1
+          return ensureCalls === 1 ? temporaryUser : targetUser
+        },
+        async bindPhone(resolvedCaller, userId, protectedPhone) {
+          binds.push({ resolvedCaller, userId, protectedPhone })
+        },
+        async loadFacts(_appId, userId) {
+          assert.equal(userId, targetUser.id)
+          return facts()
+        },
+      }),
+      async phoneResolver() {
+        return { phoneNumber: 'not-returned-to-client' }
+      },
+      protectPhone() {
+        return { phoneHash: 'a'.repeat(64), phoneCiphertext: Buffer.from('ciphertext') }
+      },
+    })
+
+    const snapshot = await service.bindWechatPhone(caller, { code: 'trusted-code' })
+    assert.equal(ensureCalls, 2)
+    assert.equal(snapshot.phoneBound, true)
+    assert.deepEqual(binds[0].resolvedCaller, caller)
+    assert.equal(binds[0].userId, temporaryUser.id)
+  })
+
   it('accepts every current agreement exactly once and persists only the server catalog', async () => {
     const writes = []
     const service = createIdentityService({
