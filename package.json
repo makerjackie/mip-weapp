@@ -52,6 +52,8 @@
     "architecture:check": "node scripts/architecture-check.mjs",
     "database:backup": "node scripts/backup-cloudbase-mysql.mjs",
     "database:setup": "node scripts/apply-mip-schema.mjs",
+    "database:import:app-scope": "node scripts/import-mip-app-scope.mjs",
+    "storage:copy:app-scope": "node scripts/copy-mip-media-app-scope.mjs",
     "database:grants": "node scripts/converge-mip-runtime-grants.mjs",
     "cloud:deploy": "node scripts/deploy-functions.mjs",
     "cloud:message-scheduler:role": "node scripts/configure-message-scheduler-role.mjs",

@@ -14,6 +14,23 @@
 - 目标环境配置与源环境完全相同的 `MIP_UNION_IDENTITY_PEPPER`；
 - 仅在完成迁移核对后设置 `MIP_UNION_ID_REBIND_ENABLED=true`。
 
+## 无 UnionID 时的付费会员认领
+
+源数据没有可用的 `union_identity_key` 时，可在目标 `test` 或 `staging` 环境临时设置
+`MIP_PHONE_MIGRATION_REBIND_ENABLED=true`。`production` 和 `development` 部署会拒绝该开关；正常部署保持
+`false`，迁移认领窗口结束后立即关闭并重新部署身份函数。
+
+该通道只接受微信 `phonenumber.getPhoneNumber` 返回的服务端可信手机号。手机号必须唯一命中另一个
+`ACTIVE` 用户，且该用户拥有当前有效、由已支付会员订单产生的权益。服务端会在单个事务中锁定手机号、
+双方用户与身份、有效权益、注册 outbox 和迁移审计记录，然后把当前微信身份转移到原会员主键。原会员的
+订单、权益、档案和其他业务外键不变；本次新建的临时用户只允许保留身份初始化记录和协议接受事实，不能有
+资料、分会、角色、订单、权益或任何其他带用户引用的业务记录。临时身份会形成不可复用墓碑，临时用户改为
+`CLOSED`；尚未处理的 `identity.user_registered` outbox 同事务改为 `CANCELLED`。
+
+同一会员只允许认领一次。并发、重复认领、临时用户超过 24 小时、手机号数据不完整、存在业务引用、权益
+不是有效付费订单来源或任何锁定/写入结果异常都会安全失败，响应和普通日志不返回手机号、手机号摘要、
+OpenID 或用户主键。此功能不能替代迁移前的数据核对，也不能用于合并正常业务账号。
+
 数据库只保存 HMAC 摘要，不保存 OpenID 或 UnionID 原文。`mip_user_identities` 在一个 AppID 范围内要求 UnionID 摘要唯一；摘要冲突时拒绝登录衔接，不自动合并用户。
 
 首次部署前运行 `pnpm secrets:init -- --confirm-env=<EnvID>`。命令会先读取目标环境中已有的 `mip-*` 函数配置：已有值与本地值不一致时失败关闭；没有已部署值时才生成稳定密钥。明文只写入被 Git 忽略且权限为 `0600` 的 `.env.local`，终端和 `.tmp/mip-secret-inventory.json` 只记录来源与短指纹。迁移到正式 AppID 或新环境时必须安全复制同一份 `MIP_UNION_IDENTITY_PEPPER`，不得重新生成。
@@ -38,4 +55,57 @@
 
 如果新旧小程序不能取得同一 UnionID，不能自动复用身份。此时使用真机验证手机号或人工凭证建立一次性映射；不得仅按昵称、头像、公司或客户端提交的用户标识合并账号。
 
-当前仓库提供身份摘要采集、稳定密钥初始化和受控 rebind，不会自动复制数据库、修改 AppID、重映射主键、重加密手机号、重键对象或合并现有旧项目用户。正式迁移前仍需单独实现并演练导出、转换、导入、对象复制、引用校验和回滚脚本；没有完成这些工具前不得按本文手工改 `app_id`。
+## 仓库迁移工具
+
+当前仓库已经提供完整的 MIP AppID 范围迁移工具，禁止再用手工 SQL 改 `app_id`：
+
+1. `scripts/export-mip-app-scope.mjs` 只读取 migration lock 中的 `mip_*` 表。业务表始终带精确源 AppID 条件；两张 schema ledger 仅用于结构证据，不进入目标业务导入。命令要求操作人先停止源 MIP 写入并显式确认，使用主键游标分页，导出后再次核对完整主键清单与行数；输出 JSONL、schema、UnionID/素材 inventory、SHA-256 和 manifest。私有包必须放在仓库外并保持 `0700/0600`。
+2. `scripts/transform-mip-app-scope-export.mjs` 离线映射 AppID，保留业务 UUID 和外键；手机号及名片联系方式按源/目标 AAD 解密再加密。通知授权、投递任务、支付尝试/回调、幂等 claim、签到/邀请凭据、导出票据、outbox、Web BFF nonce 等环境绑定或可重建事实会被明确排除并计数。
+3. `scripts/copy-mip-media-app-scope.mjs` 只复制通过完整文件集、checksum、manifest、源环境指纹和 inventory 校验的 `READY` 长期素材。对象按目标 staging scope 重键，逐个执行源下载、目标上传、目标回读、字节数和 SHA-256 校验，再更新转换包中的 `mip_media_assets` 引用和 checksum。临时导出、二维码/海报和 AI 音频不迁移。
+4. `scripts/import-mip-app-scope.mjs` 只接受同一 migration lock 的完整转换包。首次导入要求目标全部 MIP 业务表全局为空；外键始终开启，按依赖顺序插入并处理受控循环引用。私有 checkpoint 支持续跑，完成后验证全局行数、目标主键清单、源 AppID 残留和外键孤儿。
+
+标准命令如下，真实环境和 AppID 只通过本机参数或私密 env 文件传入，不写进文档或 Git：
+
+```bash
+node scripts/export-mip-app-scope.mjs \
+  --confirm-env=<source-env> \
+  --source-app-id=<source-appid> \
+  --confirm-source-writes-frozen
+
+node scripts/transform-mip-app-scope-export.mjs \
+  --input=<source-package> \
+  --output=<target-package> \
+  --source-app-id=<source-appid> \
+  --target-app-id=<target-appid> \
+  --source-env-file=<source-env-file> \
+  --target-env-file=<target-env-file>
+
+pnpm storage:copy:app-scope -- \
+  --source-package=<source-package> \
+  --transformed-package=<target-package> \
+  --source-env-file=<source-env-file> \
+  --target-env-file=<target-env-file> \
+  --confirm-source-env=<source-env> \
+  --confirm-target-env=<target-env> \
+  --confirm-source-app-id=<source-appid> \
+  --confirm-target-app-id=<target-appid>
+
+pnpm database:import:app-scope -- \
+  --input=<target-package> \
+  --confirm-env=<target-env> \
+  --confirm-prefix=mip_ \
+  --source-app-id=<source-appid> \
+  --target-app-id=<target-appid>
+```
+
+## 当前 staging 迁移证据（2026-08-28）
+
+- 目标空环境已应用 56 个锁定迁移；122 张 MIP 业务表存在且 schema 隔离检查通过。
+- 源 AppID 定向导出 124 张锁定表、1,294 行，导出前后行数一致；没有读取或复制其他项目表。
+- 离线转换保留 1,178 行并排除 116 行环境绑定/临时事实；两张 schema ledger 不进入业务导入。
+- 13 个长期素材已复制到目标 staging scope，上传后回读和 SHA-256 全部通过。
+- 目标导入 109 张表、947 行业务数据，最终行数、主键、源 AppID 残留和外键孤儿检查全部通过。
+- 专用 runtime 账号的 122 张表级最小权限已独立回读为 `already current`；没有 schema/global 权限。
+- 支付保持 `disabled`、目录保持 `TEST`、小程序状态保持 `trial`，不会产生真实支付。
+- 源身份 inventory 没有 UnionID 摘要，因此 `MIP_UNION_ID_REBIND_ENABLED` 保持关闭。旧付费用户只能在新 AppID 真机取得可信手机号后走显式、限时的手机号迁移认领，不能按昵称、头像或客户端 userId 合并。
+- 16 个核心函数仍以云端回读为准；数据导入成功不能代替 SCF 部署和 `cloud:verify`。
