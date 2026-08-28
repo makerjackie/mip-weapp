@@ -109,7 +109,7 @@
 
 ## WorkBuddy 管理端功能 PRD V0.4
 
-来源和内部映射见 [ADMIN_WEB.md](ADMIN_WEB.md)，代表截图见 [evidence/admin-web-2026-08-25](evidence/admin-web-2026-08-25/README.md)，历史线上读回见 [evidence/admin-web-live-2026-08-28](evidence/admin-web-live-2026-08-28/README.md)。WorkBuddy 是 React Web 的功能、信息架构与视觉依据，不覆盖服务端事实。既有线上证据覆盖真实管理员确认、33 条只读 action、7 个一级页面与 5 类详情；本仓库 `admin-web/` 当前 React 源码已覆盖 80 条查询 action、80 条受审写 action、14 个一级页面与 8 类详情。Task、Banner、Game 和导出创建等关键命令保留领域幂等结果，其余写操作不自动重试。当前版本已通过本地契约与三种视口验证，但尚未重新部署；CloudBase 余额不足仍阻塞扩展范围的登录后线上成功证据。
+来源和内部映射见 [ADMIN_WEB.md](ADMIN_WEB.md)，代表截图见 [evidence/admin-web-2026-08-25](evidence/admin-web-2026-08-25/README.md)，线上读回与当前生产发布见 [evidence/admin-web-live-2026-08-28](evidence/admin-web-live-2026-08-28/README.md)。WorkBuddy 是 React Web 的功能、信息架构与视觉依据，不覆盖服务端事实。既有线上证据覆盖真实管理员确认、33 条只读 action、7 个一级页面与 5 类详情；本仓库 `admin-web/` 当前 React 源码已覆盖 80 条查询 action、80 条受审写 action、14 个一级页面与 8 类详情。Task、Banner、Game 和导出创建等关键命令保留领域幂等结果，其余写操作不自动重试。当前版本已通过本地契约与三种视口验证，并以提交 `6613432` 发布到 `https://mipmini.01mvp.com/`；CloudBase 余额不足仍阻塞扩展范围的登录后线上成功证据。
 
 | 范围 | 状态 | 当前证据与缺口 |
 | --- | --- | --- |

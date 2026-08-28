@@ -29,6 +29,18 @@
 
 签名请求在进入 `AdminApplication` 前会把一次性 nonce 写入 `mip_web_bff_requests`；重复 nonce 或存储不可用时拒绝请求。4 条已有领域持久业务幂等保护的 mutation 已通过服务端精确白名单开放：补录会员、克隆活动、发布活动提醒和提交退款。后续 Web 版本已经部署对应表单，但本次线上验收没有制造业务写入，因此不把表单部署解释为真实写入结果通过。
 
+## 当前 React 生产发布
+
+- 仓库提交：`6613432` (`fix(admin-web): align server terminology`)
+- Cloudflare Pages 生产部署：`39971feb-2f1c-4331-9a25-4603d653f848`
+- 部署预览：`https://39971feb.mip-admin-web.pages.dev/`
+- 生产域名：`https://mipmini.01mvp.com/`
+- 公开入口：预览域名和生产域名均返回 HTTP 200，安全响应头保持生效。
+- 资源指纹：生产入口引用 `index-B1_sdsTI.js`，线上与本地主资源 SHA-256 均为 `bc49f70d3dd3e8a18755076fa4fc7f88369ee51182f41ccd02a4113715d19f49`。
+- BFF 边界：未登录同源 `POST /api/admin` 返回 HTTP 401 和 `AUTH_REQUIRED`，证明 Pages Functions 路由与会话门禁正在运行。
+
+本次证据证明当前 React 构建已发布，不扩大为登录后查询、写入、上传、导出或 CloudBase 恢复证据。
+
 ## 边界
 
 - 本证据证明线上身份闭环、7 个一级页面和 5 类真实详情查询可用。
