@@ -50,7 +50,7 @@
 
 ## 静态门禁
 
-2026-08-28 当前工作区通过完整静态门禁：客户端 223 个测试文件、1276 项测试；服务端 233 个测试文件、1456 项测试；源码合同为 139 个页面视图、16 个核心函数、56 个锁定迁移。架构、共享数据库隔离、安全、类型、lint、样式、构建、包体和文档链接同时通过，ESLint 为 0 warning、0 error。静态门禁不等于运行时、云端或真机证据。
+2026-08-28 当前工作区完整静态门禁通过：客户端 228 个测试文件、1287 项测试；服务端 1510 项测试；源码合同为 139 个页面视图、16 个核心函数、56 个锁定迁移。架构、共享数据库隔离、安全、类型、lint、样式、构建、包体和文档链接同时通过，ESLint 为 0 warning、0 error。静态门禁不等于运行时、云端或真机证据。
 
 - `pnpm verify`
 - `git diff --check`
@@ -64,11 +64,11 @@
 
 ## 微信开发者工具
 
-默认输出 `.tmp/runtime/report.json` 会被每次重跑覆盖，不作为固定证据。完整 UI 基线仍采用 `.tmp/runtime-evidence/2026-08-27-figma-alignment-r4/report.json`：375px 实测窗口下 108/108 路由、6/6 代表状态和 6/6 交互旅程通过，运行时诊断与 IDE 编译诊断均为 0 failure；这是历史完整基线，不是最新一次全量运行的声明。当前真实账号的补充证据为 `.tmp/runtime-evidence/2026-08-27-member-showcase-r2/report.json`，我的活动、活动/会员订单、任务详情、个人名片、档案编辑和个人中心均进入 `ready`；订单媒体解析后的最新三张截图与金额断言见 `.tmp/runtime-evidence/2026-08-28-order-media-r1/report.json`，3 个任务状态和 3 枚带图片的已佩戴徽章见 `.tmp/runtime-evidence/2026-08-28-task-badge-r1/report.json`。个人资料、名片、名片设置、徽章目录和徽章详情的最新 5/5 定向证据见 `.tmp/runtime-evidence/2026-08-28-profile-badge-card-r2/report.json`，姓名、性别、公司/职位、组织/职位、电话、微信、邮箱、地址、二维码和分享/下载入口均在实际页面进入 `ready`。最近一次全量尝试 `.tmp/runtime-evidence/2026-08-28-figma-alignment-r7/report.json` 在视口测量阶段因 `DEVTOOLS_PROTOCOL_TIMEOUT` 中断，没有替代 r4 的全量结论；定点证据不能合并成新的 110/110 全量通过。对应已保存报告的控制台均无 error、exception 或 rejection。
+默认输出 `.tmp/runtime/report.json` 会被每次重跑覆盖，不作为固定证据。完整 UI 基线仍采用 `.tmp/runtime-evidence/2026-08-27-figma-alignment-r4/report.json`：375px 实测窗口下 108/108 路由、6/6 代表状态和 6/6 交互旅程通过，运行时诊断与 IDE 编译诊断均为 0 failure；这是历史完整基线，不是最新一次全量运行的声明。当前真实账号的补充证据为 `.tmp/runtime-evidence/2026-08-27-member-showcase-r2/report.json`，我的活动、活动/会员订单、任务详情、个人名片、档案编辑和个人中心均进入 `ready`；订单媒体解析后的最新三张截图与金额断言见 `.tmp/runtime-evidence/2026-08-28-order-media-r1/report.json`，3 个任务状态和 3 枚带图片的已佩戴徽章见 `.tmp/runtime-evidence/2026-08-28-task-badge-r1/report.json`。个人资料、名片、名片设置、徽章目录和徽章详情的最新 5/5 定向证据见 `.tmp/runtime-evidence/2026-08-28-profile-badge-card-r2/report.json`，姓名、性别、公司/职位、组织/职位、电话、微信、邮箱、地址、二维码和分享/下载入口均在实际页面进入 `ready`；对应左右对照入口为 `.tmp/figma-implementation-comparison/focused-profile-badge-review.html`。最新全量报告 `.tmp/runtime-evidence/2026-08-28-full-110-r2/report.json` 已在同一个开发者工具实例访问 110/110 路由：58 条通过、40 条因 CloudBase 函数返回 `InsufficientBalance` 失败、12 条保留外部待验；6/6 代表状态通过，交互在首次服务端请求处被阻塞。该报告的控制台、exception、rejection、未知 warning 和 IDE 编译失败均为 0，但不能写成 110/110 通过。
 
 当前微信身份已经完成协议、档案和手机号绑定，并由精确档案初始化为唯一 `PLATFORM_OWNER`；手机号原值不写入仓库。`.tmp/bootstrap-owner-result.json` 记录 `ownerCount=1`、`role=PLATFORM_OWNER`、`scope=PLATFORM`。当前开发账号具有有效 TEST 玩家权益、3 场未来活动报名、1 笔 399 元 TEST 活动订单、1 笔 6000 元年度会员订单、2 个定向任务和 3 枚已佩戴勋章；这些页面均进入当前补充证据。管理端 1024px 代表页证据见 [响应式密度验收](evidence/admin-density-2026-08-26/README.md)；该证据不代替 Mac/Windows 微信客户端验收。
 
-共享开发环境已经写入并复核 `2026-08-28-demo.17`：一年 6000 元、365 天的 TEST 会员方案，3 场 2030 年周四 MIP 早会、1 场 399 元 TEST 付费活动、3 个 NPC 任务和带可替换图片的徽章目录。`pnpm owner:showcase` 已为当前 Owner 补齐 3 场未来活动报名、活动订单、2 个定向任务、3 枚已佩戴徽章，以及可替换的姓名、性别、职业身份、公司/职位、组织/职位和加密联系方式，重复执行结果为 `wrote: 0`。全部夹具使用固定 ID、版本化清单、当前 AppID 范围和 TEST 商品快照，不修改非 MIP 表，也不伪造生产支付；Banner 正常态仍需要通过媒体安全检查的真实云素材。
+共享开发环境已经写入并复核 `2026-08-28-demo.19`：一年 6000 元、365 天的 TEST 会员方案，3 场 2030 年周四 MIP 早会、1 场 399 元 TEST 付费活动、3 个 NPC 任务、6 位带姓名/性别/职业身份的完整演示用户和带可替换图片的徽章目录。`pnpm owner:showcase` 已为当前 Owner 补齐 3 场未来活动报名、活动订单、2 个定向任务、3 枚已佩戴徽章，以及可替换的姓名、性别、职业身份、公司/职位、组织/职位和加密联系方式，重复执行结果为 `wrote: 0`。全部夹具使用固定 ID、版本化清单、当前 AppID 范围和 TEST 商品快照，不修改非 MIP 表，也不伪造生产支付；复用既有 11 个 READY 素材时会逐项校验 owner、purpose、对象键、文件 ID、摘要、格式、字节、尺寸与状态，不接受仅凭 ID 的复用。
 
 - `pnpm runtime:preflight`
 - `pnpm test:runtime`
@@ -97,7 +97,7 @@
 
 - 响应式 Web 已部署到 `https://mipmini.01mvp.com/`。
 - 真实管理员在微信开发者工具确认网页登录后，浏览器进入 `AUTHENTICATED`；会话、概览、用户、活动、订单、角色、分会、消息和知识查询全部返回成功。
-- 当前 Web BFF 开放 68 条经过生成契约复核的查询 action 与 59 条受审写 action；11 个一级页面及用户、活动、订单、任务、任务完成记录、消息、知识库、机会 8 类详情已接入真实查询、筛选和适用的游标分页。写操作由精确字段白名单、一次性 nonce、capability 与作用域共同约束，其中 17 条具有领域持久幂等；其余操作不自动重试。新增页面与 action 已部署，并通过本地契约、390px/1280px 响应式验证、公开域名 200 回读、最新静态资源指纹核对及未登录浏览器冒烟；任务管理导航与筛选可见，控制台 0 warning/error。仍需登录后线上读写证据。媒体上传、用户/订单敏感导出和正式外部能力仍未完成。
+- 当前 Web BFF 开放 80 条经过生成契约复核的查询 action 与 80 条受审写 action；14 个一级页面及用户、活动、订单、任务、任务完成记录、消息、知识库、机会 8 类详情已接入真实查询、筛选和适用的游标分页。写操作由精确字段白名单、一次性 nonce、capability 与作用域共同约束；Task、Banner、Game 和导出创建等关键命令具有领域持久幂等，其余操作不自动重试。Banner、游戏、8 类用途媒体上传和用户/订单敏感导出已经实现。扩展版已部署，并通过本地契约、390px/1280px 响应式验证、公开域名 200 回读、最新静态资源指纹核对、未登录会话响应，以及媒体接口同源未登录 401/跨站 Origin 403 的负向冒烟。当前 CloudBase 余额不足，仍需恢复后补录登录查询、写入、上传和导出的线上成功证据。
 - 无身份、短码或密钥的线上读回记录见 [evidence/admin-web-live-2026-08-28](evidence/admin-web-live-2026-08-28/README.md)。
 - 未接入真实 API 的页面壳层、静态演示状态和本地数据不能作为真实业务验收证据；真实请求失败时不得回退为演示数字。
 
@@ -111,8 +111,8 @@
 | runtime 表级授权 | 122 张 MIP runtime 表的精确表→权限映射已收敛；Web 防重放表只授予过期清理与写入所需的精确权限 | 云端已验证；没有 schema/global 或非 MIP 表权限 |
 | 数据库隔离 | 迁移后检查通过，只写入 `mip_*` 与 `mip_schema_migrations` | 云端已验证 |
 | 开发者工具登录 | 已登录并可看到云函数列表 | 只证明可见性 |
-| `mip-identity-api` | 最终工作区代码、VPC/子网和环境变量已部署，MySQL 健康检查通过 | 云端已验证 |
-| 16 个核心函数 | 2026-08-28 部署身份与成长函数后，独立复核 16/16 函数清单、环境配置、健康检查、保护调用规则及高频 timer 缺失 | 云端已验证 |
+| `mip-identity-api` | 既有快照曾完成 VPC/子网、环境变量和 MySQL 健康验证；本轮更新调用后代码回读未收敛 | 当前函数返回 `InsufficientBalance`，不能把工作区版本标为已部署 |
+| 16 个核心函数 | 2026-08-28 早期快照曾独立复核 16/16 函数清单、环境配置、健康检查、保护调用规则及高频 timer 缺失；本轮 Task/Banner/Game/Media Web bridge 更新尚未形成部署回读 | 环境余额恢复后重新部署并执行 `cloud:verify` |
 
 项目 API Key 继续用于常规 CloudBase MCP、环境和 MySQL 管理；涉及 SCF 控制面的部署显式切换到资源所有者 Device Flow。此次没有修改 `TCB_QcsRole` 或给它追加 `scf:CreateFunction`，也没有观察到独立的 VPC/子网权限错误。认证边界和复现方式见 [CloudBase MCP 鉴权研究](../research/cloudbase-mcp-auth.md)。
 
