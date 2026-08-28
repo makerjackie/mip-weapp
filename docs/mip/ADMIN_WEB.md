@@ -15,17 +15,17 @@
 
 ## 产品定位
 
-WorkBuddy 原型只作为管理功能、字段和信息架构输入，不作为视觉基线。小程序管理分包继续负责手机微信和微信电脑端；独立 Web 工程已经建立，用于浏览器宽屏运营。当前 14 个一级页面和 8 类详情已接入 80 条受审查询 action 与 80 条受审写 action。
+WorkBuddy 原型作为 Web 管理后台的功能、字段、信息架构和视觉依据，但不作为领域、安全或生产数据事实。小程序管理分包继续负责手机微信和微信电脑端；React Web 工程用于桌面优先、手机自适应的浏览器运营。当前 14 个一级页面和 8 类详情已接入 80 条受审查询 action 与 80 条受审写 action。
 
-两个管理界面共享同一套 MIP 用户、分会、订单、活动、权限、审计和消息事实，也共享同一套渠道中立管理合同。独立 Web 只复用操作语义和视觉模式，不复制 WXML；生产数据接入必须经过 Web principal 与 HTTPS adapter。
+两个管理界面共享同一套 MIP 用户、分会、订单、活动、权限、审计和消息事实，也共享同一套渠道中立管理合同。Web 只复用操作语义，不复制 WXML、小程序页面或运行时；生产数据接入必须经过 Web principal 与 HTTPS adapter。
 
 ### 2026-08-28 Web 交付状态
 
-- 独立仓库：相邻工程 `mip-admin-web`
-- 测试域名：`https://mipmini.01mvp.com/`
+- 当前源码：本仓库 `admin-web/`，独立构建和部署；相邻原仓库 `mip-admin-web` 只保留为未改动的来源与回滚依据
+- 历史测试域名：`https://mipmini.01mvp.com/`；既有线上证据只证明当时部署版本，不证明本次 React 重构已经发布
 - 已完成：响应式概览、用户、活动、订单、任务、Banner、素材、游戏、机会、成长、权限、消息、知识库、运营记录 14 个一级页面，以及用户、活动、订单、任务、任务完成记录、消息、知识库、机会 8 类详情；同源 Pages Function、AES-GCM `HttpOnly` 会话、来源和请求体限制；可信 Web principal adapter；80 条由生成契约约束的查询 action。
 - 已完成安全底座：签名 envelope 的 nonce 在 MySQL 中一次性持久消费；80 条 Web 写 action 通过 required/optional 字段白名单、capability 与作用域复核。Task、Banner、Game 和导出创建等关键命令在领域内持久保存幂等结果；其他写操作依赖服务端版本冲突保护且不自动重试，网络结果不明确时必须刷新服务端事实。
-- 已验证：真实管理员在微信开发者工具确认网页登录后，浏览器曾进入 `AUTHENTICATED`；当次线上证据覆盖 7 个一级页面以及用户、活动、订单、消息、知识库详情。当前扩展版已部署到测试域名并通过本地契约、390px/1280px 响应式验证、公开静态资源回读、未登录会话检查，以及媒体接口同源未登录 401、跨站 Origin 403 的负向检查。
+- 历史线上验证：真实管理员在微信开发者工具确认网页登录后，浏览器曾进入 `AUTHENTICATED`；当次证据覆盖 7 个一级页面以及用户、活动、订单、消息、知识库详情。本次 React 版已通过本地契约、390px/1280px/1440px 响应式和构建验证；尚未部署，不能把历史公开域名回读写成本次版本的发布证据。
 - 已完成网页入口：用户详情补录会员、活动详情克隆活动/发布提醒、订单详情提交退款；用户与订单敏感导出；Banner 全生命周期；游戏赛季、战队、成员、赛况、排行和盲盒配置；8 类用途的 PNG/JPEG 安全素材上传。入口按 capability 显示，操作前明确确认，网络失败不自动重试。
 - 外部待验：当前 CloudBase 核心函数因环境余额不足返回 `InsufficientBalance`，因此扩展版的登录后查询、写入、上传和导出尚未形成线上成功证据；正式支付与外部消息同样保留生产验收边界。当前代码完整度不能替代这些外部配置与生产证据。
 - 真实 BFF 请求失败时必须进入错误态，不得回退为演示数字。
@@ -110,7 +110,7 @@ Banner 管理同样只通过 `mip.admin.banners.*` 的 7 个渠道中立 operati
 
 游戏管理通过 `mip.admin.game.*` 的 20 个渠道中立 operation 对外，覆盖赛季、战队、成员、每周赛况、排行榜快照和盲盒配置。`mip-admin-api` 每次重读管理员 session 并要求平台范围 `game.manage`，再以独立的 `MIP_GAME_ADMIN_HMAC_SECRET` 调用 `MIP_GAME_FUNCTION_NAME`（默认 `mip-game-api`）。Game trusted adapter 对 action、顶层输入、赛季规则、成员数组、赛况、盲盒目录和卡牌字段逐层 fail closed；12 个写 operation 必须提供由 HMAC 覆盖的顶层幂等键，8 个查询 operation 明确拒绝该字段。幂等认领、业务写入与响应固化共用 Game MySQL 事务，相同键与规范化请求回放原响应，不同请求冲突，失败事务不会遗留认领记录。
 
-Web 工程保持独立仓库，不把小程序改成 Monorepo，也不改变原生 WXML/TypeScript 技术栈。两个管理端都使用 MIP 黑黄设计系统；WorkBuddy 的蓝白视觉不进入产品。
+Web 工程已迁入本仓库 `admin-web/`，作为 pnpm workspace 中独立构建、独立部署的 React 应用；根目录仍是原生 WXML/TypeScript 小程序主工程，技术栈和开发者工具入口不变。Web 使用以 WorkBuddy 为依据的蓝白 Design Token，小程序继续使用自己的设计规范；两端不共享页面组件或运行时。
 
 ### 管理 module 的 seam
 
@@ -186,6 +186,6 @@ interface AdminApplication {
 - 手机微信、Windows 微信和 Mac 微信的真实截图与操作记录；
 - 宽屏键盘操作、错误恢复、窄窗降级和尺寸切换不丢状态；
 - 手机与电脑端读取同一业务事实的双端一致性验证；
-- 类型检查、静态测试、构建、运行时预检和响应式合同纳入根 `pnpm verify`。
+- 小程序静态门禁继续使用根 `pnpm verify`；Web 类型检查、测试、构建和响应式合同使用 `pnpm admin:web:verify`；合并门禁使用 `pnpm verify:all`。
 
 平台能力与限制见 [DESKTOP_ADMIN_RESEARCH.md](DESKTOP_ADMIN_RESEARCH.md)。

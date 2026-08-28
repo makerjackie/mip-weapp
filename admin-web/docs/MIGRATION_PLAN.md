@@ -9,7 +9,7 @@
 
 ## 旧 DOM 与 React 并存
 
-底座阶段将原 `src/main.ts` 移到 `src/legacy/main.ts` 作为只读对照，新入口改为 `src/main.tsx`。React 首先接管 AppShell、登录/会话、路由、Query、反馈状态和公共 UI；页面按批次改用既有 `src/modules` 与 `src/services`。
+底座阶段将生产入口改为 `src/main.tsx`，原 `src/main.ts` 与 `src/styles.css` 仅在迁移期间作为只读对照。React 先接管 AppShell、登录/会话、路由、Query、反馈状态和公共 UI，再按批次改用既有 `src/modules` 与 `src/services`。全部路由与横切流程迁移后，旧文件已删除，不再保留双渲染入口。
 
 并存期间的规则：
 
@@ -54,15 +54,17 @@
 
 退出条件：保留 action、幂等键、capability、expectedVersion；mutation 不自动重试；键盘焦点可恢复。
 
-### 6. 删除 legacy
+### 6. 删除 legacy（已完成）
 
-只有同时满足以下条件才删除 `src/legacy/main.ts`：
+只有同时满足以下条件才删除旧 `src/main.ts` 与 `src/styles.css`：
 
 1. 14 个一级页面均由 React 路由提供。
 2. 8 类详情、所有受审写操作入口、导出、上传和会话恢复已迁移。
 3. 真实 API 失败不会落到 legacy 或 demo。
 4. `pnpm verify`、`pnpm admin:web:verify`、`pnpm verify:all` 全通过。
 5. 三种视口和 Workbuddy 左右对照完成，P0/P1/P2 已处理或记录证据边界。
+
+当前状态：14 个一级页面、详情抽屉、受审写操作、敏感导出、素材上传和会话恢复均由 React 提供；旧字符串 DOM 渲染层已经删除。生产资源、DNS 与真实支付/手机号仍按项目验收边界由生产环境验证。
 
 ## 每页测试和截图
 

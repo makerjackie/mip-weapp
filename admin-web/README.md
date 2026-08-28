@@ -1,14 +1,16 @@
 # MIP Web 运营管理后台
 
-独立的响应式 Web 管理端，不属于 `mip-weapp` Monorepo，也不复制小程序的 WXML。它与小程序复用同一套服务端管理操作语义：`AdminRequest v1`（`contractVersion`、`action`、`input`、可选 `idempotencyKey`）。
+位于 `mip-weapp/admin-web/` 的独立构建、独立部署 React 管理端。它属于根 pnpm workspace，但不引用小程序的 `wx`、WXML、TDesign MiniProgram 或页面代码。Web 与小程序只复用平台中立的 `AdminRequest v1` 管理操作语义（`contractVersion`、`action`、`input`、可选 `idempotencyKey`）以及同一套服务端事实。
 
 ## 本地运行
 
 ```bash
-cp .env.example .env.local
+cp admin-web/.env.example admin-web/.env.local
 pnpm install
-pnpm dev
+pnpm admin:web:dev
 ```
+
+完整本地门禁使用 `pnpm admin:web:verify`；小程序与 Web 的合并门禁使用 `pnpm verify:all`。
 
 本地演示必须显式设置 `VITE_MIP_ADMIN_DEMO_MODE=true`。未启用演示时，浏览器只访问同源 `/api/admin`，页面不会在接口失败后回退成演示数据，也不会接触 CloudBase API Key、MySQL URI、身份提供方密钥或 BFF HMAC。
 

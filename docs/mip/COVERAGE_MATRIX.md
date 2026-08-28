@@ -109,7 +109,7 @@
 
 ## WorkBuddy 管理端功能 PRD V0.4
 
-来源和内部映射见 [ADMIN_WEB.md](ADMIN_WEB.md)，代表截图见 [evidence/admin-web-2026-08-25](evidence/admin-web-2026-08-25/README.md)，线上读回见 [evidence/admin-web-live-2026-08-28](evidence/admin-web-live-2026-08-28/README.md)。WorkBuddy 仍只作为功能输入；独立 Web 已部署，既有线上证据覆盖真实管理员确认、33 条只读 action、7 个一级页面与 5 类详情。当前源码已扩展为 80 条查询 action、80 条受审写 action、14 个一级页面与 8 类详情；Task、Banner、Game 和导出创建等关键命令保存领域幂等结果，其余写操作不自动重试。Banner、游戏、媒体上传和敏感导出已通过本地契约与响应式验证；CloudBase 余额不足阻塞当前扩展范围的登录后线上成功证据。
+来源和内部映射见 [ADMIN_WEB.md](ADMIN_WEB.md)，代表截图见 [evidence/admin-web-2026-08-25](evidence/admin-web-2026-08-25/README.md)，历史线上读回见 [evidence/admin-web-live-2026-08-28](evidence/admin-web-live-2026-08-28/README.md)。WorkBuddy 是 React Web 的功能、信息架构与视觉依据，不覆盖服务端事实。既有线上证据覆盖真实管理员确认、33 条只读 action、7 个一级页面与 5 类详情；本仓库 `admin-web/` 当前 React 源码已覆盖 80 条查询 action、80 条受审写 action、14 个一级页面与 8 类详情。Task、Banner、Game 和导出创建等关键命令保留领域幂等结果，其余写操作不自动重试。当前版本已通过本地契约与三种视口验证，但尚未重新部署；CloudBase 余额不足仍阻塞扩展范围的登录后线上成功证据。
 
 | 范围 | 状态 | 当前证据与缺口 |
 | --- | --- | --- |
@@ -119,7 +119,7 @@
 | 消息模板、定时与失败复核 | `implemented-local` | 模板、活动、收件人快照、定时发送、失败复核和 outbox 已本地实现；正式微信模板及 scheduler 云端 canary 为 `external-wait` |
 | 网页管理员认证与会话 | `implemented-local` | 真实管理员已在微信开发者工具确认登录，浏览器进入 `AUTHENTICATED` 并成功读取真实概览；该结论只覆盖当前确认登录与会话闭环 |
 | 网页端平台/分会/活动 RBAC | `partial-local` | 80 条查询 API 与 80 条精确白名单 mutation 复用 trusted principal 并在请求时重读 scope/capability；用户、活动、订单、任务、Banner、媒体、游戏、权限、消息、知识库、机会与成长主要管理动作已接入。媒体上传只接受平台范围用途 capability；分会或活动 scope 不会在 Web 显示入口，服务端仍再次拒绝越权 |
-| 网页端视觉与可访问性 | `implemented-local` | 独立 Web 工程完成 390px/1280px 响应式布局、列表和详情抽屉并部署到 `https://mipmini.01mvp.com/`；当前 14 个一级页面均接入真实查询并通过本地响应式验证，公开静态入口与未登录/跨站负向检查已通过，扩展范围尚待补录登录后线上成功证据 |
+| 网页端视觉与可访问性 | `implemented-local` | `admin-web/` React 工程完成 390×844、1280×720、1440×900 响应式布局、列表、详情抽屉和 WorkBuddy 同尺寸视觉对照；14 个一级页面均接入真实查询 adapter 并通过本地验证。历史公开入口证据不等于当前 React 版本已部署，扩展范围仍待补录登录后线上成功证据 |
 
 ## Figma 代表 frame
 
