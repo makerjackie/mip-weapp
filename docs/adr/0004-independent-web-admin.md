@@ -8,7 +8,7 @@
 
 ## 当前边界
 
-响应式 React Web 已从源码 `c182db2` 部署到 `https://mipmini.01mvp.com/`，Cloudflare Pages deployment ID 为 `6d3b4c88-31e9-452f-b27f-1a95209d8f00`。真实管理员在微信侧确认网页登录后，浏览器进入 `AUTHENTICATED`，14/14 个一级路由均已通过生产真实只读验收。
+响应式 React Web 已从源码 `c21b3b4` 部署到 `https://mipmini.01mvp.com/`，Cloudflare Pages deployment ID 为 `22429e0f-344a-49af-8fb8-e76a75f86507`。真实管理员在微信侧确认网页登录后，浏览器进入 `AUTHENTICATED`，14/14 个一级路由均已通过生产真实只读验收。
 
 生产写入证据保持最小且可回收：真实 JPEG 通过同源媒体入口上传，用于保存 `INACTIVE` Banner，随后通过服务端软删除；用户敏感导出使用 `includesPhone=false` 和唯一无匹配条件，结果 `rowCount=0`，HTTPS 下载的 ZIP magic、字节数和 SHA-256 校验一致，ticket 最终为 `CONSUMED`，验收进程内文件字节已清零。CloudBase 核心及修复函数已部署且 `pnpm cloud:verify` 通过；微信开发者工具最终报告 `.tmp/runtime-evidence/2026-08-28-final-r6/report.json` 已通过 110/110 路由、6/6 代表状态、6/6 交互旅程，diagnostics 为 0。证据见 [2026-08-28 React Web 线上验收](../mip/evidence/admin-web-live-2026-08-28-react/README.md)。此前范围较小的历史证据继续保留，不替代当前版本结论。
 

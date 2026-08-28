@@ -5,8 +5,8 @@
 ## 发布对象
 
 - 生产地址：`https://mipmini.01mvp.com/`
-- Cloudflare Pages deployment ID：`6d3b4c88-31e9-452f-b27f-1a95209d8f00`
-- 生产源码：`c182db2`
+- Cloudflare Pages deployment ID：`22429e0f-344a-49af-8fb8-e76a75f86507`
+- 生产源码：`c21b3b4`
 - CloudBase：核心函数及本轮修复函数均已部署，`pnpm cloud:verify` 通过
 
 本文件不记录 challenge、Cookie、AppID、环境标识、OpenID、数据库地址、HMAC、导出 token、资源 ID 或个人信息。

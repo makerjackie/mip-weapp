@@ -22,7 +22,7 @@ WorkBuddy 原型作为 Web 管理后台的功能、字段、信息架构和视�
 ### 2026-08-28 Web 交付状态
 
 - 当前源码：本仓库 `admin-web/`，独立构建和部署；原 Web 基线与完整导入关系已保存在当前 Git 历史中
-- 生产域名：`https://mipmini.01mvp.com/`；当前 React 生产源码为 `c182db2`，Cloudflare Pages deployment ID 为 `6d3b4c88-31e9-452f-b27f-1a95209d8f00`
+- 生产域名：`https://mipmini.01mvp.com/`；当前 React 生产源码为 `c21b3b4`，Cloudflare Pages deployment ID 为 `22429e0f-344a-49af-8fb8-e76a75f86507`
 - 已完成：响应式概览、用户、活动、订单、任务、Banner、素材、游戏、机会、成长、权限、消息、知识库、运营记录 14 个一级页面，以及用户、活动、订单、任务、任务完成记录、消息、知识库、机会 8 类详情；同源 Pages Function、AES-GCM `HttpOnly` 会话、来源和请求体限制；可信 Web principal adapter；80 条由生成契约约束的查询 action。
 - 已完成安全底座：签名 envelope 的 nonce 在 MySQL 中一次性持久消费；80 条 Web 写 action 通过 required/optional 字段白名单、capability 与作用域复核。Task、Banner、Game 和导出创建等关键命令在领域内持久保存幂等结果；其他写操作依赖服务端版本冲突保护且不自动重试，网络结果不明确时必须刷新服务端事实。
 - 线上验证：当前 React 版已由真实管理员进入 `AUTHENTICATED`，14/14 个一级路由均通过生产真实只读验收。CloudBase 核心函数及本轮修复函数均已部署，`pnpm cloud:verify` 通过；微信开发者工具最终报告 `.tmp/runtime-evidence/2026-08-28-final-r6/report.json` 通过 110/110 路由、6/6 代表状态、6/6 交互旅程，运行时与 IDE diagnostics 均为 0。

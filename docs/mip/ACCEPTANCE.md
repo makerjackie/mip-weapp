@@ -95,7 +95,7 @@
 
 ## 独立 Web 管理端
 
-- 当前 `admin-web/` React 版已于 2026-08-28 从提交 `c182db2` 发布到 `https://mipmini.01mvp.com/`，Cloudflare Pages 生产部署为 `6d3b4c88-31e9-452f-b27f-1a95209d8f00`。
+- 当前 `admin-web/` React 版已于 2026-08-28 从提交 `c21b3b4` 发布到 `https://mipmini.01mvp.com/`，Cloudflare Pages 生产部署为 `22429e0f-344a-49af-8fb8-e76a75f86507`。
 - 历史版本中，真实管理员在微信开发者工具确认网页登录后，浏览器进入 `AUTHENTICATED`；会话、概览、用户、活动、订单、角色、分会、消息和知识查询全部返回成功。
 - 当前 Web BFF 开放 80 条经过生成契约复核的查询 action 与 80 条受审写 action；React 版的 14 个一级页面及用户、活动、订单、任务、任务完成记录、消息、知识库、机会 8 类详情已接入真实查询、筛选和适用的游标分页。写操作由精确字段白名单、一次性 nonce、capability 与作用域共同约束；Task、Banner、Game 和导出创建等关键命令具有领域持久幂等，其余操作不自动重试。Banner、游戏、8 类用途媒体上传和用户/订单敏感导出已经实现。当前版本已通过本地契约、390×844、1280×720、1440×900 响应式与 WorkBuddy 对照验证，并完成公开入口 200、静态资源指纹和未登录 BFF `401 AUTH_REQUIRED` 验证。生产环境已通过 14/14 路由的登录态读取、Banner 上传后保存为 `INACTIVE` 与软删除，以及不含手机号的零行导出文件完整性和消费验证；含真实敏感行的导出仍需受控验收。
 - 无身份、短码或密钥的线上读回记录见 [evidence/admin-web-live-2026-08-28](evidence/admin-web-live-2026-08-28/README.md)。

@@ -20,7 +20,7 @@
 
 ### 当前交付形态
 
-2026-08-28 更新：保留小程序管理分包，同时增加独立 Web 管理端；该决定由 [ADR 0004](../adr/0004-independent-web-admin.md) 接受，取代此前“独立网页暂缓”的部分。当前 React 生产源码 `c182db2` 已部署到 `https://mipmini.01mvp.com/`，Cloudflare Pages deployment ID 为 `6d3b4c88-31e9-452f-b27f-1a95209d8f00`。真实管理员已完成 14/14 个已认证路由的线上只读验收；真实 JPEG 上传、Banner `INACTIVE` 保存与软删除，以及 `USERS`、`includesPhone=false`、唯一无匹配条件的空结果导出均已完成生产闭环。CloudBase 核心及修复函数已部署，`pnpm cloud:verify` 通过。详见[当前 React 生产证据](evidence/admin-web-live-2026-08-28-react/README.md)；此前较小范围的[历史证据](evidence/admin-web-live-2026-08-28/README.md)继续保留。
+2026-08-28 更新：保留小程序管理分包，同时增加独立 Web 管理端；该决定由 [ADR 0004](../adr/0004-independent-web-admin.md) 接受，取代此前“独立网页暂缓”的部分。当前 React 生产源码 `c21b3b4` 已部署到 `https://mipmini.01mvp.com/`，Cloudflare Pages deployment ID 为 `22429e0f-344a-49af-8fb8-e76a75f86507`。真实管理员已完成 14/14 个已认证路由的线上只读验收；真实 JPEG 上传、Banner `INACTIVE` 保存与软删除，以及 `USERS`、`includesPhone=false`、唯一无匹配条件的空结果导出均已完成生产闭环。CloudBase 核心及修复函数已部署，`pnpm cloud:verify` 通过。详见[当前 React 生产证据](evidence/admin-web-live-2026-08-28-react/README.md)；此前较小范围的[历史证据](evidence/admin-web-live-2026-08-28/README.md)继续保留。
 
 ### 第一条验收闭环
 

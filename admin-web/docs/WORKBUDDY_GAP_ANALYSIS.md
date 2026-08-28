@@ -4,7 +4,7 @@
 
 ## 总体结论
 
-导入基线已经具备 14 个一级页面、8 类详情、AdminRequest v1、同源 BFF、短码会话、80 条查询和 80 条受审写 action，但展示层是约 1,700 行字符串 DOM、字符图标和逐函数事件绑定。当前版本已经用 React 路由、Query、Ant Design 与公共 UI 完成迁移，旧 `src/main.ts`、旧全局 `src/styles.css` 和字符串渲染函数已经删除。React 生产版本已从源码 `c182db2` 部署到 `https://mipmini.01mvp.com/`，Cloudflare Pages deployment ID 为 `6d3b4c88-31e9-452f-b27f-1a95209d8f00`。
+导入基线已经具备 14 个一级页面、8 类详情、AdminRequest v1、同源 BFF、短码会话、80 条查询和 80 条受审写 action，但展示层是约 1,700 行字符串 DOM、字符图标和逐函数事件绑定。当前版本已经用 React 路由、Query、Ant Design 与公共 UI 完成迁移，旧 `src/main.ts`、旧全局 `src/styles.css` 和字符串渲染函数已经删除。React 生产版本已从源码 `c21b3b4` 部署到 `https://mipmini.01mvp.com/`，Cloudflare Pages deployment ID 为 `22429e0f-344a-49af-8fb8-e76a75f86507`。
 
 已经直接解决的主要差距：React AppShell、蓝色渐变侧栏、分组导航、当前位置、消息入口、账号菜单、统一页面头/筛选/表格/抽屉/弹窗/标签、四项指标、趋势容器、待办、系统动态、快捷操作、手机抽屉导航和加载/错误/空/无权限状态。
 
