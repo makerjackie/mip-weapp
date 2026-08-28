@@ -246,8 +246,8 @@ function statusClass(value: string) {
 function rowsToTable(rows: AdminTableRow[], columns: AdminTableColumn[], detailTarget?: AdminDetailRoute) {
   if (!rows.length) return '<div class="empty">暂无数据</div>'
   const hasActionColumn = Boolean(detailTarget) || rows.some(row => rowActions(row).length > 0)
-  const actionHeading = hasActionColumn ? '<th>操作</th>' : ''
-  return `<div class="table-scroll"><table><thead><tr>${columns.map(column => `<th>${column.label}</th>`).join('')}${actionHeading}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(column => {
+  const actionHeading = hasActionColumn ? '<th scope="col">操作</th>' : ''
+  return `<div class="table-scroll" role="region" aria-label="数据表格" tabindex="0"><table><thead><tr>${columns.map(column => `<th scope="col">${column.label}</th>`).join('')}${actionHeading}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(column => {
     return `<td>${renderTableValue(row, column.key)}</td>`
   }).join('')}${tableActionCell(row, detailTarget, hasActionColumn)}</tr>`).join('')}</tbody></table></div>`
 }
@@ -295,19 +295,23 @@ function sidebar() {
   const items = visibleNav()
   const groups = [...new Set(items.map(item => item.group))]
   const sessionText = client.demoMode ? '本地演示模式' : session?.enabled ? '已验证运营会话' : '尚未登录'
-  return `<aside class="sidebar"><div class="brand"><span class="brand-mark">MIP</span><div><strong>MIP</strong><small>运营管理</small></div></div><nav>${groups.map(group => `<div class="nav-group"><span class="nav-label">${group}</span>${items.filter(item => item.group === group).map(item => `<button class="nav-item ${item.route === route ? 'active' : ''}" data-route="${item.route}"><span class="nav-icon">${item.icon}</span>${item.label}</button>`).join('')}</div>`).join('')}</nav><div class="sidebar-footer"><span class="avatar">M</span><div><strong>运营账号</strong><small>${sessionText}</small></div>${session?.enabled ? '<button class="icon-button" id="logout-button" title="退出登录">↪</button>' : ''}</div></aside>`
+  return `<aside class="sidebar"><div class="brand"><span class="brand-mark">MIP</span><div><strong>MIP</strong><small>运营管理</small></div></div><nav>${groups.map(group => `<div class="nav-group"><span class="nav-label">${group}</span>${items.filter(item => item.group === group).map(item => `<button class="nav-item ${item.route === route ? 'active' : ''}" data-route="${item.route}" ${item.route === route ? 'aria-current="page"' : ''}><span class="nav-icon" aria-hidden="true">${item.icon}</span>${item.label}</button>`).join('')}</div>`).join('')}</nav><div class="sidebar-footer"><span class="avatar">M</span><div><strong>运营账号</strong><small>${sessionText}</small></div>${session?.enabled ? '<button class="icon-button" data-logout-button title="退出登录">↪</button>' : ''}</div></aside>`
 }
 
 function header() {
   const current = nav.find(item => item.route === route) || nav[0]
   const connection = client.demoMode ? '本地演示数据' : session?.enabled ? '真实数据已连接' : '需要运营登录'
-  const sessionAction = !client.demoMode && !session?.enabled ? '<button class="outline-button" id="login-button">运营登录</button>' : ''
+  const sessionAction = !client.demoMode && !session?.enabled
+    ? '<button class="outline-button" id="login-button">运营登录</button>'
+    : session?.enabled
+      ? '<button class="outline-button" data-logout-button>退出登录</button>'
+      : ''
   return `<header class="topbar"><div class="mobile-brand"><span class="brand-mark">MIP</span></div><div class="breadcrumb"><span>运营管理</span><i>/</i><strong>${current.label}</strong></div><div class="top-actions"><span class="connection"><i class="dot ${session?.enabled ? 'online' : ''}"></i>${connection}</span>${sessionAction}<button class="outline-button" id="refresh-button">刷新数据</button></div></header>`
 }
 
 function shell(content: string) {
   const loginAction = apiErrorCode === 'AUTH_REQUIRED' ? '<button class="notice-action" id="notice-login-button">运营登录</button>' : ''
-  app.innerHTML = `${sidebar()}<main class="main"><div class="content"><div id="notice" class="notice ${notice ? '' : 'hidden'}"><span>${escapeHtml(notice)}</span>${loginAction}</div>${header()}${content}</div></main>${detailPanel()}${mutationDialog()}${advancedOperationDialog()}${sensitiveExportDialog()}${loginDialog()}`
+  app.innerHTML = `${sidebar()}<main class="main">${header()}<div class="content"><div id="notice" class="notice ${notice ? '' : 'hidden'}" role="status" aria-live="polite"><span>${escapeHtml(notice)}</span>${loginAction}</div>${content}</div></main>${detailPanel()}${mutationDialog()}${advancedOperationDialog()}${sensitiveExportDialog()}${loginDialog()}`
   document.querySelectorAll<HTMLButtonElement>('[data-route]').forEach(button => button.addEventListener('click', () => {
     const nextRoute = button.dataset.route as Route
     if (route === 'media' && nextRoute !== 'media') resetMediaUploadState()
@@ -322,7 +326,7 @@ function shell(content: string) {
   document.querySelector('#refresh-button')?.addEventListener('click', () => void render())
   document.querySelector('#login-button')?.addEventListener('click', startLogin)
   document.querySelector('#notice-login-button')?.addEventListener('click', startLogin)
-  document.querySelector('#logout-button')?.addEventListener('click', () => void logout())
+  document.querySelectorAll('[data-logout-button]').forEach(button => button.addEventListener('click', () => void logout()))
   document.querySelector('#login-close-button')?.addEventListener('click', closeLogin)
   document.querySelector('#login-retry-button')?.addEventListener('click', () => void startLogin())
   document.querySelector<HTMLFormElement>('#filter-form')?.addEventListener('submit', applyFilters)
