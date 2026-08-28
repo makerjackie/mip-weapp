@@ -1,6 +1,9 @@
 'use strict'
 
 const MAX_HTTP_BODY_BYTES = 32 * 1024
+const MAX_MEDIA_HTTP_BODY_BYTES = Math.floor(1.5 * 1024 * 1024) + (16 * 1024)
+const WEB_BFF_TRANSPORT = 'MIP_WEB_BFF_V1'
+const WEB_MEDIA_ACTION = 'mip.admin.media.uploadImage'
 
 function isWebBffHttpEvent(event) {
   return Boolean(event
@@ -26,7 +29,8 @@ function parseWebBffHttpBody(event) {
   else {
     body = typeof event.body === 'string' ? event.body : JSON.stringify(event.body)
   }
-  if (Buffer.byteLength(body, 'utf8') > MAX_HTTP_BODY_BYTES) {
+  const bodyBytes = Buffer.byteLength(body, 'utf8')
+  if (bodyBytes > MAX_MEDIA_HTTP_BODY_BYTES) {
     throw new Error('HTTP_REQUEST_TOO_LARGE')
   }
   let parsed
@@ -35,7 +39,20 @@ function parseWebBffHttpBody(event) {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
     throw new Error('HTTP_REQUEST_INVALID')
   }
+  // Media is the only reviewed Web BFF operation whose canonical payload can exceed 32 KB.
+  // The signed envelope and image contract are still verified by the downstream route.
+  if (bodyBytes > MAX_HTTP_BODY_BYTES && !isMediaUploadEnvelope(parsed)) {
+    throw new Error('HTTP_REQUEST_TOO_LARGE')
+  }
   return parsed
+}
+
+function isMediaUploadEnvelope(value) {
+  return value.transport === WEB_BFF_TRANSPORT
+    && value.request
+    && typeof value.request === 'object'
+    && !Array.isArray(value.request)
+    && value.request.action === WEB_MEDIA_ACTION
 }
 
 function webBffHttpResponse(payload, statusCode = 200) {

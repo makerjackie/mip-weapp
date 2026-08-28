@@ -31,6 +31,48 @@ describe('Web BFF HTTP gateway adapter', () => {
     )
   })
 
+  it('accepts the reviewed media envelope above the regular request limit', () => {
+    const body = {
+      transport: 'MIP_WEB_BFF_V1',
+      request: {
+        action: 'mip.admin.media.uploadImage',
+        input: { purpose: 'BANNER', imageBase64: 'A'.repeat(96_000) },
+      },
+    }
+    assert.deepEqual(
+      parseWebBffHttpBody({ httpMethod: 'POST', body: JSON.stringify(body) }),
+      body,
+    )
+  })
+
+  it('keeps large non-media envelopes on the regular request limit', () => {
+    const body = {
+      transport: 'MIP_WEB_BFF_V1',
+      request: {
+        action: 'mip.admin.users.list',
+        input: { query: 'x'.repeat(96_000) },
+      },
+    }
+    assert.throws(
+      () => parseWebBffHttpBody({ httpMethod: 'POST', body: JSON.stringify(body) }),
+      /TOO_LARGE/,
+    )
+  })
+
+  it('rejects media envelopes above the upstream hard limit', () => {
+    const body = {
+      transport: 'MIP_WEB_BFF_V1',
+      request: {
+        action: 'mip.admin.media.uploadImage',
+        input: { purpose: 'BANNER', imageBase64: 'A'.repeat(1_600_000) },
+      },
+    }
+    assert.throws(
+      () => parseWebBffHttpBody({ httpMethod: 'POST', body: JSON.stringify(body) }),
+      /TOO_LARGE/,
+    )
+  })
+
   it('returns an explicit non-cacheable HTTP response envelope', () => {
     assert.deepEqual(webBffHttpResponse({ ok: true, data: {} }), {
       statusCode: 200,
