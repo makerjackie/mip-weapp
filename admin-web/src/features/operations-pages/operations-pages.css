@@ -1,0 +1,30 @@
+.media-upload-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(280px, 2fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.media-upload-card {
+  min-width: 0;
+  border: 1px solid var(--mip-line);
+}
+
+.media-upload-card .ant-upload-wrapper,
+.media-upload-card .ant-upload-drag,
+.media-upload-card .ant-image,
+.media-upload-card .ant-image-img {
+  width: 100%;
+}
+
+.media-upload-card .ant-image-img {
+  max-height: 360px;
+  object-fit: contain;
+  border: 1px solid var(--mip-line);
+}
+
+@media (max-width: 767px) {
+  .media-upload-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
