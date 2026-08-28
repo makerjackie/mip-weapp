@@ -5,6 +5,8 @@ const root = path.resolve(import.meta.dirname, '..')
 const dist = path.join(root, 'dist')
 const index = fs.readFileSync(path.join(dist, 'index.html'), 'utf8')
 const assets = path.join(dist, 'assets')
+const assetFiles = fs.readdirSync(assets)
+const antDesignChunks = assetFiles.filter(file => /^ant-design-.*\.js$/.test(file))
 const css = fs.readdirSync(assets)
   .filter(file => file.endsWith('.css'))
   .map(file => fs.readFileSync(path.join(assets, file), 'utf8'))
@@ -15,6 +17,7 @@ const sourceShell = fs.readFileSync(path.join(root, 'src/shared/ui/responsive-ap
 const checks = [
   [index.includes('src/main.ts'), 'legacy DOM entry remains in production HTML'],
   [!index.includes('/assets/'), 'production HTML does not reference built assets'],
+  [antDesignChunks.length !== 1, 'Ant Design must stay in one production chunk to preserve module initialization order'],
   [!sourceCss.includes('overflow-x: hidden'), 'root horizontal overflow guard is missing'],
   [!sourceCss.includes('@media (max-width: 767px)'), 'mobile breakpoint is missing'],
   [!sourceCss.includes('.admin-main { width: 100%; margin-left: 0; }'), 'mobile layout does not release desktop sidebar width'],

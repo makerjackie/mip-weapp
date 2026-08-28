@@ -9,8 +9,7 @@ export default defineConfig({
     rolldownOptions: {
       output: {
         codeSplitting: {
-          minSize: 20_000,
-          maxSize: 450_000,
+          // Keep framework groups whole: size-based subdivision can break Ant Design's circular initialization order.
           groups: [
             { name: 'react', test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/, priority: 30 },
             { name: 'tanstack', test: /node_modules[\\/]@tanstack[\\/]/, priority: 20 },
