@@ -1,0 +1,191 @@
+export type AdminRowOperationAction
+  = | 'mip.admin.events.registrations.review'
+    | 'mip.admin.events.checkIn'
+    | 'mip.admin.events.undoCheckIn'
+    | 'mip.admin.events.album.review'
+    | 'mip.admin.rolePolicies.update'
+    | 'mip.admin.branches.update'
+    | 'mip.admin.branches.changeStatus'
+    | 'mip.admin.messageCampaigns.cancelSchedule'
+    | 'mip.admin.banners.changeStatus'
+    | 'mip.admin.banners.move'
+    | 'mip.admin.banners.delete'
+    | 'mip.admin.game.seasons.save'
+    | 'mip.admin.game.seasons.changeStatus'
+    | 'mip.admin.game.teams.save'
+    | 'mip.admin.game.teams.changeStatus'
+    | 'mip.admin.game.teams.members.replace'
+    | 'mip.admin.game.matches.save'
+    | 'mip.admin.game.matches.finalize'
+    | 'mip.admin.game.rankings.generate'
+    | 'mip.admin.game.blindBoxes.catalogs.save'
+    | 'mip.admin.game.blindBoxes.catalogs.changeStatus'
+    | 'mip.admin.game.blindBoxes.cards.save'
+    | 'mip.admin.game.blindBoxes.cards.changeStatus'
+
+export interface AdminRowOperation {
+  action: AdminRowOperationAction
+  label: string
+  targetId?: string
+  values?: Record<string, unknown>
+  expectedVersion?: number
+  allowedCapabilities?: string[]
+}
+
+export type AdminOperationLaunchContext = Pick<
+  AdminRowOperation,
+  'values' | 'expectedVersion' | 'allowedCapabilities'
+>
+
+export type AdminOperationRow = Record<string, unknown> & {
+  rowActions?: readonly AdminRowOperation[]
+}
+
+export function parseAdminOperationLaunchContext(value: unknown): AdminOperationLaunchContext {
+  if (typeof value !== 'string' || !value.trim()) return {}
+  try {
+    const parsed = JSON.parse(value) as unknown
+    if (!plainRecord(parsed)) return {}
+    const values = plainRecord(parsed.values) ? { ...parsed.values } : undefined
+    const expectedVersion = nonNegativeVersion(parsed.expectedVersion)
+    const allowedCapabilities = stringList(parsed.allowedCapabilities)
+    return {
+      ...(values ? { values } : {}),
+      ...(expectedVersion !== null ? { expectedVersion } : {}),
+      ...(allowedCapabilities.length ? { allowedCapabilities } : {}),
+    }
+  }
+  catch {
+    return {}
+  }
+}
+
+export function eventRegistrationRowActions(
+  eventIdValue: unknown,
+  registration: Record<string, unknown>,
+): AdminRowOperation[] {
+  const eventId = identifier(eventIdValue)
+  const registrationId = identifier(registration.id || registration.registrationId)
+  const expectedVersion = positiveVersion(registration.version)
+  const status = String(registration.status || '')
+  if (!eventId || !registrationId || expectedVersion === null) return []
+  const values = { eventId, registrationId, expectedVersion }
+  if (status === 'PENDING_REVIEW') {
+    return [{ action: 'mip.admin.events.registrations.review', label: '审核', targetId: eventId, values }]
+  }
+  if (status === 'REGISTERED') {
+    return [{ action: 'mip.admin.events.checkIn', label: '签到', targetId: eventId, values }]
+  }
+  if (status === 'ATTENDED') {
+    return [{ action: 'mip.admin.events.undoCheckIn', label: '撤销签到', targetId: eventId, values }]
+  }
+  return []
+}
+
+export function eventAlbumRowActions(
+  eventIdValue: unknown,
+  photo: Record<string, unknown>,
+): AdminRowOperation[] {
+  const eventId = identifier(eventIdValue)
+  const photoId = identifier(photo.id || photo.photoId)
+  const expectedVersion = positiveVersion(photo.version)
+  if (!eventId || !photoId || expectedVersion === null || photo.status !== 'PENDING') return []
+  return [{
+    action: 'mip.admin.events.album.review',
+    label: '审核',
+    targetId: eventId,
+    values: { eventId, photoId, expectedVersion },
+  }]
+}
+
+export function rolePolicyRowActions(policy: Record<string, unknown>): AdminRowOperation[] {
+  const roleKey = identifier(policy.roleKey)
+  const expectedVersion = nonNegativeVersion(policy.version)
+  if (!roleKey || expectedVersion === null) return []
+  return [{
+    action: 'mip.admin.rolePolicies.update',
+    label: '更新策略',
+    values: {
+      roleKey,
+      capabilities: stringList(policy.capabilities),
+      reset: false,
+    },
+    expectedVersion,
+    allowedCapabilities: stringList(policy.allowedCapabilities),
+  }]
+}
+
+export function branchRowActions(branch: Record<string, unknown>): AdminRowOperation[] {
+  const branchId = identifier(branch.id || branch.branchId)
+  const expectedVersion = positiveVersion(branch.version)
+  const status = String(branch.status || '')
+  if (!branchId || expectedVersion === null || !['ACTIVE', 'INACTIVE'].includes(status)) return []
+  return [
+    {
+      action: 'mip.admin.branches.update',
+      label: '编辑',
+      targetId: branchId,
+      values: {
+        name: String(branch.name || ''),
+        cityName: String(branch.cityName || ''),
+        summary: String(branch.summary || ''),
+      },
+      expectedVersion,
+    },
+    {
+      action: 'mip.admin.branches.changeStatus',
+      label: status === 'ACTIVE' ? '停用' : '启用',
+      targetId: branchId,
+      values: { status: status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' },
+      expectedVersion,
+    },
+  ]
+}
+
+export function messageScheduleCancelAction(
+  campaign: Record<string, unknown>,
+  dispatch: Record<string, unknown>,
+): AdminRowOperation | null {
+  const campaignId = identifier(campaign.id || campaign.campaignId)
+  const expectedVersion = positiveVersion(campaign.version)
+  const expectedDispatchVersion = positiveVersion(dispatch.version)
+  const needsManualReview = dispatch.lastOutcome === 'UNKNOWN'
+    || dispatch.retryDisposition === 'MANUAL_REVIEW'
+  if (!campaignId
+    || expectedVersion === null
+    || expectedDispatchVersion === null
+    || campaign.status !== 'READY'
+    || !['SCHEDULED', 'FAILED'].includes(String(dispatch.status || ''))
+    || needsManualReview) return null
+  return {
+    action: 'mip.admin.messageCampaigns.cancelSchedule',
+    label: '取消发送计划',
+    targetId: campaignId,
+    values: { campaignId, expectedVersion, expectedDispatchVersion, reason: '' },
+  }
+}
+
+function identifier(value: unknown) {
+  const text = typeof value === 'string' ? value.trim() : ''
+  return text && text.length <= 128 && /^[A-Za-z0-9_.:-]+$/.test(text) ? text : ''
+}
+
+function positiveVersion(value: unknown) {
+  const version = Number(value)
+  return Number.isSafeInteger(version) && version >= 1 ? version : null
+}
+
+function nonNegativeVersion(value: unknown) {
+  const version = Number(value)
+  return Number.isSafeInteger(version) && version >= 0 ? version : null
+}
+
+function stringList(value: unknown) {
+  return Array.isArray(value)
+    ? [...new Set(value.filter(item => typeof item === 'string' && item.trim()).map(String))]
+    : []
+}
+
+function plainRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
+}

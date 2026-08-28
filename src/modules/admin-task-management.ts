@@ -23,6 +23,7 @@ import {
 export const ADMIN_TASK_QUERY_ACTIONS = [
   'mip.admin.tasks.list',
   'mip.admin.tasks.get',
+  'mip.admin.tasks.eligibleLevels.list',
   'mip.admin.tasks.assignableMembers.list',
   'mip.admin.tasks.completions.list',
   'mip.admin.tasks.completions.get',
@@ -53,6 +54,24 @@ export interface TaskCompletionExport {
   fileName: string
   contentBase64: string
   rowCount: number
+}
+
+export interface TaskDetailPageQuery {
+  query?: string
+  cursor?: string | null
+  limit?: number
+}
+
+export interface TaskDetailLoadOptions {
+  members?: TaskDetailPageQuery
+  completions?: TaskDetailPageQuery
+}
+
+export interface TaskEligibleLevel {
+  id: string
+  name: string
+  minimumExperience: number
+  status: string
 }
 
 const taskStatusLabels: Record<string, string> = {
@@ -116,20 +135,50 @@ export async function loadTaskManagementPage(
   }
 }
 
+export async function loadTaskEligibleLevels(request: AdminRequest): Promise<TaskEligibleLevel[]> {
+  const value = await request('mip.admin.tasks.eligibleLevels.list')
+  if (!Array.isArray(value)) throw new Error('INVALID_TASK_LEVELS')
+  return value.map((item) => {
+    const level = record(item)
+    const id = identifier(level.id)
+    const name = text(level.name, 100)
+    const minimumExperience = safeNonNegativeInteger(level.minimumExperience)
+    if (!id || !name || minimumExperience === null || level.status !== 'ACTIVE') {
+      throw new Error('INVALID_TASK_LEVELS')
+    }
+    return { id, name, minimumExperience, status: 'ACTIVE' }
+  })
+}
+
 export async function loadTaskDetail(
   taskId: string,
   request: AdminDetailRequest,
+  options: TaskDetailLoadOptions = {},
 ): Promise<AdminDetailView> {
-  const task = record(await request('mip.admin.tasks.get', { taskId }))
+  const [taskValue, eligibleLevelCatalog] = await Promise.all([
+    request('mip.admin.tasks.get', { taskId }),
+    loadTaskEligibleLevels(request),
+  ])
+  const task = record(taskValue)
   const assignmentMode = String(task.assignmentMode || 'ALL')
+  const memberQuery = taskDetailPageQuery(options.members, 20)
+  const completionQuery = taskDetailPageQuery(options.completions, 20)
   const [completionPayload, memberPayload] = await Promise.all([
-    request('mip.admin.tasks.completions.list', { filters: { taskId }, limit: 20 }),
+    request('mip.admin.tasks.completions.list', taskDetailPageInput(
+      { taskId, ...(completionQuery.query ? { query: completionQuery.query } : {}) },
+      completionQuery,
+    )),
     assignmentMode === 'SELECTED'
-      ? request('mip.admin.tasks.assignableMembers.list', { filters: { taskId, query: '' }, limit: 50 })
+      ? request('mip.admin.tasks.assignableMembers.list', taskDetailPageInput(
+          { taskId, query: memberQuery.query },
+          memberQuery,
+        ))
       : Promise.resolve({ items: [], nextCursor: null }),
   ])
-  const completions = pageValue(completionPayload).items
-  const members = pageValue(memberPayload).items
+  const completionPage = pageValue(completionPayload)
+  const memberPage = pageValue(memberPayload)
+  const completions = completionPage.items
+  const members = memberPage.items
   const eligibleLevels = Array.isArray(task.eligibleLevels)
     ? task.eligibleLevels.map(item => record(item))
     : []
@@ -143,7 +192,8 @@ export async function loadTaskDetail(
         ['需要附件', task.attachmentRequired === true ? '是' : '否'],
         ['分配范围', assignmentModeLabel(task.assignmentMode)],
         ['截止时间', formatDateTime(task.endsAt)],
-        ['模板文件', template.assetId ? '已配置' : '未配置'],
+        ['模板文件', taskTemplateStatus(template)],
+        ['模板管理', '上传与替换功能暂不可用'],
         ['版本', numberLabel(task.version)],
         ['发布时间', formatDateTime(task.publishedAt)],
         ['更新时间', formatDateTime(task.updatedAt)],
@@ -172,7 +222,7 @@ export async function loadTaskDetail(
   }
   if (assignmentMode === 'SELECTED') {
     sections.push({
-      title: '可分配成员',
+      title: '成员候选',
       rows: members.map(item => ({
         memberRef: valueOf(item, 'memberRef'),
         name: valueOf(item, 'nickname'),
@@ -181,6 +231,12 @@ export async function loadTaskDetail(
         state: assignmentStatusLabel(item.assignmentStatus),
       })),
       columns: columns([['name', '成员'], ['branch', '所属分会'], ['assignedAt', '分配时间'], ['state', '分配状态']]),
+      pager: {
+        key: 'taskMembers',
+        query: memberQuery.query,
+        nextCursor: memberPage.nextCursor,
+        placeholder: '搜索成员或分会',
+      },
     })
   }
   sections.push({
@@ -198,6 +254,12 @@ export async function loadTaskDetail(
       ['completedAt', '完成时间'], ['state', '结果'],
     ]),
     detailTarget: 'taskCompletions',
+    pager: {
+      key: 'taskCompletions',
+      query: completionQuery.query,
+      nextCursor: completionPage.nextCursor,
+      placeholder: '搜索成员或任务',
+    },
   })
   return {
     route: 'tasks',
@@ -205,7 +267,15 @@ export async function loadTaskDetail(
     subtitle: `${assignmentModeLabel(task.assignmentMode)} · ${numberLabel(task.rewardExperience)} 经验值`,
     status: taskStatusLabel(task.status),
     sections,
-    source: { task, assignableMembers: members },
+    source: {
+      task,
+      assignableMembers: members,
+      eligibleLevelCatalog,
+      taskDetailPages: {
+        members: { query: memberQuery.query, nextCursor: memberPage.nextCursor },
+        completions: { query: completionQuery.query, nextCursor: completionPage.nextCursor },
+      },
+    },
   }
 }
 
@@ -228,7 +298,8 @@ export async function loadTaskCompletionDetail(
         ['经验奖励', numberLabel(completion.rewardExperience)],
         ['结果说明', completion.resultMessage],
         ['完成时间', formatDateTime(completion.completedAt)],
-        ['附件', attachment.url ? '已上传' : '未上传'],
+        ['附件', completionAttachmentStatus(attachment)],
+        ['附件查看', validWebMediaUrl(attachment.url) ? '可用' : '当前不可用'],
         ['附件类型', attachment.contentType],
         ['附件大小', attachment.bytes ? `${numberLabel(attachment.bytes)} 字节` : '—'],
       ]),
@@ -248,7 +319,13 @@ export function createTaskMutationDefinition(
     const eligibleLevelIds = Array.isArray(task.eligibleLevels)
       ? task.eligibleLevels.map(item => String(record(item).id || '')).filter(Boolean)
       : []
-    return definition(action, targetId ? '编辑任务' : '创建任务', '填写任务内容、经验奖励、参与范围和截止时间。', [
+    const levelOptions = Array.isArray(source.eligibleLevelCatalog)
+      ? source.eligibleLevelCatalog.map(item => record(item)).map(item => ({
+          value: String(item.id || ''),
+          label: `${String(item.name || '未命名等级')} · ${numberLabel(item.minimumExperience)} 经验`,
+        })).filter(item => identifier(item.value))
+      : []
+    return definition(action, targetId ? '编辑任务' : '创建任务', '填写任务内容、经验奖励、参与范围和截止时间。任务模板图片可使用素材上传页返回的素材 ID。', [
       { name: 'name', label: '任务名称', kind: 'text', required: true, maxLength: 100 },
       { name: 'content', label: '任务内容', kind: 'textarea', required: true, maxLength: 5000, wide: true },
       { name: 'rewardExperience', label: '经验奖励', kind: 'integer', required: true },
@@ -257,8 +334,8 @@ export function createTaskMutationDefinition(
       ] },
       { name: 'attachmentRequired', label: '完成时必须上传附件', kind: 'checkbox', wide: true },
       { name: 'endsAt', label: '截止时间', kind: 'datetime' },
-      { name: 'templateAssetId', label: '任务模板素材 ID', kind: 'text' },
-      { name: 'eligibleLevelIds', label: '可参与等级 ID', kind: 'id-list', wide: true },
+      { name: 'templateAssetId', label: '任务模板素材 ID', kind: 'text', wide: true },
+      { name: 'eligibleLevelIds', label: '可参与等级（不选择表示不限）', kind: 'multi-select', options: levelOptions, wide: true },
     ], {
       taskId: targetId,
       expectedVersion: version,
@@ -393,6 +470,48 @@ export function resultStatusLabel(value: unknown) {
   return resultStatusLabels[code] || code || '—'
 }
 
+function taskDetailPageQuery(value: TaskDetailPageQuery | undefined, fallbackLimit: number) {
+  const query = typeof value?.query === 'string' ? value.query.trim().slice(0, 80) : ''
+  const cursor = typeof value?.cursor === 'string' && value.cursor.length <= 512
+    ? value.cursor
+    : null
+  const limit = Number.isSafeInteger(value?.limit)
+    ? Math.max(1, Math.min(Number(value?.limit), 50))
+    : fallbackLimit
+  return { query, cursor, limit }
+}
+
+function taskDetailPageInput(
+  filters: Record<string, unknown>,
+  query: ReturnType<typeof taskDetailPageQuery>,
+) {
+  return {
+    filters,
+    limit: query.limit,
+    ...(query.cursor ? { cursor: query.cursor } : {}),
+  }
+}
+
+function taskTemplateStatus(template: AdminTableRow) {
+  if (!template.assetId) return '未配置'
+  return validWebMediaUrl(template.url) ? '已配置' : '已配置，当前无法在 Web 查看'
+}
+
+function completionAttachmentStatus(attachment: AdminTableRow) {
+  if (!Object.keys(attachment).length) return '未上传'
+  return validWebMediaUrl(attachment.url) ? '已上传' : '已上传，当前无法在 Web 查看'
+}
+
+function validWebMediaUrl(value: unknown) {
+  try {
+    const url = new URL(String(value || ''))
+    return url.protocol === 'https:' && !url.username && !url.password
+  }
+  catch {
+    return false
+  }
+}
+
 function taskListRow(item: AdminTableRow) {
   return {
     detailId: valueOf(item, 'id', 'taskId'),
@@ -449,6 +568,11 @@ function positiveInteger(value: unknown) {
 function nonNegativeInteger(value: unknown) {
   const number = Number(value)
   return Number.isSafeInteger(number) && number >= 0 && number <= 1_000_000 ? number : null
+}
+
+function safeNonNegativeInteger(value: unknown) {
+  const number = Number(value)
+  return Number.isSafeInteger(number) && number >= 0 ? number : null
 }
 
 function text(value: unknown, maximum: number) {

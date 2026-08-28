@@ -14,7 +14,7 @@ pnpm dev
 
 ## 当前模块
 
-概览、用户、活动、订单、机会与内容、成长与徽章、权限、消息、知识库和运营记录已建立统一布局和导航。10 个一级页面与用户、活动、订单、消息、知识库、机会 6 类详情均使用真实管理 API；真实请求失败时不会回退成演示状态。当前服务端开放 62 条受审只读 action；用户详情可补录会员，活动详情可克隆活动和发布提醒，订单详情可提交退款。
+概览、用户、活动、订单、任务、Banner、战队、素材、机会与内容、成长与徽章、权限、消息、知识库和运营记录使用统一布局和导航。列表、详情和写操作均复用中立管理契约；真实请求失败时不会回退成演示状态。素材页按运营账号 capability 显示允许用途，支持 PNG/JPEG 本地预览、上传和素材 ID 复制。用户和订单页通过一次性导出票据下载当前筛选范围的数据；手机号列额外要求 `users.phone.read`，浏览器会复核文件大小、XLSX 文件头和 SHA-256 后再消费票据。
 
 ## 服务器端 BFF
 
@@ -24,7 +24,8 @@ Cloudflare Pages Function 位于 `functions/api/[[path]].ts`，核心 module 位
 - 已有运营账号在小程序运营工作台确认登录码，CloudBase 按现有角色和 capability 重新鉴权；
 - CloudBase 以独立 HMAC 将可信 AppID/OpenID 回传 BFF，D1 原子确认且仅允许消费一次；
 - AES-GCM 密封的 `HttpOnly`、`Secure`、`SameSite=Lax` 8 小时会话；
-- 严格同源检查、32 KB 请求上限和精确 action allowlist；
+- 严格同源检查；普通 `/api/admin` 保持 32 KB 请求上限和精确 action allowlist；
+- 专用 `/api/media/image` 只接受 `mip.admin.media.uploadImage`，整体请求不超过 1.5 MB、解码图片不超过 1 MB，上游超时为 60 秒；
 - mutation 必须携带业务幂等键，每次转发使用新的签名 nonce，网络失败不自动重试；
 - 向 `mip-admin-api` 发送带 60 秒有效期和随机 nonce 的 HMAC envelope；
 - 真实 `AUTH_REQUIRED`、`FORBIDDEN`、配置错误和上游错误状态。
@@ -38,12 +39,14 @@ BFF 不接受浏览器直接提交 `appId` 或 `openId`。CloudBase 侧只在小
 3. 为 `mip-admin-api` 配置 `MIP_ADMIN_WEB_BFF_HMAC_SECRET`，并在 CloudBase HTTP 访问服务把一个 HTTPS 路径映射到该函数；将地址填入 Pages 的 `MIP_ADMIN_UPSTREAM_URL`。
 4. 配置 `MIP_WEB_SESSION_SECRET`、`MIP_WEB_ALLOWED_APP_IDS`、`MIP_WEB_ALLOWED_ORIGIN=https://mipmini.01mvp.com`，关闭生产构建的 `VITE_MIP_ADMIN_DEMO_MODE`。
 5. 在预发布环境验证错误登录码、过期/篡改 Cookie、重复消费、`AUTH_REQUIRED`、`FORBIDDEN`、上游超时和 AppID 不在 allowlist 的负向用例。
+6. 确认导出存储签发的 HTTPS 临时地址允许 `https://mipmini.01mvp.com` 进行匿名 CORS `GET`；Web 不会把导出 token 写入 URL 或持久存储，CORS 不可用时下载会安全失败。
+7. 验证素材上传的用途权限、PNG/JPEG 格式、1 MB 文件边界和 `cloud://` 返回值；浏览器只保留本地预览，不尝试直接加载 `cloud://`。
 
 不需要把 CloudBase API Key、MySQL URI 或任何腾讯云管理凭证配置到浏览器或 Cloudflare。Cloudflare 只持有三项用途隔离的服务器密钥：会话密封、登录确认 HMAC、管理请求 HMAC。
 
 Cloudflare Pages 的项目配置在 `wrangler.toml`；部署命令为 `pnpm deploy:pages`。自定义域名需要在 Cloudflare Pages 项目中绑定，首次绑定和 DNS 状态以 Cloudflare 控制台为准。
 
-浏览器只显示随机短码并轮询同源 BFF，不接收可信身份字段。CloudBase 在执行前持久消费一次性 nonce；Web BFF 只允许 4 条已确认具有领域持久幂等保护的 mutation，其余写操作默认拒绝。页面按当前账号 capability 显示操作入口，写操作均要求明确确认且不会自动重试。
+浏览器只显示随机短码并轮询同源 BFF，不接收可信身份字段。CloudBase 在执行前持久消费一次性 nonce；Web BFF 只允许契约清单中已审核且具有领域持久幂等保护的 mutation，其余写操作默认拒绝。素材上传使用独立路由，但复用同一会话、来源校验和服务端 HMAC principal，浏览器不会接收密钥。页面按当前账号 capability 显示操作入口，写操作均要求明确确认且不会自动重试。
 
 官方能力依据：Cloudflare Pages Functions 支持 [D1 binding 与 secret](https://developers.cloudflare.com/pages/functions/bindings/)，D1 支持 [prepared statement 与条件写入](https://developers.cloudflare.com/d1/worker-api/prepared-statements/)；CloudBase 官方支持用 [HTTP 访问服务把 HTTPS 路由映射到云函数](https://docs.cloudbase.net/service/access-cloud-function)。
 

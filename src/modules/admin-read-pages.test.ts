@@ -74,7 +74,7 @@ describe('admin read pages', () => {
     const calls: Array<{ action: string; input: unknown }> = []
     const page = await loadAdminReadPage('permissions', { ...query, query: '周宁', status: 'ACTIVE' }, requestWith({
       'mip.admin.roles.list': { items: [{ id: 'role-1', nickname: '周宁', roleKey: 'BRANCH_ADMIN', scopeName: '福田分会', status: 'ACTIVE', grantedAt: '2030-01-01T00:00:00.000Z' }], nextCursor: null },
-      'mip.admin.branches.list': { items: [{ id: 'branch-1', name: '福田分会', branchKey: 'shenzhen-futian', cityName: '深圳', summary: '深圳福田城市分会', currentPlayerCount: 86, branchAdminNames: ['周宁'], blockers: { activeMemberships: 86, activeBranchAdmins: 1, publishedEvents: 3, publishedOpportunities: 2 }, status: 'ACTIVE' }], nextCursor: null },
+      'mip.admin.branches.list': { items: [{ id: 'branch-1', version: 2, name: '福田分会', branchKey: 'shenzhen-futian', cityName: '深圳', summary: '深圳福田城市分会', currentPlayerCount: 86, branchAdminNames: ['周宁'], blockers: { activeMemberships: 86, activeBranchAdmins: 1, publishedEvents: 3, publishedOpportunities: 2 }, status: 'ACTIVE' }], nextCursor: null },
       'mip.admin.rolePolicies.list': { items: [{ roleKey: 'BRANCH_ADMIN', scopeType: 'BRANCH', capabilities: ['events.read', 'events.write'], allowedCapabilities: ['events.read', 'events.write', 'branches.manage'], source: 'DEFAULT', version: 1, updatedAt: '2030-01-01T00:00:00.000Z' }], nextCursor: null },
       'mip.admin.audit.list': { items: [{ actorNickname: '周宁', action: 'admin.roles.grant', resourceType: 'ROLE', resourceId: 'role-1', effectiveRole: 'BRANCH_ADMIN', scopeType: 'BRANCH', scopeId: 'branch-1', createdAt: '2030-01-02T00:00:00.000Z' }], nextCursor: null },
     }, calls))
@@ -86,6 +86,14 @@ describe('admin read pages', () => {
     assert.equal(page.sections[1].title, '角色策略摘要')
     assert.equal(page.sections[1].rows[0].effective, '查看活动、管理活动')
     assert.equal(page.sections[2].rows[0].blockers, '会员 86 · 管理员 1 · 活动 3 · 机会 2')
+    assert.deepEqual(page.sections[2].rows[0].rowActions?.map(item => item.action), [
+      'mip.admin.branches.update', 'mip.admin.branches.changeStatus',
+    ])
+    assert.equal(page.sections[2].rows[0].rowActions?.[0]?.expectedVersion, 2)
+    assert.equal(page.sections[1].rows[0].rowActions?.[0]?.action, 'mip.admin.rolePolicies.update')
+    assert.deepEqual(page.sections[1].rows[0].rowActions?.[0]?.allowedCapabilities, [
+      'events.read', 'events.write', 'branches.manage',
+    ])
     assert.equal(page.sections[3].title, '最近审计记录')
     assert.equal(page.sections[3].rows[0].action, '角色 · 授权')
     assert.equal(page.sections[3].rows[0].resource, '角色')

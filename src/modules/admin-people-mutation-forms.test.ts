@@ -155,6 +155,29 @@ describe('admin people mutation forms', () => {
     }), null)
   })
 
+  it('uses a validated list-row version when opening policy or branch actions', () => {
+    const policy = createAdminPeopleMutationDefinition(
+      'mip.admin.rolePolicies.update', '', detailReader({}),
+      { expectedVersion: 0, allowedCapabilities: ['events.read'] },
+    )
+    assert.deepEqual(policy.versionSource, {
+      sectionTitle: '列表当前数据', label: '版本', minimum: 0,
+    })
+    assert.deepEqual(buildAdminPeopleMutationInput(policy, {
+      roleKey: 'EVENT_STAFF', capabilities: ['events.read'], reset: false,
+    }), {
+      roleKey: 'EVENT_STAFF', expectedVersion: 0, capabilities: ['events.read'],
+    })
+
+    const branch = createAdminPeopleMutationDefinition(
+      'mip.admin.branches.changeStatus', 'branch-a', detailReader({}),
+      { expectedVersion: 4 },
+    )
+    assert.deepEqual(buildAdminPeopleMutationInput(branch, { status: 'INACTIVE' }), {
+      branchId: 'branch-a', expectedVersion: 4, status: 'INACTIVE',
+    })
+  })
+
   it('builds branch create, update, and status inputs with the server schema', () => {
     const create = createAdminPeopleMutationDefinition(
       'mip.admin.branches.create', '', detailReader({}),

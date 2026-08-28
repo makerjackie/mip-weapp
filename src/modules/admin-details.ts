@@ -1,8 +1,39 @@
 import type { AdminRequestInput } from '../domain/contracts'
-import { loadTaskCompletionDetail, loadTaskDetail } from './admin-task-management.ts'
+import {
+  loadTaskCompletionDetail,
+  loadTaskDetail,
+  type TaskDetailLoadOptions,
+} from './admin-task-management.ts'
+import { loadBannerDetail } from './admin-banner-management.ts'
+import {
+  loadGameCatalogDetail,
+  loadGameSeasonDetail,
+  loadGameTeamDetail,
+  type GameMemberPageQuery,
+} from './admin-game-management.ts'
+import {
+  eventAlbumRowActions,
+  eventRegistrationRowActions,
+  type AdminOperationRow,
+} from './admin-row-operations.ts'
 
-export type AdminDetailRoute = 'users' | 'events' | 'orders' | 'tasks' | 'taskCompletions' | 'messages' | 'knowledge' | 'opportunities'
-export type AdminDetailRow = Record<string, unknown>
+export type AdminDetailRoute = 'users' | 'events' | 'orders' | 'tasks' | 'taskCompletions' | 'banners' | 'gameSeasons' | 'gameTeams' | 'gameCatalogs' | 'messages' | 'knowledge' | 'opportunities'
+export type AdminDetailRow = AdminOperationRow
+
+export interface AdminDetailOptions {
+  includeEventAlbum?: boolean
+  task?: TaskDetailLoadOptions
+  gameMembers?: GameMemberPageQuery
+}
+
+export type AdminDetailPagerKey = 'taskMembers' | 'taskCompletions' | 'gameMembers'
+
+export interface AdminDetailPager {
+  key: AdminDetailPagerKey
+  query: string
+  nextCursor: string | null
+  placeholder: string
+}
 
 export interface AdminDetailField {
   label: string
@@ -16,6 +47,7 @@ export interface AdminDetailSection {
   rows?: AdminDetailRow[]
   columns?: Array<{ key: string; label: string }>
   detailTarget?: AdminDetailRoute
+  pager?: AdminDetailPager
 }
 
 export interface AdminDetailView {
@@ -33,12 +65,17 @@ export async function loadAdminDetail(
   route: AdminDetailRoute,
   id: string,
   request: AdminDetailRequest,
+  options: AdminDetailOptions = {},
 ): Promise<AdminDetailView> {
   if (route === 'users') return loadUserDetail(id, request)
-  if (route === 'events') return loadEventDetail(id, request)
+  if (route === 'events') return loadEventDetail(id, request, options)
   if (route === 'orders') return loadOrderDetail(id, request)
-  if (route === 'tasks') return loadTaskDetail(id, request)
+  if (route === 'tasks') return loadTaskDetail(id, request, options.task)
   if (route === 'taskCompletions') return loadTaskCompletionDetail(id, request)
+  if (route === 'banners') return loadBannerDetail(id, request)
+  if (route === 'gameSeasons') return loadGameSeasonDetail(id, request)
+  if (route === 'gameTeams') return loadGameTeamDetail(id, request, options.gameMembers)
+  if (route === 'gameCatalogs') return loadGameCatalogDetail(id, request)
   if (route === 'messages') return loadMessageDetail(id, request)
   if (route === 'opportunities') return loadOpportunityDetail(id, request)
   return loadKnowledgeDetail(id, request)
@@ -156,11 +193,18 @@ function appendUserCollections(sections: AdminDetailSection[], user: AdminDetail
   }
 }
 
-async function loadEventDetail(eventId: string, request: AdminDetailRequest): Promise<AdminDetailView> {
-  const [eventValue, insightsValue, rosterValue] = await Promise.all([
+async function loadEventDetail(
+  eventId: string,
+  request: AdminDetailRequest,
+  options: AdminDetailOptions,
+): Promise<AdminDetailView> {
+  const [eventValue, insightsValue, rosterValue, albumValue] = await Promise.all([
     request('mip.admin.events.get', { eventId }),
     request('mip.admin.events.insights.get', { eventId }),
     request('mip.admin.events.roster', { eventId, includePhone: false, limit: 20 }),
+    options.includeEventAlbum
+      ? request('mip.admin.events.album.list', { eventId, status: 'PENDING', limit: 20 })
+      : Promise.resolve({ items: [], nextCursor: null }),
   ])
   const event = record(eventValue)
   const insights = record(insightsValue)
@@ -171,6 +215,7 @@ async function loadEventDetail(eventId: string, request: AdminDetailRequest): Pr
   const financials = record(insights.financials)
   const feedback = record(insights.feedback)
   const roster = pageRecords(rosterValue)
+  const pendingAlbum = pageRecords(albumValue)
   const sections: AdminDetailSection[] = [
     {
       title: '活动信息',
@@ -227,16 +272,32 @@ async function loadEventDetail(eventId: string, request: AdminDetailRequest): Pr
       submittedAt: dateTime(item.submittedAt),
       checkedInAt: dateTime(item.checkedInAt),
       state: codeLabel(item.status),
+      rowActions: eventRegistrationRowActions(eventId, item),
     })),
     columns: columns([['name', '姓名'], ['city', '城市'], ['phone', '手机状态'], ['submittedAt', '报名时间'], ['checkedInAt', '签到时间'], ['state', '状态']]),
   })
+  if (options.includeEventAlbum) {
+    sections.push({
+      title: '待审核相册',
+      rows: pendingAlbum.map(item => ({
+        caption: text(item.caption),
+        uploader: text(item.nickname),
+        submittedAt: dateTime(item.createdAt),
+        state: codeLabel(item.status),
+        rowActions: eventAlbumRowActions(eventId, item),
+      })),
+      columns: columns([
+        ['caption', '图片说明'], ['uploader', '提交人'], ['submittedAt', '提交时间'], ['state', '状态'],
+      ]),
+    })
+  }
   return {
     route: 'events',
     title: text(event.title, '活动详情'),
     subtitle: [text(event.cityName, ''), text(event.venueName, '')].filter(Boolean).join(' · '),
     status: codeLabel(event.status),
     sections,
-    source: { event, roster },
+    source: { event, roster, pendingAlbum },
   }
 }
 

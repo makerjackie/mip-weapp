@@ -17,17 +17,25 @@ preview.stderr?.on('data', chunk => { output += chunk })
 try {
   const started = await waitForPreview()
   if (!started) throw new Error(`preview did not start\n${output}`)
-  const viewports = [{ width: 390, height: 844 }, { width: 1280, height: 900 }]
-  const results = await Promise.all(viewports.map(viewport => execFileAsync(chrome, [
+  const checks = [
+    { width: 390, height: 844, path: '/', marker: '' },
+    { width: 1280, height: 900, path: '/', marker: '' },
+    { width: 390, height: 844, path: '/?route=media', marker: 'data-media-upload-page="true"' },
+    { width: 1280, height: 900, path: '/?route=media', marker: 'data-media-upload-page="true"' },
+  ]
+  const results = await Promise.all(checks.map((check, index) => execFileAsync(chrome, [
       '--headless=new', '--disable-gpu', '--no-sandbox', '--disable-background-networking', '--virtual-time-budget=1000',
-      `--user-data-dir=${profile}-${viewport.width}`, `--window-size=${viewport.width},${viewport.height}`, '--dump-dom', 'http://127.0.0.1:4175/',
+      `--user-data-dir=${profile}-${index}`, `--window-size=${check.width},${check.height}`, '--dump-dom', `http://127.0.0.1:4175${check.path}`,
     ], { cwd: root, timeout: 15_000, maxBuffer: 1_000_000 })))
   for (const [index, result] of results.entries()) {
-    const viewport = viewports[index]
+    const check = checks[index]
     if (!result.stdout.includes('data-mip-responsive="pass"')) {
-      throw new Error(`${viewport.width}px viewport overflow assertion failed\n${result.stdout.match(/<html[^>]*>/)?.[0] || 'html marker missing'}`)
+      throw new Error(`${check.width}px ${check.path} overflow assertion failed\n${result.stdout.match(/<html[^>]*>/)?.[0] || 'html marker missing'}`)
     }
-    console.log(`responsive viewport: ${viewport.width}px assertion passed`)
+    if (check.marker && !result.stdout.includes(check.marker)) {
+      throw new Error(`${check.width}px ${check.path} page marker missing`)
+    }
+    console.log(`responsive viewport: ${check.width}px ${check.path} assertion passed`)
   }
 } finally {
   preview.kill('SIGTERM')

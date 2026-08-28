@@ -77,7 +77,7 @@ const eventSaveFields: readonly EventMutationFieldConfig[] = [
   { key: 'description', label: '活动介绍', kind: 'textarea', required: true, maxLength: 20_000 },
   { key: 'contentMedia', label: '活动介绍媒体', kind: 'asset-list' },
   { key: 'notices', label: '活动说明', kind: 'textarea', maxLength: 5_000 },
-  { key: 'coverAssetId', label: '活动封面资源标识', kind: 'asset' },
+  { key: 'coverAssetId', label: '活动封面素材 ID', kind: 'asset' },
   { key: 'eventTypeKey', label: '活动类型标识', kind: 'text', maxLength: 64 },
   { key: 'eventMode', label: '活动方式', kind: 'select', options: [option('OFFLINE', '线下'), option('ONLINE', '线上'), option('HYBRID', '混合')] },
   { key: 'accessType', label: '收费类型', kind: 'select', options: [option('FREE', '免费'), option('MEMBER_INCLUDED', '会员权益'), option('PAID', '付费')] },
@@ -107,7 +107,7 @@ const EVENT_MUTATION_CONFIGS = {
     action: 'mip.admin.events.save',
     capability: 'events.write',
     title: '保存活动',
-    description: '保存活动基本信息。服务端会再次校验活动内容、时间和当前版本。',
+    description: '保存活动基本信息。封面和活动介绍图片可使用素材上传页返回的素材 ID；服务端会再次校验活动内容、时间和当前版本。',
     fields: eventSaveFields,
   },
   'mip.admin.events.registrations.review': {
@@ -388,7 +388,7 @@ function eventDraft(values: EventMutationValues) {
     description: text(values.description, '活动介绍', 20_000, true),
     contentMedia: eventMedia(values.contentMedia),
     notices: optionalText(values.notices, '活动说明', 5_000),
-    coverAssetId: asset(values.coverAssetId, '活动封面资源标识'),
+    coverAssetId: asset(values.coverAssetId, '活动封面素材 ID'),
     eventTypeKey: values.eventTypeKey === undefined || values.eventTypeKey === '' ? 'general' : (() => {
       const key = text(values.eventTypeKey, '活动类型标识', 64)
       if (!stableKeyPattern.test(key)) throw new FormValidationError('eventTypeKey', '活动类型标识无效')

@@ -240,6 +240,7 @@ const VERSION_MINIMUMS: Record<VersionKind, number> = {
 
 export interface CreateAdminPeopleMutationOptions {
   allowedCapabilities?: readonly string[]
+  expectedVersion?: number
 }
 
 export function createAdminPeopleMutationDefinition<Action extends AdminPeopleMutationAction>(
@@ -251,7 +252,8 @@ export function createAdminPeopleMutationDefinition<Action extends AdminPeopleMu
   const config = ADMIN_PEOPLE_MUTATION_CONFIG[action]
   const versionKind = 'versionKind' in config ? config.versionKind as VersionKind : undefined
   const versionSource = versionKind
-    ? readVersionSource(readDetailField, VERSION_FIELDS[versionKind], VERSION_MINIMUMS[versionKind])
+    ? explicitVersionSource(options.expectedVersion, VERSION_MINIMUMS[versionKind])
+      || readVersionSource(readDetailField, VERSION_FIELDS[versionKind], VERSION_MINIMUMS[versionKind])
     : undefined
   const allowedCapabilities = options.allowedCapabilities || ('allowedCapabilities' in config ? config.allowedCapabilities : undefined)
   return {
@@ -265,6 +267,15 @@ export function createAdminPeopleMutationDefinition<Action extends AdminPeopleMu
     ...(versionSource ? { expectedVersion: versionSource.value, versionSource: versionSource.field } : {}),
     ...(allowedCapabilities ? { allowedCapabilities: [...allowedCapabilities] } : {}),
   }
+}
+
+function explicitVersionSource(value: unknown, minimum: number) {
+  return Number.isSafeInteger(value) && Number(value) >= minimum
+    ? {
+        value: Number(value),
+        field: { sectionTitle: '列表当前数据', label: '版本', minimum },
+      }
+    : undefined
 }
 
 /**

@@ -28,6 +28,7 @@ describe('admin operation UI', () => {
     assert.match(html, /&lt;标题&gt;/)
     assert.doesNotMatch(html, /name="expectedVersion"/)
     assert.match(html, /value="strategist" selected/)
+    assert.doesNotMatch(html, /<option value="">未设置<\/option>/)
   })
 
   it('reads nested groups and typed lists while preserving hidden values', () => {

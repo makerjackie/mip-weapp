@@ -56,18 +56,32 @@ describe('admin detail views', () => {
         financials: { access: 'GRANTED', currency: 'CNY', paidOrderCount: 6, grossAmountCents: 112800, refundedAmountCents: 18800, netAmountCents: 94000 },
       },
       'mip.admin.events.roster': {
-        items: [{ nickname: '周宁', cityName: '深圳', phoneBound: true, submittedAt: '2030-03-01T00:00:00.000Z', checkedInAt: null, status: 'REGISTERED' }],
+        items: [{ id: 'registration-1', version: 2, nickname: '周宁', cityName: '深圳', phoneBound: true, submittedAt: '2030-03-01T00:00:00.000Z', checkedInAt: null, status: 'REGISTERED' }],
         nextCursor: null,
       },
-    }, calls))
+      'mip.admin.events.album.list': {
+        items: [{ id: 'photo-1', version: 3, nickname: '林晓', caption: '活动合影', createdAt: '2030-03-14T04:00:00.000Z', status: 'PENDING' }],
+        nextCursor: null,
+      },
+    }, calls), { includeEventAlbum: true })
 
     assert.deepEqual(calls.map(call => call.action), [
       'mip.admin.events.get', 'mip.admin.events.insights.get', 'mip.admin.events.roster',
+      'mip.admin.events.album.list',
     ])
     assert.deepEqual(calls[2].input, { eventId: 'event-1', includePhone: false, limit: 20 })
+    assert.deepEqual(calls[3].input, { eventId: 'event-1', status: 'PENDING', limit: 20 })
     assert.equal(detail.sections.find(section => section.title === '活动信息')?.fields?.find(item => item.label === '价格')?.value, '¥188.00')
     assert.equal(detail.sections.find(section => section.title === '参与情况')?.metrics?.find(item => item.label === '签到率')?.value, '66.67%')
-    assert.equal(detail.sections.find(section => section.title.startsWith('报名名单'))?.rows?.[0].state, '已报名')
+    const registration = detail.sections.find(section => section.title.startsWith('报名名单'))?.rows?.[0]
+    assert.equal(registration?.state, '已报名')
+    assert.deepEqual(registration?.rowActions, [{
+      action: 'mip.admin.events.checkIn', label: '签到', targetId: 'event-1',
+      values: { eventId: 'event-1', registrationId: 'registration-1', expectedVersion: 2 },
+    }])
+    const photo = detail.sections.find(section => section.title === '待审核相册')?.rows?.[0]
+    assert.equal(photo?.caption, '活动合影')
+    assert.equal(photo?.rowActions?.[0]?.action, 'mip.admin.events.album.review')
   })
 
   it('loads order detail before querying payment attempts by the exact order id', async () => {

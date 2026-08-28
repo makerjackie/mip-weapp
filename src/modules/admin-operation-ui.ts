@@ -78,7 +78,8 @@ function renderField(field: OperationField, path: string, raw: unknown, escapeHt
       const normalized = typeof option === 'string' ? { value: option, label: option } : option
       return `<option value="${escapeHtml(normalized.value)}" ${selected.has(normalized.value) ? 'selected' : ''}>${escapeHtml(normalized.label)}</option>`
     }).join('')
-    return `<label${className}>${escapeHtml(field.label)}<select name="${escapeHtml(path)}" ${field.kind === 'multi-select' ? 'multiple' : ''} ${required}>${field.required ? '' : '<option value="">未设置</option>'}${options}</select></label>`
+    const emptyOption = field.kind === 'select' && !field.required ? '<option value="">未设置</option>' : ''
+    return `<label${className}>${escapeHtml(field.label)}<select name="${escapeHtml(path)}" ${field.kind === 'multi-select' ? 'multiple' : ''} ${required}>${emptyOption}${options}</select></label>`
   }
   if (field.kind === 'textarea') {
     return `<label${className}>${escapeHtml(field.label)}<textarea name="${escapeHtml(path)}" rows="4" ${maximum} ${required}>${escapeHtml(raw ?? '')}</textarea></label>`

@@ -1,8 +1,9 @@
 import type { AdminRequestInput } from '../domain/contracts'
 import type { AdminDetailRoute } from './admin-details.ts'
+import type { AdminOperationRow } from './admin-row-operations.ts'
 
-export type AdminListRoute = 'users' | 'events' | 'orders' | 'tasks' | 'permissions' | 'messages' | 'knowledge' | 'opportunities' | 'growth' | 'operations'
-export type AdminTableRow = Record<string, unknown>
+export type AdminListRoute = 'users' | 'events' | 'orders' | 'tasks' | 'banners' | 'game' | 'permissions' | 'messages' | 'knowledge' | 'opportunities' | 'growth' | 'operations'
+export type AdminTableRow = AdminOperationRow
 
 export interface AdminTableColumn {
   key: string

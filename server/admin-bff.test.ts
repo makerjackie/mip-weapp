@@ -7,11 +7,17 @@ import {
   type D1DatabaseBinding,
 } from './admin-bff.ts'
 import { REVIEWED_ADMIN_MUTATIONS } from './admin-mutation-contract.ts'
+import {
+  ADMIN_MEDIA_MAX_REQUEST_BYTES,
+  ADMIN_MEDIA_UPLOAD_ACTION,
+} from './admin-media-upload.ts'
 
 const NOW = Date.UTC(2030, 0, 1)
 const ORIGIN = 'https://mipmini.01mvp.com'
 const SESSION_SECRET = 'session-encryption-secret-that-is-long-enough-for-tests'
 const LOGIN_SECRET = 'login-confirm-secret-that-is-long-enough-for-tests'
+const EXPORT_TOKEN = 'a'.repeat(43)
+const MEDIA_ASSET_ID = '10000000-0000-4000-8000-000000000001'
 const REVIEWED_QUERY_ACTIONS = [
   'mip.admin.session',
   'mip.admin.dashboard.overview.get',
@@ -30,9 +36,21 @@ const REVIEWED_QUERY_ACTIONS = [
   'mip.admin.tasks.list',
   'mip.admin.tasks.get',
   'mip.admin.tasks.assignableMembers.list',
+  'mip.admin.tasks.eligibleLevels.list',
   'mip.admin.tasks.completions.list',
   'mip.admin.tasks.completions.get',
   'mip.admin.tasks.completions.export',
+  'mip.admin.banners.session',
+  'mip.admin.banners.list',
+  'mip.admin.banners.get',
+  'mip.admin.game.session',
+  'mip.admin.game.rankings.list',
+  'mip.admin.game.seasons.list',
+  'mip.admin.game.teams.list',
+  'mip.admin.game.members.assignable.list',
+  'mip.admin.game.matches.list',
+  'mip.admin.game.blindBoxes.catalogs.list',
+  'mip.admin.game.blindBoxes.cards.list',
   'mip.admin.memberships.get',
   'mip.admin.memberships.timeline',
   'mip.admin.benefits.ledger',
@@ -90,6 +108,92 @@ const CORE_MUTATION_INPUTS: Record<string, Record<string, unknown>> = {
   'mip.admin.events.archive': { eventId: 'event-a', expectedVersion: 1, reason: '测试归档' },
   'mip.admin.communications.publishEventReminder': { eventId: 'event-a', expectedVersion: 1, sendWechatReminder: false },
   'mip.admin.refunds.submit': { orderId: 'order-a', reason: '测试退款' },
+  'mip.admin.exports.create': { exportType: 'USERS', includesPhone: false, filters: {} },
+  'mip.admin.exports.prepare': { ticketId: 'ticket-a', token: EXPORT_TOKEN },
+  'mip.admin.exports.reserve': { ticketId: 'ticket-a', token: EXPORT_TOKEN },
+  'mip.admin.exports.complete': { ticketId: 'ticket-a', token: EXPORT_TOKEN },
+  'mip.admin.banners.save': {
+    banner: {
+      title: '活动首页 Banner',
+      accessibilityLabel: '查看本周活动',
+      imageAssetId: '20000000-0000-4000-8000-000000000002',
+      targetType: 'MINIPROGRAM_PATH',
+      targetValue: '/pages/events/index',
+    },
+  },
+  'mip.admin.banners.changeStatus': {
+    bannerId: '10000000-0000-4000-8000-000000000001', expectedVersion: 1, status: 'ACTIVE',
+  },
+  'mip.admin.banners.move': {
+    bannerId: '10000000-0000-4000-8000-000000000001', expectedVersion: 1, direction: 'UP',
+  },
+  'mip.admin.banners.delete': {
+    bannerId: '10000000-0000-4000-8000-000000000001', expectedVersion: 1,
+  },
+  'mip.admin.game.seasons.save': {
+    season: {
+      seasonKey: 'season_2030', name: '2030 上半年赛季', summary: '', rulesText: '按经验值排行',
+      rules: { scoreMetric: 'EXPERIENCE', headquartersThresholds: [{ level: 1, minimumExperience: 0, label: '一级大本营' }] },
+      periodKind: 'HALF_YEAR', startsAt: '2030-01-01T00:00:00.000Z', endsAt: '2030-06-30T23:59:59.000Z',
+    },
+  },
+  'mip.admin.game.seasons.changeStatus': {
+    seasonId: '30000000-0000-4000-8000-000000000001', expectedVersion: 1, status: 'ACTIVE',
+  },
+  'mip.admin.game.teams.save': {
+    team: { seasonId: '30000000-0000-4000-8000-000000000001', name: '深圳一队', summary: '', memberLimit: 20 },
+  },
+  'mip.admin.game.teams.changeStatus': {
+    seasonId: '30000000-0000-4000-8000-000000000001', teamId: '30000000-0000-4000-8000-000000000002', expectedVersion: 1, status: 'INACTIVE',
+  },
+  'mip.admin.game.teams.members.replace': {
+    seasonId: '30000000-0000-4000-8000-000000000001', teamId: '30000000-0000-4000-8000-000000000002', expectedVersion: 1,
+    members: [{ memberRef: 'profile-owner', role: 'CAPTAIN' }],
+  },
+  'mip.admin.game.matches.save': {
+    match: {
+      seasonId: '30000000-0000-4000-8000-000000000001', weekStart: '2030-01-03', weekEnd: '2030-01-09',
+      teamAId: '30000000-0000-4000-8000-000000000002', teamBId: '30000000-0000-4000-8000-000000000003',
+    },
+  },
+  'mip.admin.game.matches.finalize': {
+    matchId: '30000000-0000-4000-8000-000000000004', expectedVersion: 1,
+  },
+  'mip.admin.game.rankings.generate': {
+    seasonId: '30000000-0000-4000-8000-000000000001', rankingType: 'TEAM_HALF_YEAR',
+  },
+  'mip.admin.game.blindBoxes.catalogs.save': {
+    catalog: {
+      catalogKey: 'mip_cards', name: 'MIP 卡片', summary: '', rulesText: '消耗游戏币抽取', redemptionRulesText: '按运营规则兑换',
+      drawCostCoin: 10, dailyDrawLimit: 20, pityThreshold: 10, pityMinRarity: 'RARE',
+    },
+  },
+  'mip.admin.game.blindBoxes.catalogs.changeStatus': {
+    catalogId: '30000000-0000-4000-8000-000000000005', expectedVersion: 1, status: 'PUBLISHED',
+  },
+  'mip.admin.game.blindBoxes.cards.save': {
+    card: {
+      catalogId: '30000000-0000-4000-8000-000000000005', cardKey: 'growth_card', name: '成长卡', summary: '',
+      rarity: 'COMMON', weight: 100, stockTotal: 1000, displayOrder: 0,
+    },
+  },
+  'mip.admin.game.blindBoxes.cards.changeStatus': {
+    cardId: '30000000-0000-4000-8000-000000000006', expectedVersion: 1, status: 'PUBLISHED',
+  },
+}
+
+function reviewedQueryInput(action: string) {
+  if (action === 'mip.admin.banners.list') return { filters: { query: '活动', status: 'INACTIVE' } }
+  if (action === 'mip.admin.banners.get') return { bannerId: '10000000-0000-4000-8000-000000000001' }
+  if (action === 'mip.admin.game.rankings.list') return { seasonId: '30000000-0000-4000-8000-000000000001', rankingType: 'TEAM_HALF_YEAR', limit: 100 }
+  if (['mip.admin.game.teams.list', 'mip.admin.game.matches.list'].includes(action)) return { seasonId: '30000000-0000-4000-8000-000000000001' }
+  if (action === 'mip.admin.game.members.assignable.list') return {
+    seasonId: '30000000-0000-4000-8000-000000000001', teamId: '30000000-0000-4000-8000-000000000002', query: '', limit: 30,
+  }
+  if (action === 'mip.admin.game.blindBoxes.cards.list') return { catalogId: '30000000-0000-4000-8000-000000000005' }
+  return action === 'mip.admin.exports.status'
+    ? { ticketId: 'ticket-a', token: EXPORT_TOKEN }
+    : {}
 }
 
 function reviewedMutationInput(action: string) {
@@ -240,7 +344,112 @@ async function confirmedLogin(fetchMock: FetchMock, database = new MemoryD1()) {
   return { bff, challengeCookie, confirm, exchange, sessionCookie: cookieValue(exchange, 'mip_admin_session') }
 }
 
+function mediaPngBase64() {
+  const bytes = new Uint8Array(24)
+  bytes.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+  bytes.set([0x49, 0x48, 0x44, 0x52], 12)
+  bytes.set([0, 0, 0, 96, 0, 0, 0, 64], 16)
+  return Buffer.from(bytes).toString('base64')
+}
+
+function mediaUploadRequest(sessionCookie: string, body: unknown, headers: Record<string, string> = {}) {
+  return new Request(`${ORIGIN}/api/media/image`, {
+    method: 'POST',
+    headers: {
+      cookie: sessionCookie,
+      origin: ORIGIN,
+      'content-type': 'application/json',
+      ...headers,
+    },
+    body: JSON.stringify(body),
+  })
+}
+
 describe('Admin Web BFF', () => {
+  it('forwards the dedicated media upload with trusted principal and a server idempotency key', async () => {
+    const imageUrl = 'cloud://env.mip/mip/live/app/banners/asset.png'
+    const fetchMock = fetchQueue(new Response(JSON.stringify({
+      ok: true,
+      data: { assetId: MEDIA_ASSET_ID, imageUrl, width: 96, height: 64 },
+    }), { status: 200, headers: { 'content-type': 'application/json' } }))
+    const { bff, sessionCookie } = await confirmedLogin(fetchMock)
+    const body = {
+      action: ADMIN_MEDIA_UPLOAD_ACTION,
+      input: { purpose: 'BANNER', imageBase64: mediaPngBase64() },
+    }
+
+    const response = await bff.handle(mediaUploadRequest(sessionCookie, body))
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), {
+      ok: true,
+      data: { assetId: MEDIA_ASSET_ID, imageUrl, width: 96, height: 64 },
+    })
+    assert.equal(fetchMock.calls.length, 1)
+    const upstream = JSON.parse(String(fetchMock.calls[0][1]?.body))
+    assert.deepEqual(upstream.principal, { appId: 'wx-mip-app', openId: 'trusted-admin-openid' })
+    assert.equal(upstream.request.contractVersion, 1)
+    assert.equal(upstream.request.action, ADMIN_MEDIA_UPLOAD_ACTION)
+    assert.deepEqual(upstream.request.input, body.input)
+    assert.match(upstream.request.idempotencyKey, /^web-media-[A-Za-z0-9_-]{32}$/)
+    assert.match(upstream.nonce, /^[A-Za-z0-9_-]{32}$/)
+    assert.match(upstream.signature, /^[a-f0-9]{64}$/)
+    assert.equal(fetchMock.calls[0][1]?.signal instanceof AbortSignal, true)
+    assert.equal(JSON.stringify(upstream).includes(SESSION_SECRET), false)
+  })
+
+  it('rejects unauthorized, cross-origin, oversized, forged, and non-image media requests before upstream', async () => {
+    const fetchMock = fetchQueue()
+    const { bff, sessionCookie } = await confirmedLogin(fetchMock)
+    const valid = {
+      action: ADMIN_MEDIA_UPLOAD_ACTION,
+      input: { purpose: 'BANNER', imageBase64: mediaPngBase64() },
+    }
+    const requests = [
+      mediaUploadRequest('', valid),
+      new Request(`${ORIGIN}/api/media/image`, {
+        method: 'POST',
+        headers: { cookie: sessionCookie, origin: 'https://attacker.example', 'content-type': 'application/json' },
+        body: JSON.stringify(valid),
+      }),
+      mediaUploadRequest(sessionCookie, { ...valid, action: 'mip.admin.media.deleteAll' }),
+      mediaUploadRequest(sessionCookie, {
+        action: ADMIN_MEDIA_UPLOAD_ACTION,
+        input: { ...valid.input, capability: 'banners.manage' },
+      }),
+      mediaUploadRequest(sessionCookie, valid, {
+        'content-length': String(ADMIN_MEDIA_MAX_REQUEST_BYTES + 1),
+      }),
+      mediaUploadRequest(sessionCookie, {
+        action: ADMIN_MEDIA_UPLOAD_ACTION,
+        input: { purpose: 'BANNER', imageBase64: Buffer.from('plain text').toString('base64') },
+      }),
+    ]
+    const statuses = []
+    for (const request of requests) statuses.push((await bff.handle(request)).status)
+
+    assert.deepEqual(statuses, [401, 403, 400, 400, 413, 400])
+    assert.equal(fetchMock.calls.length, 0)
+  })
+
+  it('keeps the regular admin route at 32 KB after enabling the dedicated media endpoint', async () => {
+    const fetchMock = fetchQueue()
+    const { bff, sessionCookie } = await confirmedLogin(fetchMock)
+    const response = await bff.handle(new Request(`${ORIGIN}/api/admin`, {
+      method: 'POST',
+      headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        contractVersion: 1,
+        action: 'mip.admin.users.list',
+        input: { query: 'x'.repeat(33 * 1024) },
+      }),
+    }))
+
+    assert.equal(response.status, 400)
+    assert.equal((await response.json()).error.code, 'VALIDATION_FAILED')
+    assert.equal(fetchMock.calls.length, 0)
+  })
+
   it('exchanges a mini-program-confirmed one-time code and forwards a signed read-only request', async () => {
     const fetchMock = fetchQueue(new Response(JSON.stringify({ ok: true, data: { people: {} } }), {
       status: 200, headers: { 'content-type': 'application/json' },
@@ -319,6 +528,7 @@ describe('Admin Web BFF', () => {
   })
 
   it('forwards every explicitly reviewed query action', async () => {
+    assert.equal(REVIEWED_QUERY_ACTIONS.length, 80)
     const fetchMock = fetchQueue(...REVIEWED_QUERY_ACTIONS.map(action => new Response(JSON.stringify({
       ok: true,
       data: { action },
@@ -329,10 +539,11 @@ describe('Admin Web BFF', () => {
     const { bff, sessionCookie } = await confirmedLogin(fetchMock)
 
     for (const action of REVIEWED_QUERY_ACTIONS) {
+      const input = reviewedQueryInput(action)
       const response = await bff.handle(new Request(`${ORIGIN}/api/admin`, {
         method: 'POST',
         headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
-        body: JSON.stringify({ contractVersion: 1, action, input: {} }),
+        body: JSON.stringify({ contractVersion: 1, action, input }),
       }))
       assert.equal(response.status, 200, action)
       assert.deepEqual(await response.json(), { ok: true, data: { action } }, action)
@@ -342,7 +553,77 @@ describe('Admin Web BFF', () => {
     assert.deepEqual(fetchMock.calls.map(([, init]) => {
       const envelope = JSON.parse(String(init?.body))
       return { action: envelope.request.action, input: envelope.request.input }
-    }), REVIEWED_QUERY_ACTIONS.map(action => ({ action, input: {} })))
+    }), REVIEWED_QUERY_ACTIONS.map(action => ({ action, input: reviewedQueryInput(action) })))
+  })
+
+  it('restricts sensitive export actions to user and order filters plus opaque ticket credentials', async () => {
+    const fetchMock = fetchQueue()
+    const { bff, sessionCookie } = await confirmedLogin(fetchMock)
+    const submit = (action: string, input: Record<string, unknown>, mutation = true) => bff.handle(new Request(`${ORIGIN}/api/admin`, {
+      method: 'POST',
+      headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
+      body: JSON.stringify({
+        contractVersion: 1,
+        action,
+        input,
+        ...(mutation ? { idempotencyKey: 'web-export-operation-fixture' } : {}),
+      }),
+    }))
+
+    const invalid = [
+      submit('mip.admin.exports.create', { exportType: 'EVENT_ROSTER_ALL', includesPhone: false, filters: {} }),
+      submit('mip.admin.exports.create', { exportType: 'ORDERS', includesPhone: true, filters: {} }),
+      submit('mip.admin.exports.create', { exportType: 'USERS', includesPhone: false, filters: { branchId: 'branch-a' } }),
+      submit('mip.admin.exports.reserve', { ticketId: 'ticket-a', token: 'short' }),
+      submit('mip.admin.exports.status', { ticketId: 'ticket-a', token: EXPORT_TOKEN, extra: true }, false),
+    ]
+    for (const response of await Promise.all(invalid)) {
+      assert.equal(response.status, 400)
+      assert.equal((await response.json()).error.code, 'VALIDATION_FAILED')
+    }
+    assert.equal(fetchMock.calls.length, 0)
+  })
+
+  it('rejects unreviewed Banner query fields and malformed Banner identifiers', async () => {
+    const fetchMock = fetchQueue()
+    const { bff, sessionCookie } = await confirmedLogin(fetchMock)
+    const submit = (action: string, input: Record<string, unknown>) => bff.handle(new Request(`${ORIGIN}/api/admin`, {
+      method: 'POST',
+      headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
+      body: JSON.stringify({ contractVersion: 1, action, input }),
+    }))
+
+    for (const response of await Promise.all([
+      submit('mip.admin.banners.session', { appId: 'forged' }),
+      submit('mip.admin.banners.list', { filters: { query: '活动', ownerUserId: 'forged' } }),
+      submit('mip.admin.banners.list', { filters: { status: 'UNKNOWN' } }),
+      submit('mip.admin.banners.get', { bannerId: 'not-a-uuid' }),
+    ])) {
+      assert.equal(response.status, 400)
+      assert.equal((await response.json()).error.code, 'VALIDATION_FAILED')
+    }
+    assert.equal(fetchMock.calls.length, 0)
+  })
+
+  it('rejects malformed game queries before signing the upstream envelope', async () => {
+    const fetchMock = fetchQueue()
+    const { bff, sessionCookie } = await confirmedLogin(fetchMock)
+    const submit = (action: string, input: Record<string, unknown>) => bff.handle(new Request(`${ORIGIN}/api/admin`, {
+      method: 'POST',
+      headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },
+      body: JSON.stringify({ contractVersion: 1, action, input }),
+    }))
+    const invalid = [
+      submit('mip.admin.game.session', { roleKey: 'PLATFORM_OWNER' }),
+      submit('mip.admin.game.rankings.list', { seasonId: 'bad', rankingType: 'TEAM_HALF_YEAR' }),
+      submit('mip.admin.game.members.assignable.list', { seasonId: '30000000-0000-4000-8000-000000000001', teamId: '30000000-0000-4000-8000-000000000002', query: '', limit: 0 }),
+      submit('mip.admin.game.blindBoxes.cards.list', { catalogId: 'bad' }),
+    ]
+    for (const response of await Promise.all(invalid)) {
+      assert.equal(response.status, 400)
+      assert.equal((await response.json()).error.code, 'VALIDATION_FAILED')
+    }
+    assert.equal(fetchMock.calls.length, 0)
   })
 
   it('rejects mutations and query actions outside the reviewed batch', async () => {
@@ -446,6 +727,45 @@ describe('Admin Web BFF', () => {
       ['mip.admin.events.archive', { eventId: 'event-a', reason: '归档', forged: true }],
       ['mip.admin.communications.publishEventReminder', { eventId: 'event-a', recipientUserIds: ['user-a'] }],
       ['mip.admin.refunds.submit', { orderId: 'order-a', amountCents: 1 }],
+      ['mip.admin.banners.save', {
+        banner: {
+          title: 'Banner', accessibilityLabel: '说明',
+          imageAssetId: '20000000-0000-4000-8000-000000000002',
+          targetType: 'MINIPROGRAM_PATH', targetValue: '/pages/events/index',
+          ownerUserId: 'forged',
+        },
+      }],
+      ['mip.admin.banners.save', {
+        bannerId: '10000000-0000-4000-8000-000000000001',
+        banner: {
+          title: 'Banner', accessibilityLabel: '说明',
+          imageAssetId: '20000000-0000-4000-8000-000000000002',
+          targetType: 'MINIPROGRAM_PATH', targetValue: '/pages/events/index',
+        },
+      }],
+      ['mip.admin.banners.changeStatus', {
+        bannerId: '10000000-0000-4000-8000-000000000001', expectedVersion: 1, status: 'DELETED',
+      }],
+      ['mip.admin.banners.move', {
+        bannerId: '10000000-0000-4000-8000-000000000001', expectedVersion: 1, direction: 'LEFT',
+      }],
+      ['mip.admin.game.seasons.save', {
+        season: { ...CORE_MUTATION_INPUTS['mip.admin.game.seasons.save'].season as object, clientScore: 100 },
+      }],
+      ['mip.admin.game.teams.members.replace', {
+        ...CORE_MUTATION_INPUTS['mip.admin.game.teams.members.replace'],
+        members: [{ memberRef: 'a', role: 'CAPTAIN' }, { memberRef: 'b', role: 'CAPTAIN' }],
+      }],
+      ['mip.admin.game.matches.save', {
+        match: {
+          ...CORE_MUTATION_INPUTS['mip.admin.game.matches.save'].match as object,
+          weekEnd: '2030-01-10',
+          teamAScore: 100,
+        },
+      }],
+      ['mip.admin.game.blindBoxes.cards.save', {
+        card: { ...CORE_MUTATION_INPUTS['mip.admin.game.blindBoxes.cards.save'].card as object, rewardAmount: 999 },
+      }],
     ] as const
 
     for (const [index, [action, input]] of cases.entries()) {

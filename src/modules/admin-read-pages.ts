@@ -15,6 +15,12 @@ import {
   loadOpportunities,
 } from './admin-read-special-pages.ts'
 import { loadTaskManagementPage } from './admin-task-management.ts'
+import { loadBannerManagementPage } from './admin-banner-management.ts'
+import { loadGameManagementPage } from './admin-game-management.ts'
+import {
+  branchRowActions,
+  rolePolicyRowActions,
+} from './admin-row-operations.ts'
 
 export type {
   AdminListQuery,
@@ -49,6 +55,16 @@ const routeDefinitions: Record<AdminListRoute, AdminReadRouteDefinition> = {
     searchPlaceholder: '搜索任务或完成人',
     statusOptions: [...commonStatus, ...options(['DRAFT', 'PUBLISHED', 'UNPUBLISHED'])],
     paginated: true,
+  },
+  banners: {
+    searchPlaceholder: '搜索名称、图片说明或跳转地址',
+    statusOptions: [...commonStatus, ...options(['ACTIVE', 'INACTIVE', 'DELETED'])],
+    paginated: false,
+  },
+  game: {
+    searchPlaceholder: '搜索赛季、规则或盲盒目录',
+    statusOptions: [...commonStatus, ...options(['DRAFT', 'ACTIVE', 'CLOSED', 'PUBLISHED', 'UNPUBLISHED'])],
+    paginated: false,
   },
   permissions: {
     searchPlaceholder: '筛选成员、角色、分会或城市',
@@ -96,6 +112,8 @@ export async function loadAdminReadPage(
     case 'events': return loadEvents(query, request)
     case 'orders': return loadOrders(query, request)
     case 'tasks': return loadTaskManagementPage(query, request)
+    case 'banners': return loadBannerManagementPage(query, request)
+    case 'game': return loadGameManagementPage(query, request)
     case 'permissions': return loadPermissions(query, request)
     case 'messages': return loadMessages(query, request)
     case 'knowledge': return loadKnowledge(query, request)
@@ -209,6 +227,7 @@ async function loadPermissions(query: AdminListQuery, request: AdminRequest): Pr
     admins: arrayLabel(item.branchAdminNames),
     blockers: blockersLabel(item.blockers),
     state: label(valueOf(item, 'status')),
+    rowActions: branchRowActions(item),
   })), query)
   const policies = pageValue(policyPayload).items.map(item => ({
     role: roleLabel(valueOf(item, 'roleKey')),
@@ -218,6 +237,7 @@ async function loadPermissions(query: AdminListQuery, request: AdminRequest): Pr
     source: label(valueOf(item, 'source')),
     version: numberLabel(item.version),
     updatedAt: formatDateTime(item.updatedAt),
+    rowActions: rolePolicyRowActions(item),
   }))
   const audits = filterRows(pageValue(auditPayload).items.map(item => ({
     actor: valueOf(item, 'actorNickname') !== '—' ? valueOf(item, 'actorNickname') : '未知运营成员',

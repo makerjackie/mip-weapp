@@ -17,6 +17,10 @@ export const REVIEWED_ADMIN_MUTATIONS = Object.freeze([
   mutation('mip.admin.events.archive', ['eventId', 'expectedVersion', 'reason']),
   mutation('mip.admin.communications.publishEventReminder', ['eventId', 'expectedVersion', 'sendWechatReminder']),
   mutation('mip.admin.refunds.submit', ['orderId', 'reason']),
+  mutation('mip.admin.exports.create', ['exportType', 'includesPhone', 'filters']),
+  mutation('mip.admin.exports.prepare', ['ticketId', 'token']),
+  mutation('mip.admin.exports.reserve', ['ticketId', 'token']),
+  mutation('mip.admin.exports.complete', ['ticketId', 'token']),
 
   mutation('mip.admin.users.update', ['userId', 'expectedVersion', 'fields']),
   mutation('mip.admin.users.changePrimaryBranch', ['userId', 'targetBranchId', 'expectedVersion', 'reason']),
@@ -74,6 +78,24 @@ export const REVIEWED_ADMIN_MUTATIONS = Object.freeze([
   mutation('mip.admin.tasks.delete', ['taskId', 'expectedVersion']),
   mutation('mip.admin.tasks.assignMembers', ['taskId', 'memberRefs', 'expectedVersion']),
   mutation('mip.admin.tasks.revokeMembers', ['taskId', 'memberRefs', 'expectedVersion']),
+
+  mutation('mip.admin.banners.save', ['banner'], ['bannerId', 'expectedVersion']),
+  mutation('mip.admin.banners.changeStatus', ['bannerId', 'expectedVersion', 'status']),
+  mutation('mip.admin.banners.move', ['bannerId', 'expectedVersion', 'direction']),
+  mutation('mip.admin.banners.delete', ['bannerId', 'expectedVersion']),
+
+  mutation('mip.admin.game.seasons.save', ['season'], ['seasonId', 'expectedVersion']),
+  mutation('mip.admin.game.seasons.changeStatus', ['seasonId', 'expectedVersion', 'status']),
+  mutation('mip.admin.game.teams.save', ['team'], ['teamId', 'expectedVersion']),
+  mutation('mip.admin.game.teams.changeStatus', ['seasonId', 'teamId', 'expectedVersion', 'status']),
+  mutation('mip.admin.game.teams.members.replace', ['seasonId', 'teamId', 'expectedVersion', 'members']),
+  mutation('mip.admin.game.matches.save', ['match']),
+  mutation('mip.admin.game.matches.finalize', ['matchId', 'expectedVersion']),
+  mutation('mip.admin.game.rankings.generate', ['seasonId', 'rankingType']),
+  mutation('mip.admin.game.blindBoxes.catalogs.save', ['catalog'], ['catalogId', 'expectedVersion']),
+  mutation('mip.admin.game.blindBoxes.catalogs.changeStatus', ['catalogId', 'expectedVersion', 'status']),
+  mutation('mip.admin.game.blindBoxes.cards.save', ['card'], ['cardId', 'expectedVersion']),
+  mutation('mip.admin.game.blindBoxes.cards.changeStatus', ['cardId', 'expectedVersion', 'status']),
 ])
 
 export const REVIEWED_ADMIN_MUTATION_ACTIONS = new Set(REVIEWED_ADMIN_MUTATIONS.map(item => item.action))

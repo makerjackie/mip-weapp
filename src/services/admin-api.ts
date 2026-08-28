@@ -4,7 +4,14 @@ import {
   type AdminApiResponse,
   type AdminRequestInput,
   type AdminSession,
-} from '../domain/contracts'
+} from '../domain/contracts.ts'
+import {
+  parseAdminMediaUploadResult,
+  prepareAdminMediaUpload,
+  type AdminMediaFile,
+  type AdminMediaPurpose,
+  type AdminMediaUploadResult,
+} from '../modules/admin-media-upload.ts'
 
 export interface AdminLoginChallenge {
   state: 'PENDING'
@@ -23,13 +30,17 @@ export type AdminLoginChallengeStatus = {
   expiresAt: string
 }
 
+const runtimeEnvironment = (import.meta as ImportMeta & {
+  env?: Record<string, string | undefined>
+}).env
+
 export class AdminApiClient {
   readonly baseUrl: string
   readonly demoMode: boolean
 
-  constructor(baseUrl = import.meta.env.VITE_MIP_ADMIN_API_URL || '/api/admin') {
+  constructor(baseUrl = runtimeEnvironment?.VITE_MIP_ADMIN_API_URL || '/api/admin') {
     this.baseUrl = baseUrl.replace(/\/$/, '')
-    this.demoMode = import.meta.env.VITE_MIP_ADMIN_DEMO_MODE === 'true'
+    this.demoMode = runtimeEnvironment?.VITE_MIP_ADMIN_DEMO_MODE === 'true'
   }
 
   get configured() { return !this.demoMode && Boolean(this.baseUrl) }
@@ -105,13 +116,45 @@ export class AdminApiClient {
     return payload.data as T
   }
 
+  async uploadImage(file: AdminMediaFile, purpose: AdminMediaPurpose): Promise<AdminMediaUploadResult> {
+    if (!this.configured) throw new AdminApiClientError('API_NOT_CONFIGURED', '尚未配置管理 API')
+    const prepared = await prepareAdminMediaUpload(file, purpose)
+    const response = await fetch('/api/media/image', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify(prepared),
+    })
+    let payload: unknown
+    try { payload = await response.json() }
+    catch { throw new AdminApiClientError('INVALID_RESPONSE', '图片上传服务返回格式无效') }
+    if (!isAdminApiResponse(payload)) {
+      throw new AdminApiClientError('INVALID_RESPONSE', '图片上传服务返回格式无效')
+    }
+    if (!payload.ok) {
+      throw new AdminApiClientError(
+        payload.error?.code || 'UPLOAD_FAILED',
+        payload.error?.message || '图片上传失败',
+        payload.error?.retryable,
+      )
+    }
+    if (!response.ok) throw new AdminApiClientError('HTTP_ERROR', `图片上传请求失败（${response.status}）`, true)
+    try { return parseAdminMediaUploadResult(payload) }
+    catch { throw new AdminApiClientError('INVALID_RESPONSE', '图片上传服务返回格式无效') }
+  }
+
   async getSession(): Promise<AdminSession> { return this.request<AdminSession>('mip.admin.session') }
 }
 
 export class AdminApiClientError extends Error {
-  constructor(readonly code: string, message: string, readonly retryable = false) {
+  readonly code: string
+  readonly retryable: boolean
+
+  constructor(code: string, message: string, retryable = false) {
     super(message)
     this.name = 'AdminApiClientError'
+    this.code = code
+    this.retryable = retryable
   }
 }
 

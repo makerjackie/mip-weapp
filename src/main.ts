@@ -6,7 +6,9 @@ import {
 import type { AdminRequestInput, AdminSession } from './domain/contracts'
 import {
   loadAdminDetail,
+  type AdminDetailPagerKey,
   type AdminDetailRoute,
+  type AdminDetailSection,
   type AdminDetailView,
 } from './modules/admin-details'
 import {
@@ -63,18 +65,59 @@ import {
   createTaskMutationDefinition,
   downloadTaskCompletionExport,
   exportTaskCompletions,
+  loadTaskEligibleLevels,
   type AdminTaskMutationAction,
+  type TaskDetailLoadOptions,
 } from './modules/admin-task-management'
+import {
+  ADMIN_BANNER_MUTATION_ACTIONS,
+  buildBannerMutationInput,
+  createBannerMutationDefinition,
+  webBannerImageUrl,
+  type AdminBannerMutationAction,
+} from './modules/admin-banner-management'
+import {
+  ADMIN_GAME_MUTATION_ACTIONS,
+  buildGameMutationInput,
+  createGameMutationDefinition,
+  type AdminGameMutationAction,
+} from './modules/admin-game-management'
+import {
+  messageScheduleCancelAction,
+  parseAdminOperationLaunchContext,
+  type AdminOperationLaunchContext,
+  type AdminRowOperation,
+} from './modules/admin-row-operations'
+import {
+  continueSensitiveExport,
+  createSensitiveExportWorkflow,
+  disposeSensitiveExportSecrets,
+  SensitiveExportError,
+  type SensitiveExportKind,
+  type SensitiveExportProgress,
+  type SensitiveExportWorkflow,
+} from './modules/admin-sensitive-export'
+import {
+  ADMIN_MEDIA_PURPOSE_CAPABILITIES,
+  ADMIN_MEDIA_PURPOSE_OPTIONS,
+  AdminMediaUploadError,
+  availableAdminMediaPurposeOptions,
+  hasAdminMediaUploadAccess,
+  renderAdminMediaUploadPage,
+  validateAdminMediaFileMetadata,
+  type AdminMediaPurpose,
+  type AdminMediaUploadResult,
+} from './modules/admin-media-upload'
 import { demo } from './services/demo-data'
 import './styles.css'
 
-type Route = 'overview' | AdminListRoute
+type Route = 'overview' | 'media' | AdminListRoute
 type OverviewMetric = { label: string; value: string; detail: string }
 type OverviewModel = { metrics: OverviewMetric[]; activity: AdminTableRow[]; period: string }
 
 const client = new AdminApiClient()
 const app = document.querySelector<HTMLDivElement>('#app')!
-let route: Route = 'overview'
+let route: Route = initialRoute()
 let loading = false
 let notice = ''
 let apiErrorCode = ''
@@ -91,7 +134,7 @@ let detailError = ''
 let detailFlow = 0
 let currentDetailId = ''
 let mutationState: MutationState | null = null
-type ReviewedOperationAction = AdminPeopleMutationAction | AdminEventMutationAction | ContentMutationAction | AdminTaskMutationAction
+type ReviewedOperationAction = AdminPeopleMutationAction | AdminEventMutationAction | ContentMutationAction | AdminTaskMutationAction | AdminBannerMutationAction | AdminGameMutationAction
 type AdvancedOperationState = OperationDialogState & {
   action: ReviewedOperationAction
   capability: string
@@ -99,11 +142,40 @@ type AdvancedOperationState = OperationDialogState & {
   buildInput: (values: OperationValues) => AdminRequestInput | null
 }
 let operationState: AdvancedOperationState | null = null
+type SensitiveExportDialogState = {
+  kind: SensitiveExportKind
+  includesPhone: boolean
+  busy: boolean
+  error: string
+  progress: SensitiveExportProgress | null
+  workflow: SensitiveExportWorkflow | null
+}
+let sensitiveExportState: SensitiveExportDialogState | null = null
+type MediaUploadState = {
+  selectedPurpose: AdminMediaPurpose | ''
+  file: File | null
+  previewUrl: string
+  busy: boolean
+  error: string
+  result: AdminMediaUploadResult | null
+  copied: boolean
+}
+let mediaUploadState: MediaUploadState = {
+  selectedPurpose: route === 'media' ? 'BANNER' : '',
+  file: null,
+  previewUrl: '',
+  busy: false,
+  error: '',
+  result: null,
+  copied: false,
+}
 
 const peopleOperationSet = new Set<string>(ADMIN_PEOPLE_MUTATION_ACTIONS)
 const eventOperationSet = new Set<string>(ADMIN_EVENT_MUTATION_ACTIONS)
 const contentOperationSet = new Set<string>(ADMIN_CONTENT_MUTATION_ACTIONS)
 const taskOperationSet = new Set<string>(ADMIN_TASK_MUTATION_ACTIONS)
+const bannerOperationSet = new Set<string>(ADMIN_BANNER_MUTATION_ACTIONS)
+const gameOperationSet = new Set<string>(ADMIN_GAME_MUTATION_ACTIONS)
 
 type ListState = AdminListQuery & { history: Array<string | null> }
 const listState = (): ListState => ({ query: '', status: '', cursor: null, limit: 20, history: [] })
@@ -112,6 +184,8 @@ const listStates: Record<AdminListRoute, ListState> = {
   events: listState(),
   orders: listState(),
   tasks: listState(),
+  banners: listState(),
+  game: listState(),
   permissions: listState(),
   messages: listState(),
   knowledge: listState(),
@@ -120,12 +194,26 @@ const listStates: Record<AdminListRoute, ListState> = {
   operations: listState(),
 }
 
-const nav: Array<{ route: Route; label: string; icon: string; group: string; capabilities: string[] }> = [
+type TaskDetailPagingState = { query: string; cursor: string | null; history: Array<string | null> }
+const taskDetailPagingState = (): TaskDetailPagingState => ({ query: '', cursor: null, history: [] })
+let taskDetailPaging: Record<AdminDetailPagerKey, TaskDetailPagingState> = {
+  taskMembers: taskDetailPagingState(),
+  taskCompletions: taskDetailPagingState(),
+  gameMembers: taskDetailPagingState(),
+}
+
+const nav: Array<{ route: Route; label: string; icon: string; group: string; capabilities: string[]; requireAny?: boolean }> = [
   { route: 'overview', label: '网站概览', icon: '▦', group: '工作台', capabilities: ['admin.dashboard'] },
   { route: 'users', label: '用户管理', icon: '◎', group: '业务管理', capabilities: ['users.read'] },
   { route: 'events', label: '活动管理', icon: '◇', group: '业务管理', capabilities: ['events.read'] },
   { route: 'orders', label: '订单管理', icon: '▤', group: '业务管理', capabilities: ['orders.read'] },
   { route: 'tasks', label: '任务管理', icon: '✓', group: '业务管理', capabilities: ['tasks.manage'] },
+  { route: 'banners', label: 'Banner 管理', icon: '▧', group: '业务管理', capabilities: ['banners.manage'] },
+  {
+    route: 'media', label: '素材上传', icon: '▣', group: '业务管理', requireAny: true,
+    capabilities: ['banners.manage', 'events.album.manage', 'events.write', 'opportunities.moderate', 'userContent.moderate', 'tasks.manage'],
+  },
+  { route: 'game', label: '战队管理', icon: '♜', group: '业务管理', capabilities: ['game.manage'] },
   { route: 'opportunities', label: '机会与内容', icon: '◇', group: '业务管理', capabilities: ['opportunities.moderate', 'userContent.moderate'] },
   { route: 'growth', label: '成长与勋章', icon: '✦', group: '会员运营', capabilities: ['growth.read', 'badges.manage'] },
   { route: 'permissions', label: '权限管理', icon: '⌘', group: '平台设置', capabilities: ['roles.change', 'branches.manage', 'audit.read'] },
@@ -136,7 +224,11 @@ const nav: Array<{ route: Route; label: string; icon: string; group: string; cap
 
 function visibleNav() {
   if (client.demoMode || !session?.enabled) return nav
-  const visible = nav.filter(item => item.capabilities.every(hasCapability))
+  const visible = nav.filter(item => item.route === 'media'
+    ? hasAdminMediaUploadAccess(session?.capabilities)
+    : item.requireAny
+      ? item.capabilities.some(hasCapability)
+      : item.capabilities.every(hasCapability))
   return visible.length ? visible : [nav[0]]
 }
 
@@ -145,26 +237,58 @@ function escapeHtml(value: unknown) {
 }
 
 function statusClass(value: string) {
-  if (['已发布', '已支付', '启用', '玩家'].includes(value)) return 'status status-success'
+  if (['已发布', '已支付', '已结算', '启用', '玩家'].includes(value)) return 'status status-success'
   if (['报名中', '待确认', '定时中', '待支付', '支付处理中', '退款处理中', '待发布', '待审核'].includes(value)) return 'status status-warning'
-  if (['草稿', '嘉宾', '停用', '已撤销', '已关闭', '已归档'].includes(value)) return 'status status-muted'
+  if (['草稿', '嘉宾', '停用', '已撤销', '已关闭', '已结束', '已下架', '已归档'].includes(value)) return 'status status-muted'
   return 'status'
 }
 
 function rowsToTable(rows: AdminTableRow[], columns: AdminTableColumn[], detailTarget?: AdminDetailRoute) {
   if (!rows.length) return '<div class="empty">暂无数据</div>'
-  const actionHeading = detailTarget ? '<th>操作</th>' : ''
+  const hasActionColumn = Boolean(detailTarget) || rows.some(row => rowActions(row).length > 0)
+  const actionHeading = hasActionColumn ? '<th>操作</th>' : ''
   return `<div class="table-scroll"><table><thead><tr>${columns.map(column => `<th>${column.label}</th>`).join('')}${actionHeading}</tr></thead><tbody>${rows.map(row => `<tr>${columns.map(column => {
-    const value = escapeHtml(row[column.key] ?? '—')
-    const rendered = ['status', 'state'].includes(column.key) ? `<span class="${statusClass(String(row[column.key] || ''))}">${value}</span>` : value
-    return `<td>${rendered}</td>`
-  }).join('')}${detailAction(row, detailTarget)}</tr>`).join('')}</tbody></table></div>`
+    return `<td>${renderTableValue(row, column.key)}</td>`
+  }).join('')}${tableActionCell(row, detailTarget, hasActionColumn)}</tr>`).join('')}</tbody></table></div>`
 }
 
-function detailAction(row: AdminTableRow, target?: AdminDetailRoute) {
+function renderTableValue(row: AdminTableRow, key: string) {
+  if (key === 'image' && row.imageAssetId) {
+    const url = webBannerImageUrl(row.imageUrl)
+    const preview = url
+      ? `<img src="${escapeHtml(url)}" alt="${escapeHtml(row.imageAlt || '')}" loading="lazy" referrerpolicy="no-referrer" />`
+      : '<span class="banner-image-placeholder">无预览</span>'
+    return `<div class="banner-image-cell">${preview}<div><span>${escapeHtml(row.image || '—')}</span><small title="${escapeHtml(row.imageAssetId)}">${escapeHtml(String(row.imageAssetId).slice(0, 12))}…</small></div></div>`
+  }
+  const value = escapeHtml(row[key] ?? '—')
+  return ['status', 'state'].includes(key)
+    ? `<span class="${statusClass(String(row[key] || ''))}">${value}</span>`
+    : value
+}
+
+function tableActionCell(row: AdminTableRow, target: AdminDetailRoute | undefined, hasActionColumn: boolean) {
+  if (!hasActionColumn) return ''
   const id = String(row.detailId || '')
-  if (!target || !id || id === '—') return target ? '<td>—</td>' : ''
-  return `<td><button class="table-action detail-button" data-detail-route="${target}" data-detail-id="${escapeHtml(id)}">查看</button></td>`
+  const detail = target && id && id !== '—'
+    ? `<button class="table-action detail-button" data-detail-route="${target}" data-detail-id="${escapeHtml(id)}">查看</button>`
+    : ''
+  const operations = rowActions(row).map(action => operationLaunchButton(action, 'table-action')).join('')
+  return `<td>${detail || operations ? `<div class="table-actions">${detail}${operations}</div>` : '—'}</td>`
+}
+
+function rowActions(row: AdminTableRow): readonly AdminRowOperation[] {
+  return Array.isArray(row.rowActions) ? row.rowActions as readonly AdminRowOperation[] : []
+}
+
+function operationLaunchButton(operation: AdminRowOperation, className: string) {
+  if (!isReviewedOperationAction(operation.action)
+    || !hasCapability(operationCapability(operation.action))) return ''
+  const context: AdminOperationLaunchContext = {
+    ...(operation.values ? { values: operation.values } : {}),
+    ...(operation.expectedVersion !== undefined ? { expectedVersion: operation.expectedVersion } : {}),
+    ...(operation.allowedCapabilities ? { allowedCapabilities: operation.allowedCapabilities } : {}),
+  }
+  return `<button class="${className}" data-operation-open="${operation.action}" data-operation-id="${escapeHtml(operation.targetId || '')}" data-operation-context="${escapeHtml(JSON.stringify(context))}">${escapeHtml(operation.label)}</button>`
 }
 
 function sidebar() {
@@ -183,12 +307,17 @@ function header() {
 
 function shell(content: string) {
   const loginAction = apiErrorCode === 'AUTH_REQUIRED' ? '<button class="notice-action" id="notice-login-button">运营登录</button>' : ''
-  app.innerHTML = `${sidebar()}<main class="main"><div class="content"><div id="notice" class="notice ${notice ? '' : 'hidden'}"><span>${escapeHtml(notice)}</span>${loginAction}</div>${header()}${content}</div></main>${detailPanel()}${mutationDialog()}${advancedOperationDialog()}${loginDialog()}`
+  app.innerHTML = `${sidebar()}<main class="main"><div class="content"><div id="notice" class="notice ${notice ? '' : 'hidden'}"><span>${escapeHtml(notice)}</span>${loginAction}</div>${header()}${content}</div></main>${detailPanel()}${mutationDialog()}${advancedOperationDialog()}${sensitiveExportDialog()}${loginDialog()}`
   document.querySelectorAll<HTMLButtonElement>('[data-route]').forEach(button => button.addEventListener('click', () => {
-    route = button.dataset.route as Route
+    const nextRoute = button.dataset.route as Route
+    if (route === 'media' && nextRoute !== 'media') resetMediaUploadState()
+    route = nextRoute
     notice = ''
     closeDetail(false)
     void render()
+  }))
+  document.querySelectorAll<HTMLButtonElement>('[data-media-upload-purpose]').forEach(button => button.addEventListener('click', () => {
+    openMediaUpload(button.dataset.mediaUploadPurpose as AdminMediaPurpose)
   }))
   document.querySelector('#refresh-button')?.addEventListener('click', () => void render())
   document.querySelector('#login-button')?.addEventListener('click', startLogin)
@@ -220,7 +349,20 @@ function shell(content: string) {
   })
   document.querySelector<HTMLFormElement>('#mutation-form')?.addEventListener('submit', event => void submitMutation(event))
   document.querySelectorAll<HTMLButtonElement>('[data-operation-open]').forEach(button => button.addEventListener('click', () => {
-    openAdvancedOperation(button.dataset.operationOpen || '', button.dataset.operationId || '')
+    void openAdvancedOperation(
+      button.dataset.operationOpen || '',
+      button.dataset.operationId || '',
+      parseAdminOperationLaunchContext(button.dataset.operationContext),
+    )
+  }))
+  document.querySelectorAll<HTMLFormElement>('[data-task-detail-filter]').forEach(form => form.addEventListener('submit', event => {
+    void submitTaskDetailFilter(event, form.dataset.taskDetailFilter as AdminDetailPagerKey)
+  }))
+  document.querySelectorAll<HTMLButtonElement>('[data-task-detail-page]').forEach(button => button.addEventListener('click', () => {
+    void changeTaskDetailPage(
+      button.dataset.taskDetailKey as AdminDetailPagerKey,
+      button.dataset.taskDetailPage as 'previous' | 'next',
+    )
   }))
   document.querySelector('#operation-close-button')?.addEventListener('click', closeAdvancedOperation)
   document.querySelector('#operation-cancel-button')?.addEventListener('click', closeAdvancedOperation)
@@ -231,6 +373,27 @@ function shell(content: string) {
   document.querySelectorAll<HTMLButtonElement>('[data-task-export]').forEach(button => button.addEventListener('click', () => {
     void handleTaskCompletionExport(button.dataset.taskExport || '', button)
   }))
+  document.querySelectorAll<HTMLButtonElement>('[data-sensitive-export-open]').forEach(button => button.addEventListener('click', () => {
+    openSensitiveExport(button.dataset.sensitiveExportOpen as SensitiveExportKind)
+  }))
+  document.querySelector('#sensitive-export-close-button')?.addEventListener('click', closeSensitiveExport)
+  document.querySelector('#sensitive-export-cancel-button')?.addEventListener('click', closeSensitiveExport)
+  document.querySelector('#sensitive-export-backdrop')?.addEventListener('click', event => {
+    if (event.target === event.currentTarget) closeSensitiveExport()
+  })
+  document.querySelector<HTMLFormElement>('#sensitive-export-form')?.addEventListener('submit', event => void submitSensitiveExport(event))
+  document.querySelector<HTMLSelectElement>('#media-purpose')?.addEventListener('change', event => {
+    mediaUploadState.selectedPurpose = (event.currentTarget as HTMLSelectElement).value as AdminMediaPurpose
+    mediaUploadState.error = ''
+    mediaUploadState.result = null
+    mediaUploadState.copied = false
+    paint()
+  })
+  document.querySelector<HTMLInputElement>('#media-file')?.addEventListener('change', event => {
+    selectMediaFile((event.currentTarget as HTMLInputElement).files?.[0] || null)
+  })
+  document.querySelector<HTMLFormElement>('#media-upload-form')?.addEventListener('submit', event => void submitMediaUpload(event))
+  document.querySelector('#media-copy-asset')?.addEventListener('click', () => void copyMediaAssetId())
 }
 
 function loginDialog() {
@@ -249,13 +412,33 @@ function detailPanel() {
     : detailError
       ? `<div class="detail-state detail-error">${escapeHtml(detailError)}</div>`
       : detailView
-        ? detailView.sections.map(section => `<section class="detail-section"><h3>${escapeHtml(section.title)}</h3>${section.fields ? `<div class="detail-fields">${section.fields.map(item => `<div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`).join('')}</div>` : ''}${section.metrics ? `<div class="detail-metrics">${section.metrics.map(item => `<div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`).join('')}</div>` : ''}${section.rows && section.columns ? rowsToTable(section.rows, section.columns, section.detailTarget) : ''}</section>`).join('')
+        ? detailView.sections.map(renderDetailSection).join('')
         : ''
-  const title = detailView?.title || ({ users: '用户详情', events: '活动详情', orders: '订单详情', tasks: '任务详情', taskCompletions: '任务完成记录', messages: '消息活动详情', knowledge: '知识内容详情', opportunities: '机会详情' })[detailRoute]
+  const title = detailView?.title || ({ users: '用户详情', events: '活动详情', orders: '订单详情', tasks: '任务详情', taskCompletions: '任务完成记录', banners: 'Banner 详情', gameSeasons: '赛季详情', gameTeams: '战队详情', gameCatalogs: '盲盒目录', messages: '消息活动详情', knowledge: '知识内容详情', opportunities: '机会详情' })[detailRoute]
   const subtitle = detailView?.subtitle ? `<p>${escapeHtml(detailView.subtitle)}</p>` : ''
   const status = detailView?.status ? `<span class="${statusClass(detailView.status)}">${escapeHtml(detailView.status)}</span>` : ''
   const actions = detailActions(detailRoute)
   return `<div class="detail-backdrop" id="detail-backdrop"><aside class="detail-drawer" role="dialog" aria-modal="true" aria-labelledby="detail-title"><header class="detail-header"><div><span class="detail-kicker">运营详情</span><h2 id="detail-title">${escapeHtml(title)}</h2>${subtitle}</div><div class="detail-header-actions">${status}${actions}<button id="detail-close-button" class="login-close" aria-label="关闭">×</button></div></header><div class="detail-body">${body}</div></aside></div>`
+}
+
+function renderDetailSection(section: AdminDetailSection) {
+  const fields = section.fields
+    ? `<div class="detail-fields">${section.fields.map(item => `<div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`).join('')}</div>`
+    : ''
+  const metrics = section.metrics
+    ? `<div class="detail-metrics">${section.metrics.map(item => `<div><span>${escapeHtml(item.label)}</span><strong>${escapeHtml(item.value)}</strong></div>`).join('')}</div>`
+    : ''
+  const rows = section.rows && section.columns
+    ? rowsToTable(section.rows, section.columns, section.detailTarget)
+    : ''
+  return `<section class="detail-section"><h3>${escapeHtml(section.title)}</h3>${fields}${metrics}${renderDetailPager(section)}${rows}</section>`
+}
+
+function renderDetailPager(section: AdminDetailSection) {
+  const pager = section.pager
+  if (!pager) return ''
+  const state = taskDetailPaging[pager.key]
+  return `<div class="detail-list-controls"><form class="detail-list-toolbar" data-task-detail-filter="${pager.key}"><label><span class="sr-only">${escapeHtml(pager.placeholder)}</span><input name="query" type="search" value="${escapeHtml(pager.query)}" placeholder="${escapeHtml(pager.placeholder)}" maxlength="80" /></label><button class="outline-button" type="submit">查询</button></form><nav class="detail-list-pagination" aria-label="${escapeHtml(section.title)}分页"><button class="outline-button" type="button" data-task-detail-key="${pager.key}" data-task-detail-page="previous" ${state.history.length ? '' : 'disabled'}>上一页</button><span>第 ${state.history.length + 1} 页</span><button class="outline-button" type="button" data-task-detail-key="${pager.key}" data-task-detail-page="next" ${pager.nextCursor ? '' : 'disabled'}>下一页</button></nav></div>`
 }
 
 function detailActions(route: AdminDetailRoute | null) {
@@ -308,8 +491,99 @@ function detailActions(route: AdminDetailRoute | null) {
     ].join('')
     return `<div class="detail-action-group">${actions}</div>`
   }
+  if (route === 'banners') {
+    const banner = record(detailView.source?.banner)
+    const version = Number(banner.version)
+    if (!Number.isSafeInteger(version) || version < 1) return ''
+    const status = String(banner.status || '')
+    const launch = (action: 'mip.admin.banners.changeStatus' | 'mip.admin.banners.move' | 'mip.admin.banners.delete', label: string, values: Record<string, unknown> = {}) => operationLaunchButton({
+      action,
+      label,
+      targetId: id,
+      expectedVersion: version,
+      values,
+    }, 'outline-button detail-action-button')
+    const actions = [
+      mediaUploadButton('BANNER', '上传图片', 'outline-button detail-action-button'),
+      operationButton('mip.admin.banners.save', '编辑 Banner', id),
+      status === 'ACTIVE'
+        ? launch('mip.admin.banners.changeStatus', '停用', { status: 'INACTIVE' })
+        : status === 'INACTIVE'
+          ? launch('mip.admin.banners.changeStatus', '启用', { status: 'ACTIVE' })
+          : '',
+      launch('mip.admin.banners.move', '上移', { direction: 'UP' }),
+      launch('mip.admin.banners.move', '下移', { direction: 'DOWN' }),
+      status !== 'DELETED' ? launch('mip.admin.banners.delete', '删除') : '',
+    ].join('')
+    return actions ? `<div class="detail-action-group">${actions}</div>` : ''
+  }
+  if (route === 'gameSeasons') {
+    const season = record(detailView.source?.season)
+    const version = Number(season.version)
+    const status = String(season.status || '')
+    const statusAction = Number.isSafeInteger(version) && version >= 1
+      ? operationLaunchButton({
+          action: 'mip.admin.game.seasons.changeStatus',
+          label: status === 'DRAFT' ? '启用赛季' : '结束赛季',
+          targetId: id,
+          expectedVersion: version,
+          values: { seasonId: id, status: status === 'DRAFT' ? 'ACTIVE' : 'CLOSED' },
+        }, 'outline-button detail-action-button')
+      : ''
+    const actions = [
+      status !== 'CLOSED' ? operationButton('mip.admin.game.seasons.save', '编辑赛季', id) : '',
+      ['DRAFT', 'ACTIVE'].includes(status) ? statusAction : '',
+      operationButton('mip.admin.game.teams.save', '新增战队'),
+      operationButton('mip.admin.game.matches.save', '新增周赛'),
+      operationButton('mip.admin.game.rankings.generate', '生成排行'),
+    ].join('')
+    return actions ? `<div class="detail-action-group">${actions}</div>` : ''
+  }
+  if (route === 'gameTeams') {
+    const team = record(detailView.source?.team)
+    const version = Number(team.version)
+    const status = String(team.status || '')
+    const seasonId = String(detailView.source?.seasonId || team.seasonId || '')
+    const statusAction = Number.isSafeInteger(version) && version >= 1 && ['ACTIVE', 'INACTIVE'].includes(status)
+      ? operationLaunchButton({
+          action: 'mip.admin.game.teams.changeStatus',
+          label: status === 'ACTIVE' ? '停用战队' : '启用战队',
+          targetId: id,
+          expectedVersion: version,
+          values: { seasonId, teamId: String(team.id || ''), status: status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE' },
+        }, 'outline-button detail-action-button')
+      : ''
+    const actions = [
+      operationButton('mip.admin.game.teams.save', '编辑战队', String(team.id || '')),
+      statusAction,
+      operationButton('mip.admin.game.teams.members.replace', '替换成员', String(team.id || '')),
+    ].join('')
+    return actions ? `<div class="detail-action-group">${actions}</div>` : ''
+  }
+  if (route === 'gameCatalogs') {
+    const catalog = record(detailView.source?.catalog)
+    const version = Number(catalog.version)
+    const status = String(catalog.status || '')
+    const statusAction = Number.isSafeInteger(version) && version >= 1 && ['PUBLISHED', 'UNPUBLISHED'].includes(status)
+      ? operationLaunchButton({
+          action: 'mip.admin.game.blindBoxes.catalogs.changeStatus',
+          label: status === 'PUBLISHED' ? '下架目录' : '发布目录',
+          targetId: id,
+          expectedVersion: version,
+          values: { catalogId: id, status: status === 'PUBLISHED' ? 'UNPUBLISHED' : 'PUBLISHED' },
+        }, 'outline-button detail-action-button')
+      : ''
+    const actions = [
+      operationButton('mip.admin.game.blindBoxes.catalogs.save', '编辑目录', id),
+      statusAction,
+      operationButton('mip.admin.game.blindBoxes.cards.save', '新增卡片'),
+    ].join('')
+    return actions ? `<div class="detail-action-group">${actions}</div>` : ''
+  }
   if (route === 'messages') {
-    return `<div class="detail-action-group">${operationButton('mip.admin.messageCampaigns.save', '编辑消息', id)}${operationButton('mip.admin.messageCampaigns.snapshot', '生成收件人快照', id)}${operationButton('mip.admin.messageCampaigns.schedule', '设置发送时间', id)}${operationButton('mip.admin.messageCampaigns.publish', '发布消息', id)}${operationButton('mip.admin.messageCampaigns.withdraw', '撤回消息', id)}</div>`
+    const source = record(detailView.source)
+    const cancel = messageScheduleCancelAction(record(source.campaign), record(source.dispatch))
+    return `<div class="detail-action-group">${operationButton('mip.admin.messageCampaigns.save', '编辑消息', id)}${operationButton('mip.admin.messageCampaigns.snapshot', '生成收件人快照', id)}${operationButton('mip.admin.messageCampaigns.schedule', '设置发送时间', id)}${cancel ? operationLaunchButton(cancel, 'outline-button detail-action-button') : ''}${operationButton('mip.admin.messageCampaigns.publish', '发布消息', id)}${operationButton('mip.admin.messageCampaigns.withdraw', '撤回消息', id)}</div>`
   }
   if (route === 'knowledge') {
     return `<div class="detail-action-group">${operationButton('mip.admin.knowledge.contents.save', '编辑内容', id)}${operationButton('mip.admin.knowledge.contents.review', '审核内容', id)}</div>`
@@ -392,15 +666,22 @@ function advancedOperationDialog() {
   return operationState ? renderOperationDialog(operationState, escapeHtml) : ''
 }
 
-function openAdvancedOperation(actionValue: string, targetId: string) {
+async function openAdvancedOperation(
+  actionValue: string,
+  targetId: string,
+  launch: AdminOperationLaunchContext = {},
+) {
   if (!client.configured || !isReviewedOperationAction(actionValue)) return
   if (!hasCapability(operationCapability(actionValue))) return
   const idempotencyKey = createAdvancedOperationKey(actionValue)
   if (peopleOperationSet.has(actionValue)) {
     const action = actionValue as AdminPeopleMutationAction
-    const definition = createAdminPeopleMutationDefinition(action, targetId, detailFieldValue)
-    const values = prefillPeopleValues(action, definition.values)
-    const fields = peopleFields(action, definition.fields)
+    const definition = createAdminPeopleMutationDefinition(action, targetId, detailFieldValue, {
+      expectedVersion: launch.expectedVersion,
+      allowedCapabilities: launch.allowedCapabilities,
+    })
+    const values = { ...prefillPeopleValues(action, definition.values), ...launch.values }
+    const fields = peopleFields(action, definition.fields, launch.allowedCapabilities)
     operationState = {
       action,
       capability: definition.capability,
@@ -417,7 +698,7 @@ function openAdvancedOperation(actionValue: string, targetId: string) {
   else if (eventOperationSet.has(actionValue)) {
     const action = actionValue as AdminEventMutationAction
     const definition = createAdminEventMutationDefinition(action, targetId, detailFieldValue)
-    const values = prefillEventValues(action, definition.values)
+    const values = { ...prefillEventValues(action, definition.values), ...launch.values }
     operationState = {
       action,
       capability: definition.capability,
@@ -433,7 +714,19 @@ function openAdvancedOperation(actionValue: string, targetId: string) {
   }
   else if (taskOperationSet.has(actionValue)) {
     const action = actionValue as AdminTaskMutationAction
-    const definition = createTaskMutationDefinition(action, targetId, detailView?.source || {})
+    let source = detailView?.source || {}
+    if (action === 'mip.admin.tasks.save' && !Array.isArray(source.eligibleLevelCatalog)) {
+      try {
+        const eligibleLevelCatalog = await loadTaskEligibleLevels((taskAction, input) => client.request(taskAction, input))
+        source = { ...source, eligibleLevelCatalog }
+      }
+      catch (error) {
+        notice = error instanceof AdminApiClientError ? error.message : '任务等级暂时无法加载'
+        paint()
+        return
+      }
+    }
+    const definition = createTaskMutationDefinition(action, targetId, source)
     operationState = {
       action,
       capability: definition.capability,
@@ -447,11 +740,53 @@ function openAdvancedOperation(actionValue: string, targetId: string) {
       error: '',
     }
   }
+  else if (bannerOperationSet.has(actionValue)) {
+    const action = actionValue as AdminBannerMutationAction
+    const definition = createBannerMutationDefinition(action, targetId, detailView?.source || {})
+    const values = {
+      ...definition.values,
+      ...(launch.expectedVersion !== undefined ? { expectedVersion: launch.expectedVersion } : {}),
+      ...launch.values,
+    }
+    operationState = {
+      action,
+      capability: definition.capability,
+      title: definition.title,
+      description: definition.description,
+      fields: definition.fields,
+      values,
+      idempotencyKey,
+      buildInput: next => buildBannerMutationInput(definition, next),
+      busy: false,
+      error: '',
+    }
+  }
+  else if (gameOperationSet.has(actionValue)) {
+    const action = actionValue as AdminGameMutationAction
+    const definition = createGameMutationDefinition(action, targetId, detailView?.source || {})
+    const values = {
+      ...definition.values,
+      ...(launch.expectedVersion !== undefined ? { expectedVersion: launch.expectedVersion } : {}),
+      ...launch.values,
+    }
+    operationState = {
+      action,
+      capability: definition.capability,
+      title: definition.title,
+      description: definition.description,
+      fields: definition.fields,
+      values,
+      idempotencyKey,
+      buildInput: next => buildGameMutationInput(definition, next),
+      busy: false,
+      error: '',
+    }
+  }
   else {
     const action = actionValue as ContentMutationAction
     const definition = getContentMutationForm(action)
     const fields = normalizeContentFields(definition.fields as readonly OperationField[])
-    const values = prefillContentValues(action, defaultOperationValues(fields), targetId)
+    const values = { ...prefillContentValues(action, defaultOperationValues(fields), targetId), ...launch.values }
     operationState = {
       action,
       capability: definition.capability,
@@ -510,13 +845,15 @@ function closeAdvancedOperation() {
 }
 
 function isReviewedOperationAction(action: string): action is ReviewedOperationAction {
-  return peopleOperationSet.has(action) || eventOperationSet.has(action) || contentOperationSet.has(action) || taskOperationSet.has(action)
+  return peopleOperationSet.has(action) || eventOperationSet.has(action) || contentOperationSet.has(action) || taskOperationSet.has(action) || bannerOperationSet.has(action) || gameOperationSet.has(action)
 }
 
 function operationCapability(action: ReviewedOperationAction) {
   if (peopleOperationSet.has(action)) return ADMIN_PEOPLE_MUTATION_CONFIGS[action as AdminPeopleMutationAction].capability
   if (eventOperationSet.has(action)) return eventMutationConfig(action as AdminEventMutationAction).capability
   if (taskOperationSet.has(action)) return 'tasks.manage'
+  if (bannerOperationSet.has(action)) return 'banners.manage'
+  if (gameOperationSet.has(action)) return 'game.manage'
   return getContentMutationForm(action as ContentMutationAction).capability
 }
 
@@ -541,19 +878,132 @@ async function handleTaskCompletionExport(taskId: string, button: HTMLButtonElem
   }
 }
 
+function sensitiveExportDialog() {
+  const state = sensitiveExportState
+  if (!state) return ''
+  const isUsers = state.kind === 'users'
+  const title = isUsers ? '导出用户' : '导出订单'
+  const started = Boolean(state.workflow)
+  const progress = state.progress ? sensitiveExportProgressLabel(state.progress) : ''
+  const phoneOption = isUsers && hasCapability('users.phone.read')
+    ? `<label class="sensitive-export-phone"><input type="checkbox" name="includesPhone" ${state.includesPhone ? 'checked' : ''} ${started ? 'disabled' : ''} /><span><strong>包含手机号</strong><small>仅导出当前账号有权查看的手机号，请按敏感数据规范保管。</small></span></label>`
+    : ''
+  return `<div class="mutation-backdrop" id="sensitive-export-backdrop" role="dialog" aria-modal="true" aria-labelledby="sensitive-export-title"><form class="mutation-dialog sensitive-export-dialog" id="sensitive-export-form"><button type="button" id="sensitive-export-close-button" class="login-close" aria-label="关闭" ${state.busy ? 'disabled' : ''}>×</button><span class="login-kicker">敏感数据导出</span><h2 id="sensitive-export-title">${title}</h2><p>导出范围与当前列表筛选一致，服务端会再次校验运营权限和数据范围。下载票据仅保留在当前页面内存中。</p>${phoneOption}<div class="sensitive-export-boundary"><span>筛选关键词</span><strong>${escapeHtml(listStates[state.kind].query || '全部')}</strong><span>状态</span><strong>${escapeHtml(listStates[state.kind].status || '全部')}</strong></div>${progress ? `<div class="sensitive-export-progress"><i class="dot online"></i>${escapeHtml(progress)}</div>` : ''}${state.error ? `<div class="mutation-error">${escapeHtml(state.error)}<small>结果不确定时会复用同一业务幂等键；不会自动重复创建导出。</small></div>` : ''}<div class="mutation-actions"><button type="button" class="outline-button" id="sensitive-export-cancel-button" ${state.busy ? 'disabled' : ''}>取消</button><button type="submit" class="primary-button" ${state.busy ? 'disabled' : ''}>${state.busy ? '正在处理' : started ? '继续导出' : '创建导出'}</button></div></form></div>`
+}
+
+function openSensitiveExport(kind: SensitiveExportKind) {
+  if (!client.configured
+    || !['users', 'orders'].includes(kind)
+    || !hasCapability('exports.create')) return
+  sensitiveExportState = {
+    kind,
+    includesPhone: false,
+    busy: false,
+    error: '',
+    progress: null,
+    workflow: null,
+  }
+  paint()
+}
+
+async function submitSensitiveExport(event: SubmitEvent) {
+  event.preventDefault()
+  const state = sensitiveExportState
+  if (!state || state.busy || !hasCapability('exports.create')) return
+  if (!state.workflow) {
+    const form = new FormData(event.currentTarget as HTMLFormElement)
+    state.includesPhone = state.kind === 'users'
+      && hasCapability('users.phone.read')
+      && form.get('includesPhone') === 'on'
+    const target = state.kind === 'users' ? '用户' : '订单'
+    if (!window.confirm(`导出当前筛选范围内的${target}数据？`)) return
+    state.workflow = createSensitiveExportWorkflow({
+      kind: state.kind,
+      includesPhone: state.includesPhone,
+      filters: {
+        query: listStates[state.kind].query,
+        status: listStates[state.kind].status,
+      },
+    })
+  }
+  state.busy = true
+  state.error = ''
+  paint()
+  try {
+    const result = await continueSensitiveExport(
+      state.workflow,
+      (action, input) => client.request(action, input),
+      {
+        onProgress(progress) {
+          if (sensitiveExportState !== state) return
+          state.progress = progress
+          paint()
+        },
+      },
+    )
+    notice = `已导出 ${result.rowCount.toLocaleString('zh-CN')} 条${state.kind === 'users' ? '用户' : '订单'}记录`
+    sensitiveExportState = null
+    paint()
+  }
+  catch (error) {
+    if (sensitiveExportState !== state) return
+    state.busy = false
+    state.progress = null
+    state.error = error instanceof AdminApiClientError || error instanceof SensitiveExportError
+      ? error.message
+      : '导出结果暂时无法确认'
+    paint()
+  }
+}
+
+function closeSensitiveExport() {
+  if (sensitiveExportState?.busy) return
+  if (sensitiveExportState?.workflow) disposeSensitiveExportSecrets(sensitiveExportState.workflow)
+  sensitiveExportState = null
+  paint()
+}
+
+function sensitiveExportProgressLabel(progress: SensitiveExportProgress) {
+  return {
+    creating: '正在创建导出票据',
+    preparing: '正在生成导出文件',
+    checking: '正在检查导出状态',
+    downloading: '正在下载并校验文件',
+    completing: '正在完成一次性下载',
+    saving: '正在保存文件',
+  }[progress]
+}
+
 function createAdvancedOperationKey(action: string) {
   const suffix = globalThis.crypto?.randomUUID?.().replaceAll('-', '')
     || `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`
   return `web-${action.split('.').at(-1) || 'operation'}-${suffix}`.slice(0, 128)
 }
 
-function peopleFields(action: AdminPeopleMutationAction, fields: readonly OperationField[]) {
-  if (action !== 'mip.admin.users.changePrimaryBranch') return fields
-  const options = recordsValue(record(record(detailView?.source).user).primaryBranchOptions).map(item => ({
-    value: String(item.id || ''),
-    label: String(item.label || item.name || item.id || ''),
-  })).filter(item => item.value && item.label)
-  return fields.map(field => (field.name === 'targetBranchId' && options.length ? { ...field, options } : field))
+function peopleFields(
+  action: AdminPeopleMutationAction,
+  fields: readonly OperationField[],
+  allowedCapabilities: readonly string[] = [],
+) {
+  if (action === 'mip.admin.users.changePrimaryBranch') {
+    const options = recordsValue(record(record(detailView?.source).user).primaryBranchOptions).map(item => ({
+      value: String(item.id || ''),
+      label: String(item.label || item.name || item.id || ''),
+    })).filter(item => item.value && item.label)
+    return fields.map(field => (field.name === 'targetBranchId' && options.length ? { ...field, options } : field))
+  }
+  if (action === 'mip.admin.rolePolicies.update' && allowedCapabilities.length) {
+    const allowed = new Set(allowedCapabilities)
+    return fields.map((field) => {
+      if (field.name !== 'capabilities') return field
+      const options = (field.options || []).filter((option) => {
+        const value = typeof option === 'string' ? option : option.value
+        return allowed.has(value)
+      })
+      return { ...field, options }
+    })
+  }
+  return fields
 }
 
 function prefillPeopleValues(action: AdminPeopleMutationAction, values: OperationValues) {
@@ -668,6 +1118,98 @@ function recordsValue(value: unknown) {
   return Array.isArray(value) ? value.map(record) : []
 }
 
+function openMediaUpload(purpose: AdminMediaPurpose) {
+  if (!client.demoMode && !hasCapability(ADMIN_MEDIA_PURPOSE_CAPABILITIES[purpose])) return
+  resetMediaUploadState(purpose)
+  closeDetail(false)
+  route = 'media'
+  notice = ''
+  void render()
+}
+
+function selectMediaFile(file: File | null) {
+  revokeMediaPreview()
+  mediaUploadState.file = null
+  mediaUploadState.error = ''
+  mediaUploadState.result = null
+  mediaUploadState.copied = false
+  if (!file) {
+    paint()
+    return
+  }
+  try {
+    validateAdminMediaFileMetadata(file)
+    mediaUploadState.file = file
+    try { mediaUploadState.previewUrl = URL.createObjectURL(file) }
+    catch { mediaUploadState.previewUrl = '' }
+  }
+  catch (error) {
+    mediaUploadState.error = error instanceof AdminMediaUploadError ? error.message : '图片无法读取'
+  }
+  paint()
+}
+
+async function submitMediaUpload(event: SubmitEvent) {
+  event.preventDefault()
+  const purpose = mediaUploadState.selectedPurpose
+  const file = mediaUploadState.file
+  if (mediaUploadState.busy || !file || !purpose || client.demoMode) return
+  if (!hasCapability(ADMIN_MEDIA_PURPOSE_CAPABILITIES[purpose])) {
+    mediaUploadState.error = '当前账号没有该素材用途的上传权限'
+    paint()
+    return
+  }
+  mediaUploadState.busy = true
+  mediaUploadState.error = ''
+  mediaUploadState.result = null
+  mediaUploadState.copied = false
+  paint()
+  try {
+    mediaUploadState.result = await client.uploadImage(file, purpose)
+  }
+  catch (error) {
+    mediaUploadState.error = error instanceof AdminApiClientError || error instanceof AdminMediaUploadError
+      ? error.message
+      : '图片上传失败，请稍后重试'
+  }
+  finally {
+    mediaUploadState.busy = false
+    paint()
+  }
+}
+
+async function copyMediaAssetId() {
+  const assetId = mediaUploadState.result?.assetId
+  if (!assetId) return
+  try {
+    await navigator.clipboard.writeText(assetId)
+    mediaUploadState.copied = true
+    mediaUploadState.error = ''
+  }
+  catch {
+    mediaUploadState.error = '素材 ID 复制失败，请手动选择并复制'
+  }
+  paint()
+}
+
+function resetMediaUploadState(selectedPurpose: AdminMediaPurpose | '' = '') {
+  revokeMediaPreview()
+  mediaUploadState = {
+    selectedPurpose,
+    file: null,
+    previewUrl: '',
+    busy: false,
+    error: '',
+    result: null,
+    copied: false,
+  }
+}
+
+function revokeMediaPreview() {
+  if (mediaUploadState.previewUrl.startsWith('blob:')) URL.revokeObjectURL(mediaUploadState.previewUrl)
+  mediaUploadState.previewUrl = ''
+}
+
 function sectionTitle(title: string, description: string, action = '') {
   return `<div class="section-title"><div><h1>${title}</h1><p>${description}</p></div>${action}</div>`
 }
@@ -684,22 +1226,38 @@ function pageOverview() {
   return `${sectionTitle('网站概览', '查看会员、活动和订单的运营状态', `<span class="date-range">${escapeHtml(data.period)}</span>`)}<div class="metric-grid">${data.metrics.map(metric => `<div class="metric"><span>${escapeHtml(metric.label)}</span><strong>${escapeHtml(metric.value)}</strong><small>${escapeHtml(metric.detail)}</small></div>`).join('')}</div><div class="overview-grid"><section class="panel"><div class="panel-heading"><h2>近期运营记录</h2></div>${rowsToTable(data.activity, [{ key: 'title', label: '记录' }, { key: 'meta', label: '时间与范围' }, { key: 'state', label: '类型' }])}</section><section class="panel permission-note"><h2>数据说明</h2><p>概览和用户列表均由服务端按当前运营账号的 capability 与作用范围返回。页面不计算会员、活动或订单事实。</p><div class="boundary-row"><span>数据来源</span><strong>${client.demoMode ? '演示数据' : 'MIP 管理服务'}</strong></div><div class="boundary-row"><span>请求协议</span><strong>AdminRequest v1</strong></div></section></div>`
 }
 
-function pageList(route: AdminListRoute, title: string, description: string, actions: readonly ReviewedOperationAction[] = []) {
+function pageList(
+  route: AdminListRoute,
+  title: string,
+  description: string,
+  actions: readonly ReviewedOperationAction[] = [],
+  headerAction = '',
+) {
   const page = liveReadPage || (client.demoMode ? demoReadPage(route) : null)
-  const detailTarget = ['users', 'events', 'orders', 'tasks', 'messages', 'knowledge', 'opportunities'].includes(route) ? route as AdminDetailRoute : undefined
+  const detailTarget = ['users', 'events', 'orders', 'tasks', 'banners', 'messages', 'knowledge', 'opportunities'].includes(route) ? route as AdminDetailRoute : undefined
   const content = page
     ? `${summaryCards(page)}${page.sections.map(section => `<section class="panel list-panel">${section.title ? `<div class="panel-heading"><h2>${escapeHtml(section.title)}</h2></div>` : ''}${rowsToTable(section.rows, section.columns, section.detailTarget === null ? undefined : section.detailTarget || detailTarget)}</section>`).join('')}${pagination(route, page)}`
     : `<section class="panel"><div class="empty">${loading ? '正在加载' : '暂无可显示的真实数据'}</div></section>`
-  return `${sectionTitle(title, description, operationMenu(actions))}${toolbar(route)}${content}`
+  return `${sectionTitle(title, description, `${operationMenu(actions)}${headerAction}`)}${toolbar(route)}${content}`
 }
 
-function pageUsers() { return pageList('users', '用户管理', '查看会员、嘉宾及用户资料') }
+function pageUsers() { return pageList('users', '用户管理', '查看会员、嘉宾及用户资料', [], sensitiveExportButton('users')) }
 function pageEvents() { return pageList('events', '活动管理', '查看活动信息、报名和签到状态', [
   'mip.admin.events.save', 'mip.admin.events.policy.save', 'mip.admin.events.catalog.save',
   'mip.admin.events.catalog.changeStatus', 'mip.admin.events.catalog.archive',
 ]) }
-function pageOrders() { return pageList('orders', '订单管理', '查看会员和活动订单及支付状态') }
+function pageOrders() { return pageList('orders', '订单管理', '查看会员和活动订单及支付状态', [], sensitiveExportButton('orders')) }
 function pageTasks() { return pageList('tasks', '任务管理', '管理任务内容、成员分配和完成记录', ['mip.admin.tasks.save']) }
+function pageBanners() {
+  return pageList(
+    'banners',
+    'Banner 管理',
+    '管理 Banner 图片、跳转目标、状态和展示顺序',
+    ['mip.admin.banners.save'],
+    mediaUploadButton('BANNER', '上传 Banner 图片', 'primary-button media-upload-link'),
+  )
+}
+function pageGame() { return pageList('game', '战队管理', '管理赛季、战队成员、周赛排行和盲盒配置', ['mip.admin.game.seasons.save', 'mip.admin.game.blindBoxes.catalogs.save']) }
 function pagePermissions() { return pageList('permissions', '权限管理', '查看运营成员和城市分会范围', ['mip.admin.branches.create']) }
 function pageMessages() { return pageList('messages', '消息管理', '查看消息活动和公告状态', [
   'mip.admin.messageCampaigns.save', 'mip.admin.messageTemplates.save', 'mip.admin.messageTemplates.activate',
@@ -709,16 +1267,48 @@ function pageKnowledge() { return pageList('knowledge', '知识库', '查看会�
   'mip.admin.knowledge.contents.save', 'mip.admin.knowledge.contents.review', 'mip.admin.knowledge.schedules.save',
 ]) }
 
+function pageMedia() {
+  const purposeOptions = client.demoMode
+    ? ADMIN_MEDIA_PURPOSE_OPTIONS
+    : availableAdminMediaPurposeOptions(session?.capabilities)
+  if (!purposeOptions.some(option => option.value === mediaUploadState.selectedPurpose)) {
+    mediaUploadState.selectedPurpose = purposeOptions[0]?.value || ''
+  }
+  return renderAdminMediaUploadPage({
+    purposeOptions,
+    selectedPurpose: mediaUploadState.selectedPurpose,
+    file: mediaUploadState.file,
+    previewUrl: mediaUploadState.previewUrl,
+    busy: mediaUploadState.busy,
+    error: mediaUploadState.error,
+    result: mediaUploadState.result,
+    copied: mediaUploadState.copied,
+    demoMode: client.demoMode,
+  }, escapeHtml)
+}
+
+function mediaUploadButton(purpose: AdminMediaPurpose, label: string, className: string) {
+  if (!client.demoMode && !hasCapability(ADMIN_MEDIA_PURPOSE_CAPABILITIES[purpose])) return ''
+  return `<button type="button" class="${className}" data-media-upload-purpose="${purpose}">${escapeHtml(label)}</button>`
+}
+
 function operationMenu(actions: readonly ReviewedOperationAction[]) {
   const available = actions.filter(action => hasCapability(operationCapability(action)))
   if (!available.length) return ''
   return `<details class="operation-menu"><summary class="primary-button">运营操作</summary><div>${available.map(action => `<button type="button" class="outline-button" data-operation-open="${action}">${escapeHtml(contentOperationLabel(action))}</button>`).join('')}</div></details>`
 }
 
+function sensitiveExportButton(kind: SensitiveExportKind) {
+  if (!hasCapability('exports.create')) return ''
+  return `<button type="button" class="primary-button sensitive-export-button" data-sensitive-export-open="${kind}">${kind === 'users' ? '导出用户' : '导出订单'}</button>`
+}
+
 function contentOperationLabel(action: ReviewedOperationAction) {
   if (peopleOperationSet.has(action)) return ADMIN_PEOPLE_MUTATION_CONFIGS[action as AdminPeopleMutationAction].title
   if (eventOperationSet.has(action)) return eventMutationConfig(action as AdminEventMutationAction).title
   if (taskOperationSet.has(action)) return createTaskMutationDefinition(action as AdminTaskMutationAction).title
+  if (bannerOperationSet.has(action)) return createBannerMutationDefinition(action as AdminBannerMutationAction).title
+  if (gameOperationSet.has(action)) return createGameMutationDefinition(action as AdminGameMutationAction).title
   const form = getContentMutationForm(action as ContentMutationAction)
   return contentOperationTitle(action as ContentMutationAction, form.resource)
 }
@@ -756,6 +1346,21 @@ function demoReadPage(route: AdminListRoute): AdminReadPage {
     ],
     nextCursor: null,
   }
+  if (route === 'banners') return {
+    sections: [{
+      rows: [],
+      columns: [{ key: 'image', label: '图片' }, { key: 'title', label: '管理名称' }, { key: 'target', label: '跳转目标' }, { key: 'order', label: '顺序' }, { key: 'updatedAt', label: '更新时间' }, { key: 'state', label: '状态' }],
+      detailTarget: null,
+    }],
+    nextCursor: null,
+  }
+  if (route === 'game') return {
+    sections: [
+      { title: '赛季', rows: [], columns: [{ key: 'name', label: '赛季' }, { key: 'period', label: '周期' }, { key: 'rules', label: '规则说明' }, { key: 'version', label: '版本' }, { key: 'state', label: '状态' }], detailTarget: null },
+      { title: '盲盒目录', rows: [], columns: [{ key: 'name', label: '目录' }, { key: 'cost', label: '抽取消耗' }, { key: 'cards', label: '卡片数' }, { key: 'stock', label: '剩余库存' }, { key: 'version', label: '版本' }, { key: 'state', label: '状态' }], detailTarget: null },
+    ],
+    nextCursor: null,
+  }
   if (route === 'permissions') return { sections: [{ title: '运营成员', rows: demo.roles.map(item => ({ name: item.name, role: item.capabilities, scope: item.scope, grantedAt: '—', state: '启用' })), columns: [{ key: 'name', label: '姓名' }, { key: 'role', label: '角色' }, { key: 'scope', label: '作用范围' }, { key: 'grantedAt', label: '授权时间' }, { key: 'state', label: '状态' }] }], nextCursor: null }
   if (route === 'messages') return { sections: [{ title: '消息活动', rows: demo.messages.map(item => ({ ...item, scope: item.audience, state: item.status })), columns: [{ key: 'title', label: '消息标题' }, { key: 'audience', label: '发送范围' }, { key: 'scope', label: '作用范围' }, { key: 'updatedAt', label: '更新时间' }, { key: 'state', label: '状态' }] }], nextCursor: null }
   if (route === 'knowledge') return { sections: [{ rows: demo.knowledge.map(item => ({ ...item, category: '—', author: '—', access: '会员可见', state: item.status })), columns: [{ key: 'title', label: '文档标题' }, { key: 'type', label: '内容类型' }, { key: 'category', label: '分类' }, { key: 'author', label: '作者' }, { key: 'access', label: '访问范围' }, { key: 'updatedAt', label: '更新时间' }, { key: 'state', label: '状态' }] }], nextCursor: null }
@@ -766,7 +1371,7 @@ function demoReadPage(route: AdminListRoute): AdminReadPage {
 
 function applyFilters(event: SubmitEvent) {
   event.preventDefault()
-  if (route === 'overview') return
+  if (route === 'overview' || route === 'media') return
   const form = new FormData(event.currentTarget as HTMLFormElement)
   const state = listStates[route]
   state.query = String(form.get('query') || '').trim()
@@ -777,7 +1382,7 @@ function applyFilters(event: SubmitEvent) {
 }
 
 async function changePage(direction: 'previous' | 'next') {
-  if (route === 'overview') return
+  if (route === 'overview' || route === 'media') return
   const state = listStates[route]
   if (direction === 'next') {
     const nextCursor = liveReadPage?.nextCursor
@@ -793,13 +1398,79 @@ async function changePage(direction: 'previous' | 'next') {
   await render()
 }
 
+async function submitTaskDetailFilter(event: SubmitEvent, key: AdminDetailPagerKey) {
+  event.preventDefault()
+  if (!detailPagerMatchesRoute(key) || !taskDetailPaging[key]) return
+  const form = new FormData(event.currentTarget as HTMLFormElement)
+  const state = taskDetailPaging[key]
+  state.query = String(form.get('query') || '').trim().slice(0, 80)
+  state.cursor = null
+  state.history = []
+  await reloadTaskDetail()
+}
+
+async function changeTaskDetailPage(
+  key: AdminDetailPagerKey,
+  direction: 'previous' | 'next',
+) {
+  if (!detailPagerMatchesRoute(key) || !taskDetailPaging[key]) return
+  const state = taskDetailPaging[key]
+  if (direction === 'next') {
+    const nextCursor = detailView?.sections.find(section => section.pager?.key === key)?.pager?.nextCursor
+    if (!nextCursor) return
+    state.history.push(state.cursor)
+    state.cursor = nextCursor
+  }
+  else {
+    const previousCursor = state.history.pop()
+    if (previousCursor === undefined) return
+    state.cursor = previousCursor
+  }
+  await reloadTaskDetail()
+}
+
+async function reloadTaskDetail() {
+  if (!currentDetailId || !['tasks', 'gameTeams'].includes(String(detailRoute))) return
+  await openDetail(detailRoute as 'tasks' | 'gameTeams', currentDetailId, true)
+}
+
+function detailPagerMatchesRoute(key: AdminDetailPagerKey) {
+  return key === 'gameMembers' ? detailRoute === 'gameTeams' : detailRoute === 'tasks'
+}
+
+function taskDetailLoadOptions(): TaskDetailLoadOptions {
+  return {
+    members: {
+      query: taskDetailPaging.taskMembers.query,
+      cursor: taskDetailPaging.taskMembers.cursor,
+      limit: 20,
+    },
+    completions: {
+      query: taskDetailPaging.taskCompletions.query,
+      cursor: taskDetailPaging.taskCompletions.cursor,
+      limit: 20,
+    },
+  }
+}
+
+function resetTaskDetailPaging() {
+  taskDetailPaging = {
+    taskMembers: taskDetailPagingState(),
+    taskCompletions: taskDetailPagingState(),
+    gameMembers: taskDetailPagingState(),
+  }
+}
+
 function paint() {
   const pages: Record<Route, () => string> = {
     overview: pageOverview,
+    media: pageMedia,
     users: pageUsers,
     events: pageEvents,
     orders: pageOrders,
     tasks: pageTasks,
+    banners: pageBanners,
+    game: pageGame,
     permissions: pagePermissions,
     messages: pageMessages,
     knowledge: pageKnowledge,
@@ -818,8 +1489,10 @@ function paint() {
   requestAnimationFrame(assertResponsiveViewport)
 }
 
-async function openDetail(target: AdminDetailRoute, id: string) {
+async function openDetail(target: AdminDetailRoute, id: string, preserveTaskPaging = false) {
   if (!id) return
+  const samePagedDetail = detailRoute === target && currentDetailId === id
+  if (['tasks', 'gameTeams'].includes(target) && (!preserveTaskPaging || !samePagedDetail)) resetTaskDetailPaging()
   const flow = detailFlow + 1
   detailFlow = flow
   detailRoute = target
@@ -829,7 +1502,20 @@ async function openDetail(target: AdminDetailRoute, id: string) {
   detailLoading = true
   paint()
   try {
-    const value = await loadAdminDetail(target, id, (action, input) => client.request(action, input))
+    const value = await loadAdminDetail(
+      target,
+      id,
+      (action, input) => client.request(action, input),
+      {
+        includeEventAlbum: target === 'events' && hasCapability('events.album.manage'),
+        ...(target === 'tasks' ? { task: taskDetailLoadOptions() } : {}),
+        ...(target === 'gameTeams' ? { gameMembers: {
+          query: taskDetailPaging.gameMembers.query,
+          cursor: taskDetailPaging.gameMembers.cursor,
+          limit: 30,
+        } } : {}),
+      },
+    )
     if (flow !== detailFlow) return
     detailView = value
   }
@@ -854,6 +1540,7 @@ function closeDetail(repaint = true) {
   detailLoading = false
   mutationState = null
   operationState = null
+  resetTaskDetailPaging()
   if (repaint) paint()
 }
 
@@ -918,6 +1605,7 @@ async function loadRouteData() {
     liveOverview = mapOverview(payload)
     return
   }
+  if (route === 'media') return
   liveReadPage = await loadAdminReadPage(
     route,
     listStates[route],
@@ -1023,6 +1711,10 @@ function assertResponsiveViewport() {
   const overflow = document.documentElement.scrollWidth > window.innerWidth + 1
   document.documentElement.dataset.mipResponsive = overflow ? 'fail' : 'pass'
   if (overflow) console.error(`MIP responsive overflow: document=${document.documentElement.scrollWidth}px viewport=${window.innerWidth}px`)
+}
+
+function initialRoute(): Route {
+  return new URL(window.location.href).searchParams.get('route') === 'media' ? 'media' : 'overview'
 }
 
 void render()
