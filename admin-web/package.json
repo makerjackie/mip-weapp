@@ -1,0 +1,21 @@
+{
+  "name": "mip-admin-web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": { "node": ">=22.18.0 <23" },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "test": "node --test server/*.test.ts src/modules/*.test.ts",
+    "verify": "pnpm test && pnpm build",
+    "preview": "vite preview",
+    "verify:responsive": "pnpm build && node scripts/verify-responsive.mjs",
+    "deploy:pages": "pnpm build && wrangler pages deploy dist --project-name=mip-admin-web"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.3.5"
+  }
+}
