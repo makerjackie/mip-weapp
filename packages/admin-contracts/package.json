@@ -1,0 +1,10 @@
+{
+  "name": "@mip/admin-contracts",
+  "type": "module",
+  "version": "0.1.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts"
+}

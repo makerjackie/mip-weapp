@@ -9,6 +9,7 @@ export default icebreaker({
     '.generated/**',
     '.tmp/**',
     '.weapp-vite/**',
+    'admin-web/**',
     'cloudfunctions/**',
     'dist/**',
     'docs/**',

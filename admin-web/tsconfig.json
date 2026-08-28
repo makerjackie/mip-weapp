@@ -3,6 +3,7 @@
     "target": "ES2022",
     "useDefineForClassFields": true,
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
     "allowJs": false,
     "skipLibCheck": true,
     "esModuleInterop": true,
@@ -13,8 +14,9 @@
     "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "noEmit": true
+    "noEmit": true,
+    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
   },
-  "include": ["src", "server", "functions", "vite.config.ts"],
-  "exclude": ["server/**/*.test.ts", "src/**/*.test.ts"]
+  "include": ["src", "server", "functions", "vite.config.ts", "vitest.config.ts"],
+  "exclude": ["server/**/*.test.ts", "src/modules/**/*.test.ts"]
 }

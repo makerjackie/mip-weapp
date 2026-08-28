@@ -36,6 +36,10 @@
     "verify:runtime": "node scripts/run-runtime-verify.mjs",
     "baseline:update": "node scripts/verify-runtime.mjs --update-baseline",
     "verify": "node scripts/verify.mjs",
+    "admin:web:dev": "pnpm --dir admin-web dev",
+    "admin:web:build": "pnpm --dir admin-web build",
+    "admin:web:verify": "pnpm --dir admin-web verify",
+    "verify:all": "pnpm verify && pnpm admin:web:verify",
     "mcp:doctor": "node scripts/mcp-doctor.mjs",
     "cloud:doctor": "node scripts/cloudbase-status.mjs",
     "cloud:status": "node scripts/cloudbase-status.mjs",
@@ -77,6 +81,7 @@
     "postinstall": "wv prepare"
   },
   "dependencies": {
+    "@mip/admin-contracts": "workspace:*",
     "tdesign-miniprogram": "^1.15.3"
   },
   "devDependencies": {

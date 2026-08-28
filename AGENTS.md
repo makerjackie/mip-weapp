@@ -1,6 +1,6 @@
 # AGENTS
 
-这是独立的会员小程序产品模板，不是 Monorepo，也不是案例馆。根目录就是唯一的微信小程序。
+这是 MIP 产品仓库。根目录仍是微信小程序主工程，`admin-web/` 是独立构建、独立部署的 React 管理后台；两端共同使用 `cloudfunctions`、`database/mysql` 和平台中立的服务端契约。
 
 ## 1. 定位
 
@@ -8,7 +8,9 @@
 
 ## 2. 技术栈
 
-原生 WXML + TypeScript + weapp-vite + Tailwind CSS 4 + weapp-tailwindcss 5 + TDesign MiniProgram。不要引入 React/Vue/Taro/uni-app。
+- 微信小程序：原生 WXML + TypeScript + weapp-vite + Tailwind CSS 4 + weapp-tailwindcss 5 + TDesign MiniProgram。`src/` 内不要引入 React/Vue/Taro/uni-app。
+- Web 管理后台：`admin-web/` 使用 React + TypeScript + Vite + TanStack Router/Query + Ant Design；遵循 [admin-web/AGENTS.md](admin-web/AGENTS.md)。
+- 平台中立共享契约：仅放在 `packages/`，不得为了复用展示代码提前拆包。
 
 ## 3. 目录地图
 
@@ -19,12 +21,14 @@
 - `src/modules/mip-admin` 运营领域
 - `src/platform` / `src/shared` 平台原语（已从共享包内联）
 - `src/config` 品牌、功能开关、运行时
+- `admin-web` React Web 管理后台（独立构建与 Cloudflare Pages/Worker 部署）
+- `packages/admin-contracts` 两端共用的 AdminRequest v1 中立契约
 - `cloudfunctions` 与 `database/mysql` 服务端事实
 - `.agents/skills` 任务技能
 
 ## 4. 常用命令
 
-`pnpm setup` · `pnpm dev:open` · `pnpm verify` · `pnpm project:init` · `pnpm mcp:doctor`
+`pnpm setup` · `pnpm dev:open` · `pnpm verify` · `pnpm admin:web:dev` · `pnpm admin:web:build` · `pnpm admin:web:verify` · `pnpm verify:all`
 
 ## 5. 改代码前先读
 
@@ -34,9 +38,11 @@
 
 ## 6. 边界
 
-- 页面 → modules → platform/cloud functions
+- 小程序页面 → modules → platform/cloud functions
+- Web 页面 → React adapter → modules/services → 同源 BFF → `mip-admin-api`
 - 页面不得直接 `wx.cloud.init` 或 `wx.requestPayment`
 - 云函数不得依赖仓库外路径
+- `admin-web/` 不得引用 `wx`、WXML、TDesign MiniProgram 或 `src/pages` / `src/packages`。
 
 ## 7. 配置和密钥
 
@@ -63,7 +69,7 @@ API Key 是日常通道，Device Flow 是部署高权限通道。只有创建、
 
 ## 11. 测试和验收
 
-`pnpm verify` 是静态门禁。UI 还要 `pnpm runtime:preflight`；支付/手机号要真机。
+`pnpm verify` 只验证微信小程序与 CloudBase；`pnpm admin:web:verify` 独立验证 Web；`pnpm verify:all` 顺序执行两者。小程序 UI 还要 `pnpm runtime:preflight`；Web UI 要按 `admin-web/AGENTS.md` 验证桌面和手机视口；支付/手机号要真机。
 
 ## 12. Skill
 
@@ -79,12 +85,14 @@ API Key 是日常通道，Device Flow 是部署高权限通道。只有创建、
 
 ## 13. 禁止
 
-workspace 协议、案例馆、跨仓库相对脚本、提交密钥、用客户端决定服务端事实。
+案例馆、跨仓库相对脚本、提交密钥、用客户端决定服务端事实。只允许经过审查的平台中立契约使用 workspace package；页面、样式和运行时 adapter 不得为共享而抽包。
 
 ## 14. 完成前
 
 ```bash
 pnpm verify
+pnpm admin:web:verify
+pnpm verify:all
 git diff --check
 ```
 

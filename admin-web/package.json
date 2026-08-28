@@ -6,16 +6,43 @@
   "engines": { "node": ">=22.18.0 <23" },
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "test": "node --test server/*.test.ts src/modules/*.test.ts",
-    "verify": "pnpm test && pnpm build",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings=0",
+    "build": "pnpm typecheck && vite build",
+    "test:contracts": "node --test server/*.test.ts src/modules/*.test.ts",
+    "test:react": "vitest run",
+    "test": "pnpm test:contracts && pnpm test:react",
+    "verify": "pnpm lint && pnpm test && pnpm build && pnpm verify:responsive",
     "preview": "vite preview",
-    "verify:responsive": "pnpm build && node scripts/verify-responsive.mjs",
+    "verify:responsive": "node scripts/verify-responsive.mjs",
     "deploy:pages": "pnpm build && wrangler pages deploy dist --project-name=mip-admin-web"
   },
+  "dependencies": {
+    "@ant-design/icons": "^6.3.2",
+    "@mip/admin-contracts": "workspace:*",
+    "@tanstack/react-query": "^5.102.8",
+    "@tanstack/react-router": "^1.170.32",
+    "antd": "^6.6.1",
+    "dayjs": "^1.11.19",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.6",
     "@types/node": "^22.15.0",
-    "typescript": "^5.8.3",
-    "vite": "^6.3.5"
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@vitejs/plugin-react": "^6.1.1",
+    "eslint": "^10.9.1",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.5",
+    "jsdom": "^30.0.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.68.0",
+    "vite": "^8.2.2",
+    "vitest": "^4.1.11"
   }
 }

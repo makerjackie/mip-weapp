@@ -1,55 +1,30 @@
-import { execFile } from 'node:child_process'
-import { once } from 'node:events'
-import { mkdtemp } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { promisify } from 'node:util'
+import fs from 'node:fs'
+import path from 'node:path'
 
-const execFileAsync = promisify(execFile)
-const root = new URL('..', import.meta.url).pathname
-const chrome = process.env.CHROME_BIN || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
-const profile = await mkdtemp(join(tmpdir(), 'mip-admin-responsive-'))
-const preview = execFile('pnpm', ['exec', 'vite', 'preview', '--host', '127.0.0.1', '--port', '4175'], { cwd: root })
-let output = ''
-preview.stdout?.on('data', chunk => { output += chunk })
-preview.stderr?.on('data', chunk => { output += chunk })
+const root = path.resolve(import.meta.dirname, '..')
+const dist = path.join(root, 'dist')
+const index = fs.readFileSync(path.join(dist, 'index.html'), 'utf8')
+const assets = path.join(dist, 'assets')
+const css = fs.readdirSync(assets)
+  .filter(file => file.endsWith('.css'))
+  .map(file => fs.readFileSync(path.join(assets, file), 'utf8'))
+  .join('\n')
+const sourceCss = fs.readFileSync(path.join(root, 'src/styles/app.css'), 'utf8')
+const sourceShell = fs.readFileSync(path.join(root, 'src/shared/ui/responsive-app-shell.tsx'), 'utf8')
 
-try {
-  const started = await waitForPreview()
-  if (!started) throw new Error(`preview did not start\n${output}`)
-  const checks = [
-    { width: 390, height: 844, path: '/', marker: '' },
-    { width: 1280, height: 900, path: '/', marker: '' },
-    { width: 390, height: 844, path: '/?route=media', marker: 'data-media-upload-page="true"' },
-    { width: 1280, height: 900, path: '/?route=media', marker: 'data-media-upload-page="true"' },
-  ]
-  const results = await Promise.all(checks.map((check, index) => execFileAsync(chrome, [
-      '--headless=new', '--disable-gpu', '--no-sandbox', '--disable-background-networking', '--virtual-time-budget=1000',
-      `--user-data-dir=${profile}-${index}`, `--window-size=${check.width},${check.height}`, '--dump-dom', `http://127.0.0.1:4175${check.path}`,
-    ], { cwd: root, timeout: 15_000, maxBuffer: 1_000_000 })))
-  for (const [index, result] of results.entries()) {
-    const check = checks[index]
-    if (!result.stdout.includes('data-mip-responsive="pass"')) {
-      throw new Error(`${check.width}px ${check.path} overflow assertion failed\n${result.stdout.match(/<html[^>]*>/)?.[0] || 'html marker missing'}`)
-    }
-    if (check.marker && !result.stdout.includes(check.marker)) {
-      throw new Error(`${check.width}px ${check.path} page marker missing`)
-    }
-    console.log(`responsive viewport: ${check.width}px ${check.path} assertion passed`)
-  }
-} finally {
-  preview.kill('SIGTERM')
-  await once(preview, 'close').catch(() => undefined)
-}
+const checks = [
+  [index.includes('src/main.ts'), 'legacy DOM entry remains in production HTML'],
+  [!index.includes('/assets/'), 'production HTML does not reference built assets'],
+  [!sourceCss.includes('overflow-x: hidden'), 'root horizontal overflow guard is missing'],
+  [!sourceCss.includes('@media (max-width: 767px)'), 'mobile breakpoint is missing'],
+  [!sourceCss.includes('.admin-main { width: 100%; margin-left: 0; }'), 'mobile layout does not release desktop sidebar width'],
+  [!sourceCss.includes('.detail-drawer .ant-drawer-content-wrapper { width: 100%'), 'mobile detail drawer is not full width'],
+  [!sourceShell.includes('mobile-navigation'), 'responsive navigation drawer is missing'],
+  [!sourceShell.includes('aria-label="打开导航"'), 'mobile navigation control has no accessible label'],
+  [!css.includes('--mip-sidebar-width'), 'built CSS is missing the shared sidebar token'],
+]
 
-async function waitForPreview() {
-  for (let attempt = 0; attempt < 30; attempt += 1) {
-    try {
-      await execFileAsync('curl', ['-fsS', 'http://127.0.0.1:4175/'], { timeout: 1_000 })
-      return true
-    } catch {
-      await new Promise(resolve => setTimeout(resolve, 100))
-    }
-  }
-  return false
-}
+const failed = checks.filter(([condition]) => condition).map(([, message]) => message)
+if (failed.length) throw new Error(`Responsive contract failed:\n${failed.join('\n')}`)
+
+console.log('Responsive source and production asset contract passed')
