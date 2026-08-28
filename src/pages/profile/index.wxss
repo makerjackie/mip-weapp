@@ -16,7 +16,7 @@
 .profile-portfolio-loading {
   padding: 40rpx 32rpx;
   background: var(--color-panel);
-  border-radius: 16rpx;
+  border-radius: var(--mip-radius-card-medium);
 }
 
 .profile-state {
@@ -116,7 +116,7 @@
   min-height: 160rpx;
   margin-top: 24rpx;
   overflow: hidden;
-  border-radius: 16rpx;
+  border-radius: var(--mip-radius-card);
 }
 
 .profile-level-card {
@@ -226,7 +226,7 @@
   height: 136rpx;
   margin-top: 24rpx;
   background: var(--color-panel);
-  border-radius: 16rpx;
+  border-radius: var(--mip-radius-card-medium);
 }
 
 .profile-stat {
@@ -286,7 +286,7 @@
   min-height: 144rpx;
   padding: 24rpx;
   background: var(--color-panel);
-  border-radius: 16rpx;
+  border-radius: var(--mip-radius-card-medium);
 }
 
 .profile-feature-image {
@@ -309,7 +309,7 @@
   min-height: 160rpx;
   margin-top: 24rpx;
   background: var(--color-panel);
-  border-radius: 16rpx;
+  border-radius: var(--mip-radius-card-medium);
 }
 
 .profile-action {
@@ -366,13 +366,13 @@
 
 .profile-cooperation-card {
   overflow: hidden;
-  border-radius: 32rpx;
+  border-radius: var(--mip-radius-card);
 }
 
 .profile-content-card {
   padding: 28rpx 24rpx;
   background: var(--color-panel);
-  border-radius: 16rpx;
+  border-radius: var(--mip-radius-card-medium);
 }
 
 .profile-content-heading {
@@ -419,7 +419,7 @@
   color: var(--color-brand);
   background: var(--color-panel);
   border: 1rpx dashed var(--color-brand);
-  border-radius: 16rpx;
+  border-radius: var(--mip-radius-card-medium);
 }
 
 .profile-add-content {
@@ -446,7 +446,7 @@
   margin-top: 24rpx;
   overflow: hidden;
   background: var(--color-panel);
-  border-radius: 16rpx;
+  border-radius: var(--mip-radius-card-medium);
 }
 
 .profile-more-item,
@@ -503,7 +503,7 @@
   margin-top: 24rpx;
   background: var(--color-panel);
   border: 1rpx solid var(--color-line);
-  border-radius: 16rpx;
+  border-radius: var(--mip-radius-card-medium);
 }
 
 .profile-admin-entry--primary {
@@ -519,5 +519,5 @@
   color: var(--color-ink);
   background: var(--color-panel-raised);
   border: 1rpx solid var(--color-line);
-  border-radius: 16rpx;
+  border-radius: var(--mip-radius-card-medium);
 }

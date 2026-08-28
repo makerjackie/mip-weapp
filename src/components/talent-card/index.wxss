@@ -5,7 +5,7 @@
   overflow: hidden;
   color: var(--color-ink);
   background: var(--color-panel);
-  border-radius: 16rpx;
+  border-radius: var(--mip-radius-card);
 }
 
 .mip-talent-card__body {
@@ -63,7 +63,7 @@
   font-weight: 500;
   color: var(--color-on-brand);
   background: var(--color-brand);
-  border-radius: 8rpx;
+  border-radius: var(--mip-radius-control);
 }
 
 .mip-talent-card__meta,
@@ -115,7 +115,7 @@
   color: var(--color-on-brand);
   white-space: nowrap;
   background: var(--color-brand);
-  border-radius: 8rpx;
+  border-radius: var(--mip-radius-control);
 }
 
 .mip-talent-card__target {

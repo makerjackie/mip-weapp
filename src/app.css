@@ -77,6 +77,12 @@ page {
   --td-tab-bar-bg-color: #202020;
   --td-tab-bar-active-bg: #202020;
   --td-tab-bar-border-color: #363636;
+
+  /* Keep the mobile member surfaces on the same radius scale as the Figma frames. */
+  --mip-radius-card: 32rpx;
+  --mip-radius-card-medium: 24rpx;
+  --mip-radius-control: 20rpx;
+  --mip-radius-button: 24rpx;
 }
 
 button::after {
@@ -90,6 +96,7 @@ input {
 
 .mip-member-page {
   --mip-member-shell-max-width: 100%;
+  --td-button-border-radius: var(--mip-radius-button);
 
   box-sizing: border-box;
   width: 100%;
@@ -97,6 +104,18 @@ input {
   max-width: var(--mip-member-shell-max-width);
   margin-right: auto;
   margin-left: auto;
+}
+
+.mip-radius-card {
+  border-radius: var(--mip-radius-card);
+}
+
+.mip-radius-card-medium {
+  border-radius: var(--mip-radius-card-medium);
+}
+
+.mip-radius-control {
+  border-radius: var(--mip-radius-control);
 }
 
 .mip-member-page > * {

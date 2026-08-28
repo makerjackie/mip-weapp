@@ -1,4 +1,4 @@
-<view wx:if="{{variant === 'feed'}}" class="event-card event-card--feed overflow-hidden rounded-[16rpx] bg-panel">
+<view wx:if="{{variant === 'feed'}}" class="event-card event-card--feed mip-radius-card overflow-hidden bg-panel">
   <view class="relative h-[298rpx] w-full active:opacity-80" bind:tap="handleSelect">
     <image wx:if="{{event.coverUrl}}" class="h-full w-full bg-brand-soft" mode="aspectFill" src="{{event.coverUrl}}" />
     <view wx:else class="flex h-full w-full items-center justify-center bg-brand-soft"><t-icon name="calendar" size="70rpx" color="var(--color-brand)" /></view>
@@ -17,7 +17,7 @@
   </view>
   <view wx:if="{{showCancel}}" class="border-t border-line px-3 py-3"><t-button block size="small" theme="primary" variant="outline" loading="{{cancelLoading}}" catch:tap="handleCancel">{{cancelRetry ? '继续处理退款' : '取消报名'}}</t-button></view>
 </view>
-<view wx:elif="{{compact}}" class="flex h-[210rpx] overflow-hidden rounded-[22rpx] border border-line bg-panel active:bg-panel-muted" bind:tap="handleSelect">
+<view wx:elif="{{compact}}" class="mip-radius-card-medium flex h-[210rpx] overflow-hidden border border-line bg-panel active:bg-panel-muted" bind:tap="handleSelect">
   <image wx:if="{{event.coverUrl}}" class="h-[210rpx] w-[210rpx] shrink-0 bg-brand-soft" mode="aspectFill" src="{{event.coverUrl}}" />
   <view wx:else class="flex h-[210rpx] w-[210rpx] shrink-0 items-center justify-center bg-brand-soft"><t-icon name="calendar-event" size="54rpx" color="var(--color-brand)" /></view>
   <view class="flex min-w-0 flex-1 flex-col px-4 py-3">
@@ -33,7 +33,7 @@
     </view>
   </view>
 </view>
-<view wx:else class="overflow-hidden rounded-[28rpx] bg-panel shadow-[0_8rpx_32rpx_rgba(29,42,35,0.06)]">
+<view wx:else class="mip-radius-card overflow-hidden bg-panel shadow-[0_8rpx_32rpx_rgba(29,42,35,0.06)]">
   <view class="active:opacity-80" bind:tap="handleSelect">
     <image wx:if="{{event.coverUrl}}" class="h-[280rpx] w-full bg-brand-soft" mode="aspectFill" src="{{event.coverUrl}}" />
     <view class="px-4 py-4">

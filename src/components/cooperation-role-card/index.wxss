@@ -5,7 +5,7 @@
   overflow: hidden;
   color: var(--color-ink);
   background: var(--color-panel);
-  border-radius: 32rpx;
+  border-radius: var(--mip-radius-card);
 }
 
 .cooperation-role-card__hero {

@@ -7,7 +7,7 @@
   overflow: hidden;
   color: var(--color-ink);
   background: var(--color-panel);
-  border-radius: 16rpx;
+  border-radius: var(--mip-radius-card);
 }
 
 .mip-opportunity-card__cover {
@@ -18,7 +18,7 @@
   height: 320rpx;
   overflow: hidden;
   background: var(--color-panel-raised);
-  border-radius: 8rpx;
+  border-radius: var(--mip-radius-control);
 }
 
 .mip-opportunity-card__cover-image,

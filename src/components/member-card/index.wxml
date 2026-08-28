@@ -1,4 +1,4 @@
-<view wx:if="{{grid}}" class="overflow-hidden rounded-[24rpx] bg-panel shadow-[0_8rpx_32rpx_rgba(29,42,35,0.06)] active:opacity-70" bind:tap="handleSelect">
+<view wx:if="{{grid}}" class="mip-radius-card overflow-hidden bg-panel shadow-[0_8rpx_32rpx_rgba(29,42,35,0.06)] active:opacity-70" bind:tap="handleSelect">
   <image wx:if="{{member.avatarUrl}}" class="h-[280rpx] w-full bg-brand-soft" mode="aspectFill" fade-show="{{false}}" src="{{member.avatarUrl}}" />
   <view wx:else class="flex h-[280rpx] w-full items-center justify-center bg-brand-soft text-[length:52rpx] font-bold text-brand">{{member.initial}}</view>
   <view class="px-3 py-3">
@@ -8,7 +8,7 @@
     <view wx:if="{{member.tags.length}}" class="mt-2 flex flex-wrap gap-1"><view wx:for="{{member.tags}}" wx:key="*this" class="rounded-full bg-brand-soft px-2 py-1 text-[length:18rpx] text-brand">{{item}}</view></view>
   </view>
 </view>
-<view wx:else class="overflow-hidden rounded-[28rpx] bg-panel shadow-[0_8rpx_32rpx_rgba(29,42,35,0.06)] active:opacity-70" bind:tap="handleSelect">
+<view wx:else class="mip-radius-card overflow-hidden bg-panel shadow-[0_8rpx_32rpx_rgba(29,42,35,0.06)] active:opacity-70" bind:tap="handleSelect">
   <view class="flex items-center gap-3 p-3">
     <image wx:if="{{member.avatarUrl}}" class="h-[104rpx] w-[104rpx] shrink-0 rounded-[20rpx] bg-brand-soft" mode="aspectFill" fade-show="{{false}}" src="{{member.avatarUrl}}" />
     <view wx:else class="flex h-[104rpx] w-[104rpx] shrink-0 items-center justify-center rounded-[20rpx] bg-brand-soft text-[length:32rpx] font-bold text-brand">{{member.initial}}</view>

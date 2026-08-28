@@ -1,4 +1,4 @@
-<view class="rounded-[28rpx] border border-line bg-panel px-6 py-10 text-center">
+<view class="mip-radius-card border border-line bg-panel px-6 py-10 text-center">
   <view class="text-[length:30rpx] font-semibold text-ink">{{title}}</view>
   <view wx:if="{{description}}" class="mx-auto mt-3 max-w-[560rpx] text-[length:24rpx] leading-6 text-muted">{{description}}</view>
   <view wx:if="{{actionText}}" class="mt-6 active:opacity-70">
