@@ -93,9 +93,6 @@ export default defineConfig({
         'packages/member': {
           dependencies: ['tdesign-miniprogram'],
         },
-        'packages/admin': {
-          dependencies: ['tdesign-miniprogram'],
-        },
       },
     },
     analyze: {

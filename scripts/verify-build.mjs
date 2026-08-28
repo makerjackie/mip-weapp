@@ -49,6 +49,10 @@ const components = { ...membershipJson.usingComponents, ...homeJson.usingCompone
 
 assert(appWxss.includes('.bg-canvas'), 'MIP design tokens did not reach WXSS')
 assert(appWxss.includes('.grid-cols-2'), 'Tailwind grid utilities did not reach WXSS')
+assert(
+  !fs.existsSync(path.join(root, 'dist/packages/admin/miniprogram_npm')),
+  'Admin subpackage must reuse main-package npm dependencies to stay below the WeChat 2 MB limit',
+)
 assert(!membershipWxml.includes('pb-[calc('), 'Tailwind arbitrary safe-area class was not transformed')
 assert(homeWxml.includes('mip-home-page'), 'Runtime-stable MIP home selector is missing')
 assert(membershipWxml.includes('mip-membership-page'), 'Runtime-stable MIP membership selector is missing')
