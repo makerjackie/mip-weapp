@@ -23,6 +23,7 @@ const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
 const envId = String(env.CLOUDBASE_ENV_ID || '').trim()
 const validateOnly = process.argv.includes('--validate-only')
+const reuseExistingMedia = process.argv.includes('--reuse-existing-media')
 const configuredAppId = String(env.MINI_PROGRAM_APP_ID || '').trim()
 const appId = validateOnly && !/^wx[0-9a-f]{16}$/i.test(configuredAppId)
   ? ['wx', '0000000000000000'].join('')
@@ -184,7 +185,9 @@ if (sameAppCollisions > 0) {
   throw new Error('MIP demo seed conflicts with records outside the demo manifest; no seed writes were attempted')
 }
 
-const mediaUploadSummary = uploadDemoMediaAssets(seed.mediaAssets)
+const mediaUploadSummary = reuseExistingMedia
+  ? verifyExistingDemoMediaAssets(seed.mediaAssets)
+  : uploadDemoMediaAssets(seed.mediaAssets)
 const statements = buildSeedStatements()
 assertSeedSqlScope(statements)
 
@@ -728,6 +731,39 @@ function uploadDemoMediaAssets(items) {
   return { uploaded, reused, total: items.length }
 }
 
+function verifyExistingDemoMediaAssets(items) {
+  const exactAssets = items.map(item => `(
+    id = ${sqlLiteral(item.id)}
+    AND owner_user_id = ${sqlLiteral(item.ownerUserId)}
+    AND purpose = ${sqlLiteral(item.purpose)}
+    AND object_key = ${sqlLiteral(item.objectKey)}
+    AND cloud_file_id = ${sqlLiteral(item.cloudFileId)}
+    AND content_sha256 = ${sqlLiteral(item.contentSha256)}
+    AND content_type = ${sqlLiteral(item.contentType)}
+    AND content_bytes = ${Number(item.contentBytes)}
+    AND width_px = ${Number(item.width)}
+    AND height_px = ${Number(item.height)}
+    AND status = 'READY'
+  )`).join(' OR ')
+  const verification = callCloudbase(root, 'queryMysqlDatabase', {
+    action: 'runQuery',
+    sql: `SELECT
+      (SELECT COUNT(*) FROM mip_app_settings
+        WHERE app_id = ${sqlLiteral(appId)}
+          AND setting_key = 'demo_seed_manifest'
+          AND JSON_EXTRACT(value_json, '$.is_demo') = 1
+          AND JSON_UNQUOTE(JSON_EXTRACT(value_json, '$.state')) = 'READY') AS readyManifest,
+      (SELECT COUNT(*) FROM mip_media_assets
+        WHERE app_id = ${sqlLiteral(appId)}
+          AND (${exactAssets})) AS readyMedia`,
+  })
+  const counts = findCountRow(verification, ['readyManifest', 'readyMedia'])
+  if (!counts || Number(counts.readyManifest) !== 1 || Number(counts.readyMedia) !== items.length) {
+    throw new Error('Existing demo media cannot be reused without one READY manifest and exact READY database facts')
+  }
+  return { uploaded: 0, reused: items.length, total: items.length }
+}
+
 function demoStorageObjectMatches(item) {
   const response = callCloudbase(root, 'queryStorage', {
     action: 'info',
@@ -1046,6 +1082,9 @@ function userPrimaryBranchStatement(items) {
 function profileStatement(items) {
   const visibility = {
     nickname: true,
+    realName: true,
+    gender: true,
+    careerIdentity: true,
     avatar: true,
     identityStatus: true,
     headline: true,
@@ -1058,16 +1097,19 @@ function profileStatement(items) {
     influence: true,
   }
   const values = items.map(item => `(
-    ${sqlLiteral(appId)}, ${sqlLiteral(item.id)}, ${sqlLiteral(item.nickname)}, ${sqlLiteral(item.avatarAssetId)},
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.id)}, ${sqlLiteral(item.nickname)}, ${sqlLiteral(item.realName)},
+    ${sqlLiteral(item.gender)}, ${sqlLiteral(item.careerIdentityKey)}, ${sqlLiteral(item.avatarAssetId)},
     ${sqlLiteral(item.identityStatus)}, ${sqlLiteral(item.headline)}, ${sqlLiteral(item.introduction)},
     ${sqlJson(item.companies)}, ${sqlJson(item.organizations)}, ${sqlJson(visibility)}, 1
   )`).join(',\n')
   return `INSERT INTO mip_profiles (
-    app_id, user_id, nickname, avatar_asset_id, identity_status, headline, introduction,
+    app_id, user_id, nickname, real_name, gender, career_identity_key,
+    avatar_asset_id, identity_status, headline, introduction,
     companies_json, organizations_json, visibility_json, version
   ) VALUES ${values}
   ON DUPLICATE KEY UPDATE
-    nickname = VALUES(nickname), avatar_asset_id = VALUES(avatar_asset_id),
+    nickname = VALUES(nickname), real_name = VALUES(real_name), gender = VALUES(gender),
+    career_identity_key = VALUES(career_identity_key), avatar_asset_id = VALUES(avatar_asset_id),
     identity_status = VALUES(identity_status), headline = VALUES(headline),
     introduction = VALUES(introduction), companies_json = VALUES(companies_json),
     organizations_json = VALUES(organizations_json), visibility_json = VALUES(visibility_json),
@@ -2688,6 +2730,18 @@ function assertDemoRelations(value) {
       || tagById.get(user.industryTagId)?.kind !== 'INDUSTRY'
       || !Array.isArray(user.abilityTagIds)
       || user.abilityTagIds.some(tagId => tagById.get(tagId)?.kind !== 'ABILITY')
+      || typeof user.realName !== 'string' || !user.realName.trim() || user.realName.length > 64
+      || !['MALE', 'FEMALE', 'UNKNOWN'].includes(user.gender)
+      || ![
+        'BRAND_PRINCIPAL',
+        'PROFESSIONAL_INVESTOR',
+        'BIG_TECH_ELITE',
+        'STUDENT',
+        'PASSIONATE_FOUNDER',
+        'FREE_EXPLORER',
+        'COMPANY_OWNER',
+        'SLASH_YOUTH',
+      ].includes(user.careerIdentityKey)
       || !Number.isInteger(user.experienceBalance)
       || !Number.isInteger(user.contributionBalance)
       || !Number.isInteger(user.coinBalance)

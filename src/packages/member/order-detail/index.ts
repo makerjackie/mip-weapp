@@ -227,6 +227,24 @@ Page({
     }
   },
 
+  copyOrderId() {
+    const orderId = String(this.data.order?.id || '').trim()
+    if (!orderId) {
+      this.setData({ message: '订单号暂不可用，请重新加载。' })
+      return
+    }
+    wx.setClipboardData({
+      data: orderId,
+      success: () => {
+        this.setData({ message: '' })
+        wx.showToast({ title: '订单号已复制', icon: 'success' })
+      },
+      fail: () => {
+        this.setData({ message: '订单号复制失败，请点击订单号重试。' })
+      },
+    })
+  },
+
   async continueCheckIn() {
     if (this.data.checkInResumeState !== 'ready' || !this.data.eventId || !mipCheckInResumeStore.peek(this.data.eventId)) {
       this.setData({

@@ -254,6 +254,17 @@ describe('MIP demo seed ownership safety', () => {
     expect(source).toContain('cover_asset_id = VALUES(cover_asset_id)')
   })
 
+  it('reuses demo media only from an existing READY manifest with exact READY database facts', () => {
+    const source = fs.readFileSync(path.join(root, 'scripts/seed-demo.mjs'), 'utf8')
+    expect(source).toContain('process.argv.includes(\'--reuse-existing-media\')')
+    expect(source).toContain('JSON_UNQUOTE(JSON_EXTRACT(value_json, \'$.state\')) = \'READY\'')
+    expect(source).toContain('AND status = \'READY\'')
+    expect(source).toContain('findCountRow(verification, [\'readyManifest\', \'readyMedia\'])')
+    expect(source).toContain('Number(counts.readyMedia) !== items.length')
+    expect(source.indexOf('verifyExistingDemoMediaAssets(seed.mediaAssets)'))
+      .toBeLessThan(source.indexOf('for (const [index, sql] of statements.entries())'))
+  })
+
   it('keeps demo users out of the platform-owner bootstrap path', () => {
     const source = fs.readFileSync(path.join(root, 'scripts/bootstrap-owner.mjs'), 'utf8')
     const selection = fs.readFileSync(path.join(root, 'scripts/lib/mip-owner-bootstrap.mjs'), 'utf8')

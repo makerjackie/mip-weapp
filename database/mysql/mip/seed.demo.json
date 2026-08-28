@@ -1,5 +1,5 @@
 {
-  "version": "2026-08-28-demo.17",
+  "version": "2026-08-28-demo.19",
   "replaceBeforeProduction": true,
   "branches": [
     {
@@ -7,28 +7,28 @@
       "key": "shenzhen",
       "name": "深圳分会",
       "cityName": "深圳",
-      "summary": "MIP 深圳城市分会测试数据"
+      "summary": "连接深圳本地玩家与合作伙伴"
     },
     {
       "id": "10000000-0000-4000-8000-000000000002",
       "key": "guangzhou",
       "name": "广州分会",
       "cityName": "广州",
-      "summary": "MIP 广州城市分会测试数据"
+      "summary": "连接广州本地玩家与合作伙伴"
     },
     {
       "id": "10000000-0000-4000-8000-000000000003",
       "key": "shanghai",
       "name": "上海分会",
       "cityName": "上海",
-      "summary": "MIP 上海城市分会测试数据"
+      "summary": "连接上海本地玩家与合作伙伴"
     },
     {
       "id": "10000000-0000-4000-8000-000000000004",
       "key": "beijing",
       "name": "北京分会",
       "cityName": "北京",
-      "summary": "MIP 北京城市分会测试数据"
+      "summary": "连接北京本地玩家与合作伙伴"
     }
   ],
   "tags": [
@@ -90,8 +90,8 @@
     {
       "id": "30000000-0000-4000-8000-000000000001",
       "key": "annual_test",
-      "name": "一年会员（测试）",
-      "description": "用于会员权益和活动联调的一年测试会员方案",
+      "name": "一年会员",
+      "description": "包含玩家身份、会员活动权益和会员资料展示",
       "durationDays": 365,
       "priceCents": 600000,
       "benefits": ["玩家身份", "会员活动权益", "会员资料展示"]
@@ -134,8 +134,11 @@
       "id": "50000000-0000-4000-8000-000000000001",
       "key": "demo_lin_xia",
       "avatarAssetId": "58000000-0000-4000-8000-000000000001",
-      "nickname": "林夏（演示）",
-      "identityStatus": "Founder",
+      "nickname": "林夏",
+      "realName": "林夏",
+      "gender": "FEMALE",
+      "careerIdentityKey": "PASSIONATE_FOUNDER",
+      "identityStatus": "创业者",
       "headline": "企业服务渠道合作",
       "introduction": "专注企业服务渠道合作，擅长识别合作机会、连接客户与服务团队，近期希望帮助更多成长型企业完成资源对接。",
       "branchId": "10000000-0000-4000-8000-000000000001",
@@ -151,8 +154,11 @@
       "id": "50000000-0000-4000-8000-000000000002",
       "key": "demo_zhou_heng",
       "avatarAssetId": "58000000-0000-4000-8000-000000000002",
-      "nickname": "周衡（演示）",
-      "identityStatus": "Operator",
+      "nickname": "周衡",
+      "realName": "周衡",
+      "gender": "MALE",
+      "careerIdentityKey": "COMPANY_OWNER",
+      "identityStatus": "运营负责人",
       "headline": "商业模式与增长设计",
       "introduction": "长期参与商业模式和增长项目，擅长梳理盈利结构、测算关键指标并推动跨团队落地。",
       "branchId": "10000000-0000-4000-8000-000000000002",
@@ -168,8 +174,11 @@
       "id": "50000000-0000-4000-8000-000000000003",
       "key": "demo_chen_yuan",
       "avatarAssetId": "58000000-0000-4000-8000-000000000003",
-      "nickname": "陈远（演示）",
-      "identityStatus": "Investor",
+      "nickname": "陈远",
+      "realName": "陈远",
+      "gender": "MALE",
+      "careerIdentityKey": "PROFESSIONAL_INVESTOR",
+      "identityStatus": "投资人",
       "headline": "消费与科技项目投资",
       "introduction": "关注消费与科技领域的早期项目，擅长投资分析、融资方案设计和产业资源协同。",
       "branchId": "10000000-0000-4000-8000-000000000003",
@@ -185,8 +194,11 @@
       "id": "50000000-0000-4000-8000-000000000004",
       "key": "demo_tang_qiao",
       "avatarAssetId": "58000000-0000-4000-8000-000000000004",
-      "nickname": "唐乔（演示）",
-      "identityStatus": "Product Planner",
+      "nickname": "唐乔",
+      "realName": "唐乔",
+      "gender": "FEMALE",
+      "careerIdentityKey": "SLASH_YOUTH",
+      "identityStatus": "产品策划",
       "headline": "产品与品牌项目策划",
       "introduction": "负责产品与品牌项目策划，擅长把业务目标整理为可执行的产品方案和内容计划。",
       "branchId": "10000000-0000-4000-8000-000000000004",
@@ -202,8 +214,11 @@
       "id": "50000000-0000-4000-8000-000000000005",
       "key": "demo_su_he",
       "avatarAssetId": "58000000-0000-4000-8000-000000000005",
-      "nickname": "苏禾（演示）",
-      "identityStatus": "Designer",
+      "nickname": "苏禾",
+      "realName": "苏禾",
+      "gender": "FEMALE",
+      "careerIdentityKey": "FREE_EXPLORER",
+      "identityStatus": "视觉设计师",
       "headline": "品牌视觉与包装设计",
       "introduction": "从事品牌视觉与包装设计，关注清晰的视觉表达、品牌一致性和实际交付质量。",
       "branchId": "10000000-0000-4000-8000-000000000001",
@@ -219,8 +234,11 @@
       "id": "50000000-0000-4000-8000-000000000006",
       "key": "demo_gu_ning",
       "avatarAssetId": "58000000-0000-4000-8000-000000000006",
-      "nickname": "顾宁（演示）",
-      "identityStatus": "Project Manager",
+      "nickname": "顾宁",
+      "realName": "顾宁",
+      "gender": "MALE",
+      "careerIdentityKey": "BIG_TECH_ELITE",
+      "identityStatus": "项目经理",
       "headline": "复杂项目交付与团队协同",
       "introduction": "负责复杂项目交付与团队协同，擅长拆解目标、管理进度并协调多方资源解决阻塞。",
       "branchId": "10000000-0000-4000-8000-000000000002",
@@ -266,8 +284,8 @@
       "branchId": "10000000-0000-4000-8000-000000000001",
       "organizerUserId": "50000000-0000-4000-8000-000000000001",
       "title": "MIP 早会（2030 年 9 月）",
-      "summary": "用于验证早会报名和活动详情的长期演示活动。",
-      "description": "围绕资源对接、合作需求和项目进展进行交流。本活动为虚构演示数据。",
+      "summary": "围绕资源对接、合作需求和项目进展进行交流。",
+      "description": "参与者分享近期项目进展，并对接可协作的客户、渠道与服务资源。",
       "notices": "活动时间为周四 10:00–12:00，请按报名信息参加。",
       "eventTypeKey": "mip_morning_meeting",
       "tagIds": ["60400000-0000-4000-8000-000000000001"],
@@ -282,7 +300,7 @@
       "registrationDeadline": "2030-09-04 10:00:00.000",
       "cancellationDeadline": "2030-09-04 10:00:00.000",
       "venueName": "MIP 福田早会会场",
-      "address": "深圳市福田区深南大道 8008 号 MIP 活动空间（演示地址）",
+      "address": "深圳市福田区深南大道 8008 号 MIP 活动空间",
       "cityName": "深圳",
       "capacity": 120,
       "publishedAt": "2026-08-25 12:00:00.000",
@@ -295,9 +313,9 @@
       "branchId": "10000000-0000-4000-8000-000000000001",
       "organizerUserId": "50000000-0000-4000-8000-000000000001",
       "title": "MIP 早会（2030 年 10 月）",
-      "summary": "用于验证玩家活动和参与人流程的长期演示活动。",
-      "description": "参与者围绕业务问题、项目协作和资源需求进行交流。本活动为虚构演示数据。",
-      "notices": "活动时间为周四 10:00–12:00，仅用于开发测试。",
+      "summary": "围绕业务问题、项目协作和资源需求进行交流。",
+      "description": "参与者提出当前业务问题，共同梳理可执行的协作方案和后续负责人。",
+      "notices": "活动时间为周四 10:00–12:00，请提前 10 分钟到场签到。",
       "eventTypeKey": "mip_morning_meeting",
       "tagIds": ["60400000-0000-4000-8000-000000000002", "60400000-0000-4000-8000-000000000003"],
       "eventMode": "OFFLINE",
@@ -311,7 +329,7 @@
       "registrationDeadline": "2030-10-09 10:00:00.000",
       "cancellationDeadline": "2030-10-09 10:00:00.000",
       "venueName": "MIP 福田早会会场",
-      "address": "深圳市福田区深南大道 8008 号 MIP 活动空间（演示地址）",
+      "address": "深圳市福田区深南大道 8008 号 MIP 活动空间",
       "cityName": "深圳",
       "capacity": 60,
       "publishedAt": "2026-08-25 12:00:00.000",
@@ -324,8 +342,8 @@
       "branchId": "10000000-0000-4000-8000-000000000001",
       "organizerUserId": "50000000-0000-4000-8000-000000000001",
       "title": "MIP 早会（2030 年 11 月）",
-      "summary": "用于验证活动筛选和多场早会列表的长期演示活动。",
-      "description": "围绕城市伙伴、合作线索和下一步行动进行交流。本活动为虚构演示数据。",
+      "summary": "围绕城市伙伴、合作线索和下一步行动进行交流。",
+      "description": "参与者介绍可开放的合作资源，并确认线索跟进方式与下一步行动。",
       "notices": "活动时间为周四 10:00–12:00，请提前完成报名。",
       "eventTypeKey": "mip_morning_meeting",
       "tagIds": [
@@ -343,7 +361,7 @@
       "registrationDeadline": "2030-11-13 10:00:00.000",
       "cancellationDeadline": "2030-11-13 10:00:00.000",
       "venueName": "MIP 福田早会会场",
-      "address": "深圳市福田区深南大道 8008 号 MIP 活动空间（演示地址）",
+      "address": "深圳市福田区深南大道 8008 号 MIP 活动空间",
       "cityName": "深圳",
       "capacity": 80,
       "publishedAt": "2026-08-25 12:00:00.000",
@@ -356,8 +374,8 @@
       "branchId": "10000000-0000-4000-8000-000000000001",
       "organizerUserId": "50000000-0000-4000-8000-000000000001",
       "title": "MIP 早会（2030 年 12 月·主题场）",
-      "summary": "用于验证付费活动订单、票务和报名关联的演示活动。",
-      "description": "围绕城市合作项目进行主题交流。本活动为虚构演示数据，活动票价为 399 元。",
+      "summary": "围绕城市合作项目进行主题交流。",
+      "description": "通过案例拆解和小组讨论，梳理城市合作项目的目标、资源与执行路径。活动票价为 399 元。",
       "notices": "活动时间为周四 10:00–12:00，报名成功后凭活动订单入场。",
       "eventTypeKey": "mip_morning_meeting",
       "tagIds": ["60400000-0000-4000-8000-000000000001", "60400000-0000-4000-8000-000000000002"],
@@ -373,7 +391,7 @@
       "registrationDeadline": "2030-12-11 10:00:00.000",
       "cancellationDeadline": "2030-12-11 10:00:00.000",
       "venueName": "MIP 福田早会会场",
-      "address": "深圳市福田区深南大道 8008 号 MIP 活动空间（演示地址）",
+      "address": "深圳市福田区深南大道 8008 号 MIP 活动空间",
       "cityName": "深圳",
       "capacity": 40,
       "publishedAt": "2026-08-25 12:00:00.000",
@@ -385,10 +403,10 @@
       "coverAssetId": null,
       "branchId": "10000000-0000-4000-8000-000000000001",
       "organizerUserId": "50000000-0000-4000-8000-000000000001",
-      "title": "MIP 城市互动交流会（演示）",
-      "summary": "用于验证签到、心动和历史活动流程的演示活动。",
-      "description": "三位演示玩家已完成报名和签到，可用于验证活动后的互动记录。",
-      "notices": "本活动为虚构演示数据。",
+      "title": "MIP 城市互动交流会",
+      "summary": "围绕城市合作与参与者互动开展交流。",
+      "description": "参与者已完成报名和签到，活动结束后可以查看互动与反馈记录。",
+      "notices": "活动结束后可在活动详情中提交反馈。",
       "eventTypeKey": "community",
       "tagIds": ["60400000-0000-4000-8000-000000000001", "60400000-0000-4000-8000-000000000003"],
       "eventMode": "OFFLINE",
@@ -402,7 +420,7 @@
       "registrationDeadline": "2026-08-19 18:00:00.000",
       "cancellationDeadline": "2026-08-19 18:00:00.000",
       "venueName": "MIP 深圳分会活动空间",
-      "address": "深圳市南山区演示地址 1 号",
+      "address": "深圳市南山区科技南路 1 号",
       "cityName": "深圳",
       "capacity": 30,
       "publishedAt": "2026-08-01 09:00:00.000",
@@ -457,7 +475,7 @@
       "title": "寻找企业服务渠道合作伙伴",
       "valueSummary": "共同拓展华南企业客户",
       "targetSummary": "熟悉企业服务渠道和客户引荐的合作伙伴",
-      "description": "希望共同验证渠道合作和客户转介流程。本机会为虚构演示数据。",
+      "description": "希望与伙伴共同建立渠道合作和客户转介流程。",
       "cityTagId": "20000000-0000-4000-8000-000000000001",
       "roleKeys": ["connector", "business_builder"],
       "tagIds": ["21000000-0000-4000-8000-000000000003", "22000000-0000-4000-8000-000000000001"]
@@ -470,7 +488,7 @@
       "title": "联合打造城市品牌视觉系统",
       "valueSummary": "形成可复用的城市活动视觉规范",
       "targetSummary": "品牌策划、视觉设计和内容团队",
-      "description": "需要共同完成策略、视觉和落地模板。本机会为虚构演示数据。",
+      "description": "需要共同完成品牌策略、视觉系统和落地模板。",
       "cityTagId": "20000000-0000-4000-8000-000000000001",
       "roleKeys": ["strategist", "visual_designer", "delivery_lead"],
       "tagIds": ["21000000-0000-4000-8000-000000000005", "22000000-0000-4000-8000-000000000005"]
@@ -483,7 +501,7 @@
       "title": "寻找消费品牌项目投资合作",
       "valueSummary": "共同筛选和验证早期消费项目",
       "targetSummary": "具备项目来源、财务测算或品牌运营经验的伙伴",
-      "description": "关注可验证收入和明确增长路径的项目。本机会为虚构演示数据。",
+      "description": "关注具备明确收入模型和增长路径的项目。",
       "cityTagId": "20000000-0000-4000-8000-000000000003",
       "roleKeys": ["capital_operator", "business_builder"],
       "tagIds": ["21000000-0000-4000-8000-000000000008", "22000000-0000-4000-8000-000000000003"]
@@ -542,7 +560,7 @@
       "commentId": "72300000-0000-4000-8000-000000000001",
       "reporterUserId": "50000000-0000-4000-8000-000000000005",
       "category": "OTHER",
-      "description": "用于验证评论举报审核列表的演示记录。",
+      "description": "该评论内容与当前合作主题无关，请运营人员复核。",
       "requestId": "mip-demo-comment-report-1",
       "status": "PENDING",
       "createdAt": "2026-08-25 15:10:00.000"
@@ -588,9 +606,9 @@
     { "id": "63000000-0000-4000-8000-000000000006", "key": "demo_card_delivery_lead", "ownerUserId": "50000000-0000-4000-8000-000000000006", "roleKey": "delivery_lead", "positioning": "统筹团队按计划完成复杂项目", "targetSummary": "完成 6 个跨团队项目", "roleFields": { "project_types": ["数字化项目", "品牌项目"], "delivery_experience": "10 至 30 人跨职能团队交付", "target": "完成 6 个跨团队项目" } }
   ],
   "superCases": [
-    { "id": "64000000-0000-4000-8000-000000000001", "key": "demo_case_channels", "ownerUserId": "50000000-0000-4000-8000-000000000001", "projectName": "区域渠道协作网络搭建", "summary": "建立服务商与企业客户之间的协作机制", "startedOn": "2025-03-01", "endedOn": "2026-02-28", "responsibility": "渠道设计、合作伙伴引入和项目协调", "cityTagId": "20000000-0000-4000-8000-000000000001", "industryTagId": "21000000-0000-4000-8000-000000000003", "caseType": "渠道合作", "description": "完成合作标准、线索流转和交付复盘流程。本案例为虚构演示数据。" },
-    { "id": "64000000-0000-4000-8000-000000000002", "key": "demo_case_growth", "ownerUserId": "50000000-0000-4000-8000-000000000002", "projectName": "消费品牌增长方案", "summary": "通过产品组合和渠道测试验证增长路径", "startedOn": "2025-06-01", "endedOn": "2026-05-31", "responsibility": "商业模式设计、财务测算和增长实验", "cityTagId": "20000000-0000-4000-8000-000000000002", "industryTagId": "21000000-0000-4000-8000-000000000006", "caseType": "商业增长", "description": "完成阶段目标、收入模型和渠道实验设计。本案例为虚构演示数据。" },
-    { "id": "64000000-0000-4000-8000-000000000003", "key": "demo_case_visual", "ownerUserId": "50000000-0000-4000-8000-000000000005", "projectName": "城市活动视觉识别系统", "summary": "建立适用于多场活动的统一视觉规范", "startedOn": "2025-09-01", "endedOn": "2026-04-30", "responsibility": "视觉策略、设计系统和交付模板", "cityTagId": "20000000-0000-4000-8000-000000000001", "industryTagId": "21000000-0000-4000-8000-000000000005", "caseType": "品牌视觉", "description": "完成主视觉、物料模板和使用规范。本案例为虚构演示数据。" }
+    { "id": "64000000-0000-4000-8000-000000000001", "key": "demo_case_channels", "ownerUserId": "50000000-0000-4000-8000-000000000001", "projectName": "区域渠道协作网络搭建", "summary": "建立服务商与企业客户之间的协作机制", "startedOn": "2025-03-01", "endedOn": "2026-02-28", "responsibility": "渠道设计、合作伙伴引入和项目协调", "cityTagId": "20000000-0000-4000-8000-000000000001", "industryTagId": "21000000-0000-4000-8000-000000000003", "caseType": "渠道合作", "description": "完成合作标准、线索流转和交付复盘流程。" },
+    { "id": "64000000-0000-4000-8000-000000000002", "key": "demo_case_growth", "ownerUserId": "50000000-0000-4000-8000-000000000002", "projectName": "消费品牌增长方案", "summary": "通过产品组合和渠道试验验证增长路径", "startedOn": "2025-06-01", "endedOn": "2026-05-31", "responsibility": "商业模式设计、财务测算和增长实验", "cityTagId": "20000000-0000-4000-8000-000000000002", "industryTagId": "21000000-0000-4000-8000-000000000006", "caseType": "商业增长", "description": "完成阶段目标、收入模型和渠道实验设计。" },
+    { "id": "64000000-0000-4000-8000-000000000003", "key": "demo_case_visual", "ownerUserId": "50000000-0000-4000-8000-000000000005", "projectName": "城市活动视觉识别系统", "summary": "建立适用于多场活动的统一视觉规范", "startedOn": "2025-09-01", "endedOn": "2026-04-30", "responsibility": "视觉策略、设计系统和交付模板", "cityTagId": "20000000-0000-4000-8000-000000000001", "industryTagId": "21000000-0000-4000-8000-000000000005", "caseType": "品牌视觉", "description": "完成主视觉、物料模板和使用规范。" }
   ],
   "opportunityInteractions": {
     "commentSettings": [
@@ -672,9 +690,9 @@
       "key": "mip_demo_announcement_platform",
       "scopeType": "PLATFORM",
       "branchId": null,
-      "title": "MIP 演示环境使用说明",
-      "summary": "当前内容用于小程序功能联调和页面验收。",
-      "body": "演示环境中的用户、活动、机会和运营内容均为虚构数据。正式上线前请按演示清单替换或清理。",
+      "title": "MIP 使用说明",
+      "summary": "了解小程序主要功能与使用入口。",
+      "body": "你可以在小程序中查看活动、机会、任务、徽章和会员权益。",
       "targetType": "EVENT",
       "targetId": "60000000-0000-4000-8000-000000000001",
       "isPinned": true,
@@ -687,9 +705,9 @@
       "key": "mip_demo_announcement_shenzhen",
       "scopeType": "BRANCH",
       "branchId": "10000000-0000-4000-8000-000000000001",
-      "title": "深圳分会演示活动开放报名",
-      "summary": "2030 年 9 月 MIP 早会已开放演示报名。",
-      "body": "本公告用于验证分会公告、活动关联和展示窗口，不代表正式活动安排。",
+      "title": "深圳分会活动开放报名",
+      "summary": "2030 年 9 月 MIP 早会已开放报名。",
+      "body": "请在活动开始前完成报名，并在活动详情中查看时间、地点和参与须知。",
       "targetType": "EVENT",
       "targetId": "60000000-0000-4000-8000-000000000001",
       "isPinned": false,
@@ -702,7 +720,7 @@
     {
       "id": "66000000-0000-4000-8000-000000000001",
       "key": "mip_demo_manual_source",
-      "name": "MIP 演示内容",
+      "name": "MIP 内容中心",
       "sourceType": "MANUAL",
       "endpointUrl": null,
       "fetchConfig": {},
@@ -722,8 +740,8 @@
       "contentType": "HOT_NEWS",
       "title": "企业服务渠道协作要点",
       "summary": "用明确分工和复盘机制提高渠道合作效率。",
-      "bodyText": "渠道合作需要明确线索标准、响应时限、交付责任和复盘周期。演示内容仅用于验证知识列表与详情页面。",
-      "authorName": "MIP 内容组（演示）",
+      "bodyText": "渠道合作需要明确线索标准、响应时限、交付责任和复盘周期，并在每个阶段记录负责人和处理结果。",
+      "authorName": "MIP 内容组",
       "accessType": "FREE",
       "sourceExternalId": "mip_demo_knowledge_channel",
       "publishedAt": "2026-08-25 12:00:00.000",
@@ -737,8 +755,8 @@
       "contentType": "EXPERT_SHARE",
       "title": "城市分会活动复盘清单",
       "summary": "从报名、到场、合作反馈三个环节记录活动结果。",
-      "bodyText": "活动复盘应保留报名转化、到场情况、合作意向和后续负责人。本内容为可替换的会员演示内容。",
-      "authorName": "MIP 深圳分会（演示）",
+      "bodyText": "活动复盘应保留报名转化、到场情况、合作意向和后续负责人，方便参与者继续跟进合作事项。",
+      "authorName": "MIP 深圳分会",
       "accessType": "MEMBER",
       "sourceExternalId": "mip_demo_knowledge_city",
       "publishedAt": "2026-08-25 12:10:00.000",
@@ -752,8 +770,8 @@
       "contentType": "ARTICLE",
       "title": "小团队增长实验设计",
       "summary": "用一周周期验证目标客户、价值主张和转化路径。",
-      "bodyText": "先选择单一客户群和单一转化动作，再记录触达量、有效反馈和成交结果。本内容用于验证单内容解锁流程。",
-      "authorName": "MIP 商业组（演示）",
+      "bodyText": "先选择单一客户群和单一转化动作，再记录触达量、有效反馈和成交结果，并根据数据决定下一轮实验。",
+      "authorName": "MIP 商业组",
       "accessType": "MEMBER_OR_PAID",
       "sourceExternalId": "mip_demo_knowledge_growth",
       "publishedAt": "2026-08-25 12:20:00.000",
@@ -761,11 +779,11 @@
     }
   ],
   "knowledgeProducts": [
-    { "id": "66300000-0000-4000-8000-000000000001", "key": "mip_demo_knowledge_product_growth", "contentId": "66200000-0000-4000-8000-000000000003", "name": "小团队增长实验设计（测试）", "priceCents": 990, "unlockDays": 365, "refundPolicy": "BEFORE_ACCESS", "refundWindowHours": 24, "actorUserId": "50000000-0000-4000-8000-000000000001" }
+    { "id": "66300000-0000-4000-8000-000000000001", "key": "mip_demo_knowledge_product_growth", "contentId": "66200000-0000-4000-8000-000000000003", "name": "小团队增长实验设计", "priceCents": 990, "unlockDays": 365, "refundPolicy": "BEFORE_ACCESS", "refundWindowHours": 24, "actorUserId": "50000000-0000-4000-8000-000000000001" }
   ],
   "inboxMessages": [
     { "id": "67000000-0000-4000-8000-000000000001", "key": "mip_demo_inbox_event", "recipientUserId": "50000000-0000-4000-8000-000000000001", "messageType": "OPERATIONS", "title": "活动报名已确认", "body": "你已报名 MIP 早会（2030 年 9 月）。", "targetType": "EVENT", "targetId": "60000000-0000-4000-8000-000000000001", "targetRoute": "/packages/member/mip-events/detail/index?id=60000000-0000-4000-8000-000000000001", "dedupeKey": "mip_demo_inbox_event", "readAt": null, "createdAt": "2026-08-25 13:00:00.000" },
-    { "id": "67000000-0000-4000-8000-000000000002", "key": "mip_demo_inbox_growth", "recipientUserId": "50000000-0000-4000-8000-000000000001", "messageType": "GROWTH", "title": "成长记录已更新", "body": "演示账号已获得成长值。", "targetType": null, "targetId": null, "targetRoute": "/packages/member/mip-growth/index", "dedupeKey": "mip_demo_inbox_growth", "readAt": "2026-08-25 14:00:00.000", "createdAt": "2026-08-25 13:30:00.000" },
+    { "id": "67000000-0000-4000-8000-000000000002", "key": "mip_demo_inbox_growth", "recipientUserId": "50000000-0000-4000-8000-000000000001", "messageType": "GROWTH", "title": "成长记录已更新", "body": "你已获得新的成长值。", "targetType": null, "targetId": null, "targetRoute": "/packages/member/mip-growth/index", "dedupeKey": "mip_demo_inbox_growth", "readAt": "2026-08-25 14:00:00.000", "createdAt": "2026-08-25 13:30:00.000" },
     { "id": "67000000-0000-4000-8000-000000000003", "key": "mip_demo_inbox_game", "recipientUserId": "50000000-0000-4000-8000-000000000003", "messageType": "GAME", "title": "新赛季已开始", "body": "MIP 2030 城市协作赛季已开放。", "targetType": null, "targetId": null, "targetRoute": "/packages/member/mip-game/index", "dedupeKey": "mip_demo_inbox_game", "readAt": null, "createdAt": "2026-08-25 14:00:00.000" }
   ],
   "deliveryTasks": [
@@ -773,11 +791,11 @@
     { "id": "67100000-0000-4000-8000-000000000002", "key": "mip_demo_delivery_success", "inboxMessageId": "67000000-0000-4000-8000-000000000002", "channel": "WECHAT_SUBSCRIPTION", "templateKey": "GROWTH_UPDATE", "payload": { "title": "成长记录已更新" }, "status": "DELIVERED", "attempts": 1, "availableAt": "2026-08-25 13:30:00.000", "deliveredAt": "2026-08-25 13:31:00.000", "lastErrorCode": null, "lastOutcome": "SUCCEEDED", "retryDisposition": "TERMINAL", "outcomeUpdatedAt": "2026-08-25 13:31:00.000" }
   ],
   "messageTemplates": [
-    { "id": "67200000-0000-4000-8000-000000000001", "key": "mip_demo_template_event", "scopeType": "PLATFORM", "branchId": null, "status": "ACTIVE", "actorUserId": "50000000-0000-4000-8000-000000000001", "revision": { "number": 1, "name": "活动提醒（演示）", "title": "活动提醒", "body": "你报名的活动即将开始，请查看活动详情。" } },
-    { "id": "67200000-0000-4000-8000-000000000002", "key": "mip_demo_template_branch", "scopeType": "BRANCH", "branchId": "10000000-0000-4000-8000-000000000001", "status": "ACTIVE", "actorUserId": "50000000-0000-4000-8000-000000000001", "revision": { "number": 1, "name": "分会通知（演示）", "title": "分会通知", "body": "深圳分会有新的运营通知，请在小程序内查看。" } }
+    { "id": "67200000-0000-4000-8000-000000000001", "key": "mip_demo_template_event", "scopeType": "PLATFORM", "branchId": null, "status": "ACTIVE", "actorUserId": "50000000-0000-4000-8000-000000000001", "revision": { "number": 1, "name": "活动提醒", "title": "活动提醒", "body": "你报名的活动即将开始，请查看活动详情。" } },
+    { "id": "67200000-0000-4000-8000-000000000002", "key": "mip_demo_template_branch", "scopeType": "BRANCH", "branchId": "10000000-0000-4000-8000-000000000001", "status": "ACTIVE", "actorUserId": "50000000-0000-4000-8000-000000000001", "revision": { "number": 1, "name": "分会通知", "title": "分会通知", "body": "深圳分会有新的运营通知，请在小程序内查看。" } }
   ],
   "messageCampaigns": [
-    { "id": "67300000-0000-4000-8000-000000000001", "key": "mip_demo_campaign_draft", "scopeType": "PLATFORM", "branchId": null, "audienceType": "ALL", "audienceUserIds": [], "name": "九月活动提示（演示草稿）", "title": "九月活动提示", "body": "请查看近期活动安排。", "actorUserId": "50000000-0000-4000-8000-000000000001" }
+    { "id": "67300000-0000-4000-8000-000000000001", "key": "mip_demo_campaign_draft", "scopeType": "PLATFORM", "branchId": null, "audienceType": "ALL", "audienceUserIds": [], "name": "九月活动提示", "title": "九月活动提示", "body": "请查看近期活动安排。", "actorUserId": "50000000-0000-4000-8000-000000000001" }
   ],
   "tasks": [
     { "id": "68000000-0000-4000-8000-000000000001", "key": "mip_demo_task_profile", "name": "完善合作资料", "content": "检查个人介绍、行业和合作能力信息，并补充缺失内容。", "rewardExperience": 50, "attachmentRequired": false, "assignmentMode": "ALL", "endsAt": "2030-12-31 23:59:59.000", "templateAssetId": "58000000-0000-4000-8000-000000000021", "actorUserId": "50000000-0000-4000-8000-000000000001" },
@@ -793,9 +811,9 @@
     { "id": "68200000-0000-4000-8000-000000000001", "key": "mip_demo_completion_profile_1", "taskId": "68000000-0000-4000-8000-000000000001", "userId": "50000000-0000-4000-8000-000000000001", "growthEntryId": "69000000-0000-4000-8000-000000000007", "completedAt": "2026-08-26 11:00:00.000" }
   ],
   "badgeAwards": [
-    { "id": "43000000-0000-4000-8000-000000000001", "key": "mip_demo_badge_award_profile", "userId": "50000000-0000-4000-8000-000000000001", "badgeId": "42000000-0000-4000-8000-000000000001", "reason": "演示账号已完成基础资料", "awardedAt": "2026-08-25 12:00:00.000" },
-    { "id": "43000000-0000-4000-8000-000000000002", "key": "mip_demo_badge_award_event", "userId": "50000000-0000-4000-8000-000000000001", "badgeId": "42000000-0000-4000-8000-000000000002", "reason": "演示账号已完成活动参与", "awardedAt": "2026-08-25 12:00:00.000" },
-    { "id": "43000000-0000-4000-8000-000000000003", "key": "mip_demo_badge_award_contributor", "userId": "50000000-0000-4000-8000-000000000001", "badgeId": "42000000-0000-4000-8000-000000000003", "reason": "演示账号已完成社区贡献", "awardedAt": "2026-08-25 12:00:00.000" }
+    { "id": "43000000-0000-4000-8000-000000000001", "key": "mip_demo_badge_award_profile", "userId": "50000000-0000-4000-8000-000000000001", "badgeId": "42000000-0000-4000-8000-000000000001", "reason": "已完成基础资料", "awardedAt": "2026-08-25 12:00:00.000" },
+    { "id": "43000000-0000-4000-8000-000000000002", "key": "mip_demo_badge_award_event", "userId": "50000000-0000-4000-8000-000000000001", "badgeId": "42000000-0000-4000-8000-000000000002", "reason": "已完成活动参与", "awardedAt": "2026-08-25 12:00:00.000" },
+    { "id": "43000000-0000-4000-8000-000000000003", "key": "mip_demo_badge_award_contributor", "userId": "50000000-0000-4000-8000-000000000001", "badgeId": "42000000-0000-4000-8000-000000000003", "reason": "已完成社区贡献", "awardedAt": "2026-08-25 12:00:00.000" }
   ],
   "badgeProfiles": [
     { "id": "43100000-0000-4000-8000-000000000001", "key": "mip_demo_badge_profile_1", "userId": "50000000-0000-4000-8000-000000000001", "version": 2 }
@@ -806,20 +824,20 @@
     { "id": "43200000-0000-4000-8000-000000000003", "key": "mip_demo_badge_equipment_3", "userId": "50000000-0000-4000-8000-000000000001", "slotNo": 3, "badgeId": "42000000-0000-4000-8000-000000000003" }
   ],
   "growthEntries": [
-    { "id": "69000000-0000-4000-8000-000000000001", "key": "mip_demo_growth_user1_experience", "userId": "50000000-0000-4000-8000-000000000001", "sourceEventId": "69100000-0000-4000-8000-000000000001", "sourceEventType": "demo.experience_initialized", "metric": "EXPERIENCE", "deltaValue": 650, "balanceAfter": 650, "adjustmentReason": "演示成长数据初始化" },
-    { "id": "69000000-0000-4000-8000-000000000002", "key": "mip_demo_growth_user1_contribution", "userId": "50000000-0000-4000-8000-000000000001", "sourceEventId": "69100000-0000-4000-8000-000000000002", "sourceEventType": "demo.contribution_initialized", "metric": "CONTRIBUTION", "deltaValue": 80, "balanceAfter": 80, "adjustmentReason": "演示贡献数据初始化" },
-    { "id": "69000000-0000-4000-8000-000000000003", "key": "mip_demo_growth_user1_coin", "userId": "50000000-0000-4000-8000-000000000001", "sourceEventId": "69100000-0000-4000-8000-000000000003", "sourceEventType": "demo.coin_initialized", "metric": "COIN", "deltaValue": 120, "balanceAfter": 120, "adjustmentReason": "演示游戏币初始化" },
-    { "id": "69000000-0000-4000-8000-000000000004", "key": "mip_demo_growth_user2_experience", "userId": "50000000-0000-4000-8000-000000000002", "sourceEventId": "69100000-0000-4000-8000-000000000004", "sourceEventType": "demo.experience_initialized", "metric": "EXPERIENCE", "deltaValue": 320, "balanceAfter": 320, "adjustmentReason": "演示成长数据初始化" },
-    { "id": "69000000-0000-4000-8000-000000000005", "key": "mip_demo_growth_user3_experience", "userId": "50000000-0000-4000-8000-000000000003", "sourceEventId": "69100000-0000-4000-8000-000000000005", "sourceEventType": "demo.experience_initialized", "metric": "EXPERIENCE", "deltaValue": 1600, "balanceAfter": 1600, "adjustmentReason": "演示成长数据初始化" },
-    { "id": "69000000-0000-4000-8000-000000000006", "key": "mip_demo_growth_user3_coin", "userId": "50000000-0000-4000-8000-000000000003", "sourceEventId": "69100000-0000-4000-8000-000000000006", "sourceEventType": "demo.coin_initialized", "metric": "COIN", "deltaValue": 200, "balanceAfter": 200, "adjustmentReason": "演示游戏币初始化" },
-    { "id": "69000000-0000-4000-8000-000000000007", "key": "mip_demo_growth_user1_task_profile", "userId": "50000000-0000-4000-8000-000000000001", "sourceEventId": "68200000-0000-4000-8000-000000000001", "sourceEventType": "task.completed", "metric": "EXPERIENCE", "deltaValue": 50, "balanceAfter": 700, "adjustmentReason": "完成演示任务奖励" }
+    { "id": "69000000-0000-4000-8000-000000000001", "key": "mip_demo_growth_user1_experience", "userId": "50000000-0000-4000-8000-000000000001", "sourceEventId": "69100000-0000-4000-8000-000000000001", "sourceEventType": "demo.experience_initialized", "metric": "EXPERIENCE", "deltaValue": 650, "balanceAfter": 650, "adjustmentReason": "成长记录初始化" },
+    { "id": "69000000-0000-4000-8000-000000000002", "key": "mip_demo_growth_user1_contribution", "userId": "50000000-0000-4000-8000-000000000001", "sourceEventId": "69100000-0000-4000-8000-000000000002", "sourceEventType": "demo.contribution_initialized", "metric": "CONTRIBUTION", "deltaValue": 80, "balanceAfter": 80, "adjustmentReason": "贡献记录初始化" },
+    { "id": "69000000-0000-4000-8000-000000000003", "key": "mip_demo_growth_user1_coin", "userId": "50000000-0000-4000-8000-000000000001", "sourceEventId": "69100000-0000-4000-8000-000000000003", "sourceEventType": "demo.coin_initialized", "metric": "COIN", "deltaValue": 120, "balanceAfter": 120, "adjustmentReason": "游戏币记录初始化" },
+    { "id": "69000000-0000-4000-8000-000000000004", "key": "mip_demo_growth_user2_experience", "userId": "50000000-0000-4000-8000-000000000002", "sourceEventId": "69100000-0000-4000-8000-000000000004", "sourceEventType": "demo.experience_initialized", "metric": "EXPERIENCE", "deltaValue": 320, "balanceAfter": 320, "adjustmentReason": "成长记录初始化" },
+    { "id": "69000000-0000-4000-8000-000000000005", "key": "mip_demo_growth_user3_experience", "userId": "50000000-0000-4000-8000-000000000003", "sourceEventId": "69100000-0000-4000-8000-000000000005", "sourceEventType": "demo.experience_initialized", "metric": "EXPERIENCE", "deltaValue": 1600, "balanceAfter": 1600, "adjustmentReason": "成长记录初始化" },
+    { "id": "69000000-0000-4000-8000-000000000006", "key": "mip_demo_growth_user3_coin", "userId": "50000000-0000-4000-8000-000000000003", "sourceEventId": "69100000-0000-4000-8000-000000000006", "sourceEventType": "demo.coin_initialized", "metric": "COIN", "deltaValue": 200, "balanceAfter": 200, "adjustmentReason": "游戏币记录初始化" },
+    { "id": "69000000-0000-4000-8000-000000000007", "key": "mip_demo_growth_user1_task_profile", "userId": "50000000-0000-4000-8000-000000000001", "sourceEventId": "68200000-0000-4000-8000-000000000001", "sourceEventType": "task.completed", "metric": "EXPERIENCE", "deltaValue": 50, "balanceAfter": 700, "adjustmentReason": "完成任务奖励" }
   ],
   "gameSeasons": [
-    { "id": "70000000-0000-4000-8000-000000000001", "key": "mip_demo_season_2030", "name": "MIP 2030 城市协作赛季", "summary": "用于游戏化、团队和排行页面联调。", "rulesText": "团队按成员成长和贡献记录生成排行，演示规则可在后台替换。", "rules": { "scoring": "growth_and_contribution", "demo": true }, "periodKind": "CUSTOM", "startsAt": "2026-01-01 00:00:00.000", "endsAt": "2031-01-01 00:00:00.000", "actorUserId": "50000000-0000-4000-8000-000000000001" }
+    { "id": "70000000-0000-4000-8000-000000000001", "key": "mip_demo_season_2030", "name": "MIP 2030 城市协作赛季", "summary": "记录团队协作和成员贡献排行。", "rulesText": "团队按成员成长和贡献记录生成排行，赛季结束后按服务端记录结算。", "rules": { "scoring": "growth_and_contribution", "demo": true }, "periodKind": "CUSTOM", "startsAt": "2026-01-01 00:00:00.000", "endsAt": "2031-01-01 00:00:00.000", "actorUserId": "50000000-0000-4000-8000-000000000001" }
   ],
   "gameTeams": [
-    { "id": "70100000-0000-4000-8000-000000000001", "key": "mip_demo_team_south", "seasonId": "70000000-0000-4000-8000-000000000001", "branchId": "10000000-0000-4000-8000-000000000001", "name": "南方协作队", "summary": "深圳分会演示团队", "actorUserId": "50000000-0000-4000-8000-000000000001" },
-    { "id": "70100000-0000-4000-8000-000000000002", "key": "mip_demo_team_east", "seasonId": "70000000-0000-4000-8000-000000000001", "branchId": "10000000-0000-4000-8000-000000000003", "name": "东方共创队", "summary": "上海分会演示团队", "actorUserId": "50000000-0000-4000-8000-000000000001" }
+    { "id": "70100000-0000-4000-8000-000000000001", "key": "mip_demo_team_south", "seasonId": "70000000-0000-4000-8000-000000000001", "branchId": "10000000-0000-4000-8000-000000000001", "name": "南方协作队", "summary": "深圳分会城市协作团队", "actorUserId": "50000000-0000-4000-8000-000000000001" },
+    { "id": "70100000-0000-4000-8000-000000000002", "key": "mip_demo_team_east", "seasonId": "70000000-0000-4000-8000-000000000001", "branchId": "10000000-0000-4000-8000-000000000003", "name": "东方共创队", "summary": "上海分会城市协作团队", "actorUserId": "50000000-0000-4000-8000-000000000001" }
   ],
   "gameTeamMemberships": [
     { "id": "70200000-0000-4000-8000-000000000001", "key": "mip_demo_team_member_1", "seasonId": "70000000-0000-4000-8000-000000000001", "teamId": "70100000-0000-4000-8000-000000000001", "userId": "50000000-0000-4000-8000-000000000001", "role": "CAPTAIN" },
@@ -854,18 +872,18 @@
       "periodEnd": "2031-01-01 00:00:00.000",
       "actorUserId": "50000000-0000-4000-8000-000000000001",
       "entries": [
-        { "rankNo": 1, "subjectType": "USER", "teamId": null, "userId": "50000000-0000-4000-8000-000000000003", "branchId": "10000000-0000-4000-8000-000000000003", "displayName": "陈远（演示）", "score": 1600, "levelNumber": 3, "levelLabel": "贡献者" },
-        { "rankNo": 2, "subjectType": "USER", "teamId": null, "userId": "50000000-0000-4000-8000-000000000001", "branchId": "10000000-0000-4000-8000-000000000001", "displayName": "林夏（演示）", "score": 650, "levelNumber": 2, "levelLabel": "活跃" },
-        { "rankNo": 3, "subjectType": "USER", "teamId": null, "userId": "50000000-0000-4000-8000-000000000002", "branchId": "10000000-0000-4000-8000-000000000002", "displayName": "周衡（演示）", "score": 320, "levelNumber": 1, "levelLabel": "起步" }
+        { "rankNo": 1, "subjectType": "USER", "teamId": null, "userId": "50000000-0000-4000-8000-000000000003", "branchId": "10000000-0000-4000-8000-000000000003", "displayName": "陈远", "score": 1600, "levelNumber": 3, "levelLabel": "贡献者" },
+        { "rankNo": 2, "subjectType": "USER", "teamId": null, "userId": "50000000-0000-4000-8000-000000000001", "branchId": "10000000-0000-4000-8000-000000000001", "displayName": "林夏", "score": 650, "levelNumber": 2, "levelLabel": "活跃" },
+        { "rankNo": 3, "subjectType": "USER", "teamId": null, "userId": "50000000-0000-4000-8000-000000000002", "branchId": "10000000-0000-4000-8000-000000000002", "displayName": "周衡", "score": 320, "levelNumber": 1, "levelLabel": "起步" }
       ]
     }
   ],
   "blindBoxCatalogs": [
-    { "id": "71000000-0000-4000-8000-000000000001", "key": "mip_demo_blind_box_2030", "name": "MIP 城市协作盲盒（演示）", "summary": "用于验证游戏币、抽取规则和卡牌目录。", "rulesText": "每次抽取消耗 5 个游戏币，每日最多 20 次。", "redemptionRulesText": "演示卡牌不承诺实物兑换，正式规则可在后台替换。", "drawCostCoin": 5, "dailyDrawLimit": 20, "pityThreshold": 10, "pityMinRarity": "RARE", "actorUserId": "50000000-0000-4000-8000-000000000001" }
+    { "id": "71000000-0000-4000-8000-000000000001", "key": "mip_demo_blind_box_2030", "name": "MIP 城市协作盲盒", "summary": "使用游戏币抽取不同等级的城市协作卡牌。", "rulesText": "每次抽取消耗 5 个游戏币，每日最多 20 次。", "redemptionRulesText": "当前卡牌为小程序内数字权益，不提供实物兑换。", "drawCostCoin": 5, "dailyDrawLimit": 20, "pityThreshold": 10, "pityMinRarity": "RARE", "actorUserId": "50000000-0000-4000-8000-000000000001" }
   ],
   "blindBoxCards": [
-    { "id": "71100000-0000-4000-8000-000000000001", "key": "mip_demo_blind_card_meetup", "catalogId": "71000000-0000-4000-8000-000000000001", "cardKey": "city_meetup", "name": "城市交流卡", "summary": "演示普通卡牌", "rarity": "COMMON", "weight": 70, "stockTotal": 1000, "stockRemaining": 1000, "displayOrder": 10, "actorUserId": "50000000-0000-4000-8000-000000000001" },
-    { "id": "71100000-0000-4000-8000-000000000002", "key": "mip_demo_blind_card_collaboration", "catalogId": "71000000-0000-4000-8000-000000000001", "cardKey": "collaboration_pass", "name": "合作优先卡", "summary": "演示稀有卡牌", "rarity": "RARE", "weight": 25, "stockTotal": 300, "stockRemaining": 300, "displayOrder": 20, "actorUserId": "50000000-0000-4000-8000-000000000001" },
-    { "id": "71100000-0000-4000-8000-000000000003", "key": "mip_demo_blind_card_workshop", "catalogId": "71000000-0000-4000-8000-000000000001", "cardKey": "workshop_invitation", "name": "共创工作坊邀请卡", "summary": "演示史诗卡牌", "rarity": "EPIC", "weight": 5, "stockTotal": 100, "stockRemaining": 100, "displayOrder": 30, "actorUserId": "50000000-0000-4000-8000-000000000001" }
+    { "id": "71100000-0000-4000-8000-000000000001", "key": "mip_demo_blind_card_meetup", "catalogId": "71000000-0000-4000-8000-000000000001", "cardKey": "city_meetup", "name": "城市交流卡", "summary": "普通城市交流卡牌", "rarity": "COMMON", "weight": 70, "stockTotal": 1000, "stockRemaining": 1000, "displayOrder": 10, "actorUserId": "50000000-0000-4000-8000-000000000001" },
+    { "id": "71100000-0000-4000-8000-000000000002", "key": "mip_demo_blind_card_collaboration", "catalogId": "71000000-0000-4000-8000-000000000001", "cardKey": "collaboration_pass", "name": "合作优先卡", "summary": "稀有合作权益卡牌", "rarity": "RARE", "weight": 25, "stockTotal": 300, "stockRemaining": 300, "displayOrder": 20, "actorUserId": "50000000-0000-4000-8000-000000000001" },
+    { "id": "71100000-0000-4000-8000-000000000003", "key": "mip_demo_blind_card_workshop", "catalogId": "71000000-0000-4000-8000-000000000001", "cardKey": "workshop_invitation", "name": "共创工作坊邀请卡", "summary": "史诗共创权益卡牌", "rarity": "EPIC", "weight": 5, "stockTotal": 100, "stockRemaining": 100, "displayOrder": 30, "actorUserId": "50000000-0000-4000-8000-000000000001" }
   ]
 }

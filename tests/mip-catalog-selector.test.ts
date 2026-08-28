@@ -68,6 +68,28 @@ describe('shared catalog selector', () => {
     }])
   })
 
+  it('partitions profile branch choices so popular options are not rendered twice', () => {
+    expect(groupedCityBranches(
+      [
+        { id: 'shenzhen-branch', name: '深圳分会', cityName: '深圳' },
+        { id: 'huizhou-branch', name: '惠州分会', cityName: '惠州' },
+      ],
+      [
+        { label: '深圳', popular: true },
+        { label: '惠州' },
+      ],
+      { separatePopular: true },
+    )).toEqual([{
+      id: 'popular-city-branches',
+      label: '热门',
+      options: [{ id: 'shenzhen-branch', label: '深圳 · 深圳分会', popular: false }],
+    }, {
+      id: 'city-branches',
+      label: '城市分会',
+      options: [{ id: 'huizhou-branch', label: '惠州 · 惠州分会', popular: false }],
+    }])
+  })
+
   it('reuses the grouped selector for profile, people, and opportunity filters', () => {
     const pages = [
       'src/packages/member/mip-profile',

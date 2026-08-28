@@ -1,7 +1,7 @@
 import type { EventId, OrderId } from '../../../../modules/mip'
 import type { MipEventDetail, MyEventRegistration, RegistrationField } from '../../../../modules/mip-events'
 import { mipCommerceModule } from '../../../../modules/mip-commerce/client'
-import { MipEventsError } from '../../../../modules/mip-events'
+import { MipEventsError, publicEventTypeLabel } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../../../modules/mip-identity/client'
@@ -134,6 +134,10 @@ Page({
     this.setData({ state: 'loading', message: '' })
     try {
       const event = await mipEventsModule.getEvent(this.data.eventId)
+      const presentedEvent = {
+        ...event,
+        eventTypeLabel: publicEventTypeLabel(event.eventTypeLabel),
+      }
       let registration: MyEventRegistration | null = null
       try {
         registration = await mipEventsModule.getMyRegistration(this.data.eventId)
@@ -149,7 +153,7 @@ Page({
         this.submissionIdempotencyKey = ''
         this.setData({
           state: 'blocked',
-          event,
+          event: presentedEvent,
           registration,
           fields: [],
           editing: false,
@@ -163,7 +167,7 @@ Page({
       wx.setNavigationBarTitle({ title: editing ? '修改报名' : '活动报名' })
       this.setData({
         state: 'ready',
-        event,
+        event: presentedEvent,
         registration: editing ? registration : null,
         fields: fieldsFromAnswers(event, editing ? registration?.answers : undefined),
         editing,

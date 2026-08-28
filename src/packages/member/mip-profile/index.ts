@@ -134,7 +134,11 @@ Page({
           popular: option.popular,
         })),
       }))
-      const branchGroups = groupedCityBranches(branches.branches, opportunityCatalog?.cityTags || [])
+      const branchGroups = groupedCityBranches(
+        branches.branches,
+        opportunityCatalog?.cityTags || [],
+        { separatePopular: true },
+      )
       const branchOptions = [
         { id: '', label: '未选择' },
         ...branchGroups.flatMap(group => group.options),

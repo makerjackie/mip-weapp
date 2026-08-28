@@ -5,7 +5,7 @@ const publicEventTypeLabels: Record<string, string> = {
 
 const technicalKeyPattern = /^[a-z][a-z0-9]*(?:[_.:-][a-z0-9]+)+$/
 
-/** Keep catalog keys out of user-facing cards when legacy rows lack a label. */
+/** Keep catalog keys out of user-facing event surfaces when legacy rows lack a label. */
 export function publicEventTypeLabel(value: string, key = value) {
   const mapped = publicEventTypeLabels[key] || publicEventTypeLabels[value]
   if (mapped) {

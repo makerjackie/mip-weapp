@@ -1,7 +1,7 @@
 import type { EventId, OrderId } from '../../../../modules/mip'
 import type { MipEventDetail } from '../../../../modules/mip-events'
 import { mipOperationsConfig } from '../../../../config/mip-operations'
-import { eventInvitationPath, eventRichTextNodes, MipEventsError, safeHttpsEventUrl } from '../../../../modules/mip-events'
+import { eventInvitationPath, eventRichTextNodes, MipEventsError, publicEventTypeLabel, safeHttpsEventUrl } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
 import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
@@ -253,6 +253,7 @@ Page({
     const onlineUrl = safeHttpsEventUrl(event.onlineUrl)
     const normalizedEvent = {
       ...event,
+      eventTypeLabel: publicEventTypeLabel(event.eventTypeLabel),
       contentMedia: event.contentMedia || [],
       tags: event.tags || [],
       videoRecaps: event.videoRecaps || [],

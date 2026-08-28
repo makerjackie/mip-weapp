@@ -11,12 +11,11 @@ import type {
 } from '../../modules/mip-events'
 import { mipOperationsConfig } from '../../config/mip-operations'
 import { mipBannerModule } from '../../modules/mip-banners'
-import { resolvePrimaryBranchCity } from '../../modules/mip-events'
+import { publicEventTypeLabel, resolvePrimaryBranchCity } from '../../modules/mip-events'
 import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { caseNavigateTo, syncCaseNavigation } from '../../modules/platform/case-navigation'
 import { getCustomNavigationStatusBarHeight } from '../../platform/navigation/status-bar'
-import { publicEventTypeLabel } from './presentation'
 
 interface EventCardView extends MipEventListItem {
   startsText: string
