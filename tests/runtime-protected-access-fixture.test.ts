@@ -362,6 +362,10 @@ describe('runtime protected access fixture', () => {
       verifier.indexOf('export async function resolveProtectedAccessRuntimeFixture'),
       verifier.indexOf('async function resolveRouteQuery'),
     )
+    const pageAudit = verifier.slice(
+      verifier.indexOf('async function verifyContractedPages'),
+      verifier.indexOf('async function verifyNavigation'),
+    )
     const privacyWrapper = privacyMarkup.match(/<view[^>]*id="privacy-sign-out"[^>]*>[\s\S]*?<\/view>/)?.[0]
     const accessWrapper = accessMarkup.match(/<view[^>]*id="mip-access-sign-in"[^>]*>[\s\S]*?<\/view>/)?.[0]
 
@@ -380,6 +384,7 @@ describe('runtime protected access fixture', () => {
     expect(verifier).toContain('(route.query || []).length > 0 && !route.protectedAccessFixture')
     expect(verifier).toContain('export async function navigateFreshRuntimeRoute(')
     expect(verifier).toContain('render recovery')
+    expect(pageAudit).toContain('|| isRecoverableRuntimeRenderError(error)')
     expect(verifier).toContain('const returned = await waitForCurrentRuntimeRoute(miniProgram, homeRoute)')
     expect(resolver).not.toContain('.callMethod(')
   })

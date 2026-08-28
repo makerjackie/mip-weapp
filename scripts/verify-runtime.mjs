@@ -1596,7 +1596,9 @@ async function verifyContractedPages(miniProgram, runtimePages, report, options)
           )
         }
       }
-      if (isRecoverableRuntimeConnectionError(error) || isScreenshotCaptureError(error)) {
+      if (isRecoverableRuntimeConnectionError(error)
+        || isScreenshotCaptureError(error)
+        || isRecoverableRuntimeRenderError(error)) {
         throw error
       }
       report.pages.push({
