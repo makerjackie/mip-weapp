@@ -35,6 +35,8 @@ const membershipWxml = read('dist/pages/membership/index.wxml')
 const homeWxml = read('dist/pages/index/index.wxml')
 const adminWxml = read('dist/packages/admin/dashboard/index.wxml')
 const privacyWxml = read('dist/packages/member/privacy/index.wxml')
+const badgeCollectionJs = read('dist/packages/member/mip-badges/index.js')
+const memberProfileJs = read('dist/packages/member/mip-profile/index.js')
 const checkInJs = read('dist/packages/member/mip-events/check-in/index.js')
 const checkInWxml = read('dist/packages/member/mip-events/check-in/index.wxml')
 const eventFunction = read('cloudfunctions/mip-events-api/index.js')
@@ -54,13 +56,14 @@ assert(
   'Admin subpackage must reuse main-package npm dependencies to stay below the WeChat 2 MB limit',
 )
 assert(
-  !fs.existsSync(path.join(root, 'dist/packages/member/common.js')),
-  'Member modules must use stable source-path chunks because DevTools can return empty subpackage common exports',
-)
-assert(
   fs.existsSync(path.join(root, 'dist/modules/mip-identity/profile-options.js'))
   && fs.existsSync(path.join(root, 'dist/modules/mip-growth/badge-presentation.js')),
   'Member runtime presentation modules were not emitted as source-path chunks',
+)
+assert(
+  badgeCollectionJs.includes('../../../modules/mip-growth/badge-presentation.js')
+  && memberProfileJs.includes('../../../modules/mip-identity/profile-options.js'),
+  'Member pages must load presentation seams directly instead of relying on a subpackage common export',
 )
 assert(!membershipWxml.includes('pb-[calc('), 'Tailwind arbitrary safe-area class was not transformed')
 assert(homeWxml.includes('mip-home-page'), 'Runtime-stable MIP home selector is missing')

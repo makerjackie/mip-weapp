@@ -1,6 +1,4 @@
 import type { BadgeCollectionFilter, BadgeView } from '../../../modules/mip-growth/badge-presentation'
-import { mipGrowthModule } from '../../../modules/mip-growth/client'
-import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import {
   canApplyBadgeLoad,
   filterBadgeItems,
@@ -10,6 +8,8 @@ import {
   presentBadges,
   sameIdOrder,
 } from '../../../modules/mip-growth/badge-presentation'
+import { mipGrowthModule } from '../../../modules/mip-growth/client'
+import { mipIdentityModule } from '../../../modules/mip-identity/client'
 
 type BadgeCategory = 'IDENTITY' | 'HONOR'
 

@@ -1,7 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
 import { badgeArtFallback } from '../src/config/mip-badge-art'
-import { parsePublicPerson } from '../src/modules/mip-opportunities/validation'
 import {
   canApplyBadgeLoad,
   filterBadgeItems,
@@ -9,6 +8,7 @@ import {
   orderedEquippedBadges,
   presentBadges,
 } from '../src/modules/mip-growth/badge-presentation'
+import { parsePublicPerson } from '../src/modules/mip-opportunities/validation'
 
 function source(path: string) {
   return readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')

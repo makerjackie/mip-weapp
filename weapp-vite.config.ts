@@ -82,8 +82,12 @@ export default defineConfig({
   weapp: {
     srcRoot: 'src',
     chunks: {
-      // Stable source-path chunks avoid WeChat DevTools returning an empty subpackage common module.
-      sharedMode: 'path',
+      sharedMode: 'common',
+      // These presentation seams must stay addressable when DevTools returns a stale subpackage common module.
+      sharedOverrides: [
+        { test: /(?:^|\/)modules\/mip-growth\/badge-presentation\.ts$/, mode: 'path' },
+        { test: /(?:^|\/)modules\/mip-identity\/profile-options\.ts$/, mode: 'path' },
+      ],
     },
     copy: {
       include: ['**/*.webp'],

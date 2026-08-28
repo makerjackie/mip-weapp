@@ -1,6 +1,6 @@
 import type { BadgeView } from '../../../modules/mip-growth/badge-presentation'
-import { mipGrowthModule } from '../../../modules/mip-growth/client'
 import { orderedEquippedIds, presentBadges } from '../../../modules/mip-growth/badge-presentation'
+import { mipGrowthModule } from '../../../modules/mip-growth/client'
 
 Page({
   data: {
