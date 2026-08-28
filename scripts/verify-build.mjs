@@ -53,6 +53,15 @@ assert(
   !fs.existsSync(path.join(root, 'dist/packages/admin/miniprogram_npm')),
   'Admin subpackage must reuse main-package npm dependencies to stay below the WeChat 2 MB limit',
 )
+assert(
+  !fs.existsSync(path.join(root, 'dist/packages/member/common.js')),
+  'Member modules must use stable source-path chunks because DevTools can return empty subpackage common exports',
+)
+assert(
+  fs.existsSync(path.join(root, 'dist/modules/mip-identity/profile-options.js'))
+  && fs.existsSync(path.join(root, 'dist/modules/mip-growth/badge-presentation.js')),
+  'Member runtime presentation modules were not emitted as source-path chunks',
+)
 assert(!membershipWxml.includes('pb-[calc('), 'Tailwind arbitrary safe-area class was not transformed')
 assert(homeWxml.includes('mip-home-page'), 'Runtime-stable MIP home selector is missing')
 assert(membershipWxml.includes('mip-membership-page'), 'Runtime-stable MIP membership selector is missing')

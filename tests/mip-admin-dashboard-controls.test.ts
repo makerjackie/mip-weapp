@@ -249,6 +249,12 @@ beforeEach(() => {
 })
 
 describe('MIP admin dashboard controls and trends', () => {
+  it('keeps stable runtime selectors on the web login confirmation controls', () => {
+    const template = readFileSync(new URL('../src/packages/admin/dashboard/index.wxml', import.meta.url), 'utf8')
+    expect(template).toContain('id="admin-web-login-code-input"')
+    expect(template).toContain('id="admin-web-login-confirm-button"')
+  })
+
   it('normalizes and confirms the web login code through the admin module', async () => {
     const page = createPage()
     callPage(page, 'openWebLogin')

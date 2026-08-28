@@ -1,6 +1,6 @@
-import type { BadgeCollectionItem } from '../../../modules/mip-growth'
-import { badgeArtFallback } from '../../../config/mip-badge-art'
-import { formatLocalDate } from '../../../utils/date'
+import type { BadgeCollectionItem } from './types'
+import { badgeArtFallback } from '../../config/mip-badge-art'
+import { formatLocalDate } from '../../utils/date'
 
 export interface BadgeView extends BadgeCollectionItem {
   selected: boolean

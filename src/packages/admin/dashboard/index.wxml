@@ -408,6 +408,7 @@
         请核对网页域名为 mipmini.01mvp.com，再输入网页显示的登录码。
       </view>
       <input
+        id="admin-web-login-code-input"
         class="mt-4 box-border h-[96rpx] w-full rounded-[12rpx] border border-line bg-panel px-4 text-center text-[length:36rpx] font-semibold tracking-[0.16em] text-ink"
         value="{{webLoginCode}}"
         maxlength="8"
@@ -424,6 +425,7 @@
       </view>
       <view
         wx:if="{{!webLoginConfirmed}}"
+        id="admin-web-login-confirm-button"
         class="mt-4 flex min-h-[88rpx] items-center justify-center rounded-[12rpx] bg-brand text-[length:25rpx] font-semibold text-on-brand"
         role="button"
         aria-disabled="{{webLoginBusy}}"

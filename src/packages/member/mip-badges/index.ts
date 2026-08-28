@@ -1,4 +1,4 @@
-import type { BadgeCollectionFilter, BadgeView } from './presenter'
+import type { BadgeCollectionFilter, BadgeView } from '../../../modules/mip-growth/badge-presentation'
 import { mipGrowthModule } from '../../../modules/mip-growth/client'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import {
@@ -9,7 +9,7 @@ import {
   orderedEquippedIds,
   presentBadges,
   sameIdOrder,
-} from './presenter'
+} from '../../../modules/mip-growth/badge-presentation'
 
 type BadgeCategory = 'IDENTITY' | 'HONOR'
 

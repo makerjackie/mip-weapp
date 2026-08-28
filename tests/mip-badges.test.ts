@@ -8,7 +8,7 @@ import {
   moveEquippedId,
   orderedEquippedBadges,
   presentBadges,
-} from '../src/packages/member/mip-badges/presenter'
+} from '../src/modules/mip-growth/badge-presentation'
 
 function source(path: string) {
   return readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')

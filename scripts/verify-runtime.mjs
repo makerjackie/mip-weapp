@@ -843,6 +843,26 @@ function snapshotDevToolsLogs() {
   return new Map(listDevToolsLogFiles().map(filePath => [filePath, fs.statSync(filePath).size]))
 }
 
+async function waitForDevToolsLogQuiescence({ quietMs = 2_000, timeoutMs = 15_000 } = {}) {
+  let snapshot = snapshotDevToolsLogs()
+  let quietSince = Date.now()
+  const startedAt = quietSince
+  while (Date.now() - startedAt < timeoutMs) {
+    await new Promise(resolve => setTimeout(resolve, 250))
+    const current = snapshotDevToolsLogs()
+    const unchanged = current.size === snapshot.size
+      && [...current].every(([filePath, size]) => snapshot.get(filePath) === size)
+    if (unchanged) {
+      if (Date.now() - quietSince >= quietMs) {
+        return
+      }
+      continue
+    }
+    snapshot = current
+    quietSince = Date.now()
+  }
+}
+
 function inspectDevToolsCompilerLogs(snapshot) {
   const matches = []
   let inspectedBytes = 0
@@ -1766,7 +1786,8 @@ export async function main(runArgs = process.argv.slice(2)) {
   const diagnostics = createRuntimeDiagnostics({ allowlist: warningAllowlist })
   let miniProgram
 
-  await new Promise(resolve => setTimeout(resolve, 1500))
+  // DevTools processes the atomic dist replacement asynchronously; start evidence after that build traffic settles.
+  await waitForDevToolsLogQuiescence()
   const devToolsLogSnapshot = snapshotDevToolsLogs()
 
   async function runRuntimeAttempt(preferOpenedSession) {

@@ -81,6 +81,10 @@ export default defineConfig({
   },
   weapp: {
     srcRoot: 'src',
+    chunks: {
+      // Stable source-path chunks avoid WeChat DevTools returning an empty subpackage common module.
+      sharedMode: 'path',
+    },
     copy: {
       include: ['**/*.webp'],
     },
