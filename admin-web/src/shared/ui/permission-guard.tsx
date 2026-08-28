@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { useAdminSession } from '../../app/session-provider'
-import { ForbiddenState } from './feedback-states'
+import { ForbiddenState, LoadingState } from './feedback-states'
 
 export function PermissionGuard({ capabilities, requireAny, children, fallback }: {
   capabilities: string[]
@@ -8,7 +8,8 @@ export function PermissionGuard({ capabilities, requireAny, children, fallback }
   children: ReactNode
   fallback?: ReactNode
 }) {
-  const { hasCapability } = useAdminSession()
+  const { hasCapability, loading } = useAdminSession()
+  if (loading) return <LoadingState label="正在验证访问权限" rows={3} />
   const allowed = requireAny
     ? capabilities.some(hasCapability)
     : capabilities.every(hasCapability)

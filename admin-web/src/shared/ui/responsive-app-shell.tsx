@@ -35,6 +35,8 @@ export function ResponsiveAppShell() {
     refreshSession, beginLogin, closeLogin, logout,
   } = useAdminSession()
 
+  const loginVisible = loginOpen && !session?.enabled
+
   const visibleNavigation = useMemo(() => {
     if (demoMode) return adminNavigation
     if (!session?.enabled) return adminNavigation.filter(item => item.path === '/overview')
@@ -122,7 +124,7 @@ export function ResponsiveAppShell() {
       </Layout>
 
       <Modal
-        open={loginOpen}
+        open={loginVisible}
         title="运营登录"
         footer={null}
         onCancel={() => { setLoginOpen(false); closeLogin() }}

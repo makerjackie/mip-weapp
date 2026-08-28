@@ -16,7 +16,6 @@ export type MutationState = {
 
 export type MutationDefinition = Omit<MutationState, 'intent' | 'error' | 'busy'>
 export type DetailFieldReader = (sectionTitle: string, label: string) => string
-export type HtmlEscaper = (value: unknown) => string
 
 export function createMutationDefinition(
   action: AdminMutationAction,
@@ -61,47 +60,6 @@ export function createMutationDefinition(
     action, targetId, title: '提交退款', description: '提交当前订单的退款申请。金额和退款状态由服务端订单与支付流水决定。',
     values: { reason: '' },
   }
-}
-
-export function renderMutationDialog(state: MutationState, escapeHtml: HtmlEscaper) {
-  const disabled = state.busy || Boolean(state.error)
-  const values = state.values
-  const field = (name: string) => escapeHtml(values[name] ?? '')
-  let fields = ''
-  if (state.action === 'mip.admin.memberships.grant') {
-    fields = `<label>会员时长<select name="durationMonths" ${disabled ? 'disabled' : ''}><option value="1" ${values.durationMonths === '1' ? 'selected' : ''}>1 个月</option><option value="3" ${values.durationMonths === '3' ? 'selected' : ''}>3 个月</option><option value="6" ${values.durationMonths === '6' ? 'selected' : ''}>6 个月</option><option value="12" ${values.durationMonths === '12' ? 'selected' : ''}>12 个月</option></select></label><label class="mutation-wide">调整原因<textarea name="reason" rows="3" maxlength="300" required ${disabled ? 'disabled' : ''}>${field('reason')}</textarea></label>`
-  }
-  else if (state.action === 'mip.admin.communications.publishEventReminder') {
-    fields = `<label class="mutation-checkbox"><input name="sendWechatReminder" type="checkbox" ${values.sendWechatReminder ? 'checked' : ''} ${disabled ? 'disabled' : ''} />同时生成微信提醒任务</label>`
-  }
-  else if (state.action === 'mip.admin.events.archive') {
-    fields = `<label class="mutation-wide">归档原因<textarea name="reason" rows="3" maxlength="300" required ${disabled ? 'disabled' : ''}>${field('reason')}</textarea></label>`
-  }
-  else if (state.action === 'mip.admin.events.changeStatus') {
-    fields = '<p class="mutation-note">服务端将按当前活动版本执行状态变更。</p>'
-  }
-  else if (state.action === 'mip.admin.refunds.submit') {
-    fields = '<label class="mutation-wide">退款原因<textarea name="reason" rows="3" maxlength="300" required ' + `${disabled ? 'disabled' : ''}` + `>${field('reason')}</textarea></label>`
-  }
-  const error = state.error
-    ? `<div class="mutation-error" role="alert">${escapeHtml(state.error)}<small>请求结果不确定时，请先核对服务端记录；再次提交会按同一次操作处理。</small></div>`
-    : ''
-  const buttonLabel = state.busy ? '提交中' : state.error ? '手动重试' : '确认提交'
-  return `<div class="mutation-backdrop" id="mutation-backdrop"><section class="mutation-dialog" role="dialog" aria-modal="true" aria-labelledby="mutation-title"><button id="mutation-close-button" class="login-close" aria-label="关闭" ${state.busy ? 'disabled' : ''}>×</button><span class="login-kicker">操作确认</span><h2 id="mutation-title">${escapeHtml(state.title)}</h2><p>${escapeHtml(state.description)}</p><form id="mutation-form"><div class="mutation-fields">${fields}</div>${error}<div class="mutation-actions"><button type="button" class="outline-button" id="mutation-cancel-button" ${state.busy ? 'disabled' : ''}>取消</button><button type="submit" class="primary-button" ${state.busy ? 'disabled' : ''}>${buttonLabel}</button></div></form></section></div>`
-}
-
-export function readMutationValues(
-  data: FormData,
-  previous: MutationValues,
-  action: AdminMutationAction,
-): MutationValues {
-  const values: MutationValues = {}
-  for (const [key, value] of data.entries()) values[key] = typeof value === 'string' ? value.trim() : String(value)
-  for (const [key, value] of Object.entries(previous)) {
-    if (!(key in values)) values[key] = value
-  }
-  if (action === 'mip.admin.communications.publishEventReminder') values.sendWechatReminder = data.get('sendWechatReminder') === 'on'
-  return values
 }
 
 export function mutationInput(state: MutationState, values: MutationValues): AdminRequestInput | null {

@@ -1,7 +1,7 @@
 import { createHashHistory, createRootRoute, createRoute, createRouter, redirect } from '@tanstack/react-router'
-import { FoundationPage } from '../pages/foundation-page'
 import { ResponsiveAppShell } from '../shared/ui/responsive-app-shell'
 import { adminNavigation } from './navigation'
+import { routeComponents } from './route-pages'
 
 export interface AdminListSearch {
   q?: string
@@ -34,7 +34,7 @@ const pageRoutes = adminNavigation.map(item => createRoute({
   getParentRoute: () => rootRoute,
   path: item.path,
   validateSearch,
-  component: FoundationPage,
+  component: routeComponents[item.path],
 }))
 
 const routeTree = rootRoute.addChildren([indexRoute, ...pageRoutes])

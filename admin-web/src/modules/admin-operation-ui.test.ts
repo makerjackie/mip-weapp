@@ -1,37 +1,12 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
-  readOperationValues,
-  renderOperationDialog,
+  normalizeOperationValues,
   type OperationField,
 } from './admin-operation-ui.ts'
 
-const escapeHtml = (value: unknown) => String(value).replace(/[&<>"']/g, character => ({
-  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-})[character]!)
-
 describe('admin operation UI', () => {
-  it('renders typed fields without exposing hidden transport values', () => {
-    const fields: OperationField[] = [
-      { key: 'expectedVersion', label: '版本', kind: 'number', hidden: true },
-      { key: 'title', label: '<标题>', kind: 'text', required: true },
-      { key: 'enabled', label: '启用', kind: 'checkbox' },
-      { key: 'roles', label: '角色', kind: 'multi-select', options: ['connector', 'strategist'] },
-    ]
-    const html = renderOperationDialog({
-      title: '<保存>', description: '服务端校验', fields,
-      values: { expectedVersion: 3, title: 'MIP', enabled: true, roles: ['strategist'] },
-      busy: false, error: '',
-    }, escapeHtml)
-
-    assert.match(html, /&lt;保存&gt;/)
-    assert.match(html, /&lt;标题&gt;/)
-    assert.doesNotMatch(html, /name="expectedVersion"/)
-    assert.match(html, /value="strategist" selected/)
-    assert.doesNotMatch(html, /<option value="">未设置<\/option>/)
-  })
-
-  it('reads nested groups and typed lists while preserving hidden values', () => {
+  it('normalizes nested groups and typed lists while preserving hidden values', () => {
     const fields: OperationField[] = [
       { key: 'expectedVersion', label: '版本', kind: 'number', hidden: true },
       { key: 'draft', label: '草稿', kind: 'group', fields: [
@@ -40,18 +15,36 @@ describe('admin operation UI', () => {
         { key: 'cover', label: '素材', kind: 'asset-list' },
       ] },
     ]
-    const data = new FormData()
-    data.set('draft.title', ' 活动 ')
-    data.set('draft.tagIds', 'tag-a\ntag-b')
-    data.set('draft.cover', '00000000-0000-4000-8000-000000000001')
-
-    assert.deepEqual(readOperationValues(fields, data, { expectedVersion: 2, draft: {} }), {
+    assert.deepEqual(normalizeOperationValues(fields, {
+      draft: {
+        title: '活动',
+        tagIds: 'tag-a\ntag-b',
+        cover: '00000000-0000-4000-8000-000000000001',
+      },
+    }, { expectedVersion: 2, draft: {} }), {
       expectedVersion: 2,
       draft: {
         title: '活动',
         tagIds: ['tag-a', 'tag-b'],
         cover: [{ assetId: '00000000-0000-4000-8000-000000000001', caption: '' }],
       },
+    })
+  })
+
+  it('normalizes nested React form values with the same transport shape', () => {
+    const fields: OperationField[] = [
+      { key: 'expectedVersion', label: '版本', kind: 'number', hidden: true },
+      { key: 'draft', label: '草稿', kind: 'group', fields: [
+        { key: 'title', label: '标题', kind: 'text' },
+        { key: 'tagIds', label: '标签', kind: 'id-list' },
+      ] },
+    ]
+
+    assert.deepEqual(normalizeOperationValues(fields, {
+      draft: { title: '活动', tagIds: 'tag-a\ntag-b' },
+    }, { expectedVersion: 2, draft: {} }), {
+      expectedVersion: 2,
+      draft: { title: '活动', tagIds: ['tag-a', 'tag-b'] },
     })
   })
 })

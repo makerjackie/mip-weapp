@@ -10,7 +10,6 @@ import {
   hasAdminMediaUploadAccess,
   parseAdminMediaUploadResult,
   prepareAdminMediaUpload,
-  renderAdminMediaUploadPage,
   validateAdminMediaFileMetadata,
   type AdminMediaFile,
 } from './admin-media-upload.ts'
@@ -118,39 +117,6 @@ describe('browser admin media upload preparation', () => {
     assert.deepEqual(availableAdminMediaPurposeOptions([
       { capability: 'events.write', scopeType: 'BRANCH' },
     ]), [])
-  })
-
-  it('renders selected, loading, error, and success states without previewing cloud identifiers', () => {
-    const html = renderAdminMediaUploadPage({
-      purposeOptions: ADMIN_MEDIA_PURPOSE_OPTIONS.slice(0, 1),
-      selectedPurpose: 'BANNER',
-      file: { name: 'home-banner.png', size: 64 * 1024, type: 'image/png' },
-      previewUrl: 'blob:https://mipmini.01mvp.com/local-preview',
-      busy: true,
-      error: '图片安全检查暂时不可用',
-      result: { assetId, imageUrl: 'cloud://env.mip/mip/live/app/banners/asset.png' },
-      copied: false,
-      demoMode: false,
-    }, value => String(value).replaceAll('&', '&amp;').replaceAll('"', '&quot;'))
-
-    assert.match(html, /data-media-upload-page="true"/)
-    assert.match(html, /正在上传/)
-    assert.match(html, /图片安全检查暂时不可用/)
-    assert.match(html, new RegExp(assetId))
-    assert.match(html, /cloud:\/\//)
-    assert.doesNotMatch(html, /src="cloud:\/\//)
-    assert.match(html, /src="blob:https:\/\/mipmini\.01mvp\.com\/local-preview"/)
-    assert.equal(validateAdminMediaFileMetadata({ size: 1024, type: 'image/png' }), 'image/png')
-  })
-
-  it('renders an unavailable state when an authenticated account has no mapped purpose', () => {
-    const html = renderAdminMediaUploadPage({
-      purposeOptions: [], selectedPurpose: '', file: null, previewUrl: '', busy: false,
-      error: '', result: null, copied: false, demoMode: false,
-    }, value => String(value))
-    assert.match(html, /当前账号没有可上传的素材用途/)
-    assert.match(html, /<select[^>]*disabled/)
-    assert.match(html, /<button[^>]*disabled[^>]*>上传图片<\/button>/)
   })
 
   it('parses only a standard successful response with safe asset and image identifiers', () => {

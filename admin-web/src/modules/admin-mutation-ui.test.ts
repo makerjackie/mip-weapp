@@ -5,12 +5,8 @@ import {
   createMutationDefinition,
   mutationInput,
   mutationSummary,
-  readMutationValues,
-  renderMutationDialog,
   type MutationState,
 } from './admin-mutation-ui.ts'
-
-const escape = (value: unknown) => String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!)
 
 function state(action: MutationState['action'], values: Record<string, string | boolean>): MutationState {
   return {
@@ -28,12 +24,6 @@ describe('admin mutation UI model', () => {
     const member = createMutationDefinition('mip.admin.memberships.grant', 'user-1', (section, label) => section === '会员权益' && label === '会员链版本' ? '9' : '')
     assert.equal(event.values.expectedVersion, '4')
     assert.equal(member.values.expectedChainVersion, '9')
-  })
-
-  it('normalizes form values while retaining hidden concurrency fields for retry', () => {
-    const previous = { expectedVersion: '4', sendWechatReminder: true }
-    const values = readMutationValues(new FormData(), previous, 'mip.admin.communications.publishEventReminder')
-    assert.deepEqual(values, { expectedVersion: '4', sendWechatReminder: false })
   })
 
   it('builds exact neutral inputs and summaries for reviewed writes', () => {
@@ -60,10 +50,4 @@ describe('admin mutation UI model', () => {
     assert.deepEqual(mutationInput(state('mip.admin.events.archive', { expectedVersion: '4', reason: '' }), { expectedVersion: '4', reason: '' }), null)
   })
 
-  it('escapes user-provided values in the dialog markup', () => {
-    const value = '<退款原因>'
-    const dialog = renderMutationDialog(state('mip.admin.refunds.submit', { reason: value }), escape)
-    assert.match(dialog, /&lt;退款原因&gt;/)
-    assert.doesNotMatch(dialog, /<退款原因>/)
-  })
 })

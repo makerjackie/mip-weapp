@@ -18,15 +18,16 @@ function controlFor(field: OperationField) {
   return <Input maxLength={field.maxLength} type={field.kind === 'url' ? 'url' : 'text'} />
 }
 
-function OperationFields({ fields }: { fields: readonly OperationField[] }) {
+function OperationFields({ fields, prefix = [] }: { fields: readonly OperationField[]; prefix?: string[] }) {
   return fields.filter(field => !field.hidden).map((field) => {
     const name = fieldName(field)
     if (!name) return null
+    const path = [...prefix, name]
     if (field.kind === 'group') {
       return (
         <fieldset className="mutation-fieldset" key={name}>
           <legend>{field.label}</legend>
-          <OperationFields fields={field.fields || []} />
+          <OperationFields fields={field.fields || []} prefix={path} />
         </fieldset>
       )
     }
@@ -35,7 +36,7 @@ function OperationFields({ fields }: { fields: readonly OperationField[] }) {
       <Form.Item
         className={field.wide ? 'mutation-field--wide' : undefined}
         key={name}
-        name={name}
+        name={path}
         label={checkbox ? undefined : field.label}
         valuePropName={checkbox ? 'checked' : 'value'}
         rules={field.required ? [{ required: true, message: `请填写${field.label}` }] : undefined}
@@ -47,12 +48,18 @@ function OperationFields({ fields }: { fields: readonly OperationField[] }) {
   })
 }
 
-function formValues(values: OperationValues) {
-  return Object.fromEntries(Object.entries(values).map(([key, value]) => {
-    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(value)) return [key, dayjs(value)]
-    if (Array.isArray(value) && value.every(item => typeof item === 'string')) return [key, value]
-    return [key, value]
-  }))
+function formValues(fields: readonly OperationField[], values: OperationValues): OperationValues {
+  const output: OperationValues = { ...values }
+  for (const field of fields) {
+    const key = fieldName(field)
+    if (!key || field.hidden) continue
+    const value = values[key]
+    if (field.kind === 'group') output[key] = formValues(field.fields || [], value && typeof value === 'object' && !Array.isArray(value) ? value as OperationValues : {})
+    else if (['datetime', 'datetime-local', 'date'].includes(field.kind) && typeof value === 'string' && value) output[key] = dayjs(value)
+    else if (field.kind === 'asset-list' && Array.isArray(value)) output[key] = value.map(item => item && typeof item === 'object' && 'assetId' in item ? String(item.assetId || '') : '').filter(Boolean).join('\n')
+    else if (['id-list', 'profile-ref-list', 'tags'].includes(field.kind) && Array.isArray(value)) output[key] = value.map(String).join('\n')
+  }
+  return output
 }
 
 export function MutationDialog({ open, title, description, fields, values, loading, error, onSubmit, onCancel }: {
@@ -79,10 +86,10 @@ export function MutationDialog({ open, title, description, fields, values, loadi
       keyboard={!loading}
       onCancel={onCancel}
       onOk={() => void form.validateFields().then(onSubmit)}
-      afterOpenChange={(next) => { if (next) form.setFieldsValue(formValues(values)) }}
+      afterOpenChange={(next) => { if (next) form.setFieldsValue(formValues(fields, values)) }}
     >
       <p className="mutation-description">{description}</p>
-      <Form form={form} layout="vertical" initialValues={formValues(values)} disabled={loading}>
+      <Form form={form} layout="vertical" initialValues={formValues(fields, values)} disabled={loading}>
         <div className="mutation-grid"><OperationFields fields={fields} /></div>
       </Form>
       {error ? <Alert type="error" showIcon message={error} description="请求结果不确定时，请先刷新并核对服务端记录。" /> : null}

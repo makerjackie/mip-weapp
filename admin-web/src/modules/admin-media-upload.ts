@@ -45,18 +45,6 @@ export interface AdminMediaCapabilityGrant {
   scopeType?: string
 }
 
-export interface AdminMediaUploadPageState {
-  purposeOptions: readonly typeof ADMIN_MEDIA_PURPOSE_OPTIONS[number][]
-  selectedPurpose: AdminMediaPurpose | ''
-  file: Pick<AdminMediaFile, 'name' | 'size' | 'type'> | null
-  previewUrl: string
-  busy: boolean
-  error: string
-  result: AdminMediaUploadResult | null
-  copied: boolean
-  demoMode: boolean
-}
-
 export class AdminMediaUploadError extends Error {
   readonly code: 'PURPOSE_INVALID' | 'IMAGE_INVALID' | 'IMAGE_TOO_LARGE' | 'INVALID_RESPONSE'
 
@@ -125,35 +113,6 @@ export function hasPlatformMediaCapability(
   return grants.some(grant => grant.capability === capability && grant.scopeType === 'PLATFORM')
 }
 
-export function renderAdminMediaUploadPage(
-  state: AdminMediaUploadPageState,
-  escapeHtml: (value: unknown) => string,
-) {
-  const options = state.purposeOptions.map(option => `<option value="${option.value}" ${option.value === state.selectedPurpose ? 'selected' : ''}>${escapeHtml(option.label)}</option>`).join('')
-  const file = state.file
-    ? `<div class="media-file-fact"><strong>${escapeHtml(state.file.name)}</strong><span>${escapeHtml(formatBytes(state.file.size))} · ${escapeHtml(state.file.type)}</span></div>`
-    : '<div class="media-file-fact media-file-empty"><strong>尚未选择图片</strong><span>支持 PNG、JPEG，文件不超过 1MB</span></div>'
-  const preview = state.previewUrl
-    ? `<img class="media-local-preview" src="${escapeHtml(state.previewUrl)}" alt="本地待上传图片预览" />`
-    : '<div class="media-preview-empty">本地预览</div>'
-  const error = state.error
-    ? `<div class="media-upload-message media-upload-error" role="alert">${escapeHtml(state.error)}</div>`
-    : ''
-  const resultHint = state.result?.imageUrl.startsWith('cloud://')
-    ? '返回的 imageUrl 为 cloud:// 文件标识，浏览器不能直接预览；当前页面只显示本地图片预览。'
-    : '当前页面只显示上传前的本地图片预览。'
-  const success = state.result
-    ? `<section class="media-upload-success" aria-live="polite"><span class="status status-success">上传成功</span><h2>素材已保存</h2><label>素材 ID<div class="media-asset-copy"><input value="${escapeHtml(state.result.assetId)}" readonly aria-label="素材 ID" /><button type="button" class="outline-button" id="media-copy-asset">${state.copied ? '已复制' : '复制'}</button></div></label><p>保存 Banner、活动、机会、案例或任务时，将素材 ID 填入对应字段。</p><small>${escapeHtml(resultHint)}</small></section>`
-    : ''
-  const unavailable = !state.purposeOptions.length
-    ? '<div class="media-upload-message media-upload-error" role="alert">当前账号没有可上传的素材用途。</div>'
-    : ''
-  const demo = state.demoMode
-    ? '<div class="media-upload-message">演示模式不会向服务端上传文件。</div>'
-    : ''
-  return `<div data-media-upload-page="true"><div class="section-title"><div><h1>素材上传</h1><p>上传运营页面使用的图片，并获取可复制的素材 ID</p></div></div><div class="media-upload-layout"><form class="panel media-upload-form" id="media-upload-form"><div class="panel-heading"><h2>上传图片</h2></div><div class="media-upload-fields"><label>素材用途<select id="media-purpose" name="purpose" ${state.busy || !state.purposeOptions.length ? 'disabled' : ''}>${options}</select></label><label class="media-file-picker">选择图片<input id="media-file" type="file" accept="image/png,image/jpeg" ${state.busy || !state.purposeOptions.length ? 'disabled' : ''} /></label>${file}<div class="media-preview">${preview}</div>${unavailable}${demo}${error}<button class="primary-button media-upload-submit" type="submit" ${state.busy || !state.file || !state.selectedPurpose || state.demoMode ? 'disabled' : ''}>${state.busy ? '正在上传' : '上传图片'}</button></div></form><aside class="panel media-upload-help"><div class="panel-heading"><h2>使用说明</h2></div><div><p>图片由服务端执行格式、尺寸、内容安全和权限校验。上传成功不代表相关内容已经发布。</p><dl><div><dt>文件格式</dt><dd>PNG、JPEG</dd></div><div><dt>文件大小</dt><dd>不超过 1MB</dd></div><div><dt>浏览器预览</dt><dd>仅显示当前本地文件</dd></div></dl></div>${success}</aside></div></div>`
-}
-
 export function parseAdminMediaUploadResult(value: unknown): AdminMediaUploadResult {
   if (!plainRecord(value) || value.ok !== true || !plainRecord(value.data)) {
     throw new AdminMediaUploadError('INVALID_RESPONSE', '图片上传结果无效')
@@ -197,11 +156,6 @@ function bytesToBase64(bytes: Uint8Array) {
     output += hasC ? alphabet[c & 63] : '='
   }
   return output
-}
-
-function formatBytes(value: number) {
-  if (value < 1024) return `${value} B`
-  return `${(value / 1024).toFixed(value < 100 * 1024 ? 1 : 0)} KB`
 }
 
 function plainRecord(value: unknown): value is Record<string, unknown> {
