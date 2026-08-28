@@ -49,7 +49,7 @@ function createBannerAdminClient(options = {}) {
 
   return Object.freeze({
     configured,
-    async execute({ appId, actorUserId, action, input = {} } = {}) {
+    async execute({ appId, actorUserId, actorOpenId, action, input = {} } = {}) {
       const operation = OPERATION_SPECS[action]
       if (!operation) throw codedError('BANNERS_OPERATION_NOT_ALLOWED')
       assertInput(operation, input)
@@ -60,7 +60,7 @@ function createBannerAdminClient(options = {}) {
       if (!configured || typeof now !== 'function' || typeof nonce !== 'function') {
         throw codedError('BANNERS_DISPATCH_CONFIG_REQUIRED')
       }
-      if (!trustedIdentifier(appId, 64) || !uuid(actorUserId)) {
+      if (!trustedIdentifier(appId, 64) || !uuid(actorUserId) || !trustedIdentifier(actorOpenId, 128)) {
         throw codedError('AUTH_REQUIRED')
       }
       const timestamp = Number(now())
@@ -75,6 +75,7 @@ function createBannerAdminClient(options = {}) {
         nonce: requestNonce,
         appId,
         actorUserId,
+        actorOpenId,
         action: operation.internalAction,
         input: { ...input },
         sourceFunction,

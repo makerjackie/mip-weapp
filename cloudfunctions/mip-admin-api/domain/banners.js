@@ -13,6 +13,7 @@ function createAdminBanners({ access, client } = {}) {
     return client.execute({
       appId: context.caller.appId,
       actorUserId: context.caller.userId,
+      actorOpenId: caller.openId,
       action,
       input,
     })

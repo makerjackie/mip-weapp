@@ -18,7 +18,7 @@ const ACTION_SPECS = Object.freeze({
   'admin.delete': spec(['bannerId', 'expectedVersion']),
 })
 const SIGNED_KEYS = new Set([
-  'transport', 'protocol', 'timestamp', 'nonce', 'appId', 'actorUserId',
+  'transport', 'protocol', 'timestamp', 'nonce', 'appId', 'actorUserId', 'actorOpenId',
   'action', 'input', 'sourceFunction',
 ])
 const FRAMEWORK_KEYS = new Set(['userInfo', 'tcbContext', 'frameworkContext'])
@@ -62,6 +62,7 @@ function verifyBannerAdminRequest(
     || !(allowedAppIds instanceof Set)
     || !allowedAppIds.has(signed.appId)
     || !uuid(signed.actorUserId)
+    || !trustedIdentifier(signed.actorOpenId, 128)
     || !operation
     || !isPlainRecord(signed.input)
     || !validInput(operation, signed.input)
@@ -123,7 +124,11 @@ function createInternalBannerHandler({
         sourceFunction,
         now,
       })
-      const caller = { appId: request.appId, userId: request.actorUserId }
+      const caller = {
+        appId: request.appId,
+        userId: request.actorUserId,
+        openId: request.actorOpenId,
+      }
       await assertAdminReady(caller)
       const run = dispatch[request.action]
       if (!run) throw new Error('NOT_FOUND')
@@ -156,6 +161,11 @@ function trustedFunctionName(value) {
 function uuid(value) {
   return typeof value === 'string'
     && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
+function trustedIdentifier(value, maximum) {
+  return typeof value === 'string' && value.length > 0 && value.length <= maximum
+    && /^[A-Za-z0-9_-]+$/.test(value)
 }
 
 function isPlainRecord(value) {

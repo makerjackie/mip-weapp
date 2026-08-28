@@ -4,7 +4,11 @@ const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const { createAdminBanners } = require('../domain/banners')
 
-const caller = { appId: 'wx-browser-value', identityKey: 'untrusted-browser-value' }
+const caller = {
+  appId: 'wx-browser-value',
+  openId: 'openid-from-trusted-principal',
+  identityKey: 'untrusted-browser-value',
+}
 
 function accessWith(bindings) {
   return {
@@ -37,6 +41,7 @@ describe('admin Banner adapter authorization', () => {
     assert.deepEqual(calls, [{
       appId: 'wx-server-app',
       actorUserId: '10000000-0000-4000-8000-000000000001',
+      actorOpenId: 'openid-from-trusted-principal',
       action: 'mip.admin.banners.list',
       input: { filters: { query: '活动' } },
     }])

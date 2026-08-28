@@ -14,6 +14,7 @@ const {
 const SECRET = 'banner-admin-hmac-secret-with-at-least-32-characters'
 const APP_ID = 'wx1234567890abcdef'
 const USER_ID = '10000000-0000-4000-8000-000000000001'
+const OPEN_ID = 'openid-from-trusted-principal'
 const NOW = 1_700_000_000_000
 
 function signed(overrides = {}) {
@@ -24,6 +25,7 @@ function signed(overrides = {}) {
     nonce: 'nonce-abcdefghijklmnopqrstuvwxyz',
     appId: APP_ID,
     actorUserId: USER_ID,
+    actorOpenId: OPEN_ID,
     action: 'admin.list',
     input: { filters: { status: 'ACTIVE', query: '活动' } },
     sourceFunction: 'mip-admin-api',
@@ -63,10 +65,10 @@ describe('Banner internal admin transport', () => {
 
     assert.deepEqual(result, { ok: true, data: { items: [], truncated: false } })
     assert.deepEqual(calls, [
-      { gate: { appId: APP_ID, userId: USER_ID } },
+      { gate: { appId: APP_ID, userId: USER_ID, openId: OPEN_ID } },
       {
         service: {
-          caller: { appId: APP_ID, userId: USER_ID },
+          caller: { appId: APP_ID, userId: USER_ID, openId: OPEN_ID },
           input: { filters: { status: 'ACTIVE', query: '活动' } },
         },
       },
@@ -87,6 +89,7 @@ describe('Banner internal admin transport', () => {
     })
     const cases = [
       signed({ appId: 'wx-other' }),
+      signed({ actorOpenId: 'forged openid' }),
       signed({ sourceFunction: 'mip-other-api' }),
       signed({ timestamp: NOW - 60_001 }),
       signed({ action: 'admin.dropAll', input: {} }),

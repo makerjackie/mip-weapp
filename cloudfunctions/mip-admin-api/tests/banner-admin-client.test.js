@@ -16,6 +16,7 @@ const {
 const SECRET = 'banner-admin-hmac-secret-with-at-least-32-characters'
 const APP_ID = 'wx1234567890abcdef'
 const USER_ID = '10000000-0000-4000-8000-000000000001'
+const OPEN_ID = 'openid-from-trusted-principal'
 
 function clientWith(cloud, extra = {}) {
   return createBannerAdminClient({
@@ -51,6 +52,7 @@ describe('banner admin typed client', () => {
           now: () => 1_700_000_000_000,
         })
         assert.equal(verified.action, 'admin.save')
+        assert.equal(verified.actorOpenId, OPEN_ID)
         assert.deepEqual(verified.input, {
           bannerId: '20000000-0000-4000-8000-000000000001',
           expectedVersion: 2,
@@ -67,6 +69,7 @@ describe('banner admin typed client', () => {
     const result = await client.execute({
       appId: APP_ID,
       actorUserId: USER_ID,
+      actorOpenId: OPEN_ID,
       action: 'mip.admin.banners.save',
       input: {
         bannerId: '20000000-0000-4000-8000-000000000001',
@@ -104,7 +107,7 @@ describe('banner admin typed client', () => {
       },
     ]) {
       await assert.rejects(
-        () => client.execute({ appId: APP_ID, actorUserId: USER_ID, ...request }),
+        () => client.execute({ appId: APP_ID, actorUserId: USER_ID, actorOpenId: OPEN_ID, ...request }),
         error => error.code === 'VALIDATION_FAILED',
       )
     }
@@ -116,6 +119,7 @@ describe('banner admin typed client', () => {
     await assert.rejects(
       () => invalidTarget.execute({
         appId: APP_ID, actorUserId: USER_ID,
+        actorOpenId: OPEN_ID,
         action: 'mip.admin.banners.list', input: {},
       }),
       error => error.code === 'BANNERS_DISPATCH_CONFIG_REQUIRED',
@@ -124,6 +128,7 @@ describe('banner admin typed client', () => {
     await assert.rejects(
       () => client.execute({
         appId: 'forged app', actorUserId: USER_ID,
+        actorOpenId: OPEN_ID,
         action: 'mip.admin.banners.list', input: {},
       }),
       error => error.code === 'AUTH_REQUIRED',
@@ -131,6 +136,7 @@ describe('banner admin typed client', () => {
     await assert.rejects(
       () => client.execute({
         appId: APP_ID, actorUserId: USER_ID,
+        actorOpenId: OPEN_ID,
         action: 'mip.admin.banners.dropAll', input: {},
       }),
       error => error.code === 'BANNERS_OPERATION_NOT_ALLOWED',
@@ -152,6 +158,7 @@ describe('banner admin typed client', () => {
       () => client.execute({
         appId: APP_ID,
         actorUserId: USER_ID,
+        actorOpenId: OPEN_ID,
         action: 'mip.admin.banners.list',
         input: {},
       }),
