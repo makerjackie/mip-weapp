@@ -1,6 +1,6 @@
-# MIP 微信小程序
+# MIP 产品仓库
 
-MIP 的会员与城市分会小程序。根目录是唯一的微信小程序工程，包含用户端、运营管理分包、CloudBase 云函数和 MySQL 追加迁移。
+MIP 的会员与城市分会产品仓库。根目录是微信小程序主工程，`admin-web/` 是独立构建和部署的 React 管理后台；两端共同使用 CloudBase 服务端和 MySQL 追加迁移。
 
 ## 包含能力
 
@@ -14,7 +14,7 @@ MIP 的会员与城市分会小程序。根目录是唯一的微信小程序工�
 - 站内消息与微信通知适配
 - AI 文字与语音草稿适配
 - 小程序运营管理分包与可复用服务端 API
-- 108 条小程序路由、16 个核心 `mip-*` CloudBase 函数和 52 个锁定的 MySQL 迁移；支付启用时另有 `mip-cloudpay` / `mip-cloudpay-callback` / `mip-refund-worker`
+- 110 条小程序路由、16 个核心 `mip-*` CloudBase 函数和 56 个锁定的 MySQL 迁移；支付启用时另有 `mip-cloudpay` / `mip-cloudpay-callback` / `mip-refund-worker`
 
 ## 五分钟开始
 
@@ -52,9 +52,11 @@ pnpm dev:open
 
 ```bash
 pnpm verify
+pnpm admin:web:verify
+pnpm verify:all
 ```
 
-真机支付、手机号、订阅消息不能用开发者工具代替。
+当前工作区对应的 16 个核心 CloudBase 函数已部署，最新 `cloud:verify` 通过。小程序开发者工具运行报告通过 110/110 路由、6/6 代表状态和 6/6 交互旅程，运行时诊断和 IDE 编译失败均为 0；375×724 为开发者工具视口，不是真机证据。React 生产环境已通过 14/14 路由的登录态读取验证。真机支付、手机号、订阅消息和扫码签到不能用开发者工具代替。
 
 ## 品牌与可替换配置
 

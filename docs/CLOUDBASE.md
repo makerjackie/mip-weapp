@@ -10,12 +10,12 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 | runtime 数据库权限 | 环境专属账号已收敛为 122 张 MIP 业务表的精确表级权限，幂等复跑为 `already current` | 云端已验证；没有 schema/global 权限或跨项目表权限 |
 | 数据隔离 | 迁移后隔离检查通过，MIP 变更只落在 `mip_*` 对象和 `mip_schema_migrations` | 云端已验证；没有把旧项目表当作 MIP 事实 |
 | 管理授权 | 环境 API Key 可完成环境和 MySQL 操作；主账号 Device Flow 可完成 SCF 管控面部署 | 两种凭证边界已分别验证；当前固定 MCP `2.32.3`，设备登录解决了环境 API Key 临时 STS 被拒绝的问题 |
-| 核心函数 | 16 个核心 `mip-*` 函数曾形成 Nodejs20.19、目标 VPC/子网、运行时环境和真实 MySQL 健康的已验证快照 | 历史快照已验证；本轮 Task/Banner/Game/Media Web bridge 更新部署回读未收敛，不能视为当前工作区已部署 |
-| 调用边界与 worker | 已验证快照中客户端 API 对已登录用户开放，payment ledger、notification worker 与 outbox worker 保持受保护，禁止的 5 分钟 timer 不存在 | 当前函数健康返回 `InsufficientBalance`；余额恢复后必须重新部署和复核完整边界 |
+| 核心函数 | 当前工作区对应的 16 个核心 `mip-*` 函数已部署，Nodejs20.19、目标 VPC/子网、运行时环境和真实 MySQL 健康均已回读 | 云端已验证；Task、Banner、Game、Media Web bridge 已包含在当前部署中 |
+| 调用边界与 worker | 客户端 API 对已登录用户开放，payment ledger、notification worker 与 outbox worker 保持受保护，禁止的 5 分钟 timer 不存在 | 最新独立 `cloud:verify` 通过 |
 
 2026-08-24 的首次 API Key 部署在原始 SCF `CreateFunction` 被拒绝；升级 MCP 并使用资源主账号 Device Flow 后完成函数创建。2026-08-25 的代码更新先严格回读现有 VPC、运行时和环境变量，配置完全一致的函数只执行 `updateFunctionCode`，随后 16/16 函数部署和独立 `cloud:verify` 均通过。`managePermissions` 仍只负责 CloudBase 资源安全规则，不能修改 CAM 或 STS policy。
 
-2026-08-28 本轮已复核 122 张 MIP runtime 表的精确授权，并为 Task、Banner、Game 和 Media 内部适配器补齐互不复用的本地密钥；随后部署在 `mip-identity-api` 代码回读阶段未收敛。CloudBase 管理健康检查返回 `Function is Unavailable, AvailableStatus = InsufficientBalance`，运行请求也出现额度拒绝，因此当前工作区新增 bridge 只能标为已提交、本地门禁通过，不能标为云端已部署。余额恢复后应原样重跑核心部署、`cloud:verify` 和 110 路由运行验收，不需要重新创建设计或数据库备份。
+2026-08-28 本轮已复核 122 张 MIP runtime 表的精确授权，并为 Task、Banner、Game 和 Media 内部适配器补齐互不复用的本地密钥。CloudBase 曾短暂返回 `InsufficientBalance`，余额恢复后已重新完成 16 个核心函数部署、独立 `cloud:verify` 和 110 路由运行验收；该状态不再是当前阻塞。部署与验收未要求重新创建设计或数据库备份。
 
 ## 部署清单
 

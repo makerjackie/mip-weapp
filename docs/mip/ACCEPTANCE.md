@@ -32,7 +32,7 @@
 | N1 会员期邀请归因与载体 | `tests/mip-membership-invitation-ui.test.ts`、`cloudfunctions/mip-commerce-api/tests/membership-invitation-code.test.js`、`cloudfunctions/mip-commerce-api/tests/repository.test.js` | `implemented-local`；正式 wxacode、扫码和相册为 `external-wait` |
 | 谁看过我 | `database/mysql/mip/023_profile_visits.sql`、`cloudfunctions/mip-opportunities-api/tests/profile-visits.test.js`、`src/packages/member/mip-received/index.ts`、`tests/mip-received-interactions.test.ts` | 访客列表及“我的”未读入口为 `implemented-local`；云端运行时为 `external-wait` |
 | 小程序端 `cloud://` 图片解析 | `tests/cloud-media.test.ts`、`tests/mip-commerce-cloud-media.test.ts`、`src/modules/platform/cloud-media.ts` | 管理端和会员订单均在传输层解析临时 URL；当前活动订单封面已在开发者工具验证，下载失败恢复仍需专项验收 |
-| H1 用户详情与导出 | `cloudfunctions/mip-admin-api/tests/service.test.js`、`cloudfunctions/mip-admin-api/tests/export.test.js` | `implemented-local`；CloudBase 私有文件运行时为 `external-wait` |
+| H1 用户详情与导出 | `cloudfunctions/mip-admin-api/tests/service.test.js`、`cloudfunctions/mip-admin-api/tests/export.test.js` | `implemented-local`；生产环境不含手机号的零行导出已通过文件完整性和消费验证，含真实敏感行及手机号的导出仍需受控证据 |
 | H2 订单与参与名单 | `tests/admin-orders-roster-h2.test.ts`、`tests/admin-roster.test.ts` | `implemented-local`；正式支付退款为 `external-wait` |
 | H3 多范围角色和管理登录审计 | `tests/admin-rbac-scope-h3.test.ts`、`cloudfunctions/mip-admin-api/tests/capabilities.test.js` | `implemented-local` |
 | H4 成长等级、规则、流水与调整 | `tests/mip-growth.test.ts`、`cloudfunctions/mip-admin-api/tests/growth-rule-catalog.test.js` | `implemented-local`；正式数值为 `external-wait` |
@@ -50,7 +50,7 @@
 
 ## 静态门禁
 
-2026-08-28 当前工作区完整静态门禁通过：客户端 228 个测试文件、1287 项测试；服务端 1510 项测试；源码合同为 139 个页面视图、16 个核心函数、56 个锁定迁移。架构、共享数据库隔离、安全、类型、lint、样式、构建、包体和文档链接同时通过，ESLint 为 0 warning、0 error。静态门禁不等于运行时、云端或真机证据。
+2026-08-28 当前工作区完整静态门禁通过：客户端 229 个测试文件、1290 项测试；服务端 1513 项测试；源码合同为 139 个页面视图、16 个核心函数、56 个锁定迁移。架构、共享数据库隔离、安全、类型、lint、样式、构建、包体和文档链接同时通过，ESLint 为 0 warning、0 error。静态门禁不等于运行时、云端或真机证据。
 
 - `pnpm verify`
 - `git diff --check`
@@ -64,7 +64,7 @@
 
 ## 微信开发者工具
 
-默认输出 `.tmp/runtime/report.json` 会被每次重跑覆盖，不作为固定证据。完整 UI 基线仍采用 `.tmp/runtime-evidence/2026-08-27-figma-alignment-r4/report.json`：375px 实测窗口下 108/108 路由、6/6 代表状态和 6/6 交互旅程通过，运行时诊断与 IDE 编译诊断均为 0 failure；这是历史完整基线，不是最新一次全量运行的声明。当前真实账号的补充证据为 `.tmp/runtime-evidence/2026-08-27-member-showcase-r2/report.json`，我的活动、活动/会员订单、任务详情、个人名片、档案编辑和个人中心均进入 `ready`；订单媒体解析后的最新三张截图与金额断言见 `.tmp/runtime-evidence/2026-08-28-order-media-r1/report.json`，3 个任务状态和 3 枚带图片的已佩戴徽章见 `.tmp/runtime-evidence/2026-08-28-task-badge-r1/report.json`。个人资料、名片、名片设置、徽章目录和徽章详情的最新 5/5 定向证据见 `.tmp/runtime-evidence/2026-08-28-profile-badge-card-r2/report.json`，姓名、性别、公司/职位、组织/职位、电话、微信、邮箱、地址、二维码和分享/下载入口均在实际页面进入 `ready`；对应左右对照入口为 `.tmp/figma-implementation-comparison/focused-profile-badge-review.html`。最新全量报告 `.tmp/runtime-evidence/2026-08-28-full-110-r2/report.json` 已在同一个开发者工具实例访问 110/110 路由：58 条通过、40 条因 CloudBase 函数返回 `InsufficientBalance` 失败、12 条保留外部待验；6/6 代表状态通过，交互在首次服务端请求处被阻塞。该报告的控制台、exception、rejection、未知 warning 和 IDE 编译失败均为 0，但不能写成 110/110 通过。
+默认输出 `.tmp/runtime/report.json` 会被每次重跑覆盖，不作为固定证据。当前完整 UI 基线采用 `.tmp/runtime-evidence/2026-08-28-final-r6/report.json`：微信开发者工具 375×724 视口下 110/110 路由、6/6 代表状态和 6/6 交互旅程通过，运行时诊断与 IDE 编译失败均为 0。该尺寸是开发者工具视口，不是真机证据。历史与定向报告继续用于页面差异追溯：当前真实账号的补充证据见 `.tmp/runtime-evidence/2026-08-27-member-showcase-r2/report.json`，订单媒体与金额断言见 `.tmp/runtime-evidence/2026-08-28-order-media-r1/report.json`，任务与徽章见 `.tmp/runtime-evidence/2026-08-28-task-badge-r1/report.json`，个人资料、名片、名片设置、徽章目录和徽章详情见 `.tmp/runtime-evidence/2026-08-28-profile-badge-card-r2/report.json`；对应左右对照入口为 `.tmp/figma-implementation-comparison/focused-profile-badge-review.html`。
 
 当前微信身份已经完成协议、档案和手机号绑定，并由精确档案初始化为唯一 `PLATFORM_OWNER`；手机号原值不写入仓库。`.tmp/bootstrap-owner-result.json` 记录 `ownerCount=1`、`role=PLATFORM_OWNER`、`scope=PLATFORM`。当前开发账号具有有效 TEST 玩家权益、3 场未来活动报名、1 笔 399 元 TEST 活动订单、1 笔 6000 元年度会员订单、2 个定向任务和 3 枚已佩戴勋章；这些页面均进入当前补充证据。管理端 1024px 代表页证据见 [响应式密度验收](evidence/admin-density-2026-08-26/README.md)；该证据不代替 Mac/Windows 微信客户端验收。
 
@@ -95,9 +95,9 @@
 
 ## 独立 Web 管理端
 
-- 当前 `admin-web/` React 版已于 2026-08-28 从提交 `6613432` 发布到 `https://mipmini.01mvp.com/`，Cloudflare Pages 生产部署为 `39971feb-2f1c-4331-9a25-4603d653f848`。
+- 当前 `admin-web/` React 版已于 2026-08-28 从提交 `c182db2` 发布到 `https://mipmini.01mvp.com/`，Cloudflare Pages 生产部署为 `6d3b4c88-31e9-452f-b27f-1a95209d8f00`。
 - 历史版本中，真实管理员在微信开发者工具确认网页登录后，浏览器进入 `AUTHENTICATED`；会话、概览、用户、活动、订单、角色、分会、消息和知识查询全部返回成功。
-- 当前 Web BFF 开放 80 条经过生成契约复核的查询 action 与 80 条受审写 action；React 版的 14 个一级页面及用户、活动、订单、任务、任务完成记录、消息、知识库、机会 8 类详情已接入真实查询、筛选和适用的游标分页。写操作由精确字段白名单、一次性 nonce、capability 与作用域共同约束；Task、Banner、Game 和导出创建等关键命令具有领域持久幂等，其余操作不自动重试。Banner、游戏、8 类用途媒体上传和用户/订单敏感导出已经实现。当前版本已通过本地契约、390×844、1280×720、1440×900 响应式与 WorkBuddy 对照验证，并完成公开入口 200、静态资源指纹和未登录 BFF `401 AUTH_REQUIRED` 验证。当前 CloudBase 余额不足，仍需恢复后补录登录查询、写入、上传和导出的线上成功证据。
+- 当前 Web BFF 开放 80 条经过生成契约复核的查询 action 与 80 条受审写 action；React 版的 14 个一级页面及用户、活动、订单、任务、任务完成记录、消息、知识库、机会 8 类详情已接入真实查询、筛选和适用的游标分页。写操作由精确字段白名单、一次性 nonce、capability 与作用域共同约束；Task、Banner、Game 和导出创建等关键命令具有领域持久幂等，其余操作不自动重试。Banner、游戏、8 类用途媒体上传和用户/订单敏感导出已经实现。当前版本已通过本地契约、390×844、1280×720、1440×900 响应式与 WorkBuddy 对照验证，并完成公开入口 200、静态资源指纹和未登录 BFF `401 AUTH_REQUIRED` 验证。生产环境已通过 14/14 路由的登录态读取、Banner 上传后保存为 `INACTIVE` 与软删除，以及不含手机号的零行导出文件完整性和消费验证；含真实敏感行的导出仍需受控验收。
 - 无身份、短码或密钥的线上读回记录见 [evidence/admin-web-live-2026-08-28](evidence/admin-web-live-2026-08-28/README.md)。
 - 未接入真实 API 的页面壳层、静态演示状态和本地数据不能作为真实业务验收证据；真实请求失败时不得回退为演示数字。
 
@@ -111,8 +111,8 @@
 | runtime 表级授权 | 122 张 MIP runtime 表的精确表→权限映射已收敛；Web 防重放表只授予过期清理与写入所需的精确权限 | 云端已验证；没有 schema/global 或非 MIP 表权限 |
 | 数据库隔离 | 迁移后检查通过，只写入 `mip_*` 与 `mip_schema_migrations` | 云端已验证 |
 | 开发者工具登录 | 已登录并可看到云函数列表 | 只证明可见性 |
-| `mip-identity-api` | 既有快照曾完成 VPC/子网、环境变量和 MySQL 健康验证；本轮更新调用后代码回读未收敛 | 当前函数返回 `InsufficientBalance`，不能把工作区版本标为已部署 |
-| 16 个核心函数 | 2026-08-28 早期快照曾独立复核 16/16 函数清单、环境配置、健康检查、保护调用规则及高频 timer 缺失；本轮 Task/Banner/Game/Media Web bridge 更新尚未形成部署回读 | 环境余额恢复后重新部署并执行 `cloud:verify` |
+| `mip-identity-api` | 当前工作区代码、VPC/子网、环境变量和 MySQL 健康均已完成部署回读 | 云端已验证 |
+| 16 个核心函数 | 已独立复核 16/16 函数清单、环境配置、健康检查、保护调用规则及高频 timer 缺失；Task、Banner、Game、Media Web bridge 已包含在当前部署中 | 最新独立 `cloud:verify` 通过 |
 
 项目 API Key 继续用于常规 CloudBase MCP、环境和 MySQL 管理；涉及 SCF 控制面的部署显式切换到资源所有者 Device Flow。此次没有修改 `TCB_QcsRole` 或给它追加 `scf:CreateFunction`，也没有观察到独立的 VPC/子网权限错误。认证边界和复现方式见 [CloudBase MCP 鉴权研究](../research/cloudbase-mcp-auth.md)。
 
@@ -125,7 +125,7 @@
 
 只有迁移到全新正式环境、执行明确的破坏性数据操作，或用户再次明确要求时，才建立新的目标环境备份与校验清单；当前开发周期不要自动重复数据库备份。
 
-当前云端证据已经包含 56 个迁移版本、122 张表的精确授权回读、MIP 对象清单、16 个核心函数配置与健康、客户端调用规则和高频 timer 缺失检查。历史 108 路由的 375px 开发者工具复验、扩展 Demo 正常态和 1024px 管理端代表页证据已经收口；当前 110 路由、真机能力、Mac/Windows 微信客户端和正式外部配置仍待对应验收。演示数据只允许写入当前 AppID 的 `mip_*` 表，不得写入共享环境中的旧项目表。
+当前云端证据已经包含 56 个迁移版本、122 张表的精确授权回读、MIP 对象清单、16 个核心函数配置与健康、客户端调用规则和高频 timer 缺失检查。当前 110 路由已在 375×724 开发者工具视口通过，扩展 Demo 正常态和 1024px 管理端代表页证据也已收口；真机能力、Mac/Windows 微信客户端和正式外部配置仍待对应验收。演示数据只允许写入当前 AppID 的 `mip_*` 表，不得写入共享环境中的旧项目表。
 
 ## 真机或生产环境
 
