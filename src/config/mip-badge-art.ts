@@ -3,12 +3,12 @@
  */
 const BADGE_ART = {
   profile: '/assets/badges/profile-complete.png',
-  collaboration: '/packages/member/assets/generated/badges/badge-collaboration.png',
-  attendance: '/packages/member/assets/generated/badges/badge-attendance.png',
-  growth: '/packages/member/assets/generated/badges/badge-growth.png',
-  connectionBuilder: '/packages/member/assets/generated/badges/badge-connection-builder.png',
-  creativeStrategist: '/packages/member/assets/generated/badges/badge-creative-strategist.png',
-  deliveryLeader: '/packages/member/assets/generated/badges/badge-delivery-leader.png',
+  collaboration: '/packages/member/assets/generated/badges/badge-collaboration.webp',
+  attendance: '/packages/member/assets/generated/badges/badge-attendance.webp',
+  growth: '/packages/member/assets/generated/badges/badge-growth.webp',
+  connectionBuilder: '/packages/member/assets/generated/badges/badge-connection-builder.webp',
+  creativeStrategist: '/packages/member/assets/generated/badges/badge-creative-strategist.webp',
+  deliveryLeader: '/packages/member/assets/generated/badges/badge-delivery-leader.webp',
 } as const
 
 export function badgeArtFallback(key: string, name = '') {
@@ -32,4 +32,12 @@ export function badgeArtFallback(key: string, name = '') {
     return BADGE_ART.growth
   }
   return BADGE_ART.collaboration
+}
+
+export function badgeArtUrl(imageUrl: string | undefined, key: string, name = '') {
+  const normalized = String(imageUrl || '').trim()
+  if (/^\/packages\/member\/assets\/generated\/badges\/badge-[a-z-]+\.png$/.test(normalized)) {
+    return normalized.replace(/\.png$/, '.webp')
+  }
+  return normalized || badgeArtFallback(key, name)
 }

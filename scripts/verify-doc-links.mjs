@@ -11,6 +11,12 @@ const roots = [
   'README.md',
   'docs',
   '.agents/skills',
+  'admin-web/AGENTS.md',
+  'admin-web/ARCHITECTURE.md',
+  'admin-web/DESIGN.md',
+  'admin-web/README.md',
+  'admin-web/design-qa.md',
+  'admin-web/docs',
 ]
 
 function markdownFiles(relativePath) {

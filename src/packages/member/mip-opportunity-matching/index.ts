@@ -50,6 +50,7 @@ Page({
     feedbackKey: '',
     message: '',
   },
+  resultsRequestSeq: 0,
   matchingRequestIntent: null as MatchingRequestIntent | null,
   matchingFeedbackIntent: null as MatchingFeedbackIntent | null,
 
@@ -57,6 +58,10 @@ Page({
     const requestId = String(query.requestId || '')
     this.setData({ requestId })
     void this.load(true)
+  },
+
+  onUnload() {
+    this.resultsRequestSeq += 1
   },
 
   async onPullDownRefresh() {
@@ -97,13 +102,25 @@ Page({
     if (!this.data.requestId || (!reset && (!this.data.nextCursor || this.data.loadingMore))) {
       return
     }
-    this.setData(reset ? { state: 'loading', nextCursor: '', message: '' } : { loadingMore: true })
+    const requestSeq = this.resultsRequestSeq + 1
+    this.resultsRequestSeq = requestSeq
+    const requestId = this.data.requestId
+    const tab = this.data.tab
+    const cursor = reset ? undefined : this.data.nextCursor
+    this.setData(reset
+      ? { state: 'loading', nextCursor: '', loadingMore: false, message: '' }
+      : { loadingMore: true })
     try {
       const page = await opportunityModule.listMatchingResults(
-        this.data.requestId,
-        this.data.tab,
-        reset ? undefined : this.data.nextCursor,
+        requestId,
+        tab,
+        cursor,
       )
+      if (requestSeq !== this.resultsRequestSeq
+        || requestId !== this.data.requestId
+        || tab !== this.data.tab) {
+        return
+      }
       this.setData({
         state: 'ready',
         results: reset ? page.items.map(resultView) : [...this.data.results, ...page.items.map(resultView)],
@@ -112,13 +129,20 @@ Page({
       })
     }
     catch (error) {
+      if (requestSeq !== this.resultsRequestSeq
+        || requestId !== this.data.requestId
+        || tab !== this.data.tab) {
+        return
+      }
       this.setData({
         state: this.data.results.length ? 'ready' : 'error',
         message: error instanceof Error ? error.message : '推荐结果加载失败',
       })
     }
     finally {
-      this.setData({ loadingMore: false })
+      if (requestSeq === this.resultsRequestSeq) {
+        this.setData({ loadingMore: false })
+      }
     }
   },
 

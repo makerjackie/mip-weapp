@@ -48,6 +48,25 @@ test('rejects DNS rebinding when any answer is private and pins an all-public an
   assert.deepEqual(await accepted.resolveEndpoint(endpoint), { address: '8.8.8.8', family: 4 })
 })
 
+test('includes DNS resolution in the configured upstream timeout', async () => {
+  const client = createHttpsJsonClient({
+    lookup() { return new Promise(() => {}) },
+  })
+  await assert.rejects(() => client.postJson(
+    new URL('https://provider.example.com/v1'),
+    { request: true },
+    {
+      secret: 'private',
+      maximumRequestBytes: 1024,
+      maximumResponseBytes: 1024,
+      operationKey: 'o'.repeat(64),
+      payloadDigest: 'd'.repeat(64),
+      requestId: 'r'.repeat(64),
+      timeoutMs: 20,
+    },
+  ), /UPSTREAM_UNAVAILABLE/)
+})
+
 test('pins the verified address, sends strict identity JSON, and never follows redirects', async () => {
   let requestOptions
   let requestBody
@@ -114,4 +133,48 @@ test('pins the verified address, sends strict identity JSON, and never follows r
     /REDIRECT_REJECTED/,
   )
   assert.equal(responses.length, 0)
+})
+
+test('enforces one wall-clock deadline while the upstream keeps dripping bytes', async () => {
+  let responseDestroyed = false
+  const client = createHttpsJsonClient({
+    async lookup() { return [{ address: '8.8.8.8', family: 4 }] },
+    request(_endpoint, _options, callback) {
+      const outgoing = new EventEmitter()
+      outgoing.destroy = () => outgoing.emit('error', new Error('destroyed'))
+      outgoing.end = () => {
+        const response = new PassThrough()
+        response.statusCode = 200
+        response.headers = { 'content-type': 'application/json' }
+        let timer
+        const drip = () => {
+          response.write(' ')
+          timer = setTimeout(drip, 5)
+        }
+        timer = setTimeout(drip, 5)
+        response.on('close', () => {
+          responseDestroyed = true
+          clearTimeout(timer)
+        })
+        callback(response)
+      }
+      return outgoing
+    },
+  })
+  const startedAt = Date.now()
+  await assert.rejects(() => client.postJson(
+    new URL('https://provider.example.com/v1'),
+    { request: true },
+    {
+      secret: 'private',
+      maximumRequestBytes: 1024,
+      maximumResponseBytes: 1024,
+      operationKey: 'o'.repeat(64),
+      payloadDigest: 'd'.repeat(64),
+      requestId: 'r'.repeat(64),
+      timeoutMs: 30,
+    },
+  ), /UPSTREAM_UNAVAILABLE/)
+  assert.equal(responseDestroyed, true)
+  assert.ok(Date.now() - startedAt < 250)
 })

@@ -99,6 +99,14 @@ Page({
     void this.loadRegistrations()
   },
 
+  onHide() {
+    this.requestSeq += 1
+  },
+
+  onUnload() {
+    this.requestSeq += 1
+  },
+
   async loadRegistrations() {
     if (!this.data.registrations.length) {
       this.setData({ state: 'loading', message: '' })
@@ -106,6 +114,7 @@ Page({
     const requestSeq = this.requestSeq + 1
     this.requestSeq = requestSeq
     const category = this.data.activeCategory
+    this.setData({ loadingMore: false })
     try {
       const result = await mipEventsModule.listMyRegistrations(undefined, category)
       if (requestSeq !== this.requestSeq || category !== this.data.activeCategory) {
@@ -153,11 +162,13 @@ Page({
     if (!this.data.nextCursor || this.data.loadingMore) {
       return
     }
+    const requestSeq = this.requestSeq
     const category = this.data.activeCategory
+    const cursor = this.data.nextCursor
     this.setData({ loadingMore: true })
     try {
-      const result = await mipEventsModule.listMyRegistrations(this.data.nextCursor, category)
-      if (category !== this.data.activeCategory) {
+      const result = await mipEventsModule.listMyRegistrations(cursor, category)
+      if (requestSeq !== this.requestSeq || category !== this.data.activeCategory) {
         return
       }
       this.setData({
@@ -167,10 +178,15 @@ Page({
       })
     }
     catch {
+      if (requestSeq !== this.requestSeq || category !== this.data.activeCategory) {
+        return
+      }
       this.setData({ message: '暂时无法加载更多活动。' })
     }
     finally {
-      this.setData({ loadingMore: false })
+      if (requestSeq === this.requestSeq && category === this.data.activeCategory) {
+        this.setData({ loadingMore: false })
+      }
     }
   },
 

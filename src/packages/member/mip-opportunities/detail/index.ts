@@ -76,6 +76,7 @@ Page({
   resumeInteraction: '' as '' | Interaction,
   commentSubmissionIntent: null as OpportunityCommentSubmissionIntent | null,
   commentReportIntent: null as OpportunityCommentReportIntent | null,
+  endConfirmationBusy: false,
 
   onLoad(options: Record<string, string | undefined>) {
     this.commentSubmissionIntent = null
@@ -622,24 +623,32 @@ Page({
     }
   },
 
-  end() {
+  async end() {
     const item = this.data.item
-    if (!item || !item.canEdit || item.status !== 'PUBLISHED') {
+    if (!item || !item.canEdit || item.status !== 'PUBLISHED'
+      || this.data.acting || this.endConfirmationBusy) {
       return
     }
-    wx.showModal({
-      title: '结束机会',
-      content: '结束后会显示在“已完成”，已有引荐记录会保留。',
-      confirmText: '确认结束',
-      success: (result) => {
-        if (result.confirm) {
-          void this.confirmEnd(item)
-        }
-      },
-    })
+    this.endConfirmationBusy = true
+    try {
+      const result = await wx.showModal({
+        title: '结束机会',
+        content: '结束后会显示在“已完成”，已有引荐记录会保留。',
+        confirmText: '确认结束',
+      }).catch(() => null)
+      if (result?.confirm) {
+        await this.confirmEnd(item)
+      }
+    }
+    finally {
+      this.endConfirmationBusy = false
+    }
   },
 
   async confirmEnd(item: OpportunityDetail) {
+    if (this.data.acting) {
+      return
+    }
     this.setData({ acting: true })
     try {
       await opportunityModule.end(item.id, item.version)

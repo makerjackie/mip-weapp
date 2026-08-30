@@ -25,8 +25,19 @@ Page({
     saving: false,
     message: '',
   },
+  navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
 
   onLoad() { void this.load() },
+
+  onHide() { this.clearNavigationTimer() },
+  onUnload() { this.clearNavigationTimer() },
+
+  clearNavigationTimer() {
+    if (this.navigationTimer !== undefined) {
+      clearTimeout(this.navigationTimer)
+      this.navigationTimer = undefined
+    }
+  },
 
   async load() {
     this.setData({ state: 'loading', message: '' })
@@ -134,7 +145,11 @@ Page({
         },
       })
       wx.showToast({ title: '名片已保存', icon: 'success' })
-      setTimeout(() => wx.navigateBack(), 300)
+      this.clearNavigationTimer()
+      this.navigationTimer = setTimeout(() => {
+        this.navigationTimer = undefined
+        wx.navigateBack()
+      }, 300)
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '名片保存失败，请重试。' })

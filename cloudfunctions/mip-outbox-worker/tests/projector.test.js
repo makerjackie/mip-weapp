@@ -631,7 +631,7 @@ describe('outbox event projector', () => {
     assert.equal(result.notifications[0].body, '本次获得 5 游戏币，当前余额 25。')
   })
 
-  it('projects one fixed game coin grant per winner present at the finalized week end', async () => {
+  it('projects one fixed game coin grant per winner eligible at finalization', async () => {
     const event = {
       ...base,
       aggregate_type: 'GAME_MATCH',
@@ -651,6 +651,7 @@ describe('outbox event projector', () => {
           team_b_score: 40,
           week_start: '2026-08-17',
           week_end: '2026-08-23',
+          finalized_at: '2026-08-24T01:00:00.000Z',
           status: 'FINALIZED',
           version: 2,
         }
@@ -659,11 +660,18 @@ describe('outbox event projector', () => {
         assert.match(sql, /mip_game_team_memberships/)
         assert.match(sql, /mip_membership_entitlements/)
         assert.match(sql, /entitlement\.status = 'ACTIVE'/)
-        assert.match(sql, /entitlement\.starts_at <= UTC_TIMESTAMP\(3\)/)
-        assert.match(sql, /entitlement\.ends_at > UTC_TIMESTAMP\(3\)/)
+        assert.doesNotMatch(sql, /UTC_TIMESTAMP/)
+        assert.match(sql, /entitlement\.starts_at <= \?/)
+        assert.match(sql, /entitlement\.ends_at > \?/)
         assert.match(sql, /member\.joined_at <=/)
         assert.match(sql, /member\.left_at IS NULL/)
-        assert.deepEqual(params, ['wx-app', '61000000-0000-4000-8000-000000000001', '2026-08-23', '2026-08-23'])
+        assert.deepEqual(params.slice(0, 2), ['wx-app', '61000000-0000-4000-8000-000000000001'])
+        assert.deepEqual(params.slice(2).map(value => value.toISOString()), [
+          '2026-08-24T01:00:00.000Z',
+          '2026-08-24T01:00:00.000Z',
+          '2026-08-24T01:00:00.000Z',
+          '2026-08-24T01:00:00.000Z',
+        ])
         return [
           { user_id: '62000000-0000-4000-8000-000000000001' },
           { user_id: '62000000-0000-4000-8000-000000000002' },
@@ -685,6 +693,74 @@ describe('outbox event projector', () => {
       },
     ])
     assert.deepEqual(result.notifications, [])
+  })
+
+  it('keeps a winner eligible when membership expires after finalization but before delayed projection', async () => {
+    const event = {
+      ...base,
+      aggregate_type: 'GAME_MATCH',
+      aggregate_id: '60000000-0000-4000-8000-000000000011',
+      event_type: 'game.match.finalized',
+      source_version: 2,
+    }
+    const winnerId = '62000000-0000-4000-8000-000000000003'
+    const result = await projectEvent({
+      async one() {
+        return {
+          id: event.aggregate_id,
+          team_a_id: '61000000-0000-4000-8000-000000000001',
+          team_b_id: '61000000-0000-4000-8000-000000000002',
+          team_a_score: 50,
+          team_b_score: 40,
+          week_start: '2026-08-17',
+          week_end: '2026-08-23',
+          finalized_at: '2026-08-24T01:00:00.000Z',
+          status: 'FINALIZED',
+          version: 2,
+        }
+      },
+      async query(sql, params) {
+        assert.match(sql, /entitlement\.ends_at > \?/)
+        assert.deepEqual(params.slice(2).map(value => value.toISOString()), Array(4).fill('2026-08-24T01:00:00.000Z'))
+        return [{ user_id: winnerId }]
+      },
+    }, event)
+
+    assert.equal(result.growth[0].userId, winnerId)
+  })
+
+  it('does not make a winner eligible when membership starts after finalization before delayed projection', async () => {
+    const event = {
+      ...base,
+      aggregate_type: 'GAME_MATCH',
+      aggregate_id: '60000000-0000-4000-8000-000000000012',
+      event_type: 'game.match.finalized',
+      source_version: 2,
+    }
+    const result = await projectEvent({
+      async one() {
+        return {
+          id: event.aggregate_id,
+          team_a_id: '61000000-0000-4000-8000-000000000001',
+          team_b_id: '61000000-0000-4000-8000-000000000002',
+          team_a_score: 50,
+          team_b_score: 40,
+          week_start: '2026-08-17',
+          week_end: '2026-08-23',
+          finalized_at: '2026-08-24T01:00:00.000Z',
+          status: 'FINALIZED',
+          version: 2,
+        }
+      },
+      async query(sql, params) {
+        assert.match(sql, /entitlement\.starts_at <= \?/)
+        assert.deepEqual(params.slice(2).map(value => value.toISOString()), Array(4).fill('2026-08-24T01:00:00.000Z'))
+        return []
+      },
+    }, event)
+
+    assert.deepEqual(result.growth, [])
+    assert.equal(result.reason, 'NO_RECIPIENTS')
   })
 
   it('projects an operations notification only from the app-scoped recipient fact', async () => {

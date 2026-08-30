@@ -30,6 +30,36 @@ function assert(condition, message) {
   }
 }
 
+function resolveBuiltComponent(jsonFile, reference) {
+  if (/^(?:plugin|dynamicLib):\/\//.test(reference)) {
+    return null
+  }
+  const basePath = reference.startsWith('/')
+    ? path.join(root, 'dist', reference.slice(1))
+    : reference.startsWith('.')
+      ? path.resolve(path.dirname(path.join(root, jsonFile)), reference)
+      : path.join(root, 'dist', 'miniprogram_npm', reference)
+  const buildRoot = path.join(root, 'dist')
+  assert(basePath === buildRoot || basePath.startsWith(`${buildRoot}${path.sep}`), `${jsonFile} component escapes dist: ${reference}`)
+  return basePath.replace(/\.json$/, '')
+}
+
+function assertBuiltComponentTargets() {
+  for (const jsonFile of walk('dist').filter(file => file.endsWith('.json'))) {
+    const definition = JSON.parse(read(jsonFile))
+    for (const referenceValue of Object.values(definition.usingComponents || {})) {
+      const reference = String(referenceValue)
+      const target = resolveBuiltComponent(jsonFile, reference)
+      if (!target) {
+        continue
+      }
+      for (const extension of ['.json', '.js', '.wxml']) {
+        assert(fs.existsSync(`${target}${extension}`), `Compiled component target is missing: ${jsonFile} -> ${reference}${extension}`)
+      }
+    }
+  }
+}
+
 const appWxss = read('dist/app.wxss')
 const membershipWxml = read('dist/pages/membership/index.wxml')
 const homeWxml = read('dist/pages/index/index.wxml')
@@ -49,11 +79,29 @@ const membershipJson = JSON.parse(read('dist/pages/membership/index.json'))
 const homeJson = JSON.parse(read('dist/pages/index/index.json'))
 const components = { ...membershipJson.usingComponents, ...homeJson.usingComponents }
 
+assertBuiltComponentTargets()
 assert(appWxss.includes('.bg-canvas'), 'MIP design tokens did not reach WXSS')
 assert(appWxss.includes('.grid-cols-2'), 'Tailwind grid utilities did not reach WXSS')
+for (const subPackage of appJson.subPackages || appJson.subpackages || []) {
+  if (subPackage.independent !== true) {
+    assert(
+      !fs.existsSync(path.join(root, 'dist', subPackage.root, 'miniprogram_npm')),
+      `Subpackage ${subPackage.root} must reuse main-package npm dependencies to stay below the WeChat 2 MB limit`,
+    )
+    for (const jsonFile of walk(path.join('dist', subPackage.root)).filter(file => file.endsWith('.json'))) {
+      const json = JSON.parse(read(jsonFile))
+      for (const reference of Object.values(json.usingComponents || {})) {
+        assert(
+          !String(reference).includes('../miniprogram_npm/'),
+          `Subpackage npm component must use a main-package absolute path: ${jsonFile} -> ${reference}`,
+        )
+      }
+    }
+  }
+}
 assert(
-  !fs.existsSync(path.join(root, 'dist/packages/admin/miniprogram_npm')),
-  'Admin subpackage must reuse main-package npm dependencies to stay below the WeChat 2 MB limit',
+  !walk('dist/packages/member').some(file => file.includes('/packages_admin.') || file.includes('/packages/admin/')),
+  'Member subpackage must not include admin runtime output',
 )
 assert(
   fs.existsSync(path.join(root, 'dist/modules/mip-identity/profile-options.js'))

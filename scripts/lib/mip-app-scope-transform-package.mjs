@@ -2,7 +2,6 @@ import { Buffer } from 'node:buffer'
 import fs from 'node:fs'
 import path from 'node:path'
 import {
-  APP_ID_MIGRATION_ACTION,
   assertNoAppIdMigrationResidue,
   transformAppScopedTable,
 } from './mip-app-id-migration-transform.mjs'
@@ -235,9 +234,7 @@ export function transformMipAppScopeExportPackage({
         })
         rows = [...result.rows]
         excludedCount = result.excludedCount
-        exclusionReason = result.action === APP_ID_MIGRATION_ACTION.EXCLUDE
-          ? result.reason
-          : null
+        exclusionReason = result.reason || null
         assertNoAppIdMigrationResidue({
           sourceAppId,
           targetAppId,

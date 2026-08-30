@@ -42,12 +42,24 @@ Page({
     openingKey: '',
     message: '',
   },
+  publishedRequestSeq: 0,
+  referredRequestSeq: 0,
 
   onShow() {
     void Promise.allSettled([
       this.loadPublished(true),
       this.loadReferred(true),
     ])
+  },
+
+  onHide() {
+    this.publishedRequestSeq += 1
+    this.referredRequestSeq += 1
+  },
+
+  onUnload() {
+    this.publishedRequestSeq += 1
+    this.referredRequestSeq += 1
   },
 
   changeTab(event: WechatMiniprogram.TouchEvent) {
@@ -65,18 +77,23 @@ Page({
     if (!reset && (!this.data.publishedNextCursor || this.data.loadingMore)) {
       return
     }
+    const sequence = this.publishedRequestSeq + 1
+    this.publishedRequestSeq = sequence
+    const cursor = reset ? undefined : this.data.publishedNextCursor || undefined
     this.setData(reset
       ? {
           publishedState: 'loading',
           publishedNextCursor: '',
+          loadingMore: false,
           message: '',
           ...(this.data.tab === 'PUBLISHED' ? { state: 'loading' as SectionState } : {}),
         }
       : { loadingMore: true, message: '' })
     try {
-      const page = await opportunityModule.listMine(
-        reset ? undefined : this.data.publishedNextCursor || undefined,
-      )
+      const page = await opportunityModule.listMine(cursor)
+      if (sequence !== this.publishedRequestSeq) {
+        return
+      }
       this.setData({
         publishedState: 'ready',
         ...(this.data.tab === 'PUBLISHED' ? { state: 'ready' as SectionState } : {}),
@@ -85,6 +102,9 @@ Page({
       })
     }
     catch (error) {
+      if (sequence !== this.publishedRequestSeq) {
+        return
+      }
       this.setData({
         publishedState: this.data.publishedItems.length ? 'ready' : 'error',
         ...(this.data.tab === 'PUBLISHED'
@@ -94,7 +114,9 @@ Page({
       })
     }
     finally {
-      this.setData({ loadingMore: false })
+      if (sequence === this.publishedRequestSeq) {
+        this.setData({ loadingMore: false })
+      }
     }
   },
 
@@ -102,10 +124,14 @@ Page({
     if (!reset && (!this.data.referredNextCursor || this.data.loadingMore)) {
       return
     }
+    const sequence = this.referredRequestSeq + 1
+    this.referredRequestSeq = sequence
+    const cursor = reset ? undefined : this.data.referredNextCursor || undefined
     this.setData(reset
       ? {
           referredState: 'loading',
           referredNextCursor: '',
+          loadingMore: false,
           message: '',
           ...(this.data.tab === 'REFERRED' ? { state: 'loading' as SectionState } : {}),
         }
@@ -113,8 +139,11 @@ Page({
     try {
       const page = await opportunityModule.listReceived(
         'REFERRAL',
-        reset ? undefined : this.data.referredNextCursor || undefined,
+        cursor,
       )
+      if (sequence !== this.referredRequestSeq) {
+        return
+      }
       const referrals = page.items.filter((item): item is ReceivedReferral => item.kind === 'REFERRAL')
       const offset = reset ? 0 : this.data.referredItems.length
       this.setData({
@@ -128,6 +157,9 @@ Page({
       })
     }
     catch (error) {
+      if (sequence !== this.referredRequestSeq) {
+        return
+      }
       this.setData({
         referredState: this.data.referredItems.length ? 'ready' : 'error',
         ...(this.data.tab === 'REFERRED'
@@ -137,7 +169,9 @@ Page({
       })
     }
     finally {
-      this.setData({ loadingMore: false })
+      if (sequence === this.referredRequestSeq) {
+        this.setData({ loadingMore: false })
+      }
     }
   },
 

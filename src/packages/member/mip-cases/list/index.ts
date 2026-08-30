@@ -44,6 +44,7 @@ Page({
     archivingId: '',
     message: '',
   },
+  requestSeq: 0,
 
   onLoad(options: Record<string, string | undefined>) {
     this.setData({ mine: options.mine === '1' })
@@ -51,34 +52,52 @@ Page({
 
   onShow() { void this.load(true) },
 
+  onHide() { this.requestSeq += 1 },
+  onUnload() { this.requestSeq += 1 },
+
   async load(reset = false) {
+    const requestSeq = this.requestSeq + 1
+    this.requestSeq = requestSeq
+    const mine = this.data.mine
+    const cursor = reset ? undefined : this.data.nextCursor || undefined
     if (reset) {
-      this.setData({ state: 'loading', nextCursor: '', message: '' })
+      this.setData({ state: 'loading', nextCursor: '', loadingMore: false, message: '' })
     }
     else {
       this.setData({ loadingMore: true })
     }
     try {
-      const page = this.data.mine
-        ? await superCaseModule.listMine(reset ? undefined : this.data.nextCursor || undefined)
-        : await superCaseModule.list(reset ? undefined : this.data.nextCursor || undefined)
+      const page = mine
+        ? await superCaseModule.listMine(cursor)
+        : await superCaseModule.list(cursor)
+      if (requestSeq !== this.requestSeq || mine !== this.data.mine) {
+        return
+      }
+      const currentItems = reset ? [] : this.data.items
+      const knownIds = new Set(currentItems.map(item => item.id))
       this.setData({
         state: 'ready',
-        items: reset
-          ? page.items.map(presentCase)
-          : [...this.data.items, ...page.items.map(presentCase)],
+        items: [
+          ...currentItems,
+          ...page.items.filter(item => !knownIds.has(item.id)).map(presentCase),
+        ],
         nextCursor: page.nextCursor || '',
         message: '',
       })
     }
     catch (error) {
+      if (requestSeq !== this.requestSeq || mine !== this.data.mine) {
+        return
+      }
       this.setData({
         state: reset ? 'error' : 'ready',
         message: error instanceof Error ? error.message : '案例加载失败',
       })
     }
     finally {
-      this.setData({ loadingMore: false })
+      if (requestSeq === this.requestSeq && mine === this.data.mine) {
+        this.setData({ loadingMore: false })
+      }
     }
   },
 
@@ -93,6 +112,7 @@ Page({
     if (mine === this.data.mine) {
       return
     }
+    this.requestSeq += 1
     this.setData({ mine })
     void this.load(true)
   },

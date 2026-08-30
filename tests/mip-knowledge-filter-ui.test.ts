@@ -6,7 +6,7 @@ const knowledgeModule = vi.hoisted(() => ({
   listContents: vi.fn(),
 }))
 
-vi.mock('../src/modules/mip-knowledge', () => ({
+vi.mock('../src/modules/mip-knowledge/module', () => ({
   mipKnowledgeModule: knowledgeModule,
 }))
 

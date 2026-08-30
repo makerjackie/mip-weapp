@@ -8,6 +8,7 @@ import type {
   DigitalAvatarGenerationIntent,
   MipAiGateway,
 } from './types'
+import { createIntentKey } from '../mip-shell/presentation'
 import { confirmAiDraft } from './domain'
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -42,11 +43,21 @@ export function createMipAiModule(gateway: MipAiGateway) {
       if (!transcriptText || transcriptText.length > 8000) {
         throw new Error('请输入 1–8000 个字的原始内容')
       }
-      return gateway.createTextDraft({ ...intent, transcriptText })
+      return gateway.createTextDraft({
+        ...intent,
+        transcriptText,
+        requestId: intent.requestId || createIntentKey('ai-draft-text'),
+      })
     },
 
-    createVoiceDraft: (intent: AiVoiceDraftIntent) => gateway.createVoiceDraft(intent),
-    createVoiceDraftUpload: (intent: AiVoiceUploadIntent) => gateway.createVoiceDraftUpload(intent),
+    createVoiceDraft: (intent: AiVoiceDraftIntent) => gateway.createVoiceDraft({
+      ...intent,
+      requestId: intent.requestId || createIntentKey('ai-draft-voice'),
+    }),
+    createVoiceDraftUpload: (intent: AiVoiceUploadIntent) => gateway.createVoiceDraftUpload({
+      ...intent,
+      requestId: intent.requestId || createIntentKey('ai-draft-upload'),
+    }),
 
     continueDraft(intent: AiDraftRefinementIntent) {
       const supplementalText = intent.supplementalText.trim()

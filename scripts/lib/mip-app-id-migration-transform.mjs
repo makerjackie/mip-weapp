@@ -20,6 +20,7 @@ export const APP_ID_MIGRATION_ACTION = Object.freeze({
 
 export const APP_ID_MIGRATION_EXCLUSIONS = Object.freeze({
   mip_admin_export_tickets: 'TEMPORARY_EXPORT_TICKET',
+  mip_ai_draft_requests: 'TEMPORARY_AI_DRAFT_REQUEST',
   mip_delivery_tasks: 'SOURCE_APP_EXTERNAL_DELIVERY',
   mip_event_checkin_credentials: 'SOURCE_APP_CHECKIN_CREDENTIAL',
   mip_event_invitation_links: 'SOURCE_APP_INVITATION_CREDENTIAL',
@@ -27,12 +28,19 @@ export const APP_ID_MIGRATION_EXCLUSIONS = Object.freeze({
   mip_idempotency_keys: 'TEMPORARY_IDEMPOTENCY_CLAIM',
   mip_message_campaign_dispatches: 'SOURCE_APP_DELIVERY_DISPATCH',
   mip_message_delivery_reviews: 'SOURCE_APP_DELIVERY_REVIEW',
+  mip_membership_invitation_codes: 'SOURCE_APP_MEMBERSHIP_INVITATION_CODE',
   mip_notification_grants: 'SOURCE_APP_NOTIFICATION_GRANT',
   mip_outbox_events: 'OPERATIONAL_OUTBOX',
   mip_payment_attempts: 'SOURCE_APP_PAYMENT_ATTEMPT',
   mip_payment_callbacks: 'SOURCE_APP_PAYMENT_CALLBACK',
   mip_web_bff_requests: 'TEMPORARY_BFF_NONCE',
 })
+
+export const APP_ID_MIGRATION_ROW_EXCLUSIONS = Object.freeze({
+  mip_ai_drafts: 'UNCONFIRMED_AI_DRAFT',
+})
+
+export const APP_ID_MIGRATION_MEDIA_EXCLUSION_REASON = 'MEDIA_COPY_PLAN_EXCLUDED'
 
 const APP_ID_PATTERN = /^wx[A-Za-z0-9]{16}$/
 const MIP_TABLE_PATTERN = /^mip_[a-z0-9_]+$/
@@ -42,6 +50,7 @@ const CONTACT_CIPHERTEXT_FIELDS = Object.freeze([
   'address_ciphertext',
 ])
 const TEMPORARY_FIELD_RESETS = Object.freeze({
+  mip_ai_drafts: Object.freeze(['audio_asset_id']),
   mip_event_checkins: Object.freeze(['credential_id']),
   mip_event_registrations: Object.freeze(['ticket_hash']),
   mip_knowledge_ingestion_schedules: Object.freeze([
@@ -117,7 +126,16 @@ export function transformAppScopedTable(input) {
     })
   }
 
-  const transformedRows = rows.map((row) => {
+  const mapping = normalizedMapping(input)
+  for (const row of rows) {
+    assertPlainRow(row)
+    if (row.app_id !== mapping.sourceAppId) {
+      throw new Error('MIGRATION_SOURCE_APP_SCOPE_MISMATCH')
+    }
+  }
+  const retainedRows = rows.filter(row => shouldMigrateRow(tableName, row))
+  const rowExclusionReason = APP_ID_MIGRATION_ROW_EXCLUSIONS[tableName] || null
+  const transformedRows = retainedRows.map((row) => {
     const transformed = tableName === 'mip_private_profiles'
       ? transformPrivateProfileRow(row, input)
       : remapAppScopedRow(row, input)
@@ -126,7 +144,8 @@ export function transformAppScopedTable(input) {
 
   return Object.freeze({
     action: policy.action,
-    excludedCount: 0,
+    excludedCount: rows.length - retainedRows.length,
+    ...(rowExclusionReason ? { reason: rowExclusionReason } : {}),
     rows: Object.freeze(transformedRows),
     tableName,
   })
@@ -161,10 +180,25 @@ export function assertNoAppIdMigrationResidue(input) {
         throw new Error(`MIGRATION_RESIDUE_SOURCE_APP_ID:${tableName}`)
       }
       assertTemporaryFieldsCleared(tableName, row)
+      assertRowMigrationPolicy(tableName, row)
     }
   }
 
   return Object.freeze({ rowCount, tableCount: tableNames.length })
+}
+
+function shouldMigrateRow(tableName, row) {
+  assertPlainRow(row)
+  if (tableName === 'mip_ai_drafts') {
+    return row.status === 'CONFIRMED'
+  }
+  return true
+}
+
+function assertRowMigrationPolicy(tableName, row) {
+  if (tableName === 'mip_ai_drafts' && row.status !== 'CONFIRMED') {
+    throw new Error('MIGRATION_RESIDUE_UNCONFIRMED_AI_DRAFT:mip_ai_drafts')
+  }
 }
 
 function normalizedMapping(options = {}) {

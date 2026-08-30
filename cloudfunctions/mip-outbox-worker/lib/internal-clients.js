@@ -3,11 +3,15 @@
 const { createHash, createHmac } = require('node:crypto')
 const { stableJson } = require('./internal-auth')
 
+const INTERNAL_CALL_TIMEOUT_MS = 60_000
+const MAX_INTERNAL_CALL_TIMEOUT_MS = 110_000
+
 function createInternalClients(options) {
   if (!options.cloud || typeof options.cloud.callFunction !== 'function') {
     throw new Error('INTERNAL_CLIENT_CONFIG_REQUIRED')
   }
   const now = options.now || Date.now
+  const timeoutMs = internalCallTimeout(options.timeoutMs)
 
   return {
     async probeDependencies(appId) {
@@ -28,6 +32,7 @@ function createInternalClients(options) {
         options.notificationFunctionName,
         { ...notificationEvent, signature: notificationSignature },
         'VALIDATION_FAILED',
+        timeoutMs,
       )
 
       const growthEvent = {
@@ -44,6 +49,7 @@ function createInternalClients(options) {
         options.growthFunctionName,
         { ...growthEvent, signature: growthSignature },
         'VALIDATION_FAILED',
+        timeoutMs,
       )
       return { growthAuthenticated, notificationAuthenticated }
     },
@@ -58,7 +64,7 @@ function createInternalClients(options) {
         timestamp: Number(now()),
       }
       const signature = signNotificationEvent(event, options.notificationSecret)
-      return invoke(options.cloud, options.notificationFunctionName, { ...event, signature })
+      return invoke(options.cloud, options.notificationFunctionName, { ...event, signature }, timeoutMs)
     },
 
     async runNotificationBatch(appId, limit = 20) {
@@ -73,7 +79,7 @@ function createInternalClients(options) {
         timestamp: Number(now()),
       }
       const signature = signNotificationEvent(event, options.notificationSecret)
-      return invoke(options.cloud, options.notificationFunctionName, { ...event, signature })
+      return invoke(options.cloud, options.notificationFunctionName, { ...event, signature }, timeoutMs)
     },
 
     async recordConfirmedEvent(appId, growth) {
@@ -97,7 +103,7 @@ function createInternalClients(options) {
             timestamp: Number(now()),
           }
       const signature = signGrowthEvent(event, options.growthSecret)
-      return invoke(options.cloud, options.growthFunctionName, { ...event, signature })
+      return invoke(options.cloud, options.growthFunctionName, { ...event, signature }, timeoutMs)
     },
   }
 }
@@ -128,8 +134,8 @@ function signGrowthEvent(event, secret) {
   return createHmac('sha256', secret).update(canonical).digest('hex')
 }
 
-async function invoke(cloud, functionName, data) {
-  const response = await cloud.callFunction({ name: functionName, data })
+async function invoke(cloud, functionName, data, timeoutMs) {
+  const response = await callFunction(cloud, functionName, data, timeoutMs)
   const envelope = response?.result
   if (!envelope || envelope.ok !== true) {
     const code = text(envelope?.error?.code)
@@ -138,10 +144,39 @@ async function invoke(cloud, functionName, data) {
   return envelope.data
 }
 
-async function invokeExpectingError(cloud, functionName, data, expectedCode) {
-  const response = await cloud.callFunction({ name: functionName, data })
+async function invokeExpectingError(cloud, functionName, data, expectedCode, timeoutMs) {
+  const response = await callFunction(cloud, functionName, data, timeoutMs)
   const envelope = response?.result
   return envelope?.ok === false && text(envelope?.error?.code) === expectedCode
+}
+
+async function callFunction(cloud, functionName, data, timeoutMs) {
+  return waitForResult(
+    Promise.resolve().then(() => cloud.callFunction({ name: functionName, data })),
+    timeoutMs,
+    'INTERNAL_FUNCTION_TIMEOUT',
+  )
+}
+
+function internalCallTimeout(value) {
+  const parsed = Number(value)
+  if (!Number.isInteger(parsed) || parsed < 1) return INTERNAL_CALL_TIMEOUT_MS
+  return Math.min(parsed, MAX_INTERNAL_CALL_TIMEOUT_MS)
+}
+
+async function waitForResult(promise, timeoutMs, errorCode) {
+  let timer
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(errorCode)), timeoutMs)
+      }),
+    ])
+  }
+  finally {
+    clearTimeout(timer)
+  }
 }
 
 function assertFunctionName(value) {

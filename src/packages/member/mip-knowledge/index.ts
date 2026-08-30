@@ -3,8 +3,8 @@ import type {
   KnowledgeCategory,
   KnowledgeContentSummary,
   KnowledgeContentType,
-} from '../../../modules/mip-knowledge'
-import { mipKnowledgeModule } from '../../../modules/mip-knowledge'
+} from '../../../modules/mip-knowledge/types'
+import { mipKnowledgeModule } from '../../../modules/mip-knowledge/module'
 
 const typeLabels: Record<KnowledgeContentType, string> = {
   HOT_NEWS: '热点',

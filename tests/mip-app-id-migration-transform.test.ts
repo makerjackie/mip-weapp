@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import {
   APP_ID_MIGRATION_ACTION,
   APP_ID_MIGRATION_EXCLUSIONS,
+  APP_ID_MIGRATION_ROW_EXCLUSIONS,
   appIdMigrationPolicy,
   assertNoAppIdMigrationResidue,
   remapAppScopedRow,
@@ -184,9 +185,11 @@ describe('MIP AppID migration transformation', () => {
       mip_notification_grants: 'SOURCE_APP_NOTIFICATION_GRANT',
       mip_idempotency_keys: 'TEMPORARY_IDEMPOTENCY_CLAIM',
       mip_admin_export_tickets: 'TEMPORARY_EXPORT_TICKET',
+      mip_ai_draft_requests: 'TEMPORARY_AI_DRAFT_REQUEST',
       mip_web_bff_requests: 'TEMPORARY_BFF_NONCE',
       mip_event_checkin_credentials: 'SOURCE_APP_CHECKIN_CREDENTIAL',
       mip_event_invitation_links: 'SOURCE_APP_INVITATION_CREDENTIAL',
+      mip_membership_invitation_codes: 'SOURCE_APP_MEMBERSHIP_INVITATION_CODE',
     })
     expect(appIdMigrationPolicy('mip_profiles')).toEqual({
       action: APP_ID_MIGRATION_ACTION.MIGRATE,
@@ -253,6 +256,52 @@ describe('MIP AppID migration transformation', () => {
       lease_due_at: null,
       leased_until: null,
     })
+  })
+
+  it('keeps only confirmed AI drafts and removes their temporary audio reference', () => {
+    const result = transformAppScopedTable({
+      ...mapping,
+      tableName: 'mip_ai_drafts',
+      rows: [
+        {
+          app_id: sourceAppId,
+          id: 'draft-ready',
+          status: 'DRAFT_READY',
+          audio_asset_id: 'temporary-audio',
+        },
+        {
+          app_id: sourceAppId,
+          id: 'draft-confirmed',
+          status: 'CONFIRMED',
+          audio_asset_id: 'temporary-audio',
+          confirmed_resource_type: 'PROFILE',
+          confirmed_resource_id: 'profile-1',
+        },
+      ],
+    })
+
+    expect(result).toMatchObject({
+      action: APP_ID_MIGRATION_ACTION.MIGRATE,
+      excludedCount: 1,
+      reason: APP_ID_MIGRATION_ROW_EXCLUSIONS.mip_ai_drafts,
+    })
+    expect(result.rows).toEqual([expect.objectContaining({
+      app_id: targetAppId,
+      id: 'draft-confirmed',
+      status: 'CONFIRMED',
+      audio_asset_id: null,
+    })])
+    expect(() => assertNoAppIdMigrationResidue({
+      ...mapping,
+      tables: {
+        mip_ai_drafts: [{
+          app_id: targetAppId,
+          id: 'draft-ready',
+          status: 'DRAFT_READY',
+          audio_asset_id: null,
+        }],
+      },
+    })).toThrow('MIGRATION_RESIDUE_UNCONFIRMED_AI_DRAFT:mip_ai_drafts')
   })
 
   it('audits target scope, nested source AppID residue and temporary credentials without exposing values', () => {

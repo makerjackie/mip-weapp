@@ -59,6 +59,9 @@ describe('AI audio maintenance', () => {
         return work({
           async query(sql, params) {
             calls.push({ sql, params })
+            if (sql.includes('SELECT id FROM mip_ai_draft_requests')) {
+              return [{ id: 'request-1' }, { id: 'request-2' }]
+            }
             if (sql.includes('SELECT id FROM mip_ai_drafts')) {
               return [{ id: 'draft-1' }, { id: 'draft-2' }]
             }
@@ -68,10 +71,17 @@ describe('AI audio maintenance', () => {
       },
     })
     assert.equal(await repository.expireDraftsForApp(APP_ID, 2), 2)
-    assert.match(calls[0].sql, /expires_at <= UTC_TIMESTAMP\(3\)/)
+    assert.match(calls[0].sql, /SELECT id FROM mip_ai_draft_requests/)
     assert.match(calls[0].sql, /LIMIT \? FOR UPDATE SKIP LOCKED/)
     assert.deepEqual(calls[0].params, [APP_ID, 2])
-    assert.equal(calls.length, 3)
+    assert.match(calls[1].sql, /UPDATE mip_ai_draft_requests/)
+    assert.match(calls[1].sql, /response_json = NULL/)
+    assert.deepEqual(calls[1].params, [APP_ID, 'request-1'])
+    assert.deepEqual(calls[2].params, [APP_ID, 'request-2'])
+    assert.match(calls[3].sql, /SELECT id FROM mip_ai_drafts/)
+    assert.match(calls[3].sql, /LIMIT \? FOR UPDATE SKIP LOCKED/)
+    assert.deepEqual(calls[3].params, [APP_ID, 2])
+    assert.equal(calls.length, 6)
   })
 
   it('leases terminal audio across users while preserving the owner and lease timestamp', async () => {
@@ -97,6 +107,10 @@ describe('AI audio maintenance', () => {
     const assets = await repository.leaseAppAudioCleanup(APP_ID, 5)
     assert.doesNotMatch(calls[0].sql, /draft\.user_id = \?/)
     assert.match(calls[0].sql, /draft\.status IN \('CONFIRMED', 'EXPIRED', 'DELETED'\)/)
+    assert.match(calls[0].sql, /LEFT JOIN mip_ai_draft_requests ai_request/)
+    assert.match(calls[0].sql, /ai_request\.status = 'PROCESSING'/)
+    assert.match(calls[0].sql, /ai_request\.expires_at > UTC_TIMESTAMP\(3\)/)
+    assert.match(calls[0].sql, /ai_request\.id IS NULL/)
     assert.match(calls[0].sql, /FOR UPDATE SKIP LOCKED/)
     assert.deepEqual(calls[0].params, [APP_ID, 5])
     assert.equal(calls[1].params[0] instanceof Date, true)

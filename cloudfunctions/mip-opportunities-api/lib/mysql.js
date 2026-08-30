@@ -13,7 +13,8 @@ function connectionOptions(options = {}) {
   const shared = {
     waitForConnections: true,
     connectionLimit: positiveInteger(options.connectionLimit || process.env.MIP_DB_POOL_SIZE, 4),
-    queueLimit: 0,
+    queueLimit: 16,
+    connectTimeout: 8000,
     enableKeepAlive: true,
     keepAliveInitialDelay: 0,
     timezone: 'Z',

@@ -29,6 +29,8 @@
 | `mip_notification_grants` / `mip_delivery_tasks` | 将 `AVAILABLE` / `RESERVED` 授权改为 `REVOKED`，清空 reservation 与收件凭据并取消未完成外部投递 |
 | `mip_admin_export_tickets` | 未消费导出票据改为 `REVOKED` |
 | `mip_ai_drafts` | 清空音频绑定、转写和结构化草稿，状态改为 `DELETED`；已确认正式资源由其领域表保留 |
+| `mip_ai_draft_requests` | 清空全部响应内容，未完成请求改为 `FAILED` 并记录 `ACCOUNT_CLOSED`；保留稳定请求事实避免注销后重放 |
+| `mip_membership_invitation_codes` | 将 `PENDING` / `READY` 邀请码改为 `EXPIRED` 并清空生成租约；保留 allocation 与对象引用供受控清理 |
 | `mip_idempotency_keys` / `mip_audit_logs` | 保存幂等响应并追加 `IDENTITY_ACCOUNT_CLOSED` 审计；审计元数据只含受影响行数 |
 
 注销不投递 outbox。`CLOSED` 与身份墓碑在事务提交后立即生效，通知 worker 也会重新验证有效用户；注销本身没有需要发送给其他用户的业务通知。

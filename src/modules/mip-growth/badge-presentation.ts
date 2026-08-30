@@ -1,5 +1,5 @@
 import type { BadgeCollectionItem } from './types'
-import { badgeArtFallback } from '../../config/mip-badge-art'
+import { badgeArtFallback, badgeArtUrl } from '../../config/mip-badge-art'
 import { formatLocalDate } from '../../utils/date'
 
 export interface BadgeView extends BadgeCollectionItem {
@@ -15,6 +15,7 @@ export function presentBadges(items: BadgeCollectionItem[], selectedIds: string[
   const selected = new Set(selectedIds)
   return items.map(item => ({
     ...item,
+    imageUrl: badgeArtUrl(item.imageUrl, item.key, item.name),
     selected: selected.has(item.id),
     locked: !item.earned || item.status !== 'ACTIVE',
     artFallbackUrl: badgeArtFallback(item.key, item.name),

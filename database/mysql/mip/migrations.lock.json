@@ -776,6 +776,30 @@
         "mip_web_bff_requests"
       ],
       "altersTables": []
+    },
+    {
+      "version": "20260830570000",
+      "name": "mip_ai_draft_requests",
+      "sql": "database/mysql/mip/057_ai_draft_requests.sql",
+      "sqlSha256": "144c7cf8cc23436e5cfc1133950f17a6082fa5ec261846f88044ba939be02ee6",
+      "rollback": "database/mysql/mip/rollback/057_ai_draft_requests.sql",
+      "rollbackSha256": "de66edc147a29ffa5c83a8b827564d5b3f7ae2af635347cc43765cc85a7e6b85",
+      "createsTables": [
+        "mip_ai_draft_requests"
+      ],
+      "altersTables": []
+    },
+    {
+      "version": "20260830580000",
+      "name": "mip_membership_invitation_codes",
+      "sql": "database/mysql/mip/058_membership_invitation_codes.sql",
+      "sqlSha256": "23307550d077bb577001e13b3e442938a58b5830b3392ced5806cc0353856691",
+      "rollback": "database/mysql/mip/rollback/058_membership_invitation_codes.sql",
+      "rollbackSha256": "0c7ceb399a6d3bbbd76e19bb6c0c79d362296cbe8949156a9530bccb42b07957",
+      "createsTables": [
+        "mip_membership_invitation_codes"
+      ],
+      "altersTables": []
     }
   ]
 }

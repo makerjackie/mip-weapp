@@ -11,7 +11,7 @@ description: Use for membership, profile, event, order, community safety, or adm
 
 ## Scope
 
-`src/modules/membership`、`src/modules/mip-*`、`src/packages/**`、`cloudfunctions/mip-*`、`database/mysql/mip`。
+`src/modules/mip-*`、`src/packages/**`、`cloudfunctions/mip-*`、`database/mysql/mip`。
 
 ## Read first
 

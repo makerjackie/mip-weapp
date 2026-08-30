@@ -49,6 +49,25 @@ describe('AI draft retention', () => {
     assert.throws(() => normalizeDraftTtlHours(169), /AI_DRAFT_TTL_INVALID/)
   })
 
+  it('expires request payloads without deleting request history or its voice object allocation', async () => {
+    const calls = []
+    const repository = createAiRepository({
+      async query(sql, params) {
+        calls.push({ sql, params })
+        return { affectedRows: 1 }
+      },
+    })
+    await repository.expireDrafts(APP_ID, USER_ID)
+    const requestExpiry = calls[0]
+    assert.match(requestExpiry.sql, /UPDATE mip_ai_draft_requests/)
+    assert.match(requestExpiry.sql, /status = 'FAILED'/)
+    assert.match(requestExpiry.sql, /response_json = NULL/)
+    assert.match(requestExpiry.sql, /failure_code = 'AI_DRAFT_REQUEST_EXPIRED'/)
+    assert.doesNotMatch(requestExpiry.sql, /audio_object_key\s*=\s*NULL/)
+    assert.doesNotMatch(requestExpiry.sql, /DELETE FROM mip_ai_draft_requests/)
+    assert.deepEqual(requestExpiry.params, [APP_ID, USER_ID])
+  })
+
   it('does not recreate a private draft after account closure wins the user lock', async () => {
     let inserted = false
     const repository = createAiRepository({
@@ -195,6 +214,117 @@ describe('AI draft retention', () => {
     assert.equal(calls[2].params[1], JSON.stringify({ headline: '产品负责人' }))
   })
 
+  it('atomically completes a keyed draft only for the active request lease', async () => {
+    const calls = []
+    const requestId = 'ai-draft:atomic-complete'
+    const inputHash = 'a'.repeat(64)
+    const leaseToken = '33333333-3333-4333-8333-333333333333'
+    const draftId = '22222222-2222-4222-8222-222222222222'
+    const repository = createAiRepository({
+      async transaction(work) {
+        calls.push({ phase: 'transaction' })
+        return work({
+          async one(sql, params) {
+            calls.push({ phase: 'one', sql, params })
+            if (sql.includes('FROM mip_users')) return { id: USER_ID, status: 'ACTIVE' }
+            if (sql.includes('FROM mip_ai_draft_requests')) {
+              return {
+                request_id: requestId,
+                input_hash: inputHash,
+                draft_kind: 'TEXT',
+                status: 'PROCESSING',
+                lease_token: leaseToken,
+                draft_id: draftId,
+                expires_at: '2099-01-01T00:00:00.000Z',
+              }
+            }
+            if (sql.includes('SELECT purpose, status')) {
+              return {
+                purpose: 'PROFILE',
+                status: 'STRUCTURING',
+                version: 1,
+                expires_at: '2099-01-01T00:00:00.000Z',
+              }
+            }
+            return {
+              id: draftId,
+              user_id: USER_ID,
+              purpose: 'PROFILE',
+              transcript_text: '资料',
+              structured_draft_json: JSON.stringify({ headline: '产品负责人' }),
+              status: 'DRAFT_READY',
+              expires_at: '2099-01-01T00:00:00.000Z',
+              version: 2,
+            }
+          },
+          async query(sql, params) {
+            calls.push({ phase: 'query', sql, params })
+            return { affectedRows: 1 }
+          },
+        })
+      },
+    })
+    const ready = await repository.completeKeyedDraft(APP_ID, USER_ID, {
+      requestId,
+      inputHash,
+      leaseToken,
+      draftId,
+      expectedVersion: 1,
+    }, {
+      purpose: 'PROFILE',
+      transcriptText: '资料',
+      structuredDraft: { headline: '产品负责人' },
+      providerJobKey: 'provider-job',
+    })
+    assert.equal(ready.status, 'DRAFT_READY')
+    assert.equal(calls.filter(call => call.phase === 'transaction').length, 1)
+    assert.match(calls[1].sql, /FROM mip_users[\s\S]*FOR UPDATE/)
+    assert.match(calls[2].sql, /FROM mip_ai_draft_requests[\s\S]*FOR UPDATE/)
+    assert.match(calls[3].sql, /FROM mip_ai_drafts[\s\S]*FOR UPDATE/)
+    const requestUpdate = calls.find(call => call.phase === 'query' && call.sql.includes("status = 'COMPLETED'"))
+    assert.match(requestUpdate.sql, /lease_token = \?/)
+    assert.equal(requestUpdate.params.at(-1), leaseToken)
+  })
+
+  it('rejects a stale keyed completion before touching the draft', async () => {
+    let draftTouched = false
+    let updated = false
+    const repository = createAiRepository({
+      async transaction(work) {
+        return work({
+          async one(sql) {
+            if (sql.includes('FROM mip_users')) return { id: USER_ID, status: 'ACTIVE' }
+            if (sql.includes('FROM mip_ai_draft_requests')) {
+              return {
+                request_id: 'ai-draft:stale-lease',
+                input_hash: 'a'.repeat(64),
+                status: 'PROCESSING',
+                lease_token: '33333333-3333-4333-8333-333333333333',
+                draft_id: '22222222-2222-4222-8222-222222222222',
+              }
+            }
+            draftTouched = true
+            return null
+          },
+          async query() { updated = true; return { affectedRows: 1 } },
+        })
+      },
+    })
+    await assert.rejects(() => repository.completeKeyedDraft(APP_ID, USER_ID, {
+      requestId: 'ai-draft:stale-lease',
+      inputHash: 'a'.repeat(64),
+      leaseToken: '44444444-4444-4444-8444-444444444444',
+      draftId: '22222222-2222-4222-8222-222222222222',
+      expectedVersion: 1,
+    }, {
+      purpose: 'PROFILE',
+      transcriptText: '资料',
+      structuredDraft: { headline: '产品负责人' },
+    }), /AI_DRAFT_REQUEST_IN_PROGRESS/)
+    assert.equal(draftTouched, false)
+    assert.equal(updated, false)
+  })
+
   it('stages uploaded audio as PENDING before the ACTIVE transaction promotes it to READY', async () => {
     const calls = []
     const repository = createAiRepository({
@@ -323,6 +453,10 @@ describe('AI draft retention', () => {
               assert.match(sql, /asset\.app_id = \?[\s\S]*draft\.user_id = \?/)
               assert.match(sql, /asset\.purpose = 'AI_AUDIO'[\s\S]*asset\.owner_user_id = \?/)
               assert.match(sql, /asset\.status = 'PENDING'/)
+              assert.match(sql, /LEFT JOIN mip_ai_draft_requests ai_request/)
+              assert.match(sql, /ai_request\.status = 'PROCESSING'/)
+              assert.match(sql, /ai_request\.expires_at > UTC_TIMESTAMP\(3\)/)
+              assert.match(sql, /ai_request\.id IS NULL/)
               assert.match(sql, /FOR UPDATE SKIP LOCKED/)
               return [{
                 id: 'asset-1',

@@ -1,6 +1,6 @@
 'use strict'
 
-const { randomUUID } = require('node:crypto')
+const { createHash, randomUUID } = require('node:crypto')
 const { deriveMembershipCheckout, jsonStringArray, refundableAmount } = require('./pure')
 const {
   createMembershipInvitation: createInvitationToken,
@@ -71,8 +71,24 @@ function createCommerceService(options) {
       inviterUserId,
       expiresAt,
     }, invitationSecret)
-    const code = await invitationCode({ appId: caller.appId, scene })
-    return { codeUrl: code.codeUrl, expiresAt: expiresAt.toISOString() }
+    const claim = await repository.claimMembershipInvitationCode(caller.appId, inviterUserId, {
+      sceneHash: createHash('sha256').update(scene).digest('hex'),
+      expiresAt: expiresAt.toISOString(),
+    })
+    if (claim.state === 'READY') {
+      return { codeUrl: claim.codeUrl, expiresAt: claim.expiresAt }
+    }
+    if (claim.state !== 'CLAIMED') throw new Error('MEMBERSHIP_INVITATION_CODE_UNAVAILABLE')
+    const code = await invitationCode({
+      appId: caller.appId,
+      inviterUserId,
+      invitationId: claim.invitationId,
+      leaseToken: claim.leaseToken,
+      allocationId: claim.allocationId,
+      assetId: claim.allocationAssetId,
+      scene,
+    })
+    return { codeUrl: code.codeUrl, expiresAt: claim.expiresAt }
   }
 
   async function resolveMembershipInvitationScene(caller, value) {

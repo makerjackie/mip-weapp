@@ -52,6 +52,40 @@ function assert(condition, message) {
   }
 }
 
+function resolveSourceComponent(jsonFile, reference) {
+  if (/^(?:plugin|dynamicLib):\/\//.test(reference) || (!reference.startsWith('/') && !reference.startsWith('.'))) {
+    return null
+  }
+  const basePath = reference.startsWith('/')
+    ? path.join(root, 'src', reference.slice(1))
+    : path.resolve(path.dirname(path.join(root, jsonFile)), reference)
+  const sourceRoot = path.join(root, 'src')
+  assert(basePath === sourceRoot || basePath.startsWith(`${sourceRoot}${path.sep}`), `${jsonFile} component escapes src: ${reference}`)
+  return path.relative(root, `${basePath.replace(/\.json$/, '')}.json`)
+}
+
+function assertSourceComponentReachability(applicationJson) {
+  const jsonFiles = walk('src').filter(file => file.endsWith('.json'))
+  const referencedComponents = new Set(applicationJson.tabBar?.custom === true ? ['src/custom-tab-bar/index.json'] : [])
+  for (const jsonFile of jsonFiles) {
+    const definition = JSON.parse(read(jsonFile))
+    for (const referenceValue of Object.values(definition.usingComponents || {})) {
+      const reference = String(referenceValue)
+      const target = resolveSourceComponent(jsonFile, reference)
+      if (!target) {
+        continue
+      }
+      assert(fs.existsSync(path.join(root, target)), `Source component target is missing: ${jsonFile} -> ${reference}`)
+      referencedComponents.add(target)
+    }
+  }
+  const orphanComponents = jsonFiles.filter((jsonFile) => {
+    const definition = JSON.parse(read(jsonFile))
+    return definition.component === true && !referencedComponents.has(jsonFile)
+  })
+  assert(orphanComponents.length === 0, `Source components must be reachable from usingComponents: ${orphanComponents.join(', ')}`)
+}
+
 function sourceTree(relativePath, extension = /\.(?:js|ts)$/) {
   return sourceFiles(relativePath, extension)
     .map(read)
@@ -92,6 +126,7 @@ const scriptsWithDeviceAuth = walk('scripts')
   .filter(file => file.endsWith('.mjs') && file !== 'scripts/verify-source.mjs')
   .filter(file => read(file).includes(deviceAuthAction))
 
+assertSourceComponentReachability(appJson)
 assert(Number(projectConfig.libVersion.replaceAll('.', '')) >= 3152, 'Mini Program base library must be >= 3.15.2')
 for (const route of [
   'pages/index/index',
@@ -108,13 +143,25 @@ const declaredRoutes = [
   ...appJson.pages,
   ...appJson.subPackages.flatMap(item => item.pages.map(page => `${item.root}/${page}`)),
 ]
+const sourcePageRoutes = wxmlFiles
+  .filter(file => file.endsWith(`${path.sep}index.wxml`))
+  .filter(file => file.startsWith(`src${path.sep}pages${path.sep}`) || file.startsWith(`src${path.sep}packages${path.sep}`))
+  .filter((file) => {
+    const configPath = file.replace(/\.wxml$/, '.json')
+    return !fs.existsSync(path.join(root, configPath)) || JSON.parse(read(configPath)).component !== true
+  })
+  .map(file => file.slice(`src${path.sep}`.length, -'.wxml'.length).split(path.sep).join('/'))
+const undeclaredPageRoutes = sourcePageRoutes.filter(route => !declaredRoutes.includes(route))
+const missingPageSources = declaredRoutes.filter(route => !sourcePageRoutes.includes(route))
+assert(undeclaredPageRoutes.length === 0, `Page sources must be declared in app.json: ${undeclaredPageRoutes.join(', ')}`)
+assert(missingPageSources.length === 0, `Declared routes must have page sources: ${missingPageSources.join(', ')}`)
 assert(project.routes.length === Number(runtimeContract.routeCount)
   && declaredRoutes.length === Number(runtimeContract.routeCount), 'MIP route declarations do not match the runtime contract count')
 assert(new Set(project.routes.map(route => route.pathName)).size === declaredRoutes.length
   && declaredRoutes.every(route => project.routes.some(item => item.pathName === route)), 'Project and app route sets have drifted')
-assert(buildConfig.includes('\'packages/member\''), 'Member subpackage dependencies are missing from the build configuration')
+assert(!buildConfig.includes('\'packages/member\''), 'Member subpackage must reuse main-package npm dependencies to stay below the WeChat 2 MB limit')
 assert(!buildConfig.includes('\'packages/admin\''), 'Admin subpackage must reuse main-package npm dependencies to stay below the WeChat 2 MB limit')
-assert(buildConfig.includes('dependencies: [\'tdesign-miniprogram\']'), 'TDesign must be emitted for the main and member packages')
+assert(buildConfig.includes('dependencies: [\'tdesign-miniprogram\']'), 'TDesign must be emitted in the main package')
 assert(!/env\.MEMBERSHIP_[A-Z0-9_]+/.test(buildConfig), 'MIP build must not inherit legacy MEMBERSHIP_* configuration')
 assert(runtimeConfig.includes('membershipFunctionName: __MIP_IDENTITY_FUNCTION_NAME__'), 'Legacy client compatibility must fail closed through the isolated MIP identity function')
 assert(appCss.includes('@source "./**/*.{wxml,js,ts}"'), 'Tailwind v4 source glob is missing')

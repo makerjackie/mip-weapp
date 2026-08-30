@@ -30,8 +30,6 @@ const env = {
 const aliases = {
   '@weapp/shared/cache': path.join(root, 'src/shared/cache.ts'),
   '@weapp/shared/retry': path.join(root, 'src/shared/retry.ts'),
-  '@weapp/shared/admin-list': path.join(root, 'src/shared/admin-list.ts'),
-  '@weapp/shared/presenter': path.join(root, 'src/shared/presenter.ts'),
   '@weapp/shared/haptics': path.join(root, 'src/shared/haptics.ts'),
   '@weapp/platform/runtime-config': path.join(root, 'src/platform/runtime/config.ts'),
   '@weapp/platform/media-urls': path.join(root, 'src/platform/storage/media-urls.ts'),
@@ -97,18 +95,13 @@ export default defineConfig({
       mainPackage: {
         dependencies: ['tdesign-miniprogram'],
       },
-      subPackages: {
-        'packages/member': {
-          dependencies: ['tdesign-miniprogram'],
-        },
-      },
     },
     analyze: {
       budgets: {
         totalBytes: 10 * 1024 * 1024,
         mainBytes: 1.5 * 1024 * 1024,
-        subPackageBytes: 2 * 1024 * 1024,
-        independentBytes: 2 * 1024 * 1024,
+        subPackageBytes: Math.floor(1.8 * 1024 * 1024),
+        independentBytes: Math.floor(1.8 * 1024 * 1024),
         warningRatio: 0.85,
       },
     },

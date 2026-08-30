@@ -67,6 +67,193 @@ describe('membership checkout attribution', () => {
   })
 })
 
+describe('membership invitation code claims', () => {
+  const sceneHash = 'a'.repeat(64)
+  const expiresAt = '2026-09-29T00:00:00.000Z'
+
+  it('persists a separate allocation and planned media identity for every lease', () => {
+    const sql = readFileSync(path.resolve(
+      __dirname,
+      '../../../database/mysql/mip/058_membership_invitation_codes.sql',
+    ), 'utf8')
+    assert.match(sql, /allocation_id CHAR\(36\)[\s\S]*NOT NULL/)
+    assert.match(sql, /allocation_asset_id CHAR\(36\)[\s\S]*NOT NULL/)
+    assert.match(sql, /allocation_object_key VARCHAR\(512\)/)
+    assert.match(sql, /UNIQUE KEY mip_membership_invitation_codes_allocation_uk/)
+    assert.match(sql, /UNIQUE KEY mip_membership_invitation_codes_allocation_asset_uk/)
+    assert.match(sql, /UNIQUE KEY mip_membership_invitation_codes_allocation_object_uk/)
+    assert.match(sql, /code_asset_id IS NULL OR code_asset_id = allocation_asset_id/)
+  })
+
+  it('durably claims a new scene before any external upload', async () => {
+    const calls = []
+    const ids = [
+      '30000000-0000-4000-8000-000000000001',
+      '40000000-0000-4000-8000-000000000001',
+      '50000000-0000-4000-8000-000000000001',
+      '60000000-0000-4000-8000-000000000001',
+    ]
+    const repository = createCommerceRepository({
+      async transaction(work) {
+        return work({
+          async one(sql, params) {
+            calls.push({ kind: 'one', sql, params })
+            if (sql.includes('FROM mip_users')) return { id: inviterUserId }
+            return { id: '30000000-0000-4000-8000-000000000001' }
+          },
+          async query(sql, params) {
+            calls.push({ kind: 'query', sql, params })
+            return { affectedRows: 1 }
+          },
+        })
+      },
+    }, { createId: () => ids.shift() })
+    assert.deepEqual(
+      await repository.claimMembershipInvitationCode('app-1', inviterUserId, { sceneHash, expiresAt }),
+      {
+        state: 'CLAIMED',
+        invitationId: '30000000-0000-4000-8000-000000000001',
+        leaseToken: '40000000-0000-4000-8000-000000000001',
+        allocationId: '50000000-0000-4000-8000-000000000001',
+        allocationAssetId: '60000000-0000-4000-8000-000000000001',
+        expiresAt,
+      },
+    )
+    const insert = calls.find(call => call.kind === 'query')
+    assert.match(insert.sql, /INSERT INTO mip_membership_invitation_codes/)
+    assert.match(insert.sql, /INTERVAL 5 MINUTE/)
+    assert.deepEqual(insert.params.slice(1, 4), ['app-1', inviterUserId, sceneHash])
+  })
+
+  it('reuses one READY asset for the same unexpired scene', async () => {
+    const repository = createCommerceRepository({
+      async transaction(work) {
+        return work({
+          async one(sql) {
+            if (sql.includes('FROM mip_users')) return { id: inviterUserId }
+            return {
+              id: '30000000-0000-4000-8000-000000000001',
+              status: 'READY',
+              expires_at: expiresAt,
+              unexpired: 1,
+              lease_active: 0,
+              asset_status: 'READY',
+              cloud_file_id: 'cloud://env.test/code.png',
+            }
+          },
+          async query() { return { affectedRows: 0 } },
+        })
+      },
+    }, { createId: () => '40000000-0000-4000-8000-000000000001' })
+    assert.deepEqual(
+      await repository.claimMembershipInvitationCode('app-1', inviterUserId, { sceneHash, expiresAt }),
+      {
+        state: 'READY',
+        invitationId: '30000000-0000-4000-8000-000000000001',
+        codeUrl: 'cloud://env.test/code.png',
+        expiresAt,
+      },
+    )
+  })
+
+  it('does not steal an active lease and resumes an unknown upload with the same allocation', async () => {
+    let leaseActive = 1
+    const updates = []
+    let idSequence = 0
+    const repository = createCommerceRepository({
+      async transaction(work) {
+        return work({
+          async one(sql) {
+            if (sql.includes('FROM mip_users')) return { id: inviterUserId }
+            return {
+              id: '30000000-0000-4000-8000-000000000001',
+              status: 'PENDING',
+              code_asset_id: null,
+              allocation_id: '90000000-0000-4000-8000-000000000001',
+              allocation_asset_id: 'a0000000-0000-4000-8000-000000000001',
+              allocation_object_key: 'mip/test/scope/membership-invitations/allocation.png',
+              unexpired: 1,
+              lease_active: leaseActive,
+            }
+          },
+          async query(sql, params) {
+            updates.push({ sql, params })
+            if (sql.includes('INSERT INTO')) return { affectedRows: 0 }
+            return { affectedRows: 1 }
+          },
+        })
+      },
+    }, {
+      createId: () => `40000000-0000-4000-8000-${String(++idSequence).padStart(12, '0')}`,
+    })
+    assert.deepEqual(
+      await repository.claimMembershipInvitationCode('app-1', inviterUserId, { sceneHash, expiresAt }),
+      { state: 'PENDING', invitationId: '30000000-0000-4000-8000-000000000001' },
+    )
+    assert.equal(updates.some(call => call.sql.startsWith('UPDATE mip_membership')), false)
+    leaseActive = 0
+    assert.deepEqual(
+      await repository.claimMembershipInvitationCode('app-1', inviterUserId, { sceneHash, expiresAt }),
+      {
+        state: 'CLAIMED',
+        invitationId: '30000000-0000-4000-8000-000000000001',
+        leaseToken: '40000000-0000-4000-8000-000000000006',
+        allocationId: '90000000-0000-4000-8000-000000000001',
+        allocationAssetId: 'a0000000-0000-4000-8000-000000000001',
+        expiresAt,
+      },
+    )
+    const resume = updates.find(call => call.sql.includes('SET expires_at = ?'))
+    assert.ok(resume)
+    assert.equal(resume.sql.split('WHERE')[0].includes('allocation_id = ?'), false)
+  })
+
+  it('rotates allocation identity after a stale claim already registered media', async () => {
+    const ids = [
+      '40000000-0000-4000-8000-000000000001',
+      '50000000-0000-4000-8000-000000000001',
+      '60000000-0000-4000-8000-000000000001',
+      '70000000-0000-4000-8000-000000000001',
+    ]
+    const updates = []
+    const repository = createCommerceRepository({
+      async transaction(work) {
+        return work({
+          async one(sql) {
+            if (sql.includes('FROM mip_users')) return { id: inviterUserId }
+            return {
+              id: '30000000-0000-4000-8000-000000000001',
+              status: 'PENDING',
+              code_asset_id: '80000000-0000-4000-8000-000000000001',
+              allocation_id: '90000000-0000-4000-8000-000000000001',
+              allocation_asset_id: '80000000-0000-4000-8000-000000000001',
+              lease_active: 0,
+            }
+          },
+          async query(sql) {
+            updates.push(sql)
+            if (sql.includes('INSERT INTO')) return { affectedRows: 0 }
+            return { affectedRows: 1 }
+          },
+        })
+      },
+    }, { createId: () => ids.shift() })
+    assert.deepEqual(
+      await repository.claimMembershipInvitationCode('app-1', inviterUserId, { sceneHash, expiresAt }),
+      {
+        state: 'CLAIMED',
+        invitationId: '30000000-0000-4000-8000-000000000001',
+        leaseToken: '50000000-0000-4000-8000-000000000001',
+        allocationId: '60000000-0000-4000-8000-000000000001',
+        allocationAssetId: '70000000-0000-4000-8000-000000000001',
+        expiresAt,
+      },
+    )
+    assert.equal(updates.some(sql => sql.includes('code_asset_id = NULL')), true)
+    assert.equal(updates.some(sql => sql.includes('allocation_object_key = NULL')), true)
+  })
+})
+
 describe('membership benefit projection', () => {
   it('reads an ORDER entitlement and its immutable benefit snapshot for the caller', async () => {
     const calls = []

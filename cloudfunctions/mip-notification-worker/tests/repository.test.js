@@ -59,6 +59,78 @@ describe('notification repository', () => {
     assert.equal(writes[0].params.at(-1), 'outbox:event:operations')
   })
 
+  it('replays only an identical inbox and delivery payload for one dedupe key', async () => {
+    const stored = {
+      id: messageId,
+      recipient_user_id: userId,
+      message_type: 'OPERATIONS',
+      title: '活动开始提醒',
+      body: '活动将于明天开始。',
+      target_type: 'EVENT',
+      target_id: '30000000-0000-4000-8000-000000000001',
+      target_route: '/packages/member/mip-events/detail/index?eventId=30000000-0000-4000-8000-000000000001',
+      read_at: null,
+      created_at: new Date('2026-08-24T00:00:00.000Z'),
+    }
+    const deliveryTasks = [{
+      channel: 'WECHAT_SUBSCRIPTION',
+      template_key: 'EVENT_REMINDER',
+      payload_json: JSON.stringify({ fields: { title: '城市交流活动', startsAt: '明天 10:00' } }),
+    }]
+    const database = {
+      transaction: async callback => callback({
+        async one(sql) {
+          if (sql.includes('FROM mip_users')) return { id: userId, status: 'ACTIVE' }
+          return stored
+        },
+        async query(sql) {
+          if (sql.includes('SELECT channel, template_key, payload_json')) return deliveryTasks
+          return { affectedRows: 1 }
+        },
+      }),
+    }
+    const repository = createNotificationRepository(database, {
+      createId: () => '40000000-0000-4000-8000-000000000001',
+    })
+    const message = {
+      recipientUserId: userId,
+      messageType: 'OPERATIONS',
+      title: stored.title,
+      body: stored.body,
+      target: {
+        type: stored.target_type,
+        id: stored.target_id,
+        route: stored.target_route,
+      },
+      dedupeKey: 'outbox:event:operations',
+      external: {
+        channel: 'WECHAT_SUBSCRIPTION',
+        templateKey: 'EVENT_REMINDER',
+        payload: { fields: { startsAt: '明天 10:00', title: '城市交流活动' } },
+      },
+    }
+
+    assert.equal((await repository.publishMessage(appId, message)).id, messageId)
+    await assert.rejects(
+      () => repository.publishMessage(appId, { ...message, body: '活动时间已经变更。' }),
+      /IDEMPOTENCY_CONFLICT/,
+    )
+    await assert.rejects(
+      () => repository.publishMessage(appId, {
+        ...message,
+        external: {
+          ...message.external,
+          payload: { fields: { startsAt: '明天 11:00', title: '城市交流活动' } },
+        },
+      }),
+      /IDEMPOTENCY_CONFLICT/,
+    )
+    await assert.rejects(
+      () => repository.publishMessage(appId, { ...message, external: null }),
+      /IDEMPOTENCY_CONFLICT/,
+    )
+  })
+
   it('reserves one app-scoped authorization before any external work', async () => {
     const lease = new Date('2026-08-24T01:02:00.000Z')
     const reads = []

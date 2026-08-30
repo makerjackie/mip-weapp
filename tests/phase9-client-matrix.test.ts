@@ -243,7 +243,6 @@ describe('phase9 page double-click / stale / error recovery behavior', () => {
   it('event detail and registration confirm gate double submit via busy flag', () => {
     const detail = read('src/packages/member/mip-events/detail/index.ts')
     const registration = read('src/packages/member/mip-events/registration/index.ts')
-    const ticket = read('src/packages/member/ticket/index.ts')
     const adminEvents = read('src/packages/admin/events/index.ts')
     const roster = read('src/packages/admin/event-registrations/index.ts')
 
@@ -251,8 +250,6 @@ describe('phase9 page double-click / stale / error recovery behavior', () => {
     expect(detail).toMatch(/busy: true[\s\S]*?showModal[\s\S]*?finally[\s\S]*?busy: false/)
     expect(registration).toMatch(/if \(!event \|\| this\.data\.busy \|\| !this\.validate\(\)\)/)
     expect(registration).toMatch(/busy: true[\s\S]*?mipEventsModule\.register[\s\S]*?finally[\s\S]*?busy: false/)
-    expect(ticket).toMatch(/if \(!this\.data\.canCancel \|\| this\.data\.busy\)/)
-    expect(ticket).toMatch(/this\.setData\(\{ busy: true[\s\S]*?showModal/)
     expect(adminEvents).toMatch(/if \(this\.data\.saving \|\| this\.data\.tagSaving \|\| this\.data\.cancelBusy\)/)
     expect(adminEvents).toMatch(/if \(this\.data\.conflict\)/)
     expect(adminEvents).toMatch(/cancelConflict/)

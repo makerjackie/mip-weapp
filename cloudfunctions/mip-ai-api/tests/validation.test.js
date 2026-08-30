@@ -36,6 +36,16 @@ test('validates text and voice-upload intents without inventing a transcript', (
     audioBase64: 'SUQzAA==',
     contentType: 'audio/wav',
   }), /VALIDATION_FAILED/)
+  assert.equal(normalizeTextIntent({
+    purpose: 'PROFILE',
+    transcriptText: '资料',
+    requestId: ' ai-draft:text-one ',
+  }).requestId, 'ai-draft:text-one')
+  assert.throws(() => normalizeTextIntent({
+    purpose: 'PROFILE',
+    transcriptText: '资料',
+    requestId: 'short',
+  }), /VALIDATION_FAILED/)
 })
 
 test('normalizes a bounded refinement turn and appends it without provider rewriting the source', () => {

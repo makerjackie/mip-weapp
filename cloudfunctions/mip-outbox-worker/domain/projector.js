@@ -968,7 +968,7 @@ async function projectGameMatchFinalized(database, event) {
   assertAggregate(event, 'GAME_MATCH')
   const match = await database.one(
     `SELECT id, team_a_id, team_b_id, team_a_score, team_b_score,
-            week_start, week_end, status, version
+            week_start, week_end, finalized_at, status, version
      FROM mip_game_weekly_matches
      WHERE app_id = ? AND id = ?`,
     [event.app_id, event.aggregate_id],
@@ -983,23 +983,24 @@ async function projectGameMatchFinalized(database, event) {
   }
   if (teamAScore === teamBScore) return projection([], [], 'NO_WINNER')
   const winningTeamId = teamAScore > teamBScore ? match.team_a_id : match.team_b_id
+  const eligibilityAt = validTimestamp(match.finalized_at)
   const members = await database.query(
     `SELECT member.user_id
      FROM mip_game_team_memberships member
      INNER JOIN mip_users user
        ON user.app_id = member.app_id AND user.id = member.user_id AND user.status = 'ACTIVE'
      WHERE member.app_id = ? AND member.team_id = ?
-       AND member.joined_at <= CONCAT(?, ' 23:59:59.999')
-       AND (member.left_at IS NULL OR member.left_at > CONCAT(?, ' 23:59:59.999'))
+       AND member.joined_at <= ?
+       AND (member.left_at IS NULL OR member.left_at > ?)
        AND EXISTS (
          SELECT 1 FROM mip_membership_entitlements entitlement
          WHERE entitlement.app_id = member.app_id AND entitlement.user_id = member.user_id
            AND entitlement.status = 'ACTIVE'
-           AND entitlement.starts_at <= UTC_TIMESTAMP(3)
-           AND entitlement.ends_at > UTC_TIMESTAMP(3)
+           AND entitlement.starts_at <= ?
+           AND entitlement.ends_at > ?
        )
      ORDER BY member.user_id`,
-    [event.app_id, winningTeamId, dateOnly(match.week_end), dateOnly(match.week_end)],
+    [event.app_id, winningTeamId, eligibilityAt, eligibilityAt, eligibilityAt, eligibilityAt],
   )
   if (members.some(member => !UUID_PATTERN.test(String(member.user_id || '')))) {
     throw new Error('OUTBOX_EVENT_INVALID')
@@ -1286,10 +1287,10 @@ function notificationDateTime(value) {
   ].join(' ')
 }
 
-function dateOnly(value) {
+function validTimestamp(value) {
   const date = new Date(value)
   if (!Number.isFinite(date.getTime())) throw new Error('OUTBOX_EVENT_INVALID')
-  return date.toISOString().slice(0, 10)
+  return date
 }
 
 function growth(event, userId, sourceEventType = event.event_type) {

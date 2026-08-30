@@ -66,11 +66,27 @@ Page({
     saving: false,
     message: '',
   },
+  navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
 
   onLoad(query: Record<string, string>) {
     const announcementId = query.announcementId || ''
     this.setData({ announcementId })
     void this.loadForm()
+  },
+
+  onHide() {
+    this.clearNavigationTimer()
+  },
+
+  onUnload() {
+    this.clearNavigationTimer()
+  },
+
+  clearNavigationTimer() {
+    if (this.navigationTimer !== undefined) {
+      clearTimeout(this.navigationTimer)
+      this.navigationTimer = undefined
+    }
   },
 
   retryLoad() {
@@ -345,7 +361,11 @@ Page({
       })
       this.setData({ announcementId: saved.id, version: saved.version })
       wx.showToast({ title: '草稿已保存', icon: 'success' })
-      setTimeout(leaveSecondaryPage, 500, '/packages/admin/announcements/index')
+      this.clearNavigationTimer()
+      this.navigationTimer = setTimeout(() => {
+        this.navigationTimer = undefined
+        leaveSecondaryPage('/packages/admin/announcements/index')
+      }, 500)
     }
     catch (error) {
       if (isAdminVersionConflict(error)) {

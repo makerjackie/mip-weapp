@@ -44,9 +44,19 @@ Page({
     processingId: '',
     message: '',
   },
+  requestSeq: 0,
+  confirmationBusy: false,
 
   onShow() {
     void this.loadItems()
+  },
+
+  onHide() {
+    this.requestSeq += 1
+  },
+
+  onUnload() {
+    this.requestSeq += 1
   },
 
   async onPullDownRefresh() {
@@ -72,17 +82,26 @@ Page({
   },
 
   async loadItems(force = false) {
+    const status = this.data.status
+    const seq = this.requestSeq + 1
+    this.requestSeq = seq
     const hasContent = this.data.items.length > 0
     if (!hasContent) {
       this.setData({ state: 'loading', message: '' })
     }
     try {
       const session = await mipAdminModule.getSession(force)
+      if (seq !== this.requestSeq || status !== this.data.status) {
+        return
+      }
       if (!hasCapability(session.capabilities, 'announcements.manage')) {
         this.setData({ state: 'forbidden', items: [], message: '' })
         return
       }
-      const response = await mipAdminModule.messaging.listAnnouncements({ status: this.data.status, limit: 50 }, force)
+      const response = await mipAdminModule.messaging.listAnnouncements({ status, limit: 50 }, force)
+      if (seq !== this.requestSeq || status !== this.data.status) {
+        return
+      }
       this.setData({
         state: response.items.length ? 'ready' : 'empty',
         items: response.items.map(view),
@@ -90,6 +109,9 @@ Page({
       })
     }
     catch (error) {
+      if (seq !== this.requestSeq || status !== this.data.status) {
+        return
+      }
       this.setData(adminLoadFailure(error, { hasContent, fallbackMessage: '公告列表加载失败' }))
     }
   },
@@ -110,15 +132,17 @@ Page({
   async transition(event: WechatMiniprogram.TouchEvent) {
     const item = this.data.items.find(candidate => candidate.id === String(event.currentTarget.dataset.id || ''))
     const transition = String(event.currentTarget.dataset.transition || '') as 'PUBLISH' | 'WITHDRAW' | 'PIN' | 'UNPIN'
-    if (!item || this.data.processingId || !['PUBLISH', 'WITHDRAW', 'PIN', 'UNPIN'].includes(transition)) {
+    if (!item || this.data.processingId || this.confirmationBusy
+      || !['PUBLISH', 'WITHDRAW', 'PIN', 'UNPIN'].includes(transition)) {
       return
     }
-    const confirmation = await this.confirmTransition(item, transition)
-    if (!confirmation.confirmed) {
-      return
-    }
-    this.setData({ processingId: item.id, message: '' })
+    this.confirmationBusy = true
     try {
+      const confirmation = await this.confirmTransition(item, transition)
+      if (!confirmation.confirmed) {
+        return
+      }
+      this.setData({ processingId: item.id, message: '' })
       await (transition === 'PUBLISH'
         ? mipAdminModule.messaging.publishAnnouncement(item.id, item.version)
         : transition === 'WITHDRAW'
@@ -136,6 +160,7 @@ Page({
       }
     }
     finally {
+      this.confirmationBusy = false
       this.setData({ processingId: '' })
     }
   },

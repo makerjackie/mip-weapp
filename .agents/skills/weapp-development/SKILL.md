@@ -36,7 +36,7 @@ description: Use for WeChat Mini Program page, config, script, Tailwind, TDesign
 
 ## Forbidden
 
-React/Vue、workspace 协议、绝对用户路径、把密钥打进日志。
+在 `src/` 引入 React/Vue/Taro/uni-app、让页面/样式/运行时 adapter 依赖 workspace package、绝对用户路径、把密钥打进日志。只有经过审查并被两端真实使用的平台中立契约可以放入 `packages/`。
 
 ## Verify
 

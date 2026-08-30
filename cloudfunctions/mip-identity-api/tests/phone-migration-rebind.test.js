@@ -244,5 +244,7 @@ describe('paid member phone migration rebind', () => {
     assert.doesNotMatch(source, /INFORMATION_SCHEMA/)
     assert.match(source, /PHONE_MIGRATION_USER_REFERENCE_CHECKS/)
     assert.match(source, /SELECT 1 AS found FROM mip_orders WHERE app_id = \? AND \? IN \(user_id\)/)
+    assert.match(source, /SELECT 1 AS found FROM mip_ai_draft_requests WHERE app_id = \? AND \? IN \(user_id\)/)
+    assert.match(source, /SELECT 1 AS found FROM mip_membership_invitation_codes WHERE app_id = \? AND \? IN \(inviter_user_id\)/)
   })
 })

@@ -12,7 +12,6 @@ const sharePages = [
   'src/packages/member/mip-events/participants/index',
   'src/packages/member/mip-opportunities/detail/index',
   'src/packages/member/mip-cases/detail/index',
-  'src/packages/member/event-detail/index',
 ]
 
 function collectJsonFiles(directory: string): string[] {
@@ -43,13 +42,5 @@ describe('WeChat page share configuration', () => {
       const controller = fs.readFileSync(path.join(root, `${page}.ts`), 'utf8')
       expect(controller, page).toMatch(/\bonShareAppMessage\s*\(/)
     }
-  })
-
-  it('retains timeline sharing where it is explicitly enabled', () => {
-    const config = JSON.parse(
-      fs.readFileSync(path.join(root, 'src/packages/member/event-detail/index.json'), 'utf8'),
-    ) as { enableShareTimeline?: boolean }
-
-    expect(config.enableShareTimeline).toBe(true)
   })
 })

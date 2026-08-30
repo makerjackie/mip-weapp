@@ -69,6 +69,25 @@ function assertOwnedAudioFile(input) {
 
 function createAudioStore(cloud, options = {}) {
   const storageKey = options.storageKey
+  const createId = options.createId || randomUUID
+  const stage = ['development', 'test', 'staging', 'production'].includes(options.stage)
+    ? options.stage
+    : 'development'
+
+  function preallocate(input) {
+    const assetId = input.assetId || createId()
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(assetId)) {
+      throw new Error('AI_AUDIO_INVALID')
+    }
+    const appScope = scope(storageKey, 'app', input.appId)
+    const userScope = scope(storageKey, 'user', input.userId)
+    const objectKey = `mip/${stage}/${appScope}/ai/${userScope}/${assetId}.mp3`
+    if (input.objectKey !== undefined && input.objectKey !== objectKey) {
+      throw new Error('AI_AUDIO_FILE_INVALID')
+    }
+    return { assetId, objectKey }
+  }
+
   async function remove(input = {}) {
     if (typeof cloud?.deleteFile !== 'function') return false
     try {
@@ -90,22 +109,18 @@ function createAudioStore(cloud, options = {}) {
   if (typeof storageKey !== 'string' || storageKey.length < 32) {
     return {
       configured: false,
+      preallocate() { throw new Error('AI_STORAGE_UNAVAILABLE') },
       async store() { throw new Error('AI_STORAGE_UNAVAILABLE') },
       remove,
     }
   }
   return {
     configured: true,
+    preallocate,
     async store(input) {
       if (input.contentType !== 'audio/mpeg') throw new Error('AI_AUDIO_INVALID')
       const fileContent = decodeMp3(input.audioBase64)
-      const assetId = randomUUID()
-      const appScope = scope(storageKey, 'app', input.appId)
-      const userScope = scope(storageKey, 'user', input.userId)
-      const stage = ['development', 'test', 'staging', 'production'].includes(options.stage)
-        ? options.stage
-        : 'development'
-      const objectKey = `mip/${stage}/${appScope}/ai/${userScope}/${assetId}.mp3`
+      const { assetId, objectKey } = preallocate(input)
       const uploaded = await cloud.uploadFile({ cloudPath: objectKey, fileContent })
       const cloudFileId = typeof uploaded?.fileID === 'string' ? uploaded.fileID : ''
       if (!cloudFileId.startsWith('cloud://')) throw new Error('AI_AUDIO_UPLOAD_FAILED')

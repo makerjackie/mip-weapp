@@ -7,6 +7,7 @@ import type {
   MipGameGateway,
   MipGameRequest,
 } from './types'
+import { parseGameSeason, parseGameSeasonPage } from './season-dto'
 import {
   parseAssignableGameMemberPage,
   parseGameTeam,
@@ -114,9 +115,17 @@ export function createMipGameGateway(transport: MipGameTransport): MipGameGatewa
     listRankings: (seasonId, rankingType, branchId) => call('listRankings', { seasonId, rankingType, branchId }),
     getAdminSession: () => call('admin.getSession', {}),
     listAdminRankings: (seasonId, rankingType, branchId) => call('admin.listRankings', { seasonId, rankingType, branchId }),
-    listSeasons: () => call('admin.listSeasons', {}),
-    saveSeason: input => call('admin.saveSeason', input),
-    changeSeasonStatus: (seasonId, expectedVersion, status) => call('admin.changeSeasonStatus', { seasonId, expectedVersion, status }),
+    listSeasons: () => callParsed('admin.listSeasons', {}, parseGameSeasonPage),
+    saveSeason: input => callParsed(
+      'admin.saveSeason',
+      input,
+      value => parseGameSeason(value, input.seasonId),
+    ),
+    changeSeasonStatus: (seasonId, expectedVersion, status) => callParsed(
+      'admin.changeSeasonStatus',
+      { seasonId, expectedVersion, status },
+      value => parseGameSeason(value, seasonId),
+    ),
     listTeams: seasonId => callParsed(
       'admin.listTeams',
       { seasonId },

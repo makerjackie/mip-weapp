@@ -59,6 +59,18 @@ function formatDateTime(value: string) {
   return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
+function decodeInvitationToken(value: string | undefined) {
+  if (!value || value.length > 1536) {
+    return ''
+  }
+  try {
+    return decodeURIComponent(value).slice(0, 1024)
+  }
+  catch {
+    return ''
+  }
+}
+
 function registrationAccessText(event: MipEventDetail) {
   if (event.accessType === 'MEMBER_INCLUDED') {
     return '仅玩家'
@@ -112,7 +124,7 @@ Page({
     const resumeCheckIn = query.resumeCheckIn === '1' && Boolean(mipCheckInResumeStore.peek(String(eventId)))
     this.setData({
       eventId,
-      invitationToken: query.invitationToken ? decodeURIComponent(query.invitationToken) : '',
+      invitationToken: decodeInvitationToken(query.invitationToken),
       resumeCheckIn,
     })
     void this.loadEvent()

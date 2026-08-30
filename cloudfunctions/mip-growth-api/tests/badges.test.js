@@ -38,7 +38,7 @@ test('lists the complete catalog with explicit award and equipment state', async
           name: '交付统筹',
           description: '带领团队按计划完成项目目标',
           icon_name: 'task-done-filled',
-          image_url: '/packages/member/assets/generated/badges/badge-delivery-leader.png',
+          image_url: '/packages/member/assets/generated/badges/badge-delivery-leader.webp',
           placeholder_shape: 'HEXAGON',
           category: 'HONOR',
           sort_order: 20,

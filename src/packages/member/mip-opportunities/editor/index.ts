@@ -82,10 +82,26 @@ Page({
     teamCandidates: [] as TeamCandidate[],
     teamLoading: false,
   },
+  navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
 
   onLoad(options: Record<string, string | undefined>) {
     this.setData({ id: String(options.id || '') as OpportunityId | '' })
     void this.initialize()
+  },
+
+  onHide() {
+    this.clearNavigationTimer()
+  },
+
+  onUnload() {
+    this.clearNavigationTimer()
+  },
+
+  clearNavigationTimer() {
+    if (this.navigationTimer !== undefined) {
+      clearTimeout(this.navigationTimer)
+      this.navigationTimer = undefined
+    }
   },
 
   async initialize() {
@@ -467,7 +483,11 @@ Page({
       })
       this.setData({ id: result.id, version: result.version })
       wx.showToast({ title: result.status === 'PUBLISHED' ? '机会已发布' : '草稿已保存', icon: 'success' })
-      setTimeout(() => wx.navigateBack(), 500)
+      this.clearNavigationTimer()
+      this.navigationTimer = setTimeout(() => {
+        this.navigationTimer = undefined
+        wx.navigateBack()
+      }, 500)
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '保存失败' })

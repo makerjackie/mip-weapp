@@ -27,19 +27,33 @@ Page({
     canContinueCheckIn: false,
   },
   pollTimer: undefined as ReturnType<typeof setTimeout> | undefined,
+  pageActive: true,
+  checkRequestSeq: 0,
 
   onLoad(query: Record<string, string>) {
+    this.pageActive = true
     this.setData({ orderId: String(query.orderId || '') as OrderId })
   },
 
   onShow() {
+    this.pageActive = true
     if (!this.pollTimer && this.data.result !== 'success') {
       void this.check()
     }
   },
 
-  onHide() { this.stopPolling() },
-  onUnload() { this.stopPolling() },
+  onHide() { this.suspendPolling() },
+  onUnload() { this.suspendPolling() },
+
+  suspendPolling() {
+    this.pageActive = false
+    this.checkRequestSeq += 1
+    this.stopPolling()
+  },
+
+  isCurrentCheck(requestSeq: number) {
+    return this.pageActive && requestSeq === this.checkRequestSeq
+  },
 
   stopPolling() {
     if (this.pollTimer) {
@@ -50,8 +64,12 @@ Page({
 
   async check() {
     this.stopPolling()
+    const requestSeq = this.checkRequestSeq + 1
+    this.checkRequestSeq = requestSeq
     if (!this.data.orderId) {
-      this.setData({ result: 'failed', title: '没有找到订单', description: '请返回订单列表重新查看。' })
+      if (this.isCurrentCheck(requestSeq)) {
+        this.setData({ result: 'failed', title: '没有找到订单', description: '请返回订单列表重新查看。' })
+      }
       return
     }
     try {
@@ -59,16 +77,25 @@ Page({
         mipCommerceModule.listOrders(),
         mipCommerceModule.listPlans().catch(() => [] as MembershipPlan[]),
       ])
+      if (!this.isCurrentCheck(requestSeq)) {
+        return
+      }
       let order = orders.find(item => item.id === this.data.orderId)
       if (!order) {
         throw new Error('NOT_FOUND')
       }
       if (presentOrderStatus(order.status).paymentPending) {
         order = await mipCommerceModule.reconcile(order.id)
+        if (!this.isCurrentCheck(requestSeq)) {
+          return
+        }
       }
-      await this.applyOrder(order, plans)
+      await this.applyOrder(order, plans, requestSeq)
     }
     catch (error) {
+      if (!this.isCurrentCheck(requestSeq)) {
+        return
+      }
       const attempts = this.data.attempts + 1
       const notFound = error instanceof Error && error.message === 'NOT_FOUND'
       if (notFound) {
@@ -82,12 +109,15 @@ Page({
         description: '暂时无法获取最新订单状态。你可以稍后再查，期间不会重复发起支付。',
       })
       if (attempts < 6) {
-        this.schedulePoll()
+        this.schedulePoll(requestSeq)
       }
     }
   },
 
-  async applyOrder(order: CommerceOrder, plans: readonly MembershipPlan[]) {
+  async applyOrder(order: CommerceOrder, plans: readonly MembershipPlan[], requestSeq: number) {
+    if (!this.isCurrentCheck(requestSeq)) {
+      return
+    }
     const classification = classifyPaymentResult(order)
     const isEventOrder = order.orderType === 'EVENT'
     const isContentOrder = order.orderType === 'CONTENT'
@@ -106,6 +136,9 @@ Page({
     if (classification === 'success') {
       if (isEventOrder) {
         const registrationReady = await this.eventRegistrationReady(order.resourceId || '')
+        if (!this.isCurrentCheck(requestSeq)) {
+          return
+        }
         if (!registrationReady) {
           const attempts = this.data.attempts + 1
           this.setData({
@@ -118,7 +151,7 @@ Page({
               : '正在等待活动报名资格生效，资格生效前不能签到。',
           })
           if (attempts < 6) {
-            this.schedulePoll()
+            this.schedulePoll(requestSeq)
           }
           return
         }
@@ -140,7 +173,7 @@ Page({
           : '服务端已确认订单为已支付，会员权益已生效。',
       })
       if (!isEventOrder && !isContentOrder) {
-        void this.loadMembershipEnd()
+        void this.loadMembershipEnd(requestSeq)
       }
       return
     }
@@ -158,7 +191,7 @@ Page({
             : '订单尚未达到已支付状态，会员权益暂未生效。',
       })
       if (attempts < 6) {
-        this.schedulePoll()
+        this.schedulePoll(requestSeq)
       }
       return
     }
@@ -196,17 +229,24 @@ Page({
     }
   },
 
-  schedulePoll() {
+  schedulePoll(requestSeq: number) {
+    if (!this.isCurrentCheck(requestSeq)) {
+      return
+    }
     this.pollTimer = setTimeout(() => {
       this.pollTimer = undefined
-      void this.check()
+      if (this.isCurrentCheck(requestSeq)) {
+        void this.check()
+      }
     }, 1500)
   },
 
-  async loadMembershipEnd() {
+  async loadMembershipEnd(requestSeq: number) {
     try {
       const snapshot = await mipIdentityModule.loadSnapshot()
-      if (snapshot.membership.kind === 'PLAYER' && snapshot.membership.entitlement?.endsAt) {
+      if (this.isCurrentCheck(requestSeq)
+        && snapshot.membership.kind === 'PLAYER'
+        && snapshot.membership.entitlement?.endsAt) {
         this.setData({ membershipEndsText: formatLocalDate(snapshot.membership.entitlement.endsAt) })
       }
     }

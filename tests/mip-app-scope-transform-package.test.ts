@@ -92,6 +92,19 @@ function exportFixture() {
       id: 'registration-fixture',
       ticket_hash: 'temporary-ticket-value',
     }],
+    mip_ai_drafts: [{
+      app_id: sourceAppId,
+      id: 'unconfirmed-draft-fixture',
+      status: 'DRAFT_READY',
+      audio_asset_id: 'temporary-audio-fixture',
+    }, {
+      app_id: sourceAppId,
+      id: 'confirmed-draft-fixture',
+      status: 'CONFIRMED',
+      audio_asset_id: 'temporary-audio-fixture',
+      confirmed_resource_type: 'PROFILE',
+      confirmed_resource_id: 'profile-fixture',
+    }],
   }
   const primaryKeys: Record<string, string[]> = {
     mip_schema_migrations: ['version'],
@@ -99,6 +112,7 @@ function exportFixture() {
     mip_private_profiles: ['app_id', 'user_id'],
     mip_notification_grants: ['id'],
     mip_event_registrations: ['id'],
+    mip_ai_drafts: ['id'],
   }
   const tableEntries = Object.entries(rows).map(([table, tableRows]) => {
     const relativeFile = `data/${table}.jsonl`
@@ -199,15 +213,15 @@ describe('MIP app-scope transformed package', () => {
     const result = transformFixture(fixture)
 
     expect(result).toMatchObject({
-      tableCount: 5,
-      rowCount: 4,
-      excludedRowCount: 1,
+      tableCount: 6,
+      rowCount: 5,
+      excludedRowCount: 2,
     })
     const manifest = JSON.parse(fs.readFileSync(path.join(fixture.output, 'manifest.json'), 'utf8'))
     expect(manifest).toMatchObject({
       format: MIP_APP_SCOPE_TRANSFORM_FORMAT,
       migrationReadiness: 'transformed-verified',
-      excludedRowCount: 1,
+      excludedRowCount: 2,
       validation: {
         sourceManifest: 'verified',
         sourceChecksums: 'verified',
@@ -215,15 +229,29 @@ describe('MIP app-scope transformed package', () => {
         targetAppScope: 'verified',
       },
     })
-    expect(manifest.exclusions).toEqual([{
-      table: 'mip_notification_grants',
-      reason: 'SOURCE_APP_NOTIFICATION_GRANT',
-      excludedRows: 1,
-    }])
+    expect(manifest.exclusions).toEqual([
+      {
+        table: 'mip_notification_grants',
+        reason: 'SOURCE_APP_NOTIFICATION_GRANT',
+        excludedRows: 1,
+      },
+      {
+        table: 'mip_ai_drafts',
+        reason: 'UNCONFIRMED_AI_DRAFT',
+        excludedRows: 1,
+      },
+    ])
     expect(readJsonLines(path.join(fixture.output, 'data', 'mip_notification_grants.jsonl')))
       .toEqual([])
     expect(readJsonLines(path.join(fixture.output, 'data', 'mip_event_registrations.jsonl'))[0])
       .toMatchObject({ app_id: targetAppId, ticket_hash: null })
+    expect(readJsonLines(path.join(fixture.output, 'data', 'mip_ai_drafts.jsonl')))
+      .toEqual([expect.objectContaining({
+        app_id: targetAppId,
+        id: 'confirmed-draft-fixture',
+        status: 'CONFIRMED',
+        audio_asset_id: null,
+      })])
 
     const privateRows = readJsonLines(
       path.join(fixture.output, 'data', 'mip_private_profiles.jsonl'),

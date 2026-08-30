@@ -416,6 +416,7 @@ describe('MIP media orphan maintenance', () => {
         return work({
           async query(sql, params) {
             calls.push({ sql, params })
+            if (sql.includes('SELECT invitation.id')) return []
             if (sql.includes('SELECT asset.id')) {
               assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_profiles/)
               assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_events/)
@@ -427,6 +428,9 @@ describe('MIP media orphan maintenance', () => {
               assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_task_completions/)
               assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_task_cards/)
               assert.match(sql, /NOT EXISTS \(\s*SELECT 1 FROM mip_banners/)
+              assert.match(sql, /mip_membership_invitation_codes invitation/)
+              assert.match(sql, /invitation\.status IN \('PENDING', 'READY'\)/)
+              assert.match(sql, /invitation\.expires_at > UTC_TIMESTAMP/)
               assert.match(sql, /mip_event_checkin_credentials credential/)
               assert.match(sql, /credential\.valid_until > UTC_TIMESTAMP/)
               assert.match(sql, /FOR UPDATE SKIP LOCKED/)
@@ -458,6 +462,7 @@ describe('MIP media orphan maintenance', () => {
     )
     assert.equal(calls.some(call => call.sql.includes("SET status = 'PENDING'")), true)
     assert.equal(calls.some(call => call.sql.includes("SET status = 'DELETED'")), true)
+    assert.equal(calls.some(call => call.sql.includes("SET status = 'EXPIRED'")), true)
   })
 
   it('keeps a deletion lease private without touching storage when the object leaves the owned MIP scope', async () => {
@@ -467,6 +472,7 @@ describe('MIP media orphan maintenance', () => {
       async transaction(work) {
         return work({
           async query(sql) {
+            if (sql.includes('SELECT invitation.id')) return []
             if (sql.includes('SELECT asset.id')) {
               return [{
                 id: ASSET_ID,
@@ -518,6 +524,7 @@ describe('MIP media orphan maintenance', () => {
       async transaction(work) {
         return work({
           async query(sql) {
+            if (sql.includes('SELECT invitation.id')) return []
             if (sql.includes('SELECT asset.id')) {
               return [{ id: ASSET_ID, object_key: objectKey, cloud_file_id: fileId }]
             }
@@ -550,6 +557,36 @@ describe('MIP media orphan maintenance', () => {
     assert.deepEqual(events, ['lease', 'storage'])
     assert.equal(updates.some(sql => sql.includes("SET status = 'READY'")), false)
     assert.equal(updates.some(sql => sql.includes("SET status = 'DELETED'")), false)
+  })
+
+  it('expires bounded code claims without assets while leaving linked assets to controlled cleanup', async () => {
+    const calls = []
+    const database = {
+      async transaction(work) {
+        return work({
+          async query(sql, params) {
+            calls.push({ sql, params })
+            if (sql.includes('SELECT invitation.id')) {
+              assert.match(sql, /status IN \('PENDING', 'READY', 'FAILED'\)/)
+              assert.match(sql, /expires_at <= UTC_TIMESTAMP/)
+              assert.match(sql, /code_asset_id IS NULL OR asset\.status = 'DELETED'/)
+              assert.match(sql, /LIMIT \? FOR UPDATE SKIP LOCKED/)
+              assert.deepEqual(params, [APP_ID, 3])
+              return [{ id: '33333333-3333-4333-8333-333333333333' }]
+            }
+            if (sql.includes('SELECT asset.id')) return []
+            return { affectedRows: 1 }
+          },
+        })
+      },
+    }
+    const service = createMediaService({ database, cloud: {}, env: environment() })
+    assert.deepEqual(
+      await service.cleanupOrphans(APP_ID, { limit: 3, minimumAgeHours: 24 }),
+      { scanned: 0, deleted: 0, failed: 0 },
+    )
+    const expired = calls.find(call => call.sql.includes("SET status = 'EXPIRED'"))
+    assert.deepEqual(expired.params, [APP_ID, '33333333-3333-4333-8333-333333333333'])
   })
 
   it('requires the CloudBase file ID to contain the exact owned object key', () => {

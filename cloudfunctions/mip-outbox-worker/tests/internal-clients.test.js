@@ -110,6 +110,20 @@ describe('outbox internal clients', () => {
     await assert.rejects(() => clients.publishMessage('wx-app', {}), /CONFLICT/)
   })
 
+  it('bounds an internal call below the outbox lease and returns a retryable timeout code', async () => {
+    const clients = createInternalClients({
+      cloud: { callFunction: async () => new Promise(() => {}) },
+      notificationFunctionName: 'mip-notification-worker',
+      notificationSecret,
+      growthFunctionName: 'mip-growth-api',
+      growthSecret,
+      timeoutMs: 5,
+    })
+    await assert.rejects(() => clients.publishMessage('wx-app', {}), {
+      message: 'INTERNAL_FUNCTION_TIMEOUT',
+    })
+  })
+
   it('signs only the immutable transition reference for check-in growth', async () => {
     const calls = []
     const now = 1_780_000_000_000

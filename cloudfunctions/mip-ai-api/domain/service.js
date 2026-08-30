@@ -1,5 +1,7 @@
 'use strict'
 
+const { createHash } = require('node:crypto')
+
 const {
   combineDraftTranscript,
   normalizeDigitalAvatarIntent,
@@ -49,6 +51,202 @@ function createAiService(options) {
       }
     }
     return { deleted, failed }
+  }
+
+  async function claimCreate(caller, input, kind, extra = {}) {
+    const inputHash = draftRequestHash(kind, input)
+    const claim = await repository.claimDraftRequest(caller.appId, caller.userId, {
+      requestId: input.requestId,
+      inputHash,
+      kind,
+      purpose: input.purpose,
+      ...extra,
+    })
+    if (claim.state === 'REPLAY') return { replay: claim.response }
+    return { claim, inputHash }
+  }
+
+  async function failCreateRequest(caller, request, failureCode) {
+    if (!request) return
+    await repository.failDraftRequest(caller.appId, caller.userId, {
+      requestId: request.claim.requestId,
+      inputHash: request.inputHash,
+      leaseToken: request.claim.leaseToken,
+    }, failureCode).catch(() => false)
+  }
+
+  async function handleCreateProviderFailure(caller, request, draft, error) {
+    const normalized = normalizeProviderError(error)
+    if (isTerminalProviderError(normalized)) {
+      if (request) {
+        await repository.failKeyedDraft(caller.appId, caller.userId, {
+          requestId: request.claim.requestId,
+          inputHash: request.inputHash,
+          leaseToken: request.claim.leaseToken,
+          draftId: draft.id,
+          expectedVersion: draft.version,
+        }, normalized.message)
+      }
+      else {
+        await repository.failDraft(caller.appId, caller.userId, draft.id, draft.version)
+      }
+    }
+    return normalized
+  }
+
+  async function completeKeyedDraft(caller, request, draft, result) {
+    try {
+      return await repository.completeKeyedDraft(
+        caller.appId,
+        caller.userId,
+        {
+          requestId: request.claim.requestId,
+          inputHash: request.inputHash,
+          leaseToken: request.claim.leaseToken,
+          draftId: draft.id,
+          expectedVersion: draft.version,
+        },
+        result,
+      )
+    }
+    catch (error) {
+      const recovered = await repository.recoverCompletedDraftRequest(
+        caller.appId,
+        caller.userId,
+        { requestId: request.claim.requestId, inputHash: request.inputHash },
+      ).catch(() => null)
+      if (recovered) return recovered
+      throw error
+    }
+  }
+
+  async function createKeyedTextDraft(caller, input) {
+    const request = await claimCreate(caller, input, 'TEXT', { transcriptText: input.transcriptText })
+    if (request.replay) return request.replay
+    const draft = request.claim.draft
+    let result
+    try {
+      result = await provider.structureText({
+        appId: caller.appId,
+        draftId: draft.id,
+        purpose: input.purpose,
+        expectedVersion: draft.version,
+        transcriptText: input.transcriptText,
+      })
+    }
+    catch (error) {
+      throw await handleCreateProviderFailure(caller, request, draft, error)
+    }
+    return completeKeyedDraft(caller, request, draft, {
+      ...result,
+      purpose: input.purpose,
+    })
+  }
+
+  async function createKeyedVoiceDraft(caller, input) {
+    const request = await claimCreate(caller, input, 'VOICE_ASSET', { audioAssetId: input.audioAssetId })
+    if (request.replay) return request.replay
+    const created = { draft: request.claim.draft, asset: request.claim.asset }
+    let result
+    try {
+      result = await provider.transcribeAndStructure(voiceProviderInput(caller, created, input.purpose))
+    }
+    catch (error) {
+      throw await handleCreateProviderFailure(caller, request, created.draft, error)
+    }
+    return completeKeyedDraft(
+      caller,
+      request,
+      created.draft,
+      { ...result, purpose: input.purpose },
+    )
+  }
+
+  async function createKeyedVoiceUploadDraft(caller, input) {
+    const candidate = options.audioStore.preallocate({
+      appId: caller.appId,
+      userId: caller.userId,
+    })
+    const request = await claimCreate(caller, input, 'VOICE_UPLOAD', { allocation: candidate })
+    if (request.replay) return request.replay
+    let created
+    if (request.claim.draft && request.claim.asset) {
+      created = { draft: request.claim.draft, asset: request.claim.asset }
+    }
+    else {
+      let asset
+      try {
+        asset = await options.audioStore.store({
+          appId: caller.appId,
+          userId: caller.userId,
+          audioBase64: input.audioBase64,
+          contentType: input.contentType,
+          ...request.claim.allocation,
+        })
+      }
+      catch (error) {
+        const code = errorCode(error, 'AI_AUDIO_UPLOAD_FAILED')
+        if (['AI_AUDIO_INVALID', 'AI_AUDIO_FILE_INVALID', 'AI_STORAGE_UNAVAILABLE'].includes(code)) {
+          await failCreateRequest(caller, request, code)
+          throw new Error(code)
+        }
+        throw new Error('AI_AUDIO_UPLOAD_RESULT_UNKNOWN')
+      }
+      try {
+        created = await repository.createVoiceDraftFromUpload(
+          caller.appId,
+          caller.userId,
+          asset,
+          input.purpose,
+          request.claim.draftId,
+        )
+      }
+      catch (error) {
+        let outcome = await repository.recoverVoiceDraftFromUpload(
+          caller.appId,
+          caller.userId,
+          asset.assetId,
+        ).catch(() => ({ state: 'UNKNOWN' }))
+        if (outcome.state === 'COMMITTED') {
+          created = outcome.created
+        }
+        else {
+          if (outcome.state === 'MISSING') {
+            try {
+              await repository.registerPendingAudioUpload(caller.appId, asset)
+              outcome = { state: 'PENDING' }
+            }
+            catch {
+              outcome = await repository.recoverVoiceDraftFromUpload(
+                caller.appId,
+                caller.userId,
+                asset.assetId,
+              ).catch(() => ({ state: 'UNKNOWN' }))
+            }
+          }
+          const code = errorCode(error, 'SERVICE_UNAVAILABLE')
+          if (outcome.state === 'PENDING' && ['FORBIDDEN', 'VALIDATION_FAILED'].includes(code)) {
+            await failCreateRequest(caller, request, code)
+            throw error
+          }
+          throw new Error('AI_AUDIO_UPLOAD_RESULT_UNKNOWN')
+        }
+      }
+    }
+
+    let result
+    try {
+      result = await provider.transcribeAndStructure(voiceProviderInput(caller, created, input.purpose))
+    }
+    catch (error) {
+      throw await handleCreateProviderFailure(caller, request, created.draft, error)
+    }
+    return completeKeyedDraft(
+      caller,
+      request,
+      created.draft,
+      { ...result, purpose: input.purpose },
+    )
   }
 
   return {
@@ -255,6 +453,7 @@ function createAiService(options) {
     async createTextDraft(caller, event) {
       assertProvider(provider.capability(), 'textDrafts')
       const input = normalizeTextIntent(event)
+      if (input.requestId) return createKeyedTextDraft(caller, input)
       const draft = await repository.createTextDraft(caller.appId, caller.userId, input)
       let result
       try {
@@ -267,8 +466,7 @@ function createAiService(options) {
         })
       }
       catch (error) {
-        await repository.failDraft(caller.appId, caller.userId, draft.id, draft.version)
-        throw normalizeProviderError(error)
+        throw await handleCreateProviderFailure(caller, null, draft, error)
       }
       return repository.completeDraft(caller.appId, caller.userId, draft.id, draft.version, {
         ...result,
@@ -279,6 +477,7 @@ function createAiService(options) {
     async createVoiceDraft(caller, event) {
       assertProvider(provider.capability(), 'voiceDrafts')
       const input = normalizeVoiceIntent(event)
+      if (input.requestId) return createKeyedVoiceDraft(caller, input)
       const created = await repository.createVoiceDraft(caller.appId, caller.userId, input)
       let result
       try {
@@ -294,8 +493,7 @@ function createAiService(options) {
         })
       }
       catch (error) {
-        await repository.failDraft(caller.appId, caller.userId, created.draft.id, created.draft.version)
-        throw normalizeProviderError(error)
+        throw await handleCreateProviderFailure(caller, null, created.draft, error)
       }
       return repository.completeDraft(caller.appId, caller.userId, created.draft.id, created.draft.version, {
         ...result,
@@ -307,6 +505,7 @@ function createAiService(options) {
       assertProvider(provider.capability(), 'voiceDrafts')
       if (!options.audioStore?.configured) throw new Error('AI_STORAGE_UNAVAILABLE')
       const input = normalizeVoiceUploadIntent(event)
+      if (input.requestId) return createKeyedVoiceUploadDraft(caller, input)
       const asset = await options.audioStore.store({
         appId: caller.appId,
         userId: caller.userId,
@@ -353,6 +552,10 @@ function createAiService(options) {
             created = outcome.created
           }
           else if (outcome.state === 'PENDING' || outcome.state === 'MISSING') {
+            const code = errorCode(error, 'SERVICE_UNAVAILABLE')
+            if (!['FORBIDDEN', 'VALIDATION_FAILED'].includes(code)) {
+              throw new Error('AI_AUDIO_UPLOAD_RESULT_UNKNOWN')
+            }
             const removed = await options.audioStore.remove({
               appId: caller.appId,
               userId: caller.userId,
@@ -384,8 +587,7 @@ function createAiService(options) {
         })
       }
       catch (error) {
-        await repository.failDraft(caller.appId, caller.userId, created.draft.id, created.draft.version)
-        throw normalizeProviderError(error)
+        throw await handleCreateProviderFailure(caller, null, created.draft, error)
       }
       return repository.completeDraft(caller.appId, caller.userId, created.draft.id, created.draft.version, {
         ...result,
@@ -470,10 +672,15 @@ function assertProvider(capability, key) {
 
 function normalizeProviderError(error) {
   const code = error instanceof Error ? error.message : ''
-  if (['AI_PROVIDER_UNAVAILABLE', 'AI_PROVIDER_RESPONSE_INVALID'].includes(code)) {
+  if (['AI_PROVIDER_REJECTED', 'AI_PROVIDER_RESPONSE_INVALID'].includes(code)) {
     return error
   }
-  return new Error('AI_PROVIDER_UNAVAILABLE')
+  return new Error('AI_PROVIDER_RESULT_UNKNOWN')
+}
+
+function isTerminalProviderError(error) {
+  return error instanceof Error
+    && ['AI_PROVIDER_REJECTED', 'AI_PROVIDER_RESPONSE_INVALID'].includes(error.message)
 }
 
 function normalizeAvatarProviderError(error) {
@@ -501,8 +708,40 @@ function errorCode(error, fallback) {
   return /^[A-Z][A-Z0-9_]{2,63}$/.test(code) ? code : fallback
 }
 
+function draftRequestHash(kind, input) {
+  const fields = kind === 'TEXT'
+    ? [input.purpose, input.transcriptText]
+    : kind === 'VOICE_ASSET'
+      ? [input.purpose, input.audioAssetId]
+      : kind === 'VOICE_UPLOAD'
+        ? [input.purpose, input.contentType, input.audioBase64]
+        : null
+  if (!fields) throw new Error('VALIDATION_FAILED')
+  return createHash('sha256')
+    .update('MIP_AI_DRAFT_REQUEST_V1\0')
+    .update(kind)
+    .update('\0')
+    .update(JSON.stringify(fields))
+    .digest('hex')
+}
+
+function voiceProviderInput(caller, created, purpose) {
+  return {
+    appId: caller.appId,
+    draftId: created.draft.id,
+    purpose,
+    expectedVersion: created.draft.version,
+    audioFileId: created.asset.cloud_file_id,
+    audioContentSha256: created.asset.content_sha256,
+    audioContentType: created.asset.content_type,
+    audioContentBytes: Number(created.asset.content_bytes),
+  }
+}
+
 module.exports = {
   createAiService,
+  draftRequestHash,
+  isTerminalProviderError,
   normalizeAvatarOutputError,
   normalizeAvatarProviderError,
   normalizeProviderError,

@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer'
 import { createHash, createHmac } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
+import { APP_ID_MIGRATION_MEDIA_EXCLUSION_REASON } from './mip-app-id-migration-transform.mjs'
 
 const APP_ID_PATTERN = /^wx[0-9a-f]{16}$/
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
@@ -32,6 +33,7 @@ const EXCLUDED_PURPOSES = Object.freeze({
   AI_AUDIO: 'EPHEMERAL_AI_AUDIO',
   CHECKIN_POSTER: 'REISSUABLE_MINIPROGRAM_CODE',
   EVENT_INVITATION_CODE: 'REISSUABLE_MINIPROGRAM_CODE',
+  MEMBERSHIP_INVITATION_CODE: 'REISSUABLE_MINIPROGRAM_CODE',
 })
 
 const TEMPORARY_DIRECTORIES = new Set([
@@ -150,6 +152,7 @@ export function buildMipLongTermMediaCopyPlan({
   excluded.sort(compareBy('reason', 'mediaId'))
   const plan = deepFreeze({
     format: MIP_MEDIA_COPY_PLAN_FORMAT,
+    targetStage: stage,
     copied,
     excluded,
     copiedCount: copied.length,
@@ -308,6 +311,10 @@ export function applyMipMediaCopyResultToTransformedPackage({
   const dataPath = path.join(root, 'data', 'mip_media_assets.jsonl')
   const manifest = readPrivateJson(manifestPath)
   const checksums = parseChecksums(checksumPath)
+  const inventoryRelativeFile = manifest?.mediaInventory?.relativeFile
+  const inventoryPath = typeof inventoryRelativeFile === 'string'
+    ? path.join(root, ...inventoryRelativeFile.split('/'))
+    : ''
   const table = Array.isArray(manifest?.tables)
     ? manifest.tables.find(item => item?.table === 'mip_media_assets')
     : null
@@ -317,58 +324,135 @@ export function applyMipMediaCopyResultToTransformedPackage({
     || manifest?.targetAppScopeFingerprint !== sha256(targetAppId).slice(0, 16)
     || table?.relativeFile !== 'data/mip_media_assets.jsonl'
     || checksums.get(table.relativeFile) !== table.sha256
-    || sha256File(dataPath) !== table.sha256) {
+    || sha256File(dataPath) !== table.sha256
+    || inventoryRelativeFile !== 'inventory/media.json'
+    || checksums.get(inventoryRelativeFile) !== manifest.mediaInventory.sha256
+    || sha256File(inventoryPath) !== manifest.mediaInventory.sha256
+    || manifest.mediaCopy !== undefined
+    || !Number.isSafeInteger(manifest.rowCount)
+    || manifest.rowCount !== manifest.tables.reduce((total, item) => total + Number(item?.rowsExported), 0)
+    || !Number.isSafeInteger(manifest.excludedRowCount)
+    || !Array.isArray(manifest.exclusions)
+    || manifest.exclusions.some(item => item?.table === table.table)) {
     throw new Error('MIP_MEDIA_COPY_TRANSFORM_PACKAGE_INVALID')
   }
   const rows = readPrivateJsonLines(dataPath)
   if (rows.length !== table.rowsExported) {
     throw new Error('MIP_MEDIA_COPY_TRANSFORM_PACKAGE_INVALID')
   }
+  const inventory = readPrivateJson(inventoryPath)
+  assertTransformedMediaInventory({ inventory, rows })
+
+  const copiedIds = new Set(plan.copied.map(item => item.mediaId))
+  const excludedIds = new Set(plan.excluded.map(item => item.mediaId))
+  if (copiedIds.size !== plan.copiedCount
+    || excludedIds.size !== plan.excludedCount
+    || [...copiedIds].some(mediaId => excludedIds.has(mediaId))) {
+    throw new Error('MIP_MEDIA_COPY_PLAN_NOT_VERIFIED')
+  }
   const rowIds = new Set()
-  const updatedRows = rows.map((row) => {
+  const updatedRows = []
+  for (const row of rows) {
     const media = normalizeMediaRow(row)
     if (row.app_id !== targetAppId || rowIds.has(media.id)) {
       throw new Error('MIP_MEDIA_COPY_TRANSFORM_PACKAGE_INVALID')
     }
     rowIds.add(media.id)
+    if (excludedIds.has(media.id)) {
+      continue
+    }
     const update = updates.get(media.id)
-    return update
-      ? { ...row, object_key: update.objectKey, cloud_file_id: update.cloudFileId }
-      : row
-  })
-  if ([...updates.keys()].some(mediaId => !rowIds.has(mediaId))) {
-    throw new Error('MIP_MEDIA_COPY_RESULT_INVALID')
+    if (!update) {
+      throw new Error('MIP_MEDIA_COPY_TRANSFORM_PACKAGE_INVALID')
+    }
+    updatedRows.push({
+      ...row,
+      object_key: update.objectKey,
+      cloud_file_id: update.cloudFileId,
+    })
+  }
+  if (rowIds.size !== copiedIds.size + excludedIds.size
+    || [...copiedIds].some(mediaId => !rowIds.has(mediaId))
+    || [...excludedIds].some(mediaId => !rowIds.has(mediaId))) {
+    throw new Error('MIP_MEDIA_COPY_TRANSFORM_PACKAGE_INVALID')
+  }
+  assertNoExcludedMediaReferences({ root, manifest, checksums, excludedIds })
+
+  const inventoryRows = updatedRows
+    .map(inventoryEntryForMediaRow)
+    .sort(compareBy('objectKey', 'id'))
+  const updatedInventory = {
+    ...inventory,
+    rows: inventoryRows,
+    objectCount: inventoryRows.length,
+    readyObjectCount: inventoryRows.filter(row => row.status === 'READY').length,
+    contentBytes: inventoryRows.reduce((total, row) => total + row.contentBytes, 0),
+    recordsSha256: sha256(canonicalInventoryRows(inventoryRows)),
   }
 
   const dataContent = updatedRows.map(row => JSON.stringify(row)).join('\n')
   replacePrivateFile(dataPath, dataContent ? `${dataContent}\n` : '')
+  replacePrivateFile(inventoryPath, `${JSON.stringify(updatedInventory, null, 2)}\n`)
   const dataSha256 = sha256File(dataPath)
   const dataBytes = fs.statSync(dataPath).size
+  const inventorySha256 = sha256File(inventoryPath)
   checksums.set(table.relativeFile, dataSha256)
+  checksums.set(inventoryRelativeFile, inventorySha256)
   replacePrivateFile(checksumPath, `${[...checksums.entries()]
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([relativeFile, digest]) => `${digest}  ${relativeFile}`)
     .join('\n')}\n`)
   const updatedManifest = {
     ...manifest,
+    rowCount: manifest.rowCount - plan.excludedCount,
+    excludedRowCount: manifest.excludedRowCount + plan.excludedCount,
     tables: manifest.tables.map(item => item.table === table.table
-      ? { ...item, bytes: dataBytes, sha256: dataSha256 }
+      ? {
+          ...item,
+          rowsBefore: updatedRows.length,
+          rowsExported: updatedRows.length,
+          rowsAfter: updatedRows.length,
+          excludedRows: Number(item.excludedRows || 0) + plan.excludedCount,
+          bytes: dataBytes,
+          sha256: dataSha256,
+        }
       : item),
+    exclusions: [
+      ...manifest.exclusions.filter(item => item?.table !== table.table),
+      ...(plan.excludedCount > 0
+        ? [{
+            table: table.table,
+            reason: APP_ID_MIGRATION_MEDIA_EXCLUSION_REASON,
+            excludedRows: plan.excludedCount,
+          }]
+        : []),
+    ],
+    mediaInventory: {
+      ...manifest.mediaInventory,
+      sha256: inventorySha256,
+      objectCount: updatedInventory.objectCount,
+      readyObjectCount: updatedInventory.readyObjectCount,
+      contentBytes: updatedInventory.contentBytes,
+    },
     mediaCopy: {
       format: MIP_MEDIA_COPY_RESULT_FORMAT,
-      targetStage: 'staging',
+      targetStage: plan.targetStage,
       copiedCount: result.copiedCount,
       excludedCount: plan.excludedCount,
       contentBytes: plan.contentBytes,
       planSha256: plan.planSha256,
       recordsSha256: result.recordsSha256,
       validation: 'source-upload-readback-verified',
+      excludedReferences: 'verified-absent',
     },
   }
   replacePrivateFile(manifestPath, `${JSON.stringify(updatedManifest, null, 2)}\n`)
   if (sha256File(dataPath) !== dataSha256
     || parseChecksums(checksumPath).get(table.relativeFile) !== dataSha256
-    || readPrivateJson(manifestPath)?.mediaCopy?.recordsSha256 !== result.recordsSha256) {
+    || parseChecksums(checksumPath).get(inventoryRelativeFile) !== inventorySha256
+    || sha256File(inventoryPath) !== inventorySha256
+    || readPrivateJson(manifestPath)?.mediaCopy?.recordsSha256 !== result.recordsSha256
+    || readPrivateJsonLines(dataPath).length !== updatedRows.length) {
     throw new Error('MIP_MEDIA_COPY_PACKAGE_UPDATE_FAILED')
   }
   return Object.freeze({
@@ -376,6 +460,91 @@ export function applyMipMediaCopyResultToTransformedPackage({
     excludedCount: plan.excludedCount,
     contentBytes: plan.contentBytes,
   })
+}
+
+function assertTransformedMediaInventory({ inventory, rows }) {
+  try {
+    if (inventory?.format !== 'mip-media-inventory-v1'
+      || inventory?.sourceTable !== 'mip_media_assets'
+      || !Array.isArray(inventory.rows)
+      || inventory.objectCount !== inventory.rows.length
+      || inventory.objectCount !== rows.length
+      || inventory.readyObjectCount !== inventory.rows.filter(row => row?.status === 'READY').length
+      || inventory.contentBytes !== inventory.rows.reduce((total, row) => total + Number(row?.contentBytes), 0)
+      || inventory.recordsSha256 !== sha256(canonicalInventoryRows(inventory.rows))) {
+      throw new Error('invalid inventory')
+    }
+    const rowsById = new Map(rows.map((row) => {
+      const media = normalizeMediaRow(row)
+      return [media.id, media]
+    }))
+    if (rowsById.size !== rows.length) {
+      throw new Error('duplicate media')
+    }
+    const inventoryIds = new Set()
+    for (const entry of inventory.rows) {
+      const normalized = normalizeInventoryEntry(entry)
+      if (inventoryIds.has(normalized.id)
+        || !sameMediaRecord(rowsById.get(normalized.id), normalized)) {
+        throw new Error('inventory mismatch')
+      }
+      inventoryIds.add(normalized.id)
+    }
+  }
+  catch {
+    throw new Error('MIP_MEDIA_COPY_TRANSFORM_PACKAGE_INVALID')
+  }
+}
+
+function assertNoExcludedMediaReferences({ root, manifest, checksums, excludedIds }) {
+  if (excludedIds.size === 0) {
+    return
+  }
+  for (const table of manifest.tables) {
+    if (table.table === 'mip_media_assets') {
+      continue
+    }
+    const filePath = path.join(root, ...String(table.relativeFile || '').split('/'))
+    if (checksums.get(table.relativeFile) !== table.sha256
+      || sha256File(filePath) !== table.sha256) {
+      throw new Error('MIP_MEDIA_COPY_TRANSFORM_PACKAGE_INVALID')
+    }
+    const rows = readPrivateJsonLines(filePath)
+    if (rows.length !== table.rowsExported) {
+      throw new Error('MIP_MEDIA_COPY_TRANSFORM_PACKAGE_INVALID')
+    }
+    if (rows.some(row => containsExactString(row, excludedIds))) {
+      throw new Error('MIP_MEDIA_COPY_EXCLUDED_MEDIA_REFERENCE')
+    }
+  }
+}
+
+function containsExactString(value, needles) {
+  if (typeof value === 'string') {
+    return needles.has(value)
+  }
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+  if (Array.isArray(value)) {
+    return value.some(item => containsExactString(item, needles))
+  }
+  return Object.values(value).some(item => containsExactString(item, needles))
+}
+
+function inventoryEntryForMediaRow(row) {
+  const media = normalizeMediaRow(row)
+  return {
+    id: media.id,
+    ownerUserId: media.ownerUserId,
+    purpose: media.purpose,
+    objectKey: media.objectKey,
+    cloudFileId: media.cloudFileId,
+    contentSha256: media.contentSha256,
+    contentType: media.contentType,
+    contentBytes: media.contentBytes,
+    status: media.status,
+  }
 }
 
 export function mediaObjectScope(secret, value) {

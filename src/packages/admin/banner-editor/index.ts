@@ -33,10 +33,26 @@ Page({
     saving: false,
     message: '',
   },
+  navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
 
   onLoad(query: Record<string, string>) {
     this.setData({ bannerId: query.bannerId || '' })
     void this.load(true)
+  },
+
+  onHide() {
+    this.clearNavigationTimer()
+  },
+
+  onUnload() {
+    this.clearNavigationTimer()
+  },
+
+  clearNavigationTimer() {
+    if (this.navigationTimer !== undefined) {
+      clearTimeout(this.navigationTimer)
+      this.navigationTimer = undefined
+    }
   },
 
   retryLoad() {
@@ -141,7 +157,11 @@ Page({
         banner: this.data.draft,
       })
       wx.showToast({ title: 'Banner 已保存', icon: 'success' })
-      setTimeout(leaveSecondaryPage, 500, '/packages/admin/banners/index')
+      this.clearNavigationTimer()
+      this.navigationTimer = setTimeout(() => {
+        this.navigationTimer = undefined
+        leaveSecondaryPage('/packages/admin/banners/index')
+      }, 500)
     }
     catch (error) {
       if (error instanceof MipBannerError && error.code === 'CONFLICT') {

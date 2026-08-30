@@ -1,6 +1,6 @@
 # Database
 
-MIP 权威结构在 `database/mysql/mip/` 和该目录的 `migrations.lock.json`。当前 lock 固定 56 个追加迁移；新表前缀固定为 `mip_*`，完整迁移记录写入 `mip_schema_migrations`，每条语句的执行状态写入 `mip_schema_migration_steps`，引擎使用 InnoDB。`mip_orders` 统一承载会员、付费活动和付费内容订单。当前 56 个迁移已全部应用；122 张 runtime 表权限已收敛并通过幂等读回。变更前稳定备份已完成并保存在 `~/Backups/mip-weapp/2026-08-24T112700-446Z/`，本轮不再重复创建备份。
+MIP 权威结构在 `database/mysql/mip/` 和该目录的 `migrations.lock.json`。仓库 lock 当前固定 58 个追加迁移；新表前缀固定为 `mip_*`，完整迁移记录写入 `mip_schema_migrations`，每条语句的执行状态写入 `mip_schema_migration_steps`，引擎使用 InnoDB。`mip_orders` 统一承载会员、付费活动和付费内容订单。2026-08-28 的共享环境证据仍是已应用 56 个迁移、122 张 runtime 表权限完成收敛；仓库新增的 057–058 尚未部署，不能把 lock 当成生产应用证明。应用前必须重新取得符合执行器时效要求的备份，并在迁移后收敛 124 张 runtime 表的精确权限。
 
 活动相册由 `012_event_album.sql` 追加 `mip_event_album_photos` 与活动相册配置；照片只做状态迁移和版本更新，不执行物理业务删除。`015_checkin_growth_compensation.sql` 追加签到 transition，并将经验余额改为可表达精确冲销的有符号值。`016_notification_delivery_reservations.sql` 为订阅授权追加任务级 reservation，使微信调用可以移出数据库事务且不被其他任务并发复用。`021_referral_targets.sql` 将历史引荐安全回填给对应机会发布人，再把被引荐人收敛为非空外键；发起人和机会的原唯一约束保持不变。后续迁移继续按 lock 中的版本和 checksum 顺序应用。
 
@@ -77,3 +77,9 @@ pnpm database:grants -- \
 ### 055–056：职业身份与 Web 防重放
 
 `055_profile_career_identity_keys.sql` 把个人资料职业身份收敛到当前八项稳定 key；客户端展示中文标签，数据库只保存稳定值。`056_web_bff_replay_guard.sql` 增加 `mip_web_bff_requests`，由可信 Web BFF adapter 一次性消费签名 nonce；它只防 transport envelope 重放，不代替具体业务 mutation 的版本校验与持久幂等。
+
+### 057–058：AI 请求幂等与会员邀请码分配
+
+`057_ai_draft_requests.sql` 保存 AI 创建请求的稳定 request ID、请求摘要、处理租约、响应和到期状态。Provider 或上传结果未知时请求保持 `PROCESSING`，重试复用同一逻辑请求；只有当前租约可以提交终态。到期维护保留审计行并清空响应内容，不能把超时推断为 Provider 失败。
+
+`058_membership_invitation_codes.sql` 保存会员邀请小程序码的稳定分配、对象键、素材引用和生成租约。一次认领只允许一个 allocation；上传重试复用同一 object key，旧租约不能覆盖当前结果。账号注销或权益失效后邀请码进入 `EXPIRED`，对象删除仍由受控媒体清理完成。

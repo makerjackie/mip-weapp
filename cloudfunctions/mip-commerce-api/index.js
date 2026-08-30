@@ -35,7 +35,11 @@ const service = createCommerceService({
   catalogStage,
   invitationSecret: process.env.MIP_IDENTITY_PEPPER,
   paymentMode: process.env.MIP_PAYMENT_MODE || 'disabled',
-  createInvitationCode: input => createMembershipInvitationCode({ ...input, cloud }),
+  createInvitationCode: input => createMembershipInvitationCode({
+    ...input,
+    cloud,
+    database: mysqlDatabase(),
+  }),
 })
 
 const handler = createHandler({

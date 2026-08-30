@@ -8,8 +8,6 @@ export default defineConfig({
     alias: {
       '@weapp/shared/cache': path.join(root, 'src/shared/cache.ts'),
       '@weapp/shared/retry': path.join(root, 'src/shared/retry.ts'),
-      '@weapp/shared/admin-list': path.join(root, 'src/shared/admin-list.ts'),
-      '@weapp/shared/presenter': path.join(root, 'src/shared/presenter.ts'),
       '@weapp/shared/haptics': path.join(root, 'src/shared/haptics.ts'),
       '@weapp/platform/runtime-config': path.join(root, 'src/platform/runtime/config.ts'),
       '@weapp/platform/media-urls': path.join(root, 'src/platform/storage/media-urls.ts'),

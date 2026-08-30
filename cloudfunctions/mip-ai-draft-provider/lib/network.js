@@ -8,9 +8,23 @@ function createHttpsJsonClient(options = {}) {
   const lookup = options.lookup || dns.lookup.bind(dns)
   const request = options.request || https.request
 
-  async function resolveEndpoint(endpoint) {
-    const records = await lookup(endpoint.hostname, { all: true, verbatim: true })
-      .catch(() => { throw new Error('AI_DRAFT_PROVIDER_UPSTREAM_UNAVAILABLE') })
+  async function resolveEndpoint(endpoint, timeoutMs = 5000) {
+    let timer
+    let records
+    try {
+      records = await Promise.race([
+        lookup(endpoint.hostname, { all: true, verbatim: true }),
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error('timeout')), normalizeDeadline(timeoutMs))
+        }),
+      ])
+    }
+    catch {
+      throw new Error('AI_DRAFT_PROVIDER_UPSTREAM_UNAVAILABLE')
+    }
+    finally {
+      clearTimeout(timer)
+    }
     if (!Array.isArray(records)
       || !records.length
       || records.some(record => (
@@ -36,12 +50,18 @@ function createHttpsJsonClient(options = {}) {
     if (!requestBytes || requestBytes > maximumRequestBytes) {
       throw new Error('AI_DRAFT_PROVIDER_REQUEST_INVALID')
     }
-    const selected = await resolveEndpoint(endpoint)
+    const timeoutMs = normalizeDeadline(requestOptions.timeoutMs)
+    const startedAt = Date.now()
+    const selected = await resolveEndpoint(endpoint, timeoutMs)
+    const remainingTimeoutMs = Math.max(1, timeoutMs - (Date.now() - startedAt))
     return new Promise((resolve, reject) => {
       let settled = false
+      let deadlineTimer
+      let responseStream
       const finish = (error, value) => {
         if (settled) return
         settled = true
+        clearTimeout(deadlineTimer)
         if (error) reject(error)
         else resolve(value)
       }
@@ -65,6 +85,7 @@ function createHttpsJsonClient(options = {}) {
           callback(null, selected.address, selected.family)
         },
       }, (response) => {
+        responseStream = response
         const status = Number(response.statusCode || 0)
         const contentType = String(response.headers?.['content-type'] || '').toLowerCase()
         const encoding = String(response.headers?.['content-encoding'] || '').toLowerCase()
@@ -110,16 +131,22 @@ function createHttpsJsonClient(options = {}) {
         })
         response.on('error', () => finish(new Error('AI_DRAFT_PROVIDER_UPSTREAM_UNAVAILABLE')))
       })
-      outgoing.setTimeout(requestOptions.timeoutMs, () => {
-        outgoing.destroy()
+      deadlineTimer = setTimeout(() => {
         finish(new Error('AI_DRAFT_PROVIDER_UPSTREAM_UNAVAILABLE'))
-      })
+        responseStream?.destroy()
+        outgoing.destroy()
+      }, remainingTimeoutMs)
       outgoing.on('error', () => finish(new Error('AI_DRAFT_PROVIDER_UPSTREAM_UNAVAILABLE')))
       outgoing.end(serialized)
     })
   }
 
   return { postJson, preflight, resolveEndpoint }
+}
+
+function normalizeDeadline(value) {
+  const timeout = Number(value)
+  return Number.isInteger(timeout) && timeout > 0 && timeout <= 45_000 ? timeout : 5000
 }
 
 function isPublicAddress(value) {

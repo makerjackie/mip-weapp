@@ -6,6 +6,7 @@ import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
 import { getProject, readJson } from './lib/project.mjs'
+import { normalizeSubpackageNpmComponentReferences } from './lib/subpackage-npm-references.mjs'
 
 const example = getProject()
 const outputDir = path.join(example.root, 'dist')
@@ -64,6 +65,8 @@ if (result.status !== 0) {
   process.exit(result.status ?? 1)
 }
 
+const compiledAppJson = readJson(path.join(stagingDir, 'app.json'))
+normalizeSubpackageNpmComponentReferences(stagingDir, compiledAppJson)
 fs.rmSync(stagingProjectConfigPath, { force: true })
 const stagedNpm = path.join(stagingDir, 'miniprogram_npm')
 const currentNpm = path.join(outputDir, 'miniprogram_npm')

@@ -84,6 +84,19 @@ describe('mip commerce service', () => {
       async resolveMembershipInviter() {
         return '20000000-0000-4000-8000-000000000001'
       },
+      async claimMembershipInvitationCode(appId, userId, input) {
+        assert.equal(appId, 'app-1')
+        assert.equal(userId, '20000000-0000-4000-8000-000000000001')
+        assert.match(input.sceneHash, /^[0-9a-f]{64}$/)
+        return {
+          state: 'CLAIMED',
+          invitationId: '30000000-0000-4000-8000-000000000001',
+          leaseToken: '40000000-0000-4000-8000-000000000001',
+          allocationId: '50000000-0000-4000-8000-000000000001',
+          allocationAssetId: '60000000-0000-4000-8000-000000000001',
+          expiresAt: input.expiresAt,
+        }
+      },
       async assertMembershipInviter(appId, userId) {
         assert.equal(appId, 'app-1')
         assertedInviter = userId
@@ -94,8 +107,20 @@ describe('mip commerce service', () => {
       invitationSecret: 'membership-invitation-secret-with-more-than-32-characters',
       now: () => new Date('2026-08-24T00:00:00.000Z'),
       repository,
-      async createInvitationCode({ scene }) {
+      async createInvitationCode({
+        scene,
+        invitationId,
+        leaseToken,
+        allocationId,
+        assetId,
+        inviterUserId,
+      }) {
         generatedScene = scene
+        assert.equal(invitationId, '30000000-0000-4000-8000-000000000001')
+        assert.equal(leaseToken, '40000000-0000-4000-8000-000000000001')
+        assert.equal(allocationId, '50000000-0000-4000-8000-000000000001')
+        assert.equal(assetId, '60000000-0000-4000-8000-000000000001')
+        assert.equal(inviterUserId, '20000000-0000-4000-8000-000000000001')
         return { codeUrl: 'cloud://env.test/membership-code.png' }
       },
     })
@@ -107,6 +132,36 @@ describe('mip commerce service', () => {
     assert.equal(assertedInviter, '20000000-0000-4000-8000-000000000001')
     assert.match(resolved.token, /^m1\./)
     assert.equal(resolved.expiresAt, '2026-09-23T00:00:00.000Z')
+  })
+
+  it('reuses a ready membership code without calling the upload adapter', async () => {
+    const service = createCommerceService({
+      catalogStage: 'TEST',
+      invitationSecret: 'membership-invitation-secret-with-more-than-32-characters',
+      now: () => new Date('2026-08-24T00:00:00.000Z'),
+      repository: {
+        async resolveMembershipInviter() {
+          return '20000000-0000-4000-8000-000000000001'
+        },
+        async claimMembershipInvitationCode() {
+          return {
+            state: 'READY',
+            codeUrl: 'cloud://env.test/existing-code.png',
+            expiresAt: '2026-09-23T00:00:00.000Z',
+          }
+        },
+      },
+      async createInvitationCode() {
+        assert.fail('ready claims must not upload again')
+      },
+    })
+    assert.deepEqual(
+      await service.createMembershipInvitationCode({ appId: 'app-1', identityKey: 'identity' }),
+      {
+        codeUrl: 'cloud://env.test/existing-code.png',
+        expiresAt: '2026-09-23T00:00:00.000Z',
+      },
+    )
   })
 
   it('passes no client amount when requesting a refund', async () => {

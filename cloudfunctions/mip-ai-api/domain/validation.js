@@ -31,23 +31,42 @@ function normalizeStructuredDraft(purposeValue, value) {
 function normalizeTextIntent(event) {
   const transcriptText = typeof event.transcriptText === 'string' ? event.transcriptText.trim() : ''
   if (!transcriptText || transcriptText.length > 8000) throw new Error('VALIDATION_FAILED')
-  return { purpose: normalizePurpose(event.purpose), transcriptText }
+  const requestId = normalizeOptionalRequestId(event.requestId)
+  return {
+    purpose: normalizePurpose(event.purpose),
+    transcriptText,
+    ...(requestId ? { requestId } : {}),
+  }
 }
 
 function normalizeVoiceIntent(event) {
   if (!isUuid(event.audioAssetId)) throw new Error('VALIDATION_FAILED')
-  return { purpose: normalizePurpose(event.purpose), audioAssetId: event.audioAssetId }
+  const requestId = normalizeOptionalRequestId(event.requestId)
+  return {
+    purpose: normalizePurpose(event.purpose),
+    audioAssetId: event.audioAssetId,
+    ...(requestId ? { requestId } : {}),
+  }
 }
 
 function normalizeVoiceUploadIntent(event) {
   if (event.contentType !== 'audio/mpeg' || typeof event.audioBase64 !== 'string') {
     throw new Error('VALIDATION_FAILED')
   }
+  const requestId = normalizeOptionalRequestId(event.requestId)
   return {
     purpose: normalizePurpose(event.purpose),
     audioBase64: event.audioBase64,
     contentType: event.contentType,
+    ...(requestId ? { requestId } : {}),
   }
+}
+
+function normalizeOptionalRequestId(value) {
+  if (value === undefined || value === null || value === '') return undefined
+  const requestId = typeof value === 'string' ? value.trim() : ''
+  if (!/^[\w.:-]{8,128}$/.test(requestId)) throw new Error('VALIDATION_FAILED')
+  return requestId
 }
 
 function normalizeRefinementIntent(event) {
@@ -112,6 +131,7 @@ module.exports = {
   combineDraftTranscript,
   isUuid,
   normalizeDigitalAvatarIntent,
+  normalizeOptionalRequestId,
   normalizePurpose,
   normalizeRefinementIntent,
   normalizeStructuredDraft,

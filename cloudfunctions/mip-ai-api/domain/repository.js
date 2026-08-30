@@ -5,10 +5,22 @@ const { isUuid, normalizeStructuredDraft } = require('./validation')
 
 function createAiRepository(database, options = {}) {
   const createId = options.createId || randomUUID
+  const createLeaseId = options.createLeaseId || randomUUID
   const draftTtlHours = normalizeDraftTtlHours(options.draftTtlHours)
   const expiryExpression = `DATE_ADD(UTC_TIMESTAMP(3), INTERVAL ${draftTtlHours} HOUR)`
+  const requestLeaseSeconds = normalizeRequestLeaseSeconds(options.requestLeaseSeconds)
+  const leaseExpression = `DATE_ADD(UTC_TIMESTAMP(3), INTERVAL ${requestLeaseSeconds} SECOND)`
 
   async function expireDrafts(appId, userId) {
+    await database.query(
+      `UPDATE mip_ai_draft_requests
+       SET status = 'FAILED', lease_token = NULL, lease_expires_at = NULL,
+           response_json = NULL, failure_code = 'AI_DRAFT_REQUEST_EXPIRED'
+       WHERE app_id = ? AND user_id = ? AND expires_at <= UTC_TIMESTAMP(3)
+         AND (status <> 'FAILED' OR failure_code <> 'AI_DRAFT_REQUEST_EXPIRED'
+           OR response_json IS NOT NULL OR lease_token IS NOT NULL OR lease_expires_at IS NOT NULL)`,
+      [appId, userId],
+    )
     return database.query(
       `UPDATE mip_ai_drafts SET status = 'EXPIRED', version = version + 1
        WHERE app_id = ? AND user_id = ? AND expires_at <= UTC_TIMESTAMP(3)
@@ -20,6 +32,25 @@ function createAiRepository(database, options = {}) {
   async function expireDraftsForApp(appId, limit = 20) {
     const boundedLimit = cleanupLimit(limit)
     return database.transaction(async (tx) => {
+      const requestRows = await tx.query(
+        `SELECT id FROM mip_ai_draft_requests
+         WHERE app_id = ? AND expires_at <= UTC_TIMESTAMP(3)
+           AND (status <> 'FAILED' OR failure_code <> 'AI_DRAFT_REQUEST_EXPIRED'
+             OR response_json IS NOT NULL OR lease_token IS NOT NULL OR lease_expires_at IS NOT NULL)
+         ORDER BY expires_at, id LIMIT ? FOR UPDATE SKIP LOCKED`,
+        [appId, boundedLimit],
+      )
+      for (const row of requestRows) {
+        await tx.query(
+          `UPDATE mip_ai_draft_requests
+           SET status = 'FAILED', lease_token = NULL, lease_expires_at = NULL,
+               response_json = NULL, failure_code = 'AI_DRAFT_REQUEST_EXPIRED'
+           WHERE app_id = ? AND id = ? AND expires_at <= UTC_TIMESTAMP(3)
+             AND (status <> 'FAILED' OR failure_code <> 'AI_DRAFT_REQUEST_EXPIRED'
+               OR response_json IS NOT NULL OR lease_token IS NOT NULL OR lease_expires_at IS NOT NULL)`,
+          [appId, row.id],
+        )
+      }
       const rows = await tx.query(
         `SELECT id FROM mip_ai_drafts
          WHERE app_id = ? AND expires_at <= UTC_TIMESTAMP(3)
@@ -97,24 +128,218 @@ function createAiRepository(database, options = {}) {
     })
   }
 
+  async function claimDraftRequest(appId, userId, input) {
+    assertDraftRequestInput(input)
+    const requestRowId = createId()
+    const draftId = createId()
+    const leaseToken = createLeaseId()
+    const createOrResume = async (tx) => {
+      await requireActiveUser(tx, appId, userId)
+      const existing = await readDraftRequestRow(tx, appId, userId, input.requestId, true)
+      if (existing) {
+        return resumeDraftRequest(tx, appId, userId, existing, input, leaseToken)
+      }
+
+      let draft
+      let asset
+      if (input.kind === 'TEXT') {
+        await tx.query(
+          `INSERT INTO mip_ai_drafts (
+             id, app_id, user_id, purpose, transcript_text, status, expires_at
+           ) VALUES (?, ?, ?, ?, ?, 'STRUCTURING', ${expiryExpression})`,
+          [draftId, appId, userId, input.purpose, input.transcriptText],
+        )
+        draft = await readDraft(tx, appId, userId, draftId)
+      }
+      else if (input.kind === 'VOICE_ASSET') {
+        asset = await requireOwnedAudioAsset(tx, appId, userId, input.audioAssetId)
+        await tx.query(
+          `INSERT INTO mip_ai_drafts (
+             id, app_id, user_id, purpose, audio_asset_id, status, expires_at
+           ) VALUES (?, ?, ?, ?, ?, 'TRANSCRIBING', ${expiryExpression})`,
+          [draftId, appId, userId, input.purpose, input.audioAssetId],
+        )
+        draft = await readDraft(tx, appId, userId, draftId)
+      }
+
+      await tx.query(
+        `INSERT INTO mip_ai_draft_requests (
+           id, app_id, user_id, request_id, input_hash, draft_kind, status,
+           lease_token, lease_expires_at, draft_id, audio_asset_id, audio_object_key,
+           expires_at
+         ) VALUES (?, ?, ?, ?, ?, ?, 'PROCESSING', ?, ${leaseExpression}, ?, ?, ?, ${expiryExpression})`,
+        [
+          requestRowId,
+          appId,
+          userId,
+          input.requestId,
+          input.inputHash,
+          input.kind,
+          leaseToken,
+          draftId,
+          input.audioAssetId || input.allocation?.assetId || null,
+          input.allocation?.objectKey || null,
+        ],
+      )
+      return {
+        state: 'CLAIMED',
+        requestId: input.requestId,
+        leaseToken,
+        draftId,
+        draft,
+        asset,
+        ...(input.allocation ? { allocation: input.allocation } : {}),
+      }
+    }
+    try {
+      return await database.transaction(createOrResume)
+    }
+    catch (error) {
+      if (error?.code !== 'ER_DUP_ENTRY') throw error
+      return database.transaction(async (tx) => {
+        await requireActiveUser(tx, appId, userId)
+        const existing = await readDraftRequestRow(tx, appId, userId, input.requestId, true)
+        if (!existing) throw error
+        return resumeDraftRequest(tx, appId, userId, existing, input, createLeaseId())
+      })
+    }
+  }
+
+  async function resumeDraftRequest(tx, appId, userId, row, input, leaseToken) {
+    const currentDraft = await readDraftIfPresent(tx, appId, userId, row.draft_id)
+    const disposition = draftRequestDisposition(row, input, currentDraft)
+    if (disposition === 'CONFLICT') throw new Error('IDEMPOTENCY_CONFLICT')
+    if (disposition === 'EXPIRED') throw new Error('AI_DRAFT_REQUEST_EXPIRED')
+    if (disposition === 'REPLAY') {
+      return { state: 'REPLAY', response: parseObject(row.response_json) }
+    }
+    if (disposition === 'FAILED') throw new Error(safeFailureCode(row.failure_code))
+    if (disposition === 'IN_PROGRESS') throw new Error('AI_DRAFT_REQUEST_IN_PROGRESS')
+
+    const renewed = await tx.query(
+      `UPDATE mip_ai_draft_requests
+       SET lease_token = ?, lease_expires_at = ${leaseExpression}
+       WHERE app_id = ? AND user_id = ? AND request_id = ? AND status = 'PROCESSING'
+         AND input_hash = ? AND lease_expires_at <= UTC_TIMESTAMP(3)
+         AND expires_at > UTC_TIMESTAMP(3)`,
+      [leaseToken, appId, userId, input.requestId, input.inputHash],
+    )
+    if (Number(renewed?.affectedRows) !== 1) throw new Error('AI_DRAFT_REQUEST_IN_PROGRESS')
+    if (disposition === 'RESUME_READY') {
+      await completeDraftRequestRow(
+        tx,
+        appId,
+        userId,
+        row.request_id,
+        currentDraft,
+        leaseToken,
+      )
+      return { state: 'REPLAY', response: currentDraft }
+    }
+    if (disposition === 'RESUME_FAILED') {
+      throw new Error('AI_PROVIDER_RESULT_UNKNOWN')
+    }
+
+    let asset
+    if (input.kind === 'VOICE_ASSET') {
+      asset = await requireOwnedAudioAsset(tx, appId, userId, row.audio_asset_id)
+    }
+    else if (input.kind === 'VOICE_UPLOAD' && currentDraft) {
+      asset = await requireOwnedAudioAsset(tx, appId, userId, row.audio_asset_id)
+    }
+    return {
+      state: 'RESUMED',
+      requestId: input.requestId,
+      leaseToken,
+      draftId: row.draft_id,
+      draft: currentDraft,
+      asset,
+      ...(input.kind === 'VOICE_UPLOAD'
+        ? { allocation: { assetId: row.audio_asset_id, objectKey: row.audio_object_key } }
+        : {}),
+    }
+  }
+
+  async function recoverCompletedDraftRequest(appId, userId, input) {
+    assertDraftRequestIdentity(input)
+    const row = await readDraftRequestRow(database, appId, userId, input.requestId)
+    if (!row) return null
+    if (row.input_hash !== input.inputHash) throw new Error('IDEMPOTENCY_CONFLICT')
+    if (row.status === 'COMPLETED') return parseObject(row.response_json)
+    return null
+  }
+
+  async function failDraftRequest(appId, userId, input, failureCode) {
+    assertDraftRequestIdentity(input)
+    const safeCode = safeFailureCode(failureCode)
+    const result = await database.query(
+      `UPDATE mip_ai_draft_requests
+       SET status = 'FAILED', lease_token = NULL, lease_expires_at = NULL,
+           response_json = NULL, failure_code = ?
+       WHERE app_id = ? AND user_id = ? AND request_id = ? AND input_hash = ?
+         AND status = 'PROCESSING' AND lease_token = ?`,
+      [safeCode, appId, userId, input.requestId, input.inputHash, input.leaseToken],
+    )
+    return Number(result?.affectedRows) === 1
+  }
+
+  async function readDraftRequestRow(store, appId, userId, requestId, forUpdate = false) {
+    return store.one(
+      `SELECT request_id, input_hash, draft_kind, status, lease_token,
+              lease_expires_at, draft_id, audio_asset_id, audio_object_key,
+              response_json, failure_code, expires_at
+       FROM mip_ai_draft_requests
+       WHERE app_id = ? AND user_id = ? AND request_id = ?${forUpdate ? ' FOR UPDATE' : ''}`,
+      [appId, userId, requestId],
+    )
+  }
+
+  async function readDraftIfPresent(store, appId, userId, draftId) {
+    const row = await store.one(
+      `SELECT id, user_id, purpose, transcript_text, structured_draft_json,
+              status, expires_at, version, created_at, updated_at
+       FROM mip_ai_drafts
+       WHERE app_id = ? AND user_id = ? AND id = ? AND status <> 'DELETED'`,
+      [appId, userId, draftId],
+    )
+    return row ? draftDto(row) : null
+  }
+
+  async function completeDraftRequestRow(store, appId, userId, requestId, response, leaseToken) {
+    const result = await store.query(
+      `UPDATE mip_ai_draft_requests
+       SET status = 'COMPLETED', lease_token = NULL, lease_expires_at = NULL,
+           response_json = ?, failure_code = NULL
+       WHERE app_id = ? AND user_id = ? AND request_id = ? AND status = 'PROCESSING'
+         AND lease_token = ?`,
+      [JSON.stringify(response), appId, userId, requestId, leaseToken],
+    )
+    if (Number(result?.affectedRows) !== 1) throw new Error('AI_DRAFT_REQUEST_IN_PROGRESS')
+  }
+
+  async function requireOwnedAudioAsset(store, appId, userId, assetId) {
+    const asset = await store.one(
+      `SELECT id, cloud_file_id, content_sha256, content_type, content_bytes, status
+       FROM mip_media_assets
+       WHERE app_id = ? AND id = ? AND owner_user_id = ? FOR UPDATE`,
+      [appId, assetId, userId],
+    )
+    if (!asset || asset.status !== 'READY'
+      || asset.content_type !== 'audio/mpeg'
+      || !/^[a-f0-9]{64}$/i.test(String(asset.content_sha256 || ''))
+      || !Number.isInteger(Number(asset.content_bytes))
+      || Number(asset.content_bytes) < 1
+      || Number(asset.content_bytes) > 2 * 1024 * 1024) {
+      throw new Error('AI_AUDIO_NOT_AVAILABLE')
+    }
+    return asset
+  }
+
   async function createVoiceDraft(appId, userId, input) {
     const id = createId()
     return database.transaction(async (tx) => {
       await requireActiveUser(tx, appId, userId)
-      const asset = await tx.one(
-        `SELECT id, cloud_file_id, content_sha256, content_type, content_bytes, status
-         FROM mip_media_assets
-         WHERE app_id = ? AND id = ? AND owner_user_id = ? FOR UPDATE`,
-        [appId, input.audioAssetId, userId],
-      )
-      if (!asset || asset.status !== 'READY'
-        || asset.content_type !== 'audio/mpeg'
-        || !/^[a-f0-9]{64}$/i.test(String(asset.content_sha256 || ''))
-        || !Number.isInteger(Number(asset.content_bytes))
-        || Number(asset.content_bytes) < 1
-        || Number(asset.content_bytes) > 2 * 1024 * 1024) {
-        throw new Error('AI_AUDIO_NOT_AVAILABLE')
-      }
+      const asset = await requireOwnedAudioAsset(tx, appId, userId, input.audioAssetId)
       await tx.query(
         `INSERT INTO mip_ai_drafts (
            id, app_id, user_id, purpose, audio_asset_id, status, expires_at
@@ -144,9 +369,36 @@ function createAiRepository(database, options = {}) {
     if (Number(pending?.affectedRows) !== 1) throw new Error('AI_AUDIO_UPLOAD_FAILED')
   }
 
-  async function createVoiceDraftFromUpload(appId, userId, asset, purpose) {
-    const draftId = createId()
-    await registerPendingAudioUpload(appId, asset)
+  async function ensurePendingAudioUpload(appId, asset) {
+    try {
+      await registerPendingAudioUpload(appId, asset)
+      return
+    }
+    catch (error) {
+      const existing = await database.one(
+        `SELECT owner_user_id, purpose, object_key, cloud_file_id, content_sha256,
+                content_type, content_bytes, status
+         FROM mip_media_assets WHERE app_id = ? AND id = ?`,
+        [appId, asset.assetId],
+      )
+      if (existing?.owner_user_id == null
+        && existing.purpose === 'AI_AUDIO'
+        && existing.object_key === asset.objectKey
+        && existing.cloud_file_id === asset.cloudFileId
+        && existing.content_sha256 === asset.contentSha256
+        && existing.content_type === asset.contentType
+        && Number(existing.content_bytes) === Number(asset.contentBytes)
+        && existing.status === 'PENDING') {
+        return
+      }
+      throw error
+    }
+  }
+
+  async function createVoiceDraftFromUpload(appId, userId, asset, purpose, preallocatedDraftId) {
+    const draftId = preallocatedDraftId || createId()
+    if (!isUuid(draftId)) throw new Error('VALIDATION_FAILED')
+    await ensurePendingAudioUpload(appId, asset)
     return database.transaction(async (tx) => {
       await requireActiveUser(tx, appId, userId)
       const activated = await tx.query(
@@ -251,6 +503,65 @@ function createAiRepository(database, options = {}) {
     })
   }
 
+  async function completeKeyedDraft(appId, userId, input, result) {
+    assertDraftRequestIdentity(input)
+    if (!isUuid(input.draftId)
+      || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1) {
+      throw new Error('VALIDATION_FAILED')
+    }
+    const providerHash = result.providerJobKey
+      ? createHash('sha256').update(result.providerJobKey).digest('hex')
+      : null
+    return database.transaction(async (tx) => {
+      await requireActiveUser(tx, appId, userId)
+      const request = await readDraftRequestRow(tx, appId, userId, input.requestId, true)
+      if (!request) throw new Error('NOT_FOUND')
+      if (request.input_hash !== input.inputHash || request.draft_id !== input.draftId) {
+        throw new Error('IDEMPOTENCY_CONFLICT')
+      }
+      if (new Date(request.expires_at).getTime() <= Date.now()) {
+        throw new Error('AI_DRAFT_REQUEST_EXPIRED')
+      }
+      if (request.status === 'COMPLETED') return parseObject(request.response_json)
+      if (request.status !== 'PROCESSING' || request.lease_token !== input.leaseToken) {
+        throw new Error('AI_DRAFT_REQUEST_IN_PROGRESS')
+      }
+      const current = await tx.one(
+        `SELECT purpose, status, version, expires_at FROM mip_ai_drafts
+         WHERE app_id = ? AND user_id = ? AND id = ? FOR UPDATE`,
+        [appId, userId, input.draftId],
+      )
+      if (!current) throw new Error('NOT_FOUND')
+      if (!['TRANSCRIBING', 'STRUCTURING'].includes(current.status)
+        || Number(current.version) !== input.expectedVersion
+        || new Date(current.expires_at).getTime() <= Date.now()
+        || current.purpose !== result.purpose) {
+        throw new Error('CONFLICT')
+      }
+      const structured = normalizeStructuredDraft(current.purpose, result.structuredDraft)
+      const update = await tx.query(
+        `UPDATE mip_ai_drafts SET
+           transcript_text = ?, structured_draft_json = ?, provider_job_key_hash = ?,
+           status = 'DRAFT_READY', version = version + 1
+         WHERE app_id = ? AND user_id = ? AND id = ? AND version = ?
+           AND status IN ('TRANSCRIBING', 'STRUCTURING') AND expires_at > UTC_TIMESTAMP(3)`,
+        [
+          result.transcriptText,
+          JSON.stringify(structured),
+          providerHash,
+          appId,
+          userId,
+          input.draftId,
+          input.expectedVersion,
+        ],
+      )
+      if (Number(update.affectedRows) !== 1) throw new Error('CONFLICT')
+      const ready = await readDraft(tx, appId, userId, input.draftId)
+      await completeDraftRequestRow(tx, appId, userId, input.requestId, ready, input.leaseToken)
+      return ready
+    })
+  }
+
   async function beginDraftRefinement(appId, userId, input) {
     if (!isUuid(input.draftId) || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1) {
       throw new Error('VALIDATION_FAILED')
@@ -297,6 +608,57 @@ function createAiRepository(database, options = {}) {
          AND status IN ('TRANSCRIBING', 'STRUCTURING')`,
       [appId, userId, draftId, expectedVersion],
     )
+  }
+
+  async function failKeyedDraft(appId, userId, input, failureCode) {
+    assertDraftRequestIdentity(input)
+    if (!isUuid(input.draftId)
+      || !Number.isInteger(input.expectedVersion) || input.expectedVersion < 1) {
+      throw new Error('VALIDATION_FAILED')
+    }
+    const safeCode = safeFailureCode(failureCode)
+    return database.transaction(async (tx) => {
+      await requireActiveUser(tx, appId, userId)
+      const request = await readDraftRequestRow(tx, appId, userId, input.requestId, true)
+      if (!request) throw new Error('NOT_FOUND')
+      if (request.input_hash !== input.inputHash || request.draft_id !== input.draftId) {
+        throw new Error('IDEMPOTENCY_CONFLICT')
+      }
+      if (new Date(request.expires_at).getTime() <= Date.now()) {
+        throw new Error('AI_DRAFT_REQUEST_EXPIRED')
+      }
+      if (request.status === 'COMPLETED') return false
+      if (request.status !== 'PROCESSING' || request.lease_token !== input.leaseToken) {
+        throw new Error('AI_DRAFT_REQUEST_IN_PROGRESS')
+      }
+      const draft = await tx.one(
+        `SELECT status, version FROM mip_ai_drafts
+         WHERE app_id = ? AND user_id = ? AND id = ? FOR UPDATE`,
+        [appId, userId, input.draftId],
+      )
+      if (!draft) throw new Error('NOT_FOUND')
+      if (!['TRANSCRIBING', 'STRUCTURING'].includes(draft.status)
+        || Number(draft.version) !== input.expectedVersion) {
+        throw new Error('CONFLICT')
+      }
+      const failedDraft = await tx.query(
+        `UPDATE mip_ai_drafts SET status = 'FAILED', version = version + 1
+         WHERE app_id = ? AND user_id = ? AND id = ? AND version = ?
+           AND status IN ('TRANSCRIBING', 'STRUCTURING')`,
+        [appId, userId, input.draftId, input.expectedVersion],
+      )
+      if (Number(failedDraft?.affectedRows) !== 1) throw new Error('CONFLICT')
+      const failedRequest = await tx.query(
+        `UPDATE mip_ai_draft_requests
+         SET status = 'FAILED', lease_token = NULL, lease_expires_at = NULL,
+             response_json = NULL, failure_code = ?
+         WHERE app_id = ? AND user_id = ? AND request_id = ?
+           AND input_hash = ? AND status = 'PROCESSING' AND lease_token = ?`,
+        [safeCode, appId, userId, input.requestId, input.inputHash, input.leaseToken],
+      )
+      if (Number(failedRequest?.affectedRows) !== 1) throw new Error('AI_DRAFT_REQUEST_IN_PROGRESS')
+      return true
+    })
   }
 
   async function updateDraft(appId, userId, input) {
@@ -375,8 +737,15 @@ function createAiRepository(database, options = {}) {
          FROM mip_media_assets asset
          ${userScoped ? 'INNER' : 'LEFT'} JOIN mip_ai_drafts draft
            ON draft.app_id = asset.app_id AND draft.audio_asset_id = asset.id
+         LEFT JOIN mip_ai_draft_requests ai_request
+           ON ai_request.app_id = asset.app_id
+             AND ai_request.audio_asset_id = asset.id
+             AND ai_request.draft_kind = 'VOICE_UPLOAD'
+             AND ai_request.status = 'PROCESSING'
+             AND ai_request.expires_at > UTC_TIMESTAMP(3)
          WHERE asset.app_id = ?
            AND asset.purpose = 'AI_AUDIO'
+           AND ai_request.id IS NULL
            ${userScoped
             ? `AND draft.user_id = ?
                AND draft.status IN ('CONFIRMED', 'EXPIRED', 'DELETED')
@@ -685,6 +1054,8 @@ function createAiRepository(database, options = {}) {
     beginDraftRefinement,
     createAvatarGeneration,
     completeDraft,
+    completeKeyedDraft,
+    claimDraftRequest,
     createTextDraft,
     createVoiceDraft,
     createVoiceDraftFromUpload,
@@ -694,6 +1065,8 @@ function createAiRepository(database, options = {}) {
     expireAvatarGenerations,
     failAvatarGeneration,
     failDraft,
+    failKeyedDraft,
+    failDraftRequest,
     getDraft,
     getAvatarGeneration,
     leaseAppAudioCleanup,
@@ -704,6 +1077,7 @@ function createAiRepository(database, options = {}) {
     markPendingAvatarOutputDeleted,
     markPendingAudioUploadDeleted,
     recoverAvatarGenerationOutput,
+    recoverCompletedDraftRequest,
     recoverVoiceDraftFromUpload,
     registerPendingAvatarOutput,
     registerPendingAudioUpload,
@@ -736,6 +1110,60 @@ function normalizeDraftTtlHours(value) {
     throw new Error('AI_DRAFT_TTL_INVALID')
   }
   return hours
+}
+
+function normalizeRequestLeaseSeconds(value) {
+  const seconds = Number(value ?? 300)
+  if (!Number.isInteger(seconds) || seconds < 30 || seconds > 900) {
+    throw new Error('AI_DRAFT_REQUEST_LEASE_INVALID')
+  }
+  return seconds
+}
+
+function assertDraftRequestInput(input) {
+  assertDraftRequestIdentity(input)
+  if (!['TEXT', 'VOICE_ASSET', 'VOICE_UPLOAD'].includes(input.kind)
+    || typeof input.purpose !== 'string' || !input.purpose) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  if (input.kind === 'TEXT' && (typeof input.transcriptText !== 'string' || !input.transcriptText)) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  if (input.kind === 'VOICE_ASSET' && !isUuid(input.audioAssetId)) {
+    throw new Error('VALIDATION_FAILED')
+  }
+  if (input.kind === 'VOICE_UPLOAD'
+    && (!isUuid(input.allocation?.assetId)
+      || typeof input.allocation?.objectKey !== 'string'
+      || !input.allocation.objectKey || input.allocation.objectKey.length > 512)) {
+    throw new Error('VALIDATION_FAILED')
+  }
+}
+
+function assertDraftRequestIdentity(input) {
+  if (!/^[\w.:-]{8,128}$/.test(String(input?.requestId || ''))
+    || !/^[0-9a-f]{64}$/.test(String(input?.inputHash || ''))
+    || (input.leaseToken !== undefined && !isUuid(input.leaseToken))) {
+    throw new Error('VALIDATION_FAILED')
+  }
+}
+
+function safeFailureCode(value) {
+  return typeof value === 'string' && /^[A-Z][A-Z0-9_]{2,63}$/.test(value)
+    ? value
+    : 'AI_PROVIDER_RESULT_UNKNOWN'
+}
+
+function draftRequestDisposition(row, input, currentDraft, now = Date.now()) {
+  if (row.input_hash !== input.inputHash || row.draft_kind !== input.kind) return 'CONFLICT'
+  if (new Date(row.expires_at).getTime() <= now) return 'EXPIRED'
+  if (row.status === 'COMPLETED') return 'REPLAY'
+  if (row.status === 'FAILED') return 'FAILED'
+  if (new Date(row.lease_expires_at).getTime() > now) return 'IN_PROGRESS'
+  if (currentDraft?.status === 'DRAFT_READY') return 'RESUME_READY'
+  if (currentDraft?.status === 'FAILED') return 'RESUME_FAILED'
+  if (currentDraft && !['TRANSCRIBING', 'STRUCTURING'].includes(currentDraft.status)) return 'EXPIRED'
+  return 'RESUME'
 }
 
 function draftDto(row) {
@@ -811,6 +1239,8 @@ module.exports = {
   cleanupLimit,
   decodeCursor,
   draftDto,
+  draftRequestDisposition,
   encodeCursor,
   normalizeDraftTtlHours,
+  normalizeRequestLeaseSeconds,
 }

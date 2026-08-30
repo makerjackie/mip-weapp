@@ -122,6 +122,10 @@ describe('MIP account closure repository', () => {
       userId,
     ])
     assert.match(source, /UPDATE mip_ai_drafts/)
+    assert.match(source, /UPDATE mip_ai_draft_requests/)
+    assert.match(source, /failure_code = 'ACCOUNT_CLOSED'/)
+    assert.match(source, /UPDATE mip_membership_invitation_codes/)
+    assert.match(source, /status IN \('PENDING', 'READY'\)/)
     assert.doesNotMatch(source, /UPDATE mip_orders/)
     assert.doesNotMatch(source, /UPDATE mip_payment_attempts/)
     assert.doesNotMatch(source, /UPDATE mip_refunds/)

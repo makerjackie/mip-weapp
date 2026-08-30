@@ -1,5 +1,6 @@
 export * from './domain'
 export * from './editor'
 export * from './module'
+export * from './request-id'
 export * from './types'
 export * from './voice-recorder'

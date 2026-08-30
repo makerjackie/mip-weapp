@@ -167,6 +167,7 @@ Page({
   },
   requestSeq: 0,
   cloneConfirmationBusy: false,
+  archiveConfirmationBusy: false,
   onShow() { void this.loadEvents() },
   onHide() { this.requestSeq += 1 },
   onUnload() { this.requestSeq += 1 },
@@ -435,23 +436,32 @@ Page({
   async archiveEvent(event: WechatMiniprogram.TouchEvent) {
     const eventId = String(event.currentTarget.dataset.id || '')
     const version = Number(event.currentTarget.dataset.version)
-    if (!eventId || this.data.processingId || this.data.cloneBusyId) {
+    if (!eventId || this.data.processingId || this.data.cloneBusyId || this.archiveConfirmationBusy) {
       return
     }
-    const modal = await wx.showModal({ title: '归档活动草稿', editable: true, placeholderText: '填写归档原因' })
-    if (!modal.confirm || !modal.content.trim()) {
-      return
-    }
-    this.setData({ processingId: eventId, message: '' })
+    this.archiveConfirmationBusy = true
     try {
-      await mipAdminModule.events.archive({ eventId, expectedVersion: version, reason: modal.content })
+      const modal = await wx.showModal({
+        title: '归档活动草稿',
+        editable: true,
+        placeholderText: '填写归档原因',
+      }).catch(() => null)
+      const reason = modal?.content?.trim() || ''
+      if (!modal?.confirm || !reason) {
+        return
+      }
+      this.setData({ processingId: eventId, message: '' })
+      await mipAdminModule.events.archive({ eventId, expectedVersion: version, reason })
       wx.showToast({ title: '活动已归档', icon: 'success' })
       await this.loadEvents(true)
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '活动归档失败' })
     }
-    finally { this.setData({ processingId: '' }) }
+    finally {
+      this.archiveConfirmationBusy = false
+      this.setData({ processingId: '' })
+    }
   },
   updateCancellationHours(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     this.setData({ cancellationHoursBeforeStart: event.detail.value })

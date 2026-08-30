@@ -5,6 +5,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import { assertWebpAssetsAnalyzed, discoverSourceWebpAssets } from './lib/analyze-asset-contract.mjs'
+import { assertPackageSizeContract } from './lib/package-size-contract.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const reportPath = path.join(root, '.tmp/analyze-budget.json')
@@ -33,4 +34,6 @@ if (result.status !== 0) {
 
 const report = JSON.parse(fs.readFileSync(reportPath, 'utf8'))
 const summary = assertWebpAssetsAnalyzed(discoverSourceWebpAssets(root), report)
+const packageSummary = assertPackageSizeContract(root, report)
 console.log(`WebP analyze contract passed (${summary.assetCount} assets, ${summary.totalBytes} bytes)`)
+console.log(`Package size contract passed (${Object.entries(packageSummary.dependencyAwareSizes).map(([id, size]) => `${id} ${size} bytes with reachable dependencies`).join('; ')})`)

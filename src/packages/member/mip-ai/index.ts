@@ -1,6 +1,10 @@
 import type { AiCapability, AiDraft, AiDraftId, AiDraftPurpose, MipVoiceRecorder } from '../../../modules/mip-ai'
 import { cooperationRoles } from '../../../config/mip-catalogs'
-import { createMipVoiceRecorder } from '../../../modules/mip-ai'
+import {
+  createAiDraftRequestSlot,
+  createMipVoiceRecorder,
+  shouldRetainAiDraftRequest,
+} from '../../../modules/mip-ai'
 import { mipAiModule } from '../../../modules/mip-ai/client'
 import { caseNavigateTo } from '../../../modules/platform/case-navigation'
 
@@ -135,6 +139,8 @@ Page({
   recordingStartedAt: 0,
   recordingTimer: null as ReturnType<typeof setInterval> | null,
   pageActive: true,
+  textDraftRequest: createAiDraftRequestSlot('ai-draft-text'),
+  voiceDraftRequest: createAiDraftRequestSlot('ai-draft-upload'),
 
   onLoad() {
     this.pageActive = true
@@ -218,10 +224,13 @@ Page({
   },
 
   changePurpose(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.textDraftRequest.rotate()
+    this.voiceDraftRequest.rotate()
     this.setData({ purposeIndex: Number(event.detail.value) })
   },
 
   updateSource(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    this.textDraftRequest.rotate()
     this.setData({ sourceText: event.detail.value, message: '' })
   },
 
@@ -235,17 +244,30 @@ Page({
       this.setData({ message: '请输入需要整理的内容。' })
       return
     }
+    const requestId = this.textDraftRequest.current()
     this.setData({ generating: true, message: '' })
     try {
-      const draft = await mipAiModule.createTextDraft({ purpose, transcriptText })
+      const draft = await mipAiModule.createTextDraft({ purpose, transcriptText, requestId })
       if (!this.pageActive) {
         return
       }
+      const unchangedSubmission = this.textDraftRequest.matches(requestId)
+      if (unchangedSubmission) {
+        this.textDraftRequest.rotate()
+      }
       const view = draftView(draft)
-      this.setData({ sourceText: '', drafts: [view, ...this.data.drafts], activeDraft: view, supplementalText: '' })
+      this.setData({
+        sourceText: unchangedSubmission ? '' : this.data.sourceText,
+        drafts: [view, ...this.data.drafts],
+        activeDraft: view,
+        supplementalText: '',
+      })
       wx.showToast({ title: '草稿已生成', icon: 'success' })
     }
     catch (error) {
+      if (this.textDraftRequest.matches(requestId) && !shouldRetainAiDraftRequest(error)) {
+        this.textDraftRequest.rotate()
+      }
       if (!this.pageActive) {
         return
       }
@@ -266,6 +288,8 @@ Page({
     if (!purpose) {
       return
     }
+    this.voiceDraftRequest.rotate()
+    const requestId = this.voiceDraftRequest.current()
     const recorder = createMipVoiceRecorder()
     this.voiceRecorder = recorder
     this.recordingStartedAt = Date.now()
@@ -291,11 +315,13 @@ Page({
         purpose,
         audioBase64: voice.audioBase64,
         contentType: voice.contentType,
+        requestId,
       })
       if (!this.pageActive) {
         return
       }
       const view = draftView(draft)
+      this.voiceDraftRequest.rotate()
       this.setData({ drafts: [view, ...this.data.drafts], activeDraft: view, supplementalText: '' })
       wx.showToast({ title: '语音草稿已生成', icon: 'success' })
     }).catch((error) => {

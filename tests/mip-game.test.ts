@@ -67,7 +67,62 @@ function gameTeam(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function gameSeason(overrides: Record<string, unknown> = {}) {
+  return {
+    id: seasonId,
+    seasonKey: '2026-h2',
+    name: '2026 下半年赛季',
+    summary: '',
+    rulesText: '以服务端经验值流水为准。',
+    rules: {
+      scoreMetric: 'EXPERIENCE',
+      headquartersThresholds: [
+        { level: 1, minimumExperience: 0, label: '一级大本营' },
+      ],
+    },
+    periodKind: 'HALF_YEAR',
+    startsAt: '2026-07-01T00:00:00.000Z',
+    endsAt: '2027-01-01T00:00:00.000Z',
+    status: 'ACTIVE',
+    version: 1,
+    ...overrides,
+  }
+}
+
 describe('MIP game client contract', () => {
+  it('validates and canonicalizes every admin season before exposing it', async () => {
+    const gateway = createMipGameGateway({
+      async invoke() {
+        return {
+          ok: true,
+          data: { items: [gameSeason({ startsAt: '2026-07-01T08:00:00+08:00' })] },
+        }
+      },
+    })
+
+    await expect(gateway.listSeasons()).resolves.toMatchObject({
+      items: [{ id: seasonId, startsAt: '2026-07-01T00:00:00.000Z' }],
+    })
+  })
+
+  it('rejects malformed, duplicate, and time-inverted admin seasons', async () => {
+    for (const items of [
+      [gameSeason({ startsAt: 'not-a-date' })],
+      [gameSeason(), gameSeason()],
+      [gameSeason({ endsAt: '2026-06-30T00:00:00.000Z' })],
+    ]) {
+      const gateway = createMipGameGateway({
+        async invoke() {
+          return { ok: true, data: { items } }
+        },
+      })
+      await expect(gateway.listSeasons()).rejects.toMatchObject({
+        code: 'SERVICE_UNAVAILABLE',
+        retryable: true,
+      })
+    }
+  })
+
   it('submits matchup intent without any client score', async () => {
     const calls: MipGameRequest[] = []
     const gateway = createMipGameGateway({

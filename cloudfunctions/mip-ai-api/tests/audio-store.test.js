@@ -41,6 +41,38 @@ test('stores voice assets only under the MIP object prefix', async () => {
   assert.equal(result.cloudFileId.startsWith('cloud://'), true)
 })
 
+test('uploads to the exact preallocated asset id and object key', async () => {
+  const appId = 'wx1111111111111111'
+  const userId = '10000000-0000-4000-8000-000000000001'
+  const assetId = '30000000-0000-4000-8000-000000000001'
+  let cloudPath = ''
+  const store = createAudioStore({
+    async uploadFile(input) {
+      cloudPath = input.cloudPath
+      return { fileID: `cloud://env/${input.cloudPath}` }
+    },
+  }, { storageKey: key, stage: 'test', createId: () => assetId })
+  const allocation = store.preallocate({ appId, userId })
+  const result = await store.store({
+    appId,
+    userId,
+    ...allocation,
+    audioBase64: Buffer.concat([Buffer.from('ID3'), Buffer.alloc(64)]).toString('base64'),
+    contentType: 'audio/mpeg',
+  })
+  assert.equal(result.assetId, assetId)
+  assert.equal(result.objectKey, allocation.objectKey)
+  assert.equal(cloudPath, allocation.objectKey)
+  await assert.rejects(() => store.store({
+    appId,
+    userId,
+    assetId,
+    objectKey: 'mip/test/wrong/object.mp3',
+    audioBase64: Buffer.concat([Buffer.from('ID3'), Buffer.alloc(64)]).toString('base64'),
+    contentType: 'audio/mpeg',
+  }), /AI_AUDIO_FILE_INVALID/)
+})
+
 test('removes only an exact app-owned MIP audio object', async () => {
   let deleted = ''
   const appId = 'wx1111111111111111'

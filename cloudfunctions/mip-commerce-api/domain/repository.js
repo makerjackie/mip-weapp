@@ -1,5 +1,6 @@
 'use strict'
 
+const { randomUUID } = require('node:crypto')
 const { assertFullAccessUser, createFullAccessPolicy } = require('./full-access')
 
 const USER_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
@@ -56,6 +57,7 @@ function createCommerceRepository(database, options = {}) {
   const fullAccess = options.fullAccessPolicy || createFullAccessPolicy({
     agreements: options.agreements,
   })
+  const createId = options.createId || randomUUID
 
   async function resolveUserId(queryable, caller, lock = false) {
     const row = await queryable.one(
@@ -183,6 +185,153 @@ function createCommerceRepository(database, options = {}) {
     )
     if (!row) throw new Error('MEMBERSHIP_INVITATION_INVALID')
     return row.id
+  }
+
+  async function claimMembershipInvitationCode(appId, inviterUserId, input) {
+    if (!USER_ID_PATTERN.test(inviterUserId)
+      || !/^[0-9a-f]{64}$/.test(String(input?.sceneHash || ''))
+      || !Number.isFinite(new Date(input?.expiresAt).getTime())) {
+      throw new Error('MEMBERSHIP_INVITATION_CODE_UNAVAILABLE')
+    }
+    const codeId = createId()
+    const leaseToken = createId()
+    const allocationId = createId()
+    const allocationAssetId = createId()
+    return database.transaction(async (tx) => {
+      const active = await tx.one(
+        `SELECT u.id
+         FROM mip_users u
+         WHERE u.app_id = ? AND u.id = ? AND u.status = 'ACTIVE'
+           AND EXISTS (
+             SELECT 1 FROM mip_membership_entitlements entitlement
+             WHERE entitlement.app_id = u.app_id AND entitlement.user_id = u.id
+               AND entitlement.status = 'ACTIVE'
+               AND entitlement.starts_at <= UTC_TIMESTAMP(3)
+               AND entitlement.ends_at > UTC_TIMESTAMP(3)
+           )
+         LIMIT 1 FOR UPDATE`,
+        [appId, inviterUserId],
+      )
+      if (!active) throw new Error('MEMBERSHIP_INVITATION_FORBIDDEN')
+
+      const inserted = await tx.query(
+        `INSERT INTO mip_membership_invitation_codes (
+           id, app_id, inviter_user_id, scene_hash, allocation_id,
+           allocation_asset_id, status, expires_at,
+           lease_token, lease_expires_at
+         ) VALUES (?, ?, ?, ?, ?, ?, 'PENDING', ?, ?,
+           DATE_ADD(UTC_TIMESTAMP(3), INTERVAL 5 MINUTE))
+         ON DUPLICATE KEY UPDATE id = id`,
+        [
+          codeId,
+          appId,
+          inviterUserId,
+          input.sceneHash,
+          allocationId,
+          allocationAssetId,
+          input.expiresAt,
+          leaseToken,
+        ],
+      )
+      if (!Number.isInteger(Number(inserted?.affectedRows))) {
+        throw new Error('MEMBERSHIP_INVITATION_CODE_UNAVAILABLE')
+      }
+
+      const existing = await tx.one(
+        `SELECT code.id, code.status, code.expires_at, code.lease_token,
+                code.allocation_id, code.allocation_asset_id, code.allocation_object_key,
+                code.code_asset_id,
+                code.expires_at > UTC_TIMESTAMP(3) AS unexpired,
+                code.lease_expires_at > UTC_TIMESTAMP(3) AS lease_active,
+                asset.status AS asset_status, asset.cloud_file_id
+         FROM mip_membership_invitation_codes code
+         LEFT JOIN mip_media_assets asset
+           ON asset.app_id = code.app_id AND asset.id = code.code_asset_id
+         WHERE code.app_id = ? AND code.inviter_user_id = ? AND code.scene_hash = ?
+         LIMIT 1 FOR UPDATE`,
+        [appId, inviterUserId, input.sceneHash],
+      )
+      if (!existing) throw new Error('MEMBERSHIP_INVITATION_CODE_UNAVAILABLE')
+      if (existing.id === codeId) {
+        return {
+          state: 'CLAIMED',
+          invitationId: codeId,
+          leaseToken,
+          allocationId,
+          allocationAssetId,
+          expiresAt: new Date(input.expiresAt).toISOString(),
+        }
+      }
+      if (existing.status === 'READY' && Number(existing.unexpired) === 1
+        && existing.asset_status === 'READY'
+        && String(existing.cloud_file_id || '').startsWith('cloud://')) {
+        return {
+          state: 'READY',
+          invitationId: existing.id,
+          codeUrl: existing.cloud_file_id,
+          expiresAt: dateValue(existing.expires_at),
+        }
+      }
+      if (existing.status === 'PENDING' && Number(existing.lease_active) === 1) {
+        return { state: 'PENDING', invitationId: existing.id }
+      }
+      if (existing.status === 'PENDING' && !existing.code_asset_id) {
+        const resumed = await tx.query(
+          `UPDATE mip_membership_invitation_codes
+           SET expires_at = ?, lease_token = ?,
+               lease_expires_at = DATE_ADD(UTC_TIMESTAMP(3), INTERVAL 5 MINUTE)
+           WHERE app_id = ? AND id = ? AND status = 'PENDING'
+             AND allocation_id = ? AND allocation_asset_id = ?`,
+          [
+            input.expiresAt,
+            leaseToken,
+            appId,
+            existing.id,
+            existing.allocation_id,
+            existing.allocation_asset_id,
+          ],
+        )
+        if (Number(resumed?.affectedRows) !== 1) {
+          throw new Error('MEMBERSHIP_INVITATION_CODE_UNAVAILABLE')
+        }
+        return {
+          state: 'CLAIMED',
+          invitationId: existing.id,
+          leaseToken,
+          allocationId: existing.allocation_id,
+          allocationAssetId: existing.allocation_asset_id,
+          expiresAt: new Date(input.expiresAt).toISOString(),
+        }
+      }
+
+      const reclaimed = await tx.query(
+        `UPDATE mip_membership_invitation_codes
+         SET status = 'PENDING', code_asset_id = NULL, expires_at = ?,
+             lease_token = ?, allocation_id = ?, allocation_asset_id = ?,
+             allocation_object_key = NULL,
+             lease_expires_at = DATE_ADD(UTC_TIMESTAMP(3), INTERVAL 5 MINUTE)
+         WHERE app_id = ? AND id = ?`,
+        [
+          input.expiresAt,
+          leaseToken,
+          allocationId,
+          allocationAssetId,
+          appId,
+          existing.id,
+        ],
+      )
+      if (Number(reclaimed?.affectedRows) !== 1) {
+        throw new Error('MEMBERSHIP_INVITATION_CODE_UNAVAILABLE')
+      }
+      return {
+        state: 'CLAIMED',
+        invitationId: existing.id,
+        leaseToken,
+        allocationId,
+        allocationAssetId,
+        expiresAt: new Date(input.expiresAt).toISOString(),
+      }
+    })
   }
 
   async function createCheckout(caller, input, ids, deriveCheckout) {
@@ -520,6 +669,7 @@ function createCommerceRepository(database, options = {}) {
 
   return {
     assertMembershipInviter,
+    claimMembershipInvitationCode,
     createCheckout,
     createKnowledgeCheckout,
     getMembershipBenefits,

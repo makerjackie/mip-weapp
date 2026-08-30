@@ -1,7 +1,6 @@
 'use strict'
 
 const assert = require('node:assert/strict')
-const { DatabaseSync } = require('node:sqlite')
 const { describe, it } = require('node:test')
 const { createAdminEvents } = require('../domain/events')
 const {
@@ -14,6 +13,13 @@ const eventId = '11111111-1111-4111-8111-111111111111'
 const actorUserId = 'user-a'
 const branchId = 'branch-a'
 const calculatedAt = new Date('2026-08-25T12:00:00.000Z')
+let DatabaseSync
+try {
+  ({ DatabaseSync } = require('node:sqlite'))
+}
+catch (error) {
+  if (error?.code !== 'ERR_UNKNOWN_BUILTIN_MODULE') throw error
+}
 
 function insightRows(sql, state) {
   if (sql.includes('SELECT id, scope_type, branch_id')) return state.event
@@ -206,12 +212,14 @@ describe('event insights repository', () => {
     assert.match(feedbackCall.sql, /f\.event_id = c\.event_id/)
     assert.match(feedbackCall.sql, /f\.user_id = c\.user_id/)
     assert.doesNotMatch(feedbackCall.sql, /c\.status = 'ACTIVE'/)
-    assert.deepEqual(executeFeedbackFixture(feedbackCall.sql), {
-      submission_count: 1,
-      eligible_checkin_count: 1,
-      rated_count: 1,
-      average_rating: 5,
-    })
+    if (DatabaseSync) {
+      assert.deepEqual(executeFeedbackFixture(feedbackCall.sql), {
+        submission_count: 1,
+        eligible_checkin_count: 1,
+        rated_count: 1,
+        average_rating: 5,
+      })
+    }
     const orderCall = harness.calls.find(call => call.sql.includes('AS paid_order_count'))
     assert.match(orderCall.sql, /MIN\(o\.currency\) AS minimum_currency/)
     assert.match(orderCall.sql, /MAX\(o\.currency\) AS maximum_currency/)

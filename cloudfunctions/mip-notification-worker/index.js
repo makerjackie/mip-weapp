@@ -6,8 +6,8 @@ const { createNotificationRepository } = require('./domain/repository')
 const { createNotificationService } = require('./domain/service')
 const { verifyInternalEvent } = require('./lib/internal-auth')
 const {
-  assertWechatSuccess,
   createServiceAccountSender,
+  createWechatOpenapiSender,
   parseServiceAccountConfig,
 } = require('./lib/channel-adapters')
 const { mysqlDatabase } = require('./lib/mysql')
@@ -23,17 +23,15 @@ const serviceAccountConfig = parseServiceAccountConfig(
   process.env.MIP_SERVICE_ACCOUNT_ADAPTER_JSON || '',
 )
 const senders = {
-  async WECHAT_SUBSCRIPTION(request) {
-    const result = await cloud.openapi.subscribeMessage.send(request)
-    assertWechatSuccess(result)
-  },
+  WECHAT_SUBSCRIPTION: createWechatOpenapiSender(
+    request => cloud.openapi.subscribeMessage.send(request),
+  ),
 }
 const customerServiceEnabled = process.env.MIP_CUSTOMER_SERVICE_ENABLED === 'true'
 if (customerServiceEnabled) {
-  senders.WECHAT_CUSTOMER_SERVICE = async (request) => {
-    const result = await cloud.openapi.customerServiceMessage.send(request)
-    assertWechatSuccess(result)
-  }
+  senders.WECHAT_CUSTOMER_SERVICE = createWechatOpenapiSender(
+    request => cloud.openapi.customerServiceMessage.send(request),
+  )
 }
 if (serviceAccountConfig) {
   senders.WECHAT_SERVICE_ACCOUNT = createServiceAccountSender({

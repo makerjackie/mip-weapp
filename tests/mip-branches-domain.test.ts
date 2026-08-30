@@ -1,6 +1,6 @@
 import type { BranchId, CityBranchSummary } from '../src/modules/mip'
 import { describe, expect, it, vi } from 'vitest'
-import { createMipBranchesModule } from '../src/modules/mip-branches'
+import { createMipBranchesModule } from '../src/modules/mip-branches/module'
 
 const activeBranch: CityBranchSummary = {
   id: '20000000-0000-4000-8000-000000000001' as BranchId,

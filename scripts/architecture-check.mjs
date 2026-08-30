@@ -16,7 +16,7 @@ const patterns = [
 
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    if (['node_modules', 'dist', '.git', '.weapp-vite', '.tmp', '.screenshots'].includes(entry.name)) {
+    if (['node_modules', 'dist', 'coverage', '.git', '.weapp-vite', '.tmp', '.screenshots', '.wrangler'].includes(entry.name)) {
       return []
     }
     if (entry.name === 'pnpm-lock.yaml') {
@@ -66,9 +66,9 @@ for (const relative of allowedWorkspaceConsumers) {
   }
 }
 
-const webSourceRoot = path.join(root, 'admin-web', 'src')
-if (fs.existsSync(webSourceRoot)) {
-  for (const file of walk(webSourceRoot)) {
+const webRoot = path.join(root, 'admin-web')
+if (fs.existsSync(webRoot)) {
+  for (const file of walk(webRoot)) {
     if (!/\.(?:ts|tsx|js|jsx)$/.test(file)) {
       continue
     }

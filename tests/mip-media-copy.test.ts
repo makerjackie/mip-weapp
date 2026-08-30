@@ -30,6 +30,7 @@ const aiAudioId = '20000000-0000-4000-8000-000000000003'
 const checkinId = '20000000-0000-4000-8000-000000000004'
 const pendingId = '20000000-0000-4000-8000-000000000005'
 const exportId = '20000000-0000-4000-8000-000000000006'
+const membershipInvitationId = '20000000-0000-4000-8000-000000000007'
 const temporaryDirectories: string[] = []
 
 afterEach(() => {
@@ -112,6 +113,7 @@ describe('MIP long-term media copy foundation', () => {
       ephemeralAudioRow(Buffer.from('ephemeral-audio')),
       temporaryCheckinRow(Buffer.from('temporary-code')),
       temporaryExportRow(Buffer.from('temporary-export')),
+      temporaryMembershipInvitationRow(Buffer.from('membership-invitation')),
       longTermRow({
         id: pendingId,
         purpose: 'EVENT_COVER',
@@ -140,7 +142,7 @@ describe('MIP long-term media copy foundation', () => {
     expect(plan).toMatchObject({
       format: MIP_MEDIA_COPY_PLAN_FORMAT,
       copiedCount: 2,
-      excludedCount: 4,
+      excludedCount: 5,
     })
     expect(plan.copied.map(item => item.targetObjectKey)).toEqual([
       `mip/staging/${targetAppScope}/avatars/${targetUserScope}/${avatarId}.jpg`,
@@ -149,6 +151,7 @@ describe('MIP long-term media copy foundation', () => {
     expect(plan.excluded.map(item => item.reason).sort()).toEqual([
       'EPHEMERAL_AI_AUDIO',
       'NOT_READY',
+      'REISSUABLE_MINIPROGRAM_CODE',
       'TEMPORARY_OR_REISSUABLE_OBJECT',
       'TEMPORARY_OR_REISSUABLE_OBJECT',
     ])
@@ -355,6 +358,104 @@ describe('MIP long-term media copy foundation', () => {
     expect(checksums).toContain(manifest.tables[0].sha256)
   })
 
+  it('removes excluded media rows and rebuilds package counts, inventory, and checksums', async () => {
+    const content = Buffer.from('package-avatar-content')
+    const fixture = writeExportPackage([
+      longTermRow({ id: avatarId, purpose: 'AVATAR', content }),
+      ephemeralAudioRow(Buffer.from('temporary-audio')),
+    ])
+    const plan = copyPlan(fixture.directory)
+    const result = await executeMipLongTermMediaCopy({
+      plan,
+      transport: {
+        downloadSource: async () => content,
+        uploadTarget: async ({ objectKey }: { objectKey: string }) => (
+          `cloud://${targetAuthority}/${objectKey}`
+        ),
+        downloadTarget: async () => content,
+      },
+    })
+    const transformed = writeTransformedPackage(fixture.rows)
+
+    applyMipMediaCopyResultToTransformedPackage({
+      packageDirectory: transformed,
+      sourceAppId,
+      targetAppId,
+      plan,
+      result,
+    })
+
+    const rows = readJsonLines(path.join(transformed, 'data', 'mip_media_assets.jsonl'))
+    const inventory = JSON.parse(fs.readFileSync(path.join(transformed, 'inventory', 'media.json'), 'utf8'))
+    const manifest = JSON.parse(fs.readFileSync(path.join(transformed, 'manifest.json'), 'utf8'))
+    const mediaTable = manifest.tables.find((table: { table: string }) => table.table === 'mip_media_assets')
+    const checksums = fs.readFileSync(path.join(transformed, 'checksums.sha256'), 'utf8')
+
+    expect(rows.map(row => row.id)).toEqual([avatarId])
+    expect(inventory.rows.map((row: { id: string }) => row.id)).toEqual([avatarId])
+    expect(inventory.rows[0]).toMatchObject({
+      objectKey: plan.copied[0].targetObjectKey,
+      cloudFileId: result.updates[0].cloudFileId,
+    })
+    expect(manifest).toMatchObject({
+      rowCount: 1,
+      excludedRowCount: 1,
+      mediaCopy: {
+        copiedCount: 1,
+        excludedCount: 1,
+        excludedReferences: 'verified-absent',
+      },
+    })
+    expect(mediaTable).toMatchObject({
+      sourceRows: 2,
+      rowsExported: 1,
+      rowsBefore: 1,
+      rowsAfter: 1,
+      excludedRows: 1,
+    })
+    expect(manifest.exclusions).toContainEqual({
+      table: 'mip_media_assets',
+      reason: 'MEDIA_COPY_PLAN_EXCLUDED',
+      excludedRows: 1,
+    })
+    expect(checksums).toContain(`${mediaTable.sha256}  data/mip_media_assets.jsonl`)
+    expect(checksums).toContain(`${manifest.mediaInventory.sha256}  inventory/media.json`)
+  })
+
+  it('fails before package mutation when a retained table references excluded media', async () => {
+    const content = Buffer.from('package-avatar-content')
+    const fixture = writeExportPackage([
+      longTermRow({ id: avatarId, purpose: 'AVATAR', content }),
+      ephemeralAudioRow(Buffer.from('temporary-audio')),
+    ])
+    const plan = copyPlan(fixture.directory)
+    const result = await executeMipLongTermMediaCopy({
+      plan,
+      transport: {
+        downloadSource: async () => content,
+        uploadTarget: async ({ objectKey }: { objectKey: string }) => (
+          `cloud://${targetAuthority}/${objectKey}`
+        ),
+        downloadTarget: async () => content,
+      },
+    })
+    const transformed = writeTransformedPackage(fixture.rows, [{
+      app_id: targetAppId,
+      user_id: userId,
+      avatar_asset_id: aiAudioId,
+    }])
+
+    expect(() => applyMipMediaCopyResultToTransformedPackage({
+      packageDirectory: transformed,
+      sourceAppId,
+      targetAppId,
+      plan,
+      result,
+    })).toThrow('MIP_MEDIA_COPY_EXCLUDED_MEDIA_REFERENCE')
+    expect(readJsonLines(path.join(transformed, 'data', 'mip_media_assets.jsonl')))
+      .toHaveLength(2)
+  })
+
   it('stops before upload when downloaded bytes do not match the export inventory', async () => {
     const content = Buffer.from('expected-avatar-content')
     const fixture = writeExportPackage([
@@ -514,6 +615,19 @@ function temporaryExportRow(content: Buffer) {
   })
 }
 
+function temporaryMembershipInvitationRow(content: Buffer) {
+  const appScope = mediaObjectScope(sourceSecret, sourceAppId)
+  const objectKey = `mip/development/${appScope}/generated/${membershipInvitationId}.png`
+  return mediaRow({
+    id: membershipInvitationId,
+    purpose: 'MEMBERSHIP_INVITATION_CODE',
+    content,
+    contentType: 'image/png',
+    objectKey,
+    ownerUserId: userId,
+  })
+}
+
 function mediaRow({
   id,
   purpose,
@@ -620,29 +734,107 @@ function writeExportPackage(rows: Array<Record<string, unknown>>) {
   return { directory, rows }
 }
 
-function writeTransformedPackage(sourceRows: Array<Record<string, unknown>>) {
+function writeTransformedPackage(
+  sourceRows: Array<Record<string, unknown>>,
+  profileRows: Array<Record<string, unknown>> = [],
+) {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'mip-media-transformed-test-'))
   temporaryDirectories.push(directory)
   fs.mkdirSync(path.join(directory, 'data'), { mode: 0o700 })
+  fs.mkdirSync(path.join(directory, 'inventory'), { mode: 0o700 })
   const dataPath = path.join(directory, 'data', 'mip_media_assets.jsonl')
   const rows = sourceRows.map(row => ({ ...row, app_id: targetAppId }))
   writePrivate(dataPath, `${rows.map(row => JSON.stringify(row)).join('\n')}\n`)
   const digest = sha256(fs.readFileSync(dataPath))
-  writePrivate(path.join(directory, 'checksums.sha256'), `${digest}  data/mip_media_assets.jsonl\n`)
+  const inventoryRows = rows.map(row => ({
+    id: row.id,
+    ownerUserId: row.owner_user_id,
+    purpose: row.purpose,
+    objectKey: row.object_key,
+    cloudFileId: row.cloud_file_id,
+    contentSha256: row.content_sha256,
+    contentType: row.content_type,
+    contentBytes: row.content_bytes,
+    status: row.status,
+  })).sort((left, right) => (
+    String(left.objectKey).localeCompare(String(right.objectKey))
+    || String(left.id).localeCompare(String(right.id))
+  ))
+  const inventory = {
+    format: 'mip-media-inventory-v1',
+    sourceTable: 'mip_media_assets',
+    rows: inventoryRows,
+    objectCount: inventoryRows.length,
+    readyObjectCount: inventoryRows.filter(row => row.status === 'READY').length,
+    contentBytes: inventoryRows.reduce((total, row) => total + Number(row.contentBytes), 0),
+    recordsSha256: sha256(
+      inventoryRows.map(row => JSON.stringify(row)).join('\n') + (inventoryRows.length ? '\n' : ''),
+    ),
+  }
+  const inventoryPath = path.join(directory, 'inventory', 'media.json')
+  writePrivate(inventoryPath, `${JSON.stringify(inventory, null, 2)}\n`)
+  const tables = [{
+    table: 'mip_media_assets',
+    scope: 'source-app',
+    relativeFile: 'data/mip_media_assets.jsonl',
+    primaryKey: ['id'],
+    rowsBefore: rows.length,
+    rowsExported: rows.length,
+    rowsAfter: rows.length,
+    rowCountStable: true,
+    sourceRows: rows.length,
+    excludedRows: 0,
+    bytes: fs.statSync(dataPath).size,
+    sha256: digest,
+  }]
+  if (profileRows.length > 0) {
+    const profilePath = path.join(directory, 'data', 'mip_profiles.jsonl')
+    writePrivate(profilePath, `${profileRows.map(row => JSON.stringify(row)).join('\n')}\n`)
+    tables.push({
+      table: 'mip_profiles',
+      scope: 'source-app',
+      relativeFile: 'data/mip_profiles.jsonl',
+      primaryKey: ['user_id'],
+      rowsBefore: profileRows.length,
+      rowsExported: profileRows.length,
+      rowsAfter: profileRows.length,
+      rowCountStable: true,
+      sourceRows: profileRows.length,
+      excludedRows: 0,
+      bytes: fs.statSync(profilePath).size,
+      sha256: sha256(fs.readFileSync(profilePath)),
+    })
+  }
+  const checksumEntries = [
+    ...tables.map(table => [table.relativeFile, table.sha256]),
+    ['inventory/media.json', sha256(fs.readFileSync(inventoryPath))],
+  ].sort(([left], [right]) => left.localeCompare(right))
+  writePrivate(path.join(directory, 'checksums.sha256'), `${checksumEntries
+    .map(([relativeFile, hash]) => `${hash}  ${relativeFile}`)
+    .join('\n')}\n`)
   writePrivate(path.join(directory, 'manifest.json'), `${JSON.stringify({
     format: 'mip-app-scope-transform-v1',
     migrationReadiness: 'transformed-verified',
     sourceAppScopeFingerprint: sha256(sourceAppId).slice(0, 16),
     targetAppScopeFingerprint: sha256(targetAppId).slice(0, 16),
-    tables: [{
-      table: 'mip_media_assets',
-      relativeFile: 'data/mip_media_assets.jsonl',
-      rowsExported: rows.length,
-      bytes: fs.statSync(dataPath).size,
-      sha256: digest,
-    }],
+    rowCount: rows.length + profileRows.length,
+    excludedRowCount: 0,
+    exclusions: [],
+    tables,
+    mediaInventory: {
+      relativeFile: 'inventory/media.json',
+      sha256: sha256(fs.readFileSync(inventoryPath)),
+      objectCount: inventory.objectCount,
+      readyObjectCount: inventory.readyObjectCount,
+      contentBytes: inventory.contentBytes,
+    },
   }, null, 2)}\n`)
   return directory
+}
+
+function readJsonLines(filePath: string) {
+  const content = fs.readFileSync(filePath, 'utf8')
+  return content ? content.trimEnd().split('\n').map(line => JSON.parse(line)) : []
 }
 
 function writePrivate(filePath: string, content: string) {

@@ -59,7 +59,7 @@
 - 14/14 个已认证路由已完成线上真实只读验收。真实 JPEG 上传后，以该素材保存 `INACTIVE` Banner 并软删除成功。
 - `USERS` 敏感导出以 `includesPhone=false` 和唯一无匹配条件完成：`rowCount=0`，HTTPS 下载的 ZIP magic、字节数和 SHA-256 均与服务端声明一致，ticket 最终为 `CONSUMED`，验收进程内文件字节已清零。
 - 14 个路由已经在 1440×900 与 390×844 逐页检查标题、致命错误与根级横向溢出；概览另在 1280×720 检查。截图见 [1280×720](screenshots/react/overview-1280x720.jpg)、[1440×900](screenshots/react/overview-1440x900.jpg) 和 [390×844](screenshots/react/overview-390x844.jpg)。
-- Workbuddy 与 React 的 1280×720 来源/实现截图已组成[左右对照图](screenshots/comparison/workbuddy-vs-react-1280x720.jpg)；当前可解决的 P0/P1/P2 视觉问题已经处理，证据边界见 `design-qa.md` 与[本轮生产证据](../../docs/mip/evidence/admin-web-live-2026-08-28-react/README.md)。
+- Workbuddy 与 React 的 1280×720 来源/实现截图已组成[左右对照图](screenshots/comparison/workbuddy-vs-react-1280x720.jpg)；当前可解决的 P0/P1/P2 视觉问题已经处理，证据边界见[设计 QA](../design-qa.md)与[本轮生产证据](../../docs/mip/evidence/admin-web-live-2026-08-28-react/README.md)。
 
 ## 仍缺少的能力
 

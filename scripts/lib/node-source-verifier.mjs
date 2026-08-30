@@ -91,7 +91,8 @@ export function verifyNodeSources({
   for (const file of sourceFiles) {
     runNode(normalizedCwd, ['--check', file], env)
   }
-  runNode(normalizedCwd, ['--test', ...testFiles], env)
+  // Keep the large Cloud Function suite deterministic on fixed-size CI runners.
+  runNode(normalizedCwd, ['--test', '--test-concurrency=1', ...testFiles], env)
 
   return {
     sourceCount: sourceFiles.length,

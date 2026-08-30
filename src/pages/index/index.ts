@@ -34,7 +34,7 @@ function presentEvent(event: MipEventListItem): DiscoverEvent {
     : event.accessType === 'PAID' ? '付费活动' : '免费活动'
   return {
     ...event,
-    coverUrl: event.coverUrl || mipOperationsConfig.defaultCoverPaths.event,
+    coverUrl: event.coverUrl || '',
     startsText: formatLocalMonthDayTime(event.startsAt),
     locationText: [event.cityName, event.venueName].filter(Boolean).join(' · ') || '地点待公布',
     accessLabel,
@@ -81,9 +81,18 @@ Page({
     announcement: null as AnnouncementSummary | null,
     hasAnnouncements: false,
   },
+  announcementRequestSeq: 0,
   onShow() {
     syncCaseNavigation(this, 'pages/index/index')
     void this.loadDiscover()
+  },
+
+  onHide() {
+    this.announcementRequestSeq += 1
+  },
+
+  onUnload() {
+    this.announcementRequestSeq += 1
   },
 
   async loadDiscover(options: { force?: boolean } = {}) {
@@ -148,8 +157,13 @@ Page({
 
   async loadAnnouncements(branchId?: BranchId | '') {
     const selectedBranchId = branchId ?? this.data.primaryBranchId
+    const requestSeq = this.announcementRequestSeq + 1
+    this.announcementRequestSeq = requestSeq
     try {
       const page = await mipAnnouncementsModule.list({ branchId: selectedBranchId || undefined, limit: 5 })
+      if (requestSeq !== this.announcementRequestSeq || selectedBranchId !== this.data.primaryBranchId) {
+        return
+      }
       this.setData({
         hasAnnouncements: page.items.length > 0,
         announcement: page.items.find(item => item.isPinned) || null,

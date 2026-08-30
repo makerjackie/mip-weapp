@@ -125,7 +125,7 @@ const protectedIntent = {
   action: 'REGISTER_EVENT' as const,
   source: {
     navigation: 'redirectTo' as const,
-    route: '/packages/member/event-detail/index',
+    route: '/packages/member/mip-events/detail/index',
     query: { id: 'event-1' },
   },
 }
@@ -355,7 +355,7 @@ describe('MIP resumable identity access', () => {
     })
     expect(restored.peekIntent('cold-intent')).toMatchObject({
       action: 'REGISTER_EVENT',
-      source: { route: '/packages/member/event-detail/index' },
+      source: { route: '/packages/member/mip-events/detail/index' },
     })
     restored.cancel('cold-intent')
     expect(memory.value()).toBeUndefined()

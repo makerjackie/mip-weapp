@@ -25,7 +25,6 @@ interface CardTheme {
 
 const CARD_WIDTH = 702
 const CARD_HEIGHT = 492
-const GENERIC_MINI_PROGRAM_CODE = '/assets/brand/mip-mini-program-qrcode.jpg'
 const themes: Record<CardStyleKey, CardTheme> = {
   PINK: {
     key: 'PINK',
@@ -174,7 +173,6 @@ Page({
     const organization = profile.organizations?.[0]
     const contact = privateProfile.privateContact
     const contactVisibility = privateProfile.visibility.cardContacts
-    const effectiveCodeUrl = codeUrl || GENERIC_MINI_PROGRAM_CODE
     this.profileRef = snapshot.profileRef || ''
     this.setData({
       state: 'ready',
@@ -196,8 +194,8 @@ Page({
       wechat: contactVisibility?.wechat ? compactText(contact?.wechat) : '',
       email: contactVisibility?.email ? compactText(contact?.email) : '',
       address: contactVisibility?.address ? compactText(contact?.address) : '',
-      codeUrl: effectiveCodeUrl,
-      codeMessage: codeUrl ? '' : '当前显示通用小程序二维码，可稍后重试专属名片码。',
+      codeUrl,
+      codeMessage: codeUrl ? '' : '名片码暂时不可用，可稍后重试。',
       posterPath: '',
       message: '',
     })

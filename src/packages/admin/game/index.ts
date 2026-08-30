@@ -35,7 +35,8 @@ function rankingFailure(error: unknown, fallback: string): { state: 'error' | 'c
 }
 
 function dateText(value: string) {
-  return value ? new Date(value).toISOString().slice(0, 10) : ''
+  const date = new Date(value)
+  return Number.isFinite(date.getTime()) ? date.toISOString().slice(0, 10) : ''
 }
 function isoDay(value: string, end = false) {
   return new Date(`${value}T${end ? '23:59:59' : '00:00:00'}+08:00`).toISOString()

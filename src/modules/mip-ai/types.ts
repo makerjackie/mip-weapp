@@ -83,17 +83,20 @@ export interface AiDraftPage {
 export interface AiTextDraftIntent {
   purpose: AiDraftPurpose
   transcriptText: string
+  requestId?: string
 }
 
 export interface AiVoiceDraftIntent {
   purpose: AiDraftPurpose
   audioAssetId: string
+  requestId?: string
 }
 
 export interface AiVoiceUploadIntent {
   purpose: AiDraftPurpose
   audioBase64: string
   contentType: 'audio/mpeg'
+  requestId?: string
 }
 
 export interface AiDraftRefinementIntent {

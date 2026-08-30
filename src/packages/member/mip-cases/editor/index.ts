@@ -71,6 +71,7 @@ Page({
     cityOptions: [{ id: '', label: '未选择' }],
     industryOptions: [{ id: '', label: '未选择' }],
   },
+  navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
 
   onLoad(options: Record<string, string | undefined>) {
     this.setData({
@@ -78,6 +79,21 @@ Page({
       aiDraftId: String(options.aiDraftId || ''),
     })
     void this.initialize()
+  },
+
+  onHide() {
+    this.clearNavigationTimer()
+  },
+
+  onUnload() {
+    this.clearNavigationTimer()
+  },
+
+  clearNavigationTimer() {
+    if (this.navigationTimer !== undefined) {
+      clearTimeout(this.navigationTimer)
+      this.navigationTimer = undefined
+    }
   },
 
   openAiAssistant() {
@@ -295,7 +311,11 @@ Page({
         publicationStatusText: publicationStatusText(status),
       })
       wx.showToast({ title: result.status === 'PUBLISHED' ? '案例已发布' : '草稿已保存', icon: 'success' })
-      setTimeout(() => wx.navigateBack(), 500)
+      this.clearNavigationTimer()
+      this.navigationTimer = setTimeout(() => {
+        this.navigationTimer = undefined
+        wx.navigateBack()
+      }, 500)
     }
     catch (error) {
       this.setData({ message: error instanceof Error ? error.message : '保存失败' })

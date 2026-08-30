@@ -22,9 +22,10 @@ function pngFile() {
 
 describe('admin media API client', () => {
   it('uses only the dedicated same-origin endpoint and strict upload envelope', async () => {
-    let captured: { url: string; init: RequestInit } | null = null
+    const captured: { url: string; init: RequestInit } = { url: '', init: {} }
     globalThis.fetch = async (input, init) => {
-      captured = { url: String(input), init: init || {} }
+      captured.url = String(input)
+      captured.init = init || {}
       return Response.json({
         ok: true,
         data: { assetId, imageUrl: 'cloud://env.mip/mip/live/app/banners/image.png' },
@@ -37,10 +38,10 @@ describe('admin media API client', () => {
       assetId,
       imageUrl: 'cloud://env.mip/mip/live/app/banners/image.png',
     })
-    assert.equal(captured?.url, '/api/media/image')
-    assert.equal(captured?.init.method, 'POST')
-    assert.equal(captured?.init.credentials, 'same-origin')
-    assert.deepEqual(JSON.parse(String(captured?.init.body)), {
+    assert.equal(captured.url, '/api/media/image')
+    assert.equal(captured.init.method, 'POST')
+    assert.equal(captured.init.credentials, 'same-origin')
+    assert.deepEqual(JSON.parse(String(captured.init.body)), {
       action: 'mip.admin.media.uploadImage',
       input: {
         purpose: 'BANNER',

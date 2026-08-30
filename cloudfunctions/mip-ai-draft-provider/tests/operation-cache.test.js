@@ -24,3 +24,25 @@ test('coalesces duplicate operations and rejects a reused key with changed conte
     /IDEMPOTENCY_CONFLICT/,
   )
 })
+
+test('fails closed instead of evicting a different in-flight draft operation', async () => {
+  const cache = createOperationCache({ maximumEntries: 1 })
+  let calls = 0
+  let release
+  const pending = new Promise(resolve => { release = resolve })
+  const operation = async () => {
+    calls += 1
+    await pending
+    return { ok: true }
+  }
+  const first = cache.run('first', 'digest-1', operation)
+  const replay = cache.run('first', 'digest-1', operation)
+  await assert.rejects(
+    () => cache.run('second', 'digest-2', async () => ({ ok: true })),
+    /UPSTREAM_UNAVAILABLE/,
+  )
+  release()
+  assert.deepEqual(await first, { ok: true })
+  assert.deepEqual(await replay, { ok: true })
+  assert.equal(calls, 1)
+})

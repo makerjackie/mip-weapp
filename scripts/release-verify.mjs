@@ -5,7 +5,7 @@ import process from 'node:process'
 
 const root = path.resolve(import.meta.dirname, '..')
 const steps = [
-  ['verify', ['pnpm', 'verify']],
+  ['verify:all', ['pnpm', 'verify:all']],
   ['cloud:doctor', ['pnpm', 'cloud:doctor']],
 ]
 

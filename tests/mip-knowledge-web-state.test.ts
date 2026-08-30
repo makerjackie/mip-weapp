@@ -6,12 +6,9 @@ const knowledgeModule = vi.hoisted(() => ({
   getContent: vi.fn(),
 }))
 
-vi.mock('../src/modules/mip-knowledge', async () => {
-  const { resolveKnowledgeWebviewUrl: resolveUrl } = await import(
-    '../src/modules/mip-knowledge/webview-url',
-  )
-  return { mipKnowledgeModule: knowledgeModule, resolveKnowledgeWebviewUrl: resolveUrl }
-})
+vi.mock('../src/modules/mip-knowledge/module', () => ({
+  mipKnowledgeModule: knowledgeModule,
+}))
 
 vi.mock('../src/config/runtime', () => ({
   runtimeConfig: { knowledgeWebviewAllowedHosts: ['content.example.com'] },

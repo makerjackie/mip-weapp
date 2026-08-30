@@ -201,6 +201,38 @@ test('retries a draft transport once with the exact same stable request identity
   assert.equal(requests[0].signature, requests[1].signature)
 })
 
+test('classifies transport loss as an unknown result and explicit provider failures separately', async () => {
+  const secret = 's'.repeat(48)
+  const input = {
+    appId: 'wx1234567890abcdef',
+    draftId: '20000000-0000-4000-8000-000000000001',
+    purpose: 'PROFILE',
+    expectedVersion: 1,
+    transcriptText: '资料内容',
+  }
+  const unknown = createCloudAiProvider({
+    async callFunction() { throw new Error('transport response lost') },
+  }, 'mip-ai-draft-provider', secret)
+  await assert.rejects(() => unknown.structureText(input), /AI_PROVIDER_RESULT_UNKNOWN/)
+
+  const rejected = createCloudAiProvider({
+    async callFunction() {
+      return {
+        result: {
+          ok: false,
+          error: { code: 'AI_DRAFT_PROVIDER_REQUEST_INVALID', retryable: false },
+        },
+      }
+    },
+  }, 'mip-ai-draft-provider', secret)
+  await assert.rejects(() => rejected.structureText(input), /AI_PROVIDER_REJECTED/)
+
+  const invalid = createCloudAiProvider({
+    async callFunction() { return { result: { ok: true } } },
+  }, 'mip-ai-draft-provider', secret)
+  await assert.rejects(() => invalid.structureText(input), /AI_PROVIDER_RESPONSE_INVALID/)
+})
+
 test('binds all refinement context while allowing a structured-only response', async () => {
   const secret = 'ai-provider-secret-that-is-longer-than-thirty-two'
   let request

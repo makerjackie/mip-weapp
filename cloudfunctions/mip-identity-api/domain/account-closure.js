@@ -287,6 +287,19 @@ async function revokeAndMinimize(tx, input) {
      WHERE app_id = ? AND user_id = ? AND status <> 'DELETED'`,
     [appId, user.id],
   ))
+  effects.aiDraftRequests = affected(await tx.query(
+    `UPDATE mip_ai_draft_requests
+     SET response_json = NULL, failure_code = 'ACCOUNT_CLOSED',
+       lease_token = NULL, lease_expires_at = NULL, status = 'FAILED'
+     WHERE app_id = ? AND user_id = ?`,
+    [appId, user.id],
+  ))
+  effects.membershipInvitationCodes = affected(await tx.query(
+    `UPDATE mip_membership_invitation_codes
+     SET status = 'EXPIRED', lease_token = NULL, lease_expires_at = NULL
+     WHERE app_id = ? AND inviter_user_id = ? AND status IN ('PENDING', 'READY')`,
+    [appId, user.id],
+  ))
   effects.profile = affected(await tx.query(
     `UPDATE mip_profiles
      SET nickname = '已注销用户', avatar_asset_id = NULL, identity_status = NULL,

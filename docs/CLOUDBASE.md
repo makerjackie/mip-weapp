@@ -2,6 +2,13 @@
 
 MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存储和运行时账号上建立独立边界。真实 AppID、EnvID、MySQL URI、商户凭证和内部密钥只放本机 `.env.local` 或 Cloud Function 环境变量，不进入仓库。
 
+## 图片资源边界
+
+- TabBar 回退图标、品牌 Logo、小型界面图标、固定卡片插画、名片背景和压缩后的徽章兜底图随小程序代码发布，保证应用外壳无需网络即可呈现。
+- Banner、活动/机会/案例封面、头像、相册、任务附件和专属小程序码属于业务或运营内容，必须通过 `mip-media-api` 写入 `mip/` 对象存储，并在数据库保留素材引用或永久 `cloud://` 文件 ID。
+- 客户端不硬编码临时 CDN 地址，也不在业务图片缺失时展示设计稿或通用二维码冒充正式内容；页面使用无图状态或小型中性占位。
+- development/test 演示媒体保存在 `database/mysql/mip/demo-assets/`，只由 `pnpm seed:demo` 上传并校验；这些文件不进入小程序 `src/`，production 禁止运行 demo seed。
+
 ## 当前云端事实（2026-08-28）
 
 | 范围 | 当前事实 | 结论 |
@@ -12,6 +19,8 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 | 管理授权 | 环境 API Key 可完成环境和 MySQL 操作；主账号 Device Flow 可完成 SCF 管控面部署 | 两种凭证边界已分别验证；当前固定 MCP `2.32.3`，设备登录解决了环境 API Key 临时 STS 被拒绝的问题 |
 | 核心函数 | 当前工作区对应的 16 个核心 `mip-*` 函数已部署，Nodejs20.19、目标 VPC/子网、运行时环境和真实 MySQL 健康均已回读 | 云端已验证；Task、Banner、Game、Media Web bridge 已包含在当前部署中 |
 | 调用边界与 worker | 客户端 API 对已登录用户开放，payment ledger、notification worker 与 outbox worker 保持受保护，禁止的 5 分钟 timer 不存在 | 最新独立 `cloud:verify` 通过 |
+
+仓库现已追加 057–058 两个未部署迁移，用于 AI 请求幂等和会员邀请码分配。上表的 56 个迁移、122 张表与函数部署状态是 2026-08-28 的生产读回事实，不覆盖这两个新增迁移；在完成新备份、迁移、124 张表权限收敛和函数部署回读前，不能声明它们已在线生效。
 
 2026-08-24 的首次 API Key 部署在原始 SCF `CreateFunction` 被拒绝；升级 MCP 并使用资源主账号 Device Flow 后完成函数创建。2026-08-25 的代码更新先严格回读现有 VPC、运行时和环境变量，配置完全一致的函数只执行 `updateFunctionCode`，随后 16/16 函数部署和独立 `cloud:verify` 均通过。`managePermissions` 仍只负责 CloudBase 资源安全规则，不能修改 CAM 或 STS policy。
 

@@ -44,6 +44,7 @@ Page({
     fields: [] as FieldView[],
     abilities: cooperationAbilityDimensions.map(item => ({ ...item, score: 3 })) as AbilityView[],
   },
+  navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
 
   onLoad(options: Record<string, string | undefined>) {
     this.setData({
@@ -51,6 +52,21 @@ Page({
       aiDraftId: String(options.aiDraftId || ''),
     })
     void this.initialize()
+  },
+
+  onHide() {
+    this.clearNavigationTimer()
+  },
+
+  onUnload() {
+    this.clearNavigationTimer()
+  },
+
+  clearNavigationTimer() {
+    if (this.navigationTimer !== undefined) {
+      clearTimeout(this.navigationTimer)
+      this.navigationTimer = undefined
+    }
   },
 
   async initialize() {
@@ -188,7 +204,11 @@ Page({
         })
       }
       else {
-        setTimeout(() => wx.navigateBack(), 500)
+        this.clearNavigationTimer()
+        this.navigationTimer = setTimeout(() => {
+          this.navigationTimer = undefined
+          wx.navigateBack()
+        }, 500)
       }
     }
     catch (error) {

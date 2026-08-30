@@ -4,8 +4,8 @@ import type {
   KnowledgeSchedule,
   KnowledgeScheduleSaveInput,
   KnowledgeScheduleStatus,
-} from '../../../modules/mip-knowledge'
-import { mipKnowledgeAdminModule } from '../../../modules/mip-knowledge'
+} from '../../../modules/mip-knowledge/admin'
+import { mipKnowledgeAdminModule } from '../../../modules/mip-knowledge/admin'
 import { adminLoadFailure } from '../shared/page-state'
 
 type EditorKind = '' | 'SOURCE' | 'CATEGORY' | 'CONTENT' | 'SCHEDULE'

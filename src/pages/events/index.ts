@@ -30,18 +30,6 @@ interface EventFilterOptionView extends EventDiscoveryOption {
 
 type EventBannerView = MipPublicBanner
 
-function fallbackEventBanners(): EventBannerView[] {
-  return mipOperationsConfig.eventBanners.map((item, index) => ({
-    id: item.id,
-    title: item.accessibilityLabel,
-    accessibilityLabel: item.accessibilityLabel,
-    imageUrl: item.imagePath,
-    targetType: item.targetType === 'ARTICLE' ? 'ARTICLE_URL' : 'MINIPROGRAM_PATH',
-    targetValue: item.target,
-    sortOrder: index * 10,
-  }))
-}
-
 function formatDateTime(value: string) {
   const date = new Date(value)
   if (!Number.isFinite(date.getTime())) {
@@ -105,7 +93,7 @@ function presentEvent(event: MipEventListItem): EventCardView {
   const eventTypeLabel = publicEventTypeLabel(event.eventTypeLabel)
   return {
     ...event,
-    coverUrl: event.coverUrl || mipOperationsConfig.defaultCoverPaths.event,
+    coverUrl: event.coverUrl || '',
     startsText: formatDateTime(event.startsAt),
     accessLabel: accessLabel(event),
     statusLabel: statusLabel(event),
@@ -139,7 +127,7 @@ Page({
     view: 'UPCOMING' as EventListView,
     dateFilter: 'RECENT' as EventDateFilter,
     events: [] as EventCardView[],
-    banners: fallbackEventBanners(),
+    banners: [] as EventBannerView[],
     videoChannelConfigured: Boolean(mipOperationsConfig.videoChannelFinderUserName),
     cities: [] as string[],
     selectedCity: '',
@@ -269,13 +257,9 @@ Page({
   async loadBanners(force = false) {
     try {
       const banners = await mipBannerModule.listActive(force)
-      this.setData({ banners: banners.length ? banners : fallbackEventBanners() })
+      this.setData({ banners })
     }
-    catch {
-      if (!this.data.banners.length) {
-        this.setData({ banners: fallbackEventBanners() })
-      }
-    }
+    catch {}
   },
 
   async initializeDefaultCity() {

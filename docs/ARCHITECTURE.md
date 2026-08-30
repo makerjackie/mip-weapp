@@ -30,6 +30,6 @@ Web 页面 (admin-web/src/pages)
 - `pnpm verify` 不进入 `admin-web/`；`pnpm admin:web:verify` 不进入小程序目录；`pnpm verify:all` 是联合门禁。
 - `packages/admin-contracts` 是当前唯一共享 workspace package，只包含 AdminRequest v1 envelope；新增 package 必须证明两端真实调用和平台中立。
 
-`src/modules/membership` 是仍被部分页面使用的 MIP 兼容适配层，只指向隔离的 MIP 身份、活动和消息接口。仓库不再保留旧 `membership-*` 云函数、`member_*` 迁移或旧管理模块；静态门禁阻止当前代码回读共享旧表。
+旧 `src/modules/membership` 兼容适配层和未注册页面已经删除；用户端统一使用按领域拆分的 `src/modules/mip-*` 模块。仓库不再保留旧 `membership-*` 云函数、`member_*` 迁移或旧管理模块；静态门禁阻止当前代码回读共享旧表，并拒绝未在 `app.json` 声明的页面源码。
 
 数据库隔离见 [adr/0001-shared-cloudbase-isolation.md](adr/0001-shared-cloudbase-isolation.md)，支付名额决策见 [adr/0002-paid-event-registration.md](adr/0002-paid-event-registration.md)。

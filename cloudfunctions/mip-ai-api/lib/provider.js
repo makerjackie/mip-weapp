@@ -30,16 +30,35 @@ function createCloudAiProvider(cloud, functionName, secret, options = {}) {
     const request = digitalAvatar
       ? createAvatarProviderRequest(input, avatarSecret)
       : createDraftProviderRequest(action, input, secret)
-    const result = await callProviderFunction({
-      attempts: digitalAvatar ? 1 : 2,
-      cloud,
-      functionName: digitalAvatar ? avatarFunctionName : functionName,
-      request,
-      timeoutMs: digitalAvatar ? avatarTimeoutMs : timeoutMs,
-    })
+    let result
+    try {
+      result = await callProviderFunction({
+        attempts: digitalAvatar ? 1 : 2,
+        cloud,
+        functionName: digitalAvatar ? avatarFunctionName : functionName,
+        request,
+        timeoutMs: digitalAvatar ? avatarTimeoutMs : timeoutMs,
+      })
+    }
+    catch (error) {
+      if (digitalAvatar) throw error
+      throw new Error('AI_PROVIDER_RESULT_UNKNOWN')
+    }
     const envelope = result?.result
-    if (!envelope || envelope.ok !== true) {
-      throw new Error('AI_PROVIDER_UNAVAILABLE')
+    if (!envelope || typeof envelope !== 'object' || typeof envelope.ok !== 'boolean') {
+      throw new Error(digitalAvatar ? 'AI_PROVIDER_UNAVAILABLE' : 'AI_PROVIDER_RESPONSE_INVALID')
+    }
+    if (envelope.ok !== true) {
+      if (digitalAvatar) throw new Error('AI_PROVIDER_UNAVAILABLE')
+      if (envelope.error?.code === 'AI_DRAFT_PROVIDER_RESPONSE_INVALID') {
+        throw new Error('AI_PROVIDER_RESPONSE_INVALID')
+      }
+      if (envelope.error?.retryable === false
+        && ['FORBIDDEN', 'IDEMPOTENCY_CONFLICT', 'AI_DRAFT_PROVIDER_REQUEST_INVALID']
+          .includes(envelope.error?.code)) {
+        throw new Error('AI_PROVIDER_REJECTED')
+      }
+      throw new Error('AI_PROVIDER_RESULT_UNKNOWN')
     }
     const data = digitalAvatar
       ? verifyAvatarProviderResponse(envelope, request, avatarSecret)

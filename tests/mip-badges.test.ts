@@ -1,6 +1,6 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { badgeArtFallback } from '../src/config/mip-badge-art'
+import { badgeArtFallback, badgeArtUrl } from '../src/config/mip-badge-art'
 import {
   canApplyBadgeLoad,
   filterBadgeItems,
@@ -17,14 +17,32 @@ function source(path: string) {
 describe('MIP badge collection', () => {
   it('uses local generated art only when the server has no badge image', () => {
     expect(badgeArtFallback('event_participant', '活动参与')).toBe(
-      '/packages/member/assets/generated/badges/badge-attendance.png',
+      '/packages/member/assets/generated/badges/badge-attendance.webp',
     )
     expect(badgeArtFallback('growth_level', '成长等级')).toBe(
-      '/packages/member/assets/generated/badges/badge-growth.png',
+      '/packages/member/assets/generated/badges/badge-growth.webp',
     )
     expect(badgeArtFallback('community_connector', '社区连接')).toBe(
-      '/packages/member/assets/generated/badges/badge-collaboration.png',
+      '/packages/member/assets/generated/badges/badge-collaboration.webp',
     )
+    expect(badgeArtUrl(
+      '/packages/member/assets/generated/badges/badge-attendance.png',
+      'event_participant',
+    )).toBe('/packages/member/assets/generated/badges/badge-attendance.webp')
+    expect(badgeArtUrl('cloud://example/badges/attendance.png', 'event_participant'))
+      .toBe('cloud://example/badges/attendance.png')
+    const badgeFiles = readdirSync(new URL('../src/packages/member/assets/generated/badges/', import.meta.url))
+    expect(badgeFiles.filter(file => file.endsWith('.png'))).toEqual([])
+    expect(badgeFiles.filter(file => file.endsWith('.webp'))).toHaveLength(6)
+
+    const seed = JSON.parse(source('database/mysql/mip/seed.demo.json')) as {
+      badges: Array<{ imageUrl?: string }>
+    }
+    expect(seed.badges
+      .map(item => item.imageUrl || '')
+      .filter(url => url.includes('/packages/member/assets/generated/badges/'))
+      .every(url => url.endsWith('.webp')))
+      .toBe(true)
   })
 
   it('keeps local display order and separates equipped from equippable badges', () => {
@@ -137,8 +155,8 @@ describe('MIP badge collection', () => {
 
   it('keeps the profile primary badge visible when the server omits visual art', () => {
     const profilePage = source('src/pages/profile/index.ts')
-    expect(profilePage).toContain('import { badgeArtFallback } from \'../../config/mip-badge-art\'')
-    expect(profilePage).toContain('imageUrl: equippedBadges[0].imageUrl || badgeArtFallback(equippedBadges[0].key, equippedBadges[0].name)')
+    expect(profilePage).toContain('import { badgeArtUrl } from \'../../config/mip-badge-art\'')
+    expect(profilePage).toContain('imageUrl: badgeArtUrl(equippedBadges[0].imageUrl, equippedBadges[0].key, equippedBadges[0].name)')
   })
 
   it('locks a server-constrained three-slot award model and exact grants', () => {

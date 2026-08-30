@@ -3,7 +3,7 @@ import type { CooperationCardSummary } from '../../modules/mip-cooperation'
 import type { BadgeCollectionItem } from '../../modules/mip-growth'
 import type { IdentityAccessSnapshot, ProtectedActionKey } from '../../modules/mip-identity'
 import type { OpportunitySummary } from '../../modules/mip-opportunities'
-import { badgeArtFallback } from '../../config/mip-badge-art'
+import { badgeArtUrl } from '../../config/mip-badge-art'
 import { cooperationRoles } from '../../config/mip-catalogs'
 import { superCaseModule } from '../../modules/mip-cases'
 import { cooperationModule } from '../../modules/mip-cooperation'
@@ -315,7 +315,7 @@ Page({
       const primaryBadge = equippedBadges[0]
         ? {
             ...equippedBadges[0],
-            imageUrl: equippedBadges[0].imageUrl || badgeArtFallback(equippedBadges[0].key, equippedBadges[0].name),
+            imageUrl: badgeArtUrl(equippedBadges[0].imageUrl, equippedBadges[0].key, equippedBadges[0].name),
           }
         : null
       this.setData({

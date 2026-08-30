@@ -5,6 +5,7 @@ import process from 'node:process'
 
 const root = path.resolve(import.meta.dirname, '..')
 const steps = [
+  ['verify:toolchain', ['node', 'scripts/verify-toolchain.mjs']],
   ['architecture:check', ['node', 'scripts/architecture-check.mjs']],
   ['mip:isolation:check', ['node', 'scripts/mip-isolation-check.mjs']],
   ['security:check', ['node', 'scripts/security-check.mjs']],

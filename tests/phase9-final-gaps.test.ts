@@ -146,12 +146,12 @@ describe('phase9 final gap contracts', () => {
   it('real pages latch confirmations and drop superseded roster responses', () => {
     const events = read('src/packages/admin/events/index.ts')
     const roster = read('src/packages/admin/event-registrations/index.ts')
-    const ticket = read('src/packages/member/ticket/index.ts')
+    const eventDetail = read('src/packages/member/mip-events/detail/index.ts')
     const profiles = read('src/packages/admin/profiles/index.ts')
     const orders = read('src/packages/admin/orders/index.ts')
 
     expect(events).toMatch(/cancelBusy: true[\s\S]*?showModal/)
-    expect(ticket).toMatch(/busy: true[\s\S]*?showModal/)
+    expect(eventDetail).toMatch(/busy: true[\s\S]*?showModal/)
     expect(profiles).toMatch(/processingId: userId[\s\S]*?showModal/)
     expect(orders).toMatch(/processingId: orderId[\s\S]*?showModal/)
     expect(roster).toMatch(/this\.confirmationBusy = true[\s\S]*?showModal/)

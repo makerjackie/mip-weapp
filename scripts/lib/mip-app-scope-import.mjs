@@ -2,7 +2,12 @@ import { Buffer } from 'node:buffer'
 import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
-import { APP_ID_MIGRATION_EXCLUSIONS } from './mip-app-id-migration-transform.mjs'
+import {
+  APP_ID_MIGRATION_EXCLUSIONS,
+  APP_ID_MIGRATION_MEDIA_EXCLUSION_REASON,
+  APP_ID_MIGRATION_ROW_EXCLUSIONS,
+  assertNoAppIdMigrationResidue,
+} from './mip-app-id-migration-transform.mjs'
 import {
   MIP_APP_SCOPE_TRACKING_TABLES,
   sha256,
@@ -384,6 +389,8 @@ function validateTransformManifest({
       || table.rowsBefore !== table.rowsExported
       || table.rowsAfter !== table.rowsExported
       || table.rowCountStable !== true
+      || !Number.isSafeInteger(table.sourceRows)
+      || table.sourceRows < table.rowsExported
       || !HASH_PATTERN.test(table.sha256)) {
       throw new Error('MIP_IMPORT_MANIFEST_INVALID')
     }
@@ -394,8 +401,14 @@ function validateTransformManifest({
     if (Object.hasOwn(APP_ID_MIGRATION_EXCLUSIONS, table.table) && table.rowsExported !== 0) {
       throw new Error('MIP_IMPORT_EXCLUSION_INVALID')
     }
+    const staticExclusion = Object.hasOwn(APP_ID_MIGRATION_EXCLUSIONS, table.table)
+      || Object.hasOwn(APP_ID_MIGRATION_ROW_EXCLUSIONS, table.table)
+    const mediaExclusion = table.table === 'mip_media_assets'
+      && Number.isSafeInteger(manifest.mediaCopy?.excludedCount)
+      && manifest.mediaCopy.excludedCount > 0
     if (!Number.isSafeInteger(table.excludedRows) || table.excludedRows < 0
-      || (!Object.hasOwn(APP_ID_MIGRATION_EXCLUSIONS, table.table) && table.excludedRows !== 0)) {
+      || (!staticExclusion && !mediaExclusion && table.excludedRows !== 0)
+      || table.sourceRows !== table.rowsExported + table.excludedRows) {
       throw new Error('MIP_IMPORT_EXCLUSION_INVALID')
     }
     rowCount += table.rowsExported
@@ -405,20 +418,32 @@ function validateTransformManifest({
   if (rowCount !== manifest.rowCount) {
     throw new Error('MIP_IMPORT_ROW_COUNT_INVALID')
   }
-  const expectedExclusions = requiredTables.filter(
-    table => Object.hasOwn(APP_ID_MIGRATION_EXCLUSIONS, table),
-  )
+  const expectedExclusions = new Map()
+  for (const table of requiredTables) {
+    const reason = APP_ID_MIGRATION_EXCLUSIONS[table]
+      || APP_ID_MIGRATION_ROW_EXCLUSIONS[table]
+    if (reason) {
+      expectedExclusions.set(table, reason)
+    }
+  }
+  if (Number.isSafeInteger(manifest.mediaCopy?.excludedCount)
+    && manifest.mediaCopy.excludedCount > 0) {
+    expectedExclusions.set('mip_media_assets', APP_ID_MIGRATION_MEDIA_EXCLUSION_REASON)
+  }
   if (!Array.isArray(manifest.exclusions)
-    || manifest.exclusions.length !== expectedExclusions.length) {
+    || manifest.exclusions.length !== expectedExclusions.size) {
     throw new Error('MIP_IMPORT_EXCLUSION_INVALID')
   }
   const exclusionsByTable = new Map(manifest.exclusions.map(item => [item?.table, item]))
+  if (exclusionsByTable.size !== manifest.exclusions.length) {
+    throw new Error('MIP_IMPORT_EXCLUSION_INVALID')
+  }
   let excludedRowCount = 0
-  for (const table of expectedExclusions) {
+  for (const [table, reason] of expectedExclusions) {
     const exclusion = exclusionsByTable.get(table)
     const tableEntry = manifest.tables.find(item => item.table === table)
-    if (!exclusion
-      || exclusion.reason !== APP_ID_MIGRATION_EXCLUSIONS[table]
+    if (!exclusion || !tableEntry
+      || exclusion.reason !== reason
       || exclusion.excludedRows !== tableEntry.excludedRows) {
       throw new Error('MIP_IMPORT_EXCLUSION_INVALID')
     }
@@ -426,6 +451,15 @@ function validateTransformManifest({
   }
   if (excludedRowCount !== manifest.excludedRowCount) {
     throw new Error('MIP_IMPORT_EXCLUSION_INVALID')
+  }
+  const mediaTable = manifest.tables.find(table => table.table === 'mip_media_assets')
+  if (mediaTable?.sourceRows > 0
+    && (manifest.mediaCopy?.format !== 'mip-long-term-media-copy-result-v1'
+      || manifest.mediaCopy.copiedCount !== mediaTable.rowsExported
+      || manifest.mediaCopy.excludedCount !== mediaTable.excludedRows
+      || manifest.mediaCopy.copiedCount + manifest.mediaCopy.excludedCount !== mediaTable.sourceRows
+      || manifest.mediaCopy.excludedReferences !== 'verified-absent')) {
+    throw new Error('MIP_IMPORT_MEDIA_COPY_INVALID')
   }
   if (!Array.isArray(manifest.schemaFiles) || manifest.schemaFiles.length === 0
     || new Set(manifest.schemaFiles).size !== manifest.schemaFiles.length
@@ -452,6 +486,18 @@ function validateTransformedRows({ table, rows, sourceAppId, targetAppId }) {
     }
     if (containsExactString(row, sourceAppId)) {
       throw new Error('MIP_IMPORT_SOURCE_APP_RESIDUE')
+    }
+  }
+  if (table.scope === 'source-app') {
+    try {
+      assertNoAppIdMigrationResidue({
+        sourceAppId,
+        targetAppId,
+        tables: { [table.table]: rows },
+      })
+    }
+    catch {
+      throw new Error('MIP_IMPORT_ROW_POLICY_INVALID')
     }
   }
 }

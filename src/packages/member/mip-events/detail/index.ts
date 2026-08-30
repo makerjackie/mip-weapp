@@ -60,6 +60,18 @@ function formatDateTime(value?: string) {
   return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
+function decodeInvitationToken(value: string | undefined) {
+  if (!value || value.length > 1536) {
+    return ''
+  }
+  try {
+    return decodeURIComponent(value).slice(0, 1024)
+  }
+  catch {
+    return ''
+  }
+}
+
 function accessText(event: MipEventDetail) {
   if (event.accessType === 'MEMBER_INCLUDED') {
     return '玩家活动'
@@ -148,7 +160,7 @@ Page({
     const hasCheckInIntent = Boolean(mipCheckInResumeStore.peek(String(eventId)))
     this.setData({
       eventId,
-      incomingInvitationToken: query.invitationToken ? decodeURIComponent(query.invitationToken) : '',
+      incomingInvitationToken: decodeInvitationToken(query.invitationToken),
       hasCheckInIntent,
     })
     const cached = mipEventsModule.peekEvent(eventId)

@@ -273,7 +273,7 @@ test('stores provider output as a draft instead of an official profile', async (
   assert.equal(typeof repository.saveProfile, 'undefined')
 })
 
-test('marks the private draft failed when provider processing fails', async () => {
+test('marks the private draft failed only for an explicit invalid provider response', async () => {
   let failed = false
   const service = createAiService({
     repository: {
@@ -282,14 +282,33 @@ test('marks the private draft failed when provider processing fails', async () =
     },
     provider: {
       capability: () => ({ textDrafts: true, voiceDrafts: false }),
-      async structureText() { throw new Error('provider detail that must not escape') },
+      async structureText() { throw new Error('AI_PROVIDER_RESPONSE_INVALID') },
     },
   })
   await assert.rejects(() => service.createTextDraft(caller, {
     purpose: 'PROFILE',
     transcriptText: '资料内容',
-  }), /AI_PROVIDER_UNAVAILABLE/)
+  }), /AI_PROVIDER_RESPONSE_INVALID/)
   assert.equal(failed, true)
+})
+
+test('keeps the private draft processing when the provider result is unknown', async () => {
+  let failed = false
+  const service = createAiService({
+    repository: {
+      async createTextDraft() { return draft },
+      async failDraft() { failed = true },
+    },
+    provider: {
+      capability: () => ({ textDrafts: true, voiceDrafts: false }),
+      async structureText() { throw new Error('transport timeout detail') },
+    },
+  })
+  await assert.rejects(() => service.createTextDraft(caller, {
+    purpose: 'PROFILE',
+    transcriptText: '资料内容',
+  }), /AI_PROVIDER_RESULT_UNKNOWN/)
+  assert.equal(failed, false)
 })
 
 test('does not disguise a post-provider ownership fence as a provider error', async () => {
@@ -314,6 +333,199 @@ test('does not disguise a post-provider ownership fence as a provider error', as
   assert.equal(failed, false)
 })
 
+test('claims and completes a keyed text request around the existing draft write', async () => {
+  const calls = []
+  const ready = { ...draft, status: 'DRAFT_READY', version: 2 }
+  const service = createAiService({
+    repository: {
+      async claimDraftRequest(_appId, _userId, input) {
+        calls.push(['claim', input.kind, input.requestId, input.inputHash])
+        return { state: 'CLAIMED', requestId: input.requestId, leaseToken: '30000000-0000-4000-8000-000000000001', draft }
+      },
+      async completeKeyedDraft(_appId, _userId, input) {
+        calls.push(['atomic-complete', input.requestId, input.inputHash, input.leaseToken])
+        return ready
+      },
+      async recoverCompletedDraftRequest() { throw new Error('unexpected recovery') },
+      async failDraft() { throw new Error('unexpected failure') },
+      async failDraftRequest() { throw new Error('unexpected failure') },
+    },
+    provider: {
+      capability: () => ({ textDrafts: true }),
+      async structureText() {
+        calls.push(['provider'])
+        return { transcriptText: '资料内容', structuredDraft: { headline: '产品负责人' } }
+      },
+    },
+  })
+  const result = await service.createTextDraft(caller, {
+    purpose: 'PROFILE',
+    transcriptText: '资料内容',
+    requestId: 'ai-draft:text-one',
+  })
+  assert.equal(result, ready)
+  assert.deepEqual(calls.map(item => item[0]), ['claim', 'provider', 'atomic-complete'])
+  assert.match(calls[0][3], /^[0-9a-f]{64}$/)
+  assert.equal(calls[0][3], calls[2][2])
+  assert.equal(calls[2][3], '30000000-0000-4000-8000-000000000001')
+})
+
+test('replays a completed keyed draft without calling the provider', async () => {
+  let providerCalls = 0
+  const ready = { ...draft, status: 'DRAFT_READY', version: 2 }
+  const service = createAiService({
+    repository: {
+      async claimDraftRequest() { return { state: 'REPLAY', response: ready } },
+    },
+    provider: {
+      capability: () => ({ textDrafts: true }),
+      async structureText() { providerCalls += 1 },
+    },
+  })
+  assert.equal(await service.createTextDraft(caller, {
+    purpose: 'PROFILE',
+    transcriptText: '资料内容',
+    requestId: 'ai-draft:replay-one',
+  }), ready)
+  assert.equal(providerCalls, 0)
+})
+
+test('reuses the same draft operation after an unknown keyed provider result', async () => {
+  const providerInputs = []
+  let claimCount = 0
+  let failedDraft = false
+  let failedRequest = false
+  const ready = { ...draft, status: 'DRAFT_READY', version: 2 }
+  const service = createAiService({
+    repository: {
+      async claimDraftRequest(_appId, _userId, input) {
+        claimCount += 1
+        return {
+          state: claimCount === 1 ? 'CLAIMED' : 'RESUMED',
+          requestId: input.requestId,
+          leaseToken: claimCount === 1
+            ? '30000000-0000-4000-8000-000000000001'
+            : '30000000-0000-4000-8000-000000000002',
+          draft,
+        }
+      },
+      async failDraft() { failedDraft = true },
+      async failDraftRequest() { failedRequest = true },
+      async completeKeyedDraft() { return ready },
+      async recoverCompletedDraftRequest() { return null },
+    },
+    provider: {
+      capability: () => ({ textDrafts: true }),
+      async structureText(input) {
+        providerInputs.push(input)
+        if (providerInputs.length === 1) throw new Error('AI_PROVIDER_RESULT_UNKNOWN')
+        return { transcriptText: '资料内容', structuredDraft: { headline: '产品负责人' } }
+      },
+    },
+  })
+  const event = {
+    purpose: 'PROFILE',
+    transcriptText: '资料内容',
+    requestId: 'ai-draft:resume-unknown',
+  }
+  await assert.rejects(() => service.createTextDraft(caller, event), /AI_PROVIDER_RESULT_UNKNOWN/)
+  assert.equal(await service.createTextDraft(caller, event), ready)
+  assert.deepEqual(providerInputs.map(input => [input.draftId, input.expectedVersion]), [
+    [draft.id, draft.version],
+    [draft.id, draft.version],
+  ])
+  assert.equal(failedDraft, false)
+  assert.equal(failedRequest, false)
+})
+
+test('fences a terminal keyed provider failure with the same request lease', async () => {
+  let failureInput
+  const service = createAiService({
+    repository: {
+      async claimDraftRequest(_appId, _userId, input) {
+        return {
+          state: 'CLAIMED',
+          requestId: input.requestId,
+          leaseToken: '30000000-0000-4000-8000-000000000001',
+          draft,
+        }
+      },
+      async failKeyedDraft(_appId, _userId, input, code) {
+        failureInput = { ...input, code }
+        return true
+      },
+      async failDraft() { throw new Error('unfenced failure path') },
+    },
+    provider: {
+      capability: () => ({ textDrafts: true }),
+      async structureText() { throw new Error('AI_PROVIDER_REJECTED') },
+    },
+  })
+  await assert.rejects(() => service.createTextDraft(caller, {
+    purpose: 'PROFILE',
+    transcriptText: '资料内容',
+    requestId: 'ai-draft:terminal-failure',
+  }), /AI_PROVIDER_REJECTED/)
+  assert.deepEqual(failureInput, {
+    requestId: 'ai-draft:terminal-failure',
+    inputHash: failureInput.inputHash,
+    leaseToken: '30000000-0000-4000-8000-000000000001',
+    draftId: draft.id,
+    expectedVersion: draft.version,
+    code: 'AI_PROVIDER_REJECTED',
+  })
+  assert.match(failureInput.inputHash, /^[0-9a-f]{64}$/)
+})
+
+test('rereads a keyed request when the request completion result is unknown', async () => {
+  const ready = { ...draft, status: 'DRAFT_READY', version: 2 }
+  let recoveryInput
+  const service = createAiService({
+    repository: {
+      async claimDraftRequest(_appId, _userId, input) {
+        return { state: 'CLAIMED', requestId: input.requestId, leaseToken: '30000000-0000-4000-8000-000000000001', draft }
+      },
+      async completeKeyedDraft() { throw new Error('COMMIT_RESULT_UNKNOWN') },
+      async recoverCompletedDraftRequest(_appId, _userId, input) { recoveryInput = input; return ready },
+    },
+    provider: {
+      capability: () => ({ textDrafts: true }),
+      async structureText() {
+        return { transcriptText: '资料内容', structuredDraft: { headline: '产品负责人' } }
+      },
+    },
+  })
+  assert.equal(await service.createTextDraft(caller, {
+    purpose: 'PROFILE',
+    transcriptText: '资料内容',
+    requestId: 'ai-draft:unknown-complete',
+  }), ready)
+  assert.equal(recoveryInput.requestId, 'ai-draft:unknown-complete')
+})
+
+test('does not turn a draft-only completion into a request replay', async () => {
+  const service = createAiService({
+    repository: {
+      async claimDraftRequest(_appId, _userId, input) {
+        return { state: 'CLAIMED', requestId: input.requestId, leaseToken: '30000000-0000-4000-8000-000000000001', draft }
+      },
+      async completeKeyedDraft() { throw new Error('COMMIT_RESULT_UNKNOWN') },
+      async recoverCompletedDraftRequest() { return null },
+    },
+    provider: {
+      capability: () => ({ textDrafts: true }),
+      async structureText() {
+        return { transcriptText: '资料内容', structuredDraft: { headline: '产品负责人' } }
+      },
+    },
+  })
+  await assert.rejects(() => service.createTextDraft(caller, {
+    purpose: 'PROFILE',
+    transcriptText: '资料内容',
+    requestId: 'ai-draft:unknown-draft',
+  }), /COMMIT_RESULT_UNKNOWN/)
+})
+
 function voiceUploadEvent() {
   return {
     purpose: 'PROFILE',
@@ -332,6 +544,177 @@ function uploadedAsset() {
     contentBytes: 4,
   }
 }
+
+test('claims a keyed voice upload and persists its allocation before uploading bytes', async () => {
+  const calls = []
+  const asset = uploadedAsset()
+  const ready = { ...draft, status: 'DRAFT_READY', version: 2 }
+  const created = {
+    draft,
+    asset: {
+      cloud_file_id: asset.cloudFileId,
+      content_sha256: asset.contentSha256,
+      content_type: asset.contentType,
+      content_bytes: asset.contentBytes,
+    },
+  }
+  const service = createAiService({
+    repository: {
+      async claimDraftRequest(_appId, _userId, input) {
+        calls.push(['claim', input.allocation.assetId, input.allocation.objectKey])
+        return {
+          state: 'CLAIMED',
+          requestId: input.requestId,
+          leaseToken: '40000000-0000-4000-8000-000000000001',
+          draftId: draft.id,
+          allocation: input.allocation,
+        }
+      },
+      async createVoiceDraftFromUpload(_appId, _userId, stored, _purpose, draftId) {
+        calls.push(['persist', stored.assetId, draftId])
+        return created
+      },
+      async completeKeyedDraft() { return ready },
+      async recoverCompletedDraftRequest() { throw new Error('unexpected recovery') },
+      async recoverVoiceDraftFromUpload() { throw new Error('unexpected recovery') },
+    },
+    provider: {
+      capability: () => ({ voiceDrafts: true }),
+      async transcribeAndStructure() {
+        calls.push(['provider'])
+        return { transcriptText: '资料', structuredDraft: { headline: '产品负责人' } }
+      },
+    },
+    audioStore: {
+      configured: true,
+      preallocate() {
+        calls.push(['preallocate'])
+        return { assetId: asset.assetId, objectKey: asset.objectKey }
+      },
+      async store(input) {
+        calls.push(['upload', input.assetId, input.objectKey])
+        return asset
+      },
+    },
+  })
+  assert.equal(await service.createVoiceDraftUpload(caller, {
+    ...voiceUploadEvent(),
+    requestId: 'ai-draft:voice-upload',
+  }), ready)
+  assert.deepEqual(calls.map(item => item[0]), ['preallocate', 'claim', 'upload', 'persist', 'provider'])
+  assert.deepEqual(calls[1].slice(1), [asset.assetId, asset.objectKey])
+  assert.deepEqual(calls[2].slice(1), [asset.assetId, asset.objectKey])
+  assert.equal(calls[3][2], draft.id)
+})
+
+test('claims an owned keyed voice asset before provider processing', async () => {
+  const asset = uploadedAsset()
+  const ready = { ...draft, status: 'DRAFT_READY', version: 2 }
+  let claimInput
+  let providerInput
+  const service = createAiService({
+    repository: {
+      async claimDraftRequest(_appId, _userId, input) {
+        claimInput = input
+        return {
+          state: 'CLAIMED',
+          requestId: input.requestId,
+          leaseToken: '40000000-0000-4000-8000-000000000001',
+          draft,
+          asset: {
+            cloud_file_id: asset.cloudFileId,
+            content_sha256: asset.contentSha256,
+            content_type: asset.contentType,
+            content_bytes: asset.contentBytes,
+          },
+        }
+      },
+      async completeKeyedDraft() { return ready },
+      async recoverCompletedDraftRequest() { throw new Error('unexpected recovery') },
+    },
+    provider: {
+      capability: () => ({ voiceDrafts: true }),
+      async transcribeAndStructure(input) {
+        providerInput = input
+        return { transcriptText: '资料', structuredDraft: { headline: '产品负责人' } }
+      },
+    },
+  })
+  assert.equal(await service.createVoiceDraft(caller, {
+    purpose: 'PROFILE',
+    audioAssetId: asset.assetId,
+    requestId: 'ai-draft:voice-asset',
+  }), ready)
+  assert.equal(claimInput.kind, 'VOICE_ASSET')
+  assert.equal(claimInput.audioAssetId, asset.assetId)
+  assert.equal(providerInput.audioFileId, asset.cloudFileId)
+})
+
+test('keeps a keyed voice request processing when upload completion is unknown', async () => {
+  let failedRequest = false
+  const asset = uploadedAsset()
+  const service = createAiService({
+    repository: {
+      async claimDraftRequest(_appId, _userId, input) {
+        return {
+          state: 'CLAIMED',
+          requestId: input.requestId,
+          leaseToken: '40000000-0000-4000-8000-000000000001',
+          draftId: draft.id,
+          allocation: input.allocation,
+        }
+      },
+      async failDraftRequest() { failedRequest = true },
+    },
+    provider: { capability: () => ({ voiceDrafts: true }) },
+    audioStore: {
+      configured: true,
+      preallocate: () => ({ assetId: asset.assetId, objectKey: asset.objectKey }),
+      async store() { throw new Error('cloud transport timeout') },
+    },
+  })
+  await assert.rejects(() => service.createVoiceDraftUpload(caller, {
+    ...voiceUploadEvent(),
+    requestId: 'ai-draft:upload-unknown',
+  }), /AI_AUDIO_UPLOAD_RESULT_UNKNOWN/)
+  assert.equal(failedRequest, false)
+})
+
+test('does not delete uploaded bytes when database registration is unknown', async () => {
+  let removed = false
+  let failedRequest = false
+  const asset = uploadedAsset()
+  const service = createAiService({
+    repository: {
+      async claimDraftRequest(_appId, _userId, input) {
+        return {
+          state: 'CLAIMED',
+          requestId: input.requestId,
+          leaseToken: '40000000-0000-4000-8000-000000000001',
+          draftId: draft.id,
+          allocation: input.allocation,
+        }
+      },
+      async createVoiceDraftFromUpload() { throw new Error('COMMIT_RESULT_UNKNOWN') },
+      async recoverVoiceDraftFromUpload() { return { state: 'UNKNOWN' } },
+      async registerPendingAudioUpload() { throw new Error('DB_RESULT_UNKNOWN') },
+      async failDraftRequest() { failedRequest = true },
+    },
+    provider: { capability: () => ({ voiceDrafts: true }) },
+    audioStore: {
+      configured: true,
+      preallocate: () => ({ assetId: asset.assetId, objectKey: asset.objectKey }),
+      async store() { return asset },
+      async remove() { removed = true; return true },
+    },
+  })
+  await assert.rejects(() => service.createVoiceDraftUpload(caller, {
+    ...voiceUploadEvent(),
+    requestId: 'ai-draft:db-unknown',
+  }), /AI_AUDIO_UPLOAD_RESULT_UNKNOWN/)
+  assert.equal(removed, false)
+  assert.equal(failedRequest, false)
+})
 
 test('recovers a committed voice upload instead of deleting it after an uncertain commit result', async () => {
   let removeCalls = 0
@@ -496,7 +879,7 @@ test('restores the last ready draft when refinement provider processing fails', 
     draftId: draft.id,
     expectedVersion: 1,
     supplementalText: '补充内容',
-  }), /AI_PROVIDER_UNAVAILABLE/)
+  }), /AI_PROVIDER_RESULT_UNKNOWN/)
   assert.deepEqual(restored, [caller.appId, caller.userId, draft.id, 2])
   assert.equal(completed, false)
 })

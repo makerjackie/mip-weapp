@@ -96,6 +96,7 @@ Page({
     saving: false,
     message: '',
   },
+  navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
 
   onLoad(query: Record<string, string>) {
     this.setData({
@@ -103,6 +104,21 @@ Page({
       aiDraftId: String(query.aiDraftId || ''),
     })
     void this.loadProfile()
+  },
+
+  onHide() {
+    this.clearNavigationTimer()
+  },
+
+  onUnload() {
+    this.clearNavigationTimer()
+  },
+
+  clearNavigationTimer() {
+    if (this.navigationTimer !== undefined) {
+      clearTimeout(this.navigationTimer)
+      this.navigationTimer = undefined
+    }
   },
 
   async loadProfile() {
@@ -473,10 +489,14 @@ Page({
         })
       }
       else {
-        setTimeout(() => wx.navigateBack({
-          delta: 1,
-          fail: () => wx.switchTab({ url: '/pages/profile/index' }),
-        }), 300)
+        this.clearNavigationTimer()
+        this.navigationTimer = setTimeout(() => {
+          this.navigationTimer = undefined
+          wx.navigateBack({
+            delta: 1,
+            fail: () => wx.switchTab({ url: '/pages/profile/index' }),
+          })
+        }, 300)
       }
     }
     catch (error) {

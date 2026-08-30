@@ -34,10 +34,19 @@ Page({
     loadingMore: false,
     message: '',
   },
+  requestSeq: 0,
 
   onShow() {
     void this.loadTasks()
     void this.loadCapability()
+  },
+
+  onHide() {
+    this.requestSeq += 1
+  },
+
+  onUnload() {
+    this.requestSeq += 1
   },
 
   async loadCapability() {
@@ -60,11 +69,17 @@ Page({
   },
 
   async loadTasks(force = false) {
+    const seq = this.requestSeq + 1
+    this.requestSeq = seq
     if (!this.data.tasks.length) {
       this.setData({ state: 'loading', message: '' })
     }
+    this.setData({ loadingMore: false })
     try {
       const page = await mipTasksModule.query.listTasks(undefined, 20, force)
+      if (seq !== this.requestSeq) {
+        return
+      }
       const tasks = page.items.map(taskView)
       this.setData({
         state: tasks.length ? 'ready' : 'empty',
@@ -75,6 +90,9 @@ Page({
       })
     }
     catch (error) {
+      if (seq !== this.requestSeq) {
+        return
+      }
       this.setData({
         state: this.data.tasks.length ? 'ready' : 'error',
         message: error instanceof Error ? error.message : '任务加载失败',
@@ -86,9 +104,14 @@ Page({
     if (!this.data.nextCursor || this.data.loadingMore) {
       return
     }
+    const seq = this.requestSeq
+    const cursor = this.data.nextCursor
     this.setData({ loadingMore: true, message: '' })
     try {
-      const page = await mipTasksModule.query.listTasks(this.data.nextCursor, 20)
+      const page = await mipTasksModule.query.listTasks(cursor, 20)
+      if (seq !== this.requestSeq) {
+        return
+      }
       const knownTaskIds = new Set(this.data.tasks.map(task => task.id))
       if (page.items.some(task => knownTaskIds.has(task.id))) {
         throw new Error('任务列表返回了重复内容，请刷新后重试')
@@ -101,10 +124,15 @@ Page({
       })
     }
     catch (error) {
+      if (seq !== this.requestSeq) {
+        return
+      }
       this.setData({ message: error instanceof Error ? error.message : '更多任务加载失败' })
     }
     finally {
-      this.setData({ loadingMore: false })
+      if (seq === this.requestSeq) {
+        this.setData({ loadingMore: false })
+      }
     }
   },
 

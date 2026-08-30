@@ -5,6 +5,7 @@ const { normalizePage, parseObject } = require('./templates')
 
 const CUSTOMER_SERVICE_TEMPLATE_KEY = 'CUSTOMER_SERVICE_TEXT'
 const SERVICE_ACCOUNT_TIMEOUT_MS = 8_000
+const WECHAT_OPENAPI_TIMEOUT_MS = 8_000
 const templateKeyPattern = /^[A-Z][A-Z0-9_]{2,79}$/
 
 function buildCustomerServiceRequest(task, recipient) {
@@ -110,6 +111,19 @@ function createServiceAccountSender(options) {
   }
 }
 
+function createWechatOpenapiSender(send, options = {}) {
+  if (typeof send !== 'function') throw new Error('DELIVERY_SENDER_INVALID')
+  const timeoutMs = positiveTimeout(options.timeoutMs, WECHAT_OPENAPI_TIMEOUT_MS)
+  return async function deliver(request) {
+    const result = await waitForResult(
+      Promise.resolve().then(() => send(request)),
+      timeoutMs,
+      'DELIVERY_OUTCOME_UNKNOWN',
+    )
+    assertWechatSuccess(result)
+  }
+}
+
 function assertWechatSuccess(result) {
   const rawCode = result?.errCode ?? result?.errcode
   const errorCode = typeof rawCode === 'number'
@@ -148,6 +162,26 @@ function normalizeHttpsEndpoint(value) {
   }
 }
 
+function positiveTimeout(value, fallback) {
+  const parsed = Number(value)
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
+}
+
+async function waitForResult(promise, timeoutMs, errorCode) {
+  let timer
+  try {
+    return await Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(new Error(errorCode)), timeoutMs)
+      }),
+    ])
+  }
+  finally {
+    clearTimeout(timer)
+  }
+}
+
 function text(value) {
   return typeof value === 'string' ? value.trim() : ''
 }
@@ -158,6 +192,7 @@ module.exports = {
   buildCustomerServiceRequest,
   buildServiceAccountRequest,
   createServiceAccountSender,
+  createWechatOpenapiSender,
   normalizeFields,
   parseServiceAccountConfig,
 }

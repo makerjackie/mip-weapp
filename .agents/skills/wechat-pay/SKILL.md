@@ -11,7 +11,7 @@ description: Use for membership checkout, CloudPay, ledger, callback, or refund 
 
 ## Scope
 
-`src/modules/membership`、`cloudfunctions/membership-cloudpay*`、`cloudfunctions/membership-payment-ledger`、`docs/WECHAT_PAY.md`。
+`src/modules/mip-commerce`、`cloudfunctions/mip-cloudpay`、`cloudfunctions/mip-cloudpay-callback`、`cloudfunctions/mip-payment-ledger`、`cloudfunctions/mip-refund-worker`、`docs/WECHAT_PAY.md`。
 
 ## Read first
 

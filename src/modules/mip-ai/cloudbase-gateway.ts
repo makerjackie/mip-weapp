@@ -18,6 +18,7 @@ interface Envelope<T> {
 }
 
 const readActions = new Set(['getCapability', 'listDrafts', 'getDraft', 'listDigitalAvatars'])
+const idempotentCreateActions = new Set(['createTextDraft', 'createVoiceDraft', 'createVoiceDraftUpload'])
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const styleKeys = new Set<DigitalAvatarStyleKey>(['PROFESSIONAL', 'ILLUSTRATED', 'MONOCHROME'])
@@ -96,10 +97,14 @@ function unwrap<T>(value: unknown): T {
 export function createMipAiGateway(functionName = runtimeConfig.cloudbase.aiFunctionName): MipAiGateway {
   async function call<T>(action: string, data: Record<string, unknown> = {}) {
     try {
+      const retryable = readActions.has(action)
+        || (idempotentCreateActions.has(action)
+          && typeof data.requestId === 'string'
+          && /^[\w.:-]{8,128}$/.test(data.requestId))
       const response = await retryTransport(async () => {
         const cloud = await requireCloudClient()
         return cloud.callFunction({ name: functionName, data: { action, ...data } })
-      }, readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 })
+      }, retryable ? COLD_START_READ_RETRY : { attempts: 1 })
       return unwrap<T>(response.result)
     }
     catch (error) {

@@ -66,6 +66,19 @@ function createNotificationRepository(database, options = {}) {
          WHERE app_id = ? AND recipient_user_id = ? AND dedupe_key = ? FOR UPDATE`,
         [appId, message.recipientUserId, message.dedupeKey],
       )
+      assertInboxReplay(stored, message)
+      const replayed = stored.id !== messageId
+      if (replayed) {
+        const deliveryTasks = await tx.query(
+          `SELECT channel, template_key, payload_json
+           FROM mip_delivery_tasks
+           WHERE app_id = ? AND inbox_message_id = ?
+           ORDER BY created_at, id FOR UPDATE`,
+          [appId, stored.id],
+        )
+        assertDeliveryReplay(deliveryTasks, message.external)
+        return messageDto(stored)
+      }
       if (message.external) {
         await tx.query(
           `INSERT INTO mip_delivery_tasks (
@@ -502,6 +515,56 @@ function createNotificationRepository(database, options = {}) {
     reconcileDeliveryTask,
     reserveTask,
   }
+}
+
+function assertInboxReplay(stored, message) {
+  const target = message.target || null
+  if (!stored
+    || stored.recipient_user_id !== message.recipientUserId
+    || stored.message_type !== message.messageType
+    || stored.title !== message.title
+    || stored.body !== message.body
+    || nullable(stored.target_type) !== nullable(target?.type)
+    || nullable(stored.target_id) !== nullable(target?.id)
+    || nullable(stored.target_route) !== nullable(target?.route)) {
+    throw new Error('IDEMPOTENCY_CONFLICT')
+  }
+}
+
+function assertDeliveryReplay(rows, external) {
+  if (!Array.isArray(rows) || rows.length !== (external ? 1 : 0)) {
+    throw new Error('IDEMPOTENCY_CONFLICT')
+  }
+  if (!external) return
+  const stored = rows[0]
+  if (stored.channel !== external.channel
+    || nullable(stored.template_key) !== nullable(external.templateKey)
+    || canonicalJson(stored.payload_json) !== canonicalJson(external.payload)) {
+    throw new Error('IDEMPOTENCY_CONFLICT')
+  }
+}
+
+function nullable(value) {
+  return value === null || value === undefined || value === '' ? null : String(value)
+}
+
+function canonicalJson(value) {
+  let parsed = value
+  if (typeof value === 'string') {
+    try {
+      parsed = JSON.parse(value)
+    }
+    catch {
+      throw new Error('IDEMPOTENCY_CONFLICT')
+    }
+  }
+  return JSON.stringify(sortJson(parsed))
+}
+
+function sortJson(value) {
+  if (Array.isArray(value)) return value.map(sortJson)
+  if (!value || typeof value !== 'object') return value
+  return Object.fromEntries(Object.keys(value).sort().map(key => [key, sortJson(value[key])]))
 }
 
 async function lockDeliveryEvidence(tx, appId, taskId) {

@@ -1,9 +1,0 @@
-{
-  "navigationBarTitleText": "确认报名",
-  "usingComponents": {
-    "app-empty-state": "/components/empty-state/index",
-    "t-button": "tdesign-miniprogram/button/button",
-    "t-icon": "tdesign-miniprogram/icon/icon",
-    "app-page-exit": "/components/page-exit/index"
-  }
-}

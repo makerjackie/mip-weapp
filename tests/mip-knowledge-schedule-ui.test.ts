@@ -28,9 +28,10 @@ const knowledgeAdminModule = vi.hoisted(() => ({
   saveSource: vi.fn(),
 }))
 
-vi.mock('../src/modules/mip-knowledge', () => ({
-  mipKnowledgeAdminModule: knowledgeAdminModule,
-}))
+vi.mock('../src/modules/mip-knowledge/admin', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../src/modules/mip-knowledge/admin')>()
+  return { ...actual, mipKnowledgeAdminModule: knowledgeAdminModule }
+})
 
 type PageData = Record<string, unknown>
 type PageDefinition = PageData & {

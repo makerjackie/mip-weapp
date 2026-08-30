@@ -60,8 +60,8 @@ OpenID 或用户主键。此功能不能替代迁移前的数据核对，也不�
 当前仓库已经提供完整的 MIP AppID 范围迁移工具，禁止再用手工 SQL 改 `app_id`：
 
 1. `scripts/export-mip-app-scope.mjs` 只读取 migration lock 中的 `mip_*` 表。业务表始终带精确源 AppID 条件；两张 schema ledger 仅用于结构证据，不进入目标业务导入。命令要求操作人先停止源 MIP 写入并显式确认，使用主键游标分页，导出后再次核对完整主键清单与行数；输出 JSONL、schema、UnionID/素材 inventory、SHA-256 和 manifest。私有包必须放在仓库外并保持 `0700/0600`。
-2. `scripts/transform-mip-app-scope-export.mjs` 离线映射 AppID，保留业务 UUID 和外键；手机号及名片联系方式按源/目标 AAD 解密再加密。通知授权、投递任务、支付尝试/回调、幂等 claim、签到/邀请凭据、导出票据、outbox、Web BFF nonce 等环境绑定或可重建事实会被明确排除并计数。
-3. `scripts/copy-mip-media-app-scope.mjs` 只复制通过完整文件集、checksum、manifest、源环境指纹和 inventory 校验的 `READY` 长期素材。对象按目标 staging scope 重键，逐个执行源下载、目标上传、目标回读、字节数和 SHA-256 校验，再更新转换包中的 `mip_media_assets` 引用和 checksum。临时导出、二维码/海报和 AI 音频不迁移。
+2. `scripts/transform-mip-app-scope-export.mjs` 离线映射 AppID，保留业务 UUID 和外键；手机号及名片联系方式按源/目标 AAD 解密再加密。通知授权、投递任务、支付尝试/回调、幂等 claim、AI 草稿创建请求、会员邀请码、签到/活动邀请凭据、导出票据、outbox、Web BFF nonce 等环境绑定或可重建事实会被明确排除并计数。`mip_ai_drafts` 只保留 `CONFIRMED` 行，其他状态均按临时草稿丢弃；保留行的 `audio_asset_id` 会清空，不把临时 AI 音频带入目标环境。
+3. `scripts/copy-mip-media-app-scope.mjs` 只复制通过完整文件集、checksum、manifest、源环境指纹和 inventory 校验的 `READY` 长期素材。对象按目标 staging scope 重键，逐个执行源下载、目标上传、目标回读、字节数和 SHA-256 校验，再更新转换包中的 `mip_media_assets`、media inventory、行数、manifest 和 checksum。临时导出、会员邀请码、二维码/海报、AI 音频以及未就绪或不支持的素材不迁移；对应媒体行会从转换包删除。删除前会扫描所有待导入表，任何仍引用这些媒体 ID 的行都会使流程明确失败，不生成带孤儿引用的导入包。
 4. `scripts/import-mip-app-scope.mjs` 只接受同一 migration lock 的完整转换包。首次导入要求目标全部 MIP 业务表全局为空；外键始终开启，按依赖顺序插入并处理受控循环引用。私有 checkpoint 支持续跑，完成后验证全局行数、目标主键清单、源 AppID 残留和外键孤儿。
 
 标准命令如下，真实环境和 AppID 只通过本机参数或私密 env 文件传入，不写进文档或 Git：

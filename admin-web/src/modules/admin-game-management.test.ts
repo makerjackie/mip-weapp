@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import type { AdminRequestInput } from '@mip/admin-contracts'
 import {
   ADMIN_GAME_MUTATION_ACTIONS,
   ADMIN_GAME_QUERY_ACTIONS,
@@ -11,6 +12,11 @@ import {
   loadGameTeamDetail,
   type AdminGameMutationAction,
 } from './admin-game-management.ts'
+import type { AdminDetailRequest } from './admin-details.ts'
+
+function requestWith(handler: (action: string, input?: unknown) => unknown): AdminDetailRequest {
+  return async <T>(action: string, input?: AdminRequestInput) => handler(action, input) as T
+}
 
 const seasonId = '30000000-0000-4000-8000-000000000001'
 const teamAId = '30000000-0000-4000-8000-000000000002'
@@ -46,13 +52,13 @@ const card = {
 describe('admin game management', () => {
   it('loads the exact game session, season, and catalog queries and fails closed on the game session', async () => {
     const calls: Array<[string, unknown]> = []
-    const request = async (action: string, input?: unknown) => {
+    const request = requestWith((action: string, input?: unknown) => {
       calls.push([action, input])
       if (action === 'mip.admin.game.session') return { capability: 'game.manage', roleKey: 'PLATFORM_OPERATIONS' }
       if (action === 'mip.admin.game.seasons.list') return { items: [season] }
       if (action === 'mip.admin.game.blindBoxes.catalogs.list') return { items: [catalog] }
       throw new Error(`UNEXPECTED:${action}`)
-    }
+    })
     const page = await loadGameManagementPage({ query: '', status: '', cursor: null, limit: 20 }, request)
     assert.deepEqual(calls, [
       ['mip.admin.game.session', undefined],
@@ -60,18 +66,18 @@ describe('admin game management', () => {
       ['mip.admin.game.blindBoxes.catalogs.list', undefined],
     ])
     assert.deepEqual(page.sections.map(item => item.detailTarget), ['gameSeasons', 'gameCatalogs'])
-    assert.deepEqual((page.sections[0].rows[0].rowActions as Array<{ action: string }>).map(item => item.action), [
+    assert.deepEqual((page.sections[0].rows[0].rowActions as readonly { action: string }[]).map(item => item.action), [
       'mip.admin.game.seasons.save', 'mip.admin.game.seasons.changeStatus',
     ])
     await assert.rejects(
-      () => loadGameManagementPage({ query: '', status: '', cursor: null, limit: 20 }, async action => action === 'mip.admin.game.session' ? { capability: 'game.manage', roleKey: 'BRANCH_ADMIN' } : { items: [] }),
+      () => loadGameManagementPage({ query: '', status: '', cursor: null, limit: 20 }, requestWith(action => action === 'mip.admin.game.session' ? { capability: 'game.manage', roleKey: 'BRANCH_ADMIN' } : { items: [] })),
       /INVALID_GAME_SESSION/,
     )
   })
 
   it('loads one season with teams, matches, and a server-generated ranking snapshot', async () => {
     const calls: Array<[string, unknown]> = []
-    const detail = await loadGameSeasonDetail(seasonId, async (action, input) => {
+    const detail = await loadGameSeasonDetail(seasonId, requestWith((action, input) => {
       calls.push([action, input])
       if (action === 'mip.admin.game.seasons.list') return { items: [season] }
       if (action === 'mip.admin.game.teams.list') return { items: [team, { ...team, id: teamBId, name: '深圳二队' }] }
@@ -85,7 +91,7 @@ describe('admin game management', () => {
         branches: [{ id: branchId, name: '深圳分会' }], items: [{ rank: 1, displayName: '深圳一队', branchName: '深圳分会', score: 100 }],
       }
       throw new Error(`UNEXPECTED:${action}`)
-    })
+    }))
     assert.deepEqual(calls, [
       ['mip.admin.game.seasons.list', undefined],
       ['mip.admin.game.teams.list', { seasonId }],
@@ -95,19 +101,19 @@ describe('admin game management', () => {
     assert.equal(detail.route, 'gameSeasons')
     assert.equal(detail.sections.find(item => item.title === '战队')?.detailTarget, 'gameTeams')
     assert.equal(detail.sections.find(item => item.title === '周赛')?.rows?.[0].state, '待结算')
-    assert.deepEqual((detail.sections.find(item => item.title === '周赛')?.rows?.[0].rowActions as Array<{ action: string }>).map(item => item.action), ['mip.admin.game.matches.finalize'])
+    assert.deepEqual((detail.sections.find(item => item.title === '周赛')?.rows?.[0].rowActions as readonly { action: string }[]).map(item => item.action), ['mip.admin.game.matches.finalize'])
   })
 
   it('paginates assignable members independently and builds a full replacement input', async () => {
     const calls: Array<[string, unknown]> = []
-    const detail = await loadGameTeamDetail(`${seasonId}:${teamAId}`, async (action, input) => {
+    const detail = await loadGameTeamDetail(`${seasonId}:${teamAId}`, requestWith((action, input) => {
       calls.push([action, input])
       if (action === 'mip.admin.game.teams.list') return { items: [team] }
       return {
         items: [{ memberRef: 'profile-owner', nickname: '运营成员', branchName: '深圳分会', teamName: '深圳一队', role: 'CAPTAIN' }],
         hasMore: true, nextCursor: 'next_member_cursor', limit: 30,
       }
-    }, { query: '运营', cursor: 'current_member_cursor', limit: 30 })
+    }), { query: '运营', cursor: 'current_member_cursor', limit: 30 })
     assert.deepEqual(calls, [
       ['mip.admin.game.teams.list', { seasonId }],
       ['mip.admin.game.members.assignable.list', { seasonId, teamId: teamAId, query: '运营', limit: 30, cursor: 'current_member_cursor' }],
@@ -125,13 +131,13 @@ describe('admin game management', () => {
   })
 
   it('loads blind-box cards and builds all reviewed game mutation inputs without score or reward fields', async () => {
-    const detail = await loadGameCatalogDetail(catalogId, async (action, input) => {
+    const detail = await loadGameCatalogDetail(catalogId, requestWith((action, input) => {
       if (action === 'mip.admin.game.blindBoxes.catalogs.list') return { items: [catalog] }
       assert.deepEqual(input, { catalogId })
       return { items: [card] }
-    })
+    }))
     assert.equal(detail.sections[1].rows?.[0].state, '已发布')
-    assert.deepEqual((detail.sections[1].rows?.[0].rowActions as Array<{ action: string }>).map(item => item.action), [
+    assert.deepEqual((detail.sections[1].rows?.[0].rowActions as readonly { action: string }[]).map(item => item.action), [
       'mip.admin.game.blindBoxes.cards.save', 'mip.admin.game.blindBoxes.cards.changeStatus',
     ])
 

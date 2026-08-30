@@ -112,12 +112,13 @@ describe('outbox service', () => {
       projectEvent: async () => ({ supported: true, notifications: [{}], growth: [] }),
       clients: {
         publishMessage: async () => {
-          throw new Error('INTERNAL_FUNCTION_FAILED')
+          throw new Error('INTERNAL_FUNCTION_TIMEOUT')
         },
       },
     })
     const result = await service.runBatch({ appId: 'wx-app' })
     assert.equal(result.retried, 1)
+    assert.equal(result.results[0].errorCode, 'INTERNAL_FUNCTION_TIMEOUT')
     assert.equal(completed, false)
   })
 

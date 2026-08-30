@@ -7,6 +7,7 @@ const CLEANABLE_PURPOSES = Object.freeze([
   ...Object.keys(PURPOSE_POLICIES),
   'CHECKIN_POSTER',
   'EVENT_INVITATION_CODE',
+  'MEMBERSHIP_INVITATION_CODE',
 ])
 const ADMIN_UPLOAD_PURPOSES = new Set(['BANNER', 'TASK_TEMPLATE'])
 const ADMIN_UPLOAD_CAPABILITIES = Object.freeze({
@@ -287,6 +288,31 @@ function createMediaService({ database, cloud, checker, env = process.env, id = 
       || !Number.isInteger(minimumAgeHours) || minimumAgeHours < 24 || minimumAgeHours > 2160) {
       throw new Error('MEDIA_CLEANUP_INVALID')
     }
+    await database.transaction(async (tx) => {
+      const rows = await tx.query(
+        `SELECT invitation.id
+         FROM mip_membership_invitation_codes invitation
+         LEFT JOIN mip_media_assets asset
+           ON asset.app_id = invitation.app_id AND asset.id = invitation.code_asset_id
+         WHERE invitation.app_id = ?
+           AND invitation.status IN ('PENDING', 'READY', 'FAILED')
+           AND invitation.expires_at <= UTC_TIMESTAMP(3)
+           AND (invitation.code_asset_id IS NULL OR asset.status = 'DELETED')
+         ORDER BY invitation.expires_at, invitation.id
+         LIMIT ? FOR UPDATE SKIP LOCKED`,
+        [appId, limit],
+      )
+      for (const row of rows) {
+        await tx.query(
+          `UPDATE mip_membership_invitation_codes
+           SET status = 'EXPIRED', lease_token = NULL, lease_expires_at = NULL
+           WHERE app_id = ? AND id = ?
+             AND status IN ('PENDING', 'READY', 'FAILED')
+             AND expires_at <= UTC_TIMESTAMP(3)`,
+          [appId, row.id],
+        )
+      }
+    })
     const leased = await database.transaction(async (tx) => {
       const rows = await tx.query(
         `SELECT asset.id, asset.object_key, asset.cloud_file_id
@@ -347,6 +373,12 @@ function createMediaService({ database, cloud, checker, env = process.env, id = 
              WHERE invitation.app_id = asset.app_id AND invitation.code_asset_id = asset.id
                AND invitation.status = 'ACTIVE' AND invitation.expires_at > UTC_TIMESTAMP(3)
            )
+           AND NOT EXISTS (
+             SELECT 1 FROM mip_membership_invitation_codes invitation
+             WHERE invitation.app_id = asset.app_id AND invitation.code_asset_id = asset.id
+               AND invitation.status IN ('PENDING', 'READY')
+               AND invitation.expires_at > UTC_TIMESTAMP(3)
+           )
            AND (
              asset.purpose <> 'CHECKIN_POSTER'
              OR NOT EXISTS (
@@ -383,14 +415,24 @@ function createMediaService({ database, cloud, checker, env = process.env, id = 
         })
         const result = await cloud.deleteFile({ fileList: [asset.cloud_file_id] })
         assertDeleted(result, asset.cloud_file_id)
-        const update = await database.query(
-          `UPDATE mip_media_assets SET status = 'DELETED'
-           WHERE app_id = ? AND id = ? AND status = 'PENDING'`,
-          [appId, asset.id],
-        )
-        if (Number(update?.affectedRows) !== 1) {
-          throw new Error('MEDIA_CLEANUP_LEASE_LOST')
-        }
+        await database.transaction(async (tx) => {
+          const update = await tx.query(
+            `UPDATE mip_media_assets SET status = 'DELETED'
+             WHERE app_id = ? AND id = ? AND status = 'PENDING'`,
+            [appId, asset.id],
+          )
+          if (Number(update?.affectedRows) !== 1) {
+            throw new Error('MEDIA_CLEANUP_LEASE_LOST')
+          }
+          await tx.query(
+            `UPDATE mip_membership_invitation_codes
+             SET status = 'EXPIRED', lease_token = NULL, lease_expires_at = NULL
+             WHERE app_id = ? AND code_asset_id = ?
+               AND status IN ('PENDING', 'READY', 'FAILED')
+               AND expires_at <= UTC_TIMESTAMP(3)`,
+            [appId, asset.id],
+          )
+        })
         deleted += 1
       }
       catch {

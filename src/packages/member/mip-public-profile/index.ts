@@ -6,7 +6,7 @@ import type {
   PublicProfileOpportunity,
   PublicProfileSuperCase,
 } from '../../../modules/mip-opportunities'
-import { badgeArtFallback } from '../../../config/mip-badge-art'
+import { badgeArtUrl } from '../../../config/mip-badge-art'
 import { cooperationRoles } from '../../../config/mip-catalogs'
 import {
   createCommunityReportIntent,
@@ -63,7 +63,7 @@ function presentProfile(profile: PublicPerson): PublicProfileView {
     badges: profile.badges || [],
     badgeArtFallbackUrls: Object.fromEntries((profile.badges || []).map(badge => [
       badge.id,
-      badgeArtFallback(badge.key, badge.name),
+      badgeArtUrl(badge.imageUrl, badge.key, badge.name),
     ])),
     branchText: profile.primaryBranch
       ? [profile.primaryBranch.cityName, profile.primaryBranch.name].filter(Boolean).join(' · ')
@@ -94,6 +94,7 @@ Page({
   pendingAction: '' as ProfileAction | '',
   reportIntent: null as CommunityReportIntent | null,
   visitKey: '',
+  safetyActionBusy: false,
 
   onLoad(query: Record<string, string | undefined>) {
     this.reportIntent = null
@@ -252,20 +253,33 @@ Page({
   },
 
   async runProfileAction(action: ProfileAction) {
+    if (action !== 'interest' && this.safetyActionBusy) {
+      return
+    }
+    if (action !== 'interest') {
+      this.safetyActionBusy = true
+    }
     this.pendingAction = action
-    if (!await this.ensureActionAccess(action)) {
-      return
+    try {
+      if (!await this.ensureActionAccess(action)) {
+        return
+      }
+      this.pendingAction = ''
+      if (action === 'interest') {
+        await this.updateInterest()
+        return
+      }
+      if (action === 'block') {
+        await this.confirmBlock()
+        return
+      }
+      await this.submitReport()
     }
-    this.pendingAction = ''
-    if (action === 'interest') {
-      await this.updateInterest()
-      return
+    finally {
+      if (action !== 'interest') {
+        this.safetyActionBusy = false
+      }
     }
-    if (action === 'block') {
-      await this.confirmBlock()
-      return
-    }
-    await this.submitReport()
   },
 
   async updateInterest() {

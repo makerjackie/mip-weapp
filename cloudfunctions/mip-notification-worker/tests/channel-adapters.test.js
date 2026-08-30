@@ -7,6 +7,7 @@ const {
   buildCustomerServiceRequest,
   buildServiceAccountRequest,
   createServiceAccountSender,
+  createWechatOpenapiSender,
   parseServiceAccountConfig,
 } = require('../lib/channel-adapters')
 
@@ -23,6 +24,24 @@ test('classifies WeChat acknowledgements without retrying an unknown result', ()
   assert.throws(() => assertWechatSuccess({ errCode: 45009 }), /WECHAT_DELIVERY_REJECTED/)
   assert.throws(() => assertWechatSuccess({}), /DELIVERY_OUTCOME_UNKNOWN/)
   assert.throws(() => assertWechatSuccess({ errCode: '' }), /DELIVERY_OUTCOME_UNKNOWN/)
+})
+
+test('bounds WeChat OpenAPI calls and classifies a timeout as outcome unknown', async () => {
+  let captured
+  const sender = createWechatOpenapiSender(async (request) => {
+    captured = request
+    return { errCode: 0 }
+  }, { timeoutMs: 50 })
+  await sender({ touser: 'openid-private' })
+  assert.deepEqual(captured, { touser: 'openid-private' })
+
+  const timedOut = createWechatOpenapiSender(
+    () => new Promise(() => {}),
+    { timeoutMs: 5 },
+  )
+  await assert.rejects(() => timedOut({ touser: 'openid-private' }), {
+    message: 'DELIVERY_OUTCOME_UNKNOWN',
+  })
 })
 
 test('builds customer-service text without exposing an internal user id', () => {
