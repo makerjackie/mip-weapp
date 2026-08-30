@@ -35,6 +35,8 @@ interface DraftView extends AiDraft {
   fieldRows: Array<{ key: string, label: string, value: string }>
 }
 
+type AiDraftRequestSlot = ReturnType<typeof createAiDraftRequestSlot>
+
 const fieldLabels: Record<AiDraftPurpose, Record<string, string>> = {
   PROFILE: {
     nickname: '昵称',
@@ -139,11 +141,13 @@ Page({
   recordingStartedAt: 0,
   recordingTimer: null as ReturnType<typeof setInterval> | null,
   pageActive: true,
-  textDraftRequest: createAiDraftRequestSlot('ai-draft-text'),
-  voiceDraftRequest: createAiDraftRequestSlot('ai-draft-upload'),
+  textDraftRequest: null as AiDraftRequestSlot | null,
+  voiceDraftRequest: null as AiDraftRequestSlot | null,
 
   onLoad() {
     this.pageActive = true
+    this.textDraftRequest = createAiDraftRequestSlot('ai-draft-text')
+    this.voiceDraftRequest = createAiDraftRequestSlot('ai-draft-upload')
     void this.loadDrafts()
   },
 
@@ -160,6 +164,16 @@ Page({
       clearInterval(this.recordingTimer)
       this.recordingTimer = null
     }
+  },
+
+  getTextDraftRequest() {
+    this.textDraftRequest ||= createAiDraftRequestSlot('ai-draft-text')
+    return this.textDraftRequest
+  },
+
+  getVoiceDraftRequest() {
+    this.voiceDraftRequest ||= createAiDraftRequestSlot('ai-draft-upload')
+    return this.voiceDraftRequest
   },
 
   async loadDrafts() {
@@ -224,13 +238,13 @@ Page({
   },
 
   changePurpose(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    this.textDraftRequest.rotate()
-    this.voiceDraftRequest.rotate()
+    this.getTextDraftRequest().rotate()
+    this.getVoiceDraftRequest().rotate()
     this.setData({ purposeIndex: Number(event.detail.value) })
   },
 
   updateSource(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
-    this.textDraftRequest.rotate()
+    this.getTextDraftRequest().rotate()
     this.setData({ sourceText: event.detail.value, message: '' })
   },
 
@@ -244,16 +258,17 @@ Page({
       this.setData({ message: '请输入需要整理的内容。' })
       return
     }
-    const requestId = this.textDraftRequest.current()
+    const requestSlot = this.getTextDraftRequest()
+    const requestId = requestSlot.current()
     this.setData({ generating: true, message: '' })
     try {
       const draft = await mipAiModule.createTextDraft({ purpose, transcriptText, requestId })
       if (!this.pageActive) {
         return
       }
-      const unchangedSubmission = this.textDraftRequest.matches(requestId)
+      const unchangedSubmission = requestSlot.matches(requestId)
       if (unchangedSubmission) {
-        this.textDraftRequest.rotate()
+        requestSlot.rotate()
       }
       const view = draftView(draft)
       this.setData({
@@ -265,8 +280,8 @@ Page({
       wx.showToast({ title: '草稿已生成', icon: 'success' })
     }
     catch (error) {
-      if (this.textDraftRequest.matches(requestId) && !shouldRetainAiDraftRequest(error)) {
-        this.textDraftRequest.rotate()
+      if (requestSlot.matches(requestId) && !shouldRetainAiDraftRequest(error)) {
+        requestSlot.rotate()
       }
       if (!this.pageActive) {
         return
@@ -288,8 +303,9 @@ Page({
     if (!purpose) {
       return
     }
-    this.voiceDraftRequest.rotate()
-    const requestId = this.voiceDraftRequest.current()
+    const requestSlot = this.getVoiceDraftRequest()
+    requestSlot.rotate()
+    const requestId = requestSlot.current()
     const recorder = createMipVoiceRecorder()
     this.voiceRecorder = recorder
     this.recordingStartedAt = Date.now()
@@ -321,7 +337,7 @@ Page({
         return
       }
       const view = draftView(draft)
-      this.voiceDraftRequest.rotate()
+      requestSlot.rotate()
       this.setData({ drafts: [view, ...this.data.drafts], activeDraft: view, supplementalText: '' })
       wx.showToast({ title: '语音草稿已生成', icon: 'success' })
     }).catch((error) => {
