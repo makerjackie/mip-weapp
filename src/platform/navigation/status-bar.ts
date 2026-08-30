@@ -11,7 +11,11 @@ function toFiniteNumber(value: unknown) {
  * capsule-adjacent chrome must use getCustomNavigationContentTop instead.
  */
 export function getCustomNavigationStatusBarHeight() {
-  return Math.ceil(toFiniteNumber(wx.getWindowInfo().statusBarHeight))
+  const windowInfo = wx.getWindowInfo()
+  return Math.ceil(Math.max(
+    toFiniteNumber(windowInfo.statusBarHeight),
+    toFiniteNumber(windowInfo.safeArea?.top),
+  ))
 }
 
 /**

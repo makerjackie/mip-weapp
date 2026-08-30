@@ -1,0 +1,5 @@
+.top-safe-area {
+  display: block;
+  flex-shrink: 0;
+  width: 100%;
+}

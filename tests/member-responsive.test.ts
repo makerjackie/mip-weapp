@@ -12,6 +12,14 @@ function read(relativePath: string) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8')
 }
 
+function filesBelow(relativeDirectory: string): string[] {
+  const absoluteDirectory = path.join(root, relativeDirectory)
+  return fs.readdirSync(absoluteDirectory, { withFileTypes: true }).flatMap((entry) => {
+    const relativePath = path.join(relativeDirectory, entry.name)
+    return entry.isDirectory() ? filesBelow(relativePath) : [relativePath]
+  })
+}
+
 function findMedia(rootNode: Root, params: string) {
   const matches = rootNode.nodes.filter(
     (node): node is AtRule => node.type === 'atrule' && node.name === 'media' && node.params === params,
@@ -118,7 +126,7 @@ describe('MIP member responsive foundation', () => {
     })
   })
 
-  it('uses one platform-backed custom-navigation inset on the city-led main tabs', () => {
+  it('uses one shared platform-backed custom-navigation inset on the city-led main tabs', () => {
     for (const page of [
       { route: 'events', prefix: 'events' },
       { route: 'opportunities', prefix: 'opportunities' },
@@ -126,6 +134,7 @@ describe('MIP member responsive foundation', () => {
       const pageConfig = JSON.parse(read(`src/pages/${page.route}/index.json`)) as {
         navigationBarTitleText?: string
         navigationStyle?: string
+        usingComponents?: Record<string, string>
       }
       const pageSource = read(`src/pages/${page.route}/index.wxml`)
       const pageScript = read(`src/pages/${page.route}/index.ts`)
@@ -135,19 +144,33 @@ describe('MIP member responsive foundation', () => {
 
       expect(pageConfig.navigationStyle).toBe('custom')
       expect(pageConfig.navigationBarTitleText).toBeUndefined()
-      expect(pageSource.match(/\{\{statusBarHeight\}\}/g)).toHaveLength(1)
+      expect(pageConfig.usingComponents?.['app-top-safe-area']).toBe('/components/top-safe-area/index')
       expect(pageSource).toContain(`id="${page.prefix}-status-bar"`)
-      expect(pageSource).toContain('style="height: {{statusBarHeight}}px;"')
+      expect(pageSource).toContain(`<app-top-safe-area id="${page.prefix}-status-bar" />`)
       expect(pageSource).not.toContain('safe-area-inset-top')
       expect(navigationMarkup).toContain('h-[88rpx]')
       expect(navigationMarkup).toContain('pr-[200rpx]')
       expect(navigationMarkup).toContain('max-w-[360rpx]')
       expect(navigationMarkup).toContain('truncate')
       expect(navigationMarkup).not.toContain('justify-center')
-      expect(pageScript).toContain('getCustomNavigationStatusBarHeight')
-      expect(pageScript).toContain('statusBarHeight: getCustomNavigationStatusBarHeight()')
+      expect(pageScript).not.toContain('getCustomNavigationStatusBarHeight')
       expect(pageScript).not.toContain('wx.getWindowInfo')
       expect(pageSource).not.toMatch(/<app-page-exit\b|aria-label="返回|bind:tap="(?:goBack|navigateBack|leavePage)"/)
+    }
+  })
+
+  it('keeps every custom-navigation page on the shared top-safe-area contract', () => {
+    const customNavigationConfigs = filesBelow('src')
+      .filter(file => file.endsWith('.json'))
+      .map(file => ({ file, config: JSON.parse(read(file)) as { navigationStyle?: string, usingComponents?: Record<string, string> } }))
+      .filter(({ config }) => config.navigationStyle === 'custom')
+
+    expect(customNavigationConfigs.length).toBeGreaterThan(0)
+    for (const { file, config } of customNavigationConfigs) {
+      const pageBase = file.slice(0, -'.json'.length)
+      expect(config.usingComponents?.['app-top-safe-area'], file).toBe('/components/top-safe-area/index')
+      expect(read(`${pageBase}.wxml`), file).toContain('<app-top-safe-area')
+      expect(read(`${pageBase}.ts`), file).not.toMatch(/wx\.getWindowInfo|getCustomNavigationStatusBarHeight/)
     }
   })
 

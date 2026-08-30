@@ -1,5 +1,5 @@
 <view id="mip-opportunities-page" class="mip-member-page mip-member-tab-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+220rpx)] text-ink">
-  <view id="opportunities-status-bar" class="shrink-0" style="height: {{statusBarHeight}}px;" aria-hidden="true" />
+  <app-top-safe-area id="opportunities-status-bar" />
   <view id="opportunities-custom-navigation" class="box-border flex h-[88rpx] items-center pl-3 pr-[200rpx]">
     <view id="opportunities-filter-toggle" class="flex h-[88rpx] max-w-[360rpx] min-w-0 items-center gap-1 text-[length:32rpx] font-medium" aria-role="button" aria-expanded="{{filterOpen}}" bind:tap="toggleFilters">
       <text class="min-w-0 truncate">{{cityOptions[cityIndex].label}}</text>

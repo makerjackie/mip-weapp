@@ -15,7 +15,6 @@ import { mipAccessPageUrl } from '../../modules/mip-identity'
 import { mipIdentityModule } from '../../modules/mip-identity/client'
 import { groupedCityBranches, opportunityModule } from '../../modules/mip-opportunities'
 import { caseNavigateTo, syncCaseNavigation } from '../../modules/platform/case-navigation'
-import { getCustomNavigationStatusBarHeight } from '../../platform/navigation/status-bar'
 
 type PageMode = 'opportunities' | 'cooperation'
 interface CooperationTalentView extends Omit<CooperationTalentSummary, 'cards'> {
@@ -72,7 +71,6 @@ function cityGroupsFor(mode: PageMode, cityOptions: CityOption[]): CatalogSelect
 
 Page({
   data: {
-    statusBarHeight: getCustomNavigationStatusBarHeight(),
     state: 'loading' as 'loading' | 'ready' | 'error',
     mode: 'opportunities' as PageMode,
     status: 'RECRUITING' as OpportunityFilter['status'],

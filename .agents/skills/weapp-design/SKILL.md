@@ -26,6 +26,7 @@ description: Use for visual, token, TabBar, empty/error/loading, or TDesign work
 4. 需要的状态都要能看见：loading、empty、error+retry、未配置、支付关闭。
 5. 不要用假数据把界面填满。
 6. 非 Tab 页禁止关掉侧滑返回。编译条件入口会变成栈根，必须有明显的「返回」「完成」或「返回首页」（`app-page-exit` 或现有返回首页），不要只靠原生返回箭头。
+7. `navigationStyle: custom` 页面必须在首屏复用 `app-top-safe-area`；不要在页面内读取 `wx.getWindowInfo`、手写顶部高度或叠加 `safe-area-inset-top`。只有标题或操作靠近右上角胶囊时，才额外使用平台层的胶囊几何。
 
 ## Scripts
 

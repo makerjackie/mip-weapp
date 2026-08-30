@@ -20,6 +20,14 @@ describe('custom navigation content inset', () => {
     expect(getMenuButtonBoundingClientRect).not.toHaveBeenCalled()
   })
 
+  it('falls back to the portrait safe-area inset when status-bar height is unavailable', () => {
+    vi.stubGlobal('wx', {
+      getWindowInfo: () => ({ safeArea: { top: 31.4 } }),
+    })
+
+    expect(getCustomNavigationStatusBarHeight()).toBe(32)
+  })
+
   it('places content below the real WeChat capsule', () => {
     vi.stubGlobal('wx', {
       getWindowInfo: () => ({ statusBarHeight: 24 }),

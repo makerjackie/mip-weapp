@@ -16,7 +16,7 @@ describe('MIP opportunity Figma surfaces', () => {
   it('keeps the discovery hierarchy and all committed filters above the custom TabBar', () => {
     expect(discovery).toContain('id="opportunities-status-bar"')
     expect(discovery).toContain('id="opportunities-custom-navigation"')
-    expect(discovery).toContain('style="height: {{statusBarHeight}}px;"')
+    expect(discovery).toContain('<app-top-safe-area id="opportunities-status-bar" />')
     expect(discovery).toContain('id="opportunities-filter-actions"')
     expect(discovery).toContain('bottom-[calc(env(safe-area-inset-bottom)+112rpx)]')
     expect(discovery).toContain('pb-[280rpx]')

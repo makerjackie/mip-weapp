@@ -1,5 +1,5 @@
 <view id="mip-events-page" class="mip-member-page mip-member-tab-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+220rpx)] text-ink">
-  <view id="events-status-bar" class="shrink-0" style="height: {{statusBarHeight}}px;" aria-hidden="true" />
+  <app-top-safe-area id="events-status-bar" />
   <view id="events-custom-navigation" class="box-border flex h-[88rpx] items-center pr-[200rpx]">
     <view id="events-city-select" class="flex h-[88rpx] max-w-[360rpx] min-w-0 items-center gap-1 text-[length:28rpx] font-semibold" aria-role="button" bind:tap="selectCity">
       <text class="min-w-0 truncate">{{selectedCity || '全部城市'}}</text>

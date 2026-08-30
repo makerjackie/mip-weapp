@@ -7,6 +7,7 @@
   "backgroundColorBottom": "#040404",
   "enablePullDownRefresh": true,
   "usingComponents": {
+    "app-top-safe-area": "/components/top-safe-area/index",
     "app-empty-state": "/components/empty-state/index",
     "mip-opportunity-card": "/components/opportunity-card/index",
     "mip-talent-card": "/components/talent-card/index",

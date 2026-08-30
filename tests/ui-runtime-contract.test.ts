@@ -320,17 +320,17 @@ describe('mip-weapp UI runtime contract', () => {
     expect(verifyRuntime).toContain('injectedDiffRatio >= 0.001')
   })
 
-  it('keeps the city-led main tabs below one real status-bar inset', () => {
+  it('keeps the city-led main tabs below one shared real status-bar inset', () => {
     for (const route of ['events', 'opportunities']) {
-      const pageConfig = readJson<{ navigationStyle?: string }>(`src/pages/${route}/index.json`)
+      const pageConfig = readJson<{ navigationStyle?: string, usingComponents?: Record<string, string> }>(`src/pages/${route}/index.json`)
       const pageScript = read(`src/pages/${route}/index.ts`)
       const pageSource = read(`src/pages/${route}/index.wxml`)
 
       expect(pageConfig.navigationStyle).toBe('custom')
-      expect(pageScript).toContain('platform/navigation/status-bar')
-      expect(pageScript).toContain('statusBarHeight: getCustomNavigationStatusBarHeight()')
+      expect(pageConfig.usingComponents?.['app-top-safe-area']).toBe('/components/top-safe-area/index')
+      expect(pageScript).not.toContain('platform/navigation/status-bar')
       expect(pageScript).not.toContain('wx.getWindowInfo')
-      expect(pageSource.match(/\{\{statusBarHeight\}\}/g)).toHaveLength(1)
+      expect(pageSource).toContain('<app-top-safe-area')
       expect(pageSource).not.toContain('safe-area-inset-top')
     }
   })

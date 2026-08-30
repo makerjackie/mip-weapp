@@ -5,6 +5,7 @@
   "backgroundColorBottom": "#040404",
   "enablePullDownRefresh": true,
   "usingComponents": {
+    "app-top-safe-area": "/components/top-safe-area/index",
     "app-empty-state": "/components/empty-state/index",
     "event-card": "/components/event-card/index",
     "t-calendar": "tdesign-miniprogram/calendar/calendar",
