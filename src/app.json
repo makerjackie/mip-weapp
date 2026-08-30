@@ -126,10 +126,11 @@
   ],
   "window": {
     "navigationBarTitleText": "MIP奇点聚合",
-    "navigationBarBackgroundColor": "#080808",
+    "navigationBarBackgroundColor": "#040404",
     "navigationBarTextStyle": "white",
-    "backgroundColor": "#080808",
-    "backgroundColorBottom": "#080808",
+    "backgroundColor": "#040404",
+    "backgroundColorTop": "#040404",
+    "backgroundColorBottom": "#040404",
     "backgroundTextStyle": "light"
   },
   "tabBar": {

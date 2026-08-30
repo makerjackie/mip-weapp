@@ -19,6 +19,8 @@ import { formatLocalDate } from '../../utils/date'
 type PortfolioTab = 'cooperation' | 'cases' | 'opportunities'
 type SectionState = 'loading' | 'ready' | 'error'
 
+const PROFILE_REFRESH_INTERVAL_MS = 30_000
+
 interface CooperationCardView extends CooperationCardSummary {
   roleName: string
 }
@@ -69,6 +71,8 @@ Page({
   },
   resumeDestination: '',
   loadPromise: null as Promise<void> | null,
+  lastSuccessfulRefreshAt: 0,
+  refreshOnReturn: false,
 
   onShow() {
     syncCaseNavigation(this, 'pages/profile/index')
@@ -83,7 +87,13 @@ Page({
     if (this.loadPromise) {
       return
     }
-    void this.loadProfile()
+    const shouldForceRefresh = this.refreshOnReturn
+    const refreshIsDue = Date.now() - this.lastSuccessfulRefreshAt >= PROFILE_REFRESH_INTERVAL_MS
+    if (!shouldForceRefresh && this.data.state === 'ready' && !refreshIsDue) {
+      return
+    }
+    this.refreshOnReturn = false
+    void this.loadProfile({ force: shouldForceRefresh })
   },
 
   async loadProfile(options: { force?: boolean } = {}) {
@@ -110,6 +120,11 @@ Page({
     }
     if (cached) {
       this.applyIdentity(cached)
+      // Identity is cached by the app shell. Reveal the existing page immediately while
+      // the remaining profile sections revalidate in the background.
+      if (!hasRenderedContent) {
+        this.setData({ state: 'ready', initialSectionsState: 'loading' })
+      }
     }
     else if (!hasRenderedContent) {
       this.setData({
@@ -155,6 +170,7 @@ Page({
       initialSectionsState: 'ready',
       message: hasUnexpectedSectionFailure ? '部分资料暂时无法加载，请稍后重试。' : this.data.message,
     })
+    this.lastSuccessfulRefreshAt = Date.now()
   },
 
   async loadInfluenceSummary(snapshot: IdentityAccessSnapshot) {
@@ -412,6 +428,7 @@ Page({
   },
 
   async openProtected(destination: string, action: ProtectedActionKey, requiredCapability?: string) {
+    this.refreshOnReturn = true
     this.resumeDestination = destination
     try {
       const session = await mipIdentityModule.beginProtectedAction({

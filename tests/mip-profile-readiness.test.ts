@@ -59,4 +59,22 @@ describe('profile page readiness', () => {
     expect(loadBody.indexOf('snapshot = cached')).toBeLessThan(loadBody.indexOf('const sectionResults = await Promise.allSettled(['))
     expect(loadBody).toContain('this.setData({ identityState: \'error\', message: \'资料更新失败，已保留上次结果。\' })')
   })
+
+  it('reveals cached identity while the profile sections revalidate', () => {
+    const loadBody = methodBody('async loadProfileOnce', 'async loadInfluenceSummary')
+    expect(loadBody).toContain('this.setData({ state: \'ready\', initialSectionsState: \'loading\' })')
+    expect(loadBody.indexOf('state: \'ready\', initialSectionsState: \'loading\'')).toBeLessThan(
+      loadBody.indexOf('const sectionResults = await Promise.allSettled(['),
+    )
+  })
+
+  it('throttles ordinary onShow refreshes but forces refresh after protected pages', () => {
+    const showBody = methodBody('onShow()', 'async loadProfile')
+    expect(source).toContain('PROFILE_REFRESH_INTERVAL_MS = 30_000')
+    expect(showBody).toContain('lastSuccessfulRefreshAt')
+    expect(showBody).toContain('refreshOnReturn')
+    expect(showBody).toContain('loadProfile({ force: shouldForceRefresh })')
+    const protectedBody = methodBody('async openProtected', 'openMembership')
+    expect(protectedBody).toContain('this.refreshOnReturn = true')
+  })
 })

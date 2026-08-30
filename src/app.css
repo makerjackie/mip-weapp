@@ -26,10 +26,10 @@
 }
 
 page {
-  min-height: 100%;
+  min-height: 100vh;
   font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
   color: #fff;
-  background: #040404;
+  background-color: #040404;
 
   --td-brand-color: #fcdf03;
   --td-brand-color-active: #e3c900;
