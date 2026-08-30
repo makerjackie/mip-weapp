@@ -3,13 +3,15 @@
 > 调研日期：2026-08-30
 > 范围：原生微信小程序、微信云开发、开发者工具与编码 Agent Skill。本文不讨论 Taro、uni-app、React 小程序方案。
 
+> 扩展检索说明：本文保留官方平台基线与安全区整改记录。后续针对活跃开源项目和上游 Skill 的扩大检索，见 [`weapp-open-source-guidelines.md`](./weapp-open-source-guidelines.md) 与 [`weapp-agent-skills-ecosystem.md`](./weapp-agent-skills-ecosystem.md)。Skill 安装判断以后者为准。
+
 ## 结论
 
-当前没有一个公开、知名且适合直接覆盖本仓库全部约束的“原生微信小程序最佳实践 Skill”。本仓库已经有按技术栈和业务边界定制的 [`weapp-development`](../../.agents/skills/weapp-development/SKILL.md)、[`weapp-design`](../../.agents/skills/weapp-design/SKILL.md)、[`weapp-runtime-qa`](../../.agents/skills/weapp-runtime-qa/SKILL.md)、[`weapp-cloudbase`](../../.agents/skills/weapp-cloudbase/SKILL.md) 等本地 Skill，直接安装通用 Skill 会产生重复或冲突。
+当前没有一个公开 Skill 能完整覆盖本仓库全部约束。本仓库仍应以按技术栈和业务边界定制的 [`weapp-development`](../../.agents/skills/weapp-development/SKILL.md)、[`weapp-design`](../../.agents/skills/weapp-design/SKILL.md)、[`weapp-runtime-qa`](../../.agents/skills/weapp-runtime-qa/SKILL.md)、[`weapp-cloudbase`](../../.agents/skills/weapp-cloudbase/SKILL.md) 等本地 Skill 为项目事实；但扩大检索后，确认 `weapp-vite` 上游有两项高度适配的工具专用 Skill，可作为本地规则的补充。
 
 建议：
 
-1. **当前不新增第三方 Skill。** 先把本次调研中可验证的官方规则补入现有本地 Skill 和自动检查。
+1. **可项目级引入两项上游 Skill。** `weapp-vite-best-practices` 用于构建配置、分包、包体分析和 MCP；`weapp-devtools-e2e-best-practices` 用于 DevTools/automator 会话与证据边界。具体来源、安装命令和冲突检查见[扩展 Skill 调研](./weapp-agent-skills-ecosystem.md)。
 2. **暂不安装官方 Skyline Skills。** 它是目前最可信、最专门的微信小程序 Agent Skill，但只覆盖 Skyline；当前工程仍是原生 WebView / `glass-easel` 路线，并未启用 Skyline renderer。[微信 Skyline Skills 官方文档](https://developers.weixin.qq.com/miniprogram/dev/framework/runtime/skyline/skills.html) · [GitHub](https://github.com/wechat-miniprogram/skyline-skills)
 3. **如果以后决定迁移 Skyline，再安装官方包。** 建议先使用 `skyline-overview` 评估迁移成本，再按需安装 config、components、wxss、route 等子 Skill，不要为了“有 Skill”提前改变渲染架构。
 4. **如果以后需要更强的开发者工具自动化，优先评估微信开发者工具 Nightly 内置 Skill。** 它属于工具能力，不应复制为仓库业务规范；本次检查未发现 `wechatide` 或内置 `miniprogram-dev-skill`，因此不能把官方 Agent 工作流记为当前可用。Nightly 的稳定性和账号授权仍需单独评估。[Nightly 下载](https://developers.weixin.qq.com/miniprogram/dev/devtools/nightly_backup.html)
@@ -118,7 +120,7 @@
 
 | 时间 | 决策 |
 | --- | --- |
-| 现在 | 不安装新的公共 Skill；修复并收口共享页面壳，把官方规则写入现有本地 Skill 和质量门禁。 |
+| 现在 | 保留本地项目 Skill 为主规范；可项目级安装 `weapp-vite-best-practices` 与 `weapp-devtools-e2e-best-practices`，不安装额外 DevTools MCP。 |
 | 需要官方 DevTools Agent 自动化时 | 先在独立环境评估 Nightly 内置 `miniprogram-dev-skill`，确认稳定性后再决定是否作为团队工具要求。 |
 | 确认迁移 Skyline 时 | 安装 `wechat-miniprogram/skyline-skills`，先跑 `skyline-overview` 做迁移评估。 |
 | 接入微信小程序 AI 开发模式时 | 再评估 `wechat-miniprogram/ai-mode-skills`；不要把它与普通编码 Agent Skill 混为一谈。 |
