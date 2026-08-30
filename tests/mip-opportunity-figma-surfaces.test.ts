@@ -19,7 +19,7 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(discovery).toContain('style="height: {{statusBarHeight}}px;"')
     expect(discovery).toContain('id="opportunities-filter-actions"')
     expect(discovery).toContain('bottom-[calc(env(safe-area-inset-bottom)+112rpx)]')
-    expect(discovery).toContain('pb-[152rpx]')
+    expect(discovery).toContain('pb-[280rpx]')
 
     for (const binding of [
       'bindconfirm="onSearchConfirm"',

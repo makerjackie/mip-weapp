@@ -6,8 +6,8 @@
     <view wx:if="{{canDispatch}}" class="flex min-h-[88rpx] flex-1 items-center justify-center border-b-[4rpx] border-transparent text-[length:27rpx] text-muted" aria-role="button" bind:tap="openDispatch">派发任务</view>
   </view>
   <view class="mt-4 flex gap-2">
-    <view class="rounded-[8rpx] px-3 py-2 text-[length:23rpx] {{filter === 'pending' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-filter="pending" bind:tap="chooseFilter">待完成</view>
-    <view class="rounded-[8rpx] px-3 py-2 text-[length:23rpx] {{filter === 'ended' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-filter="ended" bind:tap="chooseFilter">已结束</view>
+    <view class="flex min-h-[88rpx] items-center rounded-[12rpx] px-3 text-[length:23rpx] {{filter === 'pending' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-filter="pending" bind:tap="chooseFilter">待完成</view>
+    <view class="flex min-h-[88rpx] items-center rounded-[12rpx] px-3 text-[length:23rpx] {{filter === 'ended' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-filter="ended" bind:tap="chooseFilter">已结束</view>
   </view>
   <view wx:if="{{state === 'loading'}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载任务" description="{{message}}" action-text="重新加载" bind:action="loadTasks" /></view>

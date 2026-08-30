@@ -1,6 +1,6 @@
 .badge-detail-page {
   min-height: 100vh;
-  background: #080808;
+  background: var(--color-canvas);
 }
 
 .badge-detail-content {

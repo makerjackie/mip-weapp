@@ -152,7 +152,7 @@ describe('event registration experience', () => {
     expect(paymentResult).toContain('mipCommerceModule.reconcile(order.id)')
     expect(paymentResult).toContain('classification === \'success\'')
     expect(paymentResultView).toContain('服务端状态')
-    expect(paymentResultView).toContain('<app-page-exit label="完成" tab-url="/pages/profile/index" />')
+    expect(paymentResultView).toContain('<app-page-exit always label="完成" tab-url="/pages/profile/index" />')
     expect(benefits).toContain('caseNavigateTo({ url: \'/pages/membership/index\' })')
     expect(benefitsView).toContain('<app-page-exit label="返回" />')
   })

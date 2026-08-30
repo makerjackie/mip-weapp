@@ -77,6 +77,7 @@ page {
   --td-tab-bar-bg-color: #202020;
   --td-tab-bar-active-bg: #202020;
   --td-tab-bar-border-color: #363636;
+  --td-collapse-icon-color: #a3a3a3;
 
   /* Keep the mobile member surfaces on the same radius scale as the Figma frames. */
   --mip-radius-card: 32rpx;

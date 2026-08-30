@@ -126,7 +126,7 @@ describe('MIP super case editor visual contract', () => {
     }
     expect(template).toContain('maxlength="8000"')
     expect(template).toContain('{{publicationStatusText}}')
-    expect(template).toContain('<app-page-exit label="取消" />')
+    expect(template).toContain('<app-page-exit always label="取消" />')
   })
 
   it('uses the exact exported Figma glyphs without remote runtime assets', () => {

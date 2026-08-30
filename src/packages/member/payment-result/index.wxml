@@ -22,5 +22,5 @@
     <t-button wx:if="{{isContentOrder && contentId}}" block variant="outline" theme="default" bind:tap="openContent">返回内容</t-button>
     <t-button wx:if="{{!isEventOrder && !isContentOrder && result === 'success'}}" block variant="outline" theme="default" bind:tap="openMembership">查看会员权益</t-button>
   </view>
-  <app-page-exit label="完成" tab-url="/pages/profile/index" />
+  <app-page-exit always label="完成" tab-url="/pages/profile/index" />
 </view>

@@ -40,7 +40,7 @@
     <view class="flex h-[80rpx] w-[160rpx] shrink-0 items-center justify-center gap-1 rounded-[16rpx] bg-panel text-[length:32rpx] text-muted active:bg-panel-raised" aria-role="button" aria-expanded="{{filterOpen}}" bind:tap="toggleFilters"><t-icon name="filter" size="32rpx" color="var(--color-muted)" /><text>筛选</text></view>
   </view>
 
-  <view hidden="{{!filterOpen}}" class="mx-3 mt-3 rounded-[16rpx] border border-line bg-panel px-4 pb-[152rpx] pt-4">
+  <view hidden="{{!filterOpen}}" class="mx-3 mt-3 rounded-[16rpx] border border-line bg-panel px-4 pb-[280rpx] pt-4">
     <view class="flex items-center justify-between"><view class="text-[length:25rpx] font-semibold">筛选条件</view><view class="text-[length:24rpx] text-brand" bind:tap="resetFilters">重置</view></view>
     <view wx:if="{{mode === 'opportunities'}}" class="mt-4 flex min-h-[88rpx] min-w-0 items-center gap-2 rounded-[12rpx] bg-panel-raised px-3">
       <t-icon name="search" size="32rpx" color="var(--color-muted)" />

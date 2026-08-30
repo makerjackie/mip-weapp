@@ -1,6 +1,6 @@
 .badge-page {
   min-height: 100vh;
-  background: #080808;
+  background: var(--color-canvas);
 }
 
 .badge-hero {
@@ -37,8 +37,8 @@
 
 .badge-order-button--disabled,
 .badge-card-action--disabled {
-  color: #666;
-  opacity: .7;
+  color: var(--color-muted);
+  border-color: var(--color-line);
 }
 
 .badge-filters {

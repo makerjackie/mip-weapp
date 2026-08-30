@@ -2,9 +2,9 @@
   <view wx:if="{{state === 'loading'}}" class="mt-3 flex flex-col gap-3">
     <view class="min-h-[196rpx] rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <view class="min-h-[360rpx] rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-    <app-page-exit label="取消" />
+    <app-page-exit always label="取消" />
   </view>
-  <view wx:elif="{{state === 'error'}}" class="pt-3"><app-empty-state title="暂时无法编辑机会" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit label="取消" /></view>
+  <view wx:elif="{{state === 'error'}}" class="pt-3"><app-empty-state title="暂时无法编辑机会" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit always label="取消" /></view>
   <block wx:else>
     <view class="-mx-3 flex h-[64rpx] items-center justify-center bg-brand px-4 text-center text-[length:26rpx] font-medium text-on-brand">准确的描述可以更容易帮你找到合作机会</view>
     <view class="mt-3 flex min-h-[196rpx] items-center justify-center rounded-[16rpx] border border-dashed border-brand bg-panel text-[length:27rpx] text-brand active:bg-panel-raised" aria-role="button" bind:tap="pasteAndRecognize"><t-icon class="mr-2" name="file-copy" size="30rpx" color="var(--color-brand)" />粘贴整段文字，自动识别</view>
@@ -51,7 +51,7 @@
     <view id="opportunity-editor-fixed-actions" class="mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center rounded-full border border-brand bg-brand-soft p-2">
       <view class="flex h-[80rpx] w-full items-center justify-center rounded-full bg-brand text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" aria-disabled="{{saving || coverUploading}}" bind:tap="publish">{{id ? '确认修改' : '确认发布'}}</view>
     </view>
-    <app-page-exit label="取消" />
+    <app-page-exit always label="取消" />
     <t-popup visible="{{pastePreviewVisible}}" placement="bottom" prevent-scroll-through bind:visible-change="handlePastePreviewVisibility">
       <view class="box-border max-h-[76vh] min-h-[420rpx] rounded-t-[24rpx] bg-panel px-4 pb-[calc(env(safe-area-inset-bottom)+32rpx)] pt-5 text-ink">
         <view class="text-[length:30rpx] font-semibold">确认识别结果</view>

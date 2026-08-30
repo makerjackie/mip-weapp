@@ -19,6 +19,6 @@
     <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5"><view class="text-[length:27rpx] font-semibold">特征打分</view><view class="mt-4 grid grid-cols-2 gap-3"><view wx:for="{{abilities}}" wx:key="key" class="rounded-[14rpx] bg-panel-raised px-3 py-3"><view class="flex items-center justify-between text-[length:22rpx]"><text>{{item.label}}</text><text class="font-semibold text-brand">{{item.score}}</text></view><slider min="0" max="5" step="1" value="{{item.score}}" activeColor="#FCDF03" backgroundColor="#363636" block-color="#FCDF03" block-size="16" data-key="{{item.key}}" bindchange="updateAbility" /></view></view></view>
     <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] border border-danger px-4 py-3 text-[length:22rpx] text-danger">{{message}}</view>
     <view class="mt-5 rounded-[24rpx] border border-line bg-panel p-2"><view class="grid grid-cols-2 gap-2"><t-button block size="large" variant="outline" theme="primary" disabled="{{saving}}" bind:tap="saveDraft">保存草稿</t-button><t-button block size="large" variant="outline" theme="primary" disabled="{{saving}}" bind:tap="preview">预览</t-button><t-button class="col-span-2" block size="large" theme="primary" loading="{{saving}}" bind:tap="publish">发布合作卡</t-button></view></view>
-    <app-page-exit label="取消" />
+    <app-page-exit always label="取消" />
   </block>
 </view>

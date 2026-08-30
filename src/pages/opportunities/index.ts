@@ -30,6 +30,7 @@ interface CityOption { id: string, label: string, popular?: boolean }
 
 const allRoleOptions = [{ key: '', name: '全部角色' }, ...cooperationRoles]
 const nationwideOption: CityOption = { id: '', label: '全国' }
+const OPPORTUNITY_REFRESH_INTERVAL_MS = 30_000
 
 function amountRange(minimum: string, maximum: string) {
   const toCents = (value: string) => {
@@ -111,6 +112,7 @@ Page({
   },
   requestSequence: 0,
   resumeDestination: '',
+  lastSuccessfulRefreshAt: 0,
 
   onShow() {
     syncCaseNavigation(this, 'pages/opportunities/index')
@@ -125,7 +127,10 @@ Page({
     if (!this.data.catalog.cityTags.length) {
       void this.loadCatalogs()
     }
-    void this.loadContent(true)
+    const refreshIsDue = Date.now() - this.lastSuccessfulRefreshAt >= OPPORTUNITY_REFRESH_INTERVAL_MS
+    if (this.data.state !== 'ready' || refreshIsDue) {
+      void this.loadContent(true, { preserveContent: this.data.state === 'ready' })
+    }
   },
 
   async loadCatalogs() {
@@ -163,11 +168,14 @@ Page({
     }
   },
 
-  async loadContent(reset = false) {
+  async loadContent(reset = false, options: { preserveContent?: boolean } = {}) {
     const sequence = this.requestSequence + 1
     this.requestSequence = sequence
-    if (reset) {
+    if (reset && !options.preserveContent) {
       this.setData({ state: 'loading', nextCursor: '', message: '' })
+    }
+    else if (reset) {
+      this.setData({ nextCursor: '', message: '' })
     }
     else {
       this.setData({ loadingMore: true, message: '' })
@@ -195,6 +203,7 @@ Page({
           opportunities: reset ? page.items : [...this.data.opportunities, ...page.items],
           nextCursor: page.nextCursor || '',
         })
+        this.lastSuccessfulRefreshAt = Date.now()
       }
       else {
         const page = await cooperationModule.listTalents(
@@ -230,6 +239,7 @@ Page({
             : mergeCooperationTalents(this.data.cooperationTalents, talents),
           nextCursor: page.nextCursor || '',
         })
+        this.lastSuccessfulRefreshAt = Date.now()
       }
     }
     catch (error) {
@@ -261,7 +271,7 @@ Page({
 
   async onPullDownRefresh() {
     try {
-      await Promise.all([this.loadCatalogs(), this.loadContent(true)])
+      await Promise.all([this.loadCatalogs(), this.loadContent(true, { preserveContent: this.data.state === 'ready' })])
     }
     finally {
       wx.stopPullDownRefresh()

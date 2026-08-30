@@ -120,7 +120,7 @@
     </view>
 
     <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] border border-danger px-4 py-3 text-[length:22rpx] leading-6 text-danger" aria-live="polite">{{message}}</view>
-    <app-page-exit label="取消" />
+    <app-page-exit always label="取消" />
 
     <mip-sticky-actions>
       <view id="case-editor-fixed-actions" slot="actions" class="case-editor-actions grid min-h-[112rpx] w-full grid-cols-2 items-center gap-2 rounded-full border border-brand bg-brand-soft p-2">
