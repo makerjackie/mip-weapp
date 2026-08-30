@@ -28,8 +28,6 @@ function migrationDatabase(overrides = {}) {
       closed_at: null,
       primary_branch_id: null,
       version: 1,
-      created_at: new Date('2026-08-28T00:00:00.000Z'),
-      created_recently: 1,
     },
     currentPrivate: {
       phone_hash: null,
@@ -74,7 +72,7 @@ function migrationDatabase(overrides = {}) {
     async one(sql, params) {
       calls.push({ kind: 'one', sql, params })
       if (sql.includes('WHERE app_id = ? AND phone_hash = ?')) return state.phoneOwner
-      if (sql.includes('FROM mip_users') && sql.includes('created_recently')) return state.currentUser
+      if (sql.includes('FROM mip_users') && sql.includes('primary_branch_id')) return state.currentUser
       if (sql.includes('FROM mip_private_profiles') && sql.includes('wechat_ciphertext')) return state.currentPrivate
       if (sql.includes('FROM mip_membership_chains')) return state.chain
       if (/FROM mip_[a-z_]+ WHERE app_id = \? AND \? IN \(/.test(sql)) {
@@ -126,6 +124,19 @@ describe('paid member phone migration rebind', () => {
     assert.equal(writes.some(call => call.sql.includes("SET status = 'CLOSED'")), true)
     assert.equal(writes.some(call => call.sql.includes("SET status = 'CANCELLED'")), true)
     assert.equal(writes.some(call => call.sql.includes('IDENTITY_PHONE_MIGRATION_REBOUND')), true)
+  })
+
+  it('does not reject an otherwise pristine temporary user because of account age', async () => {
+    const state = migrationDatabase()
+    await repositoryFor(state).bindPhone(caller, currentUserId, phone)
+
+    const currentUserLookup = state.calls.find(call => (
+      call.kind === 'one'
+      && call.sql.includes('FROM mip_users')
+      && call.sql.includes('primary_branch_id')
+    ))
+    assert.ok(currentUserLookup)
+    assert.doesNotMatch(currentUserLookup.sql, /created_at|INTERVAL\s+24\s+HOUR|created_recently/i)
   })
 
   it('keeps the ordinary unique-key collision behavior when the migration switch is disabled', async () => {
@@ -190,9 +201,8 @@ describe('paid member phone migration rebind', () => {
     )
   })
 
-  it('fails closed for stale temporary users, identity mismatch, or an existing claim audit', async () => {
+  it('fails closed for identity mismatch or an existing claim audit', async () => {
     for (const overrides of [
-      { currentUser: { id: currentUserId, status: 'ACTIVE', closed_at: null, primary_branch_id: null, version: 1, created_recently: 0 } },
       { currentIdentities: [{ id: 'identity-current', provider: 'WECHAT_MINIPROGRAM', identity_key: 'd'.repeat(64), closed_identity_key: null, union_identity_key: null }] },
       { existingClaim: { id: 1 } },
     ]) {

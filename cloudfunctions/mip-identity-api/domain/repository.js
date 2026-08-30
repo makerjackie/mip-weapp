@@ -774,9 +774,7 @@ async function updatePhone(tx, appId, userId, protectedPhone) {
 async function rebindPaidMemberByPhone(tx, input) {
   try {
     const currentUser = await tx.one(
-      `SELECT id, status, closed_at, primary_branch_id, version, created_at,
-              (created_at >= UTC_TIMESTAMP(3) - INTERVAL 24 HOUR
-                AND created_at <= UTC_TIMESTAMP(3)) AS created_recently
+      `SELECT id, status, closed_at, primary_branch_id, version
        FROM mip_users
        WHERE app_id = ? AND id = ?
        FOR UPDATE`,
@@ -786,8 +784,7 @@ async function rebindPaidMemberByPhone(tx, input) {
       || currentUser.status !== 'ACTIVE'
       || currentUser.closed_at
       || currentUser.primary_branch_id
-      || Number(currentUser.version) !== 1
-      || !Boolean(currentUser.created_recently)) {
+      || Number(currentUser.version) !== 1) {
       throw new Error('PHONE_MIGRATION_REBIND_FAILED')
     }
 
