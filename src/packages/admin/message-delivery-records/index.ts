@@ -64,6 +64,7 @@ Page({
     message: '',
     pageSizes,
   },
+  requestSequence: 0,
 
   onShow() {
     void this.load()
@@ -125,13 +126,18 @@ Page({
   },
 
   async load(force = false) {
-    const session = await mipAdminModule.getSession(force)
-    if (!session.enabled || !hasCapability(session.capabilities, 'messages.manage')) {
-      this.setData({ state: 'forbidden', items: [], message: '' })
-      return false
-    }
+    const sequence = this.requestSequence + 1
+    this.requestSequence = sequence
     this.setData({ state: 'loading', nextCursor: null, message: '' })
     try {
+      const session = await mipAdminModule.getSession(force)
+      if (sequence !== this.requestSequence) {
+        return false
+      }
+      if (!session.enabled || !hasCapability(session.capabilities, 'messages.manage')) {
+        this.setData({ state: 'forbidden', items: [], message: '' })
+        return false
+      }
       const page = await mipAdminModule.messaging.listDeliveryRecords({
         query: this.data.query.trim() || undefined,
         channel: this.data.channel || undefined,
@@ -140,6 +146,9 @@ Page({
         to: this.data.to ? localDayBoundary(this.data.to, 1) : undefined,
         limit: this.data.pageSize,
       }, force)
+      if (sequence !== this.requestSequence) {
+        return false
+      }
       this.setData({
         state: page.items.length ? 'ready' : 'empty',
         items: page.items.map(viewItem),
@@ -148,6 +157,9 @@ Page({
       return true
     }
     catch (error) {
+      if (sequence !== this.requestSequence) {
+        return false
+      }
       if (isAdminForbiddenError(error)) {
         this.setData({ state: 'forbidden', items: [] })
       }

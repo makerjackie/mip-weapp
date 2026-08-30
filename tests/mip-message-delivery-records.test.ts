@@ -50,6 +50,8 @@ describe('MIP message delivery records', () => {
     expect(page).toContain('加载更多')
     expect(page).toContain('mip-admin-section-grid')
     expect(script).toContain('listDeliveryRecords')
+    expect(script.indexOf('try {')).toBeLessThan(script.indexOf('await mipAdminModule.getSession(force)'))
+    expect(script).toContain('sequence !== this.requestSequence')
     expect(nav).toContain('packages/admin/message-delivery-records/index')
   })
 })
