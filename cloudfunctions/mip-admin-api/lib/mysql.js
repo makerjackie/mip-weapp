@@ -4,6 +4,20 @@ const mysql = require('mysql2/promise')
 
 const retryableErrors = new Set(['ER_LOCK_DEADLOCK', 'ER_LOCK_WAIT_TIMEOUT'])
 
+function safeQueryParams(params) {
+  if (!Array.isArray(params) || params.some(unsupportedQueryParam)) {
+    throw new TypeError('INVALID_SQL_PARAMETER')
+  }
+  return params
+}
+
+function unsupportedQueryParam(value) {
+  return value === undefined
+    || ['function', 'symbol'].includes(typeof value)
+    || Array.isArray(value)
+    || (value !== null && typeof value === 'object' && !(value instanceof Date) && !Buffer.isBuffer(value))
+}
+
 function positiveInteger(value, fallback) {
   const parsed = Number(value)
   return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback
@@ -38,7 +52,7 @@ function connectionOptions(options = {}) {
 function createMysqlDatabase(options = {}) {
   const pool = options.pool || mysql.createPool(connectionOptions(options))
   async function query(sql, params = []) {
-    const [rows] = await pool.execute(sql, params)
+    const [rows] = await pool.query(sql, safeQueryParams(params))
     return rows
   }
   async function one(sql, params = []) {
@@ -54,11 +68,11 @@ function createMysqlDatabase(options = {}) {
         await connection.beginTransaction()
         const tx = {
           async query(sql, params = []) {
-            const [rows] = await connection.execute(sql, params)
+            const [rows] = await connection.query(sql, safeQueryParams(params))
             return rows
           },
           async one(sql, params = []) {
-            const [rows] = await connection.execute(sql, params)
+            const [rows] = await connection.query(sql, safeQueryParams(params))
             return rows[0] || null
           },
         }
