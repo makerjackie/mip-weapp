@@ -57,6 +57,7 @@ Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
     plans: [] as DisplayPlan[],
+    plansVerified: false,
     selectedPlanId: '' as MembershipPlanId | '',
     selectedBenefits: [] as string[],
     identityState: 'loading' as 'loading' | 'ready' | 'error',
@@ -124,49 +125,61 @@ Page({
   },
 
   async loadPlans() {
-    if (this.data.state !== 'ready') {
+    const cached = mipCommerceModule.peekPlans()
+    const hasCachedPlans = cached !== undefined
+    if (cached !== undefined) {
+      this.applyPlans(cached, false)
+      this.setData({ message: '正在确认最新会员方案。' })
+    }
+    else if (this.data.state !== 'ready') {
       this.setData({ state: 'loading' })
     }
     try {
-      const plans = (await mipCommerceModule.listPlans()).map(presentPlan)
-      const selectedPlanId = plans.some(plan => plan.id === this.data.selectedPlanId)
-        ? this.data.selectedPlanId
-        : plans[0]?.id || ''
-      const selected = plans.find(plan => plan.id === selectedPlanId)
-      this.setData({
-        state: 'ready',
-        plans,
-        selectedPlanId,
-        selectedBenefits: selected?.benefits || [],
-        message: plans.length ? '' : '当前没有可用会员方案。',
-      })
+      const plans = await mipCommerceModule.listPlans({ force: hasCachedPlans })
+      this.applyPlans(plans, true)
     }
     catch {
-      this.setData(this.data.plans.length
-        ? { message: '会员方案更新失败，已保留上次结果。' }
+      this.setData({ plansVerified: false })
+      this.setData(hasCachedPlans
+        ? { message: '会员方案更新失败，暂时无法购买。' }
         : { state: 'error', message: '会员方案暂时无法加载。' })
     }
   },
 
+  applyPlans(source: readonly MembershipPlan[], plansVerified: boolean) {
+    const plans = source.map(presentPlan)
+    const selectedPlanId = plans.some(plan => plan.id === this.data.selectedPlanId)
+      ? this.data.selectedPlanId
+      : plans[0]?.id || ''
+    const selected = plans.find(plan => plan.id === selectedPlanId)
+    this.setData({
+      state: 'ready',
+      plans,
+      plansVerified,
+      selectedPlanId,
+      selectedBenefits: selected?.benefits || [],
+      message: plans.length ? '' : '当前没有可用会员方案。',
+    })
+  },
+
   async loadIdentity() {
     try {
-      const [snapshot, benefits] = await Promise.all([
-        mipIdentityModule.loadSnapshot(),
-        mipCommerceModule.getMembershipBenefits().catch(() => null),
-      ])
+      const snapshot = await mipIdentityModule.loadSnapshot()
       const membership = membershipPresentation(snapshot.membership.kind, snapshot.membership.entitlement)
       const isPlayer = snapshot.membership.kind === 'PLAYER'
-      const attribution = benefits?.kind === 'PLAYER' ? benefits.invitationAttribution : undefined
       this.setData({
         identityState: 'ready',
         membershipLabel: membership.label,
         membershipDescription: membership.description,
         membershipEndsText: membership.endsAt ? formatLocalDate(membership.endsAt) : '',
         isPlayer,
-        invitationSourceName: attribution?.displayName || '',
-        invitationSourceAvatar: attribution?.avatarUrl || '',
       })
       if (isPlayer) {
+        const cachedBenefits = mipCommerceModule.peekMembershipBenefits()
+        if (cachedBenefits?.kind === 'PLAYER') {
+          this.applyInvitationAttribution(cachedBenefits)
+        }
+        void this.refreshMembershipBenefits(cachedBenefits !== undefined)
         void this.prepareInvitation()
       }
       else {
@@ -177,6 +190,23 @@ Page({
     catch {
       this.setData({ identityState: 'error' })
     }
+  },
+
+  async refreshMembershipBenefits(force: boolean) {
+    try {
+      const benefits = await mipCommerceModule.getMembershipBenefits({ force })
+      if (benefits.kind === 'PLAYER') {
+        this.applyInvitationAttribution(benefits)
+      }
+    }
+    catch {}
+  },
+
+  applyInvitationAttribution(benefits: Extract<Awaited<ReturnType<typeof mipCommerceModule.getMembershipBenefits>>, { kind: 'PLAYER' }>) {
+    this.setData({
+      invitationSourceName: benefits.invitationAttribution?.displayName || '',
+      invitationSourceAvatar: benefits.invitationAttribution?.avatarUrl || '',
+    })
   },
 
   async prepareInvitation() {
@@ -213,7 +243,11 @@ Page({
 
   async purchase() {
     const planId = this.data.selectedPlanId
-    if (!planId || this.data.paying || this.data.accessing || this.data.invitationResolving) {
+    if (!planId
+      || !this.data.plansVerified
+      || this.data.paying
+      || this.data.accessing
+      || this.data.invitationResolving) {
       return
     }
     if (!this.data.paymentEnabled) {

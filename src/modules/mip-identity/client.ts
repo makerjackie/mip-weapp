@@ -1,6 +1,6 @@
 import { createMipBranchesModule } from '../mip-branches/module'
 import { createMipIdentityCloudbaseGateway } from './cloudbase-gateway'
-import { registerMipLocalUserCache } from './local-session'
+import { clearMipLocalUserCaches, registerMipLocalUserCache } from './local-session'
 import {
   createMipIdentityModule,
   MIP_IDENTITY_ACCESS_STORAGE_KEY,
@@ -15,6 +15,7 @@ const identityAccessStorage = {
 export const mipIdentityGateway = createMipIdentityCloudbaseGateway()
 export const mipIdentityModule = createMipIdentityModule(mipIdentityGateway, {
   storage: identityAccessStorage,
+  onIdentityBoundary: clearMipLocalUserCaches,
 })
 export const mipBranchesModule = createMipBranchesModule(mipIdentityGateway)
 

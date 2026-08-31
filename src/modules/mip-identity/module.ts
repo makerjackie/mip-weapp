@@ -45,6 +45,7 @@ export interface MipIdentityModuleOptions {
   token?: () => string
   intentLifetimeMs?: number
   storage?: MipIdentityAccessStorage
+  onIdentityBoundary?: () => void
 }
 
 const accessRequirements = new Set<AccessRequirement>([
@@ -164,6 +165,15 @@ export function createMipIdentityModule(
   let pendingResume: StoredPendingResume | undefined
   let signedOut = false
   let localSessionGeneration = 0
+
+  function notifyIdentityBoundary() {
+    try {
+      options.onIdentityBoundary?.()
+    }
+    catch {
+      // Local caches are optional and must not make a completed identity mutation fail.
+    }
+  }
 
   function currentLocalSnapshot(): IdentityAccessSnapshot {
     return latestSnapshot || signedOutSnapshot()
@@ -424,14 +434,24 @@ export function createMipIdentityModule(
       if (!code.trim()) {
         throw new Error('PHONE_CODE_REQUIRED')
       }
-      return mutateAccessSession(token, () => gateway.bindWechatPhone(code))
+      const requestGeneration = localSessionGeneration
+      const result = await mutateAccessSession(token, () => gateway.bindWechatPhone(code))
+      if (requestGeneration === localSessionGeneration && !signedOut) {
+        notifyIdentityBoundary()
+      }
+      return result
     },
 
     async rebindWechatPhone(code: string) {
       if (!code.trim()) {
         throw new Error('PHONE_CODE_REQUIRED')
       }
-      return loadAndStoreSnapshot(() => gateway.bindWechatPhone(code))
+      const requestGeneration = localSessionGeneration
+      const snapshot = await loadAndStoreSnapshot(() => gateway.bindWechatPhone(code))
+      if (requestGeneration === localSessionGeneration && !signedOut) {
+        notifyIdentityBoundary()
+      }
+      return snapshot
     },
 
     async closeAccount(input: AccountClosureInput) {
@@ -446,6 +466,7 @@ export function createMipIdentityModule(
       pendingResume = undefined
       signedOut = false
       persistAccessState()
+      notifyIdentityBoundary()
       return result
     },
 

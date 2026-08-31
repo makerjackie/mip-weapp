@@ -28,7 +28,7 @@
 
   <view wx:if="{{message && state !== 'error'}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:22rpx] text-ink">{{message}}</view>
   <view wx:if="{{invitationMessage}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:22rpx] text-ink">{{invitationMessage}}</view>
-  <view wx:if="{{state === 'ready' && plans.length}}" class="mt-6"><t-button block size="large" theme="primary" loading="{{paying || accessing}}" disabled="{{!paymentEnabled || !selectedPlanId}}" bind:tap="purchase">{{!paymentEnabled ? '会员支付尚未配置' : isPlayer ? '续费会员' : '微信支付'}}</t-button></view>
+  <view wx:if="{{state === 'ready' && plans.length}}" class="mt-6"><t-button block size="large" theme="primary" loading="{{paying || accessing}}" disabled="{{!paymentEnabled || !selectedPlanId || !plansVerified}}" bind:tap="purchase">{{!paymentEnabled ? '会员支付尚未配置' : !plansVerified ? '正在确认方案' : isPlayer ? '续费会员' : '微信支付'}}</t-button></view>
   <view class="mt-3 text-center text-[length:21rpx] leading-5 text-muted">支付调起后需等待服务端确认，以订单状态为准。</view>
   <view wx:if="{{isPlayer}}" class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
     <view class="text-[length:27rpx] font-semibold">会员邀请</view>

@@ -1,4 +1,5 @@
 export * from './domain'
 export * from './gateway'
 export * from './module'
+export * from './plan-cache'
 export * from './types'

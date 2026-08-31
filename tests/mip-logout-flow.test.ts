@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import { createMipEventsModule, MipEventsError } from '../src/modules/mip-events'
 import {
+  clearMipLocalUserCaches,
   createMipIdentityModule,
   createMipLocalSessionController,
   registerMipLocalUserCache,
@@ -206,6 +207,19 @@ describe('MIP local logout flow', () => {
 
     await expect(pending).resolves.toBe('old-user')
     expect(cache.peek('private-profile')).toBeUndefined()
+  })
+
+  it('clears user-scoped caches after a successful phone identity migration', async () => {
+    const clearMembership = vi.fn()
+    const unregister = registerMipLocalUserCache(clearMembership)
+    const identity = createMipIdentityModule(identityGateway(), {
+      onIdentityBoundary: clearMipLocalUserCaches,
+    })
+
+    await identity.rebindWechatPhone('wechat-phone-code')
+
+    expect(clearMembership).toHaveBeenCalledOnce()
+    unregister()
   })
 
   it('rejects a check-in scene resolved after logout before a resume token can be saved', async () => {

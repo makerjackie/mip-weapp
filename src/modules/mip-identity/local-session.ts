@@ -47,6 +47,17 @@ export function registerMipLocalUserCache(clear: () => void) {
   return () => cacheRegistry().delete(clear)
 }
 
+export function clearMipLocalUserCaches() {
+  for (const clear of cacheRegistry()) {
+    try {
+      clear()
+    }
+    catch {
+      // One optional cache must not prevent the identity boundary from taking effect.
+    }
+  }
+}
+
 export function isMipLocalUserStorageKey(key: string): boolean {
   return MIP_LOCAL_USER_STORAGE_KEYS.includes(
     key as (typeof MIP_LOCAL_USER_STORAGE_KEYS)[number],
@@ -61,11 +72,8 @@ export function createMipLocalSessionController(
     signOut() {
       identity.signOutLocally()
 
-      const clearers = [
-        ...cacheRegistry(),
-        ...(options.clearUserCaches || []),
-      ]
-      for (const clear of clearers) {
+      clearMipLocalUserCaches()
+      for (const clear of options.clearUserCaches || []) {
         try {
           clear()
         }

@@ -11,6 +11,7 @@ Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
     plans: [] as MembershipPlan[],
+    plansKnown: false,
     membershipLabel: '会员状态',
     membershipDescription: '正在读取会员权益',
     membershipEndsText: '',
@@ -45,12 +46,23 @@ Page({
   },
 
   async loadOnce() {
-    if (this.data.state !== 'ready') {
+    const cachedMembership = mipCommerceModule.peekMembershipBenefits()
+    const cachedPlans = mipCommerceModule.peekPlans()
+    if (cachedMembership) {
+      this.presentMembership(cachedMembership)
+    }
+    if (cachedPlans !== undefined) {
+      this.setData({ plans: cachedPlans, plansKnown: true })
+    }
+    if (cachedMembership) {
+      this.setData({ state: 'ready', message: '' })
+    }
+    else if (this.data.state !== 'ready') {
       this.setData({ state: 'loading', message: '' })
     }
     const [membershipResult, plansResult] = await Promise.allSettled([
-      mipCommerceModule.getMembershipBenefits(),
-      mipCommerceModule.listPlans(),
+      mipCommerceModule.getMembershipBenefits({ force: cachedMembership !== undefined }),
+      mipCommerceModule.listPlans({ force: cachedPlans !== undefined }),
     ])
     if (membershipResult.status === 'fulfilled') {
       this.presentMembership(membershipResult.value)
@@ -62,7 +74,7 @@ Page({
       })
     }
     if (plansResult.status === 'fulfilled') {
-      this.setData({ plans: plansResult.value })
+      this.setData({ plans: plansResult.value, plansKnown: true })
     }
     if (membershipResult.status === 'rejected' && !this.data.membershipKnown) {
       this.setData({ state: 'error', message: '会员权益暂时无法加载。' })
