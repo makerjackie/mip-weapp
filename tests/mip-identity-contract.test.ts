@@ -168,6 +168,7 @@ function createAgreementServerHarness() {
 
 afterEach(() => {
   cloudHarness.callFunction.mockReset()
+  vi.unstubAllGlobals()
   vi.useRealTimers()
 })
 
@@ -381,6 +382,20 @@ describe('MIP identity v1 client contract', () => {
         input: { code: 'one-shot-code' },
       },
     })
+  })
+
+  it('does not send simulator phone codes to the identity service', async () => {
+    vi.stubGlobal('wx', {
+      getDeviceInfo: () => ({ platform: 'devtools' }),
+    })
+    const transport = createMipIdentityCloudbaseTransport('mip-identity-api')
+
+    await expect(transport.invoke({
+      contractVersion: 1,
+      action: 'bindWechatPhone',
+      input: { code: 'simulator-phone-code' },
+    })).rejects.toThrow('手机号授权必须在微信真机完成。')
+    expect(cloudHarness.callFunction).not.toHaveBeenCalled()
   })
 
   it('does not add logging or storage seams around sensitive identity requests', () => {

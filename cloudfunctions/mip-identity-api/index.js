@@ -13,6 +13,7 @@ const {
   readProfileCardScene,
 } = require('./lib/profile-card-code')
 const { createProfileRef, readProfileRef } = require('./lib/profile-ref')
+const { createWechatPhoneResolver } = require('./lib/wechat-phone')
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 
@@ -73,14 +74,9 @@ const repository = createIdentityRepository(mysqlDatabase(), {
 const service = createIdentityService({
   repository,
   agreements: configuredAgreements(),
-  async phoneResolver(code) {
-    const result = await cloud.openapi.phonenumber.getPhoneNumber({ code })
-    const phoneInfo = result?.phoneInfo || result?.phone_info
-    if (!phoneInfo) {
-      throw new Error('PHONE_BIND_FAILED')
-    }
-    return phoneInfo
-  },
+  phoneResolver: createWechatPhoneResolver(
+    input => cloud.openapi.phonenumber.getPhoneNumber(input),
+  ),
   protectPhone(phoneInfo, context) {
     return protectPhone(phoneInfo, process.env.MIP_PHONE_ENCRYPTION_KEY, context)
   },

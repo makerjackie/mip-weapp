@@ -6,11 +6,33 @@ import { requireCloudClient } from '../platform/cloudbase'
 import { createMipIdentityGateway } from './gateway'
 import { isRetryableIdentityAction } from './retry-policy'
 
+function isDevToolsRuntime() {
+  if (typeof wx === 'undefined') {
+    return false
+  }
+  try {
+    if (typeof wx.getDeviceInfo === 'function') {
+      return wx.getDeviceInfo().platform === 'devtools'
+    }
+  }
+  catch { /* Fall back for older base-library runtimes. */ }
+  try {
+    return typeof wx.getSystemInfoSync === 'function'
+      && wx.getSystemInfoSync().platform === 'devtools'
+  }
+  catch {
+    return false
+  }
+}
+
 export function createMipIdentityCloudbaseTransport(
   functionName = runtimeConfig.cloudbase.identityFunctionName,
 ): MipIdentityTransport {
   return {
     async invoke(request) {
+      if (request.action === 'bindWechatPhone' && isDevToolsRuntime()) {
+        throw new Error('手机号授权必须在微信真机完成。')
+      }
       try {
         const result = await retryTransport(async () => {
           const cloud = await requireCloudClient()

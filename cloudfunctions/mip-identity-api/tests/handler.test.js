@@ -303,6 +303,35 @@ describe('MIP identity handler', () => {
     })
   })
 
+  it('returns actionable bounded phone provider states', async () => {
+    const handler = createHandler({
+      getContext: () => ({}),
+      resolveCaller: () => ({ appId: 'trusted-app', identityKey: 'a'.repeat(64) }),
+      service: {
+        async bindWechatPhone(_caller, { code }) {
+          throw new Error(code)
+        },
+      },
+    })
+
+    assert.deepEqual(await handler({ action: 'bindWechatPhone', code: 'PHONE_CODE_INVALID' }), {
+      ok: false,
+      error: {
+        code: 'PHONE_CODE_INVALID',
+        message: '手机号授权已失效，请重新授权',
+        retryable: true,
+      },
+    })
+    assert.deepEqual(await handler({ action: 'bindWechatPhone', code: 'PHONE_PERMISSION_REQUIRED' }), {
+      ok: false,
+      error: {
+        code: 'PHONE_PERMISSION_REQUIRED',
+        message: '手机号能力尚未开通，请联系管理员',
+        retryable: false,
+      },
+    })
+  })
+
   it('exposes a retryable pending-settlement state for account closure', async () => {
     const handler = createHandler({
       getContext: () => ({}),
