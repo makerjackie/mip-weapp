@@ -1,31 +1,10 @@
 # Operations
 
-运营工作台是任务入口，不是报表大屏。入口：`packages/admin/dashboard`，服务端入口为 `mip-admin-api`；未来独立后台复用同一 DTO、capability 和审计合同。
+运营工作台是任务入口，不是报表大屏。小程序入口为 `packages/admin/dashboard`，Web 入口为 `admin-web/`，服务端入口统一为 `mip-admin-api`；两端复用同一 DTO、capability 和审计合同。
 
-## 初始化命令
+## 初始化与部署
 
-```bash
-pnpm database:setup -- \
-  --confirm-env=<EnvID> \
-  --confirm-prefix=mip_ \
-  --backup-manifest=/absolute/path/to/manifest.json
-
-pnpm project:init
-pnpm database:grants -- \
-  --confirm-env=<EnvID> \
-  --confirm-runtime-user=<exact-runtime-user>
-
-pnpm cloud:deploy-payment -- \
-  --confirm-env=<EnvID> \
-  --confirm-function=mip-cloudpay \
-  --confirm-callback=mip-cloudpay-callback \
-  --confirm-refund=mip-refund-worker
-
-pnpm admin:bootstrap -- --confirm-env=<EnvID> --confirm-owner
-pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo
-# staging 环境额外要求显式确认
-pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo --confirm-staging-demo
-```
+数据库、云函数、支付、Owner 和演示数据的首次初始化统一按 [部署手册](DEPLOYMENT.md) 执行。本页只保留上线后的运营和受控恢复命令。
 
 为在微信开发者工具中验证当前非演示 Owner 的活动互动页，可在 development/test 环境单独创建一条固定的 `ATTENDED` 历史报名：
 
@@ -71,7 +50,7 @@ pnpm membership:test -- \
 
 - 分会：平台范围、城市分会、主分会和分会成员归属
 - 活动：统一列表 → 单场管理 → 编辑/名单/相册/导出/团队；可将任意授权活动复制为独立草稿，活动时间按周顺延，报名、订单、签到、相册和消息不会复制
-- 订单：`mip_orders` 统一展示会员和付费活动订单；退款由 ledger 状态决定
+- 订单：`mip_orders` 统一展示会员、付费活动和单内容订单；退款由 ledger 状态决定
 - 退款：服务端角色校验；管理端只提交订单/退款意图，金额和权益由 ledger 决定；到账后由 ledger 重算权益，不能手工改玩家状态
 - 名册导出：含手机号的导出走安全票据，页面只显示掩码票码
 - 公告：使用独立 `announcements.manage` capability；平台运营维护全平台和分会公告，城市管理员只能维护本分会公告

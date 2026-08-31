@@ -33,8 +33,8 @@
 ## 5. 改代码前先读
 
 1. 本文件
-2. [DESIGN.md](DESIGN.md)
-3. 任务对应文档：领域 [docs/MEMBERSHIP_DOMAIN.md](docs/MEMBERSHIP_DOMAIN.md)，支付 [docs/WECHAT_PAY.md](docs/WECHAT_PAY.md)，云 [docs/CLOUDBASE.md](docs/CLOUDBASE.md)
+2. [docs/README.md](docs/README.md)，按权威关系定位任务文档
+3. 任务对应文档：界面 [DESIGN.md](DESIGN.md)，领域 [docs/MEMBERSHIP_DOMAIN.md](docs/MEMBERSHIP_DOMAIN.md)，支付 [docs/WECHAT_PAY.md](docs/WECHAT_PAY.md)，云 [docs/CLOUDBASE.md](docs/CLOUDBASE.md)
 
 ## 6. 边界
 

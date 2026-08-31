@@ -18,7 +18,7 @@ loading、empty、error、forbidden、conflict、disabled 代表状态除页面�
 
 当前 DevTools 版本的动态 `wx:if` 节点查询存在协议缓存时，代表状态和非写入交互使用绑定在页面上的真实 handler 驱动，并同时验证页面数据、源码中的节点/文案和动作前后截图像素变化；自然已处于目标状态时保留目标状态截图。该兼容路径不能绕过路由的 `readyAssertion`，也不能把缺少身份、权限或数据夹具的页面记为通过。
 
-## 独立证据目录与视口
+## 临时批次目录与视口
 
 默认运行仍写入 `.tmp/runtime`，并清理该目录中的旧运行文件。需要保留多批证据时，必须为每批选择 `.tmp/runtime-evidence` 下一个新的空目录：
 
@@ -27,7 +27,7 @@ pnpm test:runtime -- --output-dir .tmp/runtime-evidence/2026-08-25-mobile --view
 pnpm test:runtime -- --output-dir .tmp/runtime-evidence/2026-08-25-desktop --viewport desktop-960
 ```
 
-自定义目录不能指向 `.tmp`、仓库其他目录、已有非空目录或符号链接。每个目录独立保存 `report.json`、`console.json` 和该批截图。
+自定义目录必须是 `.tmp/runtime-evidence/` 的严格子目录，不能指向 `.tmp` 根目录、仓库其他目录、已有非空目录或符号链接。每个目录独立保存 `report.json`、`console.json` 和该批截图。这些目录仍被 Git 忽略；需要支撑现行结论时，必须把脱敏摘要、环境、提交号和必要截图整理到 `docs/mip/evidence/`。
 
 当前安装的 DevTools automator 没有受支持的窗口缩放 API。`--viewport` 不会调整窗口，只声明本批目标：运行前在同一个 DevTools 实例中手动选择对应尺寸。验证器使用公开的 `miniProgram.systemInfo()` 记录实测 `windowWidth`、`windowHeight`、屏幕尺寸与像素比；`mobile-375` 要求窗口宽度等于 375，`desktop-960` 要求窗口宽度至少为 960。不满足时本批失败，报告保留 `manual-required`、目标 profile 和实测尺寸，不能作为对应视口证据。
 

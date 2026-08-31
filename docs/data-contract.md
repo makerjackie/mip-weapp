@@ -1,6 +1,6 @@
 # MIP 数据合同
 
-本文描述当前 MIP 运行时的数据边界。权威结构是 `database/mysql/mip/` 下的 append-only 迁移及 `migrations.lock.json`；新业务只读写 `mip_*` 表。真实 AppID、EnvID、OpenID、连接串、商户凭证和内部 HMAC 不进入仓库文档或公开日志。
+本文描述当前 MIP 运行时的数据语义和写入边界，不复制完整表目录。字段、索引和迁移顺序以 `database/mysql/mip/` 下的 append-only 迁移及 `migrations.lock.json` 为准；新业务只读写 `mip_*` 表。真实 AppID、EnvID、OpenID、连接串、商户凭证和内部 HMAC 不进入仓库文档或公开日志。
 
 ## 身份、租户和角色
 
@@ -33,7 +33,7 @@
 | `mip_knowledge_sources` / `mip_knowledge_categories` / `mip_knowledge_contents` | 信息源、行业分类、内容交付和发布审核事实 | community 读取；admin 受 capability 管理 |
 | `mip_knowledge_products` / `mip_knowledge_entitlements` | 单内容 TEST/LIVE 商品和支付确认后的阅读权益 | admin 管商品；ledger 发放或撤销权益 |
 | `mip_content_comment_settings` / `mip_content_comments` / `mip_content_comment_reports` | 跨内容目标的评论开关、评论、举报与审核事实 | community 与 admin 受身份、屏蔽、内容安全和 capability 约束 |
-| `mip_knowledge_ingestion_runs` / `mip_knowledge_ingestion_items` | 显式采集运行、去重和来源审计 | admin 手动触发；不安装 timer |
+| `mip_knowledge_ingestion_runs` / `mip_knowledge_ingestion_items` | 采集运行、去重和来源审计 | admin 手动触发，或由无数据库连接的 scheduler 按已审核计划唤醒 |
 | `mip_membership_attributions` | 会员期内固定的邀请归属 | ledger/会员事务 |
 | `mip_payment_callbacks` | 已验签回调的幂等记录和处理状态 | callback/ledger |
 | `mip_events` / `mip_event_changes` | 平台或分会活动及追加变更历史 | events/admin 事务 |

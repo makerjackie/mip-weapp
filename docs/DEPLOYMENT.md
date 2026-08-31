@@ -1,24 +1,16 @@
 # Deployment
 
-## 当前共享环境进度（2026-08-28）
-
-- 56 个锁定的 `mip_*` 迁移已成功应用，迁移版本、表清单和数据库隔离检查通过；变更前稳定备份保存在仓库外既有目录，本轮未重复创建备份。
-- 环境专属 runtime 账号已收敛为 122 张 MIP 业务表的精确表级权限，二次运行结果为 `already current`；没有 schema/global 权限，也没有改动其他账号。
-- CloudBase MCP 已固定为 `2.32.3`；资源主账号 Device Flow 已完成 SCF 管控面部署，环境 API Key 继续用于已验证的环境和 MySQL 操作。
-- 16 个核心 `mip-*` 函数均为 Active/Available，使用 Nodejs20.19、目标 VPC/子网、完整运行时环境变量和仓库代码，并通过真实 MySQL 健康检查。
-- 最近一次部署快照已通过独立 `cloud:verify`，验证 schema、122 张表的精确 runtime 权限、函数配置、客户端调用规则、内部受保护函数及禁止高频 timer；工作区后续变更必须重新部署和回读后才能计入云端事实。
-
-首次 API Key 部署曾在 `scf:CreateFunction` 被拒绝；同一请求改用资源主账号 Device Flow 后成功，且没有出现独立 VPC、子网或 `TCB_QcsRole` 错误。不要把主账号长期密钥写入项目，也不要把真实 AppID、EnvID、VPC、子网、UIN、runtime 用户或 secret 写入文档。
+本页只维护可重复的部署步骤。当前环境已应用的迁移、权限、函数与验证结果见 [MIP 项目状态](mip/PROJECT_STATUS.md)；任何历史快照都不能替代目标环境的重新回读。不要把主账号长期密钥、真实 AppID、EnvID、VPC、子网、UIN、runtime 用户或 secret 写入文档。
 
 从临时 AppID 切换到正式 MIP AppID 时，先准备空的新 CloudBase/MySQL 环境，再执行 [AppID 身份迁移](IDENTITY_MIGRATION.md) 中的备份、应用范围复制和身份衔接流程。当前 schema 不支持在同一个数据库中保留旧 AppID 数据并复制同主键的新 AppID 副本。正常开发与部署保持 `MIP_UNION_ID_REBIND_ENABLED=false`。
 
 1. 在 `.env.local` 配置 AppID、CloudBase EnvID、允许的 AppID、MIP runtime 配置和明确的 `MIP_DEPLOYMENT_STAGE=development|test|staging|production`。知识采集还必须配置 `MIP_KNOWLEDGE_SOURCE_ALLOWED_HOSTS`，外部内容配置 `MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS`；二者均为逗号分隔的精确 DNS hostname，不接受通配符/IP，web-view 列表必须与微信公众平台业务域名一致。
 2. 首次部署运行 `pnpm secrets:init -- --confirm-env=<EnvID>`，并把 `.env.local` 纳入私密凭证备份。命令先校验已部署函数，不打印密钥，也不会修改云资源。
-3. 对新环境或新增迁移先做仓库外逻辑备份，预览 `mip_` 迁移范围：`pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --dry-run`。当前共享环境的 56 个锁定迁移已经完成；只有后续新增迁移才重新进入备份、dry-run 和应用流程。
+3. 对新环境或新增迁移先做仓库外逻辑备份，预览 `mip_` 迁移范围：`pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --dry-run`。是否存在待应用迁移以目标环境回读和当前 `migrations.lock.json` 为准。
 4. 只在预览显示存在新迁移时应用：`pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --backup-manifest=/absolute/path/to/manifest.json`。
 5. 运行 `pnpm project:init` 生成环境专属 runtime 用户，再执行 `pnpm database:grants -- --confirm-env=<EnvID> --confirm-runtime-user=<.env.local 中的 MIP_DB_RUNTIME_USER>` 收敛并回读验证精确表级权限。发现 schema/global 权限、缺表授权或账号归属不一致时停止部署。
 6. 仅在 development/test 环境需要占位目录时执行 `pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo`；MIP staging 需额外追加 `--confirm-staging-demo`，并保持 TEST catalog 与非 live payment；生产环境不得运行 demo seed。
-7. API Key 的临时 STS 无法执行所需 SCF action 时，经维护者明确授权运行 `pnpm cloud:auth:device -- --allow-device-auth`，再使用 `CLOUDBASE_AUTH_MODE=local pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<.env.local 中的 MIP_DB_RUNTIME_USER>` 部署 16 个核心 `mip-*` 函数。不要在控制台手工补配置。部署脚本会从真实 MySQL 连接详情解析目标 VPC/子网，严格比较运行时、handler、超时、VPC 和完整环境变量；配置完全一致时只更新代码，配置漂移时才请求配置更新。production 仍需 `--confirm-production`。函数安全规则读取或解析失败时部署会停止，且更新前后的全部非目标条目必须保持不变。脚本会复核所有核心函数都没有 timer，只自动删除三个明确的历史 timer 名称；遇到其他 timer 保留现场并停止。支付模式为 `disabled` 时，已存在的支付函数不会被删除，但其客户端调用会被禁止。
+7. API Key 的临时 STS 无法执行所需 SCF action 时，经维护者明确授权运行 `pnpm cloud:auth:device -- --allow-device-auth`，再使用 `CLOUDBASE_AUTH_MODE=local pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<.env.local 中的 MIP_DB_RUNTIME_USER>` 部署清单中的核心 `mip-*` 函数。不要在控制台手工补配置。部署脚本会从真实 MySQL 连接详情解析目标 VPC/子网，严格比较运行时、handler、超时、VPC 和完整环境变量；配置完全一致时只更新代码，配置漂移时才请求配置更新。production 仍需 `--confirm-production`。函数安全规则读取或解析失败时部署会停止，且更新前后的全部非目标条目必须保持不变。脚本会复核所有核心函数都没有 timer，只自动删除三个明确的历史 timer 名称；遇到其他 timer 保留现场并停止。支付模式为 `disabled` 时，已存在的支付函数不会被删除，但其客户端调用会被禁止。
 8. 消息和知识采集自动定时分别使用独立函数、trigger、HMAC 和专用角色，不加入数据库核心清单。先在 `.env.local` 配置 `MIP_SCF_REGION`、待 canary 验证的 `MIP_SCF_TIMER_UTC_OFFSET_MINUTES`、两个 scheduler 的函数名/trigger/角色名和资源所有者 UIN，再运行 `secrets:init` 与核心部署，把两个同域 HMAC 和函数名注入 `mip-admin-api`。两个角色不得相同。先运行各 role 命令的 dry-run，核对仅有 `UpdateTrigger`、`ListTriggers`、`InvokeFunction` 后再追加 `--apply`。CAM 的 `InvokeFunction` 当前是操作级权限，resource 必须为 `*`；不得误写成函数 ARN，也不得把权限加到共享 `TCB_QcsRole`。新建 scheduler 禁止使用 CloudBase `manageFunctions/createFunction`，部署脚本必须先完成专用角色、环境变量、既有函数身份和 trigger inventory 预检，再以 raw SCF `CreateFunction` 的首个云端写入直接传精确角色名；Update 与 GetFunction 同样使用和回读精确角色名，不接受 ARN、子串或共享角色。
 
 ```bash

@@ -4,14 +4,15 @@
 
 1. `.nvmrc` 与 `packageManager` 声明的精确 Node/pnpm 工具链检查
 2. 架构残留检查
-3. 安全检查
-4. MCP doctor
-5. typecheck / lint / stylelint
-6. 单元测试
-7. 源码契约
-8. 构建、分包预算与全部 `usingComponents` 产物目标契约
-9. 云函数与 AI Provider 源码、精确直接依赖、实际解析版本和测试
-10. 文档链接
+3. MIP 资源隔离检查
+4. 安全检查
+5. MCP doctor
+6. typecheck / lint / stylelint
+7. 单元测试
+8. 源码契约
+9. 构建、分包预算、分析与全部 `usingComponents` 产物目标契约
+10. 云函数与 AI Provider 源码、精确直接依赖、实际解析版本和测试
+11. 文档链接与文档事实一致性
 
 `pnpm verify` 不等于运行时验收。UI 变更还需要开发者工具。
 

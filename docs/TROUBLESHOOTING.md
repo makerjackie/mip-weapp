@@ -11,7 +11,7 @@
 | 部署提示 `MIP deployment requires AppID and --confirm-env=<exact CLOUDBASE_ENV_ID>` | 检查 `MINI_PROGRAM_APP_ID`、`CLOUDBASE_ENV_ID` 和命令行 `--confirm-env` 完全一致；不要猜测或切换目标环境。 |
 | 部署提示缺少 MIP 表 | 先运行 `pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --dry-run`，确认 lock 文件和迁移范围，再按数据库备份流程应用迁移。不要补建 `member_*` 表。 |
 | `Runtime account missing grant` / `schema-level ALL PRIVILEGES` | 运行时账号必须是环境专属 `mip_*` 用户。运行 `pnpm database:grants -- --confirm-env=<EnvID> --confirm-runtime-user=<exact-runtime-user>` 收敛并复核 `mip_*` 表逐表权限；命令会拒绝 schema/global 权限和不精确授权，审计及流水等追加事实不授予无业务需要的更新或删除权限。 |
-| 部署产物出现非 MIP 函数或找不到 `mip-*` | 检查 `scripts/lib/mip-function-manifest.mjs` 和部署产物，只允许 16 个核心 `mip-*`，其中游戏化服务为 `mip-game-api`；支付另查 `mip-cloudpay`、`mip-cloudpay-callback`、`mip-refund-worker`。共享环境中的其他函数不由本仓库部署。 |
+| 部署产物出现非 MIP 函数或找不到 `mip-*` | 检查 `scripts/lib/mip-function-manifest.mjs` 和部署产物，只允许清单中的核心 `mip-*`，其中游戏化服务为 `mip-game-api`；支付另查 `mip-cloudpay`、`mip-cloudpay-callback`、`mip-refund-worker`。共享环境中的其他函数不由本仓库部署。 |
 | 赛季页返回 `MEMBERSHIP_REQUIRED` | 团队 PK、赛季、排行榜和队伍大本营只对当前有效会员开放。检查 ledger 已确认的 `mip_membership_entitlements`，不要用客户端会员标记或支付调起结果绕过。 |
 | 游戏化接口返回 `SCORE_NOT_ACCEPTED` | 客户端请求中包含了 score/points 等分数字段。移除这些字段；周赛结算和排行榜快照只允许 `mip-game-api` 从当前 AppID 的服务端成长流水与账户事实生成。 |
 | 消息页提示无权调用 `mip-notification-worker` | 客户端只能调用 `mip-notifications-api`。检查构建配置中的 `MIP_NOTIFICATIONS_FUNCTION_NAME`，再重新部署并运行云端验收；不要开放 worker 的客户端权限。 |

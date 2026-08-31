@@ -16,7 +16,6 @@ const patterns = [
 const allowAppIdFiles = new Set([
   'project.config.json',
   '.env.example',
-  'docs/GETTING_STARTED.md',
   'docs/SECURITY.md',
   'docs/CUSTOMIZATION.md',
   'scripts/setup-local.mjs',

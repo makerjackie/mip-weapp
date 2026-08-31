@@ -68,13 +68,6 @@
 
 该结果证明当前开发者工具运行时闭环，不替代手机号、支付、扫码、订阅消息和文件/相册等真机能力，也不替代 Mac 或 Windows 微信客户端兼容性验收。
 
-## 响应式与对照截图
-
-- [React 概览 1280×720](../../../../admin-web/docs/screenshots/react/overview-1280x720.jpg)
-- [React 概览 1440×900](../../../../admin-web/docs/screenshots/react/overview-1440x900.jpg)
-- [React 概览 390×844](../../../../admin-web/docs/screenshots/react/overview-390x844.jpg)
-- [Workbuddy 与 React 1280×720 左右对照](../../../../admin-web/docs/screenshots/comparison/workbuddy-vs-react-1280x720.jpg)
-
 ## 术语与剩余边界
 
 “服务器”是产品 UI 对城市分会的习惯称谓。服务端模型、数据库表和契约继续使用 `branch` / city branch，不新增通用服务器或租户模型。

@@ -1,96 +1,128 @@
-# MIP 架构
+# MIP 当前架构
 
-MIP 是一个由原生微信小程序、16 个核心 CloudBase 函数及按需启用的 provider、scheduler 和支付函数组成的会员与协作平台。当前工程声明 108 条小程序路由；数据库追加迁移以 `migrations.lock.json` 为准。短期复用共享 CloudBase，业务数据、函数名和对象 key 使用 MIP 专属边界；正式 AppID 上线时迁移到空的独立 CloudBase/MySQL 环境。当前 schema 不支持在同一数据库中以相同主键并存两个 AppID 副本。
+MIP 由原生微信小程序、React Web 管理端、CloudBase 云函数、MySQL 和对象存储组成。根目录是小程序主工程，`admin-web/` 独立构建和部署；两端共享服务端业务事实，不共享页面组件或客户端运行时。
 
-## 调用方向
+动态数量与部署状态统一见 [PROJECT_STATUS.md](PROJECT_STATUS.md)，本文件不固化路由数、迁移数或最近一次验收结果。
+
+## 系统形态
 
 ```text
-小程序页面 / 管理分包
-  → src/modules/mip-* 用例接口
-    → src/platform adapter
-      → mip-* Cloud Functions
-        → mip_* MySQL / mip/ 对象存储
+微信小程序用户端 ─→ src/modules/mip-* ─→ src/platform ─→ mip-* 云函数
+微信小程序管理端 ─→ AdminTransport(CloudBase) ─┐
+React Web 管理端 ─→ 同源 BFF / HTTPS transport ─┼→ AdminApplication
+                                                  ↓
+                                  领域服务 / capability / scope / audit
+                                                  ↓
+                                  mip_* MySQL / mip/ 对象 / outbox
 ```
 
-页面不得直接初始化 CloudBase、读取 MySQL 或调用 `wx.requestPayment`。客户端只提交业务意图；身份、玩家/嘉宾状态、会员资格、金额、名额、活动资格、成长流水、比赛分数、排行快照、通知状态和管理权限都由服务端决定。
+页面不得直接初始化 CloudBase、读取 MySQL 或调用 `wx.requestPayment`。客户端只提交业务意图；身份、会员资格、金额、报名、签到、成长余额、比赛分数、通知状态和管理权限由服务端决定。
 
-未来独立后台 API 复用同一套服务端 DTO、capability、错误码和审计合同，只新增后台 adapter，不复制业务规则。当前管理端仍在小程序管理分包中。
+React Web 当前已经存在于 `admin-web/`。它通过同源 BFF 建立 Web principal，再使用与小程序管理分包相同的渠道中立 operation 合同；浏览器不能直接访问 MySQL，也不能提交可信的 `appId`、`userId`、角色或 capability。
 
-临时 AppID 与正式 AppID 的 OpenID 不相同。身份服务可以在微信提供 UnionID 时保存不可逆摘要，并在完成应用范围迁移后通过显式开关衔接原用户；流程和前置条件见 [AppID 身份迁移](../IDENTITY_MIGRATION.md)。
+## 管理应用边界
 
-## 当前函数边界
+管理端使用统一请求形态：
 
-| 函数 | 负责的领域 | 调用边界 |
+```ts
+interface AdminTransport {
+  request<A extends AdminAction>(request: {
+    contractVersion: 1
+    action: A
+    input: AdminInput<A>
+    idempotencyKey?: string
+  }): Promise<AdminOutput<A>>
+}
+
+interface AdminApplication {
+  execute(
+    principal: TrustedAdminPrincipal,
+    command: { action: AdminAction; input: unknown },
+  ): Promise<AdminEnvelope>
+}
+```
+
+`TrustedAdminPrincipal` 只能由 CloudBase 微信上下文或 Web session adapter 创建。operation registry 统一声明输入校验、capability、scope、读写类型、幂等要求、outbox 唤醒和审计类型。任务、Banner、游戏和媒体仍由 `mip-admin-api` 通过窄 adapter 调用对应独立函数，不能在 BFF 复制领域规则。
+
+当前 `mip-admin-api` 保持单一部署单元，内部按以下深模块组织：
+
+| 模块 | 独占事实与规则 | 可依赖 |
+| --- | --- | --- |
+| `access` | trusted principal、角色、capability、平台/分会/活动 scope、登录审计 | 用户只读状态 |
+| `users` | 用户聚合、档案、分会归属、账号控制、敏感字段投影 | `access`、媒体引用 |
+| `events` | 活动、报名、签到、名单、反馈、相册、提醒 | `access`、订单只读状态、消息端口 |
+| `orders` | 订单查询、退款意图、财务字段 | `access`、payment ledger 端口 |
+| `messaging` | 公告、消息活动、收件人快照、outbox、发送状态 | `access`、目标资源只读端口 |
+| `knowledge` | 来源、分类、内容、商品、评论、举报和采集计划 | `access`、媒体、订单端口 |
+| `opportunities` | 机会、团队、评论、举报、撮合设置与重算 | `access`、公开用户投影、消息端口 |
+| `growth` | 等级、权益、规则、流水、勋章与调整 | `access`、用户只读状态 |
+
+模块之间只通过窄端口或领域事件协作，不直接读取另一模块的内部 repository。
+
+## 云函数边界
+
+| 函数 | 负责范围 | 调用边界 |
 | --- | --- | --- |
 | `mip-identity-api` | 微信身份、协议、手机号、用户档案 | 小程序调用 |
-| `mip-media-api` | 图片解码、内容安全、隔离存储和素材登记（含活动相册） | 小程序调用 |
-| `mip-events-api` | 城市/平台活动、报名、邀请、签到、心动、反馈和活动相册 | 小程序调用 |
-| `mip-opportunities-api` | 机会、引荐、感兴趣、合作卡、超级案例、撮合和用户偏好 | 小程序调用；后台重算为内部 HMAC |
-| `mip-community-api` | 公开档案安全、知识内容目录/详情和知识评论 | 小程序调用；身份补全后可写 |
-| `mip-commerce-api` | 会员方案、会员/活动/单内容统一订单、订单查询和退款申请 | 小程序调用 |
-| `mip-admin-api` | 管理分包、分会/活动/相册/知识运营、审计、导出和显式采集 | capability 保护；采集不安装 timer |
+| `mip-media-api` | 媒体隔离上传、解码、内容安全、重编码和绑定 | 小程序及受审管理 adapter |
+| `mip-events-api` | 活动、报名、邀请、签到、心动、反馈和相册 | 小程序调用 |
+| `mip-opportunities-api` | 机会、引荐、感兴趣、合作卡、案例、撮合和偏好 | 小程序；后台重算使用内部 HMAC |
+| `mip-community-api` | 公开档案、知识目录/详情和知识评论 | 小程序调用 |
+| `mip-commerce-api` | 会员、活动和内容统一订单、订单查询、退款申请 | 小程序调用 |
+| `mip-admin-api` | 管理应用、分会/活动/知识运营、审计、导出和采集事实 | capability 与 scope 保护 |
 | `mip-growth-api` | 等级、规则、余额和不可变成长流水 | 小程序或内部事件 |
-| `mip-game-api` | 团队、赛季、周赛、排行榜快照与队伍大本营 | 玩家读取；管理动作受 `game.manage` capability 保护 |
-| `mip-tasks-api` | 任务、成员派发、模板、完成事实和经验奖励 | 小程序调用；管理动作受 capability 保护 |
-| `mip-banners-api` | Banner 公开读取、版本化编辑、排序、启停与软删除 | 小程序读取；管理动作受 `banners.manage` capability 保护 |
+| `mip-game-api` | 赛季、团队、周赛、排行、盲盒和背包 | 玩家读取；管理动作受 capability 保护 |
+| `mip-tasks-api` | 任务、成员派发、模板、完成事实和经验奖励 | 小程序；管理动作受 capability 保护 |
+| `mip-banners-api` | Banner 读取、编辑、排序、启停和软删除 | 小程序读取；管理动作受 capability 保护 |
 | `mip-ai-api` | 音频、转写、结构化草稿和用户确认 | 小程序；provider 内部鉴权 |
-| `mip-notifications-api` | 当前用户站内消息、已读状态和订阅授权选择 | 小程序调用 |
+| `mip-notifications-api` | 站内消息、已读状态和订阅选择 | 小程序调用 |
 | `mip-payment-ledger` | 支付、退款、权益和订单事务 | 仅内部 HMAC |
-| `mip-notification-worker` | 站内消息写入和可选微信订阅消息投递 | 仅内部 HMAC，无定时器 |
-| `mip-outbox-worker` | 业务事件领取、站内消息与成长投影 | 仅内部 HMAC，无定时器 |
-| `mip-message-scheduler` | 消息活动最近一次 UTC 唤醒与 trigger 收敛 | 仅内部 HMAC；无 MySQL/VPC；一个滚动单次 timer |
-| `mip-cloudpay` / `mip-cloudpay-callback` | CloudPay 参数、用户退款、查单和回调适配 | 支付启用时部署 |
-| `mip-refund-worker` | 管理退款提交、provider 查单和耐久退款恢复 | 仅内部 HMAC；支付启用时部署，无定时器 |
+| `mip-notification-worker` | 站内消息写入和可选微信投递 | 仅内部 HMAC，不安装定时器 |
+| `mip-outbox-worker` | 业务事件领取、消息与成长投影 | 仅内部 HMAC，不安装定时器 |
+| `mip-message-scheduler` | 消息活动的下一次唤醒 | 无 MySQL/VPC；一个滚动单次 timer |
+| `mip-knowledge-scheduler` | 知识采集计划的下一次唤醒 | 无 MySQL/VPC；一个滚动单次 timer |
+| `mip-cloudpay` / `mip-cloudpay-callback` | CloudPay 参数、查单和回调适配 | 支付启用时部署 |
+| `mip-refund-worker` | 退款提交、查单和恢复 | 仅内部 HMAC；支付启用时部署，不安装定时器 |
 
-仓库只保留当前 `mip-*` Cloud Functions。共享环境里可能仍存在的其他项目函数不属于本仓库，也不由 MIP 部署脚本修改。
+核心部署、调度函数和支付函数是三组独立清单。共享环境里其他项目的函数不属于本仓库，也不由 MIP 部署脚本修改。
 
-## 业务域
+## 调度约束
 
-| 域 | 主要事实 | 不能由客户端决定 |
+通知 worker、outbox worker 和退款 worker 不安装高频定时器，避免持续唤醒 Serverless MySQL。
+
+消息排期和知识采集分别使用 `mip-message-scheduler` 与 `mip-knowledge-scheduler`。两个 scheduler 都不连接 MySQL、不配置 VPC，分别维护唯一的滚动单次 timer，并通过不同的专用 HMAC 调用 `mip-admin-api`。权威计划、资格复核、失败计数、去重、内容保存和审核状态仍在管理领域内；没有有效计划时关闭 timer。知识采集只允许受控 HTTPS 来源，采集结果进入审核，不能自动发布。
+
+详细部署与 CAM 约束见 [CLOUDBASE.md](../CLOUDBASE.md) 和 [OPERATIONS.md](../OPERATIONS.md)。
+
+## 业务事实
+
+| 域 | 权威事实 | 客户端不能决定 |
 | --- | --- | --- |
-| identity/profile | 用户、微信身份、协议、手机号、公开/私密档案 | `user_id`、手机号归属、资料可见性 |
+| identity/profile | 用户、微信身份、协议、手机号、公开/私密档案 | 用户 ID、手机号归属、资料可见性 |
 | branches | 城市分会、主分会、分会成员和范围 | 当前城市不等于管理权限 |
-| membership commerce | 会员方案、会员/活动/单内容统一订单、支付 ledger、退款、权益 | 价格、支付终态、玩家状态和单内容解锁 |
-| events | 活动、报名、邀请、签到、心动、反馈、相册照片 | 名额、活动资格、签到和照片发布状态 |
-| opportunities | 机会、引荐、感兴趣、合作卡、超级案例、撮合请求/结果/反馈和用户偏好 | 内容审核、候选范围、隐私过滤、关系状态和结果版本 |
-| knowledge | 信息源、分类、内容、采集运行、商品、阅读权益、评论和举报 | 发布状态、受保护交付、价格、首次访问、退款资格和审核结果 |
-| community safety | 举报事实、双向可见性屏蔽和个人屏蔽列表 | 客户端目标身份、举报处置和对方通知 |
-| growth | 等级、规则、经验/贡献/游戏币余额与不可变流水、勋章目录和佩戴事实 | 客户端直接改余额、提交奖励或消费金额 |
-| tasks | 全员或指定成员任务、模板、截止窗口、完成事实 | 可见范围、截止资格、单次完成和经验奖励 |
-| game | 赛季、团队成员历史、每周赛况、排行快照、队伍大本营、周赛游戏币事件，以及盲盒目录/概率/库存/抽取/背包 | 客户端不能传分数、游戏币、抽取结果或概率；只对当前有效会员开放；正式规则与视觉可替换 |
-| messaging | 站内消息、授权和投递任务 | 业务事实最终状态、授权消耗 |
-| ai | 语音、转写、结构化草稿 | 未确认草稿不能写正式资源 |
-| admin | 平台/分会/活动 capability、脱敏、导出、审计 | 页面菜单不是授权依据 |
+| commerce | 会员/活动/内容统一订单、支付 ledger、退款、权益 | 价格、支付终态、玩家状态和内容解锁 |
+| events | 活动、报名、邀请、签到、心动、反馈、相册 | 名额、资格、签到和照片发布状态 |
+| opportunities | 机会、团队、引荐、兴趣、评论、案例、撮合和偏好 | 内容审核、候选范围、关系状态和结果版本 |
+| knowledge | 来源、分类、内容、采集计划/运行、商品、权益、评论和举报 | 发布状态、价格、受保护正文、退款资格 |
+| growth/game/tasks | 等级、余额、流水、勋章、任务、赛季、排行和盲盒 | 奖励、分数、抽取结果、完成资格 |
+| messaging | 站内消息、收件人快照、投递任务和回执 | 业务事实终态和授权消耗 |
+| admin | 角色、capability、scope、脱敏、导出和审计 | 页面菜单不是授权依据 |
 
-### 玩家和嘉宾
-
-用户只有一个身份。当前拥有有效 `mip_membership_entitlements` 的用户是玩家；没有有效付费权益的用户是嘉宾。退款、到期或撤销后，服务端重新计算为嘉宾。嘉宾仍可浏览公开内容，并按活动和机会规则参与；页面不能通过本地标记把嘉宾变成玩家。
+用户只有一个账号身份。当前有效付费权益决定玩家状态，其他用户为嘉宾；会员状态与管理角色、城市分会归属相互独立。
 
 ## 数据与隔离
 
-- 新业务只写 `mip_*` 表，迁移记录使用 `mip_schema_migrations`；表结构以 `database/mysql/mip/` 和 lock 文件为准。
-- `mip_orders` 统一承载会员、付费活动和单内容订单，不能再引入第二套订单事实。
-- 每张业务表使用可信 `app_id`；所有唯一约束、订单、管理员、幂等键、审计和对象 key 都按 AppID 隔离。
+- MIP 业务只写 `mip_*` 表，迁移记录使用 `mip_schema_migrations`；结构以 `database/mysql/mip/` 和 `migrations.lock.json` 为准。
+- `mip_orders` 统一承载会员、活动和内容订单，不新增第二套订单事实。
+- 每张业务表使用可信 `app_id`；唯一约束、幂等键、审计和对象 key 都按 AppID 隔离。
 - 对象存储只使用 `mip/` 前缀，数据库保存完整 `cloud://` 文件 ID、摘要和业务外键，不保存临时 URL。
-- 共享环境的 `member_*`、`dating_*`、`sewing_*` 表保持只读，不做跨表迁移；其他项目函数不在 MIP 部署清单内。
-- MIP runtime 账号只有精确的 `mip_*` 表级权限；无 schema-level ALL、无全局 DELETE。支付适配器不持有数据库凭证。
+- 共享环境中的其他项目前缀保持只读；MIP runtime 账号只拥有精确的 `mip_*` 表级权限。
+- 当前 schema 不支持在同一数据库中以相同主键并存两个 AppID 副本；正式迁移必须使用明确的导出、空目标校验和 AppID 转换流程。
 
-## 授权顺序
+## Web 会话与敏感操作
 
-```text
-可信 CloudBase AppID/OpenID
-  → 解析 MIP user
-    → 读取 app-scoped 资源与分会归属
-      → 平台 capability
-        → 城市分会 capability
-          → 活动临时 capability
-            → 默认拒绝
-```
+Web 登录使用短期、单次、绑定浏览器 verifier 的 challenge，由已登录且拥有管理 capability 的小程序用户确认。服务端只保存 session token hash；Cookie 使用 `HttpOnly`、`Secure` 和合适的 `SameSite`，写操作校验 CSRF。每次请求重新读取用户状态、协议、角色和 capability，撤权或停用后下一次请求立即失败。
 
-手机号、导出、退款、角色变更、签到覆盖、相册审核和成长人工调整使用独立 capability，并追加不可变审计。活动报名、付费席位、相册提交/撤回、支付回调和退款都使用行锁、版本或幂等键与条件状态更新。
+手机号原文、导出、退款、角色变更、签到覆盖、相册审核和成长人工调整使用独立 capability。mutation 与审计在同一事务内；审计只记录必要的 channel 和 request reference，不记录 Cookie、授权头、OpenID 或完整浏览器载荷。
 
-## 运行时和迁移边界
-
-`mip-notification-worker`、`mip-outbox-worker` 和 `mip-refund-worker` 不安装高频 timer。消息排期由不连接数据库的 `mip-message-scheduler` 维护唯一滚动单次 timer；它只调用管理 API 的内部计划/执行契约，无计划即关闭，并保留手动 runner 恢复路径。Outbox worker 按 AppID 领取事件，回查服务端事实后，以内部 HMAC 和幂等键调用消息与成长服务；退款 worker 只从 ledger 读取金额和商户单号，使用不可变退款单号向 provider 提交或查单。需要处理积压时分别运行 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10` 和 `pnpm refunds:run -- --confirm-env=<EnvID> --confirm-refund=mip-refund-worker --limit=10`。未知事件或重试耗尽会终止并写系统审计。短期共享环境的变更流程是：仓库外逻辑备份 → `mip_` 前缀 dry-run → 迁移 → `pnpm database:grants` 收敛运行时表级权限 → 函数部署 → 只读健康检查。未来独立环境迁移时，只复制经过校验的 MIP 表、`mip/` 对象和 MIP 配置，重新绑定 AppID，不迁移旧项目资源。
-
-并行开发前冻结 `UserId`、`BranchId`、`EventId`、`OpportunityId`、`OrderId`、caller context、错误码、分页游标、审计 envelope、状态机和跨域事件名。各域不能自行创建第二套身份、订单或权限模型。
+临时 AppID 与正式 AppID 的 OpenID 不相同，身份迁移见 [IDENTITY_MIGRATION.md](../IDENTITY_MIGRATION.md)。

@@ -9,26 +9,11 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 - 客户端不硬编码临时 CDN 地址，也不在业务图片缺失时展示设计稿或通用二维码冒充正式内容；页面使用无图状态或小型中性占位。
 - development/test 演示媒体保存在 `database/mysql/mip/demo-assets/`，只由 `pnpm seed:demo` 上传并校验；MIP staging 也可使用，但必须追加 `--confirm-staging-demo` 并保持 TEST catalog、非 live payment 和 exact EnvID 确认。这些文件不进入小程序 `src/`，production 禁止运行 demo seed。
 
-## 当前云端事实（2026-08-28）
-
-| 范围 | 当前事实 | 结论 |
-| --- | --- | --- |
-| 数据库 | 56 个锁定的 `mip_*` 迁移已在当前共享数据库成功应用，变更前稳定备份保存在本地仓库外目录 | 云端已验证；本轮复用已有稳定备份，未重复备份 |
-| runtime 数据库权限 | 环境专属账号已收敛为 122 张 MIP 业务表的精确表级权限，幂等复跑为 `already current` | 云端已验证；没有 schema/global 权限或跨项目表权限 |
-| 数据隔离 | 迁移后隔离检查通过，MIP 变更只落在 `mip_*` 对象和 `mip_schema_migrations` | 云端已验证；没有把旧项目表当作 MIP 事实 |
-| 管理授权 | 环境 API Key 可完成环境和 MySQL 操作；主账号 Device Flow 可完成 SCF 管控面部署 | 两种凭证边界已分别验证；当前固定 MCP `2.32.3`，设备登录解决了环境 API Key 临时 STS 被拒绝的问题 |
-| 核心函数 | 当前工作区对应的 16 个核心 `mip-*` 函数已部署，Nodejs20.19、目标 VPC/子网、运行时环境和真实 MySQL 健康均已回读 | 云端已验证；Task、Banner、Game、Media Web bridge 已包含在当前部署中 |
-| 调用边界与 worker | 客户端 API 对已登录用户开放，payment ledger、notification worker 与 outbox worker 保持受保护，禁止的 5 分钟 timer 不存在 | 最新独立 `cloud:verify` 通过 |
-
-仓库现已追加 057–058 两个未部署迁移，用于 AI 请求幂等和会员邀请码分配。上表的 56 个迁移、122 张表与函数部署状态是 2026-08-28 的生产读回事实，不覆盖这两个新增迁移；在完成新备份、迁移、124 张表权限收敛和函数部署回读前，不能声明它们已在线生效。
-
-2026-08-24 的首次 API Key 部署在原始 SCF `CreateFunction` 被拒绝；升级 MCP 并使用资源主账号 Device Flow 后完成函数创建。2026-08-25 的代码更新先严格回读现有 VPC、运行时和环境变量，配置完全一致的函数只执行 `updateFunctionCode`，随后 16/16 函数部署和独立 `cloud:verify` 均通过。`managePermissions` 仍只负责 CloudBase 资源安全规则，不能修改 CAM 或 STS policy。
-
-2026-08-28 本轮已复核 122 张 MIP runtime 表的精确授权，并为 Task、Banner、Game 和 Media 内部适配器补齐互不复用的本地密钥。CloudBase 曾短暂返回 `InsufficientBalance`，余额恢复后已重新完成 16 个核心函数部署、独立 `cloud:verify` 和 110 路由运行验收；该状态不再是当前阻塞。部署与验收未要求重新创建设计或数据库备份。
+当前云端迁移、表权限、函数部署和验收结果只在 [MIP 项目状态](mip/PROJECT_STATUS.md) 与对应的已提交证据中维护。仓库内的迁移、函数源码或历史部署记录不能代替目标环境回读。
 
 ## 部署清单
 
-普通业务部署固定为 16 个核心函数：
+普通业务部署包含以下数据库业务函数：
 
 | 函数 | 责任 | 客户端可直接调用 |
 | --- | --- | --- |
@@ -51,13 +36,13 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 
 Web 管理端不直接调用任务、Banner、游戏或媒体函数。`mip-admin-api` 会重新读取当前管理员 session，并按操作复核平台范围的 `tasks.manage`、`banners.manage`、`game.manage` 或媒体用途对应 capability；随后使用互不复用的 `MIP_TASKS_ADMIN_HMAC_SECRET`、`MIP_BANNERS_ADMIN_HMAC_SECRET`、`MIP_GAME_ADMIN_HMAC_SECRET`、`MIP_MEDIA_ADMIN_HMAC_SECRET` 调用默认函数 `mip-tasks-api`、`mip-banners-api`、`mip-game-api`、`mip-media-api`。目标函数只接受各自版本化协议、允许的 AppID、真实管理员 userId、固定来源函数及逐 action 输入白名单。媒体桥额外校验图片用途、完整图片签名、格式、体积和尺寸，并复用既有解码、重编码、内容安全和隔离存储流程。四个内部适配器不替代原函数的领域校验，也不放宽原有微信入口。
 
-启用真实支付时，另外部署 `mip-cloudpay`、`mip-cloudpay-callback` 和 `mip-refund-worker`。它们是下单/查单适配器、回调入口和退款提交/恢复 worker，不计入 16 个核心函数；适配器不持有 MySQL 连接串，通过 HMAC 调用 `mip-payment-ledger`。退款 worker 另用 `MIP_REFUND_WORKER_HMAC_SECRET` 接受管理 API 和受控运营命令调用。
+启用真实支付时，另外部署 `mip-cloudpay`、`mip-cloudpay-callback` 和 `mip-refund-worker`。它们是下单/查单适配器、回调入口和退款提交/恢复 worker，不属于普通业务函数清单；适配器不持有 MySQL 连接串，通过 HMAC 调用 `mip-payment-ledger`。退款 worker 另用 `MIP_REFUND_WORKER_HMAC_SECRET` 接受管理 API 和受控运营命令调用。
 
 仓库只包含直接的 `mip-*` 函数源码。部署脚本和云端验收只接受当前 MIP 清单中的函数名，不修改共享环境中的其他项目函数。
 
-消息定时和知识采集分别使用不计入 16 个数据库核心函数的 `mip-message-scheduler` 与 `mip-knowledge-scheduler`。两个函数都不配置 MySQL URI 或 VPC，各自只维护一个固定滚动单次 timer，并通过独立 HMAC 调用 `mip-admin-api`。每个函数使用互不复用的专用 CAM 角色、128 MB 内存和 128 MB 预留并发，使同一时刻最多一个调度实例运行；运行时仅有 `UpdateTrigger`、`ListTriggers` 和 `InvokeFunction`。腾讯云 [CAM 权限粒度表](https://intl.cloud.tencent.com/document/product/598/57149) 当前把 `InvokeFunction` 定义为不支持资源级授权的操作，因此该 action 的 policy resource 必须是 `*`，不能在 CAM 层收窄到管理函数；运行时代码固定目标为 `mip-admin-api`，再由独立 HMAC、AppID allowlist 和专用角色限制用途。角色信任载体固定为腾讯云 SCF 官方文档定义的 [`scf.qcloud.com`](https://intl.cloud.tencent.com/zh/document/product/583/38176)，部署和验收均回读完整 trust policy。新建函数不使用会默认注入共享 `TCB_QcsRole` 的 CloudBase create 路径，而是用 raw SCF `CreateFunction` 在首个写入中绑定专用角色；创建 trigger、角色、异步失败重试和预留并发只在各自的专用命令中执行。普通 `cloud:deploy` 的核心清单明确排除两个 scheduler。
+消息定时和知识采集分别使用不属于数据库业务清单的 `mip-message-scheduler` 与 `mip-knowledge-scheduler`。两个函数都不配置 MySQL URI 或 VPC，各自只维护一个固定滚动单次 timer，并通过互不复用的 HMAC 和专用 CAM 角色调用 `mip-admin-api`。CAM 的 `InvokeFunction` 不支持资源级授权时，目标限制由固定函数名、AppID allowlist、内部 HMAC 和专用角色共同完成；不得把 scheduler 绑定到共享 `TCB_QcsRole`。具体创建、canary、激活和回读步骤见 [DEPLOYMENT.md](DEPLOYMENT.md)。
 
-AI 草稿和数字分身分别使用不计入 16 个数据库核心函数的 `mip-ai-draft-provider` 与 `mip-ai-avatar-provider`。两个 Provider 都不配置 MySQL URI 或 VPC，客户端调用保持关闭，只从已部署 `mip-ai-api` 继承 AppID allowlist 和各自专用 HMAC；数字分身 Provider 额外要求零 trigger。数字分身 Provider 使用 `mip.ai.avatar-provider.v1` 版本化完整签名，并通过独立 HTTPS adapter 调用精确白名单上游；Endpoint、allowlist、覆盖 DNS/请求/响应的总超时和上游鉴权均为函数环境配置，所有 AI 内部 HMAC 与上游凭证必须互不复用。缺少任一配置或 readiness 未通过时 fail closed，不复制源图，也不存在 mock 成功路径。仓库代码与部署验收入口已具备，但在真实上游未配置前不得部署，也不能把本地源码当成云端可用证据。
+AI 草稿和数字分身分别使用不属于数据库业务清单的 `mip-ai-draft-provider` 与 `mip-ai-avatar-provider`。两个 Provider 都不配置 MySQL URI 或 VPC，客户端调用保持关闭，只从已部署 `mip-ai-api` 继承 AppID allowlist 和各自专用 HMAC；数字分身 Provider 额外要求零 trigger。上游 Endpoint、allowlist、总超时和鉴权都是函数环境配置，内部 HMAC 与上游凭证必须互不复用。缺少任一配置或 readiness 未通过时 fail closed，不复制源图，也不存在 mock 成功路径。
 
 ## 数据和存储
 
@@ -119,9 +104,9 @@ pnpm cloud:auth:device -- --allow-device-auth
 
 该命令不会被部署、诊断或初始化脚本调用。授权完成后，使用 `CLOUDBASE_AUTH_MODE=local` 明确选择本地 Device Flow 凭证；环境 API Key 仍保留给状态、环境和 MySQL 等已验证操作。
 
-## 已验证的管控面部署路径
+## 管控面部署路径
 
-当前共享环境的核心函数使用资源主账号 Device Flow 完成部署。不要给 `TCB_QcsRole` 添加 `scf:CreateFunction`，也不要在没有原始 VPC 错误时预授 `vpc:*`。需要重新部署时，从脚本覆盖代码、配置与权限，不在控制台手工补环境变量：
+API Key 的临时 STS 无法执行所需 SCF action 时，在维护者明确授权后使用 Device Flow。不要给 `TCB_QcsRole` 添加 `scf:CreateFunction`，也不要在没有原始 VPC 错误时预授 `vpc:*`。需要重新部署时，从脚本覆盖代码、配置与权限，不在控制台手工补环境变量：
 
 ```bash
 pnpm cloud:auth:device -- --allow-device-auth
@@ -130,7 +115,7 @@ CLOUDBASE_AUTH_MODE=local pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-r
 CLOUDBASE_AUTH_MODE=local pnpm cloud:verify -- --confirm-env=<EnvID>
 ```
 
-当前固定 MCP `2.32.3` 的 `getInstanceInfo` 不返回 VPC/子网；部署脚本只在缺少显式网络配置时调用 `getConnectionInfo`，只提取实际 MySQL 网络元数据，不打印或持久化其余连接载荷。最终代码的 `cloud:deploy` 和独立 `cloud:verify` 均已在当前环境通过。
+部署脚本在缺少显式网络配置时从 CloudBase 连接信息提取实际 MySQL 网络元数据，不打印或持久化其余连接载荷。执行结果必须记录到 [MIP 项目状态](mip/PROJECT_STATUS.md) 或对应证据中，不能写回本运行手册作为永久结论。
 
 ## 未来迁移
 

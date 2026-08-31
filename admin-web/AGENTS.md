@@ -14,14 +14,13 @@
 
 ## 先读
 
-1. [DESIGN.md](DESIGN.md)
+1. [README.md](README.md)
 2. [ARCHITECTURE.md](ARCHITECTURE.md)
-3. [docs/WORKBUDDY_GAP_ANALYSIS.md](docs/WORKBUDDY_GAP_ANALYSIS.md)
-4. [docs/MIGRATION_PLAN.md](docs/MIGRATION_PLAN.md)
+3. [DESIGN.md](DESIGN.md)
 
 ## 依赖方向
 
-`pages → React adapter/features → modules/services → 同源 BFF → mip-admin-api`
+`app/route-pages → features → modules/services → 同源 BFF → mip-admin-api`
 
 - 页面不直接拼 AdminRequest，也不复制会员、活动资格、订单、支付、权限或状态机规则。
 - `src/modules` 保持渠道中立；React 只通过 module interface 调用。
@@ -49,10 +48,8 @@
 ## 测试与完成
 
 ```bash
-pnpm test
-pnpm lint
-pnpm build
-pnpm verify
+# 从仓库根目录执行
+pnpm admin:web:verify
 ```
 
 视觉变更另验收 1280×720、1440×900、390×844；检查键盘焦点、对比度、无横向溢出、加载/错误/空/无权限状态。生产登录、上传、导出、支付和 CloudBase 成功事实必须单独标注证据边界。

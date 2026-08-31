@@ -7,7 +7,7 @@ description: Use for membership checkout, CloudPay, ledger, callback, or refund 
 
 ## Trigger
 
-支付、下单、查单、回调、退款、`MEMBERSHIP_PAYMENT_MODE`。
+支付、下单、查单、回调、退款、`MIP_PAYMENT_MODE`。
 
 ## Scope
 

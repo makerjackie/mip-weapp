@@ -4,15 +4,31 @@
 
 ## 本地运行
 
+### 演示模式
+
 ```bash
 cp admin-web/.env.example admin-web/.env.local
 pnpm install
 pnpm admin:web:dev
 ```
 
+在 `admin-web/.env.local` 中保留 `VITE_MIP_ADMIN_API_URL=/api/admin`，并设置 `VITE_MIP_ADMIN_DEMO_MODE=true`。演示模式只使用本地演示数据，不启动 Pages Function，也不提交写操作。
+
+### 真实 BFF 联调
+
+在 `admin-web/.env.local` 中设置 `VITE_MIP_ADMIN_DEMO_MODE=false` 以及下文列出的 Pages 服务端变量，然后从仓库根目录执行：
+
+```bash
+pnpm admin:web:build
+pnpm --dir admin-web exec wrangler d1 migrations apply mip-admin-auth --local
+pnpm --dir admin-web exec wrangler pages dev dist --env-file .env.local
+```
+
+真实模式由 Wrangler 同时提供静态资源和同源 Pages Function。`VITE_MIP_ADMIN_API_URL` 只允许配置以 `/` 开头的同源路径，默认并推荐使用 `/api/admin`；不要填写协议、域名或跨源地址。登录确认还要求 CloudBase 能访问本次 BFF 的内部确认端点。
+
 完整本地门禁使用 `pnpm admin:web:verify`；小程序与 Web 的合并门禁使用 `pnpm verify:all`。
 
-本地演示必须显式设置 `VITE_MIP_ADMIN_DEMO_MODE=true`。未启用演示时，浏览器只访问同源 `/api/admin`，页面不会在接口失败后回退成演示数据，也不会接触 CloudBase API Key、MySQL URI、身份提供方密钥或 BFF HMAC。
+未启用演示时，页面不会在接口失败后回退成演示数据。浏览器不会接触 CloudBase API Key、MySQL URI、身份提供方密钥或 BFF HMAC。
 
 ## 当前模块
 
@@ -38,7 +54,7 @@ BFF 不接受浏览器直接提交 `appId` 或 `openId`。CloudBase 侧只在小
 
 1. 创建 D1 数据库 `mip-admin-auth`，将其以 `MIP_ADMIN_AUTH_DB` 绑定到 Pages 项目；示例见 `wrangler.d1.example.toml`。执行 `migrations/0001_web_login_challenges.sql`。
 2. 为 Cloudflare 与 `mip-admin-api` 配置同一个 `MIP_ADMIN_WEB_LOGIN_HMAC_SECRET`，它只用于小程序确认网页登录；不要与查询 HMAC 复用。
-3. 为 `mip-admin-api` 配置 `MIP_ADMIN_WEB_BFF_HMAC_SECRET`，并在 CloudBase HTTP 访问服务把一个 HTTPS 路径映射到该函数；将地址填入 Pages 的 `MIP_ADMIN_UPSTREAM_URL`。
+3. 为 CloudBase 的 `mip-admin-api` 配置 `MIP_ADMIN_WEB_BFF_HMAC_SECRET`，为 Pages 配置 `MIP_ADMIN_UPSTREAM_HMAC_SECRET`；两项变量名不同，但必须使用同一个密钥值。再通过 CloudBase HTTP 访问服务把一个 HTTPS 路径映射到该函数，并将地址填入 Pages 的 `MIP_ADMIN_UPSTREAM_URL`。
 4. 配置 `MIP_WEB_SESSION_SECRET`、`MIP_WEB_ALLOWED_APP_IDS`、`MIP_WEB_ALLOWED_ORIGIN=https://mipmini.01mvp.com`，关闭生产构建的 `VITE_MIP_ADMIN_DEMO_MODE`。
 5. 在预发布环境验证错误登录码、过期/篡改 Cookie、重复消费、`AUTH_REQUIRED`、`FORBIDDEN`、上游超时和 AppID 不在 allowlist 的负向用例。
 6. 确认导出存储签发的 HTTPS 临时地址允许 `https://mipmini.01mvp.com` 进行匿名 CORS `GET`；Web 不会把导出 token 写入 URL 或持久存储，CORS 不可用时下载会安全失败。
@@ -46,7 +62,7 @@ BFF 不接受浏览器直接提交 `appId` 或 `openId`。CloudBase 侧只在小
 
 不需要把 CloudBase API Key、MySQL URI 或任何腾讯云管理凭证配置到浏览器或 Cloudflare。Cloudflare 只持有三项用途隔离的服务器密钥：会话密封、登录确认 HMAC、管理请求 HMAC。
 
-Cloudflare Pages 的项目配置在 `wrangler.toml`；部署命令为 `pnpm deploy:pages`。自定义域名需要在 Cloudflare Pages 项目中绑定，首次绑定和 DNS 状态以 Cloudflare 控制台为准。
+Cloudflare Pages 的项目配置在 `wrangler.toml`；从仓库根目录执行 `pnpm --dir admin-web deploy:pages`。自定义域名需要在 Cloudflare Pages 项目中绑定，首次绑定和 DNS 状态以 Cloudflare 控制台为准。
 
 浏览器只显示随机短码并轮询同源 BFF，不接收可信身份字段。CloudBase 在执行前持久消费一次性 nonce；Web BFF 只允许契约清单中已审核且具有领域持久幂等保护的 mutation，其余写操作默认拒绝。素材上传使用独立路由，但复用同一会话、来源校验和服务端 HMAC principal，浏览器不会接收密钥。页面按当前账号 capability 显示操作入口，写操作均要求明确确认且不会自动重试。
 

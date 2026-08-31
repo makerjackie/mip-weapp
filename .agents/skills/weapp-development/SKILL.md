@@ -48,4 +48,4 @@ description: Use for WeChat Mini Program page, config, script, Tailwind, TDesign
 
 ## Docs
 
-[GETTING_STARTED.md](../../../docs/GETTING_STARTED.md) · [TROUBLESHOOTING.md](../../../docs/TROUBLESHOOTING.md)
+[README.md](../../../README.md) · [文档入口](../../../docs/README.md) · [TROUBLESHOOTING.md](../../../docs/TROUBLESHOOTING.md)

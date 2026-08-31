@@ -14,22 +14,11 @@
 - 目标环境配置与源环境完全相同的 `MIP_UNION_IDENTITY_PEPPER`；
 - 仅在完成迁移核对后设置 `MIP_UNION_ID_REBIND_ENABLED=true`。
 
-## 无 UnionID 时的付费会员认领
+## 无 UnionID 时
 
-源数据没有可用的 `union_identity_key` 时，可在目标 `test` 或 `staging` 环境临时设置
-`MIP_PHONE_MIGRATION_REBIND_ENABLED=true`。`production` 和 `development` 部署会拒绝该开关；正常部署保持
-`false`，迁移认领窗口结束后立即关闭并重新部署身份函数。
-
-该通道只接受微信 `phonenumber.getPhoneNumber` 返回的服务端可信手机号。手机号必须唯一命中另一个
-`ACTIVE` 用户，且该用户拥有当前有效、由已支付会员订单产生的权益。服务端会在单个事务中锁定手机号、
-双方用户与身份、有效权益、注册 outbox 和迁移审计记录，然后把当前微信身份转移到原会员主键。原会员的
-订单、权益、档案和其他业务外键不变；本次新建的临时用户只允许保留身份初始化记录和协议接受事实，不能有
-资料、分会、角色、订单、权益或任何其他带用户引用的业务记录。临时身份会形成不可复用墓碑，临时用户改为
-`CLOSED`；尚未处理的 `identity.user_registered` outbox 同事务改为 `CANCELLED`。
-
-同一会员只允许认领一次。并发、重复认领、临时用户超过 24 小时、手机号数据不完整、存在业务引用、权益
-不是有效付费订单来源或任何锁定/写入结果异常都会安全失败，响应和普通日志不返回手机号、手机号摘要、
-OpenID 或用户主键。此功能不能替代迁移前的数据核对，也不能用于合并正常业务账号。
+本仓库不提供按手机号自动认领或合并历史账号的运行时通道。没有可校验 `union_identity_key` 的数据，必须在
+冻结写入后通过受审计的离线映射完成身份核对，再导入空的新环境；无法建立可信映射的账号不迁移。手机号
+只能用于当前账号的服务端验证与绑定，已被其他账号占用时返回冲突，不在登录过程中改写用户主键或业务外键。
 
 数据库只保存 HMAC 摘要，不保存 OpenID 或 UnionID 原文。`mip_user_identities` 在一个 AppID 范围内要求 UnionID 摘要唯一；摘要冲突时拒绝登录衔接，不自动合并用户。
 
@@ -98,14 +87,4 @@ pnpm database:import:app-scope -- \
   --target-app-id=<target-appid>
 ```
 
-## 当前 staging 迁移证据（2026-08-28）
-
-- 目标空环境已应用 56 个锁定迁移；122 张 MIP 业务表存在且 schema 隔离检查通过。
-- 源 AppID 定向导出 124 张锁定表、1,294 行，导出前后行数一致；没有读取或复制其他项目表。
-- 离线转换保留 1,178 行并排除 116 行环境绑定/临时事实；两张 schema ledger 不进入业务导入。
-- 13 个长期素材已复制到目标 staging scope，上传后回读和 SHA-256 全部通过。
-- 目标导入 109 张表、947 行业务数据，最终行数、主键、源 AppID 残留和外键孤儿检查全部通过。
-- 专用 runtime 账号的 122 张表级最小权限已独立回读为 `already current`；没有 schema/global 权限。
-- 支付保持 `disabled`、目录保持 `TEST`、小程序状态保持 `trial`，不会产生真实支付。
-- 源身份 inventory 没有 UnionID 摘要，因此 `MIP_UNION_ID_REBIND_ENABLED` 保持关闭。旧付费用户只能在新 AppID 真机取得可信手机号后走显式、限时的手机号迁移认领，不能按昵称、头像或客户端 userId 合并。
-- 16 个核心函数仍以云端回读为准；数据导入成功不能代替 SCF 部署和 `cloud:verify`。
+迁移演练和目标环境状态不在本运行手册中维护。执行后将来源环境、目标环境类型、迁移 lock、行数、素材校验、权限回读和验证时间记录到 `docs/mip/evidence/`，并在 [MIP 项目状态](mip/PROJECT_STATUS.md) 引用；不得用旧演练数字推断当前环境。

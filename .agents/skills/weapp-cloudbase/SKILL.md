@@ -35,7 +35,7 @@ description: Use for CloudBase env, membership cloud functions, MySQL, or MCP au
 
 编辑器 MCP 不要启动 CloudBase。连接串只进函数配置。密钥不提交。
 
-不要给会访问 MySQL 的云函数挂定时触发器。哪怕 outbox 是空的，定时任务也会连库，阻止 Serverless MySQL 自动暂停，按 CCU 消耗大量资源点。`cloud:deploy` 必须删除而不是创建 `membership-notification-every-5m`。
+不要给会访问 MySQL 的云函数挂定时触发器。哪怕 outbox 是空的，定时任务也会连库，阻止 Serverless MySQL 自动暂停，按 CCU 消耗大量资源点。`cloud:deploy` 必须删除而不是创建已知历史 timer：`mip-notification-every-5m`、`mip-outbox-every-5m`、`mip-refund-every-5m`。
 
 ## Forbidden
 

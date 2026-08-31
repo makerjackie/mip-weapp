@@ -1,6 +1,6 @@
 # Database
 
-MIP 权威结构在 `database/mysql/mip/` 和该目录的 `migrations.lock.json`。仓库 lock 当前固定 58 个追加迁移；新表前缀固定为 `mip_*`，完整迁移记录写入 `mip_schema_migrations`，每条语句的执行状态写入 `mip_schema_migration_steps`，引擎使用 InnoDB。`mip_orders` 统一承载会员、付费活动和付费内容订单。2026-08-28 的共享环境证据仍是已应用 56 个迁移、122 张 runtime 表权限完成收敛；仓库新增的 057–058 尚未部署，不能把 lock 当成生产应用证明。应用前必须重新取得符合执行器时效要求的备份，并在迁移后收敛 124 张 runtime 表的精确权限。
+MIP 权威结构在 `database/mysql/mip/` 和该目录的 `migrations.lock.json`。新表前缀固定为 `mip_*`，完整迁移记录写入 `mip_schema_migrations`，每条语句的执行状态写入 `mip_schema_migration_steps`，引擎使用 InnoDB。`mip_orders` 统一承载会员、付费活动和付费内容订单。lock 只证明仓库期望结构；目标环境是否已应用、表级权限是否收敛，必须以环境回读为准，并记录在 [MIP 项目状态](mip/PROJECT_STATUS.md) 或对应证据中。
 
 活动相册由 `012_event_album.sql` 追加 `mip_event_album_photos` 与活动相册配置；照片只做状态迁移和版本更新，不执行物理业务删除。`015_checkin_growth_compensation.sql` 追加签到 transition，并将经验余额改为可表达精确冲销的有符号值。`016_notification_delivery_reservations.sql` 为订阅授权追加任务级 reservation，使微信调用可以移出数据库事务且不被其他任务并发复用。`021_referral_targets.sql` 将历史引荐安全回填给对应机会发布人，再把被引荐人收敛为非空外键；发起人和机会的原唯一约束保持不变。后续迁移继续按 lock 中的版本和 checksum 顺序应用。
 
@@ -20,15 +20,15 @@ MIP 权威结构在 `database/mysql/mip/` 和该目录的 `migrations.lock.json`
 
 `035_mip_blind_box.sql` 追加盲盒目录、卡牌库存、用户保底状态、不可变抽取记录和卡牌背包。抽取事务复用游戏币账户与 COIN 流水，重新锁定有效会员权益、账户和库存，防止负余额，并以 `(app_id, user_id, request_id)` 保证同目录重试不重复扣币或授予卡牌。抽取记录固化目录版本、保底阈值、最低稀有度、随机落点、卡牌展示字段、余额和获得后数量；目录、规则、概率、保底和库存由 `game.manage` 管理动作配置并追加审计。已发布目录的规则和卡牌变更必须继续保有满足保底最低稀有度的已发布库存；rollback 检测到抽取记录时会在删除任何表前失败，避免拆断游戏币流水审计。
 
-`037_mip_ai_matching_preferences.sql` 追加用户通知/机会权限、范围化撮合设置、撮合请求、版本化结果和不可变反馈。撮合记录只追加，阈值和用户偏好使用版本更新；该迁移已应用并纳入当前迁移与权限基线。
+`037_mip_ai_matching_preferences.sql` 追加用户通知/机会权限、范围化撮合设置、撮合请求、版本化结果和不可变反馈。撮合记录只追加，阈值和用户偏好使用版本更新。
 
 `041_message_delivery_reviews.sql` 追加消息活动派发和外部投递任务的独立复核工作流。表只保存 AppID 范围内的来源引用、证据哈希、认领租约、处理结论、操作者和版本，不复制消息正文、收件人或 provider 响应，也不通过复核行改变业务来源事实。runtime 权限固定为 `SELECT`、`INSERT`、`UPDATE`；rollback 在表非空时拒绝删除，必须先导出当前复核状态。迁移是否已应用必须以目标环境的 schema migration 记录、表结构和权限读回为准，仓库 lock 本身不是部署证明。
 
-`042_profile_identity_status_unicode.sql` 将会员资料的身份状态列改为 `utf8mb4`，允许页面保存中文身份描述。rollback 检测到非 ASCII 值时拒绝有损回退；目标环境已应用该迁移，并通过微信开发者工具复核中文资料写入与重新载入。
+`042_profile_identity_status_unicode.sql` 将会员资料的身份状态列改为 `utf8mb4`，允许页面保存中文身份描述。rollback 检测到非 ASCII 值时拒绝有损回退。
 
 `038_task_level_rules.sql` 以 `mip_task_level_rules` 保存任务与启用成长等级的精确允许集合；任务没有关联记录时表示全部等级可完成。关系替换由任务管理事务和任务版本保护，运行账号仅获得 `SELECT/INSERT/DELETE`；rollback 会先检测业务行，非空时在删除表前失败。
 
-仓库只保留 `database/mysql/mip/` 的当前迁移。共享数据库中既有的 `member_*`、`dating_*`、`sewing_*` 表不属于本仓库，不应用、不修复、不回滚，也不在迁移脚本中保留其结构副本。活跃合同见 [data-model.md](data-model.md)、[data-contract.md](data-contract.md) 和 [mip/ARCHITECTURE.md](mip/ARCHITECTURE.md)。
+仓库只保留 `database/mysql/mip/` 的当前迁移。共享数据库中既有的 `member_*`、`dating_*`、`sewing_*` 表不属于本仓库，不应用、不修复、不回滚，也不在迁移脚本中保留其结构副本。数据语义见 [data-contract.md](data-contract.md)，领域边界见 [mip/ARCHITECTURE.md](mip/ARCHITECTURE.md)。
 
 只预览迁移范围，不连接数据库：
 

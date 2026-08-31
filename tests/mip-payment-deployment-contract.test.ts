@@ -41,12 +41,12 @@ describe('MIP payment deployment contract', () => {
       'pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo',
     ]
 
-    for (const relativePath of ['README.md', 'docs/DEPLOYMENT.md', 'docs/OPERATIONS.md']) {
-      const document = normalizedCommandSource(read(relativePath))
-      for (const command of requiredCommands) {
-        expect(document, `${relativePath} is missing: ${command}`).toContain(command)
-      }
-      expect(document).toContain('--confirm-live')
+    const deployment = normalizedCommandSource(read('docs/DEPLOYMENT.md'))
+    for (const command of requiredCommands) {
+      expect(deployment, `docs/DEPLOYMENT.md is missing: ${command}`).toContain(command)
     }
+    expect(deployment).toContain('--confirm-live')
+    expect(read('README.md')).toContain('(docs/DEPLOYMENT.md)')
+    expect(read('docs/OPERATIONS.md')).toContain('(DEPLOYMENT.md)')
   })
 })

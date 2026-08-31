@@ -23,7 +23,7 @@ description: Use for owner bootstrap, demo seed, CloudBase deploy, MySQL schema,
 
 1. 先 `pnpm cloud:status`。环境和 MySQL 管理默认使用 `.env.local` 的环境级 `CLOUDBASE_API_KEY`；`pnpm cloud:auth` 只验证 API Key。SCF 管控面被其临时 STS 拒绝时，经明确授权使用 Device Flow，并为部署、验收显式设置 `CLOUDBASE_AUTH_MODE=local`。
 2. 部署必须带 `--confirm-env=`，并从 `.env.local` 读取 `MIP_DEPLOYMENT_STAGE`；production 还必须带 `--confirm-production`。
-3. seed 只能打到 development/test，且 `is_demo=1`。
+3. seed 默认只允许 development/test，且 `is_demo=1`；MIP staging 仅在 TEST catalog、非 live payment、精确 EnvID 和 `--confirm-staging-demo` 同时满足时允许，production 禁止。
 4. owner bootstrap 拒绝 demo 身份，不打印 OpenID。
 5. 运营端变更走 admin API 与 RBAC，不要给客户端加管理 action。
 

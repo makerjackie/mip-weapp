@@ -58,10 +58,11 @@ describe('MIP deployment safety guards', () => {
     expect(cloudbaseHelper).toContain('\'EnvId\' in value || \'envId\' in value')
     expect(cloudbaseHelper).toContain('if (resolvedId !== envId)')
 
-    for (const document of ['README.md', 'docs/CLOUDBASE.md', 'docs/DEPLOYMENT.md']) {
+    for (const document of ['docs/CLOUDBASE.md', 'docs/DEPLOYMENT.md']) {
       expect(read(document), document).toContain('MIP_DEPLOYMENT_STAGE')
       expect(read(document), document).toContain('--confirm-production')
     }
+    expect(read('README.md')).toContain('(docs/DEPLOYMENT.md)')
   })
 
   it('limits a requested single-function deployment to one known core manifest entry', () => {

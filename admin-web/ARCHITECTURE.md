@@ -18,9 +18,8 @@ pages
 
 | 目录 | 职责 | 禁止 |
 | --- | --- | --- |
-| `src/app` | Router、QueryClient、主题、会话、错误边界和全局组合 | 领域查询格式化、页面业务规则 |
-| `src/pages` | 路由级页面组合和 URL state | 直接 `fetch`、拼 AdminRequest、计算服务端事实 |
-| `src/features` | 跨页面业务交互 adapter，例如详情、写操作、导出、上传 | 绕过 module validator 或 capability |
+| `src/app` | Router、`route-pages.tsx` 路由组合、QueryClient、主题、会话和错误边界 | 领域查询格式化、页面业务规则 |
+| `src/features` | React 页面视图和交互 adapter，包括列表、详情、写操作、导出和上传 | 直接 `fetch`、拼 AdminRequest、绕过 module validator 或 capability |
 | `src/shared/ui` | PageHeader、FilterBar、DataTable、状态与反馈组件 | action 名称、领域 DTO、页面特例 |
 | `src/modules` | 既有渠道中立 read model、detail、mutation definition 和 validator | React、DOM、Ant Design、浏览器会话 |
 | `src/services` | AdminApiClient、同源 BFF transport、显式 demo adapter | 领域状态机和权限推断 |
@@ -48,8 +47,9 @@ TanStack Router 使用 hash history，保持 Cloudflare Pages 静态回退简单
 ## Query 与 mutation
 
 - Query key 至少包含 route、筛选、cursor、limit 与 session identity boundary。
-- Query 默认不自动重试 `AUTH_REQUIRED`、`FORBIDDEN`、`CONFLICT` 和 mutation。
-- 成功 mutation 只失效相关 query；未知网络结果先刷新服务端事实，不盲目重放。
+- Query 对 `AUTH_REQUIRED`、`FORBIDDEN` 和 `CONFLICT` 不重试；其他查询失败最多重试一次。
+- 成功 mutation 当前会失效全部 Query 缓存，由各可见页面重新读取服务端事实；在没有完整 action-to-query 依赖表前不缩小失效范围。
+- mutation 不自动重放；失败时保留表单上下文并显示服务端或网络错误。
 - mutation action、幂等键、`expectedVersion` 与 input 由既有 module builder 创建。
 
 ## AdminRequest v1 边界
@@ -65,7 +65,21 @@ TanStack Router 使用 hash history，保持 Cloudflare Pages 静态回退简单
 }
 ```
 
-业务 `action` 字段必须留在 `input` 内；顶层 action 只用于路由。浏览器只调用同源 `/api/admin` 与专用 `/api/media/image`，不得直接调用 CloudBase 或携带服务器密钥。
+业务 `action` 字段必须留在 `input` 内；顶层 action 只用于路由。浏览器只调用同源 BFF；`VITE_MIP_ADMIN_API_URL` 只能是以 `/` 开头的同源路径，默认使用 `/api/admin`，不得配置完整 URL 或跨源地址。媒体上传使用同源 `/api/media/image`，浏览器不得直接调用 CloudBase 或携带服务器密钥。
+
+## BFF 路由
+
+| 方法与路径 | 调用方 | 职责 |
+| --- | --- | --- |
+| `POST /api/auth/challenge` | 浏览器 | 创建 5 分钟有效的登录短码 |
+| `POST /api/auth/challenge/status` | 浏览器 | 轮询并一次性消费已确认登录 |
+| `GET /api/auth/session` | 浏览器 | 读取当前密封会话 |
+| `POST /api/auth/logout` | 浏览器 | 清除当前会话 |
+| `POST /api/internal/auth/challenge/confirm` | CloudBase | 使用登录确认 HMAC 提交可信身份 |
+| `POST /api/admin` | 浏览器 | 转发精确 allowlist 内的 AdminRequest v1 |
+| `POST /api/media/image` | 浏览器 | 转发受控图片上传请求 |
+
+Pages 通过 `MIP_ADMIN_UPSTREAM_HMAC_SECRET` 签名管理请求，CloudBase 的 `mip-admin-api` 通过 `MIP_ADMIN_WEB_BFF_HMAC_SECRET` 验签；两个变量必须保存同一个密钥值。登录确认使用独立的 `MIP_ADMIN_WEB_LOGIN_HMAC_SECRET`，不得与管理请求 HMAC 复用。
 
 ## 权限与服务端事实
 
