@@ -85,6 +85,8 @@ describe('AI draft Provider cloud contract', () => {
     expect(linkCheck).toBeGreaterThan(-1)
     expect(staging).toBeGreaterThan(linkCheck)
     expect(providerWrite).toBeGreaterThan(linkCheck)
+    expect(deploySource).toContain('function delay(milliseconds)')
+    expect(deploySource).not.toContain('const delay =')
   })
 
   it('requires exact HTTPS hosts and rejects wildcard/IP allowlists', () => {
