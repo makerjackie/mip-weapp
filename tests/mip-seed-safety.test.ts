@@ -94,7 +94,7 @@ describe('MIP demo seed ownership safety', () => {
       .filter(([, value]) => Array.isArray(value) && value.every(item => typeof item?.id === 'string'))
       .map(([key]) => key)
       .sort()
-    expect(Object.keys(SEED_TABLES).sort()).toEqual(fixtureGroups.filter(key => !['badgeProfiles', 'badgeEquipment'].includes(key)))
+    expect(Object.keys(SEED_TABLES).sort()).toEqual(fixtureGroups.filter(key => !['badgeProfiles', 'badgeEquipment', 'eventContentMedia'].includes(key)))
   })
 
   it('rejects SQL plans that leave the MIP table and AppID boundary', () => {
@@ -134,13 +134,23 @@ describe('MIP demo seed ownership safety', () => {
     expect(result).toMatchObject({
       valid: true,
       seedVersion: seed.version,
-      fixtureGroups: 49,
+      fixtureGroups: 51,
     })
     expect(result.statementCount).toBeGreaterThan(Object.keys(SEED_TABLES).length)
     expect(result.tableCount).toBeGreaterThan(Object.keys(SEED_TABLES).length)
-    expect(result.fixtureGroups).toBe(49)
-    expect(result.tableCount).toBe(69)
+    expect(result.fixtureGroups).toBe(51)
+    expect(result.tableCount).toBe(71)
     expect(result.maxStatementBytes).toBeLessThan(30 * 1024)
+  })
+
+  it('requires explicit staging confirmation and bypasses the development-only helper guard only for staging', () => {
+    const source = fs.readFileSync(path.join(root, 'scripts/seed-demo.mjs'), 'utf8')
+    expect(source).toContain('const confirmStagingDemo = process.argv.includes(\'--confirm-staging-demo\')')
+    expect(source).toContain('const stagingDemo = stage === \'staging\' && confirmStagingDemo')
+    expect(source).toContain('confirmStagingDemo && stage !== \'staging\'')
+    expect(source).toContain('development: !stagingDemo')
+    expect(source).toContain('![\'development\', \'test\', \'staging\'].includes(runtimeStage)')
+    expect(source).toContain('stage === \'production\'')
   })
 
   it('seeds a coherent opportunity interaction and matching path', () => {
@@ -236,11 +246,14 @@ describe('MIP demo seed ownership safety', () => {
     expect(source).toContain('mip_profile_visits:')
     expect(source).toContain('mip_membership_chains:')
     expect(source).toContain('mip_media_assets:')
+    expect(source).toContain('mip_event_content_media:')
+    expect(fs.readFileSync(path.join(root, 'scripts/lib/mip-seed-safety.mjs'), 'utf8'))
+      .toContain('JSON_CONTAINS')
   })
 
-  it('uploads and binds eleven READY demo media objects without storing temporary URLs', () => {
+  it('uploads and binds demo media objects without storing temporary URLs', () => {
     const source = fs.readFileSync(path.join(root, 'scripts/seed-demo.mjs'), 'utf8')
-    expect(seed.mediaAssets).toHaveLength(11)
+    expect(seed.mediaAssets).toHaveLength(18)
     expect(seed.mediaAssets.filter((item: { purpose: string }) => item.purpose === 'TASK_TEMPLATE')).toHaveLength(1)
     expect(new Set(seed.users.map((item: { avatarAssetId: string }) => item.avatarAssetId)).size).toBe(6)
     expect(new Set(seed.events

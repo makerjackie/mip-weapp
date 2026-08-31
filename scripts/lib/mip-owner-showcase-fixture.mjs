@@ -77,6 +77,7 @@ export function resolveOwnerShowcaseCommand({ args = [], env = {} } = {}) {
   const stage = String(env.MIP_DEPLOYMENT_STAGE || '').trim().toLowerCase()
   const catalogStage = String(env.MIP_CATALOG_STAGE || 'TEST').trim().toUpperCase()
   const paymentMode = String(env.MIP_PAYMENT_MODE || 'disabled').trim().toLowerCase()
+  const stagingConfirmationCount = args.filter(value => value === '--confirm-staging-demo').length
   const allowedAppIds = String(env.MIP_ALLOWED_APP_IDS || appId)
     .split(',')
     .map(value => value.trim())
@@ -90,16 +91,25 @@ export function resolveOwnerShowcaseCommand({ args = [], env = {} } = {}) {
     || args.filter(value => value === '--confirm-owner-showcase').length !== 1) {
     throw new Error('Owner showcase fixture requires exact environment, AppID, and confirmation flag')
   }
-  if (!['development', 'test'].includes(stage)
+  if (!['development', 'test', 'staging'].includes(stage)
     || catalogStage !== 'TEST'
-    || !['disabled', 'test'].includes(paymentMode)) {
-    throw new Error('Owner showcase fixture is restricted to development/test with TEST catalog and non-live payment')
+    || !['disabled', 'test'].includes(paymentMode)
+    || (stage === 'staging' && stagingConfirmationCount !== 1)
+    || (stage !== 'staging' && stagingConfirmationCount !== 0)) {
+    throw new Error('Owner showcase fixture is restricted to development/test; staging requires --confirm-staging-demo, TEST catalog, and non-live payment')
   }
   if (!allowedAppIds.includes(appId)
     || allowedAppIds.some(value => !APP_ID_PATTERN.test(value))) {
     throw new Error('MIP_ALLOWED_APP_IDS must contain valid AppIDs and include MINI_PROGRAM_APP_ID')
   }
-  return Object.freeze({ envId, appId, stage, catalogStage, paymentMode })
+  return Object.freeze({
+    envId,
+    appId,
+    stage,
+    catalogStage,
+    paymentMode,
+    stagingConfirmed: stage === 'staging',
+  })
 }
 
 export function buildOwnerShowcasePreflightQuery({ appId, ownerUserId }) {

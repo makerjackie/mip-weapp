@@ -24,7 +24,7 @@ const appId = 'wx1234567890abcdef'
 const ownerUserId = '70000000-0000-4000-8000-000000000001'
 
 describe('owner showcase fixture safety', () => {
-  it('requires exact TEST-only confirmations and development stage', () => {
+  it('requires exact TEST-only confirmations and allows explicitly confirmed staging', () => {
     const config = resolveOwnerShowcaseCommand({
       args: [`--confirm-env=dev-env`, `--confirm-app-id=${appId}`, '--confirm-owner-showcase'],
       env: {
@@ -37,6 +37,41 @@ describe('owner showcase fixture safety', () => {
       },
     })
     expect(config.paymentMode).toBe('disabled')
+    expect(config.stagingConfirmed).toBe(false)
+    const stagingConfig = resolveOwnerShowcaseCommand({
+      args: [`--confirm-env=staging-env`, `--confirm-app-id=${appId}`, '--confirm-owner-showcase', '--confirm-staging-demo'],
+      env: {
+        CLOUDBASE_ENV_ID: 'staging-env',
+        MINI_PROGRAM_APP_ID: appId,
+        MIP_DEPLOYMENT_STAGE: 'staging',
+        MIP_CATALOG_STAGE: 'TEST',
+        MIP_PAYMENT_MODE: 'disabled',
+        MIP_ALLOWED_APP_IDS: appId,
+      },
+    })
+    expect(stagingConfig.stagingConfirmed).toBe(true)
+    expect(() => resolveOwnerShowcaseCommand({
+      args: [`--confirm-env=staging-env`, `--confirm-app-id=${appId}`, '--confirm-owner-showcase'],
+      env: {
+        CLOUDBASE_ENV_ID: 'staging-env',
+        MINI_PROGRAM_APP_ID: appId,
+        MIP_DEPLOYMENT_STAGE: 'staging',
+        MIP_CATALOG_STAGE: 'TEST',
+        MIP_PAYMENT_MODE: 'disabled',
+        MIP_ALLOWED_APP_IDS: appId,
+      },
+    })).toThrow(/staging requires/)
+    expect(() => resolveOwnerShowcaseCommand({
+      args: [`--confirm-env=dev-env`, `--confirm-app-id=${appId}`, '--confirm-owner-showcase', '--confirm-staging-demo'],
+      env: {
+        CLOUDBASE_ENV_ID: 'dev-env',
+        MINI_PROGRAM_APP_ID: appId,
+        MIP_DEPLOYMENT_STAGE: 'development',
+        MIP_CATALOG_STAGE: 'TEST',
+        MIP_PAYMENT_MODE: 'disabled',
+        MIP_ALLOWED_APP_IDS: appId,
+      },
+    })).toThrow(/staging requires/)
     expect(() => resolveOwnerShowcaseCommand({
       args: [`--confirm-env=prod-env`, `--confirm-app-id=${appId}`, '--confirm-owner-showcase'],
       env: { CLOUDBASE_ENV_ID: 'prod-env', MINI_PROGRAM_APP_ID: appId, MIP_DEPLOYMENT_STAGE: 'production' },

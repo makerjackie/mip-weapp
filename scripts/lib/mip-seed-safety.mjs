@@ -7,6 +7,7 @@ const SEED_TABLES = Object.freeze({
   badges: 'mip_badges',
   users: 'mip_users',
   mediaAssets: 'mip_media_assets',
+  banners: 'mip_banners',
   membershipOrders: 'mip_orders',
   eventOrders: 'mip_orders',
   entitlements: 'mip_membership_entitlements',
@@ -61,6 +62,10 @@ export function buildSeedOwnershipQuery(appId, seed) {
     selects.push(`SELECT id FROM ${table}
       WHERE id IN (${ids.map(id => `'${id}'`).join(', ')}) AND app_id <> '${appId}'`)
   }
+  selects.push(`SELECT media_asset_id AS id FROM mip_event_content_media
+    WHERE media_asset_id IN (${seed.eventContentMedia.map(item => literal(item.mediaAssetId)).join(', ')})
+      AND event_id IN (${seed.eventContentMedia.map(item => literal(item.eventId)).join(', ')})
+      AND app_id <> ${literal(appId)}`)
   selects.push(`SELECT user_id AS id FROM mip_membership_chains
     WHERE user_id IN (${seedIds(seed, 'users').map(literal).join(', ')})
       AND app_id <> ${literal(appId)}`)
@@ -98,6 +103,20 @@ export function buildSeedCollisionQuery(appId, seed) {
             ) IS NOT NULL
         )`)
   }
+  selects.push(`SELECT CONCAT(candidate.event_id, ':', candidate.media_asset_id) AS id
+    FROM mip_event_content_media candidate
+    WHERE candidate.app_id = ${literal(appId)}
+      AND (${seed.eventContentMedia.map(item => `(candidate.event_id = ${literal(item.eventId)} AND candidate.media_asset_id = ${literal(item.mediaAssetId)})`).join(' OR ')})
+      AND NOT EXISTS (
+        SELECT 1 FROM mip_app_settings demo_manifest
+        WHERE demo_manifest.app_id = candidate.app_id
+          AND demo_manifest.setting_key LIKE 'demo_seed_manifest%'
+          AND JSON_UNQUOTE(JSON_EXTRACT(demo_manifest.value_json, '$.is_demo')) = '1'
+          AND JSON_CONTAINS(
+            JSON_EXTRACT(demo_manifest.value_json, '$.recordsByTable.mip_event_content_media'),
+            JSON_OBJECT('eventId', candidate.event_id, 'mediaAssetId', candidate.media_asset_id), '$'
+          )
+      )`)
   selects.push(`SELECT membership_chain.user_id AS id
     FROM mip_membership_chains membership_chain
     WHERE membership_chain.app_id = ${literal(appId)}

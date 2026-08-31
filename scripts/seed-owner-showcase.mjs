@@ -96,7 +96,10 @@ const phoneHash = resolveOwnerPhoneHash({
   phoneEncryptionKey: env.MIP_PHONE_ENCRYPTION_KEY,
 })
 const agreements = currentAgreementVersions(env.MIP_AGREEMENTS_JSON)
-bindAndRequireMysqlEnvironment(root, command.envId, { development: true, stage: command.stage })
+bindAndRequireMysqlEnvironment(root, command.envId, {
+  development: ['development', 'test'].includes(command.stage),
+  stage: command.stage,
+})
 assertTablesExist([
   'mip_users',
   'mip_profiles',

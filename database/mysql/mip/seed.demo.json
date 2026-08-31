@@ -1,5 +1,5 @@
 {
-  "version": "2026-08-28-demo.19",
+  "version": "2026-08-31-demo.20",
   "replaceBeforeProduction": true,
   "branches": [
     {
@@ -123,11 +123,25 @@
     { "id": "58000000-0000-4000-8000-000000000004", "key": "demo_avatar_tang_qiao", "purpose": "AVATAR", "ownerUserId": "50000000-0000-4000-8000-000000000004", "sourcePath": "database/mysql/mip/demo-assets/avatars/tang-qiao.jpg", "extension": "jpg", "width": 512, "height": 512 },
     { "id": "58000000-0000-4000-8000-000000000005", "key": "demo_avatar_su_he", "purpose": "AVATAR", "ownerUserId": "50000000-0000-4000-8000-000000000005", "sourcePath": "database/mysql/mip/demo-assets/avatars/su-he.jpg", "extension": "jpg", "width": 512, "height": 512 },
     { "id": "58000000-0000-4000-8000-000000000006", "key": "demo_avatar_gu_ning", "purpose": "AVATAR", "ownerUserId": "50000000-0000-4000-8000-000000000006", "sourcePath": "database/mysql/mip/demo-assets/avatars/gu-ning.jpg", "extension": "jpg", "width": 512, "height": 512 },
-    { "id": "58000000-0000-4000-8000-000000000011", "key": "demo_event_cover_ai_collaboration", "purpose": "EVENT_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-morning-ai-collaboration.jpg", "extension": "jpg", "width": 1200, "height": 675 },
-    { "id": "58000000-0000-4000-8000-000000000012", "key": "demo_event_cover_resource_matching", "purpose": "EVENT_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-morning-resource-matching.jpg", "extension": "jpg", "width": 1200, "height": 675 },
-    { "id": "58000000-0000-4000-8000-000000000013", "key": "demo_event_cover_project_collaboration", "purpose": "EVENT_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-morning-project-collaboration.jpg", "extension": "jpg", "width": 1200, "height": 675 },
-    { "id": "58000000-0000-4000-8000-000000000014", "key": "demo_event_cover_paid_workshop", "purpose": "EVENT_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-morning-ai-collaboration.jpg", "extension": "jpg", "width": 1200, "height": 675 },
+    { "id": "58000000-0000-4000-8000-000000000011", "key": "demo_event_cover_forest_connect", "purpose": "EVENT_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-event-forest-connect.png", "extension": "png", "width": 1800, "height": 766 },
+    { "id": "58000000-0000-4000-8000-000000000012", "key": "demo_event_cover_ai_multiverse", "purpose": "EVENT_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-event-ai-multiverse.png", "extension": "png", "width": 1800, "height": 766 },
+    { "id": "58000000-0000-4000-8000-000000000013", "key": "demo_event_cover_red_workout", "purpose": "EVENT_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-event-red-workout.png", "extension": "png", "width": 450, "height": 192 },
+    { "id": "58000000-0000-4000-8000-000000000014", "key": "demo_event_cover_relationship_share", "purpose": "EVENT_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-event-relationship-share.png", "extension": "png", "width": 300, "height": 182 },
+    { "id": "58000000-0000-4000-8000-000000000015", "key": "demo_event_cover_relationship_poster", "purpose": "EVENT_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-event-relationship-poster.png", "extension": "png", "width": 368, "height": 450 },
+    { "id": "58000000-0000-4000-8000-000000000031", "key": "demo_banner_forest_connect", "purpose": "BANNER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-event-forest-connect.png", "extension": "png", "width": 1800, "height": 766 },
+    { "id": "58000000-0000-4000-8000-000000000032", "key": "demo_banner_ai_multiverse", "purpose": "BANNER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-event-ai-multiverse.png", "extension": "png", "width": 1800, "height": 766 },
+    { "id": "58000000-0000-4000-8000-000000000041", "key": "demo_opportunity_cover_channels", "purpose": "OPPORTUNITY_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-event-forest-connect.png", "extension": "png", "width": 1800, "height": 766 },
+    { "id": "58000000-0000-4000-8000-000000000042", "key": "demo_opportunity_cover_creative", "purpose": "OPPORTUNITY_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000005", "sourcePath": "database/mysql/mip/demo-assets/events/mip-event-ai-multiverse.png", "extension": "png", "width": 1800, "height": 766 },
+    { "id": "58000000-0000-4000-8000-000000000043", "key": "demo_opportunity_cover_investment", "purpose": "OPPORTUNITY_COVER", "ownerUserId": "50000000-0000-4000-8000-000000000003", "sourcePath": "database/mysql/mip/demo-assets/events/mip-event-red-workout.png", "extension": "png", "width": 450, "height": 192 },
+    { "id": "58000000-0000-4000-8000-000000000051", "key": "demo_event_content_relationship_share", "purpose": "EVENT_CONTENT", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/events/mip-event-relationship-share.png", "extension": "png", "width": 300, "height": 182 },
     { "id": "58000000-0000-4000-8000-000000000021", "key": "demo_task_template_activity_review", "purpose": "TASK_TEMPLATE", "ownerUserId": "50000000-0000-4000-8000-000000000001", "sourcePath": "database/mysql/mip/demo-assets/tasks/mip-activity-review-template.jpg", "extension": "jpg", "width": 1024, "height": 1536 }
+  ],
+  "banners": [
+    { "id": "60500000-0000-4000-8000-000000000001", "key": "demo_banner_forest_connect", "title": "MIP 早会·深圳分会", "accessibilityLabel": "MIP 早会深圳分会活动", "imageAssetId": "58000000-0000-4000-8000-000000000031", "targetType": "MINIPROGRAM_PATH", "targetValue": "/packages/member/mip-events/detail/index?eventId=60000000-0000-4000-8000-000000000001", "sortOrder": 10, "status": "ACTIVE", "createdByUserId": "50000000-0000-4000-8000-000000000001", "updatedByUserId": "50000000-0000-4000-8000-000000000001" },
+    { "id": "60500000-0000-4000-8000-000000000002", "key": "demo_banner_ai_multiverse", "title": "MIP 早会·主题交流", "accessibilityLabel": "MIP 早会主题交流活动", "imageAssetId": "58000000-0000-4000-8000-000000000032", "targetType": "MINIPROGRAM_PATH", "targetValue": "/packages/member/mip-events/detail/index?eventId=60000000-0000-4000-8000-000000000002", "sortOrder": 20, "status": "ACTIVE", "createdByUserId": "50000000-0000-4000-8000-000000000001", "updatedByUserId": "50000000-0000-4000-8000-000000000001" }
+  ],
+  "eventContentMedia": [
+    { "id": "58000000-0000-4000-8000-000000000051", "key": "demo_event_content_relationship_share", "eventId": "60000000-0000-4000-8000-000000000001", "mediaAssetId": "58000000-0000-4000-8000-000000000051", "sortOrder": 10, "caption": "关系力量分享会活动记录", "status": "ACTIVE" }
   ],
   "users": [
     {
@@ -263,7 +277,11 @@
       "userId": "50000000-0000-4000-8000-000000000002",
       "eventId": "60000000-0000-4000-8000-000000000005",
       "amountCents": 39900,
-      "status": "PAID"
+      "status": "PAID",
+      "lineItems": [
+        { "label": "活动门票", "amountCents": 30100 },
+        { "label": "活动资料包", "amountCents": 9800 }
+      ]
     }
   ],
   "entitlements": [
@@ -400,7 +418,7 @@
     {
       "id": "60000000-0000-4000-8000-000000000003",
       "key": "demo_event_2026_interaction",
-      "coverAssetId": null,
+      "coverAssetId": "58000000-0000-4000-8000-000000000015",
       "branchId": "10000000-0000-4000-8000-000000000001",
       "organizerUserId": "50000000-0000-4000-8000-000000000001",
       "title": "MIP 城市互动交流会",
@@ -472,6 +490,7 @@
       "key": "demo_opportunity_channels",
       "ownerUserId": "50000000-0000-4000-8000-000000000001",
       "branchId": "10000000-0000-4000-8000-000000000001",
+      "coverAssetId": "58000000-0000-4000-8000-000000000041",
       "title": "寻找企业服务渠道合作伙伴",
       "valueSummary": "共同拓展华南企业客户",
       "targetSummary": "熟悉企业服务渠道和客户引荐的合作伙伴",
@@ -485,6 +504,7 @@
       "key": "demo_opportunity_visual",
       "ownerUserId": "50000000-0000-4000-8000-000000000005",
       "branchId": "10000000-0000-4000-8000-000000000001",
+      "coverAssetId": "58000000-0000-4000-8000-000000000042",
       "title": "联合打造城市品牌视觉系统",
       "valueSummary": "形成可复用的城市活动视觉规范",
       "targetSummary": "品牌策划、视觉设计和内容团队",
@@ -498,6 +518,7 @@
       "key": "demo_opportunity_investment",
       "ownerUserId": "50000000-0000-4000-8000-000000000003",
       "branchId": "10000000-0000-4000-8000-000000000003",
+      "coverAssetId": "58000000-0000-4000-8000-000000000043",
       "title": "寻找消费品牌项目投资合作",
       "valueSummary": "共同筛选和验证早期消费项目",
       "targetSummary": "具备项目来源、财务测算或品牌运营经验的伙伴",

@@ -31,6 +31,8 @@ const appId = validateOnly && !/^wx[0-9a-f]{16}$/i.test(configuredAppId)
 const stage = String(env.MIP_DEPLOYMENT_STAGE || '').trim().toLowerCase()
 const catalogStage = String(env.MIP_CATALOG_STAGE || 'TEST').trim().toUpperCase()
 const confirmedEnv = process.argv.find(value => value.startsWith('--confirm-env='))?.slice('--confirm-env='.length)
+const confirmStagingDemo = process.argv.includes('--confirm-staging-demo')
+const stagingDemo = stage === 'staging' && confirmStagingDemo
 
 if (!validateOnly) {
   if (!process.argv.includes('--confirm-demo') || !envId || confirmedEnv !== envId) {
@@ -39,8 +41,17 @@ if (!validateOnly) {
   if (!/^wx[0-9a-f]{16}$/i.test(appId)) {
     throw new Error('MINI_PROGRAM_APP_ID is invalid')
   }
-  if (!['development', 'test'].includes(stage) || catalogStage !== 'TEST') {
-    throw new Error('MIP demo seed is restricted to development/test with MIP_CATALOG_STAGE=TEST')
+  if (confirmStagingDemo && stage !== 'staging') {
+    throw new Error('--confirm-staging-demo is only valid for staging')
+  }
+  if (!['development', 'test'].includes(stage) && !stagingDemo) {
+    throw new Error('MIP demo seed is restricted to development/test; staging requires --confirm-staging-demo')
+  }
+  if (stage === 'production' || (stage === 'staging' && !confirmStagingDemo)) {
+    throw new Error('MIP demo seed cannot run in production and requires explicit staging confirmation')
+  }
+  if (catalogStage !== 'TEST') {
+    throw new Error('MIP demo seed requires MIP_CATALOG_STAGE=TEST')
   }
   if (String(env.MIP_PAYMENT_MODE || 'disabled').trim().toLowerCase() === 'live') {
     throw new Error('MIP demo seed cannot run while live payment is enabled')
@@ -81,7 +92,10 @@ if (validateOnly) {
   process.exit(0)
 }
 
-const { environment } = bindAndRequireMysqlEnvironment(root, envId, { development: true, stage })
+const { environment } = bindAndRequireMysqlEnvironment(root, envId, {
+  development: !stagingDemo,
+  stage,
+})
 seed.mediaAssets = resolveDemoMediaAssets(seed.mediaAssets, {
   appId,
   bucket: findStorageBucket(environment),
@@ -110,6 +124,8 @@ assertTablesExist([
   'mip_event_tags',
   'mip_event_tag_assignments',
   'mip_events',
+  'mip_banners',
+  'mip_event_content_media',
   'mip_event_registrations',
   'mip_event_invitation_attributions',
   'mip_event_checkins',
@@ -281,6 +297,12 @@ const verification = callCloudbase(root, 'queryMysqlDatabase', {
     (SELECT COUNT(*) FROM mip_events
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.events.map(item => sqlLiteral(item.id)).join(', ')})) AS events,
+    (SELECT COUNT(*) FROM mip_banners
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND id IN (${seed.banners.map(item => sqlLiteral(item.id)).join(', ')})) AS banners,
+    (SELECT COUNT(*) FROM mip_event_content_media
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND (${seed.eventContentMedia.map(item => `(event_id = ${sqlLiteral(item.eventId)} AND media_asset_id = ${sqlLiteral(item.mediaAssetId)} AND status = ${sqlLiteral(item.status)})`).join(' OR ')})) AS eventContentMedia,
     (SELECT COUNT(*) FROM mip_events
       WHERE app_id = ${sqlLiteral(appId)}
         AND (${seed.events.filter(item => item.coverAssetId).map(item => `(
@@ -393,6 +415,9 @@ const verification = callCloudbase(root, 'queryMysqlDatabase', {
     (SELECT COUNT(*) FROM mip_opportunities
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.opportunities.map(item => sqlLiteral(item.id)).join(', ')})) AS opportunities,
+    (SELECT COUNT(*) FROM mip_opportunities
+      WHERE app_id = ${sqlLiteral(appId)}
+        AND (${seed.opportunities.map(item => `(id = ${sqlLiteral(item.id)} AND cover_asset_id = ${sqlLiteral(item.coverAssetId)})`).join(' OR ')})) AS opportunitiesWithCovers,
     (SELECT COUNT(*) FROM mip_opportunity_team_members
       WHERE app_id = ${sqlLiteral(appId)}
         AND id IN (${seed.opportunityTeamMembers.map(item => sqlLiteral(item.id)).join(', ')})) AS opportunityTeamMembers,
@@ -536,6 +561,8 @@ const expected = {
   eventTags: seed.eventTags.length,
   eventTagAssignments: demoEventTagAssignments(seed.events).length,
   events: seed.events.length,
+  banners: seed.banners.length,
+  eventContentMedia: seed.eventContentMedia.length,
   eventsWithCovers: seed.events.filter(item => item.coverAssetId).length,
   eventTimelineSettings: seed.events.length,
   eventAlbumSettings: seed.events.length,
@@ -552,6 +579,7 @@ const expected = {
   eventHearts: seed.userInfluence.eventHearts.length,
   profileVisits: seed.userInfluence.profileVisits.length,
   opportunities: seed.opportunities.length,
+  opportunitiesWithCovers: seed.opportunities.length,
   opportunityTeamMembers: seed.opportunityTeamMembers.length,
   referralIntents: seed.referralIntents.length,
   profileInterests: seed.profileInterests.length,
@@ -613,7 +641,7 @@ function resolveDemoMediaAssets(items, runtime) {
   if (!/^wx[0-9a-f]{16}$/i.test(runtimeAppId)
     || !/^[\w-]{3,80}$/.test(runtimeEnvId)
     || !/^[a-z0-9.-]{3,128}$/i.test(bucket)
-    || !['development', 'test'].includes(runtimeStage)
+    || !['development', 'test', 'staging'].includes(runtimeStage)
     || typeof scopeSecret !== 'string' || scopeSecret.length < 32) {
     throw new Error('Demo media runtime configuration is invalid')
   }
@@ -621,7 +649,10 @@ function resolveDemoMediaAssets(items, runtime) {
   const appScope = mediaObjectScope(scopeSecret, runtimeAppId)
   return items.map((item) => {
     const localPath = path.resolve(root, item.sourcePath)
-    if (!localPath.startsWith(`${assetRoot}${path.sep}`) || item.extension !== 'jpg') {
+    const extension = String(item.extension || '').toLowerCase()
+    if (!localPath.startsWith(`${assetRoot}${path.sep}`)
+      || !['jpg', 'jpeg', 'png'].includes(extension)
+      || path.extname(localPath).slice(1).toLowerCase() !== extension) {
       throw new Error('Demo media source path is invalid')
     }
     const stat = fs.statSync(localPath)
@@ -629,13 +660,23 @@ function resolveDemoMediaAssets(items, runtime) {
       throw new Error('Demo media source file is invalid')
     }
     const content = fs.readFileSync(localPath)
-    const dimensions = inspectDemoJpeg(content)
+    const dimensions = inspectDemoImage(content, extension)
     if (dimensions.width !== item.width || dimensions.height !== item.height) {
       throw new Error('Demo media source dimensions do not match the fixture')
     }
-    const directory = item.purpose === 'AVATAR' ? 'avatars' : 'event-covers'
+    const directory = item.purpose === 'AVATAR'
+      ? 'avatars'
+      : item.purpose === 'EVENT_COVER'
+        ? 'event-covers'
+        : item.purpose === 'BANNER'
+          ? 'banners'
+          : item.purpose === 'OPPORTUNITY_COVER'
+            ? 'opportunity-covers'
+            : item.purpose === 'EVENT_CONTENT'
+              ? 'event-content'
+              : 'task-templates'
     const userScope = mediaObjectScope(scopeSecret, `${runtimeAppId}\0${item.ownerUserId}`)
-    const objectKey = `mip/${runtimeStage}/${appScope}/${directory}/${userScope}/${item.id}.jpg`
+    const objectKey = `mip/${runtimeStage}/${appScope}/${directory}/${userScope}/${item.id}.${extension}`
     const cloudFileId = `cloud://${runtimeEnvId}.${bucket}/${objectKey}`
     return {
       ...item,
@@ -645,7 +686,7 @@ function resolveDemoMediaAssets(items, runtime) {
       contentBytes: stat.size,
       contentSha256: createHash('sha256').update(content).digest('hex'),
       contentMd5: createHash('md5').update(content).digest('hex'),
-      contentType: 'image/jpeg',
+      contentType: extension === 'png' ? 'image/png' : 'image/jpeg',
     }
   })
 }
@@ -654,7 +695,19 @@ function mediaObjectScope(secret, value) {
   return createHmac('sha256', secret).update(value).digest('hex').slice(0, 24)
 }
 
-function inspectDemoJpeg(buffer) {
+function inspectDemoImage(buffer, extension) {
+  if (extension === 'png') {
+    if (buffer.length < 24
+      || buffer.readUInt32BE(0) !== 0x89504E47
+      || buffer.readUInt32BE(4) !== 0x0D0A1A0A
+      || buffer.readUInt32BE(12) !== 0x49484452) {
+      throw new Error('Demo media source must be a PNG image')
+    }
+    return {
+      width: buffer.readUInt32BE(16),
+      height: buffer.readUInt32BE(20),
+    }
+  }
   if (buffer.length < 4 || buffer[0] !== 0xFF || buffer[1] !== 0xD8) {
     throw new Error('Demo media source must be a JPEG image')
   }
@@ -823,6 +876,8 @@ function buildSeedStatements() {
     entitlementStatement(seed.entitlements, seed.membershipPlans),
     eventTypeStatement(seed.events),
     eventStatement(seed.events),
+    bannerStatement(seed.banners),
+    eventContentMediaStatement(seed.eventContentMedia),
     eventTagStatement(seed.eventTags),
     eventTagAssignmentStatement(seed.events),
     eventRegistrationStatement(seed.eventRegistrations),
@@ -1036,6 +1091,42 @@ function mediaAssetStatement(items) {
     height_px = VALUES(height_px), status = 'READY'`
 }
 
+function bannerStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.title)},
+    ${sqlLiteral(item.accessibilityLabel)}, ${sqlLiteral(item.imageAssetId)},
+    ${sqlLiteral(item.targetType)}, ${sqlLiteral(item.targetValue)}, ${Number(item.sortOrder)},
+    ${sqlLiteral(item.status)}, 1, ${sqlLiteral(item.createdByUserId)},
+    ${sqlLiteral(item.updatedByUserId)}, '2026-08-25 12:00:00.000', NULL
+  )`).join(',\n')
+  return `INSERT INTO mip_banners (
+    id, app_id, title, accessibility_label, image_asset_id, target_type, target_value,
+    sort_order, status, version, created_by_user_id, updated_by_user_id, activated_at, deleted_at
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    app_id = IF(app_id = VALUES(app_id), app_id, NULL),
+    id = IF(id = VALUES(id), id, NULL),
+    title = VALUES(title), accessibility_label = VALUES(accessibility_label),
+    image_asset_id = VALUES(image_asset_id), target_type = VALUES(target_type),
+    target_value = VALUES(target_value), sort_order = VALUES(sort_order),
+    status = VALUES(status), version = version + 1,
+    created_by_user_id = VALUES(created_by_user_id), updated_by_user_id = VALUES(updated_by_user_id),
+    activated_at = VALUES(activated_at), deleted_at = NULL`
+}
+
+function eventContentMediaStatement(items) {
+  const values = items.map(item => `(
+    ${sqlLiteral(appId)}, ${sqlLiteral(item.eventId)}, ${sqlLiteral(item.mediaAssetId)},
+    ${Number(item.sortOrder)}, ${sqlLiteral(item.caption || null)}, ${sqlLiteral(item.status)}, 1
+  )`).join(',\n')
+  return `INSERT INTO mip_event_content_media (
+    app_id, event_id, media_asset_id, sort_order, caption, status, version
+  ) VALUES ${values}
+  ON DUPLICATE KEY UPDATE
+    status = VALUES(status), sort_order = VALUES(sort_order), caption = VALUES(caption),
+    version = version + 1`
+}
+
 function membershipChainStatement(items) {
   return `INSERT INTO mip_membership_chains (
     app_id, user_id, version, created_at, updated_at
@@ -1216,6 +1307,9 @@ function eventOrderStatement(items, events) {
       catalogStage: 'TEST',
       seedVersion: seed.version,
       demo: true,
+      priceItems: Array.isArray(item.lineItems) && item.lineItems.length
+        ? item.lineItems.map(line => ({ label: line.label, amountCents: line.amountCents }))
+        : [{ label: '活动报名', amountCents: item.amountCents }],
     }
     return `(
     ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.userId)},
@@ -1535,7 +1629,7 @@ function opportunityStatement(items, referrals) {
     ${sqlLiteral(item.id)}, ${sqlLiteral(appId)}, ${sqlLiteral(item.ownerUserId)},
     'BRANCH', ${sqlLiteral(item.branchId)}, ${sqlLiteral(item.title)},
     ${sqlLiteral(item.valueSummary)}, ${sqlLiteral(item.targetSummary)}, ${sqlLiteral(item.description)},
-    ${sqlLiteral(item.cityTagId)}, NULL, 'PUBLISHED', 'APPROVED', ${activeReferralCountByOpportunity.get(item.id) || 0}, 1,
+    ${sqlLiteral(item.cityTagId)}, ${sqlLiteral(item.coverAssetId || null)}, 'PUBLISHED', 'APPROVED', ${activeReferralCountByOpportunity.get(item.id) || 0}, 1,
     '2026-08-25 12:00:00.000', NULL, NULL, NULL, NULL, '2030-12-31 23:59:59.000',
     NULL, NULL, NULL
   )`).join(',\n')
@@ -1551,7 +1645,7 @@ function opportunityStatement(items, referrals) {
     id = IF(id = VALUES(id), id, NULL),
     owner_user_id = VALUES(owner_user_id), scope_type = 'BRANCH', branch_id = VALUES(branch_id),
     title = VALUES(title), value_summary = VALUES(value_summary), target_summary = VALUES(target_summary),
-    description = VALUES(description), city_tag_id = VALUES(city_tag_id), cover_asset_id = NULL,
+    description = VALUES(description), city_tag_id = VALUES(city_tag_id), cover_asset_id = VALUES(cover_asset_id),
     status = 'PUBLISHED', content_safety_status = 'APPROVED', referral_count = VALUES(referral_count),
     version = version + 1, published_at = VALUES(published_at), ended_at = NULL,
     moderated_at = NULL, moderated_by_user_id = NULL, moderation_reason = NULL,
@@ -2483,6 +2577,8 @@ function buildDemoManifest(value, state) {
       mip_membership_entitlements: value.entitlements.map(item => ({ id: item.id })),
       mip_event_tags: value.eventTags.map(item => ({ id: item.id })),
       mip_events: value.events.map(item => ({ id: item.id })),
+      mip_banners: value.banners.map(item => ({ id: item.id, imageAssetId: item.imageAssetId })),
+      mip_event_content_media: value.eventContentMedia.map(item => ({ eventId: item.eventId, mediaAssetId: item.mediaAssetId })),
       mip_event_tag_assignments: demoEventTagAssignments(value.events).map(item => ({
         eventId: item.eventId,
         tagId: item.tagId,
@@ -2580,6 +2676,7 @@ function assertSeed(value) {
     'growthRules',
     'badges',
     'mediaAssets',
+    'banners',
     'users',
     'membershipOrders',
     'eventOrders',
@@ -2696,18 +2793,44 @@ function assertDemoRelations(value) {
   ])
   const avatarAssets = value.mediaAssets.filter(item => item.purpose === 'AVATAR')
   const eventCoverAssets = value.mediaAssets.filter(item => item.purpose === 'EVENT_COVER')
+  const bannerAssets = value.mediaAssets.filter(item => item.purpose === 'BANNER')
+  const opportunityCoverAssets = value.mediaAssets.filter(item => item.purpose === 'OPPORTUNITY_COVER')
+  const eventContentAssets = value.mediaAssets.filter(item => item.purpose === 'EVENT_CONTENT')
   const taskTemplateAssets = value.mediaAssets.filter(item => item.purpose === 'TASK_TEMPLATE')
   if (mediaById.size !== value.mediaAssets.length
     || avatarAssets.length !== value.users.length
-    || eventCoverAssets.length !== 4
+    || eventCoverAssets.length !== 5
+    || bannerAssets.length !== value.banners.length
+    || opportunityCoverAssets.length !== value.opportunities.length
     || taskTemplateAssets.length !== 1
     || value.mediaAssets.some(item => !userIds.has(item.ownerUserId)
-      || !['AVATAR', 'EVENT_COVER', 'TASK_TEMPLATE'].includes(item.purpose)
-      || item.extension !== 'jpg'
-      || !/^database\/mysql\/mip\/demo-assets\/(?:avatars|events|tasks)\/[a-z0-9-]+\.jpg$/.test(item.sourcePath)
+      || !['AVATAR', 'EVENT_COVER', 'BANNER', 'OPPORTUNITY_COVER', 'EVENT_CONTENT', 'TASK_TEMPLATE'].includes(item.purpose)
+      || !['jpg', 'jpeg', 'png'].includes(item.extension)
+      || !/^database\/mysql\/mip\/demo-assets\/(?:avatars|events|tasks)\/[a-z0-9-]+\.(?:jpg|jpeg|png)$/.test(item.sourcePath)
       || !Number.isInteger(item.width) || !Number.isInteger(item.height)
       || item.width < 64 || item.height < 64)) {
     throw new Error('Demo media asset references are invalid')
+  }
+  const bannerById = new Map(value.banners.map(item => [item.id, item]))
+  if (bannerById.size !== value.banners.length
+    || value.banners.some(item => !mediaById.has(item.imageAssetId)
+      || mediaById.get(item.imageAssetId)?.purpose !== 'BANNER'
+      || !userIds.has(item.createdByUserId)
+      || !userIds.has(item.updatedByUserId)
+      || item.targetType !== 'MINIPROGRAM_PATH'
+      || typeof item.targetValue !== 'string' || !item.targetValue.startsWith('/')
+      || item.status !== 'ACTIVE')) {
+    throw new Error('Demo banners are invalid')
+  }
+  const eventContentById = new Map(value.eventContentMedia.map(item => [item.id, item]))
+  if (!eventContentAssets.length
+    || eventContentById.size !== value.eventContentMedia.length
+    || value.eventContentMedia.some(item => !eventById.has(item.eventId)
+      || !mediaById.has(item.mediaAssetId)
+      || mediaById.get(item.mediaAssetId)?.purpose !== 'EVENT_CONTENT'
+      || !Number.isInteger(item.sortOrder) || item.sortOrder < 0 || item.sortOrder >= 20
+      || !['ACTIVE', 'REMOVED'].includes(item.status))) {
+    throw new Error('Demo event content media references are invalid')
   }
   if (value.eventTags.length < 3 || eventTagById.size !== value.eventTags.length) {
     throw new Error('Demo event tags require at least three unique fixtures')
@@ -2771,7 +2894,11 @@ function assertDemoRelations(value) {
     const event = eventById.get(order.eventId)
     if (!userIds.has(order.userId) || !event || event.accessType !== 'PAID'
       || order.status !== 'PAID' || order.amountCents !== event.priceCents
-      || !Number.isInteger(order.amountCents) || order.amountCents <= 0) {
+      || !Number.isInteger(order.amountCents) || order.amountCents <= 0
+      || !Array.isArray(order.lineItems) || order.lineItems.length === 0
+      || order.lineItems.some(item => typeof item.label !== 'string' || !item.label.trim()
+        || !Number.isInteger(item.amountCents) || item.amountCents < 0)
+      || order.lineItems.reduce((sum, item) => sum + item.amountCents, 0) !== order.amountCents) {
       throw new Error('Demo event order references are invalid')
     }
   }
@@ -2779,9 +2906,7 @@ function assertDemoRelations(value) {
     const cover = event.coverAssetId ? mediaById.get(event.coverAssetId) : null
     if (!branchIds.has(event.branchId)
       || !userIds.has(event.organizerUserId)
-      || (event.startsAt.startsWith('2030-')
-        ? cover?.purpose !== 'EVENT_COVER' || cover.ownerUserId !== event.organizerUserId
-        : event.coverAssetId !== null)
+      || cover?.purpose !== 'EVENT_COVER' || cover.ownerUserId !== event.organizerUserId
       || !Array.isArray(event.tagIds) || event.tagIds.length === 0 || event.tagIds.length > 12
       || new Set(event.tagIds).size !== event.tagIds.length
       || event.tagIds.some(tagId => !eventTagById.has(tagId))
@@ -2806,6 +2931,12 @@ function assertDemoRelations(value) {
       throw new Error('Demo event timeline is invalid')
     }
   }
+  for (const opportunity of value.opportunities) {
+    const cover = mediaById.get(opportunity.coverAssetId)
+    if (!cover || cover.purpose !== 'OPPORTUNITY_COVER' || cover.ownerUserId !== opportunity.ownerUserId) {
+      throw new Error('Demo opportunity cover references are invalid')
+    }
+  }
   if (!value.events.some(event => event.status === 'PUBLISHED'
     && event.startsAt.startsWith('2030-') && event.albumEnabled)
   || !value.events.some(event => event.status === 'ENDED'
@@ -2814,6 +2945,7 @@ function assertDemoRelations(value) {
   }
   const longLivedEvents = value.events.filter(event => event.startsAt.startsWith('2030-'))
   if (!longLivedEvents.length
+    || new Set(value.events.map(event => event.coverAssetId)).size !== value.events.length
     || new Set(longLivedEvents.map(event => event.coverAssetId)).size !== longLivedEvents.length
     || !longLivedEvents.some(event => event.tagIds.length === 1)
     || !longLivedEvents.some(event => event.tagIds.length > 1)
