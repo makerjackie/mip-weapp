@@ -50,7 +50,7 @@
 
 ## 静态门禁
 
-2026-08-30 当前工作区完整静态门禁通过：客户端 238 个测试文件、1349 项测试；服务端 263 个测试文件；源码合同为 124 个页面视图、16 个核心函数、58 个锁定迁移。架构、共享数据库隔离、安全、类型、lint、样式、构建、包体和文档链接同时通过，ESLint 为 0 warning、0 error。057–058 及依赖它们的函数仅有本地证据，尚未部署。静态门禁不等于运行时、云端或真机证据。
+2026-08-31 当前工作区完整静态门禁通过：客户端 242 个测试文件、1370 项测试；服务端 263 个测试文件；源码合同为 125 个页面视图、16 个核心函数、58 个锁定迁移。架构、共享数据库隔离、安全、类型、lint、样式、构建、包体和文档链接同时通过，ESLint 为 0 warning、0 error。staging 已应用 58 个迁移并完成核心函数与权限读回；静态门禁和 staging 读回仍不等于真机或正式生产证据。
 
 - `pnpm verify`
 - `git diff --check`
@@ -60,15 +60,15 @@
 - 部署清单只有 `mip-*`，存储路径只有 `mip/`。
 - 金额、会员、报名、签到、成长和权限判断均有服务端测试。
 
-以下事项即使本地测试通过，仍保留 `external-wait`：正式 AppID、支付商户和回调、正式协议正文、正式标签/城市和 AME 配置、通知模板、AI provider、活动介绍图片与任务模板的真机选择/上传/内容安全/临时 URL/相册保存、正式勋章目录图片、正式游戏化规则与队伍大本营视觉、手机号授权/换绑、扫码签到、地图/日历和真实支付。共享 CloudBase 已验证的生产基线仍是 56 个数据库迁移和 122 张 MIP runtime 表；仓库新增 057–058 及依赖它们的函数代码尚未迁移、授权和部署，必须在新的生产读回后才能更新为在线证据。
+以下事项即使本地测试通过，仍保留 `external-wait`：支付商户和回调、正式协议正文、正式标签/城市和 AME 配置、通知模板、AI provider、活动介绍图片与任务模板的真机选择/上传/内容安全/临时 URL/相册保存、正式勋章目录图片、正式游戏化规则与队伍大本营视觉、手机号授权/换绑、扫码签到、地图/日历和真实支付。当前在线证据只覆盖 staging；生产必须在独立迁移、部署和读回后才能更新状态。
 
 ## 微信开发者工具
 
-默认输出 `.tmp/runtime/report.json` 会被每次重跑覆盖，不作为固定证据。当前完整 UI 基线采用 `.tmp/runtime-evidence/2026-08-28-final-r6/report.json`：微信开发者工具 375×724 视口下 110/110 路由、6/6 代表状态和 6/6 交互旅程通过，运行时诊断与 IDE 编译失败均为 0。该尺寸是开发者工具视口，不是真机证据。历史与定向报告继续用于页面差异追溯：当前真实账号的补充证据见 `.tmp/runtime-evidence/2026-08-27-member-showcase-r2/report.json`，订单媒体与金额断言见 `.tmp/runtime-evidence/2026-08-28-order-media-r1/report.json`，任务与徽章见 `.tmp/runtime-evidence/2026-08-28-task-badge-r1/report.json`，个人资料、名片、名片设置、徽章目录和徽章详情见 `.tmp/runtime-evidence/2026-08-28-profile-badge-card-r2/report.json`；对应左右对照入口为 `.tmp/figma-implementation-comparison/focused-profile-badge-review.html`。
+默认输出 `.tmp/runtime/report.json` 会被每次重跑覆盖，不作为固定证据。最近一次完整 UI 基线仍是 `.tmp/runtime-evidence/2026-08-28-final-r6/report.json`：微信开发者工具 375×724 视口下 110/110 路由、6/6 代表状态和 6/6 交互旅程通过，运行时诊断与 IDE 编译失败均为 0。2026-08-31 重跑时，公开页、活动、机会、任务、徽章和资料编辑等代表页面能够加载，WXSS 编译错误已清零；但当前开发者工具登录的是未绑定手机号的新嘉宾身份，管理页及依赖 Owner 的交互停在“请先绑定手机号”，因此本次不能替代历史完整基线。该尺寸是开发者工具视口，不是真机证据。历史与定向报告继续用于页面差异追溯：真实账号的补充证据见 `.tmp/runtime-evidence/2026-08-27-member-showcase-r2/report.json`，订单媒体与金额断言见 `.tmp/runtime-evidence/2026-08-28-order-media-r1/report.json`，任务与徽章见 `.tmp/runtime-evidence/2026-08-28-task-badge-r1/report.json`，个人资料、名片、名片设置、徽章目录和徽章详情见 `.tmp/runtime-evidence/2026-08-28-profile-badge-card-r2/report.json`；对应左右对照入口为 `.tmp/figma-implementation-comparison/focused-profile-badge-review.html`。
 
-当前微信身份已经完成协议、档案和手机号绑定，并由精确档案初始化为唯一 `PLATFORM_OWNER`；手机号原值不写入仓库。`.tmp/bootstrap-owner-result.json` 记录 `ownerCount=1`、`role=PLATFORM_OWNER`、`scope=PLATFORM`。当前开发账号具有有效 TEST 玩家权益、3 场未来活动报名、1 笔 399 元 TEST 活动订单、1 笔 6000 元年度会员订单、2 个定向任务和 3 枚已佩戴勋章；这些页面均进入当前补充证据。管理端 1024px 代表页证据见 [响应式密度验收](evidence/admin-density-2026-08-26/README.md)；该证据不代替 Mac/Windows 微信客户端验收。
+staging 中存在唯一、非 Demo 的 `PLATFORM_OWNER` 档案；手机号原值不写入仓库。`.tmp/bootstrap-owner-result.json` 的历史读回记录为 `ownerCount=1`、`role=PLATFORM_OWNER`、`scope=PLATFORM`。该 Owner 具有有效 TEST 玩家权益、3 场未来活动报名、1 笔 399 元 TEST 活动订单、1 笔 6000 元年度会员订单、2 个定向任务和 3 枚已佩戴勋章；它与 2026-08-31 当前开发者工具中的未绑定嘉宾会话不是同一可验证身份。管理端 1024px 代表页证据见 [响应式密度验收](evidence/admin-density-2026-08-26/README.md)；该证据不代替 Mac/Windows 微信客户端验收。
 
-共享开发环境已经写入并复核 `2026-08-28-demo.19`：一年 6000 元、365 天的 TEST 会员方案，3 场 2030 年周四 MIP 早会、1 场 399 元 TEST 付费活动、3 个 NPC 任务、6 位带姓名/性别/职业身份的完整演示用户和带可替换图片的徽章目录。`pnpm owner:showcase` 已为当前 Owner 补齐 3 场未来活动报名、活动订单、2 个定向任务、3 枚已佩戴徽章，以及可替换的姓名、性别、职业身份、公司/职位、组织/职位和加密联系方式，重复执行结果为 `wrote: 0`。全部夹具使用固定 ID、版本化清单、当前 AppID 范围和 TEST 商品快照，不修改非 MIP 表，也不伪造生产支付；复用既有 11 个 READY 素材时会逐项校验 owner、purpose、对象键、文件 ID、摘要、格式、字节、尺寸与状态，不接受仅凭 ID 的复用。
+MIP staging 环境已经写入并复核 `2026-08-31-demo.20`：一年 6000 元、365 天的 TEST 会员方案，4 场 2030 年周四 MIP 早会、1 场历史活动、1 场 399 元 TEST 付费活动、3 个 NPC 任务、6 位带姓名/性别/职业身份的完整演示用户和带可替换图片的徽章目录。5 场活动及 3 条机会均通过数据库媒体记录引用演示图片。`pnpm owner:showcase` 已验证当前 Owner 具备 3 场未来活动报名、活动订单、2 个定向任务、3 枚已佩戴徽章，以及可替换的姓名、性别、职业身份、公司/职位、组织/职位和加密联系方式，重复执行结果为 `wrote: 0`；staging TEST 会员也已通过受保护 ledger 幂等确认为 ACTIVE。全部夹具使用固定 ID、版本化清单、当前 AppID 范围和 TEST 商品快照，不修改非 MIP 表，也不伪造生产支付；18 个媒体对象中 11 个新上传、7 个在 owner、purpose、对象键、文件 ID、摘要、格式、字节、尺寸与状态完全一致时安全复用。
 
 - `pnpm runtime:preflight`
 - `pnpm test:runtime`
