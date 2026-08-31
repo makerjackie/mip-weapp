@@ -1,14 +1,19 @@
 import { DownloadOutlined, PlusOutlined } from '@ant-design/icons'
-import { Button, Typography } from 'antd'
+import { Button, Space, Typography } from 'antd'
 import { useMemo } from 'react'
 import { useAdminSession } from '../../app/session-provider'
-import { EVENT_MUTATION_CONFIGS } from '../../modules/admin-event-mutation-forms'
+import {
+  EVENT_MUTATION_ACTIONS,
+  EVENT_MUTATION_CONFIGS,
+  type AdminEventMutationAction,
+} from '../../modules/admin-event-mutation-forms'
 import {
   getAdminReadRouteDefinition,
   type AdminListRoute,
   type AdminReadPage,
   type AdminTableRow,
 } from '../../modules/admin-read-pages'
+import type { AdminRowOperation } from '../../modules/admin-row-operations'
 import {
   DataTable,
   ErrorState,
@@ -71,7 +76,7 @@ export function OrdersPage(props: CoreListPageProps) {
 }
 
 function CoreListPage({ route, ...props }: CoreListPageProps & { route: CoreListRoute }) {
-  const { hasCapability } = useAdminSession()
+  const { hasCapability, hasCapabilityAtScope } = useAdminSession()
   const query = useCoreReadPage(route, props.search)
   const definition = pageDefinitions[route]
   return (
@@ -84,6 +89,8 @@ function CoreListPage({ route, ...props }: CoreListPageProps & { route: CoreList
         error={query.errorMessage}
         canExport={hasCapability('exports.create')}
         canWriteEvents={hasCapability(EVENT_MUTATION_CONFIGS['mip.admin.events.save'].capability)}
+        canWriteEventPolicy={hasCapabilityAtScope(EVENT_MUTATION_CONFIGS['mip.admin.events.policy.save'].capability, 'PLATFORM')}
+        canManageEventCatalog={hasCapabilityAtScope(EVENT_MUTATION_CONFIGS['mip.admin.events.catalog.save'].capability, 'PLATFORM')}
         onRetry={() => void query.refetch()}
       />
     </PermissionGuard>
@@ -98,6 +105,8 @@ export function CoreListPageView({
   error,
   canExport,
   canWriteEvents,
+  canWriteEventPolicy,
+  canManageEventCatalog,
   onRetry,
   onSearchChange,
   onOpenDetail,
@@ -112,22 +121,35 @@ export function CoreListPageView({
   error?: string
   canExport?: boolean
   canWriteEvents?: boolean
+  canWriteEventPolicy?: boolean
+  canManageEventCatalog?: boolean
   onRetry?: () => void
 }) {
   const pageDefinition = pageDefinitions[route]
   const readDefinition = getAdminReadRouteDefinition(route)
   const pageNumber = search.page && search.page > 1 ? search.page : 1
   const headerActions = useMemo(() => {
-    if (route === 'events' && canWriteEvents && onMutation) {
-      const config = EVENT_MUTATION_CONFIGS['mip.admin.events.save']
+    if (route === 'events' && onMutation && (canWriteEvents || canManageEventCatalog)) {
       return (
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => onMutation({ action: config.action, targetId: '' })}
-        >
-          新建活动
-        </Button>
+        <Space wrap>
+          {canWriteEvents ? (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => onMutation({ action: 'mip.admin.events.save', targetId: '' })}
+            >
+              新建活动
+            </Button>
+          ) : null}
+          {canManageEventCatalog ? (
+            <Button
+              icon={<PlusOutlined />}
+              onClick={() => onMutation({ action: 'mip.admin.events.catalog.save', targetId: '' })}
+            >
+              新建活动目录
+            </Button>
+          ) : null}
+        </Space>
       )
     }
     if ((route === 'users' || route === 'orders') && canExport && onSensitiveExport) {
@@ -145,7 +167,7 @@ export function CoreListPageView({
       )
     }
     return null
-  }, [canExport, canWriteEvents, onMutation, onSensitiveExport, route, search.q, search.status])
+  }, [canExport, canManageEventCatalog, canWriteEvents, onMutation, onSensitiveExport, route, search.q, search.status])
 
   function openDetail(row: AdminTableRow) {
     const id = String(row.detailId || '')
@@ -189,6 +211,13 @@ export function CoreListPageView({
                 rows={section.rows}
                 columns={section.columns}
                 onView={section.detailTarget === null ? undefined : openDetail}
+                renderActions={route === 'events' && onMutation
+                  ? row => renderEventRowActions(row, {
+                    canManageEventCatalog: Boolean(canManageEventCatalog),
+                    canWriteEventPolicy: Boolean(canWriteEventPolicy),
+                    onMutation,
+                  })
+                  : undefined}
               />
             </section>
           ))}
@@ -213,4 +242,51 @@ export function CoreListPageView({
       ) : null}
     </>
   )
+}
+
+const eventMutationActions = new Set<string>(EVENT_MUTATION_ACTIONS)
+
+function renderEventRowActions(
+  row: AdminTableRow,
+  options: {
+    canManageEventCatalog: boolean
+    canWriteEventPolicy: boolean
+    onMutation: NonNullable<CoreListPageCallbacks['onMutation']>
+  },
+) {
+  const operations = Array.isArray(row.rowActions)
+    ? row.rowActions.filter(isEventRowOperation)
+    : []
+  return operations.flatMap(operation => {
+    const allowed = operation.action === 'mip.admin.events.policy.save'
+      ? options.canWriteEventPolicy
+      : operation.action.startsWith('mip.admin.events.catalog.')
+        ? options.canManageEventCatalog
+        : false
+    if (!allowed) return []
+    return [(
+      <Button
+        key={`${operation.action}-${operation.label}`}
+        type="link"
+        size="small"
+        onClick={() => options.onMutation({
+          action: operation.action,
+          targetId: operation.targetId || '',
+          ...(operation.values ? { values: { ...operation.values } } : {}),
+          ...(operation.expectedVersion !== undefined ? { expectedVersion: operation.expectedVersion } : {}),
+          ...(operation.allowedCapabilities ? { allowedCapabilities: [...operation.allowedCapabilities] } : {}),
+        })}
+      >
+        {operation.label}
+      </Button>
+    )]
+  })
+}
+
+function isEventRowOperation(value: unknown): value is AdminRowOperation & { action: AdminEventMutationAction } {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false
+  const operation = value as Partial<AdminRowOperation>
+  return typeof operation.action === 'string'
+    && eventMutationActions.has(operation.action)
+    && typeof operation.label === 'string'
 }

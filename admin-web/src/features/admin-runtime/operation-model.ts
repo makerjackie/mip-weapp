@@ -38,6 +38,7 @@ import {
 import {
   ADMIN_CONTENT_MUTATION_ACTIONS,
   getContentMutationForm,
+  USER_CONTENT_ROLE_FIELDS,
   validateContentMutation,
   type ContentMutationAction,
 } from '../../modules/content-mutation-forms'
@@ -105,7 +106,11 @@ export async function createOperationModel(
   }
   if (eventActions.has(action)) {
     const typedAction = action as AdminEventMutationAction
-    const definition = createAdminEventMutationDefinition(typedAction, targetId, readField)
+    const baseDefinition = createAdminEventMutationDefinition(typedAction, targetId, readField)
+    const launchVersion = trustedEventVersion(typedAction, launch)
+    const definition = launchVersion === undefined
+      ? baseDefinition
+      : { ...baseDefinition, expectedVersion: launchVersion }
     const values = { ...prefillEventValues(typedAction, definition.values, detail), ...launch.values }
     return model(definition, definition.fields as readonly OperationField[], values, idempotencyKey, next => buildAdminEventMutationInput(definition, next))
   }
@@ -133,8 +138,23 @@ export async function createOperationModel(
 
   const typedAction = action as ContentMutationAction
   const definition = getContentMutationForm(typedAction)
-  const fields = normalizeContentFields(definition.fields as readonly OperationField[])
-  const values = { ...prefillContentValues(typedAction, defaultValues(fields), targetId, detail), ...launch.values }
+  const baseFields = normalizeContentFields(definition.fields as readonly OperationField[])
+  const values = mergeValues(
+    prefillContentValues(typedAction, defaultValues(baseFields), targetId, detail),
+    launch.values || {},
+  )
+  const targetKey = contentTargetKey(typedAction)
+  const trustedTarget = targetId && targetKey ? targetId : ''
+  const trustedVersion = positiveInteger(values.expectedVersion)
+  const creating = typedAction.endsWith('.save') && !targetId && !detail
+  const fields = baseFields.map(field => {
+    const key = String(field.key || field.name || '')
+    return (trustedTarget && key === targetKey)
+      || (trustedVersion !== undefined && key === 'expectedVersion')
+      || (creating && (key === targetKey || key === 'expectedVersion'))
+      ? { ...field, hidden: true }
+      : field
+  })
   return {
     action: typedAction,
     capability: definition.capability,
@@ -145,10 +165,38 @@ export async function createOperationModel(
     idempotencyKey,
     buildInput: (next) => {
       const normalized = contentValues(typedAction, next, idempotencyKey)
+      if (trustedTarget) normalized[targetKey] = trustedTarget
+      if (trustedVersion !== undefined) normalized.expectedVersion = trustedVersion
       const result = validateContentMutation(typedAction, normalized)
       return result.ok ? result.input : null
     },
   }
+}
+
+function contentTargetKey(action: ContentMutationAction) {
+  if (action.startsWith('mip.admin.announcements.')) return 'announcementId'
+  if (action.startsWith('mip.admin.messageCampaigns.')) return 'campaignId'
+  if (action.startsWith('mip.admin.messageTemplates.')) return 'templateId'
+  if (action.startsWith('mip.admin.communityReports.')) return 'reportId'
+  if (action.startsWith('mip.admin.opportunities.')) return 'opportunityId'
+  if (action.startsWith('mip.admin.userContent.')) return 'contentId'
+  if (action.startsWith('mip.admin.knowledge.contents.')) return 'contentId'
+  if (action.startsWith('mip.admin.knowledge.schedules.')) return 'scheduleId'
+  if (action === 'mip.admin.badges.revoke') return 'awardId'
+  if (action === 'mip.admin.badges.grant' || action === 'mip.admin.growth.adjust') return 'userId'
+  return ''
+}
+
+function positiveInteger(value: unknown) {
+  const number = Number(value)
+  return Number.isSafeInteger(number) && number >= 1 ? number : undefined
+}
+
+function trustedEventVersion(action: AdminEventMutationAction, launch: AdminOperationLaunchContext) {
+  const candidate = launch.expectedVersion ?? record(launch.values).expectedVersion
+  const version = Number(candidate)
+  const minimum = action === 'mip.admin.events.policy.save' ? 0 : 1
+  return Number.isSafeInteger(version) && version >= minimum ? version : undefined
 }
 
 function model(
@@ -203,6 +251,7 @@ function prefillEventValues(action: AdminEventMutationAction, values: OperationV
 function prefillContentValues(action: ContentMutationAction, values: OperationValues, targetId: string, detail: AdminDetailView | null) {
   const next = { ...values }
   const source = record(detail?.source)
+  if (action === 'mip.admin.userContent.save') return prefillUserContent(next, targetId, record(source.userContent))
   const resource = action.startsWith('mip.admin.messageCampaigns.') ? record(source.campaign)
     : action.startsWith('mip.admin.opportunities.') ? record(source.opportunity)
       : action.startsWith('mip.admin.knowledge.contents.') ? record(source.content) : {}
@@ -213,6 +262,25 @@ function prefillContentValues(action: ContentMutationAction, values: OperationVa
   if (idKey && targetId) next[idKey] = targetId
   if (resource.version !== undefined) next.expectedVersion = resource.version
   if (action.endsWith('.save')) for (const key of Object.keys(next)) if (resource[key] !== undefined) next[key] = resource[key]
+  return next
+}
+
+function prefillUserContent(values: OperationValues, targetId: string, item: OperationValues) {
+  const next = { ...values }
+  if (!Object.keys(item).length) {
+    if (targetId) next.contentId = targetId
+    return next
+  }
+  const kind = String(item.kind || '')
+  const owner = record(item.owner)
+  next.kind = kind
+  next.contentId = String(item.id || targetId || '')
+  next.ownerUserId = String(owner.userId || '')
+  next.expectedVersion = item.version
+  const common = { kind, status: item.status }
+  next.draft = kind === 'COOPERATION_CARD'
+    ? { ...common, roleKey: item.roleKey, positioning: item.positioning, targetSummary: item.targetSummary, roleFields: item.roleFields, abilityScores: item.abilityScores }
+    : { ...common, projectName: item.projectName, summary: item.summary, startedOn: item.startedOn, endedOn: item.endedOn, responsibility: item.responsibility, cityTagId: item.cityTagId, industryTagId: item.industryTagId, caseType: item.caseType, description: item.description, coverAssetId: item.coverAssetId, mediaAssetIds: item.mediaAssetIds }
   return next
 }
 
@@ -243,7 +311,54 @@ function contentValues(action: ContentMutationAction, values: OperationValues, i
     if (!terms.minAmountCents && !terms.maxAmountCents && !Array.isArray(terms.locations)) delete draft.commercialTerms
     next.draft = draft
   }
+  if (action === 'mip.admin.userContent.save') next.draft = userContentDraft(next)
   return next
+}
+
+function userContentDraft(values: OperationValues) {
+  const kind = String(values.kind || '')
+  const draft = record(values.draft)
+  if (kind === 'COOPERATION_CARD') {
+    const roleKey = String(draft.roleKey || '') as keyof typeof USER_CONTENT_ROLE_FIELDS
+    const sourceRoleFields = record(draft.roleFields)
+    const roleFields = Object.fromEntries((USER_CONTENT_ROLE_FIELDS[roleKey] || [])
+      .flatMap(key => nonEmpty(sourceRoleFields[key]) ? [[key, sourceRoleFields[key]]] : []))
+    return {
+      kind,
+      roleKey,
+      positioning: draft.positioning,
+      targetSummary: draft.targetSummary,
+      roleFields,
+      abilityScores: record(draft.abilityScores),
+      status: draft.status,
+    }
+  }
+  const output: OperationValues = { kind }
+  for (const key of ['projectName', 'summary', 'startedOn', 'endedOn', 'responsibility', 'cityTagId', 'industryTagId', 'caseType', 'description', 'coverAssetId', 'mediaAssetIds', 'status']) {
+    const value = draft[key]
+    if (value !== undefined && (nonEmpty(value) || key === 'mediaAssetIds')) output[key] = dateOnly(key, value)
+  }
+  return output
+}
+
+function dateOnly(key: string, value: unknown) {
+  return ['startedOn', 'endedOn'].includes(key) && typeof value === 'string' && value.length >= 10
+    ? value.slice(0, 10)
+    : value
+}
+
+function nonEmpty(value: unknown) {
+  return Array.isArray(value) ? value.length > 0 : typeof value === 'string' ? Boolean(value.trim()) : value !== undefined && value !== null
+}
+
+function mergeValues(base: OperationValues, override: OperationValues): OperationValues {
+  const output = { ...base }
+  for (const [key, value] of Object.entries(override)) {
+    output[key] = value && typeof value === 'object' && !Array.isArray(value)
+      ? mergeValues(record(output[key]), value as OperationValues)
+      : value
+  }
+  return output
 }
 
 function normalizeContentFields(fields: readonly OperationField[]): readonly OperationField[] {

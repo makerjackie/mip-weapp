@@ -149,6 +149,23 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     button('mip.admin.opportunities.unpublish', '下架机会', id, 'opportunities.moderate'),
     button('mip.admin.opportunities.archive', '归档机会', id, 'opportunities.archive'),
   )
+  else if (route === 'userContent') {
+    const item = record(view.source?.userContent)
+    const contentId = String(item.id || '')
+    const kind = String(item.kind || '')
+    const status = String(item.status || '')
+    const expectedVersion = positiveVersion(item.version)
+    const values = expectedVersion && contentId && ['COOPERATION_CARD', 'SUPER_CASE'].includes(kind)
+      ? { kind, contentId, expectedVersion }
+      : null
+    actions.push(button('mip.admin.userContent.save', '编辑内容', contentId, 'userContent.moderate'))
+    if (values && status === 'PUBLISHED') actions.push(button(
+      'mip.admin.userContent.unpublish', '下架内容', contentId, 'userContent.moderate', { values },
+    ))
+    if (values && status !== 'ARCHIVED') actions.push(button(
+      'mip.admin.userContent.archive', '归档内容', contentId, 'userContent.moderate', { values },
+    ))
+  }
 
   return actions.some(Boolean) ? <Space size={8} wrap>{actions}</Space> : null
 }

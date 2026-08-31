@@ -56,7 +56,7 @@ export const adminNavigation: AdminNavigationItem[] = [
   { path: '/permissions', label: '权限管理', description: '管理运营成员、角色策略和服务器', group: '平台设置', icon: <SafetyCertificateOutlined />, capabilities: ['roles.change', 'branches.manage', 'audit.read'], requireAny: true },
   { path: '/messages', label: '消息管理', description: '管理站内消息、模板和发送计划', group: '平台设置', icon: <MessageOutlined />, capabilities: ['messages.manage'] },
   { path: '/knowledge', label: '知识库', description: '管理内容、来源、审核和采集计划', group: '平台设置', icon: <BookOutlined />, capabilities: ['knowledge.manage'] },
-  { path: '/operations', label: '运营记录', description: '查看公告、举报、异常和运营待办', group: '平台设置', icon: <FileSearchOutlined />, capabilities: ['announcements.manage', 'community.reports.manage', 'operations.exceptions.read'], requireAny: true },
+  { path: '/operations', label: '运营记录', description: '查看公告、举报、异常和运营待办', group: '平台设置', icon: <FileSearchOutlined />, capabilities: ['announcements.manage', 'community.reports.manage', 'operations.exceptions.read', 'messages.delivery.review'], requireAny: true },
 ]
 
 export const navigationByPath = new Map(adminNavigation.map(item => [item.path, item]))

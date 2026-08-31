@@ -115,6 +115,7 @@ button, input, select, textarea { font: inherit; }
 .detail-drawer__title small { margin-top: 3px; color: var(--mip-muted); font-size: 12px; font-weight: 400; }
 .detail-section { overflow: hidden; background: #fff; border: 1px solid var(--mip-line); border-radius: 12px; box-shadow: 0 4px 16px rgb(44 76 121 / 5%); }
 .detail-section h4 { margin: 0 !important; padding: 16px 18px; border-bottom: 1px solid var(--mip-line); }
+.detail-section__pager { display: flex; justify-content: flex-end; padding: 12px 18px; border-top: 1px solid var(--mip-line); }
 .detail-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
 .detail-fields > div { min-width: 0; padding: 14px 18px; border-bottom: 1px solid #edf1f6; }
 .detail-fields dt { color: var(--mip-muted); font-size: 12px; }

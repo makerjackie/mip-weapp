@@ -47,4 +47,15 @@ describe('admin operation UI', () => {
       draft: { title: '活动', tagIds: ['tag-a', 'tag-b'] },
     })
   })
+
+  it('normalizes only fields whose server-facing condition is active', () => {
+    const fields: OperationField[] = [
+      { key: 'kind', label: '类型', kind: 'select' },
+      { key: 'card', label: '合作卡', kind: 'text', visibleWhen: { path: 'kind', value: 'CARD' } },
+      { key: 'case', label: '案例', kind: 'text', visibleWhen: { path: 'kind', value: 'CASE' } },
+    ]
+    assert.deepEqual(normalizeOperationValues(fields, {
+      kind: 'CARD', card: '合作信息', case: '不应提交',
+    }), { kind: 'CARD', card: '合作信息' })
+  })
 })

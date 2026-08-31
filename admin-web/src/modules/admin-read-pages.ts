@@ -3,6 +3,7 @@ import type {
   AdminListQuery,
   AdminListRoute,
   AdminReadPage,
+  AdminReadAccess,
   AdminReadRouteDefinition,
   AdminRequest,
   AdminTableColumn,
@@ -19,6 +20,9 @@ import { loadBannerManagementPage } from './admin-banner-management.ts'
 import { loadGameManagementPage } from './admin-game-management.ts'
 import {
   branchRowActions,
+  eventCatalogRowActions,
+  eventPolicyRowActions,
+  messageTemplateRowActions,
   rolePolicyRowActions,
 } from './admin-row-operations.ts'
 
@@ -31,6 +35,7 @@ export type {
   AdminTableColumn,
   AdminTableRow,
   AdminTableSection,
+  AdminReadAccess,
 } from './admin-read-contracts.ts'
 
 const commonStatus = [{ value: '', label: '全部状态' }]
@@ -72,8 +77,8 @@ const routeDefinitions: Record<AdminListRoute, AdminReadRouteDefinition> = {
     paginated: false,
   },
   messages: {
-    searchPlaceholder: '搜索消息或公告标题',
-    statusOptions: [...commonStatus, ...options(['DRAFT', 'READY', 'PUBLISHED', 'WITHDRAWN'])],
+    searchPlaceholder: '搜索消息或模板',
+    statusOptions: [...commonStatus, ...options(['DRAFT', 'READY', 'PUBLISHED', 'WITHDRAWN', 'ACTIVE', 'ARCHIVED'])],
     paginated: false,
   },
   knowledge: {
@@ -106,20 +111,21 @@ export async function loadAdminReadPage(
   route: AdminListRoute,
   query: AdminListQuery,
   request: AdminRequest,
+  access?: AdminReadAccess,
 ): Promise<AdminReadPage> {
   switch (route) {
     case 'users': return loadUsers(query, request)
-    case 'events': return loadEvents(query, request)
+    case 'events': return loadEvents(query, request, access)
     case 'orders': return loadOrders(query, request)
     case 'tasks': return loadTaskManagementPage(query, request)
     case 'banners': return loadBannerManagementPage(query, request)
     case 'game': return loadGameManagementPage(query, request)
-    case 'permissions': return loadPermissions(query, request)
+    case 'permissions': return loadPermissions(query, request, access)
     case 'messages': return loadMessages(query, request)
     case 'knowledge': return loadKnowledge(query, request)
     case 'opportunities': return loadOpportunities(query, request)
-    case 'growth': return loadGrowth(query, request)
-    case 'operations': return loadOperations(query, request)
+    case 'growth': return loadGrowth(query, request, access)
+    case 'operations': return loadOperations(query, request, access)
   }
 }
 
@@ -146,12 +152,41 @@ async function loadUsers(query: AdminListQuery, request: AdminRequest): Promise<
   }
 }
 
-async function loadEvents(query: AdminListQuery, request: AdminRequest): Promise<AdminReadPage> {
-  const page = pageValue(await request('mip.admin.events.list', listInput(query, {
-    sort: { field: 'startsAt', direction: 'DESC' },
-  })))
+async function loadEvents(
+  query: AdminListQuery,
+  request: AdminRequest,
+  access?: AdminReadAccess,
+): Promise<AdminReadPage> {
+  const canManagePolicy = access?.hasCapability('events.write', 'PLATFORM') === true
+  const canManageCatalog = access?.hasCapability('events.catalog.manage', 'PLATFORM') === true
+  const [eventPayload, policyPayload, typePayload, tagPayload] = await Promise.all([
+    request('mip.admin.events.list', listInput(query, {
+      sort: { field: 'startsAt', direction: 'DESC' },
+    })),
+    canManagePolicy ? request('mip.admin.events.policy.get') : null,
+    canManageCatalog ? request('mip.admin.events.catalog.list', {
+      kind: 'TYPE', query: query.query, limit: query.limit,
+    }) : null,
+    canManageCatalog ? request('mip.admin.events.catalog.list', {
+      kind: 'TAG', query: query.query, limit: query.limit,
+    }) : null,
+  ])
+  const page = pageValue(eventPayload)
+  const policy = record(policyPayload)
+  const catalogRows = (payload: unknown) => pageValue(payload).items.map(item => ({
+    key: valueOf(item, 'key'),
+    name: valueOf(item, 'name'),
+    description: valueOf(item, 'description'),
+    sort: numberLabel(item.sortOrder),
+    usage: numberLabel(item.usageCount),
+    updatedAt: formatDateTime(item.updatedAt),
+    state: label(valueOf(item, 'status')),
+    rowActions: eventCatalogRowActions(item),
+  }))
   return {
     sections: [{
+      key: 'events',
+      title: '活动',
       rows: page.items.map(item => ({
         detailId: valueOf(item, 'id', 'eventId'),
         title: valueOf(item, 'title', 'name'),
@@ -166,7 +201,29 @@ async function loadEvents(query: AdminListQuery, request: AdminRequest): Promise
         ['title', '活动名称'], ['time', '开始时间'], ['location', '城市与服务器'],
         ['access', '活动类型'], ['registrations', '报名人数'], ['attended', '签到人数'], ['state', '状态'],
       ]),
-    }],
+    }, policyPayload ? {
+      key: 'policy',
+      title: '活动政策',
+      detailTarget: null,
+      rows: [{
+        cancellation: `${numberLabel(policy.cancellationHoursBeforeStart)} 小时`,
+        version: numberLabel(policy.version),
+        rowActions: eventPolicyRowActions(policy),
+      }],
+      columns: columns([['cancellation', '默认取消提前时间'], ['version', '版本']]),
+    } : null, typePayload ? {
+      key: 'event-types',
+      title: '活动类型',
+      detailTarget: null,
+      rows: catalogRows(typePayload),
+      columns: columns([['key', '目录标识'], ['name', '名称'], ['description', '说明'], ['sort', '排序'], ['usage', '使用数'], ['updatedAt', '更新时间'], ['state', '状态']]),
+    } : null, tagPayload ? {
+      key: 'event-tags',
+      title: '活动标签',
+      detailTarget: null,
+      rows: catalogRows(tagPayload),
+      columns: columns([['key', '目录标识'], ['name', '名称'], ['description', '说明'], ['sort', '排序'], ['usage', '使用数'], ['updatedAt', '更新时间'], ['state', '状态']]),
+    } : null].filter(isSection),
     nextCursor: page.nextCursor,
   }
 }
@@ -202,12 +259,12 @@ async function loadOrders(query: AdminListQuery, request: AdminRequest): Promise
   }
 }
 
-async function loadPermissions(query: AdminListQuery, request: AdminRequest): Promise<AdminReadPage> {
+async function loadPermissions(query: AdminListQuery, request: AdminRequest, access?: AdminReadAccess): Promise<AdminReadPage> {
   const [rolePayload, branchPayload, policyPayload, auditPayload] = await Promise.all([
-    request('mip.admin.roles.list'),
-    request('mip.admin.branches.list'),
-    request('mip.admin.rolePolicies.list'),
-    request('mip.admin.audit.list', { limit: query.limit }),
+    canRead(access, 'roles.change') ? request('mip.admin.roles.list') : null,
+    canRead(access, 'branches.manage', 'PLATFORM') ? request('mip.admin.branches.list') : null,
+    canRead(access, 'roles.change', 'PLATFORM') ? request('mip.admin.rolePolicies.list') : null,
+    canRead(access, 'audit.read') ? request('mip.admin.audit.list', { limit: query.limit }) : null,
   ])
   const roles = filterRows(pageValue(rolePayload).items.map(item => ({
     detailId: valueOf(item, 'id', 'roleId'),
@@ -249,20 +306,42 @@ async function loadPermissions(query: AdminListQuery, request: AdminRequest): Pr
   })), { ...query, status: '' })
   return {
     sections: [
-      { title: '运营成员', rows: roles, columns: columns([['name', '姓名'], ['role', '角色'], ['scope', '作用范围'], ['grantedAt', '授权时间'], ['state', '状态']]) },
-      { title: '角色策略摘要', rows: policies, columns: columns([['role', '角色'], ['scope', '作用范围'], ['effective', '当前能力'], ['allowed', '可用能力边界'], ['source', '策略来源'], ['version', '版本'], ['updatedAt', '更新时间']]) },
-      { title: '服务器', rows: branches, columns: columns([['name', '服务器'], ['city', '城市'], ['summary', '说明'], ['players', '有效会员'], ['admins', '管理员'], ['blockers', '关联数据'], ['state', '状态']]) },
-      { title: '最近审计记录', rows: audits, columns: columns([['actor', '操作人'], ['action', '操作'], ['resource', '资源'], ['role', '生效角色'], ['scope', '作用范围'], ['createdAt', '时间']]) },
-    ],
+      rolePayload ? { key: 'members', title: '运营成员', rows: roles, columns: columns([['name', '姓名'], ['role', '角色'], ['scope', '作用范围'], ['grantedAt', '授权时间'], ['state', '状态']]) } : null,
+      policyPayload ? { key: 'policies', title: '角色策略摘要', rows: policies, columns: columns([['role', '角色'], ['scope', '作用范围'], ['effective', '当前能力'], ['allowed', '可用能力边界'], ['source', '策略来源'], ['version', '版本'], ['updatedAt', '更新时间']]) } : null,
+      branchPayload ? { key: 'branches', title: '服务器', rows: branches, columns: columns([['name', '服务器'], ['city', '城市'], ['summary', '说明'], ['players', '有效会员'], ['admins', '管理员'], ['blockers', '关联数据'], ['state', '状态']]) } : null,
+      auditPayload ? { key: 'audit', title: '最近审计记录', rows: audits, columns: columns([['actor', '操作人'], ['action', '操作'], ['resource', '资源'], ['role', '生效角色'], ['scope', '作用范围'], ['createdAt', '时间']]) } : null,
+    ].filter(isSection),
     nextCursor: null,
   }
 }
 
+function canRead(access: AdminReadAccess | undefined, capability: string, scopeType?: string) {
+  return !access || access.hasCapability(capability, scopeType)
+}
+
+function isSection<T extends AdminReadPage['sections'][number]>(value: T | null): value is T {
+  return value !== null
+}
+
 async function loadMessages(query: AdminListQuery, request: AdminRequest): Promise<AdminReadPage> {
-  const filter = filterInput(query)
-  const campaignPayload = await request('mip.admin.messageCampaigns.list', filter)
+  const campaignFilter = {
+    query: query.query,
+    status: ['DRAFT', 'READY', 'PUBLISHED', 'WITHDRAWN'].includes(query.status) ? query.status : '',
+    limit: query.limit,
+  }
+  const templateFilter = {
+    query: query.query,
+    status: ['DRAFT', 'ACTIVE', 'ARCHIVED'].includes(query.status) ? query.status : '',
+    limit: query.limit,
+  }
+  const [campaignPayload, templatePayload] = await Promise.all([
+    request('mip.admin.messageCampaigns.list', campaignFilter),
+    request('mip.admin.messageTemplates.list', templateFilter),
+  ])
   return {
     sections: [{
+      key: 'campaigns',
+      title: '消息活动',
       rows: pageValue(campaignPayload).items.map(item => ({
         detailId: valueOf(item, 'id', 'campaignId'),
         title: valueOf(item, 'title', 'name'),
@@ -272,6 +351,20 @@ async function loadMessages(query: AdminListQuery, request: AdminRequest): Promi
         state: label(valueOf(item, 'status')),
       })),
       columns: columns([['title', '消息标题'], ['audience', '发送范围'], ['scope', '作用范围'], ['updatedAt', '更新时间'], ['state', '状态']]),
+    }, {
+      key: 'templates',
+      title: '消息模板',
+      detailTarget: null,
+      rows: pageValue(templatePayload).items.map(item => ({
+        name: valueOf(item, 'name'),
+        title: valueOf(item, 'title'),
+        scope: item.branchName || label(valueOf(item, 'scopeType')),
+        safety: label(valueOf(item, 'contentSafetyStatus')),
+        updatedAt: formatDateTime(item.updatedAt),
+        state: label(valueOf(item, 'status')),
+        rowActions: messageTemplateRowActions(item),
+      })),
+      columns: columns([['name', '模板名称'], ['title', '消息标题'], ['scope', '作用范围'], ['safety', '内容安全'], ['updatedAt', '更新时间'], ['state', '状态']]),
     }],
     nextCursor: null,
   }

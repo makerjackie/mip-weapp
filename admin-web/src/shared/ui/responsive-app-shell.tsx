@@ -94,7 +94,7 @@ export function ResponsiveAppShell() {
       <Drawer
         className="mobile-navigation"
         placement="left"
-        width="min(86vw, 320px)"
+        size="min(86vw, 320px)"
         open={navigationOpen}
         onClose={() => setNavigationOpen(false)}
         title={<Brand />}

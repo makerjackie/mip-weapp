@@ -11,6 +11,10 @@ export interface OperationField {
   maxLength?: number
   options?: readonly OperationFieldOption[]
   fields?: readonly OperationField[]
+  visibleWhen?: {
+    path: string
+    value: string
+  }
 }
 
 export type OperationValues = Record<string, unknown>
@@ -25,12 +29,18 @@ export function normalizeOperationValues(
   return values
 }
 
+export function operationFieldVisible(field: OperationField, values: OperationValues) {
+  if (!field.visibleWhen) return true
+  return readPath(values, field.visibleWhen.path) === field.visibleWhen.value
+}
+
 function normalizeSubmittedField(
   target: OperationValues,
   submitted: OperationValues,
   field: OperationField,
   prefix: string,
 ) {
+  if (!operationFieldVisible(field, submitted)) return
   if (field.hidden) return
   const key = fieldKey(field)
   if (!key) return

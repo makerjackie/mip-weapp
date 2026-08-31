@@ -248,6 +248,7 @@ export async function loadGameTeamDetail(
         pager: {
           key: 'gameMembers',
           query: query.query,
+          currentCursor: query.cursor || null,
           nextCursor: memberPage.hasMore === true && typeof memberPage.nextCursor === 'string' ? memberPage.nextCursor : null,
           placeholder: '搜索成员或服务器',
         },

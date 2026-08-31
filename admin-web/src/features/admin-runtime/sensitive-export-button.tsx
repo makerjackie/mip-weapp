@@ -98,7 +98,7 @@ export function SensitiveExportButton({ kind, query, status, open: controlledOpe
         okText={workflow ? '继续导出' : '创建导出'}
         cancelText="取消"
         confirmLoading={loading}
-        maskClosable={!loading}
+        mask={{ closable: !loading }}
         keyboard={!loading}
         onOk={() => void submit()}
         onCancel={close}

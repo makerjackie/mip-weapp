@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  announcementRowActions,
   branchRowActions,
+  communityReportRowActions,
   eventAlbumRowActions,
+  eventCatalogRowActions,
+  eventPolicyRowActions,
   eventRegistrationRowActions,
   messageScheduleCancelAction,
+  messageTemplateRowActions,
   parseAdminOperationLaunchContext,
   rolePolicyRowActions,
 } from './admin-row-operations.ts'
@@ -83,6 +88,66 @@ describe('admin row operations', () => {
     assert.equal(messageScheduleCancelAction(campaign, { ...dispatch, status: 'PROCESSING' }), null)
     assert.equal(messageScheduleCancelAction(campaign, { ...dispatch, retryDisposition: 'MANUAL_REVIEW' }), null)
     assert.equal(messageScheduleCancelAction({ ...campaign, status: 'PUBLISHED' }, dispatch), null)
+  })
+
+  it('uses versioned announcement, template, and report facts for legal transitions', () => {
+    assert.deepEqual(announcementRowActions({
+      id: 'announcement-1', version: 2, status: 'DRAFT', isPinned: false,
+    }), [{
+      action: 'mip.admin.announcements.publish', label: '发布', targetId: 'announcement-1',
+      values: { announcementId: 'announcement-1', expectedVersion: 2 },
+    }])
+    assert.deepEqual(announcementRowActions({
+      id: 'announcement-1', version: 3, status: 'PUBLISHED', isPinned: true,
+    }).map(item => [item.action, item.label]), [
+      ['mip.admin.announcements.withdraw', '撤回'],
+      ['mip.admin.announcements.pin', '取消置顶'],
+    ])
+
+    assert.deepEqual(messageTemplateRowActions({
+      id: 'template-1', version: 4, status: 'DRAFT',
+    }).map(item => item.action), [
+      'mip.admin.messageTemplates.activate', 'mip.admin.messageTemplates.archive',
+    ])
+    assert.deepEqual(messageTemplateRowActions({
+      id: 'template-1', version: 5, status: 'ARCHIVED',
+    }), [])
+
+    assert.equal(communityReportRowActions({
+      id: 'report-1', version: 1, status: 'PENDING',
+    })[0]?.action, 'mip.admin.communityReports.claim')
+    assert.deepEqual(communityReportRowActions({
+      id: 'report-1', version: 2, status: 'REVIEWING',
+    })[0]?.values, {
+      reportId: 'report-1', expectedVersion: 2, outcome: 'RESOLVED', reason: '',
+    })
+    assert.deepEqual(communityReportRowActions({ status: 'PENDING', version: 1 }), [])
+  })
+
+  it('carries event policy and catalog versions into reachable actions', () => {
+    assert.deepEqual(eventPolicyRowActions({ version: 0, cancellationHoursBeforeStart: 24 }), [{
+      action: 'mip.admin.events.policy.save', label: '编辑政策',
+      values: { expectedVersion: 0, cancellationHoursBeforeStart: 24 },
+    }])
+    const actions = eventCatalogRowActions({
+      id: 'catalog-1', kind: 'TYPE', name: '工作坊', description: '互动活动',
+      sortOrder: 10, version: 2, status: 'ACTIVE',
+    })
+    assert.deepEqual(actions.map(item => item.action), [
+      'mip.admin.events.catalog.save',
+      'mip.admin.events.catalog.changeStatus',
+      'mip.admin.events.catalog.archive',
+    ])
+    assert.deepEqual(actions[0]?.values, {
+      kind: 'TYPE', catalogId: 'catalog-1', expectedVersion: 2,
+      name: '工作坊', description: '互动活动', sortOrder: 10,
+    })
+    assert.deepEqual(actions[1]?.values, {
+      kind: 'TYPE', catalogId: 'catalog-1', expectedVersion: 2, status: 'INACTIVE',
+    })
+    assert.deepEqual(eventCatalogRowActions({
+      id: 'catalog-1', kind: 'TYPE', sortOrder: 10, version: 2, status: 'ARCHIVED',
+    }), [])
   })
 
   it('parses only structured launch facts and rejects malformed context', () => {

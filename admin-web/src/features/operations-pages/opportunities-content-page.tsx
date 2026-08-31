@@ -14,10 +14,13 @@ export function OpportunitiesContentPage(props: OperationsPageState) {
       searchPlaceholder={definition.searchPlaceholder}
       statusOptions={definition.statusOptions}
       paginated={definition.paginated}
-      detailRouteForSection={section => section.title === '机会' ? 'opportunities' : null}
+      detailRouteForSection={section => section.title === '机会'
+        ? 'opportunities'
+        : section.title === '用户内容' ? 'userContent' : null}
       actions={props.onWrite ? (
         <Space wrap>
-          <Button icon={<PlusOutlined />} onClick={() => props.onWrite?.({ action: 'mip.admin.userContent.save' })}>创建用户内容</Button>
+          <Button icon={<PlusOutlined />} onClick={() => props.onWrite?.({ action: 'mip.admin.userContent.save', values: { kind: 'COOPERATION_CARD' } })}>创建合作卡</Button>
+          <Button icon={<PlusOutlined />} onClick={() => props.onWrite?.({ action: 'mip.admin.userContent.save', values: { kind: 'SUPER_CASE' } })}>创建超级案例</Button>
           <Button type="primary" icon={<PlusOutlined />} onClick={() => props.onWrite?.({ action: 'mip.admin.opportunities.save' })}>创建机会</Button>
         </Space>
       ) : null}

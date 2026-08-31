@@ -1,6 +1,7 @@
 import type { AdminDetailRoute } from '../../modules/admin-details'
 import type { AdminEventMutationAction } from '../../modules/admin-event-mutation-forms'
 import type { AdminTableRow } from '../../modules/admin-read-pages'
+import type { AdminOperationLaunchContext } from '../../modules/admin-row-operations'
 import type { SensitiveExportKind } from '../../modules/admin-sensitive-export'
 
 export interface CorePageSearchState {
@@ -16,7 +17,7 @@ export interface CorePageDetailIntent {
   row: AdminTableRow
 }
 
-export interface CorePageMutationIntent {
+export interface CorePageMutationIntent extends AdminOperationLaunchContext {
   action: AdminEventMutationAction
   targetId: string
 }

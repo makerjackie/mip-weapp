@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import type { AdminRequestInput, AdminSession } from '../domain/contracts'
 import { AdminApiClient, AdminApiClientError, type AdminLoginChallenge } from '../services/admin-api'
@@ -10,7 +11,9 @@ interface SessionContextValue {
   challenge: AdminLoginChallenge | null
   loginError: string
   demoMode: boolean
+  sessionBoundary: number
   hasCapability: (capability: string) => boolean
+  hasCapabilityAtScope: (capability: string, scopeType: string) => boolean
   request: <T>(action: string, input?: AdminRequestInput) => Promise<T>
   refreshSession: () => Promise<void>
   beginLogin: () => Promise<void>
@@ -22,33 +25,52 @@ const SessionContext = createContext<SessionContextValue | null>(null)
 const defaultClient = new AdminApiClient()
 
 export function SessionProvider({ children, client = defaultClient }: { children: ReactNode; client?: AdminApiClient }) {
+  const queryClient = useQueryClient()
   const [session, setSession] = useState<AdminSession | null>(null)
+  const [sessionBoundary, setSessionBoundary] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<AdminApiClientError | null>(null)
   const [challenge, setChallenge] = useState<AdminLoginChallenge | null>(null)
   const [loginError, setLoginError] = useState('')
   const loginFlow = useRef(0)
+  const sessionIdentity = useRef<string | null>(null)
+
+  const commitSession = useCallback((next: AdminSession | null) => {
+    const capabilityBoundary = [...(next?.capabilities || [])]
+      .map(item => `${item.capability}:${item.scopeType || ''}:${item.scopeId || ''}`)
+      .sort()
+      .join('|')
+    const nextIdentity = next?.enabled
+      ? `${next.actor?.id || 'authenticated'}:${capabilityBoundary}`
+      : null
+    if (nextIdentity !== sessionIdentity.current) {
+      sessionIdentity.current = nextIdentity
+      setSessionBoundary(value => value + 1)
+      queryClient.removeQueries({ predicate: query => isProtectedAdminQueryKey(query.queryKey) })
+    }
+    setSession(next)
+  }, [queryClient])
 
   const refreshSession = useCallback(async () => {
     setLoading(true)
     setError(null)
     if (client.demoMode) {
-      setSession({ enabled: true, actor: { id: 'demo', name: '演示运营账号' }, capabilities: [] })
+      commitSession({ enabled: true, actor: { id: 'demo', name: '演示运营账号' }, capabilities: [] })
       setLoading(false)
       return
     }
     try {
-      setSession(await client.getSession())
+      commitSession(await client.getSession())
     }
     catch (reason) {
       const next = reason instanceof AdminApiClientError
         ? reason
         : new AdminApiClientError('SERVICE_UNAVAILABLE', '运营会话暂时无法加载', true)
-      if (next.code === 'AUTH_REQUIRED') setSession(null)
+      if (next.code === 'AUTH_REQUIRED') commitSession(null)
       setError(next)
     }
     finally { setLoading(false) }
-  }, [client])
+  }, [client, commitSession])
 
   useEffect(() => {
     const timer = window.setTimeout(() => void refreshSession(), 0)
@@ -103,14 +125,18 @@ export function SessionProvider({ children, client = defaultClient }: { children
 
   const logout = useCallback(async () => {
     loginFlow.current += 1
+    commitSession(null)
     await client.logout()
-    setSession(null)
     await refreshSession()
-  }, [client, refreshSession])
+  }, [client, commitSession, refreshSession])
 
   const hasCapability = useCallback((capability: string) => {
     if (client.demoMode) return true
     return Boolean(session?.capabilities?.some(item => item.capability === capability))
+  }, [client.demoMode, session])
+  const hasCapabilityAtScope = useCallback((capability: string, scopeType: string) => {
+    if (client.demoMode) return true
+    return Boolean(session?.capabilities?.some(item => item.capability === capability && item.scopeType === scopeType))
   }, [client.demoMode, session])
 
   const request = useCallback(<T,>(action: string, input: AdminRequestInput = {}) => client.request<T>(action, input), [client])
@@ -123,15 +149,21 @@ export function SessionProvider({ children, client = defaultClient }: { children
     challenge,
     loginError,
     demoMode: client.demoMode,
+    sessionBoundary,
     hasCapability,
+    hasCapabilityAtScope,
     request,
     refreshSession,
     beginLogin,
     closeLogin,
     logout,
-  }), [beginLogin, challenge, client, closeLogin, error, hasCapability, loading, loginError, logout, refreshSession, request, session])
+  }), [beginLogin, challenge, client, closeLogin, error, hasCapability, hasCapabilityAtScope, loading, loginError, logout, refreshSession, request, session, sessionBoundary])
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
+}
+
+export function isProtectedAdminQueryKey(queryKey: readonly unknown[]) {
+  return ['admin', 'admin-detail', 'admin-read-page', 'admin-overview'].includes(String(queryKey[0] || ''))
 }
 
 export function useAdminSession() {

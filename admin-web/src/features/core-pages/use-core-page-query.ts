@@ -20,6 +20,7 @@ export function useCoreReadPage(route: CoreListRoute, search: CorePageSearchStat
     queryKey: [
       'admin-read-page',
       sessionState.session?.actor?.id || 'anonymous',
+      sessionState.sessionBoundary,
       sessionState.demoMode ? 'demo' : 'api',
       route,
       query.query,
@@ -30,7 +31,11 @@ export function useCoreReadPage(route: CoreListRoute, search: CorePageSearchStat
     enabled,
     queryFn: () => sessionState.demoMode
       ? Promise.resolve(createCoreDemoReadPage(route, query))
-      : loadAdminReadPage(route, query, request),
+      : loadAdminReadPage(route, query, request, {
+        hasCapability: (capability, scopeType) => scopeType
+          ? sessionState.hasCapabilityAtScope(capability, scopeType)
+          : sessionState.hasCapability(capability),
+      }),
   })
   return {
     ...result,
@@ -47,6 +52,7 @@ export function useAdminOverview() {
     queryKey: [
       'admin-overview',
       sessionState.session?.actor?.id || 'anonymous',
+      sessionState.sessionBoundary,
       sessionState.demoMode ? 'demo' : 'api',
     ],
     enabled,

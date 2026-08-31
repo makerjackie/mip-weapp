@@ -1,10 +1,10 @@
 import { Button, Drawer, Space, Table, Typography } from 'antd'
-import type { AdminDetailRoute, AdminDetailView } from '../../modules/admin-details'
+import type { AdminDetailPager, AdminDetailRoute, AdminDetailView } from '../../modules/admin-details'
 import type { AdminOperationRow, AdminRowOperation } from '../../modules/admin-row-operations'
 import { ErrorState, LoadingState } from './feedback-states'
 import { StatusTag } from './status-tag'
 
-export function DetailDrawer({ open, view, loading, error, onClose, actions, onRowAction, onNestedView }: {
+export function DetailDrawer({ open, view, loading, error, onClose, actions, onRowAction, onNestedView, onPagerChange }: {
   open: boolean
   view: AdminDetailView | null
   loading?: boolean
@@ -13,11 +13,12 @@ export function DetailDrawer({ open, view, loading, error, onClose, actions, onR
   actions?: React.ReactNode
   onRowAction?: (operation: AdminRowOperation) => void
   onNestedView?: (target: AdminDetailRoute, row: AdminOperationRow) => void
+  onPagerChange?: (pager: AdminDetailPager, direction: 'previous' | 'next') => void
 }) {
   return (
     <Drawer
       className="detail-drawer"
-      width={820}
+      size={820}
       open={open}
       onClose={onClose}
       title={(
@@ -51,7 +52,7 @@ export function DetailDrawer({ open, view, loading, error, onClose, actions, onR
                 <Table
                   size="small"
                   pagination={false}
-                  rowKey={(row, index) => String(row.detailId || `${section.title}-${index}`)}
+                  rowKey={row => stableRowKey(row, section.title)}
                   columns={[
                     ...section.columns.map(column => ({
                       title: column.label,
@@ -83,10 +84,34 @@ export function DetailDrawer({ open, view, loading, error, onClose, actions, onR
                   scroll={{ x: 'max-content' }}
                 />
               ) : null}
+              {section.pager ? (
+                <nav className="detail-section__pager" aria-label={`${section.title}分页`}>
+                  <Space size={8}>
+                    <Button
+                      disabled={!section.pager.currentCursor || !onPagerChange}
+                      onClick={() => onPagerChange?.(section.pager!, 'previous')}
+                    >
+                      上一页
+                    </Button>
+                    <Button
+                      disabled={!section.pager.nextCursor || !onPagerChange}
+                      onClick={() => onPagerChange?.(section.pager!, 'next')}
+                    >
+                      下一页
+                    </Button>
+                  </Space>
+                </nav>
+              ) : null}
             </section>
           ))}
         </Space>
       ) : null}
     </Drawer>
   )
+}
+
+function stableRowKey(row: AdminOperationRow, prefix: string) {
+  const id = row.detailId || row.id || row.key
+  if (id) return String(id)
+  return `${prefix}:${JSON.stringify(row, (key, value) => key === 'rowActions' ? undefined : value)}`
 }

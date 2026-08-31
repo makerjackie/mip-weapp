@@ -1,4 +1,4 @@
-import type { AdminListQuery, AdminReadPage, AdminRequest } from './admin-read-contracts.ts'
+import type { AdminListQuery, AdminReadAccess, AdminReadPage, AdminRequest, AdminTableSection } from './admin-read-contracts.ts'
 import {
   arrayCodeLabel,
   arrayLabel,
@@ -17,6 +17,10 @@ import {
   sourceEventLabel,
   valueOf,
 } from './admin-read-formatters.ts'
+import {
+  announcementRowActions,
+  communityReportRowActions,
+} from './admin-row-operations.ts'
 
 export async function loadOpportunities(query: AdminListQuery, request: AdminRequest): Promise<AdminReadPage> {
   const contentStatus = ['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'ARCHIVED'].includes(query.status)
@@ -50,7 +54,12 @@ export async function loadOpportunities(query: AdminListQuery, request: AdminReq
   })), query)
   const contentRows = filterRows(pageValue(contentPayload).items.map(item => {
     const owner = record(item.owner)
+    const kind = String(valueOf(item, 'kind'))
+    const contentId = valueOf(item, 'id', 'contentId')
     return {
+      detailId: ['COOPERATION_CARD', 'SUPER_CASE'].includes(kind) && contentId !== '—'
+        ? `${kind}:${contentId}`
+        : undefined,
       title: valueOf(item, 'title'),
       kind: label(valueOf(item, 'kind')),
       owner: valueOf(owner, 'nickname'),
@@ -85,18 +94,20 @@ export async function loadOpportunities(query: AdminListQuery, request: AdminReq
   }
 }
 
-export async function loadGrowth(query: AdminListQuery, request: AdminRequest): Promise<AdminReadPage> {
+export async function loadGrowth(query: AdminListQuery, request: AdminRequest, access?: AdminReadAccess): Promise<AdminReadPage> {
+  const canReadGrowth = canRead(access, 'growth.read')
+  const canReadBadges = canRead(access, 'badges.manage', 'PLATFORM')
   const [levelsPayload, benefitsPayload, rulesPayload, entriesPayload, transitionsPayload, badgesPayload, awardsPayload] = await Promise.all([
-    request('mip.admin.growth.levels'),
-    request('mip.admin.growth.benefits'),
-    request('mip.admin.growth.rules'),
-    request('mip.admin.growth.entries', { filters: { query: query.query }, limit: query.limit }),
-    request('mip.admin.growth.levelTransitions', { filters: { query: query.query }, limit: query.limit }),
-    request('mip.admin.badges.list'),
-    request('mip.admin.badges.awards', {
+    canReadGrowth ? request('mip.admin.growth.levels') : null,
+    canReadGrowth ? request('mip.admin.growth.benefits') : null,
+    canReadGrowth ? request('mip.admin.growth.rules') : null,
+    canReadGrowth ? request('mip.admin.growth.entries', { filters: { query: query.query }, limit: query.limit }) : null,
+    canReadGrowth ? request('mip.admin.growth.levelTransitions', { filters: { query: query.query }, limit: query.limit }) : null,
+    canReadBadges ? request('mip.admin.badges.list') : null,
+    canReadBadges ? request('mip.admin.badges.awards', {
       query: query.query,
       status: ['ACTIVE', 'REVOKED'].includes(query.status) ? query.status : '',
-    }),
+    }) : null,
   ])
   const levels = filterRows(pageValue(levelsPayload).items.map(item => ({
     name: valueOf(item, 'name'), threshold: numberLabel(item.minimumExperience), badge: valueOf(item, 'displayBadge'), benefits: nestedNames(item.benefits).concat(arrayLabel(item.legacyBenefits) === '—' ? [] : [arrayLabel(item.legacyBenefits)]).join('、') || '—', users: numberLabel(item.currentUserCount), share: `${numberLabel(item.currentUserPercentage)}%`, state: label(valueOf(item, 'status')),
@@ -108,33 +119,68 @@ export async function loadGrowth(query: AdminListQuery, request: AdminRequest): 
   const badges = filterRows(pageValue(badgesPayload).items.map(item => ({ name: valueOf(item, 'name'), description: valueOf(item, 'description'), shape: label(valueOf(item, 'placeholderShape')), updatedAt: formatDateTime(item.updatedAt), state: label(valueOf(item, 'status')) })), query)
   const awards = filterRows(pageValue(awardsPayload).items.map(item => ({ user: valueOf(item, 'nickname') === '—' ? '未知用户' : valueOf(item, 'nickname'), badge: valueOf(item, 'badgeName'), reason: reasonLabel(item.awardReason), awardedAt: formatDateTime(item.awardedAt), equipped: booleanLabel(item.equipped), state: label(valueOf(item, 'status')) })), query)
   return { sections: [
-    { title: '等级', rows: levels, columns: columns([['name', '等级'], ['threshold', '最低经验'], ['badge', '展示徽章'], ['benefits', '权益'], ['users', '用户数'], ['share', '用户占比'], ['state', '状态']]) },
-    { title: '等级权益', rows: benefits, columns: columns([['name', '权益'], ['description', '说明'], ['sort', '排序'], ['state', '状态']]) },
-    { title: '成长规则', rows: rules, columns: columns([['name', '规则'], ['metric', '指标'], ['delta', '增量'], ['dailyLimit', '每日上限'], ['source', '来源事件'], ['scope', '作用范围'], ['effective', '生效区间'], ['state', '状态']]) },
-    { title: '成长流水', rows: entries, columns: columns([['user', '用户'], ['metric', '指标'], ['delta', '变动'], ['balance', '余额变化'], ['source', '来源事件'], ['reason', '原因'], ['createdAt', '时间']]) },
-    { title: '等级变更', rows: transitions, columns: columns([['user', '用户'], ['direction', '等级变化'], ['experience', '经验变化'], ['source', '来源事件'], ['createdAt', '时间']]) },
-    { title: '徽章', rows: badges, columns: columns([['name', '徽章'], ['description', '说明'], ['shape', '图形'], ['updatedAt', '更新时间'], ['state', '状态']]) },
-    { title: '徽章获得记录', rows: awards, columns: columns([['user', '用户'], ['badge', '徽章'], ['reason', '原因'], ['awardedAt', '获得时间'], ['equipped', '佩戴'], ['state', '状态']]) },
-  ], nextCursor: null }
+    levelsPayload ? { title: '等级', rows: levels, columns: columns([['name', '等级'], ['threshold', '最低经验'], ['badge', '展示徽章'], ['benefits', '权益'], ['users', '用户数'], ['share', '用户占比'], ['state', '状态']]) } : null,
+    benefitsPayload ? { title: '等级权益', rows: benefits, columns: columns([['name', '权益'], ['description', '说明'], ['sort', '排序'], ['state', '状态']]) } : null,
+    rulesPayload ? { title: '成长规则', rows: rules, columns: columns([['name', '规则'], ['metric', '指标'], ['delta', '增量'], ['dailyLimit', '每日上限'], ['source', '来源事件'], ['scope', '作用范围'], ['effective', '生效区间'], ['state', '状态']]) } : null,
+    entriesPayload ? { title: '成长流水', rows: entries, columns: columns([['user', '用户'], ['metric', '指标'], ['delta', '变动'], ['balance', '余额变化'], ['source', '来源事件'], ['reason', '原因'], ['createdAt', '时间']]) } : null,
+    transitionsPayload ? { title: '等级变更', rows: transitions, columns: columns([['user', '用户'], ['direction', '等级变化'], ['experience', '经验变化'], ['source', '来源事件'], ['createdAt', '时间']]) } : null,
+    badgesPayload ? { title: '徽章', rows: badges, columns: columns([['name', '徽章'], ['description', '说明'], ['shape', '图形'], ['updatedAt', '更新时间'], ['state', '状态']]) } : null,
+    awardsPayload ? { title: '徽章获得记录', rows: awards, columns: columns([['user', '用户'], ['badge', '徽章'], ['reason', '原因'], ['awardedAt', '获得时间'], ['equipped', '佩戴'], ['state', '状态']]) } : null,
+  ].filter(isSection), nextCursor: null }
 }
 
-export async function loadOperations(query: AdminListQuery, request: AdminRequest): Promise<AdminReadPage> {
+export async function loadOperations(query: AdminListQuery, request: AdminRequest, access?: AdminReadAccess): Promise<AdminReadPage> {
   const reportStatuses = ['PENDING', 'REVIEWING', 'RESOLVED', 'DISMISSED']
-  const reportRequests = (query.status && reportStatuses.includes(query.status) ? [query.status] : reportStatuses).map(status => request('mip.admin.communityReports.list', { status, limit: query.limit }))
+  const canReadReports = canRead(access, 'community.reports.manage', 'PLATFORM')
+  const canReadAnnouncements = canRead(access, 'announcements.manage')
+  const canReadExceptions = canRead(access, 'operations.exceptions.read', 'PLATFORM')
+  const canReadQueue = canReadExceptions || canRead(access, 'messages.delivery.review', 'PLATFORM')
+  const reportRequests = canReadReports
+    ? (query.status && reportStatuses.includes(query.status) ? [query.status] : reportStatuses).map(status => request('mip.admin.communityReports.list', { status, limit: query.limit }))
+    : []
   const [announcementPayload, exceptionsPayload, queuePayload, ...reportPayloads] = await Promise.all([
-    request('mip.admin.announcements.list', { status: ['DRAFT', 'PUBLISHED', 'WITHDRAWN'].includes(query.status) ? query.status : '', query: query.query, limit: query.limit }),
-    request('mip.admin.exceptions.list', { status: ['FAILED', 'STALLED', 'REJECTED', 'EXPIRED', 'CLEANUP_PENDING'].includes(query.status) ? query.status : '', limit: query.limit }),
-    request('mip.admin.operations.queue.list', { state: ['PENDING', 'PROCESSING', 'MANUAL_REVIEW'].includes(query.status) ? query.status : '', limit: query.limit }),
+    canReadAnnouncements ? request('mip.admin.announcements.list', { status: ['DRAFT', 'PUBLISHED', 'WITHDRAWN'].includes(query.status) ? query.status : '', query: query.query, limit: query.limit }) : null,
+    canReadExceptions ? request('mip.admin.exceptions.list', { status: ['FAILED', 'STALLED', 'REJECTED', 'EXPIRED', 'CLEANUP_PENDING'].includes(query.status) ? query.status : '', limit: query.limit }) : null,
+    canReadQueue ? request('mip.admin.operations.queue.list', { state: ['PENDING', 'PROCESSING', 'MANUAL_REVIEW'].includes(query.status) ? query.status : '', limit: query.limit }) : null,
     ...reportRequests,
   ])
-  const announcements = filterRows(pageValue(announcementPayload).items.map(item => ({ title: valueOf(item, 'title'), scope: valueOf(item, 'branchName') !== '—' ? valueOf(item, 'branchName') : scopeLabel(item.scopeType), target: item.targetType ? label(item.targetType) : '—', safety: label(valueOf(item, 'contentSafetyStatus')), pinned: booleanLabel(item.isPinned), updatedAt: formatDateTime(item.updatedAt), state: label(valueOf(item, 'status')) })), { ...query, status: '' })
+  const announcements = filterRows(pageValue(announcementPayload).items.map(item => ({
+    title: valueOf(item, 'title'),
+    scope: valueOf(item, 'branchName') !== '—' ? valueOf(item, 'branchName') : scopeLabel(item.scopeType),
+    target: item.targetType ? label(item.targetType) : '—',
+    safety: label(valueOf(item, 'contentSafetyStatus')),
+    pinned: booleanLabel(item.isPinned),
+    updatedAt: formatDateTime(item.updatedAt),
+    state: label(valueOf(item, 'status')),
+    rowActions: announcementRowActions(item),
+  })), { ...query, status: '' })
   const exceptions = filterRows(pageValue(exceptionsPayload).items.map(item => { const target = record(item.target); return { title: valueOf(item, 'title'), source: label(valueOf(item, 'source')), summary: valueOf(item, 'summary'), reason: reasonLabel(item.reasonCode), target: target.type ? label(target.type) : '—', occurredAt: formatDateTime(item.occurredAt), state: label(valueOf(item, 'status')) } }), { ...query, status: '' })
   const queue = filterRows(pageValue(queuePayload).items.map(item => ({ title: valueOf(item, 'title'), source: `${label(valueOf(item, 'source'))} · ${label(valueOf(item, 'sourceType'))}`, summary: valueOf(item, 'summary'), reason: reasonLabel(item.reasonCode), occurredAt: formatDateTime(item.occurredAt), state: label(valueOf(item, 'state')) })), { ...query, status: '' })
-  const reports = filterRows(reportPayloads.flatMap(payload => pageValue(payload).items).map(item => { const reporter = record(item.reporter); const target = record(item.target); return { category: label(valueOf(item, 'category')), description: valueOf(item, 'description'), reporter: valueOf(reporter, 'nickname'), target: `${valueOf(target, 'nickname')} · ${valueOf(target, 'cityName')}`, updatedAt: formatDateTime(item.updatedAt), state: label(valueOf(item, 'status')) } }), { ...query, status: '' })
+  const reports = filterRows(reportPayloads.flatMap(payload => pageValue(payload).items).map(item => {
+    const reporter = record(item.reporter)
+    const target = record(item.target)
+    return {
+      category: label(valueOf(item, 'category')),
+      description: valueOf(item, 'description'),
+      reporter: valueOf(reporter, 'nickname'),
+      target: `${valueOf(target, 'nickname')} · ${valueOf(target, 'cityName')}`,
+      updatedAt: formatDateTime(item.updatedAt),
+      state: label(valueOf(item, 'status')),
+      rowActions: communityReportRowActions(item),
+    }
+  }), { ...query, status: '' })
   return { sections: [
-    { title: '公告', rows: announcements, columns: columns([['title', '标题'], ['scope', '作用范围'], ['target', '关联对象'], ['safety', '内容安全'], ['pinned', '置顶'], ['updatedAt', '更新时间'], ['state', '状态']]) },
-    { title: '社区举报', rows: reports, columns: columns([['category', '分类'], ['description', '描述'], ['reporter', '举报人'], ['target', '被举报对象'], ['updatedAt', '更新时间'], ['state', '状态']]) },
-    { title: '运营异常', rows: exceptions, columns: columns([['title', '异常'], ['source', '来源'], ['summary', '摘要'], ['reason', '原因'], ['target', '关联对象'], ['occurredAt', '发生时间'], ['state', '状态']]) },
-    { title: '运营待办', rows: queue, columns: columns([['title', '待办'], ['source', '来源'], ['summary', '摘要'], ['reason', '原因'], ['occurredAt', '发生时间'], ['state', '状态']]) },
-  ], nextCursor: null }
+    announcementPayload ? { key: 'announcements', title: '公告', rows: announcements, columns: columns([['title', '标题'], ['scope', '作用范围'], ['target', '关联对象'], ['safety', '内容安全'], ['pinned', '置顶'], ['updatedAt', '更新时间'], ['state', '状态']]) } : null,
+    canReadReports ? { key: 'reports', title: '社区举报', rows: reports, columns: columns([['category', '分类'], ['description', '描述'], ['reporter', '举报人'], ['target', '被举报对象'], ['updatedAt', '更新时间'], ['state', '状态']]) } : null,
+    exceptionsPayload ? { key: 'exceptions', title: '运营异常', rows: exceptions, columns: columns([['title', '异常'], ['source', '来源'], ['summary', '摘要'], ['reason', '原因'], ['target', '关联对象'], ['occurredAt', '发生时间'], ['state', '状态']]) } : null,
+    queuePayload ? { key: 'queue', title: '运营待办', rows: queue, columns: columns([['title', '待办'], ['source', '来源'], ['summary', '摘要'], ['reason', '原因'], ['occurredAt', '发生时间'], ['state', '状态']]) } : null,
+  ].filter(isSection), nextCursor: null }
+}
+
+function canRead(access: AdminReadAccess | undefined, capability: string, scopeType?: string) {
+  return !access || access.hasCapability(capability, scopeType)
+}
+
+function isSection<T extends AdminTableSection>(value: T | null): value is T {
+  return value !== null
 }

@@ -11,6 +11,7 @@ export interface AdminTableColumn {
 }
 
 export interface AdminTableSection {
+  key?: string
   title?: string
   rows: AdminTableRow[]
   columns: AdminTableColumn[]
@@ -34,6 +35,10 @@ export interface AdminReadRouteDefinition {
   searchPlaceholder: string
   statusOptions: Array<{ value: string; label: string }>
   paginated: boolean
+}
+
+export interface AdminReadAccess {
+  hasCapability: (capability: string, scopeType?: string) => boolean
 }
 
 export type AdminRequest = <T>(action: string, input?: AdminRequestInput) => Promise<T>

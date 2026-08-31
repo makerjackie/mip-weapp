@@ -72,6 +72,10 @@ export interface ContentMutationField {
   readonly options?: readonly string[]
   readonly maxLength?: number
   readonly fields?: readonly ContentMutationField[]
+  readonly visibleWhen?: {
+    readonly path: string
+    readonly value: string
+  }
 }
 
 export interface ContentMutationFormDefinition {
@@ -309,7 +313,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3
 const PROFILE_REF_PATTERN = /^p1\.[A-Za-z0-9_-]{16}\.[A-Za-z0-9_-]{48}\.[A-Za-z0-9_-]{22}$/
 const IDEMPOTENCY_PATTERN = /^[A-Za-z0-9_.:-]{12,128}$/
 const OPPORTUNITY_ROLES = ['connector', 'business_builder', 'capital_operator', 'strategist', 'visual_designer', 'delivery_lead'] as const
-const ROLE_FIELDS: Record<OpportunityRole, readonly string[]> = {
+export const USER_CONTENT_ROLE_FIELDS: Record<OpportunityRole, readonly string[]> = {
   connector: ['circles', 'resources', 'target'],
   business_builder: ['industries', 'business_models', 'target'],
   capital_operator: ['investment_fields', 'capital_range', 'target'],
@@ -338,28 +342,50 @@ const USER_CONTENT_FIELDS: ContentMutationField[] = [
   idField('contentId', '用户内容', false),
   { ...versionField(), required: false },
   groupField('draft', '内容草稿', [
-    selectField('kind', '草稿类型', ['COOPERATION_CARD', 'SUPER_CASE']),
-    selectField('roleKey', '合作角色', [...OPPORTUNITY_ROLES], false),
-    textField('positioning', '合作定位', 500, false),
-    textField('targetSummary', '合作目标', 500, false),
-    groupField('roleFields', '角色信息', [
-      { key: 'stringOrList', label: '角色字段（按角色填写）', kind: 'group' },
-    ]),
-    groupField('abilityScores', '能力评分', ABILITY_KEYS.map(key => ({ key, label: key, kind: 'integer' as const, required: true }))),
-    textField('projectName', '项目名称', 120, false),
-    textField('summary', '案例摘要', 240, false),
-    { key: 'startedOn', label: '开始日期', kind: 'date', required: false },
-    { key: 'endedOn', label: '结束日期', kind: 'date', required: false },
-    textField('responsibility', '项目责任', 500, false),
-    idField('cityTagId', '城市标签', false),
-    idField('industryTagId', '行业标签', false),
-    textField('caseType', '案例类型', 80, false),
-    areaField('description', '案例说明', 8_000, false),
-    idField('coverAssetId', '封面素材', false),
-    { key: 'mediaAssetIds', label: '案例素材', kind: 'id-list', required: false },
+    { ...selectField('roleKey', '合作角色', [...OPPORTUNITY_ROLES]), visibleWhen: { path: 'kind', value: 'COOPERATION_CARD' } },
+    { ...textField('positioning', '合作定位', 500), visibleWhen: { path: 'kind', value: 'COOPERATION_CARD' } },
+    { ...textField('targetSummary', '合作目标', 500), visibleWhen: { path: 'kind', value: 'COOPERATION_CARD' } },
+    { ...groupField('roleFields', '角色信息', [
+      ...roleFields('connector', [['circles', '圈层'], ['resources', '可提供资源'], ['target', '希望对接']]),
+      ...roleFields('business_builder', [['industries', '熟悉行业'], ['business_models', '商业模式'], ['target', '合作目标']]),
+      ...roleFields('capital_operator', [['investment_fields', '投资领域'], ['capital_range', '资金范围'], ['target', '合作目标']]),
+      ...roleFields('strategist', [['planning_types', '策划类型'], ['methods', '工作方法'], ['target', '合作目标']]),
+      ...roleFields('visual_designer', [['visual_types', '视觉类型'], ['portfolio_summary', '作品说明'], ['target', '合作目标']]),
+      ...roleFields('delivery_lead', [['project_types', '项目类型'], ['delivery_experience', '交付经验'], ['target', '合作目标']]),
+    ]), visibleWhen: { path: 'kind', value: 'COOPERATION_CARD' } },
+    { ...groupField('abilityScores', '能力评分', [
+      ['business_development', '商务拓展'],
+      ['resource_integration', '资源整合'],
+      ['capital_operation', '资本运作'],
+      ['strategy_planning', '战略策划'],
+      ['visual_design', '视觉设计'],
+      ['delivery_management', '交付管理'],
+    ].map(([key, label]) => ({ key, label, kind: 'integer' as const, required: true }))), visibleWhen: { path: 'kind', value: 'COOPERATION_CARD' } },
+    { ...textField('projectName', '项目名称', 120), visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
+    { ...textField('summary', '案例摘要', 240), visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
+    { key: 'startedOn', label: '开始日期', kind: 'date', required: false, visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
+    { key: 'endedOn', label: '结束日期', kind: 'date', required: false, visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
+    { ...textField('responsibility', '项目责任', 500), visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
+    { ...idField('cityTagId', '城市标签', false), visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
+    { ...idField('industryTagId', '行业标签', false), visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
+    { ...textField('caseType', '案例类型', 80, false), visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
+    { ...areaField('description', '案例说明', 8_000), visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
+    { ...idField('coverAssetId', '封面素材', false), visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
+    { key: 'mediaAssetIds', label: '案例素材', kind: 'id-list', required: false, visibleWhen: { path: 'kind', value: 'SUPER_CASE' } },
     selectField('status', '内容状态', ['DRAFT', 'PUBLISHED', 'UNPUBLISHED'], false),
   ]),
 ]
+
+function roleFields(role: OpportunityRole, fields: ReadonlyArray<readonly [string, string]>): ContentMutationField[] {
+  return fields.map(([key, label]) => ({
+    key,
+    label,
+    kind: 'textarea',
+    required: true,
+    maxLength: 1_000,
+    visibleWhen: { path: 'draft.roleKey', value: role },
+  }))
+}
 
 const CONTENT_MUTATION_FORMS: readonly ContentMutationFormDefinition[] = [
   {
@@ -573,7 +599,7 @@ function validateCardDraft(draft: Record<string, unknown>): CooperationCardDraft
   if (draft.kind !== 'COOPERATION_CARD') throw invalid('合作卡草稿无效')
   const roleKey = enumValue(draft.roleKey, OPPORTUNITY_ROLES, '合作角色') as OpportunityRole
   const fields = record(draft.roleFields)
-  const required = ROLE_FIELDS[roleKey]
+  const required = USER_CONTENT_ROLE_FIELDS[roleKey]
   if (Object.keys(fields).some(key => !required.includes(key)) || required.some(key => !(key in fields))) throw invalid('合作卡信息无效')
   for (const key of required) {
     const value = fields[key]

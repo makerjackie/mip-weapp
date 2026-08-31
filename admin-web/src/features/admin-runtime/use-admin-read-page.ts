@@ -11,11 +11,15 @@ export function useAdminReadPage(route: AdminListRoute, query: AdminListQuery) {
   const session = useAdminSession()
   const enabled = session.demoMode || Boolean(session.session?.enabled)
   const result = useQuery({
-    queryKey: ['admin', 'read-page', session.session?.actor?.id || 'anonymous', session.demoMode ? 'demo' : 'api', route, query],
+    queryKey: ['admin', 'read-page', session.session?.actor?.id || 'anonymous', session.sessionBoundary, session.demoMode ? 'demo' : 'api', route, query],
     enabled,
     queryFn: () => session.demoMode
       ? Promise.resolve(createDemoReadPage(route, query))
-      : loadAdminReadPage(route, query, session.request),
+      : loadAdminReadPage(route, query, session.request, {
+          hasCapability: (capability, scopeType) => scopeType
+            ? session.hasCapabilityAtScope(capability, scopeType)
+            : session.hasCapability(capability),
+        }),
   })
   return {
     ...result,

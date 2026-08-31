@@ -88,6 +88,7 @@ interface GovernancePageSpec {
 
 const createBranch = peopleAction('mip.admin.branches.create', '新建服务器')
 const createMessage = contentAction('mip.admin.messageCampaigns.save', '创建消息')
+const createMessageTemplate = contentAction('mip.admin.messageTemplates.save', '新建消息模板')
 const createKnowledgeContent = contentAction('mip.admin.knowledge.contents.save', '新建内容')
 const createKnowledgeSchedule = contentAction('mip.admin.knowledge.schedules.save', '新建采集计划')
 const createAnnouncement = contentAction('mip.admin.announcements.save', '新建公告')
@@ -107,8 +108,11 @@ const pageSpecs: Record<GovernanceRoute, GovernancePageSpec> = {
   messages: {
     title: '消息管理',
     description: '查看消息活动及服务端记录的投递状态。',
-    sections: [{ key: 'campaigns', label: '消息活动', detailTarget: 'messages' }],
-    actions: [createMessage],
+    sections: [
+      { key: 'campaigns', label: '消息活动', detailTarget: 'messages' },
+      { key: 'templates', label: '消息模板' },
+    ],
+    actions: [createMessage, createMessageTemplate],
   },
   knowledge: {
     title: '知识库',
@@ -248,7 +252,7 @@ function createTabItems({
 }): Array<{ key: string; label: string; children: ReactNode }> {
   if (!page) return []
   return page.sections.map((section, index) => {
-    const sectionSpec = spec.sections[index] ?? {
+    const sectionSpec = spec.sections.find(item => item.key === section.key) ?? spec.sections[index] ?? {
       key: `section-${index + 1}`,
       label: section.title || `分类 ${index + 1}`,
     }

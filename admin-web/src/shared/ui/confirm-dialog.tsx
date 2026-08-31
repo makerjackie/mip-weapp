@@ -19,7 +19,7 @@ export function ConfirmDialog({ open, title, description, confirmText = '确认'
       okButtonProps={{ danger, loading }}
       onOk={onConfirm}
       onCancel={onCancel}
-      maskClosable={!loading}
+      mask={{ closable: !loading }}
       keyboard={!loading}
     >
       <p>{description}</p>

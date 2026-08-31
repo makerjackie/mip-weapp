@@ -40,11 +40,18 @@ function unfilteredDemoPage(route: AdminListRoute): AdminReadPage {
     }], nextCursor: null,
   }
   if (route === 'messages') return {
-    sections: [{
-      title: '消息活动',
-      rows: demo.messages.map((item, index) => ({ ...item, detailId: `demo-message-${index + 1}`, scope: item.audience, state: item.status })),
-      columns: columns([['title', '消息标题'], ['audience', '发送范围'], ['scope', '作用范围'], ['updatedAt', '更新时间'], ['state', '状态']]),
-    }], nextCursor: null,
+    sections: [
+      {
+        title: '消息活动',
+        rows: demo.messages.map((item, index) => ({ ...item, detailId: `demo-message-${index + 1}`, scope: item.audience, state: item.status })),
+        columns: columns([['title', '消息标题'], ['audience', '发送范围'], ['scope', '作用范围'], ['updatedAt', '更新时间'], ['state', '状态']]),
+      },
+      {
+        title: '消息模板',
+        rows: [],
+        columns: columns([['name', '模板名称'], ['title', '消息标题'], ['scope', '作用范围'], ['updatedAt', '更新时间'], ['state', '状态']]),
+      },
+    ], nextCursor: null,
   }
   if (route === 'knowledge') return {
     sections: [{
@@ -63,7 +70,7 @@ function unfilteredDemoPage(route: AdminListRoute): AdminReadPage {
   ])
   if (route === 'opportunities') return empty([
     { title: '机会', columns: columns([['title', '标题'], ['publisher', '发布人'], ['type', '类型'], ['updatedAt', '更新时间'], ['state', '状态']]), detailTarget: 'opportunities' },
-    { title: '用户内容', columns: columns([['title', '标题'], ['author', '作者'], ['type', '类型'], ['updatedAt', '更新时间'], ['state', '状态']]), detailTarget: null },
+    { title: '用户内容', columns: columns([['title', '标题'], ['author', '作者'], ['type', '类型'], ['updatedAt', '更新时间'], ['state', '状态']]), detailTarget: 'userContent' },
   ])
   if (route === 'growth') return empty([
     { title: '等级', columns: columns([['name', '等级'], ['minimum', '最低经验'], ['benefits', '权益'], ['state', '状态']]), detailTarget: null },
@@ -83,7 +90,7 @@ function empty(sections: Array<{ title?: string; columns: Array<{ key: string; l
   return { sections: sections.map(section => ({ ...section, rows: [] })), nextCursor: null }
 }
 
-type AdminListSectionDetailTarget = 'tasks' | 'banners' | 'gameSeasons' | 'gameTeams' | 'gameCatalogs' | 'opportunities' | null
+type AdminListSectionDetailTarget = 'tasks' | 'banners' | 'gameSeasons' | 'gameTeams' | 'gameCatalogs' | 'opportunities' | 'userContent' | null
 
 function columns(values: Array<[string, string]>) {
   return values.map(([key, label]) => ({ key, label }))

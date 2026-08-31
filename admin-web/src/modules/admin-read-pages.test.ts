@@ -50,6 +50,33 @@ describe('admin read pages', () => {
     assert.equal(page.sections[0].rows[0].state, '已发布')
   })
 
+  it('loads platform event policy and catalogs only when the projected capabilities allow them', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const page = await loadAdminReadPage('events', { ...query, query: '', status: '' }, requestWith({
+      'mip.admin.events.list': { items: [], nextCursor: null },
+      'mip.admin.events.policy.get': { cancellationHoursBeforeStart: 24, version: 0 },
+      'mip.admin.events.catalog.list': { items: [{
+        id: 'catalog-1', kind: 'TYPE', key: 'workshop', name: '工作坊', description: '互动活动',
+        sortOrder: 10, usageCount: 2, version: 2, status: 'ACTIVE', updatedAt: '2030-03-01T00:00:00.000Z',
+      }], nextCursor: null },
+    }, calls), {
+      hasCapability: capability => ['events.write', 'events.catalog.manage'].includes(capability),
+    })
+
+    assert.deepEqual(calls.map(call => call.action), [
+      'mip.admin.events.list',
+      'mip.admin.events.policy.get',
+      'mip.admin.events.catalog.list',
+      'mip.admin.events.catalog.list',
+    ])
+    assert.deepEqual(calls[2].input, { kind: 'TYPE', query: '', limit: 20 })
+    assert.deepEqual(calls[3].input, { kind: 'TAG', query: '', limit: 20 })
+    assert.deepEqual(page.sections.map(section => section.key), ['events', 'policy', 'event-types', 'event-tags'])
+    assert.equal(page.sections[1].rows[0].rowActions?.[0]?.action, 'mip.admin.events.policy.save')
+    assert.equal(page.sections[2].rows[0].rowActions?.[0]?.action, 'mip.admin.events.catalog.save')
+    assert.equal(page.sections[3].rows[0].rowActions?.[0]?.action, 'mip.admin.events.catalog.save')
+  })
+
   it('keeps order summary and safe projected fields in the read model', async () => {
     const calls: Array<{ action: string; input: unknown }> = []
     const page = await loadAdminReadPage('orders', { ...query, query: 'MIP-001', status: 'PAID' }, requestWith({
@@ -99,6 +126,18 @@ describe('admin read pages', () => {
     assert.equal(page.sections[3].rows[0].resource, '角色')
   })
 
+  it('loads only permission sections allowed by the current capability projection', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const page = await loadAdminReadPage('permissions', { ...query, query: '', status: '' }, requestWith({
+      'mip.admin.audit.list': { items: [], nextCursor: null },
+    }, calls), {
+      hasCapability: capability => capability === 'audit.read',
+    })
+
+    assert.deepEqual(calls.map(call => call.action), ['mip.admin.audit.list'])
+    assert.deepEqual(page.sections.map(section => section.key), ['audit'])
+  })
+
   it('loads opportunity content and matching facts without reusing the opportunity cursor', async () => {
     const calls: Array<{ action: string; input: unknown }> = []
     const page = await loadAdminReadPage('opportunities', { query: '', status: '', cursor: null, limit: 20 }, requestWith({
@@ -113,6 +152,7 @@ describe('admin read pages', () => {
     assert.equal(page.sections.length, 4)
     assert.equal(page.sections[0].rows[0].referrals, '4')
     assert.equal(page.sections[0].rows[0].roles, '狗策划')
+    assert.equal(page.sections[1].rows[0].detailId, 'COOPERATION_CARD:content-1')
     assert.equal(page.sections[2].rows[0].provider, '仅本地服务')
     assert.equal(page.nextCursor, 'next')
   })
@@ -138,11 +178,30 @@ describe('admin read pages', () => {
     assert.equal(page.sections[6].rows[0].reason, '完成个人资料')
   })
 
+  it('does not request badge management data for a growth read-only account', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const page = await loadAdminReadPage('growth', { query: '', status: '', cursor: null, limit: 20 }, requestWith({
+      'mip.admin.growth.levels': { items: [] },
+      'mip.admin.growth.benefits': { items: [] },
+      'mip.admin.growth.rules': { items: [] },
+      'mip.admin.growth.entries': { items: [] },
+      'mip.admin.growth.levelTransitions': { items: [] },
+    }, calls), {
+      hasCapability: capability => capability === 'growth.read',
+    })
+
+    assert.deepEqual(calls.map(call => call.action), [
+      'mip.admin.growth.levels', 'mip.admin.growth.benefits', 'mip.admin.growth.rules',
+      'mip.admin.growth.entries', 'mip.admin.growth.levelTransitions',
+    ])
+    assert.deepEqual(page.sections.map(section => section.title), ['等级', '等级权益', '成长规则', '成长流水', '等级变更'])
+  })
+
   it('loads operations records without deriving queue or moderation state in the browser', async () => {
     const calls: Array<{ action: string; input: unknown }> = []
-    const report = { items: [{ category: 'SPAM', description: '重复发布', status: 'PENDING', reporter: { nickname: '陈默', cityName: '深圳' }, target: { nickname: '林晓', cityName: '深圳' }, updatedAt: '2030-03-01T00:00:00.000Z' }] }
+    const report = { items: [{ id: 'report-1', version: 1, category: 'SPAM', description: '重复发布', status: 'PENDING', reporter: { nickname: '陈默', cityName: '深圳' }, target: { nickname: '林晓', cityName: '深圳' }, updatedAt: '2030-03-01T00:00:00.000Z' }] }
     const page = await loadAdminReadPage('operations', { query: '', status: 'PENDING', cursor: null, limit: 20 }, requestWith({
-      'mip.admin.announcements.list': { items: [] },
+      'mip.admin.announcements.list': { items: [{ id: 'announcement-1', version: 2, title: '服务通知', status: 'DRAFT', isPinned: false }] },
       'mip.admin.exceptions.list': { items: [] },
       'mip.admin.operations.queue.list': { items: [{ title: '投递待复核', source: 'DELIVERY_REVIEW', sourceType: 'DELIVERY_TASK', summary: '等待人工处理', reasonCode: 'TIMEOUT', occurredAt: '2030-03-01T00:00:00.000Z', state: 'PENDING' }] },
       'mip.admin.communityReports.list': report,
@@ -151,27 +210,49 @@ describe('admin read pages', () => {
     assert.deepEqual(calls.map(call => call.action), ['mip.admin.communityReports.list', 'mip.admin.announcements.list', 'mip.admin.exceptions.list', 'mip.admin.operations.queue.list'])
     assert.deepEqual(calls[0].input, { status: 'PENDING', limit: 20 })
     assert.equal(page.sections.length, 4)
+    assert.equal(page.sections[0].rows[0].rowActions?.[0]?.action, 'mip.admin.announcements.publish')
     assert.equal(page.sections[1].rows[0].category, '垃圾信息')
+    assert.equal(page.sections[1].rows[0].rowActions?.[0]?.action, 'mip.admin.communityReports.claim')
     assert.equal(page.sections[3].rows[0].state, '待处理')
     assert.equal(page.sections[3].rows[0].reason, '处理超时')
   })
 
-  it('uses only the reviewed message campaign query for the message page', async () => {
+  it('keeps an announcement-only operations page independent from forbidden subqueries', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const page = await loadAdminReadPage('operations', { query: '', status: '', cursor: null, limit: 20 }, requestWith({
+      'mip.admin.announcements.list': { items: [] },
+    }, calls), {
+      hasCapability: capability => capability === 'announcements.manage',
+    })
+
+    assert.deepEqual(calls.map(call => call.action), ['mip.admin.announcements.list'])
+    assert.deepEqual(page.sections.map(section => section.key), ['announcements'])
+  })
+
+  it('loads message campaigns and templates with status filters valid for each service', async () => {
     const calls: Array<{ action: string; input: unknown }> = []
     const page = await loadAdminReadPage('messages', query, requestWith({
       'mip.admin.messageCampaigns.list': {
         items: [{ id: 'campaign-1', title: '报名提醒', audienceType: 'EXPLICIT', recipientCount: 24, scopeType: 'BRANCH', branchName: '福田分会', updatedAt: '2030-03-01T00:00:00.000Z', status: 'READY' }],
         nextCursor: null,
       },
+      'mip.admin.messageTemplates.list': {
+        items: [{ id: 'template-1', version: 3, name: '活动提醒', title: '报名提醒', scopeType: 'PLATFORM', contentSafetyStatus: 'APPROVED', updatedAt: '2030-03-01T00:00:00.000Z', status: 'DRAFT' }],
+        nextCursor: null,
+      },
     }, calls))
 
-    assert.deepEqual(calls, [{
-      action: 'mip.admin.messageCampaigns.list',
-      input: { query: '早会', status: 'PUBLISHED', limit: 20 },
-    }])
+    assert.deepEqual(calls, [
+      { action: 'mip.admin.messageCampaigns.list', input: { query: '早会', status: 'PUBLISHED', limit: 20 } },
+      { action: 'mip.admin.messageTemplates.list', input: { query: '早会', status: '', limit: 20 } },
+    ])
+    assert.deepEqual(page.sections.map(section => section.key), ['campaigns', 'templates'])
     assert.equal(page.sections[0].rows[0].audience, '24 人')
     assert.equal(page.sections[0].rows[0].scope, '福田分会')
     assert.equal(page.sections[0].rows[0].detailId, 'campaign-1')
+    assert.deepEqual(page.sections[1].rows[0].rowActions?.map(item => item.action), [
+      'mip.admin.messageTemplates.activate', 'mip.admin.messageTemplates.archive',
+    ])
   })
 
   it('requests the knowledge content section and maps nested category data', async () => {

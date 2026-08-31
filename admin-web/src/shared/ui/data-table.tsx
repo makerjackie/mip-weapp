@@ -35,7 +35,7 @@ export function DataTable({ label, rows, columns, onView, renderActions }: {
       <Table<AdminTableRow>
         size="middle"
         pagination={false}
-        rowKey={(row, index) => String(row.detailId || row.id || `${label}-${index}`)}
+        rowKey={row => stableRowKey(row, label)}
         columns={tableColumns}
         dataSource={rows}
         scroll={{ x: 'max-content' }}
@@ -43,4 +43,10 @@ export function DataTable({ label, rows, columns, onView, renderActions }: {
       />
     </div>
   )
+}
+
+function stableRowKey(row: AdminTableRow, prefix: string) {
+  const id = row.detailId || row.id || row.key
+  if (id) return String(id)
+  return `${prefix}:${JSON.stringify(row, (key, value) => key === 'rowActions' ? undefined : value)}`
 }

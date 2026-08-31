@@ -37,6 +37,16 @@ describe('admin detail views', () => {
     assert.equal(detail.sections.find(section => section.title === '业务记录')?.metrics?.find(item => item.label === '订单')?.value, '2')
   })
 
+  it('does not request membership detail when the session lacks membership read access', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const detail = await loadAdminDetail('users', 'user-1', requestWith({
+      'mip.admin.users.get': { id: 'user-1', nickname: '林晓', kind: 'PLAYER', status: 'ACTIVE' },
+    }, calls), { includeUserMembership: false })
+
+    assert.deepEqual(calls.map(call => call.action), ['mip.admin.users.get'])
+    assert.equal(detail.title, '林晓')
+  })
+
   it('aggregates event detail, insights and roster from their read actions', async () => {
     const calls: Array<{ action: string; input: unknown }> = []
     const detail = await loadAdminDetail('events', 'event-1', requestWith({
@@ -57,19 +67,19 @@ describe('admin detail views', () => {
       },
       'mip.admin.events.roster': {
         items: [{ id: 'registration-1', version: 2, nickname: '周宁', cityName: '深圳', phoneBound: true, submittedAt: '2030-03-01T00:00:00.000Z', checkedInAt: null, status: 'REGISTERED' }],
-        nextCursor: null,
+        nextCursor: 'roster-cursor-3',
       },
       'mip.admin.events.album.list': {
         items: [{ id: 'photo-1', version: 3, nickname: '林晓', caption: '活动合影', createdAt: '2030-03-14T04:00:00.000Z', status: 'PENDING' }],
         nextCursor: null,
       },
-    }, calls), { includeEventAlbum: true })
+    }, calls), { includeEventAlbum: true, eventRoster: { cursor: 'roster-cursor-2', limit: 10 } })
 
     assert.deepEqual(calls.map(call => call.action), [
       'mip.admin.events.get', 'mip.admin.events.insights.get', 'mip.admin.events.roster',
       'mip.admin.events.album.list',
     ])
-    assert.deepEqual(calls[2].input, { eventId: 'event-1', includePhone: false, limit: 20 })
+    assert.deepEqual(calls[2].input, { eventId: 'event-1', includePhone: false, limit: 10, cursor: 'roster-cursor-2' })
     assert.deepEqual(calls[3].input, { eventId: 'event-1', status: 'PENDING', limit: 20 })
     assert.equal(detail.sections.find(section => section.title === '活动信息')?.fields?.find(item => item.label === '价格')?.value, '¥188.00')
     assert.equal(detail.sections.find(section => section.title === '参与情况')?.metrics?.find(item => item.label === '签到率')?.value, '66.67%')
@@ -79,6 +89,9 @@ describe('admin detail views', () => {
       action: 'mip.admin.events.checkIn', label: '签到', targetId: 'event-1',
       values: { eventId: 'event-1', registrationId: 'registration-1', expectedVersion: 2 },
     }])
+    assert.deepEqual(detail.sections.find(section => section.title === '报名名单')?.pager, {
+      key: 'eventRoster', query: '', currentCursor: 'roster-cursor-2', nextCursor: 'roster-cursor-3', placeholder: '报名名单',
+    })
     const photo = detail.sections.find(section => section.title === '待审核相册')?.rows?.[0]
     assert.equal(photo?.caption, '活动合影')
     assert.equal(photo?.rowActions?.[0]?.action, 'mip.admin.events.album.review')
@@ -154,6 +167,22 @@ describe('admin detail views', () => {
     assert.equal(detail.sections.find(section => section.title.startsWith('投递复核'))?.rows?.[0].classification, '成功')
   })
 
+  it('keeps message detail usable without delivery review capability', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const detail = await loadAdminDetail('messages', 'campaign-1', requestWith({
+      'mip.admin.messageCampaigns.get': {
+        id: 'campaign-1', title: '报名提醒', audienceType: 'ALL', recipientCount: 0,
+        deliveryStats: {}, activeDispatch: null,
+      },
+      'mip.admin.messageDeliveryRecords.list': { items: [], nextCursor: null },
+    }, calls), { includeMessageDeliveryReviews: false })
+
+    assert.deepEqual(calls.map(call => call.action), [
+      'mip.admin.messageCampaigns.get', 'mip.admin.messageDeliveryRecords.list',
+    ])
+    assert.equal(detail.sections.some(section => section.title.startsWith('投递复核')), false)
+  })
+
   it('loads an opportunity with its own comments instead of a list-selected record', async () => {
     const calls: Array<{ action: string; input: unknown }> = []
     const detail = await loadAdminDetail('opportunities', 'opportunity-1', requestWith({
@@ -181,6 +210,28 @@ describe('admin detail views', () => {
     assert.equal(detail.sections.find(section => section.title === '机会信息')?.fields?.find(item => item.label === '合作角色')?.value, '狗策划')
     assert.equal(detail.sections.find(section => section.title === '评论与评价')?.rows?.[0].body, '愿意沟通')
     assert.equal(detail.sections.find(section => section.title === '操作记录')?.rows?.[0].action, '发布机会')
+  })
+
+  it('loads a typed user-content detail from its composite list reference', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const detail = await loadAdminDetail('userContent', 'COOPERATION_CARD:card-1', requestWith({
+      'mip.admin.userContent.get': {
+        id: 'card-1', kind: 'COOPERATION_CARD', status: 'PUBLISHED', contentSafetyStatus: 'APPROVED', version: 3,
+        owner: { userId: 'user-1', nickname: '周宁', branchName: '福田分会', cityName: '深圳' },
+        roleKey: 'connector', positioning: '链接产业资源', targetSummary: '寻找合作伙伴',
+        roleFields: { circles: ['消费品牌'], resources: '渠道资源', target: '品牌合作' },
+        abilityScores: { business_development: 4 }, moderationHistory: [],
+        updatedAt: '2030-03-02T00:00:00.000Z', publishedAt: '2030-03-01T00:00:00.000Z',
+      },
+    }, calls))
+
+    assert.deepEqual(calls, [{
+      action: 'mip.admin.userContent.get', input: { kind: 'COOPERATION_CARD', contentId: 'card-1' },
+    }])
+    assert.equal(detail.route, 'userContent')
+    assert.equal(detail.title, '链接产业资源')
+    assert.equal(detail.source?.userContent && (detail.source.userContent as { version: number }).version, 3)
+    assert.match(detail.sections.find(section => section.title === '合作卡内容')?.fields?.find(field => field.label === '角色信息')?.value || '', /品牌合作/)
   })
 
   it('loads knowledge content and keeps schedule data explicitly read-only', async () => {

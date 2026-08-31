@@ -8,6 +8,7 @@ import {
   OrdersPage,
   OverviewPage,
   UsersPage,
+  type CorePageMutationIntent,
   type CorePageSearchState,
 } from '../features/core-pages'
 import {
@@ -70,7 +71,11 @@ function CoreRoutePage({ route }: { route: CoreRoute }) {
     onSearchChange: (next: CorePageSearchState) => void updateSearch(next),
     onPreviousPage: search.page && search.page > 1 ? () => router.history.back() : undefined,
     onOpenDetail: (intent: { route: AdminDetailRoute; id: string }) => detail.openDetail(intent.route, intent.id),
-    onMutation: (intent: { action: string; targetId: string }) => void launch(intent.action, intent.targetId),
+    onMutation: (intent: CorePageMutationIntent) => void launch(intent.action, intent.targetId, null, {
+      values: intent.values,
+      expectedVersion: intent.expectedVersion,
+      allowedCapabilities: intent.allowedCapabilities,
+    }),
     onSensitiveExport: (intent: { kind: 'users' | 'orders'; filters: { query: string; status: string } }) => setExportIntent({
       kind: intent.kind, query: intent.filters.query, status: intent.filters.status,
     }),
@@ -111,7 +116,7 @@ function OperationsRoutePage({ route }: { route: OperationsRoute }) {
   const detail = useAdminDetail()
   const query = listQuery(search)
   const result = useAdminReadPage(route, query)
-  const canWrite = demoMode || operationRouteCapabilities[route].some(hasCapability)
+  const canWrite = demoMode || operationRouteWriteCapabilities[route].some(hasCapability)
   const onWrite = canWrite ? (intent: OperationsWriteIntent) => void launch(intent.action, intent.targetId, detail.view, {
     values: intent.values,
     expectedVersion: intent.expectedVersion,
@@ -277,6 +282,7 @@ function RouteDetailLayer({ detail, onMediaUpload }: {
       onClose={detail.closeDetail}
       onRowAction={operation => void handleRowAction(operation)}
       onNestedView={(target, row) => detail.openDetail(target, String(row.detailId || ''))}
+      onPagerChange={detail.changeDetailPage}
     />
   )
 }
@@ -299,6 +305,14 @@ const operationRouteCapabilities: Record<OperationsRoute, string[]> = {
   banners: ['banners.manage'],
   game: ['game.manage'],
   opportunities: ['opportunities.moderate', 'userContent.moderate'],
+  growth: ['growth.read', 'growth.adjust', 'badges.manage'],
+}
+
+const operationRouteWriteCapabilities: Record<OperationsRoute, string[]> = {
+  tasks: ['tasks.manage'],
+  banners: ['banners.manage'],
+  game: ['game.manage'],
+  opportunities: ['opportunities.moderate', 'userContent.moderate'],
   growth: ['growth.adjust', 'badges.manage'],
 }
 
@@ -306,7 +320,7 @@ const governanceRouteCapabilities: Record<GovernanceRoute, string[]> = {
   permissions: ['roles.change', 'branches.manage', 'audit.read'],
   messages: ['messages.manage'],
   knowledge: ['knowledge.manage'],
-  operations: ['announcements.manage', 'community.reports.manage', 'operations.exceptions.read'],
+  operations: ['announcements.manage', 'community.reports.manage', 'operations.exceptions.read', 'messages.delivery.review'],
 }
 
 export const routeComponents = {

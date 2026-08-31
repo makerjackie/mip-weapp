@@ -17,20 +17,31 @@ import {
   type AdminOperationRow,
 } from './admin-row-operations.ts'
 
-export type AdminDetailRoute = 'users' | 'events' | 'orders' | 'tasks' | 'taskCompletions' | 'banners' | 'gameSeasons' | 'gameTeams' | 'gameCatalogs' | 'messages' | 'knowledge' | 'opportunities'
+export type AdminDetailRoute = 'users' | 'events' | 'orders' | 'tasks' | 'taskCompletions' | 'banners' | 'gameSeasons' | 'gameTeams' | 'gameCatalogs' | 'messages' | 'knowledge' | 'opportunities' | 'userContent'
 export type AdminDetailRow = AdminOperationRow
 
+export interface AdminEventRosterPageQuery {
+  cursor?: string | null
+  limit?: number
+}
+
 export interface AdminDetailOptions {
+  includeUserMembership?: boolean
+  includeEventRoster?: boolean
   includeEventAlbum?: boolean
+  includeMessageDeliveryReviews?: boolean
+  includeOpportunityComments?: boolean
+  eventRoster?: AdminEventRosterPageQuery
   task?: TaskDetailLoadOptions
   gameMembers?: GameMemberPageQuery
 }
 
-export type AdminDetailPagerKey = 'taskMembers' | 'taskCompletions' | 'gameMembers'
+export type AdminDetailPagerKey = 'eventRoster' | 'taskMembers' | 'taskCompletions' | 'gameMembers'
 
 export interface AdminDetailPager {
   key: AdminDetailPagerKey
   query: string
+  currentCursor: string | null
   nextCursor: string | null
   placeholder: string
 }
@@ -67,7 +78,7 @@ export async function loadAdminDetail(
   request: AdminDetailRequest,
   options: AdminDetailOptions = {},
 ): Promise<AdminDetailView> {
-  if (route === 'users') return loadUserDetail(id, request)
+  if (route === 'users') return loadUserDetail(id, request, options)
   if (route === 'events') return loadEventDetail(id, request, options)
   if (route === 'orders') return loadOrderDetail(id, request)
   if (route === 'tasks') return loadTaskDetail(id, request, options.task)
@@ -76,15 +87,18 @@ export async function loadAdminDetail(
   if (route === 'gameSeasons') return loadGameSeasonDetail(id, request)
   if (route === 'gameTeams') return loadGameTeamDetail(id, request, options.gameMembers)
   if (route === 'gameCatalogs') return loadGameCatalogDetail(id, request)
-  if (route === 'messages') return loadMessageDetail(id, request)
-  if (route === 'opportunities') return loadOpportunityDetail(id, request)
+  if (route === 'messages') return loadMessageDetail(id, request, options)
+  if (route === 'opportunities') return loadOpportunityDetail(id, request, options)
+  if (route === 'userContent') return loadUserContentDetail(id, request)
   return loadKnowledgeDetail(id, request)
 }
 
-async function loadUserDetail(userId: string, request: AdminDetailRequest): Promise<AdminDetailView> {
+async function loadUserDetail(userId: string, request: AdminDetailRequest, options: AdminDetailOptions): Promise<AdminDetailView> {
   const [userValue, membershipValue] = await Promise.all([
     request('mip.admin.users.get', { userId, includePhone: false }),
-    request('mip.admin.memberships.get', { userId }),
+    options.includeUserMembership === false
+      ? Promise.resolve(null)
+      : request('mip.admin.memberships.get', { userId }),
   ])
   const user = record(userValue)
   const membershipDetail = record(membershipValue)
@@ -198,10 +212,24 @@ async function loadEventDetail(
   request: AdminDetailRequest,
   options: AdminDetailOptions,
 ): Promise<AdminDetailView> {
+  const rosterCursor = typeof options.eventRoster?.cursor === 'string'
+    && options.eventRoster.cursor.length <= 512
+    ? options.eventRoster.cursor
+    : null
+  const rosterLimit = Number.isSafeInteger(options.eventRoster?.limit)
+    ? Math.max(1, Math.min(Number(options.eventRoster?.limit), 100))
+    : 20
   const [eventValue, insightsValue, rosterValue, albumValue] = await Promise.all([
     request('mip.admin.events.get', { eventId }),
     request('mip.admin.events.insights.get', { eventId }),
-    request('mip.admin.events.roster', { eventId, includePhone: false, limit: 20 }),
+    options.includeEventRoster === false
+      ? Promise.resolve({ items: [], nextCursor: null })
+      : request('mip.admin.events.roster', {
+          eventId,
+          includePhone: false,
+          limit: rosterLimit,
+          ...(rosterCursor ? { cursor: rosterCursor } : {}),
+        }),
     options.includeEventAlbum
       ? request('mip.admin.events.album.list', { eventId, status: 'PENDING', limit: 20 })
       : Promise.resolve({ items: [], nextCursor: null }),
@@ -215,6 +243,7 @@ async function loadEventDetail(
   const financials = record(insights.financials)
   const feedback = record(insights.feedback)
   const roster = pageRecords(rosterValue)
+  const rosterPage = record(rosterValue)
   const pendingAlbum = pageRecords(albumValue)
   const sections: AdminDetailSection[] = [
     {
@@ -261,21 +290,32 @@ async function loadEventDetail(
     },
   ]
   sections.push(financialSection(financials), feedbackSection(feedback))
-  sections.push({
-    title: '报名名单（前 20 条）',
-    rows: roster.map(item => ({
-      registrationId: text(item.id, text(item.registrationId)),
-      version: numberText(item.version),
-      name: text(item.nickname),
-      city: text(item.cityName),
-      phone: item.phoneBound === true ? '已绑定' : '未绑定',
-      submittedAt: dateTime(item.submittedAt),
-      checkedInAt: dateTime(item.checkedInAt),
-      state: codeLabel(item.status),
-      rowActions: eventRegistrationRowActions(eventId, item),
-    })),
-    columns: columns([['name', '姓名'], ['city', '城市'], ['phone', '手机状态'], ['submittedAt', '报名时间'], ['checkedInAt', '签到时间'], ['state', '状态']]),
-  })
+  if (options.includeEventRoster !== false) {
+    sections.push({
+      title: '报名名单',
+      rows: roster.map(item => ({
+        registrationId: text(item.id, text(item.registrationId)),
+        version: numberText(item.version),
+        name: text(item.nickname),
+        city: text(item.cityName),
+        phone: item.phoneBound === true ? '已绑定' : '未绑定',
+        submittedAt: dateTime(item.submittedAt),
+        checkedInAt: dateTime(item.checkedInAt),
+        state: codeLabel(item.status),
+        rowActions: eventRegistrationRowActions(eventId, item),
+      })),
+      columns: columns([['name', '姓名'], ['city', '城市'], ['phone', '手机状态'], ['submittedAt', '报名时间'], ['checkedInAt', '签到时间'], ['state', '状态']]),
+      pager: {
+        key: 'eventRoster',
+        query: '',
+        currentCursor: rosterCursor,
+        nextCursor: typeof rosterPage.nextCursor === 'string' && rosterPage.nextCursor
+          ? rosterPage.nextCursor
+          : null,
+        placeholder: '报名名单',
+      },
+    })
+  }
   if (options.includeEventAlbum) {
     sections.push({
       title: '待审核相册',
@@ -297,7 +337,7 @@ async function loadEventDetail(
     subtitle: [text(event.cityName, ''), text(event.venueName, '')].filter(Boolean).join(' · '),
     status: codeLabel(event.status),
     sections,
-    source: { event, roster, pendingAlbum },
+    source: { event, roster, rosterPage, pendingAlbum },
   }
 }
 
@@ -400,11 +440,11 @@ async function loadOrderDetail(orderId: string, request: AdminDetailRequest): Pr
   }
 }
 
-async function loadMessageDetail(campaignId: string, request: AdminDetailRequest): Promise<AdminDetailView> {
+async function loadMessageDetail(campaignId: string, request: AdminDetailRequest, options: AdminDetailOptions): Promise<AdminDetailView> {
   const campaign = record(await request('mip.admin.messageCampaigns.get', { campaignId }))
   const title = text(campaign.title, text(campaign.name, '消息活动'))
   const [reviewPage, deliveryPage] = await Promise.all([
-    request('mip.admin.messageDeliveryReviews.list', {
+    options.includeMessageDeliveryReviews === false ? Promise.resolve({ items: [], nextCursor: null }) : request('mip.admin.messageDeliveryReviews.list', {
       sourceType: 'CAMPAIGN_DISPATCH',
       workflowStatus: 'ALL',
       limit: 20,
@@ -416,9 +456,11 @@ async function loadMessageDetail(campaignId: string, request: AdminDetailRequest
   ])
   const reviews = pageRecords(reviewPage)
     .filter(item => record(item.evidence).campaignRef && record(record(item.evidence).campaignRef).id === campaignId)
-  const reviewDetails = await Promise.all(reviews.slice(0, 5).map(item => (
-    request('mip.admin.messageDeliveryReviews.get', { resourceRef: item.resourceRef })
-  )))
+  const reviewDetails = options.includeMessageDeliveryReviews === false
+    ? []
+    : await Promise.all(reviews.slice(0, 5).map(item => (
+        request('mip.admin.messageDeliveryReviews.get', { resourceRef: item.resourceRef })
+      )))
   const stats = record(campaign.deliveryStats)
   const outbox = record(stats.outboxStats)
   const external = record(stats.externalTaskStats)
@@ -484,27 +526,29 @@ async function loadMessageDetail(campaignId: string, request: AdminDetailRequest
       ['attempts', '尝试次数'], ['occurredAt', '发生时间'], ['error', '错误'],
     ]),
   })
-  sections.push({
-    title: '投递复核（当前可见）',
-    rows: reviewDetails.map(value => {
-      const item = record(value)
-      const source = record(item.sourceState)
-      const workflow = record(item.workflow)
-      return {
-        source: codeLabel(record(item.resourceRef).type),
-        classification: codeLabel(item.classification),
-        state: codeLabel(workflow.status),
-        sourceState: codeLabel(source.status),
-        attempts: numberText(source.attempts),
-        occurredAt: dateTime(source.occurredAt),
-        error: text(source.lastErrorCode),
-      }
-    }),
-    columns: columns([
-      ['source', '来源'], ['classification', '分类'], ['state', '复核状态'], ['sourceState', '投递状态'],
-      ['attempts', '尝试次数'], ['occurredAt', '发生时间'], ['error', '错误'],
-    ]),
-  })
+  if (options.includeMessageDeliveryReviews !== false) {
+    sections.push({
+      title: '投递复核（当前可见）',
+      rows: reviewDetails.map(value => {
+        const item = record(value)
+        const source = record(item.sourceState)
+        const workflow = record(item.workflow)
+        return {
+          source: codeLabel(record(item.resourceRef).type),
+          classification: codeLabel(item.classification),
+          state: codeLabel(workflow.status),
+          sourceState: codeLabel(source.status),
+          attempts: numberText(source.attempts),
+          occurredAt: dateTime(source.occurredAt),
+          error: text(source.lastErrorCode),
+        }
+      }),
+      columns: columns([
+        ['source', '来源'], ['classification', '分类'], ['state', '复核状态'], ['sourceState', '投递状态'],
+        ['attempts', '尝试次数'], ['occurredAt', '发生时间'], ['error', '错误'],
+      ]),
+    })
+  }
   return {
     route: 'messages',
     title,
@@ -515,10 +559,11 @@ async function loadMessageDetail(campaignId: string, request: AdminDetailRequest
   }
 }
 
-async function loadOpportunityDetail(opportunityId: string, request: AdminDetailRequest): Promise<AdminDetailView> {
+async function loadOpportunityDetail(opportunityId: string, request: AdminDetailRequest, options: AdminDetailOptions): Promise<AdminDetailView> {
   const opportunity = record(await request('mip.admin.opportunities.get', { opportunityId }))
   let commentState: AdminDetailRow | null = null
   try {
+    if (options.includeOpportunityComments === false) throw new Error('COMMENTS_NOT_REQUESTED')
     commentState = record(await request('mip.admin.opportunityComments.get', { opportunityId }))
   }
   catch {
@@ -596,6 +641,75 @@ async function loadOpportunityDetail(opportunityId: string, request: AdminDetail
     status: codeLabel(opportunity.status),
     sections,
     source: { opportunity, commentState: commentState || {} },
+  }
+}
+
+async function loadUserContentDetail(reference: string, request: AdminDetailRequest): Promise<AdminDetailView> {
+  const separator = reference.indexOf(':')
+  const kind = separator > 0 ? reference.slice(0, separator) : ''
+  const contentId = separator > 0 ? reference.slice(separator + 1) : ''
+  if (!['COOPERATION_CARD', 'SUPER_CASE'].includes(kind) || !contentId) throw new Error('用户内容标识无效')
+  const item = record(await request('mip.admin.userContent.get', { kind, contentId }))
+  const owner = record(item.owner)
+  const sections: AdminDetailSection[] = [{
+    title: '基本信息',
+    fields: fields([
+      ['内容类型', codeLabel(item.kind)],
+      ['归属用户', text(owner.nickname)],
+      ['所属服务器', text(owner.branchName)],
+      ['城市', text(owner.cityName)],
+      ['状态', codeLabel(item.status)],
+      ['内容安全', codeLabel(item.contentSafetyStatus)],
+      ['版本', numberText(item.version)],
+      ['发布时间', dateTime(item.publishedAt)],
+      ['更新时间', dateTime(item.updatedAt)],
+    ]),
+  }]
+  if (kind === 'COOPERATION_CARD') {
+    sections.push({
+      title: '合作卡内容',
+      fields: fields([
+        ['合作角色', codeLabel(item.roleKey)],
+        ['合作定位', text(item.positioning)],
+        ['合作目标', text(item.targetSummary)],
+        ['角色信息', keyValueText(item.roleFields)],
+        ['能力评分', keyValueText(item.abilityScores)],
+      ]),
+    })
+  }
+  else {
+    sections.push({
+      title: '案例内容',
+      fields: fields([
+        ['项目名称', text(item.projectName)],
+        ['案例摘要', text(item.summary)],
+        ['项目时间', [text(item.startedOn, ''), text(item.endedOn, '')].filter(Boolean).join(' — ') || '—'],
+        ['项目责任', text(item.responsibility)],
+        ['城市', text(item.cityLabel)],
+        ['行业', text(item.industryLabel)],
+        ['案例类型', text(item.caseType)],
+        ['案例说明', text(item.description)],
+        ['案例素材', numberText(records(item.media).length)],
+      ]),
+    })
+  }
+  sections.push({
+    title: '操作记录',
+    rows: records(item.moderationHistory).map(history => ({
+      action: codeLabel(history.action),
+      actor: text(history.actorNickname),
+      reason: text(history.reason),
+      createdAt: dateTime(history.createdAt),
+    })),
+    columns: columns([['action', '操作'], ['actor', '操作人'], ['reason', '原因'], ['createdAt', '时间']]),
+  })
+  return {
+    route: 'userContent',
+    title: text(item.projectName, text(item.positioning, '用户内容')),
+    subtitle: [text(owner.nickname, ''), text(owner.branchName, '')].filter(Boolean).join(' · '),
+    status: codeLabel(item.status),
+    sections,
+    source: { userContent: item },
   }
 }
 
@@ -735,6 +849,12 @@ function columns(entries: Array<[string, string]>) {
 
 function text(value: unknown, fallback = '—') {
   return value === undefined || value === null || value === '' ? fallback : String(value)
+}
+
+function keyValueText(value: unknown) {
+  const entries = Object.entries(record(value))
+  if (!entries.length) return '—'
+  return entries.map(([key, item]) => `${key}: ${Array.isArray(item) ? item.join('、') : text(item)}`).join('；')
 }
 
 function numberText(value: unknown) {

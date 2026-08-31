@@ -78,6 +78,81 @@ describe('core admin pages', () => {
     expect(page.sections[0].rows[0].detailId).toBe('USR-1001')
   })
 
+  it('keeps event policy and catalog operations reachable with their server-projected context', async () => {
+    const user = userEvent.setup()
+    const onMutation = vi.fn()
+    const page: AdminReadPage = {
+      sections: [
+        { key: 'events', title: '活动', rows: [], columns: [{ key: 'title', label: '活动名称' }] },
+        {
+          key: 'policy',
+          title: '活动政策',
+          detailTarget: null,
+          rows: [{
+            cancellation: '24 小时',
+            version: '0',
+            rowActions: [{
+              action: 'mip.admin.events.policy.save',
+              label: '编辑政策',
+              values: { expectedVersion: 0, cancellationHoursBeforeStart: 24 },
+            }],
+          }],
+          columns: [{ key: 'cancellation', label: '默认取消提前时间' }],
+        },
+        {
+          key: 'event-types',
+          title: '活动类型',
+          detailTarget: null,
+          rows: [{
+            name: '工作坊',
+            rowActions: [{
+              action: 'mip.admin.events.catalog.save',
+              label: '编辑',
+              targetId: 'catalog-1',
+              values: {
+                kind: 'TYPE', catalogId: 'catalog-1', expectedVersion: 2,
+                name: '工作坊', description: '互动活动', sortOrder: 10,
+              },
+            }],
+          }],
+          columns: [{ key: 'name', label: '名称' }],
+        },
+      ],
+      nextCursor: null,
+    }
+
+    render(
+      <CoreListPageView
+        route="events"
+        search={{ q: '', status: '' }}
+        page={page}
+        canManageEventCatalog
+        canWriteEventPolicy
+        onSearchChange={vi.fn()}
+        onOpenDetail={vi.fn()}
+        onMutation={onMutation}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /新建活动目录/ }))
+    expect(onMutation).toHaveBeenCalledWith({ action: 'mip.admin.events.catalog.save', targetId: '' })
+    await user.click(screen.getByRole('button', { name: '编辑政策' }))
+    expect(onMutation).toHaveBeenCalledWith({
+      action: 'mip.admin.events.policy.save',
+      targetId: '',
+      values: { expectedVersion: 0, cancellationHoursBeforeStart: 24 },
+    })
+    await user.click(screen.getByRole('button', { name: '编辑' }))
+    expect(onMutation).toHaveBeenLastCalledWith({
+      action: 'mip.admin.events.catalog.save',
+      targetId: 'catalog-1',
+      values: {
+        kind: 'TYPE', catalogId: 'catalog-1', expectedVersion: 2,
+        name: '工作坊', description: '互动活动', sortOrder: 10,
+      },
+    })
+  })
+
   it('renders overview gaps and delegates quick actions', async () => {
     const user = userEvent.setup()
     const onNavigate = vi.fn()

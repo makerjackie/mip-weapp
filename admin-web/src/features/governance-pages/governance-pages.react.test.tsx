@@ -53,6 +53,53 @@ describe('governance React pages', () => {
     expect(onViewDetail).toHaveBeenCalledWith({ route: 'messages', id: 'campaign-1' })
   }, 15_000)
 
+  it('creates and operates message templates through reviewed actions', () => {
+    const onMutationRequest = vi.fn()
+    const page: AdminReadPage = {
+      sections: [
+        { key: 'campaigns', title: '消息活动', rows: [], columns: [{ key: 'title', label: '消息标题' }] },
+        {
+          key: 'templates',
+          title: '消息模板',
+          rows: [{
+            name: '活动提醒',
+            rowActions: [{
+              action: 'mip.admin.messageTemplates.activate',
+              label: '启用',
+              targetId: 'template-1',
+              values: { templateId: 'template-1', expectedVersion: 3 },
+            }],
+          }],
+          columns: [{ key: 'name', label: '模板名称' }],
+        },
+      ],
+      nextCursor: null,
+    }
+
+    render(
+      <MessagesPage
+        {...commonProps}
+        activeTab="templates"
+        page={page}
+        routeDefinition={getAdminReadRouteDefinition('messages')}
+        onMutationRequest={onMutationRequest}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '新建消息模板' }))
+    expect(onMutationRequest).toHaveBeenCalledWith({
+      action: 'mip.admin.messageTemplates.save',
+      capability: 'messages.manage',
+    })
+    fireEvent.click(screen.getByRole('button', { name: '启用' }))
+    expect(onMutationRequest).toHaveBeenLastCalledWith({
+      action: 'mip.admin.messageTemplates.activate',
+      capability: 'messages.manage',
+      targetId: 'template-1',
+      values: { templateId: 'template-1', expectedVersion: 3 },
+    })
+  }, 15_000)
+
   it('preserves reviewed permission row operation context', () => {
     const onMutationRequest = vi.fn()
     const page: AdminReadPage = {
@@ -148,4 +195,75 @@ describe('governance React pages', () => {
     fireEvent.click(screen.getByRole('tab', { name: '社区举报' }))
     expect(onTabChange).toHaveBeenCalledWith('reports')
   })
+
+  it('preserves announcement and report identifiers and versions in row operations', () => {
+    const onMutationRequest = vi.fn()
+    const page: AdminReadPage = {
+      sections: [
+        {
+          key: 'announcements',
+          title: '公告',
+          rows: [{
+            title: '服务通知',
+            rowActions: [{
+              action: 'mip.admin.announcements.publish',
+              label: '发布',
+              targetId: 'announcement-1',
+              values: { announcementId: 'announcement-1', expectedVersion: 2 },
+            }],
+          }],
+          columns: [{ key: 'title', label: '标题' }],
+        },
+        {
+          key: 'reports',
+          title: '社区举报',
+          rows: [{
+            description: '重复发布',
+            rowActions: [{
+              action: 'mip.admin.communityReports.close',
+              label: '结案',
+              targetId: 'report-1',
+              values: { reportId: 'report-1', expectedVersion: 4, outcome: 'RESOLVED', reason: '' },
+            }],
+          }],
+          columns: [{ key: 'description', label: '描述' }],
+        },
+      ],
+      nextCursor: null,
+    }
+    const { rerender } = render(
+      <OperationsPage
+        {...commonProps}
+        activeTab="announcements"
+        page={page}
+        routeDefinition={getAdminReadRouteDefinition('operations')}
+        onMutationRequest={onMutationRequest}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '发布' }))
+    expect(onMutationRequest).toHaveBeenLastCalledWith({
+      action: 'mip.admin.announcements.publish',
+      capability: 'announcements.manage',
+      targetId: 'announcement-1',
+      values: { announcementId: 'announcement-1', expectedVersion: 2 },
+    })
+
+    rerender(
+      <OperationsPage
+        {...commonProps}
+        activeTab="reports"
+        page={page}
+        routeDefinition={getAdminReadRouteDefinition('operations')}
+        onMutationRequest={onMutationRequest}
+      />,
+    )
+    fireEvent.click(screen.getByRole('button', { name: '结案' }))
+    expect(onMutationRequest).toHaveBeenLastCalledWith({
+      action: 'mip.admin.communityReports.close',
+      capability: 'community.reports.manage',
+      targetId: 'report-1',
+      values: { reportId: 'report-1', expectedVersion: 4, outcome: 'RESOLVED', reason: '' },
+    })
+  }, 15_000)
 })

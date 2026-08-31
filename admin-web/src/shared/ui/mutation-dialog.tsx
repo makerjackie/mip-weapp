@@ -1,6 +1,6 @@
-import { Alert, Checkbox, DatePicker, Form, Input, InputNumber, Modal, Select } from 'antd'
+import { Alert, Checkbox, DatePicker, Form, Input, InputNumber, Modal, Select, type FormInstance } from 'antd'
 import dayjs from 'dayjs'
-import type { OperationField, OperationValues } from '../../modules/admin-operation-ui'
+import { operationFieldVisible, type OperationField, type OperationValues } from '../../modules/admin-operation-ui'
 
 function fieldName(field: OperationField) { return String(field.name || field.key || '') }
 
@@ -18,8 +18,9 @@ function controlFor(field: OperationField) {
   return <Input maxLength={field.maxLength} type={field.kind === 'url' ? 'url' : 'text'} />
 }
 
-function OperationFields({ fields, prefix = [] }: { fields: readonly OperationField[]; prefix?: string[] }) {
-  return fields.filter(field => !field.hidden).map((field) => {
+function OperationFields({ fields, form, prefix = [] }: { fields: readonly OperationField[]; form: FormInstance<OperationValues>; prefix?: string[] }) {
+  const watchedValues = Form.useWatch([], form) || form.getFieldsValue(true)
+  return fields.filter(field => !field.hidden && operationFieldVisible(field, watchedValues)).map((field) => {
     const name = fieldName(field)
     if (!name) return null
     const path = [...prefix, name]
@@ -27,7 +28,7 @@ function OperationFields({ fields, prefix = [] }: { fields: readonly OperationFi
       return (
         <fieldset className="mutation-fieldset" key={name}>
           <legend>{field.label}</legend>
-          <OperationFields fields={field.fields || []} prefix={path} />
+          <OperationFields fields={field.fields || []} form={form} prefix={path} />
         </fieldset>
       )
     }
@@ -82,7 +83,7 @@ export function MutationDialog({ open, title, description, fields, values, loadi
       okText="确认提交"
       cancelText="取消"
       confirmLoading={loading}
-      maskClosable={!loading}
+      mask={{ closable: !loading }}
       keyboard={!loading}
       onCancel={onCancel}
       onOk={() => void form.validateFields().then(onSubmit)}
@@ -90,7 +91,7 @@ export function MutationDialog({ open, title, description, fields, values, loadi
     >
       <p className="mutation-description">{description}</p>
       <Form form={form} layout="vertical" initialValues={formValues(fields, values)} disabled={loading}>
-        <div className="mutation-grid"><OperationFields fields={fields} /></div>
+        <div className="mutation-grid"><OperationFields fields={fields} form={form} /></div>
       </Form>
       {error ? <Alert type="error" showIcon message={error} description="请求结果不确定时，请先刷新并核对服务端记录。" /> : null}
     </Modal>

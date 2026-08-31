@@ -105,6 +105,10 @@ describe('second-batch operations pages', () => {
     )
     fireEvent.click(screen.getByRole('button', { name: /创建机会/ }))
     expect(opportunityWrite).toHaveBeenCalledWith({ action: 'mip.admin.opportunities.save' })
+    fireEvent.click(screen.getByRole('button', { name: /创建合作卡/ }))
+    expect(opportunityWrite).toHaveBeenCalledWith({ action: 'mip.admin.userContent.save', values: { kind: 'COOPERATION_CARD' } })
+    fireEvent.click(screen.getByRole('button', { name: /创建超级案例/ }))
+    expect(opportunityWrite).toHaveBeenCalledWith({ action: 'mip.admin.userContent.save', values: { kind: 'SUPER_CASE' } })
     unmount()
 
     const growthWrite = vi.fn()

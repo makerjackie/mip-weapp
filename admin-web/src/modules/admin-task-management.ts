@@ -234,6 +234,7 @@ export async function loadTaskDetail(
       pager: {
         key: 'taskMembers',
         query: memberQuery.query,
+        currentCursor: memberQuery.cursor,
         nextCursor: memberPage.nextCursor,
         placeholder: '搜索成员或服务器',
       },
@@ -257,6 +258,7 @@ export async function loadTaskDetail(
     pager: {
       key: 'taskCompletions',
       query: completionQuery.query,
+      currentCursor: completionQuery.cursor,
       nextCursor: completionPage.nextCursor,
       placeholder: '搜索成员或任务',
     },
