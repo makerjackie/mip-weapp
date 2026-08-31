@@ -52,8 +52,9 @@ function amountRange(minimum: string, maximum: string) {
 }
 
 function cityOptionsFor(mode: PageMode, catalog: OpportunityCatalog): CityOption[] {
+  const branchGroup = groupedCityBranches(catalog.branches, catalog.cityTags)[0]
   return mode === 'cooperation'
-    ? [nationwideOption, ...groupedCityBranches(catalog.branches, catalog.cityTags)[0].options]
+    ? [nationwideOption, ...(branchGroup?.options || [])]
     : [nationwideOption, ...catalog.cityTags.map(item => ({
         id: item.id,
         label: item.label,

@@ -126,6 +126,15 @@ describe('MIP member responsive foundation', () => {
     })
   })
 
+  it('keeps member corner radii on the shared Figma token scale', () => {
+    const source = read('src/app.css')
+
+    expect(source).toContain('--mip-radius-card: 32rpx;')
+    expect(source).toContain('--mip-radius-card-medium: 24rpx;')
+    expect(source).toContain('--mip-radius-control: 20rpx;')
+    expect(source).toContain('--mip-radius-button: 24rpx;')
+  })
+
   it('uses one shared platform-backed custom-navigation inset on the city-led main tabs', () => {
     for (const page of [
       { route: 'events', prefix: 'events' },

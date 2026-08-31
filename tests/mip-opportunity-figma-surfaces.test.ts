@@ -12,6 +12,8 @@ describe('MIP opportunity Figma surfaces', () => {
   const editor = source('src/packages/member/mip-opportunities/editor/index.wxml')
   const opportunityCard = source('src/components/opportunity-card/index.wxml')
   const opportunityCardStyles = source('src/components/opportunity-card/index.wxss')
+  const discoveryScript = source('src/pages/opportunities/index.ts')
+  const discoveryStyles = source('src/pages/opportunities/index.wxss')
 
   it('keeps the discovery hierarchy and all committed filters above the custom TabBar', () => {
     expect(discovery).toContain('id="opportunities-status-bar"')
@@ -20,6 +22,7 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(discovery).toContain('id="opportunities-filter-actions"')
     expect(discovery).toContain('bottom-[calc(env(safe-area-inset-bottom)+112rpx)]')
     expect(discovery).toContain('pb-[280rpx]')
+    expect(discoveryStyles).toContain('padding-bottom: calc(280rpx + env(safe-area-inset-bottom) + 112rpx);')
 
     for (const binding of [
       'bindconfirm="onSearchConfirm"',
@@ -32,6 +35,12 @@ describe('MIP opportunity Figma surfaces', () => {
     ]) {
       expect(discovery).toContain(binding)
     }
+  })
+
+  it('keeps existing discovery content during onShow refresh and reserves fixed-filter space', () => {
+    expect(discoveryScript).toContain('preserveContent: this.data.state === \'ready\'')
+    expect(discovery).toContain('class="opportunities-filter-panel')
+    expect(discovery).toContain('mb-[112rpx]')
   })
 
   it('matches the 351 by 176 opportunity-card silhouette without inventing referral avatars', () => {

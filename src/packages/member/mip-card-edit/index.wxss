@@ -1,0 +1,98 @@
+.card-edit-preview {
+  position: relative;
+  box-sizing: border-box;
+  min-height: 492rpx;
+  padding: 28rpx;
+  margin: 24rpx 24rpx 0;
+  overflow: hidden;
+  color: #090909;
+  background: var(--color-brand);
+  border-radius: var(--mip-radius-card);
+}
+
+.card-edit-preview::after {
+  position: absolute;
+  top: -80rpx;
+  right: -120rpx;
+  width: 360rpx;
+  height: 620rpx;
+  content: '';
+  border: 2rpx solid rgb(255 255 255 / 46%);
+  border-radius: 50%;
+  transform: rotate(22deg);
+}
+
+.card-edit-preview__copy {
+  position: relative;
+  z-index: 1;
+  width: 62%;
+}
+
+.card-edit-preview__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 34rpx;
+  font-weight: 700;
+  line-height: 44rpx;
+  white-space: nowrap;
+}
+
+.card-edit-preview__line {
+  margin-top: 8rpx;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 22rpx;
+  line-height: 30rpx;
+  white-space: nowrap;
+}
+
+.card-edit-preview__line--spaced {
+  margin-top: 22rpx;
+}
+
+.card-edit-preview__contacts {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+  margin-top: 32rpx;
+  font-size: 21rpx;
+  line-height: 30rpx;
+}
+
+.card-edit-preview__avatar {
+  position: absolute;
+  top: 24rpx;
+  right: 24rpx;
+  z-index: 1;
+  width: 192rpx;
+  height: 192rpx;
+  overflow: hidden;
+  background: #f0f0f0;
+  border-radius: 50%;
+}
+
+.card-edit-preview__avatar--fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 56rpx;
+  font-weight: 700;
+}
+
+.card-edit-preview__code {
+  position: absolute;
+  right: 28rpx;
+  bottom: 24rpx;
+  z-index: 1;
+  box-sizing: border-box;
+  width: 104rpx;
+  height: 104rpx;
+  padding: 8rpx;
+  background: #fff;
+  border-radius: 12rpx;
+}
+
+.card-edit-preview__code image {
+  width: 100%;
+  height: 100%;
+}

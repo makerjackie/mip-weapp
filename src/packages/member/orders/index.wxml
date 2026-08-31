@@ -12,9 +12,9 @@
   <view wx:else class="mt-4 flex flex-col gap-3">
     <view wx:for="{{orders}}" wx:key="id" data-order-id="{{item.id}}" class="order-card overflow-hidden rounded-[16rpx] bg-panel active:bg-panel-raised {{item.orderType === 'EVENT' ? 'order-card--event' : ''}}" bind:tap="openOrder">
       <image wx:if="{{item.orderType === 'EVENT' && item.event.coverUrl}}" class="order-card__cover h-[298rpx] w-full bg-panel-raised" src="{{item.event.coverUrl}}" mode="aspectFill" />
-      <view class="px-4 py-4">
+      <view class="order-card__body px-4 py-4">
       <view class="flex items-start justify-between gap-3">
-        <view class="min-w-0 flex-1"><view wx:if="{{item.orderType === 'EVENT'}}" class="truncate text-[length:32rpx] font-semibold">{{item.title}}</view><view wx:else class="truncate text-[length:28rpx] font-semibold">{{item.title}}</view><view wx:if="{{item.createdText}}" class="mt-2 text-[length:21rpx] text-muted">{{item.createdText}}</view></view>
+        <view class="min-w-0 flex-1"><view wx:if="{{item.orderType === 'EVENT'}}" class="truncate text-[length:32rpx] font-semibold">{{item.title}}</view><view wx:else class="truncate text-[length:28rpx] font-semibold">{{item.title}}</view><view wx:if="{{item.orderType !== 'EVENT' && item.createdText}}" class="mt-2 text-[length:21rpx] text-muted">{{item.createdText}}</view></view>
         <text wx:if="{{item.orderType !== 'EVENT' && item.statusSuccess}}" class="shrink-0 rounded-full bg-panel-raised px-3 py-1 text-[length:20rpx] text-success">{{item.statusText}}</text>
         <text wx:elif="{{item.orderType !== 'EVENT' && item.statusDanger}}" class="shrink-0 rounded-full bg-panel-raised px-3 py-1 text-[length:20rpx] text-danger">{{item.statusText}}</text>
         <text wx:elif="{{item.orderType !== 'EVENT' && item.statusBrand}}" class="shrink-0 rounded-full bg-panel-raised px-3 py-1 text-[length:20rpx] text-brand">{{item.statusText}}</text>

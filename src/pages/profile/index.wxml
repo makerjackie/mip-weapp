@@ -8,46 +8,48 @@
   </view>
 
   <block wx:else>
-    <view class="profile-summary" bind:tap="openProfileEdit">
-      <image wx:if="{{avatarUrl}}" class="profile-avatar" mode="aspectFill" fade-show="{{false}}" src="{{avatarUrl}}" />
-      <view wx:else class="profile-avatar profile-avatar--fallback">{{nicknameInitial}}</view>
-      <view class="profile-identity">
-        <view class="profile-name-row">
-          <text class="profile-name">{{nickname}}</text>
-          <text class="profile-level-chip">{{growthState === 'ready' ? levelName : membershipLabel}}</text>
-          <image wx:if="{{primaryBadge && primaryBadge.imageUrl}}" class="profile-rank-mark" mode="aspectFill" src="{{primaryBadge.imageUrl}}" />
-          <t-icon wx:elif="{{primaryBadge && primaryBadge.iconName}}" name="{{primaryBadge.iconName}}" size="36rpx" color="var(--color-brand)" />
-          <image wx:elif="{{primaryBadge}}" class="profile-rank-mark" mode="aspectFit" src="/assets/figma/profile/rank-mark.png" />
+    <view class="profile-hero">
+      <view class="profile-summary" bind:tap="openProfileEdit">
+        <image wx:if="{{avatarUrl}}" class="profile-avatar" mode="aspectFill" fade-show="{{false}}" src="{{avatarUrl}}" />
+        <view wx:else class="profile-avatar profile-avatar--fallback">{{nicknameInitial}}</view>
+        <view class="profile-identity">
+          <view class="profile-name-row">
+            <text class="profile-name">{{nickname}}</text>
+            <text class="profile-level-chip">{{growthState === 'ready' ? levelName : membershipLabel}}</text>
+            <image wx:if="{{primaryBadge && primaryBadge.imageUrl}}" class="profile-rank-mark" mode="aspectFill" src="{{primaryBadge.imageUrl}}" />
+            <t-icon wx:elif="{{primaryBadge && primaryBadge.iconName}}" name="{{primaryBadge.iconName}}" size="36rpx" color="var(--color-brand)" />
+            <image wx:elif="{{primaryBadge}}" class="profile-rank-mark" mode="aspectFit" src="/assets/figma/profile/rank-mark.png" />
+          </view>
+          <view class="profile-meta">
+            <text>{{primaryBranchName}}</text>
+            <text wx:if="{{primaryIndustryName}}"> · {{primaryIndustryName}}</text>
+            <text wx:if="{{identityStatus}}"> · {{identityStatus}}</text>
+          </view>
+          <view wx:if="{{headline}}" class="profile-headline">{{headline}}</view>
+          <view wx:elif="{{!profileComplete}}" class="profile-headline">档案待完善</view>
         </view>
-        <view class="profile-meta">
-          <text>{{primaryBranchName}}</text>
-          <text wx:if="{{primaryIndustryName}}"> · {{primaryIndustryName}}</text>
-          <text wx:if="{{identityStatus}}"> · {{identityStatus}}</text>
-        </view>
-        <view wx:if="{{headline}}" class="profile-headline">{{headline}}</view>
-        <view wx:elif="{{!profileComplete}}" class="profile-headline">档案待完善</view>
       </view>
-    </view>
 
-    <view wx:if="{{isPlayer}}" class="profile-level-card" bind:tap="openGrowth">
-      <image class="profile-level-art" mode="aspectFill" src="/assets/figma/profile/level-art.png" />
-      <view class="profile-level-header">
-        <text class="profile-level-name">{{growthState === 'ready' ? levelName : '玩家等级'}}</text>
-        <view class="profile-level-action">玩家等级<t-icon name="chevron-right" size="24rpx" color="var(--color-on-brand)" /></view>
+      <view wx:if="{{isPlayer}}" class="profile-level-card" bind:tap="openGrowth">
+        <image class="profile-level-art" mode="aspectFill" src="/assets/figma/profile/level-art.png" />
+        <view class="profile-level-header">
+          <text class="profile-level-name">{{growthState === 'ready' ? levelName : '玩家等级'}}</text>
+          <view class="profile-level-action">玩家等级<t-icon name="chevron-right" size="24rpx" color="var(--color-on-brand)" /></view>
+        </view>
+        <view wx:if="{{growthState === 'loading'}}" class="profile-level-loading" />
+        <block wx:elif="{{growthState === 'ready'}}">
+          <view class="profile-level-experience">{{experience}} 经验值</view>
+          <view class="profile-level-progress"><view class="profile-level-progress-value" style="width: {{growthProgress}}%" /></view>
+        </block>
+        <view wx:else class="profile-level-experience">成长数据暂时不可用</view>
       </view>
-      <view wx:if="{{growthState === 'loading'}}" class="profile-level-loading" />
-      <block wx:elif="{{growthState === 'ready'}}">
-        <view class="profile-level-experience">{{experience}} 经验值</view>
-        <view class="profile-level-progress"><view class="profile-level-progress-value" style="width: {{growthProgress}}%" /></view>
-      </block>
-      <view wx:else class="profile-level-experience">成长数据暂时不可用</view>
-    </view>
-    <view wx:else class="profile-membership-card" bind:tap="openMembership">
-      <view>
-        <view class="profile-membership-label">{{membershipLabel}}</view>
-        <view class="profile-membership-description">{{membershipDescription}}</view>
+      <view wx:else class="profile-membership-card" bind:tap="openMembership">
+        <view>
+          <view class="profile-membership-label">{{membershipLabel}}</view>
+          <view class="profile-membership-description">{{membershipDescription}}</view>
+        </view>
+        <view class="profile-membership-action">查看会员</view>
       </view>
-      <view class="profile-membership-action">查看会员</view>
     </view>
 
     <view class="profile-stats">

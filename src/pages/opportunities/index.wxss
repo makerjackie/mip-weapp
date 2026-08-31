@@ -14,6 +14,11 @@
   box-sizing: border-box;
 }
 
+/* Keep the final filter row above the fixed confirmation bar on short screens. */
+.opportunities-filter-panel {
+  padding-bottom: calc(280rpx + env(safe-area-inset-bottom) + 112rpx);
+}
+
 .mip-opportunities-loading {
   --td-skeleton-bg-color: var(--color-panel-raised);
   --td-skeleton-animation-gradient: rgb(255 255 255 / 8%);

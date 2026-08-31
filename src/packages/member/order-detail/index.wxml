@@ -10,7 +10,7 @@
 
     <block wx:if="{{isEventOrder}}">
     <view class="overflow-hidden rounded-[16rpx] bg-panel">
-      <image wx:if="{{order.event && eventCoverUrl}}" class="h-[282rpx] w-full bg-panel-raised" src="{{eventCoverUrl}}" mode="aspectFill" />
+      <image wx:if="{{order.event && eventCoverUrl}}" class="h-[298rpx] w-full bg-panel-raised" src="{{eventCoverUrl}}" mode="aspectFill" />
       <view class="px-4 py-4">
         <view class="mb-3 flex gap-2"><text class="rounded-[8rpx] bg-brand px-2 py-1 text-[length:22rpx] text-on-brand">活动</text><text wx:if="{{serviceStatusText}}" class="rounded-[8rpx] bg-brand-soft px-2 py-1 text-[length:22rpx] text-brand">{{serviceStatusText}}</text></view>
         <view class="text-[length:28rpx] font-semibold">{{order.event ? order.event.title : title}}</view>

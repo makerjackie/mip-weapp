@@ -13,6 +13,9 @@ import { mipIdentityModule } from '../../../modules/mip-identity/client'
 
 type BadgeCategory = 'IDENTITY' | 'HONOR'
 
+const BADGE_CATEGORIES: readonly BadgeCategory[] = ['IDENTITY', 'HONOR']
+const BADGE_FILTERS: readonly BadgeCollectionFilter[] = ['ALL', 'EQUIPPED', 'EQUIPPABLE']
+
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'empty' | 'error',
@@ -109,7 +112,8 @@ Page({
   },
 
   chooseCategory(event: WechatMiniprogram.TouchEvent) {
-    const category = String(event.currentTarget.dataset.category || 'IDENTITY') as BadgeCategory
+    const candidate = String(event.currentTarget.dataset.category || '') as BadgeCategory
+    const category = BADGE_CATEGORIES.includes(candidate) ? candidate : 'IDENTITY'
     this.setData({
       activeCategory: category,
       visibleItems: this.filterItems(this.data.items, category, this.data.activeFilter),
@@ -117,7 +121,8 @@ Page({
   },
 
   chooseFilter(event: WechatMiniprogram.TouchEvent) {
-    const filter = String(event.currentTarget.dataset.filter || 'ALL') as BadgeCollectionFilter
+    const candidate = String(event.currentTarget.dataset.filter || '') as BadgeCollectionFilter
+    const filter = BADGE_FILTERS.includes(candidate) ? candidate : 'ALL'
     this.setData({
       activeFilter: filter,
       visibleItems: this.filterItems(this.data.items, this.data.activeCategory, filter),

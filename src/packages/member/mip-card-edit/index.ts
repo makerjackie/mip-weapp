@@ -1,10 +1,16 @@
 import type { ProfileOrganization } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
+import { cardPreviewIdentity } from './preview'
 
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
     profileVersion: 0,
+    previewNickname: 'MIP 成员',
+    previewInitial: 'M',
+    previewFallbackName: 'MIP 成员',
+    previewAvatarUrl: '',
+    previewCodeUrl: '',
     realName: '',
     company: '',
     role: '',
@@ -42,13 +48,22 @@ Page({
   async load() {
     this.setData({ state: 'loading', message: '' })
     try {
-      const profile = await mipIdentityModule.getProfile()
+      const [profile, cardCode] = await Promise.all([
+        mipIdentityModule.getProfile(),
+        mipIdentityModule.getMyProfileCardCode().catch(() => ({ codeUrl: '' })),
+      ])
+      const preview = cardPreviewIdentity(profile)
       const company = profile.companies[0]
       const organization = profile.organizations[0]
       const contact = profile.privateContact
       this.setData({
         state: 'ready',
         profileVersion: profile.version,
+        previewNickname: preview.name,
+        previewInitial: preview.initial,
+        previewFallbackName: profile.nickname || 'MIP 成员',
+        previewAvatarUrl: profile.avatarUrl || '',
+        previewCodeUrl: cardCode.codeUrl,
         realName: profile.realName,
         company: company?.name || '',
         role: company?.role || '',
@@ -75,7 +90,14 @@ Page({
   updateText(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const field = String(event.currentTarget.dataset.field || '')
     if (['realName', 'company', 'role', 'organization', 'organizationRole', 'wechat', 'email', 'address'].includes(field)) {
-      this.setData({ [field]: event.detail.value })
+      const value = event.detail.value
+      const updates: Record<string, string> = { [field]: value }
+      if (field === 'realName') {
+        const preview = cardPreviewIdentity({ realName: value, nickname: this.data.previewFallbackName })
+        updates.previewNickname = preview.name
+        updates.previewInitial = preview.initial
+      }
+      this.setData(updates)
     }
   },
 

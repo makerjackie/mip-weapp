@@ -39,7 +39,7 @@
     justify-content: flex-end;
   }
 
-  .mip-managed-events-filter .mip-admin-filter-actions > * {
+  .mip-managed-events-filter .mip-managed-events-filter-action {
     flex: 0 1 220px;
     max-width: 220px;
   }

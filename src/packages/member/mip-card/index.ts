@@ -130,9 +130,18 @@ Page({
     message: '',
   },
   profileRef: '',
+  loadSequence: 0,
 
   onShow() {
     void this.loadCard()
+  },
+
+  onHide() {
+    this.loadSequence += 1
+  },
+
+  onUnload() {
+    this.loadSequence += 1
   },
 
   retryLoad() {
@@ -140,6 +149,7 @@ Page({
   },
 
   async loadCard(_force = false) {
+    const sequence = ++this.loadSequence
     if (this.data.state !== 'ready') {
       this.setData({ state: 'loading', message: '' })
     }
@@ -157,10 +167,16 @@ Page({
         mipAiModule.listDigitalAvatars().catch(() => ({ items: [] })),
         codePromise,
       ])
+      if (sequence !== this.loadSequence) {
+        return
+      }
       const digitalAvatar = avatarHistory.items.find(item => item.status === 'READY' && item.outputUrl)
       this.applyCard(snapshot, profile, privateProfile, digitalAvatar?.outputUrl || '', cardCode.codeUrl)
     }
     catch (error) {
+      if (sequence !== this.loadSequence) {
+        return
+      }
       this.setData({ state: 'error', message: error instanceof Error ? error.message : '名片加载失败' })
     }
   },

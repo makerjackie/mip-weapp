@@ -4,3 +4,8 @@
   min-height: 88rpx;
   margin: -16rpx 0;
 }
+
+/* Keep the last talent filter row reachable above the fixed apply bar. */
+.mip-people-filter-content {
+  padding-bottom: calc(260rpx + env(safe-area-inset-bottom) + 128rpx);
+}

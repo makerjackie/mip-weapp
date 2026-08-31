@@ -1,6 +1,6 @@
 import type { UserTaskCard } from '../../../../modules/mip-tasks'
 import { mipMediaModule } from '../../../../modules/mip-media/client'
-import { mipTasksModule } from '../../../../modules/mip-tasks'
+import { mipTasksModule, rewardExperienceStarIndexes } from '../../../../modules/mip-tasks'
 import { chooseSingleImage } from '../../../../modules/platform/image-upload'
 
 const MAXIMUM_ORIGINAL_BYTES = 10 * 1024 * 1024
@@ -10,6 +10,7 @@ Page({
     state: 'loading' as 'loading' | 'ready' | 'error',
     taskId: '',
     task: null as UserTaskCard | null,
+    starIndexes: [] as number[],
     deadlineText: '',
     attachmentAssetId: '',
     attachmentUrl: '',
@@ -34,6 +35,7 @@ Page({
       this.setData({
         state: 'ready',
         task,
+        starIndexes: rewardExperienceStarIndexes(task.rewardExperience),
         deadlineText: task.endsAt
           ? new Date(task.endsAt).toLocaleString('zh-CN', { hour12: false })
           : '不限截止时间',

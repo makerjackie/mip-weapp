@@ -2,7 +2,25 @@
   <view wx:if="{{state === 'loading'}}" class="mx-3 mt-3 rounded-[16rpx] bg-panel px-5 py-8"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}" class="mx-3 mt-3"><app-empty-state title="暂时无法加载名片设置" description="身份服务暂时没有响应。" action-text="重新加载" bind:action="load" /></view>
   <block wx:else>
-    <view class="bg-brand px-3 py-2 text-center text-[length:24rpx] text-on-brand">名片资料保存后同步到个人名片</view>
+    <view class="card-edit-preview" aria-label="名片预览">
+      <view class="card-edit-preview__copy">
+        <view class="card-edit-preview__name">{{previewNickname}}</view>
+        <view wx:if="{{company}}" class="card-edit-preview__line">{{company}}</view>
+        <view wx:if="{{role}}" class="card-edit-preview__line">{{role}}</view>
+        <view wx:if="{{organization}}" class="card-edit-preview__line card-edit-preview__line--spaced">{{organization}}</view>
+        <view wx:if="{{organizationRole}}" class="card-edit-preview__line">{{organizationRole}}</view>
+        <view class="card-edit-preview__contacts">
+          <view wx:if="{{phoneBound && phoneMasked}}">{{phoneMasked}}</view>
+          <view wx:if="{{wechat}}">{{wechat}}</view>
+          <view wx:if="{{email}}">{{email}}</view>
+          <view wx:if="{{address}}">{{address}}</view>
+        </view>
+      </view>
+      <image wx:if="{{previewAvatarUrl}}" class="card-edit-preview__avatar" mode="aspectFill" src="{{previewAvatarUrl}}" />
+      <view wx:else class="card-edit-preview__avatar card-edit-preview__avatar--fallback">{{previewInitial}}</view>
+      <view wx:if="{{previewCodeUrl}}" class="card-edit-preview__code"><image mode="aspectFit" src="{{previewCodeUrl}}" /></view>
+    </view>
+    <view class="mx-3 mt-3 text-[length:22rpx] text-muted">保存后，名片会同步更新。</view>
 
     <view class="mx-3 mt-3 text-[length:30rpx] font-semibold">个人信息</view>
     <view data-card-field-group="identity" class="mip-radius-card-medium mx-3 mt-3 overflow-hidden bg-panel">

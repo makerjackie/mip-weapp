@@ -12,13 +12,19 @@ Page({
   },
 
   badgeId: '',
+  loadSequence: 0,
 
   onLoad(options: Record<string, string | undefined>) {
     this.badgeId = String(options.badgeId || '')
     void this.loadBadge()
   },
 
+  onUnload() {
+    this.loadSequence += 1
+  },
+
   async loadBadge() {
+    const sequence = ++this.loadSequence
     if (!this.badgeId) {
       this.setData({ state: 'empty', message: '未找到徽章。' })
       return
@@ -27,9 +33,15 @@ Page({
       const collection = await mipGrowthModule.listBadgeCollection()
       const selectedIds = orderedEquippedIds(collection.items)
       const badge = presentBadges(collection.items, selectedIds).find(item => item.id === this.badgeId) || null
+      if (sequence !== this.loadSequence) {
+        return
+      }
       this.setData({ state: badge ? 'ready' : 'empty', badge, version: collection.version, message: badge ? '' : '未找到徽章。' })
     }
     catch (error) {
+      if (sequence !== this.loadSequence) {
+        return
+      }
       this.setData({ state: 'error', message: error instanceof Error ? error.message : '徽章加载失败。' })
     }
   },

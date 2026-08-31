@@ -4,6 +4,7 @@ import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { createMipTasksGateway } from '../src/modules/mip-tasks/gateway'
 import { createMipTasksModule } from '../src/modules/mip-tasks/module'
+import { rewardExperienceStarIndexes } from '../src/modules/mip-tasks/presentation'
 import { isRetryableTaskAction } from '../src/modules/mip-tasks/retry-policy'
 import { MipTasksError } from '../src/modules/mip-tasks/types'
 
@@ -20,6 +21,13 @@ const task = {
 } as const
 
 describe('MIP tasks client contract', () => {
+  it('derives bounded reward stars from server-owned experience values', () => {
+    expect(rewardExperienceStarIndexes(0)).toEqual([])
+    expect(rewardExperienceStarIndexes(1)).toEqual([0])
+    expect(rewardExperienceStarIndexes(20)).toEqual([0, 1])
+    expect(rewardExperienceStarIndexes(100)).toEqual([0, 1, 2, 3, 4])
+  })
+
   it('submits only a task and owned attachment intent', async () => {
     const calls: MipTasksRequest[] = []
     const gateway = createMipTasksGateway({
@@ -342,6 +350,7 @@ describe('MIP tasks client contract', () => {
     const completionSource = fs.readFileSync(path.join(process.cwd(), 'src/packages/admin/task-completions/index.ts'), 'utf8')
     const assignmentSource = fs.readFileSync(path.join(process.cwd(), 'src/packages/admin/task-assignments/index.ts'), 'utf8')
     const memberListSource = fs.readFileSync(path.join(process.cwd(), 'src/packages/member/mip-tasks/index.ts'), 'utf8')
+    const memberListView = fs.readFileSync(path.join(process.cwd(), 'src/packages/member/mip-tasks/index.wxml'), 'utf8')
     const memberDetailSource = fs.readFileSync(path.join(process.cwd(), 'src/packages/member/mip-tasks/detail/index.ts'), 'utf8')
     const moduleSource = fs.readFileSync(path.join(process.cwd(), 'src/modules/mip-tasks/module.ts'), 'utf8')
     const cloudbaseTransport = fs.readFileSync(path.join(process.cwd(), 'src/modules/mip-tasks/cloudbase-gateway.ts'), 'utf8')
@@ -373,6 +382,8 @@ describe('MIP tasks client contract', () => {
     expect(detail).toContain('提交完成')
     expect(detail).toContain('保存模板图片')
     expect(detail).toContain('任务已截止')
+    expect(memberListView).toContain('min-h-[88rpx]')
+    expect(memberListView).toContain('starIndexes')
     for (const source of [adminSource, completionSource, assignmentSource, memberListSource, memberDetailSource]) {
       expect(source).not.toContain('mipTasksModule.gateway')
       expect(source).toContain('mipTasksModule.query')

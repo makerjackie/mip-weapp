@@ -43,7 +43,7 @@ function findRule(container: Container, selector: string, topLevel = false) {
   return matches[0]
 }
 
-function declarations(rule: Rule) {
+function declarations(rule: Container) {
   return Object.fromEntries(
     rule.nodes
       .filter(node => node.type === 'decl')
@@ -54,7 +54,11 @@ function declarations(rule: Rule) {
 describe('MIP admin desktop density', () => {
   it('keeps shared TDesign states on the dark surface', () => {
     const stylesheet = postcss.parse(read('src/app.css'))
-    const page = declarations(findRule(stylesheet, 'page', true))
+    const theme = stylesheet.nodes.find(
+      (node): node is AtRule => node.type === 'atrule' && node.name === 'theme' && node.params === 'static',
+    )
+    expect(theme).toBeDefined()
+    const page = declarations(theme!)
 
     expect(page).toMatchObject({
       '--td-text-color-anti': '#040000',

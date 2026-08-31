@@ -164,6 +164,14 @@ describe('MIP people discovery client contract', () => {
     expect(profileView).toContain('profile.primaryCompanyLine')
   })
 
+  it('keeps the filter apply bar clear of the final option row', () => {
+    const view = source('src/packages/member/mip-people/index.wxml')
+    const styles = source('src/packages/member/mip-people/index.wxss')
+    expect(view).toContain('class="mip-people-filter-content mt-4"')
+    expect(view).toContain('bottom-[calc(env(safe-area-inset-bottom)+16rpx)]')
+    expect(styles).toContain('padding-bottom: calc(260rpx + env(safe-area-inset-bottom) + 128rpx);')
+  })
+
   it('locks the PROFILE interest source and discovery index in migration 017', () => {
     const migration = source('database/mysql/mip/017_profile_interest_source.sql')
     const rollback = source('database/mysql/mip/rollback/017_profile_interest_source.sql')

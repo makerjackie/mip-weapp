@@ -18,7 +18,7 @@
     <t-input class="box-border max-w-full" type="digit" value="{{priceMinYuan}}" placeholder="最低价格（元）" data-field="priceMinYuan" bind:change="updateTextFilter" />
     <t-input class="box-border max-w-full" type="digit" value="{{priceMaxYuan}}" placeholder="最高价格（元）" data-field="priceMaxYuan" bind:change="updateTextFilter" />
     <view class="mip-admin-span-wide flex flex-wrap gap-1" role="radiogroup" aria-label="活动状态"><view wx:for="{{statuses}}" wx:key="value" class="flex min-h-[88rpx] items-center" role="radio" aria-checked="{{status === item.value}}"><t-tag variant="outline" theme="{{status === item.value ? 'primary' : 'default'}}" data-value="{{item.value}}" bind:tap="changeStatus">{{item.label}}</t-tag></view></view>
-    <view class="mip-admin-filter-actions mip-admin-span-wide"><view class="min-w-0"><t-button block variant="outline" bind:tap="clearFilters">清除筛选</t-button></view><view class="min-w-0"><t-button block theme="primary" bind:tap="search">查询</t-button></view></view>
+    <view class="mip-admin-filter-actions mip-admin-span-wide"><view class="mip-managed-events-filter-action min-w-0"><t-button block variant="outline" bind:tap="clearFilters">清除筛选</t-button></view><view class="mip-managed-events-filter-action min-w-0"><t-button block theme="primary" bind:tap="search">查询</t-button></view></view>
   </view>
   <view wx:if="{{state === 'ready' && canManagePolicy}}" class="mt-4 rounded-[16rpx] bg-panel px-4 py-4">
     <view class="text-[length:27rpx] font-semibold">默认取消报名时间</view>

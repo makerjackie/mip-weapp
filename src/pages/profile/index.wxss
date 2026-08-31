@@ -23,6 +23,13 @@
   margin-top: 24rpx;
 }
 
+.profile-hero {
+  box-sizing: border-box;
+  padding: 28rpx 24rpx 0;
+  margin: -24rpx -24rpx 0;
+  background: var(--color-panel);
+}
+
 .profile-summary {
   display: flex;
   align-items: center;

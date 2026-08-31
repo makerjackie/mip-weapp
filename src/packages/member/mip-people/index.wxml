@@ -14,7 +14,7 @@
     <view class="min-w-0 flex-1 truncate text-right text-[length:22rpx] text-muted">{{branchOptions[branchIndex].label}}</view>
   </view>
 
-  <view wx:if="{{filterOpen}}" class="mt-4">
+  <view wx:if="{{filterOpen}}" class="mip-people-filter-content mt-4">
     <view class="text-[length:32rpx] font-medium">人才筛选</view>
     <view class="mt-4"><mip-catalog-selector title="城市与分会" groups="{{branchGroups}}" selected-ids="{{draftBranchIds}}" multiple="{{false}}" clear-label="全部城市与分会" bind:change="changeBranch" /></view>
     <view class="mt-5 text-[length:32rpx] font-medium">合作角色</view>

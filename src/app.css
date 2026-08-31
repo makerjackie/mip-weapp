@@ -3,7 +3,7 @@
 @source not "../dist/**";
 @source not "../node_modules/**";
 
-@theme {
+@theme static {
   --color-canvas: #040404;
   --color-panel: #202020;
   --color-panel-raised: #2a2a2a;
@@ -23,14 +23,6 @@
   --color-membership-brand: #fcdf03;
   --color-membership-muted: #a3a3a3;
   --color-membership-panel: #202020;
-}
-
-page {
-  min-height: 100vh;
-  font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
-  color: #fff;
-  background-color: #040404;
-
   --td-brand-color: #fcdf03;
   --td-brand-color-active: #e3c900;
   --td-brand-color-disabled: #72680f;
@@ -59,7 +51,18 @@ page {
   --td-button-default-border-color: #363636;
   --td-button-default-active-bg-color: #363636;
   --td-button-primary-color: #040000;
+  --td-button-primary-bg-color: #fcdf03;
+  --td-button-primary-border-color: #fcdf03;
+  --td-button-primary-active-bg-color: #e3c900;
+  --td-button-primary-active-border-color: #e3c900;
   --td-button-primary-disabled-color: #f3f3f3;
+  --td-button-primary-disabled-bg: #72680f;
+  --td-button-primary-disabled-border-color: #72680f;
+  --td-button-primary-outline-color: #fcdf03;
+  --td-button-primary-outline-border-color: #fcdf03;
+  --td-button-primary-outline-active-bg-color: #3b3505;
+  --td-button-primary-outline-active-border-color: #e3c900;
+  --td-button-primary-outline-disabled-color: #72680f;
   --td-tag-outline-bg-color: #2a2a2a;
   --td-tag-default-color: #a3a3a3;
   --td-tag-default-font-color: #fff;
@@ -86,13 +89,22 @@ page {
   --mip-radius-button: 24rpx;
 }
 
-button::after {
-  border: 0;
-}
+@layer base {
+  page {
+    min-height: 100vh;
+    font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+    color: #fff;
+    background-color: #040404;
+  }
 
-textarea,
-input {
-  box-sizing: border-box;
+  button::after {
+    border: 0;
+  }
+
+  textarea,
+  input {
+    box-sizing: border-box;
+  }
 }
 
 .mip-member-page {

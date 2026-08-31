@@ -28,4 +28,14 @@ describe('MIP dark theme contrast', () => {
     expect(source).toContain('--td-text-color-disabled: #999;')
     expect(source).not.toContain('--td-text-color-disabled: #777;')
   })
+
+  it('pins TDesign primary button surfaces to the MIP palette', () => {
+    const source = fs.readFileSync(path.join(root, 'src/app.css'), 'utf8')
+
+    expect(source).toContain('@theme static {')
+    expect(source).toContain('--td-button-primary-bg-color: #fcdf03;')
+    expect(source).toContain('--td-button-primary-border-color: #fcdf03;')
+    expect(source).toContain('--td-button-primary-outline-color: #fcdf03;')
+    expect(source).toContain('--td-button-primary-outline-border-color: #fcdf03;')
+  })
 })

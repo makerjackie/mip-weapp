@@ -1,11 +1,12 @@
 import type { UserTaskCard } from '../../../modules/mip-tasks'
-import { mipTasksModule } from '../../../modules/mip-tasks'
+import { mipTasksModule, rewardExperienceStarIndexes } from '../../../modules/mip-tasks'
 
 interface TaskView extends UserTaskCard {
   statusText: string
   deadlineText: string
   attachmentText: string
   templateText: string
+  starIndexes: number[]
 }
 
 function taskView(task: UserTaskCard): TaskView {
@@ -13,9 +14,10 @@ function taskView(task: UserTaskCard): TaskView {
   return {
     ...task,
     statusText,
-    deadlineText: task.endsAt ? `截止 ${new Date(task.endsAt).toLocaleString('zh-CN', { hour12: false })}` : '不限截止时间',
+    deadlineText: task.endsAt ? `任务周期 · ${new Date(task.endsAt).toLocaleString('zh-CN', { hour12: false })}` : '任务周期不限',
     attachmentText: task.attachmentRequired ? '需要上传附件' : '无需附件',
     templateText: task.hasTemplate ? '提供任务模板' : '未配置任务模板',
+    starIndexes: rewardExperienceStarIndexes(task.rewardExperience),
   }
 }
 
