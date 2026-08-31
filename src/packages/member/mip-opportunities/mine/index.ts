@@ -204,6 +204,14 @@ Page({
     }
   },
 
+  editPublished(event: WechatMiniprogram.TouchEvent) {
+    const id = String(event.currentTarget.dataset.id || '')
+    const item = this.data.publishedItems.find(entry => entry.id === id)
+    if (item && ['DRAFT', 'PUBLISHED'].includes(item.status)) {
+      caseNavigateTo({ url: `/packages/member/mip-opportunities/editor/index?id=${encodeURIComponent(id)}` })
+    }
+  },
+
   async openReferred(event: WechatMiniprogram.TouchEvent) {
     const viewKey = String(event.currentTarget.dataset.key || '')
     if (!viewKey || this.data.openingKey) {

@@ -162,6 +162,35 @@ test('reports configured draft capability only after the Provider readiness cont
   assert.equal(calls, 1)
 })
 
+test('uses the ready Provider capability instead of advertising unsupported voice drafts', async () => {
+  const provider = createCloudAiProvider({
+    async callFunction() {
+      return {
+        result: {
+          ok: true,
+          data: {
+            ready: true,
+            capabilities: {
+              textDrafts: true,
+              voiceDrafts: false,
+              refinementDrafts: true,
+            },
+          },
+        },
+      }
+    },
+  }, 'mip-ai-draft-provider', 's'.repeat(48))
+
+  assert.equal(await provider.readiness(), true)
+  assert.deepEqual(provider.capability(), {
+    voiceDrafts: false,
+    textDrafts: true,
+    refinementDrafts: true,
+    digitalAvatars: false,
+    reason: undefined,
+  })
+})
+
 test('retries a draft transport once with the exact same stable request identity', async () => {
   const secret = 's'.repeat(48)
   const requests = []

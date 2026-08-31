@@ -4,7 +4,16 @@ const purposeFields = {
   PROFILE: new Set(['nickname', 'identityStatus', 'headline', 'introduction', 'companies', 'organizations']),
   COOPERATION_CARD: new Set(['roleKey', 'positioning', 'targetSummary', 'roleFields', 'abilityScores']),
   SUPER_CASE: new Set(['projectName', 'summary', 'responsibility', 'description', 'startedOn', 'endedOn', 'caseType']),
+  OPPORTUNITY: new Set(['title', 'valueSummary', 'cityLabel', 'targetSummary', 'description']),
 }
+
+const opportunityTextLimits = Object.freeze({
+  title: 120,
+  valueSummary: 240,
+  cityLabel: 80,
+  targetSummary: 500,
+  description: 6000,
+})
 
 const digitalAvatarStyleKeys = new Set(['PROFESSIONAL', 'ILLUSTRATED', 'MONOCHROME'])
 
@@ -19,9 +28,12 @@ function normalizeStructuredDraft(purposeValue, value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error('AI_DRAFT_CONTENT_INVALID')
   }
-  const result = Object.fromEntries(Object.entries(value).filter(([key, item]) => (
-    purposeFields[purpose].has(key) && isSupportedValue(item)
-  )))
+  const result = Object.fromEntries(Object.entries(value).flatMap(([key, item]) => {
+    if (!purposeFields[purpose].has(key)) return []
+    if (purpose !== 'OPPORTUNITY') return isSupportedValue(item) ? [[key, item]] : []
+    const normalized = typeof item === 'string' ? item.trim() : ''
+    return normalized && normalized.length <= opportunityTextLimits[key] ? [[key, normalized]] : []
+  }))
   if (!Object.keys(result).length || JSON.stringify(result).length > 30_000) {
     throw new Error('AI_DRAFT_CONTENT_INVALID')
   }

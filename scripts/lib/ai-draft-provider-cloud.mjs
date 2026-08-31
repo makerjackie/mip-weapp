@@ -14,6 +14,7 @@ export const AI_DRAFT_PROVIDER_DEPLOYABLE_SOURCE_FILES = Object.freeze([
   'lib/config.js',
   'lib/contract.js',
   'lib/network.js',
+  'lib/openai-compatible.js',
   'lib/operation-cache.js',
   'lib/upstream.js',
   'package.json',
@@ -25,6 +26,9 @@ export const AI_DRAFT_PROVIDER_ENVIRONMENT_KEYS = Object.freeze([
   'MIP_AI_DRAFT_UPSTREAM_ENDPOINT',
   'MIP_AI_DRAFT_UPSTREAM_SECRET',
   'MIP_AI_DRAFT_UPSTREAM_TIMEOUT_MS',
+  'OPENAI_API_KEY',
+  'OPENAI_BASE_URL',
+  'OPENAI_MODEL',
   'MIP_AI_DRAFT_PROVIDER_HMAC_SECRET',
   'MIP_ALLOWED_APP_IDS',
 ])
@@ -56,6 +60,10 @@ export function providerEnvironment({ aiEnvironment, env, sourceMarker }) {
     .map(value => value.trim())
     .filter(Boolean)
   const hmacSecret = text(aiEnvironment.MIP_AI_DRAFT_PROVIDER_HMAC_SECRET)
+  const openAiBaseUrl = endpointUrl(env.OPENAI_BASE_URL)
+  const openAiModel = text(env.OPENAI_MODEL)
+  const openAiApiKey = text(env.OPENAI_API_KEY)
+  const openAiSupplied = [env.OPENAI_BASE_URL, env.OPENAI_MODEL, env.OPENAI_API_KEY].some(value => text(value))
   const endpoint = endpointUrl(env.MIP_AI_DRAFT_UPSTREAM_ENDPOINT)
   const allowedHosts = exactHosts(env.MIP_AI_DRAFT_UPSTREAM_ALLOWED_HOSTS)
   const upstreamSecret = text(env.MIP_AI_DRAFT_UPSTREAM_SECRET)
@@ -65,21 +73,46 @@ export function providerEnvironment({ aiEnvironment, env, sourceMarker }) {
     || hmacSecret.length < 32) {
     throw new Error('Deploy mip-ai-api with a valid AppID allowlist and dedicated draft Provider HMAC before the Provider')
   }
+  const baseEnvironment = {
+    MIP_ALLOWED_APP_IDS: [...new Set(allowedAppIds)].join(','),
+    MIP_AI_DRAFT_PROVIDER_HMAC_SECRET: hmacSecret,
+    MIP_AI_DRAFT_PROVIDER_FUNCTION_NAME: AI_DRAFT_PROVIDER_FUNCTION_NAME,
+    MIP_AI_DRAFT_PROVIDER_CODE_MARKER: sourceMarker,
+  }
+  if (!/^[a-f0-9]{64}$/.test(sourceMarker)) {
+    throw new Error('AI draft Provider source marker is invalid')
+  }
+  if (openAiSupplied) {
+    if (!openAiBaseUrl
+      || !validHostname(openAiBaseUrl.hostname)
+      || !/^\w[\w.:-]{1,127}$/.test(openAiModel)
+      || openAiApiKey.length < 16
+      || openAiApiKey.length > 512
+      || !/^[\x21-\x7E]+$/.test(openAiApiKey)
+      || !Number.isInteger(timeoutMs)
+      || timeoutMs < 500
+      || timeoutMs > 10_000) {
+      throw new Error('AI draft Provider OpenAI-compatible base URL, model, API key, or timeout is invalid')
+    }
+    return Object.freeze({
+      ...baseEnvironment,
+      OPENAI_BASE_URL: openAiBaseUrl.toString(),
+      OPENAI_MODEL: openAiModel,
+      OPENAI_API_KEY: openAiApiKey,
+      MIP_AI_DRAFT_UPSTREAM_TIMEOUT_MS: String(timeoutMs),
+    })
+  }
   if (!endpoint
     || !allowedHosts.length
     || !allowedHosts.includes(endpoint.hostname)
     || upstreamSecret.length < 16
     || !Number.isInteger(timeoutMs)
     || timeoutMs < 500
-    || timeoutMs > 10_000
-    || !/^[a-f0-9]{64}$/.test(sourceMarker)) {
+    || timeoutMs > 10_000) {
     throw new Error('AI draft Provider upstream endpoint, exact host allowlist, secret, timeout, or source marker is invalid')
   }
   return Object.freeze({
-    MIP_ALLOWED_APP_IDS: [...new Set(allowedAppIds)].join(','),
-    MIP_AI_DRAFT_PROVIDER_HMAC_SECRET: hmacSecret,
-    MIP_AI_DRAFT_PROVIDER_FUNCTION_NAME: AI_DRAFT_PROVIDER_FUNCTION_NAME,
-    MIP_AI_DRAFT_PROVIDER_CODE_MARKER: sourceMarker,
+    ...baseEnvironment,
     MIP_AI_DRAFT_UPSTREAM_ENDPOINT: endpoint.toString(),
     MIP_AI_DRAFT_UPSTREAM_ALLOWED_HOSTS: allowedHosts.join(','),
     MIP_AI_DRAFT_UPSTREAM_SECRET: upstreamSecret,
@@ -109,8 +142,9 @@ export function assertProviderFunctionReadback(detailValue, expectedEnvironment)
   assertNoVpc(detail)
   const actual = environmentVariables(detail)
   const actualKeys = Object.keys(actual).sort()
-  const expectedKeys = [...AI_DRAFT_PROVIDER_ENVIRONMENT_KEYS].sort()
-  if (JSON.stringify(actualKeys) !== JSON.stringify(expectedKeys)) {
+  const expectedKeys = Object.keys(expectedEnvironment).sort()
+  if (JSON.stringify(actualKeys) !== JSON.stringify(expectedKeys)
+    || actualKeys.some(key => !AI_DRAFT_PROVIDER_ENVIRONMENT_KEYS.includes(key))) {
     throw new Error('AI draft Provider environment contains missing or unexpected keys')
   }
   for (const [key, value] of Object.entries(expectedEnvironment)) {

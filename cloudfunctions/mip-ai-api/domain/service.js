@@ -283,6 +283,15 @@ function createAiService(options) {
           providerReady = false
         }
       }
+      if (providerReady) {
+        const readyCapability = provider.capability()
+        normalized = {
+          ...normalized,
+          textDrafts: normalized.textDrafts && readyCapability.textDrafts === true,
+          voiceDrafts: normalized.voiceDrafts && readyCapability.voiceDrafts === true,
+          refinementDrafts: normalized.refinementDrafts && readyCapability.refinementDrafts === true,
+        }
+      }
       if (!providerReady) {
         normalized = {
           ...normalized,

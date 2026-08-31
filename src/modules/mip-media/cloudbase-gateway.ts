@@ -18,7 +18,7 @@ export function createMipMediaCloudbaseTransport(
         return resolveCloudFileUrls(response.result, cloud)
       }
       catch {
-        throw new Error('素材服务暂时不可用，请稍后重试')
+        throw new Error('图片上传暂时不可用，请稍后重试')
       }
     },
   }

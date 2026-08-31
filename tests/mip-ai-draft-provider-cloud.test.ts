@@ -23,6 +23,12 @@ const aiEnvironment = {
   MIP_AI_PROVIDER_FUNCTION_NAME: AI_DRAFT_PROVIDER_FUNCTION_NAME,
 }
 const localEnvironment = {
+  OPENAI_BASE_URL: 'https://api.deepseek.com',
+  OPENAI_MODEL: 'deepseek-v4-flash',
+  OPENAI_API_KEY: `sk-${'k'.repeat(32)}`,
+  MIP_AI_DRAFT_UPSTREAM_TIMEOUT_MS: '5000',
+}
+const legacyEnvironment = {
   MIP_AI_DRAFT_UPSTREAM_ENDPOINT: 'https://provider.example.com/v1/drafts',
   MIP_AI_DRAFT_UPSTREAM_ALLOWED_HOSTS: 'provider.example.com',
   MIP_AI_DRAFT_UPSTREAM_SECRET: 's'.repeat(32),
@@ -36,12 +42,26 @@ describe('AI draft Provider cloud contract', () => {
       env: localEnvironment,
       sourceMarker,
     })
-    expect(Object.keys(environment).sort()).toEqual([...AI_DRAFT_PROVIDER_ENVIRONMENT_KEYS].sort())
+    expect(Object.keys(environment).every(key => AI_DRAFT_PROVIDER_ENVIRONMENT_KEYS.includes(key))).toBe(true)
     expect(environment.MIP_DB_CONNECTION_URI).toBeUndefined()
     expect(environment.MIP_AI_HMAC_SECRET).toBeUndefined()
     expect(environment.MIP_ALLOWED_APP_IDS).toBe(aiEnvironment.MIP_ALLOWED_APP_IDS)
     expect(environment.MIP_AI_DRAFT_PROVIDER_HMAC_SECRET)
       .toBe(aiEnvironment.MIP_AI_DRAFT_PROVIDER_HMAC_SECRET)
+    expect(environment.OPENAI_BASE_URL).toBe('https://api.deepseek.com/')
+    expect(environment.OPENAI_MODEL).toBe('deepseek-v4-flash')
+    expect(environment.MIP_AI_DRAFT_UPSTREAM_ENDPOINT).toBeUndefined()
+  })
+
+  it('keeps the legacy authenticated MIP upstream deployable', () => {
+    const environment = providerEnvironment({
+      aiEnvironment,
+      env: legacyEnvironment,
+      sourceMarker,
+    })
+    expect(environment.MIP_AI_DRAFT_UPSTREAM_ENDPOINT).toBe('https://provider.example.com/v1/drafts')
+    expect(environment.MIP_AI_DRAFT_UPSTREAM_ALLOWED_HOSTS).toBe('provider.example.com')
+    expect(environment.OPENAI_API_KEY).toBeUndefined()
   })
 
   it('stops before Provider deployment unless the existing AI API already targets the exact function', () => {
@@ -138,11 +158,15 @@ describe('AI draft Provider cloud contract', () => {
 
     expect(envExample).toContain('MIP_AI_DRAFT_PROVIDER_HMAC_SECRET=')
     expect(envExample).toContain('MIP_AI_DRAFT_UPSTREAM_ENDPOINT=')
+    expect(envExample).toContain('OPENAI_BASE_URL=https://api.deepseek.com')
+    expect(envExample).toContain('OPENAI_MODEL=deepseek-v4-flash')
+    expect(envExample).toContain('OPENAI_API_KEY=')
     expect(envExample).toContain('MIP_AI_PROVIDER_TIMEOUT_MS=8000')
     expect(localSecrets).toContain('\'MIP_AI_DRAFT_PROVIDER_HMAC_SECRET\'')
     expect(coreDeploy).toContain('aiDraftProviderHmac: stableSecretValues.MIP_AI_DRAFT_PROVIDER_HMAC_SECRET')
     expect(coreDeploy).toContain('MIP_AI_DRAFT_PROVIDER_HMAC_SECRET: options.secrets.aiDraftProviderHmac')
     expect(coreDeploy).toContain('MIP_AI_PROVIDER_TIMEOUT_MS: String(options.aiProviderTimeoutMs)')
+    expect(coreDeploy).not.toContain('OPENAI_API_KEY')
     expect(packageJson.scripts['cloud:ai-draft-provider:deploy'])
       .toBe('node scripts/deploy-ai-draft-provider.mjs')
     expect(packageJson.scripts['cloud:ai-draft-provider:verify'])

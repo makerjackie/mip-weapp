@@ -6,6 +6,7 @@ const { createDraftProvider } = require('./domain/provider')
 const { createAudioLoader } = require('./lib/audio')
 const { readConfig } = require('./lib/config')
 const { createHttpsJsonClient } = require('./lib/network')
+const { createOpenAiCompatibleAdapter } = require('./lib/openai-compatible')
 const { createOperationCache } = require('./lib/operation-cache')
 const { createUpstreamAdapter } = require('./lib/upstream')
 
@@ -16,11 +17,13 @@ let defaultRuntime
 function createRuntime(options = {}) {
   const config = options.config || readConfig()
   const http = options.http || createHttpsJsonClient()
-  const upstream = options.upstream || createUpstreamAdapter({
-    audioLoader: options.audioLoader || createAudioLoader(cloud),
-    config,
-    http,
-  })
+  const upstream = options.upstream || (config.mode === 'openai_compatible'
+    ? createOpenAiCompatibleAdapter({ config, http })
+    : createUpstreamAdapter({
+        audioLoader: options.audioLoader || createAudioLoader(cloud),
+        config,
+        http,
+      }))
   return {
     config,
     http,

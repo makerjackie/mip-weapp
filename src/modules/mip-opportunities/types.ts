@@ -1,4 +1,5 @@
 import type { BranchId, CooperationRoleKey, OpportunityId } from '../mip'
+import type { AiDraftSourceConfirmation } from '../mip-ai/types'
 
 export type OpportunityStatus = 'DRAFT' | 'PUBLISHED' | 'ENDED' | 'UNPUBLISHED'
 export type OpportunityStatusFilter = 'RECRUITING' | 'COMPLETED'
@@ -289,6 +290,7 @@ export interface OpportunityDraft {
   abilityTagIds: string[]
   teamProfileRefs?: string[]
   publish: boolean
+  aiConfirmation?: AiDraftSourceConfirmation
 }
 
 export interface OpportunityMutationResult {

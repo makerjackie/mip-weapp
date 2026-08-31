@@ -10,6 +10,8 @@ describe('MIP opportunity Figma surfaces', () => {
   const detail = source('src/packages/member/mip-opportunities/detail/index.wxml')
   const detailScript = source('src/packages/member/mip-opportunities/detail/index.ts')
   const editor = source('src/packages/member/mip-opportunities/editor/index.wxml')
+  const editorScript = source('src/packages/member/mip-opportunities/editor/index.ts')
+  const editorConfig = source('src/packages/member/mip-opportunities/editor/index.json')
   const opportunityCard = source('src/components/opportunity-card/index.wxml')
   const opportunityCardStyles = source('src/components/opportunity-card/index.wxss')
   const discoveryScript = source('src/pages/opportunities/index.ts')
@@ -86,17 +88,59 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(detail).toContain('<app-page-exit label="返回机会" />')
   })
 
-  it('keeps the editor sequence, draft lifecycle and bottom action aligned with the frozen frame', () => {
+  it('keeps the editor sequence and uses one standard primary bottom action', () => {
     expect(editor).toContain('准确的描述可以更容易帮你找到合作机会')
     expect(editor.indexOf('未选择时为全国')).toBeLessThan(editor.indexOf('cityGridOptions'))
     expect(editor.indexOf('机会封面')).toBeLessThan(editor.indexOf('更多设置'))
     expect(editor).toContain('wx:if="{{advancedOpen}}"')
     expect(editor).toContain('id="opportunity-editor-fixed-actions"')
     expect(editor).toContain('bottom-[calc(env(safe-area-inset-bottom)+16rpx)]')
+    expect(editor).toContain('<t-button block size="large" theme="primary" loading="{{saving}}" disabled="{{saving || coverUploading}}" bind:tap="publish">')
+    expect(editor).not.toContain('id="opportunity-editor-fixed-actions" class="mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center rounded-full border border-brand bg-brand-soft p-2"')
     expect(editor).toContain('bind:tap="saveDraft"')
     expect(editor).toContain('bind:tap="publish"')
     expect(editor).toContain('bind:tap="pasteAndRecognize"')
     expect(editor).toContain('bind:tap="openTeamPicker"')
+  })
+
+  it('distinguishes create, draft edit and published edit behavior', () => {
+    expect(editorConfig).toContain('"navigationBarTitleText": "发布机会"')
+    expect(editorScript).toContain(`type OpportunityEditorMode = 'CREATE' | 'DRAFT' | 'PUBLISHED'`)
+    expect(editorScript).toContain(`editorMode === 'CREATE' ? '发布机会' : editorMode === 'DRAFT' ? '编辑草稿' : '编辑机会'`)
+    expect(editor).toContain(`editorMode !== 'PUBLISHED'`)
+    expect(editor).toContain(`editorMode === 'PUBLISHED' ? '保存修改' : '发布机会'`)
+  })
+
+  it('uses AI recognition with a bounded local fallback and explicit confirmation', () => {
+    expect(editorScript).toContain('purpose: \'OPPORTUNITY\'')
+    expect(editorScript).toContain('mipAiModule.createTextDraft')
+    expect(editorScript).toContain('loadAiEditorDraft(this.data.aiDraftId, \'OPPORTUNITY\')')
+    expect(editorScript).toContain('confirmedAiDraftId: aiSource.confirmation.draftId')
+    expect(editorScript).toContain('parseOpportunityAiDraft')
+    expect(editorScript).toContain('parseOpportunityText(source, this.data.cityOptions)')
+    expect(editorScript).toContain('aiConfirmation: {')
+    expect(editorScript).toContain('confirmedAiDraftId: this.data.pasteAiDraftId')
+    expect(editor).toContain('pasteRecognizing ? \'正在智能识别\' : \'粘贴整段文字，自动识别\'')
+    expect(editorScript).toContain('已使用智能识别，请核对结果。')
+    expect(editorScript).toContain('智能识别暂时不可用，已使用基础识别，请重点核对。')
+    expect(editor).toContain('bind:tap="confirmPasteDraft"')
+  })
+
+  it('keeps media errors with the optional cover and save errors above the actions', () => {
+    expect(editor).toContain('wx:if="{{coverMessage}}"')
+    expect(editor).toContain('{{coverMessage}}')
+    expect(editorScript).toContain('封面为选填，可以稍后补充。')
+    expect(editor.indexOf('wx:if="{{coverMessage}}"')).toBeLessThan(editor.indexOf('更多设置'))
+    expect(editor.indexOf('bind:tap="saveDraft"')).toBeLessThan(editor.indexOf('wx:if="{{message}}"'))
+    expect(editor.indexOf('wx:if="{{message}}"')).toBeLessThan(editor.indexOf('id="opportunity-editor-fixed-actions"'))
+  })
+
+  it('opens new saves on detail and refreshes detail after returning from an edit', () => {
+    expect(editorScript).toContain(`const wasExisting = Boolean(this.data.id)`)
+    expect(editorScript).toContain(`previousPage?.route === detailRoute`)
+    expect(editorScript).toContain('wx.redirectTo({')
+    expect(editorScript).toContain('/packages/member/mip-opportunities/detail/index?id=')
+    expect(detailScript).toContain('if (this.data.item) {\n      void this.load()')
   })
 
   it('uses design tokens instead of page-local colour literals', () => {

@@ -3,6 +3,7 @@
 const { randomUUID } = require('node:crypto')
 const { lockActiveContributor } = require('../lib/auth')
 const { createProfileRef, readProfileRef } = require('../lib/profile-ref')
+const { confirmAiDraft, normalizeAiConfirmation } = require('./ai-confirmation')
 const {
   assertCommercialTerms,
   legacyTerms,
@@ -662,6 +663,7 @@ function isSelectableTag(tag, kind) {
 
 async function saveOpportunity(database, contentSafety, caller, input) {
   const draft = normalizeDraft(input.draft)
+  const aiConfirmation = normalizeAiConfirmation(input.aiConfirmation, 'OPPORTUNITY')
   await contentSafety.assertSafe(caller, [
     draft.title,
     draft.valueSummary,
@@ -673,7 +675,7 @@ async function saveOpportunity(database, contentSafety, caller, input) {
     userId: caller.userId,
     operation: 'opportunity.save',
     idempotencyKey: input.idempotencyKey,
-    request: draft,
+    request: aiConfirmation ? { draft, aiConfirmation } : draft,
   }, async (tx) => {
     await lockActiveContributor(tx, caller)
     await assertReferences(tx, caller, draft)
@@ -783,6 +785,18 @@ async function saveOpportunity(database, contentSafety, caller, input) {
         payload: { opportunityId: id, branchId: draft.branchId },
       })
     }
+    await confirmAiDraft(tx, {
+      appId: caller.appId,
+      userId: caller.userId,
+      confirmation: aiConfirmation,
+      resourceId: id,
+      structuredDraft: {
+        title: draft.title,
+        valueSummary: draft.valueSummary,
+        targetSummary: draft.targetSummary,
+        description: draft.description,
+      },
+    })
     return { id, status, version }
   })
 }

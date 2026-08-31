@@ -20,6 +20,11 @@ function createHandler(resolveRuntime) {
           service: runtime.config.functionName,
           persistence: 'none',
           ready: true,
+          capabilities: {
+            textDrafts: true,
+            voiceDrafts: runtime.config.mode !== 'openai_compatible',
+            refinementDrafts: true,
+          },
         })
       }
       catch (error) {

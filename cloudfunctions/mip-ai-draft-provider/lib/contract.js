@@ -75,7 +75,7 @@ function validatePayload(action, value, appId) {
     || value.appId !== appId
     || !/^wx[0-9a-f]{16}$/i.test(value.appId)
     || !uuid(value.draftId)
-    || !['PROFILE', 'COOPERATION_CARD', 'SUPER_CASE'].includes(value.purpose)
+    || !['PROFILE', 'COOPERATION_CARD', 'SUPER_CASE', 'OPPORTUNITY'].includes(value.purpose)
     || !Number.isInteger(value.expectedVersion)
     || value.expectedVersion < 1
     || value.expectedVersion > 1_000_000) {

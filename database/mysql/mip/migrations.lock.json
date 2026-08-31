@@ -800,6 +800,18 @@
         "mip_membership_invitation_codes"
       ],
       "altersTables": []
+    },
+    {
+      "version": "20260831590000",
+      "name": "mip_ai_opportunity_draft_purpose",
+      "sql": "database/mysql/mip/059_ai_opportunity_draft_purpose.sql",
+      "sqlSha256": "c8a52723f24ae06c27ed89fe0b1a63e5d26b4489a6e01e392631da67fbf08b91",
+      "rollback": "database/mysql/mip/rollback/059_ai_opportunity_draft_purpose.sql",
+      "rollbackSha256": "8f0a4885aa38ea64b445d7be782e44ce442ec76fb092dcb5f0a17a2819d0a53a",
+      "createsTables": [],
+      "altersTables": [
+        "mip_ai_drafts"
+      ]
     }
   ]
 }

@@ -42,6 +42,23 @@ test('accepts the caller contract and returns a caller-verifiable signed respons
   assert.deepEqual(verifyDraftProviderResponse(response, signed, secret, now), data)
 })
 
+test('accepts the opportunity purpose without widening the signed payload', () => {
+  const signed = request({ purpose: 'OPPORTUNITY', transcriptText: '项目名称：品牌渠道合作' })
+  const verified = verifyProviderRequest(signed, {
+    allowedAppIds: new Set([appId]),
+    secret,
+    now: () => now,
+  })
+  assert.equal(verified.payload.purpose, 'OPPORTUNITY')
+  assert.deepEqual(Object.keys(verified.payload).sort(), [
+    'appId',
+    'draftId',
+    'expectedVersion',
+    'purpose',
+    'transcriptText',
+  ])
+})
+
 test('strips only well-formed CloudBase transport metadata before verification', () => {
   const signed = request()
   const verify = value => verifyProviderRequest(value, {

@@ -10,27 +10,71 @@ function readConfig(env = process.env) {
   const endpoint = parseEndpoint(env.MIP_AI_DRAFT_UPSTREAM_ENDPOINT)
   const secret = text(env.MIP_AI_DRAFT_PROVIDER_HMAC_SECRET)
   const upstreamSecret = text(env.MIP_AI_DRAFT_UPSTREAM_SECRET)
+  const openAiBaseUrl = parseOpenAiBaseUrl(env.OPENAI_BASE_URL)
+  const openAiModel = parseOpenAiModel(env.OPENAI_MODEL)
+  const openAiApiKey = parseOpenAiApiKey(env.OPENAI_API_KEY)
   const timeoutMs = normalizeTimeout(env.MIP_AI_DRAFT_UPSTREAM_TIMEOUT_MS)
+  const openAiConfigured = Boolean(openAiBaseUrl && openAiModel && openAiApiKey)
+  const openAiSupplied = [env.OPENAI_BASE_URL, env.OPENAI_MODEL, env.OPENAI_API_KEY]
+    .some(value => text(value))
   const errors = []
   if (!allowedAppIds.size) errors.push('APP_ID_ALLOWLIST_MISSING')
   if (secret.length < 32) errors.push('INTERNAL_HMAC_MISSING')
-  if (upstreamSecret.length < 16) errors.push('UPSTREAM_SECRET_MISSING')
-  if (!endpoint) errors.push('UPSTREAM_ENDPOINT_INVALID')
-  if (!allowedHosts.length) errors.push('UPSTREAM_HOST_ALLOWLIST_MISSING')
-  if (endpoint && !allowedHosts.includes(endpoint.hostname)) {
-    errors.push('UPSTREAM_ENDPOINT_NOT_ALLOWED')
+  if (openAiSupplied) {
+    if (!openAiBaseUrl) errors.push('OPENAI_BASE_URL_INVALID')
+    if (!openAiModel) errors.push('OPENAI_MODEL_INVALID')
+    if (!openAiApiKey) errors.push('OPENAI_API_KEY_INVALID')
+  }
+  else {
+    if (upstreamSecret.length < 16) errors.push('UPSTREAM_SECRET_MISSING')
+    if (!endpoint) errors.push('UPSTREAM_ENDPOINT_INVALID')
+    if (!allowedHosts.length) errors.push('UPSTREAM_HOST_ALLOWLIST_MISSING')
+    if (endpoint && !allowedHosts.includes(endpoint.hostname)) {
+      errors.push('UPSTREAM_ENDPOINT_NOT_ALLOWED')
+    }
   }
   return Object.freeze({
     functionName: FUNCTION_NAME,
+    mode: openAiSupplied ? 'openai_compatible' : 'mip_upstream',
     allowedAppIds,
     allowedHosts,
     endpoint,
+    openAiApiKey,
+    openAiBaseUrl,
+    openAiChatEndpoint: openAiConfigured ? openAiChatEndpoint(openAiBaseUrl) : null,
+    openAiModel,
     secret,
     upstreamSecret,
     timeoutMs,
     configured: errors.length === 0,
     errors: Object.freeze(errors),
   })
+}
+
+function parseOpenAiBaseUrl(value) {
+  const baseUrl = parseEndpoint(value)
+  if (!baseUrl || !parseAllowedHosts(baseUrl.hostname).includes(baseUrl.hostname)) return null
+  baseUrl.pathname = baseUrl.pathname.replace(/\/+$/, '') || '/'
+  return baseUrl
+}
+
+function openAiChatEndpoint(baseUrl) {
+  const endpoint = new URL(baseUrl.toString())
+  const basePath = endpoint.pathname.replace(/\/+$/, '')
+  endpoint.pathname = basePath.endsWith('/chat/completions')
+    ? basePath
+    : `${basePath}/chat/completions`.replace(/^\/+/, '/')
+  return endpoint
+}
+
+function parseOpenAiModel(value) {
+  const model = text(value)
+  return /^\w[\w.:-]{1,127}$/.test(model) ? model : ''
+}
+
+function parseOpenAiApiKey(value) {
+  const key = text(value)
+  return key.length >= 16 && key.length <= 512 && /^[\x21-\x7E]+$/.test(key) ? key : ''
 }
 
 function requireReady(config) {
@@ -95,6 +139,9 @@ module.exports = {
   parseAllowedHosts,
   parseAppIds,
   parseEndpoint,
+  parseOpenAiApiKey,
+  parseOpenAiBaseUrl,
+  parseOpenAiModel,
   readConfig,
   requireReady,
 }

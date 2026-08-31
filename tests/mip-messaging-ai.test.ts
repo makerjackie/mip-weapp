@@ -137,6 +137,27 @@ describe('MIP AI drafts', () => {
     })).toEqual({ headline: '产品负责人' })
   })
 
+  it('normalizes an opportunity draft through a strict text-only field whitelist', () => {
+    expect(normalizeStructuredDraft('OPPORTUNITY', {
+      title: ' 品牌渠道合作 ',
+      valueSummary: '年度合作额 50 万元',
+      cityLabel: '深圳',
+      targetSummary: '寻找成熟消费品渠道',
+      description: '第一阶段覆盖华南。',
+      branchId: 'untrusted-internal-id',
+      roleKeys: ['connector'],
+    })).toEqual({
+      title: '品牌渠道合作',
+      valueSummary: '年度合作额 50 万元',
+      cityLabel: '深圳',
+      targetSummary: '寻找成熟消费品渠道',
+      description: '第一阶段覆盖华南。',
+    })
+    expect(() => normalizeStructuredDraft('OPPORTUNITY', {
+      title: { invented: true },
+    })).toThrow('AI_DRAFT_CONTENT_INVALID')
+  })
+
   it('hydrates only a ready unexpired draft into its matching editor', () => {
     const editor = requireAiEditorDraft({
       ...draft,

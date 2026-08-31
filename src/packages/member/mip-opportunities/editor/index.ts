@@ -1,9 +1,13 @@
 import type { BranchId, CooperationRoleKey, OpportunityId } from '../../../../modules/mip'
+import type { AiDraftId } from '../../../../modules/mip-ai'
 import type { OpportunityCatalog, OpportunityDetail, OpportunityLocationType, PublicPerson } from '../../../../modules/mip-opportunities'
 import type { OpportunityTextDraft } from '../../../../modules/mip-opportunities/text-parser'
 import { cooperationRoles } from '../../../../config/mip-catalogs'
+import { mipAiModule } from '../../../../modules/mip-ai/client'
+import { loadAiEditorDraft } from '../../../../modules/mip-ai/editor-loader'
 import { mipMediaModule } from '../../../../modules/mip-media/client'
 import { opportunityModule } from '../../../../modules/mip-opportunities'
+import { parseOpportunityAiDraft } from '../../../../modules/mip-opportunities/ai-draft'
 import { parseOpportunityText } from '../../../../modules/mip-opportunities/text-parser'
 import { chooseSingleImage } from '../../../../modules/platform/image-upload'
 
@@ -14,6 +18,7 @@ interface TeamSelection { profileRef: string, nickname: string, avatarUrl?: stri
 interface TeamCandidate extends PublicPerson { selected: boolean }
 interface CityOption { id: string, label: string }
 interface PastePreviewRow { key: string, label: string, value: string }
+type OpportunityEditorMode = 'CREATE' | 'DRAFT' | 'PUBLISHED'
 
 const cityPriority = ['深圳', '北京', '上海', '成都', '广州', '中国香港', '中国澳门', '海外']
 
@@ -42,13 +47,24 @@ function pastePreviewRows(draft: OpportunityTextDraft): PastePreviewRow[] {
   ].filter(item => item.value)
 }
 
+function isCancelledImageSelection(error: unknown) {
+  const message = error instanceof Error
+    ? error.message
+    : typeof (error as { errMsg?: unknown })?.errMsg === 'string'
+      ? String((error as { errMsg: string }).errMsg)
+      : ''
+  return /cancel/i.test(message)
+}
+
 Page({
   data: {
     id: '' as OpportunityId | '',
     version: 0,
     state: 'loading' as 'loading' | 'ready' | 'error',
+    editorMode: 'CREATE' as OpportunityEditorMode,
     saving: false,
     message: '',
+    coverMessage: '',
     title: '',
     valueSummary: '',
     targetSummary: '',
@@ -70,6 +86,13 @@ Page({
     cityOptions: [{ id: '', label: '全国' }],
     cityGridOptions: [] as CityOption[],
     pastePreviewVisible: false,
+    pasteRecognizing: false,
+    aiDraftId: '',
+    pasteAiDraftId: '' as AiDraftId | '',
+    pasteAiDraftVersion: 0,
+    confirmedAiDraftId: '' as AiDraftId | '',
+    confirmedAiDraftVersion: 0,
+    pasteRecognitionNotice: '',
     pasteDraft: {} as OpportunityTextDraft,
     pastePreview: [] as PastePreviewRow[],
     advancedOpen: false,
@@ -85,7 +108,9 @@ Page({
   navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
 
   onLoad(options: Record<string, string | undefined>) {
-    this.setData({ id: String(options.id || '') as OpportunityId | '' })
+    const id = String(options.id || '') as OpportunityId | ''
+    this.setData({ id, aiDraftId: String(options.aiDraftId || '') })
+    wx.setNavigationBarTitle({ title: id ? '编辑机会' : '发布机会' })
     void this.initialize()
   },
 
@@ -107,9 +132,13 @@ Page({
   async initialize() {
     this.setData({ state: 'loading', message: '' })
     try {
-      const [catalog, detail] = await Promise.all([
+      if (this.data.id && this.data.aiDraftId) {
+        throw new Error('AI 草稿不能覆盖已有机会')
+      }
+      const [catalog, detail, aiSource] = await Promise.all([
         opportunityModule.getCatalogs(),
         this.data.id ? opportunityModule.get(this.data.id) : Promise.resolve(null),
+        this.data.aiDraftId ? loadAiEditorDraft(this.data.aiDraftId, 'OPPORTUNITY') : Promise.resolve(null),
       ])
       if (detail && !detail.canEdit) {
         this.setData({
@@ -120,7 +149,29 @@ Page({
         })
         return
       }
+      const editorMode: OpportunityEditorMode = detail?.status === 'DRAFT'
+        ? 'DRAFT'
+        : detail?.status === 'PUBLISHED' ? 'PUBLISHED' : 'CREATE'
+      wx.setNavigationBarTitle({
+        title: editorMode === 'CREATE' ? '发布机会' : editorMode === 'DRAFT' ? '编辑草稿' : '编辑机会',
+      })
+      this.setData({ editorMode })
       this.applyCatalog(catalog, detail)
+      if (aiSource) {
+        const parsed = parseOpportunityAiDraft(aiSource.fields, this.data.cityOptions)
+        const cityIndex = parsed.draft.cityTagId
+          ? this.data.cityOptions.findIndex(item => item.id === parsed.draft.cityTagId)
+          : -1
+        this.setData({
+          ...(parsed.draft.title ? { title: parsed.draft.title } : {}),
+          ...(parsed.draft.valueSummary ? { valueSummary: parsed.draft.valueSummary } : {}),
+          ...(parsed.draft.targetSummary ? { targetSummary: parsed.draft.targetSummary } : {}),
+          ...(parsed.draft.description ? { description: parsed.draft.description } : {}),
+          ...(cityIndex >= 0 ? { cityTagId: parsed.draft.cityTagId, cityIndex } : {}),
+          confirmedAiDraftId: aiSource.confirmation.draftId,
+          confirmedAiDraftVersion: aiSource.confirmation.expectedVersion,
+        })
+      }
       this.setData({ state: 'ready' })
     }
     catch (error) {
@@ -262,32 +313,72 @@ Page({
   },
 
   async pasteAndRecognize() {
+    if (this.data.pasteRecognizing) {
+      return
+    }
+
+    let source = ''
     try {
       const clipboard = await wx.getClipboardData()
-      const source = typeof clipboard.data === 'string' ? clipboard.data.trim() : ''
+      source = typeof clipboard.data === 'string' ? clipboard.data.trim() : ''
       if (!source) {
         wx.showToast({ title: '剪贴板中没有文字', icon: 'none' })
         return
       }
+    }
+    catch {
+      this.setData({ message: '暂时无法读取剪贴板，请手动填写。' })
+      return
+    }
+
+    this.setData({ pasteRecognizing: true, message: '', pasteRecognitionNotice: '' })
+    try {
+      const aiDraft = await mipAiModule.createTextDraft({
+        purpose: 'OPPORTUNITY',
+        transcriptText: source,
+      })
+      const parsed = parseOpportunityAiDraft(aiDraft.structuredDraft, this.data.cityOptions)
+      if (aiDraft.status !== 'DRAFT_READY' || !parsed.recognizedFields.length) {
+        throw new Error('智能识别未返回可用内容')
+      }
+      this.setData({
+        pasteDraft: parsed.draft,
+        pastePreview: pastePreviewRows(parsed.draft),
+        pastePreviewVisible: true,
+        pasteAiDraftId: aiDraft.id,
+        pasteAiDraftVersion: aiDraft.version,
+        pasteRecognitionNotice: '已使用智能识别，请核对结果。',
+        message: '',
+      })
+    }
+    catch {
       const parsed = parseOpportunityText(source, this.data.cityOptions)
       if (!parsed.recognizedFields.length) {
-        this.setData({ message: '未识别到可填写的机会信息，请按字段名称分行粘贴。' })
+        this.setData({ message: '暂时无法识别这段内容，请手动填写。' })
         return
       }
       this.setData({
         pasteDraft: parsed.draft,
         pastePreview: pastePreviewRows(parsed.draft),
         pastePreviewVisible: true,
+        pasteAiDraftId: '',
+        pasteAiDraftVersion: 0,
+        pasteRecognitionNotice: '智能识别暂时不可用，已使用基础识别，请重点核对。',
         message: '',
       })
     }
-    catch {
-      this.setData({ message: '暂时无法读取剪贴板，请手动填写。' })
+    finally {
+      this.setData({ pasteRecognizing: false })
     }
   },
 
   closePastePreview() {
-    this.setData({ pastePreviewVisible: false })
+    this.setData({
+      pastePreviewVisible: false,
+      pasteAiDraftId: '',
+      pasteAiDraftVersion: 0,
+      pasteRecognitionNotice: '',
+    })
   },
 
   toggleAdvancedSettings() {
@@ -312,6 +403,11 @@ Page({
       ...(draft.description ? { description: draft.description } : {}),
       ...(cityIndex >= 0 ? { cityTagId: draft.cityTagId, cityIndex } : {}),
       pastePreviewVisible: false,
+      confirmedAiDraftId: this.data.pasteAiDraftId,
+      confirmedAiDraftVersion: this.data.pasteAiDraftVersion,
+      pasteAiDraftId: '',
+      pasteAiDraftVersion: 0,
+      pasteRecognitionNotice: '',
     })
     wx.showToast({ title: '已填入，请确认内容', icon: 'none' })
   },
@@ -426,14 +522,19 @@ Page({
     if (this.data.coverUploading || this.data.saving) {
       return
     }
-    this.setData({ coverUploading: true, message: '' })
+    this.setData({ coverUploading: true, coverMessage: '' })
     try {
       const sourcePath = await chooseSingleImage()
       const asset = await mipMediaModule.uploadImageFromPath('OPPORTUNITY_COVER', sourcePath)
       this.setData({ coverAssetId: asset.assetId, coverUrl: asset.imageUrl })
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '封面上传失败，请重试。' })
+      if (isCancelledImageSelection(error)) {
+        return
+      }
+      this.setData({
+        coverMessage: `${error instanceof Error ? error.message : '封面上传失败，请重试。'} 封面为选填，可以稍后补充。`,
+      })
     }
     finally {
       this.setData({ coverUploading: false })
@@ -447,6 +548,7 @@ Page({
     if (this.data.saving || this.data.coverUploading) {
       return
     }
+    const wasExisting = Boolean(this.data.id)
     this.setData({ saving: true, message: '' })
     try {
       const minAmountCents = this.data.minAmountYuan.trim() ? Math.round(Number(this.data.minAmountYuan) * 100) : undefined
@@ -480,13 +582,35 @@ Page({
         abilityTagIds: this.data.abilityOptions.filter(item => item.selected).map(item => item.id),
         teamProfileRefs: this.data.teamMembers.map(item => item.profileRef),
         publish,
+        ...(this.data.confirmedAiDraftId
+          ? {
+              aiConfirmation: {
+                draftId: this.data.confirmedAiDraftId,
+                expectedVersion: this.data.confirmedAiDraftVersion,
+              },
+            }
+          : {}),
       })
-      this.setData({ id: result.id, version: result.version })
+      this.setData({
+        id: result.id,
+        version: result.version,
+        confirmedAiDraftId: '',
+        confirmedAiDraftVersion: 0,
+      })
       wx.showToast({ title: result.status === 'PUBLISHED' ? '机会已发布' : '草稿已保存', icon: 'success' })
       this.clearNavigationTimer()
       this.navigationTimer = setTimeout(() => {
         this.navigationTimer = undefined
-        wx.navigateBack()
+        const detailRoute = 'packages/member/mip-opportunities/detail/index'
+        const pages = getCurrentPages()
+        const previousPage = pages.length > 1 ? pages[pages.length - 2] : undefined
+        if (wasExisting && previousPage?.route === detailRoute) {
+          wx.navigateBack()
+          return
+        }
+        wx.redirectTo({
+          url: `/packages/member/mip-opportunities/detail/index?id=${encodeURIComponent(result.id)}`,
+        })
       }, 500)
     }
     catch (error) {

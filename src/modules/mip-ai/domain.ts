@@ -4,6 +4,15 @@ const allowedFields = {
   PROFILE: new Set(['nickname', 'identityStatus', 'headline', 'introduction', 'companies', 'organizations']),
   COOPERATION_CARD: new Set(['roleKey', 'positioning', 'targetSummary', 'roleFields', 'abilityScores']),
   SUPER_CASE: new Set(['projectName', 'summary', 'responsibility', 'description', 'startedOn', 'endedOn', 'caseType']),
+  OPPORTUNITY: new Set(['title', 'valueSummary', 'cityLabel', 'targetSummary', 'description']),
+} as const
+
+const opportunityTextLimits = {
+  title: 120,
+  valueSummary: 240,
+  cityLabel: 80,
+  targetSummary: 500,
+  description: 6000,
 } as const
 
 const transitions: Readonly<Record<AiDraftStatus, readonly AiDraftStatus[]>> = {
@@ -53,9 +62,17 @@ export function normalizeStructuredDraft(
     throw new Error('AI_DRAFT_CONTENT_INVALID')
   }
   const permitted = allowedFields[purpose]
-  const result = Object.fromEntries(Object.entries(value).filter(([key, item]) => (
-    permitted.has(key as never) && isSupportedValue(item)
-  )))
+  const result = Object.fromEntries(Object.entries(value).flatMap(([key, item]) => {
+    if (!permitted.has(key as never)) {
+      return []
+    }
+    if (purpose !== 'OPPORTUNITY') {
+      return isSupportedValue(item) ? [[key, item]] : []
+    }
+    const maximumLength = opportunityTextLimits[key as keyof typeof opportunityTextLimits]
+    const normalized = typeof item === 'string' ? item.trim() : ''
+    return normalized && normalized.length <= maximumLength ? [[key, normalized]] : []
+  }))
   if (!Object.keys(result).length || JSON.stringify(result).length > 30_000) {
     throw new Error('AI_DRAFT_CONTENT_INVALID')
   }

@@ -65,6 +65,32 @@ test('does not advertise draft actions until the configured Provider is ready', 
   })
 })
 
+test('refreshes draft capabilities after readiness resolves', async () => {
+  let ready = false
+  const service = createAiService({
+    repository: {},
+    provider: {
+      capability: () => ({
+        textDrafts: true,
+        voiceDrafts: !ready,
+        refinementDrafts: true,
+        digitalAvatars: false,
+      }),
+      readiness: async () => {
+        ready = true
+        return true
+      },
+    },
+    audioStore: { configured: true },
+  })
+  assert.deepEqual(await service.getCapability(), {
+    textDrafts: true,
+    voiceDrafts: false,
+    refinementDrafts: true,
+    digitalAvatars: false,
+  })
+})
+
 test('degrades a readiness exception to unavailable capability without exposing it', async () => {
   const service = createAiService({
     repository: {},

@@ -73,9 +73,9 @@
       <view wx:if="{{commentsMessage && commentsState === 'ready'}}" class="mt-3 text-[length:21rpx] text-danger">{{commentsMessage}}</view>
     </view>
     <view wx:if="{{item.canEdit}}" id="opportunity-owner-actions" class="mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full border border-brand bg-brand-soft p-2">
-      <view class="flex h-[80rpx] w-[176rpx] shrink-0 items-center justify-center gap-2 rounded-full bg-panel text-[length:32rpx] font-medium text-brand active:bg-panel-raised" aria-role="button" bind:tap="edit"><image class="h-[40rpx] w-[40rpx]" src="/assets/figma/opportunities/edit-draft.svg" mode="aspectFit" /><text>编辑</text></view>
+      <view class="flex h-[80rpx] w-[176rpx] shrink-0 items-center justify-center gap-2 rounded-full bg-panel text-[length:32rpx] font-medium text-brand active:bg-panel-raised" aria-role="button" bind:tap="edit"><image class="h-[40rpx] w-[40rpx]" src="/assets/figma/opportunities/edit-draft.svg" mode="aspectFit" /><text>{{item.status === 'DRAFT' ? '编辑草稿' : '编辑'}}</text></view>
       <view wx:if="{{item.status === 'PUBLISHED'}}" class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-center text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" bind:tap="end">已完成招募，结束机会</view>
-      <view wx:else class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-panel-raised px-4 text-center text-[length:28rpx] text-muted">机会已结束</view>
+      <view wx:else class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-center text-[length:32rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" bind:tap="edit">发布机会</view>
     </view>
     <view wx:elif="{{!item.mine && item.status === 'PUBLISHED'}}" id="opportunity-referral-actions" class="mip-member-fixed-inset fixed inset-x-3 bottom-[calc(env(safe-area-inset-bottom)+16rpx)] z-20 flex h-[112rpx] items-center gap-3 rounded-full border border-brand bg-brand-soft p-2">
       <view class="flex h-[80rpx] min-w-[176rpx] shrink-0 items-center justify-center rounded-full bg-panel px-3 text-[length:26rpx] font-medium text-brand">+{{item.referralCount}}引荐</view>

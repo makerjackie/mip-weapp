@@ -13,5 +13,8 @@ describe('MIP opportunity terminal state', () => {
     expect(detailView).toContain('wx:if="{{item.canEdit}}"')
     expect(editorPage).toContain('if (detail && !detail.canEdit)')
     expect(editorPage).toContain('机会已结束，不能继续编辑。')
+    expect(detailView).toContain(`item.status === 'DRAFT' ? '编辑草稿' : '编辑'`)
+    expect(detailView).toContain('bind:tap="edit">发布机会</view>')
+    expect(detailView).not.toContain('机会已结束')
   })
 })

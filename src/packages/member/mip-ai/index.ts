@@ -12,6 +12,7 @@ const purposeOptions: Array<{ label: string, value: AiDraftPurpose }> = [
   { label: '个人档案', value: 'PROFILE' },
   { label: '合作卡', value: 'COOPERATION_CARD' },
   { label: '超级案例', value: 'SUPER_CASE' },
+  { label: '机会', value: 'OPPORTUNITY' },
 ]
 
 const statusLabels = {
@@ -62,6 +63,13 @@ const fieldLabels: Record<AiDraftPurpose, Record<string, string>> = {
     endedOn: '结束日期',
     caseType: '案例类型',
   },
+  OPPORTUNITY: {
+    title: '项目名称',
+    valueSummary: '价值金额',
+    cityLabel: '主营城市',
+    targetSummary: '寻找合作方',
+    description: '项目介绍',
+  },
 }
 
 function readableValue(value: unknown): string {
@@ -108,6 +116,7 @@ function editorRoute(draft: DraftView) {
     PROFILE: '/packages/member/mip-profile/index',
     COOPERATION_CARD: '/packages/member/mip-cooperation/editor/index',
     SUPER_CASE: '/packages/member/mip-cases/editor/index',
+    OPPORTUNITY: '/packages/member/mip-opportunities/editor/index',
   }
   return `${routes[draft.purpose]}?aiDraftId=${encodeURIComponent(draft.id)}`
 }

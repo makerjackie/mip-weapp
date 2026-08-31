@@ -37,4 +37,29 @@ test('returns readiness only after the exact endpoint resolves', async () => {
   assert.equal(checked, true)
   assert.equal(result.ok, true)
   assert.equal(result.data.ready, true)
+  assert.deepEqual(result.data.capabilities, {
+    textDrafts: true,
+    voiceDrafts: true,
+    refinementDrafts: true,
+  })
+})
+
+test('reports DeepSeek-compatible mode as text-only', async () => {
+  const runtime = {
+    config: readConfig({
+      MIP_ALLOWED_APP_IDS: 'wx1234567890abcdef',
+      MIP_AI_DRAFT_PROVIDER_HMAC_SECRET: 'h'.repeat(48),
+      OPENAI_BASE_URL: 'https://api.deepseek.com',
+      OPENAI_MODEL: 'deepseek-v4-flash',
+      OPENAI_API_KEY: 'k'.repeat(32),
+    }),
+    provider: {},
+    upstream: { async readiness() {} },
+  }
+  const result = await createHandler(() => runtime)({ action: 'readiness' })
+  assert.deepEqual(result.data.capabilities, {
+    textDrafts: true,
+    voiceDrafts: false,
+    refinementDrafts: true,
+  })
 })

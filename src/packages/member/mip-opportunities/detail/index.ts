@@ -96,6 +96,9 @@ Page({
     else if (interaction) {
       this.resumeInteraction = ''
     }
+    if (this.data.item) {
+      void this.load()
+    }
   },
 
   async load() {

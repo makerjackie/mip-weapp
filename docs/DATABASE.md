@@ -83,3 +83,7 @@ pnpm database:grants -- \
 `057_ai_draft_requests.sql` 保存 AI 创建请求的稳定 request ID、请求摘要、处理租约、响应和到期状态。Provider 或上传结果未知时请求保持 `PROCESSING`，重试复用同一逻辑请求；只有当前租约可以提交终态。到期维护保留审计行并清空响应内容，不能把超时推断为 Provider 失败。
 
 `058_membership_invitation_codes.sql` 保存会员邀请小程序码的稳定分配、对象键、素材引用和生成租约。一次认领只允许一个 allocation；上传重试复用同一 object key，旧租约不能覆盖当前结果。账号注销或权益失效后邀请码进入 `EXPIRED`，对象删除仍由受控媒体清理完成。
+
+### 059：机会 AI 草稿
+
+`059_ai_opportunity_draft_purpose.sql` 只扩展 `mip_ai_drafts.purpose` 的 CHECK，允许 `OPPORTUNITY` 与既有三种草稿类型并存。机会 AI 输出仍保存在可过期草稿中，必须由用户确认并经机会服务校验后才能成为正式机会；rollback 在仍有机会草稿时由收紧后的 CHECK 拒绝执行。

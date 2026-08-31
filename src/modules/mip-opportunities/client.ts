@@ -104,8 +104,10 @@ export const opportunityModule = {
   },
 
   save(draft: OpportunityDraft, idempotencyKey = createMutationKey('opportunity-save')) {
+    const { aiConfirmation, ...resourceDraft } = normalizeOpportunityDraft(draft)
     return callOpportunityApi<OpportunityMutationResult>('saveOpportunity', {
-      draft: normalizeOpportunityDraft(draft),
+      draft: resourceDraft,
+      aiConfirmation,
       idempotencyKey,
     })
   },

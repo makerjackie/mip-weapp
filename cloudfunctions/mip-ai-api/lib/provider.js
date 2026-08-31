@@ -21,6 +21,11 @@ function createCloudAiProvider(cloud, functionName, secret, options = {}) {
     && avatarSecret.length >= 32
   const timeoutMs = normalizeTimeout(options.timeoutMs)
   const avatarTimeoutMs = normalizeAvatarTimeout(options.avatarTimeoutMs)
+  let draftCapabilities = {
+    voiceDrafts: configured,
+    textDrafts: configured,
+    refinementDrafts: configured,
+  }
   let readinessCache
   let avatarReadinessCache
 
@@ -74,9 +79,18 @@ function createCloudAiProvider(cloud, functionName, secret, options = {}) {
       const promise = Promise.resolve().then(() => withTimeout(cloud.callFunction({
         name: functionName,
         data: { action: 'readiness' },
-      }), timeoutMs)).then((result) => (
-        result?.result?.ok === true && result?.result?.data?.ready === true
-      )).catch(() => false)
+      }), timeoutMs)).then((result) => {
+        const ready = result?.result?.ok === true && result?.result?.data?.ready === true
+        const capabilities = result?.result?.data?.capabilities
+        if (ready && capabilities && typeof capabilities === 'object' && !Array.isArray(capabilities)) {
+          draftCapabilities = {
+            textDrafts: capabilities.textDrafts === true,
+            voiceDrafts: capabilities.voiceDrafts === true,
+            refinementDrafts: capabilities.refinementDrafts === true,
+          }
+        }
+        return ready
+      }).catch(() => false)
       readinessCache = { expiresAt: now + 60_000, promise }
       return promise
     },
@@ -95,9 +109,7 @@ function createCloudAiProvider(cloud, functionName, secret, options = {}) {
     },
     capability() {
       return {
-        voiceDrafts: configured,
-        textDrafts: configured,
-        refinementDrafts: configured,
+        ...draftCapabilities,
         digitalAvatars: avatarConfigured,
         reason: configured ? undefined : 'PROVIDER_NOT_CONFIGURED',
       }

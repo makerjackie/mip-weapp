@@ -10,6 +10,13 @@ const DRAFT_ID = '22222222-2222-4222-8222-222222222222'
 const RESOURCE_ID = '33333333-3333-4333-8333-333333333333'
 
 describe('content AI draft confirmation', () => {
+  it('normalizes an opportunity draft confirmation without accepting extra client facts', () => {
+    assert.deepEqual(
+      normalizeAiConfirmation({ draftId: DRAFT_ID, expectedVersion: 5, purpose: 'SUPER_CASE' }, 'OPPORTUNITY'),
+      { draftId: DRAFT_ID, expectedVersion: 5, purpose: 'OPPORTUNITY' },
+    )
+  })
+
   it('confirms a draft for exactly one official resource inside the caller transaction', async () => {
     const confirmation = normalizeAiConfirmation({ draftId: DRAFT_ID, expectedVersion: 5 }, 'SUPER_CASE')
     const tx = {

@@ -21,6 +21,27 @@ test('keeps only supported fields for the selected draft purpose', () => {
   })
 })
 
+test('keeps only bounded text fields for opportunity drafts', () => {
+  assert.deepEqual(normalizeStructuredDraft('OPPORTUNITY', {
+    title: ' 品牌渠道合作 ',
+    valueSummary: '年度合作额 50 万元',
+    cityLabel: '深圳',
+    targetSummary: '寻找成熟消费品渠道',
+    description: '第一阶段覆盖华南。',
+    cityTagId: 'untrusted-internal-id',
+    roleKeys: ['connector'],
+  }), {
+    title: '品牌渠道合作',
+    valueSummary: '年度合作额 50 万元',
+    cityLabel: '深圳',
+    targetSummary: '寻找成熟消费品渠道',
+    description: '第一阶段覆盖华南。',
+  })
+  assert.throws(() => normalizeStructuredDraft('OPPORTUNITY', {
+    title: 'x'.repeat(121),
+  }), /AI_DRAFT_CONTENT_INVALID/)
+})
+
 test('validates text and voice-upload intents without inventing a transcript', () => {
   assert.deepEqual(normalizeTextIntent({ purpose: 'SUPER_CASE', transcriptText: ' 项目内容 ' }), {
     purpose: 'SUPER_CASE',

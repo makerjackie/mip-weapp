@@ -23,6 +23,9 @@ describe('MIP related opportunity flow', () => {
     expect(view).toContain('引荐给我的')
     expect(view).toContain('其他用户向你引荐机会后会显示在这里。')
     expect(view).toContain('向你引荐了这个机会')
+    expect(view).toContain('catch:tap="editPublished"')
+    expect(page).toContain('editPublished(event: WechatMiniprogram.TouchEvent)')
+    expect(page).toContain('/packages/member/mip-opportunities/editor/index?id=')
   })
 
   it('requires an explicit visible profile target before activating a referral', () => {
