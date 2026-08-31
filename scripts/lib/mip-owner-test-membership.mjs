@@ -9,6 +9,7 @@ export function resolveOwnerTestMembershipCommand({ args = [], env = {}, functio
   const deploymentStage = String(env.MIP_DEPLOYMENT_STAGE || '').trim().toLowerCase()
   const catalogStage = String(env.MIP_CATALOG_STAGE || 'TEST').trim().toUpperCase()
   const paymentMode = String(env.MIP_PAYMENT_MODE || 'disabled').trim().toLowerCase()
+  const stagingConfirmationCount = args.filter(value => value === '--confirm-staging-demo').length
   const allowedAppIds = String(env.MIP_ALLOWED_APP_IDS || appId)
     .split(',')
     .map(value => value.trim())
@@ -25,10 +26,12 @@ export function resolveOwnerTestMembershipCommand({ args = [], env = {}, functio
     || !args.includes('--confirm-owner')) {
     throw new Error('Owner TEST membership requires exact operation, owner, environment, AppID, ledger, catalog, and operation confirmations')
   }
-  if (!['development', 'test'].includes(deploymentStage)
+  if (!['development', 'test', 'staging'].includes(deploymentStage)
     || catalogStage !== 'TEST'
-    || !['disabled', 'test'].includes(paymentMode)) {
-    throw new Error('Owner TEST membership is restricted to development/test with the TEST catalog and non-live payment mode')
+    || !['disabled', 'test'].includes(paymentMode)
+    || (deploymentStage === 'staging' && stagingConfirmationCount !== 1)
+    || (deploymentStage !== 'staging' && stagingConfirmationCount !== 0)) {
+    throw new Error('Owner TEST membership is restricted to development/test; staging requires --confirm-staging-demo, TEST catalog, and non-live payment mode')
   }
   if (!allowedAppIds.includes(appId)
     || allowedAppIds.some(value => !APP_ID_PATTERN.test(value))) {
@@ -43,6 +46,7 @@ export function resolveOwnerTestMembershipCommand({ args = [], env = {}, functio
     deploymentStage,
     catalogStage,
     paymentMode,
+    stagingConfirmed: deploymentStage === 'staging',
     functionName,
   })
 }

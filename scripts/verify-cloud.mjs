@@ -311,10 +311,11 @@ function assertOwnerTestMembershipEnvironment(detail) {
     || variables.MIP_PAYMENT_MODE !== paymentMode) {
     throw new Error('Payment ledger test-membership environment does not match the verified deployment')
   }
-  const shouldEnable = ['development', 'test'].includes(deploymentStage)
+  const shouldEnable = ['development', 'test', 'staging'].includes(deploymentStage)
     && catalogStage === 'TEST'
     && ['disabled', 'test'].includes(paymentMode)
-  const configured = String(variables.MIP_TEST_MEMBERSHIP_HMAC_SECRET || '').length >= 32
+  const configuredSecret = String(variables.MIP_TEST_MEMBERSHIP_HMAC_SECRET || '')
+  const configured = configuredSecret.length >= 32 && !/[\r\n]/.test(configuredSecret)
   if (configured !== shouldEnable) {
     throw new Error('Payment ledger test-membership maintenance boundary is not converged')
   }

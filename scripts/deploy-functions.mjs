@@ -62,6 +62,7 @@ const replaceLegacyRuntime = process.argv.includes('--replace-legacy-runtime')
 const deploymentStage = resolveMipDeploymentStage(env.MIP_DEPLOYMENT_STAGE, process.argv.slice(2))
 const paymentMode = String(env.MIP_PAYMENT_MODE || 'disabled').trim().toLowerCase()
 const catalogStage = String(env.MIP_CATALOG_STAGE || 'TEST').trim().toUpperCase()
+const configuredTestMembershipHmac = String(env.MIP_TEST_MEMBERSHIP_HMAC_SECRET || '').trim()
 const knowledgeTestPriceCents = Number(env.MIP_KNOWLEDGE_TEST_PRICE_CENTS || 990)
 const knowledgeSourceAllowedHosts = exactHostnameList(env.MIP_KNOWLEDGE_SOURCE_ALLOWED_HOSTS)
 const knowledgeWebviewAllowedHosts = exactHostnameList(env.MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS)
@@ -117,6 +118,12 @@ if ((paymentMode === 'live' || catalogStage === 'LIVE') && !process.argv.include
 }
 if (catalogStage === 'LIVE' && paymentMode !== 'live') {
   throw new Error('LIVE catalog requires MIP_PAYMENT_MODE=live')
+}
+if (deploymentStage === 'staging'
+  && catalogStage === 'TEST'
+  && ['disabled', 'test'].includes(paymentMode)
+  && (configuredTestMembershipHmac.length < 32 || /[\r\n]/.test(configuredTestMembershipHmac))) {
+  throw new Error('Staging TEST membership maintenance requires a configured MIP_TEST_MEMBERSHIP_HMAC_SECRET with at least 32 single-line characters')
 }
 if (databaseRuntimeUser !== runtimeUserForEnvironment(envId)
   || confirmedRuntimeUser !== databaseRuntimeUser) {
@@ -1019,7 +1026,7 @@ function environmentForRole(role, options) {
       MIP_LEDGER_SECRET: options.secrets.ledger,
       MIP_CATALOG_STAGE: options.catalogStage,
       MIP_PAYMENT_MODE: options.paymentMode,
-      ...(['development', 'test'].includes(options.deploymentStage)
+      ...(['development', 'test', 'staging'].includes(options.deploymentStage)
         && options.catalogStage === 'TEST'
         && ['disabled', 'test'].includes(options.paymentMode)
         ? { MIP_TEST_MEMBERSHIP_HMAC_SECRET: options.secrets.testMembershipHmac }

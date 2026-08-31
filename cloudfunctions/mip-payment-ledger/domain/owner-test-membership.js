@@ -208,7 +208,7 @@ function assertOwnerTestMembershipEnvironment(input) {
   const deploymentStage = String(input.deploymentStage || '').trim().toLowerCase()
   const catalogStage = String(input.catalogStage || '').trim().toUpperCase()
   const paymentMode = String(input.paymentMode || '').trim().toLowerCase()
-  if (!['development', 'test'].includes(deploymentStage)
+  if (!['development', 'test', 'staging'].includes(deploymentStage)
     || catalogStage !== 'TEST'
     || !['disabled', 'test'].includes(paymentMode)) {
     throw new Error('TEST_MEMBERSHIP_DISABLED')

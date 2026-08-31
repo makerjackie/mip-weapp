@@ -23,6 +23,8 @@ pnpm cloud:deploy-payment -- \
 
 pnpm admin:bootstrap -- --confirm-env=<EnvID> --confirm-owner
 pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo
+# staging 环境额外要求显式确认
+pnpm seed:demo -- --confirm-env=<EnvID> --confirm-demo --confirm-staging-demo
 ```
 
 为在微信开发者工具中验证当前非演示 Owner 的活动互动页，可在 development/test 环境单独创建一条固定的 `ATTENDED` 历史报名：
@@ -44,9 +46,26 @@ pnpm event:interaction:seed -- \
 
 首个 Owner 通过本机 `.env.local` 的 `MIP_OWNER_PHONE` 定位。该手机号必须已由同一 AppID 的微信真机流程绑定；脚本只使用与身份服务相同的 AppID 范围哈希查询，不解密或输出号码。候选还必须是 ACTIVE、非 demo、已有昵称和主分会，并已接受当前 `MIP_AGREEMENTS_JSON` 的全部协议版本。需要额外消除操作歧义时可传 `--user-id=<用户 UUID>`，但该 ID 必须与手机号唯一命中的用户严格一致。
 
-支付模式为 `live` 时，支付部署命令还必须追加 `--confirm-live`。demo seed 只允许用于 development/test 环境，会以固定 ID 写入可重复执行的城市、标签、玩家/嘉宾、测试会员订单与权益、2030 活动、报名、机会、合作卡、案例、公告、知识、消息、任务、成长、赛季、排行和盲盒。种子附带 6 张虚拟人物头像和 3 张活动封面；执行时通过 CloudBase 存储上传或复用同一内容的对象，复核字节数与 ETag 后再写入 `READY` 媒体记录，数据库只保存永久 `cloud://` 文件 ID。执行前写入 `PENDING` 清单，完整验证后改为 `READY`，并保留版本化清单；Owner 初始化始终排除其中的演示用户。Banner 依赖真实云媒体素材，不写入无效文件引用。手机号未绑定、候选资料或协议不完整、命中不唯一，以及可选 user ID 不一致时都会停止且不授予权限。
+支付模式为 `live` 时，支付部署命令还必须追加 `--confirm-live`。demo seed 默认只允许 development/test；MIP 专用 staging 环境还必须同时传入 `--confirm-staging-demo`，并继续满足 TEST catalog、非 live payment 和 exact EnvID 确认，production 永远禁止。它会以固定 ID 写入可重复执行的城市、标签、玩家/嘉宾、测试会员订单与权益、2030 活动、报名、机会、合作卡、案例、公告、知识、消息、任务、成长、赛季、排行和盲盒。种子附带 6 张虚拟人物头像、4 张活动封面和 2 张运营 Banner；执行时通过 CloudBase 存储上传或复用同一内容的对象，复核字节数与 ETag 后再写入 `READY` 媒体记录，数据库只保存永久 `cloud://` 文件 ID。执行前写入 `PENDING` 清单，完整验证后改为 `READY`，并保留版本化清单；Owner 初始化始终排除其中的演示用户。Banner 依赖真实云媒体素材，不写入无效文件引用。手机号未绑定、候选资料或协议不完整、命中不唯一，以及可选 user ID 不一致时都会停止且不授予权限。
 
-当前固定活动包含 3 场 2030 年周四、10:00–12:00 的深圳福田 MIP 早会，场地和地址均标注为演示数据。前 3 位演示用户具有测试订单和有效演示权益；它们不可用于推断或恢复真实会员缴费。
+当前固定活动包含 4 场 2030 年周四、10:00–12:00 的深圳福田 MIP 早会，以及 1 场历史互动活动；5 场活动均有独立的演示封面，场地和地址均标注为演示数据。前 3 位演示用户具有测试订单和有效演示权益；它们不可用于推断或恢复真实会员缴费。
+
+`owner:showcase` 是另一条仅用于当前真实 Owner 验收的展示夹具通道。它通过 `MIP_OWNER_PHONE` 定位已完成手机号绑定、协议确认且非 Demo 的唯一用户，只补齐活动报名/TEST 活动订单、任务、勋章和资料展示事实，不创建或绕过会员权益。development/test 仍按原命令执行；MIP 专用 staging 还必须追加 `--confirm-staging-demo`，并继续确认 exact EnvID、exact AppID、TEST catalog 和非 live payment。production 永远禁止。`membership:test` 同样可用于 staging，但必须追加 `--confirm-staging-demo`，且 ledger 必须部署有效的独立 `MIP_TEST_MEMBERSHIP_HMAC_SECRET`；它始终通过内部签名调用受保护 ledger，由 ledger 重算订单与权益，并复核手机号绑定、协议、唯一 Owner 和非 Demo 身份，不能由脚本直接 SQL 写会员事实。没有有效专用 HMAC 时 staging 会员操作和云验收均停止。
+
+staging Owner 的 TEST 会员操作示例：
+
+```bash
+pnpm membership:test -- \
+  --operation=grant \
+  --plan-key=annual_test \
+  --confirm-owner \
+  --confirm-env=<EnvID> \
+  --confirm-app-id=<AppID> \
+  --confirm-ledger=<ledger-function-name> \
+  --confirm-catalog=TEST \
+  --confirm-test-membership=grant \
+  --confirm-staging-demo
+```
 
 活动创建/编辑、状态变更和撤销签到只通过 `mip-admin-api` 执行。`mip-events-api` 不接受这些管理写操作，避免同一活动事实存在第二套状态机、退款和权限路径。
 

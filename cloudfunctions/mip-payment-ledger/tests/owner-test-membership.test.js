@@ -32,10 +32,9 @@ const environment = {
 const now = new Date('2026-08-26T08:00:00.000Z')
 
 describe('Owner TEST membership ledger operations', () => {
-  it('fails before opening a transaction outside development/test TEST configuration', async () => {
+  it('fails before opening a transaction outside development/test/staging TEST configuration', async () => {
     for (const invalid of [
       { deploymentStage: 'production' },
-      { deploymentStage: 'staging' },
       { catalogStage: 'LIVE' },
       { paymentMode: 'live' },
     ]) {
@@ -49,6 +48,10 @@ describe('Owner TEST membership ledger operations', () => {
       ...environment,
       planKey: 'LIVE/PLAN',
     }), /TEST_MEMBERSHIP_PLAN_INVALID/)
+    assert.doesNotThrow(() => assertOwnerTestMembershipEnvironment({
+      ...environment,
+      deploymentStage: 'staging',
+    }))
   })
 
   it('maps storage failures to a safe operation stage without returning database details', async () => {

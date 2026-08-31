@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { randomBytes } from 'node:crypto'
+import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import process from 'node:process'
@@ -12,6 +13,12 @@ import {
 } from './lib/example-cloudbase.mjs'
 import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
 import {
+  buildOwnerCandidateQuery,
+  currentAgreementVersions,
+  resolveOwnerPhoneHash,
+  selectOwnerCandidateId,
+} from './lib/mip-owner-bootstrap.mjs'
+import {
   assertDeployedOwnerTestMembership,
   ownerTestMembershipSummary,
   resolveOwnerTestMembershipCommand,
@@ -22,6 +29,10 @@ const { signInternalRequest } = require('../cloudfunctions/mip-payment-ledger/li
 
 const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
+const seed = JSON.parse(fs.readFileSync(path.join(root, 'database/mysql/mip/seed.demo.json'), 'utf8'))
+const demoUserIds = (Array.isArray(seed?.users) ? seed.users : [])
+  .map(item => String(item?.id || ''))
+  .filter(Boolean)
 const functionName = resolveMipFunctionNames(env).ledger
 const command = resolveOwnerTestMembershipCommand({
   args: process.argv.slice(2),
@@ -30,9 +41,26 @@ const command = resolveOwnerTestMembershipCommand({
 })
 
 bindAndRequireMysqlEnvironment(root, command.envId, {
-  development: true,
+  development: ['development', 'test'].includes(command.deploymentStage),
   stage: command.deploymentStage,
 })
+const ownerPhoneHash = resolveOwnerPhoneHash({
+  appId: command.appId,
+  ownerPhone: env.MIP_OWNER_PHONE,
+  phoneEncryptionKey: env.MIP_PHONE_ENCRYPTION_KEY,
+})
+const agreements = currentAgreementVersions(env.MIP_AGREEMENTS_JSON)
+const candidates = callCloudbase(root, 'queryMysqlDatabase', {
+  action: 'runQuery',
+  sql: buildOwnerCandidateQuery({
+    agreements,
+    appId: command.appId,
+    demoUserIds,
+    phoneHash: ownerPhoneHash,
+  }),
+  limit: 2,
+})
+selectOwnerCandidateId(candidates)
 const detail = callCloudbase(root, 'callCloudApi', {
   service: 'scf',
   action: 'GetFunction',
