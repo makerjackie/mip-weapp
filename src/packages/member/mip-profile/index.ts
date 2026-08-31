@@ -1,5 +1,4 @@
 import type { CatalogSelectorGroup } from '../../../components/catalog-selector/model'
-import type { BranchId } from '../../../modules/mip'
 import type { AiDraftSourceConfirmation } from '../../../modules/mip-ai'
 import type { ProfileTagOption } from '../../../modules/mip-identity'
 import type { EditableProfileOrganization } from './organization-editor'
@@ -23,6 +22,7 @@ import {
   updateEditableOrganization,
   validateEditableOrganizations,
 } from './organization-editor'
+import { profileBranchUpdate, profileSaveValidationMessage } from './save-intent'
 
 interface SelectableTag extends ProfileTagOption {
   selected: boolean
@@ -61,6 +61,7 @@ Page({
     avatarAssetId: '',
     avatarUrl: '',
     avatarUploading: false,
+    avatarPending: false,
     identityStatus: '',
     headline: '',
     introduction: '',
@@ -85,6 +86,7 @@ Page({
     branchGroups: [] as CatalogSelectorGroup[],
     selectedBranchIds: [] as string[],
     branchIndex: 0,
+    savedPrimaryBranchId: '',
     branchCatalogExpanded: false,
     industryOptions: [] as Array<{ id: string, label: string }>,
     industryGroups: [] as CatalogSelectorGroup[],
@@ -180,6 +182,7 @@ Page({
         careerIdentityKey: snapshot.profile.careerIdentityKey || '',
         avatarAssetId: snapshot.profile.avatarAssetId || '',
         avatarUrl: snapshot.profile.avatarUrl || '',
+        avatarPending: false,
         identityStatus: aiText(aiFields, 'identityStatus', 32) || snapshot.profile.identityStatus,
         headline: aiText(aiFields, 'headline', 160) || snapshot.profile.headline,
         introduction: aiText(aiFields, 'introduction', 300) || snapshot.profile.introduction,
@@ -209,6 +212,7 @@ Page({
         branchGroups,
         selectedBranchIds: primaryBranchId ? [primaryBranchId] : [],
         branchIndex: Math.max(0, branchOptions.findIndex(item => item.id === primaryBranchId)),
+        savedPrimaryBranchId: primaryBranchId,
         industryOptions,
         industryGroups,
         selectedIndustryIds: primaryIndustryId ? [primaryIndustryId] : [],
@@ -238,6 +242,11 @@ Page({
     ].includes(field)) {
       this.setData({ [field]: event.detail.value })
     }
+  },
+
+  showEditorMessage(message: string) {
+    this.setData({ message })
+    wx.showToast({ title: message, icon: 'none' })
   },
 
   changeGender(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
@@ -313,10 +322,11 @@ Page({
     this.setData({ avatarUploading: true, message: '' })
     try {
       const asset = await mipMediaModule.uploadImageFromPath('AVATAR', avatarUrl)
-      this.setData({ avatarAssetId: asset.assetId, avatarUrl: asset.imageUrl })
+      this.setData({ avatarAssetId: asset.assetId, avatarUrl: asset.imageUrl, avatarPending: true })
+      wx.showToast({ title: '头像已选择，请保存资料', icon: 'none' })
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '头像上传失败，请重试。' })
+      this.showEditorMessage(error instanceof Error ? error.message : '头像上传失败，请重试。')
     }
     finally {
       this.setData({ avatarUploading: false })
@@ -427,29 +437,35 @@ Page({
     }
     const nickname = this.data.nickname.trim()
     const selectedBranch = this.data.branchOptions[this.data.branchIndex]
-    if (!nickname) {
-      this.setData({ message: '请填写昵称。' })
-      return
-    }
-    if (!selectedBranch?.id) {
-      this.setData({ message: '请选择主城市分会。' })
+    const branchId = selectedBranch?.id || ''
+    const validationMessage = profileSaveValidationMessage({
+      nickname,
+      branchId,
+      currentBranchId: this.data.savedPrimaryBranchId,
+      requirePrimaryBranch: Boolean(this.data.token),
+    })
+    if (validationMessage) {
+      this.setData({
+        moreExpanded: validationMessage === '请选择主城市分会。' || this.data.moreExpanded,
+      })
+      this.showEditorMessage(validationMessage)
       return
     }
     const experienceError = validateEditableOrganizations(this.data.companies, '公司')
       || validateEditableOrganizations(this.data.organizations, '组织')
     if (experienceError) {
-      this.setData({ message: experienceError })
+      this.setData({ moreExpanded: true })
+      this.showEditorMessage(experienceError)
       return
     }
 
     this.setData({ saving: true, message: '' })
     try {
       const selectedIndustry = this.data.industryOptions[this.data.industryIndex]
-      await mipIdentityModule.saveProfile({
+      const snapshot = await mipIdentityModule.saveProfile({
         expectedVersion: this.data.profileVersion,
         avatarAssetId: this.data.avatarAssetId || undefined,
-        expectedUserVersion: this.data.userVersion,
-        primaryBranchId: selectedBranch.id as BranchId,
+        ...profileBranchUpdate(branchId, this.data.userVersion),
         nickname,
         realName: this.data.realName,
         gender: this.data.gender,
@@ -479,6 +495,15 @@ Page({
         abilityTagIds: this.data.abilityOptions.filter(tag => tag.selected).map(tag => tag.id),
         aiConfirmation: this.data.aiConfirmation || undefined,
       })
+      this.setData({
+        profileVersion: snapshot.profile.version,
+        userVersion: snapshot.userVersion,
+        savedPrimaryBranchId: snapshot.primaryBranchId || '',
+        phoneBound: snapshot.phoneBound,
+        avatarAssetId: snapshot.profile.avatarAssetId || '',
+        avatarUrl: snapshot.profile.avatarUrl || '',
+        avatarPending: false,
+      })
       wx.showToast({ title: '资料已保存', icon: 'success' })
       if (this.data.token) {
         wx.navigateBack({
@@ -500,7 +525,7 @@ Page({
       }
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '资料保存失败，请重试。' })
+      this.showEditorMessage(error instanceof Error ? error.message : '资料保存失败，请重试。')
     }
     finally {
       this.setData({ saving: false })

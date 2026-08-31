@@ -6,6 +6,7 @@
   <block wx:else>
     <view class="bg-brand px-3 py-2 text-center text-[length:24rpx] text-on-brand">资料用于个人名片和公开档案展示</view>
     <view wx:if="{{aiDraftLoaded}}" class="mx-3 mt-3 rounded-[14rpx] bg-brand-soft px-4 py-3 text-[length:23rpx] text-brand">已载入 AI 草稿，可继续修改后保存。</view>
+    <view wx:if="{{message}}" data-profile-message="true" class="mx-3 mt-3 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:23rpx] leading-6">{{message}}</view>
 
     <view class="mx-3 mt-3 flex items-center gap-2 text-[length:30rpx] font-semibold">
       <t-icon name="user-avatar" size="30rpx" color="var(--color-brand)" />
@@ -17,11 +18,11 @@
           <image wx:if="{{avatarUrl}}" class="h-full w-full" mode="aspectFill" src="{{avatarUrl}}" />
           <t-icon wx:else name="user-avatar" size="56rpx" color="var(--color-muted)" />
         </button>
-        <view class="text-[length:24rpx] text-muted">{{avatarUploading ? '头像上传中' : '更换头像'}}</view>
+        <view class="text-[length:24rpx] text-muted">{{avatarUploading ? '头像上传中' : avatarPending ? '保存后生效' : '更换头像'}}</view>
       </view>
       <view data-profile-basic-row="nickname" class="flex min-h-[92rpx] items-center border-t border-line px-3">
         <view class="w-[120rpx] shrink-0 text-[length:26rpx] font-medium">昵称 <text class="text-[length:20rpx] text-danger">*</text></view>
-        <input class="h-[92rpx] min-w-0 flex-1 text-right text-[length:26rpx]" type="nickname" maxlength="64" value="{{nickname}}" data-field="nickname" bindinput="updateText" placeholder="请输入您的昵称" placeholder-style="color:#A3A3A3;text-align:right" />
+        <input class="h-[92rpx] min-w-0 flex-1 text-right text-[length:26rpx]" type="nickname" maxlength="64" value="{{nickname}}" data-field="nickname" bindinput="updateText" bindblur="updateText" placeholder="请输入您的昵称" placeholder-style="color:#A3A3A3;text-align:right" />
       </view>
       <view data-profile-basic-row="realName" class="flex min-h-[92rpx] items-center border-t border-line px-3">
         <view class="w-[120rpx] shrink-0 text-[length:26rpx] font-medium">姓名</view>
@@ -190,7 +191,6 @@
     </view>
     </block>
 
-    <view wx:if="{{message}}" class="mx-3 mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:23rpx] leading-6">{{message}}</view>
     <mip-sticky-actions><view slot="actions" class="w-full"><t-button block size="large" theme="primary" loading="{{saving}}" disabled="{{avatarUploading}}" bind:tap="saveProfile">保存资料</t-button></view></mip-sticky-actions>
   </block>
   <app-page-exit />
