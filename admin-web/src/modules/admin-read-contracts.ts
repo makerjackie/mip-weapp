@@ -1,4 +1,4 @@
-import type { AdminRequestInput } from '../domain/contracts'
+import type { AdminOperationAction, AdminRequestInput } from '../domain/contracts'
 import type { AdminDetailRoute } from './admin-details.ts'
 import type { AdminOperationRow } from './admin-row-operations.ts'
 
@@ -41,4 +41,4 @@ export interface AdminReadAccess {
   hasCapability: (capability: string, scopeType?: string) => boolean
 }
 
-export type AdminRequest = <T>(action: string, input?: AdminRequestInput) => Promise<T>
+export type AdminRequest = <T>(action: AdminOperationAction, input?: AdminRequestInput) => Promise<T>

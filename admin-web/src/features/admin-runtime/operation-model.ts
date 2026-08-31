@@ -1,4 +1,4 @@
-import type { AdminRequestInput } from '../../domain/contracts'
+import type { AdminOperationAction, AdminRequestInput } from '../../domain/contracts'
 import type { AdminDetailView } from '../../modules/admin-details'
 import {
   ADMIN_BANNER_MUTATION_ACTIONS,
@@ -87,7 +87,7 @@ export async function createOperationModel(
   targetId: string,
   detail: AdminDetailView | null,
   launch: AdminOperationLaunchContext,
-  request: <T>(action: string, input?: AdminRequestInput) => Promise<T>,
+  request: <T>(action: AdminOperationAction, input?: AdminRequestInput) => Promise<T>,
 ): Promise<OperationModel> {
   const readField = (sectionTitle: string, label: string) => detail?.sections
     .find(section => section.title === sectionTitle)?.fields

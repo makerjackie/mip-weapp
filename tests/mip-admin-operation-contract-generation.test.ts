@@ -5,8 +5,10 @@ import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   ADMIN_OPERATION_CONTRACT_ARTIFACT,
+  ADMIN_OPERATION_CONTRACT_TYPES_ARTIFACT,
   assertAdminOperationContractArtifact,
   renderAdminOperationContract,
+  renderAdminOperationContractTypes,
 } from '../scripts/lib/admin-operation-contract.mjs'
 
 const repositoryRoot = path.resolve(import.meta.dirname, '..')
@@ -63,16 +65,26 @@ describe('MIP admin operation contract generation', () => {
       'utf8',
     )
     expect(artifact).toBe(renderAdminOperationContract())
+    const typesArtifact = fs.readFileSync(
+      path.resolve(import.meta.dirname, '..', ADMIN_OPERATION_CONTRACT_TYPES_ARTIFACT),
+      'utf8',
+    )
+    expect(typesArtifact).toBe(renderAdminOperationContractTypes())
   })
 
   it('fails closed when the generated artifact is missing or changed', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mip-admin-contract-'))
     temporaryRoots.push(root)
     const artifactPath = path.join(root, ADMIN_OPERATION_CONTRACT_ARTIFACT)
+    const typesArtifactPath = path.join(root, ADMIN_OPERATION_CONTRACT_TYPES_ARTIFACT)
 
     expect(() => assertAdminOperationContractArtifact(root)).toThrow(/artifact drifted/)
     fs.mkdirSync(path.dirname(artifactPath), { recursive: true })
     fs.writeFileSync(artifactPath, '{}\n', 'utf8')
+    expect(() => assertAdminOperationContractArtifact(root)).toThrow(/artifact drifted/)
+    fs.writeFileSync(artifactPath, renderAdminOperationContract(), 'utf8')
+    fs.mkdirSync(path.dirname(typesArtifactPath), { recursive: true })
+    fs.writeFileSync(typesArtifactPath, '{}\n', 'utf8')
     expect(() => assertAdminOperationContractArtifact(root)).toThrow(/artifact drifted/)
   })
 
@@ -81,9 +93,12 @@ describe('MIP admin operation contract generation', () => {
     temporaryRoots.push(root)
     prepareGeneratorFixture(root)
     const artifactPath = path.join(root, ADMIN_OPERATION_CONTRACT_ARTIFACT)
+    const typesArtifactPath = path.join(root, ADMIN_OPERATION_CONTRACT_TYPES_ARTIFACT)
 
     fs.mkdirSync(path.dirname(artifactPath), { recursive: true })
     fs.writeFileSync(artifactPath, renderAdminOperationContract(), 'utf8')
+    fs.mkdirSync(path.dirname(typesArtifactPath), { recursive: true })
+    fs.writeFileSync(typesArtifactPath, renderAdminOperationContractTypes(), 'utf8')
     expect(runGeneratorCheck(root)).toContain('artifact is current')
 
     fs.rmSync(artifactPath)

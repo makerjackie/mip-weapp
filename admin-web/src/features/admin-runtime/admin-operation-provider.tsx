@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { App } from 'antd'
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
 import { useAdminSession } from '../../app/session-provider'
-import type { AdminRequestInput } from '../../domain/contracts'
+import type { AdminOperationAction, AdminRequestInput } from '../../domain/contracts'
 import type { AdminDetailView } from '../../modules/admin-details'
 import {
   createMutationDefinition,
@@ -35,7 +35,7 @@ type LaunchOptions = AdminOperationLaunchContext & {
 }
 
 interface DialogModel {
-  action: string
+  action: AdminOperationAction
   title: string
   description: string
   capability: string

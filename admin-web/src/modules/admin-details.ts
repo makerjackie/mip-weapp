@@ -1,4 +1,4 @@
-import type { AdminRequestInput } from '../domain/contracts'
+import type { AdminOperationAction, AdminRequestInput } from '../domain/contracts'
 import {
   loadTaskCompletionDetail,
   loadTaskDetail,
@@ -70,7 +70,7 @@ export interface AdminDetailView {
   source?: Record<string, unknown>
 }
 
-export type AdminDetailRequest = <T>(action: string, input?: AdminRequestInput) => Promise<T>
+export type AdminDetailRequest = <T>(action: AdminOperationAction, input?: AdminRequestInput) => Promise<T>
 
 export async function loadAdminDetail(
   route: AdminDetailRoute,

@@ -1,4 +1,4 @@
-import type { AdminRequestInput } from '../domain/contracts'
+import type { AdminOperationAction, AdminRequestInput } from '../domain/contracts'
 
 const XLSX_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 const MAX_EXPORT_BYTES = 10 * 1024 * 1024
@@ -10,7 +10,7 @@ const terminalStatuses = new Set(['CONSUMED', 'EXPIRED', 'REVOKED', 'FAILED'])
 
 export type SensitiveExportKind = 'users' | 'orders'
 export type SensitiveExportProgress = 'creating' | 'preparing' | 'checking' | 'downloading' | 'completing' | 'saving'
-export type SensitiveExportRequest = <T>(action: string, input?: AdminRequestInput) => Promise<T>
+export type SensitiveExportRequest = <T>(action: AdminOperationAction, input?: AdminRequestInput) => Promise<T>
 
 export interface SensitiveExportInput {
   kind: SensitiveExportKind

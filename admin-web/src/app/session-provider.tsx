@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import type { AdminRequestInput, AdminSession } from '../domain/contracts'
+import type { AdminOperationAction, AdminRequestInput, AdminSession } from '../domain/contracts'
 import { AdminApiClient, AdminApiClientError, type AdminLoginChallenge } from '../services/admin-api'
 
 interface SessionContextValue {
@@ -14,7 +14,7 @@ interface SessionContextValue {
   sessionBoundary: number
   hasCapability: (capability: string) => boolean
   hasCapabilityAtScope: (capability: string, scopeType: string) => boolean
-  request: <T>(action: string, input?: AdminRequestInput) => Promise<T>
+  request: <T>(action: AdminOperationAction, input?: AdminRequestInput) => Promise<T>
   refreshSession: () => Promise<void>
   beginLogin: () => Promise<void>
   closeLogin: () => void
@@ -139,7 +139,7 @@ export function SessionProvider({ children, client = defaultClient }: { children
     return Boolean(session?.capabilities?.some(item => item.capability === capability && item.scopeType === scopeType))
   }, [client.demoMode, session])
 
-  const request = useCallback(<T,>(action: string, input: AdminRequestInput = {}) => client.request<T>(action, input), [client])
+  const request = useCallback(<T,>(action: AdminOperationAction, input: AdminRequestInput = {}) => client.request<T>(action, input), [client])
 
   const value = useMemo<SessionContextValue>(() => ({
     client,

@@ -1,6 +1,7 @@
 export {
   ADMIN_REQUEST_CONTRACT_VERSION,
   createAdminRequest,
+  type AdminOperationAction,
   type AdminRequest,
   type AdminRequestInput,
 } from '@mip/admin-contracts'

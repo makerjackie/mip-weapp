@@ -2,6 +2,7 @@ import {
   createAdminRequest,
   isAdminApiResponse,
   type AdminApiResponse,
+  type AdminOperationAction,
   type AdminRequestInput,
   type AdminSession,
 } from '../domain/contracts.ts'
@@ -98,7 +99,7 @@ export class AdminApiClient {
     return record
   }
 
-  async request<T>(action: string, input: AdminRequestInput = {}): Promise<T> {
+  async request<T>(action: AdminOperationAction, input: AdminRequestInput = {}): Promise<T> {
     if (!this.configured) throw new AdminApiClientError('API_NOT_CONFIGURED', '尚未配置管理 API')
     const response = await fetch(this.baseUrl, {
       method: 'POST',
