@@ -1,7 +1,7 @@
 import type { MipMediaTransport } from './gateway'
 import { runtimeConfig } from '../../config/runtime'
-import { resolveCloudFileUrls } from '../platform/cloud-media'
-import { requireCloudClient } from '../platform/cloudbase'
+import { requireCloudClient } from '../../platform/cloudbase/client'
+import { resolveCloudFileUrls } from '../../platform/storage/cloud-media'
 import { createMipMediaGateway } from './gateway'
 
 export function createMipMediaCloudbaseTransport(

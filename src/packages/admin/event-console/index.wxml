@@ -1,86 +1,52 @@
-<view id="admin-event-console-page" class="mip-admin-page mip-admin-workspace-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
-  <mip-admin-workspace-nav />
-  <view class="text-[length:40rpx] font-bold">单场活动管理</view>
-  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6"><app-empty-state title="暂时无法加载活动" description="{{message}}" action-text="重新加载" bind:action="loadEvent" /></view>
-  <view wx:elif="{{state === 'forbidden'}}" class="mt-6"><app-empty-state title="没有活动管理权限" description="当前账号不能管理这场活动。" /></view>
+<view id="admin-event-console-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+  <view class="text-[length:40rpx] font-bold">活动现场</view>
+
+  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5">
+    <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
+  </view>
+  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6">
+    <app-empty-state title="暂时无法加载活动" description="{{message}}" action-text="重新加载" bind:action="loadEvent" />
+  </view>
+  <view wx:elif="{{state === 'forbidden'}}" class="mt-6">
+    <app-empty-state title="没有活动权限" description="当前账号不能查看这场活动。" />
+  </view>
   <view wx:elif="{{event}}">
-    <view class="mt-5 rounded-[16rpx] bg-panel px-5 py-5"><view class="flex items-start justify-between gap-3"><view class="text-[length:32rpx] font-bold">{{event.title}}</view><t-tag variant="outline">{{event.status}}</t-tag></view><view class="mt-3 text-[length:23rpx] text-muted">{{event.cityName || '未设置城市'}} · {{event.startsAt}}</view><view class="mt-2 text-[length:23rpx] text-muted">内容安全：{{event.contentSafetyStatus}} · 版本 {{event.version}}</view></view>
-    <view class="mt-5 rounded-[16rpx] bg-panel px-4 py-4">
-      <view class="flex items-center justify-between gap-3"><view class="text-[length:27rpx] font-semibold">活动数据</view><view wx:if="{{insightsState === 'ready'}}" class="text-[length:20rpx] text-muted">统计于 {{insightsCalculatedText}}</view></view>
-      <view wx:if="{{insightsState === 'loading'}}" class="mt-4"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-      <view wx:elif="{{insightsState === 'error'}}" class="mt-4"><app-empty-state title="暂时无法加载活动数据" description="{{insightsMessage}}" action-text="重新加载" bind:action="retryInsights" /></view>
-      <block wx:elif="{{insights}}">
-        <view class="mip-admin-metric-grid mt-4 grid grid-cols-2 gap-2">
-          <view class="rounded-[12rpx] bg-panel-raised px-3 py-3"><view class="text-[length:21rpx] text-muted">有效报名</view><view class="mt-1 text-[length:32rpx] font-bold">{{insights.participation.effectiveRegistrationCount}}</view></view>
-          <view class="rounded-[12rpx] bg-panel-raised px-3 py-3"><view class="text-[length:21rpx] text-muted">当前签到</view><view class="mt-1 text-[length:32rpx] font-bold">{{insights.participation.checkedInCount}}</view></view>
-          <view class="rounded-[12rpx] bg-panel-raised px-3 py-3"><view class="text-[length:21rpx] text-muted">签到率</view><view class="mt-1 text-[length:32rpx] font-bold">{{checkInRateText}}</view></view>
-          <view class="rounded-[12rpx] bg-panel-raised px-3 py-3"><view class="text-[length:21rpx] text-muted">待审核</view><view class="mt-1 text-[length:32rpx] font-bold">{{insights.participation.pendingReviewCount}}</view></view>
-          <view class="rounded-[12rpx] bg-panel-raised px-3 py-3"><view class="text-[length:21rpx] text-muted">候补</view><view class="mt-1 text-[length:32rpx] font-bold">{{insights.participation.waitlistedCount}}</view></view>
-          <view class="rounded-[12rpx] bg-panel-raised px-3 py-3"><view class="text-[length:21rpx] text-muted">玩家 / 嘉宾</view><view class="mt-1 text-[length:32rpx] font-bold">{{insights.composition.playerCount}} / {{insights.composition.guestCount}}</view></view>
-        </view>
-        <view class="mt-4 text-[length:24rpx] font-semibold">邀请与互动</view>
-        <view class="mip-admin-summary-grid mt-2 grid grid-cols-2 gap-2 text-[length:22rpx]">
-          <view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">邀请报名</view><view class="mt-1 font-semibold">{{insights.invitations.attributedRegistrationCount}}</view></view>
-          <view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">邀请人</view><view class="mt-1 font-semibold">{{insights.invitations.distinctInviterCount}}</view></view>
-          <view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">心动参与人数</view><view class="mt-1 font-semibold">{{insights.hearts.voterCount}}</view></view>
-          <view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">当前心动票</view><view class="mt-1 font-semibold">{{insights.hearts.activeVoteCount}}</view></view>
-          <view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">双向匹配</view><view class="mt-1 font-semibold">{{insights.hearts.mutualMatchCount}}</view></view>
-        </view>
-        <view class="mt-4 text-[length:24rpx] font-semibold">活动反馈</view>
-        <view wx:if="{{insights.feedback.access === 'GRANTED'}}" class="mip-admin-summary-grid mt-2 grid grid-cols-2 gap-2 text-[length:22rpx]">
-          <view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">有签到记录</view><view class="mt-1 font-semibold">{{insights.feedback.eligibleCheckInCount}}</view></view>
-          <view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">反馈数</view><view class="mt-1 font-semibold">{{insights.feedback.submissionCount}}</view></view>
-          <view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">反馈率</view><view class="mt-1 font-semibold">{{feedbackRateText}}</view></view>
-          <view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">评分数 / 平均分</view><view class="mt-1 font-semibold">{{insights.feedback.ratedCount}} / {{averageRatingText}}</view></view>
-        </view>
-        <view wx:else class="mt-2 rounded-[10rpx] bg-panel-raised px-3 py-3 text-[length:22rpx] text-muted">当前账号不能查看活动反馈统计。</view>
-        <view class="mt-4 text-[length:24rpx] font-semibold">活动财务</view>
-        <view wx:if="{{insights.financials.access === 'GRANTED'}}" class="mip-admin-summary-grid mt-2 grid grid-cols-2 gap-2 text-[length:22rpx]">
-          <view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">支付订单</view><view class="mt-1 font-semibold">{{insights.financials.paidOrderCount}}</view></view>
-          <view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">实收金额</view><view class="mt-1 font-semibold">{{grossAmountText}}</view></view>
-          <view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">退款金额</view><view class="mt-1 font-semibold">{{refundedAmountText}}</view></view>
-          <view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">净收入</view><view class="mt-1 font-semibold">{{netAmountText}}</view></view>
-        </view>
-        <view wx:else class="mt-2 rounded-[10rpx] bg-panel-raised px-3 py-3 text-[length:22rpx] text-muted">当前账号不能查看活动财务统计。</view>
-        <view class="mt-4 text-[length:24rpx] font-semibold">浏览与分享</view>
-        <view class="mip-admin-summary-grid mt-2 grid grid-cols-2 gap-2 text-[length:22rpx]">
-          <view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">浏览次数</view><view class="mt-1 font-semibold">—</view><view class="mt-1 text-[length:20rpx] text-muted">未接入统计</view></view>
-          <view class="rounded-[10rpx] bg-panel-raised px-3 py-3"><view class="text-muted">分享次数</view><view class="mt-1 font-semibold">—</view><view class="mt-1 text-[length:20rpx] text-muted">未接入统计</view></view>
-        </view>
-      </block>
+    <view class="mt-5 rounded-[16rpx] bg-panel px-5 py-5">
+      <view class="flex items-start justify-between gap-3">
+        <view class="min-w-0 flex-1 break-all text-[length:32rpx] font-bold">{{event.title}}</view>
+        <t-tag variant="outline">{{eventStatusText}}</t-tag>
+      </view>
+      <view class="mt-3 text-[length:23rpx] text-muted">{{eventTimeText}}</view>
+      <view class="mt-1 text-[length:23rpx] text-muted">{{event.cityName || '未设置城市'}}</view>
     </view>
-    <view class="mip-admin-menu-grid mt-5 flex flex-col gap-3">
-      <view wx:if="{{canEdit && (event.status === 'DRAFT' || event.status === 'UNPUBLISHED')}}" class="flex min-h-[92rpx] items-center rounded-[16rpx] bg-panel px-4" data-page="events" bind:tap="openPage"><view class="flex-1"><view class="text-[length:27rpx] font-semibold">活动信息</view><view class="mt-1 text-[length:22rpx] text-muted">编辑基本信息与报名配置</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:elif="{{canEdit && event.status === 'PUBLISHED'}}" class="flex min-h-[92rpx] items-center rounded-[16rpx] bg-panel px-4" bind:tap="unpublishBeforeEdit"><view class="flex-1"><view class="text-[length:27rpx] font-semibold">下架后编辑</view><view class="mt-1 text-[length:22rpx] text-muted">先下架活动，再修改基本信息与报名配置</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canRoster}}" class="flex min-h-[92rpx] items-center rounded-[16rpx] bg-panel px-4" data-page="event-registrations" bind:tap="openPage"><view class="flex-1"><view class="text-[length:27rpx] font-semibold">参与者与签到</view><view class="mt-1 text-[length:22rpx] text-muted">查看名单、联系电话和签到状态</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canTeam}}" class="flex min-h-[92rpx] items-center rounded-[16rpx] bg-panel px-4" data-page="event-managers" bind:tap="openPage"><view class="flex-1"><view class="text-[length:27rpx] font-semibold">活动团队</view><view class="mt-1 text-[length:22rpx] text-muted">负责人、管理员和现场人员</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canAlbum}}" class="flex min-h-[92rpx] items-center rounded-[16rpx] bg-panel px-4" data-page="event-album" bind:tap="openPage"><view class="flex-1"><view class="text-[length:27rpx] font-semibold">活动相册</view><view class="mt-1 text-[length:22rpx] text-muted">审核和查看活动照片</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canFeedback}}" class="flex min-h-[92rpx] items-center rounded-[16rpx] bg-panel px-4" data-page="event-feedback" bind:tap="openPage"><view class="flex-1"><view class="text-[length:27rpx] font-semibold">活动反馈</view><view class="mt-1 text-[length:22rpx] text-muted">查看参与者提交的活动反馈</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canComments}}" class="flex min-h-[92rpx] items-center rounded-[16rpx] bg-panel px-4" data-page="event-comments" bind:tap="openPage"><view class="flex-1"><view class="text-[length:27rpx] font-semibold">活动评论</view><view class="mt-1 text-[length:22rpx] text-muted">配置评论规则并处理评论举报</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canOrders}}" class="flex min-h-[92rpx] items-center rounded-[16rpx] bg-panel px-4" data-page="orders" bind:tap="openPage"><view class="flex-1"><view class="text-[length:27rpx] font-semibold">活动订单</view><view class="mt-1 text-[length:22rpx] text-muted">查看支付与退款状态</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-      <view wx:if="{{canExport}}" class="flex min-h-[92rpx] items-center rounded-[16rpx] bg-panel px-4" data-page="exports" bind:tap="openPage"><view class="flex-1"><view class="text-[length:27rpx] font-semibold">导出与现场资料</view><view class="mt-1 text-[length:22rpx] text-muted">创建短期导出任务</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+
+    <view wx:if="{{canRoster}}" class="mt-5 flex min-h-[104rpx] items-center rounded-[16rpx] bg-panel px-4" role="button" bind:tap="openRoster">
+      <view class="min-w-0 flex-1">
+        <view class="text-[length:28rpx] font-semibold">参与者与签到</view>
+        <view class="mt-1 text-[length:22rpx] text-muted">查看名单、确认签到或按权限撤销签到</view>
+      </view>
+      <t-icon name="chevron-right" size="32rpx" color="var(--color-brand)" />
     </view>
-    <view wx:if="{{canPublishCommunications && event.status === 'PUBLISHED'}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-4">
-      <view class="text-[length:27rpx] font-semibold">活动提醒</view>
-      <view class="mt-1 text-[length:22rpx] text-muted">向已确认参与者创建站内提醒，可选择同时尝试微信提醒。</view>
-      <view class="mt-4"><t-button block theme="primary" loading="{{reminderBusy}}" disabled="{{reminderBusy}}" bind:tap="publishEventReminder">发送活动提醒</t-button></view>
-      <view wx:if="{{reminderSummary}}" class="mt-3 rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:22rpx] text-success">{{reminderSummary}}</view>
-    </view>
+
     <view wx:if="{{canCheckIn}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-4">
-      <view class="text-[length:27rpx] font-semibold">签到码</view>
-      <view class="mt-1 text-[length:22rpx] text-muted">静态码适合提前制作海报；短时码有效期为 5 分钟，刷新后旧码失效。</view>
-      <image wx:if="{{posterPath}}" class="mip-admin-poster mt-4 h-[560rpx] w-full rounded-[12rpx] bg-panel-raised" mode="aspectFit" src="{{posterPath}}" bind:tap="previewCheckInPoster" />
+      <view class="text-[length:28rpx] font-semibold">签到码</view>
+      <view class="mt-1 text-[length:22rpx] text-muted">静态码适合提前制作海报；短时码有效期为 5 分钟。</view>
+      <image wx:if="{{posterPath}}" class="mt-4 h-[560rpx] w-full rounded-[12rpx] bg-panel-raised" mode="aspectFit" src="{{posterPath}}" bind:tap="previewCheckInPoster" />
       <view wx:if="{{posterValidText}}" class="mt-2 text-center text-[length:20rpx] text-muted">{{posterMode === 'ROTATING' ? '短时签到码 · ' : '静态签到码 · '}}{{posterValidText}}</view>
       <view wx:if="{{posterMode === 'ROTATING' && !posterExpired}}" class="mt-2 text-center text-[length:30rpx] font-semibold text-brand">{{posterCountdownText}}</view>
       <view wx:elif="{{posterMode === 'ROTATING'}}" class="mt-2 text-center text-[length:30rpx] font-semibold text-danger">{{posterCountdownText}}</view>
-      <view class="mt-4 grid grid-cols-2 gap-3"><t-button block variant="outline" loading="{{posterBusy}}" disabled="{{event.status !== 'PUBLISHED'}}" bind:tap="createStaticCheckInPoster">生成静态海报</t-button><t-button block theme="primary" loading="{{posterBusy}}" disabled="{{event.status !== 'PUBLISHED'}}" bind:tap="createRotatingCheckInPoster">{{posterMode === 'ROTATING' ? '刷新短时码' : '生成短时码'}}</t-button></view>
+      <view class="mt-4 grid grid-cols-2 gap-3">
+        <t-button block variant="outline" loading="{{posterBusy}}" disabled="{{event.status !== 'PUBLISHED'}}" bind:tap="createStaticCheckInPoster">生成静态海报</t-button>
+        <t-button block theme="primary" loading="{{posterBusy}}" disabled="{{event.status !== 'PUBLISHED'}}" bind:tap="createRotatingCheckInPoster">{{posterMode === 'ROTATING' ? '刷新短时码' : '生成短时码'}}</t-button>
+      </view>
       <view class="mt-3"><t-button block variant="outline" disabled="{{!posterPath || posterExpired}}" bind:tap="saveCheckInPoster">保存到相册</t-button></view>
-      <view wx:if="{{event.status !== 'PUBLISHED'}}" class="mt-2 text-[length:20rpx] text-muted">发布活动后可生成签到海报。</view>
+      <view wx:if="{{event.status !== 'PUBLISHED'}}" class="mt-2 text-[length:20rpx] text-muted">只有已发布活动可以生成签到海报。</view>
     </view>
-    <view wx:if="{{canClone || canEdit}}" class="mt-6"><t-button wx:if="{{canClone}}" block variant="outline" loading="{{cloneBusy}}" disabled="{{processing || cloneBusy}}" bind:tap="cloneEvent">复制为草稿</t-button><view wx:if="{{canEdit}}" class="{{canClone ? 'mt-3 ' : ''}}grid grid-cols-2 gap-3"><t-button block variant="outline" disabled="{{processing || cloneBusy || event.status === 'CANCELLED' || event.status === 'ENDED'}}" data-status="{{event.status === 'PUBLISHED' ? 'UNPUBLISHED' : 'PUBLISHED'}}" bind:tap="changeStatus">{{event.status === 'PUBLISHED' ? '下架活动' : '发布活动'}}</t-button><t-button block variant="outline" theme="danger" disabled="{{processing || cloneBusy || event.status === 'CANCELLED' || event.status === 'ENDED'}}" bind:tap="cancelEvent">取消活动</t-button></view></view>
+    <view wx:elif="{{!canRoster}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-4 text-[length:23rpx] text-muted">当前账号只有活动查看权限，没有名单或签到操作权限。</view>
+
     <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
   </view>
+
   <canvas id="admin-checkin-poster-canvas" type="2d" class="fixed left-[-9999px] top-0 h-[560px] w-[375px]"></canvas>
   <app-page-exit />
 </view>

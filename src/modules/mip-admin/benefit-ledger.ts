@@ -1,5 +1,7 @@
 import type { MipAdminGateway } from './types'
-import { MipAdminError } from './types'
+import { MipAdminError } from './error'
+
+export type BenefitLedgerAdminGateway = Pick<MipAdminGateway, 'listUnifiedBenefitLedger'>
 
 export type AdminUnifiedBenefitType = 'MEMBERSHIP' | 'GROWTH'
 export type AdminUnifiedBenefitPageSize = 10 | 20 | 50 | 100
@@ -117,7 +119,7 @@ interface BenefitLedgerCache {
 }
 
 export function createMipBenefitLedgerAdmin(
-  gateway: MipAdminGateway,
+  gateway: BenefitLedgerAdminGateway,
   cache: BenefitLedgerCache,
 ): MipBenefitLedgerAdmin {
   return {

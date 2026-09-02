@@ -1,4 +1,4 @@
-import { MipAdminError } from './types'
+import { MipAdminError } from './error'
 
 export const adminOperationalExceptionTypes = [
   'OUTBOX',

@@ -2,6 +2,7 @@ import type { AdminApiResponse, AdminRequest } from '../src/domain/contracts'
 import {
   REVIEWED_ADMIN_MUTATION_ACTIONS,
   REVIEWED_ADMIN_MUTATION_SCHEMAS,
+  WEB_ADMIN_QUERY_ACTIONS,
 } from './admin-mutation-contract.ts'
 import {
   ADMIN_MEDIA_UPLOAD_PATH,
@@ -60,6 +61,20 @@ interface ChallengeRow {
   expires_at: number
 }
 
+interface LoginPrincipalLimitRow {
+  failed_attempts: number
+  locked_until: number
+}
+
+interface VerifiedLoginConfirmation {
+  code: string
+  principal: {
+    appId: string
+    openId: string
+    displayName?: string
+  }
+}
+
 interface AdminBffDependencies {
   fetch: typeof fetch
   crypto: Crypto
@@ -74,89 +89,9 @@ const MAX_BODY_BYTES = 32 * 1024
 const WEB_BFF_TRANSPORT = 'MIP_WEB_BFF_V1'
 const WEB_LOGIN_CONFIRM_TRANSPORT = 'MIP_WEB_LOGIN_CONFIRM_V1'
 const WEB_LOGIN_MAX_CLOCK_SKEW_MS = 60_000
-const CHALLENGE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-const ALLOWED_QUERY_ACTIONS = new Set([
-  'mip.admin.session',
-  'mip.admin.dashboard.overview.get',
-  'mip.admin.users.list',
-  'mip.admin.users.get',
-  'mip.admin.users.influence.list',
-  'mip.admin.events.list',
-  'mip.admin.events.get',
-  'mip.admin.events.insights.get',
-  'mip.admin.events.roster',
-  'mip.admin.events.rosterAll',
-  'mip.admin.events.policy.get',
-  'mip.admin.orders.list',
-  'mip.admin.orders.get',
-  'mip.admin.paymentAttempts.list',
-  'mip.admin.tasks.list',
-  'mip.admin.tasks.get',
-  'mip.admin.tasks.assignableMembers.list',
-  'mip.admin.tasks.eligibleLevels.list',
-  'mip.admin.tasks.completions.list',
-  'mip.admin.tasks.completions.get',
-  'mip.admin.tasks.completions.export',
-  'mip.admin.banners.session',
-  'mip.admin.banners.list',
-  'mip.admin.banners.get',
-  'mip.admin.game.session',
-  'mip.admin.game.rankings.list',
-  'mip.admin.game.seasons.list',
-  'mip.admin.game.teams.list',
-  'mip.admin.game.members.assignable.list',
-  'mip.admin.game.matches.list',
-  'mip.admin.game.blindBoxes.catalogs.list',
-  'mip.admin.game.blindBoxes.cards.list',
-  'mip.admin.memberships.get',
-  'mip.admin.memberships.timeline',
-  'mip.admin.benefits.ledger',
-  'mip.admin.branches.list',
-  'mip.admin.roles.list',
-  'mip.admin.roles.candidates',
-  'mip.admin.rolePolicies.list',
-  'mip.admin.audit.list',
-  'mip.admin.messageCampaigns.list',
-  'mip.admin.messageCampaigns.get',
-  'mip.admin.messageCampaigns.recipients',
-  'mip.admin.messageTemplates.list',
-  'mip.admin.messageTemplates.get',
-  'mip.admin.messageDeliveryReviews.list',
-  'mip.admin.messageDeliveryReviews.get',
-  'mip.admin.messageDeliveryRecords.list',
-  'mip.admin.knowledge.list',
-  'mip.admin.knowledge.get',
-  'mip.admin.knowledge.schedules.list',
-  'mip.admin.communityReports.list',
-  'mip.admin.announcements.scopes',
-  'mip.admin.announcements.list',
-  'mip.admin.announcements.get',
-  'mip.admin.opportunities.list',
-  'mip.admin.opportunities.get',
-  'mip.admin.opportunities.options',
-  'mip.admin.userContent.list',
-  'mip.admin.userContent.get',
-  'mip.admin.matching.get',
-  'mip.admin.opportunityComments.get',
-  'mip.admin.growth.levels',
-  'mip.admin.growth.benefits',
-  'mip.admin.growth.rules',
-  'mip.admin.growth.entries',
-  'mip.admin.growth.levelTransitions',
-  'mip.admin.badges.list',
-  'mip.admin.badges.awards',
-  'mip.admin.exceptions.list',
-  'mip.admin.operations.queue.list',
-  'mip.admin.events.catalog.list',
-  'mip.admin.events.tags.get',
-  'mip.admin.events.recaps.list',
-  'mip.admin.events.recaps.get',
-  'mip.admin.events.album.list',
-  'mip.admin.events.comments.get',
-  'mip.admin.messageCampaigns.scopes',
-  'mip.admin.exports.status',
-  'mip.admin.dashboard',
-])
+const LOGIN_FAILURE_LIMIT = 5
+const LOGIN_FAILURE_WINDOW_MS = 5 * 60 * 1000
+const LOGIN_LOCK_MS = 5 * 60 * 1000
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_.:-]{12,128}$/
 const encoder = new TextEncoder()
 
@@ -205,6 +140,14 @@ export function createAdminBff(
 
     const createdAt = deps.now()
     const expiresAt = createdAt + CHALLENGE_TTL_MS
+    try {
+      await env.MIP_ADMIN_AUTH_DB!.prepare(
+        'DELETE FROM mip_admin_web_login_challenges WHERE expires_at < ?1',
+      ).bind(createdAt).run()
+    }
+    catch {
+      return jsonError('AUTH_UNAVAILABLE', '网页登录服务暂时不可用', 503)
+    }
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const id = randomToken(deps.crypto, 24)
       const browserKey = randomToken(deps.crypto, 24)
@@ -292,25 +235,81 @@ export function createAdminBff(
     const configError = challengeConfigError(env)
     if (configError) return jsonError('AUTH_NOT_CONFIGURED', configError, 503)
     const envelope = await readJsonRecord(request)
-    if (!envelope || !await verifyLoginConfirmation(envelope, env, deps)) {
-      return jsonError('AUTH_REQUIRED', '确认请求未通过验证', 401)
+    if (!envelope) return jsonError('CONFIRMATION_INVALID', '确认请求格式无效', 400)
+    const verification = await verifyLoginConfirmation(envelope, env, deps)
+    if (verification === 'INVALID') {
+      return jsonError('CONFIRMATION_INVALID', '确认请求格式无效', 400)
     }
-    const principal = envelope.principal as Record<string, unknown>
-    const code = String(envelope.challengeCode)
+    if (verification === 'SIGNATURE_INVALID') {
+      return jsonError('CONFIRMATION_SIGNATURE_INVALID', '确认请求签名无效', 401)
+    }
+    const now = deps.now()
+    const { code, principal } = verification
+    const principalKey = await hmacHex(
+      env.MIP_WEB_SESSION_SECRET!,
+      `principal\0${principal.appId}\0${principal.openId}`,
+      deps.crypto,
+    )
+    let currentLimit: LoginPrincipalLimitRow | null
+    try {
+      currentLimit = await env.MIP_ADMIN_AUTH_DB!.prepare(
+        `SELECT failed_attempts, locked_until
+           FROM mip_admin_web_login_principal_limits
+          WHERE principal_key = ?1`,
+      ).bind(principalKey).first<LoginPrincipalLimitRow>()
+    }
+    catch {
+      return jsonError('AUTH_UNAVAILABLE', '网页登录服务暂时不可用', 503)
+    }
+    if (currentLimit && currentLimit.locked_until > now) {
+      return loginRateLimited(currentLimit.locked_until, now)
+    }
     const codeHash = await hmacHex(env.MIP_WEB_SESSION_SECRET!, `code\0${code}`, deps.crypto)
-    const confirmed = await env.MIP_ADMIN_AUTH_DB!.prepare(
-      `UPDATE mip_admin_web_login_challenges
-          SET status = 'CONFIRMED', app_id = ?1, open_id = ?2, display_name = ?3, confirmed_at = ?4
-        WHERE code_hash = ?5 AND status = 'PENDING' AND expires_at >= ?4`,
-    ).bind(
-      principal.appId,
-      principal.openId,
-      typeof principal.displayName === 'string' ? principal.displayName.slice(0, 80) : null,
-      deps.now(),
-      codeHash,
-    ).run()
+    let confirmed: D1RunResult
+    try {
+      confirmed = await env.MIP_ADMIN_AUTH_DB!.prepare(
+        `UPDATE mip_admin_web_login_challenges
+            SET status = 'CONFIRMED', app_id = ?1, open_id = ?2, display_name = ?3, confirmed_at = ?4
+          WHERE code_hash = ?5
+            AND status = 'PENDING'
+            AND expires_at >= ?4
+            AND NOT EXISTS (
+              SELECT 1
+                FROM mip_admin_web_login_principal_limits
+               WHERE principal_key = ?6 AND locked_until > ?4
+            )`,
+      ).bind(
+        principal.appId,
+        principal.openId,
+        principal.displayName?.slice(0, 80) || null,
+        now,
+        codeHash,
+        principalKey,
+      ).run()
+    }
+    catch {
+      return jsonError('AUTH_UNAVAILABLE', '网页登录服务暂时不可用', 503)
+    }
     if (!confirmed.success || Number(confirmed.meta?.changes || 0) !== 1) {
+      let failedLimit: LoginPrincipalLimitRow | null
+      try {
+        failedLimit = await recordFailedLoginAttempt(env.MIP_ADMIN_AUTH_DB!, principalKey, now)
+      }
+      catch {
+        return jsonError('AUTH_UNAVAILABLE', '网页登录服务暂时不可用', 503)
+      }
+      if (failedLimit && failedLimit.locked_until > now) {
+        return loginRateLimited(failedLimit.locked_until, now)
+      }
       return jsonError('CHALLENGE_NOT_FOUND', '登录码无效或已过期', 404)
+    }
+    try {
+      await env.MIP_ADMIN_AUTH_DB!.prepare(
+        'DELETE FROM mip_admin_web_login_principal_limits WHERE principal_key = ?1',
+      ).bind(principalKey).run()
+    }
+    catch {
+      // A stale failure counter can only make the next confirmation stricter; login stays single-use.
     }
     return json({ confirmed: true }, 200)
   }
@@ -333,7 +332,7 @@ export function createAdminBff(
     if (!session) return adminError('AUTH_REQUIRED', '请登录后继续', 401)
     const adminRequest = await readAdminRequest(request)
     if (!adminRequest) return adminError('VALIDATION_FAILED', '运营请求格式无效', 400)
-    const isQuery = ALLOWED_QUERY_ACTIONS.has(adminRequest.action)
+    const isQuery = WEB_ADMIN_QUERY_ACTIONS.has(adminRequest.action)
     const isMutation = REVIEWED_ADMIN_MUTATION_ACTIONS.has(adminRequest.action)
     if (!isQuery && !isMutation) {
       return adminError('FORBIDDEN', 'Web 管理端当前未开放该操作', 403)
@@ -442,7 +441,7 @@ async function verifyLoginConfirmation(
   value: Record<string, unknown>,
   env: AdminBffEnv,
   deps: AdminBffDependencies,
-) {
+): Promise<VerifiedLoginConfirmation | 'INVALID' | 'SIGNATURE_INVALID'> {
   const allowedKeys = new Set(['transport', 'timestamp', 'nonce', 'challengeCode', 'principal', 'signature'])
   if (!hasExactKeys(value, allowedKeys)
     || value.transport !== WEB_LOGIN_CONFIRM_TRANSPORT
@@ -451,20 +450,65 @@ async function verifyLoginConfirmation(
     || typeof value.nonce !== 'string'
     || !/^[A-Za-z0-9_-]{24,128}$/.test(value.nonce)
     || typeof value.challengeCode !== 'string'
-    || !/^[A-HJ-NP-Z2-9]{8}$/.test(value.challengeCode)
-    || typeof value.signature !== 'string'
-    || !/^[a-f0-9]{64}$/.test(value.signature)
-    || !plainRecord(value.principal)) return false
+    || !/^\d{6}$/.test(value.challengeCode)
+    || !plainRecord(value.principal)) return 'INVALID'
   const principalKeys = Object.keys(value.principal)
   if (principalKeys.some(key => !['appId', 'openId', 'displayName'].includes(key))
     || !identifier(value.principal.appId, 64)
     || !identifier(value.principal.openId, 128)
     || (value.principal.displayName !== undefined
       && (typeof value.principal.displayName !== 'string' || value.principal.displayName.length > 80))
-    || !allowedAppIds(env.MIP_WEB_ALLOWED_APP_IDS).has(value.principal.appId)) return false
+    || !allowedAppIds(env.MIP_WEB_ALLOWED_APP_IDS).has(value.principal.appId)) return 'INVALID'
+  if (typeof value.signature !== 'string' || !/^[a-f0-9]{64}$/.test(value.signature)) {
+    return 'SIGNATURE_INVALID'
+  }
   const { signature, ...unsigned } = value
   const expected = await hmacHex(env.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET!, canonicalJson(unsigned), deps.crypto)
-  return constantTimeHexEqual(signature, expected)
+  if (!constantTimeHexEqual(signature, expected)) return 'SIGNATURE_INVALID'
+  return {
+    code: value.challengeCode,
+    principal: {
+      appId: value.principal.appId,
+      openId: value.principal.openId,
+      ...(value.principal.displayName ? { displayName: value.principal.displayName } : {}),
+    },
+  }
+}
+
+async function recordFailedLoginAttempt(
+  database: D1DatabaseBinding,
+  principalKey: string,
+  now: number,
+) {
+  return database.prepare(
+    `INSERT INTO mip_admin_web_login_principal_limits
+      (principal_key, failed_attempts, window_started_at, locked_until, updated_at)
+     VALUES (?1, 1, ?2, 0, ?2)
+     ON CONFLICT(principal_key) DO UPDATE SET
+       failed_attempts = CASE
+         WHEN locked_until > ?2 THEN failed_attempts
+         WHEN window_started_at <= ?3 THEN 1
+         ELSE failed_attempts + 1
+       END,
+       window_started_at = CASE
+         WHEN locked_until > ?2 THEN window_started_at
+         WHEN window_started_at <= ?3 THEN ?2
+         ELSE window_started_at
+       END,
+       locked_until = CASE
+         WHEN locked_until > ?2 THEN locked_until
+         WHEN (CASE WHEN window_started_at <= ?3 THEN 1 ELSE failed_attempts + 1 END) >= ?4 THEN ?5
+         ELSE 0
+       END,
+       updated_at = ?2
+     RETURNING failed_attempts, locked_until`,
+  ).bind(
+    principalKey,
+    now,
+    now - LOGIN_FAILURE_WINDOW_MS,
+    LOGIN_FAILURE_LIMIT,
+    now + LOGIN_LOCK_MS,
+  ).first<LoginPrincipalLimitRow>()
 }
 
 async function readAdminRequest(request: Request): Promise<AdminRequest | null> {
@@ -940,8 +984,11 @@ function randomToken(cryptoApi: Crypto, length: number) {
 }
 
 function randomChallengeCode(cryptoApi: Crypto) {
-  const bytes = cryptoApi.getRandomValues(new Uint8Array(8))
-  return [...bytes].map(byte => CHALLENGE_ALPHABET[byte % CHALLENGE_ALPHABET.length]).join('')
+  const range = 1_000_000
+  const maximum = Math.floor(0x1_0000_0000 / range) * range
+  let value = maximum
+  while (value >= maximum) value = cryptoApi.getRandomValues(new Uint32Array(1))[0]
+  return String(value % range).padStart(6, '0')
 }
 
 function base64Url(value: Uint8Array) {
@@ -979,6 +1026,13 @@ function expireCookie(name: string, request: Request) {
 function challengeExpired(request: Request) {
   return jsonError('CHALLENGE_EXPIRED', '登录码无效或已过期', 410, {
     'set-cookie': expireCookie(CHALLENGE_COOKIE, request),
+  })
+}
+
+function loginRateLimited(lockedUntil: number, now: number) {
+  const retryAfterSeconds = Math.max(1, Math.ceil((lockedUntil - now) / 1000))
+  return jsonError('CHALLENGE_RATE_LIMITED', '尝试次数过多，请稍后再试', 429, {
+    'retry-after': String(retryAfterSeconds),
   })
 }
 

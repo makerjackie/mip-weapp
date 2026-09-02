@@ -1,10 +1,11 @@
 import type { EventId, OrderId } from '../../../../modules/mip'
 import type { MipEventDetail } from '../../../../modules/mip-events'
+import { brand } from '../../../../config/brand'
 import { mipOperationsConfig } from '../../../../config/mip-operations'
 import { eventInvitationPath, eventRichTextNodes, MipEventsError, publicEventTypeLabel, safeHttpsEventUrl } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
-import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../../platform/navigation/client'
 import { openWechatChannelsDestination } from '../../../../platform/wechat/channels'
 
 const POSTER_WIDTH = 375
@@ -108,7 +109,7 @@ function primaryAction(event: MipEventDetail, hasCheckInScene = false) {
     return { key: 'registration', label: '查看候补状态' }
   }
   return event.canRegister
-    ? { key: 'register', label: event.accessType === 'PAID' ? '提交付费报名' : '报名活动' }
+    ? { key: 'register', label: event.accessType === 'PAID' ? '提交付费报名' : '立即报名' }
     : { key: 'disabled', label: '暂不可报名' }
 }
 
@@ -467,6 +468,9 @@ Page({
   },
 
   handlePrimary() {
+    if (this.data.busy || this.data.primaryAction === 'disabled') {
+      return
+    }
     if (this.data.primaryAction === 'register') {
       const invitation = this.data.incomingInvitationToken
         ? `&invitationToken=${encodeURIComponent(this.data.incomingInvitationToken)}`
@@ -754,6 +758,7 @@ Page({
     return {
       title: this.data.event?.title || 'MIP 活动',
       path: eventInvitationPath(this.data.eventId, this.data.invitationToken),
+      imageUrl: this.data.event?.coverUrl || brand.logoPath,
     }
   },
 })

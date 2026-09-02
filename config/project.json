@@ -29,6 +29,10 @@
       "pathName": "pages/profile/index"
     },
     {
+      "name": "全部服务",
+      "pathName": "packages/member/mip-services/index"
+    },
+    {
       "name": "机会广场",
       "pathName": "pages/opportunities/index"
     },
@@ -39,6 +43,10 @@
     {
       "name": "玩家档案",
       "pathName": "packages/member/mip-profile/index"
+    },
+    {
+      "name": "公开设置",
+      "pathName": "packages/member/mip-visibility-settings/index"
     },
     {
       "name": "我的名片",
@@ -221,8 +229,12 @@
       "pathName": "packages/member/benefits/index"
     },
     {
-      "name": "隐私与账户",
+      "name": "账号设置",
       "pathName": "packages/member/privacy/index"
+    },
+    {
+      "name": "隐私政策",
+      "pathName": "packages/member/privacy-policy/index"
     },
     {
       "name": "用户协议",
@@ -237,196 +249,20 @@
       "pathName": "packages/member/about/index"
     },
     {
-      "name": "运营工作台",
+      "name": "现场工作台",
       "pathName": "packages/admin/dashboard/index"
     },
     {
-      "name": "公告管理",
-      "pathName": "packages/admin/announcements/index"
-    },
-    {
-      "name": "公告编辑",
-      "pathName": "packages/admin/announcement-editor/index"
-    },
-    {
-      "name": "消息管理",
-      "pathName": "packages/admin/message-campaigns/index"
-    },
-    {
-      "name": "城市分会",
-      "pathName": "packages/admin/branches/index"
-    },
-    {
-      "name": "活动管理",
+      "name": "授权活动",
       "pathName": "packages/admin/managed-events/index"
     },
     {
-      "name": "活动分类与标签",
-      "pathName": "packages/admin/event-catalogs/index"
-    },
-    {
-      "name": "视频回顾",
-      "pathName": "packages/admin/event-recaps/index"
-    },
-    {
-      "name": "单场活动管理",
+      "name": "活动现场",
       "pathName": "packages/admin/event-console/index"
     },
     {
-      "name": "活动编辑",
-      "pathName": "packages/admin/events/index"
-    },
-    {
-      "name": "活动管理员",
-      "pathName": "packages/admin/event-managers/index"
-    },
-    {
-      "name": "活动相册审核",
-      "pathName": "packages/admin/event-album/index"
-    },
-    {
-      "name": "活动反馈",
-      "pathName": "packages/admin/event-feedback/index"
-    },
-    {
-      "name": "活动评论",
-      "pathName": "packages/admin/event-comments/index"
-    },
-    {
-      "name": "导出与现场资料",
-      "pathName": "packages/admin/exports/index"
-    },
-    {
-      "name": "活动报名名单",
+      "name": "参与者与签到",
       "pathName": "packages/admin/event-registrations/index"
-    },
-    {
-      "name": "活动参与者",
-      "pathName": "packages/admin/event-participants/index"
-    },
-    {
-      "name": "成员运营",
-      "pathName": "packages/admin/profiles/index"
-    },
-    {
-      "name": "用户内容",
-      "pathName": "packages/admin/user-content/index"
-    },
-    {
-      "name": "编辑用户内容",
-      "pathName": "packages/admin/user-content-editor/index"
-    },
-    {
-      "name": "会员管理",
-      "pathName": "packages/admin/membership/index"
-    },
-    {
-      "name": "会员权益台账",
-      "pathName": "packages/admin/membership-ledger/index"
-    },
-    {
-      "name": "订单运营",
-      "pathName": "packages/admin/orders/index"
-    },
-    {
-      "name": "支付尝试记录",
-      "pathName": "packages/admin/payment-attempts/index"
-    },
-    {
-      "name": "机会管理",
-      "pathName": "packages/admin/opportunities/index"
-    },
-    {
-      "name": "机会撮合设置",
-      "pathName": "packages/admin/opportunity-matching/index"
-    },
-    {
-      "name": "机会编辑",
-      "pathName": "packages/admin/opportunity-editor/index"
-    },
-    {
-      "name": "机会详情",
-      "pathName": "packages/admin/opportunity-detail/index"
-    },
-    {
-      "name": "成长等级",
-      "pathName": "packages/admin/growth-levels/index"
-    },
-    {
-      "name": "权益管理",
-      "pathName": "packages/admin/growth-benefits/index"
-    },
-    {
-      "name": "奖励规则",
-      "pathName": "packages/admin/growth-rules/index"
-    },
-    {
-      "name": "成长流水",
-      "pathName": "packages/admin/growth-entries/index"
-    },
-    {
-      "name": "统一权益流水",
-      "pathName": "packages/admin/benefit-ledger/index"
-    },
-    {
-      "name": "等级变更记录",
-      "pathName": "packages/admin/growth-transitions/index"
-    },
-    {
-      "name": "勋章管理",
-      "pathName": "packages/admin/badges/index"
-    },
-    {
-      "name": "赛季与队伍管理",
-      "pathName": "packages/admin/game/index"
-    },
-    {
-      "name": "盲盒管理",
-      "pathName": "packages/admin/blind-box/index"
-    },
-    {
-      "name": "任务管理",
-      "pathName": "packages/admin/tasks/index"
-    },
-    {
-      "name": "任务派发",
-      "pathName": "packages/admin/task-assignments/index"
-    },
-    {
-      "name": "任务完成流水",
-      "pathName": "packages/admin/task-completions/index"
-    },
-    {
-      "name": "Banner 管理",
-      "pathName": "packages/admin/banners/index"
-    },
-    {
-      "name": "Banner 编辑",
-      "pathName": "packages/admin/banner-editor/index"
-    },
-    {
-      "name": "举报审核",
-      "pathName": "packages/admin/community-reports/index"
-    },
-    {
-      "name": "异常中心",
-      "pathName": "packages/admin/exceptions/index"
-    },
-    {
-      "name": "消息投递复核明细",
-      "pathName": "packages/admin/message-delivery-review/index"
-    },
-    {
-      "name": "消息投递记录",
-      "pathName": "packages/admin/message-delivery-records/index"
-    },
-    {
-      "name": "运营审计",
-      "pathName": "packages/admin/audit/index"
-    },
-    {
-      "name": "管理员与权限",
-      "pathName": "packages/admin/roles/index"
     },
     {
       "name": "知识内容",
@@ -439,10 +275,6 @@
     {
       "name": "知识内容网页",
       "pathName": "packages/member/mip-knowledge/web/index"
-    },
-    {
-      "name": "知识内容管理",
-      "pathName": "packages/admin/knowledge/index"
     }
   ]
 }

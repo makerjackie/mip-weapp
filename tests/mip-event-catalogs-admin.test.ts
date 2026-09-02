@@ -14,7 +14,7 @@ import {
 } from '../src/modules/mip-admin/event-catalogs'
 import { MipAdminError } from '../src/modules/mip-admin/types'
 
-vi.mock('../src/modules/platform/cloudbase', () => ({ requireCloudClient: vi.fn() }))
+vi.mock('../src/platform/cloudbase/client', () => ({ requireCloudClient: vi.fn() }))
 vi.mock('../src/config/runtime', () => ({
   runtimeConfig: { cloudbase: { adminFunctionName: 'mip-admin-api' } },
 }))
@@ -254,9 +254,9 @@ describe('MIP event catalog admin contract', () => {
     const module = createMipAdminModule(spies as unknown as MipAdminGateway)
 
     await module.eventCatalogs.listCatalogs({ kind: 'TYPE' })
-    await module.listEventCatalogs({ kind: 'TYPE' })
+    await module.eventCatalogs.listCatalogs({ kind: 'TYPE' })
     await module.eventCatalogs.getRecap(recap.id)
-    await module.getEventVideoRecap(recap.id)
+    await module.eventCatalogs.getRecap(recap.id)
     expect(spies.listEventCatalogs).toHaveBeenCalledTimes(1)
     expect(spies.getEventVideoRecap).toHaveBeenCalledTimes(1)
 
@@ -267,8 +267,8 @@ describe('MIP event catalog admin contract', () => {
       description: '',
       sortOrder: 20,
     })
-    await module.listEventCatalogs({ kind: 'TYPE' })
-    await module.getEventVideoRecap(recap.id)
+    await module.eventCatalogs.listCatalogs({ kind: 'TYPE' })
+    await module.eventCatalogs.getRecap(recap.id)
     expect(spies.listEventCatalogs).toHaveBeenCalledTimes(2)
     expect(spies.getEventVideoRecap).toHaveBeenCalledTimes(1)
 
@@ -279,7 +279,7 @@ describe('MIP event catalog admin contract', () => {
       destination: recap.destination,
       sortOrder: recap.sortOrder,
     })
-    await module.getEventVideoRecap(recap.id)
+    await module.eventCatalogs.getRecap(recap.id)
     expect(spies.getEventVideoRecap).toHaveBeenCalledTimes(2)
 
     await expect(module.eventCatalogs.archiveRecap({
@@ -287,7 +287,7 @@ describe('MIP event catalog admin contract', () => {
       expectedVersion: 4,
       reason: '停止展示',
     })).rejects.toBe(failure)
-    await module.getEventVideoRecap(recap.id)
+    await module.eventCatalogs.getRecap(recap.id)
     expect(spies.getEventVideoRecap).toHaveBeenCalledTimes(2)
   })
 })

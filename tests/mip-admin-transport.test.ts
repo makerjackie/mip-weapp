@@ -1,3 +1,4 @@
+import type { AdminOperationAction } from '../src/modules/mip-admin/request-contract'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMipAdminGateway } from '../src/modules/mip-admin/cloudbase-gateway'
 import { createCloudBaseAdminTransport } from '../src/modules/mip-admin/cloudbase-transport'
@@ -9,7 +10,7 @@ const defaultCloudHarness = vi.hoisted(() => ({
   callFunction: vi.fn(),
 }))
 
-vi.mock('../src/modules/platform/cloudbase', () => ({
+vi.mock('../src/platform/cloudbase/client', () => ({
   requireCloudClient: vi.fn(async () => ({ callFunction: defaultCloudHarness.callFunction })),
 }))
 
@@ -161,7 +162,7 @@ describe('MIP admin transports', () => {
     }))
     const cloudbase = createCloudBaseAdminTransport({ cloudClient: { callFunction } })
     const inMemory = createInMemoryAdminTransport({})
-    const request = createAdminRequest('mip.admin.unknown')
+    const request = createAdminRequest('mip.admin.unknown' as AdminOperationAction)
     const expectedError = {
       name: 'MipAdminError',
       code: 'NOT_FOUND',
@@ -177,7 +178,7 @@ describe('MIP admin transports', () => {
       data: request,
     })
     await expect(inMemory.request(request)).rejects.toMatchObject(expectedError)
-    await expect(inMemory.request(createAdminRequest('toString'))).rejects.toMatchObject(expectedError)
+    await expect(inMemory.request(createAdminRequest('toString' as AdminOperationAction))).rejects.toMatchObject(expectedError)
   })
 
   it('keeps gateway DTO behavior behind an injected transport', async () => {

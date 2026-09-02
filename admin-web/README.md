@@ -38,9 +38,10 @@ pnpm --dir admin-web exec wrangler pages dev dist --env-file .env.local
 
 Cloudflare Pages Function 位于 `functions/api/[[path]].ts`，核心 module 位于 `server/admin-bff.ts`。它完成：
 
-- 网页生成 5 分钟有效的 8 位登录码，浏览器凭据只进入密封的 `HttpOnly` Cookie；
-- 已有运营账号在小程序运营工作台确认登录码，CloudBase 按现有角色和 capability 重新鉴权；
+- 网页生成 5 分钟有效的 6 位数字登录码，浏览器凭据只进入密封的 `HttpOnly` Cookie；
+- 已有运营账号在小程序现场工作台确认登录码，CloudBase 按现有角色和 capability 重新鉴权；
 - CloudBase 以独立 HMAC 将可信 AppID/OpenID 回传 BFF，D1 原子确认且仅允许消费一次；
+- 每个可信 AppID 与运营账号连续失败 5 次后锁定确认 5 分钟，限流键只保存不可逆 HMAC；
 - AES-GCM 密封的 `HttpOnly`、`Secure`、`SameSite=Lax` 8 小时会话；
 - 严格同源检查；普通 `/api/admin` 保持 32 KB 请求上限和精确 action allowlist；
 - 专用 `/api/media/image` 只接受 `mip.admin.media.uploadImage`，整体请求不超过 1.5 MB、解码图片不超过 1 MB，上游超时为 60 秒；
@@ -52,7 +53,7 @@ BFF 不接受浏览器直接提交 `appId` 或 `openId`。CloudBase 侧只在小
 
 ## 部署前最小清单
 
-1. 创建 D1 数据库 `mip-admin-auth`，将其以 `MIP_ADMIN_AUTH_DB` 绑定到 Pages 项目；示例见 `wrangler.d1.example.toml`。执行 `migrations/0001_web_login_challenges.sql`。
+1. 创建 D1 数据库 `mip-admin-auth`，将其以 `MIP_ADMIN_AUTH_DB` 绑定到 Pages 项目；示例见 `wrangler.d1.example.toml`。按编号顺序执行 `migrations/` 内全部迁移。
 2. 为 Cloudflare 与 `mip-admin-api` 配置同一个 `MIP_ADMIN_WEB_LOGIN_HMAC_SECRET`，它只用于小程序确认网页登录；不要与查询 HMAC 复用。
 3. 为 CloudBase 的 `mip-admin-api` 配置 `MIP_ADMIN_WEB_BFF_HMAC_SECRET`，为 Pages 配置 `MIP_ADMIN_UPSTREAM_HMAC_SECRET`；两项变量名不同，但必须使用同一个密钥值。再通过 CloudBase HTTP 访问服务把一个 HTTPS 路径映射到该函数，并将地址填入 Pages 的 `MIP_ADMIN_UPSTREAM_URL`。
 4. 配置 `MIP_WEB_SESSION_SECRET`、`MIP_WEB_ALLOWED_APP_IDS`、`MIP_WEB_ALLOWED_ORIGIN=https://mipmini.01mvp.com`，关闭生产构建的 `VITE_MIP_ADMIN_DEMO_MODE`。

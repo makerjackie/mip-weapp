@@ -476,8 +476,8 @@ describe('MIP global access guard', () => {
       new URL('../src/packages/member/user-agreement/index.ts', import.meta.url),
       'utf8',
     )
-    const privacy = readFileSync(
-      new URL('../src/packages/member/privacy/index.ts', import.meta.url),
+    const privacyPolicy = readFileSync(
+      new URL('../src/packages/member/privacy-policy/index.ts', import.meta.url),
       'utf8',
     )
 
@@ -489,13 +489,14 @@ describe('MIP global access guard', () => {
     expect(accessTemplate).toContain('<app-page-exit managed')
     expect(accessTemplate).toContain('bind:exit="cancel"')
     expect(agreement).toContain('mipGlobalAccessGuard.leaveDocument()')
-    expect(privacy).toContain('mipGlobalAccessGuard.leaveDocument()')
+    expect(privacyPolicy).toContain('mipGlobalAccessGuard.leaveDocument()')
   })
 
   it('exempts access-control documents without exempting public pages', () => {
     expect(isMipGlobalAccessExemptRoute('/packages/member/mip-access/index')).toBe(true)
     expect(isMipGlobalAccessExemptRoute('packages/member/user-agreement/index')).toBe(true)
-    expect(isMipGlobalAccessExemptRoute('/packages/member/privacy/index')).toBe(true)
+    expect(isMipGlobalAccessExemptRoute('/packages/member/privacy-policy/index')).toBe(true)
+    expect(isMipGlobalAccessExemptRoute('/packages/member/privacy/index')).toBe(false)
     expect(isMipGlobalAccessExemptRoute('/pages/index/index')).toBe(false)
   })
 

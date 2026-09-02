@@ -1,13 +1,11 @@
 import type { AdminEventInsights } from '../src/modules/mip-admin/types'
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { createMipAdminGateway } from '../src/modules/mip-admin/cloudbase-gateway'
 import { readActions } from '../src/modules/mip-admin/cloudbase-transport'
 import { parseAdminEventInsights } from '../src/modules/mip-admin/event-insights'
 import { createMipEventsAdmin } from '../src/modules/mip-admin/events-admin'
 
-vi.mock('../src/modules/platform/cloudbase', () => ({
+vi.mock('../src/platform/cloudbase/client', () => ({
   requireCloudClient: vi.fn(),
 }))
 
@@ -174,42 +172,5 @@ describe('MIP event insights client contract', () => {
     expect(gateway.getEventInsights).toHaveBeenCalledTimes(2)
     await events.getInsights(eventId, true)
     expect(gateway.getEventInsights).toHaveBeenCalledTimes(3)
-  })
-})
-
-describe('MIP event insights operator presentation', () => {
-  it('loads independently on every show and renders real facts before the action menu', () => {
-    const root = path.resolve(import.meta.dirname, '..')
-    const source = fs.readFileSync(path.join(root, 'src/packages/admin/event-console/index.ts'), 'utf8')
-    const view = fs.readFileSync(path.join(root, 'src/packages/admin/event-console/index.wxml'), 'utf8')
-    const insightIndex = view.indexOf('活动数据')
-    const menuIndex = view.indexOf('mip-admin-menu-grid')
-
-    expect(source).toContain('void this.loadInsights(true)')
-    expect(source).toContain('mipAdminModule.events.getInsights')
-    expect(source.match(/await Promise\.all\(\[\s*this\.loadEvent\(true\),\s*this\.loadInsights\(true\),\s*\]\)/g)).toHaveLength(2)
-    expect(view).toContain('insightsState === \'loading\'')
-    expect(view).toContain('insightsState === \'error\'')
-    expect(view).toContain('bind:action="retryInsights"')
-    expect(view).toContain('mip-admin-metric-grid')
-    expect(view).toContain('mip-admin-summary-grid')
-    expect(view).toContain('有效报名')
-    expect(view).toContain('未接入统计')
-    expect(insightIndex).toBeGreaterThan(0)
-    expect(insightIndex).toBeLessThan(menuIndex)
-    expect(view).not.toContain('浏览次数</view><view class="mt-1 font-semibold">0')
-    expect(view).not.toContain('分享次数</view><view class="mt-1 font-semibold">0')
-  })
-
-  it('labels managed list counts with the effective registration scope', () => {
-    const root = path.resolve(import.meta.dirname, '..')
-    const repository = fs.readFileSync(
-      path.join(root, 'cloudfunctions/mip-admin-api/domain/repositories/events.js'),
-      'utf8',
-    )
-    const view = fs.readFileSync(path.join(root, 'src/packages/admin/managed-events/index.wxml'), 'utf8')
-    expect(repository).toMatch(/SUM\(CASE WHEN r\.status IN \('REGISTERED', 'CANCELLATION_PENDING', 'ATTENDED'\)/)
-    expect(repository).not.toContain('COUNT(r.id) AS registration_count')
-    expect(view).toContain('有效报名 {{item.registrationCount}}')
   })
 })

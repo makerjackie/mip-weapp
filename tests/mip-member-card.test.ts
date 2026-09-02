@@ -13,6 +13,7 @@ describe('MIP member card', () => {
     const app = JSON.parse(source('src/app.json'))
     const memberPackage = app.subPackages.find((item: { root: string }) => item.root === 'packages/member')
     const profile = source('src/pages/profile/index.wxml')
+    const services = source('src/packages/member/mip-services/index.wxml')
     const page = source('src/packages/member/mip-card/index.ts')
     const view = source('src/packages/member/mip-card/index.wxml')
     const editor = source('src/packages/member/mip-card-edit/index.ts')
@@ -21,8 +22,9 @@ describe('MIP member card', () => {
     expect(memberPackage.pages).toContain('mip-card/index')
     expect(memberPackage.pages).toContain('mip-card-edit/index')
     expect(memberPackage.pages).toContain('mip-avatar/index')
+    expect(memberPackage.pages).toContain('mip-services/index')
     expect(profile).toContain('bind:tap="openMemberCard"')
-    expect(profile).toContain('bind:tap="openDigitalAvatar"')
+    expect(services).toContain('bind:tap="openDigitalAvatar"')
     expect(view).toContain('wx:for="{{themeOptions}}"')
     expect(view).toContain('data-key="{{item.key}}"')
     expect(page).toContain('type CardStyleKey = \'PINK\' | \'BLUE\' | \'WHITE\' | \'YELLOW\'')
@@ -46,9 +48,12 @@ describe('MIP member card', () => {
     expect(page).toContain(`\`性别  \${this.data.gender}\``)
     expect(view).toContain('下载名片')
     expect(page).toContain('/packages/member/mip-public-profile/index?profileRef=')
-    for (const field of ['realName', 'company', 'role', 'wechat', 'email', 'address']) {
+    for (const field of ['realName', 'wechat', 'email', 'address']) {
       expect(editorView).toContain(`data-field="${field}"`)
     }
+    expect(editorView).toContain('data-kind="companies"')
+    expect(editorView).toContain('data-field="name"')
+    expect(editorView).toContain('data-field="role"')
     expect(editorView).toContain('open-type="getPhoneNumber"')
     expect(editor).toContain('phoneBinding')
     expect(editor).toContain('mipIdentityModule.updateCard')

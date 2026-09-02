@@ -74,7 +74,7 @@ describe('runtime evidence output', () => {
 
 describe('runtime viewport evidence', () => {
   it('records measured dimensions without claiming an automated resize', () => {
-    expect(createPendingViewportEvidence('desktop-960')).toMatchObject({
+    expect(createPendingViewportEvidence('mobile-375')).toMatchObject({
       automatedResize: false,
       observed: null,
       status: 'not-observed',
@@ -84,13 +84,13 @@ describe('runtime viewport evidence', () => {
       screenHeight: 900,
       screenWidth: 1200,
       windowHeight: 820,
-      windowWidth: 1000,
-    }, 'desktop-960')
+      windowWidth: 375,
+    }, 'mobile-375')
     expect(evidence).toMatchObject({
       automatedResize: false,
       mode: 'manual-required',
-      observed: { height: 820, width: 1000 },
-      profile: 'desktop-960',
+      observed: { height: 820, width: 375 },
+      profile: 'mobile-375',
       status: 'matched',
     })
     expect(() => assertViewportEvidence(evidence)).not.toThrow()

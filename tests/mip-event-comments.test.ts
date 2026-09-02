@@ -57,7 +57,9 @@ describe('MIP event comments vertical contract', () => {
     expect(view).toContain('comments.length === 0')
     expect(view).toContain('disabled="{{!draft || submitting}}"')
     expect(view).toContain('loading="{{loadingMore}}"')
-    expect(read('config/runtime-pages.json')).toContain('"forbidden", "conflict", "disabled"')
+    const runtime = JSON.parse(read('config/runtime-pages.json')) as { routes: Array<{ path: string, states: string[] }> }
+    expect(runtime.routes.find(route => route.path === 'packages/member/mip-events/comments/index')?.states)
+      .toEqual(expect.arrayContaining(['forbidden', 'conflict', 'disabled']))
   })
 
   it('retains mutation identifiers until content or server version changes', () => {

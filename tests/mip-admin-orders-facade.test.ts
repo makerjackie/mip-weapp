@@ -1,7 +1,5 @@
 import type { MipOrdersAdmin } from '../src/modules/mip-admin/orders-admin'
 import type { AdminOrderListInput, MipAdminGateway } from '../src/modules/mip-admin/types'
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { createMipAdminModule } from '../src/modules/mip-admin/client'
 import { MipAdminError } from '../src/modules/mip-admin/types'
@@ -167,7 +165,7 @@ describe('MIP admin orders facade', () => {
   it('keeps the legacy listOrders alias on the same cache', async () => {
     const { module, spies } = createHarness()
 
-    await module.listOrders(listInput)
+    await module.orders.list(listInput)
     await module.orders.list(listInput)
 
     expect(spies.listOrders).toHaveBeenCalledTimes(1)
@@ -178,7 +176,7 @@ describe('MIP admin orders facade', () => {
     const { module, spies } = createHarness()
 
     await module.orders.get('order-a')
-    await module.getOrder('order-a')
+    await module.orders.get('order-a')
     await module.orders.get('order-b')
     await module.orders.get('order-a', true)
 
@@ -206,13 +204,13 @@ describe('MIP admin orders facade', () => {
       await module.orders.list(listInput)
       await module.orders.get('order-a')
       await module.orders.get('order-a')
-      await module.getSession()
-      await module.getSession()
+      await module.session.get()
+      await module.session.get()
 
       await mutation.execute(module.orders)
       await module.orders.list(listInput)
       await module.orders.get('order-a')
-      await module.getSession()
+      await module.session.get()
 
       expect(spies.listOrders).toHaveBeenCalledTimes(2)
       expect(spies.getOrder).toHaveBeenCalledTimes(2)
@@ -237,20 +235,5 @@ describe('MIP admin orders facade', () => {
     await module.orders.list(listInput)
 
     expect(spies.listOrders).toHaveBeenCalledTimes(1)
-  })
-
-  it('keeps the orders page behind the typed facade and exports outside generic mutation', () => {
-    const root = path.resolve(import.meta.dirname, '..')
-    const source = fs.readFileSync(path.join(root, 'src/packages/admin/orders/index.ts'), 'utf8')
-
-    expect(source).toContain('mipAdminModule.orders.list(')
-    expect(source).toContain('mipAdminModule.orders.get(')
-    expect(source).toContain('mipAdminModule.orders.submitRefund(')
-    expect(source).toContain('mipAdminModule.orders.retryRefund(')
-    expect(source).toContain('mipAdminModule.exportAndOpen(')
-    expect(source).not.toContain('mipAdminModule.gateway')
-    expect(source).not.toContain('mipAdminModule.mutate')
-    expect(source.match(/mipAdminModule\.orders\.submitRefund\(/g)).toHaveLength(1)
-    expect(source.match(/mipAdminModule\.orders\.retryRefund\(/g)).toHaveLength(1)
   })
 })

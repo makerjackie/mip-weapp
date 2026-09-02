@@ -1,5 +1,5 @@
 import type { AdminRequest, AdminRequestInput } from './request-contract'
-import { MipAdminError } from './types'
+import { MipAdminError } from './error'
 
 export interface AdminTransport {
   request: <T>(request: AdminRequest) => Promise<T>

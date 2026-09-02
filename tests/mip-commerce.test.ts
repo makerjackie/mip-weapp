@@ -2,19 +2,14 @@ import type { OrderId, UserId } from '../src/modules/mip'
 import type {
   CommerceGateway,
   CommerceOrder,
-  MembershipEntitlement,
   MembershipPlan,
   PaymentAdapter,
 } from '../src/modules/mip-commerce'
 import { describe, expect, it, vi } from 'vitest'
 import {
-  assertOrderTransition,
-  buildEntitlementWindow,
   createMipCommerceGateway,
   createMipCommerceModule,
-  deriveMembershipCheckout,
   interpretClientPayment,
-  validateRefundIntent,
 } from '../src/modules/mip-commerce'
 
 const plan: MembershipPlan = {
@@ -46,46 +41,6 @@ function order(status: CommerceOrder['status']): CommerceOrder {
 }
 
 describe('MIP membership commerce', () => {
-  it('derives price, duration, and stage from the trusted plan', () => {
-    expect(deriveMembershipCheckout(plan, 'TEST')).toMatchObject({
-      amountCents: 79900,
-      durationDays: 365,
-      currency: 'CNY',
-    })
-    expect(() => deriveMembershipCheckout(plan, 'LIVE')).toThrow('MEMBERSHIP_PLAN_NOT_AVAILABLE')
-  })
-
-  it('keeps order transitions and refund amounts server constrained', () => {
-    expect(() => assertOrderTransition('PAYMENT_CREATED', 'PAID')).not.toThrow()
-    expect(() => assertOrderTransition('CREATED', 'REFUNDED')).toThrow('ORDER_TRANSITION_NOT_ALLOWED')
-    expect(validateRefundIntent(order('PAID'), {
-      orderId: 'order-1' as OrderId,
-      idempotencyKey: 'refund-1',
-      reason: '  取消购买  ',
-    })).toMatchObject({ amountCents: 79900, reason: '取消购买' })
-    expect(() => validateRefundIntent({ ...order('PAID'), refundedAmountCents: 79900 }, {
-      orderId: 'order-1' as OrderId,
-      idempotencyKey: 'refund-2',
-    })).toThrow('REFUND_AMOUNT_INVALID')
-  })
-
-  it('extends an active entitlement without overlapping its window', () => {
-    const current = [{
-      id: 'entitlement-1',
-      userId: 'user-1',
-      orderId: 'old-order',
-      planId: 'plan-1',
-      status: 'ACTIVE',
-      startsAt: '2026-01-01T00:00:00.000Z',
-      endsAt: '2026-09-01T00:00:00.000Z',
-      version: 1,
-    }] as MembershipEntitlement[]
-    expect(buildEntitlementWindow(new Date('2026-08-24T00:00:00.000Z'), 30, current)).toEqual({
-      startsAt: '2026-09-01T00:00:00.000Z',
-      endsAt: '2026-10-01T00:00:00.000Z',
-    })
-  })
-
   it('never treats wx.requestPayment acceptance as paid', () => {
     expect(interpretClientPayment('ACCEPTED', order('PAYMENT_CREATED')).kind).toBe('PENDING')
     expect(interpretClientPayment('ACCEPTED', order('PAID')).kind).toBe('CONFIRMED')

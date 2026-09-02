@@ -1,6 +1,3 @@
-import fs from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   parseAdminOrderDetail,
@@ -8,17 +5,12 @@ import {
   parseAdminRosterPage,
 } from '../src/modules/mip-admin/order-roster'
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const uuid = {
   order: '10000000-0000-4000-8000-000000000001',
   user: '10000000-0000-4000-8000-000000000002',
   plan: '10000000-0000-4000-8000-000000000003',
   registration: '10000000-0000-4000-8000-000000000004',
   refund: '10000000-0000-4000-8000-000000000005',
-}
-
-function read(relativePath: string) {
-  return fs.readFileSync(path.join(root, relativePath), 'utf8')
 }
 
 function order(overrides: Record<string, unknown> = {}) {
@@ -242,38 +234,5 @@ describe('H2 admin order and roster response boundary', () => {
         }],
       },
     }))).toThrow(/无效的订单详情/)
-  })
-
-  it('wires all requested filters and renders server-derived actions and full roster facts', () => {
-    const page = read('src/packages/admin/orders/index.ts')
-    const orderWxml = read('src/packages/admin/orders/index.wxml')
-    const rosterWxml = read('src/packages/admin/event-registrations/index.wxml')
-    const service = read('cloudfunctions/mip-admin-api/domain/orders.js')
-    const repository = read('cloudfunctions/mip-admin-api/domain/repositories/orders.js')
-    const gateway = read('src/modules/mip-admin/cloudbase-gateway.ts')
-
-    for (const filter of ['query', 'orderType', 'status', 'refundStatus', 'createdFrom', 'createdTo']) {
-      expect(page).toContain(`${filter}:`)
-    }
-    expect(orderWxml).toContain('item.resourceTitle')
-    expect(orderWxml).toContain('item.refundedText')
-    expect(orderWxml).toContain('item.createdText')
-    expect(orderWxml).toContain('item.paidText')
-    expect(orderWxml).toContain('item.canSubmitRefund')
-    expect(orderWxml).toContain('item.canRetryRefund')
-    expect(orderWxml).toContain('mip-admin-responsive-panel')
-    expect(orderWxml).toContain('关联权益时间线')
-    expect(page).toContain('mipAdminModule.orders.get(')
-    expect(service).toContain('availableRefundActions.push(\'SUBMIT_REFUND\')')
-    expect(service).toContain('availableRefundActions.push(\'RETRY_REFUND\')')
-    expect(repository).toContain('LEFT JOIN mip_membership_plans')
-    expect(repository).toContain('refundStatus === \'NONE\'')
-    expect(gateway).toContain('parseAdminOrderPage')
-    expect(gateway).toContain('call(\'mip.admin.orders.get\'')
-    expect(gateway).toContain('parseAdminRosterPage')
-    expect(rosterWxml).toContain('item.answerItems')
-    expect(rosterWxml).toContain('item.submittedText')
-    expect(rosterWxml).toContain('item.registeredText')
-    expect(rosterWxml).toContain('item.checkedInText')
   })
 })

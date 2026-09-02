@@ -12,7 +12,7 @@ import {
   retainMatchingFeedbackIntent,
   retainMatchingRequestIntent,
 } from '../../../modules/mip-opportunities'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 
 type PageState = 'loading' | 'ready' | 'error'
 type ResultTab = 'TALENT' | 'PROJECT'

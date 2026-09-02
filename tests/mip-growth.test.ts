@@ -89,17 +89,4 @@ describe('MIP growth', () => {
     expect(page).toContain('游戏币')
     expect(page).toContain('snapshot.account.coinBalance')
   })
-
-  it('keeps the admin editor limited to server-approved reward values', () => {
-    const page = fs.readFileSync(path.join(process.cwd(), 'src/packages/admin/growth-rules/index.wxml'), 'utf8')
-    const controller = fs.readFileSync(path.join(process.cwd(), 'src/packages/admin/growth-rules/index.ts'), 'utf8')
-    expect(page).not.toContain('新增规则')
-    expect(page).not.toContain('data-field="ruleKey"')
-    expect(page).not.toContain('data-field="metric"')
-    expect(page).not.toContain('data-field="sourceEventType"')
-    expect(controller).toContain('!this.data.editorId')
-    expect(page).not.toContain('COIN')
-    expect(fs.readFileSync(path.join(process.cwd(), 'src/packages/admin/growth-entries/index.wxml'), 'utf8'))
-      .toContain('data-value="COIN"')
-  })
 })

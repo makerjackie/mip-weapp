@@ -1,11 +1,9 @@
 import type { AdminRequest } from '../src/modules/mip-admin/request-contract'
 import type { MipAdminError } from '../src/modules/mip-admin/types'
-import { readFileSync } from 'node:fs'
 import { describe, expect, it, vi } from 'vitest'
 import { createMipAdminGateway } from '../src/modules/mip-admin/cloudbase-gateway'
-import { activeAdminWorkspaceItemKey } from '../src/packages/admin/components/workspace-nav/model'
 
-vi.mock('../src/modules/platform/cloudbase', () => ({
+vi.mock('../src/platform/cloudbase/client', () => ({
   requireCloudClient: vi.fn(),
 }))
 
@@ -16,10 +14,6 @@ vi.mock('../src/config/runtime', () => ({
 const EVENT_ID = '20000000-0000-4000-8000-000000000001'
 const COMMENT_ID = '30000000-0000-4000-8000-000000000001'
 const REPORT_ID = '40000000-0000-4000-8000-000000000001'
-
-function read(path: string) {
-  return readFileSync(path, 'utf8')
-}
 
 function validState() {
   return {
@@ -148,39 +142,5 @@ describe('MIP admin event comment contract', () => {
       reportId: REPORT_ID,
       expectedVersion: 1,
     })).rejects.toMatchObject({ code: 'INVALID_RESPONSE' } satisfies Partial<MipAdminError>)
-  })
-
-  it('keeps the event comment route scoped to the event console', () => {
-    const app = JSON.parse(read('src/app.json')) as {
-      pages: string[]
-      subPackages: Array<{ root: string, pages: string[] }>
-    }
-    const admin = app.subPackages.find(item => item.root === 'packages/admin')
-    const totalRoutes = app.pages.length
-      + app.subPackages.reduce((total, item) => total + item.pages.length, 0)
-    const consoleSource = read('src/packages/admin/event-console/index.ts')
-    const consoleView = read('src/packages/admin/event-console/index.wxml')
-    const page = read('src/packages/admin/event-comments/index.ts')
-    const view = read('src/packages/admin/event-comments/index.wxml')
-    const runtime = read('config/runtime-pages.json')
-
-    expect(admin?.pages).toContain('event-comments/index')
-    expect(admin?.pages.length).toBeGreaterThanOrEqual(42)
-    expect(totalRoutes).toBe(JSON.parse(runtime).routeCount)
-    expect(consoleSource).toContain('hasScopedCapability(session.capabilities, \'events.comments.manage\', scope)')
-    expect(consoleSource).toContain('\'event-comments\'')
-    expect(consoleView).toContain('data-page="event-comments"')
-    expect(activeAdminWorkspaceItemKey('/packages/admin/event-comments/index?eventId=test'))
-      .toBe('managed-events')
-    expect(runtime).toContain('"id": "A38"')
-    expect(runtime).toContain('"path": "packages/admin/event-comments/index"')
-
-    for (const state of ['loading', 'error', 'conflict', 'forbidden']) {
-      expect(view).toContain(`state === '${state}'`)
-    }
-    expect(view).toContain('comments.length')
-    expect(view).toContain('reports.length')
-    expect(page).toContain('await this.load(true)')
-    expect(page).toContain('error.code === \'INVALID_STATE\'')
   })
 })

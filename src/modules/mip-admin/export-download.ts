@@ -5,7 +5,16 @@ import type {
   AdminExportStatusValue,
   MipAdminGateway,
 } from './types'
-import { MipAdminError } from './types'
+import { MipAdminError } from './error'
+
+export type ExportAdminGateway = Pick<
+  MipAdminGateway,
+  | 'createExport'
+  | 'getExportStatus'
+  | 'prepareExport'
+  | 'reserveExport'
+  | 'completeExport'
+>
 
 export type ExportProgress = 'creating' | 'checking' | 'preparing' | 'downloading' | 'opening'
 
@@ -160,7 +169,7 @@ function openDocument(runtime: ExportRuntime, filePath: string) {
 }
 
 async function waitUntilReady(
-  gateway: MipAdminGateway,
+  gateway: ExportAdminGateway,
   ticketId: string,
   token: string,
   initial: AdminExportStatus,
@@ -212,7 +221,7 @@ function shouldDiscardPending(error: unknown) {
 }
 
 async function observePendingExport(
-  gateway: MipAdminGateway,
+  gateway: ExportAdminGateway,
   pendingStore: PendingAdminExportStore,
   options: ExportWorkflowOptions,
 ) {
@@ -247,7 +256,7 @@ async function observePendingExport(
 }
 
 async function openPreparedExport(
-  gateway: MipAdminGateway,
+  gateway: ExportAdminGateway,
   pending: PendingAdminExport,
   status: AdminExportStatus,
   options: ExportWorkflowOptions,
@@ -333,7 +342,7 @@ async function openPreparedExport(
 }
 
 export async function getPendingAdminExportStatus(
-  gateway: MipAdminGateway,
+  gateway: ExportAdminGateway,
   options: Pick<ExportWorkflowOptions, 'pendingStore' | 'onProgress' | 'sessionFence'> = {},
 ): Promise<PendingAdminExportStatus | null> {
   const observed = await observePendingExport(
@@ -348,7 +357,7 @@ export async function getPendingAdminExportStatus(
 }
 
 export async function resumeAndOpenPendingAdminExport(
-  gateway: MipAdminGateway,
+  gateway: ExportAdminGateway,
   options: ExportWorkflowOptions = {},
 ): Promise<AdminExportDownloadResult | null> {
   const pendingStore = options.pendingStore || transientPendingStore
@@ -365,7 +374,7 @@ export async function resumeAndOpenPendingAdminExport(
 }
 
 export async function createAndOpenExport(
-  gateway: MipAdminGateway,
+  gateway: ExportAdminGateway,
   input: Record<string, unknown>,
   options: ExportWorkflowOptions = {},
 ): Promise<AdminExportDownloadResult> {

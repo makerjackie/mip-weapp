@@ -3,8 +3,6 @@ import type {
   AdminCommunityReportStatus,
   MipAdminGateway,
 } from '../src/modules/mip-admin/types'
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { createMipAdminModule } from '../src/modules/mip-admin/client'
 import { MipAdminError } from '../src/modules/mip-admin/types'
@@ -85,7 +83,7 @@ describe('MIP admin community facade', () => {
   it('uses the complete status dimension and keeps the legacy alias on the same cache', async () => {
     const { module, spies } = createHarness()
 
-    await module.listCommunityReports('PENDING')
+    await module.community.listReports('PENDING')
     await module.community.listReports('PENDING')
     for (const status of statuses.slice(1)) {
       await module.community.listReports(status)
@@ -161,20 +159,5 @@ describe('MIP admin community facade', () => {
     expect(spies.listAudit).toHaveBeenCalledTimes(1)
     expect(spies.listUsers).toHaveBeenCalledTimes(1)
     expect(spies.getUser).toHaveBeenCalledTimes(1)
-  })
-
-  it('keeps the community report page behind typed module interfaces', () => {
-    const source = fs.readFileSync(
-      path.resolve(import.meta.dirname, '../src/packages/admin/community-reports/index.ts'),
-      'utf8',
-    )
-
-    expect(source).toContain('mipAdminModule.community.listReports(')
-    expect(source).toContain('mipAdminModule.community.claimReport(')
-    expect(source).toContain('mipAdminModule.community.closeReport(')
-    expect(source).toContain('mipAdminModule.governance.getSession(')
-    expect(source).not.toContain('mipAdminModule.listCommunityReports(')
-    expect(source).not.toContain('mipAdminModule.gateway')
-    expect(source).not.toContain('mipAdminModule.mutate')
   })
 })

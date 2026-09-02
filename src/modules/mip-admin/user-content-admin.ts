@@ -7,12 +7,24 @@ import type {
   AdminUserContentUnpublishInput,
 } from './user-content'
 
+export type UserContentAdminGateway = Pick<
+  MipAdminGateway,
+  | 'listUserContent'
+  | 'getUserContent'
+  | 'unpublishUserContent'
+  | 'saveUserContent'
+  | 'archiveUserContent'
+>
+
 interface UserContentAdminCache {
   query: <T>(key: string, loader: () => Promise<T>, options?: { force?: boolean }) => Promise<T>
   invalidate: (prefix?: string) => void
 }
 
-export function createMipUserContentAdmin(gateway: MipAdminGateway, cache: UserContentAdminCache) {
+export function createMipUserContentAdmin(
+  gateway: UserContentAdminGateway,
+  cache: UserContentAdminCache,
+) {
   const invalidate = () => {
     cache.invalidate('mip-admin:user-content')
     cache.invalidate('mip-admin:audit')

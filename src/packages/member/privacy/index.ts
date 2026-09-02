@@ -6,8 +6,7 @@ import {
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { mipLocalSession } from '../../../modules/mip-identity/local-session-client'
 import { mipGlobalAccessGuard } from '../../../modules/mip-identity/runtime'
-import { mipMessagingModule } from '../../../modules/mip-messaging/client'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 
 Page({
   data: {
@@ -33,10 +32,6 @@ Page({
       this.closureRequest = createAccountClosureRequestTracker()
     }
     return this.closureRequest
-  },
-
-  leavePage() {
-    mipGlobalAccessGuard.leaveDocument()
   },
 
   async loadAccountState() {
@@ -70,16 +65,20 @@ Page({
     }
   },
 
-  openProfilePrivacy() {
-    caseNavigateTo({ url: '/packages/member/mip-profile/index' })
+  openVisibilitySettings() {
+    caseNavigateTo({ url: '/packages/member/mip-visibility-settings/index' })
   },
 
   openBlockedProfiles() {
     caseNavigateTo({ url: '/packages/member/mip-blocked/index' })
   },
 
-  recordCustomerServiceInteraction() {
-    void mipMessagingModule.recordCustomerServiceInteraction().catch(() => undefined)
+  openUserAgreement() {
+    caseNavigateTo({ url: '/packages/member/user-agreement/index' })
+  },
+
+  openPrivacyPolicy() {
+    caseNavigateTo({ url: '/packages/member/privacy-policy/index' })
   },
 
   async signOutLocally() {

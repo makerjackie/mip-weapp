@@ -141,6 +141,15 @@ function dispatchRefunds(input) {
   })
   return initializedRefundWorkerClient.dispatchRefunds(input)
 }
+const knowledgeModule = createKnowledgeAdminService(mysqlDatabase(), {
+  catalogStage: process.env.MIP_CATALOG_STAGE,
+  contentSafety,
+  defaultTestPriceCents: process.env.MIP_KNOWLEDGE_TEST_PRICE_CENTS,
+  fetchSource: fetchKnowledgeSource,
+  fullAccessPolicy,
+  sourceAllowedHosts: knowledgeSourceAllowedHosts,
+  webviewAllowedHosts: knowledgeWebviewAllowedHosts,
+})
 const service = createAdminService({
   repository,
   phoneEncryptionKey: process.env.MIP_PHONE_ENCRYPTION_KEY,
@@ -154,20 +163,12 @@ const service = createAdminService({
   tasksClient: taskAdminClient,
   bannersClient: bannerAdminClient,
   gameClient: gameAdminClient,
+  knowledgeModule,
   mediaClient: mediaAdminClient,
   profileRefSecret: process.env.MIP_IDENTITY_PEPPER,
   exportMaxRows: boundedInteger(process.env.MIP_EXPORT_MAX_ROWS, 5_000, 100, 20_000),
   exportMaxBytes: boundedInteger(process.env.MIP_EXPORT_MAX_BYTES, 8 * 1024 * 1024, 1_048_576, 10_485_760),
 })
-Object.assign(service, createKnowledgeAdminService(mysqlDatabase(), {
-  catalogStage: process.env.MIP_CATALOG_STAGE,
-  contentSafety,
-  defaultTestPriceCents: process.env.MIP_KNOWLEDGE_TEST_PRICE_CENTS,
-  fetchSource: fetchKnowledgeSource,
-  fullAccessPolicy,
-  sourceAllowedHosts: knowledgeSourceAllowedHosts,
-  webviewAllowedHosts: knowledgeWebviewAllowedHosts,
-}))
 const knowledgeSchedulingRepository = createKnowledgeSchedulingRepository(mysqlDatabase())
 const knowledgeSchedulingService = createKnowledgeSchedulingService({
   fetchSource: fetchKnowledgeSource,

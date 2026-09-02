@@ -1,7 +1,5 @@
 import type { MipGovernanceAdmin } from '../src/modules/mip-admin/governance-admin'
 import type { AdminBranch, AdminRoleCapabilityPolicy, MipAdminGateway } from '../src/modules/mip-admin/types'
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { createMipAdminModule } from '../src/modules/mip-admin/client'
 import { MipAdminError } from '../src/modules/mip-admin/types'
@@ -143,7 +141,7 @@ const querySpies: QuerySpyName[] = [
 
 async function warmQueries(module: ReturnType<typeof createHarness>['module']) {
   await Promise.all([
-    module.governance.getSession(),
+    module.session.get(),
     module.governance.listBranches(),
     module.governance.listRoles(),
     module.governance.listRoleCapabilityPolicies(),
@@ -226,22 +224,22 @@ describe('MIP admin governance facade', () => {
     expect(spies.listOperationalExceptions.mock.calls[0]?.[0]).toBe(exceptionInput)
   })
 
-  it('keeps legacy query aliases on the same cache and candidates uncached', async () => {
+  it('caches named query modules and keeps candidates uncached', async () => {
     const { module, spies } = createHarness()
 
-    await module.getSession()
-    await module.governance.getSession()
-    await module.listBranches()
+    await module.session.get()
+    await module.session.get()
     await module.governance.listBranches()
-    await module.listRoles()
+    await module.governance.listBranches()
     await module.governance.listRoles()
-    await module.listRoleCapabilityPolicies()
+    await module.governance.listRoles()
     await module.governance.listRoleCapabilityPolicies()
-    await module.listAudit(auditInput)
+    await module.governance.listRoleCapabilityPolicies()
     await module.governance.listAudit(auditInput)
-    await module.listOperationalExceptions(exceptionInput)
+    await module.governance.listAudit(auditInput)
     await module.governance.listOperationalExceptions(exceptionInput)
-    await module.searchRoleCandidates('event-a', '林')
+    await module.governance.listOperationalExceptions(exceptionInput)
+    await module.governance.searchRoleCandidates('event-a', '林')
     await module.governance.searchRoleCandidates('event-a', '林')
 
     expect(spies.getSession).toHaveBeenCalledTimes(1)
@@ -329,41 +327,5 @@ describe('MIP admin governance facade', () => {
     for (const query of querySpies) {
       expect(spies[query]).toHaveBeenCalledTimes(1)
     }
-  })
-
-  it('keeps governance pages behind the governance, events, and users facades', () => {
-    const root = path.resolve(import.meta.dirname, '..')
-    const pages = [
-      'src/packages/admin/branches/index.ts',
-      'src/packages/admin/roles/index.ts',
-      'src/packages/admin/event-managers/index.ts',
-      'src/packages/admin/audit/index.ts',
-      'src/packages/admin/exceptions/index.ts',
-    ]
-    const sources: string[] = []
-    for (const page of pages) {
-      const source = fs.readFileSync(path.join(root, page), 'utf8')
-      sources.push(source)
-      expect(source).toContain('mipAdminModule.governance.')
-      expect(source).not.toContain('mipAdminModule.gateway')
-      expect(source).not.toContain('mipAdminModule.mutate')
-      expect(source).not.toContain('mipAdminModule.setRole')
-    }
-    const roles = sources[1]
-    const eventManagers = sources[2]
-    expect(roles).toContain('mipAdminModule.events.list(')
-    expect(roles).toContain('mipAdminModule.users.list(')
-    expect(eventManagers).toContain('mipAdminModule.events.get(')
-    const mutationCalls = new Set([...sources.join('\n').matchAll(
-      /mipAdminModule\.governance\.(createBranch|updateBranch|changeBranchStatus|setRole|updateRoleCapabilityPolicy|resetRoleCapabilityPolicy)\(/g,
-    )].map(match => match[1]))
-    expect([...mutationCalls].sort()).toEqual([
-      'changeBranchStatus',
-      'createBranch',
-      'resetRoleCapabilityPolicy',
-      'setRole',
-      'updateBranch',
-      'updateRoleCapabilityPolicy',
-    ].sort())
   })
 })

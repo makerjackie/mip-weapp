@@ -1,6 +1,7 @@
 'use strict'
 
 const { actions } = require('./application')
+const { createOperationDispatcher } = require('./operation-registry')
 const { AdminError } = require('./validation')
 
 const ADMIN_REQUEST_CONTRACT_VERSION = 1
@@ -82,6 +83,8 @@ function createHandler(options = {}) {
     && typeof application.probe === 'function'
     && typeof issuePrincipal === 'function'
   const legacyValid = service
+    && typeof service.health === 'function'
+    && service.ownerModules
     && typeof resolveCaller === 'function'
   if (typeof getContext !== 'function'
     || modern === legacy
@@ -90,6 +93,8 @@ function createHandler(options = {}) {
     throw new Error('HANDLER_CONFIG_INVALID')
   }
 
+  const legacyDispatcher = legacy ? createOperationDispatcher(service.ownerModules) : null
+
   return async function handler(event = {}) {
     try {
       const request = normalizeAdminRequest(event)
@@ -97,13 +102,13 @@ function createHandler(options = {}) {
       const dispatch = actions[action]
       if (!dispatch) throw new AdminError('NOT_FOUND', '运营操作不存在')
       if (action === 'health') {
-        const data = modern ? await application.probe() : await dispatch(service, null, input)
+        const data = modern ? await application.probe() : await service.health()
         return { ok: true, data }
       }
       const principal = await (modern ? issuePrincipal : resolveCaller)(getContext())
       const data = modern
         ? await application.execute(principal, action, input)
-        : await dispatch(service, principal, input)
+        : (await legacyDispatcher.execute(principal, action, input)).data
       return { ok: true, data }
     }
     catch (error) {

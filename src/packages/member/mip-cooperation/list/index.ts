@@ -7,7 +7,7 @@ import type {
 import { cooperationRoles } from '../../../../config/mip-catalogs'
 import { cooperationModule } from '../../../../modules/mip-cooperation'
 import { mergeCooperationTalents } from '../../../../modules/mip-cooperation/validation'
-import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../../platform/navigation/client'
 
 interface CardView extends CooperationCardSummary { roleName: string }
 interface TalentView extends Omit<CooperationTalentSummary, 'cards'> {

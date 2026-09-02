@@ -1,4 +1,6 @@
-# 管理端响应式密度验收
+# 旧小程序完整管理端响应式密度验收
+
+本证据记录 2026-08-26 当时的完整小程序管理端布局。该产品形态已被 [ADR 0005](../../../adr/0005-web-admin-and-onsite-workbench.md) 取代；截图只作历史追溯，不能证明当前四路由现场工作台或 React Web 通过。
 
 验收页面：`packages/admin/event-catalogs/index`。
 

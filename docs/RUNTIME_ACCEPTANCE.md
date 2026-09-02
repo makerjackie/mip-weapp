@@ -10,7 +10,7 @@ pnpm test:runtime
 
 `project.private.config.json` 是本机忽略文件。新增路由后先运行 `pnpm setup:local`，由 `config/project.json` 重新生成完整 DevTools conditions；不要提交 AppID、查询参数或本机测试身份。
 
-检查四个主导航：发现、活动、机会、我的；同时检查会员、订单和运营工作台等分包页面。`pnpm test:runtime` 必须让 `config/runtime-pages.json` 中的全部路由达到各自可执行的 `readyAssertion`，错误、无权限或冲突不能作为页面通过。
+检查四个主导航：发现、活动、机会、我的；同时检查会员、订单和四路由现场工作台等分包页面。现场工作台只覆盖 Web 登录确认、已授权活动、签到码与海报、名单与签到，不验证完整运营后台。`pnpm test:runtime` 必须让 `config/runtime-pages.json` 中的全部路由达到各自可执行的 `readyAssertion`，错误、无权限或冲突不能作为页面通过。
 
 带查询参数的页面必须从对应列表页动态取得真实业务 ID 或 `profileRef`。来源页没有符合条件的记录时，报告记为 `external-wait`，不能使用通用 UUID、不能跳过后记为通过。
 
@@ -24,12 +24,11 @@ loading、empty、error、forbidden、conflict、disabled 代表状态除页面�
 
 ```bash
 pnpm test:runtime -- --output-dir .tmp/runtime-evidence/2026-08-25-mobile --viewport mobile-375
-pnpm test:runtime -- --output-dir .tmp/runtime-evidence/2026-08-25-desktop --viewport desktop-960
 ```
 
 自定义目录必须是 `.tmp/runtime-evidence/` 的严格子目录，不能指向 `.tmp` 根目录、仓库其他目录、已有非空目录或符号链接。每个目录独立保存 `report.json`、`console.json` 和该批截图。这些目录仍被 Git 忽略；需要支撑现行结论时，必须把脱敏摘要、环境、提交号和必要截图整理到 `docs/mip/evidence/`。
 
-当前安装的 DevTools automator 没有受支持的窗口缩放 API。`--viewport` 不会调整窗口，只声明本批目标：运行前在同一个 DevTools 实例中手动选择对应尺寸。验证器使用公开的 `miniProgram.systemInfo()` 记录实测 `windowWidth`、`windowHeight`、屏幕尺寸与像素比；`mobile-375` 要求窗口宽度等于 375，`desktop-960` 要求窗口宽度至少为 960。不满足时本批失败，报告保留 `manual-required`、目标 profile 和实测尺寸，不能作为对应视口证据。
+当前安装的 DevTools automator 没有受支持的窗口缩放 API。`--viewport` 不会调整窗口，只声明本批目标：运行前在同一个 DevTools 实例中手动选择对应尺寸。验证器使用公开的 `miniProgram.systemInfo()` 记录实测 `windowWidth`、`windowHeight`、屏幕尺寸与像素比；`mobile-375` 要求窗口宽度等于 375。不满足时本批失败，报告保留 `manual-required`、目标 profile 和实测尺寸，不能作为对应视口证据。小程序不再要求宽屏 profile；React Web 的桌面视口按 `admin-web/` 验收规则执行。
 
 完整验收时无需先执行 `pnpm dev:open`。当服务端口已配置但当前没有 DevTools 实例监听时，`pnpm test:runtime` 会先通过 CLI 打开隔离的本地 host，再重试预检；服务端口已监听时不额外打开项目。安全设置中的服务端口如果被关闭，仍需先手动开启。
 
@@ -48,6 +47,6 @@ pnpm test:runtime -- --output-dir .tmp/runtime-evidence/2026-08-25-desktop --vie
 - 单内容正式商户支付、回调、查单、退款与首次访问后的退款拒绝
 - 微信分享面板
 - 活动地图、系统日历、线上活动 `web-view` 业务域名
-- 活动照片、任务附件、任务模板上传与图片内容安全
+- 活动照片、任务附件上传与图片内容安全
 - 海报或图片保存到系统相册
 - AI 录音权限、音频上传与语音整理

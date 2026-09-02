@@ -21,7 +21,7 @@ vi.mock('../src/modules/mip-identity/client', () => ({
   },
 }))
 
-vi.mock('../src/modules/platform/case-navigation', () => ({
+vi.mock('../src/platform/navigation/client', () => ({
   caseNavigateTo: vi.fn(),
 }))
 

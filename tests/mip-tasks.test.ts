@@ -339,16 +339,11 @@ describe('MIP tasks client contract', () => {
     await expect(malformedError.listTasks()).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
   })
 
-  it('keeps task configuration, completion detail, filtering, export and user upload reachable', () => {
-    const app = fs.readFileSync(path.join(process.cwd(), 'src/app.json'), 'utf8')
-    const adminNavigation = fs.readFileSync(path.join(process.cwd(), 'src/packages/admin/components/workspace-nav/model.ts'), 'utf8')
+  it('keeps member task completion reachable without a mini-program dispatch entry', () => {
+    const app = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src/app.json'), 'utf8')) as {
+      subPackages: Array<{ root: string, pages: string[] }>
+    }
     const growth = fs.readFileSync(path.join(process.cwd(), 'src/packages/member/mip-growth/index.wxml'), 'utf8')
-    const admin = fs.readFileSync(path.join(process.cwd(), 'src/packages/admin/tasks/index.wxml'), 'utf8')
-    const completions = fs.readFileSync(path.join(process.cwd(), 'src/packages/admin/task-completions/index.wxml'), 'utf8')
-    const assignments = fs.readFileSync(path.join(process.cwd(), 'src/packages/admin/task-assignments/index.wxml'), 'utf8')
-    const adminSource = fs.readFileSync(path.join(process.cwd(), 'src/packages/admin/tasks/index.ts'), 'utf8')
-    const completionSource = fs.readFileSync(path.join(process.cwd(), 'src/packages/admin/task-completions/index.ts'), 'utf8')
-    const assignmentSource = fs.readFileSync(path.join(process.cwd(), 'src/packages/admin/task-assignments/index.ts'), 'utf8')
     const memberListSource = fs.readFileSync(path.join(process.cwd(), 'src/packages/member/mip-tasks/index.ts'), 'utf8')
     const memberListView = fs.readFileSync(path.join(process.cwd(), 'src/packages/member/mip-tasks/index.wxml'), 'utf8')
     const memberDetailSource = fs.readFileSync(path.join(process.cwd(), 'src/packages/member/mip-tasks/detail/index.ts'), 'utf8')
@@ -356,40 +351,28 @@ describe('MIP tasks client contract', () => {
     const cloudbaseTransport = fs.readFileSync(path.join(process.cwd(), 'src/modules/mip-tasks/cloudbase-gateway.ts'), 'utf8')
     const detail = fs.readFileSync(path.join(process.cwd(), 'src/packages/member/mip-tasks/detail/index.wxml'), 'utf8')
 
-    for (const route of [
+    expect(app.subPackages.find(pkg => pkg.root === 'packages/member')?.pages).toEqual(expect.arrayContaining([
       'mip-tasks/index',
       'mip-tasks/detail/index',
+    ]))
+    expect(app.subPackages.find(pkg => pkg.root === 'packages/admin')?.pages).not.toEqual(expect.arrayContaining([
       'tasks/index',
       'task-assignments/index',
       'task-completions/index',
-    ]) {
-      expect(app).toContain(route)
-    }
-    expect(adminNavigation).toContain('route: \'packages/admin/tasks/index\'')
+    ]))
     expect(growth).toContain('bind:tap="openTasks"')
-    expect(admin).toContain('新增任务')
-    expect(admin).toContain('需要上传附件')
-    expect(admin).toContain('指定成员')
-    expect(admin).toContain('适用成长等级')
-    expect(admin).toContain('不选择时，全部成长等级均可完成')
-    expect(admin).toContain('上传模板')
-    expect(completions).toContain('导出')
-    expect(completions).toContain('任务内容快照')
-    expect(assignments).toContain('批量派发')
-    expect(assignments).toContain('批量撤销')
-    expect(assignments).toContain('搜索昵称或分会')
     expect(detail).toContain('原图不超过 10MB')
     expect(detail).toContain('提交完成')
     expect(detail).toContain('保存模板图片')
     expect(detail).toContain('任务已截止')
     expect(memberListView).toContain('min-h-[88rpx]')
     expect(memberListView).toContain('starIndexes')
-    for (const source of [adminSource, completionSource, assignmentSource, memberListSource, memberDetailSource]) {
+    expect(memberListView).not.toContain('派发任务')
+    expect(memberListSource).not.toContain('getAdminSession')
+    for (const source of [memberListSource, memberDetailSource]) {
       expect(source).not.toContain('mipTasksModule.gateway')
       expect(source).toContain('mipTasksModule.query')
     }
-    expect(adminSource).toContain('mipTasksModule.mutation')
-    expect(assignmentSource).toContain('mipTasksModule.mutation')
     expect(memberDetailSource).toContain('mipTasksModule.mutation.completeTask')
     expect(moduleSource).not.toMatch(/return\s*\{\s*gateway,/)
     expect(cloudbaseTransport).toContain('data: request')

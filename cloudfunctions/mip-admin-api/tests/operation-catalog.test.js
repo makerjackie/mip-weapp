@@ -11,9 +11,11 @@ const {
   operationCatalog,
 } = require('../domain/operation-catalog')
 const {
+  createOperationDispatcher,
   createOperationRegistry,
   outboxMutationActions,
 } = require('../domain/operation-registry')
+const { createOwnerModules } = require('./owner-modules-test-helper')
 
 const expectedOperations = Object.freeze({
   'mip.admin.session': ['ACCESS', 'QUERY', 'getSession'],
@@ -244,8 +246,9 @@ function definition(action, kind = 'QUERY', options = {}) {
   return {
     action,
     kind,
-    dispatch: options.dispatch || (() => undefined),
+    method: options.method || 'testOperation',
     sessionFirst: options.sessionFirst === true,
+    usesInput: options.usesInput !== false,
     wakesOutbox: options.wakesOutbox === true,
     ...options.extra,
   }
@@ -271,30 +274,28 @@ describe('admin operation catalog', () => {
     assert.deepEqual(healthOperation, { action: 'health', owner: 'SYSTEM', kind: 'QUERY' })
 
     for (const operation of operationCatalog) {
-      const [owner, kind, , mode] = expectedOperations[operation.action]
+      const [owner, kind, method, mode] = expectedOperations[operation.action]
       assert.equal(operation.owner, owner, operation.action)
       assert.equal(operation.kind, kind, operation.action)
+      assert.equal(operation.method, method, operation.action)
       assert.equal(operation.sessionFirst, mode === 'SESSION_FIRST', operation.action)
+      assert.equal(operation.usesInput, mode !== 'NO_INPUT', operation.action)
       assert.equal(operationByAction[operation.action], operation)
       assert.equal(Object.isFrozen(operation), true)
     }
   })
 
-  it('dispatches every action to the exact legacy method and preserves special call ordering', async () => {
+  it('binds every action to its owner module method and preserves special call ordering', async () => {
     const caller = { appId: 'wx-app', userId: 'user-a' }
     const input = { marker: 'input-a' }
 
     for (const [action, [, , expectedMethod, mode]] of Object.entries(expectedOperations)) {
       const calls = []
-      const service = new Proxy({}, {
-        get(_target, method) {
-          return async (...args) => {
-            calls.push({ method, args })
-            return { method }
-          }
-        },
+      const ownerModules = createOwnerModules({}, operation => async (...args) => {
+        calls.push({ method: operation.method, args })
+        return { method: operation.method }
       })
-      const result = await actions[action](service, caller, input)
+      const result = await actions[action](ownerModules, caller, input)
 
       if (mode === 'SESSION_FIRST') {
         assert.deepEqual(calls.map(call => call.method), ['getSession', expectedMethod], action)
@@ -317,8 +318,9 @@ describe('admin operation catalog', () => {
     for (const operation of operationCatalog) {
       assert.equal(OPERATION_OWNERS.includes(operation.owner), true)
       assert.equal(OPERATION_KINDS.includes(operation.kind), true)
-      assert.equal(typeof operation.dispatch, 'function')
+      assert.equal(typeof operation.method, 'string')
       assert.equal(typeof operation.sessionFirst, 'boolean')
+      assert.equal(typeof operation.usesInput, 'boolean')
       assert.equal(typeof operation.wakesOutbox, 'boolean')
     }
   })
@@ -350,8 +352,8 @@ describe('admin operation catalog', () => {
         error: 'OPERATION_ACTION_INVALID',
       },
       {
-        manifests: [manifest('ACCESS', [{ ...valid, dispatch: null }])],
-        error: 'OPERATION_DISPATCH_INVALID',
+        manifests: [manifest('ACCESS', [{ ...valid, method: null }])],
+        error: 'OPERATION_METHOD_INVALID',
       },
       {
         manifests: [manifest('ACCESS', [{ ...valid, sessionFirst: null }])],
@@ -401,6 +403,31 @@ describe('admin operation catalog', () => {
         manifest('ACCESS', [definition('mip.admin.one')]),
       ], { expectedCount: 2, expectedOwners: ['ACCESS'] }),
       /OPERATION_COUNT_INVALID/,
+    )
+    assert.throws(
+      () => createOperationRegistry([
+        manifest('ACCESS', [
+          definition('mip.admin.one'),
+          definition('mip.admin.two'),
+        ]),
+      ], { expectedCount: 2, expectedOwners: ['ACCESS'] }),
+      /OPERATION_METHOD_DUPLICATE/,
+    )
+  })
+
+  it('fails at startup when an owner module or declared method is missing', () => {
+    const ownerModules = createOwnerModules()
+    delete ownerModules.KNOWLEDGE
+    assert.throws(
+      () => createOperationDispatcher(ownerModules),
+      /OPERATION_OWNER_MODULE_INVALID:KNOWLEDGE/,
+    )
+
+    const incomplete = createOwnerModules()
+    delete incomplete.EVENTS.saveEvent
+    assert.throws(
+      () => createOperationDispatcher(incomplete),
+      /OPERATION_METHOD_MISSING:EVENTS:mip\.admin\.events\.save:saveEvent/,
     )
   })
 })

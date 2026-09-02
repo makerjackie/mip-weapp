@@ -1,6 +1,6 @@
 import type { AnnouncementSummary } from '../../../modules/mip-announcements'
 import { mipAnnouncementsModule } from '../../../modules/mip-announcements'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 import { formatLocalMonthDayTime } from '../../../utils/date'
 
 interface AnnouncementView extends AnnouncementSummary {

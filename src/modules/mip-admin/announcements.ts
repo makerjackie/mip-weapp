@@ -1,4 +1,4 @@
-import { MipAdminError } from './types'
+import { MipAdminError } from './error'
 
 export type AdminAnnouncementScopeType = 'PLATFORM' | 'BRANCH'
 export type AdminAnnouncementStatus = 'DRAFT' | 'PUBLISHED' | 'WITHDRAWN'

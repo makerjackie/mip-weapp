@@ -6,7 +6,7 @@ import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
-import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../../platform/navigation/client'
 
 interface RegistrationFieldView extends RegistrationField {
   value: string
@@ -438,7 +438,7 @@ Page({
   },
 
   openPrivacy() {
-    caseNavigateTo({ url: '/packages/member/privacy/index' })
+    caseNavigateTo({ url: '/packages/member/privacy-policy/index' })
   },
 
   async recoverUpdateConflict(

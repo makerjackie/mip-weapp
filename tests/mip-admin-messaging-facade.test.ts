@@ -2,8 +2,6 @@ import type { AdminAnnouncement, AdminAnnouncementDraft } from '../src/modules/m
 import type { AdminMessageCampaign, AdminMessageCampaignDraft } from '../src/modules/mip-admin/message-campaigns'
 import type { MipMessagingAdmin } from '../src/modules/mip-admin/messaging-admin'
 import type { MipAdminGateway } from '../src/modules/mip-admin/types'
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { createMipAdminModule } from '../src/modules/mip-admin/client'
 import { MipAdminError } from '../src/modules/mip-admin/types'
@@ -309,11 +307,11 @@ describe('MIP admin messaging facade', () => {
   it('keeps legacy query aliases on the same cache', async () => {
     const { module, spies } = createHarness()
 
-    await module.getAnnouncement(announcement.id)
     await module.messaging.getAnnouncement(announcement.id)
-    await module.listMessageCampaigns({ status: 'DRAFT' })
+    await module.messaging.getAnnouncement(announcement.id)
     await module.messaging.listCampaigns({ status: 'DRAFT' })
-    await module.searchMessageRecipients({ branchId: null, query: '林' })
+    await module.messaging.listCampaigns({ status: 'DRAFT' })
+    await module.messaging.searchRecipients({ branchId: null, query: '林' })
     await module.messaging.searchRecipients({ branchId: null, query: '林' })
 
     expect(spies.getAnnouncement).toHaveBeenCalledTimes(1)
@@ -405,38 +403,5 @@ describe('MIP admin messaging facade', () => {
 
     const error = await module.messaging.publishCampaign(campaign.id, 1, 'publish-a').catch(caught => caught)
     expect(error).toBe(forbidden)
-  })
-
-  it('keeps all messaging pages behind the typed facade', () => {
-    const root = path.resolve(import.meta.dirname, '..')
-    const pages = [
-      'src/packages/admin/message-campaigns/index.ts',
-      'src/packages/admin/announcements/index.ts',
-      'src/packages/admin/announcement-editor/index.ts',
-    ]
-    const sources: string[] = []
-    for (const page of pages) {
-      const source = fs.readFileSync(path.join(root, page), 'utf8')
-      sources.push(source)
-      expect(source).toContain('mipAdminModule.messaging.')
-      expect(source).not.toContain('mipAdminModule.gateway')
-      expect(source).not.toContain('mipAdminModule.mutate')
-    }
-    const mutationCalls = [...sources.join('\n').matchAll(
-      /mipAdminModule\.messaging\.(saveAnnouncement|publishAnnouncement|withdrawAnnouncement|setAnnouncementPinned|saveCampaign|snapshotCampaign|publishCampaign|scheduleCampaign|cancelCampaignSchedule|withdrawCampaign)\(/g,
-    )].map(match => match[1])
-    expect(mutationCalls.sort()).toEqual([
-      'publishAnnouncement',
-      'publishCampaign',
-      'scheduleCampaign',
-      'cancelCampaignSchedule',
-      'saveAnnouncement',
-      'saveCampaign',
-      'setAnnouncementPinned',
-      'snapshotCampaign',
-      'withdrawAnnouncement',
-      'withdrawCampaign',
-    ].sort())
-    expect(sources.every(source => source.includes('isAdminVersionConflict'))).toBe(true)
   })
 })

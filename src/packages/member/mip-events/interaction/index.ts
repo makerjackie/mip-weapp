@@ -4,7 +4,7 @@ import { isEventAccessRequirementError, MipEventsError } from '../../../../modul
 import { mipEventsModule } from '../../../../modules/mip-events/client'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
-import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../../platform/navigation/client'
 
 type InteractionView = 'SENT' | 'RECEIVED' | 'FEEDBACK'
 type PendingInteractionAction

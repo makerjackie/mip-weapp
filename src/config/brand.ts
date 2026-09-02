@@ -8,7 +8,7 @@ export const brand = {
   icpFilingNumber: '粤ICP备2026005262号-2',
   supportChannel: '小程序客服',
   contactHint: '请通过小程序客服联系运营团队',
-  privacyPolicyPath: '/packages/member/privacy/index',
+  privacyPolicyPath: '/packages/member/privacy-policy/index',
   userAgreementPath: '/packages/member/user-agreement/index',
   colors: {
     canvas: '#040404',

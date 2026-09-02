@@ -4,7 +4,7 @@ import type {
 } from '../../../modules/mip-commerce'
 import type { MembershipBenefitPresentation, MembershipHistoryPresentation } from './presentation'
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 import { presentMembershipBenefits } from './presentation'
 
 Page({

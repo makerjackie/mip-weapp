@@ -4,6 +4,7 @@ const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const { createAdminApplication } = require('../domain/application')
 const { createTrustedPrincipalIssuer } = require('../lib/identity')
+const { createServiceDouble } = require('./owner-modules-test-helper')
 
 const identityOptions = {
   allowedAppIds: new Set(['wx-trusted']),
@@ -18,12 +19,12 @@ describe('admin application seam', () => {
     const calls = []
     const application = createAdminApplication({
       assertPrincipal: issuer.assert,
-      service: {
+      service: createServiceDouble({
         async getSession(principal, input) {
           calls.push({ principal, input })
           return { enabled: true }
         },
-      },
+      }),
     })
     const principal = issuer.issue(trustedContext)
 
@@ -53,12 +54,12 @@ describe('admin application seam', () => {
     let received
     const application = createAdminApplication({
       assertPrincipal: issuer.assert,
-      service: {
+      service: createServiceDouble({
         async moderateOpportunityComment(actualPrincipal, input) {
           received = { principal: actualPrincipal, input }
           return { id: input.commentId, status: input.action }
         },
-      },
+      }),
     })
     const input = {
       opportunityId: 'opportunity-a',
@@ -87,12 +88,12 @@ describe('admin application seam', () => {
         assertions += 1
         throw new Error('principal must not be checked')
       },
-      service: {
+      service: createServiceDouble({
         async health() {
           probes += 1
           return { persistence: 'cloudbase-mysql' }
         },
-      },
+      }),
     })
 
     await assert.rejects(

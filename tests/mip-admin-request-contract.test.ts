@@ -12,7 +12,7 @@ const cloudHarness = vi.hoisted(() => ({
   callFunction: vi.fn(),
 }))
 
-vi.mock('../src/modules/platform/cloudbase', () => ({
+vi.mock('../src/platform/cloudbase/client', () => ({
   requireCloudClient: vi.fn(async () => ({ callFunction: cloudHarness.callFunction })),
 }))
 

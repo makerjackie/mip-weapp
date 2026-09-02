@@ -1,9 +1,7 @@
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { createMipAdminGateway } from '../src/modules/mip-admin/cloudbase-gateway'
 
-vi.mock('../src/modules/platform/cloudbase', () => ({
+vi.mock('../src/platform/cloudbase/client', () => ({
   requireCloudClient: vi.fn(),
 }))
 
@@ -42,15 +40,5 @@ describe('MIP admin branch list contract', () => {
       action: 'mip.admin.branches.list',
       input: {},
     })
-  })
-
-  it('renders the summary fields through the responsive admin section grid', () => {
-    const source = fs.readFileSync(
-      path.resolve(process.cwd(), 'src/packages/admin/branches/index.wxml'),
-      'utf8',
-    )
-    expect(source).toContain('有效玩家 {{item.currentPlayerCount}}')
-    expect(source).toContain('城市管理员 {{item.branchAdminSummary}}')
-    expect(source).toContain('class="mip-admin-section-grid mt-3 grid gap-2')
   })
 })

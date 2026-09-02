@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   estimateBase64Bytes,
   IMAGE_UPLOAD_POLICIES,
-} from '../src/modules/platform/image-upload'
+} from '../src/platform/wechat/image-upload'
 
 describe('image upload policy', () => {
   it('estimates padded base64 payload size exactly', () => {

@@ -52,7 +52,7 @@ describe('MIP received interaction client flow', () => {
     const profileView = read('src/pages/profile/index.wxml')
     const publicPage = read('src/packages/member/mip-public-profile/index.ts')
     const publicView = read('src/packages/member/mip-public-profile/index.wxml')
-    const profileEditor = read('src/packages/member/mip-profile/index.wxml')
+    const visibilitySettings = read('src/packages/member/mip-visibility-settings/index.wxml')
     const server = read('cloudfunctions/mip-opportunities-api/domain/profile-influence.js')
 
     expect(profilePage).toContain('opportunityModule.getProfileInfluence()')
@@ -63,7 +63,7 @@ describe('MIP received interaction client flow', () => {
       expect(publicView).toContain(label)
     }
     expect(publicView).toContain('influence ? influence.guestCount : \'—\'')
-    expect(profileEditor).toContain('visibilityInfluence')
+    expect(visibilitySettings).toContain('visibilityInfluence')
     expect(server).toContain('FROM mip_event_invitation_attributions')
     expect(server).toContain('FROM mip_event_hearts')
     expect(server).toContain('FROM mip_profile_interests')

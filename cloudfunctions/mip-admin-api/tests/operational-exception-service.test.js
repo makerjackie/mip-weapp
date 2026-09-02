@@ -4,6 +4,7 @@ const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const { actions } = require('../domain/handler')
 const { createAdminService } = require('../domain/service')
+const { createOwnerModules } = require('./owner-modules-test-helper')
 
 const caller = { appId: 'wx1111111111111111', identityKey: 'trusted-identity' }
 const user = {
@@ -93,12 +94,12 @@ describe('operational exception service', () => {
 
   it('dispatches a read-only handler action and exposes no mutation action', async () => {
     let received = null
-    const result = await actions['mip.admin.exceptions.list']({
+    const result = await actions['mip.admin.exceptions.list'](createOwnerModules({
       async listOperationalExceptions(receivedCaller, event) {
         received = { receivedCaller, event }
         return { items: [], nextCursor: null, availableTypes: [] }
       },
-    }, caller, { type: 'PAYMENT' })
+    }), caller, { type: 'PAYMENT' })
     assert.deepEqual(result, { items: [], nextCursor: null, availableTypes: [] })
     assert.deepEqual(received, { receivedCaller: caller, event: { type: 'PAYMENT' } })
     assert.equal(Object.keys(actions).some(action => action.startsWith('mip.admin.exceptions.')

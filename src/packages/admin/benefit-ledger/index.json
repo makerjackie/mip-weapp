@@ -1,7 +1,0 @@
-{
-  "usingComponents": {
-    "mip-admin-workspace-nav": "/packages/admin/components/workspace-nav/index",
-    "app-empty-state": "/components/empty-state/index",
-    "app-page-exit": "/components/page-exit/index"
-  }
-}

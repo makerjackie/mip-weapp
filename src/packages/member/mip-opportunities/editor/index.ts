@@ -9,7 +9,7 @@ import { mipMediaModule } from '../../../../modules/mip-media/client'
 import { opportunityModule } from '../../../../modules/mip-opportunities'
 import { parseOpportunityAiDraft } from '../../../../modules/mip-opportunities/ai-draft'
 import { parseOpportunityText } from '../../../../modules/mip-opportunities/text-parser'
-import { chooseSingleImage } from '../../../../modules/platform/image-upload'
+import { chooseSingleImage } from '../../../../platform/wechat/image-upload'
 
 interface SelectOption { id: string, label: string, selected: boolean }
 interface IndustryGroupOption { id: string, label: string, options: SelectOption[] }

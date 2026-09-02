@@ -5,7 +5,7 @@ import { mipCommerceModule } from '../../modules/mip-commerce/client'
 import { mipAccessPageUrl } from '../../modules/mip-identity'
 import { mipIdentityModule } from '../../modules/mip-identity/client'
 import { createIntentKey, formatCny, membershipPresentation } from '../../modules/mip-shell'
-import { caseNavigateTo, caseRedirectTo } from '../../modules/platform/case-navigation'
+import { caseNavigateTo, caseRedirectTo } from '../../platform/navigation/client'
 import { formatLocalDate } from '../../utils/date'
 
 const POSTER_WIDTH = 375

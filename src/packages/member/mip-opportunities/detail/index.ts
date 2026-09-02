@@ -16,7 +16,7 @@ import {
   retainOpportunityCommentReportIntent,
   retainOpportunityCommentSubmissionIntent,
 } from '../../../../modules/mip-opportunities'
-import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../../platform/navigation/client'
 import { formatLocalDateTime } from '../../../../utils/date'
 
 type Interaction = 'referral' | 'referral-cancel' | 'interest' | 'comment'

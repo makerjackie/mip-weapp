@@ -1,121 +1,75 @@
 import type { OrderId } from '../mip'
-import type {
-  KnowledgeCategory,
-  KnowledgeComment,
-  KnowledgeCommentPage,
-  KnowledgeContentDetail,
-  KnowledgeContentSummary,
-  KnowledgeContentType,
-  KnowledgePurchaseOutcome,
-} from './types'
-import { runtimeConfig } from '../../config/runtime'
-import { mipCommerceModule } from '../mip-commerce/client'
-import { resolveCloudFileUrls } from '../platform/cloud-media'
-import { requireCloudClient } from '../platform/cloudbase'
+import type { ClientPaymentOutcome } from '../mip-commerce'
+import type { MipKnowledgeGateway } from './gateway'
+import type { KnowledgePurchaseOutcome } from './types'
 
-interface Envelope<T> {
-  ok: boolean
-  data?: T
-  error?: { code?: string, message?: string }
+export interface MipKnowledgePaymentPort {
+  payOrder: (orderId: OrderId) => Promise<ClientPaymentOutcome>
 }
 
-async function call<T>(functionName: string, action: string, data: Record<string, unknown> = {}) {
-  const cloud = await requireCloudClient()
-  const response = await cloud.callFunction({ name: functionName, data: { action, ...data } })
-  const envelope = response.result as Envelope<T>
-  if (!envelope || typeof envelope.ok !== 'boolean') {
-    throw new Error('内容服务返回了无效响应')
-  }
-  if (!envelope.ok) {
-    throw new Error(envelope.error?.message || '内容服务暂时不可用')
-  }
-  return resolveCloudFileUrls(envelope.data as T)
+export interface MipKnowledgeModuleOptions {
+  paymentEnabled: boolean
+  createRequestId?: (prefix: string) => string
 }
 
-function requestId(prefix: string) {
+function defaultRequestId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`
 }
 
-export const mipKnowledgeModule = {
-  paymentEnabled: runtimeConfig.paymentMode !== 'disabled',
+export function createMipKnowledgeModule(
+  gateway: MipKnowledgeGateway,
+  payment: MipKnowledgePaymentPort,
+  options: MipKnowledgeModuleOptions,
+) {
+  const createRequestId = options.createRequestId || defaultRequestId
 
-  async listCategories() {
-    const value = await call<{ items: KnowledgeCategory[] }>(
-      runtimeConfig.cloudbase.communityFunctionName,
-      'listKnowledgeCategories',
-    )
-    return Array.isArray(value.items) ? value.items : []
-  },
+  return Object.freeze({
+    paymentEnabled: options.paymentEnabled,
 
-  async listContents(input: {
-    categoryId?: string
-    contentType?: KnowledgeContentType | ''
-    accessType?: '' | 'FREE' | 'MEMBER' | 'MEMBER_OR_PAID'
-    query?: string
-    cursor?: string
-    limit?: number
-  } = {}) {
-    return call<{ items: KnowledgeContentSummary[], nextCursor?: string }>(
-      runtimeConfig.cloudbase.communityFunctionName,
-      'listKnowledgeContents',
-      input,
-    )
-  },
+    listCategories: gateway.listCategories,
+    listContents: gateway.listContents,
+    getContent: gateway.getContent,
+    listComments: gateway.listComments,
 
-  getContent(contentId: string) {
-    return call<KnowledgeContentDetail>(runtimeConfig.cloudbase.communityFunctionName, 'getKnowledgeContent', {
-      contentId,
-    })
-  },
+    createComment(contentId: string, body: string, parentCommentId?: string) {
+      return gateway.createComment({
+        contentId,
+        body,
+        parentCommentId,
+        idempotencyKey: createRequestId('knowledge-comment'),
+      })
+    },
 
-  listComments(contentId: string, cursor?: string) {
-    return call<KnowledgeCommentPage>(runtimeConfig.cloudbase.communityFunctionName, 'listKnowledgeComments', {
-      contentId,
-      cursor,
-      limit: 20,
-    })
-  },
+    deleteComment(commentId: string, expectedVersion: number) {
+      return gateway.deleteComment({
+        commentId,
+        expectedVersion,
+        idempotencyKey: createRequestId('knowledge-comment-delete'),
+      })
+    },
 
-  createComment(contentId: string, body: string, parentCommentId?: string) {
-    return call<{ id: string, status: KnowledgeComment['status'], version: number }>(
-      runtimeConfig.cloudbase.communityFunctionName,
-      'createKnowledgeComment',
-      { contentId, body, parentCommentId, idempotencyKey: requestId('knowledge-comment') },
-    )
-  },
-
-  deleteComment(commentId: string, expectedVersion: number) {
-    return call<{ id: string, status: 'DELETED', version: number }>(
-      runtimeConfig.cloudbase.communityFunctionName,
-      'deleteKnowledgeComment',
-      { commentId, expectedVersion, idempotencyKey: requestId('knowledge-comment-delete') },
-    )
-  },
-
-  reportComment(commentId: string, category: string, description = '') {
-    const reportRequestId = requestId('knowledge-comment-report')
-    return call<{ reportId: string, status: 'PENDING' }>(
-      runtimeConfig.cloudbase.communityFunctionName,
-      'reportKnowledgeComment',
-      {
+    reportComment(commentId: string, category: string, description = '') {
+      const reportRequestId = createRequestId('knowledge-comment-report')
+      return gateway.reportComment({
         commentId,
         category,
         description,
         requestId: reportRequestId,
         idempotencyKey: reportRequestId,
-      },
-    )
-  },
+      })
+    },
 
-  async purchase(contentId: string): Promise<KnowledgePurchaseOutcome> {
-    if (!this.paymentEnabled) {
-      throw new Error('PAYMENT_UNAVAILABLE')
-    }
-    const order = await call<{ id: string }>(
-      runtimeConfig.cloudbase.commerceFunctionName,
-      'createKnowledgeCheckout',
-      { contentId, idempotencyKey: requestId('knowledge-checkout') },
-    )
-    return { contentId, payment: await mipCommerceModule.payOrder(order.id as OrderId) }
-  },
+    async purchase(contentId: string): Promise<KnowledgePurchaseOutcome> {
+      if (!options.paymentEnabled) {
+        throw new Error('PAYMENT_UNAVAILABLE')
+      }
+      const order = await gateway.createCheckout({
+        contentId,
+        idempotencyKey: createRequestId('knowledge-checkout'),
+      })
+      return { contentId, payment: await payment.payOrder(order.id) }
+    },
+  })
 }
+
+export type MipKnowledgeModule = ReturnType<typeof createMipKnowledgeModule>

@@ -9,7 +9,7 @@ import {
 
 export const MIP_GLOBAL_ACCESS_EXEMPT_ROUTES = [
   'packages/member/mip-access/index',
-  'packages/member/privacy/index',
+  'packages/member/privacy-policy/index',
   'packages/member/user-agreement/index',
 ] as const
 

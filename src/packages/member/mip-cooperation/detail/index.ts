@@ -4,7 +4,7 @@ import { cooperationAbilityDimensions, cooperationRoles } from '../../../../conf
 import { cooperationModule } from '../../../../modules/mip-cooperation'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
-import { caseNavigateTo, leaveSecondaryPage } from '../../../../modules/platform/case-navigation'
+import { caseNavigateTo, leaveSecondaryPage } from '../../../../platform/navigation/client'
 
 interface AbilityView { key: string, label: string, score: number }
 interface RoleFieldView { key: string, label: string, value: string }

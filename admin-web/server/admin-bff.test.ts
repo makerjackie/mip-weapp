@@ -6,7 +6,7 @@ import {
   type AdminBffEnv,
   type D1DatabaseBinding,
 } from './admin-bff.ts'
-import { REVIEWED_ADMIN_MUTATIONS } from './admin-mutation-contract.ts'
+import { REVIEWED_ADMIN_MUTATIONS, WEB_ADMIN_QUERY_ACTIONS } from './admin-mutation-contract.ts'
 import {
   ADMIN_MEDIA_MAX_REQUEST_BYTES,
   ADMIN_MEDIA_UPLOAD_ACTION,
@@ -18,88 +18,7 @@ const SESSION_SECRET = 'session-encryption-secret-that-is-long-enough-for-tests'
 const LOGIN_SECRET = 'login-confirm-secret-that-is-long-enough-for-tests'
 const EXPORT_TOKEN = 'a'.repeat(43)
 const MEDIA_ASSET_ID = '10000000-0000-4000-8000-000000000001'
-const REVIEWED_QUERY_ACTIONS = [
-  'mip.admin.session',
-  'mip.admin.dashboard.overview.get',
-  'mip.admin.users.list',
-  'mip.admin.users.get',
-  'mip.admin.users.influence.list',
-  'mip.admin.events.list',
-  'mip.admin.events.get',
-  'mip.admin.events.insights.get',
-  'mip.admin.events.roster',
-  'mip.admin.events.rosterAll',
-  'mip.admin.events.policy.get',
-  'mip.admin.orders.list',
-  'mip.admin.orders.get',
-  'mip.admin.paymentAttempts.list',
-  'mip.admin.tasks.list',
-  'mip.admin.tasks.get',
-  'mip.admin.tasks.assignableMembers.list',
-  'mip.admin.tasks.eligibleLevels.list',
-  'mip.admin.tasks.completions.list',
-  'mip.admin.tasks.completions.get',
-  'mip.admin.tasks.completions.export',
-  'mip.admin.banners.session',
-  'mip.admin.banners.list',
-  'mip.admin.banners.get',
-  'mip.admin.game.session',
-  'mip.admin.game.rankings.list',
-  'mip.admin.game.seasons.list',
-  'mip.admin.game.teams.list',
-  'mip.admin.game.members.assignable.list',
-  'mip.admin.game.matches.list',
-  'mip.admin.game.blindBoxes.catalogs.list',
-  'mip.admin.game.blindBoxes.cards.list',
-  'mip.admin.memberships.get',
-  'mip.admin.memberships.timeline',
-  'mip.admin.benefits.ledger',
-  'mip.admin.branches.list',
-  'mip.admin.roles.list',
-  'mip.admin.roles.candidates',
-  'mip.admin.rolePolicies.list',
-  'mip.admin.audit.list',
-  'mip.admin.messageCampaigns.list',
-  'mip.admin.messageCampaigns.get',
-  'mip.admin.messageCampaigns.recipients',
-  'mip.admin.messageTemplates.list',
-  'mip.admin.messageTemplates.get',
-  'mip.admin.messageDeliveryReviews.list',
-  'mip.admin.messageDeliveryReviews.get',
-  'mip.admin.messageDeliveryRecords.list',
-  'mip.admin.knowledge.list',
-  'mip.admin.knowledge.get',
-  'mip.admin.knowledge.schedules.list',
-  'mip.admin.communityReports.list',
-  'mip.admin.announcements.scopes',
-  'mip.admin.announcements.list',
-  'mip.admin.announcements.get',
-  'mip.admin.opportunities.list',
-  'mip.admin.opportunities.get',
-  'mip.admin.opportunities.options',
-  'mip.admin.userContent.list',
-  'mip.admin.userContent.get',
-  'mip.admin.matching.get',
-  'mip.admin.opportunityComments.get',
-  'mip.admin.growth.levels',
-  'mip.admin.growth.benefits',
-  'mip.admin.growth.rules',
-  'mip.admin.growth.entries',
-  'mip.admin.growth.levelTransitions',
-  'mip.admin.badges.list',
-  'mip.admin.badges.awards',
-  'mip.admin.exceptions.list',
-  'mip.admin.operations.queue.list',
-  'mip.admin.events.catalog.list',
-  'mip.admin.events.tags.get',
-  'mip.admin.events.recaps.list',
-  'mip.admin.events.recaps.get',
-  'mip.admin.events.album.list',
-  'mip.admin.events.comments.get',
-  'mip.admin.messageCampaigns.scopes',
-  'mip.admin.exports.status',
-  'mip.admin.dashboard',
-] as const
+const REVIEWED_QUERY_ACTIONS = [...WEB_ADMIN_QUERY_ACTIONS]
 const REVIEWED_MUTATION_ACTIONS = REVIEWED_ADMIN_MUTATIONS.map(item => item.action)
 const CORE_MUTATION_INPUTS: Record<string, Record<string, unknown>> = {
   'mip.admin.memberships.grant': { userId: 'user-a', durationMonths: 12, expectedChainVersion: 1, reason: '测试补录' },
@@ -225,8 +144,16 @@ interface Row {
   consumed_at: number | null
 }
 
+interface LimitRow {
+  failed_attempts: number
+  window_started_at: number
+  locked_until: number
+  updated_at: number
+}
+
 class MemoryD1 implements D1DatabaseBinding {
   readonly rows = new Map<string, Row>()
+  readonly limits = new Map<string, LimitRow>()
 
   prepare(query: string) {
     let values: unknown[] = []
@@ -236,15 +163,50 @@ class MemoryD1 implements D1DatabaseBinding {
         return statement
       },
       first: async <T>() => {
-        if (!query.includes('FROM mip_admin_web_login_challenges')) throw new Error('QUERY_UNSUPPORTED')
-        const row = this.rows.get(String(values[0]))
-        if (!row || row.browser_key_hash !== values[1]) return null
-        return { ...row } as T
+        if (query.includes('FROM mip_admin_web_login_challenges')) {
+          const row = this.rows.get(String(values[0]))
+          if (!row || row.browser_key_hash !== values[1]) return null
+          return { ...row } as T
+        }
+        if (query.includes('FROM mip_admin_web_login_principal_limits')) {
+          const row = this.limits.get(String(values[0]))
+          return row ? { ...row } as T : null
+        }
+        if (query.includes('INSERT INTO mip_admin_web_login_principal_limits')) {
+          const [principalKey, now, windowBoundary, failureLimit, lockedUntil] = values.map(NumberOrString)
+          const existing = this.limits.get(String(principalKey))
+          if (!existing) {
+            const row = { failed_attempts: 1, window_started_at: Number(now), locked_until: 0, updated_at: Number(now) }
+            this.limits.set(String(principalKey), row)
+            return { ...row } as T
+          }
+          if (existing.locked_until <= Number(now)) {
+            const resetWindow = existing.window_started_at <= Number(windowBoundary)
+            existing.failed_attempts = resetWindow ? 1 : existing.failed_attempts + 1
+            existing.window_started_at = resetWindow ? Number(now) : existing.window_started_at
+            existing.locked_until = existing.failed_attempts >= Number(failureLimit) ? Number(lockedUntil) : 0
+          }
+          existing.updated_at = Number(now)
+          return { ...existing } as T
+        }
+        throw new Error('QUERY_UNSUPPORTED')
       },
       run: async () => {
+        if (query.includes('DELETE FROM mip_admin_web_login_challenges')) {
+          for (const [id, row] of this.rows) {
+            if (row.expires_at < Number(values[0])) this.rows.delete(id)
+          }
+          return { success: true }
+        }
+        if (query.includes('DELETE FROM mip_admin_web_login_principal_limits')) {
+          this.limits.delete(String(values[0]))
+          return { success: true }
+        }
         if (query.includes('INSERT INTO mip_admin_web_login_challenges')) {
           const [id, codeHash, browserKeyHash, createdAt, expiresAt] = values
-          if ([...this.rows.values()].some(row => row.code_hash === codeHash)) throw new Error('UNIQUE')
+          if ([...this.rows.values()].some(row => row.code_hash === codeHash && row.status === 'PENDING')) {
+            throw new Error('UNIQUE')
+          }
           this.rows.set(String(id), {
             id: String(id), code_hash: String(codeHash), browser_key_hash: String(browserKeyHash),
             status: 'PENDING', app_id: null, open_id: null, display_name: null,
@@ -253,9 +215,11 @@ class MemoryD1 implements D1DatabaseBinding {
           return { success: true, meta: { changes: 1 } }
         }
         if (query.includes("SET status = 'CONFIRMED'")) {
-          const [appId, openId, displayName, confirmedAt, codeHash] = values
+          const [appId, openId, displayName, confirmedAt, codeHash, principalKey] = values
           const row = [...this.rows.values()].find(item => item.code_hash === codeHash)
-          if (!row || row.status !== 'PENDING' || row.expires_at < Number(confirmedAt)) {
+          const limit = this.limits.get(String(principalKey))
+          if (!row || row.status !== 'PENDING' || row.expires_at < Number(confirmedAt)
+            || (limit && limit.locked_until > Number(confirmedAt))) {
             return { success: true, meta: { changes: 0 } }
           }
           Object.assign(row, {
@@ -281,6 +245,10 @@ class MemoryD1 implements D1DatabaseBinding {
   }
 }
 
+function NumberOrString(value: unknown) {
+  return typeof value === 'number' ? value : String(value)
+}
+
 const env = (database = new MemoryD1()): AdminBffEnv => ({
   MIP_ADMIN_AUTH_DB: database,
   MIP_ADMIN_UPSTREAM_URL: 'https://cloud.example.test/mip-admin-api',
@@ -290,7 +258,6 @@ const env = (database = new MemoryD1()): AdminBffEnv => ({
   MIP_WEB_ALLOWED_ORIGIN: ORIGIN,
   MIP_WEB_SESSION_SECRET: SESSION_SECRET,
 })
-
 type FetchCall = [RequestInfo | URL, RequestInit | undefined]
 type FetchMock = typeof fetch & { calls: FetchCall[] }
 
@@ -322,6 +289,26 @@ async function hmacHex(secret: string, value: string) {
   return [...new Uint8Array(signature)].map(byte => byte.toString(16).padStart(2, '0')).join('')
 }
 
+async function loginConfirmationBody(
+  challengeCode: string,
+  options: {
+    now?: number
+    nonce?: string
+    principal?: { appId: string; openId: string; displayName?: string }
+    secret?: string
+  } = {},
+) {
+  const unsigned = {
+    transport: 'MIP_WEB_LOGIN_CONFIRM_V1',
+    timestamp: options.now ?? NOW,
+    nonce: options.nonce || '0123456789abcdefghijklmn',
+    challengeCode,
+    principal: options.principal || { appId: 'wx-mip-app', openId: 'trusted-admin-openid', displayName: '运营成员' },
+  }
+  const signature = await hmacHex(options.secret || LOGIN_SECRET, canonicalJson(unsigned))
+  return { ...unsigned, signature }
+}
+
 async function confirmedLogin(fetchMock: FetchMock, database = new MemoryD1()) {
   const bff = createAdminBff(env(database), { fetch: fetchMock, now: () => NOW })
   const start = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
@@ -329,14 +316,10 @@ async function confirmedLogin(fetchMock: FetchMock, database = new MemoryD1()) {
   }))
   const challengeCookie = cookieValue(start, 'mip_admin_login_challenge')
   const challenge = await start.clone().json() as { code: string }
-  const unsigned = {
-    transport: 'MIP_WEB_LOGIN_CONFIRM_V1', timestamp: NOW,
-    nonce: '0123456789abcdefghijklmn', challengeCode: challenge.code,
-    principal: { appId: 'wx-mip-app', openId: 'trusted-admin-openid', displayName: '运营成员' },
-  }
-  const signature = await hmacHex(LOGIN_SECRET, canonicalJson(unsigned))
   const confirm = await bff.handle(new Request(`${ORIGIN}/api/internal/auth/challenge/confirm`, {
-    method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...unsigned, signature }),
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(await loginConfirmationBody(challenge.code)),
   }))
   const exchange = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge/status`, {
     method: 'POST', headers: { cookie: challengeCookie, origin: ORIGIN },
@@ -485,33 +468,118 @@ describe('Admin Web BFF', () => {
     }))
 
     assert.equal(start.status, 201)
-    assert.match((await start.clone().json()).code, /^[A-HJ-NP-Z2-9]{8}$/)
+    assert.match((await start.clone().json()).code, /^\d{6}$/)
     assert.deepEqual(await pending.json(), {
       state: 'PENDING', expiresAt: new Date(NOW + 5 * 60 * 1000).toISOString(), pollAfterMs: 1_500,
     })
   })
 
-  it('rejects forged confirmation and makes a challenge single-use', async () => {
+  it('distinguishes malformed and forged confirmations and makes a challenge single-use', async () => {
     const bff = createAdminBff(env(), { now: () => NOW })
     const start = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
       method: 'POST', headers: { origin: ORIGIN },
     }))
     const challenge = await start.clone().json() as { code: string }
-    const forged = await bff.handle(new Request(`${ORIGIN}/api/internal/auth/challenge/confirm`, {
+    const malformed = await bff.handle(new Request(`${ORIGIN}/api/internal/auth/challenge/confirm`, {
       method: 'POST',
       body: JSON.stringify({
         transport: 'MIP_WEB_LOGIN_CONFIRM_V1', timestamp: NOW,
-        nonce: '0123456789abcdefghijklmn', challengeCode: challenge.code,
+        nonce: '0123456789abcdefghijklmn', challengeCode: 'ABC123',
         principal: { appId: 'wx-mip-app', openId: 'attacker' }, signature: '0'.repeat(64),
       }),
     }))
+    assert.equal(malformed.status, 400)
+    assert.equal((await malformed.json()).error.code, 'CONFIRMATION_INVALID')
+
+    const forgedBody = await loginConfirmationBody(challenge.code)
+    const forged = await bff.handle(new Request(`${ORIGIN}/api/internal/auth/challenge/confirm`, {
+      method: 'POST',
+      body: JSON.stringify({ ...forgedBody, signature: '0'.repeat(64) }),
+    }))
     assert.equal(forged.status, 401)
+    assert.equal((await forged.json()).error.code, 'CONFIRMATION_SIGNATURE_INVALID')
 
     const authenticated = await confirmedLogin(fetchQueue())
     const replay = await authenticated.bff.handle(new Request(`${ORIGIN}/api/auth/challenge/status`, {
       method: 'POST', headers: { cookie: authenticated.challengeCookie, origin: ORIGIN },
     }))
     assert.equal(replay.status, 410)
+  })
+
+  it('reports missing login configuration separately from invalid codes', async () => {
+    const missingSecret = createAdminBff({ ...env(), MIP_ADMIN_WEB_LOGIN_HMAC_SECRET: undefined }, { now: () => NOW })
+    const response = await missingSecret.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
+      method: 'POST', headers: { origin: ORIGIN },
+    }))
+
+    assert.equal(response.status, 503)
+    assert.equal((await response.json()).error.code, 'AUTH_NOT_CONFIGURED')
+  })
+
+  it('atomically locks each trusted AppID and principal after five failed codes for five minutes', async () => {
+    const database = new MemoryD1()
+    let now = NOW
+    const bff = createAdminBff(env(database), { now: () => now })
+    const start = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
+      method: 'POST', headers: { origin: ORIGIN },
+    }))
+    const challenge = await start.clone().json() as { code: string }
+    const secondStart = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
+      method: 'POST', headers: { origin: ORIGIN },
+    }))
+    const secondChallenge = await secondStart.clone().json() as { code: string }
+    const wrongCode = challenge.code === '000000' ? '000001' : '000000'
+    const confirm = async (code: string, openId = 'trusted-admin-openid') => bff.handle(new Request(
+      `${ORIGIN}/api/internal/auth/challenge/confirm`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(await loginConfirmationBody(code, {
+          now,
+          principal: { appId: 'wx-mip-app', openId, displayName: '运营成员' },
+        })),
+      },
+    ))
+
+    for (let attempt = 1; attempt < 5; attempt += 1) {
+      const response = await confirm(wrongCode)
+      assert.equal(response.status, 404)
+      assert.equal((await response.json()).error.code, 'CHALLENGE_NOT_FOUND')
+    }
+    const locked = await confirm(wrongCode)
+    assert.equal(locked.status, 429)
+    assert.equal(locked.headers.get('retry-after'), '300')
+    assert.equal((await locked.json()).error.code, 'CHALLENGE_RATE_LIMITED')
+    assert.equal(database.limits.size, 1)
+    assert.match([...database.limits.keys()][0], /^[a-f0-9]{64}$/)
+    assert.equal([...database.limits.keys()][0].includes('trusted-admin-openid'), false)
+
+    assert.equal((await confirm(challenge.code)).status, 429)
+    const otherPrincipal = await confirm(challenge.code, 'another-trusted-admin')
+    assert.equal(otherPrincipal.status, 200)
+    assert.equal(database.limits.size, 1)
+
+    now += 5 * 60 * 1000
+    assert.equal((await confirm(secondChallenge.code)).status, 200)
+    assert.equal(database.limits.size, 0)
+  })
+
+  it('clears expired challenges before issuing a new six-digit code', async () => {
+    const database = new MemoryD1()
+    let now = NOW
+    const bff = createAdminBff(env(database), { now: () => now })
+    const request = () => bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
+      method: 'POST', headers: { origin: ORIGIN },
+    }))
+
+    const first = await request()
+    assert.equal(first.status, 201)
+    assert.equal(database.rows.size, 1)
+    now += 5 * 60 * 1000 + 1
+    const second = await request()
+    assert.equal(second.status, 201)
+    assert.match((await second.json()).code, /^\d{6}$/)
+    assert.equal(database.rows.size, 1)
   })
 
   it('rejects missing or tampered sessions without contacting the upstream', async () => {

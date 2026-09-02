@@ -6,12 +6,14 @@ import { registerMipLocalUserCache } from './modules/mip-identity/local-session'
 import { mipGlobalAccessGuard } from './modules/mip-identity/runtime'
 import { mipPopupMessagePresenter } from './modules/mip-messaging/client'
 import { createPopupForegroundCoordinator } from './modules/mip-messaging/popup'
+import { clearCloudMediaCache } from './platform/storage/cloud-media'
 
 const popupForeground = createPopupForegroundCoordinator(
   mipIdentityModule,
   mipPopupMessagePresenter,
 )
 registerMipLocalUserCache(() => popupForeground.invalidate())
+registerMipLocalUserCache(clearCloudMediaCache)
 
 const freeEventRuntimeAcceptanceStorageKey = 'mip:internal:free-event-runtime-acceptance:v1'
 const runtimeAcceptance = Object.freeze({

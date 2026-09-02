@@ -26,7 +26,7 @@ function createWebLoginConfirmationClient({
     if (!trustedIdentifier(appId, 64)
       || !trustedIdentifier(openId, 128)
       || typeof challengeCode !== 'string'
-      || !/^[A-HJ-NP-Z2-9]{8}$/.test(challengeCode)
+      || !/^\d{6}$/.test(challengeCode)
       || (displayName !== undefined && (typeof displayName !== 'string' || displayName.length > 80))) {
       throw codedError('WEB_LOGIN_REQUEST_INVALID')
     }
@@ -58,12 +58,27 @@ function createWebLoginConfirmationClient({
         signal: AbortSignal.timeout(8_000),
       })
     }
-    catch {
-      throw codedError('WEB_LOGIN_UNAVAILABLE')
+    catch (error) {
+      throw codedError(isTimeoutError(error)
+        ? 'WEB_LOGIN_TIMEOUT'
+        : 'WEB_LOGIN_NETWORK_ERROR')
     }
     const payload = await safeJson(response)
-    if (response.status === 404 && payload?.error?.code === 'CHALLENGE_NOT_FOUND') {
+    const responseCode = payload?.error?.code
+    if (response.status === 404 && responseCode === 'CHALLENGE_NOT_FOUND') {
       throw codedError('WEB_LOGIN_CHALLENGE_NOT_FOUND')
+    }
+    if (response.status === 400 && responseCode === 'CONFIRMATION_INVALID') {
+      throw codedError('WEB_LOGIN_REQUEST_INVALID')
+    }
+    if (response.status === 401 && responseCode === 'CONFIRMATION_SIGNATURE_INVALID') {
+      throw codedError('WEB_LOGIN_AUTH_REJECTED')
+    }
+    if (response.status === 429 && responseCode === 'CHALLENGE_RATE_LIMITED') {
+      throw codedError('WEB_LOGIN_RATE_LIMITED')
+    }
+    if (response.status === 503 && responseCode === 'AUTH_NOT_CONFIGURED') {
+      throw codedError('WEB_LOGIN_CONFIG_REQUIRED')
     }
     if (!response.ok) throw codedError('WEB_LOGIN_UNAVAILABLE')
     if (!payload || payload.confirmed !== true || Reflect.ownKeys(payload).length !== 1) {
@@ -96,6 +111,10 @@ function codedError(code) {
   const error = new Error(code)
   error.code = code
   return error
+}
+
+function isTimeoutError(error) {
+  return error?.name === 'AbortError' || error?.name === 'TimeoutError'
 }
 
 async function safeJson(response) {

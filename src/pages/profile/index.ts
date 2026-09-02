@@ -13,7 +13,7 @@ import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity
 import { mipMessagingModule } from '../../modules/mip-messaging/client'
 import { opportunityModule } from '../../modules/mip-opportunities'
 import { canManageEvents, hasCapability, membershipPresentation } from '../../modules/mip-shell'
-import { caseNavigateTo, syncCaseNavigation } from '../../modules/platform/case-navigation'
+import { caseNavigateTo, syncCaseNavigation } from '../../platform/navigation/client'
 import { formatLocalDate } from '../../utils/date'
 
 type PortfolioTab = 'cooperation' | 'cases' | 'opportunities'
@@ -44,7 +44,6 @@ Page({
     membershipEndsText: '',
     isPlayer: false,
     adminVisible: false,
-    eventManagementVisible: false,
     growthState: 'loading' as 'hidden' | SectionState,
     levelName: '',
     growthProgress: 0,
@@ -250,10 +249,7 @@ Page({
       membershipDescription: membership.description,
       membershipEndsText: membership.endsAt ? formatLocalDate(membership.endsAt) : '',
       isPlayer,
-      adminVisible: hasCapability(snapshot.grants, 'admin:enter'),
-      // The workspace already surfaces every granted activity tool, so keep one clear entry point.
-      eventManagementVisible: !hasCapability(snapshot.grants, 'admin:enter')
-        && canManageEvents(snapshot.grants),
+      adminVisible: hasCapability(snapshot.grants, 'admin:enter') || canManageEvents(snapshot.grants),
       growthState: isPlayer ? this.data.growthState : 'hidden',
       message: '',
     })
@@ -452,11 +448,8 @@ Page({
   openMembership() { caseNavigateTo({ url: '/pages/membership/index' }) },
   openProfileEdit() { void this.openProtected('/packages/member/mip-profile/index', 'EDIT_PROFILE') },
   openMemberCard() { void this.openProtected('/packages/member/mip-card/index', 'VIEW_RESTRICTED_PROFILE') },
-  openDigitalAvatar() { void this.openProtected('/packages/member/mip-avatar/index', 'EDIT_PROFILE') },
-  openBranches() { caseNavigateTo({ url: '/packages/member/mip-branches/index' }) },
   openRegistrations() { void this.openProtected('/packages/member/mip-events/mine/index', 'INTERACT') },
   openOrders() { void this.openProtected('/packages/member/orders/index', 'VIEW_RESTRICTED_PROFILE') },
-  openNotifications() { void this.openProtected('/packages/member/mip-notifications/index', 'INTERACT') },
   openInfluenceList(event: WechatMiniprogram.TouchEvent) {
     const category = String(event.currentTarget.dataset.category || '')
     if (!['GUEST', 'INTERACTION', 'ACTIVE_INTEREST'].includes(category)) {
@@ -473,22 +466,14 @@ Page({
       'INTERACT',
     )
   },
-  openHeartHistory() { void this.openProtected('/packages/member/mip-hearts/index', 'INTERACT') },
   openGrowth() { void this.openProtected('/packages/member/mip-growth/index', 'VIEW_RESTRICTED_PROFILE') },
   openBadges() { void this.openProtected('/packages/member/mip-badges/index', 'VIEW_RESTRICTED_PROFILE') },
   openTasks() { void this.openProtected('/packages/member/mip-tasks/index', 'VIEW_RESTRICTED_PROFILE') },
-  openGame() { void this.openProtected('/packages/member/mip-game/index', 'VIEW_RESTRICTED_PROFILE') },
-  openAiDrafts() { void this.openProtected('/packages/member/mip-ai/index', 'EDIT_PROFILE') },
-  openMatching() { void this.openProtected('/packages/member/mip-opportunity-matching/index', 'INTERACT') },
-  openOpportunitySettings() { void this.openProtected('/packages/member/mip-opportunity-settings/index', 'INTERACT') },
   openCooperationList() { void this.openProtected('/packages/member/mip-cooperation/list/index?mine=1', 'INTERACT') },
   openCaseList() { void this.openProtected('/packages/member/mip-cases/list/index?mine=1', 'INTERACT') },
   openOpportunityList() { void this.openProtected('/packages/member/mip-opportunities/mine/index', 'INTERACT') },
-  openBenefits() { caseNavigateTo({ url: '/packages/member/benefits/index' }) },
   openSettings() { caseNavigateTo({ url: '/packages/member/privacy/index' }) },
-  openPrivacy() { caseNavigateTo({ url: '/packages/member/privacy/index' }) },
-  openHelp() { caseNavigateTo({ url: '/packages/member/help/index' }) },
-  openAbout() { caseNavigateTo({ url: '/packages/member/about/index' }) },
+  openServices() { caseNavigateTo({ url: '/packages/member/mip-services/index' }) },
 
   openCooperation(event: WechatMiniprogram.TouchEvent) {
     const id = String(event.currentTarget.dataset.id || '')
@@ -511,15 +496,9 @@ Page({
     }
   },
 
-  openManagedEvents() {
-    if (this.data.eventManagementVisible) {
-      void this.openProtected('/packages/admin/managed-events/index', 'ENTER_ADMIN', 'admin:enter')
-    }
-  },
-
   openAdmin() {
     if (this.data.adminVisible) {
-      void this.openProtected('/packages/admin/dashboard/index', 'ENTER_ADMIN', 'admin:enter')
+      void this.openProtected('/packages/admin/dashboard/index', 'ENTER_ADMIN')
     }
   },
 })

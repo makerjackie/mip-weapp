@@ -1,4 +1,4 @@
-import { MipAdminError } from './types'
+import { MipAdminError } from './error'
 
 export type AdminEventCatalogKind = 'TYPE' | 'TAG'
 export type AdminEventCatalogStatus = 'ACTIVE' | 'INACTIVE' | 'ARCHIVED'

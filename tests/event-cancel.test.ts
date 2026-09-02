@@ -30,45 +30,19 @@ describe('MIP event cancellation convergence contract', () => {
 
   it('requires a reason, expected version, and an explicit confirmation latch', () => {
     const service = read('cloudfunctions/mip-admin-api/domain/events.js')
-    const pageTs = read('src/packages/admin/events/index.ts')
-    const pageWxml = read('src/packages/admin/events/index.wxml')
 
     expect(service).toContain('text(input.reason, 300, { required: true, label: \'取消原因\' })')
     expect(service).toContain('const version = expectedVersion(input.expectedVersion)')
-    expect(pageTs).toContain('confirmCancelEvent')
-    expect(pageTs).toMatch(/cancelBusy: true[\s\S]*?wx\.showModal/)
-    expect(pageTs).toContain('status: \'CANCELLED\'')
-    expect(pageTs).toContain('expectedVersion: this.data.version')
-    expect(pageWxml).toContain('取消原因（必填）')
-    expect(pageWxml).toContain('cancelDialogVisible && !cancelConflict')
-  })
-
-  it('does not adopt a new version after conflict without reloading the event', () => {
-    const pageTs = read('src/packages/admin/events/index.ts')
-    const pageWxml = read('src/packages/admin/events/index.wxml')
-
-    expect(pageTs).toContain('cancelConflict: true')
-    expect(pageTs).toContain('cancelDialogVisible: false')
-    expect(pageTs).toContain('refreshAfterCancelConflict')
-    expect(pageTs).toContain('this.setData({ cancelReason: \'\' })')
-    expect(pageTs).not.toMatch(/cancelEventVersion:\s*latest\.version/)
-    expect(pageWxml).toContain('refreshAfterCancelConflict')
   })
 
   it('dispatches committed refund ids and exposes recoverable provider status in the order page', () => {
     const events = read('cloudfunctions/mip-admin-api/domain/events.js')
     const service = read('cloudfunctions/mip-admin-api/domain/service.js')
     const gateway = read('src/modules/mip-admin/cloudbase-gateway.ts')
-    const pageTs = read('src/packages/admin/orders/index.ts')
-    const pageWxml = read('src/packages/admin/orders/index.wxml')
 
     expect(events).toMatch(/const result = await repository\.changeEventStatus\([\s\S]*?const refundIds = result\.idempotent \? \[\] : \(Array\.isArray\(result\.refundIds\)/)
     expect(events).toContain('dispatchCancellationRefunds(context.caller.appId, refundIds)')
     expect(service).toContain('dispatchCancellationRefunds: dispatchRefundBatchSafely')
     expect(gateway).toContain('call(\'mip.admin.refunds.retry\', { refundId })')
-    expect(pageTs).toContain('orders.retryRefund(refundId)')
-    expect(pageTs).toContain('\'退款处理失败\'')
-    expect(pageWxml).toContain('item.status === \'REFUND_PENDING\'')
-    expect(pageWxml).toContain('item.refundStatus === \'PROVIDER_CREATED\'')
   })
 })

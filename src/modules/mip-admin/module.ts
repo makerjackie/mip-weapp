@@ -14,4 +14,4 @@ const pendingExportStore = createPendingAdminExportStore({
 
 export const mipAdminModule = createMipAdminModule(cloudbaseMipAdminGateway, { pendingExportStore })
 
-registerMipLocalUserCache(() => mipAdminModule.invalidate())
+registerMipLocalUserCache(() => mipAdminModule.runtime.invalidate())

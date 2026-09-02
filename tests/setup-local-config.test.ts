@@ -9,7 +9,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 describe('local DevTools condition generation', () => {
   const project = JSON.parse(fs.readFileSync(path.join(root, 'config/project.json'), 'utf8'))
 
-  it('generates every tracked route including the activity operations pages', () => {
+  it('generates every tracked route including the onsite workbench pages', () => {
     const config = buildDevtoolsPrivateConfig({
       appid: 'local-test-appid',
       existing: {
@@ -24,7 +24,12 @@ describe('local DevTools condition generation', () => {
     expect(routes).toHaveLength(project.routes.length)
     expect(new Set(routes).size).toBe(project.routes.length)
     expect(routes).toContain('packages/member/mip-events/comments/index')
-    expect(routes).toContain('packages/admin/event-comments/index')
+    expect(routes.filter(route => route.startsWith('packages/admin/'))).toEqual([
+      'packages/admin/dashboard/index',
+      'packages/admin/managed-events/index',
+      'packages/admin/event-console/index',
+      'packages/admin/event-registrations/index',
+    ])
     expect(config.condition.plugin.list).toEqual([{ name: 'preserved' }])
     expect(config.setting).toMatchObject({ compileHotReLoad: true, urlCheck: false })
   })

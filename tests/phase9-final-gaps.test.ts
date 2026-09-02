@@ -88,24 +88,10 @@ describe('phase9 final gap contracts', () => {
     expect(statusFlow).not.toContain('input.startsAt')
   })
 
-  it('cancel version conflict locks submit and requires explicit refresh + reopen', () => {
-    const pageTs = read('src/packages/admin/events/index.ts')
-    const pageWxml = read('src/packages/admin/events/index.wxml')
-
-    expect(pageTs).toContain('cancelConflict: true')
-    expect(pageTs).toContain('refreshAfterCancelConflict')
-    expect(pageTs).not.toMatch(/cancelEventVersion:\s*latest\.version/)
-    expect(pageTs).toMatch(/isAdminVersionConflict\(error\)[\s\S]*?cancelDialogVisible: false[\s\S]*?cancelConflict: true/)
-    expect(pageTs).toMatch(/cancelBusy: true[\s\S]*?showModal/)
-    expect(pageWxml).toContain('refreshAfterCancelConflict')
-    expect(pageWxml).toContain('cancelDialogVisible && !cancelConflict')
-  })
-
   it('default MIP roster exposes only phoneBound until an audited phone request', () => {
     const types = read('src/modules/mip-admin/types.ts')
     const service = read('cloudfunctions/mip-admin-api/domain/events.js')
     const repository = read('cloudfunctions/mip-admin-api/domain/repositories/events.js')
-    const wxml = read('src/packages/admin/event-registrations/index.wxml')
     const rosterType = types.slice(
       types.indexOf('export interface AdminRosterItem'),
       types.indexOf('export interface AdminRoleItem'),
@@ -124,9 +110,6 @@ describe('phase9 final gap contracts', () => {
     expect(rosterService).toContain('admin.events.roster.phone.view')
     expect(rosterService).toContain('const { phoneCiphertext, userId, ...safe } = item')
     expect(rosterService).not.toContain('phoneMasked')
-    expect(wxml).toContain('手机已绑定')
-    expect(wxml).toContain('wx:if="{{includePhone}}"')
-    expect(wxml).not.toContain('phoneMasked')
   })
 
   it('keeps roster reads app/event scoped with deterministic ordering', () => {
@@ -143,17 +126,11 @@ describe('phase9 final gap contracts', () => {
     expect(roster).not.toMatch(/ORDER BY\s+\$\{/)
   })
 
-  it('real pages latch confirmations and drop superseded roster responses', () => {
-    const events = read('src/packages/admin/events/index.ts')
+  it('onsite roster latches confirmations and drops superseded responses', () => {
     const roster = read('src/packages/admin/event-registrations/index.ts')
     const eventDetail = read('src/packages/member/mip-events/detail/index.ts')
-    const profiles = read('src/packages/admin/profiles/index.ts')
-    const orders = read('src/packages/admin/orders/index.ts')
 
-    expect(events).toMatch(/cancelBusy: true[\s\S]*?showModal/)
     expect(eventDetail).toMatch(/busy: true[\s\S]*?showModal/)
-    expect(profiles).toMatch(/processingId: userId[\s\S]*?showModal/)
-    expect(orders).toMatch(/processingId: orderId[\s\S]*?showModal/)
     expect(roster).toMatch(/this\.confirmationBusy = true[\s\S]*?showModal/)
     expect(roster).toContain('requestSeq: 0')
     expect(roster).toMatch(/if \(seq !== this\.requestSeq\)/)

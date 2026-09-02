@@ -1,6 +1,6 @@
 import type { SuperCaseSummary } from '../../../../modules/mip-cases'
 import { superCaseModule } from '../../../../modules/mip-cases'
-import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../../platform/navigation/client'
 
 interface SuperCaseListItem extends SuperCaseSummary {
   publishedText: string

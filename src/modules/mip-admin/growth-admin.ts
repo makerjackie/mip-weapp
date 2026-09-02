@@ -1,5 +1,23 @@
 import type { MipAdminGateway } from './types'
 
+export type GrowthAdminGateway = Pick<
+  MipAdminGateway,
+  | 'listGrowthLevels'
+  | 'listGrowthBenefits'
+  | 'listGrowthRules'
+  | 'listGrowthEntries'
+  | 'listGrowthLevelTransitions'
+  | 'listBadges'
+  | 'listBadgeAwards'
+  | 'adjustGrowth'
+  | 'saveGrowthLevel'
+  | 'saveGrowthBenefit'
+  | 'saveGrowthRule'
+  | 'saveBadge'
+  | 'grantBadge'
+  | 'revokeBadge'
+>
+
 interface GrowthAdminCache {
   query: <T>(key: string, loader: () => Promise<T>, options?: { force?: boolean }) => Promise<T>
   invalidate: (prefix?: string) => void
@@ -46,7 +64,7 @@ const cacheKeys = {
 } as const
 
 export function createMipGrowthAdmin(
-  gateway: MipAdminGateway,
+  gateway: GrowthAdminGateway,
   cache: GrowthAdminCache,
 ): MipGrowthAdmin {
   const mutate = async <T>(prefixes: string[], work: () => Promise<T>) => {

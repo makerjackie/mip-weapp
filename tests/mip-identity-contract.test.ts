@@ -22,11 +22,11 @@ const cloudHarness = vi.hoisted(() => ({
   callFunction: vi.fn(),
 }))
 
-vi.mock('../src/modules/platform/cloudbase', () => ({
+vi.mock('../src/platform/cloudbase/client', () => ({
   requireCloudClient: vi.fn(async () => ({ callFunction: cloudHarness.callFunction })),
 }))
 
-vi.mock('../src/modules/platform/cloud-media', () => ({
+vi.mock('../src/platform/storage/cloud-media', () => ({
   resolveCloudFileUrls: (value: unknown) => value,
 }))
 

@@ -1,6 +1,29 @@
-import type { ProfileOrganization } from '../../../modules/mip-identity'
+import type { EditableProfileOrganization } from '../../../modules/mip-identity'
+import {
+  appendEditableOrganization,
+  createEditableOrganizations,
+  MAX_PROFILE_ORGANIZATIONS,
+  moveEditableOrganization,
+  normalizeEditableOrganizations,
+  removeEditableOrganization,
+  updateEditableOrganization,
+  validateEditableOrganizations,
+} from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { cardPreviewIdentity } from './preview'
+
+type ExperienceCollection = 'companies' | 'organizations'
+
+let experienceId = 0
+
+function nextExperienceId(kind: ExperienceCollection) {
+  experienceId += 1
+  return `${kind}-${experienceId}`
+}
+
+function experienceCollection(value: unknown): ExperienceCollection | null {
+  return value === 'companies' || value === 'organizations' ? value : null
+}
 
 Page({
   data: {
@@ -12,12 +35,9 @@ Page({
     previewAvatarUrl: '',
     previewCodeUrl: '',
     realName: '',
-    company: '',
-    role: '',
-    remainingCompanies: [] as ProfileOrganization[],
-    organization: '',
-    organizationRole: '',
-    remainingOrganizations: [] as ProfileOrganization[],
+    companies: [] as EditableProfileOrganization[],
+    organizations: [] as EditableProfileOrganization[],
+    maxOrganizations: MAX_PROFILE_ORGANIZATIONS,
     phoneBound: false,
     phoneBinding: false,
     phoneMasked: '',
@@ -53,8 +73,6 @@ Page({
         mipIdentityModule.getMyProfileCardCode().catch(() => ({ codeUrl: '' })),
       ])
       const preview = cardPreviewIdentity(profile)
-      const company = profile.companies[0]
-      const organization = profile.organizations[0]
       const contact = profile.privateContact
       this.setData({
         state: 'ready',
@@ -65,12 +83,8 @@ Page({
         previewAvatarUrl: profile.avatarUrl || '',
         previewCodeUrl: cardCode.codeUrl,
         realName: profile.realName,
-        company: company?.name || '',
-        role: company?.role || '',
-        remainingCompanies: profile.companies.slice(1),
-        organization: organization?.name || '',
-        organizationRole: organization?.role || '',
-        remainingOrganizations: profile.organizations.slice(1),
+        companies: createEditableOrganizations(profile.companies, () => nextExperienceId('companies')),
+        organizations: createEditableOrganizations(profile.organizations, () => nextExperienceId('organizations')),
         phoneBound: Boolean(contact?.phoneBound),
         phoneMasked: contact?.phoneMasked || '',
         wechat: contact?.wechat || '',
@@ -89,7 +103,7 @@ Page({
 
   updateText(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const field = String(event.currentTarget.dataset.field || '')
-    if (['realName', 'company', 'role', 'organization', 'organizationRole', 'wechat', 'email', 'address'].includes(field)) {
+    if (['realName', 'wechat', 'email', 'address'].includes(field)) {
       const value = event.detail.value
       const updates: Record<string, string> = { [field]: value }
       if (field === 'realName') {
@@ -101,11 +115,58 @@ Page({
     }
   },
 
-  updateVisibility(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
-    const field = String(event.currentTarget.dataset.field || '')
-    if (['visibilityPhone', 'visibilityWechat', 'visibilityEmail', 'visibilityAddress'].includes(field)) {
-      this.setData({ [field]: Boolean(event.detail.value) })
+  addExperience(event: WechatMiniprogram.TouchEvent) {
+    const kind = experienceCollection(event.currentTarget.dataset.kind)
+    if (!kind) {
+      return
     }
+    const items = this.data[kind]
+    if (items.length >= MAX_PROFILE_ORGANIZATIONS) {
+      this.setData({ message: `${kind === 'companies' ? '公司' : '组织'}经历最多添加 ${MAX_PROFILE_ORGANIZATIONS} 条。` })
+      return
+    }
+    this.setData({
+      [kind]: appendEditableOrganization(items, nextExperienceId(kind)),
+      message: '',
+    })
+  },
+
+  updateExperience(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
+    const kind = experienceCollection(event.currentTarget.dataset.kind)
+    const field = event.currentTarget.dataset.field
+    const index = Number(event.currentTarget.dataset.index)
+    if (!kind || (field !== 'name' && field !== 'role') || !Number.isInteger(index)) {
+      return
+    }
+    this.setData({
+      [kind]: updateEditableOrganization(this.data[kind], index, field, event.detail.value),
+      message: '',
+    })
+  },
+
+  moveExperience(event: WechatMiniprogram.TouchEvent) {
+    const kind = experienceCollection(event.currentTarget.dataset.kind)
+    const index = Number(event.currentTarget.dataset.index)
+    const direction = Number(event.currentTarget.dataset.direction)
+    if (!kind || !Number.isInteger(index) || (direction !== -1 && direction !== 1)) {
+      return
+    }
+    this.setData({
+      [kind]: moveEditableOrganization(this.data[kind], index, direction),
+      message: '',
+    })
+  },
+
+  removeExperience(event: WechatMiniprogram.TouchEvent) {
+    const kind = experienceCollection(event.currentTarget.dataset.kind)
+    const index = Number(event.currentTarget.dataset.index)
+    if (!kind || !Number.isInteger(index)) {
+      return
+    }
+    this.setData({
+      [kind]: removeEditableOrganization(this.data[kind], index),
+      message: '',
+    })
   },
 
   async bindPhone(event: WechatMiniprogram.CustomEvent<{ code?: string, errMsg?: string }>) {
@@ -139,21 +200,20 @@ Page({
     if (this.data.saving || this.data.phoneBinding) {
       return
     }
+    const experienceError = validateEditableOrganizations(this.data.companies, '公司')
+      || validateEditableOrganizations(this.data.organizations, '组织')
+    if (experienceError) {
+      this.setData({ message: experienceError })
+      wx.showToast({ title: experienceError, icon: 'none' })
+      return
+    }
     this.setData({ saving: true, message: '' })
     try {
-      const primaryCompany = { name: this.data.company.trim(), role: this.data.role.trim() }
-      const companies = primaryCompany.name
-        ? [primaryCompany, ...this.data.remainingCompanies]
-        : this.data.remainingCompanies
-      const primaryOrganization = { name: this.data.organization.trim(), role: this.data.organizationRole.trim() }
-      const organizations = primaryOrganization.name
-        ? [primaryOrganization, ...this.data.remainingOrganizations]
-        : this.data.remainingOrganizations
       await mipIdentityModule.updateCard({
         expectedVersion: this.data.profileVersion,
         realName: this.data.realName,
-        companies,
-        organizations,
+        companies: normalizeEditableOrganizations(this.data.companies),
+        organizations: normalizeEditableOrganizations(this.data.organizations),
         wechat: this.data.wechat,
         email: this.data.email,
         address: this.data.address,

@@ -1,11 +1,8 @@
 import type { MipGrowthAdmin } from '../src/modules/mip-admin/growth-admin'
 import type { MipAdminGateway } from '../src/modules/mip-admin/types'
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { createMipAdminModule } from '../src/modules/mip-admin/client'
 import { MipAdminError } from '../src/modules/mip-admin/types'
-import { growthAdminActionFailure } from '../src/packages/admin/growth-entries/action-state'
 
 function createHarness() {
   const spies = {
@@ -131,9 +128,9 @@ describe('MIP admin growth facade', () => {
   it('keeps legacy query aliases on the same cache for remaining callers', async () => {
     const { module, spies } = createHarness()
 
-    await module.listGrowthLevels()
     await module.growth.listLevels()
-    await module.listBadgeAwards({ status: 'ACTIVE' })
+    await module.growth.listLevels()
+    await module.growth.listBadgeAwards({ status: 'ACTIVE' })
     await module.growth.listBadgeAwards({ status: 'ACTIVE' })
 
     expect(spies.listGrowthLevels).toHaveBeenCalledTimes(1)
@@ -187,9 +184,6 @@ describe('MIP admin growth facade', () => {
     for (const query of querySpies) {
       expect(spies[query]).toHaveBeenCalledTimes(1)
     }
-    expect(growthAdminActionFailure(conflict, '等级保存失败')).toEqual({
-      message: '成长等级已被其他管理员更新',
-    })
   })
 
   it('passes permission failures through to page state without replacement', async () => {
@@ -199,39 +193,5 @@ describe('MIP admin growth facade', () => {
 
     const error = await module.growth.grantBadge(grantBadgeInput).catch(caught => caught)
     expect(error).toBe(forbidden)
-    expect(growthAdminActionFailure(error, '勋章授予失败')).toEqual({
-      message: '当前账号不能授予勋章',
-    })
-  })
-
-  it('keeps all five pages behind the growth facade', () => {
-    const root = path.resolve(import.meta.dirname, '..')
-    const pages = [
-      'src/packages/admin/growth-entries/index.ts',
-      'src/packages/admin/growth-levels/index.ts',
-      'src/packages/admin/growth-benefits/index.ts',
-      'src/packages/admin/growth-rules/index.ts',
-      'src/packages/admin/badges/index.ts',
-    ]
-    const sources: string[] = []
-    for (const page of pages) {
-      const source = fs.readFileSync(path.join(root, page), 'utf8')
-      sources.push(source)
-      expect(source).toContain('mipAdminModule.growth.')
-      expect(source).not.toContain('mipAdminModule.gateway')
-      expect(source).not.toContain('mipAdminModule.mutate')
-    }
-    const mutationCalls = [...sources.join('\n').matchAll(
-      /mipAdminModule\.growth\.(adjust|saveLevel|saveBenefit|saveRule|saveBadge|grantBadge|revokeBadge)\(/g,
-    )].map(match => match[1])
-    expect(mutationCalls.sort()).toEqual([
-      'adjust',
-      'grantBadge',
-      'revokeBadge',
-      'saveBadge',
-      'saveBenefit',
-      'saveLevel',
-      'saveRule',
-    ].sort())
   })
 })

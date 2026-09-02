@@ -2,9 +2,9 @@ import type { MipGrowthTransport } from '../src/modules/mip-growth/cloudbase-gat
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createMipGrowthGateway } from '../src/modules/mip-growth/cloudbase-gateway'
 import { resolveMipGrowthRetryOptions } from '../src/modules/mip-growth/retry-policy'
-import { requireCloudClient } from '../src/modules/platform/cloudbase'
+import { requireCloudClient } from '../src/platform/cloudbase/client'
 
-vi.mock('../src/modules/platform/cloudbase', () => ({
+vi.mock('../src/platform/cloudbase/client', () => ({
   requireCloudClient: vi.fn(),
 }))
 

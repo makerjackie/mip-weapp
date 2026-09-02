@@ -90,11 +90,11 @@ describe('MIP admin client module', () => {
   it('caches reads and invalidates them after a mutation', async () => {
     const source = gateway()
     const module = createMipAdminModule(source)
-    await module.listUsers({ filters: { kind: 'PLAYER' } })
-    await module.listUsers({ filters: { kind: 'PLAYER' } })
+    await module.users.list({ filters: { kind: 'PLAYER' } })
+    await module.users.list({ filters: { kind: 'PLAYER' } })
     expect(source.listUsers).toHaveBeenCalledTimes(1)
     await module.users.update({ userId: 'user-a', expectedVersion: 1, fields: { headline: '顾问' } })
-    await module.listUsers({ filters: { kind: 'PLAYER' } })
+    await module.users.list({ filters: { kind: 'PLAYER' } })
     expect(source.listUsers).toHaveBeenCalledTimes(2)
     expect(source.updateUser).toHaveBeenCalledTimes(1)
   })
@@ -102,8 +102,8 @@ describe('MIP admin client module', () => {
   it('caches the branch directory and invalidates it after a successful mutation', async () => {
     const source = gateway()
     const module = createMipAdminModule(source)
-    await module.listBranches()
-    await module.listBranches()
+    await module.governance.listBranches()
+    await module.governance.listBranches()
     expect(source.listBranches).toHaveBeenCalledTimes(1)
     await module.governance.createBranch({
       branchKey: 'guangzhou',
@@ -111,7 +111,7 @@ describe('MIP admin client module', () => {
       cityName: '广州',
       summary: '广州城市分会',
     })
-    await module.listBranches()
+    await module.governance.listBranches()
     expect(source.listBranches).toHaveBeenCalledTimes(2)
     expect(source.createBranch).toHaveBeenCalledTimes(1)
   })
@@ -125,21 +125,21 @@ describe('MIP admin client module', () => {
   it('caches each community report status and invalidates the list after a mutation', async () => {
     const source = gateway()
     const module = createMipAdminModule(source)
-    await module.listCommunityReports('PENDING')
+    await module.community.listReports('PENDING')
     await module.community.listReports('PENDING')
     await module.community.listReports('REVIEWING')
     expect(source.listCommunityReports).toHaveBeenCalledTimes(2)
     await module.community.claimReport({ reportId: 'report-a', expectedVersion: 1, reason: '开始审核' })
-    await module.listCommunityReports('PENDING')
+    await module.community.listReports('PENDING')
     expect(source.listCommunityReports).toHaveBeenCalledTimes(3)
   })
 
   it('caches operational exception reads by server-side filters', async () => {
     const source = gateway()
     const module = createMipAdminModule(source)
-    await module.listOperationalExceptions({ type: 'PAYMENT', status: 'FAILED' })
-    await module.listOperationalExceptions({ type: 'PAYMENT', status: 'FAILED' })
-    await module.listOperationalExceptions({ type: 'REFUND', status: 'FAILED' })
+    await module.governance.listOperationalExceptions({ type: 'PAYMENT', status: 'FAILED' })
+    await module.governance.listOperationalExceptions({ type: 'PAYMENT', status: 'FAILED' })
+    await module.governance.listOperationalExceptions({ type: 'REFUND', status: 'FAILED' })
     expect(source.listOperationalExceptions).toHaveBeenCalledTimes(2)
   })
 

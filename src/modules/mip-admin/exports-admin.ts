@@ -1,6 +1,5 @@
-import type { ExportProgress, ExportSessionFence } from './export-download'
+import type { ExportAdminGateway, ExportProgress, ExportSessionFence } from './export-download'
 import type { PendingAdminExportStore } from './pending-export'
-import type { MipAdminGateway } from './types'
 import {
   createAndOpenExport,
   getPendingAdminExportStatus,
@@ -26,7 +25,7 @@ export interface MipExportsAdmin {
 }
 
 export function createMipExportsAdmin(
-  gateway: MipAdminGateway,
+  gateway: ExportAdminGateway,
   cache: ExportsAdminCache,
   pendingStore?: PendingAdminExportStore,
   beginSession?: () => ExportSessionFence,

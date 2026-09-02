@@ -1,5 +1,5 @@
 import { runtimeConfig } from '../../../../config/runtime'
-import { mipKnowledgeModule } from '../../../../modules/mip-knowledge/module'
+import { mipKnowledgeModule } from '../../../../modules/mip-knowledge/client'
 import { resolveKnowledgeWebviewUrl } from '../../../../modules/mip-knowledge/webview-url'
 
 Page({

@@ -1,4 +1,4 @@
-import { MipAdminError } from './types'
+import { MipAdminError } from './error'
 
 export type AdminUserContentKind = 'COOPERATION_CARD' | 'SUPER_CASE'
 export type AdminUserContentStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'ARCHIVED'

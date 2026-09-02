@@ -1,9 +1,5 @@
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { parseAdminUnifiedBenefitLedgerPage } from '../src/modules/mip-admin/benefit-ledger'
-
-const root = path.resolve(import.meta.dirname, '..')
 
 function item() {
   return {
@@ -37,15 +33,5 @@ describe('admin unified benefit ledger operator contract', () => {
     })).toThrow('统一权益流水')
     expect(() => parseAdminUnifiedBenefitLedgerPage({ items: [], nextCursor: null, extra: true }))
       .toThrow('统一权益流水')
-  })
-
-  it('exposes the operator filters and state variants without UUID copy', () => {
-    const page = fs.readFileSync(path.join(root, 'src/packages/admin/benefit-ledger/index.wxml'), 'utf8')
-    expect(page).toContain('搜索昵称或玩家编号')
-    expect(page).toContain('暂无权益流水')
-    expect(page).toContain('无权访问统一权益流水')
-    expect(page).toContain('加载更多')
-    expect(page).not.toContain('sourceId')
-    expect(page).not.toContain('UUID')
   })
 })

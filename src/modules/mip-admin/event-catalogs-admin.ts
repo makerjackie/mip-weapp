@@ -1,5 +1,20 @@
 import type { MipAdminGateway } from './types'
 
+export type EventCatalogAdminGateway = Pick<
+  MipAdminGateway,
+  | 'listEventCatalogs'
+  | 'saveEventCatalog'
+  | 'changeEventCatalogStatus'
+  | 'archiveEventCatalog'
+  | 'getEventTagAssignments'
+  | 'replaceEventTagAssignments'
+  | 'listEventVideoRecaps'
+  | 'getEventVideoRecap'
+  | 'saveEventVideoRecap'
+  | 'changeEventVideoRecapStatus'
+  | 'archiveEventVideoRecap'
+>
+
 interface EventCatalogAdminCache {
   query: <T>(key: string, loader: () => Promise<T>, options?: { force?: boolean }) => Promise<T>
   invalidate: (prefix?: string) => void
@@ -40,7 +55,7 @@ const recapKey = 'mip-admin:event-video-recap'
 const tagAssignmentsKey = 'mip-admin:event-tag-assignments'
 
 export function createMipEventCatalogAdmin(
-  gateway: MipAdminGateway,
+  gateway: EventCatalogAdminGateway,
   cache: EventCatalogAdminCache,
 ): MipEventCatalogAdmin {
   const mutate = async <T>(prefixes: readonly string[], work: () => Promise<T>) => {

@@ -1,12 +1,9 @@
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   createAdminMembershipTimelineRequest,
   parseAdminMembershipTimelinePage,
 } from '../src/modules/mip-admin/memberships'
 
-const root = path.resolve(import.meta.dirname, '..')
 const id = (value: number) => `00000000-0000-4000-8000-${String(value).padStart(12, '0')}`
 
 function item(playerNumber: number | null) {
@@ -42,13 +39,8 @@ describe('admin membership ledger operator contract', () => {
       .toThrow('Invalid admin membership timeline user query')
   })
 
-  it('accepts player numbers and keeps raw user identifiers out of the page copy', () => {
+  it('accepts player numbers without exposing raw user identifiers in the DTO', () => {
     expect(parseAdminMembershipTimelinePage({ items: [item(42), item(null)], nextCursor: null }))
       .toMatchObject({ items: [{ user: { playerNumber: 42 } }, { user: { playerNumber: null } }] })
-    const page = fs.readFileSync(path.join(root, 'src/packages/admin/membership-ledger/index.wxml'), 'utf8')
-    expect(page).toContain('搜索昵称或玩家编号')
-    expect(page).toContain('item.user.playerNumber ? \'玩家编号 \'')
-    expect(page).not.toContain('item.user.id')
-    expect(page).not.toContain('UUID')
   })
 })

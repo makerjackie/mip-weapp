@@ -71,8 +71,7 @@
       <view class="profile-action" bind:tap="openSettings"><image class="profile-action-icon" mode="aspectFit" src="/assets/figma/profile/action-settings.svg" /><text>设置</text></view>
     </view>
 
-    <view wx:if="{{eventManagementVisible}}" class="profile-admin-entry" bind:tap="openManagedEvents"><view><view class="profile-more-label">活动管理</view><view class="profile-more-description">查看已授权的活动</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-brand)" /></view>
-    <view wx:if="{{adminVisible}}" class="profile-admin-entry profile-admin-entry--primary" bind:tap="openAdmin"><view><view class="profile-more-label">运营管理</view><view class="profile-more-description">按当前授权范围进入</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-brand)" /></view>
+    <view wx:if="{{adminVisible}}" class="profile-admin-entry profile-admin-entry--primary" bind:tap="openAdmin"><view><view class="profile-more-label">现场工作台</view><view class="profile-more-description">授权活动、签到与网页登录</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-brand)" /></view>
 
     <view class="profile-tabs" aria-role="tablist">
       <view wx:if="{{portfolioTab === 'cooperation'}}" id="profile-tab-cooperation" class="profile-tab profile-tab--active" aria-role="tab" aria-selected="true" data-tab="cooperation" bind:tap="changePortfolioTab">合作卡</view>
@@ -112,29 +111,16 @@
       </view>
     </block>
 
-    <view class="profile-more-title">更多服务</view>
-    <view class="profile-more">
-      <view class="profile-more-item" bind:tap="openGame"><view><view class="profile-more-label">团队 PK</view><view class="profile-more-description">查看赛季、队伍和排行榜</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
-      <view class="profile-more-item" bind:tap="openBranches"><view><view class="profile-more-label">主分会</view><view class="profile-more-description">{{primaryBranchName}}</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
-      <view class="profile-more-item" bind:tap="openHeartHistory"><view><view class="profile-more-label">心动记录</view><view class="profile-more-description">查看我点过和对我心动的人</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
-      <view class="profile-more-item" bind:tap="openDigitalAvatar"><view><view class="profile-more-label">数字分身</view><view class="profile-more-description">生成并保存头像图片</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
-      <view class="profile-more-item" bind:tap="openAiDrafts"><view><view class="profile-more-label">AI 草稿</view><view class="profile-more-description">整理档案、合作卡和案例草稿</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
-      <view class="profile-more-item" bind:tap="openMatching"><view><view class="profile-more-label">机会撮合</view><view class="profile-more-description">查看人才和项目推荐</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
-      <view class="profile-more-item" aria-role="button" bind:tap="openNotifications">
-        <view>
-          <view class="profile-more-label">站内消息</view>
-          <view wx:if="{{notificationUnreadCount > 0}}" class="profile-more-description">{{notificationUnreadCount}} 条未读</view>
-          <view wx:else class="profile-more-description">暂无未读消息</view>
-        </view>
-        <view class="profile-more-trailing">
-          <view wx:if="{{notificationUnreadCount > 0}}" class="profile-unread-badge">{{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}}</view>
-          <t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" />
-        </view>
+    <view class="profile-services-entry" aria-role="button" bind:tap="openServices">
+      <view class="profile-services-icon"><t-icon name="grid-view" size="42rpx" color="var(--color-brand)" /></view>
+      <view class="profile-services-copy">
+        <view class="profile-more-label">全部服务</view>
+        <view class="profile-more-description">消息、互动、工具与支持</view>
       </view>
-      <view class="profile-more-item" bind:tap="openOpportunitySettings"><view><view class="profile-more-label">消息与机会权限</view><view class="profile-more-description">管理评论、撮合和热点通知</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
-      <view class="profile-more-item" bind:tap="openBenefits"><view><view class="profile-more-label">会员权益</view><view wx:if="{{membershipEndsText}}" class="profile-more-description">有效期至 {{membershipEndsText}}</view></view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
-      <view class="profile-more-item" bind:tap="openHelp"><view class="profile-more-label">帮助与客服</view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
-      <view class="profile-more-item profile-more-item--last" bind:tap="openAbout"><view class="profile-more-label">关于 MIP</view><t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" /></view>
+      <view class="profile-services-trailing">
+        <view wx:if="{{notificationUnreadCount > 0}}" class="profile-unread-badge">{{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}}</view>
+        <t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" />
+      </view>
     </view>
 
     <view wx:if="{{message}}" class="profile-message">{{message}}</view>

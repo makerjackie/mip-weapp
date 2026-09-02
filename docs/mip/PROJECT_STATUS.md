@@ -6,22 +6,22 @@
 
 ## 结论
 
-当前产品形态为“小程序用户端 + 小程序管理分包 + 独立 React Web 管理端”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
+当前产品形态为“小程序用户端 + 四路由小程序现场工作台 + React Web 主后台”。会员、活动、机会、成长、任务、游戏、内容、消息、订单、支付和运营管理已经形成统一的服务端事实与本地实现底座，不需要整体重写。
 
-仓库清单当前为 110 条小程序路由、58 个锁定迁移、187 个渠道中立管理 operation（80 查询、107 写）和 16 个数据库核心函数。Web 使用其中 80 个查询与 80 个受审 mutation。以上数字只描述当前代码合同，不自动证明运行时、云端或生产通过。
+仓库清单当前为 68 条小程序路由、59 个锁定迁移、187 个渠道中立管理 operation（80 查询、107 写）和 16 个数据库核心函数。Web 使用其中 80 个查询与 80 个受审 mutation。以上数字只描述当前代码合同，不自动证明运行时、云端或生产通过。
 
 ## 仓库事实
 
 | 范围 | 当前事实 | 权威来源 |
 | --- | --- | --- |
-| 小程序路由 | 110 条：5 条主包、56 条用户分包、49 条管理分包 | `config/runtime-pages.json`、`src/app.json` |
-| 数据库 | 58 个追加迁移；目标 runtime 表清单为 124 张 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
+| 小程序路由 | 68 条：5 条主包、59 条用户分包、4 条管理分包（现场工作台） | `config/runtime-pages.json`、`src/app.json` |
+| 数据库 | 59 个追加迁移；目标 runtime 表清单为 124 张 | `database/mysql/mip/migrations.lock.json`、迁移生成清单 |
 | 管理合同 | 187 个 operation：80 查询、107 写 | `cloudfunctions/mip-admin-api/domain/public-operation-contract.js` |
 | Web 开放范围 | 80 查询、80 个受审 mutation | `cloudfunctions/mip-admin-api/lib/web-bff-auth.js` |
 | 云函数 | 23 个 `mip-*` 函数目录；数据库核心部署清单为 16 个函数 | `cloudfunctions/`、部署清单 |
 | 调度 | 消息和知识采集各有独立 scheduler；均不属于数据库核心函数 | `mip-message-scheduler`、`mip-knowledge-scheduler` 及部署脚本 |
 | Web 页面 | 14 个一级页面、8 类详情 | `admin-web/src/` 的路由与页面合同 |
-| 管理端形态 | 小程序管理分包与 React Web 同时存在，共享管理 operation 和服务端事实 | `src/packages/admin/`、`admin-web/`、`packages/admin-contracts/` |
+| 管理端形态 | React Web 是唯一完整后台；小程序现场工作台只保留 Web 登录确认、已授权活动、签到码与海报、名单与签到，共享管理 operation 和服务端事实 | `src/packages/admin/`、`admin-web/`、`packages/admin-contracts/` |
 
 ## 环境状态
 
@@ -29,7 +29,7 @@
 | --- | --- | --- |
 | MIP staging | 58 个迁移已应用，124 张 runtime 表完成隔离和最小权限读回；核心函数读回通过 | 不代表正式生产环境、正式 AppID 或真实支付通过 |
 | React Web 生产 | `https://mipmini.01mvp.com/` 已有 14/14 一级页面登录态读取证据；Banner JPEG 上传后以 `INACTIVE` 保存并软删除；无手机号、零行用户导出完成文件完整性与一次性消费验证 | 不代表全部 mutation、全部媒体用途、非空/含手机号导出、支付或外部消息通过 |
-| 小程序运行时 | 路由与代表旅程有过本地开发者工具执行记录，但原报告位于被 Git 忽略的 `.tmp/`，不作为仓库权威证据 | 不能据此声明当前 checkout、真机或 Mac/Windows 微信客户端通过 |
+| 小程序运行时 | 旧完整路由与代表旅程有过本地开发者工具执行记录，但原报告位于被 Git 忽略的 `.tmp/`，不作为当前 68 路由权威证据 | 不能据此声明当前 checkout 或现场真机通过 |
 | 正式小程序 | 正式 AppID、商户、回调、通知、AI/provider 和真机能力仍待验收 | 不能用 staging、浏览器或开发者工具结果代替 |
 
 ## 已形成稳定底座
@@ -40,15 +40,15 @@
 - `mip_*` 表、`mip/` 对象路径、函数名和部署清单与共享环境中的其他项目隔离。
 - 支付 ledger、退款、outbox、站内消息和媒体安全已有代码及聚焦测试。
 - 管理端使用渠道中立 DTO、错误合同、trusted principal、transport 和 operation registry。
-- React Web 已迁入 `admin-web/`，独立构建、独立部署，并与小程序管理端共享服务端合同。
+- React Web 已迁入 `admin-web/`，独立构建、独立部署，并与小程序现场工作台共享服务端合同。
 - 消息排期和知识采集分别使用不连接 MySQL 的滚动单次 scheduler；worker 不安装高频定时器。
 
 ## 当前缺口
 
 ### 证据与运行环境
 
-- 当前 checkout 缺少可提交的 110 路由完整运行报告；下一次完整运行验收应把摘要、环境、提交号和必要截图整理到 `docs/mip/evidence/`，不再只引用 `.tmp/`。
-- 管理端仍需 Mac 和 Windows 微信客户端的发布版本验收。
+- 当前 checkout 缺少可提交的 68 路由完整运行报告；下一次完整运行验收应把摘要、环境、提交号和必要截图整理到 `docs/mip/evidence/`，不再只引用 `.tmp/`。
+- 小程序现场工作台仍需真实设备完成 Web 登录确认、签到码、扫码、海报保存、手工签到和受控撤销验收；React Web 继续按浏览器桌面和手机视口验收。
 - Figma 代表 frame 已固定，但仍需与当前实现做同尺寸、逐屏差异验收。
 - staging 的 58/124 读回需要在后续环境变更时重新生成，不得继续沿用旧日期结论。
 
@@ -63,7 +63,7 @@
 
 - [当前 React Web 线上验收](evidence/admin-web-live-2026-08-28-react/README.md)
 - [早期 React Web 线上证据](evidence/admin-web-live-2026-08-28/README.md)（只作历史追溯）
-- [管理端响应式密度验收](evidence/admin-density-2026-08-26/README.md)
+- [旧小程序完整管理端响应式密度验收](evidence/admin-density-2026-08-26/README.md)（只作历史追溯，不证明当前现场工作台）
 - [Figma 固定证据](evidence/figma-2026-08-25/README.md)
 
 证据的适用层级和外推限制以 [ACCEPTANCE.md](ACCEPTANCE.md) 为准。

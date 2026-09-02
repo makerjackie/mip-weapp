@@ -1,3 +1,4 @@
+import type { AdminOperationAction } from './request-contract'
 import type { AdminTransport } from './transport'
 import type {
   AdminBranch,
@@ -19,7 +20,7 @@ import type {
   AdminWebLoginConfirmation,
   MipAdminGateway,
 } from './types'
-import { resolveCloudFileUrls } from '../platform/cloud-media'
+import { resolveCloudFileUrls } from '../../platform/storage/cloud-media'
 import {
   parseAdminAnnouncementDetail,
   parseAdminAnnouncementPage,
@@ -30,6 +31,7 @@ import { cloudbaseAdminTransport } from './cloudbase-transport'
 import {
   parseDashboardOverview,
 } from './dashboard-overview'
+import { MipAdminError } from './error'
 import {
   createAdminEventCatalogArchiveRequest,
   createAdminEventCatalogListRequest,
@@ -92,7 +94,6 @@ import {
 import { parseAdminOrderDetail, parseAdminOrderPage, parseAdminRosterPage } from './order-roster'
 import { parseAdminPaymentAttemptPage } from './payment-attempts'
 import { createAdminRequest } from './request-contract'
-import { MipAdminError } from './types'
 import {
   parseAdminUserContentArchiveMutation,
   parseAdminUserContentDetail,
@@ -684,7 +685,7 @@ function parseEventAlbumPage(value: unknown) {
 }
 
 export function createMipAdminGateway(transport: AdminTransport): MipAdminGateway {
-  const call = <T>(action: string, data: Record<string, unknown> = {}) => (
+  const call = <T>(action: AdminOperationAction, data: Record<string, unknown> = {}) => (
     transport.request<T>(createAdminRequest(action, data))
   )
   return {

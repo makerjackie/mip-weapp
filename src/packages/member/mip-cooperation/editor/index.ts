@@ -5,7 +5,7 @@ import { cooperationAbilityDimensions, cooperationRoles } from '../../../../conf
 import { aiObject, aiText } from '../../../../modules/mip-ai/editor'
 import { loadAiEditorDraft } from '../../../../modules/mip-ai/editor-loader'
 import { cooperationModule } from '../../../../modules/mip-cooperation'
-import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../../platform/navigation/client'
 
 interface RoleOption { key: CooperationRoleKey, name: string }
 interface FieldView { key: string, label: string, placeholder: string, value: string, input: string }

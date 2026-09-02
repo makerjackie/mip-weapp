@@ -1,4 +1,4 @@
-import { MipAdminError } from './types'
+import { MipAdminError } from './error'
 
 export type AdminDeliveryReviewSourceType = 'CAMPAIGN_DISPATCH' | 'DELIVERY_TASK'
 export type AdminDeliveryReviewWorkflowFilter = 'ACTIVE' | 'RESOLVED' | 'ALL'

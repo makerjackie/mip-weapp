@@ -5,7 +5,7 @@ import { mipCheckInResumeStore, mipEventsModule } from '../../../modules/mip-eve
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { mipMessagingModule } from '../../../modules/mip-messaging/client'
 import { classifyPaymentResult, formatCny, planTitle, presentOrderStatus } from '../../../modules/mip-shell'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 import { formatLocalDate } from '../../../utils/date'
 
 Page({

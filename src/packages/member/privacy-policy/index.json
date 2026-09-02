@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "隐私政策",
+  "usingComponents": {
+    "app-page-exit": "/components/page-exit/index"
+  }
+}

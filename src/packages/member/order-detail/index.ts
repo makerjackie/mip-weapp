@@ -7,7 +7,7 @@ import { mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { mipMessagingModule } from '../../../modules/mip-messaging/client'
 import { createIntentKey, formatCny, planTitle, presentOrderServiceStatus, presentOrderStatus } from '../../../modules/mip-shell'
-import { caseNavigateTo, caseRedirectTo } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo, caseRedirectTo } from '../../../platform/navigation/client'
 import { formatLocalDateTime } from '../../../utils/date'
 
 function statusDescription(order: CommerceOrder) {

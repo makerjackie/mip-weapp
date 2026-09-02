@@ -1,5 +1,10 @@
 import type { AdminCommunityReportStatus, MipAdminGateway } from './types'
 
+export type CommunityAdminGateway = Pick<
+  MipAdminGateway,
+  'listCommunityReports' | 'claimCommunityReport' | 'closeCommunityReport'
+>
+
 interface CommunityAdminCache {
   query: <T>(key: string, loader: () => Promise<T>, options?: { force?: boolean }) => Promise<T>
   invalidate: (prefix?: string) => void
@@ -20,7 +25,7 @@ const cacheKeys = {
 } as const
 
 export function createMipCommunityAdmin(
-  gateway: MipAdminGateway,
+  gateway: CommunityAdminGateway,
   cache: CommunityAdminCache,
 ): MipCommunityAdmin {
   const mutate = async <T>(work: () => Promise<T>) => {

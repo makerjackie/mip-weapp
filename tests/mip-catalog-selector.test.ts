@@ -27,10 +27,22 @@ const groups = [
 ]
 
 describe('shared catalog selector', () => {
-  it('keeps parent groups non-selectable and projects popular child options', () => {
+  it('keeps popular options in the popular section without repeating them in regular groups', () => {
     const view = catalogSelectorView(groups, ['child-a'])
     expect(view.popularOptions).toEqual([{ id: 'child-a', label: '子行业一', popular: true, selected: true }])
-    expect(view.viewGroups[0].options[0].selected).toBe(true)
+    expect(view.viewGroups).toEqual([{
+      id: 'industry-a',
+      label: '行业一',
+      options: [{ id: 'child-b', label: '子行业二', selected: false }],
+    }])
+  })
+
+  it('omits regular group headings when all of their options are popular', () => {
+    expect(catalogSelectorView([{
+      id: 'popular-only',
+      label: '热门分组',
+      options: [{ id: 'popular-child', label: '热门选项', popular: true }],
+    }], []).viewGroups).toEqual([])
   })
 
   it('removes unknown values and enforces single selection', () => {

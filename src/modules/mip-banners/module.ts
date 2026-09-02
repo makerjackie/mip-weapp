@@ -4,7 +4,7 @@ import type {
   MipBannerMediaPort,
 } from './types'
 import { createQueryCache } from '@weapp/shared/cache'
-import { compressImageToBase64, IMAGE_UPLOAD_POLICIES } from '../platform/image-upload'
+import { compressImageToBase64, IMAGE_UPLOAD_POLICIES } from '../../platform/wechat/image-upload'
 
 export interface MipBannerQueryFacade {
   listActive: (force?: boolean) => ReturnType<MipBannerGateway['listActive']>

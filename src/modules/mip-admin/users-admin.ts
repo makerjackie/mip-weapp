@@ -1,5 +1,15 @@
 import type { MipAdminGateway } from './types'
 
+export type UsersAdminGateway = Pick<
+  MipAdminGateway,
+  | 'listUsers'
+  | 'getUser'
+  | 'listUserInfluence'
+  | 'updateUser'
+  | 'changeUserPrimaryBranch'
+  | 'setUserControl'
+>
+
 interface UsersAdminCache {
   query: <T>(key: string, loader: () => Promise<T>, options?: { force?: boolean }) => Promise<T>
   invalidate: (prefix?: string) => void
@@ -33,7 +43,7 @@ const cacheKeys = {
 } as const
 
 export function createMipUsersAdmin(
-  gateway: MipAdminGateway,
+  gateway: UsersAdminGateway,
   cache: UsersAdminCache,
 ): MipUsersAdmin {
   const mutate = async <T>(work: () => Promise<T>) => {

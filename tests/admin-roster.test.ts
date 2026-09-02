@@ -52,10 +52,10 @@ describe('MIP admin roster contract', () => {
     const source = gateway()
     const module = createMipAdminModule(source)
 
-    await module.listRoster({ eventId: 'event-a', includePhone: true })
-    await module.listRoster({ eventId: 'event-a', includePhone: true })
-    await module.listUsers({ includePhone: true })
-    await module.listUsers({ includePhone: true })
+    await module.events.listRoster({ eventId: 'event-a', includePhone: true })
+    await module.events.listRoster({ eventId: 'event-a', includePhone: true })
+    await module.users.list({ includePhone: true })
+    await module.users.list({ includePhone: true })
 
     expect(source.listRoster).toHaveBeenCalledTimes(2)
     expect(source.listUsers).toHaveBeenCalledTimes(2)
@@ -76,7 +76,7 @@ describe('MIP admin roster contract', () => {
     expect(service).toContain('const { phoneCiphertext, userId, ...safe } = item')
   })
 
-  it('prevents stale responses and keeps original phone data outside page data', () => {
+  it('prevents stale responses and requests only the masked onsite roster', () => {
     const usersAdmin = read('src/modules/mip-admin/users-admin.ts')
     const pageTs = read('src/packages/admin/event-registrations/index.ts')
     const pageWxml = read('src/packages/admin/event-registrations/index.wxml')
@@ -86,32 +86,21 @@ describe('MIP admin roster contract', () => {
     expect(pageTs).toContain('confirmationBusy = true')
     expect(pageTs).toMatch(/confirmationBusy = true[\s\S]*?wx\.showModal/)
     expect(pageTs).toContain('onHide()')
-    expect(pageTs).toContain('clearPrivatePhones(this)')
-    expect(pageTs).toContain('phoneNumberMasked: maskedPhone(phoneNumber)')
-    expect(pageTs).toContain('mipAdminModule.clearSensitive()')
+    expect(pageTs).toContain('Omit<AdminRosterItem, \'phoneNumber\'>')
+    expect(pageTs).toContain('includePhone: false')
     expect(usersAdmin).toContain('input.includePhone === true')
-    expect(pageWxml).toContain('手机已绑定')
-    expect(pageWxml).toContain('item.phoneNumberMasked')
-    expect(pageWxml).toContain('bind:tap="revealPhone"')
+    expect(pageWxml).not.toContain('phoneNumber')
+    expect(pageWxml).not.toContain('查看完整号码')
     expect(pageWxml).not.toMatch(/\{\{item\.phoneNumber[\s|}]/)
-    expect(pageWxml).toContain('创建导出')
+    expect(pageWxml).not.toContain('创建导出')
   })
 
-  it('exposes registration review only through its scoped capability and versioned gateway action', () => {
+  it('keeps registration review in the service contract without exposing it onsite', () => {
     const types = read('src/modules/mip-admin/types.ts')
     const gateway = read('src/modules/mip-admin/cloudbase-gateway.ts')
-    const pageTs = read('src/packages/admin/event-registrations/index.ts')
-    const pageWxml = read('src/packages/admin/event-registrations/index.wxml')
 
     expect(types).toContain('\'events.registrations.manage\'')
     expect(gateway).toContain('call(\'mip.admin.events.registrations.review\', input)')
-    expect(pageTs).toContain('hasScopedCapability(session.capabilities, \'events.registrations.manage\', scope)')
-    expect(pageTs).toContain('expectedVersion: version')
-    expect(pageTs).toContain('decision,')
-    expect(pageTs).toMatch(/confirmationBusy = true[\s\S]*?wx\.showModal/)
-    expect(pageWxml).toContain('canReview && item.status === \'PENDING_REVIEW\'')
-    expect(pageWxml).toContain('data-decision="APPROVE"')
-    expect(pageWxml).toContain('data-decision="REJECT"')
   })
 
   it('keeps check-in undo behind a separate manager capability and a required reason', () => {

@@ -4,11 +4,13 @@ MIP 由原生微信小程序、React Web 管理端、CloudBase 云函数、MySQL
 
 动态数量与部署状态统一见 [PROJECT_STATUS.md](PROJECT_STATUS.md)，本文件不固化路由数、迁移数或最近一次验收结果。
 
+完整后台与小程序现场工作台的渠道边界见 [ADR 0005](../adr/0005-web-admin-and-onsite-workbench.md)。
+
 ## 系统形态
 
 ```text
 微信小程序用户端 ─→ src/modules/mip-* ─→ src/platform ─→ mip-* 云函数
-微信小程序管理端 ─→ AdminTransport(CloudBase) ─┐
+小程序现场工作台 ─→ AdminTransport(CloudBase) ─┐
 React Web 管理端 ─→ 同源 BFF / HTTPS transport ─┼→ AdminApplication
                                                   ↓
                                   领域服务 / capability / scope / audit
@@ -18,7 +20,7 @@ React Web 管理端 ─→ 同源 BFF / HTTPS transport ─┼→ AdminApplicati
 
 页面不得直接初始化 CloudBase、读取 MySQL 或调用 `wx.requestPayment`。客户端只提交业务意图；身份、会员资格、金额、报名、签到、成长余额、比赛分数、通知状态和管理权限由服务端决定。
 
-React Web 当前已经存在于 `admin-web/`。它通过同源 BFF 建立 Web principal，再使用与小程序管理分包相同的渠道中立 operation 合同；浏览器不能直接访问 MySQL，也不能提交可信的 `appId`、`userId`、角色或 capability。
+React Web 当前已经存在于 `admin-web/`，并且是唯一完整运营后台。它通过同源 BFF 建立 Web principal，再使用与小程序现场工作台相同的渠道中立 operation 合同；浏览器不能直接访问 MySQL，也不能提交可信的 `appId`、`userId`、角色或 capability。小程序只保留现场入口与 Web 登录确认、已授权活动、签到码与海报、参与名单与签到四条路由。
 
 ## 管理应用边界
 
@@ -42,7 +44,7 @@ interface AdminApplication {
 }
 ```
 
-`TrustedAdminPrincipal` 只能由 CloudBase 微信上下文或 Web session adapter 创建。operation registry 统一声明输入校验、capability、scope、读写类型、幂等要求、outbox 唤醒和审计类型。任务、Banner、游戏和媒体仍由 `mip-admin-api` 通过窄 adapter 调用对应独立函数，不能在 BFF 复制领域规则。
+`TrustedAdminPrincipal` 只能由 CloudBase 微信上下文或 Web session adapter 创建。operation registry 统一声明 owner、实现方法、读写类型、会话前置和 outbox 唤醒；服务端维护的公开 operation 合同进一步声明 Web 暴露范围、字段白名单和幂等转发，并生成 `@mip/admin-contracts` 供小程序与 Web 消费。BFF 不再维护 action 或字段副本。任务、Banner、游戏和媒体仍由 `mip-admin-api` 通过窄 adapter 调用对应独立函数，不能在 BFF 复制领域规则。
 
 当前 `mip-admin-api` 保持单一部署单元，内部按以下深模块组织：
 
@@ -57,7 +59,7 @@ interface AdminApplication {
 | `opportunities` | 机会、团队、评论、举报、撮合设置与重算 | `access`、公开用户投影、消息端口 |
 | `growth` | 等级、权益、规则、流水、勋章与调整 | `access`、用户只读状态 |
 
-模块之间只通过窄端口或领域事件协作，不直接读取另一模块的内部 repository。
+operation dispatcher 只通过冻结的 owner module interface 调用实现，不再访问扁平 service 方法袋。模块之间只通过窄端口或领域事件协作；当前仍共用一个事务型 MySQL persistence adapter，不拆网络服务或部署单元。
 
 ## 云函数边界
 
@@ -121,7 +123,7 @@ interface AdminApplication {
 
 ## Web 会话与敏感操作
 
-Web 登录使用短期、单次、绑定浏览器 verifier 的 challenge，由已登录且拥有管理 capability 的小程序用户确认。服务端只保存 session token hash；Cookie 使用 `HttpOnly`、`Secure` 和合适的 `SameSite`，写操作校验 CSRF。每次请求重新读取用户状态、协议、角色和 capability，撤权或停用后下一次请求立即失败。
+Web 登录使用短期、单次、绑定浏览器 verifier 的 challenge，由已登录且拥有管理 capability 的小程序现场工作台用户确认。服务端只保存 session token hash；Cookie 使用 `HttpOnly`、`Secure` 和合适的 `SameSite`，写操作校验 CSRF。每次请求重新读取用户状态、协议、角色和 capability，撤权或停用后下一次请求立即失败。
 
 手机号原文、导出、退款、角色变更、签到覆盖、相册审核和成长人工调整使用独立 capability。mutation 与审计在同一事务内；审计只记录必要的 channel 和 request reference，不记录 Cookie、授权头、OpenID 或完整浏览器载荷。
 

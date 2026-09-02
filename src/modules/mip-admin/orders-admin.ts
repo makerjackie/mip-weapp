@@ -1,5 +1,13 @@
 import type { MipAdminGateway } from './types'
 
+export type OrdersAdminGateway = Pick<
+  MipAdminGateway,
+  | 'listOrders'
+  | 'getOrder'
+  | 'submitRefund'
+  | 'retryRefund'
+>
+
 interface OrdersAdminCache {
   query: <T>(key: string, loader: () => Promise<T>, options?: { force?: boolean }) => Promise<T>
   invalidate: (prefix?: string) => void
@@ -23,7 +31,7 @@ export interface MipOrdersAdmin {
 const ordersCacheKey = 'mip-admin:orders'
 
 export function createMipOrdersAdmin(
-  gateway: MipAdminGateway,
+  gateway: OrdersAdminGateway,
   cache: OrdersAdminCache,
 ): MipOrdersAdmin {
   const mutate = async <T>(work: () => Promise<T>) => {

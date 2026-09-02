@@ -6,7 +6,7 @@ import {
   shouldRetainAiDraftRequest,
 } from '../../../modules/mip-ai'
 import { mipAiModule } from '../../../modules/mip-ai/client'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 
 const purposeOptions: Array<{ label: string, value: AiDraftPurpose }> = [
   { label: '个人档案', value: 'PROFILE' },

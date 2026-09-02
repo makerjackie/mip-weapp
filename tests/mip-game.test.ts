@@ -662,7 +662,7 @@ describe('MIP game client contract', () => {
     expect(shouldRetainPendingDraw({ code: 'INSUFFICIENT_GAME_COIN_BALANCE' })).toBe(false)
   })
 
-  it('keeps the full member and admin vertical slice in independently integrable files', () => {
+  it('keeps the full member vertical slice in independently integrable files', () => {
     const root = process.cwd()
     for (const file of [
       'cloudfunctions/mip-game-api/index.js',
@@ -673,27 +673,20 @@ describe('MIP game client contract', () => {
       'src/modules/mip-game/index.ts',
       'src/packages/member/mip-game/index.wxml',
       'src/packages/member/mip-game/team/index.wxml',
-      'src/packages/admin/game/index.wxml',
       'src/packages/member/mip-blind-box/index.wxml',
       'src/packages/member/mip-blind-box/detail/index.wxml',
       'src/packages/member/mip-blind-box/backpack/index.wxml',
       'src/packages/member/mip-blind-box/coin-entries/index.wxml',
-      'src/packages/admin/blind-box/index.wxml',
     ]) {
       expect(fs.existsSync(path.join(root, file)), file).toBe(true)
     }
     const member = fs.readFileSync(path.join(root, 'src/packages/member/mip-game/index.wxml'), 'utf8')
     const team = fs.readFileSync(path.join(root, 'src/packages/member/mip-game/team/index.wxml'), 'utf8')
-    const admin = fs.readFileSync(path.join(root, 'src/packages/admin/game/index.wxml'), 'utf8')
-    const adminPage = fs.readFileSync(path.join(root, 'src/packages/admin/game/index.ts'), 'utf8')
     const app = fs.readFileSync(path.join(root, 'src/app.json'), 'utf8')
     const discover = fs.readFileSync(path.join(root, 'src/pages/index/index.wxml'), 'utf8')
     const blindBoxDetail = fs.readFileSync(path.join(root, 'src/packages/member/mip-blind-box/detail/index.wxml'), 'utf8')
-    const blindBoxAdmin = fs.readFileSync(path.join(root, 'src/packages/admin/blind-box/index.wxml'), 'utf8')
     const blindBoxDetailPage = fs.readFileSync(path.join(root, 'src/packages/member/mip-blind-box/detail/index.ts'), 'utf8')
     const pageSources = [
-      'src/packages/admin/game/index.ts',
-      'src/packages/admin/blind-box/index.ts',
       'src/packages/member/mip-game/index.ts',
       'src/packages/member/mip-game/team/index.ts',
       'src/packages/member/mip-blind-box/index.ts',
@@ -711,29 +704,6 @@ describe('MIP game client contract', () => {
     expect(member).toContain('全部分会')
     expect(team).toContain('队伍大本营')
     expect(team).toContain('历史成员')
-    expect(admin).toContain('新增赛季')
-    expect(admin).toContain('生成排行榜')
-    expect(admin).toContain('分数')
-    expect(admin).toContain('排行榜快照')
-    expect(admin).toContain('生成时间：{{rankingGeneratedText}}')
-    expect(admin).toContain('全部分会')
-    expect(admin).toContain('mip-admin-record-list')
-    expect(admin).toMatch(/rankingState === 'conflict'/)
-    expect(adminPage).toMatch(/key: 'TEAM_HALF_YEAR', label: '团队半年榜'/)
-    expect(adminPage).toMatch(/key: 'TEAM_YEAR', label: '团队年度榜'/)
-    expect(adminPage).toMatch(/key: 'INDIVIDUAL_SEASON', label: '个人赛季榜'/)
-    expect(adminPage).toMatch(/key: 'INDIVIDUAL_ALL_TIME', label: '个人累计榜'/)
-    expect(adminPage).toContain('mipGameModule.query.listAdminRankings')
-    expect(adminPage).toContain('mipGameModule.query.listAllAssignableMembers')
-    expect(adminPage).toMatch(/function emptySeasonView\(\)[\s\S]+teams:[\s\S]+activeTeams:[\s\S]+matches:[\s\S]+rankings:/)
-    expect(adminPage).toMatch(/seasonChanged[\s\S]+\.\.\.emptySeasonView\(\)[\s\S]+\.\.\.emptyTeamEditor\(\)/)
-    expect(adminPage).toMatch(/selectedSeasonId,[\s\S]+\.\.\.emptySeasonView\(\)[\s\S]+\.\.\.emptyTeamEditor\(\)/)
-    expect(adminPage).toMatch(/seasonChanged[\s\S]+rankingRequestKey: this\.data\.rankingRequestKey \+ 1[\s\S]+memberRequestKey: this\.data\.memberRequestKey \+ 1/)
-    expect(adminPage).toMatch(/async chooseSeason[\s\S]+memberRequestKey: this\.data\.memberRequestKey \+ 1[\s\S]+rankingRequestKey: this\.data\.rankingRequestKey \+ 1/)
-    expect(adminPage).toMatch(/match\.status !== 'SCHEDULED'[\s\S]+this\.data\.selectedSeasonClosed/)
-    expect(admin).toContain('item.status === \'SCHEDULED\' && !selectedSeasonClosed')
-    expect(adminPage).toMatch(/requestKey !== this\.data\.memberRequestKey[\s\S]+currentTeam\?\.version !== team\.version/)
-    expect(adminPage).toMatch(/generateRankingSnapshot[\s\S]+await this\.loadRanking\(true\)/)
     expect(app).toContain('mip-blind-box/detail/index')
     expect(app).toContain('blind-box/index')
     expect(discover).toContain('bind:tap="openBlindBoxes"')
@@ -751,8 +721,6 @@ describe('MIP game client contract', () => {
     expect(moduleSource).not.toMatch(/return\s*\{\s*gateway,/)
     expect(cloudbaseTransport).toContain('data: request')
     expect(cloudbaseTransport).not.toContain('{ action, ...data }')
-    expect(blindBoxAdmin).toContain('概率权重')
-    expect(blindBoxAdmin).toContain('总库存')
     expect(migration).toContain('mip_blind_box_draws')
     expect(migration).toContain('mip_blind_box_inventory')
     expect(migration).toContain('UNIQUE KEY mip_blind_box_draws_request_uk')

@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 110,
+  "routeCount": 68,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 110 paths.",
+    "config/project.json routes must list the same 68 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -40,7 +40,7 @@
       "label": "小程序客服会话",
       "routes": [
         "packages/member/help/index",
-        "packages/member/privacy/index"
+        "packages/member/privacy-policy/index"
       ],
       "reason": "open-type=contact opens WeChat customer service on a real device"
     },
@@ -123,9 +123,9 @@
     },
     {
       "id": "task-template",
-      "label": "任务模板上传与保存",
-      "routes": ["packages/admin/tasks/index", "packages/member/mip-tasks/detail/index"],
-      "reason": "wx.chooseMedia、图片内容安全、模板下载和相册保存结果需要真机验收"
+      "label": "任务模板下载与保存",
+      "routes": ["packages/member/mip-tasks/detail/index"],
+      "reason": "任务模板下载和相册保存结果需要真机验收"
     },
     {
       "id": "photo-save",
@@ -175,65 +175,104 @@
     {
       "id": "loading",
       "route": "pages/membership/index",
-      "patch": { "state": "loading" },
-      "dataAssertions": [{ "path": "state", "equals": "loading" }],
-      "visibleAssertion": { "selector": "#mip-membership-page #mip-membership-loading-state" }
+      "patch": {
+        "state": "loading"
+      },
+      "dataAssertions": [
+        {
+          "path": "state",
+          "equals": "loading"
+        }
+      ],
+      "visibleAssertion": {
+        "selector": "#mip-membership-page #mip-membership-loading-state"
+      }
     },
     {
       "id": "empty",
       "route": "packages/member/mip-branches/index",
-      "patch": { "state": "empty", "branches": [] },
+      "patch": {
+        "state": "empty",
+        "branches": []
+      },
       "dataAssertions": [
-        { "path": "state", "equals": "empty" },
-        { "path": "branches.length", "equals": 0 }
+        {
+          "path": "state",
+          "equals": "empty"
+        },
+        {
+          "path": "branches.length",
+          "equals": 0
+        }
       ],
-      "visibleAssertion": { "selector": "#mip-branches-page #mip-branches-empty-state" }
+      "visibleAssertion": {
+        "selector": "#mip-branches-page #mip-branches-empty-state"
+      }
     },
     {
       "id": "error",
       "route": "pages/membership/index",
-      "patch": { "state": "error", "message": "暂时无法加载" },
-      "dataAssertions": [{ "path": "state", "equals": "error" }],
-      "visibleAssertion": { "selector": "#mip-membership-page #mip-membership-error-state" }
+      "patch": {
+        "state": "error",
+        "message": "暂时无法加载"
+      },
+      "dataAssertions": [
+        {
+          "path": "state",
+          "equals": "error"
+        }
+      ],
+      "visibleAssertion": {
+        "selector": "#mip-membership-page #mip-membership-error-state"
+      }
     },
     {
       "id": "forbidden",
       "route": "packages/admin/dashboard/index",
-      "patch": { "state": "forbidden", "message": "" },
-      "dataAssertions": [{ "path": "state", "equals": "forbidden" }],
-      "visibleAssertion": { "selector": "#admin-dashboard-page #admin-dashboard-forbidden-state" }
-    },
-    {
-      "id": "conflict",
-      "route": "packages/admin/events/index",
       "patch": {
-        "state": "ready",
-        "conflict": true,
-        "cancelConflict": false,
-        "message": "活动信息已更新"
+        "state": "forbidden",
+        "message": ""
       },
       "dataAssertions": [
-        { "path": "state", "equals": "ready" },
-        { "path": "conflict", "equals": true }
+        {
+          "path": "state",
+          "equals": "forbidden"
+        }
       ],
-      "visibleAssertion": { "selector": "#admin-events-page #admin-events-conflict-state" }
+      "visibleAssertion": {
+        "selector": "#admin-dashboard-page #admin-dashboard-forbidden-state"
+      }
     },
     {
       "id": "disabled",
       "route": "packages/member/mip-ai/index",
       "patch": {
         "state": "ready",
-        "capability": { "textDrafts": false, "voiceDrafts": false },
+        "capability": {
+          "textDrafts": false,
+          "voiceDrafts": false
+        },
         "drafts": [],
         "recording": false,
         "generating": false
       },
       "dataAssertions": [
-        { "path": "state", "equals": "ready" },
-        { "path": "capability.textDrafts", "equals": false },
-        { "path": "capability.voiceDrafts", "equals": false }
+        {
+          "path": "state",
+          "equals": "ready"
+        },
+        {
+          "path": "capability.textDrafts",
+          "equals": false
+        },
+        {
+          "path": "capability.voiceDrafts",
+          "equals": false
+        }
       ],
-      "visibleAssertion": { "selector": "#mip-ai-page #mip-ai-disabled-state" }
+      "visibleAssertion": {
+        "selector": "#mip-ai-page #mip-ai-disabled-state"
+      }
     }
   ],
   "interactionJourneys": [
@@ -241,32 +280,63 @@
       "id": "opportunity-search-and-filter",
       "route": "pages/opportunities/index",
       "nonMutating": true,
+      "requireVisibleTarget": true,
+      "requireRenderedAction": true,
+      "requireScreenshotDiff": true,
       "steps": [
-        {
-          "id": "open-filter",
-          "type": "tap",
-          "selector": "#opportunities-filter-toggle",
-          "handler": "toggleFilters",
-          "dataAssertions": [{ "path": "filterOpen", "equals": true }],
-          "visibleAssertion": { "text": "筛选条件" }
-        },
         {
           "id": "enter-keyword",
           "type": "input",
           "selector": "#opportunities-search-input",
           "handler": "onKeywordInput",
           "value": "合作",
-          "dataAssertions": [{ "path": "keywordInput", "equals": "合作" }]
+          "scrollIntoView": true,
+          "dataAssertions": [
+            {
+              "path": "keywordInput",
+              "equals": "合作"
+            }
+          ],
+          "visibleAssertion": {
+            "selector": "#opportunities-search-input"
+          }
+        },
+        {
+          "id": "open-filter",
+          "type": "tap",
+          "selector": "#opportunities-filter-toggle",
+          "handler": "toggleFilters",
+          "scrollIntoView": true,
+          "dataAssertions": [
+            {
+              "path": "filterOpen",
+              "equals": true
+            }
+          ],
+          "visibleAssertion": {
+            "selector": "#opportunities-filter-page",
+            "text": "筛选条件"
+          }
         },
         {
           "id": "close-filter",
           "type": "tap",
           "selector": "#opportunities-filter-toggle",
           "handler": "toggleFilters",
+          "scrollIntoView": true,
           "dataAssertions": [
-            { "path": "filterOpen", "equals": false },
-            { "path": "keywordInput", "equals": "" }
-          ]
+            {
+              "path": "filterOpen",
+              "equals": false
+            },
+            {
+              "path": "keywordInput",
+              "equals": "合作"
+            }
+          ],
+          "visibleAssertion": {
+            "selector": "#opportunities-search-input"
+          }
         }
       ]
     },
@@ -281,22 +351,39 @@
           "selector": "#people-search-input",
           "handler": "onKeywordInput",
           "value": "设计",
-          "dataAssertions": [{ "path": "keywordInput", "equals": "设计" }]
+          "dataAssertions": [
+            {
+              "path": "keywordInput",
+              "equals": "设计"
+            }
+          ]
         },
         {
           "id": "open-filter",
           "type": "tap",
           "selector": "#people-filter-toggle",
           "handler": "toggleFilters",
-          "dataAssertions": [{ "path": "filterOpen", "equals": true }],
-          "visibleAssertion": { "text": "人才筛选" }
+          "dataAssertions": [
+            {
+              "path": "filterOpen",
+              "equals": true
+            }
+          ],
+          "visibleAssertion": {
+            "text": "人才筛选"
+          }
         },
         {
           "id": "close-filter",
           "type": "tap",
           "selector": "#people-filter-toggle",
           "handler": "toggleFilters",
-          "dataAssertions": [{ "path": "filterOpen", "equals": false }]
+          "dataAssertions": [
+            {
+              "path": "filterOpen",
+              "equals": false
+            }
+          ]
         }
       ]
     },
@@ -313,67 +400,40 @@
           "type": "tap",
           "selector": "#profile-tab-cases",
           "handler": "changePortfolioTab",
-          "handlerDataset": { "tab": "cases" },
+          "handlerDataset": {
+            "tab": "cases"
+          },
           "scrollIntoView": true,
-          "dataAssertions": [{ "path": "portfolioTab", "equals": "cases" }],
-          "visibleAssertion": { "selector": "#profile-tab-cases", "text": "超级案例" }
+          "dataAssertions": [
+            {
+              "path": "portfolioTab",
+              "equals": "cases"
+            }
+          ],
+          "visibleAssertion": {
+            "selector": "#profile-tab-cases",
+            "text": "超级案例"
+          }
         },
         {
           "id": "show-opportunities",
           "type": "tap",
           "selector": "#profile-tab-opportunities",
           "handler": "changePortfolioTab",
-          "handlerDataset": { "tab": "opportunities" },
+          "handlerDataset": {
+            "tab": "opportunities"
+          },
           "scrollIntoView": true,
-          "dataAssertions": [{ "path": "portfolioTab", "equals": "opportunities" }],
-          "visibleAssertion": { "selector": "#profile-tab-opportunities", "text": "相关机会" }
-        }
-      ]
-    },
-    {
-      "id": "task-assignment-mode",
-      "route": "packages/admin/tasks/index",
-      "nonMutating": true,
-      "steps": [
-        {
-          "id": "open-task-editor",
-          "type": "tap",
-          "selector": "#admin-task-create",
-          "handler": "openCreate",
           "dataAssertions": [
-            { "path": "editorOpen", "equals": true },
-            { "path": "eligibleLevelsState", "equals": "ready" }
+            {
+              "path": "portfolioTab",
+              "equals": "opportunities"
+            }
           ],
-          "visibleAssertion": { "text": "任务范围" }
-        },
-        {
-          "id": "select-assignment-mode",
-          "type": "tap",
-          "selector": "#task-assignment-mode-selected",
-          "handler": "chooseAssignmentMode",
-          "handlerDataset": { "mode": "SELECTED" },
-          "scrollIntoView": true,
-          "requireVisibleTarget": true,
-          "requireRenderedAction": true,
-          "requireScreenshotDiff": true,
-          "dataAssertions": [{ "path": "assignmentMode", "equals": "SELECTED" }],
-          "visibleAssertion": { "selector": "#task-assignment-mode-selected", "text": "指定成员" }
-        }
-      ]
-    },
-    {
-      "id": "badge-award-search-input",
-      "route": "packages/admin/badges/index",
-      "nonMutating": true,
-      "steps": [
-        {
-          "id": "enter-award-keyword",
-          "type": "input",
-          "selector": "#badge-award-query",
-          "handler": "updateField",
-          "handlerDataset": { "field": "awardQuery" },
-          "value": "活动",
-          "dataAssertions": [{ "path": "awardQuery", "equals": "活动" }]
+          "visibleAssertion": {
+            "selector": "#profile-tab-opportunities",
+            "text": "相关机会"
+          }
         }
       ]
     },
@@ -387,12 +447,19 @@
           "type": "tap",
           "selector": "#game-ranking-INDIVIDUAL_SEASON",
           "handler": "changeRanking",
-          "handlerDataset": { "type": "INDIVIDUAL_SEASON" },
+          "handlerDataset": {
+            "type": "INDIVIDUAL_SEASON"
+          },
           "scrollIntoView": true,
           "requireVisibleTarget": true,
           "requireRenderedAction": true,
           "requireScreenshotDiff": true,
-          "dataAssertions": [{ "path": "rankingType", "equals": "INDIVIDUAL_SEASON" }],
+          "dataAssertions": [
+            {
+              "path": "rankingType",
+              "equals": "INDIVIDUAL_SEASON"
+            }
+          ],
           "visibleAssertion": {
             "selector": "#game-ranking-INDIVIDUAL_SEASON",
             "text": "个人赛季榜"
@@ -437,7 +504,9 @@
       "queryFixture": {
         "sourceRoute": "packages/member/announcements/index",
         "dataPath": "items",
-        "values": { "announcementId": "id" }
+        "values": {
+          "announcementId": "id"
+        }
       }
     },
     {
@@ -475,6 +544,26 @@
       "tab": true
     },
     {
+      "id": "M48",
+      "name": "全部服务",
+      "path": "packages/member/mip-services/index",
+      "selector": "#mip-services-page",
+      "group": "member",
+      "kind": "static",
+      "states": ["ready"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "M49",
+      "name": "公开设置",
+      "path": "packages/member/mip-visibility-settings/index",
+      "selector": "#mip-visibility-settings-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "error"],
+      "readyAssertion": "state === 'ready'"
+    },
+    {
       "id": "U12",
       "name": "我的订单",
       "path": "packages/member/orders/index",
@@ -497,7 +586,9 @@
       "queryFixture": {
         "sourceRoute": "packages/member/orders/index",
         "dataPath": "orders",
-        "values": { "orderId": "id" }
+        "values": {
+          "orderId": "id"
+        }
       },
       "deviceRequired": ["wechat-pay"]
     },
@@ -516,7 +607,9 @@
       "queryFixture": {
         "sourceRoute": "packages/member/orders/index",
         "dataPath": "orders",
-        "values": { "orderId": "id" }
+        "values": {
+          "orderId": "id"
+        }
       },
       "deviceRequired": ["wechat-pay"]
     },
@@ -532,14 +625,32 @@
     },
     {
       "id": "U17",
-      "name": "隐私与账户",
+      "name": "账号设置",
       "path": "packages/member/privacy/index",
       "selector": "#privacy-account-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "processing", "success", "blocked", "conflict", "error"],
+      "states": [
+        "loading",
+        "ready",
+        "processing",
+        "success",
+        "blocked",
+        "conflict",
+        "error"
+      ],
       "acceptStates": ["ready", "success", "blocked"],
-      "readyAssertion": "state === 'ready' || state === 'success' || state === 'blocked'",
+      "readyAssertion": "state === 'ready' || state === 'success' || state === 'blocked'"
+    },
+    {
+      "id": "U28",
+      "name": "隐私政策",
+      "path": "packages/member/privacy-policy/index",
+      "selector": "#mip-privacy-policy-page",
+      "group": "public",
+      "kind": "static",
+      "states": ["ready"],
+      "readyAssertion": "state === 'ready'",
       "deviceRequired": ["customer-service"]
     },
     {
@@ -575,7 +686,7 @@
     },
     {
       "id": "A01",
-      "name": "运营工作台",
+      "name": "现场工作台",
       "path": "packages/admin/dashboard/index",
       "selector": "#admin-dashboard-page",
       "group": "admin",
@@ -584,57 +695,8 @@
       "readyAssertion": "state === 'ready'"
     },
     {
-      "id": "A16",
-      "name": "城市分会",
-      "path": "packages/admin/branches/index",
-      "selector": "#admin-branches-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "A19",
-      "name": "公告管理",
-      "path": "packages/admin/announcements/index",
-      "selector": "#admin-announcements-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "A20",
-      "name": "公告编辑",
-      "path": "packages/admin/announcement-editor/index",
-      "selector": "#admin-announcement-editor-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden", "conflict"],
-      "readyAssertion": "state === 'ready'",
-      "query": ["announcementId"],
-      "queryFixture": {
-        "sourceRoute": "packages/admin/announcements/index",
-        "dataPath": "items",
-        "values": { "announcementId": "id" }
-      }
-    },
-    {
-      "id": "A34",
-      "name": "消息管理",
-      "path": "packages/admin/message-campaigns/index",
-      "selector": "#admin-message-campaigns-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
       "id": "A02",
-      "name": "活动管理",
+      "name": "授权活动",
       "path": "packages/admin/managed-events/index",
       "selector": "#admin-managed-events-page",
       "group": "admin",
@@ -643,28 +705,8 @@
       "readyAssertion": "state === 'ready'"
     },
     {
-      "id": "A39",
-      "name": "活动分类与标签",
-      "path": "packages/admin/event-catalogs/index",
-      "selector": "#admin-event-catalogs-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden", "conflict"],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
-      "id": "A40",
-      "name": "视频回顾",
-      "path": "packages/admin/event-recaps/index",
-      "selector": "#admin-event-recaps-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden", "conflict"],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
       "id": "A03",
-      "name": "单场活动管理",
+      "name": "活动现场",
       "path": "packages/admin/event-console/index",
       "selector": "#admin-event-console-page",
       "group": "admin",
@@ -675,29 +717,15 @@
       "queryFixture": {
         "sourceRoute": "packages/admin/managed-events/index",
         "dataPath": "events",
-        "values": { "eventId": "id" }
+        "values": {
+          "eventId": "id"
+        }
       },
       "deviceRequired": ["photo-save"]
     },
     {
-      "id": "A04",
-      "name": "活动编辑",
-      "path": "packages/admin/events/index",
-      "selector": "#admin-events-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
-      "readyAssertion": "state === 'ready'",
-      "query": ["eventId"],
-      "queryFixture": {
-        "sourceRoute": "packages/admin/managed-events/index",
-        "dataPath": "events",
-        "values": { "eventId": "id" }
-      }
-    },
-    {
       "id": "A05",
-      "name": "活动报名名单",
+      "name": "参与者与签到",
       "path": "packages/admin/event-registrations/index",
       "selector": "#admin-event-registrations-page",
       "group": "admin",
@@ -708,439 +736,11 @@
       "queryFixture": {
         "sourceRoute": "packages/admin/managed-events/index",
         "dataPath": "events",
-        "values": { "eventId": "id" }
+        "values": {
+          "eventId": "id"
+        }
       },
       "deviceRequired": ["qr-checkin"]
-    },
-    {
-      "id": "A06",
-      "name": "活动管理员",
-      "path": "packages/admin/event-managers/index",
-      "selector": "#admin-event-managers-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden"],
-      "readyAssertion": "state === 'ready'",
-      "query": ["eventId"],
-      "queryFixture": {
-        "sourceRoute": "packages/admin/managed-events/index",
-        "dataPath": "events",
-        "values": { "eventId": "id" }
-      }
-    },
-    {
-      "id": "A30",
-      "name": "活动参与者",
-      "path": "packages/admin/event-participants/index",
-      "selector": "#admin-event-participants-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "A18",
-      "name": "活动相册审核",
-      "path": "packages/admin/event-album/index",
-      "selector": "#admin-event-album-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'",
-      "query": ["eventId"],
-      "queryFixture": {
-        "sourceRoute": "packages/admin/managed-events/index",
-        "dataPath": "events",
-        "values": { "eventId": "id" }
-      }
-    },
-    {
-      "id": "A22",
-      "name": "活动反馈",
-      "path": "packages/admin/event-feedback/index",
-      "selector": "#admin-event-feedback-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'",
-      "query": ["eventId"],
-      "queryFixture": {
-        "sourceRoute": "packages/admin/managed-events/index",
-        "dataPath": "events",
-        "values": { "eventId": "id" }
-      }
-    },
-    {
-      "id": "A07",
-      "name": "导出与现场资料",
-      "path": "packages/admin/exports/index",
-      "selector": "#admin-exports-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden"],
-      "readyAssertion": "state === 'ready'",
-      "query": ["eventId"],
-      "queryFixture": {
-        "sourceRoute": "packages/admin/managed-events/index",
-        "dataPath": "events",
-        "values": { "eventId": "id" }
-      }
-    },
-    {
-      "id": "A08",
-      "name": "成员运营",
-      "path": "packages/admin/profiles/index",
-      "selector": "#admin-profiles-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "A42",
-      "name": "用户内容",
-      "path": "packages/admin/user-content/index",
-      "selector": "#admin-user-content-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "A46",
-      "name": "编辑用户内容",
-      "path": "packages/admin/user-content-editor/index",
-      "selector": "#admin-user-content-editor-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden", "conflict"],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
-      "id": "A41",
-      "name": "会员管理",
-      "path": "packages/admin/membership/index",
-      "selector": "#admin-membership-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden", "conflict"],
-      "acceptStates": ["ready"],
-      "readyAssertion": "state === 'ready'",
-      "query": ["userId"],
-      "queryFixture": {
-        "sourceRoute": "packages/admin/profiles/index",
-        "dataPath": "users",
-        "values": { "userId": "id" }
-      }
-    },
-    {
-      "id": "A09",
-      "name": "订单运营",
-      "path": "packages/admin/orders/index",
-      "selector": "#admin-orders-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden"],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
-      "id": "A43",
-      "name": "会员权益台账",
-      "path": "packages/admin/membership-ledger/index",
-      "selector": "#admin-membership-ledger-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden"],
-      "acceptStates": ["ready"],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
-      "id": "A48",
-      "name": "支付尝试记录",
-      "path": "packages/admin/payment-attempts/index",
-      "selector": "#admin-payment-attempts-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
-      "id": "A12",
-      "name": "机会管理",
-      "path": "packages/admin/opportunities/index",
-      "selector": "#admin-opportunities-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden"],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
-      "id": "A36",
-      "name": "机会撮合设置",
-      "path": "packages/admin/opportunity-matching/index",
-      "selector": "#admin-opportunity-matching-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden"],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
-      "id": "A27",
-      "name": "机会编辑",
-      "path": "packages/admin/opportunity-editor/index",
-      "selector": "#admin-opportunity-editor-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden"],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
-      "id": "A28",
-      "name": "机会详情",
-      "path": "packages/admin/opportunity-detail/index",
-      "selector": "#admin-opportunity-detail-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden"],
-      "readyAssertion": "state === 'ready'",
-      "query": ["id"],
-      "queryFixture": {
-        "sourceRoute": "packages/admin/opportunities/index",
-        "dataPath": "opportunities",
-        "values": { "id": "id" }
-      }
-    },
-    {
-      "id": "A13",
-      "name": "成长等级",
-      "path": "packages/admin/growth-levels/index",
-      "selector": "#admin-growth-levels-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden"],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
-      "id": "A29",
-      "name": "权益管理",
-      "path": "packages/admin/growth-benefits/index",
-      "selector": "#admin-growth-benefits-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "A14",
-      "name": "奖励规则",
-      "path": "packages/admin/growth-rules/index",
-      "selector": "#admin-growth-rules-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden"],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
-      "id": "A15",
-      "name": "成长流水",
-      "path": "packages/admin/growth-entries/index",
-      "selector": "#admin-growth-entries-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden"],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
-      "id": "A45",
-      "name": "等级变更记录",
-      "path": "packages/admin/growth-transitions/index",
-      "selector": "#admin-growth-transitions-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "A47",
-      "name": "统一权益流水",
-      "path": "packages/admin/benefit-ledger/index",
-      "selector": "#admin-benefit-ledger-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "A32",
-      "name": "勋章管理",
-      "path": "packages/admin/badges/index",
-      "selector": "#admin-badges-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "A33",
-      "name": "赛季与队伍管理",
-      "path": "packages/admin/game/index",
-      "selector": "#admin-game-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden"],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
-      "id": "A35",
-      "name": "盲盒管理",
-      "path": "packages/admin/blind-box/index",
-      "selector": "#admin-blind-box-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "A23",
-      "name": "任务管理",
-      "path": "packages/admin/tasks/index",
-      "selector": "#admin-tasks-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'",
-      "deviceRequired": ["task-template"]
-    },
-    {
-      "id": "A24",
-      "name": "任务完成流水",
-      "path": "packages/admin/task-completions/index",
-      "selector": "#admin-task-completions-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "A31",
-      "name": "任务派发",
-      "path": "packages/admin/task-assignments/index",
-      "selector": "#admin-task-assignments-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'",
-      "query": ["taskId", "version"],
-      "queryFixture": {
-        "sourceRoute": "packages/admin/tasks/index",
-        "dataPath": "tasks",
-        "where": { "assignmentMode": "SELECTED" },
-        "values": { "taskId": "id", "version": "version" }
-      }
-    },
-    {
-      "id": "A25",
-      "name": "Banner 管理",
-      "path": "packages/admin/banners/index",
-      "selector": "#admin-banners-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden", "conflict"],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
-      "id": "A26",
-      "name": "Banner 编辑",
-      "path": "packages/admin/banner-editor/index",
-      "selector": "#admin-banner-editor-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden", "conflict"],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
-      "id": "A17",
-      "name": "举报审核",
-      "path": "packages/admin/community-reports/index",
-      "selector": "#admin-community-reports-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "A21",
-      "name": "异常中心",
-      "path": "packages/admin/exceptions/index",
-      "selector": "#admin-exceptions-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "A44",
-      "name": "消息投递复核明细",
-      "path": "packages/admin/message-delivery-review/index",
-      "selector": "#admin-message-delivery-review-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden", "conflict"],
-      "acceptStates": ["ready"],
-      "readyAssertion": "state === 'ready'",
-      "query": ["sourceType", "sourceId"],
-      "queryFixture": {
-        "sourceRoute": "packages/admin/exceptions/index",
-        "dataPath": "reviewItems",
-        "values": { "sourceType": "resourceRef.type", "sourceId": "resourceRef.id" }
-      }
-    },
-    {
-      "id": "A49",
-      "name": "消息投递记录",
-      "path": "packages/admin/message-delivery-records/index",
-      "selector": "#admin-message-delivery-records-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'"
-    },
-    {
-      "id": "A10",
-      "name": "运营审计",
-      "path": "packages/admin/audit/index",
-      "selector": "#admin-audit-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden"],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
-      "id": "A11",
-      "name": "管理员与权限",
-      "path": "packages/admin/roles/index",
-      "selector": "#admin-roles-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden"],
-      "readyAssertion": "state === 'ready'"
     },
     {
       "id": "M01",
@@ -1213,9 +813,19 @@
       "queryFixture": {
         "sourceRoute": "pages/events/index",
         "dataPath": "events",
-        "values": { "eventId": "id" }
+        "values": {
+          "eventId": "id"
+        }
       },
-      "deviceRequired": ["calendar-location", "online-event-webview", "phone-call", "photo-save", "share", "video-channel", "wechat-pay"]
+      "deviceRequired": [
+        "calendar-location",
+        "online-event-webview",
+        "phone-call",
+        "photo-save",
+        "share",
+        "video-channel",
+        "wechat-pay"
+      ]
     },
     {
       "id": "M26",
@@ -1231,8 +841,12 @@
       "queryFixture": {
         "sourceRoute": "pages/events/index",
         "dataPath": "events",
-        "where": { "albumEnabled": true },
-        "values": { "eventId": "id" }
+        "where": {
+          "albumEnabled": true
+        },
+        "values": {
+          "eventId": "id"
+        }
       },
       "deviceRequired": ["event-album-photo"]
     },
@@ -1249,7 +863,9 @@
       "queryFixture": {
         "sourceRoute": "pages/events/index",
         "dataPath": "events",
-        "values": { "eventId": "id" }
+        "values": {
+          "eventId": "id"
+        }
       },
       "deviceRequired": ["phone-auth", "wechat-pay"]
     },
@@ -1287,10 +903,16 @@
       "query": ["eventId"],
       "queryFixture": {
         "sourceRoute": "packages/member/mip-events/mine/index",
-        "sourceQuery": { "category": "ATTENDED" },
+        "sourceQuery": {
+          "category": "ATTENDED"
+        },
         "dataPath": "registrations",
-        "where": { "status": "ATTENDED" },
-        "values": { "eventId": "event.id" }
+        "where": {
+          "status": "ATTENDED"
+        },
+        "values": {
+          "eventId": "event.id"
+        }
       }
     },
     {
@@ -1300,14 +922,25 @@
       "selector": "#mip-event-comments-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "empty", "access", "error", "forbidden", "conflict", "disabled"],
+      "states": [
+        "loading",
+        "ready",
+        "empty",
+        "access",
+        "error",
+        "forbidden",
+        "conflict",
+        "disabled"
+      ],
       "acceptStates": ["ready", "empty"],
       "readyAssertion": "state === 'ready' || state === 'empty'",
       "query": ["eventId"],
       "queryFixture": {
         "sourceRoute": "pages/events/index",
         "dataPath": "events",
-        "values": { "eventId": "id" }
+        "values": {
+          "eventId": "id"
+        }
       }
     },
     {
@@ -1323,7 +956,9 @@
       "queryFixture": {
         "sourceRoute": "pages/opportunities/index",
         "dataPath": "opportunities",
-        "values": { "id": "id" }
+        "values": {
+          "id": "id"
+        }
       },
       "deviceRequired": ["share"]
     },
@@ -1390,7 +1025,9 @@
       "queryFixture": {
         "sourceRoute": "packages/member/mip-cooperation/list/index",
         "dataPath": "talents",
-        "values": { "id": "cards.0.id" }
+        "values": {
+          "id": "cards.0.id"
+        }
       }
     },
     {
@@ -1426,7 +1063,9 @@
       "queryFixture": {
         "sourceRoute": "packages/member/mip-cases/list/index",
         "dataPath": "items",
-        "values": { "id": "id" }
+        "values": {
+          "id": "id"
+        }
       },
       "deviceRequired": ["share"]
     },
@@ -1476,7 +1115,9 @@
       "queryFixture": {
         "sourceRoute": "packages/member/mip-badges/index",
         "dataPath": "items",
-        "values": { "badgeId": "id" }
+        "values": {
+          "badgeId": "id"
+        }
       }
     },
     {
@@ -1538,8 +1179,12 @@
       "queryFixture": {
         "sourceRoute": "packages/member/mip-game/index",
         "dataPath": "rankings",
-        "where": { "subjectType": "TEAM" },
-        "values": { "teamId": "teamId" }
+        "where": {
+          "subjectType": "TEAM"
+        },
+        "values": {
+          "teamId": "teamId"
+        }
       }
     },
     {
@@ -1566,7 +1211,9 @@
       "queryFixture": {
         "sourceRoute": "packages/member/mip-blind-box/index",
         "dataPath": "items",
-        "values": { "catalogId": "id" }
+        "values": {
+          "catalogId": "id"
+        }
       }
     },
     {
@@ -1615,7 +1262,9 @@
       "queryFixture": {
         "sourceRoute": "packages/member/mip-tasks/index",
         "dataPath": "tasks",
-        "values": { "taskId": "id" }
+        "values": {
+          "taskId": "id"
+        }
       },
       "deviceRequired": ["task-attachment", "task-template"]
     },
@@ -1687,7 +1336,9 @@
       "queryFixture": {
         "sourceRoute": "packages/member/mip-people/index",
         "dataPath": "people",
-        "values": { "profileRef": "profileRef" }
+        "values": {
+          "profileRef": "profileRef"
+        }
       }
     },
     {
@@ -1714,7 +1365,9 @@
       "queryFixture": {
         "sourceRoute": "pages/events/index",
         "dataPath": "events",
-        "values": { "eventId": "id" }
+        "values": {
+          "eventId": "id"
+        }
       },
       "deviceRequired": ["share"]
     },
@@ -1742,7 +1395,9 @@
       "queryFixture": {
         "sourceRoute": "packages/member/mip-knowledge/index",
         "dataPath": "items",
-        "values": { "contentId": "id" }
+        "values": {
+          "contentId": "id"
+        }
       },
       "deviceRequired": ["wechat-pay", "video-channel"]
     },
@@ -1760,36 +1415,11 @@
       "queryFixture": {
         "sourceRoute": "packages/member/mip-knowledge/index",
         "dataPath": "items",
-        "values": { "contentId": "id" }
+        "values": {
+          "contentId": "id"
+        }
       },
       "deviceRequired": ["knowledge-webview"]
-    },
-    {
-      "id": "A37",
-      "name": "知识内容管理",
-      "path": "packages/admin/knowledge/index",
-      "selector": "#admin-knowledge-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "error", "forbidden", "conflict"],
-      "readyAssertion": "state === 'ready'"
-    },
-    {
-      "id": "A38",
-      "name": "活动评论",
-      "path": "packages/admin/event-comments/index",
-      "selector": "#admin-event-comments-page",
-      "group": "admin",
-      "kind": "data",
-      "states": ["loading", "ready", "empty", "error", "forbidden", "conflict"],
-      "acceptStates": ["ready", "empty"],
-      "readyAssertion": "state === 'ready' || state === 'empty'",
-      "query": ["eventId"],
-      "queryFixture": {
-        "sourceRoute": "packages/admin/managed-events/index",
-        "dataPath": "events",
-        "values": { "eventId": "id" }
-      }
     }
   ]
 }

@@ -17,14 +17,4 @@ describe('growth rule scope migration and admin surface', () => {
     expect(migration).toContain('REFERENCES mip_city_branches')
     expect(migration).not.toMatch(/\b(?:member|dating|sewing)_/i)
   })
-
-  it('exposes scope and window controls only on the admin rule editor', () => {
-    const root = path.resolve(import.meta.dirname, '..')
-    const page = fs.readFileSync(path.join(root, 'src/packages/admin/growth-rules/index.wxml'), 'utf8')
-    const controller = fs.readFileSync(path.join(root, 'src/packages/admin/growth-rules/index.ts'), 'utf8')
-    expect(page).toContain('data-field="scopeType"')
-    expect(page).toContain('data-field="effectiveFrom"')
-    expect(page).toContain('data-field="effectiveTo"')
-    expect(controller).toContain('hasCapability(session.capabilities, \'growth.configure\')')
-  })
 })

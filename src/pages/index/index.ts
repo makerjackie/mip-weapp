@@ -13,7 +13,7 @@ import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { opportunityModule } from '../../modules/mip-opportunities'
 import { membershipPresentation } from '../../modules/mip-shell'
-import { caseNavigateTo, caseSwitchPrimary, syncCaseNavigation } from '../../modules/platform/case-navigation'
+import { caseNavigateTo, caseSwitchPrimary, syncCaseNavigation } from '../../platform/navigation/client'
 import { formatLocalMonthDayTime } from '../../utils/date'
 
 interface DiscoverEvent extends MipEventListItem {

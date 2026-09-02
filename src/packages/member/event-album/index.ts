@@ -4,7 +4,7 @@ import type { AlbumPageCursor } from './cursor-state'
 import { MipEventsError } from '../../../modules/mip-events'
 import { mipEventsModule } from '../../../modules/mip-events/client'
 import { mipMediaModule } from '../../../modules/mip-media/client'
-import { chooseSingleImage } from '../../../modules/platform/image-upload'
+import { chooseSingleImage } from '../../../platform/wechat/image-upload'
 import { albumPageCursor, albumRequestCursor } from './cursor-state'
 
 type AlbumState = 'loading' | 'ready' | 'empty' | 'disabled' | 'error'

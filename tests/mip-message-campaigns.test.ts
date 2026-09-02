@@ -151,20 +151,13 @@ describe('MIP message campaign admin contract', () => {
     expect(() => parseMessageCampaign(missingDispatch)).toThrow()
   })
 
-  it('keeps message management separate from announcements and exposes complete page states', () => {
+  it('keeps message management separate from announcements in the service contract', () => {
     const operations = readFileSync('cloudfunctions/mip-admin-api/domain/operations/messaging.js', 'utf8')
     const gateway = readFileSync('src/modules/mip-admin/cloudbase-gateway.ts', 'utf8')
     const types = readFileSync('src/modules/mip-admin/types.ts', 'utf8')
-    const page = readFileSync('src/packages/admin/message-campaigns/index.wxml', 'utf8')
     expect(operations).toContain('mip.admin.messageCampaigns.publish')
     expect(types).toContain('messages.manage')
     expect(gateway).toContain('mip.admin.messageCampaigns.snapshot')
-    expect(page).toContain('消息管理')
-    expect(page).toContain('state === \'forbidden\'')
-    expect(page).toContain('state === \'error\' || state === \'conflict\'')
-    expect(page).toContain('暂无消息活动')
-    expect(page).toContain('生成收件人快照')
-    expect(page).toContain('送达结果以用户消息列表为准')
   })
 
   it('adds append-only campaign storage and preserves per-recipient operation facts', () => {

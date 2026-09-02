@@ -1,4 +1,4 @@
-import { MipAdminError } from './types'
+import { MipAdminError } from './error'
 
 export type AdminMessageTemplateStatus = 'DRAFT' | 'ACTIVE' | 'ARCHIVED'
 export type AdminMessageTemplateSafetyStatus = 'PENDING' | 'PASSED' | 'REJECTED' | 'ERROR'

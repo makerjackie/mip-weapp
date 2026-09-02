@@ -7,6 +7,7 @@ const { describe, it } = require('node:test')
 const { createAdminApplication } = require('../domain/application')
 const { actions, createHandler, normalizeAdminRequest } = require('../domain/handler')
 const { createTrustedPrincipalIssuer } = require('../lib/identity')
+const { createServiceDouble } = require('./owner-modules-test-helper')
 
 describe('admin handler and isolation contract', () => {
   it('normalizes v1 requests without mixing route and business fields', () => {
@@ -68,12 +69,12 @@ describe('admin handler and isolation contract', () => {
     const handler = createHandler({
       getContext: () => ({ APPID: 'wx', OPENID: 'openid' }),
       resolveCaller: () => ({ appId: 'wx', identityKey: 'key' }),
-      service: {
+      service: createServiceDouble({
         async updateUser(_caller, input) {
           received = input
           return { userId: input.userId, version: input.expectedVersion + 1 }
         },
-      },
+      }),
     })
     const response = await handler({
       contractVersion: 1,
@@ -113,12 +114,12 @@ describe('admin handler and isolation contract', () => {
     const handler = createHandler({
       getContext: () => ({}),
       resolveCaller: () => ({ appId: 'wx', identityKey: 'key' }),
-      service: {
+      service: createServiceDouble({
         async moderateOpportunityComment(_caller, input) {
           received = input
           return { id: input.commentId, status: input.action, version: input.expectedVersion + 1 }
         },
-      },
+      }),
     })
     const response = await handler({
       action: 'HIDE',
@@ -152,7 +153,7 @@ describe('admin handler and isolation contract', () => {
     const handler = createHandler({
       getContext: () => ({}),
       resolveCaller: () => { throw new Error('must not resolve invalid request') },
-      service: {},
+      service: createServiceDouble(),
     })
     const cases = [
       {
@@ -217,7 +218,9 @@ describe('admin handler and isolation contract', () => {
     const handler = createHandler({
       getContext: () => ({}),
       resolveCaller: () => { resolved = true; throw new Error('unexpected') },
-      service: { health: async () => ({ persistence: 'cloudbase-mysql' }) },
+      service: createServiceDouble({
+        health: async () => ({ persistence: 'cloudbase-mysql' }),
+      }),
     })
     assert.deepEqual(await handler({ action: 'health' }), {
       ok: true, data: { persistence: 'cloudbase-mysql' },
@@ -230,7 +233,9 @@ describe('admin handler and isolation contract', () => {
     let issues = 0
     const application = createAdminApplication({
       assertPrincipal() { throw new Error('unexpected principal check') },
-      service: { health: async () => ({ persistence: 'cloudbase-mysql' }) },
+      service: createServiceDouble({
+        health: async () => ({ persistence: 'cloudbase-mysql' }),
+      }),
     })
     const handler = createHandler({
       application,
@@ -248,16 +253,9 @@ describe('admin handler and isolation contract', () => {
   it('keeps all 187 business actions compatible with the handler configuration', async () => {
     const caller = { appId: 'wx', identityKey: 'key' }
     const calls = []
-    const service = new Proxy({}, {
-      get(target, method) {
-        if (!Object.hasOwn(target, method)) {
-          target[method] = async (...args) => {
-            calls.push({ method, args })
-            return { method }
-          }
-        }
-        return target[method]
-      },
+    const service = createServiceDouble({}, operation => async (...args) => {
+      calls.push({ method: operation.method, args })
+      return { method: operation.method }
     })
     const handler = createHandler({
       getContext: () => ({ APPID: 'wx', OPENID: 'openid' }),
@@ -284,13 +282,13 @@ describe('admin handler and isolation contract', () => {
     const issuer = createTrustedPrincipalIssuer(options)
     const application = createAdminApplication({
       assertPrincipal: issuer.assert,
-      service: {
+      service: createServiceDouble({
         async getSession() {
           const error = new Error('CONFLICT')
           error.code = 'CONFLICT'
           throw error
         },
-      },
+      }),
     })
     const handler = createHandler({
       application,
@@ -318,13 +316,13 @@ describe('admin handler and isolation contract', () => {
     const handler = createHandler({
       getContext: () => ({ FROM_APPID: 'wx', FROM_OPENID: 'openid' }),
       resolveCaller: () => ({ appId: 'wx', identityKey: 'key' }),
-      service: {
+      service: createServiceDouble({
         async getSession() {
           const error = new Error('CONFLICT')
           error.code = 'CONFLICT'
           throw error
         },
-      },
+      }),
     })
     const response = await handler({ action: 'mip.admin.session' })
     assert.equal(response.ok, false)
@@ -343,13 +341,13 @@ describe('admin handler and isolation contract', () => {
       const handler = createHandler({
         getContext: () => ({ FROM_APPID: 'wx', FROM_OPENID: 'openid' }),
         resolveCaller: () => ({ appId: 'wx', identityKey: 'key' }),
-        service: {
+        service: createServiceDouble({
           async saveGrowthLevel() {
             const error = new Error(code)
             error.code = code
             throw error
           },
-        },
+        }),
       })
       const response = await handler({ action: 'mip.admin.growth.saveLevel' })
       assert.deepEqual(response.error, { code, message, retryable: false })
@@ -360,13 +358,13 @@ describe('admin handler and isolation contract', () => {
     const handler = createHandler({
       getContext: () => ({ FROM_APPID: 'wx', FROM_OPENID: 'openid' }),
       resolveCaller: () => ({ appId: 'wx', identityKey: 'key' }),
-      service: {
+      service: createServiceDouble({
         async publishEventReminder() {
           const error = new Error('COMMUNICATIONS_RECIPIENT_LIMIT_EXCEEDED')
           error.code = 'COMMUNICATIONS_RECIPIENT_LIMIT_EXCEEDED'
           throw error
         },
-      },
+      }),
     })
     const response = await handler({ action: 'mip.admin.communications.publishEventReminder' })
     assert.deepEqual(response.error, {
@@ -380,7 +378,7 @@ describe('admin handler and isolation contract', () => {
     const handler = createHandler({
       getContext: () => ({}),
       resolveCaller: () => { throw new Error('should not resolve') },
-      service: {},
+      service: createServiceDouble(),
     })
     const response = await handler({ action: 'mip.admin.deleteEverything' })
     assert.equal(response.ok, false)

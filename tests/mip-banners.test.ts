@@ -242,20 +242,11 @@ describe('MIP Banner client contracts', () => {
 
   it('keeps page access and media upload behind their dedicated typed interfaces', () => {
     const root = process.cwd()
-    const listPage = fs.readFileSync(path.join(root, 'src/packages/admin/banners/index.ts'), 'utf8')
-    const editorPage = fs.readFileSync(path.join(root, 'src/packages/admin/banner-editor/index.ts'), 'utf8')
     const moduleSource = fs.readFileSync(path.join(root, 'src/modules/mip-banners/module.ts'), 'utf8')
     const gatewaySource = fs.readFileSync(path.join(root, 'src/modules/mip-banners/gateway.ts'), 'utf8')
     const mediaSource = fs.readFileSync(path.join(root, 'src/modules/mip-banners/media-port.ts'), 'utf8')
     const cloudbaseSource = fs.readFileSync(path.join(root, 'src/modules/mip-banners/cloudbase-gateway.ts'), 'utf8')
 
-    for (const page of [listPage, editorPage]) {
-      expect(page).not.toContain('mipBannerModule.gateway')
-      expect(page).not.toContain('mipBannerModule.mutate')
-      expect(page).toContain('mipBannerModule.query')
-      expect(page).toContain('mipBannerModule.mutation')
-    }
-    expect(editorPage).toContain('mipBannerModule.uploadBannerImageFromPath')
     expect(moduleSource).not.toMatch(/\n\s+gateway,\n/)
     expect(gatewaySource).not.toContain('uploadImage')
     expect(mediaSource).toContain('action: \'uploadImage\'')

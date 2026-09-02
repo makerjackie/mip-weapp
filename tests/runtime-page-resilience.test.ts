@@ -35,28 +35,6 @@ describe('runtime page resilience', () => {
     expect(page).not.toMatch(/^let pollTimer:/m)
   })
 
-  it('enables pull-down refresh for activity feedback', () => {
-    const config = JSON.parse(read('src/packages/admin/event-feedback/index.json')) as {
-      enablePullDownRefresh?: boolean
-    }
-    expect(config.enablePullDownRefresh).toBe(true)
-  })
-
-  it('maps forbidden admin loads to the shared state and renders it explicitly', () => {
-    for (const page of [
-      'opportunity-editor',
-      'opportunity-detail',
-      'growth-benefits',
-      'event-participants',
-    ]) {
-      const script = read(`src/packages/admin/${page}/index.ts`)
-      const view = read(`src/packages/admin/${page}/index.wxml`)
-      expect(script, page).toContain('adminLoadFailure')
-      expect(view, page).toContain('state === \'forbidden\'')
-      expect(view, page).toContain('无运营权限')
-    }
-  })
-
   it('shows feedback when help-page native capabilities fail', () => {
     const page = read('src/packages/member/help/index.ts')
 

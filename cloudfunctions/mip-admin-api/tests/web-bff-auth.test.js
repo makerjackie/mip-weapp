@@ -3,17 +3,17 @@
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const {
-  WEB_BFF_FIRST_QUERY_ACTIONS,
   WEB_BFF_MUTATION_ACTIONS,
   WEB_BFF_QUERY_ACTIONS,
   WEB_BFF_REVIEWED_MUTATION_MANIFEST,
   WEB_BFF_TRANSPORT,
-  createQueryActionAllowlist,
-  createReviewedMutationActionAllowlist,
   createWebBffRoute,
   signWebBffEnvelope,
 } = require('../lib/web-bff-auth')
-const { publicOperationContract } = require('../domain/public-operation-contract')
+const {
+  adminWebOperationContract,
+  publicOperationContract,
+} = require('../domain/public-operation-contract')
 
 const SECRET = 'web-bff-test-secret-that-is-at-least-thirty-two-bytes'
 const NOW = Date.UTC(2030, 0, 1)
@@ -57,88 +57,35 @@ function fixture() {
 }
 
 describe('Web BFF trusted query adapter', () => {
-  it('derives the exact first query allowlist from the generated operation contract', () => {
-    const expected = [
-      'mip.admin.session',
-      'mip.admin.dashboard.overview.get',
-      'mip.admin.users.list',
-      'mip.admin.events.list',
-      'mip.admin.orders.list',
-      'mip.admin.branches.list',
-      'mip.admin.roles.list',
-      'mip.admin.rolePolicies.list',
-      'mip.admin.audit.list',
-      'mip.admin.messageCampaigns.list',
-      'mip.admin.messageTemplates.list',
-      'mip.admin.knowledge.list',
-    ]
-    const operationByAction = new Map(
-      publicOperationContract.operations.map(operation => [operation.action, operation]),
-    )
-    const firstQueryAllowlist = createQueryActionAllowlist(
-      WEB_BFF_FIRST_QUERY_ACTIONS,
-      publicOperationContract,
-    )
+  it('derives every allowed action and mutation field schema from the server-owned Web contract', () => {
+    const expectedQueries = adminWebOperationContract.operations
+      .filter(operation => operation.webAllowed
+        && operation.webRoute === 'ADMIN'
+        && operation.kind === 'QUERY')
+    const expectedMutations = adminWebOperationContract.operations
+      .filter(operation => operation.webAllowed && operation.kind === 'MUTATION')
 
-    assert.deepEqual(WEB_BFF_FIRST_QUERY_ACTIONS, expected)
-    assert.deepEqual([...firstQueryAllowlist], expected)
-    for (const action of firstQueryAllowlist) {
-      assert.deepEqual(operationByAction.get(action), {
-        action,
-        kind: 'QUERY',
-        authentication: 'REQUIRED',
-        session: 'REQUIRED',
-        safeToRetry: true,
-        idempotencyKeyRequired: null,
-      })
-    }
-  })
-
-  it('fails closed when an allowlisted action is absent or becomes a mutation', () => {
-    assert.throws(
-      () => createQueryActionAllowlist(['mip.admin.missing'], publicOperationContract),
-      /WEB_BFF_QUERY_CONTRACT_INVALID/,
-    )
-    assert.throws(
-      () => createQueryActionAllowlist(['mip.admin.users.update'], publicOperationContract),
-      /WEB_BFF_QUERY_CONTRACT_INVALID/,
-    )
-  })
-
-  it('derives an exact reviewed mutation manifest and rejects metadata drift', () => {
-    assert.equal(WEB_BFF_REVIEWED_MUTATION_MANIFEST.length, 80)
+    assert.equal(expectedQueries.length, 80)
+    assert.equal(expectedMutations.length, 80)
+    assert.deepEqual([...WEB_BFF_QUERY_ACTIONS], expectedQueries.map(operation => operation.action))
+    assert.deepEqual([...WEB_BFF_MUTATION_ACTIONS], expectedMutations.map(operation => operation.action))
     assert.deepEqual(
-      [...WEB_BFF_MUTATION_ACTIONS],
-      WEB_BFF_REVIEWED_MUTATION_MANIFEST.map(item => item.action),
-    )
-    for (const key of ['kind', 'authentication', 'session', 'safeToRetry', 'idempotencyKeyRequired']) {
-      const drifted = WEB_BFF_REVIEWED_MUTATION_MANIFEST.map(item => ({ ...item }))
-      drifted[0][key] = key === 'kind'
-        ? 'QUERY'
-        : key === 'safeToRetry' || key === 'idempotencyKeyRequired'
-          ? !drifted[0][key]
-          : 'OPTIONAL'
-      assert.throws(
-        () => createReviewedMutationActionAllowlist(drifted, publicOperationContract),
-        /WEB_BFF_MUTATION_CONTRACT_INVALID/,
-        key,
-      )
-    }
-    const contractDrift = {
-      ...publicOperationContract,
-      operations: publicOperationContract.operations.map(operation => operation.action === 'mip.admin.events.clone'
-        ? { ...operation, safeToRetry: true }
-        : operation),
-    }
-    assert.throws(
-      () => createReviewedMutationActionAllowlist(WEB_BFF_REVIEWED_MUTATION_MANIFEST, contractDrift),
-      /WEB_BFF_MUTATION_CONTRACT_INVALID/,
-    )
-    const invalidForwardPolicy = WEB_BFF_REVIEWED_MUTATION_MANIFEST.map(item => ({ ...item }))
-    invalidForwardPolicy[0].forwardIdempotencyKey = 'yes'
-    assert.throws(
-      () => createReviewedMutationActionAllowlist(invalidForwardPolicy, publicOperationContract),
-      /WEB_BFF_MUTATION_CONTRACT_INVALID/,
+      WEB_BFF_REVIEWED_MUTATION_MANIFEST.map(operation => ({
+        action: operation.action,
+        requiredInputKeys: operation.requiredInputKeys,
+        optionalInputKeys: operation.optionalInputKeys,
+        idempotencyKeyRequired: operation.idempotencyKeyRequired,
+        forwardIdempotencyKey: operation.forwardIdempotencyKey,
+        webRoute: operation.webRoute,
+      })),
+      expectedMutations.map(operation => ({
+        action: operation.action,
+        requiredInputKeys: operation.requiredInputKeys,
+        optionalInputKeys: operation.optionalInputKeys,
+        idempotencyKeyRequired: operation.idempotencyKeyRequired,
+        forwardIdempotencyKey: operation.forwardIdempotencyKey,
+        webRoute: operation.webRoute,
+      })),
     )
   })
 

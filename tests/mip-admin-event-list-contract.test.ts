@@ -2,7 +2,7 @@ import type { AdminEvent, AdminEventListInput } from '../src/modules/mip-admin/t
 import { describe, expect, it, vi } from 'vitest'
 import { createMipAdminGateway } from '../src/modules/mip-admin/cloudbase-gateway'
 
-vi.mock('../src/modules/platform/cloudbase', () => ({
+vi.mock('../src/platform/cloudbase/client', () => ({
   requireCloudClient: vi.fn(),
 }))
 

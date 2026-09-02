@@ -1,4 +1,4 @@
-import { MipAdminError } from './types'
+import { MipAdminError } from './error'
 
 export type AdminUserInfluenceKind = 'INVITATION' | 'HEART' | 'VISIT'
 export type AdminUserInfluenceDirection = 'ALL' | 'INCOMING' | 'OUTGOING'

@@ -1,6 +1,23 @@
 import type { AdminOperationsQueueState } from './operations-queue'
 import type { MipAdminGateway } from './types'
 
+export type GovernanceAdminGateway = Pick<
+  MipAdminGateway,
+  | 'listBranches'
+  | 'createBranch'
+  | 'updateBranch'
+  | 'changeBranchStatus'
+  | 'listRoles'
+  | 'searchRoleCandidates'
+  | 'setRole'
+  | 'listRoleCapabilityPolicies'
+  | 'updateRoleCapabilityPolicy'
+  | 'resetRoleCapabilityPolicy'
+  | 'listAudit'
+  | 'listOperationalExceptions'
+  | 'listOperationsQueue'
+>
+
 interface GovernanceAdminCache {
   query: <T>(key: string, loader: () => Promise<T>, options?: { force?: boolean }) => Promise<T>
   invalidate: (prefix?: string) => void
@@ -12,7 +29,6 @@ type OperationalExceptionListInput
     & { cursor?: string }
 
 export interface MipGovernanceAdmin {
-  getSession: (force?: boolean) => ReturnType<MipAdminGateway['getSession']>
   listBranches: (force?: boolean) => ReturnType<MipAdminGateway['listBranches']>
   createBranch: MipAdminGateway['createBranch']
   updateBranch: MipAdminGateway['updateBranch']
@@ -41,7 +57,6 @@ export interface MipGovernanceAdmin {
 
 const cacheKeys = {
   admin: 'mip-admin',
-  session: 'mip-admin:session',
   branches: 'mip-admin:branches',
   roles: 'mip-admin:roles',
   rolePolicies: 'mip-admin:role-capability-policies',
@@ -51,7 +66,7 @@ const cacheKeys = {
 } as const
 
 export function createMipGovernanceAdmin(
-  gateway: MipAdminGateway,
+  gateway: GovernanceAdminGateway,
   cache: GovernanceAdminCache,
 ): MipGovernanceAdmin {
   const mutate = async <T>(work: () => Promise<T>, invalidate: () => void) => {
@@ -62,7 +77,7 @@ export function createMipGovernanceAdmin(
   const invalidateAdmin = () => cache.invalidate(cacheKeys.admin)
   const invalidateRoleBinding = (input: Record<string, unknown>) => {
     cache.invalidate(cacheKeys.roles)
-    cache.invalidate(cacheKeys.session)
+    cache.invalidate('mip-admin:session')
     cache.invalidate(cacheKeys.audit)
     if (typeof input.userId === 'string') {
       cache.invalidate(`mip-admin:user:${input.userId}`)
@@ -73,7 +88,6 @@ export function createMipGovernanceAdmin(
   }
 
   return {
-    getSession: (force = false) => cache.query(cacheKeys.session, gateway.getSession, { force }),
     listBranches: (force = false) => cache.query(cacheKeys.branches, gateway.listBranches, { force }),
     createBranch: input => mutate(() => gateway.createBranch(input), invalidateAdmin),
     updateBranch: input => mutate(() => gateway.updateBranch(input), invalidateAdmin),

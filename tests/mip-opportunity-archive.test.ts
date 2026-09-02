@@ -6,24 +6,12 @@ const root = path.resolve(import.meta.dirname, '..')
 const read = (relativePath: string) => fs.readFileSync(path.join(root, relativePath), 'utf8')
 
 describe('MIP opportunity archive client contract', () => {
-  it('shows the archive action only for a server-granted platform capability', () => {
+  it('keeps archive behind the neutral service contract', () => {
     const types = read('src/modules/mip-admin/types.ts')
     const gateway = read('src/modules/mip-admin/cloudbase-gateway.ts')
-    const page = read('src/packages/admin/opportunities/index.ts')
-    const template = read('src/packages/admin/opportunities/index.wxml')
-    const detailPage = read('src/packages/admin/opportunity-detail/index.ts')
-    const detailTemplate = read('src/packages/admin/opportunity-detail/index.wxml')
 
     expect(types).toContain('\'opportunities.archive\'')
     expect(gateway).toContain('call(\'mip.admin.opportunities.archive\', input)')
-    expect(page).toContain('hasCapability(session.capabilities, \'opportunities.archive\')')
-    expect(page).toContain('expectedVersion: version')
-    expect(page).toContain('status !== \'DRAFT\'')
-    expect(template).toContain('item.status === \'DRAFT\' && canArchive')
-    expect(template).toContain('data-status="{{item.status}}"')
-    expect(detailPage).toContain('this.data.item.status !== \'DRAFT\'')
-    expect(detailTemplate).toContain('canArchive && item.status === \'DRAFT\'')
-    expect(template).toContain('data-value="ARCHIVED"')
   })
 
   it('keeps archived drafts out of owner reads and editing', () => {

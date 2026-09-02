@@ -63,9 +63,10 @@ describe('phase9 gateway retry policy (read-only)', () => {
     }
     expect(eventReads).toContain('mip.events.myRegistration')
 
-    expect(adminTransport).toContain('import { retryableAdminOperationActions } from \'./operation-contract\'')
+    expect(adminTransport).toContain('isRetryableAdminOperationAction')
+    expect(adminTransport).toContain('retryableAdminOperationActions')
     expect(adminTransport).not.toMatch(/new Set\(\[/)
-    expect(adminTransport).toContain('readActions.has(request.action) ? COLD_START_READ_RETRY : { attempts: 1 }')
+    expect(adminTransport).toContain('isRetryableAdminOperationAction(request.action) ? COLD_START_READ_RETRY : { attempts: 1 }')
     expect(eventGateway).toContain('readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 }')
     expect(COLD_START_READ_RETRY.attempts).toBeGreaterThan(1)
   })
@@ -243,18 +244,13 @@ describe('phase9 page double-click / stale / error recovery behavior', () => {
   it('event detail and registration confirm gate double submit via busy flag', () => {
     const detail = read('src/packages/member/mip-events/detail/index.ts')
     const registration = read('src/packages/member/mip-events/registration/index.ts')
-    const adminEvents = read('src/packages/admin/events/index.ts')
     const roster = read('src/packages/admin/event-registrations/index.ts')
 
     expect(detail).toMatch(/if \(\(!currentEvent\?\.canCancel && !retryRefund\) \|\| this\.data\.busy\)/)
     expect(detail).toMatch(/busy: true[\s\S]*?showModal[\s\S]*?finally[\s\S]*?busy: false/)
     expect(registration).toMatch(/if \(!event \|\| this\.data\.busy \|\| !this\.validate\(\)\)/)
     expect(registration).toMatch(/busy: true[\s\S]*?mipEventsModule\.register[\s\S]*?finally[\s\S]*?busy: false/)
-    expect(adminEvents).toMatch(/if \(this\.data\.saving \|\| this\.data\.tagSaving \|\| this\.data\.cancelBusy\)/)
-    expect(adminEvents).toMatch(/if \(this\.data\.conflict\)/)
-    expect(adminEvents).toMatch(/cancelConflict/)
-    expect(adminEvents).toMatch(/cancelBusy: true[\s\S]*?showModal/)
-    expect(roster).toMatch(/this\.data\.processingId \|\| this\.data\.exportPending \|\| this\.confirmationBusy/)
+    expect(roster).toMatch(/this\.data\.processingId \|\| this\.confirmationBusy/)
     expect(roster).toMatch(/confirmationBusy/)
     expect(roster).toMatch(/this\.confirmationBusy = true[\s\S]*?showModal/)
     expect(roster).toMatch(/seq !== this\.requestSeq/)

@@ -1,0 +1,60 @@
+<view id="mip-services-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+  <view class="px-1">
+    <view class="text-[length:38rpx] font-bold">全部服务</view>
+    <view class="mt-2 text-[length:22rpx] text-muted">查看互动、工具和账号服务。</view>
+  </view>
+
+  <view class="mt-6 text-[length:30rpx] font-semibold">互动</view>
+  <view class="mt-3 grid grid-cols-3 gap-3">
+    <view class="relative flex min-h-[184rpx] flex-col items-center justify-center rounded-[24rpx] bg-panel px-2 py-4 text-center" aria-role="button" bind:tap="openGame">
+      <view class="flex h-[72rpx] w-[72rpx] items-center justify-center rounded-[20rpx] bg-brand-soft"><t-icon name="gamepad" size="44rpx" color="var(--color-brand)" /></view>
+      <view class="mt-3 text-[length:25rpx] font-semibold">团队 PK</view>
+      <view class="mt-1 text-[length:22rpx] text-muted">赛季与排行</view>
+    </view>
+    <view class="relative flex min-h-[184rpx] flex-col items-center justify-center rounded-[24rpx] bg-panel px-2 py-4 text-center" aria-role="button" bind:tap="openHeartHistory">
+      <view class="flex h-[72rpx] w-[72rpx] items-center justify-center rounded-[20rpx] bg-brand-soft"><t-icon name="heart" size="44rpx" color="var(--color-brand)" /></view>
+      <view class="mt-3 text-[length:25rpx] font-semibold">心动记录</view>
+      <view class="mt-1 text-[length:22rpx] text-muted">发出与收到</view>
+    </view>
+    <view class="relative flex min-h-[184rpx] flex-col items-center justify-center rounded-[24rpx] bg-panel px-2 py-4 text-center" aria-role="button" bind:tap="openNotifications">
+      <view class="relative flex h-[72rpx] w-[72rpx] items-center justify-center rounded-[20rpx] bg-brand-soft">
+        <t-icon name="notification" size="44rpx" color="var(--color-brand)" />
+        <view wx:if="{{notificationUnreadCount > 0}}" class="absolute -right-2 -top-2 min-w-[32rpx] rounded-full bg-brand px-1 text-center text-[length:17rpx] font-semibold leading-[32rpx] text-on-brand">{{notificationUnreadCount > 99 ? '99+' : notificationUnreadCount}}</view>
+      </view>
+      <view class="mt-3 text-[length:25rpx] font-semibold">站内消息</view>
+      <view wx:if="{{notificationUnreadCount > 0}}" class="mt-1 text-[length:22rpx] text-muted">{{notificationUnreadCount}} 条未读</view>
+      <view wx:else class="mt-1 text-[length:22rpx] text-muted">暂无未读</view>
+    </view>
+  </view>
+
+  <view class="mt-6 text-[length:30rpx] font-semibold">工具</view>
+  <view class="mt-3 grid grid-cols-3 gap-3">
+    <view class="flex min-h-[184rpx] flex-col items-center justify-center rounded-[24rpx] bg-panel px-2 py-4 text-center" aria-role="button" bind:tap="openDigitalAvatar">
+      <view class="flex h-[72rpx] w-[72rpx] items-center justify-center rounded-[20rpx] bg-brand-soft"><t-icon name="user-avatar" size="44rpx" color="var(--color-brand)" /></view>
+      <view class="mt-3 text-[length:25rpx] font-semibold">数字分身</view>
+      <view class="mt-1 text-[length:22rpx] text-muted">管理头像图片</view>
+    </view>
+    <view class="flex min-h-[184rpx] flex-col items-center justify-center rounded-[24rpx] bg-panel px-2 py-4 text-center" aria-role="button" bind:tap="openAiDrafts">
+      <view class="flex h-[72rpx] w-[72rpx] items-center justify-center rounded-[20rpx] bg-brand-soft"><t-icon name="ai-edit" size="44rpx" color="var(--color-brand)" /></view>
+      <view class="mt-3 text-[length:25rpx] font-semibold">AI 草稿</view>
+      <view class="mt-1 text-[length:22rpx] text-muted">整理内容草稿</view>
+    </view>
+    <view class="flex min-h-[184rpx] flex-col items-center justify-center rounded-[24rpx] bg-panel px-2 py-4 text-center" aria-role="button" bind:tap="openMatching">
+      <view class="flex h-[72rpx] w-[72rpx] items-center justify-center rounded-[20rpx] bg-brand-soft"><t-icon name="usergroup" size="44rpx" color="var(--color-brand)" /></view>
+      <view class="mt-3 text-[length:25rpx] font-semibold">机会撮合</view>
+      <view class="mt-1 text-[length:22rpx] text-muted">人才与项目推荐</view>
+    </view>
+  </view>
+
+  <view class="mt-6 text-[length:30rpx] font-semibold">账号与支持</view>
+  <view class="mt-3 overflow-hidden rounded-[24rpx] bg-panel">
+    <view class="flex min-h-[96rpx] items-center justify-between gap-4 px-4" aria-role="button" bind:tap="openBranches"><view class="min-w-0"><view class="text-[length:26rpx] font-semibold">主分会</view><view class="mt-1 text-[length:20rpx] text-muted">查看城市分会</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+    <view class="flex min-h-[96rpx] items-center justify-between gap-4 border-t border-line px-4" aria-role="button" bind:tap="openOpportunitySettings"><view class="min-w-0"><view class="text-[length:26rpx] font-semibold">消息与机会权限</view><view class="mt-1 text-[length:20rpx] text-muted">管理评论、撮合和热点通知</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+    <view class="flex min-h-[96rpx] items-center justify-between gap-4 border-t border-line px-4" aria-role="button" bind:tap="openBenefits"><view class="min-w-0"><view class="text-[length:26rpx] font-semibold">会员权益</view><view class="mt-1 text-[length:20rpx] text-muted">查看方案权益和使用说明</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+    <view class="flex min-h-[96rpx] items-center justify-between gap-4 border-t border-line px-4" aria-role="button" bind:tap="openHelp"><view class="min-w-0"><view class="text-[length:26rpx] font-semibold">帮助与客服</view><view class="mt-1 text-[length:20rpx] text-muted">查看使用说明或联系客服</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+    <view class="flex min-h-[96rpx] items-center justify-between gap-4 border-t border-line px-4" aria-role="button" bind:tap="openAbout"><view class="min-w-0"><view class="text-[length:26rpx] font-semibold">关于 MIP</view><view class="mt-1 text-[length:20rpx] text-muted">查看运营主体和版本信息</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+  </view>
+
+  <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:22rpx] text-ink">{{message}}</view>
+  <app-page-exit label="返回我的" tab-url="/pages/profile/index" />
+</view>

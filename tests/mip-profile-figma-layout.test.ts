@@ -29,6 +29,8 @@ describe('MIP profile Figma structure', () => {
     expect(page).toContain('industryCatalogExpanded: false')
     expect(page).toContain('toggleCatalog(event')
     expect(page).toContain('toggleMore()')
+    expect(view).not.toContain('公开范围')
+    expect(view).not.toContain('bind:tap="addExperience"')
   })
 
   it('uses the same compact row contract in the card editor', () => {
@@ -36,12 +38,16 @@ describe('MIP profile Figma structure', () => {
     const config = JSON.parse(source('src/packages/member/mip-card-edit/index.json'))
 
     expect(config.navigationBarTitleText).toBe('编辑名片')
-    for (const group of ['identity', 'contact', 'organization']) {
+    for (const group of ['identity', 'company', 'contact', 'organization']) {
       expect(view).toContain(`data-card-field-group="${group}"`)
     }
-    for (const row of ['realName', 'company', 'role', 'phone', 'wechat', 'email', 'address', 'organization', 'organizationRole']) {
+    for (const row of ['realName', 'phone', 'wechat', 'email', 'address']) {
       expect(view).toMatch(new RegExp(`data-card-field-row="${row}"[^>]+min-h-\\[92rpx\\]`))
     }
+    for (const row of ['company', 'role', 'organization', 'organizationRole']) {
+      expect(view).toMatch(new RegExp(`data-card-field-row="${row}"[^>]+h-\\[88rpx\\]`))
+    }
     expect(view).not.toContain('rounded-[14rpx] bg-panel-raised px-4 text-[length:25rpx]')
+    expect(view).not.toContain('公开范围')
   })
 })

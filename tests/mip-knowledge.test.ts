@@ -26,31 +26,34 @@ describe('MIP knowledge content contract', () => {
     expect(migration).not.toMatch(/\b(TRUNCATE TABLE|DELETE FROM)\b/i)
   })
 
-  it('registers public content and capability-protected admin routes', () => {
+  it('registers public content routes', () => {
     const app = JSON.parse(read('src/app.json')) as {
       subPackages: Array<{ root: string, pages: string[] }>
     }
     const member = app.subPackages.find(item => item.root === 'packages/member')
-    const admin = app.subPackages.find(item => item.root === 'packages/admin')
     expect(member?.pages).toEqual(expect.arrayContaining([
       'mip-knowledge/index',
       'mip-knowledge/detail/index',
       'mip-knowledge/web/index',
     ]))
-    expect(admin?.pages).toContain('knowledge/index')
-    expect(read('src/packages/admin/components/workspace-nav/model.ts'))
-      .toContain('capabilities: [\'knowledge.manage\']')
   })
 
   it('keeps payment and private video capabilities behind module and device boundaries', () => {
     const page = read('src/packages/member/mip-knowledge/detail/index.ts')
     const module = read('src/modules/mip-knowledge/module.ts')
+    const client = read('src/modules/mip-knowledge/client.ts')
+    const gateway = read('src/modules/mip-knowledge/cloudbase-gateway.ts')
     const runtime = read('config/runtime-pages.json')
     expect(page).toContain('mipKnowledgeModule.purchase')
     expect(page).toContain('mipIdentityModule.beginProtectedAction')
     expect(page).toContain('wx.openChannelsActivity')
     expect(page).not.toContain('wx.requestPayment')
-    expect(module).toContain('runtimeConfig.paymentMode !== \'disabled\'')
+    expect(module).toContain('createMipKnowledgeModule')
+    expect(module).not.toContain('runtimeConfig')
+    expect(module).not.toContain('requireCloudClient')
+    expect(module).not.toContain('mipCommerceModule')
+    expect(client).toContain('paymentEnabled: runtimeConfig.paymentMode !== \'disabled\'')
+    expect(gateway).toContain('\'createKnowledgeCheckout\'')
     expect(runtime).toContain('knowledge-webview')
     expect(runtime).toContain('video-channel')
     expect(read('src/config/runtime.ts')).toContain('knowledgeWebviewAllowedHosts')

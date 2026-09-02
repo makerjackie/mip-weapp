@@ -65,7 +65,7 @@ vi.mock('../src/modules/mip-messaging/client', () => ({
     subscriptionCapability: vi.fn(() => ({ available: false })),
   },
 }))
-vi.mock('../src/modules/platform/case-navigation', () => ({
+vi.mock('../src/platform/navigation/client', () => ({
   caseNavigateTo: vi.fn(),
   caseSwitchPrimary: vi.fn(),
   syncCaseNavigation: vi.fn(),

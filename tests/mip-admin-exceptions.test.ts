@@ -1,5 +1,3 @@
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { parseOperationalExceptionPage } from '../src/modules/mip-admin/operational-exceptions'
 import { MipAdminError } from '../src/modules/mip-admin/types'
@@ -36,42 +34,5 @@ describe('MIP admin operational exceptions', () => {
       ...page(),
       openid: 'must-not-be-accepted',
     })).toThrow(MipAdminError)
-    expect(() => parseOperationalExceptionPage(page({
-      type: 'EVENT',
-      id: eventId,
-      route: '/packages/admin/roles/index',
-    }))).toThrow(MipAdminError)
-  })
-
-  it('keeps generic exceptions read-only and isolates delivery review mutations', () => {
-    const root = path.resolve(import.meta.dirname, '../src/packages/admin/exceptions')
-    const script = fs.readFileSync(path.join(root, 'index.ts'), 'utf8')
-    const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
-    expect(script).toContain('\'operations.exceptions.read\'')
-    expect(script).toContain('\'messages.delivery.review\'')
-    expect(script).not.toMatch(/retryOperational|submitRefund|changeStatus/)
-    expect(script).toContain('mutateReview(\'reconcile\'')
-    expect(script).toContain('resolutionCode: item.requiresNote ? \'UNKNOWN_NO_REPLAY\'')
-    expect(script).toContain('AUTO_CONVERGED: \'系统状态已收敛\'')
-    expect(script).toMatch(/错误码 \$\{item\.sourceState\.lastErrorCode\}/)
-    expect(template).toContain('state === \'loading\'')
-    expect(template).toContain('reviewState === \'empty\'')
-    expect(template).toContain('state === \'error\'')
-    expect(template).toContain('state === \'forbidden\'')
-    expect(template).toContain('核对投递状态不会重新发送消息')
-  })
-
-  it('connects the route, dashboard capability and read-only gateway action', () => {
-    const app = JSON.parse(fs.readFileSync(path.resolve(import.meta.dirname, '../src/app.json'), 'utf8'))
-    const admin = app.subPackages.find((item: { root: string }) => item.root === 'packages/admin')
-    const dashboard = fs.readFileSync(path.resolve(import.meta.dirname, '../src/packages/admin/dashboard/index.wxml'), 'utf8')
-    const adminNavigation = fs.readFileSync(path.resolve(import.meta.dirname, '../src/packages/admin/components/workspace-nav/model.ts'), 'utf8')
-    const gateway = fs.readFileSync(path.resolve(import.meta.dirname, '../src/modules/mip-admin/cloudbase-gateway.ts'), 'utf8')
-    expect(admin.pages).toContain('exceptions/index')
-    expect(dashboard).toContain('view.menuGroups')
-    expect(adminNavigation).toContain('route: \'packages/admin/exceptions/index\'')
-    expect(gateway).toContain('\'mip.admin.exceptions.list\'')
-    expect(gateway).toContain('parseOperationalExceptionPage')
-    expect(gateway).not.toContain('mip.admin.exceptions.retry')
   })
 })

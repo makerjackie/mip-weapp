@@ -1,7 +1,7 @@
 import type { InboxMessage, InboxMessageId } from '../../../modules/mip-messaging'
 import { isTrustedInboxRoute } from '../../../modules/mip-messaging'
 import { mipMessagingModule } from '../../../modules/mip-messaging/client'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 
 interface MessageView extends InboxMessage {
   createdText: string

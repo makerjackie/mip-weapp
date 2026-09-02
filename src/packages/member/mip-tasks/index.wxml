@@ -1,7 +1,6 @@
 <view id="mip-tasks-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] text-ink">
   <view class="-mx-3 flex border-b border-line bg-canvas px-3">
     <view class="mip-tasks-tab flex min-h-[88rpx] flex-1 items-center justify-center border-b-[4rpx] border-brand text-[length:28rpx] text-brand">我的任务</view>
-    <view wx:if="{{canDispatch}}" class="mip-tasks-tab flex min-h-[88rpx] flex-1 items-center justify-center border-b-[4rpx] border-transparent text-[length:28rpx] text-muted" aria-role="button" bind:tap="openDispatch">派发任务</view>
   </view>
   <view class="mt-3 flex gap-2">
     <view class="mip-tasks-filter flex min-h-[88rpx] items-center" data-filter="pending" bind:tap="chooseFilter"><view class="flex min-h-[56rpx] items-center rounded-[12rpx] px-3 text-[length:24rpx] {{filter === 'pending' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}">待完成</view></view>

@@ -8,7 +8,7 @@ const cloudHarness = vi.hoisted(() => ({
   uploadFile: vi.fn(),
 }))
 
-vi.mock('../src/modules/platform/cloudbase', () => ({
+vi.mock('../src/platform/cloudbase/client', () => ({
   requireCloudClient: vi.fn(async () => cloudHarness),
 }))
 

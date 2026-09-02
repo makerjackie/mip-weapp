@@ -57,15 +57,15 @@ TanStack Router 使用 hash history，保持 Cloudflare Pages 静态回退简单
 平台中立 envelope 来自 workspace package `@mip/admin-contracts`：
 
 ```ts
-{
+interface AdminRequest<A extends AdminOperationAction> {
   contractVersion: 1
-  action: string
+  action: A
   input: Record<string, unknown>
   idempotencyKey?: string
 }
 ```
 
-业务 `action` 字段必须留在 `input` 内；顶层 action 只用于路由。浏览器只调用同源 BFF；`VITE_MIP_ADMIN_API_URL` 只能是以 `/` 开头的同源路径，默认使用 `/api/admin`，不得配置完整 URL 或跨源地址。媒体上传使用同源 `/api/media/image`，浏览器不得直接调用 CloudBase 或携带服务器密钥。
+action、query/mutation 分类、Web 暴露范围、mutation 字段白名单和幂等策略均由 `mip-admin-api` 生成到 `@mip/admin-contracts`；React adapter、Cloudflare BFF 与 CloudBase Web 入口消费同一份事实。业务 `action` 字段必须留在 `input` 内；顶层 action 只用于路由。浏览器只调用同源 BFF；`VITE_MIP_ADMIN_API_URL` 只能是以 `/` 开头的同源路径，默认使用 `/api/admin`，不得配置完整 URL 或跨源地址。媒体上传使用同源 `/api/media/image`，浏览器不得直接调用 CloudBase 或携带服务器密钥。
 
 ## BFF 路由
 
@@ -97,7 +97,7 @@ Pages 通过 `MIP_ADMIN_UPSTREAM_HMAC_SECRET` 签名管理请求，CloudBase 的
 - `CONFLICT`：刷新当前资源并要求重新确认。
 - 5xx/网络：保留页面上下文，允许手动重试。
 
-网页登录继续使用 5 分钟单次短码、浏览器 verifier、D1 原子确认和 AES-GCM `HttpOnly` 8 小时会话；React 不持久化 token。
+网页登录使用 5 分钟有效的 6 位数字单次短码、浏览器 verifier、D1 原子确认和 AES-GCM `HttpOnly` 8 小时会话；每个可信 AppID 与运营账号连续失败 5 次后锁定确认 5 分钟，D1 只保存该主体的 HMAC 限流键。React 不持久化 token。
 
 ## 测试策略
 

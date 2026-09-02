@@ -1,4 +1,4 @@
-import { MipAdminError } from './types'
+import { MipAdminError } from './error'
 
 export const ADMIN_MEMBERSHIP_DURATION_MONTHS = [1, 3, 6, 12] as const
 

@@ -1,7 +1,7 @@
 import type { UserTaskCard } from '../../../../modules/mip-tasks'
 import { mipMediaModule } from '../../../../modules/mip-media/client'
 import { mipTasksModule, rewardExperienceStarIndexes } from '../../../../modules/mip-tasks'
-import { chooseSingleImage } from '../../../../modules/platform/image-upload'
+import { chooseSingleImage } from '../../../../platform/wechat/image-upload'
 
 const MAXIMUM_ORIGINAL_BYTES = 10 * 1024 * 1024
 

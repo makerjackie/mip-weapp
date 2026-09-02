@@ -3,7 +3,12 @@
 const assert = require('node:assert/strict')
 const { createCipheriv, createHash, createHmac } = require('node:crypto')
 const { describe, it } = require('node:test')
+const {
+  OPERATION_OWNERS,
+  createOperationDispatcher,
+} = require('../domain/operation-registry')
 const { createAdminService } = require('../domain/service')
+const { createOwnerModules } = require('./owner-modules-test-helper')
 
 const secret = 'phone-encryption-secret-with-at-least-32-characters'
 const caller = { appId: 'wx-trusted', identityKey: 'identity-key' }
@@ -96,6 +101,21 @@ function repository(roleKey = 'PLATFORM_OWNER', scopeType = 'PLATFORM', scopeId 
 }
 
 describe('admin service', () => {
+  it('composes every operation owner as a frozen startup-valid module', () => {
+    const service = createAdminService({
+      knowledgeModule: createOwnerModules().KNOWLEDGE,
+      repository: {},
+    })
+
+    assert.deepEqual(Object.keys(service.ownerModules), OPERATION_OWNERS)
+    assert.equal(Object.isFrozen(service.ownerModules), true)
+    for (const ownerModule of Object.values(service.ownerModules)) {
+      assert.equal(Object.isFrozen(ownerModule), true)
+    }
+    assert.doesNotThrow(() => createOperationDispatcher(service.ownerModules))
+    assert.equal(service.getSession, service.ownerModules.ACCESS.getSession)
+  })
+
   it('confirms a web login only after resolving the current operator session', async () => {
     const repo = repository('BRANCH_ADMIN', 'BRANCH', 'branch-a')
     const confirmations = []
@@ -106,12 +126,12 @@ describe('admin service', () => {
     })
     const result = await service.confirmWebLogin(
       { ...caller, openId: 'openid-admin' },
-      { challengeCode: 'abcd2345' },
+      { challengeCode: ' 123456 ' },
     )
 
     assert.deepEqual(result, { confirmed: true })
     assert.deepEqual(confirmations, [{
-      appId: 'wx-trusted', openId: 'openid-admin', challengeCode: 'ABCD2345',
+      appId: 'wx-trusted', openId: 'openid-admin', challengeCode: '123456',
     }])
     assert.deepEqual(repo.audits.at(-1), {
       appId: caller.appId,
@@ -124,6 +144,60 @@ describe('admin service', () => {
       effectiveRole: 'BRANCH_ADMIN',
       metadata: {},
     })
+  })
+
+  it('maps web login failures and audits only a normalized reason', async () => {
+    const cases = [
+      ['WEB_LOGIN_CHALLENGE_NOT_FOUND', 'WEB_LOGIN_INVALID_CODE', 'INVALID_CODE'],
+      ['WEB_LOGIN_RATE_LIMITED', 'WEB_LOGIN_RATE_LIMITED', 'RATE_LIMITED'],
+      ['WEB_LOGIN_REQUEST_INVALID', 'WEB_LOGIN_REQUEST_INVALID', 'CONFIGURATION'],
+      ['WEB_LOGIN_AUTH_REJECTED', 'WEB_LOGIN_CONFIGURATION_ERROR', 'CONFIGURATION'],
+      ['WEB_LOGIN_TIMEOUT', 'WEB_LOGIN_TIMEOUT', 'UNAVAILABLE'],
+      ['WEB_LOGIN_NETWORK_ERROR', 'WEB_LOGIN_NETWORK_ERROR', 'UNAVAILABLE'],
+      ['WEB_LOGIN_UNAVAILABLE', 'WEB_LOGIN_UNAVAILABLE', 'UNAVAILABLE'],
+    ]
+
+    for (const [sourceCode, expectedCode, auditReason] of cases) {
+      const repo = repository('BRANCH_ADMIN', 'BRANCH', 'branch-a')
+      const service = createAdminService({
+        repository: repo,
+        phoneEncryptionKey: secret,
+        confirmWebLogin: async () => { throw Object.assign(new Error(sourceCode), { code: sourceCode }) },
+      })
+
+      await assert.rejects(
+        () => service.confirmWebLogin(
+          { ...caller, openId: 'openid-admin' },
+          { challengeCode: '123456' },
+        ),
+        error => error.code === expectedCode,
+      )
+      const failureAudit = repo.audits.at(-1)
+      assert.equal(failureAudit.action, 'admin.web_login.confirm_failed')
+      assert.deepEqual(failureAudit.metadata, { reason: auditReason })
+      assert.equal(JSON.stringify(failureAudit).includes('123456'), false)
+      assert.equal(JSON.stringify(failureAudit).includes('openid-admin'), false)
+    }
+  })
+
+  it('rejects and audits a malformed web login code before dispatch', async () => {
+    const repo = repository('BRANCH_ADMIN', 'BRANCH', 'branch-a')
+    let dispatched = false
+    const service = createAdminService({
+      repository: repo,
+      phoneEncryptionKey: secret,
+      confirmWebLogin: async () => { dispatched = true },
+    })
+
+    await assert.rejects(
+      () => service.confirmWebLogin(
+        { ...caller, openId: 'openid-admin' },
+        { challengeCode: '12345A' },
+      ),
+      error => error.code === 'VALIDATION_FAILED',
+    )
+    assert.equal(dispatched, false)
+    assert.deepEqual(repo.audits.at(-1).metadata, { reason: 'INVALID_CODE' })
   })
 
   it('does not dispatch a web login confirmation for an account without an operator role', async () => {
@@ -139,7 +213,7 @@ describe('admin service', () => {
     await assert.rejects(
       () => service.confirmWebLogin(
         { ...caller, openId: 'openid-admin' },
-        { challengeCode: 'ABCD2345' },
+        { challengeCode: '123456' },
       ),
       error => error.code === 'FORBIDDEN',
     )

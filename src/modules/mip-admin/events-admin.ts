@@ -1,5 +1,31 @@
 import type { AdminRosterAllListInput, AdminRosterListInput, MipAdminGateway } from './types'
 
+export type EventsAdminGateway = Pick<
+  MipAdminGateway,
+  | 'listEvents'
+  | 'getEvent'
+  | 'getEventInsights'
+  | 'getEventPolicy'
+  | 'listRoster'
+  | 'listRosterAll'
+  | 'listEventAlbumPhotos'
+  | 'getEventCommentAdminState'
+  | 'saveEvent'
+  | 'changeEventStatus'
+  | 'archiveEvent'
+  | 'cloneEvent'
+  | 'saveEventPolicy'
+  | 'publishEventReminder'
+  | 'reviewRegistration'
+  | 'checkIn'
+  | 'undoCheckIn'
+  | 'reviewEventAlbumPhoto'
+  | 'saveEventCommentSettings'
+  | 'moderateEventComment'
+  | 'claimEventCommentReport'
+  | 'closeEventCommentReport'
+>
+
 interface EventsAdminCache {
   query: <T>(key: string, loader: () => Promise<T>, options?: { force?: boolean }) => Promise<T>
   invalidate: (prefix?: string) => void
@@ -71,7 +97,7 @@ function inputId(input: Record<string, unknown>, key: string) {
 }
 
 export function createMipEventsAdmin(
-  gateway: MipAdminGateway,
+  gateway: EventsAdminGateway,
   cache: EventsAdminCache,
 ): MipEventsAdmin {
   const invalidateEvent = (eventId: string) => {

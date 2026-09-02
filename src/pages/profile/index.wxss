@@ -443,32 +443,36 @@
   height: 28rpx;
 }
 
-.profile-more-title {
-  margin-top: 48rpx;
-  font-size: 32rpx;
-  font-weight: 600;
-}
-
-.profile-more {
-  margin-top: 24rpx;
-  overflow: hidden;
-  background: var(--color-panel);
-  border-radius: var(--mip-radius-card-medium);
-}
-
-.profile-more-item,
+.profile-services-entry,
 .profile-admin-entry {
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  justify-content: space-between;
   min-height: 96rpx;
   padding: 20rpx 32rpx;
-  border-bottom: 1rpx solid var(--color-line);
 }
 
-.profile-more-item--last {
-  border-bottom: 0;
+.profile-services-entry {
+  margin-top: 48rpx;
+  background: var(--color-panel);
+  border: 1rpx solid var(--color-line);
+  border-radius: var(--mip-radius-card-medium);
+}
+
+.profile-services-icon {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 72rpx;
+  height: 72rpx;
+  background: var(--color-brand-soft);
+  border-radius: var(--mip-radius-control);
+}
+
+.profile-services-copy {
+  min-width: 0;
+  margin-left: 20rpx;
 }
 
 .profile-more-label {
@@ -484,12 +488,13 @@
   color: var(--color-muted);
 }
 
-.profile-more-trailing {
+.profile-services-trailing {
   display: flex;
   flex: 0 0 auto;
   gap: 12rpx;
   align-items: center;
-  margin-left: 16rpx;
+  padding-left: 16rpx;
+  margin-left: auto;
 }
 
 .profile-unread-badge {
@@ -507,6 +512,7 @@
 }
 
 .profile-admin-entry {
+  justify-content: space-between;
   margin-top: 24rpx;
   background: var(--color-panel);
   border: 1rpx solid var(--color-line);

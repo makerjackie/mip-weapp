@@ -1,7 +1,5 @@
 import type { AdminTransport } from '../src/modules/mip-admin/transport'
 import type { AdminUser, AdminUserDetail } from '../src/modules/mip-admin/types'
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { createMipAdminGateway } from '../src/modules/mip-admin/cloudbase-gateway'
 import {
@@ -10,15 +8,13 @@ import {
   parseAdminUserPage,
 } from '../src/modules/mip-admin/user-records'
 
-vi.mock('../src/modules/platform/cloud-media', () => ({
+vi.mock('../src/platform/storage/cloud-media', () => ({
   resolveCloudFileUrls: vi.fn(),
 }))
 
 vi.mock('../src/modules/mip-admin/cloudbase-transport', () => ({
   cloudbaseAdminTransport: { request: vi.fn() },
 }))
-
-const root = path.resolve(import.meta.dirname, '..')
 
 function user(overrides: Partial<AdminUser> = {}): AdminUser {
   return {
@@ -296,17 +292,5 @@ describe('MIP admin user record contract', () => {
       request: vi.fn(async () => ({ ...detail(), influence: undefined })),
     })
     await expect(drift.getUser('user-a')).rejects.toMatchObject({ code: 'INVALID_RESPONSE' })
-  })
-
-  it('renders current and scheduled membership separately and shows all four server summaries', () => {
-    const page = fs.readFileSync(path.join(root, 'src/packages/admin/profiles/index.ts'), 'utf8')
-    const template = fs.readFileSync(path.join(root, 'src/packages/admin/profiles/index.wxml'), 'utf8')
-
-    expect(page).toContain('detail.membership.isCurrent')
-    expect(page).toContain('detail.membership.isScheduled')
-    for (const key of ['guestCount', 'interactionCount', 'interestCount', 'visitorCount']) {
-      expect(template).toContain(`detail.influence.${key}`)
-    }
-    expect(template).toContain('影响力概览')
   })
 })

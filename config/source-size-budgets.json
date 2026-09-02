@@ -6,11 +6,6 @@
       "path": "cloudfunctions/mip-events-api/domain/event-service.js",
       "maxLines": 3400,
       "reason": "Keep the event lifecycle service below the deployment-unit hotspot threshold."
-    },
-    {
-      "path": "src/packages/admin/message-campaigns/index.ts",
-      "maxLines": 1400,
-      "reason": "Keep the message-campaign page below the page-controller hotspot threshold."
     }
   ]
 }

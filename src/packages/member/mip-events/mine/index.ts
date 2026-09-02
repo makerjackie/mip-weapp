@@ -5,7 +5,7 @@ import type {
   RegistrationSummary,
 } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
-import { caseNavigateTo, caseSwitchPrimary } from '../../../../modules/platform/case-navigation'
+import { caseNavigateTo, caseSwitchPrimary } from '../../../../platform/navigation/client'
 import { resolveMyRegistrationCategory } from './category'
 
 interface RegistrationView extends RegistrationSummary {

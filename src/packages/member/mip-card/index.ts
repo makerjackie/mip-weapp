@@ -1,7 +1,7 @@
 import type { IdentityAccessSnapshot, MipProfileSnapshot, PublicMipProfile } from '../../../modules/mip-identity'
 import { mipAiModule } from '../../../modules/mip-ai/client'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 
 type CardStyleKey = 'PINK' | 'BLUE' | 'WHITE' | 'YELLOW'
 

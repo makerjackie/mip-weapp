@@ -23,7 +23,7 @@ vi.mock('../src/modules/mip-messaging/client', () => ({
     requestWechatSubscription: vi.fn(),
   },
 }))
-vi.mock('../src/modules/platform/case-navigation', () => ({ caseNavigateTo: vi.fn() }))
+vi.mock('../src/platform/navigation/client', () => ({ caseNavigateTo: vi.fn() }))
 
 interface PageDefinition {
   data: Record<string, unknown>

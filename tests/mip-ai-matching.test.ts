@@ -34,15 +34,13 @@ describe('MIP AI opportunity matching contract', () => {
     expect(migration).not.toMatch(/\b(DROP TABLE|TRUNCATE TABLE|DELETE FROM)\b/i)
   })
 
-  it('keeps matching behind the opportunity module and exposes user and admin routes', () => {
+  it('keeps matching behind the opportunity module and exposes user routes', () => {
     const app = JSON.parse(read('src/app.json')) as {
       subPackages: Array<{ root: string, pages: string[] }>
     }
     const member = app.subPackages.find(item => item.root === 'packages/member')
-    const admin = app.subPackages.find(item => item.root === 'packages/admin')
     expect(member?.pages).toContain('mip-opportunity-matching/index')
     expect(member?.pages).toContain('mip-opportunity-settings/index')
-    expect(admin?.pages).toContain('opportunity-matching/index')
 
     const page = read('src/packages/member/mip-opportunity-matching/index.ts')
     expect(page).toContain('opportunityModule.createMatchingRequest')
@@ -50,24 +48,6 @@ describe('MIP AI opportunity matching contract', () => {
     expect(page).toContain('retainMatchingFeedbackIntent')
     expect(page).toContain('candidateRef')
     expect(page).not.toContain('wx.cloud')
-  })
-
-  it('selects a scoped published opportunity instead of accepting a raw identifier for admin recalculation', () => {
-    const page = read('src/packages/admin/opportunity-matching/index.ts')
-    const view = read('src/packages/admin/opportunity-matching/index.wxml')
-
-    expect(page).toContain('mipAdminModule.opportunities.list(')
-    expect(page).toContain('status: \'PUBLISHED\'')
-    expect(page).toContain('cursor: cursor || undefined')
-    expect(page).toContain('opportunityId: selectedOpportunity.id')
-    expect(page).toContain('opportunityOptionRequestSequence: 0')
-    expect(page).toContain('selectedOpportunity: null')
-    expect(page).not.toContain('updateOpportunityId')
-    expect(view).toContain('选择当前管理范围内的已发布机会')
-    expect(view).toContain('bind:tap="loadMoreOpportunityOptions"')
-    expect(view).toContain('role="radiogroup" aria-label="已发布机会"')
-    expect(view).toContain('!opportunityOptions.length && !opportunityOptionsMessage')
-    expect(view).not.toContain('输入机会 ID')
   })
 
   it('retains one idempotency key for the same user intent and rotates it after intent changes', () => {

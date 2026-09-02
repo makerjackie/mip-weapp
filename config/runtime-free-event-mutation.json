@@ -114,12 +114,6 @@
       ]
     },
     {
-      "id": "admin-feedback",
-      "route": "packages/admin/event-feedback/index",
-      "selector": "#admin-event-feedback-page",
-      "mode": "automated-read"
-    },
-    {
       "id": "external-undo-check-in",
       "route": "packages/admin/event-registrations/index",
       "selector": "#admin-event-registrations-page",

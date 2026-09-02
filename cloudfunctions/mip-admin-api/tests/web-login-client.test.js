@@ -29,7 +29,7 @@ describe('Web login confirmation client', () => {
     assert.deepEqual(await client.confirm({
       appId: 'wx-mip-app',
       openId: 'openid-admin',
-      challengeCode: 'ABCD2345',
+      challengeCode: '123456',
     }), { confirmed: true })
 
     const body = JSON.parse(calls[0].options.body)
@@ -48,9 +48,47 @@ describe('Web login confirmation client', () => {
     const { client } = fixture(response)
 
     await assert.rejects(
-      () => client.confirm({ appId: 'wx-mip-app', openId: 'openid-admin', challengeCode: 'ABCD2345' }),
+      () => client.confirm({ appId: 'wx-mip-app', openId: 'openid-admin', challengeCode: '123456' }),
       error => error.code === 'WEB_LOGIN_CHALLENGE_NOT_FOUND',
     )
+  })
+
+  it('maps reviewed BFF rejection codes to stable service errors', async () => {
+    const cases = [
+      [400, 'CONFIRMATION_INVALID', 'WEB_LOGIN_REQUEST_INVALID'],
+      [401, 'CONFIRMATION_SIGNATURE_INVALID', 'WEB_LOGIN_AUTH_REJECTED'],
+      [429, 'CHALLENGE_RATE_LIMITED', 'WEB_LOGIN_RATE_LIMITED'],
+      [503, 'AUTH_NOT_CONFIGURED', 'WEB_LOGIN_CONFIG_REQUIRED'],
+    ]
+
+    for (const [status, responseCode, expectedCode] of cases) {
+      const { client } = fixture(new Response(JSON.stringify({
+        error: { code: responseCode, message: 'rejected' },
+      }), { status }))
+      await assert.rejects(
+        () => client.confirm({ appId: 'wx-mip-app', openId: 'openid-admin', challengeCode: '123456' }),
+        error => error.code === expectedCode,
+      )
+    }
+  })
+
+  it('distinguishes a timeout from other network failures', async () => {
+    for (const [failure, expectedCode] of [
+      [Object.assign(new Error('timeout'), { name: 'TimeoutError' }), 'WEB_LOGIN_TIMEOUT'],
+      [new Error('offline'), 'WEB_LOGIN_NETWORK_ERROR'],
+    ]) {
+      const client = createWebLoginConfirmationClient({
+        endpoint: 'https://mipmini.01mvp.com/api/internal/auth/challenge/confirm',
+        fetchImpl: async () => { throw failure },
+        now: () => NOW,
+        nonce: () => '0123456789abcdefghijklmn',
+        secret: SECRET,
+      })
+      await assert.rejects(
+        () => client.confirm({ appId: 'wx-mip-app', openId: 'openid-admin', challengeCode: '123456' }),
+        error => error.code === expectedCode,
+      )
+    }
   })
 
   it('fails closed for missing configuration or malformed input', async () => {
@@ -60,7 +98,7 @@ describe('Web login confirmation client', () => {
     )
     const { client } = fixture()
     await assert.rejects(
-      () => client.confirm({ appId: 'wx-mip-app', openId: 'openid-admin', challengeCode: '12345678' }),
+      () => client.confirm({ appId: 'wx-mip-app', openId: 'openid-admin', challengeCode: '12345A' }),
       error => error.code === 'WEB_LOGIN_REQUEST_INVALID',
     )
   })

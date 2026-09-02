@@ -4,7 +4,7 @@ import { mipOperationsConfig } from '../../../../config/mip-operations'
 import { superCaseModule } from '../../../../modules/mip-cases'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
-import { caseNavigateTo, leaveSecondaryPage } from '../../../../modules/platform/case-navigation'
+import { caseNavigateTo, leaveSecondaryPage } from '../../../../platform/navigation/client'
 
 interface SuperCaseDetailView extends SuperCaseDetail {
   coverUrl: string

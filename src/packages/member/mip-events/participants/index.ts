@@ -1,7 +1,7 @@
 import type { EventId } from '../../../../modules/mip'
 import type { PublicEventParticipant, PublicEventParticipantQuery } from '../../../../modules/mip-events'
 import { mipEventsModule } from '../../../../modules/mip-events/client'
-import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../../platform/navigation/client'
 
 type ParticipantKindFilter = 'ALL' | 'PLAYER' | 'GUEST'
 

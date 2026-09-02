@@ -161,7 +161,8 @@ describe('mip-weapp UI runtime contract', () => {
     expect(new Set(ids).size).toBe(contract.routeCount)
     expect(paths).toEqual(expect.arrayContaining([
       'pages/opportunities/index',
-      'packages/admin/event-album/index',
+      'packages/admin/dashboard/index',
+      'packages/admin/managed-events/index',
       'packages/admin/event-console/index',
       'packages/admin/event-registrations/index',
       'packages/member/event-album/index',
@@ -219,7 +220,12 @@ describe('mip-weapp UI runtime contract', () => {
 
   it('declares forbidden handling for every admin page', () => {
     const adminRoutes = contract.routes.filter(route => route.group === 'admin')
-    expect(adminRoutes.length).toBeGreaterThanOrEqual(10)
+    expect(adminRoutes.map(route => route.path)).toEqual([
+      'packages/admin/dashboard/index',
+      'packages/admin/managed-events/index',
+      'packages/admin/event-console/index',
+      'packages/admin/event-registrations/index',
+    ])
     for (const route of adminRoutes) {
       expect(route.states, `${route.path} must declare forbidden`).toContain('forbidden')
     }
@@ -292,7 +298,6 @@ describe('mip-weapp UI runtime contract', () => {
     expect(verifyRuntime).toContain('deepLink')
     expect(verifyRuntime).toContain('verifyRepresentativeStates')
     expect(contract.representativeStates.map(state => state.id).sort()).toEqual([
-      'conflict',
       'disabled',
       'empty',
       'error',
@@ -396,31 +401,6 @@ describe('mip-weapp UI runtime contract', () => {
     }
   })
 
-  it('proves the task assignment mode through a visible native control', () => {
-    const journey = contract.interactionJourneys.find(item => item.id === 'task-assignment-mode')
-    const openStep = journey?.steps.find(item => item.id === 'open-task-editor')
-    const step = journey?.steps.find(item => item.id === 'select-assignment-mode')
-    const tasksMarkup = read('src/packages/admin/tasks/index.wxml')
-    const controlStart = tasksMarkup.indexOf('<view id="task-assignment-mode-selected"')
-    const controlEnd = tasksMarkup.indexOf('</view>', controlStart)
-    const selectedControl = tasksMarkup.slice(controlStart, controlEnd)
-
-    expect(step).toMatchObject({
-      scrollIntoView: true,
-      requireVisibleTarget: true,
-      requireRenderedAction: true,
-      requireScreenshotDiff: true,
-    })
-    expect(openStep?.dataAssertions).toContainEqual({ path: 'eligibleLevelsState', equals: 'ready' })
-    expect(controlStart).toBeGreaterThanOrEqual(0)
-    expect(selectedControl).toContain('class="flex min-h-[88rpx] items-center"')
-    expect(selectedControl).toContain('aria-role="radio"')
-    expect(selectedControl).toContain('aria-checked="{{assignmentMode === \'SELECTED\'}}"')
-    expect(selectedControl).toContain('data-mode="SELECTED" bind:tap="chooseAssignmentMode"')
-    expect(selectedControl).toContain('variant="{{assignmentMode === \'SELECTED\' ? \'light\' : \'outline\'}}"')
-    expect(tasksMarkup).not.toContain('<t-tag id="task-assignment-mode-selected"')
-  })
-
   it('proves ranking tab changes through a visible native control', () => {
     const journey = contract.interactionJourneys.find(item => item.id === 'game-ranking-tabs')
     const step = journey?.steps.find(item => item.id === 'show-individual-season-ranking')
@@ -508,15 +488,11 @@ describe('mip-weapp UI runtime contract', () => {
     expect(byId.get('share')?.routes).toContain('packages/member/mip-growth/index')
     expect(contract.routes.find(route => route.path === 'packages/member/mip-growth/index')?.deviceRequired)
       .toContain('share')
-    expect(byId.get('task-template')?.routes).toEqual([
-      'packages/admin/tasks/index',
-      'packages/member/mip-tasks/detail/index',
-    ])
+    expect(byId.get('task-template')?.routes).toEqual(['packages/member/mip-tasks/detail/index'])
   })
 
   it('uses safe query contracts for event, profile, and order deep links', () => {
     const byPath = new Map(contract.routes.map(route => [route.path, route]))
-    expect(byPath.get('packages/admin/event-album/index')?.query).toEqual(['eventId'])
     expect(byPath.get('packages/admin/event-console/index')?.query).toEqual(['eventId'])
     expect(byPath.get('packages/admin/event-registrations/index')?.query).toEqual(['eventId'])
     expect(byPath.get('packages/member/event-album/index')?.query).toEqual(['eventId'])
@@ -587,57 +563,31 @@ describe('mip-weapp UI runtime contract', () => {
     expect(paymentResult?.readyAssertion).toBe('result in success|pending|refund')
   })
 
-  it('uses one event-management entry and a consistent eventId query', () => {
-    const dashboardView = read('src/packages/admin/dashboard/index.wxml')
-    const adminNavigation = read('src/packages/admin/components/workspace-nav/model.ts')
-    const managedEvents = read('src/packages/admin/managed-events/index.ts')
-    const eventConsole = read('src/packages/admin/event-console/index.ts')
-    const eventConsoleView = read('src/packages/admin/event-console/index.wxml')
-
-    expect(dashboardView).toContain('view.quickActions')
-    expect(adminNavigation).toContain('route: \'packages/admin/managed-events/index\'')
-    expect(managedEvents).toContain('/packages/admin/event-console/index?eventId=')
-    expect(eventConsole).toContain('query.eventId')
-    expect(eventConsole).toContain('event-registrations')
-    expect(eventConsole).toContain('event-managers')
-    expect(eventConsole).toContain('\'exports\'')
-    expect(eventConsole).toContain('\'event-album\'')
-    expect(eventConsole).toContain('eventId=')
-    expect(eventConsoleView).toContain('活动相册')
-    expect(eventConsoleView).toContain('取消活动')
-  })
-
-  it('uses domain-specific admin routes without legacy aliases', () => {
-    const activeRoutes = new Set(appRoutes)
-    const expectedRoutes = [
-      'packages/admin/exports/index',
-      'packages/admin/opportunities/index',
-      'packages/admin/growth-levels/index',
-      'packages/admin/growth-rules/index',
-      'packages/admin/growth-entries/index',
-      'packages/admin/event-album/index',
-      'packages/admin/announcements/index',
-      'packages/admin/announcement-editor/index',
-      'packages/admin/exceptions/index',
+  it('keeps one onsite-workbench entry and exactly four admin routes', () => {
+    const profileSource = read('src/pages/profile/index.ts')
+    const profileView = read('src/pages/profile/index.wxml')
+    const expectedAdminRoutes = [
+      'packages/admin/dashboard/index',
+      'packages/admin/managed-events/index',
+      'packages/admin/event-console/index',
+      'packages/admin/event-registrations/index',
     ]
-    const legacyRoutes = [
-      'packages/admin/reports/index',
-    ]
-    for (const route of expectedRoutes) {
-      expect(activeRoutes.has(route)).toBe(true)
-    }
-    for (const route of legacyRoutes) {
-      expect(activeRoutes.has(route)).toBe(false)
-    }
 
-    const dashboardView = read('src/packages/admin/dashboard/index.wxml')
-    const adminNavigation = read('src/packages/admin/components/workspace-nav/model.ts')
-    const growthLevels = read('src/packages/admin/growth-levels/index.ts')
-    expect(dashboardView).toContain('view.menuGroups')
-    expect(adminNavigation).toContain('route: \'packages/admin/opportunities/index\'')
-    expect(adminNavigation).toContain('route: \'packages/admin/growth-levels/index\'')
-    expect(growthLevels).toContain('/packages/admin/growth-rules/index')
-    expect(growthLevels).toContain('/packages/admin/growth-entries/index')
+    expect(appRoutes.filter(route => route.startsWith('packages/admin/'))).toEqual(expectedAdminRoutes)
+    expect(projectRoutes.filter(route => route.startsWith('packages/admin/'))).toEqual(expectedAdminRoutes)
+    expect(contractRoutes.filter(route => route.startsWith('packages/admin/'))).toEqual(expectedAdminRoutes)
+    expect(contract.routes.filter(route => route.path.startsWith('packages/admin/')).map(route => route.name)).toEqual([
+      '现场工作台',
+      '授权活动',
+      '活动现场',
+      '参与者与签到',
+    ])
+    expect(profileSource).toContain('/packages/admin/dashboard/index')
+    expect(profileSource).toContain('hasCapability(snapshot.grants, \'admin:enter\') || canManageEvents(snapshot.grants)')
+    expect(profileSource).not.toContain('openManagedEvents')
+    expect(profileSource).not.toContain('eventManagementVisible')
+    expect(profileView).toContain('现场工作台')
+    expect(profileView).not.toContain('活动管理')
   })
 
   it('routes QR scanning through server-authoritative check-in validation', () => {

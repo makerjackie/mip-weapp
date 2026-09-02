@@ -7,8 +7,6 @@ import type {
   AdminRosterItem,
   MipAdminGateway,
 } from '../src/modules/mip-admin/types'
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { createMipAdminModule } from '../src/modules/mip-admin/client'
 import { MipAdminError } from '../src/modules/mip-admin/types'
@@ -358,7 +356,7 @@ async function warmQueries(module: ReturnType<typeof createHarness>['module']) {
     module.events.listRosterAll(rosterAllInput),
     module.events.listAlbumPhotos(eventId, 'PENDING'),
     module.orders.list(orderListInput),
-    module.getSession(),
+    module.session.get(),
   ])
 }
 
@@ -422,17 +420,17 @@ describe('MIP admin events facade', () => {
   it('keeps every legacy query alias on the facade cache', async () => {
     const { module, spies } = createHarness()
 
-    await module.listEvents(eventListInput)
     await module.events.list(eventListInput)
-    await module.getEvent(eventId)
+    await module.events.list(eventListInput)
     await module.events.get(eventId)
-    await module.getEventPolicy()
+    await module.events.get(eventId)
     await module.events.getPolicy()
-    await module.listRoster(rosterInput)
+    await module.events.getPolicy()
     await module.events.listRoster(rosterInput)
-    await module.listRosterAll(rosterAllInput)
+    await module.events.listRoster(rosterInput)
     await module.events.listRosterAll(rosterAllInput)
-    await module.listEventAlbumPhotos(eventId, 'PENDING')
+    await module.events.listRosterAll(rosterAllInput)
+    await module.events.listAlbumPhotos(eventId, 'PENDING')
     await module.events.listAlbumPhotos(eventId, 'PENDING')
 
     expect(spies.listEvents).toHaveBeenCalledTimes(1)
@@ -504,44 +502,5 @@ describe('MIP admin events facade', () => {
     for (const query of querySpies) {
       expect(spies[query]).toHaveBeenCalledTimes(1)
     }
-  })
-
-  it('keeps all event administration pages behind typed module boundaries', () => {
-    const root = path.resolve(import.meta.dirname, '..')
-    const pages = [
-      'src/packages/admin/events/index.ts',
-      'src/packages/admin/managed-events/index.ts',
-      'src/packages/admin/event-console/index.ts',
-      'src/packages/admin/event-registrations/index.ts',
-      'src/packages/admin/event-participants/index.ts',
-      'src/packages/admin/event-album/index.ts',
-      'src/packages/admin/event-feedback/index.ts',
-      'src/packages/admin/event-managers/index.ts',
-    ]
-    const sources: string[] = []
-    for (const page of pages) {
-      const source = fs.readFileSync(path.join(root, page), 'utf8')
-      sources.push(source)
-      expect(source).toContain('mipAdminModule.events.')
-      expect(source).not.toContain('mipAdminModule.gateway')
-      expect(source).not.toContain('mipAdminModule.mutate')
-    }
-    const calls = new Set([...sources.join('\n').matchAll(
-      /mipAdminModule\.events\.(save|changeStatus|archive|clone|savePolicy|publishReminder|reviewRegistration|checkIn|undoCheckIn|reviewAlbumPhoto)\(/g,
-    )].map(match => match[1]))
-    expect([...calls].sort()).toEqual([
-      'archive',
-      'changeStatus',
-      'checkIn',
-      'clone',
-      'publishReminder',
-      'reviewAlbumPhoto',
-      'reviewRegistration',
-      'save',
-      'savePolicy',
-      'undoCheckIn',
-    ].sort())
-    expect(sources.join('\n')).toContain('mipAdminModule.governance.setRole(')
-    expect(sources.join('\n')).toContain('mipAdminModule.exportAndOpen(')
   })
 })

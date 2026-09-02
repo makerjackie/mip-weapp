@@ -423,8 +423,12 @@ describe('MIP local logout flow', () => {
       new URL('../src/modules/mip-messaging/client.ts', import.meta.url),
       'utf8',
     )
+    const app = readFileSync(
+      new URL('../src/app.ts', import.meta.url),
+      'utf8',
+    )
     const cloudMedia = readFileSync(
-      new URL('../src/modules/platform/cloud-media.ts', import.meta.url),
+      new URL('../src/platform/storage/cloud-media.ts', import.meta.url),
       'utf8',
     )
 
@@ -442,6 +446,7 @@ describe('MIP local logout flow', () => {
     expect(messagingClient).toContain('registerMipLocalUserCache(() => {')
     expect(messagingClient).toContain('mipMessagingModule.invalidate()')
     expect(messagingClient).toContain('mipPopupMessagePresenter.invalidate()')
-    expect(cloudMedia).toContain('registerMipLocalUserCache(clearCloudMediaCache)')
+    expect(app).toContain('registerMipLocalUserCache(clearCloudMediaCache)')
+    expect(cloudMedia).not.toContain('mip-identity')
   })
 })

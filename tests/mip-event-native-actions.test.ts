@@ -30,11 +30,9 @@ describe('MIP event native actions', () => {
   })
 
   it('stores map coordinates only through the validated event draft', () => {
-    const adminPage = read('src/packages/admin/events/index.ts')
     const service = read('cloudfunctions/mip-admin-api/domain/events.js')
     const repository = read('cloudfunctions/mip-admin-api/domain/repositories/events.js')
 
-    expect(adminPage).toContain('wx.chooseLocation')
     expect(service).toContain('coordinate(value.latitude, -90, 90, \'纬度\')')
     expect(service).toContain('coordinate(value.longitude, -180, 180, \'经度\')')
     expect(repository).toContain('latitude = ?, longitude = ?')

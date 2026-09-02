@@ -9,7 +9,7 @@ import {
   removeEditableOrganization,
   updateEditableOrganization,
   validateEditableOrganizations,
-} from '../src/packages/member/mip-profile/organization-editor'
+} from '../src/modules/mip-identity/organization-editor'
 
 function source(path: string) {
   return readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
@@ -68,11 +68,11 @@ describe('MIP profile multiple organizations editor', () => {
     ])
   })
 
-  it('renders independent company and organization collections with all controls', () => {
-    const page = source('src/packages/member/mip-profile/index.ts')
-    const view = source('src/packages/member/mip-profile/index.wxml')
+  it('renders independent company and organization collections in the card editor', () => {
+    const page = source('src/packages/member/mip-card-edit/index.ts')
+    const view = source('src/packages/member/mip-card-edit/index.wxml')
+    const profileView = source('src/packages/member/mip-profile/index.wxml')
 
-    expect(page).not.toMatch(/companies\[0\]|organizations\[0\]/)
     expect(page).toContain('normalizeEditableOrganizations(this.data.companies)')
     expect(page).toContain('normalizeEditableOrganizations(this.data.organizations)')
     expect(view).toContain('wx:for="{{companies}}"')
@@ -81,7 +81,8 @@ describe('MIP profile multiple organizations editor', () => {
       expect(view).toContain(`bind:tap="${action}"`)
     }
     expect(view).toContain('bindinput="updateExperience"')
-    expect(view).toContain('公司经历</text><switch')
-    expect(view).toContain('组织经历</text><switch')
+    expect(view).not.toContain('公开范围')
+    expect(profileView).not.toContain('wx:for="{{companies}}"')
+    expect(profileView).not.toContain('wx:for="{{organizations}}"')
   })
 })

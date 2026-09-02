@@ -1,7 +1,7 @@
 import type { BranchId } from '../../../modules/mip'
 import { mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../../modules/mip-identity/client'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 
 Page({
   resumeBranchId: '' as BranchId | '',

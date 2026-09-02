@@ -1,6 +1,6 @@
-import type { ImageUploadPolicy } from '../platform/image-upload'
+import type { ImageUploadPolicy } from '../../platform/wechat/image-upload'
 import type { MipMediaGateway, MipMediaPurpose } from './types'
-import { compressImageToBase64, estimateBase64Bytes, IMAGE_UPLOAD_POLICIES } from '../platform/image-upload'
+import { compressImageToBase64, estimateBase64Bytes, IMAGE_UPLOAD_POLICIES } from '../../platform/wechat/image-upload'
 import { mipMediaPurposes } from './types'
 
 const MAX_CLIENT_IMAGE_BYTES = 1024 * 1024

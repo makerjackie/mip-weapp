@@ -1,7 +1,5 @@
 import type { AdminUserDetail, MipAdminGateway } from '../src/modules/mip-admin/types'
 import type { MipUsersAdmin } from '../src/modules/mip-admin/users-admin'
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { createMipAdminModule } from '../src/modules/mip-admin/client'
 import { MipAdminError } from '../src/modules/mip-admin/types'
@@ -214,9 +212,9 @@ describe('MIP admin users facade', () => {
   it('keeps legacy list and detail aliases on the same non-sensitive cache', async () => {
     const { module, spies } = createHarness()
 
-    await module.listUsers(listInput)
     await module.users.list(listInput)
-    await module.getUser(userDetail.id)
+    await module.users.list(listInput)
+    await module.users.get(userDetail.id)
     await module.users.get(userDetail.id)
 
     expect(spies.listUsers).toHaveBeenCalledTimes(1)
@@ -252,12 +250,12 @@ describe('MIP admin users facade', () => {
       const { module, spies } = createHarness()
       await warmNonSensitiveReads(module.users)
       await warmNonSensitiveReads(module.users)
-      await module.getSession()
-      await module.getSession()
+      await module.session.get()
+      await module.session.get()
 
       await mutation.execute(module.users)
       await warmNonSensitiveReads(module.users)
-      await module.getSession()
+      await module.session.get()
 
       expect(spies.listUsers).toHaveBeenCalledTimes(2)
       expect(spies.getUser).toHaveBeenCalledTimes(2)
@@ -294,27 +292,9 @@ describe('MIP admin users facade', () => {
     await module.users.listInfluence(influenceInput)
     await module.users.listInfluence(influenceInput)
 
-    module.clearSensitive()
+    module.runtime.clearSensitive()
     await module.users.listInfluence(influenceInput)
 
     expect(spies.listUserInfluence).toHaveBeenCalledTimes(2)
-  })
-
-  it('keeps the profiles page behind the typed facade and export workflow', () => {
-    const root = path.resolve(import.meta.dirname, '..')
-    const source = fs.readFileSync(path.join(root, 'src/packages/admin/profiles/index.ts'), 'utf8')
-
-    expect(source).toContain('mipAdminModule.users.list(')
-    expect(source).toContain('mipAdminModule.users.get(')
-    expect(source).toContain('mipAdminModule.users.update(')
-    expect(source).toContain('mipAdminModule.users.changePrimaryBranch(')
-    expect(source).toContain('mipAdminModule.users.setControl(')
-    expect(source).toContain('mipAdminModule.users.listInfluence(')
-    expect(source).toContain('mipAdminModule.exportAndOpen(')
-    expect(source).not.toContain('mipAdminModule.gateway')
-    expect(source).not.toContain('mipAdminModule.mutate')
-    expect(source.match(/mipAdminModule\.users\.update\(/g)).toHaveLength(1)
-    expect(source.match(/mipAdminModule\.users\.changePrimaryBranch\(/g)).toHaveLength(1)
-    expect(source.match(/mipAdminModule\.users\.setControl\(/g)).toHaveLength(1)
   })
 })

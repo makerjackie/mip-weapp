@@ -1,11 +1,11 @@
 import type { EventId } from '../../../modules/mip'
-import type { AdminEventDetail, AdminEventInsights } from '../../../modules/mip-admin'
+import type { AdminEventDetail, AdminEventStatus } from '../../../modules/mip-admin'
 import type { CheckInCredentialMode } from '../../../modules/mip-events'
 import type { AdminPageState } from '../shared/page-state'
-import { hasScopedCapability, MipAdminError, mipAdminModule } from '../../../modules/mip-admin'
+import { hasScopedCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { checkInCredentialCountdown } from '../../../modules/mip-events'
 import { mipEventsModule } from '../../../modules/mip-events/client'
-import { adminLoadFailure, isAdminVersionConflict } from '../shared/page-state'
+import { adminLoadFailure } from '../shared/page-state'
 
 const POSTER_WIDTH = 375
 const POSTER_HEIGHT = 560
@@ -18,6 +18,15 @@ interface Canvas2dNode {
   requestAnimationFrame?: (callback: () => void) => number
 }
 
+const statusLabels: Record<AdminEventStatus, string> = {
+  DRAFT: '草稿',
+  PUBLISHED: '已发布',
+  UNPUBLISHED: '已下架',
+  CANCELLED: '已取消',
+  ENDED: '已结束',
+  ARCHIVED: '已归档',
+}
+
 function localDateTime(value: string) {
   const date = new Date(value)
   if (!Number.isFinite(date.getTime())) {
@@ -26,7 +35,12 @@ function localDateTime(value: string) {
   return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
-function wrappedLines(context: WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext2D, value: string, maxWidth: number, limit: number) {
+function wrappedLines(
+  context: WechatMiniprogram.CanvasRenderingContext.CanvasRenderingContext2D,
+  value: string,
+  maxWidth: number,
+  limit: number,
+) {
   const lines: string[] = []
   let current = ''
   for (const character of value) {
@@ -57,67 +71,15 @@ function loadCanvasImage(node: Canvas2dNode, source: string) {
   })
 }
 
-function reminderRequestKey(eventId: string) {
-  return `event-reminder:${eventId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`
-}
-
-function cloneRequestKey(eventId: string) {
-  return `event-clone:${eventId}:${Date.now()}:${Math.random().toString(36).slice(2, 10)}`
-}
-
-function percentageText(value: number | null) {
-  if (value === null) {
-    return '—'
-  }
-  return `${(value / 100).toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1')}%`
-}
-
-function ratingText(value: number | null) {
-  if (value === null) {
-    return '—'
-  }
-  return value.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1')
-}
-
-function moneyText(value: number) {
-  return `¥${(value / 100).toFixed(2)}`
-}
-
 Page({
   data: {
     state: 'loading' as AdminPageState,
     eventId: '',
     event: null as AdminEventDetail | null,
-    insightsState: 'loading' as AdminPageState,
-    insights: null as AdminEventInsights | null,
-    insightsCalculatedText: '',
-    checkInRateText: '—',
-    feedbackRateText: '—',
-    averageRatingText: '—',
-    grossAmountText: '—',
-    refundedAmountText: '—',
-    netAmountText: '—',
-    insightsMessage: '',
-    canEdit: false,
-    canClone: false,
+    eventStatusText: '',
+    eventTimeText: '',
     canRoster: false,
-    canTeam: false,
-    canAlbum: false,
-    canFeedback: false,
-    canComments: false,
-    canOrders: false,
-    canExport: false,
     canCheckIn: false,
-    canPublishCommunications: false,
-    processing: false,
-    cloneBusy: false,
-    cloneRequestKey: '',
-    cloneRequestVersion: 0,
-    reminderBusy: false,
-    reminderSummary: '',
-    reminderRequestKey: '',
-    reminderRequestVersion: 0,
-    reminderRequestWechat: false,
     posterBusy: false,
     posterPath: '',
     posterMode: '' as CheckInCredentialMode | '',
@@ -127,24 +89,29 @@ Page({
     posterExpired: false,
     message: '',
   },
-  cloneConfirmationBusy: false,
   posterCountdownTimer: 0 as number | ReturnType<typeof setInterval>,
-  onLoad(query: Record<string, string>) { this.setData({ eventId: query.eventId || '' }) },
+
+  onLoad(query: Record<string, string>) {
+    this.setData({ eventId: query.eventId || '' })
+  },
+
   onShow() {
     if (this.data.posterMode === 'ROTATING' && this.data.posterValidUntil) {
       this.startPosterCountdown(this.data.posterValidUntil)
     }
     if (this.data.eventId) {
       void this.loadEvent()
-      void this.loadInsights(true)
     }
   },
+
   onHide() {
     this.clearPosterCountdown()
   },
+
   onUnload() {
     this.clearPosterCountdown()
   },
+
   async loadEvent(force = false) {
     const hasContent = Boolean(this.data.event)
     if (!hasContent) {
@@ -152,27 +119,17 @@ Page({
     }
     try {
       const [session, event] = await Promise.all([
-        mipAdminModule.getSession(force),
+        mipAdminModule.session.get(force),
         mipAdminModule.events.get(this.data.eventId, force),
       ])
       const scope = { scopeType: 'EVENT' as const, scopeId: event.id, branchId: event.branchId }
       this.setData({
         state: 'ready',
         event,
-        canEdit: hasScopedCapability(session.capabilities, 'events.write', scope),
-        canClone: session.capabilities.some(item => item.capability === 'events.write' && (
-          item.scopeType === 'PLATFORM'
-          || (item.scopeType === 'BRANCH' && item.scopeId === event.branchId)
-        )),
+        eventStatusText: statusLabels[event.status],
+        eventTimeText: localDateTime(event.startsAt),
         canRoster: hasScopedCapability(session.capabilities, 'events.roster.read', scope),
-        canTeam: hasScopedCapability(session.capabilities, 'events.team.manage', scope),
-        canAlbum: hasScopedCapability(session.capabilities, 'events.album.manage', scope),
-        canFeedback: hasScopedCapability(session.capabilities, 'events.feedback.read', scope),
-        canComments: hasScopedCapability(session.capabilities, 'events.comments.manage', scope),
-        canOrders: hasScopedCapability(session.capabilities, 'orders.read', scope),
-        canExport: hasScopedCapability(session.capabilities, 'exports.create', scope),
         canCheckIn: hasScopedCapability(session.capabilities, 'events.checkin.manage', scope),
-        canPublishCommunications: hasScopedCapability(session.capabilities, 'communications.publish', scope),
         message: '',
       })
     }
@@ -181,38 +138,13 @@ Page({
     }
   },
 
-  async loadInsights(force = true) {
-    const hasContent = Boolean(this.data.insights)
-    if (!hasContent) {
-      this.setData({ insightsState: 'loading', insightsMessage: '' })
+  openRoster() {
+    if (!this.data.canRoster || !this.data.eventId) {
+      return
     }
-    try {
-      const insights = await mipAdminModule.events.getInsights(this.data.eventId, force)
-      const feedback = insights.feedback.access === 'GRANTED' ? insights.feedback : null
-      const financials = insights.financials.access === 'GRANTED' ? insights.financials : null
-      this.setData({
-        insightsState: 'ready',
-        insights,
-        insightsCalculatedText: localDateTime(insights.calculatedAt),
-        checkInRateText: percentageText(insights.participation.checkInRateBasisPoints),
-        feedbackRateText: percentageText(feedback?.submissionRateBasisPoints ?? null),
-        averageRatingText: ratingText(feedback?.averageRating ?? null),
-        grossAmountText: financials ? moneyText(financials.grossAmountCents) : '—',
-        refundedAmountText: financials ? moneyText(financials.refundedAmountCents) : '—',
-        netAmountText: financials ? moneyText(financials.netAmountCents) : '—',
-        insightsMessage: '',
-      })
-    }
-    catch (error) {
-      this.setData({
-        insightsState: 'error',
-        insightsMessage: error instanceof Error ? error.message : '活动数据加载失败',
-      })
-    }
-  },
-
-  retryInsights() {
-    void this.loadInsights(true)
+    void wx.navigateTo({
+      url: `/packages/admin/event-registrations/index?eventId=${encodeURIComponent(this.data.eventId)}`,
+    })
   },
 
   clearPosterCountdown() {
@@ -259,7 +191,6 @@ Page({
     try {
       const credential = await mipEventsModule.createCheckInPoster(event.id as EventId, mode)
       const posterPath = await this.drawCheckInPoster(credential.codeUrl, event, credential.mode)
-      const rotating = credential.mode === 'ROTATING'
       this.setData({
         posterPath,
         posterMode: credential.mode,
@@ -268,7 +199,7 @@ Page({
         posterCountdownText: '',
         posterExpired: false,
       })
-      if (rotating) {
+      if (credential.mode === 'ROTATING') {
         this.startPosterCountdown(credential.validUntil)
       }
       else {
@@ -355,271 +286,6 @@ Page({
     }
     catch {
       this.setData({ message: '保存失败，请检查相册权限后重试。' })
-    }
-  },
-  async publishEventReminder() {
-    const event = this.data.event
-    if (!event || !this.data.canPublishCommunications || this.data.reminderBusy || event.status !== 'PUBLISHED') {
-      return
-    }
-    this.setData({ reminderBusy: true })
-    const retrying = Boolean(this.data.reminderRequestKey)
-      && this.data.reminderRequestVersion === event.version
-    let sendWechatReminder = retrying ? this.data.reminderRequestWechat : false
-    if (!retrying) {
-      try {
-        const choice = await wx.showActionSheet({
-          itemList: ['站内提醒并尝试微信提醒', '仅发送站内提醒'],
-        })
-        sendWechatReminder = choice.tapIndex === 0
-      }
-      catch {
-        this.setData({ reminderBusy: false })
-        return
-      }
-    }
-    const confirmation = await wx.showModal({
-      title: '发送活动提醒',
-      content: sendWechatReminder
-        ? '将向已确认参与者创建站内提醒，并在参与者已授权且服务可用时尝试发送微信提醒。'
-        : '将向已确认参与者创建站内提醒。',
-      confirmText: '发送',
-    }).catch(() => null)
-    if (!confirmation?.confirm) {
-      this.setData({ reminderBusy: false })
-      return
-    }
-    const idempotencyKey = retrying
-      ? this.data.reminderRequestKey
-      : reminderRequestKey(event.id)
-    this.setData({
-      reminderSummary: '',
-      reminderRequestKey: idempotencyKey,
-      reminderRequestVersion: event.version,
-      reminderRequestWechat: sendWechatReminder,
-      message: '',
-    })
-    try {
-      const result = await mipAdminModule.events.publishReminder({
-        eventId: event.id,
-        expectedVersion: event.version,
-        idempotencyKey,
-        sendWechatReminder,
-      })
-      const reminderSummary = result.recipientCount === 0
-        ? '当前没有已确认参与者，未创建提醒。'
-        : result.wechatDelivery === 'BEST_EFFORT'
-          ? `已为 ${result.recipientCount} 位参与者创建站内提醒。微信提醒会在参与者已授权且服务可用时尝试发送。`
-          : `已为 ${result.recipientCount} 位参与者创建站内提醒。`
-      this.setData({
-        reminderSummary,
-        reminderRequestKey: '',
-        reminderRequestVersion: 0,
-        reminderRequestWechat: false,
-      })
-      wx.showToast({ title: '提醒已创建', icon: 'success' })
-    }
-    catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '活动提醒发送失败' })
-    }
-    finally {
-      this.setData({ reminderBusy: false })
-    }
-  },
-  openPage(event: WechatMiniprogram.TouchEvent) {
-    const page = String(event.currentTarget.dataset.page || '')
-    const allowed = new Set(['events', 'event-registrations', 'event-managers', 'event-album', 'event-feedback', 'event-comments', 'exports', 'orders'])
-    if (allowed.has(page)) {
-      void wx.navigateTo({ url: `/packages/admin/${page}/index?eventId=${encodeURIComponent(this.data.eventId)}` })
-    }
-  },
-  async unpublishBeforeEdit() {
-    const event = this.data.event
-    if (!event || !this.data.canEdit || event.status !== 'PUBLISHED'
-      || this.data.processing || this.data.cloneBusy) {
-      return
-    }
-    this.setData({ processing: true, message: '' })
-    try {
-      const modal = await wx.showModal({
-        title: '下架后编辑',
-        content: '已发布活动需要先下架。下架后用户端会暂时隐藏，重新发布后恢复展示。',
-        confirmText: '下架并编辑',
-      })
-      if (!modal.confirm) {
-        return
-      }
-      await mipAdminModule.events.changeStatus({
-        eventId: event.id,
-        status: 'UNPUBLISHED',
-        expectedVersion: event.version,
-      })
-      await this.loadEvent(true)
-      wx.showToast({ title: '活动已下架', icon: 'success' })
-      try {
-        await wx.navigateTo({ url: `/packages/admin/events/index?eventId=${encodeURIComponent(event.id)}` })
-      }
-      catch {
-        this.setData({ message: '活动已下架，请从活动信息入口继续编辑。' })
-      }
-    }
-    catch (error) {
-      const failure = adminLoadFailure(error, { hasContent: true, fallbackMessage: '活动下架失败' })
-      this.setData({ message: failure.message, state: failure.state || 'ready' })
-    }
-    finally {
-      this.setData({ processing: false })
-    }
-  },
-  async cloneEvent() {
-    const event = this.data.event
-    if (!event || !this.data.canClone || this.data.cloneBusy || this.data.processing
-      || this.cloneConfirmationBusy) {
-      return
-    }
-    const retrying = Boolean(this.data.cloneRequestKey)
-    this.cloneConfirmationBusy = true
-    this.setData({ cloneBusy: true, message: '' })
-    try {
-      if (!retrying) {
-        const modal = await wx.showModal({
-          title: '复制活动',
-          content: '将复制活动内容和配置，并自动顺延时间。报名、订单、签到、相册和消息不会复制。',
-          confirmText: '复制',
-        }).catch(() => null)
-        if (!modal?.confirm) {
-          return
-        }
-      }
-      const idempotencyKey = retrying
-        ? this.data.cloneRequestKey
-        : cloneRequestKey(event.id)
-      const expectedVersion = retrying
-        ? this.data.cloneRequestVersion
-        : event.version
-      if (!retrying) {
-        this.setData({
-          cloneRequestKey: idempotencyKey,
-          cloneRequestVersion: expectedVersion,
-        })
-      }
-      const result = await mipAdminModule.events.clone({
-        sourceEventId: event.id,
-        expectedVersion,
-        idempotencyKey,
-      })
-      this.setData({ cloneRequestKey: '', cloneRequestVersion: 0 })
-      await wx.showModal({
-        title: '草稿已创建',
-        content: '活动时间已自动顺延，请复核活动标题和时间。',
-        showCancel: false,
-        confirmText: '继续编辑',
-      }).catch(() => null)
-      try {
-        await wx.navigateTo({ url: `/packages/admin/events/index?eventId=${encodeURIComponent(result.id)}` })
-      }
-      catch {
-        this.setData({ message: '草稿已创建。请返回活动管理列表打开，并复核标题和时间。' })
-      }
-    }
-    catch (error) {
-      if (isAdminVersionConflict(error)) {
-        this.setData({
-          cloneRequestKey: '',
-          cloneRequestVersion: 0,
-          message: '活动信息已更新，请重新加载后再复制。',
-        })
-      }
-      else if (error instanceof MipAdminError && !error.retryable) {
-        this.setData({
-          cloneRequestKey: '',
-          cloneRequestVersion: 0,
-          message: error.message || '活动复制失败',
-        })
-      }
-      else {
-        this.setData({
-          message: error instanceof Error
-            ? `${error.message}。再次点击复制可安全重试。`
-            : '活动复制状态未确认，再次点击复制可安全重试。',
-        })
-      }
-    }
-    finally {
-      this.cloneConfirmationBusy = false
-      this.setData({ cloneBusy: false })
-    }
-  },
-  async changeStatus(event: WechatMiniprogram.TouchEvent) {
-    if (!this.data.event || !this.data.canEdit || this.data.processing || this.data.cloneBusy) {
-      return
-    }
-    const status = String(event.currentTarget.dataset.status || '')
-    if (!['PUBLISHED', 'UNPUBLISHED', 'ENDED'].includes(status)) {
-      return
-    }
-    this.setData({ processing: true, message: '' })
-    try {
-      const modal = await wx.showModal({ title: '确认状态变更', content: '状态变更会立即影响用户端展示和后续操作。' })
-      if (!modal.confirm) {
-        return
-      }
-      await mipAdminModule.events.changeStatus({
-        eventId: this.data.eventId,
-        status,
-        expectedVersion: this.data.event?.version,
-      })
-      wx.showToast({ title: '状态已更新', icon: 'success' })
-      await Promise.all([
-        this.loadEvent(true),
-        this.loadInsights(true),
-      ])
-    }
-    catch (error) {
-      const failure = adminLoadFailure(error, { hasContent: true, fallbackMessage: '状态更新失败' })
-      this.setData({ message: failure.message, state: failure.state || 'ready' })
-    }
-    finally {
-      this.setData({ processing: false })
-    }
-  },
-  async cancelEvent() {
-    if (!this.data.event || !this.data.canEdit || this.data.processing || this.data.cloneBusy) {
-      return
-    }
-    this.setData({ processing: true, message: '' })
-    try {
-      const modal = await wx.showModal({
-        title: '取消活动',
-        editable: true,
-        placeholderText: '填写取消原因',
-      })
-      const reason = modal.content.trim()
-      if (!modal.confirm) {
-        return
-      }
-      if (!reason) {
-        this.setData({ message: '请填写取消原因。' })
-        return
-      }
-      await mipAdminModule.events.changeStatus({
-        eventId: this.data.eventId,
-        status: 'CANCELLED',
-        reason,
-        expectedVersion: this.data.event?.version,
-      })
-      wx.showToast({ title: '活动已取消', icon: 'success' })
-      await Promise.all([
-        this.loadEvent(true),
-        this.loadInsights(true),
-      ])
-    }
-    catch (error) {
-      const failure = adminLoadFailure(error, { hasContent: true, fallbackMessage: '活动取消失败' })
-      this.setData({ message: failure.message, state: failure.state || 'ready' })
-    }
-    finally {
-      this.setData({ processing: false })
     }
   },
 })

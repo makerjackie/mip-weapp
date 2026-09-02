@@ -36,16 +36,22 @@ export function catalogSelectorView(
   selectedIds: readonly string[],
 ) {
   const selected = new Set(selectedIds)
-  const viewGroups: CatalogSelectorViewGroup[] = groups.map(group => ({
-    ...group,
-    options: group.options.map(option => ({
-      ...option,
-      selected: selected.has(option.id),
-    })),
-  }))
-  const popularOptions = viewGroups
+  const projectOption = (option: CatalogSelectorOption): CatalogSelectorViewOption => ({
+    ...option,
+    selected: selected.has(option.id),
+  })
+  const popularOptions = groups
     .flatMap(group => group.options)
     .filter(option => option.popular)
+    .map(projectOption)
+  const viewGroups: CatalogSelectorViewGroup[] = groups
+    .map(group => ({
+      ...group,
+      options: group.options
+        .filter(option => !option.popular)
+        .map(projectOption),
+    }))
+    .filter(group => group.options.length > 0)
   return { viewGroups, popularOptions }
 }
 

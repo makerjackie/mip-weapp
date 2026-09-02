@@ -6,7 +6,7 @@ import { mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { mipMessagingModule } from '../../../modules/mip-messaging/client'
 import { opportunityModule } from '../../../modules/mip-opportunities'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 
 type PageState = 'loading' | 'ready' | 'empty' | 'error' | 'access'
 

@@ -59,6 +59,7 @@ function createAdminService({
   bannersClient = null,
   gameClient = null,
   mediaClient = null,
+  knowledgeModule = null,
 }) {
   const access = createAdminAccess({ repository })
   const {
@@ -338,10 +339,11 @@ function createAdminService({
   async function confirmWebLogin(caller, input = {}) {
     const context = await session(caller)
     const challengeCode = typeof input.challengeCode === 'string'
-      ? input.challengeCode.trim().toUpperCase()
+      ? input.challengeCode.trim()
       : ''
-    if (!/^[A-HJ-NP-Z2-9]{8}$/.test(challengeCode)) {
-      throw new AdminError('VALIDATION_FAILED', '网页登录码格式无效')
+    if (!/^\d{6}$/.test(challengeCode)) {
+      await recordWebLoginFailure(context, 'INVALID_CODE')
+      throw new AdminError('VALIDATION_FAILED', '请输入 6 位数字登录码')
     }
     try {
       await dispatchWebLoginConfirmation({
@@ -351,13 +353,9 @@ function createAdminService({
       })
     }
     catch (error) {
-      if (error?.code === 'WEB_LOGIN_CHALLENGE_NOT_FOUND') {
-        throw new AdminError('VALIDATION_FAILED', '网页登录码无效或已过期')
-      }
-      if (error?.code === 'WEB_LOGIN_REQUEST_INVALID') {
-        throw new AdminError('VALIDATION_FAILED', '网页登录码格式无效')
-      }
-      throw new AdminError('SERVICE_UNAVAILABLE', '网页登录确认服务暂时不可用', true)
+      const failure = webLoginFailure(error)
+      await recordWebLoginFailure(context, failure.auditReason)
+      throw failure.error
     }
     const grant = context.bindings[0]
     await repository.recordAudit(audit(context, grant, {
@@ -368,6 +366,17 @@ function createAdminService({
       metadata: {},
     }))
     return { confirmed: true }
+  }
+
+  async function recordWebLoginFailure(context, reason) {
+    const grant = context.bindings[0]
+    await repository.recordAudit(audit(context, grant, {
+      scopeType: grant.scopeType,
+      scopeId: grant.scopeId,
+      action: 'admin.web_login.confirm_failed',
+      resourceType: 'ADMIN_SESSION',
+      metadata: { reason },
+    }))
   }
 
   async function getDashboard(caller) {
@@ -401,146 +410,232 @@ function createAdminService({
       .getOverview(caller, input)
   }
 
-  return {
-    activateMessageTemplate,
-    cancelMessageCampaignSchedule,
-    getAnnouncement,
-    adjustGrowth,
-    archiveEvent,
-    archiveEventCatalog,
-    archiveEventVideoRecap,
-    archiveOpportunity,
-    archiveMessageTemplate,
-    closeOpportunityCommentReport,
-    changeBranchStatus,
-    changeEventStatus,
-    changeEventCatalogStatus,
-    changeEventVideoRecapStatus,
-    checkIn,
-    claimEventCommentReport,
-    changePrimaryBranch,
-    claimCommunityReport,
-    claimMessageDeliveryReview,
-    cloneEvent,
-    closeCommunityReport,
-    closeEventCommentReport,
-    completeExportDownload,
-    confirmWebLogin,
-    createBranch,
-    createExport,
-    getDashboard,
-    getDashboardOverview,
-    getEvent,
-    getEventVideoRecap,
-    getEventCommentAdminState,
-    getEventInsights,
-    getEventTagAssignments,
-    getEventPolicy,
-    getOpportunity,
-    getMatchingAdminState,
-    getOpportunityCommentAdminState,
-    getOpportunityEditorOptions,
-    getOrder,
-    getMessageCampaign,
-    getMessageDeliveryReview,
-    getMessageTemplate,
-    getMembership,
-    listMembershipTimeline,
-    endOpportunity,
-    getExportStatus,
-    health,
-    getSession,
-    getUser,
-    getUserContent,
-    saveUserContent,
-    archiveUserContent,
-    listAnnouncements,
-    listAnnouncementScopes,
-    listAudit,
-    listBadges,
-    listBadgeAwards,
-    listBranches,
-    listCommunityReports,
-    listEventAlbumPhotos,
-    listEventCatalogs,
-    listEvents,
-    listEventVideoRecaps,
-    listGrowthEntries,
-    listGrowthLevelTransitions,
-    listGrowthBenefits,
-    listGrowthLevels,
-    listGrowthRules,
-    listUnifiedBenefitLedger,
-    ...taskAdmin,
-    ...bannerAdmin,
-    ...gameAdmin,
-    ...mediaAdmin,
-    listOpportunities,
-    listOrders,
-    listPaymentAttempts,
-    listOperationalExceptions,
-    listOperationsQueue,
-    listMessageCampaignScopes,
-    listMessageCampaigns,
-    listMessageDeliveryRecords,
-    listMessageDeliveryReviews,
-    listMessageTemplates,
-    listRoles,
-    listRoster,
-    listRosterAll,
-    reviewRegistration,
-    reviewEventAlbumPhoto,
-    retryRefund,
-    prepareExport,
-    reserveExportDownload,
-    listUserInfluence,
-    listUsers,
-    listUserContent,
-    publishEventReminder,
-    publishMessageCampaign,
-    publishOpportunity,
-    recalculateOpportunityMatching,
-    reconcileMessageDeliveryReview,
-    moderateOpportunityComment,
-    moderateEventComment,
-    publishAnnouncement,
-    grantBadge,
-    grantMembership,
-    saveEvent,
-    saveEventCatalog,
-    saveEventCommentSettings,
-    saveEventPolicy,
-    saveEventVideoRecap,
-    replaceEventTagAssignments,
-    saveAnnouncement,
-    saveMessageCampaign,
-    saveMessageTemplate,
-    saveBadge,
-    saveGrowthLevel,
-    saveGrowthBenefit,
-    saveGrowthRule,
-    searchRoleCandidates,
-    setRole,
-    listRoleCapabilityPolicies,
-    updateRoleCapabilityPolicy,
-    setUserControl,
-    submitRefund,
-    revokeBadge,
-    resolveMessageDeliveryReview,
-    setAnnouncementPinned,
-    searchMessageRecipients,
-    scheduleMessageCampaign,
-    snapshotMessageCampaign,
-    withdrawAnnouncement,
-    withdrawMessageCampaign,
-    unpublishOpportunity,
-    undoCheckIn,
-    updateBranch,
-    updateUser,
-    unpublishUserContent,
-    saveOpportunity,
-    saveOpportunityCommentSettings,
-    saveMatchingSettings,
+  const ownerModules = Object.freeze({
+    ACCESS: freezeModule({
+      getSession,
+      confirmWebLogin,
+      listBranches,
+      listRoles,
+      searchRoleCandidates,
+      listRoleCapabilityPolicies,
+      listAudit,
+      createBranch,
+      updateBranch,
+      changeBranchStatus,
+      setRole,
+      updateRoleCapabilityPolicy,
+    }),
+    USERS: freezeModule({
+      listUsers,
+      getUser,
+      listUserInfluence,
+      listCommunityReports,
+      updateUser,
+      changePrimaryBranch,
+      setUserControl,
+      claimCommunityReport,
+      closeCommunityReport,
+    }),
+    MEMBERSHIPS: freezeModule({
+      getMembership,
+      listMembershipTimeline,
+      grantMembership,
+    }),
+    EVENTS: freezeModule({
+      listEvents,
+      listEventCatalogs,
+      getEventTagAssignments,
+      listEventVideoRecaps,
+      getEventVideoRecap,
+      getEventPolicy,
+      getEvent,
+      getEventInsights,
+      listEventAlbumPhotos,
+      getEventCommentAdminState,
+      listRoster,
+      listRosterAll,
+      saveEventPolicy,
+      saveEventCatalog,
+      changeEventCatalogStatus,
+      archiveEventCatalog,
+      replaceEventTagAssignments,
+      saveEventVideoRecap,
+      changeEventVideoRecapStatus,
+      archiveEventVideoRecap,
+      saveEvent,
+      cloneEvent,
+      changeEventStatus,
+      archiveEvent,
+      reviewEventAlbumPhoto,
+      saveEventCommentSettings,
+      moderateEventComment,
+      claimEventCommentReport,
+      closeEventCommentReport,
+      publishEventReminder,
+      reviewRegistration,
+      checkIn,
+      undoCheckIn,
+    }),
+    ORDERS: freezeModule({
+      listOrders,
+      getOrder,
+      listPaymentAttempts,
+      submitRefund,
+      retryRefund,
+    }),
+    MESSAGING: freezeModule({
+      listAnnouncementScopes,
+      listAnnouncements,
+      getAnnouncement,
+      listMessageCampaignScopes,
+      listMessageCampaigns,
+      getMessageCampaign,
+      searchMessageRecipients,
+      listMessageTemplates,
+      getMessageTemplate,
+      listMessageDeliveryReviews,
+      getMessageDeliveryReview,
+      listMessageDeliveryRecords,
+      saveAnnouncement,
+      publishAnnouncement,
+      withdrawAnnouncement,
+      setAnnouncementPinned,
+      saveMessageCampaign,
+      snapshotMessageCampaign,
+      scheduleMessageCampaign,
+      cancelMessageCampaignSchedule,
+      publishMessageCampaign,
+      withdrawMessageCampaign,
+      saveMessageTemplate,
+      activateMessageTemplate,
+      archiveMessageTemplate,
+      claimMessageDeliveryReview,
+      reconcileMessageDeliveryReview,
+      resolveMessageDeliveryReview,
+    }),
+    KNOWLEDGE: freezeModule(knowledgeModule || {}),
+    OPPORTUNITIES: freezeModule({
+      listOpportunities,
+      listUserContent,
+      getUserContent,
+      getOpportunity,
+      getOpportunityEditorOptions,
+      getMatchingAdminState,
+      getOpportunityCommentAdminState,
+      saveOpportunity,
+      publishOpportunity,
+      endOpportunity,
+      unpublishOpportunity,
+      archiveOpportunity,
+      unpublishUserContent,
+      saveUserContent,
+      archiveUserContent,
+      saveMatchingSettings,
+      recalculateOpportunityMatching,
+      saveOpportunityCommentSettings,
+      moderateOpportunityComment,
+      closeOpportunityCommentReport,
+    }),
+    GROWTH: freezeModule({
+      listGrowthLevels,
+      listGrowthBenefits,
+      listGrowthRules,
+      listGrowthEntries,
+      listUnifiedBenefitLedger,
+      listGrowthLevelTransitions,
+      listBadges,
+      listBadgeAwards,
+      saveGrowthBenefit,
+      saveGrowthLevel,
+      saveGrowthRule,
+      adjustGrowth,
+      saveBadge,
+      grantBadge,
+      revokeBadge,
+    }),
+    TASKS: freezeModule(taskAdmin),
+    BANNERS: freezeModule(bannerAdmin),
+    GAME: freezeModule(gameAdmin),
+    MEDIA: freezeModule(mediaAdmin),
+    APPLICATION_WORKFLOW: freezeModule({
+      getDashboard,
+      getDashboardOverview,
+      getExportStatus,
+      listOperationalExceptions,
+      listOperationsQueue,
+      createExport,
+      prepareExport,
+      reserveExportDownload,
+      completeExportDownload,
+    }),
+  })
+
+  return createServiceFacade(health, ownerModules)
+}
+
+function freezeModule(methods) {
+  return Object.freeze({ ...methods })
+}
+
+function createServiceFacade(health, ownerModules) {
+  const service = { health, ownerModules }
+  for (const [owner, ownerModule] of Object.entries(ownerModules)) {
+    for (const [method, implementation] of Object.entries(ownerModule)) {
+      if (Object.hasOwn(service, method)) {
+        throw new Error(`ADMIN_SERVICE_METHOD_DUPLICATE:${owner}:${method}`)
+      }
+      Object.defineProperty(service, method, {
+        configurable: false,
+        enumerable: true,
+        value: implementation,
+        writable: false,
+      })
+    }
+  }
+  return Object.freeze(service)
+}
+
+function webLoginFailure(error) {
+  switch (error?.code) {
+    case 'WEB_LOGIN_CHALLENGE_NOT_FOUND':
+    case 'WEB_LOGIN_CHALLENGE_INVALID':
+    case 'WEB_LOGIN_CHALLENGE_EXPIRED':
+      return {
+        auditReason: 'INVALID_CODE',
+        error: new AdminError('WEB_LOGIN_INVALID_CODE', '登录码无效或已过期'),
+      }
+    case 'WEB_LOGIN_RATE_LIMITED':
+    case 'WEB_LOGIN_LOCKED':
+      return {
+        auditReason: 'RATE_LIMITED',
+        error: new AdminError('WEB_LOGIN_RATE_LIMITED', '尝试次数过多，请稍后在网页获取新的登录码'),
+      }
+    case 'WEB_LOGIN_REQUEST_INVALID':
+      return {
+        auditReason: 'CONFIGURATION',
+        error: new AdminError('WEB_LOGIN_REQUEST_INVALID', '网页登录确认请求无效，请刷新网页后重试'),
+      }
+    case 'WEB_LOGIN_CONFIG_REQUIRED':
+    case 'WEB_LOGIN_AUTH_REJECTED':
+      return {
+        auditReason: 'CONFIGURATION',
+        error: new AdminError('WEB_LOGIN_CONFIGURATION_ERROR', '网页登录服务配置异常，请联系管理员'),
+      }
+    case 'WEB_LOGIN_TIMEOUT':
+      return {
+        auditReason: 'UNAVAILABLE',
+        error: new AdminError('WEB_LOGIN_TIMEOUT', '网页登录服务响应超时，请稍后重试', true),
+      }
+    case 'WEB_LOGIN_NETWORK_ERROR':
+      return {
+        auditReason: 'UNAVAILABLE',
+        error: new AdminError('WEB_LOGIN_NETWORK_ERROR', '网络连接失败，请检查网络后重试', true),
+      }
+    default:
+      return {
+        auditReason: 'UNAVAILABLE',
+        error: new AdminError('WEB_LOGIN_UNAVAILABLE', '网页登录服务暂时不可用，请稍后重试', true),
+      }
   }
 }
 

@@ -2,10 +2,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 
 const viewportProfiles = {
-  'desktop-960': {
-    height: null,
-    width: { minimum: 960 },
-  },
   'mobile-375': {
     height: null,
     width: { equals: 375 },

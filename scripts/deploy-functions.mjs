@@ -30,7 +30,6 @@ import {
 import { resolveMipDeploymentStage } from './lib/mip-deployment-stage.mjs'
 import { createMipCoreFunctionManifest } from './lib/mip-function-manifest.mjs'
 import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
-import { resolvePhoneMigrationRebindEnabled } from './lib/mip-identity-rebind-policy.mjs'
 import {
   assertMipSchedulerHmacSecretsIsolated,
   assertMipTaskAdminHmacSecretsIsolated,
@@ -67,10 +66,6 @@ const knowledgeTestPriceCents = Number(env.MIP_KNOWLEDGE_TEST_PRICE_CENTS || 990
 const knowledgeSourceAllowedHosts = exactHostnameList(env.MIP_KNOWLEDGE_SOURCE_ALLOWED_HOSTS)
 const knowledgeWebviewAllowedHosts = exactHostnameList(env.MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS)
 const unionIdRebindEnabled = String(env.MIP_UNION_ID_REBIND_ENABLED || 'false').trim().toLowerCase() === 'true'
-const phoneMigrationRebindEnabled = resolvePhoneMigrationRebindEnabled(
-  env.MIP_PHONE_MIGRATION_REBIND_ENABLED,
-  deploymentStage,
-)
 const exportMaxRows = Number(env.MIP_EXPORT_MAX_ROWS || 5_000)
 const exportMaxBytes = Number(env.MIP_EXPORT_MAX_BYTES || 8 * 1024 * 1024)
 const adminWebLoginConfirmUrl = exactHttpsEndpoint(
@@ -418,7 +413,6 @@ try {
       matchingProviderFunction,
       matchingProviderTimeoutMs,
       paymentMode,
-      phoneMigrationRebindEnabled,
       secrets,
       serviceAccountAdapterJson,
       serviceAccountAdapterSecret,
@@ -924,7 +918,6 @@ function environmentForRole(role, options) {
       ...agreementEnvironment,
       MIP_UNION_IDENTITY_PEPPER: options.secrets.unionIdentityPepper,
       MIP_UNION_ID_REBIND_ENABLED: options.unionIdRebindEnabled ? 'true' : 'false',
-      MIP_PHONE_MIGRATION_REBIND_ENABLED: options.phoneMigrationRebindEnabled ? 'true' : 'false',
     },
     media: {
       MIP_MEDIA_SCOPE_SECRET: options.secrets.mediaScope,

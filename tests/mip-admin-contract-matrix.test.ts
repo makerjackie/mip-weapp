@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { readActions } from '../src/modules/mip-admin/cloudbase-transport'
 import { adminOperationContract } from '../src/modules/mip-admin/operation-contract'
 
-vi.mock('../src/modules/platform/cloudbase', () => ({
+vi.mock('../src/platform/cloudbase/client', () => ({
   requireCloudClient: vi.fn(),
 }))
 

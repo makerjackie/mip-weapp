@@ -3,7 +3,7 @@ import type { UserTaskCard } from '../../../modules/mip-tasks'
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
 import { mipGrowthModule } from '../../../modules/mip-growth/client'
 import { mipTasksModule } from '../../../modules/mip-tasks/client'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 import { formatLocalDate } from '../../../utils/date'
 
 const metricLabels = {

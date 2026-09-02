@@ -89,6 +89,6 @@ describe('MIP free event vertical contract', () => {
     expect(views).toContain('state === \'error\'')
     expect(views).toContain('暂无活动')
     expect(views).toContain('state === \'blocked\'')
-    expect(views).toContain('disabled="{{primaryAction === \'disabled\'}}"')
+    expect(views).toContain('aria-disabled="{{primaryAction === \'disabled\' || busy}}"')
   })
 })

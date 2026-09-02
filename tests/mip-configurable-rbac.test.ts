@@ -18,29 +18,6 @@ describe('MIP configurable RBAC', () => {
     expect(rollback.trim()).toBe('DROP TABLE IF EXISTS mip_role_capability_policies;')
   })
 
-  it('uses roles.change for the dashboard entry and exposes owner policy controls through the module', () => {
-    const adminNavigation = fs.readFileSync(
-      path.resolve(import.meta.dirname, '../src/packages/admin/components/workspace-nav/model.ts'),
-      'utf8',
-    )
-    const page = fs.readFileSync(
-      path.resolve(import.meta.dirname, '../src/packages/admin/roles/index.ts'),
-      'utf8',
-    )
-    const template = fs.readFileSync(
-      path.resolve(import.meta.dirname, '../src/packages/admin/roles/index.wxml'),
-      'utf8',
-    )
-    expect(adminNavigation).toContain('capabilities: [\'roles.change\']')
-    expect(page).toContain('mipAdminModule.governance.listRoleCapabilityPolicies')
-    expect(page).toContain('mipAdminModule.governance.updateRoleCapabilityPolicy')
-    expect(page).toContain('mipAdminModule.governance.resetRoleCapabilityPolicy')
-    expect(page).toContain('role.roleKey === \'PLATFORM_OWNER\'')
-    expect(template).toContain('权限模板')
-    expect(template).toContain('保存权限')
-    expect(template).not.toMatch(/>\s*\{\{item\.key\}\}\s*</)
-  })
-
   it('resets a custom policy through the existing mutation route and returns the default template', () => {
     const governance = fs.readFileSync(
       path.resolve(import.meta.dirname, '../cloudfunctions/mip-admin-api/domain/governance.js'),

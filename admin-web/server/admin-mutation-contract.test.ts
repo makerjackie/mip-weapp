@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { ADMIN_WEB_OPERATION_CONTRACT } from '@mip/admin-contracts'
 import { ADMIN_EVENT_MUTATION_ACTIONS } from '../src/modules/admin-event-mutation-forms.ts'
 import { ADMIN_PEOPLE_MUTATION_ACTIONS } from '../src/modules/admin-people-mutation-forms.ts'
 import { ADMIN_CONTENT_MUTATION_ACTIONS } from '../src/modules/content-mutation-forms.ts'
@@ -9,9 +10,30 @@ import { ADMIN_GAME_MUTATION_ACTIONS } from '../src/modules/admin-game-managemen
 import {
   REVIEWED_ADMIN_MUTATIONS,
   REVIEWED_ADMIN_MUTATION_ACTIONS,
+  WEB_ADMIN_QUERY_ACTIONS,
 } from './admin-mutation-contract.ts'
 
 describe('reviewed Web admin mutation contract', () => {
+  it('derives query actions and mutation fields from the generated server contract', () => {
+    const expectedQueries = ADMIN_WEB_OPERATION_CONTRACT.operations
+      .filter(operation => operation.webAllowed
+        && operation.webRoute === 'ADMIN'
+        && operation.kind === 'QUERY')
+      .map(operation => operation.action)
+    const expectedMutations = ADMIN_WEB_OPERATION_CONTRACT.operations
+      .filter(operation => operation.webAllowed
+        && operation.webRoute === 'ADMIN'
+        && operation.kind === 'MUTATION')
+      .map(operation => ({
+        action: operation.action,
+        required: operation.requiredInputKeys,
+        optional: operation.optionalInputKeys,
+      }))
+
+    assert.deepEqual([...WEB_ADMIN_QUERY_ACTIONS], expectedQueries)
+    assert.deepEqual(REVIEWED_ADMIN_MUTATIONS, expectedMutations)
+  })
+
   it('covers every rendered advanced operation exactly once', () => {
     const advanced = [
       ...ADMIN_PEOPLE_MUTATION_ACTIONS,

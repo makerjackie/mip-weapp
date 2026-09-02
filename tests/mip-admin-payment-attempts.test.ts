@@ -1,9 +1,5 @@
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { parseAdminPaymentAttemptPage } from '../src/modules/mip-admin/payment-attempts'
-
-const root = path.resolve(import.meta.dirname, '..')
 
 function item() {
   return {
@@ -33,15 +29,5 @@ describe('admin payment attempt operator contract', () => {
       items: [{ ...item(), providerResponse: { secret: 'raw' } }],
       nextCursor: null,
     })).toThrow('支付尝试记录')
-  })
-
-  it('exposes neutral filters, pagination and order navigation without raw identifiers', () => {
-    const page = fs.readFileSync(path.join(root, 'src/packages/admin/payment-attempts/index.wxml'), 'utf8')
-    expect(page).toContain('搜索昵称、玩家编号或订单号')
-    expect(page).toContain('暂无支付尝试记录')
-    expect(page).toContain('加载更多')
-    expect(page).toContain('查看订单')
-    expect(page).not.toContain('providerResponse')
-    expect(page).not.toContain('lastErrorCode')
   })
 })

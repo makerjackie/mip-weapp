@@ -23,7 +23,7 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 | `mip-opportunities-api` | 机会、引荐、感兴趣、合作卡、超级案例、机会撮合和用户偏好 | 是 |
 | `mip-community-api` | 公开档案安全、知识内容目录/详情和知识评论 | 是；写操作受身份补全约束 |
 | `mip-commerce-api` | 会员方案、会员/活动/单内容统一订单、退款申请、订单查询 | 是 |
-| `mip-admin-api` | 管理分包、分会、活动、相册与知识内容运营、审计、导出和显式采集 | 是，受 capability 约束 |
+| `mip-admin-api` | Web 完整运营后台、小程序现场工作台、分会、活动、相册与知识内容运营、审计、导出和显式采集 | 是，受 capability 约束 |
 | `mip-growth-api` | 成长等级、规则、账户和流水 | 是；内部事件也可调用 |
 | `mip-game-api` | 团队、赛季、每周赛况、排行榜快照与队伍大本营 | 是；只向有效会员开放，管理动作受 `game.manage` capability 约束 |
 | `mip-tasks-api` | 任务卡、全员或指定成员派发、模板、截止窗口、单次完成事实、附件复核、经验奖励和完成流水 | 是；管理动作受 `tasks.manage` capability 约束 |

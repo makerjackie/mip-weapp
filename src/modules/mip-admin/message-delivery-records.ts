@@ -1,4 +1,4 @@
-import { MipAdminError } from './types'
+import { MipAdminError } from './error'
 
 export type AdminMessageDeliveryRecordChannel
   = 'WECHAT_SUBSCRIPTION' | 'WECHAT_CUSTOMER_SERVICE' | 'WECHAT_SERVICE_ACCOUNT'

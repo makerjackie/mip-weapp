@@ -17,21 +17,34 @@ describe('MIP opportunity Figma surfaces', () => {
   const discoveryScript = source('src/pages/opportunities/index.ts')
   const discoveryStyles = source('src/pages/opportunities/index.wxss')
 
-  it('keeps the discovery hierarchy and all committed filters above the custom TabBar', () => {
+  it('keeps the discovery hierarchy and presents filters as a dedicated full-screen state', () => {
     expect(discovery).toContain('id="opportunities-status-bar"')
     expect(discovery).toContain('id="opportunities-custom-navigation"')
     expect(discovery).toContain('<app-top-safe-area id="opportunities-status-bar" />')
     expect(discovery).toContain('id="opportunities-filter-actions"')
+    expect(discovery).toContain('id="opportunities-filter-page"')
     expect(discovery).toContain('bottom-[calc(env(safe-area-inset-bottom)+112rpx)]')
     expect(discovery).toContain('pb-[280rpx]')
     expect(discoveryStyles).toContain('padding-bottom: calc(280rpx + env(safe-area-inset-bottom) + 112rpx);')
+    expect(discovery.indexOf('id="opportunities-filter-page"')).toBeLessThan(discovery.indexOf('id="opportunities-search-input"'))
+
+    const filterSurface = discovery.slice(
+      discovery.indexOf('id="opportunities-filter-page"'),
+      discovery.indexOf('id="opportunities-filter-actions"'),
+    )
+    expect(filterSurface).not.toContain('bind:tap="openPeople"')
+    expect(filterSurface).not.toContain('bind:tap="openMatching"')
+    expect(filterSurface).not.toContain('bind:tap="openMine"')
 
     for (const binding of [
       'bindconfirm="onSearchConfirm"',
       'bind:change="changeCity"',
+      'bind:tap="chooseLocationPreset"',
       'bind:tap="chooseRole"',
-      'bind:change="changeIndustry"',
+      'bind:tap="toggleIndustryPicker"',
+      'bind:tap="toggleIndustryGroup"',
       'bind:tap="toggleTag"',
+      'bind:tap="toggleMoreFilters"',
       'bind:tap="resetFilters"',
       'bind:tap="applyFilters"',
     ]) {
@@ -39,10 +52,47 @@ describe('MIP opportunity Figma surfaces', () => {
     }
   })
 
-  it('keeps existing discovery content during onShow refresh and reserves fixed-filter space', () => {
+  it('keeps existing discovery content during refresh and stops list pagination behind filters', () => {
     expect(discoveryScript).toContain('preserveContent: this.data.state === \'ready\'')
     expect(discovery).toContain('class="opportunities-filter-panel')
-    expect(discovery).toContain('mb-[112rpx]')
+    expect(discoveryScript).toContain('if (!this.data.filterOpen && this.data.nextCursor && !this.data.loadingMore)')
+    expect(discovery).toContain('<block wx:if="{{filterOpen}}">')
+    expect(discovery).toContain('<block wx:else>')
+  })
+
+  it('uses one location concept and progressive disclosure for lower-frequency filters', () => {
+    expect(discovery).toContain('合作地点')
+    expect(discovery).not.toContain('合作范围')
+    expect(discovery).toContain('data-preset="ALL"')
+    expect(discovery).toContain('data-preset="REMOTE"')
+    expect(discovery).toContain('data-preset="NATIONAL"')
+    expect(discovery).toContain('data-preset="CITY"')
+    expect(discovery).toContain('clear-label="全部城市"')
+    expect(discovery).toContain('wx:if="{{industryPickerOpen}}"')
+    expect(discovery).toContain('wx:if="{{expandedIndustryGroupId === group.id}}"')
+    expect(discovery).toContain('wx:if="{{moreFiltersOpen}}"')
+  })
+
+  it('maps the location preset to one backend scope and keeps search independent from filter reset', () => {
+    const chooseLocation = discoveryScript.slice(
+      discoveryScript.indexOf('  chooseLocationPreset('),
+      discoveryScript.indexOf('  toggleIndustryPicker('),
+    )
+    const reset = discoveryScript.slice(
+      discoveryScript.indexOf('  resetFilters('),
+      discoveryScript.indexOf('  applyFilters('),
+    )
+    const apply = discoveryScript.slice(
+      discoveryScript.indexOf('  applyFilters('),
+      discoveryScript.indexOf('  clearAppliedFilters('),
+    )
+
+    expect(chooseLocation).toContain('draftLocationTypes: locationTypesForPreset(preset)')
+    expect(chooseLocation).toContain('const cityId = keepsCity ? this.data.draftOpportunityCityTagId : \'\'')
+    expect(reset).not.toContain('keywordInput:')
+    expect(apply).toContain('this.data.draftLocationPreset === \'CITY\' ? this.data.draftOpportunityCityTagId : \'\'')
+    expect(apply).toContain('locationTypesForPreset(this.data.draftLocationPreset)')
+    expect(apply.match(/loadContent\(true\)/g)).toHaveLength(1)
   })
 
   it('matches the 351 by 176 opportunity-card silhouette without inventing referral avatars', () => {

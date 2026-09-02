@@ -9,9 +9,9 @@ import {
   parseMipEventDetail,
   parseMipEventListItem,
 } from '../src/modules/mip-events/dto'
-import { requireCloudClient } from '../src/modules/platform/cloudbase'
+import { requireCloudClient } from '../src/platform/cloudbase/client'
 
-vi.mock('../src/modules/platform/cloudbase', () => ({ requireCloudClient: vi.fn() }))
+vi.mock('../src/platform/cloudbase/client', () => ({ requireCloudClient: vi.fn() }))
 vi.mock('../src/config/runtime', () => ({
   runtimeConfig: { cloudbase: { eventsFunctionName: 'mip-events-api' } },
 }))

@@ -24,7 +24,6 @@ import {
   resolveFreeEventRuntimeEnvironment,
   runtimeCompileDisposition,
   runtimeRouteDisposition,
-  summarizeAdminFeedback,
   summarizeCommentPage,
   summarizeEventDetail,
   summarizeInteraction,
@@ -36,7 +35,6 @@ import {
   validateFreeEventMutationContract,
   validateRuntimeAttestation,
 } from './lib/free-event-runtime-contract.mjs'
-import { installMiniprogramAutomatorCompatibility } from './lib/miniprogram-automator-compat.mjs'
 import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
 import { readEnv } from './lib/project.mjs'
 import {
@@ -496,14 +494,6 @@ async function findRosterRegistration(page, registrationId) {
   })
 }
 
-async function findAdminFeedback(page, feedbackMarker) {
-  return await loadAllPages(page, {
-    find: data => (data.items || []).find(item => item?.body === feedbackMarker),
-    label: 'Admin event feedback',
-    loadMoreHandler: 'loadMore',
-  })
-}
-
 async function ensureRegistrationCategory(page, category) {
   const data = await waitForData(page, value => value?.state === 'ready', { label: 'My event registrations' })
   if (data.activeCategory === category) {
@@ -525,7 +515,6 @@ async function executeWorkflow({ contract, diagnostics, markers, miniProgram, op
   const contractSteps = new Map(contract.steps.map(step => [step.id, step]))
   let registrationId = ''
   let registrationVersion = 0
-  let feedbackId = ''
   let commentId = ''
 
   async function runStep(id, operation) {
@@ -773,7 +762,7 @@ async function executeWorkflow({ contract, diagnostics, markers, miniProgram, op
         && Number(value.feedback.version) > previousVersion,
       { label: step.id },
     )
-    feedbackId = String(saved.feedback.id || '')
+    const feedbackId = String(saved.feedback.id || '')
     invariant(feedbackId, 'Saved feedback is missing its authoritative id')
     confirmMutation(report, persist, mutation, { feedbackId, version: saved.feedback.version })
     await captureEvidence({
@@ -822,25 +811,6 @@ async function executeWorkflow({ contract, diagnostics, markers, miniProgram, op
       step,
       label: 'created',
       state: summarizeCommentPage(published, markers.comment),
-    })
-  })
-
-  await runStep('admin-feedback', async (step, spec) => {
-    const page = await openEventPage(miniProgram, spec, options.eventId)
-    const found = await findAdminFeedback(page, markers.feedback)
-    if (!found.data.canRead) {
-      runtimeFixtureMismatch('The current operator lacks events.feedback.read for the exact event')
-    }
-    invariant(found.match, 'The saved feedback is absent from the authoritative admin feedback page')
-    invariant(found.match.id === feedbackId, 'Member/admin feedback ids do not match')
-    invariant(found.match.rating === 5, 'Admin feedback rating does not match the saved fact')
-    await captureEvidence({
-      miniProgram,
-      outputDir,
-      persist,
-      step,
-      label: 'matched',
-      state: summarizeAdminFeedback(found.data, markers.feedback),
     })
   })
 
@@ -1083,7 +1053,6 @@ export async function main(runArgs = process.argv.slice(2)) {
     }
     persist()
 
-    installMiniprogramAutomatorCompatibility()
     const acquireOptions = createOpenedAutomatorOptions({ contract, devtoolsRoot, port, sessionId })
     try {
       miniProgram = await acquireSharedMiniProgram(acquireOptions)

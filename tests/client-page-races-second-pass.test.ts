@@ -18,7 +18,7 @@ vi.mock('../src/modules/mip-events/client', () => ({
 vi.mock('../src/modules/mip-cases', () => ({
   superCaseModule: casesModule,
 }))
-vi.mock('../src/modules/platform/case-navigation', () => ({
+vi.mock('../src/platform/navigation/client', () => ({
   caseNavigateTo: vi.fn(),
   caseSwitchPrimary: vi.fn(),
 }))

@@ -11,7 +11,7 @@ import {
 } from '../src/modules/mip-admin/message-delivery-reviews'
 import { MipAdminError } from '../src/modules/mip-admin/types'
 
-vi.mock('../src/modules/platform/cloudbase', () => ({
+vi.mock('../src/platform/cloudbase/client', () => ({
   requireCloudClient: vi.fn(),
 }))
 
@@ -170,20 +170,6 @@ describe('MIP message delivery review client contract', () => {
     expect(deliveryReviewMutationSignature('claim', item)).toBe(
       deliveryReviewMutationSignature('claim', item),
     )
-  })
-
-  it('connects ACTIVE/history pagination and never exposes an unknown replay action in the UI', () => {
-    const root = path.resolve(import.meta.dirname, '../src/packages/admin/exceptions')
-    const script = fs.readFileSync(path.join(root, 'index.ts'), 'utf8')
-    const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
-    expect(script).toContain('reviewWorkflowStatus: \'ACTIVE\'')
-    expect(script).toContain('reviewNextCursor')
-    expect(script).toContain('cursor: this.data.reviewNextCursor')
-    expect(script).toContain('loadMoreDeliveryReviews')
-    expect(template).toContain('加载更多')
-    expect(template).toContain('确认未知结果，不重放')
-    expect(script).not.toMatch(/replayDelivery|retryDelivery|sendDelivery/)
-    expect(template).not.toContain('text-white')
   })
 
   it('locks migration 041 and grants runtime only the three required table privileges', () => {

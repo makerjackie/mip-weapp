@@ -16,7 +16,7 @@
 
 - `src/pages` 主 Tab
 - `src/packages/member` 用户端二级页
-- `src/packages/admin` 运营端
+- `src/packages/admin` 小程序现场工作台（仅 Web 登录确认、已授权活动、签到码与海报、名单与签到）
 - `src/modules/mip-*` 用户与运营领域
 - `src/modules/mip-admin` 运营领域
 - `src/platform` / `src/shared` 平台原语（已从共享包内联）
@@ -40,6 +40,7 @@
 
 - 小程序页面 → modules → platform/cloud functions
 - Web 页面 → React adapter → modules/services → 同源 BFF → `mip-admin-api`
+- 完整运营界面只进入 `admin-web/`；小程序不得新增现场白名单以外的管理页面
 - 页面不得直接 `wx.cloud.init` 或 `wx.requestPayment`
 - 云函数不得依赖仓库外路径
 - `admin-web/` 不得引用 `wx`、WXML、TDesign MiniProgram 或 `src/pages` / `src/packages`。

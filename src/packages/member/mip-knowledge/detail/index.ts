@@ -2,8 +2,8 @@ import type { KnowledgeComment, KnowledgeContentDetail } from '../../../../modul
 import { reportCategoryOptions } from '../../../../modules/mip-community'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
-import { mipKnowledgeModule } from '../../../../modules/mip-knowledge/module'
-import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
+import { mipKnowledgeModule } from '../../../../modules/mip-knowledge/client'
+import { caseNavigateTo } from '../../../../platform/navigation/client'
 
 Page({
   data: {

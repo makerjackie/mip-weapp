@@ -1,8 +1,8 @@
 import type { MipCommerceTransport } from './gateway'
 import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
 import { runtimeConfig } from '../../config/runtime'
-import { resolveCloudFileUrls } from '../platform/cloud-media'
-import { requireCloudClient } from '../platform/cloudbase'
+import { requireCloudClient } from '../../platform/cloudbase/client'
+import { resolveCloudFileUrls } from '../../platform/storage/cloud-media'
 import { createMipCommerceGateway, MipCommerceError } from './gateway'
 
 export const cloudbaseMipCommerceTransport: MipCommerceTransport = {

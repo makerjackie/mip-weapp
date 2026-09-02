@@ -22,6 +22,8 @@
     "analyze": "wv analyze --markdown",
     "analyze:pr": "wv analyze --report pr --output .tmp/analyze-pr.md",
     "analyze:json": "wv analyze --json --output .tmp/analyze.json",
+    "analyze:preload": "wv analyze --preload",
+    "analyze:glass-easel": "wv analyze --glass-easel-check",
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",
     "stylelint": "stylelint \"src/**/*.{css,wxss}\" --allow-empty-input",
@@ -92,7 +94,6 @@
     "@icebreakers/eslint-config": "^7.0.1",
     "@icebreakers/stylelint-config": "^5.0.2",
     "@types/node": "^22.15.0",
-    "@weapp-vite/miniprogram-automator": "1.2.8",
     "eslint": "^10.7.0",
     "jpeg-js": "0.4.4",
     "mcporter": "0.9.0",
@@ -106,9 +107,8 @@
     "tencentcloud-sdk-nodejs-scf": "4.1.168",
     "typescript": "^6.0.3",
     "vitest": "^4.1.10",
-    "weapp-ide-cli": "6.0.0",
-    "weapp-tailwindcss": "^5.1.16",
-    "weapp-vite": "^6.18.6",
+    "weapp-ide-cli": "6.1.0",
+    "weapp-vite": "^6.25.0",
     "wx-server-sdk": "4.0.2"
   }
 }

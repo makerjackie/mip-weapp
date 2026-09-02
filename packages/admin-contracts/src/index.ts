@@ -4,12 +4,19 @@ export const ADMIN_REQUEST_CONTRACT_VERSION = 1 as const
 
 export {
   ADMIN_OPERATION_CONTRACT,
+  ADMIN_WEB_OPERATION_CONTRACT,
   type AdminMutationAction,
   type AdminOperation,
   type AdminOperationAction,
   type AdminOperationContract,
   type AdminOperationKind,
   type AdminQueryAction,
+  type AdminWebAllowedOperation,
+  type AdminWebMutationAction,
+  type AdminWebOperation,
+  type AdminWebOperationAction,
+  type AdminWebOperationContract,
+  type AdminWebQueryAction,
 } from './generated/admin-operation-contract.ts'
 
 export type AdminRequestInput = Record<string, unknown>

@@ -1,5 +1,7 @@
 import type { MipAdminGateway } from './types'
-import { MipAdminError } from './types'
+import { MipAdminError } from './error'
+
+export type PaymentAttemptsAdminGateway = Pick<MipAdminGateway, 'listPaymentAttempts'>
 
 export type AdminPaymentAttemptProvider = 'WECHAT_PAY' | 'TEST'
 export type AdminPaymentAttemptStatus = 'CREATED' | 'PARAMETERS_ISSUED' | 'PENDING' | 'SUCCEEDED' | 'FAILED' | 'CLOSED'
@@ -124,7 +126,7 @@ export interface MipPaymentAttemptsAdmin {
 }
 
 export function createMipPaymentAttemptsAdmin(
-  gateway: MipAdminGateway,
+  gateway: PaymentAttemptsAdminGateway,
   cache: PaymentAttemptsCache,
 ): MipPaymentAttemptsAdmin {
   return {

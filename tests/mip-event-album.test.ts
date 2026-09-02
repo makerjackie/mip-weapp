@@ -64,11 +64,9 @@ describe('MIP event album vertical slice', () => {
     expect(mediaService).toContain('photo.status IN (\'PENDING\', \'PUBLISHED\')')
   })
 
-  it('routes both album pages through MIP modules with client pre-compression', () => {
+  it('routes the member album through MIP modules with client pre-compression', () => {
     const memberPage = read('src/packages/member/event-album/index.ts')
     const memberView = read('src/packages/member/event-album/index.wxml')
-    const adminPage = read('src/packages/admin/event-album/index.ts')
-    const eventConsole = read('src/packages/admin/event-console/index.ts')
     const eventDetail = read('src/packages/member/mip-events/detail/index.ts')
     const eventDetailView = read('src/packages/member/mip-events/detail/index.wxml')
     const appJson = read('src/app.json')
@@ -80,9 +78,6 @@ describe('MIP event album vertical slice', () => {
     expect(memberPage).not.toContain('modules/membership')
     expect(memberView).toContain('待审核，仅自己可见')
     expect(memberView).toContain('未通过审核')
-    expect(adminPage).toContain('\'events.album.manage\'')
-    expect(adminPage).toContain('expectedVersion: this.data.actionVersion')
-    expect(eventConsole).toContain('\'event-album\'')
     expect(eventDetail).toContain('/packages/member/event-album/index?eventId=')
     expect(eventDetailView).toContain('event.albumEnabled')
     expect(appJson).toContain('event-album/index')

@@ -1,4 +1,4 @@
-import { initializeCloudbase } from './modules/platform/cloudbase'
+import { initializeCloudbase } from './platform/cloudbase/client'
 
 let prepared = false
 

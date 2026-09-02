@@ -26,51 +26,10 @@ describe('MIP admin event contract', () => {
     expect(service).toContain('contentSafety')
   })
 
-  it('uses native date controls, yuan input, and explicit scope and reservation settings', () => {
-    const pageTs = read('src/packages/admin/events/index.ts')
-    const pageWxml = read('src/packages/admin/events/index.wxml')
-
-    expect(pageWxml).toContain('id="admin-events-page"')
-    expect(pageWxml).toContain('mode="date"')
-    expect(pageWxml).toContain('mode="time"')
-    expect(pageWxml).toContain('城市分会活动')
-    expect(pageWxml).toContain('免费报名')
-    expect(pageWxml).toContain('玩家权益包含')
-    expect(pageWxml).toContain('付费报名')
-    expect(pageWxml).toContain('报名价格（元）')
-    expect(pageWxml).toContain('人工确认')
-    expect(pageWxml).toContain('名额满后启用候补')
-    for (const field of ['scopeType', 'eventMode', 'accessType', 'registrationPolicy', 'albumSubmissionPolicy']) {
-      expect(pageWxml).toContain(`draft.${field} ===`)
-    }
-    expect(pageWxml.match(/aria-role="radio"/g)?.length).toBe(12)
-    expect(pageWxml.match(/min-h-\[88rpx\]/g)?.length).toBeGreaterThanOrEqual(12)
-    expect(pageWxml.match(/aria-role="radio" aria-checked=/g)?.length).toBe(12)
-    expect(pageWxml).toContain('box-border')
-    expect(pageWxml).toContain('max-w-full')
-    expect(pageWxml).not.toContain('开始时间（ISO）')
-    expect(pageWxml).not.toContain('金额（分）')
-    expect(pageWxml).not.toMatch(/class="[^"]*\{\{/)
-    expect(pageTs).toContain('Math.round(Number(priceYuan) * 100)')
-    expect(pageTs).toContain('\'draft.registrationPolicy\': \'AUTO\'')
-    expect(pageTs).toContain('\'draft.waitlistEnabled\': false')
-  })
-
-  it('lets platform event operators configure the default cancellation hours', () => {
-    const source = read('src/packages/admin/managed-events/index.ts')
-    const view = read('src/packages/admin/managed-events/index.wxml')
-    expect(source).toContain('saveEventPolicy')
-    expect(source).toContain('item.capability === \'events.write\' && item.scopeType === \'PLATFORM\'')
-    expect(view).toContain('默认取消报名时间')
-    expect(view).toContain('cancellationHoursBeforeStart')
-  })
-
   it('keeps event list filters, price DTO, and sort-bound cursor behavior end to end', () => {
     const types = read('src/modules/mip-admin/types.ts')
     const service = read('cloudfunctions/mip-admin-api/domain/events.js')
     const repository = read('cloudfunctions/mip-admin-api/domain/repositories/events.js')
-    const source = read('src/packages/admin/managed-events/index.ts')
-    const view = read('src/packages/admin/managed-events/index.wxml')
 
     for (const field of [
       'startsFrom',
@@ -92,52 +51,5 @@ describe('MIP admin event contract', () => {
     expect(repository).toMatch(/ORDER BY e\.starts_at \$\{direction\}, e\.id \$\{direction\}/)
     expect(repository).toContain('e.event_type_key = ?')
     expect(repository).toContain('e.price_cents >= ?')
-    expect(source).toContain('sortDirection: \'ASC\' as AdminEventSortDirection')
-    expect(source).toContain('sort: { field: \'startsAt\', direction: this.data.sortDirection }')
-    expect(source).toContain('clearFilters()')
-    for (const label of [
-      '城市或分会',
-      '活动类型',
-      '开始日期起',
-      '开始日期止',
-      '收费类型',
-      '最低价格（元）',
-      '最高价格（元）',
-      '清除筛选',
-    ]) {
-      expect(view).toContain(label)
-    }
-    expect(view).toContain('{{item.eventTypeText}}')
-    expect(view).toContain('{{item.priceText}}')
-  })
-
-  it('supports ordered event description image upload and preview', () => {
-    const source = read('src/packages/admin/events/index.ts')
-    const view = read('src/packages/admin/events/index.wxml')
-    const detail = read('src/packages/member/mip-events/detail/index.wxml')
-    const gateway = read('src/modules/mip-admin/cloudbase-gateway.ts')
-    expect(source).toContain('uploadImageFromPath(\'EVENT_CONTENT\'')
-    expect(source).toContain('moveContentImage')
-    expect(source).toContain('previewContentImage')
-    expect(view).toContain('活动介绍图片')
-    expect(view).toContain('updateContentCaption')
-    expect(view).toContain('removeContentImage')
-    expect(detail).toContain('event.contentMedia')
-    expect(detail).toContain('bind:tap="previewContentImage"')
-    expect(read('src/packages/member/mip-events/detail/index.ts')).toContain('wx.previewImage({ current, urls })')
-    expect(gateway).toMatch(/getEvent: async eventId => resolveCloudFileUrls\([\s\S]*mip\.admin\.events\.get/)
-  })
-
-  it('blocks stale saves and requires explicit conflict recovery', () => {
-    const pageTs = read('src/packages/admin/events/index.ts')
-    const pageWxml = read('src/packages/admin/events/index.wxml')
-
-    expect(pageTs).toContain('if (this.data.conflict)')
-    expect(pageTs).toContain('isAdminVersionConflict(error)')
-    expect(pageTs).toContain('refreshAfterConflict')
-    expect(pageTs).toContain('await this.loadEvent(true)')
-    expect(pageTs).toContain('expectedVersion: this.data.version')
-    expect(pageWxml).toContain('活动信息已更新')
-    expect(pageWxml).toContain('载入最新版本')
   })
 })

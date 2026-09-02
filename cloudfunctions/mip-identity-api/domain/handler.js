@@ -25,7 +25,6 @@ const errorMessages = {
   PHONE_CODE_INVALID: '手机号授权已失效，请重新授权',
   PHONE_CODE_REQUIRED: '未获得手机号授权码',
   PHONE_ENCRYPTION_NOT_CONFIGURED: '手机号服务尚未配置',
-  PHONE_MIGRATION_REBIND_FAILED: '会员账号迁移未完成，请联系客服处理',
   PHONE_PERMISSION_REQUIRED: '手机号能力尚未开通，请联系管理员',
   PHONE_SERVICE_UNAVAILABLE: '手机号服务暂时不可用',
   PROFILE_TAG_INVALID: '资料标签不存在或当前不可用',

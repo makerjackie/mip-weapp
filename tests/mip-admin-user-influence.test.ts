@@ -11,7 +11,7 @@ import {
   parseAdminUserInfluencePage,
 } from '../src/modules/mip-admin/user-influence'
 
-vi.mock('../src/modules/platform/cloud-media', () => ({
+vi.mock('../src/platform/storage/cloud-media', () => ({
   resolveCloudFileUrls: vi.fn(),
 }))
 

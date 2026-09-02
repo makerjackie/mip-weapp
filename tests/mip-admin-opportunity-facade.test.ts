@@ -6,12 +6,9 @@ import type {
   AdminOpportunityEditorOptions,
   MipAdminGateway,
 } from '../src/modules/mip-admin/types'
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { createMipAdminModule } from '../src/modules/mip-admin/client'
 import { MipAdminError } from '../src/modules/mip-admin/types'
-import { opportunityActionFailure } from '../src/packages/admin/opportunities/action-state'
 
 const matchingSettings: AdminMatchingSettings = {
   scopeKey: 'branch-a',
@@ -240,9 +237,6 @@ describe('MIP admin opportunity facade', () => {
     expect(spies.getOpportunity).toHaveBeenCalledTimes(1)
     expect(spies.getOpportunityCommentAdminState).toHaveBeenCalledTimes(1)
     expect(spies.getMatchingAdminState).toHaveBeenCalledTimes(1)
-    expect(opportunityActionFailure(conflict, '机会发布失败')).toEqual({
-      message: '机会已被其他管理员更新',
-    })
   })
 
   it('passes permission failures through to page state without replacement', async () => {
@@ -252,50 +246,5 @@ describe('MIP admin opportunity facade', () => {
 
     const error = await module.opportunities.archive(archiveInput).catch(caught => caught)
     expect(error).toBe(forbidden)
-    expect(opportunityActionFailure(error, '机会归档失败')).toEqual({
-      message: '当前账号不能归档机会',
-    })
-  })
-
-  it('keeps all four opportunity pages behind the module facade', () => {
-    const root = path.resolve(import.meta.dirname, '..')
-    const pages = [
-      'src/packages/admin/opportunities/index.ts',
-      'src/packages/admin/opportunity-editor/index.ts',
-      'src/packages/admin/opportunity-detail/index.ts',
-      'src/packages/admin/opportunity-matching/index.ts',
-    ]
-    const sources: string[] = []
-    for (const page of pages) {
-      const source = fs.readFileSync(path.join(root, page), 'utf8')
-      sources.push(source)
-      expect(source).toContain('mipAdminModule.opportunities.')
-      expect(source).not.toContain('mipAdminModule.gateway')
-      expect(source).not.toContain('mipAdminModule.mutate')
-    }
-    const mutationCalls = [...sources.join('\n').matchAll(
-      /mipAdminModule\.opportunities\.(save|publish|end|unpublish|archive|saveCommentSettings|moderateComment|closeCommentReport|saveMatchingSettings|recalculateMatching)\(/g,
-    )].map(match => match[1])
-    expect(mutationCalls.sort()).toEqual([
-      'archive',
-      'archive',
-      'closeCommentReport',
-      'end',
-      'moderateComment',
-      'publish',
-      'recalculateMatching',
-      'save',
-      'saveCommentSettings',
-      'saveMatchingSettings',
-      'unpublish',
-      'unpublish',
-    ].sort())
-    const listTemplate = fs.readFileSync(
-      path.join(root, 'src/packages/admin/opportunities/index.wxml'),
-      'utf8',
-    )
-    expect(listTemplate).toContain('item.status === \'DRAFT\' || item.status === \'PUBLISHED\'')
-    expect(listTemplate).toContain('item.status === \'PUBLISHED\'')
-    expect(listTemplate).not.toContain('item.status === \'PUBLISHED\' || item.status === \'ENDED\'')
   })
 })

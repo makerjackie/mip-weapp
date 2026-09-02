@@ -1,0 +1,40 @@
+<view id="mip-visibility-settings-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+180rpx)] pt-3 text-ink">
+  <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-8">
+    <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
+  </view>
+  <app-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载公开设置" description="{{message}}" action-text="重新加载" bind:action="load" />
+  <block wx:else>
+    <view class="rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:22rpx] leading-6 text-muted">关闭后，对应信息不会出现在他人看到的公开档案或个人名片中。</view>
+
+    <view class="mt-5 px-1 text-[length:30rpx] font-semibold">公开档案</view>
+    <view data-visibility-group="profile" class="mt-3 overflow-hidden rounded-[16rpx] bg-panel">
+      <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><text class="text-[length:25rpx]">昵称</text><t-switch checked="{{visibilityNickname}}" data-field="visibilityNickname" bind:change="updateVisibility" /></view>
+      <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><text class="text-[length:25rpx]">姓名</text><t-switch checked="{{visibilityRealName}}" data-field="visibilityRealName" bind:change="updateVisibility" /></view>
+      <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><text class="text-[length:25rpx]">性别</text><t-switch checked="{{visibilityGender}}" data-field="visibilityGender" bind:change="updateVisibility" /></view>
+      <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><text class="text-[length:25rpx]">职业身份</text><t-switch checked="{{visibilityCareerIdentity}}" data-field="visibilityCareerIdentity" bind:change="updateVisibility" /></view>
+      <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><text class="text-[length:25rpx]">头像</text><t-switch checked="{{visibilityAvatar}}" data-field="visibilityAvatar" bind:change="updateVisibility" /></view>
+      <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><text class="text-[length:25rpx]">身份状态</text><t-switch checked="{{visibilityIdentityStatus}}" data-field="visibilityIdentityStatus" bind:change="updateVisibility" /></view>
+      <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><text class="text-[length:25rpx]">一句话介绍</text><t-switch checked="{{visibilityHeadline}}" data-field="visibilityHeadline" bind:change="updateVisibility" /></view>
+      <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><text class="text-[length:25rpx]">补充资料</text><t-switch checked="{{visibilityIntroduction}}" data-field="visibilityIntroduction" bind:change="updateVisibility" /></view>
+      <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><text class="text-[length:25rpx]">公司信息</text><t-switch checked="{{visibilityCompanies}}" data-field="visibilityCompanies" bind:change="updateVisibility" /></view>
+      <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><text class="text-[length:25rpx]">组织信息</text><t-switch checked="{{visibilityOrganizations}}" data-field="visibilityOrganizations" bind:change="updateVisibility" /></view>
+      <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><text class="text-[length:25rpx]">代表行业</text><t-switch checked="{{visibilityIndustry}}" data-field="visibilityIndustry" bind:change="updateVisibility" /></view>
+      <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><text class="text-[length:25rpx]">能力标签</text><t-switch checked="{{visibilityAbilities}}" data-field="visibilityAbilities" bind:change="updateVisibility" /></view>
+      <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><text class="text-[length:25rpx]">主城市分会</text><t-switch checked="{{visibilityPrimaryBranch}}" data-field="visibilityPrimaryBranch" bind:change="updateVisibility" /></view>
+      <view class="flex min-h-[92rpx] items-center justify-between px-4"><text class="text-[length:25rpx]">影响力数据</text><t-switch checked="{{visibilityInfluence}}" data-field="visibilityInfluence" bind:change="updateVisibility" /></view>
+    </view>
+
+    <view class="mt-5 px-1 text-[length:30rpx] font-semibold">名片联系方式</view>
+    <view class="mt-2 px-1 text-[length:22rpx] leading-6 text-muted">公开档案不会返回联系方式；以下设置只控制个人名片展示。</view>
+    <view data-visibility-group="card-contacts" class="mt-3 overflow-hidden rounded-[16rpx] bg-panel">
+      <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><view><view class="text-[length:25rpx]">手机号</view><view wx:if="{{!phoneBound}}" class="mt-1 text-[length:20rpx] text-muted">尚未绑定</view></view><t-switch checked="{{visibilityPhone}}" disabled="{{!phoneBound}}" data-field="visibilityPhone" bind:change="updateVisibility" /></view>
+      <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><text class="text-[length:25rpx]">微信号</text><t-switch checked="{{visibilityWechat}}" data-field="visibilityWechat" bind:change="updateVisibility" /></view>
+      <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><text class="text-[length:25rpx]">邮箱</text><t-switch checked="{{visibilityEmail}}" data-field="visibilityEmail" bind:change="updateVisibility" /></view>
+      <view class="flex min-h-[92rpx] items-center justify-between px-4"><text class="text-[length:25rpx]">地址</text><t-switch checked="{{visibilityAddress}}" data-field="visibilityAddress" bind:change="updateVisibility" /></view>
+    </view>
+
+    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:22rpx] leading-6">{{message}}</view>
+    <mip-sticky-actions><view slot="actions" class="w-full"><t-button block size="large" theme="primary" loading="{{saving}}" bind:tap="save">保存公开设置</t-button></view></mip-sticky-actions>
+    <app-page-exit label="返回我的" tab-url="/pages/profile/index" />
+  </block>
+</view>

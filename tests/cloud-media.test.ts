@@ -1,13 +1,13 @@
-import type { CaseCloudClient } from '../src/modules/platform/cloudbase'
+import type { CaseCloudClient } from '../src/platform/cloudbase/client'
 import { replaceCloudFileUrls } from '@weapp/platform/media-urls'
 import { describe, expect, it, vi } from 'vitest'
 import {
   appendCloudImageTransform,
   cloudImageTransformForFileId,
   resolveCloudFileUrls,
-} from '../src/modules/platform/cloud-media'
+} from '../src/platform/storage/cloud-media'
 
-vi.mock('../src/modules/platform/cloudbase', () => ({
+vi.mock('../src/platform/cloudbase/client', () => ({
   requireCloudClient: vi.fn(),
 }))
 

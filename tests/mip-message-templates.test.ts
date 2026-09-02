@@ -14,7 +14,7 @@ import {
 } from '../src/modules/mip-admin/message-templates'
 import { MipAdminError } from '../src/modules/mip-admin/types'
 
-vi.mock('../src/modules/platform/cloudbase', () => ({
+vi.mock('../src/platform/cloudbase/client', () => ({
   requireCloudClient: vi.fn(),
 }))
 
@@ -140,9 +140,9 @@ describe('MIP message template contract', () => {
     const module = createMipAdminModule(spies as unknown as MipAdminGateway)
 
     await module.messaging.listTemplates({ status: 'DRAFT' })
-    await module.listMessageTemplates({ status: 'DRAFT' })
+    await module.messaging.listTemplates({ status: 'DRAFT' })
     await module.messaging.getTemplate(template.id)
-    await module.getMessageTemplate(template.id)
+    await module.messaging.getTemplate(template.id)
     expect(spies.listMessageTemplates).toHaveBeenCalledTimes(1)
     expect(spies.getMessageTemplate).toHaveBeenCalledTimes(1)
 

@@ -18,7 +18,7 @@ import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { careerIdentityOptions } from '../../../modules/mip-identity/profile-options'
 import { opportunityModule } from '../../../modules/mip-opportunities'
 import { createMutationKey } from '../../../modules/mip-opportunities/validation'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 
 type ProfileAction = 'interest' | 'block' | 'report'
 type AccessActionState = 'loading' | 'ready' | 'access' | 'error'

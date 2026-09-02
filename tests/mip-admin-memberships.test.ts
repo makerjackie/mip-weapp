@@ -1,8 +1,5 @@
 import type { AdminTransport } from '../src/modules/mip-admin/transport'
 import type { MipAdminGateway } from '../src/modules/mip-admin/types'
-import fs from 'node:fs'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 import { createMipAdminModule } from '../src/modules/mip-admin/client'
 import { createMipAdminGateway } from '../src/modules/mip-admin/cloudbase-gateway'
@@ -12,7 +9,7 @@ import {
   retainAdminMembershipGrantIntent,
 } from '../src/modules/mip-admin/memberships'
 
-vi.mock('../src/modules/platform/cloudbase', () => ({
+vi.mock('../src/platform/cloudbase/client', () => ({
   requireCloudClient: vi.fn(),
 }))
 
@@ -20,17 +17,12 @@ vi.mock('../src/config/runtime', () => ({
   runtimeConfig: { cloudbase: { adminFunctionName: 'mip-admin-api' } },
 }))
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const USER_ID = '10000000-0000-4000-8000-000000000001'
 const ORDER_ID = '10000000-0000-4000-8000-000000000002'
 const ORDER_ENTITLEMENT_ID = '10000000-0000-4000-8000-000000000003'
 const MANUAL_ENTITLEMENT_ID = '10000000-0000-4000-8000-000000000004'
 const ADJUSTMENT_ID = '10000000-0000-4000-8000-000000000005'
 const NEXT_ADJUSTMENT_ID = '10000000-0000-4000-8000-000000000006'
-
-function read(relativePath: string) {
-  return fs.readFileSync(path.join(root, relativePath), 'utf8')
-}
 
 function detail(chainVersion = 4) {
   return {
@@ -204,36 +196,5 @@ describe('MIP admin membership client contract', () => {
     })
     await module.memberships.get(USER_ID)
     expect(spies.getMembership).toHaveBeenCalledTimes(2)
-  })
-
-  it('registers a contextual responsive page without adding a workspace navigation item', () => {
-    const app = JSON.parse(read('src/app.json')) as { subPackages: Array<{ root: string, pages: string[] }> }
-    const runtime = JSON.parse(read('config/runtime-pages.json')) as {
-      routes: Array<{
-        path: string
-        states: string[]
-        acceptStates?: string[]
-        readyAssertion: string
-      }>
-    }
-    const adminPackage = app.subPackages.find(item => item.root === 'packages/admin')
-    const membershipRoute = runtime.routes.find(item => item.path === 'packages/admin/membership/index')
-    const page = read('src/packages/admin/membership/index.wxml')
-    const profile = read('src/packages/admin/profiles/index.wxml')
-    const profileScript = read('src/packages/admin/profiles/index.ts')
-    const workspaceNav = read('src/packages/admin/components/workspace-nav/index.ts')
-
-    expect(adminPackage?.pages).toContain('membership/index')
-    expect(membershipRoute?.states).toContain('conflict')
-    expect(membershipRoute?.acceptStates).toEqual(['ready'])
-    expect(membershipRoute?.readyAssertion).toBe('state === \'ready\'')
-    expect(page).toContain('mip-admin-section-grid')
-    expect(page).toContain('mip-admin-record-list')
-    expect(page).toContain('<app-page-exit />')
-    expect(page).not.toContain('windowWidth')
-    expect(profile).toContain('wx:if="{{canReadMembership}}"')
-    expect(profileScript).toContain('hasCapability(session.capabilities, \'memberships.read\')')
-    expect(profileScript).toContain('/packages/admin/membership/index?userId=')
-    expect(workspaceNav).not.toContain('/packages/admin/membership/index')
   })
 })

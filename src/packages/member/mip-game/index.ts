@@ -1,6 +1,6 @@
 import type { GameBranchFilter, GameMatch, GameOverview, GameRankingEntry, GameRankingType } from '../../../modules/mip-game'
 import { mipGameModule, rankingTeamRoute } from '../../../modules/mip-game'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 
 interface MatchView extends GameMatch { periodText: string, resultText: string }
 

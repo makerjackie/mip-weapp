@@ -1,7 +1,7 @@
 import type { CommerceOrder, MembershipPlan, OrderServiceStatus } from '../../../modules/mip-commerce'
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
 import { formatCny, planTitle, presentOrderServiceStatus, presentOrderStatus } from '../../../modules/mip-shell'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 import { formatLocalDateTime } from '../../../utils/date'
 
 type OrderFilter = 'all' | Exclude<OrderServiceStatus, 'UNAVAILABLE'>

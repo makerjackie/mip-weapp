@@ -1,12 +1,8 @@
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
   localDayBoundary,
   parseMessageDeliveryRecordPage,
 } from '../src/modules/mip-admin/message-delivery-records'
-
-const root = path.resolve(import.meta.dirname, '..')
 
 describe('MIP message delivery records', () => {
   it('parses safe operational delivery facts without raw identifiers or payloads', () => {
@@ -40,18 +36,5 @@ describe('MIP message delivery records', () => {
 
   it('uses an exclusive next-day boundary for the end-date filter', () => {
     expect(Date.parse(localDayBoundary('2030-08-01') || '')).toBeLessThan(Date.parse(localDayBoundary('2030-08-01', 1) || ''))
-  })
-
-  it('registers the responsive records page and navigation destination', () => {
-    const page = fs.readFileSync(path.join(root, 'src/packages/admin/message-delivery-records/index.wxml'), 'utf8')
-    const script = fs.readFileSync(path.join(root, 'src/packages/admin/message-delivery-records/index.ts'), 'utf8')
-    const nav = fs.readFileSync(path.join(root, 'src/packages/admin/components/workspace-nav/model.ts'), 'utf8')
-    expect(page).toContain('搜索消息标题、活动、昵称或玩家编号')
-    expect(page).toContain('加载更多')
-    expect(page).toContain('mip-admin-section-grid')
-    expect(script).toContain('listDeliveryRecords')
-    expect(script.indexOf('try {')).toBeLessThan(script.indexOf('await mipAdminModule.getSession(force)'))
-    expect(script).toContain('sequence !== this.requestSequence')
-    expect(nav).toContain('packages/admin/message-delivery-records/index')
   })
 })

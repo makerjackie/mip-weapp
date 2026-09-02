@@ -11,6 +11,7 @@ const {
   normalizeArchiveRequest,
 } = require('../domain/opportunity-archive')
 const { withTestAuthorization } = require('./test-authorization')
+const { createOwnerModules } = require('./owner-modules-test-helper')
 
 const APP_ID = 'wx-app'
 const ADMIN_ID = '00000000-0000-4000-8000-000000000001'
@@ -340,12 +341,12 @@ describe('opportunity archive service', () => {
 describe('opportunity archive API contract', () => {
   it('registers the admin action and exposes only allowlisted blocker categories', async () => {
     let received
-    const result = await actions['mip.admin.opportunities.archive']({
+    const result = await actions['mip.admin.opportunities.archive'](createOwnerModules({
       async archiveOpportunity(caller, event) {
         received = { caller, event }
         return { id: OPPORTUNITY_ID, status: 'ARCHIVED', version: 5 }
       },
-    }, { appId: APP_ID }, { opportunityId: OPPORTUNITY_ID })
+    }), { appId: APP_ID }, { opportunityId: OPPORTUNITY_ID })
     assert.equal(result.status, 'ARCHIVED')
     assert.deepEqual(received, {
       caller: { appId: APP_ID },

@@ -11,7 +11,6 @@ import {
   resolveFreeEventRuntimeEnvironment,
   runtimeCompileDisposition,
   runtimeRouteDisposition,
-  summarizeAdminFeedback,
   summarizeCommentPage,
   summarizeEventDetail,
   summarizeInteraction,
@@ -54,7 +53,7 @@ function contractWithStep(id: string, update: Record<string, unknown>) {
 
 describe('free offline event mutation runtime contract', () => {
   it('keeps the flow isolated from the read-only runtime contract', () => {
-    expect(validateFreeEventMutationContract(contract)).toEqual({ routeCount: 7, stepCount: 12 })
+    expect(validateFreeEventMutationContract(contract)).toEqual({ routeCount: 6, stepCount: 11 })
     expect(contract.connection).toMatchObject({
       allowDirectDatabaseWrites: false,
       allowProjectWarmup: false,
@@ -555,11 +554,6 @@ describe('free event runtime evidence summaries', () => {
           canDelete: true,
           author: { profileRef: sensitiveValues[2], nickname: sensitiveValues[0] },
         }],
-      }, sensitiveValues[4]),
-      summarizeAdminFeedback({
-        state: 'ready',
-        canRead: true,
-        items: [{ id: 'feedback-1', nickname: sensitiveValues[0], body: sensitiveValues[4], rating: 5, version: 1 }],
       }, sensitiveValues[4]),
     ]
     const serialized = JSON.stringify(summaries)

@@ -6,6 +6,7 @@ const { CAPABILITIES, roleCapabilities } = require('../domain/capabilities')
 const { actions, createHandler } = require('../domain/handler')
 const { createAdminRepository: createProductionAdminRepository } = require('../domain/repository')
 const { withTestAuthorization } = require('./test-authorization')
+const { createServiceDouble } = require('./owner-modules-test-helper')
 
 function createAdminRepository(database, options) {
   return createProductionAdminRepository(database, withTestAuthorization(options))
@@ -188,7 +189,7 @@ describe('admin branch management', () => {
     const handler = createHandler({
       getContext: () => ({ FROM_APPID: 'wx-app', FROM_OPENID: 'openid' }),
       resolveCaller: () => caller,
-      service: {
+      service: createServiceDouble({
         async changeBranchStatus() {
           const error = new Error('BRANCH_DEACTIVATION_BLOCKED')
           error.code = 'BRANCH_DEACTIVATION_BLOCKED'
@@ -202,7 +203,7 @@ describe('admin branch management', () => {
           }
           throw error
         },
-      },
+      }),
     })
     const response = await handler({ action: 'mip.admin.branches.changeStatus' })
     assert.deepEqual(response.error, {

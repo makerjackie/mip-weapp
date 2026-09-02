@@ -48,15 +48,15 @@
 
 | 领域 / 来源 | 范围 | 实现状态 | 验证状态 | 当前证据与缺口 |
 | --- | --- | --- | --- | --- |
-| 管理身份与 RBAC / H3 | 七类角色、capability、平台/分会/活动 scope、登录审计 | implemented | verified-local + verified-production | React Web 已有真实管理员登录态读取证据；完整越权矩阵和 Mac/Windows 微信仍待验 |
+| 管理身份与 RBAC / H3 | 七类角色、capability、平台/分会/活动 scope、登录审计 | implemented | verified-local + verified-production | React Web 已有真实管理员登录态读取证据；完整越权矩阵仍待验 |
 | 用户管理 / H1 | 组合筛选、详情、控制、分会、角色、脱敏和导出 | implemented | verified-local + verified-production + external-wait | 生产证据仅覆盖不含手机号的零行导出；非空与敏感字段需单独验收 |
 | 活动管理 / H2 | CRUD、发布、名单、签到、相册、订单、退款、复制、预览和导出 | implemented | verified-local + external-wait | 本地 action 和测试已覆盖；正式支付、媒体、非空导出和现场操作待验 |
 | 机会与用户内容管理 | 机会状态、评论、案例/合作卡治理、撮合设置 | implemented | verified-local + evidence-missing | 服务端 operation 与 Web 表单已接入；缺完整生产 mutation 证据 |
 | 成长、任务、游戏管理 | 规则、流水、调整、任务派发、赛季、队伍、排行和盲盒 | implemented | verified-local + external-wait | 本地合同已覆盖；正式配置、媒体和生产写入待验 |
 | Banner 与素材 | 上传、绑定、排序、启停和软删除 | implemented | verified-local + verified-production | [生产证据](evidence/admin-web-live-2026-08-28-react/README.md) 覆盖 JPEG、`INACTIVE` 保存和软删除；不能外推到全部用途 |
-| 消息与知识管理 | 模板、活动、失败复核、来源、内容、商品、评论和计划 | implemented | verified-local + external-wait | Web 与小程序管理入口已接入；外部投递、真实采集和 scheduler 云端证据待验 |
+| 消息与知识管理 | 模板、活动、失败复核、来源、内容、商品、评论和计划 | implemented | verified-local + external-wait | React Web 已接入；外部投递、真实采集和 scheduler 云端证据待验 |
 | React Web 页面 | 一级页面、详情、响应式与真实 API | implemented | verified-local + verified-production | 已提交证据覆盖当时全部一级页面的登录态读取；全部 mutation 和详情旅程未全部生产验证 |
-| 小程序管理分包 | 管理路由、手机现场能力和宽屏适配 | implemented | evidence-missing + external-wait | 本地代码与布局证据存在；缺当前可提交全路由报告及 Mac/Windows 微信验收 |
+| 小程序现场工作台 | Web 登录确认、已授权活动、签到码与海报、名单搜索、签到和受控撤销 | implemented | evidence-missing + external-wait | 四条现场路由已纳入实现范围；缺当前可提交运行报告和真实设备现场闭环 |
 
 ## 视觉映射
 
@@ -65,7 +65,7 @@
 | 我的、档案、名片、勋章、合作卡、案例、成长 | [FIGMA_MAP.md](FIGMA_MAP.md) 的个人中心与档案节点 | implemented | verified-local + evidence-missing | 设计截图已固定；需当前实现同尺寸对照 |
 | 活动列表、详情、报名、参与人、心动 | [FIGMA_MAP.md](FIGMA_MAP.md) 的活动节点 | implemented | verified-local + external-wait | 媒体、地图、扫码、支付和相册仍需真机 |
 | 机会列表、筛选、详情、人才、发布 | [FIGMA_MAP.md](FIGMA_MAP.md) 的机会节点 | implemented | verified-local + evidence-missing | 需当前实现同尺寸对照及真实数据旅程 |
-| 小程序管理端 | `DESIGN.md` 与管理端代表证据 | implemented | verified-local + external-wait | 375px/1024px 证据不能替代 Mac/Windows 微信 |
+| 小程序现场工作台 | `DESIGN.md` 的现场工作台规则 | implemented | evidence-missing + external-wait | 旧 375px/1024px 完整管理端证据只作历史追溯；当前四路由需 375px 与真机验收 |
 | React Web | `admin-web/DESIGN.md` 与 WorkBuddy 信息架构 | implemented | verified-local + verified-production | 响应式读取已验；完整生产写操作仍按领域逐项验收 |
 
 ## 更新规则

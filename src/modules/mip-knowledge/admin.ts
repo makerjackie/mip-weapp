@@ -1,3 +1,4 @@
+import type { AdminOperationAction } from '../mip-admin/request-contract'
 import type { AdminTransport } from '../mip-admin/transport'
 import { cloudbaseAdminTransport } from '../mip-admin/cloudbase-transport'
 import { createAdminRequest } from '../mip-admin/request-contract'
@@ -57,7 +58,7 @@ function requestId(prefix: string) {
 }
 
 export function createMipKnowledgeAdminModule(transport: AdminTransport) {
-  const invoke = <T>(action: string, input: Record<string, unknown> = {}) => (
+  const invoke = <T>(action: AdminOperationAction, input: Record<string, unknown> = {}) => (
     transport.request<T>(createAdminRequest(action, input))
   )
   return {

@@ -1,5 +1,37 @@
 import type { MipAdminGateway } from './types'
 
+export type MessagingAdminGateway = Pick<
+  MipAdminGateway,
+  | 'getAnnouncementScopes'
+  | 'listAnnouncements'
+  | 'getAnnouncement'
+  | 'saveAnnouncement'
+  | 'publishAnnouncement'
+  | 'withdrawAnnouncement'
+  | 'setAnnouncementPinned'
+  | 'getMessageCampaignScopes'
+  | 'listMessageCampaigns'
+  | 'getMessageCampaign'
+  | 'saveMessageCampaign'
+  | 'snapshotMessageCampaign'
+  | 'scheduleMessageCampaign'
+  | 'cancelMessageCampaignSchedule'
+  | 'publishMessageCampaign'
+  | 'withdrawMessageCampaign'
+  | 'searchMessageRecipients'
+  | 'listMessageDeliveryReviews'
+  | 'getMessageDeliveryReview'
+  | 'claimMessageDeliveryReview'
+  | 'resolveMessageDeliveryReview'
+  | 'reconcileMessageDeliveryReview'
+  | 'listMessageDeliveryRecords'
+  | 'listMessageTemplates'
+  | 'getMessageTemplate'
+  | 'saveMessageTemplate'
+  | 'activateMessageTemplate'
+  | 'archiveMessageTemplate'
+>
+
 interface MessagingAdminCache {
   query: <T>(key: string, loader: () => Promise<T>, options?: { force?: boolean }) => Promise<T>
   invalidate: (prefix?: string) => void
@@ -92,7 +124,7 @@ function inputCacheKey(prefix: string, input: object) {
 }
 
 export function createMipMessagingAdmin(
-  gateway: MipAdminGateway,
+  gateway: MessagingAdminGateway,
   cache: MessagingAdminCache,
 ): MipMessagingAdmin {
   const mutate = async <T>(prefixes: readonly string[], work: () => Promise<T>) => {

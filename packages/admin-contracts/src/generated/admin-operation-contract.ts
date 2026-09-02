@@ -1504,9 +1504,2275 @@ export const ADMIN_OPERATION_CONTRACT = {
   ]
 } as const
 
+export const ADMIN_WEB_OPERATION_CONTRACT = {
+  "version": 1,
+  "operationCount": 187,
+  "operations": [
+    {
+      "action": "mip.admin.session",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.webLogin.confirm",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.branches.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.roles.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.roles.candidates",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.rolePolicies.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.audit.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.branches.create",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "branchKey",
+        "name",
+        "cityName",
+        "summary"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.branches.update",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "branchId",
+        "expectedVersion",
+        "name",
+        "cityName",
+        "summary"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.branches.changeStatus",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "branchId",
+        "expectedVersion",
+        "status"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.roles.set",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "userId",
+        "roleKey",
+        "active"
+      ],
+      "optionalInputKeys": [
+        "scopeId",
+        "branchId"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.rolePolicies.update",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "roleKey",
+        "expectedVersion"
+      ],
+      "optionalInputKeys": [
+        "capabilities",
+        "reset"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.users.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.users.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.users.influence.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.communityReports.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.users.update",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "userId",
+        "expectedVersion",
+        "fields"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.users.changePrimaryBranch",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "userId",
+        "targetBranchId",
+        "expectedVersion",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.users.setControl",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "userId",
+        "controlType",
+        "active",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.communityReports.claim",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "reportId",
+        "expectedVersion",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.communityReports.close",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "reportId",
+        "expectedVersion",
+        "outcome",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.memberships.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.memberships.timeline",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.memberships.grant",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "durationMonths",
+        "expectedChainVersion",
+        "reason",
+        "userId"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.events.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.catalog.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.tags.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.recaps.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.recaps.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.policy.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.insights.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.album.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.comments.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.roster",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.rosterAll",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.policy.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "expectedVersion",
+        "cancellationHoursBeforeStart"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.catalog.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "kind",
+        "name",
+        "description",
+        "sortOrder"
+      ],
+      "optionalInputKeys": [
+        "key",
+        "catalogId",
+        "expectedVersion"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.catalog.changeStatus",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "kind",
+        "catalogId",
+        "expectedVersion",
+        "status"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.catalog.archive",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "kind",
+        "catalogId",
+        "expectedVersion",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.tags.replace",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "eventId",
+        "expectedVersion",
+        "tagIds"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.recaps.save",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.events.recaps.changeStatus",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.events.recaps.archive",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.events.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "draft"
+      ],
+      "optionalInputKeys": [
+        "eventId",
+        "expectedVersion"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.clone",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "expectedVersion",
+        "sourceEventId"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.events.changeStatus",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "eventId",
+        "expectedVersion",
+        "status"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.events.archive",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "eventId",
+        "expectedVersion",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.events.album.review",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "eventId",
+        "photoId",
+        "expectedVersion",
+        "decision",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.comments.settings.save",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.events.comments.moderate",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.events.comments.reports.claim",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.events.comments.reports.close",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.communications.publishEventReminder",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "eventId",
+        "expectedVersion",
+        "sendWechatReminder"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.events.registrations.review",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "eventId",
+        "registrationId",
+        "expectedVersion",
+        "decision"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.checkIn",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "eventId",
+        "registrationId",
+        "expectedVersion"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.events.undoCheckIn",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "eventId",
+        "registrationId",
+        "expectedVersion",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.orders.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.orders.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.paymentAttempts.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.refunds.submit",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "orderId",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.refunds.retry",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.announcements.scopes",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.announcements.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.announcements.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.messageCampaigns.scopes",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.messageCampaigns.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.messageCampaigns.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.messageCampaigns.recipients",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.messageTemplates.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.messageTemplates.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.messageDeliveryReviews.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.messageDeliveryReviews.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.messageDeliveryRecords.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.announcements.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "scopeType",
+        "title",
+        "summary",
+        "body",
+        "visibleFrom"
+      ],
+      "optionalInputKeys": [
+        "announcementId",
+        "expectedVersion",
+        "branchId",
+        "targetType",
+        "targetId",
+        "visibleUntil"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.announcements.publish",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "announcementId",
+        "expectedVersion"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.announcements.withdraw",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "announcementId",
+        "expectedVersion",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.announcements.pin",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "announcementId",
+        "expectedVersion",
+        "pinned"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.messageCampaigns.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "scopeType",
+        "audienceType",
+        "recipientRefs",
+        "name",
+        "title",
+        "body"
+      ],
+      "optionalInputKeys": [
+        "campaignId",
+        "expectedVersion",
+        "branchId"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.messageCampaigns.snapshot",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "campaignId",
+        "expectedVersion"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.messageCampaigns.schedule",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "campaignId",
+        "expectedVersion",
+        "scheduledFor"
+      ],
+      "optionalInputKeys": [
+        "expectedDispatchVersion"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.messageCampaigns.cancelSchedule",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "campaignId",
+        "expectedVersion",
+        "expectedDispatchVersion",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.messageCampaigns.publish",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "campaignId",
+        "expectedVersion"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.messageCampaigns.withdraw",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "campaignId",
+        "expectedVersion",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.messageTemplates.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "scopeType",
+        "name",
+        "title",
+        "body"
+      ],
+      "optionalInputKeys": [
+        "templateId",
+        "expectedVersion",
+        "branchId"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.messageTemplates.activate",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "templateId",
+        "expectedVersion"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.messageTemplates.archive",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "templateId",
+        "expectedVersion"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.messageDeliveryReviews.claim",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.messageDeliveryReviews.reconcile",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.messageDeliveryReviews.resolve",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.knowledge.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.knowledge.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.knowledge.sources.save",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.knowledge.categories.save",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.knowledge.contents.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "categoryId",
+        "contentType",
+        "title",
+        "summary",
+        "accessType",
+        "commentsEnabled",
+        "moderationMode"
+      ],
+      "optionalInputKeys": [
+        "contentId",
+        "expectedVersion",
+        "sourceId",
+        "bodyText",
+        "externalUrl",
+        "channelFinderUserName",
+        "channelFeedId",
+        "coverAssetId",
+        "authorName"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.knowledge.contents.review",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "contentId",
+        "expectedVersion",
+        "decision"
+      ],
+      "optionalInputKeys": [
+        "reason"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.knowledge.products.save",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.knowledge.comments.moderate",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.knowledge.reports.close",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.knowledge.ingestion.run",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.knowledge.schedules.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.knowledge.schedules.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "sourceId",
+        "categoryId",
+        "dailyTime",
+        "timeZone"
+      ],
+      "optionalInputKeys": [
+        "scheduleId",
+        "expectedVersion",
+        "status"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.opportunities.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.userContent.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.userContent.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.opportunities.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.opportunities.options",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.matching.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.opportunityComments.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.opportunities.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "draft"
+      ],
+      "optionalInputKeys": [
+        "opportunityId",
+        "expectedVersion"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.opportunities.publish",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "opportunityId",
+        "expectedVersion"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.opportunities.end",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "opportunityId",
+        "expectedVersion"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.opportunities.unpublish",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "opportunityId",
+        "expectedVersion",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.opportunities.archive",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "opportunityId",
+        "expectedVersion",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.userContent.unpublish",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "kind",
+        "contentId",
+        "expectedVersion",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.userContent.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "kind",
+        "ownerUserId",
+        "draft"
+      ],
+      "optionalInputKeys": [
+        "contentId",
+        "expectedVersion"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.userContent.archive",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "kind",
+        "contentId",
+        "expectedVersion",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.matching.settings.save",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.matching.recalculate",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.opportunityComments.settings.save",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.opportunityComments.moderate",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.opportunityComments.reports.close",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.growth.levels",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.growth.benefits",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.growth.rules",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.growth.entries",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.benefits.ledger",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.growth.levelTransitions",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.badges.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.badges.awards",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.growth.saveBenefit",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.growth.saveLevel",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.growth.saveRule",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.growth.adjust",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "userId",
+        "metric",
+        "deltaValue",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.badges.save",
+      "kind": "MUTATION",
+      "webAllowed": false,
+      "webRoute": null,
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": null,
+      "forwardIdempotencyKey": null
+    },
+    {
+      "action": "mip.admin.badges.grant",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "userId",
+        "badgeId",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.badges.revoke",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "awardId",
+        "expectedVersion",
+        "reason"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.tasks.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.tasks.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.tasks.eligibleLevels.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.tasks.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "task"
+      ],
+      "optionalInputKeys": [
+        "taskId",
+        "expectedVersion"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.tasks.publish",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "taskId",
+        "expectedVersion"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.tasks.unpublish",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "taskId",
+        "expectedVersion"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.tasks.delete",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "taskId",
+        "expectedVersion"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.tasks.assignableMembers.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.tasks.assignMembers",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "taskId",
+        "memberRefs",
+        "expectedVersion"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.tasks.revokeMembers",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "taskId",
+        "memberRefs",
+        "expectedVersion"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.tasks.completions.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.tasks.completions.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.tasks.completions.export",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.banners.session",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.banners.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.banners.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.banners.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "banner"
+      ],
+      "optionalInputKeys": [
+        "bannerId",
+        "expectedVersion"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.banners.changeStatus",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "bannerId",
+        "expectedVersion",
+        "status"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.banners.move",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "bannerId",
+        "expectedVersion",
+        "direction"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.banners.delete",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "bannerId",
+        "expectedVersion"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.game.session",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.game.rankings.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.game.seasons.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.game.seasons.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "season"
+      ],
+      "optionalInputKeys": [
+        "seasonId",
+        "expectedVersion"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.game.seasons.changeStatus",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "seasonId",
+        "expectedVersion",
+        "status"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.game.teams.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.game.teams.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "team"
+      ],
+      "optionalInputKeys": [
+        "teamId",
+        "expectedVersion"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.game.teams.changeStatus",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "seasonId",
+        "teamId",
+        "expectedVersion",
+        "status"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.game.members.assignable.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.game.teams.members.replace",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "seasonId",
+        "teamId",
+        "expectedVersion",
+        "members"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.game.matches.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.game.matches.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "match"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.game.matches.finalize",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "matchId",
+        "expectedVersion"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.game.rankings.generate",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "seasonId",
+        "rankingType"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.game.blindBoxes.catalogs.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.game.blindBoxes.catalogs.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "catalog"
+      ],
+      "optionalInputKeys": [
+        "catalogId",
+        "expectedVersion"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.game.blindBoxes.catalogs.changeStatus",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "catalogId",
+        "expectedVersion",
+        "status"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.game.blindBoxes.cards.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.game.blindBoxes.cards.save",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "card"
+      ],
+      "optionalInputKeys": [
+        "cardId",
+        "expectedVersion"
+      ],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.game.blindBoxes.cards.changeStatus",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "cardId",
+        "expectedVersion",
+        "status"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.media.uploadImage",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "MEDIA",
+      "requiredInputKeys": [
+        "purpose",
+        "imageBase64"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.dashboard",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.dashboard.overview.get",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.exports.status",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.exceptions.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.operations.queue.list",
+      "kind": "QUERY",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": false,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.exports.create",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "exportType",
+        "includesPhone",
+        "filters"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": true
+    },
+    {
+      "action": "mip.admin.exports.prepare",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "ticketId",
+        "token"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.exports.reserve",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "ticketId",
+        "token"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    },
+    {
+      "action": "mip.admin.exports.complete",
+      "kind": "MUTATION",
+      "webAllowed": true,
+      "webRoute": "ADMIN",
+      "requiredInputKeys": [
+        "ticketId",
+        "token"
+      ],
+      "optionalInputKeys": [],
+      "idempotencyKeyRequired": true,
+      "forwardIdempotencyKey": false
+    }
+  ]
+} as const
+
 export type AdminOperationContract = typeof ADMIN_OPERATION_CONTRACT
 export type AdminOperation = AdminOperationContract['operations'][number]
 export type AdminOperationKind = AdminOperation['kind']
 export type AdminOperationAction = AdminOperation['action']
 export type AdminQueryAction = Extract<AdminOperation, { kind: 'QUERY' }>['action']
 export type AdminMutationAction = Extract<AdminOperation, { kind: 'MUTATION' }>['action']
+
+export type AdminWebOperationContract = typeof ADMIN_WEB_OPERATION_CONTRACT
+export type AdminWebOperation = AdminWebOperationContract['operations'][number]
+export type AdminWebAllowedOperation = Extract<AdminWebOperation, { webAllowed: true }>
+export type AdminWebOperationAction = AdminWebAllowedOperation['action']
+export type AdminWebQueryAction = Extract<AdminWebAllowedOperation, { kind: 'QUERY' }>['action']
+export type AdminWebMutationAction = Extract<AdminWebAllowedOperation, { kind: 'MUTATION' }>['action']

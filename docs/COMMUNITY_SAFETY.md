@@ -1,6 +1,6 @@
 # 社区安全
 
-MIP 的社区安全入口位于公开档案和“隐私与账号”。用户完成互动所需身份信息后，可以举报或屏蔽其他用户；不能对自己操作。
+MIP 的社区安全入口位于公开档案和“账号设置”。用户完成互动所需身份信息后，可以举报或屏蔽其他用户；不能对自己操作。
 
 ## 用户合同
 
@@ -22,7 +22,7 @@ MIP 的社区安全入口位于公开档案和“隐私与账号”。用户完�
 
 ## 运营审核合同
 
-- 独立页面 `packages/admin/community-reports/index` 只允许拥有平台范围 `community.reports.manage` capability 的 `PLATFORM_OWNER` 和 `PLATFORM_OPERATIONS` 使用。
+- React Web 的举报审核页面只允许拥有平台范围 `community.reports.manage` capability 的 `PLATFORM_OWNER` 和 `PLATFORM_OPERATIONS` 使用；小程序现场工作台不提供举报审核。
 - 列表按 `PENDING`、`REVIEWING`、`RESOLVED`、`DISMISSED` 查询当前 App 的举报，返回固定类别、说明、时间、版本，以及举报人和目标用户按公开可见性脱敏后的昵称、简介和城市摘要；不返回手机号、OpenID 或内部用户 ID。
 - 状态机固定为 `PENDING → REVIEWING → RESOLVED | DISMISSED`。领取、处理和驳回都提交 `expectedVersion` 和 1–300 字原因；服务端事务内锁定事实、校验状态与版本，并仅在成功后追加审计。
 - 领取原因仅写审计，结论原因写入举报事实。版本或状态已变化时返回稳定冲突，管理端重新加载后再操作。

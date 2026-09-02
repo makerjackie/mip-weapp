@@ -1,7 +1,7 @@
 import type { MipGrowthGateway } from './types'
 import { retryTransport } from '@weapp/shared/retry'
-import { resolveCloudFileUrls } from '../platform/cloud-media'
-import { requireCloudClient } from '../platform/cloudbase'
+import { requireCloudClient } from '../../platform/cloudbase/client'
+import { resolveCloudFileUrls } from '../../platform/storage/cloud-media'
 import { resolveMipGrowthRetryOptions } from './retry-policy'
 import { MipGrowthError } from './types'
 

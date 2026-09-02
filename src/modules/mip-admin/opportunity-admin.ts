@@ -1,5 +1,24 @@
 import type { MipAdminGateway } from './types'
 
+export type OpportunityAdminGateway = Pick<
+  MipAdminGateway,
+  | 'listOpportunities'
+  | 'getOpportunity'
+  | 'getOpportunityEditorOptions'
+  | 'getOpportunityCommentAdminState'
+  | 'getMatchingAdminState'
+  | 'saveOpportunity'
+  | 'publishOpportunity'
+  | 'endOpportunity'
+  | 'unpublishOpportunity'
+  | 'archiveOpportunity'
+  | 'saveOpportunityCommentSettings'
+  | 'moderateOpportunityComment'
+  | 'closeOpportunityCommentReport'
+  | 'saveMatchingSettings'
+  | 'recalculateOpportunityMatching'
+>
+
 interface OpportunityAdminCache {
   query: <T>(key: string, loader: () => Promise<T>, options?: { force?: boolean }) => Promise<T>
   invalidate: (prefix?: string) => void
@@ -45,7 +64,7 @@ const opportunityCachePrefixes = [
 ] as const
 
 export function createMipOpportunityAdmin(
-  gateway: MipAdminGateway,
+  gateway: OpportunityAdminGateway,
   cache: OpportunityAdminCache,
 ): MipOpportunityAdmin {
   const invalidateQueries = () => {

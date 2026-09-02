@@ -10,7 +10,7 @@ vi.mock('../src/modules/mip-events/client', () => ({
   mipEventsModule: eventsModule,
 }))
 
-vi.mock('../src/modules/platform/case-navigation', () => ({
+vi.mock('../src/platform/navigation/client', () => ({
   caseNavigateTo: vi.fn(),
 }))
 

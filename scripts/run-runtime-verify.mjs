@@ -11,7 +11,6 @@ import {
   selectRuntimeDevtoolsRoot,
   syncLocalDevtoolsHost,
 } from './lib/devtools-host.mjs'
-import { installMiniprogramAutomatorCompatibility } from './lib/miniprogram-automator-compat.mjs'
 import { getProject } from './lib/project.mjs'
 
 const example = getProject()
@@ -52,7 +51,6 @@ process.env.MINIPROGRAM_SOURCE_ROOT = example.root
 process.env.MINIPROGRAM_PROJECT_ROOT = example.root
 process.env.MINIPROGRAM_DEVTOOLS_PROJECT_ROOT = devtoolsRoot
 process.env.MINIPROGRAM_SESSION_ID = 'mip-weapp-runtime'
-installMiniprogramAutomatorCompatibility()
 const caseVerifier = path.join(example.root, 'scripts', 'verify-runtime.mjs')
 const verifier = await import(pathToFileURL(caseVerifier).href)
 if (typeof verifier.main === 'function') {

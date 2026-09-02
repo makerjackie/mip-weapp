@@ -4,7 +4,7 @@ import type {
   KnowledgeContentSummary,
   KnowledgeContentType,
 } from '../../../modules/mip-knowledge/types'
-import { mipKnowledgeModule } from '../../../modules/mip-knowledge/module'
+import { mipKnowledgeModule } from '../../../modules/mip-knowledge/client'
 
 const typeLabels: Record<KnowledgeContentType, string> = {
   HOT_NEWS: '热点',

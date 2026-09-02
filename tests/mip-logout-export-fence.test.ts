@@ -90,7 +90,7 @@ describe('logout fences privileged admin exports', () => {
     const outcome = module.exports.createAndOpen({ exportType: 'USERS' }).catch(error => error)
     await vi.waitFor(() => expect(gateway.reserveExport).toHaveBeenCalledTimes(1))
 
-    module.invalidate()
+    module.runtime.invalidate()
     reserve.resolve(reservation)
 
     await expect(outcome).resolves.toMatchObject({ code: 'AUTH_REQUIRED' })
@@ -122,7 +122,7 @@ describe('logout fences privileged admin exports', () => {
     const outcome = module.exports.createAndOpen({ exportType: 'USERS' }).catch(error => error)
     await vi.waitFor(() => expect(downloadFile).toHaveBeenCalledTimes(1))
 
-    module.invalidate()
+    module.runtime.invalidate()
     finishDownload({ statusCode: 200, tempFilePath: '/tmp/mip-sensitive-export.xlsx' })
 
     await expect(outcome).resolves.toMatchObject({ code: 'AUTH_REQUIRED' })

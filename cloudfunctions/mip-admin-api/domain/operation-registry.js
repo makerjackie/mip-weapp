@@ -22,7 +22,7 @@ const OPERATION_OWNERS = Object.freeze([
 ])
 const healthOperation = Object.freeze({ action: 'health', owner: 'SYSTEM', kind: 'QUERY' })
 const manifestKeys = new Set(['owner', 'operations'])
-const operationKeys = new Set(['action', 'kind', 'dispatch', 'sessionFirst', 'wakesOutbox'])
+const operationKeys = new Set(['action', 'kind', 'method', 'sessionFirst', 'usesInput', 'wakesOutbox'])
 
 function createOperationRegistry(manifests, options = {}) {
   const expectedCount = options.expectedCount ?? EXPECTED_OPERATION_COUNT
@@ -40,6 +40,7 @@ function createOperationRegistry(manifests, options = {}) {
   const expectedOwnerSet = new Set(expectedOwners)
   const manifestOwners = new Set()
   const actionNames = new Set()
+  const ownerMethods = new Set()
   const operations = []
 
   for (const manifest of manifests) {
@@ -69,11 +70,19 @@ function createOperationRegistry(manifests, options = {}) {
       if (!OPERATION_KINDS.includes(definition.kind)) {
         throw new Error('OPERATION_KIND_INVALID')
       }
-      if (typeof definition.dispatch !== 'function') {
-        throw new TypeError('OPERATION_DISPATCH_INVALID')
+      if (typeof definition.method !== 'string'
+        || !/^[A-Za-z][A-Za-z0-9]*$/.test(definition.method)) {
+        throw new TypeError('OPERATION_METHOD_INVALID')
+      }
+      const ownerMethod = `${manifest.owner}:${definition.method}`
+      if (ownerMethods.has(ownerMethod)) {
+        throw new Error('OPERATION_METHOD_DUPLICATE')
       }
       if (typeof definition.sessionFirst !== 'boolean') {
         throw new Error('OPERATION_SESSION_INVALID')
+      }
+      if (typeof definition.usesInput !== 'boolean') {
+        throw new Error('OPERATION_INPUT_INVALID')
       }
       if (typeof definition.wakesOutbox !== 'boolean'
         || (definition.wakesOutbox && definition.kind !== 'MUTATION')) {
@@ -81,12 +90,14 @@ function createOperationRegistry(manifests, options = {}) {
       }
 
       actionNames.add(definition.action)
+      ownerMethods.add(ownerMethod)
       operations.push(Object.freeze({
         action: definition.action,
         owner: manifest.owner,
         kind: definition.kind,
-        dispatch: definition.dispatch,
+        method: definition.method,
         sessionFirst: definition.sessionFirst,
+        usesInput: definition.usesInput,
         wakesOutbox: definition.wakesOutbox,
       }))
     }
@@ -104,14 +115,55 @@ function createOperationRegistry(manifests, options = {}) {
   const operationByAction = frozenRecord(
     operationCatalog.map(operation => [operation.action, operation]),
   )
-  const actions = frozenRecord(
-    operationCatalog.map(operation => [operation.action, operation.dispatch]),
-  )
   const outboxMutationActions = new Set(
     operationCatalog.filter(operation => operation.wakesOutbox).map(operation => operation.action),
   )
 
-  return Object.freeze({ actions, operationByAction, operationCatalog, outboxMutationActions })
+  return Object.freeze({ operationByAction, operationCatalog, outboxMutationActions })
+}
+
+function createOperationDispatcher(ownerModules, registry = operationRegistry) {
+  if (!ownerModules || typeof ownerModules !== 'object' || Array.isArray(ownerModules)) {
+    throw new Error('OPERATION_MODULES_INVALID')
+  }
+
+  const methodsByAction = Object.create(null)
+  for (const owner of OPERATION_OWNERS) {
+    const ownerModule = ownerModules[owner]
+    if (!Object.hasOwn(ownerModules, owner)
+      || !ownerModule
+      || typeof ownerModule !== 'object'
+      || Array.isArray(ownerModule)) {
+      throw new Error(`OPERATION_OWNER_MODULE_INVALID:${owner}`)
+    }
+  }
+  for (const operation of registry.operationCatalog) {
+    const method = ownerModules[operation.owner][operation.method]
+    if (!Object.hasOwn(ownerModules[operation.owner], operation.method)
+      || typeof method !== 'function') {
+      throw new Error(`OPERATION_METHOD_MISSING:${operation.owner}:${operation.action}:${operation.method}`)
+    }
+    methodsByAction[operation.action] = method.bind(ownerModules[operation.owner])
+  }
+
+  const getSession = ownerModules.ACCESS.getSession
+  if (typeof getSession !== 'function') {
+    throw new Error('OPERATION_SESSION_METHOD_MISSING:ACCESS:getSession')
+  }
+  const boundGetSession = getSession.bind(ownerModules.ACCESS)
+  const boundMethods = Object.freeze(methodsByAction)
+
+  async function execute(caller, action, input = {}) {
+    const operation = registry.operationByAction[action]
+    if (!operation) return { found: false }
+    if (operation.sessionFirst) await boundGetSession(caller)
+    const data = operation.usesInput
+      ? await boundMethods[action](caller, input)
+      : await boundMethods[action](caller)
+    return { found: true, data }
+  }
+
+  return Object.freeze({ execute })
 }
 
 function hasExactKeys(value, allowedKeys) {
@@ -137,6 +189,7 @@ module.exports = {
   EXPECTED_OPERATION_COUNT,
   OPERATION_KINDS,
   OPERATION_OWNERS,
+  createOperationDispatcher,
   createOperationRegistry,
   healthOperation,
   operationByAction: operationRegistry.operationByAction,

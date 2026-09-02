@@ -1,7 +1,6 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
-import { WeappTailwindcss } from 'weapp-tailwindcss/vite'
 import { defineConfig } from 'weapp-vite'
 import { TDesignResolver } from 'weapp-vite/auto-import-components/resolvers'
 
@@ -112,6 +111,10 @@ export default defineConfig({
       logLevels: ['log', 'info', 'warn', 'error'],
       unhandledErrors: true,
     },
+    tailwindcss: {
+      rem2rpx: true,
+      cssEntries: [path.join(root, 'src/app.css')],
+    },
     typescript: {
       app: {
         compilerOptions: {
@@ -124,10 +127,4 @@ export default defineConfig({
     },
     autoImportComponents: { resolvers: [TDesignResolver()] },
   },
-  plugins: [
-    WeappTailwindcss({
-      rem2rpx: true,
-      cssEntries: [path.join(root, 'src/app.css')],
-    }),
-  ],
 })

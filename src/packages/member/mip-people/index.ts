@@ -7,7 +7,7 @@ import type {
 } from '../../../modules/mip-opportunities'
 import { cooperationRoles } from '../../../config/mip-catalogs'
 import { groupedCityBranches, opportunityModule } from '../../../modules/mip-opportunities'
-import { caseNavigateTo } from '../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../platform/navigation/client'
 
 interface PersonView extends PublicPerson {
   displayName: string

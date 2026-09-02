@@ -74,12 +74,6 @@ const expectedStepSpecs = [
     handlers: ['updateDraft', 'submitComment'],
   },
   {
-    id: 'admin-feedback',
-    route: 'packages/admin/event-feedback/index',
-    selector: '#admin-event-feedback-page',
-    mode: 'automated-read',
-  },
-  {
     id: 'external-undo-check-in',
     route: 'packages/admin/event-registrations/index',
     selector: '#admin-event-registrations-page',
@@ -673,22 +667,6 @@ export function summarizeCommentPage(data, commentMarker) {
           mine: comment.mine === true,
           status: comment.status,
           version: comment.version,
-        }
-      : null,
-  }
-}
-
-export function summarizeAdminFeedback(data, feedbackMarker) {
-  const feedback = (data?.items || []).find(item => item?.body === feedbackMarker)
-  return {
-    state: data?.state || null,
-    canRead: data?.canRead === true,
-    feedback: feedback
-      ? {
-          id: feedback.id,
-          markerMatches: true,
-          rating: feedback.rating || null,
-          version: feedback.version,
         }
       : null,
   }

@@ -31,7 +31,6 @@ Page({
     tasks: [] as TaskView[],
     visibleTasks: [] as TaskView[],
     filter: 'pending' as 'pending' | 'ended',
-    canDispatch: false,
     nextCursor: '',
     loadingMore: false,
     message: '',
@@ -40,7 +39,6 @@ Page({
 
   onShow() {
     void this.loadTasks()
-    void this.loadCapability()
   },
 
   onHide() {
@@ -49,16 +47,6 @@ Page({
 
   onUnload() {
     this.requestSeq += 1
-  },
-
-  async loadCapability() {
-    try {
-      await mipTasksModule.query.getAdminSession()
-      this.setData({ canDispatch: true })
-    }
-    catch {
-      this.setData({ canDispatch: false })
-    }
   },
 
   async onPullDownRefresh() {
@@ -148,11 +136,5 @@ Page({
   chooseFilter(event: WechatMiniprogram.TouchEvent) {
     const filter = String(event.currentTarget.dataset.filter || 'pending') as 'pending' | 'ended'
     this.setData({ filter, visibleTasks: visibleTasks(this.data.tasks, filter) })
-  },
-
-  openDispatch() {
-    if (this.data.canDispatch) {
-      void wx.navigateTo({ url: '/packages/admin/tasks/index' })
-    }
   },
 })

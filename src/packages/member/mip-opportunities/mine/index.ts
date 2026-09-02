@@ -1,7 +1,7 @@
 import type { OpportunitySummary, ReceivedReferral } from '../../../../modules/mip-opportunities'
 import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
 import { opportunityModule } from '../../../../modules/mip-opportunities'
-import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
+import { caseNavigateTo } from '../../../../platform/navigation/client'
 import { formatLocalDateTime } from '../../../../utils/date'
 
 type OpportunityTab = 'PUBLISHED' | 'REFERRED'

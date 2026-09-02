@@ -6,7 +6,7 @@ import type {
   AdminOperationalException,
   AdminOperationalExceptionTarget,
 } from './operational-exceptions'
-import { MipAdminError } from './types'
+import { MipAdminError } from './error'
 
 export const adminOperationsQueueStates = ['PENDING', 'PROCESSING', 'MANUAL_REVIEW'] as const
 export type AdminOperationsQueueState = typeof adminOperationsQueueStates[number]

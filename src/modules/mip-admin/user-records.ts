@@ -7,7 +7,7 @@ import type {
   AdminUser,
   AdminUserDetail,
 } from './types'
-import { MipAdminError } from './types'
+import { MipAdminError } from './error'
 
 const idPattern = /^[\w-]{1,36}$/
 const cursorPattern = /^[\w-]{1,512}$/

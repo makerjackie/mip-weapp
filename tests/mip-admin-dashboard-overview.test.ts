@@ -1,14 +1,11 @@
 import type { AdminRequest } from '../src/modules/mip-admin/request-contract'
 import type { AdminTransport } from '../src/modules/mip-admin/transport'
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { createMipAdminGateway } from '../src/modules/mip-admin/cloudbase-gateway'
 import { parseDashboardOverview } from '../src/modules/mip-admin/dashboard-overview'
 import { MipAdminError } from '../src/modules/mip-admin/types'
-import { buildDashboardViewModel } from '../src/packages/admin/dashboard/model'
 
-vi.mock('../src/modules/platform/cloudbase', () => ({
+vi.mock('../src/platform/cloudbase/client', () => ({
   requireCloudClient: vi.fn(),
 }))
 
@@ -268,74 +265,5 @@ describe('MIP admin dashboard overview client and page', () => {
         input: {},
       },
     ])
-  })
-
-  it('formats only server-returned facts and keeps unknown metrics explicit', () => {
-    const view = buildDashboardViewModel(parseDashboardOverview(overview()))
-
-    expect(view.summaryMetrics.map(item => item.value)).toEqual(['8', '3', '2', '7', '4', '6'])
-    expect(view.opportunityMetrics.find(item => item.key === 'opportunities-conversion'))
-      .toMatchObject({ value: '—', detail: '暂未统计', available: false })
-    expect(view.activities[0]).toMatchObject({
-      title: '活动报名已确认',
-      actor: '运营成员',
-      resource: '长期测试活动',
-      scope: '活动',
-    })
-  })
-
-  it('keeps visible membership facts when purchase attribution is unavailable', () => {
-    const parsed = parseDashboardOverview(overview())
-    parsed.membership.purchaseFlow = { availability: 'NOT_PROVIDED' }
-    const view = buildDashboardViewModel(parsed)
-
-    expect(view.membershipMetrics[0]).toMatchObject({
-      key: 'membership-expiring',
-      value: '2',
-      available: true,
-    })
-    expect(view.membershipMetrics[1]).toMatchObject({
-      key: 'membership-purchase-flow',
-      value: '—',
-      available: false,
-    })
-  })
-
-  it('distinguishes unnamed users from system activity and formats custom Shanghai dates', () => {
-    const value = overview()
-    value.operations.activity[0].actor.displayName = null
-    value.period = {
-      preset: 'CUSTOM',
-      startAt: '2030-08-24T16:00:00.000Z',
-      endAt: '2030-08-26T04:00:00.000Z',
-      comparisonStartAt: '2030-08-23T04:00:00.000Z',
-      comparisonEndAt: '2030-08-24T16:00:00.000Z',
-      granularity: 'DAY',
-    }
-    const view = buildDashboardViewModel(parseDashboardOverview(value))
-
-    expect(view.activities[0].actor).toBe('未命名用户')
-    expect(view.periodLabel).toBe('2030-08-25 至 2030-08-26')
-  })
-
-  it('uses responsive record and detail primitives without replacing existing admin routes', () => {
-    const root = path.resolve(import.meta.dirname, '../src/packages/admin/dashboard')
-    const script = fs.readFileSync(path.join(root, 'index.ts'), 'utf8')
-    const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
-    const config = JSON.parse(fs.readFileSync(path.join(root, 'index.json'), 'utf8'))
-
-    expect(script).toContain('getDashboardOverview')
-    expect(script).toContain('getSession(force)')
-    expect(script).toContain('seq !== this.requestSeq')
-    expect(script).toContain('isAdminForbiddenError(error)')
-    expect(script).toContain('view: emptyDashboardViewModel')
-    expect(script).not.toContain('counts: emptyCounts')
-    expect(template).toContain('class="mip-admin-record-list mt-3"')
-    expect(template).toContain('<mip-admin-responsive-panel')
-    expect(template).toContain('运营工作台')
-    expect(template).toContain('view.menuGroups')
-    expect(template).not.toContain('opportunityConversionRate')
-    expect(config.usingComponents['mip-admin-responsive-panel'])
-      .toBe('/packages/admin/components/responsive-panel/index')
   })
 })

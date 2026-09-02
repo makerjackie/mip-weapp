@@ -17,7 +17,6 @@ import {
   isLocalPortListening,
 } from './lib/devtools-automator-session.mjs'
 import { warmWechatDevtoolsProject } from './lib/devtools-project-warmup.mjs'
-import { installMiniprogramAutomatorCompatibility } from './lib/miniprogram-automator-compat.mjs'
 import {
   assertViewportEvidence,
   createObservedViewportEvidence,
@@ -1730,7 +1729,6 @@ export async function main(runArgs = process.argv.slice(2)) {
     return { status: 'contract-passed', routeCount: runtimePages.routeCount }
   }
 
-  installMiniprogramAutomatorCompatibility()
   const skipBuild = runArgs.includes('--skip-build')
   const updateBaseline = runArgs.includes('--update-baseline')
   const requireBaseline = runArgs.includes('--require-baseline')

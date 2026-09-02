@@ -121,7 +121,7 @@ describe('MIP badge collection', () => {
     })) })).toThrow()
   })
 
-  it('registers member and admin routes and keeps pages behind modules', () => {
+  it('registers member routes and keeps pages behind modules', () => {
     const app = JSON.parse(source('src/app.json'))
     const routes = app.subPackages.flatMap((pkg: { root: string, pages: string[] }) => (
       pkg.pages.map(page => `${pkg.root}/${page}`)
@@ -129,15 +129,11 @@ describe('MIP badge collection', () => {
     const runtime = JSON.parse(source('config/runtime-pages.json'))
     expect(routes).toContain('packages/member/mip-badges/index')
     expect(routes).toContain('packages/member/mip-badge-detail/index')
-    expect(routes).toContain('packages/admin/badges/index')
     expect(runtime.routeCount).toBe(runtime.routes.length)
     expect(source('src/packages/member/mip-badge-detail/index.ts')).toContain('mipGrowthModule.equipBadges')
     expect(source('src/packages/member/mip-badge-detail/index.ts')).toContain('toggleEquipment')
     expect(source('src/packages/member/mip-badge-detail/index.wxml')).toContain('立即佩戴')
-    expect(source('src/packages/admin/badges/index.ts')).toContain('mipAdminModule.growth.grantBadge')
-    expect(`${source('src/packages/member/mip-badges/index.ts')}\n${source('src/packages/admin/badges/index.ts')}`)
-      .not
-      .toContain('wx.cloud')
+    expect(source('src/packages/member/mip-badges/index.ts')).not.toContain('wx.cloud')
   })
 
   it('provides a local draft and one explicit save for equipment changes', () => {

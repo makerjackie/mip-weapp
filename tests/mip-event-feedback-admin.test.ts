@@ -10,32 +10,6 @@ function read(relativePath: string) {
 }
 
 describe('MIP admin event feedback workflow', () => {
-  it('registers an event-scoped page from the event console', () => {
-    const app = read('src/app.json')
-    const consolePage = read('src/packages/admin/event-console/index.ts')
-    const consoleView = read('src/packages/admin/event-console/index.wxml')
-    const page = read('src/packages/admin/event-feedback/index.ts')
-    const view = read('src/packages/admin/event-feedback/index.wxml')
-    const runtime = JSON.parse(read('config/runtime-pages.json')) as {
-      routes: Array<{ id: string, path: string, selector: string, query?: string[] }>
-    }
-    const route = runtime.routes.find(item => item.path === 'packages/admin/event-feedback/index')
-
-    expect(app).toContain('"event-feedback/index"')
-    expect(consolePage).toContain('\'event-feedback\'')
-    expect(consolePage).toContain('\'events.feedback.read\'')
-    expect(consoleView).toContain('data-page="event-feedback"')
-    expect(page).toContain('listAdminFeedback')
-    expect(view).toContain('state === \'forbidden\'')
-    expect(view).toContain('暂无活动反馈')
-    expect(view).toContain('加载更多')
-    expect(route).toMatchObject({
-      id: 'A22',
-      selector: '#admin-event-feedback-page',
-      query: ['eventId'],
-    })
-  })
-
   it('keeps feedback access and filtering on the canonical events service', () => {
     const service = read('cloudfunctions/mip-events-api/domain/event-service.js')
     const handler = read('cloudfunctions/mip-events-api/index.js')

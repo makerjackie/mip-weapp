@@ -3,10 +3,6 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const adminMocks = vi.hoisted(() => ({
-  getSession: vi.fn(),
-  listAnnouncements: vi.fn(),
-}))
 const messagingMocks = vi.hoisted(() => ({
   listInbox: vi.fn(),
   markRead: vi.fn(),
@@ -14,16 +10,6 @@ const messagingMocks = vi.hoisted(() => ({
 const runtimeMocks = vi.hoisted(() => ({
   navigateTo: vi.fn(),
   showModal: vi.fn(),
-}))
-
-vi.mock('../src/modules/mip-admin', () => ({
-  hasCapability: () => true,
-  mipAdminModule: {
-    getSession: adminMocks.getSession,
-    messaging: {
-      listAnnouncements: adminMocks.listAnnouncements,
-    },
-  },
 }))
 vi.mock('../src/modules/mip-messaging', () => ({
   isTrustedInboxRoute: () => true,
@@ -36,7 +22,7 @@ vi.mock('../src/modules/mip-messaging/client', () => ({
     subscriptionCapability: vi.fn(() => ({ available: false })),
   },
 }))
-vi.mock('../src/modules/platform/case-navigation', () => ({
+vi.mock('../src/platform/navigation/client', () => ({
   caseNavigateTo: runtimeMocks.navigateTo,
 }))
 
@@ -46,7 +32,6 @@ interface PageDefinition {
 }
 
 let capturedPage: PageDefinition
-let announcementPage: PageDefinition
 let notificationPage: PageDefinition
 
 function deferred<T>() {
@@ -72,18 +57,6 @@ function callPage(page: PageDefinition, method: string, ...args: unknown[]) {
   return Reflect.apply(handler, page, args) as Promise<unknown> | void
 }
 
-function announcement(id: string, status: 'DRAFT' | 'PUBLISHED') {
-  return {
-    id,
-    title: id,
-    scopeType: 'PLATFORM',
-    branchName: '',
-    status,
-    contentSafetyStatus: 'PASSED',
-    updatedAt: '2026-08-30T00:00:00.000Z',
-  }
-}
-
 function inboxMessage(id: string) {
   return {
     id,
@@ -100,15 +73,11 @@ beforeAll(async () => {
   vi.stubGlobal('Page', (definition: PageDefinition) => {
     capturedPage = definition
   })
-  await import('../src/packages/admin/announcements/index')
-  announcementPage = capturedPage
   await import('../src/packages/member/mip-notifications/index')
   notificationPage = capturedPage
 })
 
 beforeEach(() => {
-  adminMocks.getSession.mockReset().mockResolvedValue({ capabilities: [{}] })
-  adminMocks.listAnnouncements.mockReset()
   messagingMocks.listInbox.mockReset()
   messagingMocks.markRead.mockReset()
   runtimeMocks.navigateTo.mockReset().mockResolvedValue(undefined)
@@ -116,41 +85,6 @@ beforeEach(() => {
 })
 
 describe('client page request ordering', () => {
-  it('keeps the newest admin announcement filter when an older response finishes last', async () => {
-    const older = deferred<{ items: ReturnType<typeof announcement>[], nextCursor: null }>()
-    const newer = deferred<{ items: ReturnType<typeof announcement>[], nextCursor: null }>()
-    adminMocks.listAnnouncements.mockReturnValueOnce(older.promise).mockReturnValueOnce(newer.promise)
-    const page = createPage(announcementPage)
-
-    page.data.status = 'DRAFT'
-    const olderRun = callPage(page, 'loadItems', true) as Promise<unknown>
-    await Promise.resolve()
-    page.data.status = 'PUBLISHED'
-    const newerRun = callPage(page, 'loadItems', true) as Promise<unknown>
-    await Promise.resolve()
-    newer.resolve({ items: [announcement('newer', 'PUBLISHED')], nextCursor: null })
-    await newerRun
-    older.resolve({ items: [announcement('older', 'DRAFT')], nextCursor: null })
-    await olderRun
-
-    expect(page.data.status).toBe('PUBLISHED')
-    expect(page.data.items).toEqual([expect.objectContaining({ id: 'newer' })])
-  })
-
-  it('does not open two announcement confirmations before the first one settles', async () => {
-    const confirmation = deferred<{ confirm: boolean }>()
-    runtimeMocks.showModal.mockReturnValue(confirmation.promise)
-    const page = createPage(announcementPage)
-    page.data.items = [announcement('announcement-1', 'DRAFT')]
-    const event = { currentTarget: { dataset: { id: 'announcement-1', transition: 'PUBLISH' } } }
-
-    const first = callPage(page, 'transition', event) as Promise<unknown>
-    await callPage(page, 'transition', event)
-    expect(runtimeMocks.showModal).toHaveBeenCalledOnce()
-    confirmation.resolve({ confirm: false })
-    await first
-  })
-
   it('drops a superseded inbox append and latches unread message opening', async () => {
     const append = deferred<{ items: ReturnType<typeof inboxMessage>[], unreadCount: number, nextCursor: string }>()
     const refresh = deferred<{ items: ReturnType<typeof inboxMessage>[], unreadCount: number, nextCursor: string }>()
@@ -208,8 +142,6 @@ describe('client stability source contracts', () => {
 
   it('clears every delayed editor navigation on hide and unload', () => {
     for (const file of [
-      'src/packages/admin/announcement-editor/index.ts',
-      'src/packages/admin/banner-editor/index.ts',
       'src/packages/member/mip-profile/index.ts',
       'src/packages/member/mip-card-edit/index.ts',
       'src/packages/member/mip-cases/editor/index.ts',

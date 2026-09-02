@@ -7,8 +7,8 @@ import { loadAiEditorDraft } from '../../../../modules/mip-ai/editor-loader'
 import { superCaseModule } from '../../../../modules/mip-cases'
 import { mipMediaModule } from '../../../../modules/mip-media/client'
 import { opportunityModule } from '../../../../modules/mip-opportunities'
-import { caseNavigateTo } from '../../../../modules/platform/case-navigation'
-import { chooseMultipleImages, chooseSingleImage } from '../../../../modules/platform/image-upload'
+import { caseNavigateTo } from '../../../../platform/navigation/client'
+import { chooseMultipleImages, chooseSingleImage } from '../../../../platform/wechat/image-upload'
 
 interface CaseMediaDraft { assetId: string, imageUrl: string }
 

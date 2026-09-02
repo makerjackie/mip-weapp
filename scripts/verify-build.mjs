@@ -65,6 +65,7 @@ const membershipWxml = read('dist/pages/membership/index.wxml')
 const homeWxml = read('dist/pages/index/index.wxml')
 const adminWxml = read('dist/packages/admin/dashboard/index.wxml')
 const privacyWxml = read('dist/packages/member/privacy/index.wxml')
+const privacyPolicyWxml = read('dist/packages/member/privacy-policy/index.wxml')
 const badgeCollectionJs = read('dist/packages/member/mip-badges/index.js')
 const memberProfileJs = read('dist/packages/member/mip-profile/index.js')
 const checkInJs = read('dist/packages/member/mip-events/check-in/index.js')
@@ -82,6 +83,13 @@ const components = { ...membershipJson.usingComponents, ...homeJson.usingCompone
 assertBuiltComponentTargets()
 assert(appWxss.includes('.bg-canvas'), 'MIP design tokens did not reach WXSS')
 assert(appWxss.includes('.grid-cols-2'), 'Tailwind grid utilities did not reach WXSS')
+for (const tab of appJson.tabBar?.list || []) {
+  const tabPageJson = JSON.parse(read(`dist/${tab.pagePath}.json`))
+  assert(
+    tabPageJson.backgroundColorContent === '#040404',
+    `MIP Tab page container background is not opaque: ${tab.pagePath}`,
+  )
+}
 for (const subPackage of appJson.subPackages || appJson.subpackages || []) {
   if (subPackage.independent !== true) {
     assert(
@@ -118,6 +126,7 @@ assert(homeWxml.includes('mip-home-page'), 'Runtime-stable MIP home selector is 
 assert(membershipWxml.includes('mip-membership-page'), 'Runtime-stable MIP membership selector is missing')
 assert(adminWxml.includes('admin-dashboard-page'), 'Runtime-stable admin selector is missing')
 assert(privacyWxml.includes('privacy-account-page'), 'Runtime-stable privacy selector is missing')
+assert(privacyPolicyWxml.includes('mip-privacy-policy-page'), 'Runtime-stable privacy policy selector is missing')
 assert(Object.values(components).some(value => String(value).includes('tdesign-miniprogram/button')), 'TDesign button was not auto-imported')
 assert(Object.values(components).some(value => String(value).includes('tdesign-miniprogram/skeleton')), 'TDesign cold-start skeleton was not auto-imported')
 assert(Object.values(tabBarJson.usingComponents).some(value => String(value).includes('tdesign-miniprogram/icon')), 'TDesign custom TabBar icons were not built')

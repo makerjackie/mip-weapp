@@ -11,7 +11,7 @@ const defaultAgreements = Object.freeze([
     key: 'PRIVACY_POLICY',
     label: '隐私政策',
     version: 'draft-2026-08-24',
-    documentPath: '/packages/member/privacy/index',
+    documentPath: '/packages/member/privacy-policy/index',
   }),
 ])
 

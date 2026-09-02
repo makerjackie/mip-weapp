@@ -1,8 +1,6 @@
 import type { ExportProgress } from '../src/modules/mip-admin/export-download'
 import type { PendingAdminExportStorage } from '../src/modules/mip-admin/pending-export'
 import type { AdminExportStatus, MipAdminGateway } from '../src/modules/mip-admin/types'
-import fs from 'node:fs'
-import path from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createMipAdminModule } from '../src/modules/mip-admin/client'
 import { createPendingAdminExportStore } from '../src/modules/mip-admin/pending-export'
@@ -118,7 +116,7 @@ describe('MIP admin exports facade', () => {
     vi.stubGlobal('wx', runtime(true))
     const createProgress: ExportProgress[] = []
 
-    await expect(module.exportAndOpen(exportInput, progress => createProgress.push(progress)))
+    await expect(module.exports.createAndOpen(exportInput, progress => createProgress.push(progress)))
       .rejects
       .toMatchObject({ code: 'EXPORT_DOWNLOAD_FAILED', retryable: true })
     expect(createProgress).toEqual(['creating', 'preparing', 'downloading'])
@@ -131,7 +129,7 @@ describe('MIP admin exports facade', () => {
     expect(statusProgress).toEqual(['checking'])
     expect(spies.getExportStatus).toHaveBeenCalledTimes(1)
 
-    module.clearPendingExport()
+    module.exports.clearPending()
     await expect(module.exports.getPendingStatus()).resolves.toBeNull()
     expect(pending.value()).toBeUndefined()
     expect(spies.getExportStatus).toHaveBeenCalledTimes(1)
@@ -232,7 +230,7 @@ describe('MIP admin exports facade', () => {
     spies.reserveExport.mockRejectedValueOnce(failure)
     await warmAdminReads(module)
 
-    await expect(module.resumePendingExport()).rejects.toBe(failure)
+    await expect(module.exports.resumeAndOpen()).rejects.toBe(failure)
     await warmAdminReads(module)
 
     expect(spies.getExportStatus).toHaveBeenCalledTimes(1)
@@ -240,22 +238,5 @@ describe('MIP admin exports facade', () => {
     expect(spies.completeExport).not.toHaveBeenCalled()
     expect(spies.listAudit).toHaveBeenCalledTimes(1)
     expect(pending.store.peek()).toMatchObject({ ticketId: 'ticket-a', token })
-  })
-
-  it('keeps the exports page behind typed governance, events, and exports interfaces', () => {
-    const source = fs.readFileSync(
-      path.resolve(import.meta.dirname, '../src/packages/admin/exports/index.ts'),
-      'utf8',
-    )
-
-    expect(source).toContain('mipAdminModule.governance.getSession(')
-    expect(source).toContain('mipAdminModule.events.get(')
-    expect(source).toContain('mipAdminModule.exports.getPendingStatus(')
-    expect(source).toContain('mipAdminModule.exports.resumeAndOpen(')
-    expect(source).toContain('mipAdminModule.exports.clearPending(')
-    expect(source).toContain('mipAdminModule.exports.createAndOpen(')
-    expect(source).not.toContain('mipAdminModule.mutate')
-    expect(source).not.toContain('mipAdminModule.gateway')
-    expect(source).not.toContain('mipAdminModule.exportAndOpen')
   })
 })

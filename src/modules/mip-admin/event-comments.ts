@@ -1,4 +1,4 @@
-import { MipAdminError } from './types'
+import { MipAdminError } from './error'
 
 export type AdminEventCommentStatus = 'PENDING' | 'PUBLISHED' | 'HIDDEN'
 export type AdminEventCommentReportStatus = 'PENDING' | 'REVIEWING'

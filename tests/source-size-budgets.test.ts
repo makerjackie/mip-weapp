@@ -25,18 +25,14 @@ afterEach(() => {
 })
 
 describe('source size budgets', () => {
-  it('covers the known event and admin hotspots with current line counts', () => {
+  it('covers the active event service hotspot with its current line count', () => {
     const entries = assertSourceSizeBudgets(root).entries
-    expect(entries).toEqual(expect.arrayContaining([
+    expect(entries).toEqual([
       expect.objectContaining({
         path: 'cloudfunctions/mip-events-api/domain/event-service.js',
         maxLines: 3400,
       }),
-      expect.objectContaining({
-        path: 'src/packages/admin/message-campaigns/index.ts',
-        maxLines: 1400,
-      }),
-    ]))
+    ])
     for (const entry of entries) {
       expect(entry.actualLines).toBeLessThanOrEqual(entry.maxLines)
     }

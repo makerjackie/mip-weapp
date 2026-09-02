@@ -6,6 +6,13 @@ import type {
 import type { MipAdminGateway } from './types'
 import { createAdminMembershipGetRequest, createAdminMembershipTimelineRequest } from './memberships'
 
+export type MembershipsAdminGateway = Pick<
+  MipAdminGateway,
+  | 'getMembership'
+  | 'listMembershipTimeline'
+  | 'grantMembership'
+>
+
 interface MembershipsAdminCache {
   query: <T>(key: string, loader: () => Promise<T>, options?: { force?: boolean }) => Promise<T>
   invalidate: (prefix?: string) => void
@@ -28,7 +35,7 @@ const cacheKeys = {
 } as const
 
 export function createMipMembershipsAdmin(
-  gateway: MipAdminGateway,
+  gateway: MembershipsAdminGateway,
   cache: MembershipsAdminCache,
 ): MipMembershipsAdmin {
   return {

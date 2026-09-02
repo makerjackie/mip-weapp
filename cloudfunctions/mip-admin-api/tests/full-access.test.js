@@ -9,6 +9,7 @@ const {
 } = require('../domain/full-access')
 const { actions, createHandler } = require('../domain/handler')
 const { createAdminService } = require('../domain/service')
+const { createOwnerModules } = require('./owner-modules-test-helper')
 
 const caller = { appId: 'wx-app', identityKey: 'identity-key' }
 
@@ -144,6 +145,7 @@ describe('admin full access', () => {
   it('checks all non-health actions before role, capability, or input handling', async () => {
     let roleReads = 0
     const service = createAdminService({
+      knowledgeModule: createOwnerModules().KNOWLEDGE,
       repository: {
         async resolveUser() {
           return {

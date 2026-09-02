@@ -1,11 +1,11 @@
-import type { CaseCloudClient } from '../platform/cloudbase'
+import type { CaseCloudClient } from '../../platform/cloudbase/client'
 import type { AdminRequest } from './request-contract'
 import type { AdminTransport } from './transport'
 import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
 import { runtimeConfig } from '../../config/runtime'
-import { requireCloudClient } from '../platform/cloudbase'
-import { retryableAdminOperationActions } from './operation-contract'
-import { MipAdminError } from './types'
+import { requireCloudClient } from '../../platform/cloudbase/client'
+import { MipAdminError } from './error'
+import { isRetryableAdminOperationAction, retryableAdminOperationActions } from './operation-contract'
 
 interface Envelope<T> {
   ok: boolean
@@ -56,7 +56,7 @@ export function createCloudBaseAdminTransport(
         const response = await retryTransport(async () => {
           const cloud = await getCloudClient()
           return cloud.callFunction({ name: functionName, data: request })
-        }, readActions.has(request.action) ? COLD_START_READ_RETRY : { attempts: 1 })
+        }, isRetryableAdminOperationAction(request.action) ? COLD_START_READ_RETRY : { attempts: 1 })
         return unwrap<T>(response.result)
       }
       catch (error) {

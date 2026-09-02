@@ -11,7 +11,7 @@ import {
 } from '../src/modules/mip-admin/event-tag-assignments'
 import { MipAdminError } from '../src/modules/mip-admin/types'
 
-vi.mock('../src/modules/platform/cloudbase', () => ({ requireCloudClient: vi.fn() }))
+vi.mock('../src/platform/cloudbase/client', () => ({ requireCloudClient: vi.fn() }))
 vi.mock('../src/config/runtime', () => ({
   runtimeConfig: { cloudbase: { adminFunctionName: 'mip-admin-api' } },
 }))
@@ -128,7 +128,7 @@ describe('MIP event tag assignment admin contract', () => {
 
     await module.eventCatalogs.getTagAssignments(EVENT_ID)
     await module.eventCatalogs.listCatalogs({ kind: 'TAG' })
-    await module.getEventTagAssignments(EVENT_ID)
+    await module.eventCatalogs.getTagAssignments(EVENT_ID)
     await module.events.get(EVENT_ID)
     await module.events.list()
     expect(spies.getEventTagAssignments).toHaveBeenCalledTimes(1)
@@ -138,7 +138,7 @@ describe('MIP event tag assignment admin contract', () => {
       expectedVersion: 4,
       tagIds: [TAG_ID],
     })
-    await module.getEventTagAssignments(EVENT_ID)
+    await module.eventCatalogs.getTagAssignments(EVENT_ID)
     await module.eventCatalogs.listCatalogs({ kind: 'TAG' })
     await module.events.get(EVENT_ID)
     await module.events.list()
@@ -153,7 +153,7 @@ describe('MIP event tag assignment admin contract', () => {
       expectedVersion: 5,
       tagIds: [],
     })).rejects.toBe(failure)
-    await module.getEventTagAssignments(EVENT_ID)
+    await module.eventCatalogs.getTagAssignments(EVENT_ID)
     await module.eventCatalogs.listCatalogs({ kind: 'TAG' })
     expect(spies.getEventTagAssignments).toHaveBeenCalledTimes(2)
     expect(spies.listEventCatalogs).toHaveBeenCalledTimes(2)

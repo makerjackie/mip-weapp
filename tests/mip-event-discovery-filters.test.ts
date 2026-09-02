@@ -3,9 +3,9 @@ import { readFileSync } from 'node:fs'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMipEventsModule, parseEventDiscoveryFilters } from '../src/modules/mip-events'
 import { cloudbaseMipEventsGateway } from '../src/modules/mip-events/cloudbase-gateway'
-import { requireCloudClient } from '../src/modules/platform/cloudbase'
+import { requireCloudClient } from '../src/platform/cloudbase/client'
 
-vi.mock('../src/modules/platform/cloudbase', () => ({ requireCloudClient: vi.fn() }))
+vi.mock('../src/platform/cloudbase/client', () => ({ requireCloudClient: vi.fn() }))
 vi.mock('../src/config/runtime', () => ({
   runtimeConfig: { cloudbase: { eventsFunctionName: 'mip-events-api' } },
 }))
