@@ -6,13 +6,15 @@ import type {
   OpportunityCommentSubmissionIntent,
   OpportunityCommentType,
   OpportunityDetail,
+  ProfileInterestMutationSnapshot,
   PublicPerson,
 } from '../../../../modules/mip-opportunities'
 import { cooperationRoles } from '../../../../config/mip-catalogs'
-import { mipAccessPageUrl } from '../../../../modules/mip-identity'
+import { evaluateAccess, mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
 import {
   opportunityModule,
+  profileInterestMutations,
   retainOpportunityCommentReportIntent,
   retainOpportunityCommentSubmissionIntent,
 } from '../../../../modules/mip-opportunities'
@@ -53,6 +55,7 @@ Page({
     roleNames: [] as string[],
     message: '',
     acting: false,
+    interestPending: false,
     referralPickerVisible: false,
     referralKeyword: '',
     referralCandidates: [] as ReferralCandidate[],
@@ -77,6 +80,7 @@ Page({
   commentSubmissionIntent: null as OpportunityCommentSubmissionIntent | null,
   commentReportIntent: null as OpportunityCommentReportIntent | null,
   endConfirmationBusy: false,
+  stopInterestSubscription: null as (() => void) | null,
 
   onLoad(options: Record<string, string | undefined>) {
     this.commentSubmissionIntent = null
@@ -101,6 +105,11 @@ Page({
     }
   },
 
+  onUnload() {
+    this.stopInterestSubscription?.()
+    this.stopInterestSubscription = null
+  },
+
   async load() {
     if (!this.data.id) {
       this.setData({ state: 'error', message: '机会信息不完整' })
@@ -111,9 +120,12 @@ Page({
     }
     try {
       const item = await opportunityModule.get(this.data.id)
+      const interest = profileInterestMutations.mergeServer(item.author.profileRef, item.interestActive)
+      this.observeInterest(item.author.profileRef)
       this.setData({
         state: 'ready',
-        item,
+        item: { ...item, interestActive: interest.active },
+        interestPending: interest.pending,
         publishedText: formatLocalDateTime(item.publishedAt),
         roleNames: item.roles.map(key => cooperationRoles.find(role => role.key === key)?.name || key),
         message: '',
@@ -141,7 +153,42 @@ Page({
   },
 
   async toggleInterest() {
+    if (this.data.interestPending) {
+      return
+    }
+    if (this.hasCachedInterestAccess()) {
+      this.performInteraction('interest')
+      return
+    }
     await this.authorizeInteraction('interest')
+  },
+
+  observeInterest(profileRef: string) {
+    this.stopInterestSubscription?.()
+    this.stopInterestSubscription = profileInterestMutations.subscribe(profileRef, (interest) => {
+      if (this.data.item?.author.profileRef !== profileRef) {
+        return
+      }
+      this.applyInterest(interest)
+      if (interest.error) {
+        wx.showToast({ title: interest.error.message, icon: 'none' })
+      }
+    })
+  },
+
+  applyInterest(interest: ProfileInterestMutationSnapshot) {
+    this.setData({
+      'item.interestActive': interest.active,
+      'interestPending': interest.pending,
+    })
+  },
+
+  hasCachedInterestAccess() {
+    const snapshot = mipIdentityModule.peekSnapshot()
+    return Boolean(snapshot && evaluateAccess(snapshot, {
+      action: 'INTERACT',
+      source: { navigation: 'navigateBack' },
+    }).ready)
   },
 
   async authorizeInteraction(interaction: Interaction) {
@@ -175,7 +222,17 @@ Page({
 
   async performInteraction(interaction: Interaction) {
     const item = this.data.item
-    if (!item || this.data.acting) {
+    if (!item || (interaction === 'interest' ? this.data.interestPending : this.data.acting)) {
+      return
+    }
+    if (interaction === 'interest') {
+      const interest = profileInterestMutations.mutate({
+        targetProfileRef: item.author.profileRef,
+        active: !item.interestActive,
+        currentActive: item.interestActive,
+        source: { sourceType: 'OPPORTUNITY', sourceId: item.id },
+      })
+      this.applyInterest(interest)
       return
     }
     this.setData({ acting: true })
@@ -196,11 +253,6 @@ Page({
           'item.referralCount': result.referralCount ?? item.referralCount,
         })
         wx.showToast({ title: '已取消引荐', icon: 'none' })
-      }
-      else {
-        const result = await opportunityModule.setAuthorInterest(item.id, !item.interestActive)
-        this.setData({ 'item.interestActive': result.active })
-        wx.showToast({ title: result.active ? '已标记感兴趣' : '已取消感兴趣', icon: 'none' })
       }
     }
     catch (error) {

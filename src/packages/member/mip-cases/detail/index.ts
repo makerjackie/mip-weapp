@@ -1,9 +1,11 @@
 import type { SuperCaseId } from '../../../../modules/mip'
 import type { SuperCaseDetail } from '../../../../modules/mip-cases'
+import type { ProfileInterestMutationSnapshot } from '../../../../modules/mip-opportunities'
 import { mipOperationsConfig } from '../../../../config/mip-operations'
 import { superCaseModule } from '../../../../modules/mip-cases'
-import { mipAccessPageUrl } from '../../../../modules/mip-identity'
+import { evaluateAccess, mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
+import { profileInterestMutations } from '../../../../modules/mip-opportunities'
 import { caseNavigateTo, leaveSecondaryPage } from '../../../../platform/navigation/client'
 
 interface SuperCaseDetailView extends SuperCaseDetail {
@@ -47,9 +49,11 @@ Page({
     item: null as SuperCaseDetailView | null,
     mediaUrls: [] as string[],
     acting: false,
+    interestPending: false,
     message: '',
   },
   resumeInterest: false,
+  stopInterestSubscription: null as (() => void) | null,
 
   onLoad(options: Record<string, string | undefined>) {
     this.setData({ id: String(options.id || '') as SuperCaseId })
@@ -67,6 +71,11 @@ Page({
     }
   },
 
+  onUnload() {
+    this.stopInterestSubscription?.()
+    this.stopInterestSubscription = null
+  },
+
   async load() {
     if (!this.data.id) {
       this.setData({ state: 'error', message: '案例信息不完整' })
@@ -76,9 +85,12 @@ Page({
     try {
       const item = await superCaseModule.get(this.data.id)
       const presented = presentCase(item)
+      const interest = profileInterestMutations.mergeServer(item.author.profileRef, item.interestActive)
+      this.observeInterest(item.author.profileRef)
       this.setData({
         state: 'ready',
-        item: presented,
+        item: { ...presented, interestActive: interest.active },
+        interestPending: interest.pending,
         mediaUrls: presented.media.map(media => media.url).filter(Boolean),
         message: '',
       })
@@ -90,7 +102,11 @@ Page({
 
   async toggleInterest() {
     const item = this.data.item
-    if (!item || item.mine || this.data.acting) {
+    if (!item || item.mine || this.data.acting || this.data.interestPending) {
+      return
+    }
+    if (this.hasCachedInterestAccess()) {
+      this.performToggleInterest()
       return
     }
     this.resumeInterest = true
@@ -106,7 +122,7 @@ Page({
       }
       this.resumeInterest = false
       this.setData({ acting: false })
-      await this.performToggleInterest()
+      this.performToggleInterest()
     }
     catch {
       this.resumeInterest = false
@@ -117,23 +133,46 @@ Page({
     }
   },
 
-  async performToggleInterest() {
+  observeInterest(profileRef: string) {
+    this.stopInterestSubscription?.()
+    this.stopInterestSubscription = profileInterestMutations.subscribe(profileRef, (interest) => {
+      if (this.data.item?.author.profileRef !== profileRef) {
+        return
+      }
+      this.applyInterest(interest)
+      if (interest.error) {
+        wx.showToast({ title: interest.error.message, icon: 'none' })
+      }
+    })
+  },
+
+  applyInterest(interest: ProfileInterestMutationSnapshot) {
+    this.setData({
+      'item.interestActive': interest.active,
+      'interestPending': interest.pending,
+    })
+  },
+
+  hasCachedInterestAccess() {
+    const snapshot = mipIdentityModule.peekSnapshot()
+    return Boolean(snapshot && evaluateAccess(snapshot, {
+      action: 'INTERACT',
+      source: { navigation: 'navigateBack' },
+    }).ready)
+  },
+
+  performToggleInterest() {
     const item = this.data.item
-    if (!item || item.mine || this.data.acting) {
+    if (!item || item.mine || this.data.interestPending) {
       return
     }
-    this.setData({ acting: true })
-    try {
-      const result = await superCaseModule.setOwnerInterest(item.id, !item.interestActive)
-      this.setData({ 'item.interestActive': result.active })
-      wx.showToast({ title: result.active ? '已标记感兴趣' : '已取消感兴趣', icon: 'none' })
-    }
-    catch (error) {
-      wx.showToast({ title: error instanceof Error ? error.message : '操作失败', icon: 'none' })
-    }
-    finally {
-      this.setData({ acting: false })
-    }
+    const interest = profileInterestMutations.mutate({
+      targetProfileRef: item.author.profileRef,
+      active: !item.interestActive,
+      currentActive: item.interestActive,
+      source: { sourceType: 'SUPER_CASE', sourceId: item.id },
+    })
+    this.applyInterest(interest)
   },
 
   openAuthor() {

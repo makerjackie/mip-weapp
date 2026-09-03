@@ -1,9 +1,11 @@
 import type { CooperationCardId } from '../../../../modules/mip'
 import type { CooperationCardDetail } from '../../../../modules/mip-cooperation'
+import type { ProfileInterestMutationSnapshot } from '../../../../modules/mip-opportunities'
 import { cooperationAbilityDimensions, cooperationRoles } from '../../../../config/mip-catalogs'
 import { cooperationModule } from '../../../../modules/mip-cooperation'
-import { mipAccessPageUrl } from '../../../../modules/mip-identity'
+import { evaluateAccess, mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
+import { profileInterestMutations } from '../../../../modules/mip-opportunities'
 import { caseNavigateTo, leaveSecondaryPage } from '../../../../platform/navigation/client'
 
 interface AbilityView { key: string, label: string, score: number }
@@ -18,9 +20,11 @@ Page({
     abilities: [] as AbilityView[],
     roleFields: [] as RoleFieldView[],
     acting: false,
+    interestPending: false,
     message: '',
   },
   resumeInterest: false,
+  stopInterestSubscription: null as (() => void) | null,
 
   onLoad(options: Record<string, string | undefined>) {
     this.setData({ id: String(options.id || '') as CooperationCardId })
@@ -47,6 +51,11 @@ Page({
     }
   },
 
+  onUnload() {
+    this.stopInterestSubscription?.()
+    this.stopInterestSubscription = null
+  },
+
   async load() {
     if (!this.data.id) {
       this.setData({ state: 'error', message: '合作卡信息不完整' })
@@ -54,6 +63,8 @@ Page({
     }
     try {
       const item = await cooperationModule.get(this.data.id)
+      const interest = profileInterestMutations.mergeServer(item.author.profileRef, item.interestActive)
+      this.observeInterest(item.author.profileRef)
       const definition = cooperationRoles.find(role => role.key === item.roleKey)
       const abilities = cooperationAbilityDimensions.map(dimension => ({
         ...dimension,
@@ -67,7 +78,15 @@ Page({
           value: Array.isArray(value) ? value.join('、') : String(value ?? ''),
         }
       })
-      this.setData({ state: 'ready', item, roleName: definition?.name || item.roleKey, abilities, roleFields, message: '' })
+      this.setData({
+        state: 'ready',
+        item: { ...item, interestActive: interest.active },
+        interestPending: interest.pending,
+        roleName: definition?.name || item.roleKey,
+        abilities,
+        roleFields,
+        message: '',
+      })
       wx.nextTick(() => this.drawRadar())
     }
     catch (error) {
@@ -146,7 +165,11 @@ Page({
 
   async toggleInterest() {
     const item = this.data.item
-    if (!item || item.mine || this.data.acting) {
+    if (!item || item.mine || this.data.acting || this.data.interestPending) {
+      return
+    }
+    if (this.hasCachedInterestAccess()) {
+      this.performToggleInterest()
       return
     }
     this.resumeInterest = true
@@ -162,7 +185,7 @@ Page({
       }
       this.resumeInterest = false
       this.setData({ acting: false })
-      await this.performToggleInterest()
+      this.performToggleInterest()
     }
     catch {
       this.resumeInterest = false
@@ -173,23 +196,46 @@ Page({
     }
   },
 
-  async performToggleInterest() {
+  observeInterest(profileRef: string) {
+    this.stopInterestSubscription?.()
+    this.stopInterestSubscription = profileInterestMutations.subscribe(profileRef, (interest) => {
+      if (this.data.item?.author.profileRef !== profileRef) {
+        return
+      }
+      this.applyInterest(interest)
+      if (interest.error) {
+        wx.showToast({ title: interest.error.message, icon: 'none' })
+      }
+    })
+  },
+
+  applyInterest(interest: ProfileInterestMutationSnapshot) {
+    this.setData({
+      'item.interestActive': interest.active,
+      'interestPending': interest.pending,
+    })
+  },
+
+  hasCachedInterestAccess() {
+    const snapshot = mipIdentityModule.peekSnapshot()
+    return Boolean(snapshot && evaluateAccess(snapshot, {
+      action: 'INTERACT',
+      source: { navigation: 'navigateBack' },
+    }).ready)
+  },
+
+  performToggleInterest() {
     const item = this.data.item
-    if (!item || item.mine || this.data.acting) {
+    if (!item || item.mine || this.data.interestPending) {
       return
     }
-    this.setData({ acting: true })
-    try {
-      const result = await cooperationModule.setOwnerInterest(item.id, !item.interestActive)
-      this.setData({ 'item.interestActive': result.active })
-      wx.showToast({ title: result.active ? '已标记感兴趣' : '已取消感兴趣', icon: 'none' })
-    }
-    catch (error) {
-      wx.showToast({ title: error instanceof Error ? error.message : '操作失败', icon: 'none' })
-    }
-    finally {
-      this.setData({ acting: false })
-    }
+    const interest = profileInterestMutations.mutate({
+      targetProfileRef: item.author.profileRef,
+      active: !item.interestActive,
+      currentActive: item.interestActive,
+      source: { sourceType: 'COOPERATION_CARD', sourceId: item.id },
+    })
+    this.applyInterest(interest)
   },
 
   openAuthor() {

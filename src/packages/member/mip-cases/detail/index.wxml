@@ -38,7 +38,7 @@
     <mip-sticky-actions wx:elif="{{!item.mine && item.status === 'PUBLISHED'}}">
       <view slot="actions" class="flex h-[112rpx] w-full items-center gap-2 rounded-full border border-brand bg-brand-soft p-2">
       <button open-type="share" class="m-0 flex h-[80rpx] w-[176rpx] shrink-0 items-center justify-center gap-2 rounded-full border-0 bg-panel p-0 text-[length:25rpx] leading-[80rpx] text-brand active:bg-panel-raised" aria-label="分享案例"><t-icon name="share" size="32rpx" color="var(--color-brand)" /><text>分享</text></button>
-      <view class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:30rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" aria-disabled="{{acting}}" bind:tap="toggleInterest">{{acting ? '处理中' : (item.interestActive ? '取消感兴趣' : '我感兴趣')}}</view>
+      <view class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:30rpx] font-medium text-on-brand active:bg-brand-active {{interestPending ? 'opacity-60' : ''}}" aria-role="button" aria-disabled="{{interestPending}}" bind:tap="toggleInterest">{{item.interestActive ? '取消感兴趣' : '我感兴趣'}}</view>
       </view>
     </mip-sticky-actions>
   </block>

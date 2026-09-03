@@ -154,7 +154,7 @@ describe('MIP people discovery client contract', () => {
     expect(source('src/packages/member/mip-people/index.wxml')).toContain('只搜玩家')
     expect(source('src/packages/member/mip-people/index.wxml')).toContain('data-scope="PLAYER"')
     expect(profile).toContain('opportunityModule.getPublicProfile')
-    expect(profile).toContain('opportunityModule.setProfileInterest')
+    expect(profile).toContain('profileInterestMutations.mutate')
     expect(`${discovery}\n${profile}`).not.toMatch(/membershipModule|wx\.cloud/)
     expect(profile).not.toContain('mipIdentityModule.getPublicProfile')
     for (const heading of ['合作卡', '超级案例', '招募中的机会', '感兴趣']) {

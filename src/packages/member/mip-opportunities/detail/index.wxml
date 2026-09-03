@@ -38,7 +38,7 @@
       <view wx:if="{{item.referralActive}}" class="mt-3">
         <t-button block size="large" variant="outline" theme="primary" disabled="{{acting}}" bind:tap="cancelReferral">取消引荐</t-button>
       </view>
-      <view class="mt-3 flex min-h-[88rpx] items-center justify-between gap-3 rounded-[12rpx] bg-panel-raised px-4 active:bg-panel" aria-role="button" aria-pressed="{{item.interestActive}}" bind:tap="toggleInterest"><view><view class="text-[length:24rpx] font-medium">感兴趣</view><view class="mt-1 text-[length:20rpx] text-muted">{{item.interestActive ? '已标记，点击可取消' : '标记后可在我的相关机会中查看'}}</view></view><view class="shrink-0 text-[length:22rpx] text-brand">{{item.interestActive ? '已标记' : '标记'}}</view></view>
+      <view class="mt-3 flex min-h-[88rpx] items-center justify-between gap-3 rounded-[12rpx] bg-panel-raised px-4 active:bg-panel {{interestPending ? 'opacity-60' : ''}}" aria-role="button" aria-pressed="{{item.interestActive}}" aria-disabled="{{interestPending}}" bind:tap="toggleInterest"><view><view class="text-[length:24rpx] font-medium">感兴趣</view><view class="mt-1 text-[length:20rpx] text-muted">{{interestPending ? '正在同步' : (item.interestActive ? '已标记，点击可取消' : '标记后可在我的相关机会中查看')}}</view></view><view class="shrink-0 text-[length:22rpx] text-brand">{{item.interestActive ? '已标记' : '标记'}}</view></view>
     </view>
     <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
       <view class="flex items-center justify-between gap-3">

@@ -106,9 +106,9 @@
     <view wx:if="{{interestMessage}}" class="fixed inset-x-6 bottom-[calc(env(safe-area-inset-bottom)+132rpx)] z-20 rounded-[8rpx] border border-danger bg-panel px-3 py-2 text-center text-[length:20rpx] text-danger">{{interestMessage}}</view>
     <mip-sticky-actions wx:if="{{!isSelf}}">
       <view slot="actions" class="flex h-[112rpx] w-full items-center gap-2 rounded-full border border-brand bg-brand-soft p-2">
-      <view class="flex h-[80rpx] min-w-0 flex-1 items-center px-3"><view class="min-w-0"><view class="truncate text-[length:22rpx] font-medium">{{profile.displayName}}</view><view class="mt-1 text-[length:18rpx] text-muted">{{interestActive ? '已标记感兴趣' : '公开档案'}}</view></view></view>
+      <view class="flex h-[80rpx] min-w-0 flex-1 items-center px-3"><view class="min-w-0"><view class="truncate text-[length:22rpx] font-medium">{{profile.displayName}}</view><view class="mt-1 text-[length:18rpx] text-muted">{{interestState === 'syncing' ? '正在同步' : (interestActive ? '已标记感兴趣' : '公开档案')}}</view></view></view>
       <view wx:if="{{interestState === 'access'}}" class="flex min-h-[88rpx] w-[336rpx] shrink-0 items-center justify-center rounded-full bg-brand px-3 text-center text-[length:24rpx] font-medium text-on-brand" aria-role="button" bind:tap="openAccess">完成身份信息后继续</view>
-      <view wx:else class="flex min-h-[88rpx] w-[336rpx] shrink-0 items-center justify-center rounded-full bg-brand px-3 text-[length:28rpx] font-medium text-on-brand active:bg-brand-active {{interestState === 'loading' || interestState === 'processing' ? 'opacity-50' : ''}}" aria-role="button" aria-disabled="{{interestState === 'loading' || interestState === 'processing'}}" bind:tap="toggleInterest">{{interestState === 'processing' ? '处理中' : (interestActive ? '取消感兴趣' : '我感兴趣')}}</view>
+      <view wx:else class="flex min-h-[88rpx] w-[336rpx] shrink-0 items-center justify-center rounded-full bg-brand px-3 text-[length:28rpx] font-medium text-on-brand active:bg-brand-active {{interestState === 'loading' || interestState === 'syncing' ? 'opacity-50' : ''}}" aria-role="button" aria-disabled="{{interestState === 'loading' || interestState === 'syncing'}}" bind:tap="toggleInterest">{{interestActive ? '取消感兴趣' : '我感兴趣'}}</view>
       </view>
     </mip-sticky-actions>
   </block>

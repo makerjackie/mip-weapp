@@ -23,6 +23,11 @@ import type {
   ReceivedInteractionCategory,
   ReceivedInteractionPage,
 } from './types'
+import { registerMipLocalUserCache } from '../mip-identity/local-session'
+import {
+  createProfileInterestMutationStore,
+  PROFILE_INTEREST_MUTATION_STORAGE_KEY,
+} from './profile-interest-mutation'
 import { callOpportunityApi } from './transport'
 import {
   createMutationKey,
@@ -35,6 +40,22 @@ import {
   parseProfileInfluence,
   parsePublicProfileAggregate,
 } from './validation'
+
+export const profileInterestMutations = createProfileInterestMutationStore({
+  send: intent => callOpportunityApi<OpportunityInteractionResult>('setProfileInterest', {
+    sourceType: intent.sourceType,
+    ...('sourceId' in intent ? { sourceId: intent.sourceId } : { profileRef: intent.profileRef }),
+    active: intent.active,
+    idempotencyKey: intent.idempotencyKey,
+  }),
+  storage: {
+    read: () => wx.getStorageSync(PROFILE_INTEREST_MUTATION_STORAGE_KEY) as unknown,
+    write: value => wx.setStorageSync(PROFILE_INTEREST_MUTATION_STORAGE_KEY, value),
+    clear: () => wx.removeStorageSync(PROFILE_INTEREST_MUTATION_STORAGE_KEY),
+  },
+})
+
+registerMipLocalUserCache(() => profileInterestMutations.reset())
 
 export const opportunityModule = {
   getCatalogs() {

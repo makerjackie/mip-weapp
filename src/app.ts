@@ -6,6 +6,7 @@ import { registerMipLocalUserCache } from './modules/mip-identity/local-session'
 import { mipGlobalAccessGuard } from './modules/mip-identity/runtime'
 import { mipPopupMessagePresenter } from './modules/mip-messaging/client'
 import { createPopupForegroundCoordinator } from './modules/mip-messaging/popup'
+import { profileInterestMutations } from './modules/mip-opportunities/client'
 import { clearCloudMediaCache } from './platform/storage/cloud-media'
 
 const popupForeground = createPopupForegroundCoordinator(
@@ -39,12 +40,16 @@ App({
     }
     prepareApp()
     mipCheckInResumeStore.prune()
-    mipGlobalAccessGuard.ensureLaunch(options)
+    if (mipGlobalAccessGuard.ensureLaunch(options) === 'READY') {
+      void profileInterestMutations.flush()
+    }
   },
 
   onShow(options) {
     mipCheckInResumeStore.prune()
-    mipGlobalAccessGuard.ensureLaunch(options)
+    if (mipGlobalAccessGuard.ensureLaunch(options) === 'READY') {
+      void profileInterestMutations.flush()
+    }
     void popupForeground.onShow()
   },
 

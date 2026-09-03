@@ -162,6 +162,7 @@ describe('MIP local logout flow', () => {
       'mip:event-check-in-resume:v1',
       'mip:event-check-in-resume:v2',
       'mip:admin-export-pending:v1',
+      'mip:profile-interest-mutations:v1',
       'mip:popup-message-presented:v1',
       'mip:blind-box-pending-draw:v1:10000000-0000-4000-8000-000000000001:20000000-0000-4000-8000-000000000001',
       'mip:internal:free-event-runtime-acceptance:v1',
@@ -188,9 +189,9 @@ describe('MIP local logout flow', () => {
     expect(identity.signOutLocally).toHaveBeenCalledOnce()
     expect(registeredCache).toHaveBeenCalledOnce()
     expect(laterCache).toHaveBeenCalledOnce()
-    expect(removed).toEqual(keys.slice(1, 5))
+    expect(removed).toEqual(keys.slice(1, 6))
     expect(removed).not.toContain('mip.identity.access-state.v1')
-    expect(removed).not.toContain(keys[5])
+    expect(removed).not.toContain(keys[6])
     expect(removed).not.toContain('mip:internal:free-event-runtime-acceptance:v1')
     unregister()
   })

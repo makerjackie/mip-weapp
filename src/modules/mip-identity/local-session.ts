@@ -2,6 +2,7 @@ export const MIP_LOCAL_USER_STORAGE_KEYS = [
   'mip:admin-export-pending:v1',
   'mip:event-check-in-resume:v1',
   'mip:event-check-in-resume:v2',
+  'mip:profile-interest-mutations:v1',
   'mip:popup-message-presented:v1',
 ] as const
 

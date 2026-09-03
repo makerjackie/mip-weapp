@@ -87,7 +87,7 @@ describe('MIP public profiles', () => {
     expect(participantPage).toContain('mipEventsModule.listPublicParticipants')
     expect(profilePage).toContain('opportunityModule.getPublicProfile')
     expect(profilePage).toContain('mipIdentityModule.resolveProfileCardScene')
-    expect(profilePage).toContain('opportunityModule.setProfileInterest')
+    expect(profilePage).toContain('profileInterestMutations.mutate')
     expect(`${participantPage}\n${profilePage}`).not.toMatch(/membershipModule|wx\.cloud/)
 
     for (const detail of [

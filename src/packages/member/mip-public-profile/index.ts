@@ -1,6 +1,7 @@
 import type { CommunityReportIntent, ReportCategory } from '../../../modules/mip-community'
 import type {
   ProfileInfluenceSummary,
+  ProfileInterestMutationSnapshot,
   PublicPerson,
   PublicProfileCooperationCard,
   PublicProfileOpportunity,
@@ -13,10 +14,10 @@ import {
   mipCommunityModule,
   reportCategoryOptions,
 } from '../../../modules/mip-community'
-import { mipAccessPageUrl } from '../../../modules/mip-identity'
+import { evaluateAccess, mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { careerIdentityOptions } from '../../../modules/mip-identity/profile-options'
-import { opportunityModule } from '../../../modules/mip-opportunities'
+import { opportunityModule, profileInterestMutations } from '../../../modules/mip-opportunities'
 import { createMutationKey } from '../../../modules/mip-opportunities/validation'
 import { caseNavigateTo } from '../../../platform/navigation/client'
 
@@ -81,7 +82,7 @@ Page({
     opportunities: [] as PublicProfileOpportunity[],
     influence: null as ProfileInfluenceSummary | null,
     interestActive: false,
-    interestState: 'idle' as 'idle' | 'loading' | 'ready' | 'access' | 'processing' | 'error',
+    interestState: 'idle' as 'idle' | 'loading' | 'ready' | 'access' | 'syncing' | 'error',
     interestMessage: '',
     safetyState: 'idle' as 'idle' | 'loading' | 'ready' | 'access' | 'processing' | 'reported' | 'error',
     safetyMessage: '',
@@ -95,6 +96,7 @@ Page({
   reportIntent: null as CommunityReportIntent | null,
   visitKey: '',
   safetyActionBusy: false,
+  stopInterestSubscription: null as (() => void) | null,
 
   onLoad(query: Record<string, string | undefined>) {
     this.reportIntent = null
@@ -129,6 +131,11 @@ Page({
     }
   },
 
+  onUnload() {
+    this.stopInterestSubscription?.()
+    this.stopInterestSubscription = null
+  },
+
   async loadProfile() {
     if (!this.data.profileRef) {
       this.setData({ state: 'error', message: '档案信息不完整。' })
@@ -139,6 +146,11 @@ Page({
     }
     try {
       const aggregate = await opportunityModule.getPublicProfile(this.data.profileRef)
+      const interest = profileInterestMutations.mergeServer(
+        aggregate.profile.profileRef,
+        aggregate.interestActive,
+      )
+      this.observeInterest(aggregate.profile.profileRef)
       this.setData({
         state: 'ready',
         profile: presentProfile(aggregate.profile),
@@ -152,8 +164,8 @@ Page({
         })),
         opportunities: aggregate.opportunities,
         influence: aggregate.influence || null,
-        interestActive: aggregate.interestActive,
-        interestState: 'ready',
+        interestActive: interest.active,
+        interestState: interest.pending ? 'syncing' : 'ready',
         isSelf: aggregate.profile.isSelf,
         message: '',
       })
@@ -168,6 +180,35 @@ Page({
         message: error instanceof Error ? error.message : '公开档案加载失败。',
       })
     }
+  },
+
+  observeInterest(profileRef: string) {
+    this.stopInterestSubscription?.()
+    this.stopInterestSubscription = profileInterestMutations.subscribe(profileRef, (interest) => {
+      if (profileRef !== this.data.profileRef) {
+        return
+      }
+      this.applyInterest(interest)
+      if (interest.error) {
+        wx.showToast({ title: interest.error.message, icon: 'none' })
+      }
+    })
+  },
+
+  applyInterest(interest: ProfileInterestMutationSnapshot) {
+    this.setData({
+      interestActive: interest.active,
+      interestState: interest.error ? 'error' : interest.pending ? 'syncing' : 'ready',
+      interestMessage: interest.error?.message || '',
+    })
+  },
+
+  hasCachedInterestAccess() {
+    const snapshot = mipIdentityModule.peekSnapshot()
+    return Boolean(snapshot && evaluateAccess(snapshot, {
+      action: 'INTERACT',
+      source: { navigation: 'navigateBack' },
+    }).ready)
   },
 
   openOwnInfluence(event: WechatMiniprogram.TouchEvent) {
@@ -204,6 +245,11 @@ Page({
         this.setActionState(action, 'access')
         return false
       }
+      if (action === 'interest') {
+        this.setData({ accessToken: '' })
+        this.setActionState(action, 'ready')
+        return !this.data.isSelf
+      }
       const relationship = await mipCommunityModule.relationship(this.data.profileRef)
       this.setData({ accessToken: '', isSelf: relationship.isSelf })
       this.setActionState(action, 'ready')
@@ -238,7 +284,7 @@ Page({
   },
 
   toggleInterest() {
-    if (['loading', 'processing'].includes(this.data.interestState)) {
+    if (this.data.isSelf || ['loading', 'syncing'].includes(this.data.interestState)) {
       return
     }
     void this.runProfileAction('interest')
@@ -261,12 +307,17 @@ Page({
     }
     this.pendingAction = action
     try {
+      if (action === 'interest' && this.hasCachedInterestAccess()) {
+        this.pendingAction = ''
+        this.updateInterest()
+        return
+      }
       if (!await this.ensureActionAccess(action)) {
         return
       }
       this.pendingAction = ''
       if (action === 'interest') {
-        await this.updateInterest()
+        this.updateInterest()
         return
       }
       if (action === 'block') {
@@ -282,24 +333,15 @@ Page({
     }
   },
 
-  async updateInterest() {
+  updateInterest() {
     const active = !this.data.interestActive
-    this.setData({ interestState: 'processing', interestMessage: '' })
-    try {
-      const result = await opportunityModule.setProfileInterest(this.data.profileRef, active)
-      this.setData({
-        interestActive: result.active,
-        interestState: 'ready',
-        interestMessage: '',
-      })
-      wx.showToast({ title: result.active ? '已标记感兴趣' : '已取消', icon: 'success' })
-    }
-    catch (error) {
-      this.setData({
-        interestState: 'error',
-        interestMessage: error instanceof Error ? error.message : '操作失败，请重试。',
-      })
-    }
+    const interest = profileInterestMutations.mutate({
+      targetProfileRef: this.data.profileRef,
+      active,
+      currentActive: this.data.interestActive,
+      source: { sourceType: 'PROFILE', profileRef: this.data.profileRef },
+    })
+    this.applyInterest(interest)
   },
 
   async confirmBlock() {
