@@ -267,7 +267,7 @@ describe('admin read pages', () => {
 
     assert.deepEqual(calls, [{
       action: 'mip.admin.knowledge.list',
-      input: { section: 'CONTENTS', status: 'PUBLISHED', limit: 20 },
+      input: { section: 'CONTENTS', status: 'PUBLISHED', query: '运营', limit: 20 },
     }])
     assert.equal(page.sections[0].rows[0].category, '运营')
     assert.equal(page.sections[0].rows[0].access, '会员可见')

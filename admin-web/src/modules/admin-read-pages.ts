@@ -9,7 +9,7 @@ import type {
   AdminTableColumn,
   AdminTableRow,
 } from './admin-read-contracts.ts'
-import { capabilityLabels, labels } from './admin-read-formatters.ts'
+import { capabilityLabels, filterRows, labels } from './admin-read-formatters.ts'
 import {
   loadGrowth,
   loadOperations,
@@ -374,6 +374,7 @@ async function loadKnowledge(query: AdminListQuery, request: AdminRequest): Prom
   const payload = pageValue(await request('mip.admin.knowledge.list', {
     section: 'CONTENTS',
     status: query.status,
+    query: query.query || undefined,
     limit: query.limit,
   }))
   const rows = filterRows(payload.items.map(item => {
@@ -407,10 +408,6 @@ function listInput(query: AdminListQuery, extra: AdminRequestInput = {}): AdminR
   }
 }
 
-function filterInput(query: AdminListQuery): AdminRequestInput {
-  return { query: query.query, status: query.status, limit: query.limit }
-}
-
 function pageValue(value: unknown): { items: AdminTableRow[]; nextCursor: string | null } {
   const source = record(value)
   const items = Array.isArray(source.items)
@@ -428,16 +425,6 @@ function record(value: unknown): AdminTableRow {
 function valueOf(row: AdminTableRow, ...keys: string[]) {
   for (const key of keys) if (row[key] !== undefined && row[key] !== null && row[key] !== '') return row[key]
   return '—'
-}
-
-function filterRows(rows: AdminTableRow[], query: Pick<AdminListQuery, 'query' | 'status'>) {
-  const keyword = query.query.trim().toLocaleLowerCase('zh-CN')
-  const expectedStatus = query.status ? label(query.status) : ''
-  return rows.filter((row) => {
-    const values = Object.values(row).map(value => String(value))
-    return (!keyword || values.some(value => value.toLocaleLowerCase('zh-CN').includes(keyword)))
-      && (!expectedStatus || values.includes(expectedStatus))
-  })
 }
 
 function columns(entries: Array<[string, string]>): AdminTableColumn[] {

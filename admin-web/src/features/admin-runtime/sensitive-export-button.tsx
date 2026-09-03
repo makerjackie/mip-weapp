@@ -103,7 +103,7 @@ export function SensitiveExportButton({ kind, query, status, open: controlledOpe
         onOk={() => void submit()}
         onCancel={close}
       >
-        <Space direction="vertical" size={16} className="field-full-width">
+        <Space orientation="vertical" size={16} className="field-full-width">
           <Typography.Paragraph type="secondary">
             导出范围与当前列表筛选一致，服务端会再次校验运营权限和数据范围。
           </Typography.Paragraph>

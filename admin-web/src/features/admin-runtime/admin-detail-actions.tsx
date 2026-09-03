@@ -1,4 +1,5 @@
 import { Button, Space } from 'antd'
+import { useState } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminDetailRoute, AdminDetailView } from '../../modules/admin-details'
 import type { AdminOperationLaunchContext, AdminRowOperation } from '../../modules/admin-row-operations'
@@ -9,11 +10,12 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
   route: AdminDetailRoute
   id: string
   view: AdminDetailView
-  onTaskExport?: (taskId: string) => void
+  onTaskExport?: (taskId: string) => void | Promise<void>
   onMediaUpload?: () => void
 }) {
   const { hasCapability } = useAdminSession()
   const { launch } = useAdminOperations()
+  const [taskExporting, setTaskExporting] = useState(false)
   const button = (
     action: string,
     label: string,
@@ -37,8 +39,10 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     )
   }
   else if (route === 'events') {
-    const targetStatus = view.status === '已发布' ? 'UNPUBLISHED'
-      : ['草稿', '已下架'].includes(view.status) ? 'PUBLISHED' : null
+    const event = record(view.source?.event)
+    const eventStatus = String(event.status || '')
+    const targetStatus = eventStatus === 'PUBLISHED' ? 'UNPUBLISHED'
+      : ['DRAFT', 'UNPUBLISHED'].includes(eventStatus) ? 'PUBLISHED' : null
     actions.push(button('mip.admin.events.save', '编辑活动', id, 'events.write'))
     if (targetStatus) actions.push(button(
       'mip.admin.events.changeStatus',
@@ -47,7 +51,7 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
       'events.write',
       { targetStatus },
     ))
-    if (view.status === '草稿') actions.push(button('mip.admin.events.archive', '归档活动', id, 'events.write'))
+    if (eventStatus === 'DRAFT') actions.push(button('mip.admin.events.archive', '归档活动', id, 'events.write'))
     actions.push(
       button('mip.admin.events.clone', '克隆活动', id, 'events.write'),
       button('mip.admin.events.tags.replace', '活动标签', id, 'events.write'),
@@ -67,7 +71,23 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
       button('mip.admin.tasks.revokeMembers', '撤销成员', id, 'tasks.manage'),
     )
     actions.push(button('mip.admin.tasks.delete', '删除任务', id, 'tasks.manage'))
-    if (hasCapability('tasks.manage') && onTaskExport) actions.push(<Button key="task-export" onClick={() => onTaskExport(id)}>导出完成记录</Button>)
+    if (hasCapability('tasks.manage') && onTaskExport) actions.push(
+      <Button
+        key="task-export"
+        loading={taskExporting}
+        onClick={async () => {
+          setTaskExporting(true)
+          try {
+            await onTaskExport(id)
+          }
+          finally {
+            setTaskExporting(false)
+          }
+        }}
+      >
+        导出完成记录
+      </Button>,
+    )
   }
   else if (route === 'banners') {
     const banner = record(view.source?.banner)

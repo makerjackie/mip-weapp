@@ -48,14 +48,13 @@ export function useAdminDetail() {
   }, [])
 
   const changeDetailPage = useCallback((pager: AdminDetailPager, direction: 'previous' | 'next') => {
-    setSelection(current => {
-      if (!current) return current
-      const transition = transitionDetailPage(pageHistory.current, current.options, pager, direction)
-      if (!transition) return current
-      pageHistory.current = transition.history
-      return { ...current, options: transition.options }
-    })
-  }, [])
+    const transition = selection
+      ? transitionDetailPage(pageHistory.current, selection.options, pager, direction)
+      : null
+    if (!transition) return
+    pageHistory.current = transition.history
+    setSelection(current => current ? { ...current, options: transition.options } : current)
+  }, [selection])
 
   return {
     selection,

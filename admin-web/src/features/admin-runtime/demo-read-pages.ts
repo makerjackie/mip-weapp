@@ -1,14 +1,16 @@
-import type { AdminListQuery, AdminListRoute, AdminReadPage, AdminTableRow } from '../../modules/admin-read-pages'
+import type { AdminListQuery, AdminListRoute, AdminReadPage } from '../../modules/admin-read-pages'
+import { labels } from '../../modules/admin-read-formatters'
 import { demo } from '../../services/demo-data'
 
 export function createDemoReadPage(route: AdminListRoute, query: AdminListQuery): AdminReadPage {
   const page = unfilteredDemoPage(route)
   const text = query.query.toLocaleLowerCase('zh-CN')
+  const expectedStatus = query.status ? (labels[query.status] || query.status) : ''
   return {
     ...page,
     sections: page.sections.map(section => ({
       ...section,
-      rows: section.rows.filter(row => (!query.status || String(row.state || row.status || '') === query.status)
+      rows: section.rows.filter(row => (!expectedStatus || String(row.state || row.status || '') === expectedStatus)
         && (!text || Object.values(row).some(value => String(value || '').toLocaleLowerCase('zh-CN').includes(text)))),
     })),
   }
@@ -94,8 +96,4 @@ type AdminListSectionDetailTarget = 'tasks' | 'banners' | 'gameSeasons' | 'gameT
 
 function columns(values: Array<[string, string]>) {
   return values.map(([key, label]) => ({ key, label }))
-}
-
-export function demoRows(page: AdminReadPage): AdminTableRow[] {
-  return page.sections.flatMap(section => section.rows)
 }

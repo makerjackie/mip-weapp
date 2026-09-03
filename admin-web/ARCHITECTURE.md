@@ -73,8 +73,7 @@ action、query/mutation 分类、Web 暴露范围、mutation 字段白名单和�
 | --- | --- | --- |
 | `POST /api/auth/challenge` | 浏览器 | 创建 5 分钟有效的登录短码 |
 | `POST /api/auth/challenge/status` | 浏览器 | 轮询并一次性消费已确认登录 |
-| `GET /api/auth/session` | 浏览器 | 读取当前密封会话 |
-| `POST /api/auth/logout` | 浏览器 | 清除当前会话 |
+| `POST /api/auth/logout` | 浏览器 | 清除当前会话与登录挑战 Cookie |
 | `POST /api/internal/auth/challenge/confirm` | CloudBase | 使用登录确认 HMAC 提交可信身份 |
 | `POST /api/admin` | 浏览器 | 转发精确 allowlist 内的 AdminRequest v1 |
 | `POST /api/media/image` | 浏览器 | 转发受控图片上传请求 |

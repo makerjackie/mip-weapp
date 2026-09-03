@@ -1,7 +1,6 @@
 import {
   createAdminRequest,
   isAdminApiResponse,
-  type AdminApiResponse,
   type AdminOperationAction,
   type AdminRequestInput,
   type AdminSession,
@@ -158,5 +157,3 @@ export class AdminApiClientError extends Error {
     this.retryable = retryable
   }
 }
-
-export type LoadResult<T> = AdminApiResponse<T> & { source: 'api' | 'demo' | 'error' }

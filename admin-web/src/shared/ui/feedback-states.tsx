@@ -23,7 +23,7 @@ export function ErrorState({ title = '数据暂时无法加载', description, on
       type="error"
       showIcon
       icon={<WarningOutlined />}
-      message={title}
+      title={title}
       description={description || '请检查网络后重试。'}
       action={onRetry ? <Button icon={<ReloadOutlined />} onClick={onRetry}>重试</Button> : undefined}
     />

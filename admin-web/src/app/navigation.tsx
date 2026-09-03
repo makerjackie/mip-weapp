@@ -52,7 +52,7 @@ export const adminNavigation: AdminNavigationItem[] = [
   { path: '/media', label: '素材上传', description: '上传并复用受控运营素材', group: '业务管理', icon: <UploadOutlined />, capabilities: ['banners.manage', 'events.album.manage', 'events.write', 'opportunities.moderate', 'userContent.moderate', 'tasks.manage'], requireAny: true },
   { path: '/game', label: '战队管理', description: '管理赛季、战队、赛况、排行和盲盒', group: '业务管理', icon: <TrophyOutlined />, capabilities: ['game.manage'] },
   { path: '/opportunities', label: '机会与内容', description: '管理机会、合作内容和治理记录', group: '业务管理', icon: <BulbOutlined />, capabilities: ['opportunities.moderate', 'userContent.moderate'], requireAny: true },
-  { path: '/growth', label: '成长与勋章', description: '查看等级、权益、流水和勋章', group: '会员运营', icon: <RiseOutlined />, capabilities: ['growth.read', 'badges.manage'], requireAny: true },
+  { path: '/growth', label: '成长与勋章', description: '查看等级、权益、流水和勋章', group: '会员运营', icon: <RiseOutlined />, capabilities: ['growth.read', 'growth.adjust', 'badges.manage'], requireAny: true },
   { path: '/permissions', label: '权限管理', description: '管理运营成员、角色策略和服务器', group: '平台设置', icon: <SafetyCertificateOutlined />, capabilities: ['roles.change', 'branches.manage', 'audit.read'], requireAny: true },
   { path: '/messages', label: '消息管理', description: '管理站内消息、模板和发送计划', group: '平台设置', icon: <MessageOutlined />, capabilities: ['messages.manage'] },
   { path: '/knowledge', label: '知识库', description: '管理内容、来源、审核和采集计划', group: '平台设置', icon: <BookOutlined />, capabilities: ['knowledge.manage'] },

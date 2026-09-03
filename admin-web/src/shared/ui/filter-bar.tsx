@@ -1,6 +1,6 @@
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { Button, Form, Input, Select } from 'antd'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 export interface FilterBarValue { q: string; status: string }
 
@@ -13,7 +13,13 @@ export function FilterBar({ value, placeholder, statusOptions, loading, onChange
   onRefresh?: () => void
 }) {
   const [form] = Form.useForm<FilterBarValue>()
-  useEffect(() => { form.setFieldsValue(value) }, [form, value])
+  const syncedValue = useRef('')
+  useEffect(() => {
+    const signature = `${value.q}\u0000${value.status}`
+    if (syncedValue.current === signature) return
+    syncedValue.current = signature
+    form.setFieldsValue(value)
+  }, [form, value])
   return (
     <Form
       form={form}

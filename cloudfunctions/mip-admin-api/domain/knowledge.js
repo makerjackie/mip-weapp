@@ -13,6 +13,10 @@ const {
 const PLATFORM_SCOPE_ID = '00000000-0000-0000-0000-000000000000'
 const CONTENT_TYPES = new Set(['HOT_NEWS', 'ARTICLE', 'WEB', 'VIDEO', 'PRIVATE_CHANNEL', 'EXPERT_SHARE'])
 const ACCESS_TYPES = new Set(['FREE', 'MEMBER', 'MEMBER_OR_PAID'])
+
+function escapeLike(value) {
+  return value.replace(/[\\%_]/g, '\\$&')
+}
 const REPORT_CATEGORIES = new Set([
   'SPAM', 'HARASSMENT', 'FRAUD', 'INAPPROPRIATE_CONTENT', 'IMPERSONATION', 'OTHER',
 ])
@@ -152,6 +156,9 @@ function createKnowledgeAdminService(database, options = {}) {
       return { section, items: rows.map(runDto), nextCursor: null }
     }
     const status = optionalEnum(input.status, ['DRAFT', 'PENDING_REVIEW', 'PUBLISHED', 'REJECTED', 'WITHDRAWN'])
+    const keyword = typeof input.query === 'string' && input.query.trim()
+      ? `%${escapeLike(input.query.trim().slice(0, 80))}%`
+      : null
     const rows = await database.query(
       `SELECT content.id, content.title, content.summary, content.content_type,
               content.access_type, content.status, content.content_safety_status,
@@ -172,8 +179,9 @@ function createKnowledgeAdminService(database, options = {}) {
          ON product.app_id = content.app_id AND product.content_id = content.id
         AND product.catalog_stage = ?
        WHERE content.app_id = ? AND (? IS NULL OR content.status = ?)
+         AND (? IS NULL OR content.title LIKE ?)
        ORDER BY content.updated_at DESC, content.id DESC LIMIT ?`,
-      [catalogStage, context.appId, status, status, limit],
+      [catalogStage, context.appId, status, status, keyword, keyword, limit],
     )
     return { section: 'CONTENTS', items: rows.map(contentAdminDto), nextCursor: null }
   }

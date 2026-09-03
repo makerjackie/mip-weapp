@@ -33,7 +33,7 @@ export function DetailDrawer({ open, view, loading, error, onClose, actions, onR
       {loading ? <LoadingState /> : null}
       {!loading && error ? <ErrorState description={error} /> : null}
       {!loading && !error && view ? (
-        <Space direction="vertical" size={16} className="detail-sections">
+        <Space orientation="vertical" size={16} className="detail-sections">
           {view.status ? <StatusTag value={view.status} /> : null}
           {view.sections.map(section => (
             <section className="detail-section" key={section.title}>

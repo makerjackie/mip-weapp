@@ -516,6 +516,48 @@ describe('Admin Web BFF', () => {
     assert.equal((await response.json()).error.code, 'AUTH_NOT_CONFIGURED')
   })
 
+  it('maps a challenge-status database outage to an auth-unavailable 503', async () => {
+    const base = new MemoryD1()
+    const database = {
+      prepare: (query: string) => {
+        if (query.includes('FROM mip_admin_web_login_challenges') && query.includes('SELECT')) {
+          throw new Error('D1_DOWN')
+        }
+        return base.prepare(query)
+      },
+    } as unknown as MemoryD1
+    const bff = createAdminBff(env(database), { fetch: fetchQueue(), now: () => NOW })
+    const start = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
+      method: 'POST', headers: { origin: ORIGIN },
+    }))
+    const challengeCookie = cookieValue(start, 'mip_admin_login_challenge')
+    const challenge = await start.clone().json() as { code: string }
+    await bff.handle(new Request(`${ORIGIN}/api/internal/auth/challenge/confirm`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(await loginConfirmationBody(challenge.code)),
+    }))
+
+    const exchange = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge/status`, {
+      method: 'POST', headers: { cookie: challengeCookie, origin: ORIGIN },
+    }))
+
+    assert.equal(exchange.status, 503)
+    assert.equal((await exchange.json()).error.code, 'AUTH_UNAVAILABLE')
+  })
+
+  it('expires both the session and the login-challenge cookie on logout', async () => {
+    const { bff, sessionCookie, challengeCookie } = await confirmedLogin(fetchQueue())
+
+    const response = await bff.handle(new Request(`${ORIGIN}/api/auth/logout`, {
+      method: 'POST', headers: { origin: ORIGIN, cookie: `${sessionCookie}; ${challengeCookie}` },
+    }))
+
+    assert.equal(response.status, 200)
+    const cookies = response.headers.getSetCookie()
+    assert.equal(cookies.filter(value => value.startsWith('mip_admin_session=;')).length, 1)
+    assert.equal(cookies.filter(value => value.startsWith('mip_admin_login_challenge=;')).length, 1)
+  })
+
   it('atomically locks each trusted AppID and principal after five failed codes for five minutes', async () => {
     const database = new MemoryD1()
     let now = NOW

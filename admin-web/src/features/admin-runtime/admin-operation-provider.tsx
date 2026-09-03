@@ -17,8 +17,6 @@ import { ConfirmDialog, MutationDialog } from '../../shared/ui'
 import {
   createOperationModel,
   isReviewedOperationAction,
-  operationCapability,
-  type ReviewedOperationAction,
 } from './operation-model'
 
 const basicActions = new Set<string>([
@@ -226,8 +224,4 @@ function basicCapability(action: AdminMutationAction) {
   if (action === 'mip.admin.refunds.submit') return 'refunds.submit'
   if (action === 'mip.admin.communications.publishEventReminder') return 'communications.publish'
   return 'events.write'
-}
-
-export function reviewedCapability(action: ReviewedOperationAction) {
-  return operationCapability(action)
 }

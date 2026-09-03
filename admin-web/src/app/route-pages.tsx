@@ -1,5 +1,5 @@
 import { App } from 'antd'
-import { useNavigate, useRouter, useRouterState } from '@tanstack/react-router'
+import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { useCallback, useEffect, useState } from 'react'
 import { useAdminSession } from './session-provider'
 import type { AdminListSearch } from './router'
@@ -63,13 +63,24 @@ function CoreRoutePage({ route }: { route: CoreRoute }) {
   const { launch } = useAdminOperations()
   const search = useRouteSearch()
   const updateSearch = useUpdateSearch()
-  const router = useRouter()
+  const [cursorStack, setCursorStack] = useState<Array<string | null>>([])
   const detail = useAdminDetail()
   const [exportIntent, setExportIntent] = useState<{ kind: 'users' | 'orders'; query: string; status: string } | null>(null)
+  const changeSearch = useCallback((next: AdminListSearch) => {
+    if (next.cursor === undefined) setCursorStack([])
+    else if ((next.page ?? 1) > (search.page ?? 1)) setCursorStack(stack => [...stack, search.cursor || null])
+    void updateSearch(next)
+  }, [search, updateSearch])
+  const goPreviousPage = useCallback(() => {
+    const previous = cursorStack[cursorStack.length - 1] ?? null
+    const page = (search.page || 2) - 1
+    setCursorStack(stack => stack.slice(0, -1))
+    void updateSearch({ ...search, cursor: previous || undefined, page: page > 1 ? page : undefined })
+  }, [cursorStack, search, updateSearch])
   const common = {
     search: search as CorePageSearchState,
-    onSearchChange: (next: CorePageSearchState) => void updateSearch(next),
-    onPreviousPage: search.page && search.page > 1 ? () => router.history.back() : undefined,
+    onSearchChange: (next: CorePageSearchState) => void changeSearch(next),
+    onPreviousPage: cursorStack.length > 0 ? goPreviousPage : undefined,
     onOpenDetail: (intent: { route: AdminDetailRoute; id: string }) => detail.openDetail(intent.route, intent.id),
     onMutation: (intent: CorePageMutationIntent) => void launch(intent.action, intent.targetId, null, {
       values: intent.values,
@@ -112,7 +123,7 @@ function OperationsRoutePage({ route }: { route: OperationsRoute }) {
   const navigate = useNavigate()
   const search = useRouteSearch()
   const updateSearch = useUpdateSearch()
-  const router = useRouter()
+  const [cursorStack, setCursorStack] = useState<Array<string | null>>([])
   const detail = useAdminDetail()
   const query = listQuery(search)
   const result = useAdminReadPage(route, query)
@@ -122,17 +133,29 @@ function OperationsRoutePage({ route }: { route: OperationsRoute }) {
     expectedVersion: intent.expectedVersion,
     allowedCapabilities: intent.allowedCapabilities,
   }) : undefined
+  const goPreviousPage = useCallback(() => {
+    const previous = cursorStack[cursorStack.length - 1] ?? null
+    const page = (search.page || 2) - 1
+    setCursorStack(stack => stack.slice(0, -1))
+    void updateSearch({ ...search, cursor: previous || undefined, page: page > 1 ? page : undefined })
+  }, [cursorStack, search, updateSearch])
   const state: OperationsPageState = {
     page: result.data || null,
     query,
     loading: result.loading,
     error: result.errorMessage,
     demoMode,
-    hasPreviousPage: Boolean(search.page && search.page > 1),
-    onFilterChange: value => void updateSearch({ q: value.query || undefined, status: value.status || undefined }),
+    hasPreviousPage: Boolean(search.page && search.page > 1) && cursorStack.length > 0,
+    onFilterChange: value => {
+      setCursorStack([])
+      void updateSearch({ q: value.query || undefined, status: value.status || undefined })
+    },
     onRefresh: () => void result.refetch(),
-    onPreviousPage: () => router.history.back(),
-    onNextPage: cursor => void updateSearch({ ...search, cursor, page: (search.page || 1) + 1 }),
+    onPreviousPage: cursorStack.length > 0 ? goPreviousPage : undefined,
+    onNextPage: cursor => {
+      setCursorStack(stack => [...stack, search.cursor || null])
+      void updateSearch({ ...search, cursor, page: (search.page || 1) + 1 })
+    },
     onOpenDetail: intent => detail.openDetail(intent.route, intent.id),
     onWrite,
   }

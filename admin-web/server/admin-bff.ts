@@ -117,12 +117,12 @@ export function createAdminBff(
     if (request.method === 'POST' && url.pathname === '/api/internal/auth/challenge/confirm') {
       return confirmLoginChallenge(request)
     }
-    if (request.method === 'GET' && url.pathname === '/api/auth/session') {
-      return readBrowserSession(request)
-    }
     if (request.method === 'POST' && url.pathname === '/api/auth/logout') {
       if (!hasTrustedOrigin(request, env)) return jsonError('FORBIDDEN', '请求来源无效', 403)
-      return json({ authenticated: false }, 200, { 'set-cookie': expireCookie(SESSION_COOKIE, request) })
+      const headers = new Headers({ 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+      headers.append('set-cookie', expireCookie(SESSION_COOKIE, request))
+      headers.append('set-cookie', expireCookie(CHALLENGE_COOKIE, request))
+      return new Response(JSON.stringify({ authenticated: false }), { status: 200, headers })
     }
     if (request.method === 'POST' && url.pathname === ADMIN_MEDIA_UPLOAD_PATH) {
       return forwardAdminMediaImage(request)
@@ -192,11 +192,17 @@ export function createAdminBff(
       return challengeExpired(request)
     }
     const browserKeyHash = await hmacHex(env.MIP_WEB_SESSION_SECRET!, `browser\0${claims.browserKey}`, deps.crypto)
-    const row = await env.MIP_ADMIN_AUTH_DB!.prepare(
-      `SELECT id, status, app_id, open_id, display_name, expires_at
-         FROM mip_admin_web_login_challenges
-        WHERE id = ?1 AND browser_key_hash = ?2`,
-    ).bind(claims.id, browserKeyHash).first<ChallengeRow>()
+    let row: ChallengeRow | null
+    try {
+      row = await env.MIP_ADMIN_AUTH_DB!.prepare(
+        `SELECT id, status, app_id, open_id, display_name, expires_at
+           FROM mip_admin_web_login_challenges
+          WHERE id = ?1 AND browser_key_hash = ?2`,
+      ).bind(claims.id, browserKeyHash).first<ChallengeRow>()
+    }
+    catch {
+      return jsonError('AUTH_UNAVAILABLE', '网页登录服务暂时不可用', 503)
+    }
     if (!row || row.expires_at < deps.now()) return challengeExpired(request)
     if (row.status === 'PENDING') {
       return json({ state: 'PENDING', expiresAt: new Date(row.expires_at).toISOString(), pollAfterMs: 1_500 })
@@ -205,11 +211,17 @@ export function createAdminBff(
       return challengeExpired(request)
     }
 
-    const consumed = await env.MIP_ADMIN_AUTH_DB!.prepare(
-      `UPDATE mip_admin_web_login_challenges
-          SET status = 'CONSUMED', consumed_at = ?1
-        WHERE id = ?2 AND browser_key_hash = ?3 AND status = 'CONFIRMED' AND consumed_at IS NULL`,
-    ).bind(deps.now(), claims.id, browserKeyHash).run()
+    let consumed: D1RunResult
+    try {
+      consumed = await env.MIP_ADMIN_AUTH_DB!.prepare(
+        `UPDATE mip_admin_web_login_challenges
+            SET status = 'CONSUMED', consumed_at = ?1
+          WHERE id = ?2 AND browser_key_hash = ?3 AND status = 'CONFIRMED' AND consumed_at IS NULL`,
+      ).bind(deps.now(), claims.id, browserKeyHash).run()
+    }
+    catch {
+      return jsonError('AUTH_UNAVAILABLE', '网页登录服务暂时不可用', 503)
+    }
     if (!consumed.success || Number(consumed.meta?.changes || 0) !== 1) return challengeExpired(request)
 
     const session: SessionClaims = {
@@ -312,16 +324,6 @@ export function createAdminBff(
       // A stale failure counter can only make the next confirmation stricter; login stays single-use.
     }
     return json({ confirmed: true }, 200)
-  }
-
-  async function readBrowserSession(request: Request): Promise<Response> {
-    const session = await sessionFromRequest(request)
-    if (!session) return json({ authenticated: false }, 200)
-    return json({
-      authenticated: true,
-      actor: session.displayName ? { name: session.displayName } : {},
-      expiresAt: new Date(session.expiresAt).toISOString(),
-    }, 200)
   }
 
   async function forwardAdminQuery(request: Request): Promise<Response> {

@@ -19,7 +19,7 @@ export class AppErrorBoundary extends Component<{ children: ReactNode }, State> 
         <Alert
           type="error"
           showIcon
-          message="页面暂时无法显示"
+          title="页面暂时无法显示"
           description="界面运行时发生错误。刷新后仍未恢复时，请记录当前页面和操作。"
           action={<Button onClick={() => window.location.reload()}>刷新页面</Button>}
         />

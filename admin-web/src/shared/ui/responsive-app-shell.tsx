@@ -138,7 +138,7 @@ export function ResponsiveAppShell() {
             <small>登录码有效期至 {new Date(challenge.expiresAt).toLocaleTimeString('zh-CN', { hour12: false })}</small>
           </div>
         ) : loginError ? (
-          <Space direction="vertical">
+          <Space orientation="vertical">
             <Typography.Text type="danger">{loginError}</Typography.Text>
             <Button onClick={() => void beginLogin()}>重新获取登录码</Button>
           </Space>

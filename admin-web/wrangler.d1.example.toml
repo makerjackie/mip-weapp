@@ -1,8 +1,9 @@
 name = "mip-admin-web"
 pages_build_output_dir = "./dist"
-compatibility_date = "2026-08-28"
+compatibility_date = "2026-08-27"
 
 [[d1_databases]]
 binding = "MIP_ADMIN_AUTH_DB"
 database_name = "mip-admin-auth"
 database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"

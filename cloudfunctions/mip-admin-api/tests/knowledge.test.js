@@ -85,6 +85,34 @@ describe('knowledge admin service', () => {
     assert.deepEqual(commentQuery.params, ['app', null, null, 50])
   })
 
+  it('filters knowledge contents by an escaped server-side keyword', async () => {
+    const calls = []
+    const database = {
+      async one() { return accessRow() },
+      async query(sql, params) {
+        calls.push({ sql, params })
+        if (sql.includes('mip_admin_role_bindings')) return platformKnowledgeGrant
+        return []
+      },
+    }
+    const service = createKnowledgeAdminService(database)
+
+    await service.listKnowledgeAdmin(caller, { section: 'CONTENTS', query: '早会%分享_' })
+    const filtered = calls.find(call => call.sql.includes('FROM mip_knowledge_contents content'))
+    assert.match(filtered.sql, /AND \(\? IS NULL OR content\.title LIKE \?\)/)
+    const [, appId, status, statusArg, keyword, keywordArg, limit] = filtered.params
+    assert.equal(appId, 'app')
+    assert.equal(status, null)
+    assert.equal(keyword, '%早会\\%分享\\_%')
+    assert.equal(keywordArg, keyword)
+    assert.equal(limit, 50)
+
+    await service.listKnowledgeAdmin(caller, { section: 'CONTENTS' })
+    const unfiltered = calls.filter(call => call.sql.includes('FROM mip_knowledge_contents content')).at(-1)
+    assert.deepEqual(unfiltered.params.at(-3), null)
+    assert.deepEqual(unfiltered.params.at(-2), null)
+  })
+
   it('checks every current agreement and the primary branch before platform capability', async () => {
     const cases = [
       {

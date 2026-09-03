@@ -93,7 +93,7 @@ export function MutationDialog({ open, title, description, fields, values, loadi
       <Form form={form} layout="vertical" initialValues={formValues(fields, values)} disabled={loading}>
         <div className="mutation-grid"><OperationFields fields={fields} form={form} /></div>
       </Form>
-      {error ? <Alert type="error" showIcon message={error} description="请求结果不确定时，请先刷新并核对服务端记录。" /> : null}
+      {error ? <Alert type="error" showIcon title={error} description="请求结果不确定时，请先刷新并核对服务端记录。" /> : null}
     </Modal>
   )
 }

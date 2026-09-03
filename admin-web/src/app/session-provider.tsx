@@ -91,6 +91,11 @@ export function SessionProvider({ children, client = defaultClient }: { children
           await refreshSession()
           return
         }
+        if (Date.parse(status.expiresAt) <= Date.now()) {
+          setChallenge(null)
+          setLoginError('登录码已过期，请重新获取')
+          return
+        }
         delay = status.pollAfterMs
       }
       catch (reason) {
