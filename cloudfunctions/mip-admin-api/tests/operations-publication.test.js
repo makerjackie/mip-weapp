@@ -97,6 +97,7 @@ describe('admin event reminder publication', () => {
       fields: {
         title: '城市交流活动',
         startsAt: '2026-08-25 10:00',
+        description: '城市交流活动',
         location: '广州活动中心',
       },
     })

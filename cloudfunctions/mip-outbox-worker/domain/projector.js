@@ -1092,6 +1092,9 @@ function eventReminderFields(value) {
     startsAt: boundedText(fields.startsAt, 100),
     location: boundedText(fields.location, 100),
   }
+  if (fields.description !== undefined) {
+    normalized.description = boundedText(fields.description, 100)
+  }
   if (Object.values(normalized).some(item => !item)) {
     throw new Error('OUTBOX_EVENT_INVALID')
   }

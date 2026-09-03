@@ -23,7 +23,7 @@ function createOperationsPublisher(options = {}) {
       const authorization = await lockMutationAuthorization(tx, input)
       const requestHash = eventReminderRequestHash(input)
       const event = await tx.one(
-        `SELECT id, branch_id, status, version, title,
+        `SELECT id, branch_id, status, version, title, description,
           DATE_FORMAT(CONVERT_TZ(starts_at, '+00:00', '+08:00'), '%Y-%m-%d %H:%i') AS starts_at_label,
           COALESCE(NULLIF(TRIM(venue_name), ''),
             CASE WHEN event_mode IN ('ONLINE', 'HYBRID') THEN '线上活动' ELSE NULL END,
@@ -185,6 +185,7 @@ function eventReminderFacts(event, sendWechatReminder) {
   if (!eventTitle || !startsAt || !location) {
     throw codeError('COMMUNICATIONS_EVENT_FACT_INVALID')
   }
+  const description = boundedText(event?.description_label || event?.description, 100) || eventTitle
   const title = truncateText(`活动提醒：${eventTitle}`, 100)
   const body = `活动“${eventTitle}”将于 ${startsAt} 开始，地点：${location}。`
   if (body.length > 500) throw codeError('COMMUNICATIONS_EVENT_FACT_INVALID')
@@ -197,6 +198,7 @@ function eventReminderFacts(event, sendWechatReminder) {
           fields: {
             title: truncateText(eventTitle, 100),
             startsAt,
+            description: truncateText(description, 100),
             location: truncateText(location, 100),
           },
         }

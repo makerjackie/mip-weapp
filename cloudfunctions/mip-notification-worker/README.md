@@ -4,7 +4,7 @@ MIP 站内消息写入与微信补充通知投递函数。站内消息先落库�
 
 本函数不开放客户端调用，也不配置定时触发器。`publishMessage`、`reconcileDeliveryTask` 与 `runDeliveryBatch` 只接受受控 HMAC 调用。`reconcileDeliveryTask` 只在证据版本匹配时收敛过期 `PROCESSING` 或读取既有失败事实，不调用外部 provider；`UNKNOWN` / `MANUAL_REVIEW` 不自动重放，也不会被伪造为 `DELIVERED`。
 
-`MIP_SUBSCRIBE_TEMPLATES_JSON` 只配置实际已启用的模板。没有对应模板时仍写站内消息，不创建外部投递任务。`EVENT_REMINDER` 的逻辑字段合同为 `title`、`startsAt`、`location`；配置将实际模板关键词映射到这些字段，例如：
+`MIP_SUBSCRIBE_TEMPLATES_JSON` 只配置实际已启用的模板。没有对应模板时仍写站内消息，不创建外部投递任务。`EVENT_REMINDER` 的逻辑字段合同为 `title`、`startsAt`、`description`、`location`；配置将实际模板关键词映射到这些字段，例如：
 
 ```json
 {
@@ -13,7 +13,8 @@ MIP 站内消息写入与微信补充通知投递函数。站内消息先落库�
     "fields": {
       "title": "thing1",
       "startsAt": "time2",
-      "location": "thing3"
+      "description": "thing3",
+      "location": "thing4"
     }
   }
 }

@@ -2,7 +2,7 @@
 
 const keywordPattern = /^(?:thing|time|date|amount|phone_number|phrase|character_string|number)\d+$/
 const templateFieldContracts = Object.freeze({
-  EVENT_REMINDER: Object.freeze(new Set(['title', 'startsAt', 'location'])),
+  EVENT_REMINDER: Object.freeze(new Set(['title', 'startsAt', 'description', 'location'])),
   CHECKIN_RESULT: Object.freeze(new Set(['title', 'checkedAt', 'status'])),
   HEART_RECEIVED: Object.freeze(new Set(['title', 'status'])),
 })

@@ -50,6 +50,13 @@
 可提交：`.env.example`、`src/config/brand.ts`、`touristappid`
 仅本地：`.env.local`、`project.private.config.json`、商户证书、MySQL URI
 
+### 微信代码上传
+
+- 日常上传优先使用已登录的微信开发者工具登录态，通过仓库现有的 `weapp upload` 流程操作；不把登录态、二维码或凭证写入仓库。
+- 微信开发者工具登录态不可用时，使用 `miniprogram-ci` 读取 `.env.local` 中的 `MIP_WECHAT_CODE_UPLOAD_KEY_PATH` 作为 `privateKeyPath` 上传；当前默认路径为仓库根目录下的本地微信私钥文件。
+- 私钥只作为本地文件保存，并由 `.gitignore` 忽略；不得读取、打印、复制到源码、构建产物、云函数或日志，也不得修改包含它的文件夹权限。
+- 上传前先构建 `dist/`；正式上传必须明确版本号和更新说明。微信开放接口凭证用于接口访问，不替代代码上传私钥。
+
 ## 8. CloudBase
 
 唯一通道 `config/mcporter.json`。默认使用 `.env.local` 中的环境级 `CLOUDBASE_API_KEY` 与 `CLOUDBASE_ENV_ID`；`pnpm cloud:status` 和 `pnpm cloud:auth` 只验证并加载 API Key，不发起设备码。
