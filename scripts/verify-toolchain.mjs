@@ -13,8 +13,25 @@ const expectedPnpmVersion = /^pnpm@(.+)$/.exec(packageJson.packageManager)?.[1]
 if (!expectedPnpmVersion) {
   throw new Error('package.json packageManager must declare an exact pnpm version')
 }
+const enginesNode = packageJson.engines?.node ?? ''
+const minNodeVersion = /^>=(\d+\.\d+\.\d+)/.exec(enginesNode)?.[1]
+if (!minNodeVersion) {
+  throw new Error('package.json engines.node must declare a minimum Node version (">=x.y.z")')
+}
+const nodeTuple = process.versions.node.split('.').map(Number)
+const minTuple = minNodeVersion.split('.').map(Number)
+for (let i = 0; i < 3; i += 1) {
+  if ((nodeTuple[i] ?? 0) > (minTuple[i] ?? 0)) {
+    break
+  }
+  if ((nodeTuple[i] ?? 0) < (minTuple[i] ?? 0)) {
+    throw new Error(`Node >= ${minNodeVersion} is required by package.json engines; received ${process.version}`)
+  }
+}
 if (process.versions.node !== expectedNodeVersion) {
-  throw new Error(`Node ${expectedNodeVersion} is required by .nvmrc; received ${process.version}`)
+  console.warn(
+    `[WARN] .nvmrc pins Node ${expectedNodeVersion}; received ${process.version} — allowed by engines.node (${enginesNode})`,
+  )
 }
 
 const pnpmVersion = execFileSync('pnpm', ['--version'], { encoding: 'utf8' }).trim()

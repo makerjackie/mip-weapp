@@ -7,7 +7,7 @@
   "description": "MIP membership and city-branch WeChat Mini Program",
   "license": "UNLICENSED",
   "engines": {
-    "node": ">=22.18.0 <23"
+    "node": ">=22.18.0"
   },
   "scripts": {
     "setup": "node scripts/setup.mjs",
