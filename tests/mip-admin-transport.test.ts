@@ -4,7 +4,6 @@ import { createMipAdminGateway } from '../src/modules/mip-admin/cloudbase-gatewa
 import { createCloudBaseAdminTransport } from '../src/modules/mip-admin/cloudbase-transport'
 import { createAdminRequest } from '../src/modules/mip-admin/request-contract'
 import { createInMemoryAdminTransport } from '../src/modules/mip-admin/transport'
-import { createMipKnowledgeAdminModule } from '../src/modules/mip-knowledge/admin'
 
 const defaultCloudHarness = vi.hoisted(() => ({
   callFunction: vi.fn(),
@@ -186,44 +185,25 @@ describe('MIP admin transports', () => {
     const handledInputs: Array<Record<string, unknown>> = []
     const transport = createInMemoryAdminTransport({
       'mip.admin.session': () => session,
-      'mip.admin.opportunityComments.moderate': (input) => {
+      'mip.admin.events.checkIn': (input) => {
         handledInputs.push(input)
-        return { id: 'comment-a', status: 'HIDDEN', version: 4 }
+        return { id: 'registration-a', status: 'ATTENDED', version: 4, idempotent: false }
       },
     })
     const gateway = createMipAdminGateway(transport)
 
     await expect(gateway.getSession()).resolves.toEqual(session)
-    await expect(gateway.moderateOpportunityComment({
-      opportunityId: 'opportunity-a',
-      commentId: 'comment-a',
+    await expect(gateway.checkIn({
+      eventId: 'event-a',
+      registrationId: 'registration-a',
       expectedVersion: 3,
-      action: 'HIDE',
-      reason: '内容不符合要求',
-    })).resolves.toEqual({ id: 'comment-a', status: 'HIDDEN', version: 4 })
+      idempotencyKey: 'checkin-registration-a-3',
+    })).resolves.toEqual({ id: 'registration-a', status: 'ATTENDED', version: 4, idempotent: false })
     expect(handledInputs).toEqual([{
-      opportunityId: 'opportunity-a',
-      commentId: 'comment-a',
+      eventId: 'event-a',
+      registrationId: 'registration-a',
       expectedVersion: 3,
-      action: 'HIDE',
-      reason: '内容不符合要求',
+      idempotencyKey: 'checkin-registration-a-3',
     }])
-  })
-
-  it('runs knowledge administration through the neutral transport seam', async () => {
-    const handledInputs: Array<Record<string, unknown>> = []
-    const transport = createInMemoryAdminTransport({
-      'mip.admin.knowledge.get': (input) => {
-        handledInputs.push(input)
-        return { id: input.contentId, title: '示例内容' }
-      },
-    })
-    const knowledge = createMipKnowledgeAdminModule(transport)
-
-    await expect(knowledge.getContent('content-a')).resolves.toEqual({
-      id: 'content-a',
-      title: '示例内容',
-    })
-    expect(handledInputs).toEqual([{ contentId: 'content-a' }])
   })
 })

@@ -27,15 +27,10 @@ describe('MIP configurable RBAC', () => {
       path.resolve(import.meta.dirname, '../cloudfunctions/mip-admin-api/domain/role-capability-policies.js'),
       'utf8',
     )
-    const gateway = fs.readFileSync(
-      path.resolve(import.meta.dirname, '../src/modules/mip-admin/cloudbase-gateway.ts'),
-      'utf8',
-    )
     expect(repository).toContain('SET policy_mode = \'DEFAULT\'')
     expect(repository).not.toContain('DELETE FROM mip_role_capability_policies')
     expect(repository).toContain('AND version = ?')
     expect(governance).toContain('\'admin.role_capability_policies.reset\'')
     expect(governance).toContain('roleCapabilityPolicyView(roleKey, policy, \'DEFAULT\')')
-    expect(gateway).toContain('call(\'mip.admin.rolePolicies.update\', { ...input, reset: true })')
   })
 })

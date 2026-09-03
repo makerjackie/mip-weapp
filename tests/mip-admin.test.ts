@@ -1,7 +1,6 @@
 import type { MipAdminGateway, MipAdminSession } from '../src/modules/mip-admin/types'
 import { describe, expect, it, vi } from 'vitest'
 import { createMipAdminModule, hasCapability, hasScopedCapability } from '../src/modules/mip-admin/client'
-import { createAndOpenExport } from '../src/modules/mip-admin/export-download'
 
 const session: MipAdminSession = {
   enabled: true,
@@ -9,58 +8,25 @@ const session: MipAdminSession = {
   capabilities: [
     { capability: 'users.read', scopeType: 'BRANCH', scopeId: 'branch-a' },
     { capability: 'events.read', scopeType: 'BRANCH', scopeId: 'branch-a' },
-    { capability: 'events.album.manage', scopeType: 'BRANCH', scopeId: 'branch-a' },
-    { capability: 'communications.publish', scopeType: 'BRANCH', scopeId: 'branch-a' },
+    { capability: 'events.roster.read', scopeType: 'BRANCH', scopeId: 'branch-a' },
+    { capability: 'events.checkin.manage', scopeType: 'BRANCH', scopeId: 'branch-a' },
+    { capability: 'events.checkin.undo', scopeType: 'BRANCH', scopeId: 'branch-a' },
   ],
 }
 
 function gateway() {
   return {
     getSession: vi.fn(async () => session),
-    getDashboard: vi.fn(),
-    listBranches: vi.fn(async () => ({ items: [], nextCursor: null })),
-    createBranch: vi.fn(),
-    updateBranch: vi.fn(),
-    changeBranchStatus: vi.fn(),
-    listCommunityReports: vi.fn(async () => ({ items: [], nextCursor: null })),
-    claimCommunityReport: vi.fn(),
-    closeCommunityReport: vi.fn(),
-    listUsers: vi.fn(async () => ({ items: [], nextCursor: null })),
-    updateUser: vi.fn(),
-    setUserControl: vi.fn(),
-    createExport: vi.fn(),
-    prepareExport: vi.fn(),
-    getExportStatus: vi.fn(),
-    reserveExport: vi.fn(),
-    completeExport: vi.fn(),
+    confirmWebLogin: vi.fn(),
     listEvents: vi.fn(async () => ({ items: [], nextCursor: null })),
-    getEvent: vi.fn(),
-    listEventAlbumPhotos: vi.fn(async () => ({ items: [], nextCursor: null })),
-    reviewEventAlbumPhoto: vi.fn(),
-    saveEvent: vi.fn(),
-    cloneEvent: vi.fn(),
-    changeEventStatus: vi.fn(),
-    publishEventReminder: vi.fn(),
-    listRoster: vi.fn(),
-    reviewRegistration: vi.fn(),
+    getEvent: vi.fn(async (eventId: string) => ({
+      id: eventId,
+      status: 'PUBLISHED',
+      version: 1,
+    })),
+    listRoster: vi.fn(async () => ({ items: [], nextCursor: null })),
     checkIn: vi.fn(),
-    listRoles: vi.fn(),
-    searchRoleCandidates: vi.fn(),
-    setRole: vi.fn(),
-    listOpportunities: vi.fn(),
-    unpublishOpportunity: vi.fn(),
-    archiveOpportunity: vi.fn(),
-    listGrowthLevels: vi.fn(),
-    saveGrowthLevel: vi.fn(),
-    listGrowthRules: vi.fn(),
-    saveGrowthRule: vi.fn(),
-    listGrowthEntries: vi.fn(),
-    adjustGrowth: vi.fn(),
-    listOrders: vi.fn(),
-    submitRefund: vi.fn(),
-    retryRefund: vi.fn(),
-    listOperationalExceptions: vi.fn(async () => ({ items: [], nextCursor: null, availableTypes: [] })),
-    listAudit: vi.fn(),
+    undoCheckIn: vi.fn(),
   } satisfies MipAdminGateway
 }
 
@@ -69,151 +35,77 @@ describe('MIP admin client module', () => {
     expect(hasCapability(session.capabilities, 'users.read')).toBe(true)
     expect(hasCapability(session.capabilities, 'refunds.submit')).toBe(false)
     expect(hasCapability(session.capabilities, 'branches.manage')).toBe(false)
-    expect(hasCapability(session.capabilities, 'community.reports.manage')).toBe(false)
-    expect(hasScopedCapability(session.capabilities, 'communications.publish', {
+    expect(hasScopedCapability(session.capabilities, 'events.checkin.manage', {
       scopeType: 'EVENT',
       scopeId: 'event-a',
       branchId: 'branch-a',
     })).toBe(true)
-    expect(hasScopedCapability(session.capabilities, 'communications.publish', {
+    expect(hasScopedCapability(session.capabilities, 'events.checkin.manage', {
       scopeType: 'EVENT',
       scopeId: 'event-b',
       branchId: 'branch-b',
     })).toBe(false)
-    expect(hasScopedCapability(session.capabilities, 'events.album.manage', {
+    expect(hasScopedCapability(session.capabilities, 'events.checkin.undo', {
       scopeType: 'EVENT',
       scopeId: 'event-a',
       branchId: 'branch-a',
     })).toBe(true)
   })
 
-  it('caches reads and invalidates them after a mutation', async () => {
+  it('caches the session read and honors the force refresh', async () => {
     const source = gateway()
     const module = createMipAdminModule(source)
-    await module.users.list({ filters: { kind: 'PLAYER' } })
-    await module.users.list({ filters: { kind: 'PLAYER' } })
-    expect(source.listUsers).toHaveBeenCalledTimes(1)
-    await module.users.update({ userId: 'user-a', expectedVersion: 1, fields: { headline: '顾问' } })
-    await module.users.list({ filters: { kind: 'PLAYER' } })
-    expect(source.listUsers).toHaveBeenCalledTimes(2)
-    expect(source.updateUser).toHaveBeenCalledTimes(1)
+
+    await module.session.get()
+    await module.session.get()
+    expect(source.getSession).toHaveBeenCalledTimes(1)
+
+    await module.session.get(true)
+    expect(source.getSession).toHaveBeenCalledTimes(2)
   })
 
-  it('caches the branch directory and invalidates it after a successful mutation', async () => {
+  it('caches event reads and invalidates them after a check-in mutation', async () => {
     const source = gateway()
     const module = createMipAdminModule(source)
-    await module.governance.listBranches()
-    await module.governance.listBranches()
-    expect(source.listBranches).toHaveBeenCalledTimes(1)
-    await module.governance.createBranch({
-      branchKey: 'guangzhou',
-      name: '广州分会',
-      cityName: '广州',
-      summary: '广州城市分会',
+
+    await module.events.list()
+    await module.events.list()
+    expect(source.listEvents).toHaveBeenCalledTimes(1)
+
+    await module.events.get('event-a')
+    await module.events.get('event-a')
+    expect(source.getEvent).toHaveBeenCalledTimes(1)
+
+    await module.events.checkIn({
+      eventId: 'event-a',
+      registrationId: 'registration-a',
+      expectedVersion: 1,
+      idempotencyKey: 'checkin-event-a-1',
     })
-    await module.governance.listBranches()
-    expect(source.listBranches).toHaveBeenCalledTimes(2)
-    expect(source.createBranch).toHaveBeenCalledTimes(1)
+
+    await module.events.list()
+    await module.events.get('event-a')
+    expect(source.listEvents).toHaveBeenCalledTimes(2)
+    expect(source.getEvent).toHaveBeenCalledTimes(2)
+    expect(source.checkIn).toHaveBeenCalledTimes(1)
+  })
+
+  it('caches roster reads by event and bypasses the cache for phone requests', async () => {
+    const source = gateway()
+    const module = createMipAdminModule(source)
+
+    await module.events.listRoster({ eventId: 'event-a' })
+    await module.events.listRoster({ eventId: 'event-a' })
+    expect(source.listRoster).toHaveBeenCalledTimes(1)
+
+    await module.events.listRoster({ eventId: 'event-a', includePhone: true })
+    await module.events.listRoster({ eventId: 'event-a', includePhone: true })
+    expect(source.listRoster).toHaveBeenCalledTimes(3)
   })
 
   it('does not expose the raw gateway or a generic mutation escape hatch', () => {
     const module = createMipAdminModule(gateway())
     expect(module).not.toHaveProperty('gateway')
     expect(module).not.toHaveProperty('mutate')
-  })
-
-  it('caches each community report status and invalidates the list after a mutation', async () => {
-    const source = gateway()
-    const module = createMipAdminModule(source)
-    await module.community.listReports('PENDING')
-    await module.community.listReports('PENDING')
-    await module.community.listReports('REVIEWING')
-    expect(source.listCommunityReports).toHaveBeenCalledTimes(2)
-    await module.community.claimReport({ reportId: 'report-a', expectedVersion: 1, reason: '开始审核' })
-    await module.community.listReports('PENDING')
-    expect(source.listCommunityReports).toHaveBeenCalledTimes(3)
-  })
-
-  it('caches operational exception reads by server-side filters', async () => {
-    const source = gateway()
-    const module = createMipAdminModule(source)
-    await module.governance.listOperationalExceptions({ type: 'PAYMENT', status: 'FAILED' })
-    await module.governance.listOperationalExceptions({ type: 'PAYMENT', status: 'FAILED' })
-    await module.governance.listOperationalExceptions({ type: 'REFUND', status: 'FAILED' })
-    expect(source.listOperationalExceptions).toHaveBeenCalledTimes(2)
-  })
-
-  it('downloads before consuming the one-time export and opens only the local file', async () => {
-    const source = gateway()
-    const calls: string[] = []
-    source.createExport.mockImplementation(async () => {
-      calls.push('create')
-      return { ticketId: 'ticket-a', token: 'a'.repeat(43), status: 'PENDING', expiresAt: '2026-08-24T00:15:00.000Z' }
-    })
-    source.prepareExport.mockImplementation(async () => {
-      calls.push('prepare')
-      return { status: 'READY', rowCount: 2, expiresAt: '2026-08-24T00:15:00.000Z', fileName: 'mip-users-20260824T000000000Z.xlsx', failureCode: null }
-    })
-    source.reserveExport.mockImplementation(async () => {
-      calls.push('reserve')
-      return {
-        status: 'RESERVED',
-        tempUrl: 'https://example.test/export.xlsx',
-        fileName: 'mip-users-20260824T000000000Z.xlsx',
-        contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        contentBytes: 512,
-        contentSha256: 'a'.repeat(64),
-        reservationExpiresAt: '2026-08-24T00:02:00.000Z',
-      }
-    })
-    source.completeExport.mockImplementation(async () => {
-      calls.push('complete')
-      return { status: 'CONSUMED', consumedAt: '2026-08-24T00:00:01.000Z' }
-    })
-    const runtime = {
-      downloadFile(options: { success: (value: { statusCode: number, tempFilePath: string }) => void }) {
-        calls.push('download')
-        options.success({ statusCode: 200, tempFilePath: '/tmp/export.xlsx' })
-      },
-      openDocument(options: { filePath: string, success: () => void }) {
-        calls.push(`open:${options.filePath}`)
-        options.success()
-      },
-    }
-    const result = await createAndOpenExport(source, { exportType: 'USERS' }, { runtime })
-    expect(result.rowCount).toBe(2)
-    expect(calls).toEqual(['create', 'prepare', 'reserve', 'download', 'complete', 'open:/tmp/export.xlsx'])
-  })
-
-  it('does not consume a reservation when the file download fails', async () => {
-    const source = gateway()
-    source.createExport.mockResolvedValue({
-      ticketId: 'ticket-a',
-      token: 'a'.repeat(43),
-      status: 'PENDING',
-      expiresAt: '2026-08-24T00:15:00.000Z',
-    })
-    source.prepareExport.mockResolvedValue({
-      status: 'READY',
-      rowCount: 1,
-      expiresAt: '2026-08-24T00:15:00.000Z',
-      fileName: 'mip-users-20260824T000000000Z.xlsx',
-      failureCode: null,
-    })
-    source.reserveExport.mockResolvedValue({
-      status: 'RESERVED',
-      tempUrl: 'https://example.test/export.xlsx',
-      fileName: 'mip-users-20260824T000000000Z.xlsx',
-      contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      contentBytes: 512,
-      contentSha256: 'a'.repeat(64),
-      reservationExpiresAt: '2026-08-24T00:02:00.000Z',
-    })
-    const runtime = {
-      downloadFile(options: { fail: () => void }) { options.fail() },
-      openDocument: vi.fn(),
-    }
-    await expect(createAndOpenExport(source, { exportType: 'USERS' }, { runtime })).rejects.toThrow('下载失败')
-    expect(source.completeExport).not.toHaveBeenCalled()
   })
 })

@@ -14,36 +14,12 @@ function read(relativePath: string) {
 function gateway() {
   return {
     getSession: vi.fn(),
-    getDashboard: vi.fn(),
-    listUsers: vi.fn(async () => ({ items: [], nextCursor: null })),
-    updateUser: vi.fn(),
-    setUserControl: vi.fn(),
-    createExport: vi.fn(),
+    confirmWebLogin: vi.fn(),
     listEvents: vi.fn(),
     getEvent: vi.fn(),
-    saveEvent: vi.fn(),
-    cloneEvent: vi.fn(),
-    changeEventStatus: vi.fn(),
     listRoster: vi.fn(async () => ({ items: [], nextCursor: null })),
-    reviewRegistration: vi.fn(),
     checkIn: vi.fn(),
-    listRoles: vi.fn(),
-    searchRoleCandidates: vi.fn(),
-    setRole: vi.fn(),
-    listOpportunities: vi.fn(),
-    unpublishOpportunity: vi.fn(),
-    archiveOpportunity: vi.fn(),
-    listGrowthLevels: vi.fn(),
-    saveGrowthLevel: vi.fn(),
-    listGrowthRules: vi.fn(),
-    saveGrowthRule: vi.fn(),
-    listGrowthEntries: vi.fn(),
-    adjustGrowth: vi.fn(),
-    listOrders: vi.fn(),
-    submitRefund: vi.fn(),
-    retryRefund: vi.fn(),
-    listOperationalExceptions: vi.fn(),
-    listAudit: vi.fn(),
+    undoCheckIn: vi.fn(),
   } satisfies MipAdminGateway
 }
 
@@ -54,11 +30,8 @@ describe('MIP admin roster contract', () => {
 
     await module.events.listRoster({ eventId: 'event-a', includePhone: true })
     await module.events.listRoster({ eventId: 'event-a', includePhone: true })
-    await module.users.list({ includePhone: true })
-    await module.users.list({ includePhone: true })
 
     expect(source.listRoster).toHaveBeenCalledTimes(2)
-    expect(source.listUsers).toHaveBeenCalledTimes(2)
   })
 
   it('exposes only binding state until an audited phone request', () => {
@@ -66,7 +39,7 @@ describe('MIP admin roster contract', () => {
     const service = read('cloudfunctions/mip-admin-api/domain/events.js')
     const rosterType = types.slice(
       types.indexOf('export interface AdminRosterItem'),
-      types.indexOf('export interface AdminRoleItem'),
+      types.indexOf('export interface AdminPage'),
     )
 
     expect(rosterType).toContain('phoneBound: boolean')
@@ -77,7 +50,7 @@ describe('MIP admin roster contract', () => {
   })
 
   it('prevents stale responses and requests only the masked onsite roster', () => {
-    const usersAdmin = read('src/modules/mip-admin/users-admin.ts')
+    const eventsAdmin = read('src/modules/mip-admin/events-admin.ts')
     const pageTs = read('src/packages/admin/event-registrations/index.ts')
     const pageWxml = read('src/packages/admin/event-registrations/index.wxml')
 
@@ -88,19 +61,19 @@ describe('MIP admin roster contract', () => {
     expect(pageTs).toContain('onHide()')
     expect(pageTs).toContain('Omit<AdminRosterItem, \'phoneNumber\'>')
     expect(pageTs).toContain('includePhone: false')
-    expect(usersAdmin).toContain('input.includePhone === true')
+    expect(eventsAdmin).toContain('input.includePhone === true')
     expect(pageWxml).not.toContain('phoneNumber')
     expect(pageWxml).not.toContain('查看完整号码')
     expect(pageWxml).not.toMatch(/\{\{item\.phoneNumber[\s|}]/)
     expect(pageWxml).not.toContain('创建导出')
   })
 
-  it('keeps registration review in the service contract without exposing it onsite', () => {
+  it('keeps registration review on the server without an onsite entry', () => {
     const types = read('src/modules/mip-admin/types.ts')
-    const gateway = read('src/modules/mip-admin/cloudbase-gateway.ts')
+    const gatewaySource = read('src/modules/mip-admin/cloudbase-gateway.ts')
 
     expect(types).toContain('\'events.registrations.manage\'')
-    expect(gateway).toContain('call(\'mip.admin.events.registrations.review\', input)')
+    expect(gatewaySource).not.toContain('mip.admin.events.registrations.review')
   })
 
   it('keeps check-in undo behind a separate manager capability and a required reason', () => {

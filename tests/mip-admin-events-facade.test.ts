@@ -1,9 +1,6 @@
-import type { MipEventsAdmin } from '../src/modules/mip-admin/events-admin'
 import type {
-  AdminEventAlbumPhoto,
   AdminEventDetail,
   AdminEventListInput,
-  AdminRosterAllItem,
   AdminRosterItem,
   MipAdminGateway,
 } from '../src/modules/mip-admin/types'
@@ -64,43 +61,6 @@ const rosterItem: AdminRosterItem = {
   version: 1,
 }
 
-const rosterAllItem: AdminRosterAllItem = {
-  ...rosterItem,
-  eventId,
-  eventTitle: eventDetail.title,
-  branchId: eventDetail.branchId,
-  branchName: '深圳分会',
-}
-
-const albumPhoto: AdminEventAlbumPhoto = {
-  id: 'photo-a',
-  caption: '活动现场',
-  imageUrl: 'cloud://env/event-album/photo-a.jpg',
-  nickname: '林然',
-  avatarUrl: '',
-  status: 'PENDING',
-  moderationReason: '',
-  version: 1,
-  createdAt: '2026-08-25T00:00:00.000Z',
-  reviewedAt: null,
-  publishedAt: null,
-}
-
-const emptyOrderPage = {
-  items: [],
-  nextCursor: null,
-  summary: {
-    currency: 'CNY' as const,
-    orderCount: 0,
-    paidOrderCount: 0,
-    eventGrossAmountCents: 0,
-    membershipGrossAmountCents: 0,
-    grossAmountCents: 0,
-    refundedAmountCents: 0,
-    netAmountCents: 0,
-  },
-}
-
 function createHarness() {
   const spies = {
     getSession: vi.fn<MipAdminGateway['getSession']>(async () => ({
@@ -108,58 +68,12 @@ function createHarness() {
       capabilities: [],
       roles: [],
     })),
+    confirmWebLogin: vi.fn<MipAdminGateway['confirmWebLogin']>(),
     listEvents: vi.fn<MipAdminGateway['listEvents']>(async () => ({ items: [], nextCursor: null })),
     getEvent: vi.fn<MipAdminGateway['getEvent']>(async id => ({ ...eventDetail, id })),
-    getEventPolicy: vi.fn<MipAdminGateway['getEventPolicy']>(async () => ({
-      cancellationHoursBeforeStart: 24,
-      version: 1,
-    })),
     listRoster: vi.fn<MipAdminGateway['listRoster']>(async input => ({
       items: [{ ...rosterItem, phoneNumber: input.includePhone === true ? '18800000000' : null }],
       nextCursor: null,
-    })),
-    listRosterAll: vi.fn<MipAdminGateway['listRosterAll']>(async input => ({
-      items: [{ ...rosterAllItem, phoneNumber: input.includePhone === true ? '18800000000' : null }],
-      nextCursor: null,
-    })),
-    listEventAlbumPhotos: vi.fn<MipAdminGateway['listEventAlbumPhotos']>(async () => ({
-      items: [albumPhoto],
-      nextCursor: null,
-    })),
-    listOrders: vi.fn<MipAdminGateway['listOrders']>(async () => emptyOrderPage),
-    saveEvent: vi.fn<MipAdminGateway['saveEvent']>(async () => ({ id: eventId, version: 2, status: 'DRAFT' })),
-    changeEventStatus: vi.fn<MipAdminGateway['changeEventStatus']>(async input => ({
-      id: eventId,
-      version: 2,
-      status: String(input.status),
-    })),
-    archiveEvent: vi.fn<MipAdminGateway['archiveEvent']>(async () => ({
-      id: eventId,
-      version: 2,
-      status: 'ARCHIVED',
-    })),
-    cloneEvent: vi.fn<MipAdminGateway['cloneEvent']>(async () => ({
-      id: 'event-clone',
-      status: 'DRAFT',
-      version: 1,
-      startsAt: '2030-09-01T10:00:00.000Z',
-      idempotent: false,
-    })),
-    saveEventPolicy: vi.fn<MipAdminGateway['saveEventPolicy']>(async input => ({
-      ...input,
-      version: input.version + 1,
-    })),
-    publishEventReminder: vi.fn<MipAdminGateway['publishEventReminder']>(async () => ({
-      publicationId: 'publication-a',
-      recipientCount: 1,
-      sendWechatReminder: false,
-      wechatDelivery: 'NOT_REQUESTED',
-      idempotent: false,
-    })),
-    reviewRegistration: vi.fn<MipAdminGateway['reviewRegistration']>(async () => ({
-      id: rosterItem.id,
-      status: 'REGISTERED',
-      version: 2,
     })),
     checkIn: vi.fn<MipAdminGateway['checkIn']>(async () => ({
       id: rosterItem.id,
@@ -170,11 +84,6 @@ function createHarness() {
     undoCheckIn: vi.fn<MipAdminGateway['undoCheckIn']>(async () => ({
       id: rosterItem.id,
       status: 'REGISTERED',
-      version: 2,
-    })),
-    reviewEventAlbumPhoto: vi.fn<MipAdminGateway['reviewEventAlbumPhoto']>(async () => ({
-      ...albumPhoto,
-      status: 'PUBLISHED',
       version: 2,
     })),
   }
@@ -206,156 +115,24 @@ const rosterInput = {
   cursor: 'roster-cursor-a',
   limit: 25,
 }
-const rosterAllInput = {
-  includePhone: false,
-  filters: {
-    query: '林',
-    status: 'REGISTERED' as const,
-    eventId,
-    branchId: 'branch-a',
-    createdFrom: '2026-08-01T00:00:00.000Z',
-    createdTo: '2026-08-31T23:59:59.999Z',
-  },
-  cursor: 'roster-all-cursor-a',
-  limit: 25,
-}
-const orderListInput = { filters: { eventId }, cursor: 'order-cursor-a', limit: 25 }
 
-const saveInput = { eventId, expectedVersion: 1, draft: { title: '更新后的活动' } }
-const statusInput = { eventId, expectedVersion: 1, status: 'PUBLISHED' }
-const archiveInput = { eventId, expectedVersion: 1, reason: '草稿不再使用' }
-const cloneInput = { sourceEventId: eventId, expectedVersion: 1, idempotencyKey: 'clone-event-a' }
-const policyInput = { cancellationHoursBeforeStart: 48, version: 1 }
-const reminderInput = {
-  eventId,
-  expectedVersion: 1,
-  idempotencyKey: 'reminder-event-a',
-  sendWechatReminder: false,
-}
-const reviewInput = { eventId, registrationId: rosterItem.id, expectedVersion: 1, decision: 'APPROVE' }
 const checkInInput = { eventId, registrationId: rosterItem.id, expectedVersion: 1 }
 const undoInput = { ...checkInInput, reason: '现场记录修正' }
-const albumInput = {
-  eventId,
-  photoId: albumPhoto.id,
-  decision: 'APPROVE' as const,
-  reason: '内容符合要求',
-  expectedVersion: 1,
-}
 
-type QuerySpyName
-  = | 'listEvents'
-    | 'getEvent'
-    | 'getEventPolicy'
-    | 'listRoster'
-    | 'listRosterAll'
-    | 'listEventAlbumPhotos'
-    | 'listOrders'
-    | 'getSession'
+type QuerySpyName = 'listEvents' | 'getEvent' | 'listRoster' | 'getSession'
 
 const querySpies: QuerySpyName[] = [
   'listEvents',
   'getEvent',
-  'getEventPolicy',
   'listRoster',
-  'listRosterAll',
-  'listEventAlbumPhotos',
-  'listOrders',
   'getSession',
 ]
-
-interface MutationCase {
-  name: string
-  execute: (events: MipEventsAdmin) => Promise<unknown>
-  spy: Exclude<keyof ReturnType<typeof createHarness>['spies'], QuerySpyName>
-  input: unknown
-  invalidated: QuerySpyName[]
-}
-
-function mutationCases(): MutationCase[] {
-  return [
-    {
-      name: 'save',
-      execute: events => events.save(saveInput),
-      spy: 'saveEvent',
-      input: saveInput,
-      invalidated: ['listEvents', 'getEvent', 'listRosterAll'],
-    },
-    {
-      name: 'changeStatus',
-      execute: events => events.changeStatus(statusInput),
-      spy: 'changeEventStatus',
-      input: statusInput,
-      invalidated: ['listEvents', 'getEvent'],
-    },
-    {
-      name: 'archive',
-      execute: events => events.archive(archiveInput),
-      spy: 'archiveEvent',
-      input: archiveInput,
-      invalidated: ['listEvents', 'getEvent'],
-    },
-    {
-      name: 'clone',
-      execute: events => events.clone(cloneInput),
-      spy: 'cloneEvent',
-      input: cloneInput,
-      invalidated: ['listEvents'],
-    },
-    {
-      name: 'savePolicy',
-      execute: events => events.savePolicy(policyInput),
-      spy: 'saveEventPolicy',
-      input: policyInput,
-      invalidated: ['getEventPolicy'],
-    },
-    {
-      name: 'publishReminder',
-      execute: events => events.publishReminder(reminderInput),
-      spy: 'publishEventReminder',
-      input: reminderInput,
-      invalidated: [],
-    },
-    {
-      name: 'reviewRegistration',
-      execute: events => events.reviewRegistration(reviewInput),
-      spy: 'reviewRegistration',
-      input: reviewInput,
-      invalidated: ['listEvents', 'getEvent', 'listRoster', 'listRosterAll'],
-    },
-    {
-      name: 'checkIn',
-      execute: events => events.checkIn(checkInInput),
-      spy: 'checkIn',
-      input: checkInInput,
-      invalidated: ['listEvents', 'getEvent', 'listRoster', 'listRosterAll'],
-    },
-    {
-      name: 'undoCheckIn',
-      execute: events => events.undoCheckIn(undoInput),
-      spy: 'undoCheckIn',
-      input: undoInput,
-      invalidated: ['listEvents', 'getEvent', 'listRoster', 'listRosterAll'],
-    },
-    {
-      name: 'reviewAlbumPhoto',
-      execute: events => events.reviewAlbumPhoto(albumInput),
-      spy: 'reviewEventAlbumPhoto',
-      input: albumInput,
-      invalidated: ['listEventAlbumPhotos'],
-    },
-  ]
-}
 
 async function warmQueries(module: ReturnType<typeof createHarness>['module']) {
   await Promise.all([
     module.events.list(eventListInput),
     module.events.get(eventId),
-    module.events.getPolicy(),
     module.events.listRoster(rosterInput),
-    module.events.listRosterAll(rosterAllInput),
-    module.events.listAlbumPhotos(eventId, 'PENDING'),
-    module.orders.list(orderListInput),
     module.session.get(),
   ])
 }
@@ -376,127 +153,88 @@ describe('MIP admin events facade', () => {
     await module.events.listRoster({ ...rosterInput, limit: 50 })
     await module.events.listRoster({ ...rosterInput, filters: { ...rosterInput.filters, status: 'ATTENDED' } })
 
-    await module.events.listRosterAll(rosterAllInput)
-    await module.events.listRosterAll(rosterAllInput)
-    await module.events.listRosterAll({ ...rosterAllInput, cursor: 'roster-all-cursor-b' })
-    await module.events.listRosterAll({ ...rosterAllInput, limit: 50 })
-    await module.events.listRosterAll({
-      ...rosterAllInput,
-      filters: { ...rosterAllInput.filters, branchId: 'branch-b' },
-    })
-
     expect(spies.listEvents).toHaveBeenCalledTimes(4)
     expect(spies.listRoster).toHaveBeenCalledTimes(4)
-    expect(spies.listRosterAll).toHaveBeenCalledTimes(4)
     expect(spies.listEvents.mock.calls[0]?.[0]).toBe(eventListInput)
     expect(spies.listRoster.mock.calls[0]?.[0]).toBe(rosterInput)
-    expect(spies.listRosterAll.mock.calls[0]?.[0]).toBe(rosterAllInput)
   })
 
-  it('never caches phone-bearing roster or cross-event roster responses', async () => {
+  it('never caches phone-bearing roster responses', async () => {
     const { module, spies } = createHarness()
     const sensitiveRoster = { ...rosterInput, includePhone: true }
-    const sensitiveRosterAll = { ...rosterAllInput, includePhone: true }
 
     await expect(module.events.listRoster(sensitiveRoster)).resolves.toMatchObject({
       items: [{ phoneNumber: '18800000000' }],
     })
     await module.events.listRoster(sensitiveRoster)
-    await expect(module.events.listRosterAll(sensitiveRosterAll)).resolves.toMatchObject({
-      items: [{ phoneNumber: '18800000000' }],
-    })
-    await module.events.listRosterAll(sensitiveRosterAll)
     await expect(module.events.listRoster(rosterInput)).resolves.toMatchObject({ items: [{ phoneNumber: null }] })
     await module.events.listRoster(rosterInput)
-    await expect(module.events.listRosterAll(rosterAllInput)).resolves.toMatchObject({ items: [{ phoneNumber: null }] })
-    await module.events.listRosterAll(rosterAllInput)
 
     expect(spies.listRoster).toHaveBeenCalledTimes(3)
-    expect(spies.listRosterAll).toHaveBeenCalledTimes(3)
     expect(spies.listRoster.mock.calls[0]?.[0]).toBe(sensitiveRoster)
-    expect(spies.listRosterAll.mock.calls[0]?.[0]).toBe(sensitiveRosterAll)
   })
 
-  it('keeps every legacy query alias on the facade cache', async () => {
+  it('keeps every query on the facade cache', async () => {
     const { module, spies } = createHarness()
 
     await module.events.list(eventListInput)
     await module.events.list(eventListInput)
     await module.events.get(eventId)
     await module.events.get(eventId)
-    await module.events.getPolicy()
-    await module.events.getPolicy()
     await module.events.listRoster(rosterInput)
     await module.events.listRoster(rosterInput)
-    await module.events.listRosterAll(rosterAllInput)
-    await module.events.listRosterAll(rosterAllInput)
-    await module.events.listAlbumPhotos(eventId, 'PENDING')
-    await module.events.listAlbumPhotos(eventId, 'PENDING')
 
     expect(spies.listEvents).toHaveBeenCalledTimes(1)
     expect(spies.getEvent).toHaveBeenCalledTimes(1)
-    expect(spies.getEventPolicy).toHaveBeenCalledTimes(1)
     expect(spies.listRoster).toHaveBeenCalledTimes(1)
-    expect(spies.listRosterAll).toHaveBeenCalledTimes(1)
-    expect(spies.listEventAlbumPhotos).toHaveBeenCalledTimes(1)
   })
 
   it('passes every event mutation input to the neutral gateway unchanged', async () => {
     const { module, spies } = createHarness()
 
-    for (const mutation of mutationCases()) {
-      await mutation.execute(module.events)
-      expect(spies[mutation.spy].mock.calls[0]?.[0]).toBe(mutation.input)
-    }
+    await module.events.checkIn(checkInInput)
+    expect(spies.checkIn.mock.calls[0]?.[0]).toBe(checkInInput)
+
+    await module.events.undoCheckIn(undoInput)
+    expect(spies.undoCheckIn.mock.calls[0]?.[0]).toBe(undoInput)
   })
 
-  for (const mutation of mutationCases()) {
-    it(`invalidates only real query dependencies after ${mutation.name}`, async () => {
-      const { module, spies } = createHarness()
-      await warmQueries(module)
-      await warmQueries(module)
-
-      await mutation.execute(module.events)
-      await warmQueries(module)
-
-      for (const query of querySpies) {
-        expect(spies[query]).toHaveBeenCalledTimes(mutation.invalidated.includes(query) ? 2 : 1)
-      }
-    })
-  }
-
-  it('invalidates roster and orders only when a status change cancels the event', async () => {
+  it('invalidates only real query dependencies after a check-in mutation', async () => {
     const { module, spies } = createHarness()
-    const cancelInput = { eventId, expectedVersion: 1, status: 'CANCELLED', reason: '活动安排变化' }
     await warmQueries(module)
     await warmQueries(module)
 
-    await module.events.changeStatus(cancelInput)
+    await module.events.checkIn(checkInInput)
     await warmQueries(module)
 
     for (const query of querySpies) {
-      const invalidated = ['listEvents', 'getEvent', 'listRoster', 'listRosterAll', 'listOrders'].includes(query)
+      const invalidated = query !== 'getSession'
       expect(spies[query]).toHaveBeenCalledTimes(invalidated ? 2 : 1)
     }
-    expect(spies.changeEventStatus.mock.calls[0]?.[0]).toBe(cancelInput)
   })
 
-  it.each([
-    ['saveEvent', new MipAdminError('CONFLICT', '活动已被其他管理员更新')],
-    ['cloneEvent', new MipAdminError('SERVICE_UNAVAILABLE', '活动复制状态未确认', true)],
-    ['reviewEventAlbumPhoto', new MipAdminError('FORBIDDEN', '当前账号不能审核相册')],
-  ] as const)('keeps cached reads and the original %s failure', async (name, failure) => {
+  it('invalidates only real query dependencies after an undo mutation', async () => {
     const { module, spies } = createHarness()
-    spies[name].mockRejectedValueOnce(failure)
+    await warmQueries(module)
     await warmQueries(module)
 
-    const work = name === 'saveEvent'
-      ? module.events.save(saveInput)
-      : name === 'cloneEvent'
-        ? module.events.clone(cloneInput)
-        : module.events.reviewAlbumPhoto(albumInput)
-    await expect(work).rejects.toBe(failure)
-    expect(spies[name]).toHaveBeenCalledTimes(1)
+    await module.events.undoCheckIn(undoInput)
+    await warmQueries(module)
+
+    for (const query of querySpies) {
+      const invalidated = query !== 'getSession'
+      expect(spies[query]).toHaveBeenCalledTimes(invalidated ? 2 : 1)
+    }
+  })
+
+  it('keeps cached reads and the original checkIn failure', async () => {
+    const { module, spies } = createHarness()
+    const failure = new MipAdminError('CONFLICT', '签到状态已变化')
+    spies.checkIn.mockRejectedValueOnce(failure)
+    await warmQueries(module)
+
+    await expect(module.events.checkIn(checkInInput)).rejects.toBe(failure)
+    expect(spies.checkIn).toHaveBeenCalledTimes(1)
     await warmQueries(module)
 
     for (const query of querySpies) {

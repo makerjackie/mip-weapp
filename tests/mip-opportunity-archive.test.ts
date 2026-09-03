@@ -5,15 +5,7 @@ import { describe, expect, it } from 'vitest'
 const root = path.resolve(import.meta.dirname, '..')
 const read = (relativePath: string) => fs.readFileSync(path.join(root, relativePath), 'utf8')
 
-describe('MIP opportunity archive client contract', () => {
-  it('keeps archive behind the neutral service contract', () => {
-    const types = read('src/modules/mip-admin/types.ts')
-    const gateway = read('src/modules/mip-admin/cloudbase-gateway.ts')
-
-    expect(types).toContain('\'opportunities.archive\'')
-    expect(gateway).toContain('call(\'mip.admin.opportunities.archive\', input)')
-  })
-
+describe('MIP opportunity archive contract', () => {
   it('keeps archived drafts out of owner reads and editing', () => {
     const source = read('cloudfunctions/mip-opportunities-api/domain/opportunities.js')
     expect(source).toContain('o.status <> \'ARCHIVED\'')

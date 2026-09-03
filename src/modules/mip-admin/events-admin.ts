@@ -1,29 +1,8 @@
-import type { AdminRosterAllListInput, AdminRosterListInput, MipAdminGateway } from './types'
+import type { AdminRosterListInput, MipAdminGateway } from './types'
 
 export type EventsAdminGateway = Pick<
   MipAdminGateway,
-  | 'listEvents'
-  | 'getEvent'
-  | 'getEventInsights'
-  | 'getEventPolicy'
-  | 'listRoster'
-  | 'listRosterAll'
-  | 'listEventAlbumPhotos'
-  | 'getEventCommentAdminState'
-  | 'saveEvent'
-  | 'changeEventStatus'
-  | 'archiveEvent'
-  | 'cloneEvent'
-  | 'saveEventPolicy'
-  | 'publishEventReminder'
-  | 'reviewRegistration'
-  | 'checkIn'
-  | 'undoCheckIn'
-  | 'reviewEventAlbumPhoto'
-  | 'saveEventCommentSettings'
-  | 'moderateEventComment'
-  | 'claimEventCommentReport'
-  | 'closeEventCommentReport'
+  'listEvents' | 'getEvent' | 'listRoster' | 'checkIn' | 'undoCheckIn'
 >
 
 interface EventsAdminCache {
@@ -42,54 +21,18 @@ export interface MipEventsAdmin {
     eventId: Parameters<MipAdminGateway['getEvent']>[0],
     force?: boolean,
   ) => ReturnType<MipAdminGateway['getEvent']>
-  getInsights: (
-    eventId: Parameters<MipAdminGateway['getEventInsights']>[0],
-    force?: boolean,
-  ) => ReturnType<MipAdminGateway['getEventInsights']>
-  getPolicy: (force?: boolean) => ReturnType<MipAdminGateway['getEventPolicy']>
   listRoster: (
     input: AdminRosterListInput,
     force?: boolean,
   ) => ReturnType<MipAdminGateway['listRoster']>
-  listRosterAll: (
-    input?: AdminRosterAllListInput,
-    force?: boolean,
-  ) => ReturnType<MipAdminGateway['listRosterAll']>
-  listAlbumPhotos: (
-    eventId: Parameters<MipAdminGateway['listEventAlbumPhotos']>[0],
-    status: Parameters<MipAdminGateway['listEventAlbumPhotos']>[1],
-    force?: boolean,
-  ) => ReturnType<MipAdminGateway['listEventAlbumPhotos']>
-  getCommentState: (
-    eventId: Parameters<MipAdminGateway['getEventCommentAdminState']>[0],
-    force?: boolean,
-  ) => ReturnType<MipAdminGateway['getEventCommentAdminState']>
-  save: MipAdminGateway['saveEvent']
-  changeStatus: MipAdminGateway['changeEventStatus']
-  archive: MipAdminGateway['archiveEvent']
-  clone: MipAdminGateway['cloneEvent']
-  savePolicy: MipAdminGateway['saveEventPolicy']
-  publishReminder: MipAdminGateway['publishEventReminder']
-  reviewRegistration: MipAdminGateway['reviewRegistration']
   checkIn: MipAdminGateway['checkIn']
   undoCheckIn: MipAdminGateway['undoCheckIn']
-  reviewAlbumPhoto: MipAdminGateway['reviewEventAlbumPhoto']
-  saveCommentSettings: MipAdminGateway['saveEventCommentSettings']
-  moderateComment: MipAdminGateway['moderateEventComment']
-  claimCommentReport: MipAdminGateway['claimEventCommentReport']
-  closeCommentReport: MipAdminGateway['closeEventCommentReport']
 }
 
 const cacheKeys = {
   lists: 'mip-admin:events',
   detail: 'mip-admin:event',
-  insights: 'mip-admin:event-insights',
-  policy: 'mip-admin:event-policy',
   roster: 'mip-admin:roster',
-  rosterAll: 'mip-admin:roster-all',
-  album: 'mip-admin:event-album',
-  comments: 'mip-admin:event-comments',
-  orders: 'mip-admin:orders',
 } as const
 
 function inputId(input: Record<string, unknown>, key: string) {
@@ -104,7 +47,6 @@ export function createMipEventsAdmin(
     cache.invalidate(cacheKeys.lists)
     if (eventId) {
       cache.invalidate(`${cacheKeys.detail}:${eventId}`)
-      cache.invalidate(`${cacheKeys.insights}:${eventId}`)
     }
   }
   const invalidateRoster = (eventId: string) => {
@@ -114,16 +56,15 @@ export function createMipEventsAdmin(
     else {
       cache.invalidate(cacheKeys.roster)
     }
-    cache.invalidate(cacheKeys.rosterAll)
+  }
+  const invalidateParticipation = (eventId: string) => {
+    invalidateEvent(eventId)
+    invalidateRoster(eventId)
   }
   const mutate = async <T>(work: () => Promise<T>, invalidate: () => void) => {
     const result = await work()
     invalidate()
     return result
-  }
-  const invalidateParticipation = (eventId: string) => {
-    invalidateEvent(eventId)
-    invalidateRoster(eventId)
   }
 
   return {
@@ -137,12 +78,6 @@ export function createMipEventsAdmin(
       () => gateway.getEvent(eventId),
       { force },
     ),
-    getInsights: (eventId, force = false) => cache.query(
-      `${cacheKeys.insights}:${eventId}`,
-      () => gateway.getEventInsights(eventId),
-      { force },
-    ),
-    getPolicy: (force = false) => cache.query(cacheKeys.policy, gateway.getEventPolicy, { force }),
     listRoster: (input, force = false) => input.includePhone === true
       ? gateway.listRoster(input)
       : cache.query(
@@ -150,61 +85,6 @@ export function createMipEventsAdmin(
           () => gateway.listRoster(input),
           { force },
         ),
-    listRosterAll: (input: AdminRosterAllListInput = {}, force = false) => input.includePhone === true
-      ? gateway.listRosterAll(input)
-      : cache.query(
-          `${cacheKeys.rosterAll}:${JSON.stringify(input)}`,
-          () => gateway.listRosterAll(input),
-          { force },
-        ),
-    listAlbumPhotos: (eventId, status, force = false) => cache.query(
-      `${cacheKeys.album}:${eventId}:${status}`,
-      () => gateway.listEventAlbumPhotos(eventId, status),
-      { force },
-    ),
-    getCommentState: (eventId, force = false) => cache.query(
-      `${cacheKeys.comments}:${eventId}`,
-      () => gateway.getEventCommentAdminState(eventId),
-      { force },
-    ),
-    save: input => mutate(
-      () => gateway.saveEvent(input),
-      () => {
-        const eventId = inputId(input, 'eventId')
-        invalidateEvent(eventId)
-        if (eventId) {
-          cache.invalidate(cacheKeys.rosterAll)
-        }
-      },
-    ),
-    changeStatus: input => mutate(
-      () => gateway.changeEventStatus(input),
-      () => {
-        const eventId = inputId(input, 'eventId')
-        invalidateEvent(eventId)
-        if (input.status === 'CANCELLED') {
-          invalidateRoster(eventId)
-          cache.invalidate(cacheKeys.orders)
-        }
-      },
-    ),
-    archive: input => mutate(
-      () => gateway.archiveEvent(input),
-      () => invalidateEvent(input.eventId),
-    ),
-    clone: input => mutate(
-      () => gateway.cloneEvent(input),
-      () => cache.invalidate(cacheKeys.lists),
-    ),
-    savePolicy: input => mutate(
-      () => gateway.saveEventPolicy(input),
-      () => cache.invalidate(cacheKeys.policy),
-    ),
-    publishReminder: input => gateway.publishEventReminder(input),
-    reviewRegistration: input => mutate(
-      () => gateway.reviewRegistration(input),
-      () => invalidateParticipation(inputId(input, 'eventId')),
-    ),
     checkIn: input => mutate(
       () => gateway.checkIn(input),
       () => invalidateParticipation(inputId(input, 'eventId')),
@@ -212,26 +92,6 @@ export function createMipEventsAdmin(
     undoCheckIn: input => mutate(
       () => gateway.undoCheckIn(input),
       () => invalidateParticipation(inputId(input, 'eventId')),
-    ),
-    reviewAlbumPhoto: input => mutate(
-      () => gateway.reviewEventAlbumPhoto(input),
-      () => cache.invalidate(`${cacheKeys.album}:${input.eventId}`),
-    ),
-    saveCommentSettings: input => mutate(
-      () => gateway.saveEventCommentSettings(input),
-      () => cache.invalidate(`${cacheKeys.comments}:${input.eventId}`),
-    ),
-    moderateComment: input => mutate(
-      () => gateway.moderateEventComment(input),
-      () => cache.invalidate(`${cacheKeys.comments}:${input.eventId}`),
-    ),
-    claimCommentReport: input => mutate(
-      () => gateway.claimEventCommentReport(input),
-      () => cache.invalidate(`${cacheKeys.comments}:${input.eventId}`),
-    ),
-    closeCommentReport: input => mutate(
-      () => gateway.closeEventCommentReport(input),
-      () => cache.invalidate(`${cacheKeys.comments}:${input.eventId}`),
     ),
   }
 }

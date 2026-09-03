@@ -35,14 +35,12 @@ describe('MIP event cancellation convergence contract', () => {
     expect(service).toContain('const version = expectedVersion(input.expectedVersion)')
   })
 
-  it('dispatches committed refund ids and exposes recoverable provider status in the order page', () => {
+  it('dispatches committed refund ids and exposes recoverable provider status on the server', () => {
     const events = read('cloudfunctions/mip-admin-api/domain/events.js')
     const service = read('cloudfunctions/mip-admin-api/domain/service.js')
-    const gateway = read('src/modules/mip-admin/cloudbase-gateway.ts')
 
     expect(events).toMatch(/const result = await repository\.changeEventStatus\([\s\S]*?const refundIds = result\.idempotent \? \[\] : \(Array\.isArray\(result\.refundIds\)/)
     expect(events).toContain('dispatchCancellationRefunds(context.caller.appId, refundIds)')
     expect(service).toContain('dispatchCancellationRefunds: dispatchRefundBatchSafely')
-    expect(gateway).toContain('call(\'mip.admin.refunds.retry\', { refundId })')
   })
 })

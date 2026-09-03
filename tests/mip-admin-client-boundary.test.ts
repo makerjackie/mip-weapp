@@ -23,23 +23,9 @@ describe('MIP admin client boundary', () => {
     const module = createMipAdminModule(gateway)
 
     expect(Object.keys(module).sort()).toEqual([
-      'benefitLedger',
-      'community',
-      'dashboard',
-      'eventCatalogs',
       'events',
-      'exports',
-      'governance',
-      'growth',
-      'memberships',
-      'messaging',
-      'opportunities',
-      'orders',
-      'paymentAttempts',
       'runtime',
       'session',
-      'userContent',
-      'users',
     ])
   })
 

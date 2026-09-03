@@ -6,7 +6,6 @@ import {
   ADMIN_REQUEST_CONTRACT_VERSION,
   createAdminRequest,
 } from '../src/modules/mip-admin/request-contract'
-import { mipKnowledgeAdminModule } from '../src/modules/mip-knowledge/admin'
 
 const cloudHarness = vi.hoisted(() => ({
   callFunction: vi.fn(),
@@ -54,41 +53,17 @@ describe('MIP admin request contract', () => {
     })).toThrow('Admin request idempotencyKey must be a string')
   })
 
-  it('uses the v1 builder for the main admin CloudBase transport', async () => {
+  it('uses the v1 builder for the main admin CloudBase transport and lifts the request key', async () => {
     cloudHarness.callFunction.mockResolvedValueOnce({
-      result: { ok: true, data: { id: 'comment-a', status: 'HIDDEN', version: 6 } },
+      result: { ok: true, data: { id: 'registration-a', status: 'ATTENDED', version: 4, idempotent: false } },
     })
 
-    await cloudbaseMipAdminGateway.moderateOpportunityComment({
-      opportunityId: 'opportunity-a',
-      commentId: 'comment-a',
-      expectedVersion: 5,
-      action: 'HIDE',
-      reason: '内容不符合要求',
+    await cloudbaseMipAdminGateway.checkIn({
+      eventId: 'event-a',
+      registrationId: 'registration-a',
+      expectedVersion: 3,
+      idempotencyKey: 'checkin-registration-a-3',
     })
-
-    expect(cloudHarness.callFunction).toHaveBeenCalledWith({
-      name: expect.any(String),
-      data: {
-        contractVersion: 1,
-        action: 'mip.admin.opportunityComments.moderate',
-        input: {
-          opportunityId: 'opportunity-a',
-          commentId: 'comment-a',
-          expectedVersion: 5,
-          action: 'HIDE',
-          reason: '内容不符合要求',
-        },
-      },
-    })
-  })
-
-  it('uses the v1 builder for knowledge administration and lifts its request key', async () => {
-    cloudHarness.callFunction.mockResolvedValueOnce({
-      result: { ok: true, data: { id: 'run-a' } },
-    })
-
-    await mipKnowledgeAdminModule.runIngestion('source-a', 'category-a')
 
     expect(cloudHarness.callFunction).toHaveBeenCalledTimes(1)
     const request = cloudHarness.callFunction.mock.calls[0][0]
@@ -96,9 +71,13 @@ describe('MIP admin request contract', () => {
       name: expect.any(String),
       data: {
         contractVersion: 1,
-        action: 'mip.admin.knowledge.ingestion.run',
-        input: { sourceId: 'source-a', categoryId: 'category-a' },
-        idempotencyKey: expect.any(String),
+        action: 'mip.admin.events.checkIn',
+        input: {
+          eventId: 'event-a',
+          registrationId: 'registration-a',
+          expectedVersion: 3,
+        },
+        idempotencyKey: 'checkin-registration-a-3',
       },
     })
     expect(request.data.input).not.toHaveProperty('idempotencyKey')
