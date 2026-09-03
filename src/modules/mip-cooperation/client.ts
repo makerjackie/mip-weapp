@@ -7,6 +7,7 @@ import type {
   CooperationCatalog,
   CooperationTalentPage,
 } from './types'
+import { registerMipLocalUserCache } from '../mip-identity/local-session'
 import { callOpportunityApi } from '../mip-opportunities/transport'
 import { createMutationKey } from '../mip-opportunities/validation'
 import {
@@ -14,6 +15,10 @@ import {
   normalizeCooperationCardFilter,
   parseCooperationTalentPage,
 } from './validation'
+
+let minePage: CooperationCardPage | undefined
+let pendingMinePage: Promise<CooperationCardPage> | undefined
+let mineCacheGeneration = 0
 
 export const cooperationModule = {
   getCatalogs() {
@@ -34,7 +39,38 @@ export const cooperationModule = {
   },
 
   listMine(cursor?: string) {
-    return callOpportunityApi<CooperationCardPage>('listMyCooperationCards', { cursor, limit: 20 })
+    if (!cursor && pendingMinePage) {
+      return pendingMinePage
+    }
+
+    const generation = mineCacheGeneration
+    const request = callOpportunityApi<CooperationCardPage>('listMyCooperationCards', { cursor, limit: 20 })
+      .then((page) => {
+        if (!cursor && generation === mineCacheGeneration) {
+          minePage = page
+        }
+        return page
+      })
+      .finally(() => {
+        if (!cursor && pendingMinePage === request) {
+          pendingMinePage = undefined
+        }
+      })
+
+    if (!cursor) {
+      pendingMinePage = request
+    }
+    return request
+  },
+
+  peekMine() {
+    return minePage
+  },
+
+  invalidateMine() {
+    mineCacheGeneration += 1
+    minePage = undefined
+    pendingMinePage = undefined
   },
 
   get(id: CooperationCardId) {
@@ -43,10 +79,14 @@ export const cooperationModule = {
 
   save(draft: CooperationCardDraft, idempotencyKey = createMutationKey('cooperation-save')) {
     const { aiConfirmation, ...resourceDraft } = normalizeCooperationCardDraft(draft)
-    return callOpportunityApi<{ id: CooperationCardId, status: string, version: number }>(
+    const request = callOpportunityApi<{ id: CooperationCardId, status: string, version: number }>(
       'saveCooperationCard',
       { draft: resourceDraft, aiConfirmation, idempotencyKey },
     )
+    return request.then((result) => {
+      cooperationModule.invalidateMine()
+      return result
+    })
   },
 
   unpublish(
@@ -54,10 +94,14 @@ export const cooperationModule = {
     expectedVersion: number,
     idempotencyKey = createMutationKey('cooperation-unpublish'),
   ) {
-    return callOpportunityApi<{ id: CooperationCardId, status: 'UNPUBLISHED', version: number }>(
+    const request = callOpportunityApi<{ id: CooperationCardId, status: 'UNPUBLISHED', version: number }>(
       'unpublishCooperationCard',
       { id, expectedVersion, idempotencyKey },
     )
+    return request.then((result) => {
+      cooperationModule.invalidateMine()
+      return result
+    })
   },
 
   archive(
@@ -65,10 +109,14 @@ export const cooperationModule = {
     expectedVersion: number,
     idempotencyKey = createMutationKey('cooperation-archive'),
   ) {
-    return callOpportunityApi<{ id: CooperationCardId, status: 'ARCHIVED', version: number }>(
+    const request = callOpportunityApi<{ id: CooperationCardId, status: 'ARCHIVED', version: number }>(
       'archiveCooperationCard',
       { id, expectedVersion, idempotencyKey },
     )
+    return request.then((result) => {
+      cooperationModule.invalidateMine()
+      return result
+    })
   },
 
   setOwnerInterest(
@@ -84,3 +132,5 @@ export const cooperationModule = {
     })
   },
 }
+
+registerMipLocalUserCache(() => cooperationModule.invalidateMine())

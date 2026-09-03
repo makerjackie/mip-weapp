@@ -24,6 +24,13 @@ const emptyCatalog: CooperationCatalog = {
   industryTags: [],
 }
 
+function cardViews(items: CooperationCardSummary[]): CardView[] {
+  return items.map(item => ({
+    ...item,
+    roleName: cooperationRoles.find(role => role.key === item.roleKey)?.name || item.roleKey,
+  }))
+}
+
 Page({
   data: {
     mine: false,
@@ -55,7 +62,15 @@ Page({
 
   onLoad(options: Record<string, string | undefined>) {
     const mine = options.mine === '1'
+    const cached = mine ? cooperationModule.peekMine() : undefined
     this.setData({ mine })
+    if (cached) {
+      this.setData({
+        state: 'ready',
+        cards: cardViews(cached.items),
+        nextCursor: cached.nextCursor || '',
+      })
+    }
     if (!mine) {
       void this.loadCatalogs()
     }
@@ -115,7 +130,11 @@ Page({
     const sequence = this.requestSequence + 1
     this.requestSequence = sequence
     if (reset) {
-      this.setData({ state: 'loading', message: '', nextCursor: '' })
+      this.setData({
+        state: this.data.state === 'ready' ? 'ready' : 'loading',
+        message: '',
+        nextCursor: '',
+      })
     }
     else {
       this.setData({ loadingMore: true, message: '' })
@@ -126,10 +145,7 @@ Page({
         if (sequence !== this.requestSequence) {
           return
         }
-        const cards = page.items.map(item => ({
-          ...item,
-          roleName: cooperationRoles.find(role => role.key === item.roleKey)?.name || item.roleKey,
-        }))
+        const cards = cardViews(page.items)
         this.setData({
           state: 'ready',
           cards: reset ? cards : [...this.data.cards, ...cards],

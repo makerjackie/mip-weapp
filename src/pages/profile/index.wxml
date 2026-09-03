@@ -89,7 +89,7 @@
         <view wx:for="{{cooperationCards}}" wx:key="id" class="profile-cooperation-card" data-id="{{item.id}}" bind:tap="openCooperation">
           <cooperation-role-card role-key="{{item.roleKey}}" positioning="{{item.positioning}}" target-summary="{{item.targetSummary}}" />
         </view>
-        <view class="profile-add-card" bind:tap="openCooperationList"><view class="profile-add-content"><image src="/assets/figma/profile/add.svg" mode="aspectFit" />{{cooperationCards.length ? '管理合作卡' : '添加合作卡'}}</view></view>
+        <view class="profile-add-card {{openingAction === 'cooperation-list' ? 'profile-add-card--loading' : ''}}" aria-role="button" aria-disabled="{{openingAction === 'cooperation-list'}}" bind:tap="openCooperationList"><view class="profile-add-content"><image src="/assets/figma/profile/add.svg" mode="aspectFit" /><text wx:if="{{openingAction === 'cooperation-list'}}">正在打开</text><text wx:else>{{cooperationCards.length ? '管理合作卡' : '添加合作卡'}}</text></view></view>
       </view>
     </block>
 

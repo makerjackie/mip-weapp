@@ -429,6 +429,10 @@
   border-radius: var(--mip-radius-card-medium);
 }
 
+.profile-add-card--loading {
+  opacity: 0.62;
+}
+
 .profile-add-content {
   display: flex;
   gap: 8rpx;

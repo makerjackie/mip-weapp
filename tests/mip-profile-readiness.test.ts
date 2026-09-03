@@ -77,4 +77,12 @@ describe('profile page readiness', () => {
     const protectedBody = methodBody('async openProtected', 'openMembership')
     expect(protectedBody).toContain('this.refreshOnReturn = true')
   })
+
+  it('shows immediate feedback and ignores repeated protected navigation taps', () => {
+    expect(source).toContain('openingAction: \'\' as OpeningAction')
+    expect(source).toContain('openingActionLock = false')
+    expect(source).toContain('if (this.openingActionLock || this.data.openingAction)')
+    expect(source).toContain('\'cooperation-list\'')
+    expect(source).toContain('[\'AUTHENTICATED\', \'AGREEMENTS\']')
+  })
 })

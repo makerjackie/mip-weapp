@@ -1,14 +1,19 @@
 import type { SuperCaseSummary } from '../../modules/mip-cases'
 import type { CooperationCardSummary } from '../../modules/mip-cooperation'
 import type { BadgeCollectionItem } from '../../modules/mip-growth'
-import type { IdentityAccessSnapshot, ProtectedActionKey } from '../../modules/mip-identity'
+import type {
+  AccessRequirement,
+  IdentityAccessSnapshot,
+  ProtectedActionIntent,
+  ProtectedActionKey,
+} from '../../modules/mip-identity'
 import type { OpportunitySummary } from '../../modules/mip-opportunities'
 import { badgeArtUrl } from '../../config/mip-badge-art'
 import { cooperationRoles } from '../../config/mip-catalogs'
 import { superCaseModule } from '../../modules/mip-cases'
 import { cooperationModule } from '../../modules/mip-cooperation'
 import { mipGrowthModule } from '../../modules/mip-growth/client'
-import { mipAccessPageUrl } from '../../modules/mip-identity'
+import { evaluateAccess, mipAccessPageUrl } from '../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { mipMessagingModule } from '../../modules/mip-messaging/client'
 import { opportunityModule } from '../../modules/mip-opportunities'
@@ -18,6 +23,7 @@ import { formatLocalDate } from '../../utils/date'
 
 type PortfolioTab = 'cooperation' | 'cases' | 'opportunities'
 type SectionState = 'loading' | 'ready' | 'error'
+type OpeningAction = '' | 'cooperation-list' | 'other'
 
 const PROFILE_REFRESH_INTERVAL_MS = 30_000
 
@@ -66,15 +72,21 @@ Page({
     cases: [] as SuperCaseSummary[],
     opportunityState: 'loading' as SectionState,
     opportunities: [] as OpportunitySummary[],
+    openingAction: '' as OpeningAction,
     message: '',
   },
   resumeDestination: '',
   loadPromise: null as Promise<void> | null,
   lastSuccessfulRefreshAt: 0,
   refreshOnReturn: false,
+  openingActionLock: false,
 
   onShow() {
     syncCaseNavigation(this, 'pages/profile/index')
+    this.openingActionLock = false
+    if (this.data.openingAction) {
+      this.setData({ openingAction: '' })
+    }
     const resume = mipIdentityModule.consumePendingResume('pages/profile/index')
     if (resume && this.resumeDestination) {
       const destination = this.resumeDestination
@@ -423,15 +435,38 @@ Page({
     }
   },
 
-  async openProtected(destination: string, action: ProtectedActionKey, requiredCapability?: string) {
+  async openProtected(
+    destination: string,
+    action: ProtectedActionKey,
+    requiredCapability?: string,
+    openingAction: Exclude<OpeningAction, ''> = 'other',
+    requirements?: AccessRequirement[],
+  ) {
+    if (this.openingActionLock || this.data.openingAction) {
+      return
+    }
+    this.openingActionLock = true
+    this.setData({ openingAction })
     this.refreshOnReturn = true
     this.resumeDestination = destination
     try {
-      const session = await mipIdentityModule.beginProtectedAction({
+      const intent: ProtectedActionIntent = {
         action,
         requiredCapability,
+        requirements,
         source: { navigation: 'navigateBack' },
-      })
+      }
+      const accessSnapshotFresh = this.lastSuccessfulRefreshAt > 0
+        && Date.now() - this.lastSuccessfulRefreshAt < PROFILE_REFRESH_INTERVAL_MS
+      if (openingAction === 'cooperation-list' && accessSnapshotFresh) {
+        const cached = mipIdentityModule.peekSnapshot()
+        if (cached && evaluateAccess(cached, intent).ready) {
+          this.resumeDestination = ''
+          caseNavigateTo({ url: destination })
+          return
+        }
+      }
+      const session = await mipIdentityModule.beginProtectedAction(intent)
       if (session.decision.ready) {
         this.resumeDestination = ''
         caseNavigateTo({ url: destination })
@@ -440,8 +475,9 @@ Page({
       caseNavigateTo({ url: mipAccessPageUrl(session.token) })
     }
     catch {
+      this.openingActionLock = false
       this.resumeDestination = ''
-      this.setData({ message: '身份状态暂时无法确认，请稍后重试。' })
+      this.setData({ openingAction: '', message: '身份状态暂时无法确认，请稍后重试。' })
     }
   },
 
@@ -469,7 +505,15 @@ Page({
   openGrowth() { void this.openProtected('/packages/member/mip-growth/index', 'VIEW_RESTRICTED_PROFILE') },
   openBadges() { void this.openProtected('/packages/member/mip-badges/index', 'VIEW_RESTRICTED_PROFILE') },
   openTasks() { void this.openProtected('/packages/member/mip-tasks/index', 'VIEW_RESTRICTED_PROFILE') },
-  openCooperationList() { void this.openProtected('/packages/member/mip-cooperation/list/index?mine=1', 'INTERACT') },
+  openCooperationList() {
+    void this.openProtected(
+      '/packages/member/mip-cooperation/list/index?mine=1',
+      'INTERACT',
+      undefined,
+      'cooperation-list',
+      ['AUTHENTICATED', 'AGREEMENTS'],
+    )
+  },
   openCaseList() { void this.openProtected('/packages/member/mip-cases/list/index?mine=1', 'INTERACT') },
   openOpportunityList() { void this.openProtected('/packages/member/mip-opportunities/mine/index', 'INTERACT') },
   openSettings() { caseNavigateTo({ url: '/packages/member/privacy/index' }) },
