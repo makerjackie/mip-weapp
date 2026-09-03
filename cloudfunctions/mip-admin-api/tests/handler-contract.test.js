@@ -5,7 +5,8 @@ const fs = require('node:fs')
 const path = require('node:path')
 const { describe, it } = require('node:test')
 const { createAdminApplication } = require('../domain/application')
-const { actions, createHandler, normalizeAdminRequest } = require('../domain/handler')
+const { createHandler, normalizeAdminRequest } = require('../domain/handler')
+const { operationRegistry } = require('../domain/operation-registry')
 const { createTrustedPrincipalIssuer } = require('../lib/identity')
 const { createServiceDouble } = require('./owner-modules-test-helper')
 
@@ -262,7 +263,7 @@ describe('admin handler and isolation contract', () => {
       resolveCaller: () => caller,
       service,
     })
-    const businessActions = Object.keys(actions).filter(action => action !== 'health')
+    const businessActions = operationRegistry.operationCatalog.map(operation => operation.action)
 
     assert.equal(businessActions.length, 187)
     for (const action of businessActions) {

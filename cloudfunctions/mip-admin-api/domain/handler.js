@@ -1,7 +1,6 @@
 'use strict'
 
-const { actions } = require('./application')
-const { createOperationDispatcher } = require('./operation-registry')
+const { createOperationDispatcher, operationRegistry } = require('./operation-registry')
 const { AdminError } = require('./validation')
 
 const ADMIN_REQUEST_CONTRACT_VERSION = 1
@@ -99,8 +98,9 @@ function createHandler(options = {}) {
     try {
       const request = normalizeAdminRequest(event)
       const { action, input } = request
-      const dispatch = actions[action]
-      if (!dispatch) throw new AdminError('NOT_FOUND', '运营操作不存在')
+      if (action !== 'health' && !operationRegistry.operationByAction[action]) {
+        throw new AdminError('NOT_FOUND', '运营操作不存在')
+      }
       if (action === 'health') {
         const data = modern ? await application.probe() : await service.health()
         return { ok: true, data }
@@ -279,4 +279,4 @@ function opportunityArchiveBlockerDetails(code, details) {
   return blockers.length ? { blockers } : null
 }
 
-module.exports = { actions, createHandler, errorResponse, normalizeAdminRequest }
+module.exports = { createHandler, errorResponse, normalizeAdminRequest }

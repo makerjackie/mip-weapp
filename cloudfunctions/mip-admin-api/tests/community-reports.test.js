@@ -3,8 +3,8 @@
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const { CAPABILITIES, roleCapabilities } = require('../domain/capabilities')
-const { actions } = require('../domain/handler')
 const { createAdminRepository: createProductionAdminRepository } = require('../domain/repository')
+const { operationRegistry } = require('../domain/operation-registry')
 const { withTestAuthorization } = require('./test-authorization')
 
 function createAdminRepository(database, options) {
@@ -120,9 +120,9 @@ describe('admin community report review', () => {
   })
 
   it('exposes only the list, claim and close review actions', () => {
-    assert.equal(typeof actions['mip.admin.communityReports.list'], 'function')
-    assert.equal(typeof actions['mip.admin.communityReports.claim'], 'function')
-    assert.equal(typeof actions['mip.admin.communityReports.close'], 'function')
+    assert.notEqual(operationRegistry.operationByAction['mip.admin.communityReports.list'], undefined)
+    assert.notEqual(operationRegistry.operationByAction['mip.admin.communityReports.claim'], undefined)
+    assert.notEqual(operationRegistry.operationByAction['mip.admin.communityReports.close'], undefined)
   })
 
   it('normalizes filters and reasons while keeping a claim reason audit-only', async () => {

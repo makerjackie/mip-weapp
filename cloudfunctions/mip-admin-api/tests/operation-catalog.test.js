@@ -2,7 +2,6 @@
 
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
-const { actions } = require('../domain/handler')
 const {
   OPERATION_KINDS,
   OPERATION_OWNERS,
@@ -260,16 +259,15 @@ function manifest(owner, operations) {
 
 describe('admin operation catalog', () => {
   it('freezes the exact 187 business actions, owners, and kinds while keeping health separate', () => {
-    const handlerActions = Object.keys(actions).filter(action => action !== 'health')
+    const catalogActions = operationCatalog.map(operation => operation.action)
     const expectedActions = Object.keys(expectedOperations)
 
     assert.equal(expectedActions.length, 187)
     assert.equal(operationCatalog.length, 187)
-    assert.deepEqual(sorted(handlerActions), sorted(expectedActions))
+    assert.deepEqual(sorted(catalogActions), sorted(expectedActions))
     assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(expectedActions))
     assert.equal(operationByAction.health, undefined)
     assert.equal(operationByAction.toString, undefined)
-    assert.equal(actions.toString, undefined)
     assert.equal(Object.getPrototypeOf(operationByAction), null)
     assert.deepEqual(healthOperation, { action: 'health', owner: 'SYSTEM', kind: 'QUERY' })
 
@@ -295,7 +293,7 @@ describe('admin operation catalog', () => {
         calls.push({ method: operation.method, args })
         return { method: operation.method }
       })
-      const result = await actions[action](ownerModules, caller, input)
+      const result = (await createOperationDispatcher(ownerModules).execute(caller, action, input)).data
 
       if (mode === 'SESSION_FIRST') {
         assert.deepEqual(calls.map(call => call.method), ['getSession', expectedMethod], action)

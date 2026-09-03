@@ -3,8 +3,9 @@
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const { CAPABILITIES, roleCapabilities } = require('../domain/capabilities')
-const { actions, createHandler } = require('../domain/handler')
+const { createHandler } = require('../domain/handler')
 const { createAdminRepository: createProductionAdminRepository } = require('../domain/repository')
+const { operationRegistry } = require('../domain/operation-registry')
 const { withTestAuthorization } = require('./test-authorization')
 const { createServiceDouble } = require('./owner-modules-test-helper')
 
@@ -184,7 +185,7 @@ describe('admin branch management', () => {
       'mip.admin.branches.update',
       'mip.admin.branches.changeStatus',
     ]) {
-      assert.equal(typeof actions[action], 'function')
+      assert.notEqual(operationRegistry.operationByAction[action], undefined)
     }
     const handler = createHandler({
       getContext: () => ({ FROM_APPID: 'wx-app', FROM_OPENID: 'openid' }),

@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
-const { actions } = require('../domain/handler')
+const { createOperationDispatcher, operationRegistry } = require('../domain/operation-registry')
 const { createAdminService } = require('../domain/service')
 const { createOwnerModules } = require('./owner-modules-test-helper')
 
@@ -94,15 +94,15 @@ describe('operational exception service', () => {
 
   it('dispatches a read-only handler action and exposes no mutation action', async () => {
     let received = null
-    const result = await actions['mip.admin.exceptions.list'](createOwnerModules({
+    const result = (await createOperationDispatcher(createOwnerModules({
       async listOperationalExceptions(receivedCaller, event) {
         received = { receivedCaller, event }
         return { items: [], nextCursor: null, availableTypes: [] }
       },
-    }), caller, { type: 'PAYMENT' })
+    })).execute(caller, 'mip.admin.exceptions.list', { type: 'PAYMENT' })).data
     assert.deepEqual(result, { items: [], nextCursor: null, availableTypes: [] })
     assert.deepEqual(received, { receivedCaller: caller, event: { type: 'PAYMENT' } })
-    assert.equal(Object.keys(actions).some(action => action.startsWith('mip.admin.exceptions.')
-      && action !== 'mip.admin.exceptions.list'), false)
+    assert.equal(operationRegistry.operationCatalog.some(operation => operation.action.startsWith('mip.admin.exceptions.')
+      && operation.action !== 'mip.admin.exceptions.list'), false)
   })
 })

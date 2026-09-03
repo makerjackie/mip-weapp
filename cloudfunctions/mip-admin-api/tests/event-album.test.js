@@ -3,8 +3,8 @@
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const { CAPABILITIES, roleCapabilities } = require('../domain/capabilities')
-const { actions } = require('../domain/handler')
 const { createAdminRepository: createProductionAdminRepository } = require('../domain/repository')
+const { operationRegistry } = require('../domain/operation-registry')
 const { withTestAuthorization } = require('./test-authorization')
 
 function createAdminRepository(database, options) {
@@ -130,8 +130,8 @@ describe('admin event album capability and scope', () => {
     for (const role of ['PLATFORM_FINANCE', 'EVENT_STAFF']) {
       assert.equal(roleCapabilities[role].includes(CAPABILITIES.EVENTS_ALBUM_MANAGE), false)
     }
-    assert.equal(typeof actions['mip.admin.events.album.list'], 'function')
-    assert.equal(typeof actions['mip.admin.events.album.review'], 'function')
+    assert.notEqual(operationRegistry.operationByAction['mip.admin.events.album.list'], undefined)
+    assert.notEqual(operationRegistry.operationByAction['mip.admin.events.album.review'], undefined)
   })
 
   it('allows matching event or branch grants and rejects unrelated scopes before repository access', async () => {

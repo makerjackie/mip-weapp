@@ -4,12 +4,13 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const { describe, it } = require('node:test')
-const { actions, errorResponse } = require('../domain/handler')
+const { errorResponse } = require('../domain/handler')
 const {
   createOpportunityArchiveRepository: createProductionOpportunityArchiveRepository,
   createOpportunityArchiveService,
   normalizeArchiveRequest,
 } = require('../domain/opportunity-archive')
+const { createOperationDispatcher } = require('../domain/operation-registry')
 const { withTestAuthorization } = require('./test-authorization')
 const { createOwnerModules } = require('./owner-modules-test-helper')
 
@@ -341,12 +342,12 @@ describe('opportunity archive service', () => {
 describe('opportunity archive API contract', () => {
   it('registers the admin action and exposes only allowlisted blocker categories', async () => {
     let received
-    const result = await actions['mip.admin.opportunities.archive'](createOwnerModules({
+    const result = (await createOperationDispatcher(createOwnerModules({
       async archiveOpportunity(caller, event) {
         received = { caller, event }
         return { id: OPPORTUNITY_ID, status: 'ARCHIVED', version: 5 }
       },
-    }), { appId: APP_ID }, { opportunityId: OPPORTUNITY_ID })
+    })).execute({ appId: APP_ID }, 'mip.admin.opportunities.archive', { opportunityId: OPPORTUNITY_ID })).data
     assert.equal(result.status, 'ARCHIVED')
     assert.deepEqual(received, {
       caller: { appId: APP_ID },

@@ -7,7 +7,8 @@ const {
   configuredAgreements,
   createFullAccessPolicy,
 } = require('../domain/full-access')
-const { actions, createHandler } = require('../domain/handler')
+const { createHandler } = require('../domain/handler')
+const { operationRegistry } = require('../domain/operation-registry')
 const { createAdminService } = require('../domain/service')
 const { createOwnerModules } = require('./owner-modules-test-helper')
 
@@ -168,7 +169,7 @@ describe('admin full access', () => {
       resolveCaller: () => caller,
     })
 
-    for (const action of Object.keys(actions).filter(action => action !== 'health')) {
+    for (const action of operationRegistry.operationCatalog.map(operation => operation.action)) {
       const response = await handler({ action })
       assert.equal(response.ok, false, action)
       assert.equal(response.error.code, 'AGREEMENT_REQUIRED', action)

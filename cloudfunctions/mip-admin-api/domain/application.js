@@ -6,16 +6,6 @@ const {
 } = require('./operation-registry')
 const { AdminError } = require('./validation')
 
-const healthAction = service => service.health()
-const actions = Object.freeze(Object.assign(Object.create(null), { health: healthAction },
-  Object.fromEntries(operationRegistry.operationCatalog.map(operation => [
-    operation.action,
-    async (ownerModules, caller, input) => {
-      const result = await createOperationDispatcher(ownerModules).execute(caller, operation.action, input)
-      return result.data
-    },
-  ]))))
-
 function createAdminApplication({ service, assertPrincipal } = {}) {
   if (!service
     || typeof service.health !== 'function'
@@ -35,10 +25,10 @@ function createAdminApplication({ service, assertPrincipal } = {}) {
   }
 
   async function probe() {
-    return healthAction(service)
+    return service.health()
   }
 
   return Object.freeze({ execute, probe })
 }
 
-module.exports = { actions, createAdminApplication }
+module.exports = { createAdminApplication }
