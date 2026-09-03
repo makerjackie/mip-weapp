@@ -31,8 +31,8 @@ export function ResponsiveAppShell() {
   const pathname = useRouterState({ select: state => state.location.pathname }) as AdminRoutePath
   const navigate = useNavigate()
   const {
-    session, loading, error, demoMode, hasCapability, challenge, loginError,
-    refreshSession, beginLogin, closeLogin, logout,
+    session, loading, error, demoMode, hasCapability, challenge, loginError, loginConfirmed,
+    refreshSession, beginLogin, retryConfirmedLogin, closeLogin, logout,
   } = useAdminSession()
 
   const loginVisible = loginOpen && !session?.enabled
@@ -140,7 +140,9 @@ export function ResponsiveAppShell() {
         ) : loginError ? (
           <Space orientation="vertical">
             <Typography.Text type="danger">{loginError}</Typography.Text>
-            <Button onClick={() => void beginLogin()}>重新获取登录码</Button>
+            <Button onClick={() => void (loginConfirmed ? retryConfirmedLogin() : beginLogin())}>
+              {loginConfirmed ? '重新加载会话' : '重新获取登录码'}
+            </Button>
           </Space>
         ) : <Typography.Text type="secondary">正在获取登录码…</Typography.Text>}
       </Modal>

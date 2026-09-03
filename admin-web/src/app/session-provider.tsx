@@ -10,13 +10,15 @@ interface SessionContextValue {
   error: AdminApiClientError | null
   challenge: AdminLoginChallenge | null
   loginError: string
+  loginConfirmed: boolean
   demoMode: boolean
   sessionBoundary: number
   hasCapability: (capability: string) => boolean
   hasCapabilityAtScope: (capability: string, scopeType: string) => boolean
   request: <T>(action: AdminOperationAction, input?: AdminRequestInput) => Promise<T>
-  refreshSession: () => Promise<void>
+  refreshSession: () => Promise<boolean>
   beginLogin: () => Promise<void>
+  retryConfirmedLogin: () => Promise<void>
   closeLogin: () => void
   logout: () => Promise<void>
 }
@@ -32,6 +34,7 @@ export function SessionProvider({ children, client = defaultClient }: { children
   const [error, setError] = useState<AdminApiClientError | null>(null)
   const [challenge, setChallenge] = useState<AdminLoginChallenge | null>(null)
   const [loginError, setLoginError] = useState('')
+  const [loginConfirmed, setLoginConfirmed] = useState(false)
   const loginFlow = useRef(0)
   const sessionIdentity = useRef<string | null>(null)
 
@@ -57,10 +60,12 @@ export function SessionProvider({ children, client = defaultClient }: { children
     if (client.demoMode) {
       commitSession({ enabled: true, actor: { id: 'demo', name: '演示运营账号' }, capabilities: [] })
       setLoading(false)
-      return
+      return true
     }
     try {
-      commitSession(await client.getSession())
+      const next = await client.getSession()
+      commitSession(next)
+      return Boolean(next.enabled)
     }
     catch (reason) {
       const next = reason instanceof AdminApiClientError
@@ -68,6 +73,7 @@ export function SessionProvider({ children, client = defaultClient }: { children
         : new AdminApiClientError('SERVICE_UNAVAILABLE', '运营会话暂时无法加载', true)
       if (next.code === 'AUTH_REQUIRED') commitSession(null)
       setError(next)
+      return false
     }
     finally { setLoading(false) }
   }, [client, commitSession])
@@ -88,7 +94,15 @@ export function SessionProvider({ children, client = defaultClient }: { children
         if (status.state === 'AUTHENTICATED') {
           setChallenge(null)
           setLoginError('')
-          await refreshSession()
+          setLoginConfirmed(true)
+          const loaded = await refreshSession()
+          if (loginFlow.current !== flow) return
+          if (loaded) {
+            setLoginConfirmed(false)
+          }
+          else {
+            setLoginError('登录已确认，但运营会话暂时无法加载，请重试')
+          }
           return
         }
         if (Date.parse(status.expiresAt) <= Date.now()) {
@@ -112,6 +126,7 @@ export function SessionProvider({ children, client = defaultClient }: { children
     loginFlow.current = flow
     setChallenge(null)
     setLoginError('')
+    setLoginConfirmed(false)
     try {
       const next = await client.beginLogin()
       setChallenge(next)
@@ -126,10 +141,22 @@ export function SessionProvider({ children, client = defaultClient }: { children
     loginFlow.current += 1
     setChallenge(null)
     setLoginError('')
+    setLoginConfirmed(false)
   }, [])
+
+  const retryConfirmedLogin = useCallback(async () => {
+    setLoginError('')
+    const loaded = await refreshSession()
+    if (loaded) {
+      setLoginConfirmed(false)
+      return
+    }
+    setLoginError('登录已确认，但运营会话暂时无法加载，请重试')
+  }, [refreshSession])
 
   const logout = useCallback(async () => {
     loginFlow.current += 1
+    setLoginConfirmed(false)
     commitSession(null)
     await client.logout()
     await refreshSession()
@@ -153,6 +180,7 @@ export function SessionProvider({ children, client = defaultClient }: { children
     error,
     challenge,
     loginError,
+    loginConfirmed,
     demoMode: client.demoMode,
     sessionBoundary,
     hasCapability,
@@ -160,9 +188,10 @@ export function SessionProvider({ children, client = defaultClient }: { children
     request,
     refreshSession,
     beginLogin,
+    retryConfirmedLogin,
     closeLogin,
     logout,
-  }), [beginLogin, challenge, client, closeLogin, error, hasCapability, hasCapabilityAtScope, loading, loginError, logout, refreshSession, request, session, sessionBoundary])
+  }), [beginLogin, challenge, client, closeLogin, error, hasCapability, hasCapabilityAtScope, loading, loginConfirmed, loginError, logout, refreshSession, request, retryConfirmedLogin, session, sessionBoundary])
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>
 }

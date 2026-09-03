@@ -34,6 +34,10 @@ const runtimeEnvironment = (import.meta as ImportMeta & {
   env?: Record<string, string | undefined>
 }).env
 
+const AUTH_REQUEST_TIMEOUT_MS = 15_000
+const ADMIN_REQUEST_TIMEOUT_MS = 15_000
+const MEDIA_UPLOAD_TIMEOUT_MS = 70_000
+
 export class AdminApiClient {
   readonly baseUrl: string
   readonly demoMode: boolean
@@ -73,11 +77,20 @@ export class AdminApiClient {
   }
 
   async logout() {
-    await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
+    await this.authRequest('/api/auth/logout')
   }
 
   private async authRequest(path: string): Promise<Record<string, unknown>> {
-    const response = await fetch(path, { method: 'POST', credentials: 'same-origin' })
+    let response: Response
+    try {
+      response = await fetchWithTimeout(path, {
+        method: 'POST',
+        credentials: 'same-origin',
+      }, AUTH_REQUEST_TIMEOUT_MS)
+    }
+    catch (error) {
+      throw connectionError(error, 'AUTH_UNAVAILABLE', '网页登录服务连接失败，请稍后重试')
+    }
     let payload: unknown
     try { payload = await response.json() } catch {
       throw new AdminApiClientError('INVALID_RESPONSE', '网页登录服务返回格式无效')
@@ -100,14 +113,20 @@ export class AdminApiClient {
 
   async request<T>(action: AdminOperationAction, input: AdminRequestInput = {}): Promise<T> {
     if (!this.configured) throw new AdminApiClientError('API_NOT_CONFIGURED', '尚未配置管理 API')
-    const response = await fetch(this.baseUrl, {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      credentials: 'same-origin',
-      body: JSON.stringify(createAdminRequest(action, input)),
-    })
+    let response: Response
+    try {
+      response = await fetchWithTimeout(this.baseUrl, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify(createAdminRequest(action, input)),
+      }, ADMIN_REQUEST_TIMEOUT_MS)
+    }
+    catch (error) {
+      throw connectionError(error, 'SERVICE_UNAVAILABLE', '运营服务连接失败，请稍后重试')
+    }
     let payload: unknown
     try { payload = await response.json() } catch { throw new AdminApiClientError('INVALID_RESPONSE', '管理 API 返回格式无效') }
     if (!isAdminApiResponse<T>(payload)) throw new AdminApiClientError('INVALID_RESPONSE', '管理 API 返回格式无效')
@@ -119,12 +138,18 @@ export class AdminApiClient {
   async uploadImage(file: AdminMediaFile, purpose: AdminMediaPurpose): Promise<AdminMediaUploadResult> {
     if (!this.configured) throw new AdminApiClientError('API_NOT_CONFIGURED', '尚未配置管理 API')
     const prepared = await prepareAdminMediaUpload(file, purpose)
-    const response = await fetch('/api/media/image', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      credentials: 'same-origin',
-      body: JSON.stringify(prepared),
-    })
+    let response: Response
+    try {
+      response = await fetchWithTimeout('/api/media/image', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(prepared),
+      }, MEDIA_UPLOAD_TIMEOUT_MS)
+    }
+    catch (error) {
+      throw connectionError(error, 'UPLOAD_FAILED', '图片上传服务连接失败，请稍后重试')
+    }
     let payload: unknown
     try { payload = await response.json() }
     catch { throw new AdminApiClientError('INVALID_RESPONSE', '图片上传服务返回格式无效') }
@@ -156,4 +181,27 @@ export class AdminApiClientError extends Error {
     this.code = code
     this.retryable = retryable
   }
+}
+
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController()
+  const timeout = globalThis.setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await fetch(input, { ...init, signal: controller.signal })
+  }
+  finally {
+    globalThis.clearTimeout(timeout)
+  }
+}
+
+function connectionError(error: unknown, networkCode: string, networkMessage: string) {
+  const errorName = error && typeof error === 'object' && 'name' in error
+    ? String(error.name)
+    : ''
+  const timedOut = errorName === 'AbortError' || errorName === 'TimeoutError'
+  return new AdminApiClientError(
+    timedOut ? 'TIMEOUT' : networkCode,
+    timedOut ? '请求超时，请重试' : networkMessage,
+    true,
+  )
 }
