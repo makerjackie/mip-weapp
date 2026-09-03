@@ -151,9 +151,15 @@ interface LimitRow {
   updated_at: number
 }
 
+interface IpLimitRow {
+  window_started_at: number
+  hit_count: number
+}
+
 class MemoryD1 implements D1DatabaseBinding {
   readonly rows = new Map<string, Row>()
   readonly limits = new Map<string, LimitRow>()
+  readonly ipLimits = new Map<string, IpLimitRow>()
 
   prepare(query: string) {
     let values: unknown[] = []
@@ -171,6 +177,17 @@ class MemoryD1 implements D1DatabaseBinding {
         if (query.includes('FROM mip_admin_web_login_principal_limits')) {
           const row = this.limits.get(String(values[0]))
           return row ? { ...row } as T : null
+        }
+        if (query.includes('INSERT INTO mip_admin_web_login_ip_limits')) {
+          const [ipKey, now, windowBoundary] = values.map(NumberOrString)
+          const existing = this.ipLimits.get(String(ipKey))
+          if (!existing || existing.window_started_at <= Number(windowBoundary)) {
+            const row = { window_started_at: Number(now), hit_count: 1 }
+            this.ipLimits.set(String(ipKey), row)
+            return { ...row } as T
+          }
+          existing.hit_count += 1
+          return { ...existing } as T
         }
         if (query.includes('INSERT INTO mip_admin_web_login_principal_limits')) {
           const [principalKey, now, windowBoundary, failureLimit, lockedUntil] = values.map(NumberOrString)
@@ -192,6 +209,12 @@ class MemoryD1 implements D1DatabaseBinding {
         throw new Error('QUERY_UNSUPPORTED')
       },
       run: async () => {
+        if (query.includes('DELETE FROM mip_admin_web_login_ip_limits')) {
+          for (const [key, row] of this.ipLimits) {
+            if (row.window_started_at < Number(values[0])) this.ipLimits.delete(key)
+          }
+          return { success: true }
+        }
         if (query.includes('DELETE FROM mip_admin_web_login_challenges')) {
           for (const [id, row] of this.rows) {
             if (row.expires_at < Number(values[0])) this.rows.delete(id)
@@ -604,6 +627,52 @@ describe('Admin Web BFF', () => {
     now += 5 * 60 * 1000
     assert.equal((await confirm(secondChallenge.code)).status, 200)
     assert.equal(database.limits.size, 0)
+  })
+
+  it('caps login-challenge creation at 30 codes per client IP every 10 minutes', async () => {
+    const database = new MemoryD1()
+    let now = NOW
+    const bff = createAdminBff(env(database), { now: () => now })
+    const request = (ip: string) => bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
+      method: 'POST', headers: { origin: ORIGIN, 'cf-connecting-ip': ip },
+    }))
+
+    for (let attempt = 1; attempt <= 30; attempt += 1) {
+      const response = await request('203.0.113.10')
+      assert.equal(response.status, 201, `attempt ${attempt}`)
+    }
+    const limited = await request('203.0.113.10')
+    assert.equal(limited.status, 429)
+    assert.equal(limited.headers.get('retry-after'), '600')
+    assert.equal((await limited.json()).error.code, 'CHALLENGE_RATE_LIMITED')
+    assert.equal(database.rows.size, 30)
+    assert.equal(database.ipLimits.size, 1)
+    const limitedKey = [...database.ipLimits.keys()][0]
+    assert.match(limitedKey, /^[a-f0-9]{64}$/)
+    assert.equal(limitedKey.includes('203.0.113.10'), false)
+
+    assert.equal((await request('198.51.100.20')).status, 201)
+    assert.equal(database.ipLimits.size, 2)
+
+    now += 10 * 60 * 1000
+    assert.equal((await request('203.0.113.10')).status, 201)
+    assert.equal(database.ipLimits.get(limitedKey)?.hit_count, 1)
+  })
+
+  it('keeps issuing login codes when the IP limit table is unavailable', async () => {
+    const database = new MemoryD1()
+    const original = database.prepare.bind(database)
+    database.prepare = (query: string) => {
+      if (query.includes('mip_admin_web_login_ip_limits')) throw new Error('IP_LIMITS_MISSING')
+      return original(query)
+    }
+    const bff = createAdminBff(env(database), { now: () => NOW })
+    const response = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
+      method: 'POST', headers: { origin: ORIGIN, 'cf-connecting-ip': '203.0.113.10' },
+    }))
+    assert.equal(response.status, 201)
+    assert.match((await response.json()).code, /^\d{6}$/)
+    assert.equal(database.rows.size, 1)
   })
 
   it('clears expired challenges before issuing a new six-digit code', async () => {

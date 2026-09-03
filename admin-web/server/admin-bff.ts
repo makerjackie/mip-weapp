@@ -66,6 +66,11 @@ interface LoginPrincipalLimitRow {
   locked_until: number
 }
 
+interface LoginIpLimitRow {
+  window_started_at: number
+  hit_count: number
+}
+
 interface VerifiedLoginConfirmation {
   code: string
   principal: {
@@ -92,6 +97,8 @@ const WEB_LOGIN_MAX_CLOCK_SKEW_MS = 60_000
 const LOGIN_FAILURE_LIMIT = 5
 const LOGIN_FAILURE_WINDOW_MS = 5 * 60 * 1000
 const LOGIN_LOCK_MS = 5 * 60 * 1000
+const LOGIN_CHALLENGE_IP_WINDOW_MS = 10 * 60 * 1000
+const LOGIN_CHALLENGE_IP_MAX_PER_WINDOW = 30
 const IDEMPOTENCY_KEY_PATTERN = /^[A-Za-z0-9_.:-]{12,128}$/
 const encoder = new TextEncoder()
 
@@ -140,6 +147,27 @@ export function createAdminBff(
 
     const createdAt = deps.now()
     const expiresAt = createdAt + CHALLENGE_TTL_MS
+
+    let ipHit: LoginIpLimitRow | null = null
+    try {
+      await env.MIP_ADMIN_AUTH_DB!.prepare(
+        'DELETE FROM mip_admin_web_login_ip_limits WHERE window_started_at < ?1',
+      ).bind(createdAt - 2 * LOGIN_CHALLENGE_IP_WINDOW_MS).run()
+      ipHit = await recordLoginChallengeHit(
+        env.MIP_ADMIN_AUTH_DB!,
+        await loginIpKey(request, env.MIP_WEB_SESSION_SECRET!, deps.crypto),
+        createdAt,
+      )
+    }
+    catch {
+      // Missing or unhealthy IP counters must not block a legitimate login.
+    }
+    if (ipHit
+      && ipHit.hit_count > LOGIN_CHALLENGE_IP_MAX_PER_WINDOW
+      && ipHit.window_started_at > createdAt - LOGIN_CHALLENGE_IP_WINDOW_MS) {
+      return loginRateLimited(ipHit.window_started_at + LOGIN_CHALLENGE_IP_WINDOW_MS, createdAt)
+    }
+
     try {
       await env.MIP_ADMIN_AUTH_DB!.prepare(
         'DELETE FROM mip_admin_web_login_challenges WHERE expires_at < ?1',
@@ -475,6 +503,34 @@ async function verifyLoginConfirmation(
       ...(value.principal.displayName ? { displayName: value.principal.displayName } : {}),
     },
   }
+}
+
+async function loginIpKey(request: Request, secret: string, cryptoApi: Crypto) {
+  const ip = request.headers.get('cf-connecting-ip')?.trim() || ''
+  const normalized = ip.length > 0 && ip.length <= 128 ? ip : 'unknown'
+  return hmacHex(secret, `ip\0${normalized}`, cryptoApi)
+}
+
+async function recordLoginChallengeHit(
+  database: D1DatabaseBinding,
+  ipKey: string,
+  now: number,
+) {
+  return database.prepare(
+    `INSERT INTO mip_admin_web_login_ip_limits
+      (ip_key, window_started_at, hit_count)
+     VALUES (?1, ?2, 1)
+     ON CONFLICT(ip_key) DO UPDATE SET
+       hit_count = CASE
+         WHEN window_started_at <= ?3 THEN 1
+         ELSE hit_count + 1
+       END,
+       window_started_at = CASE
+         WHEN window_started_at <= ?3 THEN ?2
+         ELSE window_started_at
+       END
+     RETURNING window_started_at, hit_count`,
+  ).bind(ipKey, now, now - LOGIN_CHALLENGE_IP_WINDOW_MS).first<LoginIpLimitRow>()
 }
 
 async function recordFailedLoginAttempt(

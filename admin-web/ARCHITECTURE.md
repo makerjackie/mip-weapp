@@ -96,7 +96,7 @@ Pages 通过 `MIP_ADMIN_UPSTREAM_HMAC_SECRET` 签名管理请求，CloudBase 的
 - `CONFLICT`：刷新当前资源并要求重新确认。
 - 5xx/网络：保留页面上下文，允许手动重试。
 
-网页登录使用 5 分钟有效的 6 位数字单次短码、浏览器 verifier、D1 原子确认和 AES-GCM `HttpOnly` 8 小时会话；每个可信 AppID 与运营账号连续失败 5 次后锁定确认 5 分钟，D1 只保存该主体的 HMAC 限流键。React 不持久化 token。
+网页登录使用 5 分钟有效的 6 位数字单次短码、浏览器 verifier、D1 原子确认和 AES-GCM `HttpOnly` 8 小时会话；每个可信 AppID 与运营账号连续失败 5 次后锁定确认 5 分钟，同一客户端 IP 在 10 分钟内最多创建 30 个登录码，D1 只保存 HMAC 限流键。IP 计数表不可用时该限流自动旁路，不阻断登录。React 不持久化 token。
 
 ## 测试策略
 

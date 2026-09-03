@@ -42,6 +42,7 @@ Cloudflare Pages Function 位于 `functions/api/[[path]].ts`，核心 module 位
 - 已有运营账号在小程序现场工作台确认登录码，CloudBase 按现有角色和 capability 重新鉴权；
 - CloudBase 以独立 HMAC 将可信 AppID/OpenID 回传 BFF，D1 原子确认且仅允许消费一次；
 - 每个可信 AppID 与运营账号连续失败 5 次后锁定确认 5 分钟，限流键只保存不可逆 HMAC；
+- 同一客户端 IP 在 10 分钟内最多创建 30 个登录码，限流键同样只保存 HMAC；该表不可用时自动旁路，不阻断登录；
 - AES-GCM 密封的 `HttpOnly`、`Secure`、`SameSite=Lax` 8 小时会话；
 - 严格同源检查；普通 `/api/admin` 保持 32 KB 请求上限和精确 action allowlist；
 - 专用 `/api/media/image` 只接受 `mip.admin.media.uploadImage`，整体请求不超过 1.5 MB、解码图片不超过 1 MB，上游超时为 60 秒；
