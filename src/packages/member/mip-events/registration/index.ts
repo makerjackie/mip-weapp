@@ -1,12 +1,13 @@
 import type { EventId, OrderId } from '../../../../modules/mip'
 import type { MipEventDetail, MyEventRegistration, RegistrationField } from '../../../../modules/mip-events'
 import { mipCommerceModule } from '../../../../modules/mip-commerce/client'
-import { MipEventsError, publicEventTypeLabel } from '../../../../modules/mip-events'
+import { decodeInvitationToken, MipEventsError, publicEventTypeLabel } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
+import { formatChineseDateTime } from '../../../../utils/date'
 
 interface RegistrationFieldView extends RegistrationField {
   value: string
@@ -49,26 +50,6 @@ function answersFromFields(fields: RegistrationFieldView[]) {
 
 function requestKey(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
-}
-
-function formatDateTime(value: string) {
-  const date = new Date(value)
-  if (!Number.isFinite(date.getTime())) {
-    return ''
-  }
-  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
-
-function decodeInvitationToken(value: string | undefined) {
-  if (!value || value.length > 1536) {
-    return ''
-  }
-  try {
-    return decodeURIComponent(value).slice(0, 1024)
-  }
-  catch {
-    return ''
-  }
 }
 
 function registrationAccessText(event: MipEventDetail) {
@@ -185,7 +166,7 @@ Page({
         editing,
         shareProfile: editing ? registration?.shareProfile === true : false,
         cancellationText: event.cancellationDeadline
-          ? `${formatDateTime(event.cancellationDeadline)} 前可申请取消`
+          ? `${formatChineseDateTime(event.cancellationDeadline)} 前可申请取消`
           : '是否可以取消以活动当前状态为准',
         accessText: registrationAccessText(event),
         priceText: registrationPriceText(event),

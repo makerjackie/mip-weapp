@@ -6,6 +6,7 @@ import type {
 import { digitalAvatarStyles } from '../../../modules/mip-ai'
 import { mipAiModule } from '../../../modules/mip-ai/client'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
+import { formatChineseMonthDayTime } from '../../../utils/date'
 
 interface DigitalAvatarView extends DigitalAvatarGeneration {
   styleLabel: string
@@ -19,7 +20,6 @@ function generationRequestId() {
 }
 
 function generationView(generation: DigitalAvatarGeneration): DigitalAvatarView {
-  const date = new Date(generation.createdAt)
   const statusLabels = {
     PROCESSING: '正在生成',
     READY: '已生成',
@@ -29,9 +29,7 @@ function generationView(generation: DigitalAvatarGeneration): DigitalAvatarView 
     ...generation,
     styleLabel: digitalAvatarStyles.find(item => item.key === generation.styleKey)?.label || '数字分身',
     statusLabel: statusLabels[generation.status],
-    createdText: Number.isFinite(date.getTime())
-      ? `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-      : '',
+    createdText: formatChineseMonthDayTime(generation.createdAt),
     canPreview: generation.status === 'READY' && Boolean(generation.outputUrl),
   }
 }

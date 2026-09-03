@@ -30,6 +30,18 @@ export function eventInvitationPath(eventId: string, invitationToken = '') {
     : path
 }
 
+export function decodeInvitationToken(value: string | undefined) {
+  if (!value || value.length > 1536) {
+    return ''
+  }
+  try {
+    return decodeURIComponent(value).slice(0, 1024)
+  }
+  catch {
+    return ''
+  }
+}
+
 export function isEventAccessRequirementError(error: unknown) {
   return Boolean(error
     && typeof error === 'object'

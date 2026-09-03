@@ -6,6 +6,7 @@ import type {
 } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { caseNavigateTo, caseSwitchPrimary } from '../../../../platform/navigation/client'
+import { formatChineseMonthDayTime } from '../../../../utils/date'
 import { resolveMyRegistrationCategory } from './category'
 
 interface RegistrationView extends RegistrationSummary {
@@ -47,16 +48,14 @@ function uniqueText(values: Array<string | undefined>) {
 }
 
 function present(item: RegistrationSummary): RegistrationView {
-  const startsAt = new Date(item.event.startsAt)
   const accessText = item.event.accessType === 'MEMBER_INCLUDED'
     ? '仅玩家'
     : item.event.accessType === 'PAID' ? '付费' : '免费'
+  const startsText = formatChineseMonthDayTime(item.event.startsAt)
   return {
     ...item,
     statusText: statusLabels[item.status],
-    startsText: Number.isFinite(startsAt.getTime())
-      ? `${startsAt.getMonth() + 1}月${startsAt.getDate()}日 ${String(startsAt.getHours()).padStart(2, '0')}:${String(startsAt.getMinutes()).padStart(2, '0')}`
-      : '',
+    startsText,
     locationText: uniqueText([item.event.cityName, item.event.venueName, item.venueAddress]),
     accessText,
     participantCountText: item.event.registrationCount > 0 ? `${item.event.registrationCount} 人参加` : '',
@@ -65,9 +64,7 @@ function present(item: RegistrationSummary): RegistrationView {
       status: item.status,
       title: item.event.title,
       coverUrl: item.event.coverUrl,
-      startsText: Number.isFinite(startsAt.getTime())
-        ? `${startsAt.getMonth() + 1}月${startsAt.getDate()}日 ${String(startsAt.getHours()).padStart(2, '0')}:${String(startsAt.getMinutes()).padStart(2, '0')}`
-        : '',
+      startsText,
       locationText: uniqueText([item.event.cityName, item.event.venueName, item.venueAddress]),
       participantPreview: item.event.participantPreview,
       registrationCount: item.event.registrationCount,

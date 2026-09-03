@@ -1,7 +1,6 @@
 import { createRuntimeConfig } from '@weapp/platform/runtime-config'
 import { brand } from './brand'
 import { defaults } from './defaults'
-import { features } from './features'
 
 export type CloudbaseMode = 'disabled' | 'direct' | 'shared'
 export type PaymentMode = 'disabled' | 'test' | 'live'
@@ -37,7 +36,6 @@ export const runtimeConfig = {
   appVersion: baseConfig.app.version,
   buildSha: baseConfig.app.buildSha,
   brand,
-  features,
   cloudbase: {
     envId: baseConfig.cloudbase.envId,
     resourceAppId: baseConfig.cloudbase.resourceAppId,

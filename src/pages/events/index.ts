@@ -15,6 +15,7 @@ import { publicEventTypeLabel, resolvePrimaryBranchCity } from '../../modules/mi
 import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { caseNavigateTo, syncCaseNavigation } from '../../platform/navigation/client'
+import { formatChineseMonthDay, formatChineseMonthDayTime, formatLocalDate } from '../../utils/date'
 
 interface EventCardView extends MipEventListItem {
   startsText: string
@@ -28,33 +29,6 @@ interface EventFilterOptionView extends EventDiscoveryOption {
 }
 
 type EventBannerView = MipPublicBanner
-
-function formatDateTime(value: string) {
-  const date = new Date(value)
-  if (!Number.isFinite(date.getTime())) {
-    return ''
-  }
-  return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
-
-function formatCalendarDate(value: number) {
-  const date = new Date(value)
-  if (!Number.isFinite(date.getTime())) {
-    return ''
-  }
-  return [
-    date.getFullYear(),
-    String(date.getMonth() + 1).padStart(2, '0'),
-    String(date.getDate()).padStart(2, '0'),
-  ].join('-')
-}
-
-function formatCalendarLabel(value: number) {
-  const date = new Date(value)
-  return Number.isFinite(date.getTime())
-    ? `${date.getMonth() + 1}月${date.getDate()}日`
-    : ''
-}
 
 function accessLabel(event: MipEventListItem) {
   if (event.accessType === 'MEMBER_INCLUDED') {
@@ -93,7 +67,7 @@ function presentEvent(event: MipEventListItem): EventCardView {
   return {
     ...event,
     coverUrl: event.coverUrl || '',
-    startsText: formatDateTime(event.startsAt),
+    startsText: formatChineseMonthDayTime(event.startsAt),
     accessLabel: accessLabel(event),
     statusLabel: statusLabel(event),
     locationText: [event.cityName, event.venueName].filter(Boolean).join(' · ') || '地点待公布',
@@ -607,12 +581,12 @@ Page({
 
   confirmCalendar(event: WechatMiniprogram.CustomEvent<{ value: number | number[] }>) {
     const value = Array.isArray(event.detail.value) ? event.detail.value[0] : event.detail.value
-    const selectedDate = formatCalendarDate(value)
+    const selectedDate = formatLocalDate(value)
     if (!selectedDate) {
       wx.showToast({ title: '请选择有效日期', icon: 'none' })
       return
     }
-    const label = formatCalendarLabel(value)
+    const label = formatChineseMonthDay(value)
     if (this.data.calendarTarget === 'FROM') {
       if (this.data.dateTo && selectedDate > this.data.dateTo) {
         wx.showToast({ title: '开始日期不能晚于结束日期', icon: 'none' })

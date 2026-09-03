@@ -133,5 +133,3 @@ export function createPopupForegroundCoordinator(
     },
   }
 }
-
-export const _popupTest = { presentedIds }

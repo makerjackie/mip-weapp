@@ -118,13 +118,17 @@ describe('client stability source contracts', () => {
   const source = (relativePath: string) => fs.readFileSync(path.join(root, relativePath), 'utf8')
 
   it('safely decodes invitation query values', () => {
+    const helper = source('src/modules/mip-events/experience.ts')
+    expect(helper).toContain('export function decodeInvitationToken')
+    expect(helper).toMatch(/try \{[\s\S]*?decodeURIComponent\(value\)[\s\S]*?catch \{/)
+
     for (const file of [
       'src/packages/member/mip-events/detail/index.ts',
       'src/packages/member/mip-events/registration/index.ts',
     ]) {
       const page = source(file)
-      expect(page).toContain('function decodeInvitationToken')
-      expect(page).toMatch(/try \{[\s\S]*?decodeURIComponent\(value\)[\s\S]*?catch \{/)
+      expect(page).toContain('decodeInvitationToken(query.invitationToken)')
+      expect(page).not.toContain('function decodeInvitationToken')
       expect(page).not.toContain('query.invitationToken ? decodeURIComponent(query.invitationToken)')
     }
   })

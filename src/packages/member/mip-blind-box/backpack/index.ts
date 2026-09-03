@@ -1,18 +1,11 @@
 import type { BlindBoxInventoryItem } from '../../../../modules/mip-game'
 import { mipGameModule } from '../../../../modules/mip-game'
+import { formatLocalDate } from '../../../../utils/date'
 
 interface InventoryView extends BlindBoxInventoryItem {
   firstAcquiredText: string
   lastAcquiredText: string
   rarityLabel: string
-}
-
-function dateText(value: string) {
-  const date = new Date(value)
-  if (!Number.isFinite(date.getTime())) {
-    return ''
-  }
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
 function inventoryView(item: BlindBoxInventoryItem): InventoryView {
@@ -24,8 +17,8 @@ function inventoryView(item: BlindBoxInventoryItem): InventoryView {
   }
   return {
     ...item,
-    firstAcquiredText: dateText(item.firstAcquiredAt),
-    lastAcquiredText: dateText(item.lastAcquiredAt),
+    firstAcquiredText: formatLocalDate(item.firstAcquiredAt),
+    lastAcquiredText: formatLocalDate(item.lastAcquiredAt),
     rarityLabel: rarityLabels[item.rarity],
   }
 }

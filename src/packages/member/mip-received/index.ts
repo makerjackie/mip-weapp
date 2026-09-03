@@ -7,6 +7,7 @@ import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { mipMessagingModule } from '../../../modules/mip-messaging/client'
 import { opportunityModule } from '../../../modules/mip-opportunities'
 import { caseNavigateTo } from '../../../platform/navigation/client'
+import { formatChineseMonthDayTime } from '../../../utils/date'
 
 type PageState = 'loading' | 'ready' | 'empty' | 'error' | 'access'
 
@@ -45,14 +46,6 @@ function createCategoryCache(): CategoryCache {
   }
 }
 
-function dateText(value: string) {
-  const date = new Date(value)
-  if (!Number.isFinite(date.getTime())) {
-    return ''
-  }
-  return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
-
 function present(item: ReceivedInteraction, index: number): InteractionView {
   const subject = item.kind === 'OUTBOUND_INTEREST' ? item.target : item.actor
   const actorName = subject.nickname || 'MIP 用户'
@@ -72,7 +65,7 @@ function present(item: ReceivedInteraction, index: number): InteractionView {
         ? `通过你的邀请参加过 ${item.invitationCount} 场活动`
         : '通过你的邀请参加活动',
       note: '',
-      updatedText: dateText(item.updatedAt),
+      updatedText: formatChineseMonthDayTime(item.updatedAt),
       navigationUrl: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(item.actor.profileRef)}`,
     }
   }
@@ -90,7 +83,7 @@ function present(item: ReceivedInteraction, index: number): InteractionView {
       sourceText: item.event.title,
       detailText: '在活动中向你发送了心动',
       note: '',
-      updatedText: dateText(item.updatedAt),
+      updatedText: formatChineseMonthDayTime(item.updatedAt),
       navigationUrl: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(item.actor.profileRef)}`,
     }
   }
@@ -108,7 +101,7 @@ function present(item: ReceivedInteraction, index: number): InteractionView {
       sourceText: item.source.label,
       detailText: '当前对你标记了感兴趣',
       note: '',
-      updatedText: dateText(item.updatedAt),
+      updatedText: formatChineseMonthDayTime(item.updatedAt),
       navigationUrl: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(item.actor.profileRef)}`,
     }
   }
@@ -126,7 +119,7 @@ function present(item: ReceivedInteraction, index: number): InteractionView {
       sourceText: '公开档案',
       detailText: `访问了你的公开档案 ${item.visitCount} 次`,
       note: '',
-      updatedText: dateText(item.lastVisitedAt),
+      updatedText: formatChineseMonthDayTime(item.lastVisitedAt),
       navigationUrl: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(item.actor.profileRef)}`,
     }
   }
@@ -144,7 +137,7 @@ function present(item: ReceivedInteraction, index: number): InteractionView {
       sourceText: item.opportunity.title,
       detailText: '向你引荐了这个机会',
       note: item.note || '',
-      updatedText: dateText(item.updatedAt),
+      updatedText: formatChineseMonthDayTime(item.updatedAt),
       navigationUrl: `/packages/member/mip-opportunities/detail/index?id=${encodeURIComponent(item.opportunity.id)}`,
     }
   }
@@ -168,7 +161,7 @@ function present(item: ReceivedInteraction, index: number): InteractionView {
       sourceText: item.source.label,
       detailText: `你对该用户的${sourceNames[item.source.type]}标记了感兴趣`,
       note: '',
-      updatedText: dateText(item.updatedAt),
+      updatedText: formatChineseMonthDayTime(item.updatedAt),
       navigationUrl: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(item.target.profileRef)}`,
     }
   }
@@ -185,7 +178,7 @@ function present(item: ReceivedInteraction, index: number): InteractionView {
     sourceText: item.source.label,
     detailText: `对你的${sourceNames[item.source.type]}标记感兴趣`,
     note: '',
-    updatedText: dateText(item.updatedAt),
+    updatedText: formatChineseMonthDayTime(item.updatedAt),
     navigationUrl: `/packages/member/mip-public-profile/index?profileRef=${encodeURIComponent(item.actor.profileRef)}`,
   }
 }

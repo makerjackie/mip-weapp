@@ -4,7 +4,7 @@ import { mipCommerceModule } from '../../../modules/mip-commerce/client'
 import { mipGrowthModule } from '../../../modules/mip-growth/client'
 import { mipTasksModule } from '../../../modules/mip-tasks/client'
 import { caseNavigateTo } from '../../../platform/navigation/client'
-import { formatLocalDate } from '../../../utils/date'
+import { formatLocalDate, formatLocalDateTime } from '../../../utils/date'
 
 const metricLabels = {
   EXPERIENCE: '经验值',
@@ -35,20 +35,12 @@ interface GrowthTaskView extends UserTaskCard {
   actionText: string
 }
 
-function dateText(value: string) {
-  const date = new Date(value)
-  if (!Number.isFinite(date.getTime())) {
-    return ''
-  }
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
-
 function entryView(entry: GrowthEntry): GrowthEntryView {
   return {
     ...entry,
     metricLabel: metricLabels[entry.metric],
     deltaText: entry.deltaValue > 0 ? `+${entry.deltaValue}` : String(entry.deltaValue),
-    createdText: dateText(entry.createdAt),
+    createdText: formatLocalDateTime(entry.createdAt),
   }
 }
 

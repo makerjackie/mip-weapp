@@ -2,11 +2,12 @@ import type { EventId, OrderId } from '../../../../modules/mip'
 import type { MipEventDetail } from '../../../../modules/mip-events'
 import { brand } from '../../../../config/brand'
 import { mipOperationsConfig } from '../../../../config/mip-operations'
-import { eventInvitationPath, eventRichTextNodes, MipEventsError, publicEventTypeLabel, safeHttpsEventUrl } from '../../../../modules/mip-events'
+import { decodeInvitationToken, eventInvitationPath, eventRichTextNodes, MipEventsError, publicEventTypeLabel, safeHttpsEventUrl } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
 import { openWechatChannelsDestination } from '../../../../platform/wechat/channels'
+import { formatChineseDateTime } from '../../../../utils/date'
 
 const POSTER_WIDTH = 375
 const POSTER_HEIGHT = 560
@@ -48,29 +49,6 @@ function loadCanvasImage(canvas: Canvas2dNode, source: string) {
     image.onerror = reject
     image.src = source
   })
-}
-
-function formatDateTime(value?: string) {
-  if (!value) {
-    return ''
-  }
-  const date = new Date(value)
-  if (!Number.isFinite(date.getTime())) {
-    return ''
-  }
-  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
-
-function decodeInvitationToken(value: string | undefined) {
-  if (!value || value.length > 1536) {
-    return ''
-  }
-  try {
-    return decodeURIComponent(value).slice(0, 1024)
-  }
-  catch {
-    return ''
-  }
 }
 
 function accessText(event: MipEventDetail) {
@@ -277,8 +255,8 @@ Page({
       state: 'ready',
       event: normalizedEvent,
       descriptionNodes: eventRichTextNodes(event.description),
-      startsText: formatDateTime(event.startsAt),
-      endsText: formatDateTime(event.endsAt),
+      startsText: formatChineseDateTime(event.startsAt),
+      endsText: formatChineseDateTime(event.endsAt),
       accessText: accessText(event),
       locationText: [event.cityName, event.venueName, event.address].filter(Boolean).join(' · ')
         || (event.mode === 'ONLINE' ? '线上活动' : '地点待公布'),

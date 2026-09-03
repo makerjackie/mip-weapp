@@ -5,6 +5,7 @@ import type { AdminPageState } from '../shared/page-state'
 import { hasScopedCapability, mipAdminModule } from '../../../modules/mip-admin'
 import { checkInCredentialCountdown } from '../../../modules/mip-events'
 import { mipEventsModule } from '../../../modules/mip-events/client'
+import { formatChineseDateTime } from '../../../utils/date'
 import { adminLoadFailure } from '../shared/page-state'
 
 const POSTER_WIDTH = 375
@@ -25,14 +26,6 @@ const statusLabels: Record<AdminEventStatus, string> = {
   CANCELLED: '已取消',
   ENDED: '已结束',
   ARCHIVED: '已归档',
-}
-
-function localDateTime(value: string) {
-  const date = new Date(value)
-  if (!Number.isFinite(date.getTime())) {
-    return ''
-  }
-  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
 }
 
 function wrappedLines(
@@ -127,7 +120,7 @@ Page({
         state: 'ready',
         event,
         eventStatusText: statusLabels[event.status],
-        eventTimeText: localDateTime(event.startsAt),
+        eventTimeText: formatChineseDateTime(event.startsAt),
         canRoster: hasScopedCapability(session.capabilities, 'events.roster.read', scope),
         canCheckIn: hasScopedCapability(session.capabilities, 'events.checkin.manage', scope),
         message: '',
@@ -195,7 +188,7 @@ Page({
         posterPath,
         posterMode: credential.mode,
         posterValidUntil: credential.validUntil,
-        posterValidText: `有效至 ${localDateTime(credential.validUntil)}`,
+        posterValidText: `有效至 ${formatChineseDateTime(credential.validUntil)}`,
         posterCountdownText: '',
         posterExpired: false,
       })
@@ -242,7 +235,7 @@ Page({
     wrappedLines(context, event.title, POSTER_WIDTH - 56, 2)
       .forEach((line, index) => context.fillText(line, 28, 94 + index * 30))
     context.font = '400 14px sans-serif'
-    context.fillText(localDateTime(event.startsAt), 28, 158)
+    context.fillText(formatChineseDateTime(event.startsAt), 28, 158)
     context.fillText(event.cityName || '地点待公布', 28, 182)
     context.fillStyle = '#FFFFFF'
     context.fillRect(28, 208, 319, 286)

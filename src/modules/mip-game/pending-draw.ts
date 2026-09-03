@@ -53,5 +53,3 @@ export function createBlindBoxPendingDrawStore(storage: BlindBoxPendingDrawStora
     },
   }
 }
-
-export const _pendingDrawTest = { storageKey }

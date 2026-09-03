@@ -1,5 +1,4 @@
 import type {
-  AdminRoleKey,
   BranchId,
   CallerCapabilities,
   CityBranchSummary,
@@ -305,10 +304,4 @@ export interface MipIdentityGateway {
   listProfileTags: () => Promise<ProfileTagOption[]>
   listBranches: () => Promise<CityBranchSummary[]>
   setPrimaryBranch: (input: SetPrimaryBranchInput) => Promise<BranchSelectionSnapshot>
-}
-
-export interface AdminGrantInput {
-  scopeType: 'PLATFORM' | 'BRANCH' | 'EVENT'
-  scopeId: string
-  roles: AdminRoleKey[]
 }

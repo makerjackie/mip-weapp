@@ -8,6 +8,7 @@ import {
   shouldRetainPendingDraw,
 } from '../../../../modules/mip-game'
 import { mipIdentityModule } from '../../../../modules/mip-identity/client'
+import { formatLocalDateTime } from '../../../../utils/date'
 
 type BlindBoxCardView = BlindBoxDetail['cards'][number] & {
   rarityLabel: string
@@ -31,14 +32,6 @@ function requestId() {
   return `${hex.slice(0, 8).join('')}-${hex.slice(8, 12).join('')}-${hex.slice(12, 16).join('')}-${hex.slice(16, 20).join('')}-${hex.slice(20).join('')}`
 }
 
-function dateText(value: string) {
-  const date = new Date(value)
-  if (!Number.isFinite(date.getTime())) {
-    return ''
-  }
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
-
 function detailView(detail: BlindBoxDetail): BlindBoxDetailView {
   const rarityLabels = new Map(detail.rarities.map(item => [item.rarity, item.label]))
   return {
@@ -56,7 +49,7 @@ function resultView(result: BlindBoxDrawResult, detail: BlindBoxDetailView): Dra
   return {
     ...result,
     rarityLabel: detail.rarities.find(item => item.rarity === result.card.rarity)?.label || result.card.rarity,
-    drawnText: dateText(result.drawnAt),
+    drawnText: formatLocalDateTime(result.drawnAt),
   }
 }
 

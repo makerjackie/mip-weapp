@@ -6,6 +6,7 @@ import {
   _checkInResumeTest,
   checkInCredentialCountdown,
   createCheckInResumeStore,
+  decodeInvitationToken,
   eventInvitationPath,
   isEventAccessRequirementError,
   resolvePrimaryBranchCity,
@@ -61,6 +62,11 @@ describe('MIP event experience contracts', () => {
     expect(eventInvitationPath('event 1', 'invite/value')).toBe(
       '/packages/member/mip-events/detail/index?eventId=event%201&invitationToken=invite%2Fvalue',
     )
+    expect(decodeInvitationToken('invite%2Fvalue')).toBe('invite/value')
+    expect(decodeInvitationToken(undefined)).toBe('')
+    expect(decodeInvitationToken('%E0%A4%A')).toBe('')
+    expect(decodeInvitationToken('a'.repeat(1537))).toBe('')
+    expect(decodeInvitationToken('a'.repeat(1536)).length).toBe(1024)
     expect(() => eventInvitationPath(' ')).toThrow('EVENT_ID_REQUIRED')
     expect(isEventAccessRequirementError({ code: 'PHONE_REQUIRED' })).toBe(true)
     expect(isEventAccessRequirementError({ code: 'REGISTRATION_REQUIRED' })).toBe(false)

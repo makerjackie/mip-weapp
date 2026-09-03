@@ -73,5 +73,3 @@ export function createWechatSubscriptionRequester(
     },
   }
 }
-
-export const _test = { normalizeDecision, parseTemplates }

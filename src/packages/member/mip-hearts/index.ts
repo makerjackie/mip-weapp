@@ -3,6 +3,7 @@ import { mipEventsModule } from '../../../modules/mip-events/client'
 import { mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
 import { caseNavigateTo } from '../../../platform/navigation/client'
+import { formatChineseDate, formatChineseDateTime } from '../../../utils/date'
 
 type PageState = 'loading' | 'ready' | 'empty' | 'error' | 'access'
 
@@ -24,23 +25,12 @@ function createCache(): HeartCache {
   return { loaded: false, state: 'loading', items: [], nextCursor: '' }
 }
 
-function dateText(value: string, withTime = false) {
-  const date = new Date(value)
-  if (!Number.isFinite(date.getTime())) {
-    return ''
-  }
-  const datePart = `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
-  return withTime
-    ? `${datePart} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-    : datePart
-}
-
 function present(item: HeartHistoryItem, index: number): HeartView {
   return {
     ...item,
     viewKey: `${item.event.id}-${item.person.profileRef}-${index}`,
-    eventTimeText: dateText(item.event.startsAt),
-    updatedText: dateText(item.updatedAt, true),
+    eventTimeText: formatChineseDate(item.event.startsAt),
+    updatedText: formatChineseDateTime(item.updatedAt),
     personInitial: item.person.nickname.slice(0, 1) || 'M',
   }
 }

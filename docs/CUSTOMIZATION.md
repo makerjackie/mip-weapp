@@ -7,7 +7,6 @@
 | 产品名、口号、Logo、协议入口 | `src/config/brand.ts` |
 | 客服电话、视频号、首页 Banner、默认封面 | `src/config/mip-operations.ts` |
 | 主色等 token | `src/app.css` `@theme` 与 `brand.colors` |
-| 功能开关 | `src/config/features.ts` |
 | CloudBase / 支付模式 | `.env.local` + `src/config/runtime.ts` |
 | 会员方案 | 服务端 `mip_membership_plans`，不要写死在客户端 |
 

@@ -2,6 +2,7 @@ import type { InboxMessage, InboxMessageId } from '../../../modules/mip-messagin
 import { isTrustedInboxRoute } from '../../../modules/mip-messaging'
 import { mipMessagingModule } from '../../../modules/mip-messaging/client'
 import { caseNavigateTo } from '../../../platform/navigation/client'
+import { formatChineseMonthDayTime } from '../../../utils/date'
 
 interface MessageView extends InboxMessage {
   createdText: string
@@ -9,16 +10,8 @@ interface MessageView extends InboxMessage {
 
 type SubscriptionTemplateKey = 'EVENT_REMINDER' | 'CHECKIN_RESULT' | 'HEART_RECEIVED'
 
-function dateText(value: string) {
-  const date = new Date(value)
-  if (!Number.isFinite(date.getTime())) {
-    return ''
-  }
-  return `${date.getMonth() + 1}月${date.getDate()}日 ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
-}
-
 function messageView(item: InboxMessage): MessageView {
-  return { ...item, createdText: dateText(item.createdAt) }
+  return { ...item, createdText: formatChineseMonthDayTime(item.createdAt) }
 }
 
 Page({
