@@ -48,6 +48,7 @@ tmp/
 .screenshots/
 .grok/
 .codex/
+.wrangler/
 
 # Local source material used to refresh the canonical MIP documents.
 docs/research/legacy-mip-app/
