@@ -9,8 +9,8 @@
       → mip-* 云函数
         → mip_* MySQL / mip/ 对象存储
 
-Web 页面 (admin-web/src/pages)
-  → React adapter (features, shared/ui)
+Web 页面 (admin-web/src/features/*-pages)
+  → React adapter (app, shared/ui)
     → 既有 modules/services
       → 同源 Cloudflare BFF
         → AdminRequest v1 → mip-admin-api

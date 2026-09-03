@@ -20,7 +20,7 @@
 | Web 开放范围 | 80 查询、80 个受审 mutation | `cloudfunctions/mip-admin-api/lib/web-bff-auth.js` |
 | 云函数 | 23 个 `mip-*` 函数目录；数据库核心部署清单为 16 个函数 | `cloudfunctions/`、部署清单 |
 | 调度 | 消息和知识采集各有独立 scheduler；均不属于数据库核心函数 | `mip-message-scheduler`、`mip-knowledge-scheduler` 及部署脚本 |
-| Web 页面 | 14 个一级页面、8 类详情 | `admin-web/src/` 的路由与页面合同 |
+| Web 页面 | 14 个一级页面、13 类详情 | `admin-web/src/` 的路由与页面合同 |
 | 管理端形态 | React Web 是唯一完整后台；小程序现场工作台只保留 Web 登录确认、已授权活动、签到码与海报、名单与签到，共享管理 operation 和服务端事实 | `src/packages/admin/`、`admin-web/`、`packages/admin-contracts/` |
 
 ## 环境状态

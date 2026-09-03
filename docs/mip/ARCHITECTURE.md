@@ -123,7 +123,7 @@ operation dispatcher 只通过冻结的 owner module interface 调用实现，�
 
 ## Web 会话与敏感操作
 
-Web 登录使用短期、单次、绑定浏览器 verifier 的 challenge，由已登录且拥有管理 capability 的小程序现场工作台用户确认。服务端只保存 session token hash；Cookie 使用 `HttpOnly`、`Secure` 和合适的 `SameSite`，写操作校验 CSRF。每次请求重新读取用户状态、协议、角色和 capability，撤权或停用后下一次请求立即失败。
+Web 登录使用短期、单次、绑定浏览器 verifier 的 challenge，由已登录且拥有管理 capability 的小程序现场工作台用户确认。服务端不保存会话状态：数据库只保存登录挑战和限流的哈希，会话本身是无状态的签名加密 Cookie，使用 `HttpOnly`、`Secure` 和合适的 `SameSite`，写操作校验请求 Origin。每次请求重新读取用户状态、协议、角色和 capability，撤权或停用后下一次请求立即失败。
 
 手机号原文、导出、退款、角色变更、签到覆盖、相册审核和成长人工调整使用独立 capability。mutation 与审计在同一事务内；审计只记录必要的 channel 和 request reference，不记录 Cookie、授权头、OpenID 或完整浏览器载荷。
 
