@@ -165,6 +165,7 @@ export function createMipIdentityModule(
   let pendingResume: StoredPendingResume | undefined
   let signedOut = false
   let localSessionGeneration = 0
+  let snapshotFlight: { generation: number, promise: Promise<IdentityAccessSnapshot> } | undefined
 
   function notifyIdentityBoundary() {
     try {
@@ -175,20 +176,62 @@ export function createMipIdentityModule(
     }
   }
 
+  function beginSnapshotMutation() {
+    localSessionGeneration += 1
+    return localSessionGeneration
+  }
+
   function currentLocalSnapshot(): IdentityAccessSnapshot {
     return latestSnapshot || signedOutSnapshot()
   }
 
   async function loadAndStoreSnapshot(
     loader: () => Promise<IdentityAccessSnapshot>,
+    requestGeneration = localSessionGeneration,
   ): Promise<IdentityAccessSnapshot> {
-    const requestGeneration = localSessionGeneration
     const snapshot = await loader()
     if (requestGeneration !== localSessionGeneration || signedOut) {
       return currentLocalSnapshot()
     }
     latestSnapshot = snapshot
     return snapshot
+  }
+
+  function commitMutationSnapshot(
+    generation: number,
+    snapshot: IdentityAccessSnapshot,
+  ): boolean {
+    if (generation !== localSessionGeneration || signedOut) {
+      return false
+    }
+    // Fence reads that started after the mutation began but before its result committed.
+    localSessionGeneration += 1
+    latestSnapshot = snapshot
+    return true
+  }
+
+  function loadSnapshot() {
+    if (signedOut) {
+      latestSnapshot = signedOutSnapshot()
+      return Promise.resolve(latestSnapshot)
+    }
+    const generation = localSessionGeneration
+    if (!snapshotFlight || snapshotFlight.generation !== generation) {
+      const flight: { generation: number, promise: Promise<IdentityAccessSnapshot> } = {
+        generation,
+        promise: loadAndStoreSnapshot(
+          () => gateway.getAccessSnapshot(),
+          generation,
+        ),
+      }
+      flight.promise = flight.promise.finally(() => {
+        if (snapshotFlight === flight) {
+          snapshotFlight = undefined
+        }
+      })
+      snapshotFlight = flight
+    }
+    return snapshotFlight.promise
   }
 
   function persistAccessState() {
@@ -322,7 +365,7 @@ export function createMipIdentityModule(
       latestSnapshot = snapshot
     }
     else {
-      snapshot = await loadAndStoreSnapshot(() => gateway.getAccessSnapshot())
+      snapshot = await loadSnapshot()
     }
     return {
       token,
@@ -340,9 +383,9 @@ export function createMipIdentityModule(
     if (!intent) {
       throw new Error('ACCESS_INTENT_EXPIRED')
     }
-    const requestGeneration = localSessionGeneration
+    const requestGeneration = beginSnapshotMutation()
     const next = await mutation()
-    if (requestGeneration !== localSessionGeneration || signedOut) {
+    if (!commitMutationSnapshot(requestGeneration, next)) {
       const snapshot = currentLocalSnapshot()
       return {
         token,
@@ -378,12 +421,11 @@ export function createMipIdentityModule(
       if (!intent) {
         throw new Error('ACCESS_INTENT_EXPIRED')
       }
-      localSessionGeneration += 1
-      const signInGeneration = localSessionGeneration
-      const snapshot = await gateway.getAccessSnapshot()
+      const signInGeneration = beginSnapshotMutation()
+      const snapshot = await gateway.signIn()
       if (signInGeneration === localSessionGeneration) {
         signedOut = false
-        latestSnapshot = snapshot
+        commitMutationSnapshot(signInGeneration, snapshot)
         persistAccessState()
       }
       const current = signInGeneration === localSessionGeneration
@@ -402,7 +444,7 @@ export function createMipIdentityModule(
     },
 
     signOutLocally() {
-      localSessionGeneration += 1
+      beginSnapshotMutation()
       latestSnapshot = undefined
       intents.clear()
       pendingResume = undefined
@@ -414,13 +456,7 @@ export function createMipIdentityModule(
       return latestSnapshot
     },
 
-    async loadSnapshot() {
-      if (signedOut) {
-        latestSnapshot = signedOutSnapshot()
-        return latestSnapshot
-      }
-      return loadAndStoreSnapshot(() => gateway.getAccessSnapshot())
-    },
+    loadSnapshot,
 
     peekIntent(token: string) {
       return getIntent(token)
@@ -434,9 +470,8 @@ export function createMipIdentityModule(
       if (!code.trim()) {
         throw new Error('PHONE_CODE_REQUIRED')
       }
-      const requestGeneration = localSessionGeneration
       const result = await mutateAccessSession(token, () => gateway.bindWechatPhone(code))
-      if (requestGeneration === localSessionGeneration && !signedOut) {
+      if (!signedOut) {
         notifyIdentityBoundary()
       }
       return result
@@ -446,16 +481,17 @@ export function createMipIdentityModule(
       if (!code.trim()) {
         throw new Error('PHONE_CODE_REQUIRED')
       }
-      const requestGeneration = localSessionGeneration
-      const snapshot = await loadAndStoreSnapshot(() => gateway.bindWechatPhone(code))
-      if (requestGeneration === localSessionGeneration && !signedOut) {
+      const requestGeneration = beginSnapshotMutation()
+      const snapshot = await gateway.bindWechatPhone(code)
+      const applied = commitMutationSnapshot(requestGeneration, snapshot)
+      if (applied) {
         notifyIdentityBoundary()
       }
-      return snapshot
+      return applied ? snapshot : currentLocalSnapshot()
     },
 
     async closeAccount(input: AccountClosureInput) {
-      const requestGeneration = localSessionGeneration
+      const requestGeneration = beginSnapshotMutation()
       const result = await gateway.closeAccount(input)
       if (requestGeneration !== localSessionGeneration) {
         return result
@@ -475,11 +511,17 @@ export function createMipIdentityModule(
     },
 
     async saveProfile(input: ProfileUpdateInput) {
-      return loadAndStoreSnapshot(() => gateway.updateProfile(input))
+      const generation = beginSnapshotMutation()
+      const snapshot = await gateway.updateProfile(input)
+      const applied = commitMutationSnapshot(generation, snapshot)
+      return applied ? snapshot : currentLocalSnapshot()
     },
 
     async updateCard(input: ProfileCardUpdateInput) {
-      return loadAndStoreSnapshot(() => gateway.updateCard(input))
+      const generation = beginSnapshotMutation()
+      const snapshot = await gateway.updateCard(input)
+      const applied = commitMutationSnapshot(generation, snapshot)
+      return applied ? snapshot : currentLocalSnapshot()
     },
 
     async complete(token: string): Promise<AccessReturnContext> {

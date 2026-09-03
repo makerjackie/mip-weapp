@@ -18,15 +18,15 @@ export function safeHttpsEventUrl(value: string | undefined) {
   return HTTPS_EVENT_URL.test(normalized) ? normalized : ''
 }
 
-export function eventInvitationPath(eventId: string, invitationToken = '') {
+export function eventInvitationPath(eventId: string, inviteRef = '') {
   const normalizedEventId = eventId.trim()
   if (!normalizedEventId || normalizedEventId.length > 64) {
     throw new Error('EVENT_ID_REQUIRED')
   }
   const path = `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(normalizedEventId)}`
-  const normalizedToken = invitationToken.trim()
-  return normalizedToken
-    ? `${path}&invitationToken=${encodeURIComponent(normalizedToken)}`
+  const normalizedRef = inviteRef.trim()
+  return normalizedRef
+    ? `${path}&inviteRef=${encodeURIComponent(normalizedRef)}`
     : path
 }
 

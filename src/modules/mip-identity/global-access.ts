@@ -3,6 +3,7 @@ import type { MipIdentityModule } from './module'
 import {
   accessReturnUrl,
   evaluateAccess,
+  isMipPublicRoute,
   mipAccessPageUrl,
   sanitizeReturnContext,
 } from './access-flow'
@@ -25,6 +26,7 @@ interface MipGlobalAccessIdentity {
   peekIntent: MipIdentityModule['peekIntent']
   peekSnapshot: MipIdentityModule['peekSnapshot']
   prepareProtectedAction: MipIdentityModule['prepareProtectedAction']
+  loadSnapshot: MipIdentityModule['loadSnapshot']
 }
 
 export interface MipGlobalAccessRuntime {
@@ -34,7 +36,7 @@ export interface MipGlobalAccessRuntime {
   navigateBack: () => void
 }
 
-export type MipGlobalAccessResult = 'BACK' | 'BLOCKED' | 'EXEMPT' | 'READY'
+export type MipGlobalAccessResult = 'BACK' | 'BLOCKED' | 'EXEMPT' | 'READY' | 'UNKNOWN'
 
 function normalizeRoute(route = ''): string {
   return route.split('?')[0].replace(/^\/+/, '').replace(/\/+$/, '')
@@ -73,9 +75,14 @@ export function createMipGlobalAccessGuard(
   runtime: MipGlobalAccessRuntime,
 ) {
   let activeRedirect: { token: string, source: string } | undefined
+  let restoreFlight: Promise<MipGlobalAccessResult> | undefined
 
   function redirectToAccess(intent: ProtectedActionIntent): MipGlobalAccessResult {
     const source = JSON.stringify(intent.source)
+    if (activeRedirect?.source === source
+      && identity.peekIntent(activeRedirect.token)?.action === 'ENTER_APP') {
+      return 'BLOCKED'
+    }
     let token = activeRedirect?.source === source
       && identity.peekIntent(activeRedirect.token)?.action === 'ENTER_APP'
       ? activeRedirect.token
@@ -118,12 +125,31 @@ export function createMipGlobalAccessGuard(
       if (isMipGlobalAccessExemptRoute(target.path)) {
         return 'EXEMPT'
       }
+      if (isMipPublicRoute(target.path)) {
+        return 'READY'
+      }
       const intent = createMipGlobalAccessIntent(target)
+      if (!identity.peekSnapshot()) {
+        return 'UNKNOWN'
+      }
       if (globalAccessReady(identity.peekSnapshot(), intent)) {
         clearActiveRedirect()
         return 'READY'
       }
       return redirectToAccess(intent)
+    },
+
+    async restore(launch: MipGlobalAccessTarget = {}): Promise<MipGlobalAccessResult> {
+      if (!restoreFlight) {
+        restoreFlight = identity.loadSnapshot()
+          .then(() => this.ensureLaunch(launch))
+          .finally(() => { restoreFlight = undefined })
+      }
+      return restoreFlight
+    },
+
+    isPublicTarget(target: MipGlobalAccessTarget = {}) {
+      return isMipPublicRoute(targetFromLaunch(target).path)
     },
 
     enterTarget,

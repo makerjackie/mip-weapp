@@ -51,6 +51,7 @@ function identityGateway() {
   const snapshot = readySnapshot()
   return {
     getAccessSnapshot: vi.fn(async () => snapshot),
+    signIn: vi.fn(async () => snapshot),
     acceptAgreements: vi.fn(async () => snapshot),
     bindWechatPhone: vi.fn(async () => snapshot),
     closeAccount: vi.fn(),
@@ -153,7 +154,7 @@ describe('MIP local logout flow', () => {
       snapshot: { authenticated: true, userStatus: 'ACTIVE' },
     })
     expect(restored.isSignedOut()).toBe(false)
-    expect(gateway.getAccessSnapshot).toHaveBeenCalledTimes(callsBeforeAccessPage + 1)
+    expect(gateway.signIn).toHaveBeenCalledOnce()
   })
 
   it('clears revocable local session state while retaining durable recovery ids', () => {
@@ -275,7 +276,7 @@ describe('MIP local logout flow', () => {
   it('keeps a later logout authoritative when an explicit login request is still in flight', async () => {
     let resolveSnapshot!: (snapshot: IdentityAccessSnapshot) => void
     const gateway = identityGateway()
-    gateway.getAccessSnapshot.mockImplementationOnce(() => new Promise((resolve) => {
+    gateway.signIn.mockImplementationOnce(() => new Promise((resolve) => {
       resolveSnapshot = resolve
     }))
     const identity = createMipIdentityModule(gateway, { token: () => 'login-race' })

@@ -19,6 +19,10 @@ interface PopupIdentity {
     authenticated: boolean
     agreements: Array<{ accepted: boolean }>
   }>
+  peekSnapshot?: () => {
+    authenticated: boolean
+    agreements: Array<{ accepted: boolean }>
+  } | undefined
 }
 
 function presentedIds(value: unknown): string[] {
@@ -108,16 +112,23 @@ export function createPopupForegroundCoordinator(
 ) {
   let foregroundCycle = 0
   let foreground = false
+  let sessionSnoozed = false
 
   return {
     async onShow() {
+      if (sessionSnoozed) {
+        return
+      }
       foreground = true
       const cycle = ++foregroundCycle
       try {
-        const snapshot = await identity.loadSnapshot()
+        const snapshot = identity.peekSnapshot?.() || await identity.loadSnapshot()
         if (foreground && cycle === foregroundCycle
           && snapshot.authenticated && snapshot.agreements.every(item => item.accepted)) {
-          await presenter.showNext()
+          const shown = await presenter.showNext()
+          if (shown) {
+            sessionSnoozed = true
+          }
         }
       }
       catch {}

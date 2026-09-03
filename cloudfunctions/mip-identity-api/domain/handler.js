@@ -53,6 +53,7 @@ const retryableCodes = new Set([
 const CONTRACT_VERSION = 1
 
 const actions = Object.freeze({
+  signIn: (service, caller) => service.signIn(caller),
   acceptAgreements: (service, caller, input) => service.acceptAgreements(caller, input),
   bindWechatPhone: (service, caller, input) => service.bindWechatPhone(caller, { code: input.code }),
   closeAccount: (service, caller, input) => service.closeAccount(caller, { input }),

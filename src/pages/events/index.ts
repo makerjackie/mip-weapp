@@ -131,7 +131,6 @@ Page({
     calendarMaxDate: rollingCalendarBoundary(10),
     nextCursor: '',
     loadingMore: false,
-    shareTokens: {} as Record<string, string>,
     message: '',
   },
   requestSeq: 0,
@@ -318,30 +317,6 @@ Page({
       loadingMore: false,
       message: '',
     })
-    void this.loadShareTokens(events)
-  },
-
-  async loadShareTokens(events: EventCardView[]) {
-    const missing = events.filter(item => !this.data.shareTokens[item.id])
-    if (!missing.length) {
-      return
-    }
-    const entries = await Promise.all(missing.map(async (item) => {
-      try {
-        const invitation = await mipEventsModule.createInvitation(item.id)
-        return [item.id, invitation.token] as const
-      }
-      catch {
-        return [item.id, ''] as const
-      }
-    }))
-    const shareTokens = { ...this.data.shareTokens }
-    for (const [eventId, token] of entries) {
-      if (token) {
-        shareTokens[eventId] = token
-      }
-    }
-    this.setData({ shareTokens })
   },
 
   async onPullDownRefresh() {
@@ -708,12 +683,10 @@ Page({
   onShareAppMessage(event: WechatMiniprogram.Page.IShareAppMessageOption) {
     const eventId = String(event.target?.dataset?.eventId || '')
     const item = this.data.events.find(current => current.id === eventId)
-    const token = eventId ? this.data.shareTokens[eventId] : ''
-    const invitation = token ? `&invitationToken=${encodeURIComponent(token)}` : ''
     return {
       title: item?.title || 'MIP 活动',
       path: eventId
-        ? `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(eventId)}${invitation}`
+        ? `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(eventId)}`
         : '/pages/events/index',
       imageUrl: item?.coverUrl,
     }

@@ -131,6 +131,86 @@ const protectedIntent = {
 }
 
 describe('MIP resumable identity access', () => {
+  it('coalesces concurrent snapshot reads into one request', async () => {
+    let resolve!: (value: IdentityAccessSnapshot) => void
+    const source = gateway()
+    source.getAccessSnapshot = vi.fn(() => new Promise<IdentityAccessSnapshot>((done) => {
+      resolve = done
+    }))
+    const module = createMipIdentityModule(source)
+    const first = module.loadSnapshot()
+    const second = module.loadSnapshot()
+    expect(source.getAccessSnapshot).toHaveBeenCalledOnce()
+    resolve(accessSnapshot({ agreements: [] }))
+    await expect(Promise.all([first, second])).resolves.toHaveLength(2)
+  })
+
+  it('fences an old snapshot read across a mutation and keeps the newer flight alive', async () => {
+    let resolveOld!: (value: IdentityAccessSnapshot) => void
+    let resolveNew!: (value: IdentityAccessSnapshot) => void
+    const source = gateway()
+    source.getAccessSnapshot = vi.fn()
+      .mockReturnValueOnce(new Promise<IdentityAccessSnapshot>((resolve) => { resolveOld = resolve }))
+      .mockReturnValueOnce(new Promise<IdentityAccessSnapshot>((resolve) => { resolveNew = resolve }))
+    const updated = accessSnapshot({ phoneBound: true })
+    source.updateProfile = vi.fn(async () => updated)
+    const module = createMipIdentityModule(source)
+
+    const oldRead = module.loadSnapshot()
+    await module.saveProfile({ nickname: '新用户' } as ProfileUpdateInput)
+    const newRead = module.loadSnapshot()
+    resolveOld(accessSnapshot({ phoneBound: false }))
+    await oldRead
+    expect(source.getAccessSnapshot).toHaveBeenCalledTimes(2)
+    expect(module.peekSnapshot()).toEqual(updated)
+    resolveNew(updated)
+    await expect(newRead).resolves.toEqual(updated)
+    expect(module.peekSnapshot()).toEqual(updated)
+  })
+
+  it('fences a snapshot read started during a pending access-session mutation', async () => {
+    let resolveMutation!: (value: IdentityAccessSnapshot) => void
+    let resolveRead!: (value: IdentityAccessSnapshot) => void
+    const source = gateway()
+    const updated = accessSnapshot({ agreements: [{ ...accessSnapshot().agreements[0], accepted: true }] })
+    source.acceptAgreements = vi.fn(() => new Promise<IdentityAccessSnapshot>((resolve) => {
+      resolveMutation = resolve
+    }))
+    source.getAccessSnapshot = vi.fn(() => new Promise<IdentityAccessSnapshot>((resolve) => {
+      resolveRead = resolve
+    }))
+    const module = createMipIdentityModule(source, { token: () => 'access-mutation' })
+    const token = module.prepareProtectedAction(protectedIntent)
+    const mutation = module.acceptAgreements(token, { agreements: [{ key: 'SERVICE_AGREEMENT', version: '1' }] })
+    const read = module.loadSnapshot()
+    resolveMutation(updated)
+    await expect(mutation).resolves.toMatchObject({ snapshot: updated })
+    resolveRead(accessSnapshot({ agreements: [] }))
+    await read
+    expect(module.peekSnapshot()).toEqual(updated)
+  })
+
+  it('fences a snapshot read started during a pending profile save', async () => {
+    let resolveMutation!: (value: IdentityAccessSnapshot) => void
+    let resolveRead!: (value: IdentityAccessSnapshot) => void
+    const source = gateway()
+    const updated = accessSnapshot({ phoneBound: true })
+    source.updateProfile = vi.fn(() => new Promise<IdentityAccessSnapshot>((resolve) => {
+      resolveMutation = resolve
+    }))
+    source.getAccessSnapshot = vi.fn(() => new Promise<IdentityAccessSnapshot>((resolve) => {
+      resolveRead = resolve
+    }))
+    const module = createMipIdentityModule(source)
+    const mutation = module.saveProfile({ nickname: '新用户' } as ProfileUpdateInput)
+    const read = module.loadSnapshot()
+    resolveMutation(updated)
+    await expect(mutation).resolves.toEqual(updated)
+    resolveRead(accessSnapshot({ phoneBound: false }))
+    await read
+    expect(module.peekSnapshot()).toEqual(updated)
+  })
+
   it('requires only authentication and current agreements before public browsing', () => {
     const intent = createMipGlobalAccessIntent({
       path: 'packages/member/mip-events/detail/index',
@@ -147,10 +227,7 @@ describe('MIP resumable identity access', () => {
       ready: false,
       block: 'AGREEMENT_REQUIRED',
     })
-    expect(evaluateAccess(accessSnapshot(), { ...intent, requirements: [] })).toMatchObject({
-      ready: false,
-      block: 'AGREEMENT_REQUIRED',
-    })
+    expect(evaluateAccess(accessSnapshot(), { ...intent, requirements: [] })).toEqual({ ready: true })
   })
 
   it('checks agreement, phone and profile in order before restoring the source action', async () => {
@@ -423,6 +500,7 @@ describe('MIP resumable identity access', () => {
         route: '/packages/member/mip-events/registration/index',
         query: {
           eventId: 'event-1',
+          inviteRef: 'invite-ref-1',
           invitationToken: 'must-not-persist',
         },
       },
@@ -436,8 +514,43 @@ describe('MIP resumable identity access', () => {
       source: {
         navigation: 'navigateBack',
         route: '/packages/member/mip-events/registration/index',
-        query: { eventId: 'event-1' },
+        query: { eventId: 'event-1', inviteRef: 'invite-ref-1' },
       },
+    })
+  })
+
+  it('retains inviteRef through a persisted protected action and pending resume', async () => {
+    const memory = memoryAccessStorage()
+    const ready = accessSnapshot({
+      agreements: [],
+      phoneBound: true,
+      profile: { ...accessSnapshot().profile, complete: true, missingFields: [] },
+    })
+    const first = createMipIdentityModule(gateway(ready), {
+      now: () => 33_000,
+      token: () => 'invite-intent',
+      storage: memory.storage,
+    })
+    const token = first.prepareProtectedAction({
+      action: 'REGISTER_EVENT',
+      source: {
+        navigation: 'navigateBack',
+        route: '/packages/member/mip-events/registration/index',
+        query: { eventId: 'event-1', inviteRef: 'invite-ref-2', invitationToken: 'signed-secret' },
+      },
+    })
+    const restored = createMipIdentityModule(gateway(ready), {
+      now: () => 33_001,
+      storage: memory.storage,
+    })
+    expect(restored.peekIntent(token)?.source.query).toEqual({
+      eventId: 'event-1',
+      inviteRef: 'invite-ref-2',
+    })
+    await restored.complete(token)
+    expect(restored.consumePendingResume()?.source.query).toEqual({
+      eventId: 'event-1',
+      inviteRef: 'invite-ref-2',
     })
   })
 
@@ -483,7 +596,7 @@ describe('MIP global access guard', () => {
 
     expect(app).toContain('onLaunch(options)')
     expect(app).toContain('onShow(options)')
-    expect(app.match(/mipGlobalAccessGuard\.ensureLaunch\(options\)/g)).toHaveLength(2)
+    expect(app).toContain('mipGlobalAccessGuard.restore(options)')
     expect(access).toContain('context.navigation === \'reLaunch\'')
     expect(access).toContain('exitMipMiniProgram()')
     expect(accessTemplate).toContain('<app-page-exit managed')
@@ -535,24 +648,13 @@ describe('MIP global access guard', () => {
       query: { id: 'event-1', phone: '13800000000' },
     }
 
-    expect(guard.ensureLaunch(launch)).toBe('BLOCKED')
-    expect(guard.ensureLaunch(launch)).toBe('BLOCKED')
-    expect(prepare).toHaveBeenCalledTimes(1)
-    expect(reLaunch).toHaveBeenLastCalledWith(
-      '/packages/member/mip-access/index?token=global-intent',
-    )
-    expect(module.peekIntent('global-intent')).toMatchObject({
-      action: 'ENTER_APP',
-      source: {
-        navigation: 'reLaunch',
-        route: '/packages/member/mip-events/detail/index',
-        query: { id: 'event-1' },
-      },
-    })
+    expect(guard.ensureLaunch(launch)).toBe('READY')
+    expect(guard.ensureLaunch(launch)).toBe('READY')
+    expect(prepare).not.toHaveBeenCalled()
+    expect(reLaunch).not.toHaveBeenCalled()
 
     await module.loadSnapshot()
     expect(guard.ensureLaunch(launch)).toBe('READY')
-    expect(module.peekIntent('global-intent')).toBeNull()
   })
 
   it('returns directly from an exempt document when the cached access snapshot is ready', async () => {

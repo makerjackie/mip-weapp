@@ -19,6 +19,7 @@
 | 领域 / 来源 | 范围 | 实现状态 | 验证状态 | 当前证据与缺口 |
 | --- | --- | --- | --- | --- |
 | 身份与协议 / A1–A4 | 微信身份、两份协议、拆分授权、会话恢复、补资料后恢复原动作 | implemented | verified-local + external-wait | `mip-identity-api`、全局门禁和身份流程测试已覆盖；正式协议、手机号、头像和昵称需真机 |
+| 公开浏览与活动分享 / A5 | 冷启动不闪门禁、活动先展示、邀请引用跨身份流程、无效邀请降级、拒绝手机号不循环、弹窗延后 | implemented | verified-local + external-wait | 已覆盖公开路由、匿名快照、显式身份建立、inviteRef 持久化与并发恢复保护、服务端报名归因和弹窗延后；仍需正式 AppID 真机确认冷启动、分享面板和拒绝手机号后的完整链路 |
 | 分会与档案 / N4 | 主分会、城市/行业目录、公司/组织经历、隐私 | implemented | verified-local + external-wait | 服务端档案与共用选择器已有测试；正式目录和隐私真机旅程待验 |
 | 谁看过我 / N7 | 幂等访问、累计、最新优先、未读、本人可见 | implemented | verified-local + evidence-missing | 迁移、服务端合同和页面已存在；缺可提交运行时闭环 |
 | 会员与邀请 / N1、#55 | 可配置方案、玩家权益、会员期邀请归因、续费 | implemented | verified-local + external-wait | commerce/ledger 和邀请 token 测试已覆盖；正式分享、扫码和支付待验 |

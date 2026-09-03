@@ -217,6 +217,6 @@ export const cloudbaseMipEventsGateway: MipEventsGateway = {
   },
 
   createInvitation(eventId: EventId) {
-    return callEvents<{ token: string }>('mip.events.createInvitation', { eventId })
+    return callEvents<{ inviteRef: string, validUntil?: string }>('mip.events.createInvitation', { eventId })
   },
 }

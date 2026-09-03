@@ -443,7 +443,7 @@ export interface MipEventsGateway {
   getFeedback: (eventId: EventId) => Promise<EventFeedback | null>
   saveFeedback: (eventId: EventId, draft: EventFeedbackDraft) => Promise<EventFeedback>
   listAdminFeedback: (eventId: EventId, query?: AdminEventFeedbackQuery) => Promise<AdminEventFeedbackPage>
-  createInvitation: (eventId: EventId) => Promise<{ token: string }>
+  createInvitation: (eventId: EventId) => Promise<{ inviteRef: string, validUntil?: string }>
 }
 
 export class MipEventsError extends Error {

@@ -115,7 +115,7 @@
         <view class="box-border rounded-t-[24rpx] bg-panel px-5 pb-[calc(env(safe-area-inset-bottom)+32rpx)] pt-5 text-ink">
           <view class="flex items-center justify-between"><view class="text-[length:32rpx] font-bold">分享活动</view><view class="min-h-[64rpx] px-2 py-2 text-[length:22rpx] text-brand" bind:tap="closeShare">关闭</view></view>
           <view class="mt-4 grid grid-cols-2 gap-3">
-            <button open-type="share" class="m-0 flex min-h-[144rpx] flex-col items-center justify-center gap-2 rounded-[16rpx] border-0 bg-panel-raised p-4 text-[length:23rpx] text-ink"><t-icon name="logo-wechat-stroke-filled" size="44rpx" color="var(--color-brand)" /><text>发送给微信好友</text></button>
+            <button open-type="share" disabled="{{invitationLoading}}" class="m-0 flex min-h-[144rpx] flex-col items-center justify-center gap-2 rounded-[16rpx] border-0 bg-panel-raised p-4 text-[length:23rpx] text-ink"><t-icon name="logo-wechat-stroke-filled" size="44rpx" color="var(--color-brand)" /><text>{{invitationLoading ? '正在准备分享' : '发送给微信好友'}}</text></button>
             <button class="m-0 flex min-h-[144rpx] flex-col items-center justify-center gap-2 rounded-[16rpx] border-0 bg-panel-raised p-4 text-[length:23rpx] text-ink" bind:tap="copyShareText"><t-icon name="file-copy" size="44rpx" color="var(--color-brand)" /><text>复制活动信息</text></button>
             <button class="col-span-2 m-0 flex min-h-[112rpx] items-center justify-center gap-2 rounded-[16rpx] border-0 bg-panel-raised p-4 text-[length:23rpx] text-ink" disabled="{{posterBusy}}" bind:tap="createInvitationPoster"><t-icon name="qrcode" size="42rpx" color="var(--color-brand)" /><text>{{posterBusy ? '正在生成邀请海报' : '生成邀请海报'}}</text></button>
           </view>

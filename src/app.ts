@@ -16,6 +16,9 @@ const popupForeground = createPopupForegroundCoordinator(
 registerMipLocalUserCache(() => popupForeground.invalidate())
 registerMipLocalUserCache(clearCloudMediaCache)
 
+let launchRestore: Promise<ReturnType<typeof mipGlobalAccessGuard.ensureLaunch>> | undefined
+let launchRestoreConsumed = false
+
 const freeEventRuntimeAcceptanceStorageKey = 'mip:internal:free-event-runtime-acceptance:v1'
 const runtimeAcceptance = Object.freeze({
   buildSha: __BUILD_SHA__,
@@ -40,17 +43,28 @@ App({
     }
     prepareApp()
     mipCheckInResumeStore.prune()
-    if (mipGlobalAccessGuard.ensureLaunch(options) === 'READY') {
-      void profileInterestMutations.flush()
-    }
+    launchRestore = mipGlobalAccessGuard.restore(options)
+    void launchRestore.catch(() => undefined)
+    launchRestoreConsumed = false
   },
 
   onShow(options) {
     mipCheckInResumeStore.prune()
-    if (mipGlobalAccessGuard.ensureLaunch(options) === 'READY') {
-      void profileInterestMutations.flush()
-    }
-    void popupForeground.onShow()
+    const restore = !launchRestoreConsumed && launchRestore
+      ? (launchRestoreConsumed = true, launchRestore)
+      : mipGlobalAccessGuard.restore(options)
+    void restore.then((result) => {
+      if (result !== 'READY') {
+        return
+      }
+      const snapshot = mipIdentityModule.peekSnapshot()
+      if (snapshot?.authenticated && snapshot.agreements.every(item => item.accepted)) {
+        void profileInterestMutations.flush()
+      }
+      if (!mipGlobalAccessGuard.isPublicTarget(options)) {
+        void popupForeground.onShow()
+      }
+    }).catch(() => undefined)
   },
 
   onHide() {

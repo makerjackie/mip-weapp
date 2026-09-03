@@ -8,6 +8,21 @@ import type {
 
 export const MIP_ACCESS_PAGE_PATH = '/packages/member/mip-access/index'
 
+export const MIP_PUBLIC_ROUTES = [
+  'pages/index/index',
+  'pages/events/index',
+  'packages/member/mip-events/detail/index',
+  'packages/member/mip-events/participants/index',
+  'pages/opportunities/index',
+  'packages/member/mip-opportunities/detail/index',
+  'packages/member/mip-public-profile/index',
+] as const
+
+export function isMipPublicRoute(route = ''): boolean {
+  const normalized = route.replace(/^\/+/, '').split('?')[0]
+  return MIP_PUBLIC_ROUTES.includes(normalized as typeof MIP_PUBLIC_ROUTES[number])
+}
+
 const fullAccessRequirements: AccessRequirement[] = [
   'AUTHENTICATED',
   'AGREEMENTS',
@@ -16,6 +31,8 @@ const fullAccessRequirements: AccessRequirement[] = [
 ]
 
 const defaultRequirements: Record<ProtectedActionIntent['action'], AccessRequirement[]> = {
+  // Public pages are readable before an account exists. Protected actions
+  // carry their own requirements and enter the resumable access flow.
   ENTER_APP: ['AUTHENTICATED', 'AGREEMENTS'],
   REGISTER_EVENT: fullAccessRequirements,
   PURCHASE_MEMBERSHIP: fullAccessRequirements,
@@ -34,9 +51,6 @@ const blockByRequirement = {
 } as const
 
 export function requirementsFor(intent: ProtectedActionIntent): AccessRequirement[] {
-  if (intent.action === 'ENTER_APP') {
-    return [...defaultRequirements.ENTER_APP]
-  }
   return [...(intent.requirements || defaultRequirements[intent.action])]
 }
 

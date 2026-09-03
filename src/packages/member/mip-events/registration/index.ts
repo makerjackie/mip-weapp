@@ -87,6 +87,7 @@ Page({
     orderId: '' as OrderId | '',
     message: '',
     invitationToken: '',
+    inviteRef: '',
     resumeCheckIn: false,
     canContinueCheckIn: false,
     checkingRegistration: false,
@@ -99,16 +100,33 @@ Page({
   },
   submissionIdempotencyKey: '',
   pendingAccessResume: false,
+  invitationResolution: Promise.resolve(),
 
   onLoad(query: Record<string, string>) {
     const eventId = String(query.eventId || '') as EventId
     const resumeCheckIn = query.resumeCheckIn === '1' && Boolean(mipCheckInResumeStore.peek(String(eventId)))
     this.setData({
       eventId,
+      inviteRef: String(query.inviteRef || '').trim(),
       invitationToken: decodeInvitationToken(query.invitationToken),
       resumeCheckIn,
     })
+    if (query.inviteRef) {
+      this.invitationResolution = this.resolveInvitationRef(String(query.inviteRef))
+    }
     void this.loadEvent()
+  },
+
+  async resolveInvitationRef(ref: string) {
+    try {
+      const resolved = await mipEventsModule.resolveInvitationScene(ref)
+      if (resolved.eventId === this.data.eventId) {
+        this.setData({ invitationToken: resolved.invitationToken })
+      }
+    }
+    catch {
+      this.setData({ message: '活动邀请无效或已失效，报名将不记录邀请来源。' })
+    }
   },
 
   onShow() {
@@ -249,6 +267,7 @@ Page({
     if (!event || this.data.busy || !this.validate()) {
       return
     }
+    await this.invitationResolution
     const answers = answersFromFields(this.data.fields)
     if (!this.submissionIdempotencyKey) {
       this.submissionIdempotencyKey = requestKey(this.data.editing ? 'event-registration-update' : 'event-registration')
@@ -353,6 +372,7 @@ Page({
               route: '/packages/member/mip-events/registration/index',
               query: {
                 eventId: this.data.eventId,
+                ...(this.data.inviteRef ? { inviteRef: this.data.inviteRef } : {}),
                 ...(this.data.resumeCheckIn ? { resumeCheckIn: '1' } : {}),
               },
             },

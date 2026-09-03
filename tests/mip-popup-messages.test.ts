@@ -36,7 +36,15 @@ describe('MIP popup messages', () => {
     const loadSnapshot = vi.fn()
       .mockReturnValueOnce(firstSnapshot)
       .mockResolvedValueOnce({ authenticated: true, agreements: [{ accepted: true }] })
-    const coordinator = createPopupForegroundCoordinator({ loadSnapshot }, { showNext })
+    let restoredSnapshot: { authenticated: boolean, agreements: Array<{ accepted: boolean }> } | undefined
+    const coordinator = createPopupForegroundCoordinator({
+      loadSnapshot: async () => {
+        const snapshot = await loadSnapshot()
+        restoredSnapshot = snapshot
+        return snapshot
+      },
+      peekSnapshot: () => restoredSnapshot,
+    }, { showNext })
 
     const firstShow = coordinator.onShow()
     expect(showNext).not.toHaveBeenCalled()
@@ -47,14 +55,33 @@ describe('MIP popup messages', () => {
 
     await coordinator.onShow()
     expect(showNext).toHaveBeenCalledOnce()
-    expect(loadSnapshot).toHaveBeenCalledTimes(2)
+    expect(loadSnapshot).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not present another popup in the same foreground session', async () => {
+    const showNext = vi.fn(async () => true)
+    const coordinator = createPopupForegroundCoordinator({
+      loadSnapshot: vi.fn(async () => ({ authenticated: true, agreements: [{ accepted: true }] })),
+      peekSnapshot: () => ({ authenticated: true, agreements: [{ accepted: true }] }),
+    }, { showNext })
+    await coordinator.onShow()
+    coordinator.onHide()
+    await coordinator.onShow()
+    expect(showNext).toHaveBeenCalledOnce()
   })
 
   it('wires snapshot-driven popup checks to both app foreground lifecycle edges', () => {
     const app = readFileSync(new URL('../src/app.ts', import.meta.url), 'utf8')
+    const launch = app.slice(app.indexOf('  onLaunch(options)'), app.indexOf('  onShow(options)'))
     expect(app).toContain('void popupForeground.onShow()')
     expect(app).toContain('popupForeground.onHide()')
     expect(app).toContain('registerMipLocalUserCache(() => popupForeground.invalidate())')
+    expect(app).toContain('launchRestoreConsumed')
+    expect(app).toContain('void launchRestore.catch(() => undefined)')
+    expect(app).toContain('mipIdentityModule.peekSnapshot()')
+    expect(app).toContain('void profileInterestMutations.flush()')
+    expect(app).toContain('if (!mipGlobalAccessGuard.isPublicTarget(options))')
+    expect(launch).not.toContain('profileInterestMutations.flush()')
     expect(app).not.toContain('setTimeout')
   })
 

@@ -67,6 +67,33 @@ function repository(overrides = {}) {
 }
 
 describe('MIP identity service', () => {
+  it('creates a user only through explicit sign-in', async () => {
+    let ensured = 0
+    const service = createIdentityService({
+      repository: repository({
+        async ensureUser() { ensured += 1; return facts().user },
+      }),
+    })
+    const snapshot = await service.signIn(caller)
+    assert.equal(snapshot.authenticated, true)
+    assert.equal(ensured, 1)
+  })
+
+  it('returns an anonymous snapshot without creating a business user', async () => {
+    let ensureCalls = 0
+    const service = createIdentityService({
+      repository: repository({
+        async findUserByIdentity() { return null },
+        async ensureUser() { ensureCalls += 1; return facts().user },
+      }),
+    })
+    const snapshot = await service.getAccessSnapshot(caller)
+    assert.equal(snapshot.authenticated, false)
+    assert.equal(snapshot.userId, undefined)
+    assert.equal(snapshot.membership.kind, 'GUEST')
+    assert.equal(ensureCalls, 0)
+  })
+
   it('reloads the access snapshot through the rebound caller identity', async () => {
     const temporaryUser = { ...facts().user, id: '10000000-0000-4000-8000-000000000009' }
     const targetUser = facts().user

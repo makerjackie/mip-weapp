@@ -251,6 +251,7 @@ export interface ProfileCardSceneResolution {
 export const MIP_IDENTITY_CONTRACT_VERSION = 1 as const
 
 export interface MipIdentityActionInputMap {
+  signIn: Record<string, never>
   getAccessSnapshot: Record<string, never>
   acceptAgreements: AgreementAcceptanceInput
   bindWechatPhone: { code: string }
@@ -267,6 +268,7 @@ export interface MipIdentityActionInputMap {
 }
 
 export interface MipIdentityActionResultMap {
+  signIn: IdentityAccessSnapshot
   getAccessSnapshot: IdentityAccessSnapshot
   acceptAgreements: IdentityAccessSnapshot
   bindWechatPhone: IdentityAccessSnapshot
@@ -291,6 +293,7 @@ export interface MipIdentityRequest<A extends MipIdentityAction = MipIdentityAct
 }
 
 export interface MipIdentityGateway {
+  signIn: () => Promise<IdentityAccessSnapshot>
   getAccessSnapshot: () => Promise<IdentityAccessSnapshot>
   acceptAgreements: (input: AgreementAcceptanceInput) => Promise<IdentityAccessSnapshot>
   bindWechatPhone: (code: string) => Promise<IdentityAccessSnapshot>

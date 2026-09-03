@@ -204,6 +204,9 @@ async function call<A extends MipIdentityAction>(
 
 export function createMipIdentityGateway(transport: MipIdentityTransport): MipIdentityGateway {
   return {
+    async signIn() {
+      return snapshot(await call(transport, 'signIn', {}))
+    },
     async getAccessSnapshot() {
       return snapshot(await call(transport, 'getAccessSnapshot', {}))
     },

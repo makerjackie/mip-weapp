@@ -107,7 +107,9 @@ Page({
     busy: false,
     message: '',
     invitationToken: '',
+    inviteRef: '',
     incomingInvitationToken: '',
+    invitationLoading: false,
     shareOpen: false,
     posterBusy: false,
     posterPath: '',
@@ -125,6 +127,7 @@ Page({
   onLoad(query: Record<string, string>) {
     this.onlineRequested = query.online === '1'
     const scene = String(query.scene || '').trim()
+    const inviteRef = String(query.inviteRef || '').trim()
     this.entryScene = scene
     if (scene) {
       if (scene.startsWith('i1.')) {
@@ -139,12 +142,16 @@ Page({
     const hasCheckInIntent = Boolean(mipCheckInResumeStore.peek(String(eventId)))
     this.setData({
       eventId,
+      inviteRef,
       incomingInvitationToken: decodeInvitationToken(query.invitationToken),
       hasCheckInIntent,
     })
     const cached = mipEventsModule.peekEvent(eventId)
     if (cached) {
       this.applyEvent(cached)
+    }
+    if (inviteRef) {
+      void this.loadInvitationScene(inviteRef)
     }
     void this.loadEvent()
   },
@@ -182,15 +189,18 @@ Page({
       const resolved = await mipEventsModule.resolveInvitationScene(scene)
       this.setData({
         eventId: resolved.eventId,
+        inviteRef: scene,
         incomingInvitationToken: resolved.invitationToken,
       })
       await this.loadEvent({ force: true })
     }
     catch {
-      this.setData({
-        state: 'error',
-        message: '活动邀请无效或已失效，请通过活动列表重新进入。',
-      })
+      if (this.data.eventId) {
+        this.entryScene = ''
+        this.setData({ message: '活动邀请无效或已失效，已按普通活动打开。' })
+        return
+      }
+      this.setData({ state: 'error', message: '活动邀请无效或已失效，请通过活动列表重新进入。' })
     }
   },
 
@@ -217,7 +227,6 @@ Page({
       const event = await mipEventsModule.getEvent(this.data.eventId, options)
       if (requestSeq === this.requestSeq) {
         this.applyEvent(event)
-        void this.loadInvitation()
       }
     }
     catch (error) {
@@ -286,17 +295,25 @@ Page({
   },
 
   async loadInvitation() {
+    if (this.data.invitationLoading || this.data.inviteRef) {
+      return
+    }
+    this.setData({ invitationLoading: true })
     try {
       const result = await mipEventsModule.createInvitation(this.data.eventId)
-      this.setData({ invitationToken: result.token })
+      this.setData({ inviteRef: result.inviteRef })
     }
     catch {
-      this.setData({ invitationToken: '' })
+      this.setData({ inviteRef: '' })
+    }
+    finally {
+      this.setData({ invitationLoading: false })
     }
   },
 
   openShare() {
     this.setData({ shareOpen: true })
+    void this.loadInvitation()
   },
 
   closeShare() {
@@ -328,7 +345,7 @@ Page({
       this.data.locationText,
       event.summary,
       '请在微信中打开 MIP 小程序查看活动详情。',
-      `小程序路径：${eventInvitationPath(this.data.eventId, this.data.invitationToken)}`,
+      `小程序路径：${eventInvitationPath(this.data.eventId, this.data.inviteRef)}`,
     ].filter(Boolean)
     wx.setClipboardData({
       data: lines.join('\n'),
@@ -450,8 +467,8 @@ Page({
       return
     }
     if (this.data.primaryAction === 'register') {
-      const invitation = this.data.incomingInvitationToken
-        ? `&invitationToken=${encodeURIComponent(this.data.incomingInvitationToken)}`
+      const invitation = this.data.inviteRef
+        ? `&inviteRef=${encodeURIComponent(this.data.inviteRef)}`
         : ''
       const checkIn = this.data.hasCheckInIntent
         ? '&resumeCheckIn=1'
@@ -735,7 +752,7 @@ Page({
     this.closeShare()
     return {
       title: this.data.event?.title || 'MIP 活动',
-      path: eventInvitationPath(this.data.eventId, this.data.invitationToken),
+      path: eventInvitationPath(this.data.eventId, this.data.inviteRef),
       imageUrl: this.data.event?.coverUrl || brand.logoPath,
     }
   },

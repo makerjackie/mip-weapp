@@ -60,7 +60,7 @@ describe('MIP event experience contracts', () => {
 
   it('keeps the invitation route actionable and classifies identity requirements', () => {
     expect(eventInvitationPath('event 1', 'invite/value')).toBe(
-      '/packages/member/mip-events/detail/index?eventId=event%201&invitationToken=invite%2Fvalue',
+      '/packages/member/mip-events/detail/index?eventId=event%201&inviteRef=invite%2Fvalue',
     )
     expect(decodeInvitationToken('invite%2Fvalue')).toBe('invite/value')
     expect(decodeInvitationToken(undefined)).toBe('')

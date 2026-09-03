@@ -3163,24 +3163,8 @@ async function saveFeedback(db, {
 }
 
 async function createInvitation(db, { appId, eventId, userId, tokenSecret, now = new Date() }) {
-  return db.transaction(async (tx) => {
-    await requireActiveUserForMutation(tx, appId, userId)
-    const event = await tx.one(
-      `SELECT id FROM mip_events WHERE app_id = ? AND id = ? AND status = 'PUBLISHED'`,
-      [appId, eventId],
-    )
-    if (!event) {
-      throw new DomainError('NOT_FOUND', '活动不存在或已下架')
-    }
-    return {
-      token: createSignedToken({
-        type: 'event-invitation',
-        eventId,
-        inviterUserId: userId,
-        expiresAt: iso(new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)),
-      }, tokenSecret),
-    }
-  })
+  const invitation = await issueInvitationLink(db, { appId, eventId, userId, now })
+  return { inviteRef: invitation.scene, validUntil: invitation.validUntil }
 }
 
 async function loadActiveBindings(db, { appId, userId }) {

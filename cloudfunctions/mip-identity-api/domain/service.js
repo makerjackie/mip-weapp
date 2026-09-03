@@ -37,6 +37,21 @@ function createIdentityService(options) {
   }
 
   async function getAccessSnapshot(caller) {
+    const user = typeof repository.findUserByIdentity === 'function'
+      ? await repository.findUserByIdentity(caller)
+      : await repository.ensureUser(caller)
+    if (!user) {
+      return anonymousSnapshot(agreements)
+    }
+    const facts = await repository.loadFacts(caller.appId, user.id)
+    const membership = await membershipProjection(entitlementReader, caller.appId, user.id)
+    const profileRef = typeof profileRefWriter === 'function'
+      ? profileRefWriter({ appId: caller.appId, userId: user.id })
+      : undefined
+    return snapshotDto(facts, agreements, membership, profileRef)
+  }
+
+  async function signIn(caller) {
     const user = await repository.ensureUser(caller)
     const facts = await repository.loadFacts(caller.appId, user.id)
     const membership = await membershipProjection(entitlementReader, caller.appId, user.id)
@@ -44,6 +59,23 @@ function createIdentityService(options) {
       ? profileRefWriter({ appId: caller.appId, userId: user.id })
       : undefined
     return snapshotDto(facts, agreements, membership, profileRef)
+  }
+
+  function anonymousSnapshot(currentAgreements) {
+    return {
+      authenticated: false,
+      userVersion: 0,
+      phoneBound: false,
+      agreements: currentAgreements.map(agreement => ({ ...agreement, accepted: false })),
+      profile: {
+        exists: false, version: 0, nickname: '', realName: '', gender: 'UNKNOWN',
+        careerIdentityKey: '', avatarBound: false, identityStatus: '', headline: '',
+        introduction: '', companies: [], organizations: [], visibility: visibility('{}'),
+        abilityTagIds: [], complete: false, missingFields: ['NICKNAME', 'PRIMARY_BRANCH'],
+      },
+      membership: { kind: 'GUEST', source: 'NONE' },
+      grants: [],
+    }
   }
 
   async function acceptAgreements(caller, input) {
@@ -190,6 +222,7 @@ function createIdentityService(options) {
     bindWechatPhone,
     closeAccount,
     getAccessSnapshot,
+    signIn,
     getMyProfileCardCode,
     getProfile,
     getPublicProfile,
