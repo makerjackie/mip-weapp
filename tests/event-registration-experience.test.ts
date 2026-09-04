@@ -170,14 +170,20 @@ describe('event registration experience', () => {
   it('uses the configured MIP logo and image-led event cards on the discover page', () => {
     const home = read('src/pages/index/index.wxml')
     const homePage = read('src/pages/index/index.ts')
+    const eventsPage = read('src/pages/events/index.ts')
+    const eventCard = read('src/components/event-card/index.wxml')
 
     expect(read('src/config/brand.ts')).toContain('/assets/brand/mip-logo-yellow.png')
     expect(home).toContain('src="{{logoPath}}"')
     expect(fs.existsSync(path.join(root, 'src/assets/brand/mip-logo-yellow.png'))).toBe(true)
-    expect(home).toContain('item.coverUrl')
-    expect(home).toContain('{{item.registrationCount}} 人参加')
+    expect(home).toContain('<event-card')
+    expect(home).toContain('<mip-opportunity-card')
+    expect(home).toContain('cover-url="{{item.coverUrl || \'\'}}"')
+    expect(eventCard).toContain('event.coverUrl')
+    expect(eventCard).toContain('event.registrationCount + \'人参加\'')
     expect(homePage).toContain('mipEventsModule.listEvents')
-    expect(homePage).toContain('items.slice(0, 3).map(presentEvent)')
+    expect(homePage).toContain('items.slice(0, 3).map(presentEventCard)')
+    expect(eventsPage).toContain('feed.items.map(presentEventCard)')
   })
 
   it('routes checkout to a server-confirmed result and keeps explicit exits', () => {

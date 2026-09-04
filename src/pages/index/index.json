@@ -9,6 +9,8 @@
   "enablePullDownRefresh": true,
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",
+    "event-card": "/components/event-card/index",
+    "mip-opportunity-card": "/components/opportunity-card/index",
     "t-icon": "tdesign-miniprogram/icon/icon",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
   }

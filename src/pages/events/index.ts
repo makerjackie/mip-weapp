@@ -1,3 +1,4 @@
+import type { EventCardView } from '../../components/event-card/model'
 import type { EventId } from '../../modules/mip'
 import type { MipPublicBanner } from '../../modules/mip-banners'
 import type {
@@ -7,73 +8,21 @@ import type {
   EventFeedQuery,
   EventListView,
   EventSortDirection,
-  MipEventListItem,
 } from '../../modules/mip-events'
+import { presentEventCard } from '../../components/event-card/model'
 import { mipOperationsConfig } from '../../config/mip-operations'
 import { mipBannerModule } from '../../modules/mip-banners'
 import { publicEventTypeLabel, resolvePrimaryBranchCity } from '../../modules/mip-events'
 import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { caseNavigateTo, syncCaseNavigation } from '../../platform/navigation/client'
-import { formatChineseDateTime, formatChineseMonthDay, formatLocalDate } from '../../utils/date'
-
-interface EventCardView extends MipEventListItem {
-  startsText: string
-  accessLabel: string
-  statusLabel: string
-  locationText: string
-}
+import { formatChineseMonthDay, formatLocalDate } from '../../utils/date'
 
 interface EventFilterOptionView extends EventDiscoveryOption {
   selected: boolean
 }
 
 type EventBannerView = MipPublicBanner
-
-function accessLabel(event: MipEventListItem) {
-  if (event.accessType === 'MEMBER_INCLUDED') {
-    return '仅玩家'
-  }
-  if (event.accessType === 'PAID') {
-    return '付费活动'
-  }
-  return '免费活动'
-}
-
-function statusLabel(event: MipEventListItem) {
-  if (event.registrationStatus === 'ATTENDED') {
-    return '已签到'
-  }
-  if (event.registrationStatus === 'REGISTERED') {
-    return '已报名'
-  }
-  if (event.registrationStatus === 'WAITLISTED') {
-    return '候补中'
-  }
-  if (event.registrationStatus === 'PENDING_REVIEW') {
-    return '待审核'
-  }
-  if (event.status === 'CANCELLED') {
-    return '已取消'
-  }
-  if (event.status === 'ENDED') {
-    return '已结束'
-  }
-  return ''
-}
-
-function presentEvent(event: MipEventListItem): EventCardView {
-  const eventTypeLabel = publicEventTypeLabel(event.eventTypeLabel)
-  return {
-    ...event,
-    coverUrl: event.coverUrl || '',
-    startsText: formatChineseDateTime(event.startsAt),
-    accessLabel: accessLabel(event),
-    statusLabel: statusLabel(event),
-    locationText: [event.cityName, event.venueName].filter(Boolean).join(' · ') || '地点待公布',
-    eventTypeLabel,
-  }
-}
 
 function rollingCalendarBoundary(yearOffset: number) {
   const today = new Date()
@@ -305,7 +254,7 @@ Page({
   },
 
   applyFeed(feed: Awaited<ReturnType<typeof mipEventsModule.listEvents>>, append = false) {
-    const events = feed.items.map(presentEvent)
+    const events = feed.items.map(presentEventCard)
     const merged = append
       ? [...this.data.events, ...events.filter(item => !this.data.events.some(current => current.id === item.id))]
       : events

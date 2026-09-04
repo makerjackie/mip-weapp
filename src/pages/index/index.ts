@@ -1,58 +1,17 @@
+import type { EventCardView } from '../../components/event-card/model'
 import type { BranchId, EventId, OpportunityId } from '../../modules/mip'
 import type { AnnouncementSummary } from '../../modules/mip-announcements'
 import type { MipPublicBanner } from '../../modules/mip-banners'
-import type { MipEventListItem } from '../../modules/mip-events'
 import type { IdentityAccessSnapshot } from '../../modules/mip-identity'
 import type { OpportunitySummary } from '../../modules/mip-opportunities'
+import { presentEventCard } from '../../components/event-card/model'
 import { brand } from '../../config/brand'
-import { cooperationRoles } from '../../config/mip-catalogs'
 import { mipAnnouncementsModule } from '../../modules/mip-announcements'
 import { mipBannerModule } from '../../modules/mip-banners'
 import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { opportunityModule } from '../../modules/mip-opportunities'
 import { caseNavigateTo, caseSwitchPrimary, syncCaseNavigation } from '../../platform/navigation/client'
-import { formatChineseDateTime } from '../../utils/date'
-
-interface DiscoverEvent extends MipEventListItem {
-  startsText: string
-  locationText: string
-  accessLabel: string
-}
-
-interface DiscoverOpportunity extends OpportunitySummary {
-  roleText: string
-  locationText: string
-  metaText: string
-}
-
-function presentEvent(event: MipEventListItem): DiscoverEvent {
-  const accessLabel = event.accessType === 'MEMBER_INCLUDED'
-    ? '玩家活动'
-    : event.accessType === 'PAID' ? '付费活动' : '免费活动'
-  return {
-    ...event,
-    coverUrl: event.coverUrl || '',
-    startsText: formatChineseDateTime(event.startsAt),
-    locationText: [event.cityName, event.venueName].filter(Boolean).join(' · ') || '地点待公布',
-    accessLabel,
-  }
-}
-
-function presentOpportunity(item: OpportunitySummary): DiscoverOpportunity {
-  const roleText = item.roles
-    .map(key => cooperationRoles.find(role => role.key === key)?.name || '')
-    .filter(Boolean)
-    .slice(0, 2)
-    .join(' · ')
-  const locationText = item.city?.label || item.branchName || '全国'
-  return {
-    ...item,
-    roleText,
-    locationText,
-    metaText: [locationText, roleText].filter(Boolean).join(' · '),
-  }
-}
 
 Page({
   data: {
@@ -65,9 +24,9 @@ Page({
     primaryBranchId: '' as BranchId | '',
     primaryBranchName: '全部城市',
     eventState: 'loading' as 'loading' | 'ready' | 'error',
-    events: [] as DiscoverEvent[],
+    events: [] as EventCardView[],
     opportunityState: 'loading' as 'loading' | 'ready' | 'error',
-    opportunities: [] as DiscoverOpportunity[],
+    opportunities: [] as OpportunitySummary[],
     announcement: null as AnnouncementSummary | null,
     hasAnnouncements: false,
   },
@@ -112,7 +71,7 @@ Page({
     const query = { view: 'UPCOMING' as const, dateFilter: 'RECENT' as const, limit: 3 }
     const events = mipEventsModule.peekEvents(query)
     if (events) {
-      this.setData({ eventState: 'ready', events: events.items.slice(0, 3).map(presentEvent) })
+      this.setData({ eventState: 'ready', events: events.items.slice(0, 3).map(presentEventCard) })
     }
   },
 
@@ -183,13 +142,13 @@ Page({
     const query = { view: 'UPCOMING' as const, dateFilter: 'RECENT' as const, limit: 3 }
     const cached = mipEventsModule.peekEvents(query)
     if (cached) {
-      this.setData({ eventState: 'ready', events: cached.items.slice(0, 3).map(presentEvent) })
+      this.setData({ eventState: 'ready', events: cached.items.slice(0, 3).map(presentEventCard) })
     }
     try {
       const feed = await mipEventsModule.listEvents(query, {
         force: options.force === true || Boolean(cached),
       })
-      this.setData({ eventState: 'ready', events: feed.items.slice(0, 3).map(presentEvent) })
+      this.setData({ eventState: 'ready', events: feed.items.slice(0, 3).map(presentEventCard) })
     }
     catch {
       if (!cached) {
@@ -203,7 +162,7 @@ Page({
       const result = await opportunityModule.list({ status: 'RECRUITING', limit: 3 })
       this.setData({
         opportunityState: 'ready',
-        opportunities: result.items.slice(0, 3).map(presentOpportunity),
+        opportunities: result.items.slice(0, 3),
       })
     }
     catch {
@@ -278,7 +237,8 @@ Page({
   },
 
   openEvent(event: WechatMiniprogram.TouchEvent) {
-    const eventId = String(event.currentTarget.dataset.id || '') as EventId
+    const detail = (event as unknown as { detail?: { id?: string } }).detail
+    const eventId = String(detail?.id || event.currentTarget?.dataset?.id || '') as EventId
     if (eventId) {
       caseNavigateTo({ url: `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(eventId)}` })
     }

@@ -11,10 +11,10 @@
     </view>
   </view>
 
-  <view wx:if="{{bannerState === 'loading'}}" class="mt-3 h-[260rpx] overflow-hidden rounded-[20rpx] bg-panel px-4 py-5">
+  <view wx:if="{{bannerState === 'loading'}}" class="mt-3 h-[298rpx] overflow-hidden rounded-[16rpx] bg-panel px-4 py-5">
     <t-skeleton row-col="{{[1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
-  <swiper wx:elif="{{bannerState === 'ready' && banners.length}}" class="mt-3 h-[260rpx] overflow-hidden rounded-[20rpx] bg-panel" autoplay="{{banners.length > 1}}" circular="{{banners.length > 1}}" indicator-dots="{{banners.length > 1}}" interval="4500" duration="400">
+  <swiper wx:elif="{{bannerState === 'ready' && banners.length}}" class="mt-3 h-[298rpx] overflow-hidden rounded-[16rpx] bg-panel" autoplay="{{banners.length > 1}}" circular="{{banners.length > 1}}" indicator-dots="{{banners.length > 1}}" interval="4500" duration="400">
     <swiper-item wx:for="{{banners}}" wx:key="id">
       <view class="h-full w-full" aria-role="button" aria-label="{{item.accessibilityLabel}}" data-index="{{index}}" bind:tap="openBanner">
         <image class="h-full w-full" mode="aspectFill" src="{{item.imageUrl}}" />
@@ -53,14 +53,7 @@
     <view wx:elif="{{eventState === 'error'}}" class="mt-3"><app-empty-state title="活动暂时无法加载" description="其他内容仍可继续浏览。" action-text="重新加载" bind:action="loadEvents" /></view>
     <view wx:elif="{{events.length === 0}}" class="mt-3"><app-empty-state title="暂无近期活动" description="新活动发布后会显示在这里。" /></view>
     <view wx:else class="mt-3 flex flex-col gap-3">
-      <view wx:for="{{events}}" wx:key="id" class="overflow-hidden rounded-[16rpx] bg-panel active:bg-panel-raised" data-id="{{item.id}}" bind:tap="openEvent">
-        <image wx:if="{{item.coverUrl}}" class="h-[260rpx] w-full" mode="aspectFill" src="{{item.coverUrl}}" />
-        <view class="px-4 py-4">
-          <view class="flex items-center justify-between gap-3"><text class="rounded-full bg-brand-soft px-3 py-1 text-[length:20rpx] text-brand">{{item.accessLabel}}</text><text class="text-[length:21rpx] text-muted">{{item.registrationCount}} 人参加</text></view>
-          <view class="mt-2 line-clamp-2 text-[length:29rpx] font-bold">{{item.title}}</view>
-          <view class="mt-2 text-[length:22rpx] text-muted">{{item.startsText}} · {{item.locationText}}</view>
-        </view>
-      </view>
+      <event-card wx:for="{{events}}" wx:key="id" event="{{item}}" variant="feed" bind:select="openEvent" />
     </view>
   </view>
 
@@ -73,11 +66,7 @@
     <view wx:elif="{{opportunityState === 'error'}}" class="mt-3"><app-empty-state title="机会暂时无法加载" description="其他内容仍可继续浏览。" action-text="重新加载" bind:action="loadOpportunities" /></view>
     <view wx:elif="{{opportunities.length === 0}}" class="mt-3"><app-empty-state title="暂无合作机会" description="已发布的招募信息会显示在这里。" /></view>
     <view wx:else class="mt-3 flex flex-col gap-3">
-      <view wx:for="{{opportunities}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4 active:bg-panel-raised" data-id="{{item.id}}" bind:tap="openOpportunity">
-        <view class="flex items-start justify-between gap-3"><view class="line-clamp-2 min-w-0 flex-1 text-[length:28rpx] font-bold">{{item.title}}</view><text class="shrink-0 rounded-full bg-brand-soft px-3 py-1 text-[length:20rpx] text-brand">招募中</text></view>
-        <view class="mt-2 line-clamp-2 text-[length:22rpx] leading-5 text-muted">{{item.valueSummary}}</view>
-        <view class="mt-3 flex items-center justify-between text-[length:21rpx] text-muted"><text>{{item.metaText}}</text><text>{{item.referralCount}} 人引荐</text></view>
-      </view>
+      <view wx:for="{{opportunities}}" wx:key="id" class="active:bg-panel-raised" aria-role="button" data-id="{{item.id}}" bind:tap="openOpportunity"><mip-opportunity-card title="{{item.title}}" cover-url="{{item.coverUrl || ''}}" value-text="{{item.commercialTerms.amountDisplay || item.valueSummary}}" location-text="{{item.commercialTerms.locationDisplay || item.city.label || item.branchName || '全国'}}" target-text="{{item.targetSummary}}" referral-count="{{item.referralCount}}" /></view>
     </view>
   </view>
 
