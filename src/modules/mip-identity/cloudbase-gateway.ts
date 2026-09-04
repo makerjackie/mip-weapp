@@ -1,10 +1,20 @@
+import type { MipIdentityAction } from './contracts'
 import type { MipIdentityTransport } from './gateway'
 import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
 import { runtimeConfig } from '../../config/runtime'
 import { requireCloudClient } from '../../platform/cloudbase/client'
 import { resolveCloudFileUrls } from '../../platform/storage/cloud-media'
 import { createMipIdentityGateway } from './gateway'
-import { isRetryableIdentityAction } from './retry-policy'
+
+const retryableIdentityActions = new Set<MipIdentityAction>([
+  'getAccessSnapshot',
+  'getMyProfileCardCode',
+  'getProfile',
+  'getPublicProfile',
+  'listBranches',
+  'listProfileTags',
+  'resolveProfileCardScene',
+])
 
 function isDevToolsRuntime() {
   if (typeof wx === 'undefined') {
@@ -38,7 +48,7 @@ export function createMipIdentityCloudbaseTransport(
           const cloud = await requireCloudClient()
           const response = await cloud.callFunction({ name: functionName, data: request })
           return { cloud, response }
-        }, isRetryableIdentityAction(request.action) ? COLD_START_READ_RETRY : { attempts: 1 })
+        }, retryableIdentityActions.has(request.action) ? COLD_START_READ_RETRY : { attempts: 1 })
         return resolveCloudFileUrls(result.response.result, result.cloud)
       }
       catch {

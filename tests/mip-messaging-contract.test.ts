@@ -10,7 +10,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createMipMessagingCloudbaseTransport } from '../src/modules/mip-messaging/cloudbase-gateway'
 import { createMipMessagingGateway } from '../src/modules/mip-messaging/gateway'
 import { createMipMessagingModule } from '../src/modules/mip-messaging/module'
-import { isRetryableMessagingAction } from '../src/modules/mip-messaging/retry-policy'
 import { MipMessagingError } from '../src/modules/mip-messaging/types'
 
 const cloudHarness = vi.hoisted(() => ({
@@ -117,13 +116,6 @@ describe('MIP messaging v1 contract', () => {
     }))
   })
 
-  it('limits cold-start retry to listInbox', () => {
-    expect(isRetryableMessagingAction('listInbox')).toBe(true)
-    expect(isRetryableMessagingAction('markRead')).toBe(false)
-    expect(isRetryableMessagingAction('recordCustomerServiceInteraction')).toBe(false)
-    expect(isRetryableMessagingAction('recordSubscriptionDecision')).toBe(false)
-  })
-
   it('retries listInbox while every mutation remains single-shot', async () => {
     vi.useFakeTimers()
     const transport = createMipMessagingCloudbaseTransport('mip-notifications-api')
@@ -210,7 +202,6 @@ describe('MIP messaging v1 contract', () => {
       'src/modules/mip-messaging/gateway.ts',
       'src/modules/mip-messaging/cloudbase-gateway.ts',
       'src/modules/mip-messaging/module.ts',
-      'src/modules/mip-messaging/retry-policy.ts',
     ].map(path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')).join('\n')
 
     expect(sources).not.toMatch(/console\.|setStorage|getStorage|removeStorage/)

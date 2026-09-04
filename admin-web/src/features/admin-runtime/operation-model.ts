@@ -43,7 +43,22 @@ import {
   type ContentMutationAction,
 } from '../../modules/content-mutation-forms'
 
-export type ReviewedOperationAction = AdminPeopleMutationAction
+const BASIC_OPERATION_ACTIONS = [
+  'mip.admin.memberships.grant',
+  'mip.admin.events.clone',
+  'mip.admin.events.changeStatus',
+  'mip.admin.events.archive',
+  'mip.admin.communications.publishEventReminder',
+  'mip.admin.refunds.submit',
+] as const
+
+type BasicOperationAction = typeof BASIC_OPERATION_ACTIONS[number]
+type OperationLaunchContext = AdminOperationLaunchContext & {
+  targetStatus?: 'PUBLISHED' | 'UNPUBLISHED'
+}
+
+export type ReviewedOperationAction = BasicOperationAction
+  | AdminPeopleMutationAction
   | AdminEventMutationAction
   | ContentMutationAction
   | AdminTaskMutationAction
@@ -67,13 +82,15 @@ const contentActions = new Set<string>(ADMIN_CONTENT_MUTATION_ACTIONS)
 const taskActions = new Set<string>(ADMIN_TASK_MUTATION_ACTIONS)
 const bannerActions = new Set<string>(ADMIN_BANNER_MUTATION_ACTIONS)
 const gameActions = new Set<string>(ADMIN_GAME_MUTATION_ACTIONS)
+const basicActions = new Set<string>(BASIC_OPERATION_ACTIONS)
 
 export function isReviewedOperationAction(action: string): action is ReviewedOperationAction {
-  return peopleActions.has(action) || eventActions.has(action) || contentActions.has(action)
+  return basicActions.has(action) || peopleActions.has(action) || eventActions.has(action) || contentActions.has(action)
     || taskActions.has(action) || bannerActions.has(action) || gameActions.has(action)
 }
 
 export function operationCapability(action: ReviewedOperationAction) {
+  if (basicActions.has(action)) return basicOperationCapability(action as BasicOperationAction)
   if (peopleActions.has(action)) return ADMIN_PEOPLE_MUTATION_CONFIGS[action as AdminPeopleMutationAction].capability
   if (eventActions.has(action)) return eventMutationConfig(action as AdminEventMutationAction).capability
   if (taskActions.has(action)) return 'tasks.manage'
@@ -86,7 +103,7 @@ export async function createOperationModel(
   action: ReviewedOperationAction,
   targetId: string,
   detail: AdminDetailView | null,
-  launch: AdminOperationLaunchContext,
+  launch: OperationLaunchContext,
   request: <T>(action: AdminOperationAction, input?: AdminRequestInput) => Promise<T>,
 ): Promise<OperationModel> {
   const readField = (sectionTitle: string, label: string) => detail?.sections
@@ -94,6 +111,15 @@ export async function createOperationModel(
     ?.find(field => field.label === label)?.value || ''
   const idempotencyKey = operationKey(action)
 
+  if (basicActions.has(action)) {
+    return createBasicOperationModel(
+      action as BasicOperationAction,
+      targetId,
+      readField,
+      launch.targetStatus,
+      idempotencyKey,
+    )
+  }
   if (peopleActions.has(action)) {
     const typedAction = action as AdminPeopleMutationAction
     const definition = createAdminPeopleMutationDefinition(typedAction, targetId, readField, {
@@ -171,6 +197,131 @@ export async function createOperationModel(
       return result.ok ? result.input : null
     },
   }
+}
+
+function createBasicOperationModel(
+  action: BasicOperationAction,
+  targetId: string,
+  readField: (sectionTitle: string, label: string) => string,
+  targetStatus: 'PUBLISHED' | 'UNPUBLISHED' | undefined,
+  idempotencyKey: string,
+): OperationModel {
+  const expectedVersion = readField('活动信息', '版本') || '1'
+  const capability = basicOperationCapability(action)
+  if (action === 'mip.admin.memberships.grant') {
+    const values = {
+      durationMonths: '12',
+      expectedChainVersion: readField('会员权益', '会员链版本') || '1',
+      reason: '',
+    }
+    return model({
+      action,
+      capability,
+      title: '补录会员',
+      description: '为该用户追加有效付费权益。提交前请确认会员时长和调整原因。',
+    }, [
+      { name: 'expectedChainVersion', label: '会员链版本', kind: 'number', hidden: true },
+      { name: 'durationMonths', label: '会员时长', kind: 'select', required: true, options: [
+        { value: '1', label: '1 个月' }, { value: '3', label: '3 个月' },
+        { value: '6', label: '6 个月' }, { value: '12', label: '12 个月' },
+      ] },
+      { name: 'reason', label: '调整原因', kind: 'textarea', required: true, maxLength: 300, wide: true },
+    ], values, idempotencyKey, (next) => {
+      const durationMonths = Number(next.durationMonths)
+      const chainVersion = positiveInteger(next.expectedChainVersion)
+      return [1, 3, 6, 12].includes(durationMonths) && chainVersion !== undefined && next.reason
+        ? { userId: targetId, durationMonths, expectedChainVersion: chainVersion, reason: String(next.reason) }
+        : null
+    })
+  }
+  if (action === 'mip.admin.events.clone') {
+    const values = { expectedVersion }
+    return model({
+      action,
+      capability,
+      title: '克隆活动',
+      description: '根据当前活动创建一份新的草稿活动。提交后由服务端重新校验权限和活动版本。',
+    }, versionField(), values, idempotencyKey, (next) => {
+      const version = positiveInteger(next.expectedVersion)
+      return version === undefined ? null : { sourceEventId: targetId, expectedVersion: version }
+    })
+  }
+  if (action === 'mip.admin.events.changeStatus') {
+    const status = targetStatus || 'PUBLISHED'
+    const values = { expectedVersion, status }
+    return model({
+      action,
+      capability,
+      title: status === 'PUBLISHED' ? '发布活动' : '下架活动',
+      description: status === 'PUBLISHED'
+        ? '发布前由服务端校验内容安全、活动时间和当前版本。'
+        : '下架后活动不再接受新的公开报名，历史报名和订单事实会保留。',
+    }, versionField(), values, idempotencyKey, (next) => {
+      const version = positiveInteger(next.expectedVersion)
+      const nextStatus = String(next.status)
+      return version !== undefined && ['PUBLISHED', 'UNPUBLISHED'].includes(nextStatus)
+        ? { eventId: targetId, expectedVersion: version, status: nextStatus }
+        : null
+    })
+  }
+  if (action === 'mip.admin.events.archive') {
+    const values = { expectedVersion, reason: '' }
+    return model({
+      action,
+      capability,
+      title: '归档活动',
+      description: '仅可归档没有报名、订单、签到或相册记录的草稿活动。提交后活动历史仍会保留。',
+    }, [
+      ...versionField(),
+      { name: 'reason', label: '归档原因', kind: 'textarea', required: true, maxLength: 300, wide: true },
+    ], values, idempotencyKey, (next) => {
+      const version = positiveInteger(next.expectedVersion)
+      return version !== undefined && next.reason
+        ? { eventId: targetId, expectedVersion: version, reason: String(next.reason) }
+        : null
+    })
+  }
+  if (action === 'mip.admin.communications.publishEventReminder') {
+    const values = { expectedVersion, sendWechatReminder: true }
+    return model({
+      action,
+      capability,
+      title: '发布活动提醒',
+      description: '为当前活动生成提醒投递任务。只有已发布活动可以执行此操作。',
+    }, [
+      ...versionField(),
+      { name: 'sendWechatReminder', label: '同时生成微信提醒任务', kind: 'checkbox', wide: true },
+    ], values, idempotencyKey, (next) => {
+      const version = positiveInteger(next.expectedVersion)
+      return version === undefined ? null : {
+        eventId: targetId,
+        expectedVersion: version,
+        sendWechatReminder: next.sendWechatReminder === true,
+      }
+    })
+  }
+  const values = { reason: '' }
+  return model({
+    action,
+    capability,
+    title: '提交退款',
+    description: '提交当前订单的退款申请。金额和退款状态由服务端订单与支付流水决定。',
+  }, [
+    { name: 'reason', label: '退款原因', kind: 'textarea', required: true, maxLength: 300, wide: true },
+  ], values, idempotencyKey, next => next.reason
+    ? { orderId: targetId, reason: String(next.reason) }
+    : null)
+}
+
+function basicOperationCapability(action: BasicOperationAction) {
+  if (action === 'mip.admin.memberships.grant') return 'memberships.adjust'
+  if (action === 'mip.admin.refunds.submit') return 'refunds.submit'
+  if (action === 'mip.admin.communications.publishEventReminder') return 'communications.publish'
+  return 'events.write'
+}
+
+function versionField(): OperationField[] {
+  return [{ name: 'expectedVersion', label: '版本', kind: 'number', hidden: true }]
 }
 
 function contentTargetKey(action: ContentMutationAction) {

@@ -8,7 +8,7 @@ const { createAdminApplication } = require('../domain/application')
 const { createHandler, normalizeAdminRequest } = require('../domain/handler')
 const { operationRegistry } = require('../domain/operation-registry')
 const { createTrustedPrincipalIssuer } = require('../lib/identity')
-const { createServiceDouble } = require('./owner-modules-test-helper')
+const { createHandlerDouble, createServiceDouble } = require('./owner-modules-test-helper')
 
 describe('admin handler and isolation contract', () => {
   it('normalizes v1 requests without mixing route and business fields', () => {
@@ -67,9 +67,9 @@ describe('admin handler and isolation contract', () => {
 
   it('passes only normalized v1 input to the business dispatch', async () => {
     let received
-    const handler = createHandler({
+    const handler = createHandlerDouble({
       getContext: () => ({ APPID: 'wx', OPENID: 'openid' }),
-      resolveCaller: () => ({ appId: 'wx', identityKey: 'key' }),
+      issuePrincipal: () => ({ appId: 'wx', identityKey: 'key' }),
       service: createServiceDouble({
         async updateUser(_caller, input) {
           received = input
@@ -112,9 +112,9 @@ describe('admin handler and isolation contract', () => {
 
   it('repairs the legacy opportunity comment action collision', async () => {
     let received
-    const handler = createHandler({
+    const handler = createHandlerDouble({
       getContext: () => ({}),
-      resolveCaller: () => ({ appId: 'wx', identityKey: 'key' }),
+      issuePrincipal: () => ({ appId: 'wx', identityKey: 'key' }),
       service: createServiceDouble({
         async moderateOpportunityComment(_caller, input) {
           received = input
@@ -151,9 +151,9 @@ describe('admin handler and isolation contract', () => {
   })
 
   it('rejects unsupported versions, extra envelope fields, non-object input, and duplicate idempotency', async () => {
-    const handler = createHandler({
+    const handler = createHandlerDouble({
       getContext: () => ({}),
-      resolveCaller: () => { throw new Error('must not resolve invalid request') },
+      issuePrincipal: () => { throw new Error('must not resolve invalid request') },
       service: createServiceDouble(),
     })
     const cases = [
@@ -216,9 +216,9 @@ describe('admin handler and isolation contract', () => {
 
   it('runs the public health probe against MySQL without resolving a user', async () => {
     let resolved = false
-    const handler = createHandler({
+    const handler = createHandlerDouble({
       getContext: () => ({}),
-      resolveCaller: () => { resolved = true; throw new Error('unexpected') },
+      issuePrincipal: () => { resolved = true; throw new Error('unexpected') },
       service: createServiceDouble({
         health: async () => ({ persistence: 'cloudbase-mysql' }),
       }),
@@ -229,7 +229,7 @@ describe('admin handler and isolation contract', () => {
     assert.equal(resolved, false)
   })
 
-  it('runs the modern health probe without reading context or issuing a principal', async () => {
+  it('runs the application health probe without reading context or issuing a principal', async () => {
     let contexts = 0
     let issues = 0
     const application = createAdminApplication({
@@ -258,9 +258,9 @@ describe('admin handler and isolation contract', () => {
       calls.push({ method: operation.method, args })
       return { method: operation.method }
     })
-    const handler = createHandler({
+    const handler = createHandlerDouble({
       getContext: () => ({ APPID: 'wx', OPENID: 'openid' }),
-      resolveCaller: () => caller,
+      issuePrincipal: () => caller,
       service,
     })
     const businessActions = operationRegistry.operationCatalog.map(operation => operation.action)
@@ -275,7 +275,7 @@ describe('admin handler and isolation contract', () => {
     }
   })
 
-  it('maps modern application errors through the existing response envelope', async () => {
+  it('maps application errors through the existing response envelope', async () => {
     const options = {
       allowedAppIds: new Set(['wx']),
       pepper: 'identity-pepper-with-at-least-thirty-two-characters',
@@ -302,21 +302,19 @@ describe('admin handler and isolation contract', () => {
     })
   })
 
-  it('rejects mixed modern and legacy handler dependencies', () => {
+  it('rejects removed legacy handler dependencies', () => {
     const dependencies = {
-      application: { execute() {}, probe() {} },
       getContext: () => ({}),
-      issuePrincipal: () => ({}),
       resolveCaller: () => ({}),
-      service: {},
+      service: createServiceDouble(),
     }
     assert.throws(() => createHandler(dependencies), /HANDLER_CONFIG_INVALID/)
   })
 
   it('keeps the transport handler reusable and maps conflicts to retryable responses', async () => {
-    const handler = createHandler({
+    const handler = createHandlerDouble({
       getContext: () => ({ FROM_APPID: 'wx', FROM_OPENID: 'openid' }),
-      resolveCaller: () => ({ appId: 'wx', identityKey: 'key' }),
+      issuePrincipal: () => ({ appId: 'wx', identityKey: 'key' }),
       service: createServiceDouble({
         async getSession() {
           const error = new Error('CONFLICT')
@@ -339,9 +337,9 @@ describe('admin handler and isolation contract', () => {
       ['GROWTH_RULE_ACTIVE_CONFLICT', '同一来源事件和成长类型只能启用一条规则'],
     ]
     for (const [code, message] of cases) {
-      const handler = createHandler({
+      const handler = createHandlerDouble({
         getContext: () => ({ FROM_APPID: 'wx', FROM_OPENID: 'openid' }),
-        resolveCaller: () => ({ appId: 'wx', identityKey: 'key' }),
+        issuePrincipal: () => ({ appId: 'wx', identityKey: 'key' }),
         service: createServiceDouble({
           async saveGrowthLevel() {
             const error = new Error(code)
@@ -356,9 +354,9 @@ describe('admin handler and isolation contract', () => {
   })
 
   it('returns stable event reminder errors without internal details', async () => {
-    const handler = createHandler({
+    const handler = createHandlerDouble({
       getContext: () => ({ FROM_APPID: 'wx', FROM_OPENID: 'openid' }),
-      resolveCaller: () => ({ appId: 'wx', identityKey: 'key' }),
+      issuePrincipal: () => ({ appId: 'wx', identityKey: 'key' }),
       service: createServiceDouble({
         async publishEventReminder() {
           const error = new Error('COMMUNICATIONS_RECIPIENT_LIMIT_EXCEEDED')
@@ -376,9 +374,9 @@ describe('admin handler and isolation contract', () => {
   })
 
   it('rejects unknown operations without dispatching', async () => {
-    const handler = createHandler({
+    const handler = createHandlerDouble({
       getContext: () => ({}),
-      resolveCaller: () => { throw new Error('should not resolve') },
+      issuePrincipal: () => { throw new Error('should not resolve') },
       service: createServiceDouble(),
     })
     const response = await handler({ action: 'mip.admin.deleteEverything' })
@@ -386,7 +384,7 @@ describe('admin handler and isolation contract', () => {
     assert.equal(response.error.code, 'NOT_FOUND')
   })
 
-  it('rejects unknown operations in modern mode before reading context or issuing a principal', async () => {
+  it('rejects unknown operations before reading context or issuing a principal', async () => {
     let touched = false
     const handler = createHandler({
       application: { execute() { touched = true }, probe() { touched = true } },

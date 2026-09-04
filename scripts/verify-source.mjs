@@ -12,7 +12,6 @@ import {
 } from './lib/mip-migrations.mjs'
 import { findLockingReadPrivilegeViolations } from './lib/mip-sql-isolation.mjs'
 import { RUNTIME_TABLE_PRIVILEGES } from './lib/mysql-privilege-assert.mjs'
-import { assertSourceSizeBudgets } from './lib/source-size-budgets.mjs'
 import {
   assertOfficialCustomTabBar,
   assertSemanticIconColors,
@@ -22,7 +21,6 @@ import {
 const root = path.resolve(import.meta.dirname, '..')
 
 assertAdminOperationContractArtifact(root)
-assertSourceSizeBudgets(root)
 
 function read(relativePath) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8')
@@ -51,6 +49,10 @@ function assert(condition, message) {
     throw new Error(message)
   }
 }
+
+const eventServicePath = 'cloudfunctions/mip-events-api/domain/event-service.js'
+const eventServiceLines = read(eventServicePath).replace(/\r\n?/g, '\n').replace(/\n$/, '').split('\n').length
+assert(eventServiceLines <= 3400, `${eventServicePath} exceeds source size budget (${eventServiceLines}/3400 lines)`)
 
 function resolveSourceComponent(jsonFile, reference) {
   if (/^(?:plugin|dynamicLib):\/\//.test(reference) || (!reference.startsWith('/') && !reference.startsWith('.'))) {

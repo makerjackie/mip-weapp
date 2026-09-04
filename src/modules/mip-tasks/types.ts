@@ -1,7 +1,4 @@
-export type TaskCardStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'DELETED'
 export type UserTaskStatus = 'AVAILABLE' | 'COMPLETED' | 'ENDED'
-export type TaskAssignmentMode = 'ALL' | 'SELECTED'
-export type TaskAssignmentStatus = 'ACTIVE' | 'REVOKED' | 'NONE'
 export type TaskCompletionResult = 'SUCCESS' | 'FAILED'
 
 export interface UserTaskCard {
@@ -40,163 +37,23 @@ export interface TaskCompletion {
   balanceAfter?: number | null
 }
 
-export interface AdminTaskCard {
-  id: string
-  name: string
-  content: string
-  rewardExperience: number
-  attachmentRequired: boolean
-  assignmentMode: TaskAssignmentMode
-  assignmentCount: number
-  eligibleLevels: TaskEligibleLevel[]
-  endsAt: string
-  template?: TaskTemplateMedia
-  status: TaskCardStatus
-  version: number
-  completionCount: number
-  publishedAt: string
-  updatedAt: string
-}
-
-export interface AdminTaskCompletion {
-  id: string
-  taskId: string
-  taskName: string
-  taskContent: string
-  nickname: string
-  rewardExperience: number
-  resultStatus: TaskCompletionResult
-  resultMessage: string
-  completedAt: string
-  attachment?: {
-    url: string
-    contentType: string
-    bytes: number
-  }
-}
-
 export interface TaskPage<T> {
   items: T[]
   nextCursor?: string
 }
 
-export interface AdminTaskDraft {
-  name: string
-  content: string
-  rewardExperience: number
-  attachmentRequired: boolean
-  assignmentMode: TaskAssignmentMode
-  endsAt?: string
-  templateAssetId?: string
-  eligibleLevelIds?: string[]
-}
-
-export interface TaskEligibleLevel {
-  id: string
-  levelKey: string
-  name: string
-  minimumExperience: number
-  status: 'DRAFT' | 'ACTIVE' | 'INACTIVE'
-}
-
-export interface AssignableTaskMember {
-  memberRef: string
-  nickname: string
-  branchName: string
-  assignmentStatus: TaskAssignmentStatus
-  assignedAt: string
-  revokedAt: string
-}
-
-export interface TaskAssignmentResult {
-  taskId: string
-  requestedCount: number
-  changedCount: number
-}
-
-export interface AdminTaskFilters {
-  status?: TaskCardStatus | ''
-  query?: string
-}
-
-export interface AdminCompletionFilters {
-  taskId?: string
-  query?: string
-  resultStatus?: TaskCompletionResult | ''
-  completedFrom?: string
-  completedUntil?: string
-}
-
-export interface TaskExportResult {
-  fileName: string
-  contentBase64: string
-  rowCount: number
-}
-
-export interface TaskAdminSession {
-  capability: 'tasks.manage'
-  roleKey: 'PLATFORM_OWNER' | 'PLATFORM_OPERATIONS'
-}
-
-export interface AdminTaskSaveInput {
-  taskId?: string
-  expectedVersion?: number
-  task: AdminTaskDraft
-}
-
-export interface TaskVersionInput {
-  taskId: string
-  expectedVersion: number
-}
-
-export interface TaskAssignmentMutationInput extends TaskVersionInput {
-  memberRefs: string[]
-}
-
 export const MIP_TASKS_CONTRACT_VERSION = 1 as const
 
 export interface MipTasksActionInputMap {
-  'listTasks': { cursor?: string, limit?: number }
-  'getTask': { taskId: string }
-  'completeTask': { taskId: string, attachmentAssetId?: string }
-  'admin.getSession': Record<string, never>
-  'admin.getTask': { taskId: string }
-  'admin.listTasks': { filters?: AdminTaskFilters, cursor?: string, limit?: number }
-  'admin.listEligibleLevels': Record<string, never>
-  'admin.listAssignableMembers': {
-    filters: { taskId: string, query?: string }
-    cursor?: string
-    limit?: number
-  }
-  'admin.assignMembers': TaskAssignmentMutationInput
-  'admin.revokeMembers': TaskAssignmentMutationInput
-  'admin.saveTask': AdminTaskSaveInput
-  'admin.publishTask': TaskVersionInput
-  'admin.unpublishTask': TaskVersionInput
-  'admin.deleteTask': TaskVersionInput
-  'admin.listCompletions': { filters?: AdminCompletionFilters, cursor?: string, limit?: number }
-  'admin.getCompletion': { completionId: string }
-  'admin.exportCompletions': { filters?: AdminCompletionFilters }
+  listTasks: { cursor?: string, limit?: number }
+  getTask: { taskId: string }
+  completeTask: { taskId: string, attachmentAssetId?: string }
 }
 
 export interface MipTasksActionResultMap {
-  'listTasks': TaskPage<UserTaskCard>
-  'getTask': UserTaskCard
-  'completeTask': TaskCompletion
-  'admin.getSession': TaskAdminSession
-  'admin.getTask': AdminTaskCard
-  'admin.listTasks': TaskPage<AdminTaskCard>
-  'admin.listEligibleLevels': TaskEligibleLevel[]
-  'admin.listAssignableMembers': TaskPage<AssignableTaskMember>
-  'admin.assignMembers': TaskAssignmentResult
-  'admin.revokeMembers': TaskAssignmentResult
-  'admin.saveTask': AdminTaskCard
-  'admin.publishTask': AdminTaskCard
-  'admin.unpublishTask': AdminTaskCard
-  'admin.deleteTask': AdminTaskCard
-  'admin.listCompletions': TaskPage<AdminTaskCompletion>
-  'admin.getCompletion': AdminTaskCompletion
-  'admin.exportCompletions': TaskExportResult
+  listTasks: TaskPage<UserTaskCard>
+  getTask: UserTaskCard
+  completeTask: TaskCompletion
 }
 
 export type MipTasksAction = keyof MipTasksActionInputMap
@@ -211,20 +68,6 @@ export interface MipTasksGateway {
   listTasks: (cursor?: string, limit?: number) => Promise<TaskPage<UserTaskCard>>
   getTask: (taskId: string) => Promise<UserTaskCard>
   completeTask: (taskId: string, attachmentAssetId?: string) => Promise<TaskCompletion>
-  getAdminSession: () => Promise<TaskAdminSession>
-  getAdminTask: (taskId: string) => Promise<AdminTaskCard>
-  listAdminTasks: (filters?: AdminTaskFilters, cursor?: string, limit?: number) => Promise<TaskPage<AdminTaskCard>>
-  listEligibleLevels: () => Promise<TaskEligibleLevel[]>
-  saveTask: (input: AdminTaskSaveInput) => Promise<AdminTaskCard>
-  publishTask: (taskId: string, expectedVersion: number) => Promise<AdminTaskCard>
-  unpublishTask: (taskId: string, expectedVersion: number) => Promise<AdminTaskCard>
-  deleteTask: (taskId: string, expectedVersion: number) => Promise<AdminTaskCard>
-  listAssignableMembers: (filters: { taskId: string, query?: string }, cursor?: string, limit?: number) => Promise<TaskPage<AssignableTaskMember>>
-  assignMembers: (taskId: string, expectedVersion: number, memberRefs: string[]) => Promise<TaskAssignmentResult>
-  revokeMembers: (taskId: string, expectedVersion: number, memberRefs: string[]) => Promise<TaskAssignmentResult>
-  listCompletions: (filters?: AdminCompletionFilters, cursor?: string, limit?: number) => Promise<TaskPage<AdminTaskCompletion>>
-  getCompletion: (completionId: string) => Promise<AdminTaskCompletion>
-  exportCompletions: (filters?: AdminCompletionFilters) => Promise<TaskExportResult>
 }
 
 export class MipTasksError extends Error {

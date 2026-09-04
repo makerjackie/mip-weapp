@@ -151,5 +151,3 @@ export function createCheckInResumeStore(
     },
   }
 }
-
-export const _checkInResumeTest = { LEGACY_STORAGE_KEY, LOCAL_RESUME_TTL_MS, STORAGE_KEY }

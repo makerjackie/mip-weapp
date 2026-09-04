@@ -8,9 +8,8 @@ interface TabPageHandle {
 
 type NavigationOptions = WechatMiniprogram.NavigateToOption
 type RedirectOptions = WechatMiniprogram.RedirectToOption
-type RelaunchOptions = WechatMiniprogram.ReLaunchOption
 
-export function caseRoute(url: string) {
+function caseRoute(url: string) {
   return url.startsWith('/') ? url : `/${url}`
 }
 
@@ -20,10 +19,6 @@ export function caseNavigateTo(options: NavigationOptions) {
 
 export function caseRedirectTo(options: RedirectOptions) {
   return wx.redirectTo({ ...options, url: caseRoute(options.url) })
-}
-
-export function caseRelaunch(options: RelaunchOptions) {
-  return wx.reLaunch({ ...options, url: caseRoute(options.url) })
 }
 
 export function caseSwitchPrimary(url: string) {

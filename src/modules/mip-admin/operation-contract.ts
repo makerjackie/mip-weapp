@@ -1,8 +1,7 @@
 import type {
   AdminOperationAction,
-  AdminOperationKind,
 } from '@mip/admin-contracts'
-import contractArtifact from './generated/admin-operation-contract.json'
+import { ADMIN_OPERATION_CONTRACT } from '@mip/admin-contracts'
 
 export type {
   AdminMutationAction,
@@ -13,34 +12,12 @@ export type {
   AdminQueryAction,
 } from '@mip/admin-contracts'
 
-export interface AdminOperationContractEntry {
-  readonly action: AdminOperationAction
-  readonly kind: AdminOperationKind
-  readonly authentication: 'REQUIRED'
-  readonly session: 'REQUIRED'
-  readonly safeToRetry: boolean
-  readonly idempotencyKeyRequired: null
+for (const operation of ADMIN_OPERATION_CONTRACT.operations) {
+  Object.freeze(operation)
 }
+Object.freeze(ADMIN_OPERATION_CONTRACT.operations)
 
-interface AdminOperationRuntimeContract {
-  readonly version: number
-  readonly operationCount: number
-  readonly operations: readonly AdminOperationContractEntry[]
-}
-
-const operations = contractArtifact.operations.map(operation => Object.freeze({
-  ...operation,
-  action: operation.action as AdminOperationAction,
-  kind: operation.kind as AdminOperationKind,
-  authentication: operation.authentication as 'REQUIRED',
-  session: operation.session as 'REQUIRED',
-}))
-
-export const adminOperationContract: AdminOperationRuntimeContract = Object.freeze({
-  version: contractArtifact.version,
-  operationCount: contractArtifact.operationCount,
-  operations: Object.freeze(operations),
-})
+export const adminOperationContract = Object.freeze(ADMIN_OPERATION_CONTRACT)
 
 export const retryableAdminOperationActions: ReadonlySet<AdminOperationAction> = new Set(
   adminOperationContract.operations

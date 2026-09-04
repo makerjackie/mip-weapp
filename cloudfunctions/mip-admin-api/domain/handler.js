@@ -1,10 +1,11 @@
 'use strict'
 
-const { createOperationDispatcher, operationRegistry } = require('./operation-registry')
+const { operationRegistry } = require('./operation-registry')
 const { AdminError } = require('./validation')
 
 const ADMIN_REQUEST_CONTRACT_VERSION = 1
 const adminRequestKeys = new Set(['contractVersion', 'action', 'input', 'idempotencyKey'])
+const handlerDependencyKeys = new Set(['application', 'getContext', 'issuePrincipal'])
 
 function hasOwn(value, key) {
   return Object.prototype.hasOwnProperty.call(value, key)
@@ -74,25 +75,18 @@ function normalizeAdminRequest(rawEvent = {}) {
 }
 
 function createHandler(options = {}) {
-  const { application, getContext, issuePrincipal, resolveCaller, service } = options
-  const modern = application !== undefined || issuePrincipal !== undefined
-  const legacy = service !== undefined || resolveCaller !== undefined
-  const modernValid = application
-    && typeof application.execute === 'function'
-    && typeof application.probe === 'function'
-    && typeof issuePrincipal === 'function'
-  const legacyValid = service
-    && typeof service.health === 'function'
-    && service.ownerModules
-    && typeof resolveCaller === 'function'
-  if (typeof getContext !== 'function'
-    || modern === legacy
-    || (modern && !modernValid)
-    || (legacy && !legacyValid)) {
+  if (!isPlainObject(options)
+    || Reflect.ownKeys(options).some(key => typeof key !== 'string' || !handlerDependencyKeys.has(key))) {
     throw new Error('HANDLER_CONFIG_INVALID')
   }
-
-  const legacyDispatcher = legacy ? createOperationDispatcher(service.ownerModules) : null
+  const { application, getContext, issuePrincipal } = options
+  if (!application
+    || typeof application.execute !== 'function'
+    || typeof application.probe !== 'function'
+    || typeof getContext !== 'function'
+    || typeof issuePrincipal !== 'function') {
+    throw new Error('HANDLER_CONFIG_INVALID')
+  }
 
   return async function handler(event = {}) {
     try {
@@ -102,13 +96,11 @@ function createHandler(options = {}) {
         throw new AdminError('NOT_FOUND', '运营操作不存在')
       }
       if (action === 'health') {
-        const data = modern ? await application.probe() : await service.health()
+        const data = await application.probe()
         return { ok: true, data }
       }
-      const principal = await (modern ? issuePrincipal : resolveCaller)(getContext())
-      const data = modern
-        ? await application.execute(principal, action, input)
-        : (await legacyDispatcher.execute(principal, action, input)).data
+      const principal = await issuePrincipal(getContext())
+      const data = await application.execute(principal, action, input)
       return { ok: true, data }
     }
     catch (error) {

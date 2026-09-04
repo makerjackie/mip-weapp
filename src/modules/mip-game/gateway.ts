@@ -7,13 +7,6 @@ import type {
   MipGameGateway,
   MipGameRequest,
 } from './types'
-import { parseGameSeason, parseGameSeasonPage } from './season-dto'
-import {
-  parseAssignableGameMemberPage,
-  parseGameTeam,
-  parseGameTeamPage,
-  parseTeamMemberReplacement,
-} from './team-dto'
 import { MIP_GAME_CONTRACT_VERSION, MipGameError } from './types'
 
 interface GameEnvelope<T> {
@@ -113,55 +106,5 @@ export function createMipGameGateway(transport: MipGameTransport): MipGameGatewa
     getTeam: teamId => callParsed('getTeam', { teamId }, value => bindTeamContext(value, teamId)),
     listHistory: seasonId => call('listHistory', { seasonId }),
     listRankings: (seasonId, rankingType, branchId) => call('listRankings', { seasonId, rankingType, branchId }),
-    getAdminSession: () => call('admin.getSession', {}),
-    listAdminRankings: (seasonId, rankingType, branchId) => call('admin.listRankings', { seasonId, rankingType, branchId }),
-    listSeasons: () => callParsed('admin.listSeasons', {}, parseGameSeasonPage),
-    saveSeason: input => callParsed(
-      'admin.saveSeason',
-      input,
-      value => parseGameSeason(value, input.seasonId),
-    ),
-    changeSeasonStatus: (seasonId, expectedVersion, status) => callParsed(
-      'admin.changeSeasonStatus',
-      { seasonId, expectedVersion, status },
-      value => parseGameSeason(value, seasonId),
-    ),
-    listTeams: seasonId => callParsed(
-      'admin.listTeams',
-      { seasonId },
-      value => parseGameTeamPage(value, seasonId),
-    ),
-    saveTeam: input => callParsed(
-      'admin.saveTeam',
-      input,
-      value => parseGameTeam(value, { seasonId: input.team.seasonId, teamId: input.teamId }),
-    ),
-    changeTeamStatus: (seasonId, teamId, expectedVersion, status) => callParsed(
-      'admin.changeTeamStatus',
-      { seasonId, teamId, expectedVersion, status },
-      value => parseGameTeam(value, { seasonId, teamId }),
-    ),
-    listAssignableMembers: (seasonId, teamId, query, cursor, limit = 100) => callParsed('admin.listAssignableMembers', {
-      seasonId,
-      teamId,
-      query,
-      cursor,
-      limit,
-    }, parseAssignableGameMemberPage),
-    replaceTeamMembers: (seasonId, teamId, expectedVersion, members) => callParsed(
-      'admin.replaceTeamMembers',
-      { seasonId, teamId, expectedVersion, members },
-      value => parseTeamMemberReplacement(value, teamId),
-    ),
-    listAdminMatches: seasonId => call('admin.listMatches', { seasonId }),
-    saveWeeklyMatch: match => call('admin.saveWeeklyMatch', { match }),
-    finalizeWeeklyMatch: (matchId, expectedVersion) => call('admin.finalizeWeeklyMatch', { matchId, expectedVersion }),
-    generateRankingSnapshot: (seasonId, rankingType) => call('admin.generateRankingSnapshot', { seasonId, rankingType }),
-    adminListBlindBoxCatalogs: () => call('admin.listBlindBoxCatalogs', {}),
-    adminSaveBlindBoxCatalog: input => call('admin.saveBlindBoxCatalog', input),
-    adminChangeBlindBoxCatalogStatus: (catalogId, expectedVersion, status) => call('admin.changeBlindBoxCatalogStatus', { catalogId, expectedVersion, status }),
-    adminListBlindBoxCards: catalogId => call('admin.listBlindBoxCards', { catalogId }),
-    adminSaveBlindBoxCard: input => call('admin.saveBlindBoxCard', input),
-    adminChangeBlindBoxCardStatus: (cardId, expectedVersion, status) => call('admin.changeBlindBoxCardStatus', { cardId, expectedVersion, status }),
   }
 }

@@ -7,10 +7,9 @@ const {
   configuredAgreements,
   createFullAccessPolicy,
 } = require('../domain/full-access')
-const { createHandler } = require('../domain/handler')
 const { operationRegistry } = require('../domain/operation-registry')
 const { createAdminService } = require('../domain/service')
-const { createOwnerModules } = require('./owner-modules-test-helper')
+const { createHandlerDouble, createOwnerModules } = require('./owner-modules-test-helper')
 
 const caller = { appId: 'wx-app', identityKey: 'identity-key' }
 
@@ -163,10 +162,10 @@ describe('admin full access', () => {
         },
       },
     })
-    const handler = createHandler({
+    const handler = createHandlerDouble({
       service,
       getContext: () => ({}),
-      resolveCaller: () => caller,
+      issuePrincipal: () => caller,
     })
 
     for (const action of operationRegistry.operationCatalog.map(operation => operation.action)) {

@@ -4,8 +4,9 @@ import { runtimeConfig } from '../../config/runtime'
 import { requireCloudClient } from '../../platform/cloudbase/client'
 import { resolveCloudFileUrls } from '../../platform/storage/cloud-media'
 import { createMipTasksGateway } from './gateway'
-import { isRetryableTaskAction } from './retry-policy'
 import { MipTasksError } from './types'
+
+const retryableTaskActions = new Set(['listTasks', 'getTask'])
 
 export function createMipTasksCloudbaseTransport(
   functionName = runtimeConfig.cloudbase.tasksFunctionName,
@@ -16,7 +17,7 @@ export function createMipTasksCloudbaseTransport(
         const response = await retryTransport(async () => {
           const cloud = await requireCloudClient()
           return cloud.callFunction({ name: functionName, data: request })
-        }, isRetryableTaskAction(request.action) ? COLD_START_READ_RETRY : { attempts: 1 })
+        }, retryableTaskActions.has(request.action) ? COLD_START_READ_RETRY : { attempts: 1 })
         const cloud = await requireCloudClient()
         return resolveCloudFileUrls(response.result, cloud)
       }

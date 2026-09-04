@@ -54,8 +54,7 @@ function createAdminOpportunities({
   async function listOpportunities(caller, input = {}) {
     const context = await access.session(caller)
     firstGrant(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE)
-    const readOpportunities = repository.listOpportunitiesV2 || repository.listOpportunities
-    return pageResult(await readOpportunities(
+    return pageResult(await repository.listOpportunitiesV2(
       context.caller.appId,
       visibilityForCapability(context.bindings, CAPABILITIES.OPPORTUNITIES_MODERATE),
       normalizeOpportunityFilters(input.filters),

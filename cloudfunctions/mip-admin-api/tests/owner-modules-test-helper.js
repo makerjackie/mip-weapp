@@ -4,6 +4,13 @@ const {
   OPERATION_OWNERS,
   operationCatalog,
 } = require('../domain/operation-registry')
+const { createAdminApplication } = require('../domain/application')
+const { createHandler } = require('../domain/handler')
+
+function createHandlerDouble({ service, getContext, issuePrincipal }) {
+  const application = createAdminApplication({ service, assertPrincipal: principal => principal })
+  return createHandler({ application, getContext, issuePrincipal })
+}
 
 function createOwnerModules(methods = {}, factory = () => async () => undefined) {
   const ownerModules = Object.fromEntries(OPERATION_OWNERS.map(owner => [owner, {}]))
@@ -20,4 +27,4 @@ function createServiceDouble(methods = {}, factory) {
   }
 }
 
-module.exports = { createOwnerModules, createServiceDouble }
+module.exports = { createHandlerDouble, createOwnerModules, createServiceDouble }

@@ -53,7 +53,7 @@ function repository(overrides = {}) {
     async listRoleBindings() {
       return repo.roleBindings
     },
-    async listOpportunities(appId, visibility, filters, pageLimit, cursor) {
+    async listOpportunitiesV2(appId, visibility, filters, pageLimit, cursor) {
       repo.listReads += 1
       repo.calls.push({ type: 'list', appId, visibility, filters, pageLimit, cursor })
       return { items: [opportunityRow()], nextCursor: 'next-page' }

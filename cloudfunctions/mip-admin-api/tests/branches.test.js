@@ -3,11 +3,10 @@
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
 const { CAPABILITIES, roleCapabilities } = require('../domain/capabilities')
-const { createHandler } = require('../domain/handler')
 const { createAdminRepository: createProductionAdminRepository } = require('../domain/repository')
 const { operationRegistry } = require('../domain/operation-registry')
 const { withTestAuthorization } = require('./test-authorization')
-const { createServiceDouble } = require('./owner-modules-test-helper')
+const { createHandlerDouble, createServiceDouble } = require('./owner-modules-test-helper')
 
 function createAdminRepository(database, options) {
   return createProductionAdminRepository(database, withTestAuthorization(options))
@@ -187,24 +186,25 @@ describe('admin branch management', () => {
     ]) {
       assert.notEqual(operationRegistry.operationByAction[action], undefined)
     }
-    const handler = createHandler({
+    const service = createServiceDouble({
+      async changeBranchStatus() {
+        const error = new Error('BRANCH_DEACTIVATION_BLOCKED')
+        error.code = 'BRANCH_DEACTIVATION_BLOCKED'
+        error.details = {
+          blockers: {
+            activeMemberships: 2,
+            activeBranchAdmins: 1,
+            publishedEvents: 3,
+            publishedOpportunities: 4,
+          },
+        }
+        throw error
+      },
+    })
+    const handler = createHandlerDouble({
+      service,
       getContext: () => ({ FROM_APPID: 'wx-app', FROM_OPENID: 'openid' }),
-      resolveCaller: () => caller,
-      service: createServiceDouble({
-        async changeBranchStatus() {
-          const error = new Error('BRANCH_DEACTIVATION_BLOCKED')
-          error.code = 'BRANCH_DEACTIVATION_BLOCKED'
-          error.details = {
-            blockers: {
-              activeMemberships: 2,
-              activeBranchAdmins: 1,
-              publishedEvents: 3,
-              publishedOpportunities: 4,
-            },
-          }
-          throw error
-        },
-      }),
+      issuePrincipal: () => caller,
     })
     const response = await handler({ action: 'mip.admin.branches.changeStatus' })
     assert.deepEqual(response.error, {

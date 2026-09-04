@@ -4,14 +4,13 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
-  ADMIN_OPERATION_CONTRACT_ARTIFACT,
   ADMIN_OPERATION_CONTRACT_TYPES_ARTIFACT,
   assertAdminOperationContractArtifact,
-  renderAdminOperationContract,
   renderAdminOperationContractTypes,
 } from '../scripts/lib/admin-operation-contract.mjs'
 
 const repositoryRoot = path.resolve(import.meta.dirname, '..')
+const removedRuntimeArtifact = 'src/modules/mip-admin/generated/admin-operation-contract.json'
 
 function prepareGeneratorFixture(root: string) {
   const files = [
@@ -32,17 +31,17 @@ function prepareGeneratorFixture(root: string) {
   )
 }
 
-function runGeneratorCheck(root: string) {
+function runGenerator(root: string, mode: '--check' | '--write') {
   return execFileSync(
     process.execPath,
-    [path.join(root, 'scripts/generate-admin-operation-contract.mjs'), '--check'],
+    [path.join(root, 'scripts/generate-admin-operation-contract.mjs'), mode],
     { cwd: root, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] },
   )
 }
 
 function expectGeneratorCheckToFail(root: string) {
   try {
-    runGeneratorCheck(root)
+    runGenerator(root, '--check')
     throw new Error('Expected generated contract check to fail')
   }
   catch (error) {
@@ -59,52 +58,41 @@ describe('MIP admin operation contract generation', () => {
     }
   })
 
-  it('keeps the checked-in client artifact byte-for-byte reproducible', () => {
-    const artifact = fs.readFileSync(
-      path.resolve(import.meta.dirname, '..', ADMIN_OPERATION_CONTRACT_ARTIFACT),
-      'utf8',
-    )
-    expect(artifact).toBe(renderAdminOperationContract())
+  it('keeps only the TypeScript contract artifact byte-for-byte reproducible', () => {
     const typesArtifact = fs.readFileSync(
-      path.resolve(import.meta.dirname, '..', ADMIN_OPERATION_CONTRACT_TYPES_ARTIFACT),
+      path.resolve(repositoryRoot, ADMIN_OPERATION_CONTRACT_TYPES_ARTIFACT),
       'utf8',
     )
+
     expect(typesArtifact).toBe(renderAdminOperationContractTypes())
+    expect(fs.existsSync(path.resolve(repositoryRoot, removedRuntimeArtifact))).toBe(false)
   })
 
-  it('fails closed when the generated artifact is missing or changed', () => {
+  it('fails closed when the TypeScript artifact is missing or changed', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mip-admin-contract-'))
     temporaryRoots.push(root)
-    const artifactPath = path.join(root, ADMIN_OPERATION_CONTRACT_ARTIFACT)
     const typesArtifactPath = path.join(root, ADMIN_OPERATION_CONTRACT_TYPES_ARTIFACT)
 
     expect(() => assertAdminOperationContractArtifact(root)).toThrow(/artifact drifted/)
-    fs.mkdirSync(path.dirname(artifactPath), { recursive: true })
-    fs.writeFileSync(artifactPath, '{}\n', 'utf8')
-    expect(() => assertAdminOperationContractArtifact(root)).toThrow(/artifact drifted/)
-    fs.writeFileSync(artifactPath, renderAdminOperationContract(), 'utf8')
     fs.mkdirSync(path.dirname(typesArtifactPath), { recursive: true })
     fs.writeFileSync(typesArtifactPath, '{}\n', 'utf8')
     expect(() => assertAdminOperationContractArtifact(root)).toThrow(/artifact drifted/)
+    fs.writeFileSync(typesArtifactPath, renderAdminOperationContractTypes(), 'utf8')
+    expect(() => assertAdminOperationContractArtifact(root)).not.toThrow()
   })
 
-  it('makes the generator --check command fail for a missing or tampered artifact', () => {
+  it('writes and checks only the TypeScript artifact', () => {
     const root = fs.mkdtempSync(path.join(os.tmpdir(), 'mip-admin-contract-cli-'))
     temporaryRoots.push(root)
     prepareGeneratorFixture(root)
-    const artifactPath = path.join(root, ADMIN_OPERATION_CONTRACT_ARTIFACT)
-    const typesArtifactPath = path.join(root, ADMIN_OPERATION_CONTRACT_TYPES_ARTIFACT)
 
-    fs.mkdirSync(path.dirname(artifactPath), { recursive: true })
-    fs.writeFileSync(artifactPath, renderAdminOperationContract(), 'utf8')
-    fs.mkdirSync(path.dirname(typesArtifactPath), { recursive: true })
-    fs.writeFileSync(typesArtifactPath, renderAdminOperationContractTypes(), 'utf8')
-    expect(runGeneratorCheck(root)).toContain('artifact is current')
+    expect(runGenerator(root, '--write')).toContain(ADMIN_OPERATION_CONTRACT_TYPES_ARTIFACT)
+    expect(fs.readFileSync(path.join(root, ADMIN_OPERATION_CONTRACT_TYPES_ARTIFACT), 'utf8'))
+      .toBe(renderAdminOperationContractTypes())
+    expect(fs.existsSync(path.join(root, removedRuntimeArtifact))).toBe(false)
+    expect(runGenerator(root, '--check')).toContain('artifact is current')
 
-    fs.rmSync(artifactPath)
-    expectGeneratorCheckToFail(root)
-
-    fs.writeFileSync(artifactPath, '{}\n', 'utf8')
+    fs.writeFileSync(path.join(root, ADMIN_OPERATION_CONTRACT_TYPES_ARTIFACT), '{}\n', 'utf8')
     expectGeneratorCheckToFail(root)
   })
 })

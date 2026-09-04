@@ -76,42 +76,11 @@ export function createMipTasksGateway(transport: MipTasksTransport): MipTasksGat
       getTask: parseUserTaskDetail,
       completeTask: parseTaskCompletion,
     }
-    const parse = parsers[action] || ((value: unknown) => value)
-    return unwrap(response, parse) as MipTasksActionResultMap[A]
+    return unwrap(response, parsers[action]!) as MipTasksActionResultMap[A]
   }
   return {
     listTasks: (cursor, limit) => call('listTasks', { cursor, limit }),
     getTask: taskId => call('getTask', { taskId }),
     completeTask: (taskId, attachmentAssetId) => call('completeTask', { taskId, attachmentAssetId }),
-    getAdminSession: () => call('admin.getSession', {}),
-    getAdminTask: taskId => call('admin.getTask', { taskId }),
-    listAdminTasks: (filters, cursor, limit) => call('admin.listTasks', { filters, cursor, limit }),
-    listEligibleLevels: () => call('admin.listEligibleLevels', {}),
-    saveTask: input => call('admin.saveTask', input),
-    publishTask: (taskId, expectedVersion) => call('admin.publishTask', { taskId, expectedVersion }),
-    unpublishTask: (taskId, expectedVersion) => call('admin.unpublishTask', { taskId, expectedVersion }),
-    deleteTask: (taskId, expectedVersion) => call('admin.deleteTask', { taskId, expectedVersion }),
-    listAssignableMembers: (filters, cursor, limit) => call('admin.listAssignableMembers', {
-      filters,
-      cursor,
-      limit,
-    }),
-    assignMembers: (taskId, expectedVersion, memberRefs) => call('admin.assignMembers', {
-      taskId,
-      expectedVersion,
-      memberRefs,
-    }),
-    revokeMembers: (taskId, expectedVersion, memberRefs) => call('admin.revokeMembers', {
-      taskId,
-      expectedVersion,
-      memberRefs,
-    }),
-    listCompletions: (filters, cursor, limit) => call('admin.listCompletions', {
-      filters,
-      cursor,
-      limit,
-    }),
-    getCompletion: completionId => call('admin.getCompletion', { completionId }),
-    exportCompletions: filters => call('admin.exportCompletions', { filters }),
   }
 }

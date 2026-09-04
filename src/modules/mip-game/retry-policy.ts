@@ -10,14 +10,6 @@ const retryableGameActions = new Set<MipGameAction>([
   'getTeam',
   'listHistory',
   'listRankings',
-  'admin.getSession',
-  'admin.listRankings',
-  'admin.listSeasons',
-  'admin.listTeams',
-  'admin.listAssignableMembers',
-  'admin.listMatches',
-  'admin.listBlindBoxCatalogs',
-  'admin.listBlindBoxCards',
 ])
 
 export function isRetryableGameAction(action: MipGameAction) {

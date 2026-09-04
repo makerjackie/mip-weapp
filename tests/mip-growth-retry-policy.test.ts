@@ -1,7 +1,7 @@
 import type { MipGrowthTransport } from '../src/modules/mip-growth/cloudbase-gateway'
+import type { MipGrowthGateway } from '../src/modules/mip-growth/types'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createMipGrowthGateway } from '../src/modules/mip-growth/cloudbase-gateway'
-import { resolveMipGrowthRetryOptions } from '../src/modules/mip-growth/retry-policy'
 import { requireCloudClient } from '../src/platform/cloudbase/client'
 
 vi.mock('../src/platform/cloudbase/client', () => ({
@@ -13,22 +13,31 @@ describe('MIP growth gateway retry policy', () => {
     vi.mocked(requireCloudClient).mockReset()
   })
 
-  it('retries a declared read after a cold-start transport failure', async () => {
+  it('retries every declared read after a cold-start transport failure', async () => {
     vi.useFakeTimers()
     try {
-      const snapshot = { source: 'server-snapshot' }
-      const invoke = vi.fn()
-        .mockRejectedValueOnce(new Error('cold start'))
-        .mockResolvedValueOnce({ ok: true, data: snapshot })
-      const gateway = createMipGrowthGateway('mip-growth-api', { invoke })
+      const reads: Array<{
+        action: string
+        data: Record<string, unknown>
+        invoke: (gateway: MipGrowthGateway) => Promise<unknown>
+      }> = [
+        { action: 'getSnapshot', data: {}, invoke: gateway => gateway.getSnapshot() },
+        { action: 'listEntries', data: { cursor: 'cursor-1', limit: 12 }, invoke: gateway => gateway.listEntries('cursor-1', 12) },
+        { action: 'listBadgeCollection', data: {}, invoke: gateway => gateway.listBadgeCollection() },
+      ]
+      for (const read of reads) {
+        const result = { action: read.action }
+        const invoke = vi.fn()
+          .mockRejectedValueOnce(new Error('cold start'))
+          .mockResolvedValueOnce({ ok: true, data: result })
+        const pending = read.invoke(createMipGrowthGateway('mip-growth-api', { invoke }))
+        await vi.runAllTimersAsync()
 
-      const pending = gateway.getSnapshot()
-      await vi.runAllTimersAsync()
-
-      await expect(pending).resolves.toBe(snapshot)
-      expect(invoke).toHaveBeenCalledTimes(2)
-      expect(invoke).toHaveBeenNthCalledWith(1, 'getSnapshot', {})
-      expect(invoke).toHaveBeenNthCalledWith(2, 'getSnapshot', {})
+        await expect(pending).resolves.toBe(result)
+        expect(invoke).toHaveBeenCalledTimes(2)
+        expect(invoke).toHaveBeenNthCalledWith(1, read.action, read.data)
+        expect(invoke).toHaveBeenNthCalledWith(2, read.action, read.data)
+      }
     }
     finally {
       vi.useRealTimers()
@@ -56,14 +65,6 @@ describe('MIP growth gateway retry policy', () => {
       badgeIds: ['badge-1'],
       expectedVersion: 4,
     })
-  })
-
-  it('does not classify writes or unknown actions as retryable reads', () => {
-    expect(resolveMipGrowthRetryOptions('getSnapshot').attempts).toBeGreaterThan(1)
-    expect(resolveMipGrowthRetryOptions('listEntries').attempts).toBeGreaterThan(1)
-    expect(resolveMipGrowthRetryOptions('listBadgeCollection').attempts).toBeGreaterThan(1)
-    expect(resolveMipGrowthRetryOptions('equipBadges')).toEqual({ attempts: 1 })
-    expect(resolveMipGrowthRetryOptions('futureUnknownAction')).toEqual({ attempts: 1 })
   })
 
   it('unwraps valid envelopes and preserves business errors without replay', async () => {

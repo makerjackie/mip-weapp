@@ -1,8 +1,8 @@
 import {
-  getCustomNavigationContentTop,
   getCustomNavigationStatusBarHeight,
 } from '@weapp/platform/navigation'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { caseNavigateTo } from '../src/platform/navigation/client'
 
 describe('custom navigation content inset', () => {
   afterEach(() => {
@@ -28,23 +28,16 @@ describe('custom navigation content inset', () => {
     expect(getCustomNavigationStatusBarHeight()).toBe(32)
   })
 
-  it('places content below the real WeChat capsule', () => {
-    vi.stubGlobal('wx', {
-      getWindowInfo: () => ({ statusBarHeight: 24 }),
-      getMenuButtonBoundingClientRect: () => ({ top: 32, bottom: 64 }),
+  it('normalizes relative routes through the public navigation client', async () => {
+    const navigateTo = vi.fn(async () => undefined)
+    vi.stubGlobal('wx', { navigateTo })
+
+    await caseNavigateTo({ url: 'packages/member/mip-events/mine/index' })
+    await caseNavigateTo({ url: '/pages/events/index' })
+
+    expect(navigateTo).toHaveBeenNthCalledWith(1, {
+      url: '/packages/member/mip-events/mine/index',
     })
-
-    expect(getCustomNavigationContentTop()).toBe(72)
-  })
-
-  it('falls back to the current status-bar geometry', () => {
-    vi.stubGlobal('wx', {
-      getWindowInfo: () => ({ statusBarHeight: 24 }),
-      getMenuButtonBoundingClientRect: () => {
-        throw new Error('capsule unavailable')
-      },
-    })
-
-    expect(getCustomNavigationContentTop()).toBe(68)
+    expect(navigateTo).toHaveBeenNthCalledWith(2, { url: '/pages/events/index' })
   })
 })

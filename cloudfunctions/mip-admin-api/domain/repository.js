@@ -94,34 +94,6 @@ function assertAuthorizedUserScope(row, authorizedScope) {
   if (!sameScope(userScopeFromRow(row), authorizedScope)) throw codeError('CONFLICT')
 }
 
-function growthLevelProjection(rows, levelId, draft) {
-  const next = rows.map(row => row.id === levelId
-    ? { id: levelId, minimumExperience: draft.minimumExperience, status: draft.status }
-    : {
-        id: row.id,
-        minimumExperience: Number(row.minimum_experience),
-        status: row.status,
-      })
-  if (!rows.some(row => row.id === levelId)) {
-    next.push({ id: levelId, minimumExperience: draft.minimumExperience, status: draft.status })
-  }
-  return next
-}
-
-function assertGrowthLevels(levels) {
-  const active = levels
-    .filter(level => level.status === 'ACTIVE')
-    .sort((left, right) => left.minimumExperience - right.minimumExperience)
-  for (let index = 1; index < active.length; index += 1) {
-    if (active[index - 1].minimumExperience >= active[index].minimumExperience) {
-      throw codeError('GROWTH_LEVEL_THRESHOLD_CONFLICT')
-    }
-  }
-  if (active.filter(level => level.minimumExperience === 0).length !== 1) {
-    throw codeError('GROWTH_BASE_LEVEL_REQUIRED')
-  }
-}
-
 function growthRuleProjection(rows, ruleId, draft) {
   const next = rows.map(row => row.id === ruleId
     ? {
@@ -951,84 +923,6 @@ function createAdminRepository(database, options = {}) {
     return database.transaction(tx => writeAudit(tx, audit))
   }
 
-  async function listOpportunities(appId, visibility, filters, pageLimit, cursor = null) {
-    const clauses = ['o.app_id = ?']
-    const params = [appId]
-    if (!visibility.platform) {
-      if (!visibility.branchIds.length) return { items: [], nextCursor: null }
-      clauses.push(`o.branch_id IN (${placeholders(visibility.branchIds)})`)
-      params.push(...visibility.branchIds)
-    }
-    if (filters.status) {
-      clauses.push('o.status = ?')
-      params.push(filters.status)
-    }
-    if (filters.query) {
-      clauses.push(`(o.title LIKE ? ESCAPE '\\\\' OR o.value_summary LIKE ? ESCAPE '\\\\'
-        OR o.target_summary LIKE ? ESCAPE '\\\\' OR o.description LIKE ? ESCAPE '\\\\')`)
-      const query = `%${escapeLike(filters.query)}%`
-      params.push(query, query, query, query)
-    }
-    if (filters.ownerQuery) {
-      clauses.push('owner_profile.nickname LIKE ? ESCAPE \'\\\\\'')
-      params.push(`%${escapeLike(filters.ownerQuery)}%`)
-    }
-    if (filters.cityQuery) {
-      clauses.push('(b.city_name LIKE ? ESCAPE \'\\\\\' OR city_tag.label LIKE ? ESCAPE \'\\\\\')')
-      const cityQuery = `%${escapeLike(filters.cityQuery)}%`
-      params.push(cityQuery, cityQuery)
-    }
-    if (filters.updatedFrom) { clauses.push('o.updated_at >= ?'); params.push(filters.updatedFrom) }
-    if (filters.updatedTo) { clauses.push('o.updated_at <= ?'); params.push(filters.updatedTo) }
-    const cursorWhere = cursorPredicateFor('o.updated_at', cursor, 'updatedAt', 'o.id')
-    const rows = await database.query(
-      `SELECT o.id, o.title, o.value_summary, o.target_summary, o.description,
-        o.scope_type, o.branch_id, b.name AS branch_name,
-        COALESCE(b.city_name, city_tag.label, '') AS city_name,
-        owner_profile.nickname AS owner_nickname,
-        o.status, o.content_safety_status, o.referral_count, o.version, o.published_at, o.updated_at,
-        o.moderated_at, o.moderation_reason, o.archived_at, o.archive_reason,
-        (SELECT GROUP_CONCAT(role.role_key ORDER BY role.role_key SEPARATOR ',')
-          FROM mip_opportunity_roles role
-          WHERE role.app_id = o.app_id AND role.opportunity_id = o.id) AS role_keys,
-        (SELECT GROUP_CONCAT(REPLACE(tag.label, ',', '，') ORDER BY relation.relation, tag.sort_order, tag.id SEPARATOR ',')
-          FROM mip_opportunity_tags relation
-          INNER JOIN mip_tags tag ON tag.app_id = relation.app_id AND tag.id = relation.tag_id
-          WHERE relation.app_id = o.app_id AND relation.opportunity_id = o.id) AS tag_labels
-       FROM mip_opportunities o
-       LEFT JOIN mip_city_branches b ON b.app_id = o.app_id AND b.id = o.branch_id
-       LEFT JOIN mip_tags city_tag ON city_tag.app_id = o.app_id AND city_tag.id = o.city_tag_id
-       LEFT JOIN mip_profiles owner_profile ON owner_profile.app_id = o.app_id AND owner_profile.user_id = o.owner_user_id
-       WHERE ${clauses.join(' AND ')}${cursorWhere.sql} ORDER BY o.updated_at DESC, o.id DESC LIMIT ?`,
-      [...params, ...cursorWhere.params, pageLimit + 1],
-    )
-    const items = rows.map(row => ({
-      id: row.id,
-      title: row.title,
-      valueSummary: row.value_summary,
-      scopeType: row.scope_type,
-      branchId: row.branch_id || null,
-      branchName: row.branch_name || '',
-      cityName: row.city_name || '',
-      ownerNickname: row.owner_nickname || '未填写昵称',
-      targetSummary: row.target_summary || '',
-      description: row.description || '',
-      roleKeys: row.role_keys ? String(row.role_keys).split(',') : [],
-      tags: row.tag_labels ? String(row.tag_labels).split(',') : [],
-      status: row.status,
-      contentSafetyStatus: row.content_safety_status,
-      referralCount: Number(row.referral_count || 0),
-      version: Number(row.version),
-      publishedAt: iso(row.published_at),
-      moderatedAt: iso(row.moderated_at),
-      moderationReason: row.moderation_reason || '',
-      archivedAt: iso(row.archived_at),
-      archiveReason: row.archive_reason || '',
-      updatedAt: iso(row.updated_at),
-    }))
-    return pageRows(items, pageLimit, row => ({ updatedAt: row.updatedAt, id: row.id }))
-  }
-
   async function unpublishOpportunity(input) {
     return database.transaction(async (tx) => {
       const authorization = await lockMutation(tx, input)
@@ -1054,73 +948,6 @@ function createAdminRepository(database, options = {}) {
       if (Number(result.affectedRows) !== 1) throw codeError('CONFLICT')
       await writeAudit(tx, input.audit)
       return { id: input.opportunityId, status: 'UNPUBLISHED', version: input.expectedVersion + 1 }
-    })
-  }
-
-  async function listGrowthLevels(appId) {
-    const rows = await database.query(
-      `SELECT id, level_key, name, minimum_experience, benefits_json, status, version
-       FROM mip_growth_levels WHERE app_id = ? ORDER BY minimum_experience, id`,
-      [appId],
-    )
-    return rows.map(row => ({
-      id: row.id,
-      levelKey: row.level_key,
-      name: row.name,
-      minimumExperience: Number(row.minimum_experience),
-      benefits: json(row.benefits_json, []),
-      status: row.status,
-      version: Number(row.version),
-    }))
-  }
-
-  async function saveGrowthLevel(input) {
-    return database.transaction(async (tx) => {
-      await authorizeMutation(tx, input, { scopeType: 'PLATFORM', scopeId: null })
-      const levelId = input.levelId || id()
-      const rows = await tx.query(
-        `SELECT id, minimum_experience, status, version FROM mip_growth_levels
-         WHERE app_id = ? ORDER BY minimum_experience, id FOR UPDATE`,
-        [input.appId],
-      )
-      const current = rows.find(row => row.id === levelId)
-      if (input.levelId) {
-        if (!current) throw codeError('NOT_FOUND')
-        if (Number(current.version) !== input.expectedVersion) throw codeError('CONFLICT')
-      }
-      assertGrowthLevels(growthLevelProjection(rows, levelId, input.draft))
-      if (current?.status === 'ACTIVE' && input.draft.status === 'DRAFT') throw codeError('INVALID_STATE')
-      try {
-        if (input.levelId) {
-          const result = await tx.query(
-            `UPDATE mip_growth_levels SET name = ?, minimum_experience = ?, benefits_json = ?,
-              status = ?, version = version + 1 WHERE app_id = ? AND id = ? AND version = ?`,
-            [input.draft.name, input.draft.minimumExperience, JSON.stringify(input.draft.benefits),
-              input.draft.status, input.appId, levelId, input.expectedVersion],
-          )
-          if (Number(result.affectedRows) !== 1) throw codeError('CONFLICT')
-        }
-        else {
-          await tx.query(
-            `INSERT INTO mip_growth_levels (
-              id, app_id, level_key, name, minimum_experience, benefits_json, status
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-            [levelId, input.appId, input.draft.levelKey, input.draft.name,
-              input.draft.minimumExperience, JSON.stringify(input.draft.benefits), input.draft.status],
-          )
-        }
-      }
-      catch (error) {
-        const constraint = duplicateConstraint(error)
-        if (constraint.includes('mip_growth_levels_threshold_uk')) {
-          throw codeError('GROWTH_LEVEL_THRESHOLD_CONFLICT')
-        }
-        if (constraint.includes('mip_growth_levels_key_uk')) throw codeError('GROWTH_LEVEL_KEY_CONFLICT')
-        if (constraint) throw codeError('CONFLICT')
-        throw error
-      }
-      await writeAudit(tx, input.audit(levelId))
-      return { id: levelId, version: input.levelId ? input.expectedVersion + 1 : 1 }
     })
   }
 
@@ -1553,9 +1380,7 @@ function createAdminRepository(database, options = {}) {
     listGrowthEntries,
     listUnifiedBenefitLedger,
     listGrowthLevelTransitions,
-    listGrowthLevels,
     listGrowthRules,
-    listOpportunities,
     listOrders,
     listPaymentAttempts,
     listOperationalExceptions,
@@ -1568,7 +1393,6 @@ function createAdminRepository(database, options = {}) {
     issueExportDownload,
     recordAudit,
     resolveUser,
-    saveGrowthLevel,
     saveGrowthRule,
     failExportBuild,
     finishExportBuild,

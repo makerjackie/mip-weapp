@@ -1,8 +1,7 @@
 import type { MipGrowthGateway } from './types'
-import { retryTransport } from '@weapp/shared/retry'
+import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
 import { requireCloudClient } from '../../platform/cloudbase/client'
 import { resolveCloudFileUrls } from '../../platform/storage/cloud-media'
-import { resolveMipGrowthRetryOptions } from './retry-policy'
 import { MipGrowthError } from './types'
 
 interface Envelope<T> {
@@ -12,6 +11,12 @@ interface Envelope<T> {
 }
 
 export const MIP_GROWTH_FUNCTION_NAME = 'mip-growth-api'
+
+const retryableReadActions = new Set([
+  'getSnapshot',
+  'listEntries',
+  'listBadgeCollection',
+])
 
 export interface MipGrowthTransport {
   invoke: (action: string, data?: Record<string, unknown>) => Promise<unknown>
@@ -50,7 +55,7 @@ export function createMipGrowthGateway(
     try {
       const result = await retryTransport(
         () => transport.invoke(action, data),
-        resolveMipGrowthRetryOptions(action),
+        retryableReadActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 },
       )
       return unwrap<T>(result)
     }

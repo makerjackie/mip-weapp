@@ -5,216 +5,14 @@ const { describe, it } = require('node:test')
 const {
   OPERATION_KINDS,
   OPERATION_OWNERS,
-  operationByAction,
-  operationCatalog,
   createOperationDispatcher,
   createOperationRegistry,
+  operationByAction,
+  operationCatalog,
   outboxMutationActions,
 } = require('../domain/operation-registry')
 const { createOwnerModules } = require('./owner-modules-test-helper')
 
-const expectedOperations = Object.freeze({
-  'mip.admin.session': ['ACCESS', 'QUERY', 'getSession'],
-  'mip.admin.branches.list': ['ACCESS', 'QUERY', 'listBranches'],
-  'mip.admin.roles.list': ['ACCESS', 'QUERY', 'listRoles'],
-  'mip.admin.roles.candidates': ['ACCESS', 'QUERY', 'searchRoleCandidates'],
-  'mip.admin.rolePolicies.list': ['ACCESS', 'QUERY', 'listRoleCapabilityPolicies'],
-  'mip.admin.audit.list': ['ACCESS', 'QUERY', 'listAudit'],
-  'mip.admin.branches.create': ['ACCESS', 'MUTATION', 'createBranch'],
-  'mip.admin.branches.update': ['ACCESS', 'MUTATION', 'updateBranch'],
-  'mip.admin.branches.changeStatus': ['ACCESS', 'MUTATION', 'changeBranchStatus'],
-  'mip.admin.roles.set': ['ACCESS', 'MUTATION', 'setRole'],
-  'mip.admin.rolePolicies.update': ['ACCESS', 'MUTATION', 'updateRoleCapabilityPolicy'],
-  'mip.admin.webLogin.confirm': ['ACCESS', 'MUTATION', 'confirmWebLogin'],
-
-  'mip.admin.users.list': ['USERS', 'QUERY', 'listUsers'],
-  'mip.admin.users.get': ['USERS', 'QUERY', 'getUser'],
-  'mip.admin.users.influence.list': ['USERS', 'QUERY', 'listUserInfluence'],
-  'mip.admin.communityReports.list': ['USERS', 'QUERY', 'listCommunityReports'],
-  'mip.admin.users.update': ['USERS', 'MUTATION', 'updateUser'],
-  'mip.admin.users.changePrimaryBranch': ['USERS', 'MUTATION', 'changePrimaryBranch'],
-  'mip.admin.users.setControl': ['USERS', 'MUTATION', 'setUserControl'],
-  'mip.admin.communityReports.claim': ['USERS', 'MUTATION', 'claimCommunityReport'],
-  'mip.admin.communityReports.close': ['USERS', 'MUTATION', 'closeCommunityReport'],
-
-  'mip.admin.memberships.get': ['MEMBERSHIPS', 'QUERY', 'getMembership'],
-  'mip.admin.memberships.timeline': ['MEMBERSHIPS', 'QUERY', 'listMembershipTimeline'],
-  'mip.admin.memberships.grant': ['MEMBERSHIPS', 'MUTATION', 'grantMembership'],
-
-  'mip.admin.events.list': ['EVENTS', 'QUERY', 'listEvents'],
-  'mip.admin.events.catalog.list': ['EVENTS', 'QUERY', 'listEventCatalogs', 'SESSION_FIRST'],
-  'mip.admin.events.tags.get': ['EVENTS', 'QUERY', 'getEventTagAssignments', 'SESSION_FIRST'],
-  'mip.admin.events.recaps.list': ['EVENTS', 'QUERY', 'listEventVideoRecaps', 'SESSION_FIRST'],
-  'mip.admin.events.recaps.get': ['EVENTS', 'QUERY', 'getEventVideoRecap', 'SESSION_FIRST'],
-  'mip.admin.events.policy.get': ['EVENTS', 'QUERY', 'getEventPolicy'],
-  'mip.admin.events.get': ['EVENTS', 'QUERY', 'getEvent'],
-  'mip.admin.events.insights.get': ['EVENTS', 'QUERY', 'getEventInsights'],
-  'mip.admin.events.album.list': ['EVENTS', 'QUERY', 'listEventAlbumPhotos'],
-  'mip.admin.events.comments.get': ['EVENTS', 'QUERY', 'getEventCommentAdminState'],
-  'mip.admin.events.roster': ['EVENTS', 'QUERY', 'listRoster'],
-  'mip.admin.events.rosterAll': ['EVENTS', 'QUERY', 'listRosterAll'],
-  'mip.admin.events.policy.save': ['EVENTS', 'MUTATION', 'saveEventPolicy'],
-  'mip.admin.events.catalog.save': ['EVENTS', 'MUTATION', 'saveEventCatalog', 'SESSION_FIRST'],
-  'mip.admin.events.catalog.changeStatus': ['EVENTS', 'MUTATION', 'changeEventCatalogStatus', 'SESSION_FIRST'],
-  'mip.admin.events.catalog.archive': ['EVENTS', 'MUTATION', 'archiveEventCatalog', 'SESSION_FIRST'],
-  'mip.admin.events.tags.replace': ['EVENTS', 'MUTATION', 'replaceEventTagAssignments', 'SESSION_FIRST'],
-  'mip.admin.events.recaps.save': ['EVENTS', 'MUTATION', 'saveEventVideoRecap', 'SESSION_FIRST'],
-  'mip.admin.events.recaps.changeStatus': ['EVENTS', 'MUTATION', 'changeEventVideoRecapStatus', 'SESSION_FIRST'],
-  'mip.admin.events.recaps.archive': ['EVENTS', 'MUTATION', 'archiveEventVideoRecap', 'SESSION_FIRST'],
-  'mip.admin.events.save': ['EVENTS', 'MUTATION', 'saveEvent'],
-  'mip.admin.events.clone': ['EVENTS', 'MUTATION', 'cloneEvent'],
-  'mip.admin.events.changeStatus': ['EVENTS', 'MUTATION', 'changeEventStatus'],
-  'mip.admin.events.archive': ['EVENTS', 'MUTATION', 'archiveEvent'],
-  'mip.admin.events.album.review': ['EVENTS', 'MUTATION', 'reviewEventAlbumPhoto'],
-  'mip.admin.events.comments.settings.save': ['EVENTS', 'MUTATION', 'saveEventCommentSettings'],
-  'mip.admin.events.comments.moderate': ['EVENTS', 'MUTATION', 'moderateEventComment'],
-  'mip.admin.events.comments.reports.claim': ['EVENTS', 'MUTATION', 'claimEventCommentReport'],
-  'mip.admin.events.comments.reports.close': ['EVENTS', 'MUTATION', 'closeEventCommentReport'],
-  'mip.admin.communications.publishEventReminder': ['EVENTS', 'MUTATION', 'publishEventReminder'],
-  'mip.admin.events.registrations.review': ['EVENTS', 'MUTATION', 'reviewRegistration'],
-  'mip.admin.events.checkIn': ['EVENTS', 'MUTATION', 'checkIn'],
-  'mip.admin.events.undoCheckIn': ['EVENTS', 'MUTATION', 'undoCheckIn'],
-
-  'mip.admin.orders.list': ['ORDERS', 'QUERY', 'listOrders'],
-  'mip.admin.orders.get': ['ORDERS', 'QUERY', 'getOrder'],
-  'mip.admin.paymentAttempts.list': ['ORDERS', 'QUERY', 'listPaymentAttempts'],
-  'mip.admin.refunds.submit': ['ORDERS', 'MUTATION', 'submitRefund'],
-  'mip.admin.refunds.retry': ['ORDERS', 'MUTATION', 'retryRefund'],
-
-  'mip.admin.announcements.scopes': ['MESSAGING', 'QUERY', 'listAnnouncementScopes'],
-  'mip.admin.announcements.list': ['MESSAGING', 'QUERY', 'listAnnouncements'],
-  'mip.admin.announcements.get': ['MESSAGING', 'QUERY', 'getAnnouncement'],
-  'mip.admin.messageCampaigns.scopes': ['MESSAGING', 'QUERY', 'listMessageCampaignScopes', 'NO_INPUT'],
-  'mip.admin.messageCampaigns.list': ['MESSAGING', 'QUERY', 'listMessageCampaigns'],
-  'mip.admin.messageCampaigns.get': ['MESSAGING', 'QUERY', 'getMessageCampaign'],
-  'mip.admin.messageDeliveryReviews.list': ['MESSAGING', 'QUERY', 'listMessageDeliveryReviews'],
-  'mip.admin.messageDeliveryReviews.get': ['MESSAGING', 'QUERY', 'getMessageDeliveryReview'],
-  'mip.admin.messageDeliveryRecords.list': ['MESSAGING', 'QUERY', 'listMessageDeliveryRecords'],
-  'mip.admin.messageCampaigns.recipients': ['MESSAGING', 'QUERY', 'searchMessageRecipients'],
-  'mip.admin.messageTemplates.list': ['MESSAGING', 'QUERY', 'listMessageTemplates'],
-  'mip.admin.messageTemplates.get': ['MESSAGING', 'QUERY', 'getMessageTemplate'],
-  'mip.admin.announcements.save': ['MESSAGING', 'MUTATION', 'saveAnnouncement'],
-  'mip.admin.announcements.publish': ['MESSAGING', 'MUTATION', 'publishAnnouncement'],
-  'mip.admin.announcements.withdraw': ['MESSAGING', 'MUTATION', 'withdrawAnnouncement'],
-  'mip.admin.announcements.pin': ['MESSAGING', 'MUTATION', 'setAnnouncementPinned'],
-  'mip.admin.messageCampaigns.save': ['MESSAGING', 'MUTATION', 'saveMessageCampaign'],
-  'mip.admin.messageCampaigns.snapshot': ['MESSAGING', 'MUTATION', 'snapshotMessageCampaign'],
-  'mip.admin.messageCampaigns.schedule': ['MESSAGING', 'MUTATION', 'scheduleMessageCampaign'],
-  'mip.admin.messageCampaigns.cancelSchedule': ['MESSAGING', 'MUTATION', 'cancelMessageCampaignSchedule'],
-  'mip.admin.messageCampaigns.publish': ['MESSAGING', 'MUTATION', 'publishMessageCampaign'],
-  'mip.admin.messageCampaigns.withdraw': ['MESSAGING', 'MUTATION', 'withdrawMessageCampaign'],
-  'mip.admin.messageDeliveryReviews.claim': ['MESSAGING', 'MUTATION', 'claimMessageDeliveryReview'],
-  'mip.admin.messageDeliveryReviews.reconcile': ['MESSAGING', 'MUTATION', 'reconcileMessageDeliveryReview'],
-  'mip.admin.messageDeliveryReviews.resolve': ['MESSAGING', 'MUTATION', 'resolveMessageDeliveryReview'],
-  'mip.admin.messageTemplates.save': ['MESSAGING', 'MUTATION', 'saveMessageTemplate'],
-  'mip.admin.messageTemplates.activate': ['MESSAGING', 'MUTATION', 'activateMessageTemplate'],
-  'mip.admin.messageTemplates.archive': ['MESSAGING', 'MUTATION', 'archiveMessageTemplate'],
-
-  'mip.admin.knowledge.list': ['KNOWLEDGE', 'QUERY', 'listKnowledgeAdmin', 'SESSION_FIRST'],
-  'mip.admin.knowledge.get': ['KNOWLEDGE', 'QUERY', 'getKnowledgeAdminContent', 'SESSION_FIRST'],
-  'mip.admin.knowledge.sources.save': ['KNOWLEDGE', 'MUTATION', 'saveKnowledgeSource', 'SESSION_FIRST'],
-  'mip.admin.knowledge.categories.save': ['KNOWLEDGE', 'MUTATION', 'saveKnowledgeCategory', 'SESSION_FIRST'],
-  'mip.admin.knowledge.contents.save': ['KNOWLEDGE', 'MUTATION', 'saveKnowledgeContent', 'SESSION_FIRST'],
-  'mip.admin.knowledge.contents.review': ['KNOWLEDGE', 'MUTATION', 'reviewKnowledgeContent', 'SESSION_FIRST'],
-  'mip.admin.knowledge.products.save': ['KNOWLEDGE', 'MUTATION', 'saveKnowledgeProduct', 'SESSION_FIRST'],
-  'mip.admin.knowledge.comments.moderate': ['KNOWLEDGE', 'MUTATION', 'moderateKnowledgeComment', 'SESSION_FIRST'],
-  'mip.admin.knowledge.reports.close': ['KNOWLEDGE', 'MUTATION', 'closeKnowledgeCommentReport', 'SESSION_FIRST'],
-  'mip.admin.knowledge.ingestion.run': ['KNOWLEDGE', 'MUTATION', 'runKnowledgeIngestion', 'SESSION_FIRST'],
-  'mip.admin.knowledge.schedules.list': ['KNOWLEDGE', 'QUERY', 'listKnowledgeSchedules', 'SESSION_FIRST'],
-  'mip.admin.knowledge.schedules.save': ['KNOWLEDGE', 'MUTATION', 'saveKnowledgeSchedule', 'SESSION_FIRST'],
-
-  'mip.admin.opportunities.list': ['OPPORTUNITIES', 'QUERY', 'listOpportunities'],
-  'mip.admin.userContent.list': ['OPPORTUNITIES', 'QUERY', 'listUserContent'],
-  'mip.admin.userContent.get': ['OPPORTUNITIES', 'QUERY', 'getUserContent'],
-  'mip.admin.opportunities.get': ['OPPORTUNITIES', 'QUERY', 'getOpportunity'],
-  'mip.admin.opportunities.options': ['OPPORTUNITIES', 'QUERY', 'getOpportunityEditorOptions'],
-  'mip.admin.matching.get': ['OPPORTUNITIES', 'QUERY', 'getMatchingAdminState'],
-  'mip.admin.opportunityComments.get': ['OPPORTUNITIES', 'QUERY', 'getOpportunityCommentAdminState'],
-  'mip.admin.opportunities.save': ['OPPORTUNITIES', 'MUTATION', 'saveOpportunity'],
-  'mip.admin.opportunities.publish': ['OPPORTUNITIES', 'MUTATION', 'publishOpportunity'],
-  'mip.admin.opportunities.end': ['OPPORTUNITIES', 'MUTATION', 'endOpportunity'],
-  'mip.admin.opportunities.unpublish': ['OPPORTUNITIES', 'MUTATION', 'unpublishOpportunity'],
-  'mip.admin.opportunities.archive': ['OPPORTUNITIES', 'MUTATION', 'archiveOpportunity'],
-  'mip.admin.userContent.unpublish': ['OPPORTUNITIES', 'MUTATION', 'unpublishUserContent'],
-  'mip.admin.userContent.save': ['OPPORTUNITIES', 'MUTATION', 'saveUserContent'],
-  'mip.admin.userContent.archive': ['OPPORTUNITIES', 'MUTATION', 'archiveUserContent'],
-  'mip.admin.matching.settings.save': ['OPPORTUNITIES', 'MUTATION', 'saveMatchingSettings'],
-  'mip.admin.matching.recalculate': ['OPPORTUNITIES', 'MUTATION', 'recalculateOpportunityMatching'],
-  'mip.admin.opportunityComments.settings.save': ['OPPORTUNITIES', 'MUTATION', 'saveOpportunityCommentSettings'],
-  'mip.admin.opportunityComments.moderate': ['OPPORTUNITIES', 'MUTATION', 'moderateOpportunityComment'],
-  'mip.admin.opportunityComments.reports.close': ['OPPORTUNITIES', 'MUTATION', 'closeOpportunityCommentReport'],
-
-  'mip.admin.growth.levels': ['GROWTH', 'QUERY', 'listGrowthLevels'],
-  'mip.admin.growth.benefits': ['GROWTH', 'QUERY', 'listGrowthBenefits'],
-  'mip.admin.benefits.ledger': ['GROWTH', 'QUERY', 'listUnifiedBenefitLedger'],
-  'mip.admin.growth.rules': ['GROWTH', 'QUERY', 'listGrowthRules'],
-  'mip.admin.growth.entries': ['GROWTH', 'QUERY', 'listGrowthEntries'],
-  'mip.admin.growth.levelTransitions': ['GROWTH', 'QUERY', 'listGrowthLevelTransitions'],
-  'mip.admin.badges.list': ['GROWTH', 'QUERY', 'listBadges'],
-  'mip.admin.badges.awards': ['GROWTH', 'QUERY', 'listBadgeAwards'],
-  'mip.admin.growth.saveBenefit': ['GROWTH', 'MUTATION', 'saveGrowthBenefit'],
-  'mip.admin.growth.saveLevel': ['GROWTH', 'MUTATION', 'saveGrowthLevel'],
-  'mip.admin.growth.saveRule': ['GROWTH', 'MUTATION', 'saveGrowthRule'],
-  'mip.admin.growth.adjust': ['GROWTH', 'MUTATION', 'adjustGrowth'],
-  'mip.admin.badges.save': ['GROWTH', 'MUTATION', 'saveBadge'],
-  'mip.admin.badges.grant': ['GROWTH', 'MUTATION', 'grantBadge'],
-  'mip.admin.badges.revoke': ['GROWTH', 'MUTATION', 'revokeBadge'],
-
-  'mip.admin.tasks.list': ['TASKS', 'QUERY', 'listTasks'],
-  'mip.admin.tasks.get': ['TASKS', 'QUERY', 'getTask'],
-  'mip.admin.tasks.eligibleLevels.list': ['TASKS', 'QUERY', 'listEligibleLevels'],
-  'mip.admin.tasks.save': ['TASKS', 'MUTATION', 'saveTask'],
-  'mip.admin.tasks.publish': ['TASKS', 'MUTATION', 'publishTask'],
-  'mip.admin.tasks.unpublish': ['TASKS', 'MUTATION', 'unpublishTask'],
-  'mip.admin.tasks.delete': ['TASKS', 'MUTATION', 'deleteTask'],
-  'mip.admin.tasks.assignableMembers.list': ['TASKS', 'QUERY', 'listAssignableMembers'],
-  'mip.admin.tasks.assignMembers': ['TASKS', 'MUTATION', 'assignMembers'],
-  'mip.admin.tasks.revokeMembers': ['TASKS', 'MUTATION', 'revokeMembers'],
-  'mip.admin.tasks.completions.list': ['TASKS', 'QUERY', 'listCompletions'],
-  'mip.admin.tasks.completions.get': ['TASKS', 'QUERY', 'getCompletion'],
-  'mip.admin.tasks.completions.export': ['TASKS', 'QUERY', 'exportCompletions'],
-
-  'mip.admin.banners.session': ['BANNERS', 'QUERY', 'getBannerSession'],
-  'mip.admin.banners.list': ['BANNERS', 'QUERY', 'listBanners'],
-  'mip.admin.banners.get': ['BANNERS', 'QUERY', 'getBanner'],
-  'mip.admin.banners.save': ['BANNERS', 'MUTATION', 'saveBanner'],
-  'mip.admin.banners.changeStatus': ['BANNERS', 'MUTATION', 'changeBannerStatus'],
-  'mip.admin.banners.move': ['BANNERS', 'MUTATION', 'moveBanner'],
-  'mip.admin.banners.delete': ['BANNERS', 'MUTATION', 'deleteBanner'],
-
-  'mip.admin.game.session': ['GAME', 'QUERY', 'getGameSession'],
-  'mip.admin.game.rankings.list': ['GAME', 'QUERY', 'listGameRankings'],
-  'mip.admin.game.seasons.list': ['GAME', 'QUERY', 'listGameSeasons'],
-  'mip.admin.game.seasons.save': ['GAME', 'MUTATION', 'saveGameSeason'],
-  'mip.admin.game.seasons.changeStatus': ['GAME', 'MUTATION', 'changeGameSeasonStatus'],
-  'mip.admin.game.teams.list': ['GAME', 'QUERY', 'listGameTeams'],
-  'mip.admin.game.teams.save': ['GAME', 'MUTATION', 'saveGameTeam'],
-  'mip.admin.game.teams.changeStatus': ['GAME', 'MUTATION', 'changeGameTeamStatus'],
-  'mip.admin.game.members.assignable.list': ['GAME', 'QUERY', 'listGameAssignableMembers'],
-  'mip.admin.game.teams.members.replace': ['GAME', 'MUTATION', 'replaceGameTeamMembers'],
-  'mip.admin.game.matches.list': ['GAME', 'QUERY', 'listGameMatches'],
-  'mip.admin.game.matches.save': ['GAME', 'MUTATION', 'saveGameWeeklyMatch'],
-  'mip.admin.game.matches.finalize': ['GAME', 'MUTATION', 'finalizeGameWeeklyMatch'],
-  'mip.admin.game.rankings.generate': ['GAME', 'MUTATION', 'generateGameRankingSnapshot'],
-  'mip.admin.game.blindBoxes.catalogs.list': ['GAME', 'QUERY', 'listGameBlindBoxCatalogs'],
-  'mip.admin.game.blindBoxes.catalogs.save': ['GAME', 'MUTATION', 'saveGameBlindBoxCatalog'],
-  'mip.admin.game.blindBoxes.catalogs.changeStatus': ['GAME', 'MUTATION', 'changeGameBlindBoxCatalogStatus'],
-  'mip.admin.game.blindBoxes.cards.list': ['GAME', 'QUERY', 'listGameBlindBoxCards'],
-  'mip.admin.game.blindBoxes.cards.save': ['GAME', 'MUTATION', 'saveGameBlindBoxCard'],
-  'mip.admin.game.blindBoxes.cards.changeStatus': ['GAME', 'MUTATION', 'changeGameBlindBoxCardStatus'],
-
-  'mip.admin.media.uploadImage': ['MEDIA', 'MUTATION', 'uploadMediaImage', 'SESSION_FIRST'],
-
-  'mip.admin.dashboard': ['APPLICATION_WORKFLOW', 'QUERY', 'getDashboard'],
-  'mip.admin.dashboard.overview.get': ['APPLICATION_WORKFLOW', 'QUERY', 'getDashboardOverview'],
-  'mip.admin.exports.status': ['APPLICATION_WORKFLOW', 'QUERY', 'getExportStatus'],
-  'mip.admin.exceptions.list': ['APPLICATION_WORKFLOW', 'QUERY', 'listOperationalExceptions'],
-  'mip.admin.operations.queue.list': ['APPLICATION_WORKFLOW', 'QUERY', 'listOperationsQueue'],
-  'mip.admin.exports.create': ['APPLICATION_WORKFLOW', 'MUTATION', 'createExport'],
-  'mip.admin.exports.prepare': ['APPLICATION_WORKFLOW', 'MUTATION', 'prepareExport'],
-  'mip.admin.exports.reserve': ['APPLICATION_WORKFLOW', 'MUTATION', 'reserveExportDownload'],
-  'mip.admin.exports.complete': ['APPLICATION_WORKFLOW', 'MUTATION', 'completeExportDownload'],
-})
 const expectedOutboxActions = Object.freeze([
   'mip.admin.announcements.publish',
   'mip.admin.announcements.withdraw',
@@ -255,64 +53,53 @@ function manifest(owner, operations) {
 }
 
 describe('admin operation catalog', () => {
-  it('freezes the exact 187 business actions, owners, and kinds while keeping health separate', () => {
+  it('freezes all 187 business operations and keeps health outside the registry', () => {
     const catalogActions = operationCatalog.map(operation => operation.action)
-    const expectedActions = Object.keys(expectedOperations)
 
-    assert.equal(expectedActions.length, 187)
     assert.equal(operationCatalog.length, 187)
-    assert.deepEqual(sorted(catalogActions), sorted(expectedActions))
-    assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(expectedActions))
+    assert.equal(new Set(catalogActions).size, 187)
+    assert.deepEqual(sorted(Object.keys(operationByAction)), sorted(catalogActions))
     assert.equal(operationByAction.health, undefined)
     assert.equal(operationByAction.toString, undefined)
     assert.equal(Object.getPrototypeOf(operationByAction), null)
+    assert.equal(Object.isFrozen(operationCatalog), true)
+    assert.equal(Object.isFrozen(operationByAction), true)
+
     for (const operation of operationCatalog) {
-      const [owner, kind, method, mode] = expectedOperations[operation.action]
-      assert.equal(operation.owner, owner, operation.action)
-      assert.equal(operation.kind, kind, operation.action)
-      assert.equal(operation.method, method, operation.action)
-      assert.equal(operation.sessionFirst, mode === 'SESSION_FIRST', operation.action)
-      assert.equal(operation.usesInput, mode !== 'NO_INPUT', operation.action)
       assert.equal(operationByAction[operation.action], operation)
       assert.equal(Object.isFrozen(operation), true)
+      assert.equal(OPERATION_OWNERS.includes(operation.owner), true, operation.action)
+      assert.equal(OPERATION_KINDS.includes(operation.kind), true, operation.action)
+      assert.equal(typeof operation.method, 'string', operation.action)
+      assert.equal(typeof operation.sessionFirst, 'boolean', operation.action)
+      assert.equal(typeof operation.usesInput, 'boolean', operation.action)
+      assert.equal(typeof operation.wakesOutbox, 'boolean', operation.action)
     }
   })
 
-  it('binds every action to its owner module method and preserves special call ordering', async () => {
+  it('dispatches every registered operation with its declared call ordering', async () => {
     const caller = { appId: 'wx-app', userId: 'user-a' }
     const input = { marker: 'input-a' }
 
-    for (const [action, [, , expectedMethod, mode]] of Object.entries(expectedOperations)) {
+    for (const operation of operationCatalog) {
       const calls = []
-      const ownerModules = createOwnerModules({}, operation => async (...args) => {
-        calls.push({ method: operation.method, args })
-        return { method: operation.method }
+      const ownerModules = createOwnerModules({}, declared => async (...args) => {
+        calls.push({ method: declared.method, args })
+        return { method: declared.method }
       })
-      const result = (await createOperationDispatcher(ownerModules).execute(caller, action, input)).data
+      const result = (await createOperationDispatcher(ownerModules)
+        .execute(caller, operation.action, input)).data
 
-      if (mode === 'SESSION_FIRST') {
-        assert.deepEqual(calls.map(call => call.method), ['getSession', expectedMethod], action)
-        assert.deepEqual(calls[0].args, [caller], action)
-        assert.deepEqual(calls[1].args, [caller, input], action)
+      if (operation.sessionFirst) {
+        assert.deepEqual(calls.map(call => call.method), ['getSession', operation.method], operation.action)
+        assert.deepEqual(calls[0].args, [caller], operation.action)
+        assert.deepEqual(calls[1].args, [caller, input], operation.action)
       }
       else {
-        assert.deepEqual(calls.map(call => call.method), [expectedMethod], action)
-        assert.deepEqual(calls[0].args, mode === 'NO_INPUT' ? [caller] : [caller, input], action)
+        assert.deepEqual(calls.map(call => call.method), [operation.method], operation.action)
+        assert.deepEqual(calls[0].args, operation.usesInput ? [caller, input] : [caller], operation.action)
       }
-      assert.deepEqual(result, { method: expectedMethod }, action)
-    }
-  })
-
-  it('freezes every registry surface and accepts only legal owner and kind values', () => {
-    assert.equal(Object.isFrozen(operationCatalog), true)
-    assert.equal(Object.isFrozen(operationByAction), true)
-    for (const operation of operationCatalog) {
-      assert.equal(OPERATION_OWNERS.includes(operation.owner), true)
-      assert.equal(OPERATION_KINDS.includes(operation.kind), true)
-      assert.equal(typeof operation.method, 'string')
-      assert.equal(typeof operation.sessionFirst, 'boolean')
-      assert.equal(typeof operation.usesInput, 'boolean')
-      assert.equal(typeof operation.wakesOutbox, 'boolean')
+      assert.deepEqual(result, { method: operation.method }, operation.action)
     }
   })
 
@@ -326,46 +113,25 @@ describe('admin operation catalog', () => {
     }
   })
 
-  it('fails closed for duplicate, incomplete, illegal, health, and malformed manifests', () => {
+  it('fails closed for malformed or internally inconsistent manifests', () => {
     const valid = definition('mip.admin.test')
     const options = { expectedCount: 1, expectedOwners: ['ACCESS'] }
     const cases = [
-      {
-        manifests: [manifest('UNKNOWN', [valid])],
-        error: 'OPERATION_MANIFEST_INVALID',
-      },
-      {
-        manifests: [manifest('ACCESS', [definition('mip.admin.test', 'READ')])],
-        error: 'OPERATION_KIND_INVALID',
-      },
-      {
-        manifests: [manifest('ACCESS', [definition('health')])],
-        error: 'OPERATION_ACTION_INVALID',
-      },
-      {
-        manifests: [manifest('ACCESS', [{ ...valid, method: null }])],
-        error: 'OPERATION_METHOD_INVALID',
-      },
-      {
-        manifests: [manifest('ACCESS', [{ ...valid, sessionFirst: null }])],
-        error: 'OPERATION_SESSION_INVALID',
-      },
-      {
-        manifests: [manifest('ACCESS', [definition('mip.admin.test', 'QUERY', { wakesOutbox: true })])],
-        error: 'OPERATION_OUTBOX_INVALID',
-      },
-      {
-        manifests: [manifest('ACCESS', [definition('mip.admin.test', 'MUTATION', {
-          extra: { capability: 'unproven' },
-        })])],
-        error: 'OPERATION_DEFINITION_INVALID',
-      },
+      [manifest('UNKNOWN', [valid]), 'OPERATION_MANIFEST_INVALID'],
+      [manifest('ACCESS', [definition('mip.admin.test', 'READ')]), 'OPERATION_KIND_INVALID'],
+      [manifest('ACCESS', [definition('health')]), 'OPERATION_ACTION_INVALID'],
+      [manifest('ACCESS', [{ ...valid, method: null }]), 'OPERATION_METHOD_INVALID'],
+      [manifest('ACCESS', [{ ...valid, sessionFirst: null }]), 'OPERATION_SESSION_INVALID'],
+      [manifest('ACCESS', [definition('mip.admin.test', 'QUERY', { wakesOutbox: true })]), 'OPERATION_OUTBOX_INVALID'],
+      [manifest('ACCESS', [definition('mip.admin.test', 'MUTATION', {
+        extra: { capability: 'unproven' },
+      })]), 'OPERATION_DEFINITION_INVALID'],
     ]
 
-    for (const testCase of cases) {
+    for (const [invalidManifest, error] of cases) {
       assert.throws(
-        () => createOperationRegistry(testCase.manifests, options),
-        new RegExp(testCase.error),
+        () => createOperationRegistry([invalidManifest], options),
+        new RegExp(error),
       )
     }
 

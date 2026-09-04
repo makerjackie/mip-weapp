@@ -38,8 +38,10 @@ function growthLevelDraft(overrides = {}) {
   return {
     levelKey: 'member',
     name: '会员',
+    displayBadge: '会员',
     minimumExperience: 0,
-    benefits: [],
+    sortOrder: 1,
+    benefitIds: [],
     status: 'ACTIVE',
     ...overrides,
   }
@@ -737,14 +739,14 @@ describe('admin repository persistence contracts', () => {
           return { affectedRows: 1 }
         },
       }))
-      await assert.rejects(() => repository.saveGrowthLevel({
+      await assert.rejects(() => repository.saveGrowthLevelV2({
         appId: 'wx-app',
         actorUserId: 'admin-user',
         levelId: 'level-base',
         expectedVersion: 3,
         draft,
         audit: levelId => audit({ resourceType: 'GROWTH_LEVEL', resourceId: levelId }),
-      }), error => error.code === 'GROWTH_BASE_LEVEL_REQUIRED')
+      }), error => error.code === 'GROWTH_LEVEL_THRESHOLD_CONFLICT')
       assert.equal(calls.some(call => call.sql.includes('UPDATE mip_growth_levels')), false)
       assert.equal(calls.some(call => call.sql.includes('INSERT INTO mip_audit_logs')), false)
     }
@@ -764,7 +766,7 @@ describe('admin repository persistence contracts', () => {
         return { affectedRows: 1 }
       },
     }))
-    await assert.rejects(() => repository.saveGrowthLevel({
+    await assert.rejects(() => repository.saveGrowthLevelV2({
       appId: 'wx-app',
       actorUserId: 'admin-user',
       levelId: 'level-next',
@@ -790,7 +792,7 @@ describe('admin repository persistence contracts', () => {
         return { affectedRows: 1 }
       },
     }))
-    const result = await repository.saveGrowthLevel({
+    const result = await repository.saveGrowthLevelV2({
       appId: 'wx-app',
       actorUserId: 'admin-user',
       levelId: 'level-next',

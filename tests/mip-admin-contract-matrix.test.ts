@@ -1,4 +1,5 @@
 import { createRequire } from 'node:module'
+import { ADMIN_OPERATION_CONTRACT } from '@mip/admin-contracts'
 import { describe, expect, it, vi } from 'vitest'
 import { readActions } from '../src/modules/mip-admin/cloudbase-transport'
 import { adminOperationContract } from '../src/modules/mip-admin/operation-contract'
@@ -31,9 +32,13 @@ const { publicOperationContract } = require('../cloudfunctions/mip-admin-api/dom
 
 describe('MIP admin client/server operation contract', () => {
   it('consumes the exact generated platform-neutral contract', () => {
+    expect(adminOperationContract).toBe(ADMIN_OPERATION_CONTRACT)
     expect(adminOperationContract).toEqual(publicOperationContract)
     expect(adminOperationContract.operationCount).toBe(187)
     expect(adminOperationContract.operations).toHaveLength(187)
+    expect(Object.isFrozen(adminOperationContract)).toBe(true)
+    expect(Object.isFrozen(adminOperationContract.operations)).toBe(true)
+    expect(adminOperationContract.operations.every(Object.isFrozen)).toBe(true)
   })
 
   it('retries all and only contract-declared safe operations', () => {

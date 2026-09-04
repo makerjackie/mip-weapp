@@ -2,10 +2,12 @@
 
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
+import { createRequire } from 'node:module'
 import path from 'node:path'
 import { MIP_CORE_FUNCTION_ROLES } from './lib/mip-function-manifest.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
+const require = createRequire(import.meta.url)
 
 function markdownFiles() {
   const result = spawnSync(
@@ -52,7 +54,9 @@ function readJson(relativePath) {
 
 const runtimePages = readJson('config/runtime-pages.json')
 const migrationLock = readJson('database/mysql/mip/migrations.lock.json')
-const operationContract = readJson('src/modules/mip-admin/generated/admin-operation-contract.json')
+const { publicOperationContract: operationContract } = require(
+  path.join(root, 'cloudfunctions/mip-admin-api/domain/public-operation-contract.js'),
+)
 const status = fs.readFileSync(path.join(root, 'docs/mip/PROJECT_STATUS.md'), 'utf8')
 const tableCount = new Set(migrationLock.migrations.flatMap(migration => migration.createsTables || [])).size
 const queryCount = operationContract.operations.filter(operation => operation.kind === 'QUERY').length

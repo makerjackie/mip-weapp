@@ -1,12 +1,29 @@
 import type { MipTasksGateway, MipTasksRequest } from '../src/modules/mip-tasks/types'
-import fs from 'node:fs'
-import path from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { createMipTasksCloudbaseGateway } from '../src/modules/mip-tasks/cloudbase-gateway'
 import { createMipTasksGateway } from '../src/modules/mip-tasks/gateway'
 import { createMipTasksModule } from '../src/modules/mip-tasks/module'
 import { rewardExperienceStarIndexes } from '../src/modules/mip-tasks/presentation'
-import { isRetryableTaskAction } from '../src/modules/mip-tasks/retry-policy'
 import { MipTasksError } from '../src/modules/mip-tasks/types'
+
+const cloudHarness = vi.hoisted(() => ({
+  callFunction: vi.fn(),
+  downloadFile: vi.fn(),
+}))
+
+const wxHarness = vi.hoisted(() => ({
+  downloadFile: vi.fn(),
+  saveImageToPhotosAlbum: vi.fn(),
+  unlink: vi.fn(),
+}))
+
+vi.mock('../src/platform/cloudbase/client', () => ({
+  requireCloudClient: vi.fn(async () => cloudHarness),
+}))
+
+vi.mock('../src/config/runtime', () => ({
+  runtimeConfig: { cloudbase: { tasksFunctionName: 'mip-tasks-api' } },
+}))
 
 const task = {
   id: '10000000-0000-4000-8000-000000000001',
@@ -20,7 +37,31 @@ const task = {
   status: 'AVAILABLE',
 } as const
 
-describe('MIP tasks client contract', () => {
+const completion = {
+  id: '20000000-0000-4000-8000-000000000001',
+  taskId: task.id,
+  taskName: task.name,
+  rewardExperience: 20,
+  resultStatus: 'SUCCESS',
+  completedAt: '2026-08-24T08:00:00.000Z',
+  alreadyCompleted: false,
+} as const
+
+describe('MIP tasks public client', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.stubGlobal('wx', {
+      downloadFile: wxHarness.downloadFile,
+      saveImageToPhotosAlbum: wxHarness.saveImageToPhotosAlbum,
+      getFileSystemManager: () => ({ unlink: wxHarness.unlink }),
+    })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.unstubAllGlobals()
+  })
+
   it('derives bounded reward stars from server-owned experience values', () => {
     expect(rewardExperienceStarIndexes(0)).toEqual([])
     expect(rewardExperienceStarIndexes(1)).toEqual([0])
@@ -28,7 +69,7 @@ describe('MIP tasks client contract', () => {
     expect(rewardExperienceStarIndexes(100)).toEqual([0, 1, 2, 3, 4])
   })
 
-  it('submits only a task and owned attachment intent', async () => {
+  it('preserves the v1 requests for every user task operation', async () => {
     const calls: MipTasksRequest[] = []
     const gateway = createMipTasksGateway({
       async invoke(request) {
@@ -36,37 +77,41 @@ describe('MIP tasks client contract', () => {
         if (request.action === 'listTasks') {
           return { ok: true, data: { items: [task] } }
         }
-        return {
-          ok: true,
-          data: {
-            id: '20000000-0000-4000-8000-000000000001',
-            taskId: task.id,
-            taskName: task.name,
-            rewardExperience: 20,
-            resultStatus: 'SUCCESS',
-            completedAt: '2026-08-24T08:00:00.000Z',
-            alreadyCompleted: false,
-          },
+        if (request.action === 'getTask') {
+          return { ok: true, data: task }
         }
+        return { ok: true, data: completion }
       },
     })
+    const attachmentAssetId = '30000000-0000-4000-8000-000000000001'
 
-    await expect(gateway.listTasks()).resolves.toEqual({ items: [task] })
-    await gateway.completeTask(task.id, '30000000-0000-4000-8000-000000000001')
-    expect(calls[1]).toEqual({
-      contractVersion: 1,
-      action: 'completeTask',
-      input: {
-        taskId: task.id,
-        attachmentAssetId: '30000000-0000-4000-8000-000000000001',
+    await expect(gateway.listTasks('mtu1.cursor', 20)).resolves.toEqual({ items: [task] })
+    await expect(gateway.getTask(task.id)).resolves.toEqual(task)
+    await expect(gateway.completeTask(task.id, attachmentAssetId)).resolves.toEqual(completion)
+
+    expect(calls).toEqual([
+      {
+        contractVersion: 1,
+        action: 'listTasks',
+        input: { cursor: 'mtu1.cursor', limit: 20 },
       },
-    })
-    expect(calls[1]?.input).not.toHaveProperty('rewardExperience')
-    expect(calls[1]?.input).not.toHaveProperty('resultStatus')
+      {
+        contractVersion: 1,
+        action: 'getTask',
+        input: { taskId: task.id },
+      },
+      {
+        contractVersion: 1,
+        action: 'completeTask',
+        input: { taskId: task.id, attachmentAssetId },
+      },
+    ])
+    expect(calls[2]?.input).not.toHaveProperty('rewardExperience')
+    expect(calls[2]?.input).not.toHaveProperty('resultStatus')
   })
 
-  it('preserves capability and conflict errors for admin recovery', async () => {
-    const gateway = createMipTasksGateway({
+  it('preserves business errors and rejects malformed service data', async () => {
+    const conflictGateway = createMipTasksGateway({
       async invoke() {
         return {
           ok: false,
@@ -74,308 +119,152 @@ describe('MIP tasks client contract', () => {
         }
       },
     })
-    await expect(gateway.publishTask(task.id, 1)).rejects.toEqual(expect.objectContaining({
+    const malformedEnvelope = createMipTasksGateway({
+      async invoke() {
+        return { ok: true, data: { items: [] }, debug: true }
+      },
+    })
+    const malformedTask = createMipTasksGateway({
+      async invoke() {
+        return { ok: true, data: { ...task, hasTemplate: true } }
+      },
+    })
+
+    await expect(conflictGateway.completeTask(task.id)).rejects.toMatchObject({
       name: 'MipTasksError',
       code: 'CONFLICT',
       retryable: true,
-    }))
-  })
-
-  it('uses opaque member references for batch assignment and revocation intents', async () => {
-    const calls: MipTasksRequest[] = []
-    const gateway = createMipTasksGateway({
-      async invoke(request) {
-        calls.push(request)
-        return { ok: true, data: { taskId: task.id, requestedCount: 1, changedCount: 1 } }
-      },
     })
-    const memberRef = 'p1.opaque-member-reference'
-    await gateway.assignMembers(task.id, 2, [memberRef])
-    await gateway.revokeMembers(task.id, 2, [memberRef])
-    expect(calls).toEqual([
-      {
-        contractVersion: 1,
-        action: 'admin.assignMembers',
-        input: { taskId: task.id, expectedVersion: 2, memberRefs: [memberRef] },
-      },
-      {
-        contractVersion: 1,
-        action: 'admin.revokeMembers',
-        input: { taskId: task.id, expectedVersion: 2, memberRefs: [memberRef] },
-      },
-    ])
-    expect(JSON.stringify(calls)).not.toContain('userId')
-  })
-
-  it('sends the exact eligible growth-level set through the admin contract', async () => {
-    const calls: MipTasksRequest[] = []
-    const levelId = '70000000-0000-4000-8000-000000000001'
-    const gateway = createMipTasksGateway({
-      async invoke(request) {
-        calls.push(request)
-        if (request.action === 'admin.listEligibleLevels') {
-          return { ok: true, data: [{ id: levelId, levelKey: 'level-1', name: '等级 1', minimumExperience: 0, status: 'ACTIVE' }] }
-        }
-        return { ok: true, data: { id: task.id } }
-      },
-    })
-    await gateway.listEligibleLevels()
-    await gateway.saveTask({
-      task: {
-        name: task.name,
-        content: task.content,
-        rewardExperience: task.rewardExperience,
-        attachmentRequired: false,
-        assignmentMode: 'ALL',
-        eligibleLevelIds: [levelId],
-      },
-    })
-    expect(calls[0]).toEqual({ contractVersion: 1, action: 'admin.listEligibleLevels', input: {} })
-    expect(calls[1]?.input).toEqual(expect.objectContaining({
-      task: expect.objectContaining({ eligibleLevelIds: [levelId] }),
-    }))
-  })
-
-  it('retries only read actions during a cold start', () => {
-    expect(isRetryableTaskAction('listTasks')).toBe(true)
-    expect(isRetryableTaskAction('completeTask')).toBe(false)
-    expect(isRetryableTaskAction('admin.getTask')).toBe(true)
-    expect(isRetryableTaskAction('admin.listEligibleLevels')).toBe(true)
-    expect(isRetryableTaskAction('admin.listAssignableMembers')).toBe(true)
-    expect(isRetryableTaskAction('admin.exportCompletions')).toBe(true)
-    expect(isRetryableTaskAction('admin.saveTask')).toBe(false)
-    expect(isRetryableTaskAction('admin.assignMembers')).toBe(false)
-    expect(isRetryableTaskAction('admin.revokeMembers')).toBe(false)
-    expect(isRetryableTaskAction('admin.publishTask')).toBe(false)
-    expect(isRetryableTaskAction('admin.unpublishTask')).toBe(false)
-    expect(isRetryableTaskAction('admin.deleteTask')).toBe(false)
-  })
-
-  it('keeps task versions and export filters inside the neutral v1 input', async () => {
-    const calls: MipTasksRequest[] = []
-    const gateway = createMipTasksGateway({
-      async invoke(request) {
-        calls.push(request)
-        if (request.action === 'admin.exportCompletions') {
-          return { ok: true, data: { fileName: 'tasks.xlsx', contentBase64: '', rowCount: 0 } }
-        }
-        return { ok: true, data: { id: task.id, version: 4 } }
-      },
-    })
-    await gateway.publishTask(task.id, 3)
-    await gateway.saveTask({
-      taskId: task.id,
-      expectedVersion: 3,
-      task: {
-        name: task.name,
-        content: task.content,
-        rewardExperience: task.rewardExperience,
-        attachmentRequired: false,
-        assignmentMode: 'ALL',
-      },
-    })
-    await gateway.exportCompletions({
-      taskId: task.id,
-      resultStatus: 'SUCCESS',
-      completedFrom: '2026-08-01T00:00:00.000Z',
-    })
-
-    expect(calls[0]).toMatchObject({
-      contractVersion: 1,
-      action: 'admin.publishTask',
-      input: { taskId: task.id, expectedVersion: 3 },
-    })
-    expect(calls[1]).toMatchObject({
-      contractVersion: 1,
-      action: 'admin.saveTask',
-      input: { taskId: task.id, expectedVersion: 3 },
-    })
-    expect(calls[2]).toEqual({
-      contractVersion: 1,
-      action: 'admin.exportCompletions',
-      input: {
-        filters: {
-          taskId: task.id,
-          resultStatus: 'SUCCESS',
-          completedFrom: '2026-08-01T00:00:00.000Z',
-        },
-      },
-    })
-  })
-
-  it('invalidates cached task queries after every successful mutation', async () => {
-    let listCalls = 0
-    const gateway = createMipTasksGateway({
-      async invoke(request) {
-        if (request.action === 'admin.listTasks') {
-          listCalls += 1
-          return { ok: true, data: { items: [] } }
-        }
-        if (request.action === 'completeTask') {
-          return {
-            ok: true,
-            data: {
-              id: '20000000-0000-4000-8000-000000000001',
-              taskId: task.id,
-              taskName: task.name,
-              rewardExperience: 20,
-              resultStatus: 'SUCCESS',
-              completedAt: '2026-08-25T00:00:00.000Z',
-              alreadyCompleted: false,
-            },
-          }
-        }
-        if (request.action === 'admin.assignMembers' || request.action === 'admin.revokeMembers') {
-          return { ok: true, data: { taskId: task.id, requestedCount: 1, changedCount: 1 } }
-        }
-        return { ok: true, data: { id: task.id, version: 2 } }
-      },
-    })
-    const module = createMipTasksModule(gateway)
-    const mutations = [
-      () => module.mutation.completeTask(task.id),
-      () => module.mutation.saveTask({
-        task: {
-          name: task.name,
-          content: task.content,
-          rewardExperience: task.rewardExperience,
-          attachmentRequired: false,
-          assignmentMode: 'ALL',
-        },
-      }),
-      () => module.mutation.publishTask(task.id, 1),
-      () => module.mutation.unpublishTask(task.id, 1),
-      () => module.mutation.deleteTask(task.id, 1),
-      () => module.mutation.assignMembers(task.id, 1, ['p1.member']),
-      () => module.mutation.revokeMembers(task.id, 1, ['p1.member']),
-    ]
-
-    await module.query.listAdminTasks()
-    await module.query.listAdminTasks()
-    expect(listCalls).toBe(1)
-    for (const mutate of mutations) {
-      await mutate()
-      await module.query.listAdminTasks()
-    }
-    expect(listCalls).toBe(1 + mutations.length)
-  })
-
-  it.each(['CONFLICT', 'FORBIDDEN'] as const)(
-    'preserves %s mutation errors and cached read state',
-    async (code) => {
-      let listCalls = 0
-      const failure = new MipTasksError(code, `${code} message`, code === 'CONFLICT')
-      const gateway = {
-        async listAdminTasks() {
-          listCalls += 1
-          return { items: [] }
-        },
-        async publishTask() {
-          throw failure
-        },
-      } as unknown as MipTasksGateway
-      const module = createMipTasksModule(gateway)
-
-      await module.query.listAdminTasks()
-      await expect(module.mutation.publishTask(task.id, 1)).rejects.toBe(failure)
-      await module.query.listAdminTasks()
-
-      expect(listCalls).toBe(1)
-    },
-  )
-
-  it.each([
-    { items: [{ ...task, rewardExperience: '20' }] },
-    { items: [{ ...task }, { ...task }] },
-    { items: [{ ...task, status: 'COMPLETED' }] },
-    { items: [task], nextCursor: 'eyJpZCI6InRhc2staWQifQ' },
-    { items: [task], unexpected: true },
-  ])('fails the entire user task page closed for malformed data %#', async (data) => {
-    const gateway = createMipTasksGateway({
-      async invoke() {
-        return { ok: true, data }
-      },
-    })
-    await expect(gateway.listTasks()).rejects.toEqual(expect.objectContaining({
+    await expect(malformedEnvelope.listTasks()).rejects.toMatchObject({
       code: 'SERVICE_UNAVAILABLE',
       retryable: true,
-    }))
+    })
+    await expect(malformedTask.getTask(task.id)).rejects.toMatchObject({
+      code: 'SERVICE_UNAVAILABLE',
+      retryable: true,
+    })
   })
 
-  it('strictly validates task detail and completion facts', async () => {
-    const malformedDetail = createMipTasksGateway({
-      async invoke() { return { ok: true, data: { ...task, hasTemplate: true } } },
-    })
-    await expect(malformedDetail.getTask(task.id)).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
-
-    const malformedCompletion = createMipTasksGateway({
-      async invoke() {
-        return {
-          ok: true,
-          data: {
-            id: '20000000-0000-4000-8000-000000000001',
-            taskId: task.id,
-            taskName: task.name,
-            rewardExperience: 20,
-            resultStatus: 'SUCCESS',
-            completedAt: 'not-a-date',
-            alreadyCompleted: false,
-          },
-        }
+  it('caches reads, preserves cache after failed completion, and invalidates after success', async () => {
+    let listCalls = 0
+    let detailCalls = 0
+    let failCompletion = true
+    const failure = new MipTasksError('CONFLICT', '任务已经完成')
+    const gateway: MipTasksGateway = {
+      async listTasks() {
+        listCalls += 1
+        return { items: [task] }
       },
-    })
-    await expect(malformedCompletion.completeTask(task.id)).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
+      async getTask() {
+        detailCalls += 1
+        return task
+      },
+      async completeTask() {
+        if (failCompletion) {
+          throw failure
+        }
+        return completion
+      },
+    }
+    const module = createMipTasksModule(gateway)
+
+    await module.query.listTasks()
+    await module.query.listTasks()
+    await module.query.getTask(task.id)
+    await module.query.getTask(task.id)
+    expect({ listCalls, detailCalls }).toEqual({ listCalls: 1, detailCalls: 1 })
+
+    await module.query.listTasks(undefined, undefined, true)
+    expect(listCalls).toBe(2)
+
+    await expect(module.mutation.completeTask(task.id)).rejects.toBe(failure)
+    await module.query.listTasks()
+    expect(listCalls).toBe(2)
+
+    failCompletion = false
+    await module.mutation.completeTask(task.id)
+    await module.query.listTasks()
+    await module.query.getTask(task.id)
+    expect({ listCalls, detailCalls }).toEqual({ listCalls: 3, detailCalls: 2 })
   })
 
-  it('rejects malformed success and error envelopes before using their contents', async () => {
-    const extraSuccess = createMipTasksGateway({
-      async invoke() { return { ok: true, data: { items: [] }, debug: true } },
+  it('saves local and HTTPS template images while rejecting unsafe sources', async () => {
+    wxHarness.downloadFile.mockImplementation((options: {
+      success: (result: { statusCode: number, tempFilePath: string }) => void
+    }) => options.success({ statusCode: 200, tempFilePath: 'wxfile://tmp/template.jpg' }))
+    wxHarness.saveImageToPhotosAlbum.mockImplementation((options: { success: () => void }) => {
+      options.success()
     })
-    await expect(extraSuccess.listTasks()).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
+    const module = createMipTasksModule({} as MipTasksGateway)
 
-    const malformedError = createMipTasksGateway({
-      async invoke() { return { ok: false, error: { code: 'FORBIDDEN', message: '无权限' } } },
+    await module.saveTemplateImage('wxfile://local/template.jpg')
+    await module.saveTemplateImage('https://cdn.example.com/template.jpg')
+
+    expect(wxHarness.downloadFile).toHaveBeenCalledOnce()
+    expect(wxHarness.saveImageToPhotosAlbum).toHaveBeenNthCalledWith(1, {
+      filePath: 'wxfile://local/template.jpg',
+      success: expect.any(Function),
+      fail: expect.any(Function),
     })
-    await expect(malformedError.listTasks()).rejects.toMatchObject({ code: 'SERVICE_UNAVAILABLE' })
+    expect(wxHarness.saveImageToPhotosAlbum).toHaveBeenNthCalledWith(2, {
+      filePath: 'wxfile://tmp/template.jpg',
+      success: expect.any(Function),
+      fail: expect.any(Function),
+    })
+    await expect(module.saveTemplateImage('')).rejects.toThrow('模板下载地址无效')
+    await expect(module.saveTemplateImage('http://cdn.example.com/template.jpg'))
+      .rejects
+      .toThrow('模板下载地址无效')
+    await expect(module.saveTemplateImage('cloud://mip-test/template.jpg'))
+      .rejects
+      .toThrow('模板下载地址无效')
   })
 
-  it('keeps member task completion reachable without a mini-program dispatch entry', () => {
-    const app = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'src/app.json'), 'utf8')) as {
-      subPackages: Array<{ root: string, pages: string[] }>
-    }
-    const growth = fs.readFileSync(path.join(process.cwd(), 'src/packages/member/mip-growth/index.wxml'), 'utf8')
-    const memberListSource = fs.readFileSync(path.join(process.cwd(), 'src/packages/member/mip-tasks/index.ts'), 'utf8')
-    const memberListView = fs.readFileSync(path.join(process.cwd(), 'src/packages/member/mip-tasks/index.wxml'), 'utf8')
-    const memberDetailSource = fs.readFileSync(path.join(process.cwd(), 'src/packages/member/mip-tasks/detail/index.ts'), 'utf8')
-    const moduleSource = fs.readFileSync(path.join(process.cwd(), 'src/modules/mip-tasks/module.ts'), 'utf8')
-    const cloudbaseTransport = fs.readFileSync(path.join(process.cwd(), 'src/modules/mip-tasks/cloudbase-gateway.ts'), 'utf8')
-    const detail = fs.readFileSync(path.join(process.cwd(), 'src/packages/member/mip-tasks/detail/index.wxml'), 'utf8')
+  it('cancels an in-flight template save when local task state is invalidated', async () => {
+    let finishDownload: ((result: { statusCode: number, tempFilePath: string }) => void) | undefined
+    wxHarness.downloadFile.mockImplementation((options: {
+      success: (result: { statusCode: number, tempFilePath: string }) => void
+    }) => {
+      finishDownload = options.success
+    })
+    wxHarness.unlink.mockImplementation((options: { success: () => void }) => options.success())
+    const module = createMipTasksModule({} as MipTasksGateway)
 
-    expect(app.subPackages.find(pkg => pkg.root === 'packages/member')?.pages).toEqual(expect.arrayContaining([
-      'mip-tasks/index',
-      'mip-tasks/detail/index',
-    ]))
-    expect(app.subPackages.find(pkg => pkg.root === 'packages/admin')?.pages).not.toEqual(expect.arrayContaining([
-      'tasks/index',
-      'task-assignments/index',
-      'task-completions/index',
-    ]))
-    expect(growth).toContain('bind:tap="openTasks"')
-    expect(detail).toContain('原图不超过 10MB')
-    expect(detail).toContain('提交完成')
-    expect(detail).toContain('保存模板图片')
-    expect(detail).toContain('任务已截止')
-    expect(memberListView).toContain('min-h-[88rpx]')
-    expect(memberListView).toContain('starIndexes')
-    expect(memberListView).not.toContain('派发任务')
-    expect(memberListSource).not.toContain('getAdminSession')
-    for (const source of [memberListSource, memberDetailSource]) {
-      expect(source).not.toContain('mipTasksModule.gateway')
-      expect(source).toContain('mipTasksModule.query')
-    }
-    expect(memberDetailSource).toContain('mipTasksModule.mutation.completeTask')
-    expect(moduleSource).not.toMatch(/return\s*\{\s*gateway,/)
-    expect(cloudbaseTransport).toContain('data: request')
-    expect(cloudbaseTransport).not.toContain('{ action, ...data }')
+    const pending = module.saveTemplateImage('https://cdn.example.com/template.jpg')
+    module.invalidate()
+    finishDownload?.({ statusCode: 200, tempFilePath: 'wxfile://tmp/template.jpg' })
+
+    await expect(pending).rejects.toMatchObject({
+      name: 'MipTasksError',
+      code: 'AUTH_REQUIRED',
+    })
+    expect(wxHarness.saveImageToPhotosAlbum).not.toHaveBeenCalled()
+    expect(wxHarness.unlink).toHaveBeenCalledWith({
+      filePath: 'wxfile://tmp/template.jpg',
+      success: expect.any(Function),
+      fail: expect.any(Function),
+    })
+  })
+
+  it('retries CloudBase reads but never replays task completion', async () => {
+    vi.useFakeTimers()
+    cloudHarness.callFunction
+      .mockRejectedValueOnce(new Error('cold start'))
+      .mockResolvedValueOnce({ result: { ok: true, data: { items: [task] } } })
+    const gateway = createMipTasksCloudbaseGateway('mip-tasks-api')
+
+    const pending = gateway.listTasks()
+    await vi.runAllTimersAsync()
+    await expect(pending).resolves.toEqual({ items: [task] })
+    expect(cloudHarness.callFunction).toHaveBeenCalledTimes(2)
+
+    cloudHarness.callFunction.mockReset()
+    cloudHarness.callFunction.mockRejectedValue(new Error('response lost'))
+    await expect(gateway.completeTask(task.id)).rejects.toMatchObject({
+      name: 'MipTasksError',
+      code: 'SERVICE_UNAVAILABLE',
+      retryable: true,
+    })
+    expect(cloudHarness.callFunction).toHaveBeenCalledOnce()
   })
 })

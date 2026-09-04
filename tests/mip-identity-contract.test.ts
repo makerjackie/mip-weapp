@@ -9,7 +9,6 @@ import { createRequire } from 'node:module'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createMipIdentityCloudbaseTransport } from '../src/modules/mip-identity/cloudbase-gateway'
 import { createMipIdentityGateway } from '../src/modules/mip-identity/gateway'
-import { isRetryableIdentityAction } from '../src/modules/mip-identity/retry-policy'
 
 const require = createRequire(import.meta.url)
 const { createHandler } = require('../cloudfunctions/mip-identity-api/domain/handler.js')
@@ -324,7 +323,9 @@ describe('MIP identity v1 client contract', () => {
     expect(calls.some(call => Object.hasOwn(call.input, 'input'))).toBe(false)
   })
 
-  it('limits cold-start retries to identity reads', () => {
+  it('retries every CloudBase read but sends every mutation only once', async () => {
+    vi.useFakeTimers()
+    const transport = createMipIdentityCloudbaseTransport('mip-identity-api')
     const reads = [
       'getAccessSnapshot',
       'getMyProfileCardCode',
@@ -334,54 +335,44 @@ describe('MIP identity v1 client contract', () => {
       'listProfileTags',
       'resolveProfileCardScene',
     ] satisfies MipIdentityAction[]
-    const writes = [
+    for (const action of reads) {
+      const request = { contractVersion: 1, action, input: {} } as MipIdentityRequest
+      cloudHarness.callFunction.mockReset()
+      cloudHarness.callFunction
+        .mockRejectedValueOnce(new Error('cold start'))
+        .mockResolvedValueOnce({ result: { ok: true, data: snapshot } })
+
+      const read = transport.invoke(request)
+      await vi.runAllTimersAsync()
+      await expect(read).resolves.toEqual({ ok: true, data: snapshot })
+      expect(cloudHarness.callFunction).toHaveBeenCalledTimes(2)
+      expect(cloudHarness.callFunction).toHaveBeenLastCalledWith({
+        name: 'mip-identity-api',
+        data: request,
+      })
+    }
+
+    const mutations = [
+      'signIn',
       'acceptAgreements',
       'bindWechatPhone',
       'closeAccount',
       'updateProfile',
+      'updateCard',
       'setPrimaryBranch',
     ] satisfies MipIdentityAction[]
+    for (const action of mutations) {
+      const request = { contractVersion: 1, action, input: {} } as MipIdentityRequest
+      cloudHarness.callFunction.mockReset()
+      cloudHarness.callFunction.mockRejectedValue(new Error('transport unavailable'))
 
-    expect(reads.every(isRetryableIdentityAction)).toBe(true)
-    expect(writes.some(isRetryableIdentityAction)).toBe(false)
-  })
-
-  it('retries a failed CloudBase read but sends a phone mutation only once', async () => {
-    vi.useFakeTimers()
-    const transport = createMipIdentityCloudbaseTransport('mip-identity-api')
-    cloudHarness.callFunction
-      .mockRejectedValueOnce(new Error('cold start'))
-      .mockResolvedValueOnce({ result: { ok: true, data: snapshot } })
-
-    const read = transport.invoke({
-      contractVersion: 1,
-      action: 'getAccessSnapshot',
-      input: {},
-    })
-    await vi.runAllTimersAsync()
-    await expect(read).resolves.toEqual({ ok: true, data: snapshot })
-    expect(cloudHarness.callFunction).toHaveBeenCalledTimes(2)
-    expect(cloudHarness.callFunction).toHaveBeenLastCalledWith({
-      name: 'mip-identity-api',
-      data: { contractVersion: 1, action: 'getAccessSnapshot', input: {} },
-    })
-
-    cloudHarness.callFunction.mockReset()
-    cloudHarness.callFunction.mockRejectedValue(new Error('transport unavailable'))
-    await expect(transport.invoke({
-      contractVersion: 1,
-      action: 'bindWechatPhone',
-      input: { code: 'one-shot-code' },
-    })).rejects.toThrow('身份服务暂时不可用')
-    expect(cloudHarness.callFunction).toHaveBeenCalledTimes(1)
-    expect(cloudHarness.callFunction).toHaveBeenCalledWith({
-      name: 'mip-identity-api',
-      data: {
-        contractVersion: 1,
-        action: 'bindWechatPhone',
-        input: { code: 'one-shot-code' },
-      },
-    })
+      await expect(transport.invoke(request)).rejects.toThrow('身份服务暂时不可用')
+      expect(cloudHarness.callFunction).toHaveBeenCalledTimes(1)
+      expect(cloudHarness.callFunction).toHaveBeenCalledWith({
+        name: 'mip-identity-api',
+        data: request,
+      })
+    }
   })
 
   it('does not send simulator phone codes to the identity service', async () => {
@@ -402,7 +393,6 @@ describe('MIP identity v1 client contract', () => {
     const sources = [
       'src/modules/mip-identity/gateway.ts',
       'src/modules/mip-identity/cloudbase-gateway.ts',
-      'src/modules/mip-identity/retry-policy.ts',
     ].map(path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')).join('\n')
 
     expect(sources).not.toMatch(/console\.|setStorage|getStorage|removeStorage/)

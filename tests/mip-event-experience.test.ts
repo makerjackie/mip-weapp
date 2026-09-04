@@ -3,7 +3,6 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 import {
-  _checkInResumeTest,
   checkInCredentialCountdown,
   createCheckInResumeStore,
   decodeInvitationToken,
@@ -101,16 +100,20 @@ describe('MIP event experience contracts', () => {
 
   it('keeps a server-resolved check-in intent only within both local and scene expiry', () => {
     const values = new Map<string, unknown>()
+    let activeStorageKey = ''
     let cleared = false
     let scheduled: (() => void) | undefined
     let now = Date.parse('2026-08-25T04:00:00.000Z')
     const resumeToken = `${'a'.repeat(24)}.${'b'.repeat(43)}`
     const store = createCheckInResumeStore({
       read: key => values.get(key),
-      write: (key, value) => { values.set(key, value) },
+      write: (key, value) => {
+        activeStorageKey = key
+        values.set(key, value)
+      },
       clear: (key) => {
         values.delete(key)
-        if (key === _checkInResumeTest.STORAGE_KEY) {
+        if (key === activeStorageKey) {
           cleared = true
         }
       },
@@ -132,14 +135,15 @@ describe('MIP event experience contracts', () => {
     expect(store.peek('event-a')?.resumeToken).toBe(resumeToken)
     expect(store.peek('event-b')).toBeNull()
     expect(cleared).toBe(false)
-    const stored = values.get(_checkInResumeTest.STORAGE_KEY)
+    expect(activeStorageKey).not.toBe('')
+    const stored = values.get(activeStorageKey)
     expect(stored).toEqual(expect.objectContaining({ eventId: 'event-a', resumeToken }))
     expect(stored).not.toHaveProperty('scanToken')
     expect(JSON.stringify(stored)).not.toContain('s1.')
 
     now = Date.parse('2026-08-25T04:31:00.000Z')
     scheduled?.()
-    expect(values.get(_checkInResumeTest.STORAGE_KEY)).toBeUndefined()
+    expect(values.get(activeStorageKey)).toBeUndefined()
     expect(cleared).toBe(true)
 
     const sceneBound = store.save({
@@ -177,25 +181,41 @@ describe('MIP event experience contracts', () => {
       }
     }
 
+    const probedReads: string[] = []
+    const probedClears: string[] = []
+    createCheckInResumeStore({
+      read: (key) => {
+        probedReads.push(key)
+        return undefined
+      },
+      write: () => undefined,
+      clear: key => probedClears.push(key),
+    }, () => now).prune()
+    expect(probedReads).toHaveLength(1)
+    expect(probedClears).toHaveLength(1)
+    const [storageKey] = probedReads
+    const [legacyStorageKey] = probedClears
+    expect(storageKey).not.toBe(legacyStorageKey)
+
     const legacyOnly = createStorage([[
-      _checkInResumeTest.LEGACY_STORAGE_KEY,
+      legacyStorageKey,
       { eventId: 'event-a', scanToken: 's1.abcdefghijk.abcdefghijk' },
     ]])
     createCheckInResumeStore(legacyOnly.adapter, () => now).prune()
-    expect(legacyOnly.values.has(_checkInResumeTest.LEGACY_STORAGE_KEY)).toBe(false)
+    expect(legacyOnly.values.has(legacyStorageKey)).toBe(false)
 
     const mixed = createStorage([
-      [_checkInResumeTest.LEGACY_STORAGE_KEY, { scanToken: 's1.abcdefghijk.abcdefghijk' }],
-      [_checkInResumeTest.STORAGE_KEY, validIntent],
+      [legacyStorageKey, { scanToken: 's1.abcdefghijk.abcdefghijk' }],
+      [storageKey, validIntent],
     ])
     const store = createCheckInResumeStore(mixed.adapter, () => now)
     expect(store.peek('event-a')).toEqual(validIntent)
     store.prune()
     store.prune()
-    expect(mixed.values.get(_checkInResumeTest.STORAGE_KEY)).toEqual(validIntent)
-    expect(mixed.values.has(_checkInResumeTest.LEGACY_STORAGE_KEY)).toBe(false)
-    expect(mixed.cleared.filter(key => key === _checkInResumeTest.LEGACY_STORAGE_KEY)).toHaveLength(1)
-    expect(mixed.cleared).not.toContain(_checkInResumeTest.STORAGE_KEY)
+    expect(mixed.values.get(storageKey)).toEqual(validIntent)
+    expect(mixed.values.has(legacyStorageKey)).toBe(false)
+    expect(mixed.cleared.filter(key => key === legacyStorageKey)).toHaveLength(1)
+    expect(mixed.cleared).not.toContain(storageKey)
   })
 
   it('rehydrates only the matching event intent from event detail entry and foreground hooks', () => {

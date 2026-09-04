@@ -4,7 +4,6 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
 import { describe, expect, it, vi } from 'vitest'
-import { adminOperationContract } from '../src/modules/mip-admin/operation-contract'
 import { createMipCommerceGateway } from '../src/modules/mip-commerce/gateway'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
@@ -22,29 +21,13 @@ function extractRetryableActions(source: string): string[] {
 }
 
 describe('phase9 gateway retry policy (read-only)', () => {
-  it('MIP admin and event gateways retry only declared read actions', () => {
-    const adminTransport = read('src/modules/mip-admin/cloudbase-transport.ts')
+  it('MIP event gateway retries only declared read actions', () => {
     const eventGateway = read('src/modules/mip-events/cloudbase-gateway.ts')
 
-    const adminReads = adminOperationContract.operations
-      .filter(operation => operation.safeToRetry)
-      .map(operation => operation.action)
     const eventReads = extractRetryableActions(eventGateway)
 
-    expect(adminReads.length).toBeGreaterThan(0)
     expect(eventReads.length).toBeGreaterThan(0)
 
-    const adminMutations = [
-      'mip.admin.users.update',
-      'mip.admin.users.changePrimaryBranch',
-      'mip.admin.users.setControl',
-      'mip.admin.events.save',
-      'mip.admin.events.clone',
-      'mip.admin.events.changeStatus',
-      'mip.admin.events.checkIn',
-      'mip.admin.exports.create',
-      'mip.admin.refunds.submit',
-    ]
     const eventMutations = [
       'mip.events.register',
       'mip.events.updateRegistration',
@@ -55,18 +38,11 @@ describe('phase9 gateway retry policy (read-only)', () => {
       'mip.events.createInvitation',
     ]
 
-    for (const action of adminMutations) {
-      expect(adminReads).not.toContain(action)
-    }
     for (const action of eventMutations) {
       expect(eventReads).not.toContain(action)
     }
     expect(eventReads).toContain('mip.events.myRegistration')
 
-    expect(adminTransport).toContain('isRetryableAdminOperationAction')
-    expect(adminTransport).toContain('retryableAdminOperationActions')
-    expect(adminTransport).not.toMatch(/new Set\(\[/)
-    expect(adminTransport).toContain('isRetryableAdminOperationAction(request.action) ? COLD_START_READ_RETRY : { attempts: 1 }')
     expect(eventGateway).toContain('readActions.has(action) ? COLD_START_READ_RETRY : { attempts: 1 }')
     expect(COLD_START_READ_RETRY.attempts).toBeGreaterThan(1)
   })

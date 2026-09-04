@@ -3,7 +3,6 @@ import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
 import { runtimeConfig } from '../../config/runtime'
 import { requireCloudClient } from '../../platform/cloudbase/client'
 import { createMipMessagingGateway as createGateway } from './gateway'
-import { isRetryableMessagingAction } from './retry-policy'
 import { MipMessagingError } from './types'
 
 export function createMipMessagingCloudbaseTransport(
@@ -15,7 +14,7 @@ export function createMipMessagingCloudbaseTransport(
         const response = await retryTransport(async () => {
           const cloud = await requireCloudClient()
           return cloud.callFunction({ name: functionName, data: request })
-        }, isRetryableMessagingAction(request.action) ? COLD_START_READ_RETRY : { attempts: 1 })
+        }, request.action === 'listInbox' ? COLD_START_READ_RETRY : { attempts: 1 })
         return response.result
       }
       catch (error) {

@@ -136,13 +136,14 @@ describe('admin PRD query completion', () => {
     })
   })
 
-  it('queries opportunity publisher, city, time and complete detail without exposing owner ids', async () => {
+  it('queries opportunity publisher, city, time and complete V2 detail', async () => {
     let captured
     const repository = createAdminRepository(database({
       async query(sql, params) {
+        if (!sql.includes('FROM mip_opportunities o')) return []
         captured = { sql, params }
         return [{
-          id: 'opportunity-a', title: '品牌合作', value_summary: '提供渠道', target_summary: '寻找设计团队',
+          id: 'opportunity-a', owner_user_id: 'owner-a', title: '品牌合作', value_summary: '提供渠道', target_summary: '寻找设计团队',
           description: '合作详情', scope_type: 'BRANCH', branch_id: 'branch-a', branch_name: '广州分会',
           city_name: '广州', owner_nickname: '发布人', status: 'PUBLISHED', content_safety_status: 'APPROVED',
           referral_count: 2, version: 3, published_at: new Date('2026-08-20T00:00:00.000Z'),
@@ -151,7 +152,7 @@ describe('admin PRD query completion', () => {
         }]
       },
     }))
-    const page = await repository.listOpportunities(
+    const page = await repository.listOpportunitiesV2(
       'wx-app',
       { platform: true, branchIds: [], eventIds: [] },
       {
@@ -170,7 +171,7 @@ describe('admin PRD query completion', () => {
     assert.deepEqual(page.items[0].tags, ['品牌', '设计'])
     assert.equal(page.items[0].ownerNickname, '发布人')
     assert.equal(page.items[0].description, '合作详情')
-    assert.equal(Object.hasOwn(page.items[0], 'ownerUserId'), false)
+    assert.equal(page.items[0].ownerUserId, 'owner-a')
   })
 
   it('normalizes opportunity filters before repository access', async () => {
@@ -180,7 +181,7 @@ describe('admin PRD query completion', () => {
         id: 'admin-user', status: 'ACTIVE', agreementsAccepted: true, phoneBound: true, profileComplete: true,
       }),
       listRoleBindings: async () => [{ roleKey: 'PLATFORM_OPERATIONS', scopeType: 'PLATFORM', scopeId: null }],
-      listOpportunities: async (...args) => { captured.push({ type: 'list', args }); return [] },
+      listOpportunitiesV2: async (...args) => { captured.push({ type: 'list', args }); return [] },
     }
     const service = createAdminService({ repository, phoneEncryptionKey: '' })
     const filters = {
