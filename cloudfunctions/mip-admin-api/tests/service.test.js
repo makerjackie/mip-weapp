@@ -180,6 +180,50 @@ describe('admin service', () => {
     }
   })
 
+  it('preserves the login result when its follow-up audit cannot be written', async () => {
+    for (const confirmation of [
+      { result: { confirmed: true }, expectedCode: null },
+      {
+        error: Object.assign(new Error('WEB_LOGIN_CHALLENGE_NOT_FOUND'), {
+          code: 'WEB_LOGIN_CHALLENGE_NOT_FOUND',
+        }),
+        expectedCode: 'WEB_LOGIN_INVALID_CODE',
+      },
+    ]) {
+      const reported = []
+      const repo = repository('BRANCH_ADMIN', 'BRANCH', 'branch-a')
+      repo.recordAudit = async () => {
+        throw Object.assign(new Error('database unavailable'), { code: 'AUDIT_WRITE_FAILED' })
+      }
+      const service = createAdminService({
+        repository: repo,
+        phoneEncryptionKey: secret,
+        confirmWebLogin: async () => {
+          if (confirmation.error) throw confirmation.error
+          return confirmation.result
+        },
+        reportWebLoginAuditFailure: error => reported.push(error.code),
+      })
+
+      if (confirmation.expectedCode) {
+        await assert.rejects(
+          () => service.confirmWebLogin(
+            { ...caller, openId: 'openid-admin' },
+            { challengeCode: '123456' },
+          ),
+          error => error.code === confirmation.expectedCode,
+        )
+      }
+      else {
+        assert.deepEqual(await service.confirmWebLogin(
+          { ...caller, openId: 'openid-admin' },
+          { challengeCode: '123456' },
+        ), { confirmed: true })
+      }
+      assert.deepEqual(reported, ['AUDIT_WRITE_FAILED'])
+    }
+  })
+
   it('rejects and audits a malformed web login code before dispatch', async () => {
     const repo = repository('BRANCH_ADMIN', 'BRANCH', 'branch-a')
     let dispatched = false

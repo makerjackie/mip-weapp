@@ -38,6 +38,7 @@ function createAdminService({
   confirmWebLogin: dispatchWebLoginConfirmation = async () => {
     throw new Error('WEB_LOGIN_CONFIG_REQUIRED')
   },
+  reportWebLoginAuditFailure = () => {},
   dispatchRefund = async () => ({ status: 'PENDING_RETRY' }),
   dispatchRefunds = async input => ({
     scanned: input.refundIds.length,
@@ -342,7 +343,7 @@ function createAdminService({
       ? input.challengeCode.trim()
       : ''
     if (!/^\d{6}$/.test(challengeCode)) {
-      await recordWebLoginFailure(context, 'INVALID_CODE')
+      await recordWebLoginFailureSafely(context, 'INVALID_CODE')
       throw new AdminError('VALIDATION_FAILED', '请输入 6 位数字登录码')
     }
     try {
@@ -354,29 +355,39 @@ function createAdminService({
     }
     catch (error) {
       const failure = webLoginFailure(error)
-      await recordWebLoginFailure(context, failure.auditReason)
+      await recordWebLoginFailureSafely(context, failure.auditReason)
       throw failure.error
     }
     const grant = context.bindings[0]
-    await repository.recordAudit(audit(context, grant, {
-      scopeType: grant.scopeType,
-      scopeId: grant.scopeId,
-      action: 'admin.web_login.confirm',
-      resourceType: 'ADMIN_SESSION',
-      metadata: {},
-    }))
+    try {
+      await repository.recordAudit(audit(context, grant, {
+        scopeType: grant.scopeType,
+        scopeId: grant.scopeId,
+        action: 'admin.web_login.confirm',
+        resourceType: 'ADMIN_SESSION',
+        metadata: {},
+      }))
+    }
+    catch (error) {
+      reportWebLoginAuditFailure(error)
+    }
     return { confirmed: true }
   }
 
-  async function recordWebLoginFailure(context, reason) {
+  async function recordWebLoginFailureSafely(context, reason) {
     const grant = context.bindings[0]
-    await repository.recordAudit(audit(context, grant, {
-      scopeType: grant.scopeType,
-      scopeId: grant.scopeId,
-      action: 'admin.web_login.confirm_failed',
-      resourceType: 'ADMIN_SESSION',
-      metadata: { reason },
-    }))
+    try {
+      await repository.recordAudit(audit(context, grant, {
+        scopeType: grant.scopeType,
+        scopeId: grant.scopeId,
+        action: 'admin.web_login.confirm_failed',
+        resourceType: 'ADMIN_SESSION',
+        metadata: { reason },
+      }))
+    }
+    catch (error) {
+      reportWebLoginAuditFailure(error)
+    }
   }
 
   async function getDashboard(caller) {

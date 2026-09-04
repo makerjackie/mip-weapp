@@ -155,6 +155,10 @@ const service = createAdminService({
   phoneEncryptionKey: process.env.MIP_PHONE_ENCRYPTION_KEY,
   contentSafety,
   confirmWebLogin: input => webLoginConfirmationClient.confirm(input),
+  reportWebLoginAuditFailure: error => console.warn(
+    '[mip-admin-api] web login audit failed',
+    error?.code || error?.name || 'UNKNOWN',
+  ),
   dispatchRefund,
   dispatchRefunds,
   exportStorage,
