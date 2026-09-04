@@ -102,6 +102,7 @@ const WEB_LOGIN_CONFIRM_TRANSPORT = 'MIP_WEB_LOGIN_CONFIRM_V1'
 const WEB_LOGIN_QR_TRANSPORT = 'MIP_WEB_LOGIN_QR_V1'
 const WEB_LOGIN_MAX_CLOCK_SKEW_MS = 60_000
 const MAX_LOGIN_QR_BYTES = 512 * 1024
+const LOGIN_QR_UPSTREAM_TIMEOUT_MS = 10_000
 const LOGIN_FAILURE_LIMIT = 5
 const LOGIN_FAILURE_WINDOW_MS = 5 * 60 * 1000
 const LOGIN_LOCK_MS = 5 * 60 * 1000
@@ -443,7 +444,7 @@ export function createAdminBff(
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ ...unsigned, signature }),
-        signal: AbortSignal.timeout(3_000),
+        signal: AbortSignal.timeout(LOGIN_QR_UPSTREAM_TIMEOUT_MS),
       })
     }
     catch {
