@@ -456,6 +456,7 @@ export function createAdminBff(
       console.error('[mip-admin-bff] login QR upstream response rejected', {
         status: upstream.status,
         validPayload,
+        ...loginQrUpstreamShape(payload),
         ...loginQrUpstreamDiagnostic(payload),
       })
       return ''
@@ -617,6 +618,21 @@ function loginQrUpstreamDiagnostic(value: unknown) {
     ...(diagnostic ? {
       providerCode: safeDiagnosticLabel(diagnostic.code),
       providerReason: safeDiagnosticLabel(diagnostic.reason, 160),
+    } : {}),
+  }
+}
+
+function loginQrUpstreamShape(value: unknown) {
+  if (!plainRecord(value)) {
+    return { payloadType: Array.isArray(value) ? 'array' : typeof value }
+  }
+  const data = plainRecord(value.data) ? value.data : null
+  return {
+    payloadKeys: Object.keys(value).slice(0, 8).map(key => safeDiagnosticLabel(key)).join(','),
+    ...(data ? {
+      dataKeys: Object.keys(data).slice(0, 8).map(key => safeDiagnosticLabel(key)).join(','),
+      contentType: safeDiagnosticLabel(data.contentType),
+      imageBase64Length: typeof data.imageBase64 === 'string' ? data.imageBase64.length : 0,
     } : {}),
   }
 }
