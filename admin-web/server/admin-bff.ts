@@ -31,7 +31,9 @@ export interface AdminBffEnv {
   MIP_ADMIN_UPSTREAM_URL?: string
   MIP_ADMIN_UPSTREAM_HMAC_SECRET?: string
   MIP_ADMIN_WEB_LOGIN_HMAC_SECRET?: string
+  MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET?: string
   MIP_WEB_ALLOWED_APP_IDS?: string
+  MIP_WEB_LOGIN_MINIPROGRAM_APP_ID?: string
   MIP_WEB_ALLOWED_ORIGIN?: string
   MIP_WEB_SESSION_SECRET?: string
 }
@@ -72,7 +74,10 @@ interface LoginIpLimitRow {
 }
 
 interface VerifiedLoginConfirmation {
-  code: string
+  challenge: {
+    kind: 'CODE' | 'TOKEN'
+    value: string
+  }
   principal: {
     appId: string
     openId: string
@@ -82,6 +87,7 @@ interface VerifiedLoginConfirmation {
 
 interface AdminBffDependencies {
   fetch: typeof fetch
+  generateLoginQrCode: (challengeToken: string) => Promise<string>
   crypto: Crypto
   now: () => number
 }
@@ -93,7 +99,9 @@ const CHALLENGE_TTL_MS = 5 * 60 * 1000
 const MAX_BODY_BYTES = 32 * 1024
 const WEB_BFF_TRANSPORT = 'MIP_WEB_BFF_V1'
 const WEB_LOGIN_CONFIRM_TRANSPORT = 'MIP_WEB_LOGIN_CONFIRM_V1'
+const WEB_LOGIN_QR_TRANSPORT = 'MIP_WEB_LOGIN_QR_V1'
 const WEB_LOGIN_MAX_CLOCK_SKEW_MS = 60_000
+const MAX_LOGIN_QR_BYTES = 512 * 1024
 const LOGIN_FAILURE_LIMIT = 5
 const LOGIN_FAILURE_WINDOW_MS = 5 * 60 * 1000
 const LOGIN_LOCK_MS = 5 * 60 * 1000
@@ -109,6 +117,7 @@ export function createAdminBff(
   const fetchImpl = dependencies.fetch
   const deps: AdminBffDependencies = {
     fetch: (input, init) => fetchImpl ? fetchImpl(input, init) : globalThis.fetch(input, init),
+    generateLoginQrCode: dependencies.generateLoginQrCode || generateLoginQrCode,
     crypto: dependencies.crypto || globalThis.crypto,
     now: dependencies.now || Date.now,
   }
@@ -196,9 +205,17 @@ export function createAdminBff(
 
       const claims: ChallengeCookieClaims = { v: 1, id, browserKey, expiresAt }
       const sealed = await seal(claims, env.MIP_WEB_SESSION_SECRET!, 'mip-admin-login-challenge-v1', deps.crypto)
+      let qrCodeDataUrl = ''
+      try {
+        qrCodeDataUrl = await deps.generateLoginQrCode(id)
+      }
+      catch {
+        // The six-digit code remains available when QR generation is unavailable.
+      }
       return json({
         state: 'PENDING',
         code,
+        ...(qrCodeDataUrl ? { qrCodeDataUrl } : {}),
         expiresAt: new Date(expiresAt).toISOString(),
         pollAfterMs: 1_500,
       }, 201, {
@@ -284,7 +301,7 @@ export function createAdminBff(
       return jsonError('CONFIRMATION_SIGNATURE_INVALID', '确认请求签名无效', 401)
     }
     const now = deps.now()
-    const { code, principal } = verification
+    const { challenge, principal } = verification
     const principalKey = await hmacHex(
       env.MIP_WEB_SESSION_SECRET!,
       `principal\0${principal.appId}\0${principal.openId}`,
@@ -304,11 +321,13 @@ export function createAdminBff(
     if (currentLimit && currentLimit.locked_until > now) {
       return loginRateLimited(currentLimit.locked_until, now)
     }
-    const codeHash = await hmacHex(env.MIP_WEB_SESSION_SECRET!, `code\0${code}`, deps.crypto)
+    const selector = challenge.kind === 'CODE'
+      ? await hmacHex(env.MIP_WEB_SESSION_SECRET!, `code\0${challenge.value}`, deps.crypto)
+      : challenge.value
     let confirmed: D1RunResult
     try {
-      confirmed = await env.MIP_ADMIN_AUTH_DB!.prepare(
-        `UPDATE mip_admin_web_login_challenges
+      const confirmationSql = challenge.kind === 'CODE'
+        ? `UPDATE mip_admin_web_login_challenges
             SET status = 'CONFIRMED', app_id = ?1, open_id = ?2, display_name = ?3, confirmed_at = ?4
           WHERE code_hash = ?5
             AND status = 'PENDING'
@@ -317,13 +336,23 @@ export function createAdminBff(
               SELECT 1
                 FROM mip_admin_web_login_principal_limits
                WHERE principal_key = ?6 AND locked_until > ?4
-            )`,
-      ).bind(
+            )`
+        : `UPDATE mip_admin_web_login_challenges
+            SET status = 'CONFIRMED', app_id = ?1, open_id = ?2, display_name = ?3, confirmed_at = ?4
+          WHERE id = ?5
+            AND status = 'PENDING'
+            AND expires_at >= ?4
+            AND NOT EXISTS (
+              SELECT 1
+                FROM mip_admin_web_login_principal_limits
+               WHERE principal_key = ?6 AND locked_until > ?4
+            )`
+      confirmed = await env.MIP_ADMIN_AUTH_DB!.prepare(confirmationSql).bind(
         principal.appId,
         principal.openId,
         principal.displayName?.slice(0, 80) || null,
         now,
-        codeHash,
+        selector,
         principalKey,
       ).run()
     }
@@ -341,7 +370,7 @@ export function createAdminBff(
       if (failedLimit && failedLimit.locked_until > now) {
         return loginRateLimited(failedLimit.locked_until, now)
       }
-      return jsonError('CHALLENGE_NOT_FOUND', '登录码无效或已过期', 404)
+      return jsonError('CHALLENGE_NOT_FOUND', '登录请求无效或已过期', 404)
     }
     try {
       await env.MIP_ADMIN_AUTH_DB!.prepare(
@@ -387,6 +416,42 @@ export function createAdminBff(
     }
 
     return forwardTrustedAdminRequest(adminRequest, session, { retryable: isQuery })
+  }
+
+  async function generateLoginQrCode(challengeToken: string): Promise<string> {
+    const appId = String(env.MIP_WEB_LOGIN_MINIPROGRAM_APP_ID || '').trim()
+    if (!absoluteHttpsUrl(env.MIP_ADMIN_UPSTREAM_URL)
+      || !validSecret(env.MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET)
+      || !identifier(appId, 64)
+      || !allowedAppIds(env.MIP_WEB_ALLOWED_APP_IDS).has(appId)
+      || !/^[A-Za-z0-9_-]{32}$/.test(challengeToken)) return ''
+    const unsigned = {
+      transport: WEB_LOGIN_QR_TRANSPORT,
+      timestamp: deps.now(),
+      nonce: randomToken(deps.crypto, 24),
+      appId,
+      challengeToken,
+    }
+    const signature = await hmacHex(
+      env.MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET!,
+      canonicalJson(unsigned),
+      deps.crypto,
+    )
+    let upstream: Response
+    try {
+      upstream = await deps.fetch(env.MIP_ADMIN_UPSTREAM_URL!, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ...unsigned, signature }),
+        signal: AbortSignal.timeout(3_000),
+      })
+    }
+    catch {
+      return ''
+    }
+    const payload = await safeJson(upstream)
+    if (!upstream.ok || !validLoginQrCodePayload(payload)) return ''
+    return `data:${payload.data.contentType};base64,${payload.data.imageBase64}`
   }
 
   async function forwardAdminMediaImage(request: Request): Promise<Response> {
@@ -472,15 +537,20 @@ async function verifyLoginConfirmation(
   env: AdminBffEnv,
   deps: AdminBffDependencies,
 ): Promise<VerifiedLoginConfirmation | 'INVALID' | 'SIGNATURE_INVALID'> {
-  const allowedKeys = new Set(['transport', 'timestamp', 'nonce', 'challengeCode', 'principal', 'signature'])
-  if (!hasExactKeys(value, allowedKeys)
+  const sharedKeys = ['transport', 'timestamp', 'nonce', 'principal', 'signature']
+  const keys = Object.keys(value)
+  const hasCode = Object.hasOwn(value, 'challengeCode')
+  const hasToken = Object.hasOwn(value, 'challengeToken')
+  if (keys.length !== sharedKeys.length + 1
+    || !sharedKeys.every(key => Object.hasOwn(value, key))
+    || hasCode === hasToken
     || value.transport !== WEB_LOGIN_CONFIRM_TRANSPORT
     || !Number.isSafeInteger(value.timestamp)
     || Math.abs(deps.now() - Number(value.timestamp)) > WEB_LOGIN_MAX_CLOCK_SKEW_MS
     || typeof value.nonce !== 'string'
     || !/^[A-Za-z0-9_-]{24,128}$/.test(value.nonce)
-    || typeof value.challengeCode !== 'string'
-    || !/^\d{6}$/.test(value.challengeCode)
+    || (hasCode && (typeof value.challengeCode !== 'string' || !/^\d{6}$/.test(value.challengeCode)))
+    || (hasToken && (typeof value.challengeToken !== 'string' || !/^[A-Za-z0-9_-]{32}$/.test(value.challengeToken)))
     || !plainRecord(value.principal)) return 'INVALID'
   const principalKeys = Object.keys(value.principal)
   if (principalKeys.some(key => !['appId', 'openId', 'displayName'].includes(key))
@@ -496,12 +566,47 @@ async function verifyLoginConfirmation(
   const expected = await hmacHex(env.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET!, canonicalJson(unsigned), deps.crypto)
   if (!constantTimeHexEqual(signature, expected)) return 'SIGNATURE_INVALID'
   return {
-    code: value.challengeCode,
+    challenge: hasCode
+      ? { kind: 'CODE', value: value.challengeCode as string }
+      : { kind: 'TOKEN', value: value.challengeToken as string },
     principal: {
       appId: value.principal.appId,
       openId: value.principal.openId,
       ...(value.principal.displayName ? { displayName: value.principal.displayName } : {}),
     },
+  }
+}
+
+function validLoginQrCodePayload(value: unknown): value is {
+  ok: true
+  data: { contentType: 'image/png' | 'image/jpeg'; imageBase64: string }
+} {
+  if (!plainRecord(value) || value.ok !== true || !plainRecord(value.data)
+    || !['image/png', 'image/jpeg'].includes(String(value.data.contentType || ''))
+    || typeof value.data.imageBase64 !== 'string'
+    || value.data.imageBase64.length < 4
+    || value.data.imageBase64.length > Math.ceil(MAX_LOGIN_QR_BYTES / 3) * 4
+    || !/^[A-Za-z0-9+/]+={0,2}$/.test(value.data.imageBase64)) return false
+  const decoded = decodeBase64(value.data.imageBase64)
+  if (!decoded || decoded.byteLength > MAX_LOGIN_QR_BYTES) return false
+  const png = decoded.byteLength >= 8
+    && [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]
+      .every((byte, index) => decoded[index] === byte)
+  const jpeg = decoded.byteLength >= 3
+    && decoded[0] === 0xff && decoded[1] === 0xd8 && decoded[2] === 0xff
+  if ((value.data.contentType === 'image/png' && !png)
+    || (value.data.contentType === 'image/jpeg' && !jpeg)) return false
+  return Object.keys(value).length === 2
+    && Object.keys(value.data).length === 2
+}
+
+function decodeBase64(value: string): Uint8Array | null {
+  try {
+    const decoded = atob(value)
+    return Uint8Array.from(decoded, character => character.charCodeAt(0))
+  }
+  catch {
+    return null
   }
 }
 
@@ -1082,7 +1187,7 @@ function expireCookie(name: string, request: Request) {
 }
 
 function challengeExpired(request: Request) {
-  return jsonError('CHALLENGE_EXPIRED', '登录码无效或已过期', 410, {
+  return jsonError('CHALLENGE_EXPIRED', '登录请求无效或已过期', 410, {
     'set-cookie': expireCookie(CHALLENGE_COOKIE, request),
   })
 }

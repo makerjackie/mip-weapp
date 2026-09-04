@@ -31,7 +31,7 @@ pages
 - `AdminApiClient.request(action, input)` 是浏览器 transport module 的外部 interface；它隐藏响应 envelope、同源凭据和错误映射。
 - `loadAdminReadPage`、`loadAdminDetail`、mutation definition/builder 是 React 与领域投影之间的 seam。React adapter 只消费其返回值。
 - 真实 HTTP adapter 与显式 demo adapter 是该 seam 的两个 adapter。demo 只能在构建变量明确开启时选用，不能作为真实请求失败的回退。
-- `SessionProvider` 是认证界面的 interface；短码轮询、恢复、退出和 AUTH_REQUIRED 处理留在实现内部。
+- `SessionProvider` 是认证界面的 interface；小程序码/数字码 challenge、轮询、恢复、退出和 AUTH_REQUIRED 处理留在实现内部。
 - `MutationDialog` 通过 definition 驱动字段和校验；新页面不得为相同 action 再建一套 interface。
 
 一个 module 只有在删除后会迫使多个调用者重复复杂性时才保留。仅转发 props 或重命名字段的浅层 wrapper 应删除。
@@ -71,14 +71,14 @@ action、query/mutation 分类、Web 暴露范围、mutation 字段白名单和�
 
 | 方法与路径 | 调用方 | 职责 |
 | --- | --- | --- |
-| `POST /api/auth/challenge` | 浏览器 | 创建 5 分钟有效的登录短码 |
+| `POST /api/auth/challenge` | 浏览器 | 创建 5 分钟有效的登录 challenge、小程序码和数字降级码 |
 | `POST /api/auth/challenge/status` | 浏览器 | 轮询并一次性消费已确认登录 |
 | `POST /api/auth/logout` | 浏览器 | 清除当前会话与登录挑战 Cookie |
 | `POST /api/internal/auth/challenge/confirm` | CloudBase | 使用登录确认 HMAC 提交可信身份 |
 | `POST /api/admin` | 浏览器 | 转发精确 allowlist 内的 AdminRequest v1 |
 | `POST /api/media/image` | 浏览器 | 转发受控图片上传请求 |
 
-Pages 通过 `MIP_ADMIN_UPSTREAM_HMAC_SECRET` 签名管理请求，CloudBase 的 `mip-admin-api` 通过 `MIP_ADMIN_WEB_BFF_HMAC_SECRET` 验签；两个变量必须保存同一个密钥值。登录确认使用独立的 `MIP_ADMIN_WEB_LOGIN_HMAC_SECRET`，不得与管理请求 HMAC 复用。
+Pages 通过 `MIP_ADMIN_UPSTREAM_HMAC_SECRET` 签名管理请求，CloudBase 的 `mip-admin-api` 通过 `MIP_ADMIN_WEB_BFF_HMAC_SECRET` 验签；两个变量必须保存同一个密钥值。登录确认使用独立的 `MIP_ADMIN_WEB_LOGIN_HMAC_SECRET`，动态小程序码生成使用 `MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET`；三个 HMAC 信任域必须互不复用。
 
 ## 权限与服务端事实
 
@@ -96,7 +96,7 @@ Pages 通过 `MIP_ADMIN_UPSTREAM_HMAC_SECRET` 签名管理请求，CloudBase 的
 - `CONFLICT`：刷新当前资源并要求重新确认。
 - 5xx/网络：保留页面上下文，允许手动重试。
 
-网页登录使用 5 分钟有效的 6 位数字单次短码、浏览器 verifier、D1 原子确认和 AES-GCM `HttpOnly` 8 小时会话；每个可信 AppID 与运营账号连续失败 5 次后锁定确认 5 分钟，同一客户端 IP 在 10 分钟内最多创建 30 个登录码，D1 只保存 HMAC 限流键。IP 计数表不可用时该限流自动旁路，不阻断登录。React 不持久化 token。
+网页登录使用 5 分钟有效的单次 challenge、浏览器 verifier、D1 原子确认和 AES-GCM `HttpOnly` 8 小时会话。动态小程序码是主入口，6 位数字码是降级入口；二维码图片不持久化，React 不持久化或接收原始 scene。每个可信 AppID 与运营账号连续失败 5 次后锁定确认 5 分钟，同一客户端 IP 在 10 分钟内最多创建 30 个 challenge，D1 只保存 HMAC 限流键。IP 计数表不可用时该限流自动旁路，不阻断登录。
 
 ## 测试策略
 

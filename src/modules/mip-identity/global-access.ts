@@ -12,6 +12,7 @@ export const MIP_GLOBAL_ACCESS_EXEMPT_ROUTES = [
   'packages/member/mip-access/index',
   'packages/member/privacy-policy/index',
   'packages/member/user-agreement/index',
+  'packages/admin/web-login-confirm/index',
 ] as const
 
 const MIP_HOME_ROUTE = 'pages/index/index'

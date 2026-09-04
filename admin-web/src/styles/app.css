@@ -131,9 +131,11 @@ button, input, select, textarea { font: inherit; }
 .mutation-fieldset { min-width: 0; margin: 0 0 16px; padding: 14px; border: 1px solid var(--mip-line); border-radius: 10px; }
 .mutation-fieldset legend { padding: 0 5px; color: var(--mip-muted); font-size: 12px; }
 .field-full-width { width: 100%; }
-.login-challenge { display: grid; gap: 8px; padding: 18px; place-items: center; background: #f4f8ff; border: 1px solid #cfe0f8; border-radius: 12px; }
+.login-challenge { display: grid; gap: 10px; padding: 18px; place-items: center; text-align: center; background: #f4f8ff; border: 1px solid #cfe0f8; border-radius: 12px; }
 .login-challenge span, .login-challenge small { color: var(--mip-muted); font-size: 12px; }
-.login-challenge strong { color: var(--mip-primary); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 38px; letter-spacing: .18em; }
+.login-challenge__qr { display: block; width: min(220px, 72vw); height: auto; border-radius: 8px; background: #fff; }
+.login-challenge__fallback { display: grid; gap: 4px; place-items: center; width: 100%; padding-top: 10px; border-top: 1px solid #cfe0f8; }
+.login-challenge strong { color: var(--mip-primary); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 32px; letter-spacing: .18em; }
 
 .mobile-navigation .ant-drawer-header { background: linear-gradient(135deg, #347ce9, #1d4eb8); border-bottom: 0; }
 .mobile-navigation .ant-drawer-title { min-width: 0; }
@@ -170,7 +172,7 @@ button, input, select, textarea { font: inherit; }
   .detail-fields, .detail-metrics, .mutation-grid { grid-template-columns: minmax(0, 1fr); }
   .mutation-field--wide, .mutation-fieldset { grid-column: auto; }
   .mutation-dialog { max-width: calc(100vw - 28px); margin: 14px auto; }
-  .login-challenge strong { font-size: 31px; }
+  .login-challenge strong { font-size: 28px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

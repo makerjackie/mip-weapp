@@ -1,0 +1,41 @@
+<view id="admin-web-login-confirm-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
+  <view class="border-b border-line pb-5">
+    <view class="text-[length:22rpx] font-semibold text-brand">MIP 管理</view>
+    <view class="mt-2 text-[length:40rpx] font-bold">确认网页登录</view>
+    <view class="mt-2 text-[length:24rpx] text-muted">电脑后台：mipmini.01mvp.com</view>
+  </view>
+
+  <view wx:if="{{state === 'loading' || state === 'access' || state === 'confirming'}}" class="mt-6 rounded-[16rpx] bg-panel px-5 py-6">
+    <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
+    <view class="mt-4 text-[length:25rpx] text-muted">
+      {{state === 'confirming' ? '正在确认网页登录' : (state === 'access' ? '正在确认账号权限' : '正在准备登录请求')}}
+    </view>
+  </view>
+
+  <view wx:elif="{{state === 'success'}}" class="mt-6 rounded-[16rpx] bg-panel px-5 py-6">
+    <view class="text-[length:30rpx] font-semibold">网页登录已确认</view>
+    <view class="mt-3 text-[length:24rpx] leading-7 text-muted">可以返回电脑继续操作。</view>
+  </view>
+
+  <view wx:elif="{{state === 'forbidden'}}" class="mt-6">
+    <app-empty-state title="没有运营管理权限" description="{{message}}" />
+  </view>
+
+  <view wx:elif="{{state === 'expired' || state === 'error'}}" class="mt-6">
+    <app-empty-state title="无法确认网页登录" description="{{message}}" />
+  </view>
+
+  <view wx:else class="mt-6 rounded-[16rpx] bg-panel px-5 py-6">
+    <view class="text-[length:30rpx] font-semibold">运营登录</view>
+    <view class="mt-3 text-[length:24rpx] leading-7 text-muted">{{message || '请确认本次网页登录。确认后，电脑后台会自动完成登录。'}}</view>
+    <view
+      wx:if="{{hasChallenge}}"
+      id="admin-web-login-confirm-button"
+      class="mt-6 flex min-h-[92rpx] items-center justify-center rounded-[12rpx] bg-brand text-[length:26rpx] font-semibold text-on-brand"
+      role="button"
+      bind:tap="confirmWebLogin"
+    >确认登录</view>
+  </view>
+
+  <app-page-exit />
+</view>

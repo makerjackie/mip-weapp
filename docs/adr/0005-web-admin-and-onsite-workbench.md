@@ -6,9 +6,9 @@
 
 React Web 是 MIP 唯一的完整运营后台。用户、活动配置、订单与退款、机会治理、成长、任务、游戏、消息、知识、角色权限、导出和审计等日常运营能力只在 Web 提供完整界面。
 
-小程序只保留四条路由组成的现场工作台：
+小程序只保留四条运营路由组成的现场工作台：
 
-1. `packages/admin/dashboard/index`：现场入口、权限状态和 Web 登录短码确认；
+1. `packages/admin/dashboard/index`：现场入口、权限状态和 Web 登录数字码确认；
 2. `packages/admin/managed-events/index`：当前账号有权限的活动；
 3. `packages/admin/event-console/index`：签到码、签到海报预览与保存；
 4. `packages/admin/event-registrations/index`：名单搜索、签到状态、手工签到和按 capability 受控撤销。
@@ -27,3 +27,5 @@ React Web 是 MIP 唯一的完整运营后台。用户、活动配置、订单�
 - 电脑端运营只维护一套 Web 界面和响应式规范。
 - 小程序验收聚焦微信内现场操作和真实设备能力，不再承担 960px 宽屏后台、桌面侧栏或长列表密度验收。
 - 小程序现场工作台仍是 Web 登录确认的可信入口；更换登录方式需要新的 ADR。
+
+网页登录小程序码及其无业务数据确认页由 [ADR 0006](0006-mini-program-code-web-login.md) 补充；它不扩展现场运营能力。

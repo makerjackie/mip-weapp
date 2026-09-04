@@ -609,6 +609,7 @@ describe('MIP global access guard', () => {
     expect(isMipGlobalAccessExemptRoute('/packages/member/mip-access/index')).toBe(true)
     expect(isMipGlobalAccessExemptRoute('packages/member/user-agreement/index')).toBe(true)
     expect(isMipGlobalAccessExemptRoute('/packages/member/privacy-policy/index')).toBe(true)
+    expect(isMipGlobalAccessExemptRoute('/packages/admin/web-login-confirm/index')).toBe(true)
     expect(isMipGlobalAccessExemptRoute('/packages/member/privacy/index')).toBe(false)
     expect(isMipGlobalAccessExemptRoute('/pages/index/index')).toBe(false)
   })

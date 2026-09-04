@@ -16,6 +16,10 @@ const {
   webBffHttpResponse,
 } = require('./lib/web-bff-http')
 const { createWebLoginConfirmationClient } = require('./lib/web-login-client')
+const {
+  createWebLoginQrCodeRoute,
+  isWebLoginQrCodeEvent,
+} = require('./lib/web-login-qr-code')
 const { mysqlDatabase } = require('./lib/mysql')
 const { createRefundWorkerClient } = require('./lib/refund-worker-client')
 const { createCloudExportStorage } = require('./lib/export-storage')
@@ -90,6 +94,14 @@ const notificationReconcileClient = createNotificationReconcileClient({
 const webLoginConfirmationClient = createWebLoginConfirmationClient({
   endpoint: process.env.MIP_ADMIN_WEB_LOGIN_CONFIRM_URL,
   secret: process.env.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET,
+})
+const webBffReplayGuard = createWebBffReplayGuard({ database: mysqlDatabase() })
+const webLoginQrCodeRoute = createWebLoginQrCodeRoute({
+  allowedAppIds,
+  cloud,
+  replayGuard: webBffReplayGuard,
+  secret: process.env.MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET,
+  stage: process.env.MIP_DEPLOYMENT_STAGE,
 })
 async function contentSafety(draft, caller) {
   const checker = cloud.openapi?.security?.msgSecCheck
@@ -282,7 +294,7 @@ const handler = createHandler({
 const webBffRoute = createWebBffRoute({
   application,
   issuePrincipal: principalIssuer.issue,
-  replayGuard: createWebBffReplayGuard({ database: mysqlDatabase() }),
+  replayGuard: webBffReplayGuard,
   afterSuccessfulMutation: ({ action, principal, resultData }) => postCommitAdminMutation({
     appId: principal.appId,
     action,
@@ -311,6 +323,15 @@ exports.main = async (event = {}) => {
   if (isWebBffHttpEvent(event)) {
     try {
       const request = parseWebBffHttpBody(event)
+      if (isWebLoginQrCodeEvent(request)) {
+        const result = await webLoginQrCodeRoute(request)
+        const status = result.ok
+          ? 200
+          : result.error?.code === 'AUTH_REQUIRED'
+            ? 401
+            : result.error?.code === 'WEB_LOGIN_QR_REPLAYED' ? 409 : 503
+        return webBffHttpResponse(result, status)
+      }
       if (!isWebBffEvent(request)) throw new Error('HTTP_REQUEST_INVALID')
       return webBffHttpResponse(await webBffRoute(request))
     }
@@ -320,6 +341,9 @@ exports.main = async (event = {}) => {
   }
   if (isWebBffEvent(event)) {
     return webBffRoute(event)
+  }
+  if (isWebLoginQrCodeEvent(event)) {
+    return webLoginQrCodeRoute(event)
   }
   if (MESSAGE_DISPATCH_ACTIONS.has(event?.action)) {
     return runDueMessageCampaigns(event)

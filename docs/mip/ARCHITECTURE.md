@@ -4,7 +4,7 @@ MIP 由原生微信小程序、React Web 管理端、CloudBase 云函数、MySQL
 
 动态数量与部署状态统一见 [PROJECT_STATUS.md](PROJECT_STATUS.md)，本文件不固化路由数、迁移数或最近一次验收结果。
 
-完整后台与小程序现场工作台的渠道边界见 [ADR 0005](../adr/0005-web-admin-and-onsite-workbench.md)。
+完整后台与小程序现场工作台的渠道边界见 [ADR 0005](../adr/0005-web-admin-and-onsite-workbench.md)，网页登录小程序码见 [ADR 0006](../adr/0006-mini-program-code-web-login.md)。
 
 ## 系统形态
 
@@ -20,7 +20,7 @@ React Web 管理端 ─→ 同源 BFF / HTTPS transport ─┼→ AdminApplicati
 
 页面不得直接初始化 CloudBase、读取 MySQL 或调用 `wx.requestPayment`。客户端只提交业务意图；身份、会员资格、金额、报名、签到、成长余额、比赛分数、通知状态和管理权限由服务端决定。
 
-React Web 当前已经存在于 `admin-web/`，并且是唯一完整运营后台。它通过同源 BFF 建立 Web principal，再使用与小程序现场工作台相同的渠道中立 operation 合同；浏览器不能直接访问 MySQL，也不能提交可信的 `appId`、`userId`、角色或 capability。小程序只保留现场入口与 Web 登录确认、已授权活动、签到码与海报、参与名单与签到四条路由。
+React Web 当前已经存在于 `admin-web/`，并且是唯一完整运营后台。它通过同源 BFF 建立 Web principal，再使用与小程序现场工作台相同的渠道中立 operation 合同；浏览器不能直接访问 MySQL，也不能提交可信的 `appId`、`userId`、角色或 capability。小程序只保留现场入口与数字码确认、已授权活动、签到码与海报、参与名单与签到四条运营路由，以及一条无业务数据的小程序码确认页。
 
 ## 管理应用边界
 
@@ -123,7 +123,7 @@ operation dispatcher 只通过冻结的 owner module interface 调用实现，�
 
 ## Web 会话与敏感操作
 
-Web 登录使用短期、单次、绑定浏览器 verifier 的 challenge，由已登录且拥有管理 capability 的小程序现场工作台用户确认。服务端不保存会话状态：数据库只保存登录挑战和限流的哈希，会话本身是无状态的签名加密 Cookie，使用 `HttpOnly`、`Secure` 和合适的 `SameSite`，写操作校验请求 Origin。每次请求重新读取用户状态、协议、角色和 capability，撤权或停用后下一次请求立即失败。
+Web 登录使用短期、单次、绑定浏览器 verifier 的 challenge。动态小程序码只携带 challenge token 并打开专用确认页，6 位数字码保留为降级入口；两者都由已登录且拥有管理 capability 的小程序用户明确确认。服务端不保存会话状态：数据库只保存登录挑战和限流的哈希，会话本身是无状态的签名加密 Cookie，使用 `HttpOnly`、`Secure` 和合适的 `SameSite`，写操作校验请求 Origin。每次请求重新读取用户状态、协议、角色和 capability，撤权或停用后下一次请求立即失败。
 
 手机号原文、导出、退款、角色变更、签到覆盖、相册审核和成长人工调整使用独立 capability。mutation 与审计在同一事务内；审计只记录必要的 channel 和 request reference，不记录 Cookie、授权头、OpenID 或完整浏览器载荷。
 

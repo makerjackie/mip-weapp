@@ -342,15 +342,20 @@ function createAdminService({
     const challengeCode = typeof input.challengeCode === 'string'
       ? input.challengeCode.trim()
       : ''
-    if (!/^\d{6}$/.test(challengeCode)) {
-      await recordWebLoginFailureSafely(context, 'INVALID_CODE')
-      throw new AdminError('VALIDATION_FAILED', '请输入 6 位数字登录码')
+    const challengeToken = typeof input.challengeToken === 'string'
+      ? input.challengeToken.trim()
+      : ''
+    const validCode = /^\d{6}$/.test(challengeCode)
+    const validToken = /^[A-Za-z0-9_-]{32}$/.test(challengeToken)
+    if (validCode === validToken) {
+      await recordWebLoginFailureSafely(context, 'INVALID_CHALLENGE')
+      throw new AdminError('VALIDATION_FAILED', '网页登录请求无效')
     }
     try {
       await dispatchWebLoginConfirmation({
         appId: caller.appId,
         openId: caller.openId,
-        challengeCode,
+        ...(validCode ? { challengeCode } : { challengeToken }),
       })
     }
     catch (error) {
@@ -365,7 +370,7 @@ function createAdminService({
         scopeId: grant.scopeId,
         action: 'admin.web_login.confirm',
         resourceType: 'ADMIN_SESSION',
-        metadata: {},
+        metadata: { method: validCode ? 'DIGIT_CODE' : 'MINIPROGRAM_CODE' },
       }))
     }
     catch (error) {
@@ -612,7 +617,7 @@ function webLoginFailure(error) {
     case 'WEB_LOGIN_CHALLENGE_INVALID':
     case 'WEB_LOGIN_CHALLENGE_EXPIRED':
       return {
-        auditReason: 'INVALID_CODE',
+        auditReason: 'INVALID_CHALLENGE',
         error: new AdminError('WEB_LOGIN_INVALID_CODE', '登录码无效或已过期'),
       }
     case 'WEB_LOGIN_RATE_LIMITED':

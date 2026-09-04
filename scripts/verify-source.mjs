@@ -169,7 +169,7 @@ assert(runtimeConfig.includes('membershipFunctionName: __MIP_IDENTITY_FUNCTION_N
 assert(appCss.includes('@source "./**/*.{wxml,js,ts}"'), 'Tailwind v4 source glob is missing')
 assert(!pageScripts.includes('wx.cloud.') && !pageScripts.includes('wx.requestPayment'), 'Pages must call domain modules instead of platform APIs')
 assert(!/\bwx\.(?:saveFile|removeSavedFile)\b/.test(clientSources), 'Client source uses deprecated saved-file APIs')
-assert(!/MIP_DB_CONNECTION_URI|MIP_LEDGER_SECRET|MIP_TEST_MEMBERSHIP_HMAC_SECRET|MIP_IDENTITY_PEPPER|MIP_MEDIA_SCOPE_SECRET|MIP_PHONE_ENCRYPTION_KEY|MIP_ADMIN_WEB_BFF_HMAC_SECRET|MIP_ADMIN_WEB_LOGIN_HMAC_SECRET|MIP_ADMIN_WEB_LOGIN_CONFIRM_URL/.test(clientSources), 'Server-only MIP configuration entered client source')
+assert(!/MIP_DB_CONNECTION_URI|MIP_LEDGER_SECRET|MIP_TEST_MEMBERSHIP_HMAC_SECRET|MIP_IDENTITY_PEPPER|MIP_MEDIA_SCOPE_SECRET|MIP_PHONE_ENCRYPTION_KEY|MIP_ADMIN_WEB_BFF_HMAC_SECRET|MIP_ADMIN_WEB_LOGIN_HMAC_SECRET|MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET|MIP_ADMIN_WEB_LOGIN_CONFIRM_URL/.test(clientSources), 'Server-only MIP configuration entered client source')
 assert(packageJson.scripts['cloud:auth'] === 'node scripts/cloudbase-auth.mjs', 'cloud:auth must use the API-key-only entrypoint')
 assert(packageJson.scripts['cloud:auth:device'] === 'node scripts/cloudbase-device-auth.mjs', 'Maintainer device authorization entrypoint is missing')
 assert(scriptsWithDeviceAuth.length === 1 && scriptsWithDeviceAuth[0] === 'scripts/cloudbase-device-auth.mjs', 'Device authorization must exist only in the explicit maintainer emergency command')

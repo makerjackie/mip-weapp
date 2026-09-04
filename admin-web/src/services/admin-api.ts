@@ -16,6 +16,7 @@ import {
 export interface AdminLoginChallenge {
   state: 'PENDING'
   code: string
+  qrCodeDataUrl?: string
   expiresAt: string
   pollAfterMs: number
 }
@@ -53,6 +54,7 @@ export class AdminApiClient {
     const payload = await this.authRequest('/api/auth/challenge')
     if (payload.state !== 'PENDING'
       || typeof payload.code !== 'string'
+      || (payload.qrCodeDataUrl !== undefined && !validLoginQrCodeDataUrl(payload.qrCodeDataUrl))
       || typeof payload.expiresAt !== 'string'
       || typeof payload.pollAfterMs !== 'number') {
       throw new AdminApiClientError('INVALID_RESPONSE', '网页登录服务返回格式无效')
@@ -169,6 +171,12 @@ export class AdminApiClient {
   }
 
   async getSession(): Promise<AdminSession> { return this.request<AdminSession>('mip.admin.session') }
+}
+
+function validLoginQrCodeDataUrl(value: unknown): value is string {
+  return typeof value === 'string'
+    && value.length <= 700_000
+    && /^data:image\/(?:png|jpeg);base64,(?:iVBOR|\/9j\/)[A-Za-z0-9+/]*={0,2}$/.test(value)
 }
 
 export class AdminApiClientError extends Error {

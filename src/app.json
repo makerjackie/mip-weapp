@@ -77,6 +77,7 @@
       "root": "packages/admin",
       "pages": [
         "dashboard/index",
+        "web-login-confirm/index",
         "managed-events/index",
         "event-console/index",
         "event-registrations/index"

@@ -142,13 +142,34 @@ describe('admin service', () => {
       resourceType: 'ADMIN_SESSION',
       resourceId: null,
       effectiveRole: 'BRANCH_ADMIN',
-      metadata: {},
+      metadata: { method: 'DIGIT_CODE' },
     })
+  })
+
+  it('confirms a mini-program-code login with the opaque challenge token', async () => {
+    const repo = repository('BRANCH_ADMIN', 'BRANCH', 'branch-a')
+    const confirmations = []
+    const service = createAdminService({
+      repository: repo,
+      phoneEncryptionKey: secret,
+      confirmWebLogin: async input => confirmations.push(input),
+    })
+    const challengeToken = '0123456789abcdefghijklmnopqrstuv'
+
+    assert.deepEqual(await service.confirmWebLogin(
+      { ...caller, openId: 'openid-admin' },
+      { challengeToken: ` ${challengeToken} ` },
+    ), { confirmed: true })
+    assert.deepEqual(confirmations, [{
+      appId: 'wx-trusted', openId: 'openid-admin', challengeToken,
+    }])
+    assert.deepEqual(repo.audits.at(-1).metadata, { method: 'MINIPROGRAM_CODE' })
+    assert.equal(JSON.stringify(repo.audits.at(-1)).includes(challengeToken), false)
   })
 
   it('maps web login failures and audits only a normalized reason', async () => {
     const cases = [
-      ['WEB_LOGIN_CHALLENGE_NOT_FOUND', 'WEB_LOGIN_INVALID_CODE', 'INVALID_CODE'],
+      ['WEB_LOGIN_CHALLENGE_NOT_FOUND', 'WEB_LOGIN_INVALID_CODE', 'INVALID_CHALLENGE'],
       ['WEB_LOGIN_RATE_LIMITED', 'WEB_LOGIN_RATE_LIMITED', 'RATE_LIMITED'],
       ['WEB_LOGIN_REQUEST_INVALID', 'WEB_LOGIN_REQUEST_INVALID', 'CONFIGURATION'],
       ['WEB_LOGIN_AUTH_REJECTED', 'WEB_LOGIN_CONFIGURATION_ERROR', 'CONFIGURATION'],
@@ -241,7 +262,27 @@ describe('admin service', () => {
       error => error.code === 'VALIDATION_FAILED',
     )
     assert.equal(dispatched, false)
-    assert.deepEqual(repo.audits.at(-1).metadata, { reason: 'INVALID_CODE' })
+    assert.deepEqual(repo.audits.at(-1).metadata, { reason: 'INVALID_CHALLENGE' })
+  })
+
+  it('rejects an ambiguous web login challenge before dispatch', async () => {
+    const repo = repository('BRANCH_ADMIN', 'BRANCH', 'branch-a')
+    let dispatched = false
+    const service = createAdminService({
+      repository: repo,
+      phoneEncryptionKey: secret,
+      confirmWebLogin: async () => { dispatched = true },
+    })
+
+    await assert.rejects(
+      () => service.confirmWebLogin(
+        { ...caller, openId: 'openid-admin' },
+        { challengeCode: '123456', challengeToken: '0123456789abcdefghijklmnopqrstuv' },
+      ),
+      error => error.code === 'VALIDATION_FAILED',
+    )
+    assert.equal(dispatched, false)
+    assert.deepEqual(repo.audits.at(-1).metadata, { reason: 'INVALID_CHALLENGE' })
   })
 
   it('does not dispatch a web login confirmation for an account without an operator role', async () => {

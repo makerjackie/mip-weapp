@@ -26,6 +26,7 @@ describe('local DevTools condition generation', () => {
     expect(routes).toContain('packages/member/mip-events/comments/index')
     expect(routes.filter(route => route.startsWith('packages/admin/'))).toEqual([
       'packages/admin/dashboard/index',
+      'packages/admin/web-login-confirm/index',
       'packages/admin/managed-events/index',
       'packages/admin/event-console/index',
       'packages/admin/event-registrations/index',

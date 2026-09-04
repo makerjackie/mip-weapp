@@ -17,6 +17,7 @@ export const MIP_STABLE_SECRET_KEYS = Object.freeze([
   'MIP_MESSAGE_DISPATCH_HMAC_SECRET',
   'MIP_ADMIN_WEB_BFF_HMAC_SECRET',
   'MIP_ADMIN_WEB_LOGIN_HMAC_SECRET',
+  'MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET',
   'MIP_TASKS_ADMIN_HMAC_SECRET',
   'MIP_BANNERS_ADMIN_HMAC_SECRET',
   'MIP_GAME_ADMIN_HMAC_SECRET',
@@ -76,11 +77,12 @@ export function assertMipAiProviderHmacSecretsIsolated(values = {}) {
 export function assertMipWebAdminHmacSecretsIsolated(values = {}) {
   const querySecret = normalized(values.MIP_ADMIN_WEB_BFF_HMAC_SECRET)
   const loginSecret = normalized(values.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET)
-  if (querySecret.length < 32 || loginSecret.length < 32) {
-    throw new Error('Web admin query and login HMAC secrets must both be configured')
+  const qrSecret = normalized(values.MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET)
+  if ([querySecret, loginSecret, qrSecret].some(value => value.length < 32)) {
+    throw new Error('Web admin query, login confirmation, and QR HMAC secrets must all be configured')
   }
-  if (querySecret === loginSecret) {
-    throw new Error('MIP_ADMIN_WEB_LOGIN_HMAC_SECRET must differ from MIP_ADMIN_WEB_BFF_HMAC_SECRET')
+  if (new Set([querySecret, loginSecret, qrSecret]).size !== 3) {
+    throw new Error('Web admin query, login confirmation, and QR HMAC secrets must use separate trust domains')
   }
   return true
 }

@@ -41,6 +41,21 @@ describe('Web login confirmation client', () => {
     assert.equal(canonicalJson(unsigned).includes(SECRET), false)
   })
 
+  it('signs an opaque mini-program scene token without adding a login code', async () => {
+    const { calls, client } = fixture()
+    const challengeToken = '0123456789abcdefghijklmnopqrstuv'
+    assert.deepEqual(await client.confirm({
+      appId: 'wx-mip-app',
+      openId: 'openid-admin',
+      challengeToken,
+    }), { confirmed: true })
+
+    const body = JSON.parse(calls[0].options.body)
+    assert.equal(body.challengeToken, challengeToken)
+    assert.equal(Object.hasOwn(body, 'challengeCode'), false)
+    assert.match(body.signature, /^[a-f0-9]{64}$/)
+  })
+
   it('maps an invalid or expired code without treating it as a transport failure', async () => {
     const response = new Response(JSON.stringify({
       error: { code: 'CHALLENGE_NOT_FOUND', message: '登录码无效或已过期' },
@@ -99,6 +114,15 @@ describe('Web login confirmation client', () => {
     const { client } = fixture()
     await assert.rejects(
       () => client.confirm({ appId: 'wx-mip-app', openId: 'openid-admin', challengeCode: '12345A' }),
+      error => error.code === 'WEB_LOGIN_REQUEST_INVALID',
+    )
+    await assert.rejects(
+      () => client.confirm({
+        appId: 'wx-mip-app',
+        openId: 'openid-admin',
+        challengeCode: '123456',
+        challengeToken: '0123456789abcdefghijklmnopqrstuv',
+      }),
       error => error.code === 'WEB_LOGIN_REQUEST_INVALID',
     )
   })

@@ -15,6 +15,7 @@ function gateway() {
   return {
     getSession: vi.fn(),
     confirmWebLogin: vi.fn(),
+    confirmWebLoginToken: vi.fn(),
     listEvents: vi.fn(),
     getEvent: vi.fn(),
     listRoster: vi.fn(async () => ({ items: [], nextCursor: null })),

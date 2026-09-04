@@ -130,21 +130,31 @@ export function ResponsiveAppShell() {
         onCancel={() => { setLoginOpen(false); closeLogin() }}
         destroyOnHidden
       >
-        <Typography.Paragraph>请在微信小程序运营工作台确认本次网页登录。</Typography.Paragraph>
+        <Typography.Paragraph>请使用当前运营账号完成确认。</Typography.Paragraph>
         {challenge ? (
           <div className="login-challenge" aria-live="polite">
-            <span>登录码</span>
-            <strong>{challenge.code}</strong>
-            <small>登录码有效期至 {new Date(challenge.expiresAt).toLocaleTimeString('zh-CN', { hour12: false })}</small>
+            {challenge.qrCodeDataUrl ? (
+              <>
+                <img className="login-challenge__qr" src={challenge.qrCodeDataUrl} alt="MIP 微信小程序登录码" />
+                <span>使用微信扫一扫，打开 MIP 小程序后确认登录</span>
+              </>
+            ) : (
+              <span>小程序码暂时未生成，请在 MIP 小程序运营工作台输入登录码</span>
+            )}
+            <div className="login-challenge__fallback">
+              <small>{challenge.qrCodeDataUrl ? '无法扫码时，在小程序运营工作台输入登录码' : '登录码'}</small>
+              <strong>{challenge.code}</strong>
+            </div>
+            <small>有效期至 {new Date(challenge.expiresAt).toLocaleTimeString('zh-CN', { hour12: false })}</small>
           </div>
         ) : loginError ? (
           <Space orientation="vertical">
             <Typography.Text type="danger">{loginError}</Typography.Text>
             <Button onClick={() => void (loginConfirmed ? retryConfirmedLogin() : beginLogin())}>
-              {loginConfirmed ? '重新加载会话' : '重新获取登录码'}
+              {loginConfirmed ? '重新加载会话' : '重新获取登录请求'}
             </Button>
           </Space>
-        ) : <Typography.Text type="secondary">正在获取登录码…</Typography.Text>}
+        ) : <Typography.Text type="secondary">正在获取登录请求…</Typography.Text>}
       </Modal>
     </Layout>
   )

@@ -32,4 +32,4 @@ Web 页面 (admin-web/src/features/*-pages)
 
 旧 `src/modules/membership` 兼容适配层和未注册页面已经删除；用户端统一使用按领域拆分的 `src/modules/mip-*` 模块。仓库不再保留旧 `membership-*` 云函数、`member_*` 迁移或被 Web 取代的小程序管理页面；需要追溯时使用 Git 历史。静态门禁阻止当前代码回读共享旧表，并拒绝未在 `app.json` 声明的页面源码。
 
-数据库隔离见 [adr/0001-shared-cloudbase-isolation.md](adr/0001-shared-cloudbase-isolation.md)，支付名额决策见 [adr/0002-paid-event-registration.md](adr/0002-paid-event-registration.md)，管理端渠道边界见 [adr/0005-web-admin-and-onsite-workbench.md](adr/0005-web-admin-and-onsite-workbench.md)。
+数据库隔离见 [adr/0001-shared-cloudbase-isolation.md](adr/0001-shared-cloudbase-isolation.md)，支付名额决策见 [adr/0002-paid-event-registration.md](adr/0002-paid-event-registration.md)，管理端渠道边界见 [adr/0005-web-admin-and-onsite-workbench.md](adr/0005-web-admin-and-onsite-workbench.md)，网页登录小程序码见 [adr/0006-mini-program-code-web-login.md](adr/0006-mini-program-code-web-login.md)。

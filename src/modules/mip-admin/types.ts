@@ -217,6 +217,7 @@ export interface AdminWebLoginConfirmation {
 export interface MipAdminGateway {
   getSession: () => Promise<MipAdminSession>
   confirmWebLogin: (challengeCode: string) => Promise<AdminWebLoginConfirmation>
+  confirmWebLoginToken: (challengeToken: string) => Promise<AdminWebLoginConfirmation>
   listEvents: (input?: AdminEventListInput) => Promise<AdminPage<AdminEvent>>
   getEvent: (eventId: string) => Promise<AdminEventDetail>
   listRoster: (input: AdminRosterListInput) => Promise<AdminPage<AdminRosterItem>>

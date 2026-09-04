@@ -69,6 +69,7 @@ function createHarness() {
       roles: [],
     })),
     confirmWebLogin: vi.fn<MipAdminGateway['confirmWebLogin']>(),
+    confirmWebLoginToken: vi.fn<MipAdminGateway['confirmWebLoginToken']>(),
     listEvents: vi.fn<MipAdminGateway['listEvents']>(async () => ({ items: [], nextCursor: null })),
     getEvent: vi.fn<MipAdminGateway['getEvent']>(async id => ({ ...eventDetail, id })),
     listRoster: vi.fn<MipAdminGateway['listRoster']>(async input => ({

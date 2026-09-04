@@ -377,7 +377,12 @@ function assertRefundDispatchEnvironment(detail) {
     || String(variables.MIP_MESSAGE_DISPATCH_HMAC_SECRET || '').length < 32
     || String(variables.MIP_ADMIN_WEB_BFF_HMAC_SECRET || '').length < 32
     || String(variables.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET || '').length < 32
-    || variables.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET === variables.MIP_ADMIN_WEB_BFF_HMAC_SECRET
+    || String(variables.MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET || '').length < 32
+    || new Set([
+      variables.MIP_ADMIN_WEB_BFF_HMAC_SECRET,
+      variables.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET,
+      variables.MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET,
+    ]).size !== 3
     || !/^https:\/\/\S+\/api\/internal\/auth\/challenge\/confirm$/.test(
       String(variables.MIP_ADMIN_WEB_LOGIN_CONFIRM_URL || ''),
     )) {

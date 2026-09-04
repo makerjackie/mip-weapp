@@ -16,6 +16,7 @@ const NOW = Date.UTC(2030, 0, 1)
 const ORIGIN = 'https://mipmini.01mvp.com'
 const SESSION_SECRET = 'session-encryption-secret-that-is-long-enough-for-tests'
 const LOGIN_SECRET = 'login-confirm-secret-that-is-long-enough-for-tests'
+const QR_SECRET = 'login-qr-secret-that-is-long-enough-for-tests'
 const EXPORT_TOKEN = 'a'.repeat(43)
 const MEDIA_ASSET_ID = '10000000-0000-4000-8000-000000000001'
 const REVIEWED_QUERY_ACTIONS = [...WEB_ADMIN_QUERY_ACTIONS]
@@ -238,8 +239,10 @@ class MemoryD1 implements D1DatabaseBinding {
           return { success: true, meta: { changes: 1 } }
         }
         if (query.includes("SET status = 'CONFIRMED'")) {
-          const [appId, openId, displayName, confirmedAt, codeHash, principalKey] = values
-          const row = [...this.rows.values()].find(item => item.code_hash === codeHash)
+          const [appId, openId, displayName, confirmedAt, selector, principalKey] = values
+          const row = query.includes('WHERE id = ?5')
+            ? this.rows.get(String(selector))
+            : [...this.rows.values()].find(item => item.code_hash === selector)
           const limit = this.limits.get(String(principalKey))
           if (!row || row.status !== 'PENDING' || row.expires_at < Number(confirmedAt)
             || (limit && limit.locked_until > Number(confirmedAt))) {
@@ -277,7 +280,9 @@ const env = (database = new MemoryD1()): AdminBffEnv => ({
   MIP_ADMIN_UPSTREAM_URL: 'https://cloud.example.test/mip-admin-api',
   MIP_ADMIN_UPSTREAM_HMAC_SECRET: 'upstream-hmac-secret-that-is-long-enough-for-tests',
   MIP_ADMIN_WEB_LOGIN_HMAC_SECRET: LOGIN_SECRET,
+  MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET: QR_SECRET,
   MIP_WEB_ALLOWED_APP_IDS: 'wx-mip-app',
+  MIP_WEB_LOGIN_MINIPROGRAM_APP_ID: 'wx-mip-app',
   MIP_WEB_ALLOWED_ORIGIN: ORIGIN,
   MIP_WEB_SESSION_SECRET: SESSION_SECRET,
 })
@@ -332,8 +337,34 @@ async function loginConfirmationBody(
   return { ...unsigned, signature }
 }
 
+async function tokenLoginConfirmationBody(
+  challengeToken: string,
+  options: {
+    now?: number
+    nonce?: string
+    principal?: { appId: string; openId: string; displayName?: string }
+    secret?: string
+  } = {},
+) {
+  const unsigned = {
+    transport: 'MIP_WEB_LOGIN_CONFIRM_V1',
+    timestamp: options.now ?? NOW,
+    nonce: options.nonce || 'abcdefghijklmn0123456789',
+    challengeToken,
+    principal: options.principal || { appId: 'wx-mip-app', openId: 'trusted-admin-openid', displayName: '运营成员' },
+  }
+  const signature = await hmacHex(options.secret || LOGIN_SECRET, canonicalJson(unsigned))
+  return { ...unsigned, signature }
+}
+
+const noLoginQrCode = async () => ''
+
 async function confirmedLogin(fetchMock: FetchMock, database = new MemoryD1()) {
-  const bff = createAdminBff(env(database), { fetch: fetchMock, now: () => NOW })
+  const bff = createAdminBff(env(database), {
+    fetch: fetchMock,
+    generateLoginQrCode: noLoginQrCode,
+    now: () => NOW,
+  })
   const start = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
     method: 'POST', headers: { origin: ORIGIN },
   }))
@@ -482,7 +513,7 @@ describe('Admin Web BFF', () => {
   })
 
   it('keeps the challenge pending until a trusted mini-program administrator confirms it', async () => {
-    const bff = createAdminBff(env(), { now: () => NOW })
+    const bff = createAdminBff(env(), { generateLoginQrCode: noLoginQrCode, now: () => NOW })
     const start = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
       method: 'POST', headers: { origin: ORIGIN },
     }))
@@ -497,8 +528,88 @@ describe('Admin Web BFF', () => {
     })
   })
 
+  it('returns an ephemeral mini-program code without exposing its challenge token', async () => {
+    const database = new MemoryD1()
+    const imageBase64 = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).toString('base64')
+    const fetchMock = fetchQueue(new Response(JSON.stringify({
+      ok: true,
+      data: { contentType: 'image/png', imageBase64 },
+    }), { status: 200, headers: { 'content-type': 'application/json' } }))
+    const bff = createAdminBff(env(database), { fetch: fetchMock, now: () => NOW })
+
+    const response = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
+      method: 'POST', headers: { origin: ORIGIN },
+    }))
+    const bodyText = await response.text()
+    const body = JSON.parse(bodyText)
+    const challengeToken = [...database.rows.keys()][0]
+
+    assert.equal(response.status, 201)
+    assert.equal(response.headers.get('cache-control'), 'no-store')
+    assert.equal(body.qrCodeDataUrl, `data:image/png;base64,${imageBase64}`)
+    assert.match(body.code, /^\d{6}$/)
+    assert.equal(bodyText.includes(challengeToken), false)
+    assert.equal(bodyText.includes('wx-mip-app'), false)
+    assert.equal(fetchMock.calls.length, 1)
+    const upstream = JSON.parse(String(fetchMock.calls[0][1]?.body))
+    assert.deepEqual(Object.keys(upstream).sort(), [
+      'appId', 'challengeToken', 'nonce', 'signature', 'timestamp', 'transport',
+    ])
+    assert.equal(upstream.appId, 'wx-mip-app')
+    assert.equal(upstream.challengeToken, challengeToken)
+    assert.equal(upstream.transport, 'MIP_WEB_LOGIN_QR_V1')
+    assert.equal(upstream.signature, await hmacHex(QR_SECRET, canonicalJson({
+      transport: upstream.transport,
+      timestamp: upstream.timestamp,
+      nonce: upstream.nonce,
+      appId: upstream.appId,
+      challengeToken: upstream.challengeToken,
+    })))
+  })
+
+  it('keeps the six-digit fallback when QR generation fails', async () => {
+    const bff = createAdminBff(env(), {
+      generateLoginQrCode: async () => { throw new Error('QR_UNAVAILABLE') },
+      now: () => NOW,
+    })
+    const response = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
+      method: 'POST', headers: { origin: ORIGIN },
+    }))
+    const body = await response.json()
+
+    assert.equal(response.status, 201)
+    assert.match(body.code, /^\d{6}$/)
+    assert.equal(Object.hasOwn(body, 'qrCodeDataUrl'), false)
+  })
+
+  it('confirms the same one-time challenge by its mini-program scene token', async () => {
+    const database = new MemoryD1()
+    const bff = createAdminBff(env(database), {
+      generateLoginQrCode: noLoginQrCode,
+      now: () => NOW,
+    })
+    const start = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
+      method: 'POST', headers: { origin: ORIGIN },
+    }))
+    const challengeCookie = cookieValue(start, 'mip_admin_login_challenge')
+    const challengeToken = [...database.rows.keys()][0]
+    const confirmation = async () => bff.handle(new Request(`${ORIGIN}/api/internal/auth/challenge/confirm`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(await tokenLoginConfirmationBody(challengeToken)),
+    }))
+
+    assert.equal((await confirmation()).status, 200)
+    assert.equal((await confirmation()).status, 404)
+    const exchange = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge/status`, {
+      method: 'POST', headers: { cookie: challengeCookie, origin: ORIGIN },
+    }))
+    assert.equal(exchange.status, 200)
+    assert.equal((await exchange.json()).state, 'AUTHENTICATED')
+  })
+
   it('distinguishes malformed and forged confirmations and makes a challenge single-use', async () => {
-    const bff = createAdminBff(env(), { now: () => NOW })
+    const bff = createAdminBff(env(), { generateLoginQrCode: noLoginQrCode, now: () => NOW })
     const start = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
       method: 'POST', headers: { origin: ORIGIN },
     }))
@@ -513,6 +624,13 @@ describe('Admin Web BFF', () => {
     }))
     assert.equal(malformed.status, 400)
     assert.equal((await malformed.json()).error.code, 'CONFIRMATION_INVALID')
+
+    const ambiguousBody = await loginConfirmationBody(challenge.code)
+    const ambiguous = await bff.handle(new Request(`${ORIGIN}/api/internal/auth/challenge/confirm`, {
+      method: 'POST',
+      body: JSON.stringify({ ...ambiguousBody, challengeToken: 'a'.repeat(32) }),
+    }))
+    assert.equal(ambiguous.status, 400)
 
     const forgedBody = await loginConfirmationBody(challenge.code)
     const forged = await bff.handle(new Request(`${ORIGIN}/api/internal/auth/challenge/confirm`, {
@@ -530,7 +648,10 @@ describe('Admin Web BFF', () => {
   })
 
   it('reports missing login configuration separately from invalid codes', async () => {
-    const missingSecret = createAdminBff({ ...env(), MIP_ADMIN_WEB_LOGIN_HMAC_SECRET: undefined }, { now: () => NOW })
+    const missingSecret = createAdminBff(
+      { ...env(), MIP_ADMIN_WEB_LOGIN_HMAC_SECRET: undefined },
+      { generateLoginQrCode: noLoginQrCode, now: () => NOW },
+    )
     const response = await missingSecret.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
       method: 'POST', headers: { origin: ORIGIN },
     }))
@@ -549,7 +670,9 @@ describe('Admin Web BFF', () => {
         return base.prepare(query)
       },
     } as unknown as MemoryD1
-    const bff = createAdminBff(env(database), { fetch: fetchQueue(), now: () => NOW })
+    const bff = createAdminBff(env(database), {
+      fetch: fetchQueue(), generateLoginQrCode: noLoginQrCode, now: () => NOW,
+    })
     const start = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
       method: 'POST', headers: { origin: ORIGIN },
     }))
@@ -584,7 +707,7 @@ describe('Admin Web BFF', () => {
   it('atomically locks each trusted AppID and principal after five failed codes for five minutes', async () => {
     const database = new MemoryD1()
     let now = NOW
-    const bff = createAdminBff(env(database), { now: () => now })
+    const bff = createAdminBff(env(database), { generateLoginQrCode: noLoginQrCode, now: () => now })
     const start = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
       method: 'POST', headers: { origin: ORIGIN },
     }))
@@ -632,7 +755,7 @@ describe('Admin Web BFF', () => {
   it('caps login-challenge creation at 30 codes per client IP every 10 minutes', async () => {
     const database = new MemoryD1()
     let now = NOW
-    const bff = createAdminBff(env(database), { now: () => now })
+    const bff = createAdminBff(env(database), { generateLoginQrCode: noLoginQrCode, now: () => now })
     const request = (ip: string) => bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
       method: 'POST', headers: { origin: ORIGIN, 'cf-connecting-ip': ip },
     }))
@@ -666,7 +789,7 @@ describe('Admin Web BFF', () => {
       if (query.includes('mip_admin_web_login_ip_limits')) throw new Error('IP_LIMITS_MISSING')
       return original(query)
     }
-    const bff = createAdminBff(env(database), { now: () => NOW })
+    const bff = createAdminBff(env(database), { generateLoginQrCode: noLoginQrCode, now: () => NOW })
     const response = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
       method: 'POST', headers: { origin: ORIGIN, 'cf-connecting-ip': '203.0.113.10' },
     }))
@@ -678,7 +801,7 @@ describe('Admin Web BFF', () => {
   it('clears expired challenges before issuing a new six-digit code', async () => {
     const database = new MemoryD1()
     let now = NOW
-    const bff = createAdminBff(env(database), { now: () => now })
+    const bff = createAdminBff(env(database), { generateLoginQrCode: noLoginQrCode, now: () => now })
     const request = () => bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
       method: 'POST', headers: { origin: ORIGIN },
     }))
@@ -695,7 +818,9 @@ describe('Admin Web BFF', () => {
 
   it('rejects missing or tampered sessions without contacting the upstream', async () => {
     const fetchMock = fetchQueue()
-    const bff = createAdminBff(env(), { fetch: fetchMock, now: () => NOW })
+    const bff = createAdminBff(env(), {
+      fetch: fetchMock, generateLoginQrCode: noLoginQrCode, now: () => NOW,
+    })
     const request = (cookie: string) => new Request(`${ORIGIN}/api/admin`, {
       method: 'POST', headers: { cookie, origin: ORIGIN, 'content-type': 'application/json' },
       body: JSON.stringify({ contractVersion: 1, action: 'mip.admin.users.list', input: { limit: 50 } }),
@@ -877,7 +1002,9 @@ describe('Admin Web BFF', () => {
       upstreamAttempts += 1
       throw new Error('NETWORK_DOWN')
     }) as typeof fetch, { calls: [] })
-    const networkBff = createAdminBff(env(), { fetch: throwingFetch, now: () => NOW })
+    const networkBff = createAdminBff(env(), {
+      fetch: throwingFetch, generateLoginQrCode: noLoginQrCode, now: () => NOW,
+    })
     const response = await networkBff.handle(new Request(`${ORIGIN}/api/admin`, {
       method: 'POST',
       headers: { cookie: sessionCookie, origin: ORIGIN, 'content-type': 'application/json' },

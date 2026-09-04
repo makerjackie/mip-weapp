@@ -14,7 +14,7 @@ function createWebLoginConfirmationClient({
 } = {}) {
   const normalizedEndpoint = exactHttpsUrl(endpoint)
 
-  async function confirm({ appId, challengeCode, displayName, openId } = {}) {
+  async function confirm({ appId, challengeCode, challengeToken, displayName, openId } = {}) {
     if (!normalizedEndpoint
       || typeof secret !== 'string'
       || secret.length < 32
@@ -23,10 +23,11 @@ function createWebLoginConfirmationClient({
       || typeof nonce !== 'function') {
       throw codedError('WEB_LOGIN_CONFIG_REQUIRED')
     }
+    const validCode = typeof challengeCode === 'string' && /^\d{6}$/.test(challengeCode)
+    const validToken = typeof challengeToken === 'string' && /^[A-Za-z0-9_-]{32}$/.test(challengeToken)
     if (!trustedIdentifier(appId, 64)
       || !trustedIdentifier(openId, 128)
-      || typeof challengeCode !== 'string'
-      || !/^\d{6}$/.test(challengeCode)
+      || validCode === validToken
       || (displayName !== undefined && (typeof displayName !== 'string' || displayName.length > 80))) {
       throw codedError('WEB_LOGIN_REQUEST_INVALID')
     }
@@ -34,7 +35,7 @@ function createWebLoginConfirmationClient({
       transport: WEB_LOGIN_CONFIRM_TRANSPORT,
       timestamp: now(),
       nonce: nonce(),
-      challengeCode,
+      ...(validCode ? { challengeCode } : { challengeToken }),
       principal: {
         appId,
         openId,

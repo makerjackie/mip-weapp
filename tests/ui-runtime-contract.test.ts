@@ -222,6 +222,7 @@ describe('mip-weapp UI runtime contract', () => {
     const adminRoutes = contract.routes.filter(route => route.group === 'admin')
     expect(adminRoutes.map(route => route.path)).toEqual([
       'packages/admin/dashboard/index',
+      'packages/admin/web-login-confirm/index',
       'packages/admin/managed-events/index',
       'packages/admin/event-console/index',
       'packages/admin/event-registrations/index',
@@ -445,6 +446,7 @@ describe('mip-weapp UI runtime contract', () => {
       'task-attachment',
       'task-template',
       'video-channel',
+      'web-login-qr',
       'wechat-pay',
     ])
     const routeSet = new Set(contractRoutes)
@@ -564,11 +566,12 @@ describe('mip-weapp UI runtime contract', () => {
     expect(paymentResult?.readyAssertion).toBe('result in success|pending|refund')
   })
 
-  it('keeps one onsite-workbench entry and exactly four admin routes', () => {
+  it('keeps one onsite-workbench entry, four operational routes, and one auth landing', () => {
     const profileSource = read('src/pages/profile/index.ts')
     const profileView = read('src/pages/profile/index.wxml')
     const expectedAdminRoutes = [
       'packages/admin/dashboard/index',
+      'packages/admin/web-login-confirm/index',
       'packages/admin/managed-events/index',
       'packages/admin/event-console/index',
       'packages/admin/event-registrations/index',
@@ -579,11 +582,13 @@ describe('mip-weapp UI runtime contract', () => {
     expect(contractRoutes.filter(route => route.startsWith('packages/admin/'))).toEqual(expectedAdminRoutes)
     expect(contract.routes.filter(route => route.path.startsWith('packages/admin/')).map(route => route.name)).toEqual([
       '现场工作台',
+      '网页登录确认',
       '授权活动',
       '活动现场',
       '参与者与签到',
     ])
     expect(profileSource).toContain('/packages/admin/dashboard/index')
+    expect(profileSource).not.toContain('/packages/admin/web-login-confirm/index')
     expect(profileSource).toContain('hasCapability(snapshot.grants, \'admin:enter\') || canManageEvents(snapshot.grants)')
     expect(profileSource).not.toContain('openManagedEvents')
     expect(profileSource).not.toContain('eventManagementVisible')

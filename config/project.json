@@ -257,6 +257,10 @@
       "pathName": "packages/admin/dashboard/index"
     },
     {
+      "name": "网页登录确认",
+      "pathName": "packages/admin/web-login-confirm/index"
+    },
+    {
       "name": "授权活动",
       "pathName": "packages/admin/managed-events/index"
     },

@@ -1,6 +1,6 @@
 # Operations
 
-React Web 是日常运营和完整管理的唯一界面，入口为 `admin-web/`。小程序的 `packages/admin/dashboard` 只进入现场工作台，用于 Web 登录确认、已授权活动、签到码与海报、名单和签到；它不是第二套后台，也不是报表大屏。服务端入口统一为 `mip-admin-api`，两端复用同一 DTO、capability 和审计合同。除非本页明确写“现场工作台”，下文“管理端”均指 React Web。
+React Web 是日常运营和完整管理的唯一界面，入口为 `admin-web/`。小程序的 `packages/admin/dashboard` 只进入现场工作台，用于 Web 登录数字码确认、已授权活动、签到码与海报、名单和签到；`packages/admin/web-login-confirm` 只处理网页动态小程序码的身份门禁和明确确认。它们都不是第二套后台或报表大屏。服务端入口统一为 `mip-admin-api`，两端复用同一 DTO、capability 和审计合同。除非本页明确写“现场工作台”，下文“管理端”均指 React Web。
 
 ## 初始化与部署
 

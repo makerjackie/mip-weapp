@@ -2,7 +2,7 @@ import type { MipAdminGateway } from './types'
 
 export type SessionAdminGateway = Pick<
   MipAdminGateway,
-  'getSession' | 'confirmWebLogin'
+  'getSession' | 'confirmWebLogin' | 'confirmWebLoginToken'
 >
 
 interface SessionAdminCache {
@@ -12,6 +12,7 @@ interface SessionAdminCache {
 export interface MipAdminSessionModule {
   get: (force?: boolean) => ReturnType<MipAdminGateway['getSession']>
   confirmWebLogin: MipAdminGateway['confirmWebLogin']
+  confirmWebLoginToken: MipAdminGateway['confirmWebLoginToken']
 }
 
 export function createMipAdminSession(
@@ -21,5 +22,6 @@ export function createMipAdminSession(
   return {
     get: (force = false) => cache.query('mip-admin:session', gateway.getSession, { force }),
     confirmWebLogin: gateway.confirmWebLogin,
+    confirmWebLoginToken: gateway.confirmWebLoginToken,
   }
 }

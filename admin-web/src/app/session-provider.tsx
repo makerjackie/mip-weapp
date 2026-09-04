@@ -107,7 +107,7 @@ export function SessionProvider({ children, client = defaultClient }: { children
         }
         if (Date.parse(status.expiresAt) <= Date.now()) {
           setChallenge(null)
-          setLoginError('登录码已过期，请重新获取')
+          setLoginError('登录请求已过期，请重新获取')
           return
         }
         delay = status.pollAfterMs

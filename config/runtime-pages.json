@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 69,
+  "routeCount": 70,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 69 paths.",
+    "config/project.json routes must list the same 70 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -147,6 +147,12 @@
         "packages/admin/event-registrations/index"
       ],
       "reason": "动态签到码需要两台真机验证出示、扫码、重复扫码与撤销签到"
+    },
+    {
+      "id": "web-login-qr",
+      "label": "网页登录小程序码",
+      "routes": ["packages/admin/web-login-confirm/index"],
+      "reason": "动态小程序码打开、运营账号授权、显式确认和网页会话交换需要微信真机与电脑浏览器联合验证"
     },
     {
       "id": "ai-voice",
@@ -710,6 +716,18 @@
       "kind": "data",
       "states": ["loading", "ready", "error", "forbidden"],
       "readyAssertion": "state === 'ready'"
+    },
+    {
+      "id": "A04",
+      "name": "网页登录确认",
+      "path": "packages/admin/web-login-confirm/index",
+      "selector": "#admin-web-login-confirm-page",
+      "group": "admin",
+      "kind": "data",
+      "states": ["loading", "ready", "access", "confirming", "success", "expired", "error", "forbidden"],
+      "acceptStates": ["ready", "success"],
+      "readyAssertion": "state === 'ready' || state === 'success'",
+      "deviceRequired": ["web-login-qr"]
     },
     {
       "id": "A02",

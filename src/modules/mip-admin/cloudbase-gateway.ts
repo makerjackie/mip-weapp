@@ -231,6 +231,9 @@ export function createMipAdminGateway(transport: AdminTransport): MipAdminGatewa
     confirmWebLogin: async challengeCode => parseWebLoginConfirmation(
       await call('mip.admin.webLogin.confirm', { challengeCode }),
     ),
+    confirmWebLoginToken: async challengeToken => parseWebLoginConfirmation(
+      await call('mip.admin.webLogin.confirm', { challengeToken }),
+    ),
     listEvents: async input => parseAdminEventPage(
       await call('mip.admin.events.list', { ...(input || {}) }),
     ),

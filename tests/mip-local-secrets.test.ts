@@ -82,15 +82,22 @@ describe('MIP stable local secrets', () => {
     })).toBe(true)
   })
 
-  it('requires separate Web admin query and login confirmation HMAC domains', () => {
+  it('requires separate Web admin query, login confirmation, and QR HMAC domains', () => {
     const shared = secret('s')
     expect(() => assertMipWebAdminHmacSecretsIsolated({
       MIP_ADMIN_WEB_BFF_HMAC_SECRET: shared,
       MIP_ADMIN_WEB_LOGIN_HMAC_SECRET: shared,
-    })).toThrow(/must differ/)
+      MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET: secret('r'),
+    })).toThrow(/separate trust domains/)
+    expect(() => assertMipWebAdminHmacSecretsIsolated({
+      MIP_ADMIN_WEB_BFF_HMAC_SECRET: shared,
+      MIP_ADMIN_WEB_LOGIN_HMAC_SECRET: secret('l'),
+      MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET: shared,
+    })).toThrow(/separate trust domains/)
     expect(assertMipWebAdminHmacSecretsIsolated({
       MIP_ADMIN_WEB_BFF_HMAC_SECRET: secret('q'),
       MIP_ADMIN_WEB_LOGIN_HMAC_SECRET: secret('l'),
+      MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET: secret('r'),
     })).toBe(true)
   })
 

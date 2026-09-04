@@ -5,7 +5,7 @@ MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存�
 ## 图片资源边界
 
 - TabBar 回退图标、品牌 Logo、小型界面图标、固定卡片插画、名片背景和压缩后的徽章兜底图随小程序代码发布，保证应用外壳无需网络即可呈现。
-- Banner、活动/机会/案例封面、头像、相册、任务附件和专属小程序码属于业务或运营内容，必须通过 `mip-media-api` 写入 `mip/` 对象存储，并在数据库保留素材引用或永久 `cloud://` 文件 ID。
+- Banner、活动/机会/案例封面、头像、相册、任务附件和可长期使用的小程序码属于业务或运营内容，必须通过 `mip-media-api` 写入 `mip/` 对象存储，并在数据库保留素材引用或永久 `cloud://` 文件 ID。5 分钟有效的网页登录小程序码属于临时认证载体，只以受限图片响应返回，不进入对象存储、素材表或业务日志。
 - 客户端不硬编码临时 CDN 地址，也不在业务图片缺失时展示设计稿或通用二维码冒充正式内容；页面使用无图状态或小型中性占位。
 - development/test 演示媒体保存在 `database/mysql/mip/demo-assets/`，只由 `pnpm seed:demo` 上传并校验；MIP staging 也可使用，但必须追加 `--confirm-staging-demo` 并保持 TEST catalog、非 live payment 和 exact EnvID 确认。这些文件不进入小程序 `src/`，production 禁止运行 demo seed。
 
