@@ -20,16 +20,6 @@ import {
   valueOf,
 } from './admin-read-formatters.ts'
 
-export const ADMIN_TASK_QUERY_ACTIONS = [
-  'mip.admin.tasks.list',
-  'mip.admin.tasks.get',
-  'mip.admin.tasks.eligibleLevels.list',
-  'mip.admin.tasks.assignableMembers.list',
-  'mip.admin.tasks.completions.list',
-  'mip.admin.tasks.completions.get',
-  'mip.admin.tasks.completions.export',
-] as const
-
 export const ADMIN_TASK_MUTATION_ACTIONS = [
   'mip.admin.tasks.save',
   'mip.admin.tasks.publish',

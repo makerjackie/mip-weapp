@@ -1,4 +1,4 @@
-import type { AdminOperationAction } from './request-contract'
+import type { AdminOperationAction } from '@mip/admin-contracts'
 import type { AdminTransport } from './transport'
 import type {
   AdminEvent,
@@ -8,10 +8,10 @@ import type {
   AdminWebLoginConfirmation,
   MipAdminGateway,
 } from './types'
+import { createAdminRequest } from '@mip/admin-contracts'
 import { resolveCloudFileUrls } from '../../platform/storage/cloud-media'
 import { cloudbaseAdminTransport } from './cloudbase-transport'
 import { MipAdminError } from './error'
-import { createAdminRequest } from './request-contract'
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const eventStatuses = new Set(['DRAFT', 'PUBLISHED', 'UNPUBLISHED', 'CANCELLED', 'ENDED', 'ARCHIVED'])

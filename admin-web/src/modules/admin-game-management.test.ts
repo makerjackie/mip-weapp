@@ -3,7 +3,6 @@ import { describe, it } from 'node:test'
 import type { AdminRequestInput } from '@mip/admin-contracts'
 import {
   ADMIN_GAME_MUTATION_ACTIONS,
-  ADMIN_GAME_QUERY_ACTIONS,
   buildGameMutationInput,
   createGameMutationDefinition,
   loadGameCatalogDetail,
@@ -165,6 +164,5 @@ describe('admin game management', () => {
       const json = JSON.stringify(input)
       assert.equal(/"(?:score|teamAScore|teamBScore|reward)"/.test(json), false, action)
     }
-    assert.deepEqual(ADMIN_GAME_QUERY_ACTIONS.length, 8)
   })
 })

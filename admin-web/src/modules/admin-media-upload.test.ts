@@ -7,7 +7,6 @@ import {
   ADMIN_MEDIA_UPLOAD_ACTION,
   AdminMediaUploadError,
   availableAdminMediaPurposeOptions,
-  hasAdminMediaUploadAccess,
   parseAdminMediaUploadResult,
   prepareAdminMediaUpload,
   validateAdminMediaFileMetadata,
@@ -106,14 +105,9 @@ describe('browser admin media upload preparation', () => {
       TASK_TEMPLATE: 'tasks.manage',
     })
     const platformGrants = [{ capability: 'events.write', scopeType: 'PLATFORM' }]
-    assert.equal(hasAdminMediaUploadAccess(platformGrants), true)
     assert.deepEqual(availableAdminMediaPurposeOptions(platformGrants).map(option => option.value), [
       'EVENT_CONTENT', 'EVENT_COVER',
     ])
-    assert.equal(hasAdminMediaUploadAccess([
-      { capability: 'events.write', scopeType: 'BRANCH' },
-      { capability: 'events.album.manage', scopeType: 'EVENT' },
-    ]), false)
     assert.deepEqual(availableAdminMediaPurposeOptions([
       { capability: 'events.write', scopeType: 'BRANCH' },
     ]), [])

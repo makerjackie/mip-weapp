@@ -1,11 +1,11 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { cloudbaseMipAdminGateway } from '../src/modules/mip-admin/cloudbase-gateway'
 import {
   ADMIN_REQUEST_CONTRACT_VERSION,
   createAdminRequest,
-} from '../src/modules/mip-admin/request-contract'
+} from '@mip/admin-contracts'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { cloudbaseMipAdminGateway } from '../src/modules/mip-admin/cloudbase-gateway'
 
 const cloudHarness = vi.hoisted(() => ({
   callFunction: vi.fn(),

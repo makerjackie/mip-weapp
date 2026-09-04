@@ -18,17 +18,6 @@ import {
   valueOf,
 } from './admin-read-formatters.ts'
 
-export const ADMIN_GAME_QUERY_ACTIONS = [
-  'mip.admin.game.session',
-  'mip.admin.game.rankings.list',
-  'mip.admin.game.seasons.list',
-  'mip.admin.game.teams.list',
-  'mip.admin.game.members.assignable.list',
-  'mip.admin.game.matches.list',
-  'mip.admin.game.blindBoxes.catalogs.list',
-  'mip.admin.game.blindBoxes.cards.list',
-] as const
-
 export const ADMIN_GAME_MUTATION_ACTIONS = [
   'mip.admin.game.seasons.save',
   'mip.admin.game.seasons.changeStatus',

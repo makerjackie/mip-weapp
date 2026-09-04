@@ -17,12 +17,6 @@ import {
   valueOf,
 } from './admin-read-formatters.ts'
 
-export const ADMIN_BANNER_QUERY_ACTIONS = [
-  'mip.admin.banners.session',
-  'mip.admin.banners.list',
-  'mip.admin.banners.get',
-] as const
-
 export const ADMIN_BANNER_MUTATION_ACTIONS = [
   'mip.admin.banners.save',
   'mip.admin.banners.changeStatus',

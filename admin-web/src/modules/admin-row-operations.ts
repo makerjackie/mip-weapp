@@ -52,25 +52,6 @@ export type AdminOperationRow = Record<string, unknown> & {
   rowActions?: readonly AdminRowOperation[]
 }
 
-export function parseAdminOperationLaunchContext(value: unknown): AdminOperationLaunchContext {
-  if (typeof value !== 'string' || !value.trim()) return {}
-  try {
-    const parsed = JSON.parse(value) as unknown
-    if (!plainRecord(parsed)) return {}
-    const values = plainRecord(parsed.values) ? { ...parsed.values } : undefined
-    const expectedVersion = nonNegativeVersion(parsed.expectedVersion)
-    const allowedCapabilities = stringList(parsed.allowedCapabilities)
-    return {
-      ...(values ? { values } : {}),
-      ...(expectedVersion !== null ? { expectedVersion } : {}),
-      ...(allowedCapabilities.length ? { allowedCapabilities } : {}),
-    }
-  }
-  catch {
-    return {}
-  }
-}
-
 export function eventRegistrationRowActions(
   eventIdValue: unknown,
   registration: Record<string, unknown>,
@@ -331,8 +312,4 @@ function stringList(value: unknown) {
   return Array.isArray(value)
     ? [...new Set(value.filter(item => typeof item === 'string' && item.trim()).map(String))]
     : []
-}
-
-function plainRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }

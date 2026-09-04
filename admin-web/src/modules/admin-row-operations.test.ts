@@ -10,7 +10,6 @@ import {
   eventRegistrationRowActions,
   messageScheduleCancelAction,
   messageTemplateRowActions,
-  parseAdminOperationLaunchContext,
   rolePolicyRowActions,
 } from './admin-row-operations.ts'
 
@@ -150,18 +149,4 @@ describe('admin row operations', () => {
     }), [])
   })
 
-  it('parses only structured launch facts and rejects malformed context', () => {
-    assert.deepEqual(parseAdminOperationLaunchContext(JSON.stringify({
-      values: { eventId: 'event-1' },
-      expectedVersion: 0,
-      allowedCapabilities: ['events.read', '', 'events.read'],
-      unknown: 'ignored',
-    })), {
-      values: { eventId: 'event-1' },
-      expectedVersion: 0,
-      allowedCapabilities: ['events.read'],
-    })
-    assert.deepEqual(parseAdminOperationLaunchContext('{broken'), {})
-    assert.deepEqual(parseAdminOperationLaunchContext(JSON.stringify([])), {})
-  })
 })

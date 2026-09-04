@@ -12,7 +12,7 @@ const {
   scheduleRequestHash,
   scheduledPublicationHash,
 } = require('../domain/message-campaigns')
-const { operationByAction } = require('../domain/operation-catalog')
+const { operationByAction } = require('../domain/operation-registry')
 const {
   normalizeOptionalDispatchVersion,
   normalizeScheduledFor,

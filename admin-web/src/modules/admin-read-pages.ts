@@ -6,10 +6,33 @@ import type {
   AdminReadAccess,
   AdminReadRouteDefinition,
   AdminRequest,
-  AdminTableColumn,
-  AdminTableRow,
 } from './admin-read-contracts.ts'
-import { capabilityLabels, filterRows, labels } from './admin-read-formatters.ts'
+import {
+  accessLabel,
+  arrayCodeLabel,
+  arrayLabel,
+  auditActionLabel,
+  blockersLabel,
+  booleanLabel,
+  capabilityListLabel,
+  columns,
+  countLabel,
+  dateRange,
+  filterRows,
+  formatDateTime,
+  label,
+  money,
+  nestedNames,
+  numberLabel,
+  options,
+  pageValue,
+  reasonLabel,
+  record,
+  roleLabel,
+  scopeLabel,
+  sourceEventLabel,
+  valueOf,
+} from './admin-read-formatters.ts'
 import {
   loadGrowth,
   loadOperations,
@@ -406,153 +429,4 @@ function listInput(query: AdminListQuery, extra: AdminRequestInput = {}): AdminR
     limit: query.limit,
     ...extra,
   }
-}
-
-function pageValue(value: unknown): { items: AdminTableRow[]; nextCursor: string | null } {
-  const source = record(value)
-  const items = Array.isArray(source.items)
-    ? source.items.filter(item => item && typeof item === 'object' && !Array.isArray(item)) as AdminTableRow[]
-    : Array.isArray(value)
-      ? value.filter(item => item && typeof item === 'object' && !Array.isArray(item)) as AdminTableRow[]
-      : []
-  return { items, nextCursor: typeof source.nextCursor === 'string' ? source.nextCursor : null }
-}
-
-function record(value: unknown): AdminTableRow {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as AdminTableRow : {}
-}
-
-function valueOf(row: AdminTableRow, ...keys: string[]) {
-  for (const key of keys) if (row[key] !== undefined && row[key] !== null && row[key] !== '') return row[key]
-  return '—'
-}
-
-function columns(entries: Array<[string, string]>): AdminTableColumn[] {
-  return entries.map(([key, label]) => ({ key, label }))
-}
-
-function options(values: string[]) {
-  return values.map(value => ({ value, label: label(value) }))
-}
-
-function formatDateTime(value: unknown) {
-  const date = new Date(String(value || ''))
-  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('zh-CN', { hour12: false })
-}
-
-function money(value: unknown, currency: unknown) {
-  const cents = Number(value)
-  if (!Number.isFinite(cents)) return '—'
-  return new Intl.NumberFormat('zh-CN', { style: 'currency', currency: String(currency || 'CNY') }).format(cents / 100)
-}
-
-function countLabel(count: unknown, capacity: unknown) {
-  const current = numberLabel(count)
-  const total = Number(capacity)
-  return Number.isInteger(total) && total > 0 ? `${current} / ${total}` : current
-}
-
-function numberLabel(value: unknown) {
-  const number = Number(value)
-  return Number.isFinite(number) ? number.toLocaleString('zh-CN') : '—'
-}
-
-function arrayLabel(value: unknown) {
-  return Array.isArray(value) && value.length ? value.join('、') : '—'
-}
-
-function arrayCodeLabel(value: unknown) {
-  return Array.isArray(value) && value.length ? value.map(label).join('、') : '—'
-}
-
-function nestedNames(value: unknown) {
-  if (!Array.isArray(value)) return []
-  return value.map(item => valueOf(record(item), 'name')).filter(item => item !== '—').map(String)
-}
-
-function booleanLabel(value: unknown) {
-  return value === true ? '开启' : value === false ? '关闭' : '—'
-}
-
-function dateRange(from: unknown, to: unknown) {
-  const start = formatDateTime(from)
-  const end = formatDateTime(to)
-  if (start === '—' && end === '—') return '长期有效'
-  return `${start} – ${end}`
-}
-
-function sourceEventLabel(value: unknown) {
-  const code = String(value || '')
-  const sourceLabels: Record<string, string> = {
-    'event.checked_in': '活动签到',
-    'event.registered': '活动报名',
-    'profile.completed': '完善资料',
-    'opportunity.published': '发布机会',
-    'admin.adjusted': '人工调整',
-  }
-  return sourceLabels[code] || (code ? '其他业务记录' : '—')
-}
-
-function reasonLabel(value: unknown) {
-  const code = String(value || '').trim()
-  if (!code) return '—'
-  const reasonLabels: Record<string, string> = {
-    TIMEOUT: '处理超时',
-    DELIVERY_FAILED: '投递失败',
-    RETRY_EXHAUSTED: '重试已达上限',
-    STALE: '长时间未处理',
-    REJECTED: '已拒绝',
-    EXPIRED: '已过期',
-    CLEANUP_PENDING: '等待清理',
-  }
-  return reasonLabels[code] || (/[\u3400-\u9fff]/u.test(code) ? code : '需人工核查')
-}
-
-function capabilityListLabel(value: unknown) {
-  if (!Array.isArray(value)) return '—'
-  return value.length ? value.map(item => capabilityLabels[String(item)] || String(item)).join('、') : '无'
-}
-
-function roleLabel(value: unknown) {
-  const key = String(value || '')
-  return labels[key] || key || '—'
-}
-
-function scopeLabel(value: unknown) {
-  return label(value)
-}
-
-function auditActionLabel(value: unknown) {
-  const key = String(value || '')
-  const parts = key.replace(/^admin\./, '').split('.').filter(Boolean)
-  const tokens: Record<string, string> = {
-    roles: '角色', rolePolicies: '权限策略', users: '用户', memberships: '会员', branches: '服务器',
-    events: '活动', orders: '订单', refunds: '退款', messages: '消息', knowledge: '知识库', audit: '审计',
-    grant: '授权', revoke: '撤销', create: '创建', update: '更新', save: '保存', publish: '发布',
-    withdraw: '撤回', archive: '归档', submit: '提交', changeStatus: '更改状态', view: '查看', enter: '进入',
-  }
-  return parts.length ? parts.map(part => tokens[part] || part).join(' · ') : '—'
-}
-
-function blockersLabel(value: unknown) {
-  const blockers = record(value)
-  const entries = [
-    ['activeMemberships', '会员'],
-    ['activeBranchAdmins', '管理员'],
-    ['publishedEvents', '活动'],
-    ['publishedOpportunities', '机会'],
-  ] as const
-  const values = entries
-    .filter(([key]) => blockers[key] !== undefined && blockers[key] !== null)
-    .map(([key, name]) => `${name} ${numberLabel(blockers[key])}`)
-  return values.length ? values.join(' · ') : '—'
-}
-
-function accessLabel(accessType: unknown, priceCents: unknown) {
-  return accessType === 'PAID' ? money(priceCents, 'CNY') : label(accessType)
-}
-
-function label(value: unknown) {
-  const key = String(value || '')
-  return labels[key] || key || '—'
 }

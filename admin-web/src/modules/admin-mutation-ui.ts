@@ -92,12 +92,3 @@ export function mutationInput(state: MutationState, values: MutationValues): Adm
   if (!values.reason) return null
   return { orderId: state.targetId, reason: String(values.reason) }
 }
-
-export function mutationSummary(action: AdminMutationAction, values: MutationValues) {
-  if (action === 'mip.admin.memberships.grant') return `${values.durationMonths} 个月会员权益，原因：${values.reason}`
-  if (action === 'mip.admin.events.clone') return '根据当前活动创建草稿'
-  if (action === 'mip.admin.events.changeStatus') return values.status === 'PUBLISHED' ? '发布活动' : '下架活动'
-  if (action === 'mip.admin.events.archive') return `归档活动，原因：${values.reason}`
-  if (action === 'mip.admin.communications.publishEventReminder') return values.sendWechatReminder === true ? '同时生成微信提醒任务' : '仅生成站内提醒任务'
-  return `退款原因：${values.reason}`
-}

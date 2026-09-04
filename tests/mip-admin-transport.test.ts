@@ -1,8 +1,8 @@
-import type { AdminOperationAction } from '../src/modules/mip-admin/request-contract'
+import type { AdminOperationAction } from '@mip/admin-contracts'
+import { createAdminRequest } from '@mip/admin-contracts'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMipAdminGateway } from '../src/modules/mip-admin/cloudbase-gateway'
 import { createCloudBaseAdminTransport } from '../src/modules/mip-admin/cloudbase-transport'
-import { createAdminRequest } from '../src/modules/mip-admin/request-contract'
 import { createInMemoryAdminTransport } from '../src/modules/mip-admin/transport'
 
 const defaultCloudHarness = vi.hoisted(() => ({

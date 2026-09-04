@@ -584,10 +584,3 @@ export function buildAdminEventMutationInput(
   // A definition may intentionally omit an id for platform-wide policy writes.
   return buildEventMutationInput(definition.action, values)
 }
-
-export function validateAdminEventMutationInput(
-  definition: AdminEventMutationDefinition,
-  submittedValues: EventMutationValues,
-) {
-  return buildAdminEventMutationInput(definition, submittedValues) !== null
-}

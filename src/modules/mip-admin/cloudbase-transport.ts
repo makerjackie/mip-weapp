@@ -1,5 +1,5 @@
+import type { AdminRequest } from '@mip/admin-contracts'
 import type { CaseCloudClient } from '../../platform/cloudbase/client'
-import type { AdminRequest } from './request-contract'
 import type { AdminTransport } from './transport'
 import { COLD_START_READ_RETRY, retryTransport } from '@weapp/shared/retry'
 import { runtimeConfig } from '../../config/runtime'

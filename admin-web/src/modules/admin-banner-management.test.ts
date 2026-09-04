@@ -3,7 +3,6 @@ import { describe, it } from 'node:test'
 import type { AdminRequest } from './admin-read-contracts.ts'
 import {
   ADMIN_BANNER_MUTATION_ACTIONS,
-  ADMIN_BANNER_QUERY_ACTIONS,
   buildBannerMutationInput,
   createBannerMutationDefinition,
   loadBannerDetail,
@@ -49,9 +48,6 @@ describe('admin Banner management', () => {
       'mip.admin.banners.list': { items: [banner], truncated: true },
     }, calls))
 
-    assert.deepEqual(ADMIN_BANNER_QUERY_ACTIONS, [
-      'mip.admin.banners.session', 'mip.admin.banners.list', 'mip.admin.banners.get',
-    ])
     assert.deepEqual(calls, [
       { action: 'mip.admin.banners.session', input: {} },
       {

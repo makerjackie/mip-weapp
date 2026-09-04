@@ -3,7 +3,6 @@
 const cloud = require('wx-server-sdk')
 const { createHandler } = require('./domain/handler')
 const { createGameRepository } = require('./domain/repository')
-const { createGameService } = require('./domain/service')
 const { assertFullAccessReady, configuredAgreements } = require('./lib/full-access')
 const { resolveCaller, trustedWechatIdentity } = require('./lib/identity')
 const { mysqlDatabase } = require('./lib/mysql')
@@ -20,7 +19,7 @@ const allowedAppIds = new Set(
   String(process.env.MIP_ALLOWED_APP_IDS || '').split(',').map(value => value.trim()).filter(Boolean),
 )
 const database = mysqlDatabase()
-const service = createGameService(createGameRepository(database))
+const service = createGameRepository(database)
 const outboxMutationActions = new Set(['admin.finalizeWeeklyMatch', 'drawBlindBox'])
 const outboxWakeup = createOutboxWakeup({
   cloud,

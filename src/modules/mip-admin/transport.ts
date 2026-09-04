@@ -1,4 +1,4 @@
-import type { AdminRequest, AdminRequestInput } from './request-contract'
+import type { AdminRequest, AdminRequestInput } from '@mip/admin-contracts'
 import { MipAdminError } from './error'
 
 export interface AdminTransport {

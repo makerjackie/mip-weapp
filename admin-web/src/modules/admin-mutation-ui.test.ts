@@ -4,7 +4,6 @@ import { createMutationIntent } from './admin-mutations.ts'
 import {
   createMutationDefinition,
   mutationInput,
-  mutationSummary,
   type MutationState,
 } from './admin-mutation-ui.ts'
 
@@ -26,7 +25,7 @@ describe('admin mutation UI model', () => {
     assert.equal(member.values.expectedChainVersion, '9')
   })
 
-  it('builds exact neutral inputs and summaries for reviewed writes', () => {
+  it('builds exact neutral inputs for reviewed writes', () => {
     const member = state('mip.admin.memberships.grant', { durationMonths: '12', expectedChainVersion: '9', reason: '历史会员权益补录' })
     const event = state('mip.admin.events.clone', { expectedVersion: '4' })
     const publish = state('mip.admin.events.changeStatus', { expectedVersion: '4', status: 'PUBLISHED' })
@@ -39,8 +38,6 @@ describe('admin mutation UI model', () => {
     assert.deepEqual(mutationInput(archive, archive.values), { eventId: 'resource-1', expectedVersion: 4, reason: '重复草稿' })
     assert.deepEqual(mutationInput(reminder, reminder.values), { eventId: 'resource-1', expectedVersion: 4, sendWechatReminder: true })
     assert.deepEqual(mutationInput(refund, refund.values), { orderId: 'resource-1', reason: '重复支付' })
-    assert.equal(mutationSummary('mip.admin.events.clone', event.values), '根据当前活动创建草稿')
-    assert.equal(mutationSummary('mip.admin.events.changeStatus', publish.values), '发布活动')
   })
 
   it('uses the requested status and requires a reason for event archival', () => {

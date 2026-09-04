@@ -79,22 +79,6 @@ export interface BadgeCollection {
   items: BadgeCollectionItem[]
 }
 
-export interface GrowthEntryIntent {
-  userId: UserId
-  rule: GrowthRule
-  sourceEventId: string
-  sourceEventType: string
-  awardedToday: number
-}
-
-export interface GrowthEntryProjection {
-  metric: GrowthMetric
-  requestedDelta: number
-  appliedDelta: number
-  balanceAfter: number
-  capped: boolean
-}
-
 export interface MipGrowthGateway {
   getSnapshot: () => Promise<GrowthSnapshot>
   listEntries: (cursor?: string, limit?: number) => Promise<GrowthEntryPage>

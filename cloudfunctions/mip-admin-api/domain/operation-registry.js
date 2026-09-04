@@ -20,7 +20,6 @@ const OPERATION_OWNERS = Object.freeze([
   'MEDIA',
   'APPLICATION_WORKFLOW',
 ])
-const healthOperation = Object.freeze({ action: 'health', owner: 'SYSTEM', kind: 'QUERY' })
 const manifestKeys = new Set(['owner', 'operations'])
 const operationKeys = new Set(['action', 'kind', 'method', 'sessionFirst', 'usesInput', 'wakesOutbox'])
 
@@ -191,7 +190,6 @@ module.exports = {
   OPERATION_OWNERS,
   createOperationDispatcher,
   createOperationRegistry,
-  healthOperation,
   operationByAction: operationRegistry.operationByAction,
   operationCatalog: operationRegistry.operationCatalog,
   operationRegistry,

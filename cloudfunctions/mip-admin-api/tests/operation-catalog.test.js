@@ -5,11 +5,8 @@ const { describe, it } = require('node:test')
 const {
   OPERATION_KINDS,
   OPERATION_OWNERS,
-  healthOperation,
   operationByAction,
   operationCatalog,
-} = require('../domain/operation-catalog')
-const {
   createOperationDispatcher,
   createOperationRegistry,
   outboxMutationActions,
@@ -269,8 +266,6 @@ describe('admin operation catalog', () => {
     assert.equal(operationByAction.health, undefined)
     assert.equal(operationByAction.toString, undefined)
     assert.equal(Object.getPrototypeOf(operationByAction), null)
-    assert.deepEqual(healthOperation, { action: 'health', owner: 'SYSTEM', kind: 'QUERY' })
-
     for (const operation of operationCatalog) {
       const [owner, kind, method, mode] = expectedOperations[operation.action]
       assert.equal(operation.owner, owner, operation.action)
@@ -311,8 +306,6 @@ describe('admin operation catalog', () => {
   it('freezes every registry surface and accepts only legal owner and kind values', () => {
     assert.equal(Object.isFrozen(operationCatalog), true)
     assert.equal(Object.isFrozen(operationByAction), true)
-    assert.equal(Object.isFrozen(healthOperation), true)
-
     for (const operation of operationCatalog) {
       assert.equal(OPERATION_OWNERS.includes(operation.owner), true)
       assert.equal(OPERATION_KINDS.includes(operation.kind), true)

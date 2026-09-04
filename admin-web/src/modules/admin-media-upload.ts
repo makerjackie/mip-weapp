@@ -99,13 +99,6 @@ export function availableAdminMediaPurposeOptions(grants: readonly AdminMediaCap
   ))
 }
 
-export function hasAdminMediaUploadAccess(grants: readonly AdminMediaCapabilityGrant[] = []) {
-  return ADMIN_MEDIA_PURPOSE_OPTIONS.some(option => hasPlatformMediaCapability(
-    grants,
-    ADMIN_MEDIA_PURPOSE_CAPABILITIES[option.value],
-  ))
-}
-
 export function hasPlatformMediaCapability(
   grants: readonly AdminMediaCapabilityGrant[],
   capability: string,
