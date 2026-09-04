@@ -100,9 +100,9 @@ describe('Web login mini-program code route', () => {
   })
 
   it('fails closed for provider errors and invalid image bytes', async () => {
-    for (const getUnlimited of [
-      async () => { throw new Error('provider detail') },
-      async () => ({ buffer: Buffer.from('not-an-image') }),
+    for (const [getUnlimited, reason] of [
+      [async () => { throw new Error('provider detail') }, 'provider detail'],
+      [async () => ({ buffer: Buffer.from('not-an-image') }), 'WEB_LOGIN_QR_INVALID_RESPONSE'],
     ]) {
       const route = createWebLoginQrCodeRoute({
         allowedAppIds: new Set([APP_ID]),
@@ -114,7 +114,12 @@ describe('Web login mini-program code route', () => {
       })
       assert.deepEqual(await route(envelope()), {
         ok: false,
-        error: { code: 'WEB_LOGIN_QR_UNAVAILABLE', message: '小程序码暂时无法生成', retryable: true },
+        error: {
+          code: 'WEB_LOGIN_QR_UNAVAILABLE',
+          message: '小程序码暂时无法生成',
+          retryable: true,
+          diagnostic: { reason },
+        },
       })
     }
   })

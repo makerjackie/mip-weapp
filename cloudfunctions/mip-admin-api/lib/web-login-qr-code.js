@@ -33,6 +33,9 @@ function createWebLoginQrCodeRoute({
     catch (error) {
       const authenticationFailure = error?.message === 'WEB_LOGIN_QR_AUTH_REQUIRED'
       const replayed = error?.message === 'WEB_BFF_REPLAYED'
+      const diagnostic = !authenticationFailure && !replayed
+        ? providerDiagnostic(error)
+        : null
       return {
         ok: false,
         error: {
@@ -43,6 +46,7 @@ function createWebLoginQrCodeRoute({
             ? '请求未通过验证'
             : replayed ? '请求已处理' : '小程序码暂时无法生成',
           retryable: !authenticationFailure && !replayed,
+          ...(diagnostic ? { diagnostic } : {}),
         },
       }
     }
@@ -136,6 +140,32 @@ function binaryBuffer(value) {
   if (ArrayBuffer.isView(value)) return Buffer.from(value.buffer, value.byteOffset, value.byteLength)
   if (value && value.type === 'Buffer' && Array.isArray(value.data)) return Buffer.from(value.data)
   return null
+}
+
+function providerDiagnostic(error) {
+  const code = safeDiagnosticText(
+    error?.errCode ?? error?.errcode ?? error?.code ?? error?.errorCode,
+    64,
+  )
+  const reason = safeDiagnosticText(
+    error?.errMsg ?? error?.errmsg ?? error?.message,
+    160,
+  )
+  if (!code && !reason) return null
+  return {
+    ...(code ? { code } : {}),
+    ...(reason ? { reason } : {}),
+  }
+}
+
+function safeDiagnosticText(value, maximum) {
+  if (!['string', 'number'].includes(typeof value)) return ''
+  return String(value)
+    .replace(/(access[_ -]?token|secret|password|authorization)(\s*[:=]\s*)[^\s,;]+/gi, '$1$2[redacted]')
+    .replace(/\b[A-Za-z0-9_-]{32,}\b/g, '[redacted]')
+    .replace(/[\r\n\t]+/g, ' ')
+    .trim()
+    .slice(0, maximum)
 }
 
 function isPlainRecord(value) {
