@@ -447,10 +447,18 @@ export function createAdminBff(
       })
     }
     catch {
+      console.error('[mip-admin-bff] login QR upstream fetch failed')
       return ''
     }
     const payload = await safeJson(upstream)
-    if (!upstream.ok || !validLoginQrCodePayload(payload)) return ''
+    const validPayload = validLoginQrCodePayload(payload)
+    if (!upstream.ok || !validPayload) {
+      console.error('[mip-admin-bff] login QR upstream response rejected', {
+        status: upstream.status,
+        validPayload,
+      })
+      return ''
+    }
     return `data:${payload.data.contentType};base64,${payload.data.imageBase64}`
   }
 
