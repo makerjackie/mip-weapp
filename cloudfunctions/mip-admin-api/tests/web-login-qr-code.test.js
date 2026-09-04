@@ -19,6 +19,10 @@ function png() {
   return Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0])
 }
 
+function jpeg() {
+  return Buffer.from([0xff, 0xd8, 0xff, 0, 0, 0])
+}
+
 function envelope(overrides = {}) {
   const unsigned = {
     transport: 'MIP_WEB_LOGIN_QR_V1',
@@ -69,6 +73,48 @@ describe('Web login mini-program code route', () => {
     assert.deepEqual(result, {
       ok: true,
       data: { contentType: 'image/png', imageBase64: png().toString('base64') },
+    })
+  })
+
+  it('uses server-side WeChat credentials without relying on the CloudBase OpenAPI token', async () => {
+    const directAppId = 'wx0123456789abcdef'
+    const requests = []
+    let cloudCalls = 0
+    const route = createWebLoginQrCodeRoute({
+      allowedAppIds: new Set([directAppId]),
+      cloud: { openapi: { wxacode: { getUnlimited: async () => { cloudCalls += 1 } } } },
+      fetchImpl: async (url, init = {}) => {
+        requests.push({ url: String(url), init })
+        if (String(url).startsWith('https://api.weixin.qq.com/cgi-bin/token?')) {
+          return new Response(JSON.stringify({ access_token: 't'.repeat(64), expires_in: 7200 }), {
+            headers: { 'content-type': 'application/json' },
+          })
+        }
+        return new Response(jpeg(), { headers: { 'content-type': 'image/jpeg' } })
+      },
+      replayGuard: { consume: async () => {} },
+      secret: SECRET,
+      stage: 'staging',
+      now: () => NOW,
+      wechatAppId: directAppId,
+      wechatAppSecret: 's'.repeat(32),
+    })
+
+    const result = await route(envelope({ appId: directAppId }))
+
+    assert.equal(cloudCalls, 0)
+    assert.equal(requests.length, 2)
+    assert.equal(requests[0].url.includes('secret='), true)
+    assert.deepEqual(JSON.parse(requests[1].init.body), {
+      scene: TOKEN,
+      page: WEB_LOGIN_QR_PAGE,
+      width: 430,
+      check_path: false,
+      env_version: 'trial',
+    })
+    assert.deepEqual(result, {
+      ok: true,
+      data: { contentType: 'image/jpeg', imageBase64: jpeg().toString('base64') },
     })
   })
 

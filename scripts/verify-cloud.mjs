@@ -378,6 +378,8 @@ function assertRefundDispatchEnvironment(detail) {
     || String(variables.MIP_ADMIN_WEB_BFF_HMAC_SECRET || '').length < 32
     || String(variables.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET || '').length < 32
     || String(variables.MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET || '').length < 32
+    || variables.MIP_WECHAT_APP_ID !== appId
+    || variables.MIP_WECHAT_APP_SECRET !== env.MIP_WECHAT_APP_SECRET
     || new Set([
       variables.MIP_ADMIN_WEB_BFF_HMAC_SECRET,
       variables.MIP_ADMIN_WEB_LOGIN_HMAC_SECRET,

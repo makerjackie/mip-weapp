@@ -99,9 +99,12 @@ const webBffReplayGuard = createWebBffReplayGuard({ database: mysqlDatabase() })
 const webLoginQrCodeRoute = createWebLoginQrCodeRoute({
   allowedAppIds,
   cloud,
+  fetchImpl: globalThis.fetch,
   replayGuard: webBffReplayGuard,
   secret: process.env.MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET,
   stage: process.env.MIP_DEPLOYMENT_STAGE,
+  wechatAppId: process.env.MIP_WECHAT_APP_ID,
+  wechatAppSecret: process.env.MIP_WECHAT_APP_SECRET,
 })
 async function contentSafety(draft, caller) {
   const checker = cloud.openapi?.security?.msgSecCheck

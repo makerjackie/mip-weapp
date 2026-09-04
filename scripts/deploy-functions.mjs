@@ -50,6 +50,7 @@ const root = path.resolve(import.meta.dirname, '..')
 const env = loadCaseEnv(root)
 const envId = String(env.CLOUDBASE_ENV_ID || '').trim()
 const appId = String(env.MINI_PROGRAM_APP_ID || '').trim()
+const wechatAppSecret = String(env.MIP_WECHAT_APP_SECRET || '').trim()
 const functionNames = resolveMipFunctionNames(env)
 const manifest = createMipCoreFunctionManifest(functionNames)
 const requestedFunction = argumentValue('--only=')
@@ -87,6 +88,9 @@ const legacyTimerNames = Object.freeze({
 
 if (!envId || confirmedEnv !== envId || !appId) {
   throw new Error('MIP deployment requires AppID and --confirm-env=<exact CLOUDBASE_ENV_ID>')
+}
+if (wechatAppSecret.length < 16 || /[\r\n]/.test(wechatAppSecret)) {
+  throw new Error('MIP_WECHAT_APP_SECRET must be configured for server-side mini-program API access')
 }
 if (requestedFunction && deploymentManifest.length !== 1) {
   throw new Error('--only must name exactly one function from the MIP core deployment manifest')
@@ -394,6 +398,7 @@ try {
   for (const spec of deploymentManifest) {
     const envVariables = environmentForRole(spec.role, {
       agreementsJson,
+      appId,
       aiAvatarProviderFunction,
       aiAvatarProviderTimeoutMs,
       aiDraftTtlHours,
@@ -419,6 +424,7 @@ try {
       serviceAccountAdapterSecret,
       subscribeTemplatesJson,
       unionIdRebindEnabled,
+      wechatAppSecret,
     })
     const expectedConfiguration = {
       envVariables,
@@ -956,6 +962,8 @@ function environmentForRole(role, options) {
     },
     admin: {
       ...agreementEnvironment,
+      MIP_WECHAT_APP_ID: options.appId,
+      MIP_WECHAT_APP_SECRET: options.wechatAppSecret,
       MIP_TASKS_FUNCTION_NAME: options.functionNames.tasks,
       MIP_BANNERS_FUNCTION_NAME: options.functionNames.banners,
       MIP_GAME_FUNCTION_NAME: options.functionNames.game,
