@@ -70,6 +70,28 @@
   background: var(--color-brand);
 }
 
+.participants-filter-count {
+  min-width: 24rpx;
+  text-align: center;
+}
+
+.participants-private-note {
+  display: flex;
+  column-gap: 8rpx;
+  align-items: center;
+  min-height: 56rpx;
+  margin-top: 8rpx;
+  font-size: 22rpx;
+  color: var(--color-muted);
+}
+
+.participants-heart-action {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin-top: 24rpx;
+}
+
 .participants-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -163,6 +185,34 @@
   font-size: 30rpx;
   font-weight: 600;
   line-height: 1.35;
+}
+
+.participant-card__relations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  justify-content: center;
+  margin-top: 10rpx;
+}
+
+.participant-card__relation {
+  display: flex;
+  column-gap: 6rpx;
+  align-items: center;
+  min-height: 36rpx;
+  padding: 0 10rpx;
+  font-size: 20rpx;
+  line-height: 1;
+  color: var(--color-ink);
+  background: var(--color-panel-raised);
+  border: 1rpx solid var(--color-line);
+  border-radius: 999rpx;
+}
+
+.participant-card__relation--sent {
+  color: var(--color-brand);
+  background: var(--color-brand-soft);
+  border-color: var(--color-brand-soft);
 }
 
 .participant-card__meta {

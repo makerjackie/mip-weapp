@@ -7,7 +7,7 @@ import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-
 import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
 import { openWechatChannelsDestination } from '../../../../platform/wechat/channels'
-import { formatChineseDateTime } from '../../../../utils/date'
+import { formatChineseDateTime, formatChineseMonthDay, formatChineseMonthDayTime, formatLocalTime } from '../../../../utils/date'
 
 const POSTER_WIDTH = 375
 const POSTER_HEIGHT = 560
@@ -61,15 +61,26 @@ function accessText(event: MipEventDetail) {
   return '免费活动'
 }
 
+function compactEventTime(startsAt: string, endsAt: string) {
+  const startsDay = formatChineseMonthDay(startsAt)
+  const endsDay = formatChineseMonthDay(endsAt)
+  if (!startsDay || !endsDay) {
+    return ''
+  }
+  return startsDay === endsDay
+    ? `${startsDay} ${formatLocalTime(startsAt)}-${formatLocalTime(endsAt)}`
+    : `${formatChineseMonthDayTime(startsAt)} 至 ${formatChineseMonthDayTime(endsAt)}`
+}
+
 function primaryAction(event: MipEventDetail, hasCheckInScene = false) {
   if (event.status === 'CANCELLED') {
     return { key: 'disabled', label: '活动已取消' }
   }
+  if (event.registrationStatus === 'ATTENDED') {
+    return { key: 'interact', label: '与你互动' }
+  }
   if (event.status === 'ENDED') {
     return { key: 'disabled', label: '活动已结束' }
-  }
-  if (event.registrationStatus === 'ATTENDED') {
-    return { key: 'interact', label: '心动与反馈' }
   }
   if (event.registrationStatus === 'REGISTERED') {
     if (hasCheckInScene) {
@@ -100,19 +111,22 @@ Page({
     descriptionNodes: [] as ReturnType<typeof eventRichTextNodes>,
     startsText: '',
     endsText: '',
+    shareTimeText: '',
     accessText: '',
     locationText: '',
     primaryAction: 'disabled',
     primaryLabel: '',
     busy: false,
     message: '',
-    invitationToken: '',
     inviteRef: '',
     incomingInvitationToken: '',
     invitationLoading: false,
     shareOpen: false,
     posterBusy: false,
     posterPath: '',
+    shareOverlayProps: {
+      backgroundColor: 'rgba(8, 8, 8, 0.7)',
+    },
     hasCheckInIntent: false,
     onlineMode: false,
     onlineUrl: '',
@@ -266,6 +280,7 @@ Page({
       descriptionNodes: eventRichTextNodes(event.description),
       startsText: formatChineseDateTime(event.startsAt),
       endsText: formatChineseDateTime(event.endsAt),
+      shareTimeText: compactEventTime(event.startsAt, event.endsAt),
       accessText: accessText(event),
       locationText: [event.cityName, event.venueName, event.address].filter(Boolean).join(' · ')
         || (event.mode === 'ONLINE' ? '线上活动' : '地点待公布'),
@@ -341,11 +356,9 @@ Page({
     }
     const lines = [
       event.title,
-      this.data.startsText,
-      this.data.locationText,
-      event.summary,
-      '请在微信中打开 MIP 小程序查看活动详情。',
-      `小程序路径：${eventInvitationPath(this.data.eventId, this.data.inviteRef)}`,
+      `时间：${this.data.shareTimeText}`,
+      `地址：${this.data.locationText}`,
+      `报名链接：${eventInvitationPath(this.data.eventId, this.data.inviteRef)}`,
     ].filter(Boolean)
     wx.setClipboardData({
       data: lines.join('\n'),
@@ -356,7 +369,17 @@ Page({
     })
   },
 
-  async createInvitationPoster() {
+  copyEventLink() {
+    wx.setClipboardData({
+      data: eventInvitationPath(this.data.eventId, this.data.inviteRef),
+      success: () => {
+        this.closeShare()
+        wx.showToast({ title: '活动链接已复制', icon: 'success' })
+      },
+    })
+  },
+
+  async downloadInvitationCode() {
     const event = this.data.event
     if (!event || this.data.posterBusy) {
       return
@@ -366,9 +389,13 @@ Page({
       const credential = await mipEventsModule.createInvitationCode(this.data.eventId)
       const posterPath = await this.drawInvitationPoster(credential.codeUrl)
       this.setData({ posterPath })
+      await wx.saveImageToPhotosAlbum({ filePath: posterPath })
+      this.closeShare()
+      wx.showToast({ title: '二维码已保存', icon: 'success' })
     }
-    catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '邀请海报生成失败' })
+    catch {
+      this.setData({ message: '活动二维码暂时无法保存，请稍后重试。' })
+      wx.showToast({ title: '保存失败，请检查相册权限', icon: 'none' })
     }
     finally {
       this.setData({ posterBusy: false })
@@ -560,6 +587,13 @@ Page({
       return
     }
     caseNavigateTo({ url: `/packages/member/mip-events/interaction/index?eventId=${encodeURIComponent(this.data.eventId)}` })
+  },
+
+  openFeedback() {
+    if (!this.data.event?.canInteract) {
+      return
+    }
+    caseNavigateTo({ url: `/packages/member/mip-events/feedback/index?eventId=${encodeURIComponent(this.data.eventId)}` })
   },
 
   openAlbum() {

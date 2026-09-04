@@ -812,6 +812,18 @@
       "altersTables": [
         "mip_ai_drafts"
       ]
+    },
+    {
+      "version": "20260903600000",
+      "name": "event_feedback_answers",
+      "sql": "database/mysql/mip/060_event_feedback_answers.sql",
+      "sqlSha256": "010afcce77d4b7f6c2126ec39ce196018b41345fd2334028bf74928458487e76",
+      "rollback": "database/mysql/mip/rollback/060_event_feedback_answers.sql",
+      "rollbackSha256": "59a29bf4e38de42ad62a8f1a22be663214d53858048049492f17d2d7f30b4920",
+      "createsTables": [],
+      "altersTables": [
+        "mip_event_feedback"
+      ]
     }
   ]
 }

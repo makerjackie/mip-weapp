@@ -47,7 +47,7 @@ if (validateOnly) {
     ownerUserId: fakeOwnerUserId,
   })]
   assertSeedSqlScope(statements)
-  console.log(JSON.stringify({ valid: true, developmentOnly: true, writeStatements: statements.length }))
+  console.log(JSON.stringify({ valid: true, stagingConfirmed: command.stagingConfirmed, writeStatements: statements.length }))
   process.exit(0)
 }
 
@@ -59,10 +59,10 @@ const phoneHash = resolveOwnerPhoneHash({
 const agreements = currentAgreementVersions(env.MIP_AGREEMENTS_JSON)
 
 bindAndRequireMysqlEnvironment(root, command.envId, {
-  development: true,
+  development: ['development', 'test'].includes(command.stage),
   stage: command.stage,
 })
-assertTablesExist(['mip_users', 'mip_profiles', 'mip_private_profiles', 'mip_agreement_acceptances', 'mip_events', 'mip_event_registrations'])
+assertTablesExist(['mip_users', 'mip_profiles', 'mip_private_profiles', 'mip_agreement_acceptances', 'mip_app_settings', 'mip_events', 'mip_event_registrations'])
 
 const candidates = callFixtureCloudbase('queryMysqlDatabase', {
   action: 'runQuery',
@@ -87,47 +87,44 @@ const preflight = callFixtureCloudbase('queryMysqlDatabase', {
 }, 'Owner event interaction fixture preflight failed')
 const preflightRow = findRow(preflight, [
   'eventCrossApp',
-  'registrationCrossApp',
   'eventSameApp',
+  'eventReadyRows',
   'fixedRegistrationRows',
-  'fixedOwnerEventRows',
-  'fixedReadyRows',
-  'ownerEventConflictRows',
+  'ownerEventRows',
 ])
 if (!preflightRow) {
   throw new Error('Owner event interaction fixture preflight returned no row')
 }
 const preflightCounts = numericFields(preflightRow)
-if (preflightCounts.eventCrossApp > 0 || preflightCounts.registrationCrossApp > 0) {
-  throw new Error('Owner event interaction fixture identity belongs to another AppID')
+if (preflightCounts.eventCrossApp > 0) {
+  throw new Error('Owner event interaction fixture event belongs to another AppID')
 }
 if (preflightCounts.eventSameApp !== 1) {
   throw new Error('Demo interaction event is missing from the confirmed AppID')
 }
-if (preflightCounts.ownerEventConflictRows > 0) {
-  throw new Error('Owner already has another registration for the demo interaction event; no write was attempted')
+if (preflightCounts.eventReadyRows !== 1) {
+  throw new Error('Demo interaction event does not match the fixed ended READY demo fixture; no write was attempted')
+}
+if (preflightCounts.ownerEventRows !== 0) {
+  throw new Error('Owner already has a registration for the demo interaction event; no write was attempted')
+}
+if (preflightCounts.fixedRegistrationRows !== 0) {
+  throw new Error('Fixed registration ID is already occupied; no write was attempted')
 }
 
-let wrote = false
-if (preflightCounts.fixedRegistrationRows === 0) {
-  const statement = buildOwnerInteractionInsertQuery({
-    appId: command.appId,
-    eventId: command.eventId,
-    registrationId: command.registrationId,
-    ownerUserId,
-  })
-  assertSeedSqlScope([statement])
-  const result = callFixtureCloudbase('manageMysqlDatabase', {
-    action: 'runStatement',
-    sql: statement,
-  }, 'Owner event interaction fixture write failed')
-  if (result?.success === false) {
-    throw new Error('Owner event interaction fixture write failed')
-  }
-  wrote = true
-}
-else if (preflightCounts.fixedOwnerEventRows !== 1 || preflightCounts.fixedReadyRows !== 1) {
-  throw new Error('Fixed registration ID exists with different ownership or status; no write was attempted')
+const statement = buildOwnerInteractionInsertQuery({
+  appId: command.appId,
+  eventId: command.eventId,
+  registrationId: command.registrationId,
+  ownerUserId,
+})
+assertSeedSqlScope([statement])
+const result = callFixtureCloudbase('manageMysqlDatabase', {
+  action: 'runStatement',
+  sql: statement,
+}, 'Owner event interaction fixture write failed')
+if (result?.success === false) {
+  throw new Error('Owner event interaction fixture write failed')
 }
 
 const verification = callFixtureCloudbase('queryMysqlDatabase', {
@@ -143,7 +140,7 @@ const verificationRow = findRow(verification, ['ready'])
 const summary = ownerInteractionFixtureSummary({
   ready: Number(verificationRow?.ready),
 })
-console.log(JSON.stringify({ ...summary, wrote }, null, 2))
+console.log(JSON.stringify({ ...summary, wrote: true }, null, 2))
 
 function assertTablesExist(tableNames) {
   const response = callFixtureCloudbase('queryMysqlDatabase', {

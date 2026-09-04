@@ -873,6 +873,7 @@ async function projectHeart(database, event) {
   assertAggregate(event, 'EVENT_HEART')
   const row = await database.one(
     `SELECT h.target_user_id, h.event_id, h.status, h.version,
+            h.updated_at AS heart_updated_at,
             e.title AS event_title
      FROM mip_event_hearts h
      INNER JOIN mip_events e ON e.app_id = h.app_id AND e.id = h.event_id
@@ -895,8 +896,8 @@ async function projectHeart(database, event) {
         channel: 'WECHAT_SUBSCRIPTION',
         templateKey: 'HEART_RECEIVED',
         fields: {
-          title: boundedText(row.event_title, 100),
-          status: '收到新的心动选择',
+          status: `活动“${boundedText(row.event_title, 70)}”收到新的心动选择`,
+          receivedAt: notificationDateTime(row.heart_updated_at),
         },
       },
     }),
@@ -1275,6 +1276,7 @@ function checkInExternal(title, occurredAt) {
     fields: {
       title: boundedText(title, 100),
       checkedAt: notificationDateTime(occurredAt),
+      participationMethod: '现场签到',
       status: '签到成功',
     },
   }

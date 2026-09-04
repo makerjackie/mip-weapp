@@ -156,6 +156,7 @@ describe('outbox event projector', () => {
         target_user_id: '51000000-0000-4000-8000-000000000001',
         event_id: '52000000-0000-4000-8000-000000000001',
         event_title: 'MIP 城市交流活动',
+        heart_updated_at: '2026-08-25T02:00:00.000Z',
         status: 'ACTIVE',
         version: 3,
       }),
@@ -164,8 +165,8 @@ describe('outbox event projector', () => {
       channel: 'WECHAT_SUBSCRIPTION',
       templateKey: 'HEART_RECEIVED',
       fields: {
-        title: 'MIP 城市交流活动',
-        status: '收到新的心动选择',
+        status: '活动“MIP 城市交流活动”收到新的心动选择',
+        receivedAt: '2026-08-25 10:00',
       },
     })
   })
@@ -267,6 +268,7 @@ describe('outbox event projector', () => {
       fields: {
         title: 'MIP 城市交流活动',
         checkedAt: '2026-08-24 16:30',
+        participationMethod: '现场签到',
         status: '签到成功',
       },
     })

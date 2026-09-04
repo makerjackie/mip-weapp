@@ -73,7 +73,7 @@ describe('MIP event experience contracts', () => {
     expect(isEventAccessRequirementError(null)).toBe(false)
 
     const detail = source('src/packages/member/mip-events/detail/index.ts')
-    expect(detail).toContain('`小程序路径：${eventInvitationPath(')
+    expect(detail).toContain('`报名链接：${eventInvitationPath(')
     expect(detail).toContain('requestWechatSubscription(\'CHECKIN_RESULT\')')
   })
 

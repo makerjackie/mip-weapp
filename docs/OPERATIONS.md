@@ -6,7 +6,7 @@ React Web 是日常运营和完整管理的唯一界面，入口为 `admin-web/`
 
 数据库、云函数、支付、Owner 和演示数据的首次初始化统一按 [部署手册](DEPLOYMENT.md) 执行。本页只保留上线后的运营和受控恢复命令。
 
-为在微信开发者工具中验证当前非演示 Owner 的活动互动页，可在 development/test 环境单独创建一条固定的 `ATTENDED` 历史报名：
+为在微信开发者工具中验证当前非演示 Owner 的活动互动页，可在 development/test 环境单独创建一条固定的 `ATTENDED` 历史报名；MIP 专用 staging 还必须追加 `--confirm-staging-demo`：
 
 ```bash
 pnpm event:interaction:seed -- \
@@ -17,9 +17,9 @@ pnpm event:interaction:seed -- \
 
 只检查参数和写入 SQL，不连接 CloudBase：在上述命令后追加 `--validate-only`。
 
-该命令从 `.env.local` 的 `MIP_OWNER_PHONE` 通过与 Owner bootstrap 相同的 AppID 范围哈希定位当前 Owner，并排除 `seed.demo.json` 中的演示用户。它只允许 `development`/`test`、TEST catalog 和非 live payment，固定活动为已有演示历史活动，执行前检查活动和报名 ID 是否属于其他 AppID、当前 Owner 是否已有该活动报名以及固定报名是否被其他事实占用；发现冲突立即停止，不覆盖现有报名。写入后会重新查询 `ATTENDED` 与版本状态，只输出不含 AppID、环境、用户 ID 或手机号的结果。
+该命令从 `.env.local` 的 `MIP_OWNER_PHONE` 通过与 Owner bootstrap 相同的 AppID 范围哈希定位当前 Owner，并排除 `seed.demo.json` 中的演示用户。它只允许 `development`/`test`，或带唯一 `--confirm-staging-demo` 的 MIP 专用 staging；所有允许环境都必须使用 TEST catalog 和非 live payment，非 staging 禁止携带该确认参数，production 永远禁止。固定活动必须属于当前 AppID，标题精确为“MIP 城市互动交流会”，状态为 `ENDED`，类型为 `FREE`，结束时间早于数据库当前 UTC 时间，并登记在状态为 `READY` 的 demo seed manifest 中。执行前还会确认当前 Owner 没有该活动的任何报名，且固定报名 ID 在所有 AppID 中均未占用；任一条件不满足都会停止。
 
-该报名是本地运行时验证夹具，不修改 `seed.demo.json`，不创建签到、心动或反馈事实，不用于 production/live，也不代表生产业务数据。未来若要移除，需由数据库负责人按固定报名 ID 在确认的 development/test 环境中单独处理；不要通过通用 seed 或非 MIP 表清理。
+该命令只向 `mip_event_registrations` 插入一条 `ATTENDED` 报名，写入后重新查询固定状态；输出不含 AppID、环境、用户 ID 或手机号。该报名是运行时验证夹具，不修改 `seed.demo.json`，不创建签到、心动、反馈、成长、outbox 或审计事实，不用于 production/live，也不代表生产业务数据。未来若要移除，需由数据库负责人按固定报名 ID 在确认的 development/test/staging 环境中单独处理；不要通过通用 seed 或非 MIP 表清理。
 
 核心函数需要最小化更新时，使用 `pnpm cloud:deploy -- --confirm-env=<EnvID> --confirm-runtime-user=<exact-runtime-user> --only=<exact mip-* function name>`；目标必须精确命中核心部署清单中的单个函数。
 

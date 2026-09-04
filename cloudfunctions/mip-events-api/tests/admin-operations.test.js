@@ -105,6 +105,13 @@ describe('MIP event administration boundary', () => {
           nickname: '林野',
           rating: 5,
           body: '活动安排清晰',
+          answers_json: JSON.stringify({
+            recommendation: 'RECOMMEND',
+            roleKeys: ['connector'],
+            joinIntent: 'JOIN_NOW',
+            explorationMethods: ['COMMUNITY_CHAT'],
+            rosterConsent: 'MATCH_OPPORTUNITIES',
+          }),
           version: 1,
           submitted_at: new Date('2026-08-24T10:00:00.000Z'),
           updated_at: new Date('2026-08-24T10:00:00.000Z'),
@@ -113,6 +120,7 @@ describe('MIP event administration boundary', () => {
           nickname: '周舟',
           rating: 5,
           body: '交流有效',
+          answers_json: null,
           version: 2,
           submitted_at: new Date('2026-08-23T10:00:00.000Z'),
           updated_at: new Date('2026-08-23T10:00:00.000Z'),
@@ -128,6 +136,8 @@ describe('MIP event administration boundary', () => {
     })
     assert.equal(result.items.length, 1)
     assert.equal(result.items[0].body, '活动安排清晰')
+    assert.equal(result.items[0].answers.recommendation, 'RECOMMEND')
+    assert.match(calls.at(-1).sql, /f\.answers_json/)
     assert.match(calls.at(-1).sql, /f\.rating = \?/)
     assert.equal(calls.at(-1).params[2], 5)
     assert.match(result.nextCursor, /^[A-Za-z0-9_-]+$/)

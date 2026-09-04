@@ -2,11 +2,11 @@
   "schemaVersion": 2,
   "case": "mip-weapp",
   "coverage": "full",
-  "routeCount": 68,
+  "routeCount": 69,
   "notes": [
     "Canonical runtime route contract for this membership product.",
     "Must match src/app.json page inventory exactly.",
-    "config/project.json routes must list the same 68 paths.",
+    "config/project.json routes must list the same 69 paths.",
     "verify-runtime.mjs loads this file; error is never a success state for data routes."
   ],
   "deviceRequiredCapabilities": [
@@ -241,6 +241,23 @@
       ],
       "visibleAssertion": {
         "selector": "#admin-dashboard-page #admin-dashboard-forbidden-state"
+      }
+    },
+    {
+      "id": "conflict",
+      "route": "packages/admin/event-registrations/index",
+      "patch": {
+        "state": "conflict",
+        "message": "参与者状态已更新"
+      },
+      "dataAssertions": [
+        {
+          "path": "state",
+          "equals": "conflict"
+        }
+      ],
+      "visibleAssertion": {
+        "selector": "#admin-event-registrations-page #admin-event-registrations-conflict-state"
       }
     },
     {
@@ -898,7 +915,31 @@
       "selector": "#mip-event-interaction-page",
       "group": "member",
       "kind": "data",
-      "states": ["loading", "ready", "error"],
+      "states": ["loading", "ready", "blocked", "error"],
+      "readyAssertion": "state === 'ready'",
+      "query": ["eventId"],
+      "queryFixture": {
+        "sourceRoute": "packages/member/mip-events/mine/index",
+        "sourceQuery": {
+          "category": "ATTENDED"
+        },
+        "dataPath": "registrations",
+        "where": {
+          "status": "ATTENDED"
+        },
+        "values": {
+          "eventId": "event.id"
+        }
+      }
+    },
+    {
+      "id": "M09F",
+      "name": "活动反馈",
+      "path": "packages/member/mip-events/feedback/index",
+      "selector": "#mip-event-feedback-page",
+      "group": "member",
+      "kind": "data",
+      "states": ["loading", "ready", "access", "blocked", "error", "conflict"],
       "readyAssertion": "state === 'ready'",
       "query": ["eventId"],
       "queryFixture": {

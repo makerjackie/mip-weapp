@@ -105,6 +105,10 @@
       "pathName": "packages/member/mip-events/interaction/index"
     },
     {
+      "name": "活动反馈",
+      "pathName": "packages/member/mip-events/feedback/index"
+    },
+    {
       "name": "活动评论",
       "pathName": "packages/member/mip-events/comments/index"
     },

@@ -1,6 +1,14 @@
 import type { HeartCandidate, HeartState } from '../src/modules/mip-events'
+import fs from 'node:fs'
+import path from 'node:path'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { MipEventsError } from '../src/modules/mip-events'
+
+const root = path.resolve(import.meta.dirname, '..')
+const interactionView = fs.readFileSync(
+  path.join(root, 'src/packages/member/mip-events/interaction/index.wxml'),
+  'utf8',
+)
 
 const eventsModule = vi.hoisted(() => ({
   getFeedback: vi.fn(),
@@ -77,6 +85,7 @@ function candidate(participantRef: string, selected: boolean): HeartCandidate {
   return {
     nickname: participantRef,
     participantRef,
+    profileRef: `p1.${participantRef}`,
     selected,
   }
 }
@@ -105,6 +114,63 @@ beforeEach(() => {
 })
 
 describe('MIP event heart UI state', () => {
+  it('uses a selection label and keeps the selected count visible', () => {
+    expect(interactionView).toContain('>选择心动 {{heart.targetRef ? 1 : 0}}</view>')
+    expect(interactionView).not.toContain('>我的心动 {{heart.targetRef ? 1 : 0}}</view>')
+  })
+
+  it('renders attendance failures as a blocked state', async () => {
+    eventsModule.listHeartCandidates.mockRejectedValueOnce(
+      new MipEventsError('FORBIDDEN', '完成签到后可以使用本场互动'),
+    )
+    eventsModule.getHeart.mockResolvedValueOnce(heart(1))
+    eventsModule.getFeedback.mockResolvedValueOnce(null)
+    const page = createPage({ eventId: '60000000-0000-4000-8000-000000000001' })
+
+    await callPage(page, 'loadInteraction')
+
+    expect(page.data.state).toBe('blocked')
+    expect(page.data.errorDescription).toBe('完成签到后可使用活动互动功能。')
+    expect(interactionView).toContain('state === \'blocked\'')
+    expect(interactionView).toContain('description="{{errorDescription}}"')
+  })
+
+  it('shows retryable service errors without replacing them with attendance guidance', async () => {
+    const serviceMessage = '活动服务暂时不可用，请稍后重试'
+    eventsModule.listHeartCandidates.mockRejectedValueOnce(
+      new MipEventsError('SERVICE_UNAVAILABLE', serviceMessage, true),
+    )
+    eventsModule.getHeart.mockResolvedValueOnce(heart(1))
+    eventsModule.getFeedback.mockResolvedValueOnce(null)
+    const page = createPage({ eventId: '60000000-0000-4000-8000-000000000001' })
+
+    await callPage(page, 'loadInteraction')
+
+    expect(page.data.state).toBe('error')
+    expect(page.data.errorDescription).toBe(serviceMessage)
+    expect(interactionView).toContain('action-text="重新加载"')
+    expect(interactionView).not.toContain('请确认已完成签到后重试。')
+  })
+
+  it('moves a stale ready page into the blocked state when saving is forbidden', async () => {
+    const candidates = [candidate('candidate-token', false)]
+    const page = createPage({
+      candidates,
+      eventId: '60000000-0000-4000-8000-000000000001',
+      heart: heart(1),
+      state: 'ready',
+      visibleCandidates: candidates,
+    })
+    eventsModule.setHeart.mockRejectedValueOnce(
+      new MipEventsError('FORBIDDEN', '完成签到后可以使用本场互动'),
+    )
+
+    await callPage(page, 'saveHeartTarget', 'candidate-token')
+
+    expect(page.data.state).toBe('blocked')
+    expect(page.data.errorDescription).toBe('完成签到后可以使用本场互动')
+  })
+
   it('projects a successful selection from the submitted candidate token and cancels by selected fact', async () => {
     const candidateToken = 'candidate-token-with-one-expiry'
     const otherToken = 'other-candidate-token'

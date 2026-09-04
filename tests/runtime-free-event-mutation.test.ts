@@ -13,6 +13,7 @@ import {
   runtimeRouteDisposition,
   summarizeCommentPage,
   summarizeEventDetail,
+  summarizeFeedback,
   summarizeInteraction,
   summarizeMutationCleanup,
   summarizeRegistrationFact,
@@ -53,7 +54,7 @@ function contractWithStep(id: string, update: Record<string, unknown>) {
 
 describe('free offline event mutation runtime contract', () => {
   it('keeps the flow isolated from the read-only runtime contract', () => {
-    expect(validateFreeEventMutationContract(contract)).toEqual({ routeCount: 6, stepCount: 11 })
+    expect(validateFreeEventMutationContract(contract)).toEqual({ routeCount: 7, stepCount: 11 })
     expect(contract.connection).toMatchObject({
       allowDirectDatabaseWrites: false,
       allowProjectWarmup: false,
@@ -88,7 +89,7 @@ describe('free offline event mutation runtime contract', () => {
       },
       {
         contract: contractWithStep('member-feedback', {
-          handlers: ['changeView', 'onBodyInput', 'onRatingChange', 'saveFeedback'],
+          handlers: ['selectRating', 'selectRecommendation', 'saveFeedback'],
         }),
         message: 'member-feedback bound page handlers changed unexpectedly',
       },
@@ -539,7 +540,23 @@ describe('free event runtime evidence summaries', () => {
         activeView: 'SENT',
         candidates: [{ participantRef: sensitiveValues[3] }],
         heart: { targetRef: sensitiveValues[3], version: 2 },
-        feedback: { id: 'feedback-1', body: sensitiveValues[4], rating: 5, version: 1 },
+      }),
+      summarizeFeedback({
+        state: 'ready',
+        event: { id: eventId, title: 'secret title' },
+        feedback: {
+          id: 'feedback-1',
+          body: sensitiveValues[4],
+          rating: 5,
+          answers: {
+            recommendation: 'RECOMMEND',
+            roleKeys: ['connector'],
+            joinIntent: 'JOIN_NOW',
+            explorationMethods: ['ATTEND_EVENT'],
+            rosterConsent: 'MATCH_OPPORTUNITIES',
+          },
+          version: 1,
+        },
       }, sensitiveValues[4]),
       summarizeCommentPage({
         state: 'ready',

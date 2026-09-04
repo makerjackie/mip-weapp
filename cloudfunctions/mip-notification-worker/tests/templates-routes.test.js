@@ -71,11 +71,16 @@ test('maps logical fields through server template configuration', () => {
     },
     CHECKIN_RESULT: {
       templateId: 'checkin-template-id',
-      fields: { title: 'thing1', checkedAt: 'time2', status: 'phrase3' },
+      fields: {
+        title: 'thing1',
+        checkedAt: 'time2',
+        participationMethod: 'thing3',
+        status: 'phrase4',
+      },
     },
     HEART_RECEIVED: {
       templateId: 'heart-template-id',
-      fields: { title: 'thing1', status: 'phrase2' },
+      fields: { status: 'thing1', receivedAt: 'time2' },
     },
   }))
   const request = buildWechatRequest(templates.EVENT_REMINDER, {
@@ -93,14 +98,20 @@ test('maps logical fields through server template configuration', () => {
 
   const checkInRequest = buildWechatRequest(templates.CHECKIN_RESULT, {
     payload_json: JSON.stringify({
-      fields: { title: '城市活动', checkedAt: '2026-08-25 10:00', status: '签到成功' },
+      fields: {
+        title: '城市活动',
+        checkedAt: '2026-08-25 10:00',
+        participationMethod: '现场签到',
+        status: '签到成功',
+      },
     }),
     target_route: '/packages/member/mip-events/detail/index?eventId=20000000-0000-4000-8000-000000000001',
   }, 'openid-private')
   assert.deepEqual(checkInRequest.data, {
     thing1: { value: '城市活动' },
     time2: { value: '2026-08-25 10:00' },
-    phrase3: { value: '签到成功' },
+    thing3: { value: '现场签到' },
+    phrase4: { value: '签到成功' },
   })
 })
 

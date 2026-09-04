@@ -6,6 +6,7 @@ import {
   buildOwnerInteractionPreflightQuery,
   buildOwnerInteractionVerificationQuery,
   OWNER_INTERACTION_EVENT_ID,
+  OWNER_INTERACTION_EVENT_TITLE,
   OWNER_INTERACTION_REGISTRATION_ID,
   ownerInteractionFixtureSummary,
   resolveOwnerInteractionFixtureCommand,
@@ -44,10 +45,56 @@ describe('Owner event interaction fixture', () => {
     expect(() => resolveOwnerInteractionFixtureCommand({
       args: [`--confirm-env=mip-development`, `--confirm-app-id=${appId}`, '--confirm-owner-event-interaction'],
       env: { ...env, MIP_DEPLOYMENT_STAGE: 'production' },
-    })).toThrow('development/test')
+    })).toThrow('restricted to development/test')
+    expect(() => resolveOwnerInteractionFixtureCommand({
+      args: [
+        '--confirm-env=mip-development',
+        `--confirm-app-id=${appId}`,
+        '--confirm-owner-event-interaction',
+        '--confirm-staging-demo',
+      ],
+      env,
+    })).toThrow('staging requires')
   })
 
-  it('guards fixed event and registration IDs across AppIDs and existing owner rows', () => {
+  it('allows staging only with the exact staging confirmation', () => {
+    const env = {
+      CLOUDBASE_ENV_ID: 'mip-staging',
+      MINI_PROGRAM_APP_ID: appId,
+      MIP_ALLOWED_APP_IDS: appId,
+      MIP_DEPLOYMENT_STAGE: 'staging',
+      MIP_CATALOG_STAGE: 'TEST',
+      MIP_PAYMENT_MODE: 'disabled',
+    }
+    const baseArgs = [
+      '--confirm-env=mip-staging',
+      `--confirm-app-id=${appId}`,
+      '--confirm-owner-event-interaction',
+    ]
+    expect(() => resolveOwnerInteractionFixtureCommand({ args: baseArgs, env })).toThrow('--confirm-staging-demo')
+    expect(resolveOwnerInteractionFixtureCommand({
+      args: [...baseArgs, '--confirm-staging-demo'],
+      env,
+    })).toMatchObject({ stage: 'staging', stagingConfirmed: true })
+    expect(() => resolveOwnerInteractionFixtureCommand({
+      args: [...baseArgs, '--confirm-staging-demo', '--confirm-staging-demo'],
+      env,
+    })).toThrow('--confirm-staging-demo')
+    expect(() => resolveOwnerInteractionFixtureCommand({
+      args: [...baseArgs, '--confirm-staging-demo'],
+      env: { ...env, MIP_CATALOG_STAGE: 'LIVE' },
+    })).toThrow('TEST catalog')
+    expect(() => resolveOwnerInteractionFixtureCommand({
+      args: [...baseArgs, '--confirm-staging-demo'],
+      env: { ...env, MIP_PAYMENT_MODE: 'live' },
+    })).toThrow('non-live payment')
+    expect(() => resolveOwnerInteractionFixtureCommand({
+      args: [...baseArgs, '--confirm-staging-demo'],
+      env: { ...env, MIP_DEPLOYMENT_STAGE: 'production' },
+    })).toThrow('restricted to development/test')
+  })
+
+  it('requires the exact ended free event in a READY demo manifest and unused registration identities', () => {
     const query = buildOwnerInteractionPreflightQuery({
       appId,
       eventId: OWNER_INTERACTION_EVENT_ID,
@@ -55,11 +102,20 @@ describe('Owner event interaction fixture', () => {
       ownerUserId,
     })
     expect(query).toContain('eventCrossApp')
-    expect(query).toContain('registrationCrossApp')
-    expect(query).toContain('ownerEventConflictRows')
+    expect(query).toContain('eventReadyRows')
+    expect(query).toContain(`event.status = 'ENDED'`)
+    expect(query).toContain(`event.access_type = 'FREE'`)
+    expect(query).toContain('event.ends_at < UTC_TIMESTAMP(3)')
+    expect(query).toContain(`BINARY event.title = BINARY '${OWNER_INTERACTION_EVENT_TITLE}'`)
+    expect(query).toContain(`demo_manifest.setting_key = 'demo_seed_manifest'`)
+    expect(query).toContain(`JSON_EXTRACT(demo_manifest.value_json, '$.state')`)
+    expect(query).toContain(`= 'READY'`)
+    expect(query).toContain(`JSON_EXTRACT(demo_manifest.value_json, '$.recordsByTable.mip_events')`)
+    expect(query).toContain('ownerEventRows')
     expect(query).toContain(`app_id <> '${appId}'`)
     expect(query).toContain(`id = '${OWNER_INTERACTION_REGISTRATION_ID}'`)
     expect(query).toContain(`user_id = '${ownerUserId}'`)
+    expect(query).not.toContain(`id = '${OWNER_INTERACTION_REGISTRATION_ID}' AND app_id`)
   })
 
   it('writes only a fixed ATTENDED registration without an upsert overwrite', () => {
@@ -75,6 +131,11 @@ describe('Owner event interaction fixture', () => {
     expect(query).toContain(`'${ownerUserId}'`)
     expect(query).not.toContain('ON DUPLICATE KEY UPDATE')
     expect(query).not.toContain('UPDATE mip_event_registrations')
+    expect(query.match(/INSERT INTO/g)).toHaveLength(1)
+    expect(query).not.toContain('mip_event_checkins')
+    expect(query).not.toContain('mip_event_checkin_transitions')
+    expect(query).not.toContain('mip_outbox_events')
+    expect(query).not.toContain('mip_audit_logs')
   })
 
   it('verifies the exact owner registration and returns an identity-free summary', () => {
@@ -107,6 +168,7 @@ describe('Owner event interaction fixture', () => {
     expect(script).toContain('MIP_OWNER_PHONE')
     expect(helper).toContain('--confirm-owner-event-interaction')
     expect(script).toContain('--validate-only')
+    expect(script.match(/manageMysqlDatabase/g)).toHaveLength(1)
     expect(packageJson.scripts['event:interaction:seed']).toBe('node scripts/seed-owner-event-interaction.mjs')
     expect(script).toContain('seed.demo.json')
     expect(script).not.toContain('writeFileSync(path.join(root, \'database\'')

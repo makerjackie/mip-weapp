@@ -1,5 +1,12 @@
 {
   "navigationBarTitleText": "活动详情",
+  "navigationBarBackgroundColor": "#040404",
+  "navigationBarTextStyle": "white",
+  "backgroundColor": "#040404",
+  "backgroundColorContent": "#040404",
+  "backgroundColorTop": "#040404",
+  "backgroundColorBottom": "#040404",
+  "backgroundTextStyle": "light",
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",
     "app-page-exit": "/components/page-exit/index",

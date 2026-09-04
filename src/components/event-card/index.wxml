@@ -15,7 +15,6 @@
     <view class="mt-1 flex items-center gap-2 text-[length:22rpx] text-ink"><t-icon name="location" size="27rpx" color="var(--color-brand)" /><text class="line-clamp-1">{{event.locationText}}</text></view>
     <button wx:if="{{showShare}}" open-type="share" class="absolute bottom-0 right-0 m-0 flex h-[88rpx] w-[88rpx] items-center justify-center border-0 bg-transparent p-0 leading-none after:border-0" aria-label="分享活动" data-event-id="{{event.id}}" catch:tap="handleShare"><view class="flex h-[56rpx] w-[56rpx] items-center justify-center rounded-full bg-brand"><t-icon name="share" size="30rpx" color="var(--color-on-brand)" /></view></button>
   </view>
-  <view wx:if="{{showCancel}}" class="border-t border-line px-3 py-3"><t-button block size="small" theme="primary" variant="outline" loading="{{cancelLoading}}" catch:tap="handleCancel">{{cancelRetry ? '继续处理退款' : '取消报名'}}</t-button></view>
 </view>
 <view wx:elif="{{compact}}" class="mip-radius-card-medium flex h-[210rpx] overflow-hidden border border-line bg-panel active:bg-panel-muted" bind:tap="handleSelect">
   <image wx:if="{{event.coverUrl}}" class="h-[210rpx] w-[210rpx] shrink-0 bg-brand-soft" mode="aspectFill" src="{{event.coverUrl}}" />

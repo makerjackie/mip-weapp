@@ -15,7 +15,7 @@ import { publicEventTypeLabel, resolvePrimaryBranchCity } from '../../modules/mi
 import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { caseNavigateTo, syncCaseNavigation } from '../../platform/navigation/client'
-import { formatChineseMonthDay, formatChineseMonthDayTime, formatLocalDate } from '../../utils/date'
+import { formatChineseDateTime, formatChineseMonthDay, formatLocalDate } from '../../utils/date'
 
 interface EventCardView extends MipEventListItem {
   startsText: string
@@ -67,7 +67,7 @@ function presentEvent(event: MipEventListItem): EventCardView {
   return {
     ...event,
     coverUrl: event.coverUrl || '',
-    startsText: formatChineseMonthDayTime(event.startsAt),
+    startsText: formatChineseDateTime(event.startsAt),
     accessLabel: accessLabel(event),
     statusLabel: statusLabel(event),
     locationText: [event.cityName, event.venueName].filter(Boolean).join(' · ') || '地点待公布',

@@ -45,7 +45,7 @@ describe('MIP free event vertical contract', () => {
     expect(registration).not.toMatch(/amountCents\s*:/)
   })
 
-  it('restores a signed check-in intent and continues into attended interaction', () => {
+  it('restores a signed check-in intent and keeps attended events reachable through detail', () => {
     const detail = read('src/packages/member/mip-events/detail/index.ts')
     const registration = read('src/packages/member/mip-events/registration/index.ts')
     const checkIn = read('src/packages/member/mip-events/check-in/index.ts')
@@ -57,14 +57,16 @@ describe('MIP free event vertical contract', () => {
     expect(checkIn).toContain('error.code === \'REGISTRATION_REQUIRED\'')
     expect(checkIn).toContain('error.code === \'REGISTRATION_PENDING\'')
     expect(registration).toContain('result.kind === \'REGISTERED\' && this.data.resumeCheckIn')
-    expect(mine).toContain('status === \'ATTENDED\'')
-    expect(mine).toContain('/packages/member/mip-events/interaction/index?eventId=')
+    expect(mine).toContain('activeCategory: \'UPCOMING\' as MyRegistrationCategory')
+    expect(mine).toContain('/packages/member/mip-events/detail/index?eventId=')
+    expect(mine).not.toContain('/packages/member/mip-events/interaction/index?eventId=')
   })
 
   it('rechecks full access for participation mutations and refreshes optimistic conflicts', () => {
     const handler = read('cloudfunctions/mip-events-api/index.js')
     const service = read('cloudfunctions/mip-events-api/domain/event-service.js')
     const interaction = read('src/packages/member/mip-events/interaction/index.ts')
+    const feedback = read('src/packages/member/mip-events/feedback/index.ts')
 
     expect(handler.match(/participationAccessPolicy,/g)?.length).toBeGreaterThanOrEqual(4)
     expect(service).toContain('await requireCurrentParticipationAccess(participationAccessPolicy, tx, appId, userId)')
@@ -72,8 +74,11 @@ describe('MIP free event vertical contract', () => {
     expect(interaction).toContain('action: \'INTERACT\'')
     expect(interaction).toContain('error.code === \'CONFLICT\'')
     expect(interaction).toContain('mipEventsModule.listHeartCandidates(this.data.eventId)')
-    expect(interaction).toContain('mipEventsModule.getFeedback(this.data.eventId)')
-    expect(interaction).toContain('当前填写内容已保留，请确认后重新保存')
+    expect(feedback).toContain('consumePendingResume(PAGE_ROUTE)')
+    expect(feedback).toContain('action: \'INTERACT\'')
+    expect(feedback).toContain('error.code === \'CONFLICT\'')
+    expect(feedback).toContain('mipEventsModule.getFeedback(this.data.eventId)')
+    expect(feedback).toContain('当前填写内容已保留，请确认后重新保存')
   })
 
   it('keeps visible loading, empty, error, blocked and disabled states in the journey', () => {
@@ -83,6 +88,7 @@ describe('MIP free event vertical contract', () => {
       read('src/packages/member/mip-events/registration/index.wxml'),
       read('src/packages/member/mip-events/mine/index.wxml'),
       read('src/packages/member/mip-events/interaction/index.wxml'),
+      read('src/packages/member/mip-events/feedback/index.wxml'),
     ].join('\n')
 
     expect(views).toContain('state === \'loading\'')

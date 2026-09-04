@@ -26,6 +26,7 @@ import {
   runtimeRouteDisposition,
   summarizeCommentPage,
   summarizeEventDetail,
+  summarizeFeedback,
   summarizeInteraction,
   summarizeMutationCleanup,
   summarizeRegistrationFact,
@@ -693,7 +694,7 @@ async function executeWorkflow({ contract, diagnostics, markers, miniProgram, op
         persist,
         step,
         label: 'no-candidate',
-        state: summarizeInteraction(data, markers.feedback),
+        state: summarizeInteraction(data),
       })
       return { reason, status: 'external-wait' }
     }
@@ -736,19 +737,33 @@ async function executeWorkflow({ contract, diagnostics, markers, miniProgram, op
       persist,
       step,
       label: 'selected',
-      state: summarizeInteraction(selected, markers.feedback),
+      state: summarizeInteraction(selected),
     })
   })
 
   await runStep('member-feedback', async (step, spec) => {
     const page = await openEventPage(miniProgram, spec, options.eventId)
     let data = await waitForData(page, value => value?.state === 'ready', { label: step.id })
-    await callBoundHandler(page, 'changeView', { dataset: { view: 'FEEDBACK' } })
-    await callBoundHandler(page, 'onRatingChange', { detail: { value: '4' } })
+    await callBoundHandler(page, 'selectRating', { dataset: { value: 5 } })
+    await callBoundHandler(page, 'selectRecommendation', { dataset: { value: 'RECOMMEND' } })
+    if (!data.roleOptions?.some(option => option.key === 'connector' && option.selected === true)) {
+      await callBoundHandler(page, 'toggleRole', { dataset: { key: 'connector' } })
+    }
     await callBoundHandler(page, 'onBodyInput', { detail: { value: markers.feedback } })
+    await callBoundHandler(page, 'selectJoinIntent', { dataset: { value: 'JOIN_NOW' } })
+    if (!data.explorationOptions?.some(option => option.key === 'ATTEND_EVENT' && option.selected === true)) {
+      await callBoundHandler(page, 'toggleExplorationMethod', { dataset: { key: 'ATTEND_EVENT' } })
+    }
+    await callBoundHandler(page, 'selectRosterConsent', { dataset: { value: 'MATCH_OPPORTUNITIES' } })
     data = await waitForData(
       page,
-      value => value?.activeView === 'FEEDBACK' && value?.rating === 5 && value?.body === markers.feedback,
+      value => value?.rating === 5
+        && value?.recommendation === 'RECOMMEND'
+        && value?.roleOptions?.some(option => option.key === 'connector' && option.selected === true)
+        && value?.body === markers.feedback
+        && value?.joinIntent === 'JOIN_NOW'
+        && value?.explorationOptions?.some(option => option.key === 'ATTEND_EVENT' && option.selected === true)
+        && value?.rosterConsent === 'MATCH_OPPORTUNITIES',
       { label: `${step.id} draft` },
     )
     const previousVersion = Number(data.feedback?.version || 0)
@@ -759,6 +774,11 @@ async function executeWorkflow({ contract, diagnostics, markers, miniProgram, op
       value => value?.state === 'ready'
         && value?.feedback?.body === markers.feedback
         && value?.feedback?.rating === 5
+        && value?.feedback?.answers?.recommendation === 'RECOMMEND'
+        && value?.feedback?.answers?.roleKeys?.includes('connector')
+        && value?.feedback?.answers?.joinIntent === 'JOIN_NOW'
+        && value?.feedback?.answers?.explorationMethods?.includes('ATTEND_EVENT')
+        && value?.feedback?.answers?.rosterConsent === 'MATCH_OPPORTUNITIES'
         && Number(value.feedback.version) > previousVersion,
       { label: step.id },
     )
@@ -771,7 +791,7 @@ async function executeWorkflow({ contract, diagnostics, markers, miniProgram, op
       persist,
       step,
       label: 'saved',
-      state: summarizeInteraction(saved, markers.feedback),
+      state: summarizeFeedback(saved, markers.feedback),
     })
   })
 

@@ -8,6 +8,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { createMipEventsModule } from '../src/modules/mip-events'
 
 const eventId = 'event-1' as EventId
+const feedbackAnswers = {
+  recommendation: 'RECOMMEND' as const,
+  roleKeys: ['connector' as const, 'strategist' as const],
+  joinIntent: 'JOIN_NOW' as const,
+  explorationMethods: ['ATTEND_EVENT' as const],
+  rosterConsent: 'MATCH_OPPORTUNITIES' as const,
+}
 
 const event: MipEventDetail = {
   id: eventId,
@@ -133,6 +140,7 @@ function createGateway() {
       id: 'feedback-1',
       rating: draft.rating,
       body: draft.body,
+      answers: draft.answers,
       version: 1,
       submittedAt: '',
       updatedAt: '',
@@ -314,16 +322,34 @@ describe('MIP events client module', () => {
   it('validates feedback locally while leaving attendance authorization to the server', async () => {
     const gateway = createGateway()
     const module = createMipEventsModule(gateway)
-    await expect(module.saveFeedback(eventId, { rating: 5, body: '  有收获  ', expectedVersion: 0 }))
+    await expect(module.saveFeedback(eventId, {
+      rating: 5,
+      body: '  有收获  ',
+      answers: feedbackAnswers,
+      expectedVersion: 0,
+    }))
       .resolves
       .toMatchObject({ body: '有收获' })
-    await expect(module.saveFeedback(eventId, { rating: 6, body: '内容', expectedVersion: 0 }))
+    await expect(module.saveFeedback(eventId, {
+      rating: 6,
+      body: '内容',
+      answers: feedbackAnswers,
+      expectedVersion: 0,
+    }))
       .rejects
       .toThrow('请选择 1–5 分')
+    await expect(module.saveFeedback(eventId, {
+      rating: 5,
+      answers: { ...feedbackAnswers, roleKeys: [] },
+      expectedVersion: 0,
+    }))
+      .rejects
+      .toThrow('合作角色需选择 1–6 项且不能重复')
     expect(gateway.saveFeedback).toHaveBeenCalledTimes(1)
     expect(gateway.saveFeedback).toHaveBeenCalledWith(eventId, {
       rating: 5,
       body: '有收获',
+      answers: feedbackAnswers,
       expectedVersion: 0,
     })
   })

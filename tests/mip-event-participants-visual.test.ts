@@ -51,28 +51,50 @@ describe('MIP event participant visual hierarchy', () => {
 
   it('keeps server-backed search, filters, profile routes, and privacy fallbacks', () => {
     expect(page).toContain('mipEventsModule.listPublicParticipants')
+    expect(page).toContain('mipEventsModule.listHeartCandidates')
+    expect(page).toContain('mipEventsModule.getHeart')
     expect(page).toContain('caseNavigateTo')
     expect(page).toContain('/packages/member/mip-public-profile/index?profileRef=')
     expect(page).toContain('displayName: participant.nickname || \'未公开姓名\'')
+    expect(page).toContain('viewMode=SENT')
     expect(page).not.toMatch(/wx\.cloud|openid|phoneNumber/)
 
     expect(template).toContain('bindconfirm="onSearchConfirm"')
     expect(template).toContain('data-kind="GUEST"')
     expect(template).toContain('data-kind="PLAYER"')
-    expect(template).toContain('data-view-mode="SENT"')
-    expect(template).toContain('data-view-mode="RECEIVED"')
+    expect(template).toContain('data-view="SENT"')
+    expect(template).toContain('data-view="RECEIVED"')
+    expect(template).toContain('bind:tap="changeView"')
     expect(template).toContain('data-profile-ref="{{item.profileRef}}"')
     expect(template).not.toMatch(/邀请人|Lv\.|参与人数/)
   })
 
-  it('preserves loading, empty, error recovery, and pagination states', () => {
+  it('preserves public states and separates restricted heart access from retryable errors', () => {
     expect(template).toContain('state === \'loading\'')
     expect(template).toContain('state === \'error\'')
-    expect(template).toContain('title="暂无公开参与人"')
+    expect(template).toContain('heartState === \'restricted\'')
+    expect(template).toContain('heartState === \'error\'')
+    expect(template).toContain('title="心动功能暂不可用"')
+    expect(template).toContain('本场签到后可查看和使用心动功能。')
+    expect(template).toContain('title="暂时无法加载心动信息"')
     expect(template).toContain('action-text="重新加载"')
     expect(template).toContain('bind:action="loadParticipants"')
+    expect(template).toContain('bind:action="retryHeartState"')
     expect(template).toContain('loading="{{loadingMore}}"')
     expect(template).toContain('<app-page-exit />')
+  })
+
+  it('shows private counts and explicit caller-relative heart relations on cards', () => {
+    expect(template).toContain('{{sentItems.length}}')
+    expect(template).toContain('{{receivedItems.length}}')
+    expect(template).toContain('{{sentItems.length ? \'修改或取消心动\' : \'选择心动\'}}')
+    expect(template).toContain('item.heartRelation === \'SENT\' || item.heartRelation === \'MUTUAL\'')
+    expect(template).toContain('item.heartRelation === \'RECEIVED\' || item.heartRelation === \'MUTUAL\'')
+    expect(template).toContain('心动信息仅本人可见')
+    expect(declarations(rule(stylesheet, '.participant-card__relations', true))).toMatchObject({
+      'display': 'flex',
+      'flex-wrap': 'wrap',
+    })
   })
 
   it('uses compact visual pills without shrinking their phone hit targets', () => {

@@ -66,7 +66,7 @@ describe('MIP opportunity AI draft boundary', () => {
     const lock = JSON.parse(source('database/mysql/mip/migrations.lock.json')) as {
       migrations: Array<{ name: string, altersTables: string[] }>
     }
-    expect(lock.migrations.at(-1)).toMatchObject({
+    expect(lock.migrations.find(item => item.name === 'mip_ai_opportunity_draft_purpose')).toMatchObject({
       name: 'mip_ai_opportunity_draft_purpose',
       altersTables: ['mip_ai_drafts'],
     })

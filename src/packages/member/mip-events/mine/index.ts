@@ -6,7 +6,7 @@ import type {
 } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { caseNavigateTo, caseSwitchPrimary } from '../../../../platform/navigation/client'
-import { formatChineseMonthDayTime } from '../../../../utils/date'
+import { formatChineseDateTime } from '../../../../utils/date'
 import { resolveMyRegistrationCategory } from './category'
 
 interface RegistrationView extends RegistrationSummary {
@@ -51,7 +51,7 @@ function present(item: RegistrationSummary): RegistrationView {
   const accessText = item.event.accessType === 'MEMBER_INCLUDED'
     ? '仅玩家'
     : item.event.accessType === 'PAID' ? '付费' : '免费'
-  const startsText = formatChineseMonthDayTime(item.event.startsAt)
+  const startsText = formatChineseDateTime(item.event.startsAt)
   return {
     ...item,
     statusText: statusLabels[item.status],
@@ -190,11 +190,7 @@ Page({
   openRegistration(event: WechatMiniprogram.TouchEvent) {
     const detail = (event as unknown as { detail?: { id?: string, status?: string } }).detail
     const eventId = String(detail?.id || event.currentTarget?.dataset?.eventId || '') as EventId
-    const status = String(detail?.status || event.currentTarget?.dataset?.status || '') as RegistrationStatus
-    const path = status === 'ATTENDED'
-      ? `/packages/member/mip-events/interaction/index?eventId=${encodeURIComponent(eventId)}`
-      : `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(eventId)}`
-    caseNavigateTo({ url: path })
+    caseNavigateTo({ url: `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(eventId)}` })
   },
 
   editRegistration(event: WechatMiniprogram.TouchEvent) {

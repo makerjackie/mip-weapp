@@ -20,7 +20,10 @@
   <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5">
     <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
-  <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6">
+  <view id="admin-event-registrations-error-state" wx:elif="{{state === 'error'}}" class="mt-6">
+    <app-empty-state title="暂时无法加载名单" description="{{message}}" action-text="重新加载" bind:action="loadRoster" />
+  </view>
+  <view id="admin-event-registrations-conflict-state" wx:elif="{{state === 'conflict'}}" class="mt-6">
     <app-empty-state title="暂时无法加载名单" description="{{message}}" action-text="重新加载" bind:action="loadRoster" />
   </view>
   <view wx:elif="{{state === 'forbidden'}}" class="mt-6">

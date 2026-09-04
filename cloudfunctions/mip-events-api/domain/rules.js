@@ -100,17 +100,85 @@ function assertCheckInAllowed({ event, registration, credential, now = new Date(
   }
 }
 
-function validateFeedback({ body, rating }) {
-  const normalizedBody = typeof body === 'string' ? body.trim() : ''
-  if (!normalizedBody || normalizedBody.length > 2000) {
-    throw new DomainError('VALIDATION_FAILED', '反馈内容需为 1–2000 个字')
+const cooperationRoleKeys = new Set([
+  'connector',
+  'business_builder',
+  'capital_operator',
+  'strategist',
+  'visual_designer',
+  'delivery_lead',
+])
+const feedbackAnswerKeys = new Set([
+  'recommendation',
+  'roleKeys',
+  'joinIntent',
+  'explorationMethods',
+  'rosterConsent',
+])
+const feedbackRecommendations = new Set(['RECOMMEND', 'NOT_RECOMMEND'])
+const feedbackJoinIntents = new Set(['JOIN_NOW', 'LEARN_MORE', 'NOT_INTERESTED'])
+const feedbackExplorationMethods = new Set(['ATTEND_EVENT', 'COMMUNITY_CHAT'])
+const feedbackRosterConsents = new Set(['MATCH_OPPORTUNITIES', 'PRIVATE'])
+
+function validateFeedbackAnswers(answers) {
+  if (!answers || typeof answers !== 'object' || Array.isArray(answers)
+    || Object.keys(answers).length !== feedbackAnswerKeys.size
+    || Object.keys(answers).some(key => !feedbackAnswerKeys.has(key))) {
+    throw new DomainError('VALIDATION_FAILED', '活动反馈选项无效')
   }
-  const normalizedRating = rating === null || rating === undefined || rating === '' ? null : Number(rating)
-  if (normalizedRating !== null
-    && (!Number.isInteger(normalizedRating) || normalizedRating < 1 || normalizedRating > 5)) {
+  if (!feedbackRecommendations.has(answers.recommendation)) {
+    throw new DomainError('VALIDATION_FAILED', '推荐选择无效')
+  }
+  if (!Array.isArray(answers.roleKeys)
+    || answers.roleKeys.length < 1
+    || answers.roleKeys.length > cooperationRoleKeys.size
+    || new Set(answers.roleKeys).size !== answers.roleKeys.length
+    || answers.roleKeys.some(roleKey => !cooperationRoleKeys.has(roleKey))) {
+    throw new DomainError('VALIDATION_FAILED', '合作角色需选择 1–6 项且不能重复')
+  }
+  if (!feedbackJoinIntents.has(answers.joinIntent)) {
+    throw new DomainError('VALIDATION_FAILED', '参与意向无效')
+  }
+  if (!Array.isArray(answers.explorationMethods)
+    || answers.explorationMethods.length > feedbackExplorationMethods.size
+    || new Set(answers.explorationMethods).size !== answers.explorationMethods.length
+    || answers.explorationMethods.some(method => !feedbackExplorationMethods.has(method))) {
+    throw new DomainError('VALIDATION_FAILED', '探索方式无效或存在重复项')
+  }
+  if (!feedbackRosterConsents.has(answers.rosterConsent)) {
+    throw new DomainError('VALIDATION_FAILED', '名单使用范围无效')
+  }
+  return {
+    recommendation: answers.recommendation,
+    roleKeys: [...answers.roleKeys],
+    joinIntent: answers.joinIntent,
+    explorationMethods: [...answers.explorationMethods],
+    rosterConsent: answers.rosterConsent,
+  }
+}
+
+function parseFeedbackAnswers(value) {
+  if (value === null || value === undefined) return null
+  try {
+    return validateFeedbackAnswers(typeof value === 'string' ? JSON.parse(value) : value)
+  }
+  catch {
+    throw new DomainError('DATA_INTEGRITY', '活动反馈答案无效')
+  }
+}
+
+function validateFeedback({ body, rating, answers }) {
+  if (body !== undefined && typeof body !== 'string') {
+    throw new DomainError('VALIDATION_FAILED', '反馈内容无效')
+  }
+  const normalizedBody = typeof body === 'string' ? body.trim() : ''
+  if (normalizedBody.length > 300) {
+    throw new DomainError('VALIDATION_FAILED', '反馈内容最多 300 个字')
+  }
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
     throw new DomainError('VALIDATION_FAILED', '评分需为 1–5 分')
   }
-  return { body: normalizedBody, rating: normalizedRating }
+  return { body: normalizedBody, rating, answers: validateFeedbackAnswers(answers) }
 }
 
 const roleCapabilities = Object.freeze({
@@ -173,5 +241,7 @@ module.exports = {
   capacityStatuses,
   decideRegistration,
   grantsCapability,
+  parseFeedbackAnswers,
   validateFeedback,
+  validateFeedbackAnswers,
 }

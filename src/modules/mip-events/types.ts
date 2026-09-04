@@ -1,4 +1,4 @@
-import type { BranchId, EventId, OrderId } from '../mip'
+import type { BranchId, CooperationRoleKey, EventId, OrderId } from '../mip'
 
 export type EventScopeType = 'PLATFORM' | 'BRANCH'
 export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED' | 'CANCELLED' | 'ENDED'
@@ -58,6 +58,7 @@ export interface EventParticipantPreview {
 
 export interface PublicEventParticipant {
   profileRef: string
+  heartRelation?: 'SENT' | 'RECEIVED' | 'MUTUAL'
   nickname?: string
   avatarUrl?: string
   userKind?: 'PLAYER' | 'GUEST'
@@ -343,6 +344,7 @@ export interface EventInvitationCode {
 
 export interface HeartCandidate {
   participantRef: string
+  profileRef: string
   nickname: string
   avatarUrl?: string
   headline?: string
@@ -382,15 +384,25 @@ export interface HeartHistoryPage {
 }
 
 export interface EventFeedbackDraft {
-  rating?: number
-  body: string
+  rating: number
+  body?: string
+  answers: EventFeedbackAnswers
   expectedVersion: number
+}
+
+export interface EventFeedbackAnswers {
+  recommendation: 'RECOMMEND' | 'NOT_RECOMMEND'
+  roleKeys: CooperationRoleKey[]
+  joinIntent: 'JOIN_NOW' | 'LEARN_MORE' | 'NOT_INTERESTED'
+  explorationMethods: ('ATTEND_EVENT' | 'COMMUNITY_CHAT')[]
+  rosterConsent: 'MATCH_OPPORTUNITIES' | 'PRIVATE'
 }
 
 export interface EventFeedback {
   id: string
   rating?: number
-  body: string
+  body?: string
+  answers: EventFeedbackAnswers | null
   version: number
   submittedAt: string
   updatedAt: string
@@ -400,7 +412,8 @@ export interface AdminEventFeedback {
   id: string
   nickname: string
   rating?: number
-  body: string
+  body?: string
+  answers: EventFeedbackAnswers | null
   version: number
   submittedAt: string
   updatedAt: string

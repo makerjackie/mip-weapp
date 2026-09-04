@@ -330,7 +330,17 @@ describe('current participation access for event actions', () => {
           userId,
           eventId,
           expectedVersion: 0,
-          draft: { rating: 5, body: '活动反馈' },
+          draft: {
+            rating: 5,
+            body: '活动反馈',
+            answers: {
+              recommendation: 'RECOMMEND',
+              roleKeys: ['connector'],
+              joinIntent: 'LEARN_MORE',
+              explorationMethods: [],
+              rosterConsent: 'PRIVATE',
+            },
+          },
           participationAccessPolicy: accessPolicy,
           now,
         }),

@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict')
 const { describe, it } = require('node:test')
-const { saveFeedback } = require('../domain/event-service')
+const { getFeedback, saveFeedback } = require('../domain/event-service')
 
 const appId = 'wx-app'
 const userId = '10000000-0000-4000-8000-000000000001'
@@ -11,6 +11,13 @@ const feedbackId = '30000000-0000-4000-8000-000000000001'
 const now = new Date('2026-08-25T00:00:00.000Z')
 
 const accessPolicy = { requireAccess: async () => undefined }
+const answers = {
+  recommendation: 'RECOMMEND',
+  roleKeys: ['connector', 'strategist'],
+  joinIntent: 'JOIN_NOW',
+  explorationMethods: ['ATTEND_EVENT'],
+  rosterConsent: 'MATCH_OPPORTUNITIES',
+}
 
 function feedbackDatabase({ existing = null, updateAffectedRows = 1, insertError = null } = {}) {
   const calls = []
@@ -41,6 +48,8 @@ function feedbackDatabase({ existing = null, updateAffectedRows = 1, insertError
   return {
     calls,
     get transactions() { return transactions },
+    one: tx.one,
+    query: tx.query,
     transaction(work) {
       transactions += 1
       return work(tx)
@@ -54,7 +63,7 @@ function submit(database, expectedVersion) {
     userId,
     eventId,
     expectedVersion,
-    draft: { rating: 5, body: '活动反馈' },
+    draft: { rating: 5, body: '活动反馈', answers },
     participationAccessPolicy: accessPolicy,
     now,
   })
@@ -66,7 +75,29 @@ describe('event feedback optimistic version contract', () => {
     const result = await submit(database, 0)
 
     assert.equal(result.version, 1)
-    assert.ok(database.calls.some(call => call.sql.includes('INSERT INTO mip_event_feedback')))
+    assert.deepEqual(result.answers, answers)
+    const insert = database.calls.find(call => call.sql.includes('INSERT INTO mip_event_feedback'))
+    assert.ok(insert)
+    assert.match(insert.sql, /answers_json/)
+    assert.equal(insert.params[6], JSON.stringify(answers))
+  })
+
+  it('stores an omitted optional body as an empty database value', async () => {
+    const database = feedbackDatabase()
+    const result = await saveFeedback(database, {
+      appId,
+      userId,
+      eventId,
+      expectedVersion: 0,
+      draft: { rating: 4, answers },
+      participationAccessPolicy: accessPolicy,
+      now,
+    })
+
+    const insert = database.calls.find(call => call.sql.includes('INSERT INTO mip_event_feedback'))
+    assert.equal(insert.params[5], '')
+    assert.equal('body' in result, false)
+    assert.equal(result.rating, 4)
   })
 
   it('uses the current positive version for updates', async () => {
@@ -77,6 +108,8 @@ describe('event feedback optimistic version contract', () => {
 
     assert.equal(result.version, 3)
     const update = database.calls.find(call => call.sql.includes('UPDATE mip_event_feedback'))
+    assert.match(update.sql, /answers_json = \?/)
+    assert.equal(update.params[2], JSON.stringify(answers))
     assert.deepEqual(update.params.slice(-3), [appId, feedbackId, 2])
   })
 
@@ -117,5 +150,42 @@ describe('event feedback optimistic version contract', () => {
       submit(database, 0),
       error => error?.code === 'CONFLICT' && error?.retryable === true,
     )
+  })
+
+  it('returns structured answers and keeps legacy null answers explicit', async () => {
+    for (const [answersJson, expectedAnswers] of [[JSON.stringify(answers), answers], [null, null]]) {
+      const database = feedbackDatabase({
+        existing: {
+          id: feedbackId,
+          rating: 5,
+          body: '',
+          answers_json: answersJson,
+          version: 2,
+          submitted_at: '2026-08-24T00:00:00.000Z',
+          updated_at: '2026-08-24T00:00:00.000Z',
+        },
+      })
+      const result = await getFeedback(database, { appId, eventId, userId })
+      assert.deepEqual(result.answers, expectedAnswers)
+      assert.equal('body' in result, false)
+      assert.ok(database.calls.some(call => call.sql.includes('answers_json')))
+    }
+  })
+
+  it('rejects incomplete answers before opening a transaction', async () => {
+    const database = feedbackDatabase()
+    await assert.rejects(
+      saveFeedback(database, {
+        appId,
+        userId,
+        eventId,
+        expectedVersion: 0,
+        draft: { rating: 5, answers: { ...answers, roleKeys: [] } },
+        participationAccessPolicy: accessPolicy,
+        now,
+      }),
+      error => error?.code === 'VALIDATION_FAILED',
+    )
+    assert.equal(database.transactions, 0)
   })
 })

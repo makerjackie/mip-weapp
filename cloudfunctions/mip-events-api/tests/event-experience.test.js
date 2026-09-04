@@ -5,6 +5,9 @@ const { test } = require('node:test')
 const { getHeart, listHeartCandidates, setHeart } = require('../domain/event-service')
 const { createSignedToken } = require('../lib/tokens')
 
+const profileRefSecret = 'event-experience-profile-reference-secret'
+const candidateUserId = '22222222-2222-4222-8222-222222222222'
+
 test('heart candidates are returned by registration time descending', async () => {
   const database = {
     async one(sql) {
@@ -15,11 +18,12 @@ test('heart candidates are returned by registration time descending', async () =
     },
     async query(sql, params) {
       assert.match(sql, /ORDER BY r\.registered_at DESC, r\.id DESC/)
+      assert.match(sql, /r\.id AS registration_id, r\.user_id/)
       assert.match(sql, /visibility_block\.app_id = r\.app_id/)
       assert.match(sql, /blocker_user_id = \? AND visibility_block\.blocked_user_id = r\.user_id/)
       assert.match(sql, /blocker_user_id = r\.user_id AND visibility_block\.blocked_user_id = \?/)
       assert.deepEqual(params, ['wx-app', 'event-1', 'user-self', 'user-self', 'user-self'])
-      return [{ registration_id: 'registration-2', nickname: '较晚报名的参与者' }]
+      return [{ registration_id: 'registration-2', user_id: candidateUserId, nickname: '较晚报名的参与者' }]
     },
   }
   const result = await listHeartCandidates(database, {
@@ -27,9 +31,12 @@ test('heart candidates are returned by registration time descending', async () =
     eventId: 'event-1',
     userId: 'user-self',
     tokenSecret: 'event-experience-token-secret',
+    profileRefSecret,
   })
   assert.equal(result[0].nickname, '较晚报名的参与者')
   assert.equal(result[0].selected, false)
+  assert.match(result[0].profileRef, /^p1\./)
+  assert.equal(JSON.stringify(result).includes(candidateUserId), false)
 })
 
 test('heart result hides blocked selected and received participants in app-scoped SQL', async () => {
@@ -53,6 +60,7 @@ test('heart result hides blocked selected and received participants in app-scope
     eventId: 'event-1',
     userId: 'user-self',
     tokenSecret: 'event-experience-token-secret',
+    profileRefSecret,
   })
 
   const selectedQuery = calls.find(call => call.sql.includes('FROM mip_event_hearts h')
@@ -67,6 +75,47 @@ test('heart result hides blocked selected and received participants in app-scope
   assert.equal(result.target, undefined)
   assert.deepEqual(result.received, [])
   assert.equal(result.version, 4)
+})
+
+test('heart state returns opaque profile references without exposing user ids', async () => {
+  const targetUserId = '22222222-2222-4222-8222-222222222222'
+  const voterUserId = '33333333-3333-4333-8333-333333333333'
+  const database = {
+    async one(sql) {
+      if (sql.includes('SELECT id, event_id, user_id')) {
+        return { id: 'registration-self', event_id: 'event-1', user_id: 'user-self', status: 'ATTENDED' }
+      }
+      assert.match(sql, /tr\.id AS registration_id, tr\.user_id/)
+      return {
+        version: 2,
+        updated_at: '2026-08-24T00:00:00.000Z',
+        registration_id: 'registration-target',
+        user_id: targetUserId,
+        nickname: '我的心动',
+      }
+    },
+    async query(sql) {
+      assert.match(sql, /vr\.user_id/)
+      return [{
+        registration_id: 'registration-voter',
+        user_id: voterUserId,
+        nickname: '对我心动',
+      }]
+    },
+  }
+
+  const result = await getHeart(database, {
+    appId: 'wx-app',
+    eventId: 'event-1',
+    userId: 'user-self',
+    tokenSecret: 'event-experience-token-secret',
+    profileRefSecret,
+  })
+
+  assert.match(result.target.profileRef, /^p1\./)
+  assert.match(result.received[0].profileRef, /^p1\./)
+  assert.equal(JSON.stringify(result).includes(targetUserId), false)
+  assert.equal(JSON.stringify(result).includes(voterUserId), false)
 })
 
 test('set heart rechecks a signed target inside the transaction', async () => {

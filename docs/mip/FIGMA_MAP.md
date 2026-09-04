@@ -29,7 +29,9 @@
 | 玩家等级 | `69:4972` | `1948:14079` | `src/packages/member/mip-growth` |
 | 活动首页 | `69:4975` | `1819:17664` | `src/pages/events` |
 | 活动详情 | `69:4975` | `1861:17860`、`1818:17142` | `src/packages/member/mip-events/detail` |
+| 活动分享 | `69:4975` | `1861:17981` | `src/packages/member/mip-events/detail` 的分享浮层 |
 | 参与人/互动 | `69:4975` | `1818:17230`、`2168:17419` | `src/packages/member/mip-events/participants`、`src/packages/member/mip-events/interaction` |
+| 活动反馈 | `69:4975` | `1818:17374` | `src/packages/member/mip-events/feedback` |
 | 活动报名与支付确认 | `69:4975` | `1821:19274` | `src/packages/member/mip-events/registration`、`src/packages/member/order-detail` |
 | 机会探索 | `69:4976` | `1766:36567` | `src/pages/opportunities` |
 | 发布机会 | `69:4976` | `1766:36864` | `src/packages/member/mip-opportunities/editor` |

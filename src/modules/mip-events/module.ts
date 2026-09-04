@@ -2,6 +2,7 @@ import type { EventId } from '../mip'
 import type {
   AdminEventFeedbackQuery,
   CheckInCredentialMode,
+  EventFeedbackAnswers,
   EventFeedbackDraft,
   EventFeedQuery,
   HeartHistoryKind,
@@ -10,6 +11,7 @@ import type {
   RegistrationIntent,
   RegistrationUpdateIntent,
 } from './types'
+import { isCooperationRoleKey } from '../mip'
 import { MipEventsError } from './types'
 
 function requestKey(prefix: string) {
@@ -54,6 +56,41 @@ function normalizeTagKeys(value: string[] | undefined) {
     throw new Error('活动标签筛选参数无效')
   }
   return [...new Set(normalized as string[])].sort()
+}
+
+function normalizeFeedbackAnswers(value: EventFeedbackAnswers): EventFeedbackAnswers {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error('活动反馈选项无效')
+  }
+  if (!['RECOMMEND', 'NOT_RECOMMEND'].includes(value.recommendation)) {
+    throw new Error('推荐选择无效')
+  }
+  if (!Array.isArray(value.roleKeys)
+    || value.roleKeys.length < 1
+    || value.roleKeys.length > 6
+    || new Set(value.roleKeys).size !== value.roleKeys.length
+    || value.roleKeys.some(roleKey => !isCooperationRoleKey(roleKey))) {
+    throw new Error('合作角色需选择 1–6 项且不能重复')
+  }
+  if (!['JOIN_NOW', 'LEARN_MORE', 'NOT_INTERESTED'].includes(value.joinIntent)) {
+    throw new Error('参与意向无效')
+  }
+  if (!Array.isArray(value.explorationMethods)
+    || value.explorationMethods.length > 2
+    || new Set(value.explorationMethods).size !== value.explorationMethods.length
+    || value.explorationMethods.some(method => !['ATTEND_EVENT', 'COMMUNITY_CHAT'].includes(method))) {
+    throw new Error('探索方式无效或存在重复项')
+  }
+  if (!['MATCH_OPPORTUNITIES', 'PRIVATE'].includes(value.rosterConsent)) {
+    throw new Error('名单使用范围无效')
+  }
+  return {
+    recommendation: value.recommendation,
+    roleKeys: [...value.roleKeys],
+    joinIntent: value.joinIntent,
+    explorationMethods: [...value.explorationMethods],
+    rosterConsent: value.rosterConsent,
+  }
 }
 
 function normalizedQuery(query: EventFeedQuery): EventFeedQuery {
@@ -322,14 +359,21 @@ export function createMipEventsModule(
     },
 
     async saveFeedback(eventId: EventId, draft: EventFeedbackDraft) {
-      const body = draft.body.trim()
-      if (!body || body.length > 2000) {
-        throw new Error('反馈内容需为 1–2000 个字')
+      if (draft.body !== undefined && typeof draft.body !== 'string') {
+        throw new Error('反馈内容无效')
       }
-      if (draft.rating !== undefined && (!Number.isInteger(draft.rating) || draft.rating < 1 || draft.rating > 5)) {
+      const body = draft.body?.trim()
+      if ((body?.length || 0) > 300) {
+        throw new Error('反馈内容最多 300 个字')
+      }
+      if (!Number.isInteger(draft.rating) || draft.rating < 1 || draft.rating > 5) {
         throw new Error('请选择 1–5 分')
       }
-      return gateway.saveFeedback(eventId, { ...draft, body })
+      return gateway.saveFeedback(eventId, {
+        ...draft,
+        body: body || undefined,
+        answers: normalizeFeedbackAnswers(draft.answers),
+      })
     },
 
     listAdminFeedback(eventId: EventId, query: AdminEventFeedbackQuery = {}) {

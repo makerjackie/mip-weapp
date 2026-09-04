@@ -85,8 +85,40 @@ describe('MIP event check-in and feedback rules', () => {
   })
 
   it('normalizes feedback without exposing it through public rules', () => {
-    assert.deepEqual(validateFeedback({ rating: 5, body: '  有收获  ' }), { rating: 5, body: '有收获' })
-    assert.throws(() => validateFeedback({ rating: 6, body: '内容' }), error => error.code === 'VALIDATION_FAILED')
+    const answers = {
+      recommendation: 'RECOMMEND',
+      roleKeys: ['connector', 'strategist'],
+      joinIntent: 'JOIN_NOW',
+      explorationMethods: ['ATTEND_EVENT', 'COMMUNITY_CHAT'],
+      rosterConsent: 'MATCH_OPPORTUNITIES',
+    }
+    assert.deepEqual(validateFeedback({ rating: 5, body: '  有收获  ', answers }), {
+      rating: 5,
+      body: '有收获',
+      answers,
+    })
+    assert.deepEqual(validateFeedback({ rating: 4, answers: { ...answers, explorationMethods: [] } }), {
+      rating: 4,
+      body: '',
+      answers: { ...answers, explorationMethods: [] },
+    })
+    for (const input of [
+      { rating: undefined, answers },
+      { rating: 6, answers },
+      { rating: 5, body: '超'.repeat(301), answers },
+      { rating: 5, answers: null },
+      { rating: 5, answers: { ...answers, recommendation: 'MAYBE' } },
+      { rating: 5, answers: { ...answers, roleKeys: [] } },
+      { rating: 5, answers: { ...answers, roleKeys: ['connector', 'connector'] } },
+      { rating: 5, answers: { ...answers, roleKeys: ['unknown'] } },
+      { rating: 5, answers: { ...answers, joinIntent: 'UNKNOWN' } },
+      { rating: 5, answers: { ...answers, explorationMethods: ['ATTEND_EVENT', 'ATTEND_EVENT'] } },
+      { rating: 5, answers: { ...answers, explorationMethods: ['UNKNOWN'] } },
+      { rating: 5, answers: { ...answers, rosterConsent: 'PUBLIC' } },
+      { rating: 5, answers: { ...answers, extra: true } },
+    ]) {
+      assert.throws(() => validateFeedback(input), error => error.code === 'VALIDATION_FAILED')
+    }
   })
 })
 

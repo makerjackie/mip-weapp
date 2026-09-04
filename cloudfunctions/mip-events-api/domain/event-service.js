@@ -10,6 +10,7 @@ const {
   capacityStatuses,
   decideRegistration,
   grantsCapability,
+  parseFeedbackAnswers,
   validateFeedback,
 } = require('./rules')
 const {
@@ -1329,6 +1330,26 @@ async function listPublicParticipants(db, {
   }
 
   const blockFilter = mutualBlockFilter(userId, 'r.user_id', 'r.app_id')
+  const heartRelationSelect = userId
+    ? `,
+       CASE
+         WHEN viewer_sent_heart.id IS NOT NULL AND participant_sent_heart.id IS NOT NULL THEN 'MUTUAL'
+         WHEN viewer_sent_heart.id IS NOT NULL THEN 'SENT'
+         WHEN participant_sent_heart.id IS NOT NULL THEN 'RECEIVED'
+         ELSE NULL
+       END AS heart_relation`
+    : ''
+  const heartRelationJoins = userId
+    ? `LEFT JOIN mip_event_hearts viewer_sent_heart
+       ON viewer_sent_heart.app_id = r.app_id AND viewer_sent_heart.event_id = r.event_id
+         AND viewer_sent_heart.voter_user_id = ? AND viewer_sent_heart.target_user_id = r.user_id
+         AND viewer_sent_heart.status = 'ACTIVE'
+     LEFT JOIN mip_event_hearts participant_sent_heart
+       ON participant_sent_heart.app_id = r.app_id AND participant_sent_heart.event_id = r.event_id
+         AND participant_sent_heart.voter_user_id = r.user_id AND participant_sent_heart.target_user_id = ?
+         AND participant_sent_heart.status = 'ACTIVE'`
+    : ''
+  const heartRelationParams = userId ? [userId, userId] : []
   const membershipExists = `EXISTS(
     SELECT 1 FROM mip_membership_entitlements entitlement
     WHERE entitlement.app_id = r.app_id AND entitlement.user_id = r.user_id
@@ -1406,7 +1427,7 @@ async function listPublicParticipants(db, {
                 AND industry_profile_tag.relation = 'PRIMARY_INDUSTRY'
               ORDER BY industry_tag.sort_order, industry_tag.id
               LIMIT 1
-            ) AS primary_industry_label
+            ) AS primary_industry_label${heartRelationSelect}
      FROM mip_event_registrations r
      INNER JOIN mip_users u ON u.app_id = r.app_id AND u.id = r.user_id AND u.status = 'ACTIVE'
      INNER JOIN mip_profiles p ON p.app_id = r.app_id AND p.user_id = r.user_id
@@ -1414,10 +1435,11 @@ async function listPublicParticipants(db, {
        ON avatar.app_id = p.app_id AND avatar.id = p.avatar_asset_id AND avatar.status = 'READY'
      LEFT JOIN mip_city_branches branch
        ON branch.app_id = u.app_id AND branch.id = u.primary_branch_id AND branch.status = 'ACTIVE'
+     ${heartRelationJoins}
      WHERE ${clauses.join(' AND ')}
      ORDER BY r.registered_at DESC, r.id DESC
      LIMIT ?`,
-    [...params, pageLimit + 1],
+    [...heartRelationParams, ...params, pageLimit + 1],
   )
   const pageRows = rows.slice(0, pageLimit)
   return {
@@ -1425,6 +1447,7 @@ async function listPublicParticipants(db, {
       const allowed = publicVisibility(row.visibility_json)
       return {
         profileRef: createProfileRef({ appId, userId: row.user_id }, profileRefSecret),
+        ...(['SENT', 'RECEIVED', 'MUTUAL'].includes(row.heart_relation) ? { heartRelation: row.heart_relation } : {}),
         ...(allowed.nickname && row.nickname ? { nickname: row.nickname } : {}),
         ...(allowed.avatar && row.avatar_file_id ? { avatarUrl: row.avatar_file_id } : {}),
         userKind: Number(row.is_player) === 1 ? 'PLAYER' : 'GUEST',
@@ -2811,7 +2834,7 @@ async function resolveInvitationScene(db, {
   }
 }
 
-function heartParticipant(row, { eventId, tokenSecret }) {
+function heartParticipant(row, { appId, eventId, tokenSecret, profileRefSecret }) {
   return {
     participantRef: createSignedToken({
       type: 'heart-target',
@@ -2819,6 +2842,7 @@ function heartParticipant(row, { eventId, tokenSecret }) {
       registrationId: row.registration_id,
       expiresAt: iso(new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)),
     }, tokenSecret),
+    profileRef: createProfileRef({ appId, userId: row.user_id }, profileRefSecret),
     nickname: row.nickname,
     avatarUrl: row.avatar_file_id || undefined,
     headline: row.headline || undefined,
@@ -2838,12 +2862,12 @@ async function requireAttendedRegistration(db, { appId, eventId, userId, lock = 
   return registration
 }
 
-async function listHeartCandidates(db, { appId, eventId, userId, tokenSecret }) {
+async function listHeartCandidates(db, { appId, eventId, userId, tokenSecret, profileRefSecret }) {
   await requireAttendedRegistration(db, { appId, eventId, userId })
   const blockFilter = mutualBlockFilter(userId, 'r.user_id', 'r.app_id')
   const [rows, selected] = await Promise.all([
     db.query(
-      `SELECT r.id AS registration_id, p.nickname, p.headline,
+      `SELECT r.id AS registration_id, r.user_id, p.nickname, p.headline,
          a.cloud_file_id AS avatar_file_id
        FROM mip_event_registrations r
        JOIN mip_profiles p ON p.app_id = r.app_id AND p.user_id = r.user_id
@@ -2862,19 +2886,19 @@ async function listHeartCandidates(db, { appId, eventId, userId, tokenSecret }) 
       [appId, eventId, userId],
     ),
   ])
-  return rows.map((row) => ({
-    ...heartParticipant(row, { eventId, tokenSecret }),
+  return rows.map(row => ({
+    ...heartParticipant(row, { appId, eventId, tokenSecret, profileRefSecret }),
     selected: row.registration_id === selected?.registration_id,
   }))
 }
 
-async function getHeart(db, { appId, eventId, userId, tokenSecret }) {
+async function getHeart(db, { appId, eventId, userId, tokenSecret, profileRefSecret }) {
   await requireAttendedRegistration(db, { appId, eventId, userId })
   const targetBlock = mutualBlockFilter(userId, 'h.target_user_id', 'h.app_id')
   const voterBlock = mutualBlockFilter(userId, 'h.voter_user_id', 'h.app_id')
   const [heart, received] = await Promise.all([
     db.one(
-      `SELECT h.version, h.updated_at, tr.id AS registration_id,
+      `SELECT h.version, h.updated_at, tr.id AS registration_id, tr.user_id,
          p.nickname, p.headline, a.cloud_file_id AS avatar_file_id
        FROM mip_event_hearts h
        LEFT JOIN mip_event_registrations tr
@@ -2886,7 +2910,7 @@ async function getHeart(db, { appId, eventId, userId, tokenSecret }) {
       [...targetBlock.params, appId, eventId, userId],
     ),
     db.query(
-      `SELECT vr.id AS registration_id, p.nickname, p.headline,
+      `SELECT vr.id AS registration_id, vr.user_id, p.nickname, p.headline,
          a.cloud_file_id AS avatar_file_id
        FROM mip_event_hearts h
        JOIN mip_event_registrations vr
@@ -2900,12 +2924,12 @@ async function getHeart(db, { appId, eventId, userId, tokenSecret }) {
     ),
   ])
   const target = heart?.registration_id
-    ? heartParticipant(heart, { eventId, tokenSecret })
+    ? heartParticipant(heart, { appId, eventId, tokenSecret, profileRefSecret })
     : undefined
   return {
     targetRef: target?.participantRef,
     target,
-    received: received.map(row => heartParticipant(row, { eventId, tokenSecret })),
+    received: received.map(row => heartParticipant(row, { appId, eventId, tokenSecret, profileRefSecret })),
     version: Number(heart?.version || 0),
     updatedAt: heart?.updated_at ? iso(heart.updated_at) : undefined,
   }
@@ -2981,6 +3005,7 @@ async function setHeart(db, {
   targetRef,
   expectedVersion,
   tokenSecret,
+  profileRefSecret,
   participationAccessPolicy,
   now = new Date(),
 }) {
@@ -3054,26 +3079,30 @@ async function setHeart(db, {
       payload: { eventId, voterUserId: userId, targetUserId: target?.user_id || null, active: Boolean(target) },
     })
     return null
-  }).then(async result => result || getHeart(db, { appId, eventId, userId, tokenSecret }))
+  }).then(async result => result
+    || getHeart(db, { appId, eventId, userId, tokenSecret, profileRefSecret }))
+}
+
+function feedbackProjection(row) {
+  return {
+    id: row.id,
+    rating: row.rating === null ? undefined : Number(row.rating),
+    ...(row.body ? { body: row.body } : {}),
+    answers: parseFeedbackAnswers(row.answers_json),
+    version: Number(row.version),
+    submittedAt: iso(row.submitted_at),
+    updatedAt: iso(row.updated_at),
+  }
 }
 
 async function getFeedback(db, { appId, eventId, userId }) {
   await requireAttendedRegistration(db, { appId, eventId, userId })
   const feedback = await db.one(
-    `SELECT id, rating, body, version, submitted_at, updated_at
+    `SELECT id, rating, body, answers_json, version, submitted_at, updated_at
      FROM mip_event_feedback WHERE app_id = ? AND event_id = ? AND user_id = ?`,
     [appId, eventId, userId],
   )
-  return feedback
-    ? {
-        id: feedback.id,
-        rating: feedback.rating === null ? undefined : Number(feedback.rating),
-        body: feedback.body,
-        version: Number(feedback.version),
-        submittedAt: iso(feedback.submitted_at),
-        updatedAt: iso(feedback.updated_at),
-      }
-    : null
+  return feedback ? feedbackProjection(feedback) : null
 }
 
 async function saveFeedback(db, {
@@ -3106,9 +3135,9 @@ async function saveFeedback(db, {
     const nextVersion = Number(existing?.version || 0) + 1
     if (existing) {
       const updated = await tx.query(
-        `UPDATE mip_event_feedback SET rating = ?, body = ?, version = version + 1
+        `UPDATE mip_event_feedback SET rating = ?, body = ?, answers_json = ?, version = version + 1
          WHERE app_id = ? AND id = ? AND version = ?`,
-        [normalized.rating, normalized.body, appId, feedbackId, existing.version],
+        [normalized.rating, normalized.body, JSON.stringify(normalized.answers), appId, feedbackId, existing.version],
       )
       if (Number(updated?.affectedRows) !== 1) {
         throw new DomainError('CONFLICT', '反馈已变化，请刷新后重试', true)
@@ -3118,9 +3147,10 @@ async function saveFeedback(db, {
       try {
         const inserted = await tx.query(
           `INSERT INTO mip_event_feedback (
-            id, app_id, event_id, user_id, rating, body, version, submitted_at
-          ) VALUES (?, ?, ?, ?, ?, ?, 1, ?)`,
-          [feedbackId, appId, eventId, userId, normalized.rating, normalized.body, now],
+            id, app_id, event_id, user_id, rating, body, answers_json, version, submitted_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+          [feedbackId, appId, eventId, userId, normalized.rating, normalized.body,
+            JSON.stringify(normalized.answers), now],
         )
         if (Number(inserted?.affectedRows) !== 1) {
           throw new DomainError('CONFLICT', '反馈已变化，请刷新后重试', true)
@@ -3141,7 +3171,7 @@ async function saveFeedback(db, {
       action: existing ? 'EVENT_FEEDBACK_UPDATED' : 'EVENT_FEEDBACK_SUBMITTED',
       resourceType: 'EVENT_FEEDBACK',
       resourceId: feedbackId,
-      metadata: { ratingProvided: normalized.rating !== null, bodyLength: normalized.body.length },
+      metadata: { rating: normalized.rating, bodyLength: normalized.body.length },
     })
     await writeOutbox(tx, {
       appId,
@@ -3153,8 +3183,9 @@ async function saveFeedback(db, {
     })
     return {
       id: feedbackId,
-      rating: normalized.rating === null ? undefined : normalized.rating,
-      body: normalized.body,
+      rating: normalized.rating,
+      ...(normalized.body ? { body: normalized.body } : {}),
+      answers: normalized.answers,
       version: nextVersion,
       submittedAt: iso(existing?.submitted_at || now),
       updatedAt: iso(now),
@@ -3293,7 +3324,7 @@ async function adminListFeedback(db, { appId, userId, eventId, cursor, limit = 3
   }
   params.push(pageLimit + 1)
   const rows = await db.query(
-    `SELECT f.id, f.rating, f.body, f.version, f.submitted_at, f.updated_at, p.nickname
+    `SELECT f.id, f.rating, f.body, f.answers_json, f.version, f.submitted_at, f.updated_at, p.nickname
      FROM mip_event_feedback f
      JOIN mip_profiles p ON p.app_id = f.app_id AND p.user_id = f.user_id
      WHERE f.app_id = ? AND f.event_id = ?${normalizedRating === null ? '' : ' AND f.rating = ?'} ${cursorClause}
@@ -3305,13 +3336,8 @@ async function adminListFeedback(db, { appId, userId, eventId, cursor, limit = 3
   const last = pageRows[pageRows.length - 1]
   return {
     items: pageRows.map(row => ({
-      id: row.id,
+      ...feedbackProjection(row),
       nickname: typeof row.nickname === 'string' && row.nickname ? row.nickname : '匿名用户',
-      rating: row.rating === null ? undefined : Number(row.rating),
-      body: row.body,
-      version: Number(row.version),
-      submittedAt: iso(row.submitted_at),
-      updatedAt: iso(row.updated_at),
     })),
     nextCursor: hasMore
       ? Buffer.from(JSON.stringify({ submittedAt: iso(last.submitted_at), id: last.id })).toString('base64url')

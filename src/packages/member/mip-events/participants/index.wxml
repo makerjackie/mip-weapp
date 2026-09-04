@@ -8,46 +8,74 @@
 
     <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="participants-filters">
       <view class="participants-filter-row">
-        <view wx:if="{{kind === 'ALL'}}" class="participants-filter-target" aria-role="radio" aria-checked="true" data-kind="ALL" bind:tap="changeKind">
+        <view wx:if="{{activeView === 'PUBLIC' && kind === 'ALL'}}" class="participants-filter-target" aria-role="radio" aria-checked="true" data-kind="ALL" bind:tap="changeKind">
           <view class="participants-filter-pill participants-filter-pill--active"><t-icon name="check" size="12px" color="var(--color-on-brand)" />全部</view>
         </view>
         <view wx:else class="participants-filter-target" aria-role="radio" aria-checked="false" data-kind="ALL" bind:tap="changeKind">
           <view class="participants-filter-pill">全部</view>
         </view>
-        <view wx:if="{{kind === 'GUEST'}}" class="participants-filter-target" aria-role="radio" aria-checked="true" data-kind="GUEST" bind:tap="changeKind">
+        <view wx:if="{{activeView === 'PUBLIC' && kind === 'GUEST'}}" class="participants-filter-target" aria-role="radio" aria-checked="true" data-kind="GUEST" bind:tap="changeKind">
           <view class="participants-filter-pill participants-filter-pill--active"><t-icon name="check" size="12px" color="var(--color-on-brand)" />嘉宾</view>
         </view>
         <view wx:else class="participants-filter-target" aria-role="radio" aria-checked="false" data-kind="GUEST" bind:tap="changeKind">
           <view class="participants-filter-pill">嘉宾</view>
         </view>
-        <view wx:if="{{kind === 'PLAYER'}}" class="participants-filter-target" aria-role="radio" aria-checked="true" data-kind="PLAYER" bind:tap="changeKind">
+        <view wx:if="{{activeView === 'PUBLIC' && kind === 'PLAYER'}}" class="participants-filter-target" aria-role="radio" aria-checked="true" data-kind="PLAYER" bind:tap="changeKind">
           <view class="participants-filter-pill participants-filter-pill--active"><t-icon name="check" size="12px" color="var(--color-on-brand)" />玩家</view>
         </view>
         <view wx:else class="participants-filter-target" aria-role="radio" aria-checked="false" data-kind="PLAYER" bind:tap="changeKind">
           <view class="participants-filter-pill">玩家</view>
         </view>
-        <view class="participants-filter-target" aria-role="button" data-view-mode="SENT" bind:tap="openInteraction">
-          <view class="participants-filter-pill">我的心动</view>
+        <view class="participants-filter-target" aria-role="radio" aria-checked="{{activeView === 'SENT'}}" data-view="SENT" bind:tap="changeView">
+          <view wx:if="{{activeView === 'SENT'}}" class="participants-filter-pill participants-filter-pill--active">
+            <t-icon name="check" size="12px" color="var(--color-on-brand)" />
+            <text>我的心动</text>
+            <text wx:if="{{heartState === 'ready'}}" class="participants-filter-count">{{sentItems.length}}</text>
+          </view>
+          <view wx:else class="participants-filter-pill">
+            <text>我的心动</text>
+            <text wx:if="{{heartState === 'ready'}}" class="participants-filter-count">{{sentItems.length}}</text>
+          </view>
         </view>
-        <view class="participants-filter-target" aria-role="button" data-view-mode="RECEIVED" bind:tap="openInteraction">
-          <view class="participants-filter-pill">对我心动</view>
+        <view class="participants-filter-target" aria-role="radio" aria-checked="{{activeView === 'RECEIVED'}}" data-view="RECEIVED" bind:tap="changeView">
+          <view wx:if="{{activeView === 'RECEIVED'}}" class="participants-filter-pill participants-filter-pill--active">
+            <t-icon name="check" size="12px" color="var(--color-on-brand)" />
+            <text>对我心动</text>
+            <text wx:if="{{heartState === 'ready'}}" class="participants-filter-count">{{receivedItems.length}}</text>
+          </view>
+          <view wx:else class="participants-filter-pill">
+            <text>对我心动</text>
+            <text wx:if="{{heartState === 'ready'}}" class="participants-filter-count">{{receivedItems.length}}</text>
+          </view>
         </view>
       </view>
     </scroll-view>
   </view>
 
-  <view wx:if="{{state === 'loading'}}" class="participants-grid participants-grid--loading">
+  <view wx:if="{{(activeView === 'PUBLIC' && state === 'loading') || (activeView !== 'PUBLIC' && heartState === 'loading')}}" class="participants-grid participants-grid--loading">
     <view class="participant-card participant-card--loading"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <view class="participant-card participant-card--loading"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   </view>
-  <view wx:elif="{{state === 'error'}}">
+  <view wx:elif="{{activeView === 'PUBLIC' && state === 'error'}}">
     <app-empty-state title="暂时无法加载参与人" description="{{message}}" action-text="重新加载" bind:action="loadParticipants" />
     <app-page-exit />
   </view>
+  <view wx:elif="{{activeView !== 'PUBLIC' && heartState === 'restricted'}}">
+    <app-empty-state title="心动功能暂不可用" description="完成登录、必要资料和本场签到后可查看和使用心动功能。" action-text="查看全部参与人" bind:action="showPublicParticipants" />
+    <app-page-exit />
+  </view>
+  <view wx:elif="{{activeView !== 'PUBLIC' && heartState === 'error'}}">
+    <app-empty-state title="暂时无法加载心动信息" description="{{heartMessage}}" action-text="重新加载" bind:action="retryHeartState" />
+    <app-page-exit />
+  </view>
   <block wx:else>
-    <app-empty-state wx:if="{{items.length === 0}}" title="暂无公开参与人" description="符合当前条件的公开资料会显示在这里。" />
+    <view wx:if="{{activeView !== 'PUBLIC'}}" class="participants-private-note">
+      <t-icon name="lock-on-filled" size="14px" color="var(--color-muted)" />
+      <text>心动信息仅本人可见</text>
+    </view>
+    <app-empty-state wx:if="{{displayItems.length === 0}}" title="{{emptyTitle}}" description="{{emptyDescription}}" />
     <view wx:else class="participants-grid">
-      <view wx:for="{{items}}" wx:key="profileRef" class="participant-card" hover-class="participant-card--pressed" aria-role="button" aria-label="查看{{item.displayName}}的公开档案" data-profile-ref="{{item.profileRef}}" bind:tap="openProfile">
+      <view wx:for="{{displayItems}}" wx:key="profileRef" class="participant-card" hover-class="participant-card--pressed" aria-role="button" aria-label="查看{{item.displayName}}的公开档案" data-profile-ref="{{item.profileRef}}" bind:tap="openProfile">
         <view class="participant-card__visual">
           <text wx:if="{{item.kindLabel}}" class="participant-card__kind">{{item.kindLabel}}</text>
           <t-icon class="participant-card__chevron" name="chevron-right" size="14px" color="var(--color-muted)" />
@@ -55,12 +83,25 @@
           <view wx:else class="participant-card__avatar participant-card__avatar--empty"><t-icon name="user-avatar" size="26px" color="var(--color-brand)" /></view>
         </view>
         <view class="participant-card__name">{{item.displayName}}</view>
+        <view wx:if="{{item.heartRelation}}" class="participant-card__relations">
+          <view wx:if="{{item.heartRelation === 'SENT' || item.heartRelation === 'MUTUAL'}}" class="participant-card__relation participant-card__relation--sent">
+            <t-icon name="heart-filled" size="12px" color="var(--color-brand)" />
+            <text>我的心动</text>
+          </view>
+          <view wx:if="{{item.heartRelation === 'RECEIVED' || item.heartRelation === 'MUTUAL'}}" class="participant-card__relation">
+            <t-icon name="heart-filled" size="12px" color="var(--color-danger)" />
+            <text>对我心动</text>
+          </view>
+        </view>
         <view wx:if="{{item.metaText}}" class="participant-card__meta">{{item.metaText}}</view>
         <view wx:if="{{item.introductionText}}" class="participant-card__summary">{{item.introductionText}}</view>
       </view>
     </view>
-    <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" theme="primary" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
-    <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
+    <view wx:if="{{activeView === 'SENT' && heartState === 'ready'}}" class="participants-heart-action">
+      <t-button block theme="primary" bind:tap="openInteraction">{{sentItems.length ? '修改或取消心动' : '选择心动'}}</t-button>
+    </view>
+    <view wx:if="{{activeView === 'PUBLIC' && nextCursor}}" class="mt-4"><t-button block variant="outline" theme="primary" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
+    <view wx:if="{{activeView === 'PUBLIC' && message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
     <app-page-exit />
   </block>
 </view>

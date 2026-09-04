@@ -93,13 +93,17 @@
     },
     {
       "id": "member-feedback",
-      "route": "packages/member/mip-events/interaction/index",
-      "selector": "#mip-event-interaction-page",
+      "route": "packages/member/mip-events/feedback/index",
+      "selector": "#mip-event-feedback-page",
       "mode": "automated-mutation",
       "handlers": [
-        "changeView",
-        "onRatingChange",
+        "selectRating",
+        "selectRecommendation",
+        "toggleRole",
         "onBodyInput",
+        "selectJoinIntent",
+        "toggleExplorationMethod",
+        "selectRosterConsent",
         "saveFeedback"
       ]
     },

@@ -298,6 +298,7 @@ describe('mip-weapp UI runtime contract', () => {
     expect(verifyRuntime).toContain('deepLink')
     expect(verifyRuntime).toContain('verifyRepresentativeStates')
     expect(contract.representativeStates.map(state => state.id).sort()).toEqual([
+      'conflict',
       'disabled',
       'empty',
       'error',

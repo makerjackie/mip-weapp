@@ -36,9 +36,8 @@
   </view>
 
   <view wx:if="{{rangePanelVisible}}" class="mt-2 flex flex-col gap-3 rounded-[16rpx] bg-panel px-4 py-3">
-    <view class="flex min-h-[64rpx] items-center justify-between">
+    <view class="flex min-h-[64rpx] items-center">
       <text class="text-[length:26rpx] font-semibold">活动筛选</text>
-      <view class="flex min-h-[64rpx] items-center px-2 text-[length:22rpx] text-muted" aria-role="button" bind:tap="clearDiscoveryFilters">清空</view>
     </view>
 
     <view>
@@ -99,7 +98,10 @@
       </view>
     </view>
 
-    <view class="box-border flex min-h-[88rpx] max-w-full items-center justify-center rounded-[16rpx] bg-brand text-[length:26rpx] font-semibold text-on-brand" aria-role="button" bind:tap="confirmDiscoveryFilters">确定</view>
+    <view class="flex gap-2">
+      <view id="events-clear-filters" class="box-border flex min-h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-[16rpx] border border-line bg-panel-raised text-[length:25rpx] font-semibold text-ink" aria-role="button" bind:tap="clearDiscoveryFilters">清空筛选</view>
+      <view id="events-confirm-filters" class="box-border flex min-h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-[16rpx] bg-brand text-[length:25rpx] font-semibold text-on-brand" aria-role="button" bind:tap="confirmDiscoveryFilters">确定筛选</view>
+    </view>
   </view>
 
   <view class="mt-1 flex items-center gap-2">

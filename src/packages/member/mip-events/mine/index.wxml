@@ -11,13 +11,14 @@
   <view wx:elif="{{registrations.length === 0}}" class="mx-3 mt-5"><app-empty-state title="{{activeCategory === 'UPCOMING' ? '暂无待参加活动' : '暂无已参加活动'}}" description="{{activeCategory === 'UPCOMING' ? '报名确认后的活动会显示在这里。' : '完成签到的活动会显示在这里。'}}" action-text="浏览活动" bind:action="browseEvents" /></view>
   <view wx:else class="mx-3 mt-4 flex flex-col gap-3">
     <view wx:for="{{registrations}}" wx:key="registrationId" class="overflow-hidden rounded-[16rpx] bg-panel" data-event-id="{{item.event.id}}" data-status="{{item.status}}">
-      <event-card event="{{item.card}}" variant="feed" show-cancel="{{item.canCancel || item.canRetryRefund}}" cancel-loading="{{cancelingId === item.registrationId}}" cancel-retry="{{item.canRetryRefund}}" registration-id="{{item.registrationId}}" version="{{item.version}}" bind:select="openRegistration" bind:cancel="cancelRegistration" />
+      <event-card event="{{item.card}}" variant="feed" bind:select="openRegistration" />
       <view wx:if="{{item.status === 'PAYMENT_PENDING'}}" class="border-t border-line px-3 py-2 text-[length:21rpx] text-muted">支付确认前不会生成报名资格。</view>
-      <view wx:if="{{item.orderId || item.canEdit}}" class="border-t border-line px-3 py-3">
-        <view class="flex flex-wrap gap-2">
-          <t-button wx:if="{{item.orderId}}" size="small" variant="outline" data-order-id="{{item.orderId}}" catch:tap="openOrder">查看订单详情</t-button>
-          <t-button wx:if="{{item.canEdit}}" size="small" variant="outline" data-event-id="{{item.event.id}}" catch:tap="editRegistration">修改报名</t-button>
+      <view wx:if="{{item.orderId || item.canEdit || item.canCancel || item.canRetryRefund}}" data-role="registration-actions" class="flex flex-col gap-2 border-t border-line px-3 py-3">
+        <view wx:if="{{item.canEdit || item.canCancel || item.canRetryRefund}}" class="flex gap-2">
+          <t-button wx:if="{{item.canCancel || item.canRetryRefund}}" class="min-w-0 flex-1" block size="large" theme="{{item.canRetryRefund ? 'primary' : 'danger'}}" variant="outline" loading="{{cancelingId === item.registrationId}}" data-action="cancel" data-event-id="{{item.event.id}}" data-registration-id="{{item.registrationId}}" data-version="{{item.version}}" data-refund-retry="{{item.canRetryRefund}}" catch:tap="cancelRegistration">{{item.canRetryRefund ? '继续处理退款' : '取消报名'}}</t-button>
+          <t-button wx:if="{{item.canEdit}}" class="min-w-0 flex-1" block size="large" theme="primary" data-action="edit" data-event-id="{{item.event.id}}" catch:tap="editRegistration">修改报名</t-button>
         </view>
+        <t-button wx:if="{{item.orderId}}" block size="large" theme="default" variant="text" data-action="order" data-order-id="{{item.orderId}}" catch:tap="openOrder">查看订单详情</t-button>
       </view>
     </view>
     <view wx:if="{{nextCursor}}" class="py-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>

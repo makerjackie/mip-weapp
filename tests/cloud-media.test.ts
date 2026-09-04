@@ -1,9 +1,8 @@
 import type { CaseCloudClient } from '../src/platform/cloudbase/client'
 import { replaceCloudFileUrls } from '@weapp/platform/media-urls'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
-  appendCloudImageTransform,
-  cloudImageTransformForFileId,
+  clearCloudMediaCache,
   resolveCloudFileUrls,
 } from '../src/platform/storage/cloud-media'
 
@@ -12,25 +11,9 @@ vi.mock('../src/platform/cloudbase/client', () => ({
 }))
 
 describe('CloudBase media URLs', () => {
-  it('selects bounded CloudBase image variants without changing original object IDs', () => {
-    expect(cloudImageTransformForFileId('cloud://env/member-assets/app/avatars/user/a.jpg'))
-      .toContain('thumbnail/320x320')
-    expect(cloudImageTransformForFileId('cloud://env/member-assets/app/events/id/covers/a.jpg'))
-      .toContain('thumbnail/1200x')
-    expect(cloudImageTransformForFileId('cloud://env/member-assets/app/events/id/album/a.jpg'))
-      .toContain('thumbnail/1600x')
-    expect(cloudImageTransformForFileId('cloud://env/mip/test/scope/event-album/user/a.jpg'))
-      .toContain('thumbnail/1600x')
-    expect(cloudImageTransformForFileId('cloud://env/mip/test/scope/banners/user/a.jpg'))
-      .toContain('thumbnail/1200x')
-    expect(cloudImageTransformForFileId('cloud://env/mip/test/scope/task-attachments/user/a.jpg'))
-      .toContain('thumbnail/1600x')
-    expect(cloudImageTransformForFileId('cloud://env/mip/test/scope/task-templates/user/a.jpg'))
-      .toContain('thumbnail/1600x')
-    expect(appendCloudImageTransform(
-      'https://example.test/file.jpg?sign=1',
-      'imageMogr2/thumbnail/1200x',
-    )).toBe('https://example.test/file.jpg?sign=1&imageMogr2/thumbnail/1200x')
+  afterEach(() => {
+    clearCloudMediaCache()
+    vi.unstubAllGlobals()
   })
 
   it('replaces nested cloud file IDs without mutating unrelated values', () => {
@@ -73,5 +56,47 @@ describe('CloudBase media URLs', () => {
     })
     await resolveCloudFileUrls(source, cloud)
     expect(downloads).toHaveLength(2)
+  })
+
+  it('rejects storage error documents returned as successful downloads', async () => {
+    const cloudDownload = vi.fn(async () => {
+      return {
+        tempFilePath: 'http://tmp/storage-error.xml',
+        statusCode: 200,
+        errMsg: 'downloadFile:ok',
+      }
+    })
+    const getTempFileURL = vi.fn()
+    const cloud = {
+      callFunction: async () => ({ result: null }),
+      downloadFile: cloudDownload,
+      getTempFileURL,
+    } as unknown as CaseCloudClient
+
+    const result = await resolveCloudFileUrls({
+      imageUrl: 'cloud://media-test/mip/app/events/id/covers/user-event.jpg',
+    }, cloud)
+    expect(result).toEqual({ imageUrl: '' })
+    expect(cloudDownload).toHaveBeenCalledTimes(2)
+    expect(getTempFileURL).not.toHaveBeenCalled()
+  })
+
+  it('does not request a signed URL when native CloudBase download succeeds', async () => {
+    const cloudDownload = vi.fn(async () => ({
+      tempFilePath: 'wxfile://tmp/native-event.jpg',
+      statusCode: 200,
+      errMsg: 'downloadFile:ok',
+    }))
+    const getTempFileURL = vi.fn(async () => ({ fileList: [], errMsg: 'getTempFileURL:ok' }))
+    const cloud = {
+      callFunction: async () => ({ result: null }),
+      downloadFile: cloudDownload,
+      getTempFileURL,
+    } as unknown as CaseCloudClient
+
+    const result = await resolveCloudFileUrls({ imageUrl: 'cloud://media-test/native-event.jpg' }, cloud)
+    expect(result).toEqual({ imageUrl: 'wxfile://tmp/native-event.jpg' })
+    expect(cloudDownload).toHaveBeenCalledWith({ fileID: 'cloud://media-test/native-event.jpg' })
+    expect(getTempFileURL).not.toHaveBeenCalled()
   })
 })

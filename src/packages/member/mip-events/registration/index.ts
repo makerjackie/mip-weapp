@@ -6,6 +6,7 @@ import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
+import { showErrorFeedback } from '../../../../platform/feedback/client'
 import { caseNavigateTo } from '../../../../platform/navigation/client'
 import { formatChineseDateTime } from '../../../../utils/date'
 
@@ -256,7 +257,9 @@ Page({
     })
     this.setData({ fields })
     if (firstInvalidLabel) {
-      this.setData({ message: `请检查${firstInvalidLabel}` })
+      const message = `请检查${firstInvalidLabel}`
+      this.setData({ message })
+      showErrorFeedback(message)
       return false
     }
     return true
@@ -385,11 +388,14 @@ Page({
           }
         }
         catch {
-          this.setData({ message: '身份状态暂时无法确认，请稍后重试。' })
+          const message = '身份状态暂时无法确认，请稍后重试。'
+          this.setData({ message })
+          showErrorFeedback(message)
         }
       }
       else {
-        this.setData({ message: error instanceof Error ? error.message : '报名提交失败' })
+        const message = showErrorFeedback(error, '报名提交失败，请稍后重试。')
+        this.setData({ message })
       }
     }
     finally {

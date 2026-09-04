@@ -21,7 +21,7 @@ describe('MIP admin event feedback workflow', () => {
     expect(service).toContain('submitted_at DESC, f.id DESC')
     expect(handler).toContain('case \'mip.events.admin.listFeedback\':')
     expect(gateway).toContain('\'mip.events.admin.listFeedback\'')
-    expect(service).toContain('SELECT f.id, f.rating, f.body, f.version, f.submitted_at, f.updated_at, p.nickname')
+    expect(service).toContain('SELECT f.id, f.rating, f.body, f.answers_json, f.version, f.submitted_at, f.updated_at, p.nickname')
     expect(service).not.toContain('SELECT f.user_id')
   })
 })

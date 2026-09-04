@@ -9,6 +9,20 @@ function read(relativePath: string) {
 }
 
 describe('event registration experience', () => {
+  it('keeps the first event-detail frame dark while the subpackage is loading', () => {
+    const detailConfig = JSON.parse(read('src/packages/member/mip-events/detail/index.json')) as Record<string, unknown>
+
+    expect(detailConfig).toMatchObject({
+      navigationBarBackgroundColor: '#040404',
+      navigationBarTextStyle: 'white',
+      backgroundColor: '#040404',
+      backgroundColorContent: '#040404',
+      backgroundColorTop: '#040404',
+      backgroundColorBottom: '#040404',
+      backgroundTextStyle: 'light',
+    })
+  })
+
   it('uses the MIP event detail as the registration-page fact source', () => {
     const events = read('src/pages/events/index.ts')
     const detail = read('src/packages/member/mip-events/detail/index.ts')
@@ -33,6 +47,16 @@ describe('event registration experience', () => {
     expect(registrationView).toContain('event.coverUrl')
     expect(registrationView).not.toContain('event.address')
     expect(registrationView).not.toContain('event.notices')
+  })
+
+  it('shows registration failures in the current viewport and keeps the message near the form start', () => {
+    const registration = read('src/packages/member/mip-events/registration/index.ts')
+    const registrationView = read('src/packages/member/mip-events/registration/index.wxml')
+
+    expect(registration).toContain('showErrorFeedback(error, \'报名提交失败，请稍后重试。\')')
+    expect(registrationView).toContain('id="event-registration-feedback"')
+    expect(registrationView.indexOf('id="event-registration-feedback"'))
+      .toBeLessThan(registrationView.indexOf('报名资料'))
   })
 
   it('prefills editable registrations by field key without selecting the first option', () => {
@@ -71,7 +95,6 @@ describe('event registration experience', () => {
   it('uses server-filtered activity tabs, server counts, and server-authorized cancellation', () => {
     const mine = read('src/packages/member/mip-events/mine/index.ts')
     const mineView = read('src/packages/member/mip-events/mine/index.wxml')
-    const eventCard = read('src/components/event-card/index.wxml')
     const service = read('cloudfunctions/mip-events-api/domain/event-service.js')
 
     expect(mine).toContain('listMyRegistrations(undefined, category)')
@@ -79,15 +102,13 @@ describe('event registration experience', () => {
     expect(mine).toContain('mipEventsModule.cancelRegistration')
     expect(mine).toContain('!Number.isInteger(version) || version < 1')
     expect(mine).toContain('await this.loadRegistrations()')
-    expect(mineView).toContain('version="{{item.version}}"')
+    expect(mineView).toContain('data-version="{{item.version}}"')
     expect(mineView).toContain('待参加({{counts.upcoming}})')
     expect(mineView).toContain('已参加({{counts.attended}})')
     expect(mineView).toContain('event="{{item.card}}"')
-    expect(mineView).toContain('show-cancel="{{item.canCancel || item.canRetryRefund}}"')
-    expect(mineView).toContain('cancel-retry="{{item.canRetryRefund}}"')
-    expect(eventCard).toContain('event.participantPreview')
-    expect(eventCard).toContain('event.locationText')
-    expect(eventCard).toContain('继续处理退款')
+    expect(mineView).toContain('data-role="registration-actions"')
+    expect(mineView).toContain('wx:if="{{item.canCancel || item.canRetryRefund}}"')
+    expect(mineView).toContain('data-refund-retry="{{item.canRetryRefund}}"')
     expect(service).toContain('category === \'UPCOMING\'')
     expect(service).toContain('canCancel: canCancelRegistration')
     expect(service).toContain('canRetryRefund: canRetryRegistrationRefund')
@@ -99,7 +120,6 @@ describe('event registration experience', () => {
     const detailView = read('src/packages/member/mip-events/detail/index.wxml')
     const mine = read('src/packages/member/mip-events/mine/index.ts')
     const mineView = read('src/packages/member/mip-events/mine/index.wxml')
-    const eventCard = read('src/components/event-card/index.ts')
 
     expect(detail).toContain('currentEvent?.canRetryRefund === true')
     expect(detail).toContain('currentEvent.registrationVersion')
@@ -109,18 +129,39 @@ describe('event registration experience', () => {
     expect(detailView).toContain('继续处理退款')
     expect(mine).toContain('dataset.refundRetry === \'true\'')
     expect(mine).toContain('mipEventsModule.cancelRegistration')
-    expect(mineView).toContain('cancel-retry="{{item.canRetryRefund}}"')
-    expect(eventCard).toContain('refundRetry: this.data.cancelRetry')
+    expect(mineView).toContain('data-refund-retry="{{item.canRetryRefund}}"')
+    expect(mineView).toContain('{{item.canRetryRefund ? \'继续处理退款\' : \'取消报名\'}}')
+  })
+
+  it('keeps registration actions in one footer with clear hierarchy', () => {
+    const mineView = read('src/packages/member/mip-events/mine/index.wxml')
+    const actionsStart = mineView.indexOf('data-role="registration-actions"')
+    const actionsEnd = mineView.indexOf('</view>', mineView.indexOf('</view>', actionsStart) + 1)
+    const actions = mineView.slice(actionsStart, actionsEnd)
+
+    expect(actions).toContain('data-action="cancel"')
+    expect(actions).toContain('theme="{{item.canRetryRefund ? \'primary\' : \'danger\'}}"')
+    expect(actions).toContain('variant="outline"')
+    expect(actions).toContain('size="large"')
+    expect(actions).toContain('catch:tap="cancelRegistration"')
+    expect(actions).toContain('data-action="edit"')
+    expect(actions).toContain('theme="primary"')
+    expect(actions).toContain('catch:tap="editRegistration"')
+    expect(actions).toContain('class="min-w-0 flex-1"')
+    expect(mineView).toContain('data-action="order"')
+    expect(mineView).toContain('variant="text"')
+    expect(mineView).not.toContain('show-cancel=')
+    expect(read('src/components/event-card/index.ts')).not.toContain('handleCancel')
   })
 
   it('carries optimistic versions for cancellation and first or subsequent feedback saves', () => {
     const detail = read('src/packages/member/mip-events/detail/index.ts')
-    const interaction = read('src/packages/member/mip-events/interaction/index.ts')
+    const feedback = read('src/packages/member/mip-events/feedback/index.ts')
     const gateway = read('src/modules/mip-events/cloudbase-gateway.ts')
     const entry = read('cloudfunctions/mip-events-api/index.js')
 
     expect(detail).toContain('currentEvent.registrationVersion')
-    expect(interaction).toContain('expectedVersion: this.data.feedback?.version || 0')
+    expect(feedback).toContain('expectedVersion: this.data.feedback?.version || 0')
     expect(gateway).toContain('const { expectedVersion, ...feedback } = draft')
     expect(gateway).toMatch(/eventId,[\s\S]*expectedVersion,[\s\S]*draft: feedback/)
     expect(entry).toContain('expectedVersion: event.expectedVersion')
@@ -278,5 +319,34 @@ describe('event registration experience', () => {
     expect(detailView).not.toContain('<text>客服</text>')
     expect(detailView).toContain('<app-page-exit')
     expect(detailView).not.toContain('shadow-[0_8rpx_22rpx')
+  })
+
+  it('matches the Figma event-share sheet structure and actions', () => {
+    const detailLogic = read('src/packages/member/mip-events/detail/index.ts')
+    const detailView = read('src/packages/member/mip-events/detail/index.wxml')
+
+    expect(detailView).toContain('id="mip-event-share-sheet"')
+    expect(detailView).toContain('h-[836rpx]')
+    expect(detailView).toContain('bg-[#080808]')
+    expect(detailView).toContain('id="mip-event-share-actions"')
+    expect(detailView).toContain('h-[496rpx]')
+    expect(detailView).toContain('id="mip-event-share-copy"')
+    expect(detailView).toContain('h-[292rpx]')
+    expect(detailView).toContain('id="mip-event-wechat-share"')
+    expect(detailView).toContain('id="mip-event-copy-link"')
+    expect(detailView).toContain('id="mip-event-download-code"')
+    expect(detailView).toContain('id="mip-event-copy-text"')
+    expect(detailView).toContain('/assets/figma/events/wechat.svg')
+    expect(detailView).toContain('/assets/figma/events/link.svg')
+    expect(detailView).toContain('/assets/figma/events/qr-code.svg')
+    expect(detailView).toContain('/assets/figma/events/copy.svg')
+    expect(detailView).toContain('MIP 小程序活动详情')
+    expect(detailView).toContain('时间：{{shareTimeText}}')
+    expect(detailView).not.toContain('发送给微信好友')
+    expect(detailView).not.toContain('生成邀请海报')
+    expect(detailLogic).toContain('copyEventLink()')
+    expect(detailLogic).toContain('downloadInvitationCode()')
+    expect(detailLogic).toContain('shareTimeText: compactEventTime(event.startsAt, event.endsAt)')
+    expect(detailLogic).toContain('wx.showToast({ title: \'二维码已保存\', icon: \'success\' })')
   })
 })

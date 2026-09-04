@@ -30,7 +30,7 @@ export interface CooperationRoleDefinition {
 }
 
 export const mipPlaceholderCatalog = {
-  version: '2026-08-31-demo.20',
+  version: '2026-09-03-demo.21',
   replaceBeforeProduction: true,
   cityBranches: [
     { key: 'shenzhen', label: '深圳分会', city: '深圳' },

@@ -1,20 +1,18 @@
 import type { BranchId, EventId, OpportunityId } from '../../modules/mip'
 import type { AnnouncementSummary } from '../../modules/mip-announcements'
-import type { MipBannerTargetType } from '../../modules/mip-banners'
+import type { MipPublicBanner } from '../../modules/mip-banners'
 import type { MipEventListItem } from '../../modules/mip-events'
 import type { IdentityAccessSnapshot } from '../../modules/mip-identity'
 import type { OpportunitySummary } from '../../modules/mip-opportunities'
 import { brand } from '../../config/brand'
 import { cooperationRoles } from '../../config/mip-catalogs'
-import { mipOperationsConfig } from '../../config/mip-operations'
 import { mipAnnouncementsModule } from '../../modules/mip-announcements'
 import { mipBannerModule } from '../../modules/mip-banners'
 import { mipEventsModule } from '../../modules/mip-events/client'
 import { mipBranchesModule, mipIdentityModule } from '../../modules/mip-identity/client'
 import { opportunityModule } from '../../modules/mip-opportunities'
-import { membershipPresentation } from '../../modules/mip-shell'
 import { caseNavigateTo, caseSwitchPrimary, syncCaseNavigation } from '../../platform/navigation/client'
-import { formatLocalMonthDayTime } from '../../utils/date'
+import { formatChineseDateTime } from '../../utils/date'
 
 interface DiscoverEvent extends MipEventListItem {
   startsText: string
@@ -35,7 +33,7 @@ function presentEvent(event: MipEventListItem): DiscoverEvent {
   return {
     ...event,
     coverUrl: event.coverUrl || '',
-    startsText: formatLocalMonthDayTime(event.startsAt),
+    startsText: formatChineseDateTime(event.startsAt),
     locationText: [event.cityName, event.venueName].filter(Boolean).join(' · ') || '地点待公布',
     accessLabel,
   }
@@ -61,19 +59,11 @@ Page({
     state: 'loading' as 'loading' | 'ready',
     logoPath: brand.logoPath,
     productName: brand.productName,
-    bannerImagePath: mipOperationsConfig.homeBanner.imagePath as string,
-    bannerAccessibilityLabel: mipOperationsConfig.homeBanner.accessibilityLabel as string,
-    bannerTargetType: 'MINIPROGRAM_PATH' as MipBannerTargetType,
-    bannerTargetValue: mipOperationsConfig.homeBanner.targetPath as string,
+    bannerState: 'loading' as 'loading' | 'ready' | 'empty' | 'error',
+    banners: [] as MipPublicBanner[],
     identityState: 'loading' as 'loading' | 'ready' | 'error',
-    membershipLabel: '嘉宾',
-    membershipDescription: '当前没有有效会员权益',
-    membershipEndsText: '',
     primaryBranchId: '' as BranchId | '',
     primaryBranchName: '全部城市',
-    branchState: 'loading' as 'loading' | 'ready' | 'error',
-    branchNames: [] as string[],
-    branchNamesText: '',
     eventState: 'loading' as 'loading' | 'ready' | 'error',
     events: [] as DiscoverEvent[],
     opportunityState: 'loading' as 'loading' | 'ready' | 'error',
@@ -138,15 +128,11 @@ Page({
   },
 
   applyIdentity(snapshot: IdentityAccessSnapshot) {
-    const membership = membershipPresentation(snapshot.membership.kind, snapshot.membership.entitlement)
     const primaryBranchId = snapshot.primaryBranchId || ''
     const previousBranchId = this.data.primaryBranchId
     const branch = mipBranchesModule.peek()?.branches.find(item => item.id === primaryBranchId)
     this.setData({
       identityState: 'ready',
-      membershipLabel: membership.label,
-      membershipDescription: membership.description,
-      membershipEndsText: membership.endsAt ? membership.endsAt.slice(0, 10) : '',
       primaryBranchId,
       primaryBranchName: branch?.name || this.data.primaryBranchName,
     })
@@ -166,7 +152,7 @@ Page({
       }
       this.setData({
         hasAnnouncements: page.items.length > 0,
-        announcement: page.items.find(item => item.isPinned) || null,
+        announcement: page.items.find(item => item.isPinned) || page.items[0] || null,
       })
     }
     catch {}
@@ -182,20 +168,13 @@ Page({
       const result = await mipBranchesModule.load()
       this.applyBranches(result.branches)
     }
-    catch {
-      if (this.data.branchState !== 'ready') {
-        this.setData({ branchState: 'error' })
-      }
-    }
+    catch {}
   },
 
   applyBranches(branches: Awaited<ReturnType<typeof mipBranchesModule.load>>['branches']) {
     const active = branches.filter(branch => branch.status === 'ACTIVE')
     const primary = active.find(branch => branch.id === this.data.primaryBranchId)
     this.setData({
-      branchState: 'ready',
-      branchNames: active.slice(0, 3).map(branch => branch.name),
-      branchNamesText: active.slice(0, 3).map(branch => branch.name).join(' · '),
       primaryBranchName: primary?.name || (this.data.primaryBranchId ? '主分会' : '全部城市'),
     })
   },
@@ -235,23 +214,23 @@ Page({
   },
 
   async loadBanner(force = false) {
-    try {
-      const [banner] = await mipBannerModule.listActive(force)
-      this.setData(banner
-        ? {
-            bannerImagePath: banner.imageUrl,
-            bannerAccessibilityLabel: banner.accessibilityLabel,
-            bannerTargetType: banner.targetType,
-            bannerTargetValue: banner.targetValue,
-          }
-        : {
-            bannerImagePath: mipOperationsConfig.homeBanner.imagePath,
-            bannerAccessibilityLabel: mipOperationsConfig.homeBanner.accessibilityLabel,
-            bannerTargetType: 'MINIPROGRAM_PATH',
-            bannerTargetValue: mipOperationsConfig.homeBanner.targetPath,
-          })
+    if (!this.data.banners.length) {
+      this.setData({ bannerState: 'loading' })
     }
-    catch {}
+    try {
+      const banners = await mipBannerModule.listActive(force)
+      this.setData({
+        bannerState: banners.length ? 'ready' : 'empty',
+        banners,
+      })
+    }
+    catch {
+      this.setData({ bannerState: this.data.banners.length ? 'ready' : 'error' })
+    }
+  },
+
+  retryBanner() {
+    void this.loadBanner(true)
   },
 
   async onPullDownRefresh() {
@@ -263,19 +242,20 @@ Page({
     }
   },
 
-  openMembership() {
-    caseNavigateTo({ url: '/pages/membership/index' })
-  },
-
-  openBanner() {
-    if (this.data.bannerTargetType === 'ARTICLE_URL') {
+  openBanner(event: WechatMiniprogram.TouchEvent) {
+    const index = Number(event.currentTarget.dataset.index)
+    const banner = Number.isInteger(index) ? this.data.banners[index] : undefined
+    if (!banner) {
+      return
+    }
+    if (banner.targetType === 'ARTICLE_URL') {
       wx.openOfficialAccountArticle({
-        url: this.data.bannerTargetValue,
+        url: banner.targetValue,
         fail: () => wx.showToast({ title: '文章暂未配置', icon: 'none' }),
       })
       return
     }
-    const targetPath = this.data.bannerTargetValue
+    const targetPath = banner.targetValue
     if (targetPath.startsWith('/') && !targetPath.startsWith('//') && targetPath.length < 300) {
       caseNavigateTo({ url: targetPath })
     }
@@ -283,10 +263,6 @@ Page({
 
   openBranches() {
     caseNavigateTo({ url: '/packages/member/mip-branches/index' })
-  },
-
-  openBlindBoxes() {
-    caseNavigateTo({ url: '/packages/member/mip-blind-box/index' })
   },
 
   openKnowledge() {

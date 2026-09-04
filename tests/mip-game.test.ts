@@ -706,7 +706,7 @@ describe('MIP game client contract', () => {
     expect(team).toContain('历史成员')
     expect(app).toContain('mip-blind-box/detail/index')
     expect(app).toContain('blind-box/index')
-    expect(discover).toContain('bind:tap="openBlindBoxes"')
+    expect(discover).not.toContain('bind:tap="openBlindBoxes"')
     expect(blindBoxDetail).toContain('抽取盲盒')
     expect(blindBoxDetail).toContain('draw-stage--result')
     expect(blindBoxDetail).toContain('普通抽取概率')

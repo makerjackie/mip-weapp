@@ -15,6 +15,7 @@ interface DemoEventTag {
 
 interface DemoEvent {
   id: string
+  key: string
   title: string
   startsAt: string
   endsAt: string
@@ -40,7 +41,7 @@ function sourceFunction(name: string, nextName: string) {
 
 describe('MIP demo event tag seed', () => {
   it('provides neutral tags and single-tag plus multi-tag 2030 fixtures', () => {
-    expect(seed.version).toBe('2026-08-31-demo.20')
+    expect(seed.version).toBe('2026-09-03-demo.21')
     expect(seed.eventTags).toHaveLength(3)
     expect(new Set(seed.eventTags.map(item => item.key)).size).toBe(seed.eventTags.length)
     expect(seed.eventTags.every(item => item.name.length > 0)).toBe(true)
@@ -53,7 +54,8 @@ describe('MIP demo event tag seed', () => {
     for (const event of longLived) {
       const startsAt = new Date(`${event.startsAt.replace(' ', 'T')}Z`)
       const endsAt = new Date(`${event.endsAt.replace(' ', 'T')}Z`)
-      expect(event.title).toContain('MIP 早会')
+      expect(event.title).toContain('MIP')
+      expect(event.title).toContain('早会')
       expect(event.eventTypeKey).toBe('mip_morning_meeting')
       expect(event.cityName).toBe('深圳')
       expect(event.address).toContain('福田区')
@@ -64,6 +66,9 @@ describe('MIP demo event tag seed', () => {
       expect(endsAt.toLocaleTimeString('zh-CN', { timeZone: 'Asia/Shanghai', hour12: false }))
         .toBe('12:00:00')
     }
+    const memberOnlyEvent = longLived.find(event => event.key === 'demo_event_2030_shenzhen_morning_2')
+    expect(memberOnlyEvent?.title).toBe('MIP反人性早会第233场')
+    expect(memberOnlyEvent?.title).not.toMatch(/\d{4} 年/)
     expect(seed.events.every(item => item.tagIds.every(tagId => catalogIds.has(tagId)))).toBe(true)
     expect(seed.eventTags.every(tag => seed.events.some(event => event.tagIds.includes(tag.id)))).toBe(true)
   })

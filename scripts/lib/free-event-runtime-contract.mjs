@@ -61,10 +61,19 @@ const expectedStepSpecs = [
   },
   {
     id: 'member-feedback',
-    route: 'packages/member/mip-events/interaction/index',
-    selector: '#mip-event-interaction-page',
+    route: 'packages/member/mip-events/feedback/index',
+    selector: '#mip-event-feedback-page',
     mode: 'automated-mutation',
-    handlers: ['changeView', 'onRatingChange', 'onBodyInput', 'saveFeedback'],
+    handlers: [
+      'selectRating',
+      'selectRecommendation',
+      'toggleRole',
+      'onBodyInput',
+      'selectJoinIntent',
+      'toggleExplorationMethod',
+      'selectRosterConsent',
+      'saveFeedback',
+    ],
   },
   {
     id: 'member-comment',
@@ -630,8 +639,7 @@ export function hasExactHeartCandidateState(data, {
     && !heart?.targetRef
 }
 
-export function summarizeInteraction(data, feedbackMarker) {
-  const feedback = data?.feedback
+export function summarizeInteraction(data) {
   return {
     state: data?.state || null,
     activeView: data?.activeView || null,
@@ -642,11 +650,26 @@ export function summarizeInteraction(data, feedbackMarker) {
           version: data.heart.version,
         }
       : null,
+  }
+}
+
+export function summarizeFeedback(data, feedbackMarker) {
+  const feedback = data?.feedback
+  return {
+    state: data?.state || null,
+    eventId: data?.event?.id || null,
     feedback: feedback
       ? {
           id: feedback.id,
           markerMatches: feedback.body === feedbackMarker,
           rating: feedback.rating || null,
+          recommendation: feedback.answers?.recommendation || null,
+          roleCount: Array.isArray(feedback.answers?.roleKeys) ? feedback.answers.roleKeys.length : 0,
+          joinIntent: feedback.answers?.joinIntent || null,
+          explorationMethodCount: Array.isArray(feedback.answers?.explorationMethods)
+            ? feedback.answers.explorationMethods.length
+            : 0,
+          rosterConsent: feedback.answers?.rosterConsent || null,
           version: feedback.version,
         }
       : null,
