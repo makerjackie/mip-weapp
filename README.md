@@ -25,7 +25,7 @@ pnpm dev:open
 
 ## 本地配置
 
-1. 复制并填写 `.env.local`，真实 AppID、EnvID、商户号和密钥只保存在本机。
+1. 复制并填写 `.env.local`，真实 AppID、EnvID、`MIP_WECHAT_APP_SECRET` 和上传私钥路径只保存在本机；稳定运行时密钥等恢复副本由 `pnpm env:compact` 管理到 `.env.secrets.local`。
 2. 使用 `src/config/brand.ts` 配置品牌，或运行 `pnpm project:init --name "产品名"`。
 3. 运行 `pnpm setup:local` 生成本机项目配置。
 4. CloudBase、数据库和支付配置分别遵循 [CloudBase](docs/CLOUDBASE.md)、[部署](docs/DEPLOYMENT.md) 和 [微信支付](docs/WECHAT_PAY.md) 文档。

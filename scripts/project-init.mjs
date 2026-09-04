@@ -2,6 +2,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
+import { compactEnvDocuments, writeEnvFileAtomic } from './lib/mip-local-secrets.mjs'
 import { runtimeUserForEnvironment } from './lib/mysql-privilege-assert.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
@@ -106,7 +107,13 @@ if (nextEnv.CLOUDBASE_ENV_ID) {
   nextEnv.MIP_DB_RUNTIME_USER = runtimeUserForEnvironment(nextEnv.CLOUDBASE_ENV_ID)
 }
 if (!dryRun) {
-  fs.writeFileSync(envPath, serializeEnv(nextEnv, envTemplate))
+  const secretsPath = path.join(root, '.env.secrets.local')
+  const secretsSource = fs.existsSync(secretsPath) ? fs.readFileSync(secretsPath, 'utf8') : ''
+  const compacted = compactEnvDocuments(serializeEnv(nextEnv, envTemplate), secretsSource)
+  if (secretsSource || compacted.movedKeys.length) {
+    writeEnvFileAtomic(secretsPath, compacted.secrets)
+  }
+  writeEnvFileAtomic(envPath, compacted.local)
 }
 else {
   console.log('[dry-run] would update .env.local without printing secrets')

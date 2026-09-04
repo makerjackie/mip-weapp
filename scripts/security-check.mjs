@@ -73,6 +73,9 @@ for (const file of filesToScan()) {
         && (
           relative.startsWith('tests/')
           || relative === 'config/runtime-pages.json'
+          || relative === '.env.example'
+          || relative === 'README.md'
+          || relative === 'scripts/lib/mip-local-secrets.mjs'
         )
       ) {
         continue

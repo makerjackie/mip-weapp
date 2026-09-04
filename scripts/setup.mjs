@@ -10,6 +10,7 @@ const envLocal = path.join(root, '.env.local')
 
 if (!fs.existsSync(envLocal) && fs.existsSync(envExample)) {
   fs.copyFileSync(envExample, envLocal)
+  fs.chmodSync(envLocal, 0o600)
   console.log('[setup] created .env.local from .env.example')
 }
 

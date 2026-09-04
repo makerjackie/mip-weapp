@@ -20,8 +20,16 @@ export function parseEnv(filePath) {
 }
 
 export function loadCaseEnv(caseRoot) {
+  const secrets = parseEnv(path.join(caseRoot, '.env.secrets.local'))
+  const local = parseEnv(path.join(caseRoot, '.env.local'))
+  for (const [key, value] of Object.entries(secrets)) {
+    if (String(value).trim() && String(local[key] || '').trim() && String(value).trim() !== String(local[key]).trim()) {
+      throw new Error(`${key} differs between .env.secrets.local and .env.local`)
+    }
+  }
   return {
-    ...parseEnv(path.join(caseRoot, '.env.local')),
+    ...secrets,
+    ...local,
     ...process.env,
   }
 }

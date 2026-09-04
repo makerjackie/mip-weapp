@@ -9,15 +9,17 @@ import { createMipCoreFunctionManifest } from './lib/mip-function-manifest.mjs'
 import { resolveMipFunctionNames } from './lib/mip-function-names.mjs'
 import {
   assertMipSchedulerHmacSecretsIsolated,
+  envDocumentFromValues,
   resolveMipStableSecrets,
   secretInventory,
-  updateEnvDocument,
+  writeEnvFileAtomic,
 } from './lib/mip-local-secrets.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
 const envPath = path.join(root, '.env.local')
+const secretsPath = path.join(root, '.env.secrets.local')
 const env = loadCaseEnv(root)
-const localEnv = parseEnv(envPath)
+const localEnv = { ...parseEnv(secretsPath), ...parseEnv(envPath) }
 const envId = String(env.CLOUDBASE_ENV_ID || '').trim()
 const confirmedEnv = process.argv.find(value => value.startsWith('--confirm-env='))?.slice('--confirm-env='.length)
 
@@ -49,21 +51,11 @@ const resolved = resolveMipStableSecrets({
   generate: () => randomBytes(48).toString('base64url'),
 })
 assertMipSchedulerHmacSecretsIsolated(resolved.values)
-const nextDocument = updateEnvDocument(
-  fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '',
-  resolved.values,
-)
-const temporaryPath = `${envPath}.tmp-${process.pid}`
-try {
-  fs.writeFileSync(temporaryPath, nextDocument, { encoding: 'utf8', mode: 0o600, flag: 'wx' })
-  fs.renameSync(temporaryPath, envPath)
-  fs.chmodSync(envPath, 0o600)
-}
-finally {
-  if (fs.existsSync(temporaryPath)) {
-    fs.rmSync(temporaryPath)
-  }
-}
+const existingLocal = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : ''
+const localLines = existingLocal.split(/\r?\n/).filter(line => !resolved.values[line.match(/^([A-Z_]\w*)=/)?.[1]])
+const nextLocal = `${localLines.join('\n').replace(/\n+$/, '')}\n`
+writeEnvFileAtomic(secretsPath, envDocumentFromValues({ ...parseEnv(secretsPath), ...resolved.values }))
+writeEnvFileAtomic(envPath, nextLocal)
 
 const inventoryPath = path.join(root, '.tmp', 'mip-secret-inventory.json')
 fs.mkdirSync(path.dirname(inventoryPath), { recursive: true })
@@ -80,7 +72,7 @@ const counts = Object.values(resolved.sources).reduce((result, source) => {
   return result
 }, {})
 console.log(`[mip-secrets] local secret set ready; local=${counts.local || 0}, recovered=${counts.deployed || 0}, generated=${counts.generated || 0}`)
-console.log('[mip-secrets] values were not printed; keep .env.local and its backup private')
+console.log('[mip-secrets] values were not printed; keep .env.secrets.local private')
 
 function functionDetail(value) {
   return value?.data?.functionDetail || value?.Response || value?.data || value

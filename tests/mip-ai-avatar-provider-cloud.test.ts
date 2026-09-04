@@ -164,7 +164,7 @@ describe('AI avatar Provider cloud contract', () => {
     const mcporter = JSON.parse(fs.readFileSync(path.join(root, 'config/mcporter.json'), 'utf8'))
     const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
 
-    expect(envExample).toContain('MIP_AI_AVATAR_PROVIDER_HMAC_SECRET=')
+    expect(envExample).not.toContain('MIP_AI_AVATAR_PROVIDER_HMAC_SECRET=')
     expect(envExample).toContain('MIP_AI_AVATAR_UPSTREAM_ENDPOINT=')
     expect(envExample).toContain('MIP_AI_AVATAR_PROVIDER_TIMEOUT_MS=45000')
     expect(localSecrets).toContain('\'MIP_AI_AVATAR_PROVIDER_HMAC_SECRET\'')

@@ -158,7 +158,7 @@ describe('AI draft Provider cloud contract', () => {
     const coreDeploy = fs.readFileSync(path.join(root, 'scripts/deploy-functions.mjs'), 'utf8')
     const packageJson = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
 
-    expect(envExample).toContain('MIP_AI_DRAFT_PROVIDER_HMAC_SECRET=')
+    expect(envExample).not.toContain('MIP_AI_DRAFT_PROVIDER_HMAC_SECRET=')
     expect(envExample).toContain('MIP_AI_DRAFT_UPSTREAM_ENDPOINT=')
     expect(envExample).toContain('OPENAI_BASE_URL=https://api.deepseek.com')
     expect(envExample).toContain('OPENAI_MODEL=deepseek-v4-flash')

@@ -1,6 +1,6 @@
 # CloudBase 运行边界
 
-MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存储和运行时账号上建立独立边界。真实 AppID、EnvID、MySQL URI、商户凭证和内部密钥只放本机 `.env.local` 或 Cloud Function 环境变量，不进入仓库。
+MIP 短期复用共享 CloudBase 环境，但在函数、数据库、对象存储和运行时账号上建立独立边界。普通开发配置和环境级 API Key 放本机 `.env.local`；稳定运行时密钥、MySQL URI 和其他服务端凭证可由 owner/deployer 保存在被 Git 忽略且权限为 `0600` 的 `.env.secrets.local`，或由受控 CI 注入。云函数环境是运行副本，不是唯一备份；普通开发者不需要生产密钥。`MIP_WECHAT_APP_SECRET` 仅服务端使用，不能进入小程序构建产物。
 
 ## 图片资源边界
 

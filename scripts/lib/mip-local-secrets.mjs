@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto'
+import fs from 'node:fs'
+import process from 'node:process'
 
 export const MIP_STABLE_SECRET_KEYS = Object.freeze([
   'MIP_IDENTITY_PEPPER',
@@ -28,6 +30,20 @@ export const MIP_STABLE_SECRET_KEYS = Object.freeze([
   'MIP_AI_STORAGE_KEY',
   'MIP_MATCHING_INTERNAL_HMAC_SECRET',
   'MIP_MATCHING_REFERENCE_SECRET',
+])
+
+export const MIP_LOCAL_SECRET_KEYS = Object.freeze([
+  ...MIP_STABLE_SECRET_KEYS,
+  'MIP_DB_CONNECTION_URI',
+  'OPENAI_API_KEY',
+  'MIP_AI_DRAFT_UPSTREAM_SECRET',
+  'MIP_AI_AVATAR_UPSTREAM_AUTH_SECRET',
+  'MIP_SERVICE_ACCOUNT_ADAPTER_SECRET',
+])
+
+export const REQUIRED_LOCAL_KEYS = Object.freeze([
+  'MIP_WECHAT_APP_SECRET',
+  'MIP_WECHAT_CODE_UPLOAD_KEY_PATH',
 ])
 
 export function assertMipSchedulerHmacSecretsIsolated(values = {}) {
@@ -174,6 +190,129 @@ export function updateEnvDocument(source, values) {
     updated.push(...missing.map(key => `${key}=${values[key]}`))
   }
   return `${updated.join('\n').replace(/\n+$/, '')}\n`
+}
+
+export function removeEnvKeys(source, keys) {
+  const managed = new Set(keys)
+  return `${String(source || '').split(/\r?\n/).filter((line) => {
+    const key = line.match(/^([A-Z_]\w*)=/)?.[1]
+    return !key || !managed.has(key)
+  }).join('\n').replace(/\n+$/, '')}\n`
+}
+
+export function writeEnvFileAtomic(filePath, contents) {
+  const temporaryPath = `${filePath}.tmp-${process.pid}`
+  fs.writeFileSync(temporaryPath, contents, { encoding: 'utf8', mode: 0o600, flag: 'wx' })
+  try {
+    fs.renameSync(temporaryPath, filePath)
+    fs.chmodSync(filePath, 0o600)
+  }
+  finally {
+    if (fs.existsSync(temporaryPath)) {
+      fs.rmSync(temporaryPath)
+    }
+  }
+}
+
+export function envDocumentFromValues(values) {
+  return `${Object.entries(values)
+    .filter(([, value]) => String(value ?? '').trim())
+    .map(([key, value]) => `${key}=${value}`)
+    .join('\n')}\n`
+}
+
+export function compactEnvDocuments(localSource, secretsSource = '') {
+  const localLines = String(localSource || '').split(/\r?\n/)
+  const secretsLines = String(secretsSource || '').split(/\r?\n/)
+  const moved = {}
+  const retained = []
+  const secretSet = new Set(MIP_LOCAL_SECRET_KEYS)
+  const defaults = new Map([
+    ['BUILD_SHA', 'development'],
+    ['MIP_MINIPROGRAM_STATE', 'trial'],
+    ['MIP_CUSTOMER_SERVICE_ENABLED', 'false'],
+    ['MIP_AI_PROVIDER_TIMEOUT_MS', '8000'],
+    ['MIP_AI_DRAFT_UPSTREAM_TIMEOUT_MS', '8000'],
+    ['MIP_AI_AVATAR_PROVIDER_TIMEOUT_MS', '45000'],
+    ['MIP_AI_AVATAR_UPSTREAM_TIMEOUT_MS', '30000'],
+    ['MIP_MATCHING_PROVIDER_TIMEOUT_MS', '3000'],
+    ['MIP_AI_DRAFT_TTL_HOURS', '72'],
+    ['MIP_EXPORT_MAX_ROWS', '5000'],
+    ['MIP_EXPORT_MAX_BYTES', '8388608'],
+    ['MIP_UNION_ID_REBIND_ENABLED', 'false'],
+    ['MIP_ADMIN_WEB_LOGIN_CONFIRM_URL', 'https://mipmini.01mvp.com/api/internal/auth/challenge/confirm'],
+  ])
+  const functionDefaults = new Map([
+    ['MIP_IDENTITY_FUNCTION_NAME', 'mip-identity-api'],
+    ['MIP_MEDIA_FUNCTION_NAME', 'mip-media-api'],
+    ['MIP_EVENTS_FUNCTION_NAME', 'mip-events-api'],
+    ['MIP_OPPORTUNITIES_FUNCTION_NAME', 'mip-opportunities-api'],
+    ['MIP_COMMUNITY_FUNCTION_NAME', 'mip-community-api'],
+    ['MIP_COMMERCE_FUNCTION_NAME', 'mip-commerce-api'],
+    ['MIP_ADMIN_FUNCTION_NAME', 'mip-admin-api'],
+    ['MIP_GROWTH_FUNCTION_NAME', 'mip-growth-api'],
+    ['MIP_GAME_FUNCTION_NAME', 'mip-game-api'],
+    ['MIP_TASKS_FUNCTION_NAME', 'mip-tasks-api'],
+    ['MIP_BANNERS_FUNCTION_NAME', 'mip-banners-api'],
+    ['MIP_AI_FUNCTION_NAME', 'mip-ai-api'],
+    ['MIP_NOTIFICATIONS_FUNCTION_NAME', 'mip-notifications-api'],
+    ['MIP_LEDGER_FUNCTION_NAME', 'mip-payment-ledger'],
+    ['MIP_NOTIFICATION_FUNCTION_NAME', 'mip-notification-worker'],
+    ['MIP_OUTBOX_FUNCTION_NAME', 'mip-outbox-worker'],
+    ['MIP_MESSAGE_SCHEDULER_FUNCTION_NAME', 'mip-message-scheduler'],
+    ['MIP_MESSAGE_SCHEDULER_TRIGGER_NAME', 'mip-message-campaign-next'],
+    ['MIP_KNOWLEDGE_SCHEDULER_FUNCTION_NAME', 'mip-knowledge-scheduler'],
+    ['MIP_KNOWLEDGE_SCHEDULER_TRIGGER_NAME', 'mip-knowledge-ingestion-next'],
+    ['MIP_MESSAGE_SCHEDULER_ROLE_NAME', 'MIPMessageSchedulerRole'],
+    ['MIP_KNOWLEDGE_SCHEDULER_ROLE_NAME', 'MIPKnowledgeSchedulerRole'],
+    ['MIP_PAY_FUNCTION_NAME', 'mip-cloudpay'],
+    ['MIP_PAY_CALLBACK_FUNCTION', 'mip-cloudpay-callback'],
+    ['MIP_REFUND_FUNCTION_NAME', 'mip-refund-worker'],
+  ])
+  const isDefault = (key, value) => defaults.get(key) === value || functionDefaults.get(key) === value
+  const processLine = (line, sourceIsSecrets) => {
+    const match = line.match(/^([A-Z_]\w*)=(.*)$/)
+    if (!match) {
+      if (!sourceIsSecrets && line.trim()) {
+        retained.push(line)
+      }
+      return
+    }
+    const [, key, raw] = match
+    const value = raw.trim().replace(/^['"]|['"]$/g, '')
+    if (secretSet.has(key)) {
+      if (value && moved[key] && moved[key] !== value) {
+        throw new Error(`${key} differs between local secret files`)
+      }
+      if (value) {
+        moved[key] = value
+      }
+      return
+    }
+    if (sourceIsSecrets) {
+      if (value) {
+        moved[key] = value
+      }
+      return
+    }
+    if (!value || isDefault(key, value)) {
+      return
+    }
+    retained.push(`${key}=${raw}`)
+  }
+  secretsLines.forEach(line => processLine(line, true))
+  localLines.forEach(line => processLine(line, false))
+  for (const key of REQUIRED_LOCAL_KEYS) {
+    const match = localLines.find(line => line.startsWith(`${key}=`))
+    if (match && !retained.some(line => line.startsWith(`${key}=`))) {
+      retained.push(match)
+    }
+  }
+  return {
+    local: `${retained.filter(Boolean).join('\n')}\n`,
+    secrets: envDocumentFromValues(moved),
+    movedKeys: Object.keys(moved),
+  }
 }
 
 export function secretInventory(values, sources) {

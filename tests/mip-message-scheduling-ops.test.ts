@@ -16,7 +16,7 @@ describe('MIP message scheduling operations', () => {
     const deployment = read('scripts/deploy-functions.mjs')
     const verification = read('scripts/verify-cloud.mjs')
     expect(MIP_STABLE_SECRET_KEYS).toContain('MIP_MESSAGE_DISPATCH_HMAC_SECRET')
-    expect(read('.env.example')).toContain('MIP_MESSAGE_DISPATCH_HMAC_SECRET=')
+    expect(read('.env.example')).not.toContain('MIP_MESSAGE_DISPATCH_HMAC_SECRET=')
     expect(deployment).toContain('messageDispatchHmac: stableSecretValues.MIP_MESSAGE_DISPATCH_HMAC_SECRET')
     expect(deployment).toContain('MIP_MESSAGE_DISPATCH_HMAC_SECRET: options.secrets.messageDispatchHmac')
     expect(verification).toContain('String(variables.MIP_MESSAGE_DISPATCH_HMAC_SECRET || \'\').length < 32')

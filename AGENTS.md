@@ -48,7 +48,7 @@
 ## 7. 配置和密钥
 
 可提交：`.env.example`、`src/config/brand.ts`、`touristappid`
-仅本地：`.env.local`、`project.private.config.json`、商户证书、MySQL URI
+仅本地：`.env.local`（普通开发配置）、`.env.secrets.local`（可选 owner/deployer 恢复副本）、`project.private.config.json`、商户证书、MySQL URI
 
 ### 微信代码上传
 

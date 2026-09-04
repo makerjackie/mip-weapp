@@ -636,19 +636,23 @@ function persistLocalRuntimeConnection(value) {
   if (!validMysqlUri(value) || /[\r\n]/.test(value)) {
     throw new Error('Generated MIP runtime connection is invalid')
   }
-  const envPath = path.join(root, '.env.local')
-  if (!fs.existsSync(envPath)) {
-    throw new Error('.env.local is required before provisioning the MIP runtime account')
-  }
-  const current = fs.readFileSync(envPath, 'utf8')
+  const envPath = path.join(root, '.env.secrets.local')
+  const current = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : ''
   const line = `MIP_DB_CONNECTION_URI=${value}`
   const next = /^MIP_DB_CONNECTION_URI=.*$/m.test(current)
     ? current.replace(/^MIP_DB_CONNECTION_URI=.*$/m, line)
     : `${current.replace(/\n?$/, '\n')}${line}\n`
   const temporaryPath = `${envPath}.mip-runtime-${process.pid}`
-  fs.writeFileSync(temporaryPath, next, { mode: 0o600 })
-  fs.renameSync(temporaryPath, envPath)
-  fs.chmodSync(envPath, 0o600)
+  fs.writeFileSync(temporaryPath, next, { mode: 0o600, flag: 'wx' })
+  try {
+    fs.renameSync(temporaryPath, envPath)
+    fs.chmodSync(envPath, 0o600)
+  }
+  finally {
+    if (fs.existsSync(temporaryPath)) {
+      fs.rmSync(temporaryPath)
+    }
+  }
 }
 
 function managementResponseSummary(value) {

@@ -4,8 +4,8 @@
 
 从临时 AppID 切换到正式 MIP AppID 时，先准备空的新 CloudBase/MySQL 环境，再执行 [AppID 身份迁移](IDENTITY_MIGRATION.md) 中的备份、应用范围复制和身份衔接流程。当前 schema 不支持在同一个数据库中保留旧 AppID 数据并复制同主键的新 AppID 副本。正常开发与部署保持 `MIP_UNION_ID_REBIND_ENABLED=false`。
 
-1. 在 `.env.local` 配置 AppID、CloudBase EnvID、允许的 AppID、MIP runtime 配置和明确的 `MIP_DEPLOYMENT_STAGE=development|test|staging|production`。知识采集还必须配置 `MIP_KNOWLEDGE_SOURCE_ALLOWED_HOSTS`，外部内容配置 `MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS`；二者均为逗号分隔的精确 DNS hostname，不接受通配符/IP，web-view 列表必须与微信公众平台业务域名一致。
-2. 首次部署运行 `pnpm secrets:init -- --confirm-env=<EnvID>`，并把 `.env.local` 纳入私密凭证备份。命令先校验已部署函数，不打印密钥，也不会修改云资源。
+1. 在 `.env.local` 配置 AppID、CloudBase EnvID、允许的 AppID、MIP runtime 配置、`MIP_WECHAT_APP_SECRET`（仅服务端）和明确的 `MIP_DEPLOYMENT_STAGE=development|test|staging|production`。上传私钥路径 `MIP_WECHAT_CODE_UPLOAD_KEY_PATH` 也只保存在此文件。知识采集还必须配置 `MIP_KNOWLEDGE_SOURCE_ALLOWED_HOSTS`，外部内容配置 `MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS`；二者均为逗号分隔的精确 DNS hostname，不接受通配符/IP，web-view 列表必须与微信公众平台业务域名一致。
+2. 首次部署运行 `pnpm secrets:init -- --confirm-env=<EnvID>`。稳定运行时密钥写入 `.env.secrets.local`，云函数环境保存运行副本；owner/deployer 或 CI 负责受控备份和注入，普通开发者不需要生产密钥。命令先校验已部署函数，不打印密钥，也不会修改云资源。已有旧 `.env.local` 可先运行 `pnpm env:compact`。
 3. 对新环境或新增迁移先做仓库外逻辑备份，预览 `mip_` 迁移范围：`pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --dry-run`。是否存在待应用迁移以目标环境回读和当前 `migrations.lock.json` 为准。
 4. 只在预览显示存在新迁移时应用：`pnpm database:setup -- --confirm-env=<EnvID> --confirm-prefix=mip_ --backup-manifest=/absolute/path/to/manifest.json`。
 5. 运行 `pnpm project:init` 生成环境专属 runtime 用户，再执行 `pnpm database:grants -- --confirm-env=<EnvID> --confirm-runtime-user=<.env.local 中的 MIP_DB_RUNTIME_USER>` 收敛并回读验证精确表级权限。发现 schema/global 权限、缺表授权或账号归属不一致时停止部署。

@@ -22,7 +22,7 @@
 
 数据库只保存 HMAC 摘要，不保存 OpenID 或 UnionID 原文。`mip_user_identities` 在一个 AppID 范围内要求 UnionID 摘要唯一；摘要冲突时拒绝登录衔接，不自动合并用户。
 
-首次部署前运行 `pnpm secrets:init -- --confirm-env=<EnvID>`。命令会先读取目标环境中已有的 `mip-*` 函数配置：已有值与本地值不一致时失败关闭；没有已部署值时才生成稳定密钥。明文只写入被 Git 忽略且权限为 `0600` 的 `.env.local`，终端和 `.tmp/mip-secret-inventory.json` 只记录来源与短指纹。迁移到正式 AppID 或新环境时必须安全复制同一份 `MIP_UNION_IDENTITY_PEPPER`，不得重新生成。
+首次部署前运行 `pnpm secrets:init -- --confirm-env=<EnvID>`。命令会先读取目标环境中已有的 `mip-*` 函数配置：已有值与本地值不一致时失败关闭；没有已部署值时才生成稳定密钥。明文只写入被 Git 忽略且权限为 `0600` 的 `.env.secrets.local`，终端和 `.tmp/mip-secret-inventory.json` 只记录来源与短指纹。迁移到正式 AppID 或新环境时必须安全复制同一份 `MIP_UNION_IDENTITY_PEPPER`，不得重新生成。
 
 ## 必须转换的数据
 
