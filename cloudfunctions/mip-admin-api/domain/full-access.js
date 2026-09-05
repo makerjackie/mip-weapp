@@ -67,7 +67,25 @@ function createFullAccessPolicy(options = {}) {
     return accessUser(row, agreements)
   }
 
-  return { agreements, loadByIdentity }
+  async function loadByUserId(queryable, appId, userId, options = {}) {
+    const agreementFacts = agreementSelections(agreements)
+    const row = await queryable.one(
+      `SELECT u.id, u.status, u.primary_branch_id,
+              profile.nickname, private_profile.phone_verified_at,
+              ${agreementFacts.sql}
+       FROM mip_users u
+       LEFT JOIN mip_profiles profile
+         ON profile.app_id = u.app_id AND profile.user_id = u.id
+       LEFT JOIN mip_private_profiles private_profile
+         ON private_profile.app_id = u.app_id AND private_profile.user_id = u.id
+       WHERE u.app_id = ? AND u.id = ?
+       LIMIT 1${options.lock === true ? ' FOR UPDATE' : ''}`,
+      [...agreementFacts.params, appId, userId],
+    )
+    return accessUser(row, agreements)
+  }
+
+  return { agreements, loadByIdentity, loadByUserId }
 }
 
 function agreementSelections(agreements) {

@@ -43,7 +43,9 @@ export function AdminDetailActions({ route, id, view, onTaskExport, onMediaUploa
     const eventStatus = String(event.status || '')
     const targetStatus = eventStatus === 'PUBLISHED' ? 'UNPUBLISHED'
       : ['DRAFT', 'UNPUBLISHED'].includes(eventStatus) ? 'PUBLISHED' : null
-    actions.push(button('mip.admin.events.save', '编辑活动', id, 'events.write'))
+    if (['DRAFT', 'UNPUBLISHED'].includes(eventStatus)) {
+      actions.push(button('mip.admin.events.save', '编辑活动', id, 'events.write'))
+    }
     if (targetStatus) actions.push(button(
       'mip.admin.events.changeStatus',
       targetStatus === 'PUBLISHED' ? '发布活动' : '下架活动',

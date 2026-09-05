@@ -3,6 +3,7 @@ import { registerMipLocalUserCache } from '../mip-identity/local-session'
 import { createCheckInResumeStore } from './check-in-resume'
 import { cloudbaseMipEventsGateway } from './cloudbase-gateway'
 import { createMipEventsModule } from './module'
+import { createRegistrationDraftStore } from './registration-draft'
 
 export const mipEventsModule = createMipEventsModule(cloudbaseMipEventsGateway, {
   submitRefund: refundId => mipCommerceModule.submitRefund(refundId as import('../mip-commerce').RefundId),
@@ -19,3 +20,10 @@ export const mipCheckInResumeStore = createCheckInResumeStore({
 
 registerMipLocalUserCache(() => mipEventsModule.invalidate())
 registerMipLocalUserCache(() => mipCheckInResumeStore.clear())
+
+export const mipRegistrationDraftStore = createRegistrationDraftStore({
+  read: key => wx.getStorageSync(key) as unknown,
+  write: (key, value) => wx.setStorageSync(key, value),
+  clear: key => wx.removeStorageSync(key),
+})
+registerMipLocalUserCache(() => mipRegistrationDraftStore.clear())

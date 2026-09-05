@@ -93,8 +93,8 @@ describe('my event registrations', () => {
     assert.match(listSql, /public_event_type\.app_id = e\.app_id/)
     assert.match(listSql, /public_event_type\.status = 'ACTIVE'/)
     assert.match(countQuery.sql, /event_row\.ends_at > \?/)
-    assert.deepEqual(countQuery.params, [new Date('2026-08-25T00:00:00.000Z'), 'wx-app', 'user-1'])
-    assert.deepEqual(page.counts, { upcoming: 2, attended: 5 })
+    assert.deepEqual(countQuery.params, [new Date('2026-08-25T00:00:00.000Z'), new Date('2026-08-25T00:00:00.000Z'), 'wx-app', 'user-1'])
+    assert.deepEqual(page.counts, { upcoming: 2, attended: 5, history: 0 })
     assert.deepEqual(page.items[0], {
       registrationId: '20000000-0000-4000-8000-000000000001',
       version: 4,
@@ -172,7 +172,28 @@ describe('my event registrations', () => {
     assert.equal(canCancelRegistration(row, 'ATTENDED', new Date('2026-08-25T00:00:00.000Z'), 24), false)
   })
 
-  it('rejects unsupported client categories', async () => {
+  it('includes ended, cancelled and rejected registrations in history without duplicating attended', async () => {
+    let listQuery
+    const now = new Date('2026-09-05T00:00:00Z')
+    const db = {
+      async query(sql, params) {
+        if (sql.includes('FROM mip_event_registrations r')) listQuery = { sql, params }
+        return []
+      },
+      async one(sql) {
+        return sql.includes('AS upcoming_count') ? { history_count: 3 } : null
+      },
+    }
+    const page = await listMyRegistrations(db, { appId: 'app', userId: 'user', category: 'HISTORY', now })
+    assert.match(listQuery.sql, /r.status <> 'ATTENDED'/)
+    assert.match(listQuery.sql, /r.status IN \('CANCELLED','REJECTED'\)/)
+    assert.match(listQuery.sql, /e.ends_at <= \?/)
+    assert.match(listQuery.sql, /e.status <> 'PUBLISHED'/)
+    assert.deepEqual(listQuery.params.slice(0, 5), [now, 'user', 'app', 'user', now])
+    assert.equal(page.counts.history, 3)
+  })
+
+  it('rejects unsupported client categories' , async () => {
     await assert.rejects(
       () => listMyRegistrations({}, {
         appId: 'wx-app',

@@ -17,15 +17,17 @@ describe('phase9 final gap contracts', () => {
       service.indexOf('async function listMyRegistrations'),
     )
     const replayBranch = registrationFlow.slice(
-      registrationFlow.indexOf('if (claim.replay)'),
+      registrationFlow.indexOf('if (claim.replay &&'),
       registrationFlow.indexOf('const event = await tx.one'),
     )
-    const existingIndex = registrationFlow.indexOf('if (existing && activeRegistrationStatuses.has(existing.status))')
+    const existingIndex = registrationFlow.indexOf('if (existing && activeRegistrationStatuses.has(existing.status) && !expiredPayment)')
     const accessIndex = registrationFlow.indexOf('await requireCurrentParticipationAccess')
     const existingBranch = registrationFlow.slice(existingIndex, accessIndex)
 
     expect(registrationFlow).toContain('operation: \'event.register\'')
     expect(replayBranch).toContain('return claim.replay')
+    expect(replayBranch).toContain('claim.replay.kind === \'PAYMENT_REQUIRED\'')
+    expect(replayBranch).toContain('new Date(claim.replay.holdExpiresAt).getTime() <= now.getTime()')
     expect(replayBranch).not.toMatch(/(?:INSERT|UPDATE|DELETE)\s+/)
     expect(existingIndex).toBeGreaterThan(0)
     expect(accessIndex).toBeGreaterThan(existingIndex)

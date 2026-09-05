@@ -164,7 +164,29 @@ Page({
     }
     const code = String(event.detail.code || '')
     if (!code) {
-      const cancelled = /cancel|deny/i.test(String(event.detail.errMsg || ''))
+      const cancelled = /cancel|deny|denied/i.test(String(event.detail.errMsg || ''))
+      const intent = mipIdentityModule.peekIntent(this.data.token)
+      if (cancelled && intent?.action === 'REGISTER_EVENT' && intent.source.query?.eventId) {
+        const context = mipIdentityModule.cancel(this.data.token)
+        const eventId = intent.source.query.eventId
+        const pages = getCurrentPages()
+        let detailIndex = -1
+        for (let index = pages.length - 1; index >= 0; index -= 1) {
+          const page = pages[index] as WechatMiniprogram.Page.Instance<Record<string, unknown>, Record<string, never>>
+          if (page.route === 'packages/member/mip-events/detail/index' && page.options.eventId === eventId) {
+            detailIndex = index
+            break
+          }
+        }
+        const url = `/packages/member/mip-events/detail/index?eventId=${encodeURIComponent(eventId)}${context?.query?.inviteRef ? `&inviteRef=${encodeURIComponent(context.query.inviteRef)}` : ''}`
+        if (detailIndex >= 0 && detailIndex < pages.length - 1) {
+          wx.navigateBack({ delta: pages.length - 1 - detailIndex, fail: () => wx.redirectTo({ url }) })
+        }
+        else {
+          wx.redirectTo({ url })
+        }
+        return
+      }
       this.setData({
         message: cancelled
           ? '你已取消手机号授权，可以稍后再完成。'

@@ -4,6 +4,7 @@ import type {
   RegistrationStatus,
   RegistrationSummary,
 } from '../../../../modules/mip-events'
+import { MipEventsError } from '../../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
 import { caseNavigateTo, caseSwitchPrimary } from '../../../../platform/navigation/client'
 import { formatChineseDateTime } from '../../../../utils/date'
@@ -79,7 +80,7 @@ Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
     activeCategory: 'UPCOMING' as MyRegistrationCategory,
-    counts: { upcoming: 0, attended: 0 },
+    counts: { upcoming: 0, attended: 0, history: 0 },
     registrations: [] as RegistrationView[],
     nextCursor: '',
     loadingMore: false,
@@ -119,7 +120,7 @@ Page({
       }
       this.setData({
         state: 'ready',
-        counts: result.counts || this.data.counts,
+        counts: result.counts ? { ...result.counts, history: result.counts.history || 0 } : this.data.counts,
         registrations: result.items.map(present),
         nextCursor: result.nextCursor || '',
         message: '',
@@ -137,7 +138,7 @@ Page({
 
   changeCategory(event: WechatMiniprogram.TouchEvent) {
     const category = String(event.currentTarget.dataset.category || '') as MyRegistrationCategory
-    if (!['UPCOMING', 'ATTENDED'].includes(category) || category === this.data.activeCategory) {
+    if (!['UPCOMING', 'ATTENDED', 'HISTORY'].includes(category) || category === this.data.activeCategory) {
       return
     }
     this.requestSeq += 1
@@ -169,7 +170,7 @@ Page({
         return
       }
       this.setData({
-        counts: result.counts || this.data.counts,
+        counts: result.counts ? { ...result.counts, history: result.counts.history || 0 } : this.data.counts,
         registrations: [...this.data.registrations, ...result.items.map(present)],
         nextCursor: result.nextCursor || '',
       })
@@ -247,7 +248,13 @@ Page({
       await this.loadRegistrations()
     }
     catch (error) {
-      this.setData({ message: error instanceof Error ? error.message : '暂时无法取消报名。' })
+      if (error instanceof MipEventsError && error.code === 'CONFLICT') {
+        await this.loadRegistrations()
+        this.setData({ message: this.data.message || '报名状态已变化，已加载最新状态，请重新确认。' })
+      }
+      else {
+        this.setData({ message: error instanceof Error ? error.message : '暂时无法取消报名。' })
+      }
     }
     finally {
       this.setData({ cancelingId: '' })

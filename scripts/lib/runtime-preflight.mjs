@@ -4,9 +4,11 @@ import net from 'node:net'
 import os from 'node:os'
 import path from 'node:path'
 import process from 'node:process'
+import { stripVTControlCharacters } from 'node:util'
 import {
   detectWechatDevtoolsServicePort,
-  isWechatIdeLoggedIn,
+  execute,
+  resolveCliPath,
   setRuntimeWechatDevtoolsServicePort,
 } from 'weapp-ide-cli'
 
@@ -168,7 +170,18 @@ export async function assertRuntimePreflight(root, options = {}) {
   setRuntimeWechatDevtoolsServicePort(listeningServicePort)
 
   try {
-    await isWechatIdeLoggedIn()
+    const { cliPath } = await resolveCliPath()
+    if (!cliPath) {
+      throw new Error('WeChat DevTools CLI is unavailable')
+    }
+    const result = await execute(cliPath, ['islogin'], {
+      pipeStdout: false,
+      pipeStderr: false,
+      timeout: 10000,
+    })
+    if (!parseDevtoolsLoginResult(`${result.stdout || ''}\n${result.stderr || ''}`)) {
+      throw new Error('WeChat DevTools did not confirm login')
+    }
   }
   catch {
     throw new Error('WeChat DevTools login is invalid. Re-open DevTools and scan the login QR code.')
@@ -180,4 +193,10 @@ export async function assertRuntimePreflight(root, options = {}) {
     servicePortEnabled: true,
     servicePort: listeningServicePort,
   }
+}
+
+export function parseDevtoolsLoginResult(output) {
+  const text = stripVTControlCharacters(String(output))
+  const values = [...text.matchAll(/["']?login["']?\s*:\s*(true|false)\b/g)].map(match => match[1])
+  return values.length > 0 && values.every(value => value === 'true')
 }

@@ -2,6 +2,7 @@ import type { EventId, OrderId } from '../../../modules/mip'
 import type { CommerceOrder, MembershipPlan } from '../../../modules/mip-commerce'
 import { runtimeConfig } from '../../../config/runtime'
 import { mipCommerceModule } from '../../../modules/mip-commerce/client'
+import { MipEventsError } from '../../../modules/mip-events'
 import { mipCheckInResumeStore, mipEventsModule } from '../../../modules/mip-events/client'
 import { mipAccessPageUrl } from '../../../modules/mip-identity'
 import { mipIdentityModule } from '../../../modules/mip-identity/client'
@@ -276,7 +277,12 @@ Page({
         action: order.orderType === 'EVENT'
           ? 'REGISTER_EVENT'
           : order.orderType === 'CONTENT' ? 'INTERACT' : 'PURCHASE_MEMBERSHIP',
-        source: { navigation: 'navigateBack' },
+        source: {
+          navigation: 'navigateBack',
+          ...(order.orderType === 'EVENT' && order.resourceId
+            ? { route: '/packages/member/order-detail/index', query: { orderId: order.id, eventId: order.resourceId } }
+            : {}),
+        },
       })
       if (!session.decision.ready) {
         caseNavigateTo({ url: mipAccessPageUrl(session.token) })
@@ -298,6 +304,26 @@ Page({
     }
     this.setData({ paying: true, message: '' })
     try {
+      if (order.orderType === 'EVENT' && order.resourceId) {
+        const registration = await mipEventsModule.getMyRegistration(order.resourceId as EventId)
+        if (registration?.status === 'PAYMENT_PENDING') {
+          if (registration.orderId !== order.id) {
+            this.setData({ message: '当前报名已关联其他订单，请返回活动查看最新状态。' })
+            return
+          }
+          const renewed = await mipEventsModule.register({
+            eventId: order.resourceId as EventId,
+            formVersion: registration.formVersion,
+            answers: registration.answers,
+            shareProfile: registration.shareProfile,
+            idempotencyKey: createIntentKey('event-payment-resume'),
+          })
+          if (renewed.kind !== 'PAYMENT_REQUIRED' || renewed.orderId !== order.id) {
+            this.setData({ message: '报名状态已变化，请返回活动查看最新状态。' })
+            return
+          }
+        }
+      }
       const outcome = await mipCommerceModule.payOrder(order.id)
       if (outcome.kind === 'CANCELLED') {
         this.setData({ message: '支付已取消，订单状态未发生变化。' })
@@ -308,6 +334,14 @@ Page({
       })
     }
     catch (error) {
+      if (error instanceof MipEventsError && error.code === 'CONFLICT' && order.orderType === 'EVENT' && order.resourceId) {
+        caseNavigateTo({ url: `/packages/member/mip-events/registration/index?eventId=${encodeURIComponent(order.resourceId)}` })
+        return
+      }
+      if (error instanceof MipEventsError) {
+        this.setData({ message: error.message })
+        return
+      }
       const unavailable = error instanceof Error && error.message === 'PAYMENT_UNAVAILABLE'
       this.setData({ message: unavailable ? `${this.data.paymentUnavailableText}。` : '暂时无法发起支付，请稍后重试。' })
     }

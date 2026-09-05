@@ -6,6 +6,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
 import { pathToFileURL } from 'node:url'
+import { isDeepStrictEqual } from 'node:util'
 import {
   acquireSharedMiniProgram,
   closeSharedMiniProgram,
@@ -585,6 +586,22 @@ async function executeWorkflow({ contract, diagnostics, markers, miniProgram, op
       })
       runtimeFixtureMismatch('Required registration fields cannot be completed through their bound page handlers')
     }
+    const requiredIndex = ready.fields.findIndex(field => field.required === true)
+    if (requiredIndex >= 0) {
+      const field = ready.fields[requiredIndex]
+      const handler = field.type === 'BOOLEAN' ? 'onBooleanChange' : field.type === 'SELECT' ? 'onSelectChange' : 'onTextInput'
+      await callBoundHandler(page, handler, {
+        dataset: { index: requiredIndex },
+        detail: { value: field.type === 'BOOLEAN' ? false : field.type === 'SELECT' ? '-1' : '' },
+      })
+      await callBoundHandler(page, 'submit')
+      const invalid = await waitForData(page, value => value?.state === 'ready'
+        && Boolean(value.fields?.[requiredIndex]?.error) && value.busy === false, { label: 'Required registration field validation' })
+      await captureEvidence({ miniProgram, outputDir, persist, step, label: 'required-validation', state: { state: invalid.state, invalidFieldIndex: requiredIndex, validationRejected: true } })
+    }
+    else {
+      step.requiredValidation = 'not-applicable-no-required-fields'
+    }
     for (const action of plan.actions) {
       await callBoundHandler(page, action.handler, {
         dataset: { index: action.index },
@@ -601,6 +618,29 @@ async function executeWorkflow({ contract, diagnostics, markers, miniProgram, op
     if (summary.resultTitle !== '报名成功') {
       runtimeFixtureMismatch(`Free AUTO registration did not become REGISTERED (${summary.resultTitle || 'unknown result'})`)
     }
+    const editPage = await openEventPage(miniProgram, spec, options.eventId)
+    const editable = await waitForData(editPage, value => value?.state === 'ready' && value.editing === true, { label: 'Edit submitted registration' })
+    invariant(editable.registration?.canEdit === true, 'Submitted registration is not editable')
+    const previousVersion = Number(editable.registration.version)
+    const editPlan = planRegistrationFieldActions(editable.fields, `edited-${markers.registration}`, { editing: true })
+    invariant(editPlan.unavailable.length === 0, 'Edited registration fields are unavailable')
+    for (const action of editPlan.actions) {
+      await callBoundHandler(editPage, action.handler, { dataset: { index: action.index }, detail: { value: action.value } })
+    }
+    const filledEdit = await editPage.data()
+    const expectedAnswers = Object.fromEntries(filledEdit.fields.map(field => [field.key, field.type === 'BOOLEAN' ? field.checked : field.value.trim()]))
+    step.editedAnswerValues = !isDeepStrictEqual(expectedAnswers, editable.registration.answers)
+    const editMutation = mutationAttempt(report, persist, 'edit-free-event-registration', { eventId: options.eventId })
+    await callBoundHandler(editPage, 'submit')
+    const edited = await waitForData(editPage, value => value?.state === 'submitted'
+      && value.resultTitle === '报名已修改' && Number(value.registration?.version) > previousVersion, { label: 'Registration edit confirmation' })
+    invariant(isDeepStrictEqual(edited.registration.answers, expectedAnswers), 'Registration edit did not save the submitted field values')
+    confirmMutation(report, persist, editMutation, { version: Number(edited.registration.version), editedAnswerValues: step.editedAnswerValues })
+    await captureEvidence({ miniProgram, outputDir, persist, step, label: 'edited', state: summarizeRegistrationSubmission(edited) })
+    const rereadPage = await openEventPage(miniProgram, spec, options.eventId)
+    const reread = await waitForData(rereadPage, value => value?.state === 'ready' && value.editing === true, { label: 'Registration edit readback' })
+    invariant(Number(reread.registration?.version) === Number(edited.registration.version), 'Registration edit version was not persisted')
+    invariant(isDeepStrictEqual(reread.registration?.answers, expectedAnswers), 'Registration edit answers were not persisted')
   })
 
   await runStep('member-registration-fact', async (step, spec) => {

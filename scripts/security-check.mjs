@@ -2,16 +2,10 @@
 import { spawnSync } from 'node:child_process'
 import fs from 'node:fs'
 import path from 'node:path'
+import { detectEmbeddedCredentials } from './lib/security-patterns.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
-const patterns = [
-  { id: 'app-secret', source: /appsecret|APP_SECRET/i },
-  { id: 'api-v3-key', source: /WECHATPAY.*KEY|API_V3_KEY|mch_private_key/i },
-  { id: 'private-key-block', source: /BEGIN (RSA )?PRIVATE KEY/ },
-  { id: 'access-token', source: /access_token\s*[:=]/i },
-  { id: 'real-appid', source: /wx[0-9a-f]{16}/i },
-  { id: 'pem', source: /\.pem\b/ },
-]
+const patterns = [{ id: 'real-appid', source: /wx[0-9a-f]{16}/i }]
 
 const allowAppIdFiles = new Set([
   'project.config.json',
@@ -42,11 +36,14 @@ function filesToScan() {
 
 const hits = []
 for (const file of filesToScan()) {
-  if (!/\.(?:md|json|ts|js|mjs|cjs|env|example|yml|yaml|txt)$/.test(file) && path.basename(file) !== '.env.example') {
+  if (!/\.(?:md|json|ts|js|mjs|cjs|env|example|yml|yaml|txt|pem|key)$/.test(file) && path.basename(file) !== '.env.example') {
     continue
   }
   const relative = path.relative(root, file)
   const text = fs.readFileSync(file, 'utf8')
+  for (const id of detectEmbeddedCredentials(text)) {
+    hits.push(`${relative}: ${id}`)
+  }
   for (const pattern of patterns) {
     if (pattern.id === 'real-appid') {
       if (allowAppIdFiles.has(relative) || relative.startsWith('tests/') || relative.includes('/tests/')) {
@@ -63,24 +60,6 @@ for (const file of filesToScan()) {
         hits.push(`${relative}: ${pattern.id} ${match}`)
       }
       continue
-    }
-    if (pattern.source.test(text) && !relative.startsWith('docs/') && !relative.startsWith('scripts/security-check')) {
-      if (pattern.id === 'pem' && relative === '.gitignore') {
-        continue
-      }
-      if (
-        pattern.id === 'app-secret'
-        && (
-          relative.startsWith('tests/')
-          || relative === 'config/runtime-pages.json'
-          || relative === '.env.example'
-          || relative === 'README.md'
-          || relative === 'scripts/lib/mip-local-secrets.mjs'
-        )
-      ) {
-        continue
-      }
-      hits.push(`${relative}: ${pattern.id}`)
     }
   }
 }

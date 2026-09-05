@@ -222,10 +222,45 @@ describe('canonical MIP event payment ledger', () => {
       now: () => paidAt,
     })
     assert.equal(result.status, 'REFUND_PENDING')
+    const eventLockIndex = db.calls.findIndex(call => call.sql.includes('FROM mip_events'))
+    const fulfillmentIndex = db.calls.findIndex(call => call.sql.includes('FROM mip_event_seat_holds'))
+    assert.ok(eventLockIndex >= 0 && eventLockIndex < fulfillmentIndex)
+    assert.match(db.calls[eventLockIndex].sql, /FOR UPDATE/)
+    assert.deepEqual(db.calls[eventLockIndex].params, [order.app_id, order.resource_id])
     assert.ok(result.refundId)
     assert.ok(db.calls.some(call => call.sql.includes("mip_orders SET status = 'REFUND_PENDING'")))
     assert.ok(db.calls.some(call => call.sql.includes('INSERT INTO mip_refunds')))
     assert.equal(db.calls.some(call => call.sql.includes("mip_event_registrations SET status = 'REGISTERED'")), false)
+  })
+
+  it('records a late payment on a replaced cancelled order for refund without touching the new registration', async () => {
+    const order = eventOrder({ status: 'CLOSED' })
+    const db = fakeDatabase(order, fulfillment({
+      registration_id: null,
+      registration_order_id: null,
+      hold_status: 'CANCELLED',
+    }))
+    const result = await applyPaymentCallback(db, paymentInput(order), {
+      createId: idFactory(), now: () => paidAt,
+    })
+    assert.equal(result.status, 'REFUND_PENDING')
+    const refund = db.calls.find(call => call.sql.includes('INSERT INTO mip_refunds'))
+    assert.ok(refund.sql.includes("'PENDING', NULL"))
+    assert.equal(refund.params[2], order.id)
+    assert.equal(refund.params[6], order.amount_cents)
+    assert.equal(db.calls.some(call => call.sql.includes('UPDATE mip_event_registrations')), false)
+    assert.ok(db.calls.some(call => call.sql.includes("processing_status = 'PROCESSED'")))
+  })
+
+  it('does not reconcile a detached order when its hold belongs to a different user', async () => {
+    const order = eventOrder({ status: 'CLOSED' })
+    const db = fakeDatabase(order, fulfillment({
+      registration_id: null, user_id: 'another-user', hold_status: 'CANCELLED',
+    }))
+    await assert.rejects(applyPaymentCallback(db, paymentInput(order), {
+      createId: idFactory(), now: () => paidAt,
+    }), /EVENT_ORDER_INVALID/)
+    assert.equal(db.calls.some(call => call.sql.includes('INSERT INTO mip_refunds')), false)
   })
 
   it('creates no refund or outbox when the locked late-payment registration write loses a race', async () => {
@@ -329,6 +364,61 @@ describe('canonical MIP event payment ledger', () => {
     assert.ok(calls.some(call => call.sql.includes('last_error_code = NULL')))
     assert.ok(calls.some(call => call.sql.includes("mip_event_registrations SET status = 'CANCELLED'")))
     assert.ok(calls.some(call => call.params?.includes('event.registration_cancelled')))
+  })
+
+  it('settles a replaced order refund without cancelling or inspecting checkin on the new registration', async () => {
+    const order = eventOrder({ status: 'REFUND_PENDING', provider_transaction_id: 'provider-transaction-1' })
+    const refund = {
+      id: '70000000-0000-4000-8000-000000000001',
+      app_id: order.app_id,
+      order_id: order.id,
+      merchant_refund_no: 'MIPR70000000000040008000000000000001',
+      provider_refund_id: null,
+      amount_cents: order.amount_cents,
+      status: 'PROCESSING',
+      last_error_code: null,
+      idempotency_key: `event-late-payment:${order.id}`,
+      version: 2,
+    }
+    const calls = []
+    let callbackHash
+    const tx = {
+      async one(sql, params) {
+        const normalized = String(sql).replace(/\s+/g, ' ').trim()
+        calls.push({ kind: 'one', sql: normalized, params })
+        if (normalized.includes('FROM mip_payment_callbacks')) {
+          return {
+            resource_hash: callbackHash,
+            verification_status: 'VERIFIED',
+            processing_status: 'RECEIVED',
+          }
+        }
+        if (normalized.includes('COALESCE(SUM(amount_cents)')) return { total: order.amount_cents }
+        if (normalized.includes('FROM mip_refunds')) return refund
+        if (normalized.includes('FROM mip_event_registrations')) return null
+        if (normalized.includes('FROM mip_event_seat_holds')) return { id: 'old-hold' }
+        if (normalized.includes('FROM mip_event_checkins')) return null
+        return order
+      },
+      async query(sql, params) {
+        const normalized = String(sql).replace(/\s+/g, ' ').trim()
+        calls.push({ kind: 'query', sql: normalized, params })
+        if (normalized.includes('INSERT INTO mip_payment_callbacks')) callbackHash = params[3]
+        return { affectedRows: 1 }
+      },
+    }
+    const result = await applyRefundCallback(refundDatabase(order, refund, tx, calls), {
+      appId: order.app_id,
+      merchantOrderNo: order.merchant_order_no,
+      merchantRefundNo: refund.merchant_refund_no,
+      providerRefundId: 'provider-refund-1',
+      amountCents: refund.amount_cents,
+    }, { createId: idFactory(), now: () => paidAt })
+    assert.deepEqual(result, { status: 'SUCCEEDED', orderStatus: 'REFUNDED', idempotent: false })
+    assert.ok(calls.some(call => call.sql.includes('last_error_code = NULL')))
+    assert.equal(calls.some(call => call.sql.includes('UPDATE mip_event_registrations')), false)
+    assert.equal(calls.some(call => call.sql.includes('FROM mip_event_checkins')), false)
+    assert.equal(calls.some(call => call.params?.includes('event.registration_cancelled')), false)
   })
 
   it('accepts a late authoritative success for a legacy FAILED CHANGE without a competing refund', async () => {

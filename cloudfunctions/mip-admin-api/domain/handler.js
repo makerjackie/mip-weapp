@@ -123,6 +123,8 @@ function errorResponse(error) {
     CONFLICT: '记录状态已变化，请刷新后重试',
     VERSION_CONFLICT: '会员状态已变化，请刷新后重试',
     INVALID_STATE: '当前状态不支持此操作',
+    REGISTRATION_INELIGIBLE: '报名用户当前不满足协议、手机号、资料或会员资格要求',
+    EVENT_ENDED: '活动已结束，不能通过报名审核',
     MATCHING_DISPATCH_CONFIG_REQUIRED: '机会撮合重算服务尚未配置',
     MATCHING_DISPATCH_UNAVAILABLE: '机会撮合重算服务暂时不可用',
     CONTENT_SAFETY_REQUIRED: '内容安全检查未通过，暂不能发布',

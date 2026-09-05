@@ -1,8 +1,10 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import { MipEventsError } from '../src/modules/mip-events'
 import { resolveMyRegistrationCategory } from '../src/packages/member/mip-events/mine/category'
 
 const eventsModule = vi.hoisted(() => ({
   listMyRegistrations: vi.fn(),
+  cancelRegistration: vi.fn(),
 }))
 
 vi.mock('../src/modules/mip-events/client', () => ({
@@ -57,6 +59,25 @@ beforeEach(() => {
 })
 
 describe('MIP my-events category query', () => {
+  it('loads historical registrations from the history route', async () => {
+    const page = createPage()
+    callPage(page, 'onLoad', { category: 'HISTORY' })
+    await callPage(page, 'loadRegistrations')
+    expect(eventsModule.listMyRegistrations).toHaveBeenCalledWith(undefined, 'HISTORY')
+  })
+
+  it('refreshes a conflicting cancellation before allowing another attempt', async () => {
+    const page = createPage()
+    vi.mocked(wx.showModal).mockResolvedValue({ confirm: true, cancel: false, errMsg: '' })
+    eventsModule.cancelRegistration.mockRejectedValue(new MipEventsError('CONFLICT', '状态已变化'))
+    await callPage(page, 'cancelRegistration', {
+      currentTarget: { dataset: { eventId: 'event-1', registrationId: 'registration-1', version: 1 } },
+    })
+    expect(eventsModule.listMyRegistrations).toHaveBeenCalledOnce()
+    expect(page.data.message).toContain('已加载最新状态')
+    expect(page.data.cancelingId).toBe('')
+  })
+
   it('uses ATTENDED on the first request when supplied by the route query', async () => {
     const page = createPage()
 

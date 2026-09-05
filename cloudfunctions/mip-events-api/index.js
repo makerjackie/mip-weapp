@@ -160,13 +160,14 @@ async function dispatch(event) {
         participationAccessPolicy,
       })
     case 'mip.events.updateRegistration':
-      return service.updateRegistration(mysqlDatabase(), { ...shared, input: event })
+      return service.updateRegistration(mysqlDatabase(), { ...shared, input: event, participationAccessPolicy })
     case 'mip.events.cancelRegistration':
       return service.cancelRegistration(mysqlDatabase(), {
         ...shared,
         eventId: event.eventId,
         expectedVersion: event.expectedVersion,
         paymentAvailable: paymentAvailable(),
+        participationAccessPolicy,
       })
     case 'mip.events.checkIn':
       return service.checkIn(mysqlDatabase(), {

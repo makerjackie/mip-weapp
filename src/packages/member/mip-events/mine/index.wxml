@@ -1,14 +1,16 @@
 <view id="mip-events-mine-page" class="mip-member-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+40rpx)] text-ink">
-  <view class="grid grid-cols-2 border-b border-line text-center text-[length:25rpx]">
+  <view class="grid grid-cols-3 border-b border-line text-center text-[length:25rpx]">
     <view wx:if="{{activeCategory === 'UPCOMING'}}" class="min-h-[76rpx] border-b-[4rpx] border-brand py-3 font-medium text-brand" data-category="UPCOMING" bind:tap="changeCategory">待参加({{counts.upcoming}})</view>
     <view wx:else class="min-h-[76rpx] border-b-[4rpx] border-transparent py-3 text-muted" data-category="UPCOMING" bind:tap="changeCategory">待参加({{counts.upcoming}})</view>
     <view wx:if="{{activeCategory === 'ATTENDED'}}" class="min-h-[76rpx] border-b-[4rpx] border-brand py-3 font-medium text-brand" data-category="ATTENDED" bind:tap="changeCategory">已参加({{counts.attended}})</view>
     <view wx:else class="min-h-[76rpx] border-b-[4rpx] border-transparent py-3 text-muted" data-category="ATTENDED" bind:tap="changeCategory">已参加({{counts.attended}})</view>
+    <view wx:if="{{activeCategory === 'HISTORY'}}" class="min-h-[76rpx] border-b-[4rpx] border-brand py-3 font-medium text-brand" data-category="HISTORY" bind:tap="changeCategory">历史({{counts.history || 0}})</view>
+    <view wx:else class="min-h-[76rpx] border-b-[4rpx] border-transparent py-3 text-muted" data-category="HISTORY" bind:tap="changeCategory">历史({{counts.history || 0}})</view>
   </view>
 
   <view wx:if="{{state === 'loading'}}" class="mx-3 mt-4 rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}" class="mx-3 mt-5"><app-empty-state title="暂时无法加载活动" description="{{message || '请稍后重试。'}}" action-text="重新加载" bind:action="loadRegistrations" /></view>
-  <view wx:elif="{{registrations.length === 0}}" class="mx-3 mt-5"><app-empty-state title="{{activeCategory === 'UPCOMING' ? '暂无待参加活动' : '暂无已参加活动'}}" description="{{activeCategory === 'UPCOMING' ? '报名确认后的活动会显示在这里。' : '完成签到的活动会显示在这里。'}}" action-text="浏览活动" bind:action="browseEvents" /></view>
+  <view wx:elif="{{registrations.length === 0}}" class="mx-3 mt-5"><app-empty-state title="{{activeCategory === 'UPCOMING' ? '暂无待参加活动' : activeCategory === 'ATTENDED' ? '暂无已参加活动' : '暂无历史活动'}}" description="{{activeCategory === 'UPCOMING' ? '报名后的待参加活动会显示在这里。' : activeCategory === 'ATTENDED' ? '完成签到的活动会显示在这里。' : '已结束、已取消和未通过的报名会显示在这里。'}}" action-text="浏览活动" bind:action="browseEvents" /></view>
   <view wx:else class="mx-3 mt-4 flex flex-col gap-3">
     <view wx:for="{{registrations}}" wx:key="registrationId" class="overflow-hidden rounded-[16rpx] bg-panel" data-event-id="{{item.event.id}}" data-status="{{item.status}}">
       <event-card event="{{item.card}}" variant="feed" bind:select="openRegistration" />

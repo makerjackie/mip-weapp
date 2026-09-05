@@ -102,6 +102,22 @@ function eventDraft(overrides = {}) {
 }
 
 describe('admin events deep module', () => {
+  for (const registrationSchema of [
+    null, {}, [{ key: 'name', type: 'UNSUPPORTED', label: '姓名' }],
+    [{ key: 'name', type: 'TEXT', label: '姓名' }, { key: 'name', type: 'TEXT', label: '重名' }],
+    [{ key: 'choice', type: 'SELECT', label: '选择', options: ['重复', '重复'] }],
+    [{ key: 'name', type: 'TEXT', label: '姓名', maxLength: 201 }],
+  ]) {
+    it(`rejects invalid registration schema before persistence: ${JSON.stringify(registrationSchema)}`, async () => {
+      let writes = 0
+      const service = events(repository({ async saveEvent() { writes += 1 } }))
+      await assert.rejects(service.saveEvent(caller, {
+        draft: eventDraft({ registrationSchema }),
+      }), error => error.code === 'VALIDATION_FAILED')
+      assert.equal(writes, 0)
+    })
+  }
+
   it('exposes only event administration and the export filter seam', () => {
     const api = createAdminEvents({ repository: {}, access: {} })
     assert.deepEqual(Object.keys(api).sort(), [

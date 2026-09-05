@@ -519,10 +519,15 @@ describe('admin repository persistence contracts', () => {
     const calls = []
     const repository = createAdminRepository(transactionDatabase({
       async one(sql) {
+        if (sql.includes('FROM mip_users u')) return {
+          id: 'user-a', status: 'ACTIVE', primary_branch_id: 'branch-a', nickname: '报名用户',
+          phone_verified_at: '2026-08-24', agreement_0_accepted: 1, agreement_1_accepted: 1,
+        }
+        if (sql.includes('FROM mip_membership_entitlements')) return { id: 'entitlement-a' }
         if (sql.includes('FROM mip_events')) {
           return {
             id: 'event-a', access_type: 'FREE', registration_policy: 'APPROVAL',
-            status: 'PUBLISHED', capacity: 20, waitlist_enabled: 1,
+            status: 'PUBLISHED', ends_at: '2099-01-01T00:00:00Z', capacity: 20, waitlist_enabled: 1,
           }
         }
         if (sql.includes('FROM mip_event_registrations') && sql.includes('FOR UPDATE')) {
@@ -561,10 +566,15 @@ describe('admin repository persistence contracts', () => {
     const calls = []
     const repository = createAdminRepository(transactionDatabase({
       async one(sql) {
+        if (sql.includes('FROM mip_users u')) return {
+          id: 'user-a', status: 'ACTIVE', primary_branch_id: 'branch-a', nickname: '报名用户',
+          phone_verified_at: '2026-08-24', agreement_0_accepted: 1, agreement_1_accepted: 1,
+        }
+        if (sql.includes('FROM mip_membership_entitlements')) return { id: 'entitlement-a' }
         if (sql.includes('FROM mip_events')) {
           return {
             id: 'event-a', access_type: 'MEMBER_INCLUDED', registration_policy: 'APPROVAL',
-            status: 'PUBLISHED', capacity: 2, waitlist_enabled: 1,
+            status: 'PUBLISHED', ends_at: '2099-01-01T00:00:00Z', capacity: 2, waitlist_enabled: 1,
           }
         }
         if (sql.includes('FROM mip_event_registrations') && sql.includes('FOR UPDATE')) {

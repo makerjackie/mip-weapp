@@ -408,25 +408,30 @@ function registrationText(marker, maxLength) {
   return marker.slice(0, maximum) || '验'
 }
 
-export function planRegistrationFieldActions(fields, marker) {
+export function planRegistrationFieldActions(fields, marker, { editing = false } = {}) {
   invariant(Array.isArray(fields), 'Registration fields must be an array')
   invariant(typeof marker === 'string' && marker.trim(), 'Registration marker is required')
   const actions = []
   const unavailable = []
   for (const [index, field] of fields.entries()) {
     if (field.type === 'TEXT' || field.type === 'TEXTAREA') {
-      actions.push({ handler: 'onTextInput', index, value: registrationText(marker, field.maxLength) })
+      let value = registrationText(marker, field.maxLength)
+      if (editing && value === field.value) {
+        value = `${value.startsWith('改') ? '新' : '改'}${value.slice(1)}`
+      }
+      actions.push({ handler: 'onTextInput', index, value })
     }
     else if (field.type === 'SELECT') {
       if (Array.isArray(field.options) && field.options.length > 0) {
-        actions.push({ handler: 'onSelectChange', index, value: '0' })
+        const selectedIndex = editing && field.options.length > 1 && field.selectedIndex === 0 ? 1 : 0
+        actions.push({ handler: 'onSelectChange', index, value: String(selectedIndex) })
       }
       else if (field.required) {
         unavailable.push({ index, reason: 'required SELECT field has no options' })
       }
     }
     else if (field.type === 'BOOLEAN') {
-      actions.push({ handler: 'onBooleanChange', index, value: field.required === true })
+      actions.push({ handler: 'onBooleanChange', index, value: field.required === true || (editing && !field.checked) })
     }
     else {
       unavailable.push({ index, reason: `unsupported registration field type: ${String(field.type)}` })

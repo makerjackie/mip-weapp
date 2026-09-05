@@ -21,7 +21,7 @@ export type RegistrationStatus
 export type EventListView = 'UPCOMING' | 'PAST' | 'MINE'
 export type EventDateFilter = 'RECENT' | 'ENDED' | 'TODAY' | 'CUSTOM'
 export type EventSortDirection = 'ASC' | 'DESC'
-export type MyRegistrationCategory = 'UPCOMING' | 'ATTENDED'
+export type MyRegistrationCategory = 'UPCOMING' | 'ATTENDED' | 'HISTORY'
 
 export interface EventFeedQuery {
   view: EventListView
@@ -232,6 +232,7 @@ export interface RegistrationIntent {
 }
 
 export interface MyEventRegistration {
+  orderId?: OrderId
   status: RegistrationStatus
   version: number
   formVersion: number
@@ -287,6 +288,7 @@ export interface MyRegistrationPage {
   counts?: {
     upcoming: number
     attended: number
+    history?: number
   }
   nextCursor?: string
 }

@@ -4,11 +4,13 @@ const { createHash, randomBytes, randomUUID } = require('node:crypto')
 const { createOperationsPublisher } = require('../operations-publication')
 const { cursorPredicateFor, pageRows } = require('../pagination')
 const { claimOptional, complete } = require('../idempotency')
+const { createFullAccessPolicy } = require('../full-access')
 
 function createAdminEventRepository(database, dependencies) {
   const createId = dependencies.createId || randomUUID
   const bytes = dependencies.randomBytes || randomBytes
   const now = dependencies.now || (() => new Date())
+  const fullAccess = dependencies.fullAccessPolicy || createFullAccessPolicy()
   const authorizeMutation = dependencies.authorizeMutation
   const lockMutation = dependencies.lockMutationAuthorization
   const assertScope = dependencies.assertMutationScope
@@ -1076,7 +1078,7 @@ function createAdminEventRepository(database, dependencies) {
     return database.transaction(async (tx) => {
       const authorization = await lockMutation(tx, input)
       const event = await tx.one(
-        `SELECT id, branch_id, access_type, registration_policy, status, capacity, waitlist_enabled
+        `SELECT id, branch_id, access_type, registration_policy, status, capacity, waitlist_enabled, ends_at
          FROM mip_events WHERE app_id = ? AND id = ? FOR UPDATE`,
         [input.appId, input.eventId],
       )
@@ -1102,6 +1104,21 @@ function createAdminEventRepository(database, dependencies) {
       let nextStatus = 'REJECTED'
       if (input.decision === 'APPROVE') {
         const reviewedAt = now()
+        if (!event.ends_at || new Date(event.ends_at) <= reviewedAt) throw codeError('EVENT_ENDED')
+        const user = await fullAccess.loadByUserId(tx, input.appId, registration.user_id, { lock: true })
+        if (!user || user.status !== 'ACTIVE' || !user.agreementsAccepted || !user.phoneBound || !user.profileComplete) {
+          throw codeError('REGISTRATION_INELIGIBLE')
+        }
+        if (event.access_type === 'MEMBER_INCLUDED') {
+          const entitlement = await tx.one(
+            `SELECT id FROM mip_membership_entitlements
+             WHERE app_id = ? AND user_id = ? AND status = 'ACTIVE'
+               AND starts_at <= ? AND ends_at > ?
+             ORDER BY ends_at DESC, id DESC LIMIT 1 FOR UPDATE`,
+            [input.appId, registration.user_id, reviewedAt, reviewedAt],
+          )
+          if (!entitlement) throw codeError('REGISTRATION_INELIGIBLE')
+        }
         const capacity = await tx.one(
           `SELECT COUNT(*) AS total FROM mip_event_registrations
            WHERE app_id = ? AND event_id = ?

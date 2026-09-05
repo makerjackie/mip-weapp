@@ -143,6 +143,7 @@ describe('MIP protected registration read', () => {
       'answers',
       'canEdit',
       'formVersion',
+      'orderId',
       'shareProfile',
       'status',
       'version',
@@ -168,7 +169,7 @@ describe('MIP protected registration read', () => {
     assert.match(source, /requireUser: !publicActions\.has\(action\)/)
     assert.match(source, /requireCaller: \['mip\.events\.resolveCheckInScene', 'mip\.events\.checkIn'\]\.includes\(action\)/)
     assert.match(source, /getMyRegistration\(mysqlDatabase\(\), \{ \.\.\.shared, eventId: event\.eventId \}\)/)
-    assert.match(source, /updateRegistration\(mysqlDatabase\(\), \{ \.\.\.shared, input: event \}\)/)
+    assert.match(source, /updateRegistration\(mysqlDatabase\(\), \{ \.\.\.shared, input: event, participationAccessPolicy \}\)/)
   })
 })
 
@@ -178,12 +179,14 @@ describe('MIP registration mutation', () => {
     const result = await updateRegistration(database, {
       appId: 'wx-app',
       userId: 'user-1',
+      participationAccessPolicy: { requireAccess: async () => ({}) },
       input: updateInput(),
       now,
     })
 
     assert.deepEqual(result, {
       status: 'PENDING_REVIEW',
+      orderId: undefined,
       version: 5,
       formVersion: 2,
       answers: { role: '玩家', introduction: '新内容' },
@@ -210,6 +213,7 @@ describe('MIP registration mutation', () => {
       await rejectCode(() => updateRegistration(database, {
         appId: 'wx-app',
         userId: 'user-1',
+        participationAccessPolicy: { requireAccess: async () => ({}) },
         input: updateInput({ idempotencyKey: `status-${status}` }),
         now,
       }), 'CONFLICT')
@@ -220,12 +224,14 @@ describe('MIP registration mutation', () => {
     const staleRegistration = updateDatabase({ registration: registrationRow({ version: 5 }) })
     await rejectCode(() => updateRegistration(staleRegistration.database, {
       appId: 'wx-app', userId: 'user-1', input: updateInput(), now,
+      participationAccessPolicy: { requireAccess: async () => ({}) },
     }), 'CONFLICT')
     assert.equal(staleRegistration.calls.some(call => call.sql.includes('UPDATE mip_event_registrations SET')), false)
 
     const staleForm = updateDatabase({ event: eventRow({ form_version: 3 }) })
     await rejectCode(() => updateRegistration(staleForm.database, {
       appId: 'wx-app', userId: 'user-1', input: updateInput(), now,
+      participationAccessPolicy: { requireAccess: async () => ({}) },
     }), 'CONFLICT')
     assert.equal(staleForm.calls.some(call => call.sql.includes('UPDATE mip_event_registrations SET')), false)
   })
@@ -235,6 +241,7 @@ describe('MIP registration mutation', () => {
     await rejectCode(() => updateRegistration(database, {
       appId: 'wx-app',
       userId: 'user-1',
+      participationAccessPolicy: { requireAccess: async () => ({}) },
       input: updateInput({ answers: { role: '观察员', introduction: '' } }),
       now,
     }), 'VALIDATION_FAILED')
@@ -245,6 +252,7 @@ describe('MIP registration mutation', () => {
     const { database } = updateDatabase({ affectedRows: 0 })
     await assert.rejects(() => updateRegistration(database, {
       appId: 'wx-app', userId: 'user-1', input: updateInput(), now,
+      participationAccessPolicy: { requireAccess: async () => ({}) },
     }), error => error?.code === 'CONFLICT' && error?.retryable === true)
   })
 

@@ -244,6 +244,11 @@ async function applyEventPayment(tx, {
   paidAt,
   payable,
 }) {
+  // Seat conversion shares the event lock with registration, hold renewal, and admin approval.
+  await tx.one(
+    `SELECT id FROM mip_events WHERE app_id = ? AND id = ? FOR UPDATE`,
+    [appId, order.resource_id],
+  )
   const fulfillment = await tx.one(
     `SELECT h.id AS hold_id, h.order_id AS hold_order_id, h.event_id, h.user_id,
        h.status AS hold_status,
@@ -252,12 +257,44 @@ async function applyEventPayment(tx, {
        r.user_id AS registration_user_id, r.status AS registration_status,
        r.version AS registration_version
      FROM mip_event_seat_holds h
-     JOIN mip_event_registrations r
+     LEFT JOIN mip_event_registrations r
        ON r.app_id = h.app_id AND r.order_id = h.order_id
       AND r.event_id = h.event_id AND r.user_id = h.user_id
      WHERE h.app_id = ? AND h.order_id = ? FOR UPDATE`,
     [appId, order.id],
   )
+  if (fulfillment && !fulfillment.registration_id
+    && fulfillment.hold_order_id === order.id
+    && fulfillment.event_id === order.resource_id
+    && fulfillment.user_id === order.user_id
+    && ['CANCELLED', 'EXPIRED'].includes(fulfillment.hold_status)) {
+    // A new registration may own the user's current event row; preserve it during reconciliation.
+    const updated = await tx.query(
+      `UPDATE mip_orders
+       SET status = 'REFUND_PENDING', provider_transaction_id = ?, paid_at = ?, version = version + 1
+       WHERE app_id = ? AND id = ? AND status IN ('CREATED', 'PAYMENT_CREATED', 'CLOSED') AND version = ?`,
+      [input.providerTransactionId, paidAt, appId, order.id, order.version],
+    )
+    assertAffected(updated, 'ORDER_STATUS_CONFLICT')
+    await markPaymentAttemptSucceeded(tx, appId, order.id, input.providerTransactionId)
+    const refundId = createId()
+    await tx.query(
+      `INSERT INTO mip_refunds (
+        id, app_id, order_id, requested_by_user_id, merchant_refund_no,
+        idempotency_key, amount_cents, reason, status, last_error_code
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, '原报名已变更，退还迟到支付', 'PENDING', NULL)`,
+      [refundId, appId, order.id, order.user_id, merchantRefundNumber(refundId),
+        `event-late-payment:${order.id}`, order.amount_cents],
+    )
+    await writeAudit(tx, {
+      appId,
+      action: 'EVENT_REPLACED_ORDER_REFUND_REQUESTED',
+      resourceType: 'ORDER',
+      resourceId: order.id,
+      metadata: { refundId, eventId: order.resource_id },
+    })
+    return { status: 'REFUND_PENDING', refundId, idempotent: false }
+  }
   if (!fulfillment
     || fulfillment.hold_order_id !== order.id
     || fulfillment.event_id !== order.resource_id
@@ -446,6 +483,19 @@ async function getRefundRequest(db, input) {
              AND active_checkin.user_id = o.user_id
              AND active_checkin.status = 'ACTIVE'
          )
+       ) OR (
+         o.order_type = 'EVENT'
+         AND r.idempotency_key = CONCAT('event-late-payment:', o.id)
+         AND EXISTS (
+           SELECT 1 FROM mip_event_seat_holds original_hold
+           WHERE original_hold.app_id = o.app_id AND original_hold.order_id = o.id
+             AND original_hold.event_id = o.resource_id AND original_hold.user_id = o.user_id
+             AND original_hold.status IN ('CANCELLED', 'EXPIRED')
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM mip_event_registrations original_registration
+           WHERE original_registration.app_id = o.app_id AND original_registration.order_id = o.id
+         )
        ))`,
     [input.identityKey, input.appId, input.refundId],
   )
@@ -493,6 +543,19 @@ async function getRefundRequestForProvider(db, input) {
              AND active_checkin.event_id = o.resource_id
              AND active_checkin.user_id = o.user_id
              AND active_checkin.status = 'ACTIVE'
+         )
+       ) OR (
+         o.order_type = 'EVENT'
+         AND r.idempotency_key = CONCAT('event-late-payment:', o.id)
+         AND EXISTS (
+           SELECT 1 FROM mip_event_seat_holds original_hold
+           WHERE original_hold.app_id = o.app_id AND original_hold.order_id = o.id
+             AND original_hold.event_id = o.resource_id AND original_hold.user_id = o.user_id
+             AND original_hold.status IN ('CANCELLED', 'EXPIRED')
+         )
+         AND NOT EXISTS (
+           SELECT 1 FROM mip_event_registrations original_registration
+           WHERE original_registration.app_id = o.app_id AND original_registration.order_id = o.id
          )
        ))`,
     [input.appId, input.refundId],
@@ -721,10 +784,19 @@ async function applyRefundCallback(db, input, options = {}) {
            WHERE app_id = ? AND order_id = ? AND event_id = ? AND user_id = ? FOR UPDATE`,
           [input.appId, order.id, order.resource_id, order.user_id],
         )
-        if (!eventRegistration || eventRegistration.status !== 'CANCELLATION_PENDING') {
+        if (!eventRegistration && refund.idempotency_key === `event-late-payment:${order.id}`) {
+          const originalHold = await tx.one(
+            `SELECT id FROM mip_event_seat_holds
+             WHERE app_id = ? AND order_id = ? AND event_id = ? AND user_id = ?
+               AND status IN ('CANCELLED', 'EXPIRED') FOR UPDATE`,
+            [input.appId, order.id, order.resource_id, order.user_id],
+          )
+          if (!originalHold) throw new Error('EVENT_REFUND_RECONCILIATION_REQUIRED')
+        }
+        else if (!eventRegistration || eventRegistration.status !== 'CANCELLATION_PENDING') {
           throw new Error('EVENT_REFUND_RECONCILIATION_REQUIRED')
         }
-        const activeCheckin = await tx.one(
+        const activeCheckin = eventRegistration && await tx.one(
           `SELECT id FROM mip_event_checkins
            WHERE app_id = ? AND event_id = ? AND registration_id = ? AND user_id = ?
              AND status = 'ACTIVE' FOR UPDATE`,
@@ -766,7 +838,7 @@ async function applyRefundCallback(db, input, options = {}) {
           [now(), input.appId, order.id],
         )
       }
-      else if (order.order_type === 'EVENT' && nextStatus === 'REFUNDED') {
+      else if (order.order_type === 'EVENT' && nextStatus === 'REFUNDED' && eventRegistration) {
         const registrationUpdated = await tx.query(
           `UPDATE mip_event_registrations
            SET status = 'CANCELLED', cancelled_at = COALESCE(cancelled_at, ?), version = version + 1

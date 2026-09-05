@@ -330,6 +330,20 @@ describe('free offline event mutation runtime contract', () => {
     })
   })
 
+  it('edits short text, selects, and optional booleans to different valid values', () => {
+    expect(planRegistrationFieldActions([
+      { type: 'TEXT', maxLength: 1, value: 'e', required: true },
+      { type: 'SELECT', options: ['A', 'B'], selectedIndex: 0, required: true },
+      { type: 'BOOLEAN', required: false, checked: false },
+      { type: 'BOOLEAN', required: true, checked: true },
+    ], 'edited-marker', { editing: true }).actions).toEqual([
+      { handler: 'onTextInput', index: 0, value: '改' },
+      { handler: 'onSelectChange', index: 1, value: '1' },
+      { handler: 'onBooleanChange', index: 2, value: true },
+      { handler: 'onBooleanChange', index: 3, value: true },
+    ])
+  })
+
   it('proves the running bundle and deployed dev/test function facts before mutation', () => {
     expect(validateRuntimeAttestation({
       account: { miniProgram: { appId, envVersion: 'develop' } },

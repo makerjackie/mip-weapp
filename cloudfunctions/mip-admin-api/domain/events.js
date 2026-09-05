@@ -16,6 +16,7 @@ const {
   text,
 } = require('./validation')
 const { decryptPhone } = require('../lib/phone')
+const { normalizeRegistrationSchema } = require('./registration-schema')
 
 const ROSTER_STATUSES = [
   'PENDING_REVIEW', 'WAITLISTED', 'PAYMENT_PENDING', 'REGISTERED',
@@ -741,7 +742,7 @@ function normalizeEventDraft(value) {
     capacity,
     waitlistEnabled,
     priceCents,
-    registrationSchema: Array.isArray(value.registrationSchema) ? value.registrationSchema : [],
+    registrationSchema: normalizeRegistrationSchema(value.registrationSchema === undefined ? [] : value.registrationSchema),
   }
 }
 

@@ -256,6 +256,7 @@ function createAdminRepository(database, options = {}) {
     authorizeMutation,
     createId: id,
     eventScopeFromRow,
+    fullAccessPolicy: fullAccess,
     lockMutationAuthorization: lockMutation,
     maximumEventReminderRecipients: options.maximumEventReminderRecipients,
     now,

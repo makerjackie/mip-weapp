@@ -2,7 +2,7 @@ import type { EventId, OrderId } from '../../../../modules/mip'
 import type { MipEventDetail, MyEventRegistration, RegistrationField } from '../../../../modules/mip-events'
 import { mipCommerceModule } from '../../../../modules/mip-commerce/client'
 import { decodeInvitationToken, MipEventsError, publicEventTypeLabel } from '../../../../modules/mip-events'
-import { mipCheckInResumeStore, mipEventsModule } from '../../../../modules/mip-events/client'
+import { mipCheckInResumeStore, mipEventsModule, mipRegistrationDraftStore } from '../../../../modules/mip-events/client'
 import { mipAccessPageUrl } from '../../../../modules/mip-identity'
 import { mipBranchesModule, mipIdentityModule } from '../../../../modules/mip-identity/client'
 import { mipMessagingModule } from '../../../../modules/mip-messaging/client'
@@ -101,6 +101,7 @@ Page({
   },
   submissionIdempotencyKey: '',
   pendingAccessResume: false,
+  draftUserId: '',
   invitationResolution: Promise.resolve(),
 
   onLoad(query: Record<string, string>) {
@@ -130,7 +131,10 @@ Page({
     }
   },
 
-  onShow() {
+  async onShow() {
+    if (this.data.state === 'ready') {
+      await this.loadProfileSummary(true)
+    }
     const resume = mipIdentityModule.consumePendingResume()
     if (resume?.action === 'REGISTER_EVENT') {
       if (this.data.state === 'ready' && this.data.event) {
@@ -140,6 +144,27 @@ Page({
         this.pendingAccessResume = true
       }
     }
+  },
+
+  onHide() {
+    this.persistDraft()
+  },
+
+  onUnload() {
+    this.persistDraft()
+  },
+
+  persistDraft() {
+    if (this.data.state !== 'ready' || this.data.busy || !this.draftUserId) {
+      return
+    }
+    mipRegistrationDraftStore.save({
+      userId: this.draftUserId,
+      eventId: this.data.eventId,
+      registrationVersion: this.data.registration?.version ?? null,
+      answers: answersFromFields(this.data.fields),
+      shareProfile: this.data.shareProfile,
+    })
   },
 
   async loadEvent() {
@@ -160,8 +185,9 @@ Page({
         }
       }
       const editing = registration?.canEdit === true
+      const resumingPayment = registration?.status === 'PAYMENT_PENDING'
       const canCreate = !registration || ['CANCELLED', 'REJECTED'].includes(registration.status)
-      if (!editing && (!canCreate || !event.canRegister)) {
+      if (!editing && !resumingPayment && (!canCreate || !event.canRegister)) {
         this.submissionIdempotencyKey = ''
         this.setData({
           state: 'blocked',
@@ -176,14 +202,15 @@ Page({
         return
       }
       this.submissionIdempotencyKey = ''
+      await this.loadProfileSummary(true)
       wx.setNavigationBarTitle({ title: editing ? '修改报名' : '活动报名' })
       this.setData({
         state: 'ready',
         event: presentedEvent,
-        registration: editing ? registration : null,
-        fields: fieldsFromAnswers(event, editing ? registration?.answers : undefined),
+        registration: editing || resumingPayment ? registration : null,
+        fields: fieldsFromAnswers(event, editing || resumingPayment ? registration?.answers : undefined),
         editing,
-        shareProfile: editing ? registration?.shareProfile === true : false,
+        shareProfile: editing || resumingPayment ? registration?.shareProfile === true : false,
         cancellationText: event.cancellationDeadline
           ? `${formatChineseDateTime(event.cancellationDeadline)} 前可申请取消`
           : '是否可以取消以活动当前状态为准',
@@ -194,7 +221,10 @@ Page({
         this.pendingAccessResume = false
         this.setData({ message: '身份已确认，请核对报名信息后提交。' })
       }
-      void this.loadProfileSummary()
+      const draft = mipRegistrationDraftStore.load(this.draftUserId, this.data.eventId, this.data.registration?.version ?? null)
+      if (draft) {
+        this.setData({ fields: fieldsFromAnswers(event, draft.answers), shareProfile: draft.shareProfile, message: '已恢复未提交的报名信息，请核对后提交。' })
+      }
     }
     catch (error) {
       this.setData({ state: 'error', message: error instanceof Error ? error.message : '活动加载失败' })
@@ -208,6 +238,7 @@ Page({
       : field)
     this.submissionIdempotencyKey = ''
     this.setData({ fields, message: '' })
+    this.persistDraft()
   },
 
   onSelectChange(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
@@ -224,6 +255,7 @@ Page({
       : field)
     this.submissionIdempotencyKey = ''
     this.setData({ fields, message: '' })
+    this.persistDraft()
   },
 
   onBooleanChange(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
@@ -233,11 +265,13 @@ Page({
       : field)
     this.submissionIdempotencyKey = ''
     this.setData({ fields, message: '' })
+    this.persistDraft()
   },
 
   onShareProfileChange(event: WechatMiniprogram.CustomEvent<{ value: boolean }>) {
     this.submissionIdempotencyKey = ''
     this.setData({ shareProfile: event.detail.value, message: '' })
+    this.persistDraft()
   },
 
   validate() {
@@ -260,6 +294,7 @@ Page({
       const message = `请检查${firstInvalidLabel}`
       this.setData({ message })
       showErrorFeedback(message)
+      wx.pageScrollTo({ selector: `#registration-field-${fields.findIndex(field => Boolean(field.error))}`, duration: 200 })
       return false
     }
     return true
@@ -292,6 +327,7 @@ Page({
           idempotencyKey: this.submissionIdempotencyKey,
         })
         this.submissionIdempotencyKey = ''
+        mipRegistrationDraftStore.remove(this.draftUserId, this.data.eventId)
         this.setData({
           state: 'submitted',
           registration: updated,
@@ -309,6 +345,7 @@ Page({
         invitationToken: this.data.invitationToken || undefined,
         idempotencyKey: this.submissionIdempotencyKey,
       })
+      mipRegistrationDraftStore.remove(this.draftUserId, this.data.eventId)
       void this.refreshInvitationAttribution()
       this.submissionIdempotencyKey = ''
       if (result.kind === 'PAYMENT_REQUIRED') {
@@ -363,7 +400,7 @@ Page({
       }
     }
     catch (error) {
-      if (this.data.editing && error instanceof MipEventsError && error.code === 'CONFLICT') {
+      if (error instanceof MipEventsError && error.code === 'CONFLICT') {
         await this.recoverUpdateConflict(answers, this.data.shareProfile)
       }
       else if (error instanceof MipEventsError && ['AUTH_REQUIRED', 'AGREEMENT_REQUIRED', 'PHONE_REQUIRED', 'PROFILE_REQUIRED'].includes(error.code)) {
@@ -400,12 +437,14 @@ Page({
     }
     finally {
       this.setData({ busy: false })
+      this.persistDraft()
     }
   },
 
-  async loadProfileSummary() {
+  async loadProfileSummary(force = false) {
     try {
-      const snapshot = mipIdentityModule.peekSnapshot() || await mipIdentityModule.loadSnapshot()
+      const snapshot = force ? await mipIdentityModule.loadSnapshot() : mipIdentityModule.peekSnapshot() || await mipIdentityModule.loadSnapshot()
+      this.draftUserId = snapshot.userId || ''
       let profileBranchText = snapshot.primaryBranchId ? '主分会已设置' : '主分会未设置'
       if (snapshot.primaryBranchId) {
         const branchSnapshot = mipBranchesModule.peek()
@@ -456,24 +495,28 @@ Page({
     try {
       const event = await mipEventsModule.getEvent(this.data.eventId, { force: true })
       const registration = await mipEventsModule.getMyRegistration(this.data.eventId)
-      if (!registration?.canEdit) {
+      const editing = registration?.canEdit === true
+      const resumingPayment = registration?.status === 'PAYMENT_PENDING'
+      const canCreate = resumingPayment || ((!registration || ['CANCELLED', 'REJECTED'].includes(registration.status)) && event.canRegister)
+      if (!editing && !canCreate) {
         this.setData({
           state: 'blocked',
           event,
           registration,
-          message: '报名状态或活动时间已变化，当前不能继续修改。',
+          message: '报名状态或活动时间已变化，当前不能提交报名。',
         })
         return
       }
       this.setData({
         state: 'ready',
         event,
-        registration,
-        fields: fieldsFromAnswers(event, { ...registration.answers, ...draftAnswers }),
+        registration: editing || resumingPayment ? registration : null,
+        fields: fieldsFromAnswers(event, { ...(registration?.answers || {}), ...draftAnswers }),
         shareProfile: draftShareProfile,
-        editing: true,
+        editing,
         message: '报名信息已更新，当前填写内容已保留，请确认后重新保存。',
       })
+      this.persistDraft()
     }
     catch {
       this.setData({ message: '报名信息已变化，最新内容加载失败。请稍后重试。' })

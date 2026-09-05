@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { App } from 'antd'
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useAdminSession } from '../../app/session-provider'
 import type { AdminOperationAction, AdminRequestInput } from '../../domain/contracts'
 import type { AdminDetailView } from '../../modules/admin-details'
@@ -17,6 +17,8 @@ type LaunchOptions = AdminOperationLaunchContext & {
 }
 
 interface DialogModel {
+  draftKey: string
+  needsReload?: boolean
   action: AdminOperationAction
   title: string
   description: string
@@ -41,11 +43,12 @@ const OperationContext = createContext<OperationContextValue | null>(null)
 export function AdminOperationProvider({ children }: { children: ReactNode }) {
   const { message } = App.useApp()
   const queryClient = useQueryClient()
-  const { demoMode, hasCapability, request } = useAdminSession()
+  const { demoMode, hasCapability, request, sessionBoundary } = useAdminSession()
   const [model, setModel] = useState<DialogModel | null>(null)
   const [pendingValues, setPendingValues] = useState<OperationValues | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const conflictDrafts = useRef(new Map<string, OperationValues>())
 
   const launch = useCallback(async (
     action: string,
@@ -67,12 +70,23 @@ export function AdminOperationProvider({ children }: { children: ReactNode }) {
         void message.error('当前账号没有执行此操作的权限')
         return
       }
-      setModel(next)
+      const resourceIds = Object.entries(next.values).filter(([key]) => /Id$/.test(key)).sort(([left], [right]) => left.localeCompare(right))
+      const draftKey = JSON.stringify([sessionBoundary, action, targetId, resourceIds])
+      const saved = conflictDrafts.current.get(draftKey)
+      const values = { ...next.values }
+      if (saved) {
+        for (const field of next.fields) {
+          const key = String(field.name || field.key || '')
+          if (!field.hidden && !/version/i.test(key) && !/Id$/.test(key) && Object.hasOwn(saved, key)) values[key] = saved[key]
+        }
+        setError('已保留上次填写内容，请核对最新记录后重新提交。')
+      }
+      setModel({ ...next, draftKey, values })
     }
     catch (reason) {
       void message.error(reason instanceof Error ? reason.message : '操作表单暂时无法加载')
     }
-  }, [hasCapability, message, request])
+  }, [hasCapability, message, request, sessionBoundary])
 
   const close = useCallback(() => {
     if (loading) return
@@ -83,6 +97,10 @@ export function AdminOperationProvider({ children }: { children: ReactNode }) {
 
   const prepare = useCallback((submitted: OperationValues) => {
     if (!model) return
+    if (model.needsReload) {
+      setError('记录已更新，请重新打开操作后核对。填写内容已保留。')
+      return
+    }
     const values = normalizeOperationValues(model.fields, submitted, model.values)
     if (!model.buildInput(values)) {
       setError('请检查必填项、标识、版本和字段格式')
@@ -107,6 +125,7 @@ export function AdminOperationProvider({ children }: { children: ReactNode }) {
     setError('')
     try {
       await request(model.action, { ...input, idempotencyKey: model.idempotencyKey })
+      conflictDrafts.current.delete(model.draftKey)
       await queryClient.invalidateQueries()
       void message.success(`${model.title}已提交`)
       setModel(null)
@@ -114,7 +133,14 @@ export function AdminOperationProvider({ children }: { children: ReactNode }) {
     }
     catch (reason) {
       setPendingValues(null)
-      setError(reason instanceof Error ? reason.message : '请求结果暂时无法确认')
+      if (reason && typeof reason === 'object' && 'code' in reason
+        && (reason.code === 'CONFLICT' || reason.code === 'VERSION_CONFLICT')) {
+        conflictDrafts.current.set(model.draftKey, model.values)
+        setModel({ ...model, needsReload: true })
+        await queryClient.invalidateQueries()
+        setError('记录已更新，列表已刷新。填写内容已保留，请重新打开操作后核对。')
+      }
+      else setError(reason instanceof Error ? reason.message : '请求结果暂时无法确认')
     }
     finally { setLoading(false) }
   }, [demoMode, loading, message, model, pendingValues, queryClient, request])

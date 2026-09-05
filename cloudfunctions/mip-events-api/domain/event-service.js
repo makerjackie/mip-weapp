@@ -18,6 +18,12 @@ const {
   normalizeRegistrationAnswers,
   normalizeRegistrationSchema,
 } = require('./registration-schema')
+const {
+  defaultResolveUserKind,
+  requireActiveUserForMutation,
+  requireCurrentParticipationAccess,
+  promoteWaitlist,
+} = require('./registration-lifecycle')
 const { createSignedToken, readSignedToken } = require('../lib/tokens')
 const { createProfileRef } = require('../lib/profile-ref')
 
@@ -681,36 +687,6 @@ function publicInvitationAttribution(row) {
     displayName: allowed.nickname && row.inviter_nickname ? row.inviter_nickname : 'MIP 用户',
     ...(allowed.avatar && row.inviter_avatar_file_id ? { avatarUrl: row.inviter_avatar_file_id } : {}),
   }
-}
-
-async function defaultResolveUserKind(tx, appId, userId, now) {
-  const entitlement = await tx.one(
-    `SELECT id FROM mip_membership_entitlements
-     WHERE app_id = ? AND user_id = ? AND status = 'ACTIVE'
-       AND starts_at <= ? AND ends_at > ?
-     ORDER BY ends_at DESC, id DESC LIMIT 1`,
-    [appId, userId, now, now],
-  )
-  return entitlement ? 'PLAYER' : 'GUEST'
-}
-
-async function requireActiveUserForMutation(tx, appId, userId) {
-  const user = await tx.one(
-    `SELECT id, status FROM mip_users
-     WHERE app_id = ? AND id = ? FOR UPDATE`,
-    [appId, userId],
-  )
-  if (!user || user.status !== 'ACTIVE') {
-    throw new DomainError('FORBIDDEN', '当前账号不能执行此操作')
-  }
-  return user
-}
-
-async function requireCurrentParticipationAccess(policy, queryable, appId, userId) {
-  if (!policy || typeof policy.requireAccess !== 'function') {
-    throw new DomainError('SERVICE_UNAVAILABLE', '活动参与服务暂时不可用', true)
-  }
-  return policy.requireAccess(queryable, appId, userId)
 }
 
 async function idempotencyReplay(tx, { appId, userId, operation, key, request }) {
@@ -1798,6 +1774,7 @@ function registrationEditView(event, registration, now = new Date()) {
     : {}
   return {
     status: registration.status,
+    orderId: registration.order_id || undefined,
     version: Number(registration.version),
     formVersion: Number(registration.form_version),
     answers,
@@ -1811,7 +1788,7 @@ async function getMyRegistration(db, { appId, userId, eventId, now = new Date() 
     throw new DomainError('VALIDATION_FAILED', '活动参数无效')
   }
   const row = await db.one(
-    `SELECT r.status, r.version, r.form_version, r.answers_json, r.share_profile,
+    `SELECT r.status, r.order_id, r.version, r.form_version, r.answers_json, r.share_profile,
             e.status AS event_status, e.registration_deadline, e.starts_at
      FROM mip_event_registrations r
      INNER JOIN mip_events e ON e.app_id = r.app_id AND e.id = r.event_id
@@ -1834,6 +1811,8 @@ async function updateRegistration(db, {
   userId,
   input,
   now = new Date(),
+  participationAccessPolicy,
+  resolveUserKind = defaultResolveUserKind,
 }) {
   const eventId = typeof input.eventId === 'string' ? input.eventId : ''
   const submittedAnswers = normalizeRegistrationAnswerPayload(input.answers)
@@ -1864,7 +1843,7 @@ async function updateRegistration(db, {
       return claim.replay
     }
     const event = await tx.one(
-      `SELECT id, status, starts_at, registration_deadline, registration_schema_json, form_version
+      `SELECT id, status, access_type, starts_at, registration_deadline, registration_schema_json, form_version
        FROM mip_events WHERE app_id = ? AND id = ? FOR UPDATE`,
       [appId, eventId],
     )
@@ -1885,6 +1864,11 @@ async function updateRegistration(db, {
     }
     if (Number(event.form_version) !== formVersion) {
       throw new DomainError('CONFLICT', '报名表已更新，请刷新后重试', true)
+    }
+    await requireCurrentParticipationAccess(participationAccessPolicy, tx, appId, userId)
+    if (event.access_type === 'MEMBER_INCLUDED'
+      && await resolveUserKind(tx, appId, userId, now) !== 'PLAYER') {
+      throw new DomainError('FORBIDDEN', '本活动仅限玩家报名')
     }
     const answers = normalizeRegistrationAnswers(event.registration_schema_json, submittedAnswers)
     const updated = await tx.query(
@@ -1994,7 +1978,8 @@ async function createRegistration(db, {
       key: input.idempotencyKey,
       request: { eventId, formVersion, answers: submittedAnswers, shareProfile: input.shareProfile === true },
     })
-    if (claim.replay) {
+    if (claim.replay && !(claim.replay.kind === 'PAYMENT_REQUIRED'
+      && new Date(claim.replay.holdExpiresAt).getTime() <= now.getTime())) {
       return claim.replay
     }
     const event = await tx.one(
@@ -2002,14 +1987,21 @@ async function createRegistration(db, {
       [appId, eventId],
     )
     const existing = await tx.one(
-      `SELECT r.*, o.amount_cents, o.currency, h.expires_at AS hold_expires_at
+      `SELECT r.*, o.amount_cents, o.currency, o.status AS order_status,
+         h.id AS hold_id, h.status AS hold_status, h.expires_at AS hold_expires_at
        FROM mip_event_registrations r
        LEFT JOIN mip_orders o ON o.app_id = r.app_id AND o.id = r.order_id AND o.order_type = 'EVENT'
        LEFT JOIN mip_event_seat_holds h ON h.app_id = o.app_id AND h.order_id = o.id
        WHERE r.app_id = ? AND r.event_id = ? AND r.user_id = ? FOR UPDATE`,
       [appId, eventId, userId],
     )
-    if (existing && activeRegistrationStatuses.has(existing.status)) {
+    const expiredPayment = existing?.status === 'PAYMENT_PENDING'
+      && (existing.hold_status === 'EXPIRED'
+        || new Date(existing.hold_expires_at).getTime() <= now.getTime())
+    if (claim.replay && existing && ['CANCELLED', 'REJECTED'].includes(existing.status)) {
+      throw new DomainError('CONFLICT', '原报名已结束，请重新发起报名', true)
+    }
+    if (existing && activeRegistrationStatuses.has(existing.status) && !expiredPayment) {
       const outcome = registrationOutcome(existing, { paymentAvailable })
       await completeIdempotency(tx, claim, { appId, userId, operation: 'event.register', response: outcome })
       return outcome
@@ -2045,6 +2037,43 @@ async function createRegistration(db, {
       activeHoldCount: Number(holds?.total || 0),
       now,
     })
+    if (expiredPayment) {
+      if (nextStatus !== 'PAYMENT_PENDING' || !existing.hold_id
+        || !['CREATED', 'PAYMENT_CREATED'].includes(existing.order_status)) {
+        throw new DomainError('CONFLICT', '活动订单状态已变化，请刷新后重试', true)
+      }
+      const holdExpiresAt = new Date(Math.min(
+        now.getTime() + 15 * 60 * 1000,
+        new Date(event.registration_deadline || event.starts_at).getTime(),
+      ))
+      // Preserve the order link so a delayed provider callback still resolves this registration.
+      const renewed = await tx.query(
+        `UPDATE mip_event_seat_holds SET status = 'ACTIVE', expires_at = ?
+         WHERE app_id = ? AND id = ? AND order_id = ? AND status = 'EXPIRED'`,
+        [holdExpiresAt, appId, existing.hold_id, existing.order_id],
+      )
+      if (Number(renewed?.affectedRows) !== 1) {
+        throw new DomainError('CONFLICT', '活动名额状态已变化，请刷新后重试', true)
+      }
+      const registrationUpdated = await tx.query(
+        `UPDATE mip_event_registrations SET answers_json = ?, form_version = ?, share_profile = ?,
+           version = version + 1
+         WHERE app_id = ? AND id = ? AND order_id = ? AND status = 'PAYMENT_PENDING' AND version = ?`,
+        [JSON.stringify(answers), formVersion, input.shareProfile === true ? 1 : 0,
+          appId, existing.id, existing.order_id, existing.version],
+      )
+      if (Number(registrationUpdated?.affectedRows) !== 1) {
+        throw new DomainError('CONFLICT', '报名状态已变化，请刷新后重试', true)
+      }
+      await writeAudit(tx, {
+        appId, actorUserId: userId, scopeId: eventId,
+        action: 'EVENT_PAYMENT_HOLD_RENEWED', resourceType: 'EVENT_REGISTRATION', resourceId: existing.id,
+        metadata: { orderId: existing.order_id, formVersion, holdExpiresAt: iso(holdExpiresAt) },
+      })
+      const outcome = registrationOutcome({ ...existing, hold_expires_at: holdExpiresAt }, { paymentAvailable })
+      await completeIdempotency(tx, claim, { appId, userId, operation: 'event.register', response: outcome })
+      return outcome
+    }
     const registrationId = existing?.id || randomUUID()
     let order = null
     if (nextStatus === 'PAYMENT_PENDING') {
@@ -2198,18 +2227,20 @@ async function listMyRegistrations(db, {
   now = new Date(),
   tokenSecret,
 }) {
-  if (category !== undefined && !['UPCOMING', 'ATTENDED'].includes(category)) {
+  if (category !== undefined && !['UPCOMING', 'ATTENDED', 'HISTORY'].includes(category)) {
     throw new DomainError('VALIDATION_FAILED', '活动分类无效')
   }
   const pageLimit = limitOf(limit)
   const decoded = decodeCursor(cursor)
   const params = [now, userId, appId, userId]
   const categoryClause = category === 'UPCOMING'
-    ? "AND r.status IN ('PENDING_REVIEW','WAITLISTED','PAYMENT_PENDING','REGISTERED','CANCELLATION_PENDING') AND e.ends_at > ?"
+    ? "AND r.status IN ('PENDING_REVIEW','WAITLISTED','PAYMENT_PENDING','REGISTERED','CANCELLATION_PENDING') AND e.ends_at > ? AND e.status = 'PUBLISHED'"
     : category === 'ATTENDED'
       ? "AND r.status = 'ATTENDED'"
-      : ''
-  if (category === 'UPCOMING') {
+      : category === 'HISTORY'
+        ? "AND r.status <> 'ATTENDED' AND (r.status IN ('CANCELLED','REJECTED') OR e.ends_at <= ? OR e.status <> 'PUBLISHED')"
+        : ''
+  if (category === 'UPCOMING' || category === 'HISTORY') {
     params.push(now)
   }
   let cursorClause = ''
@@ -2270,13 +2301,16 @@ async function listMyRegistrations(db, {
     db.one(
       `SELECT
          SUM(CASE WHEN registration.status IN ('PENDING_REVIEW','WAITLISTED','PAYMENT_PENDING','REGISTERED','CANCELLATION_PENDING')
-           AND event_row.ends_at > ? THEN 1 ELSE 0 END) AS upcoming_count,
-         SUM(CASE WHEN registration.status = 'ATTENDED' THEN 1 ELSE 0 END) AS attended_count
+           AND event_row.ends_at > ? AND event_row.status = 'PUBLISHED' THEN 1 ELSE 0 END) AS upcoming_count,
+         SUM(CASE WHEN registration.status = 'ATTENDED' THEN 1 ELSE 0 END) AS attended_count,
+         SUM(CASE WHEN registration.status <> 'ATTENDED'
+           AND (registration.status IN ('CANCELLED','REJECTED') OR event_row.ends_at <= ?
+             OR event_row.status <> 'PUBLISHED') THEN 1 ELSE 0 END) AS history_count
        FROM mip_event_registrations registration
        JOIN mip_events event_row
          ON event_row.app_id = registration.app_id AND event_row.id = registration.event_id
        WHERE registration.app_id = ? AND registration.user_id = ?`,
-      [now, appId, userId],
+      [now, now, appId, userId],
     ),
     db.one(
       `SELECT value_json FROM mip_app_settings
@@ -2306,6 +2340,7 @@ async function listMyRegistrations(db, {
     counts: {
       upcoming: Number(counts?.upcoming_count || 0),
       attended: Number(counts?.attended_count || 0),
+      history: Number(counts?.history_count || 0),
     },
     nextCursor: hasMore ? encodeCursor(pageRows[pageRows.length - 1]) : undefined,
   }
@@ -2322,6 +2357,7 @@ function canCancelRegistration(event, registrationStatus, now = new Date(), fall
   if (!cancellableRegistrationStatuses.has(registrationStatus)) {
     return false
   }
+  if (registrationStatus === 'PAYMENT_PENDING') return true
   const timestamp = now instanceof Date ? now.getTime() : new Date(now).getTime()
   const startsAt = new Date(event.starts_at).getTime()
   const explicitDeadline = event.cancellation_deadline
@@ -2333,34 +2369,6 @@ function canCancelRegistration(event, registrationStatus, now = new Date(), fall
   return Number.isFinite(timestamp) && Number.isFinite(deadline) && timestamp < deadline
 }
 
-async function promoteWaitlist(tx, { appId, eventId, now }) {
-  const next = await tx.one(
-    `SELECT id, user_id, version FROM mip_event_registrations
-     WHERE app_id = ? AND event_id = ? AND status = 'WAITLISTED'
-     ORDER BY waitlisted_at ASC, id ASC LIMIT 1 FOR UPDATE`,
-    [appId, eventId],
-  )
-  if (!next) {
-    return null
-  }
-  await tx.query(
-    `UPDATE mip_event_registrations SET
-      status = 'REGISTERED', ticket_hash = ?, registered_at = ?, waitlisted_at = NULL,
-      version = version + 1
-     WHERE app_id = ? AND id = ? AND version = ?`,
-    [sha256(randomBytes(24)), now, appId, next.id, next.version],
-  )
-  await writeOutbox(tx, {
-    appId,
-    aggregateType: 'EVENT_REGISTRATION',
-    aggregateId: next.id,
-    eventType: 'event.registration_confirmed',
-    sourceVersion: Number(next.version) + 1,
-    payload: { eventId, userId: next.user_id, status: 'REGISTERED', promotedFromWaitlist: true },
-  })
-  return next.id
-}
-
 async function cancelRegistration(db, {
   appId,
   userId,
@@ -2368,6 +2376,8 @@ async function cancelRegistration(db, {
   expectedVersion,
   now = new Date(),
   paymentAvailable = false,
+  participationAccessPolicy,
+  resolveUserKind = defaultResolveUserKind,
 }) {
   const version = requireExpectedVersion(expectedVersion, {
     minimum: 1,
@@ -2376,7 +2386,7 @@ async function cancelRegistration(db, {
   return db.transaction(async (tx) => {
     await requireActiveUserForMutation(tx, appId, userId)
     const event = await tx.one(
-      `SELECT id, access_type, starts_at, cancellation_deadline FROM mip_events
+      `SELECT id, status, access_type, registration_policy, starts_at, cancellation_deadline FROM mip_events
        WHERE app_id = ? AND id = ? FOR UPDATE`,
       [appId, eventId],
     )
@@ -2442,7 +2452,7 @@ async function cancelRegistration(db, {
     }
     const cancellationDeadline = await effectiveCancellationDeadline(tx, appId, event)
     assertCanCancel(registration.status)
-    if (now.getTime() >= cancellationDeadline.getTime()) {
+    if (registration.status !== 'PAYMENT_PENDING' && now.getTime() >= cancellationDeadline.getTime()) {
       throw new DomainError('CONFLICT', '已超过可取消时间')
     }
     if (version !== Number(registration.version)) {
@@ -2519,7 +2529,7 @@ async function cancelRegistration(db, {
       }
     }
     if (releasedCapacity && !refundRequired && event.access_type !== 'PAID') {
-      await promoteWaitlist(tx, { appId, eventId, now })
+      await promoteWaitlist(tx, { appId, eventId, event, now, participationAccessPolicy, resolveUserKind, writeOutbox })
     }
     await writeAudit(tx, {
       appId,
