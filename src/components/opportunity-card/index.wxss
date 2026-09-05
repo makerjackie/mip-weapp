@@ -31,11 +31,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 36rpx;
-  font-weight: 700;
-  color: var(--color-brand);
-  letter-spacing: 2rpx;
   background: var(--color-brand-soft);
+}
+
+.mip-opportunity-card__cover-placeholder-image {
+  width: 112rpx;
+  height: 112rpx;
+  border-radius: 24rpx;
 }
 
 .mip-opportunity-card__content {
@@ -94,7 +96,7 @@
   margin-top: auto;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 20rpx;
+  font-size: 22rpx;
   line-height: 30rpx;
   color: var(--color-muted);
   text-align: right;

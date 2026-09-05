@@ -1,5 +1,5 @@
 <view id="mip-event-registration-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+176rpx)] pt-3 text-ink">
-  <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="无法打开报名" description="{{message || '请稍后重试。'}}" action-text="重新加载" bind:action="loadEvent" /><app-page-exit /></view>
   <view wx:elif="{{state === 'blocked'}}"><app-empty-state title="{{editing ? '当前不能修改报名' : '当前不能报名'}}" description="{{message}}" action-text="查看我的活动" bind:action="openMine" /><app-page-exit /></view>
   <view wx:elif="{{state === 'submitted'}}" class="pt-10">
@@ -29,7 +29,7 @@
     <view id="event-registration-feedback" wx:if="{{message}}" class="mt-3 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:22rpx] leading-5 text-ink">{{message}}</view>
 
     <view class="mt-3 rounded-[16rpx] bg-panel px-4 py-4">
-      <view class="flex items-center justify-between"><view class="text-[length:26rpx] font-semibold">报名资料</view><view class="flex min-h-[64rpx] items-center px-2 text-[length:22rpx] text-brand" bind:tap="openProfile">修改资料</view></view>
+      <view class="flex items-center justify-between"><view class="text-[length:26rpx] font-semibold">报名资料</view><view class="flex min-h-[88rpx] items-center px-2 text-[length:22rpx] text-brand" bind:tap="openProfile">修改资料</view></view>
       <view class="mt-3 text-[length:26rpx]">{{profileNickname || '资料加载中'}}</view>
       <view class="mt-2 flex flex-wrap gap-2 text-[length:21rpx] text-muted"><text class="rounded-[12rpx] bg-panel-raised px-2 py-1">{{profilePhoneText || '手机号状态加载中'}}</text><text class="rounded-[12rpx] bg-panel-raised px-2 py-1">{{profileBranchText || '主分会状态加载中'}}</text></view>
     </view>
@@ -39,8 +39,8 @@
     <view wx:else class="mt-3 flex flex-col gap-3">
       <view wx:for="{{fields}}" wx:key="key" id="registration-field-{{index}}" class="rounded-[16rpx] bg-panel px-4 py-4">
         <view class="text-[length:24rpx] font-semibold">{{item.label}}<text wx:if="{{item.required}}" class="ml-1 text-danger">*</text></view>
-        <textarea wx:if="{{item.type === 'TEXTAREA'}}" class="box-border mt-3 h-[180rpx] w-full max-w-full rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:24rpx]" value="{{item.value}}" maxlength="{{item.maxLength || 500}}" data-index="{{index}}" bindinput="onTextInput" placeholder="请输入" />
-        <input wx:elif="{{item.type === 'TEXT'}}" class="box-border mt-3 h-[80rpx] w-full max-w-full rounded-[12rpx] bg-panel-raised px-3 text-[length:24rpx]" value="{{item.value}}" maxlength="{{item.maxLength || 120}}" data-index="{{index}}" bindinput="onTextInput" placeholder="请输入" />
+        <textarea aria-label="{{item.label}}" wx:if="{{item.type === 'TEXTAREA'}}" class="box-border mt-3 h-[180rpx] w-full max-w-full rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:24rpx]" value="{{item.value}}" maxlength="{{item.maxLength || 500}}" data-index="{{index}}" bindinput="onTextInput" placeholder="请输入" />
+        <input aria-label="{{item.label}}" wx:elif="{{item.type === 'TEXT'}}" class="box-border mt-3 h-[88rpx] w-full max-w-full rounded-[12rpx] bg-panel-raised px-3 text-[length:24rpx]" value="{{item.value}}" maxlength="{{item.maxLength || 120}}" data-index="{{index}}" bindinput="onTextInput" placeholder="请输入" />
         <picker wx:elif="{{item.type === 'SELECT'}}" range="{{item.options}}" value="{{item.selectedIndex}}" data-index="{{index}}" bindchange="onSelectChange"><view class="mt-3 flex min-h-[80rpx] items-center justify-between gap-2 rounded-[12rpx] bg-panel-raised px-3 py-3 text-[length:24rpx]"><text class="min-w-0 flex-1 break-all">{{item.selectedLabel}}</text><t-icon name="chevron-right" size="30rpx" color="var(--color-muted)" /></view></picker>
         <view wx:else class="mt-3 flex min-h-[80rpx] items-center justify-between"><text class="text-[length:23rpx] text-muted">确认</text><t-switch value="{{item.checked}}" data-index="{{index}}" bind:change="onBooleanChange" /></view>
         <view wx:if="{{item.type === 'TEXT' || item.type === 'TEXTAREA'}}" class="mt-2 text-right text-[length:20rpx] text-muted">{{item.currentLength}}/{{item.maxLength || (item.type === 'TEXTAREA' ? 500 : 120)}}</view>

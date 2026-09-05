@@ -71,6 +71,9 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(discovery).toContain('wx:if="{{industryPickerOpen}}"')
     expect(discovery).toContain('wx:if="{{expandedIndustryGroupId === group.id}}"')
     expect(discovery).toContain('wx:if="{{moreFiltersOpen}}"')
+    expect(discoveryScript).toContain('selectedLocation === \'NATIONAL\' ? \'全国\' : \'不限\'')
+    expect(discoveryScript).toContain('locationFilterLabel: \'不限\'')
+    expect(discoveryScript).toContain('this.data.mode === \'cooperation\' ? \'全国\' : \'不限\'')
   })
 
   it('maps the location preset to one backend scope and keeps search independent from filter reset', () => {

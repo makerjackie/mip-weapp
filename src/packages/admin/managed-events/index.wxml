@@ -2,17 +2,17 @@
   <view class="text-[length:40rpx] font-bold">活动现场</view>
   <view class="mt-2 text-[length:24rpx] text-muted">只显示当前账号有权查看的活动。</view>
 
-  <view class="mt-5 rounded-[16rpx] bg-panel p-3">
+  <view class="mt-5 rounded-[24rpx] bg-panel p-3">
     <t-input class="box-border max-w-full" value="{{query}}" placeholder="搜索活动名称" bind:change="updateQuery" bind:enter="search" />
-    <view class="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label="活动状态">
-      <view wx:for="{{statusOptions}}" wx:key="value" class="flex min-h-[72rpx] items-center" role="radio" aria-checked="{{status === item.value}}">
-        <t-tag variant="outline" theme="{{status === item.value ? 'primary' : 'default'}}" data-value="{{item.value}}" bind:tap="changeStatus">{{item.label}}</t-tag>
+    <view class="mt-3 flex flex-wrap gap-2" aria-role="radiogroup" aria-label="活动状态">
+      <view wx:for="{{statusOptions}}" wx:key="value" class="flex min-h-[88rpx] items-center" aria-role="radio" aria-checked="{{status === item.value}}" data-value="{{item.value}}" bind:tap="changeStatus">
+        <t-tag variant="outline" theme="{{status === item.value ? 'primary' : 'default'}}">{{item.label}}</t-tag>
       </view>
     </view>
     <view class="mt-3"><t-button block theme="primary" bind:tap="search">查询</t-button></view>
   </view>
 
-  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5">
+  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[24rpx] bg-panel p-5">
     <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
   <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6">
@@ -25,7 +25,7 @@
     <app-empty-state title="暂无活动" description="符合当前筛选条件的授权活动会显示在这里。" />
   </view>
   <view wx:else class="mt-5 flex flex-col gap-3">
-    <view wx:for="{{events}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4" data-id="{{item.id}}" role="button" bind:tap="openEvent">
+    <view wx:for="{{events}}" wx:key="id" class="rounded-[24rpx] bg-panel px-4 py-4" data-id="{{item.id}}" aria-role="button" bind:tap="openEvent">
       <view class="flex items-start justify-between gap-3">
         <view class="min-w-0 flex-1 break-all text-[length:29rpx] font-semibold">{{item.title}}</view>
         <t-tag variant="outline" theme="{{item.statusTheme}}">{{item.statusText}}</t-tag>
@@ -36,7 +36,7 @@
     </view>
   </view>
 
-  <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
+  <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[20rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
   <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMoreEvents">加载更多</t-button></view>
   <app-page-exit />
 </view>

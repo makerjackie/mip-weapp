@@ -1,5 +1,5 @@
 <view id="mip-badges-page" class="mip-member-page badge-page min-h-screen bg-canvas text-ink">
-  <view class="badge-hero pt-[calc(env(safe-area-inset-top)+16rpx)]">
+  <view class="badge-hero pt-4">
     <view class="px-6 pb-8">
       <view class="text-[length:30rpx] font-semibold">我的徽章</view>
       <view class="mt-10 flex items-center">
@@ -26,7 +26,7 @@
       <view wx:if="{{equippedItems.length}}" class="mt-4 flex gap-2">
         <view wx:for="{{equippedItems}}" wx:key="id" class="badge-equipped-slot">
           <image class="h-[80rpx] w-[80rpx]" mode="aspectFit" src="{{item.imageUrl || item.artFallbackUrl}}" />
-          <view class="mt-1 w-full truncate text-center text-[length:20rpx]">{{index + 1}}. {{item.name}}</view>
+          <view class="mt-1 w-full truncate text-center text-[length:22rpx]">{{index + 1}}. {{item.name}}</view>
           <view class="mt-2 flex items-center justify-center gap-1">
             <view class="badge-action-hit" data-id="{{item.id}}" data-direction="UP" catch:tap="moveEquipment"><view class="badge-order-button {{index === 0 ? 'badge-order-button--disabled' : ''}}">上移</view></view>
             <view class="badge-action-hit" data-id="{{item.id}}" catch:tap="toggleEquipment"><view class="badge-order-button">移除</view></view>
@@ -60,8 +60,8 @@
         <view class="badge-card-action-hit" data-id="{{item.id}}" catch:tap="toggleEquipment"><view class="badge-card-action mt-2 {{item.locked ? 'badge-card-action--disabled' : ''}}">{{item.locked ? '不可佩戴' : (item.selected ? '取消佩戴' : '佩戴')}}</view></view>
       </view>
     </view>
-    <view class="mt-5 text-center text-[length:20rpx] text-muted">已获得 {{earnedCount}} 枚 · 当前佩戴 {{selectedIds.length}} / {{maximumEquipped}}</view>
+    <view class="mt-5 text-center text-[length:22rpx] text-muted">已获得 {{earnedCount}} 枚 · 当前佩戴 {{selectedIds.length}} / {{maximumEquipped}}</view>
     <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] border border-line bg-panel px-4 py-3 text-[length:22rpx] text-muted">{{message}}</view>
   </view>
-  <view wx:if="{{state !== 'ready'}}" class="px-6 pb-6"><app-page-exit /></view>
+  <view class="px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)]"><app-page-exit label="返回我的" tab-url="/pages/profile/index" /></view>
 </view>

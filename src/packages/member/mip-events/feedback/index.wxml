@@ -9,21 +9,22 @@
   <block wx:else>
     <view id="mip-event-feedback-event-summary" class="rounded-[16rpx] bg-panel px-3 py-3">
       <view class="flex flex-wrap items-center gap-1">
-        <text class="rounded-[6rpx] bg-[#8CC8EA] px-2 py-1 text-[length:20rpx] font-medium text-on-brand">{{eventTypeText}}</text>
-        <text class="rounded-[6rpx] bg-brand px-2 py-1 text-[length:20rpx] font-medium text-on-brand">{{accessText}}</text>
+        <text class="rounded-[6rpx] bg-[#8CC8EA] px-2 py-1 text-[length:22rpx] font-medium text-on-brand">{{eventTypeText}}</text>
+        <text class="rounded-[6rpx] bg-brand px-2 py-1 text-[length:22rpx] font-medium text-on-brand">{{accessText}}</text>
       </view>
       <view class="mt-2 truncate text-[length:30rpx] font-medium">{{event.title}}</view>
       <view class="mt-2 flex items-center gap-2 text-[length:22rpx]"><t-icon name="calendar" size="28rpx" color="var(--color-brand)" /><text class="truncate">{{timeText}}</text></view>
       <view class="mt-1 flex items-center gap-2 text-[length:22rpx]"><t-icon name="location" size="28rpx" color="var(--color-brand)" /><text class="truncate">{{locationText}}</text></view>
     </view>
 
-    <view class="mt-4 flex items-center gap-2 text-[length:28rpx] font-medium"><t-icon name="heart" size="30rpx" color="var(--color-brand)" /><text>为本场活动的体验打个分吧</text></view>
-    <view class="mt-3 flex h-[160rpx] items-center justify-center gap-3 rounded-[16rpx] bg-panel" aria-role="radiogroup">
-      <view wx:for="{{starOptions}}" wx:key="value" class="flex h-[72rpx] w-[72rpx] items-center justify-center" aria-role="radio" aria-checked="{{item.value === rating}}" data-value="{{item.value}}" bind:tap="selectRating"><t-icon name="{{item.selected ? 'star-filled' : 'star'}}" size="60rpx" color="var(--color-brand)" /></view>
+    <view id="feedback-field-rating" class="mt-4 flex items-center gap-2 text-[length:28rpx] font-medium"><t-icon name="heart" size="30rpx" color="var(--color-brand)" /><text>本场活动体验评分</text><text class="text-[length:22rpx] text-danger">必填</text></view>
+    <view class="mt-3 flex h-[160rpx] items-center justify-center gap-3 rounded-[16rpx] bg-panel" aria-role="radiogroup" aria-label="本场活动体验评分，必填">
+      <view wx:for="{{starOptions}}" wx:key="value" class="flex h-[88rpx] w-[88rpx] items-center justify-center" aria-role="radio" aria-checked="{{item.value === rating}}" aria-label="{{item.value}} 星" data-value="{{item.value}}" bind:tap="selectRating"><t-icon name="{{item.selected ? 'star-filled' : 'star'}}" size="60rpx" color="var(--color-brand)" /></view>
     </view>
+    <view wx:if="{{validationErrorKey === 'rating'}}" class="mt-2 text-[length:22rpx] text-danger" aria-live="polite">{{validationErrorMessage}}</view>
 
-    <view class="mt-4 flex items-center gap-2 text-[length:28rpx] font-medium"><t-icon name="heart" size="30rpx" color="var(--color-brand)" /><text>你是否会给身边人推荐 MIP？</text></view>
-    <view class="mt-3 flex flex-col gap-3" aria-role="radiogroup">
+    <view id="feedback-field-recommendation" class="mt-4 flex items-center gap-2 text-[length:28rpx] font-medium"><t-icon name="heart" size="30rpx" color="var(--color-brand)" /><text>向身边人推荐 MIP 的意愿</text><text class="text-[length:22rpx] text-danger">必填</text></view>
+    <view class="mt-3 flex flex-col gap-3" aria-role="radiogroup" aria-label="向身边人推荐 MIP 的意愿，必填">
       <view class="flex min-h-[88rpx] items-center gap-3 rounded-[16rpx] bg-panel px-3" aria-role="radio" aria-checked="{{recommendation === 'RECOMMEND'}}" data-value="RECOMMEND" bind:tap="selectRecommendation">
         <view wx:if="{{recommendation === 'RECOMMEND'}}" class="flex h-[40rpx] w-[40rpx] shrink-0 items-center justify-center rounded-full bg-brand"><t-icon name="check" size="26rpx" color="var(--color-on-brand)" /></view><view wx:else class="box-border h-[40rpx] w-[40rpx] shrink-0 rounded-full border border-brand" />
         <text class="text-[length:26rpx]">是的，我会推荐</text>
@@ -33,30 +34,34 @@
         <text class="text-[length:26rpx]">不会</text>
       </view>
     </view>
+    <view wx:if="{{validationErrorKey === 'recommendation'}}" class="mt-2 text-[length:22rpx] text-danger" aria-live="polite">{{validationErrorMessage}}</view>
 
-    <view class="mt-4 flex items-center gap-2 text-[length:28rpx] font-medium"><t-icon name="usergroup" size="30rpx" color="var(--color-brand)" /><text>以下哪些符合你的能力角色？（多选）</text></view>
-    <view class="mt-3 grid grid-cols-2 gap-3">
+    <view id="feedback-field-roles" class="mt-4 flex items-center gap-2 text-[length:28rpx] font-medium"><t-icon name="usergroup" size="30rpx" color="var(--color-brand)" /><text>符合你的能力角色</text><text class="text-[length:22rpx] text-danger">必填，至少选择一项</text></view>
+    <view class="mt-3 grid grid-cols-2 gap-3" aria-role="group" aria-label="能力角色，必填，至少选择一项">
       <view wx:for="{{roleOptions}}" wx:key="key" class="flex min-h-[88rpx] items-center gap-3 rounded-[16rpx] bg-panel px-3" aria-role="checkbox" aria-checked="{{item.selected}}" data-key="{{item.key}}" bind:tap="toggleRole">
         <view wx:if="{{item.selected}}" class="flex h-[40rpx] w-[40rpx] shrink-0 items-center justify-center rounded-full bg-brand"><t-icon name="check" size="26rpx" color="var(--color-on-brand)" /></view><view wx:else class="box-border h-[40rpx] w-[40rpx] shrink-0 rounded-full border border-brand" />
         <text class="truncate text-[length:25rpx]">{{item.name}}</text>
       </view>
     </view>
+    <view wx:if="{{validationErrorKey === 'roles'}}" class="mt-2 text-[length:22rpx] text-danger" aria-live="polite">{{validationErrorMessage}}</view>
 
-    <view class="mt-4 flex items-center gap-2 text-[length:28rpx] font-medium"><t-icon name="edit" size="30rpx" color="var(--color-brand)" /><text>你可能感兴趣的合作或者引荐是？（选填）</text></view>
+    <view id="feedback-field-body" class="mt-4 flex items-center gap-2 text-[length:28rpx] font-medium"><t-icon name="edit" size="30rpx" color="var(--color-brand)" /><text>感兴趣的合作或引荐（选填）</text></view>
     <view class="relative mt-3 h-[200rpx] rounded-[16rpx] bg-panel">
-      <textarea class="box-border h-full w-full max-w-full bg-transparent px-3 pb-[52rpx] pt-3 text-[length:25rpx] leading-6 text-ink" value="{{body}}" maxlength="300" disabled="{{saving}}" placeholder="如：我有资源" placeholder-style="color:#A3A3A3" bindinput="onBodyInput" />
+      <textarea aria-label="如：我有资源" class="box-border h-full w-full max-w-full bg-transparent px-3 pb-[52rpx] pt-3 text-[length:25rpx] leading-6 text-ink" value="{{body}}" maxlength="300" disabled="{{saving}}" placeholder="如：我有资源" placeholder-style="color:#A3A3A3" bindinput="onBodyInput" />
       <text class="absolute bottom-3 right-3 text-[length:22rpx] text-muted">{{bodyLength}}/300</text>
     </view>
+    <view wx:if="{{validationErrorKey === 'body'}}" class="mt-2 text-[length:22rpx] text-danger" aria-live="polite">{{validationErrorMessage}}</view>
 
-    <view class="mt-4 flex items-center gap-2 text-[length:28rpx] font-medium"><t-icon name="heart" size="30rpx" color="var(--color-brand)" /><text>你是否有意愿加入 MIP？</text></view>
-    <view class="mt-3 flex flex-col gap-3" aria-role="radiogroup">
+    <view id="feedback-field-join-intent" class="mt-4 flex items-center gap-2 text-[length:28rpx] font-medium"><t-icon name="heart" size="30rpx" color="var(--color-brand)" /><text>加入 MIP 的意愿</text><text class="text-[length:22rpx] text-danger">必填</text></view>
+    <view class="mt-3 flex flex-col gap-3" aria-role="radiogroup" aria-label="加入 MIP 的意愿，必填">
       <view wx:for="{{joinIntentOptions}}" wx:key="value" class="flex min-h-[88rpx] items-center gap-3 rounded-[16rpx] bg-panel px-3" aria-role="radio" aria-checked="{{joinIntent === item.value}}" data-value="{{item.value}}" bind:tap="selectJoinIntent">
         <view wx:if="{{joinIntent === item.value}}" class="flex h-[40rpx] w-[40rpx] shrink-0 items-center justify-center rounded-full bg-brand"><t-icon name="check" size="26rpx" color="var(--color-on-brand)" /></view><view wx:else class="box-border h-[40rpx] w-[40rpx] shrink-0 rounded-full border border-brand" />
         <text class="text-[length:26rpx]">{{item.label}}</text>
       </view>
     </view>
+    <view wx:if="{{validationErrorKey === 'joinIntent'}}" class="mt-2 text-[length:22rpx] text-danger" aria-live="polite">{{validationErrorMessage}}</view>
 
-    <view class="mt-4 flex items-start gap-2 text-[length:28rpx] font-medium"><t-icon class="mt-1" name="heart" size="30rpx" color="var(--color-brand)" /><text class="min-w-0 flex-1">如果深入了解 MIP，您希望通过哪种方式？（选填）</text></view>
+    <view class="mt-4 flex items-start gap-2 text-[length:28rpx] font-medium"><t-icon class="mt-1" name="heart" size="30rpx" color="var(--color-brand)" /><text class="min-w-0 flex-1">深入了解 MIP 的方式（选填）</text></view>
     <view class="mt-3 flex flex-col gap-3">
       <view wx:for="{{explorationOptions}}" wx:key="key" class="flex min-h-[88rpx] items-center gap-3 rounded-[16rpx] bg-panel px-3 py-2" aria-role="checkbox" aria-checked="{{item.selected}}" data-key="{{item.key}}" bind:tap="toggleExplorationMethod">
         <view wx:if="{{item.selected}}" class="flex h-[40rpx] w-[40rpx] shrink-0 items-center justify-center rounded-full bg-brand"><t-icon name="check" size="26rpx" color="var(--color-on-brand)" /></view><view wx:else class="box-border h-[40rpx] w-[40rpx] shrink-0 rounded-full border border-brand" />
@@ -64,9 +69,9 @@
       </view>
     </view>
 
-    <view class="mt-4 flex items-center gap-2 text-[length:28rpx] font-medium"><t-icon name="heart" size="30rpx" color="var(--color-brand)" /><text>你是否愿意加入 MIP 的花名册？</text></view>
+    <view id="feedback-field-roster-consent" class="mt-4 flex items-center gap-2 text-[length:28rpx] font-medium"><t-icon name="heart" size="30rpx" color="var(--color-brand)" /><text>花名册信息使用方式</text><text class="text-[length:22rpx] text-danger">必填</text></view>
     <view class="mt-1 text-[length:22rpx] leading-5 text-muted">会为你匹配潜在的合作机会，不会泄露你的联系方式</view>
-    <view class="mt-3 flex flex-col gap-3" aria-role="radiogroup">
+    <view class="mt-3 flex flex-col gap-3" aria-role="radiogroup" aria-label="花名册信息使用方式，必填">
       <view class="flex min-h-[88rpx] items-center gap-3 rounded-[16rpx] bg-panel px-3" aria-role="radio" aria-checked="{{rosterConsent === 'MATCH_OPPORTUNITIES'}}" data-value="MATCH_OPPORTUNITIES" bind:tap="selectRosterConsent">
         <view wx:if="{{rosterConsent === 'MATCH_OPPORTUNITIES'}}" class="flex h-[40rpx] w-[40rpx] shrink-0 items-center justify-center rounded-full bg-brand"><t-icon name="check" size="26rpx" color="var(--color-on-brand)" /></view><view wx:else class="box-border h-[40rpx] w-[40rpx] shrink-0 rounded-full border border-brand" />
         <text class="text-[length:26rpx]">愿意，为我匹配更多商机</text>
@@ -76,13 +81,14 @@
         <text class="text-[length:26rpx]">不愿意，请保密</text>
       </view>
     </view>
+    <view wx:if="{{validationErrorKey === 'rosterConsent'}}" class="mt-2 text-[length:22rpx] text-danger" aria-live="polite">{{validationErrorMessage}}</view>
 
     <view wx:if="{{state === 'conflict'}}" id="mip-event-feedback-conflict-state" class="mt-4 rounded-[16rpx] border border-brand bg-brand-soft px-4 py-3 text-[length:22rpx] leading-5 text-brand">{{message}}</view>
     <view wx:elif="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] leading-5 text-brand">{{message}}</view>
     <app-page-exit />
 
     <view class="fixed bottom-[env(safe-area-inset-bottom)] left-0 right-0 z-50 box-border bg-brand-soft px-3 py-2">
-      <t-button id="mip-event-feedback-save" block size="large" theme="primary" loading="{{saving}}" disabled="{{saving || !rating || !recommendation || selectedRoleCount === 0 || !joinIntent || !rosterConsent}}" bind:tap="saveFeedback">保存</t-button>
+      <t-button id="mip-event-feedback-save" block size="large" theme="primary" loading="{{saving}}" disabled="{{saving}}" bind:tap="saveFeedback">保存</t-button>
     </view>
   </block>
 </view>

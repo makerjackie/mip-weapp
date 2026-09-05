@@ -1,5 +1,5 @@
 <view id="mip-profile-page" class="mip-member-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+180rpx)] text-ink">
-  <view wx:if="{{state === 'loading'}}" class="mx-3 mt-3 rounded-[16rpx] bg-panel px-5 py-8">
+  <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mx-3 mt-3 rounded-[16rpx] bg-panel px-5 py-8">
     <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
   <view wx:elif="{{state === 'error'}}" class="mx-3 mt-3"><app-empty-state title="暂时无法加载资料" description="身份服务暂时没有响应。" action-text="重新加载" bind:action="loadProfile" /></view>
@@ -22,12 +22,12 @@
         <view class="text-[length:24rpx] text-muted">{{avatarUploading ? '头像上传中' : avatarPending ? '保存后生效' : '更换头像'}}</view>
       </view>
       <view data-profile-basic-row="nickname" class="flex min-h-[92rpx] items-center border-t border-line px-3">
-        <view class="w-[120rpx] shrink-0 text-[length:26rpx] font-medium">昵称 <text class="text-[length:20rpx] text-danger">*</text></view>
-        <input class="h-[92rpx] min-w-0 flex-1 text-right text-[length:26rpx]" type="nickname" maxlength="64" value="{{nickname}}" data-field="nickname" bindinput="updateText" bindblur="updateText" placeholder="请输入您的昵称" placeholder-style="color:#A3A3A3;text-align:right" />
+        <view class="w-[120rpx] shrink-0 text-[length:26rpx] font-medium">昵称 <text class="text-[length:22rpx] text-danger">*</text></view>
+        <input aria-label="昵称" class="h-[92rpx] min-w-0 flex-1 text-right text-[length:26rpx]" type="nickname" maxlength="64" value="{{nickname}}" data-field="nickname" bindinput="updateText" bindblur="updateText" placeholder="请输入您的昵称" placeholder-style="color:#A3A3A3;text-align:right" />
       </view>
       <view data-profile-basic-row="realName" class="flex min-h-[92rpx] items-center border-t border-line px-3">
         <view class="w-[120rpx] shrink-0 text-[length:26rpx] font-medium">姓名</view>
-        <input class="h-[92rpx] min-w-0 flex-1 text-right text-[length:26rpx]" maxlength="64" value="{{realName}}" data-field="realName" bindinput="updateText" placeholder="请输入您的姓名" placeholder-style="color:#A3A3A3;text-align:right" />
+        <input aria-label="姓名" class="h-[92rpx] min-w-0 flex-1 text-right text-[length:26rpx]" maxlength="64" value="{{realName}}" data-field="realName" bindinput="updateText" placeholder="请输入您的姓名" placeholder-style="color:#A3A3A3;text-align:right" />
       </view>
       <view data-profile-basic-row="gender" class="flex min-h-[92rpx] items-center border-t border-line px-3">
         <view class="w-[120rpx] shrink-0 text-[length:26rpx] font-medium">性别</view>
@@ -60,7 +60,7 @@
     </view>
     <view class="mx-3 mt-3 flex flex-wrap gap-2">
       <block wx:for="{{careerIdentityOptions}}" wx:key="value">
-        <view data-value="{{item.value}}" class="min-h-[56rpx] rounded-[12rpx] border px-3 py-1 text-[length:23rpx] {{careerIdentityKey === item.value ? 'border-brand bg-brand-soft text-brand' : 'border-transparent bg-panel text-muted'}}" bind:tap="chooseCareerIdentity">{{item.label}}</view>
+        <view data-value="{{item.value}}" aria-role="radio" aria-checked="{{careerIdentityKey === item.value}}" class="flex items-center justify-center min-h-[88rpx] rounded-[12rpx] border px-3 py-1 text-[length:23rpx] {{careerIdentityKey === item.value ? 'border-brand bg-brand-soft text-brand' : 'border-transparent bg-panel text-muted'}}" bind:tap="chooseCareerIdentity">{{item.label}}</view>
       </block>
     </view>
 
@@ -69,8 +69,8 @@
       <text>一句话介绍你的工作和背景</text>
     </view>
     <view class="mx-3 mt-3 rounded-[16rpx] bg-panel px-3 py-3">
-      <textarea class="block h-[176rpx] w-full max-w-full box-border bg-transparent text-[length:25rpx] leading-6" maxlength="160" value="{{headline}}" data-field="headline" bindinput="updateText" placeholder="例如：品牌主理人，寻找一起做项目的伙伴" placeholder-style="color:#A3A3A3" />
-      <view class="text-right text-[length:21rpx] text-muted">{{headline.length}}/160</view>
+      <textarea aria-label="个人简介" class="block h-[176rpx] w-full max-w-full box-border bg-transparent text-[length:25rpx] leading-6" maxlength="160" value="{{headline}}" data-field="headline" bindinput="updateText" placeholder="例如：品牌主理人，寻找一起做项目的伙伴" placeholder-style="color:#A3A3A3" />
+      <view class="text-right text-[length:22rpx] text-muted">{{headline.length}}/160</view>
     </view>
 
     <view data-profile-more-toggle="true" class="mx-3 mt-5 flex min-h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel px-3" bind:tap="toggleMore">
@@ -102,8 +102,8 @@
       </view>
       <view class="mx-3 mt-3 flex flex-wrap gap-2">
         <block wx:for="{{abilityOptions}}" wx:key="id">
-          <view wx:if="{{item.selected}}" data-id="{{item.id}}" class="min-h-[56rpx] rounded-[12rpx] border border-brand bg-brand-soft px-3 py-1 text-[length:23rpx] text-brand" bind:tap="toggleAbility">{{item.label}}</view>
-          <view wx:else data-id="{{item.id}}" class="min-h-[56rpx] rounded-[12rpx] border border-transparent bg-panel px-3 py-1 text-[length:23rpx] text-muted" bind:tap="toggleAbility">{{item.label}}</view>
+          <view wx:if="{{item.selected}}" data-id="{{item.id}}" aria-role="checkbox" aria-checked="{{item.selected}}" class="flex items-center justify-center min-h-[88rpx] rounded-[12rpx] border border-brand bg-brand-soft px-3 py-1 text-[length:23rpx] text-brand" bind:tap="toggleAbility">{{item.label}}</view>
+          <view wx:else data-id="{{item.id}}" aria-role="checkbox" aria-checked="{{item.selected}}" class="flex items-center justify-center min-h-[88rpx] rounded-[12rpx] border border-transparent bg-panel px-3 py-1 text-[length:23rpx] text-muted" bind:tap="toggleAbility">{{item.label}}</view>
         </block>
       </view>
     </block>
@@ -115,11 +115,11 @@
     <view class="mx-3 mt-3 overflow-hidden rounded-[16rpx] bg-panel">
       <view class="flex min-h-[92rpx] items-center px-3">
         <view class="w-[144rpx] shrink-0 text-[length:25rpx]">身份说明</view>
-        <input class="h-[92rpx] min-w-0 flex-1 text-right text-[length:25rpx]" maxlength="32" value="{{identityStatus}}" data-field="identityStatus" bindinput="updateText" placeholder="例如：创业者" placeholder-style="color:#A3A3A3;text-align:right" />
+        <input aria-label="职业身份" class="h-[92rpx] min-w-0 flex-1 text-right text-[length:25rpx]" maxlength="32" value="{{identityStatus}}" data-field="identityStatus" bindinput="updateText" placeholder="例如：创业者" placeholder-style="color:#A3A3A3;text-align:right" />
       </view>
       <view class="border-t border-line px-3 py-3">
-        <textarea class="block h-[180rpx] w-full max-w-full box-border bg-transparent text-[length:25rpx] leading-6" maxlength="300" value="{{introduction}}" data-field="introduction" bindinput="updateText" placeholder="补充经历、能力和合作方向" placeholder-style="color:#A3A3A3" />
-        <view class="text-right text-[length:21rpx] text-muted">{{introduction.length}}/300</view>
+        <textarea aria-label="补充介绍" class="block h-[180rpx] w-full max-w-full box-border bg-transparent text-[length:25rpx] leading-6" maxlength="300" value="{{introduction}}" data-field="introduction" bindinput="updateText" placeholder="补充经历、能力和合作方向" placeholder-style="color:#A3A3A3" />
+        <view class="text-right text-[length:22rpx] text-muted">{{introduction.length}}/300</view>
       </view>
     </view>
 

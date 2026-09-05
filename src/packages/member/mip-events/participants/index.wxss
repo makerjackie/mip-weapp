@@ -137,7 +137,7 @@
   padding: 4rpx 10rpx;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 20rpx;
+  font-size: 22rpx;
   font-weight: 600;
   line-height: 1.4;
   color: var(--color-brand);
@@ -201,7 +201,7 @@
   align-items: center;
   min-height: 36rpx;
   padding: 0 10rpx;
-  font-size: 20rpx;
+  font-size: 22rpx;
   line-height: 1;
   color: var(--color-ink);
   background: var(--color-panel-raised);

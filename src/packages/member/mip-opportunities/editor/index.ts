@@ -69,6 +69,11 @@ Page({
     valueSummary: '',
     targetSummary: '',
     description: '',
+    titleError: '',
+    valueSummaryError: '',
+    targetSummaryError: '',
+    descriptionError: '',
+    roleError: '',
     scopeType: 'PLATFORM' as 'PLATFORM' | 'BRANCH',
     branchId: '' as BranchId | '',
     branchIndex: 0,
@@ -205,6 +210,11 @@ Page({
       valueSummary: detail?.valueSummary || '',
       targetSummary: detail?.targetSummary || '',
       description: detail?.description || '',
+      titleError: '',
+      valueSummaryError: '',
+      targetSummaryError: '',
+      descriptionError: '',
+      roleError: '',
       scopeType: detail?.branchId ? 'BRANCH' : 'PLATFORM',
       branchId: detail?.branchId || '',
       cityTagId: detail?.city?.id || '',
@@ -236,7 +246,7 @@ Page({
     if (!['title', 'valueSummary', 'targetSummary', 'description'].includes(field)) {
       return
     }
-    this.setData({ [field]: event.detail.value })
+    this.setData({ [field]: event.detail.value, [`${field}Error`]: '' })
   },
 
   chooseScope(event: WechatMiniprogram.TouchEvent) {
@@ -401,6 +411,10 @@ Page({
       ...(draft.valueSummary ? { valueSummary: draft.valueSummary } : {}),
       ...(draft.targetSummary ? { targetSummary: draft.targetSummary } : {}),
       ...(draft.description ? { description: draft.description } : {}),
+      ...(draft.title ? { titleError: '' } : {}),
+      ...(draft.valueSummary ? { valueSummaryError: '' } : {}),
+      ...(draft.targetSummary ? { targetSummaryError: '' } : {}),
+      ...(draft.description ? { descriptionError: '' } : {}),
       ...(cityIndex >= 0 ? { cityTagId: draft.cityTagId, cityIndex } : {}),
       pastePreviewVisible: false,
       confirmedAiDraftId: this.data.pasteAiDraftId,
@@ -414,7 +428,11 @@ Page({
 
   toggleRole(event: WechatMiniprogram.TouchEvent) {
     const key = String(event.currentTarget.dataset.key || '')
-    this.setData({ roleOptions: this.data.roleOptions.map(item => item.key === key ? { ...item, selected: !item.selected } : item) })
+    const roleOptions = this.data.roleOptions.map(item => item.key === key ? { ...item, selected: !item.selected } : item)
+    this.setData({
+      roleOptions,
+      roleError: roleOptions.some(item => item.selected) ? '' : this.data.roleError,
+    })
   },
 
   toggleTag(event: WechatMiniprogram.TouchEvent) {
@@ -544,8 +562,41 @@ Page({
   saveDraft() { void this.save(false) },
   publish() { void this.save(true) },
 
+  validateRequiredFields() {
+    const titleError = this.data.title.trim() ? '' : '请输入项目名称。'
+    const valueSummaryError = this.data.valueSummary.trim() ? '' : '请输入价值金额或价值说明。'
+    const targetSummaryError = this.data.targetSummary.trim() ? '' : '请输入寻找合作方的说明。'
+    const descriptionError = this.data.description.trim() ? '' : '请输入项目说明。'
+    const roleError = this.data.roleOptions.some(item => item.selected) ? '' : '请至少选择一种合作角色。'
+    const firstIssue = [
+      { message: titleError, selector: '#opportunity-field-title' },
+      { message: valueSummaryError, selector: '#opportunity-field-value-summary' },
+      { message: targetSummaryError, selector: '#opportunity-field-target-summary' },
+      { message: descriptionError, selector: '#opportunity-field-description' },
+      { message: roleError, selector: '#opportunity-field-roles' },
+    ].find(issue => issue.message)
+
+    this.setData({
+      titleError,
+      valueSummaryError,
+      targetSummaryError,
+      descriptionError,
+      roleError,
+      message: '',
+    })
+    if (!firstIssue) {
+      return true
+    }
+    wx.showToast({ title: firstIssue.message, icon: 'none' })
+    wx.pageScrollTo({ selector: firstIssue.selector, duration: 200 })
+    return false
+  },
+
   async save(publish: boolean) {
     if (this.data.saving || this.data.coverUploading) {
+      return
+    }
+    if (!this.validateRequiredFields()) {
       return
     }
     const wasExisting = Boolean(this.data.id)

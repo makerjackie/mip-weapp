@@ -1,5 +1,5 @@
 <view id="mip-branches-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
-  <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-8">
+  <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-8">
     <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
   <view id="mip-branches-empty-state" wx:elif="{{state === 'empty'}}">
@@ -15,7 +15,7 @@
           <view class="text-[length:28rpx] font-semibold">{{item.name}}</view>
           <view class="mt-1 text-[length:22rpx] text-muted">{{item.cityName}}</view>
         </view>
-        <view wx:if="{{item.selected}}" class="rounded-full bg-brand px-3 py-2 text-[length:21rpx] font-semibold text-on-brand">主分会</view>
+        <view wx:if="{{item.selected}}" class="rounded-full bg-brand px-3 py-2 text-[length:22rpx] font-semibold text-on-brand">主分会</view>
         <t-button wx:else size="small" variant="outline" theme="primary" loading="{{selectingId === item.id}}" data-id="{{item.id}}" bind:tap="selectBranch">设为主分会</t-button>
       </view>
     </view>

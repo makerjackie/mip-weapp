@@ -13,6 +13,13 @@ type Recommendation = EventFeedbackAnswers['recommendation'] | ''
 type JoinIntent = EventFeedbackAnswers['joinIntent'] | ''
 type ExplorationMethod = EventFeedbackAnswers['explorationMethods'][number]
 type RosterConsent = EventFeedbackAnswers['rosterConsent'] | ''
+type ValidationErrorKey = '' | 'rating' | 'recommendation' | 'roles' | 'body' | 'joinIntent' | 'rosterConsent'
+
+interface ValidationIssue {
+  key: Exclude<ValidationErrorKey, ''>
+  message: string
+  selector: string
+}
 
 interface SelectableRole {
   key: CooperationRoleKey
@@ -129,6 +136,8 @@ Page({
     accessToken: '',
     saving: false,
     message: '',
+    validationErrorKey: '' as ValidationErrorKey,
+    validationErrorMessage: '',
   },
   accessReady: false,
   checkingAccess: false,
@@ -254,6 +263,8 @@ Page({
         locationText: [event.cityName, event.venueName, event.address].filter(Boolean).join(' · ')
           || (event.mode === 'ONLINE' ? '线上活动' : '地点待公布'),
         message: '',
+        validationErrorKey: '' as ValidationErrorKey,
+        validationErrorMessage: '',
         ...draftData,
       })
     }
@@ -279,6 +290,7 @@ Page({
       return
     }
     this.setData({ rating, starOptions: starOptions(rating), message: '' })
+    this.clearValidationError('rating')
   },
 
   selectRecommendation(event: WechatMiniprogram.TouchEvent) {
@@ -287,6 +299,7 @@ Page({
       return
     }
     this.setData({ recommendation, message: '' })
+    this.clearValidationError('recommendation')
   },
 
   toggleRole(event: WechatMiniprogram.TouchEvent) {
@@ -302,11 +315,15 @@ Page({
       selectedRoleCount: roleOptions.filter(role => role.selected).length,
       message: '',
     })
+    if (roleOptions.some(role => role.selected)) {
+      this.clearValidationError('roles')
+    }
   },
 
   onBodyInput(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const body = String(event.detail.value || '').slice(0, 300)
     this.setData({ body, bodyLength: body.length, message: '' })
+    this.clearValidationError('body')
   },
 
   selectJoinIntent(event: WechatMiniprogram.TouchEvent) {
@@ -315,6 +332,7 @@ Page({
       return
     }
     this.setData({ joinIntent, message: '' })
+    this.clearValidationError('joinIntent')
   },
 
   toggleExplorationMethod(event: WechatMiniprogram.TouchEvent) {
@@ -336,28 +354,39 @@ Page({
       return
     }
     this.setData({ rosterConsent, message: '' })
+    this.clearValidationError('rosterConsent')
+  },
+
+  clearValidationError(key: Exclude<ValidationErrorKey, ''>) {
+    if (this.data.validationErrorKey === key) {
+      this.setData({ validationErrorKey: '' as ValidationErrorKey, validationErrorMessage: '' })
+    }
+  },
+
+  validationIssue(): ValidationIssue | null {
+    if (!this.data.rating) {
+      return { key: 'rating', message: '请选择活动评分。', selector: '#feedback-field-rating' }
+    }
+    if (!this.data.recommendation) {
+      return { key: 'recommendation', message: '请选择是否愿意推荐 MIP。', selector: '#feedback-field-recommendation' }
+    }
+    if (!this.data.roleOptions.some(role => role.selected)) {
+      return { key: 'roles', message: '请至少选择一个能力角色。', selector: '#feedback-field-roles' }
+    }
+    if (this.data.body.length > 300) {
+      return { key: 'body', message: '合作或引荐内容不能超过 300 个字。', selector: '#feedback-field-body' }
+    }
+    if (!this.data.joinIntent) {
+      return { key: 'joinIntent', message: '请选择加入 MIP 的意愿。', selector: '#feedback-field-join-intent' }
+    }
+    if (!this.data.rosterConsent) {
+      return { key: 'rosterConsent', message: '请选择花名册信息的使用方式。', selector: '#feedback-field-roster-consent' }
+    }
+    return null
   },
 
   validationMessage() {
-    if (!this.data.rating) {
-      return '请选择活动评分。'
-    }
-    if (!this.data.recommendation) {
-      return '请选择是否愿意推荐 MIP。'
-    }
-    if (!this.data.roleOptions.some(role => role.selected)) {
-      return '请至少选择一个能力角色。'
-    }
-    if (this.data.body.length > 300) {
-      return '合作或引荐内容不能超过 300 个字。'
-    }
-    if (!this.data.joinIntent) {
-      return '请选择加入 MIP 的意愿。'
-    }
-    if (!this.data.rosterConsent) {
-      return '请选择花名册信息的使用方式。'
-    }
-    return ''
+    return this.validationIssue()?.message || ''
   },
 
   saveFeedback() {
@@ -369,10 +398,15 @@ Page({
     if (this.data.saving || !['ready', 'conflict'].includes(this.data.state)) {
       return
     }
-    const validationMessage = this.validationMessage()
-    if (validationMessage) {
-      this.setData({ message: validationMessage })
-      wx.showToast({ title: validationMessage, icon: 'none' })
+    const validationIssue = this.validationIssue()
+    if (validationIssue) {
+      this.setData({
+        message: '',
+        validationErrorKey: validationIssue.key,
+        validationErrorMessage: validationIssue.message,
+      })
+      wx.showToast({ title: validationIssue.message, icon: 'none' })
+      wx.pageScrollTo({ selector: validationIssue.selector, duration: 200 })
       return
     }
     const answers: EventFeedbackAnswers = {
@@ -408,6 +442,8 @@ Page({
         explorationOptions: explorationOptions(savedAnswers.explorationMethods),
         rosterConsent: savedAnswers.rosterConsent,
         message: '',
+        validationErrorKey: '' as ValidationErrorKey,
+        validationErrorMessage: '',
       })
       wx.showToast({ title: '反馈已保存', icon: 'success' })
     }

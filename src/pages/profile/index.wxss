@@ -81,7 +81,7 @@
 .profile-level-chip {
   flex: 0 0 auto;
   padding: 2rpx 8rpx;
-  font-size: 20rpx;
+  font-size: 22rpx;
   font-weight: 600;
   line-height: 28rpx;
   color: var(--color-brand);
@@ -101,7 +101,7 @@
   max-width: 470rpx;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 20rpx;
+  font-size: 22rpx;
   line-height: 28rpx;
   white-space: nowrap;
 }
@@ -169,12 +169,12 @@
   display: flex;
   align-items: center;
   min-height: 44rpx;
-  font-size: 20rpx;
+  font-size: 22rpx;
 }
 
 .profile-level-experience {
   margin-top: 20rpx;
-  font-size: 20rpx;
+  font-size: 22rpx;
   font-weight: 600;
   line-height: 28rpx;
 }
@@ -219,7 +219,7 @@
   flex: 0 0 auto;
   min-height: 44rpx;
   padding: 8rpx 16rpx;
-  font-size: 20rpx;
+  font-size: 22rpx;
   font-weight: 600;
   line-height: 44rpx;
   color: var(--color-on-brand);
@@ -258,7 +258,7 @@
 
 .profile-stat-label {
   margin-top: 4rpx;
-  font-size: 20rpx;
+  font-size: 22rpx;
   line-height: 28rpx;
 }
 
@@ -269,7 +269,7 @@
   min-width: 28rpx;
   height: 28rpx;
   padding: 0 4rpx;
-  font-size: 18rpx;
+  font-size: 22rpx;
   font-weight: 600;
   line-height: 28rpx;
   text-align: center;
@@ -401,7 +401,7 @@
 
 .profile-content-status {
   flex: 0 0 auto;
-  font-size: 20rpx;
+  font-size: 22rpx;
   color: var(--color-brand);
 }
 
@@ -487,7 +487,7 @@
 
 .profile-more-description {
   margin-top: 4rpx;
-  font-size: 20rpx;
+  font-size: 22rpx;
   line-height: 28rpx;
   color: var(--color-muted);
 }
@@ -506,7 +506,7 @@
   min-width: 36rpx;
   height: 36rpx;
   padding: 0 8rpx;
-  font-size: 20rpx;
+  font-size: 22rpx;
   font-weight: 600;
   line-height: 36rpx;
   color: var(--color-on-brand);

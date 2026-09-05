@@ -1,3 +1,4 @@
+import type { CatalogSelectorGroup } from '../src/components/catalog-selector/model'
 import fs from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -15,7 +16,7 @@ function read(relativePath: string) {
   return fs.readFileSync(path.join(root, relativePath), 'utf8')
 }
 
-const groups = [
+const groups: CatalogSelectorGroup[] = [
   {
     id: 'industry-a',
     label: '行业一',

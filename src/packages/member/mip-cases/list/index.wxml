@@ -1,15 +1,15 @@
 <view id="mip-cases-list-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-3 text-ink">
   <view class="flex items-center gap-2">
     <view class="flex h-[88rpx] min-w-0 flex-1 items-center rounded-[16rpx] bg-panel p-1" aria-role="tablist">
-      <view wx:if="{{!mine}}" class="flex h-[72rpx] min-w-0 flex-1 items-center justify-center rounded-[12rpx] bg-brand text-[length:24rpx] font-medium text-on-brand" aria-role="tab" aria-selected="true" data-mine="0" bind:tap="selectScope">全部案例</view>
-      <view wx:else class="flex h-[72rpx] min-w-0 flex-1 items-center justify-center rounded-[12rpx] text-[length:24rpx] text-muted" aria-role="tab" aria-selected="false" data-mine="0" bind:tap="selectScope">全部案例</view>
-      <view wx:if="{{mine}}" class="flex h-[72rpx] min-w-0 flex-1 items-center justify-center rounded-[12rpx] bg-brand text-[length:24rpx] font-medium text-on-brand" aria-role="tab" aria-selected="true" data-mine="1" bind:tap="selectScope">我的案例</view>
-      <view wx:else class="flex h-[72rpx] min-w-0 flex-1 items-center justify-center rounded-[12rpx] text-[length:24rpx] text-muted" aria-role="tab" aria-selected="false" data-mine="1" bind:tap="selectScope">我的案例</view>
+      <view wx:if="{{!mine}}" class="flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-[12rpx] bg-brand text-[length:24rpx] font-medium text-on-brand" aria-role="tab" aria-selected="true" data-mine="0" bind:tap="selectScope">全部案例</view>
+      <view wx:else class="flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-[12rpx] text-[length:24rpx] text-muted" aria-role="tab" aria-selected="false" data-mine="0" bind:tap="selectScope">全部案例</view>
+      <view wx:if="{{mine}}" class="flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-[12rpx] bg-brand text-[length:24rpx] font-medium text-on-brand" aria-role="tab" aria-selected="true" data-mine="1" bind:tap="selectScope">我的案例</view>
+      <view wx:else class="flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-[12rpx] text-[length:24rpx] text-muted" aria-role="tab" aria-selected="false" data-mine="1" bind:tap="selectScope">我的案例</view>
     </view>
     <view class="flex h-[88rpx] shrink-0 items-center justify-center gap-1 rounded-[16rpx] bg-brand px-4 text-[length:24rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" bind:tap="create"><t-icon name="add" size="30rpx" color="var(--color-on-brand)" /><text>发布</text></view>
   </view>
 
-  <view wx:if="{{state === 'loading'}}" class="relative mt-5 flex flex-col gap-6 pl-[100rpx] pr-3">
+  <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="relative mt-5 flex flex-col gap-6 pl-[100rpx] pr-3">
     <view class="absolute bottom-6 left-[36rpx] top-3 w-[2rpx] bg-line" />
     <view wx:for="{{[1, 2]}}" wx:key="*this" class="relative">
       <view class="absolute left-[-76rpx] top-[10rpx] h-[24rpx] w-[24rpx] rounded-full border-[2rpx] border-white bg-panel-raised" />
@@ -23,16 +23,16 @@
     <view class="absolute bottom-6 left-[36rpx] top-3 w-[2rpx] bg-brand" />
     <view wx:for="{{items}}" wx:key="id" class="relative pb-6">
       <view class="absolute left-[-76rpx] top-[10rpx] h-[24rpx] w-[24rpx] rounded-full border-[2rpx] border-white bg-brand" />
-      <view class="mb-3 flex min-h-[36rpx] items-center justify-between gap-2 text-[length:22rpx] font-medium text-brand"><text>{{item.publishedText || item.statusText}}</text><text wx:if="{{mine && item.publishedText}}" class="shrink-0 text-[length:19rpx] font-normal text-muted">{{item.statusText}}</text></view>
+      <view class="mb-3 flex min-h-[36rpx] items-center justify-between gap-2 text-[length:22rpx] font-medium text-brand"><text>{{item.publishedText || item.statusText}}</text><text wx:if="{{mine && item.publishedText}}" class="shrink-0 text-[length:22rpx] font-normal text-muted">{{item.statusText}}</text></view>
       <view class="overflow-hidden rounded-[16rpx] bg-panel px-4 py-4 active:bg-panel-raised" aria-role="button" data-id="{{item.id}}" bind:tap="open">
         <view class="flex min-h-[44rpx] items-center gap-2"><t-icon name="folder" size="30rpx" color="var(--color-ink)" /><view class="min-w-0 flex-1 line-clamp-2 text-[length:27rpx] font-medium leading-6">{{item.projectName}}</view></view>
         <view class="mt-2 line-clamp-2 text-[length:22rpx] leading-6 text-muted">{{item.summary}}</view>
-        <view class="mt-3 flex min-h-[40rpx] items-center justify-between gap-2 border-t border-line pt-3 text-[length:19rpx] text-muted"><text class="min-w-0 flex-1 truncate">{{item.author.nickname}}</text><text wx:if="{{item.classificationText}}" class="max-w-[240rpx] truncate">{{item.classificationText}}</text></view>
-        <view wx:if="{{mine}}" class="mt-2 flex min-h-[88rpx] items-center justify-between border-t border-line pt-2"><text class="text-[length:20rpx] text-muted">管理案例</text><view class="flex min-h-[88rpx] items-center px-3 text-[length:22rpx] text-danger" aria-role="button" data-id="{{item.id}}" catch:tap="deleteCase">{{archivingId === item.id ? '正在删除' : '删除案例'}}</view></view>
+        <view class="mt-3 flex min-h-[40rpx] items-center justify-between gap-2 border-t border-line pt-3 text-[length:22rpx] text-muted"><text class="min-w-0 flex-1 truncate">{{item.author.nickname}}</text><text wx:if="{{item.classificationText}}" class="max-w-[240rpx] truncate">{{item.classificationText}}</text></view>
+        <view wx:if="{{mine}}" class="mt-2 flex min-h-[88rpx] items-center justify-between border-t border-line pt-2"><text class="text-[length:22rpx] text-muted">管理案例</text><view class="flex min-h-[88rpx] items-center px-3 text-[length:22rpx] text-danger" aria-role="button" data-id="{{item.id}}" catch:tap="deleteCase">{{archivingId === item.id ? '正在删除' : '删除案例'}}</view></view>
       </view>
     </view>
   </view>
-  <view wx:if="{{loadingMore}}" class="py-5 text-center text-[length:21rpx] text-muted">正在加载更多案例</view>
-  <view wx:elif="{{message && state === 'ready'}}" class="mb-4 rounded-[12rpx] border border-line bg-panel px-4 py-3 text-center text-[length:21rpx] text-muted"><view>{{message}}</view><view wx:if="{{nextCursor}}" class="mt-2 flex min-h-[88rpx] items-center justify-center text-brand" aria-role="button" bind:tap="retryMore">重新加载</view></view>
+  <view wx:if="{{loadingMore}}" class="py-5 text-center text-[length:22rpx] text-muted">正在加载更多案例</view>
+  <view wx:elif="{{message && state === 'ready'}}" class="mb-4 rounded-[12rpx] border border-line bg-panel px-4 py-3 text-center text-[length:22rpx] text-muted"><view>{{message}}</view><view wx:if="{{nextCursor}}" class="mt-2 flex min-h-[88rpx] items-center justify-center text-brand" aria-role="button" bind:tap="retryMore">重新加载</view></view>
   <app-page-exit label="返回合作卡" />
 </view>

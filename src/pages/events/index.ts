@@ -277,27 +277,6 @@ Page({
     }
   },
 
-  changeView(event: WechatMiniprogram.TouchEvent) {
-    const view = String(event.currentTarget.dataset.view || '') as EventListView
-    if (!['UPCOMING', 'PAST'].includes(view) || view === this.data.view) {
-      return
-    }
-    this.setData({
-      view,
-      dateFilter: view === 'PAST' ? 'ENDED' : 'RECENT',
-      selectedDate: '',
-      selectedDateLabel: '',
-      customDateLabel: '',
-      dateFrom: '',
-      dateFromLabel: '',
-      dateTo: '',
-      dateToLabel: '',
-      nextCursor: '',
-      message: '',
-    })
-    void this.loadEvents()
-  },
-
   changeDateFilter(event: WechatMiniprogram.TouchEvent) {
     const dateFilter = String(event.currentTarget.dataset.filter || '') as EventDateFilter
     if (!['RECENT', 'ENDED', 'TODAY'].includes(dateFilter) || dateFilter === this.data.dateFilter) {
@@ -525,7 +504,6 @@ Page({
         selectedDate: '',
         selectedDateLabel: '',
         customDateLabel: this.data.dateToLabel ? `${label} - ${this.data.dateToLabel}` : `${label}起`,
-        view: 'UPCOMING',
         nextCursor: '',
         message: '',
       })
@@ -544,7 +522,6 @@ Page({
         selectedDate: '',
         selectedDateLabel: '',
         customDateLabel: this.data.dateFromLabel ? `${this.data.dateFromLabel} - ${label}` : `截至${label}`,
-        view: 'UPCOMING',
         nextCursor: '',
         message: '',
       })
@@ -561,7 +538,6 @@ Page({
         dateTo: '',
         dateToLabel: '',
         dateFilter: 'CUSTOM',
-        view: 'UPCOMING',
         nextCursor: '',
         message: '',
       })
@@ -579,7 +555,9 @@ Page({
       dateTo: '',
       dateToLabel: '',
       customDateLabel: this.data.selectedDateLabel,
-      dateFilter: this.data.selectedDate ? 'CUSTOM' : 'RECENT',
+      dateFilter: this.data.selectedDate
+        ? 'CUSTOM'
+        : this.data.view === 'PAST' ? 'ENDED' : 'RECENT',
       nextCursor: '',
       message: '',
     })

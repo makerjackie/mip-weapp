@@ -1,6 +1,6 @@
 .tab-bar {
   --color-brand: #fcdf03;
-  --color-muted: #b3b3b3;
+  --color-muted: #a3a3a3;
 
   position: fixed;
   right: 0;
@@ -45,12 +45,12 @@
   position: absolute;
   top: -10rpx;
   left: 34rpx;
-  min-width: 26rpx;
-  height: 26rpx;
+  min-width: 32rpx;
+  height: 32rpx;
   padding: 0 6rpx;
-  font-size: 17rpx;
+  font-size: 22rpx;
   font-weight: 700;
-  line-height: 26rpx;
+  line-height: 32rpx;
   color: #080808;
   text-align: center;
   background: #fcdf03;
@@ -60,8 +60,8 @@
 
 .tab-bar-label {
   margin-top: 4rpx;
-  font-size: 20rpx;
-  line-height: 28rpx;
+  font-size: 22rpx;
+  line-height: 30rpx;
 }
 
 @media (min-width: 600px) and (max-width: 959px) {

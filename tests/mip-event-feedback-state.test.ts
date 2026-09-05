@@ -50,6 +50,7 @@ const answers = {
 
 let definition: PageDefinition
 const showToast = vi.fn()
+const pageScrollTo = vi.fn()
 
 function createPage(overrides: PageData = {}) {
   const page = Object.create(definition) as PageDefinition
@@ -67,7 +68,7 @@ function callPage(page: PageDefinition, method: string, ...args: unknown[]) {
 }
 
 beforeAll(async () => {
-  vi.stubGlobal('wx', { showToast })
+  vi.stubGlobal('wx', { showToast, pageScrollTo })
   vi.stubGlobal('Page', (input: PageDefinition) => {
     definition = input
   })
@@ -79,9 +80,22 @@ beforeEach(() => {
     mock.mockReset()
   }
   showToast.mockClear()
+  pageScrollTo.mockClear()
 })
 
 describe('MIP event feedback UI state', () => {
+  it('keeps save actionable and locates the first missing required answer', async () => {
+    const page = createPage({ eventId, event: eventDetail, state: 'ready' })
+
+    await callPage(page, 'submitFeedback')
+
+    expect(eventsModule.saveFeedback).not.toHaveBeenCalled()
+    expect(page.data.validationErrorKey).toBe('rating')
+    expect(page.data.validationErrorMessage).toBe('请选择活动评分。')
+    expect(showToast).toHaveBeenCalledWith({ title: '请选择活动评分。', icon: 'none' })
+    expect(pageScrollTo).toHaveBeenCalledWith({ selector: '#feedback-field-rating', duration: 200 })
+  })
+
   it('keeps legacy rating and body while requiring the new structured answers', async () => {
     const page = createPage({ eventId })
     page.accessReady = true

@@ -1,5 +1,5 @@
 <view id="mip-account-page" class="mip-member-page mip-member-tab-page profile-page">
-  <view wx:if="{{state === 'loading'}}" class="profile-loading">
+  <view wx:if="{{state === 'loading'}}" class="profile-loading" aria-role="status" aria-label="正在加载资料" aria-busy="true">
     <view class="profile-loading-card"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <view class="profile-loading-card"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   </view>
@@ -89,7 +89,8 @@
         <view wx:for="{{cooperationCards}}" wx:key="id" class="profile-cooperation-card" data-id="{{item.id}}" bind:tap="openCooperation">
           <cooperation-role-card role-key="{{item.roleKey}}" positioning="{{item.positioning}}" target-summary="{{item.targetSummary}}" />
         </view>
-        <view class="profile-add-card {{openingAction === 'cooperation-list' ? 'profile-add-card--loading' : ''}}" aria-role="button" aria-disabled="{{openingAction === 'cooperation-list'}}" bind:tap="openCooperationList"><view class="profile-add-content"><image src="/assets/figma/profile/add.svg" mode="aspectFit" /><text wx:if="{{openingAction === 'cooperation-list'}}">正在打开</text><text wx:else>{{cooperationCards.length ? '管理合作卡' : '添加合作卡'}}</text></view></view>
+        <app-empty-state wx:if="{{cooperationCards.length === 0}}" title="暂无合作卡" description="添加后会显示在这里。" action-text="添加合作卡" bind:action="openCooperationList" />
+        <view wx:else class="profile-add-card {{openingAction === 'cooperation-list' ? 'profile-add-card--loading' : ''}}" aria-role="button" aria-disabled="{{openingAction === 'cooperation-list'}}" bind:tap="openCooperationList"><view class="profile-add-content"><image src="/assets/figma/profile/add.svg" mode="aspectFit" /><text wx:if="{{openingAction === 'cooperation-list'}}">正在打开</text><text wx:else>管理合作卡</text></view></view>
       </view>
     </block>
 
@@ -98,7 +99,8 @@
       <view wx:elif="{{caseState === 'error'}}" class="profile-state"><app-empty-state title="超级案例暂时无法加载" description="稍后可以重新加载。" action-text="重新加载" bind:action="loadCases" /></view>
       <view wx:else class="profile-portfolio-list">
         <view wx:for="{{cases}}" wx:key="id" class="profile-content-card" data-id="{{item.id}}" bind:tap="openCase"><view class="profile-content-title">{{item.projectName}}</view><view class="profile-content-summary">{{item.summary}}</view></view>
-        <view class="profile-add-card" bind:tap="openCaseList"><view class="profile-add-content"><image src="/assets/figma/profile/add.svg" mode="aspectFit" />{{cases.length ? '管理超级案例' : '添加超级案例'}}</view></view>
+        <app-empty-state wx:if="{{cases.length === 0}}" title="暂无超级案例" description="添加后会显示在这里。" action-text="添加超级案例" bind:action="openCaseList" />
+        <view wx:else class="profile-add-card" aria-role="button" bind:tap="openCaseList"><view class="profile-add-content"><image src="/assets/figma/profile/add.svg" mode="aspectFit" />管理超级案例</view></view>
       </view>
     </block>
 
@@ -107,7 +109,8 @@
       <view wx:elif="{{opportunityState === 'error'}}" class="profile-state"><app-empty-state title="相关机会暂时无法加载" description="稍后可以重新加载。" action-text="重新加载" bind:action="loadOpportunities" /></view>
       <view wx:else class="profile-portfolio-list">
         <view wx:for="{{opportunities}}" wx:key="id" class="profile-content-card" data-id="{{item.id}}" bind:tap="openOpportunity"><view class="profile-content-heading"><text class="profile-content-title">{{item.title}}</text><text class="profile-content-status">{{item.status === 'PUBLISHED' ? '招募中' : item.status === 'ENDED' ? '已完成' : '草稿'}}</text></view><view class="profile-content-summary">{{item.valueSummary}}</view></view>
-        <view class="profile-add-card" bind:tap="openOpportunityList"><view class="profile-add-content"><image src="/assets/figma/profile/add.svg" mode="aspectFit" />{{opportunities.length ? '管理机会' : '发布机会'}}</view></view>
+        <app-empty-state wx:if="{{opportunities.length === 0}}" title="暂无相关机会" description="发布的机会会显示在这里。" action-text="查看我的机会" bind:action="openOpportunityList" />
+        <view wx:else class="profile-add-card" aria-role="button" bind:tap="openOpportunityList"><view class="profile-add-content"><image src="/assets/figma/profile/add.svg" mode="aspectFit" />管理机会</view></view>
       </view>
     </block>
 

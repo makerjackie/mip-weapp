@@ -1,4 +1,4 @@
-<view id="privacy-account-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
+<view id="privacy-account-page" class="mip-member-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view wx:if="{{state === 'loading'}}" class="rounded-[24rpx] bg-panel px-5 py-7">
     <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
@@ -11,11 +11,11 @@
     <view class="px-1 text-[length:24rpx] font-semibold text-muted">资料与隐私</view>
     <view class="mt-3 overflow-hidden rounded-[24rpx] bg-panel">
       <view class="flex min-h-[104rpx] items-center justify-between gap-4 px-5" aria-role="button" bind:tap="openVisibilitySettings">
-        <view class="min-w-0 flex-1"><view class="text-[length:27rpx] font-semibold">公开设置</view><view class="mt-1 text-[length:21rpx] leading-5 text-muted">管理公开档案和个人名片的可见信息</view></view>
+        <view class="min-w-0 flex-1"><view class="text-[length:27rpx] font-semibold">公开设置</view><view class="mt-1 text-[length:22rpx] leading-5 text-muted">管理公开档案和个人名片的可见信息</view></view>
         <t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" />
       </view>
       <view class="flex min-h-[104rpx] items-center justify-between gap-4 border-t border-line px-5" aria-role="button" bind:tap="openBlockedProfiles">
-        <view class="min-w-0 flex-1"><view class="text-[length:27rpx] font-semibold">屏蔽列表</view><view class="mt-1 text-[length:21rpx] leading-5 text-muted">查看和解除已屏蔽的用户</view></view>
+        <view class="min-w-0 flex-1"><view class="text-[length:27rpx] font-semibold">屏蔽列表</view><view class="mt-1 text-[length:22rpx] leading-5 text-muted">查看和解除已屏蔽的用户</view></view>
         <t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" />
       </view>
     </view>
@@ -44,9 +44,9 @@
       <view class="text-[length:27rpx] font-semibold">账号注销</view>
       <view class="mt-2 text-[length:22rpx] leading-6 text-muted">注销后无法恢复。注销前请确认没有待处理的订单或退款。</view>
       <view wx:if="{{closureState === 'idle'}}" class="mt-5"><t-button block variant="outline" theme="danger" bind:tap="startAccountClosure">注销账号</t-button></view>
-      <view wx:else class="mt-5 rounded-[16rpx] bg-panel-raised px-4 py-4">
+      <view wx:else class="mt-5 rounded-[20rpx] bg-panel-raised px-4 py-4">
         <view class="text-[length:23rpx] font-semibold">输入“{{requiredConfirmationPhrase}}”</view>
-        <input class="mt-3 block h-[80rpx] w-full max-w-full box-border rounded-[12rpx] bg-panel px-3 text-[length:24rpx]" value="{{confirmationPhrase}}" maxlength="20" disabled="{{closureState === 'processing'}}" bindinput="updateConfirmationPhrase" placeholder="输入确认短语" placeholder-style="color:#A3A3A3" />
+        <input class="mt-3 block h-[88rpx] w-full max-w-full box-border rounded-[20rpx] bg-panel px-3 text-[length:24rpx]" aria-label="账号注销确认短语" value="{{confirmationPhrase}}" maxlength="20" disabled="{{closureState === 'processing'}}" bindinput="updateConfirmationPhrase" placeholder="输入确认短语" placeholder-style="color:#A3A3A3" />
         <view wx:if="{{message}}" class="mt-3 text-[length:22rpx] leading-6 text-danger">{{message}}</view>
         <view class="mt-4 flex gap-3">
           <view class="min-w-0 flex-1"><t-button block variant="outline" disabled="{{closureState === 'processing'}}" bind:tap="cancelAccountClosure">取消</t-button></view>

@@ -2,7 +2,7 @@
   <view class="participants-toolbar">
     <view class="participants-search">
       <t-icon name="search" size="18px" color="var(--color-muted)" />
-      <input class="participants-search__input" value="{{searchInput}}" maxlength="80" confirm-type="search" placeholder="搜索姓名、行业或简介" bindinput="onSearchInput" bindconfirm="onSearchConfirm" />
+      <input aria-label="搜索姓名、行业或简介" class="participants-search__input" value="{{searchInput}}" maxlength="80" confirm-type="search" placeholder="搜索姓名、行业或简介" bindinput="onSearchInput" bindconfirm="onSearchConfirm" />
       <view wx:if="{{searchInput}}" class="participants-search__clear" aria-role="button" aria-label="清除搜索内容" bind:tap="clearSearch">清除</view>
     </view>
 

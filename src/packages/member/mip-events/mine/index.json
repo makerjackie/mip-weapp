@@ -5,7 +5,6 @@
     "app-page-exit": "/components/page-exit/index",
     "event-card": "/components/event-card/index",
     "t-button": "tdesign-miniprogram/button/button",
-    "t-icon": "tdesign-miniprogram/icon/icon",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
   }
 }

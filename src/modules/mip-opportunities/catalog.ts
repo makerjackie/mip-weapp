@@ -1,4 +1,4 @@
-import type { CatalogSelectorGroup } from '../../components/catalog-selector/model'
+import type { CatalogSelectorGroup } from '../../shared/catalog-selector'
 
 interface BranchCatalogItem {
   id: string

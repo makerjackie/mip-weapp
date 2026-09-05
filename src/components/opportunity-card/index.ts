@@ -1,4 +1,9 @@
+import { brand } from '../../config/brand'
+
 Component({
+  data: {
+    fallbackCoverUrl: brand.logoPath,
+  },
   properties: {
     title: { type: String, value: '' },
     coverUrl: { type: String, value: '' },

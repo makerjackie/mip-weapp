@@ -137,7 +137,8 @@ describe('MIP people discovery client contract', () => {
     expect(runtime.routes.map((item: { path: string }) => item.path)).toContain(route)
     expect(runtime.routeCount).toBe(runtime.routes.length)
     expect(source('src/pages/opportunities/index.ts')).toContain('\'/packages/member/mip-people/index\'')
-    expect(source('src/pages/opportunities/index.wxml')).toContain('bind:tap="openPeople"')
+    expect(source('src/pages/opportunities/index.wxml')).toContain('bind:tap="openDiscoveryMenu"')
+    expect(source('src/pages/opportunities/index.ts')).toContain('{ label: \'找人才\', action: \'people\' }')
   })
 
   it('keeps both pages on MIP module and platform boundaries with complete public sections', () => {

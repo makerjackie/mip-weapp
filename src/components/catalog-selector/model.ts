@@ -1,14 +1,6 @@
-export interface CatalogSelectorOption {
-  id: string
-  label: string
-  popular?: boolean
-}
+import type { CatalogSelectorGroup, CatalogSelectorOption } from '../../shared/catalog-selector'
 
-export interface CatalogSelectorGroup {
-  id: string
-  label: string
-  options: CatalogSelectorOption[]
-}
+export type { CatalogSelectorGroup, CatalogSelectorOption } from '../../shared/catalog-selector'
 
 export interface CatalogSelectorViewOption extends CatalogSelectorOption {
   selected: boolean

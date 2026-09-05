@@ -49,9 +49,21 @@ describe('MIP event date range client contract', () => {
   it('keeps an explicit active-filter label for a selected range', () => {
     const page = readFileSync(new URL('../src/pages/events/index.ts', import.meta.url), 'utf8')
     const view = readFileSync(new URL('../src/pages/events/index.wxml', import.meta.url), 'utf8')
+    const confirmCalendar = page.slice(
+      page.indexOf('  confirmCalendar('),
+      page.indexOf('  clearDateRange('),
+    )
+    const clearDateRange = page.slice(
+      page.indexOf('  clearDateRange('),
+      page.indexOf('  openBanner('),
+    )
     expect(page).toContain('customDateLabel: this.data.dateToLabel')
     expect(page).toContain('customDateLabel: this.data.dateFromLabel')
+    expect(confirmCalendar).not.toContain('view: \'UPCOMING\'')
+    expect(clearDateRange).toContain('this.data.view === \'PAST\' ? \'ENDED\' : \'RECENT\'')
     expect(view).toContain('customDateLabel || \'自定义日期\'')
+    expect(view).toContain('aria-checked="{{view === \'UPCOMING\'}}"')
+    expect(view).toContain('aria-checked="{{view === \'PAST\'}}"')
   })
 
   it('passes valid inclusive endpoints and keeps single-day date compatibility', async () => {
@@ -68,8 +80,10 @@ describe('MIP event date range client contract', () => {
       dateTo: '2026-08-25',
     }))
 
-    await module.listEvents({ view: 'UPCOMING', dateFilter: 'CUSTOM', date: '2026-08-24' })
+    await module.listEvents({ view: 'PAST', dateFilter: 'CUSTOM', date: '2026-08-24' })
     expect(eventGateway.listEvents).toHaveBeenLastCalledWith(expect.objectContaining({
+      view: 'PAST',
+      dateFilter: 'CUSTOM',
       date: '2026-08-24',
       dateFrom: undefined,
       dateTo: undefined,

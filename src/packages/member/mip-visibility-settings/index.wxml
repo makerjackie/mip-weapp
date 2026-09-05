@@ -1,5 +1,5 @@
 <view id="mip-visibility-settings-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+180rpx)] pt-3 text-ink">
-  <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-8">
+  <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-8">
     <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
   <app-empty-state wx:elif="{{state === 'error'}}" title="暂时无法加载公开设置" description="{{message}}" action-text="重新加载" bind:action="load" />
@@ -27,7 +27,7 @@
     <view class="mt-5 px-1 text-[length:30rpx] font-semibold">名片联系方式</view>
     <view class="mt-2 px-1 text-[length:22rpx] leading-6 text-muted">公开档案不会返回联系方式；以下设置只控制个人名片展示。</view>
     <view data-visibility-group="card-contacts" class="mt-3 overflow-hidden rounded-[16rpx] bg-panel">
-      <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><view><view class="text-[length:25rpx]">手机号</view><view wx:if="{{!phoneBound}}" class="mt-1 text-[length:20rpx] text-muted">尚未绑定</view></view><t-switch checked="{{visibilityPhone}}" disabled="{{!phoneBound}}" data-field="visibilityPhone" bind:change="updateVisibility" /></view>
+      <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><view><view class="text-[length:25rpx]">手机号</view><view wx:if="{{!phoneBound}}" class="mt-1 text-[length:22rpx] text-muted">尚未绑定</view></view><t-switch checked="{{visibilityPhone}}" disabled="{{!phoneBound}}" data-field="visibilityPhone" bind:change="updateVisibility" /></view>
       <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><text class="text-[length:25rpx]">微信号</text><t-switch checked="{{visibilityWechat}}" data-field="visibilityWechat" bind:change="updateVisibility" /></view>
       <view class="flex min-h-[92rpx] items-center justify-between border-b border-line px-4"><text class="text-[length:25rpx]">邮箱</text><t-switch checked="{{visibilityEmail}}" data-field="visibilityEmail" bind:change="updateVisibility" /></view>
       <view class="flex min-h-[92rpx] items-center justify-between px-4"><text class="text-[length:25rpx]">地址</text><t-switch checked="{{visibilityAddress}}" data-field="visibilityAddress" bind:change="updateVisibility" /></view>

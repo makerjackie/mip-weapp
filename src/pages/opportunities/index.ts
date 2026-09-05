@@ -72,6 +72,14 @@ function appliedFilterPresentation(input: {
     ? input.selectedCityTagId
     : input.selectedCooperationBranchId
   const cityLabel = input.cityOptions.find(item => item.id === cityId)?.label
+  const selectedLocation = input.selectedLocationTypes[0]
+  const locationFilterLabel = input.mode === 'cooperation'
+    ? (cityLabel || '全国')
+    : selectedLocation === 'REMOTE'
+      ? '远程'
+      : selectedLocation === 'CITY'
+        ? (cityLabel || '城市')
+        : selectedLocation === 'NATIONAL' ? '全国' : '不限'
 
   if (input.mode === 'opportunities') {
     const locationLabels = input.selectedLocationTypes.map(type => (
@@ -109,6 +117,7 @@ function appliedFilterPresentation(input: {
   }
 
   return {
+    locationFilterLabel,
     appliedFilterChips: chips,
     appliedFilterCount: chips.length,
   }
@@ -191,6 +200,7 @@ Page({
     popularIndustryOptions: [] as TagView[],
     abilityOptions: [] as TagView[],
     hasAppliedFilters: false,
+    locationFilterLabel: '不限',
     appliedFilterCount: 0,
     appliedFilterChips: [] as AppliedFilterChip[],
     opportunities: [] as OpportunitySummary[],
@@ -773,6 +783,7 @@ Page({
       popularIndustryOptions: industryView.popularOptions,
       abilityOptions: this.data.abilityOptions.map(item => ({ ...item, selected: false })),
       hasAppliedFilters: false,
+      locationFilterLabel: this.data.mode === 'cooperation' ? '全国' : '不限',
       appliedFilterCount: 0,
       appliedFilterChips: [],
       filterOpen: false,
@@ -845,6 +856,42 @@ Page({
       ? '/packages/member/mip-opportunities/editor/index'
       : '/packages/member/mip-cooperation/editor/index'
     void this.openProtected(url, 'PUBLISH_OPPORTUNITY')
+  },
+
+  openDiscoveryMenu() {
+    const entries: Array<{
+      label: string
+      action: 'people' | 'matching' | 'mine' | 'cases'
+    }> = this.data.mode === 'opportunities'
+      ? [
+          { label: '找人才', action: 'people' },
+          { label: '机会撮合', action: 'matching' },
+          { label: '我的机会', action: 'mine' },
+        ]
+      : [
+          { label: '人才名录', action: 'people' },
+          { label: '机会撮合', action: 'matching' },
+          { label: '我的合作卡', action: 'mine' },
+          { label: '超级案例', action: 'cases' },
+        ]
+    wx.showActionSheet({
+      itemList: entries.map(item => item.label),
+      success: ({ tapIndex }) => {
+        const action = entries[tapIndex]?.action
+        if (action === 'people') {
+          this.openPeople()
+        }
+        else if (action === 'matching') {
+          this.openMatching()
+        }
+        else if (action === 'mine') {
+          this.openMine()
+        }
+        else if (action === 'cases') {
+          this.openCases()
+        }
+      },
+    })
   },
 
   openMine() {

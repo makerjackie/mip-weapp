@@ -55,7 +55,7 @@
   flex-direction: column;
   gap: 4rpx;
   margin-top: 32rpx;
-  font-size: 21rpx;
+  font-size: 22rpx;
   line-height: 30rpx;
 }
 

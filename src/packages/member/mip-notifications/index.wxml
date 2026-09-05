@@ -1,9 +1,9 @@
 <view id="mip-notifications-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
-  <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载消息" description="请检查网络后重试。" action-text="重新加载" bind:action="loadInbox" /><app-page-exit /></view>
   <block wx:else>
     <view class="overflow-hidden rounded-[16rpx] bg-panel">
-      <view class="px-4 pt-4"><view class="text-[length:27rpx] font-semibold">微信通知</view><view class="mt-1 text-[length:21rpx] text-muted">站内消息始终保留，微信通知需要按类型单独授权。</view></view>
+      <view class="px-4 pt-4"><view class="text-[length:27rpx] font-semibold">微信通知</view><view class="mt-1 text-[length:22rpx] text-muted">站内消息始终保留，微信通知需要按类型单独授权。</view></view>
       <view class="mt-3 flex min-h-[88rpx] items-center justify-between gap-3 border-t border-line px-4">
         <text class="text-[length:23rpx]">活动提醒</text>
         <t-button size="small" theme="primary" data-template-key="EVENT_REMINDER" disabled="{{!eventReminderAvailable}}" loading="{{requestingSubscription === 'EVENT_REMINDER'}}" bind:tap="requestWechatSubscription">{{eventReminderAvailable ? '授权' : '未配置'}}</t-button>
@@ -21,10 +21,10 @@
     <view wx:if="{{items.length === 0}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-8 text-center text-[length:23rpx] text-muted">暂无消息。</view>
     <view wx:else class="mt-3 flex flex-col gap-3">
       <view wx:for="{{items}}" wx:key="id" class="relative rounded-[16rpx] bg-panel px-4 py-4" data-id="{{item.id}}" bind:tap="openMessage">
-        <view wx:if="{{!item.readAt}}" class="absolute right-4 top-4 h-[14rpx] w-[14rpx] rounded-full bg-brand"></view>
+        <view wx:if="{{!item.readAt}}" class="mb-2 text-[length:22rpx] text-brand" aria-label="未读消息">未读</view>
         <view class="pr-5 text-[length:26rpx] font-semibold">{{item.title}}</view>
         <view class="mt-2 text-[length:23rpx] leading-6 text-muted">{{item.body}}</view>
-        <view class="mt-3 flex items-center justify-between text-[length:20rpx] text-muted"><text>{{item.createdText}}</text><t-icon wx:if="{{item.target}}" name="chevron-right" size="28rpx" color="var(--color-muted)" /></view>
+        <view class="mt-3 flex items-center justify-between text-[length:22rpx] text-muted"><text>{{item.createdText}}</text><t-icon wx:if="{{item.target}}" name="chevron-right" size="28rpx" color="var(--color-muted)" /></view>
       </view>
     </view>
     <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>

@@ -1,5 +1,5 @@
 <view class="tab-bar">
-  <view class="tab-bar-row">
+  <view class="tab-bar-row" aria-role="tablist" aria-label="主导航">
     <view
       wx:for="{{tabs}}"
       wx:key="value"
@@ -7,6 +7,9 @@
       data-tab-bar-item="true"
       data-value="{{item.value}}"
       data-index="{{index}}"
+      aria-role="tab"
+      aria-label="{{item.label}}"
+      aria-selected="{{selected === index}}"
       bindtap="switchTab"
     >
       <view class="tab-bar-icon">

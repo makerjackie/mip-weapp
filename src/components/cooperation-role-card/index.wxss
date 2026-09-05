@@ -62,7 +62,7 @@
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-  font-size: 19rpx;
+  font-size: 22rpx;
   line-height: 28rpx;
   opacity: 0.86;
 }
@@ -98,7 +98,7 @@
   display: flex;
   gap: 8rpx;
   align-items: center;
-  font-size: 20rpx;
+  font-size: 22rpx;
   color: var(--color-ink);
   white-space: nowrap;
 }

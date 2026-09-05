@@ -1,6 +1,6 @@
 <view id="mip-privacy-policy-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view class="text-[length:38rpx] font-bold">隐私政策</view>
-  <view class="mt-2 text-[length:21rpx] text-muted">更新日期：{{effectiveDate}}</view>
+  <view class="mt-2 text-[length:22rpx] text-muted">更新日期：{{effectiveDate}}</view>
 
   <view class="mt-5 overflow-hidden rounded-[24rpx] bg-panel px-5">
     <view class="border-b border-line py-5">

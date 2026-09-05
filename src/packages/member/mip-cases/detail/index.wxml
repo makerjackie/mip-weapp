@@ -1,5 +1,5 @@
 <view id="mip-case-detail-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-3 text-ink">
-  <view wx:if="{{state === 'loading'}}" class="flex flex-col gap-3">
+  <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="flex flex-col gap-3">
     <view class="h-[300rpx] rounded-[16rpx] bg-brand-soft" />
     <view class="rounded-[16rpx] bg-panel px-4 py-5"><t-skeleton row-col="{{[1,1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   </view>
@@ -21,9 +21,9 @@
     <view wx:if="{{item.media.length}}" class="mt-3 flex flex-col gap-3">
       <view wx:for="{{item.media}}" wx:key="url" class="overflow-hidden rounded-[16rpx] bg-panel"><image class="w-full bg-panel" src="{{item.url}}" mode="widthFix" data-url="{{item.url}}" bind:tap="previewImage" /><view wx:if="{{item.caption}}" class="px-3 py-3 text-[length:22rpx] leading-6 text-muted">{{item.caption}}</view></view>
     </view>
-    <view class="mt-3 flex min-h-[112rpx] items-center rounded-[16rpx] bg-panel px-4 py-3 active:bg-panel-raised" aria-role="button" bind:tap="openAuthor"><image wx:if="{{item.author.avatarUrl}}" class="mr-3 h-[72rpx] w-[72rpx] shrink-0 rounded-full bg-brand-soft" src="{{item.author.avatarUrl}}" mode="aspectFill" /><view wx:else class="mr-3 flex h-[72rpx] w-[72rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft"><t-icon name="user" size="36rpx" color="var(--color-brand)" /></view><view class="min-w-0 flex-1"><view class="text-[length:20rpx] text-muted">发布人</view><view class="mt-1 truncate text-[length:27rpx] font-medium">{{item.author.nickname}}</view><view wx:if="{{item.author.headline}}" class="mt-1 truncate text-[length:21rpx] text-muted">{{item.author.headline}}</view></view><t-icon name="chevron-right" size="30rpx" color="var(--color-brand)" /></view>
+    <view class="mt-3 flex min-h-[112rpx] items-center rounded-[16rpx] bg-panel px-4 py-3 active:bg-panel-raised" aria-role="button" bind:tap="openAuthor"><image wx:if="{{item.author.avatarUrl}}" class="mr-3 h-[72rpx] w-[72rpx] shrink-0 rounded-full bg-brand-soft" src="{{item.author.avatarUrl}}" mode="aspectFill" /><view wx:else class="mr-3 flex h-[72rpx] w-[72rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft"><t-icon name="user" size="36rpx" color="var(--color-brand)" /></view><view class="min-w-0 flex-1"><view class="text-[length:22rpx] text-muted">发布人</view><view class="mt-1 truncate text-[length:27rpx] font-medium">{{item.author.nickname}}</view><view wx:if="{{item.author.headline}}" class="mt-1 truncate text-[length:22rpx] text-muted">{{item.author.headline}}</view></view><t-icon name="chevron-right" size="30rpx" color="var(--color-brand)" /></view>
     <view wx:if="{{item.mine}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-4">
-      <view class="flex min-h-[64rpx] items-center justify-between gap-3"><view><view class="text-[length:27rpx] font-medium">案例管理</view><view class="mt-1 text-[length:21rpx] text-muted">当前状态：{{item.statusText}}</view></view></view>
+      <view class="flex min-h-[64rpx] items-center justify-between gap-3"><view><view class="text-[length:27rpx] font-medium">案例管理</view><view class="mt-1 text-[length:22rpx] text-muted">当前状态：{{item.statusText}}</view></view></view>
       <view wx:if="{{item.status === 'PUBLISHED'}}" class="mt-3"><t-button block size="large" variant="outline" theme="danger" loading="{{acting}}" bind:tap="unpublish">下架案例</t-button></view>
       <view class="mt-2"><t-button block size="large" variant="text" theme="danger" loading="{{acting}}" bind:tap="deleteCase">删除案例</t-button></view>
     </view>
@@ -32,13 +32,13 @@
     <mip-sticky-actions wx:if="{{item.canEdit}}">
       <view slot="actions" class="flex h-[112rpx] w-full items-center gap-2 rounded-full border border-brand bg-brand-soft p-2">
       <button wx:if="{{item.status === 'PUBLISHED'}}" open-type="share" class="m-0 flex h-[80rpx] w-[176rpx] shrink-0 items-center justify-center gap-2 rounded-full border-0 bg-panel p-0 text-[length:25rpx] leading-[80rpx] text-brand active:bg-panel-raised" aria-label="分享案例"><t-icon name="share" size="32rpx" color="var(--color-brand)" /><text>分享</text></button>
-      <view class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:30rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" aria-disabled="{{acting}}" bind:tap="edit">{{acting ? '处理中' : '编辑案例'}}</view>
+      <view class="flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:30rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" aria-disabled="{{acting}}" bind:tap="edit">{{acting ? '处理中' : '编辑案例'}}</view>
       </view>
     </mip-sticky-actions>
     <mip-sticky-actions wx:elif="{{!item.mine && item.status === 'PUBLISHED'}}">
       <view slot="actions" class="flex h-[112rpx] w-full items-center gap-2 rounded-full border border-brand bg-brand-soft p-2">
       <button open-type="share" class="m-0 flex h-[80rpx] w-[176rpx] shrink-0 items-center justify-center gap-2 rounded-full border-0 bg-panel p-0 text-[length:25rpx] leading-[80rpx] text-brand active:bg-panel-raised" aria-label="分享案例"><t-icon name="share" size="32rpx" color="var(--color-brand)" /><text>分享</text></button>
-      <view class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:30rpx] font-medium text-on-brand active:bg-brand-active {{interestPending ? 'opacity-60' : ''}}" aria-role="button" aria-disabled="{{interestPending}}" bind:tap="toggleInterest">{{item.interestActive ? '取消感兴趣' : '我感兴趣'}}</view>
+      <view class="flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand px-4 text-[length:30rpx] font-medium text-on-brand active:bg-brand-active {{interestPending ? 'opacity-60' : ''}}" aria-role="button" aria-disabled="{{interestPending}}" bind:tap="toggleInterest">{{item.interestActive ? '取消感兴趣' : '我感兴趣'}}</view>
       </view>
     </mip-sticky-actions>
   </block>

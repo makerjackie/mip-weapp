@@ -11,6 +11,6 @@
     <view wx:elif="{{state === 'idle' || state === 'error'}}" class="mt-6"><t-button block size="large" theme="primary" bind:tap="scanCode">{{hasScanToken ? '确认签到' : '扫描活动码'}}</t-button></view>
     <view wx:if="{{state === 'success'}}" class="mt-6"><t-button block size="large" theme="primary" bind:tap="openInteraction">与你互动</t-button></view>
   </view>
-  <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-3 text-[length:21rpx] leading-5 text-muted">活动码可能被转发，签到仍会核对报名资格和活动时间。请仅在现场使用。</view>
+  <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-3 text-[length:22rpx] leading-5 text-muted">活动码可能被转发，签到仍会核对报名资格和活动时间。请仅在现场使用。</view>
   <app-page-exit />
 </view>

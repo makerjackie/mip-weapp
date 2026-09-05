@@ -1,5 +1,5 @@
 <view id="mip-case-editor-page" class="mip-member-page case-editor-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] text-ink">
-  <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法编辑案例" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit /></view>
   <block wx:else>
     <view class="case-editor-guidance -mx-3 flex min-h-[64rpx] items-center justify-center bg-brand px-4 text-center text-[length:26rpx] font-medium text-on-brand">填写展现能力的超级案例</view>
@@ -18,19 +18,19 @@
         <image class="case-editor-section-icon h-[32rpx] w-[32rpx] shrink-0" src="/packages/member/mip-cases/editor/assets/case-section.svg" mode="aspectFit" />
         <view class="case-editor-section-title text-[length:32rpx] font-medium">我的案例</view>
       </view>
-      <view wx:if="{{publicationStatus === 'PUBLISHED'}}" class="case-editor-status shrink-0 rounded-full bg-brand px-3 py-1 text-[length:21rpx] font-medium text-on-brand">{{publicationStatusText}}</view>
-      <view wx:else class="case-editor-status shrink-0 rounded-full border border-line bg-panel px-3 py-1 text-[length:21rpx] text-muted">{{publicationStatusText}}</view>
+      <view wx:if="{{publicationStatus === 'PUBLISHED'}}" class="case-editor-status shrink-0 rounded-full bg-brand px-3 py-1 text-[length:22rpx] font-medium text-on-brand">{{publicationStatusText}}</view>
+      <view wx:else class="case-editor-status shrink-0 rounded-full border border-line bg-panel px-3 py-1 text-[length:22rpx] text-muted">{{publicationStatusText}}</view>
     </view>
 
     <view class="case-editor-form-layout mt-2">
       <view class="case-editor-field-group">
         <view class="case-editor-field-row">
           <view class="case-editor-field__label">项目名称</view>
-          <input class="case-editor-field__control" value="{{projectName}}" maxlength="120" placeholder="填写项目名称" placeholder-class="case-editor-field__placeholder" data-field="projectName" bindinput="updateText" />
+          <input aria-label="项目名称" class="case-editor-field__control" value="{{projectName}}" maxlength="120" placeholder="填写项目名称" placeholder-class="case-editor-field__placeholder" data-field="projectName" bindinput="updateText" />
         </view>
         <view class="case-editor-field-row">
           <view class="case-editor-field__label">一句话说明</view>
-          <input class="case-editor-field__control" value="{{summary}}" maxlength="240" placeholder="概括项目和结果" placeholder-class="case-editor-field__placeholder" data-field="summary" bindinput="updateText" />
+          <input aria-label="项目摘要" class="case-editor-field__control" value="{{summary}}" maxlength="240" placeholder="概括项目和结果" placeholder-class="case-editor-field__placeholder" data-field="summary" bindinput="updateText" />
         </view>
         <picker class="case-editor-field-row" mode="date" value="{{startedOn}}" bindchange="changeStart">
           <view class="case-editor-field__label">开始时间</view>
@@ -41,7 +41,7 @@
         </picker>
         <view class="case-editor-field-row">
           <view class="case-editor-field__label">担任职责</view>
-          <input class="case-editor-field__control" value="{{responsibility}}" maxlength="500" placeholder="填写承担的职责" placeholder-class="case-editor-field__placeholder" data-field="responsibility" bindinput="updateText" />
+          <input aria-label="承担职责" class="case-editor-field__control" value="{{responsibility}}" maxlength="500" placeholder="填写承担的职责" placeholder-class="case-editor-field__placeholder" data-field="responsibility" bindinput="updateText" />
         </view>
         <picker class="case-editor-field-row case-editor-field-row--last" mode="selector" range="{{cityOptions}}" range-key="label" value="{{cityIndex}}" bindchange="changeCity">
           <view class="case-editor-field__label">主营城市</view>
@@ -73,11 +73,11 @@
         </picker>
         <view class="case-editor-field-row">
           <view class="case-editor-field__label">案例类型</view>
-          <input class="case-editor-field__control" value="{{caseType}}" maxlength="80" placeholder="填写案例类型" placeholder-class="case-editor-field__placeholder" data-field="caseType" bindinput="updateText" />
+          <input aria-label="案例类型" class="case-editor-field__control" value="{{caseType}}" maxlength="80" placeholder="填写案例类型" placeholder-class="case-editor-field__placeholder" data-field="caseType" bindinput="updateText" />
         </view>
         <view class="case-editor-description">
           <view class="text-[length:28rpx] font-medium">详细说明</view>
-          <textarea class="case-editor-description__control" value="{{description}}" maxlength="8000" placeholder="说明项目背景、过程和结果" placeholder-class="case-editor-field__placeholder" data-field="description" bindinput="updateText" />
+          <textarea aria-label="项目说明" class="case-editor-description__control" value="{{description}}" maxlength="8000" placeholder="说明项目背景、过程和结果" placeholder-class="case-editor-field__placeholder" data-field="description" bindinput="updateText" />
           <view class="text-right text-[length:22rpx] text-muted">{{description.length}}/8000</view>
         </view>
       </view>
@@ -91,9 +91,9 @@
         <view class="flex items-start justify-between gap-3">
           <view>
             <view class="text-[length:27rpx] font-medium">案例封面</view>
-            <view class="mt-1 text-[length:21rpx] text-muted">用于案例列表和详情页</view>
+            <view class="mt-1 text-[length:22rpx] text-muted">用于案例列表和详情页</view>
           </view>
-          <view wx:if="{{coverUploading}}" class="shrink-0 text-[length:21rpx] text-brand">上传中</view>
+          <view wx:if="{{coverUploading}}" class="shrink-0 text-[length:22rpx] text-brand">上传中</view>
         </view>
         <image wx:if="{{coverUrl}}" class="mt-3 h-[300rpx] w-full rounded-[12rpx] bg-panel-raised" mode="aspectFill" src="{{coverUrl}}" />
         <view wx:else class="mt-3 flex h-[240rpx] items-center justify-center rounded-[12rpx] border border-dashed border-line bg-panel-raised text-[length:23rpx] text-muted">暂未上传封面</view>
@@ -104,7 +104,7 @@
         <view class="flex items-start justify-between gap-3">
           <view>
             <view class="text-[length:27rpx] font-medium">展示素材</view>
-            <view class="mt-1 text-[length:21rpx] text-muted">最多上传 12 张图片</view>
+            <view class="mt-1 text-[length:22rpx] text-muted">最多上传 12 张图片</view>
           </view>
           <view class="shrink-0 text-[length:22rpx] text-muted">{{mediaAssets.length}} / 12</view>
         </view>

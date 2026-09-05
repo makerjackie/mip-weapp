@@ -1,7 +1,7 @@
 <view id="admin-event-console-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
   <view class="text-[length:40rpx] font-bold">活动现场</view>
 
-  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5">
+  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[24rpx] bg-panel p-5">
     <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
   <view wx:elif="{{state === 'error' || state === 'conflict'}}" class="mt-6">
@@ -11,7 +11,7 @@
     <app-empty-state title="没有活动权限" description="当前账号不能查看这场活动。" />
   </view>
   <view wx:elif="{{event}}">
-    <view class="mt-5 rounded-[16rpx] bg-panel px-5 py-5">
+    <view class="mt-5 rounded-[24rpx] bg-panel px-5 py-5">
       <view class="flex items-start justify-between gap-3">
         <view class="min-w-0 flex-1 break-all text-[length:32rpx] font-bold">{{event.title}}</view>
         <t-tag variant="outline">{{eventStatusText}}</t-tag>
@@ -20,7 +20,7 @@
       <view class="mt-1 text-[length:23rpx] text-muted">{{event.cityName || '未设置城市'}}</view>
     </view>
 
-    <view wx:if="{{canRoster}}" class="mt-5 flex min-h-[104rpx] items-center rounded-[16rpx] bg-panel px-4" role="button" bind:tap="openRoster">
+    <view wx:if="{{canRoster}}" class="mt-5 flex min-h-[104rpx] items-center rounded-[24rpx] bg-panel px-4" aria-role="button" bind:tap="openRoster">
       <view class="min-w-0 flex-1">
         <view class="text-[length:28rpx] font-semibold">参与者与签到</view>
         <view class="mt-1 text-[length:22rpx] text-muted">查看名单、确认签到或按权限撤销签到</view>
@@ -28,11 +28,11 @@
       <t-icon name="chevron-right" size="32rpx" color="var(--color-brand)" />
     </view>
 
-    <view wx:if="{{canCheckIn}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-4">
+    <view wx:if="{{canCheckIn}}" class="mt-5 rounded-[24rpx] bg-panel px-4 py-4">
       <view class="text-[length:28rpx] font-semibold">签到码</view>
       <view class="mt-1 text-[length:22rpx] text-muted">静态码适合提前制作海报；短时码有效期为 5 分钟。</view>
-      <image wx:if="{{posterPath}}" class="mt-4 h-[560rpx] w-full rounded-[12rpx] bg-panel-raised" mode="aspectFit" src="{{posterPath}}" bind:tap="previewCheckInPoster" />
-      <view wx:if="{{posterValidText}}" class="mt-2 text-center text-[length:20rpx] text-muted">{{posterMode === 'ROTATING' ? '短时签到码 · ' : '静态签到码 · '}}{{posterValidText}}</view>
+      <image wx:if="{{posterPath}}" class="mt-4 h-[560rpx] w-full rounded-[20rpx] bg-panel-raised" mode="aspectFit" src="{{posterPath}}" bind:tap="previewCheckInPoster" />
+      <view wx:if="{{posterValidText}}" class="mt-2 text-center text-[length:22rpx] text-muted">{{posterMode === 'ROTATING' ? '短时签到码 · ' : '静态签到码 · '}}{{posterValidText}}</view>
       <view wx:if="{{posterMode === 'ROTATING' && !posterExpired}}" class="mt-2 text-center text-[length:30rpx] font-semibold text-brand">{{posterCountdownText}}</view>
       <view wx:elif="{{posterMode === 'ROTATING'}}" class="mt-2 text-center text-[length:30rpx] font-semibold text-danger">{{posterCountdownText}}</view>
       <view class="mt-4 grid grid-cols-2 gap-3">
@@ -40,11 +40,11 @@
         <t-button block theme="primary" loading="{{posterBusy}}" disabled="{{event.status !== 'PUBLISHED'}}" bind:tap="createRotatingCheckInPoster">{{posterMode === 'ROTATING' ? '刷新短时码' : '生成短时码'}}</t-button>
       </view>
       <view class="mt-3"><t-button block variant="outline" disabled="{{!posterPath || posterExpired}}" bind:tap="saveCheckInPoster">保存到相册</t-button></view>
-      <view wx:if="{{event.status !== 'PUBLISHED'}}" class="mt-2 text-[length:20rpx] text-muted">只有已发布活动可以生成签到海报。</view>
+      <view wx:if="{{event.status !== 'PUBLISHED'}}" class="mt-2 text-[length:22rpx] text-muted">只有已发布活动可以生成签到海报。</view>
     </view>
-    <view wx:elif="{{!canRoster}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-4 text-[length:23rpx] text-muted">当前账号只有活动查看权限，没有名单或签到操作权限。</view>
+    <view wx:elif="{{!canRoster}}" class="mt-5 rounded-[24rpx] bg-panel px-4 py-4 text-[length:23rpx] text-muted">当前账号只有活动查看权限，没有名单或签到操作权限。</view>
 
-    <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[20rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
   </view>
 
   <canvas id="admin-checkin-poster-canvas" type="2d" class="fixed left-[-9999px] top-0 h-[560px] w-[375px]"></canvas>

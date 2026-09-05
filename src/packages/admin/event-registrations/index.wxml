@@ -6,18 +6,18 @@
     <t-button block variant="outline" bind:tap="openCheckInTools">签到码与海报</t-button>
   </view>
 
-  <view class="mt-5 rounded-[16rpx] bg-panel p-3">
+  <view class="mt-5 rounded-[24rpx] bg-panel p-3">
     <t-input class="box-border max-w-full" value="{{query}}" placeholder="搜索昵称" bind:change="updateQuery" bind:enter="search" />
-    <view class="mt-3 flex flex-wrap gap-2" role="radiogroup" aria-label="签到状态">
-      <view wx:for="{{statusOptions}}" wx:key="value" class="flex min-h-[72rpx] items-center" role="radio" aria-checked="{{status === item.value}}">
-        <t-tag variant="outline" theme="{{status === item.value ? 'primary' : 'default'}}" data-value="{{item.value}}" bind:tap="chooseStatus">{{item.label}}</t-tag>
+    <view class="mt-3 flex flex-wrap gap-2" aria-role="radiogroup" aria-label="签到状态">
+      <view wx:for="{{statusOptions}}" wx:key="value" class="flex min-h-[88rpx] items-center" aria-role="radio" aria-checked="{{status === item.value}}" data-value="{{item.value}}" bind:tap="chooseStatus">
+        <t-tag variant="outline" theme="{{status === item.value ? 'primary' : 'default'}}">{{item.label}}</t-tag>
       </view>
     </view>
     <view class="mt-3"><t-button block theme="primary" bind:tap="search">查询</t-button></view>
   </view>
 
-  <view id="admin-event-registrations-disabled-state" wx:if="{{state === 'ready' && !canCheckIn && !canUndoCheckIn}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:22rpx] text-muted">当前名单仅供查看。</view>
-  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[16rpx] bg-panel p-5">
+  <view id="admin-event-registrations-disabled-state" wx:if="{{state === 'ready' && !canCheckIn && !canUndoCheckIn}}" class="mt-4 rounded-[20rpx] bg-panel px-4 py-3 text-[length:22rpx] text-muted">当前名单仅供查看。</view>
+  <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[24rpx] bg-panel p-5">
     <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
   <view id="admin-event-registrations-error-state" wx:elif="{{state === 'error'}}" class="mt-6">
@@ -33,7 +33,7 @@
     <app-empty-state title="暂无参与者" description="符合当前筛选条件的参与者会显示在这里。" />
   </view>
   <view wx:else class="mt-5 flex flex-col gap-3">
-    <view wx:for="{{items}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
+    <view wx:for="{{items}}" wx:key="id" class="rounded-[24rpx] bg-panel px-4 py-4">
       <view class="flex items-start justify-between gap-3">
         <view class="min-w-0 flex-1">
           <view class="break-all text-[length:28rpx] font-semibold">{{item.nickname}}</view>
@@ -51,7 +51,7 @@
     </view>
   </view>
 
-  <view wx:if="{{message && state === 'ready'}}" class="mt-4 break-all rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
+  <view wx:if="{{message && state === 'ready'}}" class="mt-4 break-all rounded-[20rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
   <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" disabled="{{loadingMore || processingId !== ''}}" bind:tap="loadMoreRoster">加载更多</t-button></view>
   <app-page-exit />
 </view>

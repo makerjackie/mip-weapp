@@ -1,5 +1,5 @@
 <view id="order-detail-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
-  <view wx:if="{{state === 'loading'}}" class="flex flex-col gap-3"><view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view><view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
+  <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="flex flex-col gap-3"><view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view><view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="订单暂时无法加载" description="{{message}}" action-text="重新加载" bind:action="load" /></view>
   <block wx:else>
     <view wx:if="{{!isEventOrder}}" class="rounded-[20rpx] bg-panel px-5 py-5">
@@ -19,7 +19,7 @@
         <view wx:if="{{!order.event}}" class="mt-3 text-[length:22rpx] leading-5 text-muted">活动信息暂时不可用，订单金额和状态仍以服务端记录为准。</view>
       </view>
     </view>
-    <view class="mt-4 flex min-h-[84rpx] items-center justify-between rounded-[16rpx] bg-panel px-4 active:bg-panel-raised" aria-role="button" bind:tap="copyOrderId"><view class="flex items-center gap-2"><t-icon name="order" size="28rpx" color="var(--color-brand)" /><text>订单ID</text></view><view class="flex min-w-0 max-w-[68%] items-center gap-2"><text class="min-w-0 flex-1 truncate text-right text-[length:22rpx] text-muted">{{order.id}}</text><text class="shrink-0 text-[length:21rpx] font-semibold text-brand">复制</text></view></view>
+    <view class="mt-4 flex min-h-[88rpx] items-center justify-between rounded-[16rpx] bg-panel px-4 active:bg-panel-raised" aria-role="button" bind:tap="copyOrderId"><view class="flex items-center gap-2"><t-icon name="order" size="28rpx" color="var(--color-brand)" /><text>订单ID</text></view><view class="flex min-w-0 max-w-[68%] items-center gap-2"><text class="min-w-0 flex-1 truncate text-right text-[length:22rpx] text-muted">{{order.id}}</text><text class="shrink-0 text-[length:22rpx] font-semibold text-brand">复制</text></view></view>
 
     <view class="mt-4 overflow-hidden rounded-[16rpx] bg-panel">
       <view class="border-b border-line px-4 py-3 text-[length:23rpx] font-semibold">费用明细</view>

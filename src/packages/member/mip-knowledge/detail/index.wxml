@@ -1,10 +1,10 @@
 <view id="mip-knowledge-detail-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
-  <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载内容" description="{{message}}" action-text="重新加载" bind:action="load" /></view>
   <block wx:elif="{{detail}}">
     <image wx:if="{{detail.coverUrl}}" class="h-[360rpx] w-full rounded-[16rpx] bg-panel" mode="aspectFill" src="{{detail.coverUrl}}" />
     <view class="mt-4 text-[length:38rpx] font-bold leading-[1.35]">{{detail.title}}</view>
-    <view class="mt-3 flex flex-wrap gap-2 text-[length:21rpx] text-muted"><text>{{detail.category.name}}</text><text>{{detail.authorName || detail.sourceName || 'MIP'}}</text></view>
+    <view class="mt-3 flex flex-wrap gap-2 text-[length:22rpx] text-muted"><text>{{detail.category.name}}</text><text>{{detail.authorName || detail.sourceName || 'MIP'}}</text></view>
     <view class="mt-5 rounded-[16rpx] bg-panel px-4 py-4">
       <view class="text-[length:25rpx] leading-[1.8] text-muted">{{detail.summary}}</view>
       <view wx:if="{{detail.access.unlocked}}" class="mt-4 whitespace-pre-wrap text-[length:27rpx] leading-[1.8]">{{detail.body}}</view>
@@ -14,14 +14,14 @@
         <t-button wx:if="{{detail.product}}" class="mt-4" block theme="primary" loading="{{purchasing}}" disabled="{{!paymentEnabled}}" bind:tap="purchase">{{paymentEnabled ? '购买 ' + priceLabel : '微信支付未启用'}}</t-button>
       </view>
       <t-button wx:if="{{detail.access.unlocked && (detail.externalUrl || detail.channel)}}" class="mt-4" block theme="primary" bind:tap="openContent">{{detail.contentType === 'PRIVATE_CHANNEL' ? '打开视频号内容' : '打开内容'}}</t-button>
-      <view wx:if="{{detail.refundPolicy}}" class="mt-3 text-[length:21rpx] leading-[1.6] text-muted">{{detail.refundPolicy.policy === 'BEFORE_ACCESS' ? '单内容购买在首次访问前且支付后 ' + detail.refundPolicy.windowHours + ' 小时内可申请退款。' : '该内容购买后不支持退款。'}}</view>
+      <view wx:if="{{detail.refundPolicy}}" class="mt-3 text-[length:22rpx] leading-[1.6] text-muted">{{detail.refundPolicy.policy === 'BEFORE_ACCESS' ? '单内容购买在首次访问前且支付后 ' + detail.refundPolicy.windowHours + ' 小时内可申请退款。' : '该内容购买后不支持退款。'}}</view>
     </view>
 
     <view class="mt-6 text-[length:31rpx] font-semibold">评论</view>
     <view wx:if="{{commentsEnabled}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-4"><t-textarea value="{{commentBody}}" placeholder="填写评论" maxlength="800" bind:change="updateComment" /><t-button class="mt-3" block theme="primary" loading="{{submitting}}" disabled="{{!commentBody}}" bind:tap="submitComment">提交评论</t-button></view>
     <view wx:else class="mt-3 rounded-[12rpx] bg-panel px-4 py-3 text-[length:23rpx] text-muted">当前内容已关闭评论。</view>
     <view wx:if="{{!comments.length}}" class="mt-3"><app-empty-state title="暂无评论" description="已发布的评论会显示在这里。" /></view>
-    <view wx:else class="mt-3 flex flex-col gap-3"><view wx:for="{{comments}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4"><view class="flex items-center justify-between gap-3"><view class="text-[length:24rpx] font-semibold">{{item.author.nickname}}</view><view class="text-[length:20rpx] text-muted">{{item.status === 'PENDING' ? '待审核' : ''}}</view></view><view class="mt-2 whitespace-pre-wrap text-[length:25rpx] leading-[1.65]">{{item.body}}</view><view class="mt-3 flex justify-end gap-4 text-[length:21rpx]"><text wx:if="{{item.canDelete}}" class="text-danger" data-id="{{item.id}}" data-version="{{item.version}}" bind:tap="deleteComment">删除</text><text wx:if="{{!item.mine}}" class="text-muted" data-id="{{item.id}}" bind:tap="reportComment">举报</text></view></view></view>
+    <view wx:else class="mt-3 flex flex-col gap-3"><view wx:for="{{comments}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4"><view class="flex items-center justify-between gap-3"><view class="text-[length:24rpx] font-semibold">{{item.author.nickname}}</view><view class="text-[length:22rpx] text-muted">{{item.status === 'PENDING' ? '待审核' : ''}}</view></view><view class="mt-2 whitespace-pre-wrap text-[length:25rpx] leading-[1.65]">{{item.body}}</view><view class="mt-3 flex justify-end gap-4 text-[length:22rpx]"><text wx:if="{{item.canDelete}}" class="text-danger" data-id="{{item.id}}" data-version="{{item.version}}" bind:tap="deleteComment">删除</text><text wx:if="{{!item.mine}}" class="text-muted" data-id="{{item.id}}" bind:tap="reportComment">举报</text></view></view></view>
     <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] bg-panel px-4 py-3 text-[length:22rpx] text-danger">{{message}}</view>
   </block>
   <app-page-exit />

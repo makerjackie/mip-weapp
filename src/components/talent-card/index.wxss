@@ -59,7 +59,7 @@
 .mip-talent-card__kind {
   flex: 0 0 auto;
   padding: 4rpx 12rpx;
-  font-size: 18rpx;
+  font-size: 22rpx;
   font-weight: 500;
   color: var(--color-on-brand);
   background: var(--color-brand);
@@ -82,7 +82,7 @@
 
 .mip-talent-card__supporting {
   margin-top: 8rpx;
-  font-size: 20rpx;
+  font-size: 22rpx;
   line-height: 30rpx;
   color: var(--color-muted);
 }
@@ -110,7 +110,7 @@
   padding: 4rpx 16rpx;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 20rpx;
+  font-size: 22rpx;
   font-weight: 500;
   color: var(--color-on-brand);
   white-space: nowrap;
@@ -123,7 +123,7 @@
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 20rpx;
+  font-size: 22rpx;
   color: var(--color-brand);
   text-align: right;
   white-space: nowrap;
