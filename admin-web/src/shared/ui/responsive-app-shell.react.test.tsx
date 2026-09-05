@@ -52,7 +52,7 @@ describe('web login entry', () => {
 
     await userEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: /登\s*录/ }))
     const dialog = await screen.findByRole('dialog')
-    expect(await within(dialog).findByText('123456')).toBeVisible()
+    await waitFor(() => expect(within(dialog).getByText('123456')).toBeVisible())
     expect(within(dialog).getByText(/我的 → 现场工作台 → 确认网页登录/)).toBeVisible()
     expect(within(dialog).getByText(/开发版或体验版/)).toBeVisible()
     expect(within(dialog).queryByRole('img', { name: 'MIP 微信小程序登录码' })).not.toBeInTheDocument()
