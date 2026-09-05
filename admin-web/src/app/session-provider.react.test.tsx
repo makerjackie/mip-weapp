@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AdminApiClient, AdminApiClientError } from '../services/admin-api'
 import { SessionProvider, isProtectedAdminQueryKey, useAdminSession } from './session-provider'
+
+afterEach(cleanup)
 
 class SessionClient extends AdminApiClient {
   readonly logoutSpy = vi.fn(async () => undefined)
@@ -70,6 +72,7 @@ function LoginProbe() {
       <button onClick={() => void (session.loginConfirmed ? session.retryConfirmedLogin() : session.beginLogin())}>
         {session.loginConfirmed ? '重新加载会话' : '登录'}
       </button>
+      <button onClick={session.closeLogin}>关闭登录</button>
     </div>
   )
 }
@@ -124,5 +127,22 @@ describe('admin session query boundary', () => {
 
     await userEvent.click(screen.getByRole('button', { name: '重新加载会话' }))
     await screen.findByText('actor-a')
+  })
+
+  it('ignores a pending challenge response after the login dialog closes', async () => {
+    const client = new ConfirmedLoginFailureClient()
+    let resolveChallenge!: (value: Awaited<ReturnType<typeof client.beginLogin>>) => void
+    vi.spyOn(client, 'beginLogin').mockImplementation(() => new Promise(resolve => { resolveChallenge = resolve }))
+    const poll = vi.spyOn(client, 'pollLogin')
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <SessionProvider client={client}><LoginProbe /></SessionProvider>
+      </QueryClientProvider>,
+    )
+    await userEvent.click(screen.getByRole('button', { name: '登录' }))
+    await userEvent.click(screen.getByRole('button', { name: '关闭登录' }))
+    resolveChallenge({ state: 'PENDING', code: '123456', expiresAt: new Date(Date.now() + 60_000).toISOString(), pollAfterMs: 0 })
+    await waitFor(() => expect(screen.getByText('no-code')).toBeVisible())
+    expect(poll).not.toHaveBeenCalled()
   })
 })

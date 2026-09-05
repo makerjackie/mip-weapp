@@ -103,6 +103,7 @@ const webLoginQrCodeRoute = createWebLoginQrCodeRoute({
   replayGuard: webBffReplayGuard,
   secret: process.env.MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET,
   stage: process.env.MIP_DEPLOYMENT_STAGE,
+  envVersion: process.env.MIP_ADMIN_WEB_LOGIN_QR_ENV_VERSION,
   wechatAppId: process.env.MIP_WECHAT_APP_ID,
   wechatAppSecret: process.env.MIP_WECHAT_APP_SECRET,
 })

@@ -62,7 +62,7 @@ pnpm cloud:ai-avatar-provider:verify -- \
 11. 在本机 `.env.local` 写入空仓库示例对应的 `MIP_OWNER_PHONE`，确认该号码已通过当前 AppID 的微信真机流程绑定，并完成昵称、主分会和当前全部协议；再执行 `pnpm admin:bootstrap -- --confirm-env=<EnvID> --confirm-owner` 配置首个 owner。脚本只以身份服务的 AppID 范围哈希定位唯一 ACTIVE 非 demo 用户，不输出号码、哈希或用户 ID；可追加 `--user-id=<用户 UUID>` 做严格一致性确认。
 12. 部署后或发现 outbox 积压时，运行 `pnpm outbox:run -- --confirm-env=<EnvID> --limit=10` 做一次受控处理；退款停留在活动状态时，运行 `pnpm refunds:run -- --confirm-env=<EnvID> --confirm-refund=mip-refund-worker --limit=10`。两个命令都读取已部署函数配置完成 HMAC 调用，不打印密钥。
 13. 微信后台配置服务器域名、与 `MIP_KNOWLEDGE_WEBVIEW_ALLOWED_HOSTS` 完全一致的业务域名、用户隐私协议，完成上传与提审。
-14. 启用网页登录小程序码时，先确认 `056_web_bff_replay_guard.sql` 已应用，部署兼容 `challengeToken` 的 Pages BFF 与 `mip-admin-api`，再上传并发布包含 `packages/admin/web-login-confirm/index` 的小程序。真机验证扫码、明确确认、过期、重复确认、撤权和 6 位码降级后，才在 Pages 配置与 CloudBase 同值的 `MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET` 及属于 allowlist 的 `MIP_WEB_LOGIN_MINIPROGRAM_APP_ID`。未配置这两项时只显示 6 位码；不得在小程序发布前启用生产二维码。
+14. 网页默认使用 6 位码登录，创建登录请求不调用小程序码服务；开发版或体验版只需已有“现场工作台 → 确认网页登录”入口、相同服务端环境和当前运营权限。可选小程序码还要求 `056_web_bff_replay_guard.sql` 已应用、Pages BFF 与 `mip-admin-api` 兼容 `challengeToken`、目标版本包含 `packages/admin/web-login-confirm/index`。通过 `MIP_ADMIN_WEB_LOGIN_QR_ENV_VERSION=trial|develop|release` 独立指定目标版本；体验版/开发版不要求先正式发布，但需要相应版本及账号访问权限，正式版必须先发布确认页。在 Pages 配置与 CloudBase 同值的 `MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET` 及属于 allowlist 的 `MIP_WEB_LOGIN_MINIPROGRAM_APP_ID` 后，仅显式 `POST /api/auth/challenge?qr=1` 请求生成小程序码。当前 Web 只展示数字码；开放扫码 UI 前需真机验证扫码、明确确认、过期、重复确认、撤权和数字码登录。
 
 核心函数部署后必须使用同一授权模式单独执行 `CLOUDBASE_AUTH_MODE=local pnpm cloud:verify -- --confirm-env=<EnvID>`。空函数壳、控制台可见、单个函数创建成功或 API Key 状态为 `READY` 都不能代替该验收；只有所有核心函数配置回读、MySQL 健康、最小权限调用规则和禁止 timer 检查通过，云端运行时才算完成。
 

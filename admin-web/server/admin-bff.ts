@@ -207,11 +207,13 @@ export function createAdminBff(
       const claims: ChallengeCookieClaims = { v: 1, id, browserKey, expiresAt }
       const sealed = await seal(claims, env.MIP_WEB_SESSION_SECRET!, 'mip-admin-login-challenge-v1', deps.crypto)
       let qrCodeDataUrl = ''
-      try {
-        qrCodeDataUrl = await deps.generateLoginQrCode(id)
-      }
-      catch {
-        // The six-digit code remains available when QR generation is unavailable.
+      if (new URL(request.url).searchParams.get('qr') === '1') {
+        try {
+          qrCodeDataUrl = await deps.generateLoginQrCode(id)
+        }
+        catch {
+          // Optional QR failures must not discard a usable six-digit challenge.
+        }
       }
       return json({
         state: 'PENDING',

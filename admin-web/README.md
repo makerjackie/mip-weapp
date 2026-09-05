@@ -38,8 +38,8 @@ pnpm --dir admin-web exec wrangler pages dev dist --env-file .env.local
 
 Cloudflare Pages Function 位于 `functions/api/[[path]].ts`，核心 module 位于 `server/admin-bff.ts`。它完成：
 
-- 网页生成 5 分钟有效的动态小程序码，并保留 6 位数字登录码作为降级入口；浏览器凭据只进入密封的 `HttpOnly` Cookie；
-- 已有运营账号扫码进入专用确认页并明确确认，或在小程序现场工作台输入数字码；CloudBase 按现有角色和 capability 重新鉴权；
+- 网页默认生成 5 分钟有效的 6 位数字登录码，不调用或等待小程序码接口；仅显式 `?qr=1` 请求可选小程序码；浏览器凭据只进入密封的 `HttpOnly` Cookie；
+- 已有运营账号在小程序现场工作台输入数字码并明确确认，开发版和体验版均可使用；可选扫码进入专用确认页；CloudBase 按现有角色和 capability 重新鉴权；
 - 小程序码图片只在本次响应中返回，不写对象存储；浏览器响应不包含 challenge token、AppID 或 OpenID；
 - CloudBase 以独立 HMAC 将可信 AppID/OpenID 回传 BFF，D1 原子确认且仅允许消费一次；
 - 每个可信 AppID 与运营账号连续失败 5 次后锁定确认 5 分钟，限流键只保存不可逆 HMAC；
@@ -60,7 +60,7 @@ BFF 不接受浏览器直接提交 `appId` 或 `openId`。CloudBase 侧只在小
 3. 为 Cloudflare 与 `mip-admin-api` 配置同一个 `MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET`，它只用于动态小程序码生成；必须与查询和登录确认 HMAC 都不同。Pages 同时配置 `MIP_WEB_LOGIN_MINIPROGRAM_APP_ID`，且该值必须属于 `MIP_WEB_ALLOWED_APP_IDS`。
 4. 为 CloudBase 的 `mip-admin-api` 配置 `MIP_ADMIN_WEB_BFF_HMAC_SECRET`，为 Pages 配置 `MIP_ADMIN_UPSTREAM_HMAC_SECRET`；两项变量名不同，但必须使用同一个密钥值。再通过 CloudBase HTTP 访问服务把一个 HTTPS 路径映射到该函数，并将地址填入 Pages 的 `MIP_ADMIN_UPSTREAM_URL`。
 5. 配置 `MIP_WEB_SESSION_SECRET`、`MIP_WEB_ALLOWED_APP_IDS`、`MIP_WEB_ALLOWED_ORIGIN=https://mipmini.01mvp.com`，关闭生产构建的 `VITE_MIP_ADMIN_DEMO_MODE`。不配置小程序码专用 secret 或目标 AppID 时，页面只显示数字码降级入口。
-6. 先发布包含 `packages/admin/web-login-confirm/index` 的小程序，再启用生产小程序码；确认 `mip-admin-api/config.json` 的 `wxacode.getUnlimited` 权限已随函数重新部署。
+6. 可选扫码要求目标小程序版本包含 `packages/admin/web-login-confirm/index`；云函数配置 `MIP_ADMIN_WEB_LOGIN_QR_ENV_VERSION=trial|develop|release`，体验版/开发版无需先正式发布，但访问者需具有对应版本权限；正式版必须先发布确认页。开放扫码 UI 前完成真机验收，并确认 `mip-admin-api/config.json` 的 `wxacode.getUnlimited` 权限已随函数重新部署。
 7. 在预发布环境验证错误/过期 scene、错误数字码、篡改 Cookie、重复消费、`AUTH_REQUIRED`、`FORBIDDEN`、上游超时和 AppID 不在 allowlist 的负向用例。
 8. 确认导出存储签发的 HTTPS 临时地址允许 `https://mipmini.01mvp.com` 进行匿名 CORS `GET`；Web 不会把导出 token 写入 URL 或持久存储，CORS 不可用时下载会安全失败。
 9. 验证素材上传的用途权限、PNG/JPEG 格式、1 MB 文件边界和 `cloud://` 返回值；浏览器只保留本地预览，不尝试直接加载 `cloud://`。
@@ -69,7 +69,7 @@ BFF 不接受浏览器直接提交 `appId` 或 `openId`。CloudBase 侧只在小
 
 Cloudflare Pages 的项目配置在 `wrangler.toml`；从仓库根目录执行 `pnpm --dir admin-web deploy:pages`。自定义域名需要在 Cloudflare Pages 项目中绑定，首次绑定和 DNS 状态以 Cloudflare 控制台为准。
 
-浏览器只显示小程序码图片和数字降级码并轮询同源 BFF，不接收可信身份字段或原始 scene。CloudBase 在执行前持久消费一次性 nonce；Web BFF 只允许契约清单中已审核且具有领域持久幂等保护的 mutation，其余写操作默认拒绝。素材上传使用独立路由，但复用同一会话、来源校验和服务端 HMAC principal，浏览器不会接收密钥。页面按当前账号 capability 显示操作入口，写操作均要求明确确认且不会自动重试。
+当前浏览器界面只显示数字登录码并轮询同源 BFF，不接收可信身份字段或原始 scene。CloudBase 在执行前持久消费一次性 nonce；Web BFF 只允许契约清单中已审核且具有领域持久幂等保护的 mutation，其余写操作默认拒绝。素材上传使用独立路由，但复用同一会话、来源校验和服务端 HMAC principal，浏览器不会接收密钥。页面按当前账号 capability 显示操作入口，写操作均要求明确确认且不会自动重试。
 
 官方能力依据：Cloudflare Pages Functions 支持 [D1 binding 与 secret](https://developers.cloudflare.com/pages/functions/bindings/)，D1 支持 [prepared statement 与条件写入](https://developers.cloudflare.com/d1/worker-api/prepared-statements/)；CloudBase 官方支持用 [HTTP 访问服务把 HTTPS 路由映射到云函数](https://docs.cloudbase.net/service/access-cloud-function)。
 

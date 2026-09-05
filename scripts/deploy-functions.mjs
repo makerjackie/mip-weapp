@@ -60,6 +60,7 @@ const deploymentManifest = requestedFunction
 const confirmedEnv = argumentValue('--confirm-env=')
 const replaceLegacyRuntime = process.argv.includes('--replace-legacy-runtime')
 const deploymentStage = resolveMipDeploymentStage(env.MIP_DEPLOYMENT_STAGE, process.argv.slice(2))
+const adminWebLoginQrEnvVersion = String(env.MIP_ADMIN_WEB_LOGIN_QR_ENV_VERSION || '').trim().toLowerCase()
 const paymentMode = String(env.MIP_PAYMENT_MODE || 'disabled').trim().toLowerCase()
 const catalogStage = String(env.MIP_CATALOG_STAGE || 'TEST').trim().toUpperCase()
 const configuredTestMembershipHmac = String(env.MIP_TEST_MEMBERSHIP_HMAC_SECRET || '').trim()
@@ -91,6 +92,9 @@ if (!envId || confirmedEnv !== envId || !appId) {
 }
 if (wechatAppSecret.length < 16 || /[\r\n]/.test(wechatAppSecret)) {
   throw new Error('MIP_WECHAT_APP_SECRET must be configured for server-side mini-program API access')
+}
+if (adminWebLoginQrEnvVersion && !['release', 'trial', 'develop'].includes(adminWebLoginQrEnvVersion)) {
+  throw new Error('MIP_ADMIN_WEB_LOGIN_QR_ENV_VERSION must be release, trial, or develop')
 }
 if (requestedFunction && deploymentManifest.length !== 1) {
   throw new Error('--only must name exactly one function from the MIP core deployment manifest')
@@ -409,6 +413,7 @@ try {
       connectionUri,
       customerServiceEnabled,
       deploymentStage,
+      adminWebLoginQrEnvVersion,
       exportMaxBytes,
       exportMaxRows,
       functionNames,
@@ -964,6 +969,7 @@ function environmentForRole(role, options) {
       ...agreementEnvironment,
       MIP_WECHAT_APP_ID: options.appId,
       MIP_WECHAT_APP_SECRET: options.wechatAppSecret,
+      MIP_ADMIN_WEB_LOGIN_QR_ENV_VERSION: options.adminWebLoginQrEnvVersion,
       MIP_TASKS_FUNCTION_NAME: options.functionNames.tasks,
       MIP_BANNERS_FUNCTION_NAME: options.functionNames.banners,
       MIP_GAME_FUNCTION_NAME: options.functionNames.game,

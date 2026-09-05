@@ -38,6 +38,8 @@ export function SessionProvider({ children, client = defaultClient }: { children
   const loginFlow = useRef(0)
   const sessionIdentity = useRef<string | null>(null)
 
+  useEffect(() => () => { loginFlow.current += 1 }, [])
+
   const commitSession = useCallback((next: AdminSession | null) => {
     const capabilityBoundary = [...(next?.capabilities || [])]
       .map(item => `${item.capability}:${item.scopeType || ''}:${item.scopeId || ''}`)
@@ -129,10 +131,12 @@ export function SessionProvider({ children, client = defaultClient }: { children
     setLoginConfirmed(false)
     try {
       const next = await client.beginLogin()
+      if (loginFlow.current !== flow) return
       setChallenge(next)
       void pollLogin(flow, next.pollAfterMs)
     }
     catch (reason) {
+      if (loginFlow.current !== flow) return
       setLoginError(reason instanceof Error ? reason.message : '网页登录服务暂时不可用')
     }
   }, [client, pollLogin])

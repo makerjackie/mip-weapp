@@ -528,6 +528,29 @@ describe('Admin Web BFF', () => {
     })
   })
 
+  it('creates a six-digit challenge without calling or waiting for the QR provider', async () => {
+    let qrCalls = 0
+    const configuration = env()
+    delete configuration.MIP_ADMIN_WEB_LOGIN_QR_HMAC_SECRET
+    delete configuration.MIP_WEB_LOGIN_MINIPROGRAM_APP_ID
+    const bff = createAdminBff(configuration, {
+      generateLoginQrCode: () => {
+        qrCalls += 1
+        return new Promise<string>(() => {})
+      },
+      now: () => NOW,
+    })
+    const response = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
+      method: 'POST', headers: { origin: ORIGIN },
+    }))
+    const body = await response.json()
+
+    assert.equal(response.status, 201)
+    assert.match(body.code, /^\d{6}$/)
+    assert.equal(Object.hasOwn(body, 'qrCodeDataUrl'), false)
+    assert.equal(qrCalls, 0)
+  })
+
   it('returns an ephemeral mini-program code without exposing its challenge token', async () => {
     const database = new MemoryD1()
     const imageBase64 = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).toString('base64')
@@ -537,7 +560,7 @@ describe('Admin Web BFF', () => {
     }), { status: 200, headers: { 'content-type': 'application/json' } }))
     const bff = createAdminBff(env(database), { fetch: fetchMock, now: () => NOW })
 
-    const response = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
+    const response = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge?qr=1`, {
       method: 'POST', headers: { origin: ORIGIN },
     }))
     const bodyText = await response.text()
@@ -572,7 +595,7 @@ describe('Admin Web BFF', () => {
       generateLoginQrCode: async () => { throw new Error('QR_UNAVAILABLE') },
       now: () => NOW,
     })
-    const response = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge`, {
+    const response = await bff.handle(new Request(`${ORIGIN}/api/auth/challenge?qr=1`, {
       method: 'POST', headers: { origin: ORIGIN },
     }))
     const body = await response.json()

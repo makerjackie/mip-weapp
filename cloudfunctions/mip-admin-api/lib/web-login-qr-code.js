@@ -21,6 +21,7 @@ function createWebLoginQrCodeRoute({
   replayGuard,
   secret,
   stage,
+  envVersion,
   now = Date.now,
   fetchImpl = globalThis.fetch,
   wechatAppId,
@@ -39,6 +40,7 @@ function createWebLoginQrCodeRoute({
         fetchImpl,
         now,
         stage,
+        envVersion,
         wechatAppId,
         wechatAppSecret,
       })
@@ -119,6 +121,7 @@ async function generateQrCode({
   fetchImpl,
   now,
   stage,
+  envVersion,
   wechatAppId,
   wechatAppSecret,
 }) {
@@ -130,13 +133,14 @@ async function generateQrCode({
       fetchImpl,
       now,
       stage,
+      envVersion,
       wechatAppSecret,
     })
   }
   if (typeof cloud?.openapi?.wxacode?.getUnlimited !== 'function') {
     throw new Error('WEB_LOGIN_QR_CONFIG_REQUIRED')
   }
-  const environment = codeEnvironment(stage)
+  const environment = codeEnvironment(stage, envVersion)
   const response = await cloud.openapi.wxacode.getUnlimited({
     scene: challengeToken,
     page: WEB_LOGIN_QR_PAGE,
@@ -165,9 +169,10 @@ async function generateQrCodeWithWechatApi({
   fetchImpl,
   now,
   stage,
+  envVersion,
   wechatAppSecret,
 }) {
-  const environment = codeEnvironment(stage)
+  const environment = codeEnvironment(stage, envVersion)
   for (let attempt = 0; attempt < 2; attempt += 1) {
     const accessToken = await wechatAccessToken({
       accessTokenCache,
@@ -281,10 +286,17 @@ function diagnosticError(code, reason) {
   return error
 }
 
-function codeEnvironment(value) {
+function codeEnvironment(value, configuredVersion) {
   const stage = String(value || '').trim().toLowerCase()
   if (!['development', 'test', 'staging', 'production'].includes(stage)) {
     throw new Error('WEB_LOGIN_QR_CONFIG_REQUIRED')
+  }
+  const version = String(configuredVersion || '').trim().toLowerCase()
+  if (version) {
+    if (!['release', 'trial', 'develop'].includes(version)) {
+      throw new Error('WEB_LOGIN_QR_CONFIG_REQUIRED')
+    }
+    return version
   }
   if (stage === 'production') return 'release'
   if (stage === 'staging') return 'trial'

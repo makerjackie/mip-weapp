@@ -94,7 +94,8 @@ describe('Web login mini-program code route', () => {
       },
       replayGuard: { consume: async () => {} },
       secret: SECRET,
-      stage: 'staging',
+      stage: 'production',
+      envVersion: 'trial',
       now: () => NOW,
       wechatAppId: directAppId,
       wechatAppSecret: 's'.repeat(32),
@@ -116,6 +117,24 @@ describe('Web login mini-program code route', () => {
       ok: true,
       data: { contentType: 'image/jpeg', imageBase64: jpeg().toString('base64') },
     })
+  })
+
+  it('opens an unpublished development build when explicitly configured in production', async () => {
+    let request
+    const route = createWebLoginQrCodeRoute({
+      allowedAppIds: new Set([APP_ID]),
+      cloud: { openapi: { wxacode: { getUnlimited: async value => { request = value; return png() } } } },
+      replayGuard: { consume: async () => {} },
+      secret: SECRET,
+      stage: 'production',
+      envVersion: 'develop',
+      now: () => NOW,
+    })
+
+    assert.equal((await route(envelope())).ok, true)
+    assert.equal(request.envVersion, 'develop')
+    assert.equal(request.checkPath, false)
+    assert.equal(request.page, WEB_LOGIN_QR_PAGE)
   })
 
   it('rejects tampered or unexpected envelope fields before calling WeChat', async () => {
@@ -193,6 +212,10 @@ describe('Web login mini-program code route', () => {
     assert.equal(codeEnvironment('test'), 'develop')
     assert.equal(codeEnvironment('staging'), 'trial')
     assert.equal(codeEnvironment('production'), 'release')
+    assert.equal(codeEnvironment('production', 'trial'), 'trial')
+    assert.equal(codeEnvironment('production', 'develop'), 'develop')
+    assert.equal(codeEnvironment('development', 'release'), 'release')
+    assert.throws(() => codeEnvironment('production', 'preview'), /WEB_LOGIN_QR_CONFIG_REQUIRED/)
     assert.throws(() => codeEnvironment(''), /WEB_LOGIN_QR_CONFIG_REQUIRED/)
   })
 })

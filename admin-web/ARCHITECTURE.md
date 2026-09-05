@@ -71,7 +71,7 @@ action、query/mutation 分类、Web 暴露范围、mutation 字段白名单和�
 
 | 方法与路径 | 调用方 | 职责 |
 | --- | --- | --- |
-| `POST /api/auth/challenge` | 浏览器 | 创建 5 分钟有效的登录 challenge、小程序码和数字降级码 |
+| `POST /api/auth/challenge` | 浏览器 | 创建 5 分钟有效的数字登录码；仅显式 `?qr=1` 额外请求可选小程序码 |
 | `POST /api/auth/challenge/status` | 浏览器 | 轮询并一次性消费已确认登录 |
 | `POST /api/auth/logout` | 浏览器 | 清除当前会话与登录挑战 Cookie |
 | `POST /api/internal/auth/challenge/confirm` | CloudBase | 使用登录确认 HMAC 提交可信身份 |
