@@ -154,20 +154,6 @@ interface MessageCampaignScheduleInput extends MessageCampaignVersionInput {
   idempotencyKey?: string
 }
 
-interface MessageCampaignCancelScheduleInput extends MessageCampaignVersionInput {
-  expectedDispatchVersion: number
-  reason: string
-  idempotencyKey: string
-}
-
-interface MessageCampaignPublishInput extends MessageCampaignVersionInput {
-  idempotencyKey: string
-}
-
-interface MessageCampaignReasonInput extends MessageCampaignVersionInput {
-  reason: string
-}
-
 interface MessageTemplateInput {
   templateId?: string
   expectedVersion?: number
@@ -176,16 +162,6 @@ interface MessageTemplateInput {
   name: string
   title: string
   body: string
-}
-
-interface CommunityReportClaimInput {
-  reportId: string
-  expectedVersion: number
-  reason: string
-}
-
-interface CommunityReportCloseInput extends CommunityReportClaimInput {
-  outcome: 'RESOLVED' | 'DISMISSED'
 }
 
 interface CommercialLocation {
@@ -298,8 +274,6 @@ interface KnowledgeScheduleInput {
   idempotencyKey?: string
 }
 
-interface BadgeAwardInput { userId: string; badgeId: string; reason: string }
-interface BadgeRevokeInput { awardId: string; expectedVersion: number; reason: string }
 interface GrowthAdjustInput {
   userId: string
   metric: 'EXPERIENCE' | 'CONTRIBUTION' | 'COIN'
@@ -328,7 +302,6 @@ const areaField = (key: string, label: string, maxLength: number, required = tru
 const selectField = (key: string, label: string, options: readonly string[], required = true): ContentMutationField => ({ key, label, kind: 'select', options, required })
 const idField = (key: string, label: string, required = true): ContentMutationField => ({ key, label, kind: 'id', required })
 const versionField = (): ContentMutationField => ({ key: 'expectedVersion', label: '记录版本', kind: 'integer', required: true })
-const commonVersionFields = (): ContentMutationField[] => [idField('announcementId', '公告', false), versionField()]
 const scopeFields = (): ContentMutationField[] => [selectField('scopeType', '作用范围', ['PLATFORM', 'BRANCH']), idField('branchId', '服务器', false)]
 const reasonField = (label = '处理原因'): ContentMutationField => areaField('reason', label, 300)
 
@@ -529,9 +502,9 @@ function assertAllowedInputKeys(action: ContentMutationAction, input: Record<str
 
 function validateAnnouncement(input: Record<string, unknown>): AnnouncementInput {
   assertKeys(input, ['announcementId', 'expectedVersion', 'scopeType', 'branchId', 'title', 'summary', 'body', 'targetType', 'targetId', 'visibleFrom', 'visibleUntil'])
-  const result = { ...optionalIdVersion(input, 'announcementId', '公告'), ...scope(input), title: requiredText(input.title, 100, '公告标题'), summary: requiredText(input.summary, 240, '公告摘要'), body: requiredText(input.body, 5_000, '公告正文'), visibleFrom: requiredDate(input.visibleFrom, '展示开始时间') } as AnnouncementInput
+  const result = { ...optionalIdVersion(input, 'announcementId'), ...scope(input), title: requiredText(input.title, 100, '公告标题'), summary: requiredText(input.summary, 240, '公告摘要'), body: requiredText(input.body, 5_000, '公告正文'), visibleFrom: requiredDate(input.visibleFrom, '展示开始时间') } as AnnouncementInput
   const targetType = optionalEnum(input.targetType, ['EVENT', 'OPPORTUNITY'])
-  const targetId = optionalId(input.targetId, '关联内容')
+  const targetId = optionalId(input.targetId)
   if (Boolean(targetType) !== Boolean(targetId)) throw invalid('公告关联内容无效')
   if (targetType) result.targetType = targetType as AnnouncementTarget
   if (targetId) result.targetId = targetId
@@ -543,7 +516,7 @@ function validateAnnouncement(input: Record<string, unknown>): AnnouncementInput
 
 function validateCampaign(input: Record<string, unknown>): MessageCampaignInput {
   assertKeys(input, ['campaignId', 'expectedVersion', 'scopeType', 'branchId', 'audienceType', 'recipientRefs', 'name', 'title', 'body'])
-  const result = { ...optionalIdVersion(input, 'campaignId', '消息活动'), ...scope(input), audienceType: enumValue(input.audienceType, ['ALL', 'EXPLICIT'], '收件人范围'), recipientRefs: [] as string[], name: requiredText(input.name, 100, '活动名称'), title: requiredText(input.title, 100, '消息标题'), body: requiredText(input.body, 500, '消息正文') } as MessageCampaignInput
+  const result = { ...optionalIdVersion(input, 'campaignId'), ...scope(input), audienceType: enumValue(input.audienceType, ['ALL', 'EXPLICIT'], '收件人范围'), recipientRefs: [] as string[], name: requiredText(input.name, 100, '活动名称'), title: requiredText(input.title, 100, '消息标题'), body: requiredText(input.body, 500, '消息正文') } as MessageCampaignInput
   if (result.audienceType === 'EXPLICIT') result.recipientRefs = profileRefs(input.recipientRefs)
   else if (input.recipientRefs !== undefined && !Array.isArray(input.recipientRefs)) throw invalid('收件人信息无效')
   return result
@@ -551,7 +524,7 @@ function validateCampaign(input: Record<string, unknown>): MessageCampaignInput 
 
 function validateTemplate(input: Record<string, unknown>): MessageTemplateInput {
   assertKeys(input, ['templateId', 'expectedVersion', 'scopeType', 'branchId', 'name', 'title', 'body'])
-  return { ...optionalIdVersion(input, 'templateId', '消息模板'), ...scope(input), name: requiredText(input.name, 100, '模板名称'), title: requiredText(input.title, 100, '消息标题'), body: requiredText(input.body, 500, '消息正文') }
+  return { ...optionalIdVersion(input, 'templateId'), ...scope(input), name: requiredText(input.name, 100, '模板名称'), title: requiredText(input.title, 100, '消息标题'), body: requiredText(input.body, 500, '消息正文') }
 }
 
 function validateOpportunity(input: Record<string, unknown>): OpportunityInput {
@@ -561,7 +534,7 @@ function validateOpportunity(input: Record<string, unknown>): OpportunityInput {
   if (roles.some(item => !(OPPORTUNITY_ROLES as readonly string[]).includes(item))) throw invalid('合作角色无效')
   const tagIds = idList(draft.tagIds, 20, '标签')
   const commercialTerms = validateCommercialTerms(draft.commercialTerms)
-  return { ...optionalIdVersion(input, 'opportunityId', '机会'), draft: { ownerUserId: requiredId(draft.ownerUserId, '发布人'), ...scope(draft), title: requiredText(draft.title, 120, '机会标题'), valueSummary: requiredText(draft.valueSummary, 300, '机会价值'), targetSummary: optionalText(draft.targetSummary, 300), description: optionalText(draft.description, 5_000), cityTagId: optionalId(draft.cityTagId, '城市'), commercialTerms, roleKeys: roles as OpportunityRole[], tagIds, deadlineAt: optionalDateTime(draft.deadlineAt, '截止时间') } }
+  return { ...optionalIdVersion(input, 'opportunityId'), draft: { ownerUserId: requiredId(draft.ownerUserId, '发布人'), ...scope(draft), title: requiredText(draft.title, 120, '机会标题'), valueSummary: requiredText(draft.valueSummary, 300, '机会价值'), targetSummary: optionalText(draft.targetSummary, 300), description: optionalText(draft.description, 5_000), cityTagId: optionalId(draft.cityTagId), commercialTerms, roleKeys: roles as OpportunityRole[], tagIds, deadlineAt: optionalDateTime(draft.deadlineAt, '截止时间') } }
 }
 
 function validateCommercialTerms(value: unknown): CommercialTerms | null | undefined {
@@ -575,7 +548,7 @@ function validateCommercialTerms(value: unknown): CommercialTerms | null | undef
   const locations = terms.locations === undefined ? [] : Array.isArray(terms.locations) ? terms.locations.map(location => {
     const item = record(location)
     const type = enumValue(item.type, ['CITY', 'NATIONAL', 'REMOTE'], '合作地点') as CommercialLocation['type']
-    const cityTagId = optionalId(item.cityTagId, '城市标签')
+    const cityTagId = optionalId(item.cityTagId)
     if (type === 'CITY' && !cityTagId) throw invalid('城市合作地点无效')
     if (type !== 'CITY' && cityTagId) throw invalid('合作地点无效')
     return cityTagId ? { type, cityTagId } : { type }
@@ -587,7 +560,7 @@ function validateCommercialTerms(value: unknown): CommercialTerms | null | undef
 function validateUserContent(input: Record<string, unknown>): UserContentSaveInput {
   const kind = enumValue(input.kind, ['COOPERATION_CARD', 'SUPER_CASE'], '内容类型') as ContentKind
   const ownerUserId = requiredId(input.ownerUserId, '归属用户')
-  const contentId = optionalId(input.contentId, '用户内容')
+  const contentId = optionalId(input.contentId)
   const expectedVersion = contentId ? positiveVersion(input.expectedVersion) : undefined
   const draft = record(input.draft)
   if (kind === 'COOPERATION_CARD') return { kind, ownerUserId, ...(contentId ? { contentId, expectedVersion } : {}), draft: validateCardDraft(draft) }
@@ -681,15 +654,15 @@ function validateVersionAction(input: Record<string, unknown>, idKey: string, la
   return { [idKey]: requiredId(input[idKey], label), expectedVersion: positiveVersion(input.expectedVersion) }
 }
 
-function optionalIdVersion(input: Record<string, unknown>, key: string, label: string) {
-  const id = optionalId(input[key], label)
+function optionalIdVersion(input: Record<string, unknown>, key: string) {
+  const id = optionalId(input[key])
   if (!id) return {}
   return { [key]: id, expectedVersion: positiveVersion(input.expectedVersion) }
 }
 
 function scope(input: Record<string, unknown>) {
   const scopeType = enumValue(input.scopeType, ['PLATFORM', 'BRANCH'], '作用范围') as ScopeType
-  const branchId = optionalId(input.branchId, '服务器')
+  const branchId = optionalId(input.branchId)
   if (scopeType === 'BRANCH' && !branchId) throw invalid('服务器不能为空')
   if (scopeType === 'PLATFORM' && branchId) throw invalid('平台范围不能填写服务器')
   return scopeType === 'BRANCH' ? { scopeType, branchId } : { scopeType }
@@ -708,12 +681,12 @@ function assertKeys(value: Record<string, unknown>, allowedKeys: readonly string
 function invalid(message: string): Error { return new Error(message) }
 
 function requiredId(value: unknown, label: string): string {
-  const id = optionalId(value, label)
+  const id = optionalId(value)
   if (!id) throw invalid(`${label}标识无效`)
   return id
 }
 
-function optionalId(value: unknown, _label: string): string | undefined {
+function optionalId(value: unknown): string | undefined {
   if (value === undefined || value === null || value === '') return undefined
   const id = typeof value === 'string' ? value.trim() : ''
   if (!ID_PATTERN.test(id)) throw invalid('标识无效')

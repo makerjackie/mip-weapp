@@ -23,7 +23,6 @@ export default defineConfig(
   {
     files: ['src/modules/**/*.ts'],
     rules: {
-      '@typescript-eslint/no-unused-vars': 'off',
       'no-useless-assignment': 'off',
     },
   },

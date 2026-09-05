@@ -9,7 +9,6 @@ import {
   availableAdminMediaPurposeOptions,
   parseAdminMediaUploadResult,
   prepareAdminMediaUpload,
-  validateAdminMediaFileMetadata,
   type AdminMediaFile,
 } from './admin-media-upload.ts'
 
