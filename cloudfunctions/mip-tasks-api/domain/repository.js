@@ -453,7 +453,17 @@ function createTaskRepository(database, options = {}) {
            id, app_id, aggregate_type, aggregate_id, event_type,
            source_version, payload_json, status
          ) VALUES (?, ?, 'TASK', ?, ?, ?, JSON_OBJECT(), 'PENDING')`,
-        [createId(), caller.appId, taskId, `task.${targetStatus.toLowerCase()}`, nextVersion],
+        [
+          createId(),
+          caller.appId,
+          taskId,
+          targetStatus === 'PUBLISHED'
+            ? 'task.published'
+            : targetStatus === 'UNPUBLISHED'
+              ? 'task.unpublished'
+              : 'task.deleted',
+          nextVersion,
+        ],
       )
       const row = await tx.one(
         `SELECT task.*,

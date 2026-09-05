@@ -4,6 +4,7 @@ import fs from 'node:fs'
 import { createRequire } from 'node:module'
 import path from 'node:path'
 import { MIP_FUNCTION_SOURCES } from './lib/mip-function-names.mjs'
+import { verifyOutboxEventContract } from './lib/mip-outbox-event-contract.mjs'
 import { verifyNodeSources } from './lib/node-source-verifier.mjs'
 
 const root = path.resolve(import.meta.dirname, '..')
@@ -62,6 +63,10 @@ for (const [name, expectedVersion] of declaredDependencyVersions) {
     throw new Error(`Server tests must resolve ${name}@${expectedVersion}; received ${installedVersion}`)
   }
 }
+const outboxContract = verifyOutboxEventContract({
+  cwd: root,
+  sourceRoots,
+})
 const results = [...sourceRoots, ...providerRoots].map(relativePath => verifyNodeSources({
   cwd: root,
   sourceRoots: [relativePath],
@@ -70,4 +75,4 @@ const results = [...sourceRoots, ...providerRoots].map(relativePath => verifyNod
 const sourceCount = results.reduce((sum, result) => sum + result.sourceCount, 0)
 const testCount = results.reduce((sum, result) => sum + result.testCount, 0)
 
-console.log(`MIP server contract passed (${sourceCount} owned sources, ${testCount} test files)`)
+console.log(`MIP server contract passed (${sourceCount} owned sources, ${testCount} test files, ${outboxContract.producerEventTypes.length} outbox event types)`)

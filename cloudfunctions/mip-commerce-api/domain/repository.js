@@ -652,9 +652,7 @@ function createCommerceRepository(database, options = {}) {
         aggregateId: ids.refundId,
         eventType: order.order_type === 'CONTENT'
           ? 'knowledge.refund_requested'
-          : order.order_type === 'EVENT'
-            ? 'event.refund_requested'
-            : 'membership.refund_requested',
+          : 'membership.refund_requested',
         sourceVersion: 1,
         payload: { refundId: ids.refundId, orderId: input.orderId, userId },
       })
