@@ -562,12 +562,13 @@ async function loadMessageDetail(campaignId: string, request: AdminDetailRequest
 async function loadOpportunityDetail(opportunityId: string, request: AdminDetailRequest, options: AdminDetailOptions): Promise<AdminDetailView> {
   const opportunity = record(await request('mip.admin.opportunities.get', { opportunityId }))
   let commentState: AdminDetailRow | null = null
-  try {
-    if (options.includeOpportunityComments === false) throw new Error('COMMENTS_NOT_REQUESTED')
-    commentState = record(await request('mip.admin.opportunityComments.get', { opportunityId }))
-  }
-  catch {
-    commentState = null
+  if (options.includeOpportunityComments !== false) {
+    try {
+      commentState = record(await request('mip.admin.opportunityComments.get', { opportunityId }))
+    }
+    catch (error) {
+      if (errorCode(error) !== 'FORBIDDEN') throw error
+    }
   }
   const terms = record(opportunity.commercialTerms)
   const settings = record(commentState?.settings)
@@ -889,6 +890,11 @@ function arrayText(value: unknown) {
 
 function codeArray(value: unknown) {
   return Array.isArray(value) && value.length ? value.map(codeLabel).join('、') : '—'
+}
+
+function errorCode(value: unknown) {
+  if (!value || typeof value !== 'object' || !('code' in value)) return ''
+  return typeof value.code === 'string' ? value.code : ''
 }
 
 function booleanText(value: unknown) {

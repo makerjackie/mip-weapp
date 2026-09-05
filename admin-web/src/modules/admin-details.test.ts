@@ -9,6 +9,18 @@ function requestWith(responses: Record<string, unknown>, calls: Array<{ action: 
   }
 }
 
+function opportunityDetailResponse() {
+  return {
+    id: 'opportunity-1',
+    title: '寻找品牌合作伙伴',
+    ownerNickname: '林晓',
+    scopeType: 'BRANCH',
+    branchName: '福田分会',
+    cityName: '深圳',
+    status: 'PUBLISHED',
+  }
+}
+
 describe('admin detail views', () => {
   it('projects the server user detail without requesting private phone data', async () => {
     const calls: Array<{ action: string; input: unknown }> = []
@@ -211,6 +223,60 @@ describe('admin detail views', () => {
     assert.equal(detail.sections.find(section => section.title === '评论与评价')?.rows?.[0].body, '愿意沟通')
     assert.equal(detail.sections.find(section => section.title === '操作记录')?.rows?.[0].action, '发布机会')
   })
+
+  it('does not request opportunity comments without comment access', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const detail = await loadAdminDetail('opportunities', 'opportunity-1', requestWith({
+      'mip.admin.opportunities.get': opportunityDetailResponse(),
+    }, calls), { includeOpportunityComments: false })
+
+    assert.deepEqual(calls, [
+      { action: 'mip.admin.opportunities.get', input: { opportunityId: 'opportunity-1' } },
+    ])
+    assert.equal(
+      detail.sections.find(section => section.title === '评论数据')?.fields?.find(field => field.label === '数据权限')?.value,
+      '当前账号不可查看',
+    )
+  })
+
+  it('keeps opportunity detail usable when the comment request is forbidden', async () => {
+    const calls: Array<{ action: string; input: unknown }> = []
+    const request: AdminDetailRequest = async <T>(action: string, input = {}) => {
+      calls.push({ action, input })
+      if (action === 'mip.admin.opportunityComments.get') {
+        throw Object.assign(new Error('当前账号不可查看评论数据'), { code: 'FORBIDDEN' })
+      }
+      return opportunityDetailResponse() as unknown as T
+    }
+
+    const detail = await loadAdminDetail('opportunities', 'opportunity-1', request)
+
+    assert.deepEqual(calls.map(call => call.action), [
+      'mip.admin.opportunities.get',
+      'mip.admin.opportunityComments.get',
+    ])
+    assert.equal(
+      detail.sections.find(section => section.title === '评论数据')?.fields?.find(field => field.label === '数据权限')?.value,
+      '当前账号不可查看',
+    )
+  })
+
+  for (const failure of [
+    Object.assign(new Error('网络连接失败'), { code: 'SERVICE_UNAVAILABLE', retryable: true }),
+    Object.assign(new Error('服务端错误'), { code: 'UPSTREAM_ERROR', retryable: true }),
+  ]) {
+    it(`propagates ${failure.code} from the opportunity comment request`, async () => {
+      const request: AdminDetailRequest = async <T>(action: string) => {
+        if (action === 'mip.admin.opportunityComments.get') throw failure
+        return opportunityDetailResponse() as unknown as T
+      }
+
+      await assert.rejects(
+        () => loadAdminDetail('opportunities', 'opportunity-1', request),
+        error => error === failure,
+      )
+    })
+  }
 
   it('loads a typed user-content detail from its composite list reference', async () => {
     const calls: Array<{ action: string; input: unknown }> = []
