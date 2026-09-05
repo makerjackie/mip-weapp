@@ -1,0 +1,73 @@
+[
+  {
+    "phase": "wrongOrigin",
+    "http": 403,
+    "rejected": true
+  },
+  {
+    "phase": "defaultChallenge",
+    "http": 201,
+    "state": "PENDING",
+    "sixDigits": true,
+    "qrAbsent": true,
+    "privateFieldsAbsent": true,
+    "cookiePresent": true,
+    "elapsedMs": 547
+  },
+  {
+    "phase": "pendingWithCookie",
+    "http": 200,
+    "state": "PENDING"
+  },
+  {
+    "phase": "unsignedConfirmation",
+    "http": 400,
+    "rejected": true
+  },
+  {
+    "phase": "stillPending",
+    "http": 200,
+    "state": "PENDING"
+  },
+  {
+    "phase": "logout",
+    "http": 200,
+    "authenticated": false,
+    "cookieJarEmpty": true,
+    "cleared": true
+  },
+  {
+    "phase": "optionalQr",
+    "http": 201,
+    "state": "PENDING",
+    "sixDigits": true,
+    "qrPresent": true,
+    "png": false,
+    "jpeg": true,
+    "elapsedMs": 4631,
+    "fallbackUsable": true
+  },
+  {
+    "phase": "logout",
+    "http": 200,
+    "authenticated": false,
+    "cookieJarEmpty": true,
+    "cleared": true
+  },
+  {
+    "phase": "sessionAfterLogout",
+    "http": 401,
+    "rejected": true
+  },
+  {
+    "state": "PASS",
+    "anonymousLoginSmoke": true,
+    "ownerSessionVerified": false,
+    "realDeviceVerified": false
+  },
+  {
+    "state": "BLOCKED",
+    "trustedWechatContextAvailable": false,
+    "ownerEndToEndVerified": false
+  }
+]
