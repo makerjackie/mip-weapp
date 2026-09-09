@@ -1,21 +1,28 @@
 <view id="mip-badges-page" class="mip-member-page badge-page min-h-screen bg-canvas text-ink">
-  <view class="badge-hero pt-4">
-    <view class="px-6 pb-8">
-      <view class="text-[length:30rpx] font-semibold">我的徽章</view>
-      <view class="mt-10 flex items-center">
-        <image wx:if="{{avatarUrl}}" class="h-[80rpx] w-[80rpx] rounded-full bg-panel-raised" mode="aspectFill" src="{{avatarUrl}}" />
-        <view wx:else class="flex h-[80rpx] w-[80rpx] items-center justify-center rounded-full bg-panel-raised"><t-icon name="user-avatar" size="40rpx" color="var(--color-muted)" /></view>
-        <view class="ml-4">
-          <view class="text-[length:30rpx] font-semibold">{{memberName}}</view>
-          <view class="mt-1 text-[length:22rpx] text-muted">当前佩戴（最多三枚）</view>
-        </view>
-        <view class="ml-auto text-right">
-          <view class="text-[length:48rpx] font-semibold text-brand">{{items.length}}</view>
-          <view class="mt-1 text-[length:22rpx] text-muted">徽章数量</view>
-        </view>
+  <!-- figma 1746_3663: the #202020 hero panel carries the avatar, member name,
+       badge count and the equipped trio; the tab bar sits below it on canvas.
+       Reorder/remove controls live in a manage mode toggled by long-press. -->
+  <view class="badge-hero pt-6">
+    <view class="flex items-start px-6">
+      <!-- figma 1746_3663: the 2px canvas ring overlays the 80px avatar; a CSS
+           border would shrink the artwork to 76px and resample it. -->
+      <view class="relative h-[160rpx] w-[160rpx] shrink-0">
+        <image wx:if="{{avatarUrl}}" class="h-full w-full rounded-full bg-panel-raised" mode="aspectFill" src="{{avatarUrl}}" />
+        <view wx:else class="flex h-full w-full items-center justify-center rounded-full bg-panel-raised"><t-icon name="user-avatar" size="80rpx" color="var(--color-muted)" /></view>
+        <view class="absolute inset-0 rounded-full border-[4rpx] border-canvas" />
+      </view>
+      <view class="ml-4 mt-3.5">
+        <view class="text-[length:32rpx] font-medium leading-[1.4]">{{memberName}}</view>
+        <!-- figma 1746_3663 keeps an integer rhythm: name line box 22.4px +
+             5.6px gap puts the subtitle top at exactly y66. -->
+        <view class="mt-[11.2rpx] text-[length:20rpx] font-medium leading-[1.4] text-muted">当前佩戴（最多三枚）</view>
+      </view>
+      <view class="ml-auto mr-2 text-right">
+        <view class="text-[length:80rpx] font-medium leading-[1.4] text-brand">{{items.length}}</view>
+        <view class="text-[length:20rpx] font-medium leading-[1.4] text-brand">徽章数量</view>
       </view>
     </view>
-    <view class="badge-equipped-panel mx-6 mb-4">
+    <view wx:if="{{editing}}" class="badge-equipped-panel mx-6 mt-4">
       <view class="flex items-center justify-between">
         <view>
           <view class="text-[length:24rpx] font-semibold">当前佩戴</view>
@@ -23,31 +30,32 @@
         </view>
         <t-button theme="primary" size="small" loading="{{saving}}" disabled="{{!dirty || saving}}" bind:tap="saveEquipment">保存</t-button>
       </view>
-      <view wx:if="{{equippedItems.length}}" class="mt-4 flex gap-2">
-        <view wx:for="{{equippedItems}}" wx:key="id" class="badge-equipped-slot">
-          <image class="h-[80rpx] w-[80rpx]" mode="aspectFit" src="{{item.imageUrl || item.artFallbackUrl}}" />
-          <view class="mt-1 w-full truncate text-center text-[length:22rpx]">{{index + 1}}. {{item.name}}</view>
-          <view class="mt-2 flex items-center justify-center gap-1">
-            <view class="badge-action-hit" data-id="{{item.id}}" data-direction="UP" catch:tap="moveEquipment"><view class="badge-order-button {{index === 0 ? 'badge-order-button--disabled' : ''}}">上移</view></view>
-            <view class="badge-action-hit" data-id="{{item.id}}" catch:tap="toggleEquipment"><view class="badge-order-button">移除</view></view>
-            <view class="badge-action-hit" data-id="{{item.id}}" data-direction="DOWN" catch:tap="moveEquipment"><view class="badge-order-button {{index === equippedItems.length - 1 ? 'badge-order-button--disabled' : ''}}">下移</view></view>
-          </view>
+    </view>
+    <view wx:if="{{equippedItems.length}}" class="badge-grid mt-7 px-6 pb-[44rpx]" bind:longpress="toggleEditing">
+      <view wx:for="{{equippedItems}}" wx:key="id" class="badge-equipped-slot">
+        <image class="h-[180rpx] w-[180rpx]" mode="aspectFit" src="{{item.imageUrl || item.artFallbackUrl}}" />
+        <view class="mt-2 w-full truncate text-center text-[length:24rpx] font-medium leading-[1.4]">{{item.name}}</view>
+        <!-- 16.8px name box + 4.2px gap = figma's integer date top (y251). -->
+        <view class="mt-[8.4rpx] w-full truncate text-center text-[length:20rpx] leading-[1.4] text-muted">{{item.awardedText}} 获得</view>
+        <view wx:if="{{editing}}" class="mt-2 flex items-center justify-center gap-1">
+          <view class="badge-action-hit" data-id="{{item.id}}" data-direction="UP" catch:tap="moveEquipment"><view class="badge-order-button {{index === 0 ? 'badge-order-button--disabled' : ''}}">上移</view></view>
+          <view class="badge-action-hit" data-id="{{item.id}}" catch:tap="toggleEquipment"><view class="badge-order-button">移除</view></view>
+          <view class="badge-action-hit" data-id="{{item.id}}" data-direction="DOWN" catch:tap="moveEquipment"><view class="badge-order-button {{index === equippedItems.length - 1 ? 'badge-order-button--disabled' : ''}}">下移</view></view>
         </view>
       </view>
-      <view wx:else class="mt-4 rounded-[8rpx] border border-dashed border-line px-3 py-4 text-center text-[length:22rpx] text-muted">还没有佩戴徽章</view>
     </view>
-    <view class="badge-tabs flex border-t border-line">
-      <view class="badge-tab {{activeCategory === 'IDENTITY' ? 'badge-tab--active' : ''}}" data-category="IDENTITY" bind:tap="chooseCategory">身份成就</view>
-      <view class="badge-tab {{activeCategory === 'HONOR' ? 'badge-tab--active' : ''}}" data-category="HONOR" bind:tap="chooseCategory">荣誉成就</view>
+    <view wx:else class="px-6 pb-[44rpx]">
+      <view class="mt-7 rounded-[8rpx] border border-dashed border-line px-3 py-4 text-center text-[length:22rpx] text-muted" bind:longpress="toggleEditing">还没有佩戴徽章</view>
     </view>
+  </view>
+  <view class="badge-tabs flex">
+    <view class="badge-tab {{activeCategory === 'IDENTITY' ? 'badge-tab--active' : ''}}" data-category="IDENTITY" bind:tap="chooseCategory">身份成就</view>
+    <view class="badge-tab {{activeCategory === 'HONOR' ? 'badge-tab--active' : ''}}" data-category="HONOR" bind:tap="chooseCategory">荣誉成就</view>
   </view>
   <view wx:if="{{state === 'loading'}}" class="px-6 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}" class="px-6 py-8"><app-empty-state title="暂时无法加载徽章" description="{{message}}" action-text="重新加载" bind:action="loadBadges" /></view>
   <view wx:elif="{{state === 'empty'}}" class="px-6 py-8"><app-empty-state title="暂无徽章" description="徽章由运营人员根据实际记录授予。" /></view>
-  <view wx:else class="px-6 py-6">
-    <view class="badge-filters mb-6 flex rounded-[8rpx] border border-line bg-panel p-1">
-      <view wx:for="{{filterOptions}}" wx:key="key" class="badge-filter {{activeFilter === item.key ? 'badge-filter--active' : ''}}" data-filter="{{item.key}}" bind:tap="chooseFilter">{{item.label}}</view>
-    </view>
+  <view wx:else class="px-6 pt-10">
     <view wx:if="{{visibleItems.length === 0}}" class="py-10 text-center text-[length:24rpx] text-muted">当前分类暂无徽章。</view>
     <view wx:else class="badge-grid">
       <view wx:for="{{visibleItems}}" wx:key="id" class="badge-item {{item.selected ? 'badge-item--selected' : ''}}" data-id="{{item.id}}" bind:tap="openDetail" aria-role="button">
@@ -55,12 +63,10 @@
           <image wx:if="{{item.imageUrl || item.artFallbackUrl}}" class="badge-art" mode="aspectFit" src="{{item.imageUrl || item.artFallbackUrl}}" />
           <view wx:else class="badge-placeholder badge-placeholder--hexagon"><t-icon name="certificate" size="48rpx" color="var(--color-brand)" /></view>
         </view>
-        <view class="mt-2 w-full truncate text-center text-[length:24rpx]">{{item.name}}</view>
-        <view class="mt-1 w-full truncate text-center text-[length:22rpx] text-muted">{{item.earned ? (item.awardedText || '已获得') : '未获得'}}</view>
-        <view class="badge-card-action-hit" data-id="{{item.id}}" catch:tap="toggleEquipment"><view class="badge-card-action mt-2 {{item.locked ? 'badge-card-action--disabled' : ''}}">{{item.locked ? '不可佩戴' : (item.selected ? '取消佩戴' : '佩戴')}}</view></view>
+        <view class="mt-3 w-full truncate text-center text-[length:24rpx] font-medium leading-[1.4]">{{item.name}}</view>
+        <view class="mt-[8.4rpx] w-full truncate text-center text-[length:20rpx] leading-[1.4] text-muted">{{item.earned ? (item.awardedText || '已获得') : '未获得'}}</view>
       </view>
     </view>
-    <view class="mt-5 text-center text-[length:22rpx] text-muted">已获得 {{earnedCount}} 枚 · 当前佩戴 {{selectedIds.length}} / {{maximumEquipped}}</view>
     <view wx:if="{{message}}" class="mt-4 rounded-[8rpx] border border-line bg-panel px-4 py-3 text-[length:22rpx] text-muted">{{message}}</view>
   </view>
   <view class="px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)]"><app-page-exit label="返回我的" tab-url="/pages/profile/index" /></view>

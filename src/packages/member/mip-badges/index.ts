@@ -38,6 +38,7 @@ Page({
     avatarUrl: '',
     saving: false,
     dirty: false,
+    editing: false,
     message: '',
   },
   loadSequence: 0,
@@ -129,6 +130,12 @@ Page({
     })
   },
 
+  /** figma 1746_3663 keeps the equipped row passive; manage mode (reorder,
+   *  remove, save) is entered by long-pressing it. */
+  toggleEditing() {
+    this.setData({ editing: !this.data.editing })
+  },
+
   toggleEquipment(event: WechatMiniprogram.TouchEvent) {
     const badgeId = String(event.currentTarget.dataset.id || '')
     const badge = this.data.items.find(item => item.id === badgeId)
@@ -177,6 +184,7 @@ Page({
         version: result.version,
         earnedCount: items.filter(item => item.earned).length,
         dirty: false,
+        editing: false,
         message: '',
       })
       wx.showToast({ title: '佩戴状态已保存', icon: 'success' })
