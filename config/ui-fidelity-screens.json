@@ -5,7 +5,9 @@
     "Each entry binds one figma-restored reference screen to a route plus the fixture data needed",
     "to reproduce that screen's copy. crop.topPx removes the iOS StatusBar+NavBar and bottomPx the",
     "TabBar+HomeIndicator, because the impl render has no system chrome (WeChat draws it natively).",
-    "Screens without an entry are NOT scored — never report them as passing."
+    "Screens without an entry are NOT scored — never report them as passing.",
+    "NPC派发任务 refs 18634/18676/18736 and 经验值详情 refs 1948_14177/14211 are route-gap deferrals (no matching route exists yet).",
+    "mip-tasks fixtures use design-ahead optional fields (purpose/completionStandard/attachmentHint/attachment) absent from the backend contract; production pages degrade via wx:if until the API adds them."
   ],
   "screens": [
     {
@@ -365,7 +367,10 @@
       "key": "events-往期活动",
       "route": "pages/events/index",
       "reference": "1820_18744_往期活动.html",
-      "crop": { "topPx": 68, "bottomPx": 69 },
+      "crop": {
+        "topPx": 68,
+        "bottomPx": 69
+      },
       "fixture": {
         "state": "ready",
         "selectedCity": "深圳",
@@ -403,7 +408,12 @@
                 "id": "r1",
                 "title": "MIP反人性早会第328场",
                 "summary": "",
-                "destination": { "provider": "WECHAT_CHANNELS", "type": "PROFILE", "finderUserName": "mipRecap", "feedId": null }
+                "destination": {
+                  "provider": "WECHAT_CHANNELS",
+                  "type": "PROFILE",
+                  "finderUserName": "mipRecap",
+                  "feedId": null
+                }
               }
             ]
           },
@@ -416,7 +426,12 @@
                 "id": "r2",
                 "title": "MIP反人性早会第328场",
                 "summary": "",
-                "destination": { "provider": "WECHAT_CHANNELS", "type": "PROFILE", "finderUserName": "mipRecap", "feedId": null }
+                "destination": {
+                  "provider": "WECHAT_CHANNELS",
+                  "type": "PROFILE",
+                  "finderUserName": "mipRecap",
+                  "feedId": null
+                }
               }
             ]
           }
@@ -427,7 +442,10 @@
       "key": "opportunities-机会探索-a",
       "route": "pages/opportunities/index",
       "reference": "1766_36567_机会-机会探索-a.html",
-      "crop": { "topPx": 68, "bottomPx": 90 },
+      "crop": {
+        "topPx": 68,
+        "bottomPx": 90
+      },
       "fixture": {
         "state": "ready",
         "authenticated": true,
@@ -446,7 +464,10 @@
             "title": "设计户外过两天再说露营地",
             "coverUrl": "/assets/figma/opportunities/cover-campsite.png",
             "valueSummary": "15000",
-            "commercialTerms": { "amountDisplay": "15000", "locationDisplay": "深圳 杭州" },
+            "commercialTerms": {
+              "amountDisplay": "15000",
+              "locationDisplay": "深圳 杭州"
+            },
             "targetSummary": "露营地帐篷供应商",
             "referralCount": 45,
             "avatars": [
@@ -460,7 +481,10 @@
             "title": "建造可爱接头点快闪店",
             "coverUrl": "/assets/figma/opportunities/cover-popstore.png",
             "valueSummary": "20000",
-            "commercialTerms": { "amountDisplay": "20000", "locationDisplay": "深圳 杭州" },
+            "commercialTerms": {
+              "amountDisplay": "20000",
+              "locationDisplay": "深圳 杭州"
+            },
             "targetSummary": "快闪店成熟的渠道",
             "referralCount": 45,
             "avatars": [
@@ -523,7 +547,10 @@
             "title": "设计户外过两天再说露营地",
             "coverUrl": "/assets/figma/opportunities/cover-campsite.png",
             "valueSummary": "15000",
-            "commercialTerms": { "amountDisplay": "15000", "locationDisplay": "深圳 杭州" },
+            "commercialTerms": {
+              "amountDisplay": "15000",
+              "locationDisplay": "深圳 杭州"
+            },
             "targetSummary": "露营地帐篷供应商",
             "referralCount": 45,
             "avatars": [
@@ -537,7 +564,10 @@
             "title": "建造可爱接头点快闪店",
             "coverUrl": "/assets/figma/opportunities/cover-popstore.png",
             "valueSummary": "20000",
-            "commercialTerms": { "amountDisplay": "20000", "locationDisplay": "深圳 杭州" },
+            "commercialTerms": {
+              "amountDisplay": "20000",
+              "locationDisplay": "深圳 杭州"
+            },
             "targetSummary": "快闪店成熟的渠道",
             "referralCount": 45,
             "avatars": [
@@ -569,7 +599,10 @@
       "key": "opportunities-人才合作",
       "route": "pages/opportunities/index",
       "reference": "1768_37534_机会-人才合作.html",
-      "crop": { "topPx": 68, "bottomPx": 90 },
+      "crop": {
+        "topPx": 68,
+        "bottomPx": 90
+      },
       "fixture": {
         "state": "ready",
         "mode": "cooperation",
@@ -589,14 +622,22 @@
               "nickname": "大鹅飞飞",
               "avatarUrl": "/assets/figma/profile/avatar.png",
               "cityName": "深圳",
-              "primaryIndustry": { "label": "金融行业" },
+              "primaryIndustry": {
+                "label": "金融行业"
+              },
               "headline": "激情创业者",
               "levelText": "Lv.23"
             },
             "primaryPositioning": "这是介绍自己的一句话，只有一句话可能只有这么长。",
             "roleTags": [
-              { "icon": "/assets/figma/opportunities/role-dog.svg", "label": "狗策划" },
-              { "icon": "/assets/figma/opportunities/role-money-bag.svg", "label": "暴发户" }
+              {
+                "icon": "/assets/figma/opportunities/role-dog.svg",
+                "label": "狗策划"
+              },
+              {
+                "icon": "/assets/figma/opportunities/role-money-bag.svg",
+                "label": "暴发户"
+              }
             ],
             "badgeImageUrl": "/assets/figma/opportunities/talent-badge.png",
             "inviterName": "菠萝你个大凤梨",
@@ -609,14 +650,22 @@
               "nickname": "菠萝凤梨",
               "avatarUrl": "/assets/figma/events/avatar-1.png",
               "cityName": "深圳",
-              "primaryIndustry": { "label": "金融行业" },
+              "primaryIndustry": {
+                "label": "金融行业"
+              },
               "headline": "激情创业者",
               "levelText": "Lv.23"
             },
             "primaryPositioning": "这是介绍自己的一句话，只有一句话可能只有这么长。",
             "roleTags": [
-              { "icon": "/assets/figma/opportunities/role-dog.svg", "label": "狗策划" },
-              { "icon": "/assets/figma/opportunities/role-money-bag.svg", "label": "暴发户" }
+              {
+                "icon": "/assets/figma/opportunities/role-dog.svg",
+                "label": "狗策划"
+              },
+              {
+                "icon": "/assets/figma/opportunities/role-money-bag.svg",
+                "label": "暴发户"
+              }
             ]
           }
         ]
@@ -626,7 +675,10 @@
       "key": "events-活动详情",
       "route": "packages/member/mip-events/detail/index",
       "reference": "1861_17860_活动-首页-详情.html",
-      "crop": { "topPx": 112, "bottomPx": 0 },
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
       "fixture": {
         "state": "ready",
         "onlineMode": false,
@@ -649,7 +701,9 @@
         "posterBusy": false,
         "invitationLoading": false,
         "videoRecapBusyId": "",
-        "shareOverlayProps": { "backgroundColor": "rgba(8, 8, 8, 0.7)" },
+        "shareOverlayProps": {
+          "backgroundColor": "rgba(8, 8, 8, 0.7)"
+        },
         "event": {
           "coverUrl": "/assets/figma/events/detail-cover.png",
           "eventTypeLabel": "沙龙",
@@ -686,12 +740,36 @@
             }
           ],
           "participantPreview": [
-            { "participantRef": "p1", "nickname": "铁锤妹妹", "avatarUrl": "/assets/figma/events/detail-avatar-1.png" },
-            { "participantRef": "p2", "nickname": "Ame", "avatarUrl": "/assets/figma/events/detail-avatar-2.png" },
-            { "participantRef": "p3", "nickname": "Dylan", "avatarUrl": "/assets/figma/events/detail-avatar-3.png" },
-            { "participantRef": "p4", "nickname": "Nehz", "avatarUrl": "/assets/figma/events/detail-avatar-4.png" },
-            { "participantRef": "p5", "nickname": "大鹅飞飞", "avatarUrl": "/assets/figma/events/detail-avatar-5.png" },
-            { "participantRef": "p6", "nickname": "哈库呐玛", "avatarUrl": "/assets/figma/events/detail-avatar-6.png" }
+            {
+              "participantRef": "p1",
+              "nickname": "铁锤妹妹",
+              "avatarUrl": "/assets/figma/events/detail-avatar-1.png"
+            },
+            {
+              "participantRef": "p2",
+              "nickname": "Ame",
+              "avatarUrl": "/assets/figma/events/detail-avatar-2.png"
+            },
+            {
+              "participantRef": "p3",
+              "nickname": "Dylan",
+              "avatarUrl": "/assets/figma/events/detail-avatar-3.png"
+            },
+            {
+              "participantRef": "p4",
+              "nickname": "Nehz",
+              "avatarUrl": "/assets/figma/events/detail-avatar-4.png"
+            },
+            {
+              "participantRef": "p5",
+              "nickname": "大鹅飞飞",
+              "avatarUrl": "/assets/figma/events/detail-avatar-5.png"
+            },
+            {
+              "participantRef": "p6",
+              "nickname": "哈库呐玛",
+              "avatarUrl": "/assets/figma/events/detail-avatar-6.png"
+            }
           ]
         }
       }
@@ -700,7 +778,10 @@
       "key": "events-活动详情-已签到",
       "route": "packages/member/mip-events/detail/index",
       "reference": "1818_17142_活动详情-已签到.html",
-      "crop": { "topPx": 112, "bottomPx": 0 },
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
       "fixture": {
         "state": "ready",
         "onlineMode": false,
@@ -726,7 +807,9 @@
         "posterBusy": false,
         "invitationLoading": false,
         "videoRecapBusyId": "",
-        "shareOverlayProps": { "backgroundColor": "rgba(8, 8, 8, 0.7)" },
+        "shareOverlayProps": {
+          "backgroundColor": "rgba(8, 8, 8, 0.7)"
+        },
         "event": {
           "coverUrl": "/assets/figma/events/detail-cover.png",
           "eventTypeLabel": "沙龙",
@@ -764,12 +847,36 @@
             }
           ],
           "participantPreview": [
-            { "participantRef": "p1", "nickname": "铁锤妹妹", "avatarUrl": "/assets/figma/events/detail-avatar-1.png" },
-            { "participantRef": "p2", "nickname": "Ame", "avatarUrl": "/assets/figma/events/detail-avatar-2.png" },
-            { "participantRef": "p3", "nickname": "Dylan", "avatarUrl": "/assets/figma/events/detail-avatar-3.png" },
-            { "participantRef": "p4", "nickname": "Nehz", "avatarUrl": "/assets/figma/events/detail-avatar-4.png" },
-            { "participantRef": "p5", "nickname": "大鹅飞飞", "avatarUrl": "/assets/figma/events/detail-avatar-5.png" },
-            { "participantRef": "p6", "nickname": "哈库呐玛", "avatarUrl": "/assets/figma/events/detail-avatar-6.png" }
+            {
+              "participantRef": "p1",
+              "nickname": "铁锤妹妹",
+              "avatarUrl": "/assets/figma/events/detail-avatar-1.png"
+            },
+            {
+              "participantRef": "p2",
+              "nickname": "Ame",
+              "avatarUrl": "/assets/figma/events/detail-avatar-2.png"
+            },
+            {
+              "participantRef": "p3",
+              "nickname": "Dylan",
+              "avatarUrl": "/assets/figma/events/detail-avatar-3.png"
+            },
+            {
+              "participantRef": "p4",
+              "nickname": "Nehz",
+              "avatarUrl": "/assets/figma/events/detail-avatar-4.png"
+            },
+            {
+              "participantRef": "p5",
+              "nickname": "大鹅飞飞",
+              "avatarUrl": "/assets/figma/events/detail-avatar-5.png"
+            },
+            {
+              "participantRef": "p6",
+              "nickname": "哈库呐玛",
+              "avatarUrl": "/assets/figma/events/detail-avatar-6.png"
+            }
           ]
         }
       }
@@ -778,7 +885,10 @@
       "key": "badge-我的徽章-a",
       "route": "packages/member/mip-badge-detail/index",
       "reference": "1740_3454_我的徽章-a.html",
-      "crop": { "topPx": 112, "bottomPx": 0 },
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
       "fixture": {
         "state": "ready",
         "version": 1,
@@ -806,7 +916,10 @@
       "key": "badge-我的徽章-d",
       "route": "packages/member/mip-badge-detail/index",
       "reference": "1740_3560_我的徽章-d.html",
-      "crop": { "topPx": 112, "bottomPx": 0 },
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
       "fixture": {
         "state": "ready",
         "version": 1,
@@ -833,7 +946,10 @@
       "key": "badge-我的徽章-b",
       "route": "packages/member/mip-badge-detail/index",
       "reference": "1746_3784_我的徽章-b.html",
-      "crop": { "topPx": 112, "bottomPx": 0 },
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
       "fixture": {
         "state": "ready",
         "version": 1,
@@ -861,34 +977,205 @@
       "key": "badge-我的徽章-c",
       "route": "packages/member/mip-badges/index",
       "reference": "1746_3663_我的徽章-c.html",
-      "crop": { "topPx": 112, "bottomPx": 0 },
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
       "fixture": {
         "state": "ready",
         "items": [
-          { "id": "i1", "name": "徽章名称" }, { "id": "i2", "name": "徽章名称" },
-          { "id": "i3", "name": "徽章名称" }, { "id": "i4", "name": "徽章名称" },
-          { "id": "i5", "name": "徽章名称" }, { "id": "i6", "name": "徽章名称" },
-          { "id": "i7", "name": "徽章名称" }, { "id": "i8", "name": "徽章名称" },
-          { "id": "i9", "name": "徽章名称" }, { "id": "i10", "name": "徽章名称" },
-          { "id": "i11", "name": "徽章名称" }, { "id": "i12", "name": "徽章名称" },
-          { "id": "i13", "name": "徽章名称" }, { "id": "i14", "name": "徽章名称" },
-          { "id": "i15", "name": "徽章名称" }
+          {
+            "id": "i1",
+            "name": "徽章名称"
+          },
+          {
+            "id": "i2",
+            "name": "徽章名称"
+          },
+          {
+            "id": "i3",
+            "name": "徽章名称"
+          },
+          {
+            "id": "i4",
+            "name": "徽章名称"
+          },
+          {
+            "id": "i5",
+            "name": "徽章名称"
+          },
+          {
+            "id": "i6",
+            "name": "徽章名称"
+          },
+          {
+            "id": "i7",
+            "name": "徽章名称"
+          },
+          {
+            "id": "i8",
+            "name": "徽章名称"
+          },
+          {
+            "id": "i9",
+            "name": "徽章名称"
+          },
+          {
+            "id": "i10",
+            "name": "徽章名称"
+          },
+          {
+            "id": "i11",
+            "name": "徽章名称"
+          },
+          {
+            "id": "i12",
+            "name": "徽章名称"
+          },
+          {
+            "id": "i13",
+            "name": "徽章名称"
+          },
+          {
+            "id": "i14",
+            "name": "徽章名称"
+          },
+          {
+            "id": "i15",
+            "name": "徽章名称"
+          }
         ],
         "visibleItems": [
-          { "id": "g1", "name": "徽章名称", "imageUrl": "/assets/figma/badges/badge-benben-white.png", "artFallbackUrl": "", "placeholderShape": "HEXAGON", "category": "IDENTITY", "status": "ACTIVE", "earned": false, "locked": true, "selected": false, "awardedText": "" },
-          { "id": "g2", "name": "徽章名称", "imageUrl": "/assets/figma/badges/badge-benben-red.png", "artFallbackUrl": "", "placeholderShape": "HEXAGON", "category": "IDENTITY", "status": "ACTIVE", "earned": false, "locked": true, "selected": false, "awardedText": "" },
-          { "id": "g3", "name": "徽章名称", "imageUrl": "/assets/figma/badges/badge-benben-purple.png", "artFallbackUrl": "", "placeholderShape": "HEXAGON", "category": "IDENTITY", "status": "ACTIVE", "earned": false, "locked": true, "selected": false, "awardedText": "" },
-          { "id": "g4", "name": "徽章名称", "imageUrl": "/assets/figma/badges/badge-benben-green.png", "artFallbackUrl": "", "placeholderShape": "HEXAGON", "category": "IDENTITY", "status": "ACTIVE", "earned": false, "locked": true, "selected": false, "awardedText": "" },
-          { "id": "g5", "name": "徽章名称", "imageUrl": "/assets/figma/badges/badge-benben-gray.png", "artFallbackUrl": "", "placeholderShape": "HEXAGON", "category": "IDENTITY", "status": "ACTIVE", "earned": false, "locked": true, "selected": false, "awardedText": "" },
-          { "id": "g6", "name": "徽章名称", "imageUrl": "/assets/figma/badges/badge-benben-blue.png", "artFallbackUrl": "", "placeholderShape": "HEXAGON", "category": "IDENTITY", "status": "ACTIVE", "earned": false, "locked": true, "selected": false, "awardedText": "" }
+          {
+            "id": "g1",
+            "name": "徽章名称",
+            "imageUrl": "/assets/figma/badges/badge-benben-white.png",
+            "artFallbackUrl": "",
+            "placeholderShape": "HEXAGON",
+            "category": "IDENTITY",
+            "status": "ACTIVE",
+            "earned": false,
+            "locked": true,
+            "selected": false,
+            "awardedText": ""
+          },
+          {
+            "id": "g2",
+            "name": "徽章名称",
+            "imageUrl": "/assets/figma/badges/badge-benben-red.png",
+            "artFallbackUrl": "",
+            "placeholderShape": "HEXAGON",
+            "category": "IDENTITY",
+            "status": "ACTIVE",
+            "earned": false,
+            "locked": true,
+            "selected": false,
+            "awardedText": ""
+          },
+          {
+            "id": "g3",
+            "name": "徽章名称",
+            "imageUrl": "/assets/figma/badges/badge-benben-purple.png",
+            "artFallbackUrl": "",
+            "placeholderShape": "HEXAGON",
+            "category": "IDENTITY",
+            "status": "ACTIVE",
+            "earned": false,
+            "locked": true,
+            "selected": false,
+            "awardedText": ""
+          },
+          {
+            "id": "g4",
+            "name": "徽章名称",
+            "imageUrl": "/assets/figma/badges/badge-benben-green.png",
+            "artFallbackUrl": "",
+            "placeholderShape": "HEXAGON",
+            "category": "IDENTITY",
+            "status": "ACTIVE",
+            "earned": false,
+            "locked": true,
+            "selected": false,
+            "awardedText": ""
+          },
+          {
+            "id": "g5",
+            "name": "徽章名称",
+            "imageUrl": "/assets/figma/badges/badge-benben-gray.png",
+            "artFallbackUrl": "",
+            "placeholderShape": "HEXAGON",
+            "category": "IDENTITY",
+            "status": "ACTIVE",
+            "earned": false,
+            "locked": true,
+            "selected": false,
+            "awardedText": ""
+          },
+          {
+            "id": "g6",
+            "name": "徽章名称",
+            "imageUrl": "/assets/figma/badges/badge-benben-blue.png",
+            "artFallbackUrl": "",
+            "placeholderShape": "HEXAGON",
+            "category": "IDENTITY",
+            "status": "ACTIVE",
+            "earned": false,
+            "locked": true,
+            "selected": false,
+            "awardedText": ""
+          }
         ],
         "equippedItems": [
-          { "id": "e1", "name": "徽章名称", "imageUrl": "/assets/figma/badges/badge-benben-pink.png", "artFallbackUrl": "", "placeholderShape": "HEXAGON", "category": "IDENTITY", "status": "ACTIVE", "earned": true, "locked": false, "selected": true, "awardedText": "2025.12.24" },
-          { "id": "e2", "name": "徽章名称", "imageUrl": "/assets/figma/badges/badge-detail-art.png", "artFallbackUrl": "", "placeholderShape": "HEXAGON", "category": "IDENTITY", "status": "ACTIVE", "earned": true, "locked": false, "selected": true, "awardedText": "2025.12.24" },
-          { "id": "e3", "name": "徽章名称", "imageUrl": "/assets/figma/badges/badge-leader-spirit.png", "artFallbackUrl": "", "placeholderShape": "HEXAGON", "category": "IDENTITY", "status": "ACTIVE", "earned": true, "locked": false, "selected": true, "awardedText": "2025.12.24" }
+          {
+            "id": "e1",
+            "name": "徽章名称",
+            "imageUrl": "/assets/figma/badges/badge-benben-pink.png",
+            "artFallbackUrl": "",
+            "placeholderShape": "HEXAGON",
+            "category": "IDENTITY",
+            "status": "ACTIVE",
+            "earned": true,
+            "locked": false,
+            "selected": true,
+            "awardedText": "2025.12.24"
+          },
+          {
+            "id": "e2",
+            "name": "徽章名称",
+            "imageUrl": "/assets/figma/badges/badge-detail-art.png",
+            "artFallbackUrl": "",
+            "placeholderShape": "HEXAGON",
+            "category": "IDENTITY",
+            "status": "ACTIVE",
+            "earned": true,
+            "locked": false,
+            "selected": true,
+            "awardedText": "2025.12.24"
+          },
+          {
+            "id": "e3",
+            "name": "徽章名称",
+            "imageUrl": "/assets/figma/badges/badge-leader-spirit.png",
+            "artFallbackUrl": "",
+            "placeholderShape": "HEXAGON",
+            "category": "IDENTITY",
+            "status": "ACTIVE",
+            "earned": true,
+            "locked": false,
+            "selected": true,
+            "awardedText": "2025.12.24"
+          }
         ],
-        "selectedIds": ["e1", "e2", "e3"],
-        "savedSelectedIds": ["e1", "e2", "e3"],
+        "selectedIds": [
+          "e1",
+          "e2",
+          "e3"
+        ],
+        "savedSelectedIds": [
+          "e1",
+          "e2",
+          "e3"
+        ],
         "activeCategory": "IDENTITY",
         "activeFilter": "ALL",
         "maximumEquipped": 3,
@@ -906,7 +1193,10 @@
       "key": "opportunities-机会探索-b",
       "route": "pages/opportunities/index",
       "reference": "2198_44284_机会-机会探索-b.html",
-      "crop": { "topPx": 68, "bottomPx": 90 },
+      "crop": {
+        "topPx": 68,
+        "bottomPx": 90
+      },
       "fixture": {
         "state": "ready",
         "authenticated": false,
@@ -926,12 +1216,28 @@
       "key": "growth-玩家等级-a",
       "route": "packages/member/mip-growth/index",
       "reference": "1948_14079_玩家等级-a.html",
-      "crop": { "topPx": 112, "bottomPx": 12 },
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 12
+      },
       "fixture": {
         "state": "ready",
         "snapshot": {
-          "account": { "experienceBalance": 3000, "contributionBalance": 120, "coinBalance": 800 },
-          "currentLevel": { "id": "lv2", "name": "Lv.2", "benefits": ["参加工会", "参加工会", "参加工会", "参加工会"] },
+          "account": {
+            "experienceBalance": 3000,
+            "contributionBalance": 120,
+            "coinBalance": 800
+          },
+          "currentLevel": {
+            "id": "lv2",
+            "name": "Lv.2",
+            "benefits": [
+              "参加工会",
+              "参加工会",
+              "参加工会",
+              "参加工会"
+            ]
+          },
           "nextLevel": null,
           "levelProgressPercent": 25.33,
           "experienceToNextLevel": 37000,
@@ -942,7 +1248,12 @@
         "nextLevelNumber": 0,
         "nextLevelThreshold": 40000,
         "levels": [],
-        "levelScale": { "leftText": "Lv.1", "centerText": "Lv.10", "rightText": "Lv.20", "centerLocked": true },
+        "levelScale": {
+          "leftText": "Lv.1",
+          "centerText": "Lv.10",
+          "rightText": "Lv.20",
+          "centerLocked": true
+        },
         "legacyLevelArtVisible": false,
         "earningRules": [],
         "entries": [],
@@ -950,10 +1261,38 @@
         "loadingMore": false,
         "tasksState": "ready",
         "tasks": [
-          { "id": "t1", "name": "出席MIP反人性早会1次", "content": "本人完成早会签到", "rewardExperience": 4500, "status": "COMPLETED", "actionText": "已完成" },
-          { "id": "t2", "name": "出席MIP反人性早会1次", "content": "本人完成早会签到", "rewardExperience": 4500, "status": "AVAILABLE", "actionText": "去完成" },
-          { "id": "t3", "name": "出席MIP反人性早会1次", "content": "本人完成早会签到", "rewardExperience": 4500, "status": "AVAILABLE", "actionText": "去完成" },
-          { "id": "t4", "name": "出席MIP反人性早会1次", "content": "本人完成早会签到", "rewardExperience": 4500, "status": "AVAILABLE", "actionText": "去完成" }
+          {
+            "id": "t1",
+            "name": "出席MIP反人性早会1次",
+            "content": "本人完成早会签到",
+            "rewardExperience": 4500,
+            "status": "COMPLETED",
+            "actionText": "已完成"
+          },
+          {
+            "id": "t2",
+            "name": "出席MIP反人性早会1次",
+            "content": "本人完成早会签到",
+            "rewardExperience": 4500,
+            "status": "AVAILABLE",
+            "actionText": "去完成"
+          },
+          {
+            "id": "t3",
+            "name": "出席MIP反人性早会1次",
+            "content": "本人完成早会签到",
+            "rewardExperience": 4500,
+            "status": "AVAILABLE",
+            "actionText": "去完成"
+          },
+          {
+            "id": "t4",
+            "name": "出席MIP反人性早会1次",
+            "content": "本人完成早会签到",
+            "rewardExperience": 4500,
+            "status": "AVAILABLE",
+            "actionText": "去完成"
+          }
         ],
         "tasksMessage": "",
         "isPlayer": true,
@@ -968,12 +1307,28 @@
       "key": "growth-玩家等级-b",
       "route": "packages/member/mip-growth/index",
       "reference": "2165_17142_玩家等级-b.html",
-      "crop": { "topPx": 112, "bottomPx": 12 },
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 12
+      },
       "fixture": {
         "state": "ready",
         "snapshot": {
-          "account": { "experienceBalance": 3000, "contributionBalance": 120, "coinBalance": 800 },
-          "currentLevel": { "id": "lv2", "name": "Lv.2", "benefits": ["参加工会", "参加工会", "参加工会", "参加工会"] },
+          "account": {
+            "experienceBalance": 3000,
+            "contributionBalance": 120,
+            "coinBalance": 800
+          },
+          "currentLevel": {
+            "id": "lv2",
+            "name": "Lv.2",
+            "benefits": [
+              "参加工会",
+              "参加工会",
+              "参加工会",
+              "参加工会"
+            ]
+          },
           "nextLevel": null,
           "levelProgressPercent": 25.33,
           "experienceToNextLevel": 37000,
@@ -984,7 +1339,12 @@
         "nextLevelNumber": 0,
         "nextLevelThreshold": 40000,
         "levels": [],
-        "levelScale": { "leftText": "Lv.1", "centerText": "Lv.10", "rightText": "Lv.20", "centerLocked": true },
+        "levelScale": {
+          "leftText": "Lv.1",
+          "centerText": "Lv.10",
+          "rightText": "Lv.20",
+          "centerLocked": true
+        },
         "legacyLevelArtVisible": false,
         "earningRules": [],
         "entries": [],
@@ -992,10 +1352,38 @@
         "loadingMore": false,
         "tasksState": "ready",
         "tasks": [
-          { "id": "t1", "name": "出席MIP反人性早会1次", "content": "本人完成早会签到", "rewardExperience": 4500, "status": "COMPLETED", "actionText": "已完成" },
-          { "id": "t2", "name": "出席MIP反人性早会1次", "content": "本人完成早会签到", "rewardExperience": 4500, "status": "AVAILABLE", "actionText": "去完成" },
-          { "id": "t3", "name": "出席MIP反人性早会1次", "content": "本人完成早会签到", "rewardExperience": 4500, "status": "AVAILABLE", "actionText": "去完成" },
-          { "id": "t4", "name": "出席MIP反人性早会1次", "content": "本人完成早会签到", "rewardExperience": 4500, "status": "AVAILABLE", "actionText": "去完成" }
+          {
+            "id": "t1",
+            "name": "出席MIP反人性早会1次",
+            "content": "本人完成早会签到",
+            "rewardExperience": 4500,
+            "status": "COMPLETED",
+            "actionText": "已完成"
+          },
+          {
+            "id": "t2",
+            "name": "出席MIP反人性早会1次",
+            "content": "本人完成早会签到",
+            "rewardExperience": 4500,
+            "status": "AVAILABLE",
+            "actionText": "去完成"
+          },
+          {
+            "id": "t3",
+            "name": "出席MIP反人性早会1次",
+            "content": "本人完成早会签到",
+            "rewardExperience": 4500,
+            "status": "AVAILABLE",
+            "actionText": "去完成"
+          },
+          {
+            "id": "t4",
+            "name": "出席MIP反人性早会1次",
+            "content": "本人完成早会签到",
+            "rewardExperience": 4500,
+            "status": "AVAILABLE",
+            "actionText": "去完成"
+          }
         ],
         "tasksMessage": "",
         "isPlayer": true,
@@ -1003,6 +1391,441 @@
         "membershipEndsText": "2026.08.08",
         "invitationReady": true,
         "invitationMessage": "",
+        "message": ""
+      }
+    },
+    {
+      "key": "tasks-我的任务-待完成",
+      "route": "packages/member/mip-tasks/index",
+      "reference": "1725_18357_NPC任务-我的任务-待完成-玩家视角.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "tasks": [
+          {
+            "id": "task-1",
+            "name": "这是一条任务名称只有一行",
+            "content": "专业平台与服务机构：\n• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。\n• 政府/开发区招商部门：尤其适用于需要政策支持或本地化落地的合作。\n• 咨询公司/投行/律师事务所：他们常掌握企业并购、合作需求。\n• 创投孵化器/科技园区：适合寻找创新型技术伙伴。",
+            "rewardExperience": 4500,
+            "attachmentRequired": true,
+            "endsAt": "",
+            "hasTemplate": true,
+            "version": 1,
+            "status": "AVAILABLE",
+            "periodText": "1-2月 每周固定每周五交付",
+            "conditionText": "需上传附件",
+            "attachmentName": "",
+            "attachmentTime": "",
+            "starIndexes": [
+              0,
+              1,
+              2
+            ],
+            "showBar": true,
+            "showAttachment": false,
+            "cardRoundedAll": false,
+            "attachmentRoundedB": false
+          },
+          {
+            "id": "task-2",
+            "name": "这是一条任务名称只有一行",
+            "content": "专业平台与服务机构：\n• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。\n• 政府/开发区招商部门：尤其适用于需要政策支持或本地化落地的合作。\n• 咨询公司/投行/律师事务所：他们常掌握企业并购、合作需求。\n• 创投孵化器/科技园区：适合寻找创新型技术伙伴。",
+            "rewardExperience": 8900,
+            "attachmentRequired": true,
+            "endsAt": "",
+            "hasTemplate": true,
+            "version": 1,
+            "status": "AVAILABLE",
+            "periodText": "1-2月 每周固定每周五交付",
+            "conditionText": "需上传附件",
+            "attachmentName": "MIPBrand.pdf",
+            "attachmentTime": "2016.01.01 01:33:33",
+            "starIndexes": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "showBar": true,
+            "showAttachment": true,
+            "cardRoundedAll": false,
+            "attachmentRoundedB": false
+          }
+        ],
+        "filter": "pending",
+        "nextCursor": "",
+        "loadingMore": false,
+        "message": "",
+        "visibleTasks": [
+          {
+            "id": "task-1",
+            "name": "这是一条任务名称只有一行",
+            "content": "专业平台与服务机构：\n• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。\n• 政府/开发区招商部门：尤其适用于需要政策支持或本地化落地的合作。\n• 咨询公司/投行/律师事务所：他们常掌握企业并购、合作需求。\n• 创投孵化器/科技园区：适合寻找创新型技术伙伴。",
+            "rewardExperience": 4500,
+            "attachmentRequired": true,
+            "endsAt": "",
+            "hasTemplate": true,
+            "version": 1,
+            "status": "AVAILABLE",
+            "periodText": "1-2月 每周固定每周五交付",
+            "conditionText": "需上传附件",
+            "attachmentName": "",
+            "attachmentTime": "",
+            "starIndexes": [
+              0,
+              1,
+              2
+            ],
+            "showBar": true,
+            "showAttachment": false,
+            "cardRoundedAll": false,
+            "attachmentRoundedB": false
+          },
+          {
+            "id": "task-2",
+            "name": "这是一条任务名称只有一行",
+            "content": "专业平台与服务机构：\n• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。\n• 政府/开发区招商部门：尤其适用于需要政策支持或本地化落地的合作。\n• 咨询公司/投行/律师事务所：他们常掌握企业并购、合作需求。\n• 创投孵化器/科技园区：适合寻找创新型技术伙伴。",
+            "rewardExperience": 8900,
+            "attachmentRequired": true,
+            "endsAt": "",
+            "hasTemplate": true,
+            "version": 1,
+            "status": "AVAILABLE",
+            "periodText": "1-2月 每周固定每周五交付",
+            "conditionText": "需上传附件",
+            "attachmentName": "MIPBrand.pdf",
+            "attachmentTime": "2016.01.01 01:33:33",
+            "starIndexes": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "showBar": true,
+            "showAttachment": true,
+            "cardRoundedAll": false,
+            "attachmentRoundedB": false
+          }
+        ]
+      }
+    },
+    {
+      "key": "tasks-我的任务-已结束",
+      "route": "packages/member/mip-tasks/index",
+      "reference": "1725_18445_NPC任务-我的任务-已结束-玩家视角.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "tasks": [
+          {
+            "id": "task-1",
+            "name": "这是一条任务名称只有一行",
+            "content": "专业平台与服务机构：\n• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。\n• 政府/开发区招商部门：尤其适用于需要政策支持或本地化落地的合作。\n• 咨询公司/投行/律师事务所：他们常掌握企业并购、合作需求。\n• 创投孵化器/科技园区：适合寻找创新型技术伙伴。",
+            "rewardExperience": 4500,
+            "attachmentRequired": true,
+            "endsAt": "",
+            "hasTemplate": true,
+            "version": 1,
+            "status": "ENDED",
+            "periodText": "1-2月 每周固定每周五交付",
+            "conditionText": "需上传附件",
+            "attachmentName": "",
+            "attachmentTime": "",
+            "starIndexes": [
+              0,
+              1,
+              2
+            ],
+            "showBar": false,
+            "showAttachment": false,
+            "cardRoundedAll": true,
+            "attachmentRoundedB": false
+          },
+          {
+            "id": "task-2",
+            "name": "这是一条任务名称只有一行",
+            "content": "专业平台与服务机构：\n• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。\n• 政府/开发区招商部门：尤其适用于需要政策支持或本地化落地的合作。\n• 咨询公司/投行/律师事务所：他们常掌握企业并购、合作需求。\n• 创投孵化器/科技园区：适合寻找创新型技术伙伴。",
+            "rewardExperience": 8900,
+            "attachmentRequired": true,
+            "endsAt": "",
+            "hasTemplate": true,
+            "version": 1,
+            "status": "ENDED",
+            "periodText": "1-2月 每周固定每周五交付",
+            "conditionText": "需上传附件",
+            "attachmentName": "MIPBrand.pdf",
+            "attachmentTime": "2016.01.01 01:33:33",
+            "starIndexes": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "showBar": false,
+            "showAttachment": true,
+            "cardRoundedAll": false,
+            "attachmentRoundedB": true
+          }
+        ],
+        "filter": "ended",
+        "nextCursor": "",
+        "loadingMore": false,
+        "message": "",
+        "visibleTasks": [
+          {
+            "id": "task-1",
+            "name": "这是一条任务名称只有一行",
+            "content": "专业平台与服务机构：\n• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。\n• 政府/开发区招商部门：尤其适用于需要政策支持或本地化落地的合作。\n• 咨询公司/投行/律师事务所：他们常掌握企业并购、合作需求。\n• 创投孵化器/科技园区：适合寻找创新型技术伙伴。",
+            "rewardExperience": 4500,
+            "attachmentRequired": true,
+            "endsAt": "",
+            "hasTemplate": true,
+            "version": 1,
+            "status": "ENDED",
+            "periodText": "1-2月 每周固定每周五交付",
+            "conditionText": "需上传附件",
+            "attachmentName": "",
+            "attachmentTime": "",
+            "starIndexes": [
+              0,
+              1,
+              2
+            ],
+            "showBar": false,
+            "showAttachment": false,
+            "cardRoundedAll": true,
+            "attachmentRoundedB": false
+          },
+          {
+            "id": "task-2",
+            "name": "这是一条任务名称只有一行",
+            "content": "专业平台与服务机构：\n• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。\n• 政府/开发区招商部门：尤其适用于需要政策支持或本地化落地的合作。\n• 咨询公司/投行/律师事务所：他们常掌握企业并购、合作需求。\n• 创投孵化器/科技园区：适合寻找创新型技术伙伴。",
+            "rewardExperience": 8900,
+            "attachmentRequired": true,
+            "endsAt": "",
+            "hasTemplate": true,
+            "version": 1,
+            "status": "ENDED",
+            "periodText": "1-2月 每周固定每周五交付",
+            "conditionText": "需上传附件",
+            "attachmentName": "MIPBrand.pdf",
+            "attachmentTime": "2016.01.01 01:33:33",
+            "starIndexes": [
+              0,
+              1,
+              2,
+              3,
+              4
+            ],
+            "showBar": false,
+            "showAttachment": true,
+            "cardRoundedAll": false,
+            "attachmentRoundedB": true
+          }
+        ]
+      }
+    },
+    {
+      "key": "tasks-任务详情-a",
+      "route": "packages/member/mip-tasks/detail/index",
+      "reference": "1725_18515_NPC任务-我的任务-已结束-a.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "taskId": "task-1",
+        "task": {
+          "id": "task-1",
+          "name": "这是一条任务名称只有一行",
+          "content": "专业平台与服务机构：\n• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。\n• 政府/开发区招商部门：尤其适用于需要政策支持或本地化落地的合作。\n• 咨询公司/投行/律师事务所：他们常掌握企业并购、合作需求。\n• 创投孵化器/科技园区：适合寻找创新型技术伙伴。",
+          "rewardExperience": 4500,
+          "attachmentRequired": true,
+          "endsAt": "",
+          "hasTemplate": true,
+          "version": 1,
+          "status": "ENDED",
+          "purpose": "专业平台与服务机构：\n• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。",
+          "completionStandard": "专业平台与服务机构：\n• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。\n• 政府/开发区招商部门：尤其适用于需要政策支持或本地化落地的合作。",
+          "template": {
+            "assetId": "tpl-1",
+            "url": "",
+            "contentType": "image/png",
+            "bytes": 0
+          },
+          "attachmentHint": "请上传***大小的doc. png. jpg"
+        },
+        "starIndexes": [
+          0,
+          1,
+          2
+        ],
+        "periodText": "1-2月 每周固定每周五交付",
+        "conditionText": "需上传附件",
+        "purposeBlocks": [
+          {
+            "text": "专业平台与服务机构：",
+            "bullet": false
+          },
+          {
+            "text": "• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。",
+            "bullet": true
+          }
+        ],
+        "contentBlocks": [
+          {
+            "text": "专业平台与服务机构：",
+            "bullet": false
+          },
+          {
+            "text": "• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。",
+            "bullet": true
+          },
+          {
+            "text": "• 政府/开发区招商部门：尤其适用于需要政策支持或本地化落地的合作。",
+            "bullet": true
+          },
+          {
+            "text": "• 咨询公司/投行/律师事务所：他们常掌握企业并购、合作需求。",
+            "bullet": true
+          },
+          {
+            "text": "• 创投孵化器/科技园区：适合寻找创新型技术伙伴。",
+            "bullet": true
+          }
+        ],
+        "standardBlocks": [
+          {
+            "text": "专业平台与服务机构：",
+            "bullet": false
+          },
+          {
+            "text": "• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。",
+            "bullet": true
+          },
+          {
+            "text": "• 政府/开发区招商部门：尤其适用于需要政策支持或本地化落地的合作。",
+            "bullet": true
+          }
+        ],
+        "conditionHint": "请上传***大小的doc. png. jpg",
+        "showConditionPanel": true,
+        "attachmentName": "",
+        "attachmentTime": "",
+        "attachmentAssetId": "",
+        "attachmentUrl": "",
+        "uploading": false,
+        "submitting": false,
+        "savingTemplate": false,
+        "message": ""
+      }
+    },
+    {
+      "key": "tasks-任务详情-b",
+      "route": "packages/member/mip-tasks/detail/index",
+      "reference": "1725_18577_NPC任务-我的任务-已结束-b.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "taskId": "task-1",
+        "task": {
+          "id": "task-1",
+          "name": "这是一条任务名称只有一行",
+          "content": "专业平台与服务机构：\n• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。\n• 政府/开发区招商部门：尤其适用于需要政策支持或本地化落地的合作。\n• 咨询公司/投行/律师事务所：他们常掌握企业并购、合作需求。\n• 创投孵化器/科技园区：适合寻找创新型技术伙伴。",
+          "rewardExperience": 4500,
+          "attachmentRequired": true,
+          "endsAt": "",
+          "hasTemplate": true,
+          "version": 1,
+          "status": "ENDED",
+          "purpose": "专业平台与服务机构：\n• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。",
+          "completionStandard": "专业平台与服务机构：\n• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。\n• 政府/开发区招商部门：尤其适用于需要政策支持或本地化落地的合作。",
+          "template": {
+            "assetId": "tpl-1",
+            "url": "",
+            "contentType": "image/png",
+            "bytes": 0
+          },
+          "attachment": {
+            "name": "MIPBrand.pdf",
+            "uploadedAt": "2016.01.01 01:33:33"
+          }
+        },
+        "starIndexes": [
+          0,
+          1,
+          2
+        ],
+        "periodText": "1-2月 每周固定每周五交付",
+        "conditionText": "需上传附件",
+        "purposeBlocks": [
+          {
+            "text": "专业平台与服务机构：",
+            "bullet": false
+          },
+          {
+            "text": "• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。",
+            "bullet": true
+          }
+        ],
+        "contentBlocks": [
+          {
+            "text": "专业平台与服务机构：",
+            "bullet": false
+          },
+          {
+            "text": "• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。",
+            "bullet": true
+          },
+          {
+            "text": "• 政府/开发区招商部门：尤其适用于需要政策支持或本地化落地的合作。",
+            "bullet": true
+          },
+          {
+            "text": "• 咨询公司/投行/律师事务所：他们常掌握企业并购、合作需求。",
+            "bullet": true
+          },
+          {
+            "text": "• 创投孵化器/科技园区：适合寻找创新型技术伙伴。",
+            "bullet": true
+          }
+        ],
+        "standardBlocks": [
+          {
+            "text": "专业平台与服务机构：",
+            "bullet": false
+          },
+          {
+            "text": "• B2B平台与商业合作平台：如阿里巴巴1688、慧聪网等，或LinkedIn（领英）。",
+            "bullet": true
+          },
+          {
+            "text": "• 政府/开发区招商部门：尤其适用于需要政策支持或本地化落地的合作。",
+            "bullet": true
+          }
+        ],
+        "conditionHint": "",
+        "showConditionPanel": false,
+        "attachmentName": "MIPBrand.pdf",
+        "attachmentTime": "2016.01.01 01:33:33",
+        "attachmentAssetId": "",
+        "attachmentUrl": "",
+        "uploading": false,
+        "submitting": false,
+        "savingTemplate": false,
         "message": ""
       }
     }

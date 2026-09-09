@@ -2,22 +2,38 @@ import type { UserTaskCard } from '../../../modules/mip-tasks'
 import { mipTasksModule, rewardExperienceStarIndexes } from '../../../modules/mip-tasks'
 
 interface TaskView extends UserTaskCard {
-  statusText: string
-  deadlineText: string
-  attachmentText: string
-  templateText: string
+  /** figma 1725_18357: 任务周期 row value（仅值部分，标签在模板中固定） */
+  periodText: string
+  /** figma 1725_18357: 完成条件 row value */
+  conditionText: string
+  /** 设计先行：已上传附件展示（后端契约补齐前恒为空 → 不渲染附件卡） */
+  attachmentName: string
+  attachmentTime: string
   starIndexes: number[]
+  /** AVAILABLE → 卡片下方拼接 未完成|完成 操作条 */
+  showBar: boolean
+  showAttachment: boolean
+  /** 无附件卡且无操作条时卡片四角全圆角 */
+  cardRoundedAll: boolean
+  /** 附件卡是单元末尾时底部圆角 */
+  attachmentRoundedB: boolean
 }
 
 function taskView(task: UserTaskCard): TaskView {
-  const statusText = task.status === 'COMPLETED' ? '已完成' : task.status === 'ENDED' ? '已截止' : '待完成'
+  const showBar = task.status === 'AVAILABLE'
+  const attachmentName = task.attachment?.name || ''
+  const showAttachment = attachmentName !== ''
   return {
     ...task,
-    statusText,
-    deadlineText: task.endsAt ? `任务周期 · ${new Date(task.endsAt).toLocaleString('zh-CN', { hour12: false })}` : '任务周期不限',
-    attachmentText: task.attachmentRequired ? '需要上传附件' : '无需附件',
-    templateText: task.hasTemplate ? '提供任务模板' : '未配置任务模板',
+    periodText: task.endsAt ? new Date(task.endsAt).toLocaleString('zh-CN', { hour12: false }) : '不限',
+    conditionText: task.attachmentRequired ? '需上传附件' : '无需附件',
+    attachmentName,
+    attachmentTime: task.attachment?.uploadedAt || '',
     starIndexes: rewardExperienceStarIndexes(task.rewardExperience),
+    showBar,
+    showAttachment,
+    cardRoundedAll: !showBar && !showAttachment,
+    attachmentRoundedB: !showBar,
   }
 }
 
@@ -136,5 +152,32 @@ Page({
   chooseFilter(event: WechatMiniprogram.TouchEvent) {
     const filter = String(event.currentTarget.dataset.filter || 'pending') as 'pending' | 'ended'
     this.setData({ filter, visibleTasks: visibleTasks(this.data.tasks, filter) })
+  },
+
+  /** figma 1725_18357 右侧页签：派发任务暂无对应路由（NPC 派发参考页 18634/18676/18736 为路由缺口）。 */
+  openDispatch() {
+    wx.showToast({ title: '派发功能筹备中', icon: 'none' })
+  },
+
+  /** 列表操作条「完成」：直接走 completeTask 变更（附件校验失败时后端报错 → message 展示）。 */
+  async completeTask(event: WechatMiniprogram.TouchEvent) {
+    const taskId = String(event.currentTarget.dataset.id || '')
+    if (!taskId) {
+      return
+    }
+    this.setData({ message: '' })
+    try {
+      await mipTasksModule.mutation.completeTask(taskId)
+      wx.showToast({ title: '任务已完成', icon: 'success' })
+      await this.loadTasks(true)
+    }
+    catch (error) {
+      this.setData({ message: error instanceof Error ? error.message : '任务提交失败' })
+    }
+  },
+
+  /** 附件删除 API 暂缺：引导到详情页管理附件。 */
+  manageAttachment() {
+    wx.showToast({ title: '请在任务详情页管理附件', icon: 'none' })
   },
 })

@@ -1,28 +1,64 @@
-<view id="mip-tasks-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] text-ink">
-  <view class="-mx-3 flex border-b border-line bg-canvas px-3">
-    <view class="mip-tasks-tab flex min-h-[88rpx] flex-1 items-center justify-center border-b-[4rpx] border-brand text-[length:28rpx] text-brand">我的任务</view>
+<view id="mip-tasks-page" class="mip-member-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+48rpx)] text-ink">
+  <!-- figma 1725_18357: 双页签（我的任务=当前，派发任务=路由缺口→toast），40px 高，
+       底部 1px panel 色细线 + 左半宽 2px 品牌色指示条；标签 fs14 lh19.6 居中。 -->
+  <view class="relative flex h-[80rpx] bg-canvas">
+    <view class="flex flex-1 items-center justify-center whitespace-nowrap text-[length:28rpx] font-medium leading-[39.2rpx] text-brand">我的任务</view>
+    <view class="flex flex-1 items-center justify-center whitespace-nowrap text-[length:28rpx] leading-[39.2rpx] text-muted" aria-role="button" aria-label="派发任务" bind:tap="openDispatch">派发任务</view>
+    <view class="absolute bottom-0 left-0 h-[2rpx] w-full bg-panel" />
+    <view class="absolute bottom-0 left-0 h-[4rpx] w-1/2 bg-brand" />
   </view>
-  <view class="mt-3 flex gap-2">
-    <view class="mip-tasks-filter flex min-h-[88rpx] items-center" data-filter="pending" bind:tap="chooseFilter"><view class="flex min-h-[56rpx] items-center rounded-[8rpx] px-3 text-[length:24rpx] {{filter === 'pending' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}">待完成</view></view>
-    <view class="mip-tasks-filter flex min-h-[88rpx] items-center" data-filter="ended" bind:tap="chooseFilter"><view class="flex min-h-[56rpx] items-center rounded-[8rpx] px-3 text-[length:24rpx] {{filter === 'ended' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}">已结束</view></view>
+
+  <!-- figma 1725_18357: 过滤 chips @raw y52，28px 高 / 8px 圆角 / 8px 水平内边距 / fs14 medium；
+       激活 bg-brand 文本 on-brand，非激活 bg-panel 文本 muted，间距 12px。 -->
+  <view class="mt-[24rpx] flex gap-[24rpx] px-[24rpx]">
+    <view class="flex h-[56rpx] items-center whitespace-nowrap rounded-[16rpx] px-[16rpx] text-[length:28rpx] font-medium {{filter === 'pending' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-filter="pending" aria-role="button" bind:tap="chooseFilter">待完成</view>
+    <view class="flex h-[56rpx] items-center whitespace-nowrap rounded-[16rpx] px-[16rpx] text-[length:28rpx] font-medium {{filter === 'ended' ? 'bg-brand text-on-brand' : 'bg-panel text-muted'}}" data-filter="ended" aria-role="button" bind:tap="chooseFilter">已结束</view>
   </view>
-  <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="暂时无法加载任务" description="{{message}}" action-text="重新加载" bind:action="loadTasks" /></view>
-  <view wx:elif="{{state === 'empty' || (state === 'ready' && visibleTasks.length === 0)}}" class="mt-5"><app-empty-state title="{{filter === 'ended' ? '暂无已结束任务' : '暂无待完成任务'}}" description="{{filter === 'ended' ? '已结束的任务会显示在这里。' : '当前没有需要完成的任务。'}}" /></view>
-  <view wx:else class="mt-3 flex flex-col gap-3">
-    <view wx:for="{{visibleTasks}}" wx:key="id" class="mip-task-card overflow-hidden rounded-[8rpx] bg-panel" data-id="{{item.id}}" bind:tap="openTask">
-      <view class="px-3 py-3">
-        <view class="flex items-center justify-between gap-3">
-          <view class="mip-task-stars flex gap-1" aria-label="任务奖励"><mip-icon wx:for="{{item.starIndexes}}" wx:key="*this" name="star-favorite-3" size="{{16}}" color="var(--color-brand)" /></view>
-          <view class="text-[length:22rpx] text-brand">+{{item.rewardExperience}} EXP</view>
+
+  <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mx-3 mt-5 rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error'}}" class="mx-3 mt-5"><app-empty-state title="暂时无法加载任务" description="{{message}}" action-text="重新加载" bind:action="loadTasks" /></view>
+  <view wx:elif="{{state === 'empty' || (state === 'ready' && visibleTasks.length === 0)}}" class="mx-3 mt-5"><app-empty-state title="{{filter === 'ended' ? '暂无已结束任务' : '暂无待完成任务'}}" description="{{filter === 'ended' ? '已结束的任务会显示在这里。' : '当前没有需要完成的任务。'}}" /></view>
+
+  <!-- figma 1725_18357/18445: 任务单元 = 卡片(132px) [+ 附件卡(72px)] [+ 操作条(40px)]，
+       单元内 1px 拼接缝，单元间 12px；卡片星组/EXP/名称/任务周期/完成条件按参考绝对定位。 -->
+  <view wx:else class="mt-[24rpx] flex flex-col gap-[24rpx] px-[24rpx]">
+    <view wx:for="{{visibleTasks}}" wx:key="id" class="flex flex-col">
+      <view class="mip-task-card relative h-[264rpx] bg-panel {{item.cardRoundedAll ? 'rounded-[16rpx]' : 'rounded-t-[16rpx]'}} active:bg-panel-muted" data-id="{{item.id}}" aria-role="button" aria-label="查看任务 {{item.name}}" bind:tap="openTask">
+        <view class="absolute left-[24rpx] top-[24rpx] flex" aria-label="任务奖励">
+          <view wx:for="{{item.starIndexes}}" wx:for-item="star" wx:key="*this" class="flex h-[40rpx] w-[40rpx] items-center justify-center"><mip-icon name="star-favorite-3" size="{{16}}" /></view>
         </view>
-        <view class="mt-2 flex items-center justify-between gap-3"><view class="min-w-0 flex-1 truncate text-[length:30rpx] font-medium">{{item.name}}</view><view class="shrink-0 rounded-[8rpx] bg-brand-soft px-2 py-1 text-[length:22rpx] text-brand">{{item.statusText}}</view></view>
-        <view class="mt-2 flex items-center gap-2 text-[length:22rpx] text-ink"><mip-icon name="time" size="{{14}}" color="var(--color-ink)" /><text>{{item.deadlineText}}</text></view>
-        <view class="mt-1 flex items-center gap-2 text-[length:22rpx] text-ink"><mip-icon name="file-text" size="{{14}}" color="var(--color-ink)" /><text class="min-w-0 truncate">{{item.attachmentText}}</text></view>
+        <view class="absolute right-[24rpx] top-[24rpx] whitespace-nowrap text-right text-[length:32rpx] font-medium leading-[44.8rpx] text-brand"><text class="text-[length:24rpx]">EXP </text>{{item.rewardExperience}}</view>
+        <view class="absolute left-[24rpx] right-[24rpx] top-[88rpx] truncate text-[length:32rpx] font-medium leading-[44.8rpx]">{{item.name}}</view>
+        <view class="absolute left-[24rpx] top-[152rpx] flex items-center gap-[4rpx]">
+          <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="time" size="{{14}}" color="var(--color-brand)" /></view>
+          <text class="whitespace-nowrap text-[length:24rpx] leading-[33.6rpx]">任务周期</text>
+        </view>
+        <view class="absolute left-[180rpx] top-[152rpx] whitespace-nowrap text-[length:24rpx] font-medium leading-[33.6rpx]">{{item.periodText}}</view>
+        <view class="absolute left-[24rpx] top-[206rpx] flex items-center gap-[4rpx]">
+          <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="file-warning-line" size="{{14}}" color="var(--color-brand)" /></view>
+          <text class="whitespace-nowrap text-[length:24rpx] leading-[33.6rpx]">完成条件</text>
+        </view>
+        <view class="absolute left-[180rpx] top-[206rpx] whitespace-nowrap text-[length:24rpx] font-medium leading-[33.6rpx]">{{item.conditionText}}</view>
+      </view>
+
+      <!-- 附件卡（设计先行：attachment 字段有值才渲染；列表变体直角/收尾时底部圆角） -->
+      <view wx:if="{{item.showAttachment}}" class="relative mt-[2rpx] h-[144rpx] bg-panel {{item.attachmentRoundedB ? 'rounded-b-[16rpx]' : ''}}">
+        <view class="absolute left-[24rpx] top-[24rpx] flex h-[96rpx] w-[96rpx] items-center justify-center rounded-[8rpx] bg-canvas"><mip-icon name="folder-5-line" size="{{20}}" color="var(--color-brand)" /></view>
+        <view class="absolute left-[144rpx] top-[36rpx] whitespace-nowrap text-[length:24rpx] font-medium leading-[33.6rpx]">{{item.attachmentName}}</view>
+        <view class="absolute left-[144rpx] top-[78rpx] whitespace-nowrap text-[length:20rpx] font-medium leading-[28rpx]">{{item.attachmentTime}}</view>
+        <view class="absolute right-[40rpx] top-[56rpx] flex h-[32rpx] w-[32rpx] items-center justify-center" aria-role="button" aria-label="管理附件" bind:tap="manageAttachment"><mip-icon name="delete-bin-6-line" size="{{14}}" color="var(--color-brand)" /></view>
+      </view>
+
+      <!-- 操作条：左半「未完成」白 / 右半「完成」品牌色，中缝 1px canvas 分隔 -->
+      <view wx:if="{{item.showBar}}" class="mt-[2rpx] flex h-[80rpx] rounded-b-[16rpx] bg-panel">
+        <view class="flex flex-1 items-center justify-center whitespace-nowrap text-[length:28rpx] font-medium leading-[39.2rpx] text-ink">未完成</view>
+        <view class="h-[48rpx] w-[2rpx] bg-canvas" />
+        <view class="flex flex-1 items-center justify-center whitespace-nowrap text-[length:28rpx] font-medium leading-[39.2rpx] text-brand" data-id="{{item.id}}" aria-role="button" bind:tap="completeTask">完成</view>
       </view>
     </view>
   </view>
-  <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
-  <view wx:if="{{message && state === 'ready'}}" class="mt-4 rounded-[8rpx] bg-panel px-4 py-3 text-[length:22rpx] text-danger">{{message}}</view>
-  <app-page-exit />
+
+  <view wx:if="{{nextCursor}}" class="mx-3 mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
+  <view wx:if="{{message && state === 'ready'}}" class="mx-3 mt-4 rounded-[8rpx] bg-panel px-4 py-3 text-[length:22rpx] text-danger">{{message}}</view>
+  <view class="mx-3"><app-page-exit /></view>
 </view>
