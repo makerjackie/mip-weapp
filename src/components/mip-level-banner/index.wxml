@@ -4,7 +4,7 @@
   <text class="mip-level-banner__experience">{{current}} I {{target}}</text>
   <view class="mip-level-banner__action">
     <text class="mip-level-banner__action-label">玩家等级</text>
-    <view class="mip-level-banner__arrow"><mip-icon name="chevron-down-1" color="#080808" /></view>
+    <view class="mip-level-banner__arrow"><mip-icon name="chevron-down-1" color="var(--color-on-brand)" /></view>
   </view>
   <view class="mip-level-banner__slot">
     <view class="mip-level-banner__fill" style="width: {{fillPx > 0 ? fillPx * 2 : (target > 0 ? 4 + 292 * (current / target < 1 ? current / target : 1) : 4)}}rpx" />

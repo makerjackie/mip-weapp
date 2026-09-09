@@ -29,10 +29,10 @@
     </scroll-view>
 
     <view class="mx-3 rounded-[16rpx] bg-panel px-3 py-4">
-      <view class="flex min-h-[88rpx] items-center justify-between gap-3"><view class="text-[length:28rpx] font-semibold">可享 {{snapshot.currentLevel.benefits.length}} 项权益</view><view class="flex min-h-[88rpx] items-center text-[length:22rpx] text-brand" aria-role="button" aria-label="查看会员权益" bind:tap="openBenefits">权益详情<t-icon name="chevron-right" size="28rpx" color="var(--color-brand)" /></view></view>
+      <view class="flex min-h-[88rpx] items-center justify-between gap-3"><view class="text-[length:28rpx] font-semibold">可享 {{snapshot.currentLevel.benefits.length}} 项权益</view><view class="flex min-h-[88rpx] items-center text-[length:22rpx] text-brand" aria-role="button" aria-label="查看会员权益" bind:tap="openBenefits">权益详情<mip-icon name="chevron-down-1" size="{{14}}" color="var(--color-brand)" /></view></view>
       <view wx:if="{{snapshot.currentLevel.benefits.length}}" class="mt-3 grid grid-cols-4 gap-2">
         <view wx:for="{{snapshot.currentLevel.benefits}}" wx:key="*this" class="min-w-0 text-center">
-          <view class="mx-auto flex h-[72rpx] w-[72rpx] items-center justify-center rounded-full bg-brand"><t-icon name="gift" size="40rpx" color="var(--color-on-brand)" /></view>
+          <view class="mx-auto flex h-[72rpx] w-[72rpx] items-center justify-center rounded-full bg-brand"><mip-icon name="gift" size="{{20}}" color="var(--color-on-brand)" /></view>
           <view class="mt-2 line-clamp-2 text-[length:22rpx] leading-[1.4]">{{item}}</view>
         </view>
       </view>
@@ -45,7 +45,7 @@
       <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[length:32rpx] font-bold">{{snapshot.account.coinBalance}}</view><view class="mt-1 text-[length:22rpx] text-muted">游戏币</view></view>
     </view>
 
-    <view class="mx-3 mt-6 flex min-h-[88rpx] items-center justify-between gap-3"><view class="text-[length:30rpx] font-bold">成长任务</view><view class="flex min-h-[88rpx] items-center text-[length:22rpx] text-muted" aria-role="button" aria-label="查看全部成长任务" bind:tap="openTasks">全部任务<t-icon name="chevron-right" size="30rpx" color="var(--color-muted)" /></view></view>
+    <view class="mx-3 mt-6 flex min-h-[88rpx] items-center justify-between gap-3"><view class="text-[length:30rpx] font-bold">成长任务</view><view class="flex min-h-[88rpx] items-center text-[length:22rpx] text-muted" aria-role="button" aria-label="查看全部成长任务" bind:tap="openTasks">全部任务<mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-muted)" /></view></view>
     <view aria-label="正在加载" aria-busy="true" wx:if="{{tasksState === 'loading'}}" class="mx-3 mt-3 rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <view wx:elif="{{tasksState === 'error'}}" class="mx-3 mt-3 rounded-[16rpx] bg-panel px-4 py-5"><view class="text-[length:24rpx]">成长任务暂时无法加载</view><view class="mt-2 text-[length:22rpx] text-muted">{{tasksMessage}}</view><view class="mt-3 flex min-h-[88rpx] items-center text-[length:22rpx] text-brand" aria-role="button" bind:tap="loadTasks">重新加载</view></view>
     <view wx:elif="{{tasksState === 'empty'}}" class="mx-3 mt-3 rounded-[16rpx] bg-panel px-4 py-5 text-[length:22rpx] text-muted">暂无可完成的成长任务。</view>
@@ -88,7 +88,7 @@
 
   <mip-sticky-actions wx:if="{{isPlayer}}">
     <view id="growth-member-actions" slot="actions" class="flex h-[112rpx] w-full items-center gap-2 rounded-full border border-brand bg-brand-soft p-2">
-      <button open-type="share" disabled="{{!invitationReady}}" class="m-0 flex h-[88rpx] min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-line bg-panel p-0 text-[length:24rpx] font-semibold leading-[88rpx] text-brand disabled:opacity-50" aria-label="邀请加入 MIP"><t-icon name="share" size="30rpx" color="var(--color-brand)" /><text>邀请加入</text></button>
+      <button open-type="share" disabled="{{!invitationReady}}" class="m-0 flex h-[88rpx] min-w-0 flex-1 items-center justify-center gap-2 rounded-full border border-line bg-panel p-0 text-[length:24rpx] font-semibold leading-[88rpx] text-brand disabled:opacity-50" aria-label="邀请加入 MIP"><mip-icon name="share-circle" size="{{15}}" color="var(--color-brand)" /><text>邀请加入</text></button>
       <button class="m-0 flex h-[88rpx] min-w-0 flex-1 items-center justify-center gap-2 rounded-full border-0 bg-brand p-0 text-[length:24rpx] font-semibold leading-[88rpx] text-on-brand active:bg-brand-active" aria-label="进入会员方案续费" bind:tap="renewMembership"><t-icon name="card" size="30rpx" color="var(--color-on-brand)" /><text>立即续费</text></button>
     </view>
   </mip-sticky-actions>

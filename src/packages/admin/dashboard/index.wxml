@@ -22,7 +22,7 @@
         <view class="text-[length:28rpx] font-semibold">活动现场</view>
         <view class="mt-1 text-[length:22rpx] text-muted">查看授权活动、参与者名单和签到码</view>
       </view>
-      <t-icon name="chevron-right" size="32rpx" color="var(--color-brand)" />
+      <mip-icon name="chevron-down-1" size="{{16}}" color="var(--color-brand)" />
     </view>
 
     <view class="mt-6 text-[length:30rpx] font-semibold">电脑后台</view>
@@ -31,7 +31,7 @@
         <view class="text-[length:28rpx] font-semibold">确认网页登录</view>
         <view class="mt-1 text-[length:22rpx] text-muted">输入网页显示的 6 位数字登录码</view>
       </view>
-      <t-icon name="chevron-right" size="32rpx" color="var(--color-brand)" />
+      <mip-icon name="chevron-down-1" size="{{16}}" color="var(--color-brand)" />
     </view>
 
     <view wx:if="{{webLoginOpen}}" class="mt-4 rounded-[24rpx] bg-panel px-4 py-4">

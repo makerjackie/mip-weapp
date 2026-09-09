@@ -12,7 +12,7 @@
     <view wx:if="{{nextRequirement === 'AGREEMENTS'}}" class="mt-6 rounded-[16rpx] bg-panel px-4 py-5">
       <view wx:for="{{agreements}}" wx:key="key" class="flex min-h-[88rpx] items-center justify-between border-b border-line last:border-b-0" data-path="{{item.documentPath}}" bind:tap="openAgreement">
         <text class="text-[length:24rpx]">{{item.label}}</text>
-        <t-icon name="chevron-right" size="34rpx" color="var(--color-muted)" />
+        <mip-icon name="chevron-down-1" size="{{17}}" color="var(--color-muted)" />
       </view>
       <checkbox-group class="mt-4" bindchange="toggleAgreements">
         <label class="flex items-start gap-3 text-[length:24rpx] leading-6 text-muted">

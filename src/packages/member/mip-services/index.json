@@ -3,6 +3,7 @@
   "backgroundColor": "#080808",
   "usingComponents": {
     "app-page-exit": "/components/page-exit/index",
-    "t-icon": "tdesign-miniprogram/icon/icon"
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "mip-icon": "/components/mip-icon/index"
   }
 }

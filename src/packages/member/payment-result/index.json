@@ -3,6 +3,7 @@
   "usingComponents": {
     "app-page-exit": "/components/page-exit/index",
     "t-button": "tdesign-miniprogram/button/button",
-    "t-icon": "tdesign-miniprogram/icon/icon"
+    "t-icon": "tdesign-miniprogram/icon/icon",
+    "mip-icon": "/components/mip-icon/index"
   }
 }

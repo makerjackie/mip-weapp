@@ -5,9 +5,9 @@
       <view class="text-[length:40rpx] font-bold">{{productName}}</view>
     </view>
     <view class="flex min-h-[88rpx] items-center gap-1 px-2 text-[length:24rpx]" bind:tap="openBranches">
-      <t-icon name="location" size="30rpx" color="var(--color-brand)" />
+      <mip-icon name="icon-map-pin-line" size="{{15}}" color="var(--color-brand)" />
       <text>{{primaryBranchName}}</text>
-      <t-icon name="chevron-right" size="28rpx" color="var(--color-muted)" />
+      <mip-icon name="chevron-down-1" size="{{14}}" color="var(--color-muted)" />
     </view>
   </view>
 
@@ -32,7 +32,7 @@
   <view wx:if="{{hasAnnouncements}}" class="mt-7">
     <view class="flex min-h-[64rpx] items-center justify-between">
       <view class="text-[length:32rpx] font-bold">社区公告</view>
-      <view class="flex items-center gap-1 text-[length:22rpx] text-brand" bind:tap="openAnnouncements">全部公告<t-icon name="chevron-right" size="28rpx" color="var(--color-brand)" /></view>
+      <view class="flex items-center gap-1 text-[length:22rpx] text-brand" bind:tap="openAnnouncements">全部公告<mip-icon name="chevron-down-1" size="{{14}}" color="var(--color-brand)" /></view>
     </view>
     <view wx:if="{{announcement}}" class="mt-3 rounded-[16rpx] border border-brand bg-panel px-4 py-4 active:bg-panel-raised" bind:tap="openAnnouncement">
       <view class="flex items-center gap-2"><text wx:if="{{announcement.isPinned}}" class="rounded-full bg-brand-soft px-3 py-1 text-[length:22rpx] text-brand">置顶</text><text wx:if="{{announcement.branchName}}" class="text-[length:22rpx] text-muted">{{announcement.branchName}}</text></view>
@@ -44,7 +44,7 @@
   <view class="mt-7">
     <view class="flex min-h-[64rpx] items-center justify-between">
       <view class="text-[length:32rpx] font-bold">近期活动</view>
-      <view class="flex items-center gap-1 text-[length:22rpx] text-brand" bind:tap="openEvents">全部活动<t-icon name="chevron-right" size="28rpx" color="var(--color-brand)" /></view>
+      <view class="flex items-center gap-1 text-[length:22rpx] text-brand" bind:tap="openEvents">全部活动<mip-icon name="chevron-down-1" size="{{14}}" color="var(--color-brand)" /></view>
     </view>
     <view aria-label="正在加载" aria-busy="true" wx:if="{{eventState === 'loading'}}" class="mt-3 flex flex-col gap-3">
       <view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
@@ -60,7 +60,7 @@
   <view class="mt-7">
     <view class="flex min-h-[64rpx] items-center justify-between">
       <view class="text-[length:32rpx] font-bold">合作机会</view>
-      <view class="flex items-center gap-1 text-[length:22rpx] text-brand" bind:tap="openOpportunities">全部机会<t-icon name="chevron-right" size="28rpx" color="var(--color-brand)" /></view>
+      <view class="flex items-center gap-1 text-[length:22rpx] text-brand" bind:tap="openOpportunities">全部机会<mip-icon name="chevron-down-1" size="{{14}}" color="var(--color-brand)" /></view>
     </view>
     <view aria-label="正在加载" aria-busy="true" wx:if="{{opportunityState === 'loading'}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
     <view wx:elif="{{opportunityState === 'error'}}" class="mt-3"><app-empty-state title="机会暂时无法加载" description="其他内容仍可继续浏览。" action-text="重新加载" bind:action="loadOpportunities" /></view>
@@ -79,7 +79,7 @@
         <view class="text-[length:28rpx] font-semibold">知识内容</view>
         <view class="mt-1 text-[length:22rpx] text-muted">热点、行业内容、视频和专家分享</view>
       </view>
-      <t-icon name="chevron-right" size="34rpx" color="var(--color-brand)" />
+      <mip-icon name="chevron-down-1" size="{{17}}" color="var(--color-brand)" />
     </view>
   </view>
 </view>

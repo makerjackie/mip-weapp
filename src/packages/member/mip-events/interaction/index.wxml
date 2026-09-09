@@ -4,7 +4,7 @@
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载互动" description="{{errorDescription}}" action-text="重新加载" bind:action="loadInteraction" /><app-page-exit /></view>
   <block wx:else>
     <view class="flex items-center gap-2 rounded-[16rpx] bg-panel px-3">
-      <t-icon name="search" size="36rpx" color="var(--color-muted)" />
+      <mip-icon name="search-big-left-1" size="{{18}}" color="var(--color-muted)" />
       <input aria-label="搜索姓名或简介" class="box-border h-[88rpx] min-w-0 flex-1 max-w-full text-[length:24rpx]" value="{{searchInput}}" maxlength="80" placeholder="搜索姓名或简介" bindinput="onSearchInput" />
       <view wx:if="{{searchInput}}" class="flex min-h-[88rpx] items-center px-2 text-[length:22rpx] text-muted" bind:tap="clearSearch">清除</view>
     </view>

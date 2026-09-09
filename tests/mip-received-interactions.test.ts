@@ -58,7 +58,7 @@ describe('MIP received interaction client flow', () => {
     expect(profilePage).toContain('opportunityModule.getProfileInfluence()')
     expect(profilePage).toContain('?scope=influence&category=')
     expect(publicPage).toContain('?scope=influence&category=')
-    for (const label of ['嘉宾', '互动', '感兴趣', '访客']) {
+    for (const label of ['嘉宾', '互动过', '心动值', '访客']) {
       expect(profileView).toContain(label)
       expect(publicView).toContain(label)
     }

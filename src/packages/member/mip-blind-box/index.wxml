@@ -5,8 +5,8 @@
   </view>
 
   <view wx:if="{{state !== 'forbidden'}}" class="mt-5 grid grid-cols-2 gap-3">
-    <view class="box-border flex min-h-[104rpx] max-w-full items-center rounded-[16rpx] bg-panel px-4" aria-role="button" bind:tap="openBackpack"><view class="min-w-0 flex-1"><view class="text-[length:24rpx] font-semibold">卡牌背包</view><view class="mt-1 text-[length:22rpx] text-muted">查看已获得卡牌</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
-    <view class="box-border flex min-h-[104rpx] max-w-full items-center rounded-[16rpx] bg-panel px-4" aria-role="button" bind:tap="openCoinEntries"><view class="min-w-0 flex-1"><view class="text-[length:24rpx] font-semibold">游戏币流水</view><view class="mt-1 text-[length:22rpx] text-muted">查看收支记录</view></view><t-icon name="chevron-right" size="32rpx" color="var(--color-muted)" /></view>
+    <view class="box-border flex min-h-[104rpx] max-w-full items-center rounded-[16rpx] bg-panel px-4" aria-role="button" bind:tap="openBackpack"><view class="min-w-0 flex-1"><view class="text-[length:24rpx] font-semibold">卡牌背包</view><view class="mt-1 text-[length:22rpx] text-muted">查看已获得卡牌</view></view><mip-icon name="chevron-down-1" size="{{16}}" color="var(--color-muted)" /></view>
+    <view class="box-border flex min-h-[104rpx] max-w-full items-center rounded-[16rpx] bg-panel px-4" aria-role="button" bind:tap="openCoinEntries"><view class="min-w-0 flex-1"><view class="text-[length:24rpx] font-semibold">游戏币流水</view><view class="mt-1 text-[length:22rpx] text-muted">查看收支记录</view></view><mip-icon name="chevron-down-1" size="{{16}}" color="var(--color-muted)" /></view>
   </view>
 
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mt-5 rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>

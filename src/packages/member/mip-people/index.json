@@ -10,7 +10,7 @@
     "app-page-exit": "/components/page-exit/index",
     "mip-catalog-selector": "/components/catalog-selector/index",
     "mip-talent-card": "/components/talent-card/index",
-    "t-icon": "tdesign-miniprogram/icon/icon",
-    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton"
+    "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
+    "mip-icon": "/components/mip-icon/index"
   }
 }

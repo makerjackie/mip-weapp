@@ -10,12 +10,12 @@
   <block wx:if="{{!mine}}">
     <view class="mt-4 flex items-center gap-2">
       <view class="flex h-[72rpx] min-w-0 flex-1 items-center gap-2 rounded-[8rpx] bg-panel px-3">
-        <t-icon name="search" size="32rpx" color="var(--color-muted)" />
+        <mip-icon name="search-big-left-1" size="{{16}}" color="var(--color-muted)" />
         <input aria-label="搜索合作方向或成员" class="box-border min-w-0 flex-1 max-w-full text-[length:24rpx]" value="{{keywordInput}}" maxlength="80" confirm-type="search" placeholder="搜索合作方向或成员" bindinput="onKeywordInput" bindconfirm="onSearchConfirm" />
         <view wx:if="{{keywordInput}}" class="px-2 py-2 text-[length:22rpx] text-muted" bind:tap="clearKeywordDraft">清除</view>
       </view>
       <view class="flex h-[88rpx] w-[88rpx] shrink-0 items-center justify-center rounded-[8rpx] border border-line bg-panel active:bg-panel-raised" bind:tap="toggleFilters">
-        <t-icon name="filter" size="34rpx" color="var(--color-ink)" />
+        <mip-icon name="filter-2" size="{{17}}" color="var(--color-ink)" />
       </view>
     </view>
 
@@ -29,7 +29,7 @@
       <picker mode="selector" range="{{branchOptions}}" range-key="label" value="{{branchIndex}}" bindchange="changeBranch">
         <view class="mt-2 flex min-h-[80rpx] items-center justify-between rounded-[8rpx] bg-panel-raised px-3 text-[length:24rpx]">
           <text>{{branchOptions[branchIndex].label}}</text>
-          <t-icon name="chevron-down" size="28rpx" color="var(--color-muted)" />
+          <mip-icon name="chevron-down-1-15" size="{{14}}" color="var(--color-muted)" />
         </view>
       </picker>
 

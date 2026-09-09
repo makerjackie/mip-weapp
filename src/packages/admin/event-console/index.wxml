@@ -25,7 +25,7 @@
         <view class="text-[length:28rpx] font-semibold">参与者与签到</view>
         <view class="mt-1 text-[length:22rpx] text-muted">查看名单、确认签到或按权限撤销签到</view>
       </view>
-      <t-icon name="chevron-right" size="32rpx" color="var(--color-brand)" />
+      <mip-icon name="chevron-down-1" size="{{16}}" color="var(--color-brand)" />
     </view>
 
     <view wx:if="{{canCheckIn}}" class="mt-5 rounded-[24rpx] bg-panel px-4 py-4">

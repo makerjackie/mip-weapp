@@ -4,6 +4,6 @@
   "usingComponents": {
     "event-participant-preview": "/components/event-participant-preview/index",
     "t-button": "tdesign-miniprogram/button/button",
-    "t-icon": "tdesign-miniprogram/icon/icon"
+    "mip-icon": "../mip-icon/index"
   }
 }

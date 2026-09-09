@@ -1,3 +1,4 @@
+import { resolveIconColor } from './colors'
 import { ICONS } from './icons'
 
 interface IconBox {
@@ -64,7 +65,9 @@ Component({
 
       const box = iconSize(icon, size)
       const [width = '', height = width] = box.css.split(' ')
-      const svg = svgSource(icon, color || '#ffffff')
+      // Templates pass var(--color-*) tokens; data-URI SVGs cannot see page CSS
+      // variables, so the token is resolved to its hex mirror here (colors.ts).
+      const svg = svgSource(icon, resolveIconColor(color))
       // encodeURIComponent is required because icon paths contain quotes and
       // whitespace; WeChat image accepts a UTF-8 SVG data URI.
       this.setData({

@@ -149,9 +149,11 @@ export function assertValidTDesignIconNames({
 
 export function assertSemanticIconColors({ sources, assert, label }) {
   for (const source of sources) {
-    for (const match of source.matchAll(/<t-icon\b([^>]*)>/g)) {
-      const color = readAttribute(match[1], 'color')
-      assert(!color.includes('#'), `${label} hard-codes a t-icon color instead of a semantic token: ${color}`)
+    // mip-icon resolves var(--color-*) through its colors.ts mirror because
+    // data-URI SVGs cannot see page CSS variables; templates must stay token-only.
+    for (const match of source.matchAll(/<(t-icon|mip-icon)\b([^>]*)>/g)) {
+      const color = readAttribute(match[2], 'color')
+      assert(!color.includes('#'), `${label} hard-codes a ${match[1]} color instead of a semantic token: ${color}`)
     }
     for (const match of source.matchAll(/<t-tab-bar\b([^>]*)>/g)) {
       const customStyle = readAttribute(match[1], 'custom-style')

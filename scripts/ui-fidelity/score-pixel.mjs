@@ -17,7 +17,7 @@ import { spawnSync } from 'node:child_process'
 import { PNG } from 'pngjs'
 import pixelmatch from 'pixelmatch'
 import { createComponentResolver, parseWxml, renderToHtml, scopeCss, toBrowserCss } from './lib/wxml.mjs'
-import { loadIconRegistry, mipIconHtml } from './lib/mip-icons.mjs'
+import { loadIconColors, loadIconRegistry, mipIconHtml } from './lib/mip-icons.mjs'
 import { loadCooperationCardModel } from './lib/component-models.mjs'
 import { repoRoot } from './lib/palette.mjs'
 
@@ -46,6 +46,7 @@ function buildDocument({ route, fixture }) {
 
   const componentStyles = []
   const iconRegistry = loadIconRegistry(SRC)
+  const iconColors = loadIconColors(SRC)
   const cardModel = loadCooperationCardModel(SRC)
   const ctx = {
     instanceCount: 0,
@@ -55,7 +56,9 @@ function buildDocument({ route, fixture }) {
     // Repo-absolute asset paths resolve to files on disk; the headless shell
     // reads them over file:// when the document itself is a local file.
     resolveAsset: (src) => (src?.startsWith('/assets/') ? path.join(SRC, src) : src),
-    renderMipIcon: (props) => mipIconHtml(iconRegistry, props),
+    // Token colors resolve through the component's colors.ts mirror, exactly
+    // like the mini-program component does (data-URI SVGs cannot see CSS vars).
+    renderMipIcon: (props) => mipIconHtml(iconRegistry, props, iconColors),
     // Observer-built render data the proxy cannot compute from WXML alone.
     componentData: (tag, props) => {
       if (tag === 'cooperation-role-card') {

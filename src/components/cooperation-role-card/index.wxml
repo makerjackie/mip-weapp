@@ -5,14 +5,14 @@
   </view>
   <view wx:if="{{showDetails && view.goal}}" class="cooperation-role-card__strip cooperation-role-card__strip--goal">
     <view class="cooperation-role-card__badge">
-      <view class="cooperation-role-card__badge-circle"><mip-icon name="target" color="#202020" /></view>
+      <view class="cooperation-role-card__badge-circle"><mip-icon name="target" color="var(--color-panel)" /></view>
       <text class="cooperation-role-card__badge-label">{{goalLabel}}</text>
     </view>
     <text class="cooperation-role-card__value">{{view.goal}}</text>
   </view>
   <view wx:if="{{showDetails && view.referral}}" class="cooperation-role-card__strip cooperation-role-card__strip--referral">
     <view class="cooperation-role-card__badge">
-      <view class="cooperation-role-card__badge-circle"><mip-icon name="cup" color="#202020" /></view>
+      <view class="cooperation-role-card__badge-circle"><mip-icon name="cup" color="var(--color-panel)" /></view>
       <text class="cooperation-role-card__badge-label">{{referralLabel}}</text>
     </view>
     <text class="cooperation-role-card__value">{{view.referral}}</text>

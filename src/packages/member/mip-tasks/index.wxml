@@ -13,12 +13,12 @@
     <view wx:for="{{visibleTasks}}" wx:key="id" class="mip-task-card overflow-hidden rounded-[8rpx] bg-panel" data-id="{{item.id}}" bind:tap="openTask">
       <view class="px-3 py-3">
         <view class="flex items-center justify-between gap-3">
-          <view class="mip-task-stars flex gap-1" aria-label="任务奖励"><t-icon wx:for="{{item.starIndexes}}" wx:key="*this" name="star-filled" size="32rpx" color="var(--color-brand)" /></view>
+          <view class="mip-task-stars flex gap-1" aria-label="任务奖励"><mip-icon wx:for="{{item.starIndexes}}" wx:key="*this" name="star-favorite-3" size="{{16}}" color="var(--color-brand)" /></view>
           <view class="text-[length:22rpx] text-brand">+{{item.rewardExperience}} EXP</view>
         </view>
         <view class="mt-2 flex items-center justify-between gap-3"><view class="min-w-0 flex-1 truncate text-[length:30rpx] font-medium">{{item.name}}</view><view class="shrink-0 rounded-[8rpx] bg-brand-soft px-2 py-1 text-[length:22rpx] text-brand">{{item.statusText}}</view></view>
-        <view class="mt-2 flex items-center gap-2 text-[length:22rpx] text-ink"><t-icon name="time" size="28rpx" color="var(--color-ink)" /><text>{{item.deadlineText}}</text></view>
-        <view class="mt-1 flex items-center gap-2 text-[length:22rpx] text-ink"><t-icon name="file" size="28rpx" color="var(--color-ink)" /><text class="min-w-0 truncate">{{item.attachmentText}}</text></view>
+        <view class="mt-2 flex items-center gap-2 text-[length:22rpx] text-ink"><mip-icon name="time" size="{{14}}" color="var(--color-ink)" /><text>{{item.deadlineText}}</text></view>
+        <view class="mt-1 flex items-center gap-2 text-[length:22rpx] text-ink"><mip-icon name="file-text" size="{{14}}" color="var(--color-ink)" /><text class="min-w-0 truncate">{{item.attachmentText}}</text></view>
       </view>
     </view>
   </view>

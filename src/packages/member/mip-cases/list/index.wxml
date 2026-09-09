@@ -6,7 +6,7 @@
       <view wx:if="{{mine}}" class="flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-[8rpx] bg-brand text-[length:24rpx] font-medium text-on-brand" aria-role="tab" aria-selected="true" data-mine="1" bind:tap="selectScope">我的案例</view>
       <view wx:else class="flex h-[88rpx] min-w-0 flex-1 items-center justify-center rounded-[8rpx] text-[length:24rpx] text-muted" aria-role="tab" aria-selected="false" data-mine="1" bind:tap="selectScope">我的案例</view>
     </view>
-    <view class="flex h-[88rpx] shrink-0 items-center justify-center gap-1 rounded-[16rpx] bg-brand px-4 text-[length:24rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" bind:tap="create"><t-icon name="add" size="30rpx" color="var(--color-on-brand)" /><text>发布</text></view>
+    <view class="flex h-[88rpx] shrink-0 items-center justify-center gap-1 rounded-[16rpx] bg-brand px-4 text-[length:24rpx] font-medium text-on-brand active:bg-brand-active" aria-role="button" bind:tap="create"><mip-icon name="icon-plus-fill" size="{{15}}" color="var(--color-on-brand)" /><text>发布</text></view>
   </view>
 
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="relative mt-5 flex flex-col gap-6 pl-[100rpx] pr-3">

@@ -37,8 +37,8 @@
 
     <view class="-mx-3 grid grid-cols-4 border-y border-line bg-canvas">
       <view class="flex min-h-[112rpx] flex-col items-center justify-center" aria-role="{{isSelf ? 'button' : 'text'}}" data-category="GUEST" bind:tap="openOwnInfluence"><text class="text-[length:28rpx] font-semibold">{{influence ? influence.guestCount : '—'}}</text><text class="mt-1 text-[length:22rpx] text-muted">嘉宾</text></view>
-      <view class="flex min-h-[112rpx] flex-col items-center justify-center" aria-role="{{isSelf ? 'button' : 'text'}}" data-category="INTERACTION" bind:tap="openOwnInfluence"><text class="text-[length:28rpx] font-semibold">{{influence ? influence.interactionCount : '—'}}</text><text class="mt-1 text-[length:22rpx] text-muted">互动</text></view>
-      <view class="flex min-h-[112rpx] flex-col items-center justify-center" aria-role="{{isSelf ? 'button' : 'text'}}" data-category="ACTIVE_INTEREST" bind:tap="openOwnInfluence"><text class="text-[length:28rpx] font-semibold">{{influence ? influence.interestCount : '—'}}</text><text class="mt-1 text-[length:22rpx] text-muted">感兴趣</text></view>
+      <view class="flex min-h-[112rpx] flex-col items-center justify-center" aria-role="{{isSelf ? 'button' : 'text'}}" data-category="INTERACTION" bind:tap="openOwnInfluence"><text class="text-[length:28rpx] font-semibold">{{influence ? influence.interactionCount : '—'}}</text><text class="mt-1 text-[length:22rpx] text-muted">互动过</text></view>
+      <view class="flex min-h-[112rpx] flex-col items-center justify-center" aria-role="{{isSelf ? 'button' : 'text'}}" data-category="ACTIVE_INTEREST" bind:tap="openOwnInfluence"><text class="text-[length:28rpx] font-semibold">{{influence ? influence.interestCount : '—'}}</text><text class="mt-1 text-[length:22rpx] text-muted">心动值</text></view>
       <view class="flex min-h-[112rpx] flex-col items-center justify-center" aria-role="{{isSelf ? 'button' : 'text'}}" data-category="VISITOR" bind:tap="openOwnInfluence"><text class="text-[length:28rpx] font-semibold">{{influence ? influence.visitorCount : '—'}}</text><text class="mt-1 text-[length:22rpx] text-muted">访客</text></view>
     </view>
 

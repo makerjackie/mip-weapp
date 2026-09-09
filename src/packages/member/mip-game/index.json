@@ -7,6 +7,7 @@
     "app-page-exit": "/components/page-exit/index",
     "t-button": "tdesign-miniprogram/button/button",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
-    "t-tag": "tdesign-miniprogram/tag/tag"
+    "t-tag": "tdesign-miniprogram/tag/tag",
+    "mip-icon": "/components/mip-icon/index"
   }
 }

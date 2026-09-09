@@ -19,7 +19,7 @@
         <image wx:if="{{item.person.avatarUrl}}" class="h-[76rpx] w-[76rpx] shrink-0 rounded-full bg-brand-soft" mode="aspectFill" src="{{item.person.avatarUrl}}" />
         <view wx:else class="flex h-[76rpx] w-[76rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft text-[length:24rpx] font-semibold text-brand">{{item.personInitial}}</view>
         <view class="min-w-0 flex-1"><view class="truncate text-[length:28rpx] font-semibold">{{item.person.nickname}}</view><view wx:if="{{item.person.headline}}" class="mt-1 line-clamp-1 text-[length:22rpx] text-muted">{{item.person.headline}}</view></view>
-        <t-icon name="chevron-right" size="30rpx" color="var(--color-muted)" />
+        <mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-muted)" />
       </view>
       <view class="mt-4 border-t border-line pt-3"><view class="line-clamp-1 text-[length:24rpx]">{{item.event.title}}</view><view class="mt-2 flex items-center justify-between gap-3 text-[length:22rpx] text-muted"><text>{{item.eventTimeText}}</text><text>{{item.updatedText}}</text></view></view>
     </view>

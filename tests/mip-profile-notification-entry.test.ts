@@ -78,11 +78,11 @@ describe('MIP profile notification entry', () => {
     expect(template).toContain('<app-page-exit label="返回我的"')
   })
 
-  it('keeps every portfolio tab touch target at least 88rpx high', () => {
+  it('keeps every portfolio tab at the figma 80rpx band height (1770:38871)', () => {
     const styles = readSource('src/pages/profile/index.wxss')
     const tabRule = styles.match(/\.profile-tab\s*\{([\s\S]*?)\}/)?.[1]
 
     expect(tabRule).toBeDefined()
-    expect(tabRule).toContain('min-height: 88rpx;')
+    expect(tabRule).toContain('min-height: 80rpx;')
   })
 })

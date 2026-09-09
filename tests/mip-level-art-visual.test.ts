@@ -6,16 +6,24 @@ import { describe, expect, it } from 'vitest'
 const read = (relativePath: string) => fs.readFileSync(path.join(process.cwd(), relativePath), 'utf8')
 
 describe('MIP level artwork presentation', () => {
-  it('keeps profile level facts above the shared artwork on the brand surface', () => {
+  it('keeps profile level facts above the baked banner deco on the brand surface', () => {
     const markup = read('src/pages/profile/index.wxml')
     const styles = read('src/pages/profile/index.wxss')
+    const bannerMarkup = read('src/components/mip-level-banner/index.wxml')
+    const bannerStyles = read('src/components/mip-level-banner/index.wxss')
 
-    expect(markup).toContain('class="profile-level-art"')
-    expect(markup).toContain('src="/assets/figma/profile/level-art.png"')
-    expect(styles).toContain('background: var(--color-brand);')
-    expect(styles).toContain('mix-blend-mode: screen;')
-    expect(styles).toContain('.profile-level-header,\n.profile-level-experience,\n.profile-level-progress,\n.profile-level-loading')
-    expect(styles).toContain('z-index: 1;')
+    // The profile delegates the level band to the baked-card component instead of
+    // blending level-art.png itself (references/wechat-component-contracts.md).
+    expect(markup).toContain('<mip-level-banner')
+    expect(markup).toContain('level="{{levelName}}" current="{{experience}}" target="{{growthTarget}}"')
+    expect(styles).not.toContain('profile-level-art')
+    expect(bannerMarkup).toContain('src="/assets/mip/level-banner-deco@3x.png"')
+    expect(bannerMarkup).toContain('mode="scaleToFill"')
+    expect(bannerMarkup).toContain('{{level}}')
+    expect(bannerMarkup).toContain('{{current}} I {{target}}')
+    expect(bannerStyles).toContain('background: var(--color-brand);')
+    expect(bannerStyles).toContain('border-radius: 32rpx 32rpx 0 0;')
+    expect(bannerStyles).toContain('.mip-level-banner__base {')
   })
 
   it('reuses the artwork with screen blending on the growth brand hero', () => {

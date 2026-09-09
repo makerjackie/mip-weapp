@@ -49,7 +49,7 @@
     <view class="mx-3 mt-3 overflow-hidden rounded-[16rpx] bg-panel">
       <view data-catalog="industry" class="flex min-h-[92rpx] items-center justify-between gap-3 px-3" bind:tap="toggleCatalog">
         <text class="min-w-0 flex-1 truncate text-[length:24rpx] {{industryOptions[industryIndex].id ? 'text-ink' : 'text-muted'}}">{{industryOptions[industryIndex].id ? industryOptions[industryIndex].label : '请选择代表的行业标签'}}</text>
-        <t-icon name="chevron-right" size="28rpx" color="var(--color-muted)" />
+        <mip-icon name="chevron-down-1" size="{{14}}" color="var(--color-muted)" />
       </view>
       <view wx:if="{{industryCatalogExpanded}}" class="border-t border-line px-3 py-3"><mip-catalog-selector groups="{{industryGroups}}" selected-ids="{{selectedIndustryIds}}" multiple="{{false}}" clear-label="未选择" bind:change="changeIndustry" /></view>
     </view>
@@ -65,7 +65,7 @@
     </view>
 
     <view class="mx-3 mt-5 flex items-center gap-2 text-[length:30rpx] font-semibold">
-      <t-icon name="file" size="30rpx" color="var(--color-brand)" />
+      <mip-icon name="file-text" size="{{15}}" color="var(--color-brand)" />
       <text>一句话介绍你的工作和背景</text>
     </view>
     <view class="mx-3 mt-3 rounded-[16rpx] bg-panel px-3 py-3">
@@ -83,13 +83,13 @@
 
     <block wx:if="{{moreExpanded}}">
     <view class="mx-3 mt-5 flex items-center gap-2 text-[length:30rpx] font-semibold">
-      <t-icon name="location" size="30rpx" color="var(--color-brand)" />
+      <mip-icon name="icon-map-pin-line" size="{{15}}" color="var(--color-brand)" />
       <text>主城市分会</text>
     </view>
     <view wx:if="{{branchGroups.length}}" class="mx-3 mt-3 overflow-hidden rounded-[16rpx] bg-panel">
       <view data-catalog="branch" class="flex min-h-[92rpx] items-center justify-between gap-3 px-3" bind:tap="toggleCatalog">
         <text class="min-w-0 flex-1 truncate text-[length:24rpx] {{branchOptions[branchIndex].id ? 'text-ink' : 'text-muted'}}">{{branchOptions[branchIndex].id ? branchOptions[branchIndex].label : '请选择主城市分会'}}</text>
-        <t-icon name="chevron-right" size="28rpx" color="var(--color-muted)" />
+        <mip-icon name="chevron-down-1" size="{{14}}" color="var(--color-muted)" />
       </view>
       <view wx:if="{{branchCatalogExpanded}}" class="border-t border-line px-3 py-3"><mip-catalog-selector groups="{{branchGroups}}" selected-ids="{{selectedBranchIds}}" multiple="{{false}}" clear-label="未选择" bind:change="changeBranch" /></view>
     </view>
