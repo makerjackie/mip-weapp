@@ -72,15 +72,22 @@ export function parseColor(input) {
   const hex = raw.match(/^#([0-9a-f]{3,8})$/i)
   if (hex && [3, 4, 6, 8].includes(hex[1].length)) {
     let h = hex[1].toLowerCase()
-    if (h.length === 3 || h.length === 4) h = h.split('').map((c) => c + c).join('')
+    if (h.length === 3 || h.length === 4) { h = h.split('').map(c => c + c).join('') }
     const r = Number.parseInt(h.slice(0, 2), 16)
     const g = Number.parseInt(h.slice(2, 4), 16)
     const b = Number.parseInt(h.slice(4, 6), 16)
     const a = h.length === 8 ? Number.parseInt(h.slice(6, 8), 16) / 255 : 1
-    return { r, g, b, a }
+    return {
+      r,
+      g,
+      b,
+      a,
+    }
   }
   const fn = raw.match(/^rgba?\(([^)]+)\)$/i) || raw.match(/^hsla?\(([^)]+)\)$/i)
-  if (!fn) return null
+  if (!fn) {
+    return null
+  }
   const parts = fn[1].replace(/,/g, ' ').split(/[\s/]+/).filter(Boolean)
   if (/^hsla?\(/i.test(raw)) {
     const [h, s, l] = parts
@@ -88,20 +95,34 @@ export function parseColor(input) {
     const sat = Number.parseFloat(s) / 100
     const lig = Number.parseFloat(l) / 100
     const alpha = parts[3] ? parseAlpha(parts[3]) : 1
-    return { ...hslToRgb(hue, sat, lig), a: alpha }
+    return {
+      ...hslToRgb(hue, sat, lig),
+      a: alpha,
+    }
   }
   const [r, g, b] = parts
-  if ([r, g, b].some((v) => v === undefined)) return null
-  const channels = [r, g, b].map((v) => Number.parseInt(v, 10))
+  if ([r, g, b].includes(undefined)) {
+    return null
+  }
+  const channels = [r, g, b].map(v => Number.parseInt(v, 10))
   const alpha = parts[3] ? parseAlpha(parts[3]) : 1
   // Anything that is not a literal (var(), env(), calc()) is not a palette decision.
-  if (channels.some((v) => !Number.isFinite(v)) || !Number.isFinite(alpha)) return null
-  return { r: channels[0], g: channels[1], b: channels[2], a: alpha }
+  if (channels.some(v => !Number.isFinite(v)) || !Number.isFinite(alpha)) {
+    return null
+  }
+  return {
+    r: channels[0],
+    g: channels[1],
+    b: channels[2],
+    a: alpha,
+  }
 }
 
 function parseAlpha(token) {
   const value = String(token).trim()
-  if (value.endsWith('%')) return Number.parseFloat(value) / 100
+  if (value.endsWith('%')) {
+    return Number.parseFloat(value) / 100
+  }
   return Number.parseFloat(value)
 }
 
@@ -110,11 +131,15 @@ function hslToRgb(h, s, l) {
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1))
   const m = l - c / 2
   const [r, g, b] = h < 60 ? [c, x, 0] : h < 120 ? [x, c, 0] : h < 180 ? [0, c, x] : h < 240 ? [0, x, c] : h < 300 ? [x, 0, c] : [c, 0, x]
-  return { r: Math.round((r + m) * 255), g: Math.round((g + m) * 255), b: Math.round((b + m) * 255) }
+  return {
+    r: Math.round((r + m) * 255),
+    g: Math.round((g + m) * 255),
+    b: Math.round((b + m) * 255),
+  }
 }
 
 export function formatColor({ r, g, b, a = 1 }) {
-  if (a >= 0.999) return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`
+  if (a >= 0.999) { return `#${[r, g, b].map(v => v.toString(16).padStart(2, '0')).join('')}` }
   return `rgba(${r},${g},${b},${Number(a.toFixed(2))})`
 }
 
@@ -132,20 +157,34 @@ export function hueOf(color) {
   const b = color.b / 255
   const max = Math.max(r, g, b)
   const min = Math.min(r, g, b)
-  if (max === min) return 0
+  if (max === min) {
+    return 0
+  }
   const d = max - min
   const l = (max + min) / 2
   const s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
   let h
-  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) * 60
-  else if (max === g) h = ((b - r) / d + 2) * 60
-  else h = ((r - g) / d + 4) * 60
-  return { h, s, l }
+  if (max === r) {
+    h = ((g - b) / d + (g < b ? 6 : 0)) * 60
+  }
+  else if (max === g) {
+    h = ((b - r) / d + 2) * 60
+  }
+  else {
+    h = ((r - g) / d + 4) * 60
+  }
+  return {
+    h,
+    s,
+    l,
+  }
 }
 
 export function isYellow(color) {
   const hsl = hueOf(color)
-  if (!hsl || typeof hsl !== 'object') return false
+  if (!hsl || typeof hsl !== 'object') {
+    return false
+  }
   return hsl.h >= 40 && hsl.h <= 72 && hsl.s >= 0.45 && hsl.l >= 0.3
 }
 
@@ -158,16 +197,24 @@ export function buildPaletteFromTokensWxss(tokensSource) {
   while ((match = declRe.exec(tokensSource))) {
     const [, name, value] = match
     const parsed = parseColor(value)
-    if (!parsed) continue
+    if (!parsed) {
+      continue
+    }
     const token = name
-    if (seen.has(token)) continue
+    if (seen.has(token)) {
+      continue
+    }
     seen.add(token)
     colors.push({ token, value: value.trim(), rgb: formatColor(parsed), alpha: parsed.a, group: groupOf(name) })
   }
   for (const extra of DOCUMENTED_EXTENSIONS) {
     const parsed = parseColor(extra.value)
-    if (!parsed) continue
-    if (seen.has(extra.token)) continue
+    if (!parsed) {
+      continue
+    }
+    if (seen.has(extra.token)) {
+      continue
+    }
     seen.add(extra.token)
     colors.push({ token: extra.token, value: extra.value, rgb: formatColor(parsed), alpha: parsed.a, group: extra.group, note: extra.note })
   }
@@ -175,12 +222,24 @@ export function buildPaletteFromTokensWxss(tokensSource) {
 }
 
 function groupOf(name) {
-  if (name.startsWith('bg-')) return 'surface'
-  if (name.startsWith('text-')) return 'text'
-  if (name.startsWith('brand')) return 'brand'
-  if (name.startsWith('purple')) return 'illustration'
-  if (name === 'record' || name === 'success' || name === 'danger') return 'status'
-  if (name.startsWith('overlay') || name === 'hairline') return 'overlay'
+  if (name.startsWith('bg-')) {
+    return 'surface'
+  }
+  if (name.startsWith('text-')) {
+    return 'text'
+  }
+  if (name.startsWith('brand')) {
+    return 'brand'
+  }
+  if (name.startsWith('purple')) {
+    return 'illustration'
+  }
+  if (name === 'record' || name === 'success' || name === 'danger') {
+    return 'status'
+  }
+  if (name.startsWith('overlay') || name === 'hairline') {
+    return 'overlay'
+  }
   return 'other'
 }
 
@@ -191,20 +250,31 @@ export function loadPalette(file) {
   for (const color of doc.colors) {
     index.set(color.rgb, color)
     const parsed = parseColor(color.rgb)
-    if (!parsed || parsed.a < 0.999) continue
+    if (!parsed || parsed.a < 0.999) {
+      continue
+    }
     const key = `${parsed.r},${parsed.g},${parsed.b}`
-    if (!triples.has(key)) triples.set(key, color)
+    if (!triples.has(key)) {
+      triples.set(key, color)
+    }
   }
-  return { doc, index, triples, colors: doc.colors }
+  return {
+    doc,
+    index,
+    triples,
+    colors: doc.colors,
+  }
 }
 
 export function nearestToken(color, palette) {
   let best = null
   for (const entry of palette.colors) {
     const parsed = parseColor(entry.rgb)
-    if (!parsed) continue
+    if (!parsed) {
+      continue
+    }
     const distance = colorDistance(color, parsed)
-    if (!best || distance < best.distance) best = { entry, distance }
+    if (!best || distance < best.distance) { best = { entry, distance } }
   }
   return best
 }
@@ -212,7 +282,9 @@ export function nearestToken(color, palette) {
 export function repoRoot(start) {
   let dir = path.dirname(start)
   for (let i = 0; i < 8; i += 1) {
-    if (fs.existsSync(path.join(dir, 'pnpm-workspace.yaml'))) return dir
+    if (fs.existsSync(path.join(dir, 'pnpm-workspace.yaml'))) {
+      return dir
+    }
     dir = path.dirname(dir)
   }
   throw new Error(`repo root not found from ${start}`)

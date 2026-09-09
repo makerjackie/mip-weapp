@@ -34,10 +34,16 @@ const MAPPING = [
 
 function walk(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name.startsWith('.') || (entry.isDirectory() && SKIP_DIRS.has(entry.name))) continue
+    if (entry.name.startsWith('.') || (entry.isDirectory() && SKIP_DIRS.has(entry.name))) {
+      continue
+    }
     const full = path.join(dir, entry.name)
-    if (entry.isDirectory()) walk(full, out)
-    else if (EXTS.has(path.extname(entry.name))) out.push(full)
+    if (entry.isDirectory()) {
+      walk(full, out)
+    }
+    else if (EXTS.has(path.extname(entry.name))) {
+      out.push(full)
+    }
   }
   return out
 }
@@ -54,7 +60,7 @@ function matchCase(sample, target) {
 }
 
 const dryRun = process.argv.includes('--dry-run')
-const counts = new Map(MAPPING.map((entry) => [entry.from, 0]))
+const counts = new Map(MAPPING.map(entry => [entry.from, 0]))
 let filesChanged = 0
 
 for (const file of walk(SRC)) {
@@ -68,12 +74,14 @@ for (const file of walk(SRC)) {
   }
   if (text !== before) {
     filesChanged += 1
-    if (!dryRun) fs.writeFileSync(file, text)
+    if (!dryRun) {
+      fs.writeFileSync(file, text)
+    }
   }
 }
 
 console.log(`${dryRun ? 'would rewrite' : 'rewrote'} ${filesChanged} files`)
 for (const { from, to, note } of MAPPING) {
   const count = counts.get(from) ?? 0
-  if (count) console.log(`  ${from} -> ${to}  x${count}  (${note})`)
+  if (count) { console.log(`  ${from} -> ${to}  x${count}  (${note})`) }
 }

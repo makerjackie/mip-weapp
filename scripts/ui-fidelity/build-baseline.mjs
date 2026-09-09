@@ -8,7 +8,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
-import { DESIGN_SCALES, THEME_MAPPING, buildPaletteFromTokensWxss } from './lib/palette.mjs'
+import { buildPaletteFromTokensWxss, DESIGN_SCALES, THEME_MAPPING } from './lib/palette.mjs'
 
 const root = path.resolve(import.meta.dirname, '../..')
 const skillDir = path.join(root, '.claude/skills/mip-design-system')
@@ -26,7 +26,7 @@ const snapshot = (manifestPath && fs.existsSync(manifestPath) ? fs.readFileSync(
 const scales = tokensSource.match(/--mip-([a-z0-9-]+)\s*:\s*([0-9.]+rpx|[^;]+);/g) ?? []
 
 function rpxScale(name) {
-  const decl = scales.find((line) => line.includes(`--mip-${name}:`))
+  const decl = scales.find(line => line.includes(`--mip-${name}:`))
   return decl ? Number.parseFloat(decl.split(':')[1]) : null
 }
 

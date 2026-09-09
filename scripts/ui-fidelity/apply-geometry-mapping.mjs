@@ -21,16 +21,41 @@ const SKIP_DIRS = new Set(['assets', 'node_modules', 'dist', '.tmp'])
 // Off-scale rpx -> registered rpx.
 // 22rpx (11px) and 30rpx (15px) are registered sizes — they must not be snapped.
 const FONT = {
-  17: 20, 19: 20, 21: 20,
-  23: 24, 25: 24, 26: 24,
-  27: 28, 29: 28,
-  31: 32, 33: 32,
-  35: 34, 36: 34, 37: 34,
-  38: 40, 39: 40, 41: 40, 42: 40,
-  44: 48, 46: 48, 47: 48, 50: 48, 52: 48,
+  17: 20,
+  19: 20,
+  21: 20,
+  23: 24,
+  25: 24,
+  26: 24,
+  27: 28,
+  29: 28,
+  31: 32,
+  33: 32,
+  35: 34,
+  36: 34,
+  37: 34,
+  38: 40,
+  39: 40,
+  41: 40,
+  42: 40,
+  44: 48,
+  46: 48,
+  47: 48,
+  50: 48,
+  52: 48,
 }
 const RADIUS = {
-  6: 8, 10: 8, 12: 8, 14: 16, 18: 16, 20: 16, 22: 24, 26: 24, 28: 32, 36: 32, 40: 32,
+  6: 8,
+  10: 8,
+  12: 8,
+  14: 16,
+  18: 16,
+  20: 16,
+  22: 24,
+  26: 24,
+  28: 32,
+  36: 32,
+  40: 32,
 }
 
 /** [prefix, value, suffix] capture groups so the replacement can be rebuilt exactly. */
@@ -45,10 +70,16 @@ const PATTERNS = [
 
 function walk(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (entry.name.startsWith('.') || (entry.isDirectory() && SKIP_DIRS.has(entry.name))) continue
+    if (entry.name.startsWith('.') || (entry.isDirectory() && SKIP_DIRS.has(entry.name))) {
+      continue
+    }
     const full = path.join(dir, entry.name)
-    if (entry.isDirectory()) walk(full, out)
-    else if (EXTS.has(path.extname(entry.name))) out.push(full)
+    if (entry.isDirectory()) {
+      walk(full, out)
+    }
+    else if (EXTS.has(path.extname(entry.name))) {
+      out.push(full)
+    }
   }
   return out
 }
@@ -64,7 +95,9 @@ for (const file of walk(SRC)) {
     const table = kind === 'font' ? FONT : RADIUS
     text = text.replace(re, (matched, prefix, value, suffix) => {
       const next = table[Number.parseInt(value, 10)]
-      if (!next) return matched
+      if (!next) {
+        return matched
+      }
       const key = `${kind} ${value}->${next}`
       counts.set(key, (counts.get(key) ?? 0) + 1)
       return `${prefix}${next}${suffix}`
@@ -72,9 +105,11 @@ for (const file of walk(SRC)) {
   }
   if (text !== before) {
     filesChanged += 1
-    if (!dryRun) fs.writeFileSync(file, text)
+    if (!dryRun) {
+      fs.writeFileSync(file, text)
+    }
   }
 }
 
 console.log(`${dryRun ? 'would rewrite' : 'rewrote'} ${filesChanged} files`)
-for (const [key, count] of [...counts].sort((a, b) => b[1] - a[1])) console.log(`  ${key}  x${count}`)
+for (const [key, count] of [...counts].sort((a, b) => b[1] - a[1])) { console.log(`  ${key}  x${count}`) }
