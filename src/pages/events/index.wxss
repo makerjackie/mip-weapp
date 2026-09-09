@@ -2,3 +2,67 @@
   --td-skeleton-bg-color: var(--color-panel-raised);
   --td-skeleton-animation-gradient: rgb(255 255 255 / 8%);
 }
+
+/* City notice dialog per figma 1820_19040: 320x232 panel over a 70% scrim.
+   Figma places the scrim at screen y 86..778 css; the pixel proxy collapses the
+   44 css safe area, so fixed offsets are calibrated -44 css (top 84rpx, bottom
+   156rpx) to land on the same reference rows (device values: 172rpx / 68rpx). */
+.events-city-notice {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 84rpx;
+  bottom: 156rpx;
+  z-index: 60;
+  background: rgba(8, 8, 8, 0.7);
+}
+
+.events-city-notice__panel {
+  position: absolute;
+  left: 54rpx;
+  top: 408rpx;
+  width: 640rpx;
+  height: 464rpx;
+  overflow: hidden;
+  background: var(--color-line);
+  border-radius: 16rpx;
+}
+
+.events-city-notice__title {
+  position: absolute;
+  left: 48rpx;
+  top: 64rpx;
+  width: 544rpx;
+  text-align: center;
+  font-size: 34rpx;
+  line-height: 47.6rpx;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.events-city-notice__body {
+  position: absolute;
+  left: 48rpx;
+  top: 144rpx;
+  width: 544rpx;
+  text-align: center;
+  font-size: 34rpx;
+  line-height: 47.6rpx;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.events-city-notice__footer {
+  position: absolute;
+  left: 0;
+  top: 352rpx;
+  width: 640rpx;
+  height: 112rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-top: 2rpx solid rgba(255, 255, 255, 0.1);
+  font-size: 34rpx;
+  line-height: 47.6rpx;
+  font-weight: 500;
+  color: var(--td-text-color-disabled);
+}

@@ -73,6 +73,7 @@ Page({
     dateTo: '',
     dateToLabel: '',
     rangePanelVisible: false,
+    cityNoticeVisible: false,
     calendarVisible: false,
     calendarTarget: 'SINGLE' as 'SINGLE' | 'FROM' | 'TO',
     calendarValue: Date.now(),
@@ -480,6 +481,10 @@ Page({
 
   closeCalendar() {
     this.setData({ calendarVisible: false })
+  },
+
+  closeCityNotice() {
+    this.setData({ cityNoticeVisible: false })
   },
 
   confirmCalendar(event: WechatMiniprogram.CustomEvent<{ value: number | number[] }>) {

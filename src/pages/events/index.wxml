@@ -134,4 +134,11 @@
   </view>
   <view wx:if="{{message && state !== 'error'}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
   <t-calendar visible="{{calendarVisible}}" value="{{calendarValue}}" min-date="{{calendarMinDate}}" max-date="{{calendarMaxDate}}" title="选择活动日期" type="single" switch-mode="year-month" confirm-btn="确定" bind:confirm="confirmCalendar" bind:close="closeCalendar" />
+  <view wx:if="{{cityNoticeVisible}}" class="events-city-notice" aria-role="dialog" aria-label="温馨提示">
+    <view class="events-city-notice__panel">
+      <view class="events-city-notice__title">温馨提示</view>
+      <view class="events-city-notice__body"><view>MIP更多城市正在猛猛建设中</view><view>敬请期待~</view></view>
+      <view class="events-city-notice__footer" aria-role="button" bind:tap="closeCityNotice">我知道了</view>
+    </view>
+  </view>
 </view>
