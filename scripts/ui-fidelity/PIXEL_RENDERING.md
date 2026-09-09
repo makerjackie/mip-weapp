@@ -25,12 +25,12 @@ reported as unscored — fixtures, not the renderer, are the remaining bulk work
 | Layer | Metric | Score |
 | ----- | ------ | ----- |
 | 1 tokens | color / theme / geometry | 100% / 100% / 99.91% → **99.99%**, 0 hard-rule breaches |
-| 2 contracts | registry-valid `mip-icon` of all icon usages | **65.08%** (123/189; 66 foreign `t-icon`, all SOT gaps or dynamic) |
+| 2 contracts | registry-valid `mip-icon` of all icon usages | **65.8%** (127/193; 66 foreign `t-icon`, all SOT gaps or dynamic) |
 | 2 contracts | baked `/assets/mip/*` refs | **100%** (7 refs, 0 missing, 0 unused) |
 | 2 contracts | CooperationCard / LevelBanner checks | **100%**; component coverage 3/18 (informational) |
-| 2 contracts | composite | **88.36%** (pass mark 92) |
+| 2 contracts | composite | **88.6%** (pass mark 92 — pre-existing debt, see icon migration record) |
 | screens | routes ≥92% static conformance | **47/70** (mean 94.47%) |
-| 3 pixel | scored screens ≥92% | **1/1** — `profile-我的-a` **93.7%**; ~97 unscored |
+| 3 pixel | scored screens ≥92% | **3/3** (mean 96.18%) — `profile-我的-a` 93.7%, `events-活动-首页-a` 95.93%, `events-往期活动` 98.9%; ~98 unscored |
 
 ## Renderer (Layer 3 proxy)
 
@@ -138,3 +138,36 @@ alone misleads; measure the rendered screenshot instead.
    (row/edge scans of the raw reference screenshot resolve geometry questions).
 4. `score-pixel.mjs --only <screen>`; iterate WXSS/fixture until ≥92%.
 5. Keep Layer 1/2 green: tokens only, registry-valid icons, contract audits.
+
+## Events screens playbook (proven on 活动-首页-a 95.93%, 往期活动 98.9%)
+
+- **Crop**: events references render at raw = HTML coords + 24 (body padding +
+  page label), and the frame's status+nav band is 88px → compared = HTML − 44.
+  `crop {topPx: 68, bottomPx: 69}` lines the banner up at compared y 52..201.
+  Verify with `.tmp/band-scan.cjs <key>` (bright-band rows, impl vs raw ref).
+- **Geometry from the reference HTML**: grep absolute markers
+  (`style="left:12px;top:NNNpx;width:351px;height:243px"`) for card tops and
+  gaps instead of eyeballing — 往期活动 cards sit at page y 309/564, i.e. 12px
+  after the segment bar and 12px apart (`mt-3 gap-3`, same as UPCOMING). A 4px
+  list-margin guess cost 10% of the score while the covers flooded the diff.
+- **OrderCard / OrderTag contract** (skill `wechat-component-contracts.md`):
+  feed cover 351×149 r8; tag chips bottom-right, 32rpx tall / 8rpx radius /
+  1rpx stroke / 20rpx-500 text, presets 仅玩家 `#fde530/#d0b801/#000`,
+  沙龙 `#428bff/#075adf/#f7f7f7` (hex lives in `event-card/model.ts` +
+  allowlist, never in templates); participant pill h28 `#242424` rounded-full,
+  24px avatars overlapping −9px, small `+` then `{n}参加`
+  (`registrationCount − preview length`); title 16/22.4 medium; info rows
+  16px icon + 12/400 text, gap 4.
+- **Recap (往期活动) card**: 351×243 panel; cover 351×**197** `aspectFill`
+  under a **50% `#080808` dim** (`bg-canvas opacity-50` — the missing dim made
+  the whole cover flood the diff, 70% → 89%); centered `play-circle-line`
+  (40px box, 33.3px glyph, white); title 16/22.4 medium at cover+12px
+  (`pt-[24rpx] pb-[23rpx]`). Glyph extracted from the reference svg into
+  `mip-icon/icons.ts` (fill stripped, mono).
+- **Assets**: covers/banners/avatars are @2x copies of
+  `figma-restored/pages/assets/<hash>.png` into `src/assets/figma/events/`;
+  fixture `coverUrl` points at the copy. A busy cover is ~27% of compared
+  pixels — wrong crop or offset caps the screen near 70%.
+- **Diagnostics**: `.tmp/region-crop.cjs <key> <x> <y> <w> <h> <topPx>` writes
+  side-by-side impl/ref region pngs for eyeballing; raw IDAT bytes are
+  filter-encoded, always decode through `./node_modules/pngjs`.
