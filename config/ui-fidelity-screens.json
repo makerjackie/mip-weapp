@@ -160,6 +160,68 @@
           }
         ]
       }
+    },
+    {
+      "key": "events-往期活动",
+      "route": "pages/events/index",
+      "reference": "1820_18744_往期活动.html",
+      "crop": { "topPx": 68, "bottomPx": 69 },
+      "fixture": {
+        "state": "ready",
+        "selectedCity": "深圳",
+        "banners": [
+          {
+            "id": "banner-connect-fitness",
+            "imageUrl": "/assets/figma/events/banner-connect-fitness.png",
+            "accessibilityLabel": "MIP CONNECT 见人不如健身"
+          }
+        ],
+        "videoChannelConfigured": false,
+        "view": "PAST",
+        "dateFilter": "ENDED",
+        "customDateLabel": "",
+        "dateFrom": "",
+        "dateTo": "",
+        "rangePanelVisible": false,
+        "eventTypeOptions": [],
+        "tagOptions": [],
+        "draftAccessType": "",
+        "draftSortDirection": "ASC",
+        "searchInput": "",
+        "activeFilterCount": 0,
+        "calendarVisible": false,
+        "loadingMore": false,
+        "nextCursor": "",
+        "message": "",
+        "events": [
+          {
+            "id": "e1",
+            "coverUrl": "/assets/figma/events/cover-invest-you.png",
+            "title": "MIP反人性早会第328场",
+            "videoRecaps": [
+              {
+                "id": "r1",
+                "title": "MIP反人性早会第328场",
+                "summary": "",
+                "destination": { "provider": "WECHAT_CHANNELS", "type": "PROFILE", "finderUserName": "mipRecap", "feedId": null }
+              }
+            ]
+          },
+          {
+            "id": "e2",
+            "coverUrl": "/assets/figma/events/cover-concert-recap.png",
+            "title": "MIP反人性早会第328场",
+            "videoRecaps": [
+              {
+                "id": "r2",
+                "title": "MIP反人性早会第328场",
+                "summary": "",
+                "destination": { "provider": "WECHAT_CHANNELS", "type": "PROFILE", "finderUserName": "mipRecap", "feedId": null }
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

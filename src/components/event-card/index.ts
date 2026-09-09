@@ -1,3 +1,9 @@
+import { openWechatChannelsDestination, type WechatChannelsDestination } from '../../platform/wechat/channels'
+
+interface RecapEntry {
+  destination: WechatChannelsDestination
+}
+
 Component({
   properties: {
     event: { type: Object, value: {} },
@@ -14,6 +20,17 @@ Component({
       this.triggerEvent('select', { id: event.id || '', status: event.status || '' })
     },
     handleShare() {},
+
+    /** Recap cards open the event's first video recap; without one, the detail page. */
+    handleRecap() {
+      const event = this.data.event as { id?: string, status?: string, videoRecaps?: RecapEntry[] }
+      const recap = event.videoRecaps?.[0]
+      if (recap) {
+        void openWechatChannelsDestination(recap.destination)
+        return
+      }
+      this.triggerEvent('select', { id: event.id || '', status: event.status || '' })
+    },
 
     handleAction() {
       const event = this.data.event as { id?: string, action?: string }
