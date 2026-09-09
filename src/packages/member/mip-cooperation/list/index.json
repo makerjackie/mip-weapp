@@ -1,8 +1,8 @@
 {
   "navigationBarTitleText": "合作卡",
-  "navigationBarBackgroundColor": "#040404",
+  "navigationBarBackgroundColor": "#080808",
   "navigationBarTextStyle": "white",
-  "backgroundColor": "#040404",
+  "backgroundColor": "#080808",
   "enablePullDownRefresh": true,
   "usingComponents": {
     "cooperation-role-card": "/components/cooperation-role-card/index",

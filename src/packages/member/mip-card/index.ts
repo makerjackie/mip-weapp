@@ -31,7 +31,7 @@ const themes: Record<CardStyleKey, CardTheme> = {
     label: '暖色',
     asset: '/packages/member/assets/figma/profile/card-bg-a.jpg',
     background: '#FF5F6D',
-    foreground: '#090909',
+    foreground: '#080808',
     muted: '#4A2326',
     codeBackground: '#FFFFFF',
   },
@@ -49,7 +49,7 @@ const themes: Record<CardStyleKey, CardTheme> = {
     label: '浅色',
     asset: '/packages/member/assets/figma/profile/card-bg-c-optimized.jpg',
     background: '#F5F4F0',
-    foreground: '#090909',
+    foreground: '#080808',
     muted: '#575757',
     codeBackground: '#FFFFFF',
   },
@@ -58,7 +58,7 @@ const themes: Record<CardStyleKey, CardTheme> = {
     label: '品牌色',
     asset: '',
     background: '#FCDF03',
-    foreground: '#090909',
+    foreground: '#080808',
     muted: '#514A10',
     codeBackground: '#FFFFFF',
   },
@@ -381,7 +381,7 @@ Page({
     }
     context.fillStyle = theme.codeBackground
     context.fillRect(x, y, size, size)
-    context.fillStyle = '#111111'
+    context.fillStyle = '#080808'
     context.font = '700 58px sans-serif'
     context.textAlign = 'center'
     context.fillText(this.data.initial, x + size / 2, y + 92)

@@ -7,7 +7,7 @@
 }
 
 .growth-level-scale {
-  box-shadow: inset 0 10rpx 0 #040404;
+  box-shadow: inset 0 10rpx 0 #080808;
 }
 
 .growth-level-track {

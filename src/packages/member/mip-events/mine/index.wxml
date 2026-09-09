@@ -1,5 +1,5 @@
 <view id="mip-events-mine-page" class="mip-member-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+40rpx)] text-ink">
-  <view class="grid grid-cols-3 border-b border-line text-center text-[length:25rpx]">
+  <view class="grid grid-cols-3 border-b border-line text-center text-[length:24rpx]">
     <view wx:if="{{activeCategory === 'UPCOMING'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-3 font-medium text-brand" data-category="UPCOMING" bind:tap="changeCategory">待参加({{counts.upcoming}})</view>
     <view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-3 text-muted" data-category="UPCOMING" bind:tap="changeCategory">待参加({{counts.upcoming}})</view>
     <view wx:if="{{activeCategory === 'ATTENDED'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-3 font-medium text-brand" data-category="ATTENDED" bind:tap="changeCategory">已参加({{counts.attended}})</view>
@@ -14,7 +14,7 @@
   <view wx:else class="mx-3 mt-4 flex flex-col gap-3">
     <view wx:for="{{registrations}}" wx:key="registrationId" class="overflow-hidden rounded-[16rpx] bg-panel" data-event-id="{{item.event.id}}" data-status="{{item.status}}">
       <event-card event="{{item.card}}" variant="feed" bind:select="openRegistration" />
-      <view wx:if="{{item.status === 'PAYMENT_PENDING'}}" class="border-t border-line px-3 py-2 text-[length:21rpx] text-muted">支付确认前不会生成报名资格。</view>
+      <view wx:if="{{item.status === 'PAYMENT_PENDING'}}" class="border-t border-line px-3 py-2 text-[length:20rpx] text-muted">支付确认前不会生成报名资格。</view>
       <view wx:if="{{item.orderId || item.canEdit || item.canCancel || item.canRetryRefund}}" data-role="registration-actions" class="flex flex-col gap-2 border-t border-line px-3 py-3">
         <view wx:if="{{item.canEdit || item.canCancel || item.canRetryRefund}}" class="flex gap-2">
           <t-button wx:if="{{item.canCancel || item.canRetryRefund}}" class="min-w-0 flex-1" block size="large" theme="{{item.canRetryRefund ? 'primary' : 'danger'}}" variant="outline" loading="{{cancelingId === item.registrationId}}" data-action="cancel" data-event-id="{{item.event.id}}" data-registration-id="{{item.registrationId}}" data-version="{{item.version}}" data-refund-retry="{{item.canRetryRefund}}" catch:tap="cancelRegistration">{{item.canRetryRefund ? '继续处理退款' : '取消报名'}}</t-button>

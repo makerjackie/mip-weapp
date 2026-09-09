@@ -13,12 +13,12 @@ describe('event registration experience', () => {
     const detailConfig = JSON.parse(read('src/packages/member/mip-events/detail/index.json')) as Record<string, unknown>
 
     expect(detailConfig).toMatchObject({
-      navigationBarBackgroundColor: '#040404',
+      navigationBarBackgroundColor: '#080808',
       navigationBarTextStyle: 'white',
-      backgroundColor: '#040404',
-      backgroundColorContent: '#040404',
-      backgroundColorTop: '#040404',
-      backgroundColorBottom: '#040404',
+      backgroundColor: '#080808',
+      backgroundColorContent: '#080808',
+      backgroundColorTop: '#080808',
+      backgroundColorBottom: '#080808',
       backgroundTextStyle: 'light',
     })
   })

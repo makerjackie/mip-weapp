@@ -3,15 +3,15 @@
   <view wx:elif="{{result === 'success'}}" class="mx-auto flex h-[120rpx] w-[120rpx] items-center justify-center rounded-full bg-brand-soft"><t-icon name="check" size="60rpx" color="var(--color-brand)" /></view>
   <view wx:elif="{{result === 'failed'}}" class="mx-auto flex h-[120rpx] w-[120rpx] items-center justify-center rounded-full bg-panel-raised"><t-icon name="close" size="60rpx" color="var(--color-danger)" /></view>
   <view wx:else class="mx-auto flex h-[120rpx] w-[120rpx] items-center justify-center rounded-full bg-panel-raised"><t-icon name="pending" size="58rpx" color="var(--color-brand)" /></view>
-  <view class="mt-6 text-[length:38rpx] font-bold">{{title}}</view>
-  <view class="mx-auto mt-3 max-w-[620rpx] text-[length:23rpx] leading-6 text-muted">{{description}}</view>
+  <view class="mt-6 text-[length:40rpx] font-bold">{{title}}</view>
+  <view class="mx-auto mt-3 max-w-[620rpx] text-[length:24rpx] leading-6 text-muted">{{description}}</view>
 
   <view wx:if="{{order}}" class="mt-8 overflow-hidden rounded-[16rpx] bg-panel text-left">
     <view class="flex min-h-[92rpx] items-center justify-between gap-4 border-b border-line px-4"><text class="text-muted">订单</text><text class="text-right font-semibold">{{planName}}</text></view>
     <view class="flex min-h-[92rpx] items-center justify-between gap-4 border-b border-line px-4"><text class="text-muted">金额</text><text class="font-semibold">{{amountText}}</text></view>
     <view class="flex min-h-[92rpx] items-center justify-between gap-4 px-4"><text class="text-muted">服务端状态</text><text class="text-right text-brand">{{statusText}}</text></view>
   </view>
-  <view wx:if="{{!isEventOrder && !isContentOrder && membershipEndsText}}" class="mt-4 rounded-[16rpx] border border-line bg-panel px-4 py-4 text-[length:23rpx]">会员有效期至 {{membershipEndsText}}</view>
+  <view wx:if="{{!isEventOrder && !isContentOrder && membershipEndsText}}" class="mt-4 rounded-[16rpx] border border-line bg-panel px-4 py-4 text-[length:24rpx]">会员有效期至 {{membershipEndsText}}</view>
 
   <view class="mt-8 flex flex-col gap-3">
     <t-button wx:if="{{result === 'pending'}}" block size="large" theme="primary" bind:tap="retry">重新查询</t-button>

@@ -1,18 +1,18 @@
 .headquarters {
-  color: #f8f8f8;
+  color: #f7f7f7;
   background: #202020;
 }
 
 .headquarters-level-2 {
-  background: #34311e;
+  background: #242424;
 }
 
 .headquarters-level-3 {
-  background: #514919;
+  background: #4d4400;
 }
 
 .headquarters-level-4 {
-  color: #111;
+  color: #080808;
   background: #fcdf03;
 }
 

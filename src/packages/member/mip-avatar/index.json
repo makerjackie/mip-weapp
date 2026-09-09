@@ -1,6 +1,6 @@
 {
   "navigationBarTitleText": "数字分身",
-  "backgroundColor": "#040404",
+  "backgroundColor": "#080808",
   "enablePullDownRefresh": true,
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",

@@ -61,7 +61,7 @@ describe('MIP super case editor visual contract', () => {
   it('adapts the frozen Figma hierarchy to the native page shell', () => {
     expect(config).toMatchObject({
       navigationBarTitleText: '超级案例',
-      navigationBarBackgroundColor: '#040404',
+      navigationBarBackgroundColor: '#080808',
       navigationBarTextStyle: 'white',
     })
     expect(template).toContain('填写展现能力的超级案例')

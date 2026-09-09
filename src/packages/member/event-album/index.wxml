@@ -1,13 +1,13 @@
 <view id="event-album-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+56rpx)] pt-4 text-ink">
   <view class="flex items-center justify-between gap-3">
     <view>
-      <view class="text-[length:36rpx] font-bold">活动相册</view>
+      <view class="text-[length:34rpx] font-bold">活动相册</view>
       <view class="mt-1 text-[length:22rpx] text-muted">仅显示已发布照片，参与者可以提交照片。</view>
     </view>
     <t-button wx:if="{{canSubmit}}" size="small" theme="primary" loading="{{uploading}}" bind:tap="upload">上传照片</t-button>
   </view>
 
-  <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mt-5 rounded-[28rpx] bg-panel px-5 py-8">
+  <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mt-5 rounded-[32rpx] bg-panel px-5 py-8">
     <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
   <view wx:elif="{{state === 'error'}}" class="mt-5">
@@ -20,7 +20,7 @@
     <app-empty-state title="暂无照片" description="{{canSubmit ? '可以提交活动照片。' : '已发布照片会显示在这里。'}}" action-text="{{canSubmit ? '上传照片' : ''}}" bind:action="upload" />
   </view>
   <view wx:else class="mt-5 grid grid-cols-2 gap-3">
-    <view wx:for="{{items}}" wx:key="id" class="overflow-hidden rounded-[22rpx] bg-panel">
+    <view wx:for="{{items}}" wx:key="id" class="overflow-hidden rounded-[24rpx] bg-panel">
       <image wx:if="{{item.imageUrl}}" class="h-[300rpx] w-full bg-panel-raised" mode="aspectFill" src="{{item.imageUrl}}" data-url="{{item.imageUrl}}" bind:tap="preview" />
       <view wx:else class="flex h-[300rpx] items-center justify-center bg-panel-raised px-3 text-center text-[length:22rpx] text-muted">照片文件已清理</view>
       <view class="px-3 py-3">
@@ -35,6 +35,6 @@
     </view>
   </view>
   <view wx:if="{{loadingMore}}" class="py-5 text-center text-[length:22rpx] text-muted">正在加载</view>
-  <view wx:if="{{message && state !== 'error'}}" class="mt-4 rounded-[18rpx] bg-[#FFF0E8] px-4 py-3 text-[length:22rpx] text-[#9F4727]">{{message}}</view>
+  <view wx:if="{{message && state !== 'error'}}" class="mt-4 rounded-[16rpx] bg-[#242424] px-4 py-3 text-[length:22rpx] text-[#FCDF03]">{{message}}</view>
   <app-page-exit />
 </view>

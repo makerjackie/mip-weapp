@@ -35,10 +35,10 @@
     </view>
 
     <view wx:if="{{webLoginOpen}}" class="mt-4 rounded-[24rpx] bg-panel px-4 py-4">
-      <view class="text-[length:23rpx] text-muted">请核对网页域名为 mipmini.01mvp.com，再输入登录码。</view>
+      <view class="text-[length:24rpx] text-muted">请核对网页域名为 mipmini.01mvp.com，再输入登录码。</view>
       <input
         id="admin-web-login-code-input"
-        class="mt-4 box-border h-[96rpx] w-full rounded-[20rpx] border border-line bg-panel-raised px-4 text-center text-[length:36rpx] font-semibold tracking-[0.16em] text-ink"
+        class="mt-4 box-border h-[96rpx] w-full rounded-[16rpx] border border-line bg-panel-raised px-4 text-center text-[length:34rpx] font-semibold tracking-[0.16em] text-ink"
         aria-label="网页显示的 6 位数字登录码"
         type="number"
         value="{{webLoginCode}}"
@@ -51,10 +51,10 @@
       <view wx:if="{{webLoginError}}" class="mt-3 text-[length:22rpx] text-danger">{{webLoginError}}</view>
       <view wx:if="{{webLoginConfirmed}}" class="mt-3 text-[length:22rpx] text-success">网页登录已确认，可以返回电脑继续操作。</view>
       <view class="mt-4 grid grid-cols-2 gap-3">
-        <view class="flex min-h-[88rpx] items-center justify-center rounded-[20rpx] border border-line text-[length:25rpx]" aria-role="button" bind:tap="closeWebLogin">关闭</view>
+        <view class="flex min-h-[88rpx] items-center justify-center rounded-[16rpx] border border-line text-[length:24rpx]" aria-role="button" bind:tap="closeWebLogin">关闭</view>
         <view
           id="admin-web-login-confirm-button"
-          class="flex min-h-[88rpx] items-center justify-center rounded-[20rpx] bg-brand text-[length:25rpx] font-semibold text-on-brand"
+          class="flex min-h-[88rpx] items-center justify-center rounded-[16rpx] bg-brand text-[length:24rpx] font-semibold text-on-brand"
           aria-role="button"
           aria-disabled="{{webLoginBusy || webLoginConfirmed}}"
           bind:tap="confirmWebLogin"

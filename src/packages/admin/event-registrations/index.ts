@@ -219,7 +219,7 @@ Page({
         editable: true,
         placeholderText: '撤销原因',
         confirmText: '撤销签到',
-        confirmColor: '#E65C5C',
+        confirmColor: '#FF4D5E',
       })
       const reason = modal.content?.trim() || ''
       if (!modal.confirm) {

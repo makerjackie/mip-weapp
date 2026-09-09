@@ -13,11 +13,11 @@
     <view class="mt-4 rounded-[16rpx] bg-panel px-4 py-5">
       <view class="text-[length:30rpx] font-bold">文字整理</view>
       <view class="mt-2 text-[length:22rpx] leading-5 text-muted">AI 只整理草稿。正式内容会在对应编辑页确认保存后更新。</view>
-      <view class="mt-4 text-[length:23rpx] font-semibold text-muted">内容类型</view>
+      <view class="mt-4 text-[length:24rpx] font-semibold text-muted">内容类型</view>
       <picker range="{{purposeOptions}}" range-key="label" value="{{purposeIndex}}" bindchange="changePurpose">
-        <view class="mt-2 flex h-[88rpx] items-center justify-between rounded-[14rpx] bg-panel-raised px-4 text-[length:25rpx]"><text>{{purposeOptions[purposeIndex].label}}</text><t-icon name="chevron-down" size="30rpx" color="var(--color-muted)" /></view>
+        <view class="mt-2 flex h-[88rpx] items-center justify-between rounded-[16rpx] bg-panel-raised px-4 text-[length:24rpx]"><text>{{purposeOptions[purposeIndex].label}}</text><t-icon name="chevron-down" size="30rpx" color="var(--color-muted)" /></view>
       </picker>
-      <textarea aria-label="需要整理的内容" class="mt-3 block h-[240rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 py-3 text-[length:24rpx] leading-6" value="{{sourceText}}" maxlength="8000" bindinput="updateSource" placeholder="输入需要整理的内容" placeholder-style="color:#A3A3A3" />
+      <textarea aria-label="需要整理的内容" class="mt-3 block h-[240rpx] w-full max-w-full box-border rounded-[16rpx] bg-panel-raised px-4 py-3 text-[length:24rpx] leading-6" value="{{sourceText}}" maxlength="8000" bindinput="updateSource" placeholder="输入需要整理的内容" placeholder-style="color:#B3B3B3" />
       <view class="mt-4"><t-button block size="large" theme="primary" disabled="{{!capability.textDrafts || recording}}" loading="{{generating && !recording}}" bind:tap="generateFromText">整理文字</t-button></view>
       <view id="mip-ai-disabled-state" wx:if="{{!capability.textDrafts && !capability.voiceDrafts}}" class="mt-3 text-[length:22rpx] text-muted">AI 整理当前不可用。</view>
     </view>
@@ -28,23 +28,23 @@
         <text class="inline-flex min-h-[64rpx] items-center px-2 text-[length:22rpx] text-muted" bind:tap="closeRefinement">关闭</text>
       </view>
       <view class="mt-4 flex flex-col gap-3">
-        <view wx:for="{{activeDraft.fieldRows}}" wx:for-item="field" wx:key="key" class="rounded-[14rpx] bg-panel-raised px-4 py-3">
+        <view wx:for="{{activeDraft.fieldRows}}" wx:for-item="field" wx:key="key" class="rounded-[16rpx] bg-panel-raised px-4 py-3">
           <view class="text-[length:22rpx] text-muted">{{field.label}}</view>
           <view class="mt-1 text-[length:24rpx] leading-6 text-ink">{{field.value}}</view>
         </view>
       </view>
-      <view class="mt-4 text-[length:23rpx] font-semibold text-muted">补充内容</view>
-      <textarea aria-label="补充信息" class="mt-2 block h-[200rpx] w-full max-w-full box-border rounded-[14rpx] bg-panel-raised px-4 py-3 text-[length:24rpx] leading-6" value="{{supplementalText}}" maxlength="4000" bindinput="updateSupplement" placeholder="补充信息或说明需要调整的内容" placeholder-style="color:#A3A3A3" />
+      <view class="mt-4 text-[length:24rpx] font-semibold text-muted">补充内容</view>
+      <textarea aria-label="补充信息" class="mt-2 block h-[200rpx] w-full max-w-full box-border rounded-[16rpx] bg-panel-raised px-4 py-3 text-[length:24rpx] leading-6" value="{{supplementalText}}" maxlength="4000" bindinput="updateSupplement" placeholder="补充信息或说明需要调整的内容" placeholder-style="color:#B3B3B3" />
       <view class="mt-4"><t-button block size="large" theme="primary" disabled="{{!capability.refinementDrafts}}" loading="{{refining}}" bind:tap="continueDraft">更新草稿</t-button></view>
       <view wx:if="{{!capability.refinementDrafts}}" class="mt-3 text-[length:22rpx] text-muted">草稿补充当前不可用。</view>
     </view>
 
     <view class="mt-6 text-[length:30rpx] font-bold">我的草稿</view>
-    <view wx:if="{{drafts.length === 0}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-8 text-center text-[length:23rpx] text-muted">暂无草稿。</view>
+    <view wx:if="{{drafts.length === 0}}" class="mt-3 rounded-[16rpx] bg-panel px-4 py-8 text-center text-[length:24rpx] text-muted">暂无草稿。</view>
     <view wx:else class="mt-3 flex flex-col gap-3">
       <view wx:for="{{drafts}}" wx:key="id" class="rounded-[16rpx] bg-panel px-4 py-4">
-        <view class="flex items-start justify-between gap-3"><view class="text-[length:26rpx] font-semibold">{{item.purposeLabel}}</view><view class="rounded-full bg-brand-soft px-3 py-1 text-[length:22rpx] text-brand">{{item.statusLabel}}</view></view>
-        <view wx:if="{{item.summary}}" class="mt-3 text-[length:23rpx] leading-6 text-muted">{{item.summary}}</view>
+        <view class="flex items-start justify-between gap-3"><view class="text-[length:24rpx] font-semibold">{{item.purposeLabel}}</view><view class="rounded-full bg-brand-soft px-3 py-1 text-[length:22rpx] text-brand">{{item.statusLabel}}</view></view>
+        <view wx:if="{{item.summary}}" class="mt-3 text-[length:24rpx] leading-6 text-muted">{{item.summary}}</view>
         <view class="mt-3 text-[length:22rpx] text-muted">{{item.expiresText}}</view>
         <view wx:if="{{item.canUse}}" class="mt-4 flex flex-col gap-3">
           <view class="grid grid-cols-2 gap-3"><t-button block size="small" variant="outline" data-id="{{item.id}}" bind:tap="copyDraft">复制草稿</t-button><t-button block size="small" variant="outline" disabled="{{!capability.refinementDrafts}}" data-id="{{item.id}}" bind:tap="openRefinement">补充信息</t-button></view>

@@ -1,6 +1,6 @@
 {
   "navigationBarTitleText": "全部服务",
-  "backgroundColor": "#040404",
+  "backgroundColor": "#080808",
   "usingComponents": {
     "app-page-exit": "/components/page-exit/index",
     "t-icon": "tdesign-miniprogram/icon/icon"

@@ -1,6 +1,6 @@
 <view id="admin-event-registrations-page" class="mip-admin-page min-h-screen bg-canvas px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-7 text-ink">
   <view class="text-[length:40rpx] font-bold">参与者与签到</view>
-  <view wx:if="{{eventTitle}}" class="mt-2 break-all text-[length:23rpx] text-muted">{{eventTitle}}</view>
+  <view wx:if="{{eventTitle}}" class="mt-2 break-all text-[length:24rpx] text-muted">{{eventTitle}}</view>
 
   <view wx:if="{{state === 'ready'}}" class="mt-4">
     <t-button block variant="outline" bind:tap="openCheckInTools">签到码与海报</t-button>
@@ -16,7 +16,7 @@
     <view class="mt-3"><t-button block theme="primary" bind:tap="search">查询</t-button></view>
   </view>
 
-  <view id="admin-event-registrations-disabled-state" wx:if="{{state === 'ready' && !canCheckIn && !canUndoCheckIn}}" class="mt-4 rounded-[20rpx] bg-panel px-4 py-3 text-[length:22rpx] text-muted">当前名单仅供查看。</view>
+  <view id="admin-event-registrations-disabled-state" wx:if="{{state === 'ready' && !canCheckIn && !canUndoCheckIn}}" class="mt-4 rounded-[16rpx] bg-panel px-4 py-3 text-[length:22rpx] text-muted">当前名单仅供查看。</view>
   <view wx:if="{{state === 'loading'}}" class="mt-6 rounded-[24rpx] bg-panel p-5">
     <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
@@ -51,7 +51,7 @@
     </view>
   </view>
 
-  <view wx:if="{{message && state === 'ready'}}" class="mt-4 break-all rounded-[20rpx] bg-panel px-4 py-3 text-[length:23rpx] text-danger">{{message}}</view>
+  <view wx:if="{{message && state === 'ready'}}" class="mt-4 break-all rounded-[16rpx] bg-panel px-4 py-3 text-[length:24rpx] text-danger">{{message}}</view>
   <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" disabled="{{loadingMore || processingId !== ''}}" bind:tap="loadMoreRoster">加载更多</t-button></view>
   <app-page-exit />
 </view>

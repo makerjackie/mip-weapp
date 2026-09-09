@@ -56,19 +56,19 @@ export function eventRichTextNodes(value: string): EventRichTextNode[] {
           },
         })
         if (image[1]) {
-          nodes.push(element('p', image[1], { style: 'margin:0 0 12px;text-align:center;font-size:12px;color:#929a94;' }))
+          nodes.push(element('p', image[1], { style: 'margin:0 0 12px;text-align:center;font-size:12px;color:#b3b3b3;' }))
         }
         continue
       }
     }
     if (line.startsWith('## ')) {
       flushList()
-      nodes.push(element('h3', line.slice(3).trim(), { style: 'margin:16px 0 8px;font-size:18px;font-weight:700;color:#f5f5f5;' }))
+      nodes.push(element('h3', line.slice(3).trim(), { style: 'margin:16px 0 8px;font-size:18px;font-weight:700;color:#ffffff;' }))
       continue
     }
     if (line.startsWith('# ')) {
       flushList()
-      nodes.push(element('h2', line.slice(2).trim(), { style: 'margin:20px 0 8px;font-size:20px;font-weight:700;color:#f5f5f5;' }))
+      nodes.push(element('h2', line.slice(2).trim(), { style: 'margin:20px 0 8px;font-size:20px;font-weight:700;color:#ffffff;' }))
       continue
     }
     if (line.startsWith('- ')) {

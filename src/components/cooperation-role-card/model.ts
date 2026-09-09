@@ -36,7 +36,7 @@ export const cooperationRoleVisuals: Record<CooperationRoleKey, CooperationRoleV
   },
   visual_designer: {
     backgroundColor: '#04A44F',
-    softColor: '#AFFDD4',
+    softColor: '#E5FFF1',
     foregroundColor: '#FFFFFF',
     artPath: '/assets/figma/cooperation/visual-designer.webp',
   },
@@ -57,8 +57,8 @@ export interface CooperationRoleCardInput {
 export function cooperationRoleCardView(input: CooperationRoleCardInput) {
   const definition = cooperationRoles.find(role => role.key === input.roleKey)
   const visual = definition ? cooperationRoleVisuals[definition.key] : null
-  const backgroundColor = visual?.backgroundColor || '#363636'
-  const softColor = visual?.softColor || '#4A4A4A'
+  const backgroundColor = visual?.backgroundColor || '#333333'
+  const softColor = visual?.softColor || '#4D4D4D'
   const foregroundColor = visual?.foregroundColor || '#FFFFFF'
 
   return {

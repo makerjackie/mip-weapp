@@ -1,0 +1,568 @@
+{
+  "schemaVersion": 1,
+  "generatedFrom": "mip-design-system skill (assets/wechat/tokens.wxss + references/DESIGN.md)",
+  "skillSnapshot": "2026",
+  "conversion": "1 design px = 2 rpx",
+  "colors": [
+    {
+      "token": "bg-page",
+      "value": "#080808",
+      "rgb": "#080808",
+      "alpha": 1,
+      "group": "surface"
+    },
+    {
+      "token": "bg-surface",
+      "value": "#202020",
+      "rgb": "#202020",
+      "alpha": 1,
+      "group": "surface"
+    },
+    {
+      "token": "bg-surface-2",
+      "value": "#333333",
+      "rgb": "#333333",
+      "alpha": 1,
+      "group": "surface"
+    },
+    {
+      "token": "bg-surface-3",
+      "value": "#242424",
+      "rgb": "#242424",
+      "alpha": 1,
+      "group": "surface"
+    },
+    {
+      "token": "bg-surface-deep",
+      "value": "#191919",
+      "rgb": "#191919",
+      "alpha": 1,
+      "group": "surface"
+    },
+    {
+      "token": "bg-cell",
+      "value": "#d9d9d9",
+      "rgb": "#d9d9d9",
+      "alpha": 1,
+      "group": "surface"
+    },
+    {
+      "token": "brand",
+      "value": "#fcdf03",
+      "rgb": "#fcdf03",
+      "alpha": 1,
+      "group": "brand"
+    },
+    {
+      "token": "brand-bright",
+      "value": "rgba(255, 221, 2, 0.1)",
+      "rgb": "rgba(255,221,2,0.1)",
+      "alpha": 0.1,
+      "group": "brand"
+    },
+    {
+      "token": "brand-alt",
+      "value": "#fde104",
+      "rgb": "#fde104",
+      "alpha": 1,
+      "group": "brand"
+    },
+    {
+      "token": "brand-stroke",
+      "value": "#d0b801",
+      "rgb": "#d0b801",
+      "alpha": 1,
+      "group": "brand"
+    },
+    {
+      "token": "purple-card",
+      "value": "#7b00ff",
+      "rgb": "#7b00ff",
+      "alpha": 1,
+      "group": "illustration"
+    },
+    {
+      "token": "purple-deep",
+      "value": "#3b007a",
+      "rgb": "#3b007a",
+      "alpha": 1,
+      "group": "illustration"
+    },
+    {
+      "token": "purple-deep-2",
+      "value": "#6500d1",
+      "rgb": "#6500d1",
+      "alpha": 1,
+      "group": "illustration"
+    },
+    {
+      "token": "purple-text",
+      "value": "#f2e5ff",
+      "rgb": "#f2e5ff",
+      "alpha": 1,
+      "group": "illustration"
+    },
+    {
+      "token": "purple-light",
+      "value": "#dab8ff",
+      "rgb": "#dab8ff",
+      "alpha": 1,
+      "group": "illustration"
+    },
+    {
+      "token": "text-primary",
+      "value": "#ffffff",
+      "rgb": "#ffffff",
+      "alpha": 1,
+      "group": "text"
+    },
+    {
+      "token": "text-secondary",
+      "value": "#b3b3b3",
+      "rgb": "#b3b3b3",
+      "alpha": 1,
+      "group": "text"
+    },
+    {
+      "token": "text-on-brand",
+      "value": "#080808",
+      "rgb": "#080808",
+      "alpha": 1,
+      "group": "text"
+    },
+    {
+      "token": "text-cell",
+      "value": "#f7f7f7",
+      "rgb": "#f7f7f7",
+      "alpha": 1,
+      "group": "text"
+    },
+    {
+      "token": "text-disabled",
+      "value": "#7d90a9",
+      "rgb": "#7d90a9",
+      "alpha": 1,
+      "group": "text"
+    },
+    {
+      "token": "icon-dim",
+      "value": "#dadada",
+      "rgb": "#dadada",
+      "alpha": 1,
+      "group": "other"
+    },
+    {
+      "token": "record",
+      "value": "#ff2238",
+      "rgb": "#ff2238",
+      "alpha": 1,
+      "group": "status"
+    },
+    {
+      "token": "success",
+      "value": "#18e779",
+      "rgb": "#18e779",
+      "alpha": 1,
+      "group": "status"
+    },
+    {
+      "token": "danger",
+      "value": "#ff4d5e",
+      "rgb": "#ff4d5e",
+      "alpha": 1,
+      "group": "status"
+    },
+    {
+      "token": "wechat-green",
+      "value": "#07c160",
+      "rgb": "#07c160",
+      "alpha": 1,
+      "group": "other"
+    },
+    {
+      "token": "hairline",
+      "value": "rgba(255, 255, 255, 0.1)",
+      "rgb": "rgba(255,255,255,0.1)",
+      "alpha": 0.1,
+      "group": "overlay"
+    },
+    {
+      "token": "overlay-90",
+      "value": "rgba(255, 255, 255, 0.9)",
+      "rgb": "rgba(255,255,255,0.9)",
+      "alpha": 0.9,
+      "group": "overlay"
+    },
+    {
+      "token": "overlay-50",
+      "value": "rgba(255, 255, 255, 0.5)",
+      "rgb": "rgba(255,255,255,0.5)",
+      "alpha": 0.5,
+      "group": "overlay"
+    },
+    {
+      "token": "brand-bright-2",
+      "value": "#fde530",
+      "rgb": "#fde530",
+      "alpha": 1,
+      "group": "brand",
+      "note": "DESIGN.md §9.1 活动/机会高亮黄"
+    },
+    {
+      "token": "brand-dark-stroke",
+      "value": "#d0b801",
+      "rgb": "#d0b801",
+      "alpha": 1,
+      "group": "brand",
+      "note": "DESIGN.md §2.2 黄色图形描边"
+    },
+    {
+      "token": "accent-red",
+      "value": "#ff2248",
+      "rgb": "#ff2248",
+      "alpha": 1,
+      "group": "status",
+      "note": "DESIGN.md §9.1 嘉宾-c 插画红"
+    },
+    {
+      "token": "text-dim-2",
+      "value": "#4c4c4c",
+      "rgb": "#4c4c4c",
+      "alpha": 1,
+      "group": "text",
+      "note": "DESIGN.md §9.1 日历非本月数字"
+    },
+    {
+      "token": "ios-gray",
+      "value": "#8e8e93",
+      "rgb": "#8e8e93",
+      "alpha": 1,
+      "group": "text",
+      "note": "DESIGN.md §9.1 iOS systemGray 语义"
+    },
+    {
+      "token": "illus-navy",
+      "value": "#09121f",
+      "rgb": "#09121f",
+      "alpha": 1,
+      "group": "illustration",
+      "note": "DESIGN.md §9.1 机会探索深色矢量"
+    },
+    {
+      "token": "illus-skin",
+      "value": "#ffd3a7",
+      "rgb": "#ffd3a7",
+      "alpha": 1,
+      "group": "illustration",
+      "note": "DESIGN.md §9.1 插画肤色"
+    },
+    {
+      "token": "illus-stroke-light",
+      "value": "#eeeeee",
+      "rgb": "#eeeeee",
+      "alpha": 1,
+      "group": "illustration",
+      "note": "DESIGN.md §9.1 浅色矢量描边"
+    },
+    {
+      "token": "record-pulse-outer",
+      "value": "#fff7b8",
+      "rgb": "#fff7b8",
+      "alpha": 1,
+      "group": "brand",
+      "note": "DESIGN.md §2.8 录音光晕外圈"
+    },
+    {
+      "token": "record-pulse-inner",
+      "value": "#feeb5d",
+      "rgb": "#feeb5d",
+      "alpha": 1,
+      "group": "brand",
+      "note": "DESIGN.md §2.8 录音光晕内圈"
+    },
+    {
+      "token": "coop-name-upstart",
+      "value": "#fadab3",
+      "rgb": "#fadab3",
+      "alpha": 1,
+      "group": "illustration",
+      "note": "contracts CooperationCard upstart 名色"
+    },
+    {
+      "token": "coop-name-design-slave",
+      "value": "#e5fff1",
+      "rgb": "#e5fff1",
+      "alpha": 1,
+      "group": "illustration",
+      "note": "contracts CooperationCard design-slave 名色"
+    },
+    {
+      "token": "coop-name-pimp",
+      "value": "#ffe5f9",
+      "rgb": "#ffe5f9",
+      "alpha": 1,
+      "group": "illustration",
+      "note": "contracts CooperationCard pimp 名色"
+    },
+    {
+      "token": "coop-name-business-man",
+      "value": "#ffeee5",
+      "rgb": "#ffeee5",
+      "alpha": 1,
+      "group": "illustration",
+      "note": "contracts CooperationCard business-man 名色"
+    },
+    {
+      "token": "coop-name-old-nanny",
+      "value": "#e5efff",
+      "rgb": "#e5efff",
+      "alpha": 1,
+      "group": "illustration",
+      "note": "contracts CooperationCard old-nanny 名色"
+    },
+    {
+      "token": "coop-bg-pimp",
+      "value": "#df07a9",
+      "rgb": "#df07a9",
+      "alpha": 1,
+      "group": "illustration",
+      "note": "contracts CooperationCard pimp 垫底"
+    },
+    {
+      "token": "illus-5-blue",
+      "value": "#1a71ff",
+      "rgb": "#1a71ff",
+      "alpha": 1,
+      "group": "illustration",
+      "note": "DESIGN.md §2.4 合作卡插画五色"
+    },
+    {
+      "token": "illus-5-green",
+      "value": "#04a44f",
+      "rgb": "#04a44f",
+      "alpha": 1,
+      "group": "illustration",
+      "note": "DESIGN.md §2.4 合作卡插画五色"
+    },
+    {
+      "token": "illus-5-orange",
+      "value": "#ff5500",
+      "rgb": "#ff5500",
+      "alpha": 1,
+      "group": "illustration",
+      "note": "DESIGN.md §2.4 合作卡插画五色"
+    },
+    {
+      "token": "illus-5-magenta",
+      "value": "#af0484",
+      "rgb": "#af0484",
+      "alpha": 1,
+      "group": "illustration",
+      "note": "DESIGN.md §2.4 合作卡插画五色"
+    },
+    {
+      "token": "illus-5-brown",
+      "value": "#7a2900",
+      "rgb": "#7a2900",
+      "alpha": 1,
+      "group": "illustration",
+      "note": "DESIGN.md §2.4 合作卡插画五色"
+    },
+    {
+      "token": "star-off",
+      "value": "#4d4d4d",
+      "rgb": "#4d4d4d",
+      "alpha": 1,
+      "group": "control",
+      "note": "contracts StarRating 空星"
+    },
+    {
+      "token": "progress-slot",
+      "value": "#4d4400",
+      "rgb": "#4d4400",
+      "alpha": 1,
+      "group": "control",
+      "note": "contracts LevelBanner 进度槽"
+    },
+    {
+      "token": "switch-off",
+      "value": "#39393d",
+      "rgb": "#39393d",
+      "alpha": 1,
+      "group": "control",
+      "note": "contracts Switch 关闭底"
+    },
+    {
+      "token": "order-tag-salon-bg",
+      "value": "#428bff",
+      "rgb": "#428bff",
+      "alpha": 1,
+      "group": "status",
+      "note": "contracts OrderTag 沙龙预设底"
+    },
+    {
+      "token": "order-tag-salon-border",
+      "value": "#075adf",
+      "rgb": "#075adf",
+      "alpha": 1,
+      "group": "status",
+      "note": "contracts OrderTag 沙龙预设描边"
+    },
+    {
+      "token": "glass-scrim",
+      "value": "rgba(20,20,20,0.45)",
+      "rgb": "rgba(20,20,20,0.45)",
+      "alpha": 0.45,
+      "group": "overlay",
+      "note": "DESIGN.md §2.7 GLASS 近似底"
+    }
+  ],
+  "scales": {
+    "fontSizesPx": [
+      10,
+      11,
+      12,
+      14,
+      15,
+      16,
+      17,
+      20,
+      24,
+      48
+    ],
+    "lineHeightsPx": [
+      13,
+      14,
+      16.8,
+      17,
+      19.6,
+      20,
+      22,
+      22.4,
+      28,
+      48,
+      57,
+      40,
+      34,
+      44,
+      33,
+      28
+    ],
+    "fontWeights": [
+      400,
+      500,
+      600,
+      700
+    ],
+    "radiusPx": [
+      2,
+      4,
+      8,
+      12,
+      15,
+      16,
+      50,
+      100
+    ],
+    "spacingPx": [
+      1,
+      2,
+      4,
+      8,
+      10,
+      12,
+      16,
+      20,
+      24,
+      28,
+      32,
+      34,
+      40,
+      46,
+      47,
+      56,
+      64,
+      72,
+      80,
+      88,
+      92,
+      100,
+      112,
+      120,
+      128,
+      149,
+      160,
+      176,
+      200,
+      232,
+      238,
+      256,
+      320,
+      351,
+      375,
+      400,
+      500,
+      700,
+      1000,
+      2000
+    ],
+    "contentWidthRpx": 702,
+    "pageMarginRpx": 24,
+    "rowHeightRpx": 92
+  },
+  "themeMapping": {
+    "--color-canvas": {
+      "token": "bg-page",
+      "note": "页面底色"
+    },
+    "--color-panel": {
+      "token": "bg-surface",
+      "note": "卡片/行底"
+    },
+    "--color-panel-raised": {
+      "token": "bg-surface-3",
+      "note": "次级卡（设计稿为 #242424）"
+    },
+    "--color-panel-muted": {
+      "token": "bg-surface-3",
+      "note": "次级卡"
+    },
+    "--color-ink": {
+      "token": "text-primary",
+      "note": "主文案"
+    },
+    "--color-muted": {
+      "token": "text-secondary",
+      "note": "次要文案"
+    },
+    "--color-line": {
+      "token": "bg-surface-2",
+      "note": "分隔/描边（设计稿 #333333）"
+    },
+    "--color-brand": {
+      "token": "brand",
+      "note": "品牌黄"
+    },
+    "--color-on-brand": {
+      "token": "text-on-brand",
+      "note": "黄底文字"
+    },
+    "--color-danger": {
+      "token": "danger",
+      "note": "危险色（设计稿 #ff4d5e）"
+    },
+    "--color-success": {
+      "token": "success",
+      "note": "成功色（设计稿 #18e779）"
+    }
+  },
+  "hardRules": [
+    "page background must be #080808",
+    "card/row surface must be #202020",
+    "brand yellow is #fcdf03; unregistered yellows are forbidden",
+    "yellow actions and activated chips need a #080808 keyline",
+    "content width 702rpx with 24rpx side margins on a 750rpx page",
+    "icons come from the mip-icon registry only",
+    "no local image paths in WXSS background-image"
+  ]
+}

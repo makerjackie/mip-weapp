@@ -1,6 +1,6 @@
 .tab-bar {
   --color-brand: #fcdf03;
-  --color-muted: #a3a3a3;
+  --color-muted: #b3b3b3;
 
   position: fixed;
   right: 0;
@@ -12,7 +12,7 @@
   padding-bottom: env(safe-area-inset-bottom);
   pointer-events: auto;
   background-color: #202020;
-  border-top: 1rpx solid #363636;
+  border-top: 1rpx solid #333333;
 }
 
 .tab-bar-row {

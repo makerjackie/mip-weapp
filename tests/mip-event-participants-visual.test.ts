@@ -104,7 +104,7 @@ describe('MIP event participant visual hierarchy', () => {
     })
     expect(declarations(rule(stylesheet, '.participants-filter-pill', true))).toMatchObject({
       'min-height': '56rpx',
-      'border-radius': '12rpx',
+      'border-radius': '8rpx',
     })
     expect(template).toContain('participants-filter-pill--active')
     expect(template).toContain('name="check"')

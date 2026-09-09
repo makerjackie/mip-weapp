@@ -25,7 +25,7 @@
       <view class="mt-4 flex items-center justify-between border-t border-line pt-3">
         <text wx:if="{{item.orderType === 'EVENT'}}" class="rounded-[8rpx] bg-panel-raised px-3 py-1 text-[length:22rpx] text-muted">{{item.statusText}}</text>
         <text wx:else class="text-[length:22rpx] text-muted">{{item.orderType === 'CONTENT' ? '内容订单' : '会员订单'}}</text>
-        <text class="text-[length:31rpx] font-bold {{item.amountHighlight ? 'text-brand' : ''}}">{{item.amountLabel}}：{{item.amountText}}</text>
+        <text class="text-[length:32rpx] font-bold {{item.amountHighlight ? 'text-brand' : ''}}">{{item.amountLabel}}：{{item.amountText}}</text>
       </view>
       </view>
     </view>

@@ -61,7 +61,7 @@ describe('MIP cooperation role visual component', () => {
       },
       visual_designer: {
         backgroundColor: '#04A44F',
-        softColor: '#AFFDD4',
+        softColor: '#E5FFF1',
         foregroundColor: '#FFFFFF',
         artPath: '/assets/figma/cooperation/visual-designer.webp',
       },

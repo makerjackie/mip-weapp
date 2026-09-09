@@ -5,16 +5,16 @@
   <block wx:else>
     <view class="flex items-center gap-2 rounded-[16rpx] bg-panel px-3">
       <t-icon name="search" size="36rpx" color="var(--color-muted)" />
-      <input aria-label="搜索姓名或简介" class="box-border h-[88rpx] min-w-0 flex-1 max-w-full text-[length:26rpx]" value="{{searchInput}}" maxlength="80" placeholder="搜索姓名或简介" bindinput="onSearchInput" />
+      <input aria-label="搜索姓名或简介" class="box-border h-[88rpx] min-w-0 flex-1 max-w-full text-[length:24rpx]" value="{{searchInput}}" maxlength="80" placeholder="搜索姓名或简介" bindinput="onSearchInput" />
       <view wx:if="{{searchInput}}" class="flex min-h-[88rpx] items-center px-2 text-[length:22rpx] text-muted" bind:tap="clearSearch">清除</view>
     </view>
 
     <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="mt-3 whitespace-nowrap">
       <view class="inline-flex gap-2 pr-3">
-        <view wx:if="{{activeView === 'SENT'}}" class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-brand px-3 text-[length:26rpx] font-medium text-on-brand" data-view="SENT" bind:tap="changeView">选择心动 {{heart.targetRef ? 1 : 0}}</view>
-        <view wx:else class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:26rpx] text-muted" data-view="SENT" bind:tap="changeView">选择心动 {{heart.targetRef ? 1 : 0}}</view>
-        <view wx:if="{{activeView === 'RECEIVED'}}" class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-brand px-3 text-[length:26rpx] font-medium text-on-brand" data-view="RECEIVED" bind:tap="changeView">对我心动 {{received.length}}</view>
-        <view wx:else class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:26rpx] text-muted" data-view="RECEIVED" bind:tap="changeView">对我心动 {{received.length}}</view>
+        <view wx:if="{{activeView === 'SENT'}}" class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-brand px-3 text-[length:24rpx] font-medium text-on-brand" data-view="SENT" bind:tap="changeView">选择心动 {{heart.targetRef ? 1 : 0}}</view>
+        <view wx:else class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:24rpx] text-muted" data-view="SENT" bind:tap="changeView">选择心动 {{heart.targetRef ? 1 : 0}}</view>
+        <view wx:if="{{activeView === 'RECEIVED'}}" class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-brand px-3 text-[length:24rpx] font-medium text-on-brand" data-view="RECEIVED" bind:tap="changeView">对我心动 {{received.length}}</view>
+        <view wx:else class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:24rpx] text-muted" data-view="RECEIVED" bind:tap="changeView">对我心动 {{received.length}}</view>
       </view>
     </scroll-view>
 

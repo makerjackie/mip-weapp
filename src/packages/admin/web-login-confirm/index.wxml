@@ -7,7 +7,7 @@
 
   <view wx:if="{{state === 'loading' || state === 'access' || state === 'confirming'}}" class="mt-6 rounded-[24rpx] bg-panel px-5 py-6">
     <t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading />
-    <view class="mt-4 text-[length:25rpx] text-muted">
+    <view class="mt-4 text-[length:24rpx] text-muted">
       {{state === 'confirming' ? '正在确认网页登录' : (state === 'access' ? '正在确认账号权限' : '正在准备登录请求')}}
     </view>
   </view>
@@ -31,7 +31,7 @@
     <view
       wx:if="{{hasChallenge}}"
       id="admin-web-login-confirm-button"
-      class="mt-6 flex min-h-[92rpx] items-center justify-center rounded-[24rpx] bg-brand text-[length:26rpx] font-semibold text-on-brand"
+      class="mt-6 flex min-h-[92rpx] items-center justify-center rounded-[24rpx] bg-brand text-[length:24rpx] font-semibold text-on-brand"
       aria-role="button"
       bind:tap="confirmWebLogin"
     >确认登录</view>

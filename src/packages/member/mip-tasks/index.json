@@ -1,7 +1,7 @@
 {
   "navigationBarTitleText": "任务",
   "enablePullDownRefresh": true,
-  "backgroundColor": "#040404",
+  "backgroundColor": "#080808",
   "usingComponents": {
     "app-empty-state": "/components/empty-state/index",
     "app-page-exit": "/components/page-exit/index",

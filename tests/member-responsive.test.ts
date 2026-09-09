@@ -131,7 +131,7 @@ describe('MIP member responsive foundation', () => {
 
     expect(source).toContain('--mip-radius-card: 32rpx;')
     expect(source).toContain('--mip-radius-card-medium: 24rpx;')
-    expect(source).toContain('--mip-radius-control: 20rpx;')
+    expect(source).toContain('--mip-radius-control: 16rpx;')
     expect(source).toContain('--mip-radius-button: 24rpx;')
   })
 

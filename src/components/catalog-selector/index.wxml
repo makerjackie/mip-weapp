@@ -1,5 +1,5 @@
 <view class="w-full max-w-full box-border">
-  <view wx:if="{{title}}" class="text-[length:23rpx] font-semibold">{{title}}</view>
+  <view wx:if="{{title}}" class="text-[length:24rpx] font-semibold">{{title}}</view>
   <view class="mt-2 flex flex-wrap gap-2">
     <view wx:if="{{normalizedSelectedIds.length === 0}}" class="flex min-h-[88rpx] items-center rounded-full bg-brand px-4 py-2 text-[length:22rpx] text-on-brand" aria-role="button" aria-pressed="true" bind:tap="clear"><text>{{clearLabel}}</text><text class="ml-1 text-[length:22rpx]">已选</text></view>
     <view wx:else class="flex min-h-[88rpx] items-center rounded-full bg-panel-raised px-4 py-2 text-[length:22rpx] text-muted" aria-role="button" aria-pressed="false" bind:tap="clear">{{clearLabel}}</view>

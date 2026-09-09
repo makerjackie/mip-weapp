@@ -13,7 +13,7 @@
     <view class="mt-10 flex justify-center">
       <t-button theme="primary" loading="{{saving}}" disabled="{{badge.locked || saving}}" bind:tap="toggleEquipment">{{badge.locked ? '未获得' : (badge.selected ? '取消佩戴' : '立即佩戴')}}</t-button>
     </view>
-    <view wx:if="{{message}}" class="mx-6 mt-5 rounded-[12rpx] border border-line bg-panel px-4 py-3 text-center text-[length:22rpx] text-muted">{{message}}</view>
+    <view wx:if="{{message}}" class="mx-6 mt-5 rounded-[8rpx] border border-line bg-panel px-4 py-3 text-center text-[length:22rpx] text-muted">{{message}}</view>
   </view>
   <view class="px-6 pb-6"><app-page-exit /></view>
 </view>

@@ -16,7 +16,7 @@
       <view class="text-[length:22rpx] text-muted">主页总浏览量</view>
       <view aria-label="正在加载" aria-busy="true" wx:if="{{totalViewState === 'loading'}}" class="mt-3"><t-skeleton row-col="{{[1]}}" theme="paragraph" animation="gradient" loading /></view>
       <view wx:elif="{{totalViewState === 'error'}}" class="mt-2 text-[length:22rpx] text-muted">暂时无法加载</view>
-      <view wx:else class="mt-2 text-[length:44rpx] font-bold text-brand">{{totalViewCount}}</view>
+      <view wx:else class="mt-2 text-[length:48rpx] font-bold text-brand">{{totalViewCount}}</view>
     </view>
     <view wx:if="{{influenceMode}}" class="mt-4 grid grid-cols-4 border-b border-line text-center text-[length:22rpx]">
       <view wx:if="{{category === 'GUEST'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-4 text-brand" data-category="GUEST" bind:tap="changeCategory">嘉宾</view>
@@ -25,8 +25,8 @@
       <view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-4 text-muted" data-category="INTERACTION" bind:tap="changeCategory">互动</view>
       <view wx:if="{{category === 'ACTIVE_INTEREST'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-4 text-brand" data-category="ACTIVE_INTEREST" bind:tap="changeCategory">感兴趣</view>
       <view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-4 text-muted" data-category="ACTIVE_INTEREST" bind:tap="changeCategory">感兴趣</view>
-      <view wx:if="{{category === 'VISITOR'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-4 text-brand" data-category="VISITOR" bind:tap="changeCategory">访客<text wx:if="{{visitorUnreadCount}}" class="ml-1 rounded-full bg-brand px-1 py-1 text-[length:17rpx] text-on-brand">{{visitorUnreadCount}}</text></view>
-      <view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-4 text-muted" data-category="VISITOR" bind:tap="changeCategory">访客<text wx:if="{{visitorUnreadCount}}" class="ml-1 rounded-full bg-brand-soft px-1 py-1 text-[length:17rpx] text-brand">{{visitorUnreadCount}}</text></view>
+      <view wx:if="{{category === 'VISITOR'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-4 text-brand" data-category="VISITOR" bind:tap="changeCategory">访客<text wx:if="{{visitorUnreadCount}}" class="ml-1 rounded-full bg-brand px-1 py-1 text-[length:20rpx] text-on-brand">{{visitorUnreadCount}}</text></view>
+      <view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-4 text-muted" data-category="VISITOR" bind:tap="changeCategory">访客<text wx:if="{{visitorUnreadCount}}" class="ml-1 rounded-full bg-brand-soft px-1 py-1 text-[length:20rpx] text-brand">{{visitorUnreadCount}}</text></view>
     </view>
     <view wx:else class="mt-4 grid grid-cols-2 gap-x-4 border-b border-line text-center text-[length:24rpx]">
       <view wx:if="{{category === 'REFERRAL'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-4 text-brand" data-category="REFERRAL" bind:tap="changeCategory">引荐给我的<text wx:if="{{referralUnreadCount}}" class="ml-2 rounded-full bg-brand px-2 py-1 text-[length:22rpx] text-on-brand">{{referralUnreadCount}}</text></view>
@@ -51,15 +51,15 @@
         <view wx:if="{{item.unread}}" class="mb-2 text-[length:22rpx] text-brand" aria-label="未读互动">未读</view>
         <view class="flex items-start gap-3 pr-5">
           <image wx:if="{{item.actorAvatarUrl}}" class="h-[72rpx] w-[72rpx] shrink-0 rounded-full bg-brand-soft" mode="aspectFill" src="{{item.actorAvatarUrl}}" />
-          <view wx:else class="flex h-[72rpx] w-[72rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft text-[length:26rpx] font-semibold text-brand">{{item.actorInitial}}</view>
+          <view wx:else class="flex h-[72rpx] w-[72rpx] shrink-0 items-center justify-center rounded-full bg-brand-soft text-[length:24rpx] font-semibold text-brand">{{item.actorInitial}}</view>
           <view class="min-w-0 flex-1">
-            <view class="flex items-center gap-2"><text class="truncate text-[length:27rpx] font-semibold">{{item.actorName}}</text><text class="shrink-0 rounded-full bg-canvas px-2 py-1 text-[length:22rpx] text-muted">{{item.statusText}}</text></view>
+            <view class="flex items-center gap-2"><text class="truncate text-[length:28rpx] font-semibold">{{item.actorName}}</text><text class="shrink-0 rounded-full bg-canvas px-2 py-1 text-[length:22rpx] text-muted">{{item.statusText}}</text></view>
             <view wx:if="{{item.actorHeadline}}" class="mt-1 line-clamp-1 text-[length:22rpx] text-muted">{{item.actorHeadline}}</view>
           </view>
         </view>
-        <view class="mt-3 text-[length:23rpx]">{{item.detailText}}</view>
-        <view class="mt-2 line-clamp-2 text-[length:23rpx] text-muted">{{item.sourceText}}</view>
-        <view wx:if="{{item.note}}" class="mt-3 rounded-[12rpx] bg-canvas px-3 py-3 text-[length:22rpx] text-muted">备注：{{item.note}}</view>
+        <view class="mt-3 text-[length:24rpx]">{{item.detailText}}</view>
+        <view class="mt-2 line-clamp-2 text-[length:24rpx] text-muted">{{item.sourceText}}</view>
+        <view wx:if="{{item.note}}" class="mt-3 rounded-[8rpx] bg-canvas px-3 py-3 text-[length:22rpx] text-muted">备注：{{item.note}}</view>
         <view class="mt-3 flex items-center justify-between text-[length:22rpx] text-muted"><text>{{item.updatedText}}</text><t-icon name="chevron-right" size="28rpx" color="var(--color-muted)" /></view>
       </view>
     </view>

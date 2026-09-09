@@ -2,10 +2,10 @@
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="flex flex-col gap-3"><view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view><view class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="订单暂时无法加载" description="{{message}}" action-text="重新加载" bind:action="load" /></view>
   <block wx:else>
-    <view wx:if="{{!isEventOrder}}" class="rounded-[20rpx] bg-panel px-5 py-5">
-      <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1"><view class="text-[length:22rpx] text-muted">订单状态</view><view class="mt-2 text-[length:38rpx] font-bold">{{statusText}}</view></view><text wx:if="{{statusSuccess}}" class="rounded-full bg-panel-raised px-3 py-1 text-[length:22rpx] text-success">已确认</text><text wx:elif="{{statusDanger}}" class="rounded-full bg-panel-raised px-3 py-1 text-[length:22rpx] text-danger">未完成</text><text wx:elif="{{statusBrand}}" class="rounded-full bg-brand-soft px-3 py-1 text-[length:22rpx] text-brand">处理中</text></view>
+    <view wx:if="{{!isEventOrder}}" class="rounded-[16rpx] bg-panel px-5 py-5">
+      <view class="flex items-start justify-between gap-3"><view class="min-w-0 flex-1"><view class="text-[length:22rpx] text-muted">订单状态</view><view class="mt-2 text-[length:40rpx] font-bold">{{statusText}}</view></view><text wx:if="{{statusSuccess}}" class="rounded-full bg-panel-raised px-3 py-1 text-[length:22rpx] text-success">已确认</text><text wx:elif="{{statusDanger}}" class="rounded-full bg-panel-raised px-3 py-1 text-[length:22rpx] text-danger">未完成</text><text wx:elif="{{statusBrand}}" class="rounded-full bg-brand-soft px-3 py-1 text-[length:22rpx] text-brand">处理中</text></view>
       <view class="mt-3 text-[length:22rpx] leading-5 text-muted">{{statusDescription}}</view>
-      <view class="mt-5 text-[length:22rpx] text-muted">{{title}}</view><view class="mt-1 text-[length:42rpx] font-bold text-brand">{{amountText}}</view>
+      <view class="mt-5 text-[length:22rpx] text-muted">{{title}}</view><view class="mt-1 text-[length:40rpx] font-bold text-brand">{{amountText}}</view>
     </view>
 
     <block wx:if="{{isEventOrder}}">
@@ -22,10 +22,10 @@
     <view class="mt-4 flex min-h-[88rpx] items-center justify-between rounded-[16rpx] bg-panel px-4 active:bg-panel-raised" aria-role="button" bind:tap="copyOrderId"><view class="flex items-center gap-2"><t-icon name="order" size="28rpx" color="var(--color-brand)" /><text>订单ID</text></view><view class="flex min-w-0 max-w-[68%] items-center gap-2"><text class="min-w-0 flex-1 truncate text-right text-[length:22rpx] text-muted">{{order.id}}</text><text class="shrink-0 text-[length:22rpx] font-semibold text-brand">复制</text></view></view>
 
     <view class="mt-4 overflow-hidden rounded-[16rpx] bg-panel">
-      <view class="border-b border-line px-4 py-3 text-[length:23rpx] font-semibold">费用明细</view>
+      <view class="border-b border-line px-4 py-3 text-[length:24rpx] font-semibold">费用明细</view>
       <view wx:for="{{priceItems}}" wx:key="label" class="flex min-h-[84rpx] items-center justify-between gap-4 border-b border-line px-4 last:border-b-0"><text class="text-muted">{{item.label}}</text><text>{{item.amountText}}</text></view>
       <view wx:if="{{!priceItems.length}}" class="border-b border-line px-4 py-4 text-[length:22rpx] text-muted">该订单未保存拆分费用，以下展示订单总额。</view>
-      <view class="flex min-h-[84rpx] items-center justify-between px-4"><text>总计</text><text class="text-[length:38rpx] font-bold text-brand">{{amountText}}</text></view>
+      <view class="flex min-h-[84rpx] items-center justify-between px-4"><text>总计</text><text class="text-[length:40rpx] font-bold text-brand">{{amountText}}</text></view>
     </view>
     <view class="mt-4 bg-panel px-4 py-4 text-[length:22rpx] leading-6 text-muted"><view class="mb-4 flex items-center gap-2 text-ink"><t-icon name="info-circle" size="28rpx" color="var(--color-brand)" /><text>购买须知</text></view><view>一、订单确认与支付</view><view class="mt-2">1. 订单提交并成功支付后，订单视为交易合同成立。</view><view class="mt-1">2. 支付方式以当前页面展示为准。</view><view class="mt-1">3. 订单修改和取消请联系运营管理。</view></view>
     <view class="mt-4 rounded-[16rpx] border border-line bg-panel px-4 py-4 text-[length:22rpx] leading-6 text-muted">取消报名及关联退款请前往“我的活动”处理，最终结果以服务端状态为准。</view>
@@ -42,7 +42,7 @@
 
     <view wx:if="{{!isEventOrder}}" class="mt-4 rounded-[16rpx] border border-line bg-panel px-4 py-4 text-[length:22rpx] leading-5 text-muted">退款金额、可退资格和订单关联状态均由服务端核对。提交成功只表示已受理，完成状态以本页更新结果为准。</view>
     <view wx:if="{{checkInResumeState !== 'none'}}" class="mt-4 rounded-[16rpx] border border-line bg-panel px-4 py-4">
-      <view class="text-[length:23rpx] font-semibold">现场签到</view>
+      <view class="text-[length:24rpx] font-semibold">现场签到</view>
       <view class="mt-2 text-[length:22rpx] leading-5 text-muted">{{checkInResumeMessage}}</view>
       <view wx:if="{{checkInResumeState === 'ready'}}" class="mt-4"><t-button block size="large" theme="primary" bind:tap="continueCheckIn">继续签到</t-button></view>
       <view wx:elif="{{checkInResumeState === 'pending'}}" class="mt-4"><t-button block variant="outline" theme="default" bind:tap="retryEventRegistration">重新核对报名</t-button></view>

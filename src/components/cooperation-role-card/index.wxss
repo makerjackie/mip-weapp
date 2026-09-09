@@ -34,7 +34,7 @@
 }
 
 .cooperation-role-card__brand {
-  font-size: 38rpx;
+  font-size: 40rpx;
   font-weight: 800;
   line-height: 44rpx;
   letter-spacing: 2rpx;
@@ -50,7 +50,7 @@
 .cooperation-role-card__role {
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 26rpx;
+  font-size: 24rpx;
   font-weight: 700;
   line-height: 36rpx;
   white-space: nowrap;

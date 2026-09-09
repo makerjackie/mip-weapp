@@ -349,7 +349,7 @@ Page({
       title: '屏蔽用户',
       content: '屏蔽后，你们将无法查看对方的公开档案，相关公开列表也会隐藏对方。',
       confirmText: '确认屏蔽',
-      confirmColor: '#E65C5C',
+      confirmColor: '#FF4D5E',
     }).catch(() => null)
     if (!confirmed?.confirm) {
       return

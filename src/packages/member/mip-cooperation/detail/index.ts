@@ -114,7 +114,7 @@ Page({
         const angle = -Math.PI / 2 + index * Math.PI / 3
         return { x: centerX + Math.cos(angle) * radius * scale, y: centerY + Math.sin(angle) * radius * scale }
       }
-      context.strokeStyle = '#4A4A4A'
+      context.strokeStyle = '#4D4D4D'
       context.lineWidth = 1
       for (let level = 1; level <= 5; level += 1) {
         context.beginPath()
@@ -128,7 +128,7 @@ Page({
         context.closePath()
         context.stroke()
       }
-      context.strokeStyle = '#4A4A4A'
+      context.strokeStyle = '#4D4D4D'
       for (let index = 0; index < 6; index += 1) {
         const current = point(index, 1)
         context.beginPath()
@@ -150,7 +150,7 @@ Page({
       context.lineWidth = 2
       context.fill()
       context.stroke()
-      context.fillStyle = '#A3A3A3'
+      context.fillStyle = '#B3B3B3'
       context.font = '500 11px sans-serif'
       context.textBaseline = 'middle'
       this.data.abilities.forEach((ability, index) => {

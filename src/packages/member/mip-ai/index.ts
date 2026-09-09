@@ -462,7 +462,7 @@ Page({
     if (!draft) {
       return
     }
-    const modal = await wx.showModal({ title: '删除草稿', content: '确认删除这份草稿？', confirmText: '删除', confirmColor: '#E65C5C' })
+    const modal = await wx.showModal({ title: '删除草稿', content: '确认删除这份草稿？', confirmText: '删除', confirmColor: '#FF4D5E' })
     if (!modal.confirm || !this.pageActive) {
       return
     }

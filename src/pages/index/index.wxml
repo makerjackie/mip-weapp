@@ -1,10 +1,10 @@
 <view id="mip-home-page" class="mip-member-page mip-member-tab-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+220rpx)] pt-4 text-ink">
   <view class="flex min-h-[88rpx] items-center justify-between">
     <view class="flex items-center gap-3">
-      <image class="h-[58rpx] w-[58rpx] rounded-[14rpx]" mode="aspectFit" fade-show="{{false}}" src="{{logoPath}}" />
+      <image class="h-[58rpx] w-[58rpx] rounded-[16rpx]" mode="aspectFit" fade-show="{{false}}" src="{{logoPath}}" />
       <view class="text-[length:40rpx] font-bold">{{productName}}</view>
     </view>
-    <view class="flex min-h-[88rpx] items-center gap-1 px-2 text-[length:23rpx]" bind:tap="openBranches">
+    <view class="flex min-h-[88rpx] items-center gap-1 px-2 text-[length:24rpx]" bind:tap="openBranches">
       <t-icon name="location" size="30rpx" color="var(--color-brand)" />
       <text>{{primaryBranchName}}</text>
       <t-icon name="chevron-right" size="28rpx" color="var(--color-muted)" />
@@ -21,9 +21,9 @@
       </view>
     </swiper-item>
   </swiper>
-  <view wx:elif="{{bannerState === 'error'}}" class="mt-3 flex min-h-[128rpx] items-center justify-between gap-4 rounded-[20rpx] border border-line bg-panel px-4 py-4">
+  <view wx:elif="{{bannerState === 'error'}}" class="mt-3 flex min-h-[128rpx] items-center justify-between gap-4 rounded-[16rpx] border border-line bg-panel px-4 py-4">
     <view class="min-w-0">
-      <view class="text-[length:26rpx] font-semibold">推荐内容暂时无法加载</view>
+      <view class="text-[length:24rpx] font-semibold">推荐内容暂时无法加载</view>
       <view class="mt-1 text-[length:22rpx] text-muted">其他内容仍可继续浏览。</view>
     </view>
     <view class="flex min-h-[88rpx] shrink-0 items-center rounded-full bg-brand px-4 text-[length:22rpx] font-semibold text-on-brand" aria-role="button" bind:tap="retryBanner">重新加载</view>
@@ -76,7 +76,7 @@
     </view>
     <view class="mt-3 flex min-h-[112rpx] items-center justify-between gap-3 rounded-[16rpx] bg-panel px-4 py-4 active:bg-panel-raised" bind:tap="openKnowledge">
       <view class="min-w-0 flex-1">
-        <view class="text-[length:27rpx] font-semibold">知识内容</view>
+        <view class="text-[length:28rpx] font-semibold">知识内容</view>
         <view class="mt-1 text-[length:22rpx] text-muted">热点、行业内容、视频和专家分享</view>
       </view>
       <t-icon name="chevron-right" size="34rpx" color="var(--color-brand)" />

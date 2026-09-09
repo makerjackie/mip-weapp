@@ -4,88 +4,89 @@
 @source not "../node_modules/**";
 
 @theme static {
-  --color-canvas: #040404;
+  --color-canvas: #080808;
   --color-panel: #202020;
-  --color-panel-raised: #2a2a2a;
-  --color-panel-muted: #2a2a2a;
+  --color-panel-raised: #242424;
+  --color-panel-muted: #242424;
   --color-ink: #fff;
-  --color-muted: #a3a3a3;
-  --color-line: #363636;
+  --color-muted: #b3b3b3;
+  --color-line: #333333;
   --color-brand: #fcdf03;
-  --color-on-brand: #040000;
-  --color-brand-active: #e3c900;
-  --color-brand-soft: #3b3505;
+  --color-on-brand: #080808;
+  --color-brand-active: #d0b801;
+  --color-brand-soft: #4d4400;
   --color-coral: #fcdf03;
   --color-accent: #fcdf03;
   --color-gold: #fcdf03;
-  --color-danger: #e65c5c;
-  --color-success: #43b581;
+  --color-danger: #ff4d5e;
+  --color-success: #18e779;
   --color-membership-brand: #fcdf03;
-  --color-membership-muted: #a3a3a3;
+  --color-membership-muted: #b3b3b3;
   --color-membership-panel: #202020;
   --td-brand-color: #fcdf03;
-  --td-brand-color-active: #e3c900;
-  --td-brand-color-disabled: #72680f;
+  --td-brand-color-active: #d0b801;
+  --td-brand-color-disabled: rgb(252 223 3 / 40%);
   --td-text-color-primary: #fff;
-  --td-text-color-secondary: #a3a3a3;
-  --td-text-color-disabled: #999;
-  --td-text-color-anti: #040000;
-  --td-bg-color-page: #040404;
+  --td-text-color-secondary: #b3b3b3;
+  --td-text-color-disabled: #7d90a9;
+  --td-text-color-anti: #080808;
+  --td-bg-color-page: #080808;
   --td-bg-color-container: #202020;
-  --td-bg-color-container-active: #2a2a2a;
-  --td-bg-color-secondarycontainer: #2a2a2a;
-  --td-bg-color-secondarycontainer-active: #363636;
-  --td-bg-color-component: #2a2a2a;
-  --td-bg-color-component-active: #363636;
-  --td-bg-color-component-disabled: #363636;
-  --td-component-stroke: #363636;
-  --td-component-border: #363636;
-  --td-loading-full-bg-color: rgb(4 4 4 / 92%);
+  --td-bg-color-container-active: #242424;
+  --td-bg-color-secondarycontainer: #242424;
+  --td-bg-color-secondarycontainer-active: #333333;
+  --td-bg-color-component: #242424;
+  --td-bg-color-component-active: #333333;
+  --td-bg-color-component-disabled: #333333;
+  --td-component-stroke: #333333;
+  --td-component-border: #333333;
+  --td-loading-full-bg-color: rgb(8 8 8 / 92%);
   --td-loading-color: #fcdf03;
   --td-loading-text-color: #fff;
-  --td-overlay-bg-color: rgb(4 4 4 / 78%);
-  --td-skeleton-bg-color: #2a2a2a;
+  --td-overlay-bg-color: rgb(8 8 8 / 78%);
+  --td-skeleton-bg-color: #242424;
   --td-skeleton-animation-gradient: rgb(255 255 255 / 8%);
   --td-button-default-color: #fff;
-  --td-button-default-bg-color: #2a2a2a;
-  --td-button-default-border-color: #363636;
-  --td-button-default-active-bg-color: #363636;
-  --td-button-primary-color: #040000;
+  --td-button-default-bg-color: #242424;
+  --td-button-default-border-color: #333333;
+  --td-button-default-active-bg-color: #333333;
+  --td-button-primary-color: #080808;
   --td-button-primary-bg-color: #fcdf03;
   --td-button-primary-border-color: #fcdf03;
-  --td-button-primary-active-bg-color: #e3c900;
-  --td-button-primary-active-border-color: #e3c900;
-  --td-button-primary-disabled-color: #f3f3f3;
-  --td-button-primary-disabled-bg: #72680f;
-  --td-button-primary-disabled-border-color: #72680f;
+  --td-button-primary-active-bg-color: #d0b801;
+  --td-button-primary-active-border-color: #d0b801;
+  /* Contracts: PrimaryButton disabled is the brand core at 40% opacity, on-brand text. */
+  --td-button-primary-disabled-color: #080808;
+  --td-button-primary-disabled-bg: rgb(252 223 3 / 40%);
+  --td-button-primary-disabled-border-color: rgb(252 223 3 / 40%);
   --td-button-primary-outline-color: #fcdf03;
   --td-button-primary-outline-border-color: #fcdf03;
-  --td-button-primary-outline-active-bg-color: #3b3505;
-  --td-button-primary-outline-active-border-color: #e3c900;
-  --td-button-primary-outline-disabled-color: #72680f;
-  --td-tag-outline-bg-color: #2a2a2a;
-  --td-tag-default-color: #a3a3a3;
+  --td-button-primary-outline-active-bg-color: rgb(252 223 3 / 12%);
+  --td-button-primary-outline-active-border-color: #d0b801;
+  --td-button-primary-outline-disabled-color: rgb(252 223 3 / 40%);
+  --td-tag-outline-bg-color: #242424;
+  --td-tag-default-color: #b3b3b3;
   --td-tag-default-font-color: #fff;
-  --td-tag-default-light-color: #2a2a2a;
-  --td-tag-primary-light-color: #3b3505;
-  --td-tag-warning-color: #f2bd4b;
-  --td-tag-warning-light-color: #3b3505;
-  --td-tag-danger-color: #ff8c87;
-  --td-tag-danger-light-color: #451f21;
-  --td-tag-success-light-color: #153326;
+  --td-tag-default-light-color: #242424;
+  --td-tag-primary-light-color: rgb(252 223 3 / 12%);
+  --td-tag-warning-color: #fde530;
+  --td-tag-warning-light-color: rgb(253 229 48 / 12%);
+  --td-tag-danger-color: #ff4d5e;
+  --td-tag-danger-light-color: rgb(255 77 94 / 12%);
+  --td-tag-success-light-color: rgb(24 231 121 / 12%);
   --td-button-border-radius: 16rpx;
   --td-button-large-height: 92rpx;
   --td-tab-bar-active-color: #fcdf03;
-  --td-tab-bar-color: #a3a3a3;
+  --td-tab-bar-color: #b3b3b3;
   --td-tab-bar-bg-color: #202020;
   --td-tab-bar-active-bg: #202020;
-  --td-tab-bar-border-color: #363636;
-  --td-collapse-icon-color: #a3a3a3;
+  --td-tab-bar-border-color: #333333;
+  --td-collapse-icon-color: #b3b3b3;
 
   /* Keep the mobile member surfaces on the same radius scale as the Figma frames. */
   --mip-radius-card: 32rpx;
   --mip-radius-card-medium: 24rpx;
-  --mip-radius-control: 20rpx;
+  --mip-radius-control: 16rpx;
   --mip-radius-button: 24rpx;
 }
 
@@ -94,7 +95,7 @@
     min-height: 100vh;
     font-family: 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
     color: #fff;
-    background-color: #040404;
+    background-color: #080808;
   }
 
   button::after {
@@ -158,7 +159,7 @@
 }
 
 .mip-admin-page {
-  --mip-admin-placeholder-color: #a3a3a3;
+  --mip-admin-placeholder-color: #b3b3b3;
   --td-text-color-placeholder: var(--mip-admin-placeholder-color);
   --td-input-placeholder-text-color: var(--mip-admin-placeholder-color);
   --td-textarea-placeholder-color: var(--mip-admin-placeholder-color);

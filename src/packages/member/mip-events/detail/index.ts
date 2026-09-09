@@ -425,9 +425,9 @@ Page({
     node.height = POSTER_HEIGHT * ratio
     const context = node.getContext('2d')
     context.scale(ratio, ratio)
-    context.fillStyle = '#FFD800'
+    context.fillStyle = '#FCDF03'
     context.fillRect(0, 0, POSTER_WIDTH, POSTER_HEIGHT)
-    context.fillStyle = '#111111'
+    context.fillStyle = '#080808'
     context.font = '700 34px sans-serif'
     context.fillText('MIP', 28, 52)
     context.font = '700 22px sans-serif'
@@ -440,7 +440,7 @@ Page({
     context.fillRect(28, 208, 319, 286)
     const codeImage = await loadCanvasImage(node, codeUrl)
     context.drawImage(codeImage, 78, 228, 219, 219)
-    context.fillStyle = '#111111'
+    context.fillStyle = '#080808'
     context.font = '600 15px sans-serif'
     context.textAlign = 'center'
     context.fillText('使用微信扫码查看活动详情', POSTER_WIDTH / 2, 474)

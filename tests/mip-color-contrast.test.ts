@@ -25,8 +25,10 @@ describe('MIP dark theme contrast', () => {
 
   it('keeps disabled text readable on dark panels', () => {
     const source = fs.readFileSync(path.join(root, 'src/app.css'), 'utf8')
-    expect(source).toContain('--td-text-color-disabled: #999;')
+    // MIP text-disabled is the iOS grey-blue #7d90a9 (≥4.5:1 on #242424).
+    expect(source).toContain('--td-text-color-disabled: #7d90a9;')
     expect(source).not.toContain('--td-text-color-disabled: #777;')
+    expect(source).not.toContain('--td-text-color-disabled: #999;')
   })
 
   it('pins TDesign primary button surfaces to the MIP palette', () => {

@@ -5,7 +5,7 @@
   padding: 28rpx;
   margin: 24rpx 24rpx 0;
   overflow: hidden;
-  color: #090909;
+  color: #080808;
   background: var(--color-brand);
   border-radius: var(--mip-radius-card);
 }
@@ -67,7 +67,7 @@
   width: 192rpx;
   height: 192rpx;
   overflow: hidden;
-  background: #f0f0f0;
+  background: #d9d9d9;
   border-radius: 50%;
 }
 
@@ -89,7 +89,7 @@
   height: 104rpx;
   padding: 8rpx;
   background: #fff;
-  border-radius: 12rpx;
+  border-radius: 8rpx;
 }
 
 .card-edit-preview__code image {

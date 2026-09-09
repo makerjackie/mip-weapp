@@ -18,7 +18,7 @@
     <view class="badge-equipped-panel mx-6 mb-4">
       <view class="flex items-center justify-between">
         <view>
-          <view class="text-[length:26rpx] font-semibold">当前佩戴</view>
+          <view class="text-[length:24rpx] font-semibold">当前佩戴</view>
           <view class="mt-1 text-[length:22rpx] text-muted">按显示顺序展示，最多 {{maximumEquipped}} 枚</view>
         </view>
         <t-button theme="primary" size="small" loading="{{saving}}" disabled="{{!dirty || saving}}" bind:tap="saveEquipment">保存</t-button>
@@ -34,7 +34,7 @@
           </view>
         </view>
       </view>
-      <view wx:else class="mt-4 rounded-[10rpx] border border-dashed border-line px-3 py-4 text-center text-[length:22rpx] text-muted">还没有佩戴徽章</view>
+      <view wx:else class="mt-4 rounded-[8rpx] border border-dashed border-line px-3 py-4 text-center text-[length:22rpx] text-muted">还没有佩戴徽章</view>
     </view>
     <view class="badge-tabs flex border-t border-line">
       <view class="badge-tab {{activeCategory === 'IDENTITY' ? 'badge-tab--active' : ''}}" data-category="IDENTITY" bind:tap="chooseCategory">身份成就</view>
@@ -45,7 +45,7 @@
   <view wx:elif="{{state === 'error'}}" class="px-6 py-8"><app-empty-state title="暂时无法加载徽章" description="{{message}}" action-text="重新加载" bind:action="loadBadges" /></view>
   <view wx:elif="{{state === 'empty'}}" class="px-6 py-8"><app-empty-state title="暂无徽章" description="徽章由运营人员根据实际记录授予。" /></view>
   <view wx:else class="px-6 py-6">
-    <view class="badge-filters mb-6 flex rounded-[10rpx] border border-line bg-panel p-1">
+    <view class="badge-filters mb-6 flex rounded-[8rpx] border border-line bg-panel p-1">
       <view wx:for="{{filterOptions}}" wx:key="key" class="badge-filter {{activeFilter === item.key ? 'badge-filter--active' : ''}}" data-filter="{{item.key}}" bind:tap="chooseFilter">{{item.label}}</view>
     </view>
     <view wx:if="{{visibleItems.length === 0}}" class="py-10 text-center text-[length:24rpx] text-muted">当前分类暂无徽章。</view>
@@ -61,7 +61,7 @@
       </view>
     </view>
     <view class="mt-5 text-center text-[length:22rpx] text-muted">已获得 {{earnedCount}} 枚 · 当前佩戴 {{selectedIds.length}} / {{maximumEquipped}}</view>
-    <view wx:if="{{message}}" class="mt-4 rounded-[12rpx] border border-line bg-panel px-4 py-3 text-[length:22rpx] text-muted">{{message}}</view>
+    <view wx:if="{{message}}" class="mt-4 rounded-[8rpx] border border-line bg-panel px-4 py-3 text-[length:22rpx] text-muted">{{message}}</view>
   </view>
   <view class="px-6 pb-[calc(env(safe-area-inset-bottom)+48rpx)]"><app-page-exit label="返回我的" tab-url="/pages/profile/index" /></view>
 </view>
