@@ -430,6 +430,7 @@
       "crop": { "topPx": 68, "bottomPx": 90 },
       "fixture": {
         "state": "ready",
+        "authenticated": true,
         "mode": "opportunities",
         "status": "RECRUITING",
         "keywordInput": "",
@@ -899,6 +900,26 @@
         "dirty": false,
         "editing": false,
         "message": ""
+      }
+    },
+    {
+      "key": "opportunities-机会探索-b",
+      "route": "pages/opportunities/index",
+      "reference": "2198_44284_机会-机会探索-b.html",
+      "crop": { "topPx": 68, "bottomPx": 90 },
+      "fixture": {
+        "state": "ready",
+        "authenticated": false,
+        "mode": "opportunities",
+        "status": "RECRUITING",
+        "keywordInput": "",
+        "filterOpen": false,
+        "locationFilterLabel": "全国",
+        "appliedFilterCount": 0,
+        "appliedFilterChips": [],
+        "loadingMore": false,
+        "message": "",
+        "opportunities": []
       }
     }
   ]

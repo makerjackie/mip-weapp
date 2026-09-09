@@ -165,6 +165,7 @@ function cityGroupsFor(mode: PageMode, cityOptions: CityOption[]): CatalogSelect
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
+    authenticated: false,
     mode: 'opportunities' as PageMode,
     status: 'RECRUITING' as OpportunityFilter['status'],
     keywordInput: '',
@@ -226,6 +227,7 @@ Page({
     if (!this.data.catalog.cityTags.length) {
       void this.loadCatalogs()
     }
+    void this.refreshAuthState()
     const refreshIsDue = Date.now() - this.lastSuccessfulRefreshAt >= OPPORTUNITY_REFRESH_INTERVAL_MS
     if (this.data.state !== 'ready' || refreshIsDue) {
       void this.loadContent(true, { preserveContent: this.data.state === 'ready' })
@@ -856,6 +858,33 @@ Page({
       ? '/packages/member/mip-opportunities/editor/index'
       : '/packages/member/mip-cooperation/editor/index'
     void this.openProtected(url, 'PUBLISH_OPPORTUNITY')
+  },
+
+  /** figma 2198_44284: signed-out visitors get the player teaser on the
+   *  opportunities tab; the identity snapshot decides which surface shows. */
+  async refreshAuthState() {
+    const snapshot = await mipIdentityModule.loadSnapshot().catch(() => null)
+    if (snapshot) {
+      this.setData({ authenticated: snapshot.authenticated })
+    }
+  },
+
+  async openLogin() {
+    try {
+      const session = await mipIdentityModule.beginProtectedAction({
+        action: 'ENTER_APP',
+        source: { navigation: 'navigateBack' },
+      })
+      if (session.decision.ready) {
+        this.setData({ authenticated: true })
+        void this.loadContent(true, { preserveContent: true })
+        return
+      }
+      caseNavigateTo({ url: mipAccessPageUrl(session.token) })
+    }
+    catch {
+      this.setData({ message: '身份状态暂时无法确认，请稍后重试。' })
+    }
   },
 
   openDiscoveryMenu() {
