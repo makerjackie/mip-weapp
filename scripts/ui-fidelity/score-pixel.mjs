@@ -76,8 +76,8 @@ function buildDocument({ route, fixture }) {
   }
   const resolver = createComponentResolver({ srcDir: SRC, usingComponents, rootDir: root })
   const styleQueue = []
-  ctx.resolveComponent = (tag) => {
-    const entry = resolver(tag)
+  ctx.resolveComponent = (tag, extraUsingComponents) => {
+    const entry = resolver(tag, extraUsingComponents)
     if (entry && !styleQueue.includes(entry)) { styleQueue.push(entry) }
     return entry
   }

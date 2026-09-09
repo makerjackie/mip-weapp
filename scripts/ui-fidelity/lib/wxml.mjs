@@ -192,7 +192,7 @@ function renderNode(node, scope, ctx) {
     })
   }
 
-  const resolved = ctx.resolveComponent?.(node.tag)
+  const resolved = ctx.resolveComponent?.(node.tag, ctx.usingComponents)
   if (resolved) {
     const props = { ...resolved.defaults }
     for (const [key, value] of Object.entries(attrs)) {
@@ -206,7 +206,7 @@ function renderNode(node, scope, ctx) {
     const data = ctx.componentData?.(node.tag, props) ?? {}
     const id = `c${ctx.instanceCount += 1}`
     ctx.componentStyles.push({ id, css: resolved.css })
-    const inner = renderToHtml(resolved.nodes, { ...props, ...data }, { ...ctx, slotHtml: childHtml })
+    const inner = renderToHtml(resolved.nodes, { ...props, ...data }, { ...ctx, slotHtml: childHtml, usingComponents: resolved.usingComponents })
     const outerStyle = rpxToPx(String(interpolate(attrs.style, scope) ?? ''))
     return `<div class="wx-comp ${interpolate(attrs.class, scope)}" id="${id}"${outerStyle ? ` style="${outerStyle}"` : ''}>${inner}</div>`
   }
@@ -284,13 +284,15 @@ export function readPropertyDefaults(jsSource) {
 
 export function createComponentResolver({ srcDir, usingComponents = {}, rootDir }) {
   const cache = new Map()
-  return function resolve(tag) {
-    if (cache.has(tag)) { return cache.get(tag) }
-    const target = usingComponents[tag]
+  return function resolve(tag, extraUsingComponents) {
+    // Nested components register their children in their own json; the tag is
+    // looked up in the rendering component's map first, then the page/app map.
+    const target = extraUsingComponents?.[tag] ?? usingComponents[tag]
     if (!target) {
-      cache.set(tag, null)
       return null
     }
+    const cacheKey = `${tag}@${target}`
+    if (cache.has(cacheKey)) { return cache.get(cacheKey) }
     let base
     if (target.startsWith('tdesign-miniprogram/')) {
       base = path.join(rootDir, 'node_modules/tdesign-miniprogram/miniprogram_dist', target.slice('tdesign-miniprogram/'.length))
@@ -299,7 +301,6 @@ export function createComponentResolver({ srcDir, usingComponents = {}, rootDir 
       base = path.join(srcDir, target.slice(1))
     }
     else if (target.startsWith('@')) {
-      cache.set(tag, null)
       return null
     }
     else {
@@ -315,7 +316,6 @@ export function createComponentResolver({ srcDir, usingComponents = {}, rootDir 
     }
     const wxml = read('wxml') || read('xml')
     if (!wxml) {
-      cache.set(tag, null)
       return null
     }
     let json = {}
@@ -331,7 +331,7 @@ export function createComponentResolver({ srcDir, usingComponents = {}, rootDir 
       defaults: readPropertyDefaults(read('js') || read('ts')),
       usingComponents: json.usingComponents ?? {},
     }
-    cache.set(tag, entry)
+    cache.set(cacheKey, entry)
     return entry
   }
 }

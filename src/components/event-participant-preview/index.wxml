@@ -1,9 +1,10 @@
-<view class="event-participant-preview flex min-h-[56rpx] items-center rounded-full bg-panel px-1 pr-3" aria-label="{{countText || (count + '人参加')}}">
+<view class="event-participant-preview flex h-[56rpx] items-center rounded-full bg-panel-raised pl-[4rpx] pr-[20rpx]" aria-label="{{countText || (count + '人参加')}}">
   <view class="flex items-center">
     <block wx:for="{{participants}}" wx:key="participantRef">
-      <image wx:if="{{item.avatarUrl}}" class="-mr-2 h-[48rpx] w-[48rpx] rounded-full border-[3rpx] border-panel bg-brand-soft" mode="aspectFill" src="{{item.avatarUrl}}" />
-      <view wx:else class="-mr-2 flex h-[48rpx] w-[48rpx] items-center justify-center rounded-full border-[3rpx] border-panel bg-brand-soft"><t-icon name="user-avatar" size="28rpx" color="var(--color-brand)" /></view>
+      <image wx:if="{{item.avatarUrl}}" class="relative h-[48rpx] w-[48rpx] rounded-full bg-brand-soft {{index ? '-ml-[18rpx]' : ''}}" style="z-index: {{10 - index}}" mode="aspectFill" src="{{item.avatarUrl}}" />
+      <view wx:else class="relative flex h-[48rpx] w-[48rpx] items-center justify-center rounded-full bg-brand-soft {{index ? '-ml-[18rpx]' : ''}}" style="z-index: {{10 - index}}"><t-icon name="user-avatar" size="28rpx" color="var(--color-brand)" /></view>
     </block>
   </view>
-  <text class="ml-3 text-[length:22rpx] font-semibold text-ink">{{countText || (count + '人参加')}}</text>
+  <text wx:if="{{plusLabel}}" class="relative ml-[12rpx] text-[length:20rpx] font-semibold leading-[28rpx] text-ink" style="z-index: 20">{{plusLabel}}</text>
+  <text class="relative text-[length:24rpx] font-semibold leading-[33.6rpx] text-ink" style="z-index: 20">{{remainText || countText || (count + '人参加')}}</text>
 </view>
