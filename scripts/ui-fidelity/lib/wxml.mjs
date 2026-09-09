@@ -30,6 +30,7 @@ const TAG_MAP = {
   'rich-text': 'div',
   'web-view': 'div',
   slot: '',
+  wxs: '',
   'mip-icon': 'span',
 }
 
@@ -66,7 +67,9 @@ function evalExpr(expr, scope) {
 function interpolate(value, scope) {
   if (value == null) { return '' }
   const whole = /^\{\{([\s\S]*)\}\}$/.exec(String(value).trim())
-  if (whole) { return evalExpr(whole[1], scope) }
+  // Only a single interpolation may take the fast path: "{{a}} I {{b}}" must go
+  // through the replacement loop, or the middle is parsed as one broken expression.
+  if (whole && !/\}\}|\{\{/.test(whole[1])) { return evalExpr(whole[1], scope) }
   return String(value).replace(/\{\{([\s\S]*?)\}\}/g, (_, expr) => {
     const out = evalExpr(expr, scope)
     return out === undefined || out === null ? '' : String(out)
@@ -82,14 +85,23 @@ function truthy(value, scope) {
   return Boolean(value)
 }
 
-/** Tokenizer: comments, self-closing, open/close, with attributes preserved. */
+/** Tokenizer: comments, self-closing, open/close, text runs, attributes preserved. */
 export function parseWxml(source) {
   const root = { children: [] }
   const stack = [root]
-  const tagRe = /<!--[\s\S]*?-->|<\/([a-zA-Z][\w:.-]*)\s*>|<([a-zA-Z][\w:.-]*)((?:\s+[^<>]*?)?)(\/?)>/g
+  // Attribute values are matched as whole quoted strings so `>` and `<` inside
+  // interpolations (e.g. style="width: {{a > b ? x : y}}rpx") don't end the tag.
+  const tagRe = /<!--[\s\S]*?-->|<\/([a-zA-Z][\w:.-]*)\s*>|<([a-zA-Z][\w:.-]*)((?:[^>"']|"[^"]*"|'[^']*')*?)(\/?)>/g
   let match
+  let last = 0
   while ((match = tagRe.exec(source))) {
     const [full, closeTag, openTag, rawAttrs, selfClose] = match
+    // Text between tags renders too — dropping it made every proxy screenshot textless.
+    const text = source.slice(last, match.index)
+    last = match.index + full.length
+    if (text.trim()) {
+      stack[stack.length - 1].children.push({ tag: '#text', attrs: {}, text, children: [] })
+    }
     if (full.startsWith('<!--')) { continue }
     if (closeTag) {
       for (let i = stack.length - 1; i > 0; i -= 1) {
@@ -149,8 +161,17 @@ export function renderToHtml(nodes, scope, ctx) {
   return html
 }
 
+/** Inline rpx -> px at the fixed 375px viewport (1 design px = 2rpx). */
+function rpxToPx(value) {
+  return String(value).replace(/(-?[\d.]+)rpx/g, (_, n) => `${(Number.parseFloat(n) / 2).toFixed(3).replace(/\.?0+$/, '')}px`)
+}
+
 function renderNode(node, scope, ctx) {
   if (!node) { return '' }
+  if (node.tag === '#text') {
+    const out = interpolate(node.text ?? '', scope)
+    return String(out ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  }
   const attrs = node.attrs ?? {}
   if (attrs['wx:for'] !== undefined) {
     const list = evalExpr(String(attrs['wx:for']).replace(/^\{\{|\}\}$/g, ''), scope) ?? []
@@ -161,25 +182,41 @@ function renderNode(node, scope, ctx) {
 
   const childHtml = renderToHtml(node.children ?? [], scope, ctx)
 
+  // mip-icon computes its data-URI in JS; the proxy emulates that data path so
+  // registry glyphs land in the screenshot (see lib/mip-icons.mjs).
+  if (node.tag === 'mip-icon' && ctx.renderMipIcon) {
+    return ctx.renderMipIcon({
+      name: String(interpolate(attrs.name, scope) ?? ''),
+      size: Number(interpolate(attrs.size, scope) ?? 0),
+      color: String(interpolate(attrs.color, scope) ?? '#ffffff'),
+    })
+  }
+
   const resolved = ctx.resolveComponent?.(node.tag)
   if (resolved) {
     const props = { ...resolved.defaults }
     for (const [key, value] of Object.entries(attrs)) {
       if (key.startsWith('wx:') || key.startsWith('bind') || key.startsWith('catch') || key === 'class' || key === 'id' || key === 'style') { continue }
-      props[key] = interpolate(value, scope)
+      // WeChat maps kebab-case attributes onto camelCase properties; the proxy must too,
+      // or role-key/target-summary/fill-px never reach the component.
+      props[key.replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = interpolate(value, scope)
     }
+    // Components whose templates read JS-computed data (observer-built `view`) need the
+    // host to supply it; ctx.componentData emulates that data path per tag.
+    const data = ctx.componentData?.(node.tag, props) ?? {}
     const id = `c${ctx.instanceCount += 1}`
     ctx.componentStyles.push({ id, css: resolved.css })
-    const inner = renderToHtml(resolved.nodes, { ...props, ...props.$data }, { ...ctx, slotHtml: childHtml })
-    return `<div class="wx-comp ${interpolate(attrs.class, scope)}" id="${id}" style="${interpolate(attrs.style, scope)}">${inner}</div>`
+    const inner = renderToHtml(resolved.nodes, { ...props, ...data }, { ...ctx, slotHtml: childHtml })
+    const outerStyle = rpxToPx(String(interpolate(attrs.style, scope) ?? ''))
+    return `<div class="wx-comp ${interpolate(attrs.class, scope)}" id="${id}"${outerStyle ? ` style="${outerStyle}"` : ''}>${inner}</div>`
   }
 
+  if (node.tag === 'slot') { return ctx.slotHtml || childHtml || '' }
   const tag = TAG_MAP[node.tag] ?? (node.tag.includes('-') ? 'div' : node.tag)
-  if (tag === 'slot') { return childHtml || '' }
   if (!tag) { return childHtml }
 
   const styleParts = []
-  const declaredStyle = interpolate(attrs.style, scope)
+  const declaredStyle = rpxToPx(interpolate(attrs.style, scope) ?? '')
   if (declaredStyle) { styleParts.push(declaredStyle) }
   if (tag === 'img') {
     styleParts.push(`object-fit:${OBJECT_FIT[attrs.mode ?? 'scaleToFill'] ?? 'fill'}`)
@@ -190,9 +227,11 @@ function renderNode(node, scope, ctx) {
 
   const attrStrings = []
   for (const [key, value] of Object.entries(attrs)) {
-    if (key.startsWith('wx:') || key.startsWith('bind') || key.startsWith('catch') || key.startsWith('aria') || key === 'data') { continue }
+    // style is emitted once from styleParts — re-emitting the raw attribute produced
+    // duplicate style="" (and style="undefined") in the generated document.
+    if (key.startsWith('wx:') || key.startsWith('bind') || key.startsWith('catch') || key.startsWith('aria') || key === 'data' || key === 'style') { continue }
     const out = interpolate(value, scope)
-    if (key === 'class') { attrStrings.push(`class="${typeof out === 'string' ? out.replace(/(-?[\d.]+)rpx/g, (_, n) => `${(Number.parseFloat(n) / 2).toFixed(3).replace(/\.?0+$/, '')}px`) : out}"`) }
+    if (key === 'class') { attrStrings.push(`class="${rpxToPx(out ?? '')}"`) }
     else if (key === 'src') { attrStrings.push(`src="${ctx.resolveAsset?.(out) ?? out}"`) }
     else if (key === 'hidden') { if (out !== '' && out !== 'false') { attrStrings.push('hidden') } }
     else if (['mode', 'fade-show', 'selectable', 'placeholder-class', 'hover-class', 'type', 'confirm-type'].includes(key)) { continue }
@@ -266,7 +305,14 @@ export function createComponentResolver({ srcDir, usingComponents = {}, rootDir 
     else {
       base = path.join(srcDir, target)
     }
-    const read = (ext) => (fs.existsSync(`${base}/index.${ext}`) ? fs.readFileSync(`${base}/index.${ext}`, 'utf8') : '')
+    // usingComponents entries point at a component file with or without the
+    // trailing /index; accept both so `/components/x/index` and `/components/x` work.
+    const read = (ext) => {
+      for (const candidate of [`${base}.${ext}`, `${base}/index.${ext}`]) {
+        if (fs.existsSync(candidate)) { return fs.readFileSync(candidate, 'utf8') }
+      }
+      return ''
+    }
     const wxml = read('wxml') || read('xml')
     if (!wxml) {
       cache.set(tag, null)

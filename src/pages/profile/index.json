@@ -8,6 +8,7 @@
   "backgroundColorBottom": "#080808",
   "enablePullDownRefresh": true,
   "usingComponents": {
+    "mip-level-banner": "/components/mip-level-banner/index",
     "cooperation-role-card": "/components/cooperation-role-card/index",
     "app-empty-state": "/components/empty-state/index",
     "t-icon": "tdesign-miniprogram/icon/icon",

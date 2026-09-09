@@ -22,25 +22,20 @@
           </view>
           <view class="profile-meta">
             <text>{{primaryBranchName}}</text>
-            <text wx:if="{{primaryIndustryName}}"> · {{primaryIndustryName}}</text>
-            <text wx:if="{{identityStatus}}"> · {{identityStatus}}</text>
+            <text wx:if="{{primaryIndustryName}}"> I {{primaryIndustryName}}</text>
+            <text wx:if="{{identityStatus}}"> I {{identityStatus}}</text>
           </view>
           <view wx:if="{{headline}}" class="profile-headline">{{headline}}</view>
           <view wx:elif="{{!profileComplete}}" class="profile-headline">档案待完善</view>
         </view>
       </view>
 
-      <view wx:if="{{isPlayer}}" class="profile-level-card" bind:tap="openGrowth">
-        <image class="profile-level-art" mode="aspectFill" src="/assets/figma/profile/level-art.png" />
+      <mip-level-banner wx:if="{{isPlayer && growthState === 'ready'}}" class="profile-level-banner" level="{{levelName}}" current="{{experience}}" target="{{growthTarget}}" fill-px="{{growthFillPx}}" bind:tap="openGrowth" />
+      <view wx:elif="{{isPlayer}}" class="profile-level-card" bind:tap="openGrowth">
         <view class="profile-level-header">
-          <text class="profile-level-name">{{growthState === 'ready' ? levelName : '玩家等级'}}</text>
-          <view class="profile-level-action">玩家等级<t-icon name="chevron-right" size="24rpx" color="var(--color-on-brand)" /></view>
+          <text class="profile-level-name">玩家等级</text>
         </view>
         <view wx:if="{{growthState === 'loading'}}" class="profile-level-loading" />
-        <block wx:elif="{{growthState === 'ready'}}">
-          <view class="profile-level-experience">{{experience}} 经验值</view>
-          <view class="profile-level-progress"><view class="profile-level-progress-value" style="width: {{growthProgress}}%" /></view>
-        </block>
         <view wx:else class="profile-level-experience">成长数据暂时不可用</view>
       </view>
       <view wx:else class="profile-membership-card" bind:tap="openMembership">
@@ -54,9 +49,9 @@
 
     <view class="profile-stats">
       <view class="profile-stat" data-category="GUEST" bind:tap="openInfluenceList"><view class="profile-stat-value">{{guestCount === null ? '—' : guestCount}}</view><view class="profile-stat-label">嘉宾</view></view>
-      <view class="profile-stat" data-category="INTERACTION" bind:tap="openInfluenceList"><view class="profile-stat-value">{{interactionCount === null ? '—' : interactionCount}}</view><view class="profile-stat-label">互动</view></view>
-      <view class="profile-stat" data-category="ACTIVE_INTEREST" bind:tap="openInfluenceList"><view class="profile-stat-value">{{interestCount === null ? '—' : interestCount}}</view><view class="profile-stat-label">感兴趣</view></view>
-      <view class="profile-stat" bind:tap="openReceivedInteractions"><view class="profile-stat-value">{{visitorCount === null ? '—' : visitorCount}}</view><view class="profile-stat-label">访客</view><view wx:if="{{visitorUnreadCount > 0}}" class="profile-stat-badge">{{visitorUnreadCount > 99 ? '99+' : visitorUnreadCount}}</view></view>
+      <view class="profile-stat" data-category="INTERACTION" bind:tap="openInfluenceList"><view class="profile-stat-value">{{interactionCount === null ? '—' : interactionCount}}</view><view class="profile-stat-label">互动过</view></view>
+      <view class="profile-stat" data-category="ACTIVE_INTEREST" bind:tap="openInfluenceList"><view class="profile-stat-value">{{interestCount === null ? '—' : interestCount}}</view><view class="profile-stat-label">心动值</view></view>
+      <view class="profile-stat" bind:tap="openReceivedInteractions"><view class="profile-stat-value">{{visitorCount === null ? '—' : visitorCount}}<view wx:if="{{visitorUnreadCount > 0}}" class="profile-stat-badge">{{visitorUnreadCount > 99 ? '99+' : visitorUnreadCount}}</view></view><view class="profile-stat-label">访客</view></view>
     </view>
 
     <view class="profile-feature-grid">

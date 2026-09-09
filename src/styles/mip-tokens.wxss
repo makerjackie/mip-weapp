@@ -1,0 +1,130 @@
+/* MIP Design System tokens — snapshot 2026-09-09.2.
+   Design canvas: 375px. Conversion: 1px = 2rpx. */
+
+page {
+  /* Backgrounds and surfaces */
+  --mip-bg-page: #080808;
+  --mip-bg-surface: #202020;
+  --mip-bg-surface-2: #333333;
+  --mip-bg-surface-3: #242424;
+  --mip-bg-surface-deep: #191919;
+  --mip-bg-cell: #d9d9d9;
+
+  /* Brand */
+  --mip-brand: #fcdf03;
+  --mip-brand-bright: rgba(255, 221, 2, 0.1);
+  --mip-brand-alt: #fde104;
+  --mip-brand-stroke: #d0b801;
+
+  /* Cooperation / illustration */
+  --mip-purple-card: #7b00ff;
+  --mip-purple-deep: #3b007a;
+  --mip-purple-deep-2: #6500d1;
+  --mip-purple-text: #f2e5ff;
+  --mip-purple-light: #dab8ff;
+
+  /* Text */
+  --mip-text-primary: #ffffff;
+  --mip-text-secondary: #b3b3b3;
+  --mip-text-on-brand: #080808;
+  --mip-text-cell: #f7f7f7;
+  --mip-text-disabled: #7d90a9;
+  --mip-icon-dim: #dadada;
+
+  /* Status */
+  --mip-record: #ff2238;
+  --mip-success: #18e779;
+  --mip-danger: #ff4d5e;
+  --mip-wechat-green: #07c160;
+
+  /* Strokes and overlays */
+  --mip-hairline: rgba(255, 255, 255, 0.1);
+  --mip-overlay-90: rgba(255, 255, 255, 0.9);
+  --mip-overlay-50: rgba(255, 255, 255, 0.5);
+
+  /* Typography */
+  --mip-font: -apple-system, "PingFang SC", "Helvetica Neue", sans-serif;
+  --mip-font-number: -apple-system, "SF Pro Text", "PingFang SC", sans-serif;
+  --mip-font-display: "D-DIN Exp", "DIN Alternate", "SF Pro Text", sans-serif;
+
+  /* Layout */
+  --mip-page-width: 750rpx;
+  --mip-content-width: 702rpx;
+  --mip-page-margin: 24rpx;
+  --mip-card-padding: 20rpx 24rpx;
+  --mip-row-height: 92rpx;
+}
+
+/* Layout */
+.mip-page {
+  min-height: 100vh;
+  box-sizing: border-box;
+  width: var(--mip-page-width);
+  padding: 0 var(--mip-page-margin);
+  background: var(--mip-bg-page);
+  color: var(--mip-text-primary);
+  font-family: var(--mip-font);
+}
+
+.mip-content {
+  width: var(--mip-content-width);
+}
+
+.mip-card {
+  box-sizing: border-box;
+  border-radius: 16rpx;
+  padding: var(--mip-card-padding);
+  background: var(--mip-bg-surface);
+}
+
+.mip-row {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  min-height: var(--mip-row-height);
+}
+
+.mip-hairline {
+  border-bottom: 1rpx solid var(--mip-hairline);
+}
+
+/* Surface colors */
+.mip-bg-page { background: var(--mip-bg-page); }
+.mip-bg-surface { background: var(--mip-bg-surface); }
+.mip-bg-surface-2 { background: var(--mip-bg-surface-2); }
+.mip-bg-surface-3 { background: var(--mip-bg-surface-3); }
+.mip-bg-surface-deep { background: var(--mip-bg-surface-deep); }
+.mip-bg-brand { background: var(--mip-brand); }
+
+/* Text colors */
+.mip-text-primary { color: var(--mip-text-primary); }
+.mip-text-secondary { color: var(--mip-text-secondary); }
+.mip-text-on-brand { color: var(--mip-text-on-brand); }
+.mip-text-brand { color: var(--mip-brand); }
+.mip-text-disabled { color: var(--mip-text-disabled); }
+.mip-icon-dim { color: var(--mip-icon-dim); }
+
+/* Typography helpers. Source px values remain visible in comments. */
+.mip-text-10 { font-size: 20rpx; line-height: 28rpx; }       /* 10 / 14 */
+.mip-text-12 { font-size: 24rpx; line-height: 34rpx; }        /* 12 / 16.8 -> 17 */
+.mip-text-14 { font-size: 28rpx; line-height: 40rpx; }        /* 14 / 20 */
+.mip-text-16 { font-size: 32rpx; line-height: 44rpx; }        /* 16 / 22 */
+.mip-text-17 { font-size: 34rpx; line-height: 48rpx; }
+.mip-font-medium { font-weight: 500; }
+.mip-font-semibold { font-weight: 600; }
+.mip-tabular-nums { font-family: var(--mip-font-number); font-variant-numeric: tabular-nums; }
+.mip-display-din { font-family: var(--mip-font-display); }
+
+/* Radius helpers */
+.mip-r4 { border-radius: 8rpx; }      /* design 4px */
+.mip-r8 { border-radius: 16rpx; }     /* design 8px */
+.mip-r12 { border-radius: 24rpx; }    /* design 12px */
+.mip-r16 { border-radius: 32rpx; }    /* design 16px */
+.mip-round { border-radius: 50%; }
+.mip-pill { border-radius: 200rpx; }
+
+/* Clipping helper for baked cards */
+.mip-clip {
+  position: relative;
+  overflow: hidden;
+}

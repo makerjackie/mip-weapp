@@ -55,6 +55,8 @@ Page({
     growthProgress: 0,
     growthNextText: '',
     experience: 0,
+    growthTarget: 0,
+    growthFillPx: 0,
     contribution: 0,
     badgeState: 'loading' as SectionState,
     equippedBadges: [] as BadgeCollectionItem[],
@@ -322,6 +324,7 @@ Page({
         ? `距 ${snapshot.nextLevel.name} 还需 ${snapshot.experienceToNextLevel || 0} 经验值`
         : '已达当前最高等级',
       experience: snapshot.account.experienceBalance,
+      growthTarget: snapshot.account.experienceBalance + (snapshot.experienceToNextLevel || 0),
       contribution: snapshot.account.contributionBalance,
     })
   },

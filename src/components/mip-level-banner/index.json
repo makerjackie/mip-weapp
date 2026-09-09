@@ -1,6 +1,5 @@
 {
   "component": true,
-  "styleIsolation": "apply-shared",
   "usingComponents": {
     "mip-icon": "../mip-icon/index"
   }

@@ -25,9 +25,14 @@
 
 .profile-hero {
   box-sizing: border-box;
-  padding: 28rpx 24rpx 0;
+  padding: 24rpx 24rpx 0;
   margin: -24rpx -24rpx 0;
   background: var(--color-panel);
+}
+
+/* 24rpx of hero panel between the summary row and the level banner (figma 1770:38871). */
+.profile-level-banner {
+  margin-top: 24rpx;
 }
 
 .profile-summary {
@@ -42,7 +47,7 @@
   width: 160rpx;
   height: 160rpx;
   background: var(--color-brand-soft);
-  border: 2rpx solid var(--color-canvas);
+  border: 4rpx solid var(--color-canvas);
   border-radius: 50%;
 }
 
@@ -107,12 +112,12 @@
 }
 
 .profile-meta {
-  margin-top: 8rpx;
+  margin-top: 12rpx;
   color: var(--color-ink);
 }
 
 .profile-headline {
-  margin-top: 4rpx;
+  margin-top: 12rpx;
   color: var(--color-muted);
 }
 
@@ -132,18 +137,8 @@
   background: var(--color-brand);
 }
 
-.profile-level-art {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  width: 100%;
-  height: 100%;
-  mix-blend-mode: screen;
-}
-
 .profile-level-header,
 .profile-level-experience,
-.profile-level-progress,
 .profile-level-loading {
   position: relative;
   z-index: 1;
@@ -165,13 +160,6 @@
   white-space: nowrap;
 }
 
-.profile-level-action {
-  display: flex;
-  align-items: center;
-  min-height: 44rpx;
-  font-size: 22rpx;
-}
-
 .profile-level-experience {
   margin-top: 20rpx;
   font-size: 22rpx;
@@ -179,7 +167,6 @@
   line-height: 28rpx;
 }
 
-.profile-level-progress,
 .profile-level-loading {
   width: 294rpx;
   height: 12rpx;
@@ -187,12 +174,6 @@
   overflow: hidden;
   background: rgb(8 8 8 / 24%);
   border-radius: 999rpx;
-}
-
-.profile-level-progress-value {
-  height: 100%;
-  background: var(--color-on-brand);
-  border-radius: inherit;
 }
 
 .profile-membership-card {
@@ -227,10 +208,14 @@
   border-radius: 999rpx;
 }
 
+/* StatHeader: 68px shell, four 48px columns at left 31.5+i*80 (design px). */
 .profile-stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  gap: 64rpx;
+  align-items: center;
+  box-sizing: border-box;
   height: 136rpx;
+  padding: 0 63rpx;
   margin-top: 24rpx;
   background: var(--color-panel);
   border-radius: var(--mip-radius-card-medium);
@@ -242,14 +227,14 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  width: 96rpx;
   min-width: 0;
   min-height: 88rpx;
 }
 
 .profile-stat-value {
+  position: relative;
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
   font-size: 40rpx;
   font-weight: 500;
   line-height: 56rpx;
@@ -258,22 +243,24 @@
 
 .profile-stat-label {
   margin-top: 4rpx;
-  font-size: 22rpx;
+  font-size: 20rpx;
   line-height: 28rpx;
 }
 
 .profile-stat-badge {
   position: absolute;
-  top: 16rpx;
-  right: 12rpx;
+  top: -8rpx;
+  right: -2rpx;
+  box-sizing: border-box;
   min-width: 28rpx;
   height: 28rpx;
   padding: 0 4rpx;
-  font-size: 22rpx;
-  font-weight: 600;
+  font-size: 20rpx;
+  font-weight: 500;
   line-height: 28rpx;
   text-align: center;
-  background: var(--color-danger);
+  color: var(--color-ink);
+  background: #ff2238;
   border-radius: 999rpx;
 }
 
@@ -322,14 +309,14 @@
 .profile-action {
   display: flex;
   flex-direction: column;
-  gap: 16rpx;
+  gap: 30rpx;
   align-items: center;
   justify-content: center;
   min-width: 0;
   min-height: 112rpx;
   font-size: 28rpx;
   font-weight: 500;
-  line-height: 40rpx;
+  line-height: 28rpx;
 }
 
 .profile-action-icon {
@@ -346,7 +333,7 @@
 
 .profile-tab {
   box-sizing: border-box;
-  min-height: 88rpx;
+  min-height: 80rpx;
   padding: 20rpx 8rpx;
   font-size: 28rpx;
   line-height: 40rpx;

@@ -17,6 +17,8 @@ import { spawnSync } from 'node:child_process'
 import { PNG } from 'pngjs'
 import pixelmatch from 'pixelmatch'
 import { createComponentResolver, parseWxml, renderToHtml, scopeCss, toBrowserCss } from './lib/wxml.mjs'
+import { loadIconRegistry, mipIconHtml } from './lib/mip-icons.mjs'
+import { loadCooperationCardModel } from './lib/component-models.mjs'
 import { repoRoot } from './lib/palette.mjs'
 
 const root = repoRoot(import.meta.dirname)
@@ -43,12 +45,31 @@ function buildDocument({ route, fixture }) {
   const usingComponents = { ...(appJson.usingComponents ?? {}), ...(pageJson.usingComponents ?? {}) }
 
   const componentStyles = []
+  const iconRegistry = loadIconRegistry(SRC)
+  const cardModel = loadCooperationCardModel(SRC)
   const ctx = {
     instanceCount: 0,
     componentStyles,
     slotHtml: '',
     resolveComponent: null,
-    resolveAsset: (src) => src,
+    // Repo-absolute asset paths resolve to files on disk; the headless shell
+    // reads them over file:// when the document itself is a local file.
+    resolveAsset: (src) => (src?.startsWith('/assets/') ? path.join(SRC, src) : src),
+    renderMipIcon: (props) => mipIconHtml(iconRegistry, props),
+    // Observer-built render data the proxy cannot compute from WXML alone.
+    componentData: (tag, props) => {
+      if (tag === 'cooperation-role-card') {
+        return {
+          view: cardModel.cooperationRoleCardView({
+            roleKey: String(props.roleKey ?? ''),
+            name: props.name == null ? undefined : String(props.name),
+            positioning: props.positioning == null ? undefined : String(props.positioning),
+            targetSummary: props.targetSummary == null ? undefined : String(props.targetSummary),
+          }),
+        }
+      }
+      return undefined
+    },
   }
   const resolver = createComponentResolver({ srcDir: SRC, usingComponents, rootDir: root })
   const styleQueue = []

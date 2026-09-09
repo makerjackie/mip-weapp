@@ -127,6 +127,9 @@
     ]
   },
   "componentFramework": "glass-easel",
+  "usingComponents": {
+    "mip-icon": "/components/mip-icon/index"
+  },
   "resizable": true,
   "sitemapLocation": "sitemap.json",
   "lazyCodeLoading": "requiredComponents"

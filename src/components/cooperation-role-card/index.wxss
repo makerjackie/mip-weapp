@@ -1,135 +1,98 @@
 .cooperation-role-card {
+  position: relative;
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
+  height: 400rpx;
   overflow: hidden;
-  color: var(--color-ink);
-  background: var(--color-panel);
-  border-radius: var(--mip-radius-card);
+  border-radius: 32rpx;
 }
 
-.cooperation-role-card__hero {
-  position: relative;
-  box-sizing: border-box;
-  height: 240rpx;
-  padding: 20rpx 24rpx;
-  overflow: hidden;
-}
-
-.cooperation-role-card__soft {
+.cooperation-role-card__art {
   position: absolute;
   top: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 0;
-  width: 50%;
-  clip-path: polygon(18% 0, 100% 0, 100% 100%, 0 100%, 16% 52%, 0 52%);
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
 
-.cooperation-role-card__brand,
-.cooperation-role-card__copy,
-.cooperation-role-card__art {
-  position: relative;
-  z-index: 1;
-}
-
-.cooperation-role-card__brand {
-  font-size: 40rpx;
-  font-weight: 800;
-  line-height: 44rpx;
-  letter-spacing: 2rpx;
-}
-
-.cooperation-role-card__copy {
+.cooperation-role-card__name {
   position: absolute;
-  right: 52%;
-  bottom: 18rpx;
+  top: 192rpx;
   left: 24rpx;
-}
-
-.cooperation-role-card__role {
+  max-width: 654rpx;
   overflow: hidden;
-  text-overflow: ellipsis;
   font-size: 24rpx;
-  font-weight: 700;
-  line-height: 36rpx;
+  font-weight: 600;
+  line-height: 33.6rpx;
   white-space: nowrap;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
 }
 
-.cooperation-role-card__positioning {
-  display: -webkit-box;
-  margin-top: 6rpx;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  font-size: 22rpx;
-  line-height: 28rpx;
-  opacity: 0.86;
+.cooperation-role-card__name-run--latin {
+  font-family: 'Baloo', 'Baloo 2', -apple-system, system-ui, sans-serif;
+  font-weight: 400;
 }
 
-.cooperation-role-card__art {
+.cooperation-role-card__strip {
   position: absolute;
-  right: 38rpx;
-  bottom: 0;
-  width: 226rpx;
-  height: 240rpx;
-}
-
-.cooperation-role-card__details {
-  padding: 0 24rpx;
-  background: var(--color-panel);
-}
-
-.cooperation-role-card__detail-row {
-  box-sizing: border-box;
-  display: grid;
-  grid-template-columns: 140rpx minmax(0, 1fr);
+  left: 0;
+  display: flex;
   gap: 16rpx;
   align-items: center;
-  min-height: 80rpx;
-  padding: 16rpx 0;
+  justify-content: space-between;
+  box-sizing: border-box;
+  width: 100%;
+  height: 80rpx;
+  padding: 0 24rpx;
+  background: #202020;
 }
 
-.cooperation-role-card__detail-row + .cooperation-role-card__detail-row {
-  border-top: 1rpx solid var(--color-line);
+.cooperation-role-card__strip--goal {
+  top: 240rpx;
+  border-radius: 32rpx 32rpx 0 0;
 }
 
-.cooperation-role-card__detail-key {
+.cooperation-role-card__strip--referral {
+  top: 320rpx;
+  border-radius: 0 0 32rpx 32rpx;
+}
+
+.cooperation-role-card__badge {
   display: flex;
   gap: 8rpx;
   align-items: center;
-  font-size: 22rpx;
+  flex: 0 0 auto;
+}
+
+.cooperation-role-card__badge-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32rpx;
+  height: 32rpx;
+  background: var(--color-brand);
+  border-radius: 50%;
+}
+
+.cooperation-role-card__badge-label {
+  font-size: 20rpx;
+  font-weight: 400;
+  line-height: 28rpx;
   color: var(--color-ink);
   white-space: nowrap;
 }
 
-.cooperation-role-card__detail-icon {
-  flex: 0 0 auto;
-  width: 30rpx;
-  height: 30rpx;
-}
-
-.cooperation-role-card__detail-value {
-  display: -webkit-box;
+.cooperation-role-card__value {
+  flex: 1 1 auto;
+  min-width: 0;
   overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  font-size: 22rpx;
+  font-size: 24rpx;
   font-weight: 500;
-  line-height: 32rpx;
+  line-height: 33.6rpx;
+  color: var(--color-ink);
   text-align: right;
-}
-
-.cooperation-role-card--compact .cooperation-role-card__hero {
-  height: 200rpx;
-}
-
-.cooperation-role-card--compact .cooperation-role-card__copy {
-  right: 48%;
-}
-
-.cooperation-role-card--compact .cooperation-role-card__art {
-  right: 20rpx;
-  width: 188rpx;
-  height: 200rpx;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
