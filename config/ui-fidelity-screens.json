@@ -772,6 +772,89 @@
           ]
         }
       }
+    },
+    {
+      "key": "badge-我的徽章-a",
+      "route": "packages/member/mip-badge-detail/index",
+      "reference": "1740_3454_我的徽章-a.html",
+      "crop": { "topPx": 112, "bottomPx": 0 },
+      "fixture": {
+        "state": "ready",
+        "version": 1,
+        "saving": false,
+        "message": "",
+        "badge": {
+          "id": "b1",
+          "key": "badge-honor-a",
+          "name": "徽章名称",
+          "description": "这是一行勋章简介可能挺长",
+          "imageUrl": "/assets/figma/badges/badge-detail-art.png",
+          "placeholderShape": "HEXAGON",
+          "category": "HONOR",
+          "status": "ACTIVE",
+          "earned": true,
+          "awardedAt": "2025-12-24",
+          "selected": false,
+          "locked": false,
+          "artFallbackUrl": "",
+          "awardedText": "2025.12.24"
+        }
+      }
+    },
+    {
+      "key": "badge-我的徽章-d",
+      "route": "packages/member/mip-badge-detail/index",
+      "reference": "1740_3560_我的徽章-d.html",
+      "crop": { "topPx": 112, "bottomPx": 0 },
+      "fixture": {
+        "state": "ready",
+        "version": 1,
+        "saving": false,
+        "message": "",
+        "badge": {
+          "id": "b2",
+          "key": "badge-honor-d",
+          "name": "徽章名称",
+          "description": "这是一行勋章简介可能挺长",
+          "imageUrl": "/assets/figma/badges/badge-detail-art.png",
+          "placeholderShape": "HEXAGON",
+          "category": "HONOR",
+          "status": "ACTIVE",
+          "earned": false,
+          "selected": false,
+          "locked": true,
+          "artFallbackUrl": "",
+          "awardedText": ""
+        }
+      }
+    },
+    {
+      "key": "badge-我的徽章-b",
+      "route": "packages/member/mip-badge-detail/index",
+      "reference": "1746_3784_我的徽章-b.html",
+      "crop": { "topPx": 112, "bottomPx": 0 },
+      "fixture": {
+        "state": "ready",
+        "version": 1,
+        "saving": false,
+        "message": "",
+        "badge": {
+          "id": "b3",
+          "key": "badge-honor-b",
+          "name": "徽章名称",
+          "description": "这是一行勋章简介可能挺长",
+          "imageUrl": "/assets/figma/badges/badge-detail-art.png",
+          "placeholderShape": "HEXAGON",
+          "category": "HONOR",
+          "status": "ACTIVE",
+          "earned": true,
+          "awardedAt": "2025-12-24",
+          "selected": true,
+          "locked": false,
+          "artFallbackUrl": "",
+          "awardedText": "2025.12.24"
+        }
+      }
     }
   ]
 }

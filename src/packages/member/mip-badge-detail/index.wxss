@@ -6,7 +6,9 @@
 .badge-detail-content {
   box-sizing: border-box;
   min-height: calc(100vh - env(safe-area-inset-bottom));
-  padding-top: calc(env(safe-area-inset-top) + 48rpx);
+  /* figma 1740_3454: badge art sits 109px below the nav (200px art centred in
+     the upper screen), so the content needs a 218rpx top inset, not 48rpx. */
+  padding-top: calc(env(safe-area-inset-top) + 218rpx);
 }
 
 .badge-detail-art-wrap {
