@@ -16,6 +16,13 @@
   --color-brand-active: #d0b801;
   --color-brand-soft: #4d4400;
   --color-tag-player: #fde530;
+  /* figma 1861_17860 detail screen: brand-alt highlight yellow, event-type chip
+     blue, and the iOS systemGray used by secondary detail labels. Yellow chip
+     strokes use the registered brand-active stroke per the design system. */
+  --color-brand-alt: #fde104;
+  --color-tag-type: #80ccff;
+  --color-tag-type-line: #4b90bf;
+  --color-ios-gray: #8e8e93;
   --color-coral: #fcdf03;
   --color-accent: #fcdf03;
   --color-gold: #fcdf03;

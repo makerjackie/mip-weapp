@@ -306,7 +306,9 @@ describe('event registration experience', () => {
     expect(detailLogic).toContain('imageUrl: this.data.event?.coverUrl || brand.logoPath')
     expect(detailView).toContain('id="mip-event-detail-page"')
     expect(detailView).toContain('wx:if="{{event.coverUrl}}"')
-    expect(detailView).toContain('{{event.registrationCount}} 人参加')
+    // figma 1861_17860: participant card header reads 参与人数45/50.
+    expect(detailView).toContain('参与人数{{event.registrationCount}}')
+    expect(detailView).toContain('/{{event.capacity}}')
     expect(detailView).toContain('活动介绍')
     expect(detailView).toContain('报名须知')
     expect(detailView).toContain('open-type="share"')

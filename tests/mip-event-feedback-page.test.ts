@@ -27,7 +27,10 @@ describe('MIP event feedback page', () => {
     expect(figmaMap).toMatch(/1818:17374[^\n]+mip-events\/feedback/)
     expect(detail).toContain('openFeedback()')
     expect(detail).toContain('/packages/member/mip-events/feedback/index?eventId=')
-    expect(detailView).toContain('bind:tap="openFeedback">\u6D3B\u52A8\u53CD\u9988')
+    // figma 1861_17860: the feedback pill now leads with a pencil-ai icon, so the
+    // binding and the copy are no longer adjacent in the markup.
+    expect(detailView).toContain('bind:tap="openFeedback"')
+    expect(detailView).toContain('>\u6D3B\u52A8\u53CD\u9988</text>')
     expect(detail.indexOf('event.registrationStatus === \'ATTENDED\''))
       .toBeLessThan(detail.indexOf('event.status === \'ENDED\''))
     expect(detail).toContain('return { key: \'interact\', label: \'\u4E0E\u4F60\u4E92\u52A8\' }')

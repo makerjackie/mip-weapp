@@ -8,52 +8,63 @@
       <view wx:else class="flex h-[360rpx] w-full items-center justify-center bg-brand-soft"><mip-icon name="calendar-schedule" size="{{40}}" color="var(--color-brand)" /></view>
 
       <view class="relative z-10 -mt-[28rpx] px-3">
-        <view class="rounded-[16rpx] bg-panel px-3 py-3">
-          <view class="flex items-start justify-between gap-3">
-            <view class="min-w-0 flex-1">
-              <view class="flex flex-wrap gap-2">
-                <text class="rounded-[8rpx] bg-panel-raised px-2 py-1 text-[length:22rpx] text-muted">{{event.eventTypeLabel}}</text>
-                <text class="rounded-[8rpx] bg-brand px-2 py-1 text-[length:22rpx] font-semibold text-on-brand">{{accessText}}</text>
-                <text wx:if="{{event.branchName}}" class="rounded-[8rpx] bg-panel-raised px-2 py-1 text-[length:22rpx] text-muted">{{event.branchName}}</text>
-                <text wx:for="{{event.tags}}" wx:for-item="tag" wx:key="*this" class="rounded-[8rpx] bg-panel-raised px-2 py-1 text-[length:22rpx] text-muted">{{tag}}</text>
-              </view>
-              <view class="mt-3 text-[length:32rpx] font-semibold leading-[1.35]">{{event.title}}</view>
-              <view wx:if="{{event.summary}}" class="mt-2 line-clamp-2 text-[length:22rpx] leading-5 text-muted">{{event.summary}}</view>
+        <!-- figma 1861_17860: 351x126 info card. Left column flows (chips, title,
+             date, location); feedback / 指引 / price stack pins to the top-right. -->
+        <view class="relative box-border h-[252rpx] overflow-hidden rounded-[16rpx] bg-panel px-3 py-3">
+          <view class="flex min-w-0 flex-col pr-[152rpx]">
+            <view class="flex flex-wrap items-center gap-1">
+              <text class="box-border flex h-[32rpx] items-center rounded-[8rpx] border-[length:0.5px] border-tag-type-line bg-tag-type px-[12rpx] text-[length:20rpx] font-medium leading-[28rpx] text-on-brand">{{event.eventTypeLabel}}</text>
+              <text class="box-border flex h-[32rpx] items-center rounded-[8rpx] border-[length:0.5px] border-brand-active bg-brand-alt px-[12rpx] text-[length:20rpx] font-medium leading-[28rpx] text-on-brand">{{accessLabel}}</text>
+              <text wx:if="{{event.branchName}}" class="box-border flex h-[32rpx] items-center rounded-[8rpx] bg-panel-raised px-[12rpx] text-[length:20rpx] font-medium leading-[28rpx] text-muted">{{event.branchName}}</text>
+              <text wx:for="{{event.tags}}" wx:for-item="tag" wx:key="*this" class="box-border flex h-[32rpx] items-center rounded-[8rpx] bg-panel-raised px-[12rpx] text-[length:20rpx] font-medium leading-[28rpx] text-muted">{{tag}}</text>
             </view>
-            <view wx:if="{{event.canInteract}}" class="flex min-h-[88rpx] shrink-0 items-center rounded-full bg-brand px-3 text-[length:22rpx] font-semibold text-on-brand" bind:tap="openFeedback">活动反馈</view>
+            <view class="mt-[16rpx] truncate text-[length:32rpx] font-medium leading-[44rpx]">{{event.title}}</view>
+            <view wx:if="{{event.summary}}" class="mt-2 line-clamp-2 text-[length:22rpx] leading-5 text-muted">{{event.summary}}</view>
+            <view class="mt-[24rpx] flex h-[36rpx] items-center gap-1.5"><mip-icon name="calendar-schedule" size="{{14}}" color="var(--color-brand)" /><text class="min-w-0 flex-1 truncate text-[length:24rpx] leading-[33.6rpx]">{{startsText}}<text wx:if="{{endsText}}" class="text-muted"> 至 {{endsText}}</text></text></view>
+            <view class="mt-[16rpx] flex h-[36rpx] items-center gap-1.5" bind:tap="openLocation"><mip-icon name="icon-map-pin-line" size="{{14}}" color="var(--color-brand)" /><text class="min-w-0 flex-1 truncate text-[length:24rpx] leading-[33.6rpx]">{{locationText}}</text></view>
           </view>
-          <view class="mt-3 flex min-h-[52rpx] items-center gap-2"><mip-icon name="calendar-schedule" size="{{15}}" color="var(--color-brand)" /><text class="min-w-0 flex-1 text-[length:24rpx]">{{startsText}}<text wx:if="{{endsText}}" class="text-muted"> 至 {{endsText}}</text></text></view>
-          <view class="flex min-h-[88rpx] items-center gap-2" bind:tap="openLocation"><mip-icon name="icon-map-pin-line" size="{{15}}" color="var(--color-brand)" /><text class="min-w-0 flex-1 text-[length:24rpx]">{{locationText}}</text><text wx:if="{{event.mode !== 'ONLINE' && event.address}}" class="text-[length:22rpx] text-brand">{{hasCoordinates ? '地图' : '复制'}}</text></view>
-          <view class="mt-2 flex items-end justify-between border-t border-line pt-3"><text class="text-[length:22rpx] text-muted">{{event.status === 'PUBLISHED' ? '报名进行中' : (event.status === 'ENDED' ? '活动已结束' : '活动已取消')}}</text><text wx:if="{{event.accessType === 'PAID'}}" class="text-[length:34rpx] font-semibold text-brand">{{accessText}}</text></view>
+          <view class="absolute right-3 top-3 flex w-[152rpx] flex-col items-end">
+            <view wx:if="{{event.canInteract}}" class="flex h-[42rpx] shrink-0 items-center rounded-full bg-brand px-[12rpx]" bind:tap="openFeedback"><mip-icon name="pencil-ai-line" size="{{16}}" color="var(--color-on-brand)" /><text class="text-[length:24rpx] font-medium leading-[33.6rpx] text-on-brand">活动反馈</text></view>
+            <view wx:if="{{locationText}}" class="mt-3 flex flex-col items-center" bind:tap="openLocation"><mip-icon name="signpost-fill" size="{{20}}" color="var(--color-brand)" /><text class="mt-[4rpx] text-[length:20rpx] leading-[28rpx] text-brand">指引</text></view>
+            <view wx:if="{{event.accessType === 'PAID'}}" class="mt-1.5 flex items-baseline text-brand"><text class="text-[length:24rpx] font-semibold leading-[33.6rpx]">¥</text><text class="text-[length:48rpx] font-semibold leading-[67.2rpx]">{{priceText}}</text></view>
+          </view>
         </view>
 
-        <view class="mt-3 rounded-[16rpx] bg-panel px-3 pb-3 pt-3" bind:tap="openParticipants">
-          <view class="flex min-h-[48rpx] items-center justify-between"><text class="text-[length:24rpx] font-semibold text-brand">{{event.registrationCount}} 人参加<text wx:if="{{event.capacity}}"> / 限 {{event.capacity}} 人</text></text><view class="flex items-center gap-1 text-[length:22rpx] text-muted"><text>查看更多</text><mip-icon name="chevron-down-1" size="{{13}}" color="var(--color-muted)" /></view></view>
-          <view wx:if="{{event.participantPreview.length}}" class="mt-3 flex items-start justify-between gap-2">
-            <view wx:for="{{event.participantPreview}}" wx:key="participantRef" class="min-w-0 flex-1 text-center">
-              <image wx:if="{{item.avatarUrl}}" class="mx-auto h-[80rpx] w-[80rpx] rounded-full bg-panel-raised" mode="aspectFill" src="{{item.avatarUrl}}" />
-              <view wx:else class="mx-auto flex h-[80rpx] w-[80rpx] items-center justify-center rounded-full bg-brand-soft"><t-icon name="user-avatar" size="36rpx" color="var(--color-brand)" /></view>
-              <view class="mt-2 truncate text-[length:22rpx] text-muted">{{item.nickname}}</view>
+        <!-- figma 1861_17860: 351x110 card, header at y7, avatars on a 56px pitch. -->
+        <view class="mt-3 rounded-[16rpx] bg-panel px-3 pb-3 pt-[14rpx]" bind:tap="openParticipants">
+          <view class="flex h-[34rpx] items-center justify-between">
+            <text class="text-[length:24rpx] font-medium leading-[33.6rpx] text-brand-alt">参与人数{{event.registrationCount}}<text wx:if="{{event.capacity}}" class="text-[length:20rpx]">/{{event.capacity}}</text></text>
+            <view class="flex items-center gap-[8rpx]"><text class="text-[length:24rpx] leading-[33.6rpx] text-ios-gray">查看更多</text><mip-icon name="chevron-down-1" size="{{8}}" color="var(--color-ios-gray)" /></view>
+          </view>
+          <view wx:if="{{event.participantPreview.length}}" class="mt-4 flex gap-[32rpx] px-1">
+            <view wx:for="{{event.participantPreview}}" wx:key="participantRef" class="w-[80rpx] shrink-0">
+              <image wx:if="{{item.avatarUrl}}" class="h-[80rpx] w-[80rpx] rounded-full bg-panel-raised" mode="aspectFill" src="{{item.avatarUrl}}" />
+              <view wx:else class="flex h-[80rpx] w-[80rpx] items-center justify-center rounded-full bg-brand-soft"><t-icon name="user-avatar" size="36rpx" color="var(--color-brand)" /></view>
+              <view class="mt-1 truncate text-center text-[length:20rpx] font-medium leading-[28rpx] text-muted">{{item.nickname}}</view>
             </view>
           </view>
           <view wx:else class="mt-2 text-[length:22rpx] text-muted">暂无公开参与者资料</view>
         </view>
 
+        <!-- figma 1861_17860: 28px chips, active brand-alt/on-brand, inactive ios-gray. -->
         <view class="mt-3 flex gap-2">
-          <view wx:if="{{contentSection === 'INTRO'}}" class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-brand px-3 text-[length:24rpx] font-semibold text-on-brand" data-section="INTRO" bind:tap="selectContentSection">活动介绍</view>
-          <view wx:else class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:24rpx] text-muted" data-section="INTRO" bind:tap="selectContentSection">活动介绍</view>
-          <view wx:if="{{contentSection === 'ORGANIZER'}}" class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-brand px-3 text-[length:24rpx] font-semibold text-on-brand" data-section="ORGANIZER" bind:tap="selectContentSection">主办方</view>
-          <view wx:else class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:24rpx] text-muted" data-section="ORGANIZER" bind:tap="selectContentSection">主办方</view>
-          <view wx:if="{{contentSection === 'NOTICE'}}" class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-brand px-3 text-[length:24rpx] font-semibold text-on-brand" data-section="NOTICE" bind:tap="selectContentSection">报名须知</view>
-          <view wx:else class="flex min-h-[88rpx] items-center rounded-[16rpx] bg-panel px-3 text-[length:24rpx] text-muted" data-section="NOTICE" bind:tap="selectContentSection">报名须知</view>
+          <view wx:if="{{contentSection === 'INTRO'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand-alt px-[16rpx] text-[length:28rpx] font-medium leading-[39.2rpx] text-on-brand" data-section="INTRO" bind:tap="selectContentSection">活动介绍</view>
+          <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-[16rpx] text-[length:28rpx] font-medium leading-[39.2rpx] text-ios-gray" data-section="INTRO" bind:tap="selectContentSection">活动介绍</view>
+          <view wx:if="{{contentSection === 'ORGANIZER'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand-alt px-[16rpx] text-[length:28rpx] font-medium leading-[39.2rpx] text-on-brand" data-section="ORGANIZER" bind:tap="selectContentSection">主办方</view>
+          <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-[16rpx] text-[length:28rpx] font-medium leading-[39.2rpx] text-ios-gray" data-section="ORGANIZER" bind:tap="selectContentSection">主办方</view>
+          <view wx:if="{{contentSection === 'NOTICE'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand-alt px-[16rpx] text-[length:28rpx] font-medium leading-[39.2rpx] text-on-brand" data-section="NOTICE" bind:tap="selectContentSection">报名须知</view>
+          <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-[16rpx] text-[length:28rpx] font-medium leading-[39.2rpx] text-ios-gray" data-section="NOTICE" bind:tap="selectContentSection">报名须知</view>
         </view>
 
+        <!-- figma 1861_17860: media sits at the card's top padding (12px), copy
+             follows left-aligned 12px below; description rich-text leads only
+             when the event actually has one. -->
         <view wx:if="{{contentSection === 'INTRO'}}" class="mt-3 rounded-[16rpx] bg-panel px-3 py-3">
-          <rich-text class="mip-event-rich-content text-[length:24rpx] leading-7 text-muted" nodes="{{descriptionNodes}}" />
-          <view wx:if="{{event.contentMedia.length}}" class="mt-3 flex flex-col gap-3">
+          <rich-text wx:if="{{descriptionNodes.length}}" class="mip-event-rich-content text-[length:24rpx] leading-7 text-muted" nodes="{{descriptionNodes}}" />
+          <view wx:if="{{event.contentMedia.length}}" class="{{descriptionNodes.length ? 'mt-3' : ''}} flex flex-col gap-3">
             <view wx:for="{{event.contentMedia}}" wx:key="imageUrl">
-              <image class="w-full rounded-[8rpx] bg-panel-raised" mode="widthFix" src="{{item.imageUrl}}" data-url="{{item.imageUrl}}" bind:tap="previewContentImage" />
-              <view wx:if="{{item.caption}}" class="mt-2 text-center text-[length:22rpx] text-muted">{{item.caption}}</view>
+              <image class="w-full bg-panel-raised" mode="widthFix" src="{{item.imageUrl}}" data-url="{{item.imageUrl}}" bind:tap="previewContentImage" />
+              <view wx:if="{{item.caption}}" class="mt-3 text-[length:24rpx] leading-[33.6rpx] text-muted">{{item.caption}}</view>
             </view>
           </view>
           <view wx:if="{{!event.description && !event.contentMedia.length}}" class="py-4 text-[length:24rpx] text-muted">暂无活动介绍。</view>

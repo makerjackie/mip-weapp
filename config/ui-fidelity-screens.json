@@ -620,6 +620,80 @@
           }
         ]
       }
+    },
+    {
+      "key": "events-活动详情",
+      "route": "packages/member/mip-events/detail/index",
+      "reference": "1861_17860_活动-首页-详情.html",
+      "crop": { "topPx": 112, "bottomPx": 0 },
+      "fixture": {
+        "state": "ready",
+        "onlineMode": false,
+        "onlineUrl": "",
+        "message": "",
+        "busy": false,
+        "contentSection": "INTRO",
+        "descriptionNodes": [],
+        "startsText": "12月12日 10:00-12:00",
+        "endsText": "",
+        "shareTimeText": "12月12日 10:00-12:00",
+        "accessText": "¥589",
+        "accessLabel": "仅玩家",
+        "priceText": "589",
+        "locationText": "深圳 新洲二街海松大厦A座1706室",
+        "hasCoordinates": true,
+        "primaryAction": "register",
+        "primaryLabel": "立刻报名",
+        "shareOpen": false,
+        "posterBusy": false,
+        "invitationLoading": false,
+        "videoRecapBusyId": "",
+        "shareOverlayProps": { "backgroundColor": "rgba(8, 8, 8, 0.7)" },
+        "event": {
+          "coverUrl": "/assets/figma/events/detail-cover.png",
+          "eventTypeLabel": "沙龙",
+          "branchName": "",
+          "tags": [],
+          "title": "MIP反人性早会第328场",
+          "summary": "",
+          "mode": "OFFLINE",
+          "accessType": "PAID",
+          "status": "PUBLISHED",
+          "address": "",
+          "cityName": "深圳",
+          "venueName": "新洲二街海松大厦A座1706室",
+          "registrationCount": 45,
+          "capacity": 50,
+          "priceCents": 58900,
+          "canInteract": true,
+          "canRegister": true,
+          "canCancel": false,
+          "canRetryRefund": false,
+          "canCheckIn": false,
+          "onlineAccessAvailable": false,
+          "albumEnabled": false,
+          "organizer": null,
+          "invitationAttribution": null,
+          "videoRecaps": [],
+          "changes": [],
+          "description": "",
+          "notices": "",
+          "contentMedia": [
+            {
+              "imageUrl": "/assets/figma/events/detail-content-relationship.png",
+              "caption": "找人才、找资源、找投资就来参加创意人早会，这里是一段可以自定义的活动..."
+            }
+          ],
+          "participantPreview": [
+            { "participantRef": "p1", "nickname": "铁锤妹妹", "avatarUrl": "/assets/figma/events/detail-avatar-1.png" },
+            { "participantRef": "p2", "nickname": "Ame", "avatarUrl": "/assets/figma/events/detail-avatar-2.png" },
+            { "participantRef": "p3", "nickname": "Dylan", "avatarUrl": "/assets/figma/events/detail-avatar-3.png" },
+            { "participantRef": "p4", "nickname": "Nehz", "avatarUrl": "/assets/figma/events/detail-avatar-4.png" },
+            { "participantRef": "p5", "nickname": "大鹅飞飞", "avatarUrl": "/assets/figma/events/detail-avatar-5.png" },
+            { "participantRef": "p6", "nickname": "哈库呐玛", "avatarUrl": "/assets/figma/events/detail-avatar-6.png" }
+          ]
+        }
+      }
     }
   ]
 }

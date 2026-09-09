@@ -61,6 +61,26 @@ function accessText(event: MipEventDetail) {
   return '免费活动'
 }
 
+/**
+ * Access chip copy per figma 1861_17860: the chip names WHO may join (仅玩家)
+ * while the price line separately shows the amount for PAID events.
+ */
+function accessLabel(event: MipEventDetail) {
+  if (event.accessType === 'MEMBER_INCLUDED') {
+    return '玩家活动'
+  }
+  if (event.accessType === 'PAID') {
+    return '仅玩家'
+  }
+  return '免费活动'
+}
+
+/** Price amount without the ¥ sign; whole yuan prices drop the decimals (figma: ¥589). */
+function priceText(event: MipEventDetail) {
+  const value = event.priceCents / 100
+  return Number.isInteger(value) ? String(value) : value.toFixed(2)
+}
+
 function compactEventTime(startsAt: string, endsAt: string) {
   const startsDay = formatChineseMonthDay(startsAt)
   const endsDay = formatChineseMonthDay(endsAt)
@@ -113,6 +133,8 @@ Page({
     endsText: '',
     shareTimeText: '',
     accessText: '',
+    accessLabel: '',
+    priceText: '',
     locationText: '',
     primaryAction: 'disabled',
     primaryLabel: '',
@@ -278,10 +300,14 @@ Page({
       state: 'ready',
       event: normalizedEvent,
       descriptionNodes: eventRichTextNodes(event.description),
-      startsText: formatChineseDateTime(event.startsAt),
-      endsText: formatChineseDateTime(event.endsAt),
+      // figma 1861_17860 shows the compact range ("12月12日 10:00-12:00") on the
+      // date row; compactEventTime already folds same-day and multi-day forms.
+      startsText: compactEventTime(event.startsAt, event.endsAt) || formatChineseDateTime(event.startsAt),
+      endsText: '',
       shareTimeText: compactEventTime(event.startsAt, event.endsAt),
       accessText: accessText(event),
+      accessLabel: accessLabel(event),
+      priceText: priceText(event),
       locationText: [event.cityName, event.venueName, event.address].filter(Boolean).join(' · ')
         || (event.mode === 'ONLINE' ? '线上活动' : '地点待公布'),
       primaryAction: action.key,

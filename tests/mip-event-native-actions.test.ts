@@ -16,7 +16,11 @@ describe('MIP event native actions', () => {
     expect(service).toContain('longitude: row.longitude === null ? undefined : Number(row.longitude)')
     expect(page).toContain('wx.openLocation')
     expect(page).toContain('wx.setClipboardData')
-    expect(view).toContain('hasCoordinates ? \'地图\' : \'复制\'')
+    // figma 1861_17860: the 地图/复制 toggle became a single 指引 affordance; the
+    // page logic still branches on coordinates (pinned via wx.openLocation above).
+    expect(view).toContain('bind:tap="openLocation"')
+    expect(view).toContain('>指引</text>')
+    expect(page).toContain('hasCoordinates')
   })
 
   it('adds the server-provided activity time to the system calendar', () => {
