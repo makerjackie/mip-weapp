@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "threshold": 92,
+  "notes": [
+    "Each entry binds one figma-restored reference screen to a route plus the fixture data needed",
+    "to reproduce that screen's copy. crop.topPx removes the iOS StatusBar+NavBar and bottomPx the",
+    "TabBar+HomeIndicator, because the impl render has no system chrome (WeChat draws it natively).",
+    "Screens without an entry are NOT scored — never report them as passing."
+  ],
+  "screens": [
+    {
+      "key": "profile-我的-a",
+      "route": "pages/profile/index",
+      "reference": "1770_38871_我的-a.html",
+      "crop": { "topPx": 91, "bottomPx": 90 },
+      "fixture": {
+        "state": "ready",
+        "nickname": "Ame",
+        "nicknameInitial": "A",
+        "avatarUrl": "",
+        "growthState": "ready",
+        "levelName": "Lv.23",
+        "membershipLabel": "会员",
+        "primaryBranchName": "深圳MIP",
+        "primaryIndustryName": "金融行业",
+        "identityStatus": "激情创业者",
+        "headline": "这是介绍自己的一句话，只有一句话。",
+        "profileComplete": true,
+        "isPlayer": true,
+        "experience": 3000,
+        "growthProgress": 7.5,
+        "guestCount": 20,
+        "interactionCount": 100,
+        "interestCount": 18,
+        "visitorCount": 200,
+        "visitorUnreadCount": 0,
+        "notificationUnreadCount": 0,
+        "adminVisible": false,
+        "portfolioTab": "cooperation",
+        "cooperationState": "ready",
+        "caseState": "ready",
+        "opportunityState": "ready",
+        "cooperationCards": [
+          {
+            "id": "c1",
+            "roleKey": "strategist",
+            "positioning": "需要引荐 · 需要认识更多地产开发商地产开发商",
+            "targetSummary": "我的目标 · 26年接3个非标商业项目"
+          }
+        ],
+        "cases": [],
+        "opportunities": [],
+        "message": "",
+        "openingAction": ""
+      }
+    }
+  ]
+}

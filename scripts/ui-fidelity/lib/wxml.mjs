@@ -1,0 +1,291 @@
+/**
+ * Minimal WXML -> HTML renderer for pixel fidelity scoring.
+ *
+ * Deliberately a *proxy*, not a mini-program runtime: it covers the syntax this
+ * repo actually uses (view/text/image/block/scroll-view/input/button/textarea,
+ * wx:if/elif/else, wx:for with item/index/key, {{interp}} expressions, custom
+ * components with recursive inlining and per-instance style scoping, slots).
+ * It does not run page JS or component lifecycles — screens are rendered from an
+ * explicit fixture instead, so the pixels compared are the template plus the data.
+ */
+import fs from 'node:fs'
+import path from 'node:path'
+
+const TAG_MAP = {
+  view: 'div',
+  text: 'span',
+  image: 'img',
+  'scroll-view': 'div',
+  block: '',
+  button: 'button',
+  input: 'input',
+  textarea: 'textarea',
+  navigator: 'a',
+  picker: 'div',
+  'picker-view': 'div',
+  swiper: 'div',
+  'swiper-item': 'div',
+  canvas: 'div',
+  'cover-view': 'div',
+  'rich-text': 'div',
+  'web-view': 'div',
+  slot: '',
+  'mip-icon': 'span',
+}
+
+const OBJECT_FIT = { aspectFill: 'cover', aspectFit: 'contain', widthFix: 'contain', scaleToFill: 'fill' }
+const VOID_TAGS = new Set(['img', 'input', 'br', 'hr'])
+
+const exprCache = new Map()
+// Missing data keys read as undefined instead of throwing, so a partial fixture
+// renders the same branches the page renders before that field resolves.
+function withFallback(scope) {
+  return new Proxy(scope, {
+    has: () => true,
+    get: (target, key) => (key === Symbol.unscopables ? undefined : target[key]),
+  })
+}
+
+function evalExpr(expr, scope) {
+  if (!exprCache.has(expr)) {
+    try {
+      exprCache.set(expr, new Function('s', `with (s) { return (${expr}) }`))
+    }
+    catch {
+      exprCache.set(expr, () => undefined)
+    }
+  }
+  try {
+    return exprCache.get(expr)(withFallback(scope ?? {}))
+  }
+  catch {
+    return undefined
+  }
+}
+
+function interpolate(value, scope) {
+  if (value == null) { return '' }
+  const whole = /^\{\{([\s\S]*)\}\}$/.exec(String(value).trim())
+  if (whole) { return evalExpr(whole[1], scope) }
+  return String(value).replace(/\{\{([\s\S]*?)\}\}/g, (_, expr) => {
+    const out = evalExpr(expr, scope)
+    return out === undefined || out === null ? '' : String(out)
+  })
+}
+
+function truthy(value, scope) {
+  if (typeof value === 'string') {
+    const t = value.trim().replace(/^\{\{([\s\S]*)\}\}$/, '$1')
+    if (!t) { return false }
+    return Boolean(evalExpr(t, scope))
+  }
+  return Boolean(value)
+}
+
+/** Tokenizer: comments, self-closing, open/close, with attributes preserved. */
+export function parseWxml(source) {
+  const root = { children: [] }
+  const stack = [root]
+  const tagRe = /<!--[\s\S]*?-->|<\/([a-zA-Z][\w:.-]*)\s*>|<([a-zA-Z][\w:.-]*)((?:\s+[^<>]*?)?)(\/?)>/g
+  let match
+  while ((match = tagRe.exec(source))) {
+    const [full, closeTag, openTag, rawAttrs, selfClose] = match
+    if (full.startsWith('<!--')) { continue }
+    if (closeTag) {
+      for (let i = stack.length - 1; i > 0; i -= 1) {
+        if (stack[i].tag === closeTag) {
+          stack.length = i
+          break
+        }
+      }
+      continue
+    }
+    const attrs = {}
+    for (const attr of rawAttrs.matchAll(/([\w:@\-.]+)\s*(?:=\s*"([^"]*)"|=\s*'([^']*)')?/g)) {
+      attrs[attr[1]] = attr[2] ?? attr[3] ?? ''
+    }
+    const node = { tag: openTag, attrs, children: [] }
+    stack[stack.length - 1].children.push(node)
+    if (!selfClose && !VOID_TAGS.has(openTag)) { stack.push(node) }
+  }
+  return root.children
+}
+
+/** Group wx:if / wx:elif / wx:else siblings so only one branch renders. */
+function groupIfChains(children) {
+  const out = []
+  for (const node of children) {
+    const hasChain = node.attrs && (node.attrs['wx:if'] !== undefined || node.attrs['wx:elif'] !== undefined || node.attrs['wx:else'] !== undefined)
+    if (hasChain) {
+      const last = out[out.length - 1]
+      if (last && last.chain && (node.attrs['wx:elif'] !== undefined || node.attrs['wx:else'] !== undefined)) {
+        last.chain.branches.push(node)
+        continue
+      }
+      if (node.attrs['wx:if'] !== undefined) {
+        out.push({ chain: { branches: [node] } })
+        continue
+      }
+    }
+    out.push({ chain: false, node })
+  }
+  return out
+}
+
+export function renderToHtml(nodes, scope, ctx) {
+  let html = ''
+  for (const item of groupIfChains(nodes)) {
+    if (item.chain) {
+      const branch = item.chain.branches.find((b) => {
+        if (b.attrs['wx:if'] !== undefined) { return truthy(b.attrs['wx:if'], scope) }
+        if (b.attrs['wx:elif'] !== undefined) { return truthy(b.attrs['wx:elif'], scope) }
+        return true
+      })
+      html += renderNode(branch, scope, ctx)
+      continue
+    }
+    html += renderNode(item.node, scope, ctx)
+  }
+  return html
+}
+
+function renderNode(node, scope, ctx) {
+  if (!node) { return '' }
+  const attrs = node.attrs ?? {}
+  if (attrs['wx:for'] !== undefined) {
+    const list = evalExpr(String(attrs['wx:for']).replace(/^\{\{|\}\}$/g, ''), scope) ?? []
+    const item = attrs['wx:for-item'] ?? 'item'
+    const index = attrs['wx:for-index'] ?? 'index'
+    return list.map((value, i) => renderNode({ ...node, attrs: { ...attrs, 'wx:for': undefined } }, { ...scope, [item]: value, [index]: i, [`${index}In`]: undefined }, ctx)).join('')
+  }
+
+  const childHtml = renderToHtml(node.children ?? [], scope, ctx)
+
+  const resolved = ctx.resolveComponent?.(node.tag)
+  if (resolved) {
+    const props = { ...resolved.defaults }
+    for (const [key, value] of Object.entries(attrs)) {
+      if (key.startsWith('wx:') || key.startsWith('bind') || key.startsWith('catch') || key === 'class' || key === 'id' || key === 'style') { continue }
+      props[key] = interpolate(value, scope)
+    }
+    const id = `c${ctx.instanceCount += 1}`
+    ctx.componentStyles.push({ id, css: resolved.css })
+    const inner = renderToHtml(resolved.nodes, { ...props, ...props.$data }, { ...ctx, slotHtml: childHtml })
+    return `<div class="wx-comp ${interpolate(attrs.class, scope)}" id="${id}" style="${interpolate(attrs.style, scope)}">${inner}</div>`
+  }
+
+  const tag = TAG_MAP[node.tag] ?? (node.tag.includes('-') ? 'div' : node.tag)
+  if (tag === 'slot') { return childHtml || '' }
+  if (!tag) { return childHtml }
+
+  const styleParts = []
+  const declaredStyle = interpolate(attrs.style, scope)
+  if (declaredStyle) { styleParts.push(declaredStyle) }
+  if (tag === 'img') {
+    styleParts.push(`object-fit:${OBJECT_FIT[attrs.mode ?? 'scaleToFill'] ?? 'fill'}`)
+    if (attrs['lazy-load'] !== undefined) { styleParts.push('') }
+  }
+  if (node.tag === 'scroll-view' && String(attrs['scroll-y']) === 'true') { styleParts.push('overflow-y:auto') }
+  if (node.tag === 'scroll-view' && String(attrs['scroll-x']) === 'true') { styleParts.push('overflow-x:auto;white-space:nowrap') }
+
+  const attrStrings = []
+  for (const [key, value] of Object.entries(attrs)) {
+    if (key.startsWith('wx:') || key.startsWith('bind') || key.startsWith('catch') || key.startsWith('aria') || key === 'data') { continue }
+    const out = interpolate(value, scope)
+    if (key === 'class') { attrStrings.push(`class="${typeof out === 'string' ? out.replace(/(-?[\d.]+)rpx/g, (_, n) => `${(Number.parseFloat(n) / 2).toFixed(3).replace(/\.?0+$/, '')}px`) : out}"`) }
+    else if (key === 'src') { attrStrings.push(`src="${ctx.resolveAsset?.(out) ?? out}"`) }
+    else if (key === 'hidden') { if (out !== '' && out !== 'false') { attrStrings.push('hidden') } }
+    else if (['mode', 'fade-show', 'selectable', 'placeholder-class', 'hover-class', 'type', 'confirm-type'].includes(key)) { continue }
+    else if (key === 'placeholder') { attrStrings.push(`placeholder="${out}"`) }
+    else if (key === 'value') { attrStrings.push(`value="${out}"`) }
+    else { attrStrings.push(`${key}="${out}"`) }
+  }
+  if (styleParts.length) { attrStrings.push(`style="${styleParts.filter(Boolean).join(';')}"`) }
+
+  const inner = tag === 'input' || tag === 'img' ? '' : childHtml
+  return `<${tag} ${attrStrings.join(' ')}>${inner}</${tag}>`
+}
+
+/** rpx -> px at the given viewport width, and page -> body for browser rendering. */
+export function toBrowserCss(css, viewportWidth = 375) {
+  return css
+    .replace(/(-?[\d.]+)rpx/g, (_, n) => `${(Number.parseFloat(n) * viewportWidth) / 750}px`)
+    .replace(/(^|[\s;{])page\b/g, '$1body')
+    .replace(/@[a-z-]+[^;{]*;|@[a-z-]+\s*\{(?:[^{}]|\{[^{}]*\})*\}/g, (m) => (m.startsWith('@media') || m.startsWith('@supports') ? m : ''))
+}
+
+export function scopeCss(css, instanceId) {
+  return css.replace(/(^|\})\s*([^{}@]+)\{/g, (_, end, selector) => {
+    if (selector.trim().startsWith('@')) { return `${end}${selector}{` }
+    const scoped = selector.split(',').map((part) => {
+      const s = part.trim()
+      if (!s || s === 'from' || s === 'to') { return part }
+      return `#${instanceId} ${s}`
+    }).join(',')
+    return `${end}${scoped}{`
+  })
+}
+
+/** Reads a weapp component's property defaults without executing its JS. */
+export function readPropertyDefaults(jsSource) {
+  const defaults = {}
+  const block = jsSource.match(/properties:\s*\{([\s\S]*?)\n\s{2}\}/)?.[1] ?? ''
+  for (const match of block.matchAll(/(\w+):\s*\{\s*type:\s*[\w.]+(?:\(\))?(?:,\s*value:\s*([^,}\n]+))?/g)) {
+    if (match[2] === undefined) { continue }
+    const raw = match[2].trim()
+    try {
+      defaults[match[1]] = raw.startsWith('[') || raw.startsWith('{') ? JSON.parse(raw.replace(/'/g, '"')) : JSON.parse(raw)
+    }
+    catch {
+      defaults[match[1]] = raw.replace(/^['"]|['"]$/g, '')
+    }
+  }
+  return defaults
+}
+
+export function createComponentResolver({ srcDir, usingComponents = {}, rootDir }) {
+  const cache = new Map()
+  return function resolve(tag) {
+    if (cache.has(tag)) { return cache.get(tag) }
+    const target = usingComponents[tag]
+    if (!target) {
+      cache.set(tag, null)
+      return null
+    }
+    let base
+    if (target.startsWith('tdesign-miniprogram/')) {
+      base = path.join(rootDir, 'node_modules/tdesign-miniprogram/miniprogram_dist', target.slice('tdesign-miniprogram/'.length))
+    }
+    else if (target.startsWith('/')) {
+      base = path.join(srcDir, target.slice(1))
+    }
+    else if (target.startsWith('@')) {
+      cache.set(tag, null)
+      return null
+    }
+    else {
+      base = path.join(srcDir, target)
+    }
+    const read = (ext) => (fs.existsSync(`${base}/index.${ext}`) ? fs.readFileSync(`${base}/index.${ext}`, 'utf8') : '')
+    const wxml = read('wxml') || read('xml')
+    if (!wxml) {
+      cache.set(tag, null)
+      return null
+    }
+    let json = {}
+    try {
+      json = JSON.parse(read('json') || '{}')
+    }
+    catch {
+      json = {}
+    }
+    const entry = {
+      nodes: parseWxml(wxml),
+      css: toBrowserCss(read('wxss') || read('css')),
+      defaults: readPropertyDefaults(read('js') || read('ts')),
+      usingComponents: json.usingComponents ?? {},
+    }
+    cache.set(tag, entry)
+    return entry
+  }
+}
