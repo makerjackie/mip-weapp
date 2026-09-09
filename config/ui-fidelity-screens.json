@@ -270,6 +270,63 @@
           }
         ]
       }
+    },
+    {
+      "key": "opportunities-人才合作",
+      "route": "pages/opportunities/index",
+      "reference": "1768_37534_机会-人才合作.html",
+      "crop": { "topPx": 68, "bottomPx": 90 },
+      "fixture": {
+        "state": "ready",
+        "mode": "cooperation",
+        "keywordInput": "",
+        "filterOpen": false,
+        "locationFilterLabel": "全国",
+        "appliedFilterCount": 0,
+        "appliedFilterChips": [],
+        "loadingMore": false,
+        "message": "",
+        "opportunities": [],
+        "cooperationTalents": [
+          {
+            "talentKey": "t1",
+            "profileRef": "p1",
+            "author": {
+              "nickname": "大鹅飞飞",
+              "avatarUrl": "/assets/figma/profile/avatar.png",
+              "cityName": "深圳",
+              "primaryIndustry": { "label": "金融行业" },
+              "headline": "激情创业者",
+              "levelText": "Lv.23"
+            },
+            "primaryPositioning": "这是介绍自己的一句话，只有一句话可能只有这么长。",
+            "roleTags": [
+              { "icon": "/assets/figma/opportunities/role-dog.svg", "label": "狗策划" },
+              { "icon": "/assets/figma/opportunities/role-money-bag.svg", "label": "暴发户" }
+            ],
+            "badgeImageUrl": "/assets/figma/opportunities/talent-badge.png",
+            "inviterName": "菠萝你个大凤梨",
+            "inviterAvatarUrl": "/assets/figma/profile/avatar.png"
+          },
+          {
+            "talentKey": "t2",
+            "profileRef": "p2",
+            "author": {
+              "nickname": "菠萝凤梨",
+              "avatarUrl": "/assets/figma/events/avatar-1.png",
+              "cityName": "深圳",
+              "primaryIndustry": { "label": "金融行业" },
+              "headline": "激情创业者",
+              "levelText": "Lv.23"
+            },
+            "primaryPositioning": "这是介绍自己的一句话，只有一句话可能只有这么长。",
+            "roleTags": [
+              { "icon": "/assets/figma/opportunities/role-dog.svg", "label": "狗策划" },
+              { "icon": "/assets/figma/opportunities/role-money-bag.svg", "label": "暴发户" }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

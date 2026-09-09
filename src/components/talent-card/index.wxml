@@ -1,15 +1,30 @@
 <view class="mip-talent-card" aria-label="{{displayName}}">
-  <view class="mip-talent-card__body">
+  <view class="mip-talent-card__top">
     <image wx:if="{{avatarUrl}}" class="mip-talent-card__avatar" src="{{avatarUrl}}" mode="aspectFill" />
     <view wx:else class="mip-talent-card__avatar mip-talent-card__avatar-placeholder">MIP</view>
-    <view class="mip-talent-card__main">
-      <view class="mip-talent-card__name-row"><view class="mip-talent-card__name">{{displayName}}</view><view wx:if="{{kindLabel}}" class="mip-talent-card__kind">{{kindLabel}}</view></view>
-      <view wx:if="{{metaText}}" class="mip-talent-card__meta">{{metaText}}</view>
-      <view wx:if="{{supportingText}}" class="mip-talent-card__supporting">{{supportingText}}</view>
+    <view class="mip-talent-card__name-row">
+      <view class="mip-talent-card__name">{{displayName}}</view>
+      <view wx:if="{{levelText}}" class="mip-talent-card__level">{{levelText}}</view>
+      <image wx:if="{{badgeImageUrl}}" class="mip-talent-card__badge" src="{{badgeImageUrl}}" mode="aspectFit" />
+      <view wx:if="{{kindLabel}}" class="mip-talent-card__kind">{{kindLabel}}</view>
     </view>
+    <view wx:if="{{metaText}}" class="mip-talent-card__meta">{{metaText}}</view>
+    <view wx:if="{{supportingText}}" class="mip-talent-card__supporting">{{supportingText}}</view>
   </view>
-  <view class="mip-talent-card__footer">
-    <view class="mip-talent-card__roles"><view wx:for="{{roleNames}}" wx:key="*this" class="mip-talent-card__role">{{item}}</view></view>
-    <view wx:if="{{targetText}}" class="mip-talent-card__target">{{targetText}}</view>
+  <view class="mip-talent-card__bottom">
+    <view class="mip-talent-card__roles">
+      <view wx:for="{{roleTags}}" wx:key="label" class="mip-talent-card__role-tag {{index === 0 ? '' : 'mip-talent-card__role-tag--alt'}}">
+        <view class="mip-talent-card__role-icon"><image class="mip-talent-card__role-icon-image" src="{{item.icon}}" mode="aspectFit" /></view>
+        <text class="mip-talent-card__role-label">{{item.label}}</text>
+      </view>
+      <block wx:if="{{roleTags.length === 0}}">
+        <view wx:for="{{roleNames}}" wx:key="*this" class="mip-talent-card__role-tag mip-talent-card__role-tag--plain {{index === 0 ? '' : 'mip-talent-card__role-tag--alt'}}"><text class="mip-talent-card__role-label">{{item}}</text></view>
+      </block>
+    </view>
+    <view wx:if="{{inviterName}}" class="mip-talent-card__inviter">
+      <text class="mip-talent-card__inviter-name">{{inviterName}}邀请</text>
+      <image wx:if="{{inviterAvatarUrl}}" class="mip-talent-card__inviter-avatar" src="{{inviterAvatarUrl}}" mode="aspectFill" />
+    </view>
+    <view wx:elif="{{targetText}}" class="mip-talent-card__target">{{targetText}}</view>
   </view>
 </view>

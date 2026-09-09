@@ -5,7 +5,12 @@ Component({
     avatarUrl: { type: String, value: '' },
     metaText: { type: String, value: '' },
     supportingText: { type: String, value: '' },
+    levelText: { type: String, value: '' },
+    badgeImageUrl: { type: String, value: '' },
     roleNames: { type: Array, value: [] },
+    roleTags: { type: Array, value: [] },
+    inviterName: { type: String, value: '' },
+    inviterAvatarUrl: { type: String, value: '' },
     targetText: { type: String, value: '' },
   },
 })

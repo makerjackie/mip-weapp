@@ -1,130 +1,227 @@
+/* Talent card per figma 1768_37534 (351x127 design px -> 702x254rpx):
+   two stacked panels (86px top + 1px seam + 40px band). */
 .mip-talent-card {
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 260rpx;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 254rpx;
   overflow: hidden;
-  color: var(--color-ink);
-  background: var(--color-panel);
-  border-radius: var(--mip-radius-card);
+  background: transparent;
 }
 
-.mip-talent-card__body {
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  min-height: 172rpx;
-  padding: 16rpx 24rpx;
+.mip-talent-card__top {
+  position: relative;
+  height: 172rpx;
+  background: var(--color-panel);
+  border-radius: 16rpx 16rpx 0 0;
+}
+
+.mip-talent-card__bottom {
+  position: relative;
+  height: 80rpx;
+  margin-top: 2rpx;
+  background: var(--color-panel);
+  border-radius: 0 0 16rpx 16rpx;
 }
 
 .mip-talent-card__avatar {
-  flex: 0 0 112rpx;
+  position: absolute;
+  left: 24rpx;
+  top: 34rpx;
   width: 112rpx;
   height: 112rpx;
-  overflow: hidden;
-  background: var(--color-panel-raised);
   border-radius: 50%;
+  background: var(--color-panel-raised);
 }
 
 .mip-talent-card__avatar-placeholder {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 24rpx;
-  font-weight: 600;
-  color: var(--color-brand);
-  background: var(--color-brand-soft);
-}
-
-.mip-talent-card__main {
-  min-width: 0;
-  margin-left: 24rpx;
+  font-size: 28rpx;
+  color: var(--color-muted);
 }
 
 .mip-talent-card__name-row {
+  position: absolute;
+  left: 160rpx;
+  right: 24rpx;
+  top: 26rpx;
+  height: 40rpx;
   display: flex;
-  gap: 16rpx;
   align-items: center;
-  min-width: 0;
 }
 
 .mip-talent-card__name {
   min-width: 0;
   overflow: hidden;
+  white-space: nowrap;
   text-overflow: ellipsis;
   font-size: 32rpx;
+  line-height: 44.8rpx;
   font-weight: 500;
-  white-space: nowrap;
+  color: var(--color-ink);
+}
+
+.mip-talent-card__level {
+  flex: none;
+  margin-left: 8rpx;
+  height: 32rpx;
+  box-sizing: border-box;
+  padding: 0 8rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-panel-raised);
+  border: 1rpx solid var(--color-canvas);
+  border-radius: 8rpx;
+  font-size: 20rpx;
+  line-height: 28rpx;
+  font-weight: 600;
+  color: var(--color-brand);
+}
+
+.mip-talent-card__badge {
+  flex: none;
+  margin-left: 8rpx;
+  width: 40rpx;
+  height: 40rpx;
 }
 
 .mip-talent-card__kind {
-  flex: 0 0 auto;
-  padding: 4rpx 12rpx;
-  font-size: 22rpx;
-  font-weight: 500;
-  color: var(--color-on-brand);
-  background: var(--color-brand);
-  border-radius: var(--mip-radius-control);
-}
-
-.mip-talent-card__meta,
-.mip-talent-card__supporting {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: none;
+  margin-left: 8rpx;
+  padding: 0 8rpx;
+  border-radius: 8rpx;
+  background: var(--color-brand-soft);
+  font-size: 20rpx;
+  line-height: 32rpx;
+  color: var(--color-brand);
 }
 
 .mip-talent-card__meta {
-  margin-top: 8rpx;
+  position: absolute;
+  left: 160rpx;
+  right: 24rpx;
+  top: 76rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: 24rpx;
-  line-height: 34rpx;
+  line-height: 33.6rpx;
   color: var(--color-muted);
 }
 
 .mip-talent-card__supporting {
-  margin-top: 8rpx;
-  font-size: 22rpx;
-  line-height: 30rpx;
+  position: absolute;
+  left: 160rpx;
+  right: 24rpx;
+  top: 118rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 20rpx;
+  line-height: 28rpx;
   color: var(--color-muted);
 }
 
-.mip-talent-card__footer {
+.mip-talent-card__roles {
+  position: absolute;
+  left: 24rpx;
+  top: 24rpx;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.mip-talent-card__role-tag {
+  position: relative;
+  height: 32rpx;
   box-sizing: border-box;
   display: flex;
-  gap: 16rpx;
   align-items: center;
-  justify-content: space-between;
-  min-height: 88rpx;
-  padding: 8rpx 24rpx;
-  border-top: 1rpx solid var(--color-line);
+  padding-left: 40rpx;
+  padding-right: 8rpx;
+  background: var(--color-brand);
+  border: 1rpx solid var(--color-canvas);
+  border-radius: 8rpx;
 }
 
-.mip-talent-card__roles {
+.mip-talent-card__role-tag--alt {
+  background: var(--color-tag-player);
+}
+
+.mip-talent-card__role-tag--plain {
+  padding-left: 8rpx;
+}
+
+.mip-talent-card__role-icon {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 32rpx;
+  height: 32rpx;
+  box-sizing: border-box;
   display: flex;
-  flex: 0 1 auto;
-  flex-wrap: wrap;
-  gap: 8rpx;
-  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-panel);
+  border: 1rpx solid var(--color-canvas);
+  border-radius: 8rpx 0 0 8rpx;
 }
 
-.mip-talent-card__role {
-  padding: 4rpx 16rpx;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 22rpx;
+.mip-talent-card__role-icon-image {
+  width: 100%;
+  height: 100%;
+}
+
+.mip-talent-card__role-label {
+  font-size: 20rpx;
+  line-height: 28rpx;
   font-weight: 500;
   color: var(--color-on-brand);
   white-space: nowrap;
-  background: var(--color-brand);
-  border-radius: var(--mip-radius-control);
+}
+
+.mip-talent-card__inviter {
+  position: absolute;
+  right: 24rpx;
+  top: 16rpx;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.mip-talent-card__inviter-name {
+  max-width: 180rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: right;
+  font-size: 20rpx;
+  line-height: 28rpx;
+  font-weight: 500;
+  color: var(--color-brand);
+}
+
+.mip-talent-card__inviter-avatar {
+  flex: none;
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2rpx var(--color-ink);
 }
 
 .mip-talent-card__target {
-  flex: 0 1 300rpx;
-  min-width: 0;
+  position: absolute;
+  right: 24rpx;
+  top: 16rpx;
+  max-width: 320rpx;
   overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 22rpx;
-  color: var(--color-brand);
-  text-align: right;
   white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: right;
+  font-size: 20rpx;
+  line-height: 28rpx;
+  color: var(--color-brand);
 }
