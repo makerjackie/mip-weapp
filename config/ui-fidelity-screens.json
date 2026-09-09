@@ -18,6 +18,7 @@
       },
       "fixture": {
         "state": "ready",
+        "authenticated": true,
         "nickname": "Ame",
         "nicknameInitial": "A",
         "avatarUrl": "/assets/figma/profile/avatar.png",
@@ -262,6 +263,105 @@
       }
     },
     {
+      "key": "events-活动报名-已结束",
+      "route": "pages/events/index",
+      "reference": "1819_18218_活动报名-已结束.html",
+      "crop": {
+        "topPx": 68,
+        "bottomPx": 69
+      },
+      "fixture": {
+        "state": "ready",
+        "selectedCity": "深圳",
+        "banners": [
+          {
+            "id": "banner-connect-fitness",
+            "imageUrl": "/assets/figma/events/banner-connect-fitness.png",
+            "accessibilityLabel": "MIP CONNECT 见人不如健身"
+          }
+        ],
+        "videoChannelConfigured": false,
+        "view": "UPCOMING",
+        "dateFilter": "ENDED",
+        "customDateLabel": "",
+        "dateFrom": "",
+        "dateTo": "",
+        "rangePanelVisible": false,
+        "eventTypeOptions": [],
+        "tagOptions": [],
+        "draftAccessType": "",
+        "draftSortDirection": "ASC",
+        "searchInput": "",
+        "activeFilterCount": 0,
+        "calendarVisible": false,
+        "loadingMore": false,
+        "nextCursor": "",
+        "message": "",
+        "events": [
+          {
+            "id": "e1",
+            "coverUrl": "/assets/figma/events/cover-ai-medical.png",
+            "title": "MIP反人性早会第328场",
+            "startsText": "12月12日 10:00-12:00",
+            "locationText": "深圳 新洲二街海松大厦A座1706室",
+            "accessLabel": "仅玩家",
+            "eventTypeLabel": "沙龙",
+            "statusLabel": "",
+            "registrationCount": 48,
+            "countText": "+45参加",
+            "participantPreview": [
+              {
+                "participantRef": "p1",
+                "avatarUrl": "/assets/figma/events/avatar-1.png"
+              },
+              {
+                "participantRef": "p2",
+                "avatarUrl": "/assets/figma/events/avatar-2.png"
+              },
+              {
+                "participantRef": "p3",
+                "avatarUrl": "/assets/figma/events/avatar-3.png"
+              }
+            ],
+            "plusLabel": "+",
+            "remainText": "45参加",
+            "accessTagStyle": "background:#fde530;border-color:#d0b801;color:#000000",
+            "typeTagStyle": "background:#428bff;border-color:#075adf;color:#f7f7f7"
+          },
+          {
+            "id": "e2",
+            "coverUrl": "/assets/figma/events/cover-comfort-standup.png",
+            "title": "MIP反人性早会第328场",
+            "startsText": "12月12日 10:00-12:00",
+            "locationText": "深圳 新洲二街海松大厦A座1706室",
+            "accessLabel": "仅玩家",
+            "eventTypeLabel": "沙龙",
+            "statusLabel": "",
+            "registrationCount": 48,
+            "countText": "+45参加",
+            "participantPreview": [
+              {
+                "participantRef": "p1",
+                "avatarUrl": "/assets/figma/events/avatar-1.png"
+              },
+              {
+                "participantRef": "p2",
+                "avatarUrl": "/assets/figma/events/avatar-2.png"
+              },
+              {
+                "participantRef": "p3",
+                "avatarUrl": "/assets/figma/events/avatar-3.png"
+              }
+            ],
+            "plusLabel": "+",
+            "remainText": "45参加",
+            "accessTagStyle": "background:#fde530;border-color:#d0b801;color:#000000",
+            "typeTagStyle": "background:#428bff;border-color:#075adf;color:#f7f7f7"
+          }
+        ]
+      }
+    },
+    {
       "key": "events-往期活动",
       "route": "pages/events/index",
       "reference": "1820_18744_往期活动.html",
@@ -381,6 +481,7 @@
       },
       "fixture": {
         "state": "ready",
+        "authenticated": true,
         "nickname": "Ame",
         "nicknameInitial": "A",
         "avatarUrl": "/assets/figma/profile/avatar.png",
@@ -447,6 +548,20 @@
         ],
         "message": "",
         "openingAction": ""
+      }
+    },
+    {
+      "key": "profile-我的-未登录",
+      "route": "pages/profile/index",
+      "reference": "1862_18360_我的-未登录.html",
+      "crop": {
+        "topPx": 109,
+        "bottomPx": 90
+      },
+      "fixture": {
+        "state": "ready",
+        "authenticated": false,
+        "message": ""
       }
     },
     {

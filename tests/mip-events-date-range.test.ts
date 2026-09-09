@@ -62,8 +62,9 @@ describe('MIP event date range client contract', () => {
     expect(confirmCalendar).not.toContain('view: \'UPCOMING\'')
     expect(clearDateRange).toContain('this.data.view === \'PAST\' ? \'ENDED\' : \'RECENT\'')
     expect(view).toContain('customDateLabel || \'自定义日期\'')
-    expect(view).toContain('aria-checked="{{view === \'UPCOMING\'}}"')
-    expect(view).toContain('aria-checked="{{view === \'PAST\'}}"')
+    // figma 1819_18218: the status radios track the date filter, not the tab view.
+    expect(view).toContain('aria-checked="{{dateFilter !== \'ENDED\'}}"')
+    expect(view).toContain('aria-checked="{{dateFilter === \'ENDED\'}}"')
   })
 
   it('passes valid inclusive endpoints and keeps single-day date compatibility', async () => {

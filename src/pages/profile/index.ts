@@ -487,6 +487,7 @@ Page({
   },
 
   openMembership() { caseNavigateTo({ url: '/pages/membership/index' }) },
+  openLogin() { void this.openProtected('/packages/member/mip-profile/index', 'EDIT_PROFILE') },
   openProfileEdit() { void this.openProtected('/packages/member/mip-profile/index', 'EDIT_PROFILE') },
   openMemberCard() { void this.openProtected('/packages/member/mip-card/index', 'VIEW_RESTRICTED_PROFILE') },
   openRegistrations() { void this.openProtected('/packages/member/mip-events/mine/index', 'INTERACT') },

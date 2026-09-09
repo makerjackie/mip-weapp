@@ -299,6 +299,28 @@ Page({
     void this.loadEvents()
   },
 
+  // Status radios (figma 1819_18218): switch RECENT/ENDED inside the upcoming tab
+  // without flipping the tab view the way changeDateFilter does.
+  changeStatusFilter(event: WechatMiniprogram.TouchEvent) {
+    const dateFilter = String(event.currentTarget.dataset.filter || '') as EventDateFilter
+    if (!['RECENT', 'ENDED'].includes(dateFilter) || dateFilter === this.data.dateFilter) {
+      return
+    }
+    this.setData({
+      dateFilter,
+      selectedDate: '',
+      selectedDateLabel: '',
+      customDateLabel: '',
+      dateFrom: '',
+      dateFromLabel: '',
+      dateTo: '',
+      dateToLabel: '',
+      nextCursor: '',
+      message: '',
+    })
+    void this.loadEvents()
+  },
+
   selectCity() {
     const choices = ['全部城市', ...this.data.cities]
     if (choices.length === 1) {

@@ -553,3 +553,80 @@
   border: 1rpx solid var(--color-line);
   border-radius: var(--mip-radius-card-medium);
 }
+
+/* Guest (not logged in) hero per figma 1862_18360. */
+.profile-guest {
+  /* Reference panel starts at the crop edge; cancel the page container inset. */
+  margin-top: -30rpx;
+  background: var(--color-panel);
+  padding-top: 30rpx;
+}
+
+.profile-guest-hero {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  height: 160rpx;
+  padding: 0 24rpx;
+}
+
+.profile-guest-avatar {
+  width: 160rpx;
+  height: 160rpx;
+  box-sizing: border-box;
+  border: 4rpx solid var(--color-canvas);
+  border-radius: 50%;
+  background: var(--color-brand);
+}
+
+.profile-guest-login {
+  font-size: 32rpx;
+  line-height: 44.8rpx;
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
+.profile-guest-banner {
+  position: relative;
+  margin: 24rpx 24rpx 0;
+  height: 160rpx;
+  overflow: hidden;
+  background: var(--color-brand);
+  border-radius: 32rpx 32rpx 0 0;
+}
+
+.profile-guest-banner-text {
+  position: absolute;
+  left: 28rpx;
+  top: 18rpx;
+  z-index: 2;
+  font-size: 28rpx;
+  line-height: 39.2rpx;
+  font-weight: 600;
+  color: var(--color-on-brand);
+}
+
+.profile-guest-banner-sphere {
+  position: absolute;
+  left: 150rpx;
+  top: 0;
+  width: 552rpx;
+  height: 160rpx;
+  mix-blend-mode: color-burn;
+}
+
+.profile-guest-banner-king {
+  position: absolute;
+  top: 0;
+  height: 160rpx;
+}
+
+.profile-guest-banner-king--1 {
+  left: 304rpx;
+  width: 312rpx;
+}
+
+.profile-guest-banner-king--2 {
+  left: 358rpx;
+  width: 308rpx;
+}
