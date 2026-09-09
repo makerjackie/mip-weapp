@@ -65,6 +65,7 @@ const eventDetailKeys = [
   'canCheckIn',
   'canInteract',
   'albumSubmissionPolicy',
+  'interactionSummary',
 ] as const
 
 function invalid(label: string): never {
@@ -295,6 +296,14 @@ function eventChange(value: unknown) {
     && dateString(value.createdAt)
 }
 
+function interactionSummary(value: unknown) {
+  return record(value)
+    && onlyKeys(value, ['myInterestCount', 'receivedInterestCount'])
+    && hasKeys(value, ['myInterestCount', 'receivedInterestCount'])
+    && nonNegativeInteger(value.myInterestCount)
+    && nonNegativeInteger(value.receivedInterestCount)
+}
+
 export function parseMipEventDetail(value: unknown): MipEventDetail {
   if (!record(value)
     || !onlyKeys(value, eventDetailKeys)
@@ -344,6 +353,7 @@ export function parseMipEventDetail(value: unknown): MipEventDetail {
     || !(value.registrationVersion === undefined || positiveInteger(value.registrationVersion))
     || typeof value.canCheckIn !== 'boolean'
     || typeof value.canInteract !== 'boolean'
+    || !(value.interactionSummary === undefined || interactionSummary(value.interactionSummary))
     || !['AUTO', 'REVIEW'].includes(String(value.albumSubmissionPolicy))) {
     invalid('活动详情')
   }

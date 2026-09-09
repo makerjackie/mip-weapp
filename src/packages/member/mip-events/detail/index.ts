@@ -81,6 +81,15 @@ function priceText(event: MipEventDetail) {
   return Number.isInteger(value) ? String(value) : value.toFixed(2)
 }
 
+/** 与你互动 pill labels (figma 1818_17142); counts render once the API supplies a summary. */
+function interactionLabels(event: MipEventDetail) {
+  const summary = event.interactionSummary
+  return {
+    heartMineLabel: summary ? `我的心动 ${summary.myInterestCount}` : '我的心动',
+    heartReceivedLabel: summary ? `对我心动 ${summary.receivedInterestCount}` : '对我心动',
+  }
+}
+
 function compactEventTime(startsAt: string, endsAt: string) {
   const startsDay = formatChineseMonthDay(startsAt)
   const endsDay = formatChineseMonthDay(endsAt)
@@ -135,6 +144,9 @@ Page({
     accessText: '',
     accessLabel: '',
     priceText: '',
+    interactionVisible: false,
+    heartMineLabel: '我的心动',
+    heartReceivedLabel: '对我心动',
     locationText: '',
     primaryAction: 'disabled',
     primaryLabel: '',
@@ -308,6 +320,10 @@ Page({
       accessText: accessText(event),
       accessLabel: accessLabel(event),
       priceText: priceText(event),
+      // figma 1818_17142: the checked-in state fuses a 与你互动 card under the
+      // participant card; ATTENDED is the same gate the API uses for canInteract.
+      interactionVisible: event.registrationStatus === 'ATTENDED',
+      ...interactionLabels(event),
       locationText: [event.cityName, event.venueName, event.address].filter(Boolean).join(' · ')
         || (event.mode === 'ONLINE' ? '线上活动' : '地点待公布'),
       primaryAction: action.key,

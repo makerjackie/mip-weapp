@@ -175,6 +175,11 @@ export interface MipEventDetail extends MipEventListItem {
   canCheckIn: boolean
   canInteract: boolean
   albumSubmissionPolicy: EventAlbumSubmissionPolicy
+  /** 与你互动 pill counts (figma 1818_17142); optional until the API emits them. */
+  interactionSummary?: {
+    myInterestCount: number
+    receivedInterestCount: number
+  }
 }
 
 export interface EventAlbumPhoto {

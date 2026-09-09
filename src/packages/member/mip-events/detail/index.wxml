@@ -30,8 +30,10 @@
           </view>
         </view>
 
-        <!-- figma 1861_17860: 351x110 card, header at y7, avatars on a 56px pitch. -->
-        <view class="mt-3 rounded-[16rpx] bg-panel px-3 pb-3 pt-[14rpx]" bind:tap="openParticipants">
+        <!-- figma 1861_17860: 351x110 card, header at y7, avatars on a 56px pitch.
+             figma 1818_17142: with 与你互动 below, the two cards fuse into one
+             surface (top corners here, bottom corners on the interaction card). -->
+        <view class="mt-3 {{interactionVisible ? 'rounded-t-[16rpx]' : 'rounded-[16rpx]'}} bg-panel px-3 pb-3 pt-[14rpx]" bind:tap="openParticipants">
           <view class="flex h-[34rpx] items-center justify-between">
             <text class="text-[length:24rpx] font-medium leading-[33.6rpx] text-brand-alt">参与人数{{event.registrationCount}}<text wx:if="{{event.capacity}}" class="text-[length:20rpx]">/{{event.capacity}}</text></text>
             <view class="flex items-center gap-[8rpx]"><text class="text-[length:24rpx] leading-[33.6rpx] text-ios-gray">查看更多</text><mip-icon name="chevron-down-1" size="{{8}}" color="var(--color-ios-gray)" /></view>
@@ -46,8 +48,19 @@
           <view wx:else class="mt-2 text-[length:22rpx] text-muted">暂无公开参与者资料</view>
         </view>
 
-        <!-- figma 1861_17860: 28px chips, active brand-alt/on-brand, inactive ios-gray. -->
-        <view class="mt-3 flex gap-2">
+        <!-- figma 1818_17142: 351x78 checked-in interaction card fused under the
+             participant card; pills are 76x25 brand-outline, 12px apart. -->
+        <view wx:if="{{interactionVisible}}" class="box-border h-[156rpx] rounded-b-[16rpx] bg-panel px-3 pb-3 pt-3" bind:tap="openInteraction">
+          <view class="flex h-[34rpx] items-center text-[length:24rpx] font-medium leading-[33.6rpx] text-brand-alt">与你互动</view>
+          <view class="mt-3 flex gap-3">
+            <view class="flex h-[50rpx] items-center rounded-full border border-brand px-4 text-[length:24rpx] font-medium leading-[33.6rpx] text-brand">{{heartMineLabel}}</view>
+            <view class="flex h-[50rpx] items-center rounded-full border border-brand px-4 text-[length:24rpx] font-medium leading-[33.6rpx] text-brand">{{heartReceivedLabel}}</view>
+          </view>
+        </view>
+
+        <!-- figma 1861_17860: 28px chips, active brand-alt/on-brand, inactive ios-gray.
+             figma 1818_17142 puts 9px (18rpx) between the fused card and the tabs. -->
+        <view class="{{interactionVisible ? 'mt-[18rpx]' : 'mt-3'}} flex gap-2">
           <view wx:if="{{contentSection === 'INTRO'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand-alt px-[16rpx] text-[length:28rpx] font-medium leading-[39.2rpx] text-on-brand" data-section="INTRO" bind:tap="selectContentSection">活动介绍</view>
           <view wx:else class="flex h-[56rpx] items-center rounded-[16rpx] bg-panel px-[16rpx] text-[length:28rpx] font-medium leading-[39.2rpx] text-ios-gray" data-section="INTRO" bind:tap="selectContentSection">活动介绍</view>
           <view wx:if="{{contentSection === 'ORGANIZER'}}" class="flex h-[56rpx] items-center rounded-[16rpx] bg-brand-alt px-[16rpx] text-[length:28rpx] font-medium leading-[39.2rpx] text-on-brand" data-section="ORGANIZER" bind:tap="selectContentSection">主办方</view>
