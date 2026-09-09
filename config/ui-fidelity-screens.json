@@ -921,6 +921,90 @@
         "message": "",
         "opportunities": []
       }
+    },
+    {
+      "key": "growth-玩家等级-a",
+      "route": "packages/member/mip-growth/index",
+      "reference": "1948_14079_玩家等级-a.html",
+      "crop": { "topPx": 112, "bottomPx": 12 },
+      "fixture": {
+        "state": "ready",
+        "snapshot": {
+          "account": { "experienceBalance": 3000, "contributionBalance": 120, "coinBalance": 800 },
+          "currentLevel": { "id": "lv2", "name": "Lv.2", "benefits": ["参加工会", "参加工会", "参加工会", "参加工会"] },
+          "nextLevel": null,
+          "levelProgressPercent": 25.33,
+          "experienceToNextLevel": 37000,
+          "levels": [],
+          "earningRules": []
+        },
+        "currentLevelNumber": 2,
+        "nextLevelNumber": 0,
+        "nextLevelThreshold": 40000,
+        "levels": [],
+        "levelScale": { "leftText": "Lv.1", "centerText": "Lv.10", "rightText": "Lv.20", "centerLocked": true },
+        "legacyLevelArtVisible": false,
+        "earningRules": [],
+        "entries": [],
+        "nextCursor": "",
+        "loadingMore": false,
+        "tasksState": "ready",
+        "tasks": [
+          { "id": "t1", "name": "出席MIP反人性早会1次", "content": "本人完成早会签到", "rewardExperience": 4500, "status": "COMPLETED", "actionText": "已完成" },
+          { "id": "t2", "name": "出席MIP反人性早会1次", "content": "本人完成早会签到", "rewardExperience": 4500, "status": "AVAILABLE", "actionText": "去完成" },
+          { "id": "t3", "name": "出席MIP反人性早会1次", "content": "本人完成早会签到", "rewardExperience": 4500, "status": "AVAILABLE", "actionText": "去完成" },
+          { "id": "t4", "name": "出席MIP反人性早会1次", "content": "本人完成早会签到", "rewardExperience": 4500, "status": "AVAILABLE", "actionText": "去完成" }
+        ],
+        "tasksMessage": "",
+        "isPlayer": true,
+        "membershipState": "player",
+        "membershipEndsText": "2026.08.08",
+        "invitationReady": true,
+        "invitationMessage": "",
+        "message": ""
+      }
+    },
+    {
+      "key": "growth-玩家等级-b",
+      "route": "packages/member/mip-growth/index",
+      "reference": "2165_17142_玩家等级-b.html",
+      "crop": { "topPx": 112, "bottomPx": 12 },
+      "fixture": {
+        "state": "ready",
+        "snapshot": {
+          "account": { "experienceBalance": 3000, "contributionBalance": 120, "coinBalance": 800 },
+          "currentLevel": { "id": "lv2", "name": "Lv.2", "benefits": ["参加工会", "参加工会", "参加工会", "参加工会"] },
+          "nextLevel": null,
+          "levelProgressPercent": 25.33,
+          "experienceToNextLevel": 37000,
+          "levels": [],
+          "earningRules": []
+        },
+        "currentLevelNumber": 2,
+        "nextLevelNumber": 0,
+        "nextLevelThreshold": 40000,
+        "levels": [],
+        "levelScale": { "leftText": "Lv.1", "centerText": "Lv.10", "rightText": "Lv.20", "centerLocked": true },
+        "legacyLevelArtVisible": false,
+        "earningRules": [],
+        "entries": [],
+        "nextCursor": "",
+        "loadingMore": false,
+        "tasksState": "ready",
+        "tasks": [
+          { "id": "t1", "name": "出席MIP反人性早会1次", "content": "本人完成早会签到", "rewardExperience": 4500, "status": "COMPLETED", "actionText": "已完成" },
+          { "id": "t2", "name": "出席MIP反人性早会1次", "content": "本人完成早会签到", "rewardExperience": 4500, "status": "AVAILABLE", "actionText": "去完成" },
+          { "id": "t3", "name": "出席MIP反人性早会1次", "content": "本人完成早会签到", "rewardExperience": 4500, "status": "AVAILABLE", "actionText": "去完成" },
+          { "id": "t4", "name": "出席MIP反人性早会1次", "content": "本人完成早会签到", "rewardExperience": 4500, "status": "AVAILABLE", "actionText": "去完成" }
+        ],
+        "tasksMessage": "",
+        "isPlayer": true,
+        "membershipState": "player",
+        "membershipEndsText": "2026.08.08",
+        "invitationReady": true,
+        "invitationMessage": "",
+        "message": ""
+      }
     }
   ]
 }

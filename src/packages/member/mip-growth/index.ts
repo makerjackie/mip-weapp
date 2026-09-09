@@ -35,6 +35,28 @@ interface GrowthTaskView extends UserTaskCard {
   actionText: string
 }
 
+/** figma 1948_14079: three-point level scale under the hero — first level, middle milestone (locked), last level. */
+interface LevelScaleView {
+  leftText: string
+  centerText: string
+  rightText: string
+  centerLocked: boolean
+}
+
+function levelScaleView(levels: GrowthLevel[], currentLevelNumber: number): LevelScaleView | null {
+  if (levels.length < 3) {
+    return null
+  }
+  const last = levels.length
+  const center = Math.floor((last - 1) / 2) + 1
+  return {
+    leftText: 'Lv.1',
+    centerText: `Lv.${center}`,
+    rightText: `Lv.${last}`,
+    centerLocked: center > currentLevelNumber,
+  }
+}
+
 function entryView(entry: GrowthEntry): GrowthEntryView {
   return {
     ...entry,
@@ -88,6 +110,7 @@ function growthPresentation(snapshot: GrowthSnapshot) {
       index + 1,
       currentLevelNumber,
     )),
+    levelScale: levelScaleView(snapshot.levels, currentLevelNumber),
   }
 }
 
@@ -99,6 +122,9 @@ Page({
     nextLevelNumber: 0,
     nextLevelThreshold: 0,
     levels: [] as GrowthLevelView[],
+    levelScale: null as LevelScaleView | null,
+    // Legacy screen-blend level art; the baked figma hero background (hero-bg.png) supersedes it.
+    legacyLevelArtVisible: false,
     earningRules: [] as GrowthRuleView[],
     entries: [] as GrowthEntryView[],
     nextCursor: '',

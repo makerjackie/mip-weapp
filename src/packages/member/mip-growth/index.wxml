@@ -2,59 +2,71 @@
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="px-3 pt-3"><view class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
   <view wx:elif="{{state === 'error'}}" class="px-3 pt-3"><app-empty-state title="暂时无法加载成长记录" description="请检查网络后重试。" action-text="重新加载" bind:action="loadGrowth" /><app-page-exit /></view>
   <block wx:else>
-    <view class="growth-hero relative min-h-[300rpx] overflow-hidden bg-brand px-5 py-6 text-on-brand">
-      <image class="growth-level-art pointer-events-none absolute -bottom-[4rpx] -right-[300rpx] h-[240rpx] w-[1052rpx]" mode="aspectFit" src="/assets/figma/profile/level-art.png" />
-      <view class="relative z-10 flex items-end gap-3"><view class="text-[length:84rpx] font-bold leading-none">Lv.{{currentLevelNumber}}</view><view class="pb-1 text-[length:24rpx] font-semibold">{{snapshot.currentLevel.name}}</view></view>
-      <view class="relative z-10 mt-3 text-[length:22rpx] font-semibold">EXP: {{snapshot.account.experienceBalance}}<text wx:if="{{snapshot.nextLevel}}"> / {{nextLevelThreshold}}</text></view>
-      <view wx:if="{{snapshot.nextLevel}}" class="relative z-10 mt-2 w-[300rpx] max-w-full">
-        <progress percent="{{snapshot.levelProgressPercent}}" stroke-width="5" activeColor="#FCDF03" backgroundColor="#4D4400" border-radius="6" />
-        <view class="mt-2 text-[length:22rpx] opacity-70">距离 Lv.{{nextLevelNumber}} 还差 {{snapshot.experienceToNextLevel}} 经验值</view>
+    <!-- figma 1948_14079: hero = baked composite (curved yellow field + color-burn sphere +
+         generated art + 经验值详情 pill, ref HTML y88-230); Lv/EXP/progress/有效期 are live
+         text at figma coords — impl raw css (24,32) 48px/52.1, (24,84) 10px, (24,102) 150×6
+         bar with 2px inset fill, (24,112) 10px. -->
+    <view class="growth-hero relative h-[284rpx] overflow-hidden bg-brand px-5 py-6 text-on-brand">
+      <image class="pointer-events-none absolute inset-0 h-full w-full" mode="scaleToFill" src="/assets/figma/growth/hero-bg.png" />
+      <image wx:if="{{legacyLevelArtVisible}}" class="growth-level-art pointer-events-none absolute -bottom-[4rpx] -right-[300rpx] h-[240rpx] w-[1052rpx]" mode="aspectFit" src="/assets/figma/profile/level-art.png" />
+      <view class="relative z-10 ml-[8rpx] mt-[16rpx]">
+        <view class="text-[length:96rpx] font-bold leading-[104.2rpx]">Lv.{{currentLevelNumber}}</view>
+        <view class="text-[length:20rpx] font-semibold leading-[28rpx]">EXP: {{snapshot.account.experienceBalance}}<text wx:if="{{nextLevelThreshold}}"> I {{nextLevelThreshold}}</text></view>
+        <view wx:if="{{nextLevelThreshold}}" class="relative mt-[7.8rpx] h-[12rpx] w-[300rpx] max-w-full rounded-full bg-panel-raised">
+          <view class="absolute left-[4rpx] top-[4rpx] h-[4rpx] rounded-full bg-brand" style="width:{{snapshot.levelProgressPercent}}%;max-width:calc(100% - 8rpx)" />
+        </view>
+        <view wx:else class="mt-[7.8rpx] text-[length:20rpx] leading-[28rpx] opacity-70">已达到当前最高等级</view>
+        <view wx:if="{{membershipEndsText}}" class="mt-[8rpx] text-[length:20rpx] font-medium leading-[28rpx]">会员有效期至 {{membershipEndsText}}</view>
+        <view wx:elif="{{membershipState === 'guest'}}" class="mt-[8rpx] text-[length:20rpx] font-medium leading-[28rpx]">当前没有有效会员权益</view>
+        <view wx:elif="{{membershipState === 'error'}}" class="mt-[8rpx] text-[length:20rpx] font-medium leading-[28rpx]">会员有效期暂时无法加载</view>
       </view>
-      <view wx:else class="relative z-10 mt-3 text-[length:22rpx] opacity-70">已达到当前最高等级</view>
-      <view wx:if="{{membershipEndsText}}" class="relative z-10 mt-3 text-[length:22rpx]">会员有效期至 {{membershipEndsText}}</view>
-      <view wx:elif="{{membershipState === 'guest'}}" class="relative z-10 mt-3 text-[length:22rpx]">当前没有有效会员权益</view>
-      <view wx:elif="{{membershipState === 'error'}}" class="relative z-10 mt-3 text-[length:22rpx]">会员有效期暂时无法加载</view>
     </view>
 
-    <scroll-view class="growth-level-scale min-h-[88rpx] border-t border-brand bg-canvas" scroll-x enhanced show-scrollbar="{{false}}">
-      <view class="growth-level-track">
-        <view wx:for="{{levels}}" wx:key="id" class="growth-level-item flex flex-col items-center justify-center text-center">
-          <view wx:if="{{item.current}}" class="text-[length:22rpx] font-semibold text-brand">Lv.{{item.levelNumber}}</view>
-          <view wx:elif="{{item.reached}}" class="text-[length:22rpx] text-ink">Lv.{{item.levelNumber}}</view>
-          <view wx:else class="text-[length:22rpx] text-muted">Lv.{{item.levelNumber}}</view>
-          <view wx:if="{{item.current}}" class="mt-1 text-[length:22rpx] text-brand">当前</view>
-          <view wx:elif="{{!item.reached}}" class="mt-1 text-[length:22rpx] text-muted">{{item.thresholdText}}</view>
-        </view>
+    <!-- figma 1948_14079: static three-point level scale (Lv.1 left / locked middle milestone
+         centered on the page / Lv.N right), markers bottom-aligned at impl raw y187. -->
+    <view wx:if="{{levelScale}}" class="relative mt-[26rpx] h-[64rpx]">
+      <view class="absolute bottom-0 left-[36rpx] whitespace-nowrap text-[length:20rpx] font-semibold leading-[28rpx] text-brand">{{levelScale.leftText}}</view>
+      <view class="absolute left-1/2 top-[30rpx] flex -translate-x-1/2 items-start">
+        <view wx:if="{{levelScale.centerLocked}}" class="mr-[11rpx] mt-[8rpx]"><mip-icon name="lock-fill" color="var(--color-brand)" /></view>
+        <view class="whitespace-nowrap text-[length:24rpx] font-semibold leading-[33.6rpx] text-brand">{{levelScale.centerText}}</view>
       </view>
-    </scroll-view>
+      <view class="absolute bottom-0 right-[36rpx] whitespace-nowrap text-[length:20rpx] font-semibold leading-[28rpx] text-brand">{{levelScale.rightText}}</view>
+    </view>
 
-    <view class="mx-3 rounded-[16rpx] bg-panel px-3 py-4">
-      <view class="flex min-h-[88rpx] items-center justify-between gap-3"><view class="text-[length:28rpx] font-semibold">可享 {{snapshot.currentLevel.benefits.length}} 项权益</view><view class="flex min-h-[88rpx] items-center text-[length:22rpx] text-brand" aria-role="button" aria-label="查看会员权益" bind:tap="openBenefits">权益详情<mip-icon name="chevron-down-1" size="{{14}}" color="var(--color-brand)" /></view></view>
-      <view wx:if="{{snapshot.currentLevel.benefits.length}}" class="mt-3 grid grid-cols-4 gap-2">
-        <view wx:for="{{snapshot.currentLevel.benefits}}" wx:key="*this" class="min-w-0 text-center">
-          <view class="mx-auto flex h-[72rpx] w-[72rpx] items-center justify-center rounded-full bg-brand"><mip-icon name="gift" size="{{20}}" color="var(--color-on-brand)" /></view>
-          <view class="mt-2 line-clamp-2 text-[length:22rpx] leading-[1.4]">{{item}}</view>
+    <!-- figma 1948_14079: benefits panel (12,199) 351×119 — title 16px semibold at panel
+         (12,12); four 40px gift circles on an 88px pitch at panel y46, labels 12px at y44. -->
+    <view class="mx-3 mt-[24rpx] h-[238rpx] overflow-hidden rounded-[16rpx] bg-panel px-3 pt-3">
+      <view class="whitespace-nowrap text-[length:32rpx] font-semibold leading-[44.8rpx]">可享 {{snapshot.currentLevel.benefits.length}} 项权益</view>
+      <view wx:if="{{snapshot.currentLevel.benefits.length}}" class="mt-[23rpx] flex justify-between pl-[16rpx] pr-[14rpx]">
+        <view wx:for="{{snapshot.currentLevel.benefits}}" wx:key="*this" class="w-[96rpx]">
+          <view class="mx-auto flex h-[80rpx] w-[80rpx] items-center justify-center rounded-full bg-brand"><view class="mt-[-2rpx]"><mip-icon name="gift" color="var(--color-on-brand)" /></view></view>
+          <view class="mt-[8rpx] text-center text-[length:24rpx] font-medium leading-[33.6rpx]">{{item}}</view>
         </view>
       </view>
       <view wx:else class="mt-2 text-[length:22rpx] text-muted">当前等级暂未配置权益。</view>
     </view>
 
+    <!-- figma 1948_14079: task cards 351×67 on a 12px gap, first top at impl raw y330;
+         line1 12px medium (12,14), line2 10px white (12,32), + EXP 16/12/16 brand (169,23),
+         pill button 64×25 at (275,21). -->
+    <view aria-label="正在加载" aria-busy="true" wx:if="{{tasksState === 'loading'}}" class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+    <view wx:elif="{{tasksState === 'error'}}" class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-5"><view class="text-[length:24rpx]">成长任务暂时无法加载</view><view class="mt-2 text-[length:22rpx] text-muted">{{tasksMessage}}</view><view class="mt-3 flex min-h-[88rpx] items-center text-[length:22rpx] text-brand" aria-role="button" bind:tap="loadTasks">重新加载</view></view>
+    <view wx:elif="{{tasksState === 'empty'}}" class="mx-3 mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-5 text-[length:22rpx] text-muted">暂无可完成的成长任务。</view>
+    <view wx:else class="mx-3 mt-[24rpx] flex flex-col gap-[24rpx]">
+      <view wx:for="{{tasks}}" wx:key="id" class="relative h-[134rpx] rounded-[16rpx] bg-panel active:bg-panel-muted" aria-role="button" aria-label="查看任务 {{item.name}}" data-id="{{item.id}}" bind:tap="openTask">
+        <view class="absolute left-[24rpx] top-[28rpx] max-w-[270rpx] truncate text-[length:24rpx] font-medium leading-[33.6rpx]">{{item.name}}</view>
+        <view class="absolute left-[24rpx] top-[64rpx] max-w-[270rpx] truncate text-[length:20rpx] leading-[28rpx]">{{item.content}}</view>
+        <view class="absolute left-[338rpx] top-[46rpx] whitespace-nowrap text-[length:32rpx] font-medium leading-[44.8rpx] text-brand">+ <text class="text-[length:24rpx]">EXP</text> {{item.rewardExperience}}</view>
+        <view wx:if="{{item.status === 'AVAILABLE'}}" class="absolute right-[24rpx] top-[42rpx] flex h-[50rpx] w-[128rpx] items-center justify-center rounded-full bg-brand text-[length:24rpx] font-medium text-on-brand">{{item.actionText}}</view>
+        <view wx:else class="absolute right-[24rpx] top-[42rpx] flex h-[50rpx] w-[128rpx] items-center justify-center rounded-full bg-canvas text-[length:24rpx] font-medium text-brand">{{item.actionText}}</view>
+      </view>
+    </view>
+
+    <view class="mx-3 mt-6 flex min-h-[88rpx] items-center justify-between gap-3"><view class="text-[length:30rpx] font-bold">成长任务</view><view class="flex min-h-[88rpx] items-center text-[length:22rpx] text-muted" aria-role="button" aria-label="查看全部成长任务" bind:tap="openTasks">全部任务<mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-muted)" /></view></view>
     <view class="mx-3 mt-4 grid grid-cols-3 gap-3">
       <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[length:32rpx] font-bold">{{snapshot.account.experienceBalance}}</view><view class="mt-1 text-[length:22rpx] text-muted">经验值</view></view>
       <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[length:32rpx] font-bold">{{snapshot.account.contributionBalance}}</view><view class="mt-1 text-[length:22rpx] text-muted">贡献值</view></view>
       <view class="rounded-[16rpx] bg-panel px-3 py-4 text-center"><view class="text-[length:32rpx] font-bold">{{snapshot.account.coinBalance}}</view><view class="mt-1 text-[length:22rpx] text-muted">游戏币</view></view>
-    </view>
-
-    <view class="mx-3 mt-6 flex min-h-[88rpx] items-center justify-between gap-3"><view class="text-[length:30rpx] font-bold">成长任务</view><view class="flex min-h-[88rpx] items-center text-[length:22rpx] text-muted" aria-role="button" aria-label="查看全部成长任务" bind:tap="openTasks">全部任务<mip-icon name="chevron-down-1" size="{{15}}" color="var(--color-muted)" /></view></view>
-    <view aria-label="正在加载" aria-busy="true" wx:if="{{tasksState === 'loading'}}" class="mx-3 mt-3 rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-    <view wx:elif="{{tasksState === 'error'}}" class="mx-3 mt-3 rounded-[16rpx] bg-panel px-4 py-5"><view class="text-[length:24rpx]">成长任务暂时无法加载</view><view class="mt-2 text-[length:22rpx] text-muted">{{tasksMessage}}</view><view class="mt-3 flex min-h-[88rpx] items-center text-[length:22rpx] text-brand" aria-role="button" bind:tap="loadTasks">重新加载</view></view>
-    <view wx:elif="{{tasksState === 'empty'}}" class="mx-3 mt-3 rounded-[16rpx] bg-panel px-4 py-5 text-[length:22rpx] text-muted">暂无可完成的成长任务。</view>
-    <view wx:else class="mx-3 mt-3 flex flex-col gap-3">
-      <view wx:for="{{tasks}}" wx:key="id" class="flex min-h-[132rpx] items-center gap-3 rounded-[16rpx] bg-panel px-3 py-3 active:bg-panel-muted" aria-role="button" aria-label="查看任务 {{item.name}}" data-id="{{item.id}}" bind:tap="openTask">
-        <view class="min-w-0 flex-1"><view class="line-clamp-1 text-[length:24rpx] font-semibold">{{item.name}}</view><view class="mt-1 line-clamp-1 text-[length:22rpx] text-muted">{{item.content}}</view><view class="mt-2 text-[length:24rpx] font-semibold text-brand">+ EXP {{item.rewardExperience}}</view></view>
-        <view wx:if="{{item.status === 'AVAILABLE'}}" class="flex h-[64rpx] min-w-[120rpx] shrink-0 items-center justify-center rounded-full bg-brand px-3 text-[length:22rpx] font-semibold text-on-brand">{{item.actionText}}</view>
-        <view wx:else class="flex h-[64rpx] min-w-[120rpx] shrink-0 items-center justify-center rounded-full bg-canvas px-3 text-[length:22rpx] text-brand">{{item.actionText}}</view>
-      </view>
     </view>
 
     <view class="mx-3 mt-6 text-[length:30rpx] font-bold">等级与权益</view>
