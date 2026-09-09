@@ -222,6 +222,54 @@
           }
         ]
       }
+    },
+    {
+      "key": "opportunities-机会探索-a",
+      "route": "pages/opportunities/index",
+      "reference": "1766_36567_机会-机会探索-a.html",
+      "crop": { "topPx": 68, "bottomPx": 90 },
+      "fixture": {
+        "state": "ready",
+        "mode": "opportunities",
+        "status": "RECRUITING",
+        "keywordInput": "",
+        "filterOpen": false,
+        "locationFilterLabel": "全国",
+        "appliedFilterCount": 0,
+        "appliedFilterChips": [],
+        "loadingMore": false,
+        "message": "",
+        "opportunities": [
+          {
+            "id": "o1",
+            "title": "设计户外过两天再说露营地",
+            "coverUrl": "/assets/figma/opportunities/cover-campsite.png",
+            "valueSummary": "15000",
+            "commercialTerms": { "amountDisplay": "15000", "locationDisplay": "深圳 杭州" },
+            "targetSummary": "露营地帐篷供应商",
+            "referralCount": 45,
+            "avatars": [
+              "/assets/figma/events/avatar-1.png",
+              "/assets/figma/events/avatar-2.png",
+              "/assets/figma/events/avatar-3.png"
+            ]
+          },
+          {
+            "id": "o2",
+            "title": "建造可爱接头点快闪店",
+            "coverUrl": "/assets/figma/opportunities/cover-popstore.png",
+            "valueSummary": "20000",
+            "commercialTerms": { "amountDisplay": "20000", "locationDisplay": "深圳 杭州" },
+            "targetSummary": "快闪店成熟的渠道",
+            "referralCount": 45,
+            "avatars": [
+              "/assets/figma/events/avatar-1.png",
+              "/assets/figma/events/avatar-2.png",
+              "/assets/figma/events/avatar-3.png"
+            ]
+          }
+        ]
+      }
     }
   ]
 }

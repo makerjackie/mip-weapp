@@ -11,6 +11,6 @@
       <view class="mip-opportunity-card__fact"><image class="mip-opportunity-card__icon" src="/assets/figma/opportunities/service-target.svg" mode="aspectFit" /><text class="mip-opportunity-card__fact-text">寻找：{{targetText}}</text></view>
     </view>
     <view wx:if="{{publishedText}}" class="mip-opportunity-card__published">发布于 {{publishedText}}</view>
-    <view class="mip-opportunity-card__footer"><view class="mip-opportunity-card__referral">+{{referralCount}}引荐</view></view>
+    <view class="mip-opportunity-card__footer"><view class="mip-opportunity-card__referral"><view class="mip-opportunity-card__referral-avatars"><view wx:for="{{avatars}}" wx:key="*this" class="mip-opportunity-card__referral-avatar {{index ? 'mip-opportunity-card__referral-avatar--overlap' : ''}}" style="z-index: {{3 - index}}"><image class="h-full w-full" mode="aspectFill" src="{{item}}" /></view></view><text class="mip-opportunity-card__referral-plus">+</text><text class="mip-opportunity-card__referral-count">{{referralCount}}引荐</text></view></view>
   </view>
 </view>

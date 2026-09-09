@@ -11,6 +11,7 @@ Component({
     locationText: { type: String, value: '' },
     targetText: { type: String, value: '' },
     referralCount: { type: Number, value: 0 },
+    avatars: { type: Array, value: [] },
     publishedText: { type: String, value: '' },
   },
 })

@@ -98,13 +98,19 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(apply.match(/loadContent\(true\)/g)).toHaveLength(1)
   })
 
-  it('matches the 351 by 176 opportunity-card silhouette without inventing referral avatars', () => {
+  it('matches the 351 by 176 opportunity-card silhouette with the AttendPill referral contract', () => {
     expect(discovery).toContain('<mip-opportunity-card')
+    expect(discovery).toContain('avatars="{{item.avatars}}"')
     expect(opportunityCardStyles).toContain('height: 352rpx;')
     expect(opportunityCardStyles).toContain('width: 240rpx;')
     expect(opportunityCardStyles).toContain('height: 320rpx;')
-    expect(opportunityCard).toContain('+{{referralCount}}引荐')
-    expect(discovery).not.toContain('item.referralAvatars')
+    // AttendPill (skill contract business.jsx): fixed 116x28 -> 232x56rpx yellow pill,
+    // avatar trio left, "+" and count as separate text nodes with contract sizes.
+    expect(opportunityCardStyles).toContain('width: 232rpx;')
+    expect(opportunityCardStyles).toContain('height: 56rpx;')
+    expect(opportunityCard).toContain('wx:for="{{avatars}}"')
+    expect(opportunityCard).toContain('<text class="mip-opportunity-card__referral-plus">+</text>')
+    expect(opportunityCard).toContain('<text class="mip-opportunity-card__referral-count">{{referralCount}}引荐</text>')
   })
 
   it('shows stable discovery loading, empty, error, pagination and real-content states', () => {

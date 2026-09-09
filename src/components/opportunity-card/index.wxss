@@ -107,16 +107,52 @@
   margin-top: 8rpx;
 }
 
+/* AttendPill (yellow variant) — skill contract: fixed 116x28, avatar trio left,
+   "+" 10/600 at x62, count 12/600 right 8. */
 .mip-opportunity-card__referral {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 124rpx;
+  position: relative;
+  width: 232rpx;
   height: 56rpx;
-  padding: 0 24rpx;
-  font-size: 24rpx;
-  font-weight: 600;
-  color: var(--color-on-brand);
   background: var(--color-brand);
   border-radius: 999rpx;
+}
+
+.mip-opportunity-card__referral-avatars {
+  position: absolute;
+  top: 4rpx;
+  left: 4rpx;
+  display: flex;
+  height: 48rpx;
+}
+
+.mip-opportunity-card__referral-avatar {
+  width: 48rpx;
+  height: 48rpx;
+  overflow: hidden;
+  border-radius: 999rpx;
+  box-shadow: 0 0 0 2rpx var(--color-ink);
+}
+
+.mip-opportunity-card__referral-avatar--overlap {
+  margin-left: -18rpx;
+}
+
+.mip-opportunity-card__referral-plus {
+  position: absolute;
+  top: 10rpx;
+  left: 124rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+  line-height: 28rpx;
+  color: var(--color-on-brand);
+}
+
+.mip-opportunity-card__referral-count {
+  position: absolute;
+  top: 10rpx;
+  right: 16rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+  line-height: 34rpx;
+  color: var(--color-on-brand);
 }
