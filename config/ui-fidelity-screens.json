@@ -272,6 +272,84 @@
       }
     },
     {
+      "key": "profile-我的-c",
+      "route": "pages/profile/index",
+      "reference": "1770_39518_我的-c.html",
+      "crop": {
+        "topPx": 109,
+        "bottomPx": 90
+      },
+      "fixture": {
+        "state": "ready",
+        "nickname": "Ame",
+        "nicknameInitial": "A",
+        "avatarUrl": "/assets/figma/profile/avatar.png",
+        "primaryBadge": {
+          "imageUrl": "/assets/figma/profile/rank-mark.png"
+        },
+        "growthState": "ready",
+        "levelName": "Lv.23",
+        "membershipLabel": "会员",
+        "primaryBranchName": "深圳MIP",
+        "primaryIndustryName": "金融行业",
+        "identityStatus": "激情创业者",
+        "headline": "这是介绍自己的一句话，只有一句话。",
+        "profileComplete": true,
+        "isPlayer": true,
+        "experience": 3000,
+        "growthTarget": 40000,
+        "growthFillPx": 38,
+        "growthProgress": 7.5,
+        "guestCount": 20,
+        "interactionCount": 100,
+        "interestCount": 18,
+        "visitorCount": 200,
+        "visitorUnreadCount": 2,
+        "notificationUnreadCount": 0,
+        "adminVisible": false,
+        "portfolioTab": "opportunities",
+        "cooperationState": "ready",
+        "caseState": "ready",
+        "opportunityState": "ready",
+        "cooperationCards": [],
+        "cases": [],
+        "publishedOpportunityCount": 2,
+        "referralOpportunityCount": 1,
+        "opportunities": [
+          {
+            "id": "o1",
+            "title": "设计户外过两天再说露营地",
+            "coverUrl": "/assets/figma/opportunities/cover-campsite.png",
+            "valueSummary": "15000",
+            "commercialTerms": { "amountDisplay": "15000", "locationDisplay": "深圳 杭州" },
+            "targetSummary": "露营地帐篷供应商",
+            "referralCount": 45,
+            "avatars": [
+              "/assets/figma/events/avatar-1.png",
+              "/assets/figma/events/avatar-2.png",
+              "/assets/figma/events/avatar-3.png"
+            ]
+          },
+          {
+            "id": "o2",
+            "title": "建造可爱接头点快闪店",
+            "coverUrl": "/assets/figma/opportunities/cover-popstore.png",
+            "valueSummary": "20000",
+            "commercialTerms": { "amountDisplay": "20000", "locationDisplay": "深圳 杭州" },
+            "targetSummary": "快闪店成熟的渠道",
+            "referralCount": 45,
+            "avatars": [
+              "/assets/figma/events/avatar-1.png",
+              "/assets/figma/events/avatar-2.png",
+              "/assets/figma/events/avatar-3.png"
+            ]
+          }
+        ],
+        "message": "",
+        "openingAction": ""
+      }
+    },
+    {
       "key": "opportunities-人才合作",
       "route": "pages/opportunities/index",
       "reference": "1768_37534_机会-人才合作.html",

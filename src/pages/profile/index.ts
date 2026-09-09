@@ -74,6 +74,8 @@ Page({
     cases: [] as SuperCaseSummary[],
     opportunityState: 'loading' as SectionState,
     opportunities: [] as OpportunitySummary[],
+    publishedOpportunityCount: 0,
+    referralOpportunityCount: 0,
     openingAction: '' as OpeningAction,
     message: '',
   },

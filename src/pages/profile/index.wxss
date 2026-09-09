@@ -347,6 +347,34 @@
   border-bottom-color: var(--color-brand);
 }
 
+.profile-opportunity-chips {
+  display: flex;
+  align-items: center;
+  gap: 40rpx;
+  margin-top: 24rpx;
+  padding-left: 26rpx;
+}
+
+.profile-opportunity-chip {
+  box-sizing: border-box;
+  height: 56rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16rpx;
+  border-radius: 16rpx;
+  background: var(--color-panel);
+  font-size: 28rpx;
+  line-height: 39.2rpx;
+  font-weight: 500;
+  color: var(--color-ink);
+}
+
+.profile-opportunity-chip--active {
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
 .profile-portfolio-loading,
 .profile-portfolio-list {
   margin-top: 24rpx;

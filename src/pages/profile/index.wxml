@@ -102,10 +102,16 @@
     <block wx:else>
       <view wx:if="{{opportunityState === 'loading'}}" class="profile-portfolio-loading"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
       <view wx:elif="{{opportunityState === 'error'}}" class="profile-state"><app-empty-state title="相关机会暂时无法加载" description="稍后可以重新加载。" action-text="重新加载" bind:action="loadOpportunities" /></view>
-      <view wx:else class="profile-portfolio-list">
-        <view wx:for="{{opportunities}}" wx:key="id" class="profile-content-card" data-id="{{item.id}}" bind:tap="openOpportunity"><view class="profile-content-heading"><text class="profile-content-title">{{item.title}}</text><text class="profile-content-status">{{item.status === 'PUBLISHED' ? '招募中' : item.status === 'ENDED' ? '已完成' : '草稿'}}</text></view><view class="profile-content-summary">{{item.valueSummary}}</view></view>
-        <app-empty-state wx:if="{{opportunities.length === 0}}" title="暂无相关机会" description="发布的机会会显示在这里。" action-text="查看我的机会" bind:action="openOpportunityList" />
-        <view wx:else class="profile-add-card" aria-role="button" bind:tap="openOpportunityList"><view class="profile-add-content"><image src="/assets/figma/profile/add.svg" mode="aspectFit" />管理机会</view></view>
+      <view wx:else>
+        <view class="profile-opportunity-chips">
+          <view class="profile-opportunity-chip profile-opportunity-chip--active">发布机会 {{publishedOpportunityCount}}</view>
+          <view class="profile-opportunity-chip">引荐机会 {{referralOpportunityCount}}</view>
+        </view>
+        <view class="profile-portfolio-list">
+          <view wx:for="{{opportunities}}" wx:key="id" data-id="{{item.id}}" bind:tap="openOpportunity"><mip-opportunity-card title="{{item.title}}" cover-url="{{item.coverUrl || ''}}" value-text="{{item.commercialTerms.amountDisplay || item.valueSummary}}" location-text="{{item.commercialTerms.locationDisplay || item.cityName || '全国'}}" target-text="{{item.targetSummary}}" referral-count="{{item.referralCount}}" avatars="{{item.avatars}}" /></view>
+          <app-empty-state wx:if="{{opportunities.length === 0}}" title="暂无相关机会" description="发布的机会会显示在这里。" action-text="查看我的机会" bind:action="openOpportunityList" />
+          <view wx:else class="profile-add-card" aria-role="button" bind:tap="openOpportunityList"><view class="profile-add-content"><image src="/assets/figma/profile/add.svg" mode="aspectFit" />管理机会</view></view>
+        </view>
       </view>
     </block>
 
