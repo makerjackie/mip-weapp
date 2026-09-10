@@ -4380,6 +4380,106 @@
           ]
         }
       }
+    },
+    {
+      "key": "opportunities-发布机会-编辑",
+      "route": "packages/member/mip-opportunities/editor/index",
+      "reference": "1766_36864_发布机会-编辑.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "banner": "准确的描述可以更容易帮你找到合作机会",
+          "fields": [
+            {
+              "label": "项目名称",
+              "icon": "/assets/figma/opportunities/edit-draft.svg",
+              "labelTopRpx": 312
+            },
+            {
+              "label": "价值金额",
+              "icon": "/assets/figma/opportunities/money-cny-circle.svg",
+              "labelTopRpx": 496
+            },
+            {
+              "label": "主营城市",
+              "icon": "/assets/figma/opportunities/icon-building.png",
+              "labelTopRpx": 680
+            },
+            {
+              "label": "主营地区（选填）",
+              "icon": "/assets/figma/opportunities/location.svg",
+              "labelTopRpx": 1042
+            },
+            {
+              "label": "寻找合作方",
+              "icon": "/assets/figma/opportunities/icon-heart-hands.png",
+              "labelTopRpx": 1230
+            }
+          ],
+          "inputs": [
+            {
+              "text": "请输入你的项目名称",
+              "topRpx": 380
+            },
+            {
+              "text": "请输入价值金额",
+              "topRpx": 564
+            },
+            {
+              "text": "示例：南山十亩地",
+              "topRpx": 1114
+            }
+          ],
+          "cities": [
+            {
+              "label": "深圳",
+              "active": true,
+              "leftRpx": 16,
+              "topRpx": 24
+            },
+            {
+              "label": "北京",
+              "leftRpx": 188,
+              "topRpx": 24
+            },
+            {
+              "label": "上海",
+              "leftRpx": 360,
+              "topRpx": 24
+            },
+            {
+              "label": "成都",
+              "leftRpx": 532,
+              "topRpx": 24
+            },
+            {
+              "label": "广州",
+              "leftRpx": 16,
+              "topRpx": 96
+            },
+            {
+              "label": "中国香港",
+              "leftRpx": 188,
+              "topRpx": 96
+            },
+            {
+              "label": "中国澳门",
+              "leftRpx": 360,
+              "topRpx": 96
+            },
+            {
+              "label": "海外",
+              "leftRpx": 532,
+              "topRpx": 96
+            }
+          ]
+        }
+      }
     }
   ]
 }

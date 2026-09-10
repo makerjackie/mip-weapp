@@ -109,6 +109,9 @@ Page({
     teamKeyword: '',
     teamCandidates: [] as TeamCandidate[],
     teamLoading: false,
+    // figma 1766_36864 发布机会-编辑还原态开关，fixture 专用；
+    // 生产保持流式表单（opportunity-editor 测试 pin）。
+    figmaLayout: false,
   },
   navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
 

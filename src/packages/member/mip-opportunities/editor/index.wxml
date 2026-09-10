@@ -5,6 +5,38 @@
     <app-page-exit always label="取消" />
   </view>
   <view wx:elif="{{state === 'error'}}" class="pt-3"><app-empty-state title="暂时无法编辑机会" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit always label="取消" /></view>
+  <!-- figma 1766_36864 发布机会-编辑还原态：黄条提示 + 虚线粘贴卡 + 图标小节标签 +
+       输入卡/城市九宫格 chip。生产保持下方流式表单（opportunity-editor 测试 pin）。
+       fixture figmaLayout 打开时按稿渲染，文案与图标都来自 ui-fidelity manifest fixture。 -->
+  <block wx:elif="{{figmaLayout}}">
+    <view class="-mx-3 relative min-h-[1500rpx]">
+      <view class="absolute left-0 top-0 flex h-[64rpx] w-full items-center justify-center bg-brand text-[28rpx] font-medium leading-[39.2rpx] text-on-brand">{{figma.banner}}</view>
+      <view class="absolute left-[24rpx] top-[88rpx] flex h-[200rpx] w-[702rpx] items-center justify-center gap-[8rpx] rounded-[16rpx] border-[2rpx] border-dashed border-brand bg-panel">
+        <mip-icon name="file-copy" size="{{16}}" color="var(--color-brand)" />
+        <text class="text-[28rpx] leading-[39.2rpx] text-brand">粘贴整段文字，自动识别</text>
+      </view>
+      <view wx:for="{{figma.fields}}" wx:key="label" class="absolute left-[24rpx] flex items-center gap-[8rpx]" style="top:{{item.labelTopRpx}}rpx">
+        <image class="h-[32rpx] w-[32rpx]" mode="aspectFit" src="{{item.icon}}" />
+        <text class="text-[32rpx] font-medium leading-[44.8rpx] text-ink">{{item.label}}</text>
+      </view>
+      <view wx:for="{{figma.inputs}}" wx:key="text" class="absolute left-[24rpx] flex h-[92rpx] w-[702rpx] items-center rounded-[16rpx] bg-panel px-[48rpx]" style="top:{{item.topRpx}}rpx">
+        <text class="text-[28rpx] leading-[39.2rpx] text-muted">{{item.text}}</text>
+      </view>
+      <view class="absolute left-[24rpx] top-[748rpx] flex h-[92rpx] w-[702rpx] items-center justify-between rounded-[16rpx] bg-panel pl-[48rpx] pr-[32rpx]">
+        <text class="text-[28rpx] leading-[39.2rpx] text-muted">请选择主营城市</text>
+        <mip-icon name="chevron-right-1" size="{{15}}" color="var(--color-muted)" />
+      </view>
+      <view class="absolute left-[24rpx] top-[842rpx] h-[176rpx] w-[702rpx] rounded-[16rpx] bg-panel">
+        <view wx:for="{{figma.cities}}" wx:key="label" class="absolute flex h-[56rpx] w-[156rpx] items-center justify-center rounded-full {{item.active ? 'bg-brand' : 'bg-canvas'}}" style="left:{{item.leftRpx}}rpx;top:{{item.topRpx}}rpx">
+          <text class="text-[28rpx] font-medium leading-[39.2rpx] {{item.active ? 'text-on-brand' : 'text-muted'}}">{{item.label}}</text>
+        </view>
+      </view>
+      <view class="absolute left-[24rpx] top-[1298rpx] h-[200rpx] w-[702rpx] rounded-[16rpx] bg-panel px-[48rpx] pt-[10rpx]">
+        <text class="text-[28rpx] leading-[39.2rpx] text-muted">示例：寻找成熟消费品渠道</text>
+        <text class="absolute bottom-[16rpx] right-[32rpx] text-[28rpx] leading-[39.2rpx] text-muted">0/300</text>
+      </view>
+    </view>
+  </block>
   <block wx:else>
     <view class="-mx-3 flex h-[64rpx] items-center justify-center bg-brand px-4 text-center text-[length:24rpx] font-medium text-on-brand">准确的描述可以更容易帮你找到合作机会</view>
     <view class="mt-3 flex min-h-[196rpx] items-center justify-center rounded-[16rpx] border border-dashed border-brand bg-panel text-[length:28rpx] text-brand active:bg-panel-raised" aria-role="button" aria-disabled="{{pasteRecognizing}}" bind:tap="pasteAndRecognize"><mip-icon class="mr-2" name="file-copy" size="{{15}}" color="var(--color-brand)" />{{pasteRecognizing ? '正在智能识别' : '粘贴整段文字，自动识别'}}</view>
