@@ -5093,6 +5093,127 @@
           ]
         }
       }
+    },
+    {
+      "key": "received-参与人",
+      "route": "packages/member/mip-received/index",
+      "reference": "1818_17230_参与人.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "search": "搜索姓名，行业，简介等",
+          "searchTopRpx": 24,
+          "chips": [
+            {
+              "label": "嘉宾 2",
+              "leftRpx": 24,
+              "topRpx": 128,
+              "widthRpx": 116
+            },
+            {
+              "label": "玩家 2",
+              "leftRpx": 164,
+              "topRpx": 128,
+              "widthRpx": 116
+            },
+            {
+              "label": "我的心动 3",
+              "leftRpx": 304,
+              "topRpx": 128,
+              "widthRpx": 172,
+              "active": true
+            },
+            {
+              "label": "对我心动 4",
+              "leftRpx": 500,
+              "topRpx": 128,
+              "widthRpx": 172
+            }
+          ],
+          "cards": [
+            {
+              "name": "大鹅飞飞",
+              "avatar": "goose",
+              "leftRpx": 24,
+              "topRpx": 208,
+              "intro": "平安证券股票交易APP、天使轮到C轮创业、从0-1小程序和...",
+              "tagline": "深圳 MIP I 金融行业 I 激情创业者",
+              "taglineMedium": false,
+              "inviter": false,
+              "heartBadge": true,
+              "heartCount": "",
+              "highlight": false,
+              "chipAt": null,
+              "dot": null
+            },
+            {
+              "name": "菠萝大凤梨",
+              "avatar": "pineapple",
+              "leftRpx": 386,
+              "topRpx": 208,
+              "intro": "平安证券股票交易APP、天使轮到C轮创业、从0-1小程序和...",
+              "tagline": "金融行业 I 激情创业者",
+              "taglineMedium": true,
+              "inviter": true,
+              "heartBadge": true,
+              "heartCount": "",
+              "highlight": false,
+              "chipAt": null,
+              "dot": null
+            },
+            {
+              "name": "小玫瑰",
+              "avatar": "rose",
+              "leftRpx": 24,
+              "topRpx": 606,
+              "intro": "平安证券股票交易APP、天使轮到C轮创业、从0-1小程序和...",
+              "tagline": "深圳 MIP I 金融行业 I 专业投资人",
+              "taglineMedium": false,
+              "inviter": false,
+              "heartBadge": true,
+              "heartCount": "",
+              "highlight": false,
+              "chipAt": null,
+              "dot": null
+            },
+            {
+              "name": "Ame",
+              "avatar": "ame",
+              "leftRpx": 386,
+              "topRpx": 606,
+              "intro": "平安证券股票交易APP、天使轮到C轮创业、从0-1小程序和...",
+              "tagline": "深圳 MIP I 金融行业 I 专业投资人",
+              "taglineMedium": false,
+              "inviter": false,
+              "heartBadge": true,
+              "heartCount": "",
+              "highlight": false,
+              "chipAt": null,
+              "dot": null
+            },
+            {
+              "name": "Nehz",
+              "avatar": "nehz",
+              "leftRpx": 24,
+              "topRpx": 1004,
+              "intro": "平安证券股票交易APP、天使轮到C轮创业、从0-1小程序和...",
+              "tagline": "深圳 MIP I 金融行业 I 激情创业者",
+              "taglineMedium": false,
+              "inviter": false,
+              "heartBadge": false,
+              "heartCount": "",
+              "highlight": false,
+              "chipAt": null,
+              "dot": null
+            }
+          ]
+        }
+      }
     }
   ]
 }
