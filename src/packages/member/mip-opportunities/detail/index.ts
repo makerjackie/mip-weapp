@@ -75,6 +75,9 @@ Page({
     commentRating: 5,
     editingComment: null as PresentedComment | null,
     commentActingId: '',
+    // figma 1768_37414/1768_37369 机会详情还原态开关，fixture 专用；
+    // 生产保持 skeleton+卡片+评论布局（opportunity-detail 测试 pin）。
+    figmaLayout: false,
   },
   resumeInteraction: '' as '' | Interaction,
   commentSubmissionIntent: null as OpportunityCommentSubmissionIntent | null,

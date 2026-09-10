@@ -4198,6 +4198,188 @@
           ]
         }
       }
+    },
+    {
+      "key": "opportunities-机会详情",
+      "route": "packages/member/mip-opportunities/detail/index",
+      "reference": "1768_37414_机会详情.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "title": "设计户外过两天再说露营地",
+          "cover": "/assets/figma/opportunities/cover-campsite.png",
+          "rows": [
+            {
+              "icon": "money-cny-circle",
+              "label": "价值",
+              "value": "15000"
+            },
+            {
+              "icon": "location",
+              "label": "地区",
+              "value": "深圳 杭州"
+            },
+            {
+              "icon": "service-target",
+              "label": "寻找",
+              "value": "露营地帐篷供应商"
+            }
+          ],
+          "published": "发表于：2026-01-04 13:00",
+          "guestCta": false
+        }
+      }
+    },
+    {
+      "key": "opportunities-机会详情-访客",
+      "route": "packages/member/mip-opportunities/detail/index",
+      "reference": "1768_37369_机会详情-访客视角.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "title": "设计户外过两天再说露营地",
+          "cover": "/assets/figma/opportunities/cover-campsite.png",
+          "rows": [
+            {
+              "icon": "money-cny-circle",
+              "label": "价值",
+              "value": "15000"
+            },
+            {
+              "icon": "location",
+              "label": "地区",
+              "value": "深圳 杭州"
+            },
+            {
+              "icon": "service-target",
+              "label": "寻找",
+              "value": "露营地帐篷供应商"
+            }
+          ],
+          "published": "发表于：2026-01-04 13:00",
+          "guestCta": true
+        }
+      }
+    },
+    {
+      "key": "opportunities-相关机会档案",
+      "route": "packages/member/mip-public-profile/index",
+      "reference": "1770_38633_相关机会.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "variant": "opportunities",
+          "avatar": "/packages/member/assets/figma/coop/coop-avatar.png",
+          "name": "大鹅飞飞",
+          "level": "Lv.23",
+          "tagline": "深圳MIP I 金融行业 I 激情创业者",
+          "intro": "这是介绍自己的一句话，只有一句话可能只有这么长。",
+          "redBadge": "2",
+          "referralCount": 45,
+          "stats": [
+            {
+              "leftRpx": 63,
+              "value": "20",
+              "label": "嘉宾"
+            },
+            {
+              "leftRpx": 223,
+              "value": "100",
+              "label": "互动过"
+            },
+            {
+              "leftRpx": 383,
+              "value": "18",
+              "label": "心动值"
+            },
+            {
+              "leftRpx": 543,
+              "value": "200",
+              "label": "访客"
+            }
+          ],
+          "tabs": [
+            "合作卡",
+            "超级案例",
+            "相关机会"
+          ],
+          "activeTab": 2,
+          "chips": [
+            {
+              "label": "发布机会 2",
+              "active": true,
+              "leftRpx": 26,
+              "widthRpx": 172
+            },
+            {
+              "label": "引荐机会 1",
+              "leftRpx": 238,
+              "widthRpx": 166
+            }
+          ],
+          "cards": [
+            {
+              "title": "设计户外过两天再说露营地",
+              "cover": "/assets/figma/opportunities/cover-campsite.png",
+              "topRpx": 552,
+              "rows": [
+                {
+                  "icon": "money-cny-circle",
+                  "label": "价值",
+                  "value": "15000"
+                },
+                {
+                  "icon": "location",
+                  "label": "地区",
+                  "value": "深圳 杭州"
+                },
+                {
+                  "icon": "service-target",
+                  "label": "寻找",
+                  "value": "露营地帐篷供应商"
+                }
+              ]
+            },
+            {
+              "title": "建造可爱接头点快闪店",
+              "cover": "/assets/figma/opportunities/cover-popstore.png",
+              "topRpx": 928,
+              "rows": [
+                {
+                  "icon": "money-cny-circle",
+                  "label": "价值",
+                  "value": "20000"
+                },
+                {
+                  "icon": "location",
+                  "label": "地区",
+                  "value": "深圳 杭州"
+                },
+                {
+                  "icon": "service-target",
+                  "label": "寻找",
+                  "value": "快闪店成熟的渠道"
+                }
+              ]
+            }
+          ]
+        }
+      }
     }
   ]
 }

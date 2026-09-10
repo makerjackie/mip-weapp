@@ -18,7 +18,7 @@
        打开时按稿渲染，文案与徽标数字都来自 ui-fidelity manifest fixture。 -->
   <block wx:elif="{{figmaLayout}}">
     <view class="-mx-3 relative min-h-[1624rpx]">
-      <view wx:if="{{figma.variant === 'guest'}}" class="absolute left-0 top-0 h-[368rpx] w-full bg-panel" />
+      <view wx:if="{{figma.variant !== 'talent'}}" class="absolute left-0 top-0 h-[368rpx] w-full bg-panel" />
       <view class="absolute left-[24rpx] top-[24rpx] h-[160rpx] w-[160rpx]">
         <image class="h-full w-full rounded-full" mode="aspectFill" src="{{figma.avatar}}" />
         <view class="pointer-events-none absolute inset-0 rounded-full border-[4rpx] border-canvas" />
@@ -123,6 +123,55 @@
         <view wx:if="{{figma.editable}}" class="absolute left-[24rpx] top-[1946rpx] h-[112rpx] w-[702rpx] overflow-hidden rounded-full">
           <view class="absolute left-[24rpx] top-[16rpx] flex h-[80rpx] w-[654rpx] items-center justify-center rounded-full border-[2rpx] border-canvas bg-brand">
             <text class="text-[32rpx] font-medium leading-[44.8rpx] text-canvas">编辑</text>
+          </view>
+        </view>
+      </block>
+
+      <!-- figma 1770_38633 相关机会 tab：与嘉宾稿共用头部/统计几何，tab 激活第 3 项，
+           下方 发布/引荐机会 筛选 chip + 两张机会卡(封面+三行要素+45引荐徽) + 我想合作 CTA。 -->
+      <block wx:if="{{figma.variant === 'opportunities'}}">
+        <view class="absolute left-[24rpx] top-[208rpx] h-[136rpx] w-[702rpx] rounded-[16rpx] bg-panel">
+          <view wx:for="{{figma.stats}}" wx:key="label" class="absolute top-[24rpx] flex w-[96rpx] flex-col items-center gap-[4rpx]" style="left:{{item.leftRpx}}rpx">
+            <text class="text-[40rpx] font-medium leading-[56rpx] text-ink">{{item.value}}</text>
+            <text class="text-[20rpx] leading-[28rpx] text-ink">{{item.label}}</text>
+          </view>
+          <view class="absolute left-[628rpx] top-[16rpx] flex h-[28rpx] w-[28rpx] items-center justify-center rounded-full bg-[#ff2238]">
+            <text class="text-[20rpx] leading-[26rpx] text-ink">{{figma.redBadge}}</text>
+          </view>
+        </view>
+        <view class="absolute left-0 top-[368rpx] flex h-[80rpx] w-full">
+          <view wx:for="{{figma.tabs}}" wx:key="*this" class="relative flex h-full w-[250rpx] items-center justify-center bg-canvas">
+            <text class="{{index === figma.activeTab ? 'text-[28rpx] font-medium leading-[39.2rpx] text-brand' : 'text-[28rpx] leading-[39.2rpx] text-muted'}}">{{item}}</text>
+            <view wx:if="{{index === figma.activeTab}}" class="absolute bottom-0 left-0 h-[4rpx] w-[250rpx] bg-brand" />
+          </view>
+        </view>
+        <view class="absolute left-0 top-[446rpx] h-[2rpx] w-full bg-panel" />
+        <view wx:for="{{figma.chips}}" wx:key="label" class="absolute flex h-[56rpx] items-center justify-center rounded-[16rpx] {{item.active ? 'bg-brand' : 'bg-panel'}}" style="left:{{item.leftRpx}}rpx;top:472rpx;width:{{item.widthRpx}}rpx">
+          <text class="text-[28rpx] font-medium leading-[39.2rpx] {{item.active ? 'text-canvas' : 'text-muted'}}">{{item.label}}</text>
+        </view>
+        <view wx:for="{{figma.cards}}" wx:key="title" class="absolute h-[352rpx] w-[702rpx] overflow-hidden rounded-[16rpx] bg-panel" style="left:24rpx;top:{{item.topRpx}}rpx">
+          <image class="absolute left-[16rpx] top-[16rpx] h-[320rpx] w-[240rpx] rounded-[8rpx]" mode="aspectFill" src="{{item.cover}}" />
+          <view class="absolute left-[272rpx] top-[24rpx] text-[32rpx] font-medium leading-[44.8rpx] text-ink">{{item.title}}</view>
+          <view wx:for="{{item.rows}}" wx:for-item="row" wx:key="label" class="absolute flex items-center gap-[8rpx]" style="left:272rpx;top:{{84 + index * 46}}rpx">
+            <image class="h-[32rpx] w-[32rpx] shrink-0" mode="aspectFit" src="/assets/figma/opportunities/{{row.icon}}.svg" />
+            <text class="text-[24rpx] leading-[34rpx] text-ink">{{row.label}}：{{row.value}}</text>
+          </view>
+          <view class="absolute left-[454rpx] top-[280rpx] h-[56rpx] w-[232rpx] overflow-hidden rounded-full bg-brand">
+            <image class="absolute left-[4rpx] top-[4rpx] h-[48rpx] w-[112rpx]" src="/packages/member/assets/figma/coop/coop-avatars.png" />
+            <text class="absolute left-[124rpx] top-[10rpx] text-[20rpx] font-semibold leading-[28rpx] text-canvas">+</text>
+            <text class="absolute left-[138rpx] top-[10rpx] text-[24rpx] font-semibold leading-[33.6rpx] text-canvas">{{figma.referralCount}}引荐</text>
+          </view>
+        </view>
+        <view class="absolute left-[24rpx] top-[1268rpx] h-[112rpx] w-[702rpx] overflow-hidden rounded-full">
+          <view class="absolute left-[24rpx] top-[16rpx] flex h-[80rpx] w-[258rpx] items-center justify-center rounded-full border-[2rpx] border-canvas bg-panel">
+            <image class="h-[48rpx] w-[112rpx]" src="/packages/member/assets/figma/coop/coop-avatars.png" />
+            <view class="ml-[8rpx] flex items-center">
+              <text class="text-[20rpx] font-semibold leading-[28rpx] text-brand">+</text>
+              <text class="text-[24rpx] font-medium leading-[33.6rpx] text-brand">3想合作</text>
+            </view>
+          </view>
+          <view class="absolute left-[306rpx] top-[16rpx] flex h-[80rpx] w-[372rpx] items-center justify-center rounded-full border-[2rpx] border-canvas bg-brand">
+            <text class="text-[32rpx] font-medium leading-[44.8rpx] text-canvas">我想合作</text>
           </view>
         </view>
       </block>
