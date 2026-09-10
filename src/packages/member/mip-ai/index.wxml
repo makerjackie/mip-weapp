@@ -1,6 +1,37 @@
 <view id="mip-ai-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载 AI 草稿" description="请检查网络后重试。" action-text="重新加载" bind:action="loadDrafts" /><app-page-exit /></view>
+  <block wx:elif="{{figmaLayout}}">
+    <!-- figma 2172_42168/42177/42196/42217 AI助手录音：
+         全屏录音台（提示语 + 品牌色计时 + 麦克风/录音控制簇，按钮烘焙自
+         参考稿）；删除/确认录制稿在 0.33 透明度背景上叠原生样式弹窗
+         （#333 盒、取消 #eaeaea、确认 #576b95）。生产保持下方完整布局
+         （被 mip-ai 测试 pin）。fixture figmaLayout 打开时按稿渲染。 -->
+    <view class="relative -mx-4 -mt-4 min-h-[1400rpx]">
+      <view class="{{figma.dialog ? 'opacity-[0.33]' : ''}}">
+        <view class="absolute left-0 top-[51rpx] w-full text-center text-[length:28rpx] leading-[40rpx] text-[#999999]">录下谈话内容，AI助手为你智能填写内容</view>
+        <view class="absolute left-[-30rpx] top-[376rpx] w-full text-center text-[length:96rpx] font-bold leading-[96rpx] tracking-[8rpx] text-brand">{{figma.timer}}</view>
+        <block wx:if="{{figma.mode === 'idle'}}">
+          <image class="absolute left-[312rpx] top-[1126rpx] h-[128rpx] w-[128rpx]" src="/assets/figma/ai/mic-idle.png" />
+          <view class="absolute left-0 top-[1293rpx] w-full text-center text-[length:24rpx] leading-[34rpx] text-[#999999]">点击开始录制</view>
+        </block>
+        <block wx:else>
+          <image class="absolute left-[288rpx] top-[1102rpx] h-[176rpx] w-[176rpx]" src="/assets/figma/ai/mic-rec.png" />
+          <image class="absolute left-[128rpx] top-[1158rpx] h-[80rpx] w-[80rpx]" src="/assets/figma/ai/rec-cancel.png" />
+          <image class="absolute left-[544rpx] top-[1158rpx] h-[80rpx] w-[80rpx]" src="/assets/figma/ai/rec-confirm.png" />
+        </block>
+      </view>
+      <view wx:if="{{figma.dialog}}" class="absolute left-[54rpx] top-[404rpx] h-[464rpx] w-[640rpx] rounded-[16rpx] bg-[#333333]">
+        <view class="absolute left-0 top-[64rpx] w-full text-center text-[length:32rpx] font-semibold leading-[44.8rpx] text-[#eaeaea]">{{figma.dialog.title}}</view>
+        <view class="absolute left-0 top-[142rpx] w-full text-center text-[length:32rpx] leading-[48rpx] text-[#999999]">
+          <view wx:for="{{figma.dialog.lines}}" wx:key="*this">{{item}}</view>
+        </view>
+        <view class="absolute left-0 top-[352rpx] h-[2rpx] w-full bg-[#484848]"></view>
+        <view class="absolute left-0 top-[386rpx] w-[320rpx] text-center text-[length:32rpx] leading-[44.8rpx] text-[#eaeaea]">取消</view>
+        <view class="absolute left-[320rpx] top-[386rpx] w-[320rpx] text-center text-[length:32rpx] leading-[44.8rpx] text-[#576b95]">{{figma.dialog.confirm}}</view>
+      </view>
+    </view>
+  </block>
   <block wx:else>
     <view class="mip-ai-record-stage flex flex-col items-center bg-canvas px-5 pt-6 text-center">
       <view class="text-[length:22rpx] text-muted">录下谈话内容，AI助手为你智能填写内容</view>

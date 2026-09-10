@@ -5465,6 +5465,91 @@
           }
         }
       }
+    },
+    {
+      "key": "ai-录音智能填充",
+      "route": "packages/member/mip-ai/index",
+      "reference": "2172_42168_AI助手录音智能填充.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "mode": "idle",
+          "timer": "00:00:00",
+          "dialog": null
+        }
+      }
+    },
+    {
+      "key": "ai-录音智能填充-录完",
+      "route": "packages/member/mip-ai/index",
+      "reference": "2172_42177_AI助手录音智能填充-录完.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "mode": "recording",
+          "timer": "05:07:31",
+          "dialog": null
+        }
+      }
+    },
+    {
+      "key": "ai-删除提示",
+      "route": "packages/member/mip-ai/index",
+      "reference": "2172_42196_AI助手-删除提示.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "mode": "recording",
+          "timer": "05:07:31",
+          "dialog": {
+            "title": "提示",
+            "lines": [
+              "录音删除后将无法恢复，是否删除?"
+            ],
+            "confirm": "确认删除"
+          }
+        }
+      }
+    },
+    {
+      "key": "ai-确认录制",
+      "route": "packages/member/mip-ai/index",
+      "reference": "2172_42217_AI助手-确认录制.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "mode": "recording",
+          "timer": "05:07:31",
+          "dialog": {
+            "title": "提示",
+            "lines": [
+              "已完成录音，AI助手将为你生成内容",
+              "已有内容会被覆盖"
+            ],
+            "confirm": "确认"
+          }
+        }
+      }
     }
   ]
 }
