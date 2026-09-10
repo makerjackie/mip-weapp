@@ -8,6 +8,65 @@
     <app-page-exit always label="返回首页" tab-url="/pages/index/index" />
   </view>
   <block wx:else>
+    <!-- figma 1861_18278 隐私设置：设计稿是独立的两行开关页，但小程序没有落地路由，
+         先以页面内分支还原（fixture figmaPanel 指定），路由缺口记录在 ui-fidelity manifest notes。
+         开关轨道烘焙自设计稿矢量（switch-on.png），旋钮白圆 + 0 3px 8px 阴影，ON 态。 -->
+    <block wx:if="{{figmaPanel === 'privacy-settings'}}">
+      <view class="mt-[16rpx] -mx-3">
+        <view class="flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel py-[20rpx] pl-[24rpx] pr-[20rpx]">
+          <view class="text-[length:28rpx] leading-[40rpx] font-medium">不让他人在搜索人才时找到我</view>
+          <view class="relative h-[62rpx] w-[102rpx] shrink-0">
+            <image class="h-full w-full" src="/packages/member/assets/figma/settings/switch-on.png" />
+            <view class="absolute left-[44rpx] top-[4rpx] h-[54rpx] w-[54rpx] rounded-full bg-white shadow-[0px_6rpx_16rpx_rgba(0,0,0,0.15)]"></view>
+          </view>
+        </view>
+        <view class="mt-[24rpx] flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel py-[20rpx] pl-[24rpx] pr-[20rpx]">
+          <view class="text-[length:28rpx] leading-[40rpx] font-medium">不让非MIP玩家看到我发布的机会</view>
+          <view class="relative h-[62rpx] w-[102rpx] shrink-0">
+            <image class="h-full w-full" src="/packages/member/assets/figma/settings/switch-on.png" />
+            <view class="absolute left-[44rpx] top-[4rpx] h-[54rpx] w-[54rpx] rounded-full bg-white shadow-[0px_6rpx_16rpx_rgba(0,0,0,0.15)]"></view>
+          </view>
+        </view>
+      </view>
+    </block>
+    <!-- figma 1728_19083 账号设置：设计还原布局（fixture figmaLayout 打开）。
+         第二组标题在参考稿里逐字重复「账号与安全」（Figma 复制瑕疵），按稿保留；
+         绑定手机/绑定微信/隐私设置/会员服务协议暂无落地路由（见 manifest notes）。 -->
+    <block wx:elif="{{figmaLayout}}">
+      <view class="mt-[15rpx] -mx-3">
+        <view class="text-[length:32rpx] leading-[44.8rpx] font-medium">账号与安全</view>
+        <view class="mt-[23.2rpx] flex flex-col gap-[2rpx]">
+          <view class="flex h-[92rpx] items-center justify-between rounded-t-[16rpx] bg-panel py-[20rpx] pl-[24rpx] pr-[20rpx]">
+            <view class="text-[length:28rpx] leading-[40rpx] font-medium">绑定手机</view>
+            <mip-icon name="chevron-right-1" size="{{16}}" color="var(--color-muted)" />
+          </view>
+          <view class="flex h-[92rpx] items-center justify-between bg-panel py-[20rpx] pl-[24rpx] pr-[20rpx]">
+            <view class="text-[length:28rpx] leading-[40rpx] font-medium">绑定微信</view>
+            <mip-icon name="chevron-right-1" size="{{16}}" color="var(--color-muted)" />
+          </view>
+          <view class="flex h-[92rpx] items-center justify-between rounded-b-[16rpx] bg-panel py-[20rpx] pl-[24rpx] pr-[20rpx]" aria-role="button" bind:tap="openPrivacySettings">
+            <view class="text-[length:28rpx] leading-[40rpx] font-medium">隐私设置</view>
+            <mip-icon name="chevron-right-1" size="{{16}}" color="var(--color-muted)" />
+          </view>
+        </view>
+        <view class="mt-[48rpx] text-[length:32rpx] leading-[44.8rpx] font-medium">账号与安全</view>
+        <view class="mt-[23.2rpx] flex flex-col gap-[2rpx]">
+          <view class="flex h-[92rpx] items-center justify-between rounded-t-[16rpx] bg-panel py-[20rpx] pl-[24rpx] pr-[20rpx]" aria-role="button" bind:tap="openUserAgreement">
+            <view class="text-[length:28rpx] leading-[40rpx] font-medium">用户使用协议</view>
+            <mip-icon name="chevron-right-1" size="{{16}}" color="var(--color-muted)" />
+          </view>
+          <view class="flex h-[92rpx] items-center justify-between bg-panel py-[20rpx] pl-[24rpx] pr-[20rpx]" aria-role="button" bind:tap="openPrivacyPolicy">
+            <view class="text-[length:28rpx] leading-[40rpx] font-medium">隐私政策</view>
+            <mip-icon name="chevron-right-1" size="{{16}}" color="var(--color-muted)" />
+          </view>
+          <view class="flex h-[92rpx] items-center justify-between rounded-b-[16rpx] bg-panel py-[20rpx] pl-[24rpx] pr-[20rpx]">
+            <view class="text-[length:28rpx] leading-[40rpx] font-medium">会员服务协议</view>
+            <mip-icon name="chevron-right-1" size="{{16}}" color="var(--color-muted)" />
+          </view>
+        </view>
+      </view>
+    </block>
+    <block wx:else>
     <view class="px-1 text-[length:24rpx] font-semibold text-muted">资料与隐私</view>
     <view class="mt-3 overflow-hidden rounded-[24rpx] bg-panel">
       <view class="flex min-h-[104rpx] items-center justify-between gap-4 px-5" aria-role="button" bind:tap="openVisibilitySettings">
@@ -55,5 +114,6 @@
       </view>
     </view>
     <app-page-exit label="返回我的" tab-url="/pages/profile/index" />
+    </block>
   </block>
 </view>

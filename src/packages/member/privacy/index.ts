@@ -18,6 +18,10 @@ Page({
     userVersion: 0,
     closedAt: '',
     message: '',
+    // figma 1728_19083 / 1861_18278 设计还原态（打分 fixture 专用）：设计稿的账号设置
+    // 行组与两行隐私开关没有落地路由，先以页面内分支还原，缺口记录在 manifest notes。
+    figmaLayout: false,
+    figmaPanel: '' as '' | 'privacy-settings',
   },
   closureRequest: null as ReturnType<typeof createAccountClosureRequestTracker> | null,
 
@@ -67,6 +71,12 @@ Page({
 
   openVisibilitySettings() {
     caseNavigateTo({ url: '/packages/member/mip-visibility-settings/index' })
+  },
+
+  // figma 1728_19083 的「隐私设置」行：设计稿对应 1861_18278 独立页，但该页暂无落地
+  // 路由，设计还原态先在页内切换到两行开关分支（见 index.wxml figmaPanel 注释）。
+  openPrivacySettings() {
+    this.setData({ figmaPanel: 'privacy-settings' })
   },
 
   openBlockedProfiles() {
