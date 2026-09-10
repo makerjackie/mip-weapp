@@ -3398,6 +3398,109 @@
           ]
         }
       }
+    },
+    {
+      "key": "cases-超级案例详情",
+      "route": "packages/member/mip-cases/detail/index",
+      "reference": "2037_12261_超级案例详情.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "rows": [
+            {
+              "label": "项目名称",
+              "value": "MIP全球创意人平台",
+              "topRpx": 346
+            },
+            {
+              "label": "一句话描述案例",
+              "value": "千万超级个体生意写作社群",
+              "topRpx": 438
+            },
+            {
+              "label": "开始时间",
+              "value": "2016.01.01",
+              "topRpx": 530
+            },
+            {
+              "label": "担任职责",
+              "value": "MIP团队管理",
+              "topRpx": 622
+            },
+            {
+              "label": "主营地区",
+              "value": "总部在深圳，2026 大湾区扩张中",
+              "topRpx": 714
+            },
+            {
+              "label": "项目类型",
+              "value": "广告策划，文化创意，商业地产等",
+              "topRpx": 806
+            }
+          ],
+          "panelTopRpx": 898,
+          "desc": "MIP是面向创意的协作与资源对接的游戏化运作生态，成立1年促成千万生意，战绩可查 示例：MIP是面向创意的协作与资源对接的游戏化运作生态，\n成立1年促成千万生意，战绩可查示例：MIP是面向创意的协作与资源对接的游戏化运作生态，成立1年促成千万生意，战绩可查"
+        }
+      }
+    },
+    {
+      "key": "cases-超级案例详情-a",
+      "route": "packages/member/mip-cases/detail/index",
+      "reference": "1987_30162_超级案例详情-a.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "rows": [
+            {
+              "label": "项目名称",
+              "value": "MIP全球创意人平台",
+              "topRpx": 346
+            },
+            {
+              "label": "一句话描述案例",
+              "value": "千万超级个体生意写作社群",
+              "topRpx": 438
+            },
+            {
+              "label": "开始时间",
+              "value": "2016.01.01",
+              "topRpx": 530
+            },
+            {
+              "label": "担任职责",
+              "value": "MIP团队管理",
+              "topRpx": 622
+            },
+            {
+              "label": "主营城市",
+              "value": "深圳",
+              "topRpx": 714
+            },
+            {
+              "label": "主营地区",
+              "value": "大湾区扩张中",
+              "topRpx": 806
+            },
+            {
+              "label": "项目类型",
+              "value": "广告策划，文化创意，商业地产等",
+              "topRpx": 898
+            }
+          ],
+          "panelTopRpx": 990,
+          "desc": "MIP是面向创意的协作与资源对接的游戏化运作生态，成立1年促成千万生意，战绩可查 示例：MIP是面向创意的协作与资源对接的游戏化运作生态，\n成立1年促成千万生意，战绩可查示例：MIP是面向创意的协作与资源对接的游戏化运作生态，成立1年促成千万生意，战绩可查"
+        }
+      }
     }
   ]
 }

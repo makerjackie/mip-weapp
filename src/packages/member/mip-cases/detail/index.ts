@@ -51,6 +51,8 @@ Page({
     acting: false,
     interestPending: false,
     message: '',
+    // 还原态开关,仅像素 fixture 使用;生产保持卡片详情布局(被 mip-case-detail 测试 pin)。
+    figmaLayout: false,
   },
   resumeInterest: false,
   stopInterestSubscription: null as (() => void) | null,

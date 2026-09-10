@@ -4,6 +4,23 @@
     <view class="rounded-[16rpx] bg-panel px-4 py-5"><t-skeleton row-col="{{[1,1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   </view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法查看案例" description="{{message}}" action-text="重新加载" bind:action="load" /><app-page-exit /></view>
+
+  <!-- figma 2037_12261 / 1987_30162 超级案例详情：黄色 hero 卡(整体烘焙) + 连续信息行 +
+       展开讲讲面板。生产保持下方卡片详情布局(被 mip-case-detail 测试 pin)。
+       fixture figmaLayout 打开时按稿渲染。ref 页含 88px 导航,impl y = ref y - 88。 -->
+  <block wx:elif="{{figmaLayout}}">
+    <view class="-mx-3 -mt-3 relative min-h-[1352rpx]">
+      <image class="absolute left-[24rpx] top-[24rpx] h-[298rpx] w-[702rpx] rounded-[16rpx]" src="/packages/member/assets/figma/cases/case-hero.png" />
+      <view wx:for="{{figma.rows}}" wx:key="label" class="absolute left-[24rpx] flex h-[92rpx] w-[702rpx] items-center justify-between bg-panel px-[24rpx] {{index === 0 ? 'rounded-t-[16rpx]' : ''}}" style="top:{{item.topRpx}}rpx">
+        <text class="text-[24rpx] leading-[33.6rpx] text-muted">{{item.label}}</text>
+        <text class="text-[28rpx] font-medium leading-[33.6rpx] text-ink">{{item.value}}</text>
+      </view>
+      <view class="absolute left-[24rpx] flex h-[338rpx] w-[702rpx] flex-col gap-[20rpx] rounded-b-[16rpx] bg-panel px-[24rpx] pt-[20rpx]" style="top:{{figma.panelTopRpx}}rpx">
+        <text class="text-right text-[24rpx] leading-[33.6rpx] text-muted">展开讲讲</text>
+        <text class="whitespace-pre-wrap text-justify text-[28rpx] leading-[39.2rpx] text-ink">{{figma.desc}}</text>
+      </view>
+    </view>
+  </block>
   <view wx:elif="{{state === 'ready' && !item}}"><app-empty-state title="案例不存在" description="当前案例可能已删除或下架。" /><app-page-exit /></view>
   <block wx:elif="{{item}}">
     <view class="flex h-[300rpx] items-center justify-center overflow-hidden rounded-[16rpx] bg-brand">
