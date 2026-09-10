@@ -3445,7 +3445,9 @@
             }
           ],
           "panelTopRpx": 898,
-          "desc": "MIP是面向创意的协作与资源对接的游戏化运作生态，成立1年促成千万生意，战绩可查 示例：MIP是面向创意的协作与资源对接的游戏化运作生态，\n成立1年促成千万生意，战绩可查示例：MIP是面向创意的协作与资源对接的游戏化运作生态，成立1年促成千万生意，战绩可查"
+          "desc": "MIP是面向创意的协作与资源对接的游戏化运作生态，成立1年促成千万生意，战绩可查 示例：MIP是面向创意的协作与资源对接的游戏化运作生态，\n成立1年促成千万生意，战绩可查示例：MIP是面向创意的协作与资源对接的游戏化运作生态，成立1年促成千万生意，战绩可查",
+          "panelPadTopRpx": 20,
+          "panelGapRpx": 20
         }
       }
     },
@@ -3499,7 +3501,9 @@
             }
           ],
           "panelTopRpx": 990,
-          "desc": "MIP是面向创意的协作与资源对接的游戏化运作生态，成立1年促成千万生意，战绩可查 示例：MIP是面向创意的协作与资源对接的游戏化运作生态，\n成立1年促成千万生意，战绩可查示例：MIP是面向创意的协作与资源对接的游戏化运作生态，成立1年促成千万生意，战绩可查"
+          "desc": "MIP是面向创意的协作与资源对接的游戏化运作生态，成立1年促成千万生意，战绩可查 示例：MIP是面向创意的协作与资源对接的游戏化运作生态，\n成立1年促成千万生意，战绩可查示例：MIP是面向创意的协作与资源对接的游戏化运作生态，成立1年促成千万生意，战绩可查",
+          "panelPadTopRpx": 20,
+          "panelGapRpx": 20
         }
       }
     },
@@ -6951,6 +6955,118 @@
           ],
           "selectedIndustryLabel": "社交媒体",
           "selectedText": "已选 1/1"
+        }
+      }
+    },
+    {
+      "key": "cases-超级案例详情编辑",
+      "route": "packages/member/mip-cases/detail/index",
+      "reference": "2704_13347_超级案例详情编辑.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "rows": [
+            {
+              "label": "项目名称",
+              "value": "MIP全球创意人平台",
+              "topRpx": 346
+            },
+            {
+              "label": "一句话描述案例",
+              "value": "千万超级个体生意写作社群",
+              "topRpx": 438
+            },
+            {
+              "label": "开始时间",
+              "value": "2016.01.01",
+              "topRpx": 530
+            },
+            {
+              "label": "担任职责",
+              "value": "MIP团队管理",
+              "topRpx": 622
+            },
+            {
+              "label": "主营城市",
+              "value": "深圳",
+              "topRpx": 714
+            },
+            {
+              "label": "主营地区",
+              "value": "大湾区扩张中",
+              "topRpx": 806
+            },
+            {
+              "label": "项目类型",
+              "value": "广告策划，文化创意，商业地产等",
+              "topRpx": 898
+            }
+          ],
+          "panelTopRpx": 990,
+          "panelPadTopRpx": 24,
+          "panelGapRpx": 56,
+          "desc": "MIP是面向创意的协作与资源对接的游戏化运作生态，成立1年促成千万生意，战绩可查 示例：MIP是面向创意的协作与资源对接的游戏化运作生态，\n成立1年促成千万生意，战绩可查示例：MIP是面向创意的协作与资源对接的游戏化运作生态，成立1年促成千万生意，战绩可查",
+          "actionTopRpx": 1336,
+          "actionLabel": "编辑"
+        }
+      }
+    },
+    {
+      "key": "cases-编辑超级案例",
+      "route": "packages/member/mip-cases/editor/index",
+      "reference": "2173_42605_编辑超级案例.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "figmaEditor": true,
+        "figma": {
+          "bannerText": "做过哪些展现您能力的超级案例",
+          "aiText": "AI助手",
+          "group1": [
+            {
+              "label": "项目名称",
+              "value": "示例：MIP全球创意人平台"
+            },
+            {
+              "label": "一句话描述案例",
+              "value": "示例：千万超级个体生意写作社群"
+            },
+            {
+              "label": "开始时间",
+              "calendar": true
+            },
+            {
+              "label": "担任职责",
+              "value": "MIP团队管理"
+            },
+            {
+              "label": "主营城市",
+              "value": "请选择城市",
+              "chevron": true
+            }
+          ],
+          "group2": [
+            {
+              "label": "主营地区",
+              "value": "示例：总部在深圳，2026 大湾区扩张中"
+            },
+            {
+              "label": "项目类型",
+              "value": "示例：广告策划，文化创意，商业地产等"
+            }
+          ],
+          "bioLabel": "展开讲讲（选填）",
+          "bioPlaceholder": "示例：MIP是面向创意的协作与资源对接的游戏化运作生态，成立1年促成千万生意，战绩可查",
+          "bioCount": "0/300",
+          "addText": "添加项目",
+          "saveText": "保存"
         }
       }
     }

@@ -1,6 +1,59 @@
 <view id="mip-case-editor-page" class="mip-member-page case-editor-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] text-ink">
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法编辑案例" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit /></view>
+  <!-- figmaEditor:2173_42605 编辑超级案例稿:引导横幅(全宽 brand) + AI助手卡(brand 描边面板,
+       内容居中) + 我的案例标题 + 两组字段行(panel 92rpx 行,2rpx 缝隙) + 展开讲讲面板 +
+       添加项目 + 保存胶囊。生产保持真实编辑器布局(被 mip-case-editor-visual 测试 pin)。
+       ref 页含 88px 导航,impl y = ref y - 88。 -->
+  <block wx:elif="{{figmaEditor}}">
+    <view class="-mx-3 relative min-h-[1674rpx] bg-canvas">
+      <view class="flex h-[64rpx] items-center justify-center bg-brand">
+        <text class="text-center text-[28rpx] font-medium leading-[39.2rpx] text-on-brand">{{figma.bannerText}}</text>
+      </view>
+      <view class="mx-[22rpx] mt-[24rpx] flex h-[200rpx] items-center justify-center rounded-[16rpx] border-[2rpx] border-brand bg-panel">
+        <view class="flex items-center gap-[12rpx]">
+          <image class="h-[48rpx] w-[48rpx]" src="/packages/member/mip-cases/editor/assets/ai-assistant.svg" mode="aspectFit" />
+          <text class="text-[28rpx] font-medium leading-[40rpx] text-brand">{{figma.aiText}}</text>
+        </view>
+      </view>
+      <view class="ml-[24rpx] mt-[32rpx] flex h-[44rpx] items-center gap-[8rpx]">
+        <image class="h-[32rpx] w-[32rpx]" src="/packages/member/mip-cases/editor/assets/case-section.svg" mode="aspectFit" />
+        <text class="text-[32rpx] font-medium leading-[44.8rpx] text-ink">我的案例</text>
+      </view>
+      <view class="mx-[24rpx] mt-[24rpx] flex flex-col gap-[2rpx]">
+        <block wx:for="{{figma.group1}}" wx:key="label">
+          <view class="flex h-[92rpx] items-center justify-between bg-panel px-[24rpx] {{index === 0 ? 'rounded-t-[16rpx]' : ''}}">
+            <text class="text-[28rpx] font-medium leading-[33.6rpx] text-ink">{{item.label}}</text>
+            <view class="flex items-center gap-[24rpx]">
+              <text wx:if="{{item.value}}" class="text-right text-[24rpx] font-medium leading-[33.6rpx] text-muted">{{item.value}}</text>
+              <image wx:if="{{item.calendar}}" class="h-[40rpx] w-[40rpx]" src="/packages/member/mip-cases/editor/assets/calendar.svg" mode="aspectFit" />
+              <image wx:if="{{item.chevron}}" class="h-[32rpx] w-[32rpx]" src="/packages/member/mip-cases/editor/assets/chevron.svg" mode="aspectFit" />
+            </view>
+          </view>
+        </block>
+      </view>
+      <view class="mx-[24rpx] mt-[180rpx] flex flex-col gap-[2rpx]">
+        <block wx:for="{{figma.group2}}" wx:key="label">
+          <view class="flex h-[92rpx] items-center justify-between bg-panel px-[24rpx]">
+            <text class="text-[28rpx] font-medium leading-[33.6rpx] text-ink">{{item.label}}</text>
+            <text class="text-right text-[24rpx] font-medium leading-[33.6rpx] text-muted">{{item.value}}</text>
+          </view>
+        </block>
+        <view class="flex h-[220rpx] flex-col rounded-b-[16rpx] bg-panel px-[24rpx] pt-[20rpx]">
+          <text class="text-right text-[28rpx] font-medium leading-[33.6rpx] text-ink">{{figma.bioLabel}}</text>
+          <text class="mt-[18rpx] whitespace-pre-wrap text-[24rpx] font-medium leading-[33.6rpx] text-muted">{{figma.bioPlaceholder}}</text>
+          <text class="mt-[26rpx] text-right text-[28rpx] leading-[40rpx] text-muted">{{figma.bioCount}}</text>
+        </view>
+      </view>
+      <view class="mx-[24rpx] flex h-[92rpx] items-center justify-end gap-[16rpx] pr-[24rpx]">
+        <mip-icon name="icon-plus-fill" size="{{14}}" color="var(--color-brand)" />
+        <text class="text-[24rpx] font-medium leading-[33.6rpx] text-brand">{{figma.addText}}</text>
+      </view>
+      <view class="mx-[22rpx] mt-[26rpx] flex h-[112rpx] items-center rounded-full bg-brand-soft px-[24rpx] py-[16rpx]">
+        <view class="flex h-[80rpx] min-w-0 flex-1 items-center justify-center rounded-full border-[2rpx] border-canvas bg-brand text-[32rpx] font-medium leading-[44.8rpx] text-on-brand">{{figma.saveText}}</view>
+      </view>
+    </view>
+  </block>
   <block wx:else>
     <view class="case-editor-guidance -mx-3 flex min-h-[64rpx] items-center justify-center bg-brand px-4 text-center text-[length:24rpx] font-medium text-on-brand">填写展现能力的超级案例</view>
 

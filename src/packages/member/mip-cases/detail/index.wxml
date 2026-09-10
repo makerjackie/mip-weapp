@@ -15,9 +15,12 @@
         <text class="text-[24rpx] leading-[33.6rpx] text-muted">{{item.label}}</text>
         <text class="text-[28rpx] font-medium leading-[33.6rpx] text-ink">{{item.value}}</text>
       </view>
-      <view class="absolute left-[24rpx] flex h-[338rpx] w-[702rpx] flex-col gap-[20rpx] rounded-b-[16rpx] bg-panel px-[24rpx] pt-[20rpx]" style="top:{{figma.panelTopRpx}}rpx">
+      <view class="absolute left-[24rpx] flex h-[338rpx] w-[702rpx] flex-col rounded-b-[16rpx] bg-panel px-[24rpx]" style="top:{{figma.panelTopRpx}}rpx;padding-top:{{figma.panelPadTopRpx}}rpx;gap:{{figma.panelGapRpx}}rpx">
         <text class="text-right text-[24rpx] leading-[33.6rpx] text-muted">展开讲讲</text>
         <text class="whitespace-pre-wrap text-justify text-[28rpx] leading-[39.2rpx] text-ink">{{figma.desc}}</text>
+      </view>
+      <view wx:if="{{figma.actionLabel}}" class="absolute left-3 right-3 flex h-[108rpx] items-center rounded-full bg-brand-dim px-[24rpx] py-[16rpx]" style="top:{{figma.actionTopRpx}}rpx">
+        <view class="flex h-[76rpx] min-w-0 flex-1 items-center justify-center rounded-full bg-brand text-[28rpx] font-medium leading-[39.2rpx] text-on-brand">{{figma.actionLabel}}</view>
       </view>
     </view>
   </block>

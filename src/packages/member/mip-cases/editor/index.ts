@@ -70,6 +70,21 @@ Page({
     mediaUploading: false,
     cityOptions: [{ id: '', label: '未选择' }],
     industryOptions: [{ id: '', label: '未选择' }],
+    // figmaEditor:2173_42605 编辑超级案例稿(引导横幅 + AI助手卡 + 我的案例字段组 +
+    // 展开讲讲面板 + 保存胶囊),仅像素 fixture 使用;生产保持真实编辑器布局
+    // (被 mip-case-editor-visual 测试 pin)。
+    figmaEditor: false,
+    figma: {
+      bannerText: '填写展现能力的超级案例',
+      aiText: 'AI 助手',
+      group1: [] as Array<{ label: string, value?: string, calendar?: boolean, chevron?: boolean }>,
+      group2: [] as Array<{ label: string, value: string }>,
+      bioLabel: '',
+      bioPlaceholder: '',
+      bioCount: '',
+      addText: '',
+      saveText: '',
+    },
   },
   navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
 
