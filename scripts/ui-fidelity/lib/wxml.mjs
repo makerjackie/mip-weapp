@@ -205,6 +205,17 @@ export function renderToHtml(nodes, scope, ctx) {
   return html
 }
 
+function collectNamedSlots(nodes, out) {
+  for (const node of nodes ?? []) {
+    const name = node.attrs?.slot
+    if (name) {
+      out.set(name, [...(out.get(name) ?? []), node])
+      continue
+    }
+    collectNamedSlots(node.children ?? [], out)
+  }
+}
+
 /** Inline rpx -> px at the fixed 375px viewport (1 design px = 2rpx). */
 function rpxToPx(value) {
   return String(value).replace(
@@ -281,21 +292,31 @@ function renderNode(node, scope, ctx) {
     const data = ctx.componentData?.(node.tag, props) ?? {}
     const id = `c${(ctx.instanceCount += 1)}`
     ctx.componentStyles.push({ id, css: resolved.css })
-    const inner = renderToHtml(
-      resolved.nodes,
-      { ...props, ...data },
-      {
-        ...ctx,
-        slotHtml: childHtml,
-        usingComponents: resolved.usingComponents,
-      },
-    )
+    const slots = { default: childHtml }
+    const namedSlots = new Map()
+    collectNamedSlots(node.children ?? [], namedSlots)
+    for (const [name, nodes] of namedSlots) {
+      slots[name] = renderToHtml(nodes, scope, { ...ctx, slotHtml: '' })
+    }
+    const componentCtx = { ...ctx }
+    const parentResolveAsset = componentCtx.resolveAsset
+    componentCtx.resolveAsset = src =>
+      typeof src === 'string' && src.startsWith('/assets/figma/events/')
+        ? `/packages/member${src}`
+        : parentResolveAsset?.(src)
+    const inner = renderToHtml(resolved.nodes, { ...props, ...data }, {
+      ...componentCtx,
+      slotHtml: slots.default || '',
+      namedSlots: slots,
+      usingComponents: resolved.usingComponents,
+    })
     const outerStyle = rpxToPx(String(interpolate(attrs.style, scope) ?? ''))
     return `<div class="wx-comp ${interpolate(attrs.class, scope)}" id="${id}"${outerStyle ? ` style="${outerStyle}"` : ''}>${inner}</div>`
   }
 
   if (node.tag === 'slot') {
-    return ctx.slotHtml || childHtml || ''
+    const named = attrs.name ? ctx.namedSlots?.[attrs.name] : ''
+    return named || ctx.slotHtml || childHtml || ''
   }
   const tag = TAG_MAP[node.tag] ?? (node.tag.includes('-') ? 'div' : node.tag)
   if (!tag) {

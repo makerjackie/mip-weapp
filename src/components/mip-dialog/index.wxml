@@ -1,0 +1,20 @@
+<view wx:if="{{open && !frameOnly}}" class="mip-dialog__scrim" aria-role="dialog" aria-modal="{{true}}">
+  <view class="mip-dialog">
+    <view class="mip-dialog__body">
+      <text class="mip-dialog__title">{{title}}</text>
+      <view class="mip-dialog__content"><slot /></view>
+    </view>
+    <view class="mip-dialog__actions {{single ? 'mip-dialog__actions--single' : ''}}">
+      <view wx:if="{{!single}}" class="mip-dialog__button" aria-role="button" bind:tap="handleCancel">{{cancelText}}</view>
+      <view class="mip-dialog__button mip-dialog__button--confirm {{confirmDisabled ? 'mip-dialog__button--disabled' : ''}}" aria-role="button" aria-disabled="{{confirmDisabled}}" bind:tap="handleConfirm">
+        <slot name="confirm-text">{{confirmText}}</slot>
+      </view>
+    </view>
+  </view>
+</view>
+<view wx:if="{{open && frameOnly}}" class="mip-dialog mip-dialog--frame" aria-role="dialog">
+  <text class="mip-dialog__title mip-dialog__title--frame">{{title}}</text>
+  <view class="mip-dialog__content mip-dialog__content--frame"><slot /></view>
+  <view class="mip-dialog__frame-rule"></view>
+  <text class="mip-dialog__frame-button">{{button || confirmText}}</text>
+</view>

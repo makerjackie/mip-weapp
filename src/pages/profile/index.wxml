@@ -136,12 +136,17 @@
       </view>
     </view>
 
-    <view wx:if="{{authenticated}}" class="profile-stats">
-      <view class="profile-stat" data-category="GUEST" bind:tap="openInfluenceList"><view class="profile-stat-value">{{guestCount === null ? '—' : guestCount}}</view><view class="profile-stat-label">嘉宾</view></view>
-      <view class="profile-stat" data-category="INTERACTION" bind:tap="openInfluenceList"><view class="profile-stat-value">{{interactionCount === null ? '—' : interactionCount}}</view><view class="profile-stat-label">互动过</view></view>
-      <view class="profile-stat" data-category="ACTIVE_INTEREST" bind:tap="openInfluenceList"><view class="profile-stat-value">{{interestCount === null ? '—' : interestCount}}</view><view class="profile-stat-label">心动值</view></view>
-      <view class="profile-stat" bind:tap="openReceivedInteractions"><view class="profile-stat-value">{{visitorCount === null ? '—' : visitorCount}}<view wx:if="{{visitorUnreadCount > 0}}" class="profile-stat-badge">{{visitorUnreadCount > 99 ? '99+' : visitorUnreadCount}}</view></view><view class="profile-stat-label">访客</view></view>
-    </view>
+    <mip-stat-header
+      wx:if="{{authenticated}}"
+      class="profile-stats"
+      stats="{{[
+        {value: guestCount === null ? '—' : guestCount, label: '嘉宾', category: 'GUEST', target: 'influence'},
+        {value: interactionCount === null ? '—' : interactionCount, label: '互动过', category: 'INTERACTION', target: 'influence'},
+        {value: interestCount === null ? '—' : interestCount, label: '心动值', category: 'ACTIVE_INTEREST', target: 'influence'},
+        {value: visitorCount === null ? '—' : visitorCount, label: '访客', target: 'visitor', badge: visitorUnreadCount > 99 ? '99+' : (visitorUnreadCount > 0 ? visitorUnreadCount : '')}
+      ]}}"
+      bind:select="openStat"
+    />
 
     <view wx:if="{{authenticated}}" class="profile-feature-grid">
       <view class="profile-feature" bind:tap="openTasks"><image class="profile-feature-image" mode="aspectFit" src="/assets/figma/profile/task.png" /><text class="profile-feature-label">NPC任务</text></view>

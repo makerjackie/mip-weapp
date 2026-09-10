@@ -1,0 +1,16 @@
+<view class="mip-stat-header" aria-role="group">
+  <view
+    wx:for="{{stats}}"
+    wx:key="label"
+    class="mip-stat-header__column"
+    data-index="{{index}}"
+    bind:tap="handleSelect"
+    style="left:{{63 + index * 160}}rpx"
+  >
+    <view class="mip-stat-header__value-wrap">
+      <text class="mip-stat-header__value">{{item.value}}</text>
+      <text wx:if="{{item.badge}}" class="mip-stat-header__badge">{{item.badge}}</text>
+    </view>
+    <text class="mip-stat-header__label">{{item.label}}</text>
+  </view>
+</view>

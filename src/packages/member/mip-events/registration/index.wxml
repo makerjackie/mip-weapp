@@ -22,7 +22,7 @@
   <!-- figma 1821_19274 活动报名：像素基线变体，fixture-gated（figmaLayout），生产布局见下方 wx:else。 -->
   <block wx:elif="{{figmaLayout}}">
     <view class="relative -mx-3 -mt-3 min-h-[1400rpx]">
-      <image class="absolute left-[24rpx] top-[24rpx] h-[298rpx] w-[702rpx] rounded-[16rpx]" mode="aspectFill" src="/assets/figma/events/banner-connect-fitness.png" />
+      <image class="absolute left-[24rpx] top-[24rpx] h-[298rpx] w-[702rpx] rounded-[16rpx]" mode="aspectFill" src="/packages/member/assets/figma/events/banner-connect-fitness.webp" />
       <view class="absolute left-[24rpx] top-[346rpx] h-[232rpx] w-[702rpx] rounded-[16rpx] bg-panel"></view>
       <view class="absolute left-[49rpx] top-[370rpx] flex h-[31rpx] w-[62rpx] items-center justify-center rounded-[8rpx] bg-[#80ccff]"><text class="text-[length:20rpx] font-medium leading-none text-[#080808]">沙龙</text></view>
       <view class="absolute left-[120rpx] top-[370rpx] flex h-[31rpx] w-[84rpx] items-center justify-center rounded-[8rpx] bg-brand"><text class="text-[length:20rpx] font-medium leading-none text-[#080808]">仅玩家</text></view>

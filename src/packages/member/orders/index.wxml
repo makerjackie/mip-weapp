@@ -1,4 +1,4 @@
-<view id="member-orders-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-0 text-ink">
+  <view id="member-orders-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-0 text-ink">
   <view wx:if="{{!figmaLayout}}" id="order-filter-tabs" class="grid grid-cols-4 border-b border-line text-center text-[length:24rpx]">
     <view wx:if="{{filter === 'all'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-3 text-brand" data-filter="all" bind:tap="changeFilter">全部</view><view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-3 text-muted" data-filter="all" bind:tap="changeFilter">全部</view>
     <view wx:if="{{filter === 'PENDING_USE'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-3 text-brand" data-filter="PENDING_USE" bind:tap="changeFilter">待使用</view><view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-3 text-muted" data-filter="PENDING_USE" bind:tap="changeFilter">待使用</view>
@@ -22,19 +22,25 @@
         <view class="absolute left-[563rpx] top-[18rpx] w-[188rpx] text-center text-[length:28rpx] {{figma.tabIndex === 3 ? 'font-medium text-brand' : 'text-muted'}}" style="line-height:39.2rpx">已退款</view>
         <view class="absolute top-[76rpx] h-[4rpx] w-[188rpx] bg-brand" style="left:{{figma.underlineLeftRpx}}rpx"></view>
       </view>
-      <view wx:for="{{figma.cards}}" wx:key="topRpx" class="absolute left-[24rpx] h-[558rpx] w-[702rpx] overflow-hidden rounded-[16rpx] bg-panel" style="top:{{item.topRpx}}rpx">
-        <image class="absolute left-0 top-0 h-[298rpx] w-full" src="{{item.cover}}" />
-        <view class="absolute left-[24rpx] top-[314rpx] text-[length:32rpx] font-medium leading-[44.8rpx] text-ink">{{item.name}}</view>
-        <image class="absolute left-[24rpx] top-[374rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/events/icon-calendar.png" />
-        <view class="absolute left-[67rpx] top-[375rpx] text-[length:24rpx] leading-[33.6rpx] text-ink">{{item.time}}</view>
-        <image class="absolute left-[24rpx] top-[420rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/events/icon-pin.png" />
-        <view class="absolute left-[67rpx] top-[419rpx] text-[length:24rpx] leading-[33.6rpx] text-ink">{{item.place}}</view>
-        <view class="absolute left-0 top-[476rpx] h-[2rpx] w-full bg-canvas"></view>
-        <view class="absolute left-[24rpx] top-[502rpx] inline-flex h-[32rpx] items-center rounded-full px-[12rpx] text-[length:20rpx] font-medium {{item.chipBrand ? 'bg-panel text-brand' : 'bg-canvas text-muted'}}">{{item.chip}}</view>
-        <view class="absolute right-[24rpx] top-[494rpx] flex h-[56rpx] items-baseline justify-end text-brand">
-          <view class="text-[length:24rpx] font-medium leading-[56rpx]">{{item.label}}</view>
-          <view class="text-[length:40rpx] font-bold leading-[56rpx]">{{item.amount}}</view>
-        </view>
+      <view
+        wx:for="{{figma.cards}}"
+        wx:key="topRpx"
+        class="absolute left-[24rpx] w-[702rpx]"
+        style="top:{{item.topRpx}}rpx"
+      >
+        <mip-order-card
+          image="{{item.cover}}"
+          title="{{item.name}}"
+          rows="{{[
+            {icon: '/packages/member/assets/figma/events/icon-calendar.png', text: item.time},
+            {icon: '/packages/member/assets/figma/events/icon-pin.png', text: item.place}
+          ]}}"
+          status="{{item.chip}}"
+          status-brand="{{item.chipBrand}}"
+          payment-label="{{item.label}}"
+          payment="{{item.amount}}"
+          radius="16rpx"
+        />
       </view>
     </view>
   </block>

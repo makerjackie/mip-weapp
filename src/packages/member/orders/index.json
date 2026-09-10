@@ -3,6 +3,7 @@
   "enablePullDownRefresh": true,
   "usingComponents": {
     "mip-empty-state": "/components/mip-empty-state/index",
+    "mip-order-card": "/components/mip-order-card/index",
     "app-page-exit": "/components/page-exit/index",
     "t-skeleton": "tdesign-miniprogram/skeleton/skeleton",
     "mip-icon": "/components/mip-icon/index"

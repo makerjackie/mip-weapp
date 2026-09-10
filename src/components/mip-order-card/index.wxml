@@ -1,0 +1,21 @@
+<view class="mip-order-card" style="border-radius:{{radius}}" bind:tap="handleTap">
+  <image wx:if="{{image}}" class="mip-order-card__cover" src="{{image}}" mode="aspectFill" />
+  <view class="mip-order-card__main">
+    <text wx:if="{{title}}" class="mip-order-card__title">{{title}}</text>
+    <view wx:for="{{rows}}" wx:key="text" class="mip-order-card__row">
+      <view class="mip-order-card__icon">
+        <image class="mip-order-card__icon-image" src="{{item.icon}}" mode="aspectFit" />
+      </view>
+      <text class="mip-order-card__row-text">{{item.text}}</text>
+    </view>
+  </view>
+  <view wx:if="{{status || payment}}" class="mip-order-card__footer">
+    <text
+      class="mip-order-card__status {{statusBrand ? 'mip-order-card__status--brand' : ''}}"
+    >{{status}}</text>
+    <view wx:if="{{payment}}" class="mip-order-card__payment">
+      <text class="mip-order-card__payment-label">{{paymentLabel}}</text>
+      <text class="mip-order-card__payment-value">{{payment}}</text>
+    </view>
+  </view>
+</view>

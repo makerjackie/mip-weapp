@@ -59,7 +59,7 @@
         </view>
         <view class="absolute left-[24rpx] top-[1268rpx] h-[112rpx] w-[702rpx] overflow-hidden rounded-full bg-[#3f3c27]">
           <view class="absolute left-[24rpx] top-[16rpx] flex h-[80rpx] w-[258rpx] items-center justify-center rounded-full border-[2rpx] border-canvas bg-panel">
-            <image class="h-[48rpx] w-[112rpx]" src="/packages/member/assets/figma/coop/coop-avatars.png" />
+            <image class="h-[48rpx] w-[112rpx]" src="/packages/member/assets/figma/coop/coop-avatars.webp" />
             <view class="ml-[8rpx] flex items-center">
               <text class="text-[20rpx] font-semibold leading-[28rpx] text-brand">+</text>
               <text class="text-[24rpx] font-medium leading-[33.6rpx] text-brand">3感兴趣</text>
@@ -99,7 +99,7 @@
           </view>
           <text class="absolute left-[462rpx] top-[24rpx] text-right text-[24rpx] font-medium leading-[33.6rpx] text-ink">{{figma.rows[2].value}}</text>
         </view>
-        <image class="absolute left-[54rpx] top-[816rpx] h-[580rpx] w-[642rpx]" src="/packages/member/assets/figma/coop/radar-coop.png" />
+        <image class="absolute left-[54rpx] top-[816rpx] h-[580rpx] w-[642rpx]" src="/packages/member/assets/figma/coop/radar-coop.webp" />
         <view class="absolute left-[24rpx] top-[1444rpx] w-[702rpx]">
           <view class="flex h-[64rpx] items-center gap-[16rpx] rounded-t-[16rpx] bg-panel px-[24rpx]">
             <view class="flex h-[32rpx] w-[32rpx] items-center justify-center rounded-full bg-brand"><image class="h-[24rpx] w-[24rpx]" src="/packages/member/assets/figma/coop/icon-lifebuoy-dark.png" /></view>
@@ -157,14 +157,14 @@
             <text class="text-[24rpx] leading-[34rpx] text-ink">{{row.label}}：{{row.value}}</text>
           </view>
           <view class="absolute left-[454rpx] top-[280rpx] h-[56rpx] w-[232rpx] overflow-hidden rounded-full bg-brand">
-            <image class="absolute left-[4rpx] top-[4rpx] h-[48rpx] w-[112rpx]" src="/packages/member/assets/figma/coop/coop-avatars.png" />
+            <image class="absolute left-[4rpx] top-[4rpx] h-[48rpx] w-[112rpx]" src="/packages/member/assets/figma/coop/coop-avatars.webp" />
             <text class="absolute left-[124rpx] top-[10rpx] text-[20rpx] font-semibold leading-[28rpx] text-canvas">+</text>
             <text class="absolute left-[138rpx] top-[10rpx] text-[24rpx] font-semibold leading-[33.6rpx] text-canvas">{{figma.referralCount}}引荐</text>
           </view>
         </view>
         <view class="absolute left-[24rpx] top-[1268rpx] h-[112rpx] w-[702rpx] overflow-hidden rounded-full bg-[#3f3c27]">
           <view class="absolute left-[24rpx] top-[16rpx] flex h-[80rpx] w-[258rpx] items-center justify-center rounded-full border-[2rpx] border-canvas bg-panel">
-            <image class="h-[48rpx] w-[112rpx]" src="/packages/member/assets/figma/coop/coop-avatars.png" />
+            <image class="h-[48rpx] w-[112rpx]" src="/packages/member/assets/figma/coop/coop-avatars.webp" />
             <view class="ml-[8rpx] flex items-center">
               <text class="text-[20rpx] font-semibold leading-[28rpx] text-brand">+</text>
               <text class="text-[24rpx] font-medium leading-[33.6rpx] text-brand">3想合作</text>
@@ -215,7 +215,7 @@
         </block>
         <view class="absolute left-[24rpx] top-[1268rpx] h-[112rpx] w-[702rpx] overflow-hidden rounded-full bg-[#3f3c27]">
           <view class="absolute left-[24rpx] top-[16rpx] flex h-[80rpx] w-[258rpx] items-center justify-center rounded-full border-[2rpx] border-canvas bg-panel">
-            <image class="h-[48rpx] w-[112rpx]" src="/packages/member/assets/figma/coop/coop-avatars.png" />
+            <image class="h-[48rpx] w-[112rpx]" src="/packages/member/assets/figma/coop/coop-avatars.webp" />
             <view class="ml-[8rpx] flex items-center">
               <text class="text-[20rpx] font-semibold leading-[28rpx] text-brand">+</text>
               <text class="text-[24rpx] font-medium leading-[33.6rpx] text-brand">3感兴趣</text>

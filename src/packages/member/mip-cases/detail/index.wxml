@@ -10,7 +10,7 @@
        fixture figmaLayout 打开时按稿渲染。ref 页含 88px 导航,impl y = ref y - 88。 -->
   <block wx:elif="{{figmaLayout}}">
     <view class="-mx-3 -mt-3 relative min-h-[1352rpx]">
-      <image class="absolute left-[24rpx] top-[24rpx] h-[298rpx] w-[702rpx] rounded-[16rpx]" src="/packages/member/assets/figma/cases/case-hero.png" />
+      <image class="absolute left-[24rpx] top-[24rpx] h-[298rpx] w-[702rpx] rounded-[16rpx]" src="/packages/member/assets/figma/cases/case-hero.webp" />
       <view wx:for="{{figma.rows}}" wx:key="label" class="absolute left-[24rpx] flex h-[92rpx] w-[702rpx] items-center justify-between bg-panel px-[24rpx] {{index === 0 ? 'rounded-t-[16rpx]' : ''}}" style="top:{{item.topRpx}}rpx">
         <text class="text-[24rpx] leading-[33.6rpx] text-muted">{{item.label}}</text>
         <text class="text-[28rpx] font-medium leading-[33.6rpx] text-ink">{{item.value}}</text>
@@ -29,7 +29,7 @@
          生产保持 mip-empty-state 卡片式空态。ref 页含 88px 导航,impl y = ref y - 88。 -->
     <block wx:if="{{figmaEmpty}}">
       <view class="-mx-3 -mt-3 relative min-h-[1376rpx] overflow-hidden">
-        <image class="absolute left-[267rpx] top-[307rpx] h-[196rpx] w-[222rpx]" src="/packages/member/assets/figma/cases/empty-3d.png" />
+        <image class="absolute left-[267rpx] top-[307rpx] h-[196rpx] w-[222rpx]" src="/packages/member/assets/figma/cases/empty-3d.webp" />
         <text class="absolute left-0 top-[588rpx] w-full text-center text-[length:30rpx] leading-[42rpx] text-ink">页面不在MIP星球</text>
       </view>
     </block>

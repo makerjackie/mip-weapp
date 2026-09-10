@@ -10,25 +10,25 @@
     <view class="relative -mt-4 min-h-[1640rpx]">
       <view class="{{figma.dialog ? 'opacity-[0.33]' : ''}}">
       <view class="absolute left-[24rpx] top-[24rpx] h-[298rpx] w-[702rpx] overflow-hidden rounded-[16rpx]">
-        <image class="h-[298rpx] w-full" src="/assets/figma/orders/cover-detail.png" />
+        <image class="h-[298rpx] w-full" src="/packages/member/assets/figma/orders/cover-detail.png" />
       </view>
       <view class="absolute left-[24rpx] top-[346rpx] h-[232rpx] w-[702rpx] rounded-[16rpx] bg-panel">
         <view class="absolute left-[24rpx] top-[26rpx] flex h-[32rpx] items-center justify-center rounded-full bg-[#80ccff] w-[62rpx] text-[length:20rpx] font-medium leading-[32rpx] text-canvas">沙龙</view>
         <view class="absolute left-[98rpx] top-[26rpx] flex h-[32rpx] items-center justify-center rounded-full bg-brand w-[80rpx] text-[length:20rpx] font-medium leading-[32rpx] text-canvas">仅玩家</view>
         <view class="absolute left-[24rpx] top-[72rpx] text-[length:32rpx] font-medium leading-[44.8rpx] text-ink">MIP反人性早会第328场</view>
-        <image class="absolute left-[24rpx] top-[136rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/events/icon-calendar.png" />
+        <image class="absolute left-[24rpx] top-[136rpx] h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/events/icon-calendar.png" />
         <view class="absolute left-[62rpx] top-[133rpx] text-[length:24rpx] leading-[33.6rpx] text-ink">12月12日 10:00-12:00</view>
-        <image class="absolute left-[24rpx] top-[180rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/events/icon-pin.png" />
+        <image class="absolute left-[24rpx] top-[180rpx] h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/events/icon-pin.png" />
         <view class="absolute left-[62rpx] top-[176rpx] text-[length:24rpx] leading-[33.6rpx] text-ink">深圳 新洲二街海松大厦A座1706室</view>
       </view>
       <view class="absolute left-[24rpx] top-[602rpx] h-[80rpx] w-[702rpx] rounded-[16rpx] bg-panel">
-        <image class="absolute left-[24rpx] top-[24rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/orders/icon-order.png" />
+        <image class="absolute left-[24rpx] top-[24rpx] h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/orders/icon-order.png" />
         <view class="absolute left-[62rpx] top-[26rpx] text-[length:24rpx] leading-[33.6rpx] text-ink">订单ID</view>
         <view class="absolute right-[64rpx] top-[26rpx] text-[length:24rpx] font-medium leading-[33.6rpx] text-ink">2020020013201031031</view>
-        <image class="absolute right-[18rpx] top-[24rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/orders/icon-copy.png" />
+        <image class="absolute right-[18rpx] top-[24rpx] h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/orders/icon-copy.png" />
       </view>
       <view class="absolute left-[24rpx] top-[706rpx] h-[320rpx] w-[702rpx] rounded-[16rpx] bg-panel">
-        <image class="absolute left-[24rpx] top-[24rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/orders/icon-price.png" />
+        <image class="absolute left-[24rpx] top-[24rpx] h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/orders/icon-price.png" />
         <view class="absolute left-[62rpx] top-[26rpx] text-[length:24rpx] leading-[33.6rpx] text-ink">价格明细</view>
         <view class="absolute left-[24rpx] top-[106rpx] text-[length:24rpx] leading-[33.6rpx] text-ink">活动门票</view>
         <view class="absolute right-[26rpx] top-[106rpx] text-[length:24rpx] font-medium leading-[33.6rpx] text-ink">¥598</view>
@@ -38,7 +38,7 @@
         <view class="absolute right-[26rpx] top-[256rpx] text-[length:40rpx] font-bold leading-[56rpx] text-brand">¥589</view>
       </view>
       <view class="absolute left-[24rpx] top-[1050rpx] h-[490rpx] w-[702rpx] rounded-[16rpx] bg-panel">
-        <image class="absolute left-[24rpx] top-[28rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/orders/icon-notice.png" />
+        <image class="absolute left-[24rpx] top-[28rpx] h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/orders/icon-notice.png" />
         <view class="absolute left-[62rpx] top-[25rpx] text-[length:24rpx] leading-[33.6rpx] text-ink">购买须知</view>
         <view class="absolute left-[24rpx] top-[101rpx] text-[length:24rpx] font-medium leading-[34rpx] tracking-[-1rpx] text-ink">一、订单确认与支付</view>
         <view class="absolute left-[32rpx] top-[168rpx] text-[length:24rpx] leading-[34rpx] tracking-[-1rpx] text-muted">1. 订单生效：提交订单并成功支付后，即视为交易合同成</view>
@@ -50,17 +50,21 @@
       </view>
       <view class="absolute left-[24rpx] top-[1558rpx] h-[76rpx] w-[702rpx] items-center rounded-[16rpx] bg-panel-raised text-center text-[length:32rpx] leading-[76rpx] text-muted">退款</view>
       </view>
-      <view wx:if="{{figma.dialog}}" class="absolute left-[54rpx] top-[404rpx] h-[464rpx] w-[640rpx] rounded-[16rpx] bg-[#333333]">
-        <view class="absolute left-0 top-[64rpx] w-full text-center text-[length:32rpx] font-semibold leading-[44.8rpx] text-[#eaeaea]">{{figma.dialog.title}}</view>
-        <view class="absolute left-0 top-[142rpx] w-full text-center text-[length:32rpx] leading-[48rpx] text-[#999999]">
+      <mip-dialog
+        wx:if="{{figma.dialog}}"
+        class="absolute left-[54rpx] top-[404rpx]"
+        style="width:640rpx"
+        open="{{true}}"
+        frame-only="{{true}}"
+        title="{{figma.dialog.title}}"
+        button="{{figma.dialog.button}}"
+      >
+        <view class="w-full text-center">
           <view>{{figma.dialog.line1}}</view>
           <view>{{figma.dialog.line2}}</view>
           <view>{{figma.dialog.line3}}</view>
         </view>
-        <view class="absolute left-0 top-[352rpx] h-[2rpx] w-full bg-[#484848]"></view>
-        <view class="absolute left-0 top-[386rpx] w-[320rpx] text-center text-[length:32rpx] leading-[44.8rpx] text-[#eaeaea]">取消</view>
-        <view class="absolute left-[320rpx] top-[386rpx] w-[320rpx] text-center text-[length:32rpx] leading-[44.8rpx] text-[#7d90a9]">确定</view>
-      </view>
+      </mip-dialog>
     </view>
   </block>
   <block wx:else>

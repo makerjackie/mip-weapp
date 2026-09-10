@@ -31,6 +31,13 @@ interface CooperationCardView extends CooperationCardSummary {
   roleName: string
 }
 
+interface ProfileStatView {
+  value: number | string
+  label: string
+  category?: string
+  badge?: string | number
+}
+
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
@@ -66,6 +73,7 @@ Page({
     interestCount: null as number | null,
     visitorUnreadCount: 0,
     visitorCount: null as number | null,
+    stats: [] as ProfileStatView[],
     notificationUnreadCount: 0,
     portfolioTab: 'cooperation' as PortfolioTab,
     // ui-fidelity fixture 开关：默认走生产布局（被 vitest pin）。
@@ -198,6 +206,7 @@ Page({
         interestCount: null,
         visitorCount: null,
         visitorUnreadCount: 0,
+        stats: [],
       })
       return
     }
@@ -222,6 +231,24 @@ Page({
       updates.message = this.data.message || '部分影响力数据暂时无法加载，请稍后重试。'
     }
     if (Object.keys(updates).length) {
+      const stats = [{
+        value: this.data.guestCount ?? '—',
+        label: '嘉宾',
+        category: 'GUEST',
+      }, {
+        value: this.data.interactionCount ?? '—',
+        label: '互动过',
+        category: 'INTERACTION',
+      }, {
+        value: this.data.interestCount ?? '—',
+        label: '心动值',
+        category: 'ACTIVE_INTEREST',
+      }, {
+        value: this.data.visitorCount ?? '—',
+        label: '访客',
+        badge: this.data.visitorUnreadCount > 99 ? '99+' : (this.data.visitorUnreadCount || ''),
+      }]
+      this.setData({ stats })
       this.setData(updates)
     }
   },
@@ -509,6 +536,19 @@ Page({
       '/packages/member/mip-received/index?scope=influence&category=VISITOR',
       'INTERACT',
     )
+  },
+  openStat(event: WechatMiniprogram.CustomEvent<{ label: string }>) {
+    const label = String(event.detail.label || '')
+    if (label === '访客') {
+      this.openReceivedInteractions()
+      return
+    }
+    const category = ['GUEST', 'INTERACTION', 'ACTIVE_INTEREST'].find(item => (
+      (this.data.stats || []).find(stat => stat.label === item)?.label === label
+    ))
+    if (category) {
+      this.openInfluenceList({ currentTarget: { dataset: { category } } } as unknown as WechatMiniprogram.TouchEvent)
+    }
   },
   openGrowth() { void this.openProtected('/packages/member/mip-growth/index', 'VIEW_RESTRICTED_PROFILE') },
   openBadges() { void this.openProtected('/packages/member/mip-badges/index', 'VIEW_RESTRICTED_PROFILE') },

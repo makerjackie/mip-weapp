@@ -38,11 +38,11 @@
         <text class="absolute left-0 top-[12rpx] w-full text-center text-[28rpx] font-semibold leading-[40rpx] text-canvas">吸引更多适合你的资源和人脉~</text>
       </view>
 
-      <image class="absolute left-[24rpx] top-[96rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/profile/icon-section-people.png" />
+      <image class="absolute left-[24rpx] top-[96rpx] h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/profile/icon-section-people.png" />
       <text class="absolute left-[64rpx] top-[88rpx] text-[32rpx] font-semibold leading-[44.8rpx] text-ink">基础信息</text>
 
       <view class="absolute left-[24rpx] top-[156rpx] h-[160rpx] w-[702rpx] bg-panel">
-        <image class="absolute left-[24rpx] top-[24rpx] h-[112rpx] w-[112rpx] rounded-full" mode="aspectFill" src="/assets/figma/profile/avatar-mine.png" />
+        <image class="absolute left-[24rpx] top-[24rpx] h-[112rpx] w-[112rpx] rounded-full" mode="aspectFill" src="/packages/member/assets/figma/profile/avatar-mine.png" />
         <text class="absolute right-[24rpx] top-[60rpx] text-[28rpx] leading-[40rpx] text-ink">更换头像</text>
       </view>
       <mip-form-field-row
@@ -64,7 +64,7 @@
         </view>
       </view>
 
-      <image class="absolute left-[24rpx] top-[536rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/profile/icon-section-industry.png" />
+      <image class="absolute left-[24rpx] top-[536rpx] h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/profile/icon-section-industry.png" />
       <text class="absolute left-[64rpx] top-[528rpx] text-[32rpx] font-semibold leading-[44.8rpx] text-ink">代表行业</text>
 
       <view class="absolute left-[24rpx] top-[596rpx] h-[92rpx] w-[702rpx] rounded-[16rpx] bg-panel">
@@ -86,14 +86,14 @@
         <text class="{{item.active ? 'text-[28rpx] leading-[40rpx] text-canvas' : 'text-[28rpx] leading-[40rpx] text-muted'}}">{{item.label}}</text>
       </view>
 
-      <image class="absolute left-[24rpx] top-[944rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/profile/icon-section-identity.png" />
+      <image class="absolute left-[24rpx] top-[944rpx] h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/profile/icon-section-identity.png" />
       <text class="absolute left-[64rpx] top-[936rpx] text-[32rpx] font-semibold leading-[44.8rpx] text-ink">当前身份状态</text>
 
       <view wx:for="{{figma.statuses}}" wx:key="index" class="absolute h-[56rpx] w-[164rpx] flex items-center justify-center rounded-[16rpx] {{item.active ? 'bg-brand' : 'bg-panel'}}" style="left:{{item.leftRpx}}rpx;top:{{item.topRpx}}rpx">
         <text class="{{item.active ? 'text-[28rpx] leading-[40rpx] text-canvas' : 'text-[28rpx] leading-[40rpx] text-muted'}}">{{item.label}}</text>
       </view>
 
-      <image class="absolute left-[24rpx] top-[1164rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/profile/icon-section-intro.png" />
+      <image class="absolute left-[24rpx] top-[1164rpx] h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/profile/icon-section-intro.png" />
       <text class="absolute left-[64rpx] top-[1156rpx] text-[32rpx] font-semibold leading-[44.8rpx] text-ink">一句话介绍你的工作和背景</text>
 
       <view class="absolute left-[24rpx] top-[1224rpx] h-[200rpx] w-[702rpx] rounded-[16rpx] bg-panel">

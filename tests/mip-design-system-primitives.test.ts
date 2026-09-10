@@ -18,6 +18,11 @@ const primitives = [
   'mip-search-bar',
   'mip-primary-button',
   'mip-pill-button',
+  'mip-nav-bar',
+  'mip-order-card',
+  'mip-attend-pill',
+  'mip-stat-header',
+  'mip-dialog',
 ]
 
 describe('MIP Design System native primitives', () => {
@@ -58,6 +63,27 @@ describe('MIP Design System native primitives', () => {
     expect(read('src/components/mip-primary-button/index.wxss')).toContain('opacity: 0.4')
   })
 
+  it('implements business primitives with reference geometry', () => {
+    expect(read('src/components/mip-nav-bar/index.wxml')).toContain('mip-nav-bar__title')
+    expect(read('src/components/mip-order-card/index.wxml')).toContain('mip-order-card__payment-value')
+    expect(read('src/components/mip-attend-pill/index.wxss')).toContain('width: 232rpx;')
+    expect(read('src/components/mip-stat-header/index.wxml')).toContain('bind:tap="handleSelect"')
+    expect(read('src/components/mip-dialog/index.wxml')).toContain('aria-role="dialog"')
+  })
+
+  it('delegates repeated fixture structures to shared business components', () => {
+    const orders = read('src/packages/member/orders/index.wxml')
+    expect(orders).toContain('<mip-order-card')
+    expect(orders).not.toContain('mip-order-card__payment-value')
+
+    const mine = read('src/packages/member/mip-events/mine/index.wxml')
+    expect(mine).toContain('<mip-dialog')
+    expect(mine).toContain('frame-only="{{true}}"')
+
+    const profile = read('src/pages/profile/index.wxml')
+    expect(profile).toContain('<mip-stat-header')
+  })
+
   it('renders components instead of repeated page-owned primitive markup', () => {
     const privacy = read('src/packages/member/privacy/index.wxml')
     expect(privacy).toContain('<mip-section-header title="账号与安全" />')
@@ -71,7 +97,7 @@ describe('MIP Design System native primitives', () => {
   it('passes the Layer 2 audit and meets the migration coverage gate', () => {
     const report = runContractAudit({ jsonPath: '', quiet: true })
     expect(report.pass).toBe(true)
-    expect(report.coverage.implemented).toBeGreaterThanOrEqual(13)
-    expect(report.coverage.coveragePercent).toBeGreaterThanOrEqual(70)
+    expect(report.coverage.implemented).toBe(18)
+    expect(report.coverage.coveragePercent).toBe(100)
   })
 })

@@ -2027,8 +2027,8 @@
         "theme": {
           "key": "PINK",
           "label": "暖色",
-          "asset": "/packages/member/assets/figma/profile/card-bg-a.png",
-          "thumbAsset": "/packages/member/assets/figma/profile/card-bg-a.png",
+          "asset": "/packages/member/assets/figma/profile/card-bg-a.webp",
+          "thumbAsset": "/packages/member/assets/figma/profile/card-bg-a.webp",
           "background": "#FF5F6D",
           "foreground": "#080808",
           "muted": "#4A2326",
@@ -2038,8 +2038,8 @@
           {
             "key": "PINK",
             "label": "暖色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-a.png",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-a.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-a.webp",
+            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-a.webp",
             "background": "#FF5F6D",
             "foreground": "#080808",
             "muted": "#4A2326",
@@ -2048,8 +2048,8 @@
           {
             "key": "BLUE",
             "label": "蓝色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-b.png",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-b.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-b.webp",
+            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-b.webp",
             "background": "#403BDA",
             "foreground": "#FFFFFF",
             "muted": "#E4E3FF",
@@ -2058,8 +2058,8 @@
           {
             "key": "WHITE",
             "label": "浅色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-c.png",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-c.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-c.webp",
+            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-c.webp",
             "background": "#F5F4F0",
             "foreground": "#080808",
             "muted": "#575757",
@@ -2068,7 +2068,7 @@
           {
             "key": "YELLOW",
             "label": "品牌色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.webp",
             "thumbAsset": "/packages/member/assets/figma/profile/card-thumb-yellow.png",
             "background": "#FDE104",
             "foreground": "#080808",
@@ -2120,8 +2120,8 @@
         "theme": {
           "key": "BLUE",
           "label": "蓝色",
-          "asset": "/packages/member/assets/figma/profile/card-bg-b.png",
-          "thumbAsset": "/packages/member/assets/figma/profile/card-bg-b.png",
+          "asset": "/packages/member/assets/figma/profile/card-bg-b.webp",
+          "thumbAsset": "/packages/member/assets/figma/profile/card-bg-b.webp",
           "background": "#403BDA",
           "foreground": "#FFFFFF",
           "muted": "#E4E3FF",
@@ -2131,8 +2131,8 @@
           {
             "key": "PINK",
             "label": "暖色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-a.png",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-a.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-a.webp",
+            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-a.webp",
             "background": "#FF5F6D",
             "foreground": "#080808",
             "muted": "#4A2326",
@@ -2141,8 +2141,8 @@
           {
             "key": "BLUE",
             "label": "蓝色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-b.png",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-b.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-b.webp",
+            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-b.webp",
             "background": "#403BDA",
             "foreground": "#FFFFFF",
             "muted": "#E4E3FF",
@@ -2151,8 +2151,8 @@
           {
             "key": "WHITE",
             "label": "浅色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-c.png",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-c.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-c.webp",
+            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-c.webp",
             "background": "#F5F4F0",
             "foreground": "#080808",
             "muted": "#575757",
@@ -2161,7 +2161,7 @@
           {
             "key": "YELLOW",
             "label": "品牌色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.webp",
             "thumbAsset": "/packages/member/assets/figma/profile/card-thumb-yellow.png",
             "background": "#FDE104",
             "foreground": "#080808",
@@ -2213,8 +2213,8 @@
         "theme": {
           "key": "WHITE",
           "label": "浅色",
-          "asset": "/packages/member/assets/figma/profile/card-bg-c.png",
-          "thumbAsset": "/packages/member/assets/figma/profile/card-bg-c.png",
+          "asset": "/packages/member/assets/figma/profile/card-bg-c.webp",
+          "thumbAsset": "/packages/member/assets/figma/profile/card-bg-c.webp",
           "background": "#F5F4F0",
           "foreground": "#080808",
           "muted": "#575757",
@@ -2224,8 +2224,8 @@
           {
             "key": "PINK",
             "label": "暖色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-a.png",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-a.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-a.webp",
+            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-a.webp",
             "background": "#FF5F6D",
             "foreground": "#080808",
             "muted": "#4A2326",
@@ -2234,8 +2234,8 @@
           {
             "key": "BLUE",
             "label": "蓝色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-b.png",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-b.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-b.webp",
+            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-b.webp",
             "background": "#403BDA",
             "foreground": "#FFFFFF",
             "muted": "#E4E3FF",
@@ -2244,8 +2244,8 @@
           {
             "key": "WHITE",
             "label": "浅色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-c.png",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-c.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-c.webp",
+            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-c.webp",
             "background": "#F5F4F0",
             "foreground": "#080808",
             "muted": "#575757",
@@ -2254,7 +2254,7 @@
           {
             "key": "YELLOW",
             "label": "品牌色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.webp",
             "thumbAsset": "/packages/member/assets/figma/profile/card-thumb-yellow.png",
             "background": "#FDE104",
             "foreground": "#080808",
@@ -2306,7 +2306,7 @@
         "theme": {
           "key": "YELLOW",
           "label": "品牌色",
-          "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.png",
+          "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.webp",
           "thumbAsset": "/packages/member/assets/figma/profile/card-thumb-yellow.png",
           "background": "#FDE104",
           "foreground": "#080808",
@@ -2317,8 +2317,8 @@
           {
             "key": "PINK",
             "label": "暖色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-a.png",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-a.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-a.webp",
+            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-a.webp",
             "background": "#FF5F6D",
             "foreground": "#080808",
             "muted": "#4A2326",
@@ -2327,8 +2327,8 @@
           {
             "key": "BLUE",
             "label": "蓝色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-b.png",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-b.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-b.webp",
+            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-b.webp",
             "background": "#403BDA",
             "foreground": "#FFFFFF",
             "muted": "#E4E3FF",
@@ -2337,8 +2337,8 @@
           {
             "key": "WHITE",
             "label": "浅色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-c.png",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-c.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-c.webp",
+            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-c.webp",
             "background": "#F5F4F0",
             "foreground": "#080808",
             "muted": "#575757",
@@ -2347,7 +2347,7 @@
           {
             "key": "YELLOW",
             "label": "品牌色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.webp",
             "thumbAsset": "/packages/member/assets/figma/profile/card-thumb-yellow.png",
             "background": "#FDE104",
             "foreground": "#080808",
@@ -2399,7 +2399,7 @@
         "theme": {
           "key": "YELLOW",
           "label": "品牌色",
-          "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.png",
+          "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.webp",
           "thumbAsset": "/packages/member/assets/figma/profile/card-thumb-yellow.png",
           "background": "#FDE104",
           "foreground": "#080808",
@@ -2410,8 +2410,8 @@
           {
             "key": "PINK",
             "label": "暖色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-a.png",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-a.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-a.webp",
+            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-a.webp",
             "background": "#FF5F6D",
             "foreground": "#080808",
             "muted": "#4A2326",
@@ -2420,8 +2420,8 @@
           {
             "key": "BLUE",
             "label": "蓝色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-b.png",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-b.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-b.webp",
+            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-b.webp",
             "background": "#403BDA",
             "foreground": "#FFFFFF",
             "muted": "#E4E3FF",
@@ -2430,8 +2430,8 @@
           {
             "key": "WHITE",
             "label": "浅色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-c.png",
-            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-c.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-c.webp",
+            "thumbAsset": "/packages/member/assets/figma/profile/card-bg-c.webp",
             "background": "#F5F4F0",
             "foreground": "#080808",
             "muted": "#575757",
@@ -2440,7 +2440,7 @@
           {
             "key": "YELLOW",
             "label": "品牌色",
-            "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.png",
+            "asset": "/packages/member/assets/figma/profile/card-bg-d-yellow.webp",
             "thumbAsset": "/packages/member/assets/figma/profile/card-thumb-yellow.png",
             "background": "#FDE104",
             "foreground": "#080808",
@@ -5320,7 +5320,7 @@
           "underlineLeftRpx": 0,
           "cards": [
             {
-              "cover": "/assets/figma/events/cover-standup.png",
+              "cover": "/packages/member/assets/figma/events/cover-standup.webp",
               "topRpx": 104,
               "name": "MIP反人性早会第328场",
               "time": "12月12日 10:00-12:00",
@@ -5331,7 +5331,7 @@
               "amount": "589"
             },
             {
-              "cover": "/assets/figma/events/cover-workout.png",
+              "cover": "/packages/member/assets/figma/events/cover-workout.webp",
               "topRpx": 686,
               "name": "MIP反人性早会第328场",
               "time": "12月12日 10:00-12:00",
@@ -5361,7 +5361,7 @@
           "underlineLeftRpx": 187.5,
           "cards": [
             {
-              "cover": "/assets/figma/events/cover-standup.png",
+              "cover": "/packages/member/assets/figma/events/cover-standup.webp",
               "topRpx": 104,
               "name": "MIP反人性早会第328场",
               "time": "12月12日 10:00-12:00",
@@ -5391,7 +5391,7 @@
           "underlineLeftRpx": 375,
           "cards": [
             {
-              "cover": "/assets/figma/events/cover-standup.png",
+              "cover": "/packages/member/assets/figma/events/cover-standup.webp",
               "topRpx": 104,
               "name": "MIP反人性早会第328场",
               "time": "12月12日 10:00-12:00",
@@ -5421,7 +5421,7 @@
           "underlineLeftRpx": 562.5,
           "cards": [
             {
-              "cover": "/assets/figma/events/cover-workout.png",
+              "cover": "/packages/member/assets/figma/events/cover-workout.webp",
               "topRpx": 104,
               "name": "MIP反人性早会第328场",
               "time": "12月12日 10:00-12:00",

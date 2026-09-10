@@ -7,7 +7,7 @@
          联系行 21px 节距 @ 154/175/196/217（icon 16 格 x13 + 4px 缝 + 文本 x33），
          头像 120 圆 @ (219,12) 2px 品牌环，名片码 60 圆 @ (279,174) 1px 品牌环。 -->
     <view class="relative mx-[24rpx] mt-[24rpx] h-[492rpx] overflow-hidden rounded-[32rpx] bg-brand-alt">
-      <image class="absolute left-0 top-0 h-full w-full" src="/packages/member/assets/figma/profile/card-bg-d-yellow.png" mode="aspectFill" />
+      <image class="absolute left-0 top-0 h-full w-full" src="/packages/member/assets/figma/profile/card-bg-d-yellow.webp" mode="aspectFill" />
       <view class="absolute left-[24rpx] top-[24rpx] whitespace-nowrap text-[40rpx] font-medium leading-[56rpx] text-canvas">{{previewNickname}}</view>
       <view class="absolute left-[24rpx] top-[88rpx] whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-canvas">{{previewCompany}}</view>
       <view class="absolute left-[24rpx] top-[130rpx] whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-canvas">{{previewRole}}</view>

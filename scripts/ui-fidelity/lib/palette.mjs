@@ -42,6 +42,24 @@ export const DOCUMENTED_EXTENSIONS = [
     note: 'DESIGN.md §9.1 iOS systemGray 语义',
   },
   {
+    token: 'legacy-dialog-text',
+    value: '#999999',
+    group: 'text',
+    note: 'contracts Dialog fixture 正文参考色',
+  },
+  {
+    token: 'legacy-dialog-rule',
+    value: '#484848',
+    group: 'control',
+    note: 'contracts Dialog fixture 发丝线参考色',
+  },
+  {
+    token: 'legacy-dialog-action',
+    value: '#576b95',
+    group: 'text',
+    note: 'contracts Dialog action 参考色',
+  },
+  {
     token: 'illus-navy',
     value: '#09121f',
     group: 'illustration',

@@ -30,8 +30,8 @@ const themes: Record<CardStyleKey, CardTheme> = {
   PINK: {
     key: 'PINK',
     label: '暖色',
-    asset: '/packages/member/assets/figma/profile/card-bg-a.png',
-    thumbAsset: '/packages/member/assets/figma/profile/card-bg-a.png',
+    asset: '/packages/member/assets/figma/profile/card-bg-a.webp',
+    thumbAsset: '/packages/member/assets/figma/profile/card-bg-a.webp',
     background: '#FF5F6D',
     foreground: '#080808',
     muted: '#4A2326',
@@ -40,8 +40,8 @@ const themes: Record<CardStyleKey, CardTheme> = {
   BLUE: {
     key: 'BLUE',
     label: '蓝色',
-    asset: '/packages/member/assets/figma/profile/card-bg-b.png',
-    thumbAsset: '/packages/member/assets/figma/profile/card-bg-b.png',
+    asset: '/packages/member/assets/figma/profile/card-bg-b.webp',
+    thumbAsset: '/packages/member/assets/figma/profile/card-bg-b.webp',
     background: '#403BDA',
     foreground: '#FFFFFF',
     muted: '#E4E3FF',
@@ -50,19 +50,19 @@ const themes: Record<CardStyleKey, CardTheme> = {
   WHITE: {
     key: 'WHITE',
     label: '浅色',
-    asset: '/packages/member/assets/figma/profile/card-bg-c.png',
-    thumbAsset: '/packages/member/assets/figma/profile/card-bg-c.png',
+    asset: '/packages/member/assets/figma/profile/card-bg-c.webp',
+    thumbAsset: '/packages/member/assets/figma/profile/card-bg-c.webp',
     background: '#F5F4F0',
     foreground: '#080808',
     muted: '#575757',
     codeBackground: '#FFFFFF',
   },
   // figma 1735_3369: 品牌色卡为 #fde104 实底 + 吉祥物 hard-light，WXSS 无法可靠表达，
-  // 预烘成 card-bg-d-yellow.png（702×492），背景色仅作加载垫底。
+  // 预烘成 card-bg-d-yellow.webp（702×492），背景色仅作加载垫底。
   YELLOW: {
     key: 'YELLOW',
     label: '品牌色',
-    asset: '/packages/member/assets/figma/profile/card-bg-d-yellow.png',
+    asset: '/packages/member/assets/figma/profile/card-bg-d-yellow.webp',
     thumbAsset: '/packages/member/assets/figma/profile/card-thumb-yellow.png',
     background: '#FDE104',
     foreground: '#080808',

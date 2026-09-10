@@ -26,23 +26,28 @@
         <view wx:for="{{figma.cards}}" wx:key="name" class="absolute left-[24rpx] h-[476rpx] w-[702rpx] overflow-hidden rounded-[16rpx] bg-panel" style="top:{{item.topRpx}}rpx">
           <image class="absolute left-0 top-0 h-[298rpx] w-full" src="{{item.cover}}" />
           <view class="absolute left-[24rpx] top-[314rpx] text-[length:32rpx] font-medium leading-[44.8rpx] text-ink">{{item.name}}</view>
-          <image class="absolute left-[24rpx] top-[374rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/events/icon-calendar.png" />
+          <image class="absolute left-[24rpx] top-[374rpx] h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/events/icon-calendar.png" />
           <view class="absolute left-[67rpx] top-[375rpx] text-[length:24rpx] leading-[33.6rpx] text-ink">{{item.time}}</view>
-          <image class="absolute left-[24rpx] top-[420rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/events/icon-pin.png" />
+          <image class="absolute left-[24rpx] top-[420rpx] h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/events/icon-pin.png" />
           <view class="absolute left-[67rpx] top-[419rpx] text-[length:24rpx] leading-[33.6rpx] text-ink">{{item.place}}</view>
           <view wx:if="{{item.action}}" class="absolute right-[20rpx] top-[404rpx] flex h-[54rpx] w-[144rpx] items-center justify-center rounded-full bg-brand text-[length:24rpx] font-medium text-canvas">{{item.action}}</view>
         </view>
       </view>
-      <view wx:if="{{figma.dialog}}" class="absolute left-[54rpx] top-[404rpx] h-[464rpx] w-[640rpx] rounded-[16rpx] bg-[#333333]">
-        <view class="absolute left-0 top-[64rpx] w-full text-center text-[length:32rpx] font-semibold leading-[44.8rpx] text-ink">{{figma.dialog.title}}</view>
-        <view class="absolute left-0 top-[142rpx] w-full text-center text-[length:32rpx] leading-[48rpx] text-[#999999]">
+      <mip-dialog
+        wx:if="{{figma.dialog}}"
+        class="absolute left-[54rpx] top-[404rpx]"
+        style="width:640rpx"
+        open="{{true}}"
+        frame-only="{{true}}"
+        title="{{figma.dialog.title}}"
+        button="{{figma.dialog.button}}"
+      >
+        <view class="w-full text-center">
           <view>{{figma.dialog.line1}}</view>
           <view>{{figma.dialog.line2}}</view>
           <view>{{figma.dialog.line3}}</view>
         </view>
-        <view class="absolute left-0 top-[352rpx] h-[2rpx] w-full bg-[#484848]"></view>
-        <view class="absolute left-0 top-[396rpx] w-full text-center text-[length:32rpx] leading-[44.8rpx] text-[#576b95]">{{figma.dialog.button}}</view>
-      </view>
+      </mip-dialog>
     </view>
   </block>
   <view wx:elif="{{registrations.length === 0}}" class="mx-3 mt-5"><mip-empty-state title="{{activeCategory === 'UPCOMING' ? '暂无待参加活动' : activeCategory === 'ATTENDED' ? '暂无已参加活动' : '暂无历史活动'}}" description="{{activeCategory === 'UPCOMING' ? '报名后的待参加活动会显示在这里。' : activeCategory === 'ATTENDED' ? '完成签到的活动会显示在这里。' : '已结束、已取消和未通过的报名会显示在这里。'}}" action-text="浏览活动" bind:action="browseEvents" /></view>

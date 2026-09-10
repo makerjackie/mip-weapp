@@ -71,7 +71,12 @@ function buildDocument({ route, fixture }) {
     // Repo-absolute asset paths (src/assets and package assets) resolve to files
     // on disk; the headless shell reads them over file:// when the document
     // itself is a local file.
-    resolveAsset: src => (src?.startsWith('/') ? path.join(SRC, src) : src),
+    resolveAsset: src =>
+      src?.startsWith('/packages/member/assets/')
+        ? path.join(root, src.slice(1))
+        : src?.startsWith('/')
+          ? path.join(SRC, src)
+          : src,
     // Token colors resolve through the component's colors.ts mirror, exactly
     // like the mini-program component does (data-URI SVGs cannot see CSS vars).
     renderMipIcon: props => mipIconHtml(iconRegistry, props, iconColors),

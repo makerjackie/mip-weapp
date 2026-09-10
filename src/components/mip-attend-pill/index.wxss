@@ -1,0 +1,68 @@
+.mip-attend-pill {
+  position: relative;
+  box-sizing: border-box;
+  display: block;
+  width: 232rpx;
+  height: 56rpx;
+  border-radius: 100rpx;
+}
+
+.mip-attend-pill--dark {
+  background: var(--mip-bg-surface-3);
+}
+
+.mip-attend-pill--yellow {
+  background: var(--mip-brand);
+}
+
+.mip-attend-pill--dark .mip-attend-pill__plus,
+.mip-attend-pill--dark .mip-attend-pill__count {
+  color: var(--mip-text-primary);
+}
+
+.mip-attend-pill--yellow .mip-attend-pill__plus,
+.mip-attend-pill--yellow .mip-attend-pill__count {
+  color: var(--mip-text-on-brand);
+}
+
+.mip-attend-pill--disabled {
+  opacity: 0.4;
+}
+
+.mip-attend-pill__avatars {
+  position: absolute;
+  top: 4rpx;
+  left: 4rpx;
+  width: 112rpx;
+  height: 48rpx;
+}
+
+.mip-attend-pill__avatar {
+  position: absolute;
+  top: 0;
+  width: 48rpx;
+  height: 48rpx;
+  object-fit: cover;
+  border: 2rpx solid rgb(255 255 255 / 100%);
+  border-radius: 50%;
+}
+
+.mip-attend-pill__plus {
+  position: absolute;
+  top: 10rpx;
+  left: 124rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+  line-height: 28rpx;
+}
+
+.mip-attend-pill__count {
+  position: absolute;
+  top: 10rpx;
+  right: 16rpx;
+  overflow: hidden;
+  font-size: 24rpx;
+  font-weight: 600;
+  line-height: 34rpx;
+  white-space: nowrap;
+}

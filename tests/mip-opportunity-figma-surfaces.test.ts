@@ -104,13 +104,12 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(opportunityCardStyles).toContain('height: 352rpx;')
     expect(opportunityCardStyles).toContain('width: 240rpx;')
     expect(opportunityCardStyles).toContain('height: 320rpx;')
-    // AttendPill (skill contract business.jsx): fixed 116x28 -> 232x56rpx yellow pill,
-    // avatar trio left, "+" and count as separate text nodes with contract sizes.
-    expect(opportunityCardStyles).toContain('width: 232rpx;')
-    expect(opportunityCardStyles).toContain('height: 56rpx;')
-    expect(opportunityCard).toContain('wx:for="{{avatars}}"')
-    expect(opportunityCard).toContain('<text class="mip-opportunity-card__referral-plus">+</text>')
-    expect(opportunityCard).toContain('<text class="mip-opportunity-card__referral-count">{{referralCount}}引荐</text>')
+    // AttendPill (skill contract business.jsx): the opportunity card delegates the
+    // fixed 116x28 yellow pill to the shared design-system component.
+    expect(opportunityCard).toContain('<mip-attend-pill')
+    expect(opportunityCard).toContain('label="引荐"')
+    expect(source('src/components/mip-attend-pill/index.wxss')).toContain('width: 232rpx;')
+    expect(source('src/components/mip-attend-pill/index.wxss')).toContain('height: 56rpx;')
   })
 
   it('shows stable discovery loading, empty, error, pagination and real-content states', () => {

@@ -12,13 +12,13 @@
         <view class="absolute left-0 top-[51rpx] w-full text-center text-[length:28rpx] leading-[40rpx] text-[#999999]">录下谈话内容，AI助手为你智能填写内容</view>
         <view class="absolute left-[-30rpx] top-[376rpx] w-full text-center text-[length:96rpx] font-bold leading-[96rpx] tracking-[8rpx] text-brand">{{figma.timer}}</view>
         <block wx:if="{{figma.mode === 'idle'}}">
-          <image class="absolute left-[312rpx] top-[1126rpx] h-[128rpx] w-[128rpx]" src="/assets/figma/ai/mic-idle.png" />
+          <image class="absolute left-[312rpx] top-[1126rpx] h-[128rpx] w-[128rpx]" src="/packages/member/assets/figma/ai/mic-idle.png" />
           <view class="absolute left-0 top-[1293rpx] w-full text-center text-[length:24rpx] leading-[34rpx] text-[#999999]">点击开始录制</view>
         </block>
         <block wx:else>
-          <image class="absolute left-[288rpx] top-[1102rpx] h-[176rpx] w-[176rpx]" src="/assets/figma/ai/mic-rec.png" />
-          <image class="absolute left-[128rpx] top-[1158rpx] h-[80rpx] w-[80rpx]" src="/assets/figma/ai/rec-cancel.png" />
-          <image class="absolute left-[544rpx] top-[1158rpx] h-[80rpx] w-[80rpx]" src="/assets/figma/ai/rec-confirm.png" />
+          <image class="absolute left-[288rpx] top-[1102rpx] h-[176rpx] w-[176rpx]" src="/packages/member/assets/figma/ai/mic-rec.png" />
+          <image class="absolute left-[128rpx] top-[1158rpx] h-[80rpx] w-[80rpx]" src="/packages/member/assets/figma/ai/rec-cancel.png" />
+          <image class="absolute left-[544rpx] top-[1158rpx] h-[80rpx] w-[80rpx]" src="/packages/member/assets/figma/ai/rec-confirm.png" />
         </block>
       </view>
       <view wx:if="{{figma.dialog}}" class="absolute left-[54rpx] top-[404rpx] h-[464rpx] w-[640rpx] rounded-[16rpx] bg-[#333333]">

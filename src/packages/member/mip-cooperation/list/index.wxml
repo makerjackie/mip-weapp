@@ -4,12 +4,12 @@
        角色卡走 mip-cooperation-card 组件。ref 页含 88px 导航,impl y = ref y - 88。 -->
   <block wx:if="{{figmaList}}">
     <view class="-mx-4 -mt-4 relative min-h-[2552rpx]">
-      <image class="absolute left-[24rpx] top-[4rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-dogplaner.png" />
-      <image class="absolute left-[24rpx] top-[429rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-upstart.png" />
-      <image class="absolute left-[24rpx] top-[852rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-design-slave.png" />
-      <image class="absolute left-[24rpx] top-[1276rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-pimp.png" />
-      <image class="absolute left-[24rpx] top-[1700rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-business-man.png" />
-      <image class="absolute left-[24rpx] top-[2124rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-old-nanny.png" />
+      <image class="absolute left-[24rpx] top-[4rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-dogplaner.webp" />
+      <image class="absolute left-[24rpx] top-[429rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-upstart.webp" />
+      <image class="absolute left-[24rpx] top-[852rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-design-slave.webp" />
+      <image class="absolute left-[24rpx] top-[1276rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-pimp.webp" />
+      <image class="absolute left-[24rpx] top-[1700rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-business-man.webp" />
+      <image class="absolute left-[24rpx] top-[2124rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-old-nanny.webp" />
     </view>
   </block>
   <view wx:else class="flex items-center justify-between gap-3">

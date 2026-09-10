@@ -1,0 +1,30 @@
+<view class="mip-nav-bar {{absolute ? 'mip-nav-bar--absolute' : ''}}">
+  <view wx:if="{{showStatusBar}}" class="mip-nav-bar__status">
+    <text class="mip-nav-bar__time">{{time}}</text>
+    <view class="mip-nav-bar__status-icons">
+      <view class="mip-nav-bar__signal"></view>
+      <view class="mip-nav-bar__wifi"></view>
+      <view class="mip-nav-bar__battery"></view>
+    </view>
+  </view>
+  <view class="mip-nav-bar__bar">
+    <view
+      wx:if="{{back}}"
+      class="mip-nav-bar__back"
+      aria-role="button"
+      aria-label="返回"
+      bind:tap="handleBack"
+    >
+      <mip-icon name="nav-back" size="{{8}}" color="var(--color-ink)" />
+    </view>
+    <text wx:if="{{title}}" class="mip-nav-bar__title">{{title}}</text>
+    <view
+      wx:if="{{capsule && showCapsule}}"
+      class="mip-nav-bar__capsule"
+      aria-hidden="{{true}}"
+    >
+      <view class="mip-nav-bar__capsule-dot"></view>
+      <view class="mip-nav-bar__capsule-line"></view>
+    </view>
+  </view>
+</view>
