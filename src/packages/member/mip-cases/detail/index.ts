@@ -53,6 +53,8 @@ Page({
     message: '',
     // 还原态开关,仅像素 fixture 使用;生产保持卡片详情布局(被 mip-case-detail 测试 pin)。
     figmaLayout: false,
+    // figmaEmpty:1987_30475 空数据图标变体(全屏居中 3D 问号 + 页面不在MIP星球)。
+    figmaEmpty: false,
   },
   resumeInterest: false,
   stopInterestSubscription: null as (() => void) | null,

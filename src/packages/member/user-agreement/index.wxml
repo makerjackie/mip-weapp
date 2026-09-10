@@ -3,7 +3,7 @@
        单张通栏文本卡 + 悬挂缩进编号条款。参考稿正文是占位文案（「订单确认与支付」×4），
        仅在 fixture figmaLayout 下按稿渲染；生产布局保持下方原样。 -->
   <block wx:if="{{figmaLayout}}">
-    <view class="-mt-4 -mx-1 rounded-[16rpx] bg-panel p-[24rpx] pt-[68rpx] text-[length:24rpx] leading-[33.6rpx]">
+    <view class="-mt-4 -mx-1 rounded-[16rpx] bg-panel text-[length:24rpx] leading-[33.6rpx] {{figmaAgree ? 'h-[1162rpx] overflow-hidden pl-[24rpx] pr-[22rpx] pt-[28rpx]' : 'p-[24rpx] pt-[68rpx]'}}">
       <view class="font-medium">一、订单确认与支付</view>
       <view class="h-[33.6rpx]"></view>
       <view class="mb-[8rpx] pl-[36rpx] indent-[-28rpx]">1. 订单生效：提交订单并成功支付后，即视为交易合同成立。</view>
@@ -23,11 +23,20 @@
       <view class="mb-[8rpx] pl-[36rpx] indent-[-28rpx]">3. 订单修改：支付前可修改或取消订单；支付后如需修改，请及时联系客服处理。</view>
       <view class="h-[33.6rpx]"></view>
       <view class="font-medium">四、订单确认与支付</view>
-      <view class="h-[33.6rpx]"></view>
+      <view wx:if="{{!figmaAgree}}" class="h-[33.6rpx]"></view>
       <view class="mb-[8rpx] pl-[36rpx] indent-[-28rpx]">1. 订单生效：提交订单并成功支付后，即视为交易合同成立。</view>
-      <view class="mb-[8rpx] pl-[36rpx] indent-[-28rpx]">2. 支付方式：我们支持微信支付、支付宝、银行卡转账等线上支付方式（请根据实际情况填写）。</view>
-      <view class="mb-[8rpx] pl-[36rpx] indent-[-28rpx]">3. 订单修改：支付前可修改或取消订单；支付后如需修改，请及时联系客服处理。</view>
+      <view wx:if="{{!figmaAgree}}" class="mb-[8rpx] pl-[36rpx] indent-[-28rpx]">2. 支付方式：我们支持微信支付、支付宝、银行卡转账等线上支付方式（请根据实际情况填写）。</view>
+      <view wx:if="{{!figmaAgree}}" class="mb-[8rpx] pl-[36rpx] indent-[-28rpx]">3. 订单修改：支付前可修改或取消订单；支付后如需修改，请及时联系客服处理。</view>
     </view>
+    <!-- figma 1948_14226 入会协议变体：同意行 + 确认发布按钮（橄榄容器）。 -->
+    <block wx:if="{{figmaAgree}}">
+      <view class="relative -mx-4 mt-[22rpx] h-[238rpx]">
+        <view class="absolute left-[51rpx] top-[4rpx] flex h-[32rpx] w-[32rpx] items-center justify-center rounded-full bg-brand"><mip-icon name="check" size="{{18}}" color="var(--color-on-brand)" /></view>
+        <text class="absolute left-[95rpx] top-[2rpx] text-[length:24rpx] font-light leading-[40rpx] text-ink">我已阅读并同意<text class="text-[#4088fb]">《服务政策》</text>与<text class="text-[#4088fb]">《隐私政策》</text></text>
+        <view class="absolute left-[24rpx] top-[77rpx] h-[86rpx] w-[702rpx] rounded-full bg-[#3b3925]"></view>
+        <view class="absolute left-[48rpx] top-[79rpx] flex h-[76rpx] w-[654rpx] items-center justify-center rounded-full bg-brand"><text class="text-[length:28rpx] font-semibold leading-[40rpx] text-on-brand">确认发布</text></view>
+      </view>
+    </block>
   </block>
   <block wx:else>
   <view class="text-[length:40rpx] font-bold">用户协议</view>

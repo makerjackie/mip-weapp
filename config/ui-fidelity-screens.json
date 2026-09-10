@@ -6765,6 +6765,34 @@
           ]
         }
       }
+    },
+    {
+      "key": "settings-入会协议",
+      "route": "packages/member/user-agreement/index",
+      "reference": "1948_14226_入会协议.html",
+      "crop": {
+        "topPx": 124,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "effectiveDate": "2026年8月24日",
+        "figmaLayout": true,
+        "figmaAgree": true
+      }
+    },
+    {
+      "key": "settings-空数据图标",
+      "route": "packages/member/mip-cases/detail/index",
+      "reference": "1987_30475_空数据图标.html",
+      "crop": {
+        "topPx": 124,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaEmpty": true
+      }
     }
   ]
 }
