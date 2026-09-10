@@ -11,6 +11,124 @@
     <app-page-exit />
   </view>
 
+  <!-- figma 1769_38059/2058_12247/2704_13454 合作卡档案：
+       嘉宾稿 = 深色面板 + 4 列统计 + tab 条 + 合作卡(production 组件) + 添加卡 + 双胶囊 CTA；
+       人才稿 = 定位卡(#191919 引荐条带) + 目标三行 + 雷达图 + 圈子/臭毛病表(稿前瞻内容)。
+       生产保持下方 stats+tabs+列表(被 mip-public-profile 测试 pin)。fixture figmaLayout
+       打开时按稿渲染，文案与徽标数字都来自 ui-fidelity manifest fixture。 -->
+  <block wx:elif="{{figmaLayout}}">
+    <view class="-mx-3 relative min-h-[1624rpx]">
+      <view wx:if="{{figma.variant === 'guest'}}" class="absolute left-0 top-0 h-[368rpx] w-full bg-panel" />
+      <view class="absolute left-[24rpx] top-[24rpx] h-[160rpx] w-[160rpx]">
+        <image class="h-full w-full rounded-full" mode="aspectFill" src="{{figma.avatar}}" />
+        <view class="pointer-events-none absolute inset-0 rounded-full border-[4rpx] border-canvas" />
+      </view>
+      <view class="absolute left-[208rpx] top-[42rpx] flex items-center">
+        <text class="text-[32rpx] font-medium leading-[44.8rpx] text-ink">{{figma.name}}</text>
+        <view class="ml-[8rpx] flex h-[32rpx] w-[68rpx] items-center justify-center rounded-[8rpx] border-[2rpx] border-canvas bg-panel-raised">
+          <text class="text-[20rpx] font-semibold leading-[28rpx] text-brand">{{figma.level}}</text>
+        </view>
+        <image class="ml-[8rpx] h-[40rpx] w-[40rpx]" src="/packages/member/assets/figma/coop/frog-badge.png" />
+      </view>
+      <view class="absolute left-[208rpx] top-[98rpx] text-[20rpx] font-medium leading-[28rpx] text-ink">{{figma.tagline}}</view>
+      <view class="absolute left-[208rpx] top-[138rpx] text-[20rpx] leading-[28rpx] text-muted">{{figma.intro}}</view>
+
+      <block wx:if="{{figma.variant === 'guest'}}">
+        <view class="absolute left-[24rpx] top-[208rpx] h-[136rpx] w-[702rpx] rounded-[16rpx] bg-panel">
+          <view wx:for="{{figma.stats}}" wx:key="label" class="absolute top-[24rpx] flex w-[96rpx] flex-col items-center gap-[4rpx]" style="left:{{item.leftRpx}}rpx">
+            <text class="text-[40rpx] font-medium leading-[56rpx] text-ink">{{item.value}}</text>
+            <text class="text-[20rpx] leading-[28rpx] text-ink">{{item.label}}</text>
+          </view>
+          <view class="absolute left-[628rpx] top-[16rpx] flex h-[28rpx] w-[28rpx] items-center justify-center rounded-full bg-[#ff2238]">
+            <text class="text-[20rpx] leading-[26rpx] text-ink">{{figma.redBadge}}</text>
+          </view>
+        </view>
+        <view class="absolute left-0 top-[368rpx] flex h-[80rpx] w-full">
+          <view wx:for="{{figma.tabs}}" wx:key="*this" class="relative flex h-full w-[250rpx] items-center justify-center bg-canvas">
+            <text class="{{index === 0 ? 'text-[28rpx] font-medium leading-[39.2rpx] text-brand' : 'text-[28rpx] leading-[39.2rpx] text-muted'}}">{{item}}</text>
+            <view wx:if="{{index === 0}}" class="absolute bottom-0 left-0 h-[4rpx] w-[250rpx] bg-brand" />
+          </view>
+        </view>
+        <view class="absolute left-0 top-[446rpx] h-[2rpx] w-full bg-panel" />
+        <view class="absolute left-[24rpx] top-[472rpx] w-[702rpx]">
+          <cooperation-role-card role-key="{{figma.card.roleKey}}" name="{{figma.card.name}}" positioning="{{figma.card.positioning}}" target-summary="{{figma.card.targetSummary}}" />
+        </view>
+        <view class="absolute left-[24rpx] top-[896rpx] flex h-[200rpx] w-[702rpx] flex-row items-center justify-center gap-[8rpx] rounded-[16rpx] border-[1rpx] border-dashed border-brand bg-panel">
+          <mip-icon name="icon-plus-fill" size="28rpx" color="var(--color-brand)" />
+          <text class="text-[28rpx] font-medium leading-[40rpx] text-brand">添加</text>
+        </view>
+        <view class="absolute left-[24rpx] top-[1268rpx] h-[112rpx] w-[702rpx] overflow-hidden rounded-full">
+          <view class="absolute left-[24rpx] top-[16rpx] flex h-[80rpx] w-[258rpx] items-center justify-center rounded-full border-[2rpx] border-canvas bg-panel">
+            <image class="h-[48rpx] w-[112rpx]" src="/packages/member/assets/figma/coop/coop-avatars.png" />
+            <view class="ml-[8rpx] flex items-center">
+              <text class="text-[20rpx] font-semibold leading-[28rpx] text-brand">+</text>
+              <text class="text-[24rpx] font-medium leading-[33.6rpx] text-brand">3感兴趣</text>
+            </view>
+          </view>
+          <view class="absolute left-[306rpx] top-[16rpx] flex h-[80rpx] w-[372rpx] items-center justify-center rounded-full border-[2rpx] border-canvas bg-brand">
+            <text class="text-[32rpx] font-medium leading-[44.8rpx] text-canvas">我感兴趣</text>
+          </view>
+        </view>
+      </block>
+
+      <block wx:if="{{figma.variant === 'talent'}}">
+        <view class="absolute left-[24rpx] top-[208rpx] w-[702rpx]">
+          <cooperation-role-card role-key="{{figma.card.roleKey}}" name="{{figma.card.name}}" show-details="{{false}}" />
+        </view>
+        <view class="absolute left-[24rpx] top-[448rpx] h-[80rpx] w-[702rpx] bg-[#191919]">
+          <text class="absolute left-[24rpx] top-[24rpx] w-[654rpx] text-center text-[24rpx] font-medium leading-[33.6rpx] text-brand">{{figma.positioningQuote}}</text>
+        </view>
+        <view class="absolute left-[24rpx] top-[528rpx] h-[80rpx] w-[702rpx] rounded-t-[32rpx] bg-panel">
+          <view class="absolute left-[24rpx] top-[24rpx] flex items-center gap-[8rpx]">
+            <view class="flex h-[32rpx] w-[32rpx] items-center justify-center rounded-full bg-brand"><mip-icon name="target" size="24rpx" color="var(--color-panel)" /></view>
+            <text class="text-[20rpx] leading-[28rpx] text-ink">我的目标</text>
+          </view>
+          <text class="absolute left-[418rpx] top-[24rpx] text-right text-[24rpx] font-medium leading-[33.6rpx] text-ink">{{figma.rows[0].value}}</text>
+        </view>
+        <view class="absolute left-[24rpx] top-[608rpx] h-[80rpx] w-[702rpx] bg-panel">
+          <view class="absolute left-[24rpx] top-[24rpx] flex items-center gap-[8rpx]">
+            <view class="flex h-[32rpx] w-[32rpx] items-center justify-center rounded-full bg-brand"><mip-icon name="cup" size="24rpx" color="var(--color-panel)" /></view>
+            <text class="text-[20rpx] leading-[28rpx] text-ink">需要引荐</text>
+          </view>
+          <text class="absolute left-[294rpx] top-[24rpx] text-[24rpx] font-medium leading-[33.6rpx] text-ink">{{figma.rows[1].value}}</text>
+        </view>
+        <view class="absolute left-[24rpx] top-[688rpx] h-[80rpx] w-[702rpx] rounded-b-[16rpx] bg-panel">
+          <view class="absolute left-[24rpx] top-[24rpx] flex items-center gap-[8rpx]">
+            <view class="flex h-[32rpx] w-[32rpx] items-center justify-center rounded-full bg-brand"><image class="h-[24rpx] w-[24rpx]" src="/packages/member/assets/figma/coop/icon-copper-diamond-dark.png" /></view>
+            <text class="text-[20rpx] leading-[28rpx] text-ink">最大价值</text>
+          </view>
+          <text class="absolute left-[462rpx] top-[24rpx] text-right text-[24rpx] font-medium leading-[33.6rpx] text-ink">{{figma.rows[2].value}}</text>
+        </view>
+        <image class="absolute left-[54rpx] top-[816rpx] h-[580rpx] w-[642rpx]" src="/packages/member/assets/figma/coop/radar-coop.png" />
+        <view class="absolute left-[24rpx] top-[1444rpx] w-[702rpx]">
+          <view class="flex h-[64rpx] items-center gap-[16rpx] rounded-t-[16rpx] bg-panel px-[24rpx]">
+            <view class="flex h-[32rpx] w-[32rpx] items-center justify-center rounded-full bg-brand"><image class="h-[24rpx] w-[24rpx]" src="/packages/member/assets/figma/coop/icon-lifebuoy-dark.png" /></view>
+            <text class="text-[28rpx] font-medium leading-[39.2rpx] text-ink">{{figma.circlesTitle}}</text>
+          </view>
+          <view wx:for="{{figma.circles}}" wx:key="label" class="mt-[2rpx] flex h-[64rpx] items-center justify-between rounded-[8rpx] bg-panel px-[24rpx]">
+            <text class="text-[28rpx] font-medium text-ink">{{item.label}}</text>
+            <text class="text-[24rpx] font-medium text-muted">{{item.value}}</text>
+          </view>
+        </view>
+        <view class="absolute left-[24rpx] top-[1796rpx] w-[702rpx]">
+          <view class="flex h-[64rpx] items-center gap-[16rpx] rounded-t-[16rpx] bg-panel px-[24rpx]">
+            <view class="flex h-[32rpx] w-[32rpx] items-center justify-center rounded-full bg-brand"><image class="h-[24rpx] w-[24rpx]" src="/packages/member/assets/figma/coop/icon-virus-dark.png" /></view>
+            <text class="text-[28rpx] font-medium leading-[39.2rpx] text-ink">{{figma.quirksTitle}}</text>
+          </view>
+          <view wx:for="{{figma.quirks}}" wx:key="label" class="mt-[2rpx] flex h-[64rpx] items-center justify-between rounded-[8rpx] bg-panel px-[24rpx]">
+            <text class="text-[28rpx] font-medium text-ink">{{item.label}}</text>
+            <text class="text-[24rpx] font-medium text-muted">{{item.value}}</text>
+          </view>
+        </view>
+        <view wx:if="{{figma.editable}}" class="absolute left-[24rpx] top-[1946rpx] h-[112rpx] w-[702rpx] overflow-hidden rounded-full">
+          <view class="absolute left-[24rpx] top-[16rpx] flex h-[80rpx] w-[654rpx] items-center justify-center rounded-full border-[2rpx] border-canvas bg-brand">
+            <text class="text-[32rpx] font-medium leading-[44.8rpx] text-canvas">编辑</text>
+          </view>
+        </view>
+      </block>
+    </view>
+  </block>
+
   <block wx:elif="{{profile}}">
     <view class="-mx-3 bg-panel px-3 pb-5 pt-3">
       <view class="flex items-center gap-3">

@@ -5,26 +5,110 @@
     "context: property names whose value is rendered by WeChat itself, not by MIP UI.",
     "colors: file + literal pairs kept for product-content reasons (card art presets)."
   ],
-  "contexts": ["confirmColor"],
+  "contexts": [
+    "confirmColor"
+  ],
   "colors": [
-    { "file": "src/packages/member/mip-card/index.ts", "value": "#FF5F6D", "reason": "卡面预设 暖色 底" },
-    { "file": "src/packages/member/mip-card/index.ts", "value": "#4A2326", "reason": "卡面预设 暖色 次要文字" },
-    { "file": "src/packages/member/mip-card/index.ts", "value": "#403BDA", "reason": "卡面预设 蓝色 底" },
-    { "file": "src/packages/member/mip-card/index.ts", "value": "#E4E3FF", "reason": "卡面预设 蓝色 次要文字" },
-    { "file": "src/packages/member/mip-card/index.ts", "value": "#F5F4F0", "reason": "卡面预设 素色 底" },
-    { "file": "src/packages/member/mip-card/index.ts", "value": "#575757", "reason": "卡面预设 素色 次要文字" },
-    { "file": "src/packages/member/mip-card/index.ts", "value": "#514A10", "reason": "卡面预设 品牌色 次要文字" },
-    { "file": "src/components/event-card/model.ts", "value": "#fde530", "reason": "OrderTag 契约预设 仅玩家 底（skill wechat-component-contracts.md OrderTag）" },
-    { "file": "src/components/event-card/model.ts", "value": "#d0b801", "reason": "OrderTag 契约预设 仅玩家 描边" },
-    { "file": "src/components/event-card/model.ts", "value": "#000000", "reason": "OrderTag 契约预设 仅玩家 文字" },
-    { "file": "src/components/event-card/model.ts", "value": "#428bff", "reason": "OrderTag 契约预设 沙龙 底" },
-    { "file": "src/components/event-card/model.ts", "value": "#075adf", "reason": "OrderTag 契约预设 沙龙 描边" },
-    { "file": "src/components/event-card/model.ts", "value": "#f7f7f7", "reason": "OrderTag 契约预设 沙龙 文字" },
-    { "file": "src/app.css", "value": "#80ccff", "reason": "tag-type 活动类型芯片底（figma 1861_17860 详情屏 .bg-[#80ccff]）" },
-    { "file": "src/app.css", "value": "#4b90bf", "reason": "tag-type 活动类型芯片描边（figma 1861_17860 详情屏 .border-[#4b90bf]）" },
-    { "file": "src/components/mip-icon/colors.ts", "value": "#80ccff", "reason": "app.css --color-tag-type 的镜像（mip-icon 解析用）" },
-    { "file": "src/components/mip-icon/colors.ts", "value": "#4b90bf", "reason": "app.css --color-tag-type-line 的镜像（mip-icon 解析用）" },
-    { "file": "src/packages/member/mip-received/index.wxml", "value": "#ff2238", "reason": "嘉宾卡心动数文字（figma 2622_34610 实测 rgb(255,34,56) 的设计探索态红，非语义 danger #ff4d5e）" }
+    {
+      "file": "src/packages/member/mip-card/index.ts",
+      "value": "#FF5F6D",
+      "reason": "卡面预设 暖色 底"
+    },
+    {
+      "file": "src/packages/member/mip-card/index.ts",
+      "value": "#4A2326",
+      "reason": "卡面预设 暖色 次要文字"
+    },
+    {
+      "file": "src/packages/member/mip-card/index.ts",
+      "value": "#403BDA",
+      "reason": "卡面预设 蓝色 底"
+    },
+    {
+      "file": "src/packages/member/mip-card/index.ts",
+      "value": "#E4E3FF",
+      "reason": "卡面预设 蓝色 次要文字"
+    },
+    {
+      "file": "src/packages/member/mip-card/index.ts",
+      "value": "#F5F4F0",
+      "reason": "卡面预设 素色 底"
+    },
+    {
+      "file": "src/packages/member/mip-card/index.ts",
+      "value": "#575757",
+      "reason": "卡面预设 素色 次要文字"
+    },
+    {
+      "file": "src/packages/member/mip-card/index.ts",
+      "value": "#514A10",
+      "reason": "卡面预设 品牌色 次要文字"
+    },
+    {
+      "file": "src/components/event-card/model.ts",
+      "value": "#fde530",
+      "reason": "OrderTag 契约预设 仅玩家 底（skill wechat-component-contracts.md OrderTag）"
+    },
+    {
+      "file": "src/components/event-card/model.ts",
+      "value": "#d0b801",
+      "reason": "OrderTag 契约预设 仅玩家 描边"
+    },
+    {
+      "file": "src/components/event-card/model.ts",
+      "value": "#000000",
+      "reason": "OrderTag 契约预设 仅玩家 文字"
+    },
+    {
+      "file": "src/components/event-card/model.ts",
+      "value": "#428bff",
+      "reason": "OrderTag 契约预设 沙龙 底"
+    },
+    {
+      "file": "src/components/event-card/model.ts",
+      "value": "#075adf",
+      "reason": "OrderTag 契约预设 沙龙 描边"
+    },
+    {
+      "file": "src/components/event-card/model.ts",
+      "value": "#f7f7f7",
+      "reason": "OrderTag 契约预设 沙龙 文字"
+    },
+    {
+      "file": "src/app.css",
+      "value": "#80ccff",
+      "reason": "tag-type 活动类型芯片底（figma 1861_17860 详情屏 .bg-[#80ccff]）"
+    },
+    {
+      "file": "src/app.css",
+      "value": "#4b90bf",
+      "reason": "tag-type 活动类型芯片描边（figma 1861_17860 详情屏 .border-[#4b90bf]）"
+    },
+    {
+      "file": "src/components/mip-icon/colors.ts",
+      "value": "#80ccff",
+      "reason": "app.css --color-tag-type 的镜像（mip-icon 解析用）"
+    },
+    {
+      "file": "src/components/mip-icon/colors.ts",
+      "value": "#4b90bf",
+      "reason": "app.css --color-tag-type-line 的镜像（mip-icon 解析用）"
+    },
+    {
+      "file": "src/packages/member/mip-received/index.wxml",
+      "value": "#ff2238",
+      "reason": "嘉宾卡心动数文字（figma 2622_34610 实测 rgb(255,34,56) 的设计探索态红，非语义 danger #ff4d5e）"
+    },
+    {
+      "file": "src/packages/member/mip-public-profile/index.wxml",
+      "value": "#ff2238",
+      "reason": "嘉宾档案统计 心动值 红点徽标（figma 1769_38059 实测 rgb(255,34,56) 的设计探索态红，非语义 danger #ff4d5e）"
+    },
+    {
+      "file": "src/packages/member/mip-public-profile/index.wxml",
+      "value": "#191919",
+      "reason": "人才档案定位卡 引荐条带底（figma 2058_12247 实测，介于 canvas 与 panel 之间的深层面板）"
+    }
   ],
   "allowlistTodo": "名片四套卡面预设色是产品内容色，尚未在 figma-restored 的「我的名片A/B/C-详情」屏中找到对应 token；Layer 3 打分后需按设计稿校准并删除本 allowlist 条目。"
 }

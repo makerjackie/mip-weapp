@@ -43,6 +43,8 @@ Page({
     targetSummary: '',
     fields: [] as FieldView[],
     abilities: cooperationAbilityDimensions.map(item => ({ ...item, score: 3 })) as AbilityView[],
+    // figma 2571_34139 编辑合作卡还原态开关，fixture 专用；生产保持表单+slider 布局。
+    figmaLayout: false,
   },
   navigationTimer: undefined as ReturnType<typeof setTimeout> | undefined,
 

@@ -91,6 +91,9 @@ Page({
     isSelf: false,
     activeSection: 'cooperation' as ProfileSection,
     message: '',
+    // figma 1769_38059/2058_12247/2704_13454 合作卡档案还原态开关，fixture 专用；
+    // 生产保持 stats+tabs+列表布局（mip-public-profile 测试 pin）。
+    figmaLayout: false,
   },
   pendingAction: '' as ProfileAction | '',
   reportIntent: null as CommunityReportIntent | null,

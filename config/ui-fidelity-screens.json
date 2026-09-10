@@ -3100,6 +3100,304 @@
           }
         ]
       }
+    },
+    {
+      "key": "coop-嘉宾档案",
+      "route": "packages/member/mip-public-profile/index",
+      "reference": "1769_38059_嘉宾档案-合作卡.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "variant": "guest",
+          "avatar": "/packages/member/assets/figma/coop/coop-avatar.png",
+          "name": "大鹅飞飞",
+          "level": "Lv.23",
+          "tagline": "金融行业 I 激情创业者",
+          "intro": "这是介绍自己的一句话，只有一句话可能只有这么长。",
+          "redBadge": "2",
+          "stats": [
+            {
+              "leftRpx": 63,
+              "value": "20",
+              "label": "嘉宾"
+            },
+            {
+              "leftRpx": 223,
+              "value": "100",
+              "label": "互动过"
+            },
+            {
+              "leftRpx": 383,
+              "value": "18",
+              "label": "心动值"
+            },
+            {
+              "leftRpx": 543,
+              "value": "200",
+              "label": "访客"
+            }
+          ],
+          "tabs": [
+            "合作卡",
+            "超级案例",
+            "相关机会"
+          ],
+          "card": {
+            "roleKey": "strategist",
+            "name": "狗策划 DOGPLANER",
+            "positioning": "需要认识更多地产开发商地产开发商",
+            "targetSummary": "26年接3个非标商业项目"
+          }
+        }
+      }
+    },
+    {
+      "key": "coop-人才档案",
+      "route": "packages/member/mip-public-profile/index",
+      "reference": "2058_12247_人才档案-合作卡.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "variant": "talent",
+          "editable": false,
+          "avatar": "/packages/member/assets/figma/coop/coop-avatar.png",
+          "name": "大鹅飞飞",
+          "level": "Lv.23",
+          "tagline": "深圳MIP I 金融行业 I 产品经理",
+          "intro": "这是介绍自己的一句话，只有一句话可能只有这么长。",
+          "card": {
+            "roleKey": "strategist",
+            "name": "狗策划 DOGPLANER"
+          },
+          "positioningQuote": "“愿意分享自己的人脉或为他人引荐生意”",
+          "rows": [
+            {
+              "value": "26年接3个非标商业项目"
+            },
+            {
+              "value": "需要认识更多地产开发商地产开发商"
+            },
+            {
+              "value": "和我合作，能打胜仗"
+            }
+          ],
+          "circlesTitle": "常混迹的圈子",
+          "circles": [
+            {
+              "label": "圈子名称",
+              "value": "示例：MIP全球创意人平台"
+            },
+            {
+              "label": "圈内身份",
+              "value": "示例：资深玩家"
+            },
+            {
+              "label": "圈内年限",
+              "value": "示例：2年"
+            },
+            {
+              "label": "圈子特点",
+              "value": "聚集一群有创意，协同作战的超级个体"
+            }
+          ],
+          "quirksTitle": "需要被理解的“臭毛病”",
+          "quirks": [
+            {
+              "label": "“臭毛病”（外显）",
+              "value": "示例：拖延症晚期"
+            },
+            {
+              "label": "病因（内在）",
+              "value": "示例：存在侥幸心里"
+            },
+            {
+              "label": "预防发作建议（行为）",
+              "value": "示例：请跟我强调事情的紧迫性"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "coop-人才档案-编辑",
+      "route": "packages/member/mip-public-profile/index",
+      "reference": "2704_13454_人才档案-合作卡编辑.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "variant": "talent",
+          "editable": true,
+          "avatar": "/packages/member/assets/figma/coop/coop-avatar.png",
+          "name": "大鹅飞飞",
+          "level": "Lv.23",
+          "tagline": "深圳MIP I 金融行业 I 产品经理",
+          "intro": "这是介绍自己的一句话，只有一句话可能只有这么长。",
+          "card": {
+            "roleKey": "strategist",
+            "name": "狗策划 DOGPLANER"
+          },
+          "positioningQuote": "“愿意分享自己的人脉或为他人引荐生意”",
+          "rows": [
+            {
+              "value": "26年接3个非标商业项目"
+            },
+            {
+              "value": "需要认识更多地产开发商地产开发商"
+            },
+            {
+              "value": "和我合作，能打胜仗"
+            }
+          ],
+          "circlesTitle": "常混迹的圈子",
+          "circles": [
+            {
+              "label": "圈子名称",
+              "value": "示例：MIP全球创意人平台"
+            },
+            {
+              "label": "圈内身份",
+              "value": "示例：资深玩家"
+            },
+            {
+              "label": "圈内年限",
+              "value": "示例：2年"
+            },
+            {
+              "label": "圈子特点",
+              "value": "聚集一群有创意，协同作战的超级个体"
+            }
+          ],
+          "quirksTitle": "需要被理解的“臭毛病”",
+          "quirks": [
+            {
+              "label": "“臭毛病”（外显）",
+              "value": "示例：拖延症晚期"
+            },
+            {
+              "label": "病因（内在）",
+              "value": "示例：存在侥幸心里"
+            },
+            {
+              "label": "预防发作建议（行为）",
+              "value": "示例：请跟我强调事情的紧迫性"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "coop-编辑合作卡",
+      "route": "packages/member/mip-cooperation/editor/index",
+      "reference": "2571_34139_编辑合作卡.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "traits": [
+            {
+              "label": "开拓人脉",
+              "leftRpx": 24,
+              "topRpx": 380
+            },
+            {
+              "label": "引荐人脉",
+              "leftRpx": 362,
+              "topRpx": 380
+            },
+            {
+              "label": "长期维护",
+              "leftRpx": 24,
+              "topRpx": 540
+            },
+            {
+              "label": "引荐商机",
+              "leftRpx": 362,
+              "topRpx": 540
+            },
+            {
+              "label": "卖点提炼",
+              "leftRpx": 24,
+              "topRpx": 700
+            },
+            {
+              "label": "跨圈交际",
+              "leftRpx": 362,
+              "topRpx": 700
+            }
+          ],
+          "goals": [
+            {
+              "icon": "target",
+              "label": "目标",
+              "placeholder": "示例： 2026 年商务引荐赚100 万",
+              "topRpx": 860
+            },
+            {
+              "icon": "cup",
+              "label": "需要支持或引荐的是",
+              "placeholder": "示例： 需要能带队打仗的操盘手",
+              "topRpx": 1044
+            },
+            {
+              "icon": "diamond",
+              "label": "和我合作的最大价值是",
+              "placeholder": "示例： 躺着赚钱",
+              "topRpx": 1228
+            }
+          ],
+          "circles": [
+            {
+              "label": "圈子名称",
+              "value": "示例：MIP全球创意人平台"
+            },
+            {
+              "label": "圈内身份",
+              "value": "示例：资深玩家"
+            },
+            {
+              "label": "圈内年限",
+              "value": "示例：2年"
+            },
+            {
+              "label": "圈子特点",
+              "value": "聚集一群有创意，协同作战的超级个体"
+            }
+          ],
+          "quirks": [
+            {
+              "label": "“臭毛病”（外显）",
+              "value": "示例：拖延症晚期"
+            },
+            {
+              "label": "病因（内在）",
+              "value": "示例：存在侥幸心里"
+            },
+            {
+              "label": "预防发作建议（行为）",
+              "value": "示例：请跟我强调事情的紧迫性"
+            }
+          ]
+        }
+      }
     }
   ]
 }

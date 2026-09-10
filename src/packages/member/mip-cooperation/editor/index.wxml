@@ -1,6 +1,77 @@
 <view id="mip-cooperation-editor-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-7"><t-skeleton row-col="{{[1,1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法编辑合作卡" description="{{message}}" action-text="重新加载" bind:action="initialize" /><app-page-exit /></view>
+
+  <!-- figma 2571_34139 编辑合作卡：黄色横幅 + AI助手卡(黄描边) + 特征打分星格 +
+       目标三组输入 + 圈子/臭毛病表 + 保存胶囊。生产保持下方 表单+slider 布局
+       (被 mip-cooperation-editor 测试 pin)。fixture figmaLayout 打开时按稿渲染。 -->
+  <block wx:elif="{{figmaLayout}}">
+    <view class="-mx-4 -mt-4 relative min-h-[2526rpx]">
+      <view class="absolute left-0 top-0 flex h-[64rpx] w-full flex-col items-center justify-center bg-brand">
+        <text class="text-[28rpx] font-medium leading-[39.2rpx] text-canvas">合作卡可以帮助您更好的发现商机</text>
+      </view>
+      <view class="absolute left-[22rpx] top-[88rpx] flex h-[200rpx] w-[702rpx] flex-col items-center justify-center rounded-[16rpx] border-[2rpx] border-brand bg-panel">
+        <view class="flex items-center">
+          <view class="relative h-[48rpx] w-[48rpx]"><image class="absolute left-[4rpx] top-[2rpx] h-[42rpx] w-[44rpx]" src="/packages/member/assets/figma/coop/icon-chat-smile-ai.png" /><image class="absolute left-[12rpx] top-[18rpx] h-[12rpx] w-[24rpx]" src="/packages/member/assets/figma/coop/icon-chat-smile-mouth.png" /></view>
+          <text class="ml-[8rpx] text-[28rpx] font-medium leading-[40rpx] text-brand">AI助手</text>
+        </view>
+      </view>
+      <view class="absolute left-[24rpx] top-[312rpx] flex items-center gap-[8rpx]">
+        <mip-icon name="target" size="32rpx" color="var(--color-brand)" />
+        <text class="text-[32rpx] font-medium leading-[44.8rpx] text-ink">特征打分</text>
+      </view>
+      <view wx:for="{{figma.traits}}" wx:key="label" class="absolute h-[136rpx] w-[340rpx] rounded-[16rpx] bg-panel" style="left:{{item.leftRpx}}rpx;top:{{item.topRpx}}rpx">
+        <text class="absolute left-0 top-[24rpx] w-full text-center text-[24rpx] font-medium leading-[33.6rpx] text-ink">{{item.label}}</text>
+        <view class="absolute left-[54rpx] top-[74rpx] flex items-center gap-[8rpx]">
+          <mip-icon wx:for="{{[0,1,2,3]}}" wx:for-item="star" wx:key="*this" name="star-favorite-3" size="40rpx" />
+          <image class="h-[38rpx] w-[40rpx]" src="/packages/member/assets/figma/coop/icon-star-line.png" />
+        </view>
+      </view>
+      <view wx:for="{{figma.goals}}" wx:key="label" class="absolute left-[24rpx] w-[702rpx]" style="top:{{item.topRpx}}rpx">
+        <view class="absolute left-0 top-0 flex items-center gap-[8rpx]">
+          <mip-icon wx:if="{{item.icon === 'target'}}" name="target" size="32rpx" color="var(--color-brand)" />
+          <mip-icon wx:elif="{{item.icon === 'cup'}}" name="cup" size="32rpx" color="var(--color-brand)" />
+          <image wx:else class="h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/coop/icon-copper-diamond-yellow.png" />
+          <text class="text-[32rpx] font-medium leading-[44.8rpx] text-ink">{{item.label}}</text>
+        </view>
+        <view class="absolute left-0 top-[68rpx] flex h-[92rpx] w-full items-center rounded-[16rpx] bg-panel px-[24rpx]">
+          <text class="text-[24rpx] leading-[33.6rpx] text-muted">{{item.placeholder}}</text>
+        </view>
+      </view>
+      <view class="absolute left-[24rpx] top-[1412rpx] w-[702rpx]">
+        <view class="flex items-center gap-[8rpx]">
+          <image class="h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/coop/icon-lifebuoy-yellow.png" />
+          <text class="text-[32rpx] font-medium leading-[44.8rpx] text-ink">长混迹的圈子</text>
+        </view>
+        <view wx:for="{{figma.circles}}" wx:key="label" class="mt-[22rpx] flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel px-[24rpx]">
+          <text class="text-[28rpx] font-medium text-ink">{{item.label}}</text>
+          <text class="text-[24rpx] font-medium text-muted">{{item.value}}</text>
+        </view>
+        <view class="mt-[22rpx] flex h-[92rpx] items-center justify-end rounded-[16rpx] pr-[24rpx]">
+          <text class="text-[24rpx] font-medium text-brand">添加圈子</text>
+        </view>
+      </view>
+      <view class="absolute left-[24rpx] top-[1970rpx] w-[702rpx]">
+        <view class="flex items-center gap-[8rpx]">
+          <image class="h-[32rpx] w-[32rpx]" src="/packages/member/assets/figma/coop/icon-lifebuoy-yellow.png" />
+          <text class="text-[32rpx] font-medium leading-[44.8rpx] text-ink">需要被理解的“臭毛病”</text>
+        </view>
+        <view wx:for="{{figma.quirks}}" wx:key="label" class="mt-[22rpx] flex h-[92rpx] items-center justify-between rounded-[16rpx] bg-panel px-[24rpx]">
+          <text class="text-[28rpx] font-medium text-ink">{{item.label}}</text>
+          <text class="text-[24rpx] font-medium text-muted">{{item.value}}</text>
+        </view>
+        <view class="mt-[22rpx] flex h-[92rpx] items-center justify-end rounded-[16rpx] pr-[24rpx]">
+          <text class="text-[24rpx] font-medium text-brand">添加圈子</text>
+        </view>
+      </view>
+      <view class="absolute left-[24rpx] top-[2414rpx] h-[112rpx] w-[702rpx] overflow-hidden rounded-full">
+        <view class="absolute left-[24rpx] top-[16rpx] flex h-[80rpx] w-[654rpx] items-center justify-center rounded-full border-[2rpx] border-canvas bg-brand">
+          <text class="text-[32rpx] font-medium leading-[44.8rpx] text-canvas">保存</text>
+        </view>
+      </view>
+    </view>
+  </block>
+
   <block wx:else>
     <view class="text-[length:34rpx] font-bold">{{roleOptions[roleIndex].name}}</view>
     <view class="mt-3 rounded-[16rpx] bg-brand px-4 py-4 text-[length:24rpx] leading-6 text-on-brand">{{positioning}}</view>
