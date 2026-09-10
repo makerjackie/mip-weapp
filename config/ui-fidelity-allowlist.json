@@ -108,6 +108,21 @@
       "file": "src/packages/member/mip-public-profile/index.wxml",
       "value": "#191919",
       "reason": "人才档案定位卡 引荐条带底（figma 2058_12247 实测，介于 canvas 与 panel 之间的深层面板）"
+    },
+    {
+      "file": "src/packages/member/mip-received/index.wxml",
+      "value": "#333333",
+      "reason": "互动列表 未读高亮卡底（figma 2202_44989/44878 实测，介于 panel 与 panel-raised 之间的选中态）"
+    },
+    {
+      "file": "src/packages/member/mip-hearts/index.wxml",
+      "value": "#333333",
+      "reason": "心动值列表 未读高亮卡底（figma 2202_44989/44878 实测，介于 panel 与 panel-raised 之间的选中态）"
+    },
+    {
+      "file": "src/packages/member/mip-hearts/index.wxml",
+      "value": "#ff2238",
+      "reason": "心动值列表 红心计数与未读红点（figma 1732_19460 实测 rgb(255,34,56) 的设计探索态红，非语义 danger #ff4d5e）"
     }
   ],
   "allowlistTodo": "名片四套卡面预设色是产品内容色，尚未在 figma-restored 的「我的名片A/B/C-详情」屏中找到对应 token；Layer 3 打分后需按设计稿校准并删除本 allowlist 条目。"

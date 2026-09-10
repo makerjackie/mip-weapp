@@ -17,6 +17,42 @@
          （被 mip-received-interactions 测试 pin）。fixture figmaLayout 打开时按稿渲染。
          徽标 PNG 烘焙自参考稿；心动/点赞/三叶草计数、Lv、标签、简介、邀请人都是
          设计前瞻字段（listReceived GUEST DTO 暂无），记 ui-fidelity manifest notes。 -->
+    <!-- figma 1732_19387/2629_34956/1769_37984/2189_43192 互动列表：
+         设计稿是 2 列玩家卡网格（搜索条/筛选芯片/心动 tabs + 5 张固定嘉宾卡）；
+         生产保持下方 总浏览量+tabs+列表（被 mip-received-interactions 测试 pin）。
+         头像/红心徽标/邀请人徽标 PNG 烘焙自参考稿；Lv、标签、简介、心动计数都是
+         设计前瞻字段（listReceived DTO 暂无），记 ui-fidelity manifest notes。 -->
+    <block wx:if="{{figmaLayout && figma.cards}}">
+      <view class="-mx-4 -mt-4 relative min-h-[1400rpx]">
+        <view wx:if="{{figma.search}}" class="absolute flex h-[80rpx] items-center gap-[16rpx] rounded-[16rpx] bg-panel px-[16rpx]" style="left:24rpx;top:{{figma.searchTopRpx}}rpx;width:702rpx">
+          <view class="flex h-[40rpx] w-[40rpx] shrink-0 items-center justify-center"><mip-icon name="search-big-left-1" size="{{20}}" color="var(--color-muted)" /></view>
+          <view class="text-[length:28rpx] leading-[40rpx] text-muted">{{figma.search}}</view>
+        </view>
+        <view wx:for="{{figma.chips}}" wx:key="label" class="absolute flex h-[56rpx] items-center justify-center rounded-[16rpx] {{item.active ? 'bg-brand' : 'bg-panel'}}" style="left:{{item.leftRpx}}rpx;top:{{item.topRpx}}rpx;width:{{item.widthRpx}}rpx">
+          <view class="text-[length:28rpx] font-medium leading-[39.2rpx] {{item.active ? 'text-canvas' : 'text-muted'}}">{{item.label}}</view>
+        </view>
+        <view wx:if="{{figma.tabs}}" class="absolute left-0 top-0 h-[80rpx] w-full">
+          <view class="absolute top-[20rpx] text-[length:28rpx] font-medium leading-[39.2rpx] {{figma.tabs.leftActive ? 'text-brand' : 'text-muted'}}" style="left:132rpx">你的心动</view>
+          <view class="absolute top-[20rpx] text-[length:28rpx] font-normal leading-[39.2rpx] {{figma.tabs.leftActive ? 'text-muted' : 'text-brand'}}" style="left:506rpx">对你心动</view>
+          <view class="absolute left-0 top-[78rpx] h-[2rpx] w-full bg-panel"></view>
+          <view class="absolute top-[76rpx] h-[4rpx] w-[376rpx] bg-brand" style="left:{{figma.tabs.leftActive ? 0 : 376}}rpx"></view>
+        </view>
+        <view wx:for="{{figma.cards}}" wx:key="name" class="absolute h-[374rpx] w-[340rpx] overflow-hidden rounded-[16rpx] {{item.highlight ? 'bg-[#333333]' : 'bg-panel'}}" style="left:{{item.leftRpx}}rpx;top:{{item.topRpx}}rpx">
+          <view wx:if="{{item.chipAt}}" class="absolute flex h-[32rpx] w-[68rpx] items-center justify-center rounded-[8rpx] border border-canvas bg-panel-raised text-[length:20rpx] font-semibold leading-[28rpx] text-brand" style="left:{{item.chipAt.leftRpx}}rpx;top:{{item.chipAt.topRpx}}rpx">Lv.23</view>
+          <view wx:else class="absolute left-[16rpx] top-[16rpx] flex h-[32rpx] w-[68rpx] items-center justify-center rounded-[8rpx] border border-canvas bg-panel-raised text-[length:20rpx] font-semibold leading-[28rpx] text-brand">Lv.23</view>
+          <image class="absolute left-[114rpx] top-[16rpx] h-[112rpx] w-[112rpx] rounded-full" src="/packages/member/assets/figma/guests/avatar-{{item.avatar}}.png" />
+          <image wx:if="{{item.heartBadge}}" class="absolute left-[284rpx] top-[14rpx] h-[34rpx] w-[40rpx]" src="/packages/member/assets/figma/guests/badge-heart-fill.png" />
+          <view wx:if="{{item.heartCount}}" class="absolute left-[284rpx] top-[48rpx] w-[40rpx] text-center text-[length:20rpx] font-semibold leading-[28rpx] text-[#ff2238]">{{item.heartCount}}</view>
+          <view class="absolute left-0 top-[144rpx] w-full text-center text-[length:32rpx] font-medium leading-[44.8rpx] text-ink">{{item.name}}</view>
+          <view wx:if="{{item.taglineMedium}}" class="absolute left-0 top-[196rpx] w-full text-center text-[length:20rpx] font-medium leading-[33.6rpx] text-ink">{{item.tagline}}</view>
+          <view wx:else class="absolute left-[20rpx] top-[196rpx] whitespace-nowrap text-[length:20rpx] leading-[33.6rpx] text-ink">{{item.tagline}}</view>
+          <view class="absolute left-[24rpx] top-[238rpx] w-[288rpx] text-[length:20rpx] leading-[28rpx] text-muted">{{item.intro}}</view>
+          <image class="absolute left-[16rpx] top-[318rpx] h-[40rpx] w-[40rpx]" src="/packages/member/assets/figma/guests/bear.png" />
+          <image wx:if="{{item.inviter}}" class="absolute left-[172rpx] top-[312rpx] h-[52rpx] w-[152rpx]" src="/packages/member/assets/figma/guests/inviter-bear.png" />
+          <view wx:if="{{item.dot}}" class="absolute h-[16rpx] w-[16rpx] rounded-full bg-[#ff2238]" style="left:{{item.dot.leftRpx}}rpx;top:{{item.dot.topRpx}}rpx"></view>
+        </view>
+      </view>
+    </block>
     <block wx:if="{{figmaLayout && category === 'GUEST'}}">
       <view class="-mx-1 grid grid-cols-2 gap-x-[22rpx] gap-y-[24rpx]">
         <view wx:for="{{items}}" wx:key="viewKey" class="relative h-[374rpx] overflow-hidden rounded-[16rpx] bg-panel">

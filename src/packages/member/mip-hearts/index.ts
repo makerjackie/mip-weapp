@@ -44,6 +44,9 @@ Page({
     loadingMore: false,
     accessToken: '',
     message: '',
+    // figma 心动值三稿（1732_19460/2202_44989/2202_44878）的还原态开关，fixture 专用；
+    // 生产保持 tabs+列表（被 mip-heart-history 测试 pin）。
+    figmaLayout: false,
   },
   accessReady: false,
   checkingAccess: false,
