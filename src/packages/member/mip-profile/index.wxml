@@ -3,6 +3,81 @@
     <t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading />
   </view>
   <view wx:elif="{{state === 'error'}}" class="mx-3 mt-3"><app-empty-state title="暂时无法加载资料" description="身份服务暂时没有响应。" action-text="重新加载" bind:action="loadProfile" /></view>
+
+  <!-- figma 1774_41143/1774_41253/1822_19405 编辑信息：黄色横幅 + 基础信息(头像/昵称/性别
+       三行分组卡) + 代表行业(选择卡 + 12 标签) + 当前身份状态(7 标签) + 一句话介绍(textarea)。
+       生产保持下方表单布局（被 vitest pin）。fixture figmaLayout 打开时按稿渲染，
+       数据来自 ui-fidelity manifest fixture。 -->
+  <block wx:elif="{{figmaLayout}}">
+    <view class="relative min-h-[1500rpx]">
+      <view class="absolute left-0 top-0 h-[64rpx] w-full bg-brand">
+        <text class="absolute left-0 top-[12rpx] w-full text-center text-[28rpx] font-semibold leading-[40rpx] text-canvas">吸引更多适合你的资源和人脉~</text>
+      </view>
+
+      <image class="absolute left-[24rpx] top-[96rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/profile/icon-section-people.png" />
+      <text class="absolute left-[64rpx] top-[88rpx] text-[32rpx] font-semibold leading-[44.8rpx] text-ink">基础信息</text>
+
+      <view class="absolute left-[24rpx] top-[156rpx] h-[160rpx] w-[702rpx] bg-panel">
+        <image class="absolute left-[24rpx] top-[24rpx] h-[112rpx] w-[112rpx] rounded-full" mode="aspectFill" src="/assets/figma/profile/avatar-mine.png" />
+        <text class="absolute right-[24rpx] top-[60rpx] text-[28rpx] leading-[40rpx] text-ink">更换头像</text>
+      </view>
+      <view class="absolute left-[24rpx] top-[318rpx] h-[92rpx] w-[702rpx] bg-panel">
+        <text class="absolute left-[24rpx] top-[24rpx] text-[28rpx] leading-[40rpx] text-ink">昵称 <text class="text-[22rpx] text-[#ff2238]">*</text></text>
+        <text wx:if="{{figma.nickname}}" class="absolute right-[24rpx] top-[24rpx] text-[28rpx] leading-[40rpx] text-ink">{{figma.nickname}}</text>
+        <text wx:else class="absolute right-[24rpx] top-[24rpx] text-[28rpx] leading-[40rpx] text-muted">请输入您的昵称</text>
+      </view>
+      <view class="absolute left-[24rpx] top-[412rpx] h-[92rpx] w-[702rpx] bg-panel">
+        <text class="absolute left-[24rpx] top-[28rpx] text-[28rpx] leading-[40rpx] text-ink">性别</text>
+        <view class="absolute left-[470rpx] top-[18rpx] flex h-[56rpx] w-[96rpx] items-center justify-center gap-[4rpx] rounded-full border-[2rpx] {{figma.gender === 'MALE' ? 'border-brand bg-brand' : 'border-muted'}}">
+          <text class="{{figma.gender === 'MALE' ? 'text-[24rpx] leading-[32rpx] text-canvas' : 'text-[24rpx] leading-[32rpx] text-muted'}}">♂</text>
+          <text class="{{figma.gender === 'MALE' ? 'text-[28rpx] leading-[40rpx] text-canvas' : 'text-[28rpx] leading-[40rpx] text-muted'}}">男</text>
+        </view>
+        <view class="absolute left-[582rpx] top-[18rpx] flex h-[56rpx] w-[96rpx] items-center justify-center gap-[4rpx] rounded-full border-[2rpx] {{figma.gender === 'FEMALE' ? 'border-brand bg-brand' : 'border-muted'}}">
+          <text class="{{figma.gender === 'FEMALE' ? 'text-[24rpx] leading-[32rpx] text-canvas' : 'text-[24rpx] leading-[32rpx] text-muted'}}">♀</text>
+          <text class="{{figma.gender === 'FEMALE' ? 'text-[28rpx] leading-[40rpx] text-canvas' : 'text-[28rpx] leading-[40rpx] text-muted'}}">女</text>
+        </view>
+      </view>
+
+      <image class="absolute left-[24rpx] top-[536rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/profile/icon-section-industry.png" />
+      <text class="absolute left-[64rpx] top-[528rpx] text-[32rpx] font-semibold leading-[44.8rpx] text-ink">代表行业</text>
+
+      <view class="absolute left-[24rpx] top-[596rpx] h-[92rpx] w-[702rpx] rounded-[16rpx] bg-panel">
+        <block wx:if="{{figma.industryValue}}">
+          <view class="absolute left-[16rpx] top-[22rpx] flex h-[48rpx] items-center gap-[8rpx] rounded-full bg-brand pl-[20rpx] pr-[10rpx]">
+            <text class="text-[24rpx] font-semibold leading-[32rpx] text-canvas">{{figma.industryValue}}</text>
+            <view class="flex h-[28rpx] w-[28rpx] items-center justify-center rounded-full bg-canvas">
+              <mip-icon name="close" size="14rpx" color="var(--color-brand)" />
+            </view>
+          </view>
+        </block>
+        <text wx:else class="absolute left-[24rpx] top-[24rpx] text-[28rpx] leading-[40rpx] text-muted">请选择代表的行业标签</text>
+        <view class="absolute right-[24rpx] top-[34rpx]">
+          <mip-icon name="chevron-right-1" size="24rpx" color="var(--color-muted)" />
+        </view>
+      </view>
+
+      <view wx:for="{{figma.industries}}" wx:key="index" class="absolute h-[56rpx] w-[164rpx] flex items-center justify-center rounded-[16rpx] {{item.active ? 'bg-brand' : 'bg-panel'}}" style="left:{{item.leftRpx}}rpx;top:{{item.topRpx}}rpx">
+        <text class="{{item.active ? 'text-[28rpx] leading-[40rpx] text-canvas' : 'text-[28rpx] leading-[40rpx] text-muted'}}">{{item.label}}</text>
+      </view>
+
+      <image class="absolute left-[24rpx] top-[944rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/profile/icon-section-identity.png" />
+      <text class="absolute left-[64rpx] top-[936rpx] text-[32rpx] font-semibold leading-[44.8rpx] text-ink">当前身份状态</text>
+
+      <view wx:for="{{figma.statuses}}" wx:key="index" class="absolute h-[56rpx] w-[164rpx] flex items-center justify-center rounded-[16rpx] {{item.active ? 'bg-brand' : 'bg-panel'}}" style="left:{{item.leftRpx}}rpx;top:{{item.topRpx}}rpx">
+        <text class="{{item.active ? 'text-[28rpx] leading-[40rpx] text-canvas' : 'text-[28rpx] leading-[40rpx] text-muted'}}">{{item.label}}</text>
+      </view>
+
+      <image class="absolute left-[24rpx] top-[1164rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/profile/icon-section-intro.png" />
+      <text class="absolute left-[64rpx] top-[1156rpx] text-[32rpx] font-semibold leading-[44.8rpx] text-ink">一句话介绍你的工作和背景</text>
+
+      <view class="absolute left-[24rpx] top-[1224rpx] h-[200rpx] w-[702rpx] rounded-[16rpx] bg-panel">
+        <text wx:if="{{figma.intro}}" class="absolute left-[24rpx] top-[16rpx] text-[28rpx] leading-[40rpx] text-ink">{{figma.intro}}</text>
+        <text wx:else class="absolute left-[24rpx] top-[16rpx] text-[28rpx] leading-[40rpx] text-muted">示例：MIP 创意社群创始人，寻找永创意做生意的伙伴</text>
+        <text class="absolute bottom-[24rpx] right-[24rpx] text-[20rpx] leading-[28rpx] text-muted">0/300</text>
+      </view>
+    </view>
+  </block>
+
   <block wx:else>
     <view class="bg-brand px-3 py-2 text-center text-[length:24rpx] text-on-brand">资料用于个人名片和公开档案展示</view>
     <view wx:if="{{aiDraftLoaded}}" class="mx-3 mt-3 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:24rpx] text-brand">已载入 AI 草稿，可继续修改后保存。</view>

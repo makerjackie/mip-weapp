@@ -20,6 +20,8 @@ interface SelectableTag extends ProfileTagOption {
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
+    // ui-fidelity fixture 开关：默认走生产布局（被 vitest pin）。
+    figmaLayout: false,
     token: '',
     aiDraftId: '',
     aiConfirmation: null as AiDraftSourceConfirmation | null,

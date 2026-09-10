@@ -4690,6 +4690,409 @@
           "activeTab": 1
         }
       }
+    },
+    {
+      "key": "profile-编辑信息",
+      "route": "packages/member/mip-profile/index",
+      "reference": "1774_41143_编辑信息.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "industries": [
+            {
+              "label": "广告营销",
+              "leftRpx": 24,
+              "topRpx": 712,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 204,
+              "topRpx": 712,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 384,
+              "topRpx": 712,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 564,
+              "topRpx": 712,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 24,
+              "topRpx": 784,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 204,
+              "topRpx": 784,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 384,
+              "topRpx": 784,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 564,
+              "topRpx": 784,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 24,
+              "topRpx": 856,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 204,
+              "topRpx": 856,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 384,
+              "topRpx": 856,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 564,
+              "topRpx": 856,
+              "active": false
+            }
+          ],
+          "statuses": [
+            {
+              "label": "品牌主理人",
+              "leftRpx": 24,
+              "topRpx": 1004,
+              "active": false
+            },
+            {
+              "label": "专业投资人",
+              "leftRpx": 204,
+              "topRpx": 1004,
+              "active": false
+            },
+            {
+              "label": "大厂精英",
+              "leftRpx": 384,
+              "topRpx": 1004,
+              "active": false
+            },
+            {
+              "label": "在读学生",
+              "leftRpx": 564,
+              "topRpx": 1004,
+              "active": false
+            },
+            {
+              "label": "激情创业者",
+              "leftRpx": 24,
+              "topRpx": 1076,
+              "active": false
+            },
+            {
+              "label": "自由探索者",
+              "leftRpx": 204,
+              "topRpx": 1076,
+              "active": false
+            },
+            {
+              "label": "公司负责人",
+              "leftRpx": 384,
+              "topRpx": 1076,
+              "active": false
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "profile-编辑信息-完成",
+      "route": "packages/member/mip-profile/index",
+      "reference": "1774_41253_编辑信息-完成.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "industries": [
+            {
+              "label": "广告营销",
+              "leftRpx": 24,
+              "topRpx": 712,
+              "active": false
+            },
+            {
+              "label": "社交媒体",
+              "leftRpx": 204,
+              "topRpx": 712,
+              "active": true
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 384,
+              "topRpx": 712,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 564,
+              "topRpx": 712,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 24,
+              "topRpx": 784,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 204,
+              "topRpx": 784,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 384,
+              "topRpx": 784,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 564,
+              "topRpx": 784,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 24,
+              "topRpx": 856,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 204,
+              "topRpx": 856,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 384,
+              "topRpx": 856,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 564,
+              "topRpx": 856,
+              "active": false
+            }
+          ],
+          "statuses": [
+            {
+              "label": "品牌主理人",
+              "leftRpx": 24,
+              "topRpx": 1004,
+              "active": true
+            },
+            {
+              "label": "专业投资人",
+              "leftRpx": 204,
+              "topRpx": 1004,
+              "active": false
+            },
+            {
+              "label": "大厂精英",
+              "leftRpx": 384,
+              "topRpx": 1004,
+              "active": false
+            },
+            {
+              "label": "在读学生",
+              "leftRpx": 564,
+              "topRpx": 1004,
+              "active": false
+            },
+            {
+              "label": "激情创业者",
+              "leftRpx": 24,
+              "topRpx": 1076,
+              "active": false
+            },
+            {
+              "label": "自由探索者",
+              "leftRpx": 204,
+              "topRpx": 1076,
+              "active": false
+            },
+            {
+              "label": "公司负责人",
+              "leftRpx": 384,
+              "topRpx": 1076,
+              "active": false
+            }
+          ],
+          "nickname": "大鹅飞飞",
+          "gender": "MALE",
+          "industryValue": "社交媒体",
+          "intro": "MIP 创意社群创始人，寻找永创意做生意的伙伴"
+        }
+      }
+    },
+    {
+      "key": "profile-编辑信息-2",
+      "route": "packages/member/mip-profile/index",
+      "reference": "1822_19405_编辑信息.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "industries": [
+            {
+              "label": "广告营销",
+              "leftRpx": 24,
+              "topRpx": 712,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 204,
+              "topRpx": 712,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 384,
+              "topRpx": 712,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 564,
+              "topRpx": 712,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 24,
+              "topRpx": 784,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 204,
+              "topRpx": 784,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 384,
+              "topRpx": 784,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 564,
+              "topRpx": 784,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 24,
+              "topRpx": 856,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 204,
+              "topRpx": 856,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 384,
+              "topRpx": 856,
+              "active": false
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 564,
+              "topRpx": 856,
+              "active": false
+            }
+          ],
+          "statuses": [
+            {
+              "label": "品牌主理人",
+              "leftRpx": 24,
+              "topRpx": 1004,
+              "active": false
+            },
+            {
+              "label": "专业投资人",
+              "leftRpx": 204,
+              "topRpx": 1004,
+              "active": false
+            },
+            {
+              "label": "大厂精英",
+              "leftRpx": 384,
+              "topRpx": 1004,
+              "active": false
+            },
+            {
+              "label": "在读学生",
+              "leftRpx": 564,
+              "topRpx": 1004,
+              "active": false
+            },
+            {
+              "label": "激情创业者",
+              "leftRpx": 24,
+              "topRpx": 1076,
+              "active": false
+            },
+            {
+              "label": "自由探索者",
+              "leftRpx": 204,
+              "topRpx": 1076,
+              "active": false
+            },
+            {
+              "label": "公司负责人",
+              "leftRpx": 384,
+              "topRpx": 1076,
+              "active": false
+            }
+          ]
+        }
+      }
     }
   ]
 }
