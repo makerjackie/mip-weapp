@@ -5772,6 +5772,137 @@
           ]
         }
       }
+    },
+    {
+      "key": "coop-玩家档案-合作卡",
+      "route": "packages/member/mip-public-profile/index",
+      "reference": "1769_38198_玩家档案.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "avatar": "/packages/member/assets/figma/coop/coop-avatar.png",
+          "level": "Lv.23",
+          "intro": "这是介绍自己的一句话，只有一句话可能只有这么长。",
+          "stats": [
+            {
+              "leftRpx": 63,
+              "value": "20",
+              "label": "嘉宾"
+            },
+            {
+              "leftRpx": 223,
+              "value": "100",
+              "label": "互动过"
+            },
+            {
+              "leftRpx": 383,
+              "value": "18",
+              "label": "心动值"
+            },
+            {
+              "leftRpx": 543,
+              "value": "200",
+              "label": "访客"
+            }
+          ],
+          "redBadge": "2",
+          "tabs": [
+            "合作卡",
+            "超级案例",
+            "相关机会"
+          ],
+          "variant": "coops",
+          "name": "大鹅飞飞",
+          "tagline": "深圳MIP I 金融行业 I 激情创业者",
+          "activeTab": 0,
+          "cards": [
+            {
+              "roleKey": "strategist",
+              "topRpx": 476,
+              "targetSummary": "26年接3个非标商业项目",
+              "positioning": "需要认识更多地产开发商地产开发商"
+            },
+            {
+              "roleKey": "capital_operator",
+              "topRpx": 900,
+              "targetSummary": "26年接3个非标商业项目",
+              "positioning": "需要认识更多地产开发商地产开发商"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "coop-玩家档案-超级案例",
+      "route": "packages/member/mip-public-profile/index",
+      "reference": "1958_11897_玩家档案-超级案例.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "avatar": "/packages/member/assets/figma/coop/coop-avatar.png",
+          "level": "Lv.23",
+          "intro": "这是介绍自己的一句话，只有一句话可能只有这么长。",
+          "stats": [
+            {
+              "leftRpx": 63,
+              "value": "20",
+              "label": "嘉宾"
+            },
+            {
+              "leftRpx": 223,
+              "value": "100",
+              "label": "互动过"
+            },
+            {
+              "leftRpx": 383,
+              "value": "18",
+              "label": "心动值"
+            },
+            {
+              "leftRpx": 543,
+              "value": "200",
+              "label": "访客"
+            }
+          ],
+          "redBadge": "2",
+          "tabs": [
+            "合作卡",
+            "超级案例",
+            "相关机会"
+          ],
+          "variant": "cases",
+          "name": "大鹅飞飞大鹅飞飞",
+          "tagline": "深圳MIP I 金融行业 I 产品经理",
+          "activeTab": 1,
+          "groups": [
+            {
+              "month": "2025年 12月",
+              "title": "这是项目名称",
+              "summary": "这是项目的一句话介绍，只有一句话一行"
+            },
+            {
+              "month": "2025年 10月",
+              "title": "这是项目名称",
+              "summary": "这是项目的一句话介绍，只有一句话一行"
+            },
+            {
+              "month": "2025年 10月",
+              "title": "这是项目名称",
+              "summary": "这是项目的一句话介绍，只有一句话一行"
+            }
+          ]
+        }
+      }
     }
   ]
 }

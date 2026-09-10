@@ -57,7 +57,7 @@
           <mip-icon name="icon-plus-fill" size="28rpx" color="var(--color-brand)" />
           <text class="text-[28rpx] font-medium leading-[40rpx] text-brand">添加</text>
         </view>
-        <view class="absolute left-[24rpx] top-[1268rpx] h-[112rpx] w-[702rpx] overflow-hidden rounded-full">
+        <view class="absolute left-[24rpx] top-[1268rpx] h-[112rpx] w-[702rpx] overflow-hidden rounded-full bg-[#3f3c27]">
           <view class="absolute left-[24rpx] top-[16rpx] flex h-[80rpx] w-[258rpx] items-center justify-center rounded-full border-[2rpx] border-canvas bg-panel">
             <image class="h-[48rpx] w-[112rpx]" src="/packages/member/assets/figma/coop/coop-avatars.png" />
             <view class="ml-[8rpx] flex items-center">
@@ -162,7 +162,7 @@
             <text class="absolute left-[138rpx] top-[10rpx] text-[24rpx] font-semibold leading-[33.6rpx] text-canvas">{{figma.referralCount}}引荐</text>
           </view>
         </view>
-        <view class="absolute left-[24rpx] top-[1268rpx] h-[112rpx] w-[702rpx] overflow-hidden rounded-full">
+        <view class="absolute left-[24rpx] top-[1268rpx] h-[112rpx] w-[702rpx] overflow-hidden rounded-full bg-[#3f3c27]">
           <view class="absolute left-[24rpx] top-[16rpx] flex h-[80rpx] w-[258rpx] items-center justify-center rounded-full border-[2rpx] border-canvas bg-panel">
             <image class="h-[48rpx] w-[112rpx]" src="/packages/member/assets/figma/coop/coop-avatars.png" />
             <view class="ml-[8rpx] flex items-center">
@@ -172,6 +172,57 @@
           </view>
           <view class="absolute left-[306rpx] top-[16rpx] flex h-[80rpx] w-[372rpx] items-center justify-center rounded-full border-[2rpx] border-canvas bg-brand">
             <text class="text-[32rpx] font-medium leading-[44.8rpx] text-canvas">我想合作</text>
+          </view>
+        </view>
+      </block>
+
+      <!-- figma 1769_38198 玩家档案-合作卡、1958_11897 玩家档案-超级案例：
+           与嘉宾稿共用头部/统计几何；coops = 两张烘焙合作卡(400rpx 组件) + CTA；
+           cases = 左侧时间线(竖线+点) + 月份标签 + 案例小卡 + CTA。 -->
+      <block wx:if="{{figma.variant === 'coops' || figma.variant === 'cases'}}">
+        <view class="absolute left-[24rpx] top-[208rpx] h-[136rpx] w-[702rpx] rounded-[16rpx] bg-panel">
+          <view wx:for="{{figma.stats}}" wx:key="label" class="absolute top-[24rpx] flex w-[96rpx] flex-col items-center gap-[4rpx]" style="left:{{item.leftRpx}}rpx">
+            <text class="text-[40rpx] font-medium leading-[56rpx] text-ink">{{item.value}}</text>
+            <text class="text-[20rpx] leading-[28rpx] text-ink">{{item.label}}</text>
+          </view>
+          <view class="absolute left-[628rpx] top-[16rpx] flex h-[28rpx] w-[28rpx] items-center justify-center rounded-full bg-[#ff2238]">
+            <text class="text-[20rpx] leading-[26rpx] text-ink">{{figma.redBadge}}</text>
+          </view>
+        </view>
+        <view class="absolute left-0 top-[368rpx] flex h-[80rpx] w-full">
+          <view wx:for="{{figma.tabs}}" wx:key="*this" class="relative flex h-full w-[250rpx] items-center justify-center bg-canvas">
+            <text class="{{index === figma.activeTab ? 'text-[28rpx] font-medium leading-[39.2rpx] text-brand' : 'text-[28rpx] leading-[39.2rpx] text-muted'}}">{{item}}</text>
+            <view wx:if="{{index === figma.activeTab}}" class="absolute bottom-0 left-0 h-[4rpx] w-[250rpx] bg-brand" />
+          </view>
+        </view>
+        <view class="absolute left-0 top-[446rpx] h-[2rpx] w-full bg-panel" />
+        <block wx:if="{{figma.variant === 'coops'}}">
+          <view wx:for="{{figma.cards}}" wx:key="roleKey" class="absolute left-[24rpx] w-[702rpx]" style="top:{{item.topRpx}}rpx">
+            <cooperation-role-card role-key="{{item.roleKey}}" positioning="{{item.positioning}}" target-summary="{{item.targetSummary}}" />
+          </view>
+        </block>
+        <block wx:if="{{figma.variant === 'cases'}}">
+          <view class="absolute left-[60rpx] top-[486rpx] h-[470rpx] w-[2rpx] bg-brand" />
+          <view wx:for="{{figma.groups}}" wx:key="month" class="absolute left-0 w-full" style="top:{{485 + index * 224}}rpx">
+            <text class="absolute left-0 top-[-6rpx] w-full text-center text-[length:24rpx] font-medium leading-[33.6rpx] text-brand">{{item.month}}</text>
+            <view class="absolute left-[48rpx] top-0 h-[24rpx] w-[24rpx] rounded-full bg-brand" />
+            <view class="absolute left-[124rpx] top-[61rpx] h-[125rpx] w-[578rpx] rounded-[16rpx] bg-panel">
+              <mip-icon class="absolute left-[26rpx] top-[20rpx]" name="folder-5-line" size="{{16}}" color="var(--color-ink)" />
+              <text class="absolute left-[72rpx] top-[16rpx] text-[length:28rpx] font-semibold leading-[39.2rpx] text-ink">{{item.title}}</text>
+              <text class="absolute left-[29rpx] top-[61rpx] text-[length:24rpx] leading-[33.6rpx] text-muted">{{item.summary}}</text>
+            </view>
+          </view>
+        </block>
+        <view class="absolute left-[24rpx] top-[1268rpx] h-[112rpx] w-[702rpx] overflow-hidden rounded-full bg-[#3f3c27]">
+          <view class="absolute left-[24rpx] top-[16rpx] flex h-[80rpx] w-[258rpx] items-center justify-center rounded-full border-[2rpx] border-canvas bg-panel">
+            <image class="h-[48rpx] w-[112rpx]" src="/packages/member/assets/figma/coop/coop-avatars.png" />
+            <view class="ml-[8rpx] flex items-center">
+              <text class="text-[20rpx] font-semibold leading-[28rpx] text-brand">+</text>
+              <text class="text-[24rpx] font-medium leading-[33.6rpx] text-brand">3感兴趣</text>
+            </view>
+          </view>
+          <view class="absolute left-[306rpx] top-[16rpx] flex h-[80rpx] w-[372rpx] items-center justify-center rounded-full border-[2rpx] border-canvas bg-brand">
+            <text class="text-[32rpx] font-medium leading-[44.8rpx] text-canvas">我感兴趣</text>
           </view>
         </view>
       </block>
