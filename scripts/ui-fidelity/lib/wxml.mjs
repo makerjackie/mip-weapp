@@ -301,7 +301,9 @@ function renderNode(node, scope, ctx) {
     const componentCtx = { ...ctx }
     const parentResolveAsset = componentCtx.resolveAsset
     componentCtx.resolveAsset = src =>
-      typeof src === 'string' && src.startsWith('/assets/figma/events/')
+      typeof src === 'string'
+      && src.startsWith('/assets/figma/events/')
+      && !src.endsWith('banner-connect-fitness.png')
         ? `/packages/member${src}`
         : parentResolveAsset?.(src)
     const inner = renderToHtml(resolved.nodes, { ...props, ...data }, {
