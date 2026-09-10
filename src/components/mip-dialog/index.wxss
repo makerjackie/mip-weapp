@@ -12,7 +12,7 @@
   box-sizing: border-box;
   width: 640rpx;
   overflow: hidden;
-  background: var(--mip-bg-surface-2);
+  background: var(--color-line);
   border-radius: 16rpx;
 }
 
@@ -103,11 +103,19 @@
 
 .mip-dialog__frame-button {
   position: absolute;
-  top: 396rpx;
-  left: 0;
-  width: 100%;
+  top: 386rpx;
+  width: 320rpx;
   font-size: 32rpx;
   line-height: 44.8rpx;
   color: #576b95;
   text-align: center;
+}
+
+.mip-dialog__frame-button--left {
+  left: 0;
+  color: #eaeaea;
+}
+
+.mip-dialog__frame-button--right {
+  left: 320rpx;
 }

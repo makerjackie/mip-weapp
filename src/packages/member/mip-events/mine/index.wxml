@@ -35,8 +35,7 @@
       </view>
       <mip-dialog
         wx:if="{{figma.dialog}}"
-        class="absolute left-[54rpx] top-[404rpx]"
-        style="width:640rpx"
+        style="position:absolute;left:54rpx;top:404rpx;width:640rpx"
         open="{{true}}"
         frame-only="{{true}}"
         title="{{figma.dialog.title}}"

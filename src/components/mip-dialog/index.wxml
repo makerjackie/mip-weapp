@@ -16,5 +16,11 @@
   <text class="mip-dialog__title mip-dialog__title--frame">{{title}}</text>
   <view class="mip-dialog__content mip-dialog__content--frame"><slot /></view>
   <view class="mip-dialog__frame-rule"></view>
-  <text class="mip-dialog__frame-button">{{button || confirmText}}</text>
+  <block wx:if="{{button}}">
+    <text class="mip-dialog__frame-button">{{button}}</text>
+  </block>
+  <block wx:else>
+    <text class="mip-dialog__frame-button mip-dialog__frame-button--left">{{cancelText}}</text>
+    <text class="mip-dialog__frame-button mip-dialog__frame-button--right">{{confirmText}}</text>
+  </block>
 </view>

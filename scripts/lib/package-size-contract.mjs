@@ -155,13 +155,23 @@ function resolveReferenceCandidates(distRoot, currentFile, reference) {
   }
 
   const extension = path.extname(basePath)
-  return extension
+  // Lossy event covers ship once in the package; the original PNG may remain
+  // alongside pixel fixtures for reference-side comparisons.
+  const originalEventCover = reference.startsWith('/assets/figma/events/')
+    ? path.join(
+        distRoot,
+        'packages/member',
+        reference.replace(/\.png$/, '.webp').slice(1),
+      )
+    : null
+  const extensions = extension
     ? [basePath]
     : [
         basePath,
         ...RUNTIME_EXTENSIONS.map(item => `${basePath}${item}`),
         ...RUNTIME_EXTENSIONS.map(item => path.join(basePath, `index${item}`)),
       ]
+  return originalEventCover ? [originalEventCover, ...extensions] : extensions
 }
 
 function extractReferences(filePath) {

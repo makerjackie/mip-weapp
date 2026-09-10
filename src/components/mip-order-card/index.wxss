@@ -7,12 +7,12 @@
 .mip-order-card__cover {
   display: block;
   width: 100%;
-  height: 596rpx;
+  height: 298rpx;
   object-fit: cover;
 }
 
 .mip-order-card__main {
-  padding: 32rpx 48rpx 22rpx;
+  padding: 16rpx 48rpx 22rpx;
 }
 
 .mip-order-card__title {
@@ -34,7 +34,7 @@
 }
 
 .mip-order-card__title + .mip-order-card__row {
-  margin-top: 60rpx;
+  margin-top: 16rpx;
 }
 
 .mip-order-card__row + .mip-order-card__row {

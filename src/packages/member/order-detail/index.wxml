@@ -10,7 +10,7 @@
     <view class="relative -mt-4 min-h-[1640rpx]">
       <view class="{{figma.dialog ? 'opacity-[0.33]' : ''}}">
       <view class="absolute left-[24rpx] top-[24rpx] h-[298rpx] w-[702rpx] overflow-hidden rounded-[16rpx]">
-        <image class="h-[298rpx] w-full" src="/packages/member/assets/figma/orders/cover-detail.png" />
+        <image class="h-[298rpx] w-full" src="/packages/member/assets/figma/orders/cover-detail.webp" />
       </view>
       <view class="absolute left-[24rpx] top-[346rpx] h-[232rpx] w-[702rpx] rounded-[16rpx] bg-panel">
         <view class="absolute left-[24rpx] top-[26rpx] flex h-[32rpx] items-center justify-center rounded-full bg-[#80ccff] w-[62rpx] text-[length:20rpx] font-medium leading-[32rpx] text-canvas">沙龙</view>
@@ -52,8 +52,7 @@
       </view>
       <mip-dialog
         wx:if="{{figma.dialog}}"
-        class="absolute left-[54rpx] top-[404rpx]"
-        style="width:640rpx"
+        style="position:absolute;left:54rpx;top:404rpx;width:640rpx"
         open="{{true}}"
         frame-only="{{true}}"
         title="{{figma.dialog.title}}"

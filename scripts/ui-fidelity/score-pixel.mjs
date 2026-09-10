@@ -73,10 +73,12 @@ function buildDocument({ route, fixture }) {
     // itself is a local file.
     resolveAsset: src =>
       src?.startsWith('/packages/member/assets/')
-        ? path.join(root, src.slice(1))
-        : src?.startsWith('/')
-          ? path.join(SRC, src)
-          : src,
+        ? path.join(root, 'src', src.slice(1))
+        : src?.startsWith('/packages/member/')
+          ? path.join(root, 'src', src.slice(1))
+          : src?.startsWith('/')
+            ? path.join(SRC, src)
+            : src,
     // Token colors resolve through the component's colors.ts mirror, exactly
     // like the mini-program component does (data-URI SVGs cannot see CSS vars).
     renderMipIcon: props => mipIconHtml(iconRegistry, props, iconColors),
@@ -141,6 +143,12 @@ span{text-size-adjust:100%}img{display:block}</style>
 }
 
 function screenshot(htmlFile, pngFile, height) {
+  try {
+    fs.rmSync(pngFile, { force: true })
+  }
+  catch {
+    // Chrome overwrites the file; removal is only a guard against stale output.
+  }
   const result = spawnSync(
     CHROME,
     [
