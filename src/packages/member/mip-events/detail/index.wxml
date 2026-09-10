@@ -176,6 +176,36 @@
           </view>
         </view>
       </t-popup>
+
+      <!-- figma 1861_17981 活动详情-分享：t-popup 代理不渲染，fixture-gated 按稿绘制遮罩与分享面板。 -->
+      <block wx:if="{{figmaShare}}">
+        <view class="fixed left-0 top-0 z-[60] h-[1400rpx] w-full overflow-hidden">
+          <view class="absolute inset-0 bg-[rgba(0,0,0,0.68)]"></view>
+          <view class="absolute left-0 top-[564rpx] h-[836rpx] w-full rounded-t-[16rpx] bg-[#080808]"></view>
+          <view class="absolute left-[24rpx] top-[576rpx] h-[496rpx] w-[702rpx] rounded-[16rpx] bg-panel"></view>
+          <text class="absolute left-[50rpx] top-[592rpx] text-[length:28rpx] font-medium leading-[40rpx] text-white">分享活动</text>
+          <text class="absolute left-[50rpx] top-[644rpx] text-[length:32rpx] font-semibold leading-[44rpx] text-white">MIP反人性早会第 328 场</text>
+          <view class="absolute left-[48rpx] top-[716rpx] flex h-[92rpx] w-[654rpx] items-center justify-center gap-2 rounded-[16rpx] bg-[#07c160]">
+            <image class="h-[48rpx] w-[48rpx] shrink-0" mode="aspectFit" src="/assets/figma/events/wechat.svg" />
+            <text class="text-[length:28rpx] font-medium leading-[40rpx] text-white">微信分享</text>
+          </view>
+          <view class="absolute left-[48rpx] top-[832rpx] flex h-[92rpx] w-[654rpx] items-center justify-center gap-2 rounded-[16rpx] bg-[#1a71ff]">
+            <image class="h-[48rpx] w-[48rpx] shrink-0" mode="aspectFit" src="/assets/figma/events/link.svg" />
+            <text class="text-[length:28rpx] font-medium leading-[40rpx] text-white">复制链接</text>
+          </view>
+          <view class="absolute left-[48rpx] top-[948rpx] flex h-[92rpx] w-[654rpx] items-center justify-center gap-2 rounded-[16rpx] bg-brand">
+            <image class="h-[48rpx] w-[48rpx] shrink-0" mode="aspectFit" src="/assets/figma/events/qr-code.svg" />
+            <text class="text-[length:28rpx] font-medium leading-[40rpx] text-ink">下载活动二维码</text>
+          </view>
+          <view class="absolute left-[24rpx] top-[1086rpx] h-[292rpx] w-[702rpx] rounded-[16rpx] bg-panel"></view>
+          <text class="absolute left-[50rpx] top-[1108rpx] text-[length:28rpx] font-medium leading-[40rpx] text-white">分享文案</text>
+          <mip-icon class="absolute left-[652rpx] top-[1114rpx]" name="file-copy" size="{{32}}" color="var(--color-brand)" />
+          <text class="absolute left-[50rpx] top-[1164rpx] text-[length:32rpx] font-semibold leading-[44rpx] text-white">11.6 MIP反人性早会</text>
+          <text class="absolute left-[50rpx] top-[1224rpx] text-[length:24rpx] leading-[40rpx] text-white">时间: {{shareTimeText}}</text>
+          <text class="absolute left-[50rpx] top-[1272rpx] text-[length:24rpx] leading-[40rpx] text-white">地址: {{locationText}}</text>
+          <text class="absolute left-[50rpx] top-[1320rpx] text-[length:24rpx] leading-[40rpx] text-white">报名链接: <text class="text-[#428bff]">https://www.mipgame.com</text></text>
+        </view>
+      </block>
       <canvas id="mip-event-invitation-poster-canvas" type="2d" class="fixed left-[-9999px] top-0 h-[560px] w-[375px]"></canvas>
     </block>
     <app-page-exit wx:if="{{state !== 'ready'}}" />

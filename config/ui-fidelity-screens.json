@@ -5903,6 +5903,868 @@
           ]
         }
       }
+    },
+    {
+      "key": "profile-代表行业-a",
+      "route": "packages/member/mip-profile/index",
+      "reference": "1774_41767_代表行业.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "picker": true,
+          "pickerGroups": [
+            {
+              "label": "互联网/AI",
+              "topRpx": 111,
+              "expanded": true
+            },
+            {
+              "label": "电子/通信/半导体",
+              "topRpx": 523
+            },
+            {
+              "label": "服务业",
+              "topRpx": 615
+            }
+          ],
+          "pickerChips": [
+            {
+              "label": "互联网",
+              "leftRpx": 48,
+              "widthRpx": 124,
+              "topRpx": 204
+            },
+            {
+              "label": "电子商务",
+              "leftRpx": 188,
+              "widthRpx": 152,
+              "topRpx": 204
+            },
+            {
+              "label": "计算机软件",
+              "leftRpx": 356,
+              "widthRpx": 180,
+              "topRpx": 204
+            },
+            {
+              "label": "生活服务",
+              "leftRpx": 552,
+              "widthRpx": 152,
+              "topRpx": 204
+            },
+            {
+              "label": "企业服务",
+              "leftRpx": 48,
+              "widthRpx": 152,
+              "topRpx": 276
+            },
+            {
+              "label": "医疗健康",
+              "leftRpx": 216,
+              "widthRpx": 152,
+              "topRpx": 276
+            },
+            {
+              "label": "游戏",
+              "leftRpx": 384,
+              "widthRpx": 96,
+              "topRpx": 276
+            },
+            {
+              "label": "社交网络与媒体",
+              "leftRpx": 496,
+              "widthRpx": 236,
+              "topRpx": 276
+            },
+            {
+              "label": "人工智能",
+              "leftRpx": 48,
+              "widthRpx": 152,
+              "topRpx": 348
+            },
+            {
+              "label": "云计算",
+              "leftRpx": 216,
+              "widthRpx": 124,
+              "topRpx": 348
+            },
+            {
+              "label": "在线教育",
+              "leftRpx": 356,
+              "widthRpx": 152,
+              "topRpx": 348
+            },
+            {
+              "label": "计算机服务",
+              "leftRpx": 524,
+              "widthRpx": 190,
+              "topRpx": 348
+            },
+            {
+              "label": "大数据",
+              "leftRpx": 48,
+              "widthRpx": 124,
+              "topRpx": 420
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 188,
+              "widthRpx": 152,
+              "topRpx": 420,
+              "active": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "profile-代表行业-b",
+      "route": "packages/member/mip-profile/index",
+      "reference": "2917_4785_代表行业.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "picker": true,
+          "pickerGroups": [
+            {
+              "label": "互联网/AI",
+              "topRpx": 111,
+              "expanded": true
+            },
+            {
+              "label": "电子/通信/半导体",
+              "topRpx": 523
+            },
+            {
+              "label": "服务业",
+              "topRpx": 615
+            }
+          ],
+          "pickerChips": [
+            {
+              "label": "互联网",
+              "leftRpx": 48,
+              "widthRpx": 124,
+              "topRpx": 204
+            },
+            {
+              "label": "电子商务",
+              "leftRpx": 188,
+              "widthRpx": 152,
+              "topRpx": 204
+            },
+            {
+              "label": "计算机软件",
+              "leftRpx": 356,
+              "widthRpx": 180,
+              "topRpx": 204
+            },
+            {
+              "label": "生活服务",
+              "leftRpx": 552,
+              "widthRpx": 152,
+              "topRpx": 204
+            },
+            {
+              "label": "企业服务",
+              "leftRpx": 48,
+              "widthRpx": 152,
+              "topRpx": 276
+            },
+            {
+              "label": "医疗健康",
+              "leftRpx": 216,
+              "widthRpx": 152,
+              "topRpx": 276
+            },
+            {
+              "label": "游戏",
+              "leftRpx": 384,
+              "widthRpx": 96,
+              "topRpx": 276
+            },
+            {
+              "label": "社交网络与媒体",
+              "leftRpx": 496,
+              "widthRpx": 236,
+              "topRpx": 276
+            },
+            {
+              "label": "人工智能",
+              "leftRpx": 48,
+              "widthRpx": 152,
+              "topRpx": 348
+            },
+            {
+              "label": "云计算",
+              "leftRpx": 216,
+              "widthRpx": 124,
+              "topRpx": 348
+            },
+            {
+              "label": "在线教育",
+              "leftRpx": 356,
+              "widthRpx": 152,
+              "topRpx": 348
+            },
+            {
+              "label": "计算机服务",
+              "leftRpx": 524,
+              "widthRpx": 190,
+              "topRpx": 348
+            },
+            {
+              "label": "大数据",
+              "leftRpx": 48,
+              "widthRpx": 124,
+              "topRpx": 420
+            },
+            {
+              "label": "广告营销",
+              "leftRpx": 188,
+              "widthRpx": 152,
+              "topRpx": 420,
+              "active": true
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "events-活动-首页-时间选择",
+      "route": "pages/events/index",
+      "reference": "1819_17535_活动-时间选择.html",
+      "crop": {
+        "topPx": 68,
+        "bottomPx": 69
+      },
+      "fixture": {
+        "state": "ready",
+        "selectedCity": "深圳",
+        "banners": [
+          {
+            "id": "banner-connect-fitness",
+            "imageUrl": "/assets/figma/events/banner-connect-fitness.png",
+            "accessibilityLabel": "MIP CONNECT 见人不如健身"
+          }
+        ],
+        "videoChannelConfigured": false,
+        "view": "UPCOMING",
+        "dateFilter": "CUSTOM",
+        "customDateLabel": "2025.12.12",
+        "dateFrom": "",
+        "dateTo": "",
+        "rangePanelVisible": false,
+        "eventTypeOptions": [],
+        "tagOptions": [],
+        "draftAccessType": "",
+        "draftSortDirection": "ASC",
+        "searchInput": "",
+        "activeFilterCount": 0,
+        "calendarVisible": false,
+        "loadingMore": false,
+        "nextCursor": "",
+        "message": "",
+        "events": [
+          {
+            "id": "e1",
+            "coverUrl": "/assets/figma/events/cover-ai-medical.png",
+            "title": "MIP反人性早会第328场",
+            "startsText": "12月12日 10:00-12:00",
+            "locationText": "深圳 新洲二街海松大厦A座1706室",
+            "accessLabel": "仅玩家",
+            "eventTypeLabel": "沙龙",
+            "statusLabel": "",
+            "registrationCount": 48,
+            "countText": "+45参加",
+            "participantPreview": [
+              {
+                "participantRef": "p1",
+                "avatarUrl": "/assets/figma/events/avatar-1.png"
+              },
+              {
+                "participantRef": "p2",
+                "avatarUrl": "/assets/figma/events/avatar-2.png"
+              },
+              {
+                "participantRef": "p3",
+                "avatarUrl": "/assets/figma/events/avatar-3.png"
+              }
+            ],
+            "plusLabel": "+",
+            "remainText": "45参加",
+            "accessTagStyle": "background:#fde530;border-color:#d0b801;color:#000000",
+            "typeTagStyle": "background:#428bff;border-color:#075adf;color:#f7f7f7"
+          },
+          {
+            "id": "e2",
+            "coverUrl": "/assets/figma/events/cover-comfort-standup.png",
+            "title": "MIP反人性早会第328场",
+            "startsText": "12月12日 10:00-12:00",
+            "locationText": "深圳 新洲二街海松大厦A座1706室",
+            "accessLabel": "仅玩家",
+            "eventTypeLabel": "沙龙",
+            "statusLabel": "",
+            "registrationCount": 48,
+            "countText": "+45参加",
+            "participantPreview": [
+              {
+                "participantRef": "p1",
+                "avatarUrl": "/assets/figma/events/avatar-1.png"
+              },
+              {
+                "participantRef": "p2",
+                "avatarUrl": "/assets/figma/events/avatar-2.png"
+              },
+              {
+                "participantRef": "p3",
+                "avatarUrl": "/assets/figma/events/avatar-3.png"
+              }
+            ],
+            "plusLabel": "+",
+            "remainText": "45参加",
+            "accessTagStyle": "background:#fde530;border-color:#d0b801;color:#000000",
+            "typeTagStyle": "background:#428bff;border-color:#075adf;color:#f7f7f7"
+          }
+        ]
+      }
+    },
+    {
+      "key": "events-活动-首页-日期选择",
+      "route": "pages/events/index",
+      "reference": "1819_17793_活动-首页-日期选择.html",
+      "crop": {
+        "topPx": 68,
+        "bottomPx": 69
+      },
+      "fixture": {
+        "state": "ready",
+        "selectedCity": "深圳",
+        "banners": [
+          {
+            "id": "banner-connect-fitness",
+            "imageUrl": "/assets/figma/events/banner-connect-fitness.png",
+            "accessibilityLabel": "MIP CONNECT 见人不如健身"
+          }
+        ],
+        "videoChannelConfigured": false,
+        "view": "UPCOMING",
+        "dateFilter": "CUSTOM",
+        "customDateLabel": "2025.12.12",
+        "dateFrom": "",
+        "dateTo": "",
+        "rangePanelVisible": false,
+        "eventTypeOptions": [],
+        "tagOptions": [],
+        "draftAccessType": "",
+        "draftSortDirection": "ASC",
+        "searchInput": "",
+        "activeFilterCount": 0,
+        "calendarVisible": true,
+        "loadingMore": false,
+        "nextCursor": "",
+        "message": "",
+        "events": [
+          {
+            "id": "e1",
+            "coverUrl": "/assets/figma/events/cover-ai-medical.png",
+            "title": "MIP反人性早会第328场",
+            "startsText": "12月12日 10:00-12:00",
+            "locationText": "深圳 新洲二街海松大厦A座1706室",
+            "accessLabel": "仅玩家",
+            "eventTypeLabel": "沙龙",
+            "statusLabel": "",
+            "registrationCount": 48,
+            "countText": "+45参加",
+            "participantPreview": [
+              {
+                "participantRef": "p1",
+                "avatarUrl": "/assets/figma/events/avatar-1.png"
+              },
+              {
+                "participantRef": "p2",
+                "avatarUrl": "/assets/figma/events/avatar-2.png"
+              },
+              {
+                "participantRef": "p3",
+                "avatarUrl": "/assets/figma/events/avatar-3.png"
+              }
+            ],
+            "plusLabel": "+",
+            "remainText": "45参加",
+            "accessTagStyle": "background:#fde530;border-color:#d0b801;color:#000000",
+            "typeTagStyle": "background:#428bff;border-color:#075adf;color:#f7f7f7"
+          },
+          {
+            "id": "e2",
+            "coverUrl": "/assets/figma/events/cover-comfort-standup.png",
+            "title": "MIP反人性早会第328场",
+            "startsText": "12月12日 10:00-12:00",
+            "locationText": "深圳 新洲二街海松大厦A座1706室",
+            "accessLabel": "仅玩家",
+            "eventTypeLabel": "沙龙",
+            "statusLabel": "",
+            "registrationCount": 48,
+            "countText": "+45参加",
+            "participantPreview": [
+              {
+                "participantRef": "p1",
+                "avatarUrl": "/assets/figma/events/avatar-1.png"
+              },
+              {
+                "participantRef": "p2",
+                "avatarUrl": "/assets/figma/events/avatar-2.png"
+              },
+              {
+                "participantRef": "p3",
+                "avatarUrl": "/assets/figma/events/avatar-3.png"
+              }
+            ],
+            "plusLabel": "+",
+            "remainText": "45参加",
+            "accessTagStyle": "background:#fde530;border-color:#d0b801;color:#000000",
+            "typeTagStyle": "background:#428bff;border-color:#075adf;color:#f7f7f7"
+          }
+        ],
+        "calendarValue": 1770000000000,
+        "calendarMinDate": 1735689600000,
+        "calendarMaxDate": 1798761600000,
+        "figma": {
+          "calendarWeekdays": [
+            "日",
+            "一",
+            "二",
+            "三",
+            "四",
+            "五",
+            "六"
+          ],
+          "calendarDays": [
+            {
+              "label": "1",
+              "leftRpx": 424,
+              "topRpx": 856,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "2",
+              "leftRpx": 520,
+              "topRpx": 856,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "3",
+              "leftRpx": 616,
+              "topRpx": 856,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "4",
+              "leftRpx": 40,
+              "topRpx": 952,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "5",
+              "leftRpx": 136,
+              "topRpx": 952,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "6",
+              "leftRpx": 232,
+              "topRpx": 952,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "7",
+              "leftRpx": 328,
+              "topRpx": 952,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "8",
+              "leftRpx": 424,
+              "topRpx": 952,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "9",
+              "leftRpx": 520,
+              "topRpx": 952,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "10",
+              "leftRpx": 616,
+              "topRpx": 952,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "11",
+              "leftRpx": 40,
+              "topRpx": 1048,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "12",
+              "leftRpx": 136,
+              "topRpx": 1048,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "13",
+              "leftRpx": 232,
+              "topRpx": 1048,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "14",
+              "leftRpx": 328,
+              "topRpx": 1048,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "15",
+              "leftRpx": 424,
+              "topRpx": 1048,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "16",
+              "leftRpx": 520,
+              "topRpx": 1048,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "17",
+              "leftRpx": 616,
+              "topRpx": 1048,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "18",
+              "leftRpx": 40,
+              "topRpx": 1144,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "19",
+              "leftRpx": 136,
+              "topRpx": 1144,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "20",
+              "leftRpx": 232,
+              "topRpx": 1144,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "21",
+              "leftRpx": 328,
+              "topRpx": 1144,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "22",
+              "leftRpx": 424,
+              "topRpx": 1144,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "23",
+              "leftRpx": 520,
+              "topRpx": 1144,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "24",
+              "leftRpx": 616,
+              "topRpx": 1144,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "25",
+              "leftRpx": 40,
+              "topRpx": 1240,
+              "dimmed": true,
+              "dot": false,
+              "cellClass": "bg-panel text-[#767676]"
+            },
+            {
+              "label": "26",
+              "leftRpx": 136,
+              "topRpx": 1240,
+              "dimmed": false,
+              "dot": true,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "27",
+              "leftRpx": 232,
+              "topRpx": 1240,
+              "dimmed": false,
+              "dot": true,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "28",
+              "leftRpx": 328,
+              "topRpx": 1240,
+              "dimmed": false,
+              "dot": true,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "29",
+              "leftRpx": 424,
+              "topRpx": 1240,
+              "dimmed": false,
+              "dot": true,
+              "cellClass": "bg-panel text-ink"
+            },
+            {
+              "label": "30",
+              "leftRpx": 520,
+              "topRpx": 1240,
+              "dimmed": false,
+              "dot": false,
+              "cellClass": "bg-brand font-semibold text-canvas"
+            },
+            {
+              "label": "31",
+              "leftRpx": 616,
+              "topRpx": 1240,
+              "dimmed": false,
+              "dot": true,
+              "cellClass": "bg-panel text-ink"
+            }
+          ]
+        },
+        "figmaCalendar": true
+      }
+    },
+    {
+      "key": "events-活动-首页-原生",
+      "route": "pages/events/index",
+      "reference": "1824_19671_活动-首页-原生.html",
+      "crop": {
+        "topPx": 68,
+        "bottomPx": 69
+      },
+      "fixture": {
+        "state": "ready",
+        "selectedCity": "深圳",
+        "banners": [
+          {
+            "id": "banner-connect-fitness",
+            "imageUrl": "/assets/figma/events/banner-connect-fitness.png",
+            "accessibilityLabel": "MIP CONNECT 见人不如健身"
+          }
+        ],
+        "videoChannelConfigured": false,
+        "view": "UPCOMING",
+        "dateFilter": "TODAY",
+        "customDateLabel": "",
+        "dateFrom": "",
+        "dateTo": "",
+        "rangePanelVisible": false,
+        "eventTypeOptions": [],
+        "tagOptions": [],
+        "draftAccessType": "",
+        "draftSortDirection": "ASC",
+        "searchInput": "",
+        "activeFilterCount": 0,
+        "calendarVisible": false,
+        "loadingMore": false,
+        "nextCursor": "",
+        "message": "",
+        "events": [
+          {
+            "id": "e1",
+            "coverUrl": "/assets/figma/events/cover-ai-medical.png",
+            "title": "MIP反人性早会第328场",
+            "startsText": "12月12日 10:00-12:00",
+            "locationText": "深圳 新洲二街海松大厦A座1706室",
+            "accessLabel": "仅玩家",
+            "eventTypeLabel": "沙龙",
+            "statusLabel": "",
+            "registrationCount": 48,
+            "countText": "+45参加",
+            "participantPreview": [
+              {
+                "participantRef": "p1",
+                "avatarUrl": "/assets/figma/events/avatar-1.png"
+              },
+              {
+                "participantRef": "p2",
+                "avatarUrl": "/assets/figma/events/avatar-2.png"
+              },
+              {
+                "participantRef": "p3",
+                "avatarUrl": "/assets/figma/events/avatar-3.png"
+              }
+            ],
+            "plusLabel": "+",
+            "remainText": "45参加",
+            "accessTagStyle": "background:#fde530;border-color:#d0b801;color:#000000",
+            "typeTagStyle": "background:#428bff;border-color:#075adf;color:#f7f7f7"
+          },
+          {
+            "id": "e2",
+            "coverUrl": "/assets/figma/events/cover-comfort-standup.png",
+            "title": "MIP反人性早会第328场",
+            "startsText": "12月12日 10:00-12:00",
+            "locationText": "深圳 新洲二街海松大厦A座1706室",
+            "accessLabel": "仅玩家",
+            "eventTypeLabel": "沙龙",
+            "statusLabel": "",
+            "registrationCount": 48,
+            "countText": "+45参加",
+            "participantPreview": [
+              {
+                "participantRef": "p1",
+                "avatarUrl": "/assets/figma/events/avatar-1.png"
+              },
+              {
+                "participantRef": "p2",
+                "avatarUrl": "/assets/figma/events/avatar-2.png"
+              },
+              {
+                "participantRef": "p3",
+                "avatarUrl": "/assets/figma/events/avatar-3.png"
+              }
+            ],
+            "plusLabel": "+",
+            "remainText": "45参加",
+            "accessTagStyle": "background:#fde530;border-color:#d0b801;color:#000000",
+            "typeTagStyle": "background:#428bff;border-color:#075adf;color:#f7f7f7"
+          }
+        ],
+        "figmaNativePicker": true
+      }
+    },
+    {
+      "key": "events-活动报名",
+      "route": "packages/member/mip-events/registration/index",
+      "reference": "1821_19274_活动报名.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true
+      }
+    },
+    {
+      "key": "events-活动详情-分享",
+      "route": "packages/member/mip-events/detail/index",
+      "reference": "1861_17981_活动-首页-分享.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "onlineMode": false,
+        "figmaShare": true,
+        "startsText": "12月12日 10:00-12:00",
+        "shareTimeText": "12月12日 10:00-12:00",
+        "accessLabel": "仅玩家",
+        "locationText": "深圳 新洲二街海松大厦A座1706室",
+        "primaryLabel": "立即报名",
+        "event": {
+          "coverUrl": "/assets/figma/events/detail-cover.png",
+          "title": "MIP反人性早会第328场",
+          "eventTypeLabel": "沙龙",
+          "canInteract": true,
+          "accessType": "FREE",
+          "registrationCount": 45,
+          "tags": [],
+          "branchName": "",
+          "summary": "",
+          "contentMedia": [],
+          "videoRecaps": [],
+          "changes": [],
+          "participantPreview": [
+            {
+              "participantRef": "p1",
+              "nickname": "玩家A",
+              "avatarUrl": "/assets/figma/events/avatar-1.png"
+            },
+            {
+              "participantRef": "p2",
+              "nickname": "玩家B",
+              "avatarUrl": "/assets/figma/events/avatar-2.png"
+            },
+            {
+              "participantRef": "p3",
+              "nickname": "玩家C",
+              "avatarUrl": "/assets/figma/events/avatar-3.png"
+            }
+          ]
+        }
+      }
     }
   ]
 }

@@ -6,10 +6,34 @@
 
   <!-- figma 1774_41143/1774_41253/1822_19405 编辑信息：黄色横幅 + 基础信息(头像/昵称/性别
        三行分组卡) + 代表行业(选择卡 + 12 标签) + 当前身份状态(7 标签) + 一句话介绍(textarea)。
+       figma 1774_41767/2917_4785 代表行业选择器：黄色横幅 + 三组手风琴 + 已选计数 + 清除/确定。
        生产保持下方表单布局（被 vitest pin）。fixture figmaLayout 打开时按稿渲染，
        数据来自 ui-fidelity manifest fixture。 -->
   <block wx:elif="{{figmaLayout}}">
-    <view class="relative min-h-[1500rpx]">
+    <view wx:if="{{figma.picker}}" class="relative min-h-[1400rpx]">
+      <view class="absolute left-0 top-0 h-[64rpx] w-full bg-brand">
+        <text class="absolute left-0 top-[12rpx] w-full text-center text-[28rpx] font-semibold leading-[40rpx] text-canvas">请选择1个您当前所在的行业</text>
+      </view>
+
+      <block wx:for="{{figma.pickerGroups}}" wx:key="label">
+        <text class="absolute left-[48rpx] text-[length:32rpx] font-semibold leading-[44.8rpx] text-ink" style="top:{{item.topRpx}}rpx">{{item.label}}</text>
+        <mip-icon wx:if="{{item.expanded}}" class="absolute left-[666rpx] rotate-180" style="top:{{item.topRpx + 15}}rpx" name="chevron-down-1-15" size="{{12}}" color="var(--color-ink)" />
+        <mip-icon wx:else class="absolute left-[666rpx]" style="top:{{item.topRpx + 15}}rpx" name="chevron-down-1-15" size="{{12}}" color="var(--color-ink)" />
+      </block>
+
+      <view wx:for="{{figma.pickerChips}}" wx:key="label" class="absolute flex h-[56rpx] items-center justify-center rounded-[16rpx] text-[length:28rpx] {{item.active ? 'bg-brand font-medium text-canvas' : 'bg-panel text-ink'}}" style="left:{{item.leftRpx}}rpx;top:{{item.topRpx}}rpx;width:{{item.widthRpx}}rpx">{{item.label}}</view>
+
+      <text class="absolute left-[48rpx] top-[1200rpx] text-[length:28rpx] font-medium leading-[40rpx] text-brand">已选 1/1</text>
+      <view class="absolute left-[24rpx] top-[1268rpx] h-[112rpx] w-[702rpx] rounded-full bg-[#3f3c27]">
+        <view class="absolute left-[24rpx] top-[16rpx] flex h-[80rpx] w-[176rpx] items-center justify-center rounded-full bg-panel">
+          <text class="text-[length:28rpx] font-medium leading-[40rpx] text-brand">清除</text>
+        </view>
+        <view class="absolute left-[226rpx] top-[16rpx] flex h-[80rpx] w-[450rpx] items-center justify-center rounded-full bg-brand">
+          <text class="text-[length:32rpx] font-medium leading-[44.8rpx] text-canvas">确定</text>
+        </view>
+      </view>
+    </view>
+    <view wx:else class="relative min-h-[1500rpx]">
       <view class="absolute left-0 top-0 h-[64rpx] w-full bg-brand">
         <text class="absolute left-0 top-[12rpx] w-full text-center text-[28rpx] font-semibold leading-[40rpx] text-canvas">吸引更多适合你的资源和人脉~</text>
       </view>

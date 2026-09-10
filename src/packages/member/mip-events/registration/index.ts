@@ -98,6 +98,7 @@ Page({
     cancellationText: '',
     accessText: '',
     priceText: '',
+    figmaLayout: false,
   },
   submissionIdempotencyKey: '',
   pendingAccessResume: false,

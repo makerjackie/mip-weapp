@@ -141,4 +141,45 @@
       <view class="events-city-notice__footer" aria-role="button" bind:tap="closeCityNotice">我知道了</view>
     </view>
   </view>
+
+  <!-- figma 1819_17793 日期选择：t-calendar 为弹层组件，像素代理不渲染，fixture-gated 按稿绘制。 -->
+  <view wx:if="{{figmaCalendar}}" class="fixed left-0 top-0 z-50 h-[1350rpx] w-full overflow-hidden">
+    <view class="absolute inset-0 bg-[rgba(0,0,0,0.9)]"></view>
+    <view class="absolute left-0 top-[604rpx] h-[800rpx] w-full rounded-t-[24rpx] bg-canvas"></view>
+    <text class="absolute left-0 top-[588rpx] w-full text-center text-[length:32rpx] font-semibold leading-[44.8rpx] text-brand">请选择活动日期</text>
+    <text class="absolute left-[150rpx] top-[678rpx] text-[length:32rpx] font-medium leading-[44.8rpx] text-ink">2026</text>
+    <mip-icon class="absolute left-[66rpx] top-[689rpx] rotate-180" name="chevron-right-1" size="{{12}}" color="var(--color-brand)" />
+    <mip-icon class="absolute left-[296rpx] top-[689rpx]" name="chevron-right-1" size="{{12}}" color="var(--color-brand)" />
+    <text class="absolute left-[536rpx] top-[678rpx] text-[length:32rpx] font-medium leading-[44.8rpx] text-ink">2月</text>
+    <mip-icon class="absolute left-[442rpx] top-[689rpx] rotate-180" name="chevron-right-1" size="{{12}}" color="var(--color-brand)" />
+    <mip-icon class="absolute left-[664rpx] top-[689rpx]" name="chevron-right-1" size="{{12}}" color="var(--color-brand)" />
+    <text wx:for="{{figma.calendarWeekdays}}" wx:key="*this" class="absolute top-[779rpx] w-[92rpx] text-center text-[length:28rpx] font-medium leading-[39.2rpx] text-ink" style="left:{{40 + index * 96}}rpx">{{item}}</text>
+    <view wx:for="{{figma.calendarDays}}" wx:key="label" class="absolute flex h-[92rpx] w-[92rpx] items-center justify-center rounded-[16rpx] text-[length:32rpx] leading-[44.8rpx] {{item.cellClass}}" style="left:{{item.leftRpx}}rpx;top:{{item.topRpx}}rpx">
+      {{item.label}}
+      <view wx:if="{{item.dot}}" class="absolute bottom-[13rpx] left-[41rpx] h-[10rpx] w-[10rpx] rounded-full bg-brand"></view>
+    </view>
+    <view class="absolute left-[40rpx] top-[1368rpx] h-[80rpx] w-[670rpx] rounded-full bg-brand"></view>
+  </view>
+
+  <!-- figma 1824_19671 原生日期选择：wx picker 为原生组件，代理不渲染，fixture-gated 按稿绘制。 -->
+  <view wx:if="{{figmaNativePicker}}" class="fixed left-0 top-0 z-50 h-[1350rpx] w-full overflow-hidden">
+    <view class="absolute inset-0 bg-[rgba(0,0,0,0.675)]"></view>
+    <view class="absolute left-0 top-[796rpx] h-[600rpx] w-full rounded-t-[24rpx] bg-[#333333]"></view>
+    <text class="absolute left-[33rpx] top-[832rpx] text-[length:28rpx] font-semibold leading-[39.2rpx] text-ink">选择日期</text>
+    <text class="absolute left-[148rpx] top-[956rpx] text-[length:32rpx] font-medium leading-[44.8rpx] text-ink">2025年</text>
+    <text class="absolute left-[352rpx] top-[956rpx] text-[length:32rpx] font-medium leading-[44.8rpx] text-ink">8月</text>
+    <text class="absolute left-[148rpx] top-[1066rpx] text-[length:32rpx] font-medium leading-[44.8rpx] text-ink">2026年</text>
+    <text class="absolute left-[352rpx] top-[1066rpx] text-[length:32rpx] font-medium leading-[44.8rpx] text-ink">9月</text>
+    <text class="absolute left-[531rpx] top-[1066rpx] text-[length:32rpx] font-medium leading-[44.8rpx] text-ink">1日</text>
+    <text class="absolute left-[345rpx] top-[1181rpx] text-[length:32rpx] font-medium leading-[44.8rpx] text-ink">10月</text>
+    <text class="absolute left-[528rpx] top-[1181rpx] text-[length:32rpx] font-medium leading-[44.8rpx] text-ink">2日</text>
+    <view class="absolute left-[24rpx] top-[1031rpx] h-[2rpx] w-[702rpx] bg-[#474747]"></view>
+    <view class="absolute left-[24rpx] top-[1143rpx] h-[2rpx] w-[702rpx] bg-[#474747]"></view>
+    <view class="absolute left-[145rpx] top-[1324rpx] h-[80rpx] w-[210rpx] rounded-[16rpx] bg-[#3a3a3a]">
+      <text class="flex h-full w-full items-center justify-center text-[length:32rpx] font-medium text-ink">取消</text>
+    </view>
+    <view class="absolute left-[390rpx] top-[1324rpx] h-[80rpx] w-[220rpx] rounded-[16rpx] bg-[#07c160]">
+      <text class="flex h-full w-full items-center justify-center text-[length:32rpx] font-medium text-[#0a0a0a]">完成</text>
+    </view>
+  </view>
 </view>
