@@ -5214,6 +5214,89 @@
           ]
         }
       }
+    },
+    {
+      "key": "events-我的活动-已参加",
+      "route": "packages/member/mip-events/mine/index",
+      "reference": "1723_16383_我的-活动-已参加.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "activeTab": 1,
+          "counts": {
+            "pending": 2,
+            "joined": 2
+          },
+          "cards": [
+            {
+              "cover": "/assets/figma/events/cover-standup.png",
+              "topRpx": 104,
+              "name": "MIP反人性早会第328场",
+              "time": "12月12日 10:00–12:00",
+              "place": "深圳 新洲二街海松大厦A座1706室",
+              "action": ""
+            },
+            {
+              "cover": "/assets/figma/events/cover-workout.png",
+              "topRpx": 604,
+              "name": "MIP反人性早会第328场",
+              "time": "12月12日 10:00–12:00",
+              "place": "深圳 新洲二街海松大厦A座1706室",
+              "action": ""
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "events-我的活动-取消报名",
+      "route": "packages/member/mip-events/mine/index",
+      "reference": "1723_16299_我的-活动-取消报名.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "activeTab": 0,
+          "counts": {
+            "pending": 2,
+            "joined": 2
+          },
+          "cards": [
+            {
+              "cover": "/assets/figma/events/cover-standup.png",
+              "topRpx": 104,
+              "name": "MIP反人性早会第328场",
+              "time": "12月12日 10:00–12:00",
+              "place": "深圳 新洲二街海松大厦A座1706室",
+              "action": "取消报名"
+            },
+            {
+              "cover": "/assets/figma/events/cover-workout.png",
+              "topRpx": 604,
+              "name": "MIP反人性早会第328场",
+              "time": "12月12日 10:00–12:00",
+              "place": "深圳 新洲二街海松大厦A座1706室",
+              "action": "取消报名"
+            }
+          ],
+          "dialog": {
+            "title": "确认取消活动报名吗?",
+            "line1": "这是一条本次活动费用的相关文案可",
+            "line2": "能很长也可能很短此Dialog 是微信",
+            "line3": "小程序原生的",
+            "button": "我知道了"
+          }
+        }
+      }
     }
   ]
 }

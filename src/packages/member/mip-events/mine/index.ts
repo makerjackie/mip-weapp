@@ -79,6 +79,8 @@ function present(item: RegistrationSummary): RegistrationView {
 Page({
   data: {
     state: 'loading' as 'loading' | 'ready' | 'error',
+    // ui-fidelity fixture 开关：默认走生产布局（被 vitest pin）。
+    figmaLayout: false,
     activeCategory: 'UPCOMING' as MyRegistrationCategory,
     counts: { upcoming: 0, attended: 0, history: 0 },
     registrations: [] as RegistrationView[],

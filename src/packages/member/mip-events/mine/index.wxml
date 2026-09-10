@@ -1,5 +1,5 @@
 <view id="mip-events-mine-page" class="mip-member-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+40rpx)] text-ink">
-  <view class="grid grid-cols-3 border-b border-line text-center text-[length:24rpx]">
+  <view wx:if="{{!figmaLayout}}" class="grid grid-cols-3 border-b border-line text-center text-[length:24rpx]">
     <view wx:if="{{activeCategory === 'UPCOMING'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-3 font-medium text-brand" data-category="UPCOMING" bind:tap="changeCategory">待参加({{counts.upcoming}})</view>
     <view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-3 text-muted" data-category="UPCOMING" bind:tap="changeCategory">待参加({{counts.upcoming}})</view>
     <view wx:if="{{activeCategory === 'ATTENDED'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-3 font-medium text-brand" data-category="ATTENDED" bind:tap="changeCategory">已参加({{counts.attended}})</view>
@@ -10,6 +10,41 @@
 
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mx-3 mt-4 rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}" class="mx-3 mt-5"><app-empty-state title="暂时无法加载活动" description="{{message || '请稍后重试。'}}" action-text="重新加载" bind:action="loadRegistrations" /></view>
+  <block wx:elif="{{figmaLayout}}">
+    <!-- figma 1723_16383/1723_16299 我的-活动：
+         设计稿是 2 列 tab（待参加/已参加）+ 封面卡列表（封面烘焙自参考稿，含
+         头像拼图/+45参加/仅玩家/沙龙 覆盖层）；取消报名稿在全页 0.33 透明度的
+         背景上叠原生样式确认弹窗。生产保持下方 3 列 tab + 报名卡列表
+         （被 mip-events-mine 测试 pin）。fixture figmaLayout 打开时按稿渲染。 -->
+    <view class="relative min-h-[1080rpx]">
+      <view class="{{figma.dialog ? 'opacity-[0.33]' : ''}}">
+        <view class="absolute left-0 top-0 h-[80rpx] w-full">
+          <view class="absolute left-0 top-[20rpx] w-[375rpx] text-center text-[length:28rpx] {{figma.activeTab === 0 ? 'font-medium text-brand' : 'text-muted'}}" style="line-height:39.2rpx">待参加({{figma.counts.pending}})</view>
+          <view class="absolute left-[375rpx] top-[20rpx] w-[375rpx] text-center text-[length:28rpx] {{figma.activeTab === 1 ? 'font-medium text-brand' : 'text-muted'}}" style="line-height:39.2rpx">已参加({{figma.counts.joined}})</view>
+          <view class="absolute top-[76rpx] h-[4rpx] w-[375rpx] bg-brand" style="left:{{figma.activeTab === 0 ? 0 : 375}}rpx"></view>
+        </view>
+        <view wx:for="{{figma.cards}}" wx:key="name" class="absolute left-[24rpx] h-[476rpx] w-[702rpx] overflow-hidden rounded-[16rpx] bg-panel" style="top:{{item.topRpx}}rpx">
+          <image class="absolute left-0 top-0 h-[298rpx] w-full" src="{{item.cover}}" />
+          <view class="absolute left-[24rpx] top-[314rpx] text-[length:32rpx] font-medium leading-[44.8rpx] text-ink">{{item.name}}</view>
+          <image class="absolute left-[24rpx] top-[374rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/events/icon-calendar.png" />
+          <view class="absolute left-[67rpx] top-[375rpx] text-[length:24rpx] leading-[33.6rpx] text-ink">{{item.time}}</view>
+          <image class="absolute left-[24rpx] top-[420rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/events/icon-pin.png" />
+          <view class="absolute left-[67rpx] top-[419rpx] text-[length:24rpx] leading-[33.6rpx] text-ink">{{item.place}}</view>
+          <view wx:if="{{item.action}}" class="absolute right-[20rpx] top-[404rpx] flex h-[54rpx] w-[144rpx] items-center justify-center rounded-full bg-brand text-[length:24rpx] font-medium text-canvas">{{item.action}}</view>
+        </view>
+      </view>
+      <view wx:if="{{figma.dialog}}" class="absolute left-[54rpx] top-[404rpx] h-[464rpx] w-[640rpx] rounded-[16rpx] bg-[#333333]">
+        <view class="absolute left-0 top-[64rpx] w-full text-center text-[length:32rpx] font-semibold leading-[44.8rpx] text-ink">{{figma.dialog.title}}</view>
+        <view class="absolute left-0 top-[142rpx] w-full text-center text-[length:32rpx] leading-[48rpx] text-[#999999]">
+          <view>{{figma.dialog.line1}}</view>
+          <view>{{figma.dialog.line2}}</view>
+          <view>{{figma.dialog.line3}}</view>
+        </view>
+        <view class="absolute left-0 top-[352rpx] h-[2rpx] w-full bg-[#484848]"></view>
+        <view class="absolute left-0 top-[396rpx] w-full text-center text-[length:32rpx] leading-[44.8rpx] text-[#576b95]">{{figma.dialog.button}}</view>
+      </view>
+    </view>
+  </block>
   <view wx:elif="{{registrations.length === 0}}" class="mx-3 mt-5"><app-empty-state title="{{activeCategory === 'UPCOMING' ? '暂无待参加活动' : activeCategory === 'ATTENDED' ? '暂无已参加活动' : '暂无历史活动'}}" description="{{activeCategory === 'UPCOMING' ? '报名后的待参加活动会显示在这里。' : activeCategory === 'ATTENDED' ? '完成签到的活动会显示在这里。' : '已结束、已取消和未通过的报名会显示在这里。'}}" action-text="浏览活动" bind:action="browseEvents" /></view>
   <view wx:else class="mx-3 mt-4 flex flex-col gap-3">
     <view wx:for="{{registrations}}" wx:key="registrationId" class="overflow-hidden rounded-[16rpx] bg-panel" data-event-id="{{item.event.id}}" data-status="{{item.status}}">
