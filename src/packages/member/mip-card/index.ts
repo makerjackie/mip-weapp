@@ -17,6 +17,7 @@ interface CardTheme {
   key: CardStyleKey
   label: string
   asset: string
+  thumbAsset: string
   background: string
   foreground: string
   muted: string
@@ -29,7 +30,8 @@ const themes: Record<CardStyleKey, CardTheme> = {
   PINK: {
     key: 'PINK',
     label: '暖色',
-    asset: '/packages/member/assets/figma/profile/card-bg-a.jpg',
+    asset: '/packages/member/assets/figma/profile/card-bg-a.png',
+    thumbAsset: '/packages/member/assets/figma/profile/card-bg-a.png',
     background: '#FF5F6D',
     foreground: '#080808',
     muted: '#4A2326',
@@ -38,7 +40,8 @@ const themes: Record<CardStyleKey, CardTheme> = {
   BLUE: {
     key: 'BLUE',
     label: '蓝色',
-    asset: '/packages/member/assets/figma/profile/card-bg-b.jpg',
+    asset: '/packages/member/assets/figma/profile/card-bg-b.png',
+    thumbAsset: '/packages/member/assets/figma/profile/card-bg-b.png',
     background: '#403BDA',
     foreground: '#FFFFFF',
     muted: '#E4E3FF',
@@ -47,17 +50,21 @@ const themes: Record<CardStyleKey, CardTheme> = {
   WHITE: {
     key: 'WHITE',
     label: '浅色',
-    asset: '/packages/member/assets/figma/profile/card-bg-c-optimized.jpg',
+    asset: '/packages/member/assets/figma/profile/card-bg-c.png',
+    thumbAsset: '/packages/member/assets/figma/profile/card-bg-c.png',
     background: '#F5F4F0',
     foreground: '#080808',
     muted: '#575757',
     codeBackground: '#FFFFFF',
   },
+  // figma 1735_3369: 品牌色卡为 #fde104 实底 + 吉祥物 hard-light，WXSS 无法可靠表达，
+  // 预烘成 card-bg-d-yellow.png（702×492），背景色仅作加载垫底。
   YELLOW: {
     key: 'YELLOW',
     label: '品牌色',
-    asset: '',
-    background: '#FCDF03',
+    asset: '/packages/member/assets/figma/profile/card-bg-d-yellow.png',
+    thumbAsset: '/packages/member/assets/figma/profile/card-thumb-yellow.png',
+    background: '#FDE104',
     foreground: '#080808',
     muted: '#514A10',
     codeBackground: '#FFFFFF',
@@ -118,6 +125,8 @@ Page({
     industryName: '',
     companyName: '',
     roleTitle: '',
+    organizationName: '',
+    organizationRole: '',
     organizationLine: '',
     phone: '',
     wechat: '',
@@ -128,9 +137,22 @@ Page({
     posterPath: '',
     generating: false,
     message: '',
+    // figma 1732_20401 版式只有卡片/样式选择/底栏；页头与分身管理是存量功能，
+    // 用开关保留生产入口，打分 fixture 关闭以对齐设计稿。
+    showHeader: true,
+    showAvatarManager: true,
+    // figma 2165_17277 访客视角：无样式选择，底栏为单按钮「登录制作我的名片」。
+    // 访客入口携带 guest=1 打开（路由缺口，见 ui-fidelity manifest notes）。
+    isGuest: false,
   },
   profileRef: '',
   loadSequence: 0,
+
+  onLoad(options: { guest?: string } = {}) {
+    if (options?.guest === '1') {
+      this.setData({ isGuest: true })
+    }
+  },
 
   onShow() {
     void this.loadCard()
@@ -205,6 +227,8 @@ Page({
       industryName: compactText(profile.primaryIndustry?.label),
       companyName: compactText(company?.name),
       roleTitle: compactText(company?.role),
+      organizationName: compactText(organization?.name),
+      organizationRole: compactText(organization?.role),
       organizationLine: organization ? [compactText(organization.name), compactText(organization.role)].filter(Boolean).join(' · ') : '',
       phone: contactVisibility?.phone ? compactText(contact?.phone || contact?.phoneMasked) : '',
       wechat: contactVisibility?.wechat ? compactText(contact?.wechat) : '',
@@ -236,6 +260,11 @@ Page({
 
   openProfileEdit() {
     caseNavigateTo({ url: '/packages/member/mip-card-edit/index' })
+  },
+
+  // figma 2165_17277 访客底栏：回首页登录后再制作名片。
+  guestLogin() {
+    caseNavigateTo({ url: '/pages/profile/index' })
   },
 
   chooseStyle(event: WechatMiniprogram.TouchEvent) {

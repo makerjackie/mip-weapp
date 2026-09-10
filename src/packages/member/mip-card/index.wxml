@@ -1,46 +1,59 @@
-<view id="mip-member-card-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+180rpx)] pt-5 text-ink">
+<view id="mip-member-card-page" class="mip-member-page min-h-screen bg-canvas px-[24rpx] pb-[calc(env(safe-area-inset-bottom)+180rpx)] pt-[24rpx] text-ink">
   <view wx:if="{{state === 'loading'}}" class="rounded-[16rpx] bg-panel px-5 py-6"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
   <view wx:elif="{{state === 'error'}}"><app-empty-state title="暂时无法加载名片" description="{{message}}" action-text="重新加载" bind:action="retryLoad" /></view>
   <block wx:else>
-    <view class="flex items-center justify-between">
+    <!-- figma 1732_20401 版式无页头；「编辑名片」入口用 showHeader 保留在生产环境。 -->
+    <view wx:if="{{showHeader}}" class="flex items-center justify-between">
       <view><view class="text-[length:34rpx] font-semibold">我的名片</view><view class="mt-1 text-[length:22rpx] text-muted">展示已允许用于名片的资料。</view></view>
       <view class="flex min-h-[88rpx] items-center px-2 text-[length:24rpx] text-brand" bind:tap="openProfileEdit">编辑名片</view>
     </view>
 
-    <view class="mip-radius-card relative mt-4 h-[492rpx] w-full overflow-hidden" style="background: {{theme.background}}; color: {{theme.foreground}};">
-      <image wx:if="{{theme.asset}}" class="absolute inset-0 h-full w-full" mode="aspectFill" src="{{theme.asset}}" />
-      <view class="absolute inset-0 px-5 py-5">
-        <view class="max-w-[420rpx] truncate text-[length:40rpx] font-bold">{{nickname}}</view>
-        <view wx:if="{{companyName || roleTitle}}" class="mt-2 max-w-[420rpx] truncate text-[length:22rpx] font-semibold">{{companyName}}{{companyName && roleTitle ? ' · ' : ''}}{{roleTitle}}</view>
-        <view wx:if="{{organizationLine}}" class="mt-1 max-w-[420rpx] truncate text-[length:22rpx]" style="color: {{theme.muted}};">{{organizationLine}}</view>
-        <view wx:if="{{gender}}" class="mt-1 max-w-[420rpx] truncate text-[length:22rpx]" style="color: {{theme.muted}};">性别 · {{gender}}</view>
-        <view class="absolute bottom-5 left-5 flex max-w-[480rpx] flex-col gap-1 text-[length:22rpx] leading-[1.45]" style="color: {{theme.muted}};">
-          <view wx:if="{{phone}}" class="truncate">电话　{{phone}}</view>
-          <view wx:if="{{wechat}}" class="truncate">微信　{{wechat}}</view>
-          <view wx:if="{{email}}" class="truncate">邮箱　{{email}}</view>
-          <view wx:if="{{address}}" class="truncate">地址　{{address}}</view>
-          <view wx:if="{{!phone && !wechat && !email && !address}}" class="truncate">{{memberType}}{{identityStatus ? ' · ' + identityStatus : ''}}{{branchName ? ' · ' + branchName : ''}}</view>
-        </view>
+    <view class="relative h-[492rpx] w-full overflow-hidden rounded-[32rpx]" style="background: {{theme.background}}; color: {{theme.foreground}};">
+      <!-- 设计稿对卡面图用 width/height 100% 拉伸（含 164×80 的 b/c 源图），故用默认 scaleToFill。 -->
+      <image wx:if="{{theme.asset}}" class="absolute inset-0 h-full w-full" src="{{theme.asset}}" />
+      <view class="absolute left-[24rpx] top-[24rpx] max-w-[420rpx] truncate text-[40rpx] leading-[56rpx] font-medium">{{nickname}}</view>
+      <view wx:if="{{companyName}}" class="absolute left-[24rpx] top-[88rpx] max-w-[420rpx] truncate text-[24rpx] leading-[33.6rpx] font-medium">{{companyName}}</view>
+      <view wx:if="{{roleTitle}}" class="absolute left-[24rpx] top-[130rpx] max-w-[420rpx] truncate text-[24rpx] leading-[33.6rpx] font-medium">{{roleTitle}}</view>
+      <view wx:if="{{organizationName}}" class="absolute left-[24rpx] top-[188rpx] max-w-[420rpx] truncate text-[24rpx] leading-[33.6rpx] font-medium">{{organizationName}}</view>
+      <view wx:if="{{organizationRole}}" class="absolute left-[24rpx] top-[230rpx] max-w-[420rpx] truncate text-[24rpx] leading-[33.6rpx] font-medium">{{organizationRole}}</view>
+      <view wx:if="{{gender}}" class="absolute left-[24rpx] top-[272rpx] max-w-[420rpx] truncate text-[24rpx] leading-[33.6rpx] font-medium">性别 · {{gender}}</view>
+      <view wx:if="{{phone}}" class="absolute left-[26rpx] top-[308rpx] flex max-w-[458rpx] items-center gap-[8rpx]">
+        <mip-icon name="cellphone-2" size="16" color="{{theme.foreground}}" />
+        <text class="truncate text-[24rpx] leading-[33.6rpx] font-medium">{{phone}}</text>
       </view>
-      <image wx:if="{{cardAvatarUrl}}" class="absolute right-5 top-5 h-[192rpx] w-[192rpx] rounded-full" mode="aspectFill" src="{{cardAvatarUrl}}" />
-      <view wx:else class="absolute right-5 top-5 flex h-[192rpx] w-[192rpx] items-center justify-center rounded-full bg-white text-[length:48rpx] font-bold text-black">{{initial}}</view>
-      <view class="absolute bottom-5 right-5 flex h-[104rpx] w-[104rpx] items-center justify-center rounded-[8rpx] bg-white p-2">
+      <view wx:if="{{wechat}}" class="absolute left-[26rpx] top-[350rpx] flex max-w-[458rpx] items-center gap-[8rpx]">
+        <mip-icon name="wechat-2" size="16" color="{{theme.foreground}}" />
+        <text class="truncate text-[24rpx] leading-[33.6rpx] font-medium">{{wechat}}</text>
+      </view>
+      <view wx:if="{{email}}" class="absolute left-[26rpx] top-[392rpx] flex max-w-[458rpx] items-center gap-[8rpx]">
+        <mip-icon name="mail-2" size="16" color="{{theme.foreground}}" />
+        <text class="truncate text-[24rpx] leading-[33.6rpx] font-medium">{{email}}</text>
+      </view>
+      <view wx:if="{{address}}" class="absolute left-[26rpx] top-[434rpx] flex max-w-[458rpx] items-center gap-[8rpx]">
+        <mip-icon name="icon-map-pin-line" size="16" color="{{theme.foreground}}" />
+        <text class="truncate text-[24rpx] leading-[33.6rpx] font-medium">{{address}}</text>
+      </view>
+      <view class="absolute left-[438rpx] top-[24rpx] h-[240rpx] w-[240rpx] overflow-hidden rounded-full {{styleKey === 'YELLOW' ? 'ring-2 ring-brand' : ''}}">
+        <image wx:if="{{cardAvatarUrl}}" class="h-full w-full" mode="aspectFill" src="{{cardAvatarUrl}}" />
+        <view wx:else class="flex h-full w-full items-center justify-center bg-white text-[48rpx] font-bold text-black">{{initial}}</view>
+      </view>
+      <view class="absolute right-[24rpx] top-[348rpx] h-[120rpx] w-[120rpx] overflow-hidden rounded-full {{styleKey === 'YELLOW' ? 'ring-1 ring-brand' : ''}}">
         <image wx:if="{{codeUrl}}" class="h-full w-full" mode="aspectFit" src="{{codeUrl}}" />
-        <text wx:else class="text-[length:22rpx] text-muted">—</text>
+        <text wx:else class="text-[22rpx] text-muted">—</text>
       </view>
     </view>
 
     <view wx:if="{{codeMessage}}" class="mt-3 flex items-center justify-between rounded-[8rpx] bg-panel px-4 py-3 text-[length:22rpx] text-muted"><text>{{codeMessage}}</text><text class="ml-3 shrink-0 text-brand" bind:tap="retryCode">重试</text></view>
 
-    <view class="mt-5 text-[length:24rpx] font-semibold">名片样式</view>
-    <view class="mt-3 grid grid-cols-4 gap-2">
-      <view wx:for="{{themeOptions}}" wx:key="key" class="overflow-hidden rounded-[8rpx] border-2 {{styleKey === item.key ? 'border-brand' : 'border-transparent'}}" data-key="{{item.key}}" bind:tap="chooseStyle">
-        <view class="relative h-[96rpx]" style="background: {{item.background}};"><image wx:if="{{item.asset}}" class="absolute inset-0 h-full w-full" mode="aspectFill" src="{{item.asset}}" /></view>
-        <view class="bg-panel py-2 text-center text-[length:22rpx] text-muted">{{item.label}}</view>
+    <!-- figma 1732_20401: 样式缩略 82×40，无选中描边与文案；访客视角（2165_17277）无样式选择。 -->
+    <view wx:if="{{!isGuest}}" class="mt-[22rpx] grid grid-cols-4 gap-2">
+      <view wx:for="{{themeOptions}}" wx:key="key" class="relative h-[80rpx] overflow-hidden rounded-[8rpx]" style="background: {{item.background}};" data-key="{{item.key}}" bind:tap="chooseStyle">
+        <image wx:if="{{item.thumbAsset}}" class="absolute inset-0 h-full w-full" src="{{item.thumbAsset}}" />
       </view>
     </view>
 
-    <view class="mip-radius-card-medium mt-5 bg-panel px-4 py-4">
+    <!-- 分身头像管理为存量功能，设计稿（1732_20401）未收录；showAvatarManager 保留生产入口。 -->
+    <view wx:if="{{showAvatarManager}}" class="mip-radius-card-medium mt-5 bg-panel px-4 py-4">
       <view class="flex items-center justify-between gap-3"><view><view class="text-[length:24rpx] font-semibold">名片头像</view><view class="mt-1 text-[length:22rpx] text-muted">可使用当前头像或数字分身。</view></view><view class="shrink-0 text-[length:22rpx] text-brand" bind:tap="openDigitalAvatar">管理分身</view></view>
       <view class="mt-3 grid grid-cols-2 gap-2">
         <view class="mip-radius-control px-3 py-3 text-center text-[length:22rpx] {{avatarSource === 'ORIGINAL' ? 'bg-brand text-on-brand' : 'bg-panel-raised text-muted'}}" data-source="ORIGINAL" bind:tap="chooseAvatarSource">当前头像</view>
@@ -52,9 +65,18 @@
     <view wx:if="{{message}}" class="mt-4 rounded-[8rpx] bg-panel px-4 py-3 text-[length:22rpx] text-danger">{{message}}</view>
 
     <mip-sticky-actions>
-      <view slot="actions" class="grid w-full grid-cols-2 gap-3">
-        <t-button block open-type="share" variant="outline">分享名片</t-button>
-        <t-button block theme="primary" loading="{{generating}}" bind:tap="savePoster">下载名片</t-button>
+      <view slot="actions" class="{{isGuest ? 'flex w-full items-center px-[8rpx] py-[16rpx]' : 'flex h-[112rpx] w-full items-center gap-[22rpx] rounded-full bg-brand-soft px-[24rpx] py-[16rpx]'}}">
+        <button wx:if="{{!isGuest}}" open-type="share" class="mip-card-action flex h-[80rpx] w-[316rpx] items-center justify-center gap-[16rpx] rounded-full border border-black bg-panel">
+          <mip-icon name="share-circle-2" size="20" color="var(--color-brand)" />
+          <text class="text-[32rpx] font-medium text-brand">分享名片</text>
+        </button>
+        <button wx:if="{{!isGuest}}" class="mip-card-action flex h-[80rpx] flex-1 items-center justify-center gap-[16rpx] rounded-full border border-black bg-brand {{generating ? 'opacity-60' : ''}}" bind:tap="savePoster">
+          <mip-icon name="download-2" size="20" color="var(--color-canvas)" />
+          <text class="text-[32rpx] font-medium text-canvas">下载名片</text>
+        </button>
+        <button wx:else class="mip-card-action flex h-[80rpx] w-full items-center justify-center rounded-full border border-black bg-brand" bind:tap="guestLogin">
+          <text class="text-[32rpx] font-medium text-canvas">登录制作我的名片</text>
+        </button>
       </view>
     </mip-sticky-actions>
   </block>

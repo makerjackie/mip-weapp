@@ -14,15 +14,15 @@
       <view class="absolute left-[24rpx] top-[188rpx] whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-canvas">{{previewOrganization}}</view>
       <view class="absolute left-[24rpx] top-[230rpx] whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-canvas">{{previewOrganizationRole}}</view>
       <view class="absolute left-[26rpx] top-[308rpx] flex items-center gap-[8rpx]">
-        <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="cellphone-line" size="{{16}}" color="var(--color-canvas)" /></view>
+        <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="cellphone-2" size="{{16}}" color="var(--color-canvas)" /></view>
         <text class="whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-canvas">{{previewPhone}}</text>
       </view>
       <view class="absolute left-[26rpx] top-[350rpx] flex items-center gap-[8rpx]">
-        <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="wechat-2-line" size="{{16}}" color="var(--color-canvas)" /></view>
+        <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="wechat-2" size="{{16}}" color="var(--color-canvas)" /></view>
         <text class="whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-canvas">{{previewWechat}}</text>
       </view>
       <view class="absolute left-[26rpx] top-[392rpx] flex items-center gap-[8rpx]">
-        <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="mail-line" size="{{16}}" color="var(--color-canvas)" /></view>
+        <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="mail-2" size="{{16}}" color="var(--color-canvas)" /></view>
         <text class="whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-canvas">{{previewEmail}}</text>
       </view>
       <view class="absolute left-[26rpx] top-[434rpx] flex items-center gap-[8rpx]">
@@ -42,7 +42,7 @@
          缝（92rpx + 2rpx 缝），首行头像行 80px r8 顶圆，尾行 r8 底圆；添加行透明全圆角右对齐。
          第二段经历（figma 1729_20514）：子标题 第二公司职位 + 独立卡（公司/职位行）+ 添加行随最后一段。 -->
     <view class="mx-[24rpx] mt-[48rpx] flex items-center gap-[8rpx]">
-      <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="contacts-line" size="{{16}}" color="var(--color-brand)" /></view>
+      <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="contacts-1-1" size="{{16}}" color="var(--color-brand)" /></view>
       <text class="whitespace-nowrap text-[32rpx] font-medium leading-[44.8rpx]">个人信息</text>
     </view>
     <view class="mx-[24rpx] mt-[24rpx] flex flex-col gap-[2rpx]">
@@ -111,7 +111,7 @@
     <!-- figma 1732_20291: 联系方式组 @ (12,596)：头 contacts-book-3 + fs16；行 手机号/微信/邮箱/地址
          46px 节距 47，首尾 8px 圆角；手机号行 = 授权按钮（open-type getPhoneNumber）。 -->
     <view class="mx-[24rpx] mt-[24rpx] flex items-center gap-[8rpx]">
-      <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="contacts-book-3-line" size="{{16}}" color="var(--color-brand)" /></view>
+      <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="contacts-book-3" size="{{16}}" color="var(--color-brand)" /></view>
       <text class="whitespace-nowrap text-[32rpx] font-medium leading-[44.8rpx]">联系方式</text>
     </view>
     <view data-card-field-group="contact" class="mx-[24rpx] mt-[24rpx] flex flex-col gap-[2rpx]">
@@ -138,7 +138,7 @@
 
     <!-- figma 1732_20291: 组织信息组 @ (12,829)；第二段组织（figma 1729_20840）同公司经历模型。 -->
     <view class="mx-[24rpx] mt-[24rpx] flex items-center gap-[8rpx]">
-      <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="parent-line" size="{{16}}" color="var(--color-brand)" /></view>
+      <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="parent" size="{{16}}" color="var(--color-brand)" /></view>
       <text class="whitespace-nowrap text-[32rpx] font-medium leading-[44.8rpx]">组织信息</text>
     </view>
     <view data-card-field-group="organization" class="mx-[24rpx] mt-[24rpx] flex flex-col gap-[2rpx]">
@@ -185,7 +185,7 @@
     <mip-sticky-actions>
       <view slot="actions" class="flex h-[112rpx] w-full items-center gap-[24rpx] rounded-full bg-brand-soft px-[24rpx] py-[16rpx]">
         <view class="flex h-[80rpx] w-[176rpx] items-center justify-center gap-[16rpx] rounded-full border border-black bg-panel" aria-role="button" aria-label="预览名片" bind:tap="openPreview">
-          <view class="flex h-[40rpx] w-[40rpx] items-center justify-center"><mip-icon name="id-card-line" size="{{20}}" color="var(--color-brand)" /></view>
+          <view class="flex h-[40rpx] w-[40rpx] items-center justify-center"><mip-icon name="id-card" size="{{20}}" color="var(--color-brand)" /></view>
           <text class="whitespace-nowrap text-[32rpx] font-medium leading-[44.8rpx] text-brand">预览</text>
         </view>
         <view class="flex h-[80rpx] flex-1 items-center justify-center rounded-full border border-black bg-brand active:bg-brand-active" aria-role="button" aria-label="保存名片" bind:tap="save">

@@ -1,0 +1,13 @@
+/* figma 1732_20401 底栏按钮：原生 button 需要重置默认边框、内边距与行高。 */
+.mip-card-action {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border-radius: 9999rpx;
+  line-height: 1;
+  font-weight: 500;
+}
+
+.mip-card-action::after {
+  border: none;
+}
