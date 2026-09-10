@@ -1,5 +1,5 @@
 <view id="member-orders-page" class="mip-member-page min-h-screen bg-canvas px-3 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-0 text-ink">
-  <view id="order-filter-tabs" class="grid grid-cols-4 border-b border-line text-center text-[length:24rpx]">
+  <view wx:if="{{!figmaLayout}}" id="order-filter-tabs" class="grid grid-cols-4 border-b border-line text-center text-[length:24rpx]">
     <view wx:if="{{filter === 'all'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-3 text-brand" data-filter="all" bind:tap="changeFilter">全部</view><view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-3 text-muted" data-filter="all" bind:tap="changeFilter">全部</view>
     <view wx:if="{{filter === 'PENDING_USE'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-3 text-brand" data-filter="PENDING_USE" bind:tap="changeFilter">待使用</view><view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-3 text-muted" data-filter="PENDING_USE" bind:tap="changeFilter">待使用</view>
     <view wx:if="{{filter === 'COMPLETED'}}" class="min-h-[88rpx] border-b-[4rpx] border-brand py-3 text-brand" data-filter="COMPLETED" bind:tap="changeFilter">已完成</view><view wx:else class="min-h-[88rpx] border-b-[4rpx] border-transparent py-3 text-muted" data-filter="COMPLETED" bind:tap="changeFilter">已完成</view>
@@ -8,6 +8,36 @@
 
   <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mt-4 flex flex-col gap-3"><view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view><view class="rounded-[16rpx] bg-panel px-4 py-6"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view></view>
   <view wx:elif="{{state === 'error'}}" class="mt-5"><app-empty-state title="订单暂时无法加载" description="请稍后重试。" action-text="重新加载" bind:action="loadOrders" /></view>
+  <block wx:elif="{{figmaLayout}}">
+    <!-- figma 1723_16988/17090/17153/17217 我的-订单：
+         设计稿是 4 列 tab + 活动订单卡（封面烘焙自参考稿），卡底多一条
+         2rpx 深色分隔 + 80rpx 高的底部条（左侧状态 chip、右侧品牌色
+         实付款/已退款金额）。生产保持上方 4 列 tab + 订单卡列表
+         （被 member-orders 测试 pin）。fixture figmaLayout 打开时按稿渲染。 -->
+    <view class="relative -mx-3 min-h-[1280rpx]">
+      <view class="absolute left-0 top-0 h-[80rpx] w-full">
+        <view class="absolute left-0 top-[18rpx] w-[188rpx] text-center text-[length:28rpx] {{figma.tabIndex === 0 ? 'font-medium text-brand' : 'text-muted'}}" style="line-height:39.2rpx">全部</view>
+        <view class="absolute left-[188rpx] top-[18rpx] w-[188rpx] text-center text-[length:28rpx] {{figma.tabIndex === 1 ? 'font-medium text-brand' : 'text-muted'}}" style="line-height:39.2rpx">待使用</view>
+        <view class="absolute left-[375rpx] top-[18rpx] w-[188rpx] text-center text-[length:28rpx] {{figma.tabIndex === 2 ? 'font-medium text-brand' : 'text-muted'}}" style="line-height:39.2rpx">已完成</view>
+        <view class="absolute left-[563rpx] top-[18rpx] w-[188rpx] text-center text-[length:28rpx] {{figma.tabIndex === 3 ? 'font-medium text-brand' : 'text-muted'}}" style="line-height:39.2rpx">已退款</view>
+        <view class="absolute top-[76rpx] h-[4rpx] w-[188rpx] bg-brand" style="left:{{figma.underlineLeftRpx}}rpx"></view>
+      </view>
+      <view wx:for="{{figma.cards}}" wx:key="topRpx" class="absolute left-[24rpx] h-[558rpx] w-[702rpx] overflow-hidden rounded-[16rpx] bg-panel" style="top:{{item.topRpx}}rpx">
+        <image class="absolute left-0 top-0 h-[298rpx] w-full" src="{{item.cover}}" />
+        <view class="absolute left-[24rpx] top-[314rpx] text-[length:32rpx] font-medium leading-[44.8rpx] text-ink">{{item.name}}</view>
+        <image class="absolute left-[24rpx] top-[374rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/events/icon-calendar.png" />
+        <view class="absolute left-[67rpx] top-[375rpx] text-[length:24rpx] leading-[33.6rpx] text-ink">{{item.time}}</view>
+        <image class="absolute left-[24rpx] top-[420rpx] h-[32rpx] w-[32rpx]" src="/assets/figma/events/icon-pin.png" />
+        <view class="absolute left-[67rpx] top-[419rpx] text-[length:24rpx] leading-[33.6rpx] text-ink">{{item.place}}</view>
+        <view class="absolute left-0 top-[476rpx] h-[2rpx] w-full bg-canvas"></view>
+        <view class="absolute left-[24rpx] top-[502rpx] inline-flex h-[32rpx] items-center rounded-full px-[12rpx] text-[length:20rpx] font-medium {{item.chipBrand ? 'bg-panel text-brand' : 'bg-canvas text-muted'}}">{{item.chip}}</view>
+        <view class="absolute right-[24rpx] top-[494rpx] flex h-[56rpx] items-baseline justify-end text-brand">
+          <view class="text-[length:24rpx] font-medium leading-[56rpx]">{{item.label}}</view>
+          <view class="text-[length:40rpx] font-bold leading-[56rpx]">{{item.amount}}</view>
+        </view>
+      </view>
+    </view>
+  </block>
   <view wx:elif="{{orders.length === 0}}" class="mt-5"><app-empty-state title="{{allOrders.length ? '当前分类暂无订单' : '还没有订单'}}" description="{{allOrders.length ? '可切换其他分类查看。' : '购买会员、活动或单内容后，订单会显示在这里。'}}" /></view>
   <view wx:else class="mt-4 flex flex-col gap-3">
     <view wx:for="{{orders}}" wx:key="id" data-order-id="{{item.id}}" class="order-card overflow-hidden rounded-[16rpx] bg-panel active:bg-panel-raised {{item.orderType === 'EVENT' ? 'order-card--event' : ''}}" bind:tap="openOrder">

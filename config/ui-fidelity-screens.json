@@ -5297,6 +5297,174 @@
           }
         }
       }
+    },
+    {
+      "key": "orders-我的订单-全部",
+      "route": "packages/member/orders/index",
+      "reference": "1723_16988_我的订单-全部.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "tabIndex": 0,
+          "underlineLeftRpx": 0,
+          "cards": [
+            {
+              "cover": "/assets/figma/events/cover-standup.png",
+              "topRpx": 104,
+              "name": "MIP反人性早会第328场",
+              "time": "12月12日 10:00-12:00",
+              "place": "深圳 新洲二街海松大厦A座1706室",
+              "chip": "已完成",
+              "chipBrand": false,
+              "label": "实付款：¥",
+              "amount": "589"
+            },
+            {
+              "cover": "/assets/figma/events/cover-workout.png",
+              "topRpx": 686,
+              "name": "MIP反人性早会第328场",
+              "time": "12月12日 10:00-12:00",
+              "place": "深圳 新洲二街海松大厦A座1706室",
+              "chip": "已退款",
+              "chipBrand": false,
+              "label": "已退款：¥",
+              "amount": "89"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "orders-我的订单-待使用",
+      "route": "packages/member/orders/index",
+      "reference": "1723_17090_我的订单-待使用.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "tabIndex": 1,
+          "underlineLeftRpx": 187.5,
+          "cards": [
+            {
+              "cover": "/assets/figma/events/cover-standup.png",
+              "topRpx": 104,
+              "name": "MIP反人性早会第328场",
+              "time": "12月12日 10:00-12:00",
+              "place": "深圳 新洲二街海松大厦A座1706室",
+              "chip": "待使用",
+              "chipBrand": true,
+              "label": "实付款：¥",
+              "amount": "589"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "orders-我的订单-已完成",
+      "route": "packages/member/orders/index",
+      "reference": "1723_17153_我的订单-已完成.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "tabIndex": 2,
+          "underlineLeftRpx": 375,
+          "cards": [
+            {
+              "cover": "/assets/figma/events/cover-standup.png",
+              "topRpx": 104,
+              "name": "MIP反人性早会第328场",
+              "time": "12月12日 10:00-12:00",
+              "place": "深圳 新洲二街海松大厦A座1706室",
+              "chip": "已完成",
+              "chipBrand": false,
+              "label": "实付款：¥",
+              "amount": "589"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "orders-我的订单-已退款",
+      "route": "packages/member/orders/index",
+      "reference": "1723_17217_我的订单-已退款.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "tabIndex": 3,
+          "underlineLeftRpx": 562.5,
+          "cards": [
+            {
+              "cover": "/assets/figma/events/cover-workout.png",
+              "topRpx": 104,
+              "name": "MIP反人性早会第328场",
+              "time": "12月12日 10:00-12:00",
+              "place": "深圳 新洲二街海松大厦A座1706室",
+              "chip": "已退款",
+              "chipBrand": false,
+              "label": "已退款：¥",
+              "amount": "89"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "key": "orders-订单详情",
+      "route": "packages/member/order-detail/index",
+      "reference": "1723_16459_订单详情.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "dialog": null
+        }
+      }
+    },
+    {
+      "key": "orders-订单详情-退款提示",
+      "route": "packages/member/order-detail/index",
+      "reference": "1724_17741_订单详情-退款提示.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "dialog": {
+            "title": "确认退款吗?",
+            "line1": "这是一条本次活动费用的相关文案可",
+            "line2": "能很长也可能很短此Dialog 是微信",
+            "line3": "小程序原生的"
+          }
+        }
+      }
     }
   ]
 }
