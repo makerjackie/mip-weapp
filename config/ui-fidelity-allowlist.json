@@ -23,7 +23,8 @@
     { "file": "src/app.css", "value": "#80ccff", "reason": "tag-type 活动类型芯片底（figma 1861_17860 详情屏 .bg-[#80ccff]）" },
     { "file": "src/app.css", "value": "#4b90bf", "reason": "tag-type 活动类型芯片描边（figma 1861_17860 详情屏 .border-[#4b90bf]）" },
     { "file": "src/components/mip-icon/colors.ts", "value": "#80ccff", "reason": "app.css --color-tag-type 的镜像（mip-icon 解析用）" },
-    { "file": "src/components/mip-icon/colors.ts", "value": "#4b90bf", "reason": "app.css --color-tag-type-line 的镜像（mip-icon 解析用）" }
+    { "file": "src/components/mip-icon/colors.ts", "value": "#4b90bf", "reason": "app.css --color-tag-type-line 的镜像（mip-icon 解析用）" },
+    { "file": "src/packages/member/mip-received/index.wxml", "value": "#ff2238", "reason": "嘉宾卡心动数文字（figma 2622_34610 实测 rgb(255,34,56) 的设计探索态红，非语义 danger #ff4d5e）" }
   ],
   "allowlistTodo": "名片四套卡面预设色是产品内容色，尚未在 figma-restored 的「我的名片A/B/C-详情」屏中找到对应 token；Layer 3 打分后需按设计稿校准并删除本 allowlist 条目。"
 }

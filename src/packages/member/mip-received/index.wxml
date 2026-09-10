@@ -12,6 +12,34 @@
     <app-page-exit />
   </view>
   <block wx:else>
+    <!-- figma 1732_19323/2622_34610/2622_34365/2629_34819/2632_35120 嘉宾：
+         设计稿是影响力 GUEST 的 2 列嘉宾卡网格；生产保持下方 总浏览量+tabs+列表
+         （被 mip-received-interactions 测试 pin）。fixture figmaLayout 打开时按稿渲染。
+         徽标 PNG 烘焙自参考稿；心动/点赞/三叶草计数、Lv、标签、简介、邀请人都是
+         设计前瞻字段（listReceived GUEST DTO 暂无），记 ui-fidelity manifest notes。 -->
+    <block wx:if="{{figmaLayout && category === 'GUEST'}}">
+      <view class="-mx-1 grid grid-cols-2 gap-x-[22rpx] gap-y-[24rpx]">
+        <view wx:for="{{items}}" wx:key="viewKey" class="relative h-[374rpx] overflow-hidden rounded-[16rpx] bg-panel">
+          <view class="absolute left-[16rpx] top-[16rpx] flex h-[32rpx] w-[68rpx] items-center justify-center rounded-[8rpx] border border-canvas bg-panel-raised text-[length:20rpx] font-semibold leading-[28rpx] text-brand">{{item.guestLevel}}</view>
+          <image class="absolute left-[114rpx] top-[16rpx] h-[112rpx] w-[112rpx] rounded-full" mode="aspectFill" src="{{item.actorAvatarUrl}}" />
+          <image wx:if="{{item.guestBadge === 'heart-line' || item.guestBadge === 'heart-fill'}}" class="absolute left-[284rpx] top-[14rpx] h-[34rpx] w-[40rpx]" src="/packages/member/assets/figma/guests/badge-{{item.guestBadge}}.png" />
+          <image wx:if="{{item.guestBadge === 'endorse' || item.guestBadge === 'endorse-light' || item.guestBadge === 'emblem-dark' || item.guestBadge === 'emblem-crimson'}}" class="absolute left-[276rpx] top-[16rpx] h-[44rpx] w-[48rpx]" src="/packages/member/assets/figma/guests/badge-{{item.guestBadge}}.png" />
+          <view wx:if="{{item.guestBadgeCount && (item.guestBadge === 'heart-line' || item.guestBadge === 'heart-fill')}}" class="absolute left-[284rpx] top-[49rpx] w-[40rpx] text-center text-[length:20rpx] font-semibold leading-[28rpx] text-[#ff2238]">{{item.guestBadgeCount}}</view>
+          <view wx:elif="{{item.guestBadgeCount}}" class="absolute left-[276rpx] top-[65rpx] w-[48rpx] text-center text-[length:20rpx] font-semibold leading-[28rpx] text-ink">{{item.guestBadgeCount}}</view>
+          <view class="absolute left-0 top-[144rpx] w-full text-center text-[length:32rpx] font-medium leading-[44.8rpx]">{{item.actorName}}</view>
+          <view class="absolute left-0 top-[196rpx] w-full text-center text-[length:20rpx] font-medium leading-[33.6rpx] text-ink">{{item.guestTagLine}}</view>
+          <view class="absolute left-[24rpx] top-[238rpx] w-[288rpx] text-[length:20rpx] leading-[28rpx] text-muted">{{item.guestIntro}}</view>
+          <view class="absolute left-[16rpx] top-[318rpx] flex h-[40rpx] items-center gap-[8rpx]">
+            <image class="h-[40rpx] w-[40rpx]" src="/packages/member/assets/figma/guests/bear.png" />
+            <block wx:if="{{item.guestShowInviterText}}">
+              <view class="text-[length:20rpx] leading-[28rpx] text-ink">邀请人{{item.guestInviterName}}</view>
+              <image class="h-[40rpx] w-[40rpx] rounded-full" src="{{item.guestInviterAvatar}}" />
+            </block>
+          </view>
+        </view>
+      </view>
+    </block>
+    <block wx:else>
     <view class="rounded-[16rpx] bg-panel px-5 py-5">
       <view class="text-[length:22rpx] text-muted">主页总浏览量</view>
       <view aria-label="正在加载" aria-busy="true" wx:if="{{totalViewState === 'loading'}}" class="mt-3"><t-skeleton row-col="{{[1]}}" theme="paragraph" animation="gradient" loading /></view>
@@ -65,6 +93,7 @@
     </view>
     <view wx:if="{{nextCursor}}" class="mt-4"><t-button block variant="outline" loading="{{loadingMore}}" bind:tap="loadMore">加载更多</t-button></view>
     <view wx:if="{{message}}" class="mt-4 rounded-[16rpx] bg-brand-soft px-4 py-3 text-[length:22rpx] text-brand">{{message}}</view>
+    </block>
     <app-page-exit />
   </block>
 </view>

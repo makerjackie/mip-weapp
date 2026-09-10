@@ -199,6 +199,9 @@ Page({
     openingKey: '',
     accessToken: '',
     message: '',
+    // figma 嘉宾卡网格（1732_19323 等五稿）的还原态开关，fixture 专用；
+    // 生产保持 总浏览量+tabs+列表（mip-received-interactions 测试 pin）。
+    figmaLayout: false,
   },
   accessReady: false,
   checkingAccess: false,
