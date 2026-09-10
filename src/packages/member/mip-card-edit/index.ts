@@ -34,6 +34,15 @@ Page({
     previewFallbackName: 'MIP 成员',
     previewAvatarUrl: '',
     previewCodeUrl: '',
+    formAvatarUrl: '',
+    previewCompany: '公司',
+    previewRole: '职位',
+    previewOrganization: '组织',
+    previewOrganizationRole: '职位',
+    previewPhone: '',
+    previewWechat: '',
+    previewEmail: '',
+    previewAddress: '',
     realName: '',
     companies: [] as EditableProfileOrganization[],
     organizations: [] as EditableProfileOrganization[],
@@ -55,6 +64,11 @@ Page({
 
   onLoad() { void this.load() },
 
+  // figma 1732_20291 底部「预览」：打开名片详情页查看保存效果。
+  openPreview() {
+    wx.navigateTo({ url: '/packages/member/mip-card/index' })
+  },
+
   onHide() { this.clearNavigationTimer() },
   onUnload() { this.clearNavigationTimer() },
 
@@ -65,6 +79,25 @@ Page({
     }
   },
 
+  // 名片卡预览（figma 1732_20291）：第一段公司/组织与联系方式即时同步，空值回退为字段名。
+  syncPreview() {
+    const company = this.data.companies[0]
+    const organization = this.data.organizations[0]
+    const preview = cardPreviewIdentity({ realName: this.data.realName, nickname: this.data.previewFallbackName })
+    this.setData({
+      previewNickname: preview.name,
+      previewInitial: preview.initial,
+      previewCompany: company?.name || '公司',
+      previewRole: company?.role || '职位',
+      previewOrganization: organization?.name || '组织',
+      previewOrganizationRole: organization?.role || '职位',
+      previewPhone: this.data.phoneMasked,
+      previewWechat: this.data.wechat,
+      previewEmail: this.data.email,
+      previewAddress: this.data.address,
+    })
+  },
+
   async load() {
     this.setData({ state: 'loading', message: '' })
     try {
@@ -72,15 +105,13 @@ Page({
         mipIdentityModule.getProfile(),
         mipIdentityModule.getMyProfileCardCode().catch(() => ({ codeUrl: '' })),
       ])
-      const preview = cardPreviewIdentity(profile)
       const contact = profile.privateContact
       this.setData({
         state: 'ready',
         profileVersion: profile.version,
-        previewNickname: preview.name,
-        previewInitial: preview.initial,
         previewFallbackName: profile.nickname || 'MIP 成员',
         previewAvatarUrl: profile.avatarUrl || '',
+        formAvatarUrl: profile.avatarUrl || '',
         previewCodeUrl: cardCode.codeUrl,
         realName: profile.realName,
         companies: createEditableOrganizations(profile.companies, () => nextExperienceId('companies')),
@@ -95,6 +126,7 @@ Page({
         visibilityEmail: profile.visibility.cardContacts?.email === true,
         visibilityAddress: profile.visibility.cardContacts?.address === true,
       })
+      this.syncPreview()
     }
     catch (error) {
       this.setData({ state: 'error', message: error instanceof Error ? error.message : '名片设置加载失败' })
@@ -104,14 +136,8 @@ Page({
   updateText(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
     const field = String(event.currentTarget.dataset.field || '')
     if (['realName', 'wechat', 'email', 'address'].includes(field)) {
-      const value = event.detail.value
-      const updates: Record<string, string> = { [field]: value }
-      if (field === 'realName') {
-        const preview = cardPreviewIdentity({ realName: value, nickname: this.data.previewFallbackName })
-        updates.previewNickname = preview.name
-        updates.previewInitial = preview.initial
-      }
-      this.setData(updates)
+      this.setData({ [field]: event.detail.value })
+      this.syncPreview()
     }
   },
 
@@ -129,6 +155,7 @@ Page({
       [kind]: appendEditableOrganization(items, nextExperienceId(kind)),
       message: '',
     })
+    this.syncPreview()
   },
 
   updateExperience(event: WechatMiniprogram.CustomEvent<{ value: string }>) {
@@ -142,6 +169,7 @@ Page({
       [kind]: updateEditableOrganization(this.data[kind], index, field, event.detail.value),
       message: '',
     })
+    this.syncPreview()
   },
 
   moveExperience(event: WechatMiniprogram.TouchEvent) {
@@ -155,6 +183,7 @@ Page({
       [kind]: moveEditableOrganization(this.data[kind], index, direction),
       message: '',
     })
+    this.syncPreview()
   },
 
   removeExperience(event: WechatMiniprogram.TouchEvent) {
@@ -167,6 +196,7 @@ Page({
       [kind]: removeEditableOrganization(this.data[kind], index),
       message: '',
     })
+    this.syncPreview()
   },
 
   async bindPhone(event: WechatMiniprogram.CustomEvent<{ code?: string, errMsg?: string }>) {

@@ -1,92 +1,198 @@
-<view id="mip-card-edit-page" class="mip-member-page min-h-screen bg-canvas pb-[calc(env(safe-area-inset-bottom)+180rpx)] text-ink">
-  <view aria-label="正在加载" aria-busy="true" wx:if="{{state === 'loading'}}" class="mx-3 mt-3 rounded-[16rpx] bg-panel px-5 py-8"><t-skeleton row-col="{{[1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
-  <view wx:elif="{{state === 'error'}}" class="mx-3 mt-3"><app-empty-state title="暂时无法加载名片设置" description="身份服务暂时没有响应。" action-text="重新加载" bind:action="load" /></view>
+<view id="mip-card-edit-page" class="mip-member-page min-h-screen bg-canvas text-ink">
+  <view wx:if="{{state === 'loading'}}" class="mx-[24rpx] mt-[24rpx] rounded-[16rpx] bg-panel px-4 py-7"><t-skeleton row-col="{{[1,1,1,1]}}" theme="paragraph" animation="gradient" loading /></view>
+  <view wx:elif="{{state === 'error'}}" class="mx-[24rpx] mt-[24rpx]"><app-empty-state title="暂时无法加载名片" description="{{message}}" action-text="重新加载" bind:action="load" /><app-page-exit /></view>
   <block wx:else>
-    <view class="card-edit-preview" aria-label="名片预览">
-      <view class="card-edit-preview__copy">
-        <view class="card-edit-preview__name">{{previewNickname}}</view>
-        <view wx:if="{{companies.length}}" class="card-edit-preview__line">{{companies[0].name}}</view>
-        <view wx:if="{{companies.length && companies[0].role}}" class="card-edit-preview__line">{{companies[0].role}}</view>
-        <view wx:if="{{organizations.length}}" class="card-edit-preview__line card-edit-preview__line--spaced">{{organizations[0].name}}</view>
-        <view wx:if="{{organizations.length && organizations[0].role}}" class="card-edit-preview__line">{{organizations[0].role}}</view>
-        <view class="card-edit-preview__contacts">
-          <view wx:if="{{phoneBound && phoneMasked}}">{{phoneMasked}}</view>
-          <view wx:if="{{wechat}}">{{wechat}}</view>
-          <view wx:if="{{email}}">{{email}}</view>
-          <view wx:if="{{address}}">{{address}}</view>
+    <!-- figma 1732_20291: 名片卡 351×246 r16 @页面 (12,12)，烘焙黄底+吉祥物（card-bg-d-yellow），
+         姓名 fs20 @ (12,12)，公司/职位/组织/组织职位 fs12 @ 44/65/94/115，
+         联系行 21px 节距 @ 154/175/196/217（icon 16 格 x13 + 4px 缝 + 文本 x33），
+         头像 120 圆 @ (219,12) 2px 品牌环，名片码 60 圆 @ (279,174) 1px 品牌环。 -->
+    <view class="relative mx-[24rpx] mt-[24rpx] h-[492rpx] overflow-hidden rounded-[32rpx] bg-brand-alt">
+      <image class="absolute left-0 top-0 h-full w-full" src="/packages/member/assets/figma/profile/card-bg-d-yellow.png" mode="aspectFill" />
+      <view class="absolute left-[24rpx] top-[24rpx] whitespace-nowrap text-[40rpx] font-medium leading-[56rpx] text-canvas">{{previewNickname}}</view>
+      <view class="absolute left-[24rpx] top-[88rpx] whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-canvas">{{previewCompany}}</view>
+      <view class="absolute left-[24rpx] top-[130rpx] whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-canvas">{{previewRole}}</view>
+      <view class="absolute left-[24rpx] top-[188rpx] whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-canvas">{{previewOrganization}}</view>
+      <view class="absolute left-[24rpx] top-[230rpx] whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-canvas">{{previewOrganizationRole}}</view>
+      <view class="absolute left-[26rpx] top-[308rpx] flex items-center gap-[8rpx]">
+        <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="cellphone-line" size="{{16}}" color="var(--color-canvas)" /></view>
+        <text class="whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-canvas">{{previewPhone}}</text>
+      </view>
+      <view class="absolute left-[26rpx] top-[350rpx] flex items-center gap-[8rpx]">
+        <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="wechat-2-line" size="{{16}}" color="var(--color-canvas)" /></view>
+        <text class="whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-canvas">{{previewWechat}}</text>
+      </view>
+      <view class="absolute left-[26rpx] top-[392rpx] flex items-center gap-[8rpx]">
+        <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="mail-line" size="{{16}}" color="var(--color-canvas)" /></view>
+        <text class="whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-canvas">{{previewEmail}}</text>
+      </view>
+      <view class="absolute left-[26rpx] top-[434rpx] flex items-center gap-[8rpx]">
+        <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="icon-map-pin-line" size="{{16}}" color="var(--color-canvas)" /></view>
+        <text class="whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-canvas">{{previewAddress}}</text>
+      </view>
+      <view class="absolute left-[438rpx] top-[24rpx] h-[240rpx] w-[240rpx] overflow-hidden rounded-full border-[4rpx] border-brand">
+        <image wx:if="{{previewAvatarUrl}}" class="h-full w-full" src="{{previewAvatarUrl}}" mode="aspectFill" />
+        <view wx:else class="flex h-full w-full items-center justify-center bg-black/10 text-[48rpx] font-medium text-canvas">{{previewInitial}}</view>
+      </view>
+      <view wx:if="{{previewCodeUrl}}" class="absolute right-[24rpx] top-[348rpx] h-[120rpx] w-[120rpx] overflow-hidden rounded-full border-[2rpx] border-brand">
+        <image class="h-full w-full" src="{{previewCodeUrl}}" mode="aspectFill" />
+      </view>
+    </view>
+
+    <!-- figma 1732_20291: 个人信息组 @ (12,282)：头 16 格 + 4px 缝 + fs16 标题；行 46px 高 1px 拼
+         缝（92rpx + 2rpx 缝），首行头像行 80px r8 顶圆，尾行 r8 底圆；添加行透明全圆角右对齐。
+         第二段经历（figma 1729_20514）：子标题 第二公司职位 + 独立卡（公司/职位行）+ 添加行随最后一段。 -->
+    <view class="mx-[24rpx] mt-[48rpx] flex items-center gap-[8rpx]">
+      <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="contacts-line" size="{{16}}" color="var(--color-brand)" /></view>
+      <text class="whitespace-nowrap text-[32rpx] font-medium leading-[44.8rpx]">个人信息</text>
+    </view>
+    <view class="mx-[24rpx] mt-[24rpx] flex flex-col gap-[2rpx]">
+      <view data-card-field-group="company" class="flex h-[160rpx] items-center justify-between rounded-t-[16rpx] bg-panel px-[24rpx]">
+        <view class="h-[112rpx] w-[112rpx] overflow-hidden rounded-full bg-panel-raised">
+          <image wx:if="{{formAvatarUrl}}" class="h-full w-full" src="{{formAvatarUrl}}" mode="aspectFill" />
+          <view wx:else class="flex h-full w-full items-center justify-center text-[40rpx] font-medium text-muted">{{previewInitial}}</view>
         </view>
+        <text class="whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-muted">更换头像</text>
       </view>
-      <image wx:if="{{previewAvatarUrl}}" class="card-edit-preview__avatar" mode="aspectFill" src="{{previewAvatarUrl}}" />
-      <view wx:else class="card-edit-preview__avatar card-edit-preview__avatar--fallback">{{previewInitial}}</view>
-      <view wx:if="{{previewCodeUrl}}" class="card-edit-preview__code"><image mode="aspectFit" src="{{previewCodeUrl}}" /></view>
-    </view>
-    <view class="mx-3 mt-3 text-[length:22rpx] text-muted">保存后，名片会同步更新。</view>
-
-    <view class="mx-3 mt-3 text-[length:30rpx] font-semibold">个人信息</view>
-    <view data-card-field-group="identity" class="mip-radius-card-medium mx-3 mt-3 overflow-hidden bg-panel">
-      <view data-card-field-row="realName" class="flex min-h-[92rpx] items-center px-3">
-        <text class="w-[144rpx] shrink-0 text-[length:24rpx] font-medium">姓名</text>
-        <input aria-label="姓名" class="h-[92rpx] min-w-0 flex-1 text-right text-[length:24rpx]" maxlength="64" value="{{realName}}" data-field="realName" bindinput="updateText" placeholder="请输入姓名" placeholder-style="color:#B3B3B3;text-align:right" />
+      <view data-card-field-group="identity" data-card-field-row="realName" class="flex min-h-[92rpx] items-center justify-between bg-panel px-[24rpx] py-[20rpx]">
+        <view class="flex items-baseline gap-[4rpx]">
+          <text class="whitespace-nowrap text-[28rpx] font-medium leading-[33.6rpx]">姓名</text>
+          <text class="text-[20rpx] font-medium leading-[33.6rpx] text-danger"> *</text>
+        </view>
+        <input class="h-[52rpx] flex-1 bg-transparent text-right text-[24rpx] font-medium leading-[33.6rpx]" placeholder-style="color: var(--color-muted)" placeholder="请输入您的姓名" value="{{realName}}" bindinput="updateText" data-field="realName" />
       </view>
-    </view>
-
-    <view class="mx-3 mt-5 flex items-center justify-between"><view class="text-[length:30rpx] font-semibold">公司信息</view><view class="text-[length:22rpx] text-muted">{{companies.length}}/{{maxOrganizations}}</view></view>
-    <view data-card-field-group="company" class="mx-3 mt-3">
-      <view wx:if="{{!companies.length}}" class="rounded-[16rpx] border border-line bg-panel px-4 py-5 text-[length:24rpx] text-muted">暂未添加公司经历。</view>
-      <view wx:for="{{companies}}" wx:key="id" class="mt-3 rounded-[16rpx] border border-line bg-panel px-3 py-4">
-        <view class="flex min-h-[64rpx] items-center justify-between gap-2">
-          <view class="text-[length:24rpx] font-semibold">公司 {{index + 1}}</view>
-          <view class="flex shrink-0 items-center gap-1">
-            <button plain class="m-0 flex min-h-[88rpx] min-w-[88rpx] items-center justify-center px-2 text-[length:22rpx] text-muted disabled:opacity-40" disabled="{{index === 0}}" data-kind="companies" data-index="{{index}}" data-direction="-1" bind:tap="moveExperience">上移</button>
-            <button plain class="m-0 flex min-h-[88rpx] min-w-[88rpx] items-center justify-center px-2 text-[length:22rpx] text-muted disabled:opacity-40" disabled="{{index === companies.length - 1}}" data-kind="companies" data-index="{{index}}" data-direction="1" bind:tap="moveExperience">下移</button>
-            <button plain class="m-0 flex min-h-[88rpx] min-w-[88rpx] items-center justify-center px-2 text-[length:22rpx] text-danger" data-kind="companies" data-index="{{index}}" bind:tap="removeExperience">删除</button>
+      <view data-card-field-group="company" class="flex items-center justify-between bg-panel px-[24rpx] py-[2rpx]">
+        <view class="flex items-baseline gap-[4rpx]">
+          <text class="whitespace-nowrap text-[28rpx] font-medium leading-[33.6rpx]">公司</text>
+          <text class="text-[20rpx] font-medium leading-[33.6rpx] text-danger"> *</text>
+        </view>
+        <input data-card-field-row="company" class="h-[88rpx] flex-1 bg-transparent text-right text-[24rpx] font-medium leading-[33.6rpx]" placeholder-style="color: var(--color-muted)" placeholder="请输入您的公司名称" value="{{companies[0].name}}" bindinput="updateExperience" data-kind="companies" data-index="0" data-field="name" />
+      </view>
+      <view data-card-field-group="company" class="flex items-center justify-between rounded-b-[16rpx] bg-panel px-[24rpx] py-[2rpx]">
+        <view class="flex items-baseline gap-[4rpx]">
+          <text class="whitespace-nowrap text-[28rpx] font-medium leading-[33.6rpx]">职位</text>
+          <text class="text-[20rpx] font-medium leading-[33.6rpx] text-danger"> *</text>
+        </view>
+        <input data-card-field-row="role" class="h-[88rpx] flex-1 bg-transparent text-right text-[24rpx] font-medium leading-[33.6rpx]" placeholder-style="color: var(--color-muted)" placeholder="请输入您的公司职位" value="{{companies[0].role}}" bindinput="updateExperience" data-kind="companies" data-index="0" data-field="role" />
+      </view>
+      <block wx:for="{{companies}}" wx:key="id">
+        <view wx:if="{{companies.length > 1 && index > 0}}" class="mt-[28rpx] flex flex-col" data-card-field-group="company">
+          <view class="flex h-[34rpx] items-center justify-between">
+            <text class="whitespace-nowrap text-[28rpx] font-medium leading-[33.6rpx]">{{index === 1 ? '第二公司职位' : '其他公司职位'}}</text>
+            <view class="flex items-center gap-[24rpx]">
+              <text class="whitespace-nowrap text-[20rpx] font-medium leading-[28rpx] text-muted" aria-role="button" aria-label="上移公司经历" bind:tap="moveExperience" data-kind="companies" data-index="{{index}}" data-direction="-1">上移</text>
+              <text class="whitespace-nowrap text-[20rpx] font-medium leading-[28rpx] text-muted" aria-role="button" aria-label="下移公司经历" bind:tap="moveExperience" data-kind="companies" data-index="{{index}}" data-direction="1">下移</text>
+              <text class="whitespace-nowrap text-[20rpx] font-medium leading-[28rpx] text-muted" aria-role="button" aria-label="删除公司经历" bind:tap="removeExperience" data-kind="companies" data-index="{{index}}">删除</text>
+            </view>
+          </view>
+          <view class="mt-[28rpx] flex flex-col gap-[2rpx]">
+            <view class="flex items-center justify-between rounded-t-[16rpx] bg-panel px-[24rpx] py-[2rpx]">
+              <view class="flex items-baseline gap-[4rpx]">
+                <text class="whitespace-nowrap text-[28rpx] font-medium leading-[33.6rpx]">公司</text>
+                <text class="text-[20rpx] font-medium leading-[33.6rpx] text-danger"> *</text>
+              </view>
+              <input data-card-field-row="company" class="h-[88rpx] flex-1 bg-transparent text-right text-[24rpx] font-medium leading-[33.6rpx]" placeholder-style="color: var(--color-muted)" placeholder="请输入您的公司名称" value="{{item.name}}" bindinput="updateExperience" data-kind="companies" data-index="{{index}}" data-field="name" />
+            </view>
+            <view class="flex items-center justify-between rounded-b-[16rpx] bg-panel px-[24rpx] py-[2rpx]">
+              <view class="flex items-baseline gap-[4rpx]">
+                <text class="whitespace-nowrap text-[28rpx] font-medium leading-[33.6rpx]">职位</text>
+                <text class="text-[20rpx] font-medium leading-[33.6rpx] text-danger"> *</text>
+              </view>
+              <input data-card-field-row="role" class="h-[88rpx] flex-1 bg-transparent text-right text-[24rpx] font-medium leading-[33.6rpx]" placeholder-style="color: var(--color-muted)" placeholder="请输入您的公司职位" value="{{item.role}}" bindinput="updateExperience" data-kind="companies" data-index="{{index}}" data-field="role" />
+            </view>
           </view>
         </view>
-        <input aria-label="公司名称" data-card-field-row="company" class="mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[16rpx] bg-canvas px-4 text-[length:24rpx]" maxlength="120" value="{{item.name}}" data-kind="companies" data-index="{{index}}" data-field="name" bindinput="updateExperience" placeholder="公司名称" placeholder-style="color:#B3B3B3" />
-        <input aria-label="公司职位" data-card-field-row="role" class="mt-3 block h-[88rpx] w-full max-w-full box-border rounded-[16rpx] bg-canvas px-4 text-[length:24rpx]" maxlength="80" value="{{item.role}}" data-kind="companies" data-index="{{index}}" data-field="role" bindinput="updateExperience" placeholder="职位" placeholder-style="color:#B3B3B3" />
-      </view>
-      <button plain class="mt-3 flex min-h-[88rpx] w-full max-w-full box-border items-center justify-center rounded-[16rpx] border border-line text-[length:24rpx] text-ink disabled:opacity-40" disabled="{{companies.length >= maxOrganizations}}" data-kind="companies" bind:tap="addExperience">添加公司经历</button>
-    </view>
-
-    <view class="mx-3 mt-5 text-[length:30rpx] font-semibold">联系方式</view>
-    <view data-card-field-group="contact" class="mip-radius-card-medium mx-3 mt-3 overflow-hidden bg-panel">
-      <view data-card-field-row="phone" class="flex min-h-[92rpx] items-center border-b border-line px-3">
-        <text class="w-[144rpx] shrink-0 text-[length:24rpx] font-medium">手机号</text>
-        <view class="flex min-w-0 flex-1 items-center justify-end gap-2 text-[length:24rpx]"><text class="truncate text-muted">{{phoneBound ? (phoneMasked || '已绑定') : '未绑定'}}</text><button open-type="getPhoneNumber" plain disabled="{{phoneBinding || saving}}" class="m-0 shrink-0 border-0 p-0 text-[length:24rpx] text-brand disabled:opacity-50" bind:getphonenumber="bindPhone">{{phoneBinding ? '更新中' : (phoneBound ? '更换' : '绑定')}}</button></view>
-      </view>
-      <view data-card-field-row="wechat" class="flex min-h-[92rpx] items-center border-b border-line px-3">
-        <text class="w-[144rpx] shrink-0 text-[length:24rpx] font-medium">微信号</text>
-        <input aria-label="微信号" class="h-[92rpx] min-w-0 flex-1 text-right text-[length:24rpx]" maxlength="120" value="{{wechat}}" data-field="wechat" bindinput="updateText" placeholder="请输入微信号" placeholder-style="color:#B3B3B3;text-align:right" />
-      </view>
-      <view data-card-field-row="email" class="flex min-h-[92rpx] items-center border-b border-line px-3">
-        <text class="w-[144rpx] shrink-0 text-[length:24rpx] font-medium">邮箱</text>
-        <input aria-label="邮箱" class="h-[92rpx] min-w-0 flex-1 text-right text-[length:24rpx]" maxlength="160" value="{{email}}" data-field="email" bindinput="updateText" placeholder="请输入邮箱" placeholder-style="color:#B3B3B3;text-align:right" />
-      </view>
-      <view data-card-field-row="address" class="flex min-h-[92rpx] items-center px-3">
-        <text class="w-[144rpx] shrink-0 text-[length:24rpx] font-medium">地址</text>
-        <input aria-label="联系地址" class="h-[92rpx] min-w-0 flex-1 text-right text-[length:24rpx]" maxlength="240" value="{{address}}" data-field="address" bindinput="updateText" placeholder="请输入联系地址" placeholder-style="color:#B3B3B3;text-align:right" />
+      </block>
+      <view class="flex h-[92rpx] items-center justify-end gap-[16rpx] rounded-[16rpx]" aria-role="button" aria-label="添加公司经历" bind:tap="addExperience" data-kind="companies">
+        <view class="flex h-[28rpx] w-[28rpx] items-center justify-center"><mip-icon name="icon-plus-fill" size="{{14}}" color="var(--color-brand)" /></view>
+        <text class="whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-brand">添加公司/职位</text>
       </view>
     </view>
 
-    <view class="mx-3 mt-5 flex items-center justify-between"><view class="text-[length:30rpx] font-semibold">组织信息</view><view class="text-[length:22rpx] text-muted">{{organizations.length}}/{{maxOrganizations}}</view></view>
-    <view data-card-field-group="organization" class="mx-3 mt-3">
-      <view wx:if="{{!organizations.length}}" class="rounded-[16rpx] border border-line bg-panel px-4 py-5 text-[length:24rpx] text-muted">暂未添加组织经历。</view>
-      <view wx:for="{{organizations}}" wx:key="id" class="mt-3 rounded-[16rpx] border border-line bg-panel px-3 py-4">
-        <view class="flex min-h-[64rpx] items-center justify-between gap-2">
-          <view class="text-[length:24rpx] font-semibold">组织 {{index + 1}}</view>
-          <view class="flex shrink-0 items-center gap-1">
-            <button plain class="m-0 flex min-h-[88rpx] min-w-[88rpx] items-center justify-center px-2 text-[length:22rpx] text-muted disabled:opacity-40" disabled="{{index === 0}}" data-kind="organizations" data-index="{{index}}" data-direction="-1" bind:tap="moveExperience">上移</button>
-            <button plain class="m-0 flex min-h-[88rpx] min-w-[88rpx] items-center justify-center px-2 text-[length:22rpx] text-muted disabled:opacity-40" disabled="{{index === organizations.length - 1}}" data-kind="organizations" data-index="{{index}}" data-direction="1" bind:tap="moveExperience">下移</button>
-            <button plain class="m-0 flex min-h-[88rpx] min-w-[88rpx] items-center justify-center px-2 text-[length:22rpx] text-danger" data-kind="organizations" data-index="{{index}}" bind:tap="removeExperience">删除</button>
+    <!-- figma 1732_20291: 联系方式组 @ (12,596)：头 contacts-book-3 + fs16；行 手机号/微信/邮箱/地址
+         46px 节距 47，首尾 8px 圆角；手机号行 = 授权按钮（open-type getPhoneNumber）。 -->
+    <view class="mx-[24rpx] mt-[24rpx] flex items-center gap-[8rpx]">
+      <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="contacts-book-3-line" size="{{16}}" color="var(--color-brand)" /></view>
+      <text class="whitespace-nowrap text-[32rpx] font-medium leading-[44.8rpx]">联系方式</text>
+    </view>
+    <view data-card-field-group="contact" class="mx-[24rpx] mt-[24rpx] flex flex-col gap-[2rpx]">
+      <view data-card-field-row="phone" class="flex min-h-[92rpx] items-center justify-between rounded-t-[16rpx] bg-panel px-[24rpx] py-[20rpx]">
+        <view class="flex items-baseline gap-[4rpx]">
+          <text class="whitespace-nowrap text-[28rpx] font-medium leading-[33.6rpx]">手机号</text>
+          <text class="text-[20rpx] font-medium leading-[33.6rpx] text-danger"> *</text>
+        </view>
+        <button class="flex flex-1 items-center justify-end bg-transparent p-0 text-right text-[24rpx] font-medium leading-[33.6rpx] {{phoneMasked ? 'text-ink' : 'text-muted'}}" open-type="getPhoneNumber" bindgetphonenumber="bindPhone">{{phoneMasked || '请输入您的手机号'}}</button>
+      </view>
+      <view data-card-field-row="wechat" class="flex min-h-[92rpx] items-center justify-between bg-panel px-[24rpx] py-[20rpx]">
+        <text class="whitespace-nowrap text-[28rpx] font-medium leading-[33.6rpx]">微信</text>
+        <input class="h-[52rpx] flex-1 bg-transparent text-right text-[24rpx] font-medium leading-[33.6rpx]" placeholder-style="color: var(--color-muted)" placeholder="请输入微信号" value="{{wechat}}" bindinput="updateText" data-field="wechat" />
+      </view>
+      <view data-card-field-row="email" class="flex min-h-[92rpx] items-center justify-between bg-panel px-[24rpx] py-[20rpx]">
+        <text class="whitespace-nowrap text-[28rpx] font-medium leading-[33.6rpx]">邮箱</text>
+        <input class="h-[52rpx] flex-1 bg-transparent text-right text-[24rpx] font-medium leading-[33.6rpx]" placeholder-style="color: var(--color-muted)" placeholder="请输入您的邮箱" value="{{email}}" bindinput="updateText" data-field="email" />
+      </view>
+      <view data-card-field-row="address" class="flex min-h-[92rpx] items-center justify-between rounded-b-[16rpx] bg-panel px-[24rpx] py-[20rpx]">
+        <text class="whitespace-nowrap text-[28rpx] font-medium leading-[33.6rpx]">地址</text>
+        <input class="h-[52rpx] flex-1 bg-transparent text-right text-[24rpx] font-medium leading-[33.6rpx]" placeholder-style="color: var(--color-muted)" placeholder="请输入您的地址" value="{{address}}" bindinput="updateText" data-field="address" />
+      </view>
+    </view>
+
+    <!-- figma 1732_20291: 组织信息组 @ (12,829)；第二段组织（figma 1729_20840）同公司经历模型。 -->
+    <view class="mx-[24rpx] mt-[24rpx] flex items-center gap-[8rpx]">
+      <view class="flex h-[32rpx] w-[32rpx] items-center justify-center"><mip-icon name="parent-line" size="{{16}}" color="var(--color-brand)" /></view>
+      <text class="whitespace-nowrap text-[32rpx] font-medium leading-[44.8rpx]">组织信息</text>
+    </view>
+    <view data-card-field-group="organization" class="mx-[24rpx] mt-[24rpx] flex flex-col gap-[2rpx]">
+      <view class="flex items-center justify-between rounded-t-[16rpx] bg-panel px-[24rpx] py-[2rpx]">
+        <text class="whitespace-nowrap text-[28rpx] font-medium leading-[33.6rpx]">组织</text>
+        <input data-card-field-row="organization" class="h-[88rpx] flex-1 bg-transparent text-right text-[24rpx] font-medium leading-[33.6rpx]" placeholder-style="color: var(--color-muted)" placeholder="请输入您的组织名称" value="{{organizations[0].name}}" bindinput="updateExperience" data-kind="organizations" data-index="0" data-field="name" />
+      </view>
+      <view class="flex items-center justify-between rounded-b-[16rpx] bg-panel px-[24rpx] py-[2rpx]">
+        <text class="whitespace-nowrap text-[28rpx] font-medium leading-[33.6rpx]">职位</text>
+        <input data-card-field-row="organizationRole" class="h-[88rpx] flex-1 bg-transparent text-right text-[24rpx] font-medium leading-[33.6rpx]" placeholder-style="color: var(--color-muted)" placeholder="请输入您的公司职位" value="{{organizations[0].role}}" bindinput="updateExperience" data-kind="organizations" data-index="0" data-field="role" />
+      </view>
+      <block wx:for="{{organizations}}" wx:key="id">
+        <view wx:if="{{organizations.length > 1 && index > 0}}" class="mt-[28rpx] flex flex-col">
+          <view class="flex h-[34rpx] items-center justify-between">
+            <text class="whitespace-nowrap text-[28rpx] font-medium leading-[33.6rpx]">{{index === 1 ? '第二组织职位' : '其他组织职位'}}</text>
+            <view class="flex items-center gap-[24rpx]">
+              <text class="whitespace-nowrap text-[20rpx] font-medium leading-[28rpx] text-muted" aria-role="button" aria-label="上移组织经历" bind:tap="moveExperience" data-kind="organizations" data-index="{{index}}" data-direction="-1">上移</text>
+              <text class="whitespace-nowrap text-[20rpx] font-medium leading-[28rpx] text-muted" aria-role="button" aria-label="下移组织经历" bind:tap="moveExperience" data-kind="organizations" data-index="{{index}}" data-direction="1">下移</text>
+              <text class="whitespace-nowrap text-[20rpx] font-medium leading-[28rpx] text-muted" aria-role="button" aria-label="删除组织经历" bind:tap="removeExperience" data-kind="organizations" data-index="{{index}}">删除</text>
+            </view>
+          </view>
+          <view class="mt-[28rpx] flex flex-col gap-[2rpx]">
+            <view class="flex items-center justify-between rounded-t-[16rpx] bg-panel px-[24rpx] py-[2rpx]">
+              <text class="whitespace-nowrap text-[28rpx] font-medium leading-[33.6rpx]">组织</text>
+              <input data-card-field-row="organization" class="h-[88rpx] flex-1 bg-transparent text-right text-[24rpx] font-medium leading-[33.6rpx]" placeholder-style="color: var(--color-muted)" placeholder="请输入您的组织名称" value="{{item.name}}" bindinput="updateExperience" data-kind="organizations" data-index="{{index}}" data-field="name" />
+            </view>
+            <view class="flex items-center justify-between rounded-b-[16rpx] bg-panel px-[24rpx] py-[2rpx]">
+              <text class="whitespace-nowrap text-[28rpx] font-medium leading-[33.6rpx]">职位</text>
+              <input data-card-field-row="organizationRole" class="h-[88rpx] flex-1 bg-transparent text-right text-[24rpx] font-medium leading-[33.6rpx]" placeholder-style="color: var(--color-muted)" placeholder="请输入您的公司职位" value="{{item.role}}" bindinput="updateExperience" data-kind="organizations" data-index="{{index}}" data-field="role" />
+            </view>
           </view>
         </view>
-        <input aria-label="组织名称" data-card-field-row="organization" class="mt-2 block h-[88rpx] w-full max-w-full box-border rounded-[16rpx] bg-canvas px-4 text-[length:24rpx]" maxlength="120" value="{{item.name}}" data-kind="organizations" data-index="{{index}}" data-field="name" bindinput="updateExperience" placeholder="组织名称" placeholder-style="color:#B3B3B3" />
-        <input aria-label="组织职位" data-card-field-row="organizationRole" class="mt-3 block h-[88rpx] w-full max-w-full box-border rounded-[16rpx] bg-canvas px-4 text-[length:24rpx]" maxlength="80" value="{{item.role}}" data-kind="organizations" data-index="{{index}}" data-field="role" bindinput="updateExperience" placeholder="组织职位" placeholder-style="color:#B3B3B3" />
+      </block>
+      <view class="flex h-[92rpx] items-center justify-end gap-[16rpx] rounded-[16rpx]" aria-role="button" aria-label="添加组织经历" bind:tap="addExperience" data-kind="organizations">
+        <view class="flex h-[28rpx] w-[28rpx] items-center justify-center"><mip-icon name="icon-plus-fill" size="{{14}}" color="var(--color-brand)" /></view>
+        <text class="whitespace-nowrap text-[24rpx] font-medium leading-[33.6rpx] text-brand">添加组织/职位</text>
       </view>
-      <button plain class="mt-3 flex min-h-[88rpx] w-full max-w-full box-border items-center justify-center rounded-[16rpx] border border-line text-[length:24rpx] text-ink disabled:opacity-40" disabled="{{organizations.length >= maxOrganizations}}" data-kind="organizations" bind:tap="addExperience">添加组织经历</button>
     </view>
-    <view wx:if="{{message}}" class="mx-3 mt-4 rounded-[16rpx] border border-line bg-panel-raised px-4 py-3 text-[length:24rpx] leading-6">{{message}}</view>
-    <mip-sticky-actions><view slot="actions" class="w-full"><t-button block size="large" theme="primary" loading="{{saving}}" bind:tap="save">保存名片设置</t-button></view></mip-sticky-actions>
+
+    <view wx:if="{{message}}" class="mx-[24rpx] mt-[16rpx] rounded-[8rpx] bg-panel px-4 py-3 text-[22rpx] leading-[30.8rpx] text-danger">{{message}}</view>
+
+    <!-- figma 1732_20291: 底部玻璃药丸 @ (12,1068) 351×56：预览 88×40 panel 底 + 保存 227×40
+         品牌底，1px 黑描边，间距 12px。 -->
+    <mip-sticky-actions>
+      <view slot="actions" class="flex h-[112rpx] w-full items-center gap-[24rpx] rounded-full bg-brand-soft px-[24rpx] py-[16rpx]">
+        <view class="flex h-[80rpx] w-[176rpx] items-center justify-center gap-[16rpx] rounded-full border border-black bg-panel" aria-role="button" aria-label="预览名片" bind:tap="openPreview">
+          <view class="flex h-[40rpx] w-[40rpx] items-center justify-center"><mip-icon name="id-card-line" size="{{20}}" color="var(--color-brand)" /></view>
+          <text class="whitespace-nowrap text-[32rpx] font-medium leading-[44.8rpx] text-brand">预览</text>
+        </view>
+        <view class="flex h-[80rpx] flex-1 items-center justify-center rounded-full border border-black bg-brand active:bg-brand-active" aria-role="button" aria-label="保存名片" bind:tap="save">
+          <text class="whitespace-nowrap text-[32rpx] font-medium leading-[44.8rpx] text-on-brand">{{saving ? '保存中…' : '保存'}}</text>
+        </view>
+      </view>
+    </mip-sticky-actions>
+    <app-page-exit />
   </block>
-  <app-page-exit />
 </view>
