@@ -56,7 +56,7 @@ describe('MIP opportunity Figma surfaces', () => {
     expect(discoveryScript).toContain('preserveContent: this.data.state === \'ready\'')
     expect(discovery).toContain('class="opportunities-filter-panel')
     expect(discoveryScript).toContain('if (!this.data.filterOpen && this.data.nextCursor && !this.data.loadingMore)')
-    expect(discovery).toContain('<block wx:if="{{filterOpen}}">')
+    expect(discovery).toContain('<block wx:elif="{{filterOpen}}">')
     expect(discovery).toContain('<block wx:else>')
   })
 

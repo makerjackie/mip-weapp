@@ -20,6 +20,7 @@ export const ICON_COLOR_TOKENS: Record<string, string> = {
   '--color-brand': '#fcdf03',
   '--color-on-brand': '#080808',
   '--color-brand-active': '#d0b801',
+  '--color-brand-dim': '#3b3925',
   '--color-brand-soft': '#4d4400',
   '--color-tag-player': '#fde530',
   '--color-brand-alt': '#fde104',

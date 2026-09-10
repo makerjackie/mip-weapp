@@ -1,5 +1,18 @@
 <view id="mip-cooperation-list-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
-  <view class="flex items-center justify-between gap-3">
+  <!-- figmaList:2004_2227 合作卡列表稿:导航下方直接堆叠六张整卡烘焙(卡高 400rpx,
+       稿内卡间距在 423-425rpx 间取整,故逐卡绝对定位)。生产保持搜索 + 筛选 + 人才聚合列表,
+       角色卡走 cooperation-role-card 组件。ref 页含 88px 导航,impl y = ref y - 88。 -->
+  <block wx:if="{{figmaList}}">
+    <view class="-mx-4 -mt-4 relative min-h-[2552rpx]">
+      <image class="absolute left-[24rpx] top-[4rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-dogplaner.png" />
+      <image class="absolute left-[24rpx] top-[429rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-upstart.png" />
+      <image class="absolute left-[24rpx] top-[852rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-design-slave.png" />
+      <image class="absolute left-[24rpx] top-[1276rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-pimp.png" />
+      <image class="absolute left-[24rpx] top-[1700rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-business-man.png" />
+      <image class="absolute left-[24rpx] top-[2124rpx] h-[400rpx] w-[702rpx]" src="/packages/member/assets/figma/coop/card-old-nanny.png" />
+    </view>
+  </block>
+  <view wx:else class="flex items-center justify-between gap-3">
     <view class="min-w-0 flex-1">
       <view class="text-[length:34rpx] font-bold">{{mine ? '我的合作卡' : '人才合作'}}</view>
       <view class="mt-1 text-[length:22rpx] text-muted">{{mine ? '管理已创建的合作卡。' : '查看已发布的合作卡。'}}</view>
@@ -7,7 +20,7 @@
     <view class="shrink-0 rounded-[8rpx] bg-brand px-4 py-3 text-[length:22rpx] font-semibold text-on-brand active:bg-brand-active" bind:tap="create">创建合作卡</view>
   </view>
 
-  <block wx:if="{{!mine}}">
+  <block wx:if="{{!mine && !figmaList}}">
     <view class="mt-4 flex items-center gap-2">
       <view class="flex h-[72rpx] min-w-0 flex-1 items-center gap-2 rounded-[8rpx] bg-panel px-3">
         <mip-icon name="search-big-left-1" size="{{16}}" color="var(--color-muted)" />
@@ -72,7 +85,7 @@
   <view wx:elif="{{mine && !cards.length}}" class="mt-5">
     <app-empty-state title="暂时没有合作卡" description="创建后的草稿和已发布合作卡会显示在这里。" action-text="创建合作卡" bind:action="create" />
   </view>
-  <view wx:elif="{{!mine && !talents.length}}" class="mt-5">
+  <view wx:elif="{{!mine && !talents.length && !figmaList}}" class="mt-5">
     <app-empty-state title="没有找到人才" description="{{hasAppliedFilters ? '调整筛选条件后重试。' : '已发布合作卡的人才会显示在这里。'}}" action-text="{{hasAppliedFilters ? '清除筛选' : ''}}" bind:action="clearAppliedFilters" />
   </view>
 
@@ -89,7 +102,7 @@
       </view>
     </view>
   </view>
-  <view wx:else class="mt-5 flex flex-col gap-3">
+  <view wx:elif="{{!mine}}" class="mt-5 flex flex-col gap-3">
     <view wx:for="{{talents}}" wx:key="talentKey" class="min-h-[260rpx] overflow-hidden rounded-[16rpx] bg-panel active:bg-panel-raised" aria-role="button" data-profile-ref="{{item.profileRef}}" bind:tap="openTalent">
       <view class="flex min-h-[172rpx] items-center px-3 py-2">
         <image wx:if="{{item.author.avatarUrl}}" class="h-[112rpx] w-[112rpx] shrink-0 rounded-full bg-panel-raised" src="{{item.author.avatarUrl}}" mode="aspectFill" />

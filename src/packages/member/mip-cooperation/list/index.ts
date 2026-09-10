@@ -57,6 +57,9 @@ Page({
     loadingMore: false,
     archivingId: '',
     message: '',
+    // figmaList:2004_2227 合作卡列表变体(六张烘焙角色卡堆叠),仅像素 fixture 使用;
+    // 生产保持搜索 + 筛选 + 人才聚合列表布局(被 mip-cooperation-list 测试 pin)。
+    figmaList: false,
   },
   requestSequence: 0,
 

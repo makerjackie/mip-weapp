@@ -15,6 +15,7 @@
   --color-on-brand: #080808;
   --color-brand-active: #d0b801;
   --color-brand-soft: #4d4400;
+  --color-brand-dim: #3b3925;
   --color-tag-player: #fde530;
   /* figma 1861_17860 detail screen: brand-alt highlight yellow, event-type chip
      blue, and the iOS systemGray used by secondary detail labels. Yellow chip

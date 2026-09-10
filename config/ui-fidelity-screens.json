@@ -670,7 +670,8 @@
               }
             ]
           }
-        ]
+        ],
+        "authenticated": true
       }
     },
     {
@@ -6792,6 +6793,165 @@
       "fixture": {
         "state": "ready",
         "figmaEmpty": true
+      }
+    },
+    {
+      "key": "coop-合作卡列表",
+      "route": "packages/member/mip-cooperation/list/index",
+      "reference": "2004_2227_合作卡.html",
+      "crop": {
+        "topPx": 124,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaList": true
+      }
+    },
+    {
+      "key": "opportunities-机会详情-访客-默认封面",
+      "route": "packages/member/mip-opportunities/detail/index",
+      "reference": "2188_42941_机会详情-访客视角-默认封面.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "figmaLayout": true,
+        "figma": {
+          "title": "设计户外过两天再说露营地",
+          "cover": "/assets/figma/opportunities/cover-default.png",
+          "rows": [
+            {
+              "icon": "money-cny-circle",
+              "label": "价值",
+              "value": "15000"
+            },
+            {
+              "icon": "location",
+              "label": "地区",
+              "value": "深圳 杭州"
+            },
+            {
+              "icon": "service-target",
+              "label": "寻找",
+              "value": "露营地帐篷供应商"
+            }
+          ],
+          "published": "发表于：2026-01-04 13:00",
+          "guestCta": true
+        }
+      }
+    },
+    {
+      "key": "opportunities-人才合作-访客",
+      "route": "pages/opportunities/index",
+      "reference": "2198_43587_机会-人才合作筛选-b.html",
+      "crop": {
+        "topPx": 68,
+        "bottomPx": 90
+      },
+      "fixture": {
+        "state": "ready",
+        "authenticated": false,
+        "mode": "cooperation",
+        "status": "RECRUITING",
+        "keywordInput": "",
+        "filterOpen": false,
+        "locationFilterLabel": "全国",
+        "appliedFilterCount": 0,
+        "appliedFilterChips": [],
+        "loadingMore": false,
+        "message": "",
+        "opportunities": []
+      }
+    },
+    {
+      "key": "opportunities-人才合作筛选",
+      "route": "pages/opportunities/index",
+      "reference": "2917_4875_机会-人才合作筛选-a.html",
+      "crop": {
+        "topPx": 68,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "mode": "cooperation",
+        "authenticated": true,
+        "figmaFilter": true,
+        "figmaFilterData": {
+          "keyword": "",
+          "searchPlaceholder": "搜索活动名称",
+          "abilityRow1": [
+            {
+              "label": "不限",
+              "selected": true
+            },
+            {
+              "label": "暴发户"
+            },
+            {
+              "label": "死美工"
+            },
+            {
+              "label": "死美工"
+            },
+            {
+              "label": "死美工"
+            }
+          ],
+          "abilityRow2": [
+            {
+              "label": "死美工"
+            },
+            {
+              "label": "死美工"
+            }
+          ],
+          "industries": [
+            {
+              "label": "不限",
+              "selected": true
+            },
+            {
+              "label": "热门行业",
+              "primary": true
+            },
+            {
+              "label": "热门行业"
+            },
+            {
+              "label": "热门行业"
+            },
+            {
+              "label": "广告营销"
+            },
+            {
+              "label": "广告营销"
+            },
+            {
+              "label": "广告营销"
+            },
+            {
+              "label": "广告营销"
+            },
+            {
+              "label": "广告营销"
+            },
+            {
+              "label": "广告营销"
+            },
+            {
+              "label": "广告营销"
+            },
+            {
+              "label": "广告营销"
+            }
+          ],
+          "selectedIndustryLabel": "社交媒体",
+          "selectedText": "已选 1/1"
+        }
       }
     }
   ]
