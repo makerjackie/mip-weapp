@@ -4480,6 +4480,216 @@
           ]
         }
       }
+    },
+    {
+      "key": "profile-我的-b",
+      "route": "pages/profile/index",
+      "reference": "1732_19949_我的-b.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "authenticated": true,
+        "figmaLayout": true,
+        "figma": {
+          "avatar": "/assets/figma/profile/avatar.png",
+          "name": "Ame",
+          "level": "Lv.23",
+          "tagline": "深圳MIP I 金融行业 I 激情创业者",
+          "intro": "这是介绍自己的一句话，只有一句话。",
+          "levelCurrent": 3000,
+          "levelTarget": 40000,
+          "redBadge": "2",
+          "stats": [
+            {
+              "leftRpx": 63,
+              "value": "20",
+              "label": "嘉宾"
+            },
+            {
+              "leftRpx": 223,
+              "value": "100",
+              "label": "互动过"
+            },
+            {
+              "leftRpx": 383,
+              "value": "18",
+              "label": "心动值"
+            },
+            {
+              "leftRpx": 543,
+              "value": "200",
+              "label": "访客"
+            }
+          ],
+          "features": [
+            {
+              "leftRpx": 24,
+              "image": "/assets/figma/profile/task.png",
+              "label": "NPC任务"
+            },
+            {
+              "leftRpx": 386,
+              "image": "/assets/figma/profile/badge.png",
+              "label": "MIP勋章"
+            }
+          ],
+          "actions": [
+            {
+              "icon": "/assets/figma/profile/action-events.svg",
+              "label": "活动"
+            },
+            {
+              "icon": "/assets/figma/profile/action-card.svg",
+              "label": "名片"
+            },
+            {
+              "icon": "/assets/figma/profile/action-orders.svg",
+              "label": "订单"
+            },
+            {
+              "icon": "/assets/figma/profile/action-settings.svg",
+              "label": "设置"
+            }
+          ],
+          "tabs": [
+            "合作卡",
+            "超级案例",
+            "相关机会"
+          ],
+          "card": {
+            "roleKey": "strategist",
+            "name": "狗策划 DOGPLANER",
+            "positioning": "需要认识更多地产开发商地产开发商",
+            "targetSummary": "26年接3个非标商业项目"
+          },
+          "cases": [
+            {
+              "month": "2025年 12月",
+              "title": "这是项目名称",
+              "summary": "这是项目的一句话介绍，只有一句话一行"
+            },
+            {
+              "month": "2025年 10月",
+              "title": "这是项目名称",
+              "summary": "这是项目的一句话介绍，只有一句话一行"
+            },
+            {
+              "month": "2025年 8月",
+              "title": "这是项目名称",
+              "summary": "这是项目的一句话介绍，只有一句话一行"
+            }
+          ],
+          "activeTab": 0
+        }
+      }
+    },
+    {
+      "key": "profile-我的-d",
+      "route": "pages/profile/index",
+      "reference": "1774_41441_我的-d.html",
+      "crop": {
+        "topPx": 112,
+        "bottomPx": 0
+      },
+      "fixture": {
+        "state": "ready",
+        "authenticated": true,
+        "figmaLayout": true,
+        "figma": {
+          "avatar": "/assets/figma/profile/avatar.png",
+          "name": "Ame",
+          "level": "Lv.23",
+          "tagline": "深圳MIP I 金融行业 I 激情创业者",
+          "intro": "这是介绍自己的一句话，只有一句话。",
+          "levelCurrent": 3000,
+          "levelTarget": 40000,
+          "redBadge": "2",
+          "stats": [
+            {
+              "leftRpx": 63,
+              "value": "20",
+              "label": "嘉宾"
+            },
+            {
+              "leftRpx": 223,
+              "value": "100",
+              "label": "互动过"
+            },
+            {
+              "leftRpx": 383,
+              "value": "18",
+              "label": "心动值"
+            },
+            {
+              "leftRpx": 543,
+              "value": "200",
+              "label": "访客"
+            }
+          ],
+          "features": [
+            {
+              "leftRpx": 24,
+              "image": "/assets/figma/profile/task.png",
+              "label": "NPC任务"
+            },
+            {
+              "leftRpx": 386,
+              "image": "/assets/figma/profile/badge.png",
+              "label": "MIP勋章"
+            }
+          ],
+          "actions": [
+            {
+              "icon": "/assets/figma/profile/action-events.svg",
+              "label": "活动"
+            },
+            {
+              "icon": "/assets/figma/profile/action-card.svg",
+              "label": "名片"
+            },
+            {
+              "icon": "/assets/figma/profile/action-orders.svg",
+              "label": "订单"
+            },
+            {
+              "icon": "/assets/figma/profile/action-settings.svg",
+              "label": "设置"
+            }
+          ],
+          "tabs": [
+            "合作卡",
+            "超级案例",
+            "相关机会"
+          ],
+          "card": {
+            "roleKey": "strategist",
+            "name": "狗策划 DOGPLANER",
+            "positioning": "需要认识更多地产开发商地产开发商",
+            "targetSummary": "26年接3个非标商业项目"
+          },
+          "cases": [
+            {
+              "month": "2025年 12月",
+              "title": "这是项目名称",
+              "summary": "这是项目的一句话介绍，只有一句话一行"
+            },
+            {
+              "month": "2025年 10月",
+              "title": "这是项目名称",
+              "summary": "这是项目的一句话介绍，只有一句话一行"
+            },
+            {
+              "month": "2025年 8月",
+              "title": "这是项目名称",
+              "summary": "这是项目的一句话介绍，只有一句话一行"
+            }
+          ],
+          "activeTab": 1
+        }
+      }
     }
   ]
 }

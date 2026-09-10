@@ -68,6 +68,8 @@ Page({
     visitorCount: null as number | null,
     notificationUnreadCount: 0,
     portfolioTab: 'cooperation' as PortfolioTab,
+    // ui-fidelity fixture 开关：默认走生产布局（被 vitest pin）。
+    figmaLayout: false,
     cooperationState: 'loading' as SectionState,
     cooperationCards: [] as CooperationCardView[],
     caseState: 'loading' as SectionState,

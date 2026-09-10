@@ -7,6 +7,83 @@
     <app-empty-state title="暂时无法加载资料" description="资料服务暂时没有响应。" action-text="重新加载" bind:action="loadProfile" />
   </view>
 
+  <!-- figma 1732_19949/1774_41441 我的（放大头变体）：面板头 + 等级横幅 + 统计 + 功能 + 操作 +
+       tab 条；合作卡 tab = production cooperation-role-card + 虚线添加卡，超级案例 tab =
+       黄点时间线 + 案例卡。生产保持下方 profile-* 布局（被 vitest pin）。fixture
+       figmaLayout 打开时按稿渲染，数据来自 ui-fidelity manifest fixture。 -->
+  <block wx:elif="{{figmaLayout}}">
+    <view class="-mx-3 -mt-3 relative min-h-[1750rpx]">
+      <view class="absolute left-0 top-0 h-[208rpx] w-full bg-panel" />
+      <view class="absolute left-[24rpx] top-[24rpx] h-[160rpx] w-[160rpx]">
+        <image class="h-full w-full rounded-full" mode="aspectFill" src="{{figma.avatar}}" />
+        <view class="pointer-events-none absolute inset-0 rounded-full border-[4rpx] border-canvas" />
+      </view>
+      <view class="absolute left-[208rpx] top-[42rpx] flex items-center">
+        <text class="text-[32rpx] font-medium leading-[44.8rpx] text-ink">{{figma.name}}</text>
+        <view class="ml-[8rpx] flex h-[32rpx] w-[68rpx] items-center justify-center rounded-[8rpx] border-[2rpx] border-canvas bg-panel-raised">
+          <text class="text-[20rpx] font-semibold leading-[28rpx] text-brand">{{figma.level}}</text>
+        </view>
+        <image class="ml-[8rpx] h-[40rpx] w-[40rpx]" src="/packages/member/assets/figma/coop/frog-badge.png" />
+      </view>
+      <view class="absolute left-[208rpx] top-[98rpx] text-[20rpx] font-medium leading-[28rpx] text-ink">{{figma.tagline}}</view>
+      <view class="absolute left-[208rpx] top-[138rpx] text-[20rpx] leading-[28rpx] text-muted">{{figma.intro}}</view>
+
+      <image class="absolute left-[24rpx] top-[208rpx] h-[160rpx] w-[702rpx]" mode="scaleToFill" src="/assets/figma/profile/level-banner-mine.png" />
+
+      <view class="absolute left-[24rpx] top-[392rpx] h-[136rpx] w-[702rpx] rounded-[16rpx] bg-panel">
+        <view wx:for="{{figma.stats}}" wx:key="label" class="absolute top-[24rpx] flex w-[96rpx] flex-col items-center gap-[4rpx]" style="left:{{item.leftRpx}}rpx">
+          <text class="text-[40rpx] font-medium leading-[56rpx] text-ink">{{item.value}}</text>
+          <text class="text-[20rpx] leading-[28rpx] text-ink">{{item.label}}</text>
+        </view>
+        <view class="absolute left-[628rpx] top-[16rpx] flex h-[28rpx] w-[28rpx] items-center justify-center rounded-full bg-[#ff2238]">
+          <text class="text-[20rpx] leading-[26rpx] text-ink">{{figma.redBadge}}</text>
+        </view>
+      </view>
+
+      <view wx:for="{{figma.features}}" wx:key="label" class="absolute h-[144rpx] w-[340rpx] flex items-center gap-[24rpx] rounded-[16rpx] bg-panel px-[24rpx]" style="left:{{item.leftRpx}}rpx;top:552rpx">
+        <image class="h-[96rpx] w-[96rpx]" mode="aspectFit" src="{{item.image}}" />
+        <text class="text-[32rpx] font-semibold text-ink">{{item.label}}</text>
+      </view>
+
+      <view class="absolute left-[24rpx] top-[720rpx] grid h-[160rpx] w-[702rpx] grid-cols-4 rounded-[16rpx] bg-panel">
+        <view wx:for="{{figma.actions}}" wx:key="label" class="flex flex-col items-center justify-center gap-[30rpx]">
+          <image class="h-[56rpx] w-[56rpx]" mode="aspectFit" src="{{item.icon}}" />
+          <text class="text-[28rpx] font-medium leading-[28rpx] text-ink">{{item.label}}</text>
+        </view>
+      </view>
+
+      <view class="absolute left-0 top-[904rpx] grid h-[80rpx] w-full grid-cols-3">
+        <view wx:for="{{figma.tabs}}" wx:key="*this" class="relative flex h-full items-center justify-center">
+          <text class="{{index === figma.activeTab ? 'text-[28rpx] font-medium leading-[40rpx] text-brand' : 'text-[28rpx] leading-[40rpx] text-muted'}}">{{item}}</text>
+          <view wx:if="{{index === figma.activeTab}}" class="absolute bottom-0 left-0 h-[4rpx] w-[250rpx] bg-brand" />
+        </view>
+      </view>
+
+      <block wx:if="{{figma.activeTab === 0}}">
+        <view class="absolute left-[24rpx] top-[1008rpx] w-[702rpx]">
+          <cooperation-role-card role-key="{{figma.card.roleKey}}" name="{{figma.card.name}}" positioning="{{figma.card.positioning}}" target-summary="{{figma.card.targetSummary}}" />
+        </view>
+        <view class="absolute left-[24rpx] top-[1432rpx] flex h-[200rpx] w-[702rpx] flex-row items-center justify-center gap-[8rpx] rounded-[16rpx] border-[1rpx] border-dashed border-brand bg-panel">
+          <mip-icon name="icon-plus-fill" size="28rpx" color="var(--color-brand)" />
+          <text class="text-[28rpx] font-medium leading-[40rpx] text-brand">添加</text>
+        </view>
+      </block>
+
+      <block wx:if="{{figma.activeTab === 1}}">
+        <view class="absolute left-[60rpx] top-[1032rpx] h-[448rpx] w-[2rpx] bg-brand" />
+        <view wx:for="{{figma.cases}}" wx:key="month" class="absolute left-0 w-full" style="top:{{1012 + index * 224}}rpx">
+          <text class="block w-full text-center text-[24rpx] font-semibold leading-[40rpx] text-brand">{{item.month}}</text>
+        </view>
+        <view wx:for="{{figma.cases}}" wx:key="month" class="absolute left-[49rpx] h-[24rpx] w-[24rpx] rounded-full bg-brand" style="top:{{1021 + index * 224}}rpx" />
+        <view wx:for="{{figma.cases}}" wx:key="month" class="absolute h-[126rpx] w-[578rpx] rounded-[16rpx] bg-panel" style="left:124rpx;top:{{1082 + index * 224}}rpx">
+          <image class="absolute left-[22rpx] top-[19rpx] h-[28rpx] w-[28rpx]" src="/assets/figma/profile/icon-folder.png" />
+          <text class="absolute left-[64rpx] top-[16rpx] text-[28rpx] font-medium leading-[40rpx] text-ink">{{item.title}}</text>
+          <text class="absolute left-[24rpx] top-[62rpx] text-[24rpx] leading-[33.6rpx] text-muted">{{item.summary}}</text>
+        </view>
+      </block>
+    </view>
+  </block>
+
   <block wx:else>
     <view wx:if="{{!authenticated}}" class="profile-guest">
       <view class="profile-guest-hero" aria-role="button" aria-label="登录注册" bind:tap="openLogin">
