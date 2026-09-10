@@ -1,6 +1,6 @@
 <view id="mip-heart-history-page" class="mip-member-page min-h-screen bg-canvas px-4 pb-[calc(env(safe-area-inset-bottom)+48rpx)] pt-4 text-ink">
-  <!-- figma 1732_19460/2202_44989/2202_44878 心动值：
-       设计稿是 你的心动/对你心动 tabs + 2 列玩家卡网格（5 张固定嘉宾卡）；
+  <!-- figma 1732_19460/2202_44989/2202_44878 心动值、1732_19538 访客、2168_17419 与你互动：
+       设计稿是 你的心动/对你心动 tabs（或 搜索+筛选 chips 头部）+ 2 列玩家卡网格（5 张固定嘉宾卡）；
        生产保持下方 tabs+列表（被 mip-heart-history 测试 pin）。
        头像/红心徽标/邀请人徽标 PNG 烘焙自参考稿；Lv、标签、简介、心动计数都是
        设计前瞻字段（listHeartHistory DTO 暂无），记 ui-fidelity manifest notes。 -->
@@ -12,6 +12,11 @@
         <view class="absolute left-0 top-[78rpx] h-[2rpx] w-full bg-panel"></view>
         <view class="absolute top-[76rpx] h-[4rpx] w-[376rpx] bg-brand" style="left:{{figma.tabs.leftActive ? 0 : 376}}rpx"></view>
       </view>
+      <view wx:if="{{figma.search}}" class="absolute left-[24rpx] top-[24rpx] h-[80rpx] w-[702rpx] rounded-[16rpx] bg-panel">
+        <mip-icon class="absolute left-[24rpx] top-[20rpx]" name="search-big-left-1" size="{{20}}" color="var(--color-muted)" />
+        <view class="absolute left-[80rpx] top-0 flex h-full items-center text-[length:24rpx] leading-[33.6rpx] text-muted">搜索姓名，行业，简介等</view>
+      </view>
+      <view wx:for="{{figma.chips}}" wx:key="label" class="absolute flex h-[56rpx] items-center justify-center rounded-[16rpx] text-[length:28rpx] {{item.active ? 'bg-brand font-medium text-on-brand' : 'bg-panel text-muted'}}" style="left:{{item.leftRpx}}rpx;top:{{item.topRpx || 128}}rpx;width:{{item.widthRpx}}rpx">{{item.label}}</view>
       <view wx:for="{{figma.cards}}" wx:key="name" class="absolute h-[374rpx] w-[340rpx] overflow-hidden rounded-[16rpx] {{item.highlight ? 'bg-[#333333]' : 'bg-panel'}}" style="left:{{item.leftRpx}}rpx;top:{{item.topRpx}}rpx">
         <view wx:if="{{item.chipAt}}" class="absolute flex h-[32rpx] w-[68rpx] items-center justify-center rounded-[8rpx] border border-canvas bg-panel-raised text-[length:20rpx] font-semibold leading-[28rpx] text-brand" style="left:{{item.chipAt.leftRpx}}rpx;top:{{item.chipAt.topRpx}}rpx">Lv.23</view>
         <view wx:else class="absolute left-[16rpx] top-[16rpx] flex h-[32rpx] w-[68rpx] items-center justify-center rounded-[8rpx] border border-canvas bg-panel-raised text-[length:20rpx] font-semibold leading-[28rpx] text-brand">Lv.23</view>
@@ -24,6 +29,7 @@
         <view class="absolute left-[24rpx] top-[238rpx] w-[288rpx] text-[length:20rpx] leading-[28rpx] text-muted">{{item.intro}}</view>
         <image class="absolute left-[16rpx] top-[318rpx] h-[40rpx] w-[40rpx]" src="/packages/member/assets/figma/guests/bear.png" />
         <image wx:if="{{item.inviter}}" class="absolute left-[172rpx] top-[312rpx] h-[52rpx] w-[152rpx]" src="/packages/member/assets/figma/guests/inviter-bear.png" />
+        <image wx:elif="{{item.inviterImg}}" class="absolute left-[184rpx] top-[312rpx] h-[48rpx] w-[144rpx]" src="/packages/member/assets/figma/guests/{{item.inviterImg}}.png" />
         <view wx:if="{{item.dot}}" class="absolute h-[16rpx] w-[16rpx] rounded-full bg-[#ff2238]" style="left:{{item.dot.leftRpx}}rpx;top:{{item.dot.topRpx}}rpx"></view>
       </view>
     </view>
